@@ -1,0 +1,19 @@
+{
+  "name": "somnia-phase1",
+  "version": "0.1.0",
+  "description": "Desktop foundation and reliable editor core",
+  "scripts": {
+    "test": "tsx --test packages/editor-core/src/*.test.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "keywords": [],
+  "author": "",
+  "devDependencies": {
+    "@types/node": "^26.6.4",
+    "parse5": "^8.0.1",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2"
+  },
+  "type": "module",
+  "private": true
+}
