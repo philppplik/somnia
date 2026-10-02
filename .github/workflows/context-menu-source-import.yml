@@ -1,0 +1,44 @@
+name: Layer context menu bounded source import
+on:
+  push:
+    branches: [feature/layer-context-menu]
+    paths: [.github/workflows/context-menu-source-import.yml]
+permissions:
+  contents: write
+jobs:
+  import:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Import bounded authored sources
+        run: |
+          python3 - <<'PY'
+          import base64,io,tarfile,pathlib
+          data=base64.b64decode('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')
+          with tarfile.open(fileobj=io.BytesIO(data),mode='r:gz') as tar:
+              members=tar.getmembers()
+              for m in members:
+                  p=pathlib.PurePosixPath(m.name)
+                  if not m.isfile() or '..' in p.parts or p.is_absolute() or p.parts[0]!='phase1': raise ValueError('Unsafe import')
+              tar.extractall('.',members=members,filter='data')
+          PY
+      - name: Build and test frontend
+        working-directory: phase1
+        run: |
+          npm ci
+          npm run build
+          npm run test:core
+          npx playwright install --with-deps chromium
+          npm run test:e2e
+      - name: Commit validated sources only
+        run: |
+          test "${GITHUB_REF_NAME}" = "feature/layer-context-menu"
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add phase1/
+          git rm .github/workflows/context-menu-source-import.yml
+          git commit -m 'feat: layer context menu with keyboard access and shared undo tests'
+          git push origin HEAD:feature/layer-context-menu
