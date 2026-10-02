@@ -82,6 +82,6 @@
 </div>
 <div id="palette" hidden><div class="pal-box"><input id="pal-input" placeholder="Type a command" autocomplete="off"><ul id="pal-list"></ul></div></div>
 <div id="toast" hidden></div>
-<script>Promise.all(["app.p1.js", "app.p2.js", "app.p3.js", "app.p4.js", "app.p5.js", "app.p6.js"].map(function(u){return fetch(u).then(function(r){return r.text()})})).then(function(t){var s=document.createElement("script");s.textContent=t.join("");document.body.appendChild(s)})</script>
+<script>Promise.all(["app.p1.js", "app.p2.js", "app.p3.js", "app.p4.js", "app.p5.js", "app.p6.js"].map(function(u){return fetch(u).then(function(r){return r.text()})})).then(function(t){var s=document.createElement("script");s.textContent=t.map(function(x){return x.replace(/\n$/,"")}).join("");document.body.appendChild(s)})</script>
 </body>
 </html>
