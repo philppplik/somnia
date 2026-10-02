@@ -1,0 +1,44 @@
+name: Insert library bounded source import
+on:
+  push:
+    branches: [feature/insert-library]
+    paths: [.github/workflows/insert-library-import.yml]
+permissions:
+  contents: write
+jobs:
+  import:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Import bounded authored sources
+        run: |
+          python3 - <<'PY'
+          import base64,io,tarfile,pathlib
+          data=base64.b64decode('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')
+          with tarfile.open(fileobj=io.BytesIO(data),mode='r:gz') as tar:
+              members=tar.getmembers()
+              for m in members:
+                  p=pathlib.PurePosixPath(m.name)
+                  if not m.isfile() or '..' in p.parts or p.is_absolute() or p.parts[0]!='phase1': raise ValueError('Unsafe import')
+              tar.extractall('.',members=members,filter='data')
+          PY
+      - name: Build and test frontend
+        working-directory: phase1
+        run: |
+          npm ci
+          npm run build
+          npm run test:core
+          npx playwright install --with-deps chromium
+          npm run test:e2e
+      - name: Commit validated sources only
+        run: |
+          test "${GITHUB_REF_NAME}" = "feature/insert-library"
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add phase1/
+          git rm .github/workflows/insert-library-import.yml
+          git commit -m 'feat: insert blocks and personal source library with collision guards'
+          git push origin HEAD:feature/insert-library
