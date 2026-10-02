@@ -44,12 +44,20 @@ export async function installDesktopAdapter(){
  };
  const close=async(keepRecovery:boolean)=>{await queue;if(projectId)await invoke('close_project',{projectId,keepRecovery});unsubscribe();disconnect();projectId=null;model=null;patchState({nativeConnected:false,diskComparison:null});};
  const open=async()=>{
-  if(projectId){if(getState().isDirty&&!window.confirm('Keep unsaved edits in recovery and open another folder?'))return;await close(true);}
-  else if(getState().isDirty&&!window.confirm('Replace the in-memory project? It cannot be recovered from disk.'))return;
+  if(projectId&&getState().isDirty&&!window.confirm('Keep unsaved edits in recovery and open another folder?'))return;
+  if(!projectId&&getState().isDirty&&!window.confirm('Replace the in-memory project? It cannot be recovered from disk.'))return;
+  // Keep the current project alive until the picker and all candidate reads succeed.
   const selected=await invoke<{projectId:string;name:string}|null>('choose_project');if(!selected)return;
-  projectId=selected.projectId;counter=0;baselines=new Map();current=new Map();staged=new Map();saved=new Map();
-  const paths=await invoke<string[]>('list_files',{projectId});const editable=paths.filter(p=>/\.(html?|css|js|json|svg|txt|md)$/i.test(p));if(editable.length>64){await invoke('close_project',{projectId,keepRecovery:true});projectId=null;throw Error('This alpha supports at most 64 text documents. Pick a smaller project folder.');}
-  const files:Record<string,string>={};for(const path of editable){const read=await invoke<Read>('read_file',{projectId,path});if(read.content!==null){files[path]=read.content;saved.set(path,read.content);}baselines.set(path,read.revision);}
+  const files:Record<string,string>={},nextBaselines=new Map<string,Revision>();
+  try{
+   const paths=await invoke<string[]>('list_files',{projectId:selected.projectId});const editable=paths.filter(p=>/\.(html?|css|js|json|svg|txt|md)$/i.test(p));
+   if(editable.length>64)throw Error('This alpha supports at most 64 text documents. Pick a smaller project folder.');
+   for(const path of editable){const read=await invoke<Read>('read_file',{projectId:selected.projectId,path});if(read.content!==null)files[path]=read.content;nextBaselines.set(path,read.revision);}
+   // Validate source parsing before disconnecting the existing document model.
+   new EditorProject(files);
+   if(projectId)await close(true);
+  }catch(error){await invoke('close_project',{projectId:selected.projectId,keepRecovery:true}).catch(()=>{});throw error;}
+  projectId=selected.projectId;counter=0;baselines=nextBaselines;current=new Map();staged=new Map();saved=new Map(Object.entries(files));
   model=new EditorProject(files);disconnect=connectEditorProject(model,{name:selected.name,alreadySaved:true});
   unsubscribe=model.subscribe('internal',tx=>{const changes:Record<string,string>={};for(const path of tx.changedFiles)if(model&&path in model.files)changes[path]=model.files[path];else patchState({notice:`${path} removed from model. This alpha does not delete disk files; review the retained file manually.`});enqueueStage(changes);});
   patchState({nativeConnected:true,notice:'Folder connected. Native autosave after 1s idle / 5s continuous edits.'});
