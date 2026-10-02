@@ -1,0 +1,12 @@
+import { launch, sleep } from './lib.mjs';
+const { p, close } = await launch();
+await p.evaluate(() => { const d = document.querySelector('#frame').contentDocument; d.addEventListener('dblclick', (e) => console.warn('DBL', e.target.localName)); d.addEventListener('blur', () => console.warn('docblur'), true); });
+const box = await (await p.$('#frame')).boundingBox();
+const h1 = await p.evaluate(() => { const r = document.querySelector('#frame').contentDocument.querySelector('h1').getBoundingClientRect(); return [r.left + r.width / 2, r.top + 10]; });
+const z = await p.evaluate(() => document.querySelector('#frame-wrap').getBoundingClientRect().width / 1280);
+const x = box.x + h1[0] * z, y = box.y + h1[1] * z;
+await p.mouse.click(x, y, { clickCount: 1 }); await p.mouse.click(x, y, { clickCount: 2 }); await sleep(300);
+console.log('editing', await p.evaluate(() => !!window.__somnia.S.editing));
+await p.evaluate(() => window.__somnia.startEdit([1,1])); await sleep(200);
+console.log('editing2', await p.evaluate(() => !!window.__somnia.S.editing), await p.evaluate(() => document.querySelector('#frame').contentDocument.querySelector('h1').contentEditable));
+await close();
