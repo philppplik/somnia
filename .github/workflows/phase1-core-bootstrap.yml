@@ -33,15 +33,11 @@ jobs:
           npm run test:core
           npx playwright install --with-deps chromium
           npm run test:e2e
-      - name: Commit validated sources and remove write permission
+      - name: Commit validated sources only
         run: |
           test "${GITHUB_REF_NAME}" = "phase1-foundation"
-          python3 - <<'PY'
-          import base64,pathlib
-          pathlib.Path('.github/workflows/phase1-core-bootstrap.yml').write_bytes(base64.b64decode('bmFtZTogUGhhc2UgMSB2YWxpZGF0aW9uCm9uOgogIHB1c2g6CiAgICBicmFuY2hlczogW3BoYXNlMS1mb3VuZGF0aW9uXQogICAgcGF0aHM6IFtwaGFzZTEvKiosIC5naXRodWIvd29ya2Zsb3dzL3BoYXNlMS1jb3JlLWJvb3RzdHJhcC55bWxdCiAgd29ya2Zsb3dfZGlzcGF0Y2g6CnBlcm1pc3Npb25zOgogIGNvbnRlbnRzOiByZWFkCmpvYnM6CiAgZnJvbnRlbmQ6CiAgICBydW5zLW9uOiB1YnVudHUtMjQuMDQKICAgIGRlZmF1bHRzOgogICAgICBydW46CiAgICAgICAgd29ya2luZy1kaXJlY3Rvcnk6IHBoYXNlMQogICAgc3RlcHM6CiAgICAgIC0gdXNlczogYWN0aW9ucy9jaGVja291dEB2NwogICAgICAtIHVzZXM6IGFjdGlvbnMvc2V0dXAtbm9kZUB2NwogICAgICAgIHdpdGg6CiAgICAgICAgICBub2RlLXZlcnNpb246ICcyNCcKICAgICAgLSBydW46IG5wbSBjaQogICAgICAtIHJ1bjogbnBtIHJ1biBidWlsZCAmJiBucG0gcnVuIHRlc3Q6Y29yZQogICAgICAtIHJ1bjogbnB4IHBsYXl3cmlnaHQgaW5zdGFsbCAtLXdpdGgtZGVwcyBjaHJvbWl1bQogICAgICAtIHJ1bjogbnBtIHJ1biB0ZXN0OmUyZQogIG5hdGl2ZToKICAgIHJ1bnMtb246IHVidW50dS0yNC4wNAogICAgZGVmYXVsdHM6CiAgICAgIHJ1bjoKICAgICAgICB3b3JraW5nLWRpcmVjdG9yeTogcGhhc2UxCiAgICBzdGVwczoKICAgICAgLSB1c2VzOiBhY3Rpb25zL2NoZWNrb3V0QHY3CiAgICAgIC0gdXNlczogYWN0aW9ucy9zZXR1cC1ub2RlQHY3CiAgICAgICAgd2l0aDoKICAgICAgICAgIG5vZGUtdmVyc2lvbjogJzI0JwogICAgICAtIHVzZXM6IGR0b2xuYXkvcnVzdC10b29sY2hhaW5Ac3RhYmxlCiAgICAgIC0gcnVuOiBzdWRvIGFwdC1nZXQgdXBkYXRlICYmIHN1ZG8gYXB0LWdldCBpbnN0YWxsIC15IGxpYndlYmtpdDJndGstNC4xLWRldiBsaWJhcHBpbmRpY2F0b3IzLWRldiBsaWJyc3ZnMi1kZXYgcGF0Y2hlbGYKICAgICAgLSBydW46IG5wbSBjaQogICAgICAtIHJ1bjogY2FyZ28gdGVzdCAtLW1hbmlmZXN0LXBhdGggc3JjLXRhdXJpL0NhcmdvLnRvbWwgLS1uby1kZWZhdWx0LWZlYXR1cmVzIC0tbG9ja2VkCiAgICAgIC0gcnVuOiBjYXJnbyBjaGVjayAtLW1hbmlmZXN0LXBhdGggc3JjLXRhdXJpL0NhcmdvLnRvbWwgLS1sb2NrZWQKICAgICAgLSBydW46IG5wbSBydW4gdGF1cmkgYnVpbGQgLS0gLS1uby1idW5kbGUK'))
-          PY
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add phase1/ .github/workflows/phase1-core-bootstrap.yml
+          git add phase1/
           git commit -m 'feat: integrate phase 1 desktop shell canvas and filesystem bridge'
           git push origin HEAD:phase1-foundation
