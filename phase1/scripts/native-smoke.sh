@@ -21,4 +21,17 @@ xdotool key --window "$window" ctrl+3
 sleep 1
 import -window "$window" validation/native/split-source.png
 kill -0 "$app_pid"
+# Verify native command registration and folder-picker rendering separately from startup.
+xdotool key --window "$window" ctrl+k
+xdotool type --window "$window" --clearmodifiers 'Open folder'
+sleep 1
+import -window "$window" validation/native/native-open-command.png
+xdotool key --window "$window" Return
+sleep 1
+# The bundled in-memory sample is dirty; accept replacement for this test only.
+xdotool key Return
+sleep 2
+import -window root validation/native/native-folder-dialog.png
+xdotool key Escape
+kill -0 "$app_pid"
 printf 'Native process survived startup and palette/split keyboard smoke. PNGs require human pixel inspection; this is not file-save/recovery or final OS acceptance.\n' >validation/native/RESULT.txt
