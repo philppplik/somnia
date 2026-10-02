@@ -1,0 +1,14 @@
+import { launch, sleep } from './lib.mjs';
+const { p, close } = await launch();
+await p.click('#bp-seg [data-w="390"]'); await sleep(300);
+await p.evaluate(() => window.__somnia.select([1, 1])); await sleep(200);
+await p.evaluate(() => window.__somnia.setStyle([1, 1], { 'font-size': '30px', color: '#5b5bf0' }));
+await sleep(300);
+const r = await p.evaluate(() => ({ h1: window.__somnia.S.doc.querySelector('h1').outerHTML, css: window.__somnia.S.doc.getElementById('somnia-responsive')?.textContent, file: window.__somnia.S.files['index.html'].includes('somnia-responsive'), fs: getComputedStyle(document.querySelector('#frame').contentDocument.querySelector('h1')).fontSize }));
+console.log(JSON.stringify(r, null, 1));
+await p.screenshot({ path: '/tmp/s6.png' });
+await p.click('#bp-seg [data-w="1280"]'); await sleep(300);
+console.log('desktop fs', await p.evaluate(() => getComputedStyle(document.querySelector('#frame').contentDocument.querySelector('h1')).fontSize));
+await p.keyboard.down('Control'); await p.keyboard.press('z'); await p.keyboard.up('Control'); await sleep(200);
+console.log('undo ->', await p.evaluate(() => window.__somnia.S.doc.querySelector('h1').outerHTML + ' | ' + !!window.__somnia.S.doc.getElementById('somnia-responsive')));
+await close();
