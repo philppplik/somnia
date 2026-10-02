@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Somnia - Phase 0 prototype</title>
+<link rel="icon" href="logo.svg">
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+<div id="app">
+  <header id="titlebar">
+    <div class="tb-left">
+      <img class="logo" src="logo.svg" alt="">
+      <span class="wordmark">Somnia</span>
+      <span class="sep"></span>
+      <span id="project-name" class="project">Lumen Studio</span>
+      <span id="page-name" class="chip"></span>
+      <span id="save-state" class="save-state"></span>
+    </div>
+    <div class="tb-center seg" id="mode-seg" role="tablist">
+      <button data-mode="design" class="on">Design</button>
+      <button data-mode="split">Split</button>
+      <button data-mode="code">Code</button>
+    </div>
+    <div class="tb-right">
+      <button class="icon-btn" id="btn-undo" title="Undo (Ctrl/Cmd+Z)"></button>
+      <button class="icon-btn" id="btn-redo" title="Redo (Ctrl/Cmd+Shift+Z)"></button>
+      <span class="sep"></span>
+      <button class="btn" id="btn-open" title="Open a folder from disk"></button>
+      <button class="btn" id="btn-preview" title="Open the page with scripts in a new tab"></button>
+      <button class="btn primary" id="btn-export" title="Download the project"></button>
+      <button class="icon-btn" id="btn-cmd" title="Command palette (Ctrl/Cmd+K)"></button>
+    </div>
+  </header>
+
+  <aside id="left" class="panel">
+    <nav class="tabs" id="left-tabs">
+      <button data-tab="layers" class="on">Layers</button>
+      <button data-tab="files">Files</button>
+      <button data-tab="insert">Insert</button>
+    </nav>
+    <div class="tab-body" id="tab-layers"><div id="layers"></div></div>
+    <div class="tab-body" id="tab-files" hidden></div>
+    <div class="tab-body" id="tab-insert" hidden></div>
+  </aside>
+
+  <main id="center">
+    <div id="toolbar">
+      <div class="seg" id="bp-seg">
+        <button data-w="1280" class="on" title="Desktop 1280"></button>
+        <button data-w="820" title="Tablet 820"></button>
+        <button data-w="390" title="Mobile 390"></button>
+      </div>
+      <span id="bp-label" class="muted mono">1280 px</span>
+      <span class="grow"></span>
+      <button class="icon-btn sm" id="zoom-out" title="Zoom out">-</button>
+      <button class="zoom-val mono" id="zoom-val" title="Fit to width">Fit</button>
+      <button class="icon-btn sm" id="zoom-in" title="Zoom in">+</button>
+    </div>
+    <div id="stage">
+      <div id="canvas-pane">
+        <div id="canvas-scroll">
+          <div id="sizer"><div id="frame-wrap">
+            <iframe id="frame" sandbox="allow-same-origin" title="Canvas"></iframe>
+            <div id="overlay"></div>
+          </div></div>
+        </div>
+      </div>
+      <div id="code-pane">
+        <div id="file-tabs"></div>
+        <div id="cm"></div>
+      </div>
+    </div>
+    <div id="crumbs"></div>
+  </main>
+
+  <aside id="right" class="panel">
+    <div class="panel-title">Properties</div>
+    <div id="props"></div>
+  </aside>
+</div>
+<div id="palette" hidden><div class="pal-box"><input id="pal-input" placeholder="Type a command" autocomplete="off"><ul id="pal-list"></ul></div></div>
+<div id="toast" hidden></div>
+<script>Promise.all(["app.p1.js", "app.p2.js", "app.p3.js", "app.p4.js", "app.p5.js", "app.p6.js"].map(function(u){return fetch(u).then(function(r){return r.text()})})).then(function(t){var s=document.createElement("script");s.textContent=t.join("");document.body.appendChild(s)})</script>
+</body>
+</html>
