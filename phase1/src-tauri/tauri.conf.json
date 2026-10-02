@@ -37,5 +37,6 @@
       "icons/icon.png",
       "icons/icon.ico"
     ]
-  }
+  },
+  "mainBinaryName": "somnia"
 }
