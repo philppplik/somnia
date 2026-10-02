@@ -3,7 +3,8 @@ import type { EditorNode,EditorProjectPort,Operation,Origin } from '../lib/edito
 export type LeftTab='layers'|'assets'|'components';
 export type RightTab='design'|'prototype'|'code';
 export type ViewMode='design'|'code'|'split';
-export interface AppState {
+export interface DiskComparison {path:string;disk:string;editor:string;apply:(content:string)=>Promise<void>}
+export interface AppState {diskComparison:DiskComparison|null;nativeConnected:boolean;
  sidebarWidth:number;inspectorWidth:number;sidebarOpen:boolean;inspectorOpen:boolean;problemsOpen:boolean;
  leftTab:LeftTab;rightTab:RightTab;zoom:number;viewport:1280|820|390;viewMode:ViewMode;
  paletteOpen:boolean;recentCommands:string[];selectedElementId:string|null;selectedElementIds:string[];computedStyle:Record<string,string>;activeFile:string;
@@ -11,7 +12,7 @@ export interface AppState {
  isDirty:boolean;lastSavedAt:string|null;notice:string;theme:'dark'|'light';
 }
 const demo=(id:string,tag:string,children:EditorNode[]=[]):EditorNode=>({id,tag,attrs:{},children,from:0,to:0,contentFrom:0,contentTo:0,locked:false,hidden:false});
-let state:AppState={sidebarWidth:260,inspectorWidth:320,sidebarOpen:true,inspectorOpen:true,problemsOpen:false,leftTab:'layers',rightTab:'design',zoom:75,viewport:1280,viewMode:'design',paletteOpen:false,recentCommands:[],selectedElementId:null,selectedElementIds:[],computedStyle:{},activeFile:'index.html',projectName:'Untitled project',coreConnected:false,revision:0,files:{},nodes:[demo('header','header',[demo('nav','nav')]),demo('main','main',[demo('section','section',[demo('heading','h1'),demo('button','button')])]),demo('footer','footer')],isDirty:false,lastSavedAt:null,notice:'Shell preview. No folder connected.',theme:'dark'};
+let state:AppState={diskComparison:null,nativeConnected:false,sidebarWidth:260,inspectorWidth:320,sidebarOpen:true,inspectorOpen:true,problemsOpen:false,leftTab:'layers',rightTab:'design',zoom:75,viewport:1280,viewMode:'design',paletteOpen:false,recentCommands:[],selectedElementId:null,selectedElementIds:[],computedStyle:{},activeFile:'index.html',projectName:'Untitled project',coreConnected:false,revision:0,files:{},nodes:[demo('header','header',[demo('nav','nav')]),demo('main','main',[demo('section','section',[demo('heading','h1'),demo('button','button')])]),demo('footer','footer')],isDirty:false,lastSavedAt:null,notice:'Shell preview. No folder connected.',theme:'dark'};
 const listeners=new Set<()=>void>();
 export const getState=()=>state;
 export function patchState(patch:Partial<AppState>){if('selectedElementId' in patch&&!('selectedElementIds' in patch))patch.selectedElementIds=patch.selectedElementId?[patch.selectedElementId]:[];state={...state,...patch};listeners.forEach(fn=>fn());}

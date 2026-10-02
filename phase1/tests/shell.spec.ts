@@ -7,16 +7,16 @@ test('shell, palette, shortcuts, core edits, history and panels',async({page})=>
  await page.keyboard.press('Control+k');await expect(page.getByRole('dialog')).toBeVisible();
  await page.getByRole('combobox',{name:'Search commands'}).fill('split');await page.keyboard.press('Enter');
  await expect(page.getByRole('textbox',{name:'Source code'})).toBeVisible();
- const editor=page.getByRole('textbox',{name:'Source code'});const original=await editor.inputValue();
+ const editor=page.getByRole('textbox',{name:'Source code'});const original=await editor.innerText();
  await editor.fill(original.replace('Your first idea starts here.','Core edit works.'));
- await expect(editor).toHaveValue(/Core edit works/);await page.keyboard.press('Control+z');await expect(editor).toHaveValue(original);
- await page.keyboard.press('Control+Shift+z');await expect(editor).toHaveValue(/Core edit works/);
+ await expect(editor).toHaveText(/Core edit works/);await page.keyboard.press('Control+z');await expect(editor).toHaveText(original,{useInnerText:true});
+ await page.keyboard.press('Control+Shift+z');await expect(editor).toHaveText(/Core edit works/);
  await page.getByRole('button',{name:'h1',exact:true}).click();
  await page.getByRole('textbox',{name:'Replacement text'}).fill('Changed from inspector');await page.getByRole('button',{name:'Apply text',exact:true}).click();
- await expect(editor).toHaveValue(/Changed from inspector/);
+ await expect(editor).toHaveText(/Changed from inspector/);
  await page.getByRole('textbox',{name:'Element ID',exact:true}).fill('headline');await page.getByRole('textbox',{name:'Element ID',exact:true}).press('Enter');
- await expect(editor).toHaveValue(/id="headline"/);
- await page.getByRole('button',{name:'Undo',exact:true}).click();await expect(editor).not.toHaveValue(/id="headline"/);
+ await expect(editor).toHaveText(/id="headline"/);
+ await page.getByRole('button',{name:'Undo',exact:true}).click();await expect(editor).not.toHaveText(/id="headline"/);
  await page.getByRole('tab',{name:'Assets',exact:true}).click();await expect(page.getByText('Image importing is not connected yet.')).toBeVisible();
  await page.getByRole('tab',{name:'Layers',exact:true}).click();
  await page.getByRole('button',{name:'Toggle sidebar',exact:true}).click();await expect(page.getByRole('complementary',{name:'Project sidebar'})).toHaveCount(0);
@@ -37,4 +37,7 @@ test('minimum desktop and light theme visual',async({page})=>{
  await page.goto('/');await page.keyboard.press('Control+k');await page.getByRole('combobox',{name:'Search commands'}).fill('light');await page.keyboard.press('Enter');await page.waitForTimeout(300);
  await page.screenshot({path:'tests/artifacts/light-rest.png'});
  await page.setViewportSize({width:960,height:600});await page.screenshot({path:'tests/artifacts/minimum.png'});
+});
+test('CodeMirror highlighted source stays in shared canvas history',async({page})=>{
+ await page.goto('/');await page.getByRole('button',{name:'Split view',exact:true}).click();const editor=page.getByRole('textbox',{name:'Source code'});await expect(editor.locator('span').first()).toBeVisible();await editor.focus();await page.keyboard.press('Control+End');await page.keyboard.type('\n<!-- CodeMirror edit -->');await expect(editor).toHaveText(/CodeMirror edit/);await page.keyboard.press('Control+z');await expect(editor).not.toHaveText(/CodeMirror edit/);await page.keyboard.press('Control+Shift+z');await expect(editor).toHaveText(/CodeMirror edit/);await expect(page.frameLocator('iframe[title="Sandboxed design preview"]').locator('h1')).toHaveText('Make room for something new.');await page.screenshot({path:'tests/artifacts/codemirror-split.png'});
 });

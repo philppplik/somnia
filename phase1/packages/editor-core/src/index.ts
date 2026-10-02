@@ -1,4 +1,4 @@
-import { parse, type DefaultTreeAdapterMap } from 'parse5';
+import { parse,parseFragment, type DefaultTreeAdapterMap } from 'parse5';
 const randomUUID = () => globalThis.crypto.randomUUID();
 export type Origin = 'canvas' | 'code' | 'history' | 'external' | 'internal';
 export interface EditorNode { id:string; tag:string; attrs:Record<string,string>; children:EditorNode[]; from:number; to:number; contentFrom:number; contentTo:number; locked:boolean; hidden:boolean }
@@ -84,7 +84,29 @@ export class EditorProject {
   const add=(p:Patch,hints?:Array<{id:string;from:number;tag:string}>)=>{if(this.sources[p.file].slice(p.from,p.to)===p.insert)return;this.patch(p,hints);patches.push(p);};
   switch(op.type){
    case 'replaceSource': {const a=this.files[op.file],b=op.text;let from=0;while(from<a.length&&from<b.length&&a[from]===b[from])from++;let endA=a.length,endB=b.length;while(endA>from&&endB>from&&a[endA-1]===b[endB-1]){endA--;endB--;}add({file:op.file,from,to:endA,insert:b.slice(from,endB)});break;}
-   case 'formatText': {const n=this.editable(op.file,op.nodeId);const el=this.bindings[op.file]!.get(n.id)!;const raw=this.files[op.file].slice(n.contentFrom,n.contentTo);if(n.children.length||el.childNodes.some(c=>c.nodeName!=='#text')||['script','style','textarea','title'].includes(n.tag)||!el.sourceCodeLocation?.endTag||raw.includes('&'))throw new EditorError('mixed-content','Range formatting currently needs a plain text leaf without HTML entities. Authored content was left unchanged.');const splitsSurrogate=(pos:number)=>pos>0&&pos<raw.length&&/[\uD800-\uDBFF]/.test(raw[pos-1])&&/[\uDC00-\uDFFF]/.test(raw[pos]);if(splitsSurrogate(op.from)||splitsSurrogate(op.to))throw new EditorError('invalid-range','The selection splits a Unicode character.');if(!['strong','em','u'].includes(op.mark)||!Number.isInteger(op.from)||!Number.isInteger(op.to)||op.from<0||op.to>raw.length||op.from>=op.to)throw new EditorError('invalid-range','Select a valid text range.');add({file:op.file,from:n.contentFrom+op.from,to:n.contentFrom+op.to,insert:`<${op.mark}>${raw.slice(op.from,op.to)}</${op.mark}>`});break;}
+   case 'formatText': {
+    const n=this.editable(op.file,op.nodeId),el=this.bindings[op.file]!.get(n.id)!;
+    if(!['strong','em','u'].includes(op.mark)||!Number.isInteger(op.from)||!Number.isInteger(op.to)||op.from<0||op.from>=op.to)throw new EditorError('invalid-range','Select a valid text range.');
+    const inline=new Set(['a','abbr','b','bdi','bdo','cite','code','del','em','i','ins','kbd','mark','q','s','samp','small','span','strong','sub','sup','time','u','var']);
+    const leaves:Array<{start:number;end:number;rawFrom:number;rawTo:number;value:string;boundaries:Map<number,number>}>=[];let offset=0;
+    const visit=(nodes:DefaultTreeAdapterMap['node'][])=>{for(const child of nodes){
+     if(isElement(child)){if(!inline.has(child.tagName)||!child.sourceCodeLocation?.endTag)throw new EditorError('mixed-content','Range formatting supports text and inline markup only. Use code for block or embedded content.');const binding=[...this.bindings[op.file]!.entries()].find(([,e])=>e===child);if(!binding)throw new EditorError('mixed-content','Inline content has no editable source identity.');this.editable(op.file,binding[0]);visit(child.childNodes);}
+     else if(child.nodeName==='#text'){
+      const text=child as DefaultTreeAdapterMap['textNode'];const loc=text.sourceCodeLocation;if(!loc)throw new EditorError('mixed-content','This text cannot be mapped safely to source.');
+      const raw=this.sources[op.file].slice(loc.startOffset,loc.endOffset),boundaries=new Map<number,number>([[0,0]]);let decoded='',pos=0;
+      while(pos<raw.length){const entity=raw.slice(pos).match(/^&(?:#[xX][0-9a-fA-F]+|#\d+|[a-zA-Z][a-zA-Z0-9]+);/);let token=entity?.[0]??String.fromCodePoint(raw.codePointAt(pos)!);let value=token;
+       if(entity){const fragment=parseFragment(token);value=fragment.childNodes.map(c=>c.nodeName==='#text'?(c as DefaultTreeAdapterMap['textNode']).value:'').join('');}
+       decoded+=value;pos+=token.length;boundaries.set(decoded.length,pos);
+      }
+      if(decoded!==text.value)throw new EditorError('mixed-content','Rendered text differs from source mapping. Format this range in code.');
+      leaves.push({start:offset,end:offset+decoded.length,rawFrom:loc.startOffset,rawTo:loc.endOffset,value:decoded,boundaries});offset+=decoded.length;
+     }else if(child.nodeName!=='#comment')throw new EditorError('mixed-content','This content cannot be formatted safely.');
+    }};
+    if(['script','style','textarea','title'].includes(n.tag)||!el.sourceCodeLocation?.endTag)throw new EditorError('mixed-content','Use code to format this element.');visit(el.childNodes);
+    if(op.to>offset)throw new EditorError('invalid-range','Select a valid text range.');const changes:Patch[]=[];
+    for(const leaf of leaves){const from=Math.max(op.from,leaf.start)-leaf.start,to=Math.min(op.to,leaf.end)-leaf.start;if(from>=to)continue;const a=leaf.boundaries.get(from),b=leaf.boundaries.get(to);if(a==null||b==null)throw new EditorError('invalid-range','The selection splits a Unicode character or HTML entity.');const raw=this.sources[op.file].slice(leaf.rawFrom+a,leaf.rawFrom+b);changes.push({file:op.file,from:leaf.rawFrom+a,to:leaf.rawFrom+b,insert:`<${op.mark}>${raw}</${op.mark}>`});}
+    for(const patch of changes.reverse())add(patch);break;
+   }
    case 'setText': {const n=this.editable(op.file,op.nodeId);const el=this.bindings[op.file]!.get(n.id)!;if(n.children.length||el.childNodes.some(c=>c.nodeName!=='#text')||['script','style','textarea','title'].includes(n.tag)||!el.sourceCodeLocation?.endTag)throw new EditorError('mixed-content','This element contains markup or non-text content. Edit the text child or use code; it will not be flattened.');add({file:op.file,from:n.contentFrom,to:n.contentTo,insert:escText(op.text)});break;}
    case 'setAttribute':this.attribute(op.file,op.nodeId,op.name,op.value,patches);break;
    case 'setMeta': {const n=this.node(op.file,op.nodeId);this.metas[n.id]={locked:op.locked??n.locked,hidden:op.hidden??n.hidden};this.reparse(op.file);break;}
@@ -109,7 +131,7 @@ export class EditorProject {
   this.busy=true;const before=this.snapshot();const patches:Patch[]=[];let tx:Transaction|null=null;
   try {for(const op of req.operations)this.operation(op,patches);const after=this.snapshot();if(JSON.stringify(before.files)===JSON.stringify(after.files)&&JSON.stringify(before.meta)===JSON.stringify(after.meta))return null;
    this._revision++;tx={id:randomUUID(),origin:req.origin,revision:this.revision,operations:clone(req.operations),patches,changedFiles:[...new Set([...Object.keys(before.files),...Object.keys(after.files)].filter(f=>before.files[f]!==after.files[f]))]};
-   if(req.origin!=='internal'){const last=this.past.at(-1),now=Date.now();if(req.group&&last?.group===req.group&&last.origin===req.origin&&now-last.at<800){last.after=after;last.at=now;}else{this.past.push({before,after,group:req.group,at:now,origin:req.origin});if(this.past.length>200)this.past.shift();}this.future=[];}
+   if(req.origin==='internal'){this.past=[];this.future=[];}else{const last=this.past.at(-1),now=Date.now();if(req.group&&last?.group===req.group&&last.origin===req.origin&&now-last.at<800){last.after=after;last.at=now;}else{this.past.push({before,after,group:req.group,at:now,origin:req.origin});if(this.past.length>200)this.past.shift();}this.future=[];}
   }catch(e){this.restore(before);throw e;}finally{this.busy=false;}
   if(tx)this.emit(tx);return tx;
  }
