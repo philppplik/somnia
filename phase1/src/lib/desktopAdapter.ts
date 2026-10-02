@@ -31,7 +31,17 @@ export async function installDesktopAdapter(){
    const event=await invoke<FileEvent>('stage_edit',{projectId,path,content,clientRevision:revision});staged.set(path,{revision,content});await handle(event);
   }).catch(fail);}
  };
- const save=async()=>{await queue;if(!projectId||!model)return;const changes:Record<string,string>={};for(const [path,content] of Object.entries(model.files))if(content!==saved.get(path)&&staged.get(path)?.content!==content)changes[path]=content;enqueueStage(changes);await queue;for(const [path,snapshot] of staged){if(model.files[path]===saved.get(path))continue;if(model.files[path]!==snapshot.content){enqueueStage({[path]:model.files[path]});await queue;}const event=await invoke<FileEvent>('save_file',{projectId,path,expectedRevision:baselines.get(path)});await handle(event);}};
+ const save=async()=>{
+  await queue;if(!projectId||!model)return;
+  const changes:Record<string,string>={};for(const [path,content] of Object.entries(model.files))if(content!==saved.get(path)&&staged.get(path)?.content!==content)changes[path]=content;
+  enqueueStage(changes);await queue;
+  for(const path of Object.keys(model.files)){
+   if(model.files[path]===saved.get(path))continue;
+   if(staged.get(path)?.content!==model.files[path])throw Error(`Latest edits for ${path} were not journaled. Save stopped; retry after fixing the journal error.`);
+   const snapshot=staged.get(path)!;const event=await invoke<FileEvent>('save_file',{projectId,path,expectedRevision:baselines.get(path)});await handle(event);
+   if(event.clientRevision!==snapshot.revision)throw Error(`Save revision changed for ${path}. Review unsaved edits.`);
+  }
+ };
  const close=async(keepRecovery:boolean)=>{await queue;if(projectId)await invoke('close_project',{projectId,keepRecovery});unsubscribe();disconnect();projectId=null;model=null;patchState({nativeConnected:false,diskComparison:null});};
  const open=async()=>{
   if(projectId){if(getState().isDirty&&!window.confirm('Keep unsaved edits in recovery and open another folder?'))return;await close(true);}

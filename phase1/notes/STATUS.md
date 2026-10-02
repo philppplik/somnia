@@ -10,7 +10,7 @@ Development branch only. No shipped desktop release, no merge or deploy, existin
 - Editor-only layers lock/hide; recovery state serialization preserves IDs and metadata.
 - B/I/U toolbar wraps selected text segments in plain or mixed inline content, preserves tags/comments/attributes and entity spellings. Block/embedded content and unmappable ranges refuse safely.
 - SaveCoordinator tests reject false saved state and stale async completion.
-- 26 core tests, 14 Chromium E2E tests, TypeScript/Vite build; npm audit 0 vulnerabilities after esbuild override.
+- 26 core tests, 18 Chromium E2E tests, TypeScript/Vite build; npm audit 0 vulnerabilities after esbuild override.
 - Actual screenshots reviewed at desktop, 960x600, light/dark and resized selection.
 
 ## Pending, not represented as shipped
@@ -35,3 +35,7 @@ Philipp's original authenticated WhatsApp October 2, 12:00:59 requests continuou
 October 2 12:08 local progress: CodeMirror+source ZIP export+reviewed disk compare+native folder indicator; 23 core/13 browser tests. Not yet synced to branch. These are Phase1 gaps, not later version-Diff viewer.
 
 Internal disk reload/reviewed merge resets old undo/redo snapshots, so undo cannot silently replace newly accepted disk bytes.
+
+Follow-up local: Light default and saved theme preference; HTML elements library with real drag/drop and keyboard-click insertion; layer sibling reorder with source patches/shared undo. These arrived after current source-import payload and are not yet in repo.
+
+Preview authored selection-ID injection guarded and E2E tested. Latest follow-up has 26 core/18 browser tests/build/audit0. GUI plan: private Actions artifact + Xvfb smoke, final real-OS alpha check by Philipp. No release/public deploy inferred.

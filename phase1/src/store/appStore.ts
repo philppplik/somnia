@@ -1,3 +1,4 @@
+import {readTheme,rememberTheme} from '../lib/theme';
 import { useSyncExternalStore } from 'react';
 import type { EditorNode,EditorProjectPort,Operation,Origin } from '../lib/editorPort';
 export type LeftTab='layers'|'assets'|'components';
@@ -12,10 +13,10 @@ export interface AppState {diskComparison:DiskComparison|null;nativeConnected:bo
  isDirty:boolean;lastSavedAt:string|null;notice:string;theme:'dark'|'light';
 }
 const demo=(id:string,tag:string,children:EditorNode[]=[]):EditorNode=>({id,tag,attrs:{},children,from:0,to:0,contentFrom:0,contentTo:0,locked:false,hidden:false});
-let state:AppState={diskComparison:null,nativeConnected:false,sidebarWidth:260,inspectorWidth:320,sidebarOpen:true,inspectorOpen:true,problemsOpen:false,leftTab:'layers',rightTab:'design',zoom:75,viewport:1280,viewMode:'design',paletteOpen:false,recentCommands:[],selectedElementId:null,selectedElementIds:[],computedStyle:{},activeFile:'index.html',projectName:'Untitled project',coreConnected:false,revision:0,files:{},nodes:[demo('header','header',[demo('nav','nav')]),demo('main','main',[demo('section','section',[demo('heading','h1'),demo('button','button')])]),demo('footer','footer')],isDirty:false,lastSavedAt:null,notice:'Shell preview. No folder connected.',theme:'dark'};
+let state:AppState={diskComparison:null,nativeConnected:false,sidebarWidth:260,inspectorWidth:320,sidebarOpen:true,inspectorOpen:true,problemsOpen:false,leftTab:'layers',rightTab:'design',zoom:75,viewport:1280,viewMode:'design',paletteOpen:false,recentCommands:[],selectedElementId:null,selectedElementIds:[],computedStyle:{},activeFile:'index.html',projectName:'Untitled project',coreConnected:false,revision:0,files:{},nodes:[demo('header','header',[demo('nav','nav')]),demo('main','main',[demo('section','section',[demo('heading','h1'),demo('button','button')])]),demo('footer','footer')],isDirty:false,lastSavedAt:null,notice:'Shell preview. No folder connected.',theme:readTheme()};
 const listeners=new Set<()=>void>();
 export const getState=()=>state;
-export function patchState(patch:Partial<AppState>){if('selectedElementId' in patch&&!('selectedElementIds' in patch))patch.selectedElementIds=patch.selectedElementId?[patch.selectedElementId]:[];state={...state,...patch};listeners.forEach(fn=>fn());}
+export function patchState(patch:Partial<AppState>){if(patch.theme)rememberTheme(patch.theme);if('selectedElementId' in patch&&!('selectedElementIds' in patch))patch.selectedElementIds=patch.selectedElementId?[patch.selectedElementId]:[];state={...state,...patch};listeners.forEach(fn=>fn());}
 export const subscribe=(fn:()=>void)=>{listeners.add(fn);return()=>{listeners.delete(fn);};};
 export const useAppStore=()=>useSyncExternalStore(subscribe,getState,getState);
 let core:EditorProjectPort|null=null;
@@ -26,7 +27,7 @@ export function refreshProject(){
  if(!core)return;
  const files={...core.files};const activeFile=state.activeFile in files?state.activeFile:(Object.keys(files).find(f=>f.endsWith('.html'))??Object.keys(files)[0]??'');
  let nodes:EditorNode[]=[];
- try{if(activeFile.endsWith('.html'))nodes=core.tree(activeFile);}catch(error){patchState({notice:error instanceof Error?error.message:'Document structure unavailable.'});}
+ try{if(/\.html?$/i.test(activeFile))nodes=core.tree(activeFile);}catch(error){patchState({notice:error instanceof Error?error.message:'Document structure unavailable.'});}
  const ids=new Set<string>();const collect=(list:EditorNode[])=>list.forEach(n=>{ids.add(n.id);collect(n.children);});collect(nodes);
  patchState({files,nodes,activeFile,revision:core.revision,isDirty:isDirty(),selectedElementIds:state.selectedElementIds.filter(id=>ids.has(id)),selectedElementId:state.selectedElementId&&ids.has(state.selectedElementId)?state.selectedElementId:null});
 }

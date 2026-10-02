@@ -1,8 +1,12 @@
 import type { EditorNode } from './editorPort';
 export function renderPreview(source:string,nodes:EditorNode[],files:Readonly<Record<string,string>>,activeFile:string){
  const flat:EditorNode[]=[];const walk=(ns:EditorNode[])=>ns.forEach(n=>{flat.push(n);walk(n.children);});walk(nodes);
- let marked=source;for(const n of [...flat].sort((a,b)=>b.contentFrom-a.contentFrom)){const pos=n.contentFrom-(source[n.contentFrom-2]==='/'?2:1);marked=marked.slice(0,pos)+` data-editor-node="${n.id}"`+marked.slice(pos);}
+ const marker='data-somnia-render-'+crypto.randomUUID().replaceAll('-','');
+ let marked=source;for(const n of [...flat].sort((a,b)=>b.contentFrom-a.contentFrom)){const pos=n.contentFrom-(source[n.contentFrom-2]==='/'?2:1);marked=marked.slice(0,pos)+` ${marker}="${n.id}"`+marked.slice(pos);}
  const doc=new DOMParser().parseFromString(marked,'text/html');
+ // Never trust author-supplied selection identities. IDs are editor-generated in this render copy only.
+ for(const element of doc.querySelectorAll('[data-editor-node]'))element.removeAttribute('data-editor-node');
+ for(const element of doc.querySelectorAll(`[${marker}]`)){element.setAttribute('data-editor-node',element.getAttribute(marker)!);element.removeAttribute(marker);}
  const relative=(href:string)=>{if(/^(?:[a-z]+:|\/\/|\/)/i.test(href))return null;const parts=[...activeFile.split('/').slice(0,-1),...href.split(/[?#]/)[0].split('/')],out:string[]=[];for(const p of parts){if(p==='..')out.pop();else if(p&&p!=='.')out.push(p);}return out.join('/');};
  for(const el of doc.querySelectorAll('script,iframe,object,embed,base,meta[http-equiv],link:not([rel=stylesheet])'))el.remove();
  for(const el of doc.querySelectorAll('link[rel=stylesheet]')){const f=relative(el.getAttribute('href')||'');const css=f?files[f]:null;if(css!=null){const style=doc.createElement('style');style.textContent=css;el.replaceWith(style);}else el.remove();}

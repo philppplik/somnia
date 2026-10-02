@@ -24,6 +24,8 @@ ui('view.split','Split view','Mod+3',()=>patchState({viewMode:'split'}));
 ui('zoom.in','Zoom in','Mod+=',()=>patchState({zoom:Math.min(200,getState().zoom+10)}));
 ui('zoom.out','Zoom out','Mod+-',()=>patchState({zoom:Math.max(25,getState().zoom-10)}));
 ui('zoom.reset','Actual size','Mod+0',()=>patchState({zoom:100}));
+ui('theme.light','Use light theme',undefined,()=>patchState({theme:'light'}));
+ui('theme.dark','Use dark theme',undefined,()=>patchState({theme:'dark'}));
 ui('theme.toggle','Toggle light / dark theme',undefined,()=>patchState({theme:getState().theme==='dark'?'light':'dark'}));
 for(const direction of ['undo','redo'] as const)registerCommand({id:`edit.${direction}`,title:direction==='undo'?'Undo':'Redo',category:'Edit',shortcut:direction==='undo'?'Mod+Z':'Mod+Shift+Z',enabled:()=>getState().coreConnected,run:()=>applyHistory(direction)});
 for(const [id,title,shortcut] of [['project.open','Open folder','Mod+O'],['project.save','Save project','Mod+S'],['project.export','Export HTML',undefined]] as const)registerCommand({id,title,category:'Project',shortcut,allowInInput:id==='project.save',enabled:()=>false,run:()=>{}});
