@@ -1,0 +1,19 @@
+import { useEffect,useRef,useState } from 'react';
+import { Search,Terminal } from 'lucide-react';
+import { Dialog,DialogContent,DialogDescription,DialogTitle } from './ui/dialog';
+import { commandEnabled,executeCommand,formatShortcut,listCommands } from '../lib/commands';
+import { patchState,useAppStore } from '../store/appStore';
+function score(text:string,query:string){let position=0,total=0;for(const character of query){const at=text.indexOf(character,position);if(at<0)return -1;total+=at-position;position=at+1;}return total;}
+export function CommandPalette(){
+ const state=useAppStore();const [query,setQuery]=useState('');const [index,setIndex]=useState(0);const input=useRef<HTMLInputElement>(null);
+ useEffect(()=>{if(state.paletteOpen){setQuery('');setIndex(0);}},[state.paletteOpen]);
+ const normalized=query.toLowerCase().replace(/^>/,'').trim();
+ const results=listCommands().map(command=>({command,score:score(`${command.title} ${command.keywords?.join(' ')??''}`.toLowerCase(),normalized)})).filter(item=>item.score>=0).sort((a,b)=>normalized?a.score-b.score:((state.recentCommands.indexOf(a.command.id)+1||99)-(state.recentCommands.indexOf(b.command.id)+1||99)));
+ const selected=Math.min(index,Math.max(0,results.length-1));
+ useEffect(()=>{document.getElementById(`command-option-${selected}`)?.scrollIntoView({block:'nearest'});},[selected]);
+ const run=(id:string)=>{patchState({paletteOpen:false});void executeCommand(id);};
+ return <Dialog open={state.paletteOpen} onOpenChange={open=>patchState({paletteOpen:open})}><DialogContent initialFocus={input}><DialogTitle className="sr-only">Command palette</DialogTitle><DialogDescription className="sr-only">Search commands. Arrow keys navigate. Enter runs a command. Escape closes.</DialogDescription><div className="palette-search"><Search size={18}/><input ref={input} role="combobox" aria-label="Search commands" aria-autocomplete="list" aria-expanded="true" aria-controls="command-list" aria-activedescendant={results.length?`command-option-${selected}`:undefined} value={query} placeholder="Type a command..." onChange={event=>{setQuery(event.target.value);setIndex(0);}} onKeyDown={event=>{
+ if(event.key==='ArrowDown'||event.key==='ArrowUp'){event.preventDefault();setIndex(results.length?(selected+(event.key==='ArrowDown'?1:-1)+results.length)%results.length:0);}
+ if(event.key==='Enter'&&results[selected]){event.preventDefault();if(commandEnabled(results[selected].command))run(results[selected].command.id);}
+ }}/><kbd>Esc</kbd></div><div className="palette-heading">{query?'Results':state.recentCommands.length?'Recent and all commands':'All commands'}</div><div id="command-list" className="palette-results" role="listbox" aria-label="Commands">{results.map(({command},i)=><div key={command.id} id={`command-option-${i}`} role="option" aria-selected={i===selected} aria-disabled={!commandEnabled(command)} className={`palette-option ${i===selected?'selected':''}`} onMouseMove={()=>setIndex(i)} onClick={()=>commandEnabled(command)&&run(command.id)}><Terminal size={15}/><span className="grow">{command.title}<small>{command.category}{!commandEnabled(command)?' · Not connected':''}</small></span>{command.shortcut&&<kbd>{formatShortcut(command.shortcut)}</kbd>}</div>)}{!results.length&&<p className="empty">No matching commands.</p>}</div><div className="palette-footer">↑ ↓ to navigate <span>↵ run command</span></div></DialogContent></Dialog>;
+}

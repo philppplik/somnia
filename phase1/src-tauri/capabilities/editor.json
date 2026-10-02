@@ -1,0 +1,13 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "editor",
+  "description": "Trusted local editor only. No filesystem plugin, shell, HTTP, opener, remote URLs or child preview capabilities.",
+  "local": true,
+  "windows": ["main"],
+  "permissions": [
+    "core:event:allow-listen", "core:event:allow-unlisten",
+    "core:window:allow-close", "core:window:allow-minimize", "core:window:allow-toggle-maximize",
+    "allow-choose-project", "allow-list-files", "allow-read-file", "allow-stage-edit", "allow-save-file",
+    "allow-recovery-list", "allow-recovery-read", "allow-recovery-restore", "allow-recovery-discard", "allow-close-project"
+  ]
+}
