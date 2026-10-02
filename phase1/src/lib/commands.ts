@@ -51,3 +51,5 @@ export function attachKeyboardShortcuts(target:Window=window){
 }
 
 registerCommand({id:'project.export',title:'Export source ZIP',category:'Project',enabled:()=>getState().coreConnected,run:()=>{downloadProject(getState().files,getState().projectName);patchState({notice:'Source ZIP download requested. Local disk save state is unchanged.'});}});
+
+ui('settings.open','Settings','Mod+,',()=>patchState({settingsOpen:true}));
