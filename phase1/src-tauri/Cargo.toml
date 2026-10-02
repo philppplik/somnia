@@ -10,7 +10,7 @@ name = "somnia_desktop"
 crate-type = ["lib", "cdylib", "staticlib"]
 
 [[bin]]
-name = "somnia"
+name = "somnia-desktop"
 path = "src/main.rs"
 required-features = ["desktop"]
 
