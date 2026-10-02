@@ -489,7 +489,8 @@ impl Project {
                     return Err(AppError::Limit);
                 }
                 if let Some(p) = p.to_str() {
-                    files.push(p.strip_prefix("./").unwrap_or(p).replace('\\', "/"));
+                    let normalized = p.replace('\\', "/");
+                    files.push(normalized.strip_prefix("./").unwrap_or(&normalized).to_owned());
                 }
             }
         }
