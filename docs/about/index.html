@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Somnia - Design beyond code</title>
+<meta name="description" content="Somnia is a WYSIWYG web design studio in development: a real browser canvas, clean code you own, and an AI that sees your design. A Phase 0 prototype runs in your browser today.">
+<meta property="og:title" content="Somnia - Design beyond code">
+<meta property="og:description" content="A WYSIWYG web studio in development. Try the Phase 0 prototype in your browser.">
+<meta name="theme-color" content="#0a0a0f">
+<link rel="icon" href="favicon.svg">
+<script>document.documentElement.classList.add("js")</script>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="nav" id="nav">
+  <a class="brand" href="#top" aria-label="Somnia home"><img src="img/logo.svg" alt="" width="28" height="28"><span>Somnia</span></a>
+  <nav class="nav-links" aria-label="Main">
+    <a href="#principles">Principles</a>
+    <a href="#features">Features</a>
+    <a href="#status">Status</a>
+    <a href="#roadmap">Roadmap</a>
+  </nav>
+  <a class="btn btn-sm" href="/">Try the prototype</a>
+</header>
+
+<main id="top">
+  <section class="hero">
+    <div class="hero-bg" aria-hidden="true"><img src="img/astra-hero-bg-wide.svg" alt=""></div>
+    <div class="wrap hero-inner">
+      <p class="pill"><span class="dot"></span>Concept in development. Phase 0 prototype is live.</p>
+      <h1>Design beyond <em>code.</em></h1>
+      <p class="lead">Somnia is a web design studio that renders in a real browser, writes clean HTML and CSS you own, and has an AI that sees your canvas. We are building it in the open, one honest step at a time.</p>
+      <div class="actions">
+        <a class="btn btn-lg" href="/">Open the Phase 0 prototype</a>
+        <a class="btn btn-lg btn-ghost" href="#principles">Read the vision</a>
+      </div>
+      <p class="fine">Runs in Chrome, Edge, Firefox and Safari. No install, no account. The native desktop app does not exist yet.</p>
+    </div>
+    <div class="wrap shot-wrap">
+      <figure class="browser reveal">
+        <div class="browser-bar"><i></i><i></i><i></i><span>Somnia prototype - Lumen Studio / index.html</span></div>
+        <img src="img/shot-design.svg" alt="The Somnia prototype with the layers tree on the left, a website on the canvas, and the properties panel on the right" width="2880" height="1800" fetchpriority="high">
+      </figure>
+    </div>
+  </section>
+
+  <section class="section" id="principles">
+    <div class="wrap">
+      <p class="kicker">Why Somnia</p>
+      <h2 class="h2">Dreamweaver stopped moving. The cloud tools took your code hostage.</h2>
+      <p class="sub">There is a gap for a fast, beautiful visual editor that treats HTML and CSS as the real product. That is the whole idea.</p>
+      <div class="cols3">
+        <article class="card">
+          <span class="num">01</span>
+          <h3>Native and light</h3>
+          <p>A small desktop app on Tauri and Rust instead of a bundled Chromium. Design targets: under 10 MB installer, under 800 ms cold start, under 80 MB idle memory.</p>
+          <span class="tag tag-plan">Target, not measured yet</span>
+        </article>
+        <article class="card">
+          <span class="num">02</span>
+          <h3>A canvas that tells the truth</h3>
+          <p>The preview is a real browser rendering your real code. If it looks right in the editor, it looks right when you ship it. No fake design view.</p>
+          <span class="tag tag-live">Working in the prototype</span>
+        </article>
+        <article class="card">
+          <span class="num">03</span>
+          <h3>Your files, forever</h3>
+          <p>Plain HTML, CSS and JS on your disk. Export or deploy anywhere. No project format, no lock-in, no ransom for your own work.</p>
+          <span class="tag tag-live">Working in the prototype</span>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section class="section features" id="features">
+    <div class="wrap">
+      <p class="kicker">What it does</p>
+      <h2 class="h2">Built step by step. Each block is marked with where it stands.</h2>
+
+      <div class="feat reveal">
+        <div class="feat-text">
+          <span class="tag tag-live">Working in the prototype</span>
+          <h3>Code and design, in sync.</h3>
+          <p>Split view puts code on one side and the canvas on the other. Type in the code and the canvas updates. Drag, drop and style on the canvas and the file updates. One shared undo history covers both.</p>
+          <ul class="ticks"><li>CodeMirror 6 editor for HTML, CSS and JS</li><li>Click, drag, reorder, duplicate and edit text in place</li><li>Layers tree with drag and drop</li></ul>
+        </div>
+        <figure class="feat-img"><img src="img/shot-split.svg" alt="Split view with code on the right and the canvas on the left" loading="lazy" width="2880" height="1800"></figure>
+      </div>
+
+      <div class="feat flip reveal">
+        <div class="feat-text">
+          <span class="tag tag-live">Working in the prototype</span>
+          <h3>Responsive by design, not by accident.</h3>
+          <p>Switch to tablet or mobile and every change you make is written as a real media query. The desktop style stays untouched, and undo removes it again.</p>
+          <ul class="ticks"><li>Desktop 1280, tablet 820, mobile 390</li><li>Overrides saved as readable CSS in your file</li><li>Margin and padding shown right on the canvas</li></ul>
+        </div>
+        <figure class="feat-img"><img src="img/shot-mobile.svg" alt="Mobile breakpoint with a notice that edits apply to mobile only" loading="lazy" width="2880" height="1800"></figure>
+      </div>
+
+      <div class="feat reveal">
+        <div class="feat-text">
+          <span class="tag tag-plan">Planned</span>
+          <h3>An AI that sees your canvas.</h3>
+          <p>Oneiroi, the AI layer, will not only read code. It will see hierarchy, spacing and color. Select an element and ask for a change, then review every edit as a diff before it lands. Bring your own key or run local models.</p>
+          <ul class="ticks"><li>Diff review for every change, accept or reject per hunk</li><li>Accessibility audit with suggested fixes</li><li>Your keys, your data, a fully offline mode</li></ul>
+        </div>
+        <figure class="feat-img art"><img src="img/oneiroi-ai-brain.svg" alt="Concept art of a neural constellation" loading="lazy" width="1600" height="873"></figure>
+      </div>
+
+      <div class="feat flip reveal">
+        <div class="feat-text">
+          <span class="tag tag-plan">Planned</span>
+          <h3>Frameworks as first-class citizens.</h3>
+          <p>Vanilla HTML first, then Tailwind and Bootstrap with real component libraries, then React and Vue. The output stays idiomatic code you would be happy to commit.</p>
+          <ul class="ticks"><li>Semantic HTML, class-based CSS</li><li>No vendor runtime injected into your site</li><li>Deploy by ZIP, SFTP or GitHub Pages</li></ul>
+        </div>
+        <figure class="feat-img art"><img src="img/extensions-ecosystem.svg" alt="Concept art of an extension ecosystem around a core" loading="lazy" width="1600" height="873"></figure>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="targets">
+    <div class="wrap">
+      <p class="kicker">Performance budget</p>
+      <h2 class="h2">Numbers we hold ourselves to.</h2>
+      <p class="sub">These are targets from our performance budget. We will publish measurements when there is a native build to measure.</p>
+      <div class="stats">
+        <div><b>&lt; 10 MB</b><span>installer</span></div>
+        <div><b>&lt; 800 ms</b><span>cold start</span></div>
+        <div><b>&lt; 80 MB</b><span>idle memory</span></div>
+        <div><b>16 ms</b><span>frame budget while dragging</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section migrate">
+    <div class="wrap migrate-inner">
+      <figure class="migrate-img"><img src="img/compare-dreamweaver.svg" alt="An old desktop editor next to a modern dark editor" loading="lazy" width="1600" height="893"></figure>
+      <div>
+        <span class="tag tag-plan">Planned</span>
+        <h2 class="h2 sm">Coming from Dreamweaver?</h2>
+        <p class="sub left">You built hundreds of sites there and it worked. Then it stopped evolving. The plan is to open your existing projects, turn templates into modern components, and keep the split view you know, only faster.</p>
+        <p class="fine left">Today you can already open a folder of plain HTML files from disk in a Chromium browser and edit it in the prototype.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="status">
+    <div class="wrap">
+      <p class="kicker">Honest status</p>
+      <h2 class="h2">What exists today, and what does not.</h2>
+      <div class="status-grid">
+        <div class="status-col">
+          <h3><span class="tick ok"></span>Exists</h3>
+          <ul>
+            <li>Browser prototype with canvas, layers, properties, code and split view</li>
+            <li>In-place text editing, drag and drop, shared undo</li>
+            <li>Tablet and mobile overrides as real media queries</li>
+            <li>Multi-file projects, preview, ZIP export, command palette</li>
+            <li>Open a local folder and save back (Chromium only)</li>
+          </ul>
+        </div>
+        <div class="status-col">
+          <h3><span class="tick no"></span>Does not exist yet</h3>
+          <ul>
+            <li>The native desktop app and its installers</li>
+            <li>The AI layer (Oneiroi)</li>
+            <li>Tailwind, Bootstrap, React and Vue support</li>
+            <li>Extension SDK and marketplace</li>
+            <li>A price, a license key or a download button</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="roadmap">
+    <div class="wrap">
+      <p class="kicker">Roadmap</p>
+      <h2 class="h2">Twelve months from foundation to launch.</h2>
+      <ol class="road">
+        <li class="now"><b>Phase 0</b><span>Foundation</span><p>Open a folder, edit in code view, see it on the canvas, save. The browser prototype covers this and more.</p></li>
+        <li><b>Phase 1</b><span>Core WYSIWYG</span><p>Build a simple page visually. Closed alpha.</p></li>
+        <li><b>Phase 2</b><span>Frameworks and polish</span><p>Bootstrap and Tailwind, a competent code editor. Public beta.</p></li>
+        <li><b>Phase 3</b><span>Professional features</span><p>AI layer, accessibility audit, deploy panel, extensions.</p></li>
+        <li><b>Phase 4 and 5</b><span>Launch</span><p>Signing, installers, docs, release candidate, v1.0.</p></li>
+      </ol>
+    </div>
+  </section>
+
+  <section class="final">
+    <div class="final-bg" aria-hidden="true"><img src="img/per-aspera.svg" alt="" loading="lazy"></div>
+    <div class="wrap final-inner">
+      <p class="latin">Per aspera ad astra</p>
+      <h2>Through the rough, to the stars.</h2>
+      <p class="sub">Try what exists. It is rough in places, and it already works.</p>
+      <a class="btn btn-lg" href="/">Open the Phase 0 prototype</a>
+    </div>
+  </section>
+</main>
+
+<footer class="footer">
+  <div class="wrap foot">
+    <a class="brand" href="#top"><img src="img/logo.svg" alt="" width="24" height="24"><span>Somnia</span></a>
+    <p>Somnia is in development. Everything on this page describes plans unless it is marked as working in the prototype.</p>
+  </div>
+</footer>
+<script src="site.js"></script>
+</body>
+  </html>
