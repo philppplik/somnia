@@ -1,3 +1,4 @@
+import {zipWebFsOptions} from './lib/zipWorkingCopy';
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { EditorProject } from '@somnia/editor-core';
@@ -21,5 +22,5 @@ if(import.meta.hot)import.meta.hot.dispose(disconnect);
 createRoot(document.getElementById('root')!).render(<StrictMode><App/></StrictMode>);
 
 if(isTauri())void installDesktopAdapter().catch(error=>console.error(error));
-else if(webFsSupported())void installFileAdapter(createWebFsPort()).catch(error=>console.error(error));
-else registerCommand({id:'project.open',title:'Open folder',category:'Project',run:()=>patchState({notice:'Local folders need Chrome, Edge or Opera on HTTPS or localhost (File System Access API). This browser can only keep a working copy in memory. Use Export source ZIP to keep your work.'})});
+else if(webFsSupported()&&!location.search.includes('fallback=zip'))void installFileAdapter(createWebFsPort()).catch(error=>console.error(error));
+else void installFileAdapter(createWebFsPort({...zipWebFsOptions(),canReconnect:false})).catch(error=>console.error(error));
