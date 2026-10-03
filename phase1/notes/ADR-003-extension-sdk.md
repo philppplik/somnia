@@ -71,3 +71,7 @@ Saving to disk stays with the app's save pipeline (journal, revision check, veri
 ## Open questions for Philipp
 - Should extensions be allowed to add whole inspector or sidebar panels (needs a UI contract, round 2), or is "commands, snippets, themes" enough for the first release?
 - Distribution later: GitHub-hosted index, or only local installs?
+
+## Progress
+- Step 1 done: `src/lib/extensions/types.ts` (apiVersion 1 contract) and `manifest.ts` validator (unknown permissions, foreign command ids, non-color theme values, path escapes rejected), unit tests in `manifest.test.ts`.
+- Step 2 partly done: local registry (`registry.ts`, localStorage) and Settings > Extensions (paste manifest, install, remove; Playwright `extensions.spec.ts`). Contributions are validated and stored but not yet wired into the command palette, Insert menu or code themes.
