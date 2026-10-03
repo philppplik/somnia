@@ -26,3 +26,9 @@ html,body,#root{background:var(--shell-bg)}
 .layer-row{height:36px;border-radius:var(--radius-sm);margin:0 8px}.layer-row.selected:before{display:none}
 .inspector-row{min-height:40px}
 input,select,textarea{border-radius:var(--radius-sm)}
+/* Custom titlebar: the whole bar drags the window, controls sit at the right edge. */
+.app-titlebar{-webkit-user-select:none;user-select:none}
+.window-controls{display:flex;gap:4px;margin-left:8px}
+.window-controls button{width:40px;height:36px;border:0;border-radius:var(--radius-sm);background:transparent;color:var(--text-secondary);display:grid;place-items:center}
+.window-controls button:hover{background:var(--bg-hover);color:var(--text-primary)}
+.window-controls .window-close:hover{background:#e5484d;color:#fff}
