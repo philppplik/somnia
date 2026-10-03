@@ -27,3 +27,6 @@ The preview iframe now fills the panel directly. The gray canvas stage, dot grid
 
 ## Linked HTML stays in the preview
 `designFile` (appStore) is the HTML file the canvas, layers, inspector and structure commands work on. It follows `activeFile` while that is HTML; when a CSS/JS file is opened in the code pane it stays on the last HTML file (or the first one). Before, opening styles.css emptied the node tree and showed "Select an HTML file for design view", and in the old build the code pane stopped accepting clicks. Test: tests/linked-preview.spec.ts. Not reproduced on real Windows.
+
+## Selection sync preview -> code
+`SourceEditor` reacts to `selectedElementId`: when the selected node belongs to the file in the editor, its source range is selected, centered and the editor is focused (only if the code pane is visible). Works for clicks in the preview and in the layer tree. Test: tests/select-sync.spec.ts.
