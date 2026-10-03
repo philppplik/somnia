@@ -21,3 +21,6 @@ Unverified on real Windows: drag, snap layouts (Win11 hover on maximize), resize
 
 ## Single top bar
 Logo mask, menus (Project/Edit/View/Help), undo/redo, centered Visual/Split/Code toggle (aria labels unchanged), Commands, panel toggles, window controls. The separate command bar is gone. Project name moved to the status bar. Insert/Tools menus come once commands exist. Still open: Line/Col and language pill in the status bar.
+
+## Preview without canvas frame
+The preview iframe now fills the panel directly. The gray canvas stage, dot grid and padding are gone. The artboard label and the hint note were removed; the hint ("Double-click text to edit") and the breakpoint scope note ("Edits scoped to ≤ N px") live in the bottom row of the workspace, the zoom and viewport in the status bar.
