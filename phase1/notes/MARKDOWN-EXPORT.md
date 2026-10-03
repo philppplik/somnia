@@ -9,4 +9,6 @@ Command `project.export.md` ("Export active file as Markdown") downloads the act
 - Text is escaped for `\ * _ ` [ ]`. Link and image URLs have spaces and `)` percent-encoded.
 - Enabled only when a project is connected and the active file is .html/.htm.
 
-Tests: 9 core tests in `markdown.test.ts`. Not done: Markdown visual editor, .md import, DOCX (later via converter), a Playwright download test.
+
+
+Test: `tests/markdown-export.spec.ts` runs the palette command, checks the .md download name and converted heading.
