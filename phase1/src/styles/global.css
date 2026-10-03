@@ -28,3 +28,13 @@
 
 
 .diff-line{display:grid;grid-template-columns:40px 40px 20px minmax(0,1fr);font:12px/1.7 var(--mono);white-space:pre}.diff-line code{font:inherit;overflow-wrap:anywhere;white-space:pre-wrap}.diff-added{background:#22864b18}.diff-removed{background:#d5404020}.diff-added>span:nth-child(3){color:#167436}.diff-removed>span:nth-child(3){color:#a82e2e}:root[data-theme=dark] .diff-added>span:nth-child(3){color:#8addac}:root[data-theme=dark] .diff-removed>span:nth-child(3){color:#ffaaaa}
+[data-code-theme=github]{--syntax-tag:#116329;--syntax-keyword:#cf222e;--syntax-string:#0a3069;--syntax-number:#0550ae;}
+:root[data-theme=dark][data-code-theme=github]{--syntax-tag:#7ee787;--syntax-keyword:#ff7b72;--syntax-string:#a5d6ff;--syntax-number:#79c0ff;}
+:root[data-code-theme=solarized]{--syntax-tag:#268bd2;--syntax-keyword:#859900;--syntax-string:#2aa198;--syntax-number:#cb4b16;}
+:root[data-theme=dark][data-code-theme=solarized]{--syntax-tag:#4fb3ee;--syntax-keyword:#b5c825;--syntax-string:#4fd1c7;--syntax-number:#f07a3f;}
+:root[data-code-theme=monokai]{--syntax-tag:#a6226e;--syntax-keyword:#c4290d;--syntax-string:#8f7a00;--syntax-number:#6b4fd0;}
+:root[data-theme=dark][data-code-theme=monokai]{--syntax-tag:#f92672;--syntax-keyword:#66d9ef;--syntax-string:#e6db74;--syntax-number:#ae81ff;}
+:root[data-code-theme=dracula]{--syntax-tag:#a4469e;--syntax-keyword:#c2185b;--syntax-string:#2e7d32;--syntax-number:#6e56cf;}
+:root[data-theme=dark][data-code-theme=dracula]{--syntax-tag:#ff79c6;--syntax-keyword:#bd93f9;--syntax-string:#f1fa8c;--syntax-number:#ffb86c;}
+:root[data-code-theme=nord]{--syntax-tag:#2e6a8e;--syntax-keyword:#5e6aa8;--syntax-string:#4a7c59;--syntax-number:#a15a3a;}
+:root[data-theme=dark][data-code-theme=nord]{--syntax-tag:#88c0d0;--syntax-keyword:#81a1c1;--syntax-string:#a3be8c;--syntax-number:#d08770;}
