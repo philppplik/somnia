@@ -4,7 +4,7 @@ Branch: phase1-foundation. Source of truth for scope: STATUS.md and NEXT-BLOCK.m
 
 ## Open
 - Markdown (.md) support: first as source view and export, a visual editor later. DOCX later through a converter (Philipp accepted "later").
-- Canvas right-click context menu (web and native). Layer menu exists (PR #4).
+- Canvas right-click context menu: done (see CANVAS-CONTEXT-MENU.md). Insert/duplicate/delete actions and keyboard open still open.
 - Web to local bridge and GitHub connection.
 - Windows acceptance of Save/Recovery and GUI on alpha v3 (Philipp, running).
 
