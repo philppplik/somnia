@@ -1,7 +1,7 @@
 import {useEffect,useRef} from 'react';
 import type {EditorNode} from '../lib/editorPort';
 import {applyOperations,patchState,useAppStore} from '../store/appStore';
-import {moveLayer} from '../lib/structureCommands';
+import {moveLayer,duplicateLayer,deleteLayer} from '../lib/structureCommands';
 export interface CanvasMenuState{id:string;x:number;y:number}
 /** Right-click menu for the design canvas. Same actions as the layer menu, shared core transactions and undo. Fixed-position in the app document so it is never clipped or scaled by the iframe. */
 export function CanvasContextMenu({menu,node,onClose}:{menu:CanvasMenuState;node:EditorNode|undefined;onClose:()=>void}){
@@ -14,6 +14,8 @@ export function CanvasContextMenu({menu,node,onClose}:{menu:CanvasMenuState;node
   ['Select '+node.tag,()=>run(()=>patchState({selectedElementId:node.id,selectedElementIds:[node.id],rightTab:'design'})),false],
   ['Move up',()=>run(()=>moveLayer(node.id,-1)),!!node.locked],
   ['Move down',()=>run(()=>moveLayer(node.id,1)),!!node.locked],
+  ['Duplicate',()=>run(()=>duplicateLayer(node.id)),!!node.locked],
+  ['Delete',()=>run(()=>deleteLayer(node.id)),!!node.locked],
   [node.hidden?'Show layer':'Hide layer',()=>meta('hidden'),false],
   [node.locked?'Unlock layer':'Lock layer',()=>meta('locked'),false]];
  return <div ref={root} role="menu" aria-label="Canvas actions" className="menu-popup canvas-context-menu" style={{position:'fixed',left:menu.x,top:menu.y}}>{items.map(([label,fn,disabled])=><button key={label} role="menuitem" className="menu-item" style={{width:'100%',background:'none',border:0,textAlign:'left'}} disabled={disabled} onClick={fn}>{label}</button>)}</div>;
