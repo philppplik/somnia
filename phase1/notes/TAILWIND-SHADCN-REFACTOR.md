@@ -50,3 +50,7 @@ CommandPalette converted, pixel-identical in light and dark. Lesson: Tailwind te
 
 ## Step 5b status (Settings, DiskComparison, SourceDiff)
 Converted. `.dialog-popup` base rules moved into `@layer components` so utilities can override position, size and transform (use `transform-none`, not `translate-x-0`, because the base uses the transform property). Settings pixel-identical in light and dark. DiskComparison checked by eye on the test screenshot. Pitfall: `text-base` is the theme background color here, use `text-[16px]`.
+
+## Step 6 status (cleanup and regression fixes)
+Removed dead rules. Fixed two regressions from steps 3 and 5: bento overrides were dropped (layer rows 36px with radius and margin, 20px side padding in inspector sections, inspector rows 40px, search field margin), and a stray `.node-fields` prefix broke the problems panel rule. Inspector is pixel-identical to the step 2 baseline again. Layers rows are aligned slightly cleaner than before (leaf and chevron share a column).
+Remaining intentional CSS: tokens, base element rules, tabs, resize handle, selection overlays, canvas stage, CodeMirror host, diff line kinds.
