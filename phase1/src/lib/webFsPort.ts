@@ -1,7 +1,7 @@
 import type {FilePort,FileEvent,Read,Revision,Recovery} from './fileAdapter';
 /** Browser storage port over the File System Access API (ADR-002, option B). Same commands and payloads as the native contract. */
 type Journal={get(key:string):Promise<{content:string;clientRevision:number}|undefined>;put(key:string,value:{content:string;clientRevision:number}):Promise<void>;delete(key:string):Promise<void>;keys(prefix:string):Promise<string[]>};
-export interface WebFsOptions{pickDirectory?:()=>Promise<FileSystemDirectoryHandle|null>;journal?:Journal;maxFiles?:number;handles?:HandleStore}
+export interface WebFsOptions{pickDirectory?:()=>Promise<FileSystemDirectoryHandle|null>;journal?:Journal;maxFiles?:number;handles?:HandleStore;connectNotice?:string;canReconnect?:boolean}
 const SKIP=new Set(['node_modules','.git','dist','target']);
 const empty:Revision={exists:false,hash:null};
 export function webFsSupported(){return typeof window!=='undefined'&&'showDirectoryPicker' in window&&window.isSecureContext;}
@@ -80,8 +80,8 @@ export function createWebFsPort(options:WebFsOptions={}):FilePort{
   async close_project({projectId,keepRecovery}){const id=String(projectId);if(!keepRecovery)for(const k of await journal.keys(id+'\u0000'))await journal.delete(k);projects.delete(id);return null;}
  };
  return{
-  canReconnect:true,
-  connectNotice:'Folder connected in the browser. Press Ctrl+S to write to disk. Edits are journaled for recovery meanwhile.',
+  canReconnect:options.canReconnect??true,
+  connectNotice:options.connectNotice??'Folder connected in the browser. Press Ctrl+S to write to disk. Edits are journaled for recovery meanwhile.',
   invoke:async<T,>(command:string,args:Record<string,unknown>={})=>{const fn=commands[command];if(!fn)throw Error(`Unknown command ${command}`);return await fn(args) as T;},
   listen:async<T,>(name:string,handler:(e:{payload:T})=>void)=>{if(name!=='somnia://file-state')return()=>{};const fn=handler as unknown as (e:{payload:FileEvent})=>void;listeners.add(fn);return()=>{listeners.delete(fn);};}
  };
