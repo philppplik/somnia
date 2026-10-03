@@ -41,3 +41,6 @@ Titlebar, toolbar, status bar, WindowControls now use utilities. Added `ui/badge
 
 ## Step 3 status (panels)
 LayersPanel and Inspector converted to utilities, matching dead CSS removed. Layer names no longer truncate (the old truncation selector never matched). Inputs inside utilities need `!` because the global `input` rule is unlayered.
+
+## Step 4 status (canvas chrome)
+Canvas toolbar, device controls, zoom field, breadcrumbs and code pane header/note use utilities (pixel-identical in light 1440). Selection overlays (selection-box, resize/padding handles, text overlay, richtext toolbar) stay in CSS on purpose: JS sets their geometry and they use pseudo-elements and z-order that read better as CSS.
