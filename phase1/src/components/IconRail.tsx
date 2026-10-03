@@ -15,7 +15,7 @@ export function IconRail({side}:{side:'left'|'right'}){
   if(open&&active===id){patchState(side==='left'?{sidebarOpen:false}:{inspectorOpen:false});return;}
   patchState(side==='left'?{leftTab:id as AppState['leftTab'],sidebarOpen:true}:{rightTab:id as AppState['rightTab'],inspectorOpen:true});
  };
- return <div role="toolbar" aria-orientation="vertical" aria-label={side==='left'?'Sidebar panels':'Inspector panels'} className="flex w-11 shrink-0 flex-col items-center gap-1 pt-2">
+ return <div role="toolbar" aria-orientation="vertical" onKeyDown={e=>{const k=e.key;if(!["ArrowDown","ArrowUp","Home","End"].includes(k))return;const b=[...e.currentTarget.querySelectorAll<HTMLButtonElement>("button")];const i=b.indexOf(document.activeElement as HTMLButtonElement);if(i<0)return;e.preventDefault();b[k==="Home"?0:k==="End"?b.length-1:(i+(k==="ArrowDown"?1:-1)+b.length)%b.length].focus();}} aria-label={side==='left'?'Sidebar panels':'Inspector panels'} className="flex w-11 shrink-0 flex-col items-center gap-1 pt-2">
   <Button size="icon" aria-label={side==='left'?'Toggle sidebar':'Toggle inspector'} title={side==='left'?'Toggle sidebar (Ctrl+B)':'Toggle inspector (Ctrl+Alt+I)'} aria-pressed={open} onClick={()=>void executeCommand(side==='left'?'sidebar.toggle':'inspector.toggle')}>{side==='left'?<PanelLeft/>:<PanelRight/>}</Button>
   <span className="my-1 h-px w-6 bg-line"/>
   {items.map(({id,label,icon:Icon})=><Button key={id} size="icon" title={label} aria-label={`${label} panel`} aria-pressed={open&&active===id} className={cn(open&&active===id&&'bg-accent-soft text-accent')} onClick={()=>choose(id)}><Icon/></Button>)}
