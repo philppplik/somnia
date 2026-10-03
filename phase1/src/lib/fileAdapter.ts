@@ -13,6 +13,8 @@ export interface FilePort{
  shell?:{closeWindow():Promise<void>};
  /** Shown after a folder connects. Desktop autosaves in the native core, the web saves on Ctrl+S. */
  connectNotice?:string;
+ /** Web only: the port remembers the last folder handle and can ask the browser to re-grant access after a reload. */
+ canReconnect?:boolean;
 }
 export async function installFileAdapter(port:FilePort){
 
@@ -49,11 +51,11 @@ export async function installFileAdapter(port:FilePort){
   }
  };
  const close=async(keepRecovery:boolean)=>{await queue;if(projectId)await port.invoke('close_project',{projectId,keepRecovery});unsubscribe();disconnect();projectId=null;model=null;patchState({nativeConnected:false,diskComparison:null});};
- const open=async()=>{
+ const open=async(reconnect=false)=>{
   if(projectId&&getState().isDirty&&!window.confirm('Keep unsaved edits in recovery and open another folder?'))return;
   if(!projectId&&getState().isDirty&&!window.confirm('Replace the in-memory project? It cannot be recovered from disk.'))return;
   // Keep the current project alive until the picker and all candidate reads succeed.
-  const selected=await port.invoke<{projectId:string;name:string}|null>('choose_project');if(!selected)return;
+  const selected=await port.invoke<{projectId:string;name:string}|null>('choose_project',reconnect?{reconnect:true}:undefined);if(!selected)return;
   const files:Record<string,string>={},nextBaselines=new Map<string,Revision>();
   try{
    const paths=await port.invoke<string[]>('list_files',{projectId:selected.projectId});const editable=paths.filter(p=>/\.(html?|css|js|json|svg|txt|md)$/i.test(p));
@@ -72,7 +74,7 @@ export async function installFileAdapter(port:FilePort){
   if(recoveries.length)patchState({notice:`${recoveries.length} recovery snapshots available. Open Commands and choose Restore recovery. Nothing restored automatically.`});
  };
  const compare=async()=>{await queue;if(!projectId||!model)return;const path=getState().activeFile;const read=await port.invoke<Read>('read_file',{projectId,path});if(read.content===null)throw Error('The disk file is missing. This alpha cannot resolve disk deletion through merge.');const id=projectId;const openedModel=model;const reviewedEditor=model.files[path];patchState({diskComparison:{path,disk:read.content,editor:reviewedEditor,apply:async(content)=>{if(projectId!==id||model!==openedModel)throw Error('The project changed during comparison.');await queue;if(model!.files[path]!==reviewedEditor)throw Error('Editor changed after comparison opened. Reopen comparison before saving.');const revision=++counter;current.set(path,revision);const event=await port.invoke<FileEvent>('stage_edit',{projectId,path,content,clientRevision:revision});staged.set(path,{revision,content});model!.transact({origin:'internal',operations:[{type:'replaceSource',file:path,text:content}]});refreshProject();await handle(event);const savedEvent=await port.invoke<FileEvent>('save_file',{projectId,path,expectedRevision:read.revision});await handle(savedEvent);if(savedEvent.state!=='saved')throw Error(savedEvent.error||'Reviewed save was not accepted. Edits remain unsaved.');patchState({diskComparison:null});}}});};
- const cleanups=[registerCommand({id:'project.compare',title:'Compare active file with disk',category:'Project',enabled:()=>!!projectId,run:compare}),registerCommand({id:'project.open',title:'Open folder',category:'Project',shortcut:'Mod+O',run:open}),registerCommand({id:'project.save',title:'Save project',category:'Project',shortcut:'Mod+S',allowInInput:true,enabled:()=>!!projectId,run:save}),registerCommand({id:'project.close',title:'Close folder (keep recovery)',category:'Project',enabled:()=>!!projectId,run:()=>close(true)})];
+ const cleanups=[registerCommand({id:'project.compare',title:'Compare active file with disk',category:'Project',enabled:()=>!!projectId,run:compare}),registerCommand({id:'project.open',title:'Open folder',category:'Project',shortcut:'Mod+O',run:()=>open()}),...(port.canReconnect?[registerCommand({id:'project.reconnect',title:'Reconnect last folder',category:'Project',keywords:['reload','permission','folder'],run:()=>open(true)})]:[]),registerCommand({id:'project.save',title:'Save project',category:'Project',shortcut:'Mod+S',allowInInput:true,enabled:()=>!!projectId,run:save}),registerCommand({id:'project.close',title:'Close folder (keep recovery)',category:'Project',enabled:()=>!!projectId,run:()=>close(true)})];
  cleanups.push(await port.listen<FileEvent>('somnia://file-state',event=>{void handle(event.payload).catch(fail);}));
  if(port.shell)cleanups.push(await port.listen<string>('somnia://menu',event=>{void executeNativeMenuCommand(event.payload);}));
  if(port.shell)cleanups.push(await port.listen('somnia://close-blocked',()=>{void(async()=>{if(window.confirm('Save edits and close Somnia? Cancel keeps the editor open.')){await save();if(getState().isDirty)throw Error('Some edits are still unsaved. Close was cancelled.');await close(false);await port.shell?.closeWindow();}})().catch(fail);}));
