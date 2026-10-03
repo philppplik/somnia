@@ -9,5 +9,5 @@ export const buttonVariants=cva(
   size:{normal:'h-9 px-3.5',icon:'size-9 p-0',compact:'h-7 px-2 text-[11px]',tiny:'h-6 px-1 text-[10px]',row:'h-7 w-6 p-0 [&_svg]:size-3'}},
   defaultVariants:{variant:'ghost',size:'normal'}});
 export function Button({className,variant,size,...props}:Primitive.Props&VariantProps<typeof buttonVariants>){
- return <Primitive data-slot="button" className={cn(buttonVariants({variant,size}),className as string)} {...props}/>;
+ return <Primitive data-slot="button" title={(props as {title?:string})['title']??(props as Record<string,string|undefined>)['aria-label']} className={cn(buttonVariants({variant,size}),className as string)} {...props}/>;
 }

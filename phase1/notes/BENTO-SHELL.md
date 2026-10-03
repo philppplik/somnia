@@ -50,3 +50,9 @@ CodeMirror 6 with `@codemirror/autocomplete` (HTML tags and attributes, CSS prop
 
 ## Insert and Tools menus
 Top bar menus are Project, Edit, View, Insert, Tools, Help. Insert lists the HTML elements from the library (inserted into the selected container, same transaction and undo as the library panel). Tools holds Settings, Command palette, Toggle problems and Toggle theme. Test: tests/insert-menu.spec.ts.
+
+## Flat top bar
+The top bar runs edge to edge (no gap to the top, left and right window edges), is 44 px high, has no card background and only a hairline bottom border. Window drag region and controls unchanged.
+
+## Rails toggles, tooltips, shell color
+Sidebar and inspector toggles moved from the top bar to the top of their rails. Every Button gets `title` from its `aria-label` when none is set, so icon buttons show hover tooltips. Shell background token `--shell-bg` is #f8f9fb in light (was #e4e5ec) and #0a0b0e in dark (cool-tinted counterpart of the old #08080a).
