@@ -26,5 +26,5 @@ export function dirFromZip(bytes:Uint8Array,name:string):MemDir{
 export function pickZip():Promise<File|null>{return new Promise(resolve=>{const input=document.createElement('input');input.type='file';input.accept='.zip,application/zip';input.onchange=()=>resolve(input.files?.[0]??null);input.oncancel=()=>resolve(null);input.click();});}
 export function zipWebFsOptions():WebFsOptions{
  return{pickDirectory:async()=>{const file=await pickZip();if(!file)return null;return dirFromZip(new Uint8Array(await file.arrayBuffer()),file.name.replace(/\.zip$/i,'')||'project') as unknown as FileSystemDirectoryHandle;},
-  handles:{get:async()=>undefined,put:async()=>{}},connectNotice:'Working copy in this browser tab (ZIP import). Ctrl+S saves into the tab only. Use Export source ZIP to keep your changes.'} as WebFsOptions;
+  handles:{get:async()=>undefined,put:async()=>{}},volatile:true,connectNotice:'Working copy in this browser tab (ZIP import). Ctrl+S saves into the tab only. Use Export source ZIP to keep your changes.'} as WebFsOptions;
 }
