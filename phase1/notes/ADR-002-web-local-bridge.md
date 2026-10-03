@@ -81,3 +81,6 @@ Reuse the native contract (NATIVE-CONTRACT.md) so UI, save states and the confli
 5. Docs and a web acceptance checklist for Philipp (Chrome on Windows).
 
 No deploy is part of this. The web build stays a local/CI artifact until Philipp approves hosting.
+
+## Progress
+- Step 1 done: `phase1/src/lib/fileAdapter.ts` holds the save/recovery/conflict adapter behind a `FilePort` (invoke, listen, optional desktop shell). `desktopAdapter.ts` is now a thin Tauri port. Logic unchanged, 30 Playwright tests pass (desktop IPC tests included). Native Windows build not re-run locally, CI will.
