@@ -14,10 +14,10 @@ html,body,#root{background:var(--shell-bg)}
 .artboard,.design-iframe{border-radius:var(--r-sm)}
 .tabs-list{padding:0 12px}.tabs-trigger{padding:0 14px}
 .menu-popup,.dialog-popup{border-radius:var(--r-md)}
-.search-field{border-radius:var(--r-sm);margin:16px}
-.selection-head,.node-fields,.section-content,.panel-subtitle{padding-left:20px;padding-right:20px}
-.layer-row{height:36px;border-radius:var(--r-sm);margin:0 8px}.layer-row.selected:before{display:none}
-.inspector-row{min-height:40px}
+
+.selection-head,.node-fields,.section-content,
+
+
 input,select,textarea{border-radius:var(--r-sm)}
 /* Custom titlebar: the whole bar drags the window, controls sit at the right edge. */
 
