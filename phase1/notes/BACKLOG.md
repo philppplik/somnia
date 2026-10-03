@@ -5,7 +5,7 @@ Branch: phase1-foundation. Source of truth for scope: STATUS.md and NEXT-BLOCK.m
 ## Open
 - Markdown (.md) support: first as source view and export, a visual editor later. DOCX later through a converter (Philipp accepted "later").
 - Canvas right-click context menu: done (see CANVAS-CONTEXT-MENU.md). Duplicate and delete done in canvas and layer menus; Insert and canvas keyboard open still open.
-- Web to local bridge and GitHub connection: options in ADR-002-web-local-bridge.md, waiting for Philipp's decision.
+- Web to local bridge and GitHub connection: Philipp chose option B (browser File System Access API). Plan in ADR-002-web-local-bridge.md; GitHub connection later.
 - Windows acceptance of Save/Recovery and GUI on alpha v3 (Philipp, running).
 
 ## Closed
