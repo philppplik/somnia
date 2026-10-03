@@ -1,8 +1,8 @@
 import {tags} from '@lezer/highlight';
-import {useEffect,useRef} from 'react';
+import {useEffect,useRef,useState} from 'react';
 import {EditorState,Compartment} from '@codemirror/state';
 import {EditorView,keymap,lineNumbers,highlightActiveLine,drawSelection} from '@codemirror/view';
-import {defaultKeymap,indentWithTab} from '@codemirror/commands';
+import {defaultKeymap,indentWithTab,undo,redo,selectAll} from '@codemirror/commands';
 import {syntaxHighlighting,HighlightStyle} from '@codemirror/language';
 import {autocompletion,closeBrackets,closeBracketsKeymap,completionKeymap} from '@codemirror/autocomplete';
 import {search,searchKeymap,highlightSelectionMatches} from '@codemirror/search';
@@ -24,5 +24,15 @@ export function SourceEditor({source,file,disabled}:{source:string;file:string;d
   if(!hit)return;const len=v.state.doc.length;const from=Math.min(hit.from,len),to=Math.min(hit.to,len);
   v.dispatch({selection:{anchor:from,head:to},effects:EditorView.scrollIntoView(from,{y:'center'})});
   if(host.current&&host.current.offsetParent!==null)v.focus();},[selectedId,file]);
- return <div className="codemirror-host" ref={host}/>;
+ const [menu,setMenu]=useState<{x:number;y:number}|null>(null);const menuRef=useRef<HTMLDivElement>(null);
+ useEffect(()=>{if(!menu)return;menuRef.current?.querySelector<HTMLButtonElement>('button:not(:disabled)')?.focus();const close=()=>setMenu(null);const key=(e:KeyboardEvent)=>{if(e.key==='Escape'){close();view.current?.focus();}};const down=(e:PointerEvent)=>{if(!menuRef.current?.contains(e.target as Node))close();};window.addEventListener('keydown',key);window.addEventListener('pointerdown',down);return()=>{window.removeEventListener('keydown',key);window.removeEventListener('pointerdown',down);};},[menu]);
+ const act=(fn:(v:EditorView)=>void|Promise<void>)=>async()=>{const v=view.current;setMenu(null);if(!v)return;try{await fn(v);}catch{patchState({notice:'The browser blocked clipboard access. Use the keyboard shortcut instead.'});}v.focus();};
+ const sel=()=>{const v=view.current;return !!v&&!v.state.selection.main.empty;};
+ const items:Array<[string,string,()=>void,boolean]>=[
+  ['Undo','Ctrl+Z',act(v=>{undo(v);}),disabled],['Redo','Ctrl+Y',act(v=>{redo(v);}),disabled],
+  ['Cut','Ctrl+X',act(async v=>{const r=v.state.selection.main;await navigator.clipboard.writeText(v.state.sliceDoc(r.from,r.to));v.dispatch({changes:{from:r.from,to:r.to},selection:{anchor:r.from}});}),disabled||!sel()],
+  ['Copy','Ctrl+C',act(async v=>{const r=v.state.selection.main;await navigator.clipboard.writeText(v.state.sliceDoc(r.from,r.to));}),!sel()],
+  ['Paste','Ctrl+V',act(async v=>{const t=await navigator.clipboard.readText();v.dispatch(v.state.replaceSelection(t));}),disabled],
+  ['Select all','Ctrl+A',act(v=>{selectAll(v);}),false]];
+ return <><div className="codemirror-host" ref={host} onContextMenu={e=>{e.preventDefault();setMenu({x:Math.min(e.clientX,window.innerWidth-190),y:Math.min(e.clientY,window.innerHeight-230)});}}/>{menu&&<div ref={menuRef} role="menu" aria-label="Code editor actions" className="menu-popup" style={{position:'fixed',left:menu.x,top:menu.y,minWidth:180}}>{items.map(([label,hint,fn,off])=><button key={label} role="menuitem" className="menu-item flex justify-between gap-6" style={{width:'100%',background:'none',border:0,textAlign:'left'}} disabled={off} onClick={fn}><span>{label}</span><kbd className="text-ink-2">{hint}</kbd></button>)}</div>}</>;
 }
