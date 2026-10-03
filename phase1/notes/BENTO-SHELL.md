@@ -15,3 +15,6 @@ Custom window titlebar replacing the native Windows one (separate PR).
 ## Custom titlebar
 Native Windows titlebar removed (`decorations: false` in tauri.conf.json). The app titlebar card is the drag region (`data-tauri-drag-region` on the bar and its non-interactive children); minimize, maximize/restore and close buttons live in `WindowControls.tsx` and render only inside Tauri. Close uses the window close request, so existing unsaved-changes handling still runs. Capability `core:window:allow-start-dragging` added.
 Unverified on real Windows: drag, snap layouts (Win11 hover on maximize), resize from borders on a frameless window. Needs Philipp's test or a GUI smoke run. If resize edges misbehave, set `"resizable": true` is already default; a fallback is `decorations: true` plus overlay titlebar.
+
+## Icon rails (Philipp mockup)
+`src/components/IconRail.tsx`: narrow rails left (Layers/Assets/Components) and right (Design/Prototype/Code), always visible. Click opens the panel on that tab; click on the active icon collapses it. State stays in appStore (sidebarOpen, inspectorOpen, leftTab, rightTab). Still open: top bar with centered Splitview/Visual/Code toggle, status bar with Line/Col and language pill.
