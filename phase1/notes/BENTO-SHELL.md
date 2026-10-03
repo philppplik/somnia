@@ -44,3 +44,6 @@ CodeMirror reports cursor position into appStore (cursorLine, cursorCol); the st
 
 ## Shortcuts (v7)
 Existing: Ctrl+S save, Ctrl+Z / Ctrl+Shift+Z / Ctrl+Y undo/redo, Ctrl+K palette, Ctrl+O open, Ctrl+B / Ctrl+J / Ctrl+Alt+I panels, Ctrl+1..3 view modes, Ctrl +/-/0 zoom. New: Ctrl+D duplicate selected element, Delete removes it, Ctrl+W closes the tab, Ctrl+Alt+Left/Right switch tabs. Key presses inside the preview iframe are forwarded to the app, so shortcuts also work right after clicking in the preview. Test: tests/shortcuts.spec.ts.
+
+## Code editor assistance (v7)
+CodeMirror 6 with `@codemirror/autocomplete` (HTML tags and attributes, CSS properties and values, JS keywords from the language packages), auto-closing brackets, `@codemirror/search` (Ctrl+F find, selection match highlighting). Popup styled with app tokens. Test: tests/autocomplete.spec.ts. No language server, so no semantic suggestions or lint yet (Problems panel stays empty).
