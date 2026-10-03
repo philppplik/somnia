@@ -5,6 +5,7 @@ test('ZIP working copy opens when folder access is unavailable',async({page})=>{
  const zip=Buffer.from(zipSync({'index.html':strToU8('<!doctype html><html><body><h1>From zip</h1></body></html>')}));
  const chooser=page.waitForEvent('filechooser');await page.keyboard.press('Control+o');
  await (await chooser).setFiles({name:'site.zip',mimeType:'application/zip',buffer:zip});
- await expect(page.getByText(/Working copy in this browser tab/)).toBeVisible();
+ await expect(page.getByText(/Working copy in this browser tab/)).toBeVisible();await expect(page.locator('[data-storage]')).toHaveAttribute('data-storage','tab');
  await expect(page.frameLocator('iframe[title="Sandboxed design preview"]').locator('h1')).toHaveText('From zip');
 });
+test('status bar shows where the project is stored',async({page})=>{await page.goto('/');await expect(page.locator('[data-storage]')).toHaveAttribute('data-storage','memory');await expect(page.getByText('Memory only')).toBeVisible();});

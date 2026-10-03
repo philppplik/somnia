@@ -13,6 +13,8 @@ export interface FilePort{
  shell?:{closeWindow():Promise<void>};
  /** Shown after a folder connects. Desktop autosaves in the native core, the web saves on Ctrl+S. */
  connectNotice?:string;
+ /** True when saving never reaches disk (ZIP working copy). The status bar then shows it as not on disk. */
+ volatile?:boolean;
  /** Web only: the port remembers the last folder handle and can ask the browser to re-grant access after a reload. */
  canReconnect?:boolean;
 }
@@ -50,7 +52,7 @@ export async function installFileAdapter(port:FilePort){
    if(event.clientRevision!==snapshot.revision)throw Error(`Save revision changed for ${path}. Review unsaved edits.`);
   }
  };
- const close=async(keepRecovery:boolean)=>{await queue;if(projectId)await port.invoke('close_project',{projectId,keepRecovery});unsubscribe();disconnect();projectId=null;model=null;patchState({nativeConnected:false,diskComparison:null});};
+ const close=async(keepRecovery:boolean)=>{await queue;if(projectId)await port.invoke('close_project',{projectId,keepRecovery});unsubscribe();disconnect();projectId=null;model=null;patchState({nativeConnected:false,storage:'memory',diskComparison:null});};
  const open=async(reconnect=false)=>{
   if(projectId&&getState().isDirty&&!window.confirm('Keep unsaved edits in recovery and open another folder?'))return;
   if(!projectId&&getState().isDirty&&!window.confirm('Replace the in-memory project? It cannot be recovered from disk.'))return;
@@ -68,7 +70,7 @@ export async function installFileAdapter(port:FilePort){
   projectId=selected.projectId;counter=0;baselines=nextBaselines;current=new Map();staged=new Map();saved=new Map(Object.entries(files));
   model=new EditorProject(files);disconnect=connectEditorProject(model,{name:selected.name,alreadySaved:true});
   unsubscribe=model.subscribe('internal',tx=>{const changes:Record<string,string>={};for(const path of tx.changedFiles)if(model&&path in model.files)changes[path]=model.files[path];else patchState({notice:`${path} removed from model. This alpha does not delete disk files; review the retained file manually.`});enqueueStage(changes);});
-  patchState({nativeConnected:true,notice:port.connectNotice??'Folder connected. Native autosave after 1s idle / 5s continuous edits.'});
+  patchState({nativeConnected:true,storage:port.volatile?'tab':'disk',notice:port.connectNotice??'Folder connected. Native autosave after 1s idle / 5s continuous edits.'});
   const recoveries=await port.invoke<Recovery[]>('recovery_list',{projectId});for(const recovery of recoveries){registerCommand({id:`recovery.restore.${recovery.path}`,title:`Restore recovery: ${recovery.path}`,category:'Project',enabled:()=>!!projectId,run:async()=>{if(!window.confirm(`Restore recovery for ${recovery.path}? The recovered file enters native autosave immediately. Conflicting disk changes stop saving.`))return;const r=await port.invoke<Recovery>('recovery_read',{projectId,path:recovery.path});if(!(r.path in model!.files))throw Error('Recovery path is not in the opened model. Use a project containing this file.');const revision=++counter;const event=await port.invoke<FileEvent>('recovery_restore',{projectId,path:r.path,clientRevision:revision});current.set(r.path,revision);staged.set(r.path,{revision,content:r.content});model!.transact({origin:'internal',operations:[{type:'replaceSource',file:r.path,text:r.content}]});refreshProject();await handle(event);patchState({notice:`Restored ${r.path} from recovery. Native autosave is active; conflicting disk changes are held.`});}});}
   for(const recovery of recoveries)registerCommand({id:`recovery.discard.${recovery.path}`,title:`Discard recovery: ${recovery.path}`,category:'Project',enabled:()=>!!projectId,run:async()=>{if(window.confirm(`Permanently discard the recovery snapshot for ${recovery.path}?`))await port.invoke('recovery_discard',{projectId,path:recovery.path});}});
   if(recoveries.length)patchState({notice:`${recoveries.length} recovery snapshots available. Open Commands and choose Restore recovery. Nothing restored automatically.`});

@@ -90,3 +90,4 @@ No deploy is part of this. The web build stays a local/CI artifact until Philipp
 
 ### Step 4: Firefox/Safari ZIP working copy (done)
 Without the File System Access API, **Open folder** asks for a ZIP. `zipWorkingCopy.ts` unpacks it into an in-memory directory handle that the same web port uses (journal, conflict check, verified write). Text files only, 20 MB cap, unsafe paths rejected. Ctrl+S writes into the tab, not to disk; the connect notice says so and **Export source ZIP** keeps the work. Force it in Chrome with `?fallback=zip`. Tests: `zipWorkingCopy.test.ts`, `tests/zip-fallback.spec.ts`. Open: web acceptance checklist for Chrome on Windows.
+- Status bar shows where the project lives: green dot and "On disk" for a connected folder, amber "Tab copy" for the ZIP working copy, amber "Memory only" before any folder is connected (`data-storage`, tested in zip-fallback.spec). Closes the ADR-002 connection-indicator item.
