@@ -41,3 +41,6 @@ CodeMirror reports cursor position into appStore (cursorLine, cursorCol); the st
 - File tabs (`FileTabs.tsx`) replace the file dropdown in the code pane; middle click or x closes, right click offers Close tab / Close other tabs / Copy path. Left sidebar has a Files tab (`FilesPanel.tsx`, project tree) plus a rail icon. Open tabs live in appStore (`openFiles`, `openFileTab`, `closeFileTab`).
 - Viewport switch (Desktop/Tablet/Mobile) and zoom moved into the status bar on the right. The old toolbar row above the preview and the info row below it are gone.
 - Code theme is only in Settings now. Selection id, breakpoint note, preview file and history note live in the Problems panel (details list), not in the main UI.
+
+## Shortcuts (v7)
+Existing: Ctrl+S save, Ctrl+Z / Ctrl+Shift+Z / Ctrl+Y undo/redo, Ctrl+K palette, Ctrl+O open, Ctrl+B / Ctrl+J / Ctrl+Alt+I panels, Ctrl+1..3 view modes, Ctrl +/-/0 zoom. New: Ctrl+D duplicate selected element, Delete removes it, Ctrl+W closes the tab, Ctrl+Alt+Left/Right switch tabs. Key presses inside the preview iframe are forwarded to the app, so shortcuts also work right after clicking in the preview. Test: tests/shortcuts.spec.ts.

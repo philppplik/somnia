@@ -32,6 +32,13 @@ for(const [id,title,shortcut] of [['project.open','Open folder','Mod+O'],['proje
 registerCommand({id:'help.shortcuts',title:'Keyboard shortcuts',category:'Help',keywords:['help','keyboard'],run:()=>patchState({notice:'Ctrl/Cmd+K commands · B sidebar · J problems · 1/2/3 views · Z undo · Shift+Z redo. Resize panels with arrow keys.'})});
 export const isMac=()=>/Mac|iPhone|iPad/.test(navigator.platform);
 export const formatShortcut=(shortcut:string)=>shortcut.split('+').map(part=>({Mod:isMac()?'⌘':'Ctrl',Alt:isMac()?'⌥':'Alt',Shift:isMac()?'⇧':'Shift'}[part]??part)).join(isMac()?'':' + ');
+const sel=()=>getState().coreConnected&&!!getState().selectedElementId;
+registerCommand({id:'edit.duplicate',title:'Duplicate selected element',category:'Edit',shortcut:'Mod+D',enabled:sel,run:async()=>{(await import('./structureCommands')).duplicateLayer(getState().selectedElementId!);}});
+registerCommand({id:'edit.delete',title:'Delete selected element',category:'Edit',shortcut:'Delete',enabled:sel,run:async()=>{(await import('./structureCommands')).deleteLayer(getState().selectedElementId!);}});
+registerCommand({id:'tab.close',title:'Close current tab',category:'View',shortcut:'Mod+W',enabled:()=>getState().openFiles.length>1,run:async()=>{(await import('../store/appStore')).closeFileTab(getState().activeFile);}});
+const cycleTab=async(step:number)=>{const {openFiles,activeFile}=getState();if(openFiles.length<2)return;(await import('../store/appStore')).openFileTab(openFiles[(openFiles.indexOf(activeFile)+step+openFiles.length)%openFiles.length]);};
+registerCommand({id:'tab.next',title:'Next tab',category:'View',shortcut:'Mod+Alt+ArrowRight',run:()=>cycleTab(1)});
+registerCommand({id:'tab.prev',title:'Previous tab',category:'View',shortcut:'Mod+Alt+ArrowLeft',run:()=>cycleTab(-1)});
 export function matchesShortcut(event:KeyboardEvent,shortcut:string){
  const parts=shortcut.toLowerCase().split('+');const key=parts.pop();const modifier=isMac()?event.metaKey:event.ctrlKey;
  return event.key.toLowerCase()===key&&modifier===parts.includes('mod')&&event.altKey===parts.includes('alt')&&event.shiftKey===parts.includes('shift')&&(isMac()?!event.ctrlKey:!event.metaKey);
