@@ -38,3 +38,6 @@ None blocking. If he wants stock shadcn look instead of the Somnia bento look, t
 
 ## Step 2 status (app shell)
 Titlebar, toolbar, status bar, WindowControls now use utilities. Added `ui/badge` and `ui/separator`. Dead shell CSS removed. `data-tauri-drag-region` and the `.save-state` marker are kept. `titlebar.spec` selects `banner` role.
+
+## Step 3 status (panels)
+LayersPanel and Inspector converted to utilities, matching dead CSS removed. Layer names no longer truncate (the old truncation selector never matched). Inputs inside utilities need `!` because the global `input` rule is unlayered.
