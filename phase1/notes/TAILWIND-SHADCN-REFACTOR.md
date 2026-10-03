@@ -35,3 +35,6 @@ None blocking. If he wants stock shadcn look instead of the Somnia bento look, t
 ## Progress
 - PR 1 (foundation): clsx, tailwind-merge, cva, `cn()`, `@theme inline` bridge in global.css, Button as cva + utilities (sizes normal/icon/compact/tiny/row), old `.button*` CSS removed. Layer-row buttons are now 24px wide as originally intended, so tree names truncate less.
 - Test note: tests/desktop.spec.ts is flaky (Control+K / Control+O focus race). It also fails intermittently on the unchanged baseline; 3/3 pass on re-run.
+
+## Step 2 status (app shell)
+Titlebar, toolbar, status bar, WindowControls now use utilities. Added `ui/badge` and `ui/separator`. Dead shell CSS removed. `data-tauri-drag-region` and the `.save-state` marker are kept. `titlebar.spec` selects `banner` role.
