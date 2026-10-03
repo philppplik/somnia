@@ -47,3 +47,6 @@ Existing: Ctrl+S save, Ctrl+Z / Ctrl+Shift+Z / Ctrl+Y undo/redo, Ctrl+K palette,
 
 ## Code editor assistance (v7)
 CodeMirror 6 with `@codemirror/autocomplete` (HTML tags and attributes, CSS properties and values, JS keywords from the language packages), auto-closing brackets, `@codemirror/search` (Ctrl+F find, selection match highlighting). Popup styled with app tokens. Test: tests/autocomplete.spec.ts. No language server, so no semantic suggestions or lint yet (Problems panel stays empty).
+
+## Insert and Tools menus
+Top bar menus are Project, Edit, View, Insert, Tools, Help. Insert lists the HTML elements from the library (inserted into the selected container, same transaction and undo as the library panel). Tools holds Settings, Command palette, Toggle problems and Toggle theme. Test: tests/insert-menu.spec.ts.
