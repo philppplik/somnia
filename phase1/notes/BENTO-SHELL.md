@@ -62,3 +62,4 @@ Gap and radius tokens halved (Philipp): `--gap` 12px to 6px, `--r-lg` 22 to 11, 
 
 ## Accessibility round 1
 Global `:focus-visible` ring for buttons, tabs, menu items and inputs; `tests/a11y.spec.ts` fails if any visible control lacks an accessible name or keyboard focus has no outline. Still open: arrow-key navigation inside the icon rails and menus.
+- Icon rails: Arrow Up/Down, Home, End move focus (toolbar pattern), `tests/rail-keys.spec.ts`.
