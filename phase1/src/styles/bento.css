@@ -13,7 +13,8 @@ html,body,#root{background:var(--shell-bg)}
 .canvas-stage{margin:12px;border-radius:var(--r-md);background-color:var(--canvas-bg);padding:32px}
 .artboard,.design-iframe{border-radius:var(--r-sm)}
 .tabs-list{padding:0 12px}.tabs-trigger{padding:0 14px}
-.menu-popup,.dialog-popup{border-radius:var(--r-md)}
+.menu-popup{border-radius:var(--r-md)}
+@layer components{.dialog-popup{border-radius:var(--r-md)}}
 
 .selection-head,.node-fields,.section-content,
 

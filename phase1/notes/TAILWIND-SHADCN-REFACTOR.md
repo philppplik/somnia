@@ -47,3 +47,6 @@ Canvas toolbar, device controls, zoom field, breadcrumbs and code pane header/no
 
 ## Step 5a status (command palette)
 CommandPalette converted, pixel-identical in light and dark. Lesson: Tailwind text-* sets line-height, so rows that relied on the body 1.45 need `leading-[1.45]`; global `input` rules are unlayered, so overrides on inputs need `!`. Settings, DiskComparison and SourceDiff follow in 5b.
+
+## Step 5b status (Settings, DiskComparison, SourceDiff)
+Converted. `.dialog-popup` base rules moved into `@layer components` so utilities can override position, size and transform (use `transform-none`, not `translate-x-0`, because the base uses the transform property). Settings pixel-identical in light and dark. DiskComparison checked by eye on the test screenshot. Pitfall: `text-base` is the theme background color here, use `text-[16px]`.
