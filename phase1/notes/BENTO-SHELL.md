@@ -30,3 +30,6 @@ The preview iframe now fills the panel directly. The gray canvas stage, dot grid
 
 ## Selection sync preview -> code
 `SourceEditor` reacts to `selectedElementId`: when the selected node belongs to the file in the editor, its source range is selected, centered and the editor is focused (only if the code pane is visible). Works for clicks in the preview and in the layer tree. Test: tests/select-sync.spec.ts.
+
+## Code color themes
+Eight syntax themes (Classic, Ocean, Forest, GitHub, Solarized, Monokai, Dracula, Nord), each with a light and a dark variant as CSS tokens in global.css. Pick them in the code pane header or in Settings; persisted in localStorage. Only syntax colors change, the editor background follows the app theme. Editor is CodeMirror 6 (not Monaco). Test: tests/code-theme.spec.ts.
