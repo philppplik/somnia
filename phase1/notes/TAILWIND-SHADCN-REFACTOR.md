@@ -44,3 +44,6 @@ LayersPanel and Inspector converted to utilities, matching dead CSS removed. Lay
 
 ## Step 4 status (canvas chrome)
 Canvas toolbar, device controls, zoom field, breadcrumbs and code pane header/note use utilities (pixel-identical in light 1440). Selection overlays (selection-box, resize/padding handles, text overlay, richtext toolbar) stay in CSS on purpose: JS sets their geometry and they use pseudo-elements and z-order that read better as CSS.
+
+## Step 5a status (command palette)
+CommandPalette converted, pixel-identical in light and dark. Lesson: Tailwind text-* sets line-height, so rows that relied on the body 1.45 need `leading-[1.45]`; global `input` rules are unlayered, so overrides on inputs need `!`. Settings, DiskComparison and SourceDiff follow in 5b.
