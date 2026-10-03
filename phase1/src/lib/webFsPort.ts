@@ -66,6 +66,7 @@ export function createWebFsPort(options:WebFsOptions={}):FilePort&{reconnect?:ne
   async close_project({projectId,keepRecovery}){const id=String(projectId);if(!keepRecovery)for(const k of await journal.keys(id+'\u0000'))await journal.delete(k);projects.delete(id);return null;}
  };
  return{
+  connectNotice:'Folder connected in the browser. Press Ctrl+S to write to disk. Edits are journaled for recovery meanwhile.',
   invoke:async<T,>(command:string,args:Record<string,unknown>={})=>{const fn=commands[command];if(!fn)throw Error(`Unknown command ${command}`);return await fn(args) as T;},
   listen:async<T,>(name:string,handler:(e:{payload:T})=>void)=>{if(name!=='somnia://file-state')return()=>{};const fn=handler as unknown as (e:{payload:FileEvent})=>void;listeners.add(fn);return()=>{listeners.delete(fn);};}
  };
