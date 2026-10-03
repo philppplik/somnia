@@ -1,6 +1,7 @@
 import {registerCommand} from '../commands';
 import {applyOperations,getState,patchState} from '../../store/appStore';
 import type {ExtensionManifest} from './types';
+import {ExtensionRuntime,browserWorker} from './runtime';
 /** Declarative host: registers validated contributions as commands. No extension code runs here (see ADR-003, step 3 for the worker sandbox). */
 export function activateExtensions(list:ExtensionManifest[]){
  const disposers:Array<()=>void>=[];
@@ -11,7 +12,9 @@ export function activateExtensions(list:ExtensionManifest[]){
  document.head.appendChild(style);patchState({extensionThemes:themes.map(({id,label})=>({id,label}))});
  disposers.push(()=>{style.remove();patchState({extensionThemes:[]});});
  for(const ext of list){
-  for(const c of ext.contributes.commands)disposers.push(registerCommand({id:c.id,title:`${c.title} (${ext.name})`,category:c.category,run:()=>{patchState({notice:`${c.title} has no code handler yet. Code extensions arrive with the worker sandbox.`});}}));
+  let runtime:ExtensionRuntime|null=null;
+  if(ext.code){runtime=new ExtensionRuntime(ext,{files:()=>getState().files as Record<string,string>,selection:()=>{const id=getState().selectedElementId;let hit:{id:string;tag:string}|null=null;const walk=(ns:{id:string;tag:string;children:any[]}[])=>ns.forEach(n=>{if(n.id===id)hit={id:n.id,tag:n.tag};walk(n.children);});walk(getState().nodes as never);return hit;},notify:text=>patchState({notice:text}),log:text=>patchState({notice:text})},browserWorker);runtime.activate();const rt=runtime;disposers.push(()=>rt.dispose());}
+  for(const c of ext.contributes.commands)disposers.push(registerCommand({id:c.id,title:`${c.title} (${ext.name})`,category:c.category,run:async()=>{if(!runtime){patchState({notice:`${c.title} has no code in this extension.`});return;}await runtime.runCommand(c.id);}}));
   ext.contributes.snippets.forEach((s,i)=>disposers.push(registerCommand({id:`${ext.id}.snippet.${i}`,title:`Snippet: ${s.label} (${ext.name})`,category:'Insert',run:async()=>{
    if(s.language==='html'){const parentId=getState().selectedElementId;if(!parentId)throw Error('Select a source container before inserting a snippet.');applyOperations([{type:'insertHTML',file:getState().designFile,parentId,html:`\n${s.body}\n`}]);patchState({notice:`Inserted snippet ${s.label}.`});}
    else{await navigator.clipboard.writeText(s.body);patchState({notice:`Copied ${s.language.toUpperCase()} snippet ${s.label} to the clipboard.`});}}})));
