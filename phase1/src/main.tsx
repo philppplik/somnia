@@ -4,6 +4,7 @@ import { EditorProject } from '@somnia/editor-core';
 import { App } from './App';
 import { connectEditorProject } from './store/appStore';
 import './styles/global.css';
+import './styles/bento.css';
 import {installDesktopAdapter} from './lib/desktopAdapter';
 // Deliberately memory-only. Replace with choose_project -> read_file in the desktop integrator.
 const project=new EditorProject({
