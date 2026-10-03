@@ -1,7 +1,7 @@
 # ADR 002: Web to local bridge
 
 Date: 2026-10-03
-Status: proposed. Needs a product decision from Philipp before any code.
+Status: decided by Philipp on 2026-10-03 (WhatsApp, "Option B"): browser File System Access API, no install. Implementation plan below. Options A and C stay documented as later add-ons.
 
 ## Context
 BACKLOG and WEBAPP-BACKLOG-2026-10-02 confirm the direction: the web app should be able to work on a project that lives on the user's disk, with trustworthy save and conflict reporting. Hard rules already set there:
@@ -44,3 +44,40 @@ Treat these as layers, not rivals:
 
 ## Not decided here
 Wire protocol, pairing UX, token lifetime. These follow once the option is chosen.
+
+## Decision
+Option B. The web app opens a project folder directly with the File System Access API. No companion app, no local server.
+
+## Browser support (checked 2026-10-03)
+- `showDirectoryPicker` works in Chromium desktop browsers (Chrome, Edge, Opera, from version 86). Brave only behind a flag. Chrome docs: https://developer.chrome.com/docs/capabilities/web-apis/file-system-access
+- Firefox: not supported, Mozilla's standards position is "harmful". Safari (macOS and iOS): not supported. caniuse: https://caniuse.com/native-filesystem-api and https://caniuse.com/mdn-api_window_showdirectorypicker
+- MDN marks it limited availability, experimental, secure context only (HTTPS or localhost), and it needs a user click: https://developer.mozilla.org/en-US/docs/Web/API/Window/showDirectoryPicker
+- The Origin Private File System (`navigator.storage.getDirectory`) works in all major browsers, but it is a sandbox, not the user's real folder. Source: https://www.w3tweaks.com/html/file-system-access-api-save-to-disk/ (secondary source, verify before relying on it).
+- Not verified: browser market share for Philipp's target users, and whether `FileSystemObserver` (change notifications) is usable without a flag.
+
+Consequence: local folders work in Chrome/Edge/Opera only. In Firefox and Safari the app must say so clearly and offer the fallback below.
+
+## Save model in the web
+Reuse the native contract (NATIVE-CONTRACT.md) so UI, save states and the conflict screen stay the same. Only the adapter changes (a `WebFsAdapter` next to `desktopAdapter`).
+- Revision: `{exists, hash}` where hash is SHA-256 of the file bytes (SubtleCrypto). Read on open, kept per file.
+- stage_edit equivalent: every edit is journaled in IndexedDB before the UI counts it as staged. A rejected or failed journal write leaves the document dirty.
+- save: read the file again, compare its hash to `expectedRevision`. If it differs, stop and open the existing disk comparison flow. If it matches, write with `createWritable()` (the browser writes to a temporary file and swaps on `close()`), then re-read and verify the hash. Save state shows "saved to disk" only after that verification.
+- Honest limit: there is no file lock, so another program can change the file between the check and the write. The window is small and the post-write verification detects it, but it cannot be closed completely. The UI says "saved" only after verification and otherwise offers recovery.
+- External change detection: no reliable watcher. Check on window focus, tab visibility and before every save.
+- Recovery: IndexedDB journal, offered on next open, never restored silently, same as native.
+- Permission: the directory handle is stored in IndexedDB. After a reload the browser needs a user click to re-grant access, so the app shows "Reconnect folder" and stays read-only/dirty-safe until then. Connection state (connected, needs permission, disconnected) is always visible.
+- Folder scope: one folder per project. The browser rejects sensitive locations such as system folders. Handle that error with a clear message.
+- Writes only inside the chosen folder, no path traversal (reuse the existing relative-path validation).
+
+## Fallback for Firefox and Safari
+- Open a project from a ZIP or a folder upload into OPFS or memory, edit, export as ZIP (existing export). Label it "Working copy in this browser, not your folder" with the same save-state vocabulary (memory, recovery, not on disk).
+- Not a promise of live disk sync.
+
+## Plan
+1. Extract the adapter interface from `desktopAdapter.ts` (port) so desktop and web share it. Test that desktop behavior is unchanged.
+2. `WebFsAdapter`: open folder, list, read with hash, journal, save with verify, recovery. Unit tests with a fake directory handle, plus a Chromium Playwright test with a real temporary folder if the test runner allows the picker (otherwise OPFS-backed fake).
+3. Connection UI: connect, reconnect, permission-lost states, unsupported-browser notice.
+4. Fallback working copy for non-Chromium.
+5. Docs and a web acceptance checklist for Philipp (Chrome on Windows).
+
+No deploy is part of this. The web build stays a local/CI artifact until Philipp approves hosting.
