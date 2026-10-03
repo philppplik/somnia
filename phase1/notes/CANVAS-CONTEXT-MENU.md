@@ -8,3 +8,6 @@ Right-click on an element in the design canvas selects it and opens a menu: Sele
 - Test: `tests/canvas-context-menu.spec.ts` (hide, undo, Escape). Full Chromium suite: 25 pass.
 - Duplicate copies the exact source text after the element; Delete removes its source range; both are one undoable transaction (`duplicateLayer`, `deleteLayer` in structureCommands.ts). Roots (html, head, body) are protected.
 - Not done: keyboard-only open (Shift+F10 inside the iframe), Insert in the canvas menu, native OS menu.
+
+## Layer menu (v7 fix)
+The layer tree menu is now a fixed-position app menu like the canvas menu (it no longer uses the Base UI popup, whose item clicks did not run in the Windows webview according to Philipp). Items: Inspect, View source, Move up/down, Duplicate, Delete, Hide, Lock. Shift+F10 and the Menu key open it from the keyboard. Each area gets its own item set: canvas elements and layers differ, the code editor and file tabs get theirs with the tabs work.
