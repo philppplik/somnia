@@ -1,7 +1,7 @@
 import type {FilePort,FileEvent,Read,Revision,Recovery} from './fileAdapter';
 /** Browser storage port over the File System Access API (ADR-002, option B). Same commands and payloads as the native contract. */
 type Journal={get(key:string):Promise<{content:string;clientRevision:number}|undefined>;put(key:string,value:{content:string;clientRevision:number}):Promise<void>;delete(key:string):Promise<void>;keys(prefix:string):Promise<string[]>};
-export interface WebFsOptions{pickDirectory?:()=>Promise<FileSystemDirectoryHandle|null>;journal?:Journal;maxFiles?:number}
+export interface WebFsOptions{pickDirectory?:()=>Promise<FileSystemDirectoryHandle|null>;journal?:Journal;maxFiles?:number;handles?:HandleStore}
 const SKIP=new Set(['node_modules','.git','dist','target']);
 const empty:Revision={exists:false,hash:null};
 export function webFsSupported(){return typeof window!=='undefined'&&'showDirectoryPicker' in window&&window.isSecureContext;}
@@ -17,8 +17,15 @@ async function fileHandle(root:FileSystemDirectoryHandle,path:string,create:bool
 async function readText(root:FileSystemDirectoryHandle,path:string):Promise<string|null>{try{return await (await (await fileHandle(root,path,false)).getFile()).text();}catch(e){if(e instanceof DOMException&&(e.name==='NotFoundError'||e.name==='TypeMismatchError'))return null;throw e;}}
 async function revisionOf(text:string|null):Promise<Revision>{return text===null?empty:{exists:true,hash:await sha256(text)};}
 const same=(a:Revision|undefined,b:Revision)=>!!a&&a.exists===b.exists&&a.hash===b.hash;
-export function createWebFsPort(options:WebFsOptions={}):FilePort&{reconnect?:never}{
- const journal=options.journal??indexedDbJournal();
+/** Remembers the last picked directory handle across reloads (IndexedDB structured clone). The browser still needs a click to re-grant access. */
+export interface HandleStore{get():Promise<FileSystemDirectoryHandle|undefined>;put(h:FileSystemDirectoryHandle):Promise<void>}
+export function indexedDbHandleStore():HandleStore{
+ const open=()=>new Promise<IDBDatabase>((resolve,reject)=>{const r=indexedDB.open('somnia-web-handles',1);r.onupgradeneeded=()=>r.result.createObjectStore('handles');r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error);});
+ const run=async<T,>(mode:IDBTransactionMode,fn:(s:IDBObjectStore)=>IDBRequest<T>)=>{const db=await open();return new Promise<T>((resolve,reject)=>{const tx=db.transaction('handles',mode);const req=fn(tx.objectStore('handles'));tx.oncomplete=()=>{db.close();resolve(req.result);};tx.onerror=()=>reject(tx.error);tx.onabort=()=>reject(tx.error);});};
+ return{get:()=>run('readonly',s=>s.get('last')),put:async h=>{await run('readwrite',s=>s.put(h,'last'));}};
+}
+export function createWebFsPort(options:WebFsOptions={}):FilePort{
+ const journal=options.journal??indexedDbJournal();const handles=options.handles??indexedDbHandleStore();
  const projects=new Map<string,{root:FileSystemDirectoryHandle;name:string}>();
  const listeners=new Set<(event:{payload:FileEvent})=>void>();
  const emit=(event:FileEvent)=>listeners.forEach(fn=>fn({payload:event}));
@@ -34,9 +41,16 @@ export function createWebFsPort(options:WebFsOptions={}):FilePort&{reconnect?:ne
   }
  }
  const commands:Record<string,(args:Record<string,unknown>)=>Promise<unknown>>={
-  async choose_project(){
+  async choose_project(args){
+   if(args?.reconnect){
+    const saved=await handles.get().catch(()=>undefined);if(!saved)throw Error('No earlier folder is remembered in this browser. Use Open folder.');
+    const h=saved as FileSystemDirectoryHandle&{queryPermission?(o:object):Promise<string>;requestPermission?(o:object):Promise<string>};
+    let state=await h.queryPermission?.({mode:'readwrite'});if(state!=='granted')state=await h.requestPermission?.({mode:'readwrite'});
+    if(state!=='granted')throw Error('The browser did not grant access to the remembered folder.');
+    const projectId=crypto.randomUUID();projects.set(projectId,{root:saved,name:saved.name});return{projectId,name:saved.name};
+   }
    const root=await (options.pickDirectory?options.pickDirectory():(window as unknown as {showDirectoryPicker(o:object):Promise<FileSystemDirectoryHandle>}).showDirectoryPicker({mode:'readwrite',id:'somnia-project'}).catch(e=>{if(e instanceof DOMException&&e.name==='AbortError')return null;throw e;}));
-   if(!root)return null;const projectId=crypto.randomUUID();projects.set(projectId,{root,name:root.name});return{projectId,name:root.name};
+   if(!root)return null;await handles.put(root).catch(()=>undefined);const projectId=crypto.randomUUID();projects.set(projectId,{root,name:root.name});return{projectId,name:root.name};
   },
   async list_files({projectId}){const out:string[]=[];await walk(project(projectId).root,'',out,options.maxFiles??64,0);return out.sort();},
   async read_file({projectId,path}){const {root}=project(projectId);const content=await readText(root,String(path));const revision=await revisionOf(content);return{content,revision,status:event(String(projectId),String(path),0,'saved',revision)} satisfies Read;},
@@ -66,6 +80,7 @@ export function createWebFsPort(options:WebFsOptions={}):FilePort&{reconnect?:ne
   async close_project({projectId,keepRecovery}){const id=String(projectId);if(!keepRecovery)for(const k of await journal.keys(id+'\u0000'))await journal.delete(k);projects.delete(id);return null;}
  };
  return{
+  canReconnect:true,
   connectNotice:'Folder connected in the browser. Press Ctrl+S to write to disk. Edits are journaled for recovery meanwhile.',
   invoke:async<T,>(command:string,args:Record<string,unknown>={})=>{const fn=commands[command];if(!fn)throw Error(`Unknown command ${command}`);return await fn(args) as T;},
   listen:async<T,>(name:string,handler:(e:{payload:T})=>void)=>{if(name!=='somnia://file-state')return()=>{};const fn=handler as unknown as (e:{payload:FileEvent})=>void;listeners.add(fn);return()=>{listeners.delete(fn);};}

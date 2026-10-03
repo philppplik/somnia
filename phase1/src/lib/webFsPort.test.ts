@@ -39,3 +39,17 @@ test('close_project without keepRecovery drops the journal, with keepRecovery ke
  const {port,projectId}=await setup();await port.invoke('stage_edit',{projectId,path:'index.html',content:'a',clientRevision:1});
  await port.invoke('close_project',{projectId,keepRecovery:true});await assert.rejects(port.invoke('list_files',{projectId}),/not connected/);
 });
+
+test('reconnect reuses the remembered handle only after the browser grants permission',async()=>{
+ let stored:unknown;const handles={async get(){return stored as never;},async put(h:unknown){stored=h;}};
+ const root=new FakeDir('site') as FakeDir&{queryPermission:()=>Promise<string>;requestPermission:()=>Promise<string>};
+ let perm='prompt';root.queryPermission=async()=>perm;root.requestPermission=async()=>perm;
+ const port=createWebFsPort({pickDirectory:async()=>root as never,journal:memoryJournal(),handles:handles as never});
+ await assert.rejects(()=>port.invoke('choose_project',{reconnect:true}),/No earlier folder/);
+ await port.invoke('choose_project');
+ const reopened=createWebFsPort({journal:memoryJournal(),handles:handles as never});
+ await assert.rejects(()=>reopened.invoke('choose_project',{reconnect:true}),/did not grant/);
+ perm='granted';
+ const again=await reopened.invoke<{name:string}>('choose_project',{reconnect:true});
+ assert.equal(again.name,'site');assert.equal(reopened.canReconnect,true);
+});
