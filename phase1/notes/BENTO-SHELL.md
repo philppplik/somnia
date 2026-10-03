@@ -24,3 +24,6 @@ Logo mask, menus (Project/Edit/View/Help), undo/redo, centered Visual/Split/Code
 
 ## Preview without canvas frame
 The preview iframe now fills the panel directly. The gray canvas stage, dot grid and padding are gone. The artboard label and the hint note were removed; the hint ("Double-click text to edit") and the breakpoint scope note ("Edits scoped to ≤ N px") live in the bottom row of the workspace, the zoom and viewport in the status bar.
+
+## Linked HTML stays in the preview
+`designFile` (appStore) is the HTML file the canvas, layers, inspector and structure commands work on. It follows `activeFile` while that is HTML; when a CSS/JS file is opened in the code pane it stays on the last HTML file (or the first one). Before, opening styles.css emptied the node tree and showed "Select an HTML file for design view", and in the old build the code pane stopped accepting clicks. Test: tests/linked-preview.spec.ts. Not reproduced on real Windows.
