@@ -16,9 +16,6 @@ html,body,#root{background:var(--shell-bg)}
 .menu-popup{border-radius:var(--r-md)}
 @layer components{.dialog-popup{border-radius:var(--r-md)}}
 
-.selection-head,.node-fields,.section-content,
-
-
 input,select,textarea{border-radius:var(--r-sm)}
 /* Custom titlebar: the whole bar drags the window, controls sit at the right edge. */
 
