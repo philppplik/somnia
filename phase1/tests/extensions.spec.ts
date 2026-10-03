@@ -5,3 +5,8 @@ await page.getByLabel('Extension manifest JSON').fill('{"id":"acme.hello","name"
 test('snippet contribution shows in the command palette',async({page})=>{await page.goto('/');await page.keyboard.press('Control+,');await page.getByRole('button',{name:'Extensions'}).click();
 await page.getByLabel('Extension manifest JSON').fill('{"id":"acme.hello","name":"Hello","version":"0.1.0","apiVersion":1,"permissions":[],"contributes":{"snippets":[{"language":"html","label":"Hero","body":"<section>x</section>"}]}}');await page.getByRole('button',{name:'Install'}).click();
 await page.keyboard.press('Escape');await page.keyboard.press('Control+k');await expect(page.getByText('Snippet: Hero (Hello)')).toBeVisible();});
+test('extension code theme is selectable and applied',async({page})=>{await page.goto('/');await page.keyboard.press('Control+,');await page.getByRole('button',{name:'Extensions'}).click();
+await page.getByLabel('Extension manifest JSON').fill('{"id":"acme.hello","name":"Hello","version":"0.1.0","apiVersion":1,"permissions":[],"contributes":{"codeThemes":[{"id":"night","label":"Acme Night","light":{"--syntax-tag":"#123456"},"dark":{"--syntax-tag":"#abcdef"}}]}}');await page.getByRole('button',{name:'Install'}).click();
+await page.getByRole('button',{name:'Code editor'}).click();await page.getByLabel('Syntax theme').selectOption('acme.hello.night');
+await expect(page.locator('html')).toHaveAttribute('data-code-theme','acme.hello.night');
+expect(await page.evaluate(()=>getComputedStyle(document.documentElement).getPropertyValue('--syntax-tag').trim())).toBe('#123456');});
