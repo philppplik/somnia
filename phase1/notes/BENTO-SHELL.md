@@ -33,3 +33,6 @@ The preview iframe now fills the panel directly. The gray canvas stage, dot grid
 
 ## Code color themes
 Eight syntax themes (Classic, Ocean, Forest, GitHub, Solarized, Monokai, Dracula, Nord), each with a light and a dark variant as CSS tokens in global.css. Pick them in the code pane header or in Settings; persisted in localStorage. Only syntax colors change, the editor background follows the app theme. Editor is CodeMirror 6 (not Monaco). Test: tests/code-theme.spec.ts.
+
+## Status bar cursor and language
+CodeMirror reports cursor position into appStore (cursorLine, cursorCol); the status bar shows "Line X, Col Y" while the code pane is visible plus a HTML/CSS/JS pill from the active file. Test: tests/statusbar-cursor.spec.ts.
