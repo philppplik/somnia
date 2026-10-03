@@ -1,3 +1,4 @@
+import {htmlToMarkdown} from '@somnia/editor-core';
 import {zipSync,strToU8} from 'fflate';
 export function projectArchive(files:Readonly<Record<string,string>>){
  const entries:Record<string,Uint8Array>={};for(const [path,source] of Object.entries(files)){
@@ -8,4 +9,9 @@ export function projectArchive(files:Readonly<Record<string,string>>){
 }
 export function downloadProject(files:Readonly<Record<string,string>>,name:string){
  const bytes=projectArchive(files);const blob=new Blob([bytes as Uint8Array<ArrayBuffer>],{type:'application/zip'});const url=URL.createObjectURL(blob);const link=document.createElement('a');link.href=url;link.download=`${name.replace(/[^\w-]/g,'_')||'somnia-project'}.zip`;link.click();setTimeout(()=>URL.revokeObjectURL(url),60_000);
+}
+export function markdownFileName(path:string){return `${(path.split('/').pop()||'document').replace(/\.[^.]*$/,'').replace(/[^\w-]/g,'_')||'document'}.md`;}
+export function downloadMarkdown(files:Readonly<Record<string,string>>,activeFile:string){
+ const source=files[activeFile];if(typeof source!=='string'||!/\.html?$/i.test(activeFile))throw Error('Open an HTML file to export it as Markdown.');
+ const blob=new Blob([htmlToMarkdown(source)],{type:'text/markdown'});const url=URL.createObjectURL(blob);const link=document.createElement('a');link.href=url;link.download=markdownFileName(activeFile);link.click();setTimeout(()=>URL.revokeObjectURL(url),60_000);
 }

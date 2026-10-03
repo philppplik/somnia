@@ -1,0 +1,13 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { htmlToMarkdown } from './markdown.ts';
+const md = (b: string) => htmlToMarkdown(`<!doctype html><html><head><title>x</title><style>p{}</style></head><body>${b}</body></html>`);
+test('headings and paragraphs', () => assert.equal(md('<h1>Hi</h1><p>One <strong>two</strong> <em>three</em></p>'), '# Hi\n\nOne **two** *three*\n'));
+test('links and images', () => assert.equal(md('<p><a href="https://a.b/c d">go</a><img src="x.png" alt="pic"></p>'), '[go](https://a.b/c%20d)![pic](x.png)\n'));
+test('nested lists', () => assert.equal(md('<ul><li>a<ul><li>b</li></ul></li><li>c</li></ul><ol start="3"><li>x</li></ol>'), '- a\n  - b\n- c\n\n3. x\n'));
+test('script and style are dropped', () => assert.equal(md('<script>alert(1)</script><p>ok</p><style>a{}</style>'), 'ok\n'));
+test('special characters are escaped', () => assert.equal(md('<p>2 * 3 _x_ [y]</p>'), '2 \\* 3 \\_x\\_ \\[y\\]\n'));
+test('code and pre', () => assert.equal(md('<p>use <code>a&lt;b</code></p><pre><code>x\ny</code></pre>'), 'use `a<b`\n\n```\nx\ny\n```\n'));
+test('tables stay as raw html', () => assert.match(md('<table><tr><td>1</td></tr></table>'), /<table>/));
+test('blockquote and hr', () => assert.equal(md('<blockquote><p>q</p></blockquote><hr>'), '> q\n\n---\n'));
+test('empty body', () => assert.equal(md(''), '\n'));

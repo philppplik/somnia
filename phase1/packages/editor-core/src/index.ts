@@ -140,3 +140,4 @@ export class EditorProject {
  undo(){return this.history(true);}
  redo(){return this.history(false);}
 }
+export { htmlToMarkdown } from './markdown';

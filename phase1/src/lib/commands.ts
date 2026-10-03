@@ -1,4 +1,4 @@
-import {downloadProject} from './exportProject';
+import {downloadProject,downloadMarkdown} from './exportProject';
 import { applyHistory, getState, patchState } from '../store/appStore';
 export interface Command {id:string;title:string;category:'Project'|'Edit'|'View'|'Help';shortcut?:string;keywords?:string[];allowInInput?:boolean;enabled?:()=>boolean;run:(payload?:unknown)=>void|Promise<void>}
 const registry=new Map<string,Command>();
@@ -53,3 +53,5 @@ export function attachKeyboardShortcuts(target:Window=window){
 registerCommand({id:'project.export',title:'Export source ZIP',category:'Project',enabled:()=>getState().coreConnected,run:()=>{downloadProject(getState().files,getState().projectName);patchState({notice:'Source ZIP download requested. Local disk save state is unchanged.'});}});
 
 ui('settings.open','Settings','Mod+,',()=>patchState({settingsOpen:true}));
+
+registerCommand({id:'project.export.md',title:'Export active file as Markdown',category:'Project',keywords:['md','markdown'],enabled:()=>getState().coreConnected&&/\.html?$/i.test(getState().activeFile),run:()=>{try{downloadMarkdown(getState().files,getState().activeFile);patchState({notice:'Markdown download requested. The source file is unchanged.'});}catch(error){patchState({notice:error instanceof Error?error.message:'Markdown export failed.'});}}});
