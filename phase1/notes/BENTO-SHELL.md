@@ -59,3 +59,6 @@ Sidebar and inspector toggles moved from the top bar to the top of their rails. 
 
 ## Tighter shell
 Gap and radius tokens halved (Philipp): `--gap` 12px to 6px, `--r-lg` 22 to 11, `--r-md` 14 to 7, `--r-sm` 10 to 5 (tokens.css). Everything using the Tailwind shell spacing or radius tokens follows.
+
+## Accessibility round 1
+Global `:focus-visible` ring for buttons, tabs, menu items and inputs; `tests/a11y.spec.ts` fails if any visible control lacks an accessible name or keyboard focus has no outline. Still open: arrow-key navigation inside the icon rails and menus.
