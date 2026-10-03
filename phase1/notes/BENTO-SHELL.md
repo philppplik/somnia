@@ -36,3 +36,8 @@ Eight syntax themes (Classic, Ocean, Forest, GitHub, Solarized, Monokai, Dracula
 
 ## Status bar cursor and language
 CodeMirror reports cursor position into appStore (cursorLine, cursorCol); the status bar shows "Line X, Col Y" while the code pane is visible plus a HTML/CSS/JS pill from the active file. Test: tests/statusbar-cursor.spec.ts.
+
+## v7 UI cleanup (Philipp feedback)
+- File tabs (`FileTabs.tsx`) replace the file dropdown in the code pane; middle click or x closes, right click offers Close tab / Close other tabs / Copy path. Left sidebar has a Files tab (`FilesPanel.tsx`, project tree) plus a rail icon. Open tabs live in appStore (`openFiles`, `openFileTab`, `closeFileTab`).
+- Viewport switch (Desktop/Tablet/Mobile) and zoom moved into the status bar on the right. The old toolbar row above the preview and the info row below it are gone.
+- Code theme is only in Settings now. Selection id, breakpoint note, preview file and history note live in the Problems panel (details list), not in the main UI.
