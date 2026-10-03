@@ -13,6 +13,7 @@ export function validateManifest(input:unknown):ManifestResult{
  const name=str('name'),version=str('version',20);if(version&&!SEMVER.test(version))errors.push('"version" must be x.y.z.');
  if(input.apiVersion!==API_VERSION)errors.push(`"apiVersion" must be ${API_VERSION}; this host does not support ${String(input.apiVersion)}.`);
  const main=input.main===undefined?undefined:str('main',120);if(main&&(main.startsWith('/')||main.includes('..')||main.includes('\\')))errors.push('"main" must be a relative path inside the extension.');
+ const code=input.code===undefined?undefined:typeof input.code==='string'&&input.code.length<=100000?input.code:(errors.push('"code" must be a string up to 100000 characters.'),undefined);
  const permissions:Permission[]=[];if(!Array.isArray(input.permissions))errors.push('"permissions" must be an array.');else for(const p of input.permissions){if(typeof p==='string'&&(PERMISSIONS as readonly string[]).includes(p)){if(!permissions.includes(p as Permission))permissions.push(p as Permission);}else errors.push(`Unknown permission: ${String(p)}.`);}
  const c=obj(input.contributes)?input.contributes:{};if(input.contributes!==undefined&&!obj(input.contributes))errors.push('"contributes" must be an object.');
  const list=(k:string)=>{const v=c[k];if(v===undefined)return[];if(!Array.isArray(v)||v.length>200){errors.push(`contributes.${k} must be an array of at most 200 items.`);return[];}return v;};
@@ -24,5 +25,5 @@ export function validateManifest(input:unknown):ManifestResult{
   return[{id:x.id,label:x.label,light:side(x.light),dark:side(x.dark)}];});
  if((commands.length)&&!permissions.includes('commands'))errors.push('Commands need the "commands" permission.');
  if(errors.length)return{ok:false,errors};
- return{ok:true,manifest:{id,name,version,apiVersion:API_VERSION,...(main?{main}:{}),permissions,contributes:{commands,snippets,codeThemes}}};
+ return{ok:true,manifest:{id,name,version,apiVersion:API_VERSION,...(main?{main}:{}),...(code?{code}:{}),permissions,contributes:{commands,snippets,codeThemes}}};
 }
