@@ -5,3 +5,11 @@ test('layer context actions preserve source metadata and shared history',async({
  await layer.click({button:'right'});await page.getByRole('menuitem',{name:'Lock layer',exact:true}).click();await layer.click({button:'right'});await expect(page.getByRole('menuitem',{name:'Move down',exact:true})).toHaveAttribute('aria-disabled','true');await page.getByRole('menuitem',{name:'Unlock layer',exact:true}).click();await expect(source).toHaveText(original,{useInnerText:true});
  await layer.focus();await page.keyboard.press('Shift+F10');await expect(menu).toBeVisible();await page.keyboard.press('Escape');await expect(menu).toBeHidden();
 });
+test('layer menu duplicates and deletes with undo',async({page})=>{
+ await page.goto('/');const frame=page.frameLocator('iframe[title="Sandboxed design preview"]');await expect(frame.locator('h1')).toHaveCount(1);
+ const layer=page.getByRole('button',{name:'h1',exact:true});
+ await layer.click({button:'right'});await page.getByRole('menuitem',{name:'Duplicate',exact:true}).click();await expect(frame.locator('h1')).toHaveCount(2);
+ await page.keyboard.press('Control+z');await expect(frame.locator('h1')).toHaveCount(1);
+ await layer.click({button:'right'});await page.getByRole('menuitem',{name:'Delete',exact:true}).click();await expect(frame.locator('h1')).toHaveCount(0);
+ await page.keyboard.press('Control+z');await expect(frame.locator('h1')).toHaveCount(1);
+});
