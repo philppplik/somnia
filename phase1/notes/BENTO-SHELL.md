@@ -56,3 +56,6 @@ The top bar runs edge to edge (no gap to the top, left and right window edges), 
 
 ## Rails toggles, tooltips, shell color
 Sidebar and inspector toggles moved from the top bar to the top of their rails. Every Button gets `title` from its `aria-label` when none is set, so icon buttons show hover tooltips. Shell background token `--shell-bg` is #f8f9fb in light (was #e4e5ec) and #0a0b0e in dark (cool-tinted counterpart of the old #08080a).
+
+## Tighter shell
+Gap and radius tokens halved (Philipp): `--gap` 12px to 6px, `--r-lg` 22 to 11, `--r-md` 14 to 7, `--r-sm` 10 to 5 (tokens.css). Everything using the Tailwind shell spacing or radius tokens follows.
