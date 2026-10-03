@@ -17,9 +17,7 @@ html,body,#root{background:var(--shell-bg)}
 .canvas-stage{margin:12px;border-radius:var(--radius-md);background-color:var(--canvas-bg);padding:32px}
 .artboard,.design-iframe{border-radius:var(--radius-sm)}
 .tabs-list{padding:0 12px}.tabs-trigger{padding:0 14px}
-.button,.menu-trigger{border-radius:var(--radius-sm)}
-.button-outline{border-radius:var(--radius-sm)}
-.button-icon{width:36px;height:36px}.button{height:36px;padding:0 14px}
+.menu-trigger{border-radius:var(--radius-sm)}
 .menu-popup,.dialog-popup{border-radius:var(--radius-md)}
 .search-field{border-radius:var(--radius-sm);margin:16px}
 .selection-head,.node-fields,.section-content,.panel-subtitle{padding-left:20px;padding-right:20px}

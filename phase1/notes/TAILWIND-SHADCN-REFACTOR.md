@@ -31,3 +31,7 @@ Steering: Philipp, 2026-10-03 ("Bitte umsetzen refraktorisieren"), after asking 
 
 ## Open decisions (Philipp's)
 None blocking. If he wants stock shadcn look instead of the Somnia bento look, tokens decide that, not component code.
+
+## Progress
+- PR 1 (foundation): clsx, tailwind-merge, cva, `cn()`, `@theme inline` bridge in global.css, Button as cva + utilities (sizes normal/icon/compact/tiny/row), old `.button*` CSS removed. Layer-row buttons are now 24px wide as originally intended, so tree names truncate less.
+- Test note: tests/desktop.spec.ts is flaky (Control+K / Control+O focus race). It also fails intermittently on the unchanged baseline; 3/3 pass on re-run.
