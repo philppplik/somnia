@@ -18,3 +18,6 @@ Unverified on real Windows: drag, snap layouts (Win11 hover on maximize), resize
 
 ## Icon rails (Philipp mockup)
 `src/components/IconRail.tsx`: narrow rails left (Layers/Assets/Components) and right (Design/Prototype/Code), always visible. Click opens the panel on that tab; click on the active icon collapses it. State stays in appStore (sidebarOpen, inspectorOpen, leftTab, rightTab). Still open: top bar with centered Splitview/Visual/Code toggle, status bar with Line/Col and language pill.
+
+## Single top bar
+Logo mask, menus (Project/Edit/View/Help), undo/redo, centered Visual/Split/Code toggle (aria labels unchanged), Commands, panel toggles, window controls. The separate command bar is gone. Project name moved to the status bar. Insert/Tools menus come once commands exist. Still open: Line/Col and language pill in the status bar.
