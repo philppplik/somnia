@@ -1,6 +1,7 @@
 import {downloadProject,downloadMarkdown} from './exportProject';
+import {elements,insertElement} from './structureCommands';
 import { applyHistory, getState, patchState } from '../store/appStore';
-export interface Command {id:string;title:string;category:'Project'|'Edit'|'View'|'Help';shortcut?:string;keywords?:string[];allowInInput?:boolean;enabled?:()=>boolean;run:(payload?:unknown)=>void|Promise<void>}
+export interface Command {id:string;title:string;category:'Project'|'Edit'|'View'|'Insert'|'Tools'|'Help';shortcut?:string;keywords?:string[];allowInInput?:boolean;enabled?:()=>boolean;run:(payload?:unknown)=>void|Promise<void>}
 const registry=new Map<string,Command>();
 export const registerCommand=(command:Command)=>{registry.set(command.id,command);return()=>{if(registry.get(command.id)===command)registry.delete(command.id);};};
 export const listCommands=()=>[...registry.values()];
@@ -32,6 +33,7 @@ for(const [id,title,shortcut] of [['project.open','Open folder','Mod+O'],['proje
 registerCommand({id:'help.shortcuts',title:'Keyboard shortcuts',category:'Help',keywords:['help','keyboard'],run:()=>patchState({notice:'Ctrl/Cmd+K commands · B sidebar · J problems · 1/2/3 views · Z undo · Shift+Z redo. Resize panels with arrow keys.'})});
 export const isMac=()=>/Mac|iPhone|iPad/.test(navigator.platform);
 export const formatShortcut=(shortcut:string)=>shortcut.split('+').map(part=>({Mod:isMac()?'⌘':'Ctrl',Alt:isMac()?'⌥':'Alt',Shift:isMac()?'⇧':'Shift'}[part]??part)).join(isMac()?'':' + ');
+elements.forEach((element,i)=>registerCommand({id:`insert.element.${i}`,title:element.label,category:'Insert',keywords:['insert','add','element',element.label.toLowerCase()],enabled:()=>getState().coreConnected,run:()=>insertElement(i)}));
 const sel=()=>getState().coreConnected&&!!getState().selectedElementId;
 registerCommand({id:'edit.duplicate',title:'Duplicate selected element',category:'Edit',shortcut:'Mod+D',enabled:sel,run:async()=>{(await import('./structureCommands')).duplicateLayer(getState().selectedElementId!);}});
 registerCommand({id:'edit.delete',title:'Delete selected element',category:'Edit',shortcut:'Delete',enabled:sel,run:async()=>{(await import('./structureCommands')).deleteLayer(getState().selectedElementId!);}});
@@ -62,3 +64,5 @@ registerCommand({id:'project.export',title:'Export source ZIP',category:'Project
 ui('settings.open','Settings','Mod+,',()=>patchState({settingsOpen:true}));
 
 registerCommand({id:'project.export.md',title:'Export active file as Markdown',category:'Project',keywords:['md','markdown'],enabled:()=>getState().coreConnected&&/\.html?$/i.test(getState().activeFile),run:()=>{try{downloadMarkdown(getState().files,getState().activeFile);patchState({notice:'Markdown download requested. The source file is unchanged.'});}catch(error){patchState({notice:error instanceof Error?error.message:'Markdown export failed.'});}}});
+/** Tools menu groups app-level utilities; registered after all commands exist. */
+for(const id of ['settings.open','problems.toggle','theme.toggle','palette.open']){const c=registry.get(id);if(c)c.category='Tools';}
