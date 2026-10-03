@@ -1,32 +1,25 @@
 /* Bento shell: rounded cards on a slightly darker outer background. Tokens live in tokens.css. */
 html,body,#root{background:var(--shell-bg)}
-.app-shell{padding:var(--gap);gap:var(--gap);background:var(--shell-bg);min-width:960px}
-.app-titlebar,.main-toolbar,.status-bar,.problems-panel{background:var(--bg-panel);border:0;border-radius:var(--radius-lg);box-shadow:var(--card-shadow)}
-.app-titlebar{height:56px;padding:0 20px;gap:14px}
-.main-toolbar{height:52px;padding:0 16px;gap:6px}
-.status-bar{height:36px;padding:0 18px;border-radius:var(--radius-md)}
+.problems-panel{background:var(--bg-panel);border:0;border-radius:var(--r-lg);box-shadow:var(--card-shadow)}
 .editor-layout{gap:0}
 .pane-slot{padding:0}
-.pane-slot>.panel,.center{background:var(--bg-panel);border-radius:var(--radius-lg);box-shadow:var(--card-shadow);overflow:hidden}
+.pane-slot>.panel,.center{background:var(--bg-panel);border-radius:var(--r-lg);box-shadow:var(--card-shadow);overflow:hidden}
 .center{background:var(--bg-panel)}
 .resize-handle{background:transparent;border:0;position:relative}
 .resize-handle:hover,.resize-handle:active{background:transparent}
 .resize-handle:after{content:'';position:absolute;top:50%;left:50%;width:4px;height:48px;margin:-24px 0 0 -2px;border-radius:2px;background:transparent;transition:background 120ms}
 .resize-handle:hover:after,.resize-handle:active:after{background:var(--accent)}
 .canvas-toolbar{background:transparent;border-bottom:1px solid var(--border-subtle);height:52px;padding:0 16px}
-.canvas-stage{margin:12px;border-radius:var(--radius-md);background-color:var(--canvas-bg);padding:32px}
-.artboard,.design-iframe{border-radius:var(--radius-sm)}
+.canvas-stage{margin:12px;border-radius:var(--r-md);background-color:var(--canvas-bg);padding:32px}
+.artboard,.design-iframe{border-radius:var(--r-sm)}
 .tabs-list{padding:0 12px}.tabs-trigger{padding:0 14px}
-.menu-trigger{border-radius:var(--radius-sm)}
-.menu-popup,.dialog-popup{border-radius:var(--radius-md)}
-.search-field{border-radius:var(--radius-sm);margin:16px}
+.menu-popup,.dialog-popup{border-radius:var(--r-md)}
+.search-field{border-radius:var(--r-sm);margin:16px}
 .selection-head,.node-fields,.section-content,.panel-subtitle{padding-left:20px;padding-right:20px}
-.layer-row{height:36px;border-radius:var(--radius-sm);margin:0 8px}.layer-row.selected:before{display:none}
+.layer-row{height:36px;border-radius:var(--r-sm);margin:0 8px}.layer-row.selected:before{display:none}
 .inspector-row{min-height:40px}
-input,select,textarea{border-radius:var(--radius-sm)}
+input,select,textarea{border-radius:var(--r-sm)}
 /* Custom titlebar: the whole bar drags the window, controls sit at the right edge. */
-.app-titlebar{-webkit-user-select:none;user-select:none}
-.window-controls{display:flex;gap:4px;margin-left:8px}
-.window-controls button{width:40px;height:36px;border:0;border-radius:var(--radius-sm);background:transparent;color:var(--text-secondary);display:grid;place-items:center}
-.window-controls button:hover{background:var(--bg-hover);color:var(--text-primary)}
-.window-controls .window-close:hover{background:#e5484d;color:#fff}
+
+
+

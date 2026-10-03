@@ -5,9 +5,9 @@ import {Minus,Square,X} from 'lucide-react';
 export function WindowControls(){
  if(!isTauri())return null;
  const win=()=>getCurrentWindow();
- return <div className="window-controls" role="group" aria-label="Window controls">
-  <button type="button" aria-label="Minimize window" onClick={()=>void win().minimize()}><Minus size={14}/></button>
-  <button type="button" aria-label="Maximize or restore window" onClick={()=>void win().toggleMaximize()}><Square size={11}/></button>
-  <button type="button" aria-label="Close window" className="window-close" onClick={()=>void win().close()}><X size={14}/></button>
+ return <div className="ml-2 flex gap-1" role="group" aria-label="Window controls">
+  <button type="button" className="grid h-9 w-10 cursor-pointer place-items-center rounded-sm border-0 bg-transparent text-ink-2 hover:bg-hover hover:text-ink" aria-label="Minimize window" onClick={()=>void win().minimize()}><Minus size={14}/></button>
+  <button type="button" className="grid h-9 w-10 cursor-pointer place-items-center rounded-sm border-0 bg-transparent text-ink-2 hover:bg-hover hover:text-ink" aria-label="Maximize or restore window" onClick={()=>void win().toggleMaximize()}><Square size={11}/></button>
+  <button type="button" aria-label="Close window" className="grid h-9 w-10 cursor-pointer place-items-center rounded-sm border-0 bg-transparent text-ink-2 hover:bg-[#e5484d] hover:text-white" onClick={()=>void win().close()}><X size={14}/></button>
  </div>;
 }
