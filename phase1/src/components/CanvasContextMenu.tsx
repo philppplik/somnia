@@ -9,7 +9,7 @@ export function CanvasContextMenu({menu,node,onClose}:{menu:CanvasMenuState;node
  useEffect(()=>{root.current?.querySelector<HTMLButtonElement>('button:not(:disabled)')?.focus();const key=(e:KeyboardEvent)=>{if(e.key==='Escape')onClose();};const down=(e:PointerEvent)=>{if(!root.current?.contains(e.target as Node))onClose();};window.addEventListener('keydown',key);window.addEventListener('pointerdown',down);return()=>{window.removeEventListener('keydown',key);window.removeEventListener('pointerdown',down);};},[onClose]);
  if(!node)return null;
  const run=(action:()=>void)=>{try{action();}catch(error){patchState({notice:error instanceof Error?error.message:String(error)});}onClose();};
- const meta=(key:'locked'|'hidden')=>run(()=>{applyOperations([{type:'setMeta',file:s.activeFile,nodeId:node.id,[key]:!node[key]}]);});
+ const meta=(key:'locked'|'hidden')=>run(()=>{applyOperations([{type:'setMeta',file:s.designFile,nodeId:node.id,[key]:!node[key]}]);});
  const items:Array<[string,()=>void,boolean]>=[
   ['Select '+node.tag,()=>run(()=>patchState({selectedElementId:node.id,selectedElementIds:[node.id],rightTab:'design'})),false],
   ['Move up',()=>run(()=>moveLayer(node.id,-1)),!!node.locked],
