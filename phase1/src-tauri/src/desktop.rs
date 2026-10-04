@@ -145,6 +145,20 @@ async fn save_file(
     Ok(event)
 }
 #[tauri::command]
+async fn delete_file(
+    window: WebviewWindow,
+    state: State<'_, Shared>,
+    project_id: String,
+    path: String,
+    expected_revision: Revision,
+) -> Result<()> {
+    gate(&window)?;
+    work(state.inner().clone(), move |b| {
+        project(b, &project_id)?.delete(&path, &expected_revision)
+    })
+    .await
+}
+#[tauri::command]
 async fn recovery_list(
     window: WebviewWindow,
     state: State<'_, Shared>,
@@ -266,6 +280,7 @@ pub fn run() {
             read_file,
             stage_edit,
             save_file,
+            delete_file,
             recovery_list,
             recovery_read,
             recovery_restore,

@@ -73,6 +73,12 @@ export function createWebFsPort(options:WebFsOptions={}):FilePort{
     const e=event(id,p,staged.clientRevision,'saved',written,null,'verified-write');emit(e);return e;
    }catch(error){const e=event(id,p,staged.clientRevision,'error',diskRevision,error instanceof Error?error.message:String(error));emit(e);return e;}
   },
+  async delete_file({projectId,path,expectedRevision}){
+   const id=String(projectId),p=String(path),{root}=project(id);const disk=await readText(root,p);const rev=await revisionOf(disk);
+   if(!same(expectedRevision as Revision,rev))throw Error(`${p} changed on disk since it was opened. Delete cancelled.`);
+   if(disk!==null){const names=parts(p);let dir=root;for(const n of names.slice(0,-1))dir=await dir.getDirectoryHandle(n);await dir.removeEntry(names[names.length-1]);}
+   await journal.delete(key(id,p));return null;
+  },
   async recovery_list({projectId}){const id=String(projectId);const out:Recovery[]=[];for(const k of await journal.keys(id+'\u0000')){const v=await journal.get(k);if(v)out.push({path:k.slice(id.length+1),content:v.content,clientRevision:v.clientRevision});}return out.sort((a,b)=>a.path.localeCompare(b.path));},
   async recovery_read({projectId,path}){const v=await journal.get(key(String(projectId),String(path)));if(!v)throw Error('No recovery snapshot for this file.');return{path:String(path),content:v.content,clientRevision:v.clientRevision} satisfies Recovery;},
   async recovery_restore({projectId,path,clientRevision}){const id=String(projectId),p=String(path),k=key(id,p);const v=await journal.get(k);if(!v)throw Error('No recovery snapshot for this file.');await journal.put(k,{content:v.content,clientRevision:Number(clientRevision)});return event(id,p,Number(clientRevision),'dirty',empty,null,'browser-journal');},

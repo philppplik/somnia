@@ -358,11 +358,13 @@ impl Project {
         self.documents.get_mut(path).unwrap().state = FileState::Saving;
         let p = self.safe_path(path)?;
         // Temp file in the target directory; second compare happens AFTER writing/fsyncing temp.
-        let parent = self.root.open_dir(
-            p.parent()
-                .filter(|p| !p.as_os_str().is_empty())
-                .unwrap_or(Path::new(".")),
-        )?;
+        let parent_path = p
+            .parent()
+            .filter(|p| !p.as_os_str().is_empty())
+            .unwrap_or(Path::new("."));
+        // New files may live in folders that do not exist yet.
+        self.root.create_dir_all(parent_path)?;
+        let parent = self.root.open_dir(parent_path)?;
         let name = p.file_name().ok_or_else(|| AppError::Denied(path.into()))?;
         let temp = PathBuf::from(format!(".somnia-write-{}.tmp", Uuid::new_v4()));
         let result = (|| {
@@ -414,6 +416,27 @@ impl Project {
                 Ok(event)
             }
         }
+    }
+    /// Delete a file only if it still has the revision the editor last saw. Drops any pending edit and its recovery record.
+    pub fn delete(&mut self, path: &str, expected: &Revision) -> Result<()> {
+        let p = self.safe_path(path)?;
+        let (_, current) = self.disk(path)?;
+        if &current != expected {
+            return Err(AppError::Conflict);
+        }
+        if current.exists {
+            self.root.remove_file(&p)?;
+            let parent = p
+                .parent()
+                .filter(|p| !p.as_os_str().is_empty())
+                .unwrap_or(Path::new("."));
+            if let Ok(dir) = self.root.open_dir(parent) {
+                let _ = sync_dir(&dir);
+            }
+        }
+        self.documents.remove(path);
+        let _ = self.recovery.remove_file(recovery_name(path));
+        Ok(())
     }
     /// Call on a background worker. Watcher is a hint; periodic full hashes catch missed events.
     pub fn tick(&mut self) -> Vec<StateEvent> {
