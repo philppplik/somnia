@@ -24,3 +24,12 @@ test('storage is gated, namespaced by the host and size-capped',()=>{
  assert.throws(()=>callApi(m(['storage']),'storage.set',['a','x'.repeat(20001)],d),/limited/);
  assert.equal(callApi(m(['storage']),'storage.get',['missing'],d),null);
 });
+test('editor.applyOperations needs project.write, whitelists types and files',()=>{
+ const applied:unknown[]=[];const d={...deps,applyOperations:(o:unknown[])=>{applied.push(...o);}};
+ const op={type:'setText',file:'index.html',nodeId:'n1',text:'hi'};
+ assert.throws(()=>callApi(m(['project.read']),'editor.applyOperations',[[op]],d),/needs the "project.write"/);
+ assert.equal(callApi(m(['project.write']),'editor.applyOperations',[[op]],d),1);assert.equal(applied.length,1);
+ assert.throws(()=>callApi(m(['project.write']),'editor.applyOperations',[[{...op,type:'replaceSource'}]],d),/not allowed/);
+ assert.throws(()=>callApi(m(['project.write']),'editor.applyOperations',[[{...op,file:'../x'}]],d),/open project/);
+ assert.throws(()=>callApi(m(['project.write']),'editor.applyOperations',[[]],d),/1 to 50/);
+});

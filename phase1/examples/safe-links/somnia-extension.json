@@ -1,0 +1,11 @@
+{
+  "id": "somnia.safe-links",
+  "name": "Safe external links",
+  "version": "1.0.0",
+  "apiVersion": 1,
+  "permissions": ["commands", "selection", "project.write", "ui.notify"],
+  "contributes": {
+    "commands": [{"id": "somnia.safe-links.run", "title": "Make selected link open in a new tab safely", "category": "Edit"}]
+  },
+  "code": "await somnia.commands.register('somnia.safe-links.run', async () => { const sel = await somnia.selection.get(); if (!sel || sel.tag !== 'a') { await somnia.ui.notify('Select a link (a) first.'); return; } await somnia.editor.applyOperations([{type:'setAttribute', file:'index.html', nodeId: sel.id, name:'target', value:'_blank'},{type:'setAttribute', file:'index.html', nodeId: sel.id, name:'rel', value:'noopener noreferrer'}]); await somnia.ui.notify('Link now opens in a new tab with rel=noopener.'); });"
+}
