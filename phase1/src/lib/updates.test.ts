@@ -10,3 +10,4 @@ test('newest higher release wins, drafts and older ones are ignored',()=>{
 test('checkForUpdate reports errors and results',async()=>{
  const ok=await checkForUpdate('8',(async()=>({ok:true,json:async()=>[rel('v9')]})) as never);assert.equal(ok.status,'available');
  await assert.rejects(checkForUpdate('8',(async()=>({ok:false,status:403})) as never),/403/);});
+test('patch releases are detected and equal or older are not',()=>{assert.equal(newerRelease('9.5.4',[rel('v9.5.5-alpha')])?.tag,'v9.5.5-alpha');assert.equal(newerRelease('9.5.4',[rel('v9.5.4-alpha'),rel('v9.5.3')]),null);assert.equal(newerRelease('9.5.4',[rel('v9.6.0')])?.tag,'v9.6.0');});
