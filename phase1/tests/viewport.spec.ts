@@ -1,0 +1,14 @@
+import {test,expect} from '@playwright/test';
+test('custom viewport: typed size, preset, rotate and drag handle',async({page})=>{await page.setViewportSize({width:1500,height:900});await page.goto('/');
+ const w=page.getByLabel('Viewport width',{exact:true}),h=page.getByLabel('Viewport height',{exact:true});
+ await w.fill('500');await w.press('Enter');await h.fill('700');await h.press('Enter');
+ const size=async()=>(await page.locator('.design-iframe').boundingBox())!;
+ await expect.poll(async()=>Math.round((await size()).width/(await size()).height*100)).toBe(Math.round(500/700*100));
+ await page.getByLabel('Viewport preset').selectOption({label:'iPhone 393 x 852'});await expect(w).toHaveValue('393');await expect(h).toHaveValue('852');
+ await page.getByRole('button',{name:'Rotate viewport'}).click();await expect(w).toHaveValue('852');await expect(h).toHaveValue('393');
+ await w.fill('99999');await w.press('Enter');await expect(w).toHaveValue('3840');
+ await w.fill('100');await w.press('Enter');await expect(w).toHaveValue('200');
+ await w.fill('600');await w.press('Enter');const hb=(await page.getByLabel('Drag to resize viewport width').boundingBox())!;
+ await page.mouse.move(hb.x+3,hb.y+20);await page.mouse.down();await page.mouse.move(hb.x-60,hb.y+20,{steps:5});await page.mouse.up();
+ expect(Number(await w.inputValue())).toBeLessThan(600);
+ await page.getByRole('button',{name:'Desktop viewport'}).click();await expect(w).toHaveValue('1280');});
