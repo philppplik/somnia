@@ -88,3 +88,14 @@
 
 /* All popups, dialogs and modals share a 25px radius. */
 .dialog-popup,.dialog-popup.disk-comparison,.dialog-popup.settings-popup,.dialog-popup.confirm-dialog{border-radius:25px}
+/* Editor find bar: full width of the code pane, at the bottom (above the Problems bar), in the app's own look. */
+.cm-panels{background:var(--bg-panel);color:var(--text-primary);border-color:var(--border-subtle)}
+.cm-panels-bottom{border-top:1px solid var(--border-subtle)}
+.cm-panel.cm-search{display:flex;flex-wrap:wrap;align-items:center;gap:6px;padding:8px 36px 8px 10px;font-size:12px;position:relative}
+.cm-panel.cm-search br{display:none}
+.cm-panel.cm-search input.cm-textfield{height:26px;min-width:160px;flex:1 1 180px;max-width:360px;border:1px solid var(--border-default);border-radius:6px;background:var(--bg-base);color:var(--text-primary);padding:0 8px;font:inherit;margin:0}
+.cm-panel.cm-search input.cm-textfield:focus{outline:none;box-shadow:var(--focus)}
+.cm-panel.cm-search button.cm-button{height:26px;border:1px solid var(--border-default);border-radius:6px;background:var(--bg-surface);color:var(--text-primary);padding:0 10px;font:inherit;background-image:none;cursor:pointer;margin:0}
+.cm-panel.cm-search button.cm-button:hover{background:var(--bg-hover)}
+.cm-panel.cm-search label{display:inline-flex;align-items:center;gap:4px;color:var(--text-secondary);margin:0}
+.cm-panel.cm-search button[name=close]{position:absolute;right:8px;top:6px;background:transparent;border:0;color:var(--text-secondary);font-size:16px;cursor:pointer}
