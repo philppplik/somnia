@@ -1,1 +1,25 @@
-{"bundle":{"active":true,"targets":["nsis","msi"]},"app":{"windows":[{"label":"main","title":"Somnia","decorations":false,"shadow":true,"transparent":true,"width":1440,"height":900,"minWidth":960,"minHeight":600,"center":true}]}}
+{
+  "bundle": {
+    "active": true,
+    "targets": [
+      "nsis",
+      "msi"
+    ]
+  },
+  "app": {
+    "windows": [
+      {
+        "label": "main",
+        "title": "Somnia",
+        "decorations": false,
+        "shadow": false,
+        "transparent": true,
+        "width": 1440,
+        "height": 900,
+        "minWidth": 960,
+        "minHeight": 600,
+        "center": true
+      }
+    ]
+  }
+}

@@ -14,3 +14,6 @@ The Tauri updater verifies signed bundles. What it takes:
 4. CSP `connect-src` for github.com and the release asset host.
 Limits: `releases/latest` ignores pre-releases, so alpha builds need an explicit channel file. The Windows installer is not Authenticode-signed, SmartScreen still warns on first run; updater signatures are separate from that.
 Status: not built. Waiting for the secrets to be set by Philipp.
+
+## Window corners on Windows (2026-10-04)
+Square outer edge was reported on Windows. Causes: native `shadow: true` on a frameless window draws a rectangular shadow/border outside the CSS radius, and `backgroundColor` painted the corners. Both removed (`shadow: false`, no `backgroundColor`, WebView2 stays transparent). Trade-off: no native drop shadow. Needs a check on real Windows; if corners still show, revert the radius.

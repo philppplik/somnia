@@ -15,14 +15,13 @@
         "label": "main",
         "title": "Somnia",
         "decorations": false,
-        "shadow": true,
+        "shadow": false,
         "transparent": true,
         "width": 1440,
         "height": 900,
         "minWidth": 960,
         "minHeight": 600,
-        "center": true,
-        "backgroundColor": "#07070b"
+        "center": true
       }
     ],
     "security": {
