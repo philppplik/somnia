@@ -89,3 +89,9 @@ A public repo `somnia-extensions` holds `index.json` (id, name, version, author,
 - Step 3b (local): `storage.get/set` added (permission `storage`, keys up to 100 chars, values up to 20000 chars, stored per extension id in localStorage by the host).
 - Panels (done, local): validator, host state, rail buttons, sandboxed iframe with bridge, tests in manifest.test.ts and extensions.spec.ts.
 - Enable/disable (local): installed extensions are off until the user ticks "On" in Settings > Extensions; the list shows each extension's declared permissions. Removing an extension also clears its enabled flag. Revoking single permissions is still open.
+
+## Progress: write API, revoke, examples (2026-10-04)
+- `editor.applyOperations(ops)` (permission `project.write`): 1-50 operations, types limited to formatText, setText, setAttribute, setStyle, insertHTML, remove, move on files of the open project. `replaceSource` is not allowed. One undoable core transaction, no disk write.
+- Settings > Extensions shows every declared permission as a checkbox; unchecking revokes it (stored in `somnia.extensions.revoked.v1`) and the next call fails with a clear message.
+- Settings > Extensions > "Add from a .json file" installs a manifest from a file. ZIP/folder install is still open.
+- Examples in `phase1/examples/`: word-count and safe-links (see README there).

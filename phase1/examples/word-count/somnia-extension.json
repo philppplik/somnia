@@ -1,0 +1,11 @@
+{
+  "id": "somnia.word-count",
+  "name": "Word count",
+  "version": "1.0.0",
+  "apiVersion": 1,
+  "permissions": ["commands", "project.read", "ui.notify"],
+  "contributes": {
+    "commands": [{"id": "somnia.word-count.run", "title": "Count words in index.html", "category": "Tools"}]
+  },
+  "code": "await somnia.commands.register('somnia.word-count.run', async () => { const files = await somnia.project.listFiles(); const name = files.includes('index.html') ? 'index.html' : files[0]; const src = await somnia.project.readFile(name); const text = src.replace(/<style[\\s\\S]*?<\\/style>/gi, ' ').replace(/<script[\\s\\S]*?<\\/script>/gi, ' ').replace(/<[^>]+>/g, ' '); const words = text.split(/\\s+/).filter(Boolean).length; await somnia.ui.notify(name + ': ' + words + ' words'); });"
+}
