@@ -11,13 +11,20 @@ import {installDesktopAdapter} from './lib/desktopAdapter';
 import {installFileAdapter} from './lib/fileAdapter';
 import {createWebFsPort,webFsSupported} from './lib/webFsPort';
 import {registerCommand} from './lib/commands';
-import {patchState} from './store/appStore';
+import {readDraft,saveDraft,clearDraft} from './lib/draftSession';
+import {patchState,getState,subscribe} from './store/appStore';
 // Deliberately memory-only. Replace with choose_project -> read_file in the desktop integrator.
-const project=new EditorProject({
+const starter={
  'index.html':'<!doctype html>\n<html lang="en">\n<head>\n  <meta charset="UTF-8">\n  <title>Untitled project</title>\n  <link rel="stylesheet" href="styles.css">\n</head>\n<body>\n  <header id="header"><nav>Somnia studio</nav></header>\n  <main id="main">\n    <section class="hero">\n      <h1>Make room for something new.</h1>\n      <p>Your first idea starts here.</p>\n      <button>Explore</button>\n    </section>\n  </main>\n  <footer>Made locally.</footer>\n</body>\n</html>\n',
  'styles.css':'/* Local project styles. */\nbody { margin: 0; font-family: system-ui, sans-serif; }\n.hero { padding: 80px; }\n'
-});
+};
+const draft=readDraft();
+const project=new EditorProject(draft?draft.files:starter);
 const disconnect=connectEditorProject(project,{name:'Untitled project',alreadySaved:false});
+if(draft){patchState({notice:'Restored your unsaved draft from this device. Use Project > Reset to starter project to discard it.',...(draft.activeFile in draft.files?{activeFile:draft.activeFile}:{})});}
+let draftTimer=0;
+subscribe(()=>{const st=getState();window.clearTimeout(draftTimer);if(st.storage!=='memory')return;if(!st.coreConnected||!st.isDirty)return;draftTimer=window.setTimeout(()=>{const s2=getState();if(s2.storage==='memory'&&s2.isDirty)saveDraft({files:s2.files,activeFile:s2.activeFile,openFiles:s2.openFiles});},800);});
+registerCommand({id:'project.resetDraft',title:'Reset to starter project',category:'Project',enabled:()=>getState().storage==='memory',run:()=>{if(!window.confirm('Discard the unsaved draft and reload the starter project?'))return;clearDraft();location.reload();}});
 if(import.meta.hot)import.meta.hot.dispose(disconnect);
 createRoot(document.getElementById('root')!).render(<StrictMode><App/></StrictMode>);
 
