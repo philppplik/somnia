@@ -1,6 +1,6 @@
 /* Bento shell: rounded cards on a slightly darker outer background. Tokens live in tokens.css. */
 html,body,#root{background:var(--shell-bg)}
-.problems-panel{background:var(--bg-panel);border:0;border-radius:var(--r-lg);box-shadow:var(--card-shadow)}
+.problems-panel{background:var(--bg-panel);border:0;border-radius:var(--r-lg);box-shadow:var(--card-shadow);max-height:30vh;overflow-y:auto;overflow-x:hidden;overflow-wrap:anywhere;min-height:0}.problems-panel code{overflow-wrap:anywhere}
 .editor-layout{gap:0}
 .pane-slot{padding:0}
 .pane-slot>.panel,.center{background:var(--bg-panel);border-radius:var(--r-lg);box-shadow:var(--card-shadow);overflow:hidden}
@@ -21,3 +21,14 @@ input,select,textarea{border-radius:var(--r-sm)}
 
 
 
+
+/* Scrollbars stay visible for accessibility, but slim and quiet: transparent track, rounded thumb that only gets stronger on hover. */
+*{scrollbar-width:thin;scrollbar-color:var(--border-default) transparent}
+*::-webkit-scrollbar{width:8px;height:8px}
+*::-webkit-scrollbar-track{background:transparent}
+*::-webkit-scrollbar-thumb{background:var(--border-default);border-radius:8px;border:2px solid transparent;background-clip:content-box}
+*::-webkit-scrollbar-thumb:hover{background:var(--text-tertiary);background-clip:content-box}
+*::-webkit-scrollbar-corner{background:transparent}
+/* App frame: outer radius is twice the card radius. */
+.app-frame{border-radius:calc(var(--r-lg) * 2);overflow:hidden}
+:root[data-shell=desktop],:root[data-shell=desktop] body,:root[data-shell=desktop] #root{background:transparent}

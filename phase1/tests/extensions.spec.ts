@@ -29,4 +29,4 @@ await page.getByLabel('Extension manifest JSON').fill(JSON.stringify(manifest));
 await page.getByRole('button',{name:'File count panel (extension)'}).click();
 const f=page.frameLocator('iframe[title="File count (extension panel)"]');await expect(f.locator('#out')).toHaveText(/files:\d+/);await expect(f.locator('#net')).toHaveText('net:blocked');
 await expect(f.locator('#net')).toHaveAttribute('data-err',/needs the "ui.notify" permission/);
-await page.getByRole('button',{name:'Layers panel'}).click();await expect(page.getByRole('tablist',{name:'Sidebar tabs'})).toBeVisible();});
+await page.getByRole('button',{name:'Layers panel'}).click();await expect(page.getByRole('button',{name:'Layers panel'})).toHaveAttribute('aria-pressed','true');});

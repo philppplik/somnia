@@ -21,6 +21,7 @@ const disconnect=connectEditorProject(project,{name:'Untitled project',alreadySa
 if(import.meta.hot)import.meta.hot.dispose(disconnect);
 createRoot(document.getElementById('root')!).render(<StrictMode><App/></StrictMode>);
 
+if(isTauri())document.documentElement.dataset.shell='desktop';
 if(isTauri())void installDesktopAdapter().catch(error=>console.error(error));
 else if(webFsSupported()&&!location.search.includes('fallback=zip'))void installFileAdapter(createWebFsPort()).catch(error=>console.error(error));
 else void installFileAdapter(createWebFsPort({...zipWebFsOptions(),canReconnect:false})).catch(error=>console.error(error));

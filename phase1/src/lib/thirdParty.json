@@ -1,0 +1,236 @@
+[
+ {
+  "name": "@babel/runtime",
+  "version": "7.29.7",
+  "license": "MIT",
+  "homepage": "https://babel.dev/docs/en/next/babel-runtime"
+ },
+ {
+  "name": "@base-ui/react",
+  "version": "1.8.0",
+  "license": "MIT",
+  "homepage": "https://base-ui.com"
+ },
+ {
+  "name": "@base-ui/utils",
+  "version": "0.4.0",
+  "license": "MIT",
+  "homepage": "https://github.com/mui/base-ui"
+ },
+ {
+  "name": "@codemirror/autocomplete",
+  "version": "6.20.3",
+  "license": "MIT",
+  "homepage": "https://code.haverbeke.berlin/codemirror/autocomplete"
+ },
+ {
+  "name": "@codemirror/commands",
+  "version": "6.11.1",
+  "license": "MIT",
+  "homepage": "https://code.haverbeke.berlin/codemirror/commands"
+ },
+ {
+  "name": "@codemirror/lang-css",
+  "version": "6.3.1",
+  "license": "MIT",
+  "homepage": "https://github.com/codemirror/lang-css"
+ },
+ {
+  "name": "@codemirror/lang-html",
+  "version": "6.4.12",
+  "license": "MIT",
+  "homepage": "https://code.haverbeke.berlin/codemirror/lang-html"
+ },
+ {
+  "name": "@codemirror/lang-javascript",
+  "version": "6.2.5",
+  "license": "MIT",
+  "homepage": "https://github.com/codemirror/lang-javascript"
+ },
+ {
+  "name": "@codemirror/language",
+  "version": "6.12.4",
+  "license": "MIT",
+  "homepage": "https://code.haverbeke.berlin/codemirror/language"
+ },
+ {
+  "name": "@codemirror/lint",
+  "version": "6.9.7",
+  "license": "MIT",
+  "homepage": "https://code.haverbeke.berlin/codemirror/lint"
+ },
+ {
+  "name": "@codemirror/search",
+  "version": "6.7.2",
+  "license": "MIT",
+  "homepage": "https://code.haverbeke.berlin/codemirror/search"
+ },
+ {
+  "name": "@codemirror/state",
+  "version": "6.7.6",
+  "license": "MIT",
+  "homepage": "https://code.haverbeke.berlin/codemirror/state"
+ },
+ {
+  "name": "@codemirror/view",
+  "version": "6.43.13",
+  "license": "MIT",
+  "homepage": "https://code.haverbeke.berlin/codemirror/view"
+ },
+ {
+  "name": "@floating-ui/core",
+  "version": "1.8.0",
+  "license": "MIT",
+  "homepage": "https://floating-ui.com"
+ },
+ {
+  "name": "@floating-ui/dom",
+  "version": "1.8.0",
+  "license": "MIT",
+  "homepage": "https://floating-ui.com"
+ },
+ {
+  "name": "@floating-ui/react-dom",
+  "version": "2.1.9",
+  "license": "MIT",
+  "homepage": "https://floating-ui.com/docs/react-dom"
+ },
+ {
+  "name": "@floating-ui/utils",
+  "version": "0.2.12",
+  "license": "MIT",
+  "homepage": "https://floating-ui.com"
+ },
+ {
+  "name": "@lezer/common",
+  "version": "1.5.3",
+  "license": "MIT",
+  "homepage": "https://code.haverbeke.berlin/lezer/common"
+ },
+ {
+  "name": "@lezer/css",
+  "version": "1.3.8",
+  "license": "MIT",
+  "homepage": "https://code.haverbeke.berlin/lezer/css"
+ },
+ {
+  "name": "@lezer/highlight",
+  "version": "1.2.5",
+  "license": "MIT",
+  "homepage": "https://code.haverbeke.berlin/lezer/highlight"
+ },
+ {
+  "name": "@lezer/html",
+  "version": "1.3.13",
+  "license": "MIT",
+  "homepage": "https://github.com/lezer-parser/html"
+ },
+ {
+  "name": "@lezer/javascript",
+  "version": "1.5.6",
+  "license": "MIT",
+  "homepage": "https://code.haverbeke.berlin/lezer/javascript"
+ },
+ {
+  "name": "@lezer/lr",
+  "version": "1.4.10",
+  "license": "MIT",
+  "homepage": "https://code.haverbeke.berlin/lezer/lr"
+ },
+ {
+  "name": "@marijn/find-cluster-break",
+  "version": "1.0.4",
+  "license": "MIT",
+  "homepage": "https://code.haverbeke.berlin/marijn/find-cluster-break"
+ },
+ {
+  "name": "@somnia/editor-core",
+  "version": "0.1.0",
+  "license": "MIT",
+  "homepage": ""
+ },
+ {
+  "name": "@tauri-apps/api",
+  "version": "2.12.1",
+  "license": "Apache-2.0 OR MIT",
+  "homepage": "https://github.com/tauri-apps/tauri#readme"
+ },
+ {
+  "name": "class-variance-authority",
+  "version": "0.7.1",
+  "license": "Apache-2.0",
+  "homepage": "https://github.com/joe-bell/cva#readme"
+ },
+ {
+  "name": "clsx",
+  "version": "2.1.1",
+  "license": "MIT",
+  "homepage": ""
+ },
+ {
+  "name": "crelt",
+  "version": "1.0.7",
+  "license": "MIT",
+  "homepage": "https://code.haverbeke.berlin/marijn/crelt"
+ },
+ {
+  "name": "fflate",
+  "version": "0.8.3",
+  "license": "MIT",
+  "homepage": "https://101arrowz.github.io/fflate"
+ },
+ {
+  "name": "lucide-react",
+  "version": "1.49.0",
+  "license": "ISC",
+  "homepage": "https://lucide.dev"
+ },
+ {
+  "name": "react",
+  "version": "19.3.0",
+  "license": "MIT",
+  "homepage": "https://react.dev/"
+ },
+ {
+  "name": "react-dom",
+  "version": "19.3.0",
+  "license": "MIT",
+  "homepage": "https://react.dev/"
+ },
+ {
+  "name": "reselect",
+  "version": "5.3.0",
+  "license": "MIT",
+  "homepage": "https://github.com/reduxjs/reselect"
+ },
+ {
+  "name": "scheduler",
+  "version": "0.28.0",
+  "license": "MIT",
+  "homepage": "https://react.dev/"
+ },
+ {
+  "name": "style-mod",
+  "version": "4.1.4",
+  "license": "MIT",
+  "homepage": "https://code.haverbeke.berlin/marijn/style-mod"
+ },
+ {
+  "name": "tailwind-merge",
+  "version": "3.7.0",
+  "license": "MIT",
+  "homepage": "https://github.com/dcastil/tailwind-merge"
+ },
+ {
+  "name": "use-sync-external-store",
+  "version": "1.7.0",
+  "license": "MIT",
+  "homepage": "https://github.com/react/react"
+ },
+ {
+  "name": "w3c-keyname",
+  "version": "2.2.8",
+  "license": "MIT",
+  "homepage": "https://github.com/marijnh/w3c-keyname#readme"
+ }
+]
