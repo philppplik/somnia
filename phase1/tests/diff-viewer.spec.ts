@@ -1,0 +1,10 @@
+import {test,expect} from './fixtures';
+test('diff viewer compares the saved version with the current text and navigates changes',async({page})=>{await page.goto('/');
+ await page.evaluate(()=>(window as any).__somnia.setSource('index.html','<!doctype html><html><head><title>t</title></head><body><h1>one</h1><p>two</p><p>three</p><p>four</p></body></html>'));
+ await page.keyboard.press('Control+k');await page.getByRole('combobox',{name:'Search commands'}).fill('diff viewer');await page.getByRole('option',{name:/diff viewer/i}).click();
+ const dlg=page.getByRole('dialog',{name:'Compare'});await expect(dlg).toBeVisible();
+ await expect(dlg.getByLabel('Diff summary')).toContainText(/added/);
+ await dlg.getByLabel('Left').selectOption('file:index.html');await expect(dlg.getByLabel('Diff summary')).toHaveText('No differences.');
+ await dlg.getByLabel('Left').selectOption('saved:index.html');await dlg.getByRole('button',{name:'Next change'}).click();
+ await dlg.getByRole('button',{name:'Toggle view'}).click();await expect(dlg.getByLabel('Diff lines')).toContainText('<h1>one</h1>');
+ await page.keyboard.press('Escape');await expect(dlg).toBeHidden();});
