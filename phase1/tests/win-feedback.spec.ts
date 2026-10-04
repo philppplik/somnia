@@ -40,3 +40,9 @@ test('selected code text is clearly highlighted',async({page})=>{await page.goto
  await page.getByLabel('Source code').click();await page.keyboard.press('Control+a');
  const bg=await page.locator('.cm-selectionBackground').first().evaluate(e=>getComputedStyle(e).backgroundColor);
  const base=await page.locator('.cm-editor').evaluate(e=>getComputedStyle(e).backgroundColor);expect(bg).not.toBe(base);expect(bg).not.toBe('rgba(0, 0, 0, 0)');});
+test('breadcrumbs show the element path and select on click',async({page})=>{await page.setViewportSize({width:1500,height:900});await page.goto('/');await showCode(page);
+ await page.getByLabel('Source code').click();await page.keyboard.press('Control+Home');
+ await page.evaluate(()=>(window as any).__somnia.setSource('index.html','<html><body>\n<section class="hero">\n<div id="a"><p>Hi</p></div>\n</section>\n</body></html>'));
+ await page.getByLabel('Source code').click();await page.keyboard.press('Control+End');await page.keyboard.press('ArrowUp');await page.keyboard.press('ArrowUp');await page.keyboard.press('ArrowUp');await page.keyboard.press('Home');await page.keyboard.press('ArrowRight');await page.keyboard.press('ArrowRight');await page.keyboard.press('ArrowRight');await page.keyboard.press('ArrowRight');await page.keyboard.press('ArrowRight');
+ const nav=page.getByTestId('breadcrumbs');await expect(nav).toContainText('section.hero');
+ await nav.getByRole('button',{name:'Select section.hero'}).click();await expect(nav.getByRole('button',{name:'Select section.hero'})).toHaveAttribute('aria-current','true');});
