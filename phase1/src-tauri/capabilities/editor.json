@@ -6,7 +6,7 @@
   "windows": ["main"],
   "permissions": [
     "core:event:allow-listen", "core:event:allow-unlisten",
-    "core:window:allow-close", "core:window:allow-start-dragging", "core:window:allow-minimize", "core:window:allow-toggle-maximize",
+    "core:window:allow-close", "core:window:allow-destroy", "core:window:allow-start-dragging", "core:window:allow-minimize", "core:window:allow-toggle-maximize",
     "allow-choose-project", "allow-list-files", "allow-read-file", "allow-stage-edit", "allow-save-file",
     "allow-recovery-list", "allow-recovery-read", "allow-recovery-restore", "allow-recovery-discard", "allow-close-project"
   ]
