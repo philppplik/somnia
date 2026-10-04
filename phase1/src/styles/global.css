@@ -71,3 +71,8 @@
 .vp-handle:hover::after,.vp-handle:focus-visible::after{background:var(--accent);opacity:1}
 @media (max-width:1150px){.viewport-controls select{display:none}}
 .viewport-controls{flex:none}
+
+/* Look options (Settings > Appearance): UI scale via zoom, compensated so the app still fills the window. */
+#root{zoom:var(--ui-zoom,1)}
+#root .app-frame{height:calc(100dvh / var(--ui-zoom,1))}
+.accent-fill{background:var(--accent);color:var(--accent-ink,#fff)}
