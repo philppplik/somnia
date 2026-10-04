@@ -1,3 +1,4 @@
+import {openExternal,REPO_URL} from './openExternal';
 import {downloadProject,downloadMarkdown} from './exportProject';
 import {elements,insertElement} from './structureCommands';
 import { applyHistory, getState, patchState } from '../store/appStore';
@@ -45,6 +46,7 @@ ui('theme.dark','Use dark theme',undefined,()=>patchState({themeChoice:'dark',th
 ui('theme.toggle','Toggle light / dark theme',undefined,()=>{const t=getState().theme==='dark'?'light':'dark';patchState({themeChoice:t,theme:t});});
 for(const direction of ['undo','redo'] as const)registerCommand({id:`edit.${direction}`,title:direction==='undo'?'Undo':'Redo',category:'Edit',shortcut:direction==='undo'?'Mod+Z':'Mod+Shift+Z',enabled:()=>getState().coreConnected,run:()=>applyHistory(direction)});
 for(const [id,title,shortcut] of [['project.open','Open folder','Mod+O'],['project.save','Save project','Mod+S'],['project.export','Export HTML',undefined]] as const)registerCommand({id,title,category:'Project',shortcut,allowInInput:id==='project.save',enabled:()=>false,run:()=>{}});
+registerCommand({id:'help.github',title:'Somnia on GitHub (source, releases, issues)',category:'Help',keywords:['help','github','repo','source','issues','releases'],run:()=>{void openExternal(REPO_URL).catch(()=>patchState({notice:'Could not open the browser. The page is '+REPO_URL}));}});
 registerCommand({id:'help.shortcuts',title:'Keyboard shortcuts',category:'Help',keywords:['help','keyboard'],run:()=>patchState({notice:'Ctrl/Cmd+K commands · B sidebar · J problems · 1/2/3 views · Z undo · Shift+Z redo. Resize panels with arrow keys.'})});
 export const isMac=()=>/Mac|iPhone|iPad/.test(navigator.platform);
 export const formatShortcut=(shortcut:string)=>shortcut.split('+').map(part=>({Mod:isMac()?'⌘':'Ctrl',Alt:isMac()?'⌥':'Alt',Shift:isMac()?'⇧':'Shift'}[part]??(part.length===1?part.toUpperCase():part))).join(isMac()?'':' + ');
@@ -79,6 +81,7 @@ export function attachKeyboardShortcuts(target:Window=window){
 registerCommand({id:'project.export',title:'Export source ZIP',category:'Project',enabled:()=>getState().coreConnected,run:()=>{downloadProject(getState().files,getState().projectName);patchState({notice:'Source ZIP download requested. Local disk save state is unchanged.'});}});
 
 ui('settings.open','Settings','Mod+,',()=>patchState({settingsOpen:true}));
+ui('extensions.open','Extensions',undefined,()=>patchState({settingsOpen:true,settingsSection:'Extensions'}));
 
 registerCommand({id:'project.export.md',title:'Export active file as Markdown',category:'Project',keywords:['md','markdown'],enabled:()=>getState().coreConnected&&/\.html?$/i.test(getState().activeFile),run:()=>{try{downloadMarkdown(getState().files,getState().activeFile);patchState({notice:'Markdown download requested. The source file is unchanged.'});}catch(error){patchState({notice:error instanceof Error?error.message:'Markdown export failed.'});}}});
 /** Tools menu groups app-level utilities; registered after all commands exist. */

@@ -1,0 +1,25 @@
+import {test,expect} from '@playwright/test';
+import {showCode} from './helpers';
+test('problems panel lists unclosed tags and jumps to the line',async({page})=>{await page.setViewportSize({width:1400,height:900});await page.goto('/');await showCode(page);
+ await page.evaluate(()=>(window as any).__somnia.setSource('index.html','<html>\n<body>\n<div>\n<p>ok</p>\n</body></html>'));
+ await page.getByRole('button',{name:'Toggle problems'}).click();
+ const panel=page.getByTestId('problems-panel');await expect(panel.getByTestId('problems-count')).toContainText('warning');
+ await panel.getByRole('button',{name:/line 3/}).click();
+ await expect(page.getByText("Line 3, Col").first()).toBeVisible();});
+test('left rail has Extensions and Settings at the bottom, Help links to GitHub',async({page})=>{await page.setViewportSize({width:1400,height:900});await page.goto('/');await expect(page.locator('[data-storage]')).toBeVisible();
+ await page.getByRole('button',{name:'Extensions',exact:true}).click();
+ await expect(page.getByRole('dialog')).toContainText('Extensions');await page.keyboard.press('Escape');
+ await page.getByRole('button',{name:'Settings',exact:true}).click();await expect(page.getByRole('dialog')).toBeVisible();await page.keyboard.press('Escape');
+ await page.getByRole('button',{name:'Help'}).click();await expect(page.getByRole('menuitem',{name:/Somnia on GitHub/})).toBeVisible();});
+test('Ctrl+S on a memory project opens the save dialog',async({page})=>{await page.goto('/');await showCode(page);
+ await page.getByLabel('Source code').click();await page.keyboard.press('Control+s');
+ const d=page.getByRole('dialog',{name:'Save project'});await expect(d).toBeVisible();await expect(d.getByRole('button',{name:'Download ZIP instead'})).toBeVisible();
+ await d.getByRole('button',{name:'Cancel'}).click();await expect(d).toBeHidden();});
+test('save dialog writes the Starter project into an empty folder and continues as disk project',async({page})=>{
+ await page.addInitScript(()=>{(window as any).showDirectoryPicker=async()=>{const root=await navigator.storage.getDirectory();const dir=await root.getDirectoryHandle('somnia-save-'+Math.random().toString(36).slice(2),{create:true});(window as any).__dir=dir;return dir;};});
+ await page.goto('/');await showCode(page);
+ await page.getByLabel('Source code').click();await page.keyboard.press('Control+s');
+ const d=page.getByRole('dialog',{name:'Save project'});await d.getByRole('button',{name:'Choose folder and save'}).click();await expect(d).toBeHidden({timeout:10000});
+ const names=await page.evaluate(async()=>{const out:string[]=[];for await(const [n] of (window as any).__dir.entries())out.push(n);return out;});
+ expect(names).toContain('index.html');
+ await expect(page.getByText('Unsaved changes')).toHaveCount(0);});

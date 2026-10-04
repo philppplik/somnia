@@ -22,7 +22,7 @@ test('shell, palette, shortcuts, core edits, history and panels',async({page})=>
  await page.getByRole('button',{name:'Toggle sidebar',exact:true}).click();await expect(page.getByRole('complementary',{name:'Project sidebar'})).toHaveCount(0);
  await page.getByRole('button',{name:'Toggle sidebar',exact:true}).click();
  const separator=page.getByRole('separator',{name:'Resize sidebar'});await separator.focus();await page.keyboard.press('ArrowRight');await expect(separator).toHaveAttribute('aria-valuenow','268');
- await page.keyboard.press('Control+k');await page.getByRole('combobox',{name:'Search commands'}).fill('save');await expect(page.getByRole('option',{name:/Save project/})).toHaveAttribute('aria-disabled','true');
+ await page.keyboard.press('Control+k');await page.getByRole('combobox',{name:'Search commands'}).fill('save');await expect(page.getByRole('option',{name:/Save project/})).not.toHaveAttribute('aria-disabled','true');
  await page.screenshot({path:'tests/artifacts/palette.png',fullPage:true});await page.keyboard.press('Escape');await expect(page.getByRole('dialog')).toHaveCount(0);
  await page.getByRole('button',{name:'Design view',exact:true}).click();
  await page.keyboard.press('Control+k');await page.getByRole('combobox',{name:'Search commands'}).fill('Use light theme');await page.keyboard.press('Enter');await expect(page.locator('html')).toHaveAttribute('data-theme','light');

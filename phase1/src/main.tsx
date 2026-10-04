@@ -3,7 +3,7 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { EditorProject } from '@somnia/editor-core';
 import { App } from './App';
-import { connectEditorProject } from './store/appStore';
+import { connectEditorProject, applyOperations } from './store/appStore';
 import './styles/global.css';
 import './styles/bento.css';
 import {isTauri} from '@tauri-apps/api/core';
@@ -32,7 +32,7 @@ applyLook(getState().look);
 createRoot(document.getElementById('root')!).render(<StrictMode><App/></StrictMode>);
 
 if(!isTauri())installBeforeUnload(()=>getState().isDirty&&getState().storage!=='disk');
-if(import.meta.env.DEV)(window as unknown as {__somnia:object}).__somnia={requestClose};
+if(import.meta.env.DEV)(window as unknown as {__somnia:object}).__somnia={requestClose,setSource:(file:string,text:string)=>applyOperations([{type:'replaceSource',file,text}] as never)};
 if(isTauri())document.documentElement.dataset.shell='desktop';
 if(isTauri())void installDesktopAdapter().catch(error=>console.error(error));
 else if(webFsSupported()&&!location.search.includes('fallback=zip'))void installFileAdapter(createWebFsPort()).catch(error=>console.error(error));

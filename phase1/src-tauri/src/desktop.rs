@@ -159,6 +159,36 @@ async fn delete_file(
     .await
 }
 #[tauri::command]
+async fn open_external(window: WebviewWindow, url: String) -> Result<()> {
+    gate(&window)?;
+    // Only the project's own GitHub pages; no shell is involved, the URL is a single argument.
+    const ALLOWED: &str = "https://github.com/philppplik/somnia";
+    let boundary = matches!(
+        url.as_bytes().get(ALLOWED.len()),
+        None | Some(b'/') | Some(b'?') | Some(b'#')
+    );
+    if !(url.starts_with(ALLOWED)
+        && boundary
+        && url.len() < 300
+        && url.chars().all(|c| c.is_ascii_graphic()))
+    {
+        return Err(AppError::Denied(
+            "Only the Somnia GitHub page can be opened".into(),
+        ));
+    }
+    #[cfg(target_os = "windows")]
+    let result = std::process::Command::new("rundll32")
+        .args(["url.dll,FileProtocolHandler", url.as_str()])
+        .spawn();
+    #[cfg(target_os = "macos")]
+    let result = std::process::Command::new("open").arg(url.as_str()).spawn();
+    #[cfg(all(not(target_os = "windows"), not(target_os = "macos")))]
+    let result = std::process::Command::new("xdg-open").arg(url.as_str()).spawn();
+    result
+        .map(|_| ())
+        .map_err(|e| AppError::Io(e.to_string()))
+}
+#[tauri::command]
 async fn recovery_list(
     window: WebviewWindow,
     state: State<'_, Shared>,
@@ -281,6 +311,7 @@ pub fn run() {
             stage_edit,
             save_file,
             delete_file,
+            open_external,
             recovery_list,
             recovery_read,
             recovery_restore,
