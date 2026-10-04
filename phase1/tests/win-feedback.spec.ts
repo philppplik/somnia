@@ -46,3 +46,10 @@ test('breadcrumbs show the element path and select on click',async({page})=>{awa
  await page.getByLabel('Source code').click();await page.keyboard.press('Control+End');await page.keyboard.press('ArrowUp');await page.keyboard.press('ArrowUp');await page.keyboard.press('ArrowUp');await page.keyboard.press('Home');await page.keyboard.press('ArrowRight');await page.keyboard.press('ArrowRight');await page.keyboard.press('ArrowRight');await page.keyboard.press('ArrowRight');await page.keyboard.press('ArrowRight');
  const nav=page.getByTestId('breadcrumbs');await expect(nav).toContainText('section.hero');
  await nav.getByRole('button',{name:'Select section.hero'}).click();await expect(nav.getByRole('button',{name:'Select section.hero'})).toHaveAttribute('aria-current','true');});
+test('DOM tree panel shows the tree, collapses, searches and selects',async({page})=>{await page.setViewportSize({width:1500,height:900});await page.goto('/');await expect(page.locator('[data-storage]')).toBeVisible();
+ await page.getByRole('button',{name:'DOM tree panel'}).click();
+ const tree=page.getByRole('tree',{name:'Document tree'});await expect(tree).toBeVisible();await expect(tree.getByRole('button',{name:/Select html/})).toBeVisible();
+ await tree.getByRole('button',{name:/Collapse html/}).click();await expect(tree.getByRole('button',{name:/Select body/})).toHaveCount(0);
+ await tree.getByRole('button',{name:/Expand html/}).click();
+ await page.getByLabel('Search DOM tree').fill('hero');const hero=tree.getByRole('button',{name:/Select section.hero/});await expect(hero).toBeVisible();await hero.click();
+ await expect(page.getByTestId('breadcrumbs').getByRole('button',{name:'Select section.hero'})).toHaveAttribute('aria-current','true');});

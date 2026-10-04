@@ -5,7 +5,7 @@ import {readTheme,rememberTheme,readThemeChoice,rememberThemeChoice,type ThemeCh
 import { useSyncExternalStore } from 'react';
 import type { EditorNode,EditorProjectPort,Operation,Origin } from '../lib/editorPort';
 export type LeftTab='layers'|'files'|'search'|'assets'|'components';
-export type RightTab='design'|'prototype'|'code';
+export type RightTab='design'|'prototype'|'code'|'dom';
 export type ViewMode='design'|'code'|'split';
 export interface DiskComparison {path:string;disk:string;editor:string;apply:(content:string)=>Promise<void>}
 export interface AppState {exportDialog:boolean;closeProjectPrompt:boolean;saveDialog:null|{error:string|null;busy:boolean};jumpTo:null|{file:string;line:number;col:number;nonce:number};settingsSection:string;look:Look;closePrompt:null|'disk'|'memory';settingsOpen:boolean;contrast:Contrast;codeTheme:CodeTheme;wrapLines:boolean;extensionThemes:{id:string;label:string}[];extensionPanels:{id:string;extId:string;title:string;side:'left'|'right';html:string}[];activePanel:{left:string|null;right:string|null};storage:'memory'|'disk'|'tab';diskComparison:DiskComparison|null;nativeConnected:boolean;
