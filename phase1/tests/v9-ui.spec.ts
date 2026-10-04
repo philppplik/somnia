@@ -4,7 +4,7 @@ test('rails replace the duplicate tab rows',async({page})=>{await page.goto('/')
  await page.getByRole('button',{name:'Files panel'}).click();await expect(page.getByRole('button',{name:'Files panel'})).toHaveAttribute('aria-pressed','true');
  await page.getByRole('button',{name:'Prototype panel'}).click();await expect(page.getByRole('button',{name:'Prototype panel'})).toHaveAttribute('aria-pressed','true');});
 test('wrap lines setting wraps long code lines',async({page})=>{await page.goto('/');await page.keyboard.press('Control+1');
- const long='<p>'+'word '.repeat(300)+'</p>';await page.getByLabel('Source code').fill(long);
+ const long='<p>'+'word '.repeat(120)+'</p>';await page.getByLabel('Source code').fill(long);
  const scrollW=()=>page.locator('.cm-scroller').evaluate(e=>e.scrollWidth>e.clientWidth+2);
  expect(await scrollW()).toBe(true);
  await page.getByRole('button',{name:'Tools',exact:true}).click();await page.getByRole('menuitem',{name:'Settings'}).click();await page.getByRole('button',{name:'Code editor',exact:true}).click();await page.getByLabel('Wrap long lines').check();await page.keyboard.press('Escape');
