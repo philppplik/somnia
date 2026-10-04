@@ -1,6 +1,7 @@
 import {test,expect} from '@playwright/test';
+import {showCode} from './helpers';
 const editor=(page:any)=>page.getByLabel('Source code');
-async function code(page:any){await page.goto('/');await page.keyboard.press('Control+1');}
+async function code(page:any){await page.goto('/');await showCode(page);}
 test('auto-close tags can be switched off in settings',async({page})=>{await code(page);
  await editor(page).click();await page.keyboard.press('Control+a');await page.keyboard.type('<section>');
  await expect(editor(page)).toContainText('</section>');
