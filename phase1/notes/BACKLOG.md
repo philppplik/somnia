@@ -15,3 +15,7 @@ Branch: phase1-foundation. Source of truth for scope: STATUS.md and NEXT-BLOCK.m
 ## Rules
 - Small feature branches, draft PRs into phase1-foundation, CI green before merge.
 - No merge into main and no public deploy without Philipp's decision.
+
+## v10 progress
+- Draft restore (memory-only project): done. Disk projects rely on the existing recovery files.
+- Project search/replace (Ctrl+Shift+F): done; click opens the file, no jump to the line yet.
