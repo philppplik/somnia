@@ -7,6 +7,7 @@ import {syntaxHighlighting,HighlightStyle} from '@codemirror/language';
 import {autocompletion,closeBrackets,closeBracketsKeymap,completionKeymap} from '@codemirror/autocomplete';
 import {search,searchKeymap,highlightSelectionMatches} from '@codemirror/search';
 import {linter,lintGutter} from '@codemirror/lint';
+import {applyFormatting} from '../lib/commands';
 import {transformSelection,setActiveEditor} from '../lib/editorBridge';
 import {encodeEntities,decodeEntities} from '../lib/entities';
 import {lintState} from '../lib/diagnostics';
@@ -55,6 +56,7 @@ export function SourceEditor({source,file,disabled}:{source:string;file:string;d
   ['Copy','Ctrl+C',act(async v=>{const r=v.state.selection.main;await navigator.clipboard.writeText(v.state.sliceDoc(r.from,r.to));}),!sel()],
   ['Paste','Ctrl+V',act(async v=>{const t=await navigator.clipboard.readText();v.dispatch(v.state.replaceSelection(t));}),disabled],
   ['Select all','Ctrl+A',act(v=>{selectAll(v);}),false],
+  ['Apply formatting','Alt+Shift+F',act(()=>applyFormatting()),disabled],
   ['Encode special characters','',act(v=>{transformSelection(v,encodeEntities);}),disabled||!sel()],['Decode special characters','',act(v=>{transformSelection(v,decodeEntities);}),disabled||!sel()]];
  return <><div className="codemirror-host" ref={host} onContextMenu={e=>{e.preventDefault();setMenu({x:Math.min(e.clientX,window.innerWidth-190),y:Math.min(e.clientY,window.innerHeight-230)});}}/>{menu&&<div ref={menuRef} role="menu" aria-label="Code editor actions" className="menu-popup" style={{position:'fixed',left:menu.x,top:menu.y,minWidth:180}}>{items.map(([label,hint,fn,off])=><button key={label} role="menuitem" className="menu-item flex justify-between gap-6" style={{width:'100%',background:'none',border:0,textAlign:'left'}} disabled={off} onClick={fn}><span>{label}</span><kbd className="text-ink-2">{hint}</kbd></button>)}</div>}</>;
 }
