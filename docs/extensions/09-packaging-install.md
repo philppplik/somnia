@@ -42,3 +42,7 @@ There is no marketplace yet. The plan, recorded in [ADR-003](../../phase1/notes/
 - Dependencies between extensions.
 
 Next: [Troubleshooting](10-troubleshooting.md).
+
+## Install from a ZIP or a folder
+
+Settings > Extensions also offers "Add from a .zip package" and "Add from a folder". The package must contain `somnia-extension.json` (or `manifest.json`) at its root or in one top-level folder. If the manifest has `"main": "main.js"` and no `code`, Somnia reads that file from the package and uses its text as `code`. Limits: 2 MB total, 200 files, no `..` paths. Only the manifest and the `main` file are used; other files are ignored.
