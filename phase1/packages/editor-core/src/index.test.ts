@@ -28,3 +28,14 @@ test('mixed inline range preserves all markup, attributes, comments and entity s
 test('unsafe block content and entity internal offset reject atomically',()=>{const src='<html><body><div>before<p>inside</p>after</div><h1>&NotEqualTilde;</h1></body></html>';const p=new EditorProject({'index.html':src});assert.throws(()=>p.transact({origin:'canvas',operations:[{type:'formatText',file:'index.html',nodeId:find(p,'div').id,from:0,to:2,mark:'em'}]}),/inline markup/);assert.throws(()=>p.transact({origin:'canvas',operations:[{type:'formatText',file:'index.html',nodeId:find(p,'h1').id,from:0,to:1,mark:'em'}]}),/entity/);assert.equal(p.files['index.html'],src);});
 
 test('internal disk reload or reviewed merge invalidates old snapshot history',()=>{const p=new EditorProject({'index.html':html});p.transact({origin:'canvas',operations:[{type:'setText',file:'index.html',nodeId:find(p,'h1').id,text:'local'}]});assert.equal(p.canUndo,true);const external=html.replace('Hallo &amp; 世界','external');p.transact({origin:'internal',operations:[{type:'replaceSource',file:'index.html',text:external}]});assert.equal(p.canUndo,false);assert.equal(p.canRedo,false);assert.equal(p.undo(),null);assert.equal(p.files['index.html'],external);});
+
+test('file operations create, rename, delete and undo as one history step',()=>{
+ const p=new EditorProject({'index.html':'<h1>a</h1>'});
+ p.transact({origin:'canvas',operations:[{type:'createFile',file:'css/site.css',text:'a{}'}]});assert.deepEqual(Object.keys(p.files).sort(),['css/site.css','index.html']);
+ p.transact({origin:'canvas',operations:[{type:'renameFile',file:'css/site.css',to:'css/main.css'}]});assert.ok('css/main.css' in p.files&&!('css/site.css' in p.files));
+ p.transact({origin:'canvas',operations:[{type:'deleteFile',file:'css/main.css'}]});assert.deepEqual(Object.keys(p.files),['index.html']);
+ p.undo();assert.ok('css/main.css' in p.files);p.undo();assert.ok('css/site.css' in p.files);
+ assert.throws(()=>p.transact({origin:'canvas',operations:[{type:'createFile',file:'INDEX.html',text:''}]}),/already exists/);
+ assert.throws(()=>p.transact({origin:'canvas',operations:[{type:'createFile',file:'../x.html',text:''}]}),/not allowed|segment/);
+ assert.throws(()=>p.transact({origin:'canvas',operations:[{type:'deleteFile',file:'nope.html'}]}),/not found/);
+});
