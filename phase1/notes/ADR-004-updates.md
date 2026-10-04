@@ -17,3 +17,6 @@ Status: not built. Waiting for the secrets to be set by Philipp.
 
 ## Window corners on Windows (2026-10-04)
 Square outer edge was reported on Windows. Causes: native `shadow: true` on a frameless window draws a rectangular shadow/border outside the CSS radius, and `backgroundColor` painted the corners. Both removed (`shadow: false`, no `backgroundColor`, WebView2 stays transparent). Trade-off: no native drop shadow. Needs a check on real Windows; if corners still show, revert the radius.
+
+## Platforms (2026-10-04)
+CI builds Windows (NSIS, MSI), Linux (deb, AppImage) and macOS (dmg, universal host arch of the runner, Apple Silicon). All unsigned; macOS is not notarized, so Gatekeeper needs right-click > Open. Linux and macOS builds are untested by hand.

@@ -76,3 +76,26 @@ jobs:
           path: |
             phase1/src-tauri/target/release/bundle/nsis/*.exe
             phase1/src-tauri/target/release/bundle/msi/*.msi
+  macos:
+    runs-on: macos-latest
+    defaults:
+      run:
+        working-directory: phase1
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - uses: dtolnay/rust-toolchain@stable
+      - run: npm ci
+      - run: cargo test --manifest-path src-tauri/Cargo.toml --no-default-features --locked
+      - name: Build unsigned, not notarized macOS alpha
+        run: npm run tauri build -- --ci --config src-tauri/tauri.macos-alpha.conf.json --bundles dmg
+      - name: Retain macOS alpha
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: somnia-macos-alpha-${{ github.sha }}
+          retention-days: 14
+          if-no-files-found: error
+          path: phase1/src-tauri/target/release/bundle/dmg/*.dmg
