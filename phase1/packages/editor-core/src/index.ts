@@ -11,6 +11,9 @@ export type Operation =
  | {type:'remove';file:string;nodeId:string}
  | {type:'move';file:string;nodeId:string;parentId:string;beforeId?:string}
  | {type:'replaceSource';file:string;text:string}
+ | {type:'createFile';file:string;text:string}
+ | {type:'deleteFile';file:string}
+ | {type:'renameFile';file:string;to:string}
  | {type:'setMeta';file:string;nodeId:string;locked?:boolean;hidden?:boolean};
 export interface Request { origin:Origin; operations:Operation[]; expectedRevision?:number; group?:string }
 export interface Patch { file:string; from:number; to:number; insert:string }
@@ -79,8 +82,16 @@ export class EditorProject {
   else {if(value===null)return;const at=loc.startTag!.endOffset-(this.sources[file].slice(loc.startTag!.startOffset,loc.startTag!.endOffset).endsWith('/>')?2:1);p={file,from:at,to:at,insert:` ${name}="${escAttr(value,'"')}"`};}
   if(this.sources[file].slice(p.from,p.to)===p.insert)return;this.patch(p);patches.push(p);
  }
+ /** Project-relative path rules shared by create and rename. */
+ static validPath(path:string):string|null{if(!path||path.length>200)return 'Path must be 1-200 characters.';if(/[\\\u0000-\u001f:*?"<>|]/.test(path))return 'Path contains characters that are not allowed.';if(path.startsWith('/')||path.endsWith('/'))return 'Path must be relative and name a file.';if(path.split('/').some(p=>p===''||p==='.'||p==='..'||/[. ]$/.test(p)))return 'Path has an empty, dot or trailing-space segment.';return null;}
+ private fileOperation(op:Operation):boolean{
+  if(op.type==='createFile'){const bad=EditorProject.validPath(op.file);if(bad)throw new EditorError('bad-path',bad);if(Object.keys(this.sources).some(f=>f.toLowerCase()===op.file.toLowerCase()))throw new EditorError('exists',`A file named ${op.file} already exists.`);this.sources[op.file]=op.text;this.reparse(op.file);return true;}
+  if(op.type==='deleteFile'){if(!(op.file in this.sources))throw new EditorError('missing-file',`File not found: ${op.file}`);delete this.sources[op.file];delete this.trees[op.file];delete this.bindings[op.file];return true;}
+  if(op.type==='renameFile'){if(!(op.file in this.sources))throw new EditorError('missing-file',`File not found: ${op.file}`);const bad=EditorProject.validPath(op.to);if(bad)throw new EditorError('bad-path',bad);if(Object.keys(this.sources).some(f=>f!==op.file&&f.toLowerCase()===op.to.toLowerCase()))throw new EditorError('exists',`A file named ${op.to} already exists.`);if(op.to===op.file)return true;this.sources[op.to]=this.sources[op.file];delete this.sources[op.file];delete this.trees[op.file];delete this.bindings[op.file];this.reparse(op.to);return true;}
+  return false;}
  private operation(op:Operation,patches:Patch[]){
-  if(!(op.file in this.sources))throw new EditorError('missing-file',`File not found: ${op.file}`);
+  if(this.fileOperation(op))return;
+  if(!('file' in op)||!(op.file in this.sources))throw new EditorError('missing-file',`File not found: ${'file' in op?op.file:''}`);
   const add=(p:Patch,hints?:Array<{id:string;from:number;tag:string}>)=>{if(this.sources[p.file].slice(p.from,p.to)===p.insert)return;this.patch(p,hints);patches.push(p);};
   switch(op.type){
    case 'replaceSource': {const a=this.files[op.file],b=op.text;let from=0;while(from<a.length&&from<b.length&&a[from]===b[from])from++;let endA=a.length,endB=b.length;while(endA>from&&endB>from&&a[endA-1]===b[endB-1]){endA--;endB--;}add({file:op.file,from,to:endA,insert:b.slice(from,endB)});break;}

@@ -10,6 +10,9 @@ export type Operation =
  | {type:'remove';file:string;nodeId:string}
  | {type:'move';file:string;nodeId:string;parentId:string;beforeId?:string}
  | {type:'replaceSource';file:string;text:string}
+ | {type:'createFile';file:string;text:string}
+ | {type:'deleteFile';file:string}
+ | {type:'renameFile';file:string;to:string}
  | {type:'setMeta';file:string;nodeId:string;locked?:boolean;hidden?:boolean};
 export interface EditorProjectPort {
  readonly files:Readonly<Record<string,string>>; readonly revision:number;

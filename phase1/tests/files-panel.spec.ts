@@ -1,0 +1,13 @@
+import {test,expect} from '@playwright/test';
+test('files panel creates, duplicates, renames and deletes files',async({page})=>{await page.setViewportSize({width:1400,height:900});await page.goto('/');
+ await expect(page.locator('[data-storage]')).toBeVisible();await page.getByRole('button',{name:'Files'}).click();
+ const nav=page.getByRole('navigation',{name:'Project files'});
+ await nav.getByRole('button',{name:'New file'}).click();await nav.getByLabel('File path').fill('pages/about.html');await nav.getByRole('button',{name:'Create'}).click();
+ await expect(nav.getByRole('button',{name:'Open pages/about.html'})).toBeVisible();
+ await nav.getByRole('button',{name:'Duplicate pages/about.html'}).click({force:true});await nav.getByRole('button',{name:'Duplicate',exact:true}).click();
+ await expect(nav.getByRole('button',{name:'Open pages/about-copy.html'})).toBeVisible();
+ await nav.getByRole('button',{name:'Rename pages/about-copy.html'}).click({force:true});await nav.getByLabel('File path').fill('pages/contact.html');await nav.getByRole('button',{name:'Rename',exact:true}).click();
+ await expect(nav.getByRole('button',{name:'Open pages/contact.html'})).toBeVisible();
+ await nav.getByRole('button',{name:'Delete pages/contact.html'}).click({force:true});await nav.getByRole('button',{name:'Delete',exact:true}).click();
+ await expect(nav.getByRole('button',{name:'Open pages/contact.html'})).toHaveCount(0);
+ await nav.getByRole('button',{name:'New file'}).click();await nav.getByLabel('File path').fill('index.html');await nav.getByRole('button',{name:'Create'}).click();await expect(nav.getByRole('alert')).toContainText('already exists');});
