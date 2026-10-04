@@ -87,3 +87,6 @@ View menu: "Split: code and design side by side", "Split: code above, design bel
 ## Split divider and Ctrl+D (2026-10-04)
 - The divider between code and design drags (min 240px each side), moves with arrow keys (Shift = bigger steps), resets on double click or Home/Enter. Ratio persists in `somnia.split.v1`.
 - Ctrl/Cmd+D in the code editor duplicates the selection, or the current line when nothing is selected (CodeMirror keymap, fixed key).
+
+## Custom viewport (2026-10-04)
+Status bar: width and height fields (200-3840 / 200-4000, clamped), device presets (Desktop 1920, Laptop 1440, iPad, iPhone, small phone), rotate, plus the Desktop/Tablet/Mobile buttons. The canvas has drag handles (right edge, bottom edge, corner) that resize the viewport at the current zoom. Edits scope to a breakpoint from the width: base at 1100px and up, 900px rules from 700px, 600px rules below. Zoom and fit work as before.
