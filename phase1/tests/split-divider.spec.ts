@@ -1,0 +1,10 @@
+import {test,expect} from '@playwright/test';
+test('split divider drags, clamps, nudges by keyboard and resets on double click',async({page})=>{await page.goto('/');await page.keyboard.press('Control+3');
+ const sep=page.getByRole('separator',{name:'Resize code and design panes'});const code=page.locator('.code-pane');
+ const w=async()=>(await code.boundingBox())!.width;const start=await w();
+ const b=(await sep.boundingBox())!;await page.mouse.move(b.x+3,b.y+100);await page.mouse.down();await page.mouse.move(b.x+143,b.y+100,{steps:6});await page.mouse.up();
+ expect(await w()).toBeGreaterThan(start+100);
+ await page.mouse.move(b.x+143,b.y+100);await page.mouse.down();await page.mouse.move(2,b.y+100,{steps:6});await page.mouse.up();
+ expect(await w()).toBeGreaterThanOrEqual(235);
+ await sep.focus();await page.keyboard.press('ArrowRight');const nudged=await w();expect(nudged).toBeGreaterThan(235);
+ await sep.dblclick();expect(Math.abs(await w()-start)).toBeLessThan(3);});

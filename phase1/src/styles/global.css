@@ -48,3 +48,13 @@
 .workspace-split.split-vertical.split-swap .code-pane{border-right:0;border-left:1px solid var(--border-default)}
 .workspace-split.split-horizontal.split-swap{flex-direction:column-reverse}
 .workspace-split.split-horizontal.split-swap .code-pane{border-bottom:0;border-top:1px solid var(--border-default)}
+
+.split-divider{flex:0 0 6px;position:relative;z-index:2;background:transparent;touch-action:none}
+.split-divider::after{content:'';position:absolute;inset:0;margin:auto;border-radius:2px;background:var(--border-default);opacity:.0;transition:opacity .12s}
+.split-divider-v{cursor:col-resize}.split-divider-v::after{width:2px;height:48px}
+.split-divider-h{cursor:row-resize}.split-divider-h::after{height:2px;width:48px}
+.split-divider:hover::after,.split-divider:focus-visible::after{opacity:1}
+.split-divider:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+.workspace-split .code-pane{border-right:0!important;border-bottom:0!important;border-left:0!important;border-top:0!important}
+.split-divider-v{background:linear-gradient(var(--border-default),var(--border-default)) center/1px 100% no-repeat}
+.split-divider-h{background:linear-gradient(var(--border-default),var(--border-default)) center/100% 1px no-repeat}
