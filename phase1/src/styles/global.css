@@ -40,3 +40,11 @@
 :root[data-theme=dark][data-code-theme=nord]{--syntax-tag:#88c0d0;--syntax-keyword:#81a1c1;--syntax-string:#a3be8c;--syntax-number:#d08770;}
 /* a11y: visible keyboard focus everywhere, mouse clicks stay quiet */
 :where(button,[role=tab],[role=menuitem],input,select,textarea,a,[tabindex]):focus-visible{outline:2px solid var(--accent,#4f46e5);outline-offset:1px}
+
+/* Split view orientation: side by side (default) or stacked; swap flips which pane comes first. */
+.workspace-split.split-horizontal{flex-direction:column}
+.workspace-split.split-horizontal .code-pane{flex:0 0 48%;border-right:0;border-bottom:1px solid var(--border-default)}
+.workspace-split.split-vertical.split-swap{flex-direction:row-reverse}
+.workspace-split.split-vertical.split-swap .code-pane{border-right:0;border-left:1px solid var(--border-default)}
+.workspace-split.split-horizontal.split-swap{flex-direction:column-reverse}
+.workspace-split.split-horizontal.split-swap .code-pane{border-bottom:0;border-top:1px solid var(--border-default)}

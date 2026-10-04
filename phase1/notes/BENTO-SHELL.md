@@ -80,3 +80,6 @@ Right-click in the CodeMirror editor opens a fixed-position menu: Undo, Redo, Cu
 
 ## Editor assistance (2026-10-04)
 Settings > Code editor has four independent switches (stored in `somnia.editorPrefs.v1`): autocomplete, auto-close tags, auto-close brackets/quotes, syntax lint gutter. Lint reads the parser tree (error nodes, missing closing tags) locally, no execution. Not done yet: Emmet abbreviations, CSS/JS-specific linting rules, snippet tab-stops.
+
+## Split orientation (2026-10-04)
+View menu: "Split: code and design side by side", "Split: code above, design below", "Split: swap code and design". Layout and swap persist (`somnia.split.v1`). All three are commands, so they appear in Settings > Shortcuts and can get a key.

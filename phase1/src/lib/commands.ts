@@ -33,6 +33,9 @@ ui('problems.toggle','Toggle problems','Mod+J',()=>patchState({problemsOpen:!get
 ui('view.code','Code view','Mod+1',()=>patchState({viewMode:'code'}));
 ui('view.design','Design view','Mod+2',()=>patchState({viewMode:'design'}));
 ui('view.split','Split view','Mod+3',()=>patchState({viewMode:'split'}));
+ui('split.vertical','Split: code and design side by side',undefined,()=>patchState({viewMode:'split',splitLayout:'vertical'}));
+ui('split.horizontal','Split: code above, design below',undefined,()=>patchState({viewMode:'split',splitLayout:'horizontal'}));
+ui('split.swap','Split: swap code and design',undefined,()=>patchState({viewMode:'split',splitSwap:!getState().splitSwap}));
 ui('zoom.in','Zoom in','Mod+=',()=>patchState({zoom:Math.min(200,getState().zoom+10)}));
 ui('zoom.out','Zoom out','Mod+-',()=>patchState({zoom:Math.max(25,getState().zoom-10)}));
 ui('zoom.reset','Actual size','Mod+0',()=>patchState({zoom:100}));
