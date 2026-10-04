@@ -7,6 +7,7 @@ fn main() {
             "read_file",
             "stage_edit",
             "save_file",
+            "delete_file",
             "recovery_list",
             "recovery_read",
             "recovery_restore",

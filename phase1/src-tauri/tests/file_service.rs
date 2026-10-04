@@ -293,3 +293,30 @@ fn external_clean_change_emits_revision_without_self_echo() {
         .iter()
         .any(|e| e.state == FileState::Saved && e.disk_revision != base));
 }
+#[test]
+fn creates_new_file_in_new_folder_and_deletes_with_revision_check() {
+    let (root, _recovery, mut p) = setup();
+    let missing = p.read("pages/about.html").unwrap().revision;
+    assert!(!missing.exists);
+    p.stage("pages/about.html", "<h1>About</h1>".into(), 1).unwrap();
+    let saved = p.save("pages/about.html", &missing).unwrap();
+    assert_eq!(saved.state, FileState::Saved);
+    assert_eq!(
+        fs::read_to_string(root.path().join("pages/about.html")).unwrap(),
+        "<h1>About</h1>"
+    );
+    // A stale revision must not delete anything.
+    assert!(matches!(
+        p.delete("pages/about.html", &missing),
+        Err(AppError::Conflict)
+    ));
+    assert!(root.path().join("pages/about.html").exists());
+    let current = p.read("pages/about.html").unwrap().revision;
+    p.delete("pages/about.html", &current).unwrap();
+    assert!(!root.path().join("pages/about.html").exists());
+    assert!(root.path().join("index.html").exists());
+    // Deleting an already missing file with the matching (missing) revision is a no-op.
+    let gone = p.read("pages/about.html").unwrap().revision;
+    p.delete("pages/about.html", &gone).unwrap();
+    assert!(p.delete("../escape.html", &gone).is_err());
+}

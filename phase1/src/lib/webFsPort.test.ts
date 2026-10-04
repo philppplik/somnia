@@ -5,6 +5,7 @@ class FakeFile{constructor(public text:string){}async getFile(){return{text:asyn
 class FakeDir{kind='directory' as const;items=new Map<string,FakeDir|FakeFile>();constructor(public name:string){}
  async getDirectoryHandle(n:string,o?:{create?:boolean}){let d=this.items.get(n);if(!d){if(!o?.create)throw new DOMException('x','NotFoundError');d=new FakeDir(n);this.items.set(n,d);}if(!(d instanceof FakeDir))throw new DOMException('x','TypeMismatchError');return d;}
  async getFileHandle(n:string,o?:{create?:boolean}){let f=this.items.get(n);if(!f){if(!o?.create)throw new DOMException('x','NotFoundError');f=new FakeFile('');this.items.set(n,f);}if(!(f instanceof FakeFile))throw new DOMException('x','TypeMismatchError');return f;}
+ async removeEntry(n:string){if(!this.items.delete(n))throw new DOMException('x','NotFoundError');}
  async *entries(){for(const e of this.items)yield e;}}
 async function setup(){const root=new FakeDir('site');root.items.set('index.html',new FakeFile('<h1>Hi</h1>'));const sub=new FakeDir('css');sub.items.set('a.css',new FakeFile('h1{}'));root.items.set('css',sub);root.items.set('.git',new FakeDir('.git'));
  const port=createWebFsPort({pickDirectory:async()=>root as never,journal:memoryJournal()});const {projectId}=(await port.invoke<{projectId:string}>('choose_project'))!;return{root,port,projectId};}
@@ -52,4 +53,13 @@ test('reconnect reuses the remembered handle only after the browser grants permi
  perm='granted';
  const again=await reopened.invoke<{name:string}>('choose_project',{reconnect:true});
  assert.equal(again.name,'site');assert.equal(reopened.canReconnect,true);
+});
+test('new files in new folders are created on save and deleted only with a matching revision',async()=>{
+ const {root,port,projectId}=await setup();const miss=await port.invoke<{revision:unknown}>('read_file',{projectId,path:'pages/about.html'});
+ await port.invoke('stage_edit',{projectId,path:'pages/about.html',content:'<h1>About</h1>',clientRevision:1});
+ const saved=await port.invoke<{state:string}>('save_file',{projectId,path:'pages/about.html',expectedRevision:miss.revision});assert.equal(saved.state,'saved');
+ assert.equal(((root.items.get('pages') as FakeDir).items.get('about.html') as FakeFile).text,'<h1>About</h1>');
+ await assert.rejects(port.invoke('delete_file',{projectId,path:'pages/about.html',expectedRevision:miss.revision}),/changed on disk/);
+ const cur=await port.invoke<{revision:unknown}>('read_file',{projectId,path:'pages/about.html'});await port.invoke('delete_file',{projectId,path:'pages/about.html',expectedRevision:cur.revision});
+ assert.equal((root.items.get('pages') as FakeDir).items.has('about.html'),false);
 });

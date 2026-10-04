@@ -11,7 +11,7 @@ export function FilesPanel(){
  const [edit,setEdit]=useState<Edit|null>(null);const [value,setValue]=useState('');const [error,setError]=useState('');const [confirmDelete,setConfirmDelete]=useState<string|null>(null);const input=useRef<HTMLInputElement>(null);
  useEffect(()=>{if(edit)input.current?.focus();},[edit]);
  const start=(e:Edit)=>{setConfirmDelete(null);setError('');setEdit(e);setValue(e.mode==='new'?'untitled.html':e.mode==='duplicate'?copyName(e.path,paths):e.path);};
- const run=(ops:Parameters<typeof applyOperations>[0],after?:()=>void)=>{if(s.storage==='disk'){setError('Creating, renaming and deleting files in a folder on disk is not available yet.');return false;}try{applyOperations(ops,'canvas');after?.();return true;}catch(e){setError(e instanceof Error?e.message:String(e));return false;}};
+ const run=(ops:Parameters<typeof applyOperations>[0],after?:()=>void)=>{try{applyOperations(ops,'canvas');after?.();return true;}catch(e){setError(e instanceof Error?e.message:String(e));return false;}};
  const commit=()=>{if(!edit)return;const p=value.trim();const bad=checkPath(p);if(bad){setError(bad);return;}
   const ok=edit.mode==='new'?run([{type:'createFile',file:p,text:starterFor(p)}],()=>openFileTab(p))
    :edit.mode==='duplicate'?run([{type:'createFile',file:p,text:s.files[edit.path]??''}],()=>openFileTab(p))
