@@ -36,3 +36,7 @@ test('code menu encodes and decodes the selection with undo',async({page})=>{awa
  await expect(page.locator('.cm-content')).toContainText('<p>Café & Co</p>');
  await ed.click();await page.keyboard.press('Control+a');await ed.click({button:'right'});await page.getByRole('menuitem',{name:'Encode special characters'}).click();await expect(page.locator('.cm-content')).toContainText('&lt;p&gt;');
  await page.keyboard.press('Control+k');await page.getByRole('combobox',{name:'Search commands'}).fill('Undo');await page.getByRole('option',{name:/^Undo/}).first().click();await expect(page.locator('.cm-content')).not.toContainText('&lt;p&gt;');});
+test('selected code text is clearly highlighted',async({page})=>{await page.goto('/');await showCode(page);
+ await page.getByLabel('Source code').click();await page.keyboard.press('Control+a');
+ const bg=await page.locator('.cm-selectionBackground').first().evaluate(e=>getComputedStyle(e).backgroundColor);
+ const base=await page.locator('.cm-editor').evaluate(e=>getComputedStyle(e).backgroundColor);expect(bg).not.toBe(base);expect(bg).not.toBe('rgba(0, 0, 0, 0)');});
