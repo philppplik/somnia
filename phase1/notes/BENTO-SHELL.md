@@ -83,3 +83,7 @@ Settings > Code editor has four independent switches (stored in `somnia.editorPr
 
 ## Split orientation (2026-10-04)
 View menu: "Split: code and design side by side", "Split: code above, design below", "Split: swap code and design". Layout and swap persist (`somnia.split.v1`). All three are commands, so they appear in Settings > Shortcuts and can get a key.
+
+## Split divider and Ctrl+D (2026-10-04)
+- The divider between code and design drags (min 240px each side), moves with arrow keys (Shift = bigger steps), resets on double click or Home/Enter. Ratio persists in `somnia.split.v1`.
+- Ctrl/Cmd+D in the code editor duplicates the selection, or the current line when nothing is selected (CodeMirror keymap, fixed key).
