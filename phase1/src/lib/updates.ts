@@ -11,10 +11,19 @@ export function newerRelease(current:string,releases:{tag_name:string;draft?:boo
   best={tag:r.tag_name,name:r.name||r.tag_name,url:r.html_url,prerelease:!!r.prerelease,publishedAt:r.published_at??'',asset:asset?{name:asset.name,url:asset.browser_download_url}:undefined};bestN=n;}
  return best;}
 export async function checkForUpdate(current:string,fetcher:typeof fetch=fetch):Promise<{status:'up-to-date'}|{status:'available';release:ReleaseInfo}>{
- const res=await fetcher(`https://api.github.com/repos/${REPO}/releases?per_page=15`,{headers:{Accept:'application/vnd.github+json'}});
+ const res=await fetcher(`https://api.github.com/repos/${REPO}/releases?per_page=15`,{cache:'no-store',headers:{Accept:'application/vnd.github+json'}});
  if(!res.ok)throw Error(`GitHub answered ${res.status}. Try again later.`);
  const found=newerRelease(current,await res.json());return found?{status:'available',release:found}:{status:'up-to-date'};}
 
 const PREF='somnia.updateCheck.v1';
 export const autoCheckEnabled=()=>{try{return localStorage.getItem(PREF)!=='off';}catch{return true;}};
 export const setAutoCheck=(on:boolean)=>{try{localStorage.setItem(PREF,on?'on':'off');}catch{/* storage unavailable */}};
+
+const LAST='somnia.updateCheck.last';
+export interface LastCheck{at:number;result:'available'|'up-to-date'|'error';detail:string}
+export const lastCheck=():LastCheck|null=>{try{return JSON.parse(localStorage.getItem(LAST)??'null');}catch{return null;}};
+export const rememberCheck=(c:LastCheck)=>{try{localStorage.setItem(LAST,JSON.stringify(c));}catch{/* storage unavailable */}};
+/** Checks once now, records the outcome for Settings > About and returns the release when a newer one exists. */
+export async function autoCheck(current:string):Promise<ReleaseInfo|null>{
+ try{const r=await checkForUpdate(current);if(r.status==='available'){rememberCheck({at:Date.now(),result:'available',detail:r.release.tag});return r.release;}rememberCheck({at:Date.now(),result:'up-to-date',detail:current});return null;}
+ catch(e){rememberCheck({at:Date.now(),result:'error',detail:e instanceof Error?e.message:String(e)});return null;}}

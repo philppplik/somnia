@@ -1,5 +1,5 @@
 import type {LucideIcon} from 'lucide-react';
-import {PanelLeft,PanelRight,Files,Layers,Search,Image,Boxes,SlidersHorizontal,Play,Puzzle} from 'lucide-react';
+import {PanelLeft,PanelRight,Files,Layers,Search,Image,Boxes,SlidersHorizontal,Play,Puzzle,Blocks,Settings as Gear} from 'lucide-react';
 import {Button} from './ui/button';
 import {executeCommand} from '../lib/commands';
 import {patchState,useAppStore} from '../store/appStore';
@@ -21,5 +21,6 @@ export function IconRail({side}:{side:'left'|'right'}){
   <span className="my-1 h-px w-6 bg-line"/>
   {s.extensionPanels.filter(p=>p.side===side).map(p=><Button key={p.id} size="icon" title={p.title} aria-label={`${p.title} panel (extension)`} aria-pressed={open&&s.activePanel[side]===p.id} className={cn(open&&s.activePanel[side]===p.id&&'bg-accent-soft text-accent')} onClick={()=>{const on=open&&s.activePanel[side]===p.id;patchState({activePanel:{...s.activePanel,[side]:on?null:p.id},...(side==='left'?{sidebarOpen:!on}:{inspectorOpen:!on})});}}><Puzzle/></Button>)}
   {items.map(({id,label,icon:Icon})=><Button key={id} size="icon" title={label} aria-label={`${label} panel`} aria-pressed={open&&active===id} className={cn(open&&active===id&&'bg-accent-soft text-accent')} onClick={()=>choose(id)}><Icon/></Button>)}
+ {side==='left'&&<div className="mt-auto flex flex-col items-center gap-1 pb-2"><Button size="icon" title="Extensions" aria-label="Extensions" onClick={()=>void executeCommand('extensions.open')}><Blocks/></Button><Button size="icon" title="Settings (Ctrl+,)" aria-label="Settings" onClick={()=>void executeCommand('settings.open')}><Gear/></Button></div>}
  </div>;
 }

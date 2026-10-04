@@ -6,8 +6,8 @@ import {defaultKeymap,indentWithTab,undo,redo,selectAll,copyLineDown} from '@cod
 import {syntaxHighlighting,HighlightStyle} from '@codemirror/language';
 import {autocompletion,closeBrackets,closeBracketsKeymap,completionKeymap} from '@codemirror/autocomplete';
 import {search,searchKeymap,highlightSelectionMatches} from '@codemirror/search';
-import {linter,lintGutter,type Diagnostic} from '@codemirror/lint';
-import {syntaxTree} from '@codemirror/language';
+import {linter,lintGutter} from '@codemirror/lint';
+import {lintState} from '../lib/diagnostics';
 import type {EditorPrefs} from '../lib/editorPrefs';
 import {abbreviationTracker,expandAbbreviation} from '@emmetio/codemirror6-plugin';
 import {html} from '@codemirror/lang-html';
@@ -16,9 +16,7 @@ import {javascript} from '@codemirror/lang-javascript';
 import {applyOperations,patchState,getState,useAppStore} from '../store/appStore';
 import type {EditorNode} from '../lib/editorPort';
 /** Syntax lint: reports parser error nodes from the language tree, no network, no code execution. */
-const syntaxLint=linter(view=>{const out:Diagnostic[]=[];const VOID=/^(area|base|br|col|embed|hr|img|input|link|meta|param|source|track|wbr)$/i,OPTIONAL=/^(p|li|dt|dd|tr|td|th|thead|tbody|tfoot|option|optgroup|colgroup|html|head|body)$/i;
- syntaxTree(view.state).iterate({enter:n=>{if(n.name==='Element'&&out.length<50){const kids=[];for(let c=n.node.firstChild;c;c=c.nextSibling)kids.push(c);const open=kids.find(k=>k.name==='OpenTag');const tag=open?view.state.sliceDoc(open.from,open.to).match(/^<\s*([A-Za-z][\w:-]*)/)?.[1]:undefined;if(open&&tag&&!VOID.test(tag)&&!OPTIONAL.test(tag)&&!kids.some(k=>k.name==='CloseTag'||k.name==='SelfClosingTag'||k.name==='MismatchedCloseTag')&&!/\/\s*>$/.test(view.state.sliceDoc(open.from,open.to)))out.push({from:open.from,to:open.to,severity:'warning',message:`Missing closing tag </${tag}>.`});}
- if(n.type.isError&&out.length<50)out.push({from:n.from,to:Math.max(n.to,Math.min(n.from+1,view.state.doc.length)),severity:'error',message:'Syntax problem here (unclosed or unexpected token).'});}});return out;},{delay:400});
+const syntaxLint=linter(view=>lintState(view.state),{delay:400});
 /** Ctrl/Cmd+D like Dreamweaver and VS Code: duplicate the selection after itself, or the current line when nothing is selected. */
 const duplicateSelectionOrLine=(view:EditorView)=>{const sel=view.state.selection.main;if(sel.empty)return copyLineDown(view);const text=view.state.sliceDoc(sel.from,sel.to);view.dispatch({changes:{from:sel.to,insert:text},selection:{anchor:sel.to,head:sel.to+text.length},userEvent:'input'});return true;};
 /** Copy and cut write plain text only. Native copy also puts styled HTML on the clipboard, and Windows adds the source page (https://tauri.localhost) to it, which shows up when pasting into rich-text apps. */
@@ -43,6 +41,8 @@ export function SourceEditor({source,file,disabled}:{source:string;file:string;d
   if(!hit)return;const len=v.state.doc.length;const from=Math.min(hit.from,len),to=Math.min(hit.to,len);
   v.dispatch({selection:{anchor:from,head:to},effects:EditorView.scrollIntoView(from,{y:'center'})});
   if(host.current&&host.current.offsetParent!==null)v.focus();},[selectedId,file]);
+ const jump=useAppStore().jumpTo;
+ useEffect(()=>{const v=view.current;if(!v||!jump||jump.file!==file)return;const ln=v.state.doc.line(Math.max(1,Math.min(jump.line,v.state.doc.lines)));const pos=Math.min(ln.from+Math.max(0,jump.col-1),ln.to);v.dispatch({selection:{anchor:pos},effects:EditorView.scrollIntoView(pos,{y:'center'})});const t=window.setTimeout(()=>{if(host.current&&host.current.offsetParent!==null)v.focus();},30);return()=>window.clearTimeout(t);},[jump?.nonce,file]);
  const [menu,setMenu]=useState<{x:number;y:number}|null>(null);const menuRef=useRef<HTMLDivElement>(null);
  useEffect(()=>{if(!menu)return;menuRef.current?.querySelector<HTMLButtonElement>('button:not(:disabled)')?.focus();const close=()=>setMenu(null);const key=(e:KeyboardEvent)=>{if(e.key==='Escape'){close();view.current?.focus();}};const down=(e:PointerEvent)=>{if(!menuRef.current?.contains(e.target as Node))close();};window.addEventListener('keydown',key);window.addEventListener('pointerdown',down);return()=>{window.removeEventListener('keydown',key);window.removeEventListener('pointerdown',down);};},[menu]);
  const act=(fn:(v:EditorView)=>void|Promise<void>)=>async()=>{const v=view.current;setMenu(null);if(!v)return;try{await fn(v);}catch{patchState({notice:'The browser blocked clipboard access. Use the keyboard shortcut instead.'});}v.focus();};
