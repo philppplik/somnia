@@ -7,3 +7,6 @@ What Somnia's Windows installers can and cannot do (Tauri 2 bundler):
 - Not possible with these tools: a web-style (React/CSS) installer window or animations. That would need our own bootstrapper app, which we do not plan for now.
 - Images live in `src-tauri/installer/` (generated from the app icon: sidebar 164x314, header 150x57, WiX banner 493x58, dialog 493x312, 24-bit BMP). Config: `tauri.windows-alpha.conf.json`.
 - Status: configured and built by CI; not yet checked on a real Windows machine. The installer stays unsigned (SmartScreen warns).
+
+## Release checklist note
+Bump `somniaRelease` in `phase1/package.json` to the tag being released before building. The in-app update pill compares it (major.minor.patch) with the newest GitHub release.
