@@ -53,3 +53,9 @@ test('DOM tree panel shows the tree, collapses, searches and selects',async({pag
  await tree.getByRole('button',{name:/Expand html/}).click();
  await page.getByLabel('Search DOM tree').fill('hero');const hero=tree.getByRole('button',{name:/Select section.hero/});await expect(hero).toBeVisible();await hero.click();
  await expect(page.getByTestId('breadcrumbs').getByRole('button',{name:'Select section.hero'})).toHaveAttribute('aria-current','true');});
+test('Apply formatting formats the file from the context menu and is undoable',async({page})=>{await page.goto('/');await showCode(page);
+ await page.evaluate(()=>(window as any).__somnia.setSource('styles.css','a{color:red;margin:0}'));
+ await page.evaluate(()=>(window as any).__somnia.setSource('index.html','<div>\n<section>\n<h1>Hi</h1>\n</section>\n</div>'));
+ const ed=page.getByLabel('Source code');await ed.click();await ed.click({button:'right'});await page.getByRole('menuitem',{name:'Apply formatting'}).click();
+ await expect(page.locator('.cm-content')).toContainText('<h1>Hi</h1>');await expect(page.getByRole('status')).toContainText(/Formatted the file|Already formatted/);
+ await expect(page.locator('.cm-line',{hasText:'<section>'})).toContainText('  <section>');});

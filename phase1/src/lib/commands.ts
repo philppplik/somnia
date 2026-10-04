@@ -1,4 +1,5 @@
 import {openExternal,REPO_URL} from './openExternal';
+import {formatCode,langFor} from './format';
 import {getActiveEditor,transformSelection} from './editorBridge';
 import {encodeEntities,decodeEntities} from './entities';
 import {newBlankFile,openFileDialog} from './projectActions';
@@ -93,3 +94,12 @@ registerCommand({id:'project.export.md',title:'Export active file as Markdown',c
 for(const id of ['settings.open','problems.toggle','theme.toggle','palette.open']){const c=registry.get(id);if(c)c.category='Tools';}
 
 for(const [id,title,fn] of [['edit.encodeEntities','Encode special characters (HTML entities)',encodeEntities],['edit.decodeEntities','Decode special characters (HTML entities)',decodeEntities]] as const)registerCommand({id,title,category:'Edit',keywords:['html','entities','escape','unescape','special characters'],run:()=>{const v=getActiveEditor();if(!v||!transformSelection(v,fn))patchState({notice:'Select text in the code editor first.'});else v.focus();}});
+
+/** Apply formatting to the selection, or to the whole file when nothing is selected. */
+export async function applyFormatting(){const v=getActiveEditor();const file=getState().activeFile;const lang=langFor(file);
+ if(!v||!lang){patchState({notice:'Open an HTML, CSS or JavaScript file in the code editor to format it.'});return;}
+ const r=v.state.selection.main;const whole=r.empty;const from=whole?0:r.from,to=whole?v.state.doc.length:r.to;const src=v.state.sliceDoc(from,to);
+ try{const out=await formatCode(src,lang);const text=whole?out:out.replace(/\n$/,'');if(text===src){patchState({notice:'Already formatted.'});return;}
+  v.dispatch({changes:{from,to,insert:text},selection:{anchor:Math.min(from,from+text.length)}});v.focus();patchState({notice:whole?'Formatted the file.':'Formatted the selection.'});}
+ catch(e){patchState({notice:`Could not format: ${(e instanceof Error?e.message:String(e)).split('\n')[0]}`});}}
+registerCommand({id:'edit.format',title:'Apply formatting',category:'Edit',shortcut:'Alt+Shift+F',allowInInput:true,keywords:['format','prettier','indent','beautify'],run:()=>applyFormatting()});
