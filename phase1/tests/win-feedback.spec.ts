@@ -22,4 +22,4 @@ test('save dialog writes the Starter project into an empty folder and continues 
  const d=page.getByRole('dialog',{name:'Save project'});await d.getByRole('button',{name:'Choose folder and save'}).click();await expect(d).toBeHidden({timeout:10000});
  const names=await page.evaluate(async()=>{const out:string[]=[];for await(const [n] of (window as any).__dir.entries())out.push(n);return out;});
  expect(names).toContain('index.html');
- await expect(page.getByText('Unsaved changes')).toHaveCount(0);});
+ await expect(page.getByText('Unsaved changes')).toHaveCount(0);await expect(page.getByText('Saved to disk')).toBeVisible();await expect(page.getByText('Not saved to disk')).toHaveCount(0);});
