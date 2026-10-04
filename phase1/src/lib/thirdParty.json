@@ -78,6 +78,36 @@
   "homepage": "https://code.haverbeke.berlin/codemirror/view"
  },
  {
+  "name": "@emmetio/abbreviation",
+  "version": "2.3.3",
+  "license": "MIT",
+  "homepage": "https://github.com/emmetio/emmet#readme"
+ },
+ {
+  "name": "@emmetio/codemirror6-plugin",
+  "version": "0.4.1",
+  "license": "UNKNOWN",
+  "homepage": ""
+ },
+ {
+  "name": "@emmetio/css-abbreviation",
+  "version": "2.1.8",
+  "license": "MIT",
+  "homepage": "https://github.com/emmetio/emmet#readme"
+ },
+ {
+  "name": "@emmetio/math-expression",
+  "version": "1.0.5",
+  "license": "MIT",
+  "homepage": "https://github.com/emmetio/math-expression#readme"
+ },
+ {
+  "name": "@emmetio/scanner",
+  "version": "1.0.4",
+  "license": "MIT",
+  "homepage": "https://github.com/emmetio/emmet#readme"
+ },
+ {
   "name": "@floating-ui/core",
   "version": "1.8.0",
   "license": "MIT",
@@ -174,6 +204,12 @@
   "homepage": "https://code.haverbeke.berlin/marijn/crelt"
  },
  {
+  "name": "emmet",
+  "version": "2.4.11",
+  "license": "MIT",
+  "homepage": "https://github.com/emmetio/emmet#readme"
+ },
+ {
   "name": "fflate",
   "version": "0.8.3",
   "license": "MIT",
@@ -184,6 +220,12 @@
   "version": "1.49.0",
   "license": "ISC",
   "homepage": "https://lucide.dev"
+ },
+ {
+  "name": "prettier",
+  "version": "3.9.9",
+  "license": "MIT",
+  "homepage": "https://prettier.io"
  },
  {
   "name": "react",
