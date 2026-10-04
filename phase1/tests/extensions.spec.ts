@@ -3,19 +3,23 @@ test('install extension',async({page})=>{await page.goto('/');await page.keyboar
 await page.getByLabel('Extension manifest JSON').fill('{"id":"acme.hello","name":"Hello","version":"0.1.0","apiVersion":1,"permissions":["network"]}');await page.getByRole('button',{name:'Install'}).click();await expect(page.getByRole('alert')).toContainText('Unknown permission');
 await page.getByLabel('Extension manifest JSON').fill('{"id":"acme.hello","name":"Hello","version":"0.1.0","apiVersion":1,"permissions":[]}');await page.getByRole('button',{name:'Install'}).click();await expect(page.getByLabel('Installed extensions')).toContainText('Hello');});
 test('snippet contribution shows in the command palette',async({page})=>{await page.goto('/');await page.keyboard.press('Control+,');await page.getByRole('button',{name:'Extensions'}).click();
-await page.getByLabel('Extension manifest JSON').fill('{"id":"acme.hello","name":"Hello","version":"0.1.0","apiVersion":1,"permissions":[],"contributes":{"snippets":[{"language":"html","label":"Hero","body":"<section>x</section>"}]}}');await page.getByRole('button',{name:'Install'}).click();
+await page.getByLabel('Extension manifest JSON').fill('{"id":"acme.hello","name":"Hello","version":"0.1.0","apiVersion":1,"permissions":[],"contributes":{"snippets":[{"language":"html","label":"Hero","body":"<section>x</section>"}]}}');await page.getByRole('button',{name:'Install'}).click();await page.getByLabel('Enable Hello').check();
 await page.keyboard.press('Escape');await page.keyboard.press('Control+k');await expect(page.getByText('Snippet: Hero (Hello)')).toBeVisible();});
 test('extension code theme is selectable and applied',async({page})=>{await page.goto('/');await page.keyboard.press('Control+,');await page.getByRole('button',{name:'Extensions'}).click();
-await page.getByLabel('Extension manifest JSON').fill('{"id":"acme.hello","name":"Hello","version":"0.1.0","apiVersion":1,"permissions":[],"contributes":{"codeThemes":[{"id":"night","label":"Acme Night","light":{"--syntax-tag":"#123456"},"dark":{"--syntax-tag":"#abcdef"}}]}}');await page.getByRole('button',{name:'Install'}).click();
+await page.getByLabel('Extension manifest JSON').fill('{"id":"acme.hello","name":"Hello","version":"0.1.0","apiVersion":1,"permissions":[],"contributes":{"codeThemes":[{"id":"night","label":"Acme Night","light":{"--syntax-tag":"#123456"},"dark":{"--syntax-tag":"#abcdef"}}]}}');await page.getByRole('button',{name:'Install'}).click();await page.getByLabel('Enable Hello').check();
 await page.getByRole('button',{name:'Code editor'}).click();await page.getByLabel('Syntax theme').selectOption('acme.hello.night');
 await expect(page.locator('html')).toHaveAttribute('data-code-theme','acme.hello.night');
 expect(await page.evaluate(()=>getComputedStyle(document.documentElement).getPropertyValue('--syntax-tag').trim())).toBe('#123456');});
 test('extension code runs in a worker with gated API',async({page})=>{await page.goto('/');await page.keyboard.press('Control+,');await page.getByRole('button',{name:'Extensions'}).click();
 const manifest={id:'acme.worker',name:'Worker Demo',version:'0.1.0',apiVersion:1,permissions:['commands','ui.notify','project.read'],contributes:{commands:[{id:'acme.worker.hello',title:'Hello worker',category:'Tools'},{id:'acme.worker.net',title:'Try network',category:'Tools'}]},
  code:"await somnia.commands.register('acme.worker.hello',async()=>{const files=await somnia.project.listFiles();await somnia.ui.notify('Worker sees '+files.length+' file(s)');});await somnia.commands.register('acme.worker.net',async()=>{await somnia.ui.notify('fetch is '+typeof fetch);});"};
-await page.getByLabel('Extension manifest JSON').fill(JSON.stringify(manifest));await page.getByRole('button',{name:'Install'}).click();
+await page.getByLabel('Extension manifest JSON').fill(JSON.stringify(manifest));await page.getByRole('button',{name:'Install'}).click();await page.getByLabel('Enable Worker Demo').check();
 await page.keyboard.press('Escape');await page.waitForTimeout(400);
 await page.keyboard.press('Control+k');await page.getByRole('combobox').fill('Hello worker');await page.keyboard.press('Enter');
 await expect(page.getByRole('status').filter({hasText:/Worker sees \d+ file/})).toBeVisible();
 await page.keyboard.press('Control+k');await page.getByRole('combobox').fill('Try network');await page.keyboard.press('Enter');
 await expect(page.getByRole('status').filter({hasText:'fetch is undefined'})).toBeVisible();});
+test('installed extensions are off until enabled and list their permissions',async({page})=>{await page.goto('/');await page.keyboard.press('Control+,');await page.getByRole('button',{name:'Extensions'}).click();
+await page.getByLabel('Extension manifest JSON').fill('{"id":"acme.hello","name":"Hello","version":"0.1.0","apiVersion":1,"permissions":["ui.notify"],"contributes":{"snippets":[{"language":"html","label":"Hero","body":"<b>x</b>"}]}}');await page.getByRole('button',{name:'Install'}).click();
+await expect(page.getByLabel('Installed extensions')).toContainText('Permissions: ui.notify');await expect(page.getByLabel('Enable Hello')).not.toBeChecked();
+await page.keyboard.press('Escape');await page.keyboard.press('Control+k');await expect(page.getByText('Snippet: Hero (Hello)')).toBeHidden();});
