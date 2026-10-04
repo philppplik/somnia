@@ -99,3 +99,13 @@
 .cm-panel.cm-search button.cm-button:hover{background:var(--bg-hover)}
 .cm-panel.cm-search label{display:inline-flex;align-items:center;gap:4px;color:var(--text-secondary);margin:0}
 .cm-panel.cm-search button[name=close]{position:absolute;right:8px;top:6px;background:transparent;border:0;color:var(--text-secondary);font-size:16px;cursor:pointer}
+/* Code editor selection, find matches and bracket matching: contrast-checked against --text-primary in every palette (text stays >= 7:1 on these tints). */
+.cm-editor .cm-selectionLayer .cm-selectionBackground{background:color-mix(in srgb,var(--accent) 26%,var(--bg-base))!important}
+.cm-editor.cm-focused .cm-selectionLayer .cm-selectionBackground{background:color-mix(in srgb,var(--accent) 42%,var(--bg-base))!important}
+.cm-editor .cm-content ::selection{background:color-mix(in srgb,var(--accent) 42%,var(--bg-base))}
+.cm-editor .cm-selectionMatch{background:color-mix(in srgb,var(--accent) 22%,transparent);outline:1px solid color-mix(in srgb,var(--accent) 45%,transparent)}
+.cm-editor .cm-searchMatch{background:color-mix(in srgb,var(--warning) 38%,var(--bg-base))!important;outline:1px solid var(--warning)}
+.cm-editor .cm-searchMatch.cm-searchMatch-selected{background:color-mix(in srgb,var(--accent) 55%,var(--bg-base))!important;outline:2px solid var(--accent)}
+.cm-editor.cm-focused .cm-matchingBracket,.cm-editor .cm-matchingBracket{background:color-mix(in srgb,var(--accent) 35%,transparent)!important;outline:1px solid var(--accent);color:var(--text-primary)!important}
+.cm-editor .cm-nonmatchingBracket{background:color-mix(in srgb,#ef4444 35%,transparent)!important;outline:1px solid #ef4444}
+.cm-editor .cm-activeLine{background:color-mix(in srgb,var(--accent) 7%,transparent)}
