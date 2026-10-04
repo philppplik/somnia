@@ -6,3 +6,4 @@
 - **Save dialog:** option "Create a new folder named <project>" (desktop `choose_project` gets `create_subfolder`, validated as a single path segment; web port creates the sub directory handle).
 - **Export dialog:** ZIP, Folder (copy, never overwrites), Single HTML (inlines local CSS/JS, `inlineHtml`), Markdown. The open project and its save state stay unchanged.
 - **Close project:** disk projects keep autosave and recovery; in-memory projects with edits ask (Save / Discard / Cancel).
+- **OS file drop:** window config sets dragDropEnabled=false (all tauri*.conf.json), so the webview receives HTML5 drops with real File objects; DropOverlay reads them via the File API (same path in web and desktop). Folder drop is not supported yet.
