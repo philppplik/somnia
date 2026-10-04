@@ -4,6 +4,18 @@ Local-first visual web editor and Dreamweaver successor. Design canvas, code edi
 
 Status: alpha. Windows builds are tested by the maintainer; Linux and macOS builds come from CI and are untested. Installers are unsigned.
 
+## What it does today
+
+- Visual canvas and code editor on the same source, with shared undo. Edits in either place change the real HTML and CSS; nothing is regenerated.
+- Layers panel (drag and drop, keyboard alternative), DOM tree, breadcrumbs, inspector, Problems panel.
+- Code editor with Emmet, auto-close tags, linting, find and replace, Apply formatting (Prettier, loaded on demand), encode/decode special characters.
+- Diff viewer for last saved vs current text or any two files.
+- Project menu: open folder or file, save with new-folder option, export as ZIP, folder, single HTML file or Markdown.
+- Themes, 25 px rounded bento layout, extension SDK (see `docs/extensions/`).
+- Local first: files stay on your machine, no account, no telemetry.
+
+Roadmap: [docs/ROADMAP.md](docs/ROADMAP.md). Benchmarks: [phase1/notes/BENCHMARKS.md](phase1/notes/BENCHMARKS.md).
+
 ## Download
 
 Get installers from [Releases](https://github.com/philppplik/somnia/releases) (each release lists SHA-256 checksums).
@@ -21,6 +33,7 @@ cd phase1
 npm ci
 npm run dev        # web dev server
 npm run test:core  # unit tests
+npm run bench      # editor-core benchmarks
 npx playwright test
 ```
 
