@@ -1,4 +1,6 @@
 import {openExternal,REPO_URL} from './openExternal';
+import {getActiveEditor,transformSelection} from './editorBridge';
+import {encodeEntities,decodeEntities} from './entities';
 import {newBlankFile,openFileDialog} from './projectActions';
 import {downloadProject,downloadMarkdown} from './exportProject';
 import {elements,insertElement} from './structureCommands';
@@ -89,3 +91,5 @@ ui('extensions.open','Extensions',undefined,()=>patchState({settingsOpen:true,se
 registerCommand({id:'project.export.md',title:'Export active file as Markdown',category:'Project',keywords:['md','markdown'],enabled:()=>getState().coreConnected&&/\.html?$/i.test(getState().activeFile),run:()=>{try{downloadMarkdown(getState().files,getState().activeFile);patchState({notice:'Markdown download requested. The source file is unchanged.'});}catch(error){patchState({notice:error instanceof Error?error.message:'Markdown export failed.'});}}});
 /** Tools menu groups app-level utilities; registered after all commands exist. */
 for(const id of ['settings.open','problems.toggle','theme.toggle','palette.open']){const c=registry.get(id);if(c)c.category='Tools';}
+
+for(const [id,title,fn] of [['edit.encodeEntities','Encode special characters (HTML entities)',encodeEntities],['edit.decodeEntities','Decode special characters (HTML entities)',decodeEntities]] as const)registerCommand({id,title,category:'Edit',keywords:['html','entities','escape','unescape','special characters'],run:()=>{const v=getActiveEditor();if(!v||!transformSelection(v,fn))patchState({notice:'Select text in the code editor first.'});else v.focus();}});

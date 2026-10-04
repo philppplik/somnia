@@ -7,3 +7,4 @@
 - **Export dialog:** ZIP, Folder (copy, never overwrites), Single HTML (inlines local CSS/JS, `inlineHtml`), Markdown. The open project and its save state stay unchanged.
 - **Close project:** disk projects keep autosave and recovery; in-memory projects with edits ask (Save / Discard / Cancel).
 - **OS file drop:** window config sets dragDropEnabled=false (all tauri*.conf.json), so the webview receives HTML5 drops with real File objects; DropOverlay reads them via the File API (same path in web and desktop). Folder drop is not supported yet.
+- **Entities:** right-click in the code editor: Encode / Decode special characters (selection). Commands edit.encodeEntities / edit.decodeEntities (palette, shortcut assignable in Settings > Shortcuts). Encode: markup chars + all non-ASCII as numeric references; decode: common named + numeric. Undo via the shared editor history (consecutive code edits can be undone together).

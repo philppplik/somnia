@@ -27,3 +27,12 @@ test('Ctrl+F opens a find bar under the editor, above the problems bar area',asy
  await page.getByLabel('Source code').click();await page.keyboard.press('Control+f');
  const bar=page.locator('.cm-panel.cm-search');await expect(bar).toBeVisible();
  const [b,ed]=await Promise.all([bar.boundingBox(),page.locator('.cm-editor').boundingBox()]);expect(b!.y).toBeGreaterThan(ed!.y+ed!.height/2);expect(b!.width).toBeGreaterThan(ed!.width*0.9);});
+test('code menu encodes and decodes the selection with undo',async({page})=>{await page.goto('/');await showCode(page);
+ await page.evaluate(()=>(window as any).__somnia.setSource('index.html','<p>Café & Co</p>'));
+ const ed=page.getByLabel('Source code');await ed.click();await page.keyboard.press('Control+a');
+ await ed.click({button:'right'});await page.getByRole('menuitem',{name:'Encode special characters'}).click();
+ await expect(page.locator('.cm-content')).toContainText('&lt;p&gt;Caf&#233; &amp; Co&lt;/p&gt;');
+ await page.getByLabel('Source code').click();await page.keyboard.press('Control+a');await ed.click({button:'right'});await page.getByRole('menuitem',{name:'Decode special characters'}).click();
+ await expect(page.locator('.cm-content')).toContainText('<p>Café & Co</p>');
+ await ed.click();await page.keyboard.press('Control+a');await ed.click({button:'right'});await page.getByRole('menuitem',{name:'Encode special characters'}).click();await expect(page.locator('.cm-content')).toContainText('&lt;p&gt;');
+ await page.keyboard.press('Control+k');await page.getByRole('combobox',{name:'Search commands'}).fill('Undo');await page.getByRole('option',{name:/^Undo/}).first().click();await expect(page.locator('.cm-content')).not.toContainText('&lt;p&gt;');});
