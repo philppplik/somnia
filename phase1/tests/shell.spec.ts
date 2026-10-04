@@ -17,8 +17,8 @@ test('shell, palette, shortcuts, core edits, history and panels',async({page})=>
  await page.getByRole('textbox',{name:'Element ID',exact:true}).fill('headline');await page.getByRole('textbox',{name:'Element ID',exact:true}).press('Enter');
  await expect(editor).toHaveText(/id="headline"/);
  await page.getByRole('button',{name:'Undo',exact:true}).click();await expect(editor).not.toHaveText(/id="headline"/);
- await page.getByRole('tab',{name:'Assets',exact:true}).click();await expect(page.getByText('Image importing is not connected yet.')).toBeVisible();
- await page.getByRole('tab',{name:'Layers',exact:true}).click();
+ await page.getByRole('button',{name:'Assets panel',exact:true}).click();await expect(page.getByText('Image importing is not connected yet.')).toBeVisible();
+ await page.getByRole('button',{name:'Layers panel',exact:true}).click();
  await page.getByRole('button',{name:'Toggle sidebar',exact:true}).click();await expect(page.getByRole('complementary',{name:'Project sidebar'})).toHaveCount(0);
  await page.getByRole('button',{name:'Toggle sidebar',exact:true}).click();
  const separator=page.getByRole('separator',{name:'Resize sidebar'});await separator.focus();await page.keyboard.press('ArrowRight');await expect(separator).toHaveAttribute('aria-valuenow','268');

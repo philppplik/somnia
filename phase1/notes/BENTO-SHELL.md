@@ -66,3 +66,10 @@ Global `:focus-visible` ring for buttons, tabs, menu items and inputs; `tests/a1
 
 ## Code editor context menu
 Right-click in the CodeMirror editor opens a fixed-position menu: Undo, Redo, Cut, Copy, Paste, Select all. Items are disabled when they do not apply (no selection, read-only). Escape or an outside click closes it and returns focus to the editor. If the browser blocks clipboard access the status bar says so. Test: `tests/code-context-menu.spec.ts`.
+
+## v9 UI (2026-10-04)
+- App frame radius is 2x the card radius; desktop window is transparent (untested on real Windows).
+- Rails drive the sidebar/inspector tabs, no duplicate tab rows.
+- Code settings: wrap long lines. Problems panel scrolls inside max 30vh.
+- Scrollbars stay visible for accessibility, slim and quiet (Somnia tokens).
+- Settings: Updates, About (MIT, third-party list). See ADR-004.
