@@ -17,3 +17,10 @@ test('commands must be declared and notices are capped',()=>{
  callApi(m(['commands']),'commands.register',['acme.hello.run'],deps);assert.deepEqual(reg,['acme.hello.run']);
  callApi(m(['ui.notify']),'ui.notify',['x'.repeat(500)],deps);assert.equal(notes[0].length,200);
 });
+test('storage is gated, namespaced by the host and size-capped',()=>{
+ const mem=new Map<string,string>();const d={...deps,storage:{get:(k:string)=>mem.get(k)??null,set:(k:string,v:string)=>{mem.set(k,v);}}};
+ assert.throws(()=>callApi(m([]),'storage.set',['a','b'],d),/"storage" permission/);
+ callApi(m(['storage']),'storage.set',['a','b'],d);assert.equal(callApi(m(['storage']),'storage.get',['a'],d),'b');
+ assert.throws(()=>callApi(m(['storage']),'storage.set',['a','x'.repeat(20001)],d),/limited/);
+ assert.equal(callApi(m(['storage']),'storage.get',['missing'],d),null);
+});

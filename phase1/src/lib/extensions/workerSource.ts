@@ -8,6 +8,7 @@ const somnia=Object.freeze({
  commands:Object.freeze({register:(id,fn)=>{if(typeof fn!=='function')throw new TypeError('handler must be a function');handlers.set(id,fn);return call('commands.register',[id]);}}),
  project:Object.freeze({listFiles:()=>call('project.listFiles',[]),readFile:p=>call('project.readFile',[p])}),
  selection:Object.freeze({get:()=>call('selection.get',[])}),
+ storage:Object.freeze({get:k=>call('storage.get',[k]),set:(k,v)=>call('storage.set',[k,v])}),
  ui:Object.freeze({notify:t=>call('ui.notify',[t])})});
 self.onmessage=async e=>{const m=e.data||{};
  if(m.type==='api.result'){const p=pending.get(m.requestId);if(!p)return;pending.delete(m.requestId);m.ok?p.resolve(m.value):p.reject(new Error(m.error));return;}
