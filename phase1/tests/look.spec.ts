@@ -1,0 +1,13 @@
+import {test,expect} from '@playwright/test';
+test('look options: accent, editor font, scale, reset and persistence',async({page})=>{await page.setViewportSize({width:1400,height:900});await page.goto('/');
+ await expect(page.locator('[data-storage]')).toBeVisible();await page.keyboard.press('Control+,');
+ const dlg=page.getByRole('dialog');await expect(dlg).toBeVisible();
+ await dlg.getByLabel('Accent colour').fill('#e11d48');
+ await expect(page.getByTestId('accent-contrast')).toContainText(':1');
+ expect(await page.evaluate(()=>document.documentElement.style.getPropertyValue('--accent'))).toBe('#e11d48');
+ await dlg.getByLabel('Editor font size').fill('18');
+ expect(await page.evaluate(()=>document.documentElement.style.getPropertyValue('--editor-font-size'))).toBe('18px');
+ await dlg.getByLabel('Density').selectOption('compact');expect(await page.evaluate(()=>document.documentElement.style.getPropertyValue('--gap'))).toBe('3px');
+ await page.reload();expect(await page.evaluate(()=>document.documentElement.style.getPropertyValue('--accent'))).toBe('#e11d48');
+ await page.keyboard.press('Control+,');await page.getByRole('dialog').getByRole('button',{name:'Reset look'}).click();
+ expect(await page.evaluate(()=>document.documentElement.style.getPropertyValue('--accent'))).toBe('');});
