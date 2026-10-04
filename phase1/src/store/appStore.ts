@@ -1,5 +1,5 @@
 import {readAppearance,rememberAppearance,type Contrast,type CodeTheme} from '../lib/appearance';
-import {readTheme,rememberTheme} from '../lib/theme';
+import {readTheme,rememberTheme,readThemeChoice,rememberThemeChoice,type ThemeChoice} from '../lib/theme';
 import { useSyncExternalStore } from 'react';
 import type { EditorNode,EditorProjectPort,Operation,Origin } from '../lib/editorPort';
 export type LeftTab='layers'|'files'|'assets'|'components';
@@ -11,13 +11,13 @@ export interface AppState {settingsOpen:boolean;contrast:Contrast;codeTheme:Code
  leftTab:LeftTab;rightTab:RightTab;zoom:number;viewport:1280|820|390;viewMode:ViewMode;
  paletteOpen:boolean;recentCommands:string[];selectedElementId:string|null;selectedElementIds:string[];computedStyle:Record<string,string>;activeFile:string;openFiles:string[];designFile:string;cursorLine:number;cursorCol:number;
  projectName:string;coreConnected:boolean;revision:number;files:Readonly<Record<string,string>>;nodes:EditorNode[];
- isDirty:boolean;lastSavedAt:string|null;notice:string;theme:'dark'|'light';
+ isDirty:boolean;lastSavedAt:string|null;notice:string;theme:'dark'|'light';themeChoice:ThemeChoice;
 }
 const demo=(id:string,tag:string,children:EditorNode[]=[]):EditorNode=>({id,tag,attrs:{},children,from:0,to:0,contentFrom:0,contentTo:0,locked:false,hidden:false});
-let state:AppState={settingsOpen:false,extensionThemes:[],extensionPanels:[],activePanel:{left:null,right:null},storage:'memory',...readAppearance(),diskComparison:null,nativeConnected:false,sidebarWidth:260,inspectorWidth:320,sidebarOpen:true,inspectorOpen:true,problemsOpen:false,leftTab:'layers',rightTab:'design',zoom:75,viewport:1280,viewMode:'design',paletteOpen:false,recentCommands:[],selectedElementId:null,selectedElementIds:[],computedStyle:{},activeFile:'index.html',openFiles:['index.html'],designFile:'index.html',cursorLine:1,cursorCol:1,projectName:'Untitled project',coreConnected:false,revision:0,files:{},nodes:[demo('header','header',[demo('nav','nav')]),demo('main','main',[demo('section','section',[demo('heading','h1'),demo('button','button')])]),demo('footer','footer')],isDirty:false,lastSavedAt:null,notice:'Shell preview. No folder connected.',theme:readTheme()};
+let state:AppState={themeChoice:readThemeChoice(),settingsOpen:false,extensionThemes:[],extensionPanels:[],activePanel:{left:null,right:null},storage:'memory',...readAppearance(),diskComparison:null,nativeConnected:false,sidebarWidth:260,inspectorWidth:320,sidebarOpen:true,inspectorOpen:true,problemsOpen:false,leftTab:'layers',rightTab:'design',zoom:75,viewport:1280,viewMode:'design',paletteOpen:false,recentCommands:[],selectedElementId:null,selectedElementIds:[],computedStyle:{},activeFile:'index.html',openFiles:['index.html'],designFile:'index.html',cursorLine:1,cursorCol:1,projectName:'Untitled project',coreConnected:false,revision:0,files:{},nodes:[demo('header','header',[demo('nav','nav')]),demo('main','main',[demo('section','section',[demo('heading','h1'),demo('button','button')])]),demo('footer','footer')],isDirty:false,lastSavedAt:null,notice:'Shell preview. No folder connected.',theme:readTheme()};
 const listeners=new Set<()=>void>();
 export const getState=()=>state;
-export function patchState(patch:Partial<AppState>){if(patch.theme)rememberTheme(patch.theme);if('selectedElementId' in patch&&!('selectedElementIds' in patch))patch.selectedElementIds=patch.selectedElementId?[patch.selectedElementId]:[];state={...state,...patch};if(patch.contrast||patch.codeTheme||'wrapLines' in patch){if(!rememberAppearance(state.contrast,state.codeTheme,state.wrapLines))state.notice='Appearance changed for this session. Storage unavailable; settings will not survive restart.';}listeners.forEach(fn=>fn());}
+export function patchState(patch:Partial<AppState>){if(patch.theme)rememberTheme(patch.theme);if(patch.themeChoice)rememberThemeChoice(patch.themeChoice);if('selectedElementId' in patch&&!('selectedElementIds' in patch))patch.selectedElementIds=patch.selectedElementId?[patch.selectedElementId]:[];state={...state,...patch};if(patch.contrast||patch.codeTheme||'wrapLines' in patch){if(!rememberAppearance(state.contrast,state.codeTheme,state.wrapLines))state.notice='Appearance changed for this session. Storage unavailable; settings will not survive restart.';}listeners.forEach(fn=>fn());}
 export const subscribe=(fn:()=>void)=>{listeners.add(fn);return()=>{listeners.delete(fn);};};
 export const useAppStore=()=>useSyncExternalStore(subscribe,getState,getState);
 let core:EditorProjectPort|null=null;

@@ -73,3 +73,7 @@ Right-click in the CodeMirror editor opens a fixed-position menu: Undo, Redo, Cu
 - Code settings: wrap long lines. Problems panel scrolls inside max 30vh.
 - Scrollbars stay visible for accessibility, slim and quiet (Somnia tokens).
 - Settings: Updates, About (MIT, third-party list). See ADR-004.
+
+## Shortcuts and themes (2026-10-04)
+- Settings > Shortcuts: change, clear, reset per command, overrides in localStorage (`somnia.shortcuts.v1`), conflict hint. Dreamweaver-style defaults: Ctrl+D duplicate, Ctrl+` code/design, F4 hide panels.
+- Settings > Appearance > App theme: System (follows OS), Light, Dark, Cream, Dark Green, Midnight Blue. Palettes are token overrides in tokens.css (`data-palette`).
