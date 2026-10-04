@@ -23,7 +23,8 @@ export function validateManifest(input:unknown):ManifestResult{
  const codeThemes=list('codeThemes').flatMap((x,i)=>{if(!obj(x)||typeof x.id!=='string'||!/^[a-z0-9-]+$/.test(x.id)||typeof x.label!=='string'||!obj(x.light)||!obj(x.dark)){errors.push(`contributes.codeThemes[${i}] needs id (lowercase, dashes), label, light and dark.`);return[];}
   const side=(o:Record<string,unknown>)=>{const out:Record<string,string>={};for(const [k,v] of Object.entries(o)){if(!SYNTAX_TOKENS.includes(k)||typeof v!=='string'||!COLOR.test(v)){errors.push(`codeThemes[${i}]: ${k} must be one of ${SYNTAX_TOKENS.join(', ')} with a hex color.`);continue;}out[k]=v;}return out;};
   return[{id:x.id,label:x.label,light:side(x.light),dark:side(x.dark)}];});
+ const panels=list('panels').flatMap((x,i)=>{if(!obj(x)||typeof x.id!=='string'||!/^[a-z0-9-]+$/.test(x.id)||typeof x.title!=='string'||!x.title.trim()||x.title.length>40||!['left','right'].includes(String(x.side))||typeof x.html!=='string'||x.html.length>50000){errors.push(`contributes.panels[${i}] needs id (lowercase, dashes), title up to 40 characters, side left|right and html up to 50000 characters.`);return[];}return[{id:x.id,title:x.title,side:x.side as 'left'|'right',html:x.html}];});
  if((commands.length)&&!permissions.includes('commands'))errors.push('Commands need the "commands" permission.');
  if(errors.length)return{ok:false,errors};
- return{ok:true,manifest:{id,name,version,apiVersion:API_VERSION,...(main?{main}:{}),...(code?{code}:{}),permissions,contributes:{commands,snippets,codeThemes}}};
+ return{ok:true,manifest:{id,name,version,apiVersion:API_VERSION,...(main?{main}:{}),...(code?{code}:{}),permissions,contributes:{commands,snippets,codeThemes,panels}}};
 }
