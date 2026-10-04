@@ -1,4 +1,4 @@
-import {test,expect} from '@playwright/test';
+import {test,expect} from './fixtures';
 import {showCode} from './helpers';
 test('code editor right-click menu selects all and closes with Escape',async({page})=>{await page.goto('/');await showCode(page);
  const editor=page.getByLabel('Source code');await editor.click({button:'right'});

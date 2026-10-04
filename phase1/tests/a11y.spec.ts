@@ -1,4 +1,4 @@
-import {test,expect} from '@playwright/test';
+import {test,expect} from './fixtures';
 test('all buttons have accessible names and keyboard focus is visible',async({page})=>{
  await page.goto('/');await page.waitForTimeout(500);
  const unnamed=await page.evaluate(()=>[...document.querySelectorAll('button,[role=tab],[role=menuitem],input,select,textarea')].filter(e=>{const el=e as HTMLElement;if(el.offsetParent===null)return false;const n=(el.getAttribute('aria-label')||el.getAttribute('title')||el.textContent||'').trim()||(el.id&&document.querySelector(`label[for="${el.id}"]`)?.textContent)||el.closest('label')?.textContent;return !n;}).map(e=>e.outerHTML.slice(0,120)));

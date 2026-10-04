@@ -15,3 +15,13 @@ export function downloadMarkdown(files:Readonly<Record<string,string>>,activeFil
  const source=files[activeFile];if(typeof source!=='string'||!/\.html?$/i.test(activeFile))throw Error('Open an HTML file to export it as Markdown.');
  const blob=new Blob([htmlToMarkdown(source)],{type:'text/markdown'});const url=URL.createObjectURL(blob);const link=document.createElement('a');link.href=url;link.download=markdownFileName(activeFile);link.click();setTimeout(()=>URL.revokeObjectURL(url),60_000);
 }
+
+/** Single-file export: the page with its local stylesheets and scripts inlined. Remote URLs and missing files stay as they are. */
+export function inlineHtml(files:Readonly<Record<string,string>>,htmlPath:string,opts:{css:boolean;js:boolean}):string{
+ const dir=htmlPath.includes('/')?htmlPath.slice(0,htmlPath.lastIndexOf('/')+1):'';
+ const find=(href:string)=>{if(/^[a-z][a-z0-9+.-]*:|^\/\//i.test(href))return undefined;const clean=href.split(/[?#]/)[0];const parts:string[]=[];for(const seg of (dir+clean).split('/')){if(seg==='..')parts.pop();else if(seg&&seg!=='.')parts.push(seg);}return files[parts.join('/')];};
+ let out=files[htmlPath]??'';
+ if(opts.css)out=out.replace(/<link\b[^>]*>/gi,tag=>{if(!/rel\s*=\s*["']?stylesheet/i.test(tag))return tag;const href=/href\s*=\s*["']([^"']+)["']/i.exec(tag)?.[1];const css=href?find(href):undefined;return css===undefined?tag:`<style>\n${css.replace(/<\/style/gi,'<\\/style')}\n</style>`;});
+ if(opts.js)out=out.replace(/<script\b([^>]*)\bsrc\s*=\s*["']([^"']+)["']([^>]*)>\s*<\/script>/gi,(tag,a,src,b)=>{const js=find(src);return js===undefined?tag:`<script${(a+b).trimEnd()}>\n${js.replace(/<\/script/gi,'<\\/script')}\n</script>`;});
+ return out;}
+export function downloadText(text:string,name:string,type='text/html'){const blob=new Blob([text],{type});const url=URL.createObjectURL(blob);const link=document.createElement('a');link.href=url;link.download=name;link.click();setTimeout(()=>URL.revokeObjectURL(url),60_000);}

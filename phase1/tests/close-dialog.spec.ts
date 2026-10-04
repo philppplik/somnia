@@ -1,4 +1,4 @@
-import {test,expect} from '@playwright/test';
+import {test,expect} from './fixtures';
 import {showCode} from './helpers';
 test('close prompt offers keep draft, discard and cancel',async({page})=>{await page.goto('/');await showCode(page);
  await page.getByLabel('Source code').click();await page.keyboard.type('x');

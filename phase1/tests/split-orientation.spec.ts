@@ -1,4 +1,4 @@
-import {test,expect} from '@playwright/test';
+import {test,expect} from './fixtures';
 const dir=(page:any)=>page.locator('.workspace').evaluate((e:Element)=>getComputedStyle(e).flexDirection);
 test('View menu offers vertical, horizontal and swapped split',async({page})=>{await page.goto('/');
  const pick=async(name:string)=>{await page.getByRole('button',{name:'View',exact:true}).click();await page.getByRole('menuitem',{name:new RegExp(name)}).click();};

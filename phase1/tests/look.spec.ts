@@ -1,4 +1,4 @@
-import {test,expect} from '@playwright/test';
+import {test,expect} from './fixtures';
 test('look options: accent, editor font, scale, reset and persistence',async({page})=>{await page.setViewportSize({width:1400,height:900});await page.goto('/');
  await expect(page.locator('[data-storage]')).toBeVisible();await page.keyboard.press('Control+,');
  const dlg=page.getByRole('dialog');await expect(dlg).toBeVisible();

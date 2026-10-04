@@ -1,4 +1,4 @@
-import {test,expect} from '@playwright/test';
+import {test,expect} from './fixtures';
 test('About shows version, MIT licence and third-party list',async({page})=>{await page.goto('/');await page.keyboard.press('Control+,');await page.getByRole('button',{name:'About',exact:true}).click();
  await expect(page.getByText(/Licensed under the MIT License/)).toBeVisible();await page.getByText(/Third-party software \(\d+ packages\)/).click();await expect(page.getByLabel('Third-party software')).toContainText('react');});
 test('Updates finds a newer GitHub release and links the installer',async({page})=>{

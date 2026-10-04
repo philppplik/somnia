@@ -1,4 +1,4 @@
-import {test,expect} from '@playwright/test';
+import {test,expect} from './fixtures';
 import {showCode} from './helpers';
 test('Ctrl+D duplicates the selection or the current line in the code editor',async({page})=>{await page.goto('/');await showCode(page);
  const ed=page.getByLabel('Source code');await ed.click();await page.keyboard.press('Control+a');await page.keyboard.type('abc');

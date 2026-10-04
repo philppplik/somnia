@@ -1,4 +1,4 @@
-import {test,expect} from '@playwright/test';
+import {test,expect} from './fixtures';
 test('split divider drags, clamps, nudges by keyboard and resets on double click',async({page})=>{await page.goto('/');await page.keyboard.press('Control+3');
  const sep=page.getByRole('separator',{name:'Resize code and design panes'});const code=page.locator('.code-pane');
  const w=async()=>(await code.boundingBox())!.width;const start=await w();

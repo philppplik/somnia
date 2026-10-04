@@ -1,4 +1,4 @@
-import {test,expect} from '@playwright/test';
+import {test,expect} from './fixtures';
 import {showCode} from './helpers';
 test('rails replace the duplicate tab rows',async({page})=>{await page.goto('/');
  await expect(page.getByRole('tablist',{name:'Sidebar tabs'})).toHaveCount(0);await expect(page.getByRole('tablist',{name:'Inspector tabs'})).toHaveCount(0);

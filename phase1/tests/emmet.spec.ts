@@ -1,4 +1,4 @@
-import {test,expect} from '@playwright/test';
+import {test,expect} from './fixtures';
 import {showCode} from './helpers';
 test('Emmet abbreviation expands with Tab in HTML',async({page})=>{await page.goto('/');await showCode(page);
  const ed=page.getByLabel('Source code');await ed.click();await page.keyboard.press('Control+a');await page.keyboard.press('Delete');

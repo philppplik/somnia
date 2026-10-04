@@ -1,5 +1,6 @@
 import type {CodeTheme} from '../lib/appearance';
 import {lazy,Suspense} from 'react';
+import {EmptyState} from './EmptyState';
 import {FileTabs} from './FileTabs';
 const SourceEditor=lazy(()=>import('./SourceEditor').then(m=>({default:m.SourceEditor})));
 import {DesignCanvas} from './DesignCanvas';
@@ -19,5 +20,6 @@ export function Canvas(){
  const box=useRef<HTMLDivElement>(null);
  const state=useAppStore();
  const code=<section className="code-pane" aria-label="Source editor" style={state.viewMode==='split'?{flex:`0 0 ${state.splitRatio*100}%`}:undefined}><FileTabs/><Suspense fallback={<div className="px-3 py-2 text-[10px] text-ink-3">Loading source editor...</div>}><SourceEditor source={state.files[state.activeFile]??''} file={state.activeFile} disabled={!state.coreConnected}/></Suspense></section>;
+ if(!state.coreConnected)return <EmptyState/>;
  return <main className="center" aria-label="Editor workspace"><div ref={box} className={`workspace workspace-${state.viewMode}${state.viewMode==='split'?` split-${state.splitLayout}${state.splitSwap?' split-swap':''}`:''}`}>{state.viewMode!=='design'&&code}{state.viewMode==='split'&&<SplitDivider box={box}/>}{state.viewMode!=='code'&&<DesignCanvas/>}</div></main>;
 }

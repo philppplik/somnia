@@ -1,4 +1,4 @@
-import {test,expect} from '@playwright/test';
+import {test,expect} from './fixtures';
 test('code editor offers HTML and CSS completions',async({page})=>{
  await page.goto('/');await page.getByRole('button',{name:'Code view',exact:true}).click();
  const ed=page.getByLabel('Source code');await ed.click();await page.keyboard.press('Control+End');

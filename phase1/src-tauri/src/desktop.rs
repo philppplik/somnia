@@ -49,6 +49,7 @@ fn emit(window: &WebviewWindow, event: &StateEvent) {
 async fn choose_project(
     window: WebviewWindow,
     state: State<'_, Shared>,
+    create_subfolder: Option<String>,
 ) -> Result<Option<ProjectReply>> {
     gate(&window)?;
     let app = window.app_handle().clone();
@@ -62,6 +63,25 @@ async fn choose_project(
     let path = selected
         .into_path()
         .map_err(|e| AppError::Invalid(e.to_string()))?;
+    // Save flow "new folder": create exactly one validated sub folder inside the chosen folder and use it as the project root.
+    let path = match create_subfolder {
+        Some(name) => {
+            let bad = name.is_empty()
+                || name.len() > 100
+                || name == "."
+                || name == ".."
+                || name.ends_with('.')
+                || name.ends_with(' ')
+                || name.chars().any(|c| c.is_control() || "<>:\"/\\|?*".contains(c));
+            if bad {
+                return Err(AppError::Denied("Folder name is not allowed".into()));
+            }
+            let target = path.join(&name);
+            std::fs::create_dir_all(&target)?;
+            target
+        }
+        None => path,
+    };
     let recovery_base = window
         .app_handle()
         .path()

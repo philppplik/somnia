@@ -1,4 +1,4 @@
-import {test,expect} from '@playwright/test';
+import {test,expect} from './fixtures';
 import {showCode} from './helpers';
 test('real canvas selects and plain text editing preserves source; shared undo',async({page})=>{
  await page.goto('/');const frame=page.frameLocator('iframe[title="Sandboxed design preview"]');await expect(frame.locator('h1')).toHaveText('Make room for something new.');await frame.locator('h1').click();await expect(page.getByLabel('Element ID',{exact:true})).toBeVisible();await frame.locator('h1').dblclick();await page.getByLabel('Canvas text edit').fill('New local idea');await page.getByLabel('Canvas text edit').press('Control+Enter');await expect(frame.locator('h1')).toHaveText('New local idea');await page.getByRole('button',{name:'Undo',exact:true}).click();await expect(frame.locator('h1')).toHaveText('Make room for something new.');await page.screenshot({path:'tests/artifacts/integrated-canvas.png'});

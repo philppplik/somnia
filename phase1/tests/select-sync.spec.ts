@@ -1,4 +1,4 @@
-import {test,expect} from '@playwright/test';
+import {test,expect} from './fixtures';
 test('clicking an element in the preview selects and focuses its source in the code editor',async({page})=>{
  await page.goto('/');await page.getByRole('button',{name:'Split view',exact:true}).click();
  const f=page.frameLocator('iframe[title="Sandboxed design preview"]');await expect(f.locator('h1')).toBeVisible();

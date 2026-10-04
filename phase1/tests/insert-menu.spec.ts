@@ -1,4 +1,4 @@
-import {test,expect} from '@playwright/test';
+import {test,expect} from './fixtures';
 test('Insert menu adds an element, Tools menu opens settings',async({page})=>{
  await page.goto('/');const f=page.frameLocator('iframe[title="Sandboxed design preview"]');await expect(f.locator('h1')).toBeVisible();
  await page.getByRole('button',{name:'main',exact:true}).first().click();
