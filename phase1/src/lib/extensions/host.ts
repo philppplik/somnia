@@ -10,7 +10,9 @@ export function activateExtensions(list:ExtensionManifest[]){
  const rule=(sel:string,vars:Record<string,string>)=>`${sel}{${Object.entries(vars).map(([k,v])=>`${k}:${v}`).join(';')}}`;
  style.textContent=themes.map(({id,t})=>rule(`:root[data-code-theme="${id}"]`,t.light)+rule(`:root[data-theme=dark][data-code-theme="${id}"]`,t.dark)).join('\n');
  document.head.appendChild(style);patchState({extensionThemes:themes.map(({id,label})=>({id,label}))});
- disposers.push(()=>{style.remove();patchState({extensionThemes:[]});});
+ const panels=list.flatMap(e=>e.contributes.panels.map(p=>({id:`${e.id}.${p.id}`,extId:e.id,title:p.title,side:p.side,html:p.html})));
+ patchState({extensionPanels:panels});
+ disposers.push(()=>{style.remove();patchState({extensionThemes:[],extensionPanels:[],activePanel:{left:null,right:null}});});
  for(const ext of list){
   let runtime:ExtensionRuntime|null=null;
   if(ext.code){runtime=new ExtensionRuntime(ext,{files:()=>getState().files as Record<string,string>,selection:()=>{const id=getState().selectedElementId;let hit:{id:string;tag:string}|null=null;const walk=(ns:{id:string;tag:string;children:any[]}[])=>ns.forEach(n=>{if(n.id===id)hit={id:n.id,tag:n.tag};walk(n.children);});walk(getState().nodes as never);return hit;},storage:{get:k=>localStorage.getItem(`somnia.ext.${ext.id}.${k}`),set:(k,v)=>localStorage.setItem(`somnia.ext.${ext.id}.${k}`,v)},notify:text=>patchState({notice:text}),log:text=>patchState({notice:text})},browserWorker);runtime.activate();const rt=runtime;disposers.push(()=>rt.dispose());}

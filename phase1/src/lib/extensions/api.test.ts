@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {callApi} from './api';
 import type {ExtensionManifest} from './types';
-const m=(permissions:ExtensionManifest['permissions']):ExtensionManifest=>({id:'acme.hello',name:'Hello',version:'1.0.0',apiVersion:1,permissions,contributes:{commands:[{id:'acme.hello.run',title:'Run',category:'Tools'}],snippets:[],codeThemes:[]}});
+const m=(permissions:ExtensionManifest['permissions']):ExtensionManifest=>({id:'acme.hello',name:'Hello',version:'1.0.0',apiVersion:1,permissions,contributes:{commands:[{id:'acme.hello.run',title:'Run',category:'Tools'}],snippets:[],codeThemes:[],panels:[]}});
 const notes:string[]=[],reg:string[]=[];
 const deps={files:()=>({'index.html':'<h1>x</h1>'}),selection:()=>({id:'n1',tag:'h1'}),notify:(t:string)=>{notes.push(t);},registerHandler:(id:string)=>{reg.push(id);}};
 test('calls are gated by declared permissions',()=>{

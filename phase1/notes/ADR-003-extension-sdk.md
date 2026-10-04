@@ -68,9 +68,15 @@ Saving to disk stays with the app's save pipeline (journal, revision check, veri
 4. `editor.applyOperations` and `storage`. Docs and a sample extension in `phase1/examples/`.
 5. Desktop: load from an app data folder. Web: load from a picked folder or ZIP.
 
-## Open questions for Philipp
-- Should extensions be allowed to add whole inspector or sidebar panels (needs a UI contract, round 2), or is "commands, snippets, themes" enough for the first release?
-- Distribution later: GitHub-hosted index, or only local installs?
+## Decisions by Philipp (2026-10-04)
+- Panels are in round 1: extensions may add sidebar and inspector panels.
+- Distribution later goes through a GitHub-hosted index (see below). Local installs stay supported.
+
+## Panels
+Manifest `contributes.panels: [{id, title, side: left|right, html}]` (html up to 50 kB). The host shows one puzzle icon per panel in the matching icon rail. A panel replaces the sidebar or inspector body while active and runs in `<iframe sandbox="allow-scripts">` with an opaque origin and a CSP of `default-src 'none'` (no network, inline script and style only, data: images and fonts). The page gets `window.somnia` with `project.listFiles/readFile`, `selection.get`, `storage.get/set` and `ui.notify`; calls go over postMessage to the host and pass the same permission check as worker calls. Unlike the worker, this is a real network boundary.
+
+## Distribution (GitHub index, planned)
+A public repo `somnia-extensions` holds `index.json` (id, name, version, author, repo URL, sha256 of the release zip, permissions). The app fetches the index and the zip only when the user opens the browser view, checks the hash, runs the same manifest validator and shows permissions before install. Everything stays opt-in per extension. Prerequisites before this ships: the app CSP (`connect-src` limited to the index host), a review rule for index entries, and signed or hash-pinned releases. Not built yet.
 
 ## Progress
 - Step 1 done: `src/lib/extensions/types.ts` (apiVersion 1 contract) and `manifest.ts` validator (unknown permissions, foreign command ids, non-color theme values, path escapes rejected), unit tests in `manifest.test.ts`.
@@ -81,4 +87,5 @@ Saving to disk stays with the app's save pipeline (journal, revision check, veri
   - Hardening caveat: the worker has no DOM and fetch, XMLHttpRequest, WebSocket, IndexedDB, nested Workers and importScripts are removed before extension code runs. This is best-effort. Extension code can still reach other worker globals, so the real boundary needs a CSP with `connect-src 'none'` for the app and a review step before any distribution. Until then extensions are for the user's own code only.
   - Not yet: `editor.applyOperations` (project.write) and `storage`; events host to worker; enable/disable and permission list UI.
 - Step 3b (local): `storage.get/set` added (permission `storage`, keys up to 100 chars, values up to 20000 chars, stored per extension id in localStorage by the host).
+- Panels (done, local): validator, host state, rail buttons, sandboxed iframe with bridge, tests in manifest.test.ts and extensions.spec.ts.
 - Enable/disable (local): installed extensions are off until the user ticks "On" in Settings > Extensions; the list shows each extension's declared permissions. Removing an extension also clears its enabled flag. Revoking single permissions is still open.

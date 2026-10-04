@@ -12,3 +12,7 @@ test('rejects non-color theme values and commands without permission',()=>{
  r=validateManifest({...base,permissions:[]});assert.equal(r.ok,false);if(!r.ok)assert.match(r.errors.join(' '),/"commands" permission/);
  assert.equal(validateManifest('nope').ok,false);
 });
+test('panels are validated',()=>{
+ const ok=validateManifest({...base,contributes:{panels:[{id:'files',title:'Files',side:'left',html:'<p>x</p>'}]}});assert.equal(ok.ok,true);
+ for(const bad of [{id:'Bad Id',title:'x',side:'left',html:'x'},{id:'a',title:'x',side:'top',html:'x'},{id:'a',title:'x',side:'left',html:'x'.repeat(50001)}]){const r=validateManifest({...base,contributes:{panels:[bad]}});assert.equal(r.ok,false);}
+});
