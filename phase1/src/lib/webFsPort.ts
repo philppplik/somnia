@@ -50,7 +50,8 @@ export function createWebFsPort(options:WebFsOptions={}):FilePort{
     const projectId=crypto.randomUUID();projects.set(projectId,{root:saved,name:saved.name});return{projectId,name:saved.name};
    }
    const root=await (options.pickDirectory?options.pickDirectory():(window as unknown as {showDirectoryPicker(o:object):Promise<FileSystemDirectoryHandle>}).showDirectoryPicker({mode:'readwrite',id:'somnia-project'}).catch(e=>{if(e instanceof DOMException&&e.name==='AbortError')return null;throw e;}));
-   if(!root)return null;await handles.put(root).catch(()=>undefined);const projectId=crypto.randomUUID();projects.set(projectId,{root,name:root.name});return{projectId,name:root.name};
+   if(!root)return null;if(args?.createSubfolder){const n=String(args.createSubfolder);if(!n||n==='.'||n==='..'||/[<>:"\/\\|?*\u0000-\u001f]/.test(n)||/[. ]$/.test(n))throw Error('Folder name is not allowed.');const sub=await root.getDirectoryHandle(n,{create:true});await handles.put(sub).catch(()=>undefined);const projectId=crypto.randomUUID();projects.set(projectId,{root:sub,name:n});return{projectId,name:n};}
+   await handles.put(root).catch(()=>undefined);const projectId=crypto.randomUUID();projects.set(projectId,{root,name:root.name});return{projectId,name:root.name};
   },
   async list_files({projectId}){const out:string[]=[];await walk(project(projectId).root,'',out,options.maxFiles??64,0);return out.sort();},
   async read_file({projectId,path}){const {root}=project(projectId);const content=await readText(root,String(path));const revision=await revisionOf(content);return{content,revision,status:event(String(projectId),String(path),0,'saved',revision)} satisfies Read;},

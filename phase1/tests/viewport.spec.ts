@@ -1,4 +1,4 @@
-import {test,expect} from '@playwright/test';
+import {test,expect} from './fixtures';
 test('custom viewport: typed size, preset, rotate and drag handle',async({page})=>{await page.setViewportSize({width:1500,height:900});await page.goto('/');
  const w=page.getByLabel('Viewport width',{exact:true}),h=page.getByLabel('Viewport height',{exact:true});
  await w.fill('500');await w.press('Enter');await h.fill('700');await h.press('Enter');

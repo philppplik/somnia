@@ -1,4 +1,4 @@
-import {test,expect} from '@playwright/test';
+import {test,expect} from './fixtures';
 test('capture authentic alpha states for product video',async({page})=>{
  await page.setViewportSize({width:1920,height:1080});await page.goto('/');
  const f=page.frameLocator('iframe[title="Sandboxed design preview"]');await expect(f.locator('h1')).toBeVisible();await page.screenshot({path:'tests/artifacts/video-01-layers.png'});

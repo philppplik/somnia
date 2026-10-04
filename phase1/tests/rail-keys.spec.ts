@@ -1,4 +1,4 @@
-import {test,expect} from '@playwright/test';
+import {test,expect} from './fixtures';
 test('arrow keys move focus inside the icon rail',async({page})=>{await page.goto('/');
  const rail=page.getByRole('toolbar',{name:'Sidebar panels'});await rail.getByRole('button').first().focus();
  await page.keyboard.press('ArrowDown');await expect(rail.getByRole('button',{name:'Layers panel'})).toBeFocused();

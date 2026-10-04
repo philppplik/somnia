@@ -1,4 +1,4 @@
-import {test,expect} from '@playwright/test';
+import {test,expect} from './fixtures';
 import {zipSync,strToU8} from 'fflate';
 test('ZIP working copy opens when folder access is unavailable',async({page})=>{
  await page.goto('/?fallback=zip');page.on('dialog',d=>d.accept());await page.waitForTimeout(800);await page.locator('body').click({position:{x:5,y:5}});

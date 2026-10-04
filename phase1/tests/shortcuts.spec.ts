@@ -1,4 +1,4 @@
-import {test,expect} from '@playwright/test';
+import {test,expect} from './fixtures';
 test('shortcuts can be changed, cleared and reset in settings',async({page})=>{await page.goto('/');await page.keyboard.press('Control+,');await page.getByRole('button',{name:'Shortcuts',exact:true}).click();
  await expect(page.getByLabel('Keyboard shortcuts')).toContainText('Duplicate selected element');
  await page.getByRole('button',{name:'Change shortcut for Toggle sidebar'}).click();await page.keyboard.press('Control+Shift+Y');

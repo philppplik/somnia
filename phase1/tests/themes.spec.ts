@@ -1,4 +1,4 @@
-import {test,expect} from '@playwright/test';
+import {test,expect} from './fixtures';
 test('system theme follows the OS and named palettes apply',async({page})=>{
  await page.emulateMedia({colorScheme:'dark'});await page.goto('/');await page.keyboard.press('Control+,');
  await page.getByLabel('App theme').selectOption('system');await expect(page.locator('html')).toHaveAttribute('data-theme','dark');

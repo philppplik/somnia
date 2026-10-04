@@ -1,4 +1,4 @@
-import {test,expect} from '@playwright/test';
+import {test,expect} from './fixtures';
 test('unsaved memory-only draft survives a reload',async({page})=>{await page.goto('/');await page.keyboard.press('Control+1');
  const ed=page.getByLabel('Source code');await ed.click();await page.keyboard.press('Control+a');await page.keyboard.type('<h1>Draft survives</h1>');await expect.poll(()=>page.evaluate(()=>localStorage.getItem('somnia.draft.v1')?.includes('Draft survives')),{timeout:15000}).toBe(true);
- await page.reload();await expect(page.locator('[data-storage]')).toBeVisible();await expect(async()=>{await page.keyboard.press('Control+1');await expect(page.getByLabel('Source code')).toBeVisible({timeout:1000});}).toPass({timeout:15000});await expect(page.locator('.cm-content')).toContainText('Draft survives',{timeout:15000});await expect(page.getByText(/Restored your unsaved draft/)).toBeVisible();});
+ await page.reload();await expect(page.locator('[data-storage]')).toBeVisible();await expect(async()=>{await page.keyboard.press('Control+1');await expect(page.getByLabel('Source code')).toBeVisible({timeout:1000});}).toPass({timeout:15000});await expect(page.locator('.cm-content')).toContainText('Draft survives',{timeout:15000});await expect(page.getByText(/Restored your unsaved session/)).toBeVisible();});

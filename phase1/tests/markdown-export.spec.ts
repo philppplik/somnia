@@ -1,4 +1,4 @@
-import {test,expect} from '@playwright/test';
+import {test,expect} from './fixtures';
 import {readFileSync} from 'node:fs';
 test('Export active file as Markdown downloads a .md file with converted content',async({page})=>{
  await page.goto('/');await expect(page.frameLocator('iframe[title="Sandboxed design preview"]').locator('h1')).toBeVisible();

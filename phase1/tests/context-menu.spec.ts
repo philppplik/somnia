@@ -1,4 +1,4 @@
-import {test,expect} from '@playwright/test';
+import {test,expect} from './fixtures';
 test('layer context actions preserve source metadata and shared history',async({page})=>{
  await page.goto('/');const frame=page.frameLocator('iframe[title="Sandboxed design preview"]');await expect(frame.locator('h1')).toBeVisible();const layer=page.getByRole('button',{name:'h1',exact:true});await layer.click({button:'right'});const menu=page.getByRole('menu',{name:'h1 layer actions'});await expect(menu).toBeVisible();await page.screenshot({path:'tests/artifacts/layer-context-light.png'});await page.getByRole('menuitem',{name:'View source',exact:true}).click();const source=page.getByRole('textbox',{name:'Source code'});const original=await source.innerText();
  await layer.click({button:'right'});await page.getByRole('menuitem',{name:'Hide layer',exact:true}).click();await expect(frame.locator('h1')).toBeHidden();await expect(source).toHaveText(original,{useInnerText:true});await page.keyboard.press('Control+z');await expect(frame.locator('h1')).toBeVisible();

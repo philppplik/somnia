@@ -1,4 +1,4 @@
-import {test,expect} from '@playwright/test';
+import {test,expect} from './fixtures';
 import {showCode} from './helpers';
 test('problems panel lists unclosed tags and jumps to the line',async({page})=>{await page.setViewportSize({width:1400,height:900});await page.goto('/');await showCode(page);
  await page.evaluate(()=>(window as any).__somnia.setSource('index.html','<html>\n<body>\n<div>\n<p>ok</p>\n</body></html>'));
@@ -21,5 +21,5 @@ test('save dialog writes the Starter project into an empty folder and continues 
  await page.getByLabel('Source code').click();await page.keyboard.press('Control+s');
  const d=page.getByRole('dialog',{name:'Save project'});await d.getByRole('button',{name:'Choose folder and save'}).click();await expect(d).toBeHidden({timeout:10000});
  const names=await page.evaluate(async()=>{const out:string[]=[];for await(const [n] of (window as any).__dir.entries())out.push(n);return out;});
- expect(names).toContain('index.html');
+ expect(names).toContain('Untitled project');const inner=await page.evaluate(async()=>{const sub=await (window as any).__dir.getDirectoryHandle('Untitled project');const out:string[]=[];for await(const [n] of (sub as any).entries())out.push(n);return out;});expect(inner).toContain('index.html');
  await expect(page.getByText('Unsaved changes')).toHaveCount(0);await expect(page.getByText('Saved to disk')).toBeVisible();await expect(page.getByText('Not saved to disk')).toHaveCount(0);});

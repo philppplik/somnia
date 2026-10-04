@@ -1,4 +1,4 @@
-import {test,expect} from '@playwright/test';
+import {test,expect} from './fixtures';
 import {sourceDiff} from '../src/lib/sourceDiff';
 test('bounded diff reconstructs exact LF CRLF unicode and empty content',()=>{for(const [a,b] of [['a\nb\nc','a\nx\nc'],['😀\r\nA\r\n','😀\r\nB\r\n'],['','hello'],['one','']]){const d=sourceDiff(a,b);expect(d.limited).toBe(false);expect(d.lines.filter(l=>l.kind!=='added').map(l=>l.text).join('\n')).toBe(a);expect(d.lines.filter(l=>l.kind!=='removed').map(l=>l.text).join('\n')).toBe(b);}expect(sourceDiff('x\n'.repeat(600),'y\n'.repeat(600)).limited).toBe(true);});
 test('diff pixels show removed and added lines without HTML execution',async({page})=>{

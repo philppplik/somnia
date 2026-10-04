@@ -1,4 +1,4 @@
-import {test,expect} from '@playwright/test';
+import {test,expect} from './fixtures';
 import {showCode} from './helpers';
 const editor=(page:any)=>page.getByLabel('Source code');
 async function code(page:any){await page.goto('/');await showCode(page);}

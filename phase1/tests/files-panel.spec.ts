@@ -1,4 +1,4 @@
-import {test,expect} from '@playwright/test';
+import {test,expect} from './fixtures';
 test('files panel creates, duplicates, renames and deletes files',async({page})=>{await page.setViewportSize({width:1400,height:900});await page.goto('/');
  await expect(page.locator('[data-storage]')).toBeVisible();await page.getByRole('button',{name:'Files'}).click();
  const nav=page.getByRole('navigation',{name:'Project files'});

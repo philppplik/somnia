@@ -1,4 +1,4 @@
-import {test,expect} from '@playwright/test';
+import {test,expect} from './fixtures';
 test('editing a CSS file keeps the linked HTML in the preview and the UI responsive',async({page})=>{
  await page.goto('/');const f=page.frameLocator('iframe[title="Sandboxed design preview"]');
  await expect(f.locator('h1')).toBeVisible();

@@ -1,4 +1,4 @@
-import { test,expect } from '@playwright/test';
+import { test,expect } from './fixtures';
 test('shell, palette, shortcuts, core edits, history and panels',async({page})=>{
  const errors:string[]=[];page.on('pageerror',error=>errors.push(error.message));
  await page.goto('/');await expect(page.getByRole('main',{name:'Editor workspace'})).toBeVisible();

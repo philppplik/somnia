@@ -3,6 +3,7 @@ import {EditorProject} from '@somnia/editor-core';
 import {connectEditorProject,getState,markFileSaved,patchState,refreshProject} from '../store/appStore';
 import {registerCommand,executeNativeMenuCommand} from './commands';
 import {setSaveHandlers} from './saveFlow';
+import {closeMemoryProject} from './projectActions';
 import {clearDraft} from './draftSession';
 import {downloadProject} from './exportProject';
 export type Revision={exists:boolean;hash:string|null};
@@ -90,9 +91,9 @@ export async function installFileAdapter(port:FilePort){
   await attach(selected,files,nextBaselines);
  };
  /** Memory project (Starter, new): choose a folder, write every file into it, then continue as a normal disk project. Never overwrites existing files. */
- const saveToFolder=async()=>{
+ const saveToFolder=async(newFolder=false)=>{
   const files={...getState().files};const paths=Object.keys(files);if(!paths.length)throw Error('There is nothing to save yet.');
-  const selected=await port.invoke<{projectId:string;name:string}|null>('choose_project');if(!selected)return false;
+  const selected=await port.invoke<{projectId:string;name:string}|null>('choose_project',newFolder?{createSubfolder:(getState().projectName||'somnia-project').replace(/[<>:"/\\|?*\u0000-\u001f]/g,'_').replace(/[. ]+$/,'').slice(0,80)||'somnia-project'}:undefined);if(!selected)return false;
   const nextBaselines=new Map<string,Revision>();
   try{
    const existing=new Set(await port.invoke<string[]>('list_files',{projectId:selected.projectId}));const clash=paths.filter(p=>existing.has(p));
@@ -103,15 +104,28 @@ export async function installFileAdapter(port:FilePort){
   }catch(error){await port.invoke('close_project',{projectId:selected.projectId,keepRecovery:false}).catch(()=>{});throw error;}
   clearDraft();await attach(selected,files,nextBaselines);patchState({notice:`Saved ${paths.length} file${paths.length===1?'':'s'} to ${selected.name}. Autosave is on.`});return true;
  };
+ /** Export: write a copy of all files into a chosen folder without switching the current project. Never overwrites. */
+ const exportToFolder=async(newFolder:boolean)=>{
+  const st=getState();const files={...st.files};const paths=Object.keys(files);if(!paths.length)throw Error('There is nothing to export.');
+  const selected=await port.invoke<{projectId:string;name:string}|null>('choose_project',newFolder?{createSubfolder:(st.projectName||'somnia-export').replace(/[<>:"/\\|?*\u0000-\u001f]/g,'_').replace(/[. ]+$/,'').slice(0,80)||'somnia-export'}:undefined);if(!selected)return false;
+  try{
+   const existing=new Set(await port.invoke<string[]>('list_files',{projectId:selected.projectId}));const clash=paths.filter(p=>existing.has(p));
+   if(clash.length)throw Error(`That folder already contains ${clash.slice(0,3).join(', ')}${clash.length>3?' and more':''}. Pick an empty folder so nothing is overwritten.`);
+   let rev=0;for(const path of paths){const read=await port.invoke<Read>('read_file',{projectId:selected.projectId,path});rev+=1;
+    await port.invoke<FileEvent>('stage_edit',{projectId:selected.projectId,path,content:files[path],clientRevision:rev});
+    const event=await port.invoke<FileEvent>('save_file',{projectId:selected.projectId,path,expectedRevision:read.revision});if(event.state!=='saved')throw Error(`${path}: ${event.error||event.state}`);}
+  }finally{await port.invoke('close_project',{projectId:selected.projectId,keepRecovery:false}).catch(()=>{});}
+  patchState({notice:`Exported ${paths.length} file${paths.length===1?'':'s'} to ${selected.name}.`});return true;
+ };
+ setSaveHandlers({choose:saveToFolder,exportFolder:exportToFolder,download:()=>{const f=getState();downloadProject(f.files,f.projectName||'somnia-project');patchState({saveDialog:null,notice:'Downloaded a ZIP of the project.'});}});
  const saveCommand=async()=>{
   if(projectId)return save();
   const st=getState();
   if(port.volatile){downloadProject(st.files,st.projectName||'somnia-project');patchState({notice:'Downloaded a ZIP of the project. Browser tabs cannot write into a folder for ZIP projects.'});return;}
-  setSaveHandlers({choose:saveToFolder,download:()=>{const f=getState();downloadProject(f.files,f.projectName||'somnia-project');patchState({saveDialog:null,notice:'Downloaded a ZIP of the project.'});}});
   patchState({saveDialog:{error:null,busy:false}});
  };
  const compare=async()=>{await queue;if(!projectId||!model)return;const path=getState().activeFile;const read=await port.invoke<Read>('read_file',{projectId,path});if(read.content===null)throw Error('The disk file is missing. This alpha cannot resolve disk deletion through merge.');const id=projectId;const openedModel=model;const reviewedEditor=model.files[path];patchState({diskComparison:{path,disk:read.content,editor:reviewedEditor,apply:async(content)=>{if(projectId!==id||model!==openedModel)throw Error('The project changed during comparison.');await queue;if(model!.files[path]!==reviewedEditor)throw Error('Editor changed after comparison opened. Reopen comparison before saving.');const revision=++counter;current.set(path,revision);const event=await port.invoke<FileEvent>('stage_edit',{projectId,path,content,clientRevision:revision});staged.set(path,{revision,content});model!.transact({origin:'internal',operations:[{type:'replaceSource',file:path,text:content}]});refreshProject();await handle(event);const savedEvent=await port.invoke<FileEvent>('save_file',{projectId,path,expectedRevision:read.revision});await handle(savedEvent);if(savedEvent.state!=='saved')throw Error(savedEvent.error||'Reviewed save was not accepted. Edits remain unsaved.');patchState({diskComparison:null});}}});};
- const cleanups=[registerCommand({id:'project.compare',title:'Compare active file with disk',category:'Project',enabled:()=>!!projectId,run:compare}),registerCommand({id:'project.open',title:'Open folder',category:'Project',shortcut:'Mod+O',run:()=>open()}),...(port.canReconnect?[registerCommand({id:'project.reconnect',title:'Reconnect last folder',category:'Project',keywords:['reload','permission','folder'],run:()=>open(true)})]:[]),registerCommand({id:'project.save',title:'Save project',category:'Project',shortcut:'Mod+S',allowInInput:true,enabled:()=>true,run:saveCommand}),registerCommand({id:'project.close',title:'Close folder (keep recovery)',category:'Project',enabled:()=>!!projectId,run:()=>close(true)})];
+ const cleanups=[registerCommand({id:'project.compare',title:'Resolve conflict: compare active file with disk',category:'Tools',enabled:()=>!!projectId,run:compare}),registerCommand({id:'project.open',title:'Open folder',category:'Project',shortcut:'Mod+O',run:()=>open()}),...(port.canReconnect?[registerCommand({id:'project.reconnect',title:'Reconnect last folder',category:'Project',keywords:['reload','permission','folder'],run:()=>open(true)})]:[]),registerCommand({id:'project.save',title:'Save project',category:'Project',shortcut:'Mod+S',allowInInput:true,enabled:()=>true,run:saveCommand}),registerCommand({id:'project.close',title:'Close project',category:'Project',enabled:()=>!!projectId||getState().coreConnected,run:()=>{if(projectId)return close(true);if(getState().isDirty)patchState({closeProjectPrompt:true});else closeMemoryProject();}})];
  cleanups.push(await port.listen<FileEvent>('somnia://file-state',event=>{void handle(event.payload).catch(fail);}));
  if(port.shell)cleanups.push(await port.listen<string>('somnia://menu',event=>{void executeNativeMenuCommand(event.payload);}));
  if(port.shell){const shell=port.shell;setCloseHandlers('disk',{saveAndClose:async()=>{await save();if(getState().isDirty)throw Error('Some edits are still unsaved. Close was cancelled.');await close(false);await shell.destroyWindow();},discardAndClose:async()=>{await close(true);await shell.destroyWindow();}});cleanups.push(()=>setCloseHandlers('disk',null));cleanups.push(await port.listen('somnia://close-blocked',()=>requestClose('disk')));}

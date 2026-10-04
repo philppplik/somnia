@@ -1,4 +1,4 @@
-import {test,expect} from '@playwright/test';
+import {test,expect} from './fixtures';
 test('files panel opens files in tabs, tabs switch and close',async({page})=>{
  await page.goto('/');await page.getByRole('button',{name:'Files panel'}).click();
  await page.getByRole('button',{name:'Open styles.css'}).click();

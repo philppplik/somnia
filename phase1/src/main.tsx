@@ -15,18 +15,17 @@ import {installBeforeUnload,requestClose} from './lib/closeFlow';
 import {readDraft,saveDraft,clearDraft} from './lib/draftSession';
 import {patchState,getState,subscribe} from './store/appStore';
 import {applyLook} from './lib/look';
-// Deliberately memory-only. Replace with choose_project -> read_file in the desktop integrator.
-const starter={
+// Somnia starts empty: either the last unsaved session (draft) or the empty state. The sample project below exists only for automated tests (dev build, opt-in flag).
+const fixture=import.meta.env.DEV&&localStorage.getItem('somnia.fixture')==='starter'?{
  'index.html':'<!doctype html>\n<html lang="en">\n<head>\n  <meta charset="UTF-8">\n  <title>Untitled project</title>\n  <link rel="stylesheet" href="styles.css">\n</head>\n<body>\n  <header id="header"><nav>Somnia studio</nav></header>\n  <main id="main">\n    <section class="hero">\n      <h1>Make room for something new.</h1>\n      <p>Your first idea starts here.</p>\n      <button>Explore</button>\n    </section>\n  </main>\n  <footer>Made locally.</footer>\n</body>\n</html>\n',
  'styles.css':'/* Local project styles. */\nbody { margin: 0; font-family: system-ui, sans-serif; }\n.hero { padding: 80px; }\n'
-};
+}:null;
 const draft=readDraft();
-const project=new EditorProject(draft?draft.files:starter);
-const disconnect=connectEditorProject(project,{name:'Untitled project',alreadySaved:false});
-if(draft){patchState({notice:'Restored your unsaved draft from this device. Use Project > Reset to starter project to discard it.',...(draft.activeFile in draft.files?{activeFile:draft.activeFile}:{})});}
+const initial=draft?draft.files:fixture;
+const disconnect=initial?connectEditorProject(new EditorProject(initial),{name:'Untitled project',alreadySaved:false}):()=>{};
+if(draft){patchState({notice:'Restored your unsaved session from this device. Save it to a folder, or use Project > Close project to discard it.',...(draft.activeFile in draft.files?{activeFile:draft.activeFile}:{})});}
 let draftTimer=0;
 subscribe(()=>{const st=getState();window.clearTimeout(draftTimer);if(st.storage!=='memory')return;if(!st.coreConnected||!st.isDirty)return;draftTimer=window.setTimeout(()=>{const s2=getState();if(s2.storage==='memory'&&s2.isDirty)saveDraft({files:s2.files,activeFile:s2.activeFile,openFiles:s2.openFiles});},800);});
-registerCommand({id:'project.resetDraft',title:'Reset to starter project (discards the saved draft)',category:'Project',enabled:()=>getState().storage==='memory',run:()=>{clearDraft();location.reload();}});
 if(import.meta.hot)import.meta.hot.dispose(disconnect);
 applyLook(getState().look);
 createRoot(document.getElementById('root')!).render(<StrictMode><App/></StrictMode>);
