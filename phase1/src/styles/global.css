@@ -85,3 +85,6 @@
 .confirm-dialog button:hover:not(:disabled){background:var(--bg-hover,var(--bg-panel))}
 .confirm-dialog button:disabled{opacity:.5;cursor:default}
 .confirm-dialog button[autofocus],.confirm-dialog button:last-child:not(:only-child){border-color:var(--accent,#2563eb)}
+
+/* All popups, dialogs and modals share a 25px radius. */
+.dialog-popup,.dialog-popup.disk-comparison,.dialog-popup.settings-popup,.dialog-popup.confirm-dialog{border-radius:25px}
