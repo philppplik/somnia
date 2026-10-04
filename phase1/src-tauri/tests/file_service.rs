@@ -246,14 +246,12 @@ fn preserves_original_unix_permissions() {
 #[test]
 fn failed_save_stays_error_and_preserves_recovery() {
     let (root, _recovery, mut p) = setup();
-    fs::create_dir(root.path().join("folder")).unwrap();
-    p.stage("folder/new.html", "recover me".into(), 1).unwrap();
-    // Saving now creates missing folders, so block the path with a regular file instead.
-    fs::remove_dir(root.path().join("folder")).unwrap();
-    fs::write(root.path().join("folder"), "not a directory").unwrap();
+    p.stage("blocked.html", "recover me".into(), 1).unwrap();
+    // Saving creates missing folders now, so block the target with a directory of the same name.
+    fs::create_dir(root.path().join("blocked.html")).unwrap();
     assert!(p
         .save(
-            "folder/new.html",
+            "blocked.html",
             &Revision {
                 exists: false,
                 hash: None
@@ -262,12 +260,12 @@ fn failed_save_stays_error_and_preserves_recovery() {
         .is_err());
     assert!(p.has_dirty());
     assert_eq!(
-        p.recovery_read("folder/new.html").unwrap().content,
+        p.recovery_read("blocked.html").unwrap().content,
         "recover me"
     );
     // The path is unreadable now, so read may fail; if it answers, the state must be Error.
     assert!(p
-        .read("folder/new.html")
+        .read("blocked.html")
         .map(|r| r.status.state == FileState::Error)
         .unwrap_or(true));
 }
