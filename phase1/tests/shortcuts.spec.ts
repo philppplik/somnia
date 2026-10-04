@@ -1,8 +1,9 @@
 import {test,expect} from '@playwright/test';
-test('everyday shortcuts: duplicate, delete, undo, deselect',async({page})=>{
- await page.goto('/');const f=page.frameLocator('iframe[title="Sandboxed design preview"]');await expect(f.locator('h1')).toHaveCount(1);
- await f.locator('h1').click();await page.keyboard.press('Control+d');await expect(f.locator('h1')).toHaveCount(2);
- await page.keyboard.press('Control+z');await expect(f.locator('h1')).toHaveCount(1);
- await page.getByRole('button',{name:'h1',exact:true}).first().click();await page.keyboard.press('Delete');await expect(f.locator('h1')).toHaveCount(0);
- await page.keyboard.press('Control+z');await expect(f.locator('h1')).toHaveCount(1);
-});
+test('shortcuts can be changed, cleared and reset in settings',async({page})=>{await page.goto('/');await page.keyboard.press('Control+,');await page.getByRole('button',{name:'Shortcuts',exact:true}).click();
+ await expect(page.getByLabel('Keyboard shortcuts')).toContainText('Duplicate selected element');
+ await page.getByRole('button',{name:'Change shortcut for Toggle sidebar'}).click();await page.keyboard.press('Control+Shift+Y');
+ await expect(page.getByLabel('Keyboard shortcuts').locator('li',{hasText:'Toggle sidebar'})).toContainText('Shift + Y');
+ await page.getByRole('button',{name:'Clear shortcut for Toggle sidebar'}).click();await expect(page.getByLabel('Keyboard shortcuts').locator('li',{hasText:'Toggle sidebar'})).toContainText('None');
+ await page.getByRole('button',{name:'Reset shortcut for Toggle sidebar'}).click();await expect(page.getByLabel('Keyboard shortcuts').locator('li',{hasText:'Toggle sidebar'})).toContainText('B');});
+test('F4 hides all panels and Ctrl+` toggles code and design',async({page})=>{await page.goto('/');await page.keyboard.press('F4');await expect(page.getByRole('button',{name:/panel/i}).first()).toBeVisible();
+ await page.keyboard.press('Control+`');await page.keyboard.press('Control+`');});

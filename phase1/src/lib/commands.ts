@@ -4,7 +4,18 @@ import { applyHistory, getState, patchState } from '../store/appStore';
 export interface Command {id:string;title:string;category:'Project'|'Edit'|'View'|'Insert'|'Tools'|'Help';shortcut?:string;keywords?:string[];allowInInput?:boolean;enabled?:()=>boolean;run:(payload?:unknown)=>void|Promise<void>}
 const registry=new Map<string,Command>();
 export const registerCommand=(command:Command)=>{registry.set(command.id,command);return()=>{if(registry.get(command.id)===command)registry.delete(command.id);};};
-export const listCommands=()=>[...registry.values()];
+const SC_KEY='somnia.shortcuts.v1';
+/** User overrides: command id -> shortcut string, '' = disabled. Defaults live on the commands. */
+export function shortcutOverrides():Record<string,string>{try{const v=JSON.parse(localStorage.getItem(SC_KEY)||'{}');return v&&typeof v==='object'&&!Array.isArray(v)?Object.fromEntries(Object.entries(v).filter(([,x])=>typeof x==='string')) as Record<string,string>:{};}catch{return{};}}
+export function setShortcutOverride(id:string,shortcut:string|null){const o=shortcutOverrides();if(shortcut===null)delete o[id];else o[id]=shortcut;localStorage.setItem(SC_KEY,JSON.stringify(o));window.dispatchEvent(new Event('somnia:shortcuts-changed'));}
+export const defaultShortcut=(id:string)=>registry.get(id)?.shortcut;
+export const listCommands=()=>{const o=shortcutOverrides();return [...registry.values()].map(c=>id_in(o,c.id)?{...c,shortcut:o[c.id]||undefined}:c);};
+const id_in=(o:Record<string,string>,id:string)=>Object.prototype.hasOwnProperty.call(o,id);
+/** Turns a keydown into a shortcut string like Mod+Shift+K, or null for bare modifier presses. */
+export function shortcutFromEvent(e:KeyboardEvent):string|null{
+ if(['Control','Shift','Alt','Meta'].includes(e.key))return null;
+ const mod=(isMac()?e.metaKey:e.ctrlKey);const key=e.key.length===1?e.key.toLowerCase():e.key;
+ return [mod?'Mod':'',e.altKey?'Alt':'',e.shiftKey?'Shift':'',key===' '?'Space':key].filter(Boolean).join('+');}
 export const commandEnabled=(command:Command)=>command.enabled?.()??true;
 export async function executeCommand(id:string,payload?:unknown){
  const command=registry.get(id);if(!command)throw new Error(`Unknown command: ${id}`);
@@ -32,8 +43,10 @@ for(const direction of ['undo','redo'] as const)registerCommand({id:`edit.${dire
 for(const [id,title,shortcut] of [['project.open','Open folder','Mod+O'],['project.save','Save project','Mod+S'],['project.export','Export HTML',undefined]] as const)registerCommand({id,title,category:'Project',shortcut,allowInInput:id==='project.save',enabled:()=>false,run:()=>{}});
 registerCommand({id:'help.shortcuts',title:'Keyboard shortcuts',category:'Help',keywords:['help','keyboard'],run:()=>patchState({notice:'Ctrl/Cmd+K commands · B sidebar · J problems · 1/2/3 views · Z undo · Shift+Z redo. Resize panels with arrow keys.'})});
 export const isMac=()=>/Mac|iPhone|iPad/.test(navigator.platform);
-export const formatShortcut=(shortcut:string)=>shortcut.split('+').map(part=>({Mod:isMac()?'⌘':'Ctrl',Alt:isMac()?'⌥':'Alt',Shift:isMac()?'⇧':'Shift'}[part]??part)).join(isMac()?'':' + ');
+export const formatShortcut=(shortcut:string)=>shortcut.split('+').map(part=>({Mod:isMac()?'⌘':'Ctrl',Alt:isMac()?'⌥':'Alt',Shift:isMac()?'⇧':'Shift'}[part]??(part.length===1?part.toUpperCase():part))).join(isMac()?'':' + ');
 elements.forEach((element,i)=>registerCommand({id:`insert.element.${i}`,title:element.label,category:'Insert',keywords:['insert','add','element',element.label.toLowerCase()],enabled:()=>getState().coreConnected,run:()=>insertElement(i)}));
+registerCommand({id:'view.toggleCodeDesign',title:'Toggle code / design view',category:'View',shortcut:'Mod+`',keywords:['dreamweaver','switch'],run:()=>patchState({viewMode:getState().viewMode==='code'?'design':'code'})});
+registerCommand({id:'panels.hideAll',title:'Hide / show all panels',category:'View',shortcut:'F4',keywords:['dreamweaver','panels'],run:()=>{const s=getState();const anyOpen=s.sidebarOpen||s.inspectorOpen||s.problemsOpen;patchState({sidebarOpen:!anyOpen,inspectorOpen:!anyOpen,problemsOpen:false});}});
 const sel=()=>getState().coreConnected&&!!getState().selectedElementId;
 registerCommand({id:'edit.duplicate',title:'Duplicate selected element',category:'Edit',shortcut:'Mod+D',enabled:sel,run:async()=>{(await import('./structureCommands')).duplicateLayer(getState().selectedElementId!);}});
 registerCommand({id:'edit.delete',title:'Delete selected element',category:'Edit',shortcut:'Delete',enabled:sel,run:async()=>{(await import('./structureCommands')).deleteLayer(getState().selectedElementId!);}});
@@ -50,8 +63,8 @@ export function attachKeyboardShortcuts(target:Window=window){
   if(event.defaultPrevented||event.isComposing||event.repeat)return;
   const element=event.target;const input=element instanceof HTMLElement&&!!element.closest('input,textarea,select,[contenteditable="true"],[role="textbox"]');
   if(getState().paletteOpen)return;
-  let command=listCommands().find(c=>c.shortcut&&matchesShortcut(event,c.shortcut));
-  if(!isMac()&&matchesShortcut(event,'Mod+Y'))command=registry.get('edit.redo');
+  const list=listCommands();let command=list.find(c=>c.shortcut&&matchesShortcut(event,c.shortcut));
+  if(!isMac()&&matchesShortcut(event,'Mod+Y'))command=list.find(c=>c.id==='edit.redo');
   const coreEditor=element instanceof HTMLElement&&element.matches('[data-core-editor]');
   if(!command||(input&&!command.allowInInput&&command.id!=='palette.open'&&!(coreEditor&&command.id.startsWith('edit.'))))return;
   event.preventDefault();void executeCommand(command.id);
