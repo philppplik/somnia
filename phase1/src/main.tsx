@@ -26,7 +26,7 @@ const disconnect=connectEditorProject(project,{name:'Untitled project',alreadySa
 if(draft){patchState({notice:'Restored your unsaved draft from this device. Use Project > Reset to starter project to discard it.',...(draft.activeFile in draft.files?{activeFile:draft.activeFile}:{})});}
 let draftTimer=0;
 subscribe(()=>{const st=getState();window.clearTimeout(draftTimer);if(st.storage!=='memory')return;if(!st.coreConnected||!st.isDirty)return;draftTimer=window.setTimeout(()=>{const s2=getState();if(s2.storage==='memory'&&s2.isDirty)saveDraft({files:s2.files,activeFile:s2.activeFile,openFiles:s2.openFiles});},800);});
-registerCommand({id:'project.resetDraft',title:'Reset to starter project',category:'Project',enabled:()=>getState().storage==='memory',run:()=>{if(!window.confirm('Discard the unsaved draft and reload the starter project?'))return;clearDraft();location.reload();}});
+registerCommand({id:'project.resetDraft',title:'Reset to starter project (discards the saved draft)',category:'Project',enabled:()=>getState().storage==='memory',run:()=>{clearDraft();location.reload();}});
 if(import.meta.hot)import.meta.hot.dispose(disconnect);
 applyLook(getState().look);
 createRoot(document.getElementById('root')!).render(<StrictMode><App/></StrictMode>);
