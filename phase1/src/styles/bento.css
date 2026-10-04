@@ -30,5 +30,5 @@ input,select,textarea{border-radius:var(--r-sm)}
 *::-webkit-scrollbar-thumb:hover{background:var(--text-tertiary);background-clip:content-box}
 *::-webkit-scrollbar-corner{background:transparent}
 /* App frame: outer radius is twice the card radius. */
-.app-frame{border-radius:calc(var(--r-lg) * 2);overflow:hidden}
+.app-frame{border-radius:calc(var(--r-lg) * 2 - 5px);overflow:hidden}
 :root[data-shell=desktop],:root[data-shell=desktop] body,:root[data-shell=desktop] #root{background:transparent}

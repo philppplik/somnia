@@ -15,6 +15,6 @@ test('problems panel scrolls inside its box and scrollbars stay visible but slim
  expect(ok.y).toBe('auto');expect(ok.x).toBe('hidden');expect(ok.fits).toBe(true);
  const sb=await page.evaluate(()=>({body:getComputedStyle(document.body).scrollbarWidth,stage:getComputedStyle(document.querySelector('.canvas-stage')!).scrollbarWidth}));
  expect(sb.body).toBe('thin');expect(sb.stage).toBe('thin');});
-test('app frame radius is twice the card radius',async({page})=>{await page.goto('/');
+test('app frame radius is twice the card radius minus 5px',async({page})=>{await page.goto('/');
  const r=await page.evaluate(()=>({frame:parseFloat(getComputedStyle(document.querySelector('.app-frame')!).borderTopLeftRadius),card:parseFloat(getComputedStyle(document.querySelector('.center')!).borderTopLeftRadius)}));
- expect(r.frame).toBe(r.card*2);});
+ expect(r.frame).toBe(r.card*2-5);});
