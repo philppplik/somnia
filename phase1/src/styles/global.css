@@ -76,3 +76,12 @@
 #root{zoom:var(--ui-zoom,1)}
 #root .app-frame{height:calc(100dvh / var(--ui-zoom,1))}
 .accent-fill{background:var(--accent);color:var(--accent-ink,#fff)}
+/* Confirm-style dialogs (close, save): card padding, readable width, consistent title and text rhythm. */
+.dialog-popup.confirm-dialog{width:460px;padding:22px 22px 18px;top:20vh}
+.confirm-dialog [data-slot=title],.confirm-dialog h2{margin:0 0 8px;font-size:15px;font-weight:600;color:var(--text-primary)}
+.confirm-dialog p{margin:0;color:var(--text-secondary);font-size:13px;line-height:1.5}
+.confirm-dialog p[role=alert]{margin-top:10px}
+.confirm-dialog button{border:1px solid var(--border-default);border-radius:6px;background:var(--bg-panel);color:var(--text-primary);padding:7px 14px;font:inherit;cursor:pointer}
+.confirm-dialog button:hover:not(:disabled){background:var(--bg-hover,var(--bg-panel))}
+.confirm-dialog button:disabled{opacity:.5;cursor:default}
+.confirm-dialog button[autofocus],.confirm-dialog button:last-child:not(:only-child){border-color:var(--accent,#2563eb)}

@@ -5,7 +5,7 @@ import {cancelClose,runClose} from '../lib/closeFlow';
 /** Shown when the window is closed with unsaved changes. Disk projects: Save / Discard / Cancel. Memory projects: keep the draft (restored on next start) / Discard / Cancel. */
 export function CloseDialog(){
  const s=useAppStore();const kind=s.closePrompt;
- return <Dialog open={!!kind} onOpenChange={o=>{if(!o)cancelClose();}}><DialogContent aria-label="Unsaved changes">
+ return <Dialog open={!!kind} onOpenChange={o=>{if(!o)cancelClose();}}><DialogContent className="confirm-dialog" aria-label="Unsaved changes">
   <DialogTitle>You have unsaved changes</DialogTitle>
   <DialogDescription>{kind==='disk'?'Save them to your folder before closing, or discard them. Discarded edits stay in recovery and can be restored when you reopen the folder.':'This project is not saved to a folder. Keep a draft to restore it the next time Somnia starts, or discard it.'}</DialogDescription>
   <div className="mt-4 flex justify-end gap-2">
