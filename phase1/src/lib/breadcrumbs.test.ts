@@ -1,0 +1,10 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {EditorProject} from '@somnia/editor-core';
+import {pathToId,pathAtOffset,offsetOf,crumbLabel} from './breadcrumbs';
+const html='<!doctype html>\n<html><body>\n<section class="hero big">\n<div id="a"><p>Hi</p></div>\n</section>\n</body></html>';
+const nodes=new EditorProject({'index.html':html}).tree('index.html');
+test('path by id and by cursor offset agree',()=>{const off=html.indexOf('Hi');const byOffset=pathAtOffset(nodes,off);assert.deepEqual(byOffset.map(n=>n.tag).slice(-4),['section','div','p'].length?['body','section','div','p']:[]);
+ const byId=pathToId(nodes,byOffset[byOffset.length-1].id);assert.deepEqual(byId.map(n=>n.id),byOffset.map(n=>n.id));});
+test('labels show id or first class',()=>{const p=pathAtOffset(nodes,html.indexOf('Hi'));assert.deepEqual(p.map(crumbLabel).slice(-3),['section.hero','div#a','p']);});
+test('line and column map to an offset',()=>{assert.equal(offsetOf('ab\ncd',2,2),4);assert.equal(offsetOf('ab',9,1),2);});
