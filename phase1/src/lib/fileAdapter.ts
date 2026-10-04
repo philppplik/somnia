@@ -1,3 +1,4 @@
+import {setCloseHandlers,requestClose} from './closeFlow';
 import {EditorProject} from '@somnia/editor-core';
 import {connectEditorProject,getState,markFileSaved,patchState,refreshProject} from '../store/appStore';
 import {registerCommand,executeNativeMenuCommand} from './commands';
@@ -10,7 +11,7 @@ export interface FilePort{
  invoke<T>(command:string,args?:Record<string,unknown>):Promise<T>;
  listen<T>(event:string,handler:(event:{payload:T})=>void):Promise<()=>void>;
  /** Desktop shell only: native menu events and window-close handling. */
- shell?:{closeWindow():Promise<void>};
+ shell?:{closeWindow():Promise<void>;destroyWindow():Promise<void>};
  /** Shown after a folder connects. Desktop autosaves in the native core, the web saves on Ctrl+S. */
  connectNotice?:string;
  /** True when saving never reaches disk (ZIP working copy). The status bar then shows it as not on disk. */
@@ -79,6 +80,6 @@ export async function installFileAdapter(port:FilePort){
  const cleanups=[registerCommand({id:'project.compare',title:'Compare active file with disk',category:'Project',enabled:()=>!!projectId,run:compare}),registerCommand({id:'project.open',title:'Open folder',category:'Project',shortcut:'Mod+O',run:()=>open()}),...(port.canReconnect?[registerCommand({id:'project.reconnect',title:'Reconnect last folder',category:'Project',keywords:['reload','permission','folder'],run:()=>open(true)})]:[]),registerCommand({id:'project.save',title:'Save project',category:'Project',shortcut:'Mod+S',allowInInput:true,enabled:()=>!!projectId,run:save}),registerCommand({id:'project.close',title:'Close folder (keep recovery)',category:'Project',enabled:()=>!!projectId,run:()=>close(true)})];
  cleanups.push(await port.listen<FileEvent>('somnia://file-state',event=>{void handle(event.payload).catch(fail);}));
  if(port.shell)cleanups.push(await port.listen<string>('somnia://menu',event=>{void executeNativeMenuCommand(event.payload);}));
- if(port.shell)cleanups.push(await port.listen('somnia://close-blocked',()=>{void(async()=>{if(window.confirm('Save edits and close Somnia? Cancel keeps the editor open.')){await save();if(getState().isDirty)throw Error('Some edits are still unsaved. Close was cancelled.');await close(false);await port.shell?.closeWindow();}})().catch(fail);}));
+ if(port.shell){const shell=port.shell;setCloseHandlers('disk',{saveAndClose:async()=>{await save();if(getState().isDirty)throw Error('Some edits are still unsaved. Close was cancelled.');await close(false);await shell.destroyWindow();},discardAndClose:async()=>{await close(true);await shell.destroyWindow();}});cleanups.push(()=>setCloseHandlers('disk',null));cleanups.push(await port.listen('somnia://close-blocked',()=>requestClose('disk')));}
  return ()=>{cleanups.forEach(fn=>fn());unsubscribe();disconnect();};
 }

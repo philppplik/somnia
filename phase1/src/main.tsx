@@ -11,6 +11,7 @@ import {installDesktopAdapter} from './lib/desktopAdapter';
 import {installFileAdapter} from './lib/fileAdapter';
 import {createWebFsPort,webFsSupported} from './lib/webFsPort';
 import {registerCommand} from './lib/commands';
+import {installBeforeUnload,requestClose} from './lib/closeFlow';
 import {readDraft,saveDraft,clearDraft} from './lib/draftSession';
 import {patchState,getState,subscribe} from './store/appStore';
 // Deliberately memory-only. Replace with choose_project -> read_file in the desktop integrator.
@@ -28,6 +29,8 @@ registerCommand({id:'project.resetDraft',title:'Reset to starter project',catego
 if(import.meta.hot)import.meta.hot.dispose(disconnect);
 createRoot(document.getElementById('root')!).render(<StrictMode><App/></StrictMode>);
 
+if(!isTauri())installBeforeUnload(()=>getState().isDirty&&getState().storage!=='disk');
+if(import.meta.env.DEV)(window as unknown as {__somnia:object}).__somnia={requestClose};
 if(isTauri())document.documentElement.dataset.shell='desktop';
 if(isTauri())void installDesktopAdapter().catch(error=>console.error(error));
 else if(webFsSupported()&&!location.search.includes('fallback=zip'))void installFileAdapter(createWebFsPort()).catch(error=>console.error(error));
