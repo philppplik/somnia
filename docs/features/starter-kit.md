@@ -22,7 +22,7 @@ Insert and "Replace selection" work as for any component, so a placed Hero can b
 - **Responsive.** Flex-wrap, CSS grid `auto-fit` and `clamp()` type. Checked at 1100 px and 390 px wide: no horizontal scroll.
 - **Accessible.** Named landmarks (`nav aria-label`, `footer`, `section aria-label`), visible labels for every field, `autocomplete` hints, alt text and width/height on images, visible focus ring, text and button colours at WCAG AA contrast. Only the Hero uses `h1`; other blocks start at `h2`/`h3`.
 - No scripts, no event handlers. Forms post to `#` as a placeholder.
-- Image placeholders point to `https://placehold.co/...`; replace with real images.
+- Image placeholders are local inline SVG data URIs (no external requests); replace with real images.
 
 ## Behaviour of "Add starter kit"
 - Adds only what is missing (matched by id or name, case-insensitive). Clicking again changes nothing.
