@@ -321,3 +321,18 @@ fn creates_new_file_in_new_folder_and_deletes_with_revision_check() {
     p.delete("pages/about.html", &gone).unwrap();
     assert!(p.delete("../escape.html", &gone).is_err());
 }
+#[test]
+fn single_file_project_exposes_only_that_file() {
+    let root = TempDir::new().unwrap();
+    let recovery = TempDir::new().unwrap();
+    fs::write(root.path().join("page.html"), "one").unwrap();
+    fs::write(root.path().join("secret.txt"), "no").unwrap();
+    let mut p = Project::open_file(&root.path().join("page.html"), recovery.path()).unwrap();
+    assert_eq!(p.list_files().unwrap(), vec!["page.html".to_string()]);
+    assert!(matches!(p.read("secret.txt"), Err(AppError::Denied(_))));
+    assert!(matches!(p.read("../secret.txt"), Err(AppError::Denied(_))));
+    let r = p.read("page.html").unwrap();
+    p.stage("page.html", "two".into(), 1).unwrap();
+    p.save("page.html", &r.revision).unwrap();
+    assert_eq!(fs::read_to_string(root.path().join("page.html")).unwrap(), "two");
+}

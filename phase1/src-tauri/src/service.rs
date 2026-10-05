@@ -141,11 +141,31 @@ pub struct Project {
     _watcher: Option<RecommendedWatcher>,
     changed: Arc<AtomicBool>,
     last_poll: Instant,
+    /// Single-file project: only this root-relative file name is visible and editable.
+    only: Option<String>,
 }
 
 /// Only called by the native picker adapter, never with a renderer-supplied root.
 impl Project {
     pub fn open(root: &Path, recovery_base: &Path) -> Result<Self> {
+        Self::open_inner(root, recovery_base, None)
+    }
+    /// Opens one file in place: the project is rooted at the file's folder but only that file is listed, readable and writable.
+    pub fn open_file(file: &Path, recovery_base: &Path) -> Result<Self> {
+        let canonical = file.canonicalize()?;
+        if !canonical.is_file() {
+            return Err(AppError::Denied("Not a file".into()));
+        }
+        let name = canonical
+            .file_name()
+            .map(|n| n.to_string_lossy().into_owned())
+            .ok_or_else(|| AppError::Denied("Not a file".into()))?;
+        let parent = canonical
+            .parent()
+            .ok_or_else(|| AppError::Denied("File has no folder".into()))?;
+        Self::open_inner(parent, recovery_base, Some(name))
+    }
+    fn open_inner(root: &Path, recovery_base: &Path, only: Option<String>) -> Result<Self> {
         let root_path = root.canonicalize()?;
         if !root_path.is_dir() {
             return Err(AppError::Denied("Not a directory".into()));
@@ -175,7 +195,12 @@ impl Project {
         })
         .ok()
         .and_then(|mut w| {
-            if w.watch(&root_path, RecursiveMode::Recursive).is_ok() {
+            let mode = if only.is_some() {
+                RecursiveMode::NonRecursive
+            } else {
+                RecursiveMode::Recursive
+            };
+            if w.watch(&root_path, mode).is_ok() {
                 Some(w)
             } else {
                 None
@@ -190,11 +215,17 @@ impl Project {
             _watcher: watcher,
             changed,
             last_poll: Instant::now(),
+            only,
         })
     }
 
     fn safe_path(&self, path: &str) -> Result<PathBuf> {
         let p = validate_path(path)?;
+        if let Some(only) = &self.only {
+            if path != only {
+                return Err(AppError::Denied("Only the opened file is available".into()));
+            }
+        }
         let mut prefix = PathBuf::new();
         for component in p.components() {
             prefix.push(component);
@@ -489,6 +520,10 @@ impl Project {
     }
     pub fn list_files(&self) -> Result<Vec<String>> {
         let mut files = Vec::new();
+        if let Some(only) = &self.only {
+            files.push(only.clone());
+            return Ok(files);
+        }
         self.walk(Path::new("."), &mut files, 0)?;
         files.sort();
         Ok(files)

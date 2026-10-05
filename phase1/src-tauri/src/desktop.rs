@@ -107,6 +107,47 @@ async fn choose_project(
     .await
 }
 #[tauri::command]
+async fn choose_file(
+    window: WebviewWindow,
+    state: State<'_, Shared>,
+) -> Result<Option<ProjectReply>> {
+    gate(&window)?;
+    let app = window.app_handle().clone();
+    let selected =
+        tauri::async_runtime::spawn_blocking(move || app.dialog().file().blocking_pick_file())
+            .await
+            .map_err(|e| AppError::Io(e.to_string()))?;
+    let Some(selected) = selected else {
+        return Ok(None);
+    };
+    let path = selected
+        .into_path()
+        .map_err(|e| AppError::Invalid(e.to_string()))?;
+    let recovery_base = window
+        .app_handle()
+        .path()
+        .app_local_data_dir()
+        .map_err(|e| AppError::Io(e.to_string()))?
+        .join("recovery-v1");
+    work(state.inner().clone(), move |backend| {
+        if backend.projects.len() >= 4 {
+            return Err(AppError::Limit);
+        }
+        let project = Project::open_file(&path, &recovery_base)?;
+        let reply = ProjectReply {
+            project_id: project.id.clone(),
+            name: path
+                .file_name()
+                .unwrap_or_default()
+                .to_string_lossy()
+                .into_owned(),
+        };
+        backend.projects.insert(project.id.clone(), project);
+        Ok(Some(reply))
+    })
+    .await
+}
+#[tauri::command]
 async fn list_files(
     window: WebviewWindow,
     state: State<'_, Shared>,
@@ -328,6 +369,7 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             choose_project,
+            choose_file,
             list_files,
             read_file,
             stage_edit,
