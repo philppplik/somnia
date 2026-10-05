@@ -106,6 +106,14 @@ async fn choose_project(
     })
     .await
 }
+/// True when the app runs from a Microsoft Store (MSIX) package. Such installs are updated by the Store, so the GitHub updater stays off.
+#[tauri::command]
+fn is_store_package() -> bool {
+    std::env::current_exe()
+        .map(|p| p.to_string_lossy().to_lowercase().contains("\\windowsapps\\"))
+        .unwrap_or(false)
+}
+
 #[tauri::command]
 async fn choose_file(
     window: WebviewWindow,
@@ -370,6 +378,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             choose_project,
             choose_file,
+            is_store_package,
             list_files,
             read_file,
             stage_edit,
