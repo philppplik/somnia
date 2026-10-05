@@ -6,6 +6,10 @@ import {newBlankFile,openFileDialog} from './projectActions';
 import {downloadProject,downloadMarkdown} from './exportProject';
 import {elements,insertElement} from './structureCommands';
 import { applyHistory, getState, patchState } from '../store/appStore';
+import { EditorProject } from '@somnia/editor-core';
+/** Experimental fast parsing (partial reparse). On by default; the stored choice 'off' turns it off for good, a full parse is always the fallback. */
+const FAST_KEY='somnia.fastParse.v1';
+try{if(localStorage.getItem(FAST_KEY)==='off')EditorProject.incremental.enabled=false;}catch{/* storage unavailable */}
 export interface Command {id:string;title:string;category:'Project'|'Edit'|'View'|'Insert'|'Tools'|'Help';shortcut?:string;keywords?:string[];allowInInput?:boolean;enabled?:()=>boolean;run:(payload?:unknown)=>void|Promise<void>}
 const registry=new Map<string,Command>();
 export const registerCommand=(command:Command)=>{registry.set(command.id,command);return()=>{if(registry.get(command.id)===command)registry.delete(command.id);};};
@@ -85,6 +89,7 @@ export function attachKeyboardShortcuts(target:Window=window){
 
 registerCommand({id:'tools.diff',title:'Toggle diff split (compare in editor)',category:'Tools',keywords:['diff','compare','changes','saved version'],enabled:()=>getState().coreConnected,run:()=>{const st=getState();patchState({diffSplit:!st.diffSplit,...(st.viewMode==='design'?{viewMode:'split' as const}:{})});}});
 registerCommand({id:'project.export',title:'Export project...',category:'Project',keywords:['zip','folder','single file','download'],enabled:()=>getState().coreConnected,run:()=>patchState({exportDialog:true})});
+registerCommand({id:'experimental.fastParse',title:'Experimental: toggle fast parsing',category:'Tools',keywords:['incremental','parse','performance','experimental'],run:()=>{const on=!EditorProject.incremental.enabled;EditorProject.incremental.enabled=on;try{localStorage.setItem(FAST_KEY,on?'on':'off');}catch{/* storage unavailable */}patchState({notice:on?'Fast parsing is on (experimental). Unsure cases still use the full parser.':'Fast parsing is off. Every edit uses the full parser.'});}});
 registerCommand({id:'project.openFile',title:'Open file',category:'Project',keywords:['open','file'],run:()=>openFileDialog()});
 registerCommand({id:'project.newFile',title:'New blank page',category:'Project',keywords:['new','blank','file'],run:()=>newBlankFile()});
 

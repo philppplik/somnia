@@ -1,4 +1,9 @@
 import { parse,parseFragment, type DefaultTreeAdapterMap } from 'parse5';
+const EP=Symbol('shiftEpoch');
+// Strict tag grammar for the partial reparse: quoted attribute values must be closed, otherwise the full parser decides.
+const ATTRS='(?:\\s+[^\\s"\'<>\\/=]+(?:\\s*=\\s*(?:"[^"<>]*"|\'[^\'<>]*\'|[^\\s"\'<>=`]+))?)*\\s*';
+const TAG_G=new RegExp('<\\/?[a-zA-Z][a-zA-Z0-9-]*'+ATTRS+'\\/?>','g');
+const TAG_CAP=new RegExp('<(\\/?)([a-zA-Z][a-zA-Z0-9-]*)'+ATTRS+'(\\/?)>','g');
 const randomUUID = () => globalThis.crypto.randomUUID();
 export type Origin = 'canvas' | 'code' | 'history' | 'external' | 'internal';
 export interface EditorNode { id:string; tag:string; attrs:Record<string,string>; children:EditorNode[]; from:number; to:number; contentFrom:number; contentTo:number; locked:boolean; hidden:boolean }
@@ -33,6 +38,9 @@ export class EditorProject {
  private trees:Record<string,EditorNode[]>={};
  private metas:Record<string,Meta>={};
  private bindings:Record<string,Map<string,PElement>>={};
+ private roots:Record<string,DefaultTreeAdapterMap['document']>={};
+ /** Experimental partial reparse (feature/incremental-parse). Off by default. verify=true full-reparses and throws on any difference. */
+ static incremental:{enabled:boolean;verify:boolean;hits:number;misses:number}={enabled:true,verify:false,hits:0,misses:0};
  private listeners=new Set<{origin:Origin;fn:(tx:Transaction)=>void}>();
  private past:History[]=[]; private future:History[]=[];
  private busy=false; private _revision=0;
@@ -49,7 +57,7 @@ export class EditorProject {
  private snapshot():Snapshot{const ids:Snapshot['ids']={};for(const [f,nodes] of Object.entries(this.trees)){ids[f]=[];const walk=(ns:EditorNode[])=>{for(const n of ns){ids[f].push({id:n.id,from:n.from,tag:n.tag});walk(n.children);}};walk(nodes);}return {files:{...this.sources},ids,meta:clone(this.metas)};}
  private restore(s:Snapshot){this.sources={...s.files};this.metas=clone(s.meta);this.trees={};this.bindings={};for(const f in this.sources)this.reparse(f,s.ids[f]);}
  private reparse(file:string,hints?:Snapshot['ids'][string]){
-  if(!/\.html?$/i.test(file)){this.trees[file]=[];return;}
+  if(!/\.html?$/i.test(file)){this.trees[file]=[];delete this.roots[file];return;}
   const old=hints||this.snapshotIds(file);const byPos=new Map(old.map(x=>[x.from+':'+x.tag,x.id]));
   const root=parse(this.sources[file],{sourceCodeLocationInfo:true});const bindings=new Map<string,PElement>();
   const walk=(ns:DefaultTreeAdapterMap['node'][]):EditorNode[]=>ns.flatMap(n=>{
@@ -60,7 +68,93 @@ export class EditorProject {
    const meta=this.metas[id]||{locked:false,hidden:false};
    return [{id,tag:n.tagName,attrs:Object.fromEntries(n.attrs.map(a=>[a.name,a.value])),children:kids,from:loc.startOffset,to:loc.endOffset,contentFrom:loc.startTag.endOffset,contentTo:loc.endTag?.startOffset??loc.endOffset,...meta}];
   });
-  this.trees[file]=walk(root.childNodes);this.bindings[file]=bindings;
+  this.trees[file]=walk(root.childNodes);this.bindings[file]=bindings;this.roots[file]=root;
+ }
+
+ private static epoch=0;
+ private static SAFE_CONTAINERS=new Set(['body','div','section','main','article','aside','nav','header','footer','ul','ol','blockquote','figure','span']);
+ private static UNSAFE_INNER=/<\s*\/?\s*(script|style|textarea|title|template|table|caption|colgroup|col|thead|tbody|tfoot|tr|td|th|svg|math|select|optgroup|option|datalist|plaintext|noscript|iframe|xmp|noembed|noframes|form|button|html|head|body|frameset|frame|nobr|applet|marquee|object|input|keygen|image|isindex|listing|pre|rb|rp|rt|rtc|ruby|dl|dd|dt|fieldset|legend|label|output|!doctype|portal|slot|search)\b|<\?|<!\[CDATA|&/i;
+ /** Reparse only the element whose content the patch lies in. Returns false (caller does a full reparse) when it cannot prove the result equals a full parse. Never throws on unusual input. */
+ private partialReparse(p:Patch,delta:number,hints:Array<{id:string;from:number;tag:string}>,oldSource:string):boolean{
+  const root=this.roots[p.file],tree=this.trees[p.file];if(!root||!tree)return false;
+  // Locate the innermost safe container (in OLD offsets) whose content fully contains the replaced range.
+  let path:EditorNode[]=[];const find=(ns:EditorNode[],trail:EditorNode[]):EditorNode[]|null=>{for(const n of ns){if(n.contentFrom<=p.from&&p.to<=n.contentTo&&n.contentTo>n.contentFrom-1&&n.to>n.contentTo){const t=[...trail,n];return find(n.children,t)||t;}}return null;};
+  path=find(tree,[])||[];
+  let target:EditorNode|undefined;for(let i=path.length-1;i>=0;i--){const n=path[i];if(EditorProject.SAFE_CONTAINERS.has(n.tag)&&path.slice(0,i+1).every(a=>EditorProject.SAFE_CONTAINERS.has(a.tag)||a.tag==='html')){target=n;break;}}
+  if(!target)return false;
+  const el=this.bindings[p.file].get(target.id);if(!el||!el.sourceCodeLocation?.endTag)return false;
+  const inner=this.sources[p.file].slice(target.contentFrom,target.contentTo+delta);
+  // Both the old and the new content must be plain, balanced markup: the old content shaped how later siblings were parsed, the new content shapes them now.
+  const oldInner=oldSource.slice(target.contentFrom,target.contentTo);
+  const VOID=new Set(['br','hr','img','meta','link','wbr','source','track','embed','area','base','param']);
+  const BLOCK=new Set(['address','article','aside','blockquote','center','details','dialog','dir','div','figcaption','figure','footer','header','hgroup','main','menu','nav','ol','p','section','summary','ul','h1','h2','h3','h4','h5','h6','li','hr']);
+  const CLOSES_P=new Set([...BLOCK]);
+  /** True when txt is strictly nested, fully closed markup that the HTML parser cannot restructure (no implied end tags, no adoption agency, no block inside p/heading/a). */
+  const plain=(txt:string):boolean=>{
+   if(EditorProject.UNSAFE_INNER.test(txt))return false;
+   // Every '<' must start a plain tag or a complete comment; anything odd (e.g. '<div<div>') goes to the full parser.
+   if(/</.test(txt.replace(/<!--(?:(?!-->)[\s\S])*-->/g,'\u0000').replace(TAG_G,'')))return false;
+   const stack:string[]=[target!.tag];
+   for(const m of txt.replace(/<!--(?:(?!-->)[\s\S])*-->/g,'\u0000').matchAll(TAG_CAP)){
+    const k=m[2].toLowerCase();
+    if(m[1]){if(stack.length<=1||stack[stack.length-1]!==k)return false;stack.pop();continue;}
+    if(VOID.has(k))continue;
+    if(m[3])return false; // self-closing syntax on non-void elements is ignored by HTML
+    const inInline=stack.some(t=>t==='p'||/^h[1-6]$/.test(t)||t==='a'&&k==='a');
+    if(CLOSES_P.has(k)&&stack.some(t=>t==='p'||/^h[1-6]$/.test(t)))return false;
+    if(k==='a'&&stack.includes('a'))return false;
+    if(k==='li'&&!['ul','ol','menu'].includes(stack[stack.length-1]))return false;
+    if(['ul','ol'].includes(k)&&stack.some(t=>t==='p'))return false;
+    void inInline;
+    stack.push(k);
+   }
+   return stack.length===1;
+  };
+  if(!plain(inner)||!plain(oldInner))return false;
+  // Unclosed formatting elements before the container are re-opened by the HTML parser inside later content (active formatting list), so the prefix must be balanced.
+  {const fo=new Map<string,number>();for(const m of oldSource.slice(0,target.contentFrom).matchAll(/<(\/?)(b|i|u|em|strong|a|code|font|small|big|s|strike|tt|nobr)(?=[\s>\/])/gi)){const k=m[2].toLowerCase();fo.set(k,(fo.get(k)||0)+(m[1]?-1:1));}if([...fo.values()].some(v=>v!==0))return false;}
+  let frag:{childNodes:DefaultTreeAdapterMap['node'][]};try{frag=parseFragment(el as never,inner,{sourceCodeLocationInfo:true});}catch{return false;}
+  const base=target.contentFrom;
+  // 1. shift every location at or after the old range end (parse5 tree, includes text nodes and ancestors' end tags)
+  const shift=(o:number)=>o>=p.to?o+delta:o;
+  const d=delta,pt=p.to,epoch=++EditorProject.epoch;
+  /** parse5 can share one location object between elements (reconstructed formatting elements), so each object moves exactly once. */
+  const mv=(o:any)=>{if(o[EP]===epoch)return;o[EP]=epoch;if(o.startOffset>=pt)o.startOffset+=d;if(o.endOffset>=pt)o.endOffset+=d;};
+  const shiftLoc=(l:any)=>{if(!l)return;mv(l);const st=l.startTag;if(st)mv(st);const en=l.endTag;if(en)mv(en);const at=l.attrs;if(at)for(const k in at)mv(at[k]);const sa=st?.attrs;if(sa&&sa!==at)for(const k in sa)mv(sa[k]);};
+  const walkP=(n:any)=>{if(n===el){/* children replaced below; the container's own start tag lies before the range and must not move */const l=n.sourceCodeLocation;l.endOffset=shift(l.endOffset);shiftLoc(l.endTag);return;}const l=n.sourceCodeLocation;if(l&&l.endOffset<p.from)return; /* ends before the range: nothing inside moves */shiftLoc(l);if(n.childNodes)for(const c of n.childNodes)walkP(c);};
+  walkP(root);
+  // 2. drop old bindings inside the container, remember nothing else
+  const dropB=(ns:EditorNode[])=>{for(const n of ns){this.bindings[p.file].delete(n.id);dropB(n.children);}};dropB(target.children);
+  // 3. graft new nodes, absolute offsets
+  const seenA=new WeakSet<object>();const abs=(l:any)=>{if(!l||seenA.has(l))return;seenA.add(l);if(typeof l.startOffset==='number'){l.startOffset+=base;l.endOffset+=base;}if(l.startTag)abs(l.startTag);if(l.endTag)abs(l.endTag);if(l.attrs)for(const k in l.attrs)abs(l.attrs[k]);};
+  const absWalk=(n:any)=>{abs(n.sourceCodeLocation);if(n.childNodes)for(const c of n.childNodes)absWalk(c);};
+  for(const c of frag.childNodes)absWalk(c);
+  (el as any).childNodes=frag.childNodes;for(const c of frag.childNodes)(c as any).parentNode=el;
+  const hi=base+inner.length;const byPos=new Map(hints.filter(x=>x.from>=base&&x.from<=hi).map(x=>[x.from+':'+x.tag,x.id]));
+  const used=new Set<string>();
+  const build=(ns:DefaultTreeAdapterMap['node'][]):EditorNode[]=>ns.flatMap(n=>{
+   if(!isElement(n))return [];const loc=n.sourceCodeLocation;const kids=build(n.childNodes);
+   if(!loc?.startTag)return kids;
+   let id=byPos.get(loc.startOffset+':'+n.tagName);if(!id||used.has(id))id='node-'+shortId();used.add(id);this.bindings[p.file].set(id,n);
+   const meta=this.metas[id]||{locked:false,hidden:false};
+   return [{id,tag:n.tagName,attrs:Object.fromEntries(n.attrs.map(a=>[a.name,a.value])),children:kids,from:loc.startOffset,to:loc.endOffset,contentFrom:loc.startTag.endOffset,contentTo:loc.endTag?.startOffset??loc.endOffset,...meta}];
+  });
+  const kids=build(frag.childNodes as never);
+  // 4. tree: shift all nodes after the range and graft the new children of the container
+  const shiftT=(ns:EditorNode[])=>{for(const n of ns){if(n.to<p.from)continue;n.from=shift(n.from);n.to=shift(n.to);n.contentFrom=shift(n.contentFrom);n.contentTo=shift(n.contentTo);if(n.id!==target!.id)shiftT(n.children);}};
+  const targetNode=(()=>{let r:EditorNode|undefined;const w=(ns:EditorNode[])=>{for(const n of ns){if(n.id===target!.id){r=n;return;}if(!r)w(n.children);}};w(tree);return r;})();
+  if(!targetNode)return false;
+  const keepFrom=targetNode.from,keepCF=targetNode.contentFrom;shiftT(tree);targetNode.from=keepFrom;targetNode.contentFrom=keepCF;targetNode.children=kids;
+  return true;
+ }
+ private verifyAgainstFull(file:string){
+  const shape=(ns:EditorNode[]):unknown=>ns.map(n=>[n.tag,n.attrs,n.from,n.to,n.contentFrom,n.contentTo,n.locked,n.hidden,shape(n.children)]);
+  const locs=(root:any):unknown=>{const out:unknown[]=[];const w=(n:any)=>{const l=n.sourceCodeLocation;out.push([n.nodeName,l&&[l.startOffset,l.endOffset,l.startTag&&[l.startTag.startOffset,l.startTag.endOffset],l.endTag&&[l.endTag.startOffset,l.endTag.endOffset],l.attrs&&Object.entries(l.attrs).map(([k,v]:any)=>[k,v.startOffset,v.endOffset])]]);for(const c of n.childNodes||[])w(c);};w(root);return out;};
+  const mine={tree:shape(this.trees[file]),loc:locs(this.roots[file])};
+  const saved={t:this.trees[file],b:this.bindings[file],r:this.roots[file]};
+  this.reparse(file);const full={tree:shape(this.trees[file]),loc:locs(this.roots[file])};
+  if(JSON.stringify(mine)!==JSON.stringify(full)){const a=JSON.stringify(mine),b=JSON.stringify(full);let i=0;while(i<a.length&&a[i]===b[i])i++;throw new EditorError('incremental-mismatch',`Partial reparse differs from full reparse in ${file} at ${i}: partial ...${a.slice(Math.max(0,i-60),i+80)} full ...${b.slice(Math.max(0,i-60),i+80)} | source ${JSON.stringify(this.sources[file].slice(0,400))}`);}
+  void saved;
  }
  private snapshotIds(file:string){const a:Array<{id:string;from:number;tag:string}>=[];const walk=(ns:EditorNode[])=>{for(const n of ns){a.push({id:n.id,from:n.from,tag:n.tag});walk(n.children);}};walk(this.trees[file]||[]);return a;}
  private patch(p:Patch,extraHints:Array<{id:string;from:number;tag:string}>=[]){
@@ -71,6 +165,8 @@ export class EditorProject {
    return [{...n,from:n.from>=p.to?n.from+delta:n.from}];
   });
   this.sources[p.file]=source.slice(0,p.from)+p.insert+source.slice(p.to);
+  if(EditorProject.incremental.enabled&&this.partialReparse(p,delta,[...ids,...extraHints],source)){EditorProject.incremental.hits++;if(EditorProject.incremental.verify)this.verifyAgainstFull(p.file);return;}
+  if(EditorProject.incremental.enabled)EditorProject.incremental.misses++;
   this.reparse(p.file,[...ids,...extraHints]);
  }
  private editable(file:string,id:string){const n=this.node(file,id);if(n.locked)throw new EditorError('locked','This layer is locked. Unlock it first.');const visit=(nodes:EditorNode[],locked:boolean):boolean=>nodes.some(p=>p.id===id?locked:p.children.length?visit(p.children,locked||p.locked):false);if(visit(this.trees[file]||[],false))throw new EditorError('locked','A parent layer is locked. Unlock it first.');return n;}
