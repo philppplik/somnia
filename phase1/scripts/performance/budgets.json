@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "warmupRuns": 1,
+  "sampleRuns": 5,
+  "startupBudgetMs": 5000,
+  "fixtures": [
+    {"sections": 200, "budgetsMs": {"parse": 400, "edit": 200, "undo": 200, "redo": 200}},
+    {"sections": 2000, "budgetsMs": {"parse": 2500, "edit": 625, "undo": 625, "redo": 625}},
+    {"sections": 10000, "budgetsMs": {"parse": 12000, "edit": 3000, "undo": 3000, "redo": 3000}}
+  ]
+}

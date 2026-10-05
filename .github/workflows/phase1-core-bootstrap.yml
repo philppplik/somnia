@@ -21,7 +21,26 @@ jobs:
         with:
           node-version: '24'
       - run: npm ci
-      - run: npm run build && npm run test:core && npm run bench
+      - run: npm run build && npm run test:core
+      - name: Test performance-budget validation
+        run: node --test scripts/performance/report.test.mjs
+      - name: Editor-core budgets (full parser)
+        run: npm run bench
+      - name: Editor-core budgets (incremental parser)
+        if: ${{ !cancelled() }}
+        env:
+          SOMNIA_INCREMENTAL: '1'
+        run: npm run bench
+      - name: Retain performance reports
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: somnia-performance-${{ github.sha }}
+          retention-days: 14
+          if-no-files-found: error
+          path: |
+            phase1/validation/bench/*.json
+            phase1/validation/bench/*.md
       - run: npx playwright install --with-deps chromium
       - run: npm run test:e2e
   native:
