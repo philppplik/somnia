@@ -1,0 +1,19 @@
+{
+  "name": "@somnia/collab-internet-spike",
+  "private": true,
+  "version": "0.0.0",
+  "license": "MIT",
+  "type": "module",
+  "description": "Isolated signaling and WebRTC transport experiment; no app integration",
+  "scripts": {
+    "test": "node --test test/*.test.mjs",
+    "test:browser": "node test/browser-smoke.mjs",
+    "demo": "node test/browser-smoke.mjs"
+  },
+  "dependencies": {
+    "ws": "8.22.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.63.0"
+  }
+}
