@@ -1,3 +1,4 @@
+import {useT} from '../lib/useT';
 import {useRef,useState,useEffect} from 'react';
 import {File,FileCode,FileText,Folder,FilePlus,Pencil,Copy,Trash2} from 'lucide-react';
 import {applyOperations,openFileTab,patchState,useAppStore} from '../store/appStore';
@@ -7,6 +8,7 @@ const icon=(f:string)=>/\.(html?|css|[jt]sx?)$/i.test(f)?FileCode:/\.(md|txt)$/i
 type Edit={mode:'new'|'rename'|'duplicate';path:string;dir?:boolean};
 /** Project file tree for the left sidebar. A click opens the file in a tab and reveals the code pane. New, rename, duplicate and delete are undoable editor operations. */
 export function FilesPanel(){
+ const {t}=useT();
  const s=useAppStore();const paths=Object.keys(s.files).sort((a,b)=>a.localeCompare(b));
  const [edit,setEdit]=useState<Edit|null>(null);const [value,setValue]=useState('');const [error,setError]=useState('');const [confirmDelete,setConfirmDelete]=useState<string|null>(null);const input=useRef<HTMLInputElement>(null);
  useEffect(()=>{if(edit)input.current?.focus();},[edit]);
@@ -22,20 +24,20 @@ export function FilesPanel(){
  const rows:{path:string;name:string;depth:number;dir:boolean}[]=[];const seen=new Set<string>();
  for(const path of paths){const parts=path.split('/');parts.forEach((name,i)=>{const p=parts.slice(0,i+1).join('/');if(i<parts.length-1){if(!seen.has(p)){seen.add(p);rows.push({path:p,name,depth:i,dir:true});}}else rows.push({path,name,depth:i,dir:false});});}
  const act=(label:string,I:typeof Pencil,fn:()=>void)=><button aria-label={label} title={label} onClick={fn} className="grid size-6 place-items-center rounded-sm border-0 bg-transparent p-0 text-ink-2 hover:bg-hover"><I size={12}/></button>;
- return <nav aria-label="Project files" className="flex flex-col gap-0.5 p-2">
-  <div className="mb-1 flex items-center justify-between px-2"><span className="text-[10px] uppercase tracking-[.08em] text-ink-2">Files</span>{act('New file',FilePlus,()=>start({mode:'new',path:''}))}</div>
-  {edit&&<div className="mb-1 flex flex-col gap-1 rounded-sm border border-subtle p-2" role="group" aria-label={edit.mode==='new'?'New file':edit.mode==='rename'?'Rename':'Duplicate'}>
-   <input ref={input} aria-label="File path" aria-invalid={!!error} value={value} onChange={e=>{setValue(e.target.value);setError('');}} onKeyDown={e=>{if(e.key==='Enter')commit();if(e.key==='Escape')setEdit(null);}} className="h-7 rounded-sm border border-subtle bg-transparent px-2 font-mono text-[11px]"/>
-   <div className="text-[10px] text-ink-2">Use folder/name.ext to put it in a folder.</div>
+ return <nav aria-label={t('panels.files.projectFiles')} className="flex flex-col gap-0.5 p-2">
+  <div className="mb-1 flex items-center justify-between px-2"><span className="text-[10px] uppercase tracking-[.08em] text-ink-2">{t('panels.files.files')}</span>{act(t('panels.files.newFile'),FilePlus,()=>start({mode:'new',path:''}))}</div>
+  {edit&&<div className="mb-1 flex flex-col gap-1 rounded-sm border border-subtle p-2" role="group" aria-label={edit.mode==='new'?t('panels.files.newFile'):edit.mode==='rename'?t('panels.files.rename'):t('panels.files.duplicate')}>
+   <input ref={input} aria-label={t('panels.files.filePath')} aria-invalid={!!error} value={value} onChange={e=>{setValue(e.target.value);setError('');}} onKeyDown={e=>{if(e.key==='Enter')commit();if(e.key==='Escape')setEdit(null);}} className="h-7 rounded-sm border border-subtle bg-transparent px-2 font-mono text-[11px]"/>
+   <div className="text-[10px] text-ink-2">{t('panels.files.useFolderNameExtTo')}</div>
    {error&&<div role="alert" className="text-[11px] text-[#e5484d]">{error}</div>}
-   <div className="flex justify-end gap-1"><button className="h-6 rounded-sm border border-subtle bg-transparent px-2 text-[11px]" onClick={()=>setEdit(null)}>Cancel</button><button className="h-6 rounded-sm border border-subtle bg-transparent px-2 text-[11px]" onClick={commit}>{edit.mode==='new'?'Create':edit.mode==='rename'?'Rename':'Duplicate'}</button></div></div>}
-  {!paths.length&&<p className="p-4 text-xs text-ink-2">No project files yet. Use New file.</p>}
+   <div className="flex justify-end gap-1"><button className="h-6 rounded-sm border border-subtle bg-transparent px-2 text-[11px]" onClick={()=>setEdit(null)}>{t('panels.files.cancel')}</button><button className="h-6 rounded-sm border border-subtle bg-transparent px-2 text-[11px]" onClick={commit}>{edit.mode==='new'?t('panels.files.create'):edit.mode==='rename'?t('panels.files.rename'):t('panels.files.duplicate')}</button></div></div>}
+  {!paths.length&&<p className="p-4 text-xs text-ink-2">{t('panels.files.noProjectFilesYetUse')}</p>}
   {rows.map(r=>{const Icon=r.dir?Folder:icon(r.name);const pad=8+r.depth*14;
    return <div key={r.path} className="group flex items-center">
     {r.dir?<div className="flex h-8 flex-1 items-center gap-2 px-2 text-xs text-ink-3" style={{paddingLeft:pad}}><Icon size={14}/>{r.name}</div>
-    :<button aria-label={`Open ${r.path}`} aria-current={r.path===s.activeFile} className={cn('flex h-8 flex-1 items-center gap-2 overflow-hidden rounded-sm border-0 bg-transparent px-2 text-left text-xs text-ink-2 hover:bg-hover',r.path===s.activeFile&&'bg-accent-soft text-ink')} style={{paddingLeft:pad}} onClick={()=>{openFileTab(r.path);if(s.viewMode==='design')patchState({viewMode:'split'});}}><Icon size={14}/><span className="truncate">{r.name}</span></button>}
-    {confirmDelete===r.path?<span className="flex items-center gap-1 pr-1 text-[10px]" role="group" aria-label={`Delete ${r.path}?`}><button className="h-6 rounded-sm border border-subtle bg-transparent px-1.5 text-[#e5484d]" onClick={()=>del(r.path,r.dir)}>Delete</button><button className="h-6 rounded-sm border border-subtle bg-transparent px-1.5" onClick={()=>setConfirmDelete(null)}>Keep</button></span>
-    :<span className="flex opacity-0 focus-within:opacity-100 group-hover:opacity-100">{act(`Rename ${r.path}`,Pencil,()=>start({mode:'rename',path:r.path,dir:r.dir}))}{!r.dir&&act(`Duplicate ${r.path}`,Copy,()=>start({mode:'duplicate',path:r.path}))}{act(`Delete ${r.path}`,Trash2,()=>{setEdit(null);setConfirmDelete(r.path);})}</span>}
+    :<button aria-label={t('panels.files.open',{path:r.path})} aria-current={r.path===s.activeFile} className={cn('flex h-8 flex-1 items-center gap-2 overflow-hidden rounded-sm border-0 bg-transparent px-2 text-left text-xs text-ink-2 hover:bg-hover',r.path===s.activeFile&&'bg-accent-soft text-ink')} style={{paddingLeft:pad}} onClick={()=>{openFileTab(r.path);if(s.viewMode==='design')patchState({viewMode:'split'});}}><Icon size={14}/><span className="truncate">{r.name}</span></button>}
+    {confirmDelete===r.path?<span className="flex items-center gap-1 pr-1 text-[10px]" role="group" aria-label={t('panels.files.deleteConfirm',{path:r.path})}><button className="h-6 rounded-sm border border-subtle bg-transparent px-1.5 text-[#e5484d]" onClick={()=>del(r.path,r.dir)}>{t('panels.files.delete')}</button><button className="h-6 rounded-sm border border-subtle bg-transparent px-1.5" onClick={()=>setConfirmDelete(null)}>{t('panels.files.keep')}</button></span>
+    :<span className="flex opacity-0 focus-within:opacity-100 group-hover:opacity-100">{act(t('panels.files.renamePath',{path:r.path}),Pencil,()=>start({mode:'rename',path:r.path,dir:r.dir}))}{!r.dir&&act(t('panels.files.duplicatePath',{path:r.path}),Copy,()=>start({mode:'duplicate',path:r.path}))}{act(t('panels.files.deletePath',{path:r.path}),Trash2,()=>{setEdit(null);setConfirmDelete(r.path);})}</span>}
    </div>;})}
  </nav>;
 }
