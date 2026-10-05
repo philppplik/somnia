@@ -12,5 +12,5 @@ test('web folder: open, edit, save writes verified bytes to the folder',async({p
  await source.fill(original.replace('Folder title','Saved from browser'));
  await page.keyboard.press('Control+s');
  await expect.poll(()=>page.evaluate(async()=>{const dir=(window as unknown as {__dir:FileSystemDirectoryHandle}).__dir;return await (await (await dir.getFileHandle('index.html')).getFile()).text();}),{timeout:10000}).toContain('Saved from browser');
- await expect(page.getByText('Unsaved changes')).toHaveCount(0);
+ await expect(page.locator('[data-storage]')).toHaveAttribute('data-dirty','false');
 });

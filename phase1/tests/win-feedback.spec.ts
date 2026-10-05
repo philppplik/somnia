@@ -22,7 +22,7 @@ test('save dialog writes the Starter project into an empty folder and continues 
  const d=page.getByRole('dialog',{name:'Save project'});await d.getByRole('button',{name:'Choose folder and save'}).click();await expect(d).toBeHidden({timeout:10000});
  const names=await page.evaluate(async()=>{const out:string[]=[];for await(const [n] of (window as any).__dir.entries())out.push(n);return out;});
  expect(names).toContain('Untitled project');const inner=await page.evaluate(async()=>{const sub=await (window as any).__dir.getDirectoryHandle('Untitled project');const out:string[]=[];for await(const [n] of (sub as any).entries())out.push(n);return out;});expect(inner).toContain('index.html');
- await expect(page.getByText('Unsaved changes')).toHaveCount(0);await expect(page.getByText('Saved to disk')).toBeVisible();await expect(page.getByText('Not saved to disk')).toHaveCount(0);});
+ await expect(page.locator('[data-storage]')).toHaveAttribute('data-dirty','false');await expect(page.locator('[data-storage]')).toHaveAttribute('data-storage','disk');await expect(page.getByText('Not saved to disk')).toHaveCount(0);});
 test('Ctrl+F opens a find bar under the editor, above the problems bar area',async({page})=>{await page.setViewportSize({width:1400,height:900});await page.goto('/');await showCode(page);
  await page.getByLabel('Source code').click();await page.keyboard.press('Control+f');
  const bar=page.locator('.cm-panel.cm-search');await expect(bar).toBeVisible();
