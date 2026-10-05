@@ -7,6 +7,7 @@ const updater=process.argv.includes('--updater');
 for(const f of ['tauri.conf.json','tauri.alpha.conf.json','tauri.windows-alpha.conf.json','tauri.macos-alpha.conf.json']){
  const p=`src-tauri/${f}`;if(!existsSync(p))continue;const c=JSON.parse(readFileSync(p,'utf8'));
  if(f==='tauri.conf.json')c.version=v;else c.version=v;
- if(updater&&f!=='tauri.conf.json'&&f!=='tauri.macos-alpha.conf.json'){c.bundle=c.bundle??{};c.bundle.createUpdaterArtifacts=true;}
+ if(updater&&f!=='tauri.conf.json'){c.bundle=c.bundle??{};c.bundle.createUpdaterArtifacts=true;
+  if(f==='tauri.macos-alpha.conf.json')c.bundle.targets=['dmg','app'];} // macOS updater archive (.app.tar.gz) needs the app bundle target
  writeFileSync(p,JSON.stringify(c,null,2)+'\n');}
 console.log(`app version ${v}, updater artifacts ${updater?'on':'off'}`);
