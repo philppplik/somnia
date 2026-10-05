@@ -4,6 +4,8 @@ fn main() {
         tauri_build::AppManifest::new().commands(&[
             "choose_project",
             "choose_file",
+            "open_dropped_project",
+            "read_dropped_files",
             "is_store_package",
             "list_files",
             "read_file",

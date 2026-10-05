@@ -15,7 +15,7 @@
         "label": "main",
         "title": "Somnia",
         "decorations": false,
-        "dragDropEnabled": false,
+        "dragDropEnabled": true,
         "shadow": false,
         "transparent": true,
         "width": 1440,

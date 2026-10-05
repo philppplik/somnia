@@ -1,3 +1,4 @@
+use crate::drop_grant::DropGrant;
 use crate::service::{AppError, Project, ReadReply, RecoveryRecord, Result, Revision, StateEvent};
 use serde::Serialize;
 use std::{
@@ -11,6 +12,7 @@ use tauri_plugin_dialog::DialogExt;
 #[derive(Default)]
 struct Backend {
     projects: BTreeMap<String, Project>,
+    drop_grant: Option<DropGrant>,
 }
 type Shared = Arc<Mutex<Backend>>;
 #[derive(Serialize)]
@@ -72,7 +74,9 @@ async fn choose_project(
                 || name == ".."
                 || name.ends_with('.')
                 || name.ends_with(' ')
-                || name.chars().any(|c| c.is_control() || "<>:\"/\\|?*".contains(c));
+                || name
+                    .chars()
+                    .any(|c| c.is_control() || "<>:\"/\\|?*".contains(c));
             if bad {
                 return Err(AppError::Denied("Folder name is not allowed".into()));
             }
@@ -106,11 +110,120 @@ async fn choose_project(
     })
     .await
 }
+/// Open exactly the path delivered by the OS, never a path supplied by the renderer.
+#[tauri::command]
+async fn open_dropped_project(
+    window: WebviewWindow,
+    state: State<'_, Shared>,
+    token: String,
+) -> Result<ProjectReply> {
+    gate(&window)?;
+    let recovery_base = window
+        .app_handle()
+        .path()
+        .app_local_data_dir()
+        .map_err(|e| AppError::Io(e.to_string()))?
+        .join("recovery-v1");
+    work(state.inner().clone(), move |backend| {
+        let paths = DropGrant::consume(&mut backend.drop_grant, &token)?;
+        if paths.len() != 1 {
+            return Err(AppError::Denied(
+                "Drop one folder or one file to open in place".into(),
+            ));
+        }
+        if backend.projects.len() >= 4 {
+            return Err(AppError::Limit);
+        }
+        let path = &paths[0];
+        let project = if path.is_dir() {
+            Project::open(path, &recovery_base)?
+        } else {
+            Project::open_file(path, &recovery_base)?
+        };
+        let reply = ProjectReply {
+            project_id: project.id.clone(),
+            name: path
+                .file_name()
+                .unwrap_or_default()
+                .to_string_lossy()
+                .into_owned(),
+        };
+        backend.projects.insert(project.id.clone(), project);
+        Ok(reply)
+    })
+    .await
+}
+#[derive(Serialize)]
+struct DroppedTextFile {
+    name: String,
+    text: String,
+}
+/// Multiple dropped files retain the existing import-as-copies behavior. Reads are bounded.
+#[tauri::command]
+async fn read_dropped_files(
+    window: WebviewWindow,
+    state: State<'_, Shared>,
+    token: String,
+) -> Result<Vec<DroppedTextFile>> {
+    gate(&window)?;
+    work(state.inner().clone(), move |backend| {
+        use std::io::Read;
+        let paths = DropGrant::consume(&mut backend.drop_grant, &token)?;
+        if paths.iter().any(|p| !p.is_file()) {
+            return Err(AppError::Denied(
+                "Drop one folder alone, or text files without folders".into(),
+            ));
+        }
+        let mut files = Vec::new();
+        let mut total = 0;
+        for path in paths {
+            let ext = path
+                .extension()
+                .unwrap_or_default()
+                .to_string_lossy()
+                .to_ascii_lowercase();
+            if !["html", "htm", "css", "js", "json", "svg", "txt", "md"].contains(&ext.as_str()) {
+                continue;
+            }
+            let mut bytes = Vec::new();
+            std::fs::File::open(&path)?
+                .take(2_000_001)
+                .read_to_end(&mut bytes)?;
+            if bytes.len() > 2_000_000 {
+                return Err(AppError::Limit);
+            }
+            total += bytes.len();
+            if total > 8_000_000 {
+                return Err(AppError::Limit);
+            }
+            files.push(DroppedTextFile {
+                name: path
+                    .file_name()
+                    .unwrap_or_default()
+                    .to_string_lossy()
+                    .into_owned(),
+                text: String::from_utf8(bytes).map_err(|e| AppError::Invalid(e.to_string()))?,
+            });
+        }
+        Ok(files)
+    })
+    .await
+}
+#[derive(Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct DropReply {
+    token: String,
+    count: usize,
+}
 /// True when the app runs from a Microsoft Store (MSIX) package. Such installs are updated by the Store, so the GitHub updater stays off.
 #[tauri::command]
 fn is_store_package() -> bool {
     std::env::current_exe()
-        .map(|p| p.to_string_lossy().to_lowercase().contains("\\windowsapps\\"))
+        .map(|p| {
+            p.to_string_lossy()
+                .to_lowercase()
+                .contains("\\windowsapps\\")
+        })
         .unwrap_or(false)
 }
 
@@ -252,10 +365,10 @@ async fn open_external(window: WebviewWindow, url: String) -> Result<()> {
     #[cfg(target_os = "macos")]
     let result = std::process::Command::new("open").arg(url.as_str()).spawn();
     #[cfg(all(not(target_os = "windows"), not(target_os = "macos")))]
-    let result = std::process::Command::new("xdg-open").arg(url.as_str()).spawn();
-    result
-        .map(|_| ())
-        .map_err(|e| AppError::Io(e.to_string()))
+    let result = std::process::Command::new("xdg-open")
+        .arg(url.as_str())
+        .spawn();
+    result.map(|_| ()).map_err(|e| AppError::Io(e.to_string()))
 }
 #[tauri::command]
 async fn recovery_list(
@@ -361,6 +474,22 @@ pub fn run() {
             Ok(())
         })
         .on_window_event(|window, event| {
+            if window.label() == "main" {
+                if let tauri::WindowEvent::DragDrop(tauri::DragDropEvent::Drop { paths, .. }) =
+                    event
+                {
+                    let shared = window.state::<Shared>();
+                    if let Ok(mut backend) = shared.lock() {
+                        let grant = DropGrant::new(paths.clone());
+                        let reply = DropReply {
+                            token: grant.token().to_owned(),
+                            count: paths.len(),
+                        };
+                        backend.drop_grant = Some(grant);
+                        let _ = window.emit("somnia://os-drop", reply);
+                    };
+                }
+            }
             if let tauri::WindowEvent::CloseRequested { api, .. } = event {
                 let shared = window.state::<Shared>();
                 // Keep the app open while unsaved edits are in flight. UI must present
@@ -378,6 +507,8 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             choose_project,
             choose_file,
+            open_dropped_project,
+            read_dropped_files,
             is_store_package,
             list_files,
             read_file,
