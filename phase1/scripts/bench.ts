@@ -4,7 +4,7 @@ const make=(n:number)=>`<!doctype html><html><head><title>b</title></head><body>
 const time=<T>(f:()=>T):[T,number]=>{const t=performance.now();const r=f();return [r,performance.now()-t];};
 const rows:{case:string;nodes:number;kb:number;ms:number;budget:number}[]=[];
 const flat=(ns:any[]):any[]=>ns.flatMap(n=>[n,...flat(n.children)]);
-let failed=false;
+let failed=false;EditorProject.incremental.enabled=process.env.SOMNIA_INCREMENTAL==='1';
 for(const [n,parseBudget] of [[200,400],[2000,2500],[10000,12000]] as const){
  const html=make(n);const [p,ms]=time(()=>new EditorProject({'index.html':html}));
  const nodes=flat(p.tree('index.html')).length;rows.push({case:`parse ${n} sections`,nodes,kb:Math.round(html.length/1024),ms:Math.round(ms),budget:parseBudget});
