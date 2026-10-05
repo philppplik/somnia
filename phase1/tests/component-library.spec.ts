@@ -21,3 +21,14 @@ test('variants: add, insert, switch with one undo, default, remove',async({page}
  await page.getByRole('button',{name:'Make Wide the default of Card'}).click();await expect(page.getByRole('group',{name:'Component Card'})).toContainText('Wide (default)');
  page.once('dialog',d=>d.accept());await page.getByRole('button',{name:'Remove variant Wide from Card'}).click();await expect(page.getByRole('group',{name:'Component Card'})).not.toContainText('Wide');
 });
+
+test('starter kit: add once, insert a variant, ids stay clean',async({page})=>{
+ await page.goto('/');const f=page.frameLocator('iframe[title="Sandboxed design preview"]');await expect(f.locator('h1')).toBeVisible();
+ await page.getByRole('button',{name:'section',exact:true}).click();await page.getByRole('button',{name:'Components panel',exact:true}).click();
+ await page.getByRole('button',{name:'Add starter kit',exact:true}).click();
+ await expect(page.getByRole('group',{name:'Component Starter Hero'})).toContainText('Centered');
+ await page.getByRole('button',{name:'Add starter kit',exact:true}).click();
+ await expect(page.getByRole('group',{name:'Component Starter Form'})).toHaveCount(1);
+ await page.getByRole('button',{name:'Insert Starter Form Contact',exact:true}).click();await expect(f.locator('form[data-somnia-variant]')).toHaveCount(1);
+ await page.getByRole('button',{name:'Insert Starter Form Contact',exact:true}).click();await expect(f.locator('form[data-somnia-variant]')).toHaveCount(2);
+});
