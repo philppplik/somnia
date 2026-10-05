@@ -91,7 +91,7 @@ import { THEME_CHOICES, type ThemeChoice } from "../lib/theme";
 import { patchState, useAppStore } from "../store/appStore";
 import type { CodeTheme, Contrast } from "../lib/appearance";
 export function Settings() {
-  const { t } = useT();
+  const { t, locale } = useT();
   const state = useAppStore();
   const section = state.settingsSection;
   const setSection = (v: string) => patchState({ settingsSection: v });
@@ -264,7 +264,7 @@ export function Settings() {
         if (!el.hidden) found.push(el.dataset.settingsSection!);
       });
     setMatches((prev) => (prev.join("|") === found.join("|") ? prev : found));
-  }, [query, tick, state, exts]);
+  }, [query, tick, state, exts, locale]);
   const nativeWindowChange = async (next: WindowPrefs) => {
     if (nativeBusy) return;
     setNativeBusy(true);
@@ -612,7 +612,9 @@ export function Settings() {
                   <small>{new Date(b.at).toLocaleString()}</small>
                 </span>
                 <button
-                  onClick={() => downloadProject(b.files, b.name + "-snapshot",true)}
+                  onClick={() =>
+                    downloadProject(b.files, b.name + "-snapshot", true)
+                  }
                 >
                   {t("backup.download")}
                 </button>
