@@ -40,7 +40,7 @@ export class EditorProject {
  private bindings:Record<string,Map<string,PElement>>={};
  private roots:Record<string,DefaultTreeAdapterMap['document']>={};
  /** Experimental partial reparse (feature/incremental-parse). Off by default. verify=true full-reparses and throws on any difference. */
- static incremental:{enabled:boolean;verify:boolean;hits:number;misses:number}={enabled:false,verify:false,hits:0,misses:0};
+ static incremental:{enabled:boolean;verify:boolean;hits:number;misses:number}={enabled:true,verify:false,hits:0,misses:0};
  private listeners=new Set<{origin:Origin;fn:(tx:Transaction)=>void}>();
  private past:History[]=[]; private future:History[]=[];
  private busy=false; private _revision=0;
