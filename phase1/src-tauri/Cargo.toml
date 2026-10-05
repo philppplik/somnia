@@ -16,7 +16,7 @@ required-features = ["desktop"]
 
 [features]
 default = ["desktop"]
-desktop = ["dep:tauri", "dep:tauri-plugin-dialog", "dep:tauri-build"]
+desktop = ["dep:tauri", "dep:tauri-plugin-dialog", "dep:tauri-plugin-updater", "dep:tauri-plugin-process", "dep:tauri-build"]
 
 [dependencies]
 cap-std = "3"
@@ -29,6 +29,8 @@ notify = "8"
 fs2 = "0.4"
 tauri = { version = "2", optional = true }
 tauri-plugin-dialog = { version = "2", optional = true }
+tauri-plugin-updater = { version = "2", optional = true }
+tauri-plugin-process = { version = "2", optional = true }
 
 [build-dependencies]
 tauri-build = { version = "2", optional = true }

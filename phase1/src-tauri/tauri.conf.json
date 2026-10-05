@@ -41,5 +41,16 @@
       "icons/icon.ico"
     ]
   },
-  "mainBinaryName": "somnia"
+  "mainBinaryName": "somnia",
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDY0OTEzN0IwNThCODlBQ0UKUldUT21yaFlzRGVSWlA3UE1GU3l5M3FaWHZQNGJYV0hHZ28zUmxDYlQ4aXdvT1k2ckZoUFRjSUsK",
+      "endpoints": [
+        "https://github.com/philppplik/somnia/releases/latest/download/latest.json"
+      ],
+      "windows": {
+        "installMode": "passive"
+      }
+    }
+  }
 }
