@@ -78,3 +78,9 @@ Export & Publish: real editor-data-attribute stripping and optional HTML comment
 Native Window application now rolls back partial platform changes if a later action fails. Panning shortcut no longer intercepts Space while Settings is open.
 
 Verification: core 287/287, document e2e 2/2 after wiring correction; other document/workflow/redesign/export 6/6 passed. Build/typecheck pass. Typography screenshot inspected. Local font enumeration and native project backup-folder integrations remain.
+
+## Tranche 8
+
+Projects category: actual bounded whole-project recovery snapshots in the local app profile, retain 1-50 snapshots, automatic snapshots alongside memory-project recovery, manual snapshot, download exact original snapshot ZIP without export cleaning. Never replaces the current workspace or changes a disk project. Explicit 2 MB total budget and quota failures, older snapshots pruned. This is local-profile recovery, not native disk backup folders, crash-service backups or external-file monitoring.
+
+Verification: core 290/290, backups/redesign/draft-restore e2e 5/5, typecheck/build pass. Projects screenshot inspected. Backups operate on the current text-file model; integrate with media worker before promising binary asset snapshot coverage.

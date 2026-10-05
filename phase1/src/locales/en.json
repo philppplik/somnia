@@ -252,5 +252,13 @@
   "docPref.paragraphSpacing": "Paragraph spacing (em)",
   "docPref.exportHint": "Applied to ZIP and single HTML downloads. Folder copies preserve the original project files. Cleaning creates a copy and does not change your source.",
   "docPref.stripIds": "Remove editor data attributes on export",
-  "docPref.comments": "Keep HTML comments on export"
+  "docPref.comments": "Keep HTML comments on export",
+  "set.section.projects": "Projects",
+  "backup.hint": "Whole-project recovery snapshots are stored in this app profile, not a disk backup folder. Memory-only autosave records snapshots when enabled. Total storage is limited to 2 MB; older snapshots are removed to stay within the limit. Export large projects for an independent backup.",
+  "backup.enabled": "Create local recovery snapshots",
+  "backup.count": "Maximum snapshots to keep",
+  "backup.now": "Snapshot current project",
+  "backup.restore": "Restore as memory project",
+  "backup.restoreConfirm": "Replace the current workspace with this snapshot? Unsaved workspace changes will be replaced. Original disk files are not modified.",
+  "backup.download": "Download snapshot (ZIP)"
 }

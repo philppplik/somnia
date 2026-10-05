@@ -1,15 +1,15 @@
 import {readDocumentPrefs,cleanExportHtml} from './documentPrefs';
 import {htmlToMarkdown} from '@somnia/editor-core';
 import {zipSync,strToU8} from 'fflate';
-export function projectArchive(files:Readonly<Record<string,string>>){
+export function projectArchive(files:Readonly<Record<string,string>>,exact=false){
  const entries:Record<string,Uint8Array>={};for(const [path,source] of Object.entries(files)){
   if(path.startsWith('/')||path.split('/').some(p=>p==='..'||!p)||path.includes('\\'))throw Error(`Unsafe export path: ${path}`);
-  entries[path]=strToU8(/\.html?$/i.test(path)?cleanExportHtml(source,readDocumentPrefs()):source);
+  entries[path]=strToU8(!exact&&/\.html?$/i.test(path)?cleanExportHtml(source,readDocumentPrefs()):source);
  }
  if(!Object.keys(entries).length)throw Error('No project files to export.');return zipSync(entries);
 }
-export function downloadProject(files:Readonly<Record<string,string>>,name:string){
- const bytes=projectArchive(files);const blob=new Blob([bytes as Uint8Array<ArrayBuffer>],{type:'application/zip'});const url=URL.createObjectURL(blob);const link=document.createElement('a');link.href=url;link.download=`${name.replace(/[^\w-]/g,'_')||'somnia-project'}.zip`;link.click();setTimeout(()=>URL.revokeObjectURL(url),60_000);
+export function downloadProject(files:Readonly<Record<string,string>>,name:string,exact=false){
+ const bytes=projectArchive(files,exact);const blob=new Blob([bytes as Uint8Array<ArrayBuffer>],{type:'application/zip'});const url=URL.createObjectURL(blob);const link=document.createElement('a');link.href=url;link.download=`${name.replace(/[^\w-]/g,'_')||'somnia-project'}.zip`;link.click();setTimeout(()=>URL.revokeObjectURL(url),60_000);
 }
 export function markdownFileName(path:string){return `${(path.split('/').pop()||'document').replace(/\.[^.]*$/,'').replace(/[^\w-]/g,'_')||'document'}.md`;}
 export function downloadMarkdown(files:Readonly<Record<string,string>>,activeFile:string){

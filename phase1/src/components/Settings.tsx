@@ -1,3 +1,10 @@
+import {
+  DEFAULT_BACKUP_PREFS,
+  listProjectBackups,
+  saveProjectBackup,
+} from "../lib/projectBackups";
+import { downloadProject } from "../lib/exportProject";
+import { Folder } from "lucide-react";
 import { DEFAULT_DOCUMENT_PREFS } from "../lib/documentPrefs";
 import { Type, Upload } from "lucide-react";
 import {
@@ -100,6 +107,7 @@ export function Settings() {
   }>({ state: "idle" });
   const [query, setQuery] = useState("");
   const [nativeBusy, setNativeBusy] = useState(false);
+  const [backups, setBackups] = useState(listProjectBackups);
   const [tick, setTick] = useState(0);
   const [matches, setMatches] = useState<string[]>([]);
   const undo = useRef<(() => void)[]>([]);
@@ -146,6 +154,8 @@ export function Settings() {
           keepComments: true,
         },
       });
+    if (name === "Projects")
+      change({ backupPrefs: { ...DEFAULT_BACKUP_PREFS } });
     if (name === "Appearance")
       change({
         themeChoice: "system",
@@ -284,6 +294,7 @@ export function Settings() {
     { name: "Editing", key: "editing", group: "Editor", icon: Pencil },
     { name: "Typography", key: "typography", group: "Editor", icon: Type },
     { name: "Code editor", key: "code", group: "Editor", icon: Code2 },
+    { name: "Projects", key: "projects", group: "Workflow", icon: Folder },
     {
       name: "Export & Publish",
       key: "export",
@@ -540,6 +551,74 @@ export function Settings() {
               }
             />
           </label>
+        </>
+      )}
+      {section === "Projects" && (
+        <>
+          <p>{t("backup.hint")}</p>
+          <label>
+            {t("backup.enabled")}
+            <input
+              type="checkbox"
+              aria-label="Create local recovery snapshots"
+              checked={state.backupPrefs.enabled}
+              onChange={(e) =>
+                change({
+                  backupPrefs: {
+                    ...state.backupPrefs,
+                    enabled: e.target.checked,
+                  },
+                })
+              }
+            />
+          </label>
+          <label>
+            {t("backup.count")}
+            <input
+              type="number"
+              aria-label="Snapshot count"
+              min={1}
+              max={50}
+              value={state.backupPrefs.count}
+              onChange={(e) =>
+                change({
+                  backupPrefs: {
+                    ...state.backupPrefs,
+                    count: Math.max(
+                      1,
+                      Math.min(50, Number(e.target.value) || 20),
+                    ),
+                  },
+                })
+              }
+            />
+          </label>
+          <button
+            disabled={!state.coreConnected}
+            onClick={() => {
+              const r = saveProjectBackup(state.files, state.projectName, true);
+              setErrs(r.ok ? [] : [r.error!]);
+              setBackups(listProjectBackups());
+            }}
+          >
+            {t("backup.now")}
+          </button>
+          {errs.length > 0 && <p role="alert">{errs.join(" ")}</p>}
+          <ul aria-label="Local project snapshots">
+            {backups.map((b) => (
+              <li key={b.id} className="settings-backup-row">
+                <span>
+                  {b.name}
+                  <small>{new Date(b.at).toLocaleString()}</small>
+                </span>
+                <button
+                  onClick={() => downloadProject(b.files, b.name + "-snapshot",true)}
+                >
+                  {t("backup.download")}
+                </button>
+              </li>
+            ))}
+          </ul>
         </>
       )}
       {section === "General" && (
@@ -1754,6 +1833,7 @@ export function Settings() {
         </a>
         {[
           "General",
+          "Projects",
           "Typography",
           "Export & Publish",
           "Window",

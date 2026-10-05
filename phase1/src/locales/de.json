@@ -252,5 +252,13 @@
   "docPref.paragraphSpacing": "Absatzabstand (em)",
   "docPref.exportHint": "Gilt für ZIP und einzelne HTML-Downloads. Ordnerkopien behalten Originaldateien. Die Bereinigung erstellt eine Kopie und verändert nicht den Quelltext.",
   "docPref.stripIds": "Editor-Datenattribute beim Export entfernen",
-  "docPref.comments": "HTML-Kommentare beim Export behalten"
+  "docPref.comments": "HTML-Kommentare beim Export behalten",
+  "set.section.projects": "Projekte",
+  "backup.hint": "Projekt-Snapshots liegen in diesem App-Profil, nicht in einem Backup-Ordner. Auto-Sicherung von Speicherprojekten erstellt aktivierte Snapshots. Maximal 2 MB insgesamt; ältere Snapshots werden entfernt. Große Projekte für unabhängige Backups exportieren.",
+  "backup.enabled": "Lokale Wiederherstellungs-Snapshots erstellen",
+  "backup.count": "Maximale Snapshot-Anzahl",
+  "backup.now": "Aktuelles Projekt sichern",
+  "backup.restore": "Als Speicherprojekt wiederherstellen",
+  "backup.restoreConfirm": "Aktuellen Arbeitsbereich durch diesen Snapshot ersetzen? Ungespeicherte Änderungen werden ersetzt. Originaldateien auf der Festplatte bleiben unverändert.",
+  "backup.download": "Snapshot herunterladen (ZIP)"
 }
