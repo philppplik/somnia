@@ -1,11 +1,11 @@
 # Builds an UNSIGNED .msix from the Windows release build (CI, windows-latest). The Store signs the package after upload.
-# Env: MSIX_IDENTITY_NAME, MSIX_PUBLISHER, MSIX_PUBLISHER_DISPLAY_NAME (from Partner Center; placeholders are used otherwise, which is fine for a CI test build).
+# Env: MSIX_IDENTITY_NAME, MSIX_PUBLISHER, MSIX_PUBLISHER_DISPLAY_NAME (from Partner Center; defaults are the Somnia Editor Partner Center values (PFN PhilippPaulik.SomniaEditor_5r0205h9k3wrt).
 $ErrorActionPreference = 'Stop'
 $pkg = Get-Content package.json -Raw | ConvertFrom-Json
 $v = [string]$pkg.somniaRelease; if ($v -notmatch '^\d+\.\d+\.\d+$') { $v = '0.1.0' }
 $version = "$v.0"
-$identity = if ($env:MSIX_IDENTITY_NAME) { $env:MSIX_IDENTITY_NAME } else { 'PhilippPaulik.Somnia' }
-$publisher = if ($env:MSIX_PUBLISHER) { $env:MSIX_PUBLISHER } else { 'CN=Philipp Paulik' }
+$identity = if ($env:MSIX_IDENTITY_NAME) { $env:MSIX_IDENTITY_NAME } else { 'PhilippPaulik.SomniaEditor' }
+$publisher = if ($env:MSIX_PUBLISHER) { $env:MSIX_PUBLISHER } else { 'CN=F8533395-4C90-4374-9DA3-5FB3D3AE436E' }
 $pubName = if ($env:MSIX_PUBLISHER_DISPLAY_NAME) { $env:MSIX_PUBLISHER_DISPLAY_NAME } else { 'Philipp Paulik' }
 $exe = 'src-tauri/target/release/somnia.exe'
 if (-not (Test-Path $exe)) { throw "Missing $exe. Build the app first." }
