@@ -771,5 +771,9 @@
   "panels.elements.item.7": "Hero-Block",
   "panels.elements.item.8": "FAQ-Block",
   "panels.elements.item.9": "Kontaktfelder",
-  "panels.css.usage": "{defined} definiert / {used} verwendet{status}"
+  "panels.css.usage": "{defined} definiert / {used} verwendet{status}",
+  "welcome.title": "Willkommen bei",
+  "welcome.start": "Jetzt gestalten",
+  "welcome.changelog": "Changelog ansehen",
+  "welcome.aria": "Willkommen bei Somnia v{version}"
 }
