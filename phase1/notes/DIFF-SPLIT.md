@@ -22,3 +22,9 @@ Compare code side by side directly inside the native editor, like a split tab. N
 ## Limits
 - Text diff only (no structural HTML diff).
 - Large files: chunk computation runs on the main thread; benchmark before release.
+
+## Implemented (v9.11)
+- `src/components/DiffSplit.tsx` on `@codemirror/merge` MergeView; toggle icon at the right end of the file tabs, command "Toggle diff split (compare in editor)", Close button.
+- Base: last saved version of any file, or another project file. Right side is the live file; edits go through replaceSource (same undo/save path).
+- Previous / Next change buttons use the merge chunk navigation.
+- The old diff dialog (`DiffDialog.tsx`) is removed.

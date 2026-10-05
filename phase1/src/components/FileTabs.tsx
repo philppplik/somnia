@@ -1,6 +1,6 @@
 import {useEffect,useRef,useState} from 'react';
-import {X} from 'lucide-react';
-import {closeFileTab,openFileTab,useAppStore} from '../store/appStore';
+import {X,Columns2} from 'lucide-react';
+import {closeFileTab,openFileTab,patchState,useAppStore} from '../store/appStore';
 import {cn} from '../lib/cn';
 /** Browser-style tabs for open source files. Middle click or the x closes, right click opens a small tab menu. */
 export function FileTabs(){
@@ -16,6 +16,7 @@ export function FileTabs(){
    <span className="truncate">{file}</span>
    {s.openFiles.length>1&&<button aria-label={`Close ${file}`} className="grid size-4 place-items-center rounded-sm border-0 bg-transparent p-0 text-ink-3 opacity-0 hover:bg-hover hover:text-ink group-hover:opacity-100 focus-visible:opacity-100" onClick={e=>{e.stopPropagation();closeFileTab(file);}}><X size={12}/></button>}
   </div>)}
+  <button aria-label="Toggle diff split" aria-pressed={s.diffSplit} title="Compare in editor (diff split)" onClick={()=>patchState({diffSplit:!s.diffSplit})} className={cn("ml-auto mb-1 grid size-7 shrink-0 cursor-pointer place-items-center rounded-sm border-0 bg-transparent text-ink-2 hover:bg-hover",s.diffSplit&&"bg-accent-soft text-accent")}><Columns2 size={14}/></button>
   {menu&&<div ref={ref} role="menu" aria-label="Tab actions" className="menu-popup" style={{position:'fixed',left:menu.x,top:menu.y,zIndex:60}}>
    <button role="menuitem" className="menu-item" style={{width:'100%',background:'none',border:0,textAlign:'left'}} disabled={s.openFiles.length<=1} onClick={()=>{closeFileTab(menu.file);setMenu(null);}}>Close tab</button>
    <button role="menuitem" className="menu-item" style={{width:'100%',background:'none',border:0,textAlign:'left'}} disabled={others(menu.file).length===0} onClick={()=>{openFileTab(menu.file);others(menu.file).forEach(closeFileTab);setMenu(null);}}>Close other tabs</button>
