@@ -1,7 +1,7 @@
 import {useEffect,useRef,useState,type ReactNode} from 'react';
 import type {EditorNode} from '../lib/editorPort';
 import {applyOperations,patchState,useAppStore} from '../store/appStore';
-import {moveLayer,duplicateLayer,deleteLayer,indentLayer,outdentLayer} from '../lib/structureCommands';
+import {moveLayer,duplicateLayer,deleteLayer,wrapLayer,unwrapLayer,indentLayer,outdentLayer} from '../lib/structureCommands';
 import {tableAction,type TableAction} from '../lib/tableCommands';
 /**
  * Right-click menu for the layer tree. A fixed-position menu in the app document (same mechanism as the canvas menu), so a click always runs the
@@ -20,6 +20,8 @@ export function LayerContextMenu({node,children}:{node:EditorNode;children:React
   ['Move down',()=>run(()=>moveLayer(node.id,1)),off],
   ['Duplicate',()=>run(()=>duplicateLayer(node.id)),off],
   ['Delete',()=>run(()=>deleteLayer(node.id)),off],
+  ['Wrap in div',()=>run(()=>wrapLayer(node.id,'div')),off],
+  ['Unwrap (keep content)',()=>run(()=>unwrapLayer(node.id)),off||!node.children.length],
   ['Indent (into previous sibling)',()=>run(()=>indentLayer(node.id)),off],
   ['Outdent (out of parent)',()=>run(()=>outdentLayer(node.id)),off],
   ...(['table','tr','td','th'].includes(node.tag)?([['Table: add row above','row.above'],['Table: add row below','row.below'],['Table: delete row','row.delete'],['Table: add column left','col.left'],['Table: add column right','col.right'],['Table: delete column','col.delete'],['Table: toggle header row','header'],['Table: merge cell with right neighbour','merge']] as Array<[string,TableAction]>).map(([l,a])=>[l,()=>run(()=>tableAction(a)),off] as [string,()=>void,boolean]):[]),
