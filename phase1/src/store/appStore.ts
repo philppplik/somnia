@@ -4,7 +4,7 @@ import {readEditorPrefs,rememberEditorPrefs,type EditorPrefs} from '../lib/edito
 import {readTheme,rememberTheme,readThemeChoice,rememberThemeChoice,type ThemeChoice} from '../lib/theme';
 import { useSyncExternalStore } from 'react';
 import type { EditorNode,EditorProjectPort,Operation,Origin } from '../lib/editorPort';
-export type LeftTab='layers'|'files'|'search'|'assets'|'components';
+export type LeftTab='layers'|'files'|'search'|'assets'|'components'|'css';
 export type RightTab='design'|'prototype'|'code';
 export type ViewMode='design'|'code'|'split';
 export interface DiskComparison {path:string;disk:string;editor:string;apply:(content:string)=>Promise<void>}
