@@ -3,13 +3,15 @@ import {useRef,useState,useEffect} from 'react';
 import {File,FileCode,FileText,Folder,FilePlus,Pencil,Copy,Trash2} from 'lucide-react';
 import {applyOperations,openFileTab,patchState,useAppStore} from '../store/appStore';
 import {cn} from '../lib/cn';
+import {closeMedia,setActiveMedia,useMedia} from '../lib/media';
+import {Image as ImageIcon} from 'lucide-react';
 import {checkPath,copyName,folderRename,starterFor} from '../lib/fileOps';
 const icon=(f:string)=>/\.(html?|css|[jt]sx?)$/i.test(f)?FileCode:/\.(md|txt)$/i.test(f)?FileText:File;
 type Edit={mode:'new'|'rename'|'duplicate';path:string;dir?:boolean};
 /** Project file tree for the left sidebar. A click opens the file in a tab and reveals the code pane. New, rename, duplicate and delete are undoable editor operations. */
 export function FilesPanel(){
  const {t}=useT();
- const s=useAppStore();const paths=Object.keys(s.files).sort((a,b)=>a.localeCompare(b));
+ const s=useAppStore();const media=useMedia();const paths=Object.keys(s.files).sort((a,b)=>a.localeCompare(b));
  const [edit,setEdit]=useState<Edit|null>(null);const [value,setValue]=useState('');const [error,setError]=useState('');const [confirmDelete,setConfirmDelete]=useState<string|null>(null);const input=useRef<HTMLInputElement>(null);
  useEffect(()=>{if(edit)input.current?.focus();},[edit]);
  const start=(e:Edit)=>{setConfirmDelete(null);setError('');setEdit(e);setValue(e.mode==='new'?'untitled.html':e.mode==='duplicate'?copyName(e.path,paths):e.path);};
@@ -39,5 +41,7 @@ export function FilesPanel(){
     {confirmDelete===r.path?<span className="flex items-center gap-1 pr-1 text-[10px]" role="group" aria-label={t('panels.files.deleteConfirm',{path:r.path})}><button className="h-6 rounded-sm border border-subtle bg-transparent px-1.5 text-[#e5484d]" onClick={()=>del(r.path,r.dir)}>{t('panels.files.delete')}</button><button className="h-6 rounded-sm border border-subtle bg-transparent px-1.5" onClick={()=>setConfirmDelete(null)}>{t('panels.files.keep')}</button></span>
     :<span className="flex opacity-0 focus-within:opacity-100 group-hover:opacity-100">{act(t('panels.files.renamePath',{path:r.path}),Pencil,()=>start({mode:'rename',path:r.path,dir:r.dir}))}{!r.dir&&act(t('panels.files.duplicatePath',{path:r.path}),Copy,()=>start({mode:'duplicate',path:r.path}))}{act(t('panels.files.deletePath',{path:r.path}),Trash2,()=>{setEdit(null);setConfirmDelete(r.path);})}</span>}
    </div>;})}
+ {media.items.length>0&&<div className="mt-2 flex flex-col gap-0.5" role="group" aria-label="Preview files"><div className="px-2 text-[10px] uppercase tracking-[.08em] text-ink-2">Previews</div>
+  {media.items.map(m=><div key={m.name} className="group flex items-center"><button aria-label={`Preview ${m.name}`} aria-current={m.name===media.active} className={cn('flex h-8 flex-1 items-center gap-2 overflow-hidden rounded-sm border-0 bg-transparent px-2 text-left text-xs text-ink-2 hover:bg-hover',m.name===media.active&&'bg-accent-soft text-ink')} onClick={()=>setActiveMedia(m.name)}>{m.kind==='pdf'?<FileText size={14}/>:<ImageIcon size={14}/>}<span className="truncate">{m.name}</span></button><span className="flex opacity-0 focus-within:opacity-100 group-hover:opacity-100">{act(`Close preview ${m.name}`,Trash2,()=>closeMedia(m.name))}</span></div>)}</div>}
  </nav>;
 }

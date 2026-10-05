@@ -775,5 +775,12 @@
   "welcome.title": "Willkommen bei",
   "welcome.start": "Jetzt gestalten",
   "welcome.changelog": "Changelog ansehen",
-  "welcome.aria": "Willkommen bei Somnia v{version}"
+  "welcome.aria": "Willkommen bei Somnia v{version}",
+  "panels.layers.layers": "Ebenen",
+  "panels.layers.noProject": "Kein Projekt geöffnet",
+  "panels.layers.openToSee": "Öffne eine Datei oder einen Ordner, um die Ebenen zu sehen.",
+  "panels.layers.noHtml": "Kein HTML-Dokument geöffnet.",
+  "panels.layers.noLayersInDocument": "Dieses Dokument hat keine Ebenen.",
+  "panels.inspector.noProject": "Kein Projekt geöffnet",
+  "panels.inspector.openToInspect": "Öffne eine Datei oder einen Ordner und wähle ein Element zum Untersuchen."
 }

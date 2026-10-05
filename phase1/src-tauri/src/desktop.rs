@@ -202,7 +202,7 @@ async fn read_dropped_files(
                     .unwrap_or_default()
                     .to_string_lossy()
                     .into_owned(),
-                text: String::from_utf8(bytes).map_err(|e| AppError::Invalid(e.to_string()))?,
+                text: crate::service::decode_text(bytes),
             });
         }
         Ok(files)

@@ -3,7 +3,7 @@ import {openExternal,REPO_URL} from './openExternal';
 import {formatCode,langFor} from './format';
 import {getActiveEditor,transformSelection} from './editorBridge';
 import {encodeEntities,decodeEntities} from './entities';
-import {newBlankFile,openFileDialog} from './projectActions';
+import {newBlankFile,openFileDialog,openMediaDialog} from './projectActions';
 import {downloadProject,downloadMarkdown} from './exportProject';
 import {elements,insertElement} from './structureCommands';
 import { applyHistory, getState, patchState } from '../store/appStore';
@@ -93,6 +93,7 @@ registerCommand({id:'tools.diff',title:'Toggle diff split (compare in editor)',c
 registerCommand({id:'project.export',title:'Export project...',category:'Project',keywords:['zip','folder','single file','download'],enabled:()=>getState().coreConnected,run:()=>patchState({exportDialog:true})});
 registerCommand({id:'experimental.fastParse',title:'Experimental: toggle fast parsing',category:'Tools',keywords:['incremental','parse','performance','experimental'],run:()=>{const on=!EditorProject.incremental.enabled;EditorProject.incremental.enabled=on;try{localStorage.setItem(FAST_KEY,on?'on':'off');}catch{/* storage unavailable */}patchState({notice:on?'Fast parsing is on (experimental). Unsure cases still use the full parser.':'Fast parsing is off. Every edit uses the full parser.'});}});
 registerCommand({id:'project.openFile',title:'Open file',category:'Project',keywords:['open','file'],run:()=>openFileDialog()});
+registerCommand({id:'project.openMedia',title:'Open image or PDF to preview',category:'Project',keywords:['png','jpg','jpeg','pdf','image','preview','media'],run:()=>openMediaDialog()});
 registerCommand({id:'project.newFile',title:'New blank page',category:'Project',keywords:['new','blank','file'],run:()=>newBlankFile()});
 
 ui('settings.open','Settings','Mod+,',()=>patchState({settingsOpen:true}));

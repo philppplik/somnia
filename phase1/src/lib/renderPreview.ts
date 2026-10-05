@@ -1,4 +1,5 @@
 import type { EditorNode } from './editorPort';
+import { injectMotionSafe } from './motionSafe';
 export function renderPreview(source:string,nodes:EditorNode[],files:Readonly<Record<string,string>>,activeFile:string){
  const flat:EditorNode[]=[];const walk=(ns:EditorNode[])=>ns.forEach(n=>{flat.push(n);walk(n.children);});walk(nodes);
  const marker='data-somnia-render-'+crypto.randomUUID().replaceAll('-','');
@@ -16,6 +17,8 @@ export function renderPreview(source:string,nodes:EditorNode[],files:Readonly<Re
   if(el.localName==='input'||el.localName==='button'||el.localName==='select'||el.localName==='textarea')el.setAttribute('tabindex','-1');
  }
  for(const n of flat)if(n.hidden)doc.querySelector(`[data-editor-node="${n.id}"]`)?.setAttribute('style','display:none');
+ // Scripts never run in the design canvas, so settle animations and show reveal-on-scroll content.
+ injectMotionSafe(doc,{settle:true,reveal:true});
  const meta=doc.createElement('meta');meta.httpEquiv='Content-Security-Policy';meta.content="default-src 'none'; script-src 'none'; style-src 'unsafe-inline'; img-src data:; font-src 'none'; connect-src 'none'; form-action 'none'; object-src 'none'; base-uri 'none'";doc.head.prepend(meta);
  return '<!doctype html>'+doc.documentElement.outerHTML;
 }

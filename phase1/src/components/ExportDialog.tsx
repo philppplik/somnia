@@ -2,7 +2,7 @@ import {useState} from 'react';
 import {Dialog,DialogContent,DialogTitle,DialogDescription} from './ui/dialog';
 import {Button} from './ui/button';
 import {patchState,useAppStore} from '../store/appStore';
-import {downloadMarkdown,downloadProject,downloadText,inlineHtml} from '../lib/exportProject';
+import {downloadMarkdown,downloadProject,downloadText,singleFileHtml} from '../lib/exportProject';
 import {useT} from '../lib/useT';
 import {getSaveHandlers} from '../lib/saveFlow';
 type Kind='zip'|'folder'|'single'|'markdown';
@@ -13,7 +13,7 @@ export function ExportDialog(){
  const close=()=>patchState({exportDialog:false});const name=s.projectName||'somnia-project';
  const run=async()=>{setErr(null);setBusy(true);try{
   if(kind==='zip'){downloadProject(s.files,name);patchState({notice:t('export.zipRequested')});close();}
-  else if(kind==='single'){if(!target)throw Error(t('export.noHtml'));downloadText(inlineHtml(s.files,target,{css,js}),target.split('/').pop()!);patchState({notice:t('export.singleDone',{target})});close();}
+  else if(kind==='single'){if(!target)throw Error(t('export.noHtml'));downloadText(singleFileHtml(s.files,target,{css,js}),target.split('/').pop()!);patchState({notice:t('export.singleDone',{target})});close();}
   else if(kind==='markdown'){downloadMarkdown(s.files,target);close();}
   else{const h=getSaveHandlers();if(!h?.exportFolder)throw Error(t('export.needFolder'));if(await h.exportFolder(sub))close();}
  }catch(e){setErr(e instanceof Error?e.message:String(e));}finally{setBusy(false);}};

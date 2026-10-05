@@ -775,5 +775,12 @@
   "welcome.title": "Welcome to",
   "welcome.start": "Start designing",
   "welcome.changelog": "View Changelog",
-  "welcome.aria": "Welcome to Somnia v{version}"
+  "welcome.aria": "Welcome to Somnia v{version}",
+  "panels.layers.layers": "Layers",
+  "panels.layers.noProject": "No project open",
+  "panels.layers.openToSee": "Open a file or folder to see its layers.",
+  "panels.layers.noHtml": "No HTML document open.",
+  "panels.layers.noLayersInDocument": "No layers in this document.",
+  "panels.inspector.noProject": "No project open",
+  "panels.inspector.openToInspect": "Open a file or folder, then select an element to inspect it."
 }
