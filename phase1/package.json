@@ -33,6 +33,8 @@
     "@lezer/highlight": "^1.2.5",
     "@somnia/editor-core": "file:./packages/editor-core",
     "@tauri-apps/api": "^2.0.0",
+    "@tauri-apps/plugin-process": "^2.4.0",
+    "@tauri-apps/plugin-updater": "^2.13.1",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "fflate": "^0.8.3",
