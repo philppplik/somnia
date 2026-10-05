@@ -270,6 +270,8 @@ async fn read_dropped_files(
 struct DropReply {
     token: String,
     count: usize,
+    /// True when every dropped path is a PNG, JPEG or PDF file (media, not a project).
+    media: bool,
 }
 /// True when the app runs from a Microsoft Store (MSIX) package. Such installs are updated by the Store, so the GitHub updater stays off.
 #[tauri::command]
@@ -540,6 +542,11 @@ pub fn run() {
                         let reply = DropReply {
                             token: grant.token().to_owned(),
                             count: paths.len(),
+                            media: paths.iter().all(|p| {
+                                p.extension()
+                                    .map(|e| e.to_string_lossy().to_ascii_lowercase())
+                                    .is_some_and(|e| MEDIA_EXTENSIONS.contains(&e.as_str()))
+                            }),
                         };
                         backend.drop_grant = Some(grant);
                         let _ = window.emit("somnia://os-drop", reply);
