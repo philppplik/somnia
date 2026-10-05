@@ -1,0 +1,10 @@
+import {test,expect} from './fixtures';
+import {showCode} from './helpers';
+test('layer menu aligns a block and its text',async({page})=>{await page.goto('/');await showCode(page);
+ await page.evaluate(()=>(window as any).__somnia.setSource('index.html','<!doctype html><html><head><title>t</title></head><body><div id="box"><p>a</p></div></body></html>'));
+ await page.getByRole('button',{name:'div',exact:true}).first().click({button:'right'});
+ await page.getByRole('menuitem',{name:'Align: text center'}).click();
+ await expect(page.getByRole('status').first()).toContainText('text center');
+ await page.getByRole('button',{name:'div',exact:true}).first().click({button:'right'});
+ await page.getByRole('menuitem',{name:'Align: center this block'}).click();
+ await expect(page.getByRole('status').first()).toContainText('center this block');});
