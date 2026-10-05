@@ -23,7 +23,17 @@ export function referenceProblems(files:Readonly<Record<string,string>>):Problem
   for(const m of text.matchAll(/<(link|script)\b[^>]*>/gi)){const tag=m[0];const isCss=m[1].toLowerCase()==='link';if(isCss&&!/\brel\s*=\s*["']?stylesheet/i.test(tag))continue;const attr=/\b(?:href|src)\s*=\s*(?:"([^"]*)"|'([^']*)')/i.exec(tag);const ref=attr?(attr[1]??attr[2]):'';if(!ref)continue;const path=resolve(ref);if(path===null||path===''||path in files)continue;
    const before=text.slice(0,m.index);const line=before.split('\n').length;out.push({file:f,line,col:before.length-before.lastIndexOf('\n'),severity:'warning',message:`${isCss?'Stylesheet':'Script'} not found in the project: ${ref}`});}}
  return out;}
+/** Basic accessibility checks on HTML text: image alt, page language and title, heading order. Warnings only. */
+export function accessibilityProblems(files:Readonly<Record<string,string>>):Problem[]{
+ const out:Problem[]=[];
+ for(const f of Object.keys(files).sort()){if(!/\.html?$/i.test(f))continue;const text=files[f];const at=(i:number)=>{const b=text.slice(0,i);return{line:b.split('\n').length,col:b.length-b.lastIndexOf('\n')};};const add=(i:number,message:string)=>out.push({file:f,...at(i),severity:'warning',message});
+  const full=/<html\b/i.test(text);
+  if(full){const h=/<html\b[^>]*>/i.exec(text)!;if(!/\blang\s*=\s*["'][^"']+["']/i.test(h[0]))add(h.index,'The page has no language. Add lang="en" (or your language) to <html>.');if(!/<title\b[^>]*>\s*\S/i.test(text))add(h.index,'The page has no title. Add a non-empty <title> in <head>.');}
+  for(const m of text.matchAll(/<img\b[^>]*>/gi))if(!/\balt\s*=/i.test(m[0]))add(m.index!,'Image has no alt attribute. Describe it, or use alt="" if it is decorative.');
+  let prev=0,h1=0;for(const m of text.matchAll(/<h([1-6])\b/gi)){const lv=Number(m[1]);if(lv===1&&++h1>1)add(m.index!,'More than one <h1> on the page.');if(prev&&lv>prev+1)add(m.index!,`Heading level jumps from h${prev} to h${lv}.`);prev=lv;}
+ }
+ return out;}
 /** Lints every project file, errors first, capped so a broken minified bundle cannot flood the panel. */
 export function projectProblems(files:Readonly<Record<string,string>>):Problem[]{
- const all:Problem[]=[];for(const f of Object.keys(files).sort())all.push(...computeDiagnostics(f,files[f]).slice(0,50));all.push(...referenceProblems(files));
+ const all:Problem[]=[];for(const f of Object.keys(files).sort())all.push(...computeDiagnostics(f,files[f]).slice(0,50));all.push(...referenceProblems(files),...accessibilityProblems(files));
  return all.sort((a,b)=>(a.severity===b.severity?0:a.severity==='error'?-1:1)).slice(0,500);}

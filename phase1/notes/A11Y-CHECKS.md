@@ -1,0 +1,2 @@
+# Accessibility checks (Problems panel)
+Warnings for HTML files: page without lang, empty or missing title (full pages only), img without alt (alt="" is accepted as decorative), more than one h1, heading level jumps (for example h1 to h3). Text-based and approximate: it reads source, not the rendered page, so it does not know about scripts or templates. Colour contrast is not checked yet (v12 plan).
