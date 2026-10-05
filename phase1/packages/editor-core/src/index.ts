@@ -107,7 +107,7 @@ export class EditorProject {
   if(!plain(inner)||!plain(oldInner))return false;
   // Unclosed formatting elements before the container are re-opened by the HTML parser inside later content (active formatting list), so the prefix must be balanced.
   {const fo=new Map<string,number>();for(const m of oldSource.slice(0,target.contentFrom).matchAll(/<(\/?)(b|i|u|em|strong|a|code|font|small|big|s|strike|tt|nobr)(?=[\s>\/])/gi)){const k=m[2].toLowerCase();fo.set(k,(fo.get(k)||0)+(m[1]?-1:1));}if([...fo.values()].some(v=>v!==0))return false;}
-  let frag:ReturnType<typeof parseFragment>;try{frag=parseFragment(el as never,inner,{sourceCodeLocationInfo:true});}catch{return false;}
+  let frag:{childNodes:DefaultTreeAdapterMap['node'][]};try{frag=parseFragment(el as never,inner,{sourceCodeLocationInfo:true});}catch{return false;}
   const base=target.contentFrom;
   // 1. shift every location at or after the old range end (parse5 tree, includes text nodes and ancestors' end tags)
   const shift=(o:number)=>o>=p.to?o+delta:o;
