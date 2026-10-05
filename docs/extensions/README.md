@@ -17,6 +17,8 @@ Applies to: Somnia v9.5 and later, extension `apiVersion` 1.
 | 9 | [Packaging and install](09-packaging-install.md) | ship and install an extension |
 | 10 | [Troubleshooting](10-troubleshooting.md) | fix install and runtime errors |
 | 11 | [Versioning](11-versioning.md) | plan for API changes |
+| 12 | [Authoring kit](12-authoring-kit.md) | start, validate and pack an extension from the command line |
+| 13 | [Publish to the index](13-publish-to-index.md) | list your extension in Browse GitHub extensions |
 
 Working examples are in [`phase1/examples/`](../../phase1/examples/README.md). The design record is [ADR-003](../../phase1/notes/ADR-003-extension-sdk.md).
 

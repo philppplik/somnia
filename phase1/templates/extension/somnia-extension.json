@@ -1,0 +1,13 @@
+{
+  "id": "__ID__",
+  "name": "__NAME__",
+  "version": "0.1.0",
+  "apiVersion": 1,
+  "main": "main.js",
+  "permissions": ["commands", "ui.notify"],
+  "contributes": {
+    "commands": [
+      {"id": "__ID__.hello", "title": "__NAME__: say hello", "category": "Tools"}
+    ]
+  }
+}
