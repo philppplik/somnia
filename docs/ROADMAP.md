@@ -43,7 +43,14 @@ Risk: collaboration scope; the spike ends with a go/no-go.
 - Optional Git integration (status, diff, commit) using the diff viewer.
 Depends on: v10 diff viewer, v11 updater for smooth extension and app updates.
 
+## Microsoft Store (MSIX) - proposal
+- Package the Windows build as MSIX and publish it in the Microsoft Store. Microsoft signs store packages, so no paid code signing certificate is needed for that channel. Free for individual developers (to be re-checked on the Partner Center page when the account is created).
+- Needs from the maintainer: a Partner Center developer account (created by Philipp, not by the builder), app name reservation, privacy policy URL.
+- Builder work: MSIX packaging in CI (Tauri bundle target or makeappx), store listing text and screenshots, update flow decision (store updates replace the in-app updater for this channel).
+- Risk: store certification review, MSIX sandbox limits on file access (folder picker works, arbitrary paths may not).
+
 ## Open decisions for the maintainer
 1. Tauri signing key as GitHub secret (v11 updater).
 2. Windows code signing certificate (removes SmartScreen warnings; paid).
 3. Collaboration direction after the spike.
+4. Microsoft Store: Philipp creates the Partner Center account and reserves the name.
