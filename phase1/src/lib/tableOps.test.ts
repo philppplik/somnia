@@ -1,0 +1,9 @@
+import test from 'node:test';import assert from 'node:assert/strict';
+import {newTable,addRow,deleteRow,addColumn,deleteColumn,toggleHeaderRow,mergeRight,cellAt,tableDims,isTableError} from './tableOps';
+const ok=(r:any)=>{assert.ok(!isTableError(r),JSON.stringify(r));return r.html as string;};
+test('new table has caption, header scope and requested size',()=>{const t=newTable(3,4);assert.match(t,/<caption>/);assert.equal((t.match(/<th scope="col">/g)??[]).length,4);assert.deepEqual(tableDims(t),{rows:3,cols:4});});
+test('add and delete rows',()=>{const t=newTable(3,2);const a=ok(addRow(t,1,true));assert.equal(tableDims(a).rows,4);assert.equal(tableDims(ok(deleteRow(a,1))).rows,3);assert.ok(isTableError(deleteRow('<table><tr><td>x</td></tr></table>',0)));});
+test('add and delete columns keep header cells as th',()=>{const t=newTable(3,2);const a=ok(addColumn(t,0,false));assert.equal(tableDims(a).cols,3);assert.equal((a.match(/<th scope="col"><\/th>/g)??[]).length,1);assert.equal(tableDims(ok(deleteColumn(a,0))).cols,2);});
+test('header toggle goes both ways',()=>{const t=newTable(2,2,false);const h=ok(toggleHeaderRow(t));assert.match(h,/<th scope="col">/);const back=ok(toggleHeaderRow(h));assert.doesNotMatch(back,/<th/);});
+test('merge right sets colspan and joins text; row edits then refuse',()=>{const t='<table><tr><td>a</td><td>b</td><td>c</td></tr></table>';const m=ok(mergeRight(t,0,0));assert.match(m,/<td colspan="2">a b<\/td><td>c<\/td>/);assert.ok(isTableError(addRow(m,0,true)));assert.ok(isTableError(mergeRight(t,0,2)));});
+test('cellAt finds row and column from a source offset; nested tables refused',()=>{const t='<table><tr><td>a</td><td>b</td></tr><tr><td>c</td></tr></table>';assert.deepEqual(cellAt(t,t.indexOf('>b<')+1),{row:0,col:1});assert.deepEqual(cellAt(t,t.indexOf('>c<')+1),{row:1,col:0});assert.ok(isTableError(addRow('<table><tr><td><table><tr><td>x</td></tr></table></td></tr></table>',0,true)));});
