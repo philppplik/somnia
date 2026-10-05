@@ -1,0 +1,3 @@
+import test from 'node:test';import assert from 'node:assert/strict';import {parseShortcutFile} from './shortcutTransfer';
+test('shortcut JSON allows known commands with key combos and disabled commands',()=>assert.deepEqual(parseShortcutFile('{"edit.save":"Mod+Shift+s","edit.off":""}',['edit.save','edit.off']),{'edit.save':'Mod+Shift+s','edit.off':''}));
+test('shortcut JSON refuses unknown IDs and malformed input without partial result',()=>{assert.throws(()=>parseShortcutFile('[]',[]));assert.throws(()=>parseShortcutFile('{"unknown":"Mod+x"}',[]));assert.throws(()=>parseShortcutFile('{"save":"hello world"}',['save']));assert.throws(()=>parseShortcutFile('x'.repeat(100001),[]));});

@@ -1,0 +1,11 @@
+/** User interface preferences. Never inject these rules into project preview documents. */
+export interface UiPrefs {font:'inter'|'system';fontSize:number;animationMs:number;motion:'system'|'reduce'|'full';shadows:'subtle'|'standard'|'none';rememberPanels:boolean}
+export const DEFAULT_UI_PREFS:UiPrefs={font:'inter',fontSize:13,animationMs:120,motion:'system',shadows:'subtle',rememberPanels:true};
+const KEY='somnia.uiPrefs.v1';
+const clamp=(x:unknown,lo:number,hi:number,d:number)=>typeof x==='number'&&Number.isFinite(x)?Math.min(hi,Math.max(lo,x)):d;
+export function sanitizeUiPrefs(x:any):UiPrefs{return {font:x?.font==='system'?'system':'inter',fontSize:clamp(x?.fontSize,10,20,13),animationMs:clamp(x?.animationMs,0,200,120),motion:x?.motion==='reduce'||x?.motion==='full'?x.motion:'system',shadows:x?.shadows==='none'||x?.shadows==='standard'?x.shadows:'subtle',rememberPanels:x?.rememberPanels!==false};}
+export function readUiPrefs():UiPrefs{try{return sanitizeUiPrefs(JSON.parse(localStorage.getItem(KEY)||'{}'));}catch{return {...DEFAULT_UI_PREFS};}}
+export function saveUiPrefs(p:UiPrefs){try{localStorage.setItem(KEY,JSON.stringify(p));if(!p.rememberPanels)localStorage.removeItem('somnia.panelWidths.v1');}catch{/* session-only when storage is unavailable */}}
+export function applyUiPrefs(p:UiPrefs,root:HTMLElement=document.documentElement){root.style.setProperty('--ui-font',p.font==='system'?'-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif':'Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif');root.style.setProperty('--ui-font-size',p.fontSize+'px');root.style.setProperty('--ui-animation-ms',p.animationMs+'ms');root.dataset.motion=p.motion;root.dataset.panelShadows=p.shadows;}
+export function readPanelWidths():{sidebarWidth:number;inspectorWidth:number}{const defaults={sidebarWidth:260,inspectorWidth:320};if(!readUiPrefs().rememberPanels)return defaults;try{const p=JSON.parse(localStorage.getItem('somnia.panelWidths.v1')||'{}');return {sidebarWidth:clamp(p.sidebarWidth,220,380,260),inspectorWidth:clamp(p.inspectorWidth,280,400,320)};}catch{return defaults;}}
+export function savePanelWidths(p:{sidebarWidth:number;inspectorWidth:number}){try{localStorage.setItem('somnia.panelWidths.v1',JSON.stringify(p));}catch{/* session-only */}}

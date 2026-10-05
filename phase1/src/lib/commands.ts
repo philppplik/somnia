@@ -79,7 +79,7 @@ export function attachKeyboardShortcuts(target:Window=window){
  const listener=(event:KeyboardEvent)=>{
   if(event.defaultPrevented||event.isComposing||event.repeat)return;
   const element=event.target;const input=element instanceof HTMLElement&&!!element.closest('input,textarea,select,[contenteditable="true"],[role="textbox"]');
-  if(getState().paletteOpen)return;
+  if(getState().paletteOpen||getState().settingsOpen)return;
   const list=listCommands();let command=list.find(c=>c.shortcut&&matchesShortcut(event,c.shortcut));
   if(!isMac()&&matchesShortcut(event,'Mod+Y'))command=list.find(c=>c.id==='edit.redo');
   const coreEditor=element instanceof HTMLElement&&element.matches('[data-core-editor]');

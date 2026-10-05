@@ -1,14 +1,15 @@
+import {readDocumentPrefs,cleanExportHtml} from './documentPrefs';
 import {htmlToMarkdown} from '@somnia/editor-core';
 import {zipSync,strToU8} from 'fflate';
-export function projectArchive(files:Readonly<Record<string,string>>){
+export function projectArchive(files:Readonly<Record<string,string>>,exact=false){
  const entries:Record<string,Uint8Array>={};for(const [path,source] of Object.entries(files)){
   if(path.startsWith('/')||path.split('/').some(p=>p==='..'||!p)||path.includes('\\'))throw Error(`Unsafe export path: ${path}`);
-  entries[path]=strToU8(source);
+  entries[path]=strToU8(!exact&&/\.html?$/i.test(path)?cleanExportHtml(source,readDocumentPrefs()):source);
  }
  if(!Object.keys(entries).length)throw Error('No project files to export.');return zipSync(entries);
 }
-export function downloadProject(files:Readonly<Record<string,string>>,name:string){
- const bytes=projectArchive(files);const blob=new Blob([bytes as Uint8Array<ArrayBuffer>],{type:'application/zip'});const url=URL.createObjectURL(blob);const link=document.createElement('a');link.href=url;link.download=`${name.replace(/[^\w-]/g,'_')||'somnia-project'}.zip`;link.click();setTimeout(()=>URL.revokeObjectURL(url),60_000);
+export function downloadProject(files:Readonly<Record<string,string>>,name:string,exact=false){
+ const bytes=projectArchive(files,exact);const blob=new Blob([bytes as Uint8Array<ArrayBuffer>],{type:'application/zip'});const url=URL.createObjectURL(blob);const link=document.createElement('a');link.href=url;link.download=`${name.replace(/[^\w-]/g,'_')||'somnia-project'}.zip`;link.click();setTimeout(()=>URL.revokeObjectURL(url),60_000);
 }
 export function markdownFileName(path:string){return `${(path.split('/').pop()||'document').replace(/\.[^.]*$/,'').replace(/[^\w-]/g,'_')||'document'}.md`;}
 export function downloadMarkdown(files:Readonly<Record<string,string>>,activeFile:string){
@@ -24,4 +25,4 @@ export function inlineHtml(files:Readonly<Record<string,string>>,htmlPath:string
  if(opts.css)out=out.replace(/<link\b[^>]*>/gi,tag=>{if(!/rel\s*=\s*["']?stylesheet/i.test(tag))return tag;const href=/href\s*=\s*["']([^"']+)["']/i.exec(tag)?.[1];const css=href?find(href):undefined;return css===undefined?tag:`<style>\n${css.replace(/<\/style/gi,'<\\/style')}\n</style>`;});
  if(opts.js)out=out.replace(/<script\b([^>]*)\bsrc\s*=\s*["']([^"']+)["']([^>]*)>\s*<\/script>/gi,(tag,a,src,b)=>{const js=find(src);return js===undefined?tag:`<script${(a+b).trimEnd()}>\n${js.replace(/<\/script/gi,'<\\/script')}\n</script>`;});
  return out;}
-export function downloadText(text:string,name:string,type='text/html'){const blob=new Blob([text],{type});const url=URL.createObjectURL(blob);const link=document.createElement('a');link.href=url;link.download=name;link.click();setTimeout(()=>URL.revokeObjectURL(url),60_000);}
+export function downloadText(text:string,name:string,type='text/html'){if(type==='text/html')text=cleanExportHtml(text,readDocumentPrefs());const blob=new Blob([text],{type});const url=URL.createObjectURL(blob);const link=document.createElement('a');link.href=url;link.download=name;link.click();setTimeout(()=>URL.revokeObjectURL(url),60_000);}
