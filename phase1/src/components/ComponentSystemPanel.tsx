@@ -1,4 +1,5 @@
 import {useState} from 'react';
+import {ComponentFieldBinding,ComponentInstanceFields} from './ComponentPropsPanel';
 import {useAppStore,patchState} from '../store/appStore';
 import {Button} from './ui/button';
 import * as cs from '../lib/componentSystem';
@@ -13,8 +14,9 @@ export function ComponentSystemPanel(){
  <p>Save a source block as a component, add variants (for example Primary and Outline), insert one, or switch a placed block to another variant. Stored only in this app profile, not in the project.</p>
  <label>Name<input aria-label="Component or variant name" value={name} maxLength={cs.LIMITS.name} placeholder="Name for new component or variant" onChange={e=>setName(e.target.value)}/></label>
  <label className="flex items-center gap-2"><input type="checkbox" checked={mark} onChange={e=>setMark(e.target.checked)}/>Mark inserted blocks with data-somnia-* attributes (needed for switching)</label>
+ <ComponentFieldBinding enabled={s.coreConnected&&!!s.selectedElementId} run={run}/>
  <Button variant="outline" disabled={!s.coreConnected} onClick={()=>edit(l=>cs.createComponent(l,name,selectedSource(),newId),`Component "${name.trim()}" saved. Project save state is unchanged.`)}>Save selection as new component</Button>
- {current&&inst&&<div role="group" aria-label="Selected component instance"><h4>Selected: {current.name}</h4><p>Switch this block to:</p>{current.variants.map(v=><Button key={v.id} variant="outline" disabled={v.id===inst.variantId} onClick={()=>run(()=>switchVariant(current,v,mark))}>{v.name}{v.id===inst.variantId?' (current)':''}</Button>)}</div>}
+ {current&&inst&&<div role="group" aria-label="Selected component instance"><h4>Selected: {current.name}</h4><p>Switch this block to:</p>{current.variants.map(v=><Button key={v.id} variant="outline" disabled={v.id===inst.variantId} onClick={()=>run(()=>switchVariant(current,v,mark))}>{v.name}{v.id===inst.variantId?' (current)':''}</Button>)}<ComponentInstanceFields html={selectedSource()} component={current} run={run}/></div>}
  {!lib.length&&<p>No components yet. Select a block in Layers, name it, and save.</p>}
  {lib.map(c=>{const base=cs.variantOf(c);return <div key={c.id} role="group" aria-label={`Component ${c.name}`}><h4>{c.name}</h4>
   {c.variants.map(v=><div key={v.id}><span>{v.name}{v.id===c.defaultVariantId?' (default)':''}</span> <small>{v.id===base.id?'':cs.describeDiff(cs.classDiff(base.html,v.html))}</small>
