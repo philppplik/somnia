@@ -6,7 +6,8 @@ import { encodeSyncStep1, encodeUpdate, encodeAwareness, handleMessage } from '.
 import { assertSafePath } from './paths.mjs'
 
 export class Session {
-  constructor(url, { doc = new Y.Doc(), WebSocketImpl = WebSocket } = {}) {
+  constructor(url, { doc = new Y.Doc(), WebSocketImpl = WebSocket, prepare = null } = {}) {
+    this.prepare = prepare // async () => ws options (TLS pinning). Runs before anything is sent.
     this.doc = doc
     this.awareness = new awarenessProtocol.Awareness(doc)
     this.files = doc.getMap('files')
@@ -26,9 +27,10 @@ export class Session {
   #open() { return this.ws && this.ws.readyState === 1 }
 
   /** Resolves once the first sync with the relay is complete. Rejects if the relay refuses the code. */
-  connect() {
+  async connect() {
+    const wsOptions = this.prepare ? await this.prepare() : undefined
     return new Promise((resolve, reject) => {
-      const ws = this.ws = new this.WS(this.url)
+      const ws = this.ws = wsOptions ? new this.WS(this.url, wsOptions) : new this.WS(this.url)
       ws.binaryType = 'nodebuffer'
       ws.on('unexpected-response', (_req, res) => reject(new Error(`refused: ${res.statusCode}`)))
       ws.on('error', reject)
