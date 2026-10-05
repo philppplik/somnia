@@ -19,3 +19,6 @@ Limits
 - macOS is not in `latest.json` yet (the dmg bundle has no updater archive). Windows installs use `installMode: passive`.
 - Windows code signing is separate (SmartScreen warnings remain until a certificate exists).
 - First real test: install v(N), publish v(N+1) with latest.json, click the pill on Windows.
+
+## Secrets
+CI reads TAURI_SIGNING_PRIVATE_KEY and TAURI_SIGNING_PRIVATE_KEY_PASSWORD (repository secrets). When present, builds emit signed updater artifacts (.sig) and latest.json.
