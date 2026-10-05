@@ -109,3 +109,5 @@
 .cm-editor.cm-focused .cm-matchingBracket,.cm-editor .cm-matchingBracket{background:color-mix(in srgb,var(--accent) 35%,transparent)!important;outline:1px solid var(--accent);color:var(--text-primary)!important}
 .cm-editor .cm-nonmatchingBracket{background:color-mix(in srgb,#ef4444 35%,transparent)!important;outline:1px solid #ef4444}
 .cm-editor .cm-activeLine{background:color-mix(in srgb,var(--accent) 7%,transparent)}
+
+.canvas-drop-hint{position:absolute;z-index:3;background:rgba(99,102,241,.85);border-radius:2px}.canvas-drop-hint[data-zone=inside]{background:rgba(99,102,241,.15);outline:2px dashed #6366f1;outline-offset:-2px}
