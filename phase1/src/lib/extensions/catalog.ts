@@ -5,7 +5,7 @@ import {API_VERSION,type ExtensionManifest,type Permission} from './types';
 
 export const CATALOG_URL='https://raw.githubusercontent.com/philppplik/somnia/phase1-foundation/docs/extensions/catalog/index.json';
 const MAX_INDEX=300_000,MAX_ZIP=2_000_000;
-export interface CatalogEntry {id:string;name:string;version:string;author:string;description:string;repo:string;download:string;sha256:string;apiVersion:number;permissions:Permission[]}
+export interface CatalogEntry {id:string;name:string;version:string;author:string;description:string;repo:string;download:string;sha256:string;apiVersion:number;permissions:Permission[];category?:string}
 export interface ReviewedPackage {entry:CatalogEntry;manifest:ExtensionManifest}
 const record=(v:unknown):v is Record<string,unknown>=>!!v&&typeof v==='object'&&!Array.isArray(v);
 /** Only public GitHub raw content, with no credentials, query, port or fragments. */
@@ -18,6 +18,7 @@ export function validateCatalog(value:unknown):CatalogEntry[]{
  return value.extensions.map((item,i)=>{
   if(!record(item))throw new Error(`Invalid index entry ${i+1}.`);
   for(const [key,max] of [['id',100],['name',80],['version',20],['author',80],['description',400],['repo',300],['download',500]] as const){if(typeof item[key]!=='string'||!(item[key] as string).trim()||(item[key] as string).length>max)throw new Error(`Invalid ${key} in index entry ${i+1}.`);}
+  if(item.category!==undefined&&(typeof item.category!=='string'||item.category.length>30))throw new Error(`Invalid category in index entry ${i+1}.`);
   const m=validateManifest({id:item.id,name:item.name,version:item.version,apiVersion:item.apiVersion,permissions:item.permissions});
   if(!m.ok)throw new Error(`Index entry ${i+1}: ${m.errors.join(' ')}`);
   if(ids.has(m.manifest.id))throw new Error('Duplicate extension id in index.');ids.add(m.manifest.id);
