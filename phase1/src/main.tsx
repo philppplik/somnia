@@ -8,6 +8,8 @@ import './styles/global.css';
 import './styles/bento.css';
 import {isTauri} from '@tauri-apps/api/core';
 import {setStoreManaged} from './lib/updates';
+import {initLocale} from './lib/i18n';
+initLocale();
 import {installDesktopAdapter} from './lib/desktopAdapter';
 import {installFileAdapter} from './lib/fileAdapter';
 import {createWebFsPort,webFsSupported} from './lib/webFsPort';

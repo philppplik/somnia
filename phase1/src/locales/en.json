@@ -1,0 +1,13 @@
+{
+ "settings.language": "Language",
+ "settings.language.system": "Follow system",
+ "settings.language.note": "Translations other than English are machine translated and may contain mistakes.",
+ "empty.title": "Open something to start",
+ "empty.body": "Somnia works on your own files. Open a project folder, open a single file, or start a blank page. You can also drag files from your file manager into this window.",
+ "empty.openFolder": "Open folder",
+ "empty.openFile": "Open file",
+ "empty.newFile": "New blank page",
+ "empty.hint": "Ctrl+O opens a folder, Ctrl+K shows all commands.",
+ "common.files_one": "{count} file",
+ "common.files_other": "{count} files"
+}
