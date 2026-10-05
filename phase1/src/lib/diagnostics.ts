@@ -15,7 +15,15 @@ export function computeDiagnostics(file:string,text:string):Problem[]{
  const lang=languageFor(file);if(!lang||text.length>600_000)return [];
  const state=EditorState.create({doc:text,extensions:[lang]});ensureSyntaxTree(state,state.doc.length,2000);
  return lintState(state).map(d=>{const l=state.doc.lineAt(Math.min(d.from,state.doc.length));return {file,line:l.number,col:d.from-l.from+1,severity:d.severity==='error'?'error':'warning',message:d.message} as Problem;});}
+/** Stylesheets and scripts that point at a project file which does not exist. The design preview inlines only existing local CSS, so a wrong path explains missing styles. */
+export function referenceProblems(files:Readonly<Record<string,string>>):Problem[]{
+ const out:Problem[]=[];
+ for(const f of Object.keys(files).sort()){if(!/\.html?$/i.test(f))continue;const text=files[f];
+  const resolve=(href:string)=>{if(/^(?:[a-z][a-z0-9+.-]*:|\/\/|#|\/)/i.test(href))return null;const parts=[...f.split('/').slice(0,-1),...href.split(/[?#]/)[0].split('/')],o:string[]=[];for(const q of parts){if(q==='..')o.pop();else if(q&&q!=='.')o.push(q);}return o.join('/');};
+  for(const m of text.matchAll(/<(link|script)\b[^>]*>/gi)){const tag=m[0];const isCss=m[1].toLowerCase()==='link';if(isCss&&!/\brel\s*=\s*["']?stylesheet/i.test(tag))continue;const attr=/\b(?:href|src)\s*=\s*(?:"([^"]*)"|'([^']*)')/i.exec(tag);const ref=attr?(attr[1]??attr[2]):'';if(!ref)continue;const path=resolve(ref);if(path===null||path===''||path in files)continue;
+   const before=text.slice(0,m.index);const line=before.split('\n').length;out.push({file:f,line,col:before.length-before.lastIndexOf('\n'),severity:'warning',message:`${isCss?'Stylesheet':'Script'} not found in the project: ${ref}`});}}
+ return out;}
 /** Lints every project file, errors first, capped so a broken minified bundle cannot flood the panel. */
 export function projectProblems(files:Readonly<Record<string,string>>):Problem[]{
- const all:Problem[]=[];for(const f of Object.keys(files).sort())all.push(...computeDiagnostics(f,files[f]).slice(0,50));
+ const all:Problem[]=[];for(const f of Object.keys(files).sort())all.push(...computeDiagnostics(f,files[f]).slice(0,50));all.push(...referenceProblems(files));
  return all.sort((a,b)=>(a.severity===b.severity?0:a.severity==='error'?-1:1)).slice(0,500);}
