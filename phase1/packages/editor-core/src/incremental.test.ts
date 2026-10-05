@@ -6,7 +6,7 @@ let seed=12345;const rnd=()=>{seed=(seed*1103515245+12345)&0x7fffffff;return see
 const pick=<T>(a:T[])=>a[Math.floor(rnd()*a.length)];
 const frags=['text','<b>x</b>','<div class="a">y</div>','<span>z</span>','</div>','<p>open','<section><h2>t</h2></section>','<ul><li>a<li>b</ul>','<br>','<!-- c -->','&amp; ent','<table><tr><td>c</td></tr></table>','<div>','<img src="a.png">','<a href="#">l</a>','<script>var a=1</script>','</p>',' ','\n','<custom-el>q</custom-el>','<svg><circle/></svg>','<b><p>mis</b>x</p>','<input value="v">'];
 const base=`<!doctype html><html><head><title>t</title><style>.a{color:red}</style></head><body>\n<main id="m"><section class="s"><h2>One</h2><p>Para <em>x</em></p><div><span>in</span><div class="deep">d</div></div></section>\n<section><ul><li>a</li><li>b</li></ul></section></main>\n<footer>f &amp; g</footer></body></html>`;
-for(const s0 of [12345,777,99991,4242,31337])test(`partial reparse equals full reparse over random edits (seed ${s0})`,()=>{seed=s0;
+for(const s0 of [12345,777,99991,4242,31337,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15])test(`partial reparse equals full reparse over random edits (seed ${s0})`,()=>{seed=s0;
  EditorProject.incremental.enabled=true;EditorProject.incremental.verify=true;EditorProject.incremental.hits=0;EditorProject.incremental.misses=0;
  try{
   for(let round=0;round<60;round++){

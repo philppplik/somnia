@@ -1,4 +1,9 @@
 import { parse,parseFragment, type DefaultTreeAdapterMap } from 'parse5';
+const EP=Symbol('shiftEpoch');
+// Strict tag grammar for the partial reparse: quoted attribute values must be closed, otherwise the full parser decides.
+const ATTRS='(?:\\s+[^\\s"\'<>\\/=]+(?:\\s*=\\s*(?:"[^"<>]*"|\'[^\'<>]*\'|[^\\s"\'<>=`]+))?)*\\s*';
+const TAG_G=new RegExp('<\\/?[a-zA-Z][a-zA-Z0-9-]*'+ATTRS+'\\/?>','g');
+const TAG_CAP=new RegExp('<(\\/?)([a-zA-Z][a-zA-Z0-9-]*)'+ATTRS+'(\\/?)>','g');
 const randomUUID = () => globalThis.crypto.randomUUID();
 export type Origin = 'canvas' | 'code' | 'history' | 'external' | 'internal';
 export interface EditorNode { id:string; tag:string; attrs:Record<string,string>; children:EditorNode[]; from:number; to:number; contentFrom:number; contentTo:number; locked:boolean; hidden:boolean }
@@ -66,6 +71,7 @@ export class EditorProject {
   this.trees[file]=walk(root.childNodes);this.bindings[file]=bindings;this.roots[file]=root;
  }
 
+ private static epoch=0;
  private static SAFE_CONTAINERS=new Set(['body','div','section','main','article','aside','nav','header','footer','ul','ol','blockquote','figure','span']);
  private static UNSAFE_INNER=/<\s*\/?\s*(script|style|textarea|title|template|table|caption|colgroup|col|thead|tbody|tfoot|tr|td|th|svg|math|select|optgroup|option|datalist|plaintext|noscript|iframe|xmp|noembed|noframes|form|button|html|head|body|frameset|frame|nobr|applet|marquee|object|input|keygen|image|isindex|listing|pre|rb|rp|rt|rtc|ruby|dl|dd|dt|fieldset|legend|label|output|!doctype|portal|slot|search)\b|<\?|<!\[CDATA|&/i;
  /** Reparse only the element whose content the patch lies in. Returns false (caller does a full reparse) when it cannot prove the result equals a full parse. Never throws on unusual input. */
@@ -87,9 +93,9 @@ export class EditorProject {
   const plain=(txt:string):boolean=>{
    if(EditorProject.UNSAFE_INNER.test(txt))return false;
    // Every '<' must start a plain tag or a complete comment; anything odd (e.g. '<div<div>') goes to the full parser.
-   if(/</.test(txt.replace(/<!--(?:(?!-->)[\s\S])*-->/g,'\u0000').replace(/<\/?[a-zA-Z][a-zA-Z0-9-]*(?:\s[^<>]*)?>/g,'')))return false;
+   if(/</.test(txt.replace(/<!--(?:(?!-->)[\s\S])*-->/g,'\u0000').replace(TAG_G,'')))return false;
    const stack:string[]=[target!.tag];
-   for(const m of txt.replace(/<!--(?:(?!-->)[\s\S])*-->/g,'\u0000').matchAll(/<(\/?)([a-zA-Z][a-zA-Z0-9-]*)(?:\s[^<>]*)?(\/?)>/g)){
+   for(const m of txt.replace(/<!--(?:(?!-->)[\s\S])*-->/g,'\u0000').matchAll(TAG_CAP)){
     const k=m[2].toLowerCase();
     if(m[1]){if(stack.length<=1||stack[stack.length-1]!==k)return false;stack.pop();continue;}
     if(VOID.has(k))continue;
@@ -111,8 +117,11 @@ export class EditorProject {
   const base=target.contentFrom;
   // 1. shift every location at or after the old range end (parse5 tree, includes text nodes and ancestors' end tags)
   const shift=(o:number)=>o>=p.to?o+delta:o;
-  const seen=new WeakSet<object>();const shiftLoc=(l:any)=>{if(!l||seen.has(l))return;seen.add(l);if(typeof l.startOffset==='number'){l.startOffset=shift(l.startOffset);l.endOffset=shift(l.endOffset);}if(l.startTag)shiftLoc(l.startTag);if(l.endTag)shiftLoc(l.endTag);if(l.attrs)for(const k in l.attrs)shiftLoc(l.attrs[k]);};
-  const walkP=(n:any)=>{if(n===el){/* children replaced below; the container's own start tag lies before the range and must not move */const l=n.sourceCodeLocation;l.endOffset=shift(l.endOffset);shiftLoc(l.endTag);return;}shiftLoc(n.sourceCodeLocation);if(n.childNodes)for(const c of n.childNodes)walkP(c);};
+  const d=delta,pt=p.to,epoch=++EditorProject.epoch;
+  /** parse5 can share one location object between elements (reconstructed formatting elements), so each object moves exactly once. */
+  const mv=(o:any)=>{if(o[EP]===epoch)return;o[EP]=epoch;if(o.startOffset>=pt)o.startOffset+=d;if(o.endOffset>=pt)o.endOffset+=d;};
+  const shiftLoc=(l:any)=>{if(!l)return;mv(l);const st=l.startTag;if(st)mv(st);const en=l.endTag;if(en)mv(en);const at=l.attrs;if(at)for(const k in at)mv(at[k]);const sa=st?.attrs;if(sa&&sa!==at)for(const k in sa)mv(sa[k]);};
+  const walkP=(n:any)=>{if(n===el){/* children replaced below; the container's own start tag lies before the range and must not move */const l=n.sourceCodeLocation;l.endOffset=shift(l.endOffset);shiftLoc(l.endTag);return;}const l=n.sourceCodeLocation;if(l&&l.endOffset<p.from)return; /* ends before the range: nothing inside moves */shiftLoc(l);if(n.childNodes)for(const c of n.childNodes)walkP(c);};
   walkP(root);
   // 2. drop old bindings inside the container, remember nothing else
   const dropB=(ns:EditorNode[])=>{for(const n of ns){this.bindings[p.file].delete(n.id);dropB(n.children);}};dropB(target.children);
@@ -121,7 +130,7 @@ export class EditorProject {
   const absWalk=(n:any)=>{abs(n.sourceCodeLocation);if(n.childNodes)for(const c of n.childNodes)absWalk(c);};
   for(const c of frag.childNodes)absWalk(c);
   (el as any).childNodes=frag.childNodes;for(const c of frag.childNodes)(c as any).parentNode=el;
-  const byPos=new Map(hints.map(x=>[x.from+':'+x.tag,x.id]));
+  const hi=base+inner.length;const byPos=new Map(hints.filter(x=>x.from>=base&&x.from<=hi).map(x=>[x.from+':'+x.tag,x.id]));
   const used=new Set<string>();
   const build=(ns:DefaultTreeAdapterMap['node'][]):EditorNode[]=>ns.flatMap(n=>{
    if(!isElement(n))return [];const loc=n.sourceCodeLocation;const kids=build(n.childNodes);
@@ -132,7 +141,7 @@ export class EditorProject {
   });
   const kids=build(frag.childNodes as never);
   // 4. tree: shift all nodes after the range and graft the new children of the container
-  const shiftT=(ns:EditorNode[])=>{for(const n of ns){n.from=shift(n.from);n.to=shift(n.to);n.contentFrom=shift(n.contentFrom);n.contentTo=shift(n.contentTo);if(n.id!==target!.id)shiftT(n.children);}};
+  const shiftT=(ns:EditorNode[])=>{for(const n of ns){if(n.to<p.from)continue;n.from=shift(n.from);n.to=shift(n.to);n.contentFrom=shift(n.contentFrom);n.contentTo=shift(n.contentTo);if(n.id!==target!.id)shiftT(n.children);}};
   const targetNode=(()=>{let r:EditorNode|undefined;const w=(ns:EditorNode[])=>{for(const n of ns){if(n.id===target!.id){r=n;return;}if(!r)w(n.children);}};w(tree);return r;})();
   if(!targetNode)return false;
   const keepFrom=targetNode.from,keepCF=targetNode.contentFrom;shiftT(tree);targetNode.from=keepFrom;targetNode.contentFrom=keepCF;targetNode.children=kids;
