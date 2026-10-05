@@ -1,4 +1,5 @@
 import en from '../locales/en.json';
+import de from '../locales/de.json';
 /**
  * Small in-house i18n layer (no dependency, no network).
  * Keys are flat strings. Plurals use `_one` / `_other` suffixes picked with Intl.PluralRules.
@@ -7,9 +8,9 @@ import en from '../locales/en.json';
 export type Catalogue = Record<string, string>;
 export const BASE_LOCALE = 'en';
 /** Languages with a catalogue. Add a file in src/locales and an entry here. */
-export const CATALOGUES: Record<string, Catalogue> = {en};
+export const CATALOGUES: Record<string, Catalogue> = {en, de};
 /** Native names for the language picker. */
-export const LOCALE_NAMES: Record<string, string> = {en:'English'};
+export const LOCALE_NAMES: Record<string, string> = {en:'English', de:'Deutsch'};
 export const LOCALE_KEY = 'somnia.locale.v1';
 export const SYSTEM = 'system';
 
@@ -58,3 +59,5 @@ export function translate(locale: string, key: string, params?: Params): string 
  return params ? msg.replace(/\{(\w+)\}/g, (m, k) => (k in params ? String(params[k]) : m)) : msg;
 }
 export const t = (key: string, params?: Params) => translate(current, key, params);
+/** Translated text if the key exists in any catalogue, otherwise the given English fallback (used for commands registered with literal titles). */
+export const tOr = (key: string, fallback: string) => (key in CATALOGUES[current] || key in CATALOGUES[BASE_LOCALE]) ? translate(current, key) : fallback;

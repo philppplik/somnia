@@ -1,3 +1,4 @@
+import {tOr} from './i18n';
 import {openExternal,REPO_URL} from './openExternal';
 import {formatCode,langFor} from './format';
 import {getActiveEditor,transformSelection} from './editorBridge';
@@ -18,7 +19,7 @@ const SC_KEY='somnia.shortcuts.v1';
 export function shortcutOverrides():Record<string,string>{try{const v=JSON.parse(localStorage.getItem(SC_KEY)||'{}');return v&&typeof v==='object'&&!Array.isArray(v)?Object.fromEntries(Object.entries(v).filter(([,x])=>typeof x==='string')) as Record<string,string>:{};}catch{return{};}}
 export function setShortcutOverride(id:string,shortcut:string|null){const o=shortcutOverrides();if(shortcut===null)delete o[id];else o[id]=shortcut;localStorage.setItem(SC_KEY,JSON.stringify(o));window.dispatchEvent(new Event('somnia:shortcuts-changed'));}
 export const defaultShortcut=(id:string)=>registry.get(id)?.shortcut;
-export const listCommands=()=>{const o=shortcutOverrides();return [...registry.values()].map(c=>id_in(o,c.id)?{...c,shortcut:o[c.id]||undefined}:c);};
+export const listCommands=()=>{const o=shortcutOverrides();return [...registry.values()].map(c=>{const t={...c,title:tOr(`cmd.${c.id}`,c.title)};return id_in(o,c.id)?{...t,shortcut:o[c.id]||undefined}:t;});};
 const id_in=(o:Record<string,string>,id:string)=>Object.prototype.hasOwnProperty.call(o,id);
 /** Turns a keydown into a shortcut string like Mod+Shift+K, or null for bare modifier presses. */
 export function shortcutFromEvent(e:KeyboardEvent):string|null{
