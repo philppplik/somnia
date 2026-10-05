@@ -7,6 +7,7 @@ import { connectEditorProject, applyOperations } from './store/appStore';
 import './styles/global.css';
 import './styles/bento.css';
 import {isTauri} from '@tauri-apps/api/core';
+import {setStoreManaged} from './lib/updates';
 import {installDesktopAdapter} from './lib/desktopAdapter';
 import {installFileAdapter} from './lib/fileAdapter';
 import {createWebFsPort,webFsSupported} from './lib/webFsPort';
@@ -33,6 +34,7 @@ createRoot(document.getElementById('root')!).render(<StrictMode><App/></StrictMo
 if(!isTauri())installBeforeUnload(()=>getState().isDirty&&getState().storage!=='disk');
 if(import.meta.env.DEV)(window as unknown as {__somnia:object}).__somnia={requestClose,setSource:(file:string,text:string)=>applyOperations([{type:'replaceSource',file,text}] as never)};
 if(isTauri())document.documentElement.dataset.shell='desktop';
+if(isTauri())setStoreManaged(import('@tauri-apps/api/core').then(m=>m.invoke<boolean>('is_store_package')));
 if(isTauri())void installDesktopAdapter().catch(error=>console.error(error));
 else if(webFsSupported()&&!location.search.includes('fallback=zip'))void installFileAdapter(createWebFsPort()).catch(error=>console.error(error));
 else void installFileAdapter(createWebFsPort({...zipWebFsOptions(),canReconnect:false})).catch(error=>console.error(error));
