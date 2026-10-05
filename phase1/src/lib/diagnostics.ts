@@ -4,6 +4,7 @@ import {css} from '@codemirror/lang-css';
 import {javascript} from '@codemirror/lang-javascript';
 import {ensureSyntaxTree,syntaxTree} from '@codemirror/language';
 import type {Diagnostic} from '@codemirror/lint';
+import {a11yProblems} from './a11y';
 /** Syntax lint shared by the editor gutter and the Problems panel: reports parser error nodes and unclosed tags from the language tree. No network, no code execution. */
 export function lintState(state:EditorState):Diagnostic[]{const out:Diagnostic[]=[];const VOID=/^(area|base|br|col|embed|hr|img|input|link|meta|param|source|track|wbr)$/i,OPTIONAL=/^(p|li|dt|dd|tr|td|th|thead|tbody|tfoot|option|optgroup|colgroup|html|head|body)$/i;
  syntaxTree(state).iterate({enter:n=>{if(n.name==='Element'&&out.length<50){const kids=[];for(let c=n.node.firstChild;c;c=c.nextSibling)kids.push(c);const open=kids.find(k=>k.name==='OpenTag');const tag=open?state.sliceDoc(open.from,open.to).match(/^<\s*([A-Za-z][\w:-]*)/)?.[1]:undefined;if(open&&tag&&!VOID.test(tag)&&!OPTIONAL.test(tag)&&!kids.some(k=>k.name==='CloseTag'||k.name==='SelfClosingTag'||k.name==='MismatchedCloseTag')&&!/\/\s*>$/.test(state.sliceDoc(open.from,open.to)))out.push({from:open.from,to:open.to,severity:'warning',message:`Missing closing tag </${tag}>.`});}
@@ -35,5 +36,5 @@ export function accessibilityProblems(files:Readonly<Record<string,string>>):Pro
  return out;}
 /** Lints every project file, errors first, capped so a broken minified bundle cannot flood the panel. */
 export function projectProblems(files:Readonly<Record<string,string>>):Problem[]{
- const all:Problem[]=[];for(const f of Object.keys(files).sort())all.push(...computeDiagnostics(f,files[f]).slice(0,50));all.push(...referenceProblems(files),...accessibilityProblems(files));
+ const all:Problem[]=[];for(const f of Object.keys(files).sort())all.push(...computeDiagnostics(f,files[f]).slice(0,50));all.push(...referenceProblems(files),...accessibilityProblems(files),...a11yProblems(files));
  return all.sort((a,b)=>(a.severity===b.severity?0:a.severity==='error'?-1:1)).slice(0,500);}
