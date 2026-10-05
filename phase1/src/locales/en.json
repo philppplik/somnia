@@ -203,5 +203,20 @@
   "redesign.draftHint": "Saves memory-only project recovery data on this device. Does not write disk project files. Turning this off reduces crash recovery protection.",
   "redesign.lineNumbers": "Show line numbers",
   "redesign.autoIndent": "Automatic indentation on input",
-  "redesign.selectionScroll": "Scroll code to visual selection"
+  "redesign.selectionScroll": "Scroll code to visual selection",
+  "redesign.defaultViewport": "Default viewport for new projects",
+  "redesign.defaultZoom": "Default zoom for new projects (%)",
+  "canvasPref.grid": "Show canvas grid",
+  "canvasPref.resizeHandles": "Show resize handles",
+  "canvasPref.doubleClickEdit": "Double-click to edit text",
+  "canvasPref.shiftSelect": "Multiple selection with Shift",
+  "canvasPref.spacePan": "Space to pan canvas",
+  "canvasPref.gridSize": "Grid size (px)",
+  "canvasPref.gridColor": "Grid color",
+  "canvasPref.selectionColor": "Selection color",
+  "canvasPref.background": "Canvas background",
+  "canvasPref.selectionWidth": "Selection border width (px)",
+  "canvasPref.pageShadow": "Page shadow",
+  "redesign.soft": "Soft",
+  "redesign.strong": "Strong"
 }

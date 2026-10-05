@@ -1,3 +1,4 @@
+import { DEFAULT_CANVAS_PREFS, type CanvasPrefs } from "../lib/canvasPrefs";
 import { DEFAULT_WORKFLOW_PREFS } from "../lib/workflowPrefs";
 import { Pencil } from "lucide-react";
 import { DEFAULT_UI_PREFS } from "../lib/uiPrefs";
@@ -160,7 +161,12 @@ export function Settings() {
       );
     }
     if (name === "Canvas")
-      change({ zoom: 100, viewport: 1280, viewportHeight: 900 });
+      change({
+        canvasPrefs: { ...DEFAULT_CANVAS_PREFS },
+        zoom: 100,
+        viewport: 1280,
+        viewportHeight: 900,
+      });
     if (name === "Preview") change({ livePreview: false });
     if (name === "Updates") {
       const old = autoCheckEnabled();
@@ -389,6 +395,158 @@ export function Settings() {
                 })
               }
             />
+          </label>
+          <label>
+            {t("redesign.defaultViewport")}
+            <select
+              aria-label="Default canvas viewport"
+              value={state.canvasPrefs.defaultViewport}
+              onChange={(e) =>
+                change({
+                  canvasPrefs: {
+                    ...state.canvasPrefs,
+                    defaultViewport: Number(e.target.value),
+                  },
+                })
+              }
+            >
+              {[375, 768, 1280, 1440, 1920].map((v) => (
+                <option key={v} value={v}>
+                  {v}px
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            {t("redesign.defaultZoom")}
+            <input
+              type="number"
+              aria-label="Default canvas zoom"
+              min={25}
+              max={200}
+              value={state.canvasPrefs.defaultZoom}
+              onChange={(e) =>
+                change({
+                  canvasPrefs: {
+                    ...state.canvasPrefs,
+                    defaultZoom: Math.max(
+                      25,
+                      Math.min(200, Number(e.target.value) || 100),
+                    ),
+                  },
+                })
+              }
+            />
+          </label>
+          {(
+            [
+              "grid",
+              "resizeHandles",
+              "doubleClickEdit",
+              "shiftSelect",
+              "spacePan",
+            ] as const
+          ).map((key) => (
+            <label key={key}>
+              {t("canvasPref." + key)}
+              <input
+                type="checkbox"
+                aria-label={t("canvasPref." + key)}
+                checked={state.canvasPrefs[key]}
+                onChange={(e) =>
+                  change({
+                    canvasPrefs: {
+                      ...state.canvasPrefs,
+                      [key]: e.target.checked,
+                    },
+                  })
+                }
+              />
+            </label>
+          ))}
+          <label>
+            {t("canvasPref.gridSize")}
+            <input
+              type="number"
+              aria-label="Grid size"
+              min={2}
+              max={100}
+              value={state.canvasPrefs.gridSize}
+              onChange={(e) =>
+                change({
+                  canvasPrefs: {
+                    ...state.canvasPrefs,
+                    gridSize: Math.max(
+                      2,
+                      Math.min(100, Number(e.target.value) || 8),
+                    ),
+                  },
+                })
+              }
+            />
+          </label>
+          {(["gridColor", "selectionColor", "background"] as const).map(
+            (key) => (
+              <label key={key}>
+                {t("canvasPref." + key)}
+                <span className="settings-color-value">
+                  <code>{state.canvasPrefs[key]}</code>
+                  <input
+                    type="color"
+                    aria-label={t("canvasPref." + key)}
+                    value={state.canvasPrefs[key]}
+                    onChange={(e) =>
+                      change({
+                        canvasPrefs: {
+                          ...state.canvasPrefs,
+                          [key]: e.target.value,
+                        },
+                      })
+                    }
+                  />
+                </span>
+              </label>
+            ),
+          )}
+          <label>
+            {t("canvasPref.selectionWidth")}
+            <input
+              type="number"
+              aria-label="Selection border width"
+              min={1}
+              max={5}
+              value={state.canvasPrefs.selectionWidth}
+              onChange={(e) =>
+                change({
+                  canvasPrefs: {
+                    ...state.canvasPrefs,
+                    selectionWidth: Math.max(
+                      1,
+                      Math.min(5, Number(e.target.value) || 2),
+                    ),
+                  },
+                })
+              }
+            />
+          </label>
+          <label>
+            {t("canvasPref.pageShadow")}
+            <select
+              aria-label="Page shadow"
+              value={state.canvasPrefs.pageShadow}
+              onChange={(e) =>
+                change({
+                  canvasPrefs: {
+                    ...state.canvasPrefs,
+                    pageShadow: e.target.value as CanvasPrefs["pageShadow"],
+                  },
+                })
+              }
+            >
+              <option value="none">{t("set.sc.none")}</option>
+              <option value="soft">{t("redesign.soft")}</option>
+              <option value="strong">{t("redesign.strong")}</option>
+            </select>
           </label>
         </>
       )}

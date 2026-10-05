@@ -48,3 +48,9 @@ General now wires startup choice (restore local draft/welcome/blank), custom HTM
 Found and fixed a pre-existing starter lookup bug: `.replace('htm','html')` changed `.html` to `htmll`, so New blank file produced empty text. Anchored suffix conversion now returns the actual HTML starter for both .htm and .html.
 
 Verification: 278 core tests passed before starter regression added; new workflow e2e 2/2 passes after fix, draft restore/redesign 4/4 passed. Typecheck/build pass. Editing screenshot inspected. This tranche modifies SourceEditor.tsx (narrow preference changes), main.tsx, appStore, projectActions, structureCommands and fileOps; reconcile with encoding/media bundles.
+
+## Tranche 4
+
+Canvas: persistent defaults for new-project viewport/zoom, grid visibility/size/color, canvas background, selection color/border width, resize-handle visibility, double-click text editing, Shift multi-selection, Space-panning overlay and page shadow. Defaults apply when connecting a project. Shell overlay preferences do not modify HTML/CSS source. Current viewport/zoom controls remain distinct from new-project defaults.
+
+Verification: core 280/280, Canvas/settings/DnD e2e 15/15, typecheck/build pass. Canvas screenshot inspected. Changes to DesignCanvas.tsx need merging with animation/media worker updates.
