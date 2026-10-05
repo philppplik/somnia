@@ -40,3 +40,11 @@ Added real shell-only UI preferences: Inter-first vs system font stack, base UI 
 Added shortcut JSON export and bounded validated import (known command IDs, valid key combinations, 100KB limit). Import replaces overrides atomically after validation and is undoable. All remain under the existing Settings live/reset/undo flow.
 
 Verification: core 276/276, interface + redesign Playwright 6/6, production build/typecheck pass. Interface screenshot inspected for control visibility and scrolling. Native/Windows panel persistence still needs user verification.
+
+## Tranche 3
+
+General now wires startup choice (restore local draft/welcome/blank), custom HTML document title escaped safely, and optional element-delete confirmation. Editing category wires local memory-project recovery autosave and interval (1-300 seconds), explicitly described as recovery data rather than disk saving. Code editor now has live line-number, indent-on-input and visual-selection auto-scroll switches. Existing close-with-unsaved protection is not weakened or made optional.
+
+Found and fixed a pre-existing starter lookup bug: `.replace('htm','html')` changed `.html` to `htmll`, so New blank file produced empty text. Anchored suffix conversion now returns the actual HTML starter for both .htm and .html.
+
+Verification: 278 core tests passed before starter regression added; new workflow e2e 2/2 passes after fix, draft restore/redesign 4/4 passed. Typecheck/build pass. Editing screenshot inspected. This tranche modifies SourceEditor.tsx (narrow preference changes), main.tsx, appStore, projectActions, structureCommands and fileOps; reconcile with encoding/media bundles.

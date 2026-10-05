@@ -1,3 +1,5 @@
+import { DEFAULT_WORKFLOW_PREFS } from "../lib/workflowPrefs";
+import { Pencil } from "lucide-react";
 import { DEFAULT_UI_PREFS } from "../lib/uiPrefs";
 import { parseShortcutFile } from "../lib/shortcutTransfer";
 import { downloadText } from "../lib/exportProject";
@@ -134,7 +136,23 @@ export function Settings() {
         () => saveFormatPrefs(old),
       );
     }
+    if (name === "Editing")
+      change({
+        workflowPrefs: {
+          ...state.workflowPrefs,
+          draftAutosave: true,
+          draftSeconds: 3,
+        },
+      });
     if (name === "General") {
+      change({
+        workflowPrefs: {
+          ...state.workflowPrefs,
+          startup: "last",
+          documentTitle: "Untitled",
+          confirmDelete: false,
+        },
+      });
       const old = readLocalePref();
       preference(
         () => setLocalePref(SYSTEM),
@@ -201,6 +219,7 @@ export function Settings() {
     { name: "General", key: "general", group: "App", icon: SettingsIcon },
     { name: "Appearance", key: "appearance", group: "App", icon: Palette },
     { name: "Canvas", key: "canvas", group: "Editor", icon: Square },
+    { name: "Editing", key: "editing", group: "Editor", icon: Pencil },
     { name: "Code editor", key: "code", group: "Editor", icon: Code2 },
     { name: "Preview", key: "preview", group: "Workflow", icon: Eye },
     { name: "Shortcuts", key: "shortcuts", group: "Workflow", icon: Keyboard },
@@ -215,6 +234,59 @@ export function Settings() {
       <h2>{sectionTitle(section)}</h2>
       {section === "General" && (
         <>
+          <label title={t("redesign.startupHint")}>
+            {t("redesign.startup")}
+            <select
+              aria-label="On startup"
+              value={state.workflowPrefs.startup}
+              onChange={(e) =>
+                change({
+                  workflowPrefs: {
+                    ...state.workflowPrefs,
+                    startup: e.target.value as "last" | "welcome" | "blank",
+                  },
+                })
+              }
+            >
+              <option value="last">{t("redesign.startupLast")}</option>
+              <option value="welcome">{t("redesign.startupWelcome")}</option>
+              <option value="blank">{t("redesign.startupBlank")}</option>
+            </select>
+          </label>
+          <p>{t("redesign.startupHint")}</p>
+          <label>
+            {t("redesign.defaultTitle")}
+            <input
+              type="text"
+              aria-label="Default document title"
+              maxLength={160}
+              value={state.workflowPrefs.documentTitle}
+              onChange={(e) =>
+                change({
+                  workflowPrefs: {
+                    ...state.workflowPrefs,
+                    documentTitle: e.target.value,
+                  },
+                })
+              }
+            />
+          </label>
+          <label>
+            {t("redesign.confirmDelete")}
+            <input
+              type="checkbox"
+              aria-label="Confirm element deletion"
+              checked={state.workflowPrefs.confirmDelete}
+              onChange={(e) =>
+                change({
+                  workflowPrefs: {
+                    ...state.workflowPrefs,
+                    confirmDelete: e.target.checked,
+                  },
+                })
+              }
+            />
+          </label>
           <label>
             {t("settings.language")}
             <select
@@ -237,6 +309,48 @@ export function Settings() {
             </select>
           </label>
           <p>{t("settings.language.note")}</p>
+        </>
+      )}
+      {section === "Editing" && (
+        <>
+          <label title={t("redesign.draftHint")}>
+            {t("redesign.draftAutosave")}
+            <input
+              type="checkbox"
+              aria-label="Autosave local recovery draft"
+              checked={state.workflowPrefs.draftAutosave}
+              onChange={(e) =>
+                change({
+                  workflowPrefs: {
+                    ...state.workflowPrefs,
+                    draftAutosave: e.target.checked,
+                  },
+                })
+              }
+            />
+          </label>
+          <label>
+            {t("redesign.draftInterval")}
+            <input
+              type="number"
+              aria-label="Recovery draft interval"
+              min={1}
+              max={300}
+              value={state.workflowPrefs.draftSeconds}
+              onChange={(e) =>
+                change({
+                  workflowPrefs: {
+                    ...state.workflowPrefs,
+                    draftSeconds: Math.max(
+                      1,
+                      Math.min(300, Number(e.target.value) || 3),
+                    ),
+                  },
+                })
+              }
+            />
+          </label>
+          <p>{t("redesign.draftHint")}</p>
         </>
       )}
       {section === "Canvas" && (
@@ -1032,6 +1146,9 @@ export function Settings() {
                 ["closeBrackets", "Auto-close brackets and quotes"],
                 ["lint", "Show syntax problems in the code gutter"],
                 ["emmet", "Emmet abbreviations (Tab expands, e.g. ul>li*3)"],
+                ["lineNumbers", t("redesign.lineNumbers")],
+                ["autoIndent", t("redesign.autoIndent")],
+                ["selectionScroll", t("redesign.selectionScroll")],
               ] as const
             ).map(([k, l]) => (
               <label key={k}>
@@ -1119,6 +1236,7 @@ export function Settings() {
         </a>
         {[
           "General",
+          "Editing",
           "Appearance",
           "Code editor",
           "Canvas",

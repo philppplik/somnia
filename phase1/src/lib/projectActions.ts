@@ -1,3 +1,4 @@
+import {escapeTitle} from './workflowPrefs';
 /** Project level actions that do not need a disk port: open text files, new file, close an in-memory project. */
 import {EditorProject} from '@somnia/editor-core';
 import {applyOperations,closeCore,connectEditorProject,getState,openFileTab,patchState} from '../store/appStore';
@@ -24,7 +25,7 @@ export async function readFiles(list:FileList|File[]):Promise<IncomingFile[]>{re
 export function openFileDialog(){return new Promise<void>(resolve=>{const input=document.createElement('input');input.type='file';input.multiple=true;input.accept='.html,.htm,.css,.js,.json,.svg,.txt,.md,text/*';
  input.onchange=async()=>{if(input.files?.length)addTextFiles(await readFiles(input.files));resolve();};input.oncancel=()=>resolve();input.click();});}
 /** New file: a blank HTML page as the first file of a new in-memory project, or a new file in the open project. */
-export function newBlankFile(){const st=getState();if(st.coreConnected){const n=unique('untitled.html',Object.keys(st.files));applyOperations([{type:'createFile',file:n,text:starterFor('x.html')}]);openFileTab(n);return;}
- addTextFiles([{name:'index.html',text:starterFor('index.html')}]);}
+export function newBlankFile(){const st=getState();const blank=starterFor('index.html').replace('<title>New page</title>','<title>'+escapeTitle(st.workflowPrefs.documentTitle)+'</title>');if(st.coreConnected){const n=unique('untitled.html',Object.keys(st.files));applyOperations([{type:'createFile',file:n,text:blank}]);openFileTab(n);return;}
+ addTextFiles([{name:'index.html',text:blank}]);}
 /** Close an in-memory project (Close Project for disk projects goes through the file adapter). */
 export function closeMemoryProject(){clearDraft();closeCore();}

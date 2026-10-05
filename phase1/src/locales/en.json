@@ -189,5 +189,19 @@
   "redesign.subtle": "Subtle",
   "redesign.rememberPanels": "Remember sidebar and inspector widths",
   "redesign.exportShortcuts": "Export shortcuts (JSON)",
-  "redesign.importShortcuts": "Import shortcuts"
+  "redesign.importShortcuts": "Import shortcuts",
+  "set.section.editing": "Editing",
+  "redesign.startup": "On startup",
+  "redesign.startupLast": "Restore last local draft",
+  "redesign.startupWelcome": "Show welcome screen",
+  "redesign.startupBlank": "New blank project",
+  "redesign.startupHint": "Restores local unsaved drafts only, not disk folders. Choosing another start screen keeps your existing recovery draft until you edit a new project.",
+  "redesign.defaultTitle": "Default document title",
+  "redesign.confirmDelete": "Confirm element deletion",
+  "redesign.draftAutosave": "Autosave local recovery draft",
+  "redesign.draftInterval": "Recovery draft interval (seconds)",
+  "redesign.draftHint": "Saves memory-only project recovery data on this device. Does not write disk project files. Turning this off reduces crash recovery protection.",
+  "redesign.lineNumbers": "Show line numbers",
+  "redesign.autoIndent": "Automatic indentation on input",
+  "redesign.selectionScroll": "Scroll code to visual selection"
 }

@@ -189,5 +189,19 @@
   "redesign.subtle": "Dezent",
   "redesign.rememberPanels": "Sidebar- und Inspector-Breite merken",
   "redesign.exportShortcuts": "Tastenkürzel exportieren (JSON)",
-  "redesign.importShortcuts": "Tastenkürzel importieren"
+  "redesign.importShortcuts": "Tastenkürzel importieren",
+  "set.section.editing": "Bearbeiten",
+  "redesign.startup": "Beim Start",
+  "redesign.startupLast": "Letzten lokalen Entwurf öffnen",
+  "redesign.startupWelcome": "Willkommensbildschirm zeigen",
+  "redesign.startupBlank": "Neues leeres Projekt",
+  "redesign.startupHint": "Stellt nur lokale ungespeicherte Entwürfe wieder her, keine Ordner. Ein anderer Startbildschirm behält den Entwurf bis ein neues Projekt bearbeitet wird.",
+  "redesign.defaultTitle": "Standard-Dokumenttitel",
+  "redesign.confirmDelete": "Löschen von Elementen bestätigen",
+  "redesign.draftAutosave": "Lokalen Wiederherstellungsentwurf automatisch sichern",
+  "redesign.draftInterval": "Wiederherstellungsintervall (Sekunden)",
+  "redesign.draftHint": "Sichert Wiederherstellungsdaten für Projekte im Arbeitsspeicher auf diesem Gerät. Schreibt keine Projektdateien auf die Festplatte. Ausschalten reduziert den Schutz bei Abstürzen.",
+  "redesign.lineNumbers": "Zeilennummern anzeigen",
+  "redesign.autoIndent": "Beim Tippen automatisch einrücken",
+  "redesign.selectionScroll": "Code zur visuellen Auswahl scrollen"
 }
