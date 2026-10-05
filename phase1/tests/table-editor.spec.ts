@@ -1,0 +1,11 @@
+import {test,expect} from './fixtures';
+const doc='<!doctype html><html><head><title>t</title></head><body><section><h1>x</h1></section></body></html>';
+const run=async(page:any,q:string)=>{await page.keyboard.press('Control+k');await page.getByRole('combobox',{name:'Search commands'}).fill(q);await page.getByRole('option',{name:new RegExp(q,'i')}).first().click();};
+test('insert a table, add row and column from a selected cell, merge, then undo',async({page})=>{await page.goto('/');
+ await page.evaluate((d:string)=>(window as any).__somnia.setSource('index.html',d),doc);const frame=page.frameLocator('iframe[title="Sandboxed design preview"]');await expect(frame.locator('h1')).toHaveCount(1);
+ await page.getByRole('button',{name:'section',exact:true}).click();await run(page,'Insert table');
+ await expect(frame.locator('table th')).toHaveCount(3);await expect(frame.locator('table tbody tr')).toHaveCount(2);
+ await page.getByRole('button',{name:'td',exact:true}).first().click();await run(page,'Table: add row below');await expect(frame.locator('table tbody tr')).toHaveCount(3);
+ await page.getByRole('button',{name:'td',exact:true}).first().click();await run(page,'Table: add column right');await expect(frame.locator('table th')).toHaveCount(4);
+ await page.getByRole('button',{name:'td',exact:true}).first().click();await run(page,'Table: merge cell');await expect(frame.locator('td[colspan="2"]')).toHaveCount(1);
+ await page.keyboard.press('Control+z');await expect(frame.locator('td[colspan="2"]')).toHaveCount(0);await expect(frame.locator('table th')).toHaveCount(4);});

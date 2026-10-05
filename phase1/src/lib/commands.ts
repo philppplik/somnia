@@ -104,3 +104,7 @@ export async function applyFormatting(){const v=getActiveEditor();const file=get
   v.dispatch({changes:{from,to,insert:text},selection:{anchor:Math.min(from,from+text.length)}});v.focus();patchState({notice:whole?'Formatted the file.':'Formatted the selection.'});}
  catch(e){patchState({notice:`Could not format: ${(e instanceof Error?e.message:String(e)).split('\n')[0]}`});}}
 registerCommand({id:'edit.format',title:'Apply formatting',category:'Edit',shortcut:'Alt+Shift+F',allowInInput:true,keywords:['format','prettier','indent','beautify'],run:()=>applyFormatting()});
+
+const inTable=()=>getState().coreConnected&&!!getState().selectedElementId;
+registerCommand({id:'table.insert',title:'Insert table (3 x 3, header row, caption)',category:'Insert',keywords:['table','grid','rows','columns'],enabled:()=>getState().coreConnected,run:async()=>{(await import('./tableCommands')).insertTable(3,3);}});
+for(const [id,title,act] of [['row.above','Table: add row above','row.above'],['row.below','Table: add row below','row.below'],['row.delete','Table: delete row','row.delete'],['col.left','Table: add column left','col.left'],['col.right','Table: add column right','col.right'],['col.delete','Table: delete column','col.delete'],['header','Table: toggle header row','header'],['merge','Table: merge cell with right neighbour','merge']] as const)registerCommand({id:`table.${id}`,title,category:'Insert',keywords:['table','cell','row','column'],enabled:inTable,run:async()=>{(await import('./tableCommands')).tableAction(act);}});
