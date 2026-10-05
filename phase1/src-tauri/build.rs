@@ -3,6 +3,8 @@ fn main() {
     tauri_build::try_build(tauri_build::Attributes::new().app_manifest(
         tauri_build::AppManifest::new().commands(&[
             "choose_project",
+            "choose_file",
+            "is_store_package",
             "list_files",
             "read_file",
             "stage_edit",
