@@ -6,6 +6,7 @@
       "name": "Quiet Colors",
       "version": "1.0.0",
       "author": "Somnia",
+      "category": "Themes",
       "description": "A calm code theme with light and dark syntax colors. No code and no host permissions.",
       "repo": "https://github.com/philppplik/somnia",
       "download": "https://raw.githubusercontent.com/philppplik/somnia/phase1-foundation/docs/extensions/catalog/packages/quiet-colors-1.0.0.zip",
