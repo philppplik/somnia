@@ -1,8 +1,9 @@
-import {unzipSync,strFromU8} from 'fflate';
+import {unzipSync} from 'fflate';
+import {decodeFileBytes} from './textEncoding';
 import type {WebFsOptions} from './webFsPort';
 /** Firefox/Safari fallback (ADR-002): no folder access, so a ZIP is unpacked into an in-memory directory that the web port treats like a folder. Nothing reaches disk until the user exports a ZIP. */
 class MemFile{kind='file' as const;constructor(public text=''){}
- async getFile(){const t=this.text;return{text:async()=>t};}
+ async getFile(){const t=this.text;return{text:async()=>t,arrayBuffer:async()=>new TextEncoder().encode(t).buffer};}
  async createWritable(){let buf='';return{write:async(v:string)=>{buf=String(v);},close:async()=>{this.text=buf;}};}}
 export class MemDir{kind='directory' as const;items=new Map<string,MemDir|MemFile>();constructor(public name:string){}
  async getDirectoryHandle(n:string,o?:{create?:boolean}){let d=this.items.get(n);if(!d){if(!o?.create)throw new DOMException('missing','NotFoundError');d=new MemDir(n);this.items.set(n,d);}if(!(d instanceof MemDir))throw new DOMException('not a directory','TypeMismatchError');return d;}
@@ -19,7 +20,7 @@ export function dirFromZip(bytes:Uint8Array,name:string):MemDir{
   total+=data.length;if(total>MAX_BYTES)throw Error('ZIP is larger than 20 MB. Use a smaller project.');
   if(data.includes(0))continue;
   let dir=root;for(const p of parts.slice(0,-1)){let next=dir.items.get(p);if(!(next instanceof MemDir)){next=new MemDir(p);dir.items.set(p,next);}dir=next;}
-  dir.items.set(parts[parts.length-1],new MemFile(strFromU8(data)));
+  dir.items.set(parts[parts.length-1],new MemFile(decodeFileBytes(path,data).text));
  }
  return root;
 }

@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createWebFsPort,memoryJournal} from './webFsPort';
-class FakeFile{constructor(public text:string){}async getFile(){return{text:async()=>this.text};}async createWritable(){let buf='';const self=this;return{write:async(t:string)=>{buf=t;},close:async()=>{self.text=buf;}};}kind='file' as const}
+class FakeFile{constructor(public text:string){}async getFile(){return{text:async()=>this.text,arrayBuffer:async()=>new TextEncoder().encode(this.text).buffer};}async createWritable(){let buf='';const self=this;return{write:async(t:string)=>{buf=t;},close:async()=>{self.text=buf;}};}kind='file' as const}
 class FakeDir{kind='directory' as const;items=new Map<string,FakeDir|FakeFile>();constructor(public name:string){}
  async getDirectoryHandle(n:string,o?:{create?:boolean}){let d=this.items.get(n);if(!d){if(!o?.create)throw new DOMException('x','NotFoundError');d=new FakeDir(n);this.items.set(n,d);}if(!(d instanceof FakeDir))throw new DOMException('x','TypeMismatchError');return d;}
  async getFileHandle(n:string,o?:{create?:boolean}){let f=this.items.get(n);if(!f){if(!o?.create)throw new DOMException('x','NotFoundError');f=new FakeFile('');this.items.set(n,f);}if(!(f instanceof FakeFile))throw new DOMException('x','TypeMismatchError');return f;}

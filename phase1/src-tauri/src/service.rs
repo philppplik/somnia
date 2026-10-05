@@ -259,7 +259,7 @@ impl Project {
                     hash: Some(hash(&bytes)),
                 };
                 Ok((
-                    Some(String::from_utf8(bytes).map_err(|e| AppError::Invalid(e.to_string()))?),
+                    Some(decode_text(bytes)),
                     rev,
                 ))
             }
@@ -698,4 +698,58 @@ fn atomic_write(dir: &Dir, path: &Path, content: &[u8]) -> Result<()> {
     })();
     let _ = dir.remove_file(temp);
     result
+}
+
+/// Decodes file bytes as text without failing on legacy files: strips a UTF-8 BOM, reads UTF-16 with BOM,
+/// and falls back to Windows-1252 when the bytes are not valid UTF-8. Files are always saved as UTF-8.
+pub(crate) fn decode_text(bytes: Vec<u8>) -> String {
+    if bytes.starts_with(&[0xEF, 0xBB, 0xBF]) {
+        return String::from_utf8_lossy(&bytes[3..]).into_owned();
+    }
+    if bytes.starts_with(&[0xFF, 0xFE]) || bytes.starts_with(&[0xFE, 0xFF]) {
+        let le = bytes[0] == 0xFF;
+        let units: Vec<u16> = bytes[2..]
+            .chunks_exact(2)
+            .map(|c| if le { u16::from_le_bytes([c[0], c[1]]) } else { u16::from_be_bytes([c[0], c[1]]) })
+            .collect();
+        return String::from_utf16_lossy(&units);
+    }
+    match String::from_utf8(bytes) {
+        Ok(text) => text,
+        Err(e) => e.into_bytes().iter().map(|&b| cp1252_char(b)).collect(),
+    }
+}
+
+fn cp1252_char(b: u8) -> char {
+    const HIGH: [char; 32] = [
+        '\u{20AC}', '\u{81}', '\u{201A}', '\u{192}', '\u{201E}', '\u{2026}', '\u{2020}', '\u{2021}',
+        '\u{2C6}', '\u{2030}', '\u{160}', '\u{2039}', '\u{152}', '\u{8D}', '\u{17D}', '\u{8F}',
+        '\u{90}', '\u{2018}', '\u{2019}', '\u{201C}', '\u{201D}', '\u{2022}', '\u{2013}', '\u{2014}',
+        '\u{2DC}', '\u{2122}', '\u{161}', '\u{203A}', '\u{153}', '\u{9D}', '\u{17E}', '\u{178}',
+    ];
+    match b {
+        0x80..=0x9F => HIGH[(b - 0x80) as usize],
+        _ => b as char,
+    }
+}
+
+#[cfg(test)]
+mod decode_tests {
+    use super::decode_text;
+    #[test]
+    fn utf8_passes_through() {
+        assert_eq!(decode_text("Größe €".as_bytes().to_vec()), "Größe €");
+    }
+    #[test]
+    fn bom_is_stripped() {
+        assert_eq!(decode_text(vec![0xEF, 0xBB, 0xBF, b'M', 0xC3, 0xBC]), "Mü");
+    }
+    #[test]
+    fn windows_1252_falls_back() {
+        assert_eq!(decode_text(vec![b'M', 0xFC, b'l', b'l', b' ', 0xE4, 0xDF, b' ', 0x80]), "Müll äß €");
+    }
+    #[test]
+    fn utf16_le_bom() {
+        assert_eq!(decode_text(vec![0xFF, 0xFE, 0xFC, 0x00, b'b', 0x00]), "üb");
+    }
 }
