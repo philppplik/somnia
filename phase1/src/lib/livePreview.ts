@@ -8,6 +8,7 @@ export function buildPreviewDoc(files:Readonly<Record<string,string>>,active:str
  for(const el of doc.querySelectorAll('script')){
   if(!scripts){el.remove();continue;}
   const src=el.getAttribute('src');if(src){const f=resolve(active,src);const js=f?files[f]:null;if(js!=null){const s=doc.createElement('script');if(el.getAttribute('type'))s.setAttribute('type',el.getAttribute('type')!);s.textContent=esc(js);el.replaceWith(s);}else el.remove();}}
+ for(const el of doc.querySelectorAll('img[src]')){const f=resolve(active,el.getAttribute('src')||'');const svg=f&&/\.svg$/i.test(f)?files[f]:null;if(svg!=null)el.setAttribute('src','data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svg));}
  for(const el of doc.querySelectorAll('a[href],form')){if(el.localName==='form')el.setAttribute('onsubmit','return false');else el.setAttribute('href','#');}
  for(const a of ['target'])for(const el of doc.querySelectorAll(`[${a}]`))el.removeAttribute(a);
  const meta=doc.createElement('meta');meta.httpEquiv='Content-Security-Policy';meta.content=`default-src 'none'; script-src ${scripts?"'unsafe-inline'":"'none'"}; style-src 'unsafe-inline'; img-src data: blob:; font-src data:; connect-src 'none'; form-action 'none'; object-src 'none'; base-uri 'none'`;
