@@ -1,0 +1,15 @@
+import {test,expect} from './fixtures';
+import {showCode} from './helpers';
+test('diff split compares inside the editor, navigates changes and edits stay live',async({page})=>{await page.goto('/');await showCode(page);
+ await page.evaluate(()=>(window as any).__somnia.setSource('index.html','<!doctype html><html><head><title>t</title></head><body><h1>one</h1><p>two</p><p>three</p><p>four</p></body></html>'));
+ await expect(page.getByRole('dialog')).toHaveCount(0);
+ await page.getByRole('button',{name:'Toggle diff split'}).click();
+ const split=page.getByLabel('Diff split',{exact:true});await expect(split).toBeVisible();
+ await expect(split.getByLabel('Diff summary')).toContainText(/change/);
+ await split.getByRole('button',{name:'Next change'}).click();await split.getByRole('button',{name:'Previous change'}).click();
+ await split.getByLabel('Compare with').selectOption('file:styles.css');await expect(split.getByLabel('Diff summary')).toContainText(/change/);
+ await split.getByLabel('Compare with').selectOption('saved:index.html');
+ await split.getByLabel('Source code (diff split)').click();await page.keyboard.press('Control+End');await page.keyboard.type('<!-- hi -->');
+ await expect(split.locator('.cm-content').last()).toContainText('<!-- hi -->');
+ await split.getByRole('button',{name:'Close diff split'}).click();await expect(split).toHaveCount(0);
+ await expect(page.getByLabel('Source code')).toContainText('<!-- hi -->');});

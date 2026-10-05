@@ -82,7 +82,7 @@ export function attachKeyboardShortcuts(target:Window=window){
  target.addEventListener('keydown',listener);return()=>target.removeEventListener('keydown',listener);
 }
 
-registerCommand({id:'tools.diff',title:'Compare files (diff viewer)...',category:'Tools',keywords:['diff','compare','changes','saved version'],enabled:()=>getState().coreConnected,run:()=>patchState({diffDialog:true})});
+registerCommand({id:'tools.diff',title:'Toggle diff split (compare in editor)',category:'Tools',keywords:['diff','compare','changes','saved version'],enabled:()=>getState().coreConnected,run:()=>{const st=getState();patchState({diffSplit:!st.diffSplit,...(st.viewMode==='design'?{viewMode:'split' as const}:{})});}});
 registerCommand({id:'project.export',title:'Export project...',category:'Project',keywords:['zip','folder','single file','download'],enabled:()=>getState().coreConnected,run:()=>patchState({exportDialog:true})});
 registerCommand({id:'project.openFile',title:'Open file',category:'Project',keywords:['open','file'],run:()=>openFileDialog()});
 registerCommand({id:'project.newFile',title:'New blank page',category:'Project',keywords:['new','blank','file'],run:()=>newBlankFile()});
