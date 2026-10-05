@@ -2,6 +2,7 @@ import {useState} from 'react';
 import {useAppStore,patchState} from '../store/appStore';
 import {Button} from './ui/button';
 import * as cs from '../lib/componentSystem';
+import {VariantTools} from './VariantTools';
 import {loadLibrary,mutate,newId,selectedSource,insertVariant,switchVariant,findNode} from '../lib/componentActions';
 /** Component library with variants. Lives in the Components tab under the HTML elements. */
 export function ComponentSystemPanel(){
@@ -22,6 +23,7 @@ export function ComponentSystemPanel(){
    {s.coreConnected&&s.selectedElementId&&<Button variant="outline" aria-label={`Replace the selected block with ${c.name} ${v.name}`} onClick={()=>run(()=>switchVariant(c,v,mark))}>Replace selection</Button>}
    {v.id!==c.defaultVariantId&&<Button aria-label={`Make ${v.name} the default of ${c.name}`} onClick={()=>edit(l=>cs.setDefaultVariant(l,c.id,v.id))}>Make default</Button>}
    {c.variants.length>1&&<Button aria-label={`Remove variant ${v.name} from ${c.name}`} onClick={()=>run(()=>{if(window.confirm(`Remove variant ${v.name} from ${c.name}? Project files are unchanged.`))edit(l=>cs.removeVariant(l,c.id,v.id));})}>Remove</Button>}
+   <VariantTools component={c} variant={v} edit={edit} run={run}/>
   </div>)}
   <Button variant="outline" disabled={!s.coreConnected} onClick={()=>edit(l=>cs.addVariant(l,c.id,name,selectedSource(),newId),`Variant "${name.trim()}" added to ${c.name}.`)}>Add selection as variant</Button>
   <Button aria-label={`Rename ${c.name}`} onClick={()=>edit(l=>cs.renameComponent(l,c.id,name),`Renamed to "${name.trim()}".`)}>Rename</Button>

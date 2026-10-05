@@ -28,3 +28,14 @@ Library lives in this app profile only (not in the project, not synced). On firs
 - Switching replaces the whole block with the variant's HTML. Text edits made inside a placed block are lost on switch (Undo restores them).
 - Editing an existing variant from a changed block is not in the UI yet (`updateVariant` exists in the logic).
 - UI strings are hardcoded English.
+
+## Variant editing (branch comp/variant-editing)
+
+Per variant, in the Components tab:
+
+- **Edit**: opens the variant's HTML in a text box. "Use selected block" copies the currently selected source block into the box. Save is disabled while the HTML is empty, over 100 KB, does not start with a tag, or repeats an ID inside itself. Saving strips `data-somnia-*` marks. Blocks already placed in the project are not changed.
+- **Rename variant**: names must be unique inside the component (case-insensitive), 1-60 characters.
+- **Duplicate**: copies the variant right after the original as "<name> copy" (then "copy 2", ...). Respects the 8-variant limit.
+- **Compare**: line diff of this variant against another variant of the same component. Single long lines are split before each tag. Limit 600 lines per variant.
+
+Code: `phase1/src/lib/variantEditing.ts` (pure logic, Node tests), `phase1/src/components/VariantTools.tsx` (UI, new file). Only shared edit: two lines in `ComponentSystemPanel.tsx`. Tests: `src/lib/variantEditing.test.ts`, `tests/variant-editing.spec.ts`.
