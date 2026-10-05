@@ -77,6 +77,18 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         run: npm run tauri build -- --ci --config src-tauri/tauri.windows-alpha.conf.json --bundles nsis,msi
+      - name: Build unsigned MSIX for the Microsoft Store (experimental, does not fail CI yet)
+        id: msix
+        continue-on-error: true
+        shell: pwsh
+        run: ./scripts/make-msix.ps1
+      - name: Retain MSIX
+        if: steps.msix.outcome == 'success'
+        uses: actions/upload-artifact@v7
+        with:
+          name: somnia-msix-${{ github.sha }}
+          retention-days: 14
+          path: phase1/out/*.msix
       - name: Retain private Windows alpha
         if: always()
         uses: actions/upload-artifact@v7
