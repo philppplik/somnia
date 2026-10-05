@@ -25,7 +25,7 @@ export function idsIn(html:string):string[]{const out:string[]=[];const re=/<[a-
 export function idConflict(html:string,existing:Iterable<string>):string|null{const used=new Set(existing);const ids=idsIn(html);if(new Set(ids).size!==ids.length)return 'This block repeats an ID inside itself. Fix the ID in source before using it.';const dup=ids.find(id=>used.has(id));return dup?`This block would repeat the source ID "${dup}". Rename the ID in source first.`:null;}
 
 /** Removes Somnia marker attributes from the root tag so a saved copy never carries stale marks. */
-export function stripMarks(html:string):string{const r=rootOpenTag(html);if(!r)return html;const tag=html.slice(r.start,r.end).replace(/\s+data-somnia-(?:component|variant)\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)/g,'');return html.slice(0,r.start)+tag+html.slice(r.end);}
+export function stripMarks(html:string):string{const r=rootOpenTag(html);if(!r)return html;const tag=html.slice(r.start,r.end).replace(/\s+data-somnia-(?:component|variant|overrides)\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)/g,'');return html.slice(0,r.start)+tag+html.slice(r.end);}
 
 /** Adds the marker attributes to the root tag so the editor can later tell which component/variant a block came from. */
 export function markInstance(html:string,componentId:string,variantId:string):string{const clean=stripMarks(html);const r=rootOpenTag(clean);if(!r)return clean;const tag=clean.slice(r.start,r.end);const selfClose=/\/\s*>$/.test(tag);const cut=r.end-(selfClose?(/\s*\/>$/.exec(tag)![0].length):1);return clean.slice(0,cut)+` ${ATTR_COMPONENT}="${componentId}" ${ATTR_VARIANT}="${variantId}"`+clean.slice(cut);}

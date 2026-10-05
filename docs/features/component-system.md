@@ -25,7 +25,7 @@ Branch: `feature/component-system`. Status: Draft.
 Library lives in this app profile only (not in the project, not synced). On first load, the old v1 list (`somnia.components.v1`) is copied into v2, each old block becoming a component with a "Default" variant. v1 is not deleted.
 
 ## Known limits
-- Switching replaces the whole block with the variant's HTML. Text edits made inside a placed block are lost on switch (Undo restores them).
+- Switching replaces the block structure. The props/slots slice preserves edits to named fields; unbound edits are still lost (Undo restores them). See [Component props and slots](component-props-slots.md).
 - Editing an existing variant from a changed block is not in the UI yet (`updateVariant` exists in the logic).
 - UI strings are hardcoded English.
 
