@@ -2,7 +2,7 @@
   "name": "@somnia/desktop-shell",
   "version": "0.1.0",
   "license": "MIT",
-  "somniaRelease": "9.17.0",
+  "somniaRelease": "9.19.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -12,8 +12,10 @@
     "preview": "vite preview --host 127.0.0.1",
     "test": "playwright test",
     "bench": "tsx scripts/bench.ts",
-    "test:core": "tsx --test packages/editor-core/src/*.test.ts src/lib/*.test.ts src/lib/extensions/*.test.ts",
+    "ext": "tsx scripts/somnia-ext.ts",
+    "test:core": "tsx --test packages/editor-core/src/*.test.ts src/lib/*.test.ts src/lib/extensions/*.test.ts src/lib/collab/*.test.ts",
     "test:e2e": "playwright test",
+    "test:updater": "node --test scripts/updater-e2e/lib.test.mjs",
     "typecheck": "tsc --noEmit",
     "tauri": "tauri"
   },
@@ -24,6 +26,7 @@
     "@codemirror/lang-css": "^6.3.1",
     "@codemirror/lang-html": "^6.4.12",
     "@codemirror/lang-javascript": "^6.2.5",
+    "@codemirror/lang-json": "^6.0.2",
     "@codemirror/language": "^6.12.4",
     "@codemirror/lint": "^6.9.7",
     "@codemirror/merge": "^6.12.2",
@@ -40,10 +43,14 @@
     "clsx": "^2.1.1",
     "fflate": "^0.8.3",
     "lucide-react": "1.49.0",
+    "parse5": "8.0.0",
     "prettier": "^3.9.9",
     "react": "19.3.0",
     "react-dom": "19.3.0",
-    "tailwind-merge": "^3.7.0"
+    "tailwind-merge": "^3.7.0",
+    "y-codemirror.next": "^0.3.6",
+    "y-protocols": "^1.0.7",
+    "yjs": "^13.6.33"
   },
   "devDependencies": {
     "@playwright/test": "1.63.0",

@@ -111,3 +111,4 @@
 .cm-editor .cm-activeLine{background:color-mix(in srgb,var(--accent) 7%,transparent)}
 
 .canvas-drop-hint{position:absolute;z-index:3;background:rgba(99,102,241,.85);border-radius:2px}.canvas-drop-hint[data-zone=inside]{background:rgba(99,102,241,.15);outline:2px dashed #6366f1;outline-offset:-2px}
+.align-toolbar{position:absolute;top:8px;left:50%;transform:translateX(-50%);z-index:5;display:flex;align-items:center;gap:2px;padding:3px;background:var(--bg-base);border:1px solid var(--border,#d4d4d8);border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,.12)}.align-toolbar button{display:grid;place-items:center;width:28px;height:28px;padding:0;border:0;border-radius:8px;background:none}.align-toolbar button:hover:not(:disabled){background:rgba(99,102,241,.12)}.align-toolbar button:disabled{opacity:.35}.align-sep{width:1px;height:18px;background:currentColor;opacity:.2;margin:0 3px}

@@ -1,0 +1,10 @@
+{
+  "id": "somnia.quiet-colors",
+  "name": "Quiet Colors",
+  "version": "1.0.0",
+  "apiVersion": 1,
+  "permissions": [],
+  "contributes": {
+    "codeThemes": [{"id":"quiet","label":"Quiet Colors","light":{"--syntax-tag":"#315b64","--syntax-keyword":"#77548a","--syntax-string":"#467047","--syntax-number":"#986331"},"dark":{"--syntax-tag":"#8cc6cc","--syntax-keyword":"#d4afe4","--syntax-string":"#aad3a9","--syntax-number":"#dfba8f"}}]
+  }
+}

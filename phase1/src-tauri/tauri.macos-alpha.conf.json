@@ -1,1 +1,1 @@
-{"bundle":{"active":true,"targets":["dmg"]},"app":{"windows":[{"label":"main","dragDropEnabled":false,"title":"Somnia","decorations":false,"shadow":true,"width":1440,"height":900,"minWidth":960,"minHeight":600,"center":true}]}}
+{"bundle":{"active":true,"targets":["dmg"]},"app":{"windows":[{"label":"main","dragDropEnabled":true,"title":"Somnia","decorations":false,"shadow":true,"width":1440,"height":900,"minWidth":960,"minHeight":600,"center":true}]}}

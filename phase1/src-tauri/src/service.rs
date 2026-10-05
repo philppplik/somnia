@@ -145,7 +145,7 @@ pub struct Project {
     only: Option<String>,
 }
 
-/// Only called by the native picker adapter, never with a renderer-supplied root.
+/// Only called by the native picker or OS drop grant adapter, never with a renderer-supplied root.
 impl Project {
     pub fn open(root: &Path, recovery_base: &Path) -> Result<Self> {
         Self::open_inner(root, recovery_base, None)
