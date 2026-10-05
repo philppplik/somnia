@@ -23,3 +23,8 @@ Status: design, not built. Today the canvas is an editing surface: scripts, exte
 
 ## Tests
 Playwright: a page with a throwing script shows the overlay; edit refreshes the preview; scripts cannot reach the parent (no same-origin) or the network.
+
+## Implemented (v9.13)
+- `src/lib/livePreview.ts` builds the srcDoc (inlines project CSS/JS by relative path, strips base/iframe/object/embed, neutralizes links and forms, CSP, error and scroll bridge).
+- `src/components/LivePreview.tsx`: command "Toggle live preview"; replaces the design canvas while open. One-time choice per project (stored in localStorage as `somnia.preview.scripts.<project>`): "Run scripts" or "Preview without scripts". Auto refresh (600 ms debounce), Refresh button, scripts toggle, error overlay (script errors, unhandled rejections, failed resource loads), scroll restored after refresh, frame follows the viewport width and zoom.
+- Not yet: device frame artwork (frame is a rounded border), line mapping from preview errors to source, images from project files (only data: and blob: allowed by CSP).
