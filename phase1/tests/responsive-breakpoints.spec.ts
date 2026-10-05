@@ -33,6 +33,5 @@ test('explicit max-width controls inspector and resize rules, not the preview pr
  const handle=page.getByRole('button',{name:'Resize selection',exact:true});const b=await handle.boundingBox();if(!b)throw Error('No resize handle');
  await page.mouse.move(b.x+b.width/2,b.y+b.height/2);await page.mouse.down();await page.mouse.move(b.x+b.width/2+20,b.y+b.height/2+15,{steps:4});await page.mouse.up();
  const css=await page.evaluate(async()=> (await import(/* @vite-ignore */ '/src/store/appStore.ts')).getState().files['somnia-styles.css']);expect(css).toContain('@media (max-width: 768px)');expect(css).not.toContain('600px');
- await page.screenshot({path:'/downloads/responsive-panel.png'});
- await page.evaluate(()=>document.documentElement.dataset.theme='dark');await page.screenshot({path:'/downloads/responsive-panel-dark.png'});
+ await page.evaluate(()=>document.documentElement.dataset.theme='dark');
 });
