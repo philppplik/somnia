@@ -51,5 +51,9 @@
  "cmd.edit.wrap": "Ausgewähltes Element in ein div einpacken",
  "cmd.edit.unwrap": "Ausgewähltes Element auspacken (Inhalt behalten)",
  "cmd.project.open": "Ordner öffnen",
- "cmd.project.save": "Projekt speichern"
+ "cmd.project.save": "Projekt speichern",
+ "welcome.title": "Willkommen bei",
+ "welcome.start": "Jetzt gestalten",
+ "welcome.changelog": "Changelog ansehen",
+ "welcome.aria": "Willkommen bei Somnia v{version}"
 }

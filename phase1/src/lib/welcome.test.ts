@@ -1,0 +1,11 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {shouldShowWelcome,markWelcomeSeen,changelogUrl,WELCOME_KEY} from './welcome';
+const mem=(init:Record<string,string>={})=>{const m=new Map(Object.entries(init));return {getItem:(k:string)=>m.get(k)??null,setItem:(k:string,v:string)=>void m.set(k,v)};};
+test('first install: no popup',()=>{assert.equal(shouldShowWelcome(mem(),'10.5.1'),false);});
+test('update from a build that predates the popup: popup',()=>{assert.equal(shouldShowWelcome(mem({'somnia.updateCheck.last':'{}'}),'10.5.1'),true);});
+test('update from an older seen version: popup',()=>{assert.equal(shouldShowWelcome(mem({[WELCOME_KEY]:'10.5.0'}),'10.5.1'),true);});
+test('same version: no popup',()=>{assert.equal(shouldShowWelcome(mem({[WELCOME_KEY]:'10.5.1'}),'10.5.1'),false);});
+test('marking as seen makes it show only once',()=>{const s=mem({'somnia.updateCheck.v1':'on'});assert.equal(shouldShowWelcome(s,'10.5.1'),true);markWelcomeSeen(s,'10.5.1');assert.equal(shouldShowWelcome(s,'10.5.1'),false);assert.equal(shouldShowWelcome(s,'10.6.0'),true);});
+test('broken storage never throws',()=>{const bad={getItem:()=>{throw Error('x');},setItem:()=>{throw Error('x');}};assert.equal(shouldShowWelcome(bad,'1.0.0'),false);assert.doesNotThrow(()=>markWelcomeSeen(bad,'1.0.0'));});
+test('changelog url points at the release tag',()=>{assert.equal(changelogUrl('https://github.com/philppplik/somnia','10.5.1'),'https://github.com/philppplik/somnia/releases/tag/v10.5.1');assert.equal(changelogUrl('https://github.com/philppplik/somnia','v10.5.1'),'https://github.com/philppplik/somnia/releases/tag/v10.5.1');});

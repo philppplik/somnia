@@ -48,6 +48,12 @@
   "homepage": "https://github.com/codemirror/lang-javascript"
  },
  {
+  "name": "@codemirror/lang-json",
+  "version": "6.0.2",
+  "license": "MIT",
+  "homepage": "https://github.com/codemirror/lang-json"
+ },
+ {
   "name": "@codemirror/language",
   "version": "6.12.4",
   "license": "MIT",
@@ -58,6 +64,12 @@
   "version": "6.9.7",
   "license": "MIT",
   "homepage": "https://code.haverbeke.berlin/codemirror/lint"
+ },
+ {
+  "name": "@codemirror/merge",
+  "version": "6.12.2",
+  "license": "MIT",
+  "homepage": "https://code.haverbeke.berlin/codemirror/merge"
  },
  {
   "name": "@codemirror/search",
@@ -162,6 +174,12 @@
   "homepage": "https://code.haverbeke.berlin/lezer/javascript"
  },
  {
+  "name": "@lezer/json",
+  "version": "1.0.3",
+  "license": "MIT",
+  "homepage": "https://github.com/lezer-parser/json"
+ },
+ {
   "name": "@lezer/lr",
   "version": "1.4.10",
   "license": "MIT",
@@ -184,6 +202,18 @@
   "version": "2.12.1",
   "license": "Apache-2.0 OR MIT",
   "homepage": "https://github.com/tauri-apps/tauri#readme"
+ },
+ {
+  "name": "@tauri-apps/plugin-process",
+  "version": "2.4.0",
+  "license": "MIT OR Apache-2.0",
+  "homepage": ""
+ },
+ {
+  "name": "@tauri-apps/plugin-updater",
+  "version": "2.13.1",
+  "license": "MIT OR Apache-2.0",
+  "homepage": ""
  },
  {
   "name": "class-variance-authority",
@@ -210,16 +240,46 @@
   "homepage": "https://github.com/emmetio/emmet#readme"
  },
  {
+  "name": "entities",
+  "version": "6.0.1",
+  "license": "BSD-2-Clause",
+  "homepage": "git://github.com/fb55/entities"
+ },
+ {
   "name": "fflate",
   "version": "0.8.3",
   "license": "MIT",
   "homepage": "https://101arrowz.github.io/fflate"
  },
  {
+  "name": "isomorphic.js",
+  "version": "0.2.5",
+  "license": "MIT",
+  "homepage": "https://github.com/dmonad/isomorphic.js#readme"
+ },
+ {
+  "name": "lib0",
+  "version": "0.2.119",
+  "license": "MIT",
+  "homepage": "https://github.com/dmonad/lib0#readme"
+ },
+ {
   "name": "lucide-react",
   "version": "1.49.0",
   "license": "ISC",
   "homepage": "https://lucide.dev"
+ },
+ {
+  "name": "Momo Signature (font)",
+  "version": "1.0",
+  "license": "OFL-1.1",
+  "homepage": "https://github.com/typeassociates/MomoSignature"
+ },
+ {
+  "name": "parse5",
+  "version": "8.0.0",
+  "license": "MIT",
+  "homepage": "https://parse5.js.org"
  },
  {
   "name": "prettier",
@@ -274,5 +334,23 @@
   "version": "2.2.8",
   "license": "MIT",
   "homepage": "https://github.com/marijnh/w3c-keyname#readme"
+ },
+ {
+  "name": "y-codemirror.next",
+  "version": "0.3.6",
+  "license": "MIT",
+  "homepage": "https://github.com/yjs/y-codemirror.next#readme"
+ },
+ {
+  "name": "y-protocols",
+  "version": "1.0.7",
+  "license": "MIT",
+  "homepage": "https://github.com/yjs/y-protocols#readme"
+ },
+ {
+  "name": "yjs",
+  "version": "13.6.33",
+  "license": "MIT",
+  "homepage": "https://docs.yjs.dev"
  }
 ]
