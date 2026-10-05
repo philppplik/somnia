@@ -1,0 +1,17 @@
+{
+  "id": "somnia.section-kit",
+  "name": "Section Kit",
+  "version": "1.0.0",
+  "apiVersion": 1,
+  "permissions": [],
+  "contributes": {
+    "snippets": [
+      {"language": "html", "label": "Hero section", "body": "<section class=\"hero\">\n  <h1>Headline</h1>\n  <p>Short supporting text.</p>\n  <a href=\"#\">Call to action</a>\n</section>"},
+      {"language": "html", "label": "Three-column features", "body": "<section class=\"features\">\n  <article><h2>One</h2><p>Text</p></article>\n  <article><h2>Two</h2><p>Text</p></article>\n  <article><h2>Three</h2><p>Text</p></article>\n</section>"},
+      {"language": "css", "label": "Features grid", "body": ".features {\n  display: grid;\n  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));\n  gap: 1rem;\n}"}
+    ],
+    "panels": [
+      {"id": "tips", "title": "Section tips", "side": "right", "html": "<h3>Section Kit</h3><p>Use the snippets from the insert menu. Keep one h1 per page and give each section a heading.</p>"}
+    ]
+  }
+}
