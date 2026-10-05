@@ -135,8 +135,15 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - run: npm ci
       - run: cargo test --manifest-path src-tauri/Cargo.toml --no-default-features --locked
-      - name: Build unsigned, not notarized macOS alpha
-        run: npm run tauri build -- --ci --config src-tauri/tauri.macos-alpha.conf.json --bundles dmg
+      - name: Updater harness tests (no secrets, no network)
+        run: npm run test:updater
+      - name: Sync app version (and enable signed updater artifacts when the signing key secret exists)
+        run: node scripts/sync-version.mjs ${{ secrets.TAURI_SIGNING_PRIVATE_KEY != '' && '--updater' || '' }}
+      - name: Build unsigned, not notarized macOS alpha (adds the signed updater archive when the key secret exists)
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        run: npm run tauri build -- --ci --config src-tauri/tauri.macos-alpha.conf.json --bundles ${{ secrets.TAURI_SIGNING_PRIVATE_KEY != '' && 'dmg,app' || 'dmg' }}
       - name: Retain macOS alpha
         if: always()
         uses: actions/upload-artifact@v7
@@ -144,4 +151,7 @@ jobs:
           name: somnia-macos-alpha-${{ github.sha }}
           retention-days: 14
           if-no-files-found: error
-          path: phase1/src-tauri/target/release/bundle/dmg/*.dmg
+          path: |
+            phase1/src-tauri/target/release/bundle/dmg/*.dmg
+            phase1/src-tauri/target/release/bundle/macos/*.app.tar.gz
+            phase1/src-tauri/target/release/bundle/macos/*.app.tar.gz.sig
