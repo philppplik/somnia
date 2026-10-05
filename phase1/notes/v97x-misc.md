@@ -1,0 +1,2 @@
+# Missing reference check (preview hardening)
+The Problems panel now warns when an HTML file links a stylesheet or script that is not in the project (relative paths, resolved from the HTML file's folder). External URLs, `#` and root-absolute paths are ignored. Reason: the design preview inlines only existing local CSS, so a wrong path silently shows an unstyled page. Images are not checked (binary assets are not in the project text store yet).
