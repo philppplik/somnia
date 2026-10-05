@@ -17,3 +17,6 @@ Drop of a folder onto the window should call the same path as Open folder. Tauri
 
 ## Tests
 Rust unit tests for the allow-list (rejects siblings, `..`, symlinks out of the folder); Playwright covers the frontend with the fake adapter. Real file dialogs only on Windows by hand.
+
+## Status
+Implemented option A: backend `Project::open_file` (single-file project, allow-list, non-recursive watcher), `choose_file` Tauri command, desktop-only `Open file` command in the file adapter. Web keeps the old in-memory open. Real file dialogs are only testable by Philipp on Windows.
