@@ -1,7 +1,5 @@
 import {EditorState} from '@codemirror/state';
-import {html} from '@codemirror/lang-html';
-import {css} from '@codemirror/lang-css';
-import {javascript} from '@codemirror/lang-javascript';
+import {languageFor,modeFor} from './languages';
 import {ensureSyntaxTree,syntaxTree} from '@codemirror/language';
 import type {Diagnostic} from '@codemirror/lint';
 import {a11yProblems} from './a11y';
@@ -10,10 +8,10 @@ export function lintState(state:EditorState):Diagnostic[]{const out:Diagnostic[]
  syntaxTree(state).iterate({enter:n=>{if(n.name==='Element'&&out.length<50){const kids=[];for(let c=n.node.firstChild;c;c=c.nextSibling)kids.push(c);const open=kids.find(k=>k.name==='OpenTag');const tag=open?state.sliceDoc(open.from,open.to).match(/^<\s*([A-Za-z][\w:-]*)/)?.[1]:undefined;if(open&&tag&&!VOID.test(tag)&&!OPTIONAL.test(tag)&&!kids.some(k=>k.name==='CloseTag'||k.name==='SelfClosingTag'||k.name==='MismatchedCloseTag')&&!/\/\s*>$/.test(state.sliceDoc(open.from,open.to)))out.push({from:open.from,to:open.to,severity:'warning',message:`Missing closing tag </${tag}>.`});}
  if(n.type.isError&&out.length<50)out.push({from:n.from,to:Math.max(n.to,Math.min(n.from+1,state.doc.length)),severity:'error',message:'Syntax problem here (unclosed or unexpected token).'});}});return out;}
 export interface Problem{file:string;line:number;col:number;severity:'error'|'warning';message:string}
-const languageFor=(file:string)=>/\.html?$/i.test(file)?html():/\.css$/i.test(file)?css():/\.[jt]sx?$/i.test(file)?javascript({jsx:true,typescript:/\.tsx?$/.test(file)}):null;
+const languageForLint=(file:string)=>modeFor(file)==='plain'?null:languageFor(file);
 /** Lints one file's text without an editor view. Unsupported file types return no problems. */
 export function computeDiagnostics(file:string,text:string):Problem[]{
- const lang=languageFor(file);if(!lang||text.length>600_000)return [];
+ const lang=languageForLint(file);if(!lang||text.length>600_000)return [];
  const state=EditorState.create({doc:text,extensions:[lang]});ensureSyntaxTree(state,state.doc.length,2000);
  return lintState(state).map(d=>{const l=state.doc.lineAt(Math.min(d.from,state.doc.length));return {file,line:l.number,col:d.from-l.from+1,severity:d.severity==='error'?'error':'warning',message:d.message} as Problem;});}
 /** Stylesheets and scripts that point at a project file which does not exist. The design preview inlines only existing local CSS, so a wrong path explains missing styles. */
