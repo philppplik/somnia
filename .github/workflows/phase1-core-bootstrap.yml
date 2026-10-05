@@ -3,6 +3,9 @@ on:
   push:
     branches: [phase1-foundation]
     paths: [phase1/**, .github/workflows/phase1-core-bootstrap.yml]
+  pull_request:
+    branches: [phase1-foundation]
+    paths: [phase1/**, .github/workflows/phase1-core-bootstrap.yml]
   workflow_dispatch:
 permissions:
   contents: read
