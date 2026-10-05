@@ -137,7 +137,7 @@ export async function installFileAdapter(port:FilePort){
   const {token,count}=event.payload;
   if(count===1)void open(false,false,token).catch(fail);
   else if(opening)fail('Another project is opening. Wait, then drop again.');
-  else void port.invoke<{name:string;text:string}[]>('read_dropped_files',{token}).then(addTextFiles).catch(fail);
+  else void port.invoke<{name:string;text:string;base64?:string}[]>('read_dropped_files',{token}).then(files=>addTextFiles(files.map(f=>f.base64===undefined?{name:f.name,text:f.text}:{name:f.name,text:'',blob:new Blob([Uint8Array.from(atob(f.base64),c=>c.charCodeAt(0))])}))).catch(fail);
  }));
  if(port.shell)cleanups.push(await port.listen<string>('somnia://menu',event=>{void executeNativeMenuCommand(event.payload);}));
  if(port.shell){const shell=port.shell;setCloseHandlers('disk',{saveAndClose:async()=>{await save();if(getState().isDirty)throw Error('Some edits are still unsaved. Close was cancelled.');await close(false);await shell.destroyWindow();},discardAndClose:async()=>{await close(true);await shell.destroyWindow();}});cleanups.push(()=>setCloseHandlers('disk',null));cleanups.push(await port.listen('somnia://close-blocked',()=>requestClose('disk')));}

@@ -5,11 +5,12 @@ import {executeCommand} from '../lib/commands';
 import {patchState,useAppStore} from '../store/appStore';
 import type {AppState} from '../store/appStore';
 import {cn} from '../lib/cn';
+import {useT} from '../lib/useT';
 type Item<T extends string>={id:T;label:string;icon:LucideIcon};
 const left:Item<AppState['leftTab']>[]=[{id:'layers',label:'Layers',icon:Layers},{id:'files',label:'Files',icon:Files},{id:'search',label:'Search',icon:Search},{id:'assets',label:'Assets',icon:Image},{id:'components',label:'Components',icon:Boxes},{id:'css',label:'CSS',icon:Paintbrush}];
 const right:Item<AppState['rightTab']>[]=[{id:'design',label:'Design',icon:SlidersHorizontal},{id:'prototype',label:'Prototype',icon:Play}];
 /** Narrow icon strip beside each side panel. Always visible; a click opens that panel, a second click on the active icon collapses it. */
-export function IconRail({side}:{side:'left'|'right'}){
+export function IconRail({side}:{side:'left'|'right'}){const {t}=useT();
  const s=useAppStore();const items=side==='left'?left:right;const open=side==='left'?s.sidebarOpen:s.inspectorOpen;const active=side==='left'?s.leftTab:s.rightTab;
  const choose=(id:string)=>{
   patchState({activePanel:{...s.activePanel,[side]:null}});
@@ -21,6 +22,6 @@ export function IconRail({side}:{side:'left'|'right'}){
   <span className="my-1 h-px w-6 bg-line"/>
   {s.extensionPanels.filter(p=>p.side===side).map(p=><Button key={p.id} size="icon" title={p.title} aria-label={`${p.title} panel (extension)`} aria-pressed={open&&s.activePanel[side]===p.id} className={cn(open&&s.activePanel[side]===p.id&&'bg-accent-soft text-accent')} onClick={()=>{const on=open&&s.activePanel[side]===p.id;patchState({activePanel:{...s.activePanel,[side]:on?null:p.id},...(side==='left'?{sidebarOpen:!on}:{inspectorOpen:!on})});}}><Puzzle/></Button>)}
   {items.map(({id,label,icon:Icon})=><Button key={id} size="icon" title={label} aria-label={`${label} panel`} aria-pressed={open&&active===id} className={cn(open&&active===id&&'bg-accent-soft text-accent')} onClick={()=>choose(id)}><Icon/></Button>)}
- {side==='left'&&<div className="mt-auto flex flex-col items-center gap-1 pb-2"><Button size="icon" title="Extensions" aria-label="Extensions" onClick={()=>void executeCommand('extensions.open')}><Blocks/></Button><Button size="icon" title="Settings (Ctrl+,)" aria-label="Settings" onClick={()=>void executeCommand('settings.open')}><Gear/></Button></div>}
+ {side==='left'&&<div className="mt-auto flex flex-col items-center gap-1 pb-2"><Button size="icon" title={t('rest.iconRail.extensions')} aria-label={t('rest.iconRail.extensions')} onClick={()=>void executeCommand('extensions.open')}><Blocks/></Button><Button size="icon" title={t('rest.iconRail.settingsCtrl')} aria-label={t('rest.iconRail.settings')} onClick={()=>void executeCommand('settings.open')}><Gear/></Button></div>}
  </div>;
 }

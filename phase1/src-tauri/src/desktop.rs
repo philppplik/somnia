@@ -157,6 +157,37 @@ async fn open_dropped_project(
 struct DroppedTextFile {
     name: String,
     text: String,
+    /// Set for PNG, JPEG and PDF files: the raw bytes, standard base64. `text` is empty then.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    base64: Option<String>,
+}
+const MEDIA_EXTENSIONS: [&str; 4] = ["png", "jpg", "jpeg", "pdf"];
+const MAX_MEDIA_BYTES: usize = 25_000_000;
+const MAX_MEDIA_TOTAL: usize = 60_000_000;
+/// Standard base64 with padding. Small and dependency free, used only for dropped media files.
+fn base64_encode(bytes: &[u8]) -> String {
+    const T: &[u8; 64] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+    let mut out = String::with_capacity(bytes.len().div_ceil(3) * 4);
+    for chunk in bytes.chunks(3) {
+        let b = [
+            chunk[0],
+            *chunk.get(1).unwrap_or(&0),
+            *chunk.get(2).unwrap_or(&0),
+        ];
+        out.push(T[(b[0] >> 2) as usize] as char);
+        out.push(T[(((b[0] & 3) << 4) | (b[1] >> 4)) as usize] as char);
+        out.push(if chunk.len() > 1 {
+            T[(((b[1] & 15) << 2) | (b[2] >> 6)) as usize] as char
+        } else {
+            '='
+        });
+        out.push(if chunk.len() > 2 {
+            T[(b[2] & 63) as usize] as char
+        } else {
+            '='
+        });
+    }
+    out
 }
 /// Multiple dropped files retain the existing import-as-copies behavior. Reads are bounded.
 #[tauri::command]
@@ -176,12 +207,36 @@ async fn read_dropped_files(
         }
         let mut files = Vec::new();
         let mut total = 0;
+        let mut media_total = 0;
         for path in paths {
             let ext = path
                 .extension()
                 .unwrap_or_default()
                 .to_string_lossy()
                 .to_ascii_lowercase();
+            if MEDIA_EXTENSIONS.contains(&ext.as_str()) {
+                let mut bytes = Vec::new();
+                std::fs::File::open(&path)?
+                    .take(MAX_MEDIA_BYTES as u64 + 1)
+                    .read_to_end(&mut bytes)?;
+                if bytes.len() > MAX_MEDIA_BYTES {
+                    return Err(AppError::Limit);
+                }
+                media_total += bytes.len();
+                if media_total > MAX_MEDIA_TOTAL {
+                    return Err(AppError::Limit);
+                }
+                files.push(DroppedTextFile {
+                    name: path
+                        .file_name()
+                        .unwrap_or_default()
+                        .to_string_lossy()
+                        .into_owned(),
+                    text: String::new(),
+                    base64: Some(base64_encode(&bytes)),
+                });
+                continue;
+            }
             if !["html", "htm", "css", "js", "json", "svg", "txt", "md"].contains(&ext.as_str()) {
                 continue;
             }
@@ -203,6 +258,7 @@ async fn read_dropped_files(
                     .to_string_lossy()
                     .into_owned(),
                 text: crate::service::decode_text(bytes),
+                base64: None,
             });
         }
         Ok(files)
@@ -524,4 +580,19 @@ pub fn run() {
         ])
         .run(tauri::generate_context!())
         .expect("Unable to start Somnia");
+}
+
+#[cfg(test)]
+mod media_tests {
+    use super::base64_encode;
+    #[test]
+    fn base64_matches_rfc4648_vectors() {
+        assert_eq!(base64_encode(b""), "");
+        assert_eq!(base64_encode(b"f"), "Zg==");
+        assert_eq!(base64_encode(b"fo"), "Zm8=");
+        assert_eq!(base64_encode(b"foo"), "Zm9v");
+        assert_eq!(base64_encode(b"foob"), "Zm9vYg==");
+        assert_eq!(base64_encode(b"fooba"), "Zm9vYmE=");
+        assert_eq!(base64_encode(b"foobar"), "Zm9vYmFy");
+    }
 }
