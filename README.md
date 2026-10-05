@@ -7,7 +7,7 @@ Status: alpha. Windows builds are tested by the maintainer; Linux and macOS buil
 ## What it does today
 
 - Visual canvas and code editor on the same source, with shared undo. Edits in either place change the real HTML and CSS; nothing is regenerated.
-- Layers panel (drag and drop, keyboard alternative), DOM tree, breadcrumbs, inspector, Problems panel.
+- Layers panel (drag and drop, keyboard alternative), breadcrumbs, inspector, Problems panel.
 - Code editor with Emmet, auto-close tags, linting, find and replace, Apply formatting (Prettier, loaded on demand), encode/decode special characters.
 - Diff viewer for last saved vs current text or any two files.
 - Project menu: open folder or file, save with new-folder option, export as ZIP, folder, single HTML file or Markdown.

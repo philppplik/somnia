@@ -10,7 +10,7 @@ Depends on: nothing. Risk: new Windows window permissions and drag-drop setting 
 
 ## v9.6.3 (about 1 day)
 - Breadcrumbs (DOM path in the status bar, click selects, syncs code and design).
-- DOM tree sidebar (right rail icon, expand/collapse, selection sync, optional search).
+- ~~DOM tree sidebar~~ removed in v9.10: redundant with Layers (which filters by tag, id and class).
 - Apply formatting (HTML, CSS, JS) via Prettier standalone, loaded lazily, indentation from Settings, selection or file, undoable.
 - Fixes from Windows feedback.
 Depends on: element tree already in the store. Risk: Prettier bundle size (lazy chunk, measured and reported).

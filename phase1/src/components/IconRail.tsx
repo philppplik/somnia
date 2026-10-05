@@ -1,5 +1,5 @@
 import type {LucideIcon} from 'lucide-react';
-import {PanelLeft,PanelRight,Files,Layers,Search,Image,Boxes,SlidersHorizontal,Play,Puzzle,Blocks,ListTree,Settings as Gear} from 'lucide-react';
+import {PanelLeft,PanelRight,Files,Layers,Search,Image,Boxes,SlidersHorizontal,Play,Puzzle,Blocks,Settings as Gear} from 'lucide-react';
 import {Button} from './ui/button';
 import {executeCommand} from '../lib/commands';
 import {patchState,useAppStore} from '../store/appStore';
@@ -7,7 +7,7 @@ import type {AppState} from '../store/appStore';
 import {cn} from '../lib/cn';
 type Item<T extends string>={id:T;label:string;icon:LucideIcon};
 const left:Item<AppState['leftTab']>[]=[{id:'layers',label:'Layers',icon:Layers},{id:'files',label:'Files',icon:Files},{id:'search',label:'Search',icon:Search},{id:'assets',label:'Assets',icon:Image},{id:'components',label:'Components',icon:Boxes}];
-const right:Item<AppState['rightTab']>[]=[{id:'design',label:'Design',icon:SlidersHorizontal},{id:'prototype',label:'Prototype',icon:Play},{id:'dom',label:'DOM tree',icon:ListTree}];
+const right:Item<AppState['rightTab']>[]=[{id:'design',label:'Design',icon:SlidersHorizontal},{id:'prototype',label:'Prototype',icon:Play}];
 /** Narrow icon strip beside each side panel. Always visible; a click opens that panel, a second click on the active icon collapses it. */
 export function IconRail({side}:{side:'left'|'right'}){
  const s=useAppStore();const items=side==='left'?left:right;const open=side==='left'?s.sidebarOpen:s.inspectorOpen;const active=side==='left'?s.leftTab:s.rightTab;
