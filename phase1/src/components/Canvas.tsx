@@ -6,6 +6,8 @@ const DiffSplit=lazy(()=>import('./DiffSplit').then(m=>({default:m.DiffSplit})))
 const SourceEditor=lazy(()=>import('./SourceEditor').then(m=>({default:m.SourceEditor})));
 import {DesignCanvas} from './DesignCanvas';
 import {LivePreview} from './LivePreview';
+import {MediaViewer,RenderedPreview} from './MediaPreview';
+import {isRenderedText,useMedia} from '../lib/media';
 import {useRef} from 'react';
 import { useAppStore,patchState } from '../store/appStore';
 const DEFAULT_RATIO=0.48,MIN_PX=240;
@@ -20,8 +22,10 @@ function SplitDivider({box}:{box:React.RefObject<HTMLDivElement|null>}){
 }
 export function Canvas(){
  const box=useRef<HTMLDivElement>(null);
- const state=useAppStore();
+ const state=useAppStore();const media=useMedia();const activeMedia=media.items.find(i=>i.name===media.active);
  const code=<section className="code-pane" aria-label="Source editor" style={state.viewMode==='split'?{flex:`0 0 ${state.splitRatio*100}%`}:undefined}><FileTabs/><Suspense fallback={<div className="px-3 py-2 text-[10px] text-ink-3">Loading source editor...</div>}>{state.diffSplit?<DiffSplit file={state.activeFile}/>:<SourceEditor source={state.files[state.activeFile]??''} file={state.activeFile} disabled={!state.coreConnected}/>}</Suspense></section>;
+ if(activeMedia)return <main className="center" aria-label="Editor workspace"><div className="workspace"><section className="code-pane" aria-label="Media preview"><FileTabs/><MediaViewer item={activeMedia}/></section></div></main>;
  if(!state.coreConnected)return <EmptyState/>;
- return <main className="center" aria-label="Editor workspace"><div ref={box} className={`workspace workspace-${state.viewMode}${state.viewMode==='split'?` split-${state.splitLayout}${state.splitSwap?' split-swap':''}`:''}`}>{state.viewMode!=='design'&&code}{state.viewMode==='split'&&<SplitDivider box={box}/>}{state.viewMode!=='code'&&(state.livePreview?<LivePreview/>:<DesignCanvas/>)}</div></main>;
+ const rendered=isRenderedText(state.activeFile);
+ return <main className="center" aria-label="Editor workspace"><div ref={box} className={`workspace workspace-${state.viewMode}${state.viewMode==='split'?` split-${state.splitLayout}${state.splitSwap?' split-swap':''}`:''}`}>{state.viewMode!=='design'&&code}{state.viewMode==='split'&&<SplitDivider box={box}/>}{state.viewMode!=='code'&&(rendered?<RenderedPreview file={state.activeFile} text={state.files[state.activeFile]??''}/>:state.livePreview?<LivePreview/>:<DesignCanvas/>)}</div></main>;
 }

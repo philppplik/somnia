@@ -4,6 +4,7 @@ import {readAppearance,rememberAppearance,type Contrast,type CodeTheme} from '..
 import {readEditorPrefs,rememberEditorPrefs,type EditorPrefs} from '../lib/editorPrefs';
 import {readTheme,rememberTheme,readThemeChoice,rememberThemeChoice,type ThemeChoice} from '../lib/theme';
 import { useSyncExternalStore } from 'react';
+import {setActiveMedia,clearMedia} from '../lib/media';
 import type { EditorNode,EditorProjectPort,Operation,Origin } from '../lib/editorPort';
 export type LeftTab='layers'|'files'|'search'|'assets'|'components'|'css';
 export type RightTab='design'|'prototype'|'code';
@@ -63,7 +64,7 @@ export function getSavedFile(file:string):string{return savedFiles[file]??'';}
 export function markFileSaved(file:string,content:string){savedFiles[file]=content;patchState({isDirty:isDirty(),lastSavedAt:new Date().toISOString(),notice:'Saved to disk.'});}
 
 /** Open a project file in a tab and make it the active source file. */
-export function openFileTab(path:string){if(!(path in state.files))return;patchState({openFiles:state.openFiles.includes(path)?state.openFiles:[...state.openFiles,path],activeFile:path,selectedElementId:null});refreshProject();}
+export function openFileTab(path:string){if(!(path in state.files))return;setActiveMedia(null);patchState({openFiles:state.openFiles.includes(path)?state.openFiles:[...state.openFiles,path],activeFile:path,selectedElementId:null});refreshProject();}
 /** Close a tab; the neighbouring tab becomes active. The last tab stays open. */
 export function closeFileTab(path:string){if(state.openFiles.length<=1)return;const i=state.openFiles.indexOf(path);const next=state.openFiles.filter(f=>f!==path);patchState({openFiles:next,...(state.activeFile===path?{activeFile:next[Math.max(0,i-1)],selectedElementId:null}:{})});refreshProject();}
 
@@ -75,4 +76,4 @@ export const clampViewport=(n:number,max=3840)=>Math.min(max,Math.max(200,Math.r
 export function jumpToLine(file:string,line:number,col=1){openFileTab(file);const st=getState();patchState({jumpTo:{file,line,col,nonce:Date.now()+Math.random()},...(st.viewMode==='design'?{viewMode:'split' as const}:{})});}
 
 /** Leaves the project without opening another one: the app returns to its empty state. */
-export function closeCore(){unsubscribeCore?.();unsubscribeCore=null;core=null;savedFiles={};patchState({responsiveScope:'auto',coreConnected:false,files:{},nodes:[],openFiles:[],activeFile:'',designFile:'',selectedElementId:null,selectedElementIds:[],isDirty:false,lastSavedAt:null,storage:'memory',nativeConnected:false,projectName:'',notice:'Project closed.'});}
+export function closeCore(){clearMedia();unsubscribeCore?.();unsubscribeCore=null;core=null;savedFiles={};patchState({responsiveScope:'auto',coreConnected:false,files:{},nodes:[],openFiles:[],activeFile:'',designFile:'',selectedElementId:null,selectedElementIds:[],isDirty:false,lastSavedAt:null,storage:'memory',nativeConnected:false,projectName:'',notice:'Project closed.'});}
