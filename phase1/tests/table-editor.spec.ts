@@ -9,3 +9,6 @@ test('insert a table, add row and column from a selected cell, merge, then undo'
  await page.getByRole('button',{name:'td',exact:true}).first().click();await run(page,'Table: add column right');await expect(frame.locator('table th')).toHaveCount(4);
  await page.getByRole('button',{name:'td',exact:true}).first().click();await run(page,'Table: merge cell');await expect(frame.locator('td[colspan="2"]')).toHaveCount(1);
  await page.keyboard.press('Control+z');await expect(frame.locator('td[colspan="2"]')).toHaveCount(0);await expect(frame.locator('table th')).toHaveCount(4);});
+test('layer right-click menu on a cell offers table actions',async({page})=>{await page.goto('/');
+ await page.evaluate((d:string)=>(window as any).__somnia.setSource('index.html',d),'<!doctype html><html><head><title>t</title></head><body><table><tr><td>a</td><td>b</td></tr></table></body></html>');const frame=page.frameLocator('iframe[title="Sandboxed design preview"]');await expect(frame.locator('td')).toHaveCount(2);
+ await page.getByRole('button',{name:'td',exact:true}).first().click({button:'right'});await page.getByRole('menuitem',{name:'Table: add column right'}).click();await expect(frame.locator('td')).toHaveCount(3);});

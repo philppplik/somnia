@@ -1,7 +1,8 @@
 import {useEffect,useRef,useState,type ReactNode} from 'react';
 import type {EditorNode} from '../lib/editorPort';
 import {applyOperations,patchState,useAppStore} from '../store/appStore';
-import {moveLayer,duplicateLayer,deleteLayer} from '../lib/structureCommands';
+import {moveLayer,duplicateLayer,deleteLayer,indentLayer,outdentLayer} from '../lib/structureCommands';
+import {tableAction,type TableAction} from '../lib/tableCommands';
 /**
  * Right-click menu for the layer tree. A fixed-position menu in the app document (same mechanism as the canvas menu), so a click always runs the
  * action. Items fit the layer tree: inspect, reveal in code, order, duplicate, delete, visibility and lock.
@@ -19,6 +20,9 @@ export function LayerContextMenu({node,children}:{node:EditorNode;children:React
   ['Move down',()=>run(()=>moveLayer(node.id,1)),off],
   ['Duplicate',()=>run(()=>duplicateLayer(node.id)),off],
   ['Delete',()=>run(()=>deleteLayer(node.id)),off],
+  ['Indent (into previous sibling)',()=>run(()=>indentLayer(node.id)),off],
+  ['Outdent (out of parent)',()=>run(()=>outdentLayer(node.id)),off],
+  ...(['table','tr','td','th'].includes(node.tag)?([['Table: add row above','row.above'],['Table: add row below','row.below'],['Table: delete row','row.delete'],['Table: add column left','col.left'],['Table: add column right','col.right'],['Table: delete column','col.delete'],['Table: toggle header row','header'],['Table: merge cell with right neighbour','merge']] as Array<[string,TableAction]>).map(([l,a])=>[l,()=>run(()=>tableAction(a)),off] as [string,()=>void,boolean]):[]),
   [node.hidden?'Show layer':'Hide layer',()=>meta('hidden'),!s.coreConnected],
   [node.locked?'Unlock layer':'Lock layer',()=>meta('locked'),!s.coreConnected]];
  return <div className="layer-context-trigger" onKeyDown={e=>{if((e.shiftKey&&e.key==="F10")||e.key==="ContextMenu"){e.preventDefault();const r=(e.target as HTMLElement).getBoundingClientRect();patchState({selectedElementId:node.id,selectedElementIds:[node.id]});setPos({x:Math.min(r.left+24,window.innerWidth-240),y:Math.min(r.bottom,window.innerHeight-300)});}}} onContextMenu={e=>{e.preventDefault();e.stopPropagation();patchState({selectedElementId:node.id,selectedElementIds:[node.id]});setPos({x:Math.min(e.clientX,window.innerWidth-240),y:Math.min(e.clientY,window.innerHeight-300)});}}>{children}{pos&&<div ref={root} role="menu" aria-label={`${node.tag} layer actions`} className="menu-popup" style={{position:'fixed',left:pos.x,top:pos.y,zIndex:60}}>{items.map(([label,fn,disabled])=><button key={label} role="menuitem" className="menu-item" style={{width:'100%',background:'none',border:0,textAlign:'left'}} disabled={disabled} aria-disabled={disabled?true:undefined} onClick={fn}>{label}</button>)}</div>}</div>;
