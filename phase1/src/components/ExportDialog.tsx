@@ -2,7 +2,7 @@ import {useState} from 'react';
 import {Dialog,DialogContent,DialogTitle,DialogDescription} from './ui/dialog';
 import {Button} from './ui/button';
 import {patchState,useAppStore} from '../store/appStore';
-import {downloadMarkdown,downloadProject,downloadText,inlineHtml} from '../lib/exportProject';
+import {downloadMarkdown,downloadProject,downloadText,singleFileHtml} from '../lib/exportProject';
 import {getSaveHandlers} from '../lib/saveFlow';
 type Kind='zip'|'folder'|'single'|'markdown';
 /** Export Project: choose the format and options, then export. A copy only: the open project and its save state do not change. */
@@ -12,7 +12,7 @@ export function ExportDialog(){
  const close=()=>patchState({exportDialog:false});const name=s.projectName||'somnia-project';
  const run=async()=>{setErr(null);setBusy(true);try{
   if(kind==='zip'){downloadProject(s.files,name);patchState({notice:'ZIP download requested.'});close();}
-  else if(kind==='single'){if(!target)throw Error('This project has no HTML page.');downloadText(inlineHtml(s.files,target,{css,js}),target.split('/').pop()!);patchState({notice:`Exported ${target} as a single file.`});close();}
+  else if(kind==='single'){if(!target)throw Error('This project has no HTML page.');downloadText(singleFileHtml(s.files,target,{css,js}),target.split('/').pop()!);patchState({notice:`Exported ${target} as a single file.`});close();}
   else if(kind==='markdown'){downloadMarkdown(s.files,target);close();}
   else{const h=getSaveHandlers();if(!h?.exportFolder)throw Error('Folder export needs the desktop app or a browser with folder access.');if(await h.exportFolder(sub))close();}
  }catch(e){setErr(e instanceof Error?e.message:String(e));}finally{setBusy(false);}};

@@ -1,3 +1,4 @@
+import {decodeFileBytes} from './textEncoding';
 /** Project level actions that do not need a disk port: open text files, new file, close an in-memory project. */
 import {EditorProject} from '@somnia/editor-core';
 import {applyOperations,closeCore,connectEditorProject,getState,openFileTab,patchState} from '../store/appStore';
@@ -19,7 +20,7 @@ export function addTextFiles(incoming:IncomingFile[]):string[]{
  else{const names=Object.keys(st.files);const ops=usable.map(f=>{const n=unique(safeName(f.name),names.concat(added));added.push(n);return {type:'createFile' as const,file:n,text:f.text};});
   applyOperations(ops);openFileTab(added[0]);}
  patchState({notice:`Opened ${added.join(', ')}${skipped?` (${skipped} unsupported file${skipped===1?'':'s'} skipped)`:''}.`});return added;}
-export async function readFiles(list:FileList|File[]):Promise<IncomingFile[]>{return Promise.all([...list].map(async f=>({name:f.name,text:f.size<=MAX_BYTES?await f.text():''})));}
+export async function readFiles(list:FileList|File[]):Promise<IncomingFile[]>{return Promise.all([...list].map(async f=>({name:f.name,text:f.size<=MAX_BYTES?decodeFileBytes(f.name,await f.arrayBuffer()).text:''})));}
 /** Open File: pick one or more text files with the system file dialog. */
 export function openFileDialog(){return new Promise<void>(resolve=>{const input=document.createElement('input');input.type='file';input.multiple=true;input.accept='.html,.htm,.css,.js,.json,.svg,.txt,.md,text/*';
  input.onchange=async()=>{if(input.files?.length)addTextFiles(await readFiles(input.files));resolve();};input.oncancel=()=>resolve();input.click();});}

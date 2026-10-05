@@ -1,3 +1,4 @@
+import {decodeFileBytes} from './textEncoding';
 import type {FilePort,FileEvent,Read,Revision,Recovery} from './fileAdapter';
 /** Browser storage port over the File System Access API (ADR-002, option B). Same commands and payloads as the native contract. */
 type Journal={get(key:string):Promise<{content:string;clientRevision:number}|undefined>;put(key:string,value:{content:string;clientRevision:number}):Promise<void>;delete(key:string):Promise<void>;keys(prefix:string):Promise<string[]>};
@@ -14,7 +15,7 @@ export function indexedDbJournal():Journal{
 }
 function parts(path:string){const p=path.split('/');if(!path||path.startsWith('/')||p.some(x=>x===''||x==='.'||x==='..'||x.includes('\\')))throw Error(`Invalid project path: ${path}`);return p;}
 async function fileHandle(root:FileSystemDirectoryHandle,path:string,create:boolean){const p=parts(path);let dir=root;for(const name of p.slice(0,-1))dir=await dir.getDirectoryHandle(name,{create});return dir.getFileHandle(p[p.length-1],{create});}
-async function readText(root:FileSystemDirectoryHandle,path:string):Promise<string|null>{try{return await (await (await fileHandle(root,path,false)).getFile()).text();}catch(e){if(e instanceof DOMException&&(e.name==='NotFoundError'||e.name==='TypeMismatchError'))return null;throw e;}}
+async function readText(root:FileSystemDirectoryHandle,path:string):Promise<string|null>{try{return decodeFileBytes(path,await (await (await fileHandle(root,path,false)).getFile()).arrayBuffer()).text;}catch(e){if(e instanceof DOMException&&(e.name==='NotFoundError'||e.name==='TypeMismatchError'))return null;throw e;}}
 async function revisionOf(text:string|null):Promise<Revision>{return text===null?empty:{exists:true,hash:await sha256(text)};}
 const same=(a:Revision|undefined,b:Revision)=>!!a&&a.exists===b.exists&&a.hash===b.hash;
 /** Remembers the last picked directory handle across reloads (IndexedDB structured clone). The browser still needs a click to re-grant access. */
