@@ -4,6 +4,7 @@ import {Button} from './ui/button';
 import * as cs from '../lib/componentSystem';
 import {VariantTools} from './VariantTools';
 import {addStarterKit} from '../lib/starterKit';
+import {LibrarySharePanel} from './LibrarySharePanel';
 import {loadLibrary,mutate,newId,selectedSource,insertVariant,switchVariant,findNode} from '../lib/componentActions';
 /** Component library with variants. Lives in the Components tab under the HTML elements. */
 export function ComponentSystemPanel(){
@@ -31,5 +32,6 @@ export function ComponentSystemPanel(){
   <Button aria-label={`Rename ${c.name}`} onClick={()=>edit(l=>cs.renameComponent(l,c.id,name),`Renamed to "${name.trim()}".`)}>Rename</Button>
   <Button aria-label={`Remove ${c.name} from library`} onClick={()=>run(()=>{if(window.confirm(`Remove ${c.name} and all its variants from this personal library? Project files are unchanged.`))edit(l=>cs.removeComponent(l,c.id));})}>Remove component</Button>
  </div>;})}
+ <LibrarySharePanel onChange={setLib}/>
  </section>;
 }
