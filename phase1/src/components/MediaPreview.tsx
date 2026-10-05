@@ -4,7 +4,7 @@ import {findMedia,formatBytes,isMarkdown,useMedia,type MediaItem} from '../lib/m
 import {renderMarkdown} from '../lib/markdownRender';
 import {patchState} from '../store/appStore';
 import {openExternal} from '../lib/openExternal';
-const bar='flex items-center gap-2 border-b border-subtle px-3 py-1.5 text-[12px]';
+const bar='media-bar flex items-center gap-2 border-b border-subtle px-3 py-1.5 text-[12px]';
 const tool='grid h-7 cursor-pointer grid-flow-col items-center gap-1 rounded-sm border-0 bg-transparent px-2 text-[12px] text-ink-2 hover:bg-hover';
 function FitImage({src,alt,onSize}:{src:string;alt:string;onSize?:(w:number,h:number)=>void}){
  const [fit,setFit]=useState(true);const [dim,setDim]=useState<[number,number]|null>(null);
