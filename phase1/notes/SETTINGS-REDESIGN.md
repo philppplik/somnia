@@ -54,3 +54,11 @@ Verification: 278 core tests passed before starter regression added; new workflo
 Canvas: persistent defaults for new-project viewport/zoom, grid visibility/size/color, canvas background, selection color/border width, resize-handle visibility, double-click text editing, Shift multi-selection, Space-panning overlay and page shadow. Defaults apply when connecting a project. Shell overlay preferences do not modify HTML/CSS source. Current viewport/zoom controls remain distinct from new-project defaults.
 
 Verification: core 280/280, Canvas/settings/DnD e2e 15/15, typecheck/build pass. Canvas screenshot inspected. Changes to DesignCanvas.tsx need merging with animation/media worker updates.
+
+## Tranche 5
+
+Updates now uses real stable/beta/alpha release filtering and selectable hourly/daily/weekly check cadence; the status-bar monitor reconfigures immediately, including focus checks. Pre-release updates open their GitHub download page rather than pretending the stable signed endpoint supports every channel. Update signature protection remains enforced by the existing updater and is not exposed as a disable toggle. Release-notes button added.
+
+Extensions gains a real undoable disable-all action. Advanced gains a persistent toggle for the existing incremental parser, with honest experimental/fallback description. No fake GPU/renderer selector.
+
+Verification: core 282/282, updated redesign/system e2e 5/5, build/typecheck pass. Updates screenshot inspected; stale legacy text about unavailable signed updater removed.

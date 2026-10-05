@@ -218,5 +218,18 @@
   "canvasPref.selectionWidth": "Auswahl-Rahmenbreite (px)",
   "canvasPref.pageShadow": "Seiten-Schatten",
   "redesign.soft": "Weich",
-  "redesign.strong": "Stark"
+  "redesign.strong": "Stark",
+  "set.section.advanced": "Erweitert",
+  "redesign.updateAuto": "Automatisch nach Updates suchen",
+  "redesign.updateInterval": "Intervall für Hintergrund-Updateprüfung",
+  "redesign.hourly": "Stündlich",
+  "redesign.daily": "Täglich",
+  "redesign.weekly": "Wöchentlich",
+  "redesign.channel": "Update-Kanal",
+  "redesign.channelHint": "Stable enthält stabile Releases. Beta umfasst auch Vorabversionen außer Alpha/Nightly. Alpha enthält alle Vorabversionen. Vorabversionen öffnen die Downloadseite; die signierte In-App-Installation bleibt auf dem Stable-Endpunkt.",
+  "redesign.releaseNotes": "Release-Notes öffnen",
+  "redesign.disableAllExt": "Alle Erweiterungen deaktivieren",
+  "redesign.fastParse": "Experimentelles schnelles Parsing",
+  "redesign.fastHint": "Nutzt inkrementelles Parsing, wo unterstützt, mit vollständigem Parsing als Fallback. Ausschalten nutzt vollständiges Parsing bei jeder Änderung.",
+  "redesign.signedUpdate": "Desktop-Updates prüfen signierte Stable-Pakete vor der Installation. Nutze die Update-Anzeige, wenn eine neue stabile Version verfügbar ist."
 }

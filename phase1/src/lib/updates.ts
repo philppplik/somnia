@@ -1,3 +1,4 @@
+import {readUpdatePrefs,channelAllows} from './updatePrefs';
 /** Update check against GitHub Releases (public API, no token). Compares major.minor.patch (v9, v9.5, v9.5.4) of the newest published release with this build. One-click install needs the Tauri updater, see ADR-004. */
 export interface ReleaseInfo{tag:string;name:string;url:string;prerelease:boolean;publishedAt:string;asset?:{name:string;url:string}}
 export const REPO='philppplik/somnia';
@@ -14,7 +15,7 @@ export async function checkForUpdate(current:string,fetcher:typeof fetch=fetch):
  if(await storeManaged)throw Error('Updates for this version come from the Microsoft Store.');
  const res=await fetcher(`https://api.github.com/repos/${REPO}/releases?per_page=15`,{cache:'no-store',headers:{Accept:'application/vnd.github+json'}});
  if(!res.ok)throw Error(`GitHub answered ${res.status}. Try again later.`);
- const found=newerRelease(current,await res.json());return found?{status:'available',release:found}:{status:'up-to-date'};}
+ const prefs=readUpdatePrefs();const releases=await res.json();const found=newerRelease(current,releases.filter((r:{tag_name:string;prerelease?:boolean})=>channelAllows(r.tag_name,!!r.prerelease,prefs.channel)));return found?{status:'available',release:found}:{status:'up-to-date'};}
 
 /** Microsoft Store builds are updated by the Store: no GitHub update check, no in-app updater. main.tsx supplies the answer from the desktop shell (running inside a WindowsApps package). */
 let storeManaged:Promise<boolean>=Promise.resolve(false);

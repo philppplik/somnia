@@ -1,3 +1,6 @@
+import { DEFAULT_UPDATE_PREFS } from "../lib/updatePrefs";
+import { EditorProject } from "@somnia/editor-core";
+import { Zap } from "lucide-react";
 import { DEFAULT_CANVAS_PREFS, type CanvasPrefs } from "../lib/canvasPrefs";
 import { DEFAULT_WORKFLOW_PREFS } from "../lib/workflowPrefs";
 import { Pencil } from "lucide-react";
@@ -169,6 +172,7 @@ export function Settings() {
       });
     if (name === "Preview") change({ livePreview: false });
     if (name === "Updates") {
+      change({ updatePrefs: { ...DEFAULT_UPDATE_PREFS } });
       const old = autoCheckEnabled();
       preference(
         () => setAutoCheck(true),
@@ -231,6 +235,7 @@ export function Settings() {
     { name: "Shortcuts", key: "shortcuts", group: "Workflow", icon: Keyboard },
     { name: "Extensions", key: "extensions", group: "Power-Ups", icon: Puzzle },
     { name: "Updates", key: "updates", group: "System", icon: RefreshCw },
+    { name: "Advanced", key: "advanced", group: "System", icon: Zap },
     { name: "About", key: "about", group: "", icon: Info },
   ];
   const sectionTitle = (name: string) =>
@@ -238,6 +243,35 @@ export function Settings() {
   const renderSection = (section: string) => (
     <section data-settings-section={section} aria-label={section} key={section}>
       <h2>{sectionTitle(section)}</h2>
+      {section === "Advanced" && (
+        <>
+          <label title={t("redesign.fastHint")}>
+            {t("redesign.fastParse")}
+            <input
+              type="checkbox"
+              aria-label="Experimental fast parsing"
+              checked={EditorProject.incremental.enabled}
+              onChange={(e) => {
+                const old = EditorProject.incremental.enabled;
+                const apply = (on: boolean) => {
+                  EditorProject.incremental.enabled = on;
+                  try {
+                    localStorage.setItem(
+                      "somnia.fastParse.v1",
+                      on ? "on" : "off",
+                    );
+                  } catch {}
+                };
+                preference(
+                  () => apply(e.target.checked),
+                  () => apply(old),
+                );
+              }}
+            />
+          </label>
+          <p>{t("redesign.fastHint")}</p>
+        </>
+      )}
       {section === "General" && (
         <>
           <label title={t("redesign.startupHint")}>
@@ -746,8 +780,52 @@ export function Settings() {
                 );
               }}
             />
-            {t("set.upd.auto")}
+            {t("redesign.updateAuto")}
           </label>
+          <label>
+            {t("redesign.updateInterval")}
+            <select
+              aria-label="Update check interval"
+              value={state.updatePrefs.intervalMinutes}
+              onChange={(e) =>
+                change({
+                  updatePrefs: {
+                    ...state.updatePrefs,
+                    intervalMinutes: Number(e.target.value) as
+                      60 | 1440 | 10080,
+                  },
+                })
+              }
+            >
+              <option value={60}>{t("redesign.hourly")}</option>
+              <option value={1440}>{t("redesign.daily")}</option>
+              <option value={10080}>{t("redesign.weekly")}</option>
+            </select>
+          </label>
+          <label title={t("redesign.channelHint")}>
+            {t("redesign.channel")}
+            <select
+              aria-label="Update channel"
+              value={state.updatePrefs.channel}
+              onChange={(e) => {
+                change({
+                  updatePrefs: {
+                    ...state.updatePrefs,
+                    channel: e.target.value as "stable" | "beta" | "alpha",
+                  },
+                });
+                setUpd({ state: "idle" });
+              }}
+            >
+              <option value="stable">Stable</option>
+              <option value="beta">Beta</option>
+              <option value="alpha">Alpha</option>
+            </select>
+          </label>
+          <p>{t("redesign.channelHint")}</p>
+          <button onClick={() => void openExternal(REPO_URL + "/releases")}>
+            {t("redesign.releaseNotes")}
+          </button>
           <button
             onClick={async () => {
               setUpd({ state: "checking" });
@@ -844,6 +922,18 @@ export function Settings() {
       ) : null}
       {section === "Extensions" ? (
         <div>
+          <button
+            onClick={() => {
+              const old = enabledIds();
+              preference(
+                () => old.forEach((id) => setExtensionEnabled(id, false)),
+                () => old.forEach((id) => setExtensionEnabled(id, true)),
+              );
+              setExts(loadExtensions());
+            }}
+          >
+            {t("redesign.disableAllExt")}
+          </button>
           <ExtensionCatalog onInstalled={() => setExts(loadExtensions())} />
           <p>
             Extensions add commands, snippets and code themes. Paste a manifest

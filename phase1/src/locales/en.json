@@ -218,5 +218,18 @@
   "canvasPref.selectionWidth": "Selection border width (px)",
   "canvasPref.pageShadow": "Page shadow",
   "redesign.soft": "Soft",
-  "redesign.strong": "Strong"
+  "redesign.strong": "Strong",
+  "set.section.advanced": "Advanced",
+  "redesign.updateAuto": "Check for updates automatically",
+  "redesign.updateInterval": "Background update check interval",
+  "redesign.hourly": "Hourly",
+  "redesign.daily": "Daily",
+  "redesign.weekly": "Weekly",
+  "redesign.channel": "Update channel",
+  "redesign.channelHint": "Stable includes published stable releases. Beta also includes pre-releases except alpha/nightly builds. Alpha includes all pre-releases. Pre-release installation opens the download page; signed in-app installation stays on the stable endpoint.",
+  "redesign.releaseNotes": "Open release notes",
+  "redesign.disableAllExt": "Disable all extensions",
+  "redesign.fastParse": "Experimental fast parsing",
+  "redesign.fastHint": "Uses incremental parsing where supported, with full parsing as a fallback. Turning this off uses full parsing for every edit.",
+  "redesign.signedUpdate": "Desktop one-click updates verify signed stable packages before installation. Use the update pill when a newer stable version is available."
 }

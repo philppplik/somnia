@@ -2,7 +2,7 @@ import {test,expect} from './fixtures';
 test('resizable settings shell, icons, live controls and settings-only undo',async({page})=>{
  await page.goto('/');await expect(page.getByRole('button',{name:'Split view',exact:true})).toBeVisible();await page.keyboard.press('Control+,');const dialog=page.getByRole('dialog');
  await expect(dialog).toBeVisible();const bounds=await dialog.boundingBox();expect(bounds!.width).toBe(880);expect(bounds!.height).toBe(640);
- await expect(dialog.locator('nav button svg')).toHaveCount(10);
+ await expect(dialog.locator('nav button svg')).toHaveCount(11);
  await expect(dialog).toHaveCSS('resize','both');
  await dialog.getByLabel('Density',{exact:true}).selectOption('compact');await expect(page.locator('html')).toHaveCSS('--gap','3px');
  await dialog.getByLabel('Density',{exact:true}).focus();await page.keyboard.press('Control+z');await expect(page.locator('html')).toHaveCSS('--gap','6px');
@@ -22,8 +22,8 @@ test('settings search groups matches from different sections and filters sidebar
  await page.screenshot({path:'tests/artifacts/settings-redesign-search.png'});
  await search.fill('autocomplet');await expect(dialog.getByLabel('Autocomplete suggestions (tags, attributes, CSS properties)')).toBeVisible();
  await search.fill('zzzzzzzz');await expect(dialog.getByRole('status')).toHaveText('No matching settings.');
- await search.fill('');await dialog.getByRole('button',{name:'Canvas',exact:true}).click();await dialog.getByLabel('Canvas zoom').fill('150');
- await expect(dialog.getByLabel('Canvas zoom')).toHaveValue('150');await page.keyboard.press('Escape');await expect(page.getByLabel('Zoom',{exact:true})).toContainText('150');
+ await search.fill('');await dialog.getByRole('button',{name:'Canvas',exact:true}).click();await dialog.getByLabel('Canvas zoom',{exact:true}).fill('150');
+ await expect(dialog.getByLabel('Canvas zoom',{exact:true})).toHaveValue('150');await page.keyboard.press('Escape');await expect(page.getByLabel('Zoom',{exact:true})).toContainText('150');
 });
 test('settings fits smaller windows without losing close or controls',async({page})=>{
  await page.setViewportSize({width:760,height:560});await page.goto('/');await expect(page.getByRole('button',{name:'Split view',exact:true})).toBeVisible();await page.keyboard.press('Control+,');const dialog=page.getByRole('dialog');
