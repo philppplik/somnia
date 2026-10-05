@@ -3,6 +3,11 @@ test.use({sample:false});
 const sidebar=(page:import('@playwright/test').Page)=>page.getByRole('complementary',{name:'Project sidebar'});
 async function expectEmpty(page:import('@playwright/test').Page){
  await expect(page.getByTestId('layers-empty-state')).toBeVisible();
+ const inspector=page.getByRole('complementary',{name:'Inspector'});
+ await expect(inspector.getByTestId('inspector-empty-state')).toBeVisible();
+ await expect(inspector.getByText('Demo',{exact:true})).toHaveCount(0);
+ await expect(inspector.getByRole('textbox')).toHaveCount(0);
+ await expect(inspector.getByRole('button')).toHaveCount(0);
  await expect(sidebar(page).locator('[data-layer-id]')).toHaveCount(0);
  await expect(sidebar(page).getByText('Demo',{exact:true})).toHaveCount(0);
  await expect(sidebar(page).getByLabel('Filter layers')).toHaveCount(0);
@@ -31,7 +36,7 @@ test('opened HTML file shows its source layers, including selection and no-match
  await page.goto('/');const [chooser]=await Promise.all([page.waitForEvent('filechooser'),page.getByTestId('empty-state').getByRole('button',{name:'Open file'}).click()]);
  await chooser.setFiles({name:'hello.html',mimeType:'text/html',buffer:Buffer.from('<html><body><article id="real"><h2>Real document</h2></article></body></html>')});
  await expect(sidebar(page).getByText('hello.html',{exact:true})).toBeVisible();await expect(sidebar(page).getByRole('button',{name:'article',exact:true})).toBeVisible();
- const h2=sidebar(page).getByRole('button',{name:'h2',exact:true});await h2.click();await expect(h2).toHaveAttribute('aria-pressed','true');
+ const h2=sidebar(page).getByRole('button',{name:'h2',exact:true});await h2.click();await expect(h2).toHaveAttribute('aria-pressed','true');await expect(page.getByTestId('inspector-empty-state')).toHaveCount(0);await expect(page.getByRole('complementary',{name:'Inspector'}).getByLabel('Element ID',{exact:true})).toBeVisible();
  await sidebar(page).getByLabel('Filter layers').fill('missing');await expect(sidebar(page).getByText('No matching layers.')).toBeVisible();await sidebar(page).getByLabel('Filter layers').fill('');
  await page.screenshot({path:'tests/artifacts/empty-layers-open-file.png'});await closeProject(page);
 });

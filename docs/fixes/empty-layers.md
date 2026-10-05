@@ -28,3 +28,11 @@ Regression tests: phase1/tests/empty-layers.spec.ts (six scenarios: clean start 
 6. Open CSS-only project: no HTML document message, no demo nodes.
 
 No native Windows run, push, merge or release was performed. Native filesystem behavior is unchanged; existing native-drop tests use mocked IPC. Risk is limited to removal of initial placeholder file/name state; restore/open flows and existing shell tests passed.
+
+## Inspector follow-up
+
+Inspector now renders a matching no-project hint before any tab content when disconnected. No Demo badge, computed fields, accordions or editing controls are shown. Connected-project behavior remains unchanged. Updated empty-state assertions cover the Inspector on launch, close, light/dark and reopened workflows; HTML selection verifies the real attribute controls return.
+
+Follow-up validation: build and typecheck pass; 263/263 core tests pass; 15/15 Playwright tests pass (empty-layers, empty-start, shell, inspector-metrics). Inspected fresh light/dark screenshots of both empty panels and the opened-file selection. Both hints fit and are readable; the latest dark capture has settled theme styling and readable buttons, so the earlier contrast observation was transient. No Windows-native run.
+
+Additional Windows check: with no project, Inspector should show only the hint and no Demo or computed controls; selecting a real element after opening a file restores its attributes/metrics; closing returns both sidebars to empty.
