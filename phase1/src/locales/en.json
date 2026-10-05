@@ -175,5 +175,19 @@
   "redesign.group.Workflow": "Workflow",
   "redesign.group.Power-Ups": "Power-Ups",
   "redesign.group.System": "System",
-  "redesign.noResults": "No matching settings."
+  "redesign.noResults": "No matching settings.",
+  "redesign.interface": "Interface",
+  "redesign.uiFont": "Interface font",
+  "redesign.systemFont": "System font",
+  "redesign.uiFontSize": "Interface font size (px)",
+  "redesign.animation": "Interface animation duration",
+  "redesign.motion": "Reduce interface motion",
+  "redesign.motionHint": "Only affects the Somnia interface. Project animations are unchanged. System follows your operating system preference.",
+  "redesign.reduce": "Reduce",
+  "redesign.full": "Full motion",
+  "redesign.shadows": "Panel shadows",
+  "redesign.subtle": "Subtle",
+  "redesign.rememberPanels": "Remember sidebar and inspector widths",
+  "redesign.exportShortcuts": "Export shortcuts (JSON)",
+  "redesign.importShortcuts": "Import shortcuts"
 }

@@ -32,3 +32,11 @@ Fetch the bundle and cherry-pick the tranche commit onto the i18n integration br
 ## Windows check
 
 Open Settings with Ctrl+,; resize by bottom-right corner; navigate every icon; search theme/autocomplet and clear search; change theme/density/code preferences and Ctrl+Z; change language in General; reset and restart to check persisted preferences. Escape must close Settings without changing source. Check current Canvas zoom and preview script toggle against the actual view. Scroll sidebar to About on small windows.
+
+## Tranche 2
+
+Added real shell-only UI preferences: Inter-first vs system font stack, base UI font size (10-20px), animation duration (0-200ms), explicit reduce/full/system motion policy, panel shadow strength, remembered sidebar/inspector widths. Preferences are sanitized, persisted and restored on startup; disabling width memory deletes only the stored widths. None of these CSS rules enter project iframe documents. Fixed component-specific font sizes still take precedence over the base font size.
+
+Added shortcut JSON export and bounded validated import (known command IDs, valid key combinations, 100KB limit). Import replaces overrides atomically after validation and is undoable. All remain under the existing Settings live/reset/undo flow.
+
+Verification: core 276/276, interface + redesign Playwright 6/6, production build/typecheck pass. Interface screenshot inspected for control visibility and scrolling. Native/Windows panel persistence still needs user verification.

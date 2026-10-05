@@ -1,3 +1,6 @@
+import { DEFAULT_UI_PREFS } from "../lib/uiPrefs";
+import { parseShortcutFile } from "../lib/shortcutTransfer";
+import { downloadText } from "../lib/exportProject";
 import { ExtensionCatalog } from "./ExtensionCatalog";
 import { readFormatPrefs, saveFormatPrefs } from "../lib/format";
 import { openExternal, REPO_URL } from "../lib/openExternal";
@@ -112,6 +115,7 @@ export function Settings() {
         themeChoice: "system",
         contrast: "standard",
         look: { ...DEFAULT_LOOK },
+        uiPrefs: { ...DEFAULT_UI_PREFS },
       });
     if (name === "Code editor") {
       change({
@@ -291,6 +295,69 @@ export function Settings() {
       {section === "Shortcuts" ? (
         <div>
           <p>{t("set.sc.intro")}</p>
+          <div className="settings-transfer">
+            <button
+              onClick={() =>
+                downloadText(
+                  JSON.stringify(shortcutOverrides(), null, 2),
+                  "somnia-shortcuts.json",
+                  "application/json",
+                )
+              }
+            >
+              {t("redesign.exportShortcuts")}
+            </button>
+            <label className="settings-shortcut-import">
+              {t("redesign.importShortcuts")}
+              <input
+                type="file"
+                accept=".json,application/json"
+                aria-label="Import shortcuts"
+                onChange={async (e) => {
+                  const input = e.currentTarget,
+                    file = input.files?.[0];
+                  if (!file) return;
+                  try {
+                    if (file.size > 100000)
+                      throw Error("Shortcut file exceeds 100 KB.");
+                    const next = parseShortcutFile(
+                      await file.text(),
+                      listCommands().map((c) => c.id),
+                    );
+                    const old = shortcutOverrides();
+                    preference(
+                      () => {
+                        Object.keys(old).forEach((id) =>
+                          setShortcutOverride(id, null),
+                        );
+                        Object.entries(next).forEach(([id, v]) =>
+                          setShortcutOverride(id, v),
+                        );
+                      },
+                      () => {
+                        Object.keys(shortcutOverrides()).forEach((id) =>
+                          setShortcutOverride(id, null),
+                        );
+                        Object.entries(old).forEach(([id, v]) =>
+                          setShortcutOverride(id, v),
+                        );
+                      },
+                    );
+                    setScTick((n) => n + 1);
+                    setErrs([]);
+                  } catch (error) {
+                    setErrs([
+                      error instanceof Error
+                        ? error.message
+                        : "Could not import shortcuts.",
+                    ]);
+                  }
+                  input.value = "";
+                }}
+              />
+            </label>
+          </div>
+          {errs.length > 0 && <p role="alert">{errs.join(" ")}</p>}
           <ul
             aria-label="Keyboard shortcuts"
             data-tick={scTick}
@@ -819,6 +886,124 @@ export function Settings() {
                   {t("set.ap.density.comfortable")}
                 </option>
               </select>
+            </label>
+          </fieldset>
+          <fieldset className="settings-ui-preferences">
+            <legend>{t("redesign.interface")}</legend>
+            <label>
+              {t("redesign.uiFont")}
+              <select
+                aria-label="Interface font"
+                value={state.uiPrefs.font}
+                onChange={(e) =>
+                  change({
+                    uiPrefs: {
+                      ...state.uiPrefs,
+                      font: e.target.value as "inter" | "system",
+                    },
+                  })
+                }
+              >
+                <option value="inter">Inter</option>
+                <option value="system">{t("redesign.systemFont")}</option>
+              </select>
+            </label>
+            <label>
+              {t("redesign.uiFontSize")}
+              <input
+                type="number"
+                aria-label="Interface font size"
+                min={10}
+                max={20}
+                value={state.uiPrefs.fontSize}
+                onChange={(e) =>
+                  change({
+                    uiPrefs: {
+                      ...state.uiPrefs,
+                      fontSize: Math.max(
+                        10,
+                        Math.min(20, Number(e.target.value) || 13),
+                      ),
+                    },
+                  })
+                }
+              />
+            </label>
+            <label>
+              {t("redesign.animation")} ({state.uiPrefs.animationMs}ms)
+              <input
+                type="range"
+                aria-label="Interface animation duration"
+                min={0}
+                max={200}
+                step={10}
+                value={state.uiPrefs.animationMs}
+                onChange={(e) =>
+                  change({
+                    uiPrefs: {
+                      ...state.uiPrefs,
+                      animationMs: Number(e.target.value),
+                    },
+                  })
+                }
+              />
+            </label>
+            <label title={t("redesign.motionHint")}>
+              {t("redesign.motion")}
+              <select
+                aria-label="Reduce interface motion"
+                value={state.uiPrefs.motion}
+                onChange={(e) =>
+                  change({
+                    uiPrefs: {
+                      ...state.uiPrefs,
+                      motion: e.target.value as "system" | "reduce" | "full",
+                    },
+                  })
+                }
+              >
+                <option value="system">{t("settings.language.system")}</option>
+                <option value="reduce">{t("redesign.reduce")}</option>
+                <option value="full">{t("redesign.full")}</option>
+              </select>
+            </label>
+            <p>{t("redesign.motionHint")}</p>
+            <label>
+              {t("redesign.shadows")}
+              <select
+                aria-label="Panel shadows"
+                value={state.uiPrefs.shadows}
+                onChange={(e) =>
+                  change({
+                    uiPrefs: {
+                      ...state.uiPrefs,
+                      shadows: e.target.value as "none" | "subtle" | "standard",
+                    },
+                  })
+                }
+              >
+                <option value="subtle">{t("redesign.subtle")}</option>
+                <option value="standard">
+                  {t("set.ap.contrast.standard")}
+                </option>
+                <option value="none">{t("set.sc.none")}</option>
+              </select>
+            </label>
+            <label>
+              {t("redesign.rememberPanels")}
+              <input
+                type="checkbox"
+                aria-label="Remember panel widths"
+                checked={state.uiPrefs.rememberPanels}
+                onChange={(e) =>
+                  change({
+                    uiPrefs: {
+                      ...state.uiPrefs,
+                      rememberPanels: e.target.checked,
+                    },
+                  })
+                }
+              />
             </label>
           </fieldset>
         </>

@@ -128,3 +128,10 @@
 .settings-accent-presets{display:flex;align-items:center;gap:8px;padding:10px 0}.settings-accent-presets button{width:20px;height:20px;padding:0;border-radius:50%;border:2px solid var(--bg-panel);box-shadow:0 0 0 1px var(--border-subtle)}.settings-accent-presets code{margin-left:auto}
 .settings-sidebar [hidden]{display:none!important}
 .settings-content:has(section:nth-of-type(2)) section{min-height:0;margin-bottom:28px}.settings-content:has(section:nth-of-type(2)) .settings-accent-presets{display:none}
+/* UI preferences stay in the shell document, never in project iframe documents. */
+body{font-size:var(--ui-font-size,13px)}
+.dialog-popup{animation-duration:var(--ui-animation-ms,120ms)}.settings-content input[type=checkbox]:before{transition-duration:var(--ui-animation-ms,120ms)}
+:root[data-motion=reduce] *,:root[data-motion=reduce] *:before,:root[data-motion=reduce] *:after{animation:none!important;transition:none!important;scroll-behavior:auto!important}
+:root[data-motion=full] .dialog-popup{animation:palette-in var(--ui-animation-ms,120ms) ease-out!important}:root[data-motion=full] .settings-content input[type=checkbox]:before{transition:transform var(--ui-animation-ms,120ms) ease!important}
+:root[data-panel-shadows=none]{--card-shadow:none}:root[data-panel-shadows=standard]{--card-shadow:0 4px 16px #0002}:root[data-panel-shadows=subtle]{--card-shadow:0 1px 2px #0000000d}
+.settings-ui-preferences{border:0;padding:0;margin:20px 0}.settings-ui-preferences legend{font-weight:600}.settings-ui-preferences p{color:var(--text-secondary);font-size:12px;margin:8px 0}.settings-transfer{display:flex;flex-wrap:wrap;gap:12px;align-items:center}.settings-transfer .settings-shortcut-import{flex-direction:column;align-items:start;gap:6px;padding:0;border:0}

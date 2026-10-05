@@ -175,5 +175,19 @@
   "redesign.group.Workflow": "Workflow",
   "redesign.group.Power-Ups": "Power-Ups",
   "redesign.group.System": "System",
-  "redesign.noResults": "Keine passenden Einstellungen."
+  "redesign.noResults": "Keine passenden Einstellungen.",
+  "redesign.interface": "Bedienoberfläche",
+  "redesign.uiFont": "UI-Schrift",
+  "redesign.systemFont": "Systemschrift",
+  "redesign.uiFontSize": "UI-Schriftgröße (px)",
+  "redesign.animation": "UI-Animationsdauer",
+  "redesign.motion": "UI-Bewegung reduzieren",
+  "redesign.motionHint": "Betrifft nur die Somnia-Oberfläche, nicht Projektanimationen. System folgt der Betriebssystemeinstellung.",
+  "redesign.reduce": "Reduzieren",
+  "redesign.full": "Volle Bewegung",
+  "redesign.shadows": "Panel-Schatten",
+  "redesign.subtle": "Dezent",
+  "redesign.rememberPanels": "Sidebar- und Inspector-Breite merken",
+  "redesign.exportShortcuts": "Tastenkürzel exportieren (JSON)",
+  "redesign.importShortcuts": "Tastenkürzel importieren"
 }
