@@ -16,3 +16,6 @@ Idea: after a patch, only the innermost safe container (div, section, main, arti
 Proof: `incremental.test.ts` runs random edit fuzzing with `verify=true`, which full-reparses after every partial reparse and compares tree shape, offsets and all parse5 locations. 5 seeds x 60 rounds x 25 edits plus a typing test (248 of 300 ordinary edits take the partial path).
 Bench (SOMNIA_INCREMENTAL=1 npm run bench, edit at the start of the document = worst case): one edit 216 KB 152 -> ~30 ms, 1.1 MB 501 -> ~115 ms. Undo still does a full reparse. 150 random seeds pass the differential test.
 Open: snapshot/clone cost per transaction, undo path, enabling the flag in the app after a soak period.
+
+## Switch
+Command palette: "Experimental: toggle fast parsing" turns the partial reparse off/on (stored in localStorage key somnia.fastParse.v1). Shipped as experimental in 9.16.0; remove the feature if it misbehaves.
