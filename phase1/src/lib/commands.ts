@@ -37,6 +37,7 @@ export const executeNativeMenuCommand=executeCommand;
 const ui=(id:string,title:string,shortcut:string|undefined,run:()=>void)=>registerCommand({id,title,category:'View',shortcut,run});
 ui('palette.open','Command palette','Mod+K',()=>patchState({paletteOpen:true}));
 ui('search.project','Search in project','Mod+Shift+F',()=>patchState({leftTab:'search',sidebarOpen:true}));
+ui('css.open','CSS variables and classes',undefined,()=>patchState({leftTab:'css',sidebarOpen:true}));
 ui('sidebar.toggle','Toggle sidebar','Mod+B',()=>patchState({sidebarOpen:!getState().sidebarOpen}));
 ui('inspector.toggle','Toggle inspector','Mod+Alt+I',()=>patchState({inspectorOpen:!getState().inspectorOpen}));
 ui('problems.toggle','Toggle problems','Mod+J',()=>patchState({problemsOpen:!getState().problemsOpen}));

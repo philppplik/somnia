@@ -1,0 +1,12 @@
+import {test,expect} from './fixtures';
+test('CSS panel lists variables, adds one and edits it',async({page})=>{await page.goto('/');
+ await expect(page.locator('[data-storage]')).toBeVisible();
+ await page.getByRole('button',{name:'CSS panel'}).click();
+ const panel=page.getByLabel('CSS tools',{exact:true}).last();
+ await expect(page.getByRole('tab',{name:/^Variables/})).toBeVisible();
+ await page.getByLabel('New variable name').fill('--e2e-gap');await page.getByLabel('New variable value').fill('12px');
+ await page.getByRole('button',{name:'Add',exact:true}).click();
+ const val=page.getByLabel('Value of --e2e-gap');await expect(val).toHaveValue('12px');
+ await val.fill('20px');await val.press('Enter');await expect(page.getByLabel('Value of --e2e-gap')).toHaveValue('20px');
+ await page.getByRole('tab',{name:/^Classes/}).click();await expect(page.getByRole('button',{name:/^Rename /}).first()).toBeVisible();
+ await expect(panel).toBeVisible();});
