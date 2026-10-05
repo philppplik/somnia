@@ -1,0 +1,2 @@
+import test from 'node:test';import assert from 'node:assert/strict';import {settingsMatch} from './settingsSearch';
+test('settings search handles case, accents, multiple tokens and typos',()=>{assert.ok(settingsMatch('Editor font size','FONT'));assert.ok(settingsMatch('Schriftgröße','schriftgroße'));assert.ok(settingsMatch('Editor font size','editor font'));assert.ok(settingsMatch('Autocomplete suggestions','autocomplet'));assert.equal(settingsMatch('App theme','font'),false);assert.ok(settingsMatch('anything',''));});

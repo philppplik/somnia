@@ -1,0 +1,34 @@
+# Settings redesign, tranche 1
+
+Base: feature/i18n e33289f. Branch: feat/settings-redesign. No merge or release.
+
+## Implemented
+
+- Mockup-shaped rounded two-column modal, grey sidebar, panel content, X close, 880x640 default, CSS resize with 720x520 minimum (clamped to the viewport), independent scrolling and Escape.
+- Icons before every available sidebar item; App, Editor, Workflow, Power-Ups, System groups. Unimplemented categories are omitted, not disabled or labelled as future features.
+- Cross-section case/accent-insensitive search with one-edit typo tolerance. Filters rows and sidebar sections; empty-result feedback. Uses the existing translator with EN/DE catalogue additions from the settings translation worker.
+- Existing functional appearance/code/shortcuts/extensions/update/about controls preserved. New General language placement, actual current Canvas viewport/zoom and sandboxed preview script switch, accent presets and hex readout.
+- Section resets for General, Appearance, Code, Canvas, Preview, Shortcuts and Updates. Live changes and settings-only Ctrl/Cmd+Z for app-state preferences, language, formatting, update preference and shortcut overrides. Text inputs keep native text undo. Application shortcuts are suppressed while Settings is open so document undo/delete/save cannot leak behind the modal.
+- Repository docs link per section. Existing extension installation/removal is not undoable, so settings undo does not claim to reverse it.
+
+## Verification
+
+Typecheck and production build pass. Core suite: 272/272. Focused settings/look/shortcuts/language/extensions tests: 11/11. New redesign and about/update tests: 6/6. Broader focused run: 19 passed, 2 startup races (keyboard fired before app ready); those 2 passed on serial rerun, and new tests now wait for the UI before shortcuts.
+
+Full 156-test run exceeded the 120-second command budget at 35 tests and was stopped. It showed 3 failures under 4-worker contention (About/update startup, component browser, component library). This is NOT a green full-suite claim. Run full CI on integration.
+
+Actual light, dark, search and 760x560 screenshots inspected: rounded sidebar/content geometry, visible icons, readable control layout, close button and independent scrolling. Windows native mouse-resize and WebView2 not tested here.
+
+## Remaining scope
+
+This is the first tranche, not the complete specification. Window, Editing, Typography, Projects, Export/Publish, Oneiroi, Privacy/Security, Advanced and Account/License categories are not implemented yet. Most proposed controls in the current categories also still need real backing behavior: app startup choices/recent counts, UI font/motion/grain/shadows, canvas grid/rulers/guides/snapping/panning, code save/type formatting and font selectors, device/server preview settings, update channels/cadence/download policy, extension verification/developer mode. Canvas controls currently change the current view, not persistent defaults for new projects.
+
+Many remaining rows describe entire systems absent from the codebase, rather than simple preferences. Account/billing/credits require owner product decisions and real services; provider keys need native OS keychain work; hosting OAuth needs real application registration; native renderer/GPU choices cannot be faked by a UI select. Do not publish dummy account pricing or fake protected capabilities.
+
+## Integration
+
+Fetch the bundle and cherry-pick the tranche commit onto the i18n integration branch. Settings.tsx is reformatted and restructured; do not line-merge the old Settings i18n worker's JSX version. Its supplied EN/DE keys are already included. Merge catalogue additions by key with other i18n bundles. Commands.ts has one guard added; styles are appended at end of global.css.
+
+## Windows check
+
+Open Settings with Ctrl+,; resize by bottom-right corner; navigate every icon; search theme/autocomplet and clear search; change theme/density/code preferences and Ctrl+Z; change language in General; reset and restart to check persisted preferences. Escape must close Settings without changing source. Check current Canvas zoom and preview script toggle against the actual view. Scroll sidebar to About on small windows.
