@@ -1,4 +1,4 @@
-import {applyOperations, getState, patchState} from '../store/appStore';
+import {applyOperations, breakpointFor, getState, patchState} from '../store/appStore';
 import type {EditorNode} from './editorPort';
 import {alignDeltas, distributeDeltas, shiftStyle, type AlignMode, type Axis, type Box, type Delta} from './alignDistribute';
 
@@ -32,7 +32,7 @@ export function applyDeltas(frame: HTMLIFrameElement | null, deltas: Delta[]): n
   const doc = frame?.contentDocument, win = frame?.contentWindow;
   if (!doc || !win || !deltas.length) return 0;
   const s = getState();
-  const breakpoint = s.viewport === 1280 ? undefined : s.viewport === 820 ? 900 : 600;
+  const breakpoint = breakpointFor(s.viewport);
   const ops = deltas.flatMap(d => {
     const el = doc.querySelector(`[data-editor-node="${d.id}"]`);
     if (!el) return [];

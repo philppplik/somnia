@@ -1,4 +1,5 @@
 import {useMemo,useState} from 'react';
+import {ResponsivePanel} from './ResponsivePanel';
 import {applyOperations,jumpToLine,patchState,useAppStore} from '../store/appStore';
 import {addVariable,listClasses,parseVariables,renameClass,setVariableValue,isCss,type CssVariable} from '../lib/cssTools';
 import {cn} from '../lib/cn';
@@ -6,7 +7,7 @@ import {cn} from '../lib/cn';
 const input='h-7 w-auto! rounded-sm border border-subtle bg-transparent px-2! py-0! text-xs';
 const small='h-6 rounded-sm border border-subtle bg-transparent px-2 text-[11px] text-ink-2 disabled:opacity-40';
 export function CssPanel(){
- const s=useAppStore();const [tab,setTab]=useState<'variables'|'classes'>('variables');const [q,setQ]=useState('');
+ const s=useAppStore();const [tab,setTab]=useState<'variables'|'classes'|'responsive'>('variables');const [q,setQ]=useState('');
  const vars=useMemo(()=>parseVariables(s.files),[s.files]);const classes=useMemo(()=>listClasses(s.files),[s.files]);
  const [renaming,setRenaming]=useState<string|null>(null);const [to,setTo]=useState('');const [err,setErr]=useState<string|null>(null);
  const [nn,setNn]=useState('--');const [nv,setNv]=useState('');const cssFiles=Object.keys(s.files).filter(isCss);
@@ -18,12 +19,12 @@ export function CssPanel(){
   applyOperations(Object.entries(r.changed).map(([file,text])=>({type:'replaceSource' as const,file,text})),'code','css-class-rename');
   patchState({notice:`Renamed .${from} to .${to.trim()} (${r.count} places in ${Object.keys(r.changed).length} files). Undo reverts it.`});setRenaming(null);};
  const f=q.trim().toLowerCase();const fv=vars.filter(v=>!f||v.name.includes(f)||v.value.toLowerCase().includes(f));const fc=classes.filter(c=>!f||c.name.toLowerCase().includes(f));
- const tabBtn=(id:'variables'|'classes',label:string)=><button role="tab" aria-selected={tab===id} onClick={()=>{setTab(id);setErr(null);}} className={cn('h-7 flex-1 rounded-sm border-0 bg-transparent text-xs text-ink-2',tab===id&&'bg-accent-soft text-accent')}>{label}</button>;
+ const tabBtn=(id:'variables'|'classes'|'responsive',label:string)=><button role="tab" aria-selected={tab===id} onClick={()=>{setTab(id);setErr(null);}} className={cn('h-7 flex-1 rounded-sm border-0 bg-transparent text-xs text-ink-2',tab===id&&'bg-accent-soft text-accent')}>{label}</button>;
  return <div className="flex h-full flex-col gap-2 p-3" aria-label="CSS tools">
-  <div role="tablist" aria-label="CSS tools" className="flex gap-1">{tabBtn('variables',`Variables (${vars.length})`)}{tabBtn('classes',`Classes (${classes.length})`)}</div>
-  <input aria-label="Filter CSS" placeholder={tab==='variables'?'Filter variables':'Filter classes'} value={q} onChange={e=>setQ(e.target.value)} className={input}/>
+  <div role="tablist" aria-label="CSS tools" className="flex gap-1">{tabBtn('variables',`Variables (${vars.length})`)}{tabBtn('classes',`Classes (${classes.length})`)}{tabBtn('responsive','Responsive')}</div>
+  {tab!=='responsive'&&<input aria-label="Filter CSS" placeholder={tab==='variables'?'Filter variables':'Filter classes'} value={q} onChange={e=>setQ(e.target.value)} className={input}/>}
   {err&&<p role="alert" className="m-0 text-[11px] text-red-600">{err}</p>}
-  {tab==='variables'?<>
+  {tab==='responsive'?<ResponsivePanel/>:tab==='variables'?<>
    <div className="min-h-0 flex-1 overflow-auto">{fv.map(v=><div key={v.file+v.start} className="mb-1.5 flex flex-col gap-0.5">
      <div className="flex items-center gap-1 text-[11px]"><button aria-label={`Show ${v.name} in ${v.file}`} onClick={()=>jumpToLine(v.file,v.line,1)} className="truncate border-0 bg-transparent p-0 text-left font-mono font-medium text-ink">{v.name}</button><span className="flex-1"/><span className="text-ink-3" title={`${v.file}, ${v.scope}`}>{v.scope}</span><span className="text-ink-3">{v.uses}×</span></div>
      <div className="flex items-center gap-1">{/^#([0-9a-f]{3,8})$/i.test(v.value)&&<input type="color" aria-label={`Pick colour for ${v.name}`} value={v.value.length===4?'#'+[...v.value.slice(1)].map(c=>c+c).join(''):v.value.slice(0,7)} onChange={e=>setVar(v,e.target.value)} className="size-6! shrink-0 cursor-pointer border-0 bg-transparent p-0!"/>}
