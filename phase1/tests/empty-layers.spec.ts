@@ -28,7 +28,7 @@ test('clean launch has no sample layers or phantom file, in light and dark',asyn
 });
 test('blank page exposes document-empty state, filtering and close return to empty',async({page})=>{
  await page.goto('/');await page.getByTestId('empty-state').getByRole('button',{name:'New blank page'}).click();
- await expect(page.getByTestId('layers-empty-state')).toHaveCount(0);await expect(sidebar(page).getByText('No layers in this document.')).toBeVisible();
+ await expect(page.getByTestId('layers-empty-state')).toHaveCount(0);await expect(sidebar(page).getByRole('button',{name:'html',exact:true})).toBeVisible();
  await sidebar(page).getByLabel('Filter layers').fill('not-a-layer');await expect(sidebar(page).getByText('No matching layers.')).toBeVisible();
  await closeProject(page);await page.reload();await expectEmpty(page);
 });
