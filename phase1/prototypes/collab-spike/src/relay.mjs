@@ -35,7 +35,15 @@ export class Relay {
     this.maxAuthFailures = o.maxAuthFailures ?? 5
     this.failures = new Map()
     this.conns = new Map() // ws -> { role, awarenessIds:Set }
-    this.wss = new WebSocketServer({ host: o.host ?? '127.0.0.1', port: o.port ?? 0, maxPayload: MAX_MESSAGE_BYTES, verifyClient: (info, cb) => this.#verify(info, cb) })
+    // Extension points used by SecureRelay (transport-security slice). All optional; defaults keep the spike behaviour.
+    this.server = o.server ?? null          // pre-built http/https server (TLS). Caller listens.
+    this.scheme = o.scheme ?? 'ws'          // 'wss' when a TLS server is passed
+    this.authenticate = o.authenticate      // (code, info) => { role, id } | null, replaces the three fixed codes
+    this.verifyGate = o.verifyGate          // (info) => { status, reason } | null, runs before auth (rate limits, origin)
+    this.messageGate = o.messageGate        // (ws, byteLength, role) => boolean, false closes the socket
+    this.onAuthFailure = o.onAuthFailure    // (addr) => void
+    const wssOpts = { maxPayload: MAX_MESSAGE_BYTES, verifyClient: (info, cb) => this.#verify(info, cb) }
+    this.wss = new WebSocketServer(this.server ? { ...wssOpts, server: this.server } : { ...wssOpts, host: o.host ?? '127.0.0.1', port: o.port ?? 0 })
     this.doc.on('update', (u, origin) => { this.#broadcast(encodeUpdate(u), origin) })
     this.awareness.on('update', ({ added, updated, removed }, origin) => {
       const ids = added.concat(updated, removed)
@@ -48,12 +56,12 @@ export class Relay {
   }
 
   get port() { return this.wss.address().port }
-  get ready() { return new Promise(r => this.wss.address() ? r() : this.wss.once('listening', r)) }
+  get ready() { return new Promise(r => this.wss.address() ? r() : (this.server ?? this.wss).once('listening', r)) }
 
   /** Invite = what the host hands out. The code is the only credential. */
   invite(role, hostname = '127.0.0.1') {
     if (!ROLES.includes(role) || role === 'host') throw new Error('invite role must be editor or viewer')
-    return `ws://${hostname}:${this.port}/?code=${this.codes[role]}`
+    return `${this.scheme}://${hostname}:${this.port}/?code=${this.codes[role]}`
   }
   hostUrl() { return `ws://127.0.0.1:${this.port}/?code=${this.codes.host}` }
 
@@ -65,10 +73,18 @@ export class Relay {
 
   #verify(info, cb) {
     const addr = info.req.socket.remoteAddress
+    const gate = this.verifyGate?.(info)
+    if (gate) return cb(false, gate.status, gate.reason)
     if ((this.failures.get(addr) ?? 0) >= this.maxAuthFailures) return cb(false, 429, 'blocked')
     if (Date.now() > this.expiresAt) return cb(false, 401, 'invite expired')
     if (this.conns.size >= this.maxClients) return cb(false, 503, 'session full')
     const code = new URL(info.req.url, 'http://x').searchParams.get('code')
+    if (this.authenticate) {
+      const hit = this.authenticate(code, info)
+      if (!hit) { this.onAuthFailure?.(addr); return cb(false, 401, 'bad code') }
+      info.req.somniaRole = hit.role; info.req.somniaInvite = hit.id
+      return cb(true)
+    }
     const role = this.#roleFor(code)
     if (!role) { this.failures.set(addr, (this.failures.get(addr) ?? 0) + 1); return cb(false, 401, 'bad code') }
     info.req.somniaRole = role
@@ -77,11 +93,12 @@ export class Relay {
 
   #onConnection(ws, req) {
     const role = req.somniaRole
-    this.conns.set(ws, { role, awarenessIds: new Set() })
+    this.conns.set(ws, { role, awarenessIds: new Set(), inviteId: req.somniaInvite ?? null, addr: req.socket.remoteAddress })
     ws.binaryType = 'nodebuffer'
     ws.on('error', () => {}) // oversized or malformed frames: ws closes the socket itself
     ws.on('message', data => {
       const bytes = new Uint8Array(data)
+      if (this.messageGate && !this.messageGate(ws, bytes.length, role)) { ws.close(1008, 'rate limit'); return }
       try {
         if (bytes[0] === MSG_SYNC && role === 'viewer') {
           // sync step 1 (a request for state) is read-only; step 2 and update carry writes
