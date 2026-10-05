@@ -2,7 +2,7 @@ import {test,expect} from './fixtures';
 test('resizable settings shell, icons, live controls and settings-only undo',async({page})=>{
  await page.goto('/');await expect(page.getByRole('button',{name:'Split view',exact:true})).toBeVisible();await page.keyboard.press('Control+,');const dialog=page.getByRole('dialog');
  await expect(dialog).toBeVisible();const bounds=await dialog.boundingBox();expect(bounds!.width).toBe(880);expect(bounds!.height).toBe(640);
- await expect(dialog.locator('nav button svg')).toHaveCount(11);
+ await expect(dialog.locator('nav button svg')).toHaveCount(13);
  await expect(dialog).toHaveCSS('resize','both');
  await dialog.getByLabel('Density',{exact:true}).selectOption('compact');await expect(page.locator('html')).toHaveCSS('--gap','3px');
  await dialog.getByLabel('Density',{exact:true}).focus();await page.keyboard.press('Control+z');await expect(page.locator('html')).toHaveCSS('--gap','6px');

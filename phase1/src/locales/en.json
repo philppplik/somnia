@@ -241,5 +241,16 @@
   "windowPref.custom": "Custom",
   "windowPref.system": "System",
   "windowPref.doubleClick": "Titlebar double-click",
-  "windowPref.maximize": "Maximize / restore"
+  "windowPref.maximize": "Maximize / restore",
+  "set.section.typography": "Typography",
+  "set.section.export": "Export & Publish",
+  "docPref.newOnly": "These defaults are written into new blank HTML pages. Existing projects and local font files are not changed. Available fonts depend on your operating system.",
+  "docPref.font": "Default font for new projects",
+  "docPref.fontSize": "Body font size (px)",
+  "docPref.lineHeight": "Default line height",
+  "docPref.letterSpacing": "Default letter spacing (px)",
+  "docPref.paragraphSpacing": "Paragraph spacing (em)",
+  "docPref.exportHint": "Applied to ZIP and single HTML downloads. Folder copies preserve the original project files. Cleaning creates a copy and does not change your source.",
+  "docPref.stripIds": "Remove editor data attributes on export",
+  "docPref.comments": "Keep HTML comments on export"
 }

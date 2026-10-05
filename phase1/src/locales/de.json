@@ -241,5 +241,16 @@
   "windowPref.custom": "Benutzerdefiniert",
   "windowPref.system": "System",
   "windowPref.doubleClick": "Titlebar-Doppelklick",
-  "windowPref.maximize": "Maximieren / Wiederherstellen"
+  "windowPref.maximize": "Maximieren / Wiederherstellen",
+  "set.section.typography": "Typografie",
+  "set.section.export": "Export & Veröffentlichung",
+  "docPref.newOnly": "Diese Standards werden in neue leere HTML-Seiten geschrieben. Bestehende Projekte und lokale Schriftdateien bleiben unverändert. Verfügbare Schriften hängen vom Betriebssystem ab.",
+  "docPref.font": "Standardschrift für neue Projekte",
+  "docPref.fontSize": "Fließtext-Schriftgröße (px)",
+  "docPref.lineHeight": "Standard-Zeilenhöhe",
+  "docPref.letterSpacing": "Standard-Zeichenabstand (px)",
+  "docPref.paragraphSpacing": "Absatzabstand (em)",
+  "docPref.exportHint": "Gilt für ZIP und einzelne HTML-Downloads. Ordnerkopien behalten Originaldateien. Die Bereinigung erstellt eine Kopie und verändert nicht den Quelltext.",
+  "docPref.stripIds": "Editor-Datenattribute beim Export entfernen",
+  "docPref.comments": "HTML-Kommentare beim Export behalten"
 }

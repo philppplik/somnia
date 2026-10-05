@@ -1,3 +1,5 @@
+import { DEFAULT_DOCUMENT_PREFS } from "../lib/documentPrefs";
+import { Type, Upload } from "lucide-react";
 import {
   DEFAULT_WINDOW_PREFS,
   applyWindowPrefs,
@@ -125,6 +127,25 @@ export function Settings() {
   };
   const reset = (name: string) => {
     if (name === "Window") void nativeWindowChange({ ...DEFAULT_WINDOW_PREFS });
+    if (name === "Typography")
+      change({
+        documentPrefs: {
+          ...state.documentPrefs,
+          font: "system",
+          fontSize: 16,
+          lineHeight: 1.5,
+          letterSpacing: 0,
+          paragraphSpacing: 1,
+        },
+      });
+    if (name === "Export & Publish")
+      change({
+        documentPrefs: {
+          ...state.documentPrefs,
+          stripEditorIds: true,
+          keepComments: true,
+        },
+      });
     if (name === "Appearance")
       change({
         themeChoice: "system",
@@ -261,7 +282,14 @@ export function Settings() {
       : []),
     { name: "Canvas", key: "canvas", group: "Editor", icon: Square },
     { name: "Editing", key: "editing", group: "Editor", icon: Pencil },
+    { name: "Typography", key: "typography", group: "Editor", icon: Type },
     { name: "Code editor", key: "code", group: "Editor", icon: Code2 },
+    {
+      name: "Export & Publish",
+      key: "export",
+      group: "Workflow",
+      icon: Upload,
+    },
     { name: "Preview", key: "preview", group: "Workflow", icon: Eye },
     { name: "Shortcuts", key: "shortcuts", group: "Workflow", icon: Keyboard },
     { name: "Extensions", key: "extensions", group: "Power-Ups", icon: Puzzle },
@@ -405,6 +433,114 @@ export function Settings() {
           </label>
           {errs.length > 0 && <p role="alert">{errs.join(" ")}</p>}
         </fieldset>
+      )}
+      {section === "Typography" && (
+        <>
+          <p>{t("docPref.newOnly")}</p>
+          <label>
+            {t("docPref.font")}
+            <select
+              aria-label="Default project font"
+              value={state.documentPrefs.font}
+              onChange={(e) =>
+                change({
+                  documentPrefs: {
+                    ...state.documentPrefs,
+                    font: e.target.value as "system" | "serif" | "monospace",
+                  },
+                })
+              }
+            >
+              <option value="system">System sans-serif</option>
+              <option value="serif">Georgia / serif</option>
+              <option value="monospace">System monospace</option>
+            </select>
+          </label>
+          {(
+            [
+              ["fontSize", 8, 72, 1],
+              ["lineHeight", 1, 3, 0.1],
+              ["letterSpacing", -2, 20, 0.1],
+              ["paragraphSpacing", 0, 5, 0.1],
+            ] as const
+          ).map(([key, min, max, step]) => (
+            <label key={key}>
+              {t("docPref." + key)}
+              <input
+                type="number"
+                aria-label={t("docPref." + key)}
+                min={min}
+                max={max}
+                step={step}
+                value={state.documentPrefs[key]}
+                onChange={(e) =>
+                  change({
+                    documentPrefs: {
+                      ...state.documentPrefs,
+                      [key]: Math.max(
+                        min,
+                        Math.min(max, Number(e.target.value)),
+                      ),
+                    },
+                  })
+                }
+              />
+            </label>
+          ))}
+          <div
+            className="settings-type-sample"
+            style={{
+              fontFamily:
+                state.documentPrefs.font === "serif"
+                  ? "Georgia,serif"
+                  : state.documentPrefs.font === "monospace"
+                    ? "monospace"
+                    : "system-ui",
+              fontSize: state.documentPrefs.fontSize,
+              lineHeight: state.documentPrefs.lineHeight,
+              letterSpacing: state.documentPrefs.letterSpacing,
+            }}
+          >
+            Aa Bb Cc · 0123456789
+          </div>
+        </>
+      )}
+      {section === "Export & Publish" && (
+        <>
+          <p>{t("docPref.exportHint")}</p>
+          <label>
+            {t("docPref.stripIds")}
+            <input
+              type="checkbox"
+              aria-label="Remove editor data attributes on export"
+              checked={state.documentPrefs.stripEditorIds}
+              onChange={(e) =>
+                change({
+                  documentPrefs: {
+                    ...state.documentPrefs,
+                    stripEditorIds: e.target.checked,
+                  },
+                })
+              }
+            />
+          </label>
+          <label>
+            {t("docPref.comments")}
+            <input
+              type="checkbox"
+              aria-label="Keep HTML comments on export"
+              checked={state.documentPrefs.keepComments}
+              onChange={(e) =>
+                change({
+                  documentPrefs: {
+                    ...state.documentPrefs,
+                    keepComments: e.target.checked,
+                  },
+                })
+              }
+            />
+          </label>
+        </>
       )}
       {section === "General" && (
         <>
@@ -1618,6 +1754,8 @@ export function Settings() {
         </a>
         {[
           "General",
+          "Typography",
+          "Export & Publish",
           "Window",
           "Editing",
           "Appearance",

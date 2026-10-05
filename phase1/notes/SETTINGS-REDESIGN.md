@@ -68,3 +68,13 @@ Verification: core 282/282, updated redesign/system e2e 5/5, build/typecheck pas
 Desktop-only Window category: remembers dimensions/position, bounded default size that applies live, always-on-top, native/system vs custom frame, and custom titlebar double-click maximize/none. Actual Tauri window API calls must succeed before preferences commit; controls are disabled during the operation. Startup applies saved preferences. Added main-window-only capability permissions for always-on-top/decorations, no preview-frame privilege changes.
 
 Core 284/284, build/typecheck pass. Browser regression settings/interface/system 8/8. Native Window layout/API integration cannot be visually verified in this environment; no Rust toolchain here. Needs desktop CI capability validation and Philipp's Windows test before release. Source includes tested injected platform-port behavior and rejection tests, not a claim of native execution success.
+
+## Tranche 7
+
+Typography category: safe installed-font stacks (system/serif/monospace), font size, line height, letter spacing and paragraph spacing written into new blank HTML pages, with live sample. Not an installed-font enumeration, Google Fonts integration or existing-source rewrite.
+
+Export & Publish: real editor-data-attribute stripping and optional HTML comment removal for ZIP and single HTML downloads using parse5 tree traversal. Script strings are preserved and source remains unchanged. Folder export explicitly preserves source and does not apply these cleanups. No fake hosting/connect buttons.
+
+Native Window application now rolls back partial platform changes if a later action fails. Panning shortcut no longer intercepts Space while Settings is open.
+
+Verification: core 287/287, document e2e 2/2 after wiring correction; other document/workflow/redesign/export 6/6 passed. Build/typecheck pass. Typography screenshot inspected. Local font enumeration and native project backup-folder integrations remain.

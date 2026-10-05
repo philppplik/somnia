@@ -7,4 +7,11 @@ export function readWindowPrefs():WindowPrefs{try{return sanitizeWindowPrefs(JSO
 export function saveWindowPrefs(p:WindowPrefs){try{localStorage.setItem('somnia.windowPrefs.v1',JSON.stringify(p));if(!p.remember)localStorage.removeItem('somnia.window.v1');}catch{/* session only */}}
 export interface WindowPort{setAlwaysOnTop:(value:boolean)=>Promise<void>;setDecorations:(value:boolean)=>Promise<void>;setSize:(value:LogicalSize)=>Promise<void>}
 /** Apply only after platform accepts; callers commit the preference on success. */
-export async function applyWindowPrefs(next:WindowPrefs,old:WindowPrefs,port?:WindowPort){if(!port&&!isTauri())return;const win=port??getCurrentWindow();if(next.alwaysOnTop!==old.alwaysOnTop)await win.setAlwaysOnTop(next.alwaysOnTop);if(next.frame!==old.frame)await win.setDecorations(next.frame==='system');if(next.width!==old.width||next.height!==old.height)await win.setSize(new LogicalSize(next.width,next.height));}
+export async function applyWindowPrefs(next:WindowPrefs,old:WindowPrefs,port?:WindowPort){
+ if(!port&&!isTauri())return;const win=port??getCurrentWindow();const rollback:(()=>Promise<void>)[]=[];
+ try{
+  if(next.alwaysOnTop!==old.alwaysOnTop){await win.setAlwaysOnTop(next.alwaysOnTop);rollback.push(()=>win.setAlwaysOnTop(old.alwaysOnTop));}
+  if(next.frame!==old.frame){await win.setDecorations(next.frame==='system');rollback.push(()=>win.setDecorations(old.frame==='system'));}
+  if(next.width!==old.width||next.height!==old.height){await win.setSize(new LogicalSize(next.width,next.height));rollback.push(()=>win.setSize(new LogicalSize(old.width,old.height)));}
+ }catch(error){let rollbackFailed=false;for(const undo of rollback.reverse()){try{await undo();}catch{rollbackFailed=true;}}if(rollbackFailed)throw Error('Window change failed and previous state could not be fully restored. Check your window controls.');throw error;}
+}
