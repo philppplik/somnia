@@ -33,11 +33,12 @@ Failed installs show a list of problems under the text box; nothing is stored. S
 
 ## Distribution
 
-There is no marketplace yet. The plan, recorded in [ADR-003](../../phase1/notes/ADR-003-extension-sdk.md), is a GitHub-hosted index of extensions. Until then share the JSON file, for example as a release asset in your own repository.
+Settings > Extensions > Browse GitHub extensions loads a reviewed GitHub index. Choose Review to download and hash-check a package, read the permission list, then Confirm install. It stays off until you enable it. Replacing an installed catalog extension also switches it off. Canceling the review writes nothing.
+
+The initial index ships in the Somnia repo, with a first-party Quiet Colors theme. See [index format and review rules](catalog/README.md). Catalog worker-code packages are refused until the worker boundary is hardened; declarative contributions and sandboxed panels are supported. A matching hash is not a promise that an extension is safe. Local installs remain available.
 
 ## Not supported yet
 
-- ZIP or folder packages with separate files (`main`).
 - Signed extensions and automatic updates.
 - Dependencies between extensions.
 

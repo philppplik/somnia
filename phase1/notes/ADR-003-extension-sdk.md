@@ -95,3 +95,7 @@ A public repo `somnia-extensions` holds `index.json` (id, name, version, author,
 - Settings > Extensions shows every declared permission as a checkbox; unchecking revokes it (stored in `somnia.extensions.revoked.v1`) and the next call fails with a clear message.
 - Settings > Extensions > "Add from a .json file" installs a manifest from a file. ZIP/folder install is still open.
 - Examples in `phase1/examples/`: word-count and safe-links (see README there).
+
+## GitHub index implementation (2026-10-05)
+
+Opt-in catalog browser, hash-pinned ZIP verification, permission review and explicit installation are implemented in `catalog.ts` / `ExtensionCatalog.tsx`. Initial index lives in `docs/extensions/catalog` in the existing repository, not a separate repo. New and replacement catalog installs stay off. Download hosts/CSP allow only raw.githubusercontent.com in addition to existing app hosts. Worker-code packages remain blocked because their network boundary is not hardened; declarative themes/snippets and sandboxed panels are supported. Index entries require source/package review in a PR. See [implementation and Windows checks](EXTENSION-INDEX.md). This supersedes the "not built yet" distribution status above without claiming the worker security prerequisite is complete.

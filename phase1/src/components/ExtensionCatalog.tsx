@@ -1,0 +1,28 @@
+import {useEffect,useRef,useState} from 'react';
+import {fetchCatalog,reviewCatalogPackage,installReviewedPackage,permissionExplanation,type CatalogEntry,type ReviewedPackage} from '../lib/extensions/catalog';
+import {loadExtensions} from '../lib/extensions/registry';
+
+/** No background fetch. Opening Browse is an explicit opt-in to contact GitHub. */
+export function ExtensionCatalog({onInstalled}:{onInstalled:()=>void}){
+ const [open,setOpen]=useState(false),[entries,setEntries]=useState<CatalogEntry[]|null>(null),[query,setQuery]=useState(''),[busy,setBusy]=useState(false),[message,setMessage]=useState(''),[error,setError]=useState(''),[review,setReview]=useState<ReviewedPackage|null>(null);
+ const request=useRef<AbortController|null>(null);
+ useEffect(()=>()=>{request.current?.abort();},[]);
+ const start=()=>{request.current?.abort();const controller=new AbortController();request.current=controller;setBusy(true);setError('');setMessage('');return controller;};
+ const load=async()=>{setOpen(true);setReview(null);const controller=start();try{setEntries(await fetchCatalog(controller.signal));}catch(e){if(!controller.signal.aborted)setError(e instanceof Error?e.message:'Could not load the GitHub index.');}finally{if(!controller.signal.aborted)setBusy(false);}};
+ const inspect=async(entry:CatalogEntry)=>{setReview(null);const controller=start();try{setReview(await reviewCatalogPackage(entry,controller.signal));}catch(e){if(!controller.signal.aborted)setError(e instanceof Error?e.message:'Could not verify the package.');}finally{if(!controller.signal.aborted)setBusy(false);}};
+ const close=()=>{request.current?.abort();setOpen(false);setBusy(false);setReview(null);setError('');};
+ return <div className="mb-5 rounded-lg border border-line p-3" aria-label="GitHub extension catalog">
+  <h3 className="mt-0 text-sm">GitHub extension index</h3>
+  <p className="text-[12px]">Browse contacts GitHub to load a reviewed index. Packages are hash-checked, then you review permissions before installing. Nothing runs until you enable it. Worker-code extensions are not available here yet.</p>
+  {!open?<button onClick={()=>void load()}>Browse GitHub extensions</button>:<>
+   <div className="flex flex-wrap gap-2"><button disabled={busy} onClick={()=>void load()}>Refresh index</button><button onClick={close}>Close browser</button></div>
+   {busy&&<p role="status">Loading and verifying...</p>}
+   {entries&&<><label className="!block">Search extensions<input aria-label="Search extensions" className="min-w-0 w-full rounded border border-line bg-panel p-2" value={query} onChange={e=>setQuery(e.target.value)}/></label>
+    <ul className="max-h-[220px] list-none overflow-auto p-0" aria-label="Available extensions">{entries.filter(e=>`${e.name} ${e.author} ${e.description}`.toLowerCase().includes(query.toLowerCase())).map(entry=>{
+     const installed=loadExtensions().find(e=>e.id===entry.id);return <li key={entry.id} className="my-2 rounded border border-line p-3"><strong className="break-words">{entry.name}</strong> <small>v{entry.version} by {entry.author}</small><p className="my-1 text-[12px] break-words">{entry.description}</p><small>{installed?`Installed v${installed.version}. Replacement will be disabled.`:'Not installed.'}</small><div className="mt-2 flex flex-wrap gap-3"><a className="text-[12px] underline" href={entry.repo} target="_blank" rel="noreferrer">Source on GitHub</a><button disabled={busy} onClick={()=>void inspect(entry)}>Review {entry.name}</button></div></li>;
+    })}</ul>{entries.length===0&&<p>No extensions are listed yet.</p>}{entries.length>0&&!entries.some(e=>`${e.name} ${e.author} ${e.description}`.toLowerCase().includes(query.toLowerCase()))&&<p>No matching extensions.</p>}</>}
+   {review&&<div className="rounded-lg border border-accent p-3" role="region" aria-label="Review extension install"><h4 className="mt-0">Install {review.manifest.name} v{review.manifest.version}?</h4><p className="text-[12px]">SHA-256 verified. A hash checks the package matches the index, not that it is safe. Only install extensions you trust.</p><strong className="text-[12px]">Requested permissions</strong>{review.manifest.permissions.length?<ul className="pl-5 text-[12px]">{review.manifest.permissions.map(p=><li key={p}><code>{p}</code>: {permissionExplanation[p]}</li>)}</ul>:<p className="text-[12px]">No host permissions.</p>}<p className="text-[12px]">This installs in your app profile, not the project. It stays off until you enable it in the installed list below. Existing installs with this id are replaced and switched off.</p><div className="flex gap-2"><button onClick={()=>{try{const r=installReviewedPackage(review);if(!r.ok){setError(r.errors.join(' '));return;}setMessage(`${r.manifest.name} installed and off. Enable it below when ready.`);setReview(null);onInstalled();}catch(e){setError(e instanceof Error?e.message:'Install failed.');}}}>Confirm install</button><button onClick={()=>setReview(null)}>Cancel install</button></div></div>}
+  </>}
+  {error&&<p role="alert" className="text-[12px] break-words">{error} Local file installs remain available below.</p>}{message&&<p role="status" className="text-[12px]">{message}</p>}
+ </div>;
+}

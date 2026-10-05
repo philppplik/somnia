@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "extensions": [
+    {
+      "id": "somnia.quiet-colors",
+      "name": "Quiet Colors",
+      "version": "1.0.0",
+      "author": "Somnia",
+      "description": "A calm code theme with light and dark syntax colors. No code and no host permissions.",
+      "repo": "https://github.com/philppplik/somnia",
+      "download": "https://raw.githubusercontent.com/philppplik/somnia/phase1-foundation/docs/extensions/catalog/packages/quiet-colors-1.0.0.zip",
+      "sha256": "4415d00be5ed5714655688c39be8711c7b1b7b1d7a9a5b1f1624835cd546c798",
+      "apiVersion": 1,
+      "permissions": []
+    }
+  ]
+}
