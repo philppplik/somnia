@@ -1,3 +1,10 @@
+import {
+  DEFAULT_WINDOW_PREFS,
+  applyWindowPrefs,
+  type WindowPrefs,
+} from "../lib/windowPrefs";
+import { isTauri } from "@tauri-apps/api/core";
+import { Monitor } from "lucide-react";
 import { DEFAULT_UPDATE_PREFS } from "../lib/updatePrefs";
 import { EditorProject } from "@somnia/editor-core";
 import { Zap } from "lucide-react";
@@ -90,6 +97,7 @@ export function Settings() {
     message?: string;
   }>({ state: "idle" });
   const [query, setQuery] = useState("");
+  const [nativeBusy, setNativeBusy] = useState(false);
   const [tick, setTick] = useState(0);
   const [matches, setMatches] = useState<string[]>([]);
   const undo = useRef<(() => void)[]>([]);
@@ -116,6 +124,7 @@ export function Settings() {
     setScTick((n) => n + 1);
   };
   const reset = (name: string) => {
+    if (name === "Window") void nativeWindowChange({ ...DEFAULT_WINDOW_PREFS });
     if (name === "Appearance")
       change({
         themeChoice: "system",
@@ -225,9 +234,31 @@ export function Settings() {
       });
     setMatches((prev) => (prev.join("|") === found.join("|") ? prev : found));
   }, [query, tick, state, exts]);
+  const nativeWindowChange = async (next: WindowPrefs) => {
+    if (nativeBusy) return;
+    setNativeBusy(true);
+    const old = state.windowPrefs;
+    try {
+      await applyWindowPrefs(next, old);
+      undo.current.push(() => {
+        void applyWindowPrefs(old, next)
+          .then(() => patchState({ windowPrefs: old }))
+          .catch((error) => setErrs([String(error)]));
+      });
+      patchState({ windowPrefs: next });
+      setErrs([]);
+    } catch (error) {
+      setErrs([error instanceof Error ? error.message : String(error)]);
+    } finally {
+      setNativeBusy(false);
+    }
+  };
   const sections = [
     { name: "General", key: "general", group: "App", icon: SettingsIcon },
     { name: "Appearance", key: "appearance", group: "App", icon: Palette },
+    ...(isTauri()
+      ? [{ name: "Window", key: "window", group: "App", icon: Monitor }]
+      : []),
     { name: "Canvas", key: "canvas", group: "Editor", icon: Square },
     { name: "Editing", key: "editing", group: "Editor", icon: Pencil },
     { name: "Code editor", key: "code", group: "Editor", icon: Code2 },
@@ -271,6 +302,109 @@ export function Settings() {
           </label>
           <p>{t("redesign.fastHint")}</p>
         </>
+      )}
+      {section === "Window" && (
+        <fieldset disabled={nativeBusy} className="settings-ui-preferences">
+          <label>
+            {t("windowPref.remember")}
+            <input
+              type="checkbox"
+              aria-label="Remember window size and position"
+              checked={state.windowPrefs.remember}
+              onChange={(e) =>
+                void nativeWindowChange({
+                  ...state.windowPrefs,
+                  remember: e.target.checked,
+                })
+              }
+            />
+          </label>
+          <label>
+            {t("windowPref.width")}
+            <input
+              type="number"
+              aria-label="Default window width"
+              min={960}
+              max={3840}
+              value={state.windowPrefs.width}
+              onChange={(e) =>
+                void nativeWindowChange({
+                  ...state.windowPrefs,
+                  width: Math.max(
+                    960,
+                    Math.min(3840, Number(e.target.value) || 1440),
+                  ),
+                })
+              }
+            />
+          </label>
+          <label>
+            {t("windowPref.height")}
+            <input
+              type="number"
+              aria-label="Default window height"
+              min={600}
+              max={2160}
+              value={state.windowPrefs.height}
+              onChange={(e) =>
+                void nativeWindowChange({
+                  ...state.windowPrefs,
+                  height: Math.max(
+                    600,
+                    Math.min(2160, Number(e.target.value) || 900),
+                  ),
+                })
+              }
+            />
+          </label>
+          <label>
+            {t("windowPref.pin")}
+            <input
+              type="checkbox"
+              aria-label="Always on top"
+              checked={state.windowPrefs.alwaysOnTop}
+              onChange={(e) =>
+                void nativeWindowChange({
+                  ...state.windowPrefs,
+                  alwaysOnTop: e.target.checked,
+                })
+              }
+            />
+          </label>
+          <label>
+            {t("windowPref.frame")}
+            <select
+              aria-label="Window frame"
+              value={state.windowPrefs.frame}
+              onChange={(e) =>
+                void nativeWindowChange({
+                  ...state.windowPrefs,
+                  frame: e.target.value as "custom" | "system",
+                })
+              }
+            >
+              <option value="custom">{t("windowPref.custom")}</option>
+              <option value="system">{t("windowPref.system")}</option>
+            </select>
+          </label>
+          <label>
+            {t("windowPref.doubleClick")}
+            <select
+              aria-label="Titlebar double click"
+              value={state.windowPrefs.doubleClick}
+              onChange={(e) =>
+                void nativeWindowChange({
+                  ...state.windowPrefs,
+                  doubleClick: e.target.value as "none" | "maximize",
+                })
+              }
+            >
+              <option value="maximize">{t("windowPref.maximize")}</option>
+              <option value="none">{t("set.sc.none")}</option>
+            </select>
+          </label>
+          {errs.length > 0 && <p role="alert">{errs.join(" ")}</p>}
+        </fieldset>
       )}
       {section === "General" && (
         <>
@@ -879,7 +1013,7 @@ export function Settings() {
               </a>
             </p>
           )}
-          <p className="text-[12px]">{t("set.upd.oneclick")}</p>
+          <p className="text-[12px]">{t("redesign.signedUpdate")}</p>
         </div>
       ) : null}
       {section === "About" ? (
@@ -1484,6 +1618,7 @@ export function Settings() {
         </a>
         {[
           "General",
+          "Window",
           "Editing",
           "Appearance",
           "Code editor",

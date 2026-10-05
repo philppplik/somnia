@@ -62,3 +62,9 @@ Updates now uses real stable/beta/alpha release filtering and selectable hourly/
 Extensions gains a real undoable disable-all action. Advanced gains a persistent toggle for the existing incremental parser, with honest experimental/fallback description. No fake GPU/renderer selector.
 
 Verification: core 282/282, updated redesign/system e2e 5/5, build/typecheck pass. Updates screenshot inspected; stale legacy text about unavailable signed updater removed.
+
+## Tranche 6
+
+Desktop-only Window category: remembers dimensions/position, bounded default size that applies live, always-on-top, native/system vs custom frame, and custom titlebar double-click maximize/none. Actual Tauri window API calls must succeed before preferences commit; controls are disabled during the operation. Startup applies saved preferences. Added main-window-only capability permissions for always-on-top/decorations, no preview-frame privilege changes.
+
+Core 284/284, build/typecheck pass. Browser regression settings/interface/system 8/8. Native Window layout/API integration cannot be visually verified in this environment; no Rust toolchain here. Needs desktop CI capability validation and Philipp's Windows test before release. Source includes tested injected platform-port behavior and rejection tests, not a claim of native execution success.

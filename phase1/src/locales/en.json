@@ -231,5 +231,15 @@
   "redesign.disableAllExt": "Disable all extensions",
   "redesign.fastParse": "Experimental fast parsing",
   "redesign.fastHint": "Uses incremental parsing where supported, with full parsing as a fallback. Turning this off uses full parsing for every edit.",
-  "redesign.signedUpdate": "Desktop one-click updates verify signed stable packages before installation. Use the update pill when a newer stable version is available."
+  "redesign.signedUpdate": "Desktop one-click updates verify signed stable packages before installation. Use the update pill when a newer stable version is available.",
+  "set.section.window": "Window",
+  "windowPref.remember": "Remember window size and position",
+  "windowPref.width": "Default window width (px)",
+  "windowPref.height": "Default window height (px)",
+  "windowPref.pin": "Always on top",
+  "windowPref.frame": "Window frame",
+  "windowPref.custom": "Custom",
+  "windowPref.system": "System",
+  "windowPref.doubleClick": "Titlebar double-click",
+  "windowPref.maximize": "Maximize / restore"
 }

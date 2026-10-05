@@ -231,5 +231,15 @@
   "redesign.disableAllExt": "Alle Erweiterungen deaktivieren",
   "redesign.fastParse": "Experimentelles schnelles Parsing",
   "redesign.fastHint": "Nutzt inkrementelles Parsing, wo unterstützt, mit vollständigem Parsing als Fallback. Ausschalten nutzt vollständiges Parsing bei jeder Änderung.",
-  "redesign.signedUpdate": "Desktop-Updates prüfen signierte Stable-Pakete vor der Installation. Nutze die Update-Anzeige, wenn eine neue stabile Version verfügbar ist."
+  "redesign.signedUpdate": "Desktop-Updates prüfen signierte Stable-Pakete vor der Installation. Nutze die Update-Anzeige, wenn eine neue stabile Version verfügbar ist.",
+  "set.section.window": "Fenster",
+  "windowPref.remember": "Fenstergröße und Position merken",
+  "windowPref.width": "Standard-Fensterbreite (px)",
+  "windowPref.height": "Standard-Fensterhöhe (px)",
+  "windowPref.pin": "Immer im Vordergrund",
+  "windowPref.frame": "Fensterrahmen",
+  "windowPref.custom": "Benutzerdefiniert",
+  "windowPref.system": "System",
+  "windowPref.doubleClick": "Titlebar-Doppelklick",
+  "windowPref.maximize": "Maximieren / Wiederherstellen"
 }
