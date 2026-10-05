@@ -28,6 +28,24 @@ Risk: drop targets inside iframes need the preview bridge; keyboard path ships f
 - Folder drop, more file types, Open file with save in place (needs a native read/write path command).
 Depends on: v9.7 for container drop. Risk: benchmarks may expose editor-core limits; fixes then take priority over features.
 
+## v10 Internationalisation (i18n) - planned, docs only for now
+
+Goal: Somnia is usable in several languages. Nothing is changed in the code yet.
+
+Infrastructure:
+- Move all user-facing strings out of the code into message catalogues (one JSON file per language, stable keys).
+- Pick an i18n library (small, no runtime network, supports plurals and interpolation). Decision documented in a short note before the switch.
+- Language setting in Settings with the option "Follow system" (default), plus an explicit list of languages.
+- Missing-keys test in CI: every language must have all keys of the base language, no unused keys, placeholders match. Fallback to "en" at runtime.
+- Command palette entries, dialogs, tooltips, aria labels and error messages are included. Date and number formats follow the chosen locale.
+
+Languages:
+- Base: en
+- First wave: de, es, fr, pt-BR
+- Later: ja, zh-CN (needs a font and line-break check)
+
+Open: who reviews translations (maintainer or community PRs), and how the extension index handles localised names.
+
 ## v11 (about 1-2 weeks)
 - Table editor (insert, merge/split cells, rows/columns, accessible headers).
 - Collaboration spike (ADR-005 draft): CRDT evaluation, local network or relay, presence; a spike and a decision, not a promise of shipping.
