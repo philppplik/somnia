@@ -55,6 +55,7 @@ registerCommand({id:'help.shortcuts',title:'Keyboard shortcuts',category:'Help',
 export const isMac=()=>/Mac|iPhone|iPad/.test(navigator.platform);
 export const formatShortcut=(shortcut:string)=>shortcut.split('+').map(part=>({Mod:isMac()?'⌘':'Ctrl',Alt:isMac()?'⌥':'Alt',Shift:isMac()?'⇧':'Shift'}[part]??(part.length===1?part.toUpperCase():part))).join(isMac()?'':' + ');
 elements.forEach((element,i)=>registerCommand({id:`insert.element.${i}`,title:element.label,category:'Insert',keywords:['insert','add','element',element.label.toLowerCase()],enabled:()=>getState().coreConnected,run:()=>insertElement(i)}));
+registerCommand({id:'view.livePreview',title:'Toggle live preview',category:'View',keywords:['preview','run','scripts','browser'],enabled:()=>getState().coreConnected,run:()=>{const st=getState();patchState({livePreview:!st.livePreview,...(st.viewMode==='code'?{viewMode:'split' as const}:{})});}});
 registerCommand({id:'view.toggleCodeDesign',title:'Toggle code / design view',category:'View',shortcut:'Mod+`',keywords:['dreamweaver','switch'],run:()=>patchState({viewMode:getState().viewMode==='code'?'design':'code'})});
 registerCommand({id:'panels.hideAll',title:'Hide / show all panels',category:'View',shortcut:'F4',keywords:['dreamweaver','panels'],run:()=>{const s=getState();const anyOpen=s.sidebarOpen||s.inspectorOpen||s.problemsOpen;patchState({sidebarOpen:!anyOpen,inspectorOpen:!anyOpen,problemsOpen:false});}});
 const sel=()=>getState().coreConnected&&!!getState().selectedElementId;
