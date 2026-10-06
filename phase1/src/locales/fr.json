@@ -892,6 +892,7 @@
   "collab.people_other": "{count} personnes",
   "collab.e2e": "Chiffré de bout en bout, clé {fp}",
   "collab.noE2e": "Non chiffré de bout en bout",
+  "collab.media": "Images et PDF : {shared} partagés, {received} reçus, {pending} en cours, {failed} non synchronisés",
   "share.modeRelay": "Relais",
   "share.modeLan": "LAN-Direct",
   "share.relayUrl": "Adresse du relais",

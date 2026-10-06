@@ -6,6 +6,7 @@ export type JoinFailure='bad-link'|'refused'|'expired'|'blocked'|'unreachable'|'
 export interface CollabError{kind:JoinFailure|'start-failed';message:string}
 export interface Participant{id:string;name:string;color:string;self:boolean}
 export interface Security{e2e:boolean;/** 8 hex chars of SHA-256 over the link key, for out-of-band comparison */fingerprint:string|null;secureChannel:boolean;insecureRemote:boolean}
+export interface MediaSync{/** media files in the shared manifest */shared:number;/** received and installed in this window */received:number;/** downloads in progress */pending:number;failed:{path:string;reason:string;message:string}[]}
 export interface CollabSnapshot{
  role:'none'|'host'|'guest';
  /** Where the bytes go. For a guest this is derived from the address (private/loopback = LAN, else relay). */
@@ -26,6 +27,8 @@ export interface CollabSnapshot{
  /** Edits waiting for a connection (not lost; flushed on reconnect). */
  queued:number;
  error:CollabError|null;
+ /** Image/PDF sharing state, from the actual transfer. Null when this window shares no media. */
+ media:MediaSync|null;
 }
 export type HostOptions={mode:'lan-direct';lan:boolean;port:number}|{mode:'relay';relayUrl:string};
 export interface CollabEngine{
@@ -36,4 +39,4 @@ export interface CollabEngine{
  subscribe(listener:()=>void):()=>void;
  snapshot():CollabSnapshot;
 }
-export const idleSnapshot=():CollabSnapshot=>({role:'none',mode:null,state:'off',synced:false,attempt:0,guestLinks:[],localLink:null,noNetworkAddress:false,participants:[],security:null,queued:0,error:null});
+export const idleSnapshot=():CollabSnapshot=>({role:'none',mode:null,state:'off',synced:false,attempt:0,guestLinks:[],localLink:null,noNetworkAddress:false,participants:[],security:null,queued:0,error:null,media:null});

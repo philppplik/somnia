@@ -2,6 +2,7 @@ import {CollabDoc} from './collabDoc';
 import {CollabClient,type CollabClientSnapshot} from './net/client';
 import {newLinkKey} from './net/crypto';
 import type {TransportFactory} from './net/transport';
+import {BlobSync,type MediaPort} from './blobSync';
 import {startBridge,type Bridge,type ProjectPort} from './projectBridge';
 import {setSession,notifySession} from './session';
 import {parseJoinLink,isInsecureRemote,modeOfLink,withMode,relayRoomUrl,cleanDisplayName,newRoomId} from './invite';
@@ -16,9 +17,12 @@ export interface EngineDeps{
  hasFiles():boolean;
  /** Can a guest join here without touching local work? */
  canJoin():{ok:true}|{ok:false;reason:'unsaved-project'};
+ /** Media of this window (images/PDFs). Without it only text files sync. */
+ media?:MediaPort;
  transport?:TransportFactory;
  lan?:()=>LanHostPort|null;
  hostName?:string;
+ blobOptions?:import('./blobSync').BlobSyncOptions;
  clientOptions?:{maxAttempts?:number;baseDelayMs?:number;maxDelayMs?:number;syncTimeoutMs?:number};
 }
 const sleep=(ms:number)=>new Promise(r=>setTimeout(r,ms));
@@ -33,7 +37,7 @@ export class RealEngine implements CollabEngine{
  private ls=new Set<()=>void>();
  private doc:CollabDoc|null=null;private client:CollabClient|null=null;private bridge:Bridge|null=null;
  private offClient:(()=>void)|null=null;private offAware:(()=>void)|null=null;private lan:LanHostPort|null=null;
- private busy=false;
+ private busy=false;private blobs:BlobSync|null=null;
  constructor(private d:EngineDeps){}
  subscribe(l:()=>void){this.ls.add(l);return()=>{this.ls.delete(l);};}
  snapshot(){return this.s;}
@@ -54,13 +58,15 @@ export class RealEngine implements CollabEngine{
   setSession(doc);
   this.bridge=startBridge(doc,this.d.project,{role,onFiles:()=>notifySession()});
   const client=this.client=new CollabClient(link,{session:{doc:doc.doc,awareness:doc.awareness},mode,transport:this.d.transport,...this.d.clientOptions});
-  const view=()=>{const c=client.snapshot(),ps=participantsOf(doc.awareness);return {...this.fromClient(c),participants:ps,synced:c.synced&&ps.length>1};};
+  const view=()=>{const c=client.snapshot(),ps=participantsOf(doc.awareness);return {...this.fromClient(c),participants:ps,synced:c.synced&&ps.length>1,media:this.blobs?this.blobs.snapshot():null};};
   const refresh=()=>this.set(view());
   this.offClient=client.subscribe(refresh);
   const onAware=(ev?:{added:number[]},origin?:unknown)=>{
    this.set(view());
+   if(ev&&ev.added.some(id=>id!==doc.doc.clientID))this.blobs?.kick();   // somebody new may hold the files we are missing
    // A blind relay does not tell existing peers about a newcomer, so nobody would send it our state until the next 15 s heartbeat. Answer a newcomer's announcement with ours.
    if(ev&&origin!=='local'&&ev.added.some(id=>id!==doc.doc.clientID)){const st=doc.awareness.getLocalState();if(st)doc.awareness.setLocalState({...st});}};
+  if(this.d.media){const b=this.blobs=new BlobSync(doc,{port:this.d.media,send:f=>client.sendBlob(f),onChange:()=>refresh()},this.d.blobOptions);client.setBlobHandler(f=>b.handle(f));}
   doc.awareness.on('change',onAware);this.offAware=()=>doc.awareness.off('change',onAware);
   refresh();
   await client.connect();}
@@ -70,7 +76,7 @@ export class RealEngine implements CollabEngine{
   if(doc&&client&&client.snapshot().state==='connected'){
    // tell the others we are gone right now instead of after the 30 s awareness timeout
    removeAwarenessStates(doc.awareness,[doc.doc.clientID],'leave');await sleep(80);}
-  this.offClient?.();this.offAware?.();this.bridge?.stop();client?.leave();
+  this.offClient?.();this.offAware?.();this.bridge?.stop();this.blobs?.stop();this.blobs=null;client?.leave();
   this.offClient=this.offAware=null;this.bridge=null;this.client=null;this.doc=null;
   setSession(null);doc?.destroy();}
 

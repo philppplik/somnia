@@ -7,6 +7,7 @@ export const appProject:ProjectPort={
  write(path,text){
   const has=path in getState().files;
   applyOperations([has?{type:'replaceSource',file:path,text}:{type:'createFile',file:path,text}],'external');},
+ remove(path){if(path in getState().files)applyOperations([{type:'deleteFile',file:path}],'external');},
  subscribe:fn=>subscribe(fn),
  adopt(files){
   closeCore();

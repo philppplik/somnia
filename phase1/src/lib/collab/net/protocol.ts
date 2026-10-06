@@ -21,6 +21,8 @@ export const MSG_SYNC=0;
 export const MSG_AWARENESS=1;
 export const MSG_IDENTITY=2;
 export const MSG_ENCRYPTED=3;
+/** Media blob transfer (v11/collab-files): request/chunk frames, see blobProtocol.ts. Always travels inside MSG_ENCRYPTED when the link has a key. */
+export const MSG_BLOB=4;
 /** Hard frame cap, same as the spike relay enforces. */
 export const MAX_MESSAGE_BYTES=5*1024*1024;
 /**
