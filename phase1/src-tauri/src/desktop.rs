@@ -523,9 +523,10 @@ async fn collab_lan_start(
     host: tauri::State<'_, crate::lan_host::LanHost>,
     lan: bool,
     port: u16,
+    room_id: Option<String>,
 ) -> std::result::Result<crate::lan_host::LanHostInfo, String> {
     gate(&window).map_err(|e| e.to_string())?;
-    host.start(lan, port).await
+    host.start_room(lan, port, room_id).await
 }
 #[tauri::command]
 async fn collab_lan_stop(

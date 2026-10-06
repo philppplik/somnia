@@ -2,7 +2,7 @@
 export type CollabMode='lan-direct'|'relay';
 /** Connection state of this window's socket. 'off' = not sharing or joined. */
 export type ConnState='off'|'starting'|'connecting'|'connected'|'reconnecting'|'error';
-export type JoinFailure='bad-link'|'refused'|'expired'|'blocked'|'unreachable'|'full'|'unsaved-project'|'no-project';
+export type JoinFailure='bad-link'|'unsupported-relay'|'refused'|'expired'|'blocked'|'unreachable'|'full'|'unsaved-project'|'no-project';
 export interface CollabError{kind:JoinFailure|'start-failed';message:string}
 export interface Participant{id:string;name:string;color:string;self:boolean}
 export interface Security{e2e:boolean;/** 8 hex chars of SHA-256 over the link key, for out-of-band comparison */fingerprint:string|null;secureChannel:boolean;insecureRemote:boolean}
@@ -18,6 +18,7 @@ export interface CollabSnapshot{
  attempt:number;
  /** Host: links to hand out (full links incl. #key). Empty when the LAN host found no network address. */
  guestLinks:string[];
+ expiresAt?:number;
  /** Host: link that works on this computer only (LAN-Direct). */
  localLink:string|null;
  /** Host in LAN mode but no private IPv4 address found: nothing to hand out. */
@@ -30,7 +31,7 @@ export interface CollabSnapshot{
  /** Image/PDF sharing state, from the actual transfer. Null when this window shares no media. */
  media:MediaSync|null;
 }
-export type HostOptions={mode:'lan-direct';lan:boolean;port:number}|{mode:'relay';relayUrl:string};
+export type HostOptions=({mode:'lan-direct';lan:boolean;port:number}|{mode:'relay';relayUrl:string})&{sessionMinutes?:number};
 export interface CollabEngine{
  startHosting(opts:HostOptions):Promise<void>;
  stopHosting():Promise<void>;

@@ -23,6 +23,8 @@ import {webSocketTransport} from './transport';
 import {parseInviteLink,isInsecureRemote} from '../inviteCore';
 import type {ParsedInvite} from '../inviteCore';
 import type {CollabError} from '../types';
+import {roomExpiry} from '../roomSecurity';
+const MANAGED_ACK=new TextEncoder().encode('\x04managed-room-v1');
 
 /** Room-URL of the Relay-Wire-Contract v0: /room/<room-id>, 8-128 chars, the id itself is the credential. */
 const ROOM_PATH=/^\/room\/[A-Za-z0-9_-]{8,128}$/;
@@ -83,6 +85,8 @@ export class CollabClient{
  private sendChain:Promise<void>=Promise.resolve();
  private timer:ReturnType<typeof setTimeout>|null=null;
  private intentional=false;
+ private managed=false;private acknowledged=false;
+ private expiryTimer:ReturnType<typeof setTimeout>|null=null;
  private connectDone:(()=>void)|null=null;
  private connectFail:((e:Error)=>void)|null=null;
  private offDoc:()=>void;
@@ -118,6 +122,18 @@ export class CollabClient{
   if(this.s.state!=='idle'&&this.s.state!=='error')throw new Error('already connecting or connected');
   const parsed=parseWireInvite(this.invite);
   if(!parsed){this.patch({state:'error',error:{kind:'bad-link',message:'That does not look like a Somnia invite link.'}});throw new Error('bad-link');}
+  const expiry=roomExpiry(parsed.url);
+  this.managed=expiry!==null;this.acknowledged=false;
+  if(expiry!==null&&expiry<=Date.now()){
+   this.patch({state:'error',error:{kind:'expired',message:'This session has expired.'}});throw new Error('expired');
+  }
+  if(expiry!==null)this.expiryTimer=setTimeout(()=>{
+   const t=this.transport;this.transport=null;this.ready=false;
+   if(this.timer){clearTimeout(this.timer);this.timer=null;}
+   this.patch({state:'error',synced:false,error:{kind:'expired',message:'This session has expired.'}});
+   const fail=this.connectFail;this.connectDone=this.connectFail=null;fail?.(new Error('expired'));
+   t?.close(4004,'session expired');
+  },expiry-Date.now());
   const keyParam=linkKeyParam(parsed.url);
   this.linkKey=keyParam?await importLinkKey(keyParam):null;
   this.patch({state:'connecting',attempt:1,error:null,synced:false,
@@ -126,33 +142,52 @@ export class CollabClient{
   return new Promise<void>((resolve,reject)=>{this.connectDone=resolve;this.connectFail=reject;this.dial(parsed.url);});}
 
  private dial(url:string){
+  this.acknowledged=false;
   const t=this.transport=this.tf(url);this.ready=false;
   t.connect({
    onOpen:()=>{
     this.ready=true;
+    if(this.managed){this.armSyncTimeout(t);return;}
+    this.beginSync(t);},
+   onMessage:bytes=>{void this.onFrame(bytes);},
+   onClose:(code,reason)=>{if(this.transport===t)this.onClose(code,reason);}});}
+
+ private beginSync(t:Transport){
     for(const u of this.outbox.splice(0))this.sendFrame(encodeUpdate(u));
     this.patch({queued:0});
     this.sendFrame(encodeSyncStep1(this.sess.doc));
     if(this.sess.awareness.getLocalState())this.sendFrame(encodeAwareness(this.sess.awareness,[this.sess.doc.clientID]));
-    this.armSyncTimeout(t);},
-   onMessage:bytes=>{void this.onFrame(bytes);},
-   onClose:(code,reason)=>this.onClose(code,reason)});}
+    this.armSyncTimeout(t);}
+
 
  private armSyncTimeout(t:Transport){
-  this.timer=setTimeout(()=>{if(this.transport===t&&!this.s.synced)this.markSynced();},this.o.syncTimeoutMs);}
+  this.timer=setTimeout(()=>{if(this.transport===t&&!this.s.synced){
+   if(this.managed&&!this.acknowledged){this.ready=false;t.close(4003,'managed rooms unsupported');
+    this.onClose(4003,'managed rooms unsupported');return;}
+   this.markSynced();}},this.o.syncTimeoutMs);}
  private markSynced(){
   if(this.timer){clearTimeout(this.timer);this.timer=null;}
   this.patch({synced:true,state:'connected',attempt:0});
   const r=this.connectDone;this.connectDone=this.connectFail=null;r?.();}
 
  private async onFrame(bytes:Uint8Array){
+  const transport=this.transport;
   try{
+   if(!this.open())return;
+   if(this.managed&&!this.acknowledged){
+    if(bytes.length===MANAGED_ACK.length&&bytes.every((v,i)=>v===MANAGED_ACK[i])){
+     this.acknowledged=true;if(this.timer){clearTimeout(this.timer);this.timer=null;}
+     this.beginSync(this.transport!);
+    }
+    return;
+   }
    if(bytes[0]===MSG_IDENTITY){this.onIdentity(readIdentity(bytes));return;}
    let frame=bytes;
    if(isEncryptedFrame(bytes)){
     if(!this.linkKey)return; // encrypted traffic without a key: not for us, drop
     frame=await decryptFrame(this.linkKey,bytes);}
    else if(this.linkKey)return; // key session: plaintext sync/awareness is a downgrade attempt, drop
+   if(this.transport!==transport||!this.open())return;
    if(frame[0]===MSG_BLOB){this.blobHandler?.(frame);return;}
    if(frame[0]!==MSG_SYNC&&frame[0]!==MSG_AWARENESS)return;
    const reply=handleMessage(frame,this.sess.doc,this.sess.awareness,this);
@@ -165,15 +200,19 @@ export class CollabClient{
   if(msg.type==='identity')this.patch({identity:msg.identity});
   else if(msg.type==='presence')this.patch({people:msg.people});}
 
- private onClose(code:number,_reason:string){
+ private onClose(code:number,reason:string){
+  if(this.s.error?.kind==='expired')return;
   this.transport=null;this.ready=false;
   if(this.timer){clearTimeout(this.timer);this.timer=null;}
   this.patch({synced:false});
   const fail=(kind:CollabError['kind'],message:string)=>{
+   if(this.expiryTimer){clearTimeout(this.expiryTimer);this.expiryTimer=null;}
    this.patch({state:'error',error:{kind,message}});
    const r=this.connectFail;this.connectDone=this.connectFail=null;r?.(new Error(message));};
   if(this.intentional){this.patch({state:'idle'});return;}
-  if(CLOSE_REFUSED.includes(code))return fail('refused','The host revoked this invite. Ask for a new one.');
+  if(code===4004)return fail('expired','This session has expired.');
+  if(reason==='managed rooms unsupported')return fail('unsupported-relay','This relay does not support managed sessions. Update the self-hosted relay.');
+  if(CLOSE_REFUSED.includes(code))return fail('refused','The host ended this session or revoked the invite. Ask for a new one.');
   if(code===CLOSE_BLOCKED)return fail('blocked','The host rate-limited this connection. Wait and ask the host.');
   if(code===CLOSE_PROTOCOL)return fail('refused','The host closed the connection on a protocol error.');
   if(code===CLOSE_TOO_BIG)return fail('refused','One edit was larger than the relay\'s 2 MiB frame limit and was rejected.');
@@ -186,11 +225,12 @@ export class CollabClient{
 
  /** Ordered, encrypted send. Sync/awareness frames are encrypted when the link carries a key; identity never is. */
  private sendFrame(frame:Uint8Array){
-  const t=this.transport;if(!t||!this.ready)return;
+  const t=this.transport;if(!t||!this.ready||(this.managed&&!this.acknowledged))return;
   this.sendChain=this.sendChain.then(async()=>{
    if(!this.ready||this.transport!==t)return;
    const key=(frame[0]===MSG_SYNC||frame[0]===MSG_AWARENESS||frame[0]===MSG_BLOB)?this.linkKey:null;
-   t.send(key?await encryptFrame(key,frame):frame);});}
+   const bytes=key?await encryptFrame(key,frame):frame;
+   if(this.ready&&this.transport===t)t.send(bytes);});}
 
  /** Media blob frames (collab-files). Returns false when the socket is not open; blob transfer retries by itself. */
  sendBlob(frame:Uint8Array):boolean{if(!this.open())return false;this.sendFrame(frame);return true;}
@@ -205,6 +245,7 @@ export class CollabClient{
 
  leave(){
   this.intentional=true;
+  if(this.expiryTimer){clearTimeout(this.expiryTimer);this.expiryTimer=null;}
   if(this.timer){clearTimeout(this.timer);this.timer=null;}
   this.transport?.close(1000,'leave');this.transport=null;this.ready=false;
   this.offDoc();this.offAware();

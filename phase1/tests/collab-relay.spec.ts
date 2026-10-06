@@ -42,7 +42,7 @@ test('two windows: share, join, live text, cursors, labels, leave',async({host,g
  const link0=host.getByLabel('Link for others link');
  await expect(link0).not.toHaveValue(/#key=[A-Za-z0-9_-]{9,}/);await expect(link0).not.toHaveValue(/room\/[A-Za-z0-9_-]{9,}/);
  await host.getByRole('button',{name:'Show link'}).click();
- const link=await link0.inputValue();expect(link).toMatch(new RegExp(`^ws://127\\.0\\.0\\.1:${port}/room/[A-Za-z0-9_-]{24}#key=[A-Za-z0-9_-]{43}&m=relay$`));
+ const link=await link0.inputValue();expect(link).toMatch(new RegExp(`^ws://127\\.0\\.0\\.1:${port}/room/m1_\\d{10}_[a-f0-9]{64}#key=[A-Za-z0-9_-]{43}&m=relay$`));
  const fp=(await host.getByTestId('e2e-note').textContent())!.match(/fingerprint: ([0-9a-f]{8})/)![1];
  await host.screenshot({path:'test-results/collab-host-dialog.png'});
  await host.getByRole('button',{name:'Close',exact:true}).click();
@@ -92,4 +92,17 @@ test('relay restart: both sides show reconnecting, then resync and keep editing'
  await startRelay(port);
  await expect(pill(host)).toHaveText(/^Connected/,{timeout:30000});await expect(pill(guest)).toHaveText(/^Connected/,{timeout:30000});
  await expect(editor(guest)).toContainText('offline-edit',{timeout:20000});
+});
+
+test('host ends room: guest is disconnected and the old invite cannot rejoin',async({host,guest})=>{
+ await host.goto('/');await guest.goto('/');await open(host,'Share project...');
+ await expect(host.getByLabel('Session lifetime')).toHaveValue('60');
+ await host.getByLabel('Relay address').fill(`ws://127.0.0.1:${port}`);await host.getByRole('button',{name:'Start sharing'}).click();
+ await expect(host.getByTestId('conn-label')).toHaveText(/^Connected/);await expect(host.getByTestId('session-expiry')).toBeVisible();
+ await host.getByRole('button',{name:'Show link'}).click();const link=await host.getByLabel('Link for others link').inputValue();expect(link).not.toContain('host=');
+ await open(guest,'Join shared project...');await guest.getByLabel('Invite link').fill(link);await guest.getByRole('button',{name:'Join',exact:true}).click();await expect(guest.getByTestId('participant')).toHaveCount(2);
+ await host.getByRole('button',{name:'End session and invalidate link'}).click();await expect(guest.getByTestId('session-error')).toBeVisible({timeout:10000});
+ await guest.screenshot({path:'test-results/collab-revoked-dialog.png'});
+ await guest.getByRole('button',{name:'Leave session'}).click();await guest.getByLabel('Invite link').fill(link);await guest.getByRole('button',{name:'Join',exact:true}).click();
+ await expect(guest.getByTestId('join-error')).toBeVisible({timeout:60000});
 });

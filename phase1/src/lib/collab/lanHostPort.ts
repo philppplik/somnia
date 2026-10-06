@@ -6,7 +6,7 @@
 export interface LanHostInfo{running:boolean;lan:boolean;port:number;localUrl:string;guestUrls:string[];roomId:string}
 export interface LanSessionLinks{localLink:string;guestLinks:string[];keyFingerprint:string}
 export interface LanHostPort{
- startLanHost(opts:{lan:boolean;port:number}):Promise<LanHostInfo>;
+ startLanHost(opts:{lan:boolean;port:number;roomId?:string}):Promise<LanHostInfo>;
  stopLanHost():Promise<void>;
  /** One shared AES key for all interfaces; localLink is for the host's own connection. */
  createLanSessionLinks(info:LanHostInfo):Promise<LanSessionLinks>|LanSessionLinks;

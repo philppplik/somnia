@@ -213,3 +213,106 @@ async fn late_joiner_gets_no_replay() {
         "relay replayed frames; it must store nothing"
     );
 }
+
+fn managed_id(expires: u64, host: &str) -> String {
+    use sha2::{Digest, Sha256};
+    format!(
+        "m1_{expires}_{:x}",
+        Sha256::digest(format!("somnia-room-v1:{expires}:{host}"))
+    )
+}
+fn unix_now() -> u64 {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap()
+        .as_secs()
+}
+async fn closed_code(
+    socket: &mut tokio_tungstenite::WebSocketStream<
+        tokio_tungstenite::MaybeTlsStream<tokio::net::TcpStream>,
+    >,
+) -> u16 {
+    tokio::time::timeout(Duration::from_secs(4), async {
+        loop {
+            match socket.next().await.unwrap().unwrap() {
+                Message::Close(Some(c)) => return u16::from(c.code),
+                Message::Ping(p) => {
+                    socket.send(Message::Pong(p)).await.unwrap();
+                }
+                _ => {}
+            }
+        }
+    })
+    .await
+    .unwrap()
+}
+#[tokio::test]
+async fn managed_host_departure_revokes_room_and_reentry() {
+    let relay = TestRelay::start(test_config()).await;
+    let capability = "A".repeat(43);
+    let id = managed_id(unix_now() + 60, &capability);
+    let url = relay.room(&id);
+    // Guest cannot create the room; mismatched host secret is not authority.
+    assert!(tokio_tungstenite::connect_async(&url).await.is_err());
+    assert!(
+        tokio_tungstenite::connect_async(format!("{url}?host={}", "B".repeat(43)))
+            .await
+            .is_err()
+    );
+    let (mut host, _) = tokio_tungstenite::connect_async(format!("{url}?host={capability}"))
+        .await
+        .unwrap();
+    assert!(
+        matches!(host.next().await.unwrap().unwrap(), Message::Binary(ref b) if b.as_ref() == somnia_relay::rooms::MANAGED_ACK)
+    );
+    assert!(
+        tokio_tungstenite::connect_async(format!("{url}?host={capability}"))
+            .await
+            .is_err()
+    );
+    let (mut guest, _) = tokio_tungstenite::connect_async(&url).await.unwrap();
+    assert!(
+        matches!(guest.next().await.unwrap().unwrap(), Message::Binary(ref b) if b.as_ref() == somnia_relay::rooms::MANAGED_ACK)
+    );
+    // The relay stays blind and forwards only content frames, never host credentials.
+    host.send(Message::Binary(b"opaque".to_vec().into()))
+        .await
+        .unwrap();
+    assert!(
+        matches!(guest.next().await.unwrap().unwrap(), Message::Binary(ref b) if b.as_ref() == b"opaque")
+    );
+    drop(host); // abrupt loss must revoke as well as an intentional close
+    assert_eq!(closed_code(&mut guest).await, 4001);
+    assert!(tokio_tungstenite::connect_async(&url).await.is_err());
+    assert!(
+        tokio_tungstenite::connect_async(format!("{url}?host={capability}"))
+            .await
+            .is_err()
+    );
+}
+#[tokio::test]
+async fn managed_expiry_closes_all_and_rejects_extended_or_stale_ids() {
+    let relay = TestRelay::start(test_config()).await;
+    let cap = "C".repeat(43);
+    let id = managed_id(unix_now() + 2, &cap);
+    let url = relay.room(&id);
+    let (mut host, _) = tokio_tungstenite::connect_async(format!("{url}?host={cap}"))
+        .await
+        .unwrap();
+    let (mut guest, _) = tokio_tungstenite::connect_async(&url).await.unwrap();
+    assert_eq!(closed_code(&mut guest).await, 4004);
+    assert_eq!(closed_code(&mut host).await, 4004);
+    assert!(tokio_tungstenite::connect_async(&url).await.is_err());
+    let changed = relay.room(&id.replace(&id[3..13], &(unix_now() + 60).to_string()));
+    assert!(
+        tokio_tungstenite::connect_async(format!("{changed}?host={cap}"))
+            .await
+            .is_err()
+    );
+    let long = relay.room(&managed_id(unix_now() + 90000, &cap));
+    assert!(
+        tokio_tungstenite::connect_async(format!("{long}?host={cap}"))
+            .await
+            .is_err()
+    );
+}

@@ -33,6 +33,20 @@ pub struct LanHost {
 }
 impl LanHost {
     pub async fn start(&self, lan: bool, port: u16) -> Result<LanHostInfo, String> {
+        self.start_room(lan, port, None).await
+    }
+    pub async fn start_room(
+        &self,
+        lan: bool,
+        port: u16,
+        room_id: Option<String>,
+    ) -> Result<LanHostInfo, String> {
+        if room_id
+            .as_ref()
+            .is_some_and(|id| somnia_relay::rooms::managed_expiry(id).is_none())
+        {
+            return Err("Invalid managed session room.".into());
+        }
         let mut state = self.running.lock().await;
         if let Some(r) = state.as_ref() {
             if !r.task.is_finished() {
@@ -53,11 +67,13 @@ impl LanHost {
             .map_err(|e| format!("Could not start sharing on port {port}: {e}"))?;
         let port = listener.local_addr().map_err(|e| e.to_string())?.port();
         // Two UUIDv4 values provide 244 random bits, above the wire contract minimum.
-        let room_id = format!(
-            "{}{}",
-            uuid::Uuid::new_v4().simple(),
-            uuid::Uuid::new_v4().simple()
-        );
+        let room_id = room_id.unwrap_or_else(|| {
+            format!(
+                "{}{}",
+                uuid::Uuid::new_v4().simple(),
+                uuid::Uuid::new_v4().simple()
+            )
+        });
         let path = format!("/room/{room_id}");
         let local_url = format!("ws://127.0.0.1:{port}{path}");
         let guest_urls = if lan {
