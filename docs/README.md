@@ -4,6 +4,7 @@ Start here:
 
 - [Architecture](ARCHITECTURE.md): Rust backend, command ACL, project service, frontend, storage port, security boundaries, testing.
 - [Build, CI and release](BUILD-AND-RELEASE.md): local builds, versioning, CI jobs, release assembly.
+- [Changelog](../CHANGELOG.md) and [v11.1.0 release-notes draft](releases/v11.1.0.md): implemented release changes and publication checks.
 - [Agent](agent/README.md): the AI panel (architecture, providers, privacy, MCP plan).
 - [Extensions](extensions/README.md): build, install and secure Somnia extensions.
 - [Live collaboration](collaboration.md): share a project, join by link, your name and picture, session chat, encryption and its limits.
