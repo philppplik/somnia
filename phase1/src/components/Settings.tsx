@@ -4,22 +4,22 @@ import {
   saveProjectBackup,
 } from "../lib/projectBackups";
 import { downloadProject } from "../lib/exportProject";
-import { Folder } from "lucide-react";
+import { Folder } from '../lib/icons';
 import { DEFAULT_DOCUMENT_PREFS } from "../lib/documentPrefs";
-import { Type, Upload } from "lucide-react";
+import { Type, Upload } from '../lib/icons';
 import {
   DEFAULT_WINDOW_PREFS,
   applyWindowPrefs,
   type WindowPrefs,
 } from "../lib/windowPrefs";
 import { isTauri } from "@tauri-apps/api/core";
-import { Monitor } from "lucide-react";
+import { Monitor } from '../lib/icons';
 import { DEFAULT_UPDATE_PREFS } from "../lib/updatePrefs";
 import { EditorProject } from "@somnia/editor-core";
-import { Zap } from "lucide-react";
+import { Zap } from '../lib/icons';
 import { DEFAULT_CANVAS_PREFS, type CanvasPrefs } from "../lib/canvasPrefs";
 import { DEFAULT_WORKFLOW_PREFS } from "../lib/workflowPrefs";
-import { Pencil } from "lucide-react";
+import { Pencil } from '../lib/icons';
 import { DEFAULT_UI_PREFS } from "../lib/uiPrefs";
 import { parseShortcutFile } from "../lib/shortcutTransfer";
 import { downloadText } from "../lib/exportProject";
@@ -39,7 +39,7 @@ import {
   Info,
   Search,
   X,
-} from "lucide-react";
+} from '../lib/icons';
 import { DEFAULT_EDITOR_PREFS } from "../lib/editorPrefs";
 import { settingsMatch } from "../lib/settingsSearch";
 import { getState, type AppState } from "../store/appStore";

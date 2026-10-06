@@ -8,7 +8,7 @@ import {SearchPanel} from './SearchPanel';
 import {moveLayer,dropLayer,indentLayer,outdentLayer} from '../lib/structureCommands';
 import { useEffect,useRef,useState } from 'react';
 import {installLayerPointerDrag} from '../lib/layerPointerDrag';
-import { ChevronDown,ChevronRight,Eye,EyeOff,Lock,Unlock,Layers,Image,Search } from 'lucide-react';
+import { ChevronDown,ChevronRight,Eye,EyeOff,Lock,Unlock,Layers,Image,Search } from '../lib/icons';
 import { Tabs,TabsContent } from './ui/tabs';
 import { Button } from './ui/button';
 import { cn } from '../lib/cn';

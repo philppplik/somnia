@@ -264,12 +264,6 @@
   "homepage": "https://github.com/dmonad/lib0#readme"
  },
  {
-  "name": "lucide-react",
-  "version": "1.49.0",
-  "license": "ISC",
-  "homepage": "https://lucide.dev"
- },
- {
   "name": "Momo Signature (font)",
   "version": "1.0",
   "license": "OFL-1.1",
@@ -328,6 +322,12 @@
   "version": "1.7.0",
   "license": "MIT",
   "homepage": "https://github.com/react/react"
+ },
+ {
+  "name": "Vadivam (icons)",
+  "version": "0.0.46",
+  "license": "MIT",
+  "homepage": "https://github.com/praveenjuge/vadivam"
  },
  {
   "name": "w3c-keyname",

@@ -1,4 +1,4 @@
-import {Monitor,Tablet,Smartphone,Minus,Plus,ChevronsUpDown} from 'lucide-react';
+import {Monitor,Tablet,Smartphone,Minus,Plus,ChevronsUpDown} from '../lib/icons';
 import {Button} from './ui/button';
 import {cn} from '../lib/cn';
 import {useT} from '../lib/useT';
