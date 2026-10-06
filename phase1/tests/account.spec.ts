@@ -58,7 +58,7 @@ for (const [locale, t] of Object.entries(catalogues)) {
     await expect(pill.locator("img")).toBeVisible();
     if (locale === "en")
       await page.screenshot({
-        path: "/downloads/account-personalized-header.png",
+        path: "test-results/evidence-account-personalized-header.png",
       });
     await pill.click();
     await dialog
@@ -113,7 +113,7 @@ test("real edits and saves populate activity; opening a fixture does not", async
     .click();
   await expect(page.locator(".account-activity-total strong")).toHaveText("2");
   await expect(page.locator(".account-heatmap .level-1")).toHaveCount(1);
-  await page.screenshot({ path: "/downloads/account-real-activity.png" });
+  await page.screenshot({ path: "test-results/evidence-account-real-activity.png" });
   await page.keyboard.press("Escape");
   await page.reload();
   await page
@@ -170,7 +170,7 @@ test("account visual evidence light and dark", async ({ page }) => {
       const { patchState } = await import("/src/store/appStore.ts");
       patchState({ themeChoice: theme, theme });
     }, theme);
-    await page.screenshot({ path: `/downloads/account-${theme}-header.png` });
+    await page.screenshot({ path: `test-results/evidence-account-${theme}-header.png` });
     await page
       .getByRole("button", {
         name: "Open account",
@@ -185,7 +185,7 @@ test("account visual evidence light and dark", async ({ page }) => {
         dialog.getByRole("heading", { name: section, exact: true }),
       ).toBeVisible();
       await page.screenshot({
-        path: `/downloads/account-${theme}-${section.toLowerCase()}.png`,
+        path: `test-results/evidence-account-${theme}-${section.toLowerCase()}.png`,
       });
     }
     await page.keyboard.press("Escape");

@@ -33,7 +33,7 @@ for (const [locale, t] of Object.entries(catalogues)) {
   await expect(dialog.getByLabel(t['redesign.search'])).toHaveValue('');
   await expect(dialog.getByRole('heading', {name: t['set.section.shortcuts'], exact: true})).toBeInViewport();
   expect(await dialog.locator('.settings-content').evaluate(el => el.scrollTop)).toBe(0);
-  if (locale === 'en') await page.screenshot({path: '/downloads/help-shortcuts-settings.png'});
+  if (locale === 'en') await page.screenshot({path: 'test-results/evidence-help-shortcuts-settings.png'});
  });
 }
 

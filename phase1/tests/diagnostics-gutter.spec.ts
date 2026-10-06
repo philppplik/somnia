@@ -25,7 +25,7 @@ test('gutter matches Problems, prioritizes errors, shows hover messages, and cle
  await expect(page.getByTestId('problems-panel')).toContainText('Syntax problem here');
  await errors.first().hover();await expect(page.locator('.cm-tooltip-lint')).toContainText('Syntax problem here');
  await expect(page.locator('html')).toHaveAttribute('data-theme','dark');
- await page.screenshot({path:'/downloads/somnia-diagnostics-gutter-dark.png'});
+ await page.screenshot({path:'test-results/evidence-somnia-diagnostics-gutter-dark.png'});
  await code.click();await page.keyboard.press('Control+a');await page.keyboard.insertText('<html lang="en"><head><title>Clean</title></head><body><h1>Clean</h1></body></html>');
  await expect(page.locator('.cm-lint-marker')).toHaveCount(0);
  await expect(page.getByTestId('problems-count')).toContainText('No problems');
