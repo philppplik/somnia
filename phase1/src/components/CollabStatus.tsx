@@ -1,3 +1,5 @@
+import {useChatSession} from '../lib/collab/chatSession';
+import {openSessionChat} from '../lib/collab/communication';
 import {useCollab,openShare} from '../lib/collab/store';
 import {useT} from '../lib/useT';
 import type {CollabSnapshot} from '../lib/collab/types';
@@ -17,6 +19,6 @@ export function collabLabel(s:CollabSnapshot,t:(k:string,p?:Record<string,string
  return {label:parts.join(' \u00b7 '),tone,detail};}
 /** Status bar pill. Hidden when nothing is shared or joined, so the bar stays quiet. */
 export function CollabStatus(){
- const {t}=useT();const s=useCollab();
+ const {t}=useT();const s=useCollab();const chat=useChatSession();
  const l=collabLabel(s,t);if(!l)return null;
- return <button type="button" data-testid="collab-status" data-state={s.state} data-mode={s.mode??''} title={l.detail} aria-label={t('collab.aria',{label:`${l.label}. ${l.detail}`})} onClick={()=>openShare(s.role==='guest'?'join':'host')} className="flex cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-full border-0 bg-hover px-2 py-0.5 text-[10px] text-ink"><span aria-hidden className={`size-2 rounded-full ${l.tone}`}/>{l.label}</button>;}
+ return <span className="collab-pill"><button type="button" data-testid="collab-status" data-state={s.state} data-mode={s.mode??''} title={l.detail} aria-label={t('collab.aria',{label:`${l.label}. ${l.detail}`})} onClick={()=>openShare(s.role==='guest'?'join':'host')} className="flex cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-full border-0 bg-hover px-2 py-0.5 text-[10px] text-ink"><span aria-hidden className={`size-2 rounded-full ${l.tone}`}/>{l.label}</button>{chat&&<button className="collab-chat-open" aria-label={t('chat.open')} title={t('chat.open')} onClick={openSessionChat}><svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M3 2h10a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1H7l-4 3v-3H3a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1Z" stroke="currentColor" strokeWidth="1.4"/></svg>{chat.unread>0&&<span className="collab-unread">{chat.unread>9?'9+':chat.unread}</span>}</button>}</span>;}

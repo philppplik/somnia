@@ -1,3 +1,4 @@
+import {trackNativeDrop,nativeDropIsChat} from '../lib/collab/nativeChatDrop';
 import {useEffect,useState} from 'react';
 import {isTauri} from '@tauri-apps/api/core';
 import {getCurrentWindow} from '@tauri-apps/api/window';
@@ -8,14 +9,15 @@ export function DropOverlay(){
  const [active,setActive]=useState(false);
  useEffect(()=>{
   if(isTauri()){let disposed=false;let unlisten:(()=>void)|undefined;
-   void getCurrentWindow().onDragDropEvent(e=>setActive(e.payload.type==='enter'||e.payload.type==='over')).then(fn=>{if(disposed)fn();else unlisten=fn;}).catch(error=>patchState({notice:`Drop listener failed: ${String(error)}`}));
+   void getCurrentWindow().onDragDropEvent(e=>{trackNativeDrop(e.payload.type,'position' in e.payload?e.payload.position:undefined);setActive(!nativeDropIsChat()&&(e.payload.type==='enter'||e.payload.type==='over'));}).then(fn=>{if(disposed)fn();else unlisten=fn;}).catch(error=>patchState({notice:`Drop listener failed: ${String(error)}`}));
    return()=>{disposed=true;unlisten?.();};
   }
   let depth=0;const hasFiles=(e:DragEvent)=>!!e.dataTransfer&&[...e.dataTransfer.types].includes('Files');
-  const enter=(e:DragEvent)=>{if(!hasFiles(e))return;e.preventDefault();depth+=1;setActive(true);};
+  const inChat=(e:DragEvent)=>e.target instanceof Element&&Boolean(e.target.closest('.sc-panel'));
+  const enter=(e:DragEvent)=>{if(inChat(e)){depth=0;setActive(false);return;}if(!hasFiles(e))return;e.preventDefault();depth+=1;setActive(true);};
   const over=(e:DragEvent)=>{if(hasFiles(e))e.preventDefault();};
   const leave=(e:DragEvent)=>{if(!hasFiles(e))return;depth=Math.max(0,depth-1);if(!depth)setActive(false);};
-  const drop=(e:DragEvent)=>{if(!hasFiles(e))return;e.preventDefault();depth=0;setActive(false);const list=e.dataTransfer?.files;if(list?.length)void readFiles(list).then(addTextFiles).catch(error=>patchState({notice:`File import failed: ${String(error)}`}));};
+  const drop=(e:DragEvent)=>{if(inChat(e)){depth=0;setActive(false);return;}if(!hasFiles(e))return;e.preventDefault();depth=0;setActive(false);const list=e.dataTransfer?.files;if(list?.length)void readFiles(list).then(addTextFiles).catch(error=>patchState({notice:`File import failed: ${String(error)}`}));};
   window.addEventListener('dragenter',enter);window.addEventListener('dragover',over);window.addEventListener('dragleave',leave);window.addEventListener('drop',drop);
   return()=>{window.removeEventListener('dragenter',enter);window.removeEventListener('dragover',over);window.removeEventListener('dragleave',leave);window.removeEventListener('drop',drop);};},[]);
  if(!active)return null;

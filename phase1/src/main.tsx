@@ -9,6 +9,7 @@ import { connectEditorProject, applyOperations } from './store/appStore';
 import './styles/global.css';
 import './styles/bento.css';
 import './styles/agent.css';
+import './styles/collab-chat.css';
 import {isTauri} from '@tauri-apps/api/core';
 import {setStoreManaged} from './lib/updates';
 import {initLocale} from './lib/i18n';
