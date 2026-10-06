@@ -11,7 +11,7 @@ export type AgentEvent =
  | {type:'proposal';proposal:AgentProposal}
  | {type:'approval';approval:AgentApproval}
  | {type:'usage';inputTokens?:number;outputTokens?:number;costUsd?:number}
- | {type:'done'} | {type:'error';message:string};
+ | {type:'done'} | {type:'error';message:string;code?:string;retryable?:boolean};
 export interface AgentRun {cancel():void}
 export interface AgentCore {
  run(request:AgentRequest,onEvent:(event:AgentEvent)=>void):AgentRun;

@@ -1,5 +1,6 @@
 import { runWithProviderConsent } from './privacy';
 import type { AgentPrivacyGate } from './privacy';
+import { AgentError, classifyHttp } from './errors';
 import type { AgentCloudConsentGuard, AgentProvider, AgentProviderEvent, AgentProviderRequest } from './types';
 
 export interface OpenRouterOptions {
@@ -11,6 +12,10 @@ export interface OpenRouterOptions {
   fetch?: typeof globalThis.fetch;
   /** ZDR is the default. Changing it requires a separate conscious privacy choice. */
   requireZdr?: boolean;
+  /** Retries for 408/429/5xx before any output was produced. Default 3 (4 attempts). */
+  maxRetries?: number;
+  /** Test injection. */
+  sleep?: (ms: number, signal: AbortSignal) => Promise<void>;
 }
 const endpoint = 'https://openrouter.ai/api/v1/chat/completions';
 const maxEventBytes = 1024 * 1024;
@@ -28,7 +33,7 @@ async function* dataEvents(body: ReadableStream<Uint8Array>, signal: AbortSignal
       const { value, done } = await reader.read();
       signal.throwIfAborted();
       buffer += decoder.decode(value, { stream: !done });
-      if (buffer.length > maxEventBytes) throw Error('Provider event exceeds size limit.');
+      if (buffer.length > maxEventBytes) throw new AgentError('limit', 'context', 'Provider event exceeds size limit.');
       let newline: number;
       while ((newline = buffer.indexOf('\n')) !== -1) {
         const line = buffer.slice(0, newline).replace(/\r$/, '');
@@ -39,12 +44,15 @@ async function* dataEvents(body: ReadableStream<Uint8Array>, signal: AbortSignal
         } else if (line.startsWith('data:')) {
           const part = line.slice(5).replace(/^ /, '');
           size += part.length;
-          if (size > maxEventBytes) throw Error('Provider event exceeds size limit.');
+          if (size > maxEventBytes) throw new AgentError('limit', 'context', 'Provider event exceeds size limit.');
           data.push(part);
         }
       }
       if (done) {
-        if (buffer || data.length) throw Error('Provider stream ended inside an event.');
+        // Tolerate a final event without the trailing blank line (some gateways omit it).
+        if (buffer.startsWith('data:')) { data.push(buffer.slice(5).replace(/^ /, '').replace(/\r$/, '')); buffer = ''; }
+        if (buffer.trim()) throw new AgentError('provider-error', 'protocol', 'Provider stream ended inside an event.');
+        if (data.length) yield data.join('\n');
         break;
       }
     }
@@ -56,6 +64,21 @@ async function* dataEvents(body: ReadableStream<Uint8Array>, signal: AbortSignal
 }
 function finite(value: unknown): number | undefined {
   return typeof value === 'number' && Number.isFinite(value) && value >= 0 ? value : undefined;
+}
+/** Coarse classification hints from an error message. The text itself is never kept or shown. */
+function errorHint(message: string): { tools?: boolean; routing?: boolean } {
+  return {
+    tools: /tool[s_ ]?(use|call|choice)?|function[ _]call/i.test(message) && /support|endpoint|not available|no .*found|unsupported/i.test(message),
+    routing: /no endpoints? found|zdr|data policy|privacy/i.test(message),
+  };
+}
+async function readError(response: Response): Promise<{ status?: number; hint: { tools?: boolean; routing?: boolean } }> {
+  const text = (await response.text()).slice(0, 4096);
+  let json: any; try { json = JSON.parse(text); } catch { /* vendor HTML etc. */ }
+  const code = Number(json?.error?.code);
+  const raw = typeof json?.error?.metadata?.raw === 'string' ? json.error.metadata.raw : '';
+  return { status: Number.isInteger(code) && code >= 400 && code < 600 ? code : undefined,
+    hint: errorHint(`${typeof json?.error?.message === 'string' ? json.error.message : text} ${raw}`) };
 }
 export class OpenRouterProvider implements AgentProvider {
   readonly id = 'openrouter';
@@ -119,39 +142,56 @@ export class OpenRouterProvider implements AgentProvider {
     await this.options.consentGuard?.({ provider: this.id, endpoint, request });
     request.signal.throwIfAborted();
     const apiKey = await this.options.getApiKey();
-    if (!apiKey || /[\r\n]/.test(apiKey)) throw Error('OpenRouter credential is missing or invalid.');
+    if (!apiKey || /[\r\n]/.test(apiKey)) throw new AgentError('provider-error', 'auth', 'OpenRouter credential is missing or invalid.');
     request.signal.throwIfAborted();
-    const response = await (this.options.fetch ?? globalThis.fetch)(endpoint, {
-      method: 'POST', redirect: 'error', signal: request.signal,
-      headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: request.model, stream: true, max_tokens: request.maxOutputTokens,
-        provider: { zdr: this.options.requireZdr !== false, allow_fallbacks: false, require_parameters: true },
-        messages: request.messages.map(m => ({ role: m.role, content: m.content,
-          ...(m.toolCallId ? { tool_call_id: m.toolCallId } : {}),
-          ...(m.toolCalls ? { tool_calls: m.toolCalls.map(t => ({ id: t.id, type: 'function', function: { name: t.name, arguments: t.arguments } })) } : {}) })),
-        ...(request.tools.length ? { tools: request.tools.map(t => ({ type: 'function', function: t })) } : {}),
-      }),
+    const body = JSON.stringify({
+      model: request.model, stream: true, max_tokens: request.maxOutputTokens,
+      provider: { zdr: this.options.requireZdr !== false, allow_fallbacks: false, require_parameters: true },
+      messages: request.messages.map(m => ({ role: m.role, content: m.content,
+        ...(m.toolCallId ? { tool_call_id: m.toolCallId } : {}),
+        ...(m.toolCalls ? { tool_calls: m.toolCalls.map(t => ({ id: t.id, type: 'function', function: { name: t.name, arguments: t.arguments } })) } : {}) })),
+      ...(request.tools.length ? { tools: request.tools.map(t => ({ type: 'function', function: t })) } : {}),
     });
-    // Never echo response bodies: they can contain keys, private prompts or vendor HTML.
-    if (!response.ok) throw Error(`OpenRouter request failed (HTTP ${response.status}).`);
-    if (!response.body || !response.headers.get('content-type')?.includes('text/event-stream')) throw Error('OpenRouter did not return an event stream.');
+    const response = await this.fetchWithRetry(apiKey, body, request.signal);
+    if (!response.body || !response.headers.get('content-type')?.includes('text/event-stream')) {
+      // Some upstream failures arrive as HTTP 200 with a JSON error body instead of a stream.
+      if (response.body && response.headers.get('content-type')?.includes('json')) {
+        const err = await readError(response).catch(() => undefined);
+        if (err) throw classifyHttp(err.status ?? 502, err.hint);
+      }
+      throw new AgentError('provider-error', 'protocol', 'OpenRouter did not return an event stream.');
+    }
     let ended = false;
+    const toolIds = new Map<string, number>();
+    let lastTool = -1;
     for await (const data of dataEvents(response.body, request.signal)) {
       if (data === '[DONE]') { ended = true; break; }
       let chunk;
-      try { chunk = JSON.parse(data); } catch { throw Error('Invalid provider stream event.'); }
-      if (!chunk || typeof chunk !== 'object' || chunk.error) throw Error('Provider reported a streaming error.');
+      try { chunk = JSON.parse(data); } catch { throw new AgentError('provider-error', 'protocol', 'Invalid provider stream event.'); }
+      if (!chunk || typeof chunk !== 'object') throw new AgentError('provider-error', 'protocol', 'Invalid provider stream event.');
+      if (chunk.error) {
+        const code = Number(chunk.error.code);
+        const hint = errorHint(typeof chunk.error.message === 'string' ? chunk.error.message : '');
+        throw Number.isInteger(code) && code >= 400 && code < 600 ? classifyHttp(code, hint, 'Provider reported a streaming error')
+          : new AgentError('provider-error', 'server', 'Provider reported a streaming error.', true);
+      }
       if (chunk.usage) yield { type: 'usage', usage: {
         inputTokens: finite(chunk.usage.prompt_tokens), outputTokens: finite(chunk.usage.completion_tokens), costUsd: finite(chunk.usage.cost),
       } };
       for (const choice of chunk.choices ?? []) {
-        if (choice.index !== 0) continue;
+        if ((choice.index ?? 0) !== 0) continue;
         const delta = choice.delta ?? {};
-        if (typeof delta.content === 'string') yield { type: 'text', text: delta.content };
+        if (typeof delta.content === 'string' && delta.content) yield { type: 'text', text: delta.content };
         for (const tool of delta.tool_calls ?? []) {
-          if (!Number.isSafeInteger(tool.index) || tool.index < 0) throw Error('Invalid provider tool index.');
-          yield { type: 'tool-call', index: tool.index,
+          // Tolerate gateways that omit `index`: key by id, else continue the last call.
+          let index = tool.index;
+          if (index === undefined || index === null) {
+            if (typeof tool.id === 'string' && tool.id) { if (!toolIds.has(tool.id)) toolIds.set(tool.id, ++lastTool); index = toolIds.get(tool.id); }
+            else index = Math.max(lastTool, 0);
+          }
+          if (!Number.isSafeInteger(index) || index < 0) throw new AgentError('provider-error', 'protocol', 'Invalid provider tool index.');
+          lastTool = Math.max(lastTool, index);
+          yield { type: 'tool-call', index,
             id: typeof tool.id === 'string' ? tool.id : undefined,
             name: typeof tool.function?.name === 'string' ? tool.function.name : undefined,
             arguments: typeof tool.function?.arguments === 'string' ? tool.function.arguments : undefined };
@@ -159,6 +199,39 @@ export class OpenRouterProvider implements AgentProvider {
         if (typeof choice.finish_reason === 'string') yield { type: 'finish', reason: choice.finish_reason };
       }
     }
-    if (!ended) throw Error('Provider stream ended without completion.');
+    if (!ended) throw new AgentError('provider-error', 'protocol', 'Provider stream ended without completion.', true);
+  }
+
+  /** Retries only before any response body was consumed, so nothing is duplicated. */
+  private async fetchWithRetry(apiKey: string, body: string, signal: AbortSignal): Promise<Response> {
+    const retries = Math.max(0, this.options.maxRetries ?? 3);
+    const sleep = this.options.sleep ?? ((ms: number, s: AbortSignal) => new Promise<void>((resolve, reject) => {
+      const t = setTimeout(() => { s.removeEventListener('abort', onAbort); resolve(); }, ms);
+      const onAbort = () => { clearTimeout(t); reject(s.reason); };
+      s.addEventListener('abort', onAbort, { once: true });
+    }));
+    for (let attempt = 0; ; attempt++) {
+      signal.throwIfAborted();
+      let failure: AgentError;
+      let retryAfter: number | undefined;
+      try {
+        const response = await (this.options.fetch ?? globalThis.fetch)(endpoint, {
+          method: 'POST', redirect: 'error', signal,
+          headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' }, body,
+        });
+        if (response.ok) return response;
+        // Never echo response bodies: they can contain keys, private prompts or vendor HTML.
+        const err = await readError(response).catch(() => undefined);
+        failure = classifyHttp(response.status, err?.hint);
+        const header = Number(response.headers.get('retry-after'));
+        if (Number.isFinite(header) && header > 0) retryAfter = header * 1000;
+      } catch (error) {
+        signal.throwIfAborted();
+        if (error instanceof AgentError) throw error;
+        failure = new AgentError('provider-error', 'network', 'Network request to the provider failed.', true);
+      }
+      if (!failure.retryable || attempt >= retries) throw failure;
+      await sleep(Math.min(retryAfter ?? 1000 * 2 ** attempt * (failure.detail === 'rate-limited' ? 2 : 1), 15000), signal);
+    }
   }
 }

@@ -93,3 +93,18 @@ A runtime bridge must not bypass project boundaries, consent or reviewed-edit gu
 ## Common adapter requirements
 
 Use normalized cancellable events; expose actual capabilities; preserve request/model/provider identity; keep secrets out of renderer/log/export paths; require cloud opt-in before transmission; inspect context; enforce limits in the host; never execute model tools directly in the adapter; report unknown costs; preserve restrictions across retries and fallbacks. See [ARCHITECTURE.md](ARCHITECTURE.md) and the [privacy draft](PRIVACY.md).
+
+## Errors and limits (OpenRouter and sessions)
+
+Panel messages come from a fixed taxonomy (`phase1/src/lib/agent/errors.ts`), never from raw provider text.
+
+| code | meaning | examples |
+| --- | --- | --- |
+| `limit` | bounded loop stopped | steps (default 16), tool calls (48), output tokens (8192, one automatic retry at 2x when a reasoning model emits nothing), timeout (180 s), context size |
+| `tool-unsupported` | model/provider cannot do tool calls | HTTP 404/400 "no endpoints support tool use" |
+| `provider-error` | provider/transport failure | 429 rate limit, 401/403 key, 402 credit, 5xx, network, bad stream |
+| `aborted` | user stopped or consent withdrawn | Stop button |
+
+- 408/429/5xx are retried automatically (up to 3 times, exponential backoff, honours `Retry-After`) before any output exists. Errors flagged retryable show a Retry button.
+- The last step offers no tools, so the model must answer in text instead of the turn failing.
+- Free models: with ZDR on (default), most `:free` models have no ZDR endpoint and return 404 (shown as "no available endpoint under current privacy settings"). Free models are also frequently rate-limited upstream.

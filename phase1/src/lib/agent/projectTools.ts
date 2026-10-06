@@ -32,7 +32,7 @@ export class AgentProjectTools {
   async execute(call: AgentToolCall, signal: AbortSignal): Promise<string> {
     signal.throwIfAborted();
     let args: Record<string, unknown>;
-    try { args = JSON.parse(call.arguments); } catch { throw Error('Tool arguments must be valid JSON.'); }
+    try { args = JSON.parse(call.arguments.trim() || '{}'); } catch { throw Error('Tool arguments must be valid JSON.'); }
     if (!args || typeof args !== 'object' || Array.isArray(args)) throw Error('Tool arguments must be an object.');
     const files = this.access.files();
     if (call.name === 'list_files') {

@@ -7,7 +7,7 @@ export type ChatItem =
  | {id: string; kind: 'diff'; proposal: AgentProposal; state: ProposalState}
  | {id:string;kind:'approval';approval:AgentApproval}
  | {id:string;kind:'usage';text:string}
- | {id: string; kind: 'error'; text: string};
+ | {id: string; kind: 'error'; text: string; retryable?: boolean};
 export interface ChatState {items: ChatItem[]; busy: boolean; seq: number}
 export const initialChat: ChatState = {items: [], busy: false, seq: 0};
 export type ChatAction =
@@ -39,7 +39,7 @@ export function chatReducer(s: ChatState, a: ChatAction): ChatState {
    if (e.type === 'approval') return {...s,items:[...s.items,{id:next(s),kind:'approval',approval:e.approval}],seq:s.seq+1};
    if (e.type === 'usage') return {...s,items:[...s.items,{id:next(s),kind:'usage',text:`Tokens: ${e.inputTokens??'?'} in / ${e.outputTokens??'?'} out. Cost: ${e.costUsd===undefined?'unknown':`$${e.costUsd}`}`}],seq:s.seq+1};
    if (e.type === 'done') return {...s, items: settle(s.items), busy: false};
-   return {items: [...settle(s.items), {id: next(s), kind: 'error', text: e.message}], busy: false, seq: s.seq + 1};
+   return {items: [...settle(s.items), {id: next(s), kind: 'error', text: e.message, retryable: e.retryable}], busy: false, seq: s.seq + 1};
   }
   case 'stop': return {...s, items: settle(s.items), busy: false};
   case 'resolve': return {...s, items: s.items.map(i => i.kind === 'diff' && i.proposal.id === a.proposalId ? {...i, state: a.state} : i)};

@@ -1,5 +1,7 @@
 import { log, logWarn, describeError } from '../log';
 import { createAIProvenance } from './privacy';
+import { AgentError, describeAgentError, toAgentError } from './errors';
+import type { AgentErrorCode, AgentErrorDetail } from './errors';
 import type { AgentMessage, AgentProvider, AgentToolCall, AgentUsage } from './types';
 import { AgentProjectTools, agentFileTools } from './projectTools';
 import type { AgentFileProposal } from './projectTools';
@@ -11,7 +13,7 @@ export type AgentSessionEvent =
   | { type: 'tool'; call: AgentToolCall; status: 'running' | 'completed' | 'failed'; result?: string; turnId: string }
   | { type: 'usage'; usage: AgentUsage; turnId: string }
   | { type: 'proposals'; proposals: AgentFileProposal[]; turnId: string }
-  | { type: 'notice'; message: string; turnId: string };
+  | { type: 'notice'; message: string; turnId: string; code?: AgentErrorCode; detail?: AgentErrorDetail; retryable?: boolean };
 export interface AgentSessionOptions {
   provider: AgentProvider;
   model: string;
@@ -46,8 +48,8 @@ export class AgentSession {
   private readonly limits;
   constructor(private readonly options: AgentSessionOptions) {
     this.limits = {
-      steps: positive(options.maxSteps, 8), calls: positive(options.maxToolCalls, 24),
-      tokens: positive(options.maxOutputTokens, 4096), context: positive(options.maxContextBytes, 1024 * 1024), timeout: positive(options.timeoutMs, 120000),
+      steps: positive(options.maxSteps, 16), calls: positive(options.maxToolCalls, 48),
+      tokens: positive(options.maxOutputTokens, 8192), context: positive(options.maxContextBytes, 1024 * 1024), timeout: positive(options.timeoutMs, 180000),
     };
   }
   get status(): AgentSessionStatus { return this._status; }
@@ -98,7 +100,8 @@ export class AgentSession {
     const controller = new AbortController();
     this.controller = controller;
     const turnId = `turn-${++this.turnNumber}`;
-    const timer = setTimeout(() => controller.abort(), this.limits.timeout);
+    let timedOut = false;
+    const timer = setTimeout(() => { timedOut = true; controller.abort(); }, this.limits.timeout);
     const working: AgentMessage[] = [...clone(this.messages), { role: 'user', content }];
     let calls = 0;
     this._status = 'running'; this.emit({ type: 'state', status: this._status, turnId });
@@ -106,30 +109,50 @@ export class AgentSession {
       for (let step = 0; step < this.limits.steps; step++) {
         controller.signal.throwIfAborted();
         const outgoing = [systemMessage, ...working];
-        if (bytes(outgoing) > this.limits.context) throw Error('Agent context exceeds limit. Start a new chat or narrow context.');
+        if (bytes(outgoing) > this.limits.context) throw new AgentError('limit', 'context', 'Agent context exceeds limit. Start a new chat or narrow context.');
+        // The last step offers no tools, so the model must answer in text instead of the turn failing.
+        const finalStep = step + 1 >= this.limits.steps;
         let text = '', finish: string | null = null;
-        const fragments = new Map<number, AgentToolCall>();
-        for await (const event of this.options.provider.stream({ model: this.options.model, messages: clone(outgoing), tools: this.options.tools ? agentFileTools : [], maxOutputTokens: this.limits.tokens, signal: controller.signal })) {
-          controller.signal.throwIfAborted();
-          if (event.type === 'text') { text += event.text; this.emit({ ...event, turnId }); }
-          else if (event.type === 'usage') this.emit({ ...event, turnId });
-          else if (event.type === 'finish') finish = event.reason;
-          else if (event.type === 'tool-call') {
-            if (!Number.isSafeInteger(event.index) || event.index < 0 || event.index >= this.limits.calls) throw Error('Invalid tool-call index.');
-            const call = fragments.get(event.index) ?? { id: '', name: '', arguments: '' };
-            call.id += event.id ?? ''; call.name += event.name ?? ''; call.arguments += event.arguments ?? '';
-            fragments.set(event.index, call);
+        let fragments = new Map<number, AgentToolCall>();
+        let tokens = this.limits.tokens;
+        for (let attempt = 0; ; attempt++) {
+          for await (const event of this.options.provider.stream({ model: this.options.model, messages: clone(outgoing), tools: this.options.tools && !finalStep ? agentFileTools : [], maxOutputTokens: tokens, signal: controller.signal })) {
+            controller.signal.throwIfAborted();
+            if (event.type === 'text') { text += event.text; this.emit({ ...event, turnId }); }
+            else if (event.type === 'usage') this.emit({ ...event, turnId });
+            else if (event.type === 'finish') finish = event.reason;
+            else if (event.type === 'tool-call') {
+              if (!Number.isSafeInteger(event.index) || event.index < 0 || event.index >= this.limits.calls) throw new AgentError('provider-error', 'protocol', 'Invalid tool-call index.');
+              const call = fragments.get(event.index) ?? { id: '', name: '', arguments: '' };
+              // Some gateways repeat id/name on every fragment; only arguments are incremental.
+              if (event.id && !call.id) call.id = event.id;
+              if (event.name && call.name !== event.name) call.name += event.name;
+              call.arguments += event.arguments ?? '';
+              fragments.set(event.index, call);
+            }
+            if (bytes({ text, fragments: [...fragments.values()] }) > this.limits.context) throw new AgentError('limit', 'context', 'Agent response exceeds size limit.');
           }
-          if (bytes({ text, fragments: [...fragments.values()] }) > this.limits.context) throw Error('Agent response exceeds size limit.');
+          controller.signal.throwIfAborted();
+          // Reasoning models can spend the whole budget thinking and emit nothing: retry once with more room.
+          if (finish === 'length' && !text && !fragments.size && attempt === 0 && tokens < 32768) {
+            tokens = Math.min(tokens * 2, 32768); finish = null; fragments = new Map(); continue;
+          }
+          break;
         }
-        controller.signal.throwIfAborted();
-        if (!finish || !['stop', 'tool_calls'].includes(finish)) throw Error('Agent response did not complete. No changes are reviewable.');
+        // Lenient finish handling: some providers report 'stop'/'function_call' with tool calls, or omit the reason.
+        if (finish === 'length') throw new AgentError('limit', 'output-tokens', 'Model output hit the token limit.', true);
+        if (finish === 'content_filter') throw new AgentError('provider-error', 'moderation', 'Provider stopped the response.');
+        if (finish === 'error') throw new AgentError('provider-error', 'server', 'Provider reported an error while generating.', true);
+        if (!finish && (text || fragments.size)) finish = fragments.size ? 'tool_calls' : 'stop';
+        if (finish === 'function_call') finish = 'tool_calls';
+        if (finish === 'stop' && fragments.size && [...fragments.values()].every(c => c.id || c.name)) finish = 'tool_calls';
+        if (!finish || !['stop', 'tool_calls'].includes(finish)) throw new AgentError('provider-error', 'protocol', 'Agent response did not complete. No changes are reviewable.', true);
         const toolCalls = [...fragments.entries()].sort((a, b) => a[0] - b[0]).map(([, value]) => value);
-        if (toolCalls.length && finish !== 'tool_calls' || !toolCalls.length && finish === 'tool_calls') throw Error('Incomplete tool-call response.');
+        if (toolCalls.length && finish !== 'tool_calls' || !toolCalls.length && finish === 'tool_calls') throw new AgentError('provider-error', 'protocol', 'Incomplete tool-call response.', true);
         if (!toolCalls.length) {
           working.push({ role: 'assistant', content: text, provenance: createAIProvenance(this.options.provider.id, this.options.model) });
           this.options.tools?.markProvenance(createAIProvenance(this.options.provider.id, this.options.model));
-          if (bytes(working) > this.limits.context) throw Error('Agent history exceeds limit.');
+          if (bytes(working) > this.limits.context) throw new AgentError('limit', 'context', 'Agent history exceeds limit.');
           this.messages = clone(working);
           const proposals = this.options.tools?.proposals() ?? [];
           this._status = proposals.length ? 'review' : 'idle';
@@ -137,15 +160,17 @@ export class AgentSession {
           this.emit({ type: 'state', status: this._status, turnId });
           return;
         }
-        if (!this.options.tools) throw Error('Tools are disabled in this chat.');
+        if (!this.options.tools) throw new AgentError('tool-unsupported', 'no-tool-support', 'Tools are disabled in this chat.');
         const ids = new Set<string>();
         for (const call of toolCalls) {
-          if (!call.id || !call.name || ids.has(call.id)) throw Error('Invalid or duplicated tool call.');
+          // Gateways sometimes omit tool-call ids: synthesize a stable one instead of failing the turn.
+          if (!call.id) call.id = `call-${step}-${ids.size}`;
+          if (!call.name || ids.has(call.id)) throw new AgentError('provider-error', 'protocol', 'Invalid or duplicated tool call.', true);
           ids.add(call.id);
         }
-        if (calls + toolCalls.length > this.limits.calls) throw Error('Agent tool-call limit reached.');
+        if (calls + toolCalls.length > this.limits.calls) throw new AgentError('limit', 'tool-calls', 'Agent tool-call limit reached.');
         // Do not stage writes on the last step: no request remains to complete the turn.
-        if (step + 1 >= this.limits.steps) throw Error('Agent step limit reached.');
+        if (finalStep) throw new AgentError('limit', 'steps', 'Agent step limit reached.');
         working.push({ role: 'assistant', content: text, toolCalls, provenance: createAIProvenance(this.options.provider.id, this.options.model) });
         for (const call of toolCalls) {
           controller.signal.throwIfAborted(); calls++;
@@ -166,14 +191,14 @@ export class AgentSession {
           working.push({ role: 'tool', content: result, toolCallId: call.id });
         }
       }
-      throw Error('Agent step limit reached.');
-    } catch (turnError) {
-      // Provider/plugin errors can contain secrets. Never store or emit raw exceptions to the UI or session; the log redacts them.
-      if (!controller.signal.aborted) log('error', 'agent.turn', `Agent turn failed: ${describeError(turnError, 200)}`);
-      // (the log entry above is redacted; nothing below changes)
+      throw new AgentError('limit', 'steps', 'Agent step limit reached.');
+    } catch (error) {
+      // Provider/plugin errors can contain secrets. Only the classified, fixed-text AgentError is surfaced; the log redacts the raw error.
+      if (!controller.signal.aborted) log('error', 'agent.turn', `Agent turn failed: ${describeError(error, 200)}`);
       this.options.tools?.clear();
-      this._status = controller.signal.aborted ? 'cancelled' : 'error';
-      this.emit({ type: 'notice', message: controller.signal.aborted ? 'Agent turn stopped. No changes applied; provider costs may still occur.' : 'Agent turn failed or reached a limit. No changes applied. Retry explicitly or reduce context.', turnId });
+      const failure = toAgentError(error, { timedOut, aborted: controller.signal.aborted && !timedOut });
+      this._status = failure.code === 'aborted' ? 'cancelled' : 'error';
+      this.emit({ type: 'notice', message: describeAgentError(failure), code: failure.code, detail: failure.detail, retryable: failure.retryable || failure.code === 'aborted', turnId });
       this.emit({ type: 'state', status: this._status, turnId });
     } finally { clearTimeout(timer); this.controller = null; }
   }

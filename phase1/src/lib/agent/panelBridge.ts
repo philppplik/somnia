@@ -81,7 +81,7 @@ export const realCore:AgentCore={
     else if(event.type==='state'&&event.status==='running')send?.({type:'status',text:'Working'});
     else if(event.type==='tool')send?.({type:'status',text:`${event.call.name}: ${event.status}`});
     else if(event.type==='usage')send?.({type:'usage',...event.usage});
-    else if(event.type==='notice')send?.({type:'error',message:event.message});
+    else if(event.type==='notice')send?.({type:'error',message:event.message,code:event.code,retryable:event.retryable});
     else if(event.type==='proposals'&&event.proposals.length){
      const set:ChangeSet={id:`${generation}-${event.turnId}`,complete:true,provenance:event.proposals[0].provenance,files:event.proposals.map(p=>({path:p.path,kind:p.before===null?'create':'edit',baseText:p.before,proposedText:p.after}))};proposals.set(set.id,set);send?.({type:'proposal',proposal:panelProposal(set)});
     }

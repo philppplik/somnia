@@ -60,7 +60,7 @@ export function AgentPanel(){
     <label><input type="checkbox" checked={cfg.allowActiveFile} onChange={e=>setCfg({...cfg,allowActiveFile:e.target.checked})}/>Allow reading the active file into model context. Other file reads and all writes ask first.</label>
     <button type="submit">Use configuration</button><button type="button" onClick={()=>{setConfiguration(false);patchState({settingsOpen:true,settingsSection:'AI privacy'});}}>AI privacy settings</button>
    </form>}
-   {empty?<div className="ag-empty"><div className="ag-orb" aria-hidden="true"/><h3>{t('agent.empty.title')}</h3><span>{t('agent.empty.body')}</span><div className="ag-chips">{CHIPS.map(c=><button type="button" key={c} className="ag-chip" onClick={()=>{setDraft(c);input.current?.focus();}}>{c}</button>)}</div><p className="ag-tip">Choose a model, then describe your task. File access and proposed changes need your review.</p></div>:chat.items.map(item=><Row key={item.id} item={item} onAccept={(p,d)=>void resolve(p,'accepted',d)} onReject={p=>void resolve(p,'rejected')}/>)}
+   {empty?<div className="ag-empty"><div className="ag-orb" aria-hidden="true"/><h3>{t('agent.empty.title')}</h3><span>{t('agent.empty.body')}</span><div className="ag-chips">{CHIPS.map(c=><button type="button" key={c} className="ag-chip" onClick={()=>{setDraft(c);input.current?.focus();}}>{c}</button>)}</div><p className="ag-tip">Choose a model, then describe your task. File access and proposed changes need your review.</p></div>:chat.items.map(item=><Row key={item.id} item={item} onRetry={()=>{const last=[...chat.items].reverse().find(i=>i.kind==='user');if(last&&last.kind==='user')send(last.text);}} onAccept={(p,d)=>void resolve(p,'accepted',d)} onReject={p=>void resolve(p,'rejected')}/>)}
   </div>
   <div className="ag-bar" aria-hidden="true"><div className="ag-pb"><i/><i/><i/><i/></div><div className="ag-grad"/></div>
   <div className="ag-inp"><form className="ag-field" onSubmit={e=>{e.preventDefault();if(chat.busy)stop();else send(draft);}}>
@@ -75,12 +75,12 @@ function Approval({approval}:{approval:AgentApproval}){
  const [decision,setDecision]=useState<ApprovalDecision|null>(null);
  return <section className="ag-approval" aria-label="File access approval"><strong>{approval.action}</strong><code>{approval.path}</code><p>File contents may contain private information. Grant only the context you want the selected model to receive.</p>{decision?<p role="status">{decision}</p>:<div>{(['accept','accept_for_session','decline','cancel'] as const).map(d=><button type="button" key={d} onClick={()=>{setDecision(d);approval.resolve(d);}}>{({accept:'Accept once',accept_for_session:'Accept for session',decline:'Decline',cancel:'Cancel'})[d]}</button>)}</div>}</section>;
 }
-function Row({item,onAccept,onReject}:{item:ChatItem;onAccept:(p:AgentProposal,d:Decisions)=>void;onReject:(p:AgentProposal)=>void}){
+function Row({item,onAccept,onReject,onRetry}:{item:ChatItem;onRetry:()=>void;onAccept:(p:AgentProposal,d:Decisions)=>void;onReject:(p:AgentProposal)=>void}){
  switch(item.kind){
   case 'user':return <div className="ag-b ag-u"><p>{item.text}</p></div>;
   case 'agent':return <div className="ag-b ag-a"><AIGeneratedLabel/><p>{item.text}{item.streaming&&<span className="ag-caret"/>}</p></div>;
   case 'status':return <div className="ag-status"><LoaderCircle size={17} className="ag-spin"/>{item.text}</div>;
-  case 'error':return <div className="ag-error" role="alert">{item.text}</div>;
+  case 'error':return <div className="ag-error" role="alert">{item.text}{item.retryable&&<button type="button" className="ag-retry" onClick={onRetry}>Retry</button>}</div>;
   case 'usage':return <p className="ag-usage">{item.text}</p>;
   case 'approval':return <Approval approval={item.approval}/>;
   case 'diff':return <div className="ag-review" data-state={item.state}><AIGeneratedLabel provenance={item.proposal.changeSet?.provenance}/>{item.state==='pending'&&item.proposal.changeSet?<AgentReview changeSet={item.proposal.changeSet} readCurrent={p=>getState().files[p]??null} onApply={(_,d)=>onAccept(item.proposal,d)} onDiscard={()=>onReject(item.proposal)}/>:<p>{item.state==='accepted'?'Applied to editor, not saved. Use Save project to save, or editor Undo to revert.':'Proposal discarded.'}</p>}</div>;
