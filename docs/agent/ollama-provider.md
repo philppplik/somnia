@@ -4,7 +4,7 @@ Local models through the Ollama daemon. Code: `phase1/src/lib/agent/providers/ol
 
 ## Contract
 
-`phase1/src/lib/agent/provider.ts` is a verbatim copy of the Core agent's provider contract (`AgentProvider { id, locality, stream(request) }`). When `agent/core` merges, delete this copy and import theirs. `OllamaProvider` implements it with `id = 'ollama'` and `locality = 'local'`.
+`phase1/src/lib/agent/provider.ts` is a verbatim copy of the Core agent's provider contract (`AgentProvider { id, locality, stream(request) }`). When `agent/core` merges, delete this copy and import theirs. `OllamaProvider` implements it with `id = 'ollama'`. `locality` is derived from the validated endpoint: `'local'` only for an `http:` URL on a loopback host (`localhost`, `127.0.0.0/8`, `::1`); anything else (LAN IP, https, hostnames that merely start with `localhost`/`127.`, `0.0.0.0`) is `'cloud'` and must go through `runWithProviderConsent`, where the privacy gate does the host check.
 
 ## Behaviour
 
@@ -18,16 +18,19 @@ Local models through the Ollama daemon. Code: `phase1/src/lib/agent/providers/ol
 | Usage | `usage` event with `prompt_eval_count` / `eval_count`. `costUsd` is left absent (contract: absent = unknown). |
 | Finish | `tool_calls` if any call was emitted, `length` on `done_reason: length`, else `stop`. |
 | Abort | Aborted signal ends the stream with `{type:'finish', reason:'aborted'}`, no throw. |
+| Context window | Optional `numCtx` constructor option, sent as `options.num_ctx` (positive integer). Unset means the daemon default. Ollama may clamp it to what the model or memory allows, so a larger value is a request, not a guarantee; do not advertise context sizes in the UI. |
 | Extras (not in contract) | `listModels()` (`GET /api/tags`, sorted, with size/details) and `health()` (`GET /api/version`, never throws). For the settings/model picker UI. 5 s timeout on those. |
 
-## Assumptions to confirm with agent/core
+## Assumptions (confirmed by agent/core unless noted)
+
+Confirmed by Core: errors throw typed `ProviderError`; `finish: 'aborted'` is treated as cancelled; `stop`/`tool_calls` give reviewable turns, `length`/`aborted` discard partial proposals.
 
 1. **Errors throw.** The contract has no error event, so `stream` throws `ProviderError` (`errors.ts`) with code `unreachable | model-not-found | http | protocol | timeout`. If Core wants an error event, change in one place.
 2. **Abort is a normal finish** with reason `'aborted'`, not an exception.
 3. **Finish reason strings** are `stop`, `length`, `tool_calls`, `aborted` (finish reason is an open string in the contract).
-4. **No cloud consent guard.** `AgentCloudConsentGuard` applies to cloud providers only. Requests go to the configured daemon URL; if a user points it at a non-loopback host, the Core privacy layer should treat that as remote. `locality` is fixed `'local'` here, so Core may want to derive it from the host.
+4. **Locality** is derived from the endpoint (see Contract). Confirmed by Core.
 5. **Model support for tools varies.** Models without tool support return an HTTP 400 from Ollama; this surfaces as `ProviderError('http')` with Ollama's message.
-6. **No `keep_alive`, sampling or context-size (`num_ctx`) options** are set; Ollama defaults apply. Ollama's default context is small, so long project contexts may be truncated by the daemon silently. Worth a setting later.
+6. **Only `num_ctx` is configurable** (see table). No `keep_alive` or sampling options. Without `numCtx`, Ollama's small default context can silently truncate long project contexts.
 
 ## Not verified
 

@@ -14,6 +14,8 @@ export interface OllamaOptions {
   fetch?: FetchLike;
   /** Timeout for non-streaming calls (health, models) in ms. Default 5000. */
   requestTimeoutMs?: number;
+  /** Context window (tokens) sent as options.num_ctx. Unset = daemon default. The daemon may still clamp or truncate; no guarantee. */
+  numCtx?: number;
 }
 
 const isAbort = (e: unknown) => (e as { name?: string })?.name === 'AbortError';
@@ -27,6 +29,14 @@ export function normalizeBaseUrl(raw: string | undefined): string {
   return u.origin + u.pathname.replace(/\/+$/, '');
 }
 
+/** True only for http URLs on a loopback host (localhost, 127.0.0.0/8, ::1). Everything else is remote. */
+export function isLoopbackHttp(baseUrl: string): boolean {
+  const u = new URL(baseUrl);
+  if (u.protocol !== 'http:') return false;
+  const h = u.hostname.toLowerCase();
+  return h === 'localhost' || h === '[::1]' || /^127(\.\d{1,3}){3}$/.test(h);
+}
+
 /** Combines caller abort with a timeout. */
 function withTimeout(signal: AbortSignal | undefined, ms: number): { signal: AbortSignal; done: () => void } {
   const c = new AbortController();
@@ -38,13 +48,18 @@ function withTimeout(signal: AbortSignal | undefined, ms: number): { signal: Abo
 
 export class OllamaProvider implements AgentProvider {
   readonly id = 'ollama';
-  readonly locality = 'local' as const;
+  /** Derived from the validated endpoint: 'local' only for http loopback, else 'cloud' (must pass the consent gate). */
+  readonly locality: 'cloud' | 'local';
+  private numCtx?: number;
   readonly baseUrl: string;
   private f: FetchLike;
   private timeout: number;
 
   constructor(opts: OllamaOptions = {}) {
     this.baseUrl = normalizeBaseUrl(opts.baseUrl);
+    this.locality = isLoopbackHttp(this.baseUrl) ? 'local' : 'cloud';
+    if (opts.numCtx !== undefined && (!Number.isInteger(opts.numCtx) || opts.numCtx < 1)) throw new ProviderError('protocol', 'numCtx must be a positive integer');
+    this.numCtx = opts.numCtx;
     this.f = opts.fetch ?? ((u, i) => fetch(u, i));
     this.timeout = opts.requestTimeoutMs ?? 5000;
   }
@@ -102,7 +117,7 @@ export class OllamaProvider implements AgentProvider {
       messages: toOllamaMessages(req.messages),
       ...(req.tools.length && { tools: req.tools.map((t) => ({ type: 'function', function: { name: t.name, description: t.description, parameters: t.parameters } })) }),
       stream: true,
-      options: { num_predict: req.maxOutputTokens },
+      options: { num_predict: req.maxOutputTokens, ...(this.numCtx && { num_ctx: this.numCtx }) },
     };
     let res: Response;
     try {

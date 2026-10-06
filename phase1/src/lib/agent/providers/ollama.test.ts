@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { OllamaProvider, normalizeBaseUrl } from './ollama';
+import { OllamaProvider, normalizeBaseUrl, isLoopbackHttp } from './ollama';
 import { toOllamaMessages } from './ollama';
 import type { AgentProviderEvent, AgentProviderRequest } from '../provider';
 
@@ -40,7 +40,23 @@ test('listModels errors: http, unreachable, protocol', async () => {
   await assert.rejects(mk(async () => json({ nope: 1 })).listModels(), code('protocol'));
 });
 
-test('contract: id and locality', () => { const p = mk(async () => json({})); assert.equal(p.id, 'ollama'); assert.equal(p.locality, 'local'); });
+test('contract: id; locality derives from endpoint (only http loopback is local)', () => {
+  const p = mk(async () => json({})); assert.equal(p.id, 'ollama'); assert.equal(p.locality, 'local');
+  const loc = (u: string) => new OllamaProvider({ baseUrl: u, fetch: (async () => json({})) as never }).locality;
+  for (const u of ['http://localhost:11434', '127.0.0.1', 'http://127.1.2.3:1', 'http://[::1]:11434']) assert.equal(loc(u), 'local', u);
+  for (const u of ['http://192.168.1.5:11434', 'https://localhost:11434', 'http://localhost.evil.com', 'http://127.0.0.1.evil.com', 'http://0.0.0.0:11434', 'https://ollama.example.com']) assert.equal(loc(u), 'cloud', u);
+  assert.equal(isLoopbackHttp('http://localhost:1'), true);
+});
+
+test('numCtx is sent as options.num_ctx only when set, and validated', async () => {
+  const bodies: any[] = [];
+  const f = async (_u: string, i?: RequestInit) => { bodies.push(JSON.parse(String(i?.body))); return nd([JSON.stringify({ done: true })]); };
+  await collect(new OllamaProvider({ fetch: f as never, numCtx: 16384 }).stream(req()));
+  await collect(mk(f).stream(req()));
+  assert.equal(bodies[0].options.num_ctx, 16384); assert.equal('num_ctx' in bodies[1].options, false);
+  assert.throws(() => new OllamaProvider({ numCtx: 0 }), /numCtx/);
+  assert.throws(() => new OllamaProvider({ numCtx: 1.5 }), /numCtx/);
+});
 
 test('stream: text across chunk boundaries, usage, finish; request body', async () => {
   let sent: any;
