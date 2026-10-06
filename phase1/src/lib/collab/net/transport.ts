@@ -30,7 +30,7 @@ export class WebSocketTransport implements Transport{
  constructor(private url:string){}
  private ws:WebSocket|null=null;
  connect(h:TransportHandlers){
-  // Browsers refuse WebSocket URLs that contain a fragment ('#key=...' is the E2E key and must never be sent anyway).
+  // Browsers refuse WebSocket URLs that contain a fragment; '#key=...' is the E2E key and must never be sent anyway.
   const ws=this.ws=new WebSocket(this.url.split('#')[0]);ws.binaryType='arraybuffer';
   // Exactly one onClose, always: browsers fire close after error, but Node's undici WebSocket
   // never fires close for a refused upgrade (401/404/503) - without this the caller hangs.

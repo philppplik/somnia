@@ -41,6 +41,8 @@ createRoot(document.getElementById('root')!).render(<StrictMode><App/></StrictMo
 if(!isTauri())installBeforeUnload(()=>getState().isDirty&&getState().storage!=='disk');
 if(import.meta.env.DEV)(window as unknown as {__somnia:object}).__somnia={requestClose,setSource:(file:string,text:string)=>applyOperations([{type:'replaceSource',file,text}] as never)};
 if(isTauri())document.documentElement.dataset.shell='desktop';
+// LAN-Direct hosting is a desktop feature: register the Rust host with the collab engine only inside Tauri.
+if(isTauri())void import('./lib/collab/lanHost').then(m=>import('./lib/collab/lanHostPort').then(p=>p.registerLanHost({startLanHost:m.startLanHost,stopLanHost:m.stopLanHost,createLanSessionLinks:m.createLanSessionLinks})));
 if(isTauri())setStoreManaged(import('@tauri-apps/api/core').then(m=>m.invoke<boolean>('is_store_package')));
 if(isTauri())void installDesktopAdapter().catch(error=>console.error(error));
 else if(webFsSupported()&&!location.search.includes('fallback=zip'))void installFileAdapter(createWebFsPort()).catch(error=>console.error(error));

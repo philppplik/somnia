@@ -6,6 +6,7 @@ import {useCollab,useShareUi,closeShare,setShareTab,getCollabEngine} from '../li
 import {parseJoinLink,isInsecureRemote,hasLinkKey,maskLink,relayRoomUrl,RELAY_URL_KEY} from '../lib/collab/invite';
 import {getLanHost} from '../lib/collab/lanHostPort';
 import {collabLabel} from './CollabStatus';
+import {LanHostSettings} from './LanHostSettings';
 import type {CollabSnapshot,CollabError} from '../lib/collab/types';
 import '../lib/collab/commands';
 const field='h-9 w-full rounded-sm border border-line bg-elevated px-2.5 text-[12px] text-ink';
@@ -36,9 +37,9 @@ function HostPane(){
  const lan=getLanHost();
  const [mode,setMode]=useState<'relay'|'lan-direct'>('relay');
  const [relay,setRelay]=useState(()=>{try{return localStorage.getItem(RELAY_URL_KEY)??'';}catch{return '';}});
- const [net,setNet]=useState(false);const [port,setPort]=useState('0');
+ const [lanCfg,setLanCfg]=useState({lan:false,port:0});
  const rel=relay.trim()?relayRoomUrl(relay):null;const relBad=!!relay.trim()&&!rel;
- const portN=Number(port);const portOk=Number.isInteger(portN)&&portN>=0&&portN<=65535;
+ const portOk=Number.isInteger(lanCfg.port)&&lanCfg.port>=0&&lanCfg.port<=65535;
  const idle=s.role==='none';
  if(idle||s.state==='starting'&&s.role!=='host')return <div>
   <p className="mt-3 text-[12px] text-ink-2">{t('share.hostIntro')}</p>
@@ -48,14 +49,12 @@ function HostPane(){
    <p className="mt-1 text-[11px] text-ink-2">{t('share.relayHint')}</p>
    {relBad&&<p role="alert" className="mt-1 text-[11px] text-red-500" data-testid="relay-invalid">{t('share.invalidLink')}</p>}
    {rel&&!rel.secure&&!rel.local&&<p className="mt-1 text-[11px] text-ink-2" data-testid="relay-insecure">{t('share.relayInsecure')}</p>}</div>
-  :lan?<div>
-   <label className="mt-3 flex items-center gap-2 text-[12px]"><input type="checkbox" aria-label={t('share.lanAria')} checked={net} onChange={e=>setNet(e.target.checked)}/>{t('share.lan')}</label>
-   <label className="mt-2 flex items-center gap-2 text-[12px]">{t('share.port')}<input aria-label={t('share.port')} inputMode="numeric" className="h-8 w-24 rounded-sm border border-line bg-elevated px-2" value={port} onChange={e=>setPort(e.target.value)}/><span className="text-[11px] text-ink-2">{t('share.portHint')}</span></label></div>
+  :lan?<LanHostSettings value={lanCfg} onChange={setLanCfg}/>
   :<p className="mt-3 text-[12px] text-ink-2" data-testid="lan-needs-desktop">{t('share.lanNeedsDesktop')}</p>}
   <p className="mt-3 text-[11px] text-ink-2">{t('share.noRoles')}</p><p className="mt-1 text-[11px] text-ink-2">{t('share.scope')}</p>
   {s.error&&<p role="alert" className="mt-2 text-[12px] text-red-500" data-testid="host-error">{errText(s.error,t)}</p>}
   <div className="mt-4 flex justify-end gap-2"><Button onClick={closeShare}>{t('dialogs.close')}</Button>
-   <Button variant="primary" autoFocus disabled={mode==='relay'?!rel:(!lan||!portOk)} onClick={()=>{if(mode==='relay'){try{localStorage.setItem(RELAY_URL_KEY,relay.trim());}catch{/* storage unavailable */}void eng.startHosting({mode:'relay',relayUrl:relay});}else void eng.startHosting({mode:'lan-direct',lan:net,port:portN});}}>{t('share.start')}</Button></div></div>;
+   <Button variant="primary" autoFocus disabled={mode==='relay'?!rel:(!lan||!portOk)} onClick={()=>{if(mode==='relay'){try{localStorage.setItem(RELAY_URL_KEY,relay.trim());}catch{/* storage unavailable */}void eng.startHosting({mode:'relay',relayUrl:relay});}else void eng.startHosting({mode:'lan-direct',lan:lanCfg.lan,port:lanCfg.port});}}>{t('share.start')}</Button></div></div>;
  return <div>
   <div data-testid="host-live"/>
   <StatusBlock s={s}/>
