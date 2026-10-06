@@ -1,6 +1,6 @@
 # Somnia Phase 1
 
-Desktop foundation and reliable editor core. Development-only, not a complete desktop installer.
+The Somnia app: React frontend, Tauri/Rust desktop backend and the editor-core package. Architecture overview: [../docs/ARCHITECTURE.md](../docs/ARCHITECTURE.md). Build and release: [../docs/BUILD-AND-RELEASE.md](../docs/BUILD-AND-RELEASE.md).
 
 ```sh
 npm ci
@@ -11,9 +11,9 @@ npm run test:e2e
 npm run dev
 ```
 
-The browser development fixture is in-memory and cannot save to disk. Native filesystem integration is a separate adapter. Saving must never be simulated by a timer or localStorage toast.
+In the plain dev server the app saves through the File System Access API (Chromium) or works on a ZIP copy; the desktop app saves through the Rust backend. Both sit behind the same storage port (`src/lib/fileAdapter.ts`). Saving must never be simulated by a timer or localStorage toast.
 
-Tests exercise byte-preserving edits, stable IDs/history, sandbox safety, real canvas editing and responsive CSS. See `notes/STATUS.md`, `notes/ACCEPTANCE.md`, and `notes/ADR-001-scope.md` for scope and remaining acceptance work.
+Tests exercise byte-preserving edits, stable IDs/history, sandbox safety, real canvas editing and responsive CSS. See `notes/ACCEPTANCE.md` and `notes/ADR-001-scope.md` for the original scope and acceptance gates (`notes/STATUS.md` is a historical log).
 
 New UI follows React 19 + Base UI and restyled shadcn sources. The existing Phase-0 site is not replaced by this directory.
 

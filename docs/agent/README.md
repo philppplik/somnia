@@ -1,14 +1,16 @@
 # Somnia Agent documentation
 
-Somnia Agent is the planned native AI panel for bounded project work and reviewed file changes. These documents describe the intended design and integration requirements. They are not a release announcement or proof of completed implementation.
+Somnia Agent is the native AI panel for bounded project work and reviewed file changes. It is implemented on the `somnia-agent` branch (OpenRouter and local Ollama providers, file tools, per-file approvals, hunk review, consent gate) and is still alpha: only fake providers are covered by automated tests, and no real provider run from the packaged app has been verified.
 
-- [Concept](CONCEPT.md): product promise, panel flows, context, review, errors and acceptance criteria. English edition of the supplied concept, updated for the later provider and design direction.
-- [Architecture](ARCHITECTURE.md): Core/Provider/Panel/Diff/privacy boundaries, existing editor integration points and proposed contracts.
-- [Providers](PROVIDERS.md): OpenRouter, local/remote Ollama and researched subscription-auth options.
-- [Privacy and AI transparency](PRIVACY.md): draft opt-in, recipient disclosures, safeguards and EU AI Act review gates.
+- [Architecture](ARCHITECTURE.md): modules, data flow of a turn, session, tools, consent and approvals, providers, panel, autosave hold, logging, known gaps, and the design requirements the code is held to.
+- [Concept](CONCEPT.md): product promise, panel flows, context, review, errors and acceptance criteria.
+- [Core](CORE.md): `AgentSession`, tools and provider contract as built on the core branch, with limits and sandbox rules.
+- [Providers](PROVIDERS.md): OpenRouter, Ollama and researched subscription-auth options. [Ollama adapter](ollama-provider.md): wire format and local verification.
+- [Privacy and AI transparency](PRIVACY.md): opt-in, recipient disclosures, safeguards and EU AI Act review gates. [Site privacy draft](PRIVACY-PAGE-DRAFT.md): unpublished text.
+- [MCP and ACP](MCP-ACP.md): plan only, nothing implemented.
 
-Baseline: `phase1-foundation` at `56e2732148d367209b81b65840aeeadebc43027c` (Somnia 10.3.0), 6 October 2026. Component contracts and privacy implementation are being developed on separate `agent/*` branches. Reconcile those contracts before integration; these pages do not certify that any guard, provider or reviewed-edit path is shipped.
+Related notes: [AGENT-INTEGRATION.md](../../phase1/notes/AGENT-INTEGRATION.md) (merge record), [AGENT-PANEL.md](../../phase1/notes/AGENT-PANEL.md), [AGENT-DIFF.md](../../phase1/notes/AGENT-DIFF.md). App-wide architecture: [../ARCHITECTURE.md](../ARCHITECTURE.md).
 
-MCP and Agent Client Protocol integration planning is a separate workstream. ChatGPT sign-in has an officially documented eligible open-source path, still pending implementation checks. Claude Pro/Max third-party OAuth is not permitted under the checked policy; use legitimate API/provider routes instead. See the provider page for sources and limits.
+Claims about Claude Pro/Max third-party OAuth and ChatGPT sign-in follow the policy checks recorded in PROVIDERS.md; they are not implemented.
 
 Core rule: propose first, accept into the editor after review, save separately. AI can make mistakes. Cloud processing requires explicit opt-in and approved context.

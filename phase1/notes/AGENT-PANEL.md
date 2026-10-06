@@ -2,6 +2,8 @@
 
 Branch `agent/panel-ui`, base `origin/phase1-foundation` (56e2732). UI only: the real core lives on `agent/core`.
 
+Status (6 Oct 2026): merged into `somnia-agent` and wired to the real core through `src/lib/agent/panelBridge.ts`; `stubCore` remains for tests. The panel now also has a configuration form, file approval cards and hunk review (`AgentReview`). Event and request shapes are in `src/lib/agent/core.ts`, the full picture in [docs/agent/ARCHITECTURE.md](../../docs/agent/ARCHITECTURE.md). The sections below are the original branch notes: the core interface now also has `approval` and `usage` events and `applyProposal(id, decisions?)`; chat history is still in memory only; the Settings button opens the in-panel configuration, with AI privacy in app settings.
+
 ## What is built
 - Right side panel (340 px, 25 px radius), opened from the Vadivam `sparkles` button at the bottom of the right icon rail, or `Ctrl+Alt+A` (command `agent.toggle`). The header collapse button closes it.
 - Gradient only at the bottom: `src/assets/agent-gradient-bottom.svg` (colours live in the SVG) plus four stacked `backdrop-filter` layers for the progressive blur. No top gradient. The rail opener sits on the same SVG.

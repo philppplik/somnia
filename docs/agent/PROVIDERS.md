@@ -1,13 +1,13 @@
 # Somnia Agent providers
 
-Status: design/integration draft, 6 October 2026. This document describes supported architecture paths, not a released compatibility list. No paid inference or subscription sign-in was tested for this documentation task.
+Status: 6 October 2026. OpenRouter and Ollama adapters are implemented on `somnia-agent` (see [ARCHITECTURE.md](ARCHITECTURE.md) section 6); everything else here is design. This is not a released compatibility list. No paid inference or subscription sign-in was tested for this documentation task.
 
 ## Provider matrix
 
 | Route | Authentication | Processing location | Readiness |
 | --- | --- | --- | --- |
-| OpenRouter | User's API key | OpenRouter and routed model provider | First cloud adapter under development |
-| Ollama, local model | Local daemon; deployment-specific auth if needed | User's local daemon/model | Additional adapter under development |
+| OpenRouter | User's API key | OpenRouter and routed model provider | Implemented (`openRouter.ts`), key kept in session memory, fake-provider tests only |
+| Ollama, local model | Local daemon; deployment-specific auth if needed | User's local daemon/model | Implemented (`providers/ollama.ts`) with local verification, tested with a mocked daemon only |
 | Ollama remote/cloud route | Server-specific configuration | Configured remote server/cloud provider | Not a local-only privacy exception |
 | ChatGPT/Codex subscription | Official supported agent login/flow, if eligible | Relevant OpenAI service | Official open-source route documented; implementation and eligibility checks pending |
 | Claude/Claude Code subscription | Official supported agent login/flow, if permitted | Relevant Anthropic service | Not permitted for third-party Pro/Max login under current policy |
@@ -45,7 +45,7 @@ Sources:
 
 ## Ollama
 
-The planned adapter discovers installed models with `/api/tags`, uses `/api/chat` for chat and parses its streamed response format rather than reusing an SSE parser. Tool-capable models can return tool calls; the host executes only permitted tools and supplies their results in a subsequent request. Not every installed model is suitable for editing.
+The adapter discovers installed models with `/api/tags`, uses `/api/chat` for chat and parses its streamed response format rather than reusing an SSE parser. Tool-capable models can return tool calls; the host executes only permitted tools and supplies their results in a subsequent request. Not every installed model is suitable for editing.
 
 Display daemon URL, connection state, selected model and whether the configured route is actually local. A localhost URL alone must not become a claim that a cloud model or a proxied request is private. Approve remote endpoints separately. Prevent untrusted project content from changing the endpoint.
 

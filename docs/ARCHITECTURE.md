@@ -129,7 +129,7 @@ disk changed, pending edit    -> Conflict (both versions preserved)
 
 ## 4. Frontend (`phase1/src`)
 
-Stack: React 19, Tailwind 4 with restyled shadcn sources on Base UI, CodeMirror 6, Lucide icons. State is one external store, no router.
+Stack: React 19, Tailwind 4 with restyled shadcn sources on Base UI, CodeMirror 6, Vadivam icons (`lib/icons.tsx`, inline SVG with lucide-compatible export names). State is one external store, no router.
 
 | Area | Where |
 | --- | --- |

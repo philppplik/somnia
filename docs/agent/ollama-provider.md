@@ -4,7 +4,7 @@ Local models through the Ollama daemon. Code: `phase1/src/lib/agent/providers/ol
 
 ## Contract
 
-`phase1/src/lib/agent/provider.ts` is a verbatim copy of the Core agent's provider contract (`AgentProvider { id, locality, stream(request) }`). When `agent/core` merges, delete this copy and import theirs. `OllamaProvider` implements it with `id = 'ollama'`. `locality` is derived from the validated endpoint: `'local'` only for an `http:` URL on a loopback host (`localhost`, `127.0.0.0/8`, `::1`); anything else (LAN IP, https, hostnames that merely start with `localhost`/`127.`, `0.0.0.0`) is `'cloud'` and must go through `runWithProviderConsent`, where the privacy gate does the host check.
+`OllamaProvider` implements the shared `AgentProvider` contract from `phase1/src/lib/agent/types.ts` with `id = 'ollama'`. `locality` is derived from the validated endpoint: `'local'` only for an `http:` URL on a loopback host (`localhost`, `127.0.0.0/8`, `::1`); anything else (LAN IP, https, hostnames that merely start with `localhost`/`127.`, `0.0.0.0`) is `'cloud'` and must go through `runWithProviderConsent`, where the privacy gate does the host check.
 
 ## Behaviour
 
@@ -19,11 +19,11 @@ Local models through the Ollama daemon. Code: `phase1/src/lib/agent/providers/ol
 | Finish | `tool_calls` if any call was emitted, `length` on `done_reason: length`, else `stop`. |
 | Abort | Aborted signal ends the stream with `{type:'finish', reason:'aborted'}`, no throw. |
 | Context window | Optional `numCtx` constructor option, sent as `options.num_ctx` (positive integer). Unset means the daemon default. Ollama may clamp it to what the model or memory allows, so a larger value is a request, not a guarantee; do not advertise context sizes in the UI. |
-| Extras (not in contract) | `listModels()` (`GET /api/tags`, sorted, with size/details) and `health()` (`GET /api/version`, never throws). For the settings/model picker UI. 5 s timeout on those. |
+| Extras (not in contract) | `listModels()` (`GET /api/tags`, sorted, with size/details) and `health()` (`GET /api/version`, never throws). Meant for a model picker; the panel does not use them yet (the model name is typed in). 5 s timeout on those. |
 
 ## Local verification (`verifyLocalModel`)
 
-Core must call `await provider.verifyLocalModel(model)` and set `processing:'local'` only on `{ local: true }`. Cloud-flavoured Ollama models (for example `...-cloud` tags) and a loopback daemon that forwards to a hosted model both look "local" by URL, so the URL check alone is not enough.
+`panelBridge.guardedOllama` calls `await provider.verifyLocalModel(model)` before every request and sets `processing:'local'` only on `{ local: true }`; any other result is treated as cloud and needs consent. Cloud-flavoured Ollama models (for example `...-cloud` tags) and a loopback daemon that forwards to a hosted model both look "local" by URL, so the URL check alone is not enough.
 
 It calls `POST /api/show` and passes only if all of these hold, otherwise it returns `{ local: false, reason, message }` (it never throws, errors fail closed):
 
@@ -51,4 +51,4 @@ Confirmed by Core: errors throw typed `ProviderError`; `finish: 'aborted'` is tr
 
 ## Not verified
 
-Not run against a live Ollama daemon (none available in the build environment). Wire format follows Ollama's documented `/api/chat`, `/api/tags`, `/api/version`; check against a real daemon in the evening test.
+Not run against a live Ollama daemon (none available in the build environment). In the packaged desktop app the webview CSP does not yet allow `http://127.0.0.1:11434` (see [ARCHITECTURE.md](ARCHITECTURE.md#known-gaps)). Wire format follows Ollama's documented `/api/chat`, `/api/tags`, `/api/version`; check against a real daemon in the evening test.

@@ -1,5 +1,7 @@
 # Somnia Agent core
 
+Status: implemented and integrated on `somnia-agent`. The host wiring (`panelBridge.ts`, approvals, diff apply, autosave hold) is described in [ARCHITECTURE.md](ARCHITECTURE.md); this page documents the core modules and their contracts. The text below keeps the original `agent/core` branch notes where still accurate.
+
 Branch `agent/core`, base `56e2732148d367209b81b65840aeeadebc43027c`
 (`phase1-foundation`, v10.3.0). UI-free TypeScript core; no disk writes or paid
 inference. No Superset or Emdash code was copied.
@@ -68,8 +70,7 @@ const session = new AgentSession({
 await session.prompt(userPrompt);
 ```
 
-Names outside this module are illustrative host dependencies, not existing
-Somnia exports. Obtain explicit cloud consent and separate file context grants
+The panel wiring below is the shape `panelBridge.ts` implements (it adds the file approvals, project generations and error mapping). Obtain explicit cloud consent and separate file context grants
 first. allowed() must default to false outside selected scope and is checked on
 every tool action. Chat-only sessions omit tools. Context UX must show outgoing
 content when required; the gate enforces consent, not preview. Earlier tool
@@ -105,10 +106,7 @@ check stale bases, hunks, dependencies and permissions, then apply one accepted
 batch as one undo step. This module has no apply or save API. discardProposals()
 clears staged data only, never undoes accepted editor edits.
 
-**Release blocker outside this module:** desktop fileAdapter enables autosave
-(1s idle / 5s continuous). Editor mutation alone can write disk. Diff integration
-must implement its real holdAutosave(paths) hook and clear the hold only on
-explicit Save before claiming accepted-but-unsaved. No autosave changes here.
+Autosave: the desktop file adapter autosaves after 1 s idle or 5 s of continuous edits, so editor mutation alone could write to disk. The integration implements `holdAutosave(paths)` (`autosaveHold.ts`, `hold_autosave` command) before applying; the hold is released only by an explicit save. See ARCHITECTURE.md section 8.
 
 ## Sandbox
 
@@ -133,15 +131,9 @@ completion.
 
 ## Verification and remaining work
 
-Local typecheck, production frontend build, and existing core tests were run
-with fixture providers only. No paid request, live OpenRouter credential/model,
-GitHub CI, Windows/native key-store or UI/visual/a11y test is claimed.
+Covered by `lib/agentCore.test.ts`, `lib/agent/*.test.ts` and Playwright specs with fixture providers only. No paid request, live OpenRouter credential or model, or Windows/native key-store test is claimed.
 
-Remaining: panel/context preview, credential store/model picker, privacy UI,
-Diff-Engine bridge + autosave hold, native physical-root enforcement, durable
-history opt-in/delete, explicit retry UI, live model/tool compatibility, Ollama
-and separately authorized OAuth/ACP adapters. This is a tested core, not a
-completed end-to-end feature.
+Remaining: context preview, native credential store, model picker, durable history opt-in and delete, explicit retry UI, CSP for provider hosts, live model and tool compatibility, and separately authorized OAuth and ACP adapters. Done since the core branch: panel, privacy UI, diff bridge, autosave hold, Ollama adapter.
 
 Protocol sources checked:
 - https://openrouter.ai/docs/api/reference/streaming

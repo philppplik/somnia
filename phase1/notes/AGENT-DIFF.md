@@ -54,7 +54,7 @@ Create a `ChangeSet` from the agent's tool results (one `FileProposal` per file,
 3. Pending hunks block Apply by default. The UI only enables Apply with at least one accepted hunk, and the plan then asks for a decision on all others (`allowPending` exists for hosts that treat undecided as rejected).
 4. Persistence of proposals across restart is not implemented here. `FileProposal.baseText` is stored with the proposal, so after restart call `planApply` again: staleness is detected the same way.
 5. Undo, save conflict handling and Windows/native behaviour belong to Core and need the Windows test. Not verified here.
-6. The panel itself, tool loop and OpenRouter are not part of this branch. The component is not mounted in the app yet.
+6. The panel itself, tool loop and OpenRouter are not part of this branch. Update: on `somnia-agent` the review component is mounted in the Agent panel and `panelBridge.realCore.applyProposal` calls `applyReviewed` with a real `holdAutosave` (see docs/agent/ARCHITECTURE.md).
 
 ## Not covered
 Interaction tests in a real browser (the component has a server-render test only), move/rename/delete, three-way merge, binary files.

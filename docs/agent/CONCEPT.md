@@ -1,6 +1,6 @@
 # Somnia Agent: product and UX concept
 
-Status: design draft, 6 October 2026. This is a product specification, not an implementation report or release announcement.
+Status: product specification, 6 October 2026. The panel, session, tools, review and consent described here are implemented on `somnia-agent` (see [ARCHITECTURE.md](ARCHITECTURE.md)); items such as MCP, ACP, subscription sign-in, model discovery and persistent history are not. This page is not a release announcement.
 
 Somnia Agent is a native right-hand panel. The user describes a change, the agent reads a bounded project context and proposes changes to real files. Somnia's code diff is the review surface. Changes enter the editor only after acceptance and reach disk only through Save.
 
