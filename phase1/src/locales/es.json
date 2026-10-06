@@ -1385,5 +1385,7 @@
   "cmd.md.h5": "Markdown: Encabezado 5",
   "cmd.md.h6": "Markdown: Encabezado 6",
   "cmd.md.reveal": "Markdown: Mostrar el bloque actual de la vista previa en el código fuente",
-  "cmd.md.sync": "Markdown: Activar o desactivar el desplazamiento sincronizado"
+  "cmd.md.sync": "Markdown: Activar o desactivar el desplazamiento sincronizado",
+  "cmd.chat.toggle": "Mostrar u ocultar el chat de la sesión",
+  "cmd.agent.toggle": "Mostrar u ocultar Somnia Agent"
 }

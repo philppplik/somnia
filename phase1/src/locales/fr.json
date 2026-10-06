@@ -1385,5 +1385,7 @@
   "cmd.md.h5": "Markdown : Titre 5",
   "cmd.md.h6": "Markdown : Titre 6",
   "cmd.md.reveal": "Markdown : Afficher le bloc d'aperçu actuel dans la source",
-  "cmd.md.sync": "Markdown : Activer ou désactiver le défilement synchronisé"
+  "cmd.md.sync": "Markdown : Activer ou désactiver le défilement synchronisé",
+  "cmd.chat.toggle": "Afficher ou masquer le chat de la session",
+  "cmd.agent.toggle": "Afficher ou masquer Somnia Agent"
 }

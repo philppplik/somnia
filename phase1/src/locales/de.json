@@ -1385,5 +1385,7 @@
   "cmd.md.h5": "Markdown: Überschrift 5",
   "cmd.md.h6": "Markdown: Überschrift 6",
   "cmd.md.reveal": "Markdown: Aktuellen Vorschau-Block im Quelltext anzeigen",
-  "cmd.md.sync": "Markdown: Synchrones Scrollen umschalten"
+  "cmd.md.sync": "Markdown: Synchrones Scrollen umschalten",
+  "cmd.chat.toggle": "Sitzungs-Chat umschalten",
+  "cmd.agent.toggle": "Somnia Agent umschalten"
 }

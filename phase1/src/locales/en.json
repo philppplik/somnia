@@ -1385,5 +1385,7 @@
   "cmd.md.h5": "Markdown: Heading 5",
   "cmd.md.h6": "Markdown: Heading 6",
   "cmd.md.reveal": "Markdown: Reveal current preview block in source",
-  "cmd.md.sync": "Markdown: Toggle scroll sync"
+  "cmd.md.sync": "Markdown: Toggle scroll sync",
+  "cmd.chat.toggle": "Toggle session chat",
+  "cmd.agent.toggle": "Toggle Somnia Agent"
 }

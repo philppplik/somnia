@@ -35,3 +35,8 @@ test('contextual Source / Split / Preview, toolbar and link-dialog labels never 
  const keys=['md.view.code','md.view.split','md.view.design','md.toolbar','md.srcLabel','md.previewLabel','md.link.title','md.link.text','md.link.url','md.link.pick','md.link.cancel','md.link.insert'];
  for(const locale of Object.keys(CATALOGUES))for(const key of keys){assert.notEqual(translate(locale,key),key,`${locale}: ${key}`);assert.equal(translate(locale,key),CATALOGUES[locale][key]);}
 });
+test('chat.toggle and agent.toggle palette titles exist in every catalogue',()=>{
+ for(const [locale,cat] of Object.entries(CATALOGUES))for(const key of ['cmd.chat.toggle','cmd.agent.toggle'])assert.ok(cat[key]?.trim(),`${locale}: ${key}`);
+ for(const locale of Object.keys(CATALOGUES))assert.notEqual(translate(locale,'cmd.chat.toggle'),'cmd.chat.toggle');
+ assert.notEqual(CATALOGUES.de['cmd.chat.toggle'],CATALOGUES.en['cmd.chat.toggle']);
+});
