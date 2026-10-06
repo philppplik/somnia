@@ -2,6 +2,9 @@ fn main() {
     #[cfg(feature = "desktop")]
     tauri_build::try_build(tauri_build::Attributes::new().app_manifest(
         tauri_build::AppManifest::new().commands(&[
+            "collab_lan_start",
+            "collab_lan_stop",
+            "collab_lan_status",
             "choose_project",
             "choose_file",
             "open_dropped_project",

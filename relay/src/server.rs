@@ -29,6 +29,8 @@ use crate::{room_log_tag, valid_room_id};
 
 #[derive(Clone, Debug)]
 pub struct Config {
+    /// Restrict embedded LAN hosting to one unguessable session. None for standalone relay.
+    pub allowed_room: Option<String>,
     /// Largest accepted WebSocket message (one relayed frame) in bytes.
     pub max_frame_bytes: usize,
     /// Global cap on simultaneously open rooms.
@@ -58,6 +60,7 @@ pub struct Config {
 impl Default for Config {
     fn default() -> Self {
         Self {
+            allowed_room: None,
             max_frame_bytes: 2 * 1024 * 1024,
             max_rooms: 256,
             max_clients_per_room: 16,
@@ -201,7 +204,13 @@ async fn handle_conn(
         let Some(room_id) = path.strip_prefix("/room/") else {
             return Err(http_error(StatusCode::NOT_FOUND, "not found\n"));
         };
-        if !valid_room_id(room_id) {
+        if !valid_room_id(room_id)
+            || shared
+                .config
+                .allowed_room
+                .as_ref()
+                .is_some_and(|id| id != room_id)
+        {
             return Err(http_error(StatusCode::NOT_FOUND, "not found\n"));
         }
         let tag = room_log_tag(room_id);
