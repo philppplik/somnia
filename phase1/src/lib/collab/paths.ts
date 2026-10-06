@@ -5,5 +5,5 @@ export function isSafeProjectPath(p:unknown):p is string{
  return p.split('/').every(seg=>seg!==''&&seg!=='.'&&seg!=='..');
 }
 export function assertSafeProjectPath(p:unknown):string{if(!isSafeProjectPath(p))throw new Error(`Unsafe project path: ${String(p)}`);return p;}
-/** Only HTML files are bound to the shared editor in this slice. CSS and JS follow later. */
-export const isCollabFile=(file:string)=>/\.html?$/i.test(file);
+/** Text files that are shared (same set the app opens as text). Media and other binaries are not shared. */
+export const isCollabFile=(file:string)=>/\.(html?|css|js|json|svg|txt|md)$/i.test(file)&&isSafeProjectPath(file);

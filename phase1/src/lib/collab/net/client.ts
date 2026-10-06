@@ -20,8 +20,8 @@ import {encryptFrame,decryptFrame,isEncryptedFrame,importLinkKey,linkKeyParam} f
 import type {LinkKey} from './crypto';
 import type {Transport,TransportFactory} from './transport';
 import {webSocketTransport} from './transport';
-import {parseInviteLink,isInsecureRemote} from '../invite';
-import type {ParsedInvite} from '../invite';
+import {parseInviteLink,isInsecureRemote} from '../inviteCore';
+import type {ParsedInvite} from '../inviteCore';
 import type {CollabError} from '../types';
 
 /** Room-URL of the Relay-Wire-Contract v0: /room/<room-id>, 8-128 chars, the id itself is the credential. */
@@ -30,7 +30,7 @@ const ROOM_PATH=/^\/room\/[A-Za-z0-9_-]{8,128}$/;
  * Accepts both invite shapes: the host app's `?code=` link (spike relay, LAN-Direct) and the self-hosted
  * relay's room link where the room id carries the access entropy and no code parameter exists.
  */
-function parseWireInvite(input:string):ParsedInvite|null{
+export function parseWireInvite(input:string):ParsedInvite|null{
  const classic=parseInviteLink(input);if(classic)return classic;
  const text=input.trim();if(!text||text.length>600||/\s/.test(text))return null;
  let u:URL;try{u=new URL(text);}catch{return null;}
@@ -180,7 +180,7 @@ export class CollabClient{
   this.patch({state:'reconnecting',attempt:attempt+1});
   const r=this.o.random?.()??Math.random();
   const delay=Math.min(this.o.maxDelayMs,this.o.baseDelayMs*2**(attempt-1))*(0.75+0.5*r);
-  this.timer=setTimeout(()=>{const p=parseInviteLink(this.invite);if(p)this.dial(p.url);},delay);}
+  this.timer=setTimeout(()=>{const p=parseWireInvite(this.invite);if(p)this.dial(p.url);},delay);}
 
  /** Ordered, encrypted send. Sync/awareness frames are encrypted when the link carries a key; identity never is. */
  private sendFrame(frame:Uint8Array){

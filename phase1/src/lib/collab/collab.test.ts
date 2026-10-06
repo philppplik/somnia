@@ -24,7 +24,7 @@ test('unsafe paths are refused and skipped in snapshot',()=>{
  assert.equal(isSafeProjectPath('pages/about.html'),true);
  const A=mk();assert.throws(()=>A.text('../escape.html'));
  A.files.set('../escape.html',new Y.Text('evil'));A.text('ok.html','fine');assert.deepEqual(Object.keys(A.snapshot()),['ok.html']);});
-test('only html files are bound in this slice',()=>{assert.equal(isCollabFile('a.HTML'),true);assert.equal(isCollabFile('a.css'),false);});
+test('text files are shared, media and unsafe paths are not',()=>{for(const f of ['a.HTML','a.css','x/app.js','d.json','i.svg','n.md','t.txt'])assert.equal(isCollabFile(f),true,f);for(const f of ['a.png','a.pdf','../a.html','a','x\\y.css'])assert.equal(isCollabFile(f),false,f);});
 test('broken structure from concurrent edits stays visible text, not dropped',()=>{
  const A=mk(),B=mk();A.text('i.html','<div><b>x</b></div>');sync(A.doc,B.doc);
  const ta=A.text('i.html'),tb=B.text('i.html');ta.delete(ta.toString().indexOf('</div>'),6);tb.insert(3,'<i>');sync(A.doc,B.doc);
