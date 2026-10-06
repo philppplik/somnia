@@ -8,7 +8,7 @@ for(const theme of ['light','dark']){
   await page.getByLabel('App theme').selectOption(theme);
   await page.keyboard.press('Escape');
   await expect(page.locator('html')).toHaveAttribute('data-theme',theme);
-  const cards=page.locator('.pane-slot>.panel,.center,.ag-panel');
+  const cards=page.locator('.pane-slot>.panel,.center,.communication-panel');
   await expect(cards).toHaveCount(4);
   for(const card of await cards.all()){
    for(const corner of ['top-left','top-right','bottom-left','bottom-right']){

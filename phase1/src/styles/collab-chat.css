@@ -7,7 +7,7 @@
 .cm-ySelectionInfo[data-flip=true]{top:calc(20px + var(--badge-stack,0px))!important;border-radius:2px 8px 8px 8px}
 .cm-ySelectionInfo[data-right=true]{left:auto!important;right:0}
 .cm-ySelectionCaret:hover .cm-ySelectionInfo[data-person-token]:not([data-mode=never]){opacity:1!important}
-.communication-panel{position:relative;display:flex;flex-direction:column;flex:none;width:380px;min-height:0;margin-left:var(--gap);background:var(--bg-panel);border-radius:25px;overflow:hidden;color:var(--text-primary);box-shadow:var(--card-shadow)}
+.communication-panel{position:relative;display:flex;flex-direction:column;flex:none;width:380px;min-height:0;margin-left:var(--gap);background:var(--bg-panel);border-radius:var(--r-outer);overflow:hidden;color:var(--text-primary);box-shadow:var(--card-shadow)}
 .communication-tabs{display:flex;align-items:center;gap:4px;padding:10px 14px 2px;flex:none}
 .communication-tabs button,.sc-panel button,.collab-chat-open,.collab-preferences button,.sc-toast button{border:0;background:transparent;color:inherit;cursor:pointer;font:inherit}
 .communication-tabs button{padding:5px 11px;border-radius:999px;font-size:12px;color:var(--text-secondary)}

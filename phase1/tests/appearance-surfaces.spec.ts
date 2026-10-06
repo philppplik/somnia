@@ -36,7 +36,7 @@ for(const theme of ['light','dark']){
   await expect(page.locator('.center')).toHaveCSS('backdrop-filter','blur(32px)');
   await page.screenshot({path:`test-results/appearance-${theme}-settings-css-preview.png`});
   await page.keyboard.press('Escape');
-  const cards=page.locator('.pane-slot>.panel,.center,.ag-panel');await expect(cards).toHaveCount(4);
+  const cards=page.locator('.pane-slot>.panel,.center,.communication-panel');await expect(cards).toHaveCount(4);
   for(const card of await cards.all())await expect(card).toHaveCSS('border-radius','12px');
   await expect(page.locator('.ag-bar')).toHaveCSS('clip-path','inset(0px round 0px 0px 12px 12px)');
   await page.screenshot({path:`test-results/appearance-${theme}-shell-inner-glass-css-preview.png`});
