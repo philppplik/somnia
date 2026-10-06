@@ -93,7 +93,11 @@ Official sources checked for these notes:
 
 The `agent/privacy` source supplied for this draft exposes `AgentPrivacyGate`, `agentPrivacy`, `assertProviderConsent`, `runWithProviderConsent` and `createAIProvenance`; UI exports include `AgentConsentNotice`, `AgentPrivacySettings`, `AgentErrorNotice` and `AIGeneratedLabel`. Consent is versioned in localStorage and records acceptance time. This is a non-secret preference store, not credential storage. The run wrapper tracks abort controllers and rechecks consent after completion.
 
-Its current local exception is `provider: 'ollama'` plus an HTTP loopback URL without URL credentials. It does not inspect model locality or local-proxy forwarding. Its stored consent does not yet record provider-specific scope. Those are release/integration gaps, not demonstrated guarantees. Require model/route verification before exempting local Ollama and reconcile the recipient-scope design with the actual store. Provenance metadata/UI labels are not proof of machine-readable marking in exported output.
+The revised privacy source (`a7a3e5b2`, supplied for review) permits the local exception only for `provider: 'ollama'`, `processing: 'local'` and an HTTP loopback URL without URL credentials (`localhost`, normalized IPv4 `127.0.0.0/8` or `[::1]`). `processing: 'local'` must come from verified adapter metadata, not endpoint inference. Withdrawal aborts tracked requests and the wrapper rejects output after revocation.
+
+The Ollama workstream reports fail-closed `verifyLocalModel()` checks of endpoint, cloud tags, `/api/show` remote markers and model metadata, with a stream-time remote-marker check. Treat this as "daemon reports local", not a guarantee against a dishonest local proxy. These adapter checks were reported by the implementation workstream, not end-to-end tested in this documentation task.
+
+Provider-scoped consent remains a release gate: the stored record has version/grantedAt only. Verify the adapter-to-guard wiring and reconcile recipient scope with the store. AI provenance metadata and UI badges do not solve Article 50(2) machine-readable output marking. The implementation reports English plus German, Spanish, French and Brazilian Portuguese notice strings; integration must verify that the panel uses them accessibly. This document remains DRAFT; the parallel `PRIVACY-PAGE-DRAFT.md` is an unpublished candidate notice, not a live policy.
 
 ## Release gates
 

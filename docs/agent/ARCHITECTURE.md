@@ -53,9 +53,13 @@ Events are `text {text}`, indexed `tool-call {index, id?, name?, arguments?}` fr
 
 ### Current privacy contract
 
-`AgentPrivacyGate`, singleton `agentPrivacy`, `assertProviderConsent(target)` and `runWithProviderConsent(target, operation, signal?)` provide the shared consent boundary. `ProviderTarget` is `{provider, endpoint?}`; the run wrapper passes an AbortSignal and checks before/after the operation. `revoke()` aborts tracked cloud controllers. `createAIProvenance(provider, model)` records AI origin, timestamp and `humanReviewed: false`. UI exports are `AgentConsentNotice`, `AgentPrivacySettings`, `AgentErrorNotice` and `AIGeneratedLabel`.
+`AgentPrivacyGate`, singleton `agentPrivacy`, `assertProviderConsent(target)` and `runWithProviderConsent(target, operation, signal?)` provide the shared consent boundary. `ProviderTarget` is `{provider, endpoint?, processing?: 'local' | 'cloud'}`; the run wrapper passes an AbortSignal and checks before/after the operation. `revoke()` aborts tracked cloud controllers. `createAIProvenance(provider, model)` records AI origin, timestamp and `humanReviewed: false`. UI exports are `AgentConsentNotice`, `AgentPrivacySettings`, `AgentErrorNotice` and `AIGeneratedLabel`.
 
-Current limitations: the consent record contains only version/grantedAt, not per-route scope. `isLocalOllama` checks the provider name and an HTTP loopback URL, not model locality or whether a local proxy sends data onward. Do not treat that URL check as proof of local-only processing. Integration must close those gaps or narrow its claims; see [PRIVACY.md](PRIVACY.md). These supplied source contracts are not proof that every caller is wired to them.
+The revised privacy source (`a7a3e5b2`, supplied for review) requires `provider: 'ollama'`, `processing: 'local'` and an HTTP loopback endpoint without URL credentials before bypassing cloud opt-in. Loopback includes `localhost`, normalized IPv4 `127.0.0.0/8` and `[::1]`. `processing` must come from verified adapter metadata, never URL inference or a user/model assertion. Withdrawal aborts tracked requests; the wrapper rejects results after consent is withdrawn.
+
+The parallel Ollama integration reports `verifyLocalModel()` checks for loopback, cloud tags, `/api/show` remote markers and local-model metadata, plus a stream-time `not-local` error for remote markers. This is an adapter integration report, not an end-to-end test performed for this documentation. Its honest claim is "daemon reports local": a dishonest loopback proxy is not detected.
+
+Remaining limitations: the consent record contains only version/grantedAt, not per-route scope; model/route verification must be wired before the exemption is used; every request/retry must use the shared guard. See [PRIVACY.md](PRIVACY.md). Supplied source contracts are not proof that every caller is wired to them.
 
 ### Proposed provider boundary requirements
 

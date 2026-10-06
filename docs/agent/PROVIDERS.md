@@ -51,6 +51,8 @@ Display daemon URL, connection state, selected model and whether the configured 
 
 Expose health/discovery failures, missing models, malformed frames and cancellation without silently switching to cloud. Do not automatically download large models or install software. Hardware, model/tool quality and native networking still need practical tests.
 
+The parallel implementation reports `verifyLocalModel()` as a fail-closed locality check: HTTP loopback, cloud-tag rejection, `/api/show` remote-field checks and required model metadata. It also reports a `not-local` stream error for remote markers. Its claim is limited to "daemon reports local"; it cannot detect a dishonest loopback proxy. The revised Privacy guard also requires `processing: 'local'` from verified adapter metadata, not merely a loopback URL. These checks require actual integration/native tests and were not end-to-end exercised for this document.
+
 If the verified route is local-only, no cloud-data opt-in is needed for that request. The AI error notice, context permissions, tool policy and manual review still apply. Cost is not "free" by assumption: remote deployments, compute and user infrastructure may have costs.
 
 Source: [Ollama tool calling](https://docs.ollama.com/capabilities/tool-calling).
