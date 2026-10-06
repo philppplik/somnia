@@ -22,11 +22,12 @@ reviewFile(file) / reviewChangeSet(cs) -> FileReview {ops, hunks[], tooLarge, in
 applyHunks(review, decisions)          -> string   // pure merge, accepted hunks take proposed lines
 planApply(cs, decisions, readCurrent, {allowPending?}) -> ApplyPlan {ok, writes[], skipped[], blockers[]}
 applyReviewed(port, cs, decisions)     -> ApplyPlan // re-plans on live state, then port.applyBatch(writes)
-interface AgentApplyPort { read(path): string|null; applyBatch(writes): void|Promise<void> }
+interface AgentApplyPort { read(path): string|null; holdAutosave(paths): void|Promise<void>; applyBatch(writes): void|Promise<void> }
 ```
 
 ### What Core must provide
 - `read(path)`: current editor text including unsaved edits, `null` if the file does not exist.
+- `holdAutosave(paths)`: the phase1 desktop adapter autosaves after edits (1s idle / 5s continuous) and `main.tsx` writes drafts. Both must be suspended for the paths of an applied agent change until the user saves explicitly. Otherwise "applied, not saved" would be false. `applyReviewed` calls this before `applyBatch` and applies nothing if it fails. Proposals themselves never enter editor state, so autosave cannot see unreviewed content. This guard is port-level only: the real adapter wiring (per-path hold flag checked by the autosave timer, cleared on explicit save or undo back to base) is Core work and is NOT implemented in this branch.
 - `applyBatch(writes)`: put `writes[].text` into editor buffers (create: new buffer) as ONE undo step. Must not write to disk. Must resolve symlinks and confirm the path stays inside the project root before opening/creating a buffer (the engine only validates the string).
 
 ### What the Panel provides

@@ -154,11 +154,20 @@ export function planApply(cs: ChangeSet, decisions: Decisions, readCurrent: (pat
 export interface AgentApplyPort {
   read(path: string): string | null;
   applyBatch(writes: PlannedWrite[]): Promise<void> | void;
+  /**
+   * Autosave guard. Called BEFORE applyBatch with the paths about to change. The host must stop native/draft
+   * autosave for those paths until the user saves explicitly (Ctrl+S / Save Project), so "applied" never silently
+   * becomes "saved". If this throws or rejects, nothing is applied.
+   */
+  holdAutosave(paths: string[]): Promise<void> | void;
 }
 /** Re-plans against live state right before applying, so a stale plan is never executed. */
 export async function applyReviewed(port: AgentApplyPort, cs: ChangeSet, decisions: Decisions): Promise<ApplyPlan> {
   const plan = planApply(cs, decisions, p => port.read(p));
-  if (plan.ok && plan.writes.length) await port.applyBatch(plan.writes);
+  if (plan.ok && plan.writes.length) {
+    await port.holdAutosave(plan.writes.map(w => w.path)); // fail closed: no guard, no apply
+    await port.applyBatch(plan.writes);
+  }
   return plan;
 }
 

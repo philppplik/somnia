@@ -96,8 +96,8 @@ test('oversized files fail closed', () => {
   assert.equal(q.ok, false); assert.equal(q.blockers[0].reason, 'too-large');
 });
 test('applyReviewed re-plans against live state and writes once, only through the port', async () => {
-  const store = new Map([['index.html', base]]); const calls: PlannedWrite[][] = [];
-  const port = {read: (p: string) => store.get(p) ?? null, applyBatch: (w: PlannedWrite[]) => { calls.push(w); }};
+  const store = new Map([['index.html', base]]); const calls: PlannedWrite[][] = []; const order: string[] = [];
+  const port = {read: (p: string) => store.get(p) ?? null, holdAutosave: (p: string[]) => { order.push('hold:' + p.join()); }, applyBatch: (w: PlannedWrite[]) => { order.push('apply'); calls.push(w); }};
   const all: Decisions = {}; reviewFile(edit).hunks.forEach(h => all[h.key] = 'accept');
   store.set('index.html', 'user edited meanwhile');
   const blocked = await applyReviewed(port, cs([edit]), all);
@@ -105,6 +105,7 @@ test('applyReviewed re-plans against live state and writes once, only through th
   store.set('index.html', base);
   const done = await applyReviewed(port, cs([edit]), all);
   assert.ok(done.ok); assert.equal(calls.length, 1); assert.equal(calls[0][0].text, edit.proposedText);
+  assert.deepEqual(order, ['hold:index.html', 'apply']); // autosave guard strictly before apply
   assert.equal(store.get('index.html'), base); // engine itself never mutates state
 });
 test('AI provenance is carried to the plan and marked human reviewed; input is not mutated', () => {
@@ -113,4 +114,11 @@ test('AI provenance is carried to the plan and marked human reviewed; input is n
   const p = planApply(set, all, () => base);
   assert.equal(p.provenance?.generatedBy, 'ai'); assert.equal(p.provenance?.humanReviewed, true);
   assert.equal(p.writes[0].provenance?.model, 'm'); assert.equal(provenance.humanReviewed, false);
+});
+test('failing autosave guard prevents apply', async () => {
+  const calls: string[] = [];
+  const port = {read: () => base, holdAutosave: () => { throw new Error('no guard'); }, applyBatch: () => { calls.push('apply'); }};
+  const all: Decisions = {}; reviewFile(edit).hunks.forEach(h => all[h.key] = 'accept');
+  await assert.rejects(applyReviewed(port, cs([edit]), all), /no guard/);
+  assert.deepEqual(calls, []);
 });
