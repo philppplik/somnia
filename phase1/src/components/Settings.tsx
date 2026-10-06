@@ -311,7 +311,7 @@ export function Settings() {
   const sectionTitle = (name: string) =>
     t("set.section." + (sections.find((x) => x.name === name)?.key ?? name));
   const renderSection = (section: string) => (
-    <section data-settings-section={section} aria-label={section} key={section}>
+    <section data-settings-section={section} aria-label={sectionTitle(section)} key={section}>
       <h2>{sectionTitle(section)}</h2>
       {section === "Advanced" && (
         <>
@@ -319,7 +319,7 @@ export function Settings() {
             {t("redesign.fastParse")}
             <input
               type="checkbox"
-              aria-label="Experimental fast parsing"
+              aria-label={t("redesign.fastParse")}
               checked={EditorProject.incremental.enabled}
               onChange={(e) => {
                 const old = EditorProject.incremental.enabled;
@@ -348,7 +348,7 @@ export function Settings() {
             {t("windowPref.remember")}
             <input
               type="checkbox"
-              aria-label="Remember window size and position"
+              aria-label={t("windowPref.remember")}
               checked={state.windowPrefs.remember}
               onChange={(e) =>
                 void nativeWindowChange({
@@ -362,7 +362,7 @@ export function Settings() {
             {t("windowPref.width")}
             <input
               type="number"
-              aria-label="Default window width"
+              aria-label={t("windowPref.width")}
               min={960}
               max={3840}
               value={state.windowPrefs.width}
@@ -381,7 +381,7 @@ export function Settings() {
             {t("windowPref.height")}
             <input
               type="number"
-              aria-label="Default window height"
+              aria-label={t("windowPref.height")}
               min={600}
               max={2160}
               value={state.windowPrefs.height}
@@ -400,7 +400,7 @@ export function Settings() {
             {t("windowPref.pin")}
             <input
               type="checkbox"
-              aria-label="Always on top"
+              aria-label={t("windowPref.pin")}
               checked={state.windowPrefs.alwaysOnTop}
               onChange={(e) =>
                 void nativeWindowChange({
@@ -413,7 +413,7 @@ export function Settings() {
           <label>
             {t("windowPref.frame")}
             <select
-              aria-label="Window frame"
+              aria-label={t("windowPref.frame")}
               value={state.windowPrefs.frame}
               onChange={(e) =>
                 void nativeWindowChange({
@@ -429,7 +429,7 @@ export function Settings() {
           <label>
             {t("windowPref.doubleClick")}
             <select
-              aria-label="Titlebar double click"
+              aria-label={t("windowPref.doubleClick")}
               value={state.windowPrefs.doubleClick}
               onChange={(e) =>
                 void nativeWindowChange({
@@ -451,7 +451,7 @@ export function Settings() {
           <label>
             {t("docPref.font")}
             <select
-              aria-label="Default project font"
+              aria-label={t("docPref.font")}
               value={state.documentPrefs.font}
               onChange={(e) =>
                 change({
@@ -462,9 +462,9 @@ export function Settings() {
                 })
               }
             >
-              <option value="system">System sans-serif</option>
-              <option value="serif">Georgia / serif</option>
-              <option value="monospace">System monospace</option>
+              <option value="system">{t("finish.settings.sans")}</option>
+              <option value="serif">{t("finish.settings.serif")}</option>
+              <option value="monospace">{t("finish.settings.mono")}</option>
             </select>
           </label>
           {(
@@ -523,7 +523,7 @@ export function Settings() {
             {t("docPref.stripIds")}
             <input
               type="checkbox"
-              aria-label="Remove editor data attributes on export"
+              aria-label={t("docPref.stripIds")}
               checked={state.documentPrefs.stripEditorIds}
               onChange={(e) =>
                 change({
@@ -539,7 +539,7 @@ export function Settings() {
             {t("docPref.comments")}
             <input
               type="checkbox"
-              aria-label="Keep HTML comments on export"
+              aria-label={t("docPref.comments")}
               checked={state.documentPrefs.keepComments}
               onChange={(e) =>
                 change({
@@ -560,7 +560,7 @@ export function Settings() {
             {t("backup.enabled")}
             <input
               type="checkbox"
-              aria-label="Create local recovery snapshots"
+              aria-label={t("backup.enabled")}
               checked={state.backupPrefs.enabled}
               onChange={(e) =>
                 change({
@@ -576,7 +576,7 @@ export function Settings() {
             {t("backup.count")}
             <input
               type="number"
-              aria-label="Snapshot count"
+              aria-label={t("backup.count")}
               min={1}
               max={50}
               value={state.backupPrefs.count}
@@ -604,12 +604,12 @@ export function Settings() {
             {t("backup.now")}
           </button>
           {errs.length > 0 && <p role="alert">{errs.join(" ")}</p>}
-          <ul aria-label="Local project snapshots">
+          <ul aria-label={t("finish.settings.snapshots")}>
             {backups.map((b) => (
               <li key={b.id} className="settings-backup-row">
                 <span>
                   {b.name}
-                  <small>{new Date(b.at).toLocaleString()}</small>
+                  <small>{new Date(b.at).toLocaleString(locale)}</small>
                 </span>
                 <button
                   onClick={() =>
@@ -628,7 +628,7 @@ export function Settings() {
           <label title={t("redesign.startupHint")}>
             {t("redesign.startup")}
             <select
-              aria-label="On startup"
+              aria-label={t("redesign.startup")}
               value={state.workflowPrefs.startup}
               onChange={(e) =>
                 change({
@@ -649,7 +649,7 @@ export function Settings() {
             {t("redesign.defaultTitle")}
             <input
               type="text"
-              aria-label="Default document title"
+              aria-label={t("redesign.defaultTitle")}
               maxLength={160}
               value={state.workflowPrefs.documentTitle}
               onChange={(e) =>
@@ -666,7 +666,7 @@ export function Settings() {
             {t("redesign.confirmDelete")}
             <input
               type="checkbox"
-              aria-label="Confirm element deletion"
+              aria-label={t("redesign.confirmDelete")}
               checked={state.workflowPrefs.confirmDelete}
               onChange={(e) =>
                 change({
@@ -681,7 +681,7 @@ export function Settings() {
           <label>
             {t("settings.language")}
             <select
-              aria-label="Language"
+              aria-label={t("settings.language")}
               value={readLocalePref()}
               onChange={(e) => {
                 const old = readLocalePref();
@@ -708,7 +708,7 @@ export function Settings() {
             {t("redesign.draftAutosave")}
             <input
               type="checkbox"
-              aria-label="Autosave local recovery draft"
+              aria-label={t("redesign.draftAutosave")}
               checked={state.workflowPrefs.draftAutosave}
               onChange={(e) =>
                 change({
@@ -724,7 +724,7 @@ export function Settings() {
             {t("redesign.draftInterval")}
             <input
               type="number"
-              aria-label="Recovery draft interval"
+              aria-label={t("redesign.draftInterval")}
               min={1}
               max={300}
               value={state.workflowPrefs.draftSeconds}
@@ -749,7 +749,7 @@ export function Settings() {
           <label>
             {t("redesign.viewport")}
             <select
-              aria-label="Canvas viewport"
+              aria-label={t("redesign.viewport")}
               value={state.viewport}
               onChange={(e) => change({ viewport: Number(e.target.value) })}
             >
@@ -767,7 +767,7 @@ export function Settings() {
             {t("redesign.zoom")}
             <input
               type="number"
-              aria-label="Canvas zoom"
+              aria-label={t("redesign.zoom")}
               min="25"
               max="200"
               value={state.zoom}
@@ -784,7 +784,7 @@ export function Settings() {
           <label>
             {t("redesign.defaultViewport")}
             <select
-              aria-label="Default canvas viewport"
+              aria-label={t("redesign.defaultViewport")}
               value={state.canvasPrefs.defaultViewport}
               onChange={(e) =>
                 change({
@@ -806,7 +806,7 @@ export function Settings() {
             {t("redesign.defaultZoom")}
             <input
               type="number"
-              aria-label="Default canvas zoom"
+              aria-label={t("redesign.defaultZoom")}
               min={25}
               max={200}
               value={state.canvasPrefs.defaultZoom}
@@ -853,7 +853,7 @@ export function Settings() {
             {t("canvasPref.gridSize")}
             <input
               type="number"
-              aria-label="Grid size"
+              aria-label={t("canvasPref.gridSize")}
               min={2}
               max={100}
               value={state.canvasPrefs.gridSize}
@@ -897,7 +897,7 @@ export function Settings() {
             {t("canvasPref.selectionWidth")}
             <input
               type="number"
-              aria-label="Selection border width"
+              aria-label={t("canvasPref.selectionWidth")}
               min={1}
               max={5}
               value={state.canvasPrefs.selectionWidth}
@@ -917,7 +917,7 @@ export function Settings() {
           <label>
             {t("canvasPref.pageShadow")}
             <select
-              aria-label="Page shadow"
+              aria-label={t("canvasPref.pageShadow")}
               value={state.canvasPrefs.pageShadow}
               onChange={(e) =>
                 change({
@@ -941,7 +941,7 @@ export function Settings() {
             {t("redesign.live")}
             <input
               type="checkbox"
-              aria-label="Run preview scripts"
+              aria-label={t("redesign.live")}
               checked={state.livePreview}
               onChange={(e) => change({ livePreview: e.target.checked })}
             />
@@ -969,14 +969,14 @@ export function Settings() {
               <input
                 type="file"
                 accept=".json,application/json"
-                aria-label="Import shortcuts"
+                aria-label={t("redesign.importShortcuts")}
                 onChange={async (e) => {
                   const input = e.currentTarget,
                     file = input.files?.[0];
                   if (!file) return;
                   try {
                     if (file.size > 100000)
-                      throw Error("Shortcut file exceeds 100 KB.");
+                      throw Error(t("finish.settings.shortcutTooLarge"));
                     const next = parseShortcutFile(
                       await file.text(),
                       listCommands().map((c) => c.id),
@@ -1006,7 +1006,7 @@ export function Settings() {
                     setErrs([
                       error instanceof Error
                         ? error.message
-                        : "Could not import shortcuts.",
+                        : t("finish.settings.importFailed"),
                     ]);
                   }
                   input.value = "";
@@ -1016,7 +1016,7 @@ export function Settings() {
           </div>
           {errs.length > 0 && <p role="alert">{errs.join(" ")}</p>}
           <ul
-            aria-label="Keyboard shortcuts"
+            aria-label={t("cmd.help.shortcuts")}
             data-tick={scTick}
             className="max-h-[360px] overflow-auto"
           >
@@ -1045,20 +1045,20 @@ export function Settings() {
                       {clash && (
                         <small role="alert">
                           {" "}
-                          (also used by {clash.title})
+                          {t("set.sc.clash", {title: clash.title})}
                         </small>
                       )}
                     </span>
                     <span className="flex items-center gap-2">
                       <kbd>
                         {capture === c.id
-                          ? "Press keys..."
+                          ? t("set.sc.press")
                           : c.shortcut
                             ? formatShortcut(c.shortcut)
-                            : "None"}
+                            : t("set.sc.none")}
                       </kbd>
                       <button
-                        aria-label={`Change shortcut for ${c.title}`}
+                        aria-label={t("set.sc.change.aria", {title:c.title})}
                         onKeyDown={(e) => {
                           if (capture !== c.id) return;
                           e.preventDefault();
@@ -1079,7 +1079,7 @@ export function Settings() {
                         {t("set.sc.change")}
                       </button>
                       <button
-                        aria-label={`Clear shortcut for ${c.title}`}
+                        aria-label={t("set.sc.clear.aria", {title:c.title})}
                         onClick={() => {
                           shortcut(c.id, "");
                           setScTick((t) => t + 1);
@@ -1088,7 +1088,7 @@ export function Settings() {
                         {t("set.sc.clear")}
                       </button>
                       <button
-                        aria-label={`Reset shortcut for ${c.title}`}
+                        aria-label={t("set.sc.reset.aria", {title:c.title})}
                         onClick={() => {
                           shortcut(c.id, null);
                           setScTick((t) => t + 1);
@@ -1106,22 +1106,20 @@ export function Settings() {
       {section === "Updates" ? (
         <div>
           <p>
-            Installed: release v{__APP_RELEASE__} (app {__APP_VERSION__}).
-            Somnia checks GitHub Releases when it starts (switch off below) or
-            when you press the button, and sends no data about you.
+            {t("set.upd.intro", {release: __APP_RELEASE__, app: __APP_VERSION__})}
           </p>
           <p className="text-[12px] text-ink-3" data-testid="last-update-check">
             {(() => {
               const c = lastCheck();
               return c
-                ? `Last automatic check: ${new Date(c.at).toLocaleString()} - ${c.result === "available" ? `new release ${c.detail}` : c.result === "up-to-date" ? "up to date" : `failed (${c.detail})`}`
-                : "No automatic check has run yet.";
+                ? t("set.upd.last", {when: new Date(c.at).toLocaleString(locale), result: c.result === "available" ? t("set.upd.last.available", {detail:c.detail ?? ""}) : c.result === "up-to-date" ? t("set.upd.last.current") : t("set.upd.last.failed", {detail:c.detail ?? ""})})
+                : t("set.upd.never");
             })()}
           </p>
           <label className="flex items-center gap-2 text-[12px]">
             <input
               type="checkbox"
-              aria-label="Check for updates on start"
+              aria-label={t("set.upd.auto.aria")}
               checked={autoCheckEnabled()}
               onChange={(e) => {
                 const old = autoCheckEnabled();
@@ -1136,7 +1134,7 @@ export function Settings() {
           <label>
             {t("redesign.updateInterval")}
             <select
-              aria-label="Update check interval"
+              aria-label={t("redesign.updateInterval")}
               value={state.updatePrefs.intervalMinutes}
               onChange={(e) =>
                 change({
@@ -1156,7 +1154,7 @@ export function Settings() {
           <label title={t("redesign.channelHint")}>
             {t("redesign.channel")}
             <select
-              aria-label="Update channel"
+              aria-label={t("redesign.channel")}
               value={state.updatePrefs.channel}
               onChange={(e) => {
                 change({
@@ -1168,7 +1166,7 @@ export function Settings() {
                 setUpd({ state: "idle" });
               }}
             >
-              <option value="stable">Stable</option>
+              <option value="stable">{t("finish.settings.stable")}</option>
               <option value="beta">Beta</option>
               <option value="alpha">Alpha</option>
             </select>
@@ -1191,20 +1189,20 @@ export function Settings() {
                 setUpd({
                   state: "error",
                   message:
-                    e instanceof Error ? e.message : "Update check failed.",
+                    e instanceof Error ? e.message : t("set.upd.failed"),
                 });
               }
             }}
           >
-            {upd.state === "checking" ? "Checking..." : "Check for updates"}
+            {upd.state === "checking" ? t("set.upd.checking") : t("set.upd.check")}
           </button>
           <p role="status" aria-live="polite">
             {upd.state === "current"
-              ? "You are up to date."
+              ? t("set.upd.uptodate")
               : upd.state === "error"
                 ? upd.message
                 : upd.state === "available"
-                  ? `Version ${upd.release!.name} is available${upd.release!.prerelease ? " (pre-release)" : ""}.`
+                  ? t(upd.release!.prerelease ? "set.upd.available.pre" : "set.upd.available", {name:upd.release!.name})
                   : ""}
           </p>
           {upd.state === "available" && (
@@ -1216,8 +1214,8 @@ export function Settings() {
                 rel="noreferrer"
               >
                 {upd.release!.asset
-                  ? `Download ${upd.release!.asset.name}`
-                  : "Open release page"}
+                  ? t("set.upd.download", {name:upd.release!.asset.name})
+                  : t("set.upd.openpage")}
               </a>{" "}
               ·{" "}
               <a
@@ -1236,12 +1234,10 @@ export function Settings() {
       {section === "About" ? (
         <div>
           <p>
-            <strong>Somnia</strong> release v{__APP_RELEASE__}, app{" "}
-            {__APP_VERSION__}. A local-first visual editor for HTML and CSS.
+            <strong>Somnia</strong> {t("set.about.version", {release:__APP_RELEASE__, app:__APP_VERSION__})}
           </p>
           <p>
-            Licensed under the MIT License. Copyright (c) 2026 Philipp Paulik.
-            Source:{" "}
+            {t("set.about.license")}{" "}
             <a
               className="underline"
               href="https://github.com/philppplik/somnia"
@@ -1255,10 +1251,10 @@ export function Settings() {
           </p>
           <details>
             <summary>
-              Third-party software ({thirdParty.length} packages)
+              {t("set.about.third", {count:thirdParty.length})}
             </summary>
             <ul
-              aria-label="Third-party software"
+              aria-label={t("set.about.third.aria")}
               className="mt-2 max-h-[260px] overflow-auto text-[12px]"
             >
               {thirdParty.map((x) => (
@@ -1287,10 +1283,9 @@ export function Settings() {
           </button>
           <ExtensionCatalog onInstalled={() => setExts(loadExtensions())} />
           <p>
-            Extensions add commands, snippets and code themes. Paste a manifest
-            to install it. Installed: {exts.length}.
+            {t("set.ext.intro", {count:exts.length})}
           </p>
-          <ul aria-label="Installed extensions">
+          <ul aria-label={t("set.ext.list.aria")}>
             {exts.map((x) => (
               <li
                 key={x.id}
@@ -1311,7 +1306,7 @@ export function Settings() {
                       >
                         <input
                           type="checkbox"
-                          aria-label={`${x.name} permission ${pm}`}
+                          aria-label={t("set.ext.perm.aria", {name:x.name, perm:pm})}
                           checked={
                             !(revokedPermissions()[x.id] || []).includes(pm)
                           }
@@ -1330,7 +1325,7 @@ export function Settings() {
                 <label className="!my-0 gap-2">
                   <input
                     type="checkbox"
-                    aria-label={`Enable ${x.name}`}
+                    aria-label={t("set.ext.enable.aria", {name:x.name})}
                     checked={enabledIds().includes(x.id)}
                     onChange={(e) => {
                       setExtensionEnabled(x.id, e.target.checked);
@@ -1340,7 +1335,7 @@ export function Settings() {
                   {t("set.ext.on")}
                 </label>
                 <button
-                  aria-label={`Remove ${x.name}`}
+                  aria-label={t("set.ext.remove.aria", {name:x.name})}
                   onClick={() => {
                     removeExtension(x.id);
                     setExts(loadExtensions());
@@ -1356,12 +1351,12 @@ export function Settings() {
             <input
               type="file"
               accept=".json,application/json"
-              aria-label="Extension file"
+              aria-label={t("set.ext.file.aria")}
               onChange={async (e) => {
                 const f = e.target.files?.[0];
                 if (!f) return;
                 if (f.size > 300000) {
-                  setErrs(["File is larger than 300 KB."]);
+                  setErrs([t("set.ext.toolarge")]);
                   return;
                 }
                 const r = installExtension(await f.text());
@@ -1378,7 +1373,7 @@ export function Settings() {
             <input
               type="file"
               accept=".zip,application/zip"
-              aria-label="Extension ZIP"
+              aria-label={t("set.ext.zip.aria")}
               onChange={async (e) => {
                 const f = e.target.files?.[0];
                 if (!f) return;
@@ -1395,7 +1390,7 @@ export function Settings() {
             {t("set.ext.addfolder")}
             <input
               type="file"
-              aria-label="Extension folder"
+              aria-label={t("set.ext.folder.aria")}
               {...({ webkitdirectory: "" } as object)}
               onChange={async (e) => {
                 const l = e.target.files;
@@ -1410,7 +1405,7 @@ export function Settings() {
             />
           </label>
           <textarea
-            aria-label="Extension manifest JSON"
+            aria-label={t("set.ext.manifest.aria")}
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
             rows={6}
@@ -1442,15 +1437,15 @@ export function Settings() {
           <label>
             {t("set.ap.theme")}
             <select
-              aria-label="App theme"
+              aria-label={t("set.ap.theme")}
               value={state.themeChoice}
               onChange={(e) =>
                 change({ themeChoice: e.target.value as ThemeChoice })
               }
             >
-              {THEME_CHOICES.map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.label}
+              {THEME_CHOICES.map((theme) => (
+                <option key={theme.id} value={theme.id}>
+                  {t("finish.settings.theme." + theme.id)}
                 </option>
               ))}
             </select>
@@ -1458,7 +1453,7 @@ export function Settings() {
           <label>
             {t("set.ap.contrast")}
             <select
-              aria-label="Contrast"
+              aria-label={t("set.ap.contrast")}
               value={state.contrast}
               onChange={(e) => change({ contrast: e.target.value as Contrast })}
             >
@@ -1467,12 +1462,12 @@ export function Settings() {
             </select>
           </label>
           <p>{t("set.ap.contrast.note")}</p>
-          <fieldset className="my-3 border-0 p-0" aria-label="Look">
+          <fieldset className="my-3 border-0 p-0" aria-label={t("set.ap.look.aria")}>
             <label>
               {t("set.ap.accent")}
               <input
                 type="color"
-                aria-label="Accent colour"
+                aria-label={t("set.ap.accent")}
                 value={state.look.accent ?? "#6366f1"}
                 onChange={(e) =>
                   change({
@@ -1483,7 +1478,7 @@ export function Settings() {
             </label>
             <div
               className="settings-accent-presets"
-              aria-label="Accent presets"
+              aria-label={t("finish.settings.accentPresets")}
             >
               {[
                 ["Indigo", "#6366f1"],
@@ -1495,8 +1490,8 @@ export function Settings() {
               ].map(([name, color]) => (
                 <button
                   key={name}
-                  aria-label={name + " accent"}
-                  title={name}
+                  aria-label={t("finish.settings.accentName", {name:t("finish.settings.color." + name)})}
+                  title={t("finish.settings.color." + name)}
                   style={{ background: color }}
                   onClick={() =>
                     change({ look: { ...state.look, accent: color } })
@@ -1515,18 +1510,18 @@ export function Settings() {
                     className="text-[12px]"
                     data-testid="accent-contrast"
                   >
-                    Contrast of the accent against panels: {r}:1
+                    {t("set.ap.accent.ratio", {ratio:r})}
                     {r < 3
-                      ? ". Below 3:1, so focus rings and selections may be hard to see. Pick a darker or lighter colour."
-                      : ". Good for focus rings and selections."}
+                      ? t("set.ap.accent.low")
+                      : t("set.ap.accent.good")}
                   </p>
                 );
               })()}
             <label>
-              Interface size ({state.look.uiScale}%)
+              {t("set.ap.uiscale", {value:state.look.uiScale})}
               <input
                 type="range"
-                aria-label="Interface size"
+                aria-label={t("set.ap.uiscale.aria")}
                 min={85}
                 max={130}
                 step={5}
@@ -1542,10 +1537,10 @@ export function Settings() {
               />
             </label>
             <label>
-              Editor font size ({state.look.editorFont}px)
+              {t("set.ap.font", {value:state.look.editorFont})}
               <input
                 type="range"
-                aria-label="Editor font size"
+                aria-label={t("set.ap.font.aria")}
                 min={10}
                 max={22}
                 step={1}
@@ -1561,10 +1556,10 @@ export function Settings() {
               />
             </label>
             <label>
-              Editor line height ({state.look.lineHeight})
+              {t("set.ap.lh", {value:state.look.lineHeight})}
               <input
                 type="range"
-                aria-label="Editor line height"
+                aria-label={t("set.ap.lh.aria")}
                 min={1.2}
                 max={2}
                 step={0.1}
@@ -1582,7 +1577,7 @@ export function Settings() {
             <label>
               {t("set.ap.density")}
               <select
-                aria-label="Density"
+                aria-label={t("set.ap.density")}
                 value={state.look.density}
                 onChange={(e) =>
                   change({
@@ -1606,7 +1601,7 @@ export function Settings() {
             <label>
               {t("redesign.uiFont")}
               <select
-                aria-label="Interface font"
+                aria-label={t("redesign.uiFont")}
                 value={state.uiPrefs.font}
                 onChange={(e) =>
                   change({
@@ -1625,7 +1620,7 @@ export function Settings() {
               {t("redesign.uiFontSize")}
               <input
                 type="number"
-                aria-label="Interface font size"
+                aria-label={t("redesign.uiFontSize")}
                 min={10}
                 max={20}
                 value={state.uiPrefs.fontSize}
@@ -1646,7 +1641,7 @@ export function Settings() {
               {t("redesign.animation")} ({state.uiPrefs.animationMs}ms)
               <input
                 type="range"
-                aria-label="Interface animation duration"
+                aria-label={t("redesign.animation")}
                 min={0}
                 max={200}
                 step={10}
@@ -1664,7 +1659,7 @@ export function Settings() {
             <label title={t("redesign.motionHint")}>
               {t("redesign.motion")}
               <select
-                aria-label="Reduce interface motion"
+                aria-label={t("redesign.motion")}
                 value={state.uiPrefs.motion}
                 onChange={(e) =>
                   change({
@@ -1684,7 +1679,7 @@ export function Settings() {
             <label>
               {t("redesign.shadows")}
               <select
-                aria-label="Panel shadows"
+                aria-label={t("redesign.shadows")}
                 value={state.uiPrefs.shadows}
                 onChange={(e) =>
                   change({
@@ -1706,7 +1701,7 @@ export function Settings() {
               {t("redesign.rememberPanels")}
               <input
                 type="checkbox"
-                aria-label="Remember panel widths"
+                aria-label={t("redesign.rememberPanels")}
                 checked={state.uiPrefs.rememberPanels}
                 onChange={(e) =>
                   change({
@@ -1726,25 +1721,25 @@ export function Settings() {
             {t("set.ce.wrap")}
             <input
               type="checkbox"
-              aria-label="Wrap long lines"
+              aria-label={t("set.ce.wrap")}
               checked={state.wrapLines}
               onChange={(e) => change({ wrapLines: e.target.checked })}
             />
           </label>
           <fieldset
-            aria-label="Editor assistance"
+            aria-label={t("set.ce.assist.aria")}
             className="my-4 border-0 p-0"
           >
             {(
               [
                 [
                   "autocomplete",
-                  "Autocomplete suggestions (tags, attributes, CSS properties)",
+                  t("set.ce.autocomplete"),
                 ],
-                ["closeTags", "Auto-close HTML tags"],
-                ["closeBrackets", "Auto-close brackets and quotes"],
-                ["lint", "Show syntax problems in the code gutter"],
-                ["emmet", "Emmet abbreviations (Tab expands, e.g. ul>li*3)"],
+                ["closeTags", t("set.ce.closeTags")],
+                ["closeBrackets", t("set.ce.closeBrackets")],
+                ["lint", t("set.ce.lint")],
+                ["emmet", t("set.ce.emmet")],
                 ["lineNumbers", t("redesign.lineNumbers")],
                 ["autoIndent", t("redesign.autoIndent")],
                 ["selectionScroll", t("redesign.selectionScroll")],
@@ -1771,7 +1766,7 @@ export function Settings() {
           <label>
             {t("set.ce.indent")}
             <select
-              aria-label="Format indentation"
+              aria-label={t("set.ce.indent.aria")}
               value={String(readFormatPrefs().indent)}
               onChange={(e) => {
                 const old = readFormatPrefs();
@@ -1784,16 +1779,16 @@ export function Settings() {
                 );
               }}
             >
-              <option value="2">2 spaces</option>
-              <option value="4">4 spaces</option>
-              <option value="8">8 spaces</option>
+              <option value="2">{t("set.ce.indent.n", {count:2})}</option>
+              <option value="4">{t("set.ce.indent.n", {count:4})}</option>
+              <option value="8">{t("set.ce.indent.n", {count:8})}</option>
               <option value="tab">{t("set.ce.indent.tabs")}</option>
             </select>
           </label>
           <label>
             {t("set.ce.syntax")}
             <select
-              aria-label="Syntax theme"
+              aria-label={t("set.ce.syntax")}
               value={state.codeTheme}
               onChange={(e) =>
                 change({ codeTheme: e.target.value as CodeTheme })
@@ -1807,9 +1802,9 @@ export function Settings() {
               <option value="monokai">Monokai</option>
               <option value="dracula">Dracula</option>
               <option value="nord">Nord</option>
-              {state.extensionThemes.map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.label} (extension)
+              {state.extensionThemes.map((theme) => (
+                <option key={theme.id} value={theme.id}>
+                  {theme.label} {t("set.ce.syntax.ext")}
                 </option>
               ))}
             </select>
@@ -1819,8 +1814,8 @@ export function Settings() {
       ) : ["Components", "Connections"].includes(section) ? (
         <p>
           {section === "Components"
-            ? "HTML blocks and a personal source library are available in the Components panel. Stored in this app profile only, not synced."
-            : "Web-local bridge and GitHub connections are planned. No account or folder connection is created by these settings."}
+            ? t("set.components.note")
+            : t("set.connections.note")}
         </p>
       ) : null}
       <footer className="settings-section-footer">
@@ -1848,7 +1843,7 @@ export function Settings() {
           "Updates",
         ].includes(section) && (
           <button
-            aria-label={section === "Appearance" ? "Reset look" : undefined}
+            aria-label={section === "Appearance" ? t("set.ap.reset.aria") : undefined}
             onClick={() => reset(section)}
           >
             {t("redesign.reset")}
@@ -1891,13 +1886,13 @@ export function Settings() {
             <Search size={14} />
             <input
               type="search"
-              aria-label="Search settings"
+              aria-label={t("redesign.search")}
               placeholder={t("redesign.search")}
               value={query}
               onChange={(e) => setQuery(e.target.value)}
             />
           </div>
-          <nav aria-label="Settings sections">
+          <nav aria-label={t("set.nav.aria")}>
             {sections.map((item, i) => (
               <div
                 key={item.name}
@@ -1927,7 +1922,7 @@ export function Settings() {
         <div className="settings-main">
           <button
             className="settings-close"
-            aria-label="Close settings"
+            aria-label={t("set.close.aria")}
             title={t("set.close")}
             onClick={() => patchState({ settingsOpen: false })}
           >

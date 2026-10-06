@@ -10,7 +10,7 @@ test('resizable settings shell, icons, live controls and settings-only undo',asy
  await dialog.getByLabel('Format indentation').focus();await page.keyboard.press('Control+z');await expect(dialog.getByLabel('Format indentation')).toHaveValue('2');
  await dialog.getByRole('button',{name:'General',exact:true}).click();await dialog.getByLabel('Language').selectOption('de');
  await expect(dialog.getByRole('heading',{name:'Einstellungen',exact:true})).toBeVisible();await expect(page.locator('html')).toHaveAttribute('lang','de');
- await dialog.getByLabel('Language').selectOption('en');await dialog.getByRole('button',{name:'Appearance',exact:true}).click();
+ await dialog.getByLabel('Sprache').selectOption('en');await dialog.getByRole('button',{name:'Appearance',exact:true}).click();
  await page.screenshot({path:'tests/artifacts/settings-redesign-light.png'});
  await dialog.getByLabel('App theme').selectOption('dark');await page.screenshot({path:'tests/artifacts/settings-redesign-dark.png'});
  await page.keyboard.press('Escape');await expect(dialog).toBeHidden();
@@ -22,8 +22,8 @@ test('settings search groups matches from different sections and filters sidebar
  await page.screenshot({path:'tests/artifacts/settings-redesign-search.png'});
  await search.fill('autocomplet');await expect(dialog.getByLabel('Autocomplete suggestions (tags, attributes, CSS properties)')).toBeVisible();
  await search.fill('zzzzzzzz');await expect(dialog.getByRole('status')).toHaveText('No matching settings.');
- await search.fill('');await dialog.getByRole('button',{name:'Canvas',exact:true}).click();await dialog.getByLabel('Canvas zoom',{exact:true}).fill('150');
- await expect(dialog.getByLabel('Canvas zoom',{exact:true})).toHaveValue('150');await page.keyboard.press('Escape');await expect(page.getByLabel('Zoom',{exact:true})).toContainText('150');
+ await search.fill('');await dialog.getByRole('button',{name:'Canvas',exact:true}).click();await dialog.getByLabel('Canvas zoom (%)',{exact:true}).fill('150');
+ await expect(dialog.getByLabel('Canvas zoom (%)',{exact:true})).toHaveValue('150');await page.keyboard.press('Escape');await expect(page.getByLabel('Zoom',{exact:true})).toContainText('150');
 });
 test('settings fits smaller windows without losing close or controls',async({page})=>{
  await page.setViewportSize({width:760,height:560});await page.goto('/');await expect(page.getByRole('button',{name:'Split view',exact:true})).toBeVisible();await page.keyboard.press('Control+,');const dialog=page.getByRole('dialog');
