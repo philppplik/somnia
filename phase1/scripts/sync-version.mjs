@@ -1,8 +1,11 @@
 // CI helper: makes the Tauri app version equal the release number (somniaRelease in package.json), because the updater compares versions.
 // With --updater it also turns on signed updater artifacts (needs TAURI_SIGNING_PRIVATE_KEY in the environment).
 import {readFileSync,writeFileSync,existsSync} from 'node:fs';
-const pkg=JSON.parse(readFileSync('package.json','utf8'));const v=String(pkg.somniaRelease??'');
-if(!/^\d+\.\d+\.\d+$/.test(v)){console.log(`somniaRelease "${v}" is not x.y.z, leaving app version unchanged`);process.exit(0);}
+const pkg=JSON.parse(readFileSync('package.json','utf8'));const full=String(pkg.somniaRelease??'');
+// Tauri, MSI and MSIX need a numeric x.y.z, so a prerelease suffix (11.0.0-beta.3) is dropped here; the status bar reads the full string.
+const m=/^(\d+\.\d+\.\d+)(?:-[0-9A-Za-z.]+)?$/.exec(full);
+if(!m){console.log(`somniaRelease "${full}" is not x.y.z[-suffix], leaving app version unchanged`);process.exit(0);}
+const v=m[1];
 const updater=process.argv.includes('--updater');
 for(const f of ['tauri.conf.json','tauri.alpha.conf.json','tauri.windows-alpha.conf.json','tauri.macos-alpha.conf.json']){
  const p=`src-tauri/${f}`;if(!existsSync(p))continue;const c=JSON.parse(readFileSync(p,'utf8'));
