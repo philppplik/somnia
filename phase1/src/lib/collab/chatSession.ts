@@ -43,9 +43,11 @@ export class ChatSession {
   ) {
     this.model = model;
     const onPresence=()=>{if(this.dead)return;this.noteAware();this.changed();if(this.typingTimer)clearTimeout(this.typingTimer);this.typingTimer=setTimeout(()=>this.changed(),4500);};project.awareness.on('change',onPresence);this.offAwareness=()=>project.awareness.off('change',onPresence);
-    this.ready = client.snapshot().state === "connected";
+    // Ready means connected AND the existing history has been delivered: anything arriving earlier is history, not news.
+    const historyIn = () => { const s = client.snapshot(); return s.state === "connected" && s.chatSynced; };
+    this.ready = historyIn();
     this.offClient = client.subscribe(() => {
-      if (!this.ready && client.snapshot().state === "connected") {
+      if (!this.ready && historyIn()) {
         this.ready = true;
         for (const m of this.model.list()) this.seen.add(m.id);
       }

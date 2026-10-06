@@ -36,3 +36,13 @@ export function handleChatFrame(
   sync.readSyncMessage(d, e, doc, origin);
   return encoding.length(e) > 2 ? encoding.toUint8Array(e) : null;
 }
+/** Sync sub-type of a chat frame (0 step1, 1 step2, 2 update), or -1 when it is not a readable chat frame. */
+export function peekChatSyncType(bytes: Uint8Array) {
+  try {
+    const d = decoding.createDecoder(bytes);
+    if (decoding.readVarUint(d) !== MSG_CHAT_SYNC || decoding.readVarUint(d) !== CHAT_WIRE_VERSION) return -1;
+    return decoding.readVarUint(d);
+  } catch {
+    return -1;
+  }
+}

@@ -85,3 +85,57 @@ test('unread badge counts only remote messages while the chat is closed, mention
     guest.project.destroy();
   }
 });
+
+test('history delivered on join never badges as unread; later messages still do', async () => {
+  const { server, factory } = memoryServer();
+  server.onConnection((end) =>
+    end.transport.connect({
+      onOpen() {},
+      onMessage(frame) {
+        for (const peer of server.connections) if (peer !== end) peer.transport.send(frame);
+      },
+      onClose() {},
+    }),
+  );
+  const key = await newLinkKey();
+  const create = (name: string, role: 'host' | 'guest') => {
+    const project = new CollabDoc();
+    const model = new ChatModel();
+    project.awareness.setLocalStateField('user', makeUser(name, project.doc.clientID));
+    const client = new CollabClient(`ws://127.0.0.1/room/abcdefgh#key=${key.param}`, {
+      session: { doc: project.doc, awareness: project.awareness },
+      chatDoc: model.doc,
+      transport: factory,
+      syncTimeoutMs: 200,
+    });
+    const chat = new ChatSession(project, client, role, model);
+    return { project, model, client, chat };
+  };
+  const host = create('Mara', 'host');
+  const guest = create('Ayse', 'guest');
+  try {
+    await host.client.connect();
+    // Host is alone: no peer to ask, so chat must still become ready on its own.
+    host.chat.send('one', [], undefined);
+    host.chat.send('two', [], undefined);
+    host.chat.send('three', [], undefined);
+    await guest.client.connect();
+    await until(() => guest.model.list().length === 3);
+    await sleep(60);
+    assert.equal(guest.chat.unread, 0, 'history received while joining is not unread');
+    assert.equal(guest.client.snapshot().chatSynced, true);
+    host.chat.send('four', [], undefined);
+    await until(() => guest.chat.unread === 1);
+    // A lone host still becomes ready after the chat-sync fallback and counts later guest messages.
+    await until(() => host.client.snapshot().chatSynced);
+    guest.chat.send('reply', [], undefined);
+    await until(() => host.chat.unread === 1);
+  } finally {
+    host.chat.destroy();
+    guest.chat.destroy();
+    host.client.leave();
+    guest.client.leave();
+    host.project.destroy();
+    guest.project.destroy();
+  }
+});
