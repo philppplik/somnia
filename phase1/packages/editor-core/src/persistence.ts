@@ -24,8 +24,16 @@ export class SaveCoordinator {
   if(!this.dirty)return;
   const revision=this.project.revision,files=this.project.files;
   this.publish('saving','Writing project files...');
-  this.running=(async()=>{try{await this.storage.write(files,revision);if(this.project.revision===revision){this.dirty=false;this.publish('saved','Saved to disk');}else{this.dirty=true;this.publish('dirty','New edits are not yet saved');this.schedule();}}catch(e){this.dirty=true;this.publish('error',`Save failed: ${String(e)}. Your changes remain unsaved.`);throw e;}finally{this.running=null;}})();
-  return this.running;
+  const run=(async()=>{try{await this.storage.write(files,revision);if(this.project.revision===revision){this.dirty=false;this.publish('saved','Saved to disk');}else{this.dirty=true;this.publish('dirty','New edits are not yet saved');this.schedule();}}catch(e){this.dirty=true;this.publish('error',`Save failed: ${String(e)}. Your changes remain unsaved.`);throw e;}})();
+  this.running=run;
+  // Clear only after the assignment above: storage.write may throw synchronously, which
+  // settles run before this.running is assigned, so a finally inside the async body would
+  // be overwritten by that assignment and wedge the coordinator on a permanently rejected
+  // promise (every later flush() would fail without writing). This tap always runs as a
+  // microtask after the assignment and never clears a newer run.
+  const clear=()=>{if(this.running===run)this.running=null;};
+  run.then(clear,clear);
+  return run;
  }
  dispose(){this.disposed=true;clearTimeout(this.timer);this.off();this.listeners.clear();}
 }

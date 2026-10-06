@@ -89,3 +89,37 @@ test('recovery receives a detached current snapshot and does not count as a disk
   await save.cacheRecovery(); assert.equal(writes, 0);
   assert.equal(save.status.state, 'dirty'); assert.equal(p.files['plain.txt'], 'current');
 });
+
+test('synchronously throwing write adapter rejects but never wedges the coordinator', async t => {
+  const p = project();
+  let calls = 0;
+  const save = new SaveCoordinator(p, { write() {
+    calls++;
+    if (calls === 1) throw Error('adapter validation failed'); // sync throw before any promise
+    return Promise.resolve();
+  } }, 10000);
+  t.after(() => save.dispose());
+  await assert.rejects(save.flush(), /adapter validation failed/);
+  assert.equal(save.status.state, 'error');
+  assert.equal(calls, 1);
+  await save.flush();
+  assert.equal(calls, 2, 'retry after a synchronous throw must reach the adapter again');
+  assert.equal(save.status.state, 'saved');
+});
+
+test('overlapping flushes around a synchronous throw reject together and the retry writes', async t => {
+  const p = project();
+  let calls = 0;
+  const save = new SaveCoordinator(p, { write() {
+    calls++;
+    if (calls === 1) throw Error('sync boom');
+    return Promise.resolve();
+  } }, 10000);
+  t.after(() => save.dispose());
+  const a = save.flush(), b = save.flush();
+  await Promise.all([assert.rejects(a, /sync boom/), assert.rejects(b, /sync boom/)]);
+  assert.equal(calls, 1, 'overlapping flushes serialize to a single write call');
+  await save.flush();
+  assert.equal(calls, 2, 'a later flush must not stay stuck on the first rejected run');
+  assert.equal(save.status.state, 'saved');
+});
