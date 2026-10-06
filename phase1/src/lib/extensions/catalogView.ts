@@ -51,14 +51,26 @@ export function categoryCounts(entries:CatalogEntry[]):Record<Category,number>{
 }
 export const updatesAvailable=(entries:CatalogEntry[],installed:Pick<ExtensionManifest,'id'|'version'>[])=>entries.filter(e=>installStateOf(e,installed).state==='update-available').length;
 
+/** Stable codes keep provider diagnostics separate from translated UI text. */
+export type CatalogErrorCode='limited'|'notFound'|'server'|'timeout'|'network'|'hash'|'unknown';
+export function catalogErrorCode(message:string):CatalogErrorCode{
+ if(/\((403|429)\)/.test(message))return 'limited';
+ if(/\(404\)/.test(message))return 'notFound';
+ if(/\(5\d\d\)/.test(message))return 'server';
+ if(/abort|timeout|timed out/i.test(message))return 'timeout';
+ if(/failed to fetch|network|load failed/i.test(message))return 'network';
+ if(/SHA-256/.test(message))return 'hash';
+ return 'unknown';
+}
 /** Plain-language message for a failed index or package fetch. Raw messages stay available as detail. */
 export function describeCatalogError(message:string):{title:string;hint:string}{
- if(/\((403|429)\)/.test(message))return{title:'GitHub is limiting requests right now.',hint:'Wait a few minutes and try again.'};
- if(/\(404\)/.test(message))return{title:'The extension index was not found.',hint:'It may have moved. Update Somnia or try later.'};
- if(/\(5\d\d\)/.test(message))return{title:'GitHub is having trouble.',hint:'Try again in a moment.'};
- if(/abort|timeout|timed out/i.test(message))return{title:'The request took too long.',hint:'Check your connection and try again.'};
- if(/failed to fetch|network|load failed/i.test(message))return{title:'Could not reach GitHub.',hint:'Check your internet connection and try again.'};
- if(/SHA-256/.test(message))return{title:'The download did not match the index.',hint:'Nothing was installed. Do not retry until the index is fixed.'};
+ const code=catalogErrorCode(message);
+ if(code==='limited')return{title:'GitHub is limiting requests right now.',hint:'Wait a few minutes and try again.'};
+ if(code==='notFound')return{title:'The extension index was not found.',hint:'It may have moved. Update Somnia or try later.'};
+ if(code==='server')return{title:'GitHub is having trouble.',hint:'Try again in a moment.'};
+ if(code==='timeout')return{title:'The request took too long.',hint:'Check your connection and try again.'};
+ if(code==='network')return{title:'Could not reach GitHub.',hint:'Check your internet connection and try again.'};
+ if(code==='hash')return{title:'The download did not match the index.',hint:'Nothing was installed. Do not retry until the index is fixed.'};
  return{title:'Something went wrong.',hint:'Try again. Local file installs still work.'};
 }
 export type {Permission};
