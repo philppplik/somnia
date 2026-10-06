@@ -336,3 +336,32 @@ fn single_file_project_exposes_only_that_file() {
     p.save("page.html", &r.revision).unwrap();
     assert_eq!(fs::read_to_string(root.path().join("page.html")).unwrap(), "two");
 }
+#[test]
+fn reads_media_bytes_but_only_media_inside_the_project() {
+    let (root, _recovery, p) = setup();
+    let png = [0x89u8, b'P', b'N', b'G', 0x0d, 0x0a, 0x1a, 0x0a, 1, 2, 3];
+    fs::create_dir(root.path().join("img")).unwrap();
+    fs::write(root.path().join("img/a.PNG"), png).unwrap();
+    assert_eq!(p.read_media("img/a.PNG").unwrap(), png);
+    // Not a media extension: text files stay on the editable path.
+    assert!(matches!(p.read_media("index.html"), Err(AppError::Denied(_))));
+    // Escaping the root is denied.
+    assert!(matches!(p.read_media("../a.png"), Err(AppError::Denied(_))));
+    assert!(matches!(p.read_media("/etc/x.png"), Err(AppError::Denied(_))));
+    // A directory named like media is not a file.
+    fs::create_dir(root.path().join("dir.png")).unwrap();
+    assert!(p.read_media("dir.png").is_err());
+}
+#[test]
+fn media_over_the_limit_is_rejected_and_symlinks_are_denied() {
+    let (root, _recovery, p) = setup();
+    let big = vec![0u8; somnia_desktop::service::MAX_MEDIA_BYTES + 1];
+    fs::write(root.path().join("big.pdf"), big).unwrap();
+    assert!(matches!(p.read_media("big.pdf"), Err(AppError::Limit)));
+    #[cfg(unix)]
+    {
+        fs::write(root.path().join("real.jpg"), [0xff, 0xd8, 0xff]).unwrap();
+        std::os::unix::fs::symlink("real.jpg", root.path().join("link.jpg")).unwrap();
+        assert!(matches!(p.read_media("link.jpg"), Err(AppError::Denied(_))));
+    }
+}
