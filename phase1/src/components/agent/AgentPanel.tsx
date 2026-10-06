@@ -77,10 +77,10 @@ function Approval({approval}:{approval:AgentApproval}){
 }
 function Row({item,onAccept,onReject,onRetry}:{item:ChatItem;onRetry:()=>void;onAccept:(p:AgentProposal,d:Decisions)=>void;onReject:(p:AgentProposal)=>void}){
  switch(item.kind){
-  case 'user':return <div className="ag-b ag-u"><p>{item.text}</p></div>;
-  case 'agent':return <div className="ag-b ag-a"><AIGeneratedLabel/><p>{item.text}{item.streaming&&<span className="ag-caret"/>}</p></div>;
+  case 'user':return <div className="ag-b ag-u"><p data-copyable>{item.text}</p></div>;
+  case 'agent':return <div className="ag-b ag-a"><AIGeneratedLabel/><p data-copyable>{item.text}{item.streaming&&<span className="ag-caret"/>}</p></div>;
   case 'status':return <div className="ag-status"><LoaderCircle size={17} className="ag-spin"/>{item.text}</div>;
-  case 'error':return <div className="ag-error" role="alert">{item.text}{item.retryable&&<button type="button" className="ag-retry" onClick={onRetry}>Retry</button>}</div>;
+  case 'error':return <div className="ag-error" role="alert" data-copyable>{item.text}{item.retryable&&<button type="button" className="ag-retry" onClick={onRetry}>Retry</button>}</div>;
   case 'usage':return <p className="ag-usage">{item.text}</p>;
   case 'approval':return <Approval approval={item.approval}/>;
   case 'diff':return <div className="ag-review" data-state={item.state}><AIGeneratedLabel provenance={item.proposal.changeSet?.provenance}/>{item.state==='pending'&&item.proposal.changeSet?<AgentReview changeSet={item.proposal.changeSet} readCurrent={p=>getState().files[p]??null} onApply={(_,d)=>onAccept(item.proposal,d)} onDiscard={()=>onReject(item.proposal)}/>:<p>{item.state==='accepted'?'Applied to editor, not saved. Use Save project to save, or editor Undo to revert.':'Proposal discarded.'}</p>}</div>;

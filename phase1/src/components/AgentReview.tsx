@@ -12,7 +12,7 @@ export interface AgentReviewProps {
 }
 
 const Line = ({sign, text, kind}: {sign: string; text: string; kind: 'same' | 'added' | 'removed'}) => (
-  <div role="row" className={`diff-line diff-${kind}`}><span role="cell"/><span role="cell"/><span role="cell" aria-label={kind}>{sign}</span><code role="cell">{text || ' '}</code></div>
+  <div role="row" className={`diff-line diff-${kind}`}><span role="cell"/><span role="cell"/><span role="cell" aria-label={kind}>{sign}</span><code role="cell" data-copyable>{text || ' '}</code></div>
 );
 
 function HunkView({hunk, decision, disabled, onDecide}: {hunk: Hunk; decision: string | undefined; disabled: boolean; onDecide: (d: 'accept' | 'reject') => void}) {

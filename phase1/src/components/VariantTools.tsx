@@ -24,7 +24,7 @@ export function VariantTools({component:c,variant:v,edit,run}:Props){
  const target=others.find(x=>x.id===other)??others[0];
  let diffView:ReactNode=null;
  if(mode==='compare'&&target){
-  try{const d=diffVariants(target.html,v.html);diffView=<div><p role="status">{diffSummary(d)}</p><pre aria-label={t('panels.variants.differences',{from:target.name,to:v.name})}>{d.map((l,i)=><div key={i} data-diff={l.kind}>{l.kind==='added'?'+ ':l.kind==='removed'?'- ':'  '}{l.text}</div>)}</pre></div>;}
+  try{const d=diffVariants(target.html,v.html);diffView=<div><p role="status">{diffSummary(d)}</p><pre data-copyable aria-label={t('panels.variants.differences',{from:target.name,to:v.name})}>{d.map((l,i)=><div key={i} data-diff={l.kind}>{l.kind==='added'?'+ ':l.kind==='removed'?'- ':'  '}{l.text}</div>)}</pre></div>;}
   catch(e){diffView=<p role="alert">{e instanceof Error?e.message:String(e)}</p>;}
  }
  const label=`${c.name} ${v.name}`;

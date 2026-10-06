@@ -8,8 +8,8 @@ export class ErrorBoundary extends Component<{label:string;children:ReactNode;co
  render(){
   if(!this.state.failed)return this.props.children;
   return <div role="alert" className="flex flex-col items-start gap-2 p-4 text-[12px] text-ink-2" data-testid="error-boundary">
-   <strong>{this.props.label} could not be loaded.</strong>
-   <span>Your project is safe. The details were written to the log.</span>
+   <strong data-copyable>{this.props.label} could not be loaded.</strong>
+   <span data-copyable>Your project is safe. The details were written to the log.</span>
    <span className="flex gap-2">
     <button type="button" className="underline" onClick={()=>this.setState({failed:false})}>Try again</button>
     <button type="button" className="underline" onClick={()=>void copyErrorReport()}>Copy error report</button>
