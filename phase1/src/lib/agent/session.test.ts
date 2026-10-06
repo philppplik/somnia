@@ -48,7 +48,7 @@ test('restored multi-tool history is copied and replayed only with matched tool 
 
 test('failed follow-up does not erase or replay an incomplete turn over prior complete history', async () => {
   const seen: AgentProviderRequest[] = [], session = new AgentSession({ model: 'fixture', provider: provider([
-    [{ type: 'text', text: 'partial' }], [{ type: 'text', text: 'retry done' }, stop],
+    [{ type: 'text', text: 'partial' }, { type: 'finish', reason: 'content_filter' }], [{ type: 'text', text: 'retry done' }, stop],
   ], seen) });
   session.restore({ version: 1, projectId: null, messages: history });
   await session.prompt('failed prompt'); assert.equal(session.status, 'error');
@@ -110,7 +110,7 @@ test('timeout aborts provider work without admitting partial history', async t =
   } };
   const session = new AgentSession({ model: 'fixture', provider: held, timeoutMs: 100 });
   const pending = session.prompt('held'); t.mock.timers.tick(100); await pending;
-  assert.equal(session.status, 'cancelled'); assert.deepEqual(session.snapshot().messages, []);
+  assert.equal(session.status, 'error'); assert.deepEqual(session.snapshot().messages, []);
 });
 
 test('observer mutations cannot modify tool calls or authorize different files', async () => {
