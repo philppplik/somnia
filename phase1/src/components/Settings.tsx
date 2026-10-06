@@ -238,6 +238,20 @@ export function Settings() {
       setQuery("");
     }
   }, [state.settingsOpen]);
+  // Deep links use the same section state as the Settings sidebar. Clear any
+  // prior search, reset the independent content scroll and reveal the selected
+  // sidebar item (which can be below the fold in smaller windows).
+  useEffect(() => {
+    if (!state.settingsOpen) return;
+    setQuery("");
+    const frame = requestAnimationFrame(() => {
+      if (content.current) content.current.scrollTop = 0;
+      content.current?.closest(".settings-popup")
+        ?.querySelector<HTMLElement>('[aria-current="page"]')
+        ?.scrollIntoView({ block: "nearest" });
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [state.settingsOpen, section, state.settingsNavigationId]);
   useEffect(() => {
     const root = content.current;
     if (!root) return;
@@ -1950,7 +1964,7 @@ export function Settings() {
             <X size={14} />
           </button>
           <DialogDescription className="sr-only">
-            {t("set.description")}
+            {t(section === "Shortcuts" ? "set.sc.description" : "set.description")}
           </DialogDescription>
           <div className="settings-content" ref={content}>
             {query && matches.length === 0 && (
