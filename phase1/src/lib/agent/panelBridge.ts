@@ -1,3 +1,4 @@
+import {logWarn} from '../log';
 import {AgentSession} from './session';
 import {AgentProjectTools} from './projectTools';
 import {OllamaProvider} from './providers/ollama';
@@ -99,7 +100,7 @@ export const realCore:AgentCore={
    for(const write of writes)if(write.provenance)appliedAgentProvenance.set(write.path,write.provenance);
    patchState({notice:'AI changes applied to editor, not saved. Use Save project to write them to disk.'});
   }},set,d);
-  if(!plan.ok)throw Error(plan.blockers.map(b=>b.detail).join('; '));
+  if(!plan.ok){logWarn('agent.apply','Apply blocked',{blockers:plan.blockers.map(b=>({reason:b.reason,path:b.path}))});throw Error(plan.blockers.map(b=>b.detail).join('; '));}
   proposals.delete(id);session?.discardProposals();
  },
  async rejectProposal(id){proposals.delete(id);session?.discardProposals();},

@@ -1,3 +1,4 @@
+import { log, describeError } from '../log';
 /** Fail-closed network boundary. Call immediately before EVERY provider request/retry. */
 export const AGENT_CONSENT_VERSION = 1;
 export const AGENT_CONSENT_KEY = 'somnia.agent.cloud-consent.v1';
@@ -105,7 +106,14 @@ export class AgentPrivacyGate {
 export const agentPrivacy = new AgentPrivacyGate();
 export const assertProviderConsent = (target: ProviderTarget): void => agentPrivacy.assert(target);
 export const runWithProviderConsent = <T>(target: ProviderTarget, operation: (signal: AbortSignal) => Promise<T>, signal?: AbortSignal): Promise<T> =>
-  agentPrivacy.run(target, operation, signal);
+  agentPrivacy.run(target, operation, signal).catch(error => { logProviderFailure(target, error, signal); throw error; });
+/** One place for provider failures (ProviderError, consent, network). Aborts by the user are normal and not logged; messages are clipped and redacted. */
+export function logProviderFailure(target: ProviderTarget, error: unknown, signal?: AbortSignal): void {
+  if (signal?.aborted || (error instanceof Error && error.name === 'AbortError')) return;
+  const consent = error instanceof AgentConsentRequiredError;
+  log(consent ? 'warn' : 'error', 'agent.provider', `${target.provider} request failed: ${describeError(error, 200)}`, { provider: target.provider, host: safeHost(target.endpoint) });
+}
+const safeHost = (endpoint: unknown): string => { try { return new URL(String(endpoint)).host; } catch { return 'unknown'; } };
 if (typeof window !== 'undefined') window.addEventListener('storage', event => {
   if (event.key === AGENT_CONSENT_KEY || event.key === null) agentPrivacy.syncFromStorage();
 });

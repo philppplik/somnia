@@ -12,6 +12,9 @@ import './styles/agent.css';
 import {isTauri} from '@tauri-apps/api/core';
 import {setStoreManaged} from './lib/updates';
 import {initLocale} from './lib/i18n';
+import {installGlobalErrorHandlers,setNoticeSink,reportError,logInfo,recentLog,copyErrorReport} from './lib/log';
+import {ErrorBoundary} from './components/ErrorBoundary';
+installGlobalErrorHandlers();
 initLocale();
 import {installDesktopAdapter} from './lib/desktopAdapter';
 import {installFileAdapter} from './lib/fileAdapter';
@@ -38,14 +41,16 @@ subscribe(()=>{const st=getState();window.clearTimeout(draftTimer);if(st.storage
 if(import.meta.hot)import.meta.hot.dispose(disconnect);
 applyLook(getState().look);
 applyUiPrefs(getState().uiPrefs);
-createRoot(document.getElementById('root')!).render(<StrictMode><App/></StrictMode>);
+setNoticeSink(text=>patchState({notice:text}));
+logInfo('app','Somnia started',{desktop:isTauri()});
+createRoot(document.getElementById('root')!).render(<StrictMode><ErrorBoundary label="Somnia"><App/></ErrorBoundary></StrictMode>);
 
 if(!isTauri())installBeforeUnload(()=>getState().isDirty&&getState().storage!=='disk');
-if(import.meta.env.DEV)(window as unknown as {__somnia:object}).__somnia={requestClose,setSource:(file:string,text:string)=>applyOperations([{type:'replaceSource',file,text}] as never)};
+if(import.meta.env.DEV)(window as unknown as {__somnia:object}).__somnia={recentLog,copyErrorReport,requestClose,setSource:(file:string,text:string)=>applyOperations([{type:'replaceSource',file,text}] as never)};
 if(isTauri())document.documentElement.dataset.shell='desktop';
 // LAN-Direct hosting is a desktop feature: register the Rust host with the collab engine only inside Tauri.
-if(isTauri())void import('./lib/collab/lanHost').then(m=>import('./lib/collab/lanHostPort').then(p=>p.registerLanHost({startLanHost:m.startLanHost,stopLanHost:m.stopLanHost,createLanSessionLinks:m.createLanSessionLinks})));
-if(isTauri())setStoreManaged(import('@tauri-apps/api/core').then(m=>m.invoke<boolean>('is_store_package')));
-if(isTauri())void installDesktopAdapter().catch(error=>console.error(error));
-else if(webFsSupported()&&!location.search.includes('fallback=zip'))void installFileAdapter(createWebFsPort()).catch(error=>console.error(error));
+if(isTauri())void import('./lib/collab/lanHost').then(m=>import('./lib/collab/lanHostPort').then(p=>p.registerLanHost({startLanHost:m.startLanHost,stopLanHost:m.stopLanHost,createLanSessionLinks:m.createLanSessionLinks}))).catch(e=>reportError('startup.lan-host',e,{message:'LAN hosting could not be loaded',notify:'LAN hosting is unavailable.'}));
+if(isTauri())setStoreManaged(import('@tauri-apps/api/core').then(m=>m.invoke<boolean>('is_store_package')).catch(e=>{reportError('startup.store-package',e,{level:'warn'});return false;}));
+if(isTauri())void installDesktopAdapter().catch(error=>reportError('startup.desktop-adapter',error,{message:'Desktop file access did not start',notify:'File access is unavailable. Saving to disk may not work.'}));
+else if(webFsSupported()&&!location.search.includes('fallback=zip'))void installFileAdapter(createWebFsPort()).catch(error=>reportError('startup.file-adapter',error,{message:'Browser file access did not start',notify:'File access is unavailable in this browser session.'}));
 else void installFileAdapter(createWebFsPort({...zipWebFsOptions(),canReconnect:false})).catch(error=>console.error(error));

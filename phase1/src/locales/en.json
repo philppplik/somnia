@@ -96,6 +96,8 @@
   "set.upd.oneclick": "One-click install inside the app needs a signed update channel (Tauri updater). It is planned in ADR-004 and not active yet, so updates are a download and run for now.",
   "set.about.version": "release v{release}, app {app}. A local-first visual editor for HTML and CSS.",
   "set.about.license": "Licensed under the MIT License. Copyright (c) 2026 Philipp Paulik. Source:",
+  "set.about.errorReport": "Copy error report",
+  "set.about.errorReport.hint": "Version info and recent log lines, without keys or tokens. Paste it into a message when something goes wrong.",
   "set.about.third_one": "Third-party software ({count} package)",
   "set.about.third_other": "Third-party software ({count} packages)",
   "set.about.third.aria": "Third-party software",

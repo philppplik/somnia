@@ -96,6 +96,8 @@
   "set.upd.oneclick": "Die Ein-Klick-Installation in der App braucht einen signierten Update-Kanal (Tauri-Updater). Sie ist in ADR-004 geplant und noch nicht aktiv, daher sind Updates vorerst ein Download mit anschlie\u00dfender Installation.",
   "set.about.version": "Release v{release}, App {app}. Ein lokaler, visueller Editor f\u00fcr HTML und CSS.",
   "set.about.license": "Lizenziert unter der MIT-Lizenz. Copyright (c) 2026 Philipp Paulik. Quelltext:",
+  "set.about.errorReport": "Fehlerbericht kopieren",
+  "set.about.errorReport.hint": "Versionsinfo und letzte Log-Zeilen, ohne Schl\u00fcssel oder Tokens. Bei Problemen in eine Nachricht einf\u00fcgen.",
   "set.about.third_one": "Drittsoftware ({count} Paket)",
   "set.about.third_other": "Drittsoftware ({count} Pakete)",
   "set.about.third.aria": "Drittsoftware",

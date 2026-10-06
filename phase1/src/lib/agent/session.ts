@@ -1,3 +1,4 @@
+import { log, logWarn, describeError } from '../log';
 import { createAIProvenance } from './privacy';
 import type { AgentMessage, AgentProvider, AgentToolCall, AgentUsage } from './types';
 import { AgentProjectTools, agentFileTools } from './projectTools';
@@ -155,8 +156,9 @@ export class AgentSession {
             result = await this.options.tools.execute(call, controller.signal);
             controller.signal.throwIfAborted();
             this.emit({ type: 'tool', call, status: 'completed', result, turnId });
-          } catch {
+          } catch (toolError) {
             controller.signal.throwIfAborted();
+            logWarn('agent.tool',`Tool ${call.name} failed: ${describeError(toolError, 200)}`);
             // Host permission/map callbacks can throw private errors; do not forward them.
             result = JSON.stringify({ error: 'Tool denied or failed. Check authorized paths, current editor state, tool arguments and size limits.' });
             this.emit({ type: 'tool', call, status: 'failed', result, turnId });
@@ -165,8 +167,10 @@ export class AgentSession {
         }
       }
       throw Error('Agent step limit reached.');
-    } catch {
-      // Provider/plugin errors can contain secrets. Never store or emit raw exceptions.
+    } catch (turnError) {
+      // Provider/plugin errors can contain secrets. Never store or emit raw exceptions to the UI or session; the log redacts them.
+      if (!controller.signal.aborted) log('error', 'agent.turn', `Agent turn failed: ${describeError(turnError, 200)}`);
+      // (the log entry above is redacted; nothing below changes)
       this.options.tools?.clear();
       this._status = controller.signal.aborted ? 'cancelled' : 'error';
       this.emit({ type: 'notice', message: controller.signal.aborted ? 'Agent turn stopped. No changes applied; provider costs may still occur.' : 'Agent turn failed or reached a limit. No changes applied. Retry explicitly or reduce context.', turnId });

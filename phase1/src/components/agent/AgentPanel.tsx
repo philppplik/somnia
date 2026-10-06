@@ -1,3 +1,4 @@
+import {reportError} from '../../lib/log';
 import {useCallback,useEffect,useReducer,useRef,useState} from 'react';
 import {LoaderCircle,PanelRightClose,Send,Settings,Square,SquarePen} from '../../lib/icons';
 import {chatReducer,initialChat,type ChatItem} from '../../lib/agent/chat';
@@ -22,13 +23,13 @@ export function AgentPanel(){
  const send=useCallback((raw:string)=>{
   const text=raw.trim();if(!text||chat.busy)return;
   const generation=++requestGeneration.current;dispatch({type:'send',text});setDraft('');pinned.current=true;const s=getState();
-  void getAgentCore().then(core=>{if(generation!==requestGeneration.current)return;run.current=core.run({prompt:text,context:{activeFile:s.activeFile,selectedElementId:s.selectedElementId}},event=>dispatch({type:'event',event}));}).catch(e=>dispatch({type:'event',event:{type:'error',message:String(e)}}));
+  void getAgentCore().then(core=>{if(generation!==requestGeneration.current)return;run.current=core.run({prompt:text,context:{activeFile:s.activeFile,selectedElementId:s.selectedElementId}},event=>dispatch({type:'event',event}));}).catch(e=>{reportError('agent.start',e,{message:'Agent could not start'});dispatch({type:'event',event:{type:'error',message:String(e)}});});
  },[chat.busy]);
  const stop=()=>{requestGeneration.current++;run.current?.cancel();run.current=null;dispatch({type:'stop'});input.current?.focus();};
  const reset=()=>{stop();void getAgentCore().then(c=>c.clear?.());dispatch({type:'reset'});setDraft('');};
  const resolve=async(p:AgentProposal,state:'accepted'|'rejected',decisions?:Decisions)=>{
   const core=await getAgentCore();try{await(state==='accepted'?core.applyProposal(p.id,decisions):core.rejectProposal(p.id));dispatch({type:'resolve',proposalId:p.id,state});}
-  catch(e){dispatch({type:'event',event:{type:'error',message:e instanceof Error?e.message:String(e)}});}
+  catch(e){reportError('agent.apply',e,{message:`Proposal ${state==='accepted'?'apply':'reject'} failed`,level:'warn'});dispatch({type:'event',event:{type:'error',message:e instanceof Error?e.message:String(e)}});}
  };
  useEffect(()=>{
   if(!consent)return;

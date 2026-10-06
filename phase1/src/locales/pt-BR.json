@@ -96,6 +96,8 @@
   "set.upd.oneclick": "A instala\u00e7\u00e3o com um clique dentro do app precisa de um canal de atualiza\u00e7\u00e3o assinado (Tauri updater). Ela est\u00e1 planejada no ADR-004 e ainda n\u00e3o est\u00e1 ativa, ent\u00e3o por enquanto as atualiza\u00e7\u00f5es s\u00e3o baixadas e executadas.",
   "set.about.version": "vers\u00e3o v{release}, app {app}. Um editor visual local primeiro para HTML e CSS.",
   "set.about.license": "Licenciado sob a licen\u00e7a MIT. Copyright (c) 2026 Philipp Paulik. C\u00f3digo-fonte:",
+  "set.about.errorReport": "Copiar relat\u00f3rio de erros",
+  "set.about.errorReport.hint": "Vers\u00e3o e \u00faltimas linhas do registro, sem chaves nem tokens. Cole em uma mensagem quando algo der errado.",
   "set.about.third_one": "Software de terceiros ({count} pacote)",
   "set.about.third_other": "Software de terceiros ({count} pacotes)",
   "set.about.third.aria": "Software de terceiros",

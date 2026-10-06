@@ -1,5 +1,6 @@
 import type {CodeTheme} from '../lib/appearance';
 import {lazy,Suspense} from 'react';
+import {ErrorBoundary} from './ErrorBoundary';
 import {EmptyState} from './EmptyState';
 import {FileTabs} from './FileTabs';
 const DiffSplit=lazy(()=>import('./DiffSplit').then(m=>({default:m.DiffSplit})));
@@ -24,7 +25,7 @@ function SplitDivider({box}:{box:React.RefObject<HTMLDivElement|null>}){const {t
 export function Canvas(){const {t}=useT();
  const box=useRef<HTMLDivElement>(null);
  const state=useAppStore();const media=useMedia();const activeMedia=media.items.find(i=>i.name===media.active);
- const code=<section className="code-pane" aria-label={t('rest.canvas.sourceEditor')} style={state.viewMode==='split'?{flex:`0 0 ${state.splitRatio*100}%`}:undefined}><FileTabs/><Suspense fallback={<div className="px-3 py-2 text-[10px] text-ink-3">Loading source editor...</div>}>{state.diffSplit?<DiffSplit file={state.activeFile}/>:<SourceEditor source={state.files[state.activeFile]??''} file={state.activeFile} disabled={!state.coreConnected}/>}</Suspense></section>;
+ const code=<section className="code-pane" aria-label={t('rest.canvas.sourceEditor')} style={state.viewMode==='split'?{flex:`0 0 ${state.splitRatio*100}%`}:undefined}><FileTabs/><ErrorBoundary label="Source editor" compact><Suspense fallback={<div className="px-3 py-2 text-[10px] text-ink-3">Loading source editor...</div>}>{state.diffSplit?<DiffSplit file={state.activeFile}/>:<SourceEditor source={state.files[state.activeFile]??''} file={state.activeFile} disabled={!state.coreConnected}/>}</Suspense></ErrorBoundary></section>;
  if(activeMedia)return <main className="center" aria-label={t('rest.canvas.editorWorkspace')}><div className="workspace"><section className="code-pane" aria-label={t('rest.canvas.mediaPreview')}><FileTabs/><MediaViewer item={activeMedia}/></section></div></main>;
  if(!state.coreConnected)return <EmptyState/>;
  const rendered=isRenderedText(state.activeFile);

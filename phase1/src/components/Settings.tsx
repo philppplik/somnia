@@ -52,6 +52,8 @@ import {
   setLocalePref,
 } from "../lib/i18n";
 import { useT } from "../lib/useT";
+import { tOr } from "../lib/i18n";
+import { copyErrorReport } from "../lib/log";
 import {
   Dialog,
   DialogContent,
@@ -1251,6 +1253,12 @@ export function Settings() {
             >
               github.com/philppplik/somnia
             </a>
+          </p>
+          <p>
+            <button type="button" className="underline" data-testid="copy-error-report" onClick={() => { void copyErrorReport(); }}>
+              {tOr("set.about.errorReport", "Copy error report")}
+            </button>
+            <span className="ml-2 text-[11px] text-ink-3">{tOr("set.about.errorReport.hint", "Version info and recent log lines, without keys or tokens. Paste it into a message when something goes wrong.")}</span>
           </p>
           <details>
             <summary>

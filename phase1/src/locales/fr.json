@@ -96,6 +96,8 @@
   "set.upd.oneclick": "L\u2019installation en un clic dans l\u2019app n\u00e9cessite un canal de mise \u00e0 jour sign\u00e9 (Tauri updater). Elle est pr\u00e9vue dans l\u2019ADR-004 et n\u2019est pas encore active, donc pour l\u2019instant les mises \u00e0 jour se t\u00e9l\u00e9chargent et s\u2019ex\u00e9cutent.",
   "set.about.version": "version v{release}, app {app}. Un \u00e9diteur visuel local d\u2019abord pour HTML et CSS.",
   "set.about.license": "Sous licence MIT. Copyright (c) 2026 Philipp Paulik. Code source :",
+  "set.about.errorReport": "Copier le rapport d'erreur",
+  "set.about.errorReport.hint": "Version et derni\u00e8res lignes du journal, sans cl\u00e9s ni jetons. Collez-le dans un message en cas de probl\u00e8me.",
   "set.about.third_one": "Logiciels tiers ({count} paquet)",
   "set.about.third_other": "Logiciels tiers ({count} paquets)",
   "set.about.third.aria": "Logiciels tiers",

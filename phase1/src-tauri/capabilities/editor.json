@@ -43,6 +43,9 @@
     "allow-recovery-restore",
     "allow-recovery-discard",
     "allow-close-project",
+    "allow-log-write",
+    "allow-log-tail",
+    "allow-log-dir",
     "core:window:allow-set-always-on-top",
     "core:window:allow-set-decorations"
   ]

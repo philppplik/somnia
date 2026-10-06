@@ -33,12 +33,16 @@ async fn work<T: Send + 'static>(
     state: Shared,
     f: impl FnOnce(&mut Backend) -> Result<T> + Send + 'static,
 ) -> Result<T> {
-    tauri::async_runtime::spawn_blocking(move || {
+    let result = tauri::async_runtime::spawn_blocking(move || {
         let mut backend = state.lock().map_err(|e| AppError::Io(e.to_string()))?;
         f(&mut backend)
     })
     .await
-    .map_err(|e| AppError::Io(e.to_string()))?
+    .map_err(|e| AppError::Io(e.to_string()))?;
+    if let Err(error) = &result {
+        crate::applog::write("warn", "rust.service", &error.to_string(), None);
+    }
+    result
 }
 fn project<'a>(backend: &'a mut Backend, id: &str) -> Result<&'a mut Project> {
     backend.projects.get_mut(id).ok_or(AppError::UnknownProject)
@@ -558,6 +562,33 @@ async fn collab_lan_status(
     Ok(host.status().await)
 }
 
+#[tauri::command]
+fn log_write(
+    window: WebviewWindow,
+    level: String,
+    source: String,
+    message: String,
+    context: Option<serde_json::Value>,
+) -> std::result::Result<(), String> {
+    gate(&window).map_err(|e| e.to_string())?;
+    crate::applog::write(&level, &source, &message, context.as_ref());
+    Ok(())
+}
+#[tauri::command]
+fn log_tail(window: WebviewWindow, lines: Option<usize>) -> std::result::Result<String, String> {
+    gate(&window).map_err(|e| e.to_string())?;
+    Ok(crate::applog::global()
+        .map(|l| l.tail(lines.unwrap_or(200).min(2000)))
+        .unwrap_or_default())
+}
+#[tauri::command]
+fn log_dir(window: WebviewWindow) -> std::result::Result<String, String> {
+    gate(&window).map_err(|e| e.to_string())?;
+    Ok(crate::applog::global()
+        .map(|l| l.dir().display().to_string())
+        .unwrap_or_default())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let shared = Shared::default();
@@ -568,6 +599,9 @@ pub fn run() {
         .manage(shared.clone())
         .manage(crate::lan_host::LanHost::default())
         .setup(move |app| {
+            if let Ok(dir) = app.path().app_data_dir() {
+                crate::applog::init(dir.join("logs"));
+            }
             let app_handle = app.handle().clone();
             std::thread::spawn(move || loop {
                 std::thread::sleep(Duration::from_millis(250));
@@ -645,10 +679,16 @@ pub fn run() {
             recovery_read,
             recovery_restore,
             recovery_discard,
-            close_project
+            close_project,
+            log_write,
+            log_tail,
+            log_dir
         ])
         .run(tauri::generate_context!())
-        .expect("Unable to start Somnia");
+        .unwrap_or_else(|error| {
+            crate::applog::write("error", "rust.startup", &error.to_string(), None);
+            panic!("Unable to start Somnia: {error}");
+        });
 }
 
 #[cfg(test)]

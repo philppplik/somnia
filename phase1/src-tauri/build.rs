@@ -23,6 +23,9 @@ fn main() {
             "recovery_restore",
             "recovery_discard",
             "close_project",
+            "log_write",
+            "log_tail",
+            "log_dir",
         ]),
     ))
     .expect("Tauri build configuration failed");
