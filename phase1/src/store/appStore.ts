@@ -1,3 +1,4 @@
+import {recordActivity} from '../lib/account';
 import {readBackupPrefs,saveBackupPrefs,type BackupPrefs} from '../lib/projectBackups';
 import {readDocumentPrefs,saveDocumentPrefs,type DocumentPrefs} from '../lib/documentPrefs';
 import {readWindowPrefs,saveWindowPrefs,type WindowPrefs} from '../lib/windowPrefs';
@@ -56,7 +57,7 @@ export function getProjectGeneration(){return projectGeneration;}
 export function connectEditorProject(project:EditorProjectPort,options:{name?:string;alreadySaved?:boolean}={}){
  projectGeneration++;unsubscribeCore?.();core=project;savedFiles=options.alreadySaved?{...project.files}:{};
  patchState({zoom:state.canvasPrefs.defaultZoom,viewport:state.canvasPrefs.defaultViewport,responsiveScope:'auto',coreConnected:true,projectName:options.name??'Untitled project',selectedElementId:null,notice:'In-memory project. Native filesystem service is not connected.'});
- unsubscribeCore=project.subscribe('internal',()=>refreshProject());refreshProject();
+ unsubscribeCore=project.subscribe('internal',(tx)=>{if(tx&&typeof tx==='object'&&'origin' in tx&&(tx.origin==='canvas'||tx.origin==='code'))recordActivity('edit');refreshProject();});refreshProject();
  return()=>{if(core!==project)return;projectGeneration++;unsubscribeCore?.();unsubscribeCore=null;core=null;patchState({responsiveScope:'auto',coreConnected:false,files:{},nodes:[],selectedElementId:null,isDirty:false,lastSavedAt:null,notice:'Project closed.'});};
 }
 export function applyOperations(operations:Operation[],origin:Origin='canvas',group?:string){
@@ -69,11 +70,11 @@ export function applyHistory(direction:'undo'|'redo'){
 }
 /** Save integration must pass the exact snapshot it actually wrote; edits during save remain dirty. */
 export function markSaved(snapshot:Readonly<Record<string,string>>,at=new Date().toISOString()){
- savedFiles={...snapshot};patchState({isDirty:isDirty(),lastSavedAt:at,notice:'Saved to disk.'});
+ recordActivity('save');savedFiles={...snapshot};patchState({isDirty:isDirty(),lastSavedAt:at,notice:'Saved to disk.'});
 }
 /** Text of a file as of the last save (empty when never saved). */
 export function getSavedFile(file:string):string{return savedFiles[file]??'';}
-export function markFileSaved(file:string,content:string){savedFiles[file]=content;patchState({isDirty:isDirty(),lastSavedAt:new Date().toISOString(),notice:'Saved to disk.'});}
+export function markFileSaved(file:string,content:string){recordActivity('save');savedFiles[file]=content;patchState({isDirty:isDirty(),lastSavedAt:new Date().toISOString(),notice:'Saved to disk.'});}
 
 /** Open a project file in a tab and make it the active source file. */
 export function openFileTab(path:string){if(!(path in state.files))return;setActiveMedia(null);patchState({openFiles:state.openFiles.includes(path)?state.openFiles:[...state.openFiles,path],activeFile:path,selectedElementId:null});refreshProject();}

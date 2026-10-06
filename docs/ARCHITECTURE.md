@@ -166,7 +166,7 @@ Close flow: native close request -> if dirty, `requestClose('disk' | 'memory')` 
 
 ### 4.2 Client storage
 
-Everything below is in `localStorage` of the app profile; none of it holds file content except the draft and component library.
+Everything below is in `localStorage` of the app profile; none of it holds file content except the draft, component library and the local account avatar.
 
 | Key | Content |
 | --- | --- |
@@ -183,6 +183,7 @@ Everything below is in `localStorage` of the app profile; none of it holds file 
 | `somnia.agent.cloud-consent.v1` | Cloud AI consent record |
 | `somnia.collab.relayUrl` | Custom relay URL |
 | `somnia.updatePrefs.v1`, `somnia.updateCheck.v1`, `somnia.updateCheck.last` | Update settings and last check |
+| `somnia.account.profile.v1`, `somnia.account.activity.v1` | Local nickname + resized raster avatar, and daily contribution counts (no cloud identity or document contents) |
 | `somnia.welcome.seen.v1` | Last version whose welcome popup was shown |
 | `somnia.fixture`, `somnia.section-kit` | Test and example flags (dev builds) |
 
