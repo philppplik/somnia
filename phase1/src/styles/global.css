@@ -247,3 +247,6 @@ body{font-size:var(--ui-font-size,13px)}
 /* Split view: panes must be allowed to shrink below their content size, otherwise a long source file stretches the code pane in the stacked layout and pushes the design pane out of view. */
 .workspace-split>.code-pane{min-height:0;min-width:0;overflow:hidden}
 .workspace-split>:not(.code-pane):not(.split-divider){min-height:0;min-width:0;flex:1 1 0}
+
+.settings-content input[type=range]{accent-color:var(--accent)}
+.settings-range-value{display:flex;align-items:center;gap:12px;flex-shrink:0}.settings-range-value output{min-width:38px;text-align:right;font-variant-numeric:tabular-nums;color:var(--text-secondary)}.settings-content input:disabled{opacity:.45;cursor:not-allowed}

@@ -1215,5 +1215,10 @@
   "canvas.lock.locked": "Verrouill\u00e9",
   "canvas.lock.inherited": "Verrouill\u00e9 par l'\u00e9l\u00e9ment parent {name}",
   "canvasPref.spacingHandles": "Afficher les poign\u00e9es de marge int\u00e9rieure",
-  "canvasPref.selectionColorTheme": "Suivre l'accent du th\u00e8me"
+  "canvasPref.selectionColorTheme": "Suivre l'accent du th\u00e8me",
+  "set.ap.glassBlur": "Flou du verre",
+  "set.ap.glassPanels": "Panneaux intérieurs en verre",
+  "set.ap.glassDetailNote": "Le flou concerne les surfaces de l’app ; le système contrôle le flou du bureau. Le code, les documents et les dialogues restent opaques. Le verre est désactivé en contraste élevé.",
+  "set.ap.outerRadius": "Rayon des coins extérieurs",
+  "set.ap.outerRadiusNote": "Modifie le cadre de l’app et les panneaux de travail. Les contrôles et dialogues gardent leurs propres coins."
 }

@@ -1215,5 +1215,10 @@
   "canvas.lock.locked": "Locked",
   "canvas.lock.inherited": "Locked by parent {name}",
   "canvasPref.spacingHandles": "Show padding handles",
-  "canvasPref.selectionColorTheme": "Follow theme accent"
+  "canvasPref.selectionColorTheme": "Follow theme accent",
+  "set.ap.glassBlur": "Glass blur",
+  "set.ap.glassPanels": "Glass inner panels",
+  "set.ap.glassDetailNote": "Blur applies to app surfaces; native desktop blur follows the operating system. Code, document content and dialogs stay opaque. Glass is disabled in high contrast.",
+  "set.ap.outerRadius": "Outer corner radius",
+  "set.ap.outerRadiusNote": "Changes the app frame and workspace panels. Controls and dialogs keep their own corners."
 }

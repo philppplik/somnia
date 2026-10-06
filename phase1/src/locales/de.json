@@ -1215,5 +1215,10 @@
   "canvas.lock.locked": "Gesperrt",
   "canvas.lock.inherited": "Gesperrt durch \u00fcbergeordnetes Element {name}",
   "canvasPref.spacingHandles": "Padding-Griffe anzeigen",
-  "canvasPref.selectionColorTheme": "Theme-Akzent verwenden"
+  "canvasPref.selectionColorTheme": "Theme-Akzent verwenden",
+  "set.ap.glassBlur": "Glas-Unschärfe",
+  "set.ap.glassPanels": "Innere Panels aus Glas",
+  "set.ap.glassDetailNote": "Die Unschärfe gilt für App-Flächen; die Desktop-Unschärfe steuert das Betriebssystem. Code, Dokumentinhalte und Dialoge bleiben deckend. Bei hohem Kontrast ist Glas deaktiviert.",
+  "set.ap.outerRadius": "Äußerer Eckenradius",
+  "set.ap.outerRadiusNote": "Ändert den App-Rahmen und die Arbeitsbereich-Panels. Bedienelemente und Dialoge behalten ihre eigenen Ecken."
 }

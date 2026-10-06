@@ -3,7 +3,7 @@ html,body,#root{background:var(--shell-bg)}
 .problems-panel{background:transparent;border:0;border-radius:0;box-shadow:none;max-height:30vh;overflow-y:auto;overflow-x:hidden;overflow-wrap:anywhere;min-height:0}.problems-panel code{overflow-wrap:anywhere}
 .editor-layout{gap:0}
 .pane-slot{padding:0}
-.pane-slot>.panel,.center{background:var(--bg-panel);border-radius:var(--r-panel);box-shadow:var(--card-shadow);overflow:hidden}
+.pane-slot>.panel,.center{background:var(--bg-panel);border-radius:var(--r-outer);box-shadow:var(--card-shadow);overflow:hidden}
 .center{background:var(--bg-panel)}
 .resize-handle{background:transparent;border:0;position:relative}
 .resize-handle:hover,.resize-handle:active{background:transparent}
@@ -29,8 +29,8 @@ input,select,textarea{border-radius:var(--r-sm)}
 *::-webkit-scrollbar-thumb{background:var(--border-default);border-radius:8px;border:2px solid transparent;background-clip:content-box}
 *::-webkit-scrollbar-thumb:hover{background:var(--text-tertiary);background-clip:content-box}
 *::-webkit-scrollbar-corner{background:transparent}
-/* Window chrome keeps its own radius, independent of workspace panels. */
-.app-frame{border-radius:calc(var(--r-lg) * 2 - 5px);overflow:hidden}
+/* Outer window chrome and workspace cards share the adjustable outer token. */
+.app-frame{border-radius:var(--r-outer);overflow:hidden}
 :root[data-shell=desktop],:root[data-shell=desktop] body,:root[data-shell=desktop] #root{background:transparent}
 /* Media and Markdown preview */
 .media-checker{background-color:#fff;background-image:linear-gradient(45deg,#0000000d 25%,transparent 25%,transparent 75%,#0000000d 75%),linear-gradient(45deg,#0000000d 25%,transparent 25%,transparent 75%,#0000000d 75%);background-size:16px 16px;background-position:0 0,8px 8px}
@@ -49,17 +49,19 @@ input,select,textarea{border-radius:var(--r-sm)}
 .canvas-stage>.media-bar{margin-inline:0;width:100%}
 .md-preview ul{list-style:disc}.md-preview ol{list-style:decimal}.md-preview ul ul{list-style:circle}
 
-/* Glass is opt-in and gated by native effect success. Keep content, menus,
-   settings and code opaque for stable contrast; only shell/chrome lets the
-   blurred desktop through. Palette tokens remain unchanged. */
+/* Native compositor must confirm glass. Code, dialogs and document contents
+   retain their opaque surfaces; only shell and opt-in workspace cards blend. */
 :root[data-background=glass] .app-frame{
   background:color-mix(in srgb,var(--shell-bg) 68%,transparent);
-  backdrop-filter:blur(24px) saturate(1.15);
-  -webkit-backdrop-filter:blur(24px) saturate(1.15);
+  backdrop-filter:blur(var(--glass-blur)) saturate(1.15);
+  -webkit-backdrop-filter:blur(var(--glass-blur)) saturate(1.15);
 }
-:root[data-background=glass] .pane-slot>.panel,
-:root[data-background=glass] .center{
+:root[data-background=glass][data-glass-panels=true] .pane-slot>.panel,
+:root[data-background=glass][data-glass-panels=true] .center,
+:root[data-background=glass][data-glass-panels=true] .ag-panel{
   background:color-mix(in srgb,var(--bg-panel) 88%,transparent);
+  backdrop-filter:blur(var(--glass-blur));
+  -webkit-backdrop-filter:blur(var(--glass-blur));
 }
 :root[data-background=glass],:root[data-background=glass] body,
 :root[data-background=glass] #root{background:transparent}

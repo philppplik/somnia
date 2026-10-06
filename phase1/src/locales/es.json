@@ -1215,5 +1215,10 @@
   "canvas.lock.locked": "Bloqueado",
   "canvas.lock.inherited": "Bloqueado por el elemento superior {name}",
   "canvasPref.spacingHandles": "Mostrar controladores de relleno",
-  "canvasPref.selectionColorTheme": "Usar el acento del tema"
+  "canvasPref.selectionColorTheme": "Usar el acento del tema",
+  "set.ap.glassBlur": "Desenfoque del cristal",
+  "set.ap.glassPanels": "Paneles interiores de cristal",
+  "set.ap.glassDetailNote": "El desenfoque se aplica a las superficies de la app; el sistema controla el desenfoque del escritorio. El código, los documentos y los diálogos siguen opacos. El cristal se desactiva con contraste alto.",
+  "set.ap.outerRadius": "Radio de las esquinas exteriores",
+  "set.ap.outerRadiusNote": "Cambia el marco de la app y los paneles de trabajo. Los controles y diálogos conservan sus propias esquinas."
 }

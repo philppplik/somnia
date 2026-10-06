@@ -20,10 +20,10 @@ for(const theme of ['light','dark']){
   await expect(gradient).toHaveCSS('border-radius','0px 0px 25px 25px');
   await expect(gradient).toHaveCSS('clip-path','inset(0px round 0px 0px 25px 25px)');
   // One token drives every workspace card and the composited gradient clip.
-  await page.evaluate(()=>document.documentElement.style.setProperty('--r-panel','30px'));
+  await page.evaluate(()=>document.documentElement.style.setProperty('--r-outer','30px'));
   for(const card of await cards.all())await expect(card).toHaveCSS('border-radius','30px');
   await expect(gradient).toHaveCSS('clip-path','inset(0px round 0px 0px 30px 30px)');
-  // Control, popup and outer-window radii must not grow with the workspace cards.
-  await expect(page.locator('.app-frame')).toHaveCSS('border-radius','17px');
+  // App frame shares the outer token; dialog/control tokens stay separate.
+  await expect(page.locator('.app-frame')).toHaveCSS('border-radius','30px');
  });
 }

@@ -1515,6 +1515,36 @@ export function Settings() {
           </label>
           <p id="background-note">{t("set.ap.background.note")}</p>
           <label>
+            {t("set.ap.glassBlur")}
+            <span className="settings-range-value">
+              <input type="range" min="0" max="40" step="1"
+                aria-label={t("set.ap.glassBlur")} aria-describedby="glass-detail-note"
+                aria-valuetext={`${state.look.glassBlur} px`} value={state.look.glassBlur}
+                disabled={state.look.background !== "glass" || state.contrast === "high"}
+                onChange={(e) => change({look:{...state.look,glassBlur:Number(e.target.value)}})} />
+              <output aria-hidden="true">{state.look.glassBlur} px</output>
+            </span>
+          </label>
+          <label>
+            {t("set.ap.glassPanels")}
+            <input type="checkbox" aria-label={t("set.ap.glassPanels")}
+              aria-describedby="glass-detail-note" checked={state.look.glassPanels}
+              disabled={state.look.background !== "glass" || state.contrast === "high"}
+              onChange={(e) => change({look:{...state.look,glassPanels:e.target.checked}})} />
+          </label>
+          <p id="glass-detail-note">{t("set.ap.glassDetailNote")}</p>
+          <label>
+            {t("set.ap.outerRadius")}
+            <span className="settings-range-value">
+              <input type="range" min="0" max="25" step="1"
+                aria-label={t("set.ap.outerRadius")} aria-describedby="outer-radius-note"
+                aria-valuetext={`${state.look.outerRadius} px`} value={state.look.outerRadius}
+                onChange={(e) => change({look:{...state.look,outerRadius:Number(e.target.value)}})} />
+              <output aria-hidden="true">{state.look.outerRadius} px</output>
+            </span>
+          </label>
+          <p id="outer-radius-note">{t("set.ap.outerRadiusNote")}</p>
+          <label>
             {t("set.ap.contrast")}
             <select
               aria-label={t("set.ap.contrast")}

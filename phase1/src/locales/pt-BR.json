@@ -1215,5 +1215,10 @@
   "canvas.lock.locked": "Bloqueado",
   "canvas.lock.inherited": "Bloqueado pelo elemento pai {name}",
   "canvasPref.spacingHandles": "Mostrar al\u00e7as de preenchimento",
-  "canvasPref.selectionColorTheme": "Seguir o destaque do tema"
+  "canvasPref.selectionColorTheme": "Seguir o destaque do tema",
+  "set.ap.glassBlur": "Desfoque do vidro",
+  "set.ap.glassPanels": "Painéis internos de vidro",
+  "set.ap.glassDetailNote": "O desfoque se aplica às superfícies do app; o sistema controla o desfoque da área de trabalho. Código, documentos e diálogos continuam opacos. O vidro é desativado no alto contraste.",
+  "set.ap.outerRadius": "Raio dos cantos externos",
+  "set.ap.outerRadiusNote": "Altera a moldura do app e os painéis de trabalho. Controles e diálogos mantêm seus próprios cantos."
 }
