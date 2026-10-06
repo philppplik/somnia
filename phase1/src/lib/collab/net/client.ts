@@ -14,7 +14,7 @@
  */
 import type * as Y from 'yjs';
 import type {Awareness} from 'y-protocols/awareness';
-import {MSG_SYNC,MSG_AWARENESS,MSG_IDENTITY,encodeSyncStep1,encodeUpdate,encodeAwareness,encodeIdentity,peekSyncType,readIdentity,handleMessage} from './protocol';
+import {MSG_SYNC,MSG_AWARENESS,MSG_IDENTITY,encodeSyncStep1,encodeUpdate,encodeAwareness,encodeIdentity,peekSyncType,readIdentity,handleMessage,MSG_BLOB} from './protocol';
 import type {PublicIdentity,PresencePerson,IdentityMessage} from './protocol';
 import {encryptFrame,decryptFrame,isEncryptedFrame,importLinkKey,linkKeyParam} from './crypto';
 import type {LinkKey} from './crypto';
@@ -153,6 +153,7 @@ export class CollabClient{
     if(!this.linkKey)return; // encrypted traffic without a key: not for us, drop
     frame=await decryptFrame(this.linkKey,bytes);}
    else if(this.linkKey)return; // key session: plaintext sync/awareness is a downgrade attempt, drop
+   if(frame[0]===MSG_BLOB){this.blobHandler?.(frame);return;}
    if(frame[0]!==MSG_SYNC&&frame[0]!==MSG_AWARENESS)return;
    const reply=handleMessage(frame,this.sess.doc,this.sess.awareness,this);
    if(reply)this.sendFrame(reply);
@@ -188,9 +189,13 @@ export class CollabClient{
   const t=this.transport;if(!t||!this.ready)return;
   this.sendChain=this.sendChain.then(async()=>{
    if(!this.ready||this.transport!==t)return;
-   const key=(frame[0]===MSG_SYNC||frame[0]===MSG_AWARENESS)?this.linkKey:null;
+   const key=(frame[0]===MSG_SYNC||frame[0]===MSG_AWARENESS||frame[0]===MSG_BLOB)?this.linkKey:null;
    t.send(key?await encryptFrame(key,frame):frame);});}
 
+ /** Media blob frames (collab-files). Returns false when the socket is not open; blob transfer retries by itself. */
+ sendBlob(frame:Uint8Array):boolean{if(!this.open())return false;this.sendFrame(frame);return true;}
+ setBlobHandler(fn:((frame:Uint8Array)=>void)|null){this.blobHandler=fn;}
+ private blobHandler:((frame:Uint8Array)=>void)|null=null;
  /** Host-only relay commands. A guest sending these is dropped by the relay. */
  setGuestRole(id:string,role:'editor'|'viewer'){this.hostCommand({type:'set-role',id,role});}
  revokeGuest(id:string){this.hostCommand({type:'revoke',id});}

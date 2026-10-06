@@ -10,7 +10,10 @@ export function collabLabel(s:CollabSnapshot,t:(k:string,p?:Record<string,string
  const mode=s.mode==='lan-direct'?t('collab.lan'):s.mode==='relay'?t('collab.relay'):'';
  const n=s.participants.length;
  const parts=[state,mode,s.state==='connected'&&n>0?t('collab.people',{count:n}):''].filter(Boolean);
- const detail=s.security?(s.security.e2e?t('collab.e2e',{fp:s.security.fingerprint??''}):t('collab.noE2e')):'';
+ const sec=s.security?(s.security.e2e?t('collab.e2e',{fp:s.security.fingerprint??''}):t('collab.noE2e')):'';
+ const m=s.media;
+ const media=m&&(m.shared>0||m.failed.length>0)?t('collab.media',{shared:m.shared,received:m.received,pending:m.pending,failed:m.failed.length}):'';
+ const detail=[sec,media].filter(Boolean).join('. ');
  return {label:parts.join(' \u00b7 '),tone,detail};}
 /** Status bar pill. Hidden when nothing is shared or joined, so the bar stays quiet. */
 export function CollabStatus(){

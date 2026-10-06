@@ -103,3 +103,24 @@ test('LAN-Direct host uses the registered desktop host, shares one key, and repo
  await h.startHosting({mode:'lan-direct',lan:true,port:0});s=h.snapshot();
  assert.equal(s.noNetworkAddress,true);assert.equal(s.guestLinks.length,0);assert.ok(s.localLink);
  await h.stopHosting();});
+
+test('relay session shares images and PDFs: bytes arrive intact, status comes from the transfer, frames stay encrypted',async()=>{
+ const hub=blindHub();
+ const png=new Uint8Array(300_000);for(let i=0;i<png.length;i++)png[i]=(i*31)&255;png.set([0x89,0x50,0x4e,0x47,0x0d,0x0a,0x1a,0x0a]);
+ const mkMedia=()=>{const files=new Map<string,Uint8Array>();const ls=new Set<()=>void>();
+  const port={list:()=>[...files].map(([path,b])=>({path,id:path+b.length,size:b.length,read:async()=>b})),
+   async add(p:string,b:Uint8Array){files.set(p,b);ls.forEach(l=>l());return{ok:true as const};},
+   subscribe(f:()=>void){ls.add(f);return()=>{ls.delete(f);};}};return{files,port,put(p:string,b:Uint8Array){files.set(p,b);ls.forEach(l=>l());}};};
+ const hm=mkMedia(),gm=mkMedia();hm.put('img/hero.png',png);
+ const host=fakeProject({'index.html':'<img src="img/hero.png">','a.html':'x'});const guest=fakeProject();
+ const opts={blobOptions:{jitterMs:5,retryMs:100,bytesPerSec:50_000_000}};
+ const h=mk(host,hub,{media:hm.port,...opts}),g=mk(guest,hub,{media:gm.port,...opts});
+ await h.startHosting({mode:'relay',relayUrl:'wss://relay.example.com'});
+ await g.join(h.snapshot().guestLinks[0],'Gabi');
+ await until(()=>gm.files.has('img/hero.png'),6000,'guest received the image');
+ assert.deepEqual(gm.files.get('img/hero.png'),png);
+ await until(()=>g.snapshot().media?.received===1&&g.snapshot().media?.pending===0,3000,'status');
+ assert.deepEqual(g.snapshot().media?.failed,[]);assert.equal(h.snapshot().media?.shared,1);
+ for(const f of hub.frames)assert.equal(f[0],MSG_ENCRYPTED);
+ await g.leave();await h.stopHosting();assert.equal(h.snapshot().media,null);
+});

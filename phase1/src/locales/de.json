@@ -892,6 +892,7 @@
   "collab.people_other": "{count} Personen",
   "collab.e2e": "Ende-zu-Ende verschlüsselt, Schlüssel {fp}",
   "collab.noE2e": "Nicht Ende-zu-Ende verschlüsselt",
+  "collab.media": "Bilder und PDFs: {shared} geteilt, {received} empfangen, {pending} werden geladen, {failed} nicht synchronisiert",
   "share.modeRelay": "Relay",
   "share.modeLan": "LAN-Direct",
   "share.relayUrl": "Relay-Adresse",

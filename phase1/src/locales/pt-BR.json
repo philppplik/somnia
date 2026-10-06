@@ -892,6 +892,7 @@
   "collab.people_other": "{count} pessoas",
   "collab.e2e": "Criptografia de ponta a ponta, chave {fp}",
   "collab.noE2e": "Sem criptografia de ponta a ponta",
+  "collab.media": "Imagens e PDFs: {shared} compartilhados, {received} recebidos, {pending} carregando, {failed} não sincronizados",
   "share.modeRelay": "Relay",
   "share.modeLan": "LAN-Direct",
   "share.relayUrl": "Endereço do relay",
