@@ -1823,6 +1823,8 @@ export function Settings() {
                 ["lineNumbers", t("redesign.lineNumbers")],
                 ["autoIndent", t("redesign.autoIndent")],
                 ["selectionScroll", t("redesign.selectionScroll")],
+                ["mathMarkdown", t("set.ce.math")],
+                ["texBanner", t("set.ce.texBanner")],
               ] as const
             ).map(([k, l]) => (
               <label key={k}>

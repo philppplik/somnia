@@ -2,18 +2,48 @@ import {html} from '@codemirror/lang-html';
 import {css} from '@codemirror/lang-css';
 import {javascript} from '@codemirror/lang-javascript';
 import {json} from '@codemirror/lang-json';
-import {HighlightStyle} from '@codemirror/language';
+import {HighlightStyle,StreamLanguage,type StreamParser} from '@codemirror/language';
 import type {Extension} from '@codemirror/state';
 import {tags} from '@lezer/highlight';
 /** Which editor mode a project file gets. Pure name check so it can be tested without an editor. */
-export type EditorMode='html'|'css'|'javascript'|'typescript'|'json'|'plain';
+export type EditorMode='html'|'css'|'javascript'|'typescript'|'json'|'tex'|'plain';
 export function modeFor(file:string):EditorMode{
  if(/\.html?$/i.test(file))return 'html';
  if(/\.css$/i.test(file))return 'css';
  if(/\.(jsonc?|webmanifest|map)$/i.test(file)||/(^|\/)\.(babelrc|eslintrc|prettierrc)$/i.test(file))return 'json';
+ if(/\.tex$/i.test(file))return 'tex';
  if(/\.tsx?$/i.test(file))return 'typescript';
  if(/\.(jsx?|mjs|cjs)$/i.test(file))return 'javascript';
  return 'plain';}
+/** LaTeX highlighting: % comments, \commands, \begin/\end, and math ($..$, $$..$$, \[..\], \(..\)) as one colour. Stream-based, so it is cheap on big files. */
+const MATH_ENV='(?:equation|align|gather|multline|eqnarray|displaymath|math)\\*?';
+interface TexState{math:''|'$'|'$$'|'\\['|'\\('|'env';}
+const texParser:StreamParser<TexState>={
+ name:'latex',startState:()=>({math:''}),
+ token(stream,state){
+  if(state.math){
+   const close={'$':'$','$$':'$$','\\[':'\\]','\\(':'\\)',env:''}[state.math];
+   while(!stream.eol()){
+    if(state.math==='env'&&stream.match(new RegExp('^\\\\end\\{'+MATH_ENV+'\\}'),false)){if(stream.pos>stream.start)return 'atom';stream.match(new RegExp('^\\\\end\\{'+MATH_ENV+'\\}'));state.math='';return 'keyword';}
+    if(state.math==='env'){if(stream.peek()==='\\\\'&&!stream.match(/^\\\\end\\{/,false)){stream.next();stream.next();continue;}stream.next();continue;}
+    if(stream.peek()==='\\'){stream.next();stream.next();continue;}
+    if(stream.match(close)){state.math='';return 'atom';}
+    stream.next();}
+   return 'atom';}
+  if(stream.eatSpace())return null;
+  const c=stream.peek();
+  if(c==='%'){stream.skipToEnd();return 'comment';}
+  if(c==='$'){stream.next();state.math=stream.eat('$')?'$$':'$';return 'atom';}
+  if(c==='\\'){
+   if(stream.match('\\[')){state.math='\\[';return 'atom';}
+   if(stream.match('\\(')){state.math='\\(';return 'atom';}
+   if(stream.match(new RegExp('^\\\\begin\\{'+MATH_ENV+'\\}'))){state.math='env';return 'keyword';}
+   if(stream.match(/^\\(?:begin|end)\b/))return 'keyword';
+   if(stream.match(/^\\[a-zA-Z]+\*?/))return 'tagName';
+   stream.next();stream.next();return 'tagName';}
+  stream.next();return null;},
+ languageData:{commentTokens:{line:'%'},closeBrackets:{brackets:['(','[','{','$']}}};
+const texLanguage=StreamLanguage.define(texParser);
 /** CodeMirror language support for a file. Unknown types stay plain text. */
 export function languageFor(file:string,closeTags=true):Extension{
  switch(modeFor(file)){
@@ -22,6 +52,7 @@ export function languageFor(file:string,closeTags=true):Extension{
   case 'json':return json();
   case 'typescript':return javascript({jsx:/\.tsx$/i.test(file),typescript:true});
   case 'javascript':return javascript({jsx:true});
+  case 'tex':return texLanguage;
   default:return [];}}
 /** Syntax colours. Uses only the existing --syntax-* theme variables so every code theme keeps working. */
 export const highlightStyle=HighlightStyle.define([

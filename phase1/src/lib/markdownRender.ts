@@ -1,3 +1,5 @@
+import {extractMath,type MathWarning} from './mathExtract';
+import {fillMath,type MathSink} from './mathRender';
 /** Small Markdown to HTML renderer for the preview. Every piece of text is escaped and only tags made here are emitted, so the output is safe to inject. */
 const esc=(s:string)=>s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 /** Only web, mail and in-page links, or plain relative paths. Anything with another scheme (javascript:, data:, ...) is dropped. */
@@ -7,7 +9,7 @@ export function safeUrl(raw:string):string|null{
  if(/^(https?:|mailto:|#)/i.test(u))return u;
  if(/^[a-z][a-z0-9+.-]*:/i.test(u)||u.startsWith('//'))return null;
  return u;}
-export interface MdOptions{/** Resolves an image path to a displayable URL (e.g. an opened PNG). Return null when unknown. */resolveImage?:(src:string)=>string|null}
+export interface MdOptions{/** Turn math into formulas. The sink collects counts and errors; omit to leave $...$ as plain text. */math?:MathSink;/** Resolves an image path to a displayable URL (e.g. an opened PNG). Return null when unknown. */resolveImage?:(src:string)=>string|null}
 function inline(text:string,o:MdOptions):string{
  const codes:string[]=[];
  let t=text.replace(/(`+)([^`]|[^`][\s\S]*?[^`])\1(?!`)/g,(_m,_f,c:string)=>{codes.push(`<code>${esc(c.trim())}</code>`);return `\u0000${codes.length-1}\u0000`;});
@@ -23,7 +25,7 @@ function inline(text:string,o:MdOptions):string{
  return t.replace(/\u0000(\d+)\u0000/g,(_m,i:string)=>codes[+i]);}
 const cells=(line:string)=>line.trim().replace(/^\||\|$/g,'').split('|').map(c=>c.trim());
 const isTableSep=(l:string)=>/^\s*\|?\s*:?-+:?\s*(\|\s*:?-+:?\s*)*\|?\s*$/.test(l)&&l.includes('-');
-export function renderMarkdown(src:string,o:MdOptions={}):string{
+function renderBlocks(src:string,o:MdOptions):string{
  const lines=src.replace(/\r\n?/g,'\n').split('\n');const out:string[]=[];let i=0;
  const blockStart=(l:string)=>/^\s{0,3}(#{1,6}\s|>|```|~~~|([-*_])(\s*\2){2,}\s*$)/.test(l)||/^\s*([-*+]|\d+[.)])\s+/.test(l);
  while(i<lines.length){
@@ -34,7 +36,7 @@ export function renderMarkdown(src:string,o:MdOptions={}):string{
   const h=/^\s{0,3}(#{1,6})\s+(.*?)\s*#*\s*$/.exec(line);
   if(h){out.push(`<h${h[1].length}>${inline(h[2],o)}</h${h[1].length}>`);i++;continue;}
   if(/^\s{0,3}([-*_])(\s*\1){2,}\s*$/.test(line)){out.push('<hr>');i++;continue;}
-  if(/^\s*>/.test(line)){const buf:string[]=[];while(i<lines.length&&/^\s*>/.test(lines[i])){buf.push(lines[i].replace(/^\s*>\s?/,''));i++;}out.push(`<blockquote>${renderMarkdown(buf.join('\n'),o)}</blockquote>`);continue;}
+  if(/^\s*>/.test(line)){const buf:string[]=[];while(i<lines.length&&/^\s*>/.test(lines[i])){buf.push(lines[i].replace(/^\s*>\s?/,''));i++;}out.push(`<blockquote>${renderBlocks(buf.join('\n'),o)}</blockquote>`);continue;}
   if(line.includes('|')&&i+1<lines.length&&isTableSep(lines[i+1])){
    const head=cells(line);const align=cells(lines[i+1]).map(c=>/^:-+:$/.test(c)?'center':/-:$/.test(c)?'right':/^:-/.test(c)?'left':'');i+=2;const rows:string[][]=[];
    while(i<lines.length&&lines[i].trim()&&lines[i].includes('|')){rows.push(cells(lines[i]));i++;}
@@ -47,8 +49,15 @@ export function renderMarkdown(src:string,o:MdOptions={}):string{
     let body=m[3];i++;const sub:string[]=[];
     while(i<lines.length&&lines[i].trim()&&(/^\s{2,}\S/.test(lines[i])||/^(\s*)([-*+]|\d+[.)])\s+/.test(lines[i])&&/^(\s*)/.exec(lines[i])![1].length>base)){sub.push(lines[i].replace(new RegExp(`^\\s{0,${base+2}}`),''));i++;}
     const task=/^\[([ xX])\]\s+(.*)$/.exec(body);let prefix='';if(task){prefix=`<input type="checkbox" disabled${task[1]!==' '?' checked':''}> `;body=task[2];}
-    items.push(`<li>${prefix}${inline(body,o)}${sub.length?renderMarkdown(sub.join('\n'),o):''}</li>`);}
+    items.push(`<li>${prefix}${inline(body,o)}${sub.length?renderBlocks(sub.join('\n'),o):''}</li>`);}
    out.push(`<${ordered?'ol':'ul'}>${items.join('')}</${ordered?'ol':'ul'}>`);continue;}
   const buf=[line];i++;while(i<lines.length&&lines[i].trim()&&!blockStart(lines[i])&&!(lines[i].includes('|')&&i+1<lines.length&&isTableSep(lines[i+1]))){buf.push(lines[i]);i++;}
   out.push(`<p>${buf.map(l=>inline(l.trim(),o)).join('<br>')}</p>`);}
  return out.join('\n');}
+
+export function renderMarkdown(src:string,o:MdOptions={}):string{return renderMarkdownEx(src,o).html;}
+/** Like renderMarkdown, and also reports math warnings (for example an unclosed $$). Math is pulled out before escaping and put back as formula HTML afterwards. */
+export function renderMarkdownEx(src:string,o:MdOptions={}):{html:string;warnings:MathWarning[]}{
+ if(!o.math)return{html:renderBlocks(src,o),warnings:[]};
+ const x=extractMath(src.replace(/\r\n?/g,'\n'));
+ return{html:fillMath(renderBlocks(x.text,o),x.items,o.math),warnings:x.warnings};}

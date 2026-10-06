@@ -268,7 +268,7 @@ async fn read_dropped_files(
                 });
                 continue;
             }
-            if !["html", "htm", "css", "js", "json", "svg", "txt", "md"].contains(&ext.as_str()) {
+            if !["html", "htm", "css", "js", "json", "svg", "txt", "md", "tex"].contains(&ext.as_str()) {
                 continue;
             }
             let mut bytes = Vec::new();

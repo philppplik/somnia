@@ -8,7 +8,8 @@ export const MEDIA_ACCEPT='.png,.jpg,.jpeg,.pdf,image/png,image/jpeg,application
 export const isMarkdown=(f:string)=>/\.md$/i.test(f);
 export const isSvg=(f:string)=>/\.svg$/i.test(f);
 /** True when the file shows as a rendered preview instead of the HTML design canvas. */
-export const isRenderedText=(f:string)=>isMarkdown(f)||isSvg(f);
+export const isTex=(f:string)=>/\.tex$/i.test(f);
+export const isRenderedText=(f:string)=>isMarkdown(f)||isSvg(f)||isTex(f);
 /** Looks at the first bytes so a renamed file is not shown as something it is not. */
 export function sniffMedia(bytes:Uint8Array):{kind:MediaKind;mime:string}|null{
  const b=(...v:number[])=>v.every((x,i)=>bytes[i]===x);
