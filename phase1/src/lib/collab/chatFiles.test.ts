@@ -1,0 +1,19 @@
+import test from 'node:test';import assert from 'node:assert/strict';
+import {CollabDoc} from './collabDoc';import {ChatModel} from './chatModel';import {ChatSession} from './chatSession';import {CollabClient} from './net/client';import {memoryServer} from './net/memoryTransport';import {newLinkKey} from './net/crypto';import {makeUser} from './awarenessSafe';import {CHUNK_BYTES} from './net/blobProtocol';
+const sleep=(ms:number)=>new Promise(r=>setTimeout(r,ms));const until=async(f:()=>boolean,ms=6000)=>{const start=Date.now();while(!f()){if(Date.now()-start>ms)throw Error('timeout');await sleep(10);}};
+test('chat blob transfer uses encrypted 128KiB chunks, progress, host ack, RAM-only cleanup',async()=>{
+ const {server,factory}=memoryServer(),frames:Uint8Array[]=[];server.onConnection(end=>end.transport.connect({onOpen(){},onMessage(frame){frames.push(frame);for(const peer of server.connections)if(peer!==end)peer.transport.send(frame);},onClose(){}}));const key=await newLinkKey();
+ const create=(name:string,role:'host'|'guest')=>{const project=new CollabDoc(),model=new ChatModel();project.awareness.setLocalStateField('user',makeUser(name,project.doc.clientID));const client=new CollabClient(`ws://127.0.0.1/room/abcdefgh#key=${key.param}`,{session:{doc:project.doc,awareness:project.awareness},chatDoc:model.doc,transport:factory,syncTimeoutMs:15});const chat=new ChatSession(project,client,role,model);client.setBlobHandler(f=>chat.blobs.handle(f));return{project,model,client,chat};};
+ const host=create('Mara','host'),guest=create('Ayse','guest');let keptUrl='';
+ try{await host.client.connect();await guest.client.connect();const bytes=new Uint8Array(CHUNK_BYTES*2+33);bytes.set([0x25,0x50,0x44,0x46,0x2d]);const attachment=await host.chat.attach(new File([bytes],'notes.pdf',{type:'application/pdf'}));
+ // Draft files are not published before send.
+ await sleep(50);assert.equal(host.model.doc.getMap('media').size,0);assert.equal(guest.model.doc.getMap('media').size,0);
+ const message=host.chat.send('PDF reference',[guest.chat.localId],undefined,[attachment]);await until(()=>Boolean(guest.chat.file(attachment.id)));assert.deepEqual(guest.chat.file(attachment.id)?.bytes,bytes);assert.equal(guest.chat.blobs.progress(attachment.id).state,'ready');assert.equal(guest.chat.blobs.progress(attachment.id).received,bytes.length);assert.equal(host.project.doc.getMap('media').size,0);assert.equal(guest.project.snapshot()[attachment.name],undefined);assert.ok(host.model.sequence(message.id));assert.ok(frames.every(f=>f[0]===3));assert.ok(Math.max(...frames.map(f=>f.length))<CHUNK_BYTES+200);
+ const reply=guest.chat.send('Got it.',[],message.id);await until(()=>Boolean(guest.model.sequence(reply.id)));assert.equal(host.chat.notification,reply.id);keptUrl=guest.chat.file(attachment.id)!.url;
+ guest.chat.destroy();assert.equal(guest.chat.file(attachment.id),undefined);assert.equal(guest.chat.unread,0);assert.equal(guest.model.doc.isDestroyed,true);await assert.rejects(fetch(keptUrl));
+ }finally{host.chat.destroy();guest.chat.destroy();host.client.leave();guest.client.leave();host.project.destroy();guest.project.destroy();}
+});
+test('destroy during attachment preparation and oversize attachments never create URLs',async()=>{
+ const project=new CollabDoc(),model=new ChatModel(),{factory}=memoryServer();project.awareness.setLocalStateField('user',makeUser('Mara',project.doc.clientID));const client=new CollabClient('ws://127.0.0.1/room/abcdefgh',{session:{doc:project.doc,awareness:project.awareness},transport:factory});const session=new ChatSession(project,client,'host',model);
+ try{await assert.rejects(session.attach(new File([new Uint8Array(10_000_001)],'big.bin')));const pending=session.attach(new File(['abc'],'draft.bin'));session.destroy();await assert.rejects(pending);assert.equal(session.model.doc.isDestroyed,true);assert.equal(session.unread,0);}finally{session.destroy();client.leave();project.destroy();}
+});

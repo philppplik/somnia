@@ -199,6 +199,7 @@ async fn read_dropped_files(
     window: WebviewWindow,
     state: State<'_, Shared>,
     token: String,
+    chat: Option<bool>,
 ) -> Result<Vec<DroppedTextFile>> {
     gate(&window)?;
     work(state.inner().clone(), move |backend| {
@@ -218,6 +219,32 @@ async fn read_dropped_files(
                 .unwrap_or_default()
                 .to_string_lossy()
                 .to_ascii_lowercase();
+            if chat.unwrap_or(false) {
+                if files.len() >= 5 {
+                    return Err(AppError::Limit);
+                }
+                let mut bytes = Vec::new();
+                std::fs::File::open(&path)?
+                    .take(10_000_001)
+                    .read_to_end(&mut bytes)?;
+                if bytes.is_empty() || bytes.len() > 10_000_000 {
+                    return Err(AppError::Limit);
+                }
+                total += bytes.len();
+                if total > 50_000_000 {
+                    return Err(AppError::Limit);
+                }
+                files.push(DroppedTextFile {
+                    name: path
+                        .file_name()
+                        .unwrap_or_default()
+                        .to_string_lossy()
+                        .into_owned(),
+                    text: String::new(),
+                    base64: Some(base64_encode(&bytes)),
+                });
+                continue;
+            }
             if MEDIA_EXTENSIONS.contains(&ext.as_str()) {
                 let mut bytes = Vec::new();
                 std::fs::File::open(&path)?
@@ -276,6 +303,8 @@ struct DropReply {
     count: usize,
     /// True when every dropped path is a PNG, JPEG or PDF file (media, not a project).
     media: bool,
+    /// Physical drop position for routing to the visible session-chat target.
+    position: [f64; 2],
 }
 /// True when the app runs from a Microsoft Store (MSIX) package. Such installs are updated by the Store, so the GitHub updater stays off.
 #[tauri::command]
@@ -661,7 +690,7 @@ pub fn run() {
         })
         .on_window_event(|window, event| {
             if window.label() == "main" {
-                if let tauri::WindowEvent::DragDrop(tauri::DragDropEvent::Drop { paths, .. }) =
+                if let tauri::WindowEvent::DragDrop(tauri::DragDropEvent::Drop { paths, position, .. }) =
                     event
                 {
                     let shared = window.state::<Shared>();
@@ -670,6 +699,7 @@ pub fn run() {
                         let reply = DropReply {
                             token: grant.token().to_owned(),
                             count: paths.len(),
+                            position: [position.x, position.y],
                             media: paths.iter().all(|p| {
                                 p.extension()
                                     .map(|e| e.to_string_lossy().to_ascii_lowercase())

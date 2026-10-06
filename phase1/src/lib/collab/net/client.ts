@@ -12,9 +12,10 @@
  *   the Y.Doc itself stays the source of truth, so an outbox overflow is covered by the sync handshake.
  * - reconnect: dropped connections retry with exponential backoff + jitter; revoked/blocked closes are final.
  */
-import type * as Y from 'yjs';
+import * as Y from 'yjs';
+import {MSG_CHAT_SYNC,chatStep1,chatUpdate,handleChatFrame} from '../chatProtocol';
 import type {Awareness} from 'y-protocols/awareness';
-import {MSG_SYNC,MSG_AWARENESS,MSG_IDENTITY,encodeSyncStep1,encodeUpdate,encodeAwareness,encodeIdentity,peekSyncType,readIdentity,handleMessage,MSG_BLOB} from './protocol';
+import {MAX_RELAY_FRAME_BYTES,MSG_SYNC,MSG_AWARENESS,MSG_IDENTITY,encodeSyncStep1,encodeUpdate,encodeAwareness,encodeIdentity,peekSyncType,readIdentity,handleMessage,MSG_BLOB} from './protocol';
 import type {PublicIdentity,PresencePerson,IdentityMessage} from './protocol';
 import {encryptFrame,decryptFrame,isEncryptedFrame,importLinkKey,linkKeyParam} from './crypto';
 import type {LinkKey} from './crypto';
@@ -49,6 +50,8 @@ export type CollabMode='lan-direct'|'relay';
 export interface CollabSession{doc:Y.Doc;awareness:Awareness}
 export interface CollabClientOptions{
  session:CollabSession;
+ /** Separate volatile chat doc. Chat requires an encrypted link. */
+ chatDoc?:Y.Doc;
  /** Where this link points, for honest UI labels. The wire behaviour is identical. */
  mode?:CollabMode;
  transport?:TransportFactory;
@@ -90,13 +93,15 @@ export class CollabClient{
  private connectDone:(()=>void)|null=null;
  private connectFail:((e:Error)=>void)|null=null;
  private offDoc:()=>void;
+ private offChat:()=>void=()=>{};private chatDoc:Y.Doc|undefined;
  private offAware:()=>void;
  private tf:TransportFactory;
  private sess:CollabSession;
  private o:{maxAttempts:number;baseDelayMs:number;maxDelayMs:number;syncTimeoutMs:number;outboxLimit:number;random?:()=>number};
 
  constructor(private invite:string,opts:CollabClientOptions){
-  this.sess=opts.session;
+  this.sess=opts.session;this.chatDoc=opts.chatDoc;
+  if(this.chatDoc){const onChat=(u:Uint8Array,origin:unknown)=>{if(origin!==this&&this.linkKey&&this.open())this.sendFrame(chatUpdate(u));};this.chatDoc.on('update',onChat);this.offChat=()=>this.chatDoc?.off('update',onChat);}
   this.o={maxAttempts:opts.maxAttempts??6,baseDelayMs:opts.baseDelayMs??500,maxDelayMs:opts.maxDelayMs??15_000,
    syncTimeoutMs:opts.syncTimeoutMs??2_000,outboxLimit:opts.outboxLimit??1_000,random:opts.random};
   this.tf=opts.transport??webSocketTransport;
@@ -156,6 +161,7 @@ export class CollabClient{
     for(const u of this.outbox.splice(0))this.sendFrame(encodeUpdate(u));
     this.patch({queued:0});
     this.sendFrame(encodeSyncStep1(this.sess.doc));
+    if(this.chatDoc&&this.linkKey&&!this.chatDoc.isDestroyed){this.sendFrame(chatStep1(this.chatDoc));this.sendFrame(chatUpdate(Y.encodeStateAsUpdate(this.chatDoc)));}
     if(this.sess.awareness.getLocalState())this.sendFrame(encodeAwareness(this.sess.awareness,[this.sess.doc.clientID]));
     this.armSyncTimeout(t);}
 
@@ -188,6 +194,7 @@ export class CollabClient{
     frame=await decryptFrame(this.linkKey,bytes);}
    else if(this.linkKey)return; // key session: plaintext sync/awareness is a downgrade attempt, drop
    if(this.transport!==transport||!this.open())return;
+   if(frame[0]===MSG_CHAT_SYNC){if(!this.linkKey||!this.chatDoc||this.chatDoc.isDestroyed)return;const reply=handleChatFrame(frame,this.chatDoc,this);if(reply)this.sendFrame(reply);return;}
    if(frame[0]===MSG_BLOB){this.blobHandler?.(frame);return;}
    if(frame[0]!==MSG_SYNC&&frame[0]!==MSG_AWARENESS)return;
    const reply=handleMessage(frame,this.sess.doc,this.sess.awareness,this);
@@ -225,10 +232,13 @@ export class CollabClient{
 
  /** Ordered, encrypted send. Sync/awareness frames are encrypted when the link carries a key; identity never is. */
  private sendFrame(frame:Uint8Array){
+  // Never let a growing volatile chat snapshot take the project socket down with 1009.
+  // Epoch compaction is a follow-up; oversized chat frames stay local rather than claiming delivery.
+  if(frame[0]===MSG_CHAT_SYNC&&frame.length>MAX_RELAY_FRAME_BYTES-64)return;
   const t=this.transport;if(!t||!this.ready||(this.managed&&!this.acknowledged))return;
   this.sendChain=this.sendChain.then(async()=>{
    if(!this.ready||this.transport!==t)return;
-   const key=(frame[0]===MSG_SYNC||frame[0]===MSG_AWARENESS||frame[0]===MSG_BLOB)?this.linkKey:null;
+   const key=(frame[0]===MSG_SYNC||frame[0]===MSG_AWARENESS||frame[0]===MSG_BLOB||frame[0]===MSG_CHAT_SYNC)?this.linkKey:null;
    const bytes=key?await encryptFrame(key,frame):frame;
    if(this.ready&&this.transport===t)t.send(bytes);});}
 
@@ -248,7 +258,7 @@ export class CollabClient{
   if(this.expiryTimer){clearTimeout(this.expiryTimer);this.expiryTimer=null;}
   if(this.timer){clearTimeout(this.timer);this.timer=null;}
   this.transport?.close(1000,'leave');this.transport=null;this.ready=false;
-  this.offDoc();this.offAware();
+  this.offDoc();this.offAware();this.offChat();
   this.outbox=[];
   this.patch({state:'idle',synced:false,identity:null,people:[],queued:0});
   const r=this.connectFail;this.connectDone=this.connectFail=null;r?.(new Error('left before sync'));}}

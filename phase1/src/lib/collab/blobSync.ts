@@ -36,6 +36,8 @@ export interface BlobSyncDeps{
 export interface BlobSyncOptions{
  /** Paced upload rate for answers. Relay default budget is 1,000,000 B/s per connection; stay well below. Default 400,000. */
  bytesPerSec?:number;
+ /** Chat uses a distinct doc/store and stricter RAM budget. Defaults retain project policy. */
+ policy?:{path:(path:string)=>boolean;maxFile:number;maxTotal:number;maxFiles:number};
  /** Responder jitter window in ms. Default 120. */
  jitterMs?:number;
  /** Retry interval for unanswered requests in ms. Default 2000. */
@@ -68,21 +70,25 @@ export class BlobSync{
  private hashes=new Map<string,{id:string;size:number;hash:string}>(); // path -> hash of the local bytes, so unchanged files are not re-read
  private stopped=false;private scanning=false;private rescan=false;private received=0;
  private offPort:()=>void;
- private o:Required<Omit<BlobSyncOptions,'random'|'now'>>&{random:()=>number;now:()=>number};
+ private o:Required<Omit<BlobSyncOptions,'random'|'now'|'policy'>>&{random:()=>number;now:()=>number};
  private onManifest=()=>{void this.scan();};
- constructor(private c:CollabDoc,private d:BlobSyncDeps,opts:BlobSyncOptions={}){
+ constructor(private c:Pick<CollabDoc,'doc'>,private d:BlobSyncDeps,opts:BlobSyncOptions={}){
+  this.policy=opts.policy??{path:p=>isSafeProjectPath(p)&&MEDIA_PATH.test(p),maxFile:MAX_SHARED_MEDIA_FILE,maxTotal:MAX_SHARED_MEDIA_BYTES,maxFiles:MAX_SHARED_MEDIA_FILES};
   this.o={bytesPerSec:opts.bytesPerSec??400_000,jitterMs:opts.jitterMs??120,retryMs:opts.retryMs??2000,maxRetries:opts.maxRetries??8,
    random:opts.random??Math.random,now:opts.now??Date.now};
   this.media.observe(this.onManifest);
   this.offPort=d.port.subscribe(()=>{void this.scan();});
   this.retry=setInterval(()=>this.tick(),this.o.retryMs);
   void this.scan();}
+ private policy:{path:(path:string)=>boolean;maxFile:number;maxTotal:number;maxFiles:number};
+ progress(path:string){const e=this.manifest().get(path);if(!e)return{received:0,total:0,state:'pending' as const};const dl=this.downloads.get(e.hash);const f=this.failed.get(path);let received=0;dl?.chunks.forEach(b=>received+=b.length);return{received:this.known.get(path)===e.hash?e.size:received,total:e.size,state:f?'unavailable':this.known.get(path)===e.hash?'ready':'pending'};}
+ private entry(path:string,v:unknown):Entry|null{if(!this.policy.path(path)||!v||typeof v!=='object')return null;const {hash,size}=v as Entry;return typeof hash==='string'&&HASH_RE.test(hash)&&Number.isInteger(size)&&size>0&&size<=this.policy.maxFile?{hash,size}:null;}
  private get media(){return this.c.doc.getMap<Entry>('media');}
 
  snapshot():MediaSnapshot{
   return{shared:this.manifest().size,received:this.received,pending:this.downloads.size,failed:[...this.failed.values()]};}
  private manifest():Map<string,Entry>{
-  const m=new Map<string,Entry>();this.media.forEach((v,k)=>{const e=parseManifestEntry(k,v);if(e)m.set(k,e);});return m;}
+  const m=new Map<string,Entry>();this.media.forEach((v,k)=>{const e=this.entry(k,v);if(e)m.set(k,e);});return m;}
  private changed(){this.d.onChange?.();}
 
  /** Publish local media and fetch missing remote media. Serialised: a second call during a scan runs once more afterwards. */
@@ -97,7 +103,7 @@ export class BlobSync{
   const local=this.d.port.list();const localPaths=new Set<string>();
   for(const item of local){
    if(this.stopped)return;
-   if(!isSafeProjectPath(item.path)||!MEDIA_PATH.test(item.path)||item.size<1||item.size>MAX_SHARED_MEDIA_FILE)continue;
+   if(!this.policy.path(item.path)||item.size<1||item.size>this.policy.maxFile)continue;
    localPaths.add(item.path);
    let hash:string,bytes:Uint8Array|undefined;
    const cached=this.hashes.get(item.path);
@@ -111,8 +117,8 @@ export class BlobSync{
    // A remote version we never held, or still hold unchanged, wins and is fetched below.
    if(!inDoc||(prev!==undefined&&prev!==hash)){
     // new local file, or a local replacement of what we had synced: publish
-    if(!inDoc&&man.size>=MAX_SHARED_MEDIA_FILES){this.fail(item.path,'limit',`Not shared: a session shares at most ${MAX_SHARED_MEDIA_FILES} media files.`);continue;}
-    if(this.totalBytes(man,item.path)+item.size>MAX_SHARED_MEDIA_BYTES){this.fail(item.path,'limit',`Not shared: the session's media limit of ${MAX_SHARED_MEDIA_BYTES/1_000_000} MB is reached.`);continue;}
+    if(!inDoc&&man.size>=this.policy.maxFiles){this.fail(item.path,'limit',`Not shared: a session shares at most ${MAX_SHARED_MEDIA_FILES} media files.`);continue;}
+    if(this.totalBytes(man,item.path)+item.size>this.policy.maxTotal){this.fail(item.path,'limit',`Not shared: the session's media limit of ${MAX_SHARED_MEDIA_BYTES/1_000_000} MB is reached.`);continue;}
     this.blobs.set(hash,bytes);this.known.set(item.path,hash);
     this.c.doc.transact(()=>this.media.set(item.path,{hash,size:item.size}),'media');
     man.set(item.path,{hash,size:item.size});this.failed.delete(item.path);}}
@@ -126,7 +132,7 @@ export class BlobSync{
    const dl=this.downloads.get(e.hash);
    if(dl){dl.paths.add(path);continue;}
    if(this.downloads.size>=4)continue;               // bounded parallelism; the rest starts as these finish
-   if(total+e.size>MAX_SHARED_MEDIA_BYTES){this.fail(path,'limit','Not received: the media limit of 60 MB for one session is reached.');continue;}
+   if(total+e.size>this.policy.maxTotal){this.fail(path,'limit','Not received: the media limit of 60 MB for one session is reached.');continue;}
    total+=e.size;
    this.downloads.set(e.hash,{hash:e.hash,size:e.size,total:chunkCount(e.size),chunks:new Map(),paths:new Set([path]),idle:0,corrupt:0});
    this.failed.delete(path);this.request(this.downloads.get(e.hash)!);}
@@ -136,7 +142,7 @@ export class BlobSync{
  private fail(path:string,reason:MediaFailure['reason'],message:string){this.failed.set(path,{path,reason,message});}
 
  private async install(path:string,e:Entry,bytes:Uint8Array){
-  const r=await this.d.port.add(path,bytes);
+  if(this.stopped)return;const r=await this.d.port.add(path,bytes);if(this.stopped)return;
   if('error' in r){this.fail(path,'refused',r.error);this.known.set(path,e.hash);return;}
   this.known.set(path,e.hash);this.failed.delete(path);this.received++;}
 
@@ -174,7 +180,7 @@ export class BlobSync{
   this.heard.set(`${f.hash}:${f.index}`,this.o.now());
   const dl=this.downloads.get(f.hash);if(!dl||f.total!==dl.total||dl.chunks.has(f.index))return;
   if(f.data.length!==expectedChunkLength(dl.size,f.index))return;    // wrong size: drop, the retry asks again
-  dl.chunks.set(f.index,f.data);dl.idle=0;
+  dl.chunks.set(f.index,f.data);dl.idle=0;this.changed();
   if(dl.chunks.size===dl.total)void this.finish(dl);
   else if(dl.chunks.size%MAX_REQUEST_WINDOW===0)this.request(dl);}
  private async finish(dl:Download){
