@@ -115,3 +115,33 @@ test('stream: abort ends with finish(aborted), no throw', async () => {
   assert.deepEqual(ev[1], { type: 'finish', reason: 'aborted' });
   assert.deepEqual(await collect(mk(async () => json({})).stream(req({ signal: AbortSignal.abort() }))), [{ type: 'finish', reason: 'aborted' }]);
 });
+
+const show = (body: unknown, status = 200) => mk(async (u, i) => { assert.ok(u.endsWith('/api/show')); assert.equal(JSON.parse(String(i?.body)).model, 'llama3.2'); return json(body, status); });
+
+test('verifyLocalModel: passes only with local weights metadata', async () => {
+  assert.deepEqual(await show({ model_info: { 'general.architecture': 'llama' }, details: {} }).verifyLocalModel('llama3.2'), { local: true, model: 'llama3.2' });
+});
+
+test('verifyLocalModel: fails closed (remote marker, missing metadata, errors, non-loopback, cloud name)', async () => {
+  const reason = async (p: OllamaProvider, m = 'llama3.2') => { const r = await p.verifyLocalModel(m); return r.local ? 'LOCAL' : r.reason; };
+  assert.equal(await reason(show({ remote_host: 'https://ollama.com:443', model_info: { a: 1 } })), 'remote-model');
+  assert.equal(await reason(show({ remote_model: 'gpt-oss:120b', model_info: { a: 1 } })), 'remote-model');
+  assert.equal(await reason(show({ details: {} })), 'no-local-weights');
+  assert.equal(await reason(show({ model_info: {} })), 'no-local-weights');
+  assert.equal(await reason(show({}, 404)), 'model-not-found');
+  assert.equal(await reason(show({}, 500)), 'invalid-response');
+  assert.equal(await reason(mk(async () => new Response('nope'))), 'invalid-response');
+  assert.equal(await reason(mk(async () => { throw new TypeError('x'); })), 'unreachable');
+  assert.equal(await reason(mk(async () => json({ model_info: { a: 1 } })), 'gpt-oss:120b-cloud'), 'cloud-name');
+  assert.equal(await reason(mk(async () => json({ model_info: { a: 1 } })), 'qwen3:cloud'), 'cloud-name');
+  let called = false;
+  const remote = new OllamaProvider({ baseUrl: 'http://192.168.1.5:11434', fetch: (async () => { called = true; return json({ model_info: { a: 1 } }); }) as never });
+  assert.equal(await reason(remote), 'endpoint-not-loopback'); assert.equal(called, false);
+});
+
+test('stream: a local provider refuses chunks that carry a remote marker', async () => {
+  const p = mk(async () => nd([JSON.stringify({ message: { content: 'x' }, remote_host: 'https://ollama.com:443' })]));
+  await assert.rejects(collect(p.stream(req())), code('not-local'));
+  const cloud = new OllamaProvider({ baseUrl: 'https://ollama.example.com', fetch: (async () => nd([JSON.stringify({ message: { content: 'x' }, remote_host: 'h' }), JSON.stringify({ done: true })])) as never });
+  assert.equal((await collect(cloud.stream(req()))).at(-1)?.type, 'finish');
+});

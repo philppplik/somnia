@@ -2,6 +2,8 @@ import { ProviderError } from '../errors';
 import type { AgentMessage, AgentProvider, AgentProviderEvent, AgentProviderRequest } from '../provider';
 
 export interface HealthStatus { ok: boolean; version?: string; error?: { code: string; message: string } }
+export type LocalCheckReason = 'endpoint-not-loopback' | 'remote-model' | 'cloud-name' | 'no-local-weights' | 'unreachable' | 'model-not-found' | 'invalid-response';
+export type LocalVerification = { local: true; model: string } | { local: false; model: string; reason: LocalCheckReason; message: string };
 export interface ModelInfo { id: string; label: string; sizeBytes?: number; details?: Record<string, string> }
 
 export const OLLAMA_DEFAULT_URL = 'http://127.0.0.1:11434';
@@ -82,6 +84,35 @@ export class OllamaProvider implements AgentProvider {
     return new ProviderError('unreachable', `Cannot reach Ollama at ${this.baseUrl}. Is it running? (${(e as Error)?.message ?? e})`);
   }
 
+  /**
+   * Fail-closed check that `model` runs on this machine. Core calls this before it sets processing:'local'.
+   * Passes only if ALL hold: endpoint is http loopback; POST /api/show succeeds; the response has no
+   * remote_host/remote_model (Ollama's marker for cloud passthrough models); the name is not a *-cloud / :cloud tag;
+   * and model_info is a non-empty object (positive evidence of local weights; cloud entries may omit it).
+   * Any error or odd response means local:false. Never throws.
+   * Limit: this trusts the daemon's own answer. A proxy that fakes /api/show cannot be detected from here.
+   */
+  async verifyLocalModel(model: string, signal?: AbortSignal): Promise<LocalVerification> {
+    const no = (reason: LocalCheckReason, message: string): LocalVerification => ({ local: false, model, reason, message });
+    if (this.locality !== 'local') return no('endpoint-not-loopback', `Endpoint ${this.baseUrl} is not an http loopback address`);
+    if (/(^|[:\-_/])cloud$/i.test(model.trim())) return no('cloud-name', `Model "${model}" is a cloud tag`);
+    const t = withTimeout(signal, this.timeout);
+    try {
+      const r = await this.f(this.baseUrl + '/api/show', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ model }), signal: t.signal });
+      if (r.status === 404) return no('model-not-found', `Model "${model}" is not installed`);
+      if (!r.ok) return no('invalid-response', `Ollama answered ${r.status} for /api/show`);
+      let j: { remote_host?: unknown; remote_model?: unknown; model_info?: unknown };
+      try { j = await r.json(); } catch { return no('invalid-response', 'Invalid JSON from /api/show'); }
+      if (!j || typeof j !== 'object') return no('invalid-response', 'Unexpected /api/show response');
+      if (j.remote_host || j.remote_model) return no('remote-model', `Model "${model}" is served by a remote host`);
+      if (!j.model_info || typeof j.model_info !== 'object' || Object.keys(j.model_info).length === 0) return no('no-local-weights', `No local model metadata for "${model}"`);
+      return { local: true, model };
+    } catch (e) {
+      const pe = this.toError(e, t.signal, signal);
+      return no('unreachable', pe.message);
+    } finally { t.done(); }
+  }
+
   async health(signal?: AbortSignal): Promise<HealthStatus> {
     try {
       const r = await this.get('/api/version', signal);
@@ -143,6 +174,7 @@ export class OllamaProvider implements AgentProvider {
       if (!line.trim()) return [];
       let j: OllamaChunk;
       try { j = JSON.parse(line); } catch { throw new ProviderError('protocol', 'Invalid line in Ollama stream'); }
+      if (this.locality === 'local' && (j.remote_host || j.remote_model)) throw new ProviderError('not-local', 'Ollama answered from a remote host; refusing to treat this as local processing');
       if (j.error) throw new ProviderError(/not found/i.test(j.error) ? 'model-not-found' : 'http', j.error);
       const out: AgentProviderEvent[] = [];
       if (j.message?.content) out.push({ type: 'text', text: j.message.content });
@@ -186,7 +218,7 @@ export class OllamaProvider implements AgentProvider {
 
 interface OllamaChunk {
   message?: { content?: string; tool_calls?: Array<{ id?: string; function?: { name?: string; arguments?: unknown } }> };
-  done?: boolean; done_reason?: string; error?: string; prompt_eval_count?: number; eval_count?: number;
+  done?: boolean; done_reason?: string; error?: string; remote_host?: string; remote_model?: string; prompt_eval_count?: number; eval_count?: number;
 }
 
 /** Maps contract messages to Ollama's /api/chat shape. Tool results are keyed by tool name, so resolve it from the earlier assistant call. */

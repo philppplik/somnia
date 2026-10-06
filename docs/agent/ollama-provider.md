@@ -21,6 +21,23 @@ Local models through the Ollama daemon. Code: `phase1/src/lib/agent/providers/ol
 | Context window | Optional `numCtx` constructor option, sent as `options.num_ctx` (positive integer). Unset means the daemon default. Ollama may clamp it to what the model or memory allows, so a larger value is a request, not a guarantee; do not advertise context sizes in the UI. |
 | Extras (not in contract) | `listModels()` (`GET /api/tags`, sorted, with size/details) and `health()` (`GET /api/version`, never throws). For the settings/model picker UI. 5 s timeout on those. |
 
+## Local verification (`verifyLocalModel`)
+
+Core must call `await provider.verifyLocalModel(model)` and set `processing:'local'` only on `{ local: true }`. Cloud-flavoured Ollama models (for example `...-cloud` tags) and a loopback daemon that forwards to a hosted model both look "local" by URL, so the URL check alone is not enough.
+
+It calls `POST /api/show` and passes only if all of these hold, otherwise it returns `{ local: false, reason, message }` (it never throws, errors fail closed):
+
+1. The endpoint is http loopback (`locality === 'local'`); no request is sent otherwise.
+2. The model name is not a `-cloud` / `:cloud` tag.
+3. The response has no `remote_host` / `remote_model` (the fields Ollama sets for models it forwards to another host; present in `/api/show`, `/api/tags` and chat chunks in Ollama's `api/types.go`).
+4. `model_info` is a non-empty object, as positive evidence of local weights. Cloud models can omit `model_info` (ollama-python issue 607), so a missing one is treated as not local.
+
+Reasons: `endpoint-not-loopback`, `cloud-name`, `remote-model`, `no-local-weights`, `model-not-found`, `unreachable`, `invalid-response`.
+
+Defense in depth: while streaming, a provider with `locality:'local'` throws `ProviderError('not-local')` if any chunk carries `remote_host` / `remote_model`, so a model that turns out to be remote is cut off mid-turn; Core should discard that turn.
+
+Limits: this trusts what the daemon says. A custom local proxy that fakes `/api/show` and strips the remote fields cannot be detected from the adapter. Re-verify per session and after the user changes model or endpoint; do not cache across them. These fields come from Ollama's source and docs; not tested against a live daemon.
+
 ## Assumptions (confirmed by agent/core unless noted)
 
 Confirmed by Core: errors throw typed `ProviderError`; `finish: 'aborted'` is treated as cancelled; `stop`/`tool_calls` give reviewable turns, `length`/`aborted` discard partial proposals.
