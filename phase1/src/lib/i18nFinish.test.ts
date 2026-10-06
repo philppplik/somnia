@@ -49,3 +49,17 @@ test('preview blocked/error plural messages preserve every placeholder in all lo
   assert.ok(!translate(locale,'finish2.preview.errors',{count}).includes('{'));
  }
 });
+test('LAN host settings have translated labels and guidance in every language',()=>{
+ const keys=['title','listenOn','local','network','port','portHelp','networkWarning','localHelp'].map(k=>'share.lanSettings.'+k);
+ for(const [locale,cat] of Object.entries(CATALOGUES))for(const key of keys)assert.ok(cat[key]?.trim(),`${locale}: ${key}`);
+ const source=readFileSync(new URL('../components/LanHostSettings.tsx',import.meta.url),'utf8');
+ for(const match of source.matchAll(/t\(['"]([^'"]+)['"]/g))for(const [locale,cat] of Object.entries(CATALOGUES))assert.ok(cat[match[1]]?.trim(),`${locale}: ${match[1]}`);
+});
+
+test('collaboration UI literal translation keys exist in all five catalogues',()=>{
+ for(const file of ['LanHostSettings.tsx','ShareDialog.tsx','CollabStatus.tsx']){
+  const source=readFileSync(new URL('../components/'+file,import.meta.url),'utf8');
+  for(const match of source.matchAll(/\bt\(['"]([^'"]+)['"]/g))for(const [locale,cat] of Object.entries(CATALOGUES))assert.ok(cat[match[1]]?.trim()||cat[match[1]+'_one']?.trim()||cat[match[1]+'_other']?.trim(),`${locale}: ${file}: ${match[1]}`);
+ }
+ for(const kind of ['bad-link','refused','expired','blocked','unreachable','full','unsaved-project','no-project','start-failed'])for(const [locale,cat] of Object.entries(CATALOGUES))assert.ok(cat[`share.err.${kind}`]?.trim(),`${locale}: share.err.${kind}`);
+});

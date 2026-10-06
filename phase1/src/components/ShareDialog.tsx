@@ -11,7 +11,9 @@ import type {CollabSnapshot,CollabError} from '../lib/collab/types';
 import '../lib/collab/commands';
 const field='h-9 w-full rounded-sm border border-line bg-elevated px-2.5 text-[12px] text-ink';
 type T=(k:string,p?:Record<string,string|number>)=>string;
-const errText=(e:CollabError,t:T)=>e.kind==='start-failed'&&e.message?e.message:t(`share.err.${e.kind}`);
+// Error messages from the engine and operating system are diagnostics, not catalogue text.
+// Show the translated message for the stable error kind instead of leaking English diagnostics into the UI.
+const errText=(e:CollabError,t:T)=>t(`share.err.${e.kind}`);
 function LinkRow({label,link,testId}:{label:string;link:string;testId:string}){
  const {t}=useT();const [shown,setShown]=useState(false);const [copied,setCopied]=useState(false);
  const copy=async()=>{try{await navigator.clipboard.writeText(link);setCopied(true);setTimeout(()=>setCopied(false),1500);}catch{setShown(true);}};
