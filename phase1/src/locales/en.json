@@ -411,7 +411,7 @@
   "share.lifetimeAria": "Invite lifetime",
   "share.start": "Start sharing",
   "share.starting": "Starting...",
-  "share.stop": "Stop sharing",
+  "share.stop": "End session and invalidate link",
   "share.liveLan": "Sharing is on for your local network. Send one of these links to a person you trust. Anyone with a link can join until it runs out.",
   "share.liveLocal": "Sharing is on on this computer only. Send one of these links to a person you trust. Anyone with a link can join until it runs out.",
   "share.lanWarning": "Links on a local network are not encrypted yet. Use them on a network you trust.",
@@ -899,7 +899,7 @@
   "share.relayInsecure": "ws:// is not TLS. The content is still end-to-end encrypted with the key in the link, but who connects is visible on the way.",
   "share.lanNeedsDesktop": "LAN-Direct needs the Somnia desktop app. In the browser, use a relay.",
   "share.lanNoAddress": "No local network address found, so nobody else can reach this computer. The link below works on this computer only.",
-  "share.noRoles": "Everyone with the link can edit. Neither a relay nor LAN-Direct can enforce view-only.",
+  "share.noRoles": "Everyone with this link can read, copy and edit shared text files and see presence. Viewers are not a security role: E2E encryption prevents this blind relay from enforcing read-only access. Do not share this link when read-only access is required.",
   "share.scope": "Shared: text files (HTML, CSS, JS, JSON, SVG, TXT, MD) and newly created files. Not shared: renaming, deleting, images and PDFs.",
   "share.sendLink": "Send this link to a person you trust. Anyone who has it can join and edit.",
   "share.fingerprint": "End-to-end encrypted. Key fingerprint: {fp}. Compare it with the other person to be sure you are in the same session.",
@@ -1086,5 +1086,10 @@
   "finish2.toolbar.design": "Visual",
   "finish2.toolbar.split": "Split",
   "finish2.toolbar.code": "Code",
-  "finish2.toolbar.commands": "Commands"
+  "finish2.toolbar.commands": "Commands",
+  "share.sessionDuration": "Session lifetime",
+  "share.durationMinutes": "{count} minutes",
+  "share.expiresAt": "Session ends: {time}",
+  "share.endLimits": "Ending closes everyone's connection and blocks re-entry on this relay until expiry. It cannot erase copies already received. A new session gets a new room and key.",
+  "share.err.unsupported-relay": "This relay does not support managed sessions. Update the self-hosted relay."
 }

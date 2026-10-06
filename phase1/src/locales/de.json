@@ -411,7 +411,7 @@
   "share.lifetimeAria": "Gültigkeit der Einladung",
   "share.start": "Teilen starten",
   "share.starting": "Startet...",
-  "share.stop": "Teilen beenden",
+  "share.stop": "Sitzung beenden und Link widerrufen",
   "share.liveLan": "Teilen ist für dein lokales Netzwerk aktiv. Sende einen dieser Links an eine Person, der du vertraust. Jeder mit einem Link kann beitreten, bis er abläuft.",
   "share.liveLocal": "Teilen ist nur auf diesem Computer aktiv. Sende einen dieser Links an eine Person, der du vertraust. Jeder mit einem Link kann beitreten, bis er abläuft.",
   "share.lanWarning": "Links im lokalen Netzwerk sind noch nicht verschlüsselt. Nutze sie nur in einem Netzwerk, dem du vertraust.",
@@ -899,7 +899,7 @@
   "share.relayInsecure": "ws:// ist kein TLS. Der Inhalt bleibt mit dem Schlüssel im Link Ende-zu-Ende verschlüsselt, aber wer sich verbindet, ist unterwegs sichtbar.",
   "share.lanNeedsDesktop": "LAN-Direct braucht die Somnia-Desktop-App. Im Browser nutze ein Relay.",
   "share.lanNoAddress": "Keine lokale Netzwerkadresse gefunden, daher erreicht dich niemand sonst. Der Link unten funktioniert nur auf diesem Computer.",
-  "share.noRoles": "Alle mit dem Link können bearbeiten. Weder Relay noch LAN-Direct können „nur ansehen“ erzwingen.",
+  "share.noRoles": "Alle mit diesem Link können geteilte Textdateien lesen, kopieren und bearbeiten und die Anwesenheit sehen. Viewer sind keine Sicherheitsrolle: E2E-Verschlüsselung verhindert, dass der blinde Relay Nur-Lese-Zugriff erzwingt. Für Nur-Lese-Zugriff diesen Link nicht teilen.",
   "share.scope": "Geteilt: Textdateien (HTML, CSS, JS, JSON, SVG, TXT, MD) und neu angelegte Dateien. Nicht geteilt: Umbenennen, Löschen, Bilder und PDFs.",
   "share.sendLink": "Schick diesen Link an eine Person, der du vertraust. Wer ihn hat, kann beitreten und bearbeiten.",
   "share.fingerprint": "Ende-zu-Ende verschlüsselt. Schlüssel-Fingerabdruck: {fp}. Vergleiche ihn mit der anderen Person, um sicher in derselben Sitzung zu sein.",
@@ -1086,5 +1086,10 @@
   "finish2.toolbar.design": "Visuell",
   "finish2.toolbar.split": "Geteilt",
   "finish2.toolbar.code": "Code",
-  "finish2.toolbar.commands": "Befehle"
+  "finish2.toolbar.commands": "Befehle",
+  "share.sessionDuration": "Sitzungsdauer",
+  "share.durationMinutes": "{count} Minuten",
+  "share.expiresAt": "Sitzung endet: {time}",
+  "share.endLimits": "Beenden trennt alle und sperrt den Wiedereintritt auf diesem Relay bis zum Ablauf. Bereits erhaltene Kopien werden nicht gelöscht. Eine neue Sitzung erhält einen neuen Raum und Schlüssel.",
+  "share.err.unsupported-relay": "Dieser Relay unterstützt keine verwalteten Sitzungen. Aktualisiere den selbst gehosteten Relay."
 }

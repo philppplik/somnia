@@ -411,7 +411,7 @@
   "share.lifetimeAria": "Durée de l'invitation",
   "share.start": "Commencer à partager",
   "share.starting": "Démarrage...",
-  "share.stop": "Arrêter le partage",
+  "share.stop": "Terminer et révoquer le lien",
   "share.liveLan": "Le partage est activé pour votre réseau local. Envoyez l'un de ces liens à une personne de confiance. Toute personne disposant d'un lien peut rejoindre jusqu'à son expiration.",
   "share.liveLocal": "Le partage est activé sur cet ordinateur uniquement. Envoyez l'un de ces liens à une personne de confiance. Toute personne disposant d'un lien peut rejoindre jusqu'à son expiration.",
   "share.lanWarning": "Les liens sur un réseau local ne sont pas encore chiffrés. Utilisez-les sur un réseau de confiance.",
@@ -899,7 +899,7 @@
   "share.relayInsecure": "ws:// n’est pas du TLS. Le contenu reste chiffré de bout en bout avec la clé du lien, mais qui se connecte est visible en chemin.",
   "share.lanNeedsDesktop": "LAN-Direct nécessite l’application de bureau Somnia. Dans le navigateur, utilisez un relais.",
   "share.lanNoAddress": "Aucune adresse de réseau local trouvée : personne d’autre ne peut joindre cet ordinateur. Le lien ci-dessous ne fonctionne que sur cet ordinateur.",
-  "share.noRoles": "Toute personne avec le lien peut modifier. Ni un relais ni LAN-Direct ne peuvent imposer la lecture seule.",
+  "share.noRoles": "Ce lien permet de lire, copier et modifier les fichiers texte partagés et de voir la présence. Viewer n’est pas un rôle de sécurité : le chiffrement E2E empêche le relais aveugle d’imposer un accès en lecture seule. Ne partagez pas ce lien si la lecture seule est nécessaire.",
   "share.scope": "Partagé : fichiers texte (HTML, CSS, JS, JSON, SVG, TXT, MD) et nouveaux fichiers. Non partagé : renommer, supprimer, images et PDF.",
   "share.sendLink": "Envoyez ce lien à une personne de confiance. Quiconque l’a peut rejoindre et modifier.",
   "share.fingerprint": "Chiffré de bout en bout. Empreinte de la clé : {fp}. Comparez-la avec l’autre personne pour vérifier que vous êtes dans la même session.",
@@ -1086,5 +1086,10 @@
   "finish2.toolbar.design": "Visuel",
   "finish2.toolbar.split": "Divisé",
   "finish2.toolbar.code": "Code",
-  "finish2.toolbar.commands": "Commandes"
+  "finish2.toolbar.commands": "Commandes",
+  "share.sessionDuration": "Durée de la session",
+  "share.durationMinutes": "{count} minutes",
+  "share.expiresAt": "Fin de la session : {time}",
+  "share.endLimits": "Terminer déconnecte tout le monde et bloque le retour sur ce relais jusqu’à expiration. Les copies déjà reçues ne sont pas effacées. Une nouvelle session reçoit une nouvelle salle et clé.",
+  "share.err.unsupported-relay": "Ce relais ne prend pas en charge les sessions gérées. Mettez à jour votre relais."
 }

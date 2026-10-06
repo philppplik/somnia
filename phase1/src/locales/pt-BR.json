@@ -411,7 +411,7 @@
   "share.lifetimeAria": "Duração do convite",
   "share.start": "Começar a compartilhar",
   "share.starting": "Iniciando...",
-  "share.stop": "Parar de compartilhar",
+  "share.stop": "Encerrar e revogar o link",
   "share.liveLan": "O compartilhamento está ativado para a sua rede local. Envie um destes links para uma pessoa de confiança. Qualquer pessoa com um link pode entrar até ele expirar.",
   "share.liveLocal": "O compartilhamento está ativado somente neste computador. Envie um destes links para uma pessoa de confiança. Qualquer pessoa com um link pode entrar até ele expirar.",
   "share.lanWarning": "Links em uma rede local ainda não são criptografados. Use-os em uma rede de confiança.",
@@ -899,7 +899,7 @@
   "share.relayInsecure": "ws:// não é TLS. O conteúdo continua com criptografia de ponta a ponta usando a chave do link, mas quem se conecta fica visível no caminho.",
   "share.lanNeedsDesktop": "LAN-Direct precisa do app Somnia para desktop. No navegador, use um relay.",
   "share.lanNoAddress": "Nenhum endereço de rede local encontrado, então ninguém mais alcança este computador. O link abaixo só funciona neste computador.",
-  "share.noRoles": "Qualquer pessoa com o link pode editar. Nem relay nem LAN-Direct conseguem impor somente leitura.",
+  "share.noRoles": "Este link permite ler, copiar e editar arquivos de texto compartilhados e ver a presença. Viewer não é uma função de segurança: a criptografia E2E impede que o relay imponha acesso somente leitura. Não compartilhe este link se precisar de somente leitura.",
   "share.scope": "Compartilhado: arquivos de texto (HTML, CSS, JS, JSON, SVG, TXT, MD) e arquivos novos. Não compartilhado: renomear, excluir, imagens e PDFs.",
   "share.sendLink": "Envie este link a alguém de confiança. Quem tiver o link pode entrar e editar.",
   "share.fingerprint": "Criptografia de ponta a ponta. Impressão digital da chave: {fp}. Compare com a outra pessoa para ter certeza de que estão na mesma sessão.",
@@ -1086,5 +1086,10 @@
   "finish2.toolbar.design": "Visual",
   "finish2.toolbar.split": "Dividida",
   "finish2.toolbar.code": "Código",
-  "finish2.toolbar.commands": "Comandos"
+  "finish2.toolbar.commands": "Comandos",
+  "share.sessionDuration": "Duração da sessão",
+  "share.durationMinutes": "{count} minutos",
+  "share.expiresAt": "A sessão termina: {time}",
+  "share.endLimits": "Encerrar desconecta todos e impede o retorno neste relay até a expiração. Não apaga cópias já recebidas. Uma nova sessão recebe uma nova sala e chave.",
+  "share.err.unsupported-relay": "Este relay não suporta sessões gerenciadas. Atualize seu relay."
 }

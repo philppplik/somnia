@@ -27,6 +27,7 @@ function StatusBlock({s}:{s:CollabSnapshot}){
   {s.security?.e2e?<p className="mt-1" data-testid="e2e-note">{t('share.fingerprint',{fp:s.security.fingerprint??''})}</p>:<p className="mt-1" role="alert" data-testid="no-e2e">{t('share.noKey')}</p>}
   {s.security?.insecureRemote&&<p className="mt-1" data-testid="insecure-note">{t('share.insecure')}</p>}
   {s.state==='connected'&&s.participants.length<=1&&<p className="mt-1" data-testid="alone-note">{t('share.alone')}</p>}
+  {s.error&&<p role="alert" className="mt-2 text-red-500" data-testid="session-error">{errText(s.error,t)}</p>}
   {s.queued>0&&<p className="mt-1" data-testid="queued-note">{t('share.queued',{count:s.queued})}</p>}</div>;}
 function People({s}:{s:CollabSnapshot}){
  const {t}=useT();
@@ -37,6 +38,7 @@ function HostPane(){
  const lan=getLanHost();
  const [mode,setMode]=useState<'relay'|'lan-direct'>('relay');
  const [relay,setRelay]=useState(()=>{try{return localStorage.getItem(RELAY_URL_KEY)??'';}catch{return '';}});
+ const [minutes,setMinutes]=useState(60);
  const [lanCfg,setLanCfg]=useState({lan:false,port:0});
  const rel=relay.trim()?relayRoomUrl(relay):null;const relBad=!!relay.trim()&&!rel;
  const portOk=Number.isInteger(lanCfg.port)&&lanCfg.port>=0&&lanCfg.port<=65535;
@@ -51,10 +53,11 @@ function HostPane(){
    {rel&&!rel.secure&&!rel.local&&<p className="mt-1 text-[11px] text-ink-2" data-testid="relay-insecure">{t('share.relayInsecure')}</p>}</div>
   :lan?<LanHostSettings value={lanCfg} onChange={setLanCfg}/>
   :<p className="mt-3 text-[12px] text-ink-2" data-testid="lan-needs-desktop">{t('share.lanNeedsDesktop')}</p>}
+  <label className="mt-3 block text-[12px]">{t('share.sessionDuration')}<select className={`${field} mt-1`} aria-label={t('share.sessionDuration')} value={minutes} onChange={e=>setMinutes(Number(e.target.value))}>{[15,60,240,1440].map(n=><option key={n} value={n}>{t('share.durationMinutes',{count:n})}</option>)}</select></label>
   <p className="mt-3 text-[11px] text-ink-2">{t('share.noRoles')}</p><p className="mt-1 text-[11px] text-ink-2">{t('share.scope')}</p>
   {s.error&&<p role="alert" className="mt-2 text-[12px] text-red-500" data-testid="host-error">{errText(s.error,t)}</p>}
   <div className="mt-4 flex justify-end gap-2"><Button onClick={closeShare}>{t('dialogs.close')}</Button>
-   <Button variant="primary" autoFocus disabled={mode==='relay'?!rel:(!lan||!portOk)} onClick={()=>{if(mode==='relay'){try{localStorage.setItem(RELAY_URL_KEY,relay.trim());}catch{/* storage unavailable */}void eng.startHosting({mode:'relay',relayUrl:relay});}else void eng.startHosting({mode:'lan-direct',lan:lanCfg.lan,port:lanCfg.port});}}>{t('share.start')}</Button></div></div>;
+   <Button variant="primary" autoFocus disabled={mode==='relay'?!rel:(!lan||!portOk)} onClick={()=>{if(mode==='relay'){try{localStorage.setItem(RELAY_URL_KEY,relay.trim());}catch{/* storage unavailable */}void eng.startHosting({mode:'relay',relayUrl:relay,sessionMinutes:minutes});}else void eng.startHosting({mode:'lan-direct',lan:lanCfg.lan,port:lanCfg.port,sessionMinutes:minutes});}}>{t('share.start')}</Button></div></div>;
  return <div>
   <div data-testid="host-live"/>
   <StatusBlock s={s}/>
@@ -63,15 +66,18 @@ function HostPane(){
   {s.guestLinks.length>0&&<p className="mt-2 text-[12px] text-ink-2">{t('share.sendLink')}</p>}
   {s.guestLinks.map((l,i)=><LinkRow key={l} testId={`link-guest-${i}`} label={t('share.linkGuests')} link={l}/>)}
   {s.localLink&&s.mode==='lan-direct'&&(s.guestLinks.length===0||s.noNetworkAddress)&&<LinkRow testId="link-local" label={t('share.linkLocal')} link={s.localLink}/>}
+  {s.expiresAt&&<p className="mt-2 text-[11px] text-ink-2" data-testid="session-expiry">{t('share.expiresAt',{time:new Date(s.expiresAt).toLocaleString()})}</p>}
   <People s={s}/>
   <p className="mt-2 text-[11px] text-ink-2">{t('share.noRoles')}</p>
+  <p className="mt-2 text-[11px] text-ink-2">{t('share.endLimits')}</p>
   <div className="mt-4 flex justify-end gap-2"><Button onClick={closeShare}>{t('dialogs.close')}</Button><Button onClick={()=>void eng.stopHosting()}>{t('share.stop')}</Button></div></div>;}
 function JoinPane(){
  const {t}=useT();const s=useCollab();const [link,setLink]=useState('');const [name,setName]=useState('');const eng=getCollabEngine();
  const parsed=link.trim()?parseJoinLink(link):null;const bad=!!link.trim()&&!parsed;const busy=s.role==='guest'&&s.state==='connecting';
- if(s.role==='guest'&&s.state!=='error')return <div>
+ if(s.role==='guest')return <div>
   <StatusBlock s={s}/>
-  <p className="mt-3 text-[12px]" data-testid="guest-connected">{s.state==='connected'?t('share.joinedTo'):s.state==='reconnecting'?t('collab.reconnecting'):t('share.connecting')}</p>
+  <p className="mt-3 text-[12px]" data-testid="guest-connected">{s.state==='connected'?t('share.joinedTo'):s.state==='reconnecting'?t('collab.reconnecting'):s.state==='error'?t('collab.disconnected'):t('share.connecting')}</p>
+  {s.expiresAt&&<p className="mt-2 text-[11px] text-ink-2" data-testid="session-expiry">{t('share.expiresAt',{time:new Date(s.expiresAt).toLocaleString()})}</p>}
   <People s={s}/>
   <div className="mt-4 flex justify-end gap-2"><Button onClick={closeShare}>{t('dialogs.close')}</Button><Button onClick={()=>void eng.leave()}>{t('share.leave')}</Button></div></div>;
  return <form onSubmit={e=>{e.preventDefault();if(parsed&&!busy)void eng.join(link,name);}}>
@@ -82,6 +88,7 @@ function JoinPane(){
   {parsed&&!hasLinkKey(link)&&<p className="mt-1 text-[11px] text-ink-2" data-testid="join-no-key">{t('share.noKey')}</p>}
   <input aria-label={t('share.yourName')} className={`${field} mt-2`} placeholder={t('share.namePlaceholder')} maxLength={32} value={name} onChange={e=>setName(e.target.value)}/>
   <p className="mt-2 text-[11px] text-ink-2">{t('share.joinReplaces')}</p>
+  <p className="mt-2 text-[11px] text-ink-2">{t('share.noRoles')}</p>
   {s.state==='error'&&s.error&&s.role==='none'&&<p role="alert" className="mt-2 text-[12px] text-red-500" data-testid="join-error" data-kind={s.error.kind}>{errText(s.error,t)}</p>}
   <div className="mt-4 flex justify-end gap-2"><Button type="button" onClick={closeShare}>{t('dialogs.close')}</Button><Button type="submit" variant="primary" disabled={!parsed||busy}>{busy?t('share.connecting'):t('share.join')}</Button></div></form>;}
 /** Share / Join dialog. Opened from Tools > Share project... or Join shared project... */

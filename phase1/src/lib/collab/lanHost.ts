@@ -1,6 +1,6 @@
 import {invoke, isTauri} from '@tauri-apps/api/core';
 import {newLinkKey} from './net/crypto';
-export interface LanHostSettingsValue {lan:boolean;port:number}
+export interface LanHostSettingsValue {lan:boolean;port:number;roomId?:string}
 export interface LanHostInfo {
  running:boolean;lan:boolean;port:number;localUrl:string;guestUrls:string[];roomId:string;
 }
@@ -12,9 +12,9 @@ const desktopInvoke:LanHostInvoke=(command,args)=>{
 /** Injectable command boundary for tests; production always invokes the actual desktop server. */
 export function lanHostAdapter(call:LanHostInvoke=desktopInvoke){
  return {
-  start:({lan,port}:LanHostSettingsValue):Promise<LanHostInfo>=>{
+  start:({lan,port,roomId}:LanHostSettingsValue):Promise<LanHostInfo>=>{
    if(!Number.isInteger(port)||port<0||port>65535)return Promise.reject(new Error('Port must be 0 (automatic) or an integer from 1 to 65535.'));
-   return call<LanHostInfo>('collab_lan_start',{lan,port});
+   return call<LanHostInfo>('collab_lan_start',{lan,port,...(roomId?{roomId}:{})});
   },
   stop:()=>call<void>('collab_lan_stop'),
   status:()=>call<LanHostInfo>('collab_lan_status'),

@@ -24,7 +24,7 @@ use tokio_tungstenite::tungstenite::protocol::{CloseFrame, WebSocketConfig};
 use tokio_tungstenite::tungstenite::Message;
 
 use crate::limits::{Admission, IpLimiter, TrafficLimiter};
-use crate::rooms::{JoinError, Membership, Rooms};
+use crate::rooms::{JoinError, Membership, Rooms, MANAGED_ACK};
 use crate::{room_log_tag, valid_room_id};
 
 #[derive(Clone, Debug)]
@@ -214,13 +214,33 @@ async fn handle_conn(
             return Err(http_error(StatusCode::NOT_FOUND, "not found\n"));
         }
         let tag = room_log_tag(room_id);
-        match rooms.join(room_id, tag) {
+        // Only the host sends a capability. Never log the query or forward it.
+        let mut host = None;
+        for field in request
+            .uri()
+            .query()
+            .unwrap_or("")
+            .split('&')
+            .filter(|s| !s.is_empty())
+        {
+            let Some((key, value)) = field.split_once('=') else {
+                return Err(http_error(StatusCode::BAD_REQUEST, "invalid query\n"));
+            };
+            if key != "host" || host.is_some() {
+                return Err(http_error(StatusCode::BAD_REQUEST, "invalid query\n"));
+            }
+            host = Some(value);
+        }
+        match rooms.join_authorized(room_id, tag, host) {
             Ok(membership) => {
                 join = Some(Ok(membership));
                 Ok(response)
             }
             Err(JoinError::RoomFull) => {
                 Err(http_error(StatusCode::SERVICE_UNAVAILABLE, "room full\n"))
+            }
+            Err(JoinError::Refused | JoinError::Expired) => {
+                Err(http_error(StatusCode::FORBIDDEN, "session unavailable\n"))
             }
             Err(JoinError::TooManyRooms) => {
                 Err(http_error(StatusCode::SERVICE_UNAVAILABLE, "relay busy\n"))
@@ -266,6 +286,12 @@ async fn handle_conn(
 
     let last_seen = Arc::new(AtomicU64::new(now_ms()));
     let (mut ws_tx, mut ws_rx) = ws.split();
+    if membership.expires.is_some() {
+        ws_tx
+            .send(Message::Binary(bytes::Bytes::from_static(MANAGED_ACK)))
+            .await
+            .map_err(io::Error::other)?;
+    }
     let (control_tx, mut control_rx) = mpsc::channel::<Control>(8);
     let mut traffic = TrafficLimiter::new(
         shared.config.frames_per_sec,
@@ -280,11 +306,41 @@ async fn handle_conn(
         let mut rx = membership.rx.resubscribe();
         let mut shutdown = shutdown.clone();
         let config = shared.config.clone();
+        let mut ended = membership.ended.clone();
+        let expiry = membership.expires;
         tokio::spawn(async move {
+            let until_expiry = async move {
+                match expiry {
+                    Some(seconds) => {
+                        let now = std::time::SystemTime::now()
+                            .duration_since(std::time::UNIX_EPOCH)
+                            .unwrap_or_default()
+                            .as_secs();
+                        tokio::time::sleep(Duration::from_secs(seconds.saturating_sub(now))).await;
+                    }
+                    None => std::future::pending::<()>().await,
+                }
+            };
+            tokio::pin!(until_expiry);
             let mut heartbeat = tokio::time::interval(config.heartbeat_interval);
             heartbeat.tick().await; // first tick is immediate; skip it
             loop {
                 tokio::select! {
+                    _ = &mut until_expiry => {
+                        let _ = ws_tx.send(Message::Close(Some(CloseFrame {code: CloseCode::from(4004), reason: "session expired".into()}))).await;
+                        break;
+                    },
+                    _ = async {
+                        match ended.as_mut() {
+                            Some(rx) => { if *rx.borrow() == 0 { let _ = rx.changed().await; } }
+                            None => std::future::pending::<()>().await,
+                        }
+                    } => {
+                        let now = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap_or_default().as_secs();
+                        let expired = expiry.is_some_and(|end| now >= end);
+                        let _ = ws_tx.send(Message::Close(Some(CloseFrame {code: CloseCode::from(if expired {4004} else {4001}), reason: if expired {"session expired"} else {"host ended session"}.into()}))).await;
+                        break;
+                    },
                     incoming = rx.recv() => match incoming {
                         Ok(frame) => {
                             if frame.sender == client_id {

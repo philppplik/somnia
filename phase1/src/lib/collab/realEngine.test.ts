@@ -13,7 +13,7 @@ const until=async(f:()=>boolean,ms=4000,what='condition')=>{const t0=Date.now();
 /** A blind relay in memory: forwards every frame to the other connections, understands nothing (same contract as the Rust relay). */
 function blindHub(){
  const {server,factory}=memoryServer();const frames:Uint8Array[]=[];const ends:typeof server.connections=[];
- server.onConnection(end=>{ends.push(end);end.transport.connect({onOpen(){},onMessage(b){frames.push(b);for(const o of ends)if(o!==end)o.transport.send(b);},onClose(){const i=ends.indexOf(end);if(i>=0)ends.splice(i,1);}});});
+ server.onConnection(end=>{ends.push(end);end.transport.connect({onOpen(){end.transport.send(new TextEncoder().encode('\x04managed-room-v1'));},onMessage(b){frames.push(b);for(const o of ends)if(o!==end)o.transport.send(b);},onClose(){const i=ends.indexOf(end);if(i>=0)ends.splice(i,1);}});});
  return {factory,frames};}
 /** Project stand-in with the same contract as the app store: files, write, change notifications. */
 function fakeProject(initial:Record<string,string>={}){
@@ -32,7 +32,7 @@ test('relay session: host shares, guest adopts, edits flow both ways, frames sta
  await h.startHosting({mode:'relay',relayUrl:'wss://relay.example.com'});
  let s=h.snapshot();
  assert.equal(s.role,'host');assert.equal(s.mode,'relay');assert.equal(s.state,'connected');
- assert.equal(s.guestLinks.length,1);assert.match(s.guestLinks[0],/^wss:\/\/relay\.example\.com\/room\/[A-Za-z0-9_-]{24}#key=[A-Za-z0-9_-]{43}&m=relay$/);
+ assert.equal(s.guestLinks.length,1);assert.match(s.guestLinks[0],/^wss:\/\/relay\.example\.com\/room\/m1_\d{10}_[a-f0-9]{64}#key=[A-Za-z0-9_-]{43}&m=relay$/);
  assert.equal(s.security!.e2e,true);assert.match(s.security!.fingerprint!,/^[0-9a-f]{8}$/);
  assert.equal(s.synced,false,'nobody answered yet: must not claim synced');
  await g.join(s.guestLinks[0],'Gabi');

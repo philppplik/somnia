@@ -1,10 +1,11 @@
 import {CollabDoc} from './collabDoc';
 import {CollabClient,type CollabClientSnapshot} from './net/client';
+import {secureRoomLinks,managedRoomId,roomExpiry,DEFAULT_SESSION_MINUTES} from './roomSecurity';
 import {newLinkKey} from './net/crypto';
 import type {TransportFactory} from './net/transport';
 import {startBridge,type Bridge,type ProjectPort} from './projectBridge';
 import {setSession,notifySession} from './session';
-import {parseJoinLink,isInsecureRemote,modeOfLink,withMode,relayRoomUrl,cleanDisplayName,newRoomId} from './invite';
+import {parseJoinLink,isInsecureRemote,modeOfLink,withMode,relayRoomUrl,cleanDisplayName} from './invite';
 import {getLanHost,type LanHostPort} from './lanHostPort';
 import {isCollabFile} from './paths';
 import {makeUser,participantsOf} from './awarenessSafe';
@@ -80,21 +81,30 @@ export class RealEngine implements CollabEngine{
   this.busy=true;
   const fail=async(e:CollabError)=>{await this.teardown();if(this.lan){await this.lan.stopLanHost().catch(()=>undefined);this.lan=null;}this.set({...idleSnapshot(),role:'none',state:'error',error:e});};
   try{
+   const minutes=opts.sessionMinutes??DEFAULT_SESSION_MINUTES;
+   if(!Number.isInteger(minutes)||minutes<1||minutes>1440)throw new Error('Session lifetime must be between 1 minute and 24 hours.');
+   const expiresAt=Date.now()+minutes*60_000;
+   const room=await managedRoomId(expiresAt);
    let hostLink:string,guestLinks:string[],localLink:string|null=null,noAddr=false;
    if(opts.mode==='relay'){
-    const r=relayRoomUrl(opts.relayUrl,newRoomId());
+    const r=relayRoomUrl(opts.relayUrl,room.id);
     if(!r){this.busy=false;this.set({...idleSnapshot(),state:'error',error:{kind:'start-failed',message:'That is not a relay address. Use something like wss://relay.example.com'}});return;}
     const {param}=await newLinkKey();hostLink=withMode(`${r.url}#key=${param}`,'relay');guestLinks=[hostLink];
-    this.set({...idleSnapshot(),role:'host',mode:'relay',state:'starting',guestLinks});}
+    this.set({...idleSnapshot(),role:'host',mode:'relay',state:'starting'});}
    else{
     const lan=this.lanPort();
     if(!lan){this.busy=false;this.set({...idleSnapshot(),state:'error',error:{kind:'start-failed',message:'LAN-Direct needs the Somnia desktop app. In the browser, use a relay.'}});return;}
     this.set({...idleSnapshot(),role:'host',mode:'lan-direct',state:'starting'});
     this.lan=lan;
-    const info=await lan.startLanHost({lan:opts.lan,port:opts.port});
+    const info=await lan.startLanHost({lan:opts.lan,port:opts.port,roomId:room.id});
     const links=await lan.createLanSessionLinks(info);
     hostLink=withMode(links.localLink,'lan-direct');guestLinks=links.guestLinks.map(l=>withMode(l,'lan-direct'));localLink=hostLink;noAddr=opts.lan&&links.guestLinks.length===0;
-    this.set({guestLinks,localLink,noNetworkAddress:noAddr});}
+    this.set({noNetworkAddress:noAddr});}
+   const secure=await secureRoomLinks(hostLink,guestLinks,expiresAt,room);
+   hostLink=secure.hostLink;guestLinks=secure.guestLinks;
+   // Host capability is never exposed in a copyable local invite.
+   if(localLink){const u=new URL(hostLink);u.search='';localLink=u.toString();}
+   this.set({expiresAt:roomExpiry(hostLink)??expiresAt});
    const name=this.d.hostName??'Host';
    this.set({state:'connecting'});
    await this.run(hostLink,opts.mode,'host',name);
@@ -114,7 +124,7 @@ export class RealEngine implements CollabEngine{
   if(!can.ok){this.set({...idleSnapshot(),state:'error',error:{kind:'unsaved-project',message:'Joining replaces the project in this window. Save it to a folder or close it first (Project > Close Project).'}});return;}
   this.busy=true;
   const mode=modeOfLink(link);
-  this.set({...idleSnapshot(),role:'guest',mode,state:'connecting',security:{e2e:false,fingerprint:null,secureChannel:p.secure,insecureRemote:isInsecureRemote(p)}});
+  this.set({...idleSnapshot(),role:'guest',mode,state:'connecting',expiresAt:roomExpiry(link)??undefined,security:{e2e:false,fingerprint:null,secureChannel:p.secure,insecureRemote:isInsecureRemote(p)}});
   try{await this.run(link.trim(),mode,'guest',cleanDisplayName(displayName));}
   catch(e){
    const err=this.s.error??{kind:'unreachable' as const,message:e instanceof Error?e.message:'Could not connect.'};

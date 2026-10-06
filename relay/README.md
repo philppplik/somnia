@@ -218,3 +218,18 @@ Layout: `src/lib.rs` (room-id rules, log tags), `src/limits.rs` (token
 buckets, per-IP admission), `src/rooms.rs` (room registry + fan-out),
 `src/server.rs` (accept loop, handshake, reader/writer), `src/main.rs` (CLI),
 `src/bin/loadtest.rs` (load tool), `tests/integration.rs` (end-to-end).
+
+### Managed room lifecycle (v1)
+
+New Somnia clients create `m1_<expiry>_<host-capability digest>` rooms. Only the
+host's separate capability can create one; guests cannot create or reopen it.
+Host disconnect ends the room (close 4001), and absolute expiry closes every
+member (4004). Admission validates expiry and rejects expired rooms. Management
+uses URL metadata only; document frames are still opaque. Ended-room tombstones
+are bounded and memory-only: restart forgets them, although a guest still cannot
+recreate an ended room without the host capability. Deploy this relay version
+with the managed-session client. Old unmanaged rooms remain supported. See
+`phase1/notes/collab-security.md` for the wire contract, viewer limits and trust
+model. Use TLS on untrusted networks because host capabilities travel in upgrade
+queries, never log query strings at your reverse proxy, and do not publish host
+connection URLs.
