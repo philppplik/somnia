@@ -1,5 +1,7 @@
 # Glass v2
 
+User guide: [features/glass.md](features/glass.md).
+
 Settings > Appearance. Glass only takes effect when "App background" is Glass and the native compositor confirmed it (Windows/macOS). Linux, the web app and high contrast stay solid.
 
 | Setting | Key (`somnia.look.v2`, `look.*`) | Default |
