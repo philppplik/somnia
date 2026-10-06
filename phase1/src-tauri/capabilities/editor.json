@@ -30,6 +30,7 @@
     "allow-is-store-package",
     "allow-list-files",
     "allow-read-file",
+    "allow-read-media",
     "allow-stage-edit",
     "allow-save-file",
     "allow-delete-file",

@@ -6,6 +6,7 @@ import {setSaveHandlers} from './saveFlow';
 import {addTextFiles,closeMemoryProject} from './projectActions';
 import {clearDraft} from './draftSession';
 import {downloadProject} from './exportProject';
+import {loadFolderMedia} from './folderMedia';
 export type Revision={exists:boolean;hash:string|null};
 export type FileEvent={projectId:string;path:string;clientRevision:number;state:'dirty'|'saving'|'saved'|'error'|'conflict';diskRevision:Revision;error:string|null;durability:string|null};
 export type Read={content:string|null;revision:Revision;status:FileEvent};
@@ -83,9 +84,9 @@ export async function installFileAdapter(port:FilePort){
   if(!projectId&&getState().isDirty&&!window.confirm('Replace the in-memory project? It cannot be recovered from disk.'))return;
   // Keep the current project alive until the picker and all candidate reads succeed.
   const selected=await port.invoke<{projectId:string;name:string}|null>(dropToken?'open_dropped_project':single?'choose_file':'choose_project',dropToken?{token:dropToken}:reconnect?{reconnect:true}:undefined);if(!selected)return;
-  const files:Record<string,string>={},nextBaselines=new Map<string,Revision>();
+  const files:Record<string,string>={},nextBaselines=new Map<string,Revision>();let mediaPaths:string[]=[];
   try{
-   const paths=await port.invoke<string[]>('list_files',{projectId:selected.projectId});const editable=paths.filter(p=>/\.(html?|css|js|json|svg|txt|md)$/i.test(p));
+   const paths=await port.invoke<string[]>('list_files',{projectId:selected.projectId});const editable=paths.filter(p=>/\.(html?|css|js|json|svg|txt|md)$/i.test(p));mediaPaths=paths.filter(p=>/\.(png|jpe?g|pdf)$/i.test(p));
    if(editable.length>64)throw Error('This alpha supports at most 64 text documents. Pick a smaller project folder.');
    for(const path of editable){const read=await port.invoke<Read>('read_file',{projectId:selected.projectId,path});if(read.content!==null)files[path]=read.content;nextBaselines.set(path,read.revision);}
    // Validate source parsing before disconnecting the existing document model.
@@ -94,6 +95,7 @@ export async function installFileAdapter(port:FilePort){
    if(projectId)await close(true);
   }catch(error){await port.invoke('close_project',{projectId:selected.projectId,keepRecovery:true}).catch(()=>{});throw error;}
   await attach(selected,files,nextBaselines);
+  if(mediaPaths.length){const r=await loadFolderMedia((c,a)=>port.invoke(c,a),selected.projectId,mediaPaths);if(r.notice)patchState({notice:r.notice});}
   }finally{opening=false;}
  };
  /** Memory project (Starter, new): choose a folder, write every file into it, then continue as a normal disk project. Never overwrites existing files. */

@@ -23,7 +23,7 @@ export function MediaViewer({item}:{item:MediaItem}){const {t}=useT();
 export function RenderedPreview({file,text}:{file:string;text:string}){const {t}=useT();
  const media=useMedia();
  const md=isMarkdown(file);
- const html=useMemo(()=>md?renderMarkdown(text,{resolveImage:src=>{const clean=src.replace(/^\.\//,'').split(/[?#]/)[0];let p=clean;try{p=decodeURIComponent(clean);}catch{/* keep raw */}return findMedia(p.replace(/^.*\//,''))?.url??null;}}):'',[md,text,media.items]);
+ const html=useMemo(()=>md?renderMarkdown(text,{resolveImage:src=>{const clean=src.replace(/^\.\//,'').split(/[?#]/)[0];let p=clean;try{p=decodeURIComponent(clean);}catch{/* keep raw */}const dir=file.includes('/')?file.replace(/\/[^/]*$/,'/'):'';const rel=(dir+p).split('/').reduce<string[]>((a,x)=>{if(x==='..')a.pop();else if(x!=='.'&&x!=='')a.push(x);return a;},[]).join('/');return (findMedia(rel)??findMedia(p)??findMedia(p.replace(/^.*\//,'')))?.url??null;}}):'',[md,text,media.items]);
  const svgSrc=useMemo(()=>md?'':`data:image/svg+xml;charset=utf-8,${encodeURIComponent(text)}`,[md,text]);
  if(!md)return <section className="canvas-stage flex min-h-0 flex-1 flex-col" aria-label={t('rest.mediaPreview.svgPreview')}>{text.trim()?<FitImage src={svgSrc} alt={file}/>:<div className="grid flex-1 place-items-center text-[12px] text-ink-3">The SVG file is empty.</div>}</section>;
  return <section className="canvas-stage flex min-h-0 flex-1 flex-col" aria-label={t('rest.mediaPreview.markdownPreview')}><div className={bar}><span className="truncate" data-testid="media-name">{file}</span><span className="text-ink-3">{t('rest.mediaPreview.markdownPreview')}</span></div>

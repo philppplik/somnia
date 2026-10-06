@@ -23,6 +23,8 @@ use uuid::Uuid;
 const MAX_BYTES: usize = 8 * 1024 * 1024;
 const MAX_DOCS: usize = 64;
 const MAX_FILES: usize = 20_000;
+/// Upper bound for one media file (PNG, JPEG, PDF) read for preview.
+pub const MAX_MEDIA_BYTES: usize = 25_000_000;
 const QUIET: Duration = Duration::from_millis(1000);
 const MAX_WAIT: Duration = Duration::from_secs(5);
 const POLL: Duration = Duration::from_secs(2);
@@ -518,6 +520,25 @@ impl Project {
         }
         events
     }
+    /// Raw bytes of a PNG, JPEG or PDF inside the project, for read-only preview. Same path rules as text files (no symlinks, no escaping the root).
+    pub fn read_media(&self, path: &str) -> Result<Vec<u8>> {
+        if !is_media_path(path) {
+            return Err(AppError::Denied("Only PNG, JPEG and PDF files can be previewed".into()));
+        }
+        let p = self.safe_path(path)?;
+        let mut file = self.root.open(p)?;
+        if !file.metadata()?.is_file() {
+            return Err(AppError::Denied("Not a regular file".into()));
+        }
+        let mut bytes = Vec::new();
+        Read::by_ref(&mut file)
+            .take((MAX_MEDIA_BYTES + 1) as u64)
+            .read_to_end(&mut bytes)?;
+        if bytes.len() > MAX_MEDIA_BYTES {
+            return Err(AppError::Limit);
+        }
+        Ok(bytes)
+    }
     pub fn list_files(&self) -> Result<Vec<String>> {
         let mut files = Vec::new();
         if let Some(only) = &self.only {
@@ -626,6 +647,13 @@ impl Project {
     pub fn has_dirty(&self) -> bool {
         self.documents.values().any(|d| d.pending.is_some())
     }
+}
+/// True for file names with a PNG, JPEG or PDF extension (case-insensitive).
+pub fn is_media_path(path: &str) -> bool {
+    Path::new(path)
+        .extension()
+        .map(|e| e.to_string_lossy().to_ascii_lowercase())
+        .is_some_and(|e| matches!(e.as_str(), "png" | "jpg" | "jpeg" | "pdf"))
 }
 fn reserved(name: &str) -> bool {
     matches!(name, ".git" | ".somnia" | "node_modules" | ".svn" | ".hg")

@@ -351,6 +351,21 @@ async fn read_file(
     })
     .await
 }
+/// Media (PNG, JPEG, PDF) inside the open project folder, as standard base64. Read only, max 25 MB per file.
+#[tauri::command]
+async fn read_media(
+    window: WebviewWindow,
+    state: State<'_, Shared>,
+    project_id: String,
+    path: String,
+) -> Result<String> {
+    gate(&window)?;
+    work(state.inner().clone(), move |b| {
+        let bytes = project(b, &project_id)?.read_media(&path)?;
+        Ok(base64_encode(&bytes))
+    })
+    .await
+}
 #[tauri::command]
 async fn stage_edit(
     window: WebviewWindow,
@@ -606,6 +621,7 @@ pub fn run() {
             is_store_package,
             list_files,
             read_file,
+            read_media,
             stage_edit,
             save_file,
             delete_file,

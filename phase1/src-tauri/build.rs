@@ -12,6 +12,7 @@ fn main() {
             "is_store_package",
             "list_files",
             "read_file",
+            "read_media",
             "stage_edit",
             "save_file",
             "delete_file",

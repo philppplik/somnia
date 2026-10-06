@@ -26,8 +26,9 @@ export const useMedia=()=>useSyncExternalStore(subscribeMedia,getMedia,getMedia)
 export const findMedia=(name:string)=>state.items.find(i=>i.name.toLowerCase()===name.toLowerCase());
 const baseName=(n:string)=>n.replace(/^.*[\\/]/,'');
 /** Adds one media file. Returns the stored name, or an error text. A file with the same name is replaced. */
-export async function addMediaFile(file:Blob,rawName:string):Promise<{name:string}|{error:string}>{
- const name=baseName(rawName);
+/** `key` (folder-relative path, e.g. img/a.png) keeps same-named files in different subfolders apart; without it the file name is the key. */
+export async function addMediaFile(file:Blob,rawName:string,key?:string):Promise<{name:string}|{error:string}>{
+ const name=key??baseName(rawName);
  if(file.size>MAX_MEDIA_BYTES)return{error:`${name} is larger than ${MAX_MEDIA_BYTES/1_000_000} MB.`};
  const sniffed=sniffMedia(new Uint8Array(await file.slice(0,16).arrayBuffer()));
  if(!sniffed)return{error:`${name} is not a valid PNG, JPEG or PDF file.`};
