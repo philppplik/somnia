@@ -36,3 +36,16 @@ test('new static command titles are covered in all five catalogues',()=>{
  const ids=['edit.undo','edit.redo','project.openMedia','edit.encodeEntities','edit.decodeEntities','project.compare','project.close','project.reconnect','collab.share','collab.join',...['row.above','row.below','row.delete','col.left','col.right','col.delete','header','merge'].map(id=>'table.'+id),...Array.from({length:10},(_,i)=>'insert.element.'+i)];
  for(const [locale,cat] of Object.entries(CATALOGUES))for(const id of ids)assert.ok(cat['cmd.'+id],`${locale}: ${id}`);
 });
+test('round 2 components literal keys exist in every language',()=>{
+ for(const file of ['LivePreview.tsx','DiskComparison.tsx','SourceDiff.tsx','MediaPreview.tsx','LayersPanel.tsx','EmptyState.tsx']){
+  const source=readFileSync(new URL('../components/'+file,import.meta.url),'utf8');
+  for(const match of source.matchAll(/\bt\(["']([^"']+)["']\s*(?=[,)])/g))for(const [locale,cat] of Object.entries(CATALOGUES))assert.ok(match[1] in cat||match[1]+'_other' in cat,`${locale}: ${file}: ${match[1]}`);
+ }
+});
+test('preview blocked/error plural messages preserve every placeholder in all locales',()=>{
+ for(const locale of Object.keys(CATALOGUES))for(const count of [0,1,2,1000000]){
+  const text=translate(locale,'finish2.preview.blocked',{count,files:'literal-ä.js'});
+  assert.ok(text.includes('literal-ä.js'));assert.ok(!text.includes('{'));
+  assert.ok(!translate(locale,'finish2.preview.errors',{count}).includes('{'));
+ }
+});

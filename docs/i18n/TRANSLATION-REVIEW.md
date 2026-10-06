@@ -8,7 +8,7 @@ This pass connects Settings labels, accessible names, appearance options, shortc
 
 Do not translate project HTML/CSS, user file names, extension author/name/description, theme names supplied by extensions, permission identifiers, hashes, package versions or raw provider diagnostics. These are data. An English publisher description or technical error detail in a translated UI is intentional. No package download or installation is implied by choosing a language.
 
-This is **not** a claim that every runtime diagnostic or every newer panel is translated. Remaining source literals should be inventoried before calling the entire app fully localized. Examples at the v10.1.0 base: conflict comparison descriptions, live-preview consent/error summaries, media empty states, source-diff descriptions and some empty-layer states. Those have no native-language review in this change. Windows, Tauri menus and installer strings have not been tested by this pass.
+This is **not** a claim that every runtime diagnostic or every newer panel is translated. Remaining source literals should be inventoried before calling the entire app fully localized. A follow-up pass also connects conflict comparison descriptions and confirmation, live-preview consent/error summaries, media empty states, source-diff descriptions, empty-layer states and the app toolbar. These are still machine-assisted translations, without native-language review. Remaining examples include action notices and low-level file-adapter diagnostics, the code-editor context menu, alignment toolbar and breadcrumb accessible names. Windows, Tauri menus and installer strings have not been tested by this pass.
 
 ## Review workflow
 
