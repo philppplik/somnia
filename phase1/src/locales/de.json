@@ -1274,6 +1274,8 @@
   "chat.open": "Chat öffnen",
   "chat.dismiss": "Schließen",
   "chat.close": "Panel schließen",
+  "chat.railUnread": "Chat, {count} ungelesene Nachrichten",
+  "chat.railUnreadOne": "Chat, 1 ungelesene Nachricht",
   "chat.communication": "Kommunikation",
   "chat.badges": "Namens-Badges",
   "chat.activity": "Bei Aktivität",

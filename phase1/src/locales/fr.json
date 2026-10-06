@@ -1274,6 +1274,8 @@
   "chat.open": "Ouvrir le chat",
   "chat.dismiss": "Fermer cet avis",
   "chat.close": "Fermer le panneau",
+  "chat.railUnread": "Chat, {count} messages non lus",
+  "chat.railUnreadOne": "Chat, 1 message non lu",
   "chat.communication": "Communication",
   "chat.badges": "Étiquettes de nom",
   "chat.activity": "En activité",

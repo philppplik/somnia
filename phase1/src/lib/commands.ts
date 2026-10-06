@@ -9,6 +9,8 @@ import {downloadProject,downloadMarkdown} from './exportProject';
 import {elements,insertElement} from './structureCommands';
 import { applyHistory, getState, patchState } from '../store/appStore';
 import { EditorProject } from '@somnia/editor-core';
+import {getChatSession} from './collab/chatSession';
+import {toggleSessionChat} from './collab/communication';
 /** Experimental fast parsing (partial reparse). On by default; the stored choice 'off' turns it off for good, a full parse is always the fallback. */
 const FAST_KEY='somnia.fastParse.v1';
 try{if(localStorage.getItem(FAST_KEY)==='off')EditorProject.incremental.enabled=false;}catch{/* storage unavailable */}
@@ -42,6 +44,7 @@ ui('search.project','Search in project','Mod+Shift+F',()=>patchState({leftTab:'s
 ui('css.open','CSS variables and classes',undefined,()=>patchState({leftTab:'css',sidebarOpen:true}));
 ui('sidebar.toggle','Toggle sidebar','Mod+B',()=>patchState({sidebarOpen:!getState().sidebarOpen}));
 ui('agent.toggle','Toggle Somnia Agent','Mod+Alt+A',()=>patchState({agentOpen:!getState().agentOpen}));
+registerCommand({id:'chat.toggle',title:'Toggle session chat',category:'View',shortcut:'Mod+Alt+C',allowInInput:true,enabled:()=>!!getChatSession(),run:()=>toggleSessionChat()});
 ui('inspector.toggle','Toggle inspector','Mod+Alt+I',()=>patchState({inspectorOpen:!getState().inspectorOpen}));
 ui('problems.toggle','Toggle problems','Mod+J',()=>patchState({problemsOpen:!getState().problemsOpen}));
 ui('view.code','Code view','Mod+1',()=>patchState({viewMode:'code'}));

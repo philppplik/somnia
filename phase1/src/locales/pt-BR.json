@@ -1274,6 +1274,8 @@
   "chat.open": "Abrir chat",
   "chat.dismiss": "Dispensar",
   "chat.close": "Fechar painel",
+  "chat.railUnread": "Chat, {count} mensagens não lidas",
+  "chat.railUnreadOne": "Chat, 1 mensagem não lida",
   "chat.communication": "Comunicação",
   "chat.badges": "Etiquetas de nome",
   "chat.activity": "Durante atividade",
