@@ -2,7 +2,7 @@
 export interface MathItem{tex:string;display:boolean;/** 1-based line of the opening delimiter. */line:number}
 export interface MathWarning{line:number;message:string}
 export interface ExtractResult{text:string;items:MathItem[];warnings:MathWarning[]}
-export interface ExtractOptions{/** Skip fenced code and code spans (Markdown). Default true. */markdown?:boolean;/** Line number of the first line of src. Default 1. */startLine?:number}
+export interface ExtractOptions{/** Skip fenced code and code spans (Markdown). Default true. */markdown?:boolean;/** Line number of the first line of src. Default 1. */startLine?:number;/** Keep the line count: after each placeholder add one \\n + \\u0002 marker per source line the formula spanned, so a renderer's line maps still match the source. */keepLines?:boolean}
 /** Quick check: could this text contain math at all? Used to decide whether to load the engine. */
 export const hasMathDelims=(s:string)=>/\$[^\s$]|\\\(|\\\[/.test(s);
 /** True when the text really holds at least one formula (runs the full extraction, so call it on debounced text). */
@@ -16,7 +16,7 @@ export function extractMath(src:string,o:ExtractOptions={}):ExtractResult{
  /** End of the current paragraph (next blank line) or end of text. */
  const paraEnd=(from:number)=>{const m=/\n[ \t]*\n/.exec(src.slice(from));return m?from+m.index:n;};
  const lines=(s:string)=>{let c=0;for(const ch of s)if(ch==='\n')c++;return c;};
- const push=(tex:string,display:boolean,startAt:number)=>{items.push({tex:tex.trim(),display,line:base+line+1});out+=`\u0001${items.length-1}\u0001`;line+=lines(src.slice(startAt,i));};
+ const push=(tex:string,display:boolean,startAt:number)=>{items.push({tex:tex.trim(),display,line:base+line+1});const k=lines(src.slice(startAt,i));out+=`\u0001${items.length-1}\u0001`+(o.keepLines?'\n\u0002'.repeat(k):'');line+=k;};
  const atLineStart=()=>i===0||src[i-1]==='\n';
  while(i<n){
   const c=src[i];

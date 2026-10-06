@@ -5,7 +5,7 @@ export interface MediaItem{name:string;kind:MediaKind;mime:string;url:string;siz
 export const MEDIA_FILE=/\.(png|jpe?g|pdf)$/i;
 export const MAX_MEDIA_BYTES=25_000_000;
 export const MEDIA_ACCEPT='.png,.jpg,.jpeg,.pdf,image/png,image/jpeg,application/pdf';
-export const isMarkdown=(f:string)=>/\.md$/i.test(f);
+export const isMarkdown=(f:string)=>/\.(md|markdown)$/i.test(f);
 export const isSvg=(f:string)=>/\.svg$/i.test(f);
 /** True when the file shows as a rendered preview instead of the HTML design canvas. */
 export const isTex=(f:string)=>/\.tex$/i.test(f);

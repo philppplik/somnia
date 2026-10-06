@@ -86,13 +86,23 @@ export function attachKeyboardShortcuts(target:Window=window){
   if(event.defaultPrevented||event.isComposing||event.repeat)return;
   const element=event.target;const input=element instanceof HTMLElement&&!!element.closest('input,textarea,select,[contenteditable="true"],[role="textbox"]');
   if(getState().paletteOpen||getState().settingsOpen)return;
-  const list=listCommands();let command=list.find(c=>c.shortcut&&matchesShortcut(event,c.shortcut));
+  const list=listCommands();const mdFocus=element instanceof HTMLElement&&element.matches('[data-core-editor]')&&/\.(md|markdown)$/i.test(getState().activeFile);
+  let command=list.find(c=>!c.id.startsWith('md.')&&c.shortcut&&matchesShortcut(event,c.shortcut));
   if(!isMac()&&matchesShortcut(event,'Mod+Y'))command=list.find(c=>c.id==='edit.redo');
   const coreEditor=element instanceof HTMLElement&&element.matches('[data-core-editor]');
-  if(!command||(input&&!command.allowInInput&&command.id!=='palette.open'&&!(coreEditor&&command.id.startsWith('edit.'))))return;
+  const mdEditor=coreEditor&&/\.(md|markdown)$/i.test(getState().activeFile);
+  if(!command||(input&&!command.allowInInput&&command.id!=='palette.open'&&!(coreEditor&&command.id.startsWith('edit.'))&&!(mdEditor&&command.id.startsWith('view.'))))return;
   event.preventDefault();void executeCommand(command.id);
  };
- target.addEventListener('keydown',listener);return()=>target.removeEventListener('keydown',listener);
+ // Markdown editor commands (Mod+B, Mod+I, ...) run in the capture phase so they beat the editor's own keymap (Mod+I selects the parent syntax node) and the global sidebar toggle. They never fire outside the Markdown editor, so Mod+B stays the sidebar toggle there.
+ const mdListener=(event:KeyboardEvent)=>{
+  if(event.defaultPrevented||event.isComposing||event.repeat)return;const el=event.target;
+  if(!(el instanceof HTMLElement&&el.matches('[data-core-editor]')&&/\.(md|markdown)$/i.test(getState().activeFile)))return;
+  if(getState().paletteOpen||getState().settingsOpen)return;
+  const mc=listCommands().find(c=>c.id.startsWith('md.')&&c.shortcut&&matchesShortcut(event,c.shortcut));
+  if(mc&&commandEnabled(mc)){event.preventDefault();event.stopPropagation();void executeCommand(mc.id);}};
+ target.addEventListener('keydown',mdListener,true);
+ target.addEventListener('keydown',listener);return()=>{target.removeEventListener('keydown',listener);target.removeEventListener('keydown',mdListener,true);};
 }
 
 registerCommand({id:'tools.diff',title:'Toggle diff split (compare in editor)',category:'Tools',keywords:['diff','compare','changes','saved version'],enabled:()=>getState().coreConnected,run:()=>{const st=getState();patchState({diffSplit:!st.diffSplit,...(st.viewMode==='design'?{viewMode:'split' as const}:{})});}});
@@ -126,3 +136,16 @@ for(const [id,title,act] of [['row.above','Table: add row above','row.above'],['
 
 registerCommand({id:'edit.wrap',title:'Wrap selected element in a div',category:'Edit',keywords:['wrap','container','group'],enabled:sel,run:async()=>{(await import('./structureCommands')).wrapLayer(getState().selectedElementId!,'div');}});
 registerCommand({id:'edit.unwrap',title:'Unwrap selected element (keep content)',category:'Edit',keywords:['unwrap','ungroup','remove wrapper'],enabled:sel,run:async()=>{(await import('./structureCommands')).unwrapLayer(getState().selectedElementId!);}});
+
+// Markdown editor commands. Only Bold and Italic have default bindings; the rest are in the palette and can be assigned in Settings.
+const mdActive=()=>/\.(md|markdown)$/i.test(getState().activeFile)&&getState().viewMode!=='design';
+const mdRun=(cmd:string)=>async()=>{const [b,f]=await Promise.all([import('./mdBridge'),import('./mdFormat')]);const v=b.getMdSource();if(v)f.runMdCommand(v,cmd as import('./mdFormat').MdCommand);};
+const mdCmd=(id:string,title:string,shortcut:string|undefined,run:()=>void|Promise<void>,enabled:()=>boolean=mdActive)=>registerCommand({id,title,category:'Insert',shortcut,keywords:['markdown'],enabled,run});
+mdCmd('md.bold','Markdown: Bold','Mod+B',mdRun('bold'));mdCmd('md.italic','Markdown: Italic','Mod+I',mdRun('italic'));
+mdCmd('md.code','Markdown: Inline code',undefined,mdRun('code'));mdCmd('md.strike','Markdown: Strikethrough',undefined,mdRun('strike'));
+mdCmd('md.bullet','Markdown: Bulleted list',undefined,mdRun('bullet'));mdCmd('md.task','Markdown: Task list',undefined,mdRun('task'));
+mdCmd('md.number','Markdown: Numbered list',undefined,mdRun('number'));mdCmd('md.quote','Markdown: Quote',undefined,mdRun('quote'));
+mdCmd('md.codeblock','Markdown: Code block',undefined,mdRun('codeblock'));mdCmd('md.table','Markdown: Table',undefined,mdRun('table'));
+for(const n of [1,2,3,4,5,6])mdCmd(`md.h${n}`,`Markdown: Heading ${n}`,undefined,mdRun(`h${n}`));
+mdCmd('md.reveal','Markdown: Reveal current preview block in source',undefined,()=>{window.dispatchEvent(new Event('somnia:md-reveal'));},()=>/\.(md|markdown)$/i.test(getState().activeFile)&&getState().viewMode!=='code');
+mdCmd('md.sync','Markdown: Toggle scroll sync',undefined,async()=>{const b=await import('./mdBridge');b.setSyncScroll(!b.getSyncScroll());},()=>/\.(md|markdown)$/i.test(getState().activeFile)&&getState().viewMode==='split');

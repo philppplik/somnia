@@ -1084,7 +1084,7 @@ export function Settings() {
               .map((c) => {
                 const clash = c.shortcut
                   ? listCommands().find(
-                      (o) => o.id !== c.id && o.shortcut === c.shortcut,
+                      (o) => o.id !== c.id && o.shortcut === c.shortcut && o.id.startsWith("md.") === c.id.startsWith("md."),
                     )
                   : undefined;
                 return (

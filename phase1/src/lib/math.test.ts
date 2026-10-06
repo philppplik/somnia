@@ -3,12 +3,13 @@ import assert from 'node:assert/strict';
 import katex from 'katex';
 import {extractMath,hasMathDelims} from './mathExtract';
 import {_resetMathForTests,_setKatexForTests,makeSink,renderMath} from './mathRender';
-import {renderMarkdown,renderMarkdownEx} from './markdownRender';
+import {loadMarkdown,renderMarkdown,renderMarkdownEx} from './markdownRender';
 import {renderTex} from './texPreview';
 import {mathProblems} from './mathProblems';
 import {modeFor,languageFor} from './languages';
 import {EditorState} from '@codemirror/state';
 import {syntaxTree} from '@codemirror/language';
+test.before(async()=>{await loadMarkdown();});
 test.beforeEach(()=>{_resetMathForTests();_setKatexForTests(katex);});
 const items=(s:string)=>extractMath(s).items.map(i=>`${i.display?'D':'I'}:${i.tex}`);
 test('inline and block delimiters',()=>{
@@ -34,7 +35,7 @@ test('markdown renders formulas with aria-label and keeps code literal',()=>{
  const sink=makeSink();const html=renderMarkdown('# T $a_1$\n\nText $x^2$ and `$y$`\n\n$$E=mc^2$$\n',{math:sink});
  assert.match(html,/class="math-inline" role="math" aria-label="x\^2"/);assert.match(html,/class="math-block"/);assert.ok(html.includes('<code>$y$</code>'));
  assert.equal(sink.count,3);assert.equal(sink.errors.length,0);assert.ok(html.includes('class="katex"'));assert.ok(!html.includes('katex-mathml'));});
-test('markdown without a sink leaves dollars alone',()=>{assert.equal(renderMarkdown('cost $x$'),'<p>cost $x$</p>');});
+test('markdown without a sink leaves dollars alone',()=>{assert.equal(renderMarkdown('cost $x$').replace(/ data-md="[^"]*"/g,'').trim(),'<p>cost $x$</p>');});
 test('underscores and stars inside math are not turned into emphasis',()=>{const html=renderMarkdown('$a_1 + b_2$ and *em*',{math:makeSink()});assert.ok(!html.includes('<em>1'));assert.match(html,/<em>em<\/em>/);});
 test('one bad formula does not break the page',()=>{
  const sink=makeSink();const html=renderMarkdown('ok $x$ bad $\\frac{1}{$ ok2 $y$',{math:sink});
@@ -72,3 +73,13 @@ test('.tex mode and highlighting',()=>{
  let found=0;syntaxTree(st).iterate({enter:()=>{found++;}});assert.ok(found>1);});
 
 test('error messages are plain text and name the command',()=>{const a=renderMath('\\frac{1}{',false)!;assert.ok(!a.error!.includes('&#'));const b=renderMath('\\unknowncmd{x}',true)!;assert.match(b.error!,/\\unknowncmd/);});
+
+test('markdown-it: multi-line math keeps source line maps, prices and code stay text, no markers leak',()=>{
+ const sink=makeSink();const html=renderMarkdown('para $a\nb$ x\n\n$$\nE=mc^2\n$$\n\nafter costs $5 or $10\n\n```\n$z$\n```\n\nlast',{math:sink});
+ assert.equal(sink.count,2);assert.ok(!/[\u0001\u0002]/.test(html));
+ assert.match(html,/data-md="0-2"/);assert.match(html,/data-md="3-6"/);assert.match(html,/data-md="7-8"[^>]*>after costs \$5 or \$10/);assert.match(html,/data-md="13-14"[^>]*>last/);assert.ok(html.includes('$z$'));});
+test('markdown-it: math in link titles and image alt never reaches an attribute',()=>{
+ const html=renderMarkdown('[a](https://x.y "t $x$") ![alt $y$](p.png) # h',{math:makeSink()});
+ assert.ok(!/(title|alt)="[^"]*math-inline/.test(html));assert.ok(!/[\u0001\u0002]/.test(html));});
+test('markdown-it: headings with math get stable ids, warnings are reported',()=>{
+ const r=renderMarkdownEx('# T $a_1$\n\n$$ open',{math:makeSink()});assert.match(r.html,/<h1 [^>]*id="t"/);assert.equal(r.warnings.length,1);});

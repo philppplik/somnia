@@ -4,8 +4,8 @@ import {hasMathDelims} from './mathExtract';
 import {getEngineStatus,makeSink} from './mathRender';
 import {renderTex} from './texPreview';
 import {readEditorPrefs} from './editorPrefs';
-import {isTex} from './media';
-const isMd=(f:string)=>/\.md$/i.test(f);
+import {isMarkdown,isTex} from './media';
+const isMd=isMarkdown;
 /** Formula errors for the Problems panel and the editor gutter. Only runs once the math engine is loaded (a preview triggers that), so it costs nothing for projects without math. */
 export function mathProblems(file:string,text:string):Problem[]{
  if(getEngineStatus()==='failed'&&(isMd(file)||isTex(file))&&hasMathDelims(text))return [{file,line:1,col:1,severity:'warning',message:'Math: the math engine could not be loaded, formulas are shown as source'}];

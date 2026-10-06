@@ -101,3 +101,20 @@ input,select,textarea{border-radius:var(--r-sm)}
 .tex-eq-body .math-block{margin:0}
 .tex-eqno{position:absolute;right:0;top:50%;transform:translateY(-50%);color:var(--text-secondary)}
 .tex-ignored{max-width:760px;margin:0 auto;padding:0 28px 32px;font-size:12px;color:var(--text-tertiary);font-family:var(--font-mono,ui-monospace,monospace);overflow-wrap:anywhere}
+/* Markdown native editing + live preview */
+.md-head{background:var(--bg-panel)}
+.md-tool{border-radius:var(--r-control,8px)}
+.md-tool[aria-pressed=true]{background:var(--accent-soft);color:var(--accent)}
+.md-tool:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.md-pane{min-width:0;background:var(--bg-panel)}
+.md-scroll{scrollbar-width:thin}
+.md-preview{padding:28px}
+.md-notice{display:flex;align-items:center;gap:8px;margin:12px 28px 0;padding:6px 10px;border:1px solid var(--border-default);border-radius:8px;font-size:12px;background:var(--bg-surface)}
+.md-notice em{color:var(--text-tertiary);font-style:normal}
+.md-preview .md-reveal-flash,.md-preview [data-md].md-reveal-flash{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
+.md-preview li.md-task{list-style:none;margin-left:-1.4em}.md-preview li.md-task input{margin-right:.4em}
+.md-preview .footnotes{font-size:.9em;color:var(--text-secondary)}.md-preview .footnotes-sep{margin-top:2em}
+.md-preview sup.footnote-ref a{text-decoration:none}
+.md-preview .md-missing-image{color:var(--text-tertiary);border:1px dashed var(--border-default);border-radius:4px;padding:0 .4em}
+.md-preview a:focus-visible,.md-preview :focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+@media (prefers-reduced-motion:reduce){.md-preview .md-reveal-flash{transition:none}}

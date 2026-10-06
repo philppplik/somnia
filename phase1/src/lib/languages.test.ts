@@ -6,6 +6,7 @@ import {formatCode,langFor} from './format';
 test('file names map to editor modes',()=>{
  const m:Record<string,string>={'a.html':'html','b.HTM':'html','x/c.css':'css','d.js':'javascript','e.mjs':'javascript','f.jsx':'javascript','g.ts':'typescript','h.tsx':'typescript','i.json':'json','manifest.webmanifest':'json','tsconfig.jsonc':'json','j.png':'plain','k.txt':'plain','l.svg':'plain'};
  for(const[f,e]of Object.entries(m))assert.equal(modeFor(f),e,f);});
+test('Markdown files get the markdown mode, other text stays plain',()=>{assert.equal(modeFor('a.md'),'markdown');assert.equal(modeFor('docs/README.MD'),'markdown');assert.equal(modeFor('x.markdown'),'markdown');assert.equal(modeFor('a.txt'),'plain');});
 test('JSON problems are reported with a line number, valid JSON is clean',()=>{
  assert.deepEqual(computeDiagnostics('data.json','{"a":1,"b":[1,2,3]}'),[]);
  const p=computeDiagnostics('data.json','{\n"a":1,\n"b":,\n}');assert.ok(p.length>0&&p.every(x=>x.severity==='error'),JSON.stringify(p));assert.ok(p.some(x=>x.line>=3),JSON.stringify(p));});
