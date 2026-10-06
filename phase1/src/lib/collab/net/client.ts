@@ -152,6 +152,7 @@ export class CollabClient{
    if(isEncryptedFrame(bytes)){
     if(!this.linkKey)return; // encrypted traffic without a key: not for us, drop
     frame=await decryptFrame(this.linkKey,bytes);}
+   else if(this.linkKey)return; // key session: plaintext sync/awareness is a downgrade attempt, drop
    if(frame[0]!==MSG_SYNC&&frame[0]!==MSG_AWARENESS)return;
    const reply=handleMessage(frame,this.sess.doc,this.sess.awareness,this);
    if(reply)this.sendFrame(reply);
@@ -180,7 +181,7 @@ export class CollabClient{
   this.patch({state:'reconnecting',attempt:attempt+1});
   const r=this.o.random?.()??Math.random();
   const delay=Math.min(this.o.maxDelayMs,this.o.baseDelayMs*2**(attempt-1))*(0.75+0.5*r);
-  this.timer=setTimeout(()=>{const p=parseInviteLink(this.invite);if(p)this.dial(p.url);},delay);}
+  this.timer=setTimeout(()=>{const p=parseWireInvite(this.invite);if(p)this.dial(p.url);},delay);}
 
  /** Ordered, encrypted send. Sync/awareness frames are encrypted when the link carries a key; identity never is. */
  private sendFrame(frame:Uint8Array){

@@ -196,3 +196,31 @@ test('frame-too-big close (1009) is final with an honest message',async()=>{
  await assert.rejects(()=>c.connect(),/2 MiB/);
  assert.equal(c.snapshot().error?.kind,'refused');
  assert.equal(server.connections.length,1);});
+
+test('room-link client reconnects after a drop (regression: parseWireInvite in the reconnect path)',async()=>{
+ const {server,factory}=memoryServer();const relay=new SmartRelay(server);
+ const sess=mkSession({['a.html']:'v1'});
+ const c=mkClient('ws://relay.example:9000/room/aB3fK9xQ2mZ7pL4s',sess,{transport:factory,syncTimeoutMs:50,baseDelayMs:10,random:()=>0.5,mode:'relay'});
+ await c.connect();
+ server.connections[0].drop();
+ await until(()=>c.snapshot().state==='reconnecting');
+ (sess.doc.getMap('files').get('a.html')as Y.Text).insert(0,'offline-');
+ await until(()=>c.snapshot().state==='connected');
+ await until(()=>(relay.doc.getMap('files').get('a.html')as Y.Text).toString()==='offline-v1');});
+
+test('key session drops plaintext sync/awareness frames (no downgrade)',async()=>{
+ const {param}=await newLinkKey();
+ const sess=mkSession();let handler:TransportHandlers|null=null;
+ const tap:Transport={connect(h){handler=h;queueMicrotask(()=>h.onOpen());},send(){},close(){}};
+ const c=mkClient(`${INVITE}#key=${param}`,sess,{transport:()=>tap,syncTimeoutMs:30});
+ const p=c.connect();
+ await until(()=>handler!==null);
+ // a relay (or attacker on the path) injects a plaintext update frame carrying a hostile edit
+ const evil=mkDoc();evil.getText('evil.html').insert(0,'plaintext-injection');
+ const plainFrame=encodeUpdate(Y.encodeStateAsUpdate(evil));
+ handler!.onMessage(plainFrame);
+ // and a plaintext sync step1, which would start an unencrypted state exchange
+ handler!.onMessage(encodeSyncStep1(evil));
+ await sleep(30);
+ assert.equal(sess.doc.share.has('evil.html'),false);
+ await p;});
