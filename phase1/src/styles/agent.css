@@ -1,7 +1,7 @@
 /* Somnia Agent side panel. Visual spec: design spec v2 (agent panel). Gradient only at the bottom edge. */
 .ag-panel{--ag-ink:var(--text-primary);--ag-ink2:var(--text-secondary);--ag-line:rgba(14,15,18,.07);--ag-surface:var(--bg-surface);--ag-bubble:#3F434C;
  --ag-g1:#002AFF;--ag-g2:#EE00FF;--ag-g3:#FF001E;--ag-g4:#FF6200;--ag-g5:#FFD900;--ag-r-bubble:20px;
- position:relative;display:flex;flex-direction:column;flex:none;width:340px;min-height:0;margin-left:var(--gap);border-radius:25px;background:var(--bg-panel);overflow:hidden;isolation:isolate;box-shadow:0 0 0 1px var(--ag-line),var(--card-shadow);color:var(--ag-ink)}
+ position:relative;display:flex;flex-direction:column;flex:none;width:340px;min-height:0;margin-left:var(--gap);border-radius:var(--r-panel);background:var(--bg-panel);overflow:hidden;isolation:isolate;box-shadow:0 0 0 1px var(--ag-line),var(--card-shadow);color:var(--ag-ink)}
 :root[data-theme=dark] .ag-panel{--ag-line:rgba(255,255,255,.08);--ag-bubble:#d9dbe3}
 .ag-panel *{box-sizing:border-box}
 .ag-hd{position:relative;z-index:4;height:64px;flex:none;display:flex;align-items:center;justify-content:center}
@@ -51,8 +51,10 @@
 .ag-ok{background:var(--ag-ink);color:var(--bg-panel)}.ag-ok:hover{opacity:.86}
 .ag-no{background:transparent;color:var(--ag-ink);box-shadow:0 0 0 1px rgba(127,127,140,.4)}.ag-no:hover{background:rgba(127,127,140,.14)}
 .ag-undo{flex:none}.ag-result{flex:1;color:var(--ag-ink2);padding:6px 4px}
+/* Clip the composited gradient locally too: backdrop blur can escape the parent's
+   rounded overflow clip in Chromium/WebView2. Use the shared panel radius. */
 /* bottom gradient: SVG (colours live in the SVG) + progressive blur, nothing at the top */
-.ag-bar{position:absolute;left:0;right:0;bottom:0;height:110px;z-index:3;pointer-events:none;overflow:hidden}
+.ag-bar{position:absolute;left:0;right:0;bottom:0;height:110px;z-index:3;pointer-events:none;overflow:hidden;border-radius:0 0 var(--r-panel) var(--r-panel);clip-path:inset(0 round 0 0 var(--r-panel) var(--r-panel))}
 .ag-grad{position:absolute;left:0;right:0;bottom:0;height:100%;background:url("../assets/agent-gradient-bottom.svg") center -21px/190% auto no-repeat;filter:blur(8px);opacity:.95}
 .ag-pb{position:absolute;inset:0;z-index:1}.ag-pb i{position:absolute;inset:0;display:block}
 .ag-pb i:nth-child(1){backdrop-filter:blur(1px);-webkit-mask:linear-gradient(0deg,#000 0 25%,transparent 50%);mask:linear-gradient(0deg,#000 0 25%,transparent 50%)}
