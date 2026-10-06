@@ -1,0 +1,21 @@
+[package]
+name = "somnia-relay"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.85"
+description = "Blind, self-hostable WebSocket relay for Somnia collaboration rooms. Forwards only opaque (end-to-end encrypted) frames; stores nothing."
+license = "MIT"
+publish = false
+
+[dependencies]
+tokio = { version = "1", features = ["full"] }
+tokio-tungstenite = "0.26"
+futures-util = "0.3"
+bytes = "1"
+clap = { version = "4", features = ["derive", "env"] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+sha2 = "0.10"
+
+[dev-dependencies]
+tokio-tungstenite = "0.26"
