@@ -846,6 +846,7 @@ export function Settings() {
             [
               "grid",
               "resizeHandles",
+              "spacingHandles",
               "doubleClickEdit",
               "shiftSelect",
               "spacePan",
@@ -889,7 +890,35 @@ export function Settings() {
               }
             />
           </label>
-          {(["gridColor", "selectionColor", "background"] as const).map(
+          <label>
+            {t("canvasPref.selectionColor")}
+            <span className="settings-color-value">
+              <code>{state.canvasPrefs.selectionColor ?? t("canvasPref.selectionColorTheme")}</code>
+              <input
+                type="color"
+                aria-label={t("canvasPref.selectionColor")}
+                value={state.canvasPrefs.selectionColor ?? "#7c5cff"}
+                onChange={(e) =>
+                  change({
+                    canvasPrefs: { ...state.canvasPrefs, selectionColor: e.target.value },
+                  })
+                }
+              />
+              {state.canvasPrefs.selectionColor && (
+                <button
+                  type="button"
+                  onClick={() =>
+                    change({
+                      canvasPrefs: { ...state.canvasPrefs, selectionColor: null },
+                    })
+                  }
+                >
+                  {t("canvasPref.selectionColorTheme")}
+                </button>
+              )}
+            </span>
+          </label>
+          {(["gridColor", "background"] as const).map(
             (key) => (
               <label key={key}>
                 {t("canvasPref." + key)}

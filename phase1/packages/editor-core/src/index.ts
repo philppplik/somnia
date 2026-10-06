@@ -33,6 +33,8 @@ const isElement=(n:DefaultTreeAdapterMap['node']):n is PElement=>'tagName' in n;
 const clone=<T>(x:T):T=>structuredClone(x);
 const shortId=()=>randomUUID().replaceAll('-','').slice(0,12);
 export class EditorError extends Error { constructor(public code:string,message:string){super(message);this.name='EditorError';} }
+/** True when an inline style declaration would win over (or be shadowed by) a generated class rule for `prop`: the same property, its shorthand (padding vs padding-top), or its longhands. */
+export function inlineStyleConflict(style:string,prop:string):boolean{const k=prop.trim().toLowerCase();const names=style.split(';').map(d=>d.split(':')[0].trim().toLowerCase()).filter(Boolean);const long=k.match(/^(padding|margin)-(top|right|bottom|left)$/);return names.some(n=>n===k||(long!==null&&n===long[1])||((k==='padding'||k==='margin')&&n.startsWith(k+'-')));}
 export class EditorProject {
  private sources:Record<string,string>;
  private trees:Record<string,EditorNode[]>={};
@@ -223,7 +225,7 @@ export class EditorProject {
     if(at>=n.from&&at<=n.to)return;
     const ids=this.snapshotIds(op.file).filter(x=>x.from>=n.from&&x.from<n.to);const raw=this.files[op.file].slice(n.from,n.to);add({file:op.file,from:n.from,to:n.to,insert:''});if(at>n.to)at-=n.to-n.from;add({file:op.file,from:at,to:at,insert:raw},ids.map(x=>({...x,from:at+x.from-n.from})));break;}
    case 'setStyle': {let n=this.editable(op.file,op.nodeId);const cssFile=op.cssFile||'somnia-styles.css';if(!/^[\w./-]+\.css$/.test(cssFile)||cssFile.split('/').includes('..')||cssFile.startsWith('/'))throw new EditorError('invalid-css-file','Stylesheet must be a project-relative CSS file.');if(op.breakpoint!=null&&(!Number.isInteger(op.breakpoint)||op.breakpoint<1))throw new EditorError('invalid-breakpoint','Choose a positive breakpoint width.');
-    if(n.attrs.style&&Object.keys(op.properties).some(k=>new RegExp('(?:^|;)\\s*'+k+'\\s*:','i').test(n.attrs.style)))throw new EditorError('inline-cascade','This property is controlled by an inline style. Edit or remove that declaration in code before applying a class rule.');
+    if(n.attrs.style&&Object.keys(op.properties).some(k=>inlineStyleConflict(n.attrs.style,k)))throw new EditorError('inline-cascade','This property is controlled by an inline style. Edit or remove that declaration in code before applying a class rule.');
     const props=Object.entries(op.properties).filter(([,v])=>v!==null);for(const [k,v] of props)if(!/^(--[\w-]+|[a-z][a-z-]*)$/.test(k)||/[{};]|<\/style/i.test(v!))throw new EditorError('invalid-style','Use one CSS property value at a time.');
     if(!props.length)throw new EditorError('unsupported-style-removal','Resetting a generated rule requires editing its CSS source. No existing cascade rules will be silently deleted.');
     let cls=n.attrs.class?.split(/\s+/).find(c=>/^element-[a-f0-9]{12}$/.test(c));if(!cls){cls='element-'+shortId();this.attribute(op.file,n.id,'class',((n.attrs.class||'')+' '+cls).trim(),patches);n=this.node(op.file,n.id);}
