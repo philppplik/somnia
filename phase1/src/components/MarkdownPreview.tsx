@@ -22,12 +22,12 @@ export function MarkdownPreview({file,text}:{file:string;text:string}){
  const [out,setOut]=useState<{html:string;blocks:MdBlock[]}|null>(null);const [status,setStatus]=useState<Status>('loading');const [stale,setStale]=useState(false);const [retry,setRetry]=useState(0);
  const [menu,setMenu]=useState<{x:number;y:number;range:[number,number]}|null>(null);
  const pendingFragment=useRef<string|null>(null);const rev=useRef(0);
- const mathOn=s.editorPrefs.mathMarkdown;const engine=useMathEngine();
+ const [mathNote,setMathNote]=useState({pending:false,failed:false});const mathOn=s.editorPrefs.mathMarkdown;const engine=useMathEngine();
  const resolveImage=useCallback((raw:string)=>{const clean=raw.replace(/^\.\//,'').split(/[?#]/)[0];const p=((): string=>{try{return decodeURIComponent(clean);}catch{return clean;}})();return (findMedia(resolveRel(file,p))??findMedia(p)??findMedia(p.replace(/^.*\//,'')))?.url??null;},[file,media.items]);
  // Render the in-memory buffer. Latest revision wins; hold the last good output during IME composition.
  useEffect(()=>{const my=++rev.current;
   const run=()=>{if(my!==rev.current)return;if(src?.composing){window.setTimeout(run,60);return;}
-   loadMarkdown().then(()=>{if(my!==rev.current)return;try{const needsMath=mathOn&&hasMathDelims(text)&&hasMath(text);if(needsMath&&engine==='idle')void loadMathEngine();const sink=needsMath&&engine!=='failed'?makeSink():null;const r=renderMarkdownBlocks(text,{resolveImage,math:sink??undefined});setMathStatus({kind:'md',count:sink?.count??0,errors:sink?.errors.length??0,loading:!!sink?.pending,failed:needsMath&&engine==='failed'});setOut(r);setStatus('ok');setStale(false);}catch(e){if(my!==rev.current)return;setStatus('error');setStale(true);patchState({notice:`Preview: ${String(e)}`});}}).catch(()=>{if(my===rev.current){setStatus('error');setStale(true);}});};
+   loadMarkdown().then(()=>{if(my!==rev.current)return;try{const needsMath=mathOn&&hasMathDelims(text)&&hasMath(text);if(needsMath&&engine==='idle')void loadMathEngine();const sink=needsMath&&engine!=='failed'?makeSink():null;const r=renderMarkdownBlocks(text,{resolveImage,math:sink??undefined});setMathStatus({kind:'md',count:sink?.count??0,errors:sink?.errors.length??0,loading:!!sink?.pending,failed:needsMath&&engine==='failed'});setMathNote({pending:!!sink?.pending,failed:needsMath&&engine==='failed'});setOut(r);setStatus('ok');setStale(false);}catch(e){if(my!==rev.current)return;setStatus('error');setStale(true);patchState({notice:`Preview: ${String(e)}`});}}).catch(()=>{if(my===rev.current){setStatus('error');setStale(true);}});};
   const id=window.setTimeout(run,60);return()=>window.clearTimeout(id);},[text,resolveImage,retry,src,mathOn,engine]);
  useEffect(()=>()=>clearMathStatus(),[]);
  // geometry of mapped blocks relative to the scroller
@@ -95,6 +95,8 @@ export function MarkdownPreview({file,text}:{file:string;text:string}){
    {status==='loading'&&!html&&<p className="md-empty" data-testid="md-loading">{t('md.loading')}</p>}
    {empty&&<p className="md-empty" data-testid="md-empty">{t('md.empty')}</p>}
    <article ref={article} data-testid="md-preview" className="md-preview" onClick={onClick} onContextMenu={onContext} dangerouslySetInnerHTML={{__html:empty?'':html}}/>
+   {mathNote.pending&&<p className="math-loading-note" role="status">{t('math.loading.note')}</p>}
+   {mathNote.failed&&<p className="math-loading-note" role="alert">{t('math.failed')} <button className="math-retry" onClick={()=>void loadMathEngine()}>{t('math.retry')}</button> {t('math.failed.hint')}</p>}
   </div>
   {menu&&<div className="menu-popup fixed z-[200]" style={{left:menu.x,top:menu.y}} role="menu" onPointerDown={e=>e.stopPropagation()}><button role="menuitem" className="menu-item w-full" data-testid="md-reveal" autoFocus onClick={()=>{const r=menu.range;setMenu(null);reveal(r);}}>{t('md.reveal')}</button></div>}
  </section>;}
