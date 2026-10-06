@@ -10,5 +10,5 @@ test('1000-file folder opens fully, renders bounded rows, scrolls to last file a
  await list.evaluate(el=>{el.scrollTop=el.scrollHeight;});await nav.getByRole('button',{name:'Open page-0999.html',exact:true}).click();
  const source=page.getByRole('textbox',{name:'Source code'});await expect(source).toContainText('Page 999');await nav.getByRole('button',{name:'Open page-0999.html',exact:true}).focus();await page.keyboard.press('Home');await expect(nav.getByRole('button',{name:'Open page-0000.html',exact:true})).toBeFocused();await page.keyboard.press('End');await expect(nav.getByRole('button',{name:'Open page-0999.html',exact:true})).toBeFocused();await source.fill('<html><body><h1>Saved last file</h1></body></html>');await page.keyboard.press('Control+s');
  await expect.poll(()=>page.evaluate(async()=>{const d=(window as unknown as {__dir:FileSystemDirectoryHandle}).__dir;return (await (await d.getFileHandle('page-0999.html')).getFile()).text();})).toContain('Saved last file');
- await page.screenshot({path:'/downloads/somnia-large-projects.png'});
+// screenshot removed: CI has no /downloads directory
 });
