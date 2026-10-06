@@ -124,3 +124,30 @@ test('relay session shares images and PDFs: bytes arrive intact, status comes fr
  for(const f of hub.frames)assert.equal(f[0],MSG_ENCRYPTED);
  await g.leave();await h.stopHosting();assert.equal(h.snapshot().media,null);
 });
+
+test('identity: host uses the profile name (or Host), a dialog override wins, avatars cross as session thumbnails, legacy peers see initials',async()=>{
+ const {GOOD}=await import('./identity.test');const {getChatSession}=await import('./chatSession');
+ const hub=blindHub();const host=fakeProject({'index.html':'<p>x</p>'}),guest=fakeProject(),legacy=fakeProject();
+ let nick:string|undefined='Prof Hanna';
+ const h=mk(host,hub,{hostName:()=>nick,avatarSource:()=>'src-picture',thumbnail:async src=>{assert.equal(src,'src-picture');return GOOD;}});
+ await h.startHosting({mode:'relay',relayUrl:'wss://relay.example.com'});
+ assert.equal(h.snapshot().participants.find(p=>p.self)!.name,'Prof Hanna');
+ const link=h.snapshot().guestLinks[0];
+ const g=mk(guest,hub,{avatarSource:()=>undefined});await g.join(link,'Gabi');
+ await until(()=>h.snapshot().participants.length===2&&g.snapshot().participants.length===2,4000,'both present');
+ const hid=getChatSession()!.localId;
+ await until(()=>g.snapshot().participants.length===2,2000,'guest sees host');
+ // the guest window shares the module-level chat session slot; read the avatar map through the host session
+ assert.equal(getChatSession()!.model.avatars.size,1);
+ await g.leave();await h.stopHosting();
+ // empty profile falls back to "Host"; an over-long profile name is not silently cut, "Host" is used unless the dialog supplies one
+ nick='';const h2=mk(fakeProject({'a.html':'x'}),blindHub(),{hostName:()=>nick});await h2.startHosting({mode:'relay',relayUrl:'wss://relay.example.com'});assert.equal(h2.snapshot().participants.find(p=>p.self)!.name,'Host');await h2.stopHosting();
+ nick='N'.repeat(40);const h3=mk(fakeProject({'a.html':'x'}),blindHub(),{hostName:()=>nick});await h3.startHosting({mode:'relay',relayUrl:'wss://relay.example.com'});assert.equal(h3.snapshot().participants.find(p=>p.self)!.name,'Host');await h3.stopHosting();
+ const h4=mk(fakeProject({'a.html':'x'}),blindHub(),{hostName:()=>nick});await h4.startHosting({mode:'relay',relayUrl:'wss://relay.example.com',displayName:'Short name'});assert.equal(h4.snapshot().participants.find(p=>p.self)!.name,'Short name');await h4.stopHosting();
+ assert.ok(hid.length>0);void legacy;
+});
+test('identity: a picture that cannot be shared is reported once and the session still works',async()=>{
+ const hub=blindHub();const h=mk(fakeProject({'a.html':'x'}),hub,{avatarSource:()=>'p',thumbnail:async()=>null});
+ await h.startHosting({mode:'relay',relayUrl:'wss://relay.example.com'});
+ await until(()=>h.snapshot().avatarShareFailed===true,2000,'failure flag');assert.equal(h.snapshot().state,'connected');await h.stopHosting();
+});

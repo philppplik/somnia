@@ -12,6 +12,7 @@ import {parseJoinLink,isInsecureRemote,modeOfLink,withMode,relayRoomUrl,cleanDis
 import {getLanHost,type LanHostPort} from './lanHostPort';
 import {isCollabFile} from './paths';
 import {makeUser,participantsOf} from './awarenessSafe';
+import {checkSessionName} from './identity';
 import {removeAwarenessStates} from 'y-protocols/awareness';
 import {idleSnapshot,type CollabEngine,type CollabSnapshot,type CollabError,type HostOptions} from './types';
 export interface EngineDeps{
@@ -24,7 +25,12 @@ export interface EngineDeps{
  media?:MediaPort;
  transport?:TransportFactory;
  lan?:()=>LanHostPort|null;
- hostName?:string;
+ /** Local profile nickname for the host, read when hosting starts. */
+ hostName?:string|(()=>string|undefined);
+ /** Local profile picture (any validated data URL) captured at session start. */
+ avatarSource?:()=>string|undefined;
+ /** Turns the profile picture into the 48px session thumbnail. */
+ thumbnail?:(src:string)=>Promise<string|null>;
  blobOptions?:import('./blobSync').BlobSyncOptions;
  clientOptions?:{maxAttempts?:number;baseDelayMs?:number;maxDelayMs?:number;syncTimeoutMs?:number};
 }
@@ -63,6 +69,9 @@ export class RealEngine implements CollabEngine{
   this.bridge=startBridge(doc,this.d.project,{role,onFiles:()=>notifySession()});
   const client=this.client=new CollabClient(link,{session:{doc:doc.doc,awareness:doc.awareness},chatDoc:chatModel.doc,mode,transport:this.d.transport,...this.d.clientOptions});
   this.chat=new ChatSession(doc,client,role,chatModel);setChatSession(this.chat);
+  const avatarSrc=this.d.avatarSource?.();
+  const thumb=avatarSrc&&this.d.thumbnail?this.d.thumbnail(avatarSrc).catch(()=>null):null;
+  const chatRef=this.chat;
   const view=()=>{const c=client.snapshot(),ps=participantsOf(doc.awareness);return {...this.fromClient(c),participants:ps,synced:c.synced&&ps.length>1,media:this.blobs?this.blobs.snapshot():null};};
   const refresh=()=>{this.set(view());if(client.snapshot().state==='error'){this.chat?.destroy();this.chat=null;setChatSession(null);}};
   this.offClient=client.subscribe(refresh);
@@ -76,7 +85,8 @@ export class RealEngine implements CollabEngine{
   if(!this.d.media)client.setBlobHandler(f=>this.chat?.blobs.handle(f));
   doc.awareness.on('change',onAware);this.offAware=()=>doc.awareness.off('change',onAware);
   onAware();refresh();
-  await client.connect();}
+  await client.connect();
+  if(thumb)void thumb.then(url=>{if(this.chat!==chatRef||!chatRef||client.snapshot().state==='error')return;if(!url||!chatRef.publishAvatar(url))this.set({avatarShareFailed:true});});}
 
  private async teardown(){
   const doc=this.doc,client=this.client;
@@ -118,7 +128,9 @@ export class RealEngine implements CollabEngine{
    // Host capability is never exposed in a copyable local invite.
    if(localLink){const u=new URL(hostLink);u.search='';localLink=u.toString();}
    this.set({expiresAt:roomExpiry(hostLink)??expiresAt});
-   const name=this.d.hostName??'Host';
+   const configured=typeof this.d.hostName==='function'?this.d.hostName():this.d.hostName;
+   const chosen=checkSessionName(opts.displayName??configured??'');
+   const name=chosen.ok?chosen.name:'Host';
    this.set({state:'connecting'});
    await this.run(hostLink,opts.mode,'host',name);
    this.set({guestLinks,localLink,noNetworkAddress:noAddr,role:'host'});

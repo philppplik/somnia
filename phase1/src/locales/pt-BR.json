@@ -1263,5 +1263,19 @@
   "set.section.collaboration": "Colaboração",
   "chat.shared": "Compartilhado na sessão",
   "chat.sending": "Enviando…",
-  "chat.trimmed": "Mensagens antigas foram removidas desta sessão."
+  "chat.trimmed": "Mensagens antigas foram removidas desta sessão.",
+  "share.identity": "Sua identidade na sessão",
+  "share.nameFromProfile": "Do seu perfil local. Altere só para esta sessão.",
+  "share.nameWillSave": "Este nome será salvo no seu perfil local depois que você entrar.",
+  "share.nameTooLong": "Use {max} caracteres ou menos nesta sessão. Seu perfil não será alterado.",
+  "share.nameEmpty": "Digite um nome para esta sessão.",
+  "share.nameInvalid": "Use um nome de uma linha, sem caracteres de controle nem colchetes angulares.",
+  "share.nameCount": "{count}/{max}",
+  "share.discloseAvatar": "Seu nome e sua imagem ficam visíveis para as pessoas desta sessão.",
+  "share.discloseName": "Seu nome fica visível para as pessoas desta sessão.",
+  "share.joining": "Entrando...",
+  "share.nameSaveFailed": "Você entrou. Não foi possível salvar seu nome neste dispositivo.",
+  "share.retrySave": "Tentar salvar de novo",
+  "share.avatarNotShared": "Não foi possível compartilhar sua imagem. Os outros verão suas iniciais.",
+  "share.hostNameLong": "O nome do seu perfil tem mais de {max} caracteres. Escolha um nome para esta sessão. Seu perfil não será alterado."
 }

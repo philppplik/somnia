@@ -6,7 +6,7 @@ import {
   type ChatAttachment,
   type ChatMessage,
 } from "../lib/collab/chatModel";
-import { initialOf } from "../lib/collab/badgePolicy";
+import { SessionAvatar } from "./SessionAvatar";
 import { formatBytes } from "../lib/media";
 import { getState, patchState } from "../store/appStore";
 import { useT } from "../lib/useT";
@@ -41,6 +41,12 @@ export function SessionChat() {
   const participants = (session?.participants() ?? []).filter(
     (p) => query !== null && p.name.toLocaleLowerCase().includes(query),
   );
+  const dupes = new Set<string>();
+  {
+    const seen = new Set<string>();
+    for (const p of session?.participants() ?? []) (seen.has(p.name) ? dupes : seen).add(p.name);
+  }
+  const dupName = (p: { name: string; id: string }) => (dupes.has(p.name) ? `${p.name} #${p.id.slice(0, 4)}` : p.name);
   useEffect(() => {
     setBody("");
     setFiles([]);
@@ -240,13 +246,12 @@ export function SessionChat() {
                     }}
                   >
                     {!grouped && (
-                      <span
-                        className="sc-avatar"
-                        data-person-token={m.author.token}
+                      <SessionAvatar
+                        name={m.author.name}
+                        token={m.author.token}
                         title={m.author.name}
-                      >
-                        {initialOf(m.author.name)}
-                      </span>
+                        src={session.avatar(m.author.id)}
+                      />
                     )}
                     <div className="sc-content">
                       {!grouped && (
@@ -486,13 +491,12 @@ export function SessionChat() {
                   <button
                     role="option"
                     aria-selected={i === mentionIndex}
+                    aria-label={dupName(p)}
                     key={p.id}
                     onClick={() => choose(i)}
                   >
-                    <span className="sc-avatar" data-person-token={p.token}>
-                      {initialOf(p.name)}
-                    </span>
-                    <strong>{p.name}</strong>
+                    <SessionAvatar name={p.name} token={p.token} src={p.avatar} />
+                    <strong>{p.name}{dupes.has(p.name) && <small className="sc-suffix"> #{p.id.slice(0, 4)}</small>}</strong>
                     <span>{p.file}</span>
                   </button>
                 ))}

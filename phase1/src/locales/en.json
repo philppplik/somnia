@@ -1263,5 +1263,19 @@
   "set.section.collaboration": "Collaboration",
   "chat.shared": "Shared with session",
   "chat.sending": "Sending…",
-  "chat.trimmed": "Older messages were removed from this session history."
+  "chat.trimmed": "Older messages were removed from this session history.",
+  "share.identity": "Your session identity",
+  "share.nameFromProfile": "From your local profile. Change it for this session.",
+  "share.nameWillSave": "This name will be saved to your local profile after you join.",
+  "share.nameTooLong": "Use {max} characters or fewer for this session. Your profile will stay unchanged.",
+  "share.nameEmpty": "Enter a name for this session.",
+  "share.nameInvalid": "Use a single-line name without control characters or angle brackets.",
+  "share.nameCount": "{count}/{max}",
+  "share.discloseAvatar": "Your name and picture are visible to people in this session.",
+  "share.discloseName": "Your name is visible to people in this session.",
+  "share.joining": "Joining...",
+  "share.nameSaveFailed": "Joined. Your name could not be saved on this device.",
+  "share.retrySave": "Retry save",
+  "share.avatarNotShared": "Your picture could not be shared. Others will see your initials.",
+  "share.hostNameLong": "Your profile name is longer than {max} characters. Choose a name for this session. Your profile will stay unchanged."
 }

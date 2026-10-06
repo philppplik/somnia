@@ -42,7 +42,7 @@ export class ChatSession {
     model = new ChatModel(),
   ) {
     this.model = model;
-    const onPresence=()=>{if(this.dead)return;this.changed();if(this.typingTimer)clearTimeout(this.typingTimer);this.typingTimer=setTimeout(()=>this.changed(),4500);};project.awareness.on('change',onPresence);this.offAwareness=()=>project.awareness.off('change',onPresence);
+    const onPresence=()=>{if(this.dead)return;this.noteAware();this.changed();if(this.typingTimer)clearTimeout(this.typingTimer);this.typingTimer=setTimeout(()=>this.changed(),4500);};project.awareness.on('change',onPresence);this.offAwareness=()=>project.awareness.off('change',onPresence);
     this.ready = client.snapshot().state === "connected";
     this.offClient = client.subscribe(() => {
       if (!this.ready && client.snapshot().state === "connected") {
@@ -52,6 +52,7 @@ export class ChatSession {
     });
     const user = project.awareness.getLocalState()?.user;
     this.localId = user?.participantId ?? String(project.doc.clientID);
+    this.noteAware();
     const port: MediaPort = {
       list: () =>
         [...this.files]
@@ -145,6 +146,21 @@ export class ChatSession {
       this.changed();
     });
   }
+  private noteAware() {
+    for (const [, st] of this.project.awareness.getStates()) {
+      const id = safeUser(st?.user, 0).participantId;
+      if (id) this.model.noteParticipant(id);
+    }
+  }
+  /** Validated session thumbnail of a known participant, or undefined (initials). */
+  avatar(id: string) {
+    return this.model.avatarOf(id);
+  }
+  /** Publish this window's thumbnail once per session. */
+  publishAvatar(data: string) {
+    if (this.dead) return false;
+    return this.model.publishAvatar(this.localId, data);
+  }
   subscribe = (f: () => void) => {
     this.listeners.add(f);
     return () => {
@@ -206,6 +222,7 @@ export class ChatSession {
           id: pid,
           name: u.name,
           token: this.colour(pid),
+          avatar: this.model.avatarOf(pid),
           file: typeof s.file === "string" ? s.file.slice(0, 180) : "",
           self: id === this.project.doc.clientID,
         };

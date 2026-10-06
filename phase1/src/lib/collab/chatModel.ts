@@ -2,6 +2,7 @@ import * as Y from "yjs";
 import { HASH_RE } from "./net/blobProtocol";
 import { isSafeProjectPath } from "./paths";
 import { cleanDisplayName } from "./invite";
+import { AVATAR_MAP_KEY, admitAvatars, parseAvatarRecord } from "./identity";
 export const CHAT_MAX_ATTACHMENT = 10_000_000,
   CHAT_MAX_ATTACHMENTS = 5,
   CHAT_MAX_TOTAL = 50_000_000,
@@ -119,9 +120,46 @@ export class ChatModel {
   readonly colours = this.doc.getMap<number>("colours");
   readonly order = this.doc.getMap<number>("order");
   readonly meta = this.doc.getMap<boolean>("meta");
+  /** Session-only 48px thumbnails keyed by participant id. Never in messages, awareness or project data. Older clients ignore this key. */
+  readonly avatars = this.doc.getMap<unknown>(AVATAR_MAP_KEY);
+  private known = new Set<string>();
+  private pruning = false;
   private ls = new Set<() => void>();
   private version = 0;
   private stopped = false;
+  private prune = () => {
+    if (this.pruning || this.stopped) return;
+    const { drop } = admitAvatars(this.avatars.entries(), this.known);
+    if (!drop.length) return;
+    this.pruning = true;
+    try {
+      this.doc.transact(() => {
+        for (const k of drop) this.avatars.delete(k);
+      }, "avatar-prune");
+    } finally {
+      this.pruning = false;
+    }
+  };
+  /** A participant id seen in awareness: its thumbnail outranks unknown keys when the budget is tight. */
+  noteParticipant(id: string) {
+    if (this.known.has(id) || this.known.size >= 64) return;
+    this.known.add(id);
+    this.prune();
+    this.change();
+  }
+  avatarOf(id: string): string | undefined {
+    if (!this.known.has(id)) return undefined;
+    return parseAvatarRecord(this.avatars.get(id))?.data;
+  }
+  /** Publish the local thumbnail once. Returns false when it is invalid or did not survive admission. */
+  publishAvatar(id: string, data: string) {
+    if (this.stopped || !this.known.has(id) && this.known.size >= 64) return false;
+    this.known.add(id);
+    if (!parseAvatarRecord({ v: 1, data })) return false;
+    if (this.avatars.has(id)) return this.avatarOf(id) !== undefined;
+    this.doc.transact(() => this.avatars.set(id, { v: 1, data }), "avatar-publish");
+    return this.avatars.has(id);
+  }
   private change = () => {
     this.version++;
     this.ls.forEach((f) => f());
@@ -131,6 +169,8 @@ export class ChatModel {
     this.colours.observe(this.change);
     this.order.observe(this.change);
     this.meta.observe(this.change);
+    this.avatars.observe(this.prune);
+    this.avatars.observe(this.change);
   }
   subscribe = (f: () => void) => {
     this.ls.add(f);
@@ -227,6 +267,9 @@ export class ChatModel {
     this.colours.unobserve(this.change);
     this.order.unobserve(this.change);
     this.meta.unobserve(this.change);
+    this.avatars.unobserve(this.prune);
+    this.avatars.unobserve(this.change);
+    this.known.clear();
     this.doc.destroy();
     this.ls.clear();
   }
