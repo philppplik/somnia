@@ -2,7 +2,7 @@
   "name": "@somnia/desktop-shell",
   "version": "0.1.0",
   "license": "MIT",
-  "somniaRelease": "11.0.0",
+  "somniaRelease": "11.0.0-beta.3",
   "private": true,
   "type": "module",
   "scripts": {
