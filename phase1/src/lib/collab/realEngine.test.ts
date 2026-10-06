@@ -151,3 +151,33 @@ test('identity: a picture that cannot be shared is reported once and the session
  await h.startHosting({mode:'relay',relayUrl:'wss://relay.example.com'});
  await until(()=>h.snapshot().avatarShareFailed===true,2000,'failure flag');assert.equal(h.snapshot().state,'connected');await h.stopHosting();
 });
+test('identity: host name validation matrix (profile name, dialog override, abuse)',async()=>{
+ const hostNameFor=async(cfg:string|undefined,displayName?:string)=>{
+  const h=mk(fakeProject({'a.html':'x'}),blindHub(),{hostName:()=>cfg});
+  await h.startHosting({mode:'relay',relayUrl:'wss://relay.example.com',...(displayName===undefined?{}:{displayName})});
+  const n=h.snapshot().participants.find(p=>p.self)!.name;await h.stopHosting();return n;};
+ assert.equal(await hostNameFor('  Hanna  '),'Hanna','profile name is trimmed');
+ assert.equal(await hostNameFor('N'.repeat(32)),'N'.repeat(32),'32 units are accepted');
+ assert.equal(await hostNameFor('N'.repeat(33)),'Host','33 units: no silent cut');
+ assert.equal(await hostNameFor('   '),'Host');
+ assert.equal(await hostNameFor(undefined),'Host');
+ assert.equal(await hostNameFor('<b>Evil</b>'),'Host','markup is never used as a name');
+ assert.equal(await hostNameFor('Line\nBreak'),'Host');
+ assert.equal(await hostNameFor('Bidi\u202eName'),'Host');
+ assert.equal(await hostNameFor('Profile Name','Dialog Name'),'Dialog Name','dialog override beats the profile');
+ assert.equal(await hostNameFor('Profile Name','N'.repeat(33)),'Host','invalid override is not truncated and does not fall back to a different name silently');
+ assert.equal(await hostNameFor('N'.repeat(40),'Short'),'Short','long profile name is fine when the dialog supplies a valid one');
+});
+test('identity: a guest sees no avatar for a peer without a thumbnail and keeps chatting; a hostile thumbnail is never shown',async()=>{
+ const {getChatSession}=await import('./chatSession');
+ const hub=blindHub();const host=fakeProject({'index.html':'x'}),guest=fakeProject();
+ const h=mk(host,hub,{avatarSource:()=>'src',thumbnail:async()=>'https://evil.example/a.png'});
+ await h.startHosting({mode:'relay',relayUrl:'wss://relay.example.com'});
+ const g=mk(guest,hub,{});await g.join(h.snapshot().guestLinks[0],'Gabi');
+ await until(()=>h.snapshot().participants.length===2,4000,'both present');
+ await until(()=>h.snapshot().avatarShareFailed===true,2000,'invalid thumbnail reported');
+ const chat=getChatSession()!;assert.equal(chat.model.avatars.size,0);
+ for(const p of chat.participants())assert.equal(p.avatar,undefined);
+ assert.equal(h.snapshot().state,'connected');
+ await g.leave();await h.stopHosting();
+});
