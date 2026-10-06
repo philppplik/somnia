@@ -4,10 +4,10 @@ Changes are grouped by product release. Release notes and installation guidance
 live in [`docs/releases/`](docs/releases/). Entries describe implemented behavior,
 not roadmap promises.
 
-## 11.1.0 - Unreleased
+## 11.1.0 - 2026-10-07
 
-This entry collects the beta.6 development wave and the features already present
-in 11.0.0-beta.5. It is not a declaration of stable status. See the
+This entry collects the beta.6 wave and the features already present in
+11.0.0-beta.5. It was released from the commit that passed CI; Windows and macOS acceptance testing by the maintainer is still outstanding. See the
 [release-notes draft](docs/releases/v11.1.0.md) for limits and release checks.
 
 ### Added
