@@ -16,6 +16,10 @@ Status: alpha. Windows builds are tested by the maintainer; Linux and macOS buil
 
 Roadmap: [docs/ROADMAP.md](docs/ROADMAP.md). Benchmarks: [phase1/notes/BENCHMARKS.md](phase1/notes/BENCHMARKS.md).
 
+## Somnia Agent design
+
+The native AI panel is under development. Read the [English Agent documentation](docs/agent/README.md) for the concept, architecture, provider options and draft privacy requirements. Cloud processing requires opt-in; AI changes are reviewed before acceptance. These are design documents, not shipped-feature claims.
+
 ## Download
 
 Get installers from [Releases](https://github.com/philppplik/somnia/releases) (each release lists SHA-256 checksums).
