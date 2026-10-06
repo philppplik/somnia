@@ -31,6 +31,7 @@
     "allow-list-files",
     "allow-read-file",
     "allow-read-media",
+    "allow-hold-autosave",
     "allow-stage-edit",
     "allow-save-file",
     "allow-delete-file",

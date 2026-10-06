@@ -1,5 +1,5 @@
 import { ProviderError } from '../errors';
-import type { AgentMessage, AgentProvider, AgentProviderEvent, AgentProviderRequest } from '../provider';
+import type { AgentMessage, AgentProvider, AgentProviderEvent, AgentProviderRequest } from '../types';
 
 export interface HealthStatus { ok: boolean; version?: string; error?: { code: string; message: string } }
 export type LocalCheckReason = 'endpoint-not-loopback' | 'remote-model' | 'cloud-name' | 'no-local-weights' | 'unreachable' | 'model-not-found' | 'invalid-response';
@@ -69,7 +69,7 @@ export class OllamaProvider implements AgentProvider {
   private async get(path: string, signal?: AbortSignal): Promise<Response> {
     const t = withTimeout(signal, this.timeout);
     try {
-      const r = await this.f(this.baseUrl + path, { signal: t.signal });
+      const r = await this.f(this.baseUrl + path, { signal: t.signal, redirect: 'error' });
       if (!r.ok) throw new ProviderError('http', `Ollama answered ${r.status} for ${path}`);
       return r;
     } catch (e) {
@@ -98,7 +98,7 @@ export class OllamaProvider implements AgentProvider {
     if (/(^|[:\-_/])cloud$/i.test(model.trim())) return no('cloud-name', `Model "${model}" is a cloud tag`);
     const t = withTimeout(signal, this.timeout);
     try {
-      const r = await this.f(this.baseUrl + '/api/show', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ model }), signal: t.signal });
+      const r = await this.f(this.baseUrl + '/api/show', { method: 'POST', redirect:'error', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ model }), signal: t.signal });
       if (r.status === 404) return no('model-not-found', `Model "${model}" is not installed`);
       if (!r.ok) return no('invalid-response', `Ollama answered ${r.status} for /api/show`);
       let j: { remote_host?: unknown; remote_model?: unknown; model_info?: unknown };
@@ -152,7 +152,7 @@ export class OllamaProvider implements AgentProvider {
     };
     let res: Response;
     try {
-      res = await this.f(this.baseUrl + '/api/chat', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body), signal });
+      res = await this.f(this.baseUrl + '/api/chat', { method: 'POST', redirect:'error', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body), signal });
     } catch (e) {
       if (isAbort(e) || signal.aborted) { yield { type: 'finish', reason: 'aborted' }; return; }
       throw new ProviderError('unreachable', `Cannot reach Ollama at ${this.baseUrl}. Is it running? (${(e as Error)?.message ?? e})`);
@@ -166,6 +166,8 @@ export class OllamaProvider implements AgentProvider {
     if (!res.body) throw new ProviderError('protocol', 'Ollama response has no body');
 
     const reader = res.body.getReader();
+    const abortReader=()=>{void reader.cancel().catch(()=>{});};
+    signal.addEventListener('abort',abortReader,{once:true});
     const dec = new TextDecoder();
     let buf = '';
     let toolIndex = 0;
@@ -212,7 +214,7 @@ export class OllamaProvider implements AgentProvider {
       if (e instanceof ProviderError) throw e;
       if (isAbort(e) || signal.aborted) { yield { type: 'finish', reason: 'aborted' }; return; }
       throw new ProviderError('unreachable', `Connection to Ollama lost (${(e as Error)?.message ?? e})`);
-    }
+    } finally { signal.removeEventListener('abort',abortReader);await reader.cancel().catch(()=>{});reader.releaseLock(); }
   }
 }
 

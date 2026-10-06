@@ -122,3 +122,10 @@ test('failing autosave guard prevents apply', async () => {
   await assert.rejects(applyReviewed(port, cs([edit]), all), /no guard/);
   assert.deepEqual(calls, []);
 });
+
+test('editor changes during async autosave hold are rechecked before apply',async()=>{
+ let current='before';let applied=false;
+ const cs:ChangeSet={id:'hold-race',complete:true,files:[{path:'index.html',kind:'edit',baseText:'before',proposedText:'after'}]};
+ const result=await applyReviewed({read:()=>current,holdAutosave:async()=>{current='human edit';},applyBatch:()=>{applied=true;}},cs,{'index.html#0':'accept'});
+ assert.equal(result.ok,false);assert.equal(applied,false);
+});

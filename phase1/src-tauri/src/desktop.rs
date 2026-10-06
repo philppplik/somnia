@@ -367,6 +367,19 @@ async fn read_media(
     .await
 }
 #[tauri::command]
+async fn hold_autosave(
+    window: WebviewWindow,
+    state: State<'_, Shared>,
+    project_id: String,
+    paths: Vec<String>,
+) -> Result<()> {
+    gate(&window)?;
+    work(state.inner().clone(), move |b| {
+        project(b, &project_id)?.hold_autosave(&paths)
+    })
+    .await
+}
+#[tauri::command]
 async fn stage_edit(
     window: WebviewWindow,
     state: State<'_, Shared>,
@@ -623,6 +636,7 @@ pub fn run() {
             list_files,
             read_file,
             read_media,
+            hold_autosave,
             stage_edit,
             save_file,
             delete_file,

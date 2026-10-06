@@ -3,6 +3,7 @@ import type { AgentToolCall, AgentToolDefinition } from './types';
 
 export interface AgentProjectAccess {
   readonly projectId: string;
+  authorize?(path:string,action:'read'|'write',signal:AbortSignal):Promise<boolean>;
   /** Current editor buffers only. No OS paths/handles; no symlinks can be resolved. */
   files(): Readonly<Record<string, string>>;
   /** Trusted host callback, checked on every action including list and write. */
@@ -48,8 +49,10 @@ export class AgentProjectTools {
     validateAgentPath(path);
     const action = call.name === 'read_file' ? 'read' : 'write';
     if (Object.keys(args).some(k => !['path', ...(action === 'write' ? ['content'] : [])].includes(k))) throw Error('Unexpected tool arguments.');
+    const approved = await this.access.authorize?.(path, action, signal);
+    signal.throwIfAborted();
     // Writing an existing file also discloses its base to the proposal/review flow.
-    if (!this.access.allowed(path, action) || !this.access.allowed(path, 'read')) throw Error('File access is not authorized.');
+    if (!approved && (!this.access.allowed(path, action) || !this.access.allowed(path, 'read'))) throw Error('File access is not authorized.');
     const exists = Object.hasOwn(files, path);
     const original = exists ? files[path] : null;
     if (original !== null && (byteLength(original) > this.maxFileBytes || original.includes('\0'))) throw Error('File is binary or exceeds context limit.');

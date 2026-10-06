@@ -299,7 +299,8 @@ fn creates_new_file_in_new_folder_and_deletes_with_revision_check() {
     let (root, _recovery, mut p) = setup();
     let missing = p.read("pages/about.html").unwrap().revision;
     assert!(!missing.exists);
-    p.stage("pages/about.html", "<h1>About</h1>".into(), 1).unwrap();
+    p.stage("pages/about.html", "<h1>About</h1>".into(), 1)
+        .unwrap();
     let saved = p.save("pages/about.html", &missing).unwrap();
     assert_eq!(saved.state, FileState::Saved);
     assert_eq!(
@@ -334,7 +335,10 @@ fn single_file_project_exposes_only_that_file() {
     let r = p.read("page.html").unwrap();
     p.stage("page.html", "two".into(), 1).unwrap();
     p.save("page.html", &r.revision).unwrap();
-    assert_eq!(fs::read_to_string(root.path().join("page.html")).unwrap(), "two");
+    assert_eq!(
+        fs::read_to_string(root.path().join("page.html")).unwrap(),
+        "two"
+    );
 }
 #[test]
 fn reads_media_bytes_but_only_media_inside_the_project() {
@@ -344,10 +348,16 @@ fn reads_media_bytes_but_only_media_inside_the_project() {
     fs::write(root.path().join("img/a.PNG"), png).unwrap();
     assert_eq!(p.read_media("img/a.PNG").unwrap(), png);
     // Not a media extension: text files stay on the editable path.
-    assert!(matches!(p.read_media("index.html"), Err(AppError::Denied(_))));
+    assert!(matches!(
+        p.read_media("index.html"),
+        Err(AppError::Denied(_))
+    ));
     // Escaping the root is denied.
     assert!(matches!(p.read_media("../a.png"), Err(AppError::Denied(_))));
-    assert!(matches!(p.read_media("/etc/x.png"), Err(AppError::Denied(_))));
+    assert!(matches!(
+        p.read_media("/etc/x.png"),
+        Err(AppError::Denied(_))
+    ));
     // A directory named like media is not a file.
     fs::create_dir(root.path().join("dir.png")).unwrap();
     assert!(p.read_media("dir.png").is_err());
@@ -368,12 +378,53 @@ fn media_over_the_limit_is_rejected_and_symlinks_are_denied() {
 #[test]
 fn thousand_documents_read_and_last_document_save() {
     let (root, _recovery, mut p) = setup();
-    for i in 0..1000 { fs::write(root.path().join(format!("page-{i:04}.html")), format!("<h1>{i}</h1>")).unwrap(); }
+    for i in 0..1000 {
+        fs::write(
+            root.path().join(format!("page-{i:04}.html")),
+            format!("<h1>{i}</h1>"),
+        )
+        .unwrap();
+    }
     let paths = p.list_files().unwrap();
     assert_eq!(paths.len(), 1001);
-    for path in &paths { p.read(path).unwrap(); }
+    for path in &paths {
+        p.read(path).unwrap();
+    }
     let base = p.read("page-0999.html").unwrap().revision;
-    p.stage("page-0999.html", "<h1>saved</h1>".into(), 1).unwrap();
-    assert_eq!(p.save("page-0999.html", &base).unwrap().state, FileState::Saved);
-    assert_eq!(fs::read_to_string(root.path().join("page-0999.html")).unwrap(), "<h1>saved</h1>");
+    p.stage("page-0999.html", "<h1>saved</h1>".into(), 1)
+        .unwrap();
+    assert_eq!(
+        p.save("page-0999.html", &base).unwrap().state,
+        FileState::Saved
+    );
+    assert_eq!(
+        fs::read_to_string(root.path().join("page-0999.html")).unwrap(),
+        "<h1>saved</h1>"
+    );
+}
+#[test]
+fn held_agent_edits_never_autosave_until_explicit_save() {
+    let (root, _recovery, mut p) = setup();
+    let base = p.read("index.html").unwrap().revision;
+    p.hold_autosave(&["index.html".into()]).unwrap();
+    p.stage("index.html", "reviewed ai".into(), 1).unwrap();
+    thread::sleep(Duration::from_millis(1200));
+    p.tick();
+    assert_eq!(
+        fs::read_to_string(root.path().join("index.html")).unwrap(),
+        "original"
+    );
+    p.save("index.html", &base).unwrap();
+    assert_eq!(
+        fs::read_to_string(root.path().join("index.html")).unwrap(),
+        "reviewed ai"
+    );
+    p.stage("index.html", "later manual edit".into(), 2)
+        .unwrap();
+    thread::sleep(Duration::from_millis(1200));
+    p.tick();
+    assert_eq!(
+        fs::read_to_string(root.path().join("index.html")).unwrap(),
+        "later manual edit"
+    );
 }

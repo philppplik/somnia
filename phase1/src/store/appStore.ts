@@ -51,11 +51,13 @@ export function refreshProject(){
  patchState({files,nodes,activeFile,openFiles,designFile,revision:core.revision,isDirty:isDirty(),selectedElementIds:state.selectedElementIds.filter(id=>ids.has(id)),selectedElementId:state.selectedElementId&&ids.has(state.selectedElementId)?state.selectedElementId:null});
 }
 /** Call after initial folder read. Cleanup on close/unmount. Core is the only document/history owner. */
+let projectGeneration=0;
+export function getProjectGeneration(){return projectGeneration;}
 export function connectEditorProject(project:EditorProjectPort,options:{name?:string;alreadySaved?:boolean}={}){
- unsubscribeCore?.();core=project;savedFiles=options.alreadySaved?{...project.files}:{};
+ projectGeneration++;unsubscribeCore?.();core=project;savedFiles=options.alreadySaved?{...project.files}:{};
  patchState({zoom:state.canvasPrefs.defaultZoom,viewport:state.canvasPrefs.defaultViewport,responsiveScope:'auto',coreConnected:true,projectName:options.name??'Untitled project',selectedElementId:null,notice:'In-memory project. Native filesystem service is not connected.'});
  unsubscribeCore=project.subscribe('internal',()=>refreshProject());refreshProject();
- return()=>{if(core!==project)return;unsubscribeCore?.();unsubscribeCore=null;core=null;patchState({responsiveScope:'auto',coreConnected:false,files:{},nodes:[],selectedElementId:null,isDirty:false,lastSavedAt:null,notice:'Project closed.'});};
+ return()=>{if(core!==project)return;projectGeneration++;unsubscribeCore?.();unsubscribeCore=null;core=null;patchState({responsiveScope:'auto',coreConnected:false,files:{},nodes:[],selectedElementId:null,isDirty:false,lastSavedAt:null,notice:'Project closed.'});};
 }
 export function applyOperations(operations:Operation[],origin:Origin='canvas',group?:string){
  if(!core)throw new Error('Editor core is not connected.');
@@ -86,4 +88,4 @@ export const clampViewport=(n:number,max=3840)=>Math.min(max,Math.max(200,Math.r
 export function jumpToLine(file:string,line:number,col=1){openFileTab(file);const st=getState();patchState({jumpTo:{file,line,col,nonce:Date.now()+Math.random()},...(st.viewMode==='design'?{viewMode:'split' as const}:{})});}
 
 /** Leaves the project without opening another one: the app returns to its empty state. */
-export function closeCore(){clearMedia();unsubscribeCore?.();unsubscribeCore=null;core=null;savedFiles={};patchState({responsiveScope:'auto',coreConnected:false,files:{},nodes:[],openFiles:[],activeFile:'',designFile:'',selectedElementId:null,selectedElementIds:[],isDirty:false,lastSavedAt:null,storage:'memory',nativeConnected:false,projectName:'',notice:'Project closed.'});}
+export function closeCore(){projectGeneration++;clearMedia();unsubscribeCore?.();unsubscribeCore=null;core=null;savedFiles={};patchState({responsiveScope:'auto',coreConnected:false,files:{},nodes:[],openFiles:[],activeFile:'',designFile:'',selectedElementId:null,selectedElementIds:[],isDirty:false,lastSavedAt:null,storage:'memory',nativeConnected:false,projectName:'',notice:'Project closed.'});}

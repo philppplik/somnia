@@ -1,31 +1,75 @@
-import {test,expect} from '@playwright/test';
-const open=async(page:import('@playwright/test').Page)=>{await page.goto('/');await page.getByRole('button',{name:'Open Somnia Agent'}).click();return page.getByRole('complementary',{name:'Somnia Agent'});};
-test('opener sits at the bottom of the right rail and toggles the panel',async({page})=>{await page.goto('/');
+import {test,expect} from './fixtures';
+import type {Page} from '@playwright/test';
+const open=async(page:Page)=>{await page.goto('/');await page.getByRole('button',{name:'Open Somnia Agent'}).click();return page.getByRole('complementary',{name:'Somnia Agent'});};
+async function model(page:Page){
+ await page.route('http://127.0.0.1:11434/api/show',r=>r.fulfill({json:{model_info:{architecture:'fixture'}}}));
+ const panel=await open(page);await panel.getByRole('button',{name:'Agent configuration',exact:true}).click();
+ await panel.getByLabel('Model', {exact:true}).fill('fixture-local');await panel.getByRole('button',{name:'Use configuration'}).click();return panel;
+}
+async function fixture(page:Page,mode:'edit'|'slow'='edit'){
+ let calls=0;
+ await page.route('http://127.0.0.1:11434/api/chat',async r=>{
+  const n=++calls;await new Promise(resolve=>setTimeout(resolve,mode==='slow'?1200:150));
+  const message=n===1&&mode==='edit'?{content:'I can propose a new project stylesheet.',tool_calls:[{function:{name:'write_file',arguments:{path:'agent-test.css',content:'h1 { font-size: 56px; }\n\np { line-height: 1.6; }'}}}]}:{content:'Please review the proposed change before applying it.'};
+  await r.fulfill({contentType:'application/x-ndjson',body:JSON.stringify({message,done:true,prompt_eval_count:15,eval_count:20})+'\n'});
+ });
+}
+test('opener sits at bottom of rail and toggles the panel',async({page})=>{await page.goto('/');
  const rail=page.getByRole('toolbar',{name:'Inspector panels'});const btn=rail.getByRole('button',{name:'Open Somnia Agent'});
- await expect(btn).toBeVisible();await expect(btn).toHaveAttribute('aria-pressed','false');
- await expect(btn.locator('svg[data-icon="vadivam:sparkles"]')).toHaveCount(1);
+ await expect(btn).toHaveAttribute('aria-pressed','false');await expect(btn.locator('svg[data-icon="vadivam:sparkles"]')).toHaveCount(1);
  const rb=await rail.boundingBox(),bb=await btn.boundingBox();expect(bb!.y+bb!.height).toBeGreaterThan(rb!.y+rb!.height-24);
  await btn.click();await expect(page.getByRole('complementary',{name:'Somnia Agent'})).toBeVisible();await expect(btn).toHaveAttribute('aria-pressed','true');
- await page.getByRole('button',{name:'Collapse panel'}).click();await expect(page.getByRole('complementary',{name:'Somnia Agent'})).toHaveCount(0);});
-test('empty state shows tip and chips; panel has a bottom gradient only',async({page})=>{const panel=await open(page);
- await expect(panel.getByRole('heading',{name:'What are we building?'})).toBeVisible();await expect(panel.getByText('Use @ to refer')).toBeVisible();
- await expect(panel.getByRole('button',{name:'Help me design a landing page'})).toBeVisible();
- await expect(panel.locator('.ag-bar')).toHaveCount(1);
- const bar=await panel.locator('.ag-bar').boundingBox(),pb=await panel.boundingBox();expect(bar!.y+bar!.height).toBeCloseTo(pb!.y+pb!.height,0);
- await expect(panel.getByRole('button',{name:'Send'})).toBeDisabled();});
-test('chat flow: send, stream, stop, diff accept and undo, new chat',async({page})=>{const panel=await open(page);
- const input=panel.getByLabel('Message to Somnia Agent');await input.fill('Make the headline bigger');await input.press('Enter');
- await expect(panel.locator('.ag-u')).toHaveText('Make the headline bigger');
+ await page.screenshot({path:'tests/artifacts/agent-panel-integrated.png'});
+ await page.getByRole('button',{name:'Collapse panel'}).click();await expect(page.getByRole('complementary',{name:'Somnia Agent'})).toHaveCount(0);
+});
+test('chips fill input only; no unimplemented references; bottom gradient only',async({page})=>{const panel=await open(page);
+ await panel.getByRole('button',{name:'Help me design a landing page'}).click();await expect(panel.getByLabel('Message to Somnia Agent')).toHaveValue('Help me design a landing page');
+ await expect(panel.getByRole('button',{name:'Stop'})).toHaveCount(0);await expect(panel.getByText('Use @ to refer')).toHaveCount(0);await expect(panel.locator('.ag-bar')).toHaveCount(1);
+});
+test('real session stages a file, asks permission, reviews hunks, applies without save and editor undo reverts',async({page})=>{
+ await fixture(page);const panel=await model(page);const input=panel.getByLabel('Message to Somnia Agent');await input.fill('Create a stylesheet');await input.press('Enter');
  await expect(panel.getByRole('button',{name:'Stop'})).toBeVisible();await expect(input).toBeDisabled();
- await expect(panel.locator('.ag-diff')).toBeVisible({timeout:8000});
- await expect(panel.getByRole('button',{name:'Send'})).toBeVisible();await expect(input).toBeEnabled();
- await panel.getByRole('button',{name:'Accept'}).click();await expect(panel.getByText('Accepted')).toBeVisible();
- await panel.getByRole('button',{name:'Undo'}).click();await expect(panel.getByRole('button',{name:'Accept'})).toBeVisible();
- await panel.getByRole('button',{name:'Reject'}).click();await expect(panel.getByText('Rejected')).toBeVisible();
- await panel.getByRole('button',{name:'New chat'}).click();await expect(panel.getByRole('heading',{name:'What are we building?'})).toBeVisible();});
-test('stop ends a running answer without a diff',async({page})=>{const panel=await open(page);
- await panel.getByRole('button',{name:'Help me design a landing page'}).click();await panel.getByRole('button',{name:'Stop'}).click();
- await expect(panel.getByRole('button',{name:'Send'})).toBeVisible();await page.waitForTimeout(500);await expect(panel.locator('.ag-diff')).toHaveCount(0);});
-test('shortcut Ctrl+Alt+A toggles the panel and settings button opens app settings',async({page})=>{await page.goto('/');
- await page.keyboard.press('Control+Alt+a');const panel=page.getByRole('complementary',{name:'Somnia Agent'});await expect(panel).toBeVisible();
- await panel.getByRole('button',{name:'Settings'}).click();await expect(page.getByRole('dialog')).toBeVisible();});
+ await expect(panel.getByRole('region',{name:'File access approval'})).toBeVisible();await panel.getByRole('button',{name:'Accept once'}).click();
+ await expect(panel.getByRole('region',{name:'Review agent changes'})).toBeVisible();
+ await page.screenshot({path:'tests/artifacts/agent-hunk-review-integrated.png'});
+ await panel.getByRole('button',{name:'Accept all',exact:true}).click();await panel.getByRole('button',{name:/Apply 1 change/}).click();
+ await expect(panel.getByText('Applied to editor, not saved.',{exact:false})).toBeVisible();
+ await page.getByRole('button',{name:'Files panel',exact:true}).click();await expect(page.getByText('agent-test.css',{exact:true}).last()).toBeVisible();
+ await panel.getByRole('button',{name:'New chat'}).click();await page.getByRole('button',{name:'Files panel',exact:true}).focus();await page.keyboard.press('Control+z');await expect(page.getByText('agent-test.css',{exact:true})).toHaveCount(0);
+ await panel.getByRole('button',{name:'New chat'}).click();await expect(panel.getByRole('heading',{name:'What are we building?'})).toBeVisible();
+});
+test('stop cancels a real provider run without review; streaming state visible',async({page})=>{await fixture(page,'slow');const panel=await model(page);
+ await panel.getByLabel('Message to Somnia Agent').fill('Explain');await panel.getByLabel('Message to Somnia Agent').press('Enter');await expect(panel.getByRole('button',{name:'Stop'})).toBeVisible();
+ await page.screenshot({path:'tests/artifacts/agent-streaming-integrated.png'});
+ await panel.getByRole('button',{name:'Stop'}).click();await expect(panel.getByRole('button',{name:'Send'})).toBeVisible();await page.waitForTimeout(1500);await expect(panel.locator('.ag-review')).toHaveCount(0);
+});
+test('cloud consent modal explicit and shortcut works',async({page})=>{await page.goto('/');await expect(page.getByRole('button',{name:'Open Somnia Agent'})).toBeVisible();await page.keyboard.press('Control+Alt+a');const panel=page.getByRole('complementary',{name:'Somnia Agent'});await expect(panel).toBeVisible();
+ await panel.getByRole('button',{name:'Cloud data consent',exact:true}).click();const modal=page.getByRole('dialog',{name:'Cloud data consent'});await expect(modal.getByRole('button',{name:'Allow cloud AI',exact:true})).toBeDisabled();
+ await expect(modal.getByRole('checkbox')).not.toBeChecked();await page.screenshot({path:'tests/artifacts/agent-consent-integrated.png'});await modal.getByRole('button',{name:'Close consent'}).click();await expect(modal).toHaveCount(0);
+});
+test('unconfigured core fails honestly instead of demo reply',async({page})=>{const panel=await open(page);await panel.getByLabel('Message to Somnia Agent').fill('Hi');await panel.getByRole('button',{name:'Send',exact:true}).click();await expect(panel.getByRole('alert')).toContainText('Choose a provider and model');await expect(panel.locator('.ag-review')).toHaveCount(0);});
+test('true NDJSON text streaming is labelled and cancellable',async({page})=>{
+ const {createServer}=await import('node:http');const server=createServer((req,res)=>{
+  res.setHeader('Access-Control-Allow-Origin','*');res.setHeader('Access-Control-Allow-Headers','content-type');
+  if(req.method==='OPTIONS'){res.end();return;}
+  if(req.url==='/api/show'){res.setHeader('Content-Type','application/json');res.end(JSON.stringify({model_info:{architecture:'fixture'}}));return;}
+  res.setHeader('Content-Type','application/x-ndjson');res.write(JSON.stringify({message:{content:'This is streamed AI text. '},done:false})+'\n');
+  const timer=setTimeout(()=>res.end(JSON.stringify({message:{content:'Finished.'},done:true})+'\n'),2500);res.on('close',()=>clearTimeout(timer));
+ });
+ await new Promise<void>((resolve,reject)=>{server.once('error',reject);server.listen(11434,'127.0.0.1',resolve);});
+ try{
+  const panel=await open(page);await panel.getByRole('button',{name:'Agent configuration',exact:true}).click();await panel.getByLabel('Model',{exact:true}).fill('stream-fixture');await panel.getByRole('button',{name:'Use configuration'}).click();
+  await panel.getByLabel('Message to Somnia Agent').fill('Explain streaming');await panel.getByRole('button',{name:'Send',exact:true}).click();
+  await expect(panel.getByText('This is streamed AI text.',{exact:false})).toBeVisible();await expect(panel.locator('.ag-caret')).toBeVisible();await expect(panel.getByRole('button',{name:'Stop'})).toBeVisible();
+  await page.screenshot({path:'tests/artifacts/agent-streaming-integrated.png'});await panel.getByRole('button',{name:'Stop'}).click();await expect(panel.getByRole('button',{name:'Send',exact:true})).toBeVisible();
+ }finally{server.closeAllConnections();await new Promise<void>(resolve=>server.close(()=>resolve()));}
+});
+test('declining file access never exposes an applicable proposal',async({page})=>{
+ await fixture(page);const panel=await model(page);await panel.getByLabel('Message to Somnia Agent').fill('Create stylesheet');await panel.getByRole('button',{name:'Send',exact:true}).click();
+ await panel.getByRole('button',{name:'Decline',exact:true}).click();await expect(panel.getByRole('button',{name:'Send',exact:true})).toBeVisible();await expect(panel.getByRole('region',{name:'Review agent changes'})).toHaveCount(0);
+});
+test('OpenRouter never starts inference without explicit cloud consent',async({page})=>{
+ let requests=0;await page.route('https://openrouter.ai/api/v1/chat/completions',r=>{requests++;return r.abort();});
+ const panel=await open(page);await panel.getByRole('button',{name:'Agent configuration',exact:true}).click();await panel.getByRole('combobox',{name:'Provider',exact:true}).selectOption('openrouter');await panel.getByLabel('Model',{exact:true}).fill('fixture/model');await panel.getByLabel('API key (this session only)').fill('fixture-not-a-real-key');await panel.getByRole('button',{name:'Use configuration'}).click();
+ await panel.getByLabel('Message to Somnia Agent').fill('Hello cloud');await panel.getByRole('button',{name:'Send',exact:true}).click();await expect(panel.getByRole('alert')).toBeVisible();expect(requests).toBe(0);await expect(panel.getByRole('region',{name:'Review agent changes'})).toHaveCount(0);
+});

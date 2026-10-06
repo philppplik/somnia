@@ -1,3 +1,4 @@
+import {heldAgentPaths} from './lib/agent/autosaveHold';
 import {newBlankFile} from './lib/projectActions';
 import {zipWebFsOptions} from './lib/zipWorkingCopy';
 import { StrictMode } from 'react';
@@ -33,7 +34,7 @@ const disconnect=initial?connectEditorProject(new EditorProject(initial),{name:'
 if(!fixture&&!draft&&getState().workflowPrefs.startup==='blank')newBlankFile();
 if(draft){patchState({notice:'Restored your unsaved session from this device. Save it to a folder, or use Project > Close project to discard it.',...(draft.activeFile in draft.files?{activeFile:draft.activeFile}:{})});}
 let draftTimer=0;
-subscribe(()=>{const st=getState();window.clearTimeout(draftTimer);if(st.storage!=='memory'||!st.workflowPrefs.draftAutosave)return;if(!st.coreConnected||!st.isDirty)return;draftTimer=window.setTimeout(()=>{const s2=getState();if(s2.storage==='memory'&&s2.isDirty)saveDraft({files:s2.files,activeFile:s2.activeFile,openFiles:s2.openFiles});},st.workflowPrefs.draftSeconds*1000);});
+subscribe(()=>{const st=getState();window.clearTimeout(draftTimer);if(st.storage!=='memory'||!st.workflowPrefs.draftAutosave)return;if(!st.coreConnected||!st.isDirty)return;draftTimer=window.setTimeout(()=>{const s2=getState();if(s2.storage==='memory'&&s2.isDirty&&!heldAgentPaths().length)saveDraft({files:s2.files,activeFile:s2.activeFile,openFiles:s2.openFiles});},st.workflowPrefs.draftSeconds*1000);});
 if(import.meta.hot)import.meta.hot.dispose(disconnect);
 applyLook(getState().look);
 applyUiPrefs(getState().uiPrefs);

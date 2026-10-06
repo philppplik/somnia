@@ -13,6 +13,7 @@ fn main() {
             "list_files",
             "read_file",
             "read_media",
+            "hold_autosave",
             "stage_edit",
             "save_file",
             "delete_file",

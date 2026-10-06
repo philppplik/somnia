@@ -11,8 +11,8 @@ export interface FileProposal {
   baseText: string | null;      // editor text the agent saw; null for create
   proposedText: string;
 }
-/** Structurally identical to the Privacy module's AIProvenance (createAIProvenance). Replace with an import once that lands on phase1-foundation. */
-export interface AIProvenance { generatedBy: 'ai'; provider: string; model: string; generatedAt: string; humanReviewed: boolean }
+import type {AIProvenance} from './agent/privacy';
+export type {AIProvenance} from './agent/privacy';
 export interface HunkRef { path: string; index: number }
 export interface ChangeSet {
   id: string;
@@ -166,7 +166,9 @@ export async function applyReviewed(port: AgentApplyPort, cs: ChangeSet, decisio
   const plan = planApply(cs, decisions, p => port.read(p));
   if (plan.ok && plan.writes.length) {
     await port.holdAutosave(plan.writes.map(w => w.path)); // fail closed: no guard, no apply
-    await port.applyBatch(plan.writes);
+    const refreshed = planApply(cs, decisions, p => port.read(p));
+    if (!refreshed.ok) return refreshed;
+    await port.applyBatch(refreshed.writes);
   }
   return plan;
 }

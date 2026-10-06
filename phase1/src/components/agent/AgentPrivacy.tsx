@@ -31,7 +31,7 @@ export function AgentConsentNotice({t = agentPrivacyEnglish, onGranted, showTitl
     <p className="text-sm">{t('agent.privacy.disclosure')}</p>
     <PrivacyPolicies t={t}/>
     <p className="text-xs text-ink-2">{t('agent.privacy.review')}</p>
-    <label className="flex items-start gap-2 text-sm" style={{justifyContent: 'flex-start', gap: 10}}><input type="checkbox" checked={checked} onChange={event => setChecked(event.target.checked)}/><span>{t('agent.privacy.consent')}</span></label>
+    <label className="flex items-start gap-2 text-sm" style={{justifyContent: 'flex-start', gap: 10}}><input style={{width:16, minWidth:16, height:16, flex:"0 0 16px", marginTop:3}} type="checkbox" checked={checked} onChange={event => setChecked(event.target.checked)}/><span>{t('agent.privacy.consent')}</span></label>
     <button type="button" disabled={!checked} className="rounded-lg border border-line px-3 py-2 disabled:opacity-50" onClick={() => {
       if (!checked) return;
       if (agentPrivacy.grantExplicitConsent()) { setFailed(false); onGranted?.(); } else setFailed(true);

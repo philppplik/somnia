@@ -1,10 +1,12 @@
-import type {AgentEvent, AgentProposal} from './core';
+import type {AgentEvent, AgentProposal,AgentApproval} from './core';
 export type ProposalState = 'pending' | 'accepted' | 'rejected';
 export type ChatItem =
  | {id: string; kind: 'user'; text: string}
  | {id: string; kind: 'agent'; text: string; streaming: boolean}
  | {id: string; kind: 'status'; text: string; file?: string}
  | {id: string; kind: 'diff'; proposal: AgentProposal; state: ProposalState}
+ | {id:string;kind:'approval';approval:AgentApproval}
+ | {id:string;kind:'usage';text:string}
  | {id: string; kind: 'error'; text: string};
 export interface ChatState {items: ChatItem[]; busy: boolean; seq: number}
 export const initialChat: ChatState = {items: [], busy: false, seq: 0};
@@ -26,7 +28,7 @@ export function chatReducer(s: ChatState, a: ChatAction): ChatState {
    return {items: [...s.items, {id: next(s), kind: 'user', text}], busy: true, seq: s.seq + 1};
   }
   case 'event': {
-   const e = a.event;if (!s.busy) return s;
+   const e = a.event;if (!s.busy && e.type!=='error') return s;
    if (e.type === 'status') return {...s, items: [...s.items.filter(i => i.kind !== 'status'), {id: next(s), kind: 'status', text: e.text, file: e.file}], seq: s.seq + 1};
    if (e.type === 'text-delta') {
     const last = s.items[s.items.length - 1];
@@ -34,6 +36,8 @@ export function chatReducer(s: ChatState, a: ChatAction): ChatState {
     return {...s, items: [...s.items.filter(i => i.kind !== 'status'), {id: next(s), kind: 'agent', text: e.text, streaming: true}], seq: s.seq + 1};
    }
    if (e.type === 'proposal') return {...s, items: [...settle(s.items), {id: next(s), kind: 'diff', proposal: e.proposal, state: 'pending'}], seq: s.seq + 1};
+   if (e.type === 'approval') return {...s,items:[...s.items,{id:next(s),kind:'approval',approval:e.approval}],seq:s.seq+1};
+   if (e.type === 'usage') return {...s,items:[...s.items,{id:next(s),kind:'usage',text:`Tokens: ${e.inputTokens??'?'} in / ${e.outputTokens??'?'} out. Cost: ${e.costUsd===undefined?'unknown':`$${e.costUsd}`}`}],seq:s.seq+1};
    if (e.type === 'done') return {...s, items: settle(s.items), busy: false};
    return {items: [...settle(s.items), {id: next(s), kind: 'error', text: e.message}], busy: false, seq: s.seq + 1};
   }

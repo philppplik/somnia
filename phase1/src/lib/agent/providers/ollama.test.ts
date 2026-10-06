@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { OllamaProvider, normalizeBaseUrl, isLoopbackHttp } from './ollama';
 import { toOllamaMessages } from './ollama';
-import type { AgentProviderEvent, AgentProviderRequest } from '../provider';
+import type { AgentProviderEvent, AgentProviderRequest } from '../types';
 
 const json = (b: unknown, status = 200) => new Response(JSON.stringify(b), { status });
 const nd = (lines: string[], chunk = 7) => {

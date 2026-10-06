@@ -19,7 +19,7 @@ test('cloud consent is explicit, persisted, withdrawable and translated', async 
   await dialog.getByRole('button',{name:'Withdraw cloud consent',exact:true}).click();
   await expect(dialog.getByText('Cloud consent is off.',{exact:true})).toBeVisible();
   await expect(checkbox).not.toBeChecked();
-  await page.reload();await page.keyboard.press('Control+,');
+  await page.reload();await expect(page.getByRole('button',{name:'Split view',exact:true})).toBeVisible();await page.keyboard.press('Control+,');
   await dialog.getByRole('button',{name:'AI privacy',exact:true}).click();
   await expect(allow).toBeDisabled();
   await dialog.getByRole('button',{name:'General',exact:true}).click();
