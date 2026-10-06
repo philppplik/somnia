@@ -46,7 +46,7 @@ logInfo('app','Somnia started',{desktop:isTauri()});
 createRoot(document.getElementById('root')!).render(<StrictMode><ErrorBoundary label="Somnia"><App/></ErrorBoundary></StrictMode>);
 
 if(!isTauri())installBeforeUnload(()=>getState().isDirty&&getState().storage!=='disk');
-if(import.meta.env.DEV)(window as unknown as {__somnia:object}).__somnia={recentLog,copyErrorReport,requestClose,setSource:(file:string,text:string)=>applyOperations([{type:'replaceSource',file,text}] as never)};
+if(import.meta.env.DEV)(window as unknown as {__somnia:object}).__somnia={patch:patchState,recentLog,copyErrorReport,requestClose,setSource:(file:string,text:string)=>applyOperations([{type:'replaceSource',file,text}] as never)};
 if(isTauri())document.documentElement.dataset.shell='desktop';
 // LAN-Direct hosting is a desktop feature: register the Rust host with the collab engine only inside Tauri.
 if(isTauri())void import('./lib/collab/lanHost').then(m=>import('./lib/collab/lanHostPort').then(p=>p.registerLanHost({startLanHost:m.startLanHost,stopLanHost:m.stopLanHost,createLanSessionLinks:m.createLanSessionLinks}))).catch(e=>reportError('startup.lan-host',e,{message:'LAN hosting could not be loaded',notify:'LAN hosting is unavailable.'}));

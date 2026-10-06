@@ -1,14 +1,13 @@
-import {Dialog,DialogContent,DialogTitle,DialogDescription} from './ui/dialog';
+import {TriangleAlert} from 'lucide-react';
 import {Button} from './ui/button';
+import {ConfirmShell,FileCard} from './ConfirmShell';
 import {patchState,useAppStore} from '../store/appStore';
 import {closeMemoryProject} from '../lib/projectActions';
 import {useT} from '../lib/useT';
 import {executeCommand} from '../lib/commands';
 /** Close Project on an in-memory project with unsaved changes. */
 export function CloseProjectDialog(){
- const {t}=useT();const open=useAppStore().closeProjectPrompt;const done=()=>patchState({closeProjectPrompt:false});
- return <Dialog open={open} onOpenChange={o=>{if(!o)done();}}><DialogContent className="confirm-dialog" aria-label={t('closeProject.aria')}>
-  <DialogTitle>{t('closeProject.title')}</DialogTitle>
-  <DialogDescription>{t('closeProject.desc')}</DialogDescription>
-  <div className="mt-4 flex justify-end gap-2"><Button onClick={done}>{t('dialogs.cancel')}</Button><Button onClick={()=>{done();closeMemoryProject();}}>{t('closeProject.discard')}</Button><Button autoFocus onClick={()=>{done();void executeCommand('project.save');}}>{t('closeProject.save')}</Button></div>
- </DialogContent></Dialog>;}
+ const {t}=useT();const s=useAppStore();const open=s.closeProjectPrompt;const done=()=>patchState({closeProjectPrompt:false});
+ return <ConfirmShell open={open} onCancel={done} alert tone="warning" Icon={TriangleAlert} ariaLabel={t('closeProject.aria')} title={t('closeProject.title')} description={t('closeProject.desc')}
+  body={<FileCard name={s.projectName||t('save.thisProject')} status={t('close.statusMemory')}/>}
+  footer={<><Button className="dlg-cancel" onClick={done}>{t('dialogs.cancel')}</Button><span className="dlg-spacer"/><Button className="dlg-danger" onClick={()=>{done();closeMemoryProject();}}>{t('closeProject.discard')}</Button><Button variant="primary" autoFocus onClick={()=>{done();void executeCommand('project.save');}}>{t('closeProject.save')}</Button></>}/>;}

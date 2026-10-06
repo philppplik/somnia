@@ -1,3 +1,4 @@
+import {folderNameFor} from './folderName';
 import {installHoldBackend,isAgentAutosaveHeld,releaseAgentAutosave,clearAgentAutosaveHolds,heldAgentPaths} from './agent/autosaveHold';
 import {setCloseHandlers,requestClose} from './closeFlow';
 import {EditorProject} from '@somnia/editor-core';
@@ -106,7 +107,7 @@ export async function installFileAdapter(port:FilePort){
  /** Memory project (Starter, new): choose a folder, write every file into it, then continue as a normal disk project. Never overwrites existing files. */
  const saveToFolder=async(newFolder=false)=>{
   const files={...getState().files};const paths=Object.keys(files);if(!paths.length)throw Error('There is nothing to save yet.');
-  const selected=await port.invoke<{projectId:string;name:string}|null>('choose_project',newFolder?{createSubfolder:(getState().projectName||'somnia-project').replace(/[<>:"/\\|?*\u0000-\u001f]/g,'_').replace(/[. ]+$/,'').slice(0,80)||'somnia-project'}:undefined);if(!selected)return false;
+  const selected=await port.invoke<{projectId:string;name:string}|null>('choose_project',newFolder?{createSubfolder:folderNameFor(getState().projectName)}:undefined);if(!selected)return false;
   const nextBaselines=new Map<string,Revision>();
   try{
    const existing=new Set(await port.invoke<string[]>('list_files',{projectId:selected.projectId}));const clash=paths.filter(p=>existing.has(p));
