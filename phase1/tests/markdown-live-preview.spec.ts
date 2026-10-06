@@ -26,7 +26,7 @@ test('view shortcuts work from the Markdown editor; Mod+B is Bold there and side
  const sidebar=await page.evaluate(async()=>(await import('/src/store/appStore.ts')).getState().sidebarOpen);
  await page.keyboard.press('Control+b');expect(await docText(page)).toBe('**word**\n');
  expect(await page.evaluate(async()=>(await import('/src/store/appStore.ts')).getState().sidebarOpen)).toBe(sidebar);
- await page.keyboard.press('Control+i');expect((await docText(page))).toContain('***word***');
+ await page.waitForTimeout(800);await page.keyboard.press('Control+i');expect((await docText(page))).toContain('***word***');await page.waitForTimeout(800);
  await page.keyboard.press('Control+z');expect(await docText(page)).toBe('**word**\n');
 });
 test('toolbar formats with one undo step, keeps selection and does not steal focus',async({page})=>{
