@@ -31,8 +31,11 @@ for(const [cmd,delimiter] of [['bold','**'],['italic','*'],['strike','~~'],['cod
   assert.equal(formatted(doc,cmd,0,doc.length).doc.toString(),'word');
  });
 }
-test('inline code delimiter exceeds every selected backtick run and pads edge backticks',{todo:'inlineCode incorrectly unwraps unequal edge backtick runs'},()=>{
+test('inline code delimiter exceeds every selected backtick run and pads edge backticks',()=>{
  assert.equal(formatted('`a``b```','code',0,8).doc.toString(),'```` `a``b``` ````');
+ assert.equal(formatted('a``b```','code',0,7).doc.toString(),'```` a``b``` ````');
+ assert.equal(formatted('``a``','code',0,5).doc.toString(),'a','equal runs still toggle off');
+ assert.equal(formatted('`a`','code',0,3).doc.toString(),'a');
 });
 test('line commands include partially selected lines but exclude an unselected following line',()=>{
  for(const [cmd,prefix] of [['bullet','- '],['task','- [ ] '],['number','1. '],['quote','> ']] as const){

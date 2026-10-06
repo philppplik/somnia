@@ -21,7 +21,7 @@ function wrap(st:EditorState,open:string,close=open):TransactionSpec{
 /** Inline code picks a delimiter longer than any backtick run in the selection. */
 function inlineCode(st:EditorState):TransactionSpec{
  const r=st.selection.main;const text=st.sliceDoc(r.from,r.to);
- const m=/^(`+)([\s\S]*?)\1$/.exec(text);if(m&&text.length>=2*m[1].length)return wrap(st,m[1]);
+ const m=/^(`+)(?!`)([\s\S]*?)(?<!`)\1$/.exec(text);if(m&&text.length>=2*m[1].length)return wrap(st,m[1]);
  const longest=Math.max(0,...(text.match(/`+/g)??[]).map(x=>x.length));const d='`'.repeat(longest+1);
  const pad=longest&&(text.startsWith('`')||text.endsWith('`'))?' ':'';return wrap(st,d+pad,pad+d);}
 const lineRe={bullet:/^(\s*)[-*+]\s+(?!\[[ xX]\]\s)/,task:/^(\s*)[-*+]\s+\[[ xX]\]\s+/,number:/^(\s*)\d+[.)]\s+/,quote:/^(\s*)>\s?/};
