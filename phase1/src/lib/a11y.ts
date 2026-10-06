@@ -1,4 +1,5 @@
 import type {Problem} from './diagnostics';
+import {maskNonMarkup,tagSource} from './markupMask';
 /**
  * Accessibility checker for the Problems panel. Pure text analysis: no DOM, no network.
  * Adds checks on top of the basics in diagnostics.ts (missing alt, lang, title, heading jumps):
@@ -32,11 +33,11 @@ const sizeOk=(d:Record<string,string>)=>{const px=/^([\d.]+)px$/.exec(d['font-si
 export function contrastProblems(files:Readonly<Record<string,string>>):Problem[]{
  const out:Problem[]=[];
  const cssRules:Rule[]=[];for(const f of Object.keys(files).sort())if(/\.css$/i.test(f))cssRules.push(...rulesFrom(files[f]));
- for(const f of Object.keys(files).sort()){if(!/\.html?$/i.test(f))continue;const text=files[f];
-  const rules=[...cssRules];for(const m of text.matchAll(/<style\b[^>]*>([\s\S]*?)<\/style>/gi))rules.push(...rulesFrom(m[1]));
+ for(const f of Object.keys(files).sort()){if(!/\.html?$/i.test(f))continue;const raw=files[f];const text=maskNonMarkup(raw);
+  const rules=[...cssRules];for(const m of raw.matchAll(/<style\b[^>]*>([\s\S]*?)<\/style>/gi))rules.push(...rulesFrom(m[1]));
   const at=(i:number)=>{const b=text.slice(0,i);return{line:b.split('\n').length,col:b.length-b.lastIndexOf('\n')};};
   const page=rules.filter(r=>r.sel==='body'||r.sel==='html');const pageBg=page.map(r=>bgOf(r.d)).filter(Boolean).pop()??[255,255,255] as Rgb;const pageFg=page.map(r=>fgOf(r.d)).filter(Boolean).pop()??null;
-  for(const m of text.matchAll(/<([a-z][a-z0-9]*)\b([^>]*)>/gi)){const tag=m[1].toLowerCase();if(/^(html|head|meta|link|script|style|title|img|br|hr|svg|path|source)$/.test(tag))continue;
+  for(const m of text.matchAll(/<([a-z][a-z0-9]*)\b((?:[^>"']|"[^"]*"|'[^']*')*)>/gi)){const tag=m[1].toLowerCase();if(/^(html|head|meta|link|script|style|title|img|br|hr|svg|path|source)$/.test(tag))continue;
    const attrs=m[2];const cls=(/\bclass\s*=\s*"([^"]*)"/i.exec(attrs)?.[1]??'').split(/\s+/).filter(Boolean);const id=/\bid\s*=\s*"([^"]*)"/i.exec(attrs)?.[1];
    const matched=rules.filter(r=>r.sel===tag||(r.sel[0]==='.'&&cls.includes(r.sel.slice(1)))||(id&&r.sel==='#'+id));
    const inline=decls(/\bstyle\s*=\s*"([^"]*)"/i.exec(attrs)?.[1]??'');const layers=[...matched.map(r=>r.d),inline];
@@ -49,9 +50,9 @@ export function contrastProblems(files:Readonly<Record<string,string>>):Problem[
 /** Alt text quality, empty headings and first-heading level. */
 export function contentProblems(files:Readonly<Record<string,string>>):Problem[]{
  const out:Problem[]=[];
- for(const f of Object.keys(files).sort()){if(!/\.html?$/i.test(f))continue;const text=files[f];
+ for(const f of Object.keys(files).sort()){if(!/\.html?$/i.test(f))continue;const text=maskNonMarkup(files[f]);
   const at=(i:number)=>{const b=text.slice(0,i);return{line:b.split('\n').length,col:b.length-b.lastIndexOf('\n')};};const add=(i:number,message:string)=>out.push({file:f,...at(i),severity:'warning',message});
-  for(const m of text.matchAll(/<img\b[^>]*>/gi)){const alt=/\balt\s*=\s*(?:"([^"]*)"|'([^']*)')/i.exec(m[0]);const v=(alt?.[1]??alt?.[2]??'').trim();if(!alt||!v)continue;
+  for(const m of text.matchAll(new RegExp(tagSource('img'),'gi'))){const alt=/\balt\s*=\s*(?:"([^"]*)"|'([^']*)')/i.exec(m[0]);const v=(alt?.[1]??alt?.[2]??'').trim();if(!alt||!v)continue;
    if(/\.(png|jpe?g|gif|svg|webp|avif)$/i.test(v)||/^(image|picture|photo|graphic|img)(\s+of)?\b/i.test(v))add(m.index!,`Alt text "${v}" is not descriptive. Say what the image shows.`);}
   for(const m of text.matchAll(/<input\b[^>]*\btype\s*=\s*["']?image["']?[^>]*>/gi))if(!/\balt\s*=\s*["'][^"']+["']/i.test(m[0]))add(m.index!,'Image button has no alt text.');
   for(const m of text.matchAll(/<h([1-6])\b[^>]*>([\s\S]*?)<\/h\1>/gi))if(!m[2].replace(/<[^>]*>/g,'').trim()&&!/<img\b[^>]*\balt\s*=\s*["'][^"']+/i.test(m[2]))add(m.index!,`Empty <h${m[1]}> heading.`);
