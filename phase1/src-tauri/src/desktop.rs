@@ -523,7 +523,7 @@ async fn collab_lan_start(
     host: tauri::State<'_, crate::lan_host::LanHost>,
     lan: bool,
     port: u16,
-) -> Result<crate::lan_host::LanHostInfo, String> {
+) -> std::result::Result<crate::lan_host::LanHostInfo, String> {
     gate(&window).map_err(|e| e.to_string())?;
     host.start(lan, port).await
 }
@@ -531,7 +531,7 @@ async fn collab_lan_start(
 async fn collab_lan_stop(
     window: WebviewWindow,
     host: tauri::State<'_, crate::lan_host::LanHost>,
-) -> Result<(), String> {
+) -> std::result::Result<(), String> {
     gate(&window).map_err(|e| e.to_string())?;
     host.stop().await
 }
@@ -539,7 +539,7 @@ async fn collab_lan_stop(
 async fn collab_lan_status(
     window: WebviewWindow,
     host: tauri::State<'_, crate::lan_host::LanHost>,
-) -> Result<crate::lan_host::LanHostInfo, String> {
+) -> std::result::Result<crate::lan_host::LanHostInfo, String> {
     gate(&window).map_err(|e| e.to_string())?;
     Ok(host.status().await)
 }
