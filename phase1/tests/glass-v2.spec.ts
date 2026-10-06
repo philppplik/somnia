@@ -8,6 +8,18 @@ async function openGlass(page:Page){
  await page.getByLabel('App background',{exact:true}).selectOption('glass');
  await page.evaluate(()=>{document.documentElement.dataset.background='glass';});
 }
+
+/** Settings re-render while the rAF-throttled commit lands, so a slider can be replaced between fill() and the next step. Locators re-resolve; retry until the value really sticks. */
+async function setOpacity(page:Page,v:number){
+ const slider=page.getByRole('slider',{name:'Opacity',exact:true});
+ await expect(async()=>{await slider.fill(String(v));await expect(slider).toHaveValue(String(v),{timeout:1500});}).toPass({timeout:15000});
+}
+async function checkScope(page:Page,name:string){
+ const box=page.getByRole('checkbox',{name,exact:true});
+ await expect(async()=>{await box.check({timeout:3000});await expect(box).toBeChecked({timeout:1000});}).toPass({timeout:15000});
+}
+/** Screenshots are review artifacts, not assertions; a slow software-blur frame must not fail the test. */
+const shot=(page:Page,path:string)=>page.screenshot({path,timeout:5000}).catch(()=>undefined);
 const bg=(page:Page,sel:string)=>page.locator(sel).first().evaluate(e=>getComputedStyle(e).backgroundColor);
 /** What the pre-v2 hardcoded CSS produced, computed by the browser itself. */
 const legacy=(page:Page,token:string,pct:number)=>page.evaluate(([t,p])=>{const d=document.createElement('div');d.style.background=`color-mix(in srgb,var(${t}) ${p}%,transparent)`;document.body.append(d);const c=getComputedStyle(d).backgroundColor;d.remove();return c;},[token,pct] as const);
@@ -60,14 +72,14 @@ test('code editor scope: default off, warning, set-to-60, keep, selection stays 
  await page.keyboard.press('Control+,');
  const code=page.getByRole('checkbox',{name:'Code editor',exact:true});
  const warn=page.getByText(/^Low contrast: code text may be hard to read/);
- await page.getByRole('slider',{name:'Opacity',exact:true}).fill('50');
+ await setOpacity(page,50);
  await expect(warn).toHaveCount(0); // scope off: no warning
- await code.check();
+ await checkScope(page,'Code editor');
  await expect(warn).toBeVisible();
  await expect(page.locator('html')).toHaveAttribute('data-glass-code','true');
- await page.screenshot({path:'test-results/glass-v2-warning.png'});
+ await shot(page,'test-results/glass-v2-warning.png');
  await page.getByRole('button',{name:'Keep anyway',exact:true}).click();await expect(warn).toHaveCount(0);
- await page.getByRole('slider',{name:'Opacity',exact:true}).fill('45');await expect(warn).toBeVisible();
+ await setOpacity(page,45);await expect(warn).toBeVisible();
  await page.getByRole('button',{name:'Set to 60 %',exact:true}).click();
  await expect(page.getByRole('slider',{name:'Opacity',exact:true})).toHaveValue('60');await expect(warn).toHaveCount(0);
  await expect.poll(()=>page.evaluate(()=>document.documentElement.style.getPropertyValue('--glass-code-alpha'))).toBe('0.6');
@@ -77,7 +89,7 @@ test('code editor scope: default off, warning, set-to-60, keep, selection stays 
   expect(c).toMatch(/color\(srgb|rgba\(/);
   const gut=await page.locator('.codemirror-host .cm-gutters').first().evaluate(e=>getComputedStyle(e).backgroundColor).catch(()=>'');
   void gut;
-  await page.screenshot({path:'test-results/glass-v2-code-on.png'});
+  await shot(page,'test-results/glass-v2-code-on.png');
   const color=await page.locator('.codemirror-host .cm-content').first().evaluate(e=>getComputedStyle(e).color);
   expect(color).not.toMatch(/rgba\([^)]*,\s*0?\.\d+\)/);
  }
@@ -88,7 +100,7 @@ test('hard floor: unreadable code text is clamped to 55 % with message',async({p
  // Force a theme whose text/panel colours cannot reach 4.5:1 against grey at 45 %.
  await page.evaluate(()=>{const s=document.createElement('style');s.id='weak';s.textContent=':root{--text-primary:#9a9aa2!important;--bg-panel:#ffffff!important}';document.head.append(s);});
  await page.getByRole('checkbox',{name:'Code editor',exact:true}).check();
- await page.getByRole('slider',{name:'Opacity',exact:true}).fill('45');
+ await setOpacity(page,45);
  await expect(page.getByText('Code editor opacity is limited to 55 % to keep text readable.')).toBeVisible();
  await expect.poll(()=>page.evaluate(()=>document.documentElement.style.getPropertyValue('--glass-code-alpha'))).toBe('0.55');
  // Frame and panels keep the user's value.
@@ -127,7 +139,7 @@ test('settings search finds glass by keywords in en and de',async({page})=>{
  await expect(page.getByRole('slider',{name:'Deckkraft',exact:true})).toBeVisible();
  await page.locator('.settings-search input').fill('Weichzeichnung');
  await expect(page.getByRole('slider',{name:'Weichzeichnung',exact:true})).toBeVisible();
- await page.screenshot({path:'test-results/glass-v2-de.png'});
+ await shot(page,'test-results/glass-v2-de.png');
 });
 
 test('legacy v2 look without glass v2 keys migrates with blur kept and default opacity',async({page})=>{
@@ -151,7 +163,7 @@ test('code scope paints the editor translucent, text and selection stay opaque',
  await page.evaluate(()=>{document.documentElement.dataset.background='glass';});
  // Scope off (default): editor unchanged.
  expect(await ed.evaluate(e=>getComputedStyle(e).backgroundColor)).toBe(before);
- await page.getByRole('slider',{name:'Opacity',exact:true}).fill('70');
+ await setOpacity(page,70);
  await page.getByRole('checkbox',{name:'Code editor',exact:true}).check();
  await expect.poll(async()=>alpha(await ed.evaluate(e=>getComputedStyle(e).backgroundColor))).toBeCloseTo(0.7,1);
  const gutter=page.locator('.cm-gutters').first();
@@ -163,7 +175,7 @@ test('code scope paints the editor translucent, text and selection stay opaque',
  expect(alpha(text)).toBe(1);
  const sel=page.locator('.cm-selectionBackground').first();
  if(await sel.count())expect(alpha(await sel.evaluate(e=>getComputedStyle(e).backgroundColor))).toBe(1);
- await page.screenshot({path:'test-results/glass-v2-code-on.png'});
+ await shot(page,'test-results/glass-v2-code-on.png');
  // Code scope off again: back to the original paint.
  await page.getByRole('button',{name:'Settings',exact:true}).click();await page.locator('.settings-sidebar nav').getByRole('button',{name:'Appearance'}).click();await page.getByRole('checkbox',{name:'Code editor',exact:true}).uncheck();await page.keyboard.press('Escape');
  await expect.poll(()=>ed.evaluate(e=>getComputedStyle(e).backgroundColor)).toBe(before);
