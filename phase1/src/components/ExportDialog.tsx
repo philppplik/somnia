@@ -1,6 +1,7 @@
 import {useState} from 'react';
 import {Dialog,DialogContent,DialogTitle,DialogDescription} from './ui/dialog';
 import {Button} from './ui/button';
+import {FileArchive,FileCode2,FileText,FolderOpen,X} from 'lucide-react';
 import {patchState,useAppStore} from '../store/appStore';
 import {downloadMarkdown,downloadProject,downloadText,singleFileHtml} from '../lib/exportProject';
 import {useT} from '../lib/useT';
@@ -17,19 +18,27 @@ export function ExportDialog(){
   else if(kind==='markdown'){downloadMarkdown(s.files,target);close();}
   else{const h=getSaveHandlers();if(!h?.exportFolder)throw Error(t('export.needFolder'));if(await h.exportFolder(sub))close();}
  }catch(e){setErr(e instanceof Error?e.message:String(e));}finally{setBusy(false);}};
- const opt=(k:Kind,title:string,text:string)=><label className="flex cursor-pointer items-start gap-2 rounded-md border border-subtle p-2 text-[12px]"><input type="radio" name="export-kind" aria-label={title} checked={kind===k} onChange={()=>setKind(k)} className="mt-1"/><span><strong className="text-ink">{title}</strong><br/><span className="text-ink-2">{text}</span></span></label>;
- return <Dialog open={s.exportDialog} onOpenChange={o=>{if(!o&&!busy)close();}}><DialogContent className="confirm-dialog" aria-label={t('export.aria')}>
-  <DialogTitle>{t('export.title')}</DialogTitle>
-  <DialogDescription>{t('export.desc',{name})}</DialogDescription>
-  <div className="mt-3 grid gap-2">
-   {opt('zip',t('export.zip'),t('export.zipDesc'))}
-   {opt('folder',t('export.folder'),t('export.folderDesc'))}
-   {opt('single',t('export.single'),t('export.singleDesc'))}
-   {opt('markdown',t('export.markdown'),t('export.markdownDesc'))}
+ const icons={zip:FileArchive,folder:FolderOpen,single:FileCode2,markdown:FileText} as const;
+ const opt=(k:Kind,title:string,text:string)=>{const Icon=icons[k];return <label className="export-option" data-checked={kind===k}><input type="radio" name="export-kind" aria-label={title} checked={kind===k} onChange={()=>setKind(k)}/><span className="export-option-icon" aria-hidden="true"><Icon size={18}/></span><span className="export-option-text"><strong>{title}</strong><span>{text}</span></span></label>;};
+ return <Dialog open={s.exportDialog} onOpenChange={o=>{if(!o&&!busy)close();}}><DialogContent className="export-popup" aria-label={t('export.aria')}>
+  <header className="export-head">
+   <DialogTitle>{t('export.title')}</DialogTitle>
+   <DialogDescription>{t('export.desc',{name})}</DialogDescription>
+   <button type="button" className="export-close" aria-label={t('set.close.aria')} title={t('set.close')} onClick={close} disabled={busy}><X size={16}/></button>
+  </header>
+  <div className="export-body">
+   <div className="export-options" role="radiogroup" aria-label={t('export.title')}>
+    {opt('zip',t('export.zip'),t('export.zipDesc'))}
+    {opt('folder',t('export.folder'),t('export.folderDesc'))}
+    {opt('single',t('export.single'),t('export.singleDesc'))}
+    {opt('markdown',t('export.markdown'),t('export.markdownDesc'))}
+   </div>
+   {((kind==='single'||kind==='markdown')&&htmls.length>0||kind==='single'||kind==='folder')&&<div className="export-rows">
+    {(kind==='single'||kind==='markdown')&&htmls.length>0&&<label>{t('export.page')}<select aria-label={t('export.pageAria')} value={target} onChange={e=>setPage(e.target.value)}>{htmls.map(h=><option key={h}>{h}</option>)}</select></label>}
+    {kind==='single'&&<><label>{t('export.inlineCss')}<input type="checkbox" checked={css} onChange={e=>setCss(e.target.checked)}/></label><label>{t('export.inlineJs')}<input type="checkbox" checked={js} onChange={e=>setJs(e.target.checked)}/></label></>}
+    {kind==='folder'&&<label>{t('save.newFolder',{name})}<input type="checkbox" checked={sub} onChange={e=>setSub(e.target.checked)}/></label>}
+   </div>}
+   {err&&<p role="alert" className="export-error">{err}</p>}
   </div>
-  {(kind==='single'||kind==='markdown')&&htmls.length>0&&<label className="mt-3 flex items-center gap-2 text-[12px]">{t('export.page')}<select aria-label={t('export.pageAria')} value={target} onChange={e=>setPage(e.target.value)} className="h-7 rounded-sm border border-subtle bg-panel px-2 text-ink">{htmls.map(h=><option key={h}>{h}</option>)}</select></label>}
-  {kind==='single'&&<div className="mt-2 flex gap-4 text-[12px]"><label className="flex items-center gap-1"><input type="checkbox" checked={css} onChange={e=>setCss(e.target.checked)}/>{t('export.inlineCss')}</label><label className="flex items-center gap-1"><input type="checkbox" checked={js} onChange={e=>setJs(e.target.checked)}/>{t('export.inlineJs')}</label></div>}
-  {kind==='folder'&&<label className="mt-2 flex items-center gap-1 text-[12px]"><input type="checkbox" checked={sub} onChange={e=>setSub(e.target.checked)}/>{t('save.newFolder',{name})}</label>}
-  {err&&<p role="alert" className="mt-2 text-[12px] text-red-500">{err}</p>}
-  <div className="mt-4 flex justify-end gap-2"><Button onClick={close} disabled={busy}>{t('dialogs.cancel')}</Button><Button autoFocus onClick={()=>void run()} disabled={busy||!s.coreConnected}>{busy?t('export.exporting'):t('export.export')}</Button></div>
+  <footer className="export-foot"><Button onClick={close} disabled={busy}>{t('dialogs.cancel')}</Button><Button variant="primary" autoFocus onClick={()=>void run()} disabled={busy||!s.coreConnected}>{busy?t('export.exporting'):t('export.export')}</Button></footer>
  </DialogContent></Dialog>;}
