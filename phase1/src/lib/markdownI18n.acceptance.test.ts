@@ -4,7 +4,7 @@ import {readFileSync} from 'node:fs';
 import {CATALOGUES,BASE_LOCALE,translate} from './i18n';
 
 const commands=['bold','italic','code','strike','bullet','task','number','quote','codeblock','table','h1','h2','h3','h4','h5','h6','reveal','sync'];
-test('all Markdown palette command titles exist directly in every shipped catalogue',{todo:'cmd.md.* keys are absent; palette currently falls back to English'},()=>{
+test('all Markdown palette command titles exist directly in every shipped catalogue',()=>{
  const missing=Object.entries(CATALOGUES).flatMap(([locale,cat])=>commands.filter(command=>!cat[`cmd.md.${command}`]?.trim()).map(command=>`${locale}: cmd.md.${command}`));
  assert.deepEqual(missing,[],'Markdown palette keys must not rely on English fallback');
  for(const [locale,cat] of Object.entries(CATALOGUES))for(const command of commands){
