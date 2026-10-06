@@ -1142,5 +1142,9 @@
   "agent.diff.undo": "R\u00fcckg\u00e4ngig",
   "agent.diff.accepted": "Angenommen",
   "agent.diff.rejected": "Abgelehnt",
-  "agent.error": "Es ging etwas schief: {message}"
+  "agent.error": "Es ging etwas schief: {message}",
+  "set.ap.background": "App-Hintergrund",
+  "set.ap.background.solid": "Solid (100% deckend)",
+  "set.ap.background.glass": "Glas (verschwommener Desktop)",
+  "set.ap.background.note": "Glas nutzt nativen Blur unter Windows und macOS. Linux, Web-App, hoher Kontrast und nicht verf\u00fcgbare Effekte bleiben deckend."
 }

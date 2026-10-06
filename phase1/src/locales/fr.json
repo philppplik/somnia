@@ -1142,5 +1142,9 @@
   "agent.diff.undo": "Annuler",
   "agent.diff.accepted": "Accept\u00e9",
   "agent.diff.rejected": "Refus\u00e9",
-  "agent.error": "Une erreur s'est produite : {message}"
+  "agent.error": "Une erreur s'est produite : {message}",
+  "set.ap.background": "Arri\u00e8re-plan de l\u2019app",
+  "set.ap.background.solid": "Uni (100 % opaque)",
+  "set.ap.background.glass": "Verre (bureau flout\u00e9)",
+  "set.ap.background.note": "Le verre utilise le flou natif sur Windows et macOS. Linux, l\u2019app web, le contraste \u00e9lev\u00e9 et les effets indisponibles gardent un fond opaque."
 }

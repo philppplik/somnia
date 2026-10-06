@@ -588,6 +588,43 @@ fn log_dir(window: WebviewWindow) -> std::result::Result<String, String> {
         .map(|l| l.dir().display().to_string())
         .unwrap_or_default())
 }
+/// Never expose transparent UI on unsupported compositors. Linux remains solid.
+#[tauri::command]
+fn set_window_background(window: WebviewWindow, glass: bool, dark: bool) -> std::result::Result<bool, String> {
+    gate(&window).map_err(|e| e.to_string())?;
+    #[cfg(target_os = "windows")]
+    {
+        if !glass {
+            // Clearing an effect on unsupported Windows is harmless to our opaque CSS.
+            let _ = window_vibrancy::clear_acrylic(&window);
+            return Ok(false);
+        }
+        let tint = if dark { (18, 18, 24, 125) } else { (248, 249, 251, 125) };
+        // Tauri's set_effects discards compositor errors internally. Call the same
+        // underlying library directly so failure can keep the frontend opaque.
+        if window_vibrancy::apply_acrylic(&window, Some(tint)).is_err() {
+            let _ = window_vibrancy::clear_acrylic(&window);
+            return Ok(false);
+        }
+        Ok(true)
+    }
+    #[cfg(target_os = "macos")]
+    {
+        use window_vibrancy::{NSVisualEffectMaterial, NSVisualEffectState};
+        // Repeated theme changes must not stack vibrancy subviews.
+        let _ = window_vibrancy::clear_vibrancy(&window);
+        if !glass { return Ok(false); }
+        let _ = dark; // CSS supplies the current theme tint.
+        Ok(window_vibrancy::apply_vibrancy(&window,
+            NSVisualEffectMaterial::UnderWindowBackground,
+            Some(NSVisualEffectState::Active), Some(5.0)).is_ok())
+    }
+    #[cfg(not(any(target_os = "windows", target_os = "macos")))]
+    {
+        let _ = (glass, dark);
+        Ok(false)
+    }
+}
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -659,6 +696,7 @@ pub fn run() {
             }
         })
         .invoke_handler(tauri::generate_handler![
+            set_window_background,
             collab_lan_start,
             collab_lan_stop,
             collab_lan_status,

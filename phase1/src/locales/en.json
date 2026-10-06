@@ -1142,5 +1142,9 @@
   "agent.diff.undo": "Undo",
   "agent.diff.accepted": "Accepted",
   "agent.diff.rejected": "Rejected",
-  "agent.error": "Something went wrong: {message}"
+  "agent.error": "Something went wrong: {message}",
+  "set.ap.background": "App background",
+  "set.ap.background.solid": "Solid (100% opaque)",
+  "set.ap.background.glass": "Glass (blurred desktop)",
+  "set.ap.background.note": "Glass uses native blur on Windows and macOS. Linux, the web app, high contrast and unavailable effects stay solid."
 }

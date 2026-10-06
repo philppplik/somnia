@@ -1142,5 +1142,9 @@
   "agent.diff.undo": "Deshacer",
   "agent.diff.accepted": "Aceptado",
   "agent.diff.rejected": "Rechazado",
-  "agent.error": "Algo sali\u00f3 mal: {message}"
+  "agent.error": "Algo sali\u00f3 mal: {message}",
+  "set.ap.background": "Fondo de la app",
+  "set.ap.background.solid": "S\u00f3lido (100% opaco)",
+  "set.ap.background.glass": "Cristal (escritorio desenfocado)",
+  "set.ap.background.note": "Cristal usa desenfoque nativo en Windows y macOS. Linux, la app web, el alto contraste y los efectos no disponibles mantienen un fondo s\u00f3lido."
 }

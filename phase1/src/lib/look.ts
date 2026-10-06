@@ -1,11 +1,12 @@
 /** Look options: accent colour, UI scale, editor font size, line height, density. Applied as CSS variables on :root; stored in localStorage. */
+import type {WindowBackground} from './windowBackground';
 export type Density='compact'|'normal'|'comfortable';
-export interface Look{accent:string|null;uiScale:number;editorFont:number;lineHeight:number;density:Density}
-export const DEFAULT_LOOK:Look={accent:null,uiScale:100,editorFont:12,lineHeight:1.5,density:'normal'};
+export interface Look{accent:string|null;uiScale:number;editorFont:number;lineHeight:number;density:Density;background:WindowBackground}
+export const DEFAULT_LOOK:Look={accent:null,uiScale:100,editorFont:12,lineHeight:1.5,density:'normal',background:'solid'};
 const KEY='somnia.look.v1';
 const clamp=(n:unknown,lo:number,hi:number,d:number)=>typeof n==='number'&&Number.isFinite(n)?Math.min(hi,Math.max(lo,n)):d;
 export const isHex=(v:unknown):v is string=>typeof v==='string'&&/^#[0-9a-fA-F]{6}$/.test(v);
-export function sanitizeLook(x:any):Look{return{accent:isHex(x?.accent)?x.accent.toLowerCase():null,uiScale:clamp(x?.uiScale,85,130,100),editorFont:clamp(x?.editorFont,10,22,12),lineHeight:clamp(x?.lineHeight,1.2,2,1.5),density:x?.density==='compact'||x?.density==='comfortable'?x.density:'normal'};}
+export function sanitizeLook(x:any):Look{return{accent:isHex(x?.accent)?x.accent.toLowerCase():null,uiScale:clamp(x?.uiScale,85,130,100),editorFont:clamp(x?.editorFont,10,22,12),lineHeight:clamp(x?.lineHeight,1.2,2,1.5),background:x?.background==='glass'?'glass':'solid',density:x?.density==='compact'||x?.density==='comfortable'?x.density:'normal'};}
 export function readLook():Look{try{return sanitizeLook(JSON.parse(localStorage.getItem(KEY)||'{}'));}catch{return{...DEFAULT_LOOK};}}
 export function rememberLook(l:Look){try{localStorage.setItem(KEY,JSON.stringify(l));}catch{/* storage unavailable */}}
 const lin=(c:number)=>{const s=c/255;return s<=0.03928?s/12.92:Math.pow((s+0.055)/1.055,2.4);};

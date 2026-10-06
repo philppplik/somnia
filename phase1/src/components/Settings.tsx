@@ -1462,6 +1462,16 @@ export function Settings() {
             </select>
           </label>
           <label>
+            {t("set.ap.background")}
+            <select aria-label={t("set.ap.background")} aria-describedby="background-note"
+              value={state.look.background}
+              onChange={(e) => change({look:{...state.look,background:e.target.value === "glass" ? "glass" : "solid"}})}>
+              <option value="solid">{t("set.ap.background.solid")}</option>
+              <option value="glass">{t("set.ap.background.glass")}</option>
+            </select>
+          </label>
+          <p id="background-note">{t("set.ap.background.note")}</p>
+          <label>
             {t("set.ap.contrast")}
             <select
               aria-label={t("set.ap.contrast")}

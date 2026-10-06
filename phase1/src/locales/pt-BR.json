@@ -1142,5 +1142,9 @@
   "agent.diff.undo": "Desfazer",
   "agent.diff.accepted": "Aceito",
   "agent.diff.rejected": "Rejeitado",
-  "agent.error": "Algo deu errado: {message}"
+  "agent.error": "Algo deu errado: {message}",
+  "set.ap.background": "Fundo do app",
+  "set.ap.background.solid": "S\u00f3lido (100% opaco)",
+  "set.ap.background.glass": "Vidro (\u00e1rea de trabalho desfocada)",
+  "set.ap.background.note": "Vidro usa desfoque nativo no Windows e macOS. Linux, o app web, alto contraste e efeitos indispon\u00edveis mant\u00eam o fundo s\u00f3lido."
 }

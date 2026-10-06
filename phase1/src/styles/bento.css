@@ -48,3 +48,18 @@ input,select,textarea{border-radius:var(--r-sm)}
 .md-preview .md-missing-image,.md-preview .md-empty{color:var(--text-tertiary);font-style:italic}
 .canvas-stage>.media-bar{margin-inline:0;width:100%}
 .md-preview ul{list-style:disc}.md-preview ol{list-style:decimal}.md-preview ul ul{list-style:circle}
+
+/* Glass is opt-in and gated by native effect success. Keep content, menus,
+   settings and code opaque for stable contrast; only shell/chrome lets the
+   blurred desktop through. Palette tokens remain unchanged. */
+:root[data-background=glass] .app-frame{
+  background:color-mix(in srgb,var(--shell-bg) 68%,transparent);
+  backdrop-filter:blur(24px) saturate(1.15);
+  -webkit-backdrop-filter:blur(24px) saturate(1.15);
+}
+:root[data-background=glass] .pane-slot>.panel,
+:root[data-background=glass] .center{
+  background:color-mix(in srgb,var(--bg-panel) 88%,transparent);
+}
+:root[data-background=glass],:root[data-background=glass] body,
+:root[data-background=glass] #root{background:transparent}
