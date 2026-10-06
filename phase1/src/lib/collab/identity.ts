@@ -12,11 +12,15 @@ export type NameCheck =
   | { ok: false; reason: "empty" | "invalid" | "long" };
 // C0/C1 controls, line/paragraph separators, bidi embeddings/overrides/isolates, angle brackets (the wire sanitizer strips these).
 const BAD_NAME = /[\u0000-\u001f\u007f-\u009f\u2028\u2029\u202a-\u202e\u2066-\u2069<>]/;
+/** Characters that render as nothing: a name made only of these would look blank to other people. */
+const INVISIBLE_ONLY = /[\u200b-\u200d\u2060\u2800\ufeff]/g;
+const LONE_SURROGATE = /[\ud800-\udbff](?![\udc00-\udfff])|(?<![\ud800-\udbff])[\udc00-\udfff]/;
 /** Strict check for the new join/host inputs. Never truncates or deletes characters silently. */
 export function checkSessionName(raw: string): NameCheck {
   const name = raw.trim();
   if (!name) return { ok: false, reason: "empty" };
-  if (BAD_NAME.test(name)) return { ok: false, reason: "invalid" };
+  if (BAD_NAME.test(name) || LONE_SURROGATE.test(name)) return { ok: false, reason: "invalid" };
+  if (!name.replace(INVISIBLE_ONLY, "").trim()) return { ok: false, reason: "empty" };
   if (name.length > SESSION_NAME_MAX) return { ok: false, reason: "long" };
   return { ok: true, name };
 }

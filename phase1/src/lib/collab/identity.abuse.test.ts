@@ -177,12 +177,12 @@ test('session name: more edges around the 32-unit limit',()=>{
  assert.equal(checkSessionName('.'.repeat(32)).ok,true);
  
 });
-test('session name: KNOWN GAPS (characterization, change deliberately)',()=>{
- // Zero-width characters are not trimmed or rejected: a name can render as blank.
- assert.equal(checkSessionName('\u200b').ok,true,'zero-width space only passes validation today');
- assert.equal(checkSessionName('\u2800').ok,true,'braille blank passes validation today');
- // A lone surrogate is accepted as a name.
- assert.equal(checkSessionName('\ud83d').ok,true,'lone high surrogate passes validation today');
+test('session name: invisible-only names and lone surrogates are rejected',()=>{
+ for(const cp of ['\u200b','\u200c','\u200d','\u2060','\u2800','\ufeff','\u200b\u2800 \u2060'])assert.equal(checkSessionName(cp).ok,false,'U+'+cp.codePointAt(0)!.toString(16));
+ assert.equal(checkSessionName('\u200b').ok===false&&(checkSessionName('\u200b') as {reason:string}).reason,'empty');
+ for(const bad of ['\ud83d','\ude00','a\ud83d','\ud83db','\ude00\ud83d'])assert.equal(checkSessionName(bad).ok,false,'lone surrogate '+JSON.stringify(bad));
+ assert.equal(checkSessionName('\u{1F600}').ok,true,'valid surrogate pair stays legal');
+ assert.equal(checkSessionName('Ma\u200bra').ok,true,'invisible chars inside a visible name are not rejected');
 });
 test('shortenForDisplay: never splits a surrogate pair or a cluster, never grows',()=>{
  assert.equal(shortenForDisplay('Mara'),'Mara');assert.equal(shortenForDisplay(''),'');
