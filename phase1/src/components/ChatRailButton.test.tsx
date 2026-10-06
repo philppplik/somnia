@@ -128,3 +128,18 @@ test('agent rail button is pressed only when the panel shows the agent tab', () 
   assert.ok(html.includes('aria-pressed="false"'));
   reset();
 });
+
+test('agent rail button tooltip is platform-formatted and exposes aria-keyshortcuts', () => {
+  reset();
+  withNavigator('Win32', () => {
+    const html = renderToStaticMarkup(<AgentRailButton />);
+    assert.ok(html.includes(`(${formatShortcut('Mod+Alt+A')})`), html);
+    assert.ok(html.includes('aria-keyshortcuts="Control+Alt+A"'), html);
+  });
+  withNavigator('MacIntel', () => {
+    const html = renderToStaticMarkup(<AgentRailButton />);
+    assert.ok(html.includes(`(${formatShortcut('Mod+Alt+A')})`), html);
+    assert.ok(!html.includes('Ctrl+Alt+A'), html);
+    assert.ok(html.includes('aria-keyshortcuts="Meta+Alt+A"'), html);
+  });
+});
