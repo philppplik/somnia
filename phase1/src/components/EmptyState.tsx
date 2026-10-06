@@ -1,4 +1,4 @@
-import {FolderOpen,FileText,FilePlus2} from 'lucide-react';
+import {FolderOpen,FileText,FilePlus2} from '../lib/icons';
 import {executeCommand} from '../lib/commands';
 import {Button} from './ui/button';
 import {useT} from '../lib/useT';

@@ -40,6 +40,7 @@ ui('palette.open','Command palette','Mod+K',()=>patchState({paletteOpen:true}));
 ui('search.project','Search in project','Mod+Shift+F',()=>patchState({leftTab:'search',sidebarOpen:true}));
 ui('css.open','CSS variables and classes',undefined,()=>patchState({leftTab:'css',sidebarOpen:true}));
 ui('sidebar.toggle','Toggle sidebar','Mod+B',()=>patchState({sidebarOpen:!getState().sidebarOpen}));
+ui('agent.toggle','Toggle Somnia Agent','Mod+Alt+A',()=>patchState({agentOpen:!getState().agentOpen}));
 ui('inspector.toggle','Toggle inspector','Mod+Alt+I',()=>patchState({inspectorOpen:!getState().inspectorOpen}));
 ui('problems.toggle','Toggle problems','Mod+J',()=>patchState({problemsOpen:!getState().problemsOpen}));
 ui('view.code','Code view','Mod+1',()=>patchState({viewMode:'code'}));

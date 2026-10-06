@@ -1,5 +1,5 @@
 import {useMemo,useState} from 'react';
-import {Maximize2,Minimize2,ExternalLink} from 'lucide-react';
+import {Maximize2,Minimize2,ExternalLink} from '../lib/icons';
 import {findMedia,formatBytes,isMarkdown,useMedia,type MediaItem} from '../lib/media';
 import {renderMarkdown} from '../lib/markdownRender';
 import {patchState} from '../store/appStore';

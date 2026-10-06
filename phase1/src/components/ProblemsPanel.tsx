@@ -1,6 +1,6 @@
 import {useT} from '../lib/useT';
 import {useEffect,useMemo,useState} from 'react';
-import {AlertTriangle,CircleAlert} from 'lucide-react';
+import {AlertTriangle,CircleAlert} from '../lib/icons';
 import {breakpointFor,jumpToLine,useAppStore} from '../store/appStore';
 import {projectProblems} from '../lib/diagnostics';
 /** Lists syntax problems and unclosed tags of all project files; a click opens the file at that line. Re-lints shortly after edits stop. */

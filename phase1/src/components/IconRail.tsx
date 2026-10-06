@@ -1,6 +1,7 @@
-import type {LucideIcon} from 'lucide-react';
-import {PanelLeft,PanelRight,Files,Layers,Search,Image,Boxes,SlidersHorizontal,Play,Puzzle,Blocks,Paintbrush,Settings as Gear} from 'lucide-react';
+import type {LucideIcon} from '../lib/icons';
+import {PanelLeft,PanelRight,Files,Layers,Search,Image,Boxes,SlidersHorizontal,Play,Puzzle,Blocks,Paintbrush,Settings as Gear} from '../lib/icons';
 import {Button} from './ui/button';
+import {AgentRailButton} from './agent/AgentRailButton';
 import {executeCommand} from '../lib/commands';
 import {patchState,useAppStore} from '../store/appStore';
 import type {AppState} from '../store/appStore';
@@ -23,5 +24,6 @@ export function IconRail({side}:{side:'left'|'right'}){const {t}=useT();
   {s.extensionPanels.filter(p=>p.side===side).map(p=><Button key={p.id} size="icon" title={p.title} aria-label={`${p.title} panel (extension)`} aria-pressed={open&&s.activePanel[side]===p.id} className={cn(open&&s.activePanel[side]===p.id&&'bg-accent-soft text-accent')} onClick={()=>{const on=open&&s.activePanel[side]===p.id;patchState({activePanel:{...s.activePanel,[side]:on?null:p.id},...(side==='left'?{sidebarOpen:!on}:{inspectorOpen:!on})});}}><Puzzle/></Button>)}
   {items.map(({id,label,icon:Icon})=><Button key={id} size="icon" title={label} aria-label={`${label} panel`} aria-pressed={open&&active===id} className={cn(open&&active===id&&'bg-accent-soft text-accent')} onClick={()=>choose(id)}><Icon/></Button>)}
  {side==='left'&&<div className="mt-auto flex flex-col items-center gap-1 pb-2"><Button size="icon" title={t('rest.iconRail.extensions')} aria-label={t('rest.iconRail.extensions')} onClick={()=>void executeCommand('extensions.open')}><Blocks/></Button><Button size="icon" title={t('rest.iconRail.settingsCtrl')} aria-label={t('rest.iconRail.settings')} onClick={()=>void executeCommand('settings.open')}><Gear/></Button></div>}
+ {side==='right'&&<AgentRailButton/>}
  </div>;
 }

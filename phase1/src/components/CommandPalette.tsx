@@ -1,6 +1,6 @@
 import { cn } from '../lib/cn';
 import { useEffect,useRef,useState } from 'react';
-import { Search,Terminal } from 'lucide-react';
+import { Search,Terminal } from '../lib/icons';
 import { Dialog,DialogContent,DialogDescription,DialogTitle } from './ui/dialog';
 import { commandEnabled,executeCommand,formatShortcut,listCommands } from '../lib/commands';
 import { patchState,useAppStore } from '../store/appStore';
