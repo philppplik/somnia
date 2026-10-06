@@ -10,6 +10,7 @@ Start here:
 - [Live collaboration](collaboration.md): share a project, join by link, your name and picture, session chat, encryption and its limits.
 - [Logging and error handling](LOGGING.md), [Window background](WINDOW-BACKGROUND.md), [Folder drop](FOLDER-DROP.md).
 - [Roadmap](ROADMAP.md), [Performance budgets](PERFORMANCE-BUDGETS.md), [Large projects](PERF-LARGE-PROJECTS.md).
+- [LaTeX math (Stage 1)](features/latex-math.md): Markdown formulas, .tex math preview, errors, safety and settings.
 - Feature notes: [Markdown live preview](features/markdown-live-preview.md), [`features/`](features/), [`i18n/`](i18n/), [Collaboration share UI](collab-share-ui.md), [`fixes/`](fixes/).
 
 The app source lives in [`phase1/`](../phase1/). Architecture decisions (ADR-001 to ADR-005) and per-feature design notes are in [`phase1/notes/`](../phase1/notes/). The collaboration relay is documented in [`relay/`](../relay/README.md). Somnia is MIT licensed, see [LICENSE](../LICENSE).
