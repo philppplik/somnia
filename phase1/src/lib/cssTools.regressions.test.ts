@@ -62,3 +62,17 @@ test('selector class listing ignores quoted attribute values and decimal keyfram
   assert.ok('error' in renameClass(files, 'one', 'two'), 'usage-only target is a collision too');
   assert.deepEqual(renameClass(files, 'absent', 'unused'), { changed: {}, count: 0 });
 });
+
+test('renameClass leaves CSS comments, attribute-selector literals and HTML comments untouched', () => {
+  const css = '/* .card stays */\n.card { color: red; }\n[data-label=".card"] { x: 1; }\na[title=\'.card\'] .card:hover { y: 2; }\n';
+  const html = '<!-- <div class="card"> -->\n<div class="card big"></div>\n<!-- <style>.card{}</style> -->\n<style>/* .card keep */ .card{a:b} [data-x=".card"]{c:d}</style>';
+  const r = renameClass({ 'a.css': css, 'a.html': html }, 'card', 'tile') as { changed: Record<string, string>; count: number };
+  assert.ok('changed' in r);
+  assert.equal(r.changed['a.css'], '/* .card stays */\n.tile { color: red; }\n[data-label=".card"] { x: 1; }\na[title=\'.card\'] .tile:hover { y: 2; }\n');
+  assert.equal(r.changed['a.html'], '<!-- <div class="card"> -->\n<div class="tile big"></div>\n<!-- <style>.card{}</style> -->\n<style>/* .card keep */ .tile{a:b} [data-x=".card"]{c:d}</style>');
+  assert.equal(r.count, 4);
+});
+test('renameClass changes nothing when the name only appears in comments or literals', () => {
+  const files = { 'a.css': '/* .card */ [x=".card"]{}', 'a.html': '<!-- class="card" -->' };
+  assert.deepEqual(renameClass(files, 'card', 'tile'), { changed: {}, count: 0 });
+});
