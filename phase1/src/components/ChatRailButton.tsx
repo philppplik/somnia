@@ -1,6 +1,6 @@
 import {MessageSquare} from '../lib/icons';
 import {Button} from './ui/button';
-import {executeCommand} from '../lib/commands';
+import {defaultShortcut,executeCommand,formatShortcut,isMac} from '../lib/commands';
 import {useAppStore} from '../store/appStore';
 import {useChatSession} from '../lib/collab/chatSession';
 import {useCommunicationTab} from '../lib/collab/communication';
@@ -12,5 +12,5 @@ export function ChatRailButton(){
  if(!chat)return null;
  const active=open&&tab==='chat';const unread=active?0:chat.unread;
  const label=unread>0?t(unread===1?'chat.railUnreadOne':'chat.railUnread',{count:unread}):active?t('chat.close'):t('chat.open');
- return <Button size="icon" data-testid="chat-rail-open" className={cn('chat-rail-open relative',active&&'bg-accent-soft text-accent')} aria-label={label} title={`${active?t('chat.close'):t('chat.open')} (Ctrl+Alt+C)`} aria-pressed={active} aria-keyshortcuts="Control+Alt+C" onClick={()=>void executeCommand('chat.toggle')}><MessageSquare size={18}/>{unread>0&&<span className="collab-unread" aria-hidden="true">{unread>9?'9+':unread}</span>}</Button>;
+ return <Button size="icon" data-testid="chat-rail-open" className={cn('chat-rail-open relative',active&&'bg-accent-soft text-accent')} aria-label={label} title={`${active?t('chat.close'):t('chat.open')} (${formatShortcut(defaultShortcut('chat.toggle')??'Mod+Alt+C')})`} aria-pressed={active} aria-keyshortcuts={isMac()?'Meta+Alt+C':'Control+Alt+C'} onClick={()=>void executeCommand('chat.toggle')}><MessageSquare size={18}/>{unread>0&&<span className="collab-unread" aria-hidden="true">{unread>9?'9+':unread}</span>}</Button>;
 }

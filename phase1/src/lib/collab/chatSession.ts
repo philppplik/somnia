@@ -348,6 +348,10 @@ export const subscribeChat = (f: () => void) => {
   };
 };
 export function useChatSession() {
-  useSyncExternalStore(subscribeChat, () => session?.snapshot() ?? -1);
+  useSyncExternalStore(
+    subscribeChat,
+    () => session?.snapshot() ?? -1,
+    () => session?.snapshot() ?? -1,
+  );
   return session;
 }

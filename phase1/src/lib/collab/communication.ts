@@ -22,6 +22,7 @@ export function toggleSessionChat() {
   if (getState().agentOpen && tab === "chat") patchState({ agentOpen: false });
   else openSessionChat();
 }
+export const getCommunicationTab = () => tab;
 export const useCommunicationTab = () =>
   useSyncExternalStore(
     (f) => {
@@ -30,5 +31,6 @@ export const useCommunicationTab = () =>
         listeners.delete(f);
       };
     },
+    () => tab,
     () => tab,
   );
