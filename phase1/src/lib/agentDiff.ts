@@ -11,11 +11,15 @@ export interface FileProposal {
   baseText: string | null;      // editor text the agent saw; null for create
   proposedText: string;
 }
+/** Structurally identical to the Privacy module's AIProvenance (createAIProvenance). Replace with an import once that lands on phase1-foundation. */
+export interface AIProvenance { generatedBy: 'ai'; provider: string; model: string; generatedAt: string; humanReviewed: boolean }
 export interface HunkRef { path: string; index: number }
 export interface ChangeSet {
   id: string;
   /** false while the agent is still streaming; incomplete sets can never be applied. */
   complete: boolean;
+  /** Set by the agent loop via createAIProvenance(provider, model). Carried unchanged into the apply plan. */
+  provenance?: AIProvenance;
   files: FileProposal[];
   /** Agent-declared dependencies: accepting `hunk` requires `requires` to be accepted too. */
   links?: {hunk: HunkRef; requires: HunkRef; reason: string}[];
@@ -109,8 +113,11 @@ export function checkFresh(f: FileProposal, current: string | null): Freshness {
 }
 
 export interface Blocker { path?: string; reason: 'incomplete' | 'invalid-path' | 'too-large' | 'stale' | 'exists' | 'missing-base' | 'dependency' | 'duplicate-path' | 'too-many-files' | 'pending'; detail: string }
-export interface PlannedWrite { path: string; kind: 'create' | 'edit'; text: string; acceptedHunks: number; totalHunks: number }
-export interface ApplyPlan { ok: boolean; writes: PlannedWrite[]; skipped: string[]; blockers: Blocker[] }
+export interface PlannedWrite { path: string; kind: 'create' | 'edit'; text: string; acceptedHunks: number; totalHunks: number; provenance?: AIProvenance }
+export interface ApplyPlan { ok: boolean; provenance?: AIProvenance; writes: PlannedWrite[]; skipped: string[]; blockers: Blocker[] }
+
+/** Provenance of applied content: still AI generated, now human reviewed (user accepted hunks explicitly). */
+const reviewedProvenance = (p?: AIProvenance): AIProvenance | undefined => p && {...p, humanReviewed: true};
 
 /**
  * Sandboxed apply: computes what WOULD be written. Never touches disk or editor.
@@ -137,10 +144,10 @@ export function planApply(cs: ChangeSet, decisions: Decisions, readCurrent: (pat
     if (n === 0) { skipped.push(path); continue; }
     const fresh = checkFresh(r.file, readCurrent(path));
     if (fresh !== 'fresh') { blockers.push({path, reason: fresh, detail: fresh === 'stale' ? 'File changed since the proposal. Re-propose from the current state.' : fresh === 'exists' ? 'File already exists; never overwritten silently.' : 'File no longer exists.'}); continue; }
-    writes.push({path, kind: r.file.kind, text: applyHunks(r, decisions), acceptedHunks: n, totalHunks: r.hunks.length});
+    writes.push({path, kind: r.file.kind, text: applyHunks(r, decisions), acceptedHunks: n, totalHunks: r.hunks.length, provenance: reviewedProvenance(cs.provenance)});
   }
   const ok = blockers.length === 0;
-  return {ok, writes: ok ? writes : [], skipped, blockers};
+  return {ok, writes: ok ? writes : [], skipped, blockers, provenance: reviewedProvenance(cs.provenance)};
 }
 
 /** Host port. `applyBatch` must be ONE undo step and must not save to disk. */

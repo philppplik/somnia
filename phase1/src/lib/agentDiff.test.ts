@@ -107,3 +107,10 @@ test('applyReviewed re-plans against live state and writes once, only through th
   assert.ok(done.ok); assert.equal(calls.length, 1); assert.equal(calls[0][0].text, edit.proposedText);
   assert.equal(store.get('index.html'), base); // engine itself never mutates state
 });
+test('AI provenance is carried to the plan and marked human reviewed; input is not mutated', () => {
+  const provenance = {generatedBy: 'ai' as const, provider: 'openrouter', model: 'm', generatedAt: '2026-10-06T00:00:00Z', humanReviewed: false};
+  const set = cs([edit], {provenance}); const all: Decisions = {}; reviewFile(edit).hunks.forEach(h => all[h.key] = 'accept');
+  const p = planApply(set, all, () => base);
+  assert.equal(p.provenance?.generatedBy, 'ai'); assert.equal(p.provenance?.humanReviewed, true);
+  assert.equal(p.writes[0].provenance?.model, 'm'); assert.equal(provenance.humanReviewed, false);
+});

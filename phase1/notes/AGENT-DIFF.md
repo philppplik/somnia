@@ -32,6 +32,9 @@ interface AgentApplyPort { read(path): string|null; applyBatch(writes): void|Pro
 ### What the Panel provides
 Create a `ChangeSet` from the agent's tool results (one `FileProposal` per file, `baseText` = editor text the agent actually read) and set `complete:true` only after streaming ends. Mount `<AgentReview changeSet readCurrent onApply onDiscard/>`. `onApply` receives a plan with `ok:true`; call `applyReviewed` or `port.applyBatch(plan.writes)`.
 
+## AI provenance
+`ChangeSet.provenance` (shape of `createAIProvenance(provider, model)`: generatedBy 'ai', provider, model, generatedAt, humanReviewed) is carried into `ApplyPlan.provenance` and every `PlannedWrite.provenance` with `humanReviewed:true` (the user accepted hunks explicitly). `generatedBy` stays `'ai'` even for partly accepted changes. The type is declared locally in agentDiff.ts because the privacy module is not on phase1-foundation yet; swap for the import after it lands. Core is responsible for persisting the marker (editor/undo metadata, export).
+
 ## Rules enforced (all tested)
 - Per hunk, per file and all-at-once accept/reject. A hunk is one contiguous change block; hunks are independent.
 - Isolated: the engine has no write capability. Originals are never mutated, rejecting deletes nothing.
