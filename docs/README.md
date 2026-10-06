@@ -6,6 +6,7 @@ Start here:
 - [Build, CI and release](BUILD-AND-RELEASE.md): local builds, versioning, CI jobs, release assembly.
 - [Agent](agent/README.md): the AI panel (architecture, providers, privacy, MCP plan).
 - [Extensions](extensions/README.md): build, install and secure Somnia extensions.
+- [Live collaboration](collaboration.md): share a project, join by link, your name and picture, session chat, encryption and its limits.
 - [Logging and error handling](LOGGING.md), [Window background](WINDOW-BACKGROUND.md), [Folder drop](FOLDER-DROP.md).
 - [Roadmap](ROADMAP.md), [Performance budgets](PERFORMANCE-BUDGETS.md), [Large projects](PERF-LARGE-PROJECTS.md).
 - Feature notes: [Markdown live preview](features/markdown-live-preview.md), [`features/`](features/), [`i18n/`](i18n/), [Collaboration share UI](collab-share-ui.md), [`fixes/`](fixes/).

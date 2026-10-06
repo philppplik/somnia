@@ -1,5 +1,7 @@
 # Collaboration Share/Join UI (ADR-005, slice 1)
 
+> Superseded by [Live collaboration](collaboration.md) for current behaviour. This page records the first UI slice.
+
 Branch `collab/share-ui`, based on PR #108 (`feature/collab-spike`). UI only. No network code in the app yet.
 
 ## What it does
