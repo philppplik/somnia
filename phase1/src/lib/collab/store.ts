@@ -1,8 +1,9 @@
 import {useSyncExternalStore} from 'react';
 import type {CollabEngine,CollabSnapshot} from './types';
-import {LoopbackEngine} from './loopbackEngine';
-/** The active engine. Default is the loopback stand-in; the real relay engine calls setCollabEngine() at startup. */
-let engine:CollabEngine=new LoopbackEngine({delayMs:150});
+import {RealEngine} from './realEngine';
+import {appProject,canJoinHere,hostFilesReady} from './appProject';
+/** The active engine: the real one. Tests and the desktop shell may replace it with setCollabEngine(). */
+let engine:CollabEngine=new RealEngine({project:appProject,hasFiles:hostFilesReady,canJoin:canJoinHere});
 const listeners=new Set<()=>void>();let off:(()=>void)|null=null;
 const wire=()=>{off?.();off=engine.subscribe(()=>listeners.forEach(l=>l()));};wire();
 export const setCollabEngine=(e:CollabEngine)=>{engine=e;wire();listeners.forEach(l=>l());};
