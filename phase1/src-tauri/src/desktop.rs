@@ -502,6 +502,33 @@ async fn close_project(
     .await
 }
 
+#[tauri::command]
+async fn collab_lan_start(
+    window: WebviewWindow,
+    host: tauri::State<'_, crate::lan_host::LanHost>,
+    lan: bool,
+    port: u16,
+) -> Result<crate::lan_host::LanHostInfo, String> {
+    gate(&window).map_err(|e| e.to_string())?;
+    host.start(lan, port).await
+}
+#[tauri::command]
+async fn collab_lan_stop(
+    window: WebviewWindow,
+    host: tauri::State<'_, crate::lan_host::LanHost>,
+) -> Result<(), String> {
+    gate(&window).map_err(|e| e.to_string())?;
+    host.stop().await
+}
+#[tauri::command]
+async fn collab_lan_status(
+    window: WebviewWindow,
+    host: tauri::State<'_, crate::lan_host::LanHost>,
+) -> Result<crate::lan_host::LanHostInfo, String> {
+    gate(&window).map_err(|e| e.to_string())?;
+    Ok(host.status().await)
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let shared = Shared::default();
@@ -510,6 +537,7 @@ pub fn run() {
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_process::init())
         .manage(shared.clone())
+        .manage(crate::lan_host::LanHost::default())
         .setup(move |app| {
             let app_handle = app.handle().clone();
             std::thread::spawn(move || loop {
@@ -568,6 +596,9 @@ pub fn run() {
             }
         })
         .invoke_handler(tauri::generate_handler![
+            collab_lan_start,
+            collab_lan_stop,
+            collab_lan_status,
             choose_project,
             choose_file,
             open_dropped_project,

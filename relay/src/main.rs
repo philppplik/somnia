@@ -85,6 +85,7 @@ async fn main() -> std::io::Result<()> {
 
     let args = Args::parse();
     let config = Config {
+        allowed_room: None,
         max_frame_bytes: args.max_frame_bytes,
         max_rooms: args.max_rooms,
         max_clients_per_room: args.max_clients_per_room,
