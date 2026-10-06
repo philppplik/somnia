@@ -1100,5 +1100,22 @@
   "share.durationMinutes": "{count} minutos",
   "share.expiresAt": "A sessão termina: {time}",
   "share.endLimits": "Encerrar desconecta todos e impede o retorno neste relay até a expiração. Não apaga cópias já recebidas. Uma nova sessão recebe uma nova sala e chave.",
-  "share.err.unsupported-relay": "Este relay não suporta sessões gerenciadas. Atualize seu relay."
+  "share.err.unsupported-relay": "Este relay não suporta sessões gerenciadas. Atualize seu relay.",
+  "agent.privacy.title": "IA e seus dados",
+  "agent.privacy.disclosure": "O Somnia Agent usa IA. Modelos na nuvem enviam sua solicitação, contexto do chat e conteúdo selecionado do projeto ao provedor. O OpenRouter pode encaminhá-los a provedores de modelos. O processamento pode ocorrer fora da UE. Retenção e treinamento dependem do provedor e das suas configurações.",
+  "agent.privacy.consent": "Concordo em enviar esses dados aos provedores na nuvem que eu escolher, incluindo seus provedores de modelos.",
+  "agent.privacy.enable": "Permitir IA na nuvem",
+  "agent.privacy.required": "Permita a IA na nuvem antes de enviar dados a um provedor.",
+  "agent.privacy.saveFailed": "Não foi possível salvar o consentimento. As solicitações na nuvem continuam bloqueadas.",
+  "agent.privacy.revoke": "Retirar consentimento",
+  "agent.privacy.enabled": "O consentimento está ativo.",
+  "agent.privacy.disabled": "O consentimento está desativado.",
+  "agent.privacy.withdrawal": "A retirada bloqueia novas solicitações e cancela as ativas. Ela não apaga dados já enviados. Entre em contato com o provedor para solicitar a exclusão.",
+  "agent.privacy.local": "Para processamento local, use o Ollama neste dispositivo. Servidores remotos do Ollama ainda exigem consentimento.",
+  "agent.privacy.policies": "Privacidade dos provedores",
+  "agent.privacy.review": "Revise o contexto antes de enviar. Não inclua segredos nem dados pessoais sem permissão para compartilhar.",
+  "agent.ai.label": "Gerado por IA",
+  "agent.ai.reviewed": "Gerado por IA, revisado por uma pessoa",
+  "agent.ai.warning": "A IA pode cometer erros. Revise as alterações antes de aplicá-las.",
+  "set.section.aiPrivacy": "Privacidade de IA"
 }

@@ -1100,5 +1100,22 @@
   "share.durationMinutes": "{count} minutes",
   "share.expiresAt": "Fin de la session : {time}",
   "share.endLimits": "Terminer déconnecte tout le monde et bloque le retour sur ce relais jusqu’à expiration. Les copies déjà reçues ne sont pas effacées. Une nouvelle session reçoit une nouvelle salle et clé.",
-  "share.err.unsupported-relay": "Ce relais ne prend pas en charge les sessions gérées. Mettez à jour votre relais."
+  "share.err.unsupported-relay": "Ce relais ne prend pas en charge les sessions gérées. Mettez à jour votre relais.",
+  "agent.privacy.title": "IA et vos données",
+  "agent.privacy.disclosure": "Somnia Agent utilise une IA. Les modèles cloud envoient votre demande, le contexte du chat et le contenu du projet sélectionné au fournisseur. OpenRouter peut les transmettre à des fournisseurs de modèles. Le traitement peut avoir lieu hors UE. La conservation et l’entraînement dépendent du fournisseur et de vos réglages.",
+  "agent.privacy.consent": "Je consens à envoyer ces données aux fournisseurs cloud que je choisis, y compris leurs fournisseurs de modèles.",
+  "agent.privacy.enable": "Autoriser l’IA cloud",
+  "agent.privacy.required": "Autorisez l’IA cloud avant d’envoyer des données à un fournisseur.",
+  "agent.privacy.saveFailed": "Le consentement n’a pas pu être enregistré. Les requêtes cloud restent bloquées.",
+  "agent.privacy.revoke": "Retirer le consentement",
+  "agent.privacy.enabled": "Le consentement cloud est actif.",
+  "agent.privacy.disabled": "Le consentement cloud est désactivé.",
+  "agent.privacy.withdrawal": "Le retrait bloque les nouvelles requêtes cloud et annule celles en cours. Il ne supprime pas les données déjà envoyées. Contactez le fournisseur pour les supprimer.",
+  "agent.privacy.local": "Pour un traitement local, utilisez Ollama sur cet appareil. Les serveurs Ollama distants nécessitent un consentement.",
+  "agent.privacy.policies": "Confidentialité des fournisseurs",
+  "agent.privacy.review": "Vérifiez le contexte avant l’envoi. N’incluez aucun secret ni donnée personnelle sans autorisation de partage.",
+  "agent.ai.label": "Généré par IA",
+  "agent.ai.reviewed": "Généré par IA, vérifié par une personne",
+  "agent.ai.warning": "L’IA peut faire des erreurs. Vérifiez les modifications avant de les appliquer.",
+  "set.section.aiPrivacy": "Confidentialité IA"
 }

@@ -1100,5 +1100,22 @@
   "share.durationMinutes": "{count} Minuten",
   "share.expiresAt": "Sitzung endet: {time}",
   "share.endLimits": "Beenden trennt alle und sperrt den Wiedereintritt auf diesem Relay bis zum Ablauf. Bereits erhaltene Kopien werden nicht gelöscht. Eine neue Sitzung erhält einen neuen Raum und Schlüssel.",
-  "share.err.unsupported-relay": "Dieses Relay unterstützt keine verwalteten Sitzungen. Aktualisiere das selbst gehostete Relay."
+  "share.err.unsupported-relay": "Dieses Relay unterstützt keine verwalteten Sitzungen. Aktualisiere das selbst gehostete Relay.",
+  "agent.privacy.title": "KI und deine Daten",
+  "agent.privacy.disclosure": "Somnia Agent nutzt KI. Cloud-Modelle senden deinen Prompt, Chat-Kontext und ausgewählte Projektinhalte an deinen Anbieter. OpenRouter kann sie an Modellanbieter weiterleiten. Die Verarbeitung kann außerhalb der EU erfolgen. Speicherung und Training hängen vom Anbieter und deinen Einstellungen ab.",
+  "agent.privacy.consent": "Ich stimme zu, diese Daten an die von mir gewählten Cloud-Anbieter und deren Modellanbieter zu senden.",
+  "agent.privacy.enable": "Cloud-KI erlauben",
+  "agent.privacy.required": "Erlaube Cloud-KI, bevor Daten an einen Anbieter gesendet werden.",
+  "agent.privacy.saveFailed": "Die Zustimmung konnte nicht gespeichert werden. Cloud-Anfragen bleiben gesperrt.",
+  "agent.privacy.revoke": "Cloud-Zustimmung widerrufen",
+  "agent.privacy.enabled": "Cloud-Zustimmung ist aktiv.",
+  "agent.privacy.disabled": "Cloud-Zustimmung ist nicht aktiv.",
+  "agent.privacy.withdrawal": "Der Widerruf stoppt neue Cloud-Anfragen und bricht laufende ab. Bereits gesendete Daten werden nicht gelöscht. Wende dich zur Löschung an den Anbieter.",
+  "agent.privacy.local": "Für lokale Verarbeitung nutze Ollama auf diesem Gerät. Entfernte Ollama-Server benötigen weiterhin die Cloud-Zustimmung.",
+  "agent.privacy.policies": "Datenschutzhinweise der Anbieter",
+  "agent.privacy.review": "Prüfe den Kontext vor dem Senden. Teile keine Geheimnisse oder personenbezogenen Daten ohne Erlaubnis.",
+  "agent.ai.label": "KI-generiert",
+  "agent.ai.reviewed": "KI-generiert, von einem Menschen geprüft",
+  "agent.ai.warning": "KI kann Fehler machen. Prüfe Änderungen vor dem Übernehmen.",
+  "set.section.aiPrivacy": "KI-Datenschutz"
 }

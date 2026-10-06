@@ -1,3 +1,4 @@
+import {AgentPrivacySettings} from './agent/AgentPrivacy';
 import {
   DEFAULT_BACKUP_PREFS,
   listProjectBackups,
@@ -303,6 +304,7 @@ export function Settings() {
     },
     { name: "Preview", key: "preview", group: "Workflow", icon: Eye },
     { name: "Shortcuts", key: "shortcuts", group: "Workflow", icon: Keyboard },
+    { name: "AI Privacy", key: "aiPrivacy", group: "Power-Ups", icon: Info },
     { name: "Extensions", key: "extensions", group: "Power-Ups", icon: Puzzle },
     { name: "Updates", key: "updates", group: "System", icon: RefreshCw },
     { name: "Advanced", key: "advanced", group: "System", icon: Zap },
@@ -313,6 +315,7 @@ export function Settings() {
   const renderSection = (section: string) => (
     <section data-settings-section={section} aria-label={sectionTitle(section)} key={section}>
       <h2>{sectionTitle(section)}</h2>
+      {section === "AI Privacy" && <AgentPrivacySettings t={t}/>}
       {section === "Advanced" && (
         <>
           <label title={t("redesign.fastHint")}>
