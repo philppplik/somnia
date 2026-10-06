@@ -3,8 +3,8 @@ import {test,expect} from './fixtures';
 test('surface settings live apply, keyboard, persistence, undo/reset, solid/high-contrast gates',async({page})=>{
  await page.goto('/');await expect(page.locator('.app-frame')).toBeVisible();await page.getByRole('button',{name:'Settings',exact:true}).click();
  const background=page.getByLabel('App background',{exact:true});
- const blur=page.getByRole('slider',{name:'Glass blur',exact:true});
- const panels=page.getByRole('checkbox',{name:'Glass inner panels',exact:true});
+ const blur=page.getByRole('slider',{name:'Blur',exact:true});
+ const panels=page.getByRole('checkbox',{name:'Panels',exact:true});
  const radius=page.getByRole('slider',{name:'Outer corner radius',exact:true});
  await expect(blur).toBeDisabled();await expect(panels).toBeDisabled();await expect(radius).toHaveValue('25');
  await background.selectOption('glass');await expect(blur).toBeEnabled();
@@ -27,7 +27,7 @@ for(const theme of ['light','dark']){
   await page.goto('/');await page.getByRole('button',{name:'Open Somnia Agent'}).click();await page.keyboard.press('Control+,');
   await page.getByLabel('App theme',{exact:true}).selectOption(theme);
   await page.getByLabel('App background',{exact:true}).selectOption('glass');
-  await page.getByRole('slider',{name:'Glass blur',exact:true}).fill('32');
+  await page.getByRole('slider',{name:'Blur',exact:true}).fill('32');
   await page.getByRole('slider',{name:'Outer corner radius',exact:true}).fill('12');
   await page.addStyleTag({content:`html{background:repeating-linear-gradient(120deg,#315cb2 0px,#315cb2 28px,#c24e98 28px,#c24e98 56px,#eabb7c 56px,#eabb7c 84px)!important}body,#root{background:transparent!important}#root .app-frame{height:calc(100dvh - 48px);margin:24px;min-height:600px}`});
   // CSS-only preview: no native compositor exists in this browser test.
@@ -40,10 +40,10 @@ for(const theme of ['light','dark']){
   for(const card of await cards.all())await expect(card).toHaveCSS('border-radius','12px');
   await expect(page.locator('.ag-bar')).toHaveCSS('clip-path','inset(0px round 0px 0px 12px 12px)');
   await page.screenshot({path:`test-results/appearance-${theme}-shell-inner-glass-css-preview.png`});
-  await page.keyboard.press('Control+,');await page.getByRole('checkbox',{name:'Glass inner panels',exact:true}).uncheck();
+  await page.keyboard.press('Control+,');await page.getByRole('checkbox',{name:'Panels',exact:true}).uncheck();
   await expect(page.locator('.center')).toHaveCSS('backdrop-filter','none');
   await page.keyboard.press('Escape');await page.screenshot({path:`test-results/appearance-${theme}-shell-solid-panels-css-preview.png`});
-  await page.keyboard.press('Control+,');await page.getByRole('slider',{name:'Glass blur',exact:true}).fill('0');
+  await page.keyboard.press('Control+,');await page.getByRole('slider',{name:'Blur',exact:true}).fill('0');
   await expect(page.locator('.app-frame')).toHaveCSS('backdrop-filter','blur(0px) saturate(1.15)');
   await page.getByRole('slider',{name:'Outer corner radius',exact:true}).fill('25');await page.keyboard.press('Escape');
   await expect(page.locator('.app-frame')).toHaveCSS('border-radius','25px');
@@ -53,14 +53,14 @@ for(const theme of ['light','dark']){
 test('legacy look migrates; new strings exist in all shipped locales',async({page})=>{
  await page.addInitScript(()=>localStorage.setItem('somnia.look.v1',JSON.stringify({background:'glass',accent:'#e11d48',uiScale:100})));
  await page.goto('/');await expect(page.locator('.app-frame')).toBeVisible();await page.getByRole('button',{name:'Settings',exact:true}).click();
- await expect(page.getByRole('slider',{name:'Glass blur',exact:true})).toHaveValue('24');
+ await expect(page.getByRole('slider',{name:'Blur',exact:true})).toHaveValue('24');
  const radius=page.getByRole('slider',{name:'Outer corner radius',exact:true});await radius.fill('9');
  expect(await page.evaluate(()=>JSON.parse(localStorage.getItem('somnia.look.v2')!).look.accent)).toBe('#e11d48');
  await expect(page.getByRole('dialog')).toHaveCSS('border-top-left-radius','25px');
  await page.getByRole('button',{name:'General',exact:true}).click();
  const locale=page.locator('.settings-content select').filter({has:page.locator('option[value="pt-BR"]')});
  // Use shipped JSON to keep this test tied to the UI's real localized labels.
- const names={de:['Glas-Unschärfe','Äußerer Eckenradius'],es:['Desenfoque del cristal','Radio de las esquinas exteriores'],fr:['Flou du verre','Rayon des coins extérieurs'],'pt-BR':['Desfoque do vidro','Raio dos cantos externos']};
+ const names={de:['Weichzeichnung','Äußerer Eckenradius'],es:['Desenfoque','Radio de las esquinas exteriores'],fr:['Flou','Rayon des coins extérieurs'],'pt-BR':['Desfoque','Raio dos cantos externos']};
  for(const [id,labels] of Object.entries(names)){
   await locale.selectOption(id);
   await page.keyboard.press('Escape');await page.keyboard.press('Control+,');
