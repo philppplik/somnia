@@ -17,7 +17,8 @@
     "test:e2e": "playwright test",
     "test:updater": "node --test scripts/updater-e2e/lib.test.mjs",
     "typecheck": "tsc --noEmit",
-    "tauri": "tauri"
+    "tauri": "tauri",
+    "bench:projects": "tsx scripts/bench-projects.ts"
   },
   "dependencies": {
     "@base-ui/react": "1.8.0",

@@ -21,7 +21,8 @@ use std::{
 use uuid::Uuid;
 
 const MAX_BYTES: usize = 8 * 1024 * 1024;
-const MAX_DOCS: usize = 64;
+// Matches the eager frontend model guardrail in projectIndex.ts.
+const MAX_DOCS: usize = 2048;
 const MAX_FILES: usize = 20_000;
 /// Upper bound for one media file (PNG, JPEG, PDF) read for preview.
 pub const MAX_MEDIA_BYTES: usize = 25_000_000;

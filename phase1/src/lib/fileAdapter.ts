@@ -7,6 +7,7 @@ import {addTextFiles,closeMemoryProject} from './projectActions';
 import {clearDraft} from './draftSession';
 import {downloadProject} from './exportProject';
 import {loadFolderMedia} from './folderMedia';
+import {readProjectDocuments} from './projectIndex';
 export type Revision={exists:boolean;hash:string|null};
 export type FileEvent={projectId:string;path:string;clientRevision:number;state:'dirty'|'saving'|'saved'|'error'|'conflict';diskRevision:Revision;error:string|null;durability:string|null};
 export type Read={content:string|null;revision:Revision;status:FileEvent};
@@ -66,9 +67,9 @@ export async function installFileAdapter(port:FilePort){
   }
  };
  const close=async(keepRecovery:boolean)=>{await queue;if(projectId)await port.invoke('close_project',{projectId,keepRecovery});unsubscribe();disconnect();projectId=null;model=null;patchState({nativeConnected:false,storage:'memory',diskComparison:null});};
- const attach=async(selected:{projectId:string;name:string},files:Record<string,string>,nextBaselines:Map<string,Revision>)=>{
+ const attach=async(selected:{projectId:string;name:string},files:Record<string,string>,nextBaselines:Map<string,Revision>,candidate?:EditorProject)=>{
   projectId=selected.projectId;counter=0;baselines=nextBaselines;current=new Map();staged=new Map();saved=new Map(Object.entries(files));
-  model=new EditorProject(files);disconnect=connectEditorProject(model,{name:selected.name,alreadySaved:true});
+  model=candidate??new EditorProject(files);disconnect=connectEditorProject(model,{name:selected.name,alreadySaved:true});
   unsubscribe=model.subscribe('internal',tx=>{const changes:Record<string,string>={};const removed:string[]=[];for(const path of tx.changedFiles)if(model&&path in model.files)changes[path]=model.files[path];else removed.push(path);enqueueStage(changes);removed.forEach(enqueueDelete);});
   patchState({nativeConnected:true,storage:port.volatile?'tab':'disk',notice:port.connectNotice??'Folder connected. Native autosave after 1s idle / 5s continuous edits.'});
   const recoveries=await port.invoke<Recovery[]>('recovery_list',{projectId});for(const recovery of recoveries){registerCommand({id:`recovery.restore.${recovery.path}`,title:`Restore recovery: ${recovery.path}`,category:'Project',enabled:()=>!!projectId,run:async()=>{if(!window.confirm(`Restore recovery for ${recovery.path}? The recovered file enters native autosave immediately. Conflicting disk changes stop saving.`))return;const r=await port.invoke<Recovery>('recovery_read',{projectId,path:recovery.path});if(!(r.path in model!.files))throw Error('Recovery path is not in the opened model. Use a project containing this file.');const revision=++counter;const event=await port.invoke<FileEvent>('recovery_restore',{projectId,path:r.path,clientRevision:revision});current.set(r.path,revision);staged.set(r.path,{revision,content:r.content});model!.transact({origin:'internal',operations:[{type:'replaceSource',file:r.path,text:r.content}]});refreshProject();await handle(event);patchState({notice:`Restored ${r.path} from recovery. Native autosave is active; conflicting disk changes are held.`});}});}
@@ -84,17 +85,18 @@ export async function installFileAdapter(port:FilePort){
   if(!projectId&&getState().isDirty&&!window.confirm('Replace the in-memory project? It cannot be recovered from disk.'))return;
   // Keep the current project alive until the picker and all candidate reads succeed.
   const selected=await port.invoke<{projectId:string;name:string}|null>(dropToken?'open_dropped_project':single?'choose_file':'choose_project',dropToken?{token:dropToken}:reconnect?{reconnect:true}:undefined);if(!selected)return;
-  const files:Record<string,string>={},nextBaselines=new Map<string,Revision>();let mediaPaths:string[]=[];
+  const files:Record<string,string>={},nextBaselines=new Map<string,Revision>();let candidate:EditorProject;let mediaPaths:string[]=[];
   try{
-   const paths=await port.invoke<string[]>('list_files',{projectId:selected.projectId});const editable=paths.filter(p=>/\.(html?|css|js|json|svg|txt|md)$/i.test(p));mediaPaths=paths.filter(p=>/\.(png|jpe?g|pdf)$/i.test(p));
-   if(editable.length>64)throw Error('This alpha supports at most 64 text documents. Pick a smaller project folder.');
-   for(const path of editable){const read=await port.invoke<Read>('read_file',{projectId:selected.projectId,path});if(read.content!==null)files[path]=read.content;nextBaselines.set(path,read.revision);}
-   // Validate source parsing before disconnecting the existing document model.
-   new EditorProject(files);
+   const paths=await port.invoke<string[]>('list_files',{projectId:selected.projectId});
+   mediaPaths=paths.filter(p=>/\.(png|jpe?g|pdf)$/i.test(p));
+   const documents=await readProjectDocuments(paths,path=>port.invoke<Read>('read_file',{projectId:selected.projectId,path}));
+   for(const {path,content,revision} of documents){if(content!==null)files[path]=content;nextBaselines.set(path,revision);}
+   // Parse once before disconnecting. Reuse this validated model on attach.
+   candidate=new EditorProject(files);
    if(getState().revision!==startRevision||getState().files!==startFiles)throw Error('The current project changed while opening. Try again so no edits are lost.');
    if(projectId)await close(true);
   }catch(error){await port.invoke('close_project',{projectId:selected.projectId,keepRecovery:true}).catch(()=>{});throw error;}
-  await attach(selected,files,nextBaselines);
+  await attach(selected,files,nextBaselines,candidate);
   if(mediaPaths.length){const r=await loadFolderMedia((c,a)=>port.invoke(c,a),selected.projectId,mediaPaths);if(r.notice)patchState({notice:r.notice});}
   }finally{opening=false;}
  };

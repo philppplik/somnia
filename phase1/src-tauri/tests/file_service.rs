@@ -365,3 +365,15 @@ fn media_over_the_limit_is_rejected_and_symlinks_are_denied() {
         assert!(matches!(p.read_media("link.jpg"), Err(AppError::Denied(_))));
     }
 }
+#[test]
+fn thousand_documents_read_and_last_document_save() {
+    let (root, _recovery, mut p) = setup();
+    for i in 0..1000 { fs::write(root.path().join(format!("page-{i:04}.html")), format!("<h1>{i}</h1>")).unwrap(); }
+    let paths = p.list_files().unwrap();
+    assert_eq!(paths.len(), 1001);
+    for path in &paths { p.read(path).unwrap(); }
+    let base = p.read("page-0999.html").unwrap().revision;
+    p.stage("page-0999.html", "<h1>saved</h1>".into(), 1).unwrap();
+    assert_eq!(p.save("page-0999.html", &base).unwrap().state, FileState::Saved);
+    assert_eq!(fs::read_to_string(root.path().join("page-0999.html")).unwrap(), "<h1>saved</h1>");
+}

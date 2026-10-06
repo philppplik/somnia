@@ -63,3 +63,18 @@ test('new files in new folders are created on save and deleted only with a match
  const cur=await port.invoke<{revision:unknown}>('read_file',{projectId,path:'pages/about.html'});await port.invoke('delete_file',{projectId,path:'pages/about.html',expectedRevision:cur.revision});
  assert.equal((root.items.get('pages') as FakeDir).items.has('about.html'),false);
 });
+test('indexes 1000 text documents plus assets without the old 64/256 caps',async()=>{
+ const {root,port,projectId}=await setup();for(let i=0;i<1000;i++){root.items.set(`page-${i}.html`,new FakeFile('x'));root.items.set(`asset-${i}.png`,new FakeFile('x'));}
+ assert.equal((await port.invoke<string[]>('list_files',{projectId})).length,2002);
+});
+test('deep projects are not silently cut off after eight levels',async()=>{
+ const {root,port,projectId}=await setup();let d=root;for(let i=0;i<12;i++)d=await d.getDirectoryHandle(`d${i}`,{create:true});d.items.set('deep.html',new FakeFile('x'));
+ assert.ok((await port.invoke<string[]>('list_files',{projectId})).some(p=>p.endsWith('/deep.html')));
+ for(let i=12;i<34;i++)d=await d.getDirectoryHandle(`d${i}`,{create:true});
+ await assert.rejects(port.invoke('list_files',{projectId}),/directory levels/);
+});
+test('custom document limit does not count binary assets',async()=>{
+ const root=new FakeDir('site');root.items.set('a.txt',new FakeFile('a'));for(let i=0;i<100;i++)root.items.set(`${i}.png`,new FakeFile('x'));
+ const port=createWebFsPort({pickDirectory:async()=>root as never,journal:memoryJournal(),maxFiles:1});const {projectId}=await port.invoke<{projectId:string}>('choose_project');assert.equal((await port.invoke<string[]>('list_files',{projectId})).length,101);
+ root.items.set('b.txt',new FakeFile('b'));await assert.rejects(port.invoke('list_files',{projectId}),/1 text documents/);
+});

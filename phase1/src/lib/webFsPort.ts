@@ -1,4 +1,5 @@
 import {decodeFileBytes} from './textEncoding';
+import {MAX_PROJECT_DOCUMENTS,MAX_PROJECT_FILES,MAX_PROJECT_DEPTH,isEditablePath} from './projectIndex';
 import type {FilePort,FileEvent,Read,Revision,Recovery} from './fileAdapter';
 /** Browser storage port over the File System Access API (ADR-002, option B). Same commands and payloads as the native contract. */
 type Journal={get(key:string):Promise<{content:string;clientRevision:number}|undefined>;put(key:string,value:{content:string;clientRevision:number}):Promise<void>;delete(key:string):Promise<void>;keys(prefix:string):Promise<string[]>};
@@ -33,12 +34,13 @@ export function createWebFsPort(options:WebFsOptions={}):FilePort{
  const project=(id:unknown)=>{const p=projects.get(String(id));if(!p)throw Error('Project folder is not connected.');return p;};
  const key=(id:string,path:string)=>`${id}\u0000${path}`;
  const event=(projectId:string,path:string,clientRevision:number,state:FileEvent['state'],diskRevision:Revision,error:string|null=null,durability:string|null=null):FileEvent=>({projectId,path,clientRevision,state,diskRevision,error,durability});
- async function walk(dir:FileSystemDirectoryHandle,prefix:string,out:string[],limit:number,depth:number){
+ async function walk(dir:FileSystemDirectoryHandle,prefix:string,out:string[],limit:number,depth:number,stats:{documents:number;entries:number}){
+  if(depth>MAX_PROJECT_DEPTH)throw Error(`Project exceeds ${MAX_PROJECT_DEPTH} directory levels. No partial listing was returned.`);
   for await(const [name,handle] of (dir as unknown as {entries():AsyncIterable<[string,FileSystemHandle]>}).entries()){
    if(name.startsWith('.')||SKIP.has(name))continue;
-   if(handle.kind==='directory'){if(depth<8)await walk(handle as FileSystemDirectoryHandle,`${prefix}${name}/`,out,limit,depth+1);}
-   else out.push(prefix+name);
-   if(out.length>limit*4)throw Error('This folder has too many files. Pick a smaller project folder.');
+   if(++stats.entries>MAX_PROJECT_FILES)throw Error(`Project exceeds ${MAX_PROJECT_FILES} indexed entries. No partial listing was returned.`);
+   if(handle.kind==='directory')await walk(handle as FileSystemDirectoryHandle,`${prefix}${name}/`,out,limit,depth+1,stats);
+   else {out.push(prefix+name);if(isEditablePath(name)&&++stats.documents>limit)throw Error(`Project exceeds ${limit} text documents. No partial listing was returned.`);}
   }
  }
  const commands:Record<string,(args:Record<string,unknown>)=>Promise<unknown>>={
@@ -54,7 +56,7 @@ export function createWebFsPort(options:WebFsOptions={}):FilePort{
    if(!root)return null;if(args?.createSubfolder){const n=String(args.createSubfolder);if(!n||n==='.'||n==='..'||/[<>:"\/\\|?*\u0000-\u001f]/.test(n)||/[. ]$/.test(n))throw Error('Folder name is not allowed.');const sub=await root.getDirectoryHandle(n,{create:true});await handles.put(sub).catch(()=>undefined);const projectId=crypto.randomUUID();projects.set(projectId,{root:sub,name:n});return{projectId,name:n};}
    await handles.put(root).catch(()=>undefined);const projectId=crypto.randomUUID();projects.set(projectId,{root,name:root.name});return{projectId,name:root.name};
   },
-  async list_files({projectId}){const out:string[]=[];await walk(project(projectId).root,'',out,options.maxFiles??64,0);return out.sort();},
+  async list_files({projectId}){const out:string[]=[];await walk(project(projectId).root,'',out,options.maxFiles??MAX_PROJECT_DOCUMENTS,0,{documents:0,entries:0});return out.sort();},
   async read_file({projectId,path}){const {root}=project(projectId);const content=await readText(root,String(path));const revision=await revisionOf(content);return{content,revision,status:event(String(projectId),String(path),0,'saved',revision)} satisfies Read;},
   async read_media({projectId,path}){const {root}=project(projectId);const p=String(path);if(!/\.(png|jpe?g|pdf)$/i.test(p))throw Error('Only PNG, JPEG and PDF files can be previewed.');const file=await (await fileHandle(root,p,false)).getFile();if(file.size>25_000_000)throw Error('File is too large to preview.');
    const bytes=new Uint8Array(await file.arrayBuffer());let bin='';for(let i=0;i<bytes.length;i+=0x8000)bin+=String.fromCharCode(...bytes.subarray(i,i+0x8000));return btoa(bin);},
