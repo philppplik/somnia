@@ -3,6 +3,10 @@
 Branch: `feature/convert-image`
 Base: `somnia-agent` at `535d236` (native provider/streaming broker).
 
+## Scope decision
+
+Canvas slice is v1. The ADR's Rust-native path is a later, additional extension for batch conversion and native capabilities, not a rewrite requirement for this slice. Windows WebView2 and macOS WKWebView remain untested. This branch does not claim full native/batch ADR compliance.
+
 ## Implementation
 
 - Tools > Convert image... and command palette entry, available without an open project.
