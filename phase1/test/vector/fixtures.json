@@ -1,0 +1,23 @@
+{
+  "_comment": "Hand-derived values. See conformance.test.mjs for the independent recomputation that must agree with every number here.",
+  "curves": [
+    { "name": "arch", "c": [{"x":0,"y":0},{"x":0,"y":1},{"x":1,"y":1},{"x":1,"y":0}],
+      "points": [ {"t":0,"x":0,"y":0}, {"t":0.5,"x":0.5,"y":0.75}, {"t":1,"x":1,"y":0} ],
+      "bbox": {"minX":0,"minY":0,"maxX":1,"maxY":0.75} },
+    { "name": "hill", "c": [{"x":0,"y":0},{"x":10,"y":20},{"x":30,"y":20},{"x":40,"y":0}],
+      "points": [ {"t":0.25,"x":9.0625,"y":11.25}, {"t":0.5,"x":20,"y":15}, {"t":0.75,"x":30.9375,"y":11.25} ],
+      "bbox": {"minX":0,"minY":0,"maxX":40,"maxY":15} },
+    { "name": "straight-as-curve", "c": [{"x":0,"y":0},{"x":1,"y":1},{"x":2,"y":2},{"x":3,"y":3}],
+      "points": [ {"t":0.5,"x":1.5,"y":1.5} ], "length": 4.242640687119285 }
+  ],
+  "paths": [
+    { "name": "open-polyline", "path": {"closed":false,"nodes":[{"x":0,"y":0,"in":null,"out":null},{"x":10,"y":0,"in":null,"out":null},{"x":10,"y":5.5,"in":null,"out":null}]}, "d": "M0 0L10 0L10 5.5" },
+    { "name": "closed-triangle", "path": {"closed":true,"nodes":[{"x":0,"y":0,"in":null,"out":null},{"x":4,"y":0,"in":null,"out":null},{"x":2,"y":3,"in":null,"out":null}]}, "d": "M0 0L4 0L2 3Z" },
+    { "name": "one-cubic", "path": {"closed":false,"nodes":[{"x":0,"y":0,"in":null,"out":{"x":0,"y":1}},{"x":1,"y":0,"in":{"x":1,"y":1},"out":null}]}, "d": "M0 0C0 1 1 1 1 0" },
+    { "name": "one-sided-handle", "path": {"closed":false,"nodes":[{"x":0,"y":0,"in":null,"out":{"x":2,"y":0}},{"x":5,"y":5,"in":null,"out":null}]}, "d": "M0 0C2 0 5 5 5 5" },
+    { "name": "closed-with-curve-back", "path": {"closed":true,"nodes":[{"x":0,"y":0,"in":{"x":-1,"y":1},"out":null},{"x":4,"y":0,"in":null,"out":{"x":5,"y":1}}]}, "d": "M0 0L4 0C5 1 -1 1 0 0Z" },
+    { "name": "rounding-and-negative-zero", "path": {"closed":false,"nodes":[{"x":-0.0004,"y":0.12345,"in":null,"out":null},{"x":1.0005,"y":2.9999,"in":null,"out":null}]}, "d": "M0 0.123L1.001 3" },
+    { "name": "empty", "path": {"closed":false,"nodes":[]}, "d": "" }
+  ],
+  "fmt": [ [0,"0"], [-0,"0"], [-0.0004,"0"], [1,"1"], [1.5,"1.5"], [1.0005,"1.001"], [0.1234,"0.123"], [100,"100"], [-2.5,"-2.5"] ]
+}
