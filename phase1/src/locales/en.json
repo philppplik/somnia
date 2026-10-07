@@ -1487,5 +1487,20 @@
   "imageeditor.filter": "Filter",
   "imageeditor.filterNone": "None",
   "imageeditor.filterApply": "Apply and add another",
-  "imageeditor.select": "Select"
+  "imageeditor.select": "Select",
+  "vectoredit.layers.title": "Layers",
+  "vectoredit.layers.empty": "No layers yet",
+  "vectoredit.layers.hide": "Hide layer",
+  "vectoredit.layers.show": "Show layer",
+  "vectoredit.layers.lock": "Lock layer",
+  "vectoredit.layers.unlock": "Unlock layer",
+  "vectoredit.layers.moveUp": "Move layer up",
+  "vectoredit.layers.moveDown": "Move layer down",
+  "vectoredit.layers.rename": "Rename layer (double-click or F2)",
+  "vectoredit.layers.name": "Layer name",
+  "vectoredit.shape.rect": "Rectangle",
+  "vectoredit.shape.ellipse": "Ellipse",
+  "vectoredit.shape.polygon": "Polygon",
+  "vectoredit.shape.line": "Line",
+  "vectoredit.shape.path": "Path"
 }

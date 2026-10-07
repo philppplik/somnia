@@ -1487,5 +1487,20 @@
   "imageeditor.filter": "Filtre",
   "imageeditor.filterNone": "Aucun",
   "imageeditor.filterApply": "Appliquer et en ajouter un autre",
-  "imageeditor.select": "Sélection"
+  "imageeditor.select": "Sélection",
+  "vectoredit.layers.title": "Calques",
+  "vectoredit.layers.empty": "Aucun calque pour l’instant",
+  "vectoredit.layers.hide": "Masquer le calque",
+  "vectoredit.layers.show": "Afficher le calque",
+  "vectoredit.layers.lock": "Verrouiller le calque",
+  "vectoredit.layers.unlock": "Déverrouiller le calque",
+  "vectoredit.layers.moveUp": "Monter le calque",
+  "vectoredit.layers.moveDown": "Descendre le calque",
+  "vectoredit.layers.rename": "Renommer le calque (double-clic ou F2)",
+  "vectoredit.layers.name": "Nom du calque",
+  "vectoredit.shape.rect": "Rectangle",
+  "vectoredit.shape.ellipse": "Ellipse",
+  "vectoredit.shape.polygon": "Polygone",
+  "vectoredit.shape.line": "Ligne",
+  "vectoredit.shape.path": "Tracé"
 }

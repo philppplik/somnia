@@ -1487,5 +1487,20 @@
   "imageeditor.filter": "Filtro",
   "imageeditor.filterNone": "Ninguno",
   "imageeditor.filterApply": "Aplicar y añadir otro",
-  "imageeditor.select": "Selección"
+  "imageeditor.select": "Selección",
+  "vectoredit.layers.title": "Capas",
+  "vectoredit.layers.empty": "Aún no hay capas",
+  "vectoredit.layers.hide": "Ocultar capa",
+  "vectoredit.layers.show": "Mostrar capa",
+  "vectoredit.layers.lock": "Bloquear capa",
+  "vectoredit.layers.unlock": "Desbloquear capa",
+  "vectoredit.layers.moveUp": "Subir capa",
+  "vectoredit.layers.moveDown": "Bajar capa",
+  "vectoredit.layers.rename": "Renombrar capa (doble clic o F2)",
+  "vectoredit.layers.name": "Nombre de la capa",
+  "vectoredit.shape.rect": "Rectángulo",
+  "vectoredit.shape.ellipse": "Elipse",
+  "vectoredit.shape.polygon": "Polígono",
+  "vectoredit.shape.line": "Línea",
+  "vectoredit.shape.path": "Trazado"
 }

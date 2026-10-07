@@ -1487,5 +1487,20 @@
   "imageeditor.filter": "Filtro",
   "imageeditor.filterNone": "Nenhum",
   "imageeditor.filterApply": "Aplicar e adicionar outro",
-  "imageeditor.select": "Seleção"
+  "imageeditor.select": "Seleção",
+  "vectoredit.layers.title": "Camadas",
+  "vectoredit.layers.empty": "Ainda não há camadas",
+  "vectoredit.layers.hide": "Ocultar camada",
+  "vectoredit.layers.show": "Mostrar camada",
+  "vectoredit.layers.lock": "Bloquear camada",
+  "vectoredit.layers.unlock": "Desbloquear camada",
+  "vectoredit.layers.moveUp": "Mover camada para cima",
+  "vectoredit.layers.moveDown": "Mover camada para baixo",
+  "vectoredit.layers.rename": "Renomear camada (clique duplo ou F2)",
+  "vectoredit.layers.name": "Nome da camada",
+  "vectoredit.shape.rect": "Retângulo",
+  "vectoredit.shape.ellipse": "Elipse",
+  "vectoredit.shape.polygon": "Polígono",
+  "vectoredit.shape.line": "Linha",
+  "vectoredit.shape.path": "Caminho"
 }

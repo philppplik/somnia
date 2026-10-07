@@ -1487,5 +1487,20 @@
   "imageeditor.filter": "Filter",
   "imageeditor.filterNone": "Keiner",
   "imageeditor.filterApply": "Anwenden und weiteren hinzufügen",
-  "imageeditor.select": "Auswahl"
+  "imageeditor.select": "Auswahl",
+  "vectoredit.layers.title": "Ebenen",
+  "vectoredit.layers.empty": "Noch keine Ebenen",
+  "vectoredit.layers.hide": "Ebene ausblenden",
+  "vectoredit.layers.show": "Ebene einblenden",
+  "vectoredit.layers.lock": "Ebene sperren",
+  "vectoredit.layers.unlock": "Ebene entsperren",
+  "vectoredit.layers.moveUp": "Ebene nach oben",
+  "vectoredit.layers.moveDown": "Ebene nach unten",
+  "vectoredit.layers.rename": "Ebene umbenennen (Doppelklick oder F2)",
+  "vectoredit.layers.name": "Ebenenname",
+  "vectoredit.shape.rect": "Rechteck",
+  "vectoredit.shape.ellipse": "Ellipse",
+  "vectoredit.shape.polygon": "Polygon",
+  "vectoredit.shape.line": "Linie",
+  "vectoredit.shape.path": "Pfad"
 }
