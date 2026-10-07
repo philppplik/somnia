@@ -42,3 +42,24 @@ test('stream failure retains user prompt and partial output with an explicit inc
  assert.ok(s.items[1].kind==='agent'&&s.items[1].text==='partial answer'&&!s.items[1].streaming);
  assert.ok(s.items[2].kind==='error'&&/incomplete/.test(s.items[2].text)&&s.items[2].retryable);
 });
+test('usage/status between tokens does not split one answer; preserves newlines and literal markup',()=>{
+ const s=run(initialChat,{type:'send',text:'x'},
+ {type:'event',event:{type:'text-delta',text:'Hello\n'}},
+ {type:'event',event:{type:'usage',outputTokens:1}},
+ {type:'event',event:{type:'status',text:'Receiving'}},
+ {type:'event',event:{type:'text-delta',text:'<script>literal</script>'}});
+ const answers=s.items.filter(i=>i.kind==='agent');assert.equal(answers.length,1);assert.equal(answers[0].text,'Hello\n<script>literal</script>');
+ assert.equal(s.items.filter(i=>i.kind==='status').length,0);
+});
+test('failed and stopped answers are marked partial; completion never hides a stream error',()=>{
+ const base=run(initialChat,{type:'send',text:'x'},{type:'event',event:{type:'text-delta',text:'partial'}});
+ for(const action of [{type:'stop'} as const,{type:'event',event:{type:'error',message:'Disconnected',retryable:true}} as const]){
+  const s=chatReducer(base,action);assert.equal(s.busy,false);const a=s.items.find(i=>i.kind==='agent');assert.ok(a?.kind==='agent'&&!a.streaming&&a.incomplete);
+  assert.equal(chatReducer(s,{type:'event',event:{type:'done'}}),s);assert.equal(chatReducer(s,{type:'stop'}),s);
+ }
+});
+test('approval is an answer boundary; empty tokens never create a bubble',()=>{
+ let s=run(initialChat,{type:'send',text:'x'},{type:'event',event:{type:'text-delta',text:''}});assert.equal(s.items.length,1);
+ s=run(s,{type:'event',event:{type:'text-delta',text:'Before tool'}},{type:'event',event:{type:'approval',approval:{id:'a',path:'x',action:'read',resolve(){}}}},{type:'event',event:{type:'text-delta',text:'After tool'}});
+ assert.equal(s.items.filter(i=>i.kind==='agent').length,2);
+});
