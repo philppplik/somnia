@@ -1,5 +1,11 @@
 # Changelog
 
+## 11.1.1-beta.1 - 2026-10-07
+
+- macOS: explicitly ad-hoc sign the complete app bundle, including sealed resources.
+- CI: verify DMG integrity and signatures in the app, mounted DMG and updater archive.
+- macOS still requires a security exception: this beta is not Developer-ID signed or notarized.
+
 Changes are grouped by product release. Release notes and installation guidance
 live in [`docs/releases/`](docs/releases/). Entries describe implemented behavior,
 not roadmap promises.
