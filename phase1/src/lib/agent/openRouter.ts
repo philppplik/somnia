@@ -1,6 +1,7 @@
 import { runWithProviderConsent } from './privacy';
 import type { AgentPrivacyGate } from './privacy';
-import { AgentError, classifyHttp } from './errors';
+import { AgentError, classifyHttp, providerErrorHint, readHttpError } from './errors';
+import { fetchProviderResponse } from './retry';
 import type { AgentCloudConsentGuard, AgentProvider, AgentProviderEvent, AgentProviderRequest } from './types';
 
 export interface OpenRouterOptions {
@@ -64,21 +65,6 @@ async function* dataEvents(body: ReadableStream<Uint8Array>, signal: AbortSignal
 }
 function finite(value: unknown): number | undefined {
   return typeof value === 'number' && Number.isFinite(value) && value >= 0 ? value : undefined;
-}
-/** Coarse classification hints from an error message. The text itself is never kept or shown. */
-function errorHint(message: string): { tools?: boolean; routing?: boolean } {
-  return {
-    tools: /tool[s_ ]?(use|call|choice)?|function[ _]call/i.test(message) && /support|endpoint|not available|no .*found|unsupported/i.test(message),
-    routing: /no endpoints? found|zdr|data policy|privacy/i.test(message),
-  };
-}
-async function readError(response: Response): Promise<{ status?: number; hint: { tools?: boolean; routing?: boolean } }> {
-  const text = (await response.text()).slice(0, 4096);
-  let json: any; try { json = JSON.parse(text); } catch { /* vendor HTML etc. */ }
-  const code = Number(json?.error?.code);
-  const raw = typeof json?.error?.metadata?.raw === 'string' ? json.error.metadata.raw : '';
-  return { status: Number.isInteger(code) && code >= 400 && code < 600 ? code : undefined,
-    hint: errorHint(`${typeof json?.error?.message === 'string' ? json.error.message : text} ${raw}`) };
 }
 export class OpenRouterProvider implements AgentProvider {
   readonly id = 'openrouter';
@@ -156,8 +142,8 @@ export class OpenRouterProvider implements AgentProvider {
     if (!response.body || !response.headers.get('content-type')?.includes('text/event-stream')) {
       // Some upstream failures arrive as HTTP 200 with a JSON error body instead of a stream.
       if (response.body && response.headers.get('content-type')?.includes('json')) {
-        const err = await readError(response).catch(() => undefined);
-        if (err) throw classifyHttp(err.status ?? 502, err.hint);
+        const err = await readHttpError(response).catch(() => undefined);
+        if (err) throw classifyHttp(err.status ?? (err.hint.quota ? 429 : 502), err.hint);
       }
       throw new AgentError('provider-error', 'protocol', 'OpenRouter did not return an event stream.');
     }
@@ -171,9 +157,9 @@ export class OpenRouterProvider implements AgentProvider {
       if (!chunk || typeof chunk !== 'object') throw new AgentError('provider-error', 'protocol', 'Invalid provider stream event.');
       if (chunk.error) {
         const code = Number(chunk.error.code);
-        const hint = errorHint(typeof chunk.error.message === 'string' ? chunk.error.message : '');
+        const hint = providerErrorHint(JSON.stringify(chunk.error).slice(0, 4096));
         throw Number.isInteger(code) && code >= 400 && code < 600 ? classifyHttp(code, hint, 'Provider reported a streaming error')
-          : new AgentError('provider-error', 'server', 'Provider reported a streaming error.', true);
+          : hint.quota ? classifyHttp(429, hint, 'Provider reported a streaming error') : new AgentError('provider-error', 'server', 'Provider reported a streaming error.', true);
       }
       if (chunk.usage) yield { type: 'usage', usage: {
         inputTokens: finite(chunk.usage.prompt_tokens), outputTokens: finite(chunk.usage.completion_tokens), costUsd: finite(chunk.usage.cost),
@@ -204,34 +190,9 @@ export class OpenRouterProvider implements AgentProvider {
 
   /** Retries only before any response body was consumed, so nothing is duplicated. */
   private async fetchWithRetry(apiKey: string, body: string, signal: AbortSignal): Promise<Response> {
-    const retries = Math.max(0, this.options.maxRetries ?? 3);
-    const sleep = this.options.sleep ?? ((ms: number, s: AbortSignal) => new Promise<void>((resolve, reject) => {
-      const t = setTimeout(() => { s.removeEventListener('abort', onAbort); resolve(); }, ms);
-      const onAbort = () => { clearTimeout(t); reject(s.reason); };
-      s.addEventListener('abort', onAbort, { once: true });
-    }));
-    for (let attempt = 0; ; attempt++) {
-      signal.throwIfAborted();
-      let failure: AgentError;
-      let retryAfter: number | undefined;
-      try {
-        const response = await (this.options.fetch ?? globalThis.fetch)(endpoint, {
-          method: 'POST', redirect: 'error', signal,
-          headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' }, body,
-        });
-        if (response.ok) return response;
-        // Never echo response bodies: they can contain keys, private prompts or vendor HTML.
-        const err = await readError(response).catch(() => undefined);
-        failure = classifyHttp(response.status, err?.hint);
-        const header = Number(response.headers.get('retry-after'));
-        if (Number.isFinite(header) && header > 0) retryAfter = header * 1000;
-      } catch (error) {
-        signal.throwIfAborted();
-        if (error instanceof AgentError) throw error;
-        failure = new AgentError('provider-error', 'network', 'Network request to the provider failed.', true);
-      }
-      if (!failure.retryable || attempt >= retries) throw failure;
-      await sleep(Math.min(retryAfter ?? 1000 * 2 ** attempt * (failure.detail === 'rate-limited' ? 2 : 1), 15000), signal);
-    }
+    return fetchProviderResponse(() => (this.options.fetch ?? globalThis.fetch)(endpoint, {
+      method: 'POST', redirect: 'error', signal,
+      headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' }, body,
+    }), signal, this.options);
   }
 }

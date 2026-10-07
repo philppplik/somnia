@@ -110,3 +110,17 @@ test('provider failure surfaces fixed taxonomy text, never the raw exception', a
   const n = notice(notes)!; assert.equal(n.code, 'internal'); assert.ok(!/SECRET/.test(n.message));
   assert.match(describeAgentError(new AgentError('tool-unsupported', 'no-tool-support', 'x')), /tool calls/);
 });
+
+test('OpenRouter does not replay a stream after text or tool fragments were delivered',async()=>{
+ for(const delta of [{content:'partial'},{tool_calls:[{index:0,id:'c',function:{name:'read_file',arguments:'{"path":'}}]}]){
+  let requests=0;const events:AgentProviderEvent[]=[];
+  const provider=mk(async()=>{requests++;return sse([{choices:[{delta}]},{error:{code:503,message:'SECRET'}}]);});
+  await assert.rejects(async()=>{for await(const e of provider.stream(req()))events.push(e);},(e:AgentError)=>e.detail==='server');
+  assert.equal(requests,1);assert.equal(events.length,1);
+ }
+});
+test('OpenRouter quota 429 is a final quota error rather than a retryable rate limit',async()=>{
+ let requests=0;
+ await assert.rejects(collect(mk(async()=>{requests++;return err(429,{error:{code:429,message:'insufficient_quota SECRET'}});})),(e:AgentError)=>e.detail==='quota'&&!e.retryable&&!/SECRET/.test(e.message));
+ assert.equal(requests,1);
+});

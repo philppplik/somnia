@@ -36,3 +36,9 @@ test('stub core cancel stops delivery',async()=>{
  const core=createStubCore({charDelayMs:5,statusDelayMs:0});let n=0;const r=core.run({prompt:'p',context:{activeFile:'a',selectedElementId:null}},()=>{n++;});
  r.cancel();const at=n;await new Promise(res=>setTimeout(res,60));assert.equal(n,at);
 });
+test('stream failure retains user prompt and partial output with an explicit incomplete warning',()=>{
+ const s=run(initialChat,{type:'send',text:'original prompt'},{type:'event',event:{type:'text-delta',text:'partial answer'}},{type:'event',event:{type:'error',message:'Network failed.',retryable:true}});
+ assert.equal(s.busy,false);assert.equal(s.items[0].kind,'user');assert.equal(s.items[1].kind,'agent');
+ assert.ok(s.items[1].kind==='agent'&&s.items[1].text==='partial answer'&&!s.items[1].streaming);
+ assert.ok(s.items[2].kind==='error'&&/incomplete/.test(s.items[2].text)&&s.items[2].retryable);
+});

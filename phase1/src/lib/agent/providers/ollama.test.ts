@@ -145,3 +145,19 @@ test('stream: a local provider refuses chunks that carry a remote marker', async
   const cloud = new OllamaProvider({ baseUrl: 'https://ollama.example.com', fetch: (async () => nd([JSON.stringify({ message: { content: 'x' }, remote_host: 'h' }), JSON.stringify({ done: true })])) as never });
   assert.equal((await collect(cloud.stream(req()))).at(-1)?.type, 'finish');
 });
+
+test('stream transient HTTP errors retry before output, auth and quota do not',async()=>{
+ let calls=0;const delays:number[]=[];
+ const provider=new OllamaProvider({fetch:async()=>++calls===1?json({},503):nd([JSON.stringify({message:{content:'recovered'},done:true})]),sleep:async ms=>{delays.push(ms);},random:()=>0});
+ const events=await collect(provider.stream(req()));assert.equal(calls,2);assert.deepEqual(delays,[1000]);assert.equal(events[0].type,'text');
+ for(const [status,message,detail] of [[401,'SECRET','auth'],[429,'insufficient_quota SECRET','quota']] as const){
+  calls=0;const p=new OllamaProvider({fetch:async()=>{calls++;return json({error:{message}},status);},sleep:async()=>assert.fail('no retry')});
+  await assert.rejects(collect(p.stream(req())),(e:any)=>e.failure?.detail===detail&&!/SECRET/.test(e.message));assert.equal(calls,1);
+ }
+});
+test('stream failure after partial output never retries or drops delivered text',async()=>{
+ let calls=0;const events:AgentProviderEvent[]=[];
+ const p=new OllamaProvider({fetch:async()=>{calls++;return nd([JSON.stringify({message:{content:'partial'}}),JSON.stringify({error:'SECRET'})]);},sleep:async()=>assert.fail('no retry')});
+ await assert.rejects(async()=>{for await(const e of p.stream(req()))events.push(e);});
+ assert.equal(calls,1);assert.deepEqual(events,[{type:'text',text:'partial'}]);
+});

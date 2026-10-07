@@ -39,7 +39,7 @@ export function chatReducer(s: ChatState, a: ChatAction): ChatState {
    if (e.type === 'approval') return {...s,items:[...s.items,{id:next(s),kind:'approval',approval:e.approval}],seq:s.seq+1};
    if (e.type === 'usage') return {...s,items:[...s.items,{id:next(s),kind:'usage',text:`Tokens: ${e.inputTokens??'?'} in / ${e.outputTokens??'?'} out. Cost: ${e.costUsd===undefined?'unknown':`$${e.costUsd}`}`}],seq:s.seq+1};
    if (e.type === 'done') return {...s, items: settle(s.items), busy: false};
-   return {items: [...settle(s.items), {id: next(s), kind: 'error', text: e.message, retryable: e.retryable}], busy: false, seq: s.seq + 1};
+   return {items: [...settle(s.items), {id: next(s), kind: 'error', text: e.message + (s.busy && s.items.some(i => i.kind === 'agent' && i.streaming) ? ' The partial response above was kept, but is incomplete. Retry starts the request again; provider costs may still occur.' : ''), retryable: e.retryable}], busy: false, seq: s.seq + 1};
   }
   case 'stop': return {...s, items: settle(s.items), busy: false};
   case 'resolve': return {...s, items: s.items.map(i => i.kind === 'diff' && i.proposal.id === a.proposalId ? {...i, state: a.state} : i)};

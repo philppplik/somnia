@@ -1,4 +1,5 @@
-import { ProviderError } from '../errors';
+import { AgentError, ProviderError } from '../errors';
+import { fetchProviderResponse, type RetryOptions } from '../retry';
 import type { AgentMessage, AgentProvider, AgentProviderEvent, AgentProviderRequest } from '../types';
 
 export interface HealthStatus { ok: boolean; version?: string; error?: { code: string; message: string } }
@@ -9,7 +10,7 @@ export interface ModelInfo { id: string; label: string; sizeBytes?: number; deta
 export const OLLAMA_DEFAULT_URL = 'http://127.0.0.1:11434';
 
 type FetchLike = (url: string, init?: RequestInit) => Promise<Response>;
-export interface OllamaOptions {
+export interface OllamaOptions extends RetryOptions {
   /** Daemon base URL. Default http://127.0.0.1:11434. */
   baseUrl?: string;
   /** Injectable for tests. */
@@ -56,8 +57,10 @@ export class OllamaProvider implements AgentProvider {
   readonly baseUrl: string;
   private f: FetchLike;
   private timeout: number;
+  private retries: RetryOptions;
 
   constructor(opts: OllamaOptions = {}) {
+    this.retries = opts;
     this.baseUrl = normalizeBaseUrl(opts.baseUrl);
     this.locality = isLoopbackHttp(this.baseUrl) ? 'local' : 'cloud';
     if (opts.numCtx !== undefined && (!Number.isInteger(opts.numCtx) || opts.numCtx < 1)) throw new ProviderError('protocol', 'numCtx must be a positive integer');
@@ -81,7 +84,7 @@ export class OllamaProvider implements AgentProvider {
     if (e instanceof ProviderError) return e;
     if (isAbort(e) && outer?.aborted) return new ProviderError('timeout', 'Request aborted');
     if (own.aborted) return new ProviderError('timeout', 'Ollama did not answer in time');
-    return new ProviderError('unreachable', `Cannot reach Ollama at ${this.baseUrl}. Is it running? (${(e as Error)?.message ?? e})`);
+    return new ProviderError('unreachable', 'Cannot reach Ollama. Check that the daemon is running.');
   }
 
   /**
@@ -152,16 +155,14 @@ export class OllamaProvider implements AgentProvider {
     };
     let res: Response;
     try {
-      res = await this.f(this.baseUrl + '/api/chat', { method: 'POST', redirect:'error', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body), signal });
+      res = await fetchProviderResponse(() => this.f(this.baseUrl + '/api/chat', { method: 'POST', redirect:'error', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body), signal }), signal, this.retries);
     } catch (e) {
-      if (isAbort(e) || signal.aborted) { yield { type: 'finish', reason: 'aborted' }; return; }
-      throw new ProviderError('unreachable', `Cannot reach Ollama at ${this.baseUrl}. Is it running? (${(e as Error)?.message ?? e})`);
-    }
-    if (!res.ok) {
-      let detail = '';
-      try { detail = ((await res.json()) as { error?: string }).error ?? ''; } catch { /* ignore */ }
-      if (res.status === 404) throw new ProviderError('model-not-found', detail || `Model "${req.model}" is not installed. Run: ollama pull ${req.model}`);
-      throw new ProviderError('http', `Ollama answered ${res.status}${detail ? ': ' + detail : ''}`);
+      if (signal.aborted) { yield { type: 'finish', reason: 'aborted' }; return; }
+      if (e instanceof AgentError) {
+        const code = e.detail === 'model-not-found' ? 'model-not-found' : e.detail === 'network' ? 'unreachable' : 'http';
+        throw new ProviderError(code, 'Ollama request failed.', e);
+      }
+      throw new ProviderError('unreachable', 'Cannot reach Ollama. Check that the daemon is running.');
     }
     if (!res.body) throw new ProviderError('protocol', 'Ollama response has no body');
 
@@ -177,7 +178,7 @@ export class OllamaProvider implements AgentProvider {
       let j: OllamaChunk;
       try { j = JSON.parse(line); } catch { throw new ProviderError('protocol', 'Invalid line in Ollama stream'); }
       if (this.locality === 'local' && (j.remote_host || j.remote_model)) throw new ProviderError('not-local', 'Ollama answered from a remote host; refusing to treat this as local processing');
-      if (j.error) throw new ProviderError(/not found/i.test(j.error) ? 'model-not-found' : 'http', j.error);
+      if (j.error) throw new ProviderError(/not found/i.test(j.error) ? 'model-not-found' : 'http', 'Ollama reported a streaming error.');
       const out: AgentProviderEvent[] = [];
       if (j.message?.content) out.push({ type: 'text', text: j.message.content });
       for (const tc of j.message?.tool_calls ?? []) {
@@ -213,7 +214,7 @@ export class OllamaProvider implements AgentProvider {
     } catch (e) {
       if (e instanceof ProviderError) throw e;
       if (isAbort(e) || signal.aborted) { yield { type: 'finish', reason: 'aborted' }; return; }
-      throw new ProviderError('unreachable', `Connection to Ollama lost (${(e as Error)?.message ?? e})`);
+      throw new ProviderError('unreachable', 'Connection to Ollama was lost. Partial output is incomplete.');
     } finally { signal.removeEventListener('abort',abortReader);await reader.cancel().catch(()=>{});reader.releaseLock(); }
   }
 }
