@@ -1459,5 +1459,21 @@
   "imageedit.adjust.shadows": "Ombres",
   "imageedit.adjust.curves": "Courbes",
   "imageedit.adjust.curvePoint": "Point de courbe",
-  "imageedit.adjust.reset": "Réinitialiser les réglages"
+  "imageedit.adjust.reset": "Réinitialiser les réglages",
+  "imageeditor.title": "Modifier l'image",
+  "imageeditor.desc": "Recadrer, redimensionner, pivoter, retourner et ajuster une copie d'une image. Le fichier d'origine reste inchangé. Tout s'exécute sur cet appareil.",
+  "imageeditor.empty": "Ouvrez une image PNG, JPEG, WebP ou SVG pour commencer.",
+  "imageeditor.tools": "Outils d'image",
+  "imageeditor.open": "Ouvrir une image...",
+  "imageeditor.openOther": "Ouvrir une autre...",
+  "imageeditor.undo": "Annuler",
+  "imageeditor.redo": "Rétablir",
+  "imageeditor.format": "Enregistrer en",
+  "imageeditor.quality": "Qualité",
+  "imageeditor.close": "Fermer",
+  "imageeditor.save": "Enregistrer une copie...",
+  "imageeditor.working": "Traitement...",
+  "imageeditor.saved": "Enregistré comme nouveau fichier.",
+  "imageeditor.gpu": "Aperçu GPU",
+  "imageeditor.cpu": "Aperçu CPU"
 }

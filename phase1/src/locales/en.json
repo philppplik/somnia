@@ -1459,5 +1459,21 @@
   "imageedit.adjust.shadows": "Shadows",
   "imageedit.adjust.curves": "Curves",
   "imageedit.adjust.curvePoint": "Curve point",
-  "imageedit.adjust.reset": "Reset adjustments"
+  "imageedit.adjust.reset": "Reset adjustments",
+  "imageeditor.title": "Edit image",
+  "imageeditor.desc": "Crop, resize, rotate, flip and adjust a copy of one image. The original file stays unchanged. Everything runs on this device.",
+  "imageeditor.empty": "Open a PNG, JPEG, WebP or SVG image to start.",
+  "imageeditor.tools": "Image tools",
+  "imageeditor.open": "Open image...",
+  "imageeditor.openOther": "Open another...",
+  "imageeditor.undo": "Undo",
+  "imageeditor.redo": "Redo",
+  "imageeditor.format": "Save as",
+  "imageeditor.quality": "Quality",
+  "imageeditor.close": "Close",
+  "imageeditor.save": "Save copy...",
+  "imageeditor.working": "Working...",
+  "imageeditor.saved": "Saved as a new file.",
+  "imageeditor.gpu": "GPU preview",
+  "imageeditor.cpu": "CPU preview"
 }

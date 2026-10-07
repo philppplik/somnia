@@ -1459,5 +1459,21 @@
   "imageedit.adjust.shadows": "Sombras",
   "imageedit.adjust.curves": "Curvas",
   "imageedit.adjust.curvePoint": "Ponto da curva",
-  "imageedit.adjust.reset": "Redefinir ajustes"
+  "imageedit.adjust.reset": "Redefinir ajustes",
+  "imageeditor.title": "Editar imagem",
+  "imageeditor.desc": "Recorte, redimensione, gire, espelhe e ajuste uma cópia de uma imagem. O arquivo original não muda. Tudo roda neste dispositivo.",
+  "imageeditor.empty": "Abra uma imagem PNG, JPEG, WebP ou SVG para começar.",
+  "imageeditor.tools": "Ferramentas de imagem",
+  "imageeditor.open": "Abrir imagem...",
+  "imageeditor.openOther": "Abrir outra...",
+  "imageeditor.undo": "Desfazer",
+  "imageeditor.redo": "Refazer",
+  "imageeditor.format": "Salvar como",
+  "imageeditor.quality": "Qualidade",
+  "imageeditor.close": "Fechar",
+  "imageeditor.save": "Salvar cópia...",
+  "imageeditor.working": "Processando...",
+  "imageeditor.saved": "Salvo como novo arquivo.",
+  "imageeditor.gpu": "Prévia GPU",
+  "imageeditor.cpu": "Prévia CPU"
 }

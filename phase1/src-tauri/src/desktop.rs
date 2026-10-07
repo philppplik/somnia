@@ -526,6 +526,98 @@ async fn read_media(
     })
     .await
 }
+// ---------- image editor file access (one-time grants, raw bytes, atomic save) ----------
+#[derive(Default)]
+struct ImageGrants {
+    read: Mutex<Option<crate::image_io::ImageGrant>>,
+    save: Mutex<Option<crate::image_io::ImageGrant>>,
+}
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct ImageGrantReply {
+    token: String,
+    name: String,
+    size: u64,
+}
+fn image_name(path: &std::path::Path) -> String {
+    path.file_name().unwrap_or_default().to_string_lossy().into_owned()
+}
+/// OS open dialog for one image. The renderer receives a one-time token, never a path.
+#[tauri::command]
+async fn image_pick(window: WebviewWindow, grants: State<'_, ImageGrants>) -> Result<Option<ImageGrantReply>> {
+    gate(&window)?;
+    let app = window.app_handle().clone();
+    let selected = tauri::async_runtime::spawn_blocking(move || {
+        app.dialog().file().add_filter("Images", &crate::image_io::IMAGE_EXTENSIONS).blocking_pick_file()
+    })
+    .await
+    .map_err(|e| AppError::Io(e.to_string()))?;
+    let Some(selected) = selected else { return Ok(None) };
+    let path = selected.into_path().map_err(|e| AppError::Invalid(e.to_string()))?;
+    let size = crate::image_io::checked_image_size(&path)?;
+    let name = image_name(&path);
+    let grant = crate::image_io::ImageGrant::new(path);
+    let token = grant.token().to_owned();
+    *grants.read.lock().map_err(|e| AppError::Io(e.to_string()))? = Some(grant);
+    Ok(Some(ImageGrantReply { token, name, size }))
+}
+/// Raw bytes (no base64) of the file granted by image_pick. The grant works once.
+#[tauri::command]
+async fn image_read(window: WebviewWindow, grants: State<'_, ImageGrants>, token: String) -> Result<tauri::ipc::Response> {
+    gate(&window)?;
+    let path = {
+        let mut slot = grants.read.lock().map_err(|e| AppError::Io(e.to_string()))?;
+        crate::image_io::ImageGrant::consume(&mut slot, &token)?
+    };
+    let bytes = tauri::async_runtime::spawn_blocking(move || crate::image_io::read_image(&path))
+        .await
+        .map_err(|e| AppError::Io(e.to_string()))??;
+    Ok(tauri::ipc::Response::new(bytes))
+}
+/// OS save dialog. Choosing an existing file makes the OS ask about overwriting. Nothing is written yet.
+#[tauri::command]
+async fn image_save_pick(window: WebviewWindow, grants: State<'_, ImageGrants>, suggested_name: String) -> Result<Option<ImageGrantReply>> {
+    gate(&window)?;
+    let app = window.app_handle().clone();
+    let suggested: String = suggested_name.chars().filter(|c| !matches!(c, '/' | '\\' | '\0')).take(120).collect();
+    let selected = tauri::async_runtime::spawn_blocking(move || {
+        app.dialog().file().add_filter("Images", &crate::image_io::IMAGE_EXTENSIONS).set_file_name(suggested).blocking_save_file()
+    })
+    .await
+    .map_err(|e| AppError::Io(e.to_string()))?;
+    let Some(selected) = selected else { return Ok(None) };
+    let path = selected.into_path().map_err(|e| AppError::Invalid(e.to_string()))?;
+    if !crate::image_io::has_image_extension(&path) {
+        return Err(AppError::Denied("Save as PNG, JPEG, WebP or SVG".into()));
+    }
+    let name = image_name(&path);
+    let grant = crate::image_io::ImageGrant::new(path);
+    let token = grant.token().to_owned();
+    *grants.save.lock().map_err(|e| AppError::Io(e.to_string()))? = Some(grant);
+    Ok(Some(ImageGrantReply { token, name, size: 0 }))
+}
+/// Raw request body = file bytes, header x-somnia-token = token from image_save_pick. Written atomically, once.
+#[tauri::command]
+async fn image_save_write(window: WebviewWindow, grants: State<'_, ImageGrants>, request: tauri::ipc::Request<'_>) -> Result<()> {
+    gate(&window)?;
+    let token = request
+        .headers()
+        .get("x-somnia-token")
+        .and_then(|v| v.to_str().ok())
+        .map(str::to_owned)
+        .ok_or_else(|| AppError::Denied("Missing save token".into()))?;
+    let bytes = match request.body() {
+        tauri::ipc::InvokeBody::Raw(b) => b.clone(),
+        _ => return Err(AppError::Invalid("Expected raw image bytes".into())),
+    };
+    let path = {
+        let mut slot = grants.save.lock().map_err(|e| AppError::Io(e.to_string()))?;
+        crate::image_io::ImageGrant::consume(&mut slot, &token)?
+    };
+    tauri::async_runtime::spawn_blocking(move || crate::image_io::save_image_atomic(&path, &bytes))
+        .await
+        .map_err(|e| AppError::Io(e.to_string()))?
+}
 #[tauri::command]
 async fn hold_autosave(
     window: WebviewWindow,
@@ -791,6 +883,7 @@ pub fn run() {
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_process::init())
         .manage(shared.clone())
+        .manage(ImageGrants::default())
         .manage(crate::lan_host::LanHost::default())
         .setup(move |app| {
             if let Ok(dir) = app.path().app_data_dir() {
@@ -874,6 +967,10 @@ pub fn run() {
             list_files,
             read_file,
             read_media,
+            image_pick,
+            image_read,
+            image_save_pick,
+            image_save_write,
             hold_autosave,
             stage_edit,
             save_file,

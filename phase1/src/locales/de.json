@@ -1459,5 +1459,21 @@
   "imageedit.adjust.shadows": "Schatten",
   "imageedit.adjust.curves": "Kurven",
   "imageedit.adjust.curvePoint": "Kurvenpunkt",
-  "imageedit.adjust.reset": "Anpassungen zurücksetzen"
+  "imageedit.adjust.reset": "Anpassungen zurücksetzen",
+  "imageeditor.title": "Bild bearbeiten",
+  "imageeditor.desc": "Zuschneiden, Größe ändern, drehen, spiegeln und anpassen - an einer Kopie. Die Originaldatei bleibt unverändert. Alles läuft auf diesem Gerät.",
+  "imageeditor.empty": "Öffne ein PNG-, JPEG-, WebP- oder SVG-Bild, um zu starten.",
+  "imageeditor.tools": "Bildwerkzeuge",
+  "imageeditor.open": "Bild öffnen...",
+  "imageeditor.openOther": "Anderes öffnen...",
+  "imageeditor.undo": "Rückgängig",
+  "imageeditor.redo": "Wiederholen",
+  "imageeditor.format": "Speichern als",
+  "imageeditor.quality": "Qualität",
+  "imageeditor.close": "Schließen",
+  "imageeditor.save": "Kopie speichern...",
+  "imageeditor.working": "Arbeite...",
+  "imageeditor.saved": "Als neue Datei gespeichert.",
+  "imageeditor.gpu": "GPU-Vorschau",
+  "imageeditor.cpu": "CPU-Vorschau"
 }

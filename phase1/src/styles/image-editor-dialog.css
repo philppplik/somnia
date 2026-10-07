@@ -1,0 +1,8 @@
+.dialog-popup.export-popup.image-editor-dialog{width:1040px;max-width:calc(100vw - 32px)}
+.image-editor-body{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:16px;height:min(540px,60dvh);min-height:300px;padding:16px 32px 4px}
+.image-editor-stage{min-width:0;min-height:0;position:relative;border:1px solid var(--border-subtle,#8884);border-radius:8px;overflow:hidden}
+.image-editor-empty{position:absolute;inset:0;display:grid;place-items:center;margin:0;opacity:.7;text-align:center;padding:24px}
+.image-editor-side{overflow-y:auto;min-height:0}
+.image-editor-note{margin:6px 32px 0;font-size:12px;opacity:.75}
+.image-editor-foot{flex-wrap:wrap;gap:8px;align-items:center}
+.image-editor-format{display:flex;align-items:center;gap:6px;font-size:12px}
