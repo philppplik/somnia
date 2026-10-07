@@ -189,3 +189,14 @@ test('perf: 4 MP CPU pass stays interactive-ish', () => {
   console.log(`# 4MP random-noise CPU pass: ${ms.toFixed(0)} ms`);
   assert.ok(ms < 5000);
 });
+
+test('adjust handler registers in the image-editor core registry', async () => {
+  const core = await import('../../image-editor/index');
+  const { adjustHandler, newAdjustOperation, patchAdjustOperation } = await import('./op');
+  const reg = core.createOperationRegistry();
+  reg.register(adjustHandler);
+  const op = patchAdjustOperation(newAdjustOperation('a1'), { brightness: 0.2 });
+  const src = { width: 2, height: 2, data: new Uint8ClampedArray(16).fill(100) };
+  const out = await core.renderStack(src, { schemaVersion: 1, source: { width: 2, height: 2, format: 'png', name: 'x.png' }, operations: [op], revision: 0 } as never, reg, {});
+  assert.ok(out.data[0] > 100);
+});

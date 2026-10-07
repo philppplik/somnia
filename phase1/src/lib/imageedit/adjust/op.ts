@@ -2,24 +2,18 @@ import { applyAdjust, isNeutralAdjust, normalizeAdjustParams, type PixelBuffer }
 import { buildFragmentShader } from './shader';
 import { ADJUST_OP_TYPE, DEFAULT_ADJUST_PARAMS, type AdjustParams } from './types';
 
-/** Structural copies of the core pipeline contract (core: {types,document,loader,renderer,viewport,export}). */
-export type JsonValue = string | number | boolean | null | JsonValue[] | { [k: string]: JsonValue };
-export interface RasterImage { width: number; height: number; data: Uint8ClampedArray }
-export interface OpContext { signal?: AbortSignal }
-export interface OpHandler {
-  type: string;
-  version: number;
-  apply(input: RasterImage, params: Record<string, JsonValue>, context: OpContext): RasterImage | Promise<RasterImage>;
-  fragmentShader?(params: Record<string, JsonValue>): string;
-}
-export interface ImageOperationLike {
-  id: string; type: string; version: number; enabled: boolean; params: Record<string, JsonValue>;
-}
+import type { RasterImage } from '../../image/buffer';
+import type { ImageOperation, JsonValue } from '../../image-editor/types';
+import type { OperationHandler } from '../../image-editor/pipeline';
+export type { JsonValue, RasterImage };
+export type OpHandler = OperationHandler;
+export type ImageOperationLike = ImageOperation;
+type JsonParams = ImageOperation['params'];
 
 export const ADJUST_OP_VERSION = 1;
 
 /** Typed params -> JSON params stored in Document.operations[].params. */
-export function adjustToJson(p: Partial<AdjustParams>): Record<string, JsonValue> {
+export function adjustToJson(p: Partial<AdjustParams>): JsonParams {
   const n = normalizeAdjustParams(p);
   return {
     brightness: n.brightness, contrast: n.contrast, saturation: n.saturation, hue: n.hue,
