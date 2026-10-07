@@ -72,7 +72,9 @@ test('impl: pointAt/split/bbox/length match reference', { skip }, () => {
   for (const f of fx.curves) {
     for (const t of [0, 0.25, 0.5, 0.75, 1]) nearPt(impl.pointAt(f.c, t), ref.bernstein(f.c, t), 1e-9, `${f.name} t=${t}`);
     const [l, r] = impl.splitCubic(f.c, 0.3), [el, er] = ref.split(f.c, 0.3);
-    for (let i = 0; i < 4; i++) { nearPt(l[i], el[i], 1e-9); nearPt(r[i], er[i], 1e-9); }
+    // vectorcore returns {p0,c1,c2,p1} cubics; the reference returns point tuples. Normalize (impl convention wins).
+    const tup = (c) => Array.isArray(c) ? c : [c.p0, c.c1, c.c2, c.p1];
+    for (let i = 0; i < 4; i++) { nearPt(tup(l)[i], el[i], 1e-9); nearPt(tup(r)[i], er[i], 1e-9); }
     const b = impl.cubicBBox(f.c), eb = ref.bbox(f.c);
     for (const k of ['minX', 'minY', 'maxX', 'maxY']) near(b[k], eb[k], 1e-6, `${f.name} ${k}`);
     near(impl.cubicLength(f.c), ref.length(f.c), 1e-4, `${f.name} length`);

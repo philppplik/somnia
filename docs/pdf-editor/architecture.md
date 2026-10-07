@@ -90,3 +90,7 @@ SOMNIA_PDFLIB=$PWD/src/lib/pdf npx tsx --test test/pdf/*.test.ts
 - The `Uint8Array`-in/out contract copies whole documents per op; incremental saves are not considered.
 - Conformance specifics are skeletons. None have been run against a real module; the harness was only checked against a one-handler stub.
 - UI, i18n strings, undo/redo wiring and agent tools are not specified.
+
+## Op naming convention (decision 2026-10-07)
+
+The delivered modules keep their names: `pdfforms.fill`, `pdfannotate.*`, `pdftext.*`, and `vector.*` for the vector scene. The `pdf-text-*` / `pdf-annot-*` / `pdf-page-*` / `pdf-form-*` names proposed in the skeleton are not used and there is no rename refactor. Future modules follow the existing scheme: `<module>.<verb>`, stored as `type@version`. The `test/pdf` conformance skeletons check the shared contract (versioned type, disposer cleans up, duplicate registration throws, input bytes never mutated) and may need their name filter adjusted when a module is wired in.
