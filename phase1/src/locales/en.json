@@ -1502,5 +1502,6 @@
   "vectoredit.shape.ellipse": "Ellipse",
   "vectoredit.shape.polygon": "Polygon",
   "vectoredit.shape.line": "Line",
-  "vectoredit.shape.path": "Path"
+  "vectoredit.shape.path": "Path",
+  "vectoredit.shape.group": "Group"
 }
