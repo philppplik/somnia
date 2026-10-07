@@ -7,7 +7,7 @@ Modules covered: `vectorcore` (model + math), `pen-tool` (interaction), `svg-io`
 ## 1. Vector document schema (v1)
 
 ```ts
-// Boundary agreed with the pen-tool team (2026-10-07). version field is OPEN (see section 6).
+// Boundary as relayed by the pen-tool team via the coordinator (2026-10-07); not yet confirmed by the pen-tool code. version field is OPEN (see section 6).
 interface VectorDocument { width: number; height: number; paths: VectorPath[] }
 interface VectorPath {
   id: string;            // stable, unique in the document, never reused
