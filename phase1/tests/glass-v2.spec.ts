@@ -68,8 +68,11 @@ test('code editor scope: default off, warning, set-to-60, keep, selection stays 
  await openGlass(page);
  const editor=page.locator('.codemirror-host .cm-editor').first();
  await page.keyboard.press('Escape');
+ await expect(page.getByRole('slider',{name:'Opacity',exact:true})).toHaveCount(0);
  const visible=await editor.isVisible().catch(()=>false);
- await page.keyboard.press('Control+,');
+ // Wait for close before reopening: back-to-back keyboard toggles can race under CI load.
+ await page.getByRole('button',{name:'Settings',exact:true}).click();
+ await expect(page.getByRole('slider',{name:'Opacity',exact:true})).toBeVisible();
  const code=page.getByRole('checkbox',{name:'Code editor',exact:true});
  const warn=page.getByText(/^Low contrast: code text may be hard to read/);
  await setOpacity(page,50);
