@@ -1,26 +1,24 @@
-// Renderer-registry handlers for the transform ops. Shape follows the core contract:
+// Renderer-registry handlers for the transform ops. Types come from the image-editor core:
 // ImageOperation {id,type,version,enabled,params}, handler {type,version,apply(input,params,ctx)}.
 // Handlers never mutate their input. Params are plain JSON and validated on every call.
+import type { RasterImage } from '../image/buffer';
+import type { ImageOperation, JsonValue } from '../image-editor/types';
+import type { OperationHandler, RenderContext as OpContext } from '../image-editor/pipeline';
 import { crop, flip, resize, rotate, rotatedBounds, normalizeDegrees, clampRect, fitAspectRect, aspectRatio, type AspectPreset, type ResizeFilter, type CropRect } from './transform';
 
-export interface RasterImage { width: number; height: number; data: Uint8ClampedArray }
-export type JsonValue = string | number | boolean | null | JsonValue[] | { [k: string]: JsonValue };
-export interface ImageOperation { id: string; type: string; version: number; enabled: boolean; params: Record<string, JsonValue> }
-export interface OpContext { signal?: AbortSignal }
-export interface TransformHandler {
-  type: string; version: number;
-  apply(input: RasterImage, params: Record<string, JsonValue>, context: OpContext): RasterImage;
+export interface TransformHandler extends OperationHandler {
+  apply(input: RasterImage, params: ImageOperation['params'], context: OpContext): RasterImage;
   /** Output size without pixel work (UI preview, size limits). */
-  outputSize(width: number, height: number, params: Record<string, JsonValue>): { width: number; height: number };
+  outputSize(width: number, height: number, params: ImageOperation['params']): { width: number; height: number };
 }
 
 const FILTERS: ResizeFilter[] = ['lanczos3', 'lanczos2', 'bilinear', 'nearest'];
-function num(p: Record<string, JsonValue>, k: string): number {
+function num(p: ImageOperation['params'], k: string): number {
   const v = p[k]; if (typeof v !== 'number' || !isFinite(v)) throw new TypeError(`param "${k}" must be a finite number`); return v;
 }
 function aborted(c: OpContext): void { if (c.signal?.aborted) throw new DOMException('aborted', 'AbortError'); }
 
-export function cropRectOf(p: Record<string, JsonValue>): CropRect { return { x: num(p, 'x'), y: num(p, 'y'), width: num(p, 'width'), height: num(p, 'height') }; }
+export function cropRectOf(p: ImageOperation['params']): CropRect { return { x: num(p, 'x'), y: num(p, 'y'), width: num(p, 'width'), height: num(p, 'height') }; }
 
 /** params: {x,y,width,height} in source pixels. */
 export const cropHandler: TransformHandler = {
@@ -70,7 +68,7 @@ export const TRANSFORM_HANDLERS: readonly TransformHandler[] = [cropHandler, res
 
 // ---------- op factories used by the UI ----------
 let seq = 0;
-const mk = (type: string, params: Record<string, JsonValue>): ImageOperation => ({ id: `${type}-${Date.now().toString(36)}-${(seq++).toString(36)}`, type, version: 1, enabled: true, params });
+const mk = (type: string, params: ImageOperation['params']): ImageOperation => ({ id: `${type}-${Date.now().toString(36)}-${(seq++).toString(36)}`, type, version: 1, enabled: true, params });
 export const cropOp = (r: CropRect): ImageOperation => mk('crop', { x: r.x, y: r.y, width: r.width, height: r.height });
 export const resizeOp = (width: number, height: number, filter: ResizeFilter = 'lanczos3'): ImageOperation => mk('resize', { width, height, filter });
 export const rotateOp = (degrees: number, expand = true): ImageOperation => mk('rotate', { degrees, expand });

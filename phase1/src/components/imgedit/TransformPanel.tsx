@@ -3,7 +3,8 @@ import { Crop, FlipHorizontal2, FlipVertical2, Link2, Link2Off, RotateCcw, Rotat
 import { Button } from '../ui/button';
 import { useT } from '../../lib/useT';
 import { ASPECT_PRESETS, aspectRatio, resolveResizeSize, type AspectPreset, type CropRect, type ResizeFilter } from '../../lib/imgedit/transform';
-import { cropOp, flipOp, initialCropRect, resizeOp, rotateOp, type ImageOperation } from '../../lib/imgedit/handlers';
+import { cropOp, flipOp, initialCropRect, resizeOp, rotateOp } from '../../lib/imgedit/handlers';
+import type { ImageOperation } from '../../lib/image-editor/types';
 
 export interface TransformPanelProps {
   /** Size of the image as it is at the current point in the operations stack. */

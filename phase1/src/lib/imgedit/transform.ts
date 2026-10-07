@@ -1,7 +1,7 @@
 // Image transform kernels: crop, resize (Lanczos), rotate, flip.
 // Pure CPU code on RGBA8 rasters (straight alpha). No dependencies, no DOM: runs in Node tests, Workers and the webview.
 // The operations stack, undo and rendering live in the image-editor core; ./handlers.ts plugs these kernels into it.
-export interface Bitmap { width: number; height: number; data: Uint8ClampedArray }
+export type Bitmap = import('../image/buffer').RasterImage;
 
 export type FlipAxis = 'horizontal' | 'vertical';
 export type ResizeFilter = 'lanczos3' | 'lanczos2' | 'bilinear' | 'nearest';

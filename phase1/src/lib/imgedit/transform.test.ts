@@ -111,3 +111,13 @@ test('handlers reject bad params and honour abort', () => {
 test('performance: 2000x1500 -> 1000x750 lanczos3 under 5s', () => {
   const t = Date.now(); resize(solid(2000, 1500, [1, 2, 3, 255]), 1000, 750); assert.ok(Date.now() - t < 5000);
 });
+
+test('transform handlers register in the image-editor core and render through its stack', async () => {
+  const core = await import('../image-editor/index');
+  const reg = core.createOperationRegistry();
+  for (const h of TRANSFORM_HANDLERS) reg.register(h);
+  const src = { width: 4, height: 2, data: new Uint8ClampedArray(4 * 2 * 4).fill(200) };
+  const doc = { schemaVersion: 1 as const, source: { width: 4, height: 2, format: 'png', name: 't.png' }, operations: [flipOp('horizontal'), rotateOp(90), resizeOp(4, 4)], revision: 0 };
+  const out = await core.renderStack(src, doc as never, reg, {});
+  assert.equal(out.width, 4); assert.equal(out.height, 4);
+});
