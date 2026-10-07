@@ -19,9 +19,11 @@ pub const REFRESH_SKEW_MS: u64 = 5 * 60 * 1000;
 pub const MIN_REFRESH_DELAY_MS: u64 = 30 * 1000;
 /// Fallback lifetime when the access token carries no readable `exp`.
 pub const DEFAULT_LIFETIME_MS: u64 = 60 * 60 * 1000;
-/// Codex CLI (openai/codex, Apache-2.0) public client id and token endpoint.
-pub const OAUTH_CLIENT_ID: &str = "app_EMoamEEZ73f0CkXaXp7hrann";
-pub const OAUTH_TOKEN_URL: &str = "https://auth.openai.com/oauth/token";
+/// Official sign-in-with-ChatGPT endpoints. No first-party client id is used: the per-account
+/// `client_id` (issued by dynamic client registration, `oaiapp_...`) is stored in [`Tokens`].
+pub const OAUTH_TOKEN_URL: &str = "https://auth.openai.com/api/accounts/oauth/token";
+pub const OAUTH_ISSUER: &str = "https://auth.openai.com";
+pub const OAUTH_JWKS_URL: &str = "https://auth.openai.com/.well-known/jwks.json";
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum StoreError { Backend, Corrupt, Invalid }
@@ -37,6 +39,8 @@ impl fmt::Display for StoreError {
 pub struct Tokens {
     pub access_token: String,
     pub refresh_token: String,
+    /// Client id issued to this installation/account at registration; required for refresh.
+    pub client_id: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub id_token: Option<String>,
     /// Unix ms.
@@ -55,7 +59,7 @@ impl fmt::Debug for Tokens {
 impl Tokens {
     pub fn validate(&self) -> Result<(), StoreError> {
         let bad = |s: &str, max: usize| s.is_empty() || s.len() > max || s.chars().any(|c| c.is_control() || c.is_whitespace());
-        if bad(&self.access_token, 16384) || bad(&self.refresh_token, 8192) { return Err(StoreError::Invalid); }
+        if bad(&self.access_token, 16384) || bad(&self.refresh_token, 8192) || bad(&self.client_id, 256) { return Err(StoreError::Invalid); }
         if self.id_token.as_deref().is_some_and(|t| bad(t, 16384)) || self.account_id.as_deref().is_some_and(|t| bad(t, 256)) { return Err(StoreError::Invalid); }
         Ok(())
     }
@@ -158,9 +162,17 @@ pub fn refresh_delay_ms(t: &Tokens, now_ms: u64) -> u64 {
     if needs_refresh(t, now_ms) { return 0; }
     (t.expires_at_ms - REFRESH_SKEW_MS - now_ms).max(MIN_REFRESH_DELAY_MS)
 }
-/// JSON body for the refresh grant (same shape Codex CLI sends).
-pub fn refresh_request_body(refresh_token: &str) -> String {
-    serde_json::json!({"client_id": OAUTH_CLIENT_ID, "grant_type": "refresh_token", "refresh_token": refresh_token}).to_string()
+/// Form body (application/x-www-form-urlencoded) for the refresh grant.
+pub fn refresh_request_body(client_id: &str, refresh_token: &str) -> String {
+    format!("grant_type=refresh_token&client_id={}&refresh_token={}", form_encode(client_id), form_encode(refresh_token))
+}
+fn form_encode(v: &str) -> String {
+    v.bytes().map(|b| if b.is_ascii_alphanumeric() || matches!(b, b'-' | b'_' | b'.' | b'~') { (b as char).to_string() } else { format!("%{b:02X}") }).collect()
+}
+/// Fail-closed issuer check for any id/access token we accept: `iss` must equal the issuer exactly.
+pub fn issuer_ok(jwt: &str) -> bool {
+    let Some(p) = jwt.split('.').nth(1).and_then(b64url_decode) else { return false };
+    serde_json::from_slice::<serde_json::Value>(&p).ok().and_then(|v| v.get("iss").and_then(|i| i.as_str()).map(|i| i == OAUTH_ISSUER)).unwrap_or(false)
 }
 #[derive(Debug, PartialEq, Eq)]
 pub enum RefreshFailure { Permanent, Transient }
@@ -183,7 +195,8 @@ pub fn apply_refresh(old: &Tokens, response_json: &str, now_ms: u64) -> Result<T
         Some(secs) => now_ms + secs * 1000,
         None => jwt_exp_ms(&access).filter(|e| *e > now_ms).unwrap_or(now_ms + DEFAULT_LIFETIME_MS),
     };
-    let t = Tokens { access_token: access, refresh_token: s("refresh_token").unwrap_or_else(|| old.refresh_token.clone()), id_token: s("id_token").or_else(|| old.id_token.clone()), expires_at_ms, account_id: old.account_id.clone(), needs_reauth: false };
+    if s("id_token").is_some_and(|i| !issuer_ok(&i)) { return Err(StoreError::Invalid); } // fail closed
+    let t = Tokens { access_token: access, refresh_token: s("refresh_token").unwrap_or_else(|| old.refresh_token.clone()), id_token: s("id_token").or_else(|| old.id_token.clone()), expires_at_ms, client_id: old.client_id.clone(), account_id: old.account_id.clone(), needs_reauth: false };
     t.validate()?;
     Ok(t)
 }
@@ -206,7 +219,7 @@ fn b64url_decode(s: &str) -> Option<Vec<u8>> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    fn tok(exp: u64) -> Tokens { Tokens { access_token: "acc".into(), refresh_token: "ref".into(), id_token: None, expires_at_ms: exp, account_id: Some("acct".into()), needs_reauth: false } }
+    fn tok(exp: u64) -> Tokens { Tokens { access_token: "acc".into(), refresh_token: "ref".into(), client_id: "oaiapp_test".into(), id_token: None, expires_at_ms: exp, account_id: Some("acct".into()), needs_reauth: false } }
     fn store() -> Store<MemoryBackend> { Store::new(MemoryBackend::default()) }
     #[test] fn roundtrip_and_default_method() {
         let s = store();
@@ -273,8 +286,10 @@ mod tests {
         let old = tok(1);
         let t = apply_refresh(&old, r#"{"access_token":"n","expires_in":3600}"#, 1000).unwrap();
         assert_eq!((t.access_token.as_str(), t.refresh_token.as_str(), t.expires_at_ms), ("n", "ref", 3_601_000));
-        let t = apply_refresh(&old, r#"{"access_token":"n","refresh_token":"r2","id_token":"i"}"#, 1000).unwrap();
-        assert_eq!((t.refresh_token.as_str(), t.id_token.as_deref(), t.expires_at_ms), ("r2", Some("i"), 1000 + DEFAULT_LIFETIME_MS));
+        let id = "e30.eyJpc3MiOiJodHRwczovL2F1dGgub3BlbmFpLmNvbSJ9.x";
+        let t = apply_refresh(&old, &format!(r#"{{"access_token":"n","refresh_token":"r2","id_token":"{id}"}}"#), 1000).unwrap();
+        assert_eq!((t.refresh_token.as_str(), t.id_token.as_deref(), t.expires_at_ms), ("r2", Some(id), 1000 + DEFAULT_LIFETIME_MS));
+        assert!(apply_refresh(&old, r#"{"access_token":"n","id_token":"e30.e30.x"}"#, 0).is_err(), "foreign issuer rejected");
         assert!(apply_refresh(&old, r#"{"refresh_token":"x"}"#, 0).is_err());
         assert!(apply_refresh(&old, "garbage", 0).is_err());
     }
@@ -292,8 +307,20 @@ mod tests {
         assert_eq!(classify_refresh_failure(503, "x"), RefreshFailure::Transient);
         assert_eq!(classify_refresh_failure(429, r#"{"error":"rate_limited"}"#), RefreshFailure::Transient);
     }
-    #[test] fn refresh_body_shape() {
-        let v: serde_json::Value = serde_json::from_str(&refresh_request_body("r")).unwrap();
-        assert_eq!((v["grant_type"].as_str(), v["refresh_token"].as_str(), v["client_id"].as_str()), (Some("refresh_token"), Some("r"), Some(OAUTH_CLIENT_ID)));
+    #[test] fn refresh_body_is_form_encoded() {
+        assert_eq!(refresh_request_body("oaiapp_x", "a b+c/d=&"), "grant_type=refresh_token&client_id=oaiapp_x&refresh_token=a%20b%2Bc%2Fd%3D%26");
+        assert!(OAUTH_TOKEN_URL.starts_with("https://auth.openai.com/api/accounts/"));
+    }
+    #[test] fn issuer_is_exact_and_fail_closed() {
+        // {"iss":"https://auth.openai.com"}
+        assert!(issuer_ok("e30.eyJpc3MiOiJodHRwczovL2F1dGgub3BlbmFpLmNvbSJ9.x"));
+        // {"iss":"https://auth.openai.com.evil.test"}
+        assert!(!issuer_ok("e30.eyJpc3MiOiJodHRwczovL2F1dGgub3BlbmFpLmNvbS5ldmlsLnRlc3QifQ.x"));
+        assert!(!issuer_ok("e30.e30.x") && !issuer_ok("garbage"));
+    }
+    #[test] fn client_id_required_and_kept_on_refresh() {
+        let mut t = tok(1); t.client_id = String::new();
+        assert_eq!(store().save_tokens(&t), Err(StoreError::Invalid));
+        assert_eq!(apply_refresh(&tok(1), r#"{"access_token":"n","expires_in":1}"#, 0).unwrap().client_id, "oaiapp_test");
     }
 }

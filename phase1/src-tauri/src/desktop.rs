@@ -109,7 +109,7 @@ async fn oauth_access_token() -> std::result::Result<String, String> {
     if t.needs_reauth { return Err(ACCOUNT_ERROR.into()); }
     if !o::needs_refresh(&t, now_ms()) { return Ok(t.access_token); }
     let client = reqwest::Client::builder().no_proxy().redirect(reqwest::redirect::Policy::none()).connect_timeout(Duration::from_secs(15)).timeout(Duration::from_secs(30)).build().map_err(|_| "Account refresh unavailable")?;
-    let response = client.post(o::OAUTH_TOKEN_URL).header("content-type", "application/json").body(o::refresh_request_body(&t.refresh_token)).send().await.map_err(|_| "Account refresh failed. Check your connection.")?;
+    let response = client.post(o::OAUTH_TOKEN_URL).header("content-type", "application/x-www-form-urlencoded").body(o::refresh_request_body(&t.client_id, &t.refresh_token)).send().await.map_err(|_| "Account refresh failed. Check your connection.")?;
     let status = response.status().as_u16();
     let text = response.text().await.map_err(|_| "Account refresh failed")?;
     if !(200..300).contains(&status) {
