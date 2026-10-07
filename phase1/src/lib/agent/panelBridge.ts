@@ -18,6 +18,7 @@ import type {AgentProvider,AgentProviderEvent,AgentProviderRequest} from './type
 export interface AgentConfiguration {provider:AuthProvider;model:string;apiKey:string;allowActiveFile:boolean;customPrompts?:CustomPrompt[]}
 let config:AgentConfiguration={provider:'ollama',model:'',apiKey:'',allowActiveFile:false};
 export function configureAgent(value:AgentConfiguration){realCore.clear?.();config={...value};}
+export function setAgentActiveFileAccess(allowActiveFile:boolean){config={...config,allowActiveFile};}
 /** Custom instructions are sent every provider round, never as access permission. */
 export function withCustomPrompts(provider:AgentProvider,prompts:readonly CustomPrompt[]=[]):AgentProvider {
  const text=prompts.filter(p=>p.enabled&&p.text.trim()).map(p=>p.text.trim()).join('\n\n');
@@ -90,7 +91,7 @@ export const realCore:AgentCore={
  run(request,onEvent){
   if(session?.status==='running'){queueMicrotask(()=>onEvent({type:'error',message:'The previous turn is still stopping. Wait before sending again.'}));return {cancel(){}};}
   let stopped=false;const runId=++runGeneration;const deliver=(e:AgentEvent)=>{if(!stopped&&runId===runGeneration)onEvent(e);};send=deliver;
-  if(!config.model.trim()){queueMicrotask(()=>deliver({type:'error',message:'Choose a provider and model in Agent configuration first.'}));return {cancel(){stopped=true;}};}
+  if(!config.model.trim()){queueMicrotask(()=>deliver({type:'error',message:'Choose a provider and model in Settings > AI first.'}));return {cancel(){stopped=true;}};}
   const generation=getProjectGeneration();
   if(epoch!==generation){session?.cancel();session=null;sessionSerial++;proposals.clear();permissions.clear();appliedAgentProvenance.clear();epoch=generation;}
   if(config.allowActiveFile&&request.context.activeFile)permissions.set(request.context.activeFile,new Set(['read']));

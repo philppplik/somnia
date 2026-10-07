@@ -1,5 +1,6 @@
 import {CollabPreferences} from './CollabPreferences';
-import {AgentPrivacySettings} from './agent/AgentPrivacy';
+import {AgentSettings} from './agent/AgentSettings';
+import {initializeAgentSettings} from '../lib/agent/settingsRuntime';
 import {
   DEFAULT_BACKUP_PREFS,
   listProjectBackups,
@@ -98,7 +99,8 @@ import type { CodeTheme, Contrast } from "../lib/appearance";
 export function Settings() {
   const { t, locale } = useT();
   const state = useAppStore();
-  const section = state.settingsSection;
+  useEffect(()=>{void initializeAgentSettings();},[]);
+  const section = ['AI Privacy','AI privacy'].includes(state.settingsSection) ? 'AI' : state.settingsSection;
   const setSection = (v: string) => patchState({ settingsSection: v });
   const [exts, setExts] = useState(loadExtensions);
   const [draft, setDraft] = useState("");
@@ -258,6 +260,7 @@ export function Settings() {
     const root = content.current;
     if (!root) return;
     root.querySelectorAll<HTMLElement>("label,li,p,details").forEach((el) => {
+      if(el.closest('[data-settings-section="AI"]')){el.hidden=false;return;}
       el.hidden =
         !!query &&
         !settingsMatch(
@@ -275,6 +278,10 @@ export function Settings() {
     root
       .querySelectorAll<HTMLElement>("[data-settings-section]")
       .forEach((el) => {
+        if(el.dataset.settingsSection==='AI'){
+          el.hidden=!!query&&!settingsMatch((el.textContent??'')+' '+(el.querySelector('[data-settings-search-text]')?.getAttribute('data-settings-search-text')??''),query);
+          if(!el.hidden)found.push('AI');return;
+        }
         el.hidden =
           !!query &&
           !Array.from(el.querySelectorAll("label,li,p,details")).some(
@@ -323,7 +330,7 @@ export function Settings() {
     { name: "Collaboration", key: "collaboration", group: "Workflow", icon: Info },
     { name: "Preview", key: "preview", group: "Workflow", icon: Eye },
     { name: "Shortcuts", key: "shortcuts", group: "Workflow", icon: Keyboard },
-    { name: "AI Privacy", key: "aiPrivacy", group: "Power-Ups", icon: Info },
+    { name: "AI", key: "ai", group: "Power-Ups", icon: Zap },
     { name: "Extensions", key: "extensions", group: "Power-Ups", icon: Puzzle },
     { name: "Updates", key: "updates", group: "System", icon: RefreshCw },
     { name: "Advanced", key: "advanced", group: "System", icon: Zap },
@@ -335,7 +342,7 @@ export function Settings() {
     <section data-settings-section={section} aria-label={sectionTitle(section)} key={section}>
       <h2>{sectionTitle(section)}</h2>
       {section === "Collaboration" && <CollabPreferences/>}
-      {section === "AI Privacy" && <AgentPrivacySettings t={t}/>}
+      {section === "AI" && <AgentSettings searchQuery={query} legacyPrivacy={["AI Privacy","AI privacy"].includes(state.settingsSection)}/>}
       {section === "Advanced" && (
         <>
           <label title={t("redesign.fastHint")}>

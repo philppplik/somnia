@@ -1504,6 +1504,7 @@
   "vectoredit.shape.line": "Línea",
   "vectoredit.shape.path": "Trazado",
   "vectoredit.shape.group": "Grupo",
+
   "set.section.ai": "IA",
   "agent.settings.providers": "Proveedores y modelos",
   "agent.settings.instructions": "Instrucciones",
@@ -1535,5 +1536,6 @@
   "accountAuth.state.unavailable": "Estado no disponible",
   "accountAuth.state.checking": "Comprobando estado",
   "accountAuth.state.desktop": "Requiere inicio de sesión de escritorio",
-  "accountAuth.state.apiKey": "Usando clave API"
+  "accountAuth.state.apiKey": "Usando clave API",
+  "agent.settings.save": "Guardar ajustes de IA"
 }

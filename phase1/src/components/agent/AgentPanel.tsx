@@ -1,100 +1,61 @@
-import {ProviderAuthentication} from './ProviderAuthentication';
-import {listProviderModels} from '../../lib/agent/modelCatalog';
 import {AgentAccountStatus} from './AgentAccountStatus';
 import {reportError} from '../../lib/log';
-import {useCallback,useEffect,useReducer,useRef,useState} from 'react';
+import {useCallback,useEffect,useReducer,useRef,useState,useSyncExternalStore} from 'react';
 import {LoaderCircle,PanelRightClose,Send,Settings,Square,SquarePen} from '../../lib/icons';
 import {createStreamSink} from '../../lib/agent/streaming';
 import {chatReducer,initialChat,type ChatItem} from '../../lib/agent/chat';
 import {getAgentCore,type AgentProposal,type AgentRun,type ApprovalDecision,type AgentApproval} from '../../lib/agent/core';
-import {loadAgentSettings,saveAgentSettings} from '../../lib/agent/settings';
-import {configureAgent,type AgentConfiguration} from '../../lib/agent/panelBridge';
+import {agentSettingsSnapshot,subscribeAgentSettings,initializeAgentSettings,setAgentActivity,setActiveFileAccess} from '../../lib/agent/settingsRuntime';
 import {getState,patchState} from '../../store/appStore';
 import {useT} from '../../lib/useT';
 import {AgentReview} from '../AgentReview';
 import type {Decisions} from '../../lib/agentDiff';
-import {AgentConsentNotice,AgentErrorNotice,AIGeneratedLabel} from './AgentPrivacy';
+import {AgentErrorNotice,AIGeneratedLabel} from './AgentPrivacy';
 const CHIPS=['Help me design a landing page','Make this section responsive','Fix the A11y problems'];
 export function AgentPanel(){
  const {t}=useT();const [chat,dispatch]=useReducer(chatReducer,initialChat);const [draft,setDraft]=useState('');
- const [configuration,setConfiguration]=useState(false);const [consent,setConsent]=useState(false);
- const [cfg,setCfg]=useState<AgentConfiguration>({provider:'ollama',model:'',apiKey:'',allowActiveFile:false,customPrompts:[]});
- const [authBusy,setAuthBusy]=useState(false);
- const [models,setModels]=useState<{id:string;name:string}[]>([]),[modelsBusy,setModelsBusy]=useState(false),[modelsError,setModelsError]=useState('');const modelRequest=useRef<AbortController|null>(null);
- useEffect(()=>{modelRequest.current?.abort();setModels([]);setModelsError('');setModelsBusy(false);return()=>modelRequest.current?.abort();},[cfg.provider]);
- const refreshModels=async()=>{modelRequest.current?.abort();const controller=new AbortController();modelRequest.current=controller;setModelsBusy(true);setModelsError('');try{const list=await listProviderModels(cfg.provider,controller.signal);if(!controller.signal.aborted)setModels(list);}catch{if(!controller.signal.aborted)setModelsError('Could not load models. Check cloud consent, saved key and provider connection. You can enter a model ID manually.');}finally{if(modelRequest.current===controller)setModelsBusy(false);}};
- const [settingsReady,setSettingsReady]=useState(false);const [saving,setSaving]=useState(false);const [settingsError,setSettingsError]=useState('');
- useEffect(()=>{let live=true;void loadAgentSettings().then(value=>{if(live){setCfg(value);configureAgent(value);}}).catch(()=>{if(live)setSettingsError('Could not restore Agent settings. Unlock your OS credential store and reopen the panel, or configure this session again.');}).finally(()=>{if(live)setSettingsReady(true);});return()=>{live=false;};},[]);
- const saveConfiguration=async()=>{if(authBusy||saving)return;setSaving(true);setSettingsError('');try{await saveAgentSettings(cfg);configureAgent(cfg);setConfiguration(false);dispatch({type:'reset'});}catch{setSettingsError('Could not save settings. Check your OS credential store. API keys are never saved in plaintext.');}finally{setSaving(false);}};
+ const settings=useSyncExternalStore(subscribeAgentSettings,agentSettingsSnapshot,agentSettingsSnapshot);
+ const {ready:settingsReady,saving,authBusy,error:settingsError}=settings;
+ useEffect(()=>{void initializeAgentSettings();},[]);
+ const openSettings=()=>patchState({settingsOpen:true,settingsSection:'AI',settingsAITab:'providers',settingsNavigationId:getState().settingsNavigationId+1});
  const requestGeneration=useRef(0);const stream=useRef<ReturnType<typeof createStreamSink>|null>(null);
  const run=useRef<AgentRun|null>(null);const scroller=useRef<HTMLDivElement>(null);const input=useRef<HTMLInputElement>(null);const pinned=useRef(true);
  const [announce,setAnnounce]=useState('');
- useEffect(()=>()=>{requestGeneration.current++;stream.current?.close();run.current?.cancel();},[]);
+ useEffect(()=>{requestGeneration.current++;stream.current?.close();run.current?.cancel();run.current=null;},[settings.revision]);
+ useEffect(()=>()=>{requestGeneration.current++;stream.current?.close();run.current?.cancel();setAgentActivity(false,false);},[]);
  useEffect(()=>{const el=scroller.current;if(el&&pinned.current)el.scrollTop=el.scrollHeight;},[chat.items]);
  useEffect(()=>{const last=chat.items.at(-1);setAnnounce(chat.busy?t('agent.input.busy'):last?.kind==='error'?'Generation interrupted. Review the error message.':last?.kind==='stopped'?'Generation stopped.':chat.items.length?t('agent.status.done'):'');},[chat.busy,chat.items,t]);
  const send=useCallback((raw:string)=>{
-  const text=raw.trim();if(!text||chat.busy||!settingsReady||saving||authBusy||configuration)return;
+  const text=raw.trim();if(!text||chat.busy||!settingsReady||saving||authBusy)return;
   const generation=++requestGeneration.current;dispatch({type:'send',text});setDraft('');pinned.current=true;const s=getState();
   stream.current?.close();const sink=createStreamSink(event=>{if(generation===requestGeneration.current)dispatch({type:'event',event});});stream.current=sink;
   void getAgentCore().then(core=>{if(generation!==requestGeneration.current)return;run.current=core.run({prompt:text,context:{activeFile:s.activeFile,selectedElementId:s.selectedElementId}},event=>{if(generation===requestGeneration.current)sink.receive(event);});}).catch(e=>{if(generation!==requestGeneration.current)return;reportError('agent.start',e,{message:'Agent could not start'});sink.receive({type:'error',message:'Agent could not start. Check your configuration and try again.',retryable:true});});
- },[chat.busy,settingsReady,saving,authBusy,configuration]);
+ },[chat.busy,settingsReady,saving,authBusy]);
  const stop=()=>{stream.current?.close(true);requestGeneration.current++;run.current?.cancel();run.current=null;dispatch({type:'stop'});input.current?.focus();};
  const reset=()=>{stop();void getAgentCore().then(c=>c.clear?.());dispatch({type:'reset'});setDraft('');};
  const resolve=async(p:AgentProposal,state:'accepted'|'rejected',decisions?:Decisions)=>{
   const core=await getAgentCore();try{await(state==='accepted'?core.applyProposal(p.id,decisions):core.rejectProposal(p.id));dispatch({type:'resolve',proposalId:p.id,state});}
   catch(e){reportError('agent.apply',e,{message:`Proposal ${state==='accepted'?'apply':'reject'} failed`,level:'warn'});dispatch({type:'event',event:{type:'error',message:e instanceof Error?e.message:String(e)}});}
  };
- useEffect(()=>{
-  if(!consent)return;
-  const previous=document.activeElement as HTMLElement|null;
-  const dialog=document.querySelector<HTMLElement>('.ag-consent');
-  const trap=(e:KeyboardEvent)=>{
-   if(e.key==='Escape'){setConsent(false);return;}
-   if(e.key!=='Tab'||!dialog)return;
-   const controls=[...dialog.querySelectorAll<HTMLElement>('button:not([disabled]),input:not([disabled]),a[href]')];
-   const first=controls[0],last=controls[controls.length-1];
-   if(e.shiftKey&&document.activeElement===first){e.preventDefault();last?.focus();}
-   else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first?.focus();}
-  };
-  document.addEventListener('keydown',trap);return()=>{document.removeEventListener('keydown',trap);previous?.focus();};
- },[consent]);
+ useEffect(()=>{setAgentActivity(chat.busy,chat.items.some(i=>i.kind==='diff'&&i.state==='pending'));},[chat.busy,chat.items]);
  const empty=chat.items.length===0;
  return <aside className="ag-panel" aria-label={t('agent.title')}>
   <header className="ag-hd">
    <button type="button" className="ag-ib ag-hd-left" title={t('agent.newChat')} aria-label={t('agent.newChat')} onClick={reset}><SquarePen size={17}/></button><h2>{t('agent.title')}</h2>
-   <div className="ag-hd-right"><button type="button" className="ag-ib" title="Agent configuration" aria-label="Agent configuration" disabled={chat.busy||!settingsReady||saving||authBusy} onClick={()=>setConfiguration(v=>!v)}><Settings size={17}/></button><button type="button" className="ag-ib" title={t('agent.collapse')} aria-label={t('agent.collapse')} onClick={()=>patchState({agentOpen:false})}><PanelRightClose size={17}/></button></div>
+   <div className="ag-hd-right"><button type="button" className="ag-ib" title="Agent configuration" aria-label="Agent configuration" disabled={chat.busy||!settingsReady||saving||authBusy} onClick={openSettings}><Settings size={17}/></button><button type="button" className="ag-ib" title={t('agent.collapse')} aria-label={t('agent.collapse')} onClick={()=>patchState({agentOpen:false})}><PanelRightClose size={17}/></button></div>
   </header>
   <div className="ag-chat" ref={scroller} onScroll={e=>{const el=e.currentTarget;pinned.current=el.scrollHeight-el.scrollTop-el.clientHeight<48;}} role="log" aria-live="off" aria-label={t('agent.title')}>
    <AgentAccountStatus provider={settings.config.provider}/>
-   <div className="ag-safety"><AgentErrorNotice/><button type="button" onClick={()=>setConsent(true)}>Cloud data consent</button></div>
+   <div className="ag-safety"><AgentErrorNotice/><p role="status">{settings.config.provider} · {settings.config.model||'No model selected'}</p><button type="button" onClick={()=>patchState({settingsOpen:true,settingsSection:'AI',settingsAITab:'privacy',settingsNavigationId:getState().settingsNavigationId+1})}>Cloud data consent</button></div>
+   <label className="ag-context-permission"><input type="checkbox" checked={settings.config.allowActiveFile} disabled={chat.busy||saving||authBusy} onChange={e=>setActiveFileAccess(e.target.checked)}/>Allow reading the active file into model context. Other file reads and all writes ask first.</label>
    {settingsError&&<p role="alert">{settingsError}</p>}
-   {configuration&&<form className="ag-config" aria-label="Agent configuration" onSubmit={e=>{e.preventDefault();void saveConfiguration();}}>
-    <label>Provider<select value={cfg.provider} disabled={authBusy||saving} onChange={e=>setCfg({...cfg,provider:e.target.value as AgentConfiguration['provider']})}><option value="ollama">Ollama (local verification required)</option><option value="openrouter">OpenRouter (cloud)</option><option value="openai">OpenAI API (cloud)</option><option value="claude">Anthropic Claude API (desktop)</option></select></label>
-    <label>Model<input required value={cfg.model} onChange={e=>setCfg({...cfg,model:e.target.value})} placeholder="Installed model or provider/model" list="agent-model-catalog"/></label>
-    <datalist id="agent-model-catalog">{models.map(m=><option key={m.id} value={m.id}>{m.name}</option>)}</datalist>
-    <button type="button" disabled={modelsBusy||authBusy} onClick={()=>void refreshModels()}>{modelsBusy?'Loading models...':'Refresh models'}</button>{modelsBusy&&<button type="button" onClick={()=>modelRequest.current?.abort()}>Cancel model refresh</button>}{modelsError&&<p role="alert">{modelsError}</p>}
-    <p>Refresh is a metadata request, not inference. Cloud consent is required for cloud catalogs. A listed model is not a promise of tool support or available credits.</p>
-    <ProviderAuthentication provider={cfg.provider} disabled={saving} onBusyChange={setAuthBusy} onCredentialChange={()=>{void getAgentCore().then(c=>c.clear?.());dispatch({type:'reset'});}}/>
-    <fieldset><legend>Custom prompts</legend><p>Enabled prompts are included with every AI request. Do not put secrets here. File access and cloud consent still require approval.</p>
-     {(cfg.customPrompts??[]).map((p,i)=><div key={p.id}>
-      <label>Prompt name {i+1}<input maxLength={120} value={p.name} onChange={e=>setCfg({...cfg,customPrompts:cfg.customPrompts!.map(x=>x.id===p.id?{...x,name:e.target.value}:x)})}/></label>
-      <label>Prompt text {i+1}<textarea maxLength={8000} value={p.text} onChange={e=>setCfg({...cfg,customPrompts:cfg.customPrompts!.map(x=>x.id===p.id?{...x,text:e.target.value}:x)})}/></label>
-      <label><input type="checkbox" checked={p.enabled} onChange={e=>setCfg({...cfg,customPrompts:cfg.customPrompts!.map(x=>x.id===p.id?{...x,enabled:e.target.checked}:x)})}/>Enable prompt {i+1}</label>
-      <button type="button" onClick={()=>setCfg({...cfg,customPrompts:cfg.customPrompts!.filter(x=>x.id!==p.id)})}>Delete prompt {i+1}</button>
-     </div>)}
-     <button type="button" disabled={(cfg.customPrompts?.length??0)>=20} onClick={()=>setCfg({...cfg,customPrompts:[...(cfg.customPrompts??[]),{id:crypto.randomUUID(),name:'',text:'',enabled:true}]})}>Add custom prompt</button>
-    </fieldset>
-    <label><input type="checkbox" checked={cfg.allowActiveFile} onChange={e=>setCfg({...cfg,allowActiveFile:e.target.checked})}/>Allow reading the active file into model context. Other file reads and all writes ask first.</label>
-    <button type="submit" disabled={saving||authBusy}>{saving?'Saving...':'Use configuration'}</button><button type="button" onClick={()=>{setConfiguration(false);patchState({settingsOpen:true,settingsSection:'AI privacy'});}}>AI privacy settings</button>
-   </form>}
    {empty?<div className="ag-empty"><div className="ag-orb" aria-hidden="true"/><h3>{t('agent.empty.title')}</h3><span>{t('agent.empty.body')}</span><div className="ag-chips">{CHIPS.map(c=><button type="button" key={c} className="ag-chip" onClick={()=>{setDraft(c);input.current?.focus();}}>{c}</button>)}</div><p className="ag-tip">Choose a model, then describe your task. File access and proposed changes need your review.</p></div>:chat.items.map((item,index)=><Row key={item.id} item={item} busy={chat.busy} onRetry={()=>{const last=chat.items.slice(0,index).reverse().find(i=>i.kind==='user');if(last&&last.kind==='user')send(last.text);}} onAccept={(p,d)=>void resolve(p,'accepted',d)} onReject={p=>void resolve(p,'rejected')}/>)}
   </div>
   <div className="ag-bar" aria-hidden="true"><div className="ag-pb"><i/><i/><i/><i/></div><div className="ag-grad"/></div>
   <div className="ag-inp"><form className="ag-field" onSubmit={e=>{e.preventDefault();if(chat.busy)stop();else send(draft);}}>
    <input ref={input} value={draft} disabled={chat.busy||!settingsReady||saving||authBusy} onChange={e=>setDraft(e.target.value)} placeholder={chat.busy?t('agent.input.busy'):t('agent.input.placeholder')} aria-label={t('agent.input.label')} autoComplete="off"/>
-   {chat.busy?<button type="submit" className="ag-send ag-stop" title={t('agent.stop')} aria-label={t('agent.stop')}><Square size={14} fill="currentColor"/></button>:<button type="submit" className="ag-send" title={t('agent.send')} aria-label={t('agent.send')} disabled={!draft.trim()||!settingsReady||saving||authBusy||configuration}><Send size={17}/></button>}
+   {chat.busy?<button type="submit" className="ag-send ag-stop" title={t('agent.stop')} aria-label={t('agent.stop')}><Square size={14} fill="currentColor"/></button>:<button type="submit" className="ag-send" title={t('agent.send')} aria-label={t('agent.send')} disabled={!draft.trim()||!settingsReady||saving||authBusy}><Send size={17}/></button>}
   </form></div>
-  {consent&&<div className="ag-consent-backdrop"><div role="dialog" aria-modal="true" aria-label="Cloud data consent" className="ag-consent"><button type="button" autoFocus onClick={()=>setConsent(false)}>Close consent</button><AgentConsentNotice onGranted={()=>setConsent(false)}/></div></div>}
   <span className="sr-only" role="status" aria-live="polite">{announce}</span>
  </aside>;
 }

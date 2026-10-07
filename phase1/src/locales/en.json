@@ -1504,6 +1504,7 @@
   "vectoredit.shape.line": "Line",
   "vectoredit.shape.path": "Path",
   "vectoredit.shape.group": "Group",
+
   "set.section.ai": "AI",
   "agent.settings.providers": "Providers & models",
   "agent.settings.instructions": "Instructions",
@@ -1535,5 +1536,6 @@
   "accountAuth.state.unavailable": "Status unavailable",
   "accountAuth.state.checking": "Checking status",
   "accountAuth.state.desktop": "Desktop sign-in required",
-  "accountAuth.state.apiKey": "Using API key"
+  "accountAuth.state.apiKey": "Using API key",
+  "agent.settings.save": "Save AI settings"
 }

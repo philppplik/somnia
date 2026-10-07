@@ -55,10 +55,6 @@ export function GlassSettings({look,highContrast,onChange}:{look:Look;highContra
    {highContrast?<p className="glass-warn" role="note"><Info size={14} aria-hidden="true"/> {t('settings.glass.disabledContrast')}</p>:null}
    {solid&&!highContrast?<p className="glass-note" role="note"><Info size={12} aria-hidden="true"/> {t('settings.glass.disabledSolid')}</p>:null}
   </div>
-  <div data-testid="glass-preview" role="img" aria-label={t('settings.glass.preview')} style={{margin:'8px 0',borderRadius:12,overflow:'hidden',height:76,position:'relative',background:'linear-gradient(120deg,#002AFF,#EE00FF 55%,#FF001E)'}}>
-   <pre data-testid="glass-preview-code" style={{position:'absolute',inset:'14px 18px',margin:0,padding:'8px 12px',borderRadius:8,font:'12px/1.5 var(--mono)',color:'var(--text-primary)',overflow:'hidden',
-     background:`color-mix(in srgb,var(--bg-base) ${g.reduced?100:opacity}%,transparent)`,backdropFilter:`blur(${g.reduced?0:blur}px)`,WebkitBackdropFilter:`blur(${g.reduced?0:blur}px)`}}>{'<h1 class="title">Somnia</h1>\n<p>glass {opacity}% / {blur}px</p>'.replace('{opacity}',String(opacity)).replace('{blur}',String(blur))}</pre>
-  </div>
   <p id="glass-os-note" className="glass-note">{t('settings.glass.osNote')}</p>
   <button type="button" disabled={off} onClick={()=>{setDraft({});onChange({...look,glassOpacity:DEFAULT_LOOK.glassOpacity,glassBlur:DEFAULT_LOOK.glassBlur,glassFrame:DEFAULT_LOOK.glassFrame,glassPanels:DEFAULT_LOOK.glassPanels,glassCode:DEFAULT_LOOK.glassCode,glassKeepLow:false});}}>{t('settings.glass.reset')}</button>
  </fieldset>;

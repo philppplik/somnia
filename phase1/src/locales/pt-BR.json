@@ -1504,6 +1504,7 @@
   "vectoredit.shape.line": "Linha",
   "vectoredit.shape.path": "Caminho",
   "vectoredit.shape.group": "Grupo",
+
   "set.section.ai": "IA",
   "agent.settings.providers": "Provedores e modelos",
   "agent.settings.instructions": "Instruções",
@@ -1535,5 +1536,6 @@
   "accountAuth.state.unavailable": "Status indisponível",
   "accountAuth.state.checking": "Verificando status",
   "accountAuth.state.desktop": "Login no desktop necessário",
-  "accountAuth.state.apiKey": "Usando chave API"
+  "accountAuth.state.apiKey": "Usando chave API",
+  "agent.settings.save": "Salvar configurações de IA"
 }

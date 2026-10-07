@@ -1504,6 +1504,7 @@
   "vectoredit.shape.line": "Linie",
   "vectoredit.shape.path": "Pfad",
   "vectoredit.shape.group": "Gruppe",
+
   "set.section.ai": "KI",
   "agent.settings.providers": "Anbieter & Modelle",
   "agent.settings.instructions": "Anweisungen",
@@ -1535,5 +1536,6 @@
   "accountAuth.state.unavailable": "Status nicht verfügbar",
   "accountAuth.state.checking": "Status wird geprüft",
   "accountAuth.state.desktop": "Desktop-Anmeldung erforderlich",
-  "accountAuth.state.apiKey": "API-Schlüssel aktiv"
+  "accountAuth.state.apiKey": "API-Schlüssel aktiv",
+  "agent.settings.save": "KI-Einstellungen speichern"
 }
