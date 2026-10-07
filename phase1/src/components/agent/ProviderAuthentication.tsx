@@ -1,9 +1,10 @@
+import {ProviderAccountConnection} from './ProviderAccountConnection';
 import {useEffect,useRef,useState} from 'react';
 import {isTauri} from '@tauri-apps/api/core';
 import {deleteProviderKey,hasProviderKey,loadProviderKey,saveProviderKey,testProviderAuthentication,ProviderAuthError,type AuthProvider} from '../../lib/agent/providerAuth';
 /** Editing does not overwrite a working key. Only a successful test + keystore write rotates it. */
 export function ProviderAuthentication({provider,disabled=false,onBusyChange,onCredentialChange}:{provider:AuthProvider;disabled?:boolean;onBusyChange?:(busy:boolean)=>void;onCredentialChange?:()=>void}){
- const [key,setKey]=useState(''),[stored,setStored]=useState(false),[busy,setBusy]=useState(false),[message,setMessage]=useState(''),[error,setError]=useState(false);
+ const [key,setKey]=useState(''),[stored,setStored]=useState(false),[busy,setBusy]=useState(false),[message,setMessage]=useState(''),[error,setError]=useState(false),[accountBusy,setAccountBusy]=useState(false);
  const controller=useRef<AbortController|null>(null),epoch=useRef(0);
  const callbacks=useRef({onBusyChange,onCredentialChange});callbacks.current={onBusyChange,onCredentialChange};
  useEffect(()=>{
@@ -12,7 +13,7 @@ export function ProviderAuthentication({provider,disabled=false,onBusyChange,onC
   return()=>{epoch.current++;controller.current?.abort();callbacks.current.onBusyChange?.(false);};
  },[provider]);
  const act=async(operation:'test'|'delete')=>{
-  if(busy||disabled)return;const id=epoch.current,abort=new AbortController();controller.current=abort;setBusy(true);callbacks.current.onBusyChange?.(true);setError(false);setMessage('');
+  if(busy||accountBusy||disabled)return;const id=epoch.current,abort=new AbortController();controller.current=abort;setBusy(true);callbacks.current.onBusyChange?.(true);setError(false);setMessage('');
   try{
    if(operation==='delete'){
     await deleteProviderKey(provider);if(id!==epoch.current)return;
@@ -30,10 +31,11 @@ export function ProviderAuthentication({provider,disabled=false,onBusyChange,onC
   finally{if(id===epoch.current){setBusy(false);callbacks.current.onBusyChange?.(false);controller.current=null;}}
  };
  return <fieldset className="ag-provider-auth"><legend>Provider connection</legend>
-  {provider!=='ollama'&&<><label>API key<input type="password" autoComplete="off" spellCheck={false} maxLength={8192} value={key} disabled={busy||disabled} placeholder={stored?'Enter a replacement key':'Enter your provider API key'} onChange={e=>{setKey(e.target.value);setMessage('');setError(false);}}/></label>
+  {provider!=='ollama'&&<><label>API key<input type="password" autoComplete="off" spellCheck={false} maxLength={8192} value={key} disabled={busy||accountBusy||disabled} placeholder={stored?'Enter a replacement key':'Enter your provider API key'} onChange={e=>{setKey(e.target.value);setMessage('');setError(false);}}/></label>
   <p>{isTauri()?'Keys are stored in your OS credential store.':'Browser preview keeps keys only for this session.'} Testing sends only the key to the selected provider. No prompt or project files are sent, and no generation is requested.</p></>}
-  <div className="ag-auth-actions"><button type="button" disabled={busy||disabled} onClick={()=>void act('test')}>{provider==='ollama'?'Test local connection':key.trim()?(stored?'Test and rotate key':'Test and save key'):'Test saved key'}</button>
-  {provider!=='ollama'&&<button type="button" disabled={busy||disabled} onClick={()=>void act('delete')}>Delete key</button>}
+  <ProviderAccountConnection provider={provider} disabled={busy||disabled} onBusyChange={value=>{setAccountBusy(value);callbacks.current.onBusyChange?.(value);}} onCredentialChange={onCredentialChange}/>
+  <div className="ag-auth-actions"><button type="button" disabled={busy||accountBusy||disabled} onClick={()=>void act('test')}>{provider==='ollama'?'Test local connection':key.trim()?(stored?'Test and rotate key':'Test and save key'):'Test saved key'}</button>
+  {provider!=='ollama'&&<button type="button" disabled={busy||accountBusy||disabled} onClick={()=>void act('delete')}>Delete key</button>}
   {busy&&<button type="button" onClick={()=>controller.current?.abort()}>Cancel test</button>}</div>
   {(message||busy)&&<p role={error?'alert':'status'} aria-live="polite">{busy?'Checking connection...':message}</p>}
  </fieldset>;

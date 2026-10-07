@@ -1,42 +1,40 @@
 import {invoke,isTauri} from '@tauri-apps/api/core';
-/** Renderer side of the OpenAI account (OAuth) contract. Tokens never reach this code: only status. */
+import type {AuthProvider} from './providerAuth';
 export type AccountState='disconnected'|'pending'|'connected'|'expired';
 export type AccountMethod='account'|'api-key';
-export interface AccountStatus{provider:'openai';state:AccountState;method:AccountMethod;expiresAt?:number}
-export type AccountFailure='unavailable'|'unsupported'|'native-only';
-const MESSAGES:Record<AccountFailure,string>={
- unavailable:'Could not update the OpenAI account. Check the OS credential store and try again.',
- unsupported:'Account sign-in is only available for OpenAI.',
- 'native-only':'OpenAI account sign-in needs the desktop app.'
-};
-/** Generic message only: raw native errors can name credential-store internals. */
-export class AccountAuthError extends Error{constructor(readonly code:AccountFailure){super(MESSAGES[code]);this.name='AccountAuthError';}}
-type Invoke=<T>(command:string,args:Record<string,unknown>)=>Promise<T>;
-export interface AccountDeps{invoke?:Invoke;isTauri?:()=>boolean}
-const STATES:readonly string[]=['disconnected','pending','connected','expired'];
-export function parseAccountStatus(value:unknown):AccountStatus{
- const v=value as Record<string,unknown>|null;
- if(!v||typeof v!=='object'||v.provider!=='openai'||!STATES.includes(v.state as string)||(v.method!=='account'&&v.method!=='api-key'))throw new AccountAuthError('unavailable');
- const out:AccountStatus={provider:'openai',state:v.state as AccountState,method:v.method};
- if(typeof v.expiresAt==='number'&&Number.isFinite(v.expiresAt))out.expiresAt=v.expiresAt;
- return out; // unknown fields (tokens, e-mail) are dropped by construction
+/** Public metadata only. OAuth secrets stay in the native credential broker. */
+export interface AccountStatus {provider:'openai';state:AccountState;method:AccountMethod;expiresAt?:number}
+export type AccountCommand='agent_account_status'|'agent_account_start'|'agent_account_cancel'|'agent_account_disconnect'|'agent_account_set_method';
+export type AccountTransport=(command:AccountCommand,args:Record<string,string>)=>Promise<unknown>;
+export class AccountAuthError extends Error {
+ constructor(readonly code:'desktop'|'unsupported'|'unavailable'|'protocol'){super(code);this.name='AccountAuthError';}
 }
-async function call(command:string,provider:string,extra:Record<string,unknown>,deps:AccountDeps):Promise<AccountStatus>{
- if(provider!=='openai')throw new AccountAuthError('unsupported');
- if(!(deps.isTauri??isTauri)())throw new AccountAuthError('native-only');
- try{return parseAccountStatus(await (deps.invoke??(invoke as Invoke))(command,{provider,...extra}));}
- catch{throw new AccountAuthError('unavailable');}
+export function decodeAccountStatus(value:unknown):AccountStatus {
+ if(!value||typeof value!=='object')throw new AccountAuthError('protocol');
+ const s=value as Record<string,unknown>;
+ if(s.provider!=='openai'||!['disconnected','pending','connected','expired'].includes(String(s.state))||!['account','api-key'].includes(String(s.method))||(s.expiresAt!==undefined&&(typeof s.expiresAt!=='number'||!Number.isFinite(s.expiresAt)||s.expiresAt<0)))throw new AccountAuthError('protocol');
+ // Explicit projection: never pass arbitrary native fields to React or logs.
+ return {provider:'openai',state:s.state as AccountState,method:s.method as AccountMethod,...(s.expiresAt===undefined?{}:{expiresAt:s.expiresAt as number})};
 }
-export const accountStatus=(provider:string,deps:AccountDeps={})=>call('agent_account_status',provider,{},deps);
-export const accountStart=(provider:string,deps:AccountDeps={})=>call('agent_account_start',provider,{},deps);
-export const accountCancel=(provider:string,deps:AccountDeps={})=>call('agent_account_cancel',provider,{},deps);
-/** Deletes OAuth tokens only; an API key stays stored. */
-export const accountDisconnect=(provider:string,deps:AccountDeps={})=>call('agent_account_disconnect',provider,{},deps);
-/** Explicit user choice; the backend never switches method on its own. */
-export const accountSetMethod=(provider:string,method:AccountMethod,deps:AccountDeps={})=>{
- if(method!=='account'&&method!=='api-key')return Promise.reject(new AccountAuthError('unavailable'));
- return call('agent_account_set_method',provider,{method},deps);
-};
-/** UI polls every 2s, only while a login is pending or the account is connected (expiry/refresh changes). */
-export const ACCOUNT_POLL_MS=2000;
-export const shouldPollAccount=(s:AccountStatus)=>s.state==='pending'||s.state==='connected';
+export function effectiveAccountStatus(s:AccountStatus,now=Date.now()):AccountStatus {
+ return s.state==='connected'&&s.expiresAt!==undefined&&s.expiresAt<=now?{...s,state:'expired'}:s;
+}
+export function createAccountAuth(transport:AccountTransport,desktop:()=>boolean){
+ const call=async(command:AccountCommand,provider:AuthProvider,extra:Record<string,string>={}):Promise<AccountStatus>=>{
+  if(provider!=='openai')throw new AccountAuthError('unsupported');
+  if(!desktop())throw new AccountAuthError('desktop');
+  let value:unknown;try{value=await transport(command,{provider,...extra});}catch{throw new AccountAuthError('unavailable');}
+  return effectiveAccountStatus(decodeAccountStatus(value));
+ };
+ return {
+  status:(provider:AuthProvider)=>call('agent_account_status',provider),
+  start:(provider:AuthProvider)=>call('agent_account_start',provider),
+  cancel:(provider:AuthProvider)=>call('agent_account_cancel',provider),
+  disconnect:(provider:AuthProvider)=>call('agent_account_disconnect',provider),
+  setMethod:(provider:AuthProvider,method:AccountMethod)=>call('agent_account_set_method',provider,{method}),
+ };
+}
+export const accountAuth=createAccountAuth((command,args)=>invoke(command,args),isTauri);
+// Re-query other mounted surfaces after a credential change. No metadata in event payload.
+export const ACCOUNT_CHANGED='somnia:agent-account-changed';
+export function notifyAccountChanged(){if(typeof window!=='undefined')window.dispatchEvent(new Event(ACCOUNT_CHANGED));}

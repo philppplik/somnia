@@ -1,5 +1,6 @@
 import {ProviderAuthentication} from './ProviderAuthentication';
 import {listProviderModels} from '../../lib/agent/modelCatalog';
+import {AgentAccountStatus} from './AgentAccountStatus';
 import {reportError} from '../../lib/log';
 import {useCallback,useEffect,useReducer,useRef,useState} from 'react';
 import {LoaderCircle,PanelRightClose,Send,Settings,Square,SquarePen} from '../../lib/icons';
@@ -64,6 +65,7 @@ export function AgentPanel(){
    <div className="ag-hd-right"><button type="button" className="ag-ib" title="Agent configuration" aria-label="Agent configuration" disabled={chat.busy||!settingsReady||saving||authBusy} onClick={()=>setConfiguration(v=>!v)}><Settings size={17}/></button><button type="button" className="ag-ib" title={t('agent.collapse')} aria-label={t('agent.collapse')} onClick={()=>patchState({agentOpen:false})}><PanelRightClose size={17}/></button></div>
   </header>
   <div className="ag-chat" ref={scroller} onScroll={e=>{const el=e.currentTarget;pinned.current=el.scrollHeight-el.scrollTop-el.clientHeight<48;}} role="log" aria-live="off" aria-label={t('agent.title')}>
+   <AgentAccountStatus provider={settings.config.provider}/>
    <div className="ag-safety"><AgentErrorNotice/><button type="button" onClick={()=>setConsent(true)}>Cloud data consent</button></div>
    {settingsError&&<p role="alert">{settingsError}</p>}
    {configuration&&<form className="ag-config" aria-label="Agent configuration" onSubmit={e=>{e.preventDefault();void saveConfiguration();}}>
