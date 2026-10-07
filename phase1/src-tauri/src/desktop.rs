@@ -61,6 +61,105 @@ fn agent_key_for(provider: &str) -> std::result::Result<keyring::Entry, String> 
     keyring::Entry::new("de.philipp-paulik.somnia.agent", provider)
         .map_err(|_| "OS credential store is unavailable".into())
 }
+
+// ---- OpenAI account (OAuth) token storage: see docs/agent/oauth-token-store.md ----
+// Tokens live only in the OS credential store and in this process; the renderer sees Status only.
+const AGENT_KEY_SERVICE: &str = "de.philipp-paulik.somnia.agent";
+struct KeyringBackend;
+impl crate::oauth_store::SecretBackend for KeyringBackend {
+    fn get(&self, slot: &str) -> std::result::Result<Option<String>, crate::oauth_store::StoreError> {
+        match keyring::Entry::new(AGENT_KEY_SERVICE, slot).map_err(|_| crate::oauth_store::StoreError::Backend)?.get_password() {
+            Ok(v) => Ok(Some(v)), Err(keyring::Error::NoEntry) => Ok(None), Err(_) => Err(crate::oauth_store::StoreError::Backend),
+        }
+    }
+    fn set(&self, slot: &str, value: &str) -> std::result::Result<(), crate::oauth_store::StoreError> {
+        keyring::Entry::new(AGENT_KEY_SERVICE, slot).map_err(|_| crate::oauth_store::StoreError::Backend)?.set_password(value).map_err(|_| crate::oauth_store::StoreError::Backend)
+    }
+    fn delete(&self, slot: &str) -> std::result::Result<(), crate::oauth_store::StoreError> {
+        match keyring::Entry::new(AGENT_KEY_SERVICE, slot).map_err(|_| crate::oauth_store::StoreError::Backend)?.delete_credential() {
+            Ok(()) | Err(keyring::Error::NoEntry) => Ok(()), Err(_) => Err(crate::oauth_store::StoreError::Backend),
+        }
+    }
+}
+fn oauth_store() -> crate::oauth_store::Store<KeyringBackend> { crate::oauth_store::Store::new(KeyringBackend) }
+fn now_ms() -> u64 { std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_millis() as u64).unwrap_or(0) }
+/// Set by the login flow (agent_account_start/cancel) while a browser login is in flight.
+pub(crate) static OAUTH_PENDING: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+/// The login flow calls `oauth_saved()` after `Store::save_tokens` so the scheduler re-plans.
+pub(crate) static OAUTH_WAKE: tokio::sync::Notify = tokio::sync::Notify::const_new();
+pub(crate) fn oauth_saved() { OAUTH_PENDING.store(false, std::sync::atomic::Ordering::SeqCst); OAUTH_WAKE.notify_one(); }
+// Serializes refreshes: refresh tokens can rotate, so two concurrent refreshes would invalidate each other.
+static OAUTH_REFRESH_LOCK: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
+const ACCOUNT_ERROR: &str = "OpenAI account is not available. Reconnect it in Settings.";
+async fn blocking_store<T: Send + 'static>(f: impl FnOnce(&crate::oauth_store::Store<KeyringBackend>) -> std::result::Result<T, crate::oauth_store::StoreError> + Send + 'static) -> std::result::Result<T, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        let _guard = AGENT_SETTINGS_LOCK.lock().map_err(|_| "Credential store is busy".to_string())?;
+        f(&oauth_store()).map_err(|e| e.to_string())
+    }).await.map_err(|_| "Could not access credential store".to_string())?
+}
+/// Returns a valid access token, refreshing first when it is expired or inside the skew window.
+async fn oauth_access_token() -> std::result::Result<String, String> {
+    use crate::oauth_store as o;
+    let t = blocking_store(|s| s.load_tokens()).await?.ok_or(ACCOUNT_ERROR)?;
+    if t.needs_reauth { return Err(ACCOUNT_ERROR.into()); }
+    if !o::needs_refresh(&t, now_ms()) { return Ok(t.access_token); }
+    let _refresh = OAUTH_REFRESH_LOCK.lock().await;
+    // Re-read: another task may have refreshed while we waited for the lock.
+    let t = blocking_store(|s| s.load_tokens()).await?.ok_or(ACCOUNT_ERROR)?;
+    if t.needs_reauth { return Err(ACCOUNT_ERROR.into()); }
+    if !o::needs_refresh(&t, now_ms()) { return Ok(t.access_token); }
+    let client = reqwest::Client::builder().no_proxy().redirect(reqwest::redirect::Policy::none()).connect_timeout(Duration::from_secs(15)).timeout(Duration::from_secs(30)).build().map_err(|_| "Account refresh unavailable")?;
+    let response = client.post(o::OAUTH_TOKEN_URL).header("content-type", "application/json").body(o::refresh_request_body(&t.refresh_token)).send().await.map_err(|_| "Account refresh failed. Check your connection.")?;
+    let status = response.status().as_u16();
+    let text = response.text().await.map_err(|_| "Account refresh failed")?;
+    if !(200..300).contains(&status) {
+        if o::classify_refresh_failure(status, &text) == o::RefreshFailure::Permanent { let _ = blocking_store(|s| s.mark_reauth()).await; return Err(ACCOUNT_ERROR.into()); }
+        return Err("Account refresh failed. Try again later.".into());
+    }
+    let fresh = o::apply_refresh(&t, &text, now_ms()).map_err(|_| "Account refresh returned an unexpected response")?;
+    let token = fresh.access_token.clone();
+    blocking_store(move |s| s.update_tokens(&fresh)).await?;
+    Ok(token)
+}
+/// Background refresh scheduling: sleeps until the next token is due, or until a login/logout wakes it.
+pub(crate) async fn oauth_refresh_loop() {
+    use crate::oauth_store as o;
+    loop {
+        let wait = match blocking_store(|s| s.load_tokens()).await {
+            Ok(Some(t)) if !t.needs_reauth => {
+                let delay = o::refresh_delay_ms(&t, now_ms());
+                if delay == 0 { if oauth_access_token().await.is_err() { 5 * 60_000 } else { continue } } else { delay }
+            }
+            _ => 10 * 60_000,
+        };
+        tokio::select! { _ = tokio::time::sleep(Duration::from_millis(wait)) => {}, _ = OAUTH_WAKE.notified() => {} }
+    }
+}
+fn account_status_now() -> std::result::Result<crate::oauth_store::Status, String> {
+    oauth_store().status(now_ms(), OAUTH_PENDING.load(std::sync::atomic::Ordering::SeqCst)).map_err(|e| e.to_string())
+}
+#[tauri::command]
+async fn agent_account_status(window: WebviewWindow, provider: String) -> std::result::Result<crate::oauth_store::Status, String> {
+    gate(&window).map_err(|_| "Only the trusted editor may inspect credentials")?;
+    if provider != "openai" { return Err("Unsupported account provider".into()); }
+    tauri::async_runtime::spawn_blocking(|| { let _g = AGENT_SETTINGS_LOCK.lock().map_err(|_| "Credential store is busy".to_string())?; account_status_now() }).await.map_err(|_| "Could not access credential store")?
+}
+#[tauri::command]
+async fn agent_account_disconnect(window: WebviewWindow, provider: String) -> std::result::Result<crate::oauth_store::Status, String> {
+    gate(&window).map_err(|_| "Only the trusted editor may delete credentials")?;
+    if provider != "openai" { return Err("Unsupported account provider".into()); }
+    let _refresh = OAUTH_REFRESH_LOCK.lock().await; // never race a refresh that would re-save tokens
+    OAUTH_PENDING.store(false, std::sync::atomic::Ordering::SeqCst);
+    blocking_store(|s| s.disconnect()).await?; OAUTH_WAKE.notify_one();
+    tauri::async_runtime::spawn_blocking(|| { let _g = AGENT_SETTINGS_LOCK.lock().map_err(|_| "Credential store is busy".to_string())?; account_status_now() }).await.map_err(|_| "Could not access credential store")?
+}
+#[tauri::command]
+async fn agent_account_set_method(window: WebviewWindow, provider: String, method: crate::oauth_store::Method) -> std::result::Result<crate::oauth_store::Status, String> {
+    gate(&window).map_err(|_| "Only the trusted editor may change credentials")?;
+    if provider != "openai" { return Err("Unsupported account provider".into()); }
+    blocking_store(move |s| s.set_method(method)).await.map_err(|_| "Connect your OpenAI account first".to_string())?;
+    tauri::async_runtime::spawn_blocking(|| { let _g = AGENT_SETTINGS_LOCK.lock().map_err(|_| "Credential store is busy".to_string())?; account_status_now() }).await.map_err(|_| "Could not access credential store")?
+}
 // Credentials are independent of preferences: saving an Ollama configuration must
 // never delete an OpenRouter key. No raw backend/credential error reaches the UI.
 struct NativeResponse { receiver: tokio::sync::Mutex<tokio::sync::mpsc::Receiver<std::result::Result<Vec<u8>, String>>>, task: tokio::task::AbortHandle, expires: std::time::Instant }
@@ -81,7 +180,8 @@ async fn provider_http_start(window: WebviewWindow, state: State<'_, ProviderNet
     let key = if let Some(key)=candidate_key {
         if key.is_empty() || key.len()>8192 || key.chars().any(|c|c.is_control()||c.is_whitespace()) { return Err("Invalid API key".into()); } key
     } else {
-        let p=provider.clone();tauri::async_runtime::spawn_blocking(move||agent_key_for(&p)?.get_password().map_err(|_| "OS credential store is locked or key is missing".to_string())).await.map_err(|_| "Credential lookup failed")??
+        if provider=="openai" && blocking_store(|s|s.method()).await.is_ok_and(|m|m==crate::oauth_store::Method::Account) { oauth_access_token().await? } else {
+        let p=provider.clone();tauri::async_runtime::spawn_blocking(move||agent_key_for(&p)?.get_password().map_err(|_| "OS credential store is locked or key is missing".to_string())).await.map_err(|_| "Credential lookup failed")?? }
     };
     let client=reqwest::Client::builder().no_proxy().redirect(reqwest::redirect::Policy::none()).connect_timeout(Duration::from_secs(15)).timeout(Duration::from_secs(120)).build().map_err(|_| "Provider transport unavailable")?;
     let mut request=client.request(if method=="GET" {reqwest::Method::GET} else {reqwest::Method::POST},&url);
@@ -886,6 +986,7 @@ pub fn run() {
         .manage(ImageGrants::default())
         .manage(crate::lan_host::LanHost::default())
         .setup(move |app| {
+            tauri::async_runtime::spawn(oauth_refresh_loop());
             if let Ok(dir) = app.path().app_data_dir() {
                 crate::applog::init(dir.join("logs"));
             }
@@ -953,6 +1054,9 @@ pub fn run() {
             agent_key_status,
             agent_key_save,
             agent_key_delete,
+            agent_account_status,
+            agent_account_disconnect,
+            agent_account_set_method,
             agent_settings_load,
             agent_settings_save,
             set_window_background,
