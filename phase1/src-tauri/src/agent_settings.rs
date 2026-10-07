@@ -14,7 +14,7 @@ pub struct Preferences {
 }
 impl Preferences {
     pub fn validate(&self) -> Result<(), String> {
-        if !matches!(self.provider.as_str(), "ollama" | "openrouter") || self.model.len() > 512 || self.model.contains(['\r', '\n', '\0']) {
+        if !matches!(self.provider.as_str(), "ollama" | "openrouter" | "openai" | "claude") || self.model.len() > 512 || self.model.contains(['\r', '\n', '\0']) {
             return Err("Invalid agent preferences".into());
         }
         if self.custom_prompts.len() > 20 || self.custom_prompts.iter().map(|p| p.text.len()).sum::<usize>() > 16000 {

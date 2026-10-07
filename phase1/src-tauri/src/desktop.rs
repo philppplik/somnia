@@ -56,9 +56,56 @@ static AGENT_SETTINGS_LOCK: Mutex<()> = Mutex::new(());
 #[derive(serde::Deserialize, Serialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 struct AgentSettingsReply { provider: String, model: String, api_key: String, #[serde(default)] custom_prompts: Vec<crate::agent_settings::CustomPrompt> }
-fn agent_key() -> std::result::Result<keyring::Entry, String> {
-    keyring::Entry::new("de.philipp-paulik.somnia.agent", "openrouter")
+fn agent_key_for(provider: &str) -> std::result::Result<keyring::Entry, String> {
+    if !matches!(provider, "openrouter" | "openai" | "claude") { return Err("Unsupported credential provider".into()); }
+    keyring::Entry::new("de.philipp-paulik.somnia.agent", provider)
         .map_err(|_| "OS credential store is unavailable".into())
+}
+// Credentials are independent of preferences: saving an Ollama configuration must
+// never delete an OpenRouter key. No raw backend/credential error reaches the UI.
+#[tauri::command]
+async fn agent_key_load(window: WebviewWindow, provider: String) -> std::result::Result<String, String> {
+    gate(&window).map_err(|_| "Only the trusted editor may access credentials")?;
+    tauri::async_runtime::spawn_blocking(move || {
+        let _guard = AGENT_SETTINGS_LOCK.lock().map_err(|_| "Credential store is busy")?;
+        match agent_key_for(&provider)?.get_password() {
+            Ok(key) => Ok(key), Err(keyring::Error::NoEntry) => Ok(String::new()),
+            Err(_) => Err("OS credential store is locked or unavailable".into()),
+        }
+    }).await.map_err(|_| "Could not access credential store")?
+}
+#[tauri::command]
+async fn agent_key_status(window: WebviewWindow, provider: String) -> std::result::Result<bool, String> {
+    gate(&window).map_err(|_| "Only the trusted editor may inspect credentials")?;
+    tauri::async_runtime::spawn_blocking(move || {
+        let _guard = AGENT_SETTINGS_LOCK.lock().map_err(|_| "Credential store is busy")?;
+        match agent_key_for(&provider)?.get_password() {
+            Ok(_) => Ok(true), Err(keyring::Error::NoEntry) => Ok(false),
+            Err(_) => Err("OS credential store is locked or unavailable".into()),
+        }
+    }).await.map_err(|_| "Could not access credential store")?
+}
+#[tauri::command]
+async fn agent_key_save(window: WebviewWindow, provider: String, api_key: String) -> std::result::Result<(), String> {
+    gate(&window).map_err(|_| "Only the trusted editor may save credentials")?;
+    if api_key.is_empty() || api_key.len() > 8192 || api_key.chars().any(|c| c.is_control() || c.is_whitespace()) {
+        return Err("Invalid API key".into());
+    }
+    tauri::async_runtime::spawn_blocking(move || {
+        let _guard = AGENT_SETTINGS_LOCK.lock().map_err(|_| "Credential store is busy")?;
+        agent_key_for(&provider)?.set_password(&api_key).map_err(|_| "OS credential store is locked or unavailable".into())
+    }).await.map_err(|_| "Could not save credential")?
+}
+#[tauri::command]
+async fn agent_key_delete(window: WebviewWindow, provider: String) -> std::result::Result<(), String> {
+    gate(&window).map_err(|_| "Only the trusted editor may delete credentials")?;
+    tauri::async_runtime::spawn_blocking(move || {
+        let _guard = AGENT_SETTINGS_LOCK.lock().map_err(|_| "Credential store is busy")?;
+        match agent_key_for(&provider)?.delete_credential() {
+            Ok(()) | Err(keyring::Error::NoEntry) => Ok(()),
+            Err(_) => Err("OS credential store is locked or unavailable".into()),
+        }
+    }).await.map_err(|_| "Could not delete credential")?
 }
 #[tauri::command]
 async fn agent_settings_load(window: WebviewWindow) -> std::result::Result<AgentSettingsReply, String> {
@@ -67,11 +114,7 @@ async fn agent_settings_load(window: WebviewWindow) -> std::result::Result<Agent
     tauri::async_runtime::spawn_blocking(move || {
         let _guard = AGENT_SETTINGS_LOCK.lock().map_err(|_| "Agent settings are busy")?;
         let p = crate::agent_settings::load(&dir.join("agent-settings.json"))?;
-        let api_key = match agent_key()?.get_password() {
-            Ok(value) => value,
-            Err(keyring::Error::NoEntry) => String::new(),
-            Err(_) => return Err("Could not unlock OS credential store. Unlock it and reopen the Agent panel.".into()),
-        };
+        let api_key = String::new(); // Keys are loaded independently through agent_key_load.
         Ok(AgentSettingsReply { provider: p.provider, model: p.model, api_key, custom_prompts: p.custom_prompts })
     }).await.map_err(|_| "Could not load agent settings")?
 }
@@ -84,12 +127,6 @@ async fn agent_settings_save(window: WebviewWindow, settings: AgentSettingsReply
         let p = crate::agent_settings::Preferences { provider: settings.provider, model: settings.model, custom_prompts: settings.custom_prompts };
         p.validate()?;
         if settings.api_key.len() > 8192 || settings.api_key.contains(['\r', '\n', '\0']) { return Err("Invalid API key".into()); }
-        let entry = agent_key()?;
-        if settings.api_key.is_empty() {
-            match entry.delete_credential() { Ok(()) | Err(keyring::Error::NoEntry) => (), Err(_) => return Err("Could not clear API key in OS credential store".into()) }
-        } else {
-            entry.set_password(&settings.api_key).map_err(|_| "Could not save API key in OS credential store. Nothing was written to a plaintext file.")?;
-        }
         crate::agent_settings::save(&dir.join("agent-settings.json"), &p)
     }).await.map_err(|_| "Could not save agent settings")?
 }
@@ -769,6 +806,10 @@ pub fn run() {
             }
         })
         .invoke_handler(tauri::generate_handler![
+            agent_key_load,
+            agent_key_status,
+            agent_key_save,
+            agent_key_delete,
             agent_settings_load,
             agent_settings_save,
             set_window_background,

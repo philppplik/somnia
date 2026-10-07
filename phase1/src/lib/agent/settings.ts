@@ -13,15 +13,15 @@ export function normalizePrompts(value:unknown):CustomPrompt[]{
  });
 }
 export function nonSecretSettings(value:AgentConfiguration){
- if(!['ollama','openrouter'].includes(value.provider)||value.model.length>512||/[\r\n\0]/.test(value.model))throw Error('Invalid agent preferences.');
+ if(!['ollama','openrouter','openai','claude'].includes(value.provider)||value.model.length>512||/[\r\n\0]/.test(value.model))throw Error('Invalid agent preferences.');
  return {provider:value.provider,model:value.model,customPrompts:normalizePrompts(value.customPrompts)};
 }
 export async function loadAgentSettings():Promise<AgentConfiguration>{
  const p=isTauri()?await invoke<Record<string,unknown>>('agent_settings_load'):JSON.parse(localStorage.getItem(PREFS)||'{}');
- return {...nonSecretSettings({provider:p.provider??'ollama',model:p.model??'',customPrompts:p.customPrompts??[]} as AgentConfiguration),apiKey:isTauri()&&typeof p.apiKey==='string'?p.apiKey:'',allowActiveFile:false};
+ return {...nonSecretSettings({provider:p.provider??'ollama',model:p.model??'',customPrompts:p.customPrompts??[]} as AgentConfiguration),apiKey:'',allowActiveFile:false};
 }
 export async function saveAgentSettings(value:AgentConfiguration):Promise<void>{
  const p=nonSecretSettings(value);
- if(isTauri())await invoke('agent_settings_save',{settings:{...p,apiKey:value.apiKey}});
+ if(isTauri())await invoke('agent_settings_save',{settings:{...p,apiKey:''}});
  else localStorage.setItem(PREFS,JSON.stringify(p)); // Browser preview never persists API keys.
 }

@@ -1,3 +1,4 @@
+import {loadProviderKey} from './providerAuth';
 import type {CustomPrompt} from './settings';
 import {logWarn} from '../log';
 import {AgentSession} from './session';
@@ -80,7 +81,7 @@ export const realCore:AgentCore={
   const generation=getProjectGeneration();
   if(epoch!==generation){session?.cancel();session=null;sessionSerial++;proposals.clear();permissions.clear();appliedAgentProvenance.clear();epoch=generation;}
   if(config.allowActiveFile&&request.context.activeFile)permissions.set(request.context.activeFile,new Set(['read']));
-  if(!session){const sessionEpoch=epoch;const sessionToken=sessionSerial;const provider=config.provider==='ollama'?guardedOllama(new OllamaProvider()):new OpenRouterProvider({getApiKey:()=>config.apiKey});
+  if(!session){const sessionEpoch=epoch;const sessionToken=sessionSerial;const provider=config.provider==='ollama'?guardedOllama(new OllamaProvider()):new OpenRouterProvider({getApiKey:()=>loadProviderKey('openrouter')});
    session=new AgentSession({provider:withCustomPrompts(provider,config.customPrompts),model:config.model,tools:getState().coreConnected?createTools(String(generation)):undefined,onEvent:event=>{
     if(sessionEpoch!==epoch||sessionToken!==sessionSerial)return;
     if(event.type==='text')send?.({type:'text-delta',text:event.text});

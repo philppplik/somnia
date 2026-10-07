@@ -1,3 +1,4 @@
+import {ProviderAuthentication} from './ProviderAuthentication';
 import {reportError} from '../../lib/log';
 import {useCallback,useEffect,useReducer,useRef,useState} from 'react';
 import {LoaderCircle,PanelRightClose,Send,Settings,Square,SquarePen} from '../../lib/icons';
@@ -15,9 +16,10 @@ export function AgentPanel(){
  const {t}=useT();const [chat,dispatch]=useReducer(chatReducer,initialChat);const [draft,setDraft]=useState('');
  const [configuration,setConfiguration]=useState(false);const [consent,setConsent]=useState(false);
  const [cfg,setCfg]=useState<AgentConfiguration>({provider:'ollama',model:'',apiKey:'',allowActiveFile:false,customPrompts:[]});
+ const [authBusy,setAuthBusy]=useState(false);
  const [settingsReady,setSettingsReady]=useState(false);const [saving,setSaving]=useState(false);const [settingsError,setSettingsError]=useState('');
  useEffect(()=>{let live=true;void loadAgentSettings().then(value=>{if(live){setCfg(value);configureAgent(value);}}).catch(()=>{if(live)setSettingsError('Could not restore Agent settings. Unlock your OS credential store and reopen the panel, or configure this session again.');}).finally(()=>{if(live)setSettingsReady(true);});return()=>{live=false;};},[]);
- const saveConfiguration=async()=>{setSaving(true);setSettingsError('');try{await saveAgentSettings(cfg);configureAgent(cfg);setConfiguration(false);dispatch({type:'reset'});}catch{setSettingsError('Could not save settings. Check your OS credential store. API keys are never saved in plaintext.');}finally{setSaving(false);}};
+ const saveConfiguration=async()=>{if(authBusy||saving)return;setSaving(true);setSettingsError('');try{await saveAgentSettings(cfg);configureAgent(cfg);setConfiguration(false);dispatch({type:'reset'});}catch{setSettingsError('Could not save settings. Check your OS credential store. API keys are never saved in plaintext.');}finally{setSaving(false);}};
  const requestGeneration=useRef(0);
  const run=useRef<AgentRun|null>(null);const scroller=useRef<HTMLDivElement>(null);const input=useRef<HTMLInputElement>(null);const pinned=useRef(true);
  const [announce,setAnnounce]=useState('');
@@ -25,10 +27,10 @@ export function AgentPanel(){
  useEffect(()=>{const el=scroller.current;if(el&&pinned.current)el.scrollTop=el.scrollHeight;},[chat.items]);
  useEffect(()=>{setAnnounce(chat.busy?t('agent.input.busy'):chat.items.length?t('agent.status.done'):'');},[chat.busy]);
  const send=useCallback((raw:string)=>{
-  const text=raw.trim();if(!text||chat.busy||!settingsReady||saving)return;
+  const text=raw.trim();if(!text||chat.busy||!settingsReady||saving||authBusy||configuration)return;
   const generation=++requestGeneration.current;dispatch({type:'send',text});setDraft('');pinned.current=true;const s=getState();
   void getAgentCore().then(core=>{if(generation!==requestGeneration.current)return;run.current=core.run({prompt:text,context:{activeFile:s.activeFile,selectedElementId:s.selectedElementId}},event=>dispatch({type:'event',event}));}).catch(e=>{reportError('agent.start',e,{message:'Agent could not start'});dispatch({type:'event',event:{type:'error',message:String(e)}});});
- },[chat.busy,settingsReady,saving]);
+ },[chat.busy,settingsReady,saving,authBusy,configuration]);
  const stop=()=>{requestGeneration.current++;run.current?.cancel();run.current=null;dispatch({type:'stop'});input.current?.focus();};
  const reset=()=>{stop();void getAgentCore().then(c=>c.clear?.());dispatch({type:'reset'});setDraft('');};
  const resolve=async(p:AgentProposal,state:'accepted'|'rejected',decisions?:Decisions)=>{
@@ -53,16 +55,15 @@ export function AgentPanel(){
  return <aside className="ag-panel" aria-label={t('agent.title')}>
   <header className="ag-hd">
    <button type="button" className="ag-ib ag-hd-left" title={t('agent.newChat')} aria-label={t('agent.newChat')} onClick={reset}><SquarePen size={17}/></button><h2>{t('agent.title')}</h2>
-   <div className="ag-hd-right"><button type="button" className="ag-ib" title="Agent configuration" aria-label="Agent configuration" disabled={chat.busy||!settingsReady||saving} onClick={()=>setConfiguration(v=>!v)}><Settings size={17}/></button><button type="button" className="ag-ib" title={t('agent.collapse')} aria-label={t('agent.collapse')} onClick={()=>patchState({agentOpen:false})}><PanelRightClose size={17}/></button></div>
+   <div className="ag-hd-right"><button type="button" className="ag-ib" title="Agent configuration" aria-label="Agent configuration" disabled={chat.busy||!settingsReady||saving||authBusy} onClick={()=>setConfiguration(v=>!v)}><Settings size={17}/></button><button type="button" className="ag-ib" title={t('agent.collapse')} aria-label={t('agent.collapse')} onClick={()=>patchState({agentOpen:false})}><PanelRightClose size={17}/></button></div>
   </header>
   <div className="ag-chat" ref={scroller} onScroll={e=>{const el=e.currentTarget;pinned.current=el.scrollHeight-el.scrollTop-el.clientHeight<48;}} role="log" aria-label={t('agent.title')}>
    <div className="ag-safety"><AgentErrorNotice/><button type="button" onClick={()=>setConsent(true)}>Cloud data consent</button></div>
    {settingsError&&<p role="alert">{settingsError}</p>}
    {configuration&&<form className="ag-config" aria-label="Agent configuration" onSubmit={e=>{e.preventDefault();void saveConfiguration();}}>
-    <label>Provider<select value={cfg.provider} onChange={e=>setCfg({...cfg,provider:e.target.value as AgentConfiguration['provider']})}><option value="ollama">Ollama (local verification required)</option><option value="openrouter">OpenRouter (cloud)</option></select></label>
+    <label>Provider<select value={cfg.provider} disabled={authBusy||saving} onChange={e=>setCfg({...cfg,provider:e.target.value as AgentConfiguration['provider']})}><option value="ollama">Ollama (local verification required)</option><option value="openrouter">OpenRouter (cloud)</option></select></label>
     <label>Model<input required value={cfg.model} onChange={e=>setCfg({...cfg,model:e.target.value})} placeholder="Installed model or provider/model"/></label>
-    {cfg.provider==='openrouter'&&<label>API key<input type="password" autoComplete="off" value={cfg.apiKey} onChange={e=>setCfg({...cfg,apiKey:e.target.value})}/></label>}
-    <p>Desktop API keys are stored in the OS credential store. Browser preview keeps keys for this session only. Clear the key and save to forget it.</p>
+    <ProviderAuthentication provider={cfg.provider} disabled={saving} onBusyChange={setAuthBusy} onCredentialChange={()=>{void getAgentCore().then(c=>c.clear?.());dispatch({type:'reset'});}}/>
     <fieldset><legend>Custom prompts</legend><p>Enabled prompts are included with every AI request. Do not put secrets here. File access and cloud consent still require approval.</p>
      {(cfg.customPrompts??[]).map((p,i)=><div key={p.id}>
       <label>Prompt name {i+1}<input maxLength={120} value={p.name} onChange={e=>setCfg({...cfg,customPrompts:cfg.customPrompts!.map(x=>x.id===p.id?{...x,name:e.target.value}:x)})}/></label>
@@ -73,14 +74,14 @@ export function AgentPanel(){
      <button type="button" disabled={(cfg.customPrompts?.length??0)>=20} onClick={()=>setCfg({...cfg,customPrompts:[...(cfg.customPrompts??[]),{id:crypto.randomUUID(),name:'',text:'',enabled:true}]})}>Add custom prompt</button>
     </fieldset>
     <label><input type="checkbox" checked={cfg.allowActiveFile} onChange={e=>setCfg({...cfg,allowActiveFile:e.target.checked})}/>Allow reading the active file into model context. Other file reads and all writes ask first.</label>
-    <button type="submit" disabled={saving}>{saving?'Saving...':'Use configuration'}</button><button type="button" onClick={()=>{setConfiguration(false);patchState({settingsOpen:true,settingsSection:'AI privacy'});}}>AI privacy settings</button>
+    <button type="submit" disabled={saving||authBusy}>{saving?'Saving...':'Use configuration'}</button><button type="button" onClick={()=>{setConfiguration(false);patchState({settingsOpen:true,settingsSection:'AI privacy'});}}>AI privacy settings</button>
    </form>}
    {empty?<div className="ag-empty"><div className="ag-orb" aria-hidden="true"/><h3>{t('agent.empty.title')}</h3><span>{t('agent.empty.body')}</span><div className="ag-chips">{CHIPS.map(c=><button type="button" key={c} className="ag-chip" onClick={()=>{setDraft(c);input.current?.focus();}}>{c}</button>)}</div><p className="ag-tip">Choose a model, then describe your task. File access and proposed changes need your review.</p></div>:chat.items.map(item=><Row key={item.id} item={item} onRetry={()=>{const last=[...chat.items].reverse().find(i=>i.kind==='user');if(last&&last.kind==='user')send(last.text);}} onAccept={(p,d)=>void resolve(p,'accepted',d)} onReject={p=>void resolve(p,'rejected')}/>)}
   </div>
   <div className="ag-bar" aria-hidden="true"><div className="ag-pb"><i/><i/><i/><i/></div><div className="ag-grad"/></div>
   <div className="ag-inp"><form className="ag-field" onSubmit={e=>{e.preventDefault();if(chat.busy)stop();else send(draft);}}>
-   <input ref={input} value={draft} disabled={chat.busy||!settingsReady||saving} onChange={e=>setDraft(e.target.value)} placeholder={chat.busy?t('agent.input.busy'):t('agent.input.placeholder')} aria-label={t('agent.input.label')} autoComplete="off"/>
-   {chat.busy?<button type="submit" className="ag-send ag-stop" title={t('agent.stop')} aria-label={t('agent.stop')}><Square size={14} fill="currentColor"/></button>:<button type="submit" className="ag-send" title={t('agent.send')} aria-label={t('agent.send')} disabled={!draft.trim()||!settingsReady||saving}><Send size={17}/></button>}
+   <input ref={input} value={draft} disabled={chat.busy||!settingsReady||saving||authBusy} onChange={e=>setDraft(e.target.value)} placeholder={chat.busy?t('agent.input.busy'):t('agent.input.placeholder')} aria-label={t('agent.input.label')} autoComplete="off"/>
+   {chat.busy?<button type="submit" className="ag-send ag-stop" title={t('agent.stop')} aria-label={t('agent.stop')}><Square size={14} fill="currentColor"/></button>:<button type="submit" className="ag-send" title={t('agent.send')} aria-label={t('agent.send')} disabled={!draft.trim()||!settingsReady||saving||authBusy||configuration}><Send size={17}/></button>}
   </form></div>
   {consent&&<div className="ag-consent-backdrop"><div role="dialog" aria-modal="true" aria-label="Cloud data consent" className="ag-consent"><button type="button" autoFocus onClick={()=>setConsent(false)}>Close consent</button><AgentConsentNotice onGranted={()=>setConsent(false)}/></div></div>}
   <span className="sr-only" role="status" aria-live="polite">{announce}</span>

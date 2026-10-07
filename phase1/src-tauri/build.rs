@@ -2,6 +2,10 @@ fn main() {
     #[cfg(feature = "desktop")]
     tauri_build::try_build(tauri_build::Attributes::new().app_manifest(
         tauri_build::AppManifest::new().commands(&[
+            "agent_key_load",
+            "agent_key_status",
+            "agent_key_save",
+            "agent_key_delete",
             "agent_settings_load",
             "agent_settings_save",
             "set_window_background",
