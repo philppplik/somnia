@@ -1,0 +1,29 @@
+{
+  "$comment": "Proposed shortcuts for the vector tools. Tool keys are single letters and are only active when focus is on the canvas (never in inputs or the code editor). Checked for duplicates and for clashes with registered commands by src/lib/vectorToolsDesign.test.ts.",
+  "tools": {
+    "vector.select":       "V",
+    "vector.directSelect": "A",
+    "vector.pen":          "P",
+    "vector.rect":         "R",
+    "vector.ellipse":      "E",
+    "vector.line":         "L",
+    "vector.polygon":      "Shift+P",
+    "vector.star":         "Shift+S",
+    "vector.text":         "T",
+    "vector.hand":         "H"
+  },
+  "pen": {
+    "vector.pen.deleteAnchor":  "Delete",
+    "vector.pen.convertAnchor": "Shift+C",
+    "vector.pen.finish":        "Enter",
+    "vector.pen.cancel":        "Escape"
+  },
+  "commands": {
+    "vector.bool.union":     "Mod+Alt+U",
+    "vector.bool.subtract":  "Mod+Alt+S",
+    "vector.bool.intersect": "Mod+Alt+I",
+    "vector.bool.exclude":   "Mod+Alt+X",
+    "vector.joinPaths":      "Mod+Shift+J",
+    "vector.outlineStroke":  "Mod+Alt+O"
+  }
+}

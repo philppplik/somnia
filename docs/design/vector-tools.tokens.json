@@ -1,0 +1,38 @@
+{
+  "$comment": "Design tokens for the vector tools UI. Values are either hex colours or var(--existing-token) references that resolve against phase1/src/styles/tokens.css. Checked by src/lib/vectorToolsDesign.test.ts.",
+  "colors": {
+    "--vt-anchor-fill":      { "dark": "var(--bg-panel)",   "light": "var(--bg-panel)" },
+    "--vt-anchor-stroke":    { "dark": "var(--accent)",     "light": "var(--accent)" },
+    "--vt-anchor-selected":  { "dark": "var(--accent)",     "light": "var(--accent)" },
+    "--vt-handle-line":      { "dark": "var(--text-tertiary)", "light": "var(--text-tertiary)" },
+    "--vt-path-outline":     { "dark": "var(--accent)",     "light": "var(--accent)" },
+    "--vt-rubber-band":      { "dark": "var(--accent)",     "light": "var(--accent)" },
+    "--vt-snap-guide":       { "dark": "#ff4fd8",           "light": "#c4009f" },
+    "--vt-toolbar-bg":       { "dark": "var(--bg-elevated)","light": "var(--bg-elevated)" },
+    "--vt-toolbar-active":   { "dark": "var(--accent-soft)","light": "var(--accent-soft)" },
+    "--vt-toolbar-icon":     { "dark": "var(--text-secondary)", "light": "var(--text-secondary)" },
+    "--vt-toolbar-icon-on":  { "dark": "var(--accent)",     "light": "var(--accent)" }
+  },
+  "sizes": {
+    "--vt-toolbar-width": "44px",
+    "--vt-toolbar-radius": "22px",
+    "--vt-toolbar-inset": "12px",
+    "--vt-tool-button": "36px",
+    "--vt-tool-button-radius": "var(--r-md)",
+    "--vt-anchor-size": "8px",
+    "--vt-handle-size": "6px",
+    "--vt-hit-radius": "8px",
+    "--vt-path-hit-width": "8px",
+    "--vt-snap-radius": "6px",
+    "--vt-transform-handle": "8px",
+    "--vt-flyout-radius": "var(--r-panel)",
+    "--vt-panel-radius": "var(--r-outer)"
+  },
+  "contrastPairs": [
+    { "fg": "--vt-anchor-stroke",   "bg": "--bg-panel",    "min": 3, "why": "WCAG 1.4.11 non-text contrast, anchor outline on canvas chrome" },
+    { "fg": "--vt-toolbar-icon",    "bg": "--vt-toolbar-bg","min": 4.5, "why": "idle tool icon" },
+    { "fg": "--vt-toolbar-icon-on", "bg": "--vt-toolbar-bg","min": 3, "why": "active tool icon" },
+    { "fg": "--vt-handle-line",     "bg": "--bg-panel",    "min": 3, "why": "bezier handle line" },
+    { "fg": "--vt-snap-guide",      "bg": "--bg-panel",    "min": 3, "why": "snap guide" }
+  ]
+}
