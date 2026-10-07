@@ -1,5 +1,5 @@
 import {folderNameFor} from './folderName';
-import {trackNativeDrop,consumeNativeChatDrop} from './collab/nativeChatDrop';
+import {trackNativeDrop,consumeNativeChatDrop,consumeNativeConvertDrop} from './collab/nativeChatDrop';
 import {installHoldBackend,isAgentAutosaveHeld,releaseAgentAutosave,clearAgentAutosaveHolds,heldAgentPaths} from './agent/autosaveHold';
 import {setCloseHandlers,requestClose} from './closeFlow';
 import {EditorProject} from '@somnia/editor-core';
@@ -145,6 +145,7 @@ export async function installFileAdapter(port:FilePort){
  if(port.shell)cleanups.push(await port.listen<{token:string;count:number;media?:boolean;position?:[number,number]}>('somnia://os-drop',event=>{
   const {token,count,media,position}=event.payload;
   if(position)trackNativeDrop('drop',{x:position[0],y:position[1]});
+  if(consumeNativeConvertDrop()){void port.invoke<{name:string;text:string;base64?:string}[]>('read_dropped_files',{token,chat:true}).then(files=>{const list=files.map(f=>new File([f.base64===undefined?new TextEncoder().encode(f.text):Uint8Array.from(atob(f.base64),c=>c.charCodeAt(0))],f.name));window.dispatchEvent(new CustomEvent('somnia:convert-drop',{detail:list}));}).catch(fail);return;}
   if(consumeNativeChatDrop()){void port.invoke<{name:string;text:string;base64?:string}[]>('read_dropped_files',{token,chat:true}).then(files=>{const attachments=files.map(f=>new File([f.base64===undefined?new TextEncoder().encode(f.text):Uint8Array.from(atob(f.base64),c=>c.charCodeAt(0))],f.name));window.dispatchEvent(new CustomEvent('somnia:chat-drop',{detail:attachments}));}).catch(fail);return;}
   if(count===1&&!media)void open(false,false,token).catch(fail);
   else if(opening)fail('Another project is opening. Wait, then drop again.');
