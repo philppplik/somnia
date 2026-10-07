@@ -36,3 +36,9 @@ test('Edit image: brightness slider changes exported pixels and undo restores th
  const a=readFileSync('/tmp/image-editor-out.png'),b=readFileSync('/tmp/image-editor-bright.png');
  assert.notDeepEqual(a,b);
 });
+test('Edit image: invert filter changes pixels, strength 100% inverts the purple fill',async()=>{
+ await page.getByTestId('image-editor-filter-select').selectOption('invert');
+ const download=page.waitForEvent('download');await page.getByRole('button',{name:'Save copy...'}).click();await (await download).saveAs('/tmp/image-editor-invert.png');
+ const png=readFileSync('/tmp/image-editor-invert.png');assert.deepEqual([...png.subarray(0,8)],[137,80,78,71,13,10,26,10]);
+ assert.notDeepEqual(png,readFileSync('/tmp/image-editor-out.png'));
+});

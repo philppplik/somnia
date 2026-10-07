@@ -9,17 +9,19 @@ import {
  ImageEditorRenderer,createOperationRegistry,exportImage,exportSettings,loadImage,withOperations,
  type ExportFormat,type ImageOperation,type LoadedImage
 } from '../lib/image-editor';
+import {FilterPanel} from './imageedit/FilterPanel';
+import {FILTER_TYPES,newFilterOperation,registerFilterOps,type FilterType} from '../lib/imageedit/filters';
 import {TRANSFORM_HANDLERS} from '../lib/imgedit/handlers';
 import type {AspectPreset,CropRect} from '../lib/imgedit/transform';
 import {DEFAULT_ADJUST_PARAMS,adjustHandler,adjustToJson,isNeutralAdjust,type AdjustParams} from '../lib/imageedit/adjust';
 import {defaultImageHost,editedName,type ImageEditorHost} from '../lib/imageEditorHost';
 import '../styles/image-editor-dialog.css';
 
-interface Snapshot{stack:readonly ImageOperation[];adjust:AdjustParams}
-const EMPTY:Snapshot={stack:[],adjust:DEFAULT_ADJUST_PARAMS};
+interface Snapshot{stack:readonly ImageOperation[];adjust:AdjustParams;filter:ImageOperation|null}
+const EMPTY:Snapshot={stack:[],adjust:DEFAULT_ADJUST_PARAMS,filter:null};
 const ADJUST_ID='adjust-live';
 const MAX_HISTORY=100;
-function buildRegistry(){const r=createOperationRegistry();for(const h of TRANSFORM_HANDLERS)r.register(h);r.register(adjustHandler);return r;}
+function buildRegistry(){const r=createOperationRegistry();for(const h of TRANSFORM_HANDLERS)r.register(h);r.register(adjustHandler);registerFilterOps(r);return r;}
 /** Image size after the transform stack, without pixel work. */
 function sizeAfter(width:number,height:number,stack:readonly ImageOperation[]){
  let size={width,height};
@@ -36,7 +38,7 @@ export function ImageEditorDialog({host:injected}:{host?:ImageEditorHost}){
  const [format,setFormat]=useState<ExportFormat>('png');const [quality,setQuality]=useState(92);
  const [busy,setBusy]=useState(false);const [error,setError]=useState('');const [status,setStatus]=useState('');
  const hostRef=useRef<ImageEditorHost|null>(injected??null);const registry=useMemo(buildRegistry,[]);
- const adjustBase=useRef<Snapshot|null>(null);const generation=useRef(0);const current=useRef(source);current.current=source;
+ const adjustBase=useRef<Snapshot|null>(null);const filterId=useRef(0);const generation=useRef(0);const current=useRef(source);current.current=source;
  useEffect(()=>{const show=()=>setOpen(true);window.addEventListener('somnia:edit-image',show);return()=>window.removeEventListener('somnia:edit-image',show);},[]);
  const release=useCallback(()=>{const s=current.current;if(s){s.renderer.dispose();s.loaded.dispose();}},[]);
  useEffect(()=>()=>release(),[release]);
@@ -44,6 +46,7 @@ export function ImageEditorDialog({host:injected}:{host?:ImageEditorHost}){
   if(!source)return null;
   const ops=[...snap.stack];
   if(!isNeutralAdjust(snap.adjust))ops.push({id:ADJUST_ID,type:'adjust',version:1,enabled:true,params:adjustToJson(snap.adjust)});
+  if(snap.filter)ops.push(snap.filter);
   return withOperations(source.loaded.document,ops);
  },[source,snap]);
  useEffect(()=>{
@@ -92,6 +95,13 @@ export function ImageEditorDialog({host:injected}:{host?:ImageEditorHost}){
     {source&&<>
      <TransformPanel width={size.width} height={size.height} cropRect={cropRect} aspect={aspect} disabled={busy}
       onAspectChange={(a,r)=>{setAspect(a);setCropRect(r);}} onCropRectChange={setCropRect} onCommit={addOp}/>
+     <section className="image-editor-filter" aria-label={t('imageeditor.filter')}>
+      <label className="image-editor-format">{t('imageeditor.filter')}<select value={snap.filter?.type??''} disabled={busy} data-testid="image-editor-filter-select" onChange={e=>{const type=e.target.value as FilterType|'';commit({...snap,filter:type?newFilterOperation(`filter-${++filterId.current}`,type):null});}}><option value="">{t('imageeditor.filterNone')}</option>{FILTER_TYPES.map(f=><option key={f} value={f}>{t(`imageedit.filters.${f}`)}</option>)}</select></label>
+      {snap.filter&&<>
+       <FilterPanel operation={snap.filter} disabled={busy} onChange={next=>{adjustBase.current??=snap;setSnap(x=>({...x,filter:next}));}} onCommit={()=>{const base=adjustBase.current;adjustBase.current=null;if(base){setPast(p=>[...p.slice(-(MAX_HISTORY-1)),base]);setFuture([]);}}}/>
+       <Button size="compact" disabled={busy} onClick={()=>commit({...snap,stack:[...snap.stack,snap.filter!],filter:null})}>{t('imageeditor.filterApply')}</Button>
+      </>}
+     </section>
      <AdjustPanel params={snap.adjust} disabled={busy} onChange={a=>{adjustBase.current??=snap;setSnap(x=>({...x,adjust:a}));}} onCommit={()=>{const base=adjustBase.current;adjustBase.current=null;if(base){setPast(p=>[...p.slice(-(MAX_HISTORY-1)),base]);setFuture([]);}}}/>
     </>}
    </aside>

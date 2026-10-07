@@ -1483,5 +1483,8 @@
   "imageedit.filters.invert": "Invertir",
   "imageedit.filters.vignette": "Viñeta",
   "imageedit.filters.strength": "Intensidad",
-  "imageedit.filters.reset": "Restablecer filtro"
+  "imageedit.filters.reset": "Restablecer filtro",
+  "imageeditor.filter": "Filtro",
+  "imageeditor.filterNone": "Ninguno",
+  "imageeditor.filterApply": "Aplicar y añadir otro"
 }
