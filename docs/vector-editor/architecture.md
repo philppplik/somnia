@@ -7,24 +7,31 @@ Modules covered: `vectorcore` (model + math), `pen-tool` (interaction), `svg-io`
 ## 1. Vector document schema (v1)
 
 ```ts
-interface VectorDocument { version: 1; width: number; height: number; paths: VectorPath[] }
+// Boundary agreed with the pen-tool team (2026-10-07). version field is OPEN (see section 6).
+interface VectorDocument { width: number; height: number; paths: VectorPath[] }
 interface VectorPath {
   id: string;            // stable, unique in the document, never reused
   closed: boolean;
   nodes: VectorNode[];
-  fill?: string | null;  // CSS colour or null
+  fill?: string | null;  // OPEN: style fields not yet agreed with pen-tool
   stroke?: { color: string; width: number } | null;
 }
 interface VectorNode {
+  id: string;                      // stable node id
   x: number; y: number;
-  in:  { x: number; y: number } | null;   // incoming handle, ABSOLUTE coordinates
-  out: { x: number; y: number } | null;   // outgoing handle, ABSOLUTE coordinates
+  kind: 'corner' | 'smooth';
+  in?:  { x: number; y: number };  // incoming handle, ABSOLUTE document coordinates; absent = none
+  out?: { x: number; y: number };  // outgoing handle, ABSOLUTE document coordinates; absent = none
 }
 ```
 
+Component boundary (`components/vectoredit`, exported from there): controlled `value: VectorDocument` / `onChange(doc)`, and `onCommit({ before, after, reason })` once per gesture (not per pointer event). Commit feeds the `vector-*` ops in section 3.
+
+`vectorcore` treats `in`/`out` of `null` and `undefined` identically (no handle). The conformance fixtures use `null`, and a test checks the `undefined` form with ids and kind. `kind: 'smooth'` is a hint for editing (handles stay collinear while dragging); it does not change serialization.
+
 Rules:
 - Coordinates are user units, y down, origin top-left (same as SVG).
-- Handles are absolute, not relative to the node. `null` means "no handle" (segment side is straight).
+- Handles are absolute, not relative to the node. Absent (or `null` in fixtures) means "no handle" (segment side is straight).
 - A segment is a line iff the start node has no `out` and the end node has no `in`. Otherwise it is a cubic; a missing handle collapses onto its node.
 - A closed path has an implicit closing segment from the last node to the first.
 - The document must be JSON-serialisable (no `NaN`, `Infinity`, `undefined`, class instances).
@@ -48,7 +55,7 @@ Operations follow the existing `ImageOperation` shape from `src/lib/image-editor
 - Each op carries `version` (integer, starts at 1). Changing param meaning bumps it.
 - Params reference paths and nodes by `id`/index, never by object reference.
 - Every op is invertible or snapshots what it needs to be undone. A drag gesture (node or handle move) is one history entry, not one per pointer event.
-- `OPEN`: whether `vector-*` ops live in the raster pipeline or in a separate vector layer stack.
+- `OPEN`: how `onCommit({before,after,reason})` maps to op params (reason string vs op type). `OPEN`: whether `vector-*` ops live in the raster pipeline or in a separate vector layer stack.
 
 ## 4. Interfaces between modules
 
@@ -73,6 +80,9 @@ Dependency direction: `pen-tool -> vectorcore <- svg-io`. No cycles.
 Reference values: `fixtures.json` holds hand-derived numbers (arch and hill curves, bboxes). `reference.mjs` recomputes them with two independent evaluators (Bernstein and de Casteljau) and cross-checks split, bbox (derivative roots) and length (20000-segment polyline; circle quarter uses kappa 0.5522847498 with 3e-4 tolerance). Tolerances for implementations: points and splits 1e-9, bbox 1e-6, length 1e-4.
 
 ## 6. Open items
+
+- `version` field on VectorDocument: the pen-tool boundary has none. Add one for persistence, or keep it in the file wrapper?
+- Node `kind` vs actual handles can disagree (smooth with non-collinear handles). Who normalises?
 
 - Not wired into `test:core` (that would modify `phase1/package.json`). The integrator adds `test/vector/*.test.mjs` to the glob, or a separate script.
 - No test yet for: boolean ops, stroke outlining, path hit-testing, node snapping, SVG import of arcs/transforms, undo/redo of vector ops. Needs the dev teams' API first.

@@ -78,3 +78,11 @@ test('impl: pointAt/split/bbox/length match reference', { skip }, () => {
     near(impl.cubicLength(f.c), ref.length(f.c), 1e-4, `${f.name} length`);
   }
 });
+
+test('reference: pen-tool node shape (ids, kind, absent handles) serializes like the null form', () => {
+  const doc = { width: 10, height: 10, paths: [{ id: 'p1', closed: false, nodes: [
+    { id: 'n1', x: 0, y: 0, kind: 'smooth', out: { x: 0, y: 1 } },
+    { id: 'n2', x: 1, y: 0, kind: 'smooth', in: { x: 1, y: 1 } } ] }] };
+  assert.equal(ref.serializePath(doc.paths[0]), 'M0 0C0 1 1 1 1 0');
+  assert.equal(JSON.stringify(JSON.parse(JSON.stringify(doc))), JSON.stringify(doc));
+});
