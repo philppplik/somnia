@@ -15,7 +15,7 @@ test('markdown -> docx is a valid OOXML zip with the expected parts',async()=>{
 
 test('markdown -> docx -> markdown round-trips structure',async()=>{
  const {markdown}=await docxToMarkdown(await markdownToDocx(MD));
- assert.match(markdown,/^# Titel/m);assert.match(markdown,/\*\*fetter\*\*/);assert.match(markdown,/\[Link\]\(https:\/\/example\.com\)/);
+ assert.match(markdown,/^# Titel/m);assert.match(markdown,/\*\*fetter\*\*/);assert.match(markdown,/\[Link\]\(<https:\/\/example\.com>\)/);
  assert.match(markdown,/^-\s+eins/m);assert.match(markdown,/^1\.\s+a/m);assert.match(markdown,/zwei-a/);assert.match(markdown,/\| *A *\| *B *\|/);});
 
 test('docx -> text',async()=>{const t=await docxToText(await markdownToDocx('# Hallo\n\nWelt'));assert.match(t,/Hallo\s+Welt/);});

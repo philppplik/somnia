@@ -13,12 +13,13 @@
     "test": "playwright test",
     "bench": "tsx scripts/bench.ts",
     "ext": "tsx scripts/somnia-ext.ts",
-    "test:core": "tsx --test packages/editor-core/src/*.test.ts src/lib/*.test.ts src/lib/extensions/*.test.ts src/lib/collab/*.test.ts src/lib/collab/net/*.test.ts src/lib/agent/providers/*.test.ts src/lib/agent/*.test.ts src/lib/convert/*.test.ts src/components/*.test.tsx",
+    "test:core": "tsx --test packages/editor-core/src/*.test.ts src/lib/*.test.ts src/lib/extensions/*.test.ts src/lib/collab/*.test.ts src/lib/collab/net/*.test.ts src/lib/agent/providers/*.test.ts src/lib/agent/*.test.ts src/lib/convert/*.test.ts src/components/*.test.tsx src/lib/conversion/*.test.ts",
     "test:e2e": "playwright test",
     "test:updater": "node --test scripts/updater-e2e/lib.test.mjs",
     "typecheck": "tsc --noEmit",
     "tauri": "tauri",
-    "bench:projects": "tsx scripts/bench-projects.ts"
+    "bench:projects": "tsx scripts/bench-projects.ts",
+    "test:documents": "tsx --test src/lib/convert/*.test.ts src/lib/conversion/*.test.ts"
   },
   "dependencies": {
     "@base-ui/react": "1.8.0",
@@ -54,6 +55,7 @@
     "markdown-it-footnote": "^4.0.0",
     "parse5": "8.0.0",
     "pdf-lib": "^1.17.1",
+    "pdfmake": "0.2.20",
     "prettier": "^3.9.9",
     "react": "19.3.0",
     "react-dom": "19.3.0",
@@ -71,6 +73,7 @@
     "@tauri-apps/cli": "^2.0.0",
     "@types/katex": "^0.16.8",
     "@types/node": "24.0.0",
+    "@types/pdfmake": "0.2.11",
     "@types/react": "19.3.0",
     "@types/react-dom": "19.3.0",
     "@types/turndown": "^5.0.6",

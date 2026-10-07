@@ -54,6 +54,12 @@
   "homepage": "https://github.com/codemirror/lang-json"
  },
  {
+  "name": "@codemirror/lang-markdown",
+  "version": "6.5.2",
+  "license": "MIT",
+  "homepage": "https://code.haverbeke.berlin/codemirror/lang-markdown"
+ },
+ {
   "name": "@codemirror/language",
   "version": "6.12.4",
   "license": "MIT",
@@ -144,6 +150,30 @@
   "homepage": "https://floating-ui.com"
  },
  {
+  "name": "@foliojs-fork/fontkit",
+  "version": "1.9.2",
+  "license": "MIT",
+  "homepage": "git://github.com/foliojs-fork/fontkit"
+ },
+ {
+  "name": "@foliojs-fork/linebreak",
+  "version": "1.1.2",
+  "license": "MIT",
+  "homepage": "https://github.com/foliojs-fork/linebreaker"
+ },
+ {
+  "name": "@foliojs-fork/pdfkit",
+  "version": "0.15.3",
+  "license": "MIT",
+  "homepage": "http://pdfkit.org/"
+ },
+ {
+  "name": "@foliojs-fork/restructure",
+  "version": "2.0.2",
+  "license": "MIT",
+  "homepage": "https://github.com/foliojs-fork/restructure"
+ },
+ {
   "name": "@lezer/common",
   "version": "1.5.3",
   "license": "MIT",
@@ -186,10 +216,34 @@
   "homepage": "https://code.haverbeke.berlin/lezer/lr"
  },
  {
+  "name": "@lezer/markdown",
+  "version": "1.7.2",
+  "license": "MIT",
+  "homepage": "https://code.haverbeke.berlin/lezer/markdown"
+ },
+ {
   "name": "@marijn/find-cluster-break",
   "version": "1.0.4",
   "license": "MIT",
   "homepage": "https://code.haverbeke.berlin/marijn/find-cluster-break"
+ },
+ {
+  "name": "@mixmark-io/domino",
+  "version": "2.2.0",
+  "license": "BSD-2-Clause",
+  "homepage": "https://github.com/mixmark-io/domino"
+ },
+ {
+  "name": "@pdf-lib/standard-fonts",
+  "version": "1.0.0",
+  "license": "MIT",
+  "homepage": "https://github.com/Hopding/standard-fonts"
+ },
+ {
+  "name": "@pdf-lib/upng",
+  "version": "1.0.1",
+  "license": "MIT",
+  "homepage": "https://github.com/Hopding/upng"
  },
  {
   "name": "@somnia/editor-core",
@@ -216,10 +270,70 @@
   "homepage": ""
  },
  {
+  "name": "@types/node",
+  "version": "24.0.0",
+  "license": "MIT",
+  "homepage": "https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/node"
+ },
+ {
+  "name": "@xmldom/xmldom",
+  "version": "0.8.15",
+  "license": "MIT",
+  "homepage": "https://github.com/xmldom/xmldom"
+ },
+ {
+  "name": "argparse",
+  "version": "3.0.2",
+  "license": "PSF-2.0",
+  "homepage": ""
+ },
+ {
+  "name": "base64-js",
+  "version": "1.5.1",
+  "license": "MIT",
+  "homepage": "https://github.com/beatgammit/base64-js"
+ },
+ {
+  "name": "brotli",
+  "version": "1.3.3",
+  "license": "MIT",
+  "homepage": "https://github.com/devongovett/brotli.js"
+ },
+ {
+  "name": "browserify-zlib",
+  "version": "0.2.0",
+  "license": "MIT",
+  "homepage": "https://github.com/devongovett/browserify-zlib"
+ },
+ {
+  "name": "call-bind",
+  "version": "1.0.9",
+  "license": "MIT",
+  "homepage": "https://github.com/ljharb/call-bind#readme"
+ },
+ {
+  "name": "call-bind-apply-helpers",
+  "version": "1.0.2",
+  "license": "MIT",
+  "homepage": "https://github.com/ljharb/call-bind-apply-helpers#readme"
+ },
+ {
+  "name": "call-bound",
+  "version": "1.0.4",
+  "license": "MIT",
+  "homepage": "https://github.com/ljharb/call-bound#readme"
+ },
+ {
   "name": "class-variance-authority",
   "version": "0.7.1",
   "license": "Apache-2.0",
   "homepage": "https://github.com/joe-bell/cva#readme"
+ },
+ {
+  "name": "clone",
+  "version": "1.0.4",
+  "license": "MIT",
+  "homepage": "git://github.com/pvorb/node-clone"
  },
  {
   "name": "clsx",
@@ -234,10 +348,70 @@
   "homepage": "https://github.com/tj/commander.js"
  },
  {
+  "name": "core-util-is",
+  "version": "1.0.3",
+  "license": "MIT",
+  "homepage": "git://github.com/isaacs/core-util-is"
+ },
+ {
   "name": "crelt",
   "version": "1.0.7",
   "license": "MIT",
   "homepage": "https://code.haverbeke.berlin/marijn/crelt"
+ },
+ {
+  "name": "crypto-js",
+  "version": "4.2.0",
+  "license": "MIT",
+  "homepage": "http://github.com/brix/crypto-js"
+ },
+ {
+  "name": "deep-equal",
+  "version": "1.1.2",
+  "license": "MIT",
+  "homepage": "http://github.com/inspect-js/node-deep-equal"
+ },
+ {
+  "name": "define-data-property",
+  "version": "1.1.4",
+  "license": "MIT",
+  "homepage": "https://github.com/ljharb/define-data-property#readme"
+ },
+ {
+  "name": "define-properties",
+  "version": "1.2.1",
+  "license": "MIT",
+  "homepage": "git://github.com/ljharb/define-properties"
+ },
+ {
+  "name": "dfa",
+  "version": "1.2.0",
+  "license": "MIT",
+  "homepage": "https://github.com/devongovett/dfa#readme"
+ },
+ {
+  "name": "dingbat-to-unicode",
+  "version": "1.0.2",
+  "license": "BSD-2-Clause",
+  "homepage": "https://github.com/mwilliamson/dingbat-to-unicode#readme"
+ },
+ {
+  "name": "docx",
+  "version": "9.9.0",
+  "license": "MIT",
+  "homepage": "https://docx.js.org"
+ },
+ {
+  "name": "duck",
+  "version": "0.1.12",
+  "license": "BSD",
+  "homepage": "https://github.com/mwilliamson/duck.js"
+ },
+ {
+  "name": "dunder-proto",
+  "version": "1.0.1",
+  "license": "MIT",
+  "homepage": "https://github.com/es-shims/dunder-proto#readme"
  },
  {
   "name": "emmet",
@@ -252,16 +426,148 @@
   "homepage": "git://github.com/fb55/entities"
  },
  {
+  "name": "es-define-property",
+  "version": "1.0.1",
+  "license": "MIT",
+  "homepage": "https://github.com/ljharb/es-define-property#readme"
+ },
+ {
+  "name": "es-errors",
+  "version": "1.3.0",
+  "license": "MIT",
+  "homepage": "https://github.com/ljharb/es-errors#readme"
+ },
+ {
+  "name": "es-object-atoms",
+  "version": "1.1.2",
+  "license": "MIT",
+  "homepage": "https://github.com/ljharb/es-object-atoms#readme"
+ },
+ {
   "name": "fflate",
   "version": "0.8.3",
   "license": "MIT",
   "homepage": "https://101arrowz.github.io/fflate"
  },
  {
+  "name": "function-bind",
+  "version": "1.1.2",
+  "license": "MIT",
+  "homepage": "https://github.com/Raynos/function-bind"
+ },
+ {
+  "name": "functions-have-names",
+  "version": "1.2.3",
+  "license": "MIT",
+  "homepage": "https://github.com/inspect-js/functions-have-names#readme"
+ },
+ {
+  "name": "get-intrinsic",
+  "version": "1.3.0",
+  "license": "MIT",
+  "homepage": "https://github.com/ljharb/get-intrinsic#readme"
+ },
+ {
+  "name": "get-proto",
+  "version": "1.0.1",
+  "license": "MIT",
+  "homepage": "https://github.com/ljharb/get-proto#readme"
+ },
+ {
+  "name": "gopd",
+  "version": "1.2.0",
+  "license": "MIT",
+  "homepage": "https://github.com/ljharb/gopd#readme"
+ },
+ {
+  "name": "has-property-descriptors",
+  "version": "1.0.2",
+  "license": "MIT",
+  "homepage": "https://github.com/inspect-js/has-property-descriptors#readme"
+ },
+ {
+  "name": "has-symbols",
+  "version": "1.1.0",
+  "license": "MIT",
+  "homepage": "https://github.com/ljharb/has-symbols#readme"
+ },
+ {
+  "name": "has-tostringtag",
+  "version": "1.0.2",
+  "license": "MIT",
+  "homepage": "https://github.com/inspect-js/has-tostringtag#readme"
+ },
+ {
+  "name": "hash.js",
+  "version": "1.1.7",
+  "license": "MIT",
+  "homepage": "https://github.com/indutny/hash.js"
+ },
+ {
+  "name": "hasown",
+  "version": "2.0.4",
+  "license": "MIT",
+  "homepage": "https://github.com/inspect-js/hasOwn#readme"
+ },
+ {
+  "name": "iconv-lite",
+  "version": "0.6.3",
+  "license": "MIT",
+  "homepage": "https://github.com/ashtuchkin/iconv-lite"
+ },
+ {
+  "name": "immediate",
+  "version": "3.0.6",
+  "license": "MIT",
+  "homepage": "git://github.com/calvinmetcalf/immediate"
+ },
+ {
+  "name": "inherits",
+  "version": "2.0.4",
+  "license": "ISC",
+  "homepage": ""
+ },
+ {
+  "name": "is-arguments",
+  "version": "1.2.0",
+  "license": "MIT",
+  "homepage": "https://github.com/inspect-js/is-arguments"
+ },
+ {
+  "name": "is-date-object",
+  "version": "1.1.0",
+  "license": "MIT",
+  "homepage": "git://github.com/inspect-js/is-date-object"
+ },
+ {
+  "name": "is-regex",
+  "version": "1.2.1",
+  "license": "MIT",
+  "homepage": "https://github.com/inspect-js/is-regex"
+ },
+ {
+  "name": "isarray",
+  "version": "1.0.0",
+  "license": "MIT",
+  "homepage": "https://github.com/juliangruber/isarray"
+ },
+ {
   "name": "isomorphic.js",
   "version": "0.2.5",
   "license": "MIT",
   "homepage": "https://github.com/dmonad/isomorphic.js#readme"
+ },
+ {
+  "name": "jpeg-exif",
+  "version": "1.1.4",
+  "license": "MIT",
+  "homepage": "https://github.com/zhso/jpeg-exif"
+ },
+ {
+  "name": "jszip",
+  "version": "3.10.2",
+  "license": "(MIT OR GPL-3.0-or-later)",
+  "homepage": "https://github.com/Stuk/jszip"
  },
  {
   "name": "katex",
@@ -276,10 +582,64 @@
   "homepage": "https://github.com/dmonad/lib0#readme"
  },
  {
+  "name": "lie",
+  "version": "3.3.0",
+  "license": "MIT",
+  "homepage": "https://github.com/calvinmetcalf/lie"
+ },
+ {
+  "name": "linkify-it",
+  "version": "6.1.0",
+  "license": "MIT",
+  "homepage": "https://github.com/markdown-it/linkify-it"
+ },
+ {
+  "name": "lop",
+  "version": "0.4.2",
+  "license": "BSD-2-Clause",
+  "homepage": "https://github.com/mwilliamson/lop"
+ },
+ {
   "name": "lucide-react",
   "version": "1.49.0",
   "license": "ISC",
   "homepage": "https://lucide.dev"
+ },
+ {
+  "name": "mammoth",
+  "version": "1.13.0",
+  "license": "BSD-2-Clause",
+  "homepage": "https://github.com/mwilliamson/mammoth.js"
+ },
+ {
+  "name": "markdown-it",
+  "version": "15.0.2",
+  "license": "MIT",
+  "homepage": ""
+ },
+ {
+  "name": "markdown-it-footnote",
+  "version": "4.0.0",
+  "license": "MIT",
+  "homepage": ""
+ },
+ {
+  "name": "math-intrinsics",
+  "version": "1.1.0",
+  "license": "MIT",
+  "homepage": "https://github.com/es-shims/math-intrinsics#readme"
+ },
+ {
+  "name": "mdurl",
+  "version": "2.1.0",
+  "license": "MIT",
+  "homepage": "https://github.com/markdown-it/mdurl"
+ },
+ {
+  "name": "minimalistic-assert",
+  "version": "1.0.1",
+  "license": "ISC",
+  "homepage": "https://github.com/calvinmetcalf/minimalistic-assert"
  },
  {
   "name": "Momo Signature (font)",
@@ -288,16 +648,76 @@
   "homepage": "https://github.com/typeassociates/MomoSignature"
  },
  {
+  "name": "nanoid",
+  "version": "3.3.19",
+  "license": "MIT",
+  "homepage": ""
+ },
+ {
+  "name": "object-is",
+  "version": "1.1.6",
+  "license": "MIT",
+  "homepage": "https://github.com/es-shims/object-is"
+ },
+ {
+  "name": "object-keys",
+  "version": "1.1.1",
+  "license": "MIT",
+  "homepage": "git://github.com/ljharb/object-keys"
+ },
+ {
+  "name": "option",
+  "version": "0.2.4",
+  "license": "BSD-2-Clause",
+  "homepage": "https://github.com/mwilliamson/node-options"
+ },
+ {
+  "name": "pako",
+  "version": "1.0.11",
+  "license": "(MIT AND Zlib)",
+  "homepage": "https://github.com/nodeca/pako"
+ },
+ {
   "name": "parse5",
   "version": "8.0.0",
   "license": "MIT",
   "homepage": "https://parse5.js.org"
  },
  {
+  "name": "pdf-lib",
+  "version": "1.17.1",
+  "license": "MIT",
+  "homepage": "https://pdf-lib.js.org"
+ },
+ {
+  "name": "pdfmake",
+  "version": "0.2.20",
+  "license": "MIT",
+  "homepage": "http://pdfmake.org"
+ },
+ {
+  "name": "png-js",
+  "version": "1.1.0",
+  "license": "UNKNOWN",
+  "homepage": "https://github.com/devongovett/png.js"
+ },
+ {
   "name": "prettier",
   "version": "3.9.9",
   "license": "MIT",
   "homepage": "https://prettier.io"
+ },
+ {
+  "name": "process-nextick-args",
+  "version": "2.0.1",
+  "license": "MIT",
+  "homepage": "https://github.com/calvinmetcalf/process-nextick-args"
+ },
+ {
+  "name": "punycode.js",
+  "version": "2.3.1",
+  "license": "MIT",
+  "homepage": "https://mths.be/punycode"
  },
  {
   "name": "react",
@@ -312,16 +732,70 @@
   "homepage": "https://react.dev/"
  },
  {
+  "name": "readable-stream",
+  "version": "2.3.8",
+  "license": "MIT",
+  "homepage": "git://github.com/nodejs/readable-stream"
+ },
+ {
+  "name": "regexp.prototype.flags",
+  "version": "1.5.4",
+  "license": "MIT",
+  "homepage": "git://github.com/es-shims/RegExp.prototype.flags"
+ },
+ {
   "name": "reselect",
   "version": "5.3.0",
   "license": "MIT",
   "homepage": "https://github.com/reduxjs/reselect"
  },
  {
+  "name": "safe-buffer",
+  "version": "5.1.2",
+  "license": "MIT",
+  "homepage": "https://github.com/feross/safe-buffer"
+ },
+ {
+  "name": "safer-buffer",
+  "version": "2.1.2",
+  "license": "MIT",
+  "homepage": "https://github.com/ChALkeR/safer-buffer"
+ },
+ {
+  "name": "sax",
+  "version": "1.6.1",
+  "license": "BlueOak-1.0.0",
+  "homepage": "ssh://git@github.com/isaacs/sax-js"
+ },
+ {
   "name": "scheduler",
   "version": "0.28.0",
   "license": "MIT",
   "homepage": "https://react.dev/"
+ },
+ {
+  "name": "set-function-length",
+  "version": "1.2.2",
+  "license": "MIT",
+  "homepage": "https://github.com/ljharb/set-function-length#readme"
+ },
+ {
+  "name": "set-function-name",
+  "version": "2.0.2",
+  "license": "MIT",
+  "homepage": "https://github.com/ljharb/set-function-name#readme"
+ },
+ {
+  "name": "setimmediate",
+  "version": "1.0.5",
+  "license": "MIT",
+  "homepage": ""
+ },
+ {
+  "name": "string_decoder",
+  "version": "1.1.1",
+  "license": "MIT",
+  "homepage": "https://github.com/nodejs/string_decoder"
  },
  {
   "name": "style-mod",
@@ -336,10 +810,76 @@
   "homepage": "https://github.com/dcastil/tailwind-merge"
  },
  {
+  "name": "tiny-inflate",
+  "version": "1.0.3",
+  "license": "MIT",
+  "homepage": "https://github.com/devongovett/tiny-inflate"
+ },
+ {
+  "name": "tslib",
+  "version": "1.14.1",
+  "license": "0BSD",
+  "homepage": "https://www.typescriptlang.org/"
+ },
+ {
+  "name": "turndown",
+  "version": "7.2.4",
+  "license": "MIT",
+  "homepage": "https://github.com/mixmark-io/turndown"
+ },
+ {
+  "name": "turndown-plugin-gfm",
+  "version": "1.0.2",
+  "license": "MIT",
+  "homepage": "https://github.com/domchristie/turndown-plugin-gfm"
+ },
+ {
+  "name": "uc.micro",
+  "version": "3.0.0",
+  "license": "MIT",
+  "homepage": ""
+ },
+ {
+  "name": "underscore",
+  "version": "1.13.8",
+  "license": "MIT",
+  "homepage": "https://underscorejs.org"
+ },
+ {
+  "name": "undici-types",
+  "version": "7.8.0",
+  "license": "MIT",
+  "homepage": "https://undici.nodejs.org"
+ },
+ {
+  "name": "unicode-properties",
+  "version": "1.4.1",
+  "license": "MIT",
+  "homepage": "https://github.com/devongovett/unicode-properties"
+ },
+ {
+  "name": "unicode-trie",
+  "version": "2.0.0",
+  "license": "MIT",
+  "homepage": "https://github.com/devongovett/unicode-trie"
+ },
+ {
+  "name": "unpdf",
+  "version": "1.8.1",
+  "license": "MIT",
+  "homepage": "https://github.com/unjs/unpdf#readme"
+ },
+ {
   "name": "use-sync-external-store",
   "version": "1.7.0",
   "license": "MIT",
   "homepage": "https://github.com/react/react"
+ },
+ {
+  "name": "util-deprecate",
+  "version": "1.0.2",
+  "license": "MIT",
+  "homepage": "https://github.com/TooTallNate/util-deprecate"
  },
  {
   "name": "Vadivam (icons)",
@@ -352,6 +892,30 @@
   "version": "2.2.8",
   "license": "MIT",
   "homepage": "https://github.com/marijnh/w3c-keyname#readme"
+ },
+ {
+  "name": "xml",
+  "version": "1.0.1",
+  "license": "MIT",
+  "homepage": "http://github.com/dylang/node-xml"
+ },
+ {
+  "name": "xml-js",
+  "version": "1.6.11",
+  "license": "MIT",
+  "homepage": "https://github.com/nashwaan/xml-js#readme"
+ },
+ {
+  "name": "xmlbuilder",
+  "version": "10.1.1",
+  "license": "MIT",
+  "homepage": "http://github.com/oozcitak/xmlbuilder-js"
+ },
+ {
+  "name": "xmldoc",
+  "version": "2.0.3",
+  "license": "MIT",
+  "homepage": "git://github.com/nfarina/xmldoc"
  },
  {
   "name": "y-codemirror.next",
