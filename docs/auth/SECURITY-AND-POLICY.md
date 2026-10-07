@@ -43,7 +43,8 @@ The [official SIWC contract](SIWC-CONTRACT.md) records primary OpenAI sources
 checked 7 October 2026. They document an open-source/local account route, distinct
 from Codex client impersonation. This does not certify Somnia's as-yet-uninspected
 account implementation or imply no additional account risk. The discovery/issuer
-mismatch is unresolved. **TODO - wider provider-policy research result pending:**
+mismatch is real; the SIWC contract records a selected fail-closed allowlist, not
+a verified live-account result. Remote revocation remains unconfirmed. **TODO - wider provider-policy research result pending:**
 verify current Anthropic restrictions and API-key policy sources before promoting
 older design conclusions as fresh policy findings.
 

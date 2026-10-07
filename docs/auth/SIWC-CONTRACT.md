@@ -76,10 +76,26 @@ SIWC token reference names that production issuer, and the SIWC flow uses the
 `/api/accounts/...` authorize/token routes above. The token-reference claim concerns
 access tokens; it must not alone establish the ID-token issuer contract.
 
-Do not blindly derive SIWC authorize/token/issuer configuration from this discovery
-response, broaden issuer acceptance or disable identity verification. Research/dev
-must reconcile the specific ID-token validation and revocation contract before
-calling live account auth verified. No sign-in or token exchange was performed here.
+Somnia's selected fail-closed implementation contract is:
+
+1. Pin SIWC authorize/token/refresh to the `/api/accounts/...` allowlist above.
+   Discovery does not supply runtime token destinations; use it only to detect drift.
+2. Validate ID tokens using `https://auth.openai.com/.well-known/jwks.json`, require
+   RS256 or PS256 and a matching JWKS key ID, verify signature, issued-client-ID
+   audience, expiration and nonce, and require issuer exactly
+   `https://auth.openai.com`. Do not accept `https://auth0.openai.com/`. On mismatch,
+   abort login and save no tokens. This is the selected validation rule, not an
+   inference that the discovery document is consistent or a live-token test result.
+3. Revocation remains a source-contract ambiguity. Never forward a token to an
+   unreviewed discovery URL. Restrict any revocation attempt to explicitly reviewed
+   destinations; always finish local token deletion. If remote outcome is unknown,
+   report that and direct the user to disconnect in ChatGPT Settings.
+4. Expanding issuer or destination acceptance requires a reviewed, documented
+   decision based on actual verified provider behavior, not a generic retry fallback.
+
+**TODO - implementation verification:** inspect these controls in the delivered
+Rust code. No real account, ID token, sign-in, exchange, refresh or revocation has
+been tested here. A packaged-app account test remains required before release.
 
 ## Model discovery and inference
 

@@ -8,7 +8,8 @@ paid calls, CI runs, push or PR.
 
 ## Required before marking account OAuth implemented
 
-- [ ] Receive and inspect auth-research primary source URLs, check date and conclusion.
+- [x] Source-check official SIWC registration, sessions, token, inference, error and preview pages.
+- [ ] Receive remaining provider-policy research and verify implementation against selected fail-closed SIWC contract.
 - [ ] Receive and inspect auth implementation at a concrete commit or patch.
 - [ ] Replace pending user instructions with actual UI and cancellation/disconnect behavior.
 - [ ] Replace developer placeholders with exact endpoints, commands, token lifecycle,
