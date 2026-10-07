@@ -6,6 +6,7 @@ Start here:
 - [Build, CI and release](BUILD-AND-RELEASE.md): local builds, versioning, CI jobs, release assembly.
 - [Changelog](../CHANGELOG.md) and [v11.1.0 release-notes draft](releases/v11.1.0.md): implemented release changes and publication checks.
 - [Agent](agent/README.md): the AI panel (architecture, providers, privacy, MCP plan).
+- [Provider account authentication](auth/README.md): current API-key user/developer guides, account-OAuth integration status and security/policy checks.
 - [Extensions](extensions/README.md): build, install and secure Somnia extensions.
 - [Live collaboration](collaboration.md): share a project, join by link, your name and picture, session chat, encryption and its limits.
 - [Logging and error handling](LOGGING.md), [Window background](WINDOW-BACKGROUND.md), [Folder drop](FOLDER-DROP.md).
