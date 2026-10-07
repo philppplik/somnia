@@ -17,6 +17,7 @@ export type AgentErrorCode = 'limit' | 'tool-unsupported' | 'provider-error' | '
 export type AgentErrorDetail =
   | 'steps' | 'tool-calls' | 'output-tokens' | 'timeout' | 'context'
   | 'rate-limited' | 'auth' | 'credit' | 'quota' | 'model-not-found' | 'moderation' | 'server' | 'network' | 'protocol'
+  | 'account-auth' | 'not-eligible' | 'usage-limit'
   | 'no-tool-support' | 'consent' | 'user' | 'unknown';
 export class AgentError extends Error {
   constructor(public readonly code: AgentErrorCode, public readonly detail: AgentErrorDetail, message: string, public readonly retryable = false, public readonly status?: number, public readonly retryAfterMs?: number) {
@@ -71,6 +72,9 @@ export function describeAgentError(e: AgentError): string {
     case 'context': return `The chat or file context is too large for one request. ${none} Start a new chat or reference fewer files.`;
     case 'rate-limited': return `The provider is rate-limiting this model (HTTP ${e.status ?? 429}), common for free models. ${none} ${e.retryAfterMs !== undefined ? `Wait at least ${Math.ceil(e.retryAfterMs / 1000)} seconds` : 'Wait a minute'} and retry, or choose another model.`;
     case 'auth': return `The API key is missing or was rejected by the provider${e.status ? ` (HTTP ${e.status})` : ''}. ${none} Check the key in Agent configuration.`;
+    case 'account-auth': return `The OpenAI account session is missing, expired or was rejected${e.status ? ` (HTTP ${e.status})` : ''}. ${none} Reconnect the account in Agent configuration, or switch back to an API key.`;
+    case 'not-eligible': return `This ChatGPT account is not eligible for Sign in with ChatGPT; an eligible ChatGPT Plus or Pro plan is required. ${none} Use an API key for pay-as-you-go API billing instead.`;
+    case 'usage-limit': return `This ChatGPT account reached its usage limit. ${none} Check your ChatGPT usage settings or wait for the limit to reset. Automatic retries were stopped; no switch to other billing happens silently.`;
     case 'quota': return `The provider reports that this key's quota or spending limit is exhausted. ${none} Check usage and limits in your provider account, or choose another provider. Automatic retries were stopped.`;
     case 'credit': return `The provider reports no credit or quota for this key (HTTP 402). ${none} Add credit or use a free model.`;
     case 'model-not-found': return `The provider has no available endpoint for this model under the current privacy settings. ${none} Check the model name; for Ollama, install the model first. Or choose another model.`;
