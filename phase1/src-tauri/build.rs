@@ -29,6 +29,8 @@ fn main() {
             "agent_account_status",
             "agent_account_disconnect",
             "agent_account_set_method",
+            "agent_account_start",
+            "agent_account_cancel",
             "hold_autosave",
             "stage_edit",
             "save_file",

@@ -13,6 +13,8 @@ use std::sync::Mutex;
 /// `openai` is untouched, so key and account coexist.
 pub const TOKEN_SLOT: &str = "openai-oauth";
 pub const METHOD_SLOT: &str = "openai-auth-method";
+/// Stable per-installation `ext_agent_host_id` (urn:uuid). Created before the first login and kept across logout.
+pub const HOST_SLOT: &str = "openai-oauth-host";
 /// Refresh this long before the access token expires.
 pub const REFRESH_SKEW_MS: u64 = 5 * 60 * 1000;
 /// Never schedule a background refresh sooner than this (prevents tight loops).
@@ -129,6 +131,12 @@ impl<B: SecretBackend> Store<B> {
         self.backend.delete(TOKEN_SLOT)?;
         if self.method()? == Method::Account { self.backend.set(METHOD_SLOT, "api-key")?; }
         Ok(())
+    }
+    /// Returns the persisted host id, creating and storing it first when absent.
+    pub fn host_id(&self) -> Result<String, StoreError> {
+        if let Some(h) = self.backend.get(HOST_SLOT)? { if h.starts_with("urn:uuid:") && h.len() < 64 { return Ok(h); } }
+        let h = format!("urn:uuid:{}", uuid::Uuid::new_v4());
+        self.backend.set(HOST_SLOT, &h)?; Ok(h)
     }
     pub fn method(&self) -> Result<Method, StoreError> {
         Ok(match self.backend.get(METHOD_SLOT)?.as_deref() { Some("account") => Method::Account, _ => Method::ApiKey })

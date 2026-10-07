@@ -153,6 +153,59 @@ async fn agent_account_disconnect(window: WebviewWindow, provider: String) -> st
     blocking_store(|s| s.disconnect()).await?; OAUTH_WAKE.notify_one();
     tauri::async_runtime::spawn_blocking(|| { let _g = AGENT_SETTINGS_LOCK.lock().map_err(|_| "Credential store is busy".to_string())?; account_status_now() }).await.map_err(|_| "Could not access credential store")?
 }
+static OAUTH_CANCEL: tokio::sync::Notify = tokio::sync::Notify::const_new();
+fn open_browser(url: &str) -> std::io::Result<()> {
+    #[cfg(target_os = "windows")]
+    let r = std::process::Command::new("rundll32").args(["url.dll,FileProtocolHandler", url]).spawn();
+    #[cfg(target_os = "macos")]
+    let r = std::process::Command::new("open").arg(url).spawn();
+    #[cfg(all(not(target_os = "windows"), not(target_os = "macos")))]
+    let r = std::process::Command::new("xdg-open").arg(url).spawn();
+    r.map(|_| ())
+}
+/// The whole browser login runs here. The renderer never sees a code, verifier or token.
+async fn oauth_login_flow() -> std::result::Result<(), crate::oauth_login::LoginError> {
+    use crate::oauth_login as l;
+    use crate::oauth_store as o;
+    let existing = blocking_store(|s| s.load_tokens()).await.ok().flatten().map(|t| t.client_id);
+    let host_id = blocking_store(|s| s.host_id()).await.map_err(|_| l::LoginError::Listener)?;
+    let (state, nonce, verifier) = (l::random_token(), l::random_token(), l::random_token());
+    let lb = l::Loopback::bind(l::LOOPBACK_PORT).await?;
+    let redirect = lb.redirect_uri.clone();
+    let url = l::authorize_url(existing.as_deref().unwrap_or(l::BOOTSTRAP_CLIENT_ID), &host_id, &redirect, &state, &nonce, &l::pkce_challenge(&verifier));
+    open_browser(&url).map_err(|_| l::LoginError::Listener)?;
+    let cb = lb.wait(l::LOGIN_TIMEOUT, &OAUTH_CANCEL).await?;
+    let (code, client_id) = l::check_callback(&cb, &state, existing.as_deref())?;
+    let client = reqwest::Client::builder().no_proxy().redirect(reqwest::redirect::Policy::none()).connect_timeout(Duration::from_secs(15)).timeout(Duration::from_secs(30)).build().map_err(|_| l::LoginError::Exchange)?;
+    let resp = client.post(o::OAUTH_TOKEN_URL).header("content-type", "application/x-www-form-urlencoded").body(l::exchange_body(&code, &redirect, &client_id, &verifier)).send().await.map_err(|_| l::LoginError::Exchange)?;
+    if !resp.status().is_success() { return Err(l::LoginError::Exchange); }
+    let text = resp.text().await.map_err(|_| l::LoginError::Exchange)?;
+    let jwks = client.get(o::OAUTH_JWKS_URL).send().await.map_err(|_| l::LoginError::IdToken)?;
+    if !jwks.status().is_success() { return Err(l::LoginError::IdToken); }
+    let jwks = jwks.text().await.map_err(|_| l::LoginError::IdToken)?;
+    let tokens = l::tokens_from_exchange(&text, &jwks, &client_id, &nonce, now_ms())?;
+    let _refresh = OAUTH_REFRESH_LOCK.lock().await; // a refresh must not race the new token set; held only for the save
+    blocking_store(move |s| s.save_tokens(&tokens)).await.map_err(|_| l::LoginError::Response)?;
+    Ok(())
+}
+#[tauri::command]
+async fn agent_account_start(window: WebviewWindow, provider: String) -> std::result::Result<crate::oauth_store::Status, String> {
+    gate(&window).map_err(|_| "Only the trusted editor may sign in")?;
+    if provider != "openai" { return Err("Unsupported account provider".into()); }
+    if OAUTH_PENDING.compare_exchange(false, true, std::sync::atomic::Ordering::SeqCst, std::sync::atomic::Ordering::SeqCst).is_err() { return account_status_now(); }
+    tauri::async_runtime::spawn(async {
+        let _ = oauth_login_flow().await;
+        oauth_saved(); // clears pending and wakes the scheduler, also after failure
+    });
+    account_status_now()
+}
+#[tauri::command]
+async fn agent_account_cancel(window: WebviewWindow, provider: String) -> std::result::Result<crate::oauth_store::Status, String> {
+    gate(&window).map_err(|_| "Only the trusted editor may cancel sign-in")?;
+    if provider != "openai" { return Err("Unsupported account provider".into()); }
+    OAUTH_CANCEL.notify_waiters();
+    account_status_now()
+}
 #[tauri::command]
 async fn agent_account_set_method(window: WebviewWindow, provider: String, method: crate::oauth_store::Method) -> std::result::Result<crate::oauth_store::Status, String> {
     gate(&window).map_err(|_| "Only the trusted editor may change credentials")?;
@@ -1057,6 +1110,8 @@ pub fn run() {
             agent_account_status,
             agent_account_disconnect,
             agent_account_set_method,
+            agent_account_start,
+            agent_account_cancel,
             agent_settings_load,
             agent_settings_save,
             set_window_background,

@@ -47,6 +47,8 @@
     "allow-agent-account-status",
     "allow-agent-account-disconnect",
     "allow-agent-account-set-method",
+    "allow-agent-account-start",
+    "allow-agent-account-cancel",
     "allow-hold-autosave",
     "allow-stage-edit",
     "allow-save-file",
