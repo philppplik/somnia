@@ -42,3 +42,13 @@ test('Edit image: invert filter changes pixels, strength 100% inverts the purple
  const png=readFileSync('/tmp/image-editor-invert.png');assert.deepEqual([...png.subarray(0,8)],[137,80,78,71,13,10,26,10]);
  assert.notDeepEqual(png,readFileSync('/tmp/image-editor-out.png'));
 });
+test('Edit image: rectangle selection + fill is replayed into the exported copy',async()=>{
+ await page.getByTestId('image-editor-filter-select').selectOption('');
+ await page.getByRole('button',{name:'Select',exact:true}).click();
+ const canvas=page.getByLabel(/^Image canvas/);const box=(await canvas.boundingBox())!;
+ await page.mouse.move(box.x+box.width/2-20,box.y+box.height/2-20);await page.mouse.down();await page.mouse.move(box.x+box.width/2+20,box.y+box.height/2+20,{steps:4});await page.mouse.up();
+ await page.getByRole('button',{name:'Fill',exact:true}).click();
+ await page.screenshot({path:'/tmp/image-editor-select.png'});
+ const download=page.waitForEvent('download');await page.getByRole('button',{name:'Save copy...'}).click();await (await download).saveAs('/tmp/image-editor-fill.png');
+ assert.notDeepEqual(readFileSync('/tmp/image-editor-fill.png'),readFileSync('/tmp/image-editor-bright.png'));
+});

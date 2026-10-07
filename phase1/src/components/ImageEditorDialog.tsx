@@ -9,6 +9,8 @@ import {
  ImageEditorRenderer,createOperationRegistry,exportImage,exportSettings,loadImage,withOperations,
  type ExportFormat,type ImageOperation,type LoadedImage
 } from '../lib/image-editor';
+import {SelectionEditor} from './imgedit/SelectionEditor';
+import {registerSelectionOps,type SelectionMask} from '../lib/imgedit/select';
 import {FilterPanel} from './imageedit/FilterPanel';
 import {FILTER_TYPES,newFilterOperation,registerFilterOps,type FilterType} from '../lib/imageedit/filters';
 import {TRANSFORM_HANDLERS} from '../lib/imgedit/handlers';
@@ -21,7 +23,7 @@ interface Snapshot{stack:readonly ImageOperation[];adjust:AdjustParams;filter:Im
 const EMPTY:Snapshot={stack:[],adjust:DEFAULT_ADJUST_PARAMS,filter:null};
 const ADJUST_ID='adjust-live';
 const MAX_HISTORY=100;
-function buildRegistry(){const r=createOperationRegistry();for(const h of TRANSFORM_HANDLERS)r.register(h);r.register(adjustHandler);registerFilterOps(r);return r;}
+function buildRegistry(){const r=createOperationRegistry();for(const h of TRANSFORM_HANDLERS)r.register(h);r.register(adjustHandler);registerFilterOps(r);registerSelectionOps(r);return r;}
 /** Image size after the transform stack, without pixel work. */
 function sizeAfter(width:number,height:number,stack:readonly ImageOperation[]){
  let size={width,height};
@@ -38,6 +40,8 @@ export function ImageEditorDialog({host:injected}:{host?:ImageEditorHost}){
  const [format,setFormat]=useState<ExportFormat>('png');const [quality,setQuality]=useState(92);
  const [busy,setBusy]=useState(false);const [error,setError]=useState('');const [status,setStatus]=useState('');
  const hostRef=useRef<ImageEditorHost|null>(injected??null);const registry=useMemo(buildRegistry,[]);
+ const [selectMode,setSelectMode]=useState(false);const [selection,setSelection]=useState<SelectionMask|null>(null);
+ const raster=useMemo(()=>{if(!selectMode||!frame)return null;const c=frame.getContext('2d');return c?c.getImageData(0,0,frame.width,frame.height):null;},[selectMode,frame]);
  const adjustBase=useRef<Snapshot|null>(null);const filterId=useRef(0);const generation=useRef(0);const current=useRef(source);current.current=source;
  useEffect(()=>{const show=()=>setOpen(true);window.addEventListener('somnia:edit-image',show);return()=>window.removeEventListener('somnia:edit-image',show);},[]);
  const release=useCallback(()=>{const s=current.current;if(s){s.renderer.dispose();s.loaded.dispose();}},[]);
@@ -56,8 +60,8 @@ export function ImageEditorDialog({host:injected}:{host?:ImageEditorHost}){
   return()=>ac.abort();
  },[source,doc]);
  const commit=(next:Snapshot)=>{setPast(p=>[...p.slice(-(MAX_HISTORY-1)),snap]);setFuture([]);setSnap(next);};
- const undo=()=>{adjustBase.current=null;const prev=past[past.length-1];if(!prev)return;setPast(p=>p.slice(0,-1));setFuture(f=>[snap,...f]);setSnap(prev);setCropRect(null);};
- const redo=()=>{adjustBase.current=null;const next=future[0];if(!next)return;setFuture(f=>f.slice(1));setPast(p=>[...p,snap]);setSnap(next);setCropRect(null);};
+ const undo=()=>{adjustBase.current=null;const prev=past[past.length-1];if(!prev)return;setPast(p=>p.slice(0,-1));setFuture(f=>[snap,...f]);setSnap(prev);setCropRect(null);setSelection(null);};
+ const redo=()=>{adjustBase.current=null;const next=future[0];if(!next)return;setFuture(f=>f.slice(1));setPast(p=>[...p,snap]);setSnap(next);setCropRect(null);setSelection(null);};
  const openFile=async()=>{
   if(busy)return;setBusy(true);setError('');setStatus('');
   const id=++generation.current;
@@ -68,7 +72,7 @@ export function ImageEditorDialog({host:injected}:{host?:ImageEditorHost}){
    if(id!==generation.current){loaded.dispose();return;}
    release();
    setSource({loaded,renderer:new ImageEditorRenderer(loaded,registry),name:picked.name});
-   setSnap(EMPTY);setPast([]);setFuture([]);setCropRect(null);setAspect('free');setFrame(null);
+   setSnap(EMPTY);setPast([]);setFuture([]);setCropRect(null);setAspect('free');setFrame(null);setSelection(null);setSelectMode(false);
   }catch(e){setError(e instanceof Error?e.message:String(e));}finally{setBusy(false);}
  };
  const save=async()=>{
@@ -84,12 +88,12 @@ export function ImageEditorDialog({host:injected}:{host?:ImageEditorHost}){
  const close=()=>{if(busy)return;generation.current++;release();setSource(null);setFrame(null);setSnap(EMPTY);setPast([]);setFuture([]);setError('');setStatus('');setOpen(false);};
  const base=source?source.loaded.document.source:null;
  const size=base?sizeAfter(base.width,base.height,snap.stack):{width:1,height:1};
- const addOp=(op:ImageOperation)=>{commit({...snap,stack:[...snap.stack,op]});setCropRect(null);setAspect('free');};
+ const addOp=(op:ImageOperation)=>{setSelection(null);commit({...snap,stack:[...snap.stack,op]});setCropRect(null);setAspect('free');};
  return <Dialog open={open} onOpenChange={v=>{if(!v)close();}}><DialogContent className="export-popup image-editor-dialog" aria-label={t('imageeditor.title')}>
   <header className="export-head"><DialogTitle>{t('imageeditor.title')}</DialogTitle><DialogDescription>{t('imageeditor.desc')}</DialogDescription></header>
   <div className="image-editor-body">
    <div className="image-editor-stage" data-testid="image-editor-stage">
-    {source?<ImageEditorViewport image={frame}/>:<p className="image-editor-empty">{t('imageeditor.empty')}</p>}
+    {source?(selectMode&&raster?<SelectionEditor image={frame} raster={raster} selection={selection} onSelectionChange={setSelection} onCommit={op=>commit({...snap,stack:[...snap.stack,op]})} disabled={busy}/>:<ImageEditorViewport image={frame}/>):<p className="image-editor-empty">{t('imageeditor.empty')}</p>}
    </div>
    <aside className="image-editor-side" aria-label={t('imageeditor.tools')}>
     {source&&<>
@@ -112,6 +116,7 @@ export function ImageEditorDialog({host:injected}:{host?:ImageEditorHost}){
   <footer className="export-foot image-editor-foot">
    <Button disabled={busy} onClick={()=>void openFile()}>{source?t('imageeditor.openOther'):t('imageeditor.open')}</Button>
    {source&&<>
+    <Button disabled={busy||!frame} onClick={()=>{setSelectMode(m=>!m);setSelection(null);}} aria-pressed={selectMode}>{t('imageeditor.select')}</Button>
     <Button disabled={busy||!past.length} onClick={undo}>{t('imageeditor.undo')}</Button>
     <Button disabled={busy||!future.length} onClick={redo}>{t('imageeditor.redo')}</Button>
     <label className="image-editor-format">{t('imageeditor.format')}<select value={format} disabled={busy} onChange={e=>setFormat(e.target.value as ExportFormat)}><option value="png">PNG</option><option value="jpg">JPEG</option><option value="webp">WebP</option></select></label>

@@ -6,3 +6,8 @@
 .image-editor-note{margin:6px 32px 0;font-size:12px;opacity:.75}
 .image-editor-foot{flex-wrap:wrap;gap:8px;align-items:center}
 .image-editor-format{display:flex;align-items:center;gap:6px;font-size:12px}
+.image-editor-stage fieldset{gap:6px 10px}
+.image-editor-stage fieldset input[type=color]{width:32px;height:24px;padding:0;border:0;background:none}
+.image-editor-stage fieldset input[type=number]{width:64px}
+.image-editor-stage fieldset select,.image-editor-stage fieldset button{font-size:12px}
+.image-editor-filter{display:grid;gap:8px;padding:12px;border-top:1px solid var(--border-subtle,#8884)}

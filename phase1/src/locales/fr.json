@@ -1486,5 +1486,6 @@
   "imageedit.filters.reset": "Réinitialiser le filtre",
   "imageeditor.filter": "Filtre",
   "imageeditor.filterNone": "Aucun",
-  "imageeditor.filterApply": "Appliquer et en ajouter un autre"
+  "imageeditor.filterApply": "Appliquer et en ajouter un autre",
+  "imageeditor.select": "Sélection"
 }
