@@ -1475,5 +1475,13 @@
   "imageeditor.working": "Working...",
   "imageeditor.saved": "Saved as a new file.",
   "imageeditor.gpu": "GPU preview",
-  "imageeditor.cpu": "CPU preview"
+  "imageeditor.cpu": "CPU preview",
+  "imageedit.filters.blur": "Gaussian blur",
+  "imageedit.filters.sharpen": "Sharpen",
+  "imageedit.filters.grayscale": "Grayscale",
+  "imageedit.filters.sepia": "Sepia",
+  "imageedit.filters.invert": "Invert",
+  "imageedit.filters.vignette": "Vignette",
+  "imageedit.filters.strength": "Strength",
+  "imageedit.filters.reset": "Reset filter"
 }

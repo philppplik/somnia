@@ -1475,5 +1475,13 @@
   "imageeditor.working": "Processando...",
   "imageeditor.saved": "Salvo como novo arquivo.",
   "imageeditor.gpu": "Prévia GPU",
-  "imageeditor.cpu": "Prévia CPU"
+  "imageeditor.cpu": "Prévia CPU",
+  "imageedit.filters.blur": "Desfoque gaussiano",
+  "imageedit.filters.sharpen": "Nitidez",
+  "imageedit.filters.grayscale": "Escala de cinza",
+  "imageedit.filters.sepia": "Sépia",
+  "imageedit.filters.invert": "Inverter",
+  "imageedit.filters.vignette": "Vinheta",
+  "imageedit.filters.strength": "Intensidade",
+  "imageedit.filters.reset": "Redefinir filtro"
 }

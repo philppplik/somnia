@@ -1475,5 +1475,13 @@
   "imageeditor.working": "Arbeite...",
   "imageeditor.saved": "Als neue Datei gespeichert.",
   "imageeditor.gpu": "GPU-Vorschau",
-  "imageeditor.cpu": "CPU-Vorschau"
+  "imageeditor.cpu": "CPU-Vorschau",
+  "imageedit.filters.blur": "Gaußscher Weichzeichner",
+  "imageedit.filters.sharpen": "Schärfen",
+  "imageedit.filters.grayscale": "Graustufen",
+  "imageedit.filters.sepia": "Sepia",
+  "imageedit.filters.invert": "Invertieren",
+  "imageedit.filters.vignette": "Vignette",
+  "imageedit.filters.strength": "Stärke",
+  "imageedit.filters.reset": "Filter zurücksetzen"
 }
