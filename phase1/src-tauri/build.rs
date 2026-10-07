@@ -2,6 +2,8 @@ fn main() {
     #[cfg(feature = "desktop")]
     tauri_build::try_build(tauri_build::Attributes::new().app_manifest(
         tauri_build::AppManifest::new().commands(&[
+            "agent_settings_load",
+            "agent_settings_save",
             "set_window_background",
             "collab_lan_start",
             "collab_lan_stop",

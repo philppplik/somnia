@@ -1,6 +1,9 @@
 # Changelog
 
 ## 11.1.1-beta.1 - 2026-10-07
+- Agent: remember provider/model locally and API key in the OS credential store. No plaintext key fallback.
+- Agent: create, edit, delete and enable custom prompts, persisted locally and included in every AI provider request. Cloud consent and file access approval remain separate.
+
 
 - macOS: explicitly ad-hoc sign the complete app bundle, including sealed resources.
 - CI: verify DMG integrity and signatures in the app, mounted DMG and updater archive.

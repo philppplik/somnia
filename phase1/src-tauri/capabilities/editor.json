@@ -20,6 +20,8 @@
     "core:window:allow-outer-position",
     "core:window:allow-is-maximized",
     "core:window:allow-maximize",
+    "allow-agent-settings-load",
+    "allow-agent-settings-save",
     "allow-set-window-background",
     "allow-collab-lan-start",
     "allow-collab-lan-stop",

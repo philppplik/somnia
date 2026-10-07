@@ -16,7 +16,7 @@ required-features = ["desktop"]
 
 [features]
 default = ["desktop"]
-desktop = ["dep:tauri", "dep:tauri-plugin-dialog", "dep:tauri-plugin-updater", "dep:tauri-plugin-process", "dep:tauri-build", "dep:window-vibrancy"]
+desktop = ["dep:tauri", "dep:tauri-plugin-dialog", "dep:tauri-plugin-updater", "dep:tauri-plugin-process", "dep:tauri-build", "dep:window-vibrancy", "dep:keyring"]
 
 [dependencies]
 somnia-relay = { path = "../../relay" }
@@ -34,6 +34,8 @@ tauri = { version = "2", optional = true, features = ["macos-private-api"] }
 tauri-plugin-dialog = { version = "2", optional = true }
 tauri-plugin-updater = { version = "2", optional = true }
 tauri-plugin-process = { version = "2", optional = true }
+
+keyring = { version = "=3.6.3", optional = true, features = ["apple-native", "windows-native", "sync-secret-service", "crypto-rust", "vendored"] }
 
 [target.'cfg(any(target_os = "windows", target_os = "macos"))'.dependencies]
 window-vibrancy = { version = "=0.8.1", optional = true }

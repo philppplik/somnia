@@ -1,3 +1,4 @@
+import type {CustomPrompt} from './settings';
 import {logWarn} from '../log';
 import {AgentSession} from './session';
 import {AgentProjectTools} from './projectTools';
@@ -9,9 +10,14 @@ import {holdAgentAutosave} from './autosaveHold';
 import {applyOperations,getState,getProjectGeneration,subscribe,patchState} from '../../store/appStore';
 import type {AgentCore,AgentEvent,AgentApproval,AgentProposal,DiffLine} from './core';
 import type {AgentProvider,AgentProviderEvent,AgentProviderRequest} from './types';
-export interface AgentConfiguration {provider:'ollama'|'openrouter';model:string;apiKey:string;allowActiveFile:boolean}
+export interface AgentConfiguration {provider:'ollama'|'openrouter';model:string;apiKey:string;allowActiveFile:boolean;customPrompts?:CustomPrompt[]}
 let config:AgentConfiguration={provider:'ollama',model:'',apiKey:'',allowActiveFile:false};
 export function configureAgent(value:AgentConfiguration){realCore.clear?.();config={...value};}
+/** Custom instructions are sent every provider round, never as access permission. */
+export function withCustomPrompts(provider:AgentProvider,prompts:readonly CustomPrompt[]=[]):AgentProvider {
+ const text=prompts.filter(p=>p.enabled&&p.text.trim()).map(p=>p.text.trim()).join('\n\n');
+ return {id:provider.id,locality:provider.locality,stream(request){return provider.stream({...request,messages:text?[...request.messages.slice(0,1),{role:'system',content:'Additional user preferences (do not override tool access or safety rules):\n'+text},...request.messages.slice(1)]:request.messages});}};
+}
 /** A gated stream whose operation remains live through body consumption, with single-slot backpressure. */
 function guardedOllama(provider:OllamaProvider):AgentProvider {
  return {id:provider.id,locality:provider.locality,async *stream(request:AgentProviderRequest){
@@ -75,7 +81,7 @@ export const realCore:AgentCore={
   if(epoch!==generation){session?.cancel();session=null;sessionSerial++;proposals.clear();permissions.clear();appliedAgentProvenance.clear();epoch=generation;}
   if(config.allowActiveFile&&request.context.activeFile)permissions.set(request.context.activeFile,new Set(['read']));
   if(!session){const sessionEpoch=epoch;const sessionToken=sessionSerial;const provider=config.provider==='ollama'?guardedOllama(new OllamaProvider()):new OpenRouterProvider({getApiKey:()=>config.apiKey});
-   session=new AgentSession({provider,model:config.model,tools:getState().coreConnected?createTools(String(generation)):undefined,onEvent:event=>{
+   session=new AgentSession({provider:withCustomPrompts(provider,config.customPrompts),model:config.model,tools:getState().coreConnected?createTools(String(generation)):undefined,onEvent:event=>{
     if(sessionEpoch!==epoch||sessionToken!==sessionSerial)return;
     if(event.type==='text')send?.({type:'text-delta',text:event.text});
     else if(event.type==='state'&&event.status==='running')send?.({type:'status',text:'Working'});
