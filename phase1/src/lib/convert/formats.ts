@@ -1,5 +1,5 @@
 /** Conversion formats: detection (magic bytes first, then extension, then content) and the source to target matrix. */
-export type FormatId='md'|'html'|'txt'|'csv'|'tsv'|'json'|'svg'|'png'|'jpg'|'webp'|'gif'|'bmp'|'pdf'|'unknown';
+export type FormatId='md'|'html'|'txt'|'csv'|'tsv'|'json'|'svg'|'png'|'jpg'|'webp'|'gif'|'bmp'|'pdf'|'docx'|'unknown';
 export interface FormatInfo{id:FormatId;ext:string;mime:string;label:string;kind:'text'|'image'|'binary'}
 export const FORMATS:Readonly<Record<Exclude<FormatId,'unknown'>,FormatInfo>>={
  md:{id:'md',ext:'md',mime:'text/markdown;charset=utf-8',label:'Markdown',kind:'text'},
@@ -15,14 +15,15 @@ export const FORMATS:Readonly<Record<Exclude<FormatId,'unknown'>,FormatInfo>>={
  gif:{id:'gif',ext:'gif',mime:'image/gif',label:'GIF',kind:'image'},
  bmp:{id:'bmp',ext:'bmp',mime:'image/bmp',label:'BMP',kind:'image'},
  pdf:{id:'pdf',ext:'pdf',mime:'application/pdf',label:'PDF',kind:'binary'},
+ docx:{id:'docx',ext:'docx',mime:'application/vnd.openxmlformats-officedocument.wordprocessingml.document',label:'Word (DOCX)',kind:'binary'},
 };
 const RASTER_OUT:FormatId[]=['png','jpg','webp'];
 /** Which targets each source can reach. Anything not listed is not convertible (no placeholders). */
 export const TARGETS:Readonly<Record<FormatId,readonly FormatId[]>>={
- md:['html','txt'],html:['md','txt'],txt:['html','md'],csv:['json','tsv','html'],tsv:['csv','json'],json:['csv'],
- svg:RASTER_OUT,png:['jpg','webp'],jpg:['png','webp'],webp:['png','jpg'],gif:RASTER_OUT,bmp:RASTER_OUT,pdf:[],unknown:[],
+ md:['html','txt','pdf'],html:['md','txt'],txt:['html','md'],csv:['json','tsv','html'],tsv:['csv','json'],json:['csv'],
+ svg:RASTER_OUT,png:['jpg','webp'],jpg:['png','webp'],webp:['png','jpg'],gif:RASTER_OUT,bmp:RASTER_OUT,pdf:['txt','docx'],docx:['md'],unknown:[],
 };
-const EXT:Record<string,FormatId>={md:'md',markdown:'md',mdown:'md',html:'html',htm:'html',txt:'txt',text:'txt',csv:'csv',tsv:'tsv',tab:'tsv',json:'json',svg:'svg',png:'png',jpg:'jpg',jpeg:'jpg',jpe:'jpg',webp:'webp',gif:'gif',bmp:'bmp',pdf:'pdf'};
+const EXT:Record<string,FormatId>={md:'md',markdown:'md',mdown:'md',html:'html',htm:'html',txt:'txt',text:'txt',csv:'csv',tsv:'tsv',tab:'tsv',json:'json',svg:'svg',png:'png',jpg:'jpg',jpeg:'jpg',jpe:'jpg',webp:'webp',gif:'gif',bmp:'bmp',pdf:'pdf',docx:'docx'};
 export function extensionOf(name:string){const m=/\.([A-Za-z0-9]+)$/.exec(name);return m?m[1].toLowerCase():'';}
 export function baseName(name:string){const leaf=name.split(/[\\/]/).pop()||name;return leaf.replace(/\.[^.]*$/,'')||'file';}
 const startsWith=(b:Uint8Array,sig:number[],at=0)=>sig.every((v,i)=>b[at+i]===v);
@@ -52,10 +53,11 @@ function sniffText(text:string):FormatId{
 /** Detect the source format. Content signatures beat the extension so a renamed file still converts correctly. */
 export function detectFormat(name:string,bytes:Uint8Array):FormatId{
  const bin=sniffBinary(bytes);if(bin)return bin;
+ if(extensionOf(name)==='docx'&&bytes.length>=4&&startsWith(bytes,[0x50,0x4b,0x03,0x04]))return 'docx';
  if(looksBinary(bytes))return 'unknown';
  const byExt=EXT[extensionOf(name)];
  // An extension that promises a binary format without its signature is a corrupt or mislabelled file.
- if(byExt&&['png','jpg','gif','webp','bmp','pdf'].includes(byExt))return 'unknown';
+ if(byExt&&['png','jpg','gif','webp','bmp','pdf','docx'].includes(byExt))return 'unknown';
  if(byExt)return byExt;
  return sniffText(decodeUtf8(bytes));}
 /** Targets every file in the batch can reach. Empty when the batch has no common target. */

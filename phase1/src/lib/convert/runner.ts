@@ -10,7 +10,7 @@ export interface OutputSink{
 }
 export interface BatchItem{id:string;name:string;bytes:Uint8Array;format:FormatId}
 export type ItemState='queued'|'running'|'done'|'failed'|'skipped'|'cancelled';
-export interface ItemProgress{id:string;state:ItemState;error?:string;outputName?:string}
+export interface ItemProgress{id:string;state:ItemState;error?:string;outputName?:string;warnings?:string[]}
 export interface BatchSummary{done:number;failed:number;skipped:number;cancelled:number;items:ItemProgress[]}
 /** "a.png" taken -> "a (2).png". Case-insensitive because Windows and macOS folders are. */
 export async function uniqueName(name:string,sink:Pick<OutputSink,'has'>,taken:Set<string>):Promise<string>{
@@ -33,7 +33,7 @@ export async function runBatch(items:readonly BatchItem[],o:BatchOptions):Promis
    if(o.signal?.aborted){set({id:it.id,state:'cancelled'});continue;}
    const name=await uniqueName(r.name,o.sink,taken);
    await o.sink.write(name,r.bytes,r.mime);
-   set({id:it.id,state:'done',outputName:name});
+   set({id:it.id,state:'done',outputName:name,warnings:r.warnings});
   }catch(e){set({id:it.id,state:'failed',error:e instanceof Error?e.message:String(e)});}
  }
  const list=items.map(i=>progress.get(i.id)!);

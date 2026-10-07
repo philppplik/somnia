@@ -1390,7 +1390,7 @@
   "cmd.chat.toggle": "Toggle session chat",
   "cmd.agent.toggle": "Toggle Somnia Agent",
   "convert.title": "Convert files",
-  "convert.desc": "Convert images, Markdown, HTML, CSV and JSON files on this device. Nothing is uploaded.",
+  "convert.desc": "Convert images, Markdown, HTML, CSV, JSON, PDF and Word files on this device. Nothing is uploaded.",
   "convert.aria": "Convert files",
   "convert.drop": "Drop files here",
   "convert.choose": "Choose files",
@@ -1424,5 +1424,6 @@
   "convert.state.failed": "Failed",
   "convert.state.skipped": "Skipped",
   "convert.state.cancelled": "Cancelled",
+  "convert.imageOptions": "Resize and preview...",
   "convert.tooMany": "Up to {max} files per batch. Extra files were not added."
 }

@@ -1424,5 +1424,6 @@
   "convert.state.failed": "Échec",
   "convert.state.skipped": "Ignoré",
   "convert.state.cancelled": "Annulé",
+  "convert.imageOptions": "Redimensionner et aperçu...",
   "convert.tooMany": "{max} fichiers maximum par lot. Les autres n’ont pas été ajoutés."
 }

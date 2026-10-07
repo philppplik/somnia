@@ -26,7 +26,7 @@ test('detection: text by extension then content',()=>{
 });
 test('target matrix',()=>{
  assert.deepEqual(commonTargets(['png','jpg']),['webp']);assert.deepEqual(commonTargets(['md','json']),[]);assert.deepEqual(commonTargets([]),[]);
- assert.ok(anyTargets(['md','csv']).includes('json'));assert.deepEqual(TARGETS.pdf,[]);
+ assert.ok(anyTargets(['md','csv']).includes('json'));assert.deepEqual(TARGETS.pdf,['txt','docx']);
 });
 test('csv parsing handles quotes, commas, newlines, CRLF',()=>{
  assert.deepEqual(parseDelimited('a,"b,1","c ""q"""\r\n1,2,3\n',','),[['a','b,1','c "q"'],['1','2','3']]);
@@ -102,4 +102,10 @@ test('toBatchItem reads and detects, rejects oversize',async()=>{
  const f={name:'a.json',size:7,arrayBuffer:async()=>u('[{"a":1}]').buffer as ArrayBuffer};
  const it=await toBatchItem(f,'x');assert.equal(it.format,'json');
  await assert.rejects(toBatchItem({...f,size:300*1024*1024},'y'),/200 MB/);
+});
+test('document pairs are routed through the document facade',async()=>{
+ assert.deepEqual(TARGETS.docx,['md']);assert.ok(TARGETS.md.includes('pdf'));
+ assert.equal(detectFormat('a.docx',new Uint8Array([0x50,0x4b,0x03,0x04,0,0])),'docx');
+ const r=await convertFile('note.md',new TextEncoder().encode('# Hi\n\ntext'),'md','pdf');
+ assert.equal(r.name,'note.pdf');assert.equal(new TextDecoder().decode(r.bytes.subarray(0,5)),'%PDF-');
 });

@@ -11,7 +11,7 @@ export function ImageConversionDialog(){
  const [width,setWidth]=useState(''),[height,setHeight]=useState(''),[lock,setLock]=useState(true),[format,setFormat]=useState<ImageFormat>('png');
  const [quality,setQuality]=useState(92),[background,setBackground]=useState('#ffffff'),[busy,setBusy]=useState(false),[error,setError]=useState('');
  const [result,setResult]=useState<ConvertedImage|null>(null),[preview,setPreview]=useState('');const generation=useRef(0);
- useEffect(()=>{const show=()=>setOpen(true);window.addEventListener('somnia:convert-image',show);return()=>window.removeEventListener('somnia:convert-image',show);},[]);
+ useEffect(()=>{const show=(e:Event)=>{setOpen(true);const f=(e as CustomEvent<File|undefined>).detail;if(f instanceof File)void choose(f);};window.addEventListener('somnia:convert-image',show);return()=>window.removeEventListener('somnia:convert-image',show);},[]);
  useEffect(()=>{if(!result)return;const url=URL.createObjectURL(result.blob);setPreview(url);return()=>URL.revokeObjectURL(url);},[result]);
  const resetResult=()=>{setResult(null);setPreview('');setError('');};
  const choose=async(next:File|undefined)=>{const id=++generation.current;resetResult();setFile(next??null);setSize(null);if(!next)return;setBusy(true);try{const loaded=await loadConversionImage(next);loaded.dispose();if(id!==generation.current)return;setSize(loaded.size);setWidth(String(loaded.size.width));setHeight(String(loaded.size.height));}catch(e){if(id===generation.current)setError(e instanceof Error?e.message:String(e));}finally{if(id===generation.current)setBusy(false);}};

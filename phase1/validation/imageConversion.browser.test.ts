@@ -49,8 +49,10 @@ test('unsafe/malformed SVG, corrupt raster, zero sizes, invalid quality and MIME
 });
 test('Tools dialog provides resize, preview and a downloaded real PNG without touching the project',async()=>{
  const beforeProject=await page.evaluate(async()=>{const {getState}=await import('/src/store/appStore.ts');return JSON.stringify(getState().files);});
- await page.getByRole('button',{name:'Tools',exact:true}).click();await page.getByRole('menuitem',{name:'Convert image...'}).click();
- await page.getByLabel('Source image').setInputFiles({name:'sample.svg',mimeType:'image/svg+xml',buffer:Buffer.from('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 100"><rect width="200" height="100" fill="#7c3aed"/><circle cx="150" cy="50" r="30" fill="#fafafa"/></svg>')});
+ await page.getByRole('button',{name:'Tools',exact:true}).click();await page.getByRole('menuitem',{name:'Convert files...'}).click();
+ await page.getByTestId('convert-input').setInputFiles({name:'sample.svg',mimeType:'image/svg+xml',buffer:Buffer.from('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 100"><rect width="200" height="100" fill="#7c3aed"/><circle cx="150" cy="50" r="30" fill="#fafafa"/></svg>')});
+ await page.getByRole('button',{name:'Resize and preview...'}).click();
+ await page.getByText('Original: 200 x 100 px').waitFor();
  await page.getByLabel('Width (px)').fill('600');assert.equal(await page.getByLabel('Height (px)').inputValue(),'300');
  await page.getByRole('button',{name:'Convert',exact:true}).click();await page.getByRole('img',{name:'Converted image preview'}).waitFor();
  const download=page.waitForEvent('download');await page.getByRole('button',{name:'Download',exact:true}).click();const out=await download;assert.equal(out.suggestedFilename(),'sample.png');await out.saveAs('/tmp/image-conversion-output.png');

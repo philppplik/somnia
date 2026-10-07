@@ -39,6 +39,7 @@ export function ConvertPanel({onClose}:{onClose:()=>void}){
    const sink=folder?folderSink(folder):downloadSink();
    const r=await runBatch(rows,{target:chosen,sink,signal:ac.signal,rasterize:canvasRasterizer,quality:quality/100,onProgress:p=>setProgress(prev=>({...prev,[p.id]:p}))});
    setSummary(t('convert.summary',{done:r.done,failed:r.failed,skipped:r.skipped}));
+   const warn=[...new Set(r.items.flatMap(i=>i.warnings??[]))];if(warn.length)setProblems(warn);
    if(r.done)patchState({notice:t('convert.notice',{count:r.done})});
   }catch(e){setProblems([e instanceof Error?e.message:String(e)]);}finally{abort.current=null;setBusy(false);}
  };
@@ -80,6 +81,7 @@ export function ConvertPanel({onClose}:{onClose:()=>void}){
    </section>}
    {busy&&<div className="cv-progress"><progress max={rows.length} value={finished} aria-label={t('convert.running',{done:finished,total:rows.length})}/><span role="status">{t('convert.running',{done:finished,total:rows.length})}</span></div>}
    {summary&&<p role="status" className="cv-summary">{summary}</p>}
+   {rows.length===1&&['png','jpg','webp','svg'].includes(rows[0].format)&&!busy&&<Button size="compact" variant="outline" onClick={()=>{const r=rows[0];const f=new globalThis.File([r.bytes as Uint8Array<ArrayBuffer>],r.name);onClose();window.dispatchEvent(new CustomEvent('somnia:convert-image',{detail:f}));}}>{t('convert.imageOptions')}</Button>}
    {problems.map((p,i)=><p key={i} role="alert" className="export-error">{p}</p>)}
   </div>
   <footer className="export-foot">

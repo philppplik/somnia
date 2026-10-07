@@ -4,8 +4,9 @@ import {FORMATS,TARGETS,baseName,decodeUtf8,type FormatId} from './formats';
 import {formatDelimited,htmlDocument,htmlToText,jsonToRows,parseDelimited,rowsToHtmlTable,tableToJson,textToHtml} from './text';
 /** Turns image bytes into another raster format. Browser implementation lives in raster.ts; tests inject a fake. */
 export type Rasterizer=(bytes:Uint8Array,from:FormatId,to:'png'|'jpg'|'webp',quality:number)=>Promise<Uint8Array>;
-export interface ConvertOptions{quality?:number;rasterize?:Rasterizer}
-export interface Converted{name:string;bytes:Uint8Array;mime:string}
+export interface ConvertOptions{quality?:number;rasterize?:Rasterizer;signal?:AbortSignal}
+export interface Converted{name:string;bytes:Uint8Array;mime:string;warnings?:string[]}
+const DOC_PAIRS=new Set(['md>pdf','pdf>txt','pdf>docx','docx>md']);
 const MAX_TEXT_BYTES=8*1024*1024;
 const enc=(s:string)=>new TextEncoder().encode(s);
 /** Convert one file. Throws a readable Error when the pair is unsupported or the content is invalid; never returns a stub. */
@@ -14,6 +15,10 @@ export async function convertFile(name:string,bytes:Uint8Array,from:FormatId,to:
  if(!TARGETS[from].includes(to))throw Error(`${FORMATS[from].label} cannot be converted to ${to==='unknown'?'this format':FORMATS[to].label}`);
  const title=baseName(name);const out=(text:string):Converted=>({name:`${title}.${FORMATS[to as Exclude<FormatId,'unknown'>].ext}`,bytes:enc(text),mime:FORMATS[to as Exclude<FormatId,'unknown'>].mime});
  const info=FORMATS[to as Exclude<FormatId,'unknown'>];
+ if(DOC_PAIRS.has(`${from}>${to}`)){
+  const {convertDocument}=await import('../conversion/documents');
+  const r=await convertDocument({from:from as 'md'|'pdf'|'docx',to:to as 'pdf'|'txt'|'docx'|'md',data:bytes,title,signal:opt.signal});
+  return {name:`${title}.${info.ext}`,bytes:r.data,mime:info.mime,warnings:r.warnings};}
  if(info.kind==='image'){
   if(!opt.rasterize)throw Error('Image conversion needs a browser canvas');
   const q=Math.min(1,Math.max(0.1,opt.quality??0.92));
