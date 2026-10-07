@@ -1449,5 +1449,15 @@
   "imgedit.rotate.apply": "Drehen",
   "imgedit.rotate.expand": "Arbeitsfläche vergrößern",
   "imgedit.flip.h": "Horizontal spiegeln",
-  "imgedit.flip.v": "Vertikal spiegeln"
+  "imgedit.flip.v": "Vertikal spiegeln",
+  "imageedit.adjust.brightness": "Helligkeit",
+  "imageedit.adjust.contrast": "Kontrast",
+  "imageedit.adjust.saturation": "Sättigung",
+  "imageedit.adjust.hue": "Farbton",
+  "imageedit.adjust.temperature": "Temperatur",
+  "imageedit.adjust.highlights": "Lichter",
+  "imageedit.adjust.shadows": "Schatten",
+  "imageedit.adjust.curves": "Kurven",
+  "imageedit.adjust.curvePoint": "Kurvenpunkt",
+  "imageedit.adjust.reset": "Anpassungen zurücksetzen"
 }

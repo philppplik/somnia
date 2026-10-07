@@ -1449,5 +1449,15 @@
   "imgedit.rotate.apply": "Rotate",
   "imgedit.rotate.expand": "Grow canvas to fit",
   "imgedit.flip.h": "Flip horizontally",
-  "imgedit.flip.v": "Flip vertically"
+  "imgedit.flip.v": "Flip vertically",
+  "imageedit.adjust.brightness": "Brillo",
+  "imageedit.adjust.contrast": "Contraste",
+  "imageedit.adjust.saturation": "Saturación",
+  "imageedit.adjust.hue": "Tono",
+  "imageedit.adjust.temperature": "Temperatura",
+  "imageedit.adjust.highlights": "Luces altas",
+  "imageedit.adjust.shadows": "Sombras",
+  "imageedit.adjust.curves": "Curvas",
+  "imageedit.adjust.curvePoint": "Punto de curva",
+  "imageedit.adjust.reset": "Restablecer ajustes"
 }
