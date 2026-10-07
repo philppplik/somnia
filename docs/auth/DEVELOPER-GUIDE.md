@@ -84,9 +84,9 @@ idempotent locally; remote key revocation is the user's separate action.
 
 ## Account OAuth: pending flow
 
-**TODO - implementation and research required.** Populate the sequence and exact
-values only after inspecting the delivered account-auth code and dated policy
-research. Do not borrow Codex's client registration or import its credential files.
+**TODO - implementation required.** The [source-checked SIWC contract](SIWC-CONTRACT.md)
+records the intended provider flow and exact endpoints. Populate the implemented
+sequence only after inspecting the delivered account-auth code. Do not borrow Codex's client registration or import its credential files.
 
 ```text
 Explicit sign-in -> native pending transaction -> system browser authorization

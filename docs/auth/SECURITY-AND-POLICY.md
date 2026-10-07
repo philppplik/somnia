@@ -39,12 +39,13 @@ separate approval; none is part of this documentation work.
 
 ## Terms-of-service review
 
-**TODO - research result pending.** The older
-[authentication decision](../agent/AUTH-DECISION.md) discusses an official OpenAI
-open-source/local app route and restrictions on Claude subscription credentials.
-It is background, not a fresh policy verification for this integration. Do not
-publish a claim that Somnia's registration or intended distribution is approved
-until the current primary sources and research conclusion are recorded below.
+The [official SIWC contract](SIWC-CONTRACT.md) records primary OpenAI sources
+checked 7 October 2026. They document an open-source/local account route, distinct
+from Codex client impersonation. This does not certify Somnia's as-yet-uninspected
+account implementation or imply no additional account risk. The discovery/issuer
+mismatch is unresolved. **TODO - wider provider-policy research result pending:**
+verify current Anthropic restrictions and API-key policy sources before promoting
+older design conclusions as fresh policy findings.
 
 The review must distinguish:
 
@@ -58,7 +59,7 @@ The review must distinguish:
 | Provider/mode | Current integration statement | Policy evidence to add |
 | --- | --- | --- |
 | OpenAI API key | Implemented in inspected baseline | Current API authentication/billing docs |
-| OpenAI ChatGPT-account OAuth | Not implemented in inspected baseline | Official eligibility, registration, flow, entitlement and terms URLs with check date |
+| OpenAI ChatGPT-account OAuth | Not implemented in inspected baseline | [SIWC sources](SIWC-CONTRACT.md); implementation, distribution and discovery checks pending |
 | Anthropic Claude API key | Implemented in inspected baseline | Current API authentication docs |
 | Claude subscription OAuth | Not implemented; do not offer or import tokens | Current published third-party restrictions |
 | OpenRouter API key | Implemented in inspected baseline | Current API authentication/privacy docs |

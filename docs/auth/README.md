@@ -13,6 +13,7 @@ policy review and packaged-app checks are recorded here.
 - [Developer guide](DEVELOPER-GUIDE.md): current IPC and endpoints, trust boundary,
   lifecycle and requirements for adding OAuth providers.
 - [Security and policy](SECURITY-AND-POLICY.md): known limits, billing and terms gates.
+- [Official SIWC contract](SIWC-CONTRACT.md): source-checked registration, endpoints, token lifecycle, preview limits and unresolved discovery mismatch.
 - [Integration checklist](INTEGRATION.md): pending evidence and verification record.
 
 API-key access and a ChatGPT subscription are different authentication and billing

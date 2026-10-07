@@ -5,7 +5,7 @@ import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const read = path => readFileSync(resolve(root, path), 'utf8');
-const files = ['README.md','USER-GUIDE.md','DEVELOPER-GUIDE.md','SECURITY-AND-POLICY.md','INTEGRATION.md'];
+const files = ['README.md','USER-GUIDE.md','DEVELOPER-GUIDE.md','SECURITY-AND-POLICY.md','INTEGRATION.md','SIWC-CONTRACT.md'];
 test('auth documentation local links resolve', () => {
   for (const file of files) {
     const path = `docs/auth/${file}`;
