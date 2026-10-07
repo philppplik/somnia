@@ -72,7 +72,7 @@ export function referenceSubject(d:SubjectDeps):OAuthSubject{
     const u=new URL(disc.authorization_endpoint!);
     for(const [k,v] of Object.entries({response_type:'code',client_id:clientId,agent_name_hint:'Somnia',ext_agent_host_id:hostId,redirect_uri:redirect,scope:SCOPES,resource:RESOURCE,state,nonce,code_challenge:s256(verifier),code_challenge_method:'S256'}))u.searchParams.set(k,v);
     await d.openBrowser(u.toString());
-    const timer=opts.timeoutMs?new Promise<never>((_,rej)=>d.clock.setTimeout(()=>rej(new Error('timeout')),opts.timeoutMs)):null;
+    const timer=opts.timeoutMs?new Promise<never>((_,rej)=>d.clock.setTimeout(()=>rej(new Error('timeout')),opts.timeoutMs!)):null;
     const abort=opts.signal?new Promise<never>((_,rej)=>opts.signal!.addEventListener('abort',()=>rej(new Error('cancelled')),{once:true})):null;
     const got=await Promise.race([cb,...(timer?[timer]:[]),...(abort?[abort]:[])]);
     if(got.searchParams.get('state')!==state)throw new Error('state mismatch');
