@@ -149,3 +149,5 @@ mdCmd('md.codeblock','Markdown: Code block',undefined,mdRun('codeblock'));mdCmd(
 for(const n of [1,2,3,4,5,6])mdCmd(`md.h${n}`,`Markdown: Heading ${n}`,undefined,mdRun(`h${n}`));
 mdCmd('md.reveal','Markdown: Reveal current preview block in source',undefined,()=>{window.dispatchEvent(new Event('somnia:md-reveal'));},()=>/\.(md|markdown)$/i.test(getState().activeFile)&&getState().viewMode!=='code');
 mdCmd('md.sync','Markdown: Toggle scroll sync',undefined,async()=>{const b=await import('./mdBridge');b.setSyncScroll(!b.getSyncScroll());},()=>/\.(md|markdown)$/i.test(getState().activeFile)&&getState().viewMode==='split');
+
+registerCommand({id:'tools.convertImage',title:'Convert image...',category:'Tools',keywords:['convert','image','svg','png','jpeg','jpg','webp','resize'],run:()=>{window.dispatchEvent(new Event('somnia:convert-image'));}});
