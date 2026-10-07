@@ -1,3 +1,4 @@
+import {nativeProviderFetch,NATIVE_KEY_MARKER,NativeProviderError} from './nativeProviderFetch';
 import {invoke,isTauri} from '@tauri-apps/api/core';
 import {agentPrivacy,AgentConsentRequiredError,type AgentPrivacyGate} from './privacy';
 export type AuthProvider='ollama'|'openrouter'|'openai'|'claude';
@@ -24,7 +25,7 @@ function cloudProvider(provider:AuthProvider){if(!['openrouter','openai','claude
 export async function loadProviderKey(provider:AuthProvider):Promise<string>{
  if(provider==='ollama')return '';
  cloudProvider(provider);
- try{return isTauri()?await invoke<string>('agent_key_load',{provider}):sessionKeys.get(provider)??'';}catch{throw new ProviderAuthError('keystore-locked');}
+ try{return isTauri()?(await hasProviderKey(provider)?NATIVE_KEY_MARKER:''):sessionKeys.get(provider)??'';}catch{throw new ProviderAuthError('keystore-locked');}
 }
 /** Configuration UI receives presence only, not an existing secret. */
 export async function hasProviderKey(provider:AuthProvider):Promise<boolean>{
@@ -56,7 +57,7 @@ export async function testProviderAuthentication(provider:AuthProvider,key:strin
  const timer=setTimeout(()=>{timedOut=true;controller.abort();},options.timeoutMs??12000);
  try{
   await (options.gate??agentPrivacy).run({provider,endpoint:AUTH_ENDPOINTS[provider],processing:provider==='ollama'?'local':'cloud'},async signal=>{
-   const response=await (options.fetch??fetch)(AUTH_ENDPOINTS[provider],{method:'GET',headers,signal,cache:'no-store',credentials:'omit',redirect:'error',referrerPolicy:'no-referrer'});
+   const response=await (options.fetch??(isTauri()&&provider!=='ollama'?nativeProviderFetch(provider,key===NATIVE_KEY_MARKER?undefined:key):fetch))(AUTH_ENDPOINTS[provider],{method:'GET',headers,signal,cache:'no-store',credentials:'omit',redirect:'error',referrerPolicy:'no-referrer'});
    if(!response.ok){
     // Never read provider error text: it may echo keys or other private data.
     void response.body?.cancel();
@@ -69,6 +70,7 @@ export async function testProviderAuthentication(provider:AuthProvider,key:strin
    // Deliberately do not return key labels, account balance or model/account metadata.
   },controller.signal);
  }catch(error){
+  if(error instanceof NativeProviderError&&error.locked)throw new ProviderAuthError('keystore-locked');
   if(error instanceof AgentConsentRequiredError)throw new ProviderAuthError('consent');
   if(timedOut)throw new ProviderAuthError('timeout');
   if(options.signal?.aborted)throw new ProviderAuthError('cancelled');

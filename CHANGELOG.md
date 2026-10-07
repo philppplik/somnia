@@ -1,5 +1,12 @@
 # Changelog
 
+## 11.2.0-beta.1 - 2026-10-07
+
+- Direct OpenAI/Claude BYOK providers, live catalogs and metadata-only auth.
+- Native fixed-endpoint streaming transport with OS-side saved-key resolution.
+- Token batching, stopped/interrupted partial answers, safe errors and explicit retry.
+- Existing cloud consent, review-only writes and macOS ad-hoc checks retained.
+
 ## 11.1.1-beta.1 - 2026-10-07
 - Agent: remember provider/model locally and API key in the OS credential store. No plaintext key fallback.
 - Agent: create, edit, delete and enable custom prompts, persisted locally and included in every AI provider request. Cloud consent and file access approval remain separate.

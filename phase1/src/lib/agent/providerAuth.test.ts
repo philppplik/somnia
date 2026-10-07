@@ -54,7 +54,7 @@ test('desktop store uses per-provider commands; locked errors never leak; presen
   const {hasProviderKey}=await import('./providerAuth');
   assert.equal(await hasProviderKey('claude'),true);assert.equal(calls[0].command,'agent_key_status');assert.deepEqual(calls[0].args,{provider:'claude'});
   await saveProviderKey('openai','fixture-secret');assert.deepEqual(calls.at(-1),{command:'agent_key_save',args:{provider:'openai',apiKey:'fixture-secret'}});
-  assert.equal(await loadProviderKey('openai'),'fixture-secret');await deleteProviderKey('openai');assert.equal(calls.at(-1)?.command,'agent_key_delete');
+  assert.equal(await loadProviderKey('openai'),'somnia-native-key');assert.ok(!calls.some(c=>c.command==='agent_key_load'));await deleteProviderKey('openai');assert.equal(calls.at(-1)?.command,'agent_key_delete');
   locked=true;for(const task of [()=>hasProviderKey('claude'),()=>loadProviderKey('openai'),()=>saveProviderKey('claude','fixture-secret'),()=>deleteProviderKey('claude')])await assert.rejects(task(),code('keystore-locked'));
  }finally{if(previousTauri)Object.defineProperty(globalThis,'isTauri',previousTauri);else Reflect.deleteProperty(globalThis,'isTauri');if(previous)Object.defineProperty(globalThis,'window',previous);else Reflect.deleteProperty(globalThis,'window');}
 });

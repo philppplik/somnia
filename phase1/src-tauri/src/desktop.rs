@@ -63,16 +63,63 @@ fn agent_key_for(provider: &str) -> std::result::Result<keyring::Entry, String> 
 }
 // Credentials are independent of preferences: saving an Ollama configuration must
 // never delete an OpenRouter key. No raw backend/credential error reaches the UI.
+struct NativeResponse { receiver: tokio::sync::Mutex<tokio::sync::mpsc::Receiver<std::result::Result<Vec<u8>, String>>>, task: tokio::task::AbortHandle, expires: std::time::Instant }
+impl Drop for NativeResponse {fn drop(&mut self){self.task.abort();}}
+#[derive(Default)]
+struct ProviderNetwork(tokio::sync::Mutex<BTreeMap<String, Arc<NativeResponse>>>);
+#[derive(Serialize)]
+#[serde(rename_all="camelCase")]
+struct NativeStart { id: String, status: u16, headers: BTreeMap<String,String> }
 #[tauri::command]
-async fn agent_key_load(window: WebviewWindow, provider: String) -> std::result::Result<String, String> {
-    gate(&window).map_err(|_| "Only the trusted editor may access credentials")?;
-    tauri::async_runtime::spawn_blocking(move || {
-        let _guard = AGENT_SETTINGS_LOCK.lock().map_err(|_| "Credential store is busy")?;
-        match agent_key_for(&provider)?.get_password() {
-            Ok(key) => Ok(key), Err(keyring::Error::NoEntry) => Ok(String::new()),
-            Err(_) => Err("OS credential store is locked or unavailable".into()),
-        }
-    }).await.map_err(|_| "Could not access credential store")?
+async fn provider_http_start(window: WebviewWindow, state: State<'_, ProviderNetwork>, provider: String, url: String, method: String, body: Option<String>, candidate_key: Option<String>) -> std::result::Result<NativeStart,String> {
+    gate(&window).map_err(|_| "Only trusted editor may use provider transport")?;
+    crate::provider_transport::endpoint(&provider,&url,&method)?;
+    if body.as_ref().is_some_and(|b|b.len()>2_000_000) { return Err("Provider request is too large".into()); }
+    if method=="GET" && body.is_some() {return Err("GET request body is not allowed".into());}
+    // Candidate keys only validate account metadata, never inference before save.
+    if candidate_key.is_some() && (method!="GET" || !matches!(url.as_str(),"https://api.openai.com/v1/models"|"https://api.anthropic.com/v1/models?limit=1"|"https://openrouter.ai/api/v1/key")) { return Err("Candidate key is allowed for authentication only".into()); }
+    let key = if let Some(key)=candidate_key {
+        if key.is_empty() || key.len()>8192 || key.chars().any(|c|c.is_control()||c.is_whitespace()) { return Err("Invalid API key".into()); } key
+    } else {
+        let p=provider.clone();tauri::async_runtime::spawn_blocking(move||agent_key_for(&p)?.get_password().map_err(|_| "OS credential store is locked or key is missing".to_string())).await.map_err(|_| "Credential lookup failed")??
+    };
+    let client=reqwest::Client::builder().no_proxy().redirect(reqwest::redirect::Policy::none()).connect_timeout(Duration::from_secs(15)).timeout(Duration::from_secs(120)).build().map_err(|_| "Provider transport unavailable")?;
+    let mut request=client.request(if method=="GET" {reqwest::Method::GET} else {reqwest::Method::POST},&url);
+    request=if provider=="claude" {request.header("x-api-key",key).header("anthropic-version","2023-06-01")} else {request.bearer_auth(key)};
+    if let Some(body)=body {request=request.header("content-type","application/json").body(body);}
+    let response=request.send().await.map_err(|_| "Provider connection failed")?;
+    let mut headers=BTreeMap::new();
+    for name in ["content-type","retry-after"] {if let Some(v)=response.headers().get(name).and_then(|v|v.to_str().ok()) {headers.insert(name.into(),v.into());}}
+    let status=response.status().as_u16();let id=uuid::Uuid::new_v4().to_string();
+    let mut active=state.0.lock().await;active.retain(|_,r|r.expires>std::time::Instant::now());
+    if active.len()>=4 { return Err("Too many active provider requests".into()); }
+    let (sender,receiver)=tokio::sync::mpsc::channel(1);
+    let task=tokio::spawn(async move {
+      let mut response=response;
+      loop {match response.chunk().await {
+       Ok(Some(chunk)) if chunk.len()<=1_000_000 => {if sender.send(Ok(chunk.to_vec())).await.is_err(){break;}},
+       Ok(None)=>break,
+       _=>{let _=sender.send(Err("Provider stream interrupted".into())).await;break;}
+      }}
+    });
+    active.insert(id.clone(),Arc::new(NativeResponse{receiver:tokio::sync::Mutex::new(receiver),task:task.abort_handle(),expires:std::time::Instant::now()+Duration::from_secs(120)}));
+    Ok(NativeStart{id,status,headers})
+}
+#[tauri::command]
+async fn provider_http_next(window: WebviewWindow,state: State<'_, ProviderNetwork>,id:String) -> std::result::Result<Option<Vec<u8>>,String> {
+    gate(&window).map_err(|_| "Only trusted editor may read provider transport")?;
+    let r=state.0.lock().await.get(&id).cloned().ok_or("Provider request is closed")?;
+    if r.expires<std::time::Instant::now() {state.0.lock().await.remove(&id);return Err("Provider request timed out".into());}
+    let mut receiver=r.receiver.lock().await;
+    match tokio::time::timeout(Duration::from_secs(30),receiver.recv()).await {
+      Ok(Some(Ok(chunk))) => Ok(Some(chunk)),
+      Ok(None) => {state.0.lock().await.remove(&id);Ok(None)},
+      _ => {state.0.lock().await.remove(&id);r.task.abort();Err("Provider stream interrupted".into())}
+    }
+}
+#[tauri::command]
+async fn provider_http_cancel(window:WebviewWindow,state:State<'_,ProviderNetwork>,id:String)->std::result::Result<(),String>{
+ gate(&window).map_err(|_| "Only trusted editor may cancel provider transport")?;if let Some(r)=state.0.lock().await.remove(&id){r.task.abort();}Ok(())
 }
 #[tauri::command]
 async fn agent_key_status(window: WebviewWindow, provider: String) -> std::result::Result<bool, String> {
@@ -739,6 +786,7 @@ fn set_window_background(window: WebviewWindow, glass: bool, dark: bool) -> std:
 pub fn run() {
     let shared = Shared::default();
     tauri::Builder::default()
+        .manage(ProviderNetwork::default())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_process::init())
@@ -806,7 +854,9 @@ pub fn run() {
             }
         })
         .invoke_handler(tauri::generate_handler![
-            agent_key_load,
+            provider_http_start,
+            provider_http_next,
+            provider_http_cancel,
             agent_key_status,
             agent_key_save,
             agent_key_delete,

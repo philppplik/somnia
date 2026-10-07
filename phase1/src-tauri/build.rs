@@ -2,7 +2,9 @@ fn main() {
     #[cfg(feature = "desktop")]
     tauri_build::try_build(tauri_build::Attributes::new().app_manifest(
         tauri_build::AppManifest::new().commands(&[
-            "agent_key_load",
+            "provider_http_start",
+            "provider_http_next",
+            "provider_http_cancel",
             "agent_key_status",
             "agent_key_save",
             "agent_key_delete",

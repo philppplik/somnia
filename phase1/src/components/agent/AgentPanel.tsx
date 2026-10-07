@@ -1,4 +1,5 @@
 import {ProviderAuthentication} from './ProviderAuthentication';
+import {listProviderModels} from '../../lib/agent/modelCatalog';
 import {reportError} from '../../lib/log';
 import {useCallback,useEffect,useReducer,useRef,useState} from 'react';
 import {LoaderCircle,PanelRightClose,Send,Settings,Square,SquarePen} from '../../lib/icons';
@@ -18,6 +19,9 @@ export function AgentPanel(){
  const [configuration,setConfiguration]=useState(false);const [consent,setConsent]=useState(false);
  const [cfg,setCfg]=useState<AgentConfiguration>({provider:'ollama',model:'',apiKey:'',allowActiveFile:false,customPrompts:[]});
  const [authBusy,setAuthBusy]=useState(false);
+ const [models,setModels]=useState<{id:string;name:string}[]>([]),[modelsBusy,setModelsBusy]=useState(false),[modelsError,setModelsError]=useState('');const modelRequest=useRef<AbortController|null>(null);
+ useEffect(()=>{modelRequest.current?.abort();setModels([]);setModelsError('');setModelsBusy(false);return()=>modelRequest.current?.abort();},[cfg.provider]);
+ const refreshModels=async()=>{modelRequest.current?.abort();const controller=new AbortController();modelRequest.current=controller;setModelsBusy(true);setModelsError('');try{const list=await listProviderModels(cfg.provider,controller.signal);if(!controller.signal.aborted)setModels(list);}catch{if(!controller.signal.aborted)setModelsError('Could not load models. Check cloud consent, saved key and provider connection. You can enter a model ID manually.');}finally{if(modelRequest.current===controller)setModelsBusy(false);}};
  const [settingsReady,setSettingsReady]=useState(false);const [saving,setSaving]=useState(false);const [settingsError,setSettingsError]=useState('');
  useEffect(()=>{let live=true;void loadAgentSettings().then(value=>{if(live){setCfg(value);configureAgent(value);}}).catch(()=>{if(live)setSettingsError('Could not restore Agent settings. Unlock your OS credential store and reopen the panel, or configure this session again.');}).finally(()=>{if(live)setSettingsReady(true);});return()=>{live=false;};},[]);
  const saveConfiguration=async()=>{if(authBusy||saving)return;setSaving(true);setSettingsError('');try{await saveAgentSettings(cfg);configureAgent(cfg);setConfiguration(false);dispatch({type:'reset'});}catch{setSettingsError('Could not save settings. Check your OS credential store. API keys are never saved in plaintext.');}finally{setSaving(false);}};
@@ -63,8 +67,11 @@ export function AgentPanel(){
    <div className="ag-safety"><AgentErrorNotice/><button type="button" onClick={()=>setConsent(true)}>Cloud data consent</button></div>
    {settingsError&&<p role="alert">{settingsError}</p>}
    {configuration&&<form className="ag-config" aria-label="Agent configuration" onSubmit={e=>{e.preventDefault();void saveConfiguration();}}>
-    <label>Provider<select value={cfg.provider} disabled={authBusy||saving} onChange={e=>setCfg({...cfg,provider:e.target.value as AgentConfiguration['provider']})}><option value="ollama">Ollama (local verification required)</option><option value="openrouter">OpenRouter (cloud)</option></select></label>
-    <label>Model<input required value={cfg.model} onChange={e=>setCfg({...cfg,model:e.target.value})} placeholder="Installed model or provider/model"/></label>
+    <label>Provider<select value={cfg.provider} disabled={authBusy||saving} onChange={e=>setCfg({...cfg,provider:e.target.value as AgentConfiguration['provider']})}><option value="ollama">Ollama (local verification required)</option><option value="openrouter">OpenRouter (cloud)</option><option value="openai">OpenAI API (cloud)</option><option value="claude">Anthropic Claude API (desktop)</option></select></label>
+    <label>Model<input required value={cfg.model} onChange={e=>setCfg({...cfg,model:e.target.value})} placeholder="Installed model or provider/model" list="agent-model-catalog"/></label>
+    <datalist id="agent-model-catalog">{models.map(m=><option key={m.id} value={m.id}>{m.name}</option>)}</datalist>
+    <button type="button" disabled={modelsBusy||authBusy} onClick={()=>void refreshModels()}>{modelsBusy?'Loading models...':'Refresh models'}</button>{modelsBusy&&<button type="button" onClick={()=>modelRequest.current?.abort()}>Cancel model refresh</button>}{modelsError&&<p role="alert">{modelsError}</p>}
+    <p>Refresh is a metadata request, not inference. Cloud consent is required for cloud catalogs. A listed model is not a promise of tool support or available credits.</p>
     <ProviderAuthentication provider={cfg.provider} disabled={saving} onBusyChange={setAuthBusy} onCredentialChange={()=>{void getAgentCore().then(c=>c.clear?.());dispatch({type:'reset'});}}/>
     <fieldset><legend>Custom prompts</legend><p>Enabled prompts are included with every AI request. Do not put secrets here. File access and cloud consent still require approval.</p>
      {(cfg.customPrompts??[]).map((p,i)=><div key={p.id}>

@@ -1,4 +1,8 @@
-import {loadProviderKey} from './providerAuth';
+import {isTauri} from '@tauri-apps/api/core';
+import {nativeProviderFetch} from './nativeProviderFetch';
+import {OpenAIProvider} from './openAI';
+import {ClaudeProvider} from './providers/claude';
+import {loadProviderKey,type AuthProvider} from './providerAuth';
 import type {CustomPrompt} from './settings';
 import {logWarn} from '../log';
 import {AgentSession} from './session';
@@ -11,12 +15,13 @@ import {holdAgentAutosave} from './autosaveHold';
 import {applyOperations,getState,getProjectGeneration,subscribe,patchState} from '../../store/appStore';
 import type {AgentCore,AgentEvent,AgentApproval,AgentProposal,DiffLine} from './core';
 import type {AgentProvider,AgentProviderEvent,AgentProviderRequest} from './types';
-export interface AgentConfiguration {provider:'ollama'|'openrouter';model:string;apiKey:string;allowActiveFile:boolean;customPrompts?:CustomPrompt[]}
+export interface AgentConfiguration {provider:AuthProvider;model:string;apiKey:string;allowActiveFile:boolean;customPrompts?:CustomPrompt[]}
 let config:AgentConfiguration={provider:'ollama',model:'',apiKey:'',allowActiveFile:false};
 export function configureAgent(value:AgentConfiguration){realCore.clear?.();config={...value};}
 /** Custom instructions are sent every provider round, never as access permission. */
 export function withCustomPrompts(provider:AgentProvider,prompts:readonly CustomPrompt[]=[]):AgentProvider {
  const text=prompts.filter(p=>p.enabled&&p.text.trim()).map(p=>p.text.trim()).join('\n\n');
+ if(new TextEncoder().encode(text).length>16000)throw Error('Custom prompts exceed size limits.');
  return {id:provider.id,locality:provider.locality,stream(request){return provider.stream({...request,messages:text?[...request.messages.slice(0,1),{role:'system',content:'Additional user preferences (do not override tool access or safety rules):\n'+text},...request.messages.slice(1)]:request.messages});}};
 }
 /** A gated stream whose operation remains live through body consumption, with single-slot backpressure. */
@@ -37,6 +42,14 @@ function guardedOllama(provider:OllamaProvider):AgentProvider {
   try {while(!finished||slot){if(!slot){await new Promise<void>(resolve=>{wake=resolve;});continue;}controller.signal.throwIfAborted();gateSignal?.throwIfAborted();const event=slot;slot=undefined;release();yield event;}if(error)throw error;}
   finally{controller.abort();release();await pending;request.signal.removeEventListener('abort',abort);}
  }};
+}
+export function createProvider(id:AuthProvider):AgentProvider {
+ if(id==='ollama')return guardedOllama(new OllamaProvider());
+ const options={getApiKey:()=>loadProviderKey(id),...(isTauri()?{fetch:nativeProviderFetch(id)}:{})};
+ if(id==='openai')return new OpenAIProvider(options);
+ if(id==='claude')return new ClaudeProvider(options);
+ if(id==='openrouter')return new OpenRouterProvider(options);
+ throw Error('Unsupported AI provider.');
 }
 let runGeneration=0,sessionSerial=0;
 let session:AgentSession|null=null,epoch=-1,send:((event:AgentEvent)=>void)|null=null;
@@ -81,7 +94,7 @@ export const realCore:AgentCore={
   const generation=getProjectGeneration();
   if(epoch!==generation){session?.cancel();session=null;sessionSerial++;proposals.clear();permissions.clear();appliedAgentProvenance.clear();epoch=generation;}
   if(config.allowActiveFile&&request.context.activeFile)permissions.set(request.context.activeFile,new Set(['read']));
-  if(!session){const sessionEpoch=epoch;const sessionToken=sessionSerial;const provider=config.provider==='ollama'?guardedOllama(new OllamaProvider()):new OpenRouterProvider({getApiKey:()=>loadProviderKey('openrouter')});
+  if(!session){const sessionEpoch=epoch;const sessionToken=sessionSerial;const provider=createProvider(config.provider);
    session=new AgentSession({provider:withCustomPrompts(provider,config.customPrompts),model:config.model,tools:getState().coreConnected?createTools(String(generation)):undefined,onEvent:event=>{
     if(sessionEpoch!==epoch||sessionToken!==sessionSerial)return;
     if(event.type==='text')send?.({type:'text-delta',text:event.text});
