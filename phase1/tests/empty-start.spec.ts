@@ -16,7 +16,7 @@ test('open file loads a text file into a new project and export dialog lists for
  const d=page.getByRole('dialog',{name:'Export project'});await expect(d).toBeVisible();for(const n of ['ZIP archive','Folder','Single HTML file','Markdown'])await expect(d.getByRole('radio',{name:n})).toBeVisible();
  await d.getByRole('button',{name:'Cancel'}).click();await expect(d).toBeHidden();
  await page.keyboard.press('Control+k');await page.getByRole('combobox',{name:'Search commands'}).fill('Close project');await page.getByRole('option',{name:/Close project/}).click();
- await expect(page.getByRole('dialog',{name:'Close this project?'})).toBeVisible();await page.getByRole('button',{name:'Discard and close'}).click();await expect(page.getByTestId('empty-state')).toBeVisible();});
+ await expect(page.getByRole('alertdialog',{name:'Close this project?'})).toBeVisible();await page.getByRole('button',{name:'Discard and close'}).click();await expect(page.getByTestId('empty-state')).toBeVisible();});
 test('dropping a text file from the file manager opens it',async({page})=>{await page.goto('/');await expect(page.getByTestId('empty-state')).toBeVisible();
  await page.evaluate(()=>{const dt=new DataTransfer();dt.items.add(new File(['<h1>Dropped</h1>'],'dropped.html',{type:'text/html'}));window.dispatchEvent(new DragEvent('dragenter',{dataTransfer:dt,bubbles:true,cancelable:true}));window.dispatchEvent(new DragEvent('drop',{dataTransfer:dt,bubbles:true,cancelable:true}));});
  await expect(page.getByTestId('empty-state')).toBeHidden();await expect(page.getByRole('status')).toContainText('dropped.html');});

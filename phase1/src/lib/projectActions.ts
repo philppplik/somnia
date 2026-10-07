@@ -7,7 +7,7 @@ import {applyOperations,closeCore,connectEditorProject,getState,openFileTab,patc
 import {clearDraft} from './draftSession';
 import {starterFor} from './fileOps';
 import {MEDIA_ACCEPT,MEDIA_FILE,addMediaFile} from './media';
-export const TEXT_FILE=/\.(html?|css|js|json|svg|txt|md)$/i;
+export const TEXT_FILE=/\.(html?|css|js|json|svg|txt|md|tex)$/i;
 const MAX_BYTES=2_000_000;
 export interface IncomingFile{name:string;text:string;blob?:Blob}
 const unique=(name:string,taken:string[])=>{const set=new Set(taken.map(f=>f.toLowerCase()));if(!set.has(name.toLowerCase()))return name;const m=/^(.*?)(\.[^./]+)?$/.exec(name)!;for(let i=2;i<1000;i++){const c=`${m[1]}-${i}${m[2]??''}`;if(!set.has(c.toLowerCase()))return c;}return name;};
@@ -18,7 +18,7 @@ export function addTextFiles(incoming:IncomingFile[]):string[]{
  if(media.length){void addMediaFiles(media);if(!incoming.length)return [];}
  const usable=incoming.filter(f=>TEXT_FILE.test(f.name)&&f.text.length<=MAX_BYTES);
  const skipped=incoming.length-usable.length;
- if(!usable.length){patchState({notice:'Somnia opens .html, .css, .js, .json, .svg, .txt, .md, .png, .jpg and .pdf files (text up to 2 MB).'});return [];}
+ if(!usable.length){patchState({notice:'Somnia opens .html, .css, .js, .json, .svg, .txt, .md, .tex, .png, .jpg and .pdf files (text up to 2 MB).'});return [];}
  const st=getState();const added:string[]=[];
  if(!st.coreConnected){const files:Record<string,string>={};for(const f of usable){const n=unique(safeName(f.name),Object.keys(files));files[n]=f.text;added.push(n);}
   connectEditorProject(new EditorProject(files),{name:added.length===1?added[0]:'Untitled project',alreadySaved:false});openFileTab(added.find(n=>/\.html?$/i.test(n))??added[0]);}
@@ -30,7 +30,7 @@ export async function addMediaFiles(files:IncomingFile[]):Promise<string[]>{cons
  patchState({notice:problems.length?problems.join(' '):`Previewing ${names.join(', ')}.`});return names;}
 export async function readFiles(list:FileList|File[]):Promise<IncomingFile[]>{return Promise.all([...list].map(async f=>MEDIA_FILE.test(f.name)?{name:f.name,text:'',blob:f}:{name:f.name,text:f.size<=MAX_BYTES?decodeFileBytes(f.name,await f.arrayBuffer()).text:''}));}
 /** Open File: pick one or more text files with the system file dialog. */
-export function openFileDialog(){return new Promise<void>(resolve=>{const input=document.createElement('input');input.type='file';input.multiple=true;input.accept='.html,.htm,.css,.js,.json,.svg,.txt,.md,text/*,'+MEDIA_ACCEPT;
+export function openFileDialog(){return new Promise<void>(resolve=>{const input=document.createElement('input');input.type='file';input.multiple=true;input.accept='.html,.htm,.css,.js,.json,.svg,.txt,.md,.tex,text/*,'+MEDIA_ACCEPT;
  input.onchange=async()=>{if(input.files?.length)addTextFiles(await readFiles(input.files));resolve();};input.oncancel=()=>resolve();input.click();});}
 /** Open image or PDF: works the same in the browser and the desktop app (system file dialog, read-only preview). */
 export function openMediaDialog(){return new Promise<void>(resolve=>{const input=document.createElement('input');input.type='file';input.multiple=true;input.accept=MEDIA_ACCEPT;

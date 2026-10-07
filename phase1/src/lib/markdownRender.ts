@@ -1,5 +1,9 @@
-/** Small Markdown to HTML renderer for the preview. Every piece of text is escaped and only tags made here are emitted, so the output is safe to inject. */
-const esc=(s:string)=>s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+/** Markdown renderer for the preview, built on markdown-it. The library is loaded on demand (dynamic import) so source editing never waits for it.
+ * Security boundary: raw HTML is off (html:false), links go through safeUrl, images only through the trusted resolver (no remote images), and every
+ * attribute that is not produced here is escaped. The output is injected into the app DOM (an <article>, not an iframe), so nothing in it may come from source HTML. */
+import type {MarkdownIt,Token,Env} from 'markdown-it';
+import {extractMath,PLACEHOLDER,type MathWarning} from './mathExtract';
+import type {MathSink} from './mathRender';
 /** Only web, mail and in-page links, or plain relative paths. Anything with another scheme (javascript:, data:, ...) is dropped. */
 export function safeUrl(raw:string):string|null{
  const u=raw.trim().replace(/[\u0000-\u001f\u007f\s]/g,'');
@@ -7,48 +11,57 @@ export function safeUrl(raw:string):string|null{
  if(/^(https?:|mailto:|#)/i.test(u))return u;
  if(/^[a-z][a-z0-9+.-]*:/i.test(u)||u.startsWith('//'))return null;
  return u;}
-export interface MdOptions{/** Resolves an image path to a displayable URL (e.g. an opened PNG). Return null when unknown. */resolveImage?:(src:string)=>string|null}
-function inline(text:string,o:MdOptions):string{
- const codes:string[]=[];
- let t=text.replace(/(`+)([^`]|[^`][\s\S]*?[^`])\1(?!`)/g,(_m,_f,c:string)=>{codes.push(`<code>${esc(c.trim())}</code>`);return `\u0000${codes.length-1}\u0000`;});
- t=esc(t);
- t=t.replace(/!\[([^\]]*)\]\(([^)\s]+)(?:\s+&quot;([^&]*)&quot;)?\)/g,(_m,alt:string,src:string,title?:string)=>{
-  const raw=src.replace(/&amp;/g,'&');const ok=safeUrl(raw);const url=ok&&!/^(mailto:|#)/i.test(ok)?(/^https?:/i.test(ok)?null:(o.resolveImage?.(ok)??null)):null;
-  return url?`<img src="${esc(url)}" alt="${alt}"${title?` title="${title}"`:''}>`:`<span class="md-missing-image">[image: ${alt||esc(raw)}]</span>`;});
- t=t.replace(/\[([^\]]+)\]\(([^)\s]+)(?:\s+&quot;([^&]*)&quot;)?\)/g,(_m,label:string,href:string,title?:string)=>{
-  const ok=safeUrl(href.replace(/&amp;/g,'&'));return ok?`<a href="${esc(ok)}"${title?` title="${title}"`:''}>${label}</a>`:label;});
- t=t.replace(/(^|[\s(])(https?:\/\/[^\s<)]+[^\s<).,;:!?])/g,(_m,pre:string,url:string)=>`${pre}<a href="${url}">${url}</a>`);
- t=t.replace(/\*\*\*([^*]+)\*\*\*/g,'<strong><em>$1</em></strong>').replace(/\*\*([^*]+)\*\*/g,'<strong>$1</strong>').replace(/(^|[^\w*])\*([^*\s][^*]*)\*(?!\w)/g,'$1<em>$2</em>')
-  .replace(/(^|[^\w])__([^_]+)__(?!\w)/g,'$1<strong>$2</strong>').replace(/(^|[^\w])_([^_\s][^_]*)_(?!\w)/g,'$1<em>$2</em>').replace(/~~([^~]+)~~/g,'<del>$1</del>');
- return t.replace(/\u0000(\d+)\u0000/g,(_m,i:string)=>codes[+i]);}
-const cells=(line:string)=>line.trim().replace(/^\||\|$/g,'').split('|').map(c=>c.trim());
-const isTableSep=(l:string)=>/^\s*\|?\s*:?-+:?\s*(\|\s*:?-+:?\s*)*\|?\s*$/.test(l)&&l.includes('-');
-export function renderMarkdown(src:string,o:MdOptions={}):string{
- const lines=src.replace(/\r\n?/g,'\n').split('\n');const out:string[]=[];let i=0;
- const blockStart=(l:string)=>/^\s{0,3}(#{1,6}\s|>|```|~~~|([-*_])(\s*\2){2,}\s*$)/.test(l)||/^\s*([-*+]|\d+[.)])\s+/.test(l);
- while(i<lines.length){
-  const line=lines[i];
-  if(!line.trim()){i++;continue;}
-  const fence=/^\s{0,3}(```|~~~)\s*([\w+-]*)/.exec(line);
-  if(fence){const buf:string[]=[];i++;while(i<lines.length&&!lines[i].trim().startsWith(fence[1])){buf.push(lines[i]);i++;}i++;out.push(`<pre><code${fence[2]?` class="language-${esc(fence[2])}"`:''}>${esc(buf.join('\n'))}</code></pre>`);continue;}
-  const h=/^\s{0,3}(#{1,6})\s+(.*?)\s*#*\s*$/.exec(line);
-  if(h){out.push(`<h${h[1].length}>${inline(h[2],o)}</h${h[1].length}>`);i++;continue;}
-  if(/^\s{0,3}([-*_])(\s*\1){2,}\s*$/.test(line)){out.push('<hr>');i++;continue;}
-  if(/^\s*>/.test(line)){const buf:string[]=[];while(i<lines.length&&/^\s*>/.test(lines[i])){buf.push(lines[i].replace(/^\s*>\s?/,''));i++;}out.push(`<blockquote>${renderMarkdown(buf.join('\n'),o)}</blockquote>`);continue;}
-  if(line.includes('|')&&i+1<lines.length&&isTableSep(lines[i+1])){
-   const head=cells(line);const align=cells(lines[i+1]).map(c=>/^:-+:$/.test(c)?'center':/-:$/.test(c)?'right':/^:-/.test(c)?'left':'');i+=2;const rows:string[][]=[];
-   while(i<lines.length&&lines[i].trim()&&lines[i].includes('|')){rows.push(cells(lines[i]));i++;}
-   const td=(tag:string,c:string,k:number)=>`<${tag}${align[k]?` style="text-align:${align[k]}"`:''}>${inline(c,o)}</${tag}>`;
-   out.push(`<table><thead><tr>${head.map((c,k)=>td('th',c,k)).join('')}</tr></thead><tbody>${rows.map(r=>`<tr>${head.map((_c,k)=>td('td',r[k]??'',k)).join('')}</tr>`).join('')}</tbody></table>`);continue;}
-  const li=/^(\s*)([-*+]|\d+[.)])\s+(.*)$/.exec(line);
-  if(li){const ordered=/\d/.test(li[2]);const base=li[1].length;const items:string[]=[];
-   while(i<lines.length){const m=/^(\s*)([-*+]|\d+[.)])\s+(.*)$/.exec(lines[i]);if(!m||m[1].length<base||(m[1].length===base&&/\d/.test(m[2])!==ordered))break;
-    if(m[1].length>base+1){break;}
-    let body=m[3];i++;const sub:string[]=[];
-    while(i<lines.length&&lines[i].trim()&&(/^\s{2,}\S/.test(lines[i])||/^(\s*)([-*+]|\d+[.)])\s+/.test(lines[i])&&/^(\s*)/.exec(lines[i])![1].length>base)){sub.push(lines[i].replace(new RegExp(`^\\s{0,${base+2}}`),''));i++;}
-    const task=/^\[([ xX])\]\s+(.*)$/.exec(body);let prefix='';if(task){prefix=`<input type="checkbox" disabled${task[1]!==' '?' checked':''}> `;body=task[2];}
-    items.push(`<li>${prefix}${inline(body,o)}${sub.length?renderMarkdown(sub.join('\n'),o):''}</li>`);}
-   out.push(`<${ordered?'ol':'ul'}>${items.join('')}</${ordered?'ol':'ul'}>`);continue;}
-  const buf=[line];i++;while(i<lines.length&&lines[i].trim()&&!blockStart(lines[i])&&!(lines[i].includes('|')&&i+1<lines.length&&isTableSep(lines[i+1]))){buf.push(lines[i]);i++;}
-  out.push(`<p>${buf.map(l=>inline(l.trim(),o)).join('<br>')}</p>`);}
- return out.join('\n');}
+export interface MdOptions{/** Turn math into formulas. The sink collects counts and errors; omit to leave $...$ as plain text. */math?:MathSink;/** Resolves an image path to a displayable URL (e.g. an opened PNG). Return null when unknown. */resolveImage?:(src:string)=>string|null}
+/** A mapped block of the rendered output. Lines are zero-based and half-open: [start,end). */
+export interface MdBlock{start:number;end:number}
+export interface MdResult{html:string;blocks:MdBlock[];warnings:MathWarning[]}
+const decode=(s:string)=>{try{return decodeURIComponent(s);}catch{return s;}};
+const slugOf=(s:string)=>s.replace(/\u0001\d+\u0001/g,'').trim().toLowerCase().replace(/[^\p{L}\p{N}\s_-]/gu,'').replace(/\s+/g,'-')||'section';
+function build(MarkdownItCtor:typeof import('markdown-it').default,footnote:(md:MarkdownIt)=>void){
+ const md=new MarkdownItCtor({html:false,linkify:false,typographer:false,breaks:false});
+ md.validateLink=(u:string)=>safeUrl(decode(u))!==null&&!/^(\/\/|[a-z][a-z0-9+.-]*:(?!\/\/)(?!https?:|mailto:))/i.test(u.trim().replace(/[\u0000-\u001f\u007f\s]/g,''));
+ md.use(footnote);
+ const esc=md.utils.escapeHtml;
+ // Task list items: "[ ] x" / "[x] x" become a disabled checkbox made by this renderer.
+ md.core.ruler.push('somnia_tasks',state=>{const t=state.tokens;for(let i=2;i<t.length;i++){
+  if(t[i].type!=='inline'||t[i-1].type!=='paragraph_open'||t[i-2].type!=='list_item_open')continue;
+  const m=/^\[([ xX])\]\s+/.exec(t[i].content);if(!m)continue;const first=t[i].children?.[0];if(!first||first.type!=='text')continue;
+  first.content=first.content.replace(/^\[[ xX]\]\s+/,'');t[i].content=t[i].content.slice(m[0].length);
+  const box=new state.Token('somnia_task','',0);box.meta={checked:m[1]!==' '};t[i].children!.unshift(box);t[i-2].attrJoin('class','md-task');}});
+ // Deterministic heading anchors with numeric suffixes for duplicates. Generated here, never taken from source.
+ md.core.ruler.push('somnia_anchors',state=>{const used=new Set<string>();const t=state.tokens;for(let i=0;i<t.length;i++){
+  if(t[i].type!=='heading_open')continue;const base=slugOf(t[i+1]?.content??'');let id=base,n=1;while(used.has(id))id=`${base}-${n++}`;used.add(id);t[i].attrSet('id',id);}});
+ // Source line mapping: every mapped block token carries start-end (zero-based, half-open). Overwrites anything, source cannot supply attributes (html:false).
+ md.core.ruler.push('somnia_map',state=>{for(const tok of state.tokens){if(tok.block&&tok.map&&tok.type!=='inline'&&(tok.nesting===1||tok.nesting===0))tok.attrSet('data-md',`${tok.map[0]}-${tok.map[1]}`);}});
+ md.renderer.rules.somnia_task=(tokens:Token[],i:number)=>`<input type="checkbox" disabled${(tokens[i].meta as {checked:boolean}).checked?' checked':''}> `;
+ md.renderer.rules.link_open=(tokens,i,o,_e,self)=>{const t=tokens[i];const ok=safeUrl(decode(String(t.attrGet('href')??'')));if(!ok){t.attrSet('href','#');}else t.attrSet('href',ok);return self.renderToken(tokens,i,o);};
+ md.renderer.rules.image=(tokens,i,o,env,self)=>{const opts=(env as {opts?:MdOptions}|undefined)?.opts;
+  const t=tokens[i];const alt=self.renderInlineAsText(t.children??[],o,env);const raw=decode(String(t.attrGet('src')??''));const ok=safeUrl(raw);
+  const url=ok&&!/^(https?:|mailto:|#)/i.test(ok)?(opts?.resolveImage?.(ok)??null):null;
+  if(!url)return `<span class="md-missing-image">[image: ${esc(alt||raw)}]</span>`;
+  const title=t.attrGet('title')?String(t.attrGet('title')):'';return `<img src="${esc(url)}" alt="${esc(alt)}"${title?` title="${esc(title)}"`:''}>`;};
+ return md;}
+type Renderer=(src:string,o?:MdOptions)=>MdResult;
+let loading:Promise<Renderer>|null=null;let ready:Renderer|null=null;
+/** Loads markdown-it once. Resolves to the render function. */
+export function loadMarkdown():Promise<Renderer>{
+ return loading??=Promise.all([import('markdown-it'),import('markdown-it-footnote')]).then(([m,f])=>{
+  const md=build((m.default??m) as typeof import('markdown-it').default,(f.default??f) as (md:MarkdownIt)=>void);
+  ready=(src,o={})=>{const env={opts:o};let text=src.replace(/\r\n?/g,'\n');let items:ReturnType<typeof extractMath>['items']=[];let warnings:MathWarning[]=[];
+   if(o.math){// Math is pulled out before markdown-it sees it (so _ and * inside formulas stay literal) and put back as formula HTML afterwards.
+    // keepLines pads each placeholder with one marker line per source line it replaced, so data-md line maps stay true to the editor.
+    const x=extractMath(text.replace(/[\u0001\u0002]/g,' '),{keepLines:true});text=x.text;items=x.items;warnings=x.warnings;}
+   let html=md.render(text,env);
+   if(o.math){const sink=o.math;
+    // Text positions get the formula; placeholders that landed inside a tag attribute (link title, image alt) are dropped so no markup can enter an attribute.
+    html=html.split(/(<[^>]*>)/).map(seg=>seg.startsWith('<')&&seg.endsWith('>')?seg.replace(PLACEHOLDER,''):seg.replace(PLACEHOLDER,(_m,i:string)=>items[+i]?sink.fn(items[+i]):'')).join('').replace(/\u0002/g,'');}
+   const blocks:MdBlock[]=[];
+   for(const mm of html.matchAll(/data-md="(\d+)-(\d+)"/g))blocks.push({start:+mm[1],end:+mm[2]});return {html,blocks,warnings};};
+  return ready;});}
+export const markdownReady=()=>ready!==null;
+/** Synchronous render, valid after loadMarkdown() resolved. Returns the HTML only. */
+export function renderMarkdown(src:string,o:MdOptions={}):string{if(!ready)throw new Error('Markdown renderer is not loaded yet');return ready(src,o).html;}
+export function renderMarkdownBlocks(src:string,o:MdOptions={}):MdResult{if(!ready)throw new Error('Markdown renderer is not loaded yet');return ready(src,o);}
+
+/** Render plus math warnings (for example an unclosed $$). Valid after loadMarkdown() resolved. */
+export function renderMarkdownEx(src:string,o:MdOptions={}):{html:string;warnings:MathWarning[]}{const r=renderMarkdownBlocks(src,o);return{html:r.html,warnings:r.warnings};}

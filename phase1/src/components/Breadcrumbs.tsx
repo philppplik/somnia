@@ -1,4 +1,4 @@
-import {ChevronRight} from 'lucide-react';
+import {ChevronRight} from '../lib/icons';
 import {patchState,useAppStore} from '../store/appStore';
 import {crumbLabel,offsetOf,pathAtOffset,pathToId} from '../lib/breadcrumbs';
 /** DOM path of the selected element (or of the code cursor when nothing is selected), like Dreamweaver's tag selector. A click selects that element; code and design follow the selection. */

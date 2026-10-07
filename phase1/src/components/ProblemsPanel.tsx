@@ -1,14 +1,16 @@
 import {useT} from '../lib/useT';
 import {useEffect,useMemo,useState} from 'react';
-import {AlertTriangle,CircleAlert} from 'lucide-react';
+import {AlertTriangle,CircleAlert} from '../lib/icons';
 import {breakpointFor,jumpToLine,useAppStore} from '../store/appStore';
 import {projectProblems} from '../lib/diagnostics';
+import {useMathEngine} from '../lib/mathRender';
 /** Lists syntax problems and unclosed tags of all project files; a click opens the file at that line. Re-lints shortly after edits stop. */
 export function ProblemsPanel(){
  const {t}=useT();
  const s=useAppStore();const [files,setFiles]=useState(s.files);
  useEffect(()=>{const t=window.setTimeout(()=>setFiles(s.files),300);return()=>window.clearTimeout(t);},[s.files]);
- const problems=useMemo(()=>projectProblems(files),[files]);
+ const engine=useMathEngine();
+ const problems=useMemo(()=>projectProblems(files),[files,engine]);
  const errors=problems.filter(p=>p.severity==='error').length;
  return <section className="problems-panel" aria-label={t('panels.problems.problems')} data-testid="problems-panel">
   <div className="flex items-center gap-3"><strong>{t('panels.problems.problems')}</strong><span className="text-[11px] text-ink-3" data-testid="problems-count">{problems.length===0?t('panels.problems.noProblemsFound'):t('panels.problems.summary',{errors:t('panels.problems.errors',{count:errors}),warnings:t('panels.problems.warnings',{count:problems.length-errors})})}</span></div>

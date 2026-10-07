@@ -57,14 +57,23 @@ export function renameClass(files:Readonly<Record<string,string>>,from:string,to
  if(listClasses(files).some(c=>c.name===to))return{error:`A class named "${to}" already exists. Merging classes is not supported.`};
  const esc=from.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');const changed:Record<string,string>={};let count=0;
  const selRe=new RegExp(`(\\.)${esc}(?![\\w-])`,'g');
- const editCss=(css:string)=>{const blank=blankComments(css);let out='';let last=0;const sel=/([^{}]+)\{/g;let m:RegExpExecArray|null;
-  while((m=sel.exec(blank))){if(/^\s*@(keyframes|font-face|charset|import)/.test(m[1]))continue;const seg=css.slice(m.index,m.index+m[1].length);const seg2=seg.replace(selRe,(_,d)=>{count++;return d+to;});out+=css.slice(last,m.index)+seg2;last=m.index+m[1].length;}
+ const blankAll=(m:string)=>m.replace(/[^\n]/g,' ');
+ // Mask: comments, string literals and attribute-selector brackets are blanked so only real selector text can match.
+ const maskCss=(css:string)=>css.replace(/\/\*[\s\S]*?\*\/|"(?:\\.|[^"\\\n])*"|'(?:\\.|[^'\\\n])*'/g,blankAll).replace(/\[[^\]]*\]/g,blankAll);
+ const editCss=(css:string)=>{const blank=maskCss(css);let out='';let last=0;const sel=/([^{}]+)\{/g;let m:RegExpExecArray|null;
+  while((m=sel.exec(blank))){if(/^\s*@(keyframes|font-face|charset|import)/.test(m[1]))continue;const seg=css.slice(m.index,m.index+m[1].length);const segMask=blank.slice(m.index,m.index+m[1].length);let o='';let l=0;let h:RegExpExecArray|null;selRe.lastIndex=0;
+   while((h=selRe.exec(segMask))){count++;o+=seg.slice(l,h.index+1)+to;l=h.index+h[0].length;}
+   out+=css.slice(last,m.index)+o+seg.slice(l);last=m.index+m[1].length;}
   return out+css.slice(last);};
  const clsRe=/(\sclass\s*=\s*)("([^"]*)"|'([^']*)')/gi;
+ const editHtml=(h:string)=>{let n=h.replace(/(<style\b[^>]*>)([\s\S]*?)(<\/style>)/gi,(_,a,b,c)=>a+editCss(b)+c);
+  return n.replace(clsRe,(all,pre,q,dq,sq)=>{const body=dq??sq;const parts=body.split(/(\s+)/);let hit=false;const np=parts.map((p:string)=>{if(p===from){hit=true;count++;return to;}return p;});return hit?pre+q[0]+np.join('')+q[0]:all;});};
+ // HTML comments are copied through untouched; only the text between them is edited.
+ const editHtmlFile=(t:string)=>{let out='';let last=0;const re=/<!--[\s\S]*?(?:-->|$)/g;let m:RegExpExecArray|null;
+  while((m=re.exec(t))){out+=editHtml(t.slice(last,m.index))+m[0];last=m.index+m[0].length;if(m[0].length===0)re.lastIndex++;}
+  return out+editHtml(t.slice(last));};
  for(const [f,t] of Object.entries(files)){let n=t;
   if(isCss(f))n=editCss(t);
-  else if(isHtml(f)){
-   n=n.replace(/(<style\b[^>]*>)([\s\S]*?)(<\/style>)/gi,(_,a,b,c)=>a+editCss(b)+c);
-   n=n.replace(clsRe,(all,pre,q,dq,sq)=>{const body=dq??sq;const parts=body.split(/(\s+)/);let hit=false;const np=parts.map((p:string)=>{if(p===from){hit=true;count++;return to;}return p;});return hit?pre+q[0]+np.join('')+q[0]:all;});}
+  else if(isHtml(f))n=editHtmlFile(t);
   if(n!==t)changed[f]=n;}
  return{changed,count};}

@@ -1,0 +1,9 @@
+# Local account (Beta 2)
+
+The header Account pill opens a Settings-style dialog. This is a local profile, not a login or cloud identity. Nickname (40 characters) and avatar apply immediately after successful local persistence. PNG, JPEG and WebP files up to 5 MB are decoded, center-cropped and resized to 256 px JPEG. SVG, remote URLs and arbitrary data URLs are refused. The profile stays in the app webview/browser's localStorage, following versioned `somnia.*.v1` keys.
+
+Activity records local-day counts only. User canvas/code transactions count at most once per 30-second edit burst. Successful save callbacks count separately. Project loads, selection, undo, external collaboration updates and opening the account do not contribute. There is no retroactive history, sample activity, telemetry or file content. The 365-day Sunday-first grid has month labels, weekday labels, day/count tooltips, keyboard-readable active days and an indigo intensity legend. Up to 400 days are retained, to bound storage; counts are capped at 100,000 per day. Storage failure keeps activity in-session and logs a warning, while profile failure reports an error and keeps the saved profile unchanged.
+
+Free is the current local workspace. Pro is a visual placeholder with a disabled Coming soon button and tooltip, plus explicit text that billing and checkout do not exist. There are no prices, payment links or subscription calls. Profile, Activity and Plan strings are translated in en/de/es/fr/pt-BR; calendar labels and numbers use the selected locale.
+
+Verification: core date/validation/persistence tests and Playwright coverage for all languages, profile reload, image upload, invalid image and unavailable storage, real edit/save tracking and light/dark visual captures. Windows/Tauri profile persistence shares the existing localStorage architecture but needs a native installed-app smoke test.

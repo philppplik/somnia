@@ -1,3 +1,4 @@
+import {recordActivity} from '../lib/account';
 import {readBackupPrefs,saveBackupPrefs,type BackupPrefs} from '../lib/projectBackups';
 import {readDocumentPrefs,saveDocumentPrefs,type DocumentPrefs} from '../lib/documentPrefs';
 import {readWindowPrefs,saveWindowPrefs,type WindowPrefs} from '../lib/windowPrefs';
@@ -17,8 +18,8 @@ export type LeftTab='layers'|'files'|'search'|'assets'|'components'|'css';
 export type RightTab='design'|'prototype'|'code';
 export type ViewMode='design'|'code'|'split';
 export interface DiskComparison {path:string;disk:string;editor:string;apply:(content:string)=>Promise<void>}
-export interface AppState {backupPrefs:BackupPrefs;documentPrefs:DocumentPrefs;windowPrefs:WindowPrefs;updatePrefs:UpdatePrefs;canvasPrefs:CanvasPrefs;workflowPrefs:WorkflowPrefs;uiPrefs:UiPrefs;exportDialog:boolean;diffSplit:boolean;livePreview:boolean;closeProjectPrompt:boolean;saveDialog:null|{error:string|null;busy:boolean};jumpTo:null|{file:string;line:number;col:number;nonce:number};settingsSection:string;look:Look;closePrompt:null|'disk'|'memory';settingsOpen:boolean;contrast:Contrast;codeTheme:CodeTheme;wrapLines:boolean;extensionThemes:{id:string;label:string}[];extensionPanels:{id:string;extId:string;title:string;side:'left'|'right';html:string}[];activePanel:{left:string|null;right:string|null};storage:'memory'|'disk'|'tab';diskComparison:DiskComparison|null;nativeConnected:boolean;
- sidebarWidth:number;inspectorWidth:number;sidebarOpen:boolean;inspectorOpen:boolean;problemsOpen:boolean;
+export interface AppState {backupPrefs:BackupPrefs;documentPrefs:DocumentPrefs;windowPrefs:WindowPrefs;updatePrefs:UpdatePrefs;canvasPrefs:CanvasPrefs;workflowPrefs:WorkflowPrefs;uiPrefs:UiPrefs;exportDialog:boolean;diffSplit:boolean;livePreview:boolean;closeProjectPrompt:boolean;saveDialog:null|{error:string|null;busy:boolean};jumpTo:null|{file:string;line:number;col:number;nonce:number};settingsSection:string;settingsNavigationId:number;look:Look;closePrompt:null|'disk'|'memory';settingsOpen:boolean;contrast:Contrast;codeTheme:CodeTheme;wrapLines:boolean;extensionThemes:{id:string;label:string}[];extensionPanels:{id:string;extId:string;title:string;side:'left'|'right';html:string}[];activePanel:{left:string|null;right:string|null};storage:'memory'|'disk'|'tab';diskComparison:DiskComparison|null;nativeConnected:boolean;
+ sidebarWidth:number;inspectorWidth:number;sidebarOpen:boolean;inspectorOpen:boolean;agentOpen:boolean;problemsOpen:boolean;
  responsiveScope:'auto'|number|null;leftTab:LeftTab;rightTab:RightTab;zoom:number;viewport:number;viewportHeight:number;viewMode:ViewMode;
  paletteOpen:boolean;recentCommands:string[];selectedElementId:string|null;selectedElementIds:string[];computedStyle:Record<string,string>;activeFile:string;openFiles:string[];designFile:string;cursorLine:number;cursorCol:number;
  projectName:string;coreConnected:boolean;revision:number;files:Readonly<Record<string,string>>;nodes:EditorNode[];
@@ -29,7 +30,7 @@ const PANELS_KEY='somnia.panels.v1';
 /** Sidebar visibility survives restarts; anything unreadable falls back to both open. */
 export function readPanels():{sidebarOpen:boolean;inspectorOpen:boolean}{try{const x=JSON.parse(localStorage.getItem(PANELS_KEY)||'{}');return{sidebarOpen:x.sidebarOpen!==false,inspectorOpen:x.inspectorOpen!==false};}catch{return{sidebarOpen:true,inspectorOpen:true};}}
 
-let state:AppState={backupPrefs:readBackupPrefs(),documentPrefs:readDocumentPrefs(),windowPrefs:readWindowPrefs(),updatePrefs:readUpdatePrefs(),canvasPrefs:readCanvasPrefs(),workflowPrefs:readWorkflowPrefs(),uiPrefs:readUiPrefs(),exportDialog:false,diffSplit:false,livePreview:false,closeProjectPrompt:false,saveDialog:null,jumpTo:null,settingsSection:'Appearance',look:readLook(),closePrompt:null,viewportHeight:900,...readSplit(),editorPrefs:readEditorPrefs(),themeChoice:readThemeChoice(),settingsOpen:false,extensionThemes:[],extensionPanels:[],activePanel:{left:null,right:null},storage:'memory',...readAppearance(),diskComparison:null,nativeConnected:false,...readPanelWidths(),...readPanels(),problemsOpen:false,responsiveScope:'auto',leftTab:'layers',rightTab:'design',zoom:readCanvasPrefs().defaultZoom,viewport:readCanvasPrefs().defaultViewport,viewMode:'design',paletteOpen:false,recentCommands:[],selectedElementId:null,selectedElementIds:[],computedStyle:{},activeFile:'',openFiles:[],designFile:'',cursorLine:1,cursorCol:1,projectName:'',coreConnected:false,revision:0,files:{},nodes:[],isDirty:false,lastSavedAt:null,notice:'No project open.',theme:readTheme()};
+let state:AppState={backupPrefs:readBackupPrefs(),documentPrefs:readDocumentPrefs(),windowPrefs:readWindowPrefs(),updatePrefs:readUpdatePrefs(),canvasPrefs:readCanvasPrefs(),workflowPrefs:readWorkflowPrefs(),uiPrefs:readUiPrefs(),exportDialog:false,diffSplit:false,livePreview:false,closeProjectPrompt:false,saveDialog:null,jumpTo:null,settingsSection:'Appearance',settingsNavigationId:0,look:readLook(),closePrompt:null,viewportHeight:900,...readSplit(),editorPrefs:readEditorPrefs(),themeChoice:readThemeChoice(),settingsOpen:false,extensionThemes:[],extensionPanels:[],activePanel:{left:null,right:null},storage:'memory',...readAppearance(),diskComparison:null,nativeConnected:false,...readPanelWidths(),...readPanels(),agentOpen:false,problemsOpen:false,responsiveScope:'auto',leftTab:'layers',rightTab:'design',zoom:readCanvasPrefs().defaultZoom,viewport:readCanvasPrefs().defaultViewport,viewMode:'design',paletteOpen:false,recentCommands:[],selectedElementId:null,selectedElementIds:[],computedStyle:{},activeFile:'',openFiles:[],designFile:'',cursorLine:1,cursorCol:1,projectName:'',coreConnected:false,revision:0,files:{},nodes:[],isDirty:false,lastSavedAt:null,notice:'No project open.',theme:readTheme()};
 const listeners=new Set<()=>void>();
 export const getState=()=>state;
 function readSplit():{splitLayout:'vertical'|'horizontal';splitSwap:boolean;splitRatio:number}{try{const x=JSON.parse(localStorage.getItem(SPLIT_KEY)||'{}');return{splitLayout:x.splitLayout==='horizontal'?'horizontal':'vertical',splitSwap:x.splitSwap===true,splitRatio:typeof x.splitRatio==='number'&&x.splitRatio>=0.15&&x.splitRatio<=0.85?x.splitRatio:0.48};}catch{return{splitLayout:'vertical',splitSwap:false,splitRatio:0.48};}}
@@ -51,11 +52,13 @@ export function refreshProject(){
  patchState({files,nodes,activeFile,openFiles,designFile,revision:core.revision,isDirty:isDirty(),selectedElementIds:state.selectedElementIds.filter(id=>ids.has(id)),selectedElementId:state.selectedElementId&&ids.has(state.selectedElementId)?state.selectedElementId:null});
 }
 /** Call after initial folder read. Cleanup on close/unmount. Core is the only document/history owner. */
+let projectGeneration=0;
+export function getProjectGeneration(){return projectGeneration;}
 export function connectEditorProject(project:EditorProjectPort,options:{name?:string;alreadySaved?:boolean}={}){
- unsubscribeCore?.();core=project;savedFiles=options.alreadySaved?{...project.files}:{};
+ projectGeneration++;unsubscribeCore?.();core=project;savedFiles=options.alreadySaved?{...project.files}:{};
  patchState({zoom:state.canvasPrefs.defaultZoom,viewport:state.canvasPrefs.defaultViewport,responsiveScope:'auto',coreConnected:true,projectName:options.name??'Untitled project',selectedElementId:null,notice:'In-memory project. Native filesystem service is not connected.'});
- unsubscribeCore=project.subscribe('internal',()=>refreshProject());refreshProject();
- return()=>{if(core!==project)return;unsubscribeCore?.();unsubscribeCore=null;core=null;patchState({responsiveScope:'auto',coreConnected:false,files:{},nodes:[],selectedElementId:null,isDirty:false,lastSavedAt:null,notice:'Project closed.'});};
+ unsubscribeCore=project.subscribe('internal',(tx)=>{if(tx&&typeof tx==='object'&&'origin' in tx&&(tx.origin==='canvas'||tx.origin==='code'))recordActivity('edit');refreshProject();});refreshProject();
+ return()=>{if(core!==project)return;projectGeneration++;unsubscribeCore?.();unsubscribeCore=null;core=null;patchState({responsiveScope:'auto',coreConnected:false,files:{},nodes:[],selectedElementId:null,isDirty:false,lastSavedAt:null,notice:'Project closed.'});};
 }
 export function applyOperations(operations:Operation[],origin:Origin='canvas',group?:string){
  if(!core)throw new Error('Editor core is not connected.');
@@ -67,11 +70,11 @@ export function applyHistory(direction:'undo'|'redo'){
 }
 /** Save integration must pass the exact snapshot it actually wrote; edits during save remain dirty. */
 export function markSaved(snapshot:Readonly<Record<string,string>>,at=new Date().toISOString()){
- savedFiles={...snapshot};patchState({isDirty:isDirty(),lastSavedAt:at,notice:'Saved to disk.'});
+ recordActivity('save');savedFiles={...snapshot};patchState({isDirty:isDirty(),lastSavedAt:at,notice:'Saved to disk.'});
 }
 /** Text of a file as of the last save (empty when never saved). */
 export function getSavedFile(file:string):string{return savedFiles[file]??'';}
-export function markFileSaved(file:string,content:string){savedFiles[file]=content;patchState({isDirty:isDirty(),lastSavedAt:new Date().toISOString(),notice:'Saved to disk.'});}
+export function markFileSaved(file:string,content:string){recordActivity('save');savedFiles[file]=content;patchState({isDirty:isDirty(),lastSavedAt:new Date().toISOString(),notice:'Saved to disk.'});}
 
 /** Open a project file in a tab and make it the active source file. */
 export function openFileTab(path:string){if(!(path in state.files))return;setActiveMedia(null);patchState({openFiles:state.openFiles.includes(path)?state.openFiles:[...state.openFiles,path],activeFile:path,selectedElementId:null});refreshProject();}
@@ -86,4 +89,4 @@ export const clampViewport=(n:number,max=3840)=>Math.min(max,Math.max(200,Math.r
 export function jumpToLine(file:string,line:number,col=1){openFileTab(file);const st=getState();patchState({jumpTo:{file,line,col,nonce:Date.now()+Math.random()},...(st.viewMode==='design'?{viewMode:'split' as const}:{})});}
 
 /** Leaves the project without opening another one: the app returns to its empty state. */
-export function closeCore(){clearMedia();unsubscribeCore?.();unsubscribeCore=null;core=null;savedFiles={};patchState({responsiveScope:'auto',coreConnected:false,files:{},nodes:[],openFiles:[],activeFile:'',designFile:'',selectedElementId:null,selectedElementIds:[],isDirty:false,lastSavedAt:null,storage:'memory',nativeConnected:false,projectName:'',notice:'Project closed.'});}
+export function closeCore(){projectGeneration++;clearMedia();unsubscribeCore?.();unsubscribeCore=null;core=null;savedFiles={};patchState({responsiveScope:'auto',coreConnected:false,files:{},nodes:[],openFiles:[],activeFile:'',designFile:'',selectedElementId:null,selectedElementIds:[],isDirty:false,lastSavedAt:null,storage:'memory',nativeConnected:false,projectName:'',notice:'Project closed.'});}

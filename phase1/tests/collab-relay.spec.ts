@@ -82,7 +82,7 @@ test('relay restart: both sides show reconnecting, then resync and keep editing'
  await expect(host.getByTestId('conn-label')).toHaveText(/^Connected \u00b7 Relay/);
  await host.getByRole('button',{name:'Show link'}).click();const link=await host.getByLabel('Link for others link').inputValue();
  await host.getByRole('button',{name:'Close',exact:true}).click();
- await open(guest,'Join shared project...');await guest.getByLabel('Invite link').fill(link);await guest.getByRole('button',{name:'Join',exact:true}).click();
+ await open(guest,'Join shared project...');await guest.getByLabel('Invite link').fill(link);await guest.getByLabel('Your name').fill('Gabi');await guest.getByRole('button',{name:'Join',exact:true}).click();
  await expect(guest.getByTestId('participant')).toHaveCount(2,{timeout:15000});await guest.getByRole('button',{name:'Close',exact:true}).click();
  await showCode(host);await showCode(guest);
  await stopRelay();
@@ -100,7 +100,7 @@ test('host ends room: guest is disconnected and the old invite cannot rejoin',as
  await host.getByLabel('Relay address').fill(`ws://127.0.0.1:${port}`);await host.getByRole('button',{name:'Start sharing'}).click();
  await expect(host.getByTestId('conn-label')).toHaveText(/^Connected/);await expect(host.getByTestId('session-expiry')).toBeVisible();
  await host.getByRole('button',{name:'Show link'}).click();const link=await host.getByLabel('Link for others link').inputValue();expect(link).not.toContain('host=');
- await open(guest,'Join shared project...');await guest.getByLabel('Invite link').fill(link);await guest.getByRole('button',{name:'Join',exact:true}).click();await expect(guest.getByTestId('participant')).toHaveCount(2);
+ await open(guest,'Join shared project...');await guest.getByLabel('Invite link').fill(link);await guest.getByLabel('Your name').fill('Gabi');await guest.getByRole('button',{name:'Join',exact:true}).click();await expect(guest.getByTestId('participant')).toHaveCount(2);
  await host.getByRole('button',{name:'End session and invalidate link'}).click();await expect(guest.getByTestId('session-error')).toBeVisible({timeout:10000});
  await guest.screenshot({path:'test-results/collab-revoked-dialog.png'});
  await guest.getByRole('button',{name:'Leave session'}).click();await guest.getByLabel('Invite link').fill(link);await guest.getByRole('button',{name:'Join',exact:true}).click();

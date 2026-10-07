@@ -1,5 +1,7 @@
 # Phase 1 - Desktop foundation and reliable editor core
 
+> Historical log of the Phase 1 foundation work (early October 2026). It is not the current status. For the current state read [docs/ARCHITECTURE.md](../../docs/ARCHITECTURE.md), [docs/ROADMAP.md](../../docs/ROADMAP.md) and [docs/BUILD-AND-RELEASE.md](../../docs/BUILD-AND-RELEASE.md). Since this log was written: the native bridge, CodeMirror, extensions SDK, collaboration, i18n, the updater and the Agent subsystem have shipped or are integrated, and desktop installers are built by CI for Windows, Linux and macOS.
+
 Development branch only. No shipped desktop release, no merge or deploy, existing Phase-0 site untouched.
 
 ## Implemented and tested locally

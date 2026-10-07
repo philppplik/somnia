@@ -228,6 +228,12 @@
   "homepage": ""
  },
  {
+  "name": "commander",
+  "version": "8.3.0",
+  "license": "MIT",
+  "homepage": "https://github.com/tj/commander.js"
+ },
+ {
   "name": "crelt",
   "version": "1.0.7",
   "license": "MIT",
@@ -256,6 +262,12 @@
   "version": "0.2.5",
   "license": "MIT",
   "homepage": "https://github.com/dmonad/isomorphic.js#readme"
+ },
+ {
+  "name": "katex",
+  "version": "0.16.47",
+  "license": "MIT",
+  "homepage": "https://katex.org"
  },
  {
   "name": "lib0",
@@ -328,6 +340,12 @@
   "version": "1.7.0",
   "license": "MIT",
   "homepage": "https://github.com/react/react"
+ },
+ {
+  "name": "Vadivam (icons)",
+  "version": "0.0.46",
+  "license": "MIT",
+  "homepage": "https://github.com/praveenjuge/vadivam"
  },
  {
   "name": "w3c-keyname",

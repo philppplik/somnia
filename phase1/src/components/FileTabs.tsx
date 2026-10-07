@@ -1,5 +1,5 @@
 import {useEffect,useRef,useState} from 'react';
-import {X,Columns2} from 'lucide-react';
+import {X,Columns2} from '../lib/icons';
 import {closeFileTab,openFileTab,patchState,useAppStore} from '../store/appStore';
 import {cn} from '../lib/cn';
 import {closeMedia,setActiveMedia,useMedia} from '../lib/media';

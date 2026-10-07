@@ -14,7 +14,11 @@ Status: alpha. Windows builds are tested by the maintainer; Linux and macOS buil
 - Themes, 25 px rounded bento layout, extension SDK (see `docs/extensions/`).
 - Local first: files stay on your machine, no account, no telemetry.
 
-Roadmap: [docs/ROADMAP.md](docs/ROADMAP.md). Benchmarks: [phase1/notes/BENCHMARKS.md](phase1/notes/BENCHMARKS.md).
+Architecture: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md). Build and release: [docs/BUILD-AND-RELEASE.md](docs/BUILD-AND-RELEASE.md). Roadmap: [docs/ROADMAP.md](docs/ROADMAP.md). Benchmarks: [phase1/notes/BENCHMARKS.md](phase1/notes/BENCHMARKS.md).
+
+## Somnia Agent design
+
+The native AI panel is integrated on the `somnia-agent` branch and not yet released. It supports OpenRouter and local Ollama models, asks before reading or writing each file and shows every change as a reviewable diff. Cloud processing requires opt-in; AI changes are applied to the editor only after review and are never saved automatically. Read the [Agent documentation](docs/agent/README.md) for the architecture, providers and privacy requirements. Only fake providers are covered by automated tests so far.
 
 ## Download
 
@@ -23,8 +27,9 @@ Get installers from [Releases](https://github.com/philppplik/somnia/releases) (e
 ## Repository layout
 
 - `phase1/` - the app (Tauri + web frontend), tests and design notes (`phase1/notes/`)
-- `docs/` - documentation; `docs/extensions/` is the extension SDK guide. The project site (`index.html`) also lives here.
-- `proto/` - early prototypes
+- `relay/` - `somnia-relay`, the blind WebSocket relay for collaboration
+- `docs/` - documentation, see [docs/README.md](docs/README.md); `docs/ARCHITECTURE.md` is the technical overview, `docs/extensions/` the extension SDK guide. The project site (`index.html`) also lives here.
+- `proto/` - early prototypes (Phase 0, frozen)
 
 ## Develop
 

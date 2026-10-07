@@ -33,18 +33,149 @@ async fn work<T: Send + 'static>(
     state: Shared,
     f: impl FnOnce(&mut Backend) -> Result<T> + Send + 'static,
 ) -> Result<T> {
-    tauri::async_runtime::spawn_blocking(move || {
+    let result = tauri::async_runtime::spawn_blocking(move || {
         let mut backend = state.lock().map_err(|e| AppError::Io(e.to_string()))?;
         f(&mut backend)
     })
     .await
-    .map_err(|e| AppError::Io(e.to_string()))?
+    .map_err(|e| AppError::Io(e.to_string()))?;
+    if let Err(error) = &result {
+        crate::applog::write("warn", "rust.service", &error.to_string(), None);
+    }
+    result
 }
 fn project<'a>(backend: &'a mut Backend, id: &str) -> Result<&'a mut Project> {
     backend.projects.get_mut(id).ok_or(AppError::UnknownProject)
 }
 fn emit(window: &WebviewWindow, event: &StateEvent) {
     let _ = window.emit("somnia://file-state", event);
+}
+
+// Serialize access so concurrent windows cannot race preference/key updates.
+static AGENT_SETTINGS_LOCK: Mutex<()> = Mutex::new(());
+#[derive(serde::Deserialize, Serialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct AgentSettingsReply { provider: String, model: String, api_key: String, #[serde(default)] custom_prompts: Vec<crate::agent_settings::CustomPrompt> }
+fn agent_key_for(provider: &str) -> std::result::Result<keyring::Entry, String> {
+    if !matches!(provider, "openrouter" | "openai" | "claude") { return Err("Unsupported credential provider".into()); }
+    keyring::Entry::new("de.philipp-paulik.somnia.agent", provider)
+        .map_err(|_| "OS credential store is unavailable".into())
+}
+// Credentials are independent of preferences: saving an Ollama configuration must
+// never delete an OpenRouter key. No raw backend/credential error reaches the UI.
+struct NativeResponse { receiver: tokio::sync::Mutex<tokio::sync::mpsc::Receiver<std::result::Result<Vec<u8>, String>>>, task: tokio::task::AbortHandle, expires: std::time::Instant }
+impl Drop for NativeResponse {fn drop(&mut self){self.task.abort();}}
+#[derive(Default)]
+struct ProviderNetwork(tokio::sync::Mutex<BTreeMap<String, Arc<NativeResponse>>>);
+#[derive(Serialize)]
+#[serde(rename_all="camelCase")]
+struct NativeStart { id: String, status: u16, headers: BTreeMap<String,String> }
+#[tauri::command]
+async fn provider_http_start(window: WebviewWindow, state: State<'_, ProviderNetwork>, provider: String, url: String, method: String, body: Option<String>, candidate_key: Option<String>) -> std::result::Result<NativeStart,String> {
+    gate(&window).map_err(|_| "Only trusted editor may use provider transport")?;
+    crate::provider_transport::endpoint(&provider,&url,&method)?;
+    if body.as_ref().is_some_and(|b|b.len()>2_000_000) { return Err("Provider request is too large".into()); }
+    if method=="GET" && body.is_some() {return Err("GET request body is not allowed".into());}
+    // Candidate keys only validate account metadata, never inference before save.
+    if candidate_key.is_some() && (method!="GET" || !matches!(url.as_str(),"https://api.openai.com/v1/models"|"https://api.anthropic.com/v1/models?limit=1"|"https://openrouter.ai/api/v1/key")) { return Err("Candidate key is allowed for authentication only".into()); }
+    let key = if let Some(key)=candidate_key {
+        if key.is_empty() || key.len()>8192 || key.chars().any(|c|c.is_control()||c.is_whitespace()) { return Err("Invalid API key".into()); } key
+    } else {
+        let p=provider.clone();tauri::async_runtime::spawn_blocking(move||agent_key_for(&p)?.get_password().map_err(|_| "OS credential store is locked or key is missing".to_string())).await.map_err(|_| "Credential lookup failed")??
+    };
+    let client=reqwest::Client::builder().no_proxy().redirect(reqwest::redirect::Policy::none()).connect_timeout(Duration::from_secs(15)).timeout(Duration::from_secs(120)).build().map_err(|_| "Provider transport unavailable")?;
+    let mut request=client.request(if method=="GET" {reqwest::Method::GET} else {reqwest::Method::POST},&url);
+    request=if provider=="claude" {request.header("x-api-key",key).header("anthropic-version","2023-06-01")} else {request.bearer_auth(key)};
+    if let Some(body)=body {request=request.header("content-type","application/json").body(body);}
+    let response=request.send().await.map_err(|_| "Provider connection failed")?;
+    let mut headers=BTreeMap::new();
+    for name in ["content-type","retry-after"] {if let Some(v)=response.headers().get(name).and_then(|v|v.to_str().ok()) {headers.insert(name.into(),v.into());}}
+    let status=response.status().as_u16();let id=uuid::Uuid::new_v4().to_string();
+    let mut active=state.0.lock().await;active.retain(|_,r|r.expires>std::time::Instant::now());
+    if active.len()>=4 { return Err("Too many active provider requests".into()); }
+    let (sender,receiver)=tokio::sync::mpsc::channel(1);
+    let task=tokio::spawn(async move {
+      let mut response=response;
+      loop {match response.chunk().await {
+       Ok(Some(chunk)) if chunk.len()<=1_000_000 => {if sender.send(Ok(chunk.to_vec())).await.is_err(){break;}},
+       Ok(None)=>break,
+       _=>{let _=sender.send(Err("Provider stream interrupted".into())).await;break;}
+      }}
+    });
+    active.insert(id.clone(),Arc::new(NativeResponse{receiver:tokio::sync::Mutex::new(receiver),task:task.abort_handle(),expires:std::time::Instant::now()+Duration::from_secs(120)}));
+    Ok(NativeStart{id,status,headers})
+}
+#[tauri::command]
+async fn provider_http_next(window: WebviewWindow,state: State<'_, ProviderNetwork>,id:String) -> std::result::Result<Option<Vec<u8>>,String> {
+    gate(&window).map_err(|_| "Only trusted editor may read provider transport")?;
+    let r=state.0.lock().await.get(&id).cloned().ok_or("Provider request is closed")?;
+    if r.expires<std::time::Instant::now() {state.0.lock().await.remove(&id);return Err("Provider request timed out".into());}
+    let mut receiver=r.receiver.lock().await;
+    match tokio::time::timeout(Duration::from_secs(30),receiver.recv()).await {
+      Ok(Some(Ok(chunk))) => Ok(Some(chunk)),
+      Ok(None) => {state.0.lock().await.remove(&id);Ok(None)},
+      _ => {state.0.lock().await.remove(&id);r.task.abort();Err("Provider stream interrupted".into())}
+    }
+}
+#[tauri::command]
+async fn provider_http_cancel(window:WebviewWindow,state:State<'_,ProviderNetwork>,id:String)->std::result::Result<(),String>{
+ gate(&window).map_err(|_| "Only trusted editor may cancel provider transport")?;if let Some(r)=state.0.lock().await.remove(&id){r.task.abort();}Ok(())
+}
+#[tauri::command]
+async fn agent_key_status(window: WebviewWindow, provider: String) -> std::result::Result<bool, String> {
+    gate(&window).map_err(|_| "Only the trusted editor may inspect credentials")?;
+    tauri::async_runtime::spawn_blocking(move || {
+        let _guard = AGENT_SETTINGS_LOCK.lock().map_err(|_| "Credential store is busy")?;
+        match agent_key_for(&provider)?.get_password() {
+            Ok(_) => Ok(true), Err(keyring::Error::NoEntry) => Ok(false),
+            Err(_) => Err("OS credential store is locked or unavailable".into()),
+        }
+    }).await.map_err(|_| "Could not access credential store")?
+}
+#[tauri::command]
+async fn agent_key_save(window: WebviewWindow, provider: String, api_key: String) -> std::result::Result<(), String> {
+    gate(&window).map_err(|_| "Only the trusted editor may save credentials")?;
+    if api_key.is_empty() || api_key.len() > 8192 || api_key.chars().any(|c| c.is_control() || c.is_whitespace()) {
+        return Err("Invalid API key".into());
+    }
+    tauri::async_runtime::spawn_blocking(move || {
+        let _guard = AGENT_SETTINGS_LOCK.lock().map_err(|_| "Credential store is busy")?;
+        agent_key_for(&provider)?.set_password(&api_key).map_err(|_| "OS credential store is locked or unavailable".into())
+    }).await.map_err(|_| "Could not save credential")?
+}
+#[tauri::command]
+async fn agent_key_delete(window: WebviewWindow, provider: String) -> std::result::Result<(), String> {
+    gate(&window).map_err(|_| "Only the trusted editor may delete credentials")?;
+    tauri::async_runtime::spawn_blocking(move || {
+        let _guard = AGENT_SETTINGS_LOCK.lock().map_err(|_| "Credential store is busy")?;
+        match agent_key_for(&provider)?.delete_credential() {
+            Ok(()) | Err(keyring::Error::NoEntry) => Ok(()),
+            Err(_) => Err("OS credential store is locked or unavailable".into()),
+        }
+    }).await.map_err(|_| "Could not delete credential")?
+}
+#[tauri::command]
+async fn agent_settings_load(window: WebviewWindow) -> std::result::Result<AgentSettingsReply, String> {
+    gate(&window).map_err(|_| "Only the trusted editor may access agent settings")?;
+    let dir = window.app_handle().path().app_config_dir().map_err(|_| "App config directory is unavailable")?;
+    tauri::async_runtime::spawn_blocking(move || {
+        let _guard = AGENT_SETTINGS_LOCK.lock().map_err(|_| "Agent settings are busy")?;
+        let p = crate::agent_settings::load(&dir.join("agent-settings.json"))?;
+        let api_key = String::new(); // Keys are loaded independently through agent_key_load.
+        Ok(AgentSettingsReply { provider: p.provider, model: p.model, api_key, custom_prompts: p.custom_prompts })
+    }).await.map_err(|_| "Could not load agent settings")?
+}
+#[tauri::command]
+async fn agent_settings_save(window: WebviewWindow, settings: AgentSettingsReply) -> std::result::Result<(), String> {
+    gate(&window).map_err(|_| "Only the trusted editor may save agent settings")?;
+    let dir = window.app_handle().path().app_config_dir().map_err(|_| "App config directory is unavailable")?;
+    tauri::async_runtime::spawn_blocking(move || {
+        let _guard = AGENT_SETTINGS_LOCK.lock().map_err(|_| "Agent settings are busy")?;
+        let p = crate::agent_settings::Preferences { provider: settings.provider, model: settings.model, custom_prompts: settings.custom_prompts };
+        p.validate()?;
+        if settings.api_key.len() > 8192 || settings.api_key.contains(['\r', '\n', '\0']) { return Err("Invalid API key".into()); }
+        crate::agent_settings::save(&dir.join("agent-settings.json"), &p)
+    }).await.map_err(|_| "Could not save agent settings")?
 }
 
 #[tauri::command]
@@ -195,6 +326,7 @@ async fn read_dropped_files(
     window: WebviewWindow,
     state: State<'_, Shared>,
     token: String,
+    chat: Option<bool>,
 ) -> Result<Vec<DroppedTextFile>> {
     gate(&window)?;
     work(state.inner().clone(), move |backend| {
@@ -214,6 +346,32 @@ async fn read_dropped_files(
                 .unwrap_or_default()
                 .to_string_lossy()
                 .to_ascii_lowercase();
+            if chat.unwrap_or(false) {
+                if files.len() >= 5 {
+                    return Err(AppError::Limit);
+                }
+                let mut bytes = Vec::new();
+                std::fs::File::open(&path)?
+                    .take(10_000_001)
+                    .read_to_end(&mut bytes)?;
+                if bytes.is_empty() || bytes.len() > 10_000_000 {
+                    return Err(AppError::Limit);
+                }
+                total += bytes.len();
+                if total > 50_000_000 {
+                    return Err(AppError::Limit);
+                }
+                files.push(DroppedTextFile {
+                    name: path
+                        .file_name()
+                        .unwrap_or_default()
+                        .to_string_lossy()
+                        .into_owned(),
+                    text: String::new(),
+                    base64: Some(base64_encode(&bytes)),
+                });
+                continue;
+            }
             if MEDIA_EXTENSIONS.contains(&ext.as_str()) {
                 let mut bytes = Vec::new();
                 std::fs::File::open(&path)?
@@ -237,7 +395,7 @@ async fn read_dropped_files(
                 });
                 continue;
             }
-            if !["html", "htm", "css", "js", "json", "svg", "txt", "md"].contains(&ext.as_str()) {
+            if !["html", "htm", "css", "js", "json", "svg", "txt", "md", "tex"].contains(&ext.as_str()) {
                 continue;
             }
             let mut bytes = Vec::new();
@@ -272,6 +430,8 @@ struct DropReply {
     count: usize,
     /// True when every dropped path is a PNG, JPEG or PDF file (media, not a project).
     media: bool,
+    /// Physical drop position for routing to the visible session-chat target.
+    position: [f64; 2],
 }
 /// True when the app runs from a Microsoft Store (MSIX) package. Such installs are updated by the Store, so the GitHub updater stays off.
 #[tauri::command]
@@ -363,6 +523,19 @@ async fn read_media(
     work(state.inner().clone(), move |b| {
         let bytes = project(b, &project_id)?.read_media(&path)?;
         Ok(base64_encode(&bytes))
+    })
+    .await
+}
+#[tauri::command]
+async fn hold_autosave(
+    window: WebviewWindow,
+    state: State<'_, Shared>,
+    project_id: String,
+    paths: Vec<String>,
+) -> Result<()> {
+    gate(&window)?;
+    work(state.inner().clone(), move |b| {
+        project(b, &project_id)?.hold_autosave(&paths)
     })
     .await
 }
@@ -545,16 +718,84 @@ async fn collab_lan_status(
     Ok(host.status().await)
 }
 
+#[tauri::command]
+fn log_write(
+    window: WebviewWindow,
+    level: String,
+    source: String,
+    message: String,
+    context: Option<serde_json::Value>,
+) -> std::result::Result<(), String> {
+    gate(&window).map_err(|e| e.to_string())?;
+    crate::applog::write(&level, &source, &message, context.as_ref());
+    Ok(())
+}
+#[tauri::command]
+fn log_tail(window: WebviewWindow, lines: Option<usize>) -> std::result::Result<String, String> {
+    gate(&window).map_err(|e| e.to_string())?;
+    Ok(crate::applog::global()
+        .map(|l| l.tail(lines.unwrap_or(200).min(2000)))
+        .unwrap_or_default())
+}
+#[tauri::command]
+fn log_dir(window: WebviewWindow) -> std::result::Result<String, String> {
+    gate(&window).map_err(|e| e.to_string())?;
+    Ok(crate::applog::global()
+        .map(|l| l.dir().display().to_string())
+        .unwrap_or_default())
+}
+/// Never expose transparent UI on unsupported compositors. Linux remains solid.
+#[tauri::command]
+fn set_window_background(window: WebviewWindow, glass: bool, dark: bool) -> std::result::Result<bool, String> {
+    gate(&window).map_err(|e| e.to_string())?;
+    #[cfg(target_os = "windows")]
+    {
+        if !glass {
+            // Clearing an effect on unsupported Windows is harmless to our opaque CSS.
+            let _ = window_vibrancy::clear_acrylic(&window);
+            return Ok(false);
+        }
+        let tint = if dark { (18, 18, 24, 125) } else { (248, 249, 251, 125) };
+        // Tauri's set_effects discards compositor errors internally. Call the same
+        // underlying library directly so failure can keep the frontend opaque.
+        if window_vibrancy::apply_acrylic(&window, Some(tint)).is_err() {
+            let _ = window_vibrancy::clear_acrylic(&window);
+            return Ok(false);
+        }
+        Ok(true)
+    }
+    #[cfg(target_os = "macos")]
+    {
+        use window_vibrancy::{NSVisualEffectMaterial, NSVisualEffectState};
+        // Repeated theme changes must not stack vibrancy subviews.
+        let _ = window_vibrancy::clear_vibrancy(&window);
+        if !glass { return Ok(false); }
+        let _ = dark; // CSS supplies the current theme tint.
+        Ok(window_vibrancy::apply_vibrancy(&window,
+            NSVisualEffectMaterial::UnderWindowBackground,
+            Some(NSVisualEffectState::Active), Some(5.0)).is_ok())
+    }
+    #[cfg(not(any(target_os = "windows", target_os = "macos")))]
+    {
+        let _ = (glass, dark);
+        Ok(false)
+    }
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let shared = Shared::default();
     tauri::Builder::default()
+        .manage(ProviderNetwork::default())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_process::init())
         .manage(shared.clone())
         .manage(crate::lan_host::LanHost::default())
         .setup(move |app| {
+            if let Ok(dir) = app.path().app_data_dir() {
+                crate::applog::init(dir.join("logs"));
+            }
             let app_handle = app.handle().clone();
             std::thread::spawn(move || loop {
                 std::thread::sleep(Duration::from_millis(250));
@@ -577,7 +818,7 @@ pub fn run() {
         })
         .on_window_event(|window, event| {
             if window.label() == "main" {
-                if let tauri::WindowEvent::DragDrop(tauri::DragDropEvent::Drop { paths, .. }) =
+                if let tauri::WindowEvent::DragDrop(tauri::DragDropEvent::Drop { paths, position, .. }) =
                     event
                 {
                     let shared = window.state::<Shared>();
@@ -586,6 +827,7 @@ pub fn run() {
                         let reply = DropReply {
                             token: grant.token().to_owned(),
                             count: paths.len(),
+                            position: [position.x, position.y],
                             media: paths.iter().all(|p| {
                                 p.extension()
                                     .map(|e| e.to_string_lossy().to_ascii_lowercase())
@@ -612,6 +854,15 @@ pub fn run() {
             }
         })
         .invoke_handler(tauri::generate_handler![
+            provider_http_start,
+            provider_http_next,
+            provider_http_cancel,
+            agent_key_status,
+            agent_key_save,
+            agent_key_delete,
+            agent_settings_load,
+            agent_settings_save,
+            set_window_background,
             collab_lan_start,
             collab_lan_stop,
             collab_lan_status,
@@ -623,6 +874,7 @@ pub fn run() {
             list_files,
             read_file,
             read_media,
+            hold_autosave,
             stage_edit,
             save_file,
             delete_file,
@@ -631,10 +883,16 @@ pub fn run() {
             recovery_read,
             recovery_restore,
             recovery_discard,
-            close_project
+            close_project,
+            log_write,
+            log_tail,
+            log_dir
         ])
         .run(tauri::generate_context!())
-        .expect("Unable to start Somnia");
+        .unwrap_or_else(|error| {
+            crate::applog::write("error", "rust.startup", &error.to_string(), None);
+            panic!("Unable to start Somnia: {error}");
+        });
 }
 
 #[cfg(test)]

@@ -1,5 +1,5 @@
 import {useEffect,useState} from 'react';
-import {RotateCw} from 'lucide-react';
+import {RotateCw} from '../lib/icons';
 import {clampViewport,patchState,useAppStore} from '../store/appStore';
 import {useT} from '../lib/useT';
 export const VIEWPORT_PRESETS=[

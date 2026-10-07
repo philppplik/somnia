@@ -2,6 +2,15 @@ fn main() {
     #[cfg(feature = "desktop")]
     tauri_build::try_build(tauri_build::Attributes::new().app_manifest(
         tauri_build::AppManifest::new().commands(&[
+            "provider_http_start",
+            "provider_http_next",
+            "provider_http_cancel",
+            "agent_key_status",
+            "agent_key_save",
+            "agent_key_delete",
+            "agent_settings_load",
+            "agent_settings_save",
+            "set_window_background",
             "collab_lan_start",
             "collab_lan_stop",
             "collab_lan_status",
@@ -13,6 +22,7 @@ fn main() {
             "list_files",
             "read_file",
             "read_media",
+            "hold_autosave",
             "stage_edit",
             "save_file",
             "delete_file",
@@ -22,6 +32,9 @@ fn main() {
             "recovery_restore",
             "recovery_discard",
             "close_project",
+            "log_write",
+            "log_tail",
+            "log_dir",
         ]),
     ))
     .expect("Tauri build configuration failed");

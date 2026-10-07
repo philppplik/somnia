@@ -3,7 +3,7 @@ html,body,#root{background:var(--shell-bg)}
 .problems-panel{background:transparent;border:0;border-radius:0;box-shadow:none;max-height:30vh;overflow-y:auto;overflow-x:hidden;overflow-wrap:anywhere;min-height:0}.problems-panel code{overflow-wrap:anywhere}
 .editor-layout{gap:0}
 .pane-slot{padding:0}
-.pane-slot>.panel,.center{background:var(--bg-panel);border-radius:var(--r-lg);box-shadow:var(--card-shadow);overflow:hidden}
+.pane-slot>.panel,.center{background:var(--bg-panel);border-radius:var(--r-outer);box-shadow:var(--card-shadow);overflow:hidden}
 .center{background:var(--bg-panel)}
 .resize-handle{background:transparent;border:0;position:relative}
 .resize-handle:hover,.resize-handle:active{background:transparent}
@@ -29,8 +29,8 @@ input,select,textarea{border-radius:var(--r-sm)}
 *::-webkit-scrollbar-thumb{background:var(--border-default);border-radius:8px;border:2px solid transparent;background-clip:content-box}
 *::-webkit-scrollbar-thumb:hover{background:var(--text-tertiary);background-clip:content-box}
 *::-webkit-scrollbar-corner{background:transparent}
-/* App frame: outer radius is twice the card radius. */
-.app-frame{border-radius:calc(var(--r-lg) * 2 - 5px);overflow:hidden}
+/* Outer window chrome and workspace cards share the adjustable outer token. */
+.app-frame{border-radius:var(--r-outer);overflow:hidden}
 :root[data-shell=desktop],:root[data-shell=desktop] body,:root[data-shell=desktop] #root{background:transparent}
 /* Media and Markdown preview */
 .media-checker{background-color:#fff;background-image:linear-gradient(45deg,#0000000d 25%,transparent 25%,transparent 75%,#0000000d 75%),linear-gradient(45deg,#0000000d 25%,transparent 25%,transparent 75%,#0000000d 75%);background-size:16px 16px;background-position:0 0,8px 8px}
@@ -48,3 +48,73 @@ input,select,textarea{border-radius:var(--r-sm)}
 .md-preview .md-missing-image,.md-preview .md-empty{color:var(--text-tertiary);font-style:italic}
 .canvas-stage>.media-bar{margin-inline:0;width:100%}
 .md-preview ul{list-style:disc}.md-preview ol{list-style:decimal}.md-preview ul ul{list-style:circle}
+
+/* Glass v2. Native compositor must confirm glass. Dialogs and document contents
+   stay opaque; frame, panels and (opt-in) the code editor blend by scope.
+   --glass-*-alpha is 1 for a scope that is switched off, so the default 68 / 88 look is unchanged. */
+:root[data-background=glass] .app-frame{
+  background:color-mix(in srgb,var(--shell-bg) calc(var(--glass-frame-alpha,.68)*100%),transparent);
+  backdrop-filter:blur(var(--glass-blur)) saturate(1.15);
+  -webkit-backdrop-filter:blur(var(--glass-blur)) saturate(1.15);
+}
+:root[data-background=glass][data-glass-frame=false] .app-frame{backdrop-filter:none;-webkit-backdrop-filter:none}
+:root[data-background=glass][data-glass-panels=true] .pane-slot>.panel,
+:root[data-background=glass][data-glass-panels=true] .center,
+:root[data-background=glass][data-glass-panels=true] .ag-panel{
+  background:color-mix(in srgb,var(--bg-panel) calc(var(--glass-panel-alpha,.88)*100%),transparent);
+  backdrop-filter:blur(var(--glass-blur));
+  -webkit-backdrop-filter:blur(var(--glass-blur));
+}
+/* Code editor scope (default off). Text, caret and selection stay fully opaque. */
+:root{--cm-bg:var(--bg-base);--cm-gutter-bg:var(--bg-panel)}
+:root[data-background=glass][data-glass-code=true] .codemirror-host .cm-editor{background-color:color-mix(in srgb,var(--cm-bg) calc(var(--glass-code-alpha,1)*100%),transparent)!important}
+:root[data-background=glass][data-glass-code=true] .codemirror-host .cm-gutters{background-color:color-mix(in srgb,var(--cm-gutter-bg) calc(var(--glass-code-alpha,1)*100%),transparent)!important}
+:root[data-background=glass][data-glass-code=true] .codemirror-host .cm-activeLine{background-color:color-mix(in srgb,color-mix(in srgb,var(--accent) 7%,var(--cm-bg)) calc(var(--glass-code-alpha,1)*100%),transparent)!important}
+:root[data-background=glass],:root[data-background=glass] body,
+:root[data-background=glass] #root{background:transparent}
+/* Math (KaTeX): inline formulas follow the text size, block formulas are centred and scroll sideways instead of wrapping. */
+.math-inline{display:inline-block;max-width:100%;vertical-align:baseline}
+.math-block{display:block;margin:14px 0;text-align:center;overflow-x:auto;overflow-y:hidden;padding:2px 0}
+.md-preview .katex{font-size:1.08em}
+.math-error{display:inline;padding:0 5px;border-radius:6px;background:#FEF3F2;color:#B42318;font-family:var(--font-mono,ui-monospace,monospace);font-size:.92em;border:1px solid #FDA29B}
+.math-error-block{display:block;margin:14px 0;padding:8px 12px;border-left:3px solid #B42318;border-radius:0 8px 8px 0;background:#FEF3F2;color:#B42318;overflow-x:auto}
+.math-error-block code{display:block;white-space:pre;font-size:.92em;background:transparent;color:inherit;padding:0}
+.math-error-msg{display:block;margin-top:4px;font-size:12px}
+.math-skel{display:inline-block;width:3.2em;height:1em;border-radius:999px;vertical-align:-.15em;background:var(--border-subtle);animation:math-pulse 1.1s ease-in-out infinite}
+.math-skel-block{display:block;height:3em;margin:14px 0;border-radius:12px;background:var(--border-subtle);animation:math-pulse 1.1s ease-in-out infinite}
+@keyframes math-pulse{50%{opacity:.45}}
+@media (prefers-reduced-motion:reduce){.math-skel,.math-skel-block{animation:none}}
+.math-loading-note{max-width:760px;margin:0 auto;padding:0 28px 24px;font-size:12px;color:var(--text-tertiary)}
+.math-retry{border:0;background:transparent;color:var(--accent,#7c3aed);cursor:pointer;font:inherit;text-decoration:underline;padding:0 4px}
+.math-pill{display:inline-flex;align-items:center;height:20px;padding:0 8px;border-radius:999px;font-size:10px;white-space:nowrap}
+.math-pill.ok{background:#ECFDF3;color:#067647}
+.math-pill.err{background:#FEF3F2;color:#B42318}
+.math-pill.warn{background:#FFFAEB;color:#B54708}
+[data-theme=dark] .math-error,[data-theme=dark] .math-error-block{background:#3a1512;color:#fda29b;border-color:#7a271a}
+[data-theme=dark] .tex-banner{background:#3a2a0a;color:#fec84b}
+[data-theme=dark] .math-pill.ok{background:#073b27;color:#6ce9a6}[data-theme=dark] .math-pill.err{background:#3a1512;color:#fda29b}[data-theme=dark] .math-pill.warn{background:#3a2a0a;color:#fec84b}
+.tex-banner{display:flex;align-items:center;gap:8px;padding:6px 14px;font-size:12px;background:#FFFAEB;color:#B54708;border-bottom:1px solid var(--border-subtle)}
+.tex-banner span{flex:1}
+.tex-preview .tex-list{margin:.6em 0;padding-left:1.6em}
+.tex-preview .tex-sec{font-weight:600}
+.tex-eq{position:relative;margin:14px 0}
+.tex-eq-body .math-block{margin:0}
+.tex-eqno{position:absolute;right:0;top:50%;transform:translateY(-50%);color:var(--text-secondary)}
+.tex-ignored{max-width:760px;margin:0 auto;padding:0 28px 32px;font-size:12px;color:var(--text-tertiary);font-family:var(--font-mono,ui-monospace,monospace);overflow-wrap:anywhere}
+/* Markdown native editing + live preview */
+.md-head{background:var(--bg-panel)}
+.md-tool{border-radius:var(--r-control,8px)}
+.md-tool[aria-pressed=true]{background:var(--accent-soft);color:var(--accent)}
+.md-tool:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.md-pane{min-width:0;background:var(--bg-panel)}
+.md-scroll{scrollbar-width:thin}
+.md-preview{padding:28px}
+.md-notice{display:flex;align-items:center;gap:8px;margin:12px 28px 0;padding:6px 10px;border:1px solid var(--border-default);border-radius:8px;font-size:12px;background:var(--bg-surface)}
+.md-notice em{color:var(--text-tertiary);font-style:normal}
+.md-preview .md-reveal-flash,.md-preview [data-md].md-reveal-flash{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
+.md-preview li.md-task{list-style:none;margin-left:-1.4em}.md-preview li.md-task input{margin-right:.4em}
+.md-preview .footnotes{font-size:.9em;color:var(--text-secondary)}.md-preview .footnotes-sep{margin-top:2em}
+.md-preview sup.footnote-ref a{text-decoration:none}
+.md-preview .md-missing-image{color:var(--text-tertiary);border:1px dashed var(--border-default);border-radius:4px;padding:0 .4em}
+.md-preview a:focus-visible,.md-preview :focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+@media (prefers-reduced-motion:reduce){.md-preview .md-reveal-flash{transition:none}}

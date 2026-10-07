@@ -1,25 +1,27 @@
+import {CollabPreferences} from './CollabPreferences';
+import {AgentPrivacySettings} from './agent/AgentPrivacy';
 import {
   DEFAULT_BACKUP_PREFS,
   listProjectBackups,
   saveProjectBackup,
 } from "../lib/projectBackups";
 import { downloadProject } from "../lib/exportProject";
-import { Folder } from "lucide-react";
+import { Folder } from '../lib/icons';
 import { DEFAULT_DOCUMENT_PREFS } from "../lib/documentPrefs";
-import { Type, Upload } from "lucide-react";
+import { Type, Upload } from '../lib/icons';
 import {
   DEFAULT_WINDOW_PREFS,
   applyWindowPrefs,
   type WindowPrefs,
 } from "../lib/windowPrefs";
 import { isTauri } from "@tauri-apps/api/core";
-import { Monitor } from "lucide-react";
+import { Monitor } from '../lib/icons';
 import { DEFAULT_UPDATE_PREFS } from "../lib/updatePrefs";
 import { EditorProject } from "@somnia/editor-core";
-import { Zap } from "lucide-react";
+import { Zap } from '../lib/icons';
 import { DEFAULT_CANVAS_PREFS, type CanvasPrefs } from "../lib/canvasPrefs";
 import { DEFAULT_WORKFLOW_PREFS } from "../lib/workflowPrefs";
-import { Pencil } from "lucide-react";
+import { Pencil } from '../lib/icons';
 import { DEFAULT_UI_PREFS } from "../lib/uiPrefs";
 import { parseShortcutFile } from "../lib/shortcutTransfer";
 import { downloadText } from "../lib/exportProject";
@@ -39,9 +41,10 @@ import {
   Info,
   Search,
   X,
-} from "lucide-react";
+} from '../lib/icons';
 import { DEFAULT_EDITOR_PREFS } from "../lib/editorPrefs";
 import { settingsMatch } from "../lib/settingsSearch";
+import { GlassSettings } from "./GlassSettings";
 import { getState, type AppState } from "../store/appStore";
 import {
   CATALOGUES,
@@ -51,6 +54,8 @@ import {
   setLocalePref,
 } from "../lib/i18n";
 import { useT } from "../lib/useT";
+import { tOr } from "../lib/i18n";
+import { copyErrorReport } from "../lib/log";
 import {
   Dialog,
   DialogContent,
@@ -235,6 +240,20 @@ export function Settings() {
       setQuery("");
     }
   }, [state.settingsOpen]);
+  // Deep links use the same section state as the Settings sidebar. Clear any
+  // prior search, reset the independent content scroll and reveal the selected
+  // sidebar item (which can be below the fold in smaller windows).
+  useEffect(() => {
+    if (!state.settingsOpen) return;
+    setQuery("");
+    const frame = requestAnimationFrame(() => {
+      if (content.current) content.current.scrollTop = 0;
+      content.current?.closest(".settings-popup")
+        ?.querySelector<HTMLElement>('[aria-current="page"]')
+        ?.scrollIntoView({ block: "nearest" });
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [state.settingsOpen, section, state.settingsNavigationId]);
   useEffect(() => {
     const root = content.current;
     if (!root) return;
@@ -301,8 +320,10 @@ export function Settings() {
       group: "Workflow",
       icon: Upload,
     },
+    { name: "Collaboration", key: "collaboration", group: "Workflow", icon: Info },
     { name: "Preview", key: "preview", group: "Workflow", icon: Eye },
     { name: "Shortcuts", key: "shortcuts", group: "Workflow", icon: Keyboard },
+    { name: "AI Privacy", key: "aiPrivacy", group: "Power-Ups", icon: Info },
     { name: "Extensions", key: "extensions", group: "Power-Ups", icon: Puzzle },
     { name: "Updates", key: "updates", group: "System", icon: RefreshCw },
     { name: "Advanced", key: "advanced", group: "System", icon: Zap },
@@ -313,6 +334,8 @@ export function Settings() {
   const renderSection = (section: string) => (
     <section data-settings-section={section} aria-label={sectionTitle(section)} key={section}>
       <h2>{sectionTitle(section)}</h2>
+      {section === "Collaboration" && <CollabPreferences/>}
+      {section === "AI Privacy" && <AgentPrivacySettings t={t}/>}
       {section === "Advanced" && (
         <>
           <label title={t("redesign.fastHint")}>
@@ -827,6 +850,7 @@ export function Settings() {
             [
               "grid",
               "resizeHandles",
+              "spacingHandles",
               "doubleClickEdit",
               "shiftSelect",
               "spacePan",
@@ -870,7 +894,35 @@ export function Settings() {
               }
             />
           </label>
-          {(["gridColor", "selectionColor", "background"] as const).map(
+          <label>
+            {t("canvasPref.selectionColor")}
+            <span className="settings-color-value">
+              <code>{state.canvasPrefs.selectionColor ?? t("canvasPref.selectionColorTheme")}</code>
+              <input
+                type="color"
+                aria-label={t("canvasPref.selectionColor")}
+                value={state.canvasPrefs.selectionColor ?? "#7c5cff"}
+                onChange={(e) =>
+                  change({
+                    canvasPrefs: { ...state.canvasPrefs, selectionColor: e.target.value },
+                  })
+                }
+              />
+              {state.canvasPrefs.selectionColor && (
+                <button
+                  type="button"
+                  onClick={() =>
+                    change({
+                      canvasPrefs: { ...state.canvasPrefs, selectionColor: null },
+                    })
+                  }
+                >
+                  {t("canvasPref.selectionColorTheme")}
+                </button>
+              )}
+            </span>
+          </label>
+          {(["gridColor", "background"] as const).map(
             (key) => (
               <label key={key}>
                 {t("canvasPref." + key)}
@@ -1032,7 +1084,7 @@ export function Settings() {
               .map((c) => {
                 const clash = c.shortcut
                   ? listCommands().find(
-                      (o) => o.id !== c.id && o.shortcut === c.shortcut,
+                      (o) => o.id !== c.id && o.shortcut === c.shortcut && o.id.startsWith("md.") === c.id.startsWith("md."),
                     )
                   : undefined;
                 return (
@@ -1249,6 +1301,12 @@ export function Settings() {
               github.com/philppplik/somnia
             </a>
           </p>
+          <p>
+            <button type="button" className="underline" data-testid="copy-error-report" onClick={() => { void copyErrorReport(); }}>
+              {tOr("set.about.errorReport", "Copy error report")}
+            </button>
+            <span className="ml-2 text-[11px] text-ink-3">{tOr("set.about.errorReport.hint", "Version info and recent log lines, without keys or tokens. Paste it into a message when something goes wrong.")}</span>
+          </p>
           <details>
             <summary>
               {t("set.about.third", {count:thirdParty.length})}
@@ -1450,6 +1508,28 @@ export function Settings() {
               ))}
             </select>
           </label>
+          <label>
+            {t("set.ap.background")}
+            <select aria-label={t("set.ap.background")} aria-describedby="background-note"
+              value={state.look.background}
+              onChange={(e) => change({look:{...state.look,background:e.target.value === "glass" ? "glass" : "solid"}})}>
+              <option value="solid">{t("set.ap.background.solid")}</option>
+              <option value="glass">{t("set.ap.background.glass")}</option>
+            </select>
+          </label>
+          <p id="background-note">{t("set.ap.background.note")}</p>
+          <GlassSettings look={state.look} highContrast={state.contrast === "high"} onChange={(look) => change({ look })} />
+          <label>
+            {t("set.ap.outerRadius")}
+            <span className="settings-range-value">
+              <input type="range" min="0" max="25" step="1"
+                aria-label={t("set.ap.outerRadius")} aria-describedby="outer-radius-note"
+                aria-valuetext={`${state.look.outerRadius} px`} value={state.look.outerRadius}
+                onChange={(e) => change({look:{...state.look,outerRadius:Number(e.target.value)}})} />
+              <output aria-hidden="true">{state.look.outerRadius} px</output>
+            </span>
+          </label>
+          <p id="outer-radius-note">{t("set.ap.outerRadiusNote")}</p>
           <label>
             {t("set.ap.contrast")}
             <select
@@ -1743,6 +1823,8 @@ export function Settings() {
                 ["lineNumbers", t("redesign.lineNumbers")],
                 ["autoIndent", t("redesign.autoIndent")],
                 ["selectionScroll", t("redesign.selectionScroll")],
+                ["mathMarkdown", t("set.ce.math")],
+                ["texBanner", t("set.ce.texBanner")],
               ] as const
             ).map(([k, l]) => (
               <label key={k}>
@@ -1929,7 +2011,7 @@ export function Settings() {
             <X size={14} />
           </button>
           <DialogDescription className="sr-only">
-            {t("set.description")}
+            {t(section === "Shortcuts" ? "set.sc.description" : "set.description")}
           </DialogDescription>
           <div className="settings-content" ref={content}>
             {query && matches.length === 0 && (

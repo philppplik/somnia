@@ -19,4 +19,4 @@ export function collabLabel(s:CollabSnapshot,t:(k:string,p?:Record<string,string
 export function CollabStatus(){
  const {t}=useT();const s=useCollab();
  const l=collabLabel(s,t);if(!l)return null;
- return <button type="button" data-testid="collab-status" data-state={s.state} data-mode={s.mode??''} title={l.detail} aria-label={t('collab.aria',{label:`${l.label}. ${l.detail}`})} onClick={()=>openShare(s.role==='guest'?'join':'host')} className="flex cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-full border-0 bg-hover px-2 py-0.5 text-[10px] text-ink"><span aria-hidden className={`size-2 rounded-full ${l.tone}`}/>{l.label}</button>;}
+ return <span className="collab-pill"><button type="button" data-testid="collab-status" data-state={s.state} data-mode={s.mode??''} title={l.detail} aria-label={t('collab.aria',{label:`${l.label}. ${l.detail}`})} onClick={()=>openShare(s.role==='guest'?'join':'host')} className="flex cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-full border-0 bg-hover px-2 py-0.5 text-[10px] text-ink"><span aria-hidden className={`size-2 rounded-full ${l.tone}`}/>{l.label}</button></span>;}

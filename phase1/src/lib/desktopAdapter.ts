@@ -12,7 +12,7 @@ export async function installDesktopAdapter(){
  void restoreWindowState().catch(e=>console.error(e));
  // Memory-only and ZIP projects have no backend project, so the Rust close guard cannot see their edits. Guard them here.
  setCloseHandlers('memory',{discardAndClose:async()=>{clearDraft();await getCurrentWindow().destroy();},saveAndClose:async()=>{await getCurrentWindow().destroy();}});
- await getCurrentWindow().onCloseRequested(e=>{const st=getState();if(st.storage!=='disk'&&st.isDirty){e.preventDefault();requestClose('memory');}});
+ await getCurrentWindow().onCloseRequested(e=>{const st=getState();if(st.isDirty){e.preventDefault();requestClose(st.storage==='disk'?'disk':'memory');}});
  return installFileAdapter({
   invoke:(command,args)=>invoke(command,args),
   listen:(event,handler)=>listen(event,handler as never),

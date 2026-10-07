@@ -12,9 +12,10 @@
  *   the Y.Doc itself stays the source of truth, so an outbox overflow is covered by the sync handshake.
  * - reconnect: dropped connections retry with exponential backoff + jitter; revoked/blocked closes are final.
  */
-import type * as Y from 'yjs';
+import * as Y from 'yjs';
+import {MSG_CHAT_SYNC,chatStep1,chatUpdate,handleChatFrame,peekChatSyncType} from '../chatProtocol';
 import type {Awareness} from 'y-protocols/awareness';
-import {MSG_SYNC,MSG_AWARENESS,MSG_IDENTITY,encodeSyncStep1,encodeUpdate,encodeAwareness,encodeIdentity,peekSyncType,readIdentity,handleMessage,MSG_BLOB} from './protocol';
+import {MAX_RELAY_FRAME_BYTES,MSG_SYNC,MSG_AWARENESS,MSG_IDENTITY,encodeSyncStep1,encodeUpdate,encodeAwareness,encodeIdentity,peekSyncType,readIdentity,handleMessage,MSG_BLOB} from './protocol';
 import type {PublicIdentity,PresencePerson,IdentityMessage} from './protocol';
 import {encryptFrame,decryptFrame,isEncryptedFrame,importLinkKey,linkKeyParam} from './crypto';
 import type {LinkKey} from './crypto';
@@ -49,6 +50,8 @@ export type CollabMode='lan-direct'|'relay';
 export interface CollabSession{doc:Y.Doc;awareness:Awareness}
 export interface CollabClientOptions{
  session:CollabSession;
+ /** Separate volatile chat doc. Chat requires an encrypted link. */
+ chatDoc?:Y.Doc;
  /** Where this link points, for honest UI labels. The wire behaviour is identical. */
  mode?:CollabMode;
  transport?:TransportFactory;
@@ -63,7 +66,9 @@ export interface CollabClientOptions{
  random?:()=>number;    // jitter source, tests
 }
 export interface CollabClientSnapshot{
- state:ClientState;mode:CollabMode;synced:boolean;attempt:number;
+ state:ClientState;mode:CollabMode;synced:boolean;
+ /** True once the existing chat history has arrived (a peer's step2), or none came within syncTimeoutMs of the project sync (nobody to ask). Chat unread badges wait for this. */
+ chatSynced:boolean;attempt:number;
  identity:PublicIdentity|null;people:PresencePerson[];error:CollabError|null;
  queued:number;droppedFromQueue:number;
  security:{e2e:boolean;keyFingerprint:string|null;secureChannel:boolean;insecureRemote:boolean};
@@ -90,17 +95,20 @@ export class CollabClient{
  private connectDone:(()=>void)|null=null;
  private connectFail:((e:Error)=>void)|null=null;
  private offDoc:()=>void;
+ private chatTimer:ReturnType<typeof setTimeout>|null=null;
+ private offChat:()=>void=()=>{};private chatDoc:Y.Doc|undefined;
  private offAware:()=>void;
  private tf:TransportFactory;
  private sess:CollabSession;
  private o:{maxAttempts:number;baseDelayMs:number;maxDelayMs:number;syncTimeoutMs:number;outboxLimit:number;random?:()=>number};
 
  constructor(private invite:string,opts:CollabClientOptions){
-  this.sess=opts.session;
+  this.sess=opts.session;this.chatDoc=opts.chatDoc;
+  if(this.chatDoc){const onChat=(u:Uint8Array,origin:unknown)=>{if(origin!==this&&this.linkKey&&this.open())this.sendFrame(chatUpdate(u));};this.chatDoc.on('update',onChat);this.offChat=()=>this.chatDoc?.off('update',onChat);}
   this.o={maxAttempts:opts.maxAttempts??6,baseDelayMs:opts.baseDelayMs??500,maxDelayMs:opts.maxDelayMs??15_000,
    syncTimeoutMs:opts.syncTimeoutMs??2_000,outboxLimit:opts.outboxLimit??1_000,random:opts.random};
   this.tf=opts.transport??webSocketTransport;
-  this.s={state:'idle',mode:opts.mode??'lan-direct',synced:false,attempt:0,identity:null,people:[],error:null,
+  this.s={state:'idle',mode:opts.mode??'lan-direct',synced:false,chatSynced:false,attempt:0,identity:null,people:[],error:null,
    queued:0,droppedFromQueue:0,security:{e2e:false,keyFingerprint:null,secureChannel:false,insecureRemote:false}};
   const onUpdate=(u:Uint8Array,origin:unknown)=>{if(origin===this)return;
    if(this.open())this.sendFrame(encodeUpdate(u));
@@ -136,7 +144,7 @@ export class CollabClient{
   },expiry-Date.now());
   const keyParam=linkKeyParam(parsed.url);
   this.linkKey=keyParam?await importLinkKey(keyParam):null;
-  this.patch({state:'connecting',attempt:1,error:null,synced:false,
+  this.patch({state:'connecting',attempt:1,error:null,synced:false,chatSynced:false,
    security:{e2e:this.linkKey!==null,keyFingerprint:this.linkKey?.fingerprint??null,secureChannel:parsed.secure,insecureRemote:isInsecureRemote(parsed)}});
   this.intentional=false;
   return new Promise<void>((resolve,reject)=>{this.connectDone=resolve;this.connectFail=reject;this.dial(parsed.url);});}
@@ -156,6 +164,7 @@ export class CollabClient{
     for(const u of this.outbox.splice(0))this.sendFrame(encodeUpdate(u));
     this.patch({queued:0});
     this.sendFrame(encodeSyncStep1(this.sess.doc));
+    if(this.chatDoc&&this.linkKey&&!this.chatDoc.isDestroyed){this.sendFrame(chatStep1(this.chatDoc));this.sendFrame(chatUpdate(Y.encodeStateAsUpdate(this.chatDoc)));}
     if(this.sess.awareness.getLocalState())this.sendFrame(encodeAwareness(this.sess.awareness,[this.sess.doc.clientID]));
     this.armSyncTimeout(t);}
 
@@ -165,9 +174,17 @@ export class CollabClient{
    if(this.managed&&!this.acknowledged){this.ready=false;t.close(4003,'managed rooms unsupported');
     this.onClose(4003,'managed rooms unsupported');return;}
    this.markSynced();}},this.o.syncTimeoutMs);}
+ /** Chat history rides its own step1/step2 after the project sync. With no chat doc or no peer to answer, stop waiting after syncTimeoutMs. */
+ private armChatSync(){
+  if(this.s.chatSynced)return;
+  if(!this.chatDoc||!this.linkKey){this.patch({chatSynced:true});return;}
+  const t=this.transport;
+  if(this.chatTimer)clearTimeout(this.chatTimer);
+  this.chatTimer=setTimeout(()=>{this.chatTimer=null;if(this.transport===t&&!this.s.chatSynced)this.patch({chatSynced:true});},this.o.syncTimeoutMs);}
  private markSynced(){
   if(this.timer){clearTimeout(this.timer);this.timer=null;}
   this.patch({synced:true,state:'connected',attempt:0});
+  this.armChatSync();
   const r=this.connectDone;this.connectDone=this.connectFail=null;r?.();}
 
  private async onFrame(bytes:Uint8Array){
@@ -188,6 +205,7 @@ export class CollabClient{
     frame=await decryptFrame(this.linkKey,bytes);}
    else if(this.linkKey)return; // key session: plaintext sync/awareness is a downgrade attempt, drop
    if(this.transport!==transport||!this.open())return;
+   if(frame[0]===MSG_CHAT_SYNC){if(!this.linkKey||!this.chatDoc||this.chatDoc.isDestroyed)return;const reply=handleChatFrame(frame,this.chatDoc,this);if(reply)this.sendFrame(reply);if(!this.s.chatSynced&&peekChatSyncType(frame)===1){if(this.chatTimer){clearTimeout(this.chatTimer);this.chatTimer=null;}this.patch({chatSynced:true});}return;}
    if(frame[0]===MSG_BLOB){this.blobHandler?.(frame);return;}
    if(frame[0]!==MSG_SYNC&&frame[0]!==MSG_AWARENESS)return;
    const reply=handleMessage(frame,this.sess.doc,this.sess.awareness,this);
@@ -204,7 +222,8 @@ export class CollabClient{
   if(this.s.error?.kind==='expired')return;
   this.transport=null;this.ready=false;
   if(this.timer){clearTimeout(this.timer);this.timer=null;}
-  this.patch({synced:false});
+  if(this.chatTimer){clearTimeout(this.chatTimer);this.chatTimer=null;}
+  this.patch({synced:false,chatSynced:false});
   const fail=(kind:CollabError['kind'],message:string)=>{
    if(this.expiryTimer){clearTimeout(this.expiryTimer);this.expiryTimer=null;}
    this.patch({state:'error',error:{kind,message}});
@@ -225,10 +244,13 @@ export class CollabClient{
 
  /** Ordered, encrypted send. Sync/awareness frames are encrypted when the link carries a key; identity never is. */
  private sendFrame(frame:Uint8Array){
+  // Never let a growing volatile chat snapshot take the project socket down with 1009.
+  // Epoch compaction is a follow-up; oversized chat frames stay local rather than claiming delivery.
+  if(frame[0]===MSG_CHAT_SYNC&&frame.length>MAX_RELAY_FRAME_BYTES-64)return;
   const t=this.transport;if(!t||!this.ready||(this.managed&&!this.acknowledged))return;
   this.sendChain=this.sendChain.then(async()=>{
    if(!this.ready||this.transport!==t)return;
-   const key=(frame[0]===MSG_SYNC||frame[0]===MSG_AWARENESS||frame[0]===MSG_BLOB)?this.linkKey:null;
+   const key=(frame[0]===MSG_SYNC||frame[0]===MSG_AWARENESS||frame[0]===MSG_BLOB||frame[0]===MSG_CHAT_SYNC)?this.linkKey:null;
    const bytes=key?await encryptFrame(key,frame):frame;
    if(this.ready&&this.transport===t)t.send(bytes);});}
 
@@ -248,7 +270,7 @@ export class CollabClient{
   if(this.expiryTimer){clearTimeout(this.expiryTimer);this.expiryTimer=null;}
   if(this.timer){clearTimeout(this.timer);this.timer=null;}
   this.transport?.close(1000,'leave');this.transport=null;this.ready=false;
-  this.offDoc();this.offAware();
+  this.offDoc();this.offAware();this.offChat();
   this.outbox=[];
-  this.patch({state:'idle',synced:false,identity:null,people:[],queued:0});
+  if(this.chatTimer){clearTimeout(this.chatTimer);this.chatTimer=null;}this.patch({state:'idle',synced:false,chatSynced:false,identity:null,people:[],queued:0});
   const r=this.connectFail;this.connectDone=this.connectFail=null;r?.(new Error('left before sync'));}}

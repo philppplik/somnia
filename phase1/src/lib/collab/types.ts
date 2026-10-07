@@ -30,8 +30,10 @@ export interface CollabSnapshot{
  error:CollabError|null;
  /** Image/PDF sharing state, from the actual transfer. Null when this window shares no media. */
  media:MediaSync|null;
+ /** This window selected a profile picture but could not share it; others see initials. */
+ avatarShareFailed?:boolean;
 }
-export type HostOptions=({mode:'lan-direct';lan:boolean;port:number}|{mode:'relay';relayUrl:string})&{sessionMinutes?:number};
+export type HostOptions=({mode:'lan-direct';lan:boolean;port:number}|{mode:'relay';relayUrl:string})&{sessionMinutes?:number;/** Session-only host name chosen in the dialog; never written to the profile. */displayName?:string};
 export interface CollabEngine{
  startHosting(opts:HostOptions):Promise<void>;
  stopHosting():Promise<void>;

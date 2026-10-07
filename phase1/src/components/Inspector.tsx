@@ -3,7 +3,7 @@ import { ElementMetrics } from './ElementMetrics';
 import { Badge } from './ui/badge';
 import { useEffect,useState } from 'react';
 import { Accordion } from '@base-ui/react/accordion';
-import { ChevronDown,MousePointer2 } from 'lucide-react';
+import { ChevronDown,MousePointer2 } from '../lib/icons';
 import { Tabs,TabsContent } from './ui/tabs';
 import { Button } from './ui/button';
 import { applyOperations,patchState,useAppStore,breakpointFor } from '../store/appStore';

@@ -1,9 +1,11 @@
-import {useMemo,useState} from 'react';
-import {Maximize2,Minimize2,ExternalLink} from 'lucide-react';
-import {findMedia,formatBytes,isMarkdown,useMedia,type MediaItem} from '../lib/media';
-import {renderMarkdown} from '../lib/markdownRender';
-import {patchState} from '../store/appStore';
-import {openExternal} from '../lib/openExternal';
+import {useEffect,useMemo,useState} from 'react';
+import {Maximize2,Minimize2,ExternalLink} from '../lib/icons';
+import {formatBytes,isMarkdown,isTex,type MediaItem} from '../lib/media';
+import {MarkdownPreview} from './MarkdownPreview';
+import {loadMathEngine,makeSink,useMathEngine} from '../lib/mathRender';
+import {clearMathStatus,setMathStatus} from '../lib/mathStatus';
+import {renderTex} from '../lib/texPreview';
+import {useAppStore} from '../store/appStore';
 import {useT} from '../lib/useT';
 const bar='media-bar flex items-center gap-2 border-b border-subtle px-3 py-1.5 text-[12px]';
 const tool='grid h-7 cursor-pointer grid-flow-col items-center gap-1 rounded-sm border-0 bg-transparent px-2 text-[12px] text-ink-2 hover:bg-hover';
@@ -21,11 +23,32 @@ export function MediaViewer({item}:{item:MediaItem}){const {t}=useT();
    <iframe title={t('finish2.media.pdfTitle',{name:item.name})} data-testid="pdf-frame" src={item.url} className="min-h-0 w-full flex-1 border-0 bg-white"/></>}
  </section>;}
 /** Rendered preview for the active .md or .svg source file. */
-export function RenderedPreview({file,text}:{file:string;text:string}){const {t}=useT();
- const media=useMedia();
- const md=isMarkdown(file);
- const html=useMemo(()=>md?renderMarkdown(text,{resolveImage:src=>{const clean=src.replace(/^\.\//,'').split(/[?#]/)[0];let p=clean;try{p=decodeURIComponent(clean);}catch{/* keep raw */}const dir=file.includes('/')?file.replace(/\/[^/]*$/,'/'):'';const rel=(dir+p).split('/').reduce<string[]>((a,x)=>{if(x==='..')a.pop();else if(x!=='.'&&x!=='')a.push(x);return a;},[]).join('/');return (findMedia(rel)??findMedia(p)??findMedia(p.replace(/^.*\//,'')))?.url??null;}}):'',[md,text,media.items]);
- const svgSrc=useMemo(()=>md?'':`data:image/svg+xml;charset=utf-8,${encodeURIComponent(text)}`,[md,text]);
- if(!md)return <section className="canvas-stage flex min-h-0 flex-1 flex-col" aria-label={t('rest.mediaPreview.svgPreview')}>{text.trim()?<FitImage src={svgSrc} alt={file}/>:<div className="grid flex-1 place-items-center text-[12px] text-ink-3">{t('finish2.media.svgEmpty')}</div>}</section>;
- return <section className="canvas-stage flex min-h-0 flex-1 flex-col" aria-label={t('rest.mediaPreview.markdownPreview')}><div className={bar}><span className="truncate" data-testid="media-name">{file}</span><span className="text-ink-3">{t('rest.mediaPreview.markdownPreview')}</span></div>
-  <div className="min-h-0 flex-1 overflow-auto"><article data-testid="md-preview" className="md-preview" onClick={e=>{const a=(e.target as HTMLElement).closest('a');if(!a)return;e.preventDefault();const href=a.getAttribute('href')??'';if(/^https?:/i.test(href))void openExternal(href).catch(()=>patchState({notice:t('finish2.media.linkFailed')}));}} dangerouslySetInnerHTML={{__html:html}}/>{!html&&<p className="md-empty">{t('finish2.media.mdEmpty')}</p>}</div></section>;}
+let texBannerDismissed=false;
+/** Math preview for .tex: not a compile. Shows the body, headings, lists and formulas, and lists what it left out. */
+function TexPreview({file,text}:{file:string;text:string}){const {t}=useT();
+ const prefs=useAppStore().editorPrefs;
+ const shown=useDebounced(text,150,true);
+ const engine=useMathEngine();
+ const [dismissed,setDismissed]=useState(texBannerDismissed);
+ useEffect(()=>{if(engine==='idle')void loadMathEngine();},[engine]);
+ const out=useMemo(()=>{const sink=makeSink();if(engine==='failed')sink.fn=item=>`<span class="math-error" role="note">${item.tex.replace(/&/g,'&amp;').replace(/</g,'&lt;')}</span>`;const r=renderTex(shown,sink);return{...r,sink};},[shown,engine]);
+ useEffect(()=>{setMathStatus({kind:'tex',count:out.sink.count,errors:out.sink.errors.length,loading:out.sink.pending,failed:engine==='failed'});},[out,engine]);
+ useEffect(()=>()=>clearMathStatus(),[]);
+ return <section className="canvas-stage flex min-h-0 flex-1 flex-col" aria-label={t('math.tex.title')}>
+  <div className={bar}><span className="truncate" data-testid="media-name">{file}</span><span className="text-ink-3">{t('math.tex.title')}</span></div>
+  {prefs.texBanner&&!dismissed&&<div className="tex-banner" role="note" data-testid="tex-banner"><span>{t('math.tex.banner')}</span><button className="math-retry" onClick={()=>{texBannerDismissed=true;setDismissed(true);}}>{t('math.tex.dismiss')}</button></div>}
+  <div className="min-h-0 flex-1 overflow-auto"><article data-testid="tex-preview" className="md-preview tex-preview" dangerouslySetInnerHTML={{__html:out.html}}/>
+   {!out.html.trim()&&<p className="md-empty">{t('math.tex.empty')}</p>}
+   {out.sink.pending&&<p className="math-loading-note" role="status">{t('math.loading.note')}</p>}
+   {engine==='failed'&&<p className="math-loading-note" role="alert">{t('math.failed')} <button className="math-retry" onClick={()=>void loadMathEngine()}>{t('math.retry')}</button> {t('math.failed.hint')}</p>}
+   {out.ignored.length>0&&<p className="tex-ignored" data-testid="tex-ignored">{t('math.tex.ignored',{list:out.ignored.slice(0,12).join(' ')+(out.ignored.length>12?` +${out.ignored.length-12}`:'')})}</p>}</div></section>;}
+/** Rendered preview for the active .md, .svg or .tex source file. */
+export function RenderedPreview({file,text}:{file:string;text:string}){
+ return isTex(file)?<TexPreview file={file} text={text}/>:isMarkdown(file)?<MarkdownPreview file={file} text={text}/>:<SvgPreview file={file} text={text}/>;}
+function SvgPreview({file,text}:{file:string;text:string}){const {t}=useT();
+ const svgSrc=useMemo(()=>`data:image/svg+xml;charset=utf-8,${encodeURIComponent(text)}`,[text]);
+ return <section className="canvas-stage flex min-h-0 flex-1 flex-col" aria-label={t('rest.mediaPreview.svgPreview')}>{text.trim()?<FitImage src={svgSrc} alt={file}/>:<div className="grid flex-1 place-items-center text-[12px] text-ink-3">{t('finish2.media.svgEmpty')}</div>}</section>;}
+function useDebounced<T>(value:T,ms:number,on:boolean):T{
+ const [v,setV]=useState(value);
+ useEffect(()=>{if(!on){setV(value);return;}const id=window.setTimeout(()=>setV(value),ms);return()=>window.clearTimeout(id);},[value,ms,on]);
+ return on?v:value;}

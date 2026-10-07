@@ -1,3 +1,4 @@
+import {copyErrorReport} from './log';
 import {tOr} from './i18n';
 import {openExternal,REPO_URL} from './openExternal';
 import {formatCode,langFor} from './format';
@@ -8,6 +9,8 @@ import {downloadProject,downloadMarkdown} from './exportProject';
 import {elements,insertElement} from './structureCommands';
 import { applyHistory, getState, patchState } from '../store/appStore';
 import { EditorProject } from '@somnia/editor-core';
+import {getChatSession} from './collab/chatSession';
+import {toggleSessionChat} from './collab/communication';
 /** Experimental fast parsing (partial reparse). On by default; the stored choice 'off' turns it off for good, a full parse is always the fallback. */
 const FAST_KEY='somnia.fastParse.v1';
 try{if(localStorage.getItem(FAST_KEY)==='off')EditorProject.incremental.enabled=false;}catch{/* storage unavailable */}
@@ -40,6 +43,8 @@ ui('palette.open','Command palette','Mod+K',()=>patchState({paletteOpen:true}));
 ui('search.project','Search in project','Mod+Shift+F',()=>patchState({leftTab:'search',sidebarOpen:true}));
 ui('css.open','CSS variables and classes',undefined,()=>patchState({leftTab:'css',sidebarOpen:true}));
 ui('sidebar.toggle','Toggle sidebar','Mod+B',()=>patchState({sidebarOpen:!getState().sidebarOpen}));
+ui('agent.toggle','Toggle Somnia Agent','Mod+Alt+A',()=>patchState({agentOpen:!getState().agentOpen}));
+registerCommand({id:'chat.toggle',title:'Toggle session chat',category:'View',shortcut:'Mod+Alt+C',allowInInput:true,enabled:()=>!!getChatSession(),run:()=>toggleSessionChat()});
 ui('inspector.toggle','Toggle inspector','Mod+Alt+I',()=>patchState({inspectorOpen:!getState().inspectorOpen}));
 ui('problems.toggle','Toggle problems','Mod+J',()=>patchState({problemsOpen:!getState().problemsOpen}));
 ui('view.code','Code view','Mod+1',()=>patchState({viewMode:'code'}));
@@ -56,8 +61,9 @@ ui('theme.dark','Use dark theme',undefined,()=>patchState({themeChoice:'dark',th
 ui('theme.toggle','Toggle light / dark theme',undefined,()=>{const t=getState().theme==='dark'?'light':'dark';patchState({themeChoice:t,theme:t});});
 for(const direction of ['undo','redo'] as const)registerCommand({id:`edit.${direction}`,title:direction==='undo'?'Undo':'Redo',category:'Edit',shortcut:direction==='undo'?'Mod+Z':'Mod+Shift+Z',enabled:()=>getState().coreConnected,run:()=>applyHistory(direction)});
 for(const [id,title,shortcut] of [['project.open','Open folder','Mod+O'],['project.save','Save project','Mod+S']] as const)registerCommand({id,title,category:'Project',shortcut,allowInInput:id==='project.save',enabled:()=>false,run:()=>{}});
+registerCommand({id:'help.errorReport',title:'Copy error report (log excerpt and version)',category:'Help',keywords:['help','error','log','bug','report','copy','diagnostics'],run:async()=>{await copyErrorReport();}});
 registerCommand({id:'help.github',title:'Somnia on GitHub (source, releases, issues)',category:'Help',keywords:['help','github','repo','source','issues','releases'],run:()=>{void openExternal(REPO_URL).catch(()=>patchState({notice:'Could not open the browser. The page is '+REPO_URL}));}});
-registerCommand({id:'help.shortcuts',title:'Keyboard shortcuts',category:'Help',keywords:['help','keyboard'],run:()=>patchState({notice:'Ctrl/Cmd+K commands · B sidebar · J problems · 1/2/3 views · Z undo · Shift+Z redo. Resize panels with arrow keys.'})});
+registerCommand({id:'help.shortcuts',title:'Keyboard shortcuts',category:'Help',keywords:['help','keyboard'],run:()=>patchState({settingsOpen:true,settingsSection:'Shortcuts',settingsNavigationId:getState().settingsNavigationId+1})});
 export const isMac=()=>/Mac|iPhone|iPad/.test(navigator.platform);
 export const formatShortcut=(shortcut:string)=>shortcut.split('+').map(part=>({Mod:isMac()?'⌘':'Ctrl',Alt:isMac()?'⌥':'Alt',Shift:isMac()?'⇧':'Shift'}[part]??(part.length===1?part.toUpperCase():part))).join(isMac()?'':' + ');
 elements.forEach((element,i)=>registerCommand({id:`insert.element.${i}`,title:element.label,category:'Insert',keywords:['insert','add','element',element.label.toLowerCase()],enabled:()=>getState().coreConnected,run:()=>insertElement(i)}));
@@ -80,13 +86,23 @@ export function attachKeyboardShortcuts(target:Window=window){
   if(event.defaultPrevented||event.isComposing||event.repeat)return;
   const element=event.target;const input=element instanceof HTMLElement&&!!element.closest('input,textarea,select,[contenteditable="true"],[role="textbox"]');
   if(getState().paletteOpen||getState().settingsOpen)return;
-  const list=listCommands();let command=list.find(c=>c.shortcut&&matchesShortcut(event,c.shortcut));
+  const list=listCommands();const mdFocus=element instanceof HTMLElement&&element.matches('[data-core-editor]')&&/\.(md|markdown)$/i.test(getState().activeFile);
+  let command=list.find(c=>!c.id.startsWith('md.')&&c.shortcut&&matchesShortcut(event,c.shortcut));
   if(!isMac()&&matchesShortcut(event,'Mod+Y'))command=list.find(c=>c.id==='edit.redo');
   const coreEditor=element instanceof HTMLElement&&element.matches('[data-core-editor]');
-  if(!command||(input&&!command.allowInInput&&command.id!=='palette.open'&&!(coreEditor&&command.id.startsWith('edit.'))))return;
+  const mdEditor=coreEditor&&/\.(md|markdown)$/i.test(getState().activeFile);
+  if(!command||(input&&!command.allowInInput&&command.id!=='palette.open'&&!(coreEditor&&command.id.startsWith('edit.'))&&!(mdEditor&&command.id.startsWith('view.'))))return;
   event.preventDefault();void executeCommand(command.id);
  };
- target.addEventListener('keydown',listener);return()=>target.removeEventListener('keydown',listener);
+ // Markdown editor commands (Mod+B, Mod+I, ...) run in the capture phase so they beat the editor's own keymap (Mod+I selects the parent syntax node) and the global sidebar toggle. They never fire outside the Markdown editor, so Mod+B stays the sidebar toggle there.
+ const mdListener=(event:KeyboardEvent)=>{
+  if(event.defaultPrevented||event.isComposing||event.repeat)return;const el=event.target;
+  if(!(el instanceof HTMLElement&&el.matches('[data-core-editor]')&&/\.(md|markdown)$/i.test(getState().activeFile)))return;
+  if(getState().paletteOpen||getState().settingsOpen)return;
+  const mc=listCommands().find(c=>c.id.startsWith('md.')&&c.shortcut&&matchesShortcut(event,c.shortcut));
+  if(mc&&commandEnabled(mc)){event.preventDefault();event.stopPropagation();void executeCommand(mc.id);}};
+ target.addEventListener('keydown',mdListener,true);
+ target.addEventListener('keydown',listener);return()=>{target.removeEventListener('keydown',listener);target.removeEventListener('keydown',mdListener,true);};
 }
 
 registerCommand({id:'tools.diff',title:'Toggle diff split (compare in editor)',category:'Tools',keywords:['diff','compare','changes','saved version'],enabled:()=>getState().coreConnected,run:()=>{const st=getState();patchState({diffSplit:!st.diffSplit,...(st.viewMode==='design'?{viewMode:'split' as const}:{})});}});
@@ -120,3 +136,16 @@ for(const [id,title,act] of [['row.above','Table: add row above','row.above'],['
 
 registerCommand({id:'edit.wrap',title:'Wrap selected element in a div',category:'Edit',keywords:['wrap','container','group'],enabled:sel,run:async()=>{(await import('./structureCommands')).wrapLayer(getState().selectedElementId!,'div');}});
 registerCommand({id:'edit.unwrap',title:'Unwrap selected element (keep content)',category:'Edit',keywords:['unwrap','ungroup','remove wrapper'],enabled:sel,run:async()=>{(await import('./structureCommands')).unwrapLayer(getState().selectedElementId!);}});
+
+// Markdown editor commands. Only Bold and Italic have default bindings; the rest are in the palette and can be assigned in Settings.
+const mdActive=()=>/\.(md|markdown)$/i.test(getState().activeFile)&&getState().viewMode!=='design';
+const mdRun=(cmd:string)=>async()=>{const [b,f]=await Promise.all([import('./mdBridge'),import('./mdFormat')]);const v=b.getMdSource();if(v)f.runMdCommand(v,cmd as import('./mdFormat').MdCommand);};
+const mdCmd=(id:string,title:string,shortcut:string|undefined,run:()=>void|Promise<void>,enabled:()=>boolean=mdActive)=>registerCommand({id,title,category:'Insert',shortcut,keywords:['markdown'],enabled,run});
+mdCmd('md.bold','Markdown: Bold','Mod+B',mdRun('bold'));mdCmd('md.italic','Markdown: Italic','Mod+I',mdRun('italic'));
+mdCmd('md.code','Markdown: Inline code',undefined,mdRun('code'));mdCmd('md.strike','Markdown: Strikethrough',undefined,mdRun('strike'));
+mdCmd('md.bullet','Markdown: Bulleted list',undefined,mdRun('bullet'));mdCmd('md.task','Markdown: Task list',undefined,mdRun('task'));
+mdCmd('md.number','Markdown: Numbered list',undefined,mdRun('number'));mdCmd('md.quote','Markdown: Quote',undefined,mdRun('quote'));
+mdCmd('md.codeblock','Markdown: Code block',undefined,mdRun('codeblock'));mdCmd('md.table','Markdown: Table',undefined,mdRun('table'));
+for(const n of [1,2,3,4,5,6])mdCmd(`md.h${n}`,`Markdown: Heading ${n}`,undefined,mdRun(`h${n}`));
+mdCmd('md.reveal','Markdown: Reveal current preview block in source',undefined,()=>{window.dispatchEvent(new Event('somnia:md-reveal'));},()=>/\.(md|markdown)$/i.test(getState().activeFile)&&getState().viewMode!=='code');
+mdCmd('md.sync','Markdown: Toggle scroll sync',undefined,async()=>{const b=await import('./mdBridge');b.setSyncScroll(!b.getSyncScroll());},()=>/\.(md|markdown)$/i.test(getState().activeFile)&&getState().viewMode==='split');

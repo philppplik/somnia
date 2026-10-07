@@ -7,6 +7,7 @@ const visit=name=>{if(seen.has(name))return;const file=`node_modules/${name}/pac
  for(const dep of Object.keys(p.dependencies??{}))visit(dep);};
 for(const dep of Object.keys(pkg.dependencies??{}))visit(dep);
 // Bundled assets that are not npm packages.
+seen.set('Vadivam (icons)',{name:'Vadivam (icons)',version:'0.0.46',license:'MIT',homepage:'https://github.com/praveenjuge/vadivam'});
 seen.set('Momo Signature (font)',{name:'Momo Signature (font)',version:'1.0',license:'OFL-1.1',homepage:'https://github.com/typeassociates/MomoSignature'});
 const list=[...seen.values()].sort((a,b)=>a.name.localeCompare(b.name));
 writeFileSync('src/lib/thirdParty.json',JSON.stringify(list,null,1)+'\n');

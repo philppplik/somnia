@@ -1,0 +1,59 @@
+--- a/phase1/src/lib/agent/panelBridge.ts
++++ b/phase1/src/lib/agent/panelBridge.ts
+@@ -4,13 +4,17 @@
+ import {AgentProjectTools} from './projectTools';
+ import {OllamaProvider} from './providers/ollama';
+ import {OpenRouterProvider} from './openRouter';
++import {ClaudeProvider} from './providers/claude';
++import {loadProviderKey} from './providerAuth';
++// Builder: inject the real native transport here, not default browser fetch.
++import {nativeProviderFetch} from './nativeProviderFetch';
+ import {agentPrivacy,type AIProvenance} from './privacy';
+ import {applyReviewed,reviewChangeSet,type ChangeSet,type Decisions} from '../agentDiff';
+ import {holdAgentAutosave} from './autosaveHold';
+ import {applyOperations,getState,getProjectGeneration,subscribe,patchState} from '../../store/appStore';
+ import type {AgentCore,AgentEvent,AgentApproval,AgentProposal,DiffLine} from './core';
+ import type {AgentProvider,AgentProviderEvent,AgentProviderRequest} from './types';
+-export interface AgentConfiguration {provider:'ollama'|'openrouter';model:string;apiKey:string;allowActiveFile:boolean;customPrompts?:CustomPrompt[]}
++export interface AgentConfiguration {provider:'ollama'|'openrouter'|'claude';model:string;apiKey:string;allowActiveFile:boolean;customPrompts?:CustomPrompt[]}
+ let config:AgentConfiguration={provider:'ollama',model:'',apiKey:'',allowActiveFile:false};
+ export function configureAgent(value:AgentConfiguration){realCore.clear?.();config={...value};}
+ /** Custom instructions are sent every provider round, never as access permission. */
+@@ -80,7 +84,7 @@
+   const generation=getProjectGeneration();
+   if(epoch!==generation){session?.cancel();session=null;sessionSerial++;proposals.clear();permissions.clear();appliedAgentProvenance.clear();epoch=generation;}
+   if(config.allowActiveFile&&request.context.activeFile)permissions.set(request.context.activeFile,new Set(['read']));
+-  if(!session){const sessionEpoch=epoch;const sessionToken=sessionSerial;const provider=config.provider==='ollama'?guardedOllama(new OllamaProvider()):new OpenRouterProvider({getApiKey:()=>config.apiKey});
++  if(!session){const sessionEpoch=epoch;const sessionToken=sessionSerial;const provider=config.provider==='ollama'?guardedOllama(new OllamaProvider()):config.provider==='claude'?new ClaudeProvider({getApiKey:()=>loadProviderKey('claude'),fetch:nativeProviderFetch}):new OpenRouterProvider({getApiKey:()=>config.apiKey});
+    session=new AgentSession({provider:withCustomPrompts(provider,config.customPrompts),model:config.model,tools:getState().coreConnected?createTools(String(generation)):undefined,onEvent:event=>{
+     if(sessionEpoch!==epoch||sessionToken!==sessionSerial)return;
+     if(event.type==='text')send?.({type:'text-delta',text:event.text});
+--- a/phase1/src/lib/agent/settings.ts
++++ b/phase1/src/lib/agent/settings.ts
+@@ -13,7 +13,7 @@
+  });
+ }
+ export function nonSecretSettings(value:AgentConfiguration){
+- if(!['ollama','openrouter'].includes(value.provider)||value.model.length>512||/[\r\n\0]/.test(value.model))throw Error('Invalid agent preferences.');
++ if(!['ollama','openrouter','claude'].includes(value.provider)||value.model.length>512||/[\r\n\0]/.test(value.model))throw Error('Invalid agent preferences.');
+  return {provider:value.provider,model:value.model,customPrompts:normalizePrompts(value.customPrompts)};
+ }
+ export async function loadAgentSettings():Promise<AgentConfiguration>{
+--- a/phase1/src-tauri/src/agent_settings.rs
++++ b/phase1/src-tauri/src/agent_settings.rs
+@@ -14,7 +14,7 @@
+ }
+ impl Preferences {
+     pub fn validate(&self) -> Result<(), String> {
+-        if !matches!(self.provider.as_str(), "ollama" | "openrouter") || self.model.len() > 512 || self.model.contains(['\r', '\n', '\0']) {
++        if !matches!(self.provider.as_str(), "ollama" | "openrouter" | "claude") || self.model.len() > 512 || self.model.contains(['\r', '\n', '\0']) {
+             return Err("Invalid agent preferences".into());
+         }
+         if self.custom_prompts.len() > 20 || self.custom_prompts.iter().map(|p| p.text.len()).sum::<usize>() > 16000 {
+--- a/phase1/src/lib/agent/index.ts
++++ b/phase1/src/lib/agent/index.ts
+@@ -3,3 +3,4 @@
+ export * from './projectTools';
+ export * from './session';
+ export * from './errors';
++export * from './providers/claude';

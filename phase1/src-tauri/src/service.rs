@@ -138,6 +138,8 @@ struct Document {
 pub struct Project {
     pub id: String,
     root: Dir,
+    canonical_root: PathBuf,
+    autosave_holds: std::collections::BTreeSet<String>,
     recovery: Dir,
     _lock: fs::File,
     documents: BTreeMap<String, Document>,
@@ -212,6 +214,8 @@ impl Project {
         Ok(Self {
             id: Uuid::new_v4().to_string(),
             root,
+            canonical_root: root_path,
+            autosave_holds: Default::default(),
             recovery,
             _lock: lock,
             documents: BTreeMap::new(),
@@ -241,7 +245,24 @@ impl Project {
                 Err(e) => return Err(e.into()),
             }
         }
+        // Existing ancestors must resolve within the canonical project root.
+        let mut physical = self.canonical_root.join(&p);
+        while !physical.exists() {
+            if !physical.pop() {
+                return Err(AppError::Denied("No canonical parent".into()));
+            }
+        }
+        if !physical.canonicalize()?.starts_with(&self.canonical_root) {
+            return Err(AppError::Denied("Path escapes canonical root".into()));
+        }
         Ok(p)
+    }
+    pub fn hold_autosave(&mut self, paths: &[String]) -> Result<()> {
+        for path in paths {
+            self.safe_path(path)?;
+        }
+        self.autosave_holds.extend(paths.iter().cloned());
+        Ok(())
     }
     fn disk(&self, path: &str) -> Result<(Option<String>, Revision)> {
         let p = self.safe_path(path)?;
@@ -261,10 +282,7 @@ impl Project {
                     exists: true,
                     hash: Some(hash(&bytes)),
                 };
-                Ok((
-                    Some(decode_text(bytes)),
-                    rev,
-                ))
+                Ok((Some(decode_text(bytes)), rev))
             }
             Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok((None, Revision::missing())),
             Err(e) => Err(e.into()),
@@ -373,6 +391,9 @@ impl Project {
                 };
                 doc.error = Some(error.to_string());
             }
+        }
+        if result.is_ok() {
+            self.autosave_holds.remove(path);
         }
         result
     }
@@ -506,6 +527,7 @@ impl Project {
         for path in self.documents.keys().cloned().collect::<Vec<_>>() {
             let doc = &self.documents[&path];
             if doc.pending.is_some()
+                && !self.autosave_holds.contains(&path)
                 && doc.state == FileState::Dirty
                 && (doc.last_edit.elapsed() >= QUIET || doc.first_edit.elapsed() >= MAX_WAIT)
             {
@@ -524,7 +546,9 @@ impl Project {
     /// Raw bytes of a PNG, JPEG or PDF inside the project, for read-only preview. Same path rules as text files (no symlinks, no escaping the root).
     pub fn read_media(&self, path: &str) -> Result<Vec<u8>> {
         if !is_media_path(path) {
-            return Err(AppError::Denied("Only PNG, JPEG and PDF files can be previewed".into()));
+            return Err(AppError::Denied(
+                "Only PNG, JPEG and PDF files can be previewed".into(),
+            ));
         }
         let p = self.safe_path(path)?;
         let mut file = self.root.open(p)?;
@@ -570,7 +594,12 @@ impl Project {
                 }
                 if let Some(p) = p.to_str() {
                     let normalized = p.replace('\\', "/");
-                    files.push(normalized.strip_prefix("./").unwrap_or(&normalized).to_owned());
+                    files.push(
+                        normalized
+                            .strip_prefix("./")
+                            .unwrap_or(&normalized)
+                            .to_owned(),
+                    );
                 }
             }
         }
@@ -739,7 +768,13 @@ pub(crate) fn decode_text(bytes: Vec<u8>) -> String {
         let le = bytes[0] == 0xFF;
         let units: Vec<u16> = bytes[2..]
             .chunks_exact(2)
-            .map(|c| if le { u16::from_le_bytes([c[0], c[1]]) } else { u16::from_be_bytes([c[0], c[1]]) })
+            .map(|c| {
+                if le {
+                    u16::from_le_bytes([c[0], c[1]])
+                } else {
+                    u16::from_be_bytes([c[0], c[1]])
+                }
+            })
             .collect();
         return String::from_utf16_lossy(&units);
     }
@@ -751,10 +786,11 @@ pub(crate) fn decode_text(bytes: Vec<u8>) -> String {
 
 fn cp1252_char(b: u8) -> char {
     const HIGH: [char; 32] = [
-        '\u{20AC}', '\u{81}', '\u{201A}', '\u{192}', '\u{201E}', '\u{2026}', '\u{2020}', '\u{2021}',
-        '\u{2C6}', '\u{2030}', '\u{160}', '\u{2039}', '\u{152}', '\u{8D}', '\u{17D}', '\u{8F}',
-        '\u{90}', '\u{2018}', '\u{2019}', '\u{201C}', '\u{201D}', '\u{2022}', '\u{2013}', '\u{2014}',
-        '\u{2DC}', '\u{2122}', '\u{161}', '\u{203A}', '\u{153}', '\u{9D}', '\u{17E}', '\u{178}',
+        '\u{20AC}', '\u{81}', '\u{201A}', '\u{192}', '\u{201E}', '\u{2026}', '\u{2020}',
+        '\u{2021}', '\u{2C6}', '\u{2030}', '\u{160}', '\u{2039}', '\u{152}', '\u{8D}', '\u{17D}',
+        '\u{8F}', '\u{90}', '\u{2018}', '\u{2019}', '\u{201C}', '\u{201D}', '\u{2022}', '\u{2013}',
+        '\u{2014}', '\u{2DC}', '\u{2122}', '\u{161}', '\u{203A}', '\u{153}', '\u{9D}', '\u{17E}',
+        '\u{178}',
     ];
     match b {
         0x80..=0x9F => HIGH[(b - 0x80) as usize],
@@ -775,7 +811,10 @@ mod decode_tests {
     }
     #[test]
     fn windows_1252_falls_back() {
-        assert_eq!(decode_text(vec![b'M', 0xFC, b'l', b'l', b' ', 0xE4, 0xDF, b' ', 0x80]), "Müll äß €");
+        assert_eq!(
+            decode_text(vec![b'M', 0xFC, b'l', b'l', b' ', 0xE4, 0xDF, b' ', 0x80]),
+            "Müll äß €"
+        );
     }
     #[test]
     fn utf16_le_bom() {

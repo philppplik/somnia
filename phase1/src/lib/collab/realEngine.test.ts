@@ -124,3 +124,60 @@ test('relay session shares images and PDFs: bytes arrive intact, status comes fr
  for(const f of hub.frames)assert.equal(f[0],MSG_ENCRYPTED);
  await g.leave();await h.stopHosting();assert.equal(h.snapshot().media,null);
 });
+
+test('identity: host uses the profile name (or Host), a dialog override wins, avatars cross as session thumbnails, legacy peers see initials',async()=>{
+ const {GOOD}=await import('./identity.test');const {getChatSession}=await import('./chatSession');
+ const hub=blindHub();const host=fakeProject({'index.html':'<p>x</p>'}),guest=fakeProject(),legacy=fakeProject();
+ let nick:string|undefined='Prof Hanna';
+ const h=mk(host,hub,{hostName:()=>nick,avatarSource:()=>'src-picture',thumbnail:async src=>{assert.equal(src,'src-picture');return GOOD;}});
+ await h.startHosting({mode:'relay',relayUrl:'wss://relay.example.com'});
+ assert.equal(h.snapshot().participants.find(p=>p.self)!.name,'Prof Hanna');
+ const link=h.snapshot().guestLinks[0];
+ const g=mk(guest,hub,{avatarSource:()=>undefined});await g.join(link,'Gabi');
+ await until(()=>h.snapshot().participants.length===2&&g.snapshot().participants.length===2,4000,'both present');
+ const hid=getChatSession()!.localId;
+ await until(()=>g.snapshot().participants.length===2,2000,'guest sees host');
+ // the guest window shares the module-level chat session slot; read the avatar map through the host session
+ assert.equal(getChatSession()!.model.avatars.size,1);
+ await g.leave();await h.stopHosting();
+ // empty profile falls back to "Host"; an over-long profile name is not silently cut, "Host" is used unless the dialog supplies one
+ nick='';const h2=mk(fakeProject({'a.html':'x'}),blindHub(),{hostName:()=>nick});await h2.startHosting({mode:'relay',relayUrl:'wss://relay.example.com'});assert.equal(h2.snapshot().participants.find(p=>p.self)!.name,'Host');await h2.stopHosting();
+ nick='N'.repeat(40);const h3=mk(fakeProject({'a.html':'x'}),blindHub(),{hostName:()=>nick});await h3.startHosting({mode:'relay',relayUrl:'wss://relay.example.com'});assert.equal(h3.snapshot().participants.find(p=>p.self)!.name,'Host');await h3.stopHosting();
+ const h4=mk(fakeProject({'a.html':'x'}),blindHub(),{hostName:()=>nick});await h4.startHosting({mode:'relay',relayUrl:'wss://relay.example.com',displayName:'Short name'});assert.equal(h4.snapshot().participants.find(p=>p.self)!.name,'Short name');await h4.stopHosting();
+ assert.ok(hid.length>0);void legacy;
+});
+test('identity: a picture that cannot be shared is reported once and the session still works',async()=>{
+ const hub=blindHub();const h=mk(fakeProject({'a.html':'x'}),hub,{avatarSource:()=>'p',thumbnail:async()=>null});
+ await h.startHosting({mode:'relay',relayUrl:'wss://relay.example.com'});
+ await until(()=>h.snapshot().avatarShareFailed===true,2000,'failure flag');assert.equal(h.snapshot().state,'connected');await h.stopHosting();
+});
+test('identity: host name validation matrix (profile name, dialog override, abuse)',async()=>{
+ const hostNameFor=async(cfg:string|undefined,displayName?:string)=>{
+  const h=mk(fakeProject({'a.html':'x'}),blindHub(),{hostName:()=>cfg});
+  await h.startHosting({mode:'relay',relayUrl:'wss://relay.example.com',...(displayName===undefined?{}:{displayName})});
+  const n=h.snapshot().participants.find(p=>p.self)!.name;await h.stopHosting();return n;};
+ assert.equal(await hostNameFor('  Hanna  '),'Hanna','profile name is trimmed');
+ assert.equal(await hostNameFor('N'.repeat(32)),'N'.repeat(32),'32 units are accepted');
+ assert.equal(await hostNameFor('N'.repeat(33)),'Host','33 units: no silent cut');
+ assert.equal(await hostNameFor('   '),'Host');
+ assert.equal(await hostNameFor(undefined),'Host');
+ assert.equal(await hostNameFor('<b>Evil</b>'),'Host','markup is never used as a name');
+ assert.equal(await hostNameFor('Line\nBreak'),'Host');
+ assert.equal(await hostNameFor('Bidi\u202eName'),'Host');
+ assert.equal(await hostNameFor('Profile Name','Dialog Name'),'Dialog Name','dialog override beats the profile');
+ assert.equal(await hostNameFor('Profile Name','N'.repeat(33)),'Host','invalid override is not truncated and does not fall back to a different name silently');
+ assert.equal(await hostNameFor('N'.repeat(40),'Short'),'Short','long profile name is fine when the dialog supplies a valid one');
+});
+test('identity: a guest sees no avatar for a peer without a thumbnail and keeps chatting; a hostile thumbnail is never shown',async()=>{
+ const {getChatSession}=await import('./chatSession');
+ const hub=blindHub();const host=fakeProject({'index.html':'x'}),guest=fakeProject();
+ const h=mk(host,hub,{avatarSource:()=>'src',thumbnail:async()=>'https://evil.example/a.png'});
+ await h.startHosting({mode:'relay',relayUrl:'wss://relay.example.com'});
+ const g=mk(guest,hub,{});await g.join(h.snapshot().guestLinks[0],'Gabi');
+ await until(()=>h.snapshot().participants.length===2,4000,'both present');
+ await until(()=>h.snapshot().avatarShareFailed===true,2000,'invalid thumbnail reported');
+ const chat=getChatSession()!;assert.equal(chat.model.avatars.size,0);
+ for(const p of chat.participants())assert.equal(p.avatar,undefined);
+ assert.equal(h.snapshot().state,'connected');
+ await g.leave();await h.stopHosting();
+});

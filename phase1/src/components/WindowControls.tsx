@@ -1,7 +1,7 @@
 import {useAppStore} from '../store/appStore';
 import {isTauri} from '@tauri-apps/api/core';
 import {getCurrentWindow} from '@tauri-apps/api/window';
-import {Minus,Square,X} from 'lucide-react';
+import {Minus,Square,X} from '../lib/icons';
 import {useT} from '../lib/useT';
 /** Custom window buttons for the frameless desktop window. Renders nothing in the browser. Close goes through the window close request so the app's unsaved-changes handling still runs. */
 export function WindowControls(){const {t}=useT();
