@@ -1403,20 +1403,11 @@ pub fn diff_file(project_root: &Path, path: &str, base: DiffBase, target: DiffTa
         let mut capped_out = out.capped;
         let mut text = String::from_utf8_lossy(&out.stdout).into_owned();
         if out.code == Some(0) && text.is_empty() && after.is_some() && before.is_none() {
-            // Untracked file: synthesize the add diff.
-            let null_dev: &OsStr = OsStr::new("/dev/null") /* Git for Windows maps /dev/null itself; a literal NUL fails there */;
-            let abs = root.join(&repo_path).into_os_string();
-            let alt = run_git(
-                &root,
-                &[OsStr::new("diff"), OsStr::new("--no-index"), OsStr::new("--"), null_dev, &abs],
-                Mode::Read,
-                READ_TIMEOUT,
-                None,
-                &[],
-            )?;
-            if alt.code == Some(0) || alt.code == Some(1) {
-                capped_out = alt.capped;
-                text = String::from_utf8_lossy(&alt.stdout).into_owned();
+            // Untracked file: synthesize the add diff in-process. `git diff
+            // --no-index` is avoided: it behaves differently per platform
+            // (NUL vs /dev/null, absolute path handling on Windows).
+            if let Some(body) = after.as_deref() {
+                text = synthesize_add_diff(&rel_str, body);
             }
         }
         if text.len() > MAX_UNIFIED || capped_out {
@@ -1434,6 +1425,28 @@ pub fn diff_file(project_root: &Path, path: &str, base: DiffBase, target: DiffTa
 }
 
 // ---------------------------------------------------------------- init
+
+/// Unified diff for a brand-new file (all lines added), git format.
+fn synthesize_add_diff(path: &str, body: &str) -> String {
+    if body.is_empty() {
+        return format!("diff --git a/{p} b/{p}\nnew file mode 100644\n", p = path);
+    }
+    let lines: Vec<&str> = body.split_inclusive('\n').collect();
+    let mut out = format!(
+        "diff --git a/{p} b/{p}\nnew file mode 100644\n--- /dev/null\n+++ b/{p}\n@@ -0,0 +1,{n} @@\n",
+        p = path,
+        n = lines.len()
+    );
+    for l in &lines {
+        out.push('+');
+        out.push_str(l.trim_end_matches('\n'));
+        out.push('\n');
+    }
+    if !body.ends_with('\n') {
+        out.push_str("\\ No newline at end of file\n");
+    }
+    out
+}
 
 /// Contract command `git_init`: creates a repo in the project folder with
 /// default branch `main`, adds nothing, idempotent for existing repos.
