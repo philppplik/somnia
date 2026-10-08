@@ -64,7 +64,7 @@ export function connectEditorProject(project:EditorProjectPort,options:{name?:st
  projectGeneration++;unsubscribeCore?.();core=project;savedFiles=options.alreadySaved?{...project.files}:{};
  patchState({zoom:state.canvasPrefs.defaultZoom,viewport:state.canvasPrefs.defaultViewport,responsiveScope:'auto',coreConnected:true,projectName:options.name??'Untitled project',selectedElementId:null,notice:'In-memory project. Native filesystem service is not connected.'});
  unsubscribeCore=project.subscribe('internal',(tx)=>{if(tx&&typeof tx==='object'&&'operations' in tx)for(const fn of projectTxListeners)fn(tx as {operations:Operation[]});if(tx&&typeof tx==='object'&&'origin' in tx&&(tx.origin==='canvas'||tx.origin==='code'))recordActivity('edit');refreshProject();});refreshProject();
- return()=>{if(core!==project)return;projectGeneration++;unsubscribeCore?.();unsubscribeCore=null;core=null;patchState({responsiveScope:'auto',coreConnected:false,files:{},nodes:[],selectedElementId:null,isDirty:false,lastSavedAt:null,notice:'Project closed.'});};
+ return()=>{if(core!==project)return;projectGeneration++;unsubscribeCore?.();unsubscribeCore=null;core=null;patchState({responsiveScope:'auto',coreConnected:false,files:{},nodes:[],selectedElementId:null,isDirty:false,lastSavedAt:null,notice:'Project closed.'});return true;};
 }
 export function applyOperations(operations:Operation[],origin:Origin='canvas',group?:string){
  if(!core)throw new Error('Editor core is not connected.');
@@ -96,7 +96,7 @@ export const clampViewport=(n:number,max=3840)=>Math.min(max,Math.max(200,Math.r
 export function jumpToLine(file:string,line:number,col=1){openFileTab(file);const st=getState();patchState({jumpTo:{file,line,col,nonce:Date.now()+Math.random()},...(st.viewMode==='design'?{viewMode:'split' as const}:{})});}
 
 /** Leaves the project without opening another one: the app returns to its empty state. */
-export function closeCore(){projectGeneration++;clearMedia();unsubscribeCore?.();unsubscribeCore=null;core=null;savedFiles={};patchState({responsiveScope:'auto',coreConnected:false,files:{},nodes:[],openFiles:[],activeFile:'',designFile:'',selectedElementId:null,selectedElementIds:[],isDirty:false,lastSavedAt:null,storage:'memory',nativeConnected:false,projectName:'',notice:'Project closed.'});}
+export function closeCore(){if(!clearMedia())return false;projectGeneration++;unsubscribeCore?.();unsubscribeCore=null;core=null;savedFiles={};patchState({responsiveScope:'auto',coreConnected:false,files:{},nodes:[],openFiles:[],activeFile:'',designFile:'',selectedElementId:null,selectedElementIds:[],isDirty:false,lastSavedAt:null,storage:'memory',nativeConnected:false,projectName:'',notice:'Project closed.'});return true;}
 
 /** Switch shell only. No save, conversion, tool commit, history or agent side effects. */
 export function requestStudio(id:StudioId,source:'manual'|'automatic'='manual',pendingTool=false):'changed'|'unchanged'|'pending-tool'|'manual-wins' {

@@ -39,4 +39,4 @@ export function openMediaDialog(){return new Promise<void>(resolve=>{const input
 export function newBlankFile(){const st=getState();const blank=starterFor('index.html').replace('<title>New page</title>','<title>'+escapeTitle(st.workflowPrefs.documentTitle)+'</title>').replace('</head>','  <style>\n'+typographyCss(st.documentPrefs)+'\n  </style>\n</head>');if(st.coreConnected){const n=unique('untitled.html',Object.keys(st.files));applyOperations([{type:'createFile',file:n,text:blank}]);openFileTab(n);return;}
  addTextFiles([{name:'index.html',text:blank}]);}
 /** Close an in-memory project (Close Project for disk projects goes through the file adapter). */
-export function closeMemoryProject(){clearDraft();closeCore();}
+export function closeMemoryProject(){if(closeCore())clearDraft();}

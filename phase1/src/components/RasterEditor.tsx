@@ -1,3 +1,4 @@
+import {registerRasterPhotoPort,notifyRasterPhotoChange,savePhotoCopy} from '../lib/agent/photoWorkspace';
 import {LayerSession,type CraftLayerQuery} from '../lib/craft/layerSession';
 import {CraftSelectionBridge} from '../lib/craft/selectionBridge';
 import {createContext,useContext,useEffect,useMemo,useRef,useState,type ReactNode} from 'react';
@@ -72,7 +73,7 @@ export function RasterEditorProvider({children,host:injected}:{children:ReactNod
   }).catch(e=>{if(!ac.signal.aborted)notice(e instanceof Error?e.message:String(e));});
   return()=>ac.abort();
  },[item?.url,name]);
- const doc=useMemo(()=>{if(!source)return null;const ops=[...snap.stack];if(!isNeutralAdjust(snap.adjust))ops.push({id:'adjust-live',type:'adjust',version:1,enabled:true,params:adjustToJson(snap.adjust)});if(snap.filter)ops.push(snap.filter);return withOperations(source.loaded.document,ops);},[source,snap,version]);
+ const doc=useMemo(()=>{if(!source)return null;const ops=[...snap.stack];if(!isNeutralAdjust(snap.adjust))ops.push({id:`adjust-live-${snap.stack.length}`,type:'adjust',version:1,enabled:true,params:adjustToJson(snap.adjust)});if(snap.filter)ops.push(snap.filter);return withOperations(source.loaded.document,ops);},[source,snap,version]);
  useEffect(()=>{if(!source||!doc||source.layerSession)return;const ac=new AbortController();void source.renderer.render(doc,{preview:!selectMode,signal:ac.signal}).then(r=>{if(!ac.signal.aborted){setFrame(r.canvas);setFrameRevision(v=>v+1);setBackend(r.backend);setPreviewScale(r.previewScale??1);}}).catch(e=>{if(!ac.signal.aborted)notice(e instanceof Error?e.message:String(e));});return()=>ac.abort();},[source,doc,selectMode]);
  const commit=(next:RasterSnapshot)=>{if(source?.layerSession)return;if(name){liveBase.current=null;update(name,d=>rasterCommit(d,next));}};
  const live=(next:RasterSnapshot)=>{if(source?.layerSession||!name)return;liveBase.current??={name,snapshot:getState().rasterDoc[name].now};update(name,d=>({...d,now:next}));};
@@ -101,6 +102,22 @@ export function RasterEditorProvider({children,host:injected}:{children:ReactNod
   'tab.close':{id:'tab.close',title:t('imageeditor.close'),category:'View',shortcut:'Mod+W',enabled:()=>!a.busy,run:a.close},
   'tools.editImage':{id:'tools.editImage',title:t('imageeditor.openOther'),category:'Tools',enabled:()=>!a.busy,run:a.openFile},
  };return commands[id];}),[t]);
+ const photoActions=useRef({selection,busy});photoActions.current={selection,busy};
+ useEffect(()=>registerRasterPhotoPort(key=>{
+  const src=sources.current.get(key),state=getState().rasterDoc[key];if(!src||!state)return null;
+  const now=state.now,ops=[...now.stack];if(!isNeutralAdjust(now.adjust))ops.push({id:`adjust-live-${now.stack.length}`,type:'adjust',version:1,enabled:true,params:adjustToJson(now.adjust)});if(now.filter)ops.push(now.filter);
+  const document={...withOperations(src.loaded.document,ops),revision:ops.length};
+  return {sourceURL:src.url,document,renderer:src.renderer,state,busy:photoActions.current.busy||!!liveBase.current,layered:!!src.layerSession,selection:getMedia().active===key&&!!photoActions.current.selection,
+   commit:next=>{update(key,d=>rasterCommit(d,next));setSelection(null);setCropRect(null);},undo:()=>{update(key,rasterUndo);setSelection(null);setCropRect(null);},
+   saveCopy:async()=>{const signature=rasterSignature(state.now);savingName.current=key;setBusy(true);try{
+    const job=new ImageEditorRenderer(src.loaded,registry);let blob:Blob;try{blob=await exportImage(job,document,{format:'png'});}finally{job.dispose();}
+    if(sources.current.get(key)!==src||rasterSignature(getState().rasterDoc[key].now)!==signature)throw Error('Photo changed during export. Review again.');
+    hostRef.current??=await defaultImageHost();const saved=await (src.host??hostRef.current).save(blob,editedName(key.replace(/^.*[\\/]/,''),'png'));
+    if(saved&&sources.current.get(key)===src&&rasterSignature(getState().rasterDoc[key].now)===signature)update(key,d=>({...d,saved:signature}));return saved;
+   }finally{savingName.current=null;setBusy(false);}}
+  };
+ }),[]);
+ useEffect(()=>{notifyRasterPhotoChange();},[version,selection,busy]);
  const size=source?sizeAfter(source.loaded.document.source.width,source.loaded.document.source.height,snap.stack):emptySize;
  const value:RasterContextValue={layerQuery:source?.layerSession?.query??null,startLayered,layerCommand,active,name,source,frame,frameRevision,docState,busy,size,backend,previewScale,cropRect,aspect,selectMode,selection,format,quality,optionsSlot,selectionBackend:(image,tool,points,tolerance)=>{selectionBridge.current??=new CraftSelectionBridge(notice);return selectionBridge.current.select(image,tool,points,tolerance);},setOptionsSlot,setCropRect,setAspect,setSelection,setFormat,setQuality,openFile,save,close,undo,redo,toggleSelection:()=>{setSelection(null);patchState({editorTool:selectMode?'pan':'selection'});},commit,live,endLive,jump,addOp};
  return <Context.Provider value={value}>{children}</Context.Provider>;
@@ -112,7 +129,7 @@ export function RasterToolbar(){const c=useRasterEditor();const {t}=useT();retur
  <ToolButton label={t('imageeditor.redo')} disabled={c.busy||!(c.layerQuery?.redo??c.docState.future.length)} onClick={c.redo}><Redo2/></ToolButton>
  <ToolButton label="Toggle sidebar" onClick={()=>patchState({sidebarOpen:!getState().sidebarOpen})}><PanelLeft/></ToolButton>
  <ToolButton label="Toggle inspector" onClick={()=>patchState({inspectorOpen:!getState().inspectorOpen})}><PanelRight/></ToolButton>
- <span className="grow"/>
+ <span className="grow"/>{c.source&&!c.layerQuery&&<Button size="compact" aria-label="Save Photo copy as PNG" title="Save Photo copy as PNG (never overwrite)" disabled={c.busy||!!c.selection} onClick={()=>void savePhotoCopy(c.name!).catch(e=>patchState({notice:String(e)}))}>PNG copy</Button>}
  {c.source&&<><label className="image-editor-format">{t('imageeditor.format')}<select value={c.format} disabled={c.busy} onChange={e=>c.setFormat(e.target.value as ExportFormat)}><option value="png">PNG</option><option value="jpg">JPEG</option><option value="webp">WebP</option></select></label>{c.format!=='png'&&<label className="image-editor-format">{t('imageeditor.quality')} {c.quality}%<input aria-label={t('imageeditor.quality')} type="range" min={10} max={100} value={c.quality} disabled={c.busy} onChange={e=>c.setQuality(Number(e.target.value))}/></label>}<Button variant="primary" disabled={c.busy} onClick={()=>void c.save()}><Upload/>{c.busy?t('imageeditor.working'):t('imageeditor.save')}</Button></>}
  <ToolButton label={t('imageeditor.close')} disabled={c.busy} onClick={c.close}><X/></ToolButton>
  <div ref={c.setOptionsSlot} className="raster-selection-options"/>

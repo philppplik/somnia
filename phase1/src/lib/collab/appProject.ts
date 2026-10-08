@@ -10,7 +10,7 @@ export const appProject:ProjectPort={
  remove(path){if(path in getState().files)applyOperations([{type:'deleteFile',file:path}],'external');},
  subscribe:fn=>subscribe(fn),
  adopt(files){
-  closeCore();
+  if(!closeCore())throw Error('Unsaved Photo edits were kept.');
   connectEditorProject(new EditorProject(files),{name:'Shared project',alreadySaved:true});
   const first=Object.keys(files).find(f=>/\.html?$/i.test(f))??Object.keys(files)[0];
   if(first)openFileTab(first);},

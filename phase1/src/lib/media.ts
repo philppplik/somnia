@@ -48,5 +48,5 @@ export async function addMediaFile(file:Blob,rawName:string,key?:string):Promise
  set({items:[...state.items.filter(i=>i!==old),item],active:name});return{name};}
 export function setActiveMedia(name:string|null){if(state.active!==name)set({...state,active:name});}
 export function closeMedia(name:string){const it=findMedia(name);if(!it||!canClose(name))return;URL.revokeObjectURL(it.url);set({items:state.items.filter(i=>i!==it),active:state.active===it.name?null:state.active});}
-export function clearMedia(){if(!state.items.every(it=>canClose(it.name)))return;state.items.forEach(i=>URL.revokeObjectURL(i.url));set({items:[],active:null});}
+export function clearMedia(){if(!state.items.every(it=>canClose(it.name)))return false;state.items.forEach(i=>URL.revokeObjectURL(i.url));set({items:[],active:null});return true;}
 export const formatBytes=(n:number)=>n<1024?`${n} B`:n<1_048_576?`${(n/1024).toFixed(1)} KB`:`${(n/1_048_576).toFixed(1)} MB`;
