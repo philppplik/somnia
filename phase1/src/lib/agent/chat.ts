@@ -1,5 +1,5 @@
 import type {AgentEvent, AgentProposal,AgentApproval} from './core';
-export type ProposalState = 'pending' | 'accepted' | 'rejected';
+export type ProposalState = 'pending' | 'accepted' | 'rejected' | 'undone';
 export type ChatItem =
  | {id: string; kind: 'user'; text: string}
  | {id: string; kind: 'agent'; text: string; streaming: boolean; incomplete?: 'stopped' | 'error'}
