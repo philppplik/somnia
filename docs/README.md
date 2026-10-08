@@ -2,6 +2,8 @@
 
 Start here:
 
+- [Native UI design system](design/native-ui/README.md): exact tokens, theme/appearance cascade, components, UX, context and awareness, Studio direction, and verification.
+
 - [Architecture](ARCHITECTURE.md): Rust backend, command ACL, project service, frontend, storage port, security boundaries, testing.
 - [Build, CI and release](BUILD-AND-RELEASE.md): local builds, versioning, CI jobs, release assembly.
 - [Changelog](../CHANGELOG.md) and [v11.1.0 release-notes draft](releases/v11.1.0.md): implemented release changes and publication checks.
