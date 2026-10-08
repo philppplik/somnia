@@ -1816,5 +1816,7 @@
   "settings.modified.resetAll": "Reset all",
   "settings.modified.badge": "{n} changed",
   "settings.modified.projectChip": "Can differ per project",
-  "settings.modified.projectHint": "A project can override this setting."
+  "settings.modified.projectHint": "A project can override this setting.",
+  "settings.results.title": "Search results",
+  "settings.results.command": "Command"
 }

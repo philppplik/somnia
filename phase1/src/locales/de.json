@@ -1816,5 +1816,7 @@
   "settings.modified.resetAll": "Alle zurücksetzen",
   "settings.modified.badge": "{n} geändert",
   "settings.modified.projectChip": "Pro Projekt abweichend möglich",
-  "settings.modified.projectHint": "Ein Projekt kann diese Einstellung überschreiben."
+  "settings.modified.projectHint": "Ein Projekt kann diese Einstellung überschreiben.",
+  "settings.results.title": "Suchergebnisse",
+  "settings.results.command": "Befehl"
 }

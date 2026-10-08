@@ -24,6 +24,8 @@ import { DEFAULT_CANVAS_PREFS, type CanvasPrefs } from "../lib/canvasPrefs";
 import { DEFAULT_WORKFLOW_PREFS } from "../lib/workflowPrefs";
 import { sanitizeUnitPref } from "../lib/units";
 import { ModifiedSettings } from "./ModifiedSettings";
+import { SettingsSearchResults } from "./SettingsSearchResults";
+import { unifiedSearch } from "../lib/settingsUnifiedSearch";
 import { modifiedCountBySection, modifiedSettings, resetPatch, type SettingEntry } from "../lib/settingsRegistry";
 import { Pencil } from '../lib/icons';
 import { DEFAULT_UI_PREFS } from "../lib/uiPrefs";
@@ -263,7 +265,7 @@ export function Settings() {
     const root = content.current;
     if (!root) return;
     root.querySelectorAll<HTMLElement>("label,li,p,details").forEach((el) => {
-      if(el.closest('[data-settings-section="AI"]')){el.hidden=false;return;}
+      if(el.closest('[data-settings-section="AI"]')||el.closest('[data-settings-results]')){el.hidden=false;return;}
       el.hidden =
         !!query &&
         !settingsMatch(
@@ -314,6 +316,7 @@ export function Settings() {
     }
   };
   const resetSettings = (entries: readonly SettingEntry[]) => change(resetPatch(state, entries) as Partial<AppState>);
+  const unified = query.trim() ? unifiedSearch(query, state, (k) => t(k), listCommands()) : [];
   const modifiedCounts = modifiedCountBySection(state);
   const modifiedTotal = modifiedSettings(state).length;
   const sections = [
@@ -2073,7 +2076,16 @@ export function Settings() {
             {t(section === "Shortcuts" ? "set.sc.description" : "set.description")}
           </DialogDescription>
           <div className="settings-content" ref={content}>
-            {query && matches.length === 0 && (
+            {query && (
+              <SettingsSearchResults
+                results={unified}
+                state={state}
+                onReset={resetSettings}
+                onOpenSection={(name) => { setQuery(""); setSection(name); }}
+                onCommandShortcut={(title) => { setQuery(""); setSection("Shortcuts"); setQuery(title); }}
+              />
+            )}
+            {query && matches.length === 0 && unified.length === 0 && (
               <p role="status">{t("redesign.noResults")}</p>
             )}
             {query
