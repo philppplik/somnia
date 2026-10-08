@@ -425,7 +425,7 @@ export function Account() {
                           {t("account.active")}
                         </span>
                       </div>
-                      <h3>Free</h3>
+                      <h3>Individual</h3>
                       <p>{t("account.freeDescription")}</p>
                       <div className="account-plan-features">
                         <span>{t("account.localFiles")}</span>
