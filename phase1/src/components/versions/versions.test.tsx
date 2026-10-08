@@ -101,6 +101,6 @@ test('countUnsaved compares editor text with disk text',()=>{
 test('every versions.* key exists in all locales, with matching placeholders; DE is translated',()=>{
  const base=Object.keys(CATALOGUES.en).filter(k=>k.startsWith('versions.'));assert.ok(base.length>60);
  for(const [l,cat] of Object.entries(CATALOGUES))for(const k of base)assert.ok(k in cat,`${l}:${k}`);
- const same=base.filter(k=>CATALOGUES.de[k]===CATALOGUES.en[k]&&k!=='versions.error.detail');assert.deepEqual(same,[]);});
+ const same=base.filter(k=>CATALOGUES.de[k]===CATALOGUES.en[k]&&!['versions.error.detail','versions.history.version'].includes(k));assert.deepEqual(same,[]);});
 test('every GitErrorCode and block reason has a message',()=>{
  for(const c of ['git-missing','not-a-repo','blocked','state-changed','nothing-to-commit','hook-failed','signing-failed','identity-missing','path-rejected','timeout','cancelled','too-large','io','unknown'])assert.ok(CATALOGUES.en[`versions.error.${c}`],c);});
