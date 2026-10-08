@@ -7,3 +7,4 @@ export * from './registry';
 export * from './operations';
 export * from './replay';
 export * from './svgExport';
+export * from './flatAdapter';
