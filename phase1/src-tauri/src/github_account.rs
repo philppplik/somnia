@@ -12,8 +12,11 @@ use std::fmt;
 
 /// Client id of the "Somnia" GitHub OAuth App (device flow on, token expiry off; public by design, not a secret).
 pub const CLIENT_ID: &str = "Ov23licQQ0Gt10vUeqn8";
-/// Identity only. Broader scopes need their own explicit decision.
-pub const SCOPE: &str = "read:user";
+/// Profile (name, login) plus repository access. GitHub OAuth Apps have no read-only repo scope: `repo`
+/// can technically also write, so Somnia must only ever issue read requests with this token (owner decision B, 2026-10-08).
+pub const SCOPE: &str = "read:user repo";
+/// Scope the app needs; a stored token without it needs a re-login (one new consent on GitHub).
+pub const REQUIRED_SCOPES: [&str; 2] = ["read:user", "repo"];
 pub const DEVICE_CODE_URL: &str = "https://github.com/login/device/code";
 pub const TOKEN_URL: &str = "https://github.com/login/oauth/access_token";
 pub const USER_URL: &str = "https://api.github.com/user";
@@ -64,12 +67,13 @@ pub fn parse_device_code(text: &str) -> Result<DeviceCode, LoginError> {
 }
 
 #[derive(Debug, PartialEq, Eq)]
-pub enum Poll { Token(String), Pending, SlowDown(u64), Expired, Denied, Failed }
+pub enum Poll { Token { token: String, scope: String }, Pending, SlowDown(u64), Expired, Denied, Failed }
 /// GitHub answers 200 for every polling outcome; the `error` field carries the state.
 pub fn parse_poll(text: &str) -> Poll {
     let Ok(v) = serde_json::from_str::<serde_json::Value>(text) else { return Poll::Failed };
     if let Some(t) = v.get("access_token").and_then(|t| t.as_str()) {
-        return if clean(t, 512) && v.get("token_type").and_then(|t| t.as_str()).is_none_or(|t| t.eq_ignore_ascii_case("bearer")) { Poll::Token(t.to_owned()) } else { Poll::Failed };
+        let scope = v.get("scope").and_then(|s| s.as_str()).unwrap_or("").to_owned();
+        return if clean(t, 512) && scope.len() <= 512 && !scope.chars().any(|c| c.is_control()) && v.get("token_type").and_then(|t| t.as_str()).is_none_or(|t| t.eq_ignore_ascii_case("bearer")) { Poll::Token { token: t.to_owned(), scope } } else { Poll::Failed };
     }
     match v.get("error").and_then(|e| e.as_str()) {
         Some("authorization_pending") => Poll::Pending,
@@ -89,23 +93,32 @@ pub struct Account {
     pub login: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub name: Option<String>,
+    /// Scopes GitHub granted, comma-separated as returned. Empty for tokens saved before scopes were recorded.
+    #[serde(default)]
+    pub scope: String,
 }
 impl fmt::Debug for Account {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result { f.debug_struct("Account").field("login", &self.login).finish_non_exhaustive() }
 }
 impl Account {
+    /// True when the stored token lacks a scope the app needs (older login, or the user narrowed it).
+    pub fn needs_scope_upgrade(&self) -> bool {
+        let have: Vec<&str> = self.scope.split(|c: char| c == ',' || c == ' ').filter(|s| !s.is_empty()).collect();
+        !REQUIRED_SCOPES.iter().all(|r| have.contains(r))
+    }
     pub fn validate(&self) -> Result<(), StoreError> {
         let login_ok = !self.login.is_empty() && self.login.len() <= 39 && self.login.chars().all(|c| c.is_ascii_alphanumeric() || c == '-');
+        if self.scope.len() > 512 || self.scope.chars().any(|c| c.is_control()) { return Err(StoreError::Invalid); }
         if !clean(&self.access_token, 512) || !login_ok || self.name.as_deref().is_some_and(|n| n.len() > 200 || n.chars().any(|c| c.is_control())) { return Err(StoreError::Invalid); }
         Ok(())
     }
 }
 /// `GET /user` -> account. Only public identity fields are read.
-pub fn account_from_user(token: &str, text: &str) -> Result<Account, LoginError> {
+pub fn account_from_user(token: &str, scope: &str, text: &str) -> Result<Account, LoginError> {
     let v: serde_json::Value = serde_json::from_str(text).map_err(|_| LoginError::Response)?;
     let login = v.get("login").and_then(|l| l.as_str()).ok_or(LoginError::Response)?.to_owned();
     let name = v.get("name").and_then(|n| n.as_str()).map(|n| n.trim().to_owned()).filter(|n| !n.is_empty());
-    let a = Account { access_token: token.to_owned(), login, name };
+    let a = Account { access_token: token.to_owned(), login, name, scope: scope.to_owned() };
     a.validate().map_err(|_| LoginError::Response)?;
     Ok(a)
 }
@@ -123,6 +136,8 @@ pub struct Status {
     pub login: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub name: Option<String>,
+    /// Connected with an older/narrower scope: the UI offers a reconnect (one new consent on GitHub).
+    pub scope_upgrade: bool,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub user_code: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -147,9 +162,10 @@ impl<B: SecretBackend> Store<B> {
     pub fn status(&self, pending: Option<&str>) -> Result<Status, StoreError> {
         let a = self.load()?;
         Ok(match (a, pending) {
-            (Some(a), _) => Status { provider: "github", state: State::Connected, login: Some(a.login), name: a.name, user_code: None, verification_uri: None },
-            (None, Some(code)) => Status { provider: "github", state: State::Pending, login: None, name: None, user_code: Some(code.to_owned()), verification_uri: Some(VERIFICATION_URI) },
-            (None, None) => Status { provider: "github", state: State::Disconnected, login: None, name: None, user_code: None, verification_uri: None },
+            (Some(a), None) => Status { provider: "github", state: State::Connected, scope_upgrade: a.needs_scope_upgrade(), login: Some(a.login), name: a.name, user_code: None, verification_uri: None },
+            (Some(a), Some(_)) if !a.needs_scope_upgrade() => Status { provider: "github", state: State::Connected, scope_upgrade: false, login: Some(a.login), name: a.name, user_code: None, verification_uri: None },
+            (_, Some(code)) => Status { provider: "github", state: State::Pending, scope_upgrade: false, login: None, name: None, user_code: Some(code.to_owned()), verification_uri: Some(VERIFICATION_URI) },
+            (None, None) => Status { provider: "github", state: State::Disconnected, scope_upgrade: false, login: None, name: None, user_code: None, verification_uri: None },
         })
     }
 }
@@ -174,7 +190,7 @@ mod tests {
         assert_eq!((d.interval, d.expires_in), (5, MAX_LIFETIME_SECS));
     }
     #[test] fn poll_outcomes() {
-        assert_eq!(parse_poll(r#"{"access_token":"gho_abc","token_type":"bearer","scope":"read:user"}"#), Poll::Token("gho_abc".into()));
+        assert_eq!(parse_poll(r#"{"access_token":"gho_abc","token_type":"bearer","scope":"read:user"}"#), Poll::Token { token: "gho_abc".into(), scope: "read:user".into() });
         assert_eq!(parse_poll(r#"{"error":"authorization_pending"}"#), Poll::Pending);
         assert_eq!(parse_poll(r#"{"error":"slow_down","interval":10}"#), Poll::SlowDown(10));
         assert_eq!(parse_poll(r#"{"error":"expired_token"}"#), Poll::Expired);
@@ -187,17 +203,17 @@ mod tests {
     #[test] fn slow_down_never_decreases() { assert_eq!(slowed(5, 10), 10); assert_eq!(slowed(10, 0), 15); assert_eq!(slowed(10, 12), 15); }
     #[test] fn bodies_are_form_encoded() { assert!(poll_body("a b").contains("device_code=a%20b")); assert!(poll_body("x").contains("grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Adevice_code")); }
     #[test] fn user_profile_maps_to_account() {
-        let a = account_from_user("gho_abc", r#"{"login":"philppplik","name":" Philipp ","email":"secret@example.com","id":1}"#).unwrap();
+        let a = account_from_user("gho_abc", "read:user,repo", r#"{"login":"philppplik","name":" Philipp ","email":"secret@example.com","id":1}"#).unwrap();
         assert_eq!((a.login.as_str(), a.name.as_deref()), ("philppplik", Some("Philipp")));
-        assert!(account_from_user("gho_abc", r#"{"login":"bad login"}"#).is_err());
-        assert!(account_from_user("gho_abc", r#"{"name":"x"}"#).is_err());
+        assert!(account_from_user("gho_abc", "read:user,repo", r#"{"login":"bad login"}"#).is_err());
+        assert!(account_from_user("gho_abc", "read:user,repo", r#"{"name":"x"}"#).is_err());
     }
     #[test] fn store_roundtrip_status_and_logout() {
         let s = Store::new(MemoryBackend::default());
         assert_eq!(s.status(None).unwrap().state, State::Disconnected);
         let p = s.status(Some("WDJB-MJHT")).unwrap();
         assert_eq!((p.state, p.user_code.as_deref(), p.verification_uri), (State::Pending, Some("WDJB-MJHT"), Some(VERIFICATION_URI)));
-        s.save(&account_from_user("gho_abc", r#"{"login":"philppplik","name":"Philipp"}"#).unwrap()).unwrap();
+        s.save(&account_from_user("gho_abc", "read:user,repo", r#"{"login":"philppplik","name":"Philipp"}"#).unwrap()).unwrap();
         let c = s.status(Some("IGNORED")).unwrap();
         assert_eq!((c.state, c.login.as_deref(), c.user_code.as_deref()), (State::Connected, Some("philppplik"), None));
         let json = serde_json::to_string(&c).unwrap();
@@ -206,6 +222,21 @@ mod tests {
         assert_eq!(s.status(None).unwrap().state, State::Disconnected);
         assert!(s.load().unwrap().is_none());
     }
+    #[test] fn scope_upgrade_is_detected() {
+        let full = account_from_user("t", "read:user,repo", r#"{"login":"a"}"#).unwrap();
+        assert!(!full.needs_scope_upgrade());
+        assert!(!account_from_user("t", "repo read:user", r#"{"login":"a"}"#).unwrap().needs_scope_upgrade());
+        assert!(account_from_user("t", "read:user", r#"{"login":"a"}"#).unwrap().needs_scope_upgrade());
+        assert!(account_from_user("t", "", r#"{"login":"a"}"#).unwrap().needs_scope_upgrade());
+        assert!(account_from_user("t", "public_repo,read:user", r#"{"login":"a"}"#).unwrap().needs_scope_upgrade());
+        let s = Store::new(MemoryBackend::default()); s.save(&account_from_user("t", "read:user", r#"{"login":"a"}"#).unwrap()).unwrap();
+        let st = s.status(None).unwrap(); assert!(st.scope_upgrade && serde_json::to_string(&st).unwrap().contains("\"scopeUpgrade\":true"));
+    }
+    #[test] fn old_stored_tokens_without_scope_still_load() {
+        let b = MemoryBackend::default(); b.set(TOKEN_SLOT, r#"{"accessToken":"gho_x","login":"a"}"#).unwrap();
+        let a = Store::new(b).load().unwrap().unwrap(); assert!(a.needs_scope_upgrade());
+    }
+    #[test] fn requested_scope_is_profile_plus_repo() { assert_eq!(SCOPE, "read:user repo"); assert!(device_code_body().contains("scope=read%3Auser%20repo")); }
     #[test] fn corrupt_store_is_reported() {
         let b = MemoryBackend::default(); b.set(TOKEN_SLOT, "{").unwrap();
         assert_eq!(Store::new(b).load(), Err(StoreError::Corrupt));

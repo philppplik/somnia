@@ -246,14 +246,14 @@ async fn github_login_flow() -> std::result::Result<(), crate::github_account::L
     let _ = open_browser(g::VERIFICATION_URI); // the user can also open the page by hand; the code is shown in the UI
     let deadline = tokio::time::Instant::now() + Duration::from_secs(dc.expires_in);
     let mut interval = dc.interval;
-    let token = loop {
+    let (token, scope) = loop {
         tokio::select! {
             _ = tokio::time::sleep(Duration::from_secs(interval)) => {},
             _ = GITHUB_CANCEL.notified() => return Err(E::Cancelled),
         }
         if tokio::time::Instant::now() >= deadline { return Err(E::Expired); }
         match g::parse_poll(&github_post(&client, g::TOKEN_URL, g::poll_body(&dc.device_code)).await?) {
-            g::Poll::Token(t) => break t,
+            g::Poll::Token { token, scope } => break (token, scope),
             g::Poll::Pending => {}
             g::Poll::SlowDown(i) => interval = g::slowed(interval, i),
             g::Poll::Expired => return Err(E::Expired),
@@ -263,7 +263,7 @@ async fn github_login_flow() -> std::result::Result<(), crate::github_account::L
     };
     let r = client.get(g::USER_URL).header("accept", "application/vnd.github+json").header("authorization", format!("Bearer {token}")).send().await.map_err(|_| E::Request)?;
     if !r.status().is_success() { return Err(E::Response); }
-    let account = g::account_from_user(&token, &r.text().await.map_err(|_| E::Response)?)?;
+    let account = g::account_from_user(&token, &scope, &r.text().await.map_err(|_| E::Response)?)?;
     tauri::async_runtime::spawn_blocking(move || { let _g = AGENT_SETTINGS_LOCK.lock().map_err(|_| E::Store)?; github_store().save(&account).map_err(|_| E::Store) }).await.map_err(|_| E::Store)?
 }
 #[tauri::command]

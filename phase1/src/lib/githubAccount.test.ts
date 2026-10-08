@@ -16,3 +16,8 @@ test('browser does not invoke native; failures never leak text; malformed fails 
  await assert.rejects(createGithubAuth(async()=>{throw Error('gho_secret');},()=>true).start(),(e:unknown)=>e instanceof GithubAuthError&&!e.message.includes('gho_'));
  for(const v of [null,{},{provider:'openai',state:'connected'},{provider:'github',state:'working'}])assert.throws(()=>decodeGithubStatus(v),GithubAuthError);
 });
+
+test('scopeUpgrade flag passes through and nothing else does',()=>{
+ assert.deepEqual(decodeGithubStatus({provider:'github',state:'connected',login:'a',scopeUpgrade:true,scope:'x'}),{state:'connected',login:'a',scopeUpgrade:true});
+ assert.equal('scopeUpgrade' in decodeGithubStatus({provider:'github',state:'connected',login:'a',scopeUpgrade:'yes'}),false);
+});

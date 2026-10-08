@@ -23,10 +23,12 @@ export function GithubConnection(){
    {status!.userCode&&<p>{t('github.openPage',{url:'github.com/login/device'})}</p>}</div>}
   <div className="github-actions">
    {state!=='connected'&&<button type="button" disabled={!desktop||busy||!state||state==='pending'} onClick={()=>void act('start')}>{t('github.connect')}</button>}
+   {state==='connected'&&status!.scopeUpgrade&&<button type="button" disabled={!desktop||busy} onClick={()=>void act('start')}>{t('github.reconnect')}</button>}
    {state==='pending'&&<button type="button" disabled={busy} onClick={()=>void act('cancel')}>{t('github.cancel')}</button>}
    {state==='connected'&&<button type="button" disabled={busy} onClick={()=>void act('disconnect')}>{t('github.disconnect')}</button>}
    {desktop&&failed&&<button type="button" disabled={busy} onClick={()=>void refresh()}>{t('github.retry')}</button>}
   </div>
+  {state==='connected'&&status!.scopeUpgrade&&<p role="status" className="github-note">{t('github.upgrade')}</p>}
   {state==='connected'&&<p className="github-note">{t('github.revoke')}</p>}
   {failed&&<p role="alert" className="account-error">{t('github.error')}</p>}
  </div>;
