@@ -1866,5 +1866,6 @@
   "github.codeLabel": "GitHub sign-in code",
   "github.openPage": "Your browser opens {url}. If it does not, open that page yourself.",
   "github.revoke": "Signing out removes the token from this device. To revoke access on GitHub too, use github.com/settings/applications.",
-  "github.error": "GitHub sign-in did not work. Check your connection and try again."
+  "github.error": "GitHub sign-in did not work. Check your connection and try again.",
+  "accountAuth.manageInProfile": "Connect or disconnect your account in Profile > Connections."
 }

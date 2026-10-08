@@ -1866,5 +1866,6 @@
   "github.codeLabel": "Código de inicio de sesión de GitHub",
   "github.openPage": "Tu navegador abre {url}. Si no lo hace, abre esa página tú mismo.",
   "github.revoke": "Al cerrar sesión se elimina el token de este dispositivo. Para revocar también el acceso en GitHub, usa github.com/settings/applications.",
-  "github.error": "No se pudo iniciar sesión en GitHub. Revisa tu conexión e inténtalo de nuevo."
+  "github.error": "No se pudo iniciar sesión en GitHub. Revisa tu conexión e inténtalo de nuevo.",
+  "accountAuth.manageInProfile": "Conecta o desconecta tu cuenta en Perfil > Conexiones."
 }

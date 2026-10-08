@@ -33,7 +33,7 @@ export function ProviderAuthentication({provider,disabled=false,onBusyChange,onC
  return <fieldset className="ag-provider-auth"><legend>Provider connection</legend>
   {provider!=='ollama'&&<><label>API key<input type="password" autoComplete="off" spellCheck={false} maxLength={8192} value={key} disabled={busy||accountBusy||disabled} placeholder={stored?'Enter a replacement key':'Enter your provider API key'} onChange={e=>{setKey(e.target.value);setMessage('');setError(false);}}/></label>
   <p>{isTauri()?'Keys are stored in your OS credential store.':'Browser preview keeps keys only for this session.'} Testing sends only the key to the selected provider. No prompt or project files are sent, and no generation is requested.</p></>}
-  <ProviderAccountConnection provider={provider} disabled={busy||disabled} onBusyChange={value=>{setAccountBusy(value);callbacks.current.onBusyChange?.(value);}} onCredentialChange={onCredentialChange}/>
+  <ProviderAccountConnection provider={provider} manage={false} disabled={busy||disabled} onBusyChange={value=>{setAccountBusy(value);callbacks.current.onBusyChange?.(value);}} onCredentialChange={onCredentialChange}/>
   <div className="ag-auth-actions"><button type="button" disabled={busy||accountBusy||disabled} onClick={()=>void act('test')}>{provider==='ollama'?'Test local connection':key.trim()?(stored?'Test and rotate key':'Test and save key'):'Test saved key'}</button>
   {provider!=='ollama'&&<button type="button" disabled={busy||accountBusy||disabled} onClick={()=>void act('delete')}>Delete key</button>}
   {busy&&<button type="button" onClick={()=>controller.current?.abort()}>Cancel test</button>}</div>

@@ -21,6 +21,7 @@ import {
 import { Check } from "../lib/icons";
 import { Button } from "./ui/button";
 import { GithubConnection } from "./GithubConnection";
+import { ProviderAccountConnection } from "./agent/ProviderAccountConnection";
 import {
   Dialog,
   DialogContent,
@@ -396,7 +397,15 @@ export function Account() {
                     </div>
                   </>
                 )}
-                {section === "connections" && <GithubConnection />}
+                {section === "connections" && (
+                  <>
+                    <div className="connection-card">
+                      <h3>OpenAI</h3>
+                      <ProviderAccountConnection provider="openai" showMethod={false} />
+                    </div>
+                    <GithubConnection />
+                  </>
+                )}
                 {section === "activity" && <Heatmap />}
                 {section === "plan" && (
                   <>

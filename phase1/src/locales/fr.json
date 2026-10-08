@@ -1866,5 +1866,6 @@
   "github.codeLabel": "Code de connexion GitHub",
   "github.openPage": "Votre navigateur ouvre {url}. Sinon, ouvrez cette page vous-même.",
   "github.revoke": "La déconnexion supprime le jeton de cet appareil. Pour révoquer aussi l'accès côté GitHub, utilisez github.com/settings/applications.",
-  "github.error": "La connexion GitHub a échoué. Vérifiez votre connexion et réessayez."
+  "github.error": "La connexion GitHub a échoué. Vérifiez votre connexion et réessayez.",
+  "accountAuth.manageInProfile": "Connectez ou déconnectez votre compte dans Profil > Connexions."
 }

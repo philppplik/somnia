@@ -1866,5 +1866,6 @@
   "github.codeLabel": "Código de login do GitHub",
   "github.openPage": "Seu navegador abre {url}. Se não abrir, acesse essa página você mesmo.",
   "github.revoke": "Sair remove o token deste dispositivo. Para revogar o acesso também no GitHub, use github.com/settings/applications.",
-  "github.error": "O login no GitHub não funcionou. Verifique sua conexão e tente de novo."
+  "github.error": "O login no GitHub não funcionou. Verifique sua conexão e tente de novo.",
+  "accountAuth.manageInProfile": "Conecte ou desconecte sua conta em Perfil > Conexões."
 }

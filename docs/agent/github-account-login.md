@@ -25,6 +25,10 @@ Chosen because Somnia is a distributed desktop app. The web flow and PKCE token 
 - `phase1/src-tauri/src/desktop.rs`: commands `github_account_status|start|cancel|disconnect`, polling loop.
 - `phase1/src/lib/githubAccount.ts`, `phase1/src/components/GithubConnection.tsx`: UI, shown in `Account.tsx` under "Connections".
 
+## OpenAI in Connections
+
+The existing OpenAI account login (PKCE, keyring) is shown in the same Connections section (status, connect, disconnect). Agent settings keeps only the status and the "use account or API key" choice and points to Profile > Connections, so connect/disconnect exist in one place.
+
 ## Open items
 
 - The OAuth App "Somnia" (owner philppplik, device flow on, user token expiry off, no client secret created) is registered; `CLIENT_ID` is set. Its page: github.com/settings/applications/3915710.

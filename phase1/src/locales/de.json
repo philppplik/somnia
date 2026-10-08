@@ -1866,5 +1866,6 @@
   "github.codeLabel": "GitHub-Anmeldecode",
   "github.openPage": "Dein Browser öffnet {url}. Falls nicht, öffne die Seite selbst.",
   "github.revoke": "Beim Abmelden wird das Token von diesem Gerät entfernt. Um den Zugriff auch bei GitHub zu widerrufen, nutze github.com/settings/applications.",
-  "github.error": "Die GitHub-Anmeldung hat nicht geklappt. Prüfe deine Verbindung und versuche es erneut."
+  "github.error": "Die GitHub-Anmeldung hat nicht geklappt. Prüfe deine Verbindung und versuche es erneut.",
+  "accountAuth.manageInProfile": "Konto verbinden oder trennen unter Profil > Verbindungen."
 }
