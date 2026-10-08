@@ -1,3 +1,4 @@
+import {RasterEditor,useRasterEditor} from './RasterEditor';
 import type {CodeTheme} from '../lib/appearance';
 import {lazy,Suspense} from 'react';
 import {ErrorBoundary} from './ErrorBoundary';
@@ -25,11 +26,12 @@ function SplitDivider({box,md}:{box:React.RefObject<HTMLDivElement|null>;md?:boo
   onPointerDown={e=>{e.currentTarget.setPointerCapture(e.pointerId);}} onPointerMove={e=>{if(e.currentTarget.hasPointerCapture(e.pointerId))move(e);}} onDoubleClick={()=>patchState({splitRatio:reset})}
   onKeyDown={e=>{const step=e.shiftKey?0.1:0.02;const dir=horizontal?{ArrowUp:-1,ArrowDown:1}[e.key]:{ArrowLeft:-1,ArrowRight:1}[e.key];if(e.key==='Home'||e.key==='Enter'){e.preventDefault();patchState({splitRatio:reset});return;}if(!dir)return;e.preventDefault();patchState({splitRatio:clamp(state.splitRatio+dir*step*(state.splitSwap?-1:1))});}}/>;
 }
-export function Canvas(){const {t}=useT();
+export function Canvas(){const {t}=useT();const raster=useRasterEditor();
  const box=useRef<HTMLDivElement>(null);
  const state=useAppStore();const media=useMedia();const mdView=useMdSource();const activeMedia=media.items.find(i=>i.name===media.active);
  const mdFile=isMarkdown(state.activeFile)&&!activeMedia;
  const code=<section className="code-pane" aria-label={mdFile?t('md.srcLabel'):t('rest.canvas.sourceEditor')} style={state.viewMode==='split'?{flex:`0 0 ${state.splitRatio*100}%`}:undefined}>{mdFile?<MarkdownToolbar view={mdView}/>:<FileTabs/>}<ErrorBoundary label="Source editor" compact><Suspense fallback={<div className="px-3 py-2 text-[10px] text-ink-3">Loading source editor...</div>}>{state.diffSplit?<DiffSplit file={state.activeFile}/>:<SourceEditor source={state.files[state.activeFile]??''} file={state.activeFile} disabled={!state.coreConnected}/>}</Suspense></ErrorBoundary></section>;
+ if(raster.active)return <RasterEditor/>;
  if(activeMedia)return <main className="center" aria-label={t('rest.canvas.editorWorkspace')}><div className="workspace"><section className="code-pane" aria-label={t('rest.canvas.mediaPreview')}><FileTabs/><MediaViewer item={activeMedia}/></section></div></main>;
  if(!state.coreConnected)return <EmptyState/>;
  const rendered=isRenderedText(state.activeFile);

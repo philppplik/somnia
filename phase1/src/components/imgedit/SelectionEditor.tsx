@@ -1,3 +1,4 @@
+import {createPortal} from 'react-dom';
 import { useMemo, useRef, useState } from 'react';
 import type { RasterImage } from '../../lib/image/buffer';
 import type { ImageOperation, Point, Viewport } from '../../lib/image-editor/types';
@@ -6,6 +7,7 @@ import { ImageEditorViewport } from '../ImageEditorViewport';
 import { SelectionOverlay } from './SelectionOverlay';
 export interface SelectionEditorProps {
   image: HTMLCanvasElement | null;
+  revision?:number;
   /** Raster must be the current rendered stack. Parent clears selection after dimension-changing edits. */
   raster: RasterImage;
   selection: SelectionMask | null;
@@ -16,6 +18,7 @@ export interface SelectionEditorProps {
   viewport?: Viewport;
   onViewportChange?(viewport: Viewport): void;
   disabled?: boolean;
+  controlsSlot?: HTMLElement|null;
 }
 type Tool = 'rect' | 'lasso' | 'wand';
 export function SelectionEditor(p: SelectionEditorProps) {
@@ -37,9 +40,7 @@ export function SelectionEditor(p: SelectionEditorProps) {
     if (!valid) return; const payload = copySelection(p.raster, valid); if (!payload) return;
     clipboard.current = payload; p.onCopy?.(payload); setCopied(true);
   };
-  return <section aria-label="Image selection editor" style={{ display: 'flex', flexDirection: 'column', width: '100%', height: '100%' }}
-    onKeyDown={event => { if (event.key === 'Escape') { reset(); p.onSelectionChange(null); } }}>
-    <fieldset disabled={p.disabled} aria-label="Selection tools" className="flex flex-wrap items-center gap-2 border-0 p-2 text-xs">
+  const controls=<fieldset disabled={p.disabled} aria-label="Selection tools" className="flex flex-wrap items-center gap-2 border-0 p-2 text-xs">
       <label>Tool <select aria-label="Selection tool" value={tool} onChange={e => { reset(); setTool(e.target.value as Tool); }}>
         <option value="rect">Rectangle</option><option value="lasso">Freehand lasso</option><option value="wand">Magic wand</option>
       </select></label>
@@ -54,9 +55,12 @@ export function SelectionEditor(p: SelectionEditorProps) {
       <button type="button" disabled={!hasSelection} onClick={() => { if (valid) p.onCommit(selectionFillOp(valid, [parseInt(color.slice(1, 3), 16), parseInt(color.slice(3, 5), 16), parseInt(color.slice(5, 7), 16), alpha])); }}>Fill</button>
       <button type="button" disabled={!valid} onClick={() => { reset(); p.onSelectionChange(null); }}>Deselect</button>
       <span role="status">{copied ? 'Selection copied' : ''}</span>
-    </fieldset>
+    </fieldset>;
+  return <section aria-label="Image selection editor" style={{ display: 'flex', flexDirection: 'column', width: '100%', height: '100%' }}
+    onKeyDown={event => { if (event.key === 'Escape') { reset(); p.onSelectionChange(null); } }}>
+    {p.controlsSlot?createPortal(controls,p.controlsSlot):controls}
     <div style={{ flex: 1, minHeight: 0 }}>
-      <ImageEditorViewport image={p.image} viewport={p.viewport} onViewportChange={v => { setView(v); p.onViewportChange?.(v); }}
+      <ImageEditorViewport image={p.image} revision={p.revision} viewport={p.viewport} onViewportChange={v => { setView(v); p.onViewportChange?.(v); }}
         overlay={<SelectionOverlay selection={preview ?? valid} viewport={p.viewport ?? view} />}
         onImagePointer={(point, event) => {
           if (p.disabled) return; setCopied(false);

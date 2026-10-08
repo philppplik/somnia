@@ -1,3 +1,4 @@
+import {rasterDirty} from '../store/rasterState';
 import {invoke,isTauri} from '@tauri-apps/api/core';
 import {listen} from '@tauri-apps/api/event';
 import {getCurrentWindow} from '@tauri-apps/api/window';
@@ -12,7 +13,7 @@ export async function installDesktopAdapter(){
  void restoreWindowState().catch(e=>console.error(e));
  // Memory-only and ZIP projects have no backend project, so the Rust close guard cannot see their edits. Guard them here.
  setCloseHandlers('memory',{discardAndClose:async()=>{clearDraft();await getCurrentWindow().destroy();},saveAndClose:async()=>{await getCurrentWindow().destroy();}});
- await getCurrentWindow().onCloseRequested(e=>{const st=getState();if(st.isDirty){e.preventDefault();requestClose(st.storage==='disk'?'disk':'memory');}});
+ await getCurrentWindow().onCloseRequested(e=>{const st=getState();const dirtyImages=Object.entries(st.rasterDoc).filter(([,d])=>rasterDirty(d));if(dirtyImages.length&&!window.confirm(`Discard unsaved image edits to ${dirtyImages.map(([name])=>name).join(', ')} and close Somnia?`)){e.preventDefault();return;}if(st.isDirty){e.preventDefault();requestClose(st.storage==='disk'?'disk':'memory');}});
  return installFileAdapter({
   invoke:(command,args)=>invoke(command,args),
   listen:(event,handler)=>listen(event,handler as never),

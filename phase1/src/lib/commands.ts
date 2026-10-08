@@ -16,22 +16,27 @@ const FAST_KEY='somnia.fastParse.v1';
 try{if(localStorage.getItem(FAST_KEY)==='off')EditorProject.incremental.enabled=false;}catch{/* storage unavailable */}
 export interface Command {id:string;title:string;category:'Project'|'Edit'|'View'|'Insert'|'Tools'|'Help';shortcut?:string;keywords?:string[];allowInInput?:boolean;enabled?:()=>boolean;run:(payload?:unknown)=>void|Promise<void>}
 const registry=new Map<string,Command>();
+const scopes=new Set<(id:string)=>Command|undefined>();
+/** Editors can route shared Save/Undo/Close without replacing the project's registrations. */
+export function registerCommandScope(resolve:(id:string)=>Command|undefined){scopes.add(resolve);return()=>{scopes.delete(resolve);};}
+const scoped=(id:string)=>[...scopes].reverse().map(resolve=>resolve(id)).find(Boolean);
+
 export const registerCommand=(command:Command)=>{registry.set(command.id,command);return()=>{if(registry.get(command.id)===command)registry.delete(command.id);};};
 const SC_KEY='somnia.shortcuts.v1';
 /** User overrides: command id -> shortcut string, '' = disabled. Defaults live on the commands. */
 export function shortcutOverrides():Record<string,string>{try{const v=JSON.parse(localStorage.getItem(SC_KEY)||'{}');return v&&typeof v==='object'&&!Array.isArray(v)?Object.fromEntries(Object.entries(v).filter(([,x])=>typeof x==='string')) as Record<string,string>:{};}catch{return{};}}
 export function setShortcutOverride(id:string,shortcut:string|null){const o=shortcutOverrides();if(shortcut===null)delete o[id];else o[id]=shortcut;localStorage.setItem(SC_KEY,JSON.stringify(o));window.dispatchEvent(new Event('somnia:shortcuts-changed'));}
 export const defaultShortcut=(id:string)=>registry.get(id)?.shortcut;
-export const listCommands=()=>{const o=shortcutOverrides();return [...registry.values()].map(c=>{const t={...c,title:tOr(`cmd.${c.id}`,c.title)};return id_in(o,c.id)?{...t,shortcut:o[c.id]||undefined}:t;});};
+export const listCommands=()=>{const o=shortcutOverrides();return [...registry.values()].map(c=>{const override=scoped(c.id);const t=override??{...c,title:tOr(`cmd.${c.id}`,c.title)};return id_in(o,c.id)?{...t,shortcut:o[c.id]||undefined}:t;});};
 const id_in=(o:Record<string,string>,id:string)=>Object.prototype.hasOwnProperty.call(o,id);
 /** Turns a keydown into a shortcut string like Mod+Shift+K, or null for bare modifier presses. */
 export function shortcutFromEvent(e:KeyboardEvent):string|null{
  if(['Control','Shift','Alt','Meta'].includes(e.key))return null;
  const mod=(isMac()?e.metaKey:e.ctrlKey);const key=e.key.length===1?e.key.toLowerCase():e.key;
  return [mod?'Mod':'',e.altKey?'Alt':'',e.shiftKey?'Shift':'',key===' '?'Space':key].filter(Boolean).join('+');}
-export const commandEnabled=(command:Command)=>command.enabled?.()??true;
+export const commandEnabled=(command:Command)=>(scoped(command.id)??command).enabled?.()??true;
 export async function executeCommand(id:string,payload?:unknown){
- const command=registry.get(id);if(!command)throw new Error(`Unknown command: ${id}`);
+ const command=scoped(id)??registry.get(id);if(!command)throw new Error(`Unknown command: ${id}`);
  if(!commandEnabled(command)){patchState({notice:`${command.title} is unavailable until its service is connected.`});return false;}
  try{await command.run(payload);patchState({recentCommands:[id,...getState().recentCommands.filter(c=>c!==id)].slice(0,5)});return true;}
  catch(error){patchState({notice:error instanceof Error?error.message:'Command failed.'});return false;}

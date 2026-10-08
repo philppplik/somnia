@@ -1943,5 +1943,7 @@
   "panels.components.cardButton": "{name} auswählen",
   "panels.components.cardInsert": "{name} einfügen, Variante {variant}",
   "panels.components.cardReplace": "Auswahl durch {name} ersetzen, Variante {variant}",
-  "panels.components.nameField": "Komponentenname"
+  "panels.components.nameField": "Komponentenname",
+  "imageeditor.discardPrompt": "Ungespeicherte Bildänderungen an {name} verwerfen?",
+  "raster.adjust": "Anpassen"
 }

@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   commandEnabled,
+  registerCommandScope,
   defaultShortcut,
   executeCommand,
   formatShortcut,
@@ -128,3 +129,5 @@ test('formatShortcut displays the chord per platform', () => {
     assert.equal(formatShortcut('Mod+Alt+C'), '⌘⌥C');
   });
 });
+
+test('editor command scope routes menu, enablement and execution without replacing project commands',async()=>{let count=0;let active=true;const off=registerCommandScope(id=>active&&id==='edit.undo'?{id,title:'Image undo',category:'Edit',enabled:()=>true,run:()=>{count++;}}:undefined);try{assert.equal(commandEnabled(listCommands().find(c=>c.id==='edit.undo')!),true);assert.equal(listCommands().find(c=>c.id==='edit.undo')!.title,'Image undo');await executeCommand('edit.undo');assert.equal(count,1);active=false;assert.notEqual(listCommands().find(c=>c.id==='edit.undo')!.title,'Image undo');}finally{off();}});

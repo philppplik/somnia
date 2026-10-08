@@ -27,3 +27,25 @@
 .ieh-icon:hover:not(:disabled){background:var(--bg-hover)}
 .ieh-hint{font-size:12px;color:var(--text-secondary);margin:0}
 .image-editor-history>summary{font-size:12px;font-weight:600;cursor:pointer;margin-bottom:8px}
+
+/* Inline editor: App's existing grid owns the two panels and their resize handles. */
+.editor-shell{display:flex;flex-direction:column;min-height:0;min-width:0;border-radius:25px;overflow:hidden;background:var(--bg-panel,#F8F9FB)}
+.editor-shell-tabs{flex-shrink:0}
+.editor-shell-options{display:flex;align-items:center;flex-wrap:wrap;gap:6px;padding:8px 12px;border-bottom:1px solid var(--border-subtle);flex-shrink:0}
+.editor-shell-options select{background:var(--bg-surface);color:inherit;border:1px solid var(--border-subtle);border-radius:8px;padding:4px}
+.editor-shell-canvas{flex:1;min-height:0;min-width:0;padding:10px}
+.editor-shell-canvas>.image-editor-stage{height:100%;border-radius:16px}
+.editor-shell-footer{display:flex;align-items:center;gap:16px;padding:8px 16px;font-size:11px;color:var(--text-secondary);border-top:1px solid var(--border-subtle);flex-shrink:0}
+.raster-panel{display:flex;flex-direction:column;height:100%;min-height:0;overflow:hidden;border-radius:25px;background:var(--bg-panel,#F8F9FB);color:var(--text-primary)}
+.raster-panel-tabs{display:flex;align-items:center;gap:4px;padding:10px;border-bottom:1px solid var(--border-subtle);flex-shrink:0}
+.raster-panel-tabs [role=tab]{display:grid;place-items:center;flex:1;height:32px;background:transparent;border:0;border-radius:10px;color:inherit;cursor:pointer}
+.raster-panel-tabs [role=tab][aria-selected=true]{background:var(--accent-soft);color:var(--accent)}
+.raster-panel-tabs [role=tab]:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.raster-panel-scroll{flex:1;min-height:0;overflow:auto}
+.raster-selection-options{flex-basis:100%}
+.raster-selection-options:empty{display:none}
+.editor-shell .image-editor-empty{display:flex;flex-direction:column;justify-content:center;align-items:center;gap:10px}
+.raster-selection-options fieldset{margin:0;padding:4px 0;gap:6px 10px;align-items:center}
+.raster-selection-options input[type=color]{width:32px;height:24px;padding:0;border:0;background:none;flex:none}
+.raster-selection-options input[type=number]{width:58px;font-size:11px;padding:3px}
+.raster-selection-options fieldset select,.raster-selection-options fieldset button{font-size:11px}

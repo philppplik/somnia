@@ -3,6 +3,8 @@ import { fitViewport, panBy, zoomAt } from '../lib/image-editor/viewport';
 import type { Viewport } from '../lib/image-editor/types';
 export interface ImageEditorViewportProps {
   image: HTMLCanvasElement | null;
+  /** GPU renders reuse a canvas object; redraw when its pixels change. */
+  revision?:number;
   viewport?: Viewport;
   onViewportChange?: (viewport:Viewport)=>void;
   onImagePointer?: (point:{x:number;y:number},event:React.PointerEvent<HTMLCanvasElement>)=>void;
@@ -12,7 +14,7 @@ export interface ImageEditorViewportProps {
   overlay?: React.ReactNode;
 }
 /** Overlay children share screen coordinates; inverse transform helpers are exported by the core. */
-export function ImageEditorViewport({image,viewport,onViewportChange,onImagePointer,onImagePointerMove,onImagePointerUp,onImagePointerCancel,overlay}:ImageEditorViewportProps) {
+export function ImageEditorViewport({image,revision,viewport,onViewportChange,onImagePointer,onImagePointerMove,onImagePointerUp,onImagePointerCancel,overlay}:ImageEditorViewportProps) {
   const host=useRef<HTMLDivElement>(null),canvas=useRef<HTMLCanvasElement>(null),drag=useRef<{x:number;y:number;id:number}|null>(null);
   const [local,setLocal]=useState<Viewport>({x:0,y:0,zoom:1});const view=viewport ?? local;
   const change=(next:Viewport)=>{setLocal(next);onViewportChange?.(next);};
@@ -37,7 +39,7 @@ export function ImageEditorViewport({image,viewport,onViewportChange,onImagePoin
       const ctx=target.getContext('2d');if(!ctx)return;ctx.scale(dpr,dpr);ctx.clearRect(0,0,node.clientWidth,node.clientHeight);
       if(image){ctx.imageSmoothingEnabled=view.zoom<2;ctx.drawImage(image,view.x,view.y,image.width*view.zoom,image.height*view.zoom);}
     };draw();const observer=new ResizeObserver(draw);if(host.current)observer.observe(host.current);return()=>observer.disconnect();
-  },[image,view]);
+  },[image,revision,view]);
   return <div ref={host} role="region" aria-label="Image editing viewport" style={{position:'relative',width:'100%',height:'100%',overflow:'hidden',background:'repeating-conic-gradient(#8882 0% 25%,transparent 0% 50%) 0 / 16px 16px'}}>
     <canvas ref={canvas} tabIndex={0} aria-label="Image canvas. Drag with middle mouse to pan; scroll to zoom. Plus and minus zoom; zero fits image." style={{width:'100%',height:'100%',display:'block',touchAction:'none'}}
       onPointerDown={event=>{if(event.button===1 || event.button===0 && event.altKey){event.preventDefault();event.currentTarget.setPointerCapture(event.pointerId);drag.current={x:event.clientX,y:event.clientY,id:event.pointerId};}

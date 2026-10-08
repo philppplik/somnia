@@ -1943,5 +1943,7 @@
   "panels.components.cardButton": "Selecionar {name}",
   "panels.components.cardInsert": "Inserir {name}, variante {variant}",
   "panels.components.cardReplace": "Substituir a seleção por {name}, variante {variant}",
-  "panels.components.nameField": "Nome do componente"
+  "panels.components.nameField": "Nome do componente",
+  "imageeditor.discardPrompt": "Descartar alterações não salvas na imagem {name}?",
+  "raster.adjust": "Ajustar"
 }
