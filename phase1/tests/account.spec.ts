@@ -76,9 +76,15 @@ for (const [locale, t] of Object.entries(catalogues)) {
     await dialog
       .getByRole("button", { name: t["account.plan"], exact: true })
       .click();
-    await expect(
-      dialog.getByRole("button", { name: t["account.soon"] }),
-    ).toBeDisabled();
+    for (const tier of ["pro", "team", "enterprise"])
+      await expect(
+        dialog.getByRole("group", { name: t["account.tier." + tier] }),
+      ).toBeVisible();
+    await expect(dialog).toContainText("$12");
+    await dialog
+      .getByRole("button", { name: t["account.price.yearly"], exact: true })
+      .click();
+    await expect(dialog).toContainText("$120");
     await expect(dialog).toContainText(t["account.noBilling"]);
   });
 }

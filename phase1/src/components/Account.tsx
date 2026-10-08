@@ -18,6 +18,7 @@ import {
   localDay,
   type LocalProfile,
 } from "../lib/account";
+import { Check } from "../lib/icons";
 import { Button } from "./ui/button";
 import {
   Dialog,
@@ -175,6 +176,85 @@ function Heatmap() {
     </>
   );
 }
+
+type Tier = {
+  id: "pro" | "team" | "enterprise";
+  perks: string[];
+};
+const TIERS: Tier[] = [
+  { id: "pro", perks: ["inIndividual", "cloud", "credits"] },
+  { id: "team", perks: ["inPro", "libraries", "roles"] },
+  { id: "enterprise", perks: ["inTeam", "sso", "selfHost", "support"] },
+];
+function PricingCards() {
+  const { t } = useT();
+  const [billing, setBilling] = useState<"monthly" | "yearly">("monthly");
+  const price = (id: Tier["id"]) => {
+    if (id === "enterprise")
+      return { amount: t("account.price.custom"), unit: "" };
+    if (id === "team")
+      return { amount: "$19", unit: t("account.price.perUserMonth") };
+    return billing === "monthly"
+      ? { amount: "$12", unit: t("account.price.perMonth") }
+      : { amount: "$120", unit: t("account.price.perYear") };
+  };
+  return (
+    <div className="pricing">
+      <div
+        className="pricing-toggle"
+        role="group"
+        aria-label={t("account.price.billing")}
+      >
+        {(["monthly", "yearly"] as const).map((b) => (
+          <button
+            key={b}
+            aria-pressed={billing === b}
+            onClick={() => setBilling(b)}
+          >
+            {t("account.price." + b)}
+          </button>
+        ))}
+      </div>
+      <div className="pricing-grid">
+        {TIERS.map(({ id, perks }) => {
+          const { amount, unit } = price(id);
+          const name = t("account.tier." + id);
+          return (
+            <div
+              role="group"
+              key={id}
+              className={`pricing-card${id === "pro" ? " featured" : ""}`}
+              aria-labelledby={"pricing-" + id}
+            >
+              <h3 id={"pricing-" + id}>{name}</h3>
+              <div className="pricing-price">
+                <strong>{amount}</strong>
+                {unit && <span>{unit}</span>}
+              </div>
+              <p className="pricing-desc">
+                {t("account.tier." + id + ".desc")}
+              </p>
+              <ul>
+                {perks.map((k) => (
+                  <li key={k}>
+                    <Check size={14} aria-hidden="true" />
+                    {t("account.perk." + k)}
+                  </li>
+                ))}
+              </ul>
+              <button
+                className="pricing-select"
+                aria-label={t("account.price.select", { plan: name })}
+              >
+                {t("account.price.choose")}
+              </button>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
 export function Account() {
   const { t } = useT();
   const profile = useSyncExternalStore(
@@ -324,18 +404,7 @@ export function Account() {
                         <span>{t("account.noCloud")}</span>
                       </div>
                     </div>
-                    <div className="account-pro-card">
-                      <Sparkles size={22} />
-                      <div>
-                        <h3>Pro</h3>
-                        <p>{t("account.proDescription")}</p>
-                      </div>
-                      <span title={t("account.soon")} tabIndex={0}>
-                        <button disabled title={t("account.soon")}>
-                          {t("account.soon")}
-                        </button>
-                      </span>
-                    </div>
+                    <PricingCards />
                     <p className="account-plan-note">
                       {t("account.noBilling")}
                     </p>
