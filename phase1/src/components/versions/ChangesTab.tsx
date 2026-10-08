@@ -6,6 +6,7 @@ import {Button} from '../ui/button';
 import {ChangesController,blockedKey,errorKey,type ChangesState} from './controller';
 import {isSelectable,kindGlyph,kindKey} from './selection';
 import {withGit} from './vocab';
+import {TrustRepo} from './TrustRepo';
 
 export interface ChangesTabProps{
  backend:GitBackend;
@@ -32,18 +33,19 @@ export function ChangesTab({backend,unsavedFiles,onSaveFiles,advanced,onVersionS
  const s=useSyncExternalStore(c.subscribe,c.getState,c.getState);
  useEffect(()=>{void c.refresh();},[c]);
  const saveFirst=async()=>{await onSaveFiles();await c.refresh();};
- return <ChangesView s={s} c={c} t={t} unsavedFiles={unsavedFiles} advanced={advanced} onSaveFiles={saveFirst} onSaved={onVersionSaved}/>;}
+ return <ChangesView backend={backend} s={s} c={c} t={t} unsavedFiles={unsavedFiles} advanced={advanced} onSaveFiles={saveFirst} onSaved={onVersionSaved}/>;}
 
 type T=(k:string,p?:Record<string,string|number>)=>string;
 const btn='h-8 rounded-sm border border-subtle bg-transparent px-3 text-xs text-ink-2 disabled:opacity-40';
 /** Pure view of a controller state (also used by the SSR tests). */
-export function ChangesView({s,c,t,unsavedFiles,advanced,onSaveFiles,onSaved}:{s:ChangesState;c:ChangesController;t:T;unsavedFiles:number;advanced:boolean;onSaveFiles:()=>void;onSaved?:()=>void}){
+export function ChangesView({backend,s,c,t,unsavedFiles,advanced,onSaveFiles,onSaved}:{backend?:GitBackend;s:ChangesState;c:ChangesController;t:T;unsavedFiles:number;advanced:boolean;onSaveFiles:()=>void;onSaved?:()=>void}){
  const errMsg=s.error?<div role="alert" data-testid="versions-error" className="rounded-sm border border-subtle p-2 text-[11px] text-ink">{t(errorKey(s.error.code))}{advanced&&s.error.detail&&<details className="mt-1"><summary>{t('versions.error.detail')}</summary><pre className="whitespace-pre-wrap break-words font-mono text-[10px]">{s.error.detail}</pre></details>}</div>:null;
  if(s.phase==='loading')return <div className="p-4 text-xs text-ink-3" role="status" data-testid="versions-loading">{t('versions.loading')}</div>;
  if(s.phase==='repo'&&s.repoState){const st=s.repoState;
   return <div className="flex flex-col gap-3 p-4 text-xs" data-testid="versions-state">
    <p role="status" className="leading-[1.7] text-ink-2">{t(blockedKey(st))}</p>
    {st.kind==='no-repo'&&<><p className="text-[11px] text-ink-3">{t('versions.init.hint')}</p><Button variant="primary" size="normal" disabled={s.busy==='init'} onClick={()=>void c.init()} data-testid="versions-init">{withGit(t('versions.init'),'git init',advanced)}</Button></>}
+   {st.kind==='blocked'&&st.reason==='untrusted-repo'&&backend&&<TrustRepo t={t} onTrust={async()=>{await backend.trustRepo();await c.refresh();}}/>}
    {st.kind==='blocked'&&<Button className={btn} onClick={()=>void c.refresh()}>{t('versions.refresh')}</Button>}
    {errMsg}</div>;}
  if(s.phase==='error'||!s.status)return <div className="flex flex-col gap-3 p-4 text-xs" data-testid="versions-state">{errMsg}<Button className={btn} onClick={()=>void c.refresh()}>{t('versions.refresh')}</Button></div>;

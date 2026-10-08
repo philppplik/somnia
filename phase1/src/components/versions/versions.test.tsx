@@ -7,7 +7,7 @@ import {createFakeBackend,fakeChange,fakeRepo} from './fakeBackend';
 import {suggestSubject} from './commitText';
 import {defaultSelection,reconcileSelection} from './selection';
 import {parseGitError} from './backend';
-import {countUnsaved} from './VersionsHost';
+import {countUnsaved} from './countUnsaved';
 import {translate} from '../../lib/i18n';
 import {CATALOGUES} from '../../lib/i18n';
 

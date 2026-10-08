@@ -11,6 +11,7 @@ import {clearDraft} from './draftSession';
 import {downloadProject} from './exportProject';
 import {loadFolderMedia} from './folderMedia';
 import {readProjectDocuments} from './projectIndex';
+import {setVersionsSession} from './versionsSession';
 export type Revision={exists:boolean;hash:string|null};
 export type FileEvent={projectId:string;path:string;clientRevision:number;state:'dirty'|'saving'|'saved'|'error'|'conflict';diskRevision:Revision;error:string|null;durability:string|null};
 export type Read={content:string|null;revision:Revision;status:FileEvent};
@@ -31,6 +32,7 @@ export interface FilePort{
 export async function installFileAdapter(port:FilePort){
 
  let projectId:string|null=null,model:EditorProject|null=null,disconnect:()=>void=()=>{},unsubscribe:()=>void=()=>{},queue:Promise<void>=Promise.resolve(),counter=0;
+ let pendingWork=0,suppressStage=false;const restoreHeld=new Set<string>();
  let baselines=new Map<string,Revision>(),current=new Map<string,number>(),staged=new Map<string,{revision:number;content:string}>(),saved=new Map<string,string>();
  const fail=(error:unknown)=>patchState({notice:`Disk operation failed: ${error instanceof Error?error.message:typeof error==='string'?error:JSON.stringify(error)}. Edits remain unsaved.`});
  const handle=async(event:FileEvent)=>{
@@ -53,10 +55,10 @@ export async function installFileAdapter(port:FilePort){
   patchState({notice:`Deleted ${path} on disk. Undo restores it on the next autosave.`});
  }).catch(fail);};
  const enqueueStage=(files:Record<string,string>,explicit=false)=>{
-  for(const [path,content] of Object.entries(files)){const revision=++counter;current.set(path,revision);queue=queue.then(async()=>{if(!projectId||(!explicit&&isAgentAutosaveHeld(path)))return;if(!baselines.has(path)){const read=await port.invoke<Read>('read_file',{projectId,path});baselines.set(path,read.revision);}
+  for(const [path,content] of Object.entries(files)){const revision=++counter;current.set(path,revision);pendingWork++;queue=queue.then(async()=>{if(!projectId||(!explicit&&(isAgentAutosaveHeld(path)||restoreHeld.has(path))))return;if(!baselines.has(path)){const read=await port.invoke<Read>('read_file',{projectId,path});baselines.set(path,read.revision);}
    // Capture exact accepted snapshot. Do not clear dirty if journaling rejects.
    const event=await port.invoke<FileEvent>('stage_edit',{projectId,path,content,clientRevision:revision});staged.set(path,{revision,content});await handle(event);
-  }).catch(fail);}
+  }).catch(fail).finally(()=>{pendingWork--;});}
  };
  const save=async()=>{
 
@@ -67,17 +69,36 @@ export async function installFileAdapter(port:FilePort){
    if(model.files[path]===saved.get(path))continue;
    if(staged.get(path)?.content!==model.files[path])throw Error(`Latest edits for ${path} were not journaled. Save stopped; retry after fixing the journal error.`);
    const snapshot=staged.get(path)!;const event=await port.invoke<FileEvent>('save_file',{projectId,path,expectedRevision:baselines.get(path)});await handle(event);
-   if(event.state==='saved')releaseAgentAutosave(path);
+   if(event.state==='saved'){releaseAgentAutosave(path);restoreHeld.delete(path);}
    if(event.clientRevision!==snapshot.revision)throw Error(`Save revision changed for ${path}. Review unsaved edits.`);
   }
  };
- const close=async(keepRecovery:boolean)=>{if(heldAgentPaths().length&&getState().isDirty&&!window.confirm('Applied AI changes are only in editor memory and are not in disk recovery. Discard these unsaved changes and close the project?'))throw Error('Close cancelled. Save the applied AI changes first, or explicitly discard them.');await queue;if(projectId)await port.invoke('close_project',{projectId,keepRecovery});unsubscribe();disconnect();projectId=null;model=null;clearAgentAutosaveHolds();patchState({nativeConnected:false,storage:'memory',diskComparison:null});};
+ const close=async(keepRecovery:boolean)=>{if(heldAgentPaths().length&&getState().isDirty&&!window.confirm('Applied AI changes are only in editor memory and are not in disk recovery. Discard these unsaved changes and close the project?'))throw Error('Close cancelled. Save the applied AI changes first, or explicitly discard them.');await queue;if(projectId)await port.invoke('close_project',{projectId,keepRecovery});unsubscribe();disconnect();projectId=null;model=null;restoreHeld.clear();setVersionsSession(null);clearAgentAutosaveHolds();patchState({nativeConnected:false,storage:'memory',diskComparison:null});};
  const attach=async(selected:{projectId:string;name:string},files:Record<string,string>,nextBaselines:Map<string,Revision>,candidate?:EditorProject)=>{
-  clearAgentAutosaveHolds();projectId=selected.projectId;counter=0;baselines=nextBaselines;current=new Map();staged=new Map();saved=new Map(Object.entries(files));
+  clearAgentAutosaveHolds();restoreHeld.clear();projectId=selected.projectId;counter=0;baselines=nextBaselines;current=new Map();staged=new Map();saved=new Map(Object.entries(files));
   model=candidate??new EditorProject(files);disconnect=connectEditorProject(model,{name:selected.name,alreadySaved:true});
-  unsubscribe=model.subscribe('internal',tx=>{const changes:Record<string,string>={};const removed:string[]=[];for(const path of tx.changedFiles)if(model&&path in model.files)changes[path]=model.files[path];else removed.push(path);enqueueStage(changes);removed.forEach(enqueueDelete);});
+  unsubscribe=model.subscribe('internal',tx=>{if(suppressStage)return;const changes:Record<string,string>={};const removed:string[]=[];for(const path of tx.changedFiles)if(model&&path in model.files)changes[path]=model.files[path];else removed.push(path);enqueueStage(changes);removed.forEach(enqueueDelete);});
   patchState({nativeConnected:true,storage:port.volatile?'tab':'disk',notice:port.connectNotice??'Folder connected. Native autosave after 1s idle / 5s continuous edits.'});
-  const recoveries=await port.invoke<Recovery[]>('recovery_list',{projectId});for(const recovery of recoveries){registerCommand({id:`recovery.restore.${recovery.path}`,title:`Restore recovery: ${recovery.path}`,category:'Project',enabled:()=>!!projectId,run:async()=>{if(!window.confirm(`Restore recovery for ${recovery.path}? The recovered file enters native autosave immediately. Conflicting disk changes stop saving.`))return;const r=await port.invoke<Recovery>('recovery_read',{projectId,path:recovery.path});if(!(r.path in model!.files))throw Error('Recovery path is not in the opened model. Use a project containing this file.');const revision=++counter;const event=await port.invoke<FileEvent>('recovery_restore',{projectId,path:r.path,clientRevision:revision});current.set(r.path,revision);staged.set(r.path,{revision,content:r.content});model!.transact({origin:'internal',operations:[{type:'replaceSource',file:r.path,text:r.content}]});refreshProject();await handle(event);patchState({notice:`Restored ${r.path} from recovery. Native autosave is active; conflicting disk changes are held.`});}});}
+   {const pid=selected.projectId;setVersionsSession({projectId:pid,port,nextRevision:()=>++counter,
+   hasUnsavedBuffers:()=>pendingWork>0||restoreHeld.size>0||(!!model&&Object.entries(model.files).some(([f,c])=>c!==saved.get(f))),
+   settle:async()=>{await queue;},
+   applyRecoveryRestore:async(path,content,event)=>{
+    if(projectId!==pid||!model)throw Error('The project changed. Reopen History for this project.');
+    if(!(path in model.files))throw Error('Recovery path is not in the opened model. Use a project containing this file.');
+    restoreHeld.add(path);current.set(path,event.clientRevision);staged.set(path,{revision:event.clientRevision,content});
+    suppressStage=true;try{model.transact({origin:'internal',operations:[{type:'replaceSource',file:path,text:content}]});}finally{suppressStage=false;}
+    refreshProject();await handle(event);},
+   reloadFromDisk:async()=>{
+    await queue;if(projectId!==pid||!model)throw Error('The project changed. Reopen History for this project.');
+    const changed:string[]=[];const onDisk=new Set(await port.invoke<string[]>('list_files',{projectId:pid}));
+    for(const path of Object.keys(model.files)){if(!onDisk.has(path))continue;
+     const read=await port.invoke<Read>('read_file',{projectId:pid,path});if(read.content===null||read.content===model.files[path]){if(read.content!==null)baselines.set(path,read.revision);continue;}
+     suppressStage=true;try{model.transact({origin:'internal',operations:[{type:'replaceSource',file:path,text:read.content}]});}finally{suppressStage=false;}
+     baselines.set(path,read.revision);saved.set(path,read.content);staged.delete(path);markFileSaved(path,read.content);changed.push(path);}
+    if(changed.length)refreshProject();
+    const added=[...onDisk].filter(f=>!(f in model!.files)),removed=Object.keys(model.files).filter(f=>!onDisk.has(f));
+    return{changed,note:added.length||removed.length?`${added.length} added and ${removed.length} removed file(s) on disk are not mirrored into the open editor. Reopen the project to see them.`:undefined};}});}
+ const recoveries=await port.invoke<Recovery[]>('recovery_list',{projectId});for(const recovery of recoveries){registerCommand({id:`recovery.restore.${recovery.path}`,title:`Restore recovery: ${recovery.path}`,category:'Project',enabled:()=>!!projectId,run:async()=>{if(!window.confirm(`Restore recovery for ${recovery.path}? The recovered file enters native autosave immediately. Conflicting disk changes stop saving.`))return;const r=await port.invoke<Recovery>('recovery_read',{projectId,path:recovery.path});if(!(r.path in model!.files))throw Error('Recovery path is not in the opened model. Use a project containing this file.');const revision=++counter;const event=await port.invoke<FileEvent>('recovery_restore',{projectId,path:r.path,clientRevision:revision});current.set(r.path,revision);staged.set(r.path,{revision,content:r.content});model!.transact({origin:'internal',operations:[{type:'replaceSource',file:r.path,text:r.content}]});refreshProject();await handle(event);patchState({notice:`Restored ${r.path} from recovery. Native autosave is active; conflicting disk changes are held.`});}});}
   for(const recovery of recoveries)registerCommand({id:`recovery.discard.${recovery.path}`,title:`Discard recovery: ${recovery.path}`,category:'Project',enabled:()=>!!projectId,run:async()=>{if(window.confirm(`Permanently discard the recovery snapshot for ${recovery.path}?`))await port.invoke('recovery_discard',{projectId,path:recovery.path});}});
   if(recoveries.length)patchState({notice:`${recoveries.length} recovery snapshots available. Open Commands and choose Restore recovery. Nothing restored automatically.`});
  };

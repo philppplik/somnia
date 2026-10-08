@@ -10,7 +10,7 @@ import {getGitBackend} from './backend';
  * Left-sidebar "Versions" panel. Changes tab is this package; History is a slot for package C.
  * Rendered only through its props: backend, unsaved-file count and the save action come from the app.
  */
-export function VersionsPanel({backend,unsavedFiles,onSaveFiles,historySlot}:{backend?:GitBackend|null;unsavedFiles:number;onSaveFiles:()=>Promise<void>|void;historySlot?:ReactNode}){
+export function VersionsPanel({backend,unsavedFiles,onSaveFiles,historySlot,compareSlot}:{backend?:GitBackend|null;unsavedFiles:number;onSaveFiles:()=>Promise<void>|void;historySlot?:ReactNode;compareSlot?:ReactNode}){
  const {t}=useT();const adv=useSyncExternalStore(subscribeAdvanced,getAdvanced,getAdvanced);
  const b=backend??getGitBackend();const [tab,setTab]=useState('changes');const [rev,setRev]=useState(0);
  return <section className="flex h-full min-h-0 flex-col" aria-label={t('versions.title')} data-testid="versions-panel">
@@ -18,8 +18,9 @@ export function VersionsPanel({backend,unsavedFiles,onSaveFiles,historySlot}:{ba
    <label className="flex items-center gap-1.5 text-[11px] text-ink-2" title={t('versions.advanced.hint')}><input type="checkbox" role="switch" checked={adv} onChange={e=>setAdvanced(e.target.checked)} data-testid="versions-advanced"/>{t('versions.advanced')}</label></div>
   {!b?<p className="p-4 text-xs text-ink-3" role="status" data-testid="versions-nobackend">{t('versions.noBackend')}</p>:
   <Tabs value={tab} onValueChange={v=>setTab(String(v))} className="min-h-0 flex-1">
-   <TabsList aria-label={t('versions.title')}><TabsTrigger value="changes">{t('versions.tab.changes')}</TabsTrigger><TabsTrigger value="history">{t('versions.tab.history')}</TabsTrigger></TabsList>
+   <TabsList aria-label={t('versions.title')}><TabsTrigger value="changes">{t('versions.tab.changes')}</TabsTrigger><TabsTrigger value="history">{t('versions.tab.history')}</TabsTrigger>{compareSlot&&<TabsTrigger value="compare">{t('versions.tab.compare')}</TabsTrigger>}</TabsList>
    <TabsContent value="changes"><ChangesTab backend={b} unsavedFiles={unsavedFiles} onSaveFiles={onSaveFiles} advanced={adv} onVersionSaved={()=>setRev(r=>r+1)}/></TabsContent>
    <TabsContent value="history" key={rev}>{historySlot??<p className="p-4 text-xs text-ink-3">{t('versions.history.soon')}</p>}</TabsContent>
+  {compareSlot&&<TabsContent value="compare">{compareSlot}</TabsContent>}
   </Tabs>}
  </section>;}
