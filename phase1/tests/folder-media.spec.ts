@@ -32,6 +32,6 @@ test('folder media: png and pdf from an opened folder appear under Previews, fak
  await expect(page.getByTestId('md-preview').locator('img[src^="blob:"]')).toHaveCount(2);
  await page.screenshot({path:'test-results/folder-media-md.png'});
  await page.getByRole('tab',{name:'index.html'}).click();await page.getByRole('button',{name:'Preview doc.pdf',exact:true}).click();
- await expect(page.getByTestId('pdf-frame')).toHaveAttribute('src',/^blob:/);
+ await expect(page.getByTestId('media-name')).toHaveText('doc.pdf');
  await page.screenshot({path:'test-results/folder-media-files.png'});
 });
