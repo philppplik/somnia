@@ -1818,5 +1818,10 @@
   "settings.modified.projectChip": "Can differ per project",
   "settings.modified.projectHint": "A project can override this setting.",
   "settings.results.title": "Search results",
-  "settings.results.command": "Command"
+  "settings.results.command": "Command",
+  "settings.modified.export": "Export changes",
+  "settings.modified.import": "Import settings",
+  "settings.modified.importNone": "Nothing to import.",
+  "settings.modified.imported": "Imported {n} settings.",
+  "settings.modified.importSkipped": "{n} skipped."
 }

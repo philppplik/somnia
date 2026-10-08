@@ -351,7 +351,7 @@ export function Settings() {
   const renderSection = (section: string) => (
     <section data-settings-section={section} aria-label={sectionTitle(section)} key={section}>
       <h2>{sectionTitle(section)}</h2>
-      {section === "Modified" && <ModifiedSettings state={state} onReset={resetSettings} onOpenSection={(name) => { setQuery(""); setSection(name); }} />}
+      {section === "Modified" && <ModifiedSettings state={state} onReset={resetSettings} onImport={(patch) => change(patch as Partial<AppState>)} onOpenSection={(name) => { setQuery(""); setSection(name); }} />}
       {section === "Collaboration" && <CollabPreferences/>}
       {section === "AI" && <AgentSettings searchQuery={query} legacyPrivacy={["AI Privacy","AI privacy"].includes(state.settingsSection)}/>}
       {section === "Advanced" && (

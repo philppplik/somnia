@@ -1818,5 +1818,10 @@
   "settings.modified.projectChip": "Pro Projekt abweichend möglich",
   "settings.modified.projectHint": "Ein Projekt kann diese Einstellung überschreiben.",
   "settings.results.title": "Suchergebnisse",
-  "settings.results.command": "Befehl"
+  "settings.results.command": "Befehl",
+  "settings.modified.export": "Änderungen exportieren",
+  "settings.modified.import": "Einstellungen importieren",
+  "settings.modified.importNone": "Nichts zu importieren.",
+  "settings.modified.imported": "{n} Einstellungen importiert.",
+  "settings.modified.importSkipped": "{n} übersprungen."
 }
