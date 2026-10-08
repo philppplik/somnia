@@ -10,9 +10,8 @@ use crate::oauth_store::{SecretBackend, StoreError};
 use serde::{Deserialize, Serialize};
 use std::fmt;
 
-/// Client id of a GitHub OAuth App with device flow enabled (public by design, not a secret).
-/// EMPTY until the owner approves registering that app; while empty, login fails closed with NotConfigured.
-pub const CLIENT_ID: &str = "";
+/// Client id of the "Somnia" GitHub OAuth App (device flow on, token expiry off; public by design, not a secret).
+pub const CLIENT_ID: &str = "Ov23licQQ0Gt10vUeqn8";
 /// Identity only. Broader scopes need their own explicit decision.
 pub const SCOPE: &str = "read:user";
 pub const DEVICE_CODE_URL: &str = "https://github.com/login/device/code";

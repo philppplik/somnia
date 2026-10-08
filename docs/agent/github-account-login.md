@@ -27,5 +27,5 @@ Chosen because Somnia is a distributed desktop app. The web flow and PKCE token 
 
 ## Open items
 
-- `CLIENT_ID` in `github_account.rs` is empty. A GitHub OAuth App with "Enable Device Flow" must be registered under the owner's account; until then the button reports "not configured" instead of faking a login.
+- The OAuth App "Somnia" (owner philppplik, device flow on, user token expiry off, no client secret created) is registered; `CLIENT_ID` is set. Its page: github.com/settings/applications/3915710.
 - Real login untested. The Rust commands in `desktop.rs` were reviewed but not compiled (no Tauri system libs in the authoring sandbox); CI must build them.
