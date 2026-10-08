@@ -1,0 +1,6 @@
+import React from 'react';
+import {createRoot} from 'react-dom/client';
+import {VisualDiff} from '../VisualDiff';
+const source = (color: string, text: string) => `<link rel="stylesheet" href="style.css"><style>.card{background:${color}}</style><script>window.parent.evil=true;fetch('https://blocked.invalid/script')</script><img src="https://blocked.invalid/img" onerror="window.parent.evil=true"><iframe src="https://blocked.invalid/frame"></iframe><div class="card"><h1>${text}</h1><p>Local static HTML, separate snapshots.</p></div>`;
+const comparison = {path:'pages/very-long-project-name/home.html',before:{label:'HEAD',files:{'pages/very-long-project-name/home.html':source('#e4dcff','Original layout'),'pages/very-long-project-name/style.css':'.card{margin:32px;padding:40px;border-radius:24px;font-family:system-ui} @import "https://blocked.invalid/css";body{background:url(https://blocked.invalid/background)}'}},after:{label:'Worktree',files:{'pages/very-long-project-name/home.html':source('#c5eeea','Updated layout'),'pages/very-long-project-name/style.css':'.card{margin:32px;padding:40px;border-radius:24px;font-family:system-ui}'}}};
+createRoot(document.getElementById('root')!).render(<VisualDiff comparison={comparison}/>);

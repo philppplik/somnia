@@ -1,0 +1,24 @@
+.visual-diff { color:var(--text-primary, #20212a); background:var(--bg-panel, #f8f9fb); border:1px solid var(--border-subtle, #9b9ba5); border-radius:25px; padding:16px; min-width:0; max-width:100%; font-size:13px; }
+.visual-diff header, .visual-diff header [role=group], .visual-diff-labels, .visual-diff-viewport { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+.visual-diff header strong { overflow-wrap:anywhere; min-width:0; flex:1 1 180px; }
+.visual-diff button, .visual-diff select { font:inherit; color:inherit; background:var(--bg-base, #fff); border:1px solid var(--border-subtle, #9b9ba5); border-radius:8px; padding:6px 10px; }
+.visual-diff button[aria-pressed=true] { outline:2px solid var(--accent, #724de8); outline-offset:1px; }
+.visual-diff :focus-visible { outline:3px solid var(--accent, #724de8); outline-offset:3px; }
+.visual-diff-limits, .visual-diff-viewport span { font-size:12px; line-height:1.5; }
+.visual-diff-labels span { flex:1 1 140px; overflow-wrap:anywhere; }
+.visual-diff [role=alert] { border:2px solid var(--accent, #724de8); padding:8px; }
+.visual-diff-slider-label { display:flex; align-items:center; flex-wrap:wrap; gap:12px; margin:12px 0; }
+.visual-diff input[type=range] { flex:1 1 180px; accent-color:var(--accent, #724de8); }
+.visual-diff-scroll { max-width:100%; overflow:auto; border:1px solid var(--border-subtle, #9b9ba5); margin-top:12px; border-radius:12px; }
+.visual-diff iframe { display:block; border:0; background:white; pointer-events:none; color-scheme:light; }
+.visual-diff-overlay { position:relative; overflow:hidden; }
+.visual-diff-frame { position:absolute; inset:0; }
+.visual-diff-divider { position:absolute; inset-block:0; width:3px; background:var(--accent, #724de8); box-shadow:0 0 0 1px white; }
+.visual-diff-badge { position:absolute; top:8px; background:#20212a; color:white; border-radius:8px; padding:4px 8px; }
+.visual-diff-badge-before { left:8px; }.visual-diff-badge-after { right:8px; }
+.visual-diff-pair { display:flex; gap:16px; background:var(--bg-base, #fff); }
+.visual-diff-pair p { margin:0; padding:8px; }
+.visual-diff-code { overflow:auto; }.visual-diff-code table { width:100%; border-collapse:collapse; }
+.visual-diff-code th, .visual-diff-code td { text-align:left; border:1px solid var(--border-subtle, #9b9ba5); padding:8px; vertical-align:top; }
+.visual-diff-code code { white-space:pre-wrap; overflow-wrap:anywhere; }
+.visual-diff-line-number { font-variant-numeric:tabular-nums; padding-right:12px; opacity:.7; }
