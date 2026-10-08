@@ -1,5 +1,5 @@
 /** Structural port: import the real EditorProject in the integrator, not in this module. */
-export type Origin = 'canvas' | 'code' | 'history' | 'external' | 'internal';
+export type Origin = 'canvas' | 'code' | 'history' | 'external' | 'internal' | 'ai';
 export interface EditorNode { id: string; tag: string; attrs: Record<string,string>; children: EditorNode[]; from:number; to:number; contentFrom:number; contentTo:number; locked:boolean; hidden:boolean }
 export type Operation =
  | {type:'formatText';file:string;nodeId:string;from:number;to:number;mark:'strong'|'em'|'u'}
@@ -19,5 +19,5 @@ export interface EditorProjectPort {
  tree(file:string):EditorNode[]; node(file:string,id:string):EditorNode;
  subscribe(origin:Origin,listener:(transaction:unknown)=>void):()=>void;
  transact(input:{origin:Origin;operations:Operation[];expectedRevision?:number;group?:string}):unknown|null;
- undo():unknown|null; redo():unknown|null;
+ undoGroup(group:string):unknown|null; undo():unknown|null; redo():unknown|null;
 }

@@ -25,9 +25,9 @@ export const agentFileTools: readonly AgentToolDefinition[] = [
 const byteLength = (value: string) => new TextEncoder().encode(value).byteLength;
 export class AgentProjectTools {
   private readonly staged = new Map<string, AgentFileProposal>();
-  constructor(private readonly access: AgentProjectAccess, private readonly maxFileBytes = 256 * 1024, private readonly maxProposalBytes = 1024 * 1024, private readonly extra?: { registry: AgentToolRegistry; editor?: AgentEditorAccess; grants?: AgentToolGrants }) {}
+  constructor(private readonly access: AgentProjectAccess, private readonly maxFileBytes = 256 * 1024, private readonly maxProposalBytes = 1024 * 1024, private readonly extra?: { registry: AgentToolRegistry; editor?: AgentEditorAccess; grants?: AgentToolGrants; nativeOnly?:boolean }) {}
   /** Tool definitions sent to the model: the three file tools plus any enabled registry tools. */
-  definitions(): AgentToolDefinition[] { return [...agentFileTools, ...(this.extra?.registry.definitions(this.extra.grants) ?? [])]; }
+  definitions(): AgentToolDefinition[] { return [...(this.extra?.nativeOnly?[]:agentFileTools), ...(this.extra?.registry.definitions(this.extra.grants) ?? [])]; }
   private readableFiles(): Record<string, string> {
     const out: Record<string, string> = {};
     for (const [path, text] of Object.entries(this.access.files())) {
@@ -65,6 +65,7 @@ export class AgentProjectTools {
     if (this.extra?.registry.has(call.name)) {
       return this.extra.registry.run(call.name, args, { files: () => this.readableFiles(), propose: async (p, c, sig) => { await this.stage(p, c, sig); }, editor: this.extra.editor }, signal, this.extra.grants);
     }
+    if(this.extra?.nativeOnly)throw Error('Only scoped native studio tools are available.');
     if (call.name === 'list_files') {
       if (Object.keys(args).length) throw Error('Unexpected list arguments.');
       const paths = Object.keys(files).filter(path => {

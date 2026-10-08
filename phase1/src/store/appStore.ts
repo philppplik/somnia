@@ -55,18 +55,21 @@ export function refreshProject(){
  patchState({files,nodes,activeFile,openFiles,designFile,revision:core.revision,isDirty:isDirty(),selectedElementIds:state.selectedElementIds.filter(id=>ids.has(id)),selectedElementId:state.selectedElementId&&ids.has(state.selectedElementId)?state.selectedElementId:null});
 }
 /** Call after initial folder read. Cleanup on close/unmount. Core is the only document/history owner. */
+const projectTxListeners=new Set<(tx:{operations?:Operation[]})=>void>();
+export function subscribeProjectTransactions(fn:(tx:{operations?:Operation[]})=>void){projectTxListeners.add(fn);return()=>{projectTxListeners.delete(fn);};}
 let projectGeneration=0;
 export function getProjectGeneration(){return projectGeneration;}
 export function connectEditorProject(project:EditorProjectPort,options:{name?:string;alreadySaved?:boolean}={}){
  projectGeneration++;unsubscribeCore?.();core=project;savedFiles=options.alreadySaved?{...project.files}:{};
  patchState({zoom:state.canvasPrefs.defaultZoom,viewport:state.canvasPrefs.defaultViewport,responsiveScope:'auto',coreConnected:true,projectName:options.name??'Untitled project',selectedElementId:null,notice:'In-memory project. Native filesystem service is not connected.'});
- unsubscribeCore=project.subscribe('internal',(tx)=>{if(tx&&typeof tx==='object'&&'origin' in tx&&(tx.origin==='canvas'||tx.origin==='code'))recordActivity('edit');refreshProject();});refreshProject();
+ unsubscribeCore=project.subscribe('internal',(tx)=>{if(tx&&typeof tx==='object'&&'operations' in tx)for(const fn of projectTxListeners)fn(tx as {operations:Operation[]});if(tx&&typeof tx==='object'&&'origin' in tx&&(tx.origin==='canvas'||tx.origin==='code'))recordActivity('edit');refreshProject();});refreshProject();
  return()=>{if(core!==project)return;projectGeneration++;unsubscribeCore?.();unsubscribeCore=null;core=null;patchState({responsiveScope:'auto',coreConnected:false,files:{},nodes:[],selectedElementId:null,isDirty:false,lastSavedAt:null,notice:'Project closed.'});};
 }
 export function applyOperations(operations:Operation[],origin:Origin='canvas',group?:string){
  if(!core)throw new Error('Editor core is not connected.');
  const result=core.transact({origin,operations,expectedRevision:core.revision,group});refreshProject();return result;
 }
+export function undoAIGroup(group:string){if(!core)throw Error('Editor core is not connected.');const result=core.undoGroup(group);refreshProject();return result;}
 export function applyHistory(direction:'undo'|'redo'){
  if(!core)throw new Error('Editor core is not connected.');
  const result=core[direction]();refreshProject();patchState({notice:result?`${direction==='undo'?'Undid':'Redid'} document change.`:`Nothing to ${direction}.`});

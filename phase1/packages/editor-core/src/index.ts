@@ -5,7 +5,7 @@ const ATTRS='(?:\\s+[^\\s"\'<>\\/=]+(?:\\s*=\\s*(?:"[^"<>]*"|\'[^\'<>]*\'|[^\\s"
 const TAG_G=new RegExp('<\\/?[a-zA-Z][a-zA-Z0-9-]*'+ATTRS+'\\/?>','g');
 const TAG_CAP=new RegExp('<(\\/?)([a-zA-Z][a-zA-Z0-9-]*)'+ATTRS+'(\\/?)>','g');
 const randomUUID = () => globalThis.crypto.randomUUID();
-export type Origin = 'canvas' | 'code' | 'history' | 'external' | 'internal';
+export type Origin = 'canvas' | 'code' | 'history' | 'external' | 'internal' | 'ai';
 export interface EditorNode { id:string; tag:string; attrs:Record<string,string>; children:EditorNode[]; from:number; to:number; contentFrom:number; contentTo:number; locked:boolean; hidden:boolean }
 export type Operation =
  | {type:'formatText';file:string;nodeId:string;from:number;to:number;mark:'strong'|'em'|'u'}
@@ -246,6 +246,7 @@ export class EditorProject {
  }
  private emit(tx:Transaction){this.busy=true;try{for(const l of this.listeners)if(l.origin!==tx.origin){try{l.fn(tx);}catch(e){console.error('Editor subscriber failed',e);}}}finally{this.busy=false;}}
  private history(undo:boolean){if(this.busy)throw new EditorError('reentry','A change is already being applied.');const from=undo?this.past:this.future,to=undo?this.future:this.past,h=from.pop();if(!h)return null;const old={...this.sources};this.restore(undo?h.before:h.after);to.push(h);this._revision++;const tx:Transaction={id:randomUUID(),origin:'history',revision:this.revision,operations:[],patches:[],changedFiles:[...new Set([...Object.keys(old),...Object.keys(this.sources)].filter(f=>old[f]!==this.sources[f]))]};this.emit(tx);return tx;}
+ undoGroup(group:string){if(this.past.at(-1)?.group!==group)throw new EditorError('conflict','Later edits exist. Undo them first or request a new restoration preview.');return this.history(true);}
  undo(){return this.history(true);}
  redo(){return this.history(false);}
 }
