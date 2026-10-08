@@ -10,7 +10,7 @@ before(async()=>{
  server=spawn(process.execPath,['node_modules/vite/bin/vite.js',...(process.env.SOMNIA_PRODUCTION==='1'?['preview']:[]),'--host','127.0.0.1','--port',String(port)],{stdio:'ignore'});
  for(let i=0;i<120;i++){try{if((await fetch(`http://127.0.0.1:${port}`)).ok)break;}catch{}await new Promise(r=>setTimeout(r,100));}
  browser=await chromium.launch({executablePath:process.env.CHROME_PATH||'/usr/bin/google-chrome',headless:true,args:['--no-sandbox','--disable-dev-shm-usage']});
- page=await browser.newPage({viewport:{width:1440,height:900}});
+ page=await browser.newPage({viewport:{width:1440,height:900}});page.on('pageerror',e=>console.log('PAGEERROR',e.message));
  await page.addInitScript('window.__name = (fn) => fn; localStorage.setItem("somnia.themeChoice","light")');await page.goto(`http://127.0.0.1:${port}`);
 });
 after(async()=>{await browser?.close();server?.kill();});
@@ -127,4 +127,29 @@ test('retained real PhotoCraft document layers, masks, undo and release run in t
 test('actual upstream wand and polygon coverage executes in WASM worker',async()=>{
  const result=await page.evaluate(async()=>{const {CraftEngine}=await import('/src/lib/craft/engine.ts');const e=new CraftEngine();await e.init();try{const wand=await e.selection({tool:'wand',width:2,height:1,x:0,y:0,tolerance:0,bytes:new Uint8Array([255,0,0,255,0,0,255,255]).buffer});const polygon=await e.selection({tool:'polygon',width:4,height:4,points:[0,0,4,0,4,4,0,4]});return{wand:wand.ok&&wand.kind==='result'?[...new Uint8Array(wand.bytes)]:[],polygon:polygon.ok&&polygon.kind==='result'?[...new Uint8Array(polygon.bytes)]:[]};}finally{e.dispose();}});
  assert.deepEqual(result.wand,[255,0]);assert.equal(result.polygon.length,16);assert.ok(result.polygon.every(v=>v===255));
+});
+
+test('inline retained layer UI owns history and exports real worker composite',async()=>{
+ await page.getByRole('tab',{name:'third.webp'}).click();await page.getByRole('button',{name:'Undo',exact:true}).click();await page.getByText('320 x 240 px').waitFor();
+ await page.getByRole('tab',{name:'Layers',exact:true}).click();await page.getByRole('button',{name:'Start layered document',exact:true}).click();await page.getByText('PhotoCraft layers · composite export').waitFor();
+ assert.equal(await page.getByTestId('imgedit-rotate-right').isEnabled(),false);
+ await page.getByRole('button',{name:'Duplicate Background',exact:true}).click();await page.getByText('Background copy',{exact:true}).waitFor();
+ await page.getByRole('button',{name:'Toggle Background copy',exact:true}).click();await page.getByRole('button',{name:'Toggle Background',exact:true}).click();
+ const dl=page.waitForEvent('download');await page.getByRole('button',{name:'Save copy...'}).click();const out=await dl;await out.saveAs('/tmp/layer-composite.png');const png=readFileSync('/tmp/layer-composite.png');assert.equal(png.readUInt32BE(16),320);assert.equal(png.readUInt32BE(20),240);
+ await page.getByRole('button',{name:'Undo',exact:true}).click();await page.screenshot({path:'/tmp/raster-layer-ui-light.png'});
+ await page.getByRole('tab',{name:'photo.png'}).click();await page.getByRole('tab',{name:'third.webp'}).click();await page.getByText('Background copy',{exact:true}).waitFor();
+});
+test('inline wand selection uses actual WASM bridge and fill stays undoable',async()=>{
+ await page.getByRole('tab',{name:'other.jpg'}).click();await page.getByRole('button',{name:'Select',exact:true}).click();await page.getByLabel('Selection tool',{exact:true}).selectOption('wand');
+ await page.waitForTimeout(250);const workersBefore=page.workers().length;const canvas=page.getByLabel(/^Image canvas/);const box=(await canvas.boundingBox())!;await page.mouse.click(box.x+box.width/2,box.y+box.height/2);await page.getByRole('button',{name:'Fill',exact:true}).waitFor({state:'visible'});await page.waitForTimeout(150);assert.ok(page.workers().length>workersBefore);
+ await page.waitForTimeout(500);await page.getByRole('button',{name:'Fill',exact:true}).click();await page.screenshot({path:'/tmp/raster-wand-ui-light.png'});
+});
+
+test('inline polygon bridge and retained mask UI preserve image-space selection',async()=>{
+ await page.getByRole('tab',{name:'third.webp'}).click();await page.getByRole('button',{name:'Select',exact:true}).click();await page.getByLabel('Selection tool',{exact:true}).selectOption('lasso');
+ const canvas=page.getByLabel(/^Image canvas/);const box=(await canvas.boundingBox())!;const x=box.x+box.width/2,y=box.y+box.height/2;
+ await page.mouse.move(x-25,y-25);await page.mouse.down();await page.mouse.move(x+25,y-25,{steps:2});await page.mouse.move(x+25,y+25,{steps:2});await page.mouse.move(x-25,y+25,{steps:2});await page.mouse.up();
+ const mask=page.getByRole('button',{name:'Mask from selection',exact:true}).last();await mask.click();await page.getByRole('button',{name:'Remove mask',exact:true}).waitFor();
+ await page.screenshot({path:'/tmp/raster-mask-ui-light.png'});
+ await page.getByRole('button',{name:'Undo',exact:true}).click();await page.getByRole('button',{name:'Mask from selection',exact:true}).last().waitFor();
 });
