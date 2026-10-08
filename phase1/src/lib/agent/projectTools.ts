@@ -1,5 +1,6 @@
 import type { AIProvenance } from './privacy';
 import type { AgentToolCall, AgentToolDefinition } from './types';
+import type { AgentEditorAccess, AgentToolGrants, AgentToolRegistry } from './toolRegistry';
 
 export interface AgentProjectAccess {
   readonly projectId: string;
@@ -24,7 +25,33 @@ export const agentFileTools: readonly AgentToolDefinition[] = [
 const byteLength = (value: string) => new TextEncoder().encode(value).byteLength;
 export class AgentProjectTools {
   private readonly staged = new Map<string, AgentFileProposal>();
-  constructor(private readonly access: AgentProjectAccess, private readonly maxFileBytes = 256 * 1024, private readonly maxProposalBytes = 1024 * 1024) {}
+  constructor(private readonly access: AgentProjectAccess, private readonly maxFileBytes = 256 * 1024, private readonly maxProposalBytes = 1024 * 1024, private readonly extra?: { registry: AgentToolRegistry; editor?: AgentEditorAccess; grants?: AgentToolGrants }) {}
+  /** Tool definitions sent to the model: the three file tools plus any enabled registry tools. */
+  definitions(): AgentToolDefinition[] { return [...agentFileTools, ...(this.extra?.registry.definitions(this.extra.grants) ?? [])]; }
+  private readableFiles(): Record<string, string> {
+    const out: Record<string, string> = {};
+    for (const [path, text] of Object.entries(this.access.files())) {
+      try { validateAgentPath(path); if (this.access.allowed(path, 'list') && this.access.allowed(path, 'read') && !text.includes('\0') && byteLength(text) <= this.maxFileBytes) out[path] = text; } catch { /* hidden from tools */ }
+    }
+    return out;
+  }
+  private async stage(path: string, content: string, signal: AbortSignal): Promise<string> {
+    validateAgentPath(path);
+    const files = this.access.files();
+    const approved = await this.access.authorize?.(path, 'write', signal);
+    signal.throwIfAborted();
+    if (!approved && (!this.access.allowed(path, 'write') || !this.access.allowed(path, 'read'))) throw Error('File access is not authorized.');
+    const original = Object.hasOwn(files, path) ? files[path] : null;
+    if (original !== null && (byteLength(original) > this.maxFileBytes || original.includes('\0'))) throw Error('File is binary or exceeds context limit.');
+    const pending = this.staged.get(path);
+    if (pending && pending.before !== original) throw Error('Editor file changed since proposal. Generate a new proposal.');
+    if (content.includes('\0') || byteLength(content) > this.maxFileBytes) throw Error('Proposed content is binary or exceeds limit.');
+    const total = this.proposals().filter(p => p.path !== path).reduce((n, p) => n + byteLength(p.after), 0) + byteLength(content);
+    if (total > this.maxProposalBytes) throw Error('Proposal set exceeds size limit.');
+    signal.throwIfAborted();
+    this.staged.set(path, { path, before: pending ? pending.before : original, after: content });
+    return JSON.stringify({ path, state: 'proposed', saved: false });
+  }
   get projectId(): string { return this.access.projectId; }
   proposals(): AgentFileProposal[] { return structuredClone([...this.staged.values()]); }
   markProvenance(provenance: AIProvenance): void { for (const p of this.staged.values()) p.provenance = structuredClone(provenance); }
@@ -35,6 +62,9 @@ export class AgentProjectTools {
     try { args = JSON.parse(call.arguments.trim() || '{}'); } catch { throw Error('Tool arguments must be valid JSON.'); }
     if (!args || typeof args !== 'object' || Array.isArray(args)) throw Error('Tool arguments must be an object.');
     const files = this.access.files();
+    if (this.extra?.registry.has(call.name)) {
+      return this.extra.registry.run(call.name, args, { files: () => this.readableFiles(), propose: async (p, c, sig) => { await this.stage(p, c, sig); }, editor: this.extra.editor }, signal, this.extra.grants);
+    }
     if (call.name === 'list_files') {
       if (Object.keys(args).length) throw Error('Unexpected list arguments.');
       const paths = Object.keys(files).filter(path => {

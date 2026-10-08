@@ -3,7 +3,7 @@ import { createAIProvenance } from './privacy';
 import { AgentError, describeAgentError, toAgentError } from './errors';
 import type { AgentErrorCode, AgentErrorDetail } from './errors';
 import type { AgentMessage, AgentProvider, AgentToolCall, AgentUsage } from './types';
-import { AgentProjectTools, agentFileTools } from './projectTools';
+import { AgentProjectTools } from './projectTools';
 import type { AgentFileProposal } from './projectTools';
 
 export type AgentSessionStatus = 'idle' | 'running' | 'review' | 'cancelled' | 'error';
@@ -116,7 +116,7 @@ export class AgentSession {
         let fragments = new Map<number, AgentToolCall>();
         let tokens = this.limits.tokens;
         for (let attempt = 0; ; attempt++) {
-          for await (const event of this.options.provider.stream({ model: this.options.model, messages: clone(outgoing), tools: this.options.tools && !finalStep ? agentFileTools : [], maxOutputTokens: tokens, signal: controller.signal })) {
+          for await (const event of this.options.provider.stream({ model: this.options.model, messages: clone(outgoing), tools: this.options.tools && !finalStep ? this.options.tools.definitions() : [], maxOutputTokens: tokens, signal: controller.signal })) {
             controller.signal.throwIfAborted();
             if (event.type === 'text') { text += event.text; this.emit({ ...event, turnId }); }
             else if (event.type === 'usage') this.emit({ ...event, turnId });

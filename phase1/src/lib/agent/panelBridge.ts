@@ -9,6 +9,8 @@ import type {CustomPrompt} from './settings';
 import {logWarn} from '../log';
 import {AgentSession} from './session';
 import {AgentProjectTools} from './projectTools';
+import {createEditorToolRegistry} from './editorTools';
+import type {AgentEditorAccess} from './toolRegistry';
 import {OllamaProvider} from './providers/ollama';
 import {OpenRouterProvider} from './openRouter';
 import {agentPrivacy,type AIProvenance} from './privacy';
@@ -92,12 +94,15 @@ async function authorize(path:string,action:'read'|'write',signal:AbortSignal){
   if(signal.aborted)abort();
  });
 }
+/** The app registers what the user currently sees (selection, diagnostics). Read-only; absent means the tools report nothing. */
+let editorAccess:AgentEditorAccess|undefined;
+export function setAgentEditorAccess(access:AgentEditorAccess|undefined){editorAccess=access;}
 // Temporary per-call permission passes only after the matching human decision.
 function createTools(project:string){
  return new AgentProjectTools({projectId:project,files:currentFiles,
   authorize:async(path,action,signal)=>{await authorize(path,action,signal);return true;},
   allowed:(path,action)=>epoch===getProjectGeneration()&&(permissions.get(path)?.has(action==='list'?'read':action)||false)
- });
+ },undefined,undefined,{registry:createEditorToolRegistry(),get editor(){return editorAccess;}});
 }
 function panelProposal(set:ChangeSet):AgentProposal {
  const reviews=reviewChangeSet(set);const lines=reviews.flatMap(r=>r.ops.flatMap<DiffLine>(op=>op.t==='same'?[{kind:'ctx' as const,text:op.text}]:[...op.removed.map(text=>({kind:'del' as const,text})),...op.added.map(text=>({kind:'add' as const,text}))]));
