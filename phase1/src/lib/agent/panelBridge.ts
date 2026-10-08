@@ -1,6 +1,8 @@
 import {isTauri} from '@tauri-apps/api/core';
 import {nativeProviderFetch} from './nativeProviderFetch';
 import {OpenAIProvider} from './openAI';
+import {accountAuth} from './accountAuth';
+import type {OpenAIAccountAuth} from './openAIAccount';
 import {ClaudeProvider} from './providers/claude';
 import {loadProviderKey,type AuthProvider} from './providerAuth';
 import type {CustomPrompt} from './settings';
@@ -44,10 +46,24 @@ function guardedOllama(provider:OllamaProvider):AgentProvider {
   finally{controller.abort();release();await pending;request.signal.removeEventListener('abort',abort);}
  }};
 }
+/** Tokens never reach the renderer: the native transport injects the stored account token itself and ignores this placeholder. */
+const NATIVE_ACCOUNT:OpenAIAccountAuth={getAccessToken:async()=>'native-managed',refresh:async()=>'native-managed'};
+/** Picks API key or ChatGPT account per request from the native credential store (the user can switch in Settings at any time). */
+function openAIByMethod(options:ConstructorParameters<typeof OpenAIProvider>[0]):AgentProvider {
+ const keyed=new OpenAIProvider(options);let account:OpenAIProvider|undefined;
+ return {id:keyed.id,locality:keyed.locality,async *stream(request:AgentProviderRequest){
+  const status=await accountAuth.status('openai').catch(()=>null);
+  if(status?.method==='account'){account??=new OpenAIProvider({account:NATIVE_ACCOUNT,fetch:nativeProviderFetch('openai')});yield* account.stream(request);}
+  else yield* keyed.stream(request);
+ }} as AgentProvider;
+}
 export function createProvider(id:AuthProvider):AgentProvider {
  if(id==='ollama')return guardedOllama(new OllamaProvider());
  const options={getApiKey:()=>loadProviderKey(id),...(isTauri()?{fetch:nativeProviderFetch(id)}:{})};
- if(id==='openai')return new OpenAIProvider(options);
+ if(id==='openai'){
+  if(!isTauri())return new OpenAIProvider(options);
+  return openAIByMethod(options);
+ }
  if(id==='claude')return new ClaudeProvider(options);
  if(id==='openrouter')return new OpenRouterProvider(options);
  throw Error('Unsupported AI provider.');
