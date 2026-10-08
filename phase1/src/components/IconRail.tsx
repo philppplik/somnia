@@ -1,3 +1,4 @@
+import {getStudio} from '../lib/studios';
 import type {LucideIcon} from '../lib/icons';
 import {PanelLeft,PanelRight,Files,Layers,Search,Boxes,SlidersHorizontal,Play,Puzzle,Blocks,Paintbrush,Settings as Gear} from '../lib/icons';
 import {Button} from './ui/button';
@@ -9,12 +10,10 @@ import {patchState,useAppStore} from '../store/appStore';
 import type {AppState} from '../store/appStore';
 import {cn} from '../lib/cn';
 import {useT} from '../lib/useT';
-type Item<T extends string>={id:T;label:string;icon:LucideIcon};
-const left:Item<AppState['leftTab']>[]=[{id:'layers',label:'Layers',icon:Layers},{id:'files',label:'Files',icon:Files},{id:'search',label:'Search',icon:Search},{id:'components',label:'Components',icon:Boxes},{id:'css',label:'CSS',icon:Paintbrush},{id:'versions',label:'Versions',icon:VersionsIcon}];
-const right:Item<AppState['rightTab']>[]=[{id:'design',label:'Design',icon:SlidersHorizontal},{id:'prototype',label:'Prototype',icon:Play}];
+const railIcons:Record<string,LucideIcon>={Layers,Files,Search,Boxes,Paintbrush,VersionsIcon,SlidersHorizontal,Play};
 /** Narrow icon strip beside each side panel. Always visible; a click opens that panel, a second click on the active icon collapses it. */
 export function IconRail({side}:{side:'left'|'right'}){const {t}=useT();
- const s=useAppStore();const items=side==='left'?left:right;const open=side==='left'?s.sidebarOpen:s.inspectorOpen;const active=side==='left'?s.leftTab:s.rightTab;
+ const s=useAppStore();const items=side==='left'?getStudio(s.activeStudio).shell.leftRail:getStudio(s.activeStudio).shell.rightRail;const open=side==='left'?s.sidebarOpen:s.inspectorOpen;const active=side==='left'?s.leftTab:s.rightTab;
  const choose=(id:string)=>{
   patchState({activePanel:{...s.activePanel,[side]:null}});
   if(open&&active===id&&!s.activePanel[side]){patchState(side==='left'?{sidebarOpen:false}:{inspectorOpen:false});return;}
@@ -24,7 +23,7 @@ export function IconRail({side}:{side:'left'|'right'}){const {t}=useT();
   <Button size="icon" aria-label={side==='left'?'Toggle sidebar':'Toggle inspector'} title={side==='left'?'Toggle sidebar (Ctrl+B)':'Toggle inspector (Ctrl+Alt+I)'} aria-pressed={open} onClick={()=>void executeCommand(side==='left'?'sidebar.toggle':'inspector.toggle')}>{side==='left'?<PanelLeft/>:<PanelRight/>}</Button>
   <span className="my-1 h-px w-6 bg-line"/>
   {s.extensionPanels.filter(p=>p.side===side).map(p=><Button key={p.id} size="icon" title={p.title} aria-label={`${p.title} panel (extension)`} aria-pressed={open&&s.activePanel[side]===p.id} className={cn(open&&s.activePanel[side]===p.id&&'bg-accent-soft text-accent')} onClick={()=>{const on=open&&s.activePanel[side]===p.id;patchState({activePanel:{...s.activePanel,[side]:on?null:p.id},...(side==='left'?{sidebarOpen:!on}:{inspectorOpen:!on})});}}><Puzzle/></Button>)}
-  {items.map(({id,label,icon:Icon})=><Button key={id} size="icon" title={label} aria-label={`${label} panel`} aria-pressed={open&&active===id} className={cn(open&&active===id&&'bg-accent-soft text-accent')} onClick={()=>choose(id)}><Icon/></Button>)}
+  {items.map(({id,label,icon})=>{const Icon=railIcons[icon];return <Button key={id} size="icon" title={label} aria-label={`${label} panel`} aria-pressed={open&&active===id} className={cn(open&&active===id&&'bg-accent-soft text-accent')} onClick={()=>choose(id)}><Icon/></Button>;})}
  {side==='left'&&<div className="mt-auto flex flex-col items-center gap-1 pb-2"><Button size="icon" title={t('rest.iconRail.extensions')} aria-label={t('rest.iconRail.extensions')} onClick={()=>void executeCommand('extensions.open')}><Blocks/></Button><Button size="icon" title={t('rest.iconRail.settingsCtrl')} aria-label={t('rest.iconRail.settings')} onClick={()=>void executeCommand('settings.open')}><Gear/></Button></div>}
  {side==='right'&&<div className="mt-auto flex flex-col items-center gap-1"><ChatRailButton/><AgentRailButton/></div>}
  </div>;
