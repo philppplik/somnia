@@ -12,7 +12,7 @@ async function fixture(page:Page,mode:'edit'|'slow'='edit'){
  let calls=0;
  await page.route('http://127.0.0.1:11434/api/chat',async r=>{
   const n=++calls;await new Promise(resolve=>setTimeout(resolve,mode==='slow'?1200:150));
-  const message=n===1&&mode==='edit'?{content:'I can propose a new project stylesheet.',tool_calls:[{function:{name:'write_file',arguments:{path:'agent-test.css',content:'h1 { font-size: 56px; }\n\np { line-height: 1.6; }'}}}]}:{content:'Please review the proposed change before applying it.'};
+  const message=n===1&&mode==='edit'?{content:'I can propose a heading.',tool_calls:[{function:{name:'code_propose_html',arguments:{from:0,to:0,text:'<h1>AI test heading</h1>'}}}]}:{content:'Please review the proposed change before applying it.'};
   await r.fulfill({contentType:'application/x-ndjson',body:JSON.stringify({message,done:true,prompt_eval_count:15,eval_count:20})+'\n'});
  });
 }
@@ -28,16 +28,15 @@ test('chips fill input only; no unimplemented references; bottom gradient only',
  await panel.getByRole('button',{name:'Help me design a landing page'}).click();await expect(panel.getByLabel('Message to Somnia Agent')).toHaveValue('Help me design a landing page');
  await expect(panel.getByRole('button',{name:'Stop'})).toHaveCount(0);await expect(panel.getByText('Use @ to refer')).toHaveCount(0);await expect(panel.locator('.ag-bar')).toHaveCount(1);
 });
-test('real session stages a file, asks permission, reviews hunks, applies without save and editor undo reverts',async({page})=>{
+test('real session stages native HTML, asks permission, accepts complete preview without save and origin undo reverts',async({page})=>{
  await fixture(page);const panel=await model(page);const input=panel.getByLabel('Message to Somnia Agent');await input.fill('Create a stylesheet');await input.press('Enter');
  await expect(panel.getByRole('button',{name:'Stop'})).toBeVisible();await expect(input).toBeDisabled();
  await expect(panel.getByRole('region',{name:'File access approval'})).toBeVisible();await panel.getByRole('button',{name:'Accept once'}).click();
- await expect(panel.getByRole('region',{name:'Review agent changes'})).toBeVisible();
+ await expect(panel.getByRole('region',{name:'Review native AI proposal'})).toBeVisible();
  await page.screenshot({path:'tests/artifacts/agent-hunk-review-integrated.png'});
- await panel.getByRole('button',{name:'Accept all',exact:true}).click();await panel.getByRole('button',{name:/Apply 1 change/}).click();
+ await panel.getByRole('button',{name:'Accept preview',exact:true}).click();
  await expect(panel.getByText('Applied to editor, not saved.',{exact:false})).toBeVisible();
- await page.getByRole('button',{name:'Files panel',exact:true}).click();await expect(page.getByText('agent-test.css',{exact:true}).last()).toBeVisible();
- await panel.getByRole('button',{name:'New chat'}).click();await page.getByRole('button',{name:'Files panel',exact:true}).focus();await page.keyboard.press('Control+z');await expect(page.getByText('agent-test.css',{exact:true})).toHaveCount(0);
+ await panel.getByRole('button',{name:'Undo AI transaction',exact:true}).click();
  await panel.getByRole('button',{name:'New chat'}).click();await expect(panel.getByRole('heading',{name:'What are we building?'})).toBeVisible();
 });
 test('stop cancels a real provider run without review; streaming state visible',async({page})=>{await fixture(page,'slow');const panel=await model(page);
@@ -60,7 +59,7 @@ test('true NDJSON text streaming is labelled and cancellable',async({page})=>{
  });
  await new Promise<void>((resolve,reject)=>{server.once('error',reject);server.listen(11434,'127.0.0.1',resolve);});
  try{
-  const panel=await open(page);await panel.getByRole('button',{name:'Agent configuration',exact:true}).click();await page.getByRole('dialog').getByLabel('Model',{exact:true}).fill('stream-fixture');await saveAI(page);
+  const panel=await open(page);await panel.getByRole('button',{name:'Agent configuration',exact:true}).click();await page.getByRole('dialog').getByLabel('Model',{exact:true}).fill('stream-fixture');await saveAI(page);await panel.getByRole('checkbox',{name:/Allow inspecting/}).check();
   await panel.getByLabel('Message to Somnia Agent').fill('Explain streaming');await panel.getByRole('button',{name:'Send',exact:true}).click();
   await expect(panel.getByText('This is streamed AI text.',{exact:false})).toBeVisible();await expect(panel.locator('.ag-caret')).toBeVisible();await expect(panel.getByRole('button',{name:'Stop'})).toBeVisible();
   await page.screenshot({path:'tests/artifacts/agent-streaming-integrated.png'});await panel.getByRole('button',{name:'Stop'}).click();await expect(panel.getByRole('button',{name:'Send',exact:true})).toBeVisible();
@@ -68,12 +67,12 @@ test('true NDJSON text streaming is labelled and cancellable',async({page})=>{
 });
 test('declining file access never exposes an applicable proposal',async({page})=>{
  await fixture(page);const panel=await model(page);await panel.getByLabel('Message to Somnia Agent').fill('Create stylesheet');await panel.getByRole('button',{name:'Send',exact:true}).click();
- await panel.getByRole('button',{name:'Decline',exact:true}).click();await expect(panel.getByRole('button',{name:'Send',exact:true})).toBeVisible();await expect(panel.getByRole('region',{name:'Review agent changes'})).toHaveCount(0);
+ await panel.getByRole('button',{name:'Decline',exact:true}).click();await expect(panel.getByRole('button',{name:'Send',exact:true})).toBeVisible();await expect(panel.getByRole('region',{name:'Review native AI proposal'})).toHaveCount(0);
 });
 test('OpenRouter never starts inference without explicit cloud consent',async({page})=>{
  let requests=0;await page.route('https://openrouter.ai/api/v1/chat/completions',r=>{requests++;return r.abort();});
- const panel=await open(page);await panel.getByRole('button',{name:'Agent configuration',exact:true}).click();await page.getByRole('dialog').getByRole('combobox',{name:'Provider',exact:true}).selectOption('openrouter');await page.getByRole('dialog').getByLabel('Model',{exact:true}).fill('fixture/model');await page.getByRole('dialog').getByLabel('API key').fill('fixture-not-a-real-key');await saveAI(page);
- await panel.getByLabel('Message to Somnia Agent').fill('Hello cloud');await panel.getByRole('button',{name:'Send',exact:true}).click();await expect(panel.getByRole('alert')).toBeVisible();expect(requests).toBe(0);await expect(panel.getByRole('region',{name:'Review agent changes'})).toHaveCount(0);
+ const panel=await open(page);await panel.getByRole('button',{name:'Agent configuration',exact:true}).click();await page.getByRole('dialog').getByRole('combobox',{name:'Provider',exact:true}).selectOption('openrouter');await page.getByRole('dialog').getByLabel('Model',{exact:true}).fill('fixture/model');await page.getByRole('dialog').getByLabel('API key').fill('fixture-not-a-real-key');await saveAI(page);await panel.getByRole('checkbox',{name:/Allow inspecting/}).check();
+ await panel.getByLabel('Message to Somnia Agent').fill('Hello cloud');await panel.getByRole('button',{name:'Send',exact:true}).click();await expect(panel.getByRole('alert')).toBeVisible();expect(requests).toBe(0);await expect(panel.getByRole('region',{name:'Review native AI proposal'})).toHaveCount(0);
 });
 test('saved model and custom prompts survive reload; preview never stores API key',async({page})=>{
  const panel=await open(page);await panel.getByRole('button',{name:'Agent configuration',exact:true}).click();
