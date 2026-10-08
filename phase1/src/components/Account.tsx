@@ -21,6 +21,8 @@ import {
 import { Check } from "../lib/icons";
 import { Button } from "./ui/button";
 import { GithubConnection } from "./GithubConnection";
+import { ProviderKeyConnection, OllamaConnection } from "./ProviderKeyConnection";
+import { McpConnections } from "./McpConnections";
 import { ProviderAccountConnection } from "./agent/ProviderAccountConnection";
 import {
   Dialog,
@@ -404,6 +406,12 @@ export function Account() {
                       <ProviderAccountConnection provider="openai" showMethod={false} />
                     </div>
                     <GithubConnection />
+                    <h3 className="connection-group">{t("conn.ai")}</h3>
+                    <ProviderKeyConnection provider="claude" />
+                    <ProviderKeyConnection provider="openrouter" />
+                    <OllamaConnection />
+                    <h3 className="connection-group">{t("conn.tools")}</h3>
+                    <McpConnections onNavigate={() => setOpen(false)} />
                   </>
                 )}
                 {section === "activity" && <Heatmap />}

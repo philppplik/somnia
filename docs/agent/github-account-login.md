@@ -29,6 +29,10 @@ Chosen because Somnia is a distributed desktop app. The web flow and PKCE token 
 
 The existing OpenAI account login (PKCE, keyring) is shown in the same Connections section (status, connect, disconnect). Agent settings keeps only the status and the "use account or API key" choice and points to Profile > Connections, so connect/disconnect exist in one place.
 
+## More connections (existing infrastructure only)
+
+Claude and OpenRouter: API key entry/test/replace/delete with the same keystore and test path as Agent settings (key never shown again). Ollama: a reachability check on demand. MCP servers: read-only list (running/stopped, tool count) with a button to Settings > AI > Tools; everything else about MCP stays there. No new OAuth app involved.
+
 ## Open items
 
 - The OAuth App "Somnia" (owner philppplik, device flow on, user token expiry off, no client secret created) is registered; `CLIENT_ID` is set. Its page: github.com/settings/applications/3915710.
