@@ -1,7 +1,8 @@
 import {test,expect} from './fixtures';
 import {mkdirSync} from 'node:fs';
 const source='<!doctype html><html><head></head><body style="padding:24px"><h1>Context title</h1><img width="120" height="80"><div style="padding:20px">Container</div><p>Paragraph</p></body></html>';
-const out='/downloads/context-ui';mkdirSync(out,{recursive:true});
+import {tmpdir} from 'node:os';import {join} from 'node:path';
+const out=process.env.CONTEXT_UI_SHOTS||join(tmpdir(),'somnia-context-ui');mkdirSync(out,{recursive:true});
 test('context matrix keeps shell geometry and web rail pixels unchanged',async({page})=>{
  await page.goto('/');await page.getByRole('button',{name:'Code view',exact:true}).click();await page.getByLabel('Source code').fill(source);await page.getByRole('button',{name:'Design view',exact:true}).click();const f=page.frameLocator('.design-iframe');await expect(f.locator('h1')).toHaveText('Context title');
  const geometry=()=>page.locator('header,.editor-layout,.panel.inspector,footer,[aria-label="Sidebar panels"],[aria-label="Inspector panels"]').evaluateAll(els=>els.map(e=>{const r=e.getBoundingClientRect();return [r.x,r.y,r.width,r.height];}));const initial=await geometry();
