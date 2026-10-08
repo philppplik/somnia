@@ -22,10 +22,8 @@ function FitImage({src,alt,onSize}:{src:string;alt:string;onSize?:(w:number,h:nu
 export function MediaViewer({item}:{item:MediaItem}){const {t}=useT();
  if(item.kind==='psd')return <PsdViewer key={item.url} item={item}/>;
  if(item.kind==='pdf')return <Suspense fallback={<div role="status" className="grid flex-1 place-items-center text-xs">Opening PDF…</div>}><PdfInlineEditor key={item.name} item={item}/></Suspense>;
- return <section className="canvas-stage flex min-h-0 flex-1 flex-col" aria-label={t(item.kind==='pdf'?'finish2.media.pdf':'finish2.media.image')}>
-  {item.kind==='image'?<FitImage src={item.url} alt={item.name}/>:<>
-   <div className={bar}><span className="truncate" data-testid="media-name">{item.name}</span><span className="text-ink-3">PDF, {formatBytes(item.size)}</span><span className="flex-1"/><a className={tool} href={item.url} target="_blank" rel="noreferrer" aria-label={t('rest.mediaPreview.openPdfInANew')}><ExternalLink size={13}/>{t('rest.mediaPreview.open')}</a></div>
-   <iframe title={t('finish2.media.pdfTitle',{name:item.name})} data-testid="pdf-frame" src={item.url} className="min-h-0 w-full flex-1 border-0 bg-white"/></>}
+ return <section className="canvas-stage flex min-h-0 flex-1 flex-col" aria-label={t('finish2.media.image')}>
+  <FitImage src={item.url} alt={item.name}/>
  </section>;}
 /** Rendered preview for the active .md or .svg source file. */
 let texBannerDismissed=false;
