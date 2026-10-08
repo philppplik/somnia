@@ -15,7 +15,7 @@ test('folder media: png and pdf from an opened folder appear under Previews, fak
   (window as any).__dir=dir;return dir;};},files);
  page.on('dialog',d=>void d.accept());
  await page.goto('/');
- await page.keyboard.press('Control+k');await page.getByRole('combobox',{name:'Search commands'}).fill('open folder');await page.getByRole('option',{name:/Open folder/}).click();
+ await page.getByRole('button',{name:/^Commands/}).click();await page.getByRole('combobox',{name:'Search commands'}).fill('open folder');await page.getByRole('option',{name:/Open folder/}).click();
  const frame=page.frameLocator('iframe[title="Sandboxed design preview"]');await expect(frame.locator('h1')).toHaveText('With media');
  await expect(page.locator('span[role=status]')).toContainText('3 of 4 media files loaded');
  await page.getByRole('button',{name:'Files'}).click();
