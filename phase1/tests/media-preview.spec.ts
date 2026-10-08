@@ -11,10 +11,10 @@ test('markdown file renders in the preview pane and stays safe',async({page})=>{
  await md.getByRole('link',{name:'link'}).evaluate((a:HTMLElement)=>a.addEventListener('click',e=>e.preventDefault()));
  expect(await page.evaluate(()=>(window as any).__xss)).toBeUndefined();
  await page.screenshot({path:'test-results/media-markdown.png'});});
-test('svg file renders as an image in the preview pane',async({page})=>{await page.goto('/');await expect(page.locator('[data-storage]')).toBeVisible();
+test('svg file opens in the inline vector editor and stays safe',async({page})=>{await page.goto('/');await expect(page.locator('[data-storage]')).toBeVisible();
  await addText(page,'logo.svg','<svg xmlns="http://www.w3.org/2000/svg" width="120" height="60"><rect width="120" height="60" fill="#7c3aed"/><script>window.__xss=1</script></svg>');
- const img=page.getByTestId('media-image');await expect(img).toBeVisible();await expect(img).toHaveAttribute('src',/^data:image\/svg\+xml/);
- await expect(page.getByTestId('media-dims')).toHaveText('120 x 60 px');expect(await page.evaluate(()=>(window as any).__xss)).toBeUndefined();
+ const host=page.getByTestId('svg-host');await expect(host.locator('rect')).toBeVisible();await expect(host.locator('script')).toHaveCount(0);
+ await expect(page.getByTestId('svg-footer')).toContainText('120 × 60');expect(await page.evaluate(()=>(window as any).__xss)).toBeUndefined();
  await page.screenshot({path:'test-results/media-svg.png'});});
 test('png opens in a preview tab, fit toggles, and text tabs still work',async({page})=>{await page.goto('/');await expect(page.locator('[data-storage]')).toBeVisible();
  await openMedia(page,['red.png']);
