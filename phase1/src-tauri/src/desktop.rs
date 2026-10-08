@@ -798,6 +798,25 @@ async fn read_file(
     })
     .await
 }
+#[tauri::command]
+async fn read_project_settings(
+    window: WebviewWindow,
+    state: State<'_, Shared>,
+    project_id: String,
+) -> Result<Option<String>> {
+    gate(&window)?;
+    work(state.inner().clone(), move |b| project(b, &project_id)?.read_project_settings()).await
+}
+#[tauri::command]
+async fn write_project_settings(
+    window: WebviewWindow,
+    state: State<'_, Shared>,
+    project_id: String,
+    content: String,
+) -> Result<()> {
+    gate(&window)?;
+    work(state.inner().clone(), move |b| project(b, &project_id)?.write_project_settings(&content)).await
+}
 /// Media (PNG, JPEG, PDF) inside the open project folder, as standard base64. Read only, max 25 MB per file.
 #[tauri::command]
 async fn read_media(
@@ -1604,6 +1623,8 @@ pub fn run() {
             agent_account_start,
             agent_account_cancel,
             github_account_status,
+            read_project_settings,
+            write_project_settings,
             github_account_start,
             github_account_cancel,
             github_account_disconnect,

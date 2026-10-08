@@ -29,6 +29,8 @@ fn main() {
             "image_overwrite_prepare",
             "agent_account_status",
             "github_account_status",
+            "read_project_settings",
+            "write_project_settings",
             "github_account_start",
             "github_account_cancel",
             "github_account_disconnect",

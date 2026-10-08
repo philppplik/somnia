@@ -47,6 +47,8 @@
     "allow-image-overwrite-prepare",
     "allow-agent-account-status",
     "allow-github-account-status",
+    "allow-read-project-settings",
+    "allow-write-project-settings",
     "allow-github-account-start",
     "allow-github-account-cancel",
     "allow-github-account-disconnect",

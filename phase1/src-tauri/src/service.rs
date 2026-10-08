@@ -583,6 +583,42 @@ impl Project {
         }
         Ok(bytes)
     }
+    /// Per-project settings file `.somnia/settings.json` (UI preferences only, max 64 KB). The folder is reserved, so the normal file layer never touches it.
+    pub fn read_project_settings(&self) -> Result<Option<String>> {
+        let dir = match self.root.open_dir(PROJECT_SETTINGS_DIR) {
+            Ok(d) => d,
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(None),
+            Err(e) => return Err(e.into()),
+        };
+        let mut file = match dir.open(PROJECT_SETTINGS_FILE) {
+            Ok(f) => f,
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(None),
+            Err(e) => return Err(e.into()),
+        };
+        if !file.metadata()?.is_file() {
+            return Err(AppError::Denied("Not a regular file".into()));
+        }
+        let mut bytes = Vec::new();
+        Read::by_ref(&mut file)
+            .take((MAX_PROJECT_SETTINGS_BYTES + 1) as u64)
+            .read_to_end(&mut bytes)?;
+        if bytes.len() > MAX_PROJECT_SETTINGS_BYTES {
+            return Err(AppError::Limit);
+        }
+        Ok(Some(decode_text(bytes)))
+    }
+    pub fn write_project_settings(&self, content: &str) -> Result<()> {
+        if content.len() > MAX_PROJECT_SETTINGS_BYTES {
+            return Err(AppError::Limit);
+        }
+        match self.root.create_dir(PROJECT_SETTINGS_DIR) {
+            Ok(()) => {}
+            Err(e) if e.kind() == std::io::ErrorKind::AlreadyExists => {}
+            Err(e) => return Err(e.into()),
+        }
+        let dir = self.root.open_dir(PROJECT_SETTINGS_DIR)?;
+        atomic_write(&dir, Path::new(PROJECT_SETTINGS_FILE), content.as_bytes())
+    }
     pub fn list_files(&self) -> Result<Vec<String>> {
         let mut files = Vec::new();
         if let Some(only) = &self.only {
@@ -777,6 +813,9 @@ pub fn is_media_path(path: &str) -> bool {
         .map(|e| e.to_string_lossy().to_ascii_lowercase())
         .is_some_and(|e| matches!(e.as_str(), "png" | "jpg" | "jpeg" | "pdf"))
 }
+const PROJECT_SETTINGS_DIR: &str = ".somnia";
+const PROJECT_SETTINGS_FILE: &str = "settings.json";
+const MAX_PROJECT_SETTINGS_BYTES: usize = 64 * 1024;
 fn reserved(name: &str) -> bool {
     matches!(name, ".git" | ".somnia" | "node_modules" | ".svn" | ".hg")
         || name.starts_with(".somnia-write-")

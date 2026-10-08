@@ -428,3 +428,15 @@ fn held_agent_edits_never_autosave_until_explicit_save() {
         "later manual edit"
     );
 }
+
+#[test]
+fn project_settings_roundtrip_and_stay_hidden() {
+    let (root, _recovery, project) = setup();
+    assert_eq!(project.read_project_settings().unwrap(), None);
+    project.write_project_settings("{\"version\":1,\"settings\":{\"workflow.units\":\"metric\"}}").unwrap();
+    assert!(project.read_project_settings().unwrap().unwrap().contains("metric"));
+    assert!(root.path().join(".somnia/settings.json").is_file());
+    // the reserved folder stays invisible to the normal file layer
+    assert!(!project.list_files().unwrap().iter().any(|f| f.contains(".somnia")));
+    assert!(project.write_project_settings(&"x".repeat(70_000)).is_err());
+}
