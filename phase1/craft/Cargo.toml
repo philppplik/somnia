@@ -20,6 +20,10 @@ photocraft-raster = { git = "https://github.com/philppplik/photocraft", rev = "c
 photocraft-color = { git = "https://github.com/philppplik/photocraft", rev = "c833294e34124eb8025de91627eb5a2d3a50f422" }
 photocraft-geom = { git = "https://github.com/philppplik/photocraft", rev = "c833294e34124eb8025de91627eb5a2d3a50f422" }
 
+photocraft-doc = { git = "https://github.com/philppplik/photocraft", rev = "c833294e34124eb8025de91627eb5a2d3a50f422" }
+photocraft-compose = { git = "https://github.com/philppplik/photocraft", rev = "c833294e34124eb8025de91627eb5a2d3a50f422" }
+serde_json = "1"
+
 [profile.release]
 opt-level = "s"
 lto = "fat"

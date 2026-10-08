@@ -113,3 +113,18 @@ test('craft worker rejects invalid jobs, recovers, transfers ownership and dispo
  const result=await page.evaluate(async()=>{const {CraftEngine}=await import('/src/lib/craft/engine.ts');const engine=new CraftEngine();await engine.init();let rejected=false,disposed=false;try{await engine.blur(new ArrayBuffer(4),4,4,1);}catch{rejected=true;}const buffer=new Uint8Array([1,2,3,255]).buffer;const response=await engine.blur(buffer,1,1,0);const detached=buffer.byteLength===0;engine.dispose();try{await engine.blur(new ArrayBuffer(4),1,1,0);}catch{disposed=true;}return{rejected,detached,disposed,ok:response.ok};});
  assert.deepEqual(result,{rejected:true,detached:true,disposed:true,ok:true});
 });
+
+test('retained real PhotoCraft document layers, masks, undo and release run in the worker',async()=>{
+ const proof=await page.evaluate(async()=>{const {CraftEngine}=await import('/src/lib/craft/engine.ts');const e=new CraftEngine();await e.init();try{
+  const opened=await e.openDocument(new Uint8Array([255,0,0,255,0,0,255,255]).buffer,2,1);if(!opened.ok||opened.kind!=='document')throw Error('open');const id=opened.docId;
+  const original=await e.documentCommand(id,'render');await e.documentCommand(id,'duplicate',{index:0});await e.documentCommand(id,'visible',{index:0,value:false});await e.documentCommand(id,'mask',{index:1,bytes:new Uint8Array([255,0]).buffer});
+  const masked=await e.documentCommand(id,'render');await e.documentCommand(id,'undo');const undone=await e.documentCommand(id,'render');const queried=await e.documentCommand(id,'query');await e.documentCommand(id,'close');let closed=false;try{await e.documentCommand(id,'query');}catch{closed=true;}
+  return{original:original.ok&&original.kind==='document'?[...new Uint8Array(original.bytes!)]:[],masked:masked.ok&&masked.kind==='document'?[...new Uint8Array(masked.bytes!)]:[],undone:undone.ok&&undone.kind==='document'?[...new Uint8Array(undone.bytes!)]:[],query:queried.ok&&queried.kind==='document'?JSON.parse(queried.query):null,closed};
+ }finally{e.dispose();}});
+ assert.deepEqual(proof.original,[255,0,0,255,0,0,255,255]);assert.equal(proof.masked[3],255);assert.equal(proof.masked[7],0);assert.deepEqual(proof.undone,proof.original);assert.equal(proof.query.layers.length,2);assert.equal(proof.closed,true);
+});
+
+test('actual upstream wand and polygon coverage executes in WASM worker',async()=>{
+ const result=await page.evaluate(async()=>{const {CraftEngine}=await import('/src/lib/craft/engine.ts');const e=new CraftEngine();await e.init();try{const wand=await e.selection({tool:'wand',width:2,height:1,x:0,y:0,tolerance:0,bytes:new Uint8Array([255,0,0,255,0,0,255,255]).buffer});const polygon=await e.selection({tool:'polygon',width:4,height:4,points:[0,0,4,0,4,4,0,4]});return{wand:wand.ok&&wand.kind==='result'?[...new Uint8Array(wand.bytes)]:[],polygon:polygon.ok&&polygon.kind==='result'?[...new Uint8Array(polygon.bytes)]:[]};}finally{e.dispose();}});
+ assert.deepEqual(result.wand,[255,0]);assert.equal(result.polygon.length,16);assert.ok(result.polygon.every(v=>v===255));
+});

@@ -32,6 +32,9 @@ export class CraftEngine {
   async blur(bytes: ArrayBuffer, width: number, height: number, radius: number) {
     return this.request({ id: this.nextId++, kind: 'blur', bytes, width, height, radius }, [bytes]);
   }
+  async selection(options:Omit<Extract<CraftRequest,{kind:'selection'}>,'id'|'kind'>){return this.request({id:this.nextId++,kind:'selection',...options},options.bytes?[options.bytes]:[]);}
+  async openDocument(bytes:ArrayBuffer,width:number,height:number){return this.request({id:this.nextId++,kind:'doc-open',bytes,width,height},[bytes]);}
+  async documentCommand(docId:number,command:Extract<CraftRequest,{kind:'doc-command'}>['command'],options:{index?:number;value?:number|boolean;bytes?:ArrayBuffer}={}){return this.request({id:this.nextId++,kind:'doc-command',docId,command,...options},options.bytes?[options.bytes]:[]);}
   dispose(error = new Error('craft engine disposed')) {
     this.disposed = true;
     this.worker.terminate();

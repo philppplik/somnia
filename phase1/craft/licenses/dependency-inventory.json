@@ -12,6 +12,42 @@
     "source": "registry+https://github.com/rust-lang/crates.io-index"
   },
   {
+    "name": "crossbeam-deque",
+    "version": "0.8.8",
+    "license": "MIT OR Apache-2.0",
+    "source": "registry+https://github.com/rust-lang/crates.io-index"
+  },
+  {
+    "name": "crossbeam-epoch",
+    "version": "0.9.21",
+    "license": "MIT OR Apache-2.0",
+    "source": "registry+https://github.com/rust-lang/crates.io-index"
+  },
+  {
+    "name": "crossbeam-utils",
+    "version": "0.8.23",
+    "license": "MIT OR Apache-2.0",
+    "source": "registry+https://github.com/rust-lang/crates.io-index"
+  },
+  {
+    "name": "either",
+    "version": "1.19.0",
+    "license": "MIT OR Apache-2.0",
+    "source": "registry+https://github.com/rust-lang/crates.io-index"
+  },
+  {
+    "name": "itoa",
+    "version": "1.0.18",
+    "license": "MIT OR Apache-2.0",
+    "source": "registry+https://github.com/rust-lang/crates.io-index"
+  },
+  {
+    "name": "memchr",
+    "version": "2.8.3",
+    "license": "Unlicense OR MIT",
+    "source": "registry+https://github.com/rust-lang/crates.io-index"
+  },
+  {
     "name": "once_cell",
     "version": "1.21.4",
     "license": "MIT OR Apache-2.0",
@@ -36,6 +72,18 @@
     "source": "git+https://github.com/philppplik/photocraft?rev=c833294e34124eb8025de91627eb5a2d3a50f422#c833294e34124eb8025de91627eb5a2d3a50f422"
   },
   {
+    "name": "photocraft-compose",
+    "version": "0.5.0",
+    "license": "MIT OR Apache-2.0",
+    "source": "git+https://github.com/philppplik/photocraft?rev=c833294e34124eb8025de91627eb5a2d3a50f422#c833294e34124eb8025de91627eb5a2d3a50f422"
+  },
+  {
+    "name": "photocraft-doc",
+    "version": "0.5.0",
+    "license": "MIT OR Apache-2.0",
+    "source": "git+https://github.com/philppplik/photocraft?rev=c833294e34124eb8025de91627eb5a2d3a50f422#c833294e34124eb8025de91627eb5a2d3a50f422"
+  },
+  {
     "name": "photocraft-geom",
     "version": "0.5.0",
     "license": "MIT OR Apache-2.0",
@@ -43,6 +91,12 @@
   },
   {
     "name": "photocraft-raster",
+    "version": "0.5.0",
+    "license": "MIT OR Apache-2.0",
+    "source": "git+https://github.com/philppplik/photocraft?rev=c833294e34124eb8025de91627eb5a2d3a50f422#c833294e34124eb8025de91627eb5a2d3a50f422"
+  },
+  {
+    "name": "photocraft-vector",
     "version": "0.5.0",
     "license": "MIT OR Apache-2.0",
     "source": "git+https://github.com/philppplik/photocraft?rev=c833294e34124eb8025de91627eb5a2d3a50f422#c833294e34124eb8025de91627eb5a2d3a50f422"
@@ -56,6 +110,18 @@
   {
     "name": "quote",
     "version": "1.0.47",
+    "license": "MIT OR Apache-2.0",
+    "source": "registry+https://github.com/rust-lang/crates.io-index"
+  },
+  {
+    "name": "rayon",
+    "version": "1.12.0",
+    "license": "MIT OR Apache-2.0",
+    "source": "registry+https://github.com/rust-lang/crates.io-index"
+  },
+  {
+    "name": "rayon-core",
+    "version": "1.13.0",
     "license": "MIT OR Apache-2.0",
     "source": "registry+https://github.com/rust-lang/crates.io-index"
   },
@@ -84,10 +150,10 @@
     "source": "registry+https://github.com/rust-lang/crates.io-index"
   },
   {
-    "name": "somnia-craft",
-    "version": "0.1.0",
-    "license": "MIT",
-    "source": null
+    "name": "serde_json",
+    "version": "1.0.151",
+    "license": "MIT OR Apache-2.0",
+    "source": "registry+https://github.com/rust-lang/crates.io-index"
   },
   {
     "name": "syn",
@@ -123,6 +189,12 @@
     "name": "wasm-bindgen-shared",
     "version": "0.2.129",
     "license": "MIT OR Apache-2.0",
+    "source": "registry+https://github.com/rust-lang/crates.io-index"
+  },
+  {
+    "name": "zmij",
+    "version": "1.0.23",
+    "license": "MIT",
     "source": "registry+https://github.com/rust-lang/crates.io-index"
   }
 ]

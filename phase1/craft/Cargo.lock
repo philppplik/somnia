@@ -46,6 +46,18 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0e9c71c2167ca323c882b99918929403426e2373ea17242ff5653e0d5e1058be"
 
 [[package]]
+name = "itoa"
+version = "1.0.18"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8f42a60cbdf9a97f5d2305f08a87dc4e09308d1276d28c869c684d7777685682"
+
+[[package]]
+name = "memchr"
+version = "2.8.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cf8baf1c55e62ffcace7a9f06f4bd9cd3f0c4beb022d3b367256b91b87513d98"
+
+[[package]]
 name = "once_cell"
 version = "1.21.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -81,6 +93,31 @@ dependencies = [
 ]
 
 [[package]]
+name = "photocraft-compose"
+version = "0.5.0"
+source = "git+https://github.com/philppplik/photocraft?rev=c833294e34124eb8025de91627eb5a2d3a50f422#c833294e34124eb8025de91627eb5a2d3a50f422"
+dependencies = [
+ "photocraft-color",
+ "photocraft-doc",
+ "photocraft-geom",
+ "photocraft-raster",
+ "photocraft-vector",
+ "rayon",
+]
+
+[[package]]
+name = "photocraft-doc"
+version = "0.5.0"
+source = "git+https://github.com/philppplik/photocraft?rev=c833294e34124eb8025de91627eb5a2d3a50f422#c833294e34124eb8025de91627eb5a2d3a50f422"
+dependencies = [
+ "photocraft-color",
+ "photocraft-geom",
+ "photocraft-raster",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "photocraft-geom"
 version = "0.5.0"
 source = "git+https://github.com/philppplik/photocraft?rev=c833294e34124eb8025de91627eb5a2d3a50f422#c833294e34124eb8025de91627eb5a2d3a50f422"
@@ -96,6 +133,18 @@ dependencies = [
  "photocraft-color",
  "photocraft-geom",
  "serde",
+]
+
+[[package]]
+name = "photocraft-vector"
+version = "0.5.0"
+source = "git+https://github.com/philppplik/photocraft?rev=c833294e34124eb8025de91627eb5a2d3a50f422#c833294e34124eb8025de91627eb5a2d3a50f422"
+dependencies = [
+ "photocraft-color",
+ "photocraft-doc",
+ "photocraft-geom",
+ "photocraft-raster",
+ "rayon",
 ]
 
 [[package]]
@@ -173,13 +222,29 @@ dependencies = [
 ]
 
 [[package]]
+name = "serde_json"
+version = "1.0.151"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c841b55ecdae098c80dcae9cf767f6f8a0c2cdb3416bbef72181df4d0fe73f14"
+dependencies = [
+ "itoa",
+ "memchr",
+ "serde",
+ "serde_core",
+ "zmij",
+]
+
+[[package]]
 name = "somnia-craft"
 version = "0.1.0"
 dependencies = [
  "photocraft-algo",
  "photocraft-color",
+ "photocraft-compose",
+ "photocraft-doc",
  "photocraft-geom",
  "photocraft-raster",
+ "serde_json",
  "wasm-bindgen",
 ]
 
@@ -244,3 +309,9 @@ checksum = "23f0c9c52aa7cd7d77769a4cfe2a9adb1b331f489a41d912ce14513d5ab995c6"
 dependencies = [
  "unicode-ident",
 ]
+
+[[package]]
+name = "zmij"
+version = "1.0.23"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "29666d0abbfad1e3dc4dcf6144730dd3a3ab225bbbdac83319345b1b44ccfc1b"
