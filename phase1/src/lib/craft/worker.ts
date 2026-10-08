@@ -1,5 +1,5 @@
 /// <reference lib="webworker" />
-import init, { gaussian_blur_rgba,CraftDocument,selection_wand_rgba,selection_polygon } from '../../../craft/pkg/somnia_craft.js';
+import init, { gaussian_blur_rgba,PsdPreview,CraftDocument,selection_wand_rgba,selection_polygon } from '../../../craft/pkg/somnia_craft.js';
 import type { CraftRequest, CraftResponse } from './protocol';
 const scope = self as unknown as DedicatedWorkerGlobalScope;
 const documents=new Map<number,CraftDocument>();let nextDoc=1;
@@ -16,6 +16,7 @@ scope.onmessage = async ({ data }: MessageEvent<CraftRequest>) => {
     }
     if (!ready) throw new Error('engine not initialized');
     await ready;
+    if(data.kind==='psd-read'){const preview=new PsdPreview(new Uint8Array(data.bytes));try{const pixels=preview.pixels();const bytes=pixels.buffer as ArrayBuffer;send({id:data.id,ok:true,kind:'psd',query:preview.query(),bytes},[bytes]);}finally{preview.free();}return;}
     if(data.kind==='selection'){const start=performance.now();const pixels=data.tool==='wand'?selection_wand_rgba(new Uint8Array(data.bytes??new ArrayBuffer(0)),data.width,data.height,data.x??-1,data.y??-1,data.tolerance??24):selection_polygon(data.width,data.height,new Float32Array(data.points??[]));const bytes=pixels.buffer as ArrayBuffer;send({id:data.id,ok:true,kind:'result',bytes,jobMs:performance.now()-start},[bytes]);return;}
     if(data.kind==='doc-open'){
       if(documents.size>=4)throw Error('Document budget exceeded');

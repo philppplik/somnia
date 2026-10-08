@@ -22,6 +22,17 @@ export class CraftDocument {
 }
 
 /**
+ * Bounded merged PSD read, not a layer-preserving import or colour-managed conversion.
+ */
+export class PsdPreview {
+    free(): void;
+    [Symbol.dispose](): void;
+    constructor(bytes: Uint8Array);
+    pixels(): Uint8Array;
+    query(): string;
+}
+
+/**
  * Transfer-friendly bytes API. JS/WASM still copies at the memory boundary.
  */
 export function gaussian_blur_rgba(bytes: Uint8Array, width: number, height: number, radius: number): Uint8Array;
@@ -38,6 +49,7 @@ export type InitInput = RequestInfo | URL | Response | BufferSource | WebAssembl
 export interface InitOutput {
     readonly memory: WebAssembly.Memory;
     readonly __wbg_craftdocument_free: (a: number, b: number) => void;
+    readonly __wbg_psdpreview_free: (a: number, b: number) => void;
     readonly craftdocument_clear_mask: (a: number, b: number) => [number, number];
     readonly craftdocument_duplicate_layer: (a: number, b: number) => [number, number];
     readonly craftdocument_layer_count: (a: number) => number;
@@ -50,6 +62,9 @@ export interface InitOutput {
     readonly craftdocument_set_visible: (a: number, b: number, c: number) => [number, number];
     readonly craftdocument_undo: (a: number) => number;
     readonly gaussian_blur_rgba: (a: number, b: number, c: number, d: number, e: number) => [number, number, number, number];
+    readonly psdpreview_new: (a: number, b: number) => [number, number, number];
+    readonly psdpreview_pixels: (a: number) => [number, number];
+    readonly psdpreview_query: (a: number) => [number, number];
     readonly selection_polygon: (a: number, b: number, c: number, d: number) => [number, number, number, number];
     readonly selection_wand_rgba: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => [number, number, number, number];
     readonly __wbindgen_externrefs: WebAssembly.Table;

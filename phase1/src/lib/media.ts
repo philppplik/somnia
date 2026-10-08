@@ -1,10 +1,10 @@
 /** Media files (PNG, JPEG, PDF) are previewed, never edited: they live in a small in-memory store next to the text project. */
 import {useSyncExternalStore} from 'react';
-export type MediaKind='image'|'pdf';
+export type MediaKind='image'|'pdf'|'psd';
 export interface MediaItem{name:string;kind:MediaKind;mime:string;url:string;size:number}
-export const MEDIA_FILE=/\.(png|jpe?g|webp|pdf)$/i;
+export const MEDIA_FILE=/\.(png|jpe?g|webp|pdf|psd)$/i;
 export const MAX_MEDIA_BYTES=25_000_000;
-export const MEDIA_ACCEPT='.png,.jpg,.jpeg,.webp,.pdf,image/png,image/jpeg,image/webp,application/pdf';
+export const MEDIA_ACCEPT='.psd,.png,.jpg,.jpeg,.webp,.pdf,image/png,image/jpeg,image/webp,application/pdf';
 export const isMarkdown=(f:string)=>/\.(md|markdown)$/i.test(f);
 export const isSvg=(f:string)=>/\.svg$/i.test(f);
 /** True when the file shows as a rendered preview instead of the HTML design canvas. */
@@ -12,6 +12,7 @@ export const isTex=(f:string)=>/\.tex$/i.test(f);
 export const isRenderedText=(f:string)=>isMarkdown(f)||isSvg(f)||isTex(f);
 /** Looks at the first bytes so a renamed file is not shown as something it is not. */
 export function sniffMedia(bytes:Uint8Array):{kind:MediaKind;mime:string}|null{
+ if(bytes.length>=6&&bytes[0]===56&&bytes[1]===66&&bytes[2]===80&&bytes[3]===83&&bytes[4]===0&&bytes[5]===1)return{kind:'psd',mime:'image/vnd.adobe.photoshop'};
  const b=(...v:number[])=>v.every((x,i)=>bytes[i]===x);
  if(b(0x89,0x50,0x4e,0x47,0x0d,0x0a,0x1a,0x0a))return{kind:'image',mime:'image/png'};
  if(b(0xff,0xd8,0xff))return{kind:'image',mime:'image/jpeg'};
@@ -36,7 +37,7 @@ export async function addMediaFile(file:Blob,rawName:string,key?:string):Promise
  const name=key??baseName(rawName);
  if(file.size>MAX_MEDIA_BYTES)return{error:`${name} is larger than ${MAX_MEDIA_BYTES/1_000_000} MB.`};
  const sniffed=sniffMedia(new Uint8Array(await file.slice(0,16).arrayBuffer()));
- if(!sniffed)return{error:`${name} is not a valid PNG, JPEG, WebP or PDF file.`};
+ if(!sniffed)return{error:/\.psd$/i.test(name)?`${name} is not a valid PSD v1 file.`:`${name} is not a valid PNG, JPEG, WebP or PDF file.`};
  const old=findMedia(name);if(old&&!canClose(name))return{error:'Replacing the image was cancelled.'};if(old)URL.revokeObjectURL(old.url);
  const url=URL.createObjectURL(new Blob([file],{type:sniffed.mime}));
  const item:MediaItem={name,kind:sniffed.kind,mime:sniffed.mime,url,size:file.size};

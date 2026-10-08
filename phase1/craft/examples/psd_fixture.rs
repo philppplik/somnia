@@ -1,0 +1,2 @@
+use photocraft_psd::{PsdBuilder,LayerSpec,PixelData};
+fn main(){let pixels=[220,45,65,255].repeat(128*96);let mut b=PsdBuilder::new(128,96);b.push_layer(LayerSpec::new("背景 / Background",0,0,128,96,PixelData::Rgba8(pixels.clone())));b.push_layer(LayerSpec::new("Hidden detail",0,0,1,1,PixelData::Rgba8(vec![0,255,0,255])));b.composite(PixelData::Rgba8(pixels));std::fs::write("../validation/fixtures/psd-layers.psd",b.build().unwrap().to_bytes().unwrap()).unwrap();}

@@ -1,3 +1,4 @@
+import {PsdViewer} from './PsdViewer';
 import {useEffect,useMemo,useState} from 'react';
 import {Maximize2,Minimize2,ExternalLink} from '../lib/icons';
 import {formatBytes,isMarkdown,isTex,type MediaItem} from '../lib/media';
@@ -17,6 +18,7 @@ function FitImage({src,alt,onSize}:{src:string;alt:string;onSize?:(w:number,h:nu
   <div className="media-stage min-h-0 flex-1 overflow-auto p-4"><div className="grid min-h-full place-items-center"><img src={src} alt={alt} data-testid="media-image" draggable={false} onLoad={e=>{const i=e.currentTarget;setDim([i.naturalWidth,i.naturalHeight]);onSize?.(i.naturalWidth,i.naturalHeight);}} className="media-checker rounded-sm shadow-sm" style={fit?{maxWidth:'100%',maxHeight:'100%',objectFit:'contain'}:undefined}/></div></div></>;}
 /** Preview for an opened PNG, JPEG or PDF. */
 export function MediaViewer({item}:{item:MediaItem}){const {t}=useT();
+ if(item.kind==='psd')return <PsdViewer key={item.url} item={item}/>;
  return <section className="canvas-stage flex min-h-0 flex-1 flex-col" aria-label={t(item.kind==='pdf'?'finish2.media.pdf':'finish2.media.image')}>
   {item.kind==='image'?<FitImage src={item.url} alt={item.name}/>:<>
    <div className={bar}><span className="truncate" data-testid="media-name">{item.name}</span><span className="text-ink-3">PDF, {formatBytes(item.size)}</span><span className="flex-1"/><a className={tool} href={item.url} target="_blank" rel="noreferrer" aria-label={t('rest.mediaPreview.openPdfInANew')}><ExternalLink size={13}/>{t('rest.mediaPreview.open')}</a></div>
