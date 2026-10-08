@@ -1,0 +1,33 @@
+/* Inline SVG / vector editor. Lives in the main container; sidebars reuse the app panels. */
+.svg-editor{display:flex;flex-direction:column;flex:1;min-width:0;min-height:0;border-radius:var(--r-outer);background:var(--bg-panel);overflow:hidden;box-shadow:var(--card-shadow)}
+.svg-options{display:flex;align-items:center;gap:2px;flex-wrap:nowrap;overflow-x:auto;min-height:38px;padding:4px 10px;border-bottom:1px solid var(--border-subtle);color:var(--text-secondary)}
+.svg-stage{flex:1;min-height:0;overflow:auto;background:var(--bg-surface);outline:none;display:grid}
+.svg-stage:focus-visible{box-shadow:inset 0 0 0 2px var(--accent)}
+.svg-wrap{position:relative;margin:auto;box-sizing:content-box;user-select:none;touch-action:none}
+.svg-host{width:100%;height:100%;line-height:0}
+.svg-host>svg{background-color:#fff;background-image:linear-gradient(45deg,#ececf1 25%,transparent 25%,transparent 75%,#ececf1 75%),linear-gradient(45deg,#ececf1 25%,transparent 25%,transparent 75%,#ececf1 75%);background-size:16px 16px;background-position:0 0,8px 8px;box-shadow:0 0 0 1px var(--border-subtle),0 8px 30px #0001;overflow:hidden}
+.svg-overlay{position:absolute;left:0;top:0;pointer-events:none;overflow:visible}
+.svg-text-input{position:absolute;z-index:3;height:28px;padding:0 8px;border:2px solid var(--accent);border-radius:6px;background:var(--bg-panel);color:var(--text-primary);font:13px var(--ui-font,inherit);outline:none}
+.svg-footer{display:flex;align-items:center;gap:8px;min-height:30px;padding:2px 10px;border-top:1px solid var(--border-subtle);font-size:11px;color:var(--text-secondary)}
+.svg-sidebar{display:flex;flex-direction:column;min-height:0}
+.svg-tools{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;padding:12px}
+.svg-layers-head{display:flex;align-items:center;gap:2px;padding:6px 10px 6px 14px;border-top:1px solid var(--border-subtle)}
+.svg-layer-tree{flex:1;min-height:0;overflow:auto;padding:2px 6px 10px}
+.svg-layer{display:flex;align-items:center;gap:2px;height:28px;padding-right:4px;border-radius:6px;font-size:12px;color:var(--text-primary);cursor:default}
+.svg-layer:hover{background:var(--bg-hover)}.svg-layer.is-picked{background:var(--accent-soft);color:var(--accent)}.svg-layer.is-hidden{opacity:.5}
+.svg-layer-btn{display:grid;place-items:center;width:20px;height:20px;border:0;background:transparent;color:inherit;border-radius:4px;cursor:pointer;padding:0}
+.svg-layer-btn:hover{background:var(--bg-hover)}.svg-layer-btn:focus-visible{outline:2px solid var(--accent)}
+.svg-layer-rename{flex:1;min-width:0;height:22px;font-size:12px}
+.svg-inspector{display:flex;flex-direction:column;min-height:0;overflow:auto}
+.svg-tabs{display:flex;gap:2px;padding:10px 12px 0;border-bottom:1px solid var(--border-subtle)}
+.svg-tabs button{border:0;background:transparent;color:var(--text-secondary);padding:6px 10px;border-radius:6px 6px 0 0;font-size:12px;cursor:pointer;border-bottom:2px solid transparent}
+.svg-tabs button[aria-selected=true]{color:var(--accent);border-bottom-color:var(--accent)}
+.svg-tabs button:focus-visible{outline:2px solid var(--accent)}
+.svg-section{padding:12px 16px}.svg-section h3{font-size:12px;margin:0 0 10px}.svg-section h4{font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--text-secondary);margin:14px 0 6px}
+.svg-field{display:flex;align-items:center;gap:6px;min-height:30px;font-size:11px}.svg-field>span{width:44px;flex:none;color:var(--text-secondary);font-size:10px;text-transform:uppercase;letter-spacing:.06em}
+.svg-field input:not([type=color]){min-width:0;width:100%;height:26px;font-size:11px;font-family:var(--mono-font,monospace)}
+.svg-field input[type=color]{width:28px;height:26px;padding:0;border:1px solid var(--border-subtle);border-radius:6px;background:transparent}
+.svg-none{width:26px;height:26px;flex:none;border:1px solid var(--border-subtle);border-radius:6px;background:transparent;color:var(--text-secondary);cursor:pointer}.svg-none[aria-pressed=true]{background:var(--accent-soft);color:var(--accent);border-color:var(--accent)}
+.svg-swatches{display:flex;flex-wrap:wrap;gap:6px}.svg-swatches button{width:24px;height:24px;border-radius:6px;border:1px solid var(--border-subtle);cursor:pointer;padding:0}
+.svg-code{width:100%;min-height:220px;resize:vertical;font:11px/1.5 var(--mono-font,monospace);padding:8px;border-radius:8px}
+.svg-apply{margin-top:8px;height:28px;padding:0 12px;border-radius:8px;border:1px solid var(--accent);background:var(--accent-soft);color:var(--accent);cursor:pointer}
