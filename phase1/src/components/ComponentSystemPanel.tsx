@@ -5,7 +5,6 @@ import {useAppStore,patchState} from '../store/appStore';
 import {Button} from './ui/button';
 import * as cs from '../lib/componentSystem';
 import {VariantTools} from './VariantTools';
-import {addStarterKit} from '../lib/starterKit';
 import {LibrarySharePanel} from './LibrarySharePanel';
 import {loadLibrary,mutate,newId,selectedSource,insertVariant,switchVariant,findNode} from '../lib/componentActions';
 /** Component library with variants. Lives in the Components tab under the HTML elements. */
@@ -21,7 +20,6 @@ export function ComponentSystemPanel(){
  <label className="flex items-center gap-2"><input type="checkbox" checked={mark} onChange={e=>setMark(e.target.checked)}/>{t('panels.components.markInsertedBlocksWithData')}</label>
  <ComponentFieldBinding enabled={s.coreConnected&&!!s.selectedElementId} run={run}/>
  <Button variant="outline" disabled={!s.coreConnected} onClick={()=>edit(l=>cs.createComponent(l,name,selectedSource(),newId),t('panels.components.saved',{name:name.trim()}))}>{t('panels.components.saveSelectionAsNewComponent')}</Button>
- <Button variant="outline" onClick={()=>run(()=>{const r=addStarterKit(loadLibrary());setLib(mutate(()=>r.list));patchState({notice:r.added.length?t('panels.components.starterAdded',{names:r.added.join(', ')}):t('panels.components.starterKitIsAlreadyIn')});})}>{t('panels.components.addStarterKit')}</Button>
  {current&&inst&&<div role="group" aria-label={t('panels.components.selectedComponentInstance')}><h4>{t('panels.components.selected',{name:current.name})}</h4><p>{t('panels.components.switchThisBlockTo')}</p>{current.variants.map(v=><Button key={v.id} variant="outline" disabled={v.id===inst.variantId} onClick={()=>run(()=>switchVariant(current,v,mark))}>{v.name}{v.id===inst.variantId?t('panels.components.current'):''}</Button>)}<ComponentInstanceFields html={selectedSource()} component={current} run={run}/></div>}
  {!lib.length&&<p>{t('panels.components.noComponentsYetSelectA')}</p>}
  {lib.map(c=>{const base=cs.variantOf(c);return <div key={c.id} role="group" aria-label={t('panels.components.component',{name:c.name})}><h4>{c.name}</h4>

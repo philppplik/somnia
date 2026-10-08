@@ -17,7 +17,7 @@ test('shell, palette, shortcuts, core edits, history and panels',async({page})=>
  await page.getByRole('textbox',{name:'Element ID',exact:true}).fill('headline');await page.getByRole('textbox',{name:'Element ID',exact:true}).press('Enter');
  await expect(editor).toHaveText(/id="headline"/);
  await page.getByRole('button',{name:'Undo',exact:true}).click();await expect(editor).not.toHaveText(/id="headline"/);
- await page.getByRole('button',{name:'Assets panel',exact:true}).click();await expect(page.getByText('Image importing is not connected yet.')).toBeVisible();
+ await expect(page.getByRole('button',{name:'Assets panel',exact:true})).toHaveCount(0);const rail=page.getByRole('toolbar',{name:'Sidebar panels'}).getByRole('button',{name:/ panel$/});await expect(rail).toHaveCount(6);await expect(rail).toHaveText(['','','','','','']);expect(await rail.evaluateAll(b=>b.map(x=>x.getAttribute('aria-label')))).toEqual(['Layers panel','Files panel','Search panel','Components panel','CSS panel','Versions panel']);await page.getByRole('button',{name:'Files panel',exact:true}).click();
  await page.getByRole('button',{name:'Layers panel',exact:true}).click();
  await page.getByRole('button',{name:'Toggle sidebar',exact:true}).click();await expect(page.getByRole('complementary',{name:'Project sidebar'})).toHaveCount(0);
  await page.getByRole('button',{name:'Toggle sidebar',exact:true}).click();

@@ -4,7 +4,7 @@
  * Storage and editor wiring live in componentActions.ts.
  */
 export interface Variant{id:string;name:string;html:string}
-export interface Component{id:string;name:string;variants:Variant[];defaultVariantId:string}
+export interface Component{id:string;name:string;variants:Variant[];defaultVariantId:string;/** Built-in catalog only: category key (layout, navigation, ...). Never stored in user libraries. */category?:string;/** Built-in catalog only: read-only, always present. */builtin?:boolean}
 export const LIMITS={components:40,variants:8,html:100000,name:60} as const;
 export const ATTR_COMPONENT='data-somnia-component';
 export const ATTR_VARIANT='data-somnia-variant';

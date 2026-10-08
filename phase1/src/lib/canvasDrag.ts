@@ -1,7 +1,7 @@
 import {dropLayer} from './structureCommands';
 import {getState,patchState} from '../store/appStore';
 import type {DropZone} from './layerDrop';
-export type DropHint={x:number;y:number;w:number;h:number;zone:DropZone}|null;
+export type DropHint={x:number;y:number;w:number;h:number;zone:DropZone;label?:string}|null;
 const PROTECTED=new Set(['html','head','body']);
 export const zoneFor=(y:number,top:number,height:number):DropZone=>{const f=(y-top)/Math.max(height,1);return f<0.3?'before':f>0.7?'after':'inside';};
 /** Pointer drag inside the design iframe: move the pressed element before, after or into the element under the pointer. Reuses the Layers drop planner (dropLayer), so locked layers, protected roots and invalid targets are refused the same way and one undo restores the position. Escape cancels. */

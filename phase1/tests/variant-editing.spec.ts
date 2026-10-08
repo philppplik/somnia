@@ -1,11 +1,12 @@
 import {test,expect} from './fixtures';
+import {openMine} from './helpers';
 const lib=[{id:'c1',name:'Card',defaultVariantId:'v1',variants:[
  {id:'v1',name:'Plain',html:'<article class="card">\n<h2>Title</h2>\n</article>'},
  {id:'v2',name:'Wide',html:'<article class="card wide">\n<h2>Title</h2>\n<p>More</p>\n</article>'}]}];
 test('variants: edit in place, rename, duplicate, compare',async({page})=>{
  await page.addInitScript(l=>{if(!localStorage.getItem('somnia.components.v2'))localStorage.setItem('somnia.components.v2',JSON.stringify(l));},lib);
  await page.goto('/');const f=page.frameLocator('iframe[title="Sandboxed design preview"]');await expect(f.locator('h1')).toBeVisible();
- await page.getByRole('button',{name:'Components panel',exact:true}).click();
+ await openMine(page);
  const card=page.getByRole('group',{name:'Component Card',exact:true});
  // compare
  await page.getByRole('button',{name:'Compare Card Wide',exact:true}).click();
@@ -19,7 +20,7 @@ test('variants: edit in place, rename, duplicate, compare',async({page})=>{
  await ta.fill('<article class="card soft"><h2>Title</h2></article>');
  await page.getByRole('button',{name:'Save Card Plain',exact:true}).click();
  await expect(page.getByLabel('HTML of Card Plain')).toHaveCount(0);
- await page.reload();await page.getByRole('button',{name:'Components panel',exact:true}).click();
+ await page.reload();await openMine(page);
  await page.getByRole('button',{name:'Edit Card Plain',exact:true}).click();
  await expect(page.getByLabel('HTML of Card Plain')).toHaveValue(/card soft/);
  await page.getByRole('button',{name:'Cancel editing Card Plain',exact:true}).click();

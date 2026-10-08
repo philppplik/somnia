@@ -80,3 +80,5 @@ test('close clears project, selection, tabs and saved state and rejects disconne
   assert.equal(getSavedFile('index.html'), ''); assert.equal(getState().coreConnected, false);
   assert.throws(() => applyOperations([]), /not connected/); assert.throws(() => applyHistory('undo'), /not connected/);
 });
+import {sanitizeLeftTab,patchState as patchForTab,getState as getForTab} from '../store/appStore';
+test('a persisted or external leftTab "assets" (removed in the Components redesign) falls back to layers',()=>{assert.equal(sanitizeLeftTab('assets'),'layers');assert.equal(sanitizeLeftTab(undefined),'layers');assert.equal(sanitizeLeftTab('components'),'components');patchForTab({leftTab:'assets' as never});assert.equal(getForTab().leftTab,'layers');patchForTab({leftTab:'components'});assert.equal(getForTab().leftTab,'components');patchForTab({leftTab:'layers'});});

@@ -1,5 +1,5 @@
 import type {LucideIcon} from '../lib/icons';
-import {PanelLeft,PanelRight,Files,Layers,Search,Image,Boxes,SlidersHorizontal,Play,Puzzle,Blocks,Paintbrush,Settings as Gear} from '../lib/icons';
+import {PanelLeft,PanelRight,Files,Layers,Search,Boxes,SlidersHorizontal,Play,Puzzle,Blocks,Paintbrush,Settings as Gear} from '../lib/icons';
 import {Button} from './ui/button';
 import {AgentRailButton} from './agent/AgentRailButton';
 import {ChatRailButton} from './ChatRailButton';
@@ -10,7 +10,7 @@ import type {AppState} from '../store/appStore';
 import {cn} from '../lib/cn';
 import {useT} from '../lib/useT';
 type Item<T extends string>={id:T;label:string;icon:LucideIcon};
-const left:Item<AppState['leftTab']>[]=[{id:'layers',label:'Layers',icon:Layers},{id:'files',label:'Files',icon:Files},{id:'search',label:'Search',icon:Search},{id:'assets',label:'Assets',icon:Image},{id:'components',label:'Components',icon:Boxes},{id:'css',label:'CSS',icon:Paintbrush},{id:'versions',label:'Versions',icon:VersionsIcon}];
+const left:Item<AppState['leftTab']>[]=[{id:'layers',label:'Layers',icon:Layers},{id:'files',label:'Files',icon:Files},{id:'search',label:'Search',icon:Search},{id:'components',label:'Components',icon:Boxes},{id:'css',label:'CSS',icon:Paintbrush},{id:'versions',label:'Versions',icon:VersionsIcon}];
 const right:Item<AppState['rightTab']>[]=[{id:'design',label:'Design',icon:SlidersHorizontal},{id:'prototype',label:'Prototype',icon:Play}];
 /** Narrow icon strip beside each side panel. Always visible; a click opens that panel, a second click on the active icon collapses it. */
 export function IconRail({side}:{side:'left'|'right'}){const {t}=useT();

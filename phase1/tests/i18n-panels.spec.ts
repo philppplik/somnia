@@ -53,8 +53,10 @@ test('German component library labels, placeholders and user names',async({page}
  await page.goto('/');await locale(page,'de');
  await page.getByRole('button',{name:'section',exact:true}).first().click();
  await page.getByRole('button',{name:'Components panel',exact:true}).click();
- await page.getByLabel('Komponenten- oder Variantenname').fill('User name');
- await page.getByRole('button',{name:'Auswahl als neue Komponente speichern',exact:true}).click();
+ await page.getByRole('button',{name:'Auswahl speichern',exact:true}).click();
+ await page.getByLabel('Komponentenname').fill('User name');
+ await page.getByRole('button',{name:'Speichern',exact:true}).click();
+ await page.getByTestId('components-advanced').locator(':scope > summary').click();
  await expect(page.getByRole('group',{name:'Komponente User name',exact:true})).toBeVisible();
  await expect(page.getByLabel('Komponenten suchen')).toBeVisible();
  await expect(page.getByRole('button',{name:'Variante User name Default umbenennen',exact:true})).toBeVisible();
