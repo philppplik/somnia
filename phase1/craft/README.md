@@ -78,3 +78,31 @@ not new Somnia dependencies. The PDF check stays inside its own workspace to
 honor root `[patch.crates-io]` entries. If later importing PdfCraft via Git,
 Cargo ignores dependency-workspace patch tables: mirror its vendor patches in
 the bridge root explicitly instead of silently losing the safety fixes.
+
+
+## A2 foundation integration
+
+The inline raster editor now lazily uses this bridge for bounded blur previews.
+This does **not** promote T1 to a full document/layer engine. Generated assets
+must be built before `npm run dev` / `npm run build`; these scripts fail with
+an explicit setup message when assets are missing. The CI workflow builds them
+with the isolated 1.95 toolchain before all frontend/Tauri builds.
+
+The display proxy is capped at 900,000 pixels for known same-sized adjustment
+and filter ops. Exports remain full-resolution through the existing reference
+pipeline. Geometry, selection and unknown extension ops disable the proxy:
+no source-space intent is scaled or silently reinterpreted. The footer reports
+its preview scale. PhotoCraft has a 1MP padded-workspace bound and radius 0..32;
+out-of-bound operations fall back to the existing renderer and report that fact.
+
+Boundary policy: repeat edge RGBA pixels with 4-sigma padding + 2 pixels, run
+PhotoCraft Gaussian blur, crop to original bounds. This avoids the upstream
+transparent document-edge fade. Real WASM tests check constant opaque edges.
+Large-radius PhotoCraft uses a box approximation, so preview is not a guarantee
+of byte equality to existing full-resolution Gaussian export. Tiled full-res
+PhotoCraft export is still a separate gate.
+
+Worker jobs have a 15-second timeout and dispose rejects pending jobs. Superseded
+renders are ignored through AbortSignal and generation checks; synchronous WASM
+work is not interruptible mid-job. Document retention, layers/masks, PSD import,
+upstream selection algorithms and full craft export remain future A2 work.

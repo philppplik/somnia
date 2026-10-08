@@ -7,7 +7,7 @@ import {chromium} from '@playwright/test';
 import type {Browser,Page} from '@playwright/test';
 let browser:Browser,page:Page;const port=1438;let server:ReturnType<typeof spawn>;
 before(async()=>{
- server=spawn(process.execPath,['node_modules/vite/bin/vite.js','--host','127.0.0.1','--port',String(port)],{stdio:'ignore'});
+ server=spawn(process.execPath,['node_modules/vite/bin/vite.js',...(process.env.SOMNIA_PRODUCTION==='1'?['preview']:[]),'--host','127.0.0.1','--port',String(port)],{stdio:'ignore'});
  for(let i=0;i<120;i++){try{if((await fetch(`http://127.0.0.1:${port}`)).ok)break;}catch{}await new Promise(r=>setTimeout(r,100));}
  browser=await chromium.launch({executablePath:process.env.CHROME_PATH||'/usr/bin/google-chrome',headless:true,args:['--no-sandbox','--disable-dev-shm-usage']});
  page=await browser.newPage({viewport:{width:1440,height:900}});
@@ -93,4 +93,23 @@ test('24 MP source keeps an interactive slider path with the existing preview en
  await page.screenshot({path:'/tmp/raster-24mp-light.png'});
  console.log(`24 MP / 5 keyboard slider ticks: ${elapsed} ms (headless Chromium; not a desktop GPU benchmark)`);
  assert.ok(elapsed<5000,`five slider ticks took ${elapsed} ms`);
+ const download=page.waitForEvent('download');await page.getByRole('button',{name:'Save copy...'}).click();const out=await download;await out.saveAs('/tmp/raster-24mp-export.png');
+ const png=readFileSync('/tmp/raster-24mp-export.png');assert.equal(png.readUInt32BE(16),6000);assert.equal(png.readUInt32BE(20),4000);
+});
+
+test('real PhotoCraft WASM worker blur preview extends opaque edges and returns changed pixels',async()=>{
+ const proof=await page.evaluate(async()=>{
+  const {CraftBlurPreview}=await import('/src/lib/craft/blurPreview.ts');
+  const messages:string[]=[];const engine=new CraftBlurPreview(message=>messages.push(message));
+  const width=128,height=128,data=new Uint8ClampedArray(width*height*4);for(let y=0;y<height;y++)for(let x=0;x<width;x++){const i=(y*width+x)*4;data[i]=x<64?255:0;data[i+2]=x<64?0:255;data[i+3]=255;}
+  try{const result=await engine.render({width,height,data},4);return{alpha:result.data[3],edge:[...result.data.slice(0,4)],center:[...result.data.slice((64*width+64)*4,(64*width+64)*4+4)],messages};}finally{engine.dispose();}
+ });
+ assert.equal(proof.alpha,255);assert.deepEqual(proof.edge,[255,0,0,255]);assert.ok(proof.center[0]>0&&proof.center[0]<255);assert.equal(proof.messages.length,0);
+ await page.getByRole('tab',{name:'photo.png'}).click();await page.getByTestId('raster-transform-tool').click();await page.getByRole('tab',{name:'Filter',exact:true}).click();const workerStarted=page.waitForEvent('worker');await page.getByTestId('image-editor-filter-select').selectOption('blur');assert.match((await workerStarted).url(),/worker/);
+ await page.waitForTimeout(600);await page.screenshot({path:'/tmp/raster-craft-blur-light.png'});
+});
+
+test('craft worker rejects invalid jobs, recovers, transfers ownership and disposes',async()=>{
+ const result=await page.evaluate(async()=>{const {CraftEngine}=await import('/src/lib/craft/engine.ts');const engine=new CraftEngine();await engine.init();let rejected=false,disposed=false;try{await engine.blur(new ArrayBuffer(4),4,4,1);}catch{rejected=true;}const buffer=new Uint8Array([1,2,3,255]).buffer;const response=await engine.blur(buffer,1,1,0);const detached=buffer.byteLength===0;engine.dispose();try{await engine.blur(new ArrayBuffer(4),1,1,0);}catch{disposed=true;}return{rejected,detached,disposed,ok:response.ok};});
+ assert.deepEqual(result,{rejected:true,detached:true,disposed:true,ok:true});
 });

@@ -306,6 +306,12 @@
   "homepage": "https://github.com/devongovett/browserify-zlib"
  },
  {
+  "name": "bumpalo (PhotoCraft WASM)",
+  "version": "3.20.3",
+  "license": "MIT OR Apache-2.0",
+  "homepage": "https://crates.io/crates/bumpalo"
+ },
+ {
   "name": "call-bind",
   "version": "1.0.9",
   "license": "MIT",
@@ -322,6 +328,12 @@
   "version": "1.0.4",
   "license": "MIT",
   "homepage": "https://github.com/ljharb/call-bound#readme"
+ },
+ {
+  "name": "cfg-if (PhotoCraft WASM)",
+  "version": "1.0.5",
+  "license": "MIT OR Apache-2.0",
+  "homepage": "https://crates.io/crates/cfg-if"
  },
  {
   "name": "class-variance-authority",
@@ -666,6 +678,12 @@
   "homepage": "git://github.com/ljharb/object-keys"
  },
  {
+  "name": "once_cell (PhotoCraft WASM)",
+  "version": "1.21.4",
+  "license": "MIT OR Apache-2.0",
+  "homepage": "https://crates.io/crates/once_cell"
+ },
+ {
   "name": "option",
   "version": "0.2.4",
   "license": "BSD-2-Clause",
@@ -690,10 +708,46 @@
   "homepage": "https://pdf-lib.js.org"
  },
  {
+  "name": "pdfjs-dist",
+  "version": "6.4.299",
+  "license": "Apache-2.0",
+  "homepage": "https://mozilla.github.io/pdf.js/"
+ },
+ {
   "name": "pdfmake",
   "version": "0.2.20",
   "license": "MIT",
   "homepage": "http://pdfmake.org"
+ },
+ {
+  "name": "photocraft-algo (PhotoCraft WASM)",
+  "version": "0.5.0",
+  "license": "MIT OR Apache-2.0",
+  "homepage": "https://github.com/philppplik/photocraft"
+ },
+ {
+  "name": "photocraft-cms (PhotoCraft WASM)",
+  "version": "0.5.0",
+  "license": "MIT OR Apache-2.0",
+  "homepage": "https://github.com/philppplik/photocraft"
+ },
+ {
+  "name": "photocraft-color (PhotoCraft WASM)",
+  "version": "0.5.0",
+  "license": "MIT OR Apache-2.0",
+  "homepage": "https://github.com/philppplik/photocraft"
+ },
+ {
+  "name": "photocraft-geom (PhotoCraft WASM)",
+  "version": "0.5.0",
+  "license": "MIT OR Apache-2.0",
+  "homepage": "https://github.com/philppplik/photocraft"
+ },
+ {
+  "name": "photocraft-raster (PhotoCraft WASM)",
+  "version": "0.5.0",
+  "license": "MIT OR Apache-2.0",
+  "homepage": "https://github.com/philppplik/photocraft"
  },
  {
   "name": "png-js",
@@ -708,6 +762,12 @@
   "homepage": "https://prettier.io"
  },
  {
+  "name": "proc-macro2 (PhotoCraft WASM)",
+  "version": "1.0.107",
+  "license": "MIT OR Apache-2.0",
+  "homepage": "https://crates.io/crates/proc-macro2"
+ },
+ {
   "name": "process-nextick-args",
   "version": "2.0.1",
   "license": "MIT",
@@ -718,6 +778,12 @@
   "version": "2.3.1",
   "license": "MIT",
   "homepage": "https://mths.be/punycode"
+ },
+ {
+  "name": "quote (PhotoCraft WASM)",
+  "version": "1.0.47",
+  "license": "MIT OR Apache-2.0",
+  "homepage": "https://crates.io/crates/quote"
  },
  {
   "name": "react",
@@ -750,6 +816,12 @@
   "homepage": "https://github.com/reduxjs/reselect"
  },
  {
+  "name": "rustversion (PhotoCraft WASM)",
+  "version": "1.0.23",
+  "license": "MIT OR Apache-2.0",
+  "homepage": "https://crates.io/crates/rustversion"
+ },
+ {
   "name": "safe-buffer",
   "version": "5.1.2",
   "license": "MIT",
@@ -774,6 +846,24 @@
   "homepage": "https://react.dev/"
  },
  {
+  "name": "serde (PhotoCraft WASM)",
+  "version": "1.0.229",
+  "license": "MIT OR Apache-2.0",
+  "homepage": "https://crates.io/crates/serde"
+ },
+ {
+  "name": "serde_core (PhotoCraft WASM)",
+  "version": "1.0.229",
+  "license": "MIT OR Apache-2.0",
+  "homepage": "https://crates.io/crates/serde_core"
+ },
+ {
+  "name": "serde_derive (PhotoCraft WASM)",
+  "version": "1.0.229",
+  "license": "MIT OR Apache-2.0",
+  "homepage": "https://crates.io/crates/serde_derive"
+ },
+ {
   "name": "set-function-length",
   "version": "1.2.2",
   "license": "MIT",
@@ -792,6 +882,12 @@
   "homepage": ""
  },
  {
+  "name": "somnia-craft (PhotoCraft WASM)",
+  "version": "0.1.0",
+  "license": "MIT",
+  "homepage": "https://crates.io/crates/somnia-craft"
+ },
+ {
   "name": "string_decoder",
   "version": "1.1.1",
   "license": "MIT",
@@ -802,6 +898,12 @@
   "version": "4.1.4",
   "license": "MIT",
   "homepage": "https://code.haverbeke.berlin/marijn/style-mod"
+ },
+ {
+  "name": "syn (PhotoCraft WASM)",
+  "version": "3.0.6",
+  "license": "MIT OR Apache-2.0",
+  "homepage": "https://crates.io/crates/syn"
  },
  {
   "name": "tailwind-merge",
@@ -852,6 +954,12 @@
   "homepage": "https://undici.nodejs.org"
  },
  {
+  "name": "unicode-ident (PhotoCraft WASM)",
+  "version": "1.0.26",
+  "license": "(MIT OR Apache-2.0) AND Unicode-3.0",
+  "homepage": "https://crates.io/crates/unicode-ident"
+ },
+ {
   "name": "unicode-properties",
   "version": "1.4.1",
   "license": "MIT",
@@ -892,6 +1000,30 @@
   "version": "2.2.8",
   "license": "MIT",
   "homepage": "https://github.com/marijnh/w3c-keyname#readme"
+ },
+ {
+  "name": "wasm-bindgen (PhotoCraft WASM)",
+  "version": "0.2.129",
+  "license": "MIT OR Apache-2.0",
+  "homepage": "https://crates.io/crates/wasm-bindgen"
+ },
+ {
+  "name": "wasm-bindgen-macro (PhotoCraft WASM)",
+  "version": "0.2.129",
+  "license": "MIT OR Apache-2.0",
+  "homepage": "https://crates.io/crates/wasm-bindgen-macro"
+ },
+ {
+  "name": "wasm-bindgen-macro-support (PhotoCraft WASM)",
+  "version": "0.2.129",
+  "license": "MIT OR Apache-2.0",
+  "homepage": "https://crates.io/crates/wasm-bindgen-macro-support"
+ },
+ {
+  "name": "wasm-bindgen-shared (PhotoCraft WASM)",
+  "version": "0.2.129",
+  "license": "MIT OR Apache-2.0",
+  "homepage": "https://crates.io/crates/wasm-bindgen-shared"
  },
  {
   "name": "xml",

@@ -33,9 +33,10 @@ export const IMAGE_ACCEPT='.png,.jpg,.jpeg,.webp,.svg,image/png,image/jpeg,image
 export function webImageHost():ImageEditorHost{
  return {
   pick:()=>new Promise(resolve=>{
-   const input=document.createElement('input');input.type='file';input.accept=IMAGE_ACCEPT;
-   input.onchange=()=>{const f=input.files?.[0];resolve(f?{blob:f,name:f.name}:null);};
-   input.oncancel=()=>resolve(null);input.click();}),
+   const input=document.createElement('input');input.type='file';input.accept=IMAGE_ACCEPT;input.hidden=true;document.body.append(input);
+   const finish=(result:PickedImage|null)=>{input.remove();resolve(result);};
+   input.onchange=()=>{const f=input.files?.[0];finish(f?{blob:f,name:f.name}:null);};
+   input.oncancel=()=>finish(null);input.click();}),
   async save(blob,suggestedName){downloadImage(blob,suggestedName);return true;},
  };
 }

@@ -3,13 +3,13 @@ import type { CraftRequest, CraftResponse } from './protocol';
 export class CraftEngine {
   private worker = new Worker(new URL('./worker.ts', import.meta.url), { type: 'module' });
   private nextId = 1;
-  private pending = new Map<number, { resolve: (value: CraftResponse) => void; reject: (error: Error) => void }>();
+  private pending = new Map<number, { resolve: (value: CraftResponse) => void; reject: (error: Error) => void;timer:ReturnType<typeof setTimeout> }>();
   private disposed = false;
   constructor() {
     this.worker.onmessage = ({ data }: MessageEvent<CraftResponse>) => {
       const pending = this.pending.get(data.id);
       if (!pending) return;
-      this.pending.delete(data.id);
+      clearTimeout(pending.timer);this.pending.delete(data.id);
       if (data.ok) pending.resolve(data);
       else pending.reject(new Error(data.error));
     };
@@ -19,9 +19,10 @@ export class CraftEngine {
   private request(message: CraftRequest, transfer: Transferable[] = []) {
     return new Promise<CraftResponse>((resolve, reject) => {
       if (this.disposed) { reject(new Error('craft engine disposed')); return; }
-      this.pending.set(message.id, { resolve, reject });
+      const timer=setTimeout(()=>this.dispose(new Error('craft worker timed out')),15000);
+      this.pending.set(message.id, { resolve, reject,timer });
       try { this.worker.postMessage(message, transfer); }
-      catch (error) { this.pending.delete(message.id); reject(error); }
+      catch (error) { clearTimeout(timer);this.pending.delete(message.id); reject(error); }
     });
   }
   async init() {
@@ -34,7 +35,7 @@ export class CraftEngine {
   dispose(error = new Error('craft engine disposed')) {
     this.disposed = true;
     this.worker.terminate();
-    for (const pending of this.pending.values()) pending.reject(error);
+    for (const pending of this.pending.values()){clearTimeout(pending.timer);pending.reject(error);}
     this.pending.clear();
   }
 }

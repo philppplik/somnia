@@ -19,7 +19,14 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: '24'
+      - name: Install isolated PhotoCraft WASM toolchain
+        run: |
+          rustup toolchain install 1.95.0 --profile minimal
+          rustup target add wasm32-unknown-unknown --toolchain 1.95.0
+          cargo +1.95.0 install wasm-bindgen-cli --version 0.2.129 --locked
       - run: npm ci
+      - name: Build headless PhotoCraft assets before frontend/Tauri
+        run: npm run craft:build
       - run: npm run build && npm run test:core
       - name: Test performance-budget validation
         run: node --test scripts/performance/report.test.mjs
@@ -54,7 +61,14 @@ jobs:
           node-version: '24'
       - uses: dtolnay/rust-toolchain@stable
       - run: sudo apt-get update && sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf xvfb xdotool imagemagick
+      - name: Install isolated PhotoCraft WASM toolchain
+        run: |
+          rustup toolchain install 1.95.0 --profile minimal
+          rustup target add wasm32-unknown-unknown --toolchain 1.95.0
+          cargo +1.95.0 install wasm-bindgen-cli --version 0.2.129 --locked
       - run: npm ci
+      - name: Build headless PhotoCraft assets before frontend/Tauri
+        run: npm run craft:build
       - run: cargo test --manifest-path src-tauri/Cargo.toml --no-default-features --locked
       - run: cargo check --manifest-path src-tauri/Cargo.toml --locked
       - name: Sync app version (and enable signed updater artifacts when the signing key secret exists)
@@ -89,7 +103,14 @@ jobs:
         with:
           node-version: '24'
       - uses: dtolnay/rust-toolchain@stable
+      - name: Install isolated PhotoCraft WASM toolchain
+        run: |
+          rustup toolchain install 1.95.0 --profile minimal
+          rustup target add wasm32-unknown-unknown --toolchain 1.95.0
+          cargo +1.95.0 install wasm-bindgen-cli --version 0.2.129 --locked
       - run: npm ci
+      - name: Build headless PhotoCraft assets before frontend/Tauri
+        run: npm run craft:build
       - run: cargo test --manifest-path src-tauri/Cargo.toml --no-default-features --locked
       - name: Sync app version (and enable signed updater artifacts when the signing key secret exists)
         run: node scripts/sync-version.mjs ${{ secrets.TAURI_SIGNING_PRIVATE_KEY != '' && '--updater' || '' }}
@@ -132,7 +153,14 @@ jobs:
         with:
           node-version: '24'
       - uses: dtolnay/rust-toolchain@stable
+      - name: Install isolated PhotoCraft WASM toolchain
+        run: |
+          rustup toolchain install 1.95.0 --profile minimal
+          rustup target add wasm32-unknown-unknown --toolchain 1.95.0
+          cargo +1.95.0 install wasm-bindgen-cli --version 0.2.129 --locked
       - run: npm ci
+      - name: Build headless PhotoCraft assets before frontend/Tauri
+        run: npm run craft:build
       - run: cargo test --manifest-path src-tauri/Cargo.toml --no-default-features --locked
       - name: Updater harness tests (no secrets, no network)
         run: npm run test:updater
