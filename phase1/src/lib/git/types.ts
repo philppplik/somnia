@@ -116,3 +116,89 @@ export interface GitBackend {
 /** Tauri command names (Rust side must use exactly these; build.rs + capabilities/editor.json entries required). */
 export const GIT_COMMANDS = ['git_detect', 'git_status', 'git_diff_file', 'git_init', 'git_commit', 'git_log', 'git_restore_as_new_version', 'git_trust_repo'] as const;
 export type GitCommandName = typeof GIT_COMMANDS[number];
+
+// ---------------------------------------------------------------------------------------------
+// CONTRACT-E (git-variants-conflicts): Variants (branches) and Combine (merge). Additive only.
+// UI words: "variant" = branch, "combine" = merge, "yours" = the open variant, "theirs" = the other one.
+// ---------------------------------------------------------------------------------------------
+export interface GitVariant {
+  name: string;
+  current: boolean;
+  tip: string;
+  subject: string;
+  time: number;
+  /** Versions this variant has that the open one lacks. */
+  ahead: number;
+  /** Versions the open variant has that this one lacks. */
+  behind: number;
+  /** Everything in this variant is already in the open one. */
+  merged: boolean;
+}
+export interface GitVariantCreateRequest { name: string; from?: string; open?: boolean; stateToken?: string }
+export interface GitVariantOpenRequest { name: string; stateToken: string }
+export interface GitVariantRenameRequest { from: string; to: string }
+export interface GitVariantDeleteRequest { name: string; expectTip: string; confirmUnmerged?: boolean }
+export interface GitVariantDeleteResult { name: string; deletedTip: string; backupRef: string | null }
+
+export interface GitCombineFile { path: string; kind: 'added' | 'modified' | 'deleted' | 'typechange' }
+export interface GitCombinePreview {
+  name: string; tip: string; current: string;
+  upToDate: boolean; fastForward: boolean;
+  commits: GitVersion[]; files: GitCombineFile[]; truncated: boolean;
+}
+export interface GitCombineStartRequest { name: string; expectTip: string; stateToken: string }
+
+export type GitConflictKind = 'both-modified' | 'both-added' | 'deleted-by-yours' | 'deleted-by-theirs' | 'other';
+export interface GitConflict {
+  path: string;
+  kind: GitConflictKind;
+  binary: boolean;
+  tooLarge: boolean;
+  /** Text sides; null when that side has no file or the file is binary. */
+  base: string | null; yours: string | null; theirs: string | null;
+  /** The file on disk right now, with git's conflict markers. */
+  working: string | null;
+  yoursBytes: number | null; theirsBytes: number | null;
+}
+export interface GitCombineSession {
+  name: string; yoursTip: string; theirsTip: string;
+  fastForwarded: boolean;
+  /** Merge state exists; finish or abort is required. */
+  merging: boolean;
+  conflicts: GitConflict[];
+  safetyCopy: GitVersion | null;
+  version: GitVersion | null;
+  proposedMessage: string;
+}
+/** `yours`/`theirs` pick one whole side for that file (for a side that deleted the file: accept the deletion). */
+export type GitResolveChoice = 'yours' | 'theirs' | 'content';
+export interface GitConflictResolution { path: string; choice: GitResolveChoice; content?: string }
+export interface GitCombineResolveRequest { resolutions: GitConflictResolution[] }
+export interface GitCombineFinishRequest { message?: string }
+
+/** Extra `GitError.detail` values used by CONTRACT-E (code is `blocked` unless noted). */
+export type GitVariantErrorDetail =
+  | 'invalid-variant-name' | 'variant-exists' | 'variant-missing' | 'is-current' | 'unmerged-variant'
+  | 'dirty-worktree' | 'detached-head' | 'unborn' | 'same-variant' | 'up-to-date' | 'unrelated-histories'
+  | 'no-merge' | 'not-a-conflict' | 'duplicate-resolution' | 'conflict-markers' | 'binary-needs-choice'
+  | 'content-missing' | 'content-invalid' | 'unresolved-conflicts' | 'conflict-outside-project';
+
+/** Separate seam so the fakes of packages A-D keep compiling. */
+export interface GitVariantsBackend {
+  listVariants(): Promise<GitVariant[]>;
+  createVariant(req: GitVariantCreateRequest): Promise<GitVariant>;
+  openVariant(req: GitVariantOpenRequest): Promise<GitRepoState>;
+  renameVariant(req: GitVariantRenameRequest): Promise<GitVariant>;
+  deleteVariant(req: GitVariantDeleteRequest): Promise<GitVariantDeleteResult>;
+  combinePreview(name: string): Promise<GitCombinePreview>;
+  combineStart(req: GitCombineStartRequest): Promise<GitCombineSession>;
+  combineStatus(): Promise<GitCombineSession | null>;
+  combineResolve(req: GitCombineResolveRequest): Promise<GitCombineSession>;
+  combineFinish(req: GitCombineFinishRequest): Promise<GitVersion>;
+  combineAbort(): Promise<GitRepoState>;
+}
+export const GIT_VARIANT_COMMANDS = [
+  'git_variant_list', 'git_variant_create', 'git_variant_open', 'git_variant_rename', 'git_variant_delete',
+  'git_combine_preview', 'git_combine_start', 'git_combine_status', 'git_combine_resolve', 'git_combine_finish', 'git_combine_abort',
+] as const;
+export type GitVariantCommandName = typeof GIT_VARIANT_COMMANDS[number];

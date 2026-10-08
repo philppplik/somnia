@@ -80,6 +80,17 @@
     "allow-git-log",
     "allow-git-restore-as-new-version",
     "allow-git-trust-repo",
+    "allow-git-variant-list",
+    "allow-git-variant-create",
+    "allow-git-variant-open",
+    "allow-git-variant-rename",
+    "allow-git-variant-delete",
+    "allow-git-combine-preview",
+    "allow-git-combine-start",
+    "allow-git-combine-status",
+    "allow-git-combine-resolve",
+    "allow-git-combine-finish",
+    "allow-git-combine-abort",
     "core:window:allow-set-always-on-top",
     "core:window:allow-set-decorations"
   ]

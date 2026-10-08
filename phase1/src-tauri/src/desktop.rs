@@ -1255,6 +1255,152 @@ async fn git_trust_repo(
     })
     .await
 }
+#[tauri::command]
+async fn git_variant_list(
+    window: WebviewWindow,
+    state: State<'_, Shared>,
+) -> std::result::Result<Vec<crate::git::variants::GitVariant>, String> {
+    git_gate(&window)?;
+    git_work(state.inner().clone(), move |b| {
+        let root = git_project_root(b)?;
+        crate::git::variants::variant_list(&root).map_err(|e| e.to_json())
+    })
+    .await
+}
+#[tauri::command]
+async fn git_variant_create(
+    window: WebviewWindow,
+    state: State<'_, Shared>,
+    request: crate::git::variants::GitVariantCreateRequest,
+) -> std::result::Result<crate::git::variants::GitVariant, String> {
+    git_gate(&window)?;
+    let store = git_store(&window)?;
+    git_work(state.inner().clone(), move |b| {
+        let root = git_project_root(b)?;
+        crate::git::variants::variant_create(&root, &request, &store).map_err(|e| e.to_json())
+    })
+    .await
+}
+#[tauri::command]
+async fn git_variant_open(
+    window: WebviewWindow,
+    state: State<'_, Shared>,
+    request: crate::git::variants::GitVariantOpenRequest,
+) -> std::result::Result<crate::git::GitRepoState, String> {
+    git_gate(&window)?;
+    let store = git_store(&window)?;
+    git_work(state.inner().clone(), move |b| {
+        let root = git_project_root(b)?;
+        crate::git::variants::variant_open(&root, &request, &store).map_err(|e| e.to_json())
+    })
+    .await
+}
+#[tauri::command]
+async fn git_variant_rename(
+    window: WebviewWindow,
+    state: State<'_, Shared>,
+    request: crate::git::variants::GitVariantRenameRequest,
+) -> std::result::Result<crate::git::variants::GitVariant, String> {
+    git_gate(&window)?;
+    git_work(state.inner().clone(), move |b| {
+        let root = git_project_root(b)?;
+        crate::git::variants::variant_rename(&root, &request).map_err(|e| e.to_json())
+    })
+    .await
+}
+#[tauri::command]
+async fn git_variant_delete(
+    window: WebviewWindow,
+    state: State<'_, Shared>,
+    request: crate::git::variants::GitVariantDeleteRequest,
+) -> std::result::Result<crate::git::variants::GitVariantDeleteResult, String> {
+    git_gate(&window)?;
+    git_work(state.inner().clone(), move |b| {
+        let root = git_project_root(b)?;
+        crate::git::variants::variant_delete(&root, &request).map_err(|e| e.to_json())
+    })
+    .await
+}
+#[tauri::command]
+async fn git_combine_preview(
+    window: WebviewWindow,
+    state: State<'_, Shared>,
+    request: crate::git::variants::GitCombinePreviewRequest,
+) -> std::result::Result<crate::git::variants::GitCombinePreview, String> {
+    git_gate(&window)?;
+    git_work(state.inner().clone(), move |b| {
+        let root = git_project_root(b)?;
+        crate::git::variants::combine_preview(&root, &request).map_err(|e| e.to_json())
+    })
+    .await
+}
+#[tauri::command]
+async fn git_combine_start(
+    window: WebviewWindow,
+    state: State<'_, Shared>,
+    request: crate::git::variants::GitCombineStartRequest,
+) -> std::result::Result<crate::git::variants::GitCombineSession, String> {
+    git_gate(&window)?;
+    let store = git_store(&window)?;
+    git_work(state.inner().clone(), move |b| {
+        let root = git_project_root(b)?;
+        crate::git::variants::combine_start(&root, &request, &store).map_err(|e| e.to_json())
+    })
+    .await
+}
+#[tauri::command]
+async fn git_combine_status(
+    window: WebviewWindow,
+    state: State<'_, Shared>,
+) -> std::result::Result<Option<crate::git::variants::GitCombineSession>, String> {
+    git_gate(&window)?;
+    git_work(state.inner().clone(), move |b| {
+        let root = git_project_root(b)?;
+        crate::git::variants::combine_status(&root).map_err(|e| e.to_json())
+    })
+    .await
+}
+#[tauri::command]
+async fn git_combine_resolve(
+    window: WebviewWindow,
+    state: State<'_, Shared>,
+    request: crate::git::variants::GitCombineResolveRequest,
+) -> std::result::Result<crate::git::variants::GitCombineSession, String> {
+    git_gate(&window)?;
+    let store = git_store(&window)?;
+    git_work(state.inner().clone(), move |b| {
+        let root = git_project_root(b)?;
+        crate::git::variants::combine_resolve(&root, &request, &store).map_err(|e| e.to_json())
+    })
+    .await
+}
+#[tauri::command]
+async fn git_combine_finish(
+    window: WebviewWindow,
+    state: State<'_, Shared>,
+    request: crate::git::variants::GitCombineFinishRequest,
+) -> std::result::Result<crate::git::GitVersion, String> {
+    git_gate(&window)?;
+    let store = git_store(&window)?;
+    git_work(state.inner().clone(), move |b| {
+        let root = git_project_root(b)?;
+        crate::git::variants::combine_finish(&root, &request, &store).map_err(|e| e.to_json())
+    })
+    .await
+}
+#[tauri::command]
+async fn git_combine_abort(
+    window: WebviewWindow,
+    state: State<'_, Shared>,
+) -> std::result::Result<crate::git::GitRepoState, String> {
+    git_gate(&window)?;
+    let store = git_store(&window)?;
+    git_work(state.inner().clone(), move |b| {
+        let root = git_project_root(b)?;
+        crate::git::variants::combine_abort(&root, Some(&store)).map_err(|e| e.to_json())
+    })
+    .await
+}
 
 pub fn run() {
     let shared = Shared::default();
@@ -1387,7 +1533,18 @@ pub fn run() {
             git_commit,
             git_log,
             git_restore_as_new_version,
-            git_trust_repo
+            git_trust_repo,
+            git_variant_list,
+            git_variant_create,
+            git_variant_open,
+            git_variant_rename,
+            git_variant_delete,
+            git_combine_preview,
+            git_combine_start,
+            git_combine_status,
+            git_combine_resolve,
+            git_combine_finish,
+            git_combine_abort
         ])
         .run(tauri::generate_context!())
         .unwrap_or_else(|error| {

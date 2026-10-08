@@ -20,6 +20,8 @@ use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
+pub mod variants;
+
 const READ_TIMEOUT: Duration = Duration::from_secs(30);
 const LOG_TIMEOUT: Duration = Duration::from_secs(60);
 /// Retained child stdout per call. Diff sides are cut to their own caps below.

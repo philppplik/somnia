@@ -60,6 +60,17 @@ fn main() {
             "git_log",
             "git_restore_as_new_version",
             "git_trust_repo",
+            "git_variant_list",
+            "git_variant_create",
+            "git_variant_open",
+            "git_variant_rename",
+            "git_variant_delete",
+            "git_combine_preview",
+            "git_combine_start",
+            "git_combine_status",
+            "git_combine_resolve",
+            "git_combine_finish",
+            "git_combine_abort",
         ]),
     ))
     .expect("Tauri build configuration failed");

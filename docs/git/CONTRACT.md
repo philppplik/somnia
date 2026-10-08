@@ -56,3 +56,27 @@ Additive only; nothing above changes meaning.
 - **Hook-failed mapping**: git gives no machine-readable hook marker. Commit failures are classified in order identity → signing → nothing-to-commit → (an active non-sample pre-commit/commit-msg/prepare-commit-msg/post-commit hook exists → `hook-failed`) → `unknown`. Documented so package B/C can word the UI accordingly.
 - **Cancellation**: the 30 s / 60 s timeouts are enforced and the child is killed; UI-initiated cancel is not wired (no channel yet) and `cancelled` is reserved.
 - **Limit**: `git_log.limit` is clamped to 1-200 per call; paginate with `before` (first-parent based).
+
+## CONTRACT-E (git-variants-conflicts, branch agent/git-variants)
+
+Additive only. UI words: variant = branch, combine = merge, "yours" = the open variant (stage 2, `--ours`), "theirs" = the other variant (stage 3). Code: `src-tauri/src/git/variants.rs` (child module of `git.rs`, uses its runner, trust store and safety copy), types in `src/lib/git/types.ts` (`GitVariantsBackend` is a separate interface so the fakes of A-D keep compiling). Tauri payloads follow package A: `{ request }`. Still no network, no force, no `-X ours/theirs`, no `--no-verify`.
+
+| Command | Args | Returns | Notes |
+| --- | --- | --- | --- |
+| `git_variant_list` | none | `GitVariant[]` | open one first, then newest. `ahead/behind` against the open variant. |
+| `git_variant_create` | `GitVariantCreateRequest` | `GitVariant` | `open` switches. Starting from the current version carries uncommitted work along; any other start needs `stateToken` and a clean folder. Needs trust only when `open`. |
+| `git_variant_open` | `GitVariantOpenRequest` | `GitRepoState` | trust + `stateToken` + clean whole repo (`blocked/dirty-worktree`). A detached head gets a backup ref first. |
+| `git_variant_rename` | `GitVariantRenameRequest` | `GitVariant` | never overwrites (`variant-exists`). |
+| `git_variant_delete` | `GitVariantDeleteRequest` | `GitVariantDeleteResult` | refuses the open variant (`is-current`), a stale `expectTip` (`state-changed`), and an unmerged variant without `confirmUnmerged` (`unmerged-variant`). Unmerged tips are kept on `refs/somnia/variant-backup/<unix>-<name>` (separate from `refs/somnia/safety/*`). |
+| `git_combine_preview` | `{ name }` | `GitCombinePreview` | read only: up-to-date / fast-forward, incoming versions (max 20), files (max 500). |
+| `git_combine_start` | `GitCombineStartRequest` | `GitCombineSession` | trust, `stateToken`, `expectTip`, clean repo. Safety copy first. Fast-forward moves the variant (`fastForwarded`). Otherwise a real `git merge --no-ff --no-commit`: conflicts are returned, never resolved. Merge state is git's own (MERGE_HEAD), so it survives an app restart. |
+| `git_combine_status` | none | `GitCombineSession \| null` | resume after restart. `git_detect` reports `blocked/merge-in-progress` during a combine; this command still works. |
+| `git_combine_resolve` | `{ resolutions }` | `GitCombineSession` | every entry is an explicit choice: `yours`, `theirs` (a side without the file means accept the deletion) or `content` (text only). Validated as a whole before anything is written. Refused: unknown path, duplicate, binary with `content`, result containing conflict markers. Partial calls are allowed. |
+| `git_combine_finish` | `{ message? }` | `GitVersion` | refused while any file is unmerged (`unresolved-conflicts`). Normal commit, so hooks run; `hook-failed`, `signing-failed`, `identity-missing` map as in `git_commit`. |
+| `git_combine_abort` | none | `GitRepoState` | `git merge --abort`. Worktree was clean at start, the safety copy exists. |
+
+Rules:
+1. Nothing is decided for the user. There is no "keep all mine/theirs" command. Binary and too-large (>1 MiB per side) conflicts only take a whole side.
+2. A conflict outside the project subtree aborts the combine (`conflict-outside-project`).
+3. UI guard (not visible to git): switching, starting, finishing and aborting a combine are blocked while the editor has unsaved buffers or a running review (`VariantGuards` in `src/lib/git/variantsFlow.ts`). After any of them the editor must reload files from disk (`onDiskChanged`).
+4. Errors use `GitError.code = "blocked"` with `detail` from `GitVariantErrorDetail`.
