@@ -15,14 +15,14 @@ export function McpSettings({runtime=getMcpRuntime()}:{runtime?:McpRuntime|null}
   const cfg:McpServerConfig={id:form.id.trim(),command:form.command.trim(),args:parseArgs(form.args),env};await runtime.save(cfg);if(!runtime.getSnapshot().error)setForm({id:'',command:'',args:'',env:''});};
  const toolsOf=(id:string)=>snap.tools.filter(x=>x.server===id);
  return <div className="mcp-settings" data-testid="mcp-settings">
-  <p>{t('mcp.intro')}</p>
+  <p className="pr-8">{t('mcp.intro')}</p>
   {snap.error&&<p role="alert">{snap.error}</p>}
   <ul aria-label={t('mcp.servers')} className="m-0 list-none p-0">{snap.servers.map(s=><li key={s.config.id} data-testid="mcp-server" className="mb-3 rounded-sm border border-subtle p-2">
    <strong>{s.config.id}</strong> <code>{[s.config.command,...s.config.args].join(' ')}</code>
    <div className="mt-1 flex gap-2">
     {s.running?<Button onClick={()=>void runtime.stop(s.config.id)} disabled={snap.busy}>{t('mcp.stop')}</Button>:<Button onClick={()=>void runtime.start(s.config.id)} disabled={snap.busy}>{t('mcp.start')}</Button>}
     <Button onClick={()=>{if(window.confirm(t('mcp.removeConfirm',{id:s.config.id})))void runtime.remove(s.config.id);}} disabled={snap.busy}>{t('mcp.remove')}</Button></div>
-   {s.running&&<ul className="m-0 mt-2 list-none p-0" aria-label={t('mcp.tools')}>{toolsOf(s.config.id).map(tool=><li key={tool.name}><label className="flex items-start gap-2"><input type="checkbox" className="mt-1 size-4 shrink-0 grow-0 basis-4" checked={runtime.isGranted(tool)} onChange={e=>runtime.setGranted(tool,e.target.checked)}/><span><strong>{tool.name}</strong><br/><small>{t('mcp.untrustedText')} {tool.description.slice(0,200)}</small></span></label></li>)}{!toolsOf(s.config.id).length&&<li><small>{t('mcp.noTools')}</small></li>}</ul>}
+   {s.running&&<ul className="m-0 mt-2 list-none p-0" aria-label={t('mcp.tools')}>{toolsOf(s.config.id).map(tool=><li key={tool.name}><label className="flex items-start justify-start! gap-2 text-left"><input type="checkbox" className="mt-1 size-4 shrink-0 grow-0 basis-4" checked={runtime.isGranted(tool)} onChange={e=>runtime.setGranted(tool,e.target.checked)}/><span className="min-w-0 flex-1 text-left"><strong>{tool.name}</strong><br/><small>{t('mcp.untrustedText')} {tool.description.slice(0,200)}</small></span></label></li>)}{!toolsOf(s.config.id).length&&<li><small>{t('mcp.noTools')}</small></li>}</ul>}
   </li>)}</ul>
   {!snap.servers.length&&<p>{t('mcp.noServers')}</p>}
   <fieldset className="mt-3 flex flex-col gap-2"><legend>{t('mcp.add')}</legend>
