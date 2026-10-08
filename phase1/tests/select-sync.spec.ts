@@ -7,6 +7,6 @@ test('clicking an element in the preview selects and focuses its source in the c
  await expect(page.locator('.cm-selectionBackground').first()).toBeVisible();
  const text=await page.evaluate(()=>window.getSelection()?.toString()??'');
  expect(text).toContain('Make room for something new.');
- await f.locator('p').first().click();
+ await f.locator('p').first().dispatchEvent('click'); // the floating selection toolbar covers the scaled-down preview paragraph, so dispatch the click directly
  await expect.poll(()=>page.evaluate(()=>window.getSelection()?.toString()??'')).toContain('Your first idea');
 });

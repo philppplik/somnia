@@ -345,7 +345,7 @@
   "ctx.show": "Show layer",
   "ctx.hide": "Hide layer",
   "ctx.lock": "Lock layer",
-  "ctx.unlock": "Unlock",
+  "ctx.unlock": "Unlock layer",
   "status.toggleProblems": "Toggle problems",
   "status.problems": "Problems",
   "status.storage": "Storage",

@@ -345,7 +345,7 @@
   "ctx.show": "Afficher le calque",
   "ctx.hide": "Masquer le calque",
   "ctx.lock": "Verrouiller le calque",
-  "ctx.unlock": "Déverrouiller",
+  "ctx.unlock": "Déverrouiller le calque",
   "status.toggleProblems": "Afficher ou masquer les problèmes",
   "status.problems": "Problèmes",
   "status.storage": "Stockage",

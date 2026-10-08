@@ -345,7 +345,7 @@
   "ctx.show": "Ebene anzeigen",
   "ctx.hide": "Ebene ausblenden",
   "ctx.lock": "Ebene sperren",
-  "ctx.unlock": "Entsperren",
+  "ctx.unlock": "Ebene entsperren",
   "status.toggleProblems": "Probleme ein-/ausblenden",
   "status.problems": "Probleme",
   "status.storage": "Speicherort",

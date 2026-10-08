@@ -345,7 +345,7 @@
   "ctx.show": "Mostrar camada",
   "ctx.hide": "Ocultar camada",
   "ctx.lock": "Bloquear camada",
-  "ctx.unlock": "Desbloquear",
+  "ctx.unlock": "Desbloquear camada",
   "status.toggleProblems": "Mostrar ou ocultar problemas",
   "status.problems": "Problemas",
   "status.storage": "Armazenamento",

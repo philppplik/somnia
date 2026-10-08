@@ -345,7 +345,7 @@
   "ctx.show": "Mostrar capa",
   "ctx.hide": "Ocultar capa",
   "ctx.lock": "Bloquear capa",
-  "ctx.unlock": "Desbloquear",
+  "ctx.unlock": "Desbloquear capa",
   "status.toggleProblems": "Mostrar u ocultar problemas",
   "status.problems": "Problemas",
   "status.storage": "Almacenamiento",
