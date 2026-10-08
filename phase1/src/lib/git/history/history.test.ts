@@ -11,7 +11,7 @@ function fixture() {
  const git: GitBackend = {
   detect:async()=>({kind:'ready', repo}), status:async()=>({repo, changes:[], stateToken:'reviewed-token', truncated:false}),
   log:async()=>[version], restoreAsNewVersion:async req => {requests.push(req); return {safetyCopy:version, newVersion:{...version, sha:'restored'}};},
-  diff:async()=>{throw Error('Unexpected diff');}, init:async()=>{throw Error('Unexpected init');}, commit:async()=>{throw Error('Unexpected commit');},
+  diff:async()=>{throw Error('Unexpected diff');}, init:async()=>{throw Error('Unexpected init');}, trustRepo:async()=>{throw Error('Unexpected trust');}, commit:async()=>{throw Error('Unexpected commit');},
  };
  const recovery: RecoveryBackend = {list:async()=>[snapshot], review:async()=>({exists:true,hash:'current'}), restore:async(e,rev)=>{requests.push({e,rev}); return {event:{projectId:'p',path:e.record.path,clientRevision:2,state:'dirty',diskRevision:rev,error:null,durability:null},content:e.record.content,safetyIds:['safety-new']};}};
  let dirty=false;

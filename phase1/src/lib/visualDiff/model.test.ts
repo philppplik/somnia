@@ -6,7 +6,7 @@ import type {GitBackend, GitFileDiff} from '../git/types';
 function fakeBackend(result: GitFileDiff): {backend: GitBackend; calls: unknown[]} {
   const calls: unknown[] = [];
   const forbidden = async (): Promise<never> => {throw new Error('Unexpected backend mutation or read');};
-  return {calls, backend: {detect: forbidden, status: forbidden, init: forbidden, commit: forbidden, log: forbidden, restoreAsNewVersion: forbidden,
+  return {calls, backend: {detect: forbidden, status: forbidden, init: forbidden, trustRepo: forbidden, commit: forbidden, log: forbidden, restoreAsNewVersion: forbidden,
     diff: async (...args) => {calls.push(args); return result;}}};
 }
 test('adapter uses only GitBackend.diff and preserves missing/empty/incomplete sides', async () => {

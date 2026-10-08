@@ -9,6 +9,7 @@ export function createFakeBackend(init:{state?:GitRepoState;changes?:GitChange[]
   async detect(){f.calls.push('detect');return f.state;},
   async status():Promise<GitStatus>{f.calls.push('status');if(f.failStatus)throw f.failStatus;if(f.state.kind!=='ready')throw err('blocked');return{repo:f.state.repo,changes:f.changes,stateToken:`t${f.token}`,truncated:false};},
   async diff(path,base,target){f.calls.push(`diff:${path}`);return{path,binary:false,base,target,unified:'',tooLarge:false};},
+  async trustRepo(){f.calls.push('trust');return f.state;},
   async init(){f.calls.push('init');f.state={kind:'ready',repo:fakeRepo({unborn:true,branch:'main',head:null})};return f.state;},
   async commit(req){f.calls.push('commit');if(f.failNextCommit){const e=f.failNextCommit;f.failNextCommit=null;throw e;}
    if(req.stateToken!==`t${f.token}`)throw err('state-changed');if(!req.paths.length)throw err('nothing-to-commit');
