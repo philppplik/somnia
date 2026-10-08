@@ -4,7 +4,7 @@ const open=async(page:Page)=>{await page.goto('/');await page.getByRole('button'
 async function model(page:Page){
  await page.route('http://127.0.0.1:11434/api/show',r=>r.fulfill({json:{model_info:{architecture:'fixture'}}}));
  const panel=await open(page);await panel.getByRole('button',{name:'Agent configuration',exact:true}).click();
- await panel.getByLabel('Model', {exact:true}).fill('fixture-local');await panel.getByRole('button',{name:'Use configuration'}).click();return panel;
+ const settings=page.getByRole('dialog');await settings.getByLabel('Model', {exact:true}).fill('fixture-local');await settings.getByRole('button',{name:'Save AI settings',exact:true}).click();await settings.getByText('Configuration saved.',{exact:true}).waitFor();await settings.getByRole('button',{name:'Close settings',exact:true}).click();return panel;
 }
 async function fixture(page:Page,mode:'edit'|'slow'='edit'){
  let calls=0;
