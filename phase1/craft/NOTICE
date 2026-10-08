@@ -1,0 +1,11 @@
+Somnia craft T1 uses selected headless crates from PhotoCraft:
+https://github.com/philppplik/photocraft
+Pinned revision: c833294e34124eb8025de91627eb5a2d3a50f422
+Copyright (c) 2026 ArtCraft Team and the PhotoCraft contributors.
+Licensed MIT OR Apache-2.0. License texts are in licenses/.
+The upstream synthetic CMS profiles are CC0-1.0 (upstream ATTRIBUTION.md).
+
+No upstream UI, fonts, logos, product marks or icon assets are copied.
+The above name and copyright are legal attribution only, not Somnia branding.
+Transitive dependencies require inclusion in Somnia's release license inventory
+before distributing generated WASM. Keep Cargo.lock for that inventory.

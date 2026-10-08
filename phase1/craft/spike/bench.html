@@ -1,0 +1,38 @@
+<!doctype html><meta charset="utf-8"><title>Somnia craft T1</title>
+<style>body{background:#f8f9fb;font:16px system-ui;padding:30px;color:#222}canvas{width:360px;height:360px;border-radius:16px;image-rendering:pixelated}section{display:flex;gap:24px}pre{font-size:13px}</style>
+<h1>Somnia craft: headless WASM worker</h1><section><div><h2>Input RGBA8</h2><canvas id="before"></canvas></div><div><h2>Gaussian blur, radius 4</h2><canvas id="after"></canvas></div></section><pre id="summary">Running...</pre>
+<script type="module">
+const worker = new Worker('./worker.js', {type:'module'});
+let id=0; const pending=new Map();
+worker.onmessage=({data})=>{pending.get(data.id)?.(data);pending.delete(data.id)};
+worker.onerror=e=>{window.failure=e.message};
+function request(data, transfer=[]){return new Promise((resolve,reject)=>{data.id=++id;const t=setTimeout(()=>reject(new Error('worker timeout')),30000);pending.set(id,r=>{clearTimeout(t);resolve(r)});worker.postMessage(data,transfer)})}
+function fixture(size){const a=new Uint8Array(size*size*4);for(let y=0;y<size;y++)for(let x=0;x<size;x++){const i=(y*size+x)*4; const checker=((x>>4)^(y>>4))&1;a[i]=checker?240:20;a[i+1]=Math.floor(x*255/size);a[i+2]=Math.floor(y*255/size);a[i+3]=255}return a}
+function draw(id,bytes,n){const c=document.getElementById(id);c.width=c.height=n;c.getContext('2d').putImageData(new ImageData(new Uint8ClampedArray(bytes),n,n),0,0)}
+function checksum(a){let h=2166136261;for(const v of a){h=Math.imul(h^v,16777619)}return h>>>0}
+window.run=async()=>{
+ const started=performance.now();const init=await request({kind:'init',wasmUrl:new URL('../pkg/somnia_craft_bg.wasm',location.href).href});if(!init.ok)throw Error(init.error);
+ const coldRoundTripMs=performance.now()-started;
+ const metrics=[];let visual;
+ for(const n of [256,512,1024]){
+  const input=fixture(n), samples=[],roundTrips=[];
+  for(let k=0;k<6;k++){
+   const copy=input.slice(); const start=performance.now();const reply=await request({kind:'blur',bytes:copy.buffer,width:n,height:n,radius:4},[copy.buffer]);
+   if(copy.byteLength!==0)throw Error('input not transferred'); if(!reply.ok)throw Error(reply.error);
+   const output=new Uint8Array(reply.bytes);if(output.length!==input.length||checksum(output)===checksum(input))throw Error('invalid output');
+   if(k>0){samples.push(reply.jobMs);roundTrips.push(performance.now()-start)}
+   if(n===256)visual=output;
+  }
+  samples.sort((a,b)=>a-b);roundTrips.sort((a,b)=>a-b);
+  metrics.push({width:n,height:n,radius:4,iterations:5,jobMedianMs:samples[2],jobMinMs:samples[0],jobMaxMs:samples[4],roundTripMedianMs:roundTrips[2]});
+ }
+ const source=fixture(256);draw('before',source,256);draw('after',visual,256);
+ const identity=await request({kind:'blur',bytes:source.slice().buffer,width:256,height:256,radius:0});if(checksum(new Uint8Array(identity.bytes))!==checksum(source))throw Error('identity mismatch');
+ const invalid=await request({kind:'blur',bytes:new ArrayBuffer(4),width:4,height:4,radius:2});if(invalid.ok)throw Error('invalid length accepted');
+ const invalidRadius=await request({kind:'blur',bytes:new ArrayBuffer(4),width:1,height:1,radius:NaN});if(invalidRadius.ok)throw Error('NaN accepted');
+ // Recovery after errors must work.
+ const recovery=await request({kind:'blur',bytes:source.slice().buffer,width:256,height:256,radius:0});if(!recovery.ok)throw Error('worker failed recovery');
+ const result={userAgent:navigator.userAgent,hardwareConcurrency:navigator.hardwareConcurrency,crossOriginIsolated,initMs:init.initMs,coldRoundTripMs,metrics,checksum256:checksum(visual),edgeAlpha:visual[3],centerAlpha:visual[(128*256+128)*4+3],tests:['transfer detaches input','output size and changed pixels','radius-zero identity','bad length rejected','NaN rejected','error recovery'],scope:'selected algo/raster/geom/color/cms; not full engine'};
+ document.getElementById('summary').textContent=JSON.stringify(result,null,2);worker.terminate();return result;
+};
+</script>

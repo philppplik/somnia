@@ -1,0 +1,5 @@
+<!doctype html><meta charset="utf-8"><title>Somnia craft adapter test</title>
+<script type="module">
+import { CraftEngine } from '../../src/lib/craft/engine.ts';
+window.run=async()=>{const engine=new CraftEngine();await engine.init();const input=new Uint8Array([10,20,30,255]);const reply=await engine.blur(input.buffer,1,1,0);if(!reply.ok||reply.kind!=='result'||new Uint8Array(reply.bytes).join(',')!=='10,20,30,255'||input.byteLength!==0)throw Error('adapter failed');engine.dispose();let rejected=false;try{await engine.init()}catch{rejected=true}if(!rejected)throw Error('dispose failed');return {adapter:true,dispose:true}};
+</script>

@@ -1,0 +1,33 @@
+[package]
+name = "somnia-craft"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.95"
+license = "MIT"
+publish = false
+
+# Deliberately independent of src-tauri and its Rust 1.85 toolchain.
+[workspace]
+resolver = "3"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+wasm-bindgen = "=0.2.129"
+photocraft-algo = { git = "https://github.com/philppplik/photocraft", rev = "c833294e34124eb8025de91627eb5a2d3a50f422" }
+photocraft-raster = { git = "https://github.com/philppplik/photocraft", rev = "c833294e34124eb8025de91627eb5a2d3a50f422" }
+photocraft-color = { git = "https://github.com/philppplik/photocraft", rev = "c833294e34124eb8025de91627eb5a2d3a50f422" }
+photocraft-geom = { git = "https://github.com/philppplik/photocraft", rev = "c833294e34124eb8025de91627eb5a2d3a50f422" }
+
+[profile.release]
+opt-level = "s"
+lto = "fat"
+codegen-units = 1
+panic = "abort"
+strip = "debuginfo"
+
+[profile.release.package.photocraft-algo]
+opt-level = 3
+[profile.release.package.photocraft-raster]
+opt-level = 3

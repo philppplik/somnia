@@ -1,0 +1,9 @@
+/target/
+/pkg/*
+!/pkg/somnia_craft.d.ts
+/spike/results*.json
+/spike/preview.png
+/spike/node_modules/
+
+/spike/dist/
+/spike/worker.js

@@ -1,0 +1,128 @@
+[
+  {
+    "name": "bumpalo",
+    "version": "3.20.3",
+    "license": "MIT OR Apache-2.0",
+    "source": "registry+https://github.com/rust-lang/crates.io-index"
+  },
+  {
+    "name": "cfg-if",
+    "version": "1.0.5",
+    "license": "MIT OR Apache-2.0",
+    "source": "registry+https://github.com/rust-lang/crates.io-index"
+  },
+  {
+    "name": "once_cell",
+    "version": "1.21.4",
+    "license": "MIT OR Apache-2.0",
+    "source": "registry+https://github.com/rust-lang/crates.io-index"
+  },
+  {
+    "name": "photocraft-algo",
+    "version": "0.5.0",
+    "license": "MIT OR Apache-2.0",
+    "source": "git+https://github.com/philppplik/photocraft?rev=c833294e34124eb8025de91627eb5a2d3a50f422#c833294e34124eb8025de91627eb5a2d3a50f422"
+  },
+  {
+    "name": "photocraft-cms",
+    "version": "0.5.0",
+    "license": "MIT OR Apache-2.0",
+    "source": "git+https://github.com/philppplik/photocraft?rev=c833294e34124eb8025de91627eb5a2d3a50f422#c833294e34124eb8025de91627eb5a2d3a50f422"
+  },
+  {
+    "name": "photocraft-color",
+    "version": "0.5.0",
+    "license": "MIT OR Apache-2.0",
+    "source": "git+https://github.com/philppplik/photocraft?rev=c833294e34124eb8025de91627eb5a2d3a50f422#c833294e34124eb8025de91627eb5a2d3a50f422"
+  },
+  {
+    "name": "photocraft-geom",
+    "version": "0.5.0",
+    "license": "MIT OR Apache-2.0",
+    "source": "git+https://github.com/philppplik/photocraft?rev=c833294e34124eb8025de91627eb5a2d3a50f422#c833294e34124eb8025de91627eb5a2d3a50f422"
+  },
+  {
+    "name": "photocraft-raster",
+    "version": "0.5.0",
+    "license": "MIT OR Apache-2.0",
+    "source": "git+https://github.com/philppplik/photocraft?rev=c833294e34124eb8025de91627eb5a2d3a50f422#c833294e34124eb8025de91627eb5a2d3a50f422"
+  },
+  {
+    "name": "proc-macro2",
+    "version": "1.0.107",
+    "license": "MIT OR Apache-2.0",
+    "source": "registry+https://github.com/rust-lang/crates.io-index"
+  },
+  {
+    "name": "quote",
+    "version": "1.0.47",
+    "license": "MIT OR Apache-2.0",
+    "source": "registry+https://github.com/rust-lang/crates.io-index"
+  },
+  {
+    "name": "rustversion",
+    "version": "1.0.23",
+    "license": "MIT OR Apache-2.0",
+    "source": "registry+https://github.com/rust-lang/crates.io-index"
+  },
+  {
+    "name": "serde",
+    "version": "1.0.229",
+    "license": "MIT OR Apache-2.0",
+    "source": "registry+https://github.com/rust-lang/crates.io-index"
+  },
+  {
+    "name": "serde_core",
+    "version": "1.0.229",
+    "license": "MIT OR Apache-2.0",
+    "source": "registry+https://github.com/rust-lang/crates.io-index"
+  },
+  {
+    "name": "serde_derive",
+    "version": "1.0.229",
+    "license": "MIT OR Apache-2.0",
+    "source": "registry+https://github.com/rust-lang/crates.io-index"
+  },
+  {
+    "name": "somnia-craft",
+    "version": "0.1.0",
+    "license": "MIT",
+    "source": null
+  },
+  {
+    "name": "syn",
+    "version": "3.0.6",
+    "license": "MIT OR Apache-2.0",
+    "source": "registry+https://github.com/rust-lang/crates.io-index"
+  },
+  {
+    "name": "unicode-ident",
+    "version": "1.0.26",
+    "license": "(MIT OR Apache-2.0) AND Unicode-3.0",
+    "source": "registry+https://github.com/rust-lang/crates.io-index"
+  },
+  {
+    "name": "wasm-bindgen",
+    "version": "0.2.129",
+    "license": "MIT OR Apache-2.0",
+    "source": "registry+https://github.com/rust-lang/crates.io-index"
+  },
+  {
+    "name": "wasm-bindgen-macro",
+    "version": "0.2.129",
+    "license": "MIT OR Apache-2.0",
+    "source": "registry+https://github.com/rust-lang/crates.io-index"
+  },
+  {
+    "name": "wasm-bindgen-macro-support",
+    "version": "0.2.129",
+    "license": "MIT OR Apache-2.0",
+    "source": "registry+https://github.com/rust-lang/crates.io-index"
+  },
+  {
+    "name": "wasm-bindgen-shared",
+    "version": "0.2.129",
+    "license": "MIT OR Apache-2.0",
+    "source": "registry+https://github.com/rust-lang/crates.io-index"
+  }
+]
