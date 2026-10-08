@@ -11,6 +11,8 @@ import {
 } from '../lib/image-editor';
 import {SelectionEditor} from './imgedit/SelectionEditor';
 import {registerSelectionOps,type SelectionMask} from '../lib/imgedit/select';
+import {ImageHistory} from './imageedit/ImageHistory';
+import {jumpTo,removeOp,toggleOp} from '../lib/imageedit/historyView';
 import {FilterPanel} from './imageedit/FilterPanel';
 import {FILTER_TYPES,newFilterOperation,registerFilterOps,type FilterType} from '../lib/imageedit/filters';
 import {TRANSFORM_HANDLERS} from '../lib/imgedit/handlers';
@@ -95,6 +97,7 @@ export function ImageEditorDialog({host:injected}:{host?:ImageEditorHost}){
  const close=()=>{if(busy)return;generation.current++;release();setSource(null);setFrame(null);setSnap(EMPTY);setPast([]);setFuture([]);setError('');setStatus('');setOpen(false);};
  const base=source?source.loaded.document.source:null;
  const size=base?sizeAfter(base.width,base.height,snap.stack):{width:1,height:1};
+ const jump=(i:number)=>{const r=jumpTo(past,snap,future,i);if(!r)return;adjustBase.current=null;setPast(r.past);setSnap(r.now);setFuture(r.future);setCropRect(null);setSelection(null);};
  const addOp=(op:ImageOperation)=>{setSelection(null);commit({...snap,stack:[...snap.stack,op]});setCropRect(null);setAspect('free');};
  return <Dialog open={open} onOpenChange={v=>{if(!v)close();}}><DialogContent className="export-popup image-editor-dialog" aria-label={t('imageeditor.title')}>
   <header className="export-head"><DialogTitle>{t('imageeditor.title')}</DialogTitle><DialogDescription>{t('imageeditor.desc')}</DialogDescription></header>
@@ -114,6 +117,7 @@ export function ImageEditorDialog({host:injected}:{host?:ImageEditorHost}){
       </>}
      </section>
      <AdjustPanel params={snap.adjust} disabled={busy} onChange={a=>{adjustBase.current??=snap;setSnap(x=>({...x,adjust:a}));}} onCommit={()=>{const base=adjustBase.current;adjustBase.current=null;if(base){setPast(p=>[...p.slice(-(MAX_HISTORY-1)),base]);setFuture([]);}}}/>
+     <ImageHistory past={past} now={snap} future={future} disabled={busy} onJump={jump} onToggle={id=>commit({...snap,stack:toggleOp(snap.stack,id)})} onRemove={id=>commit({...snap,stack:removeOp(snap.stack,id)})}/>
     </>}
    </aside>
   </div>
