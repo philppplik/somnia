@@ -2017,5 +2017,12 @@
   "svg.toolRect": "Rechteck",
   "svg.toolEllipse": "Ellipse",
   "svg.toolLine": "Linie",
-  "svg.toolText": "Text"
+  "svg.toolText": "Text",
+  "office.readonly": "Schreibgeschützt",
+  "office.loading": "Dokument wird geladen ...",
+  "office.docx.title": "DOCX-Vorschau",
+  "office.docx.toMd": "Als Markdown speichern",
+  "office.docx.frameTitle": "Vorschau von {name}",
+  "office.xlsx.title": "XLSX-Vorschau",
+  "office.xlsx.toCsv": "Blatt als CSV speichern"
 }

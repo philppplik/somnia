@@ -2017,5 +2017,12 @@
   "svg.toolRect": "Retângulo",
   "svg.toolEllipse": "Elipse",
   "svg.toolLine": "Linha",
-  "svg.toolText": "Texto"
+  "svg.toolText": "Texto",
+  "office.readonly": "Somente leitura",
+  "office.loading": "Carregando documento...",
+  "office.docx.title": "Pré-visualização de DOCX",
+  "office.docx.toMd": "Salvar como Markdown",
+  "office.docx.frameTitle": "Pré-visualização de {name}",
+  "office.xlsx.title": "Pré-visualização de XLSX",
+  "office.xlsx.toCsv": "Salvar planilha como CSV"
 }

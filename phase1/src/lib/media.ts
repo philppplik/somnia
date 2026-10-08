@@ -1,10 +1,11 @@
 /** Media files (PNG, JPEG, PDF) are previewed, never edited: they live in a small in-memory store next to the text project. */
 import {useSyncExternalStore} from 'react';
-export type MediaKind='image'|'pdf'|'psd';
+export type MediaKind='image'|'pdf'|'psd'|'docx'|'xlsx';
 export interface MediaItem{name:string;kind:MediaKind;mime:string;url:string;size:number}
-export const MEDIA_FILE=/\.(png|jpe?g|webp|pdf|psd)$/i;
+export const MEDIA_FILE=/\.(png|jpe?g|webp|pdf|psd|docx|xlsx)$/i;
 export const MAX_MEDIA_BYTES=25_000_000;
-export const MEDIA_ACCEPT='.psd,.png,.jpg,.jpeg,.webp,.pdf,image/png,image/jpeg,image/webp,application/pdf';
+export const MEDIA_ACCEPT='.psd,.png,.jpg,.jpeg,.webp,.pdf,image/png,image/jpeg,image/webp,application/pdf,.docx,.xlsx,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+const OFFICE_MIME={docx:'application/vnd.openxmlformats-officedocument.wordprocessingml.document',xlsx:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'} as const;
 export const isMarkdown=(f:string)=>/\.(md|markdown)$/i.test(f);
 export const isSvg=(f:string)=>/\.svg$/i.test(f);
 /** True when the file shows as a rendered preview instead of the HTML design canvas. */
@@ -36,8 +37,11 @@ const baseName=(n:string)=>n.replace(/^.*[\\/]/,'');
 export async function addMediaFile(file:Blob,rawName:string,key?:string):Promise<{name:string}|{error:string}>{
  const name=key??baseName(rawName);
  if(file.size>MAX_MEDIA_BYTES)return{error:`${name} is larger than ${MAX_MEDIA_BYTES/1_000_000} MB.`};
- const sniffed=sniffMedia(new Uint8Array(await file.slice(0,16).arrayBuffer()));
- if(!sniffed)return{error:/\.psd$/i.test(name)?`${name} is not a valid PSD v1 file.`:`${name} is not a valid PNG, JPEG, WebP or PDF file.`};
+ let sniffed=sniffMedia(new Uint8Array(await file.slice(0,16).arrayBuffer()));
+ if(!sniffed&&/\.(docx|xlsx)$/i.test(name)){const {sniffOffice}=await import('./office/zipProbe');const k=sniffOffice(new Uint8Array(await file.arrayBuffer()));
+  if(k==='pptx')return{error:`${name} is a PowerPoint file. PPTX is not supported yet.`};
+  if(k==='docx'||k==='xlsx')sniffed={kind:k,mime:OFFICE_MIME[k]};}
+ if(!sniffed)return{error:/\.(docx|xlsx)$/i.test(name)?`${name} is not a valid ${name.slice(-4).toUpperCase()} file.`:/\.psd$/i.test(name)?`${name} is not a valid PSD v1 file.`:`${name} is not a valid PNG, JPEG, WebP or PDF file.`};
  const old=findMedia(name);if(old&&!canClose(name))return{error:'Replacing the image was cancelled.'};if(old)URL.revokeObjectURL(old.url);
  const url=URL.createObjectURL(new Blob([file],{type:sniffed.mime}));
  const item:MediaItem={name,kind:sniffed.kind,mime:sniffed.mime,url,size:file.size};

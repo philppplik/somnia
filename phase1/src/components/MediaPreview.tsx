@@ -1,6 +1,8 @@
 import {PsdViewer} from './PsdViewer';
 import {lazy,Suspense} from 'react';
 const PdfInlineEditor=lazy(()=>import('./pdfedit/PdfInlineEditor').then(m=>({default:m.PdfInlineEditor})));
+const DocxViewer=lazy(()=>import('./OfficeViewer').then(m=>({default:m.DocxViewer})));
+const XlsxViewer=lazy(()=>import('./OfficeViewer').then(m=>({default:m.XlsxViewer})));
 import {useEffect,useMemo,useState} from 'react';
 import {Maximize2,Minimize2,ExternalLink} from '../lib/icons';
 import {formatBytes,isMarkdown,isTex,type MediaItem} from '../lib/media';
@@ -22,6 +24,7 @@ function FitImage({src,alt,onSize}:{src:string;alt:string;onSize?:(w:number,h:nu
 export function MediaViewer({item}:{item:MediaItem}){const {t}=useT();
  if(item.kind==='psd')return <PsdViewer key={item.url} item={item}/>;
  if(item.kind==='pdf')return <Suspense fallback={<div role="status" className="grid flex-1 place-items-center text-xs">Opening PDF…</div>}><PdfInlineEditor key={item.name} item={item}/></Suspense>;
+ if(item.kind==='docx'||item.kind==='xlsx')return <Suspense fallback={null}>{item.kind==='docx'?<DocxViewer item={item}/>:<XlsxViewer item={item}/>}</Suspense>;
  return <section className="canvas-stage flex min-h-0 flex-1 flex-col" aria-label={t('finish2.media.image')}>
   <FitImage src={item.url} alt={item.name}/>
  </section>;}

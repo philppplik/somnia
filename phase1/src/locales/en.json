@@ -2017,5 +2017,12 @@
   "svg.toolRect": "Rectangle",
   "svg.toolEllipse": "Ellipse",
   "svg.toolLine": "Line",
-  "svg.toolText": "Text"
+  "svg.toolText": "Text",
+  "office.readonly": "Read-only",
+  "office.loading": "Loading document...",
+  "office.docx.title": "DOCX preview",
+  "office.docx.toMd": "Save as Markdown",
+  "office.docx.frameTitle": "Preview of {name}",
+  "office.xlsx.title": "XLSX preview",
+  "office.xlsx.toCsv": "Save sheet as CSV"
 }
