@@ -1776,5 +1776,10 @@
   "variants.err.binary": "Wähle für diese Datei deine oder die andere Seite.",
   "variants.err.unresolved": "Einige Dateien brauchen noch eine Entscheidung.",
   "variants.err.outside": "Ein Konflikt betrifft Dateien außerhalb dieses Projektordners, deshalb hat Somnia das Zusammenführen abgebrochen.",
-  "variants.err.noMerge": "Es läuft kein Zusammenführen."
+  "variants.err.noMerge": "Es läuft kein Zusammenführen.",
+  "redesign.units": "Einheiten und Papier",
+  "redesign.unitsAuto": "Meiner Region folgen",
+  "redesign.unitsMetric": "Metrisch (mm, A4)",
+  "redesign.unitsImperial": "Imperial (in, Letter)",
+  "redesign.unitsHint": "Legt das Standard-Papierformat für neue PDFs fest und wie Längen angezeigt werden. \"Meiner Region folgen\" nutzt die Region deiner Systemsprache."
 }

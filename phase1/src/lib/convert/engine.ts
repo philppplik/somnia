@@ -4,7 +4,7 @@ import {FORMATS,TARGETS,baseName,decodeUtf8,type FormatId} from './formats';
 import {formatDelimited,htmlDocument,htmlToText,jsonToRows,parseDelimited,rowsToHtmlTable,tableToJson,textToHtml} from './text';
 /** Turns image bytes into another raster format. Browser implementation lives in raster.ts; tests inject a fake. */
 export type Rasterizer=(bytes:Uint8Array,from:FormatId,to:'png'|'jpg'|'webp',quality:number)=>Promise<Uint8Array>;
-export interface ConvertOptions{quality?:number;rasterize?:Rasterizer;signal?:AbortSignal}
+export interface ConvertOptions{quality?:number;rasterize?:Rasterizer;signal?:AbortSignal;paper?:'A4'|'Letter'}
 export interface Converted{name:string;bytes:Uint8Array;mime:string;warnings?:string[]}
 const DOC_PAIRS=new Set(['md>pdf','pdf>txt','pdf>docx','docx>md']);
 const MAX_TEXT_BYTES=8*1024*1024;
@@ -17,7 +17,7 @@ export async function convertFile(name:string,bytes:Uint8Array,from:FormatId,to:
  const info=FORMATS[to as Exclude<FormatId,'unknown'>];
  if(DOC_PAIRS.has(`${from}>${to}`)){
   const {convertDocument}=await import('../conversion/documents');
-  const r=await convertDocument({from:from as 'md'|'pdf'|'docx',to:to as 'pdf'|'txt'|'docx'|'md',data:bytes,title,signal:opt.signal});
+  const r=await convertDocument({from:from as 'md'|'pdf'|'docx',to:to as 'pdf'|'txt'|'docx'|'md',data:bytes,title,signal:opt.signal,paper:opt.paper});
   return {name:`${title}.${info.ext}`,bytes:r.data,mime:info.mime,warnings:r.warnings};}
  if(info.kind==='image'){
   if(!opt.rasterize)throw Error('Image conversion needs a browser canvas');

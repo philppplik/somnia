@@ -139,10 +139,10 @@ export function sniffImage(b:Uint8Array):'png'|'jpg'|null{
  if(b[0]===0xff&&b[1]===0xd8)return'jpg';return null;}
 
 /** PNG/JPEG images -> PDF, one image per page, page = image size scaled to fit A4 width at most (pt). */
-export async function imagesToPdf(images:ImageInput[],opts:{fit?:'image'|'a4'}={}):Promise<Uint8Array>{
+export async function imagesToPdf(images:ImageInput[],opts:{fit?:'image'|'a4';paper?:'A4'|'Letter'}={}):Promise<Uint8Array>{
  if(!images.length)throw new Error('No images given');
  const {PDFDocument}=await import('pdf-lib');
- const pdf=await PDFDocument.create();const A4=[595.28,841.89];
+ const pdf=await PDFDocument.create();const A4=opts.paper==='Letter'?[612,792]:[595.28,841.89];
  for(const im of images){
   const img=im.type==='png'?await pdf.embedPng(im.bytes):await pdf.embedJpg(im.bytes);
   if(opts.fit==='a4'){

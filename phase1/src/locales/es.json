@@ -1776,5 +1776,10 @@
   "variants.err.binary": "Choose yours or theirs for this file.",
   "variants.err.unresolved": "Some files still need a decision.",
   "variants.err.outside": "A conflict touches files outside this project folder, so Somnia cancelled the combine.",
-  "variants.err.noMerge": "No combine is running."
+  "variants.err.noMerge": "No combine is running.",
+  "redesign.units": "Units and paper",
+  "redesign.unitsAuto": "Follow my region",
+  "redesign.unitsMetric": "Metric (mm, A4)",
+  "redesign.unitsImperial": "Imperial (in, Letter)",
+  "redesign.unitsHint": "Sets the default paper size for new PDFs and how lengths are shown. Follow my region uses your system language region."
 }

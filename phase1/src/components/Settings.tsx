@@ -22,6 +22,7 @@ import { EditorProject } from "@somnia/editor-core";
 import { Zap } from '../lib/icons';
 import { DEFAULT_CANVAS_PREFS, type CanvasPrefs } from "../lib/canvasPrefs";
 import { DEFAULT_WORKFLOW_PREFS } from "../lib/workflowPrefs";
+import { sanitizeUnitPref } from "../lib/units";
 import { Pencil } from '../lib/icons';
 import { DEFAULT_UI_PREFS } from "../lib/uiPrefs";
 import { parseShortcutFile } from "../lib/shortcutTransfer";
@@ -791,6 +792,26 @@ export function Settings() {
             </select>
           </label>
           <p>{t("redesign.imageSaveHint")}</p>
+          <label>
+            {t("redesign.units")}
+            <select
+              aria-label={t("redesign.units")}
+              value={state.workflowPrefs.units}
+              onChange={(e) =>
+                change({
+                  workflowPrefs: {
+                    ...state.workflowPrefs,
+                    units: sanitizeUnitPref(e.target.value),
+                  },
+                })
+              }
+            >
+              <option value="auto">{t("redesign.unitsAuto")}</option>
+              <option value="metric">{t("redesign.unitsMetric")}</option>
+              <option value="imperial">{t("redesign.unitsImperial")}</option>
+            </select>
+          </label>
+          <p>{t("redesign.unitsHint")}</p>
         </>
       )}
       {section === "Canvas" && (

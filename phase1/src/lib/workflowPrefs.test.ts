@@ -6,3 +6,9 @@ test('HTML and HTM starter lookup both return a document',()=>{assert.ok(starter
 test('image save mode defaults to overwrite and only accepts copy as the alternative',()=>{
  assert.equal(sanitizeWorkflowPrefs({}).imageSaveMode,'overwrite');assert.equal(sanitizeWorkflowPrefs({imageSaveMode:'copy'}).imageSaveMode,'copy');assert.equal(sanitizeWorkflowPrefs({imageSaveMode:'bogus'}).imageSaveMode,'overwrite');
 });
+
+test('units pref defaults to auto and rejects junk', () => {
+  assert.equal(sanitizeWorkflowPrefs({}).units, 'auto');
+  assert.equal(sanitizeWorkflowPrefs({ units: 'imperial' }).units, 'imperial');
+  assert.equal(sanitizeWorkflowPrefs({ units: 'furlong' }).units, 'auto');
+});

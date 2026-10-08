@@ -12,6 +12,8 @@ export interface DocumentConversionRequest {
   /** Password is used only in memory for PDF opening, never retained. */
   password?: string;
   signal?: AbortSignal;
+  /** Page size for Markdown -> PDF. Default A4; callers pass paperFor(units pref, locale). */
+  paper?: 'A4' | 'Letter';
 }
 export interface DocumentConversionResult {
   data: Uint8Array;
@@ -71,7 +73,7 @@ export async function convertDocument(request: DocumentConversionRequest): Promi
   if(from==='md') {
     let source: string;
     try {source=new TextDecoder('utf-8',{fatal:true}).decode(data);} catch {throw Error('Markdown must be UTF-8 encoded.');}
-    const definition=await markdownDefinition(source,request.title,warnings);
+    const definition=await markdownDefinition(source,request.title,warnings,request.paper);
     checkAbort(signal);
     const [pdfModule,fontsModule]=await Promise.all([import('pdfmake/build/pdfmake.js'),import('pdfmake/build/vfs_fonts.js')]);
     const pdfMake=pdfModule.default ?? pdfModule;
@@ -112,7 +114,7 @@ export async function convertDocument(request: DocumentConversionRequest): Promi
   return {data:output,mimeType:mimes[to],extension:to,warnings};
 }
 
-async function markdownDefinition(source: string,title: string|undefined,warnings: string[]):Promise<TDocumentDefinitions> {
+async function markdownDefinition(source: string,title: string|undefined,warnings: string[],paper: 'A4'|'Letter'='A4'):Promise<TDocumentDefinitions> {
   const {default:MarkdownIt}=await import('markdown-it');
   const md=new MarkdownIt({html:false});
   const tokens=md.parse(source,{});
@@ -162,5 +164,5 @@ async function markdownDefinition(source: string,title: string|undefined,warning
   }
   const content=blocks();
   warn(warnings,'Markdown PDF uses bundled Roboto fonts. Unsupported writing systems or emoji may not render; math is exported as source text.');
-  return {info:{title:title??'Somnia document'},pageSize:'A4',pageMargins:[48,48,48,48],defaultStyle:{font:'Roboto',fontSize:11,lineHeight:1.25},content:content.length?content:[{text:''}]};
+  return {info:{title:title??'Somnia document'},pageSize:paper==='Letter'?'LETTER':'A4',pageMargins:[48,48,48,48],defaultStyle:{font:'Roboto',fontSize:11,lineHeight:1.25},content:content.length?content:[{text:''}]};
 }
