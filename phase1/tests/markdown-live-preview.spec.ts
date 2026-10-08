@@ -98,7 +98,6 @@ test('relative md links open project tabs, fragments scroll, missing files repor
 test('no remote image requests are made',async({page})=>{
  const reqs:string[]=[];page.on('request',r=>{if(/evil\.test/.test(r.url()))reqs.push(r.url());});
  await open(page,'![x](https://evil.test/p.png)\n');await split(page);await expect(page.getByTestId('md-preview').locator('.md-missing-image')).toBeVisible();expect(reqs).toEqual([]);
- await page.getByRole('button',{name:'Layers'}).first().click().catch(()=>{});
 });
 test('dark theme and screenshots',async({page})=>{
  await open(page,'# Dark\n\n```js\nconst a = 1;\n```\n\n| a | b |\n|---|---|\n| 1 | 2 |\n\n> quote\n');await split(page);
