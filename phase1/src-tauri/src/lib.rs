@@ -12,6 +12,7 @@ pub use desktop::run;
 pub mod lan_host;
 
 pub mod agent_settings;
+pub mod mcp_host;
 pub mod oauth_login;
 pub mod oauth_store;
 

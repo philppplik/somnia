@@ -307,6 +307,58 @@ async fn agent_key_delete(window: WebviewWindow, provider: String) -> std::resul
         }
     }).await.map_err(|_| "Could not delete credential")?
 }
+#[derive(Serialize)]
+struct McpServerView { config: crate::mcp_host::McpServerConfig, running: bool }
+fn mcp_path(window: &WebviewWindow) -> std::result::Result<std::path::PathBuf, String> {
+    window.app_handle().path().app_config_dir().map(|d| d.join("mcp-servers.json")).map_err(|_| "App config directory is unavailable".to_string())
+}
+#[tauri::command]
+async fn mcp_servers_list(window: WebviewWindow, host: State<'_, crate::mcp_host::McpHost>) -> std::result::Result<Vec<McpServerView>, String> {
+    gate(&window).map_err(|_| "Only the trusted editor may manage MCP servers")?;
+    let path = mcp_path(&window)?;
+    let list = tauri::async_runtime::spawn_blocking(move || crate::mcp_host::load_servers(&path)).await.map_err(|_| "Could not read MCP servers")??;
+    let running = host.running().await;
+    Ok(list.into_iter().map(|c| { let r = running.contains(&c.id); McpServerView { config: c, running: r } }).collect())
+}
+/// Saving is the user's approval to run this exact executable and argument list.
+#[tauri::command]
+async fn mcp_server_save(window: WebviewWindow, host: State<'_, crate::mcp_host::McpHost>, config: crate::mcp_host::McpServerConfig) -> std::result::Result<(), String> {
+    gate(&window).map_err(|_| "Only the trusted editor may manage MCP servers")?;
+    let path = mcp_path(&window)?;
+    let id = config.id.clone();
+    tauri::async_runtime::spawn_blocking(move || { let mut l = crate::mcp_host::load_servers(&path)?; crate::mcp_host::upsert_server(&mut l, config)?; crate::mcp_host::save_servers(&path, &l) }).await.map_err(|_| "Could not save MCP server")??;
+    host.stop(&id).await; // changed config never keeps a running old process
+    Ok(())
+}
+#[tauri::command]
+async fn mcp_server_remove(window: WebviewWindow, host: State<'_, crate::mcp_host::McpHost>, id: String) -> std::result::Result<(), String> {
+    gate(&window).map_err(|_| "Only the trusted editor may manage MCP servers")?;
+    let path = mcp_path(&window)?;
+    let id2 = id.clone();
+    tauri::async_runtime::spawn_blocking(move || { let mut l = crate::mcp_host::load_servers(&path)?; l.retain(|c| c.id != id2); crate::mcp_host::save_servers(&path, &l) }).await.map_err(|_| "Could not remove MCP server")??;
+    host.stop(&id).await;
+    Ok(())
+}
+#[tauri::command]
+async fn mcp_server_start(window: WebviewWindow, host: State<'_, crate::mcp_host::McpHost>, id: String) -> std::result::Result<Vec<crate::mcp_host::McpToolInfo>, String> {
+    gate(&window).map_err(|_| "Only the trusted editor may manage MCP servers")?;
+    let path = mcp_path(&window)?;
+    let list = tauri::async_runtime::spawn_blocking(move || crate::mcp_host::load_servers(&path)).await.map_err(|_| "Could not read MCP servers")??;
+    let cfg = list.into_iter().find(|c| c.id == id).ok_or("Unknown MCP server")?;
+    host.start(&cfg).await?;
+    host.tools(&id).await
+}
+#[tauri::command]
+async fn mcp_server_stop(window: WebviewWindow, host: State<'_, crate::mcp_host::McpHost>, id: String) -> std::result::Result<(), String> {
+    gate(&window).map_err(|_| "Only the trusted editor may manage MCP servers")?;
+    host.stop(&id).await;
+    Ok(())
+}
+#[tauri::command]
+async fn mcp_tool_call(window: WebviewWindow, host: State<'_, crate::mcp_host::McpHost>, server: String, tool: String, arguments: serde_json::Map<String, serde_json::Value>) -> std::result::Result<String, String> {
+    gate(&window).map_err(|_| "Only the trusted editor may call MCP tools")?;
+    host.call(&server, &tool, arguments).await
+}
 #[tauri::command]
 async fn agent_settings_load(window: WebviewWindow) -> std::result::Result<AgentSettingsReply, String> {
     gate(&window).map_err(|_| "Only the trusted editor may access agent settings")?;
@@ -1032,6 +1084,7 @@ pub fn run() {
     let shared = Shared::default();
     tauri::Builder::default()
         .manage(ProviderNetwork::default())
+        .manage(crate::mcp_host::McpHost::new())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_process::init())
@@ -1108,6 +1161,12 @@ pub fn run() {
             agent_key_save,
             agent_key_delete,
             agent_account_status,
+            mcp_servers_list,
+            mcp_server_save,
+            mcp_server_remove,
+            mcp_server_start,
+            mcp_server_stop,
+            mcp_tool_call,
             agent_account_disconnect,
             agent_account_set_method,
             agent_account_start,
