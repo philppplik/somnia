@@ -25,18 +25,18 @@ export const agentFileTools: readonly AgentToolDefinition[] = [
 const byteLength = (value: string) => new TextEncoder().encode(value).byteLength;
 export class AgentProjectTools {
   private readonly staged = new Map<string, AgentFileProposal>();
-  constructor(private readonly access: AgentProjectAccess, private readonly maxFileBytes = 256 * 1024, private readonly maxProposalBytes = 1024 * 1024, private readonly extra?: { registry: AgentToolRegistry; editor?: AgentEditorAccess; grants?: AgentToolGrants; nativeOnly?:boolean }) {}
+  constructor(private readonly access: AgentProjectAccess, private readonly maxFileBytes = 256 * 1024, private readonly maxProposalBytes = 1024 * 1024, private readonly extra?: { registry: AgentToolRegistry; editor?: AgentEditorAccess; grants?: AgentToolGrants; nativeOnly?:boolean; nativePath?:(path:string)=>boolean }) {}
   /** Tool definitions sent to the model: the three file tools plus any enabled registry tools. */
   definitions(): AgentToolDefinition[] { return [...(this.extra?.nativeOnly?[]:agentFileTools), ...(this.extra?.registry.definitions(this.extra.grants) ?? [])]; }
   private readableFiles(): Record<string, string> {
     const out: Record<string, string> = {};
     for (const [path, text] of Object.entries(this.access.files())) {
-      try { validateAgentPath(path); if (this.access.allowed(path, 'list') && this.access.allowed(path, 'read') && !text.includes('\0') && byteLength(text) <= this.maxFileBytes) out[path] = text; } catch { /* hidden from tools */ }
+      try { if(!this.extra?.nativePath?.(path))validateAgentPath(path); if (this.access.allowed(path, 'list') && this.access.allowed(path, 'read') && !text.includes('\0') && byteLength(text) <= this.maxFileBytes) out[path] = text; } catch { /* hidden from tools */ }
     }
     return out;
   }
   private async stage(path: string, content: string, signal: AbortSignal): Promise<string> {
-    validateAgentPath(path);
+    if(!this.extra?.nativePath?.(path))validateAgentPath(path);
     const files = this.access.files();
     const approved = await this.access.authorize?.(path, 'write', signal);
     signal.throwIfAborted();

@@ -1,3 +1,6 @@
+import {getMedia} from '../media';
+import {photoAdapter,createPhotoStudioRegistry,type PhotoPreview} from './photoStudio';
+import {preparePhoto,photoRevision,photoFiles,getPhoto,assertPhoto,previewPhoto,applyPhoto,undoPhoto,subscribePhotos} from './photoWorkspace';
 import {isTauri} from '@tauri-apps/api/core';
 import {nativeProviderFetch} from './nativeProviderFetch';
 import {OpenAIProvider} from './openAI';
@@ -101,23 +104,24 @@ async function authorize(path:string,action:'read'|'write',signal:AbortSignal){
 /** The app registers what the user currently sees (selection, diagnostics). Read-only; absent means the tools report nothing. */
 let editorAccess:AgentEditorAccess|undefined;
 export function setAgentEditorAccess(access:AgentEditorAccess|undefined){editorAccess=access;}
-const documents=new DocumentRegistry([codeAdapter]);
+const documents=new DocumentRegistry([codeAdapter,photoAdapter]);
 const policy=new PolicyGateway();
+const photoPreviews=new Map<string,PhotoPreview>();
 const nativeIds=new Map<string,string>();
 const transactions=new TransactionManager(documents,policy,{
- hold:async path=>{await holdAgentAutosave([path]);syncDocuments();},
- apply:(path,text,origin)=>{applyOperations([{type:'replaceSource',file:path,text}],'ai',origin);syncDocuments();if(currentFiles()[path]!==text)throw Error('AI transaction readback failed. Inspect the editor before retrying.');},
- undo:origin=>{undoAIGroup(origin);syncDocuments();},
+ hold:async path=>{if(!getPhoto(path))await holdAgentAutosave([path]);syncDocuments();},
+ apply:(path,text,origin)=>{if(getPhoto(path)){const preview=photoPreviews.get(text);if(!preview)throw Error('No validated Photo preview.');applyPhoto(path,text,origin,preview);syncDocuments();return;}applyOperations([{type:'replaceSource',file:path,text}],'ai',origin);syncDocuments();if(currentFiles()[path]!==text)throw Error('AI transaction readback failed. Inspect the editor before retrying.');},
+ undo:origin=>{const photo=[...nativeIds.values()].map(id=>transactions.get(id)).find(p=>p.origin===origin&&p.base.studioKind==='photo');if(photo)undoPhoto(photo.base.path,origin);else undoAIGroup(origin);syncDocuments();},
  canAccept:()=>getCollabEngine().snapshot().role!=='guest',
 });
-function syncDocuments(){documents.sync(currentFiles(),getState().revision);}
+function syncDocuments(){documents.sync({...currentFiles(),...photoFiles()},getState().revision+photoRevision());}
 function createTools(project:string,context:ContextPackage,nodes:ReturnType<typeof getState>['nodes']){
  const scoped=()=>{policy.assert({effect:'inspect',documentIds:[context.document.documentId]});syncDocuments();return documents.assert(context.document);};
- const registry=createCodeStudioRegistry({snapshot:scoped,selection:()=>context.selection,nodes:()=>{scoped();return nodes;},propose:after=>{scoped();if(/\.html?$/i.test(context.document.path))validateHTML(after);}});
+ const registry=context.document.studioKind==='photo'?createPhotoStudioRegistry({snapshot:scoped,preview:async(after,signal)=>{const preview=await previewPhoto(context.document.path,after,signal);scoped();photoPreviews.set(after,preview);}}):createCodeStudioRegistry({snapshot:scoped,selection:()=>context.selection,nodes:()=>{scoped();return nodes;},propose:after=>{scoped();if(/\.html?$/i.test(context.document.path))validateHTML(after);}});
  return new AgentProjectTools({projectId:project,files:()=>{const s=scoped();return {[s.ref.path]:s.text};},
   authorize:async(path,_action,signal)=>{signal.throwIfAborted();if(path!==context.document.path)throw Error('Outside pinned document scope.');scoped();policy.assert({effect:'inspect',documentIds:[context.document.documentId]});return true;},
   allowed:path=>path===context.document.path
- },undefined,undefined,{registry,nativeOnly:true,get editor(){return editorAccess;}});
+ },undefined,undefined,{registry,nativeOnly:true,nativePath:path=>context.document.studioKind==='photo'&&path===context.document.path,get editor(){return editorAccess;}});
 }
 function scopedProvider(provider:AgentProvider,context:ContextPackage):AgentProvider {
  return {id:provider.id,locality:provider.locality,async *stream(request){
@@ -139,15 +143,18 @@ export const realCore:AgentCore={
   if(!config.model.trim()){queueMicrotask(()=>deliver({type:'error',message:'Choose a provider and model in Settings > AI first.'}));return {cancel(){stopped=true;}};}
   const generation=getProjectGeneration();
   if(epoch!==generation){session?.cancel();session=null;sessionSerial++;proposals.clear();permissions.clear();appliedAgentProvenance.clear();documents.clear();transactions.clear();nativeIds.clear();epoch=generation;}
-  policy.revoke();syncDocuments();
+  photoPreviews.clear();policy.revoke();syncDocuments();
+  void (async()=>{
+   if(request.context.activeMedia){if(Object.hasOwn(currentFiles(),request.context.activeMedia))throw Error('A text buffer and Photo asset share this path. Close or rename one before using AI.');await preparePhoto(request.context.activeMedia,controller.signal);syncDocuments();}
+   controller.signal.throwIfAborted();if(runId!==runGeneration)throw Error('Run was replaced.');
   // Pin identity/revision before any approval or provider work, never retarget on a tab switch.
   let base:ReturnType<DocumentRegistry['snapshot']>;
-  try{base=documents.snapshot(request.context.activeFile);if(base.ref.studioKind!=='code'||!base.ref.adapter)throw Error('Native AI editing currently supports Code only.');}
-  catch(e){queueMicrotask(()=>deliver({type:'error',message:e instanceof Error?e.message:String(e)}));return {cancel(){stopped=true;}};}
+  try{base=documents.snapshot(request.context.activeMedia??request.context.activeFile);if(!['code','photo'].includes(base.ref.studioKind)||!base.ref.adapter)throw Error('Native AI editing supports Code and Photo only.');}
+  catch(e){throw e;}
   const textSelection=readActiveSelection();const selectedNode=getState().nodes.flatMap(function flatten(n):import('../editorPort').EditorNode[] {return [n,...n.children.flatMap(flatten)];}).find(n=>n.id===request.context.selectedElementId);
-  const selection:SelectionRef|null=textSelection?.path===base.ref.path&&textSelection.to>textSelection.from?{from:textSelection.from,to:textSelection.to}:selectedNode?{from:selectedNode.from,to:selectedNode.to,nodeId:selectedNode.id}:null;
+  const selection:SelectionRef|null=base.ref.studioKind==='photo'?null:textSelection?.path===base.ref.path&&textSelection.to>textSelection.from?{from:textSelection.from,to:textSelection.to}:selectedNode?{from:selectedNode.from,to:selectedNode.to,nodeId:selectedNode.id}:null;
   const nodes=structuredClone(getState().designFile===base.ref.path?getState().nodes:[]);
-  void (async()=>{
+
    if(!config.allowActiveFile)await authorize(base.ref.path,'read',controller.signal);
    controller.signal.throwIfAborted();syncDocuments();documents.assert(base.ref);
    policy.grant({effect:'inspect',documentIds:[base.ref.documentId]});
@@ -169,7 +176,7 @@ export const realCore:AgentCore={
     else if(event.type==='proposals'&&event.proposals.length){
      try{syncDocuments();const p=event.proposals[0];const native=transactions.propose(String(runId),base.ref,p.after);
       const set:ChangeSet={id:`${generation}-${runId}-${event.turnId}`,complete:true,provenance:p.provenance,files:[{path:p.path,kind:'edit',baseText:p.before,proposedText:p.after}]};
-      proposals.set(set.id,set);nativeIds.set(set.id,native.id);deliver({type:'proposal',proposal:{...panelProposal(set),native}});
+      proposals.set(set.id,set);nativeIds.set(set.id,native.id);deliver({type:'proposal',proposal:{...panelProposal(set),native,...(base.ref.studioKind==='photo'?{photo:photoPreviews.get(p.after)}:{})}});
      }catch(e){deliver({type:'error',message:e instanceof Error?e.message:String(e)});}
     }
    }});
@@ -183,7 +190,7 @@ export const realCore:AgentCore={
   const nativeId=nativeIds.get(id);
   if(nativeId){
    const p=transactions.get(nativeId);
-   if(decisions&&reviewChangeSet(set).some(r=>r.hunks.some(h=>decisions[h.key]!=='accept')))throw Error('Native HTML proposals require accepting the complete preview.');
+   if(decisions&&reviewChangeSet(set).some(r=>r.hunks.some(h=>decisions[h.key]!=='accept')))throw Error('Native proposals require accepting the complete preview.');
    policy.grant({effect:'edit',documentIds:[p.base.documentId],proposalId:nativeId});
    syncDocuments();await transactions.accept(nativeId,p.after);proposals.delete(id);session?.discardProposals();
    patchState({notice:'AI changes applied to editor, not saved.'});return;
@@ -191,9 +198,11 @@ export const realCore:AgentCore={
   throw Error('Legacy proposals are not supported in native studio mode.');
 
  },
- async rejectProposal(id){const n=nativeIds.get(id);if(n)transactions.reject(n);proposals.delete(id);session?.discardProposals();},
- async revertProposal(id){const n=nativeIds.get(id);if(!n)throw Error('No native AI transaction.');transactions.undo(n);patchState({notice:'AI transaction undone, not saved.'});},
- clear(){activeController?.abort();activeController=null;runGeneration++;sessionSerial++;session?.cancel();session=null;proposals.clear();permissions.clear();policy.revoke();send=null;}
+ async rejectProposal(id){const set=proposals.get(id);if(set)for(const f of set.files)photoPreviews.delete(f.proposedText);const n=nativeIds.get(id);if(n)transactions.reject(n);proposals.delete(id);session?.discardProposals();},
+ async revertProposal(id){const n=nativeIds.get(id);if(!n)throw Error('No native AI transaction.');transactions.undo(n);photoPreviews.delete(transactions.get(n).after);patchState({notice:'AI transaction undone, not saved.'});},
+ clear(){photoPreviews.clear();activeController?.abort();activeController=null;runGeneration++;sessionSerial++;session?.cancel();session=null;proposals.clear();permissions.clear();policy.revoke();send=null;}
 };
 subscribeProjectTransactions(tx=>{for(const op of tx.operations??[])if(op.type==='renameFile'){try{documents.rename(op.file,op.to);}catch{/* document not registered yet */}}});
 subscribe(()=>{if(epoch!==getProjectGeneration()){realCore.clear?.();documents.clear();transactions.clear();nativeIds.clear();epoch=getProjectGeneration();}syncDocuments();});
+
+subscribePhotos(syncDocuments);
