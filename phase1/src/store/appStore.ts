@@ -14,7 +14,7 @@ import {readTheme,rememberTheme,readThemeChoice,rememberThemeChoice,type ThemeCh
 import { useSyncExternalStore } from 'react';
 import {setActiveMedia,clearMedia} from '../lib/media';
 import type { EditorNode,EditorProjectPort,Operation,Origin } from '../lib/editorPort';
-export type LeftTab='layers'|'files'|'search'|'assets'|'components'|'css';
+export type LeftTab='layers'|'files'|'search'|'assets'|'components'|'css'|'versions';
 export type RightTab='design'|'prototype'|'code';
 export type ViewMode='design'|'code'|'split';
 export interface DiskComparison {path:string;disk:string;editor:string;apply:(content:string)=>Promise<void>}
