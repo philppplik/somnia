@@ -27,6 +27,10 @@ import {readDraft,saveDraft,clearDraft} from './lib/draftSession';
 import {patchState,getState,subscribe} from './store/appStore';
 import {applyLook} from './lib/look';
 import {applyUiPrefs} from './lib/uiPrefs';
+import {invoke as tauriInvoke} from '@tauri-apps/api/core';
+import {installMcpRuntime} from './lib/agent/mcpRuntime';
+import {McpApprovalDialog} from './components/agent/McpApprovalDialog';
+if(isTauri())void installMcpRuntime(tauriInvoke as never).refresh();
 // Somnia starts empty: either the last unsaved session (draft) or the empty state. The sample project below exists only for automated tests (dev build, opt-in flag).
 const fixture=import.meta.env.DEV&&localStorage.getItem('somnia.fixture')==='starter'?{
  'index.html':'<!doctype html>\n<html lang="en">\n<head>\n  <meta charset="UTF-8">\n  <title>Untitled project</title>\n  <link rel="stylesheet" href="styles.css">\n</head>\n<body>\n  <header id="header"><nav>Somnia studio</nav></header>\n  <main id="main">\n    <section class="hero">\n      <h1>Make room for something new.</h1>\n      <p>Your first idea starts here.</p>\n      <button>Explore</button>\n    </section>\n  </main>\n  <footer>Made locally.</footer>\n</body>\n</html>\n',
@@ -45,7 +49,7 @@ applyLook(getState().look);
 applyUiPrefs(getState().uiPrefs);
 setNoticeSink(text=>patchState({notice:text}));
 logInfo('app','Somnia started',{desktop:isTauri()});
-createRoot(document.getElementById('root')!).render(<StrictMode><ErrorBoundary label="Somnia"><App/></ErrorBoundary></StrictMode>);
+createRoot(document.getElementById('root')!).render(<StrictMode><ErrorBoundary label="Somnia"><App/><McpApprovalDialog/></ErrorBoundary></StrictMode>);
 
 if(!isTauri())installBeforeUnload(()=>getState().isDirty&&getState().storage!=='disk');
 if(import.meta.env.DEV)(window as unknown as {__somnia:object}).__somnia={patch:patchState,recentLog,copyErrorReport,requestClose,setSource:(file:string,text:string)=>applyOperations([{type:'replaceSource',file,text}] as never)};

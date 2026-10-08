@@ -62,6 +62,6 @@ export const applyCssOpTool: AgentToolSpec = {
     return JSON.stringify({ state: 'proposed', saved: false, files: [file] });
   },
 };
-export function createEditorToolRegistry(): AgentToolRegistry {
-  return new AgentToolRegistry().register(getSelectionTool).register(getDiagnosticsTool).register(applyCssOpTool);
+export function createEditorToolRegistry(options: { allowExecute?: boolean } = {}): AgentToolRegistry {
+  return new AgentToolRegistry(options).register(getSelectionTool).register(getDiagnosticsTool).register(applyCssOpTool);
 }

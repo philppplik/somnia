@@ -6,12 +6,13 @@ import {ProviderAuthentication} from './ProviderAuthentication';
 import {AgentPrivacySettings} from './AgentPrivacy';
 import {listProviderModels} from '../../lib/agent/modelCatalog';
 import type {AgentConfiguration} from '../../lib/agent/panelBridge';
+import {McpSettings} from './McpSettings';
 import {agentSettingsSnapshot,subscribeAgentSettings,initializeAgentSettings,applyAgentSettings,setAgentAuthenticationBusy,agentCredentialsChanged} from '../../lib/agent/settingsRuntime';
 /** Provider credentials still use the existing broker, never preference storage. */
 export function AgentSettings({searchQuery='',legacyPrivacy=false}:{searchQuery?:string;legacyPrivacy?:boolean}){
  const {t}=useT();const app=useAppStore();const tab=app.settingsAITab;
- const tabs=['providers','instructions','privacy'] as const;
- const labels={providers:t('agent.settings.providers'),instructions:t('agent.settings.instructions'),privacy:t('agent.settings.privacy')};
+ const tabs=['providers','instructions','privacy','tools'] as const;
+ const labels={providers:t('agent.settings.providers'),instructions:t('agent.settings.instructions'),privacy:t('agent.settings.privacy'),tools:t('mcp.tab')};
  const settings=useSyncExternalStore(subscribeAgentSettings,agentSettingsSnapshot,agentSettingsSnapshot);
  const {saving,authBusy}=settings;
  const [cfg,setCfg]=useState<AgentConfiguration>(settings.config),[saved,setSaved]=useState(false);
@@ -26,17 +27,18 @@ export function AgentSettings({searchQuery='',legacyPrivacy=false}:{searchQuery?
  const totalBytes=(cfg.customPrompts??[]).reduce((n,p)=>n+bytes(p.text),0);
  const invalid=totalBytes>16000||(cfg.customPrompts??[]).some(p=>bytes(p.text)>8000);
  useEffect(()=>{if(legacyPrivacy)patchState({settingsAITab:'privacy'});},[legacyPrivacy]);
- useEffect(()=>{if(!searchQuery)return;const areas={providers:'Provider Model API key authentication connection Ollama OpenRouter OpenAI Claude '+labels.providers,instructions:'Custom prompts instructions '+labels.instructions+' '+(cfg.customPrompts??[]).map(p=>p.name+' '+p.text).join(' '),privacy:'Consent Privacy Cloud Local data '+labels.privacy};const match=tabs.find(id=>settingsMatch(areas[id],searchQuery));if(match)patchState({settingsAITab:match});},[searchQuery]);
+ useEffect(()=>{if(!searchQuery)return;const areas={providers:'Provider Model API key authentication connection Ollama OpenRouter OpenAI Claude '+labels.providers,instructions:'Custom prompts instructions '+labels.instructions+' '+(cfg.customPrompts??[]).map(p=>p.name+' '+p.text).join(' '),privacy:'Consent Privacy Cloud Local data '+labels.privacy,tools:'MCP tools servers external Model Context Protocol '+labels.tools};const match=tabs.find(id=>settingsMatch(areas[id],searchQuery));if(match)patchState({settingsAITab:match});},[searchQuery]);
  const visible=(id:typeof tab)=>tab===id;
  return <div className="agent-settings" data-settings-search-text={'Provider Model API key authentication connection Ollama OpenRouter OpenAI Claude Custom prompts instructions Consent Privacy Cloud Local data '+(cfg.customPrompts??[]).map(p=>p.name+' '+p.text).join(' ')}>
   <p>Choose a provider and model for Somnia Agent. Changes apply when you save the configuration.</p>
   {settings.error&&<p role="alert">{settings.error}</p>}
-  <div role="tablist" aria-label={t('set.section.ai')} onKeyDown={e=>{if(!['ArrowLeft','ArrowRight','Home','End'].includes(e.key))return;e.preventDefault();const index=tabs.indexOf(tab);const next=e.key==='Home'?0:e.key==='End'?2:(index+(e.key==='ArrowRight'?1:2))%3;patchState({settingsAITab:tabs[next]});document.getElementById('ai-tab-'+tabs[next])?.focus();}}>
+  <div role="tablist" aria-label={t('set.section.ai')} onKeyDown={e=>{if(!['ArrowLeft','ArrowRight','Home','End'].includes(e.key))return;e.preventDefault();const index=tabs.indexOf(tab);const next=e.key==='Home'?0:e.key==='End'?tabs.length-1:(index+(e.key==='ArrowRight'?1:2))%3;patchState({settingsAITab:tabs[next]});document.getElementById('ai-tab-'+tabs[next])?.focus();}}>
    {tabs.map(id=><button type="button" role="tab" id={'ai-tab-'+id} aria-controls={'ai-content-'+id} aria-selected={tab===id} tabIndex={tab===id?0:-1} key={id} onClick={()=>patchState({settingsAITab:id})}>{labels[id]}</button>)}
   </div>
   {settings.running&&<p role="status">Stop the current generation before changing AI configuration.</p>}
   {settings.pendingReview&&<p role="status">Accept or discard pending proposals before changing AI configuration.</p>}
   <p>Saving starts a new AI session. Your visible chat history stays. API key actions apply immediately; cloud consent is separate.</p>
+  <div role="tabpanel" id="ai-content-tools" aria-labelledby="ai-tab-tools" hidden={!visible('tools')}><McpSettings/></div>
   <div role="tabpanel" id="ai-content-privacy" aria-labelledby="ai-tab-privacy" hidden={!visible('privacy')}><AgentPrivacySettings/></div>
   <form aria-label="Agent configuration" onChange={()=>setSaved(false)} onSubmit={e=>{e.preventDefault();void saveConfiguration();}}>
    <fieldset disabled={locked}>
