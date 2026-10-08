@@ -33,3 +33,4 @@ test('real pdf.js: opens, counts pages, sizes, extracts text', async () => {
 test('real pdf.js: garbage with a PDF header maps to invalid', async () => {
   await assert.rejects(loadPdf(pdfjsBackend, new TextEncoder().encode('%PDF-1.4\nnot really')), (e: { code: string }) => e.code === 'invalid');
 });
+test('abort during deferred library import never opens an orphan worker',async()=>{let resolve!:(lib:never)=>void;let calls=0;const backend=createPdfjsBackend(undefined,()=>new Promise(r=>{resolve=r;}));const ac=new AbortController();const opened=backend.open(tinyPdf(1),{signal:ac.signal});ac.abort();resolve({getDocument:()=>{calls++;throw Error('should never be called');},GlobalWorkerOptions:{}} as never);await assert.rejects(opened,(e:{code:string})=>e.code==='aborted');assert.equal(calls,0);});

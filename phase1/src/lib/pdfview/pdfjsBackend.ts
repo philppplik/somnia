@@ -17,6 +17,7 @@ export function createPdfjsBackend(workerSrc?: string, importLib: () => Promise<
   return {
   async open(data, opts) {
     const pdfjs = await loadLib();
+    if(opts?.signal?.aborted)throw new PdfLoadError('aborted','Load aborted');
     // pdf.js transfers the buffer to its worker: hand it a copy so the caller's bytes stay valid.
     const task = pdfjs.getDocument({
       data: data.slice(), password: opts?.password,
@@ -26,6 +27,7 @@ export function createPdfjsBackend(workerSrc?: string, importLib: () => Promise<
     opts?.signal?.addEventListener('abort', onAbort, { once: true });
     try {
       const doc = await task.promise;
+      if(opts?.signal?.aborted){await task.destroy();throw new PdfLoadError('aborted','Load aborted');}
       return wrapDoc(pdfjs, doc, task);
     } finally { opts?.signal?.removeEventListener('abort', onAbort); }
   },

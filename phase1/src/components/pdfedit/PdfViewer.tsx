@@ -13,11 +13,12 @@ export interface PdfViewerProps{
  textLayer?:boolean;
  onError?:(e:PdfLoadError)=>void;
  onPageChange?:(page:number)=>void;
+ requestedPage?:number;
 }
 const btn='whitespace-nowrap grid h-7 min-w-7 cursor-pointer place-items-center rounded-sm border-0 bg-transparent px-2 text-[12px] text-ink-2 hover:bg-hover disabled:cursor-default disabled:opacity-40';
 const MAX_CANVAS_PX=16_777_216;
 /** Single-page PDF viewer: canvas render, zoom (wheel+Ctrl, buttons, keys), drag-pan, page navigation. */
-export function PdfViewer({data,name,backend=pdfjsBackend,textLayer=false,onError,onPageChange}:PdfViewerProps){
+export function PdfViewer({data,name,backend=pdfjsBackend,textLayer=false,onError,onPageChange,requestedPage}:PdfViewerProps){
  const stageRef=useRef<HTMLDivElement>(null);
  const canvasRef=useRef<HTMLCanvasElement>(null);
  const textRef=useRef<HTMLDivElement>(null);
@@ -35,23 +36,25 @@ export function PdfViewer({data,name,backend=pdfjsBackend,textLayer=false,onErro
  // load document
  useEffect(()=>{
   const ac=new AbortController();let opened:PdfDocumentHandle|null=null;
-  setError(null);setDoc(null);setPage(null);
+  setError(null);setDoc(null);setPage(null);setNeedPassword(false);
   loadPdf(backend,data,{password,signal:ac.signal}).then(d=>{
    if(ac.signal.aborted){void d.destroy();return;}
-   opened=d;cache.current=createPageCache(d);setNeedPassword(false);setDoc(d);setView(initialViewState(d.pageCount));
+   opened=d;cache.current=createPageCache(d);setNeedPassword(false);setDoc(d);setView(goToPage(initialViewState(d.pageCount),requestedPage??1));
   }).catch((e:PdfLoadError)=>{
    if(e.code==='aborted')return;
    if(e.code==='password'){setNeedPassword(true);return;}
    setError(e);onError?.(e);});
   return()=>{ac.abort();cache.current?.clear();cache.current=null;if(opened)void opened.destroy();};
  },[data,backend,password]);// eslint-disable-line react-hooks/exhaustive-deps
+ // Controlled navigation from the native pages/search sidebar.
+ useEffect(()=>{if(doc&&requestedPage)setView(v=>goToPage(v,requestedPage));},[doc,requestedPage]);
  // current page handle
  useEffect(()=>{
   if(!doc||view.page<1||!cache.current)return;let live=true;
   cache.current.get(view.page).then(p=>{if(live)setPage(p);}).catch(e=>{if(live)setError(new PdfLoadError('invalid',String(e?.message??e)));});
   return()=>{live=false;};
  },[doc,view.page]);
- useEffect(()=>{setPageInput(String(view.page));if(view.page>0)onPageChange?.(view.page);},[view.page]);// eslint-disable-line react-hooks/exhaustive-deps
+ useEffect(()=>{setPageInput(String(view.page));if(doc&&view.page>0)onPageChange?.(view.page);},[view.page,doc]);// eslint-disable-line react-hooks/exhaustive-deps
  // viewport size
  useEffect(()=>{
   const el=stageRef.current;if(!el)return;
@@ -68,17 +71,19 @@ export function PdfViewer({data,name,backend=pdfjsBackend,textLayer=false,onErro
   let scale=view.zoom*dpr;
   const px=sz.width*scale*sz.height*scale;
   if(px>MAX_CANVAS_PX)scale*=Math.sqrt(MAX_CANVAS_PX/px);
+  delete canvas.dataset.rendered;
   canvas.width=Math.max(1,Math.floor(sz.width*scale));canvas.height=Math.max(1,Math.floor(sz.height*scale));
   canvas.style.width=`${sz.width*view.zoom}px`;canvas.style.height=`${sz.height*view.zoom}px`;
   const task=page.render(canvas,scale,view.rotation);
   let cancelText:(()=>void)|undefined;let dead=false;
-  task.promise.catch(()=>{/* cancelled renders reject */});
+  task.promise.then(()=>{canvas.dataset.rendered='true';}).catch(e=>{if(!String(e?.name).includes('Cancel'))setError(new PdfLoadError('invalid',String(e?.message??e)));});
   const tl=textRef.current;
+  if(tl)tl.replaceChildren();
   if(textLayer&&tl&&page.renderTextLayer){
    tl.replaceChildren();tl.style.setProperty('--total-scale-factor',String(view.zoom));
    void page.renderTextLayer(tl,view.zoom,view.rotation).then(c=>{if(dead)c();else cancelText=c;}).catch(()=>{});
   }
-  return()=>{dead=true;task.cancel();cancelText?.();};
+  return()=>{dead=true;task.cancel();cancelText?.();tl?.replaceChildren();};
  },[page,view.zoom,view.rotation,viewport.width,viewport.height,textLayer]);
  const apply=useCallback((f:(v:PdfViewState)=>PdfViewState)=>setView(f),[]);
  const center=useMemo(()=>({x:viewport.width/2,y:viewport.height/2}),[viewport]);
@@ -133,14 +138,14 @@ export function PdfViewer({data,name,backend=pdfjsBackend,textLayer=false,onErro
    <button className={btn} aria-label="Rotate clockwise" onClick={()=>apply(v=>rotate(v,1))}>⟳</button>
   </div>
   <div ref={stageRef} className="relative min-h-0 flex-1 touch-none select-none overflow-hidden bg-[var(--surface-2,#eef0f3)]" data-testid="pdf-stage"
-   style={{width:"100%",cursor:drag.current?'grabbing':'grab'}}
-   onPointerDown={e=>{if(e.button!==0&&e.button!==1)return;e.currentTarget.setPointerCapture(e.pointerId);drag.current={x:e.clientX,y:e.clientY,id:e.pointerId};}}
+   style={{width:"100%",cursor:drag.current?'grabbing':textLayer?'text':'grab'}}
+   onPointerDown={e=>{if(textLayer&&e.button===0)return;if(e.button!==0&&e.button!==1)return;e.currentTarget.setPointerCapture(e.pointerId);drag.current={x:e.clientX,y:e.clientY,id:e.pointerId};}}
    onPointerMove={e=>{const d=drag.current;if(!d||d.id!==e.pointerId)return;const dx=e.clientX-d.x,dy=e.clientY-d.y;d.x=e.clientX;d.y=e.clientY;apply(v=>panBy(v,dx,dy,pageSize,viewport));}}
    onPointerUp={()=>{drag.current=null;}} onPointerCancel={()=>{drag.current=null;}}
-   onDoubleClick={e=>{const r=e.currentTarget.getBoundingClientRect();zoomTo(view.zoom<1.5?2:1,{x:e.clientX-r.left,y:e.clientY-r.top});}}>
+   onDoubleClick={e=>{if(textLayer)return;const r=e.currentTarget.getBoundingClientRect();zoomTo(view.zoom<1.5?2:1,{x:e.clientX-r.left,y:e.clientY-r.top});}}>
    <div className="absolute left-0 top-0 bg-white shadow-md" style={{transform:`translate(${view.pan.x}px,${view.pan.y}px)`,width:rotatedSize(pageSize,view.rotation).width*view.zoom,height:rotatedSize(pageSize,view.rotation).height*view.zoom}}>
     <canvas ref={canvasRef} aria-label={`Page ${view.page} of ${view.pageCount}`} role="img"/>
-    {textLayer&&<div ref={textRef} className="textLayer absolute inset-0 overflow-hidden leading-none" style={{color:'transparent'}}/>}
+    {textLayer&&<div ref={textRef} className="textLayer absolute inset-0 overflow-hidden leading-none" style={{color:'transparent',userSelect:'text'}}/>}
    </div>
   </div>
  </section>;
