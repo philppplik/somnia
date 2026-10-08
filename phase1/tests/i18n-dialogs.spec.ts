@@ -1,5 +1,5 @@
 import {test,expect} from './fixtures';
-test.use({sample:false});
+test.use({sample:true});
 test('German status bar labels',async({page})=>{
  await page.setViewportSize({width:1400,height:900});
  await page.goto('/');

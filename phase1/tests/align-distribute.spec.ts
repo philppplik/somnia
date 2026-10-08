@@ -21,13 +21,13 @@ test('toolbar appears only with two or more selected', async ({page}) => {
   await expect(page.getByRole('toolbar', {name: 'Align and distribute'})).toHaveCount(0);
   await frame.locator('#b').click({modifiers: ['Shift']});
   await expect(page.getByRole('toolbar', {name: 'Align and distribute'})).toBeVisible();
-  await expect(page.getByRole('button', {name: 'Distribute horizontally'})).toBeDisabled();
+  await expect(page.getByRole('toolbar', {name: 'Align and distribute'}).getByRole('button', {name: 'Distribute horizontally'})).toBeDisabled();
 });
 test('align left moves the others to the leftmost edge as one undo step', async ({page}) => {
   const frame = await setup(page);
   await selectAll(frame);
   const x0 = await left(frame, '#a');
-  await page.getByRole('button', {name: 'Align left'}).click();
+  await page.getByRole('toolbar', {name: 'Align and distribute'}).getByRole('button', {name: 'Align left'}).click();
   await expect.poll(() => left(frame, '#b')).toBeCloseTo(x0, 0);
   expect(await left(frame, '#c')).toBeCloseTo(x0, 0);
   await page.keyboard.press('Control+z');
@@ -36,7 +36,7 @@ test('align left moves the others to the leftmost edge as one undo step', async 
 test('align bottom lines up bottom edges', async ({page}) => {
   const frame = await setup(page);
   await selectAll(frame);
-  await page.getByRole('button', {name: 'Align bottom'}).click();
+  await page.getByRole('toolbar', {name: 'Align and distribute'}).getByRole('button', {name: 'Align bottom'}).click();
   const bottom = (id: string) => frame.locator(id).evaluate((e: HTMLElement) => e.getBoundingClientRect().bottom);
   await expect.poll(() => bottom('#a')).toBeCloseTo(await bottom('#b'), 0);
   expect(await bottom('#c')).toBeCloseTo(await bottom('#b'), 0);
@@ -44,8 +44,8 @@ test('align bottom lines up bottom edges', async ({page}) => {
 test('distribute horizontally makes equal gaps and shows equal-gap guides', async ({page}) => {
   const frame = await setup(page);
   await selectAll(frame);
-  await page.getByRole('button', {name: 'Align top'}).click(); // gap guides need the boxes to overlap on the cross axis
-  await page.getByRole('button', {name: 'Distribute horizontally'}).click();
+  await page.getByRole('toolbar', {name: 'Align and distribute'}).getByRole('button', {name: 'Align top'}).click(); // gap guides need the boxes to overlap on the cross axis
+  await page.getByRole('toolbar', {name: 'Align and distribute'}).getByRole('button', {name: 'Distribute horizontally'}).click();
   // a: 20-60, c: 320-340, b width 60 -> gap = (320-60-60)/2 = 100 -> b.left = 160
   await expect.poll(() => left(frame, '#b')).toBeCloseTo(160, 0);
   const gaps = page.locator('[data-guide="gap"][data-gap="100"][data-equal="true"]');
@@ -56,7 +56,7 @@ test('static elements get position:relative offsets and keep their flow slot', a
   const frame = await setup(page, '<!doctype html><html><head><title>t</title><style>body{margin:0} p{margin:0;width:50px;height:20px;background:#ccc}</style></head><body><p id="a">a</p><p id="b" style="margin-left:100px">b</p></body></html>');
   await frame.locator('#a').click();
   await frame.locator('#b').click({modifiers: ['Shift']});
-  await page.getByRole('button', {name: 'Align left'}).click();
+  await page.getByRole('toolbar', {name: 'Align and distribute'}).getByRole('button', {name: 'Align left'}).click();
   await expect.poll(() => left(frame, '#b')).toBeCloseTo(0, 0);
   expect(await top(frame, '#b')).toBeCloseTo(20, 0);
 });
@@ -66,7 +66,7 @@ test('locked elements are not moved', async ({page}) => {
   await page.getByRole('menuitem', {name: 'Lock layer'}).click();
   await selectAll(frame);
   const b0 = await left(frame, '#b');
-  await page.getByRole('button', {name: 'Align left'}).click();
+  await page.getByRole('toolbar', {name: 'Align and distribute'}).getByRole('button', {name: 'Align left'}).click();
   await expect.poll(() => left(frame, '#c')).toBeCloseTo(await left(frame, '#a'), 0);
   expect(await left(frame, '#b')).toBeCloseTo(b0, 0);
 });
