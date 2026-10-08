@@ -7,6 +7,7 @@ import {createTauriGitBackend,getGitBackend} from './backend';
 import type {GitBackend} from '../../lib/git/types';
 import {HistoryHost} from './HistoryHost';
 import {CompareTab} from './CompareTab';
+import {VariantsHost} from './VariantsHost';
 /** Number of project files whose editor text differs from what is on disk. */
 import {countUnsaved} from './countUnsaved';
 export {countUnsaved};
@@ -19,4 +20,4 @@ export function resolveBackend():GitBackend|null{
 export function VersionsHost(){
  const s=useAppStore();const unsaved=useMemo(()=>countUnsaved(s.files,getSavedFile),[s.files,s.isDirty,s.lastSavedAt]);
  const backend=resolveBackend();
- return <VersionsPanel backend={backend} unsavedFiles={unsaved} onSaveFiles={async()=>{await executeCommand('project.save');}} historySlot={backend?<HistoryHost backend={backend}/>:undefined} compareSlot={backend?<CompareTab backend={backend}/>:undefined}/>;}
+ return <VersionsPanel backend={backend} unsavedFiles={unsaved} onSaveFiles={async()=>{await executeCommand('project.save');}} historySlot={backend?<HistoryHost backend={backend}/>:undefined} variantsSlot={backend?go=>(<VariantsHost backend={backend} onSaveVersion={go}/>):undefined} compareSlot={backend?<CompareTab backend={backend}/>:undefined}/>;}

@@ -25,7 +25,8 @@ const initial=():ChangesState=>({phase:'loading',repoState:null,status:null,sele
 export class ChangesController{
  private s:ChangesState=initial();private ls=new Set<()=>void>();private seq=0;
  constructor(private b:GitBackend,private t:Translate){}
- setTranslate(t:Translate){this.t=t;this.autoSubject();}
+ /** Called during render: never notify here (a notification re-renders the caller forever). The suggestion refreshes on the next user or refresh action. */
+ setTranslate(t:Translate){this.t=t;}
  subscribe=(f:()=>void)=>{this.ls.add(f);return()=>{this.ls.delete(f);};};
  getState=()=>this.s;
  private set(p:Partial<ChangesState>){this.s={...this.s,...p};this.ls.forEach(f=>f());}
