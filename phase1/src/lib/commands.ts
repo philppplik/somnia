@@ -1,5 +1,7 @@
+import {listStudios} from './studios';
+import {requestStudio} from '../store/appStore';
 import {copyErrorReport} from './log';
-import {tOr} from './i18n';
+import {t,tOr} from './i18n';
 import {openExternal,REPO_URL} from './openExternal';
 import {formatCode,langFor} from './format';
 import {getActiveEditor,transformSelection} from './editorBridge';
@@ -52,9 +54,10 @@ ui('agent.toggle','Toggle Somnia Agent','Mod+Alt+A',()=>patchState({agentOpen:!g
 registerCommand({id:'chat.toggle',title:'Toggle session chat',category:'View',shortcut:'Mod+Alt+C',allowInInput:true,enabled:()=>!!getChatSession(),run:()=>toggleSessionChat()});
 ui('inspector.toggle','Toggle inspector','Mod+Alt+I',()=>patchState({inspectorOpen:!getState().inspectorOpen}));
 ui('problems.toggle','Toggle problems','Mod+J',()=>patchState({problemsOpen:!getState().problemsOpen}));
-ui('view.code','Code view','Mod+1',()=>patchState({viewMode:'code'}));
-ui('view.design','Design view','Mod+2',()=>patchState({viewMode:'design'}));
-ui('view.split','Split view','Mod+3',()=>patchState({viewMode:'split'}));
+ui('view.code','Code view','Mod+Alt+3',()=>patchState({viewMode:'code'}));
+ui('view.design','Design view','Mod+Alt+1',()=>patchState({viewMode:'design'}));
+ui('view.split','Split view','Mod+Alt+2',()=>patchState({viewMode:'split'}));
+for(const [index,studio] of listStudios().entries())registerCommand({id:'studio.'+studio.id,title:'Switch to '+studio.id+' Studio',category:'View',shortcut:index<5?'Mod+'+(index+1):undefined,allowInInput:true,run:()=>{requestStudio(studio.id);}});
 ui('split.vertical','Split: code and design side by side',undefined,()=>patchState({viewMode:'split',splitLayout:'vertical'}));
 ui('split.horizontal','Split: code above, design below',undefined,()=>patchState({viewMode:'split',splitLayout:'horizontal'}));
 ui('split.swap','Split: swap code and design',undefined,()=>patchState({viewMode:'split',splitSwap:!getState().splitSwap}));
@@ -92,7 +95,9 @@ export function attachKeyboardShortcuts(target:Window=window){
   const element=event.target;const input=element instanceof HTMLElement&&!!element.closest('input,textarea,select,[contenteditable="true"],[role="textbox"]');
   if(getState().paletteOpen||getState().settingsOpen)return;
   const list=listCommands();const mdFocus=element instanceof HTMLElement&&element.matches('[data-core-editor]')&&/\.(md|markdown)$/i.test(getState().activeFile);
-  let command=list.find(c=>!c.id.startsWith('md.')&&c.shortcut&&matchesShortcut(event,c.shortcut));
+  const matches=list.filter(c=>!c.id.startsWith('md.')&&c.shortcut&&matchesShortcut(event,c.shortcut));
+  if(matches.length>1){event.preventDefault();patchState({notice:t('studio.shortcutConflict',{commands:matches.map(c=>c.title).join(', ')})});return;}
+  let command:Command|undefined=matches[0];
   if(!isMac()&&matchesShortcut(event,'Mod+Y'))command=list.find(c=>c.id==='edit.redo');
   const coreEditor=element instanceof HTMLElement&&element.matches('[data-core-editor]');
   const mdEditor=coreEditor&&/\.(md|markdown)$/i.test(getState().activeFile);

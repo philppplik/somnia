@@ -2024,5 +2024,11 @@
   "office.docx.toMd": "Save as Markdown",
   "office.docx.frameTitle": "Preview of {name}",
   "office.xlsx.title": "XLSX preview",
-  "office.xlsx.toCsv": "Save sheet as CSV"
+  "office.xlsx.toCsv": "Save sheet as CSV",
+  "studio.switcher": "Studios",
+  "studio.code": "Somnia Code",
+  "studio.viewMode": "View mode",
+  "studio.announcement": "{studio} studio",
+  "cmd.studio.code": "Switch to Code Studio",
+  "studio.shortcutConflict": "Shortcut conflict: {commands}. Change it in Settings > Shortcuts."
 }

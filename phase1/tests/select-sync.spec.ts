@@ -1,6 +1,6 @@
 import {test,expect} from './fixtures';
 test('clicking an element in the preview selects and focuses its source in the code editor',async({page})=>{
- await page.goto('/');await page.getByRole('button',{name:'Split view',exact:true}).click();
+ await page.goto('/');await page.getByRole('button',{name:'View',exact:true}).click();await page.getByRole('menuitemradio',{name:/^Split view/}).click();
  const f=page.frameLocator('iframe[title="Sandboxed design preview"]');await expect(f.locator('h1')).toBeVisible();
  await f.locator('h1').click();
  const sel=page.locator('.cm-content');await expect(sel).toBeFocused();

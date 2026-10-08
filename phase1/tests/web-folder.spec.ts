@@ -7,7 +7,7 @@ test('web folder: open, edit, save writes verified bytes to the folder',async({p
  await page.keyboard.press('Control+k');await page.getByRole('combobox',{name:'Search commands'}).fill('open folder');await page.getByRole('option',{name:/Open folder/}).click();
  const frame=page.frameLocator('iframe[title="Sandboxed design preview"]');await expect(frame.locator('h1')).toHaveText('Folder title');
  await expect(page.getByRole('status')).toContainText('Folder connected in the browser');
- await page.getByRole('button',{name:'Split view',exact:true}).click();
+ await page.getByRole('button',{name:'View',exact:true}).click();await page.getByRole('menuitemradio',{name:/^Split view/}).click();
  const source=page.getByRole('textbox',{name:'Source code'});const original=await source.innerText();
  await source.fill(original.replace('Folder title','Saved from browser'));
  await page.keyboard.press('Control+s');

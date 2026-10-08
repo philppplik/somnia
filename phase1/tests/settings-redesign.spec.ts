@@ -1,6 +1,6 @@
 import {test,expect} from './fixtures';
 test('resizable settings shell, icons, live controls and settings-only undo',async({page})=>{
- await page.goto('/');await expect(page.getByRole('button',{name:'Split view',exact:true})).toBeVisible();await page.keyboard.press('Control+,');const dialog=page.getByRole('dialog');
+ await page.goto('/');await expect(page.getByRole('radio',{name:'Somnia Code',exact:true})).toBeVisible();await page.keyboard.press('Control+,');const dialog=page.getByRole('dialog');
  await expect(dialog).toBeVisible();const bounds=await dialog.boundingBox();expect(bounds!.width).toBe(880);expect(bounds!.height).toBe(640);
  await expect(dialog.locator('nav button svg')).toHaveCount(17);
  await expect(dialog).toHaveCSS('resize','both');
@@ -16,7 +16,7 @@ test('resizable settings shell, icons, live controls and settings-only undo',asy
  await page.keyboard.press('Escape');await expect(dialog).toBeHidden();
 });
 test('settings search groups matches from different sections and filters sidebar',async({page})=>{
- await page.goto('/');await expect(page.getByRole('button',{name:'Split view',exact:true})).toBeVisible();await page.keyboard.press('Control+,');const dialog=page.getByRole('dialog');const search=dialog.getByLabel('Search settings');
+ await page.goto('/');await expect(page.getByRole('radio',{name:'Somnia Code',exact:true})).toBeVisible();await page.keyboard.press('Control+,');const dialog=page.getByRole('dialog');const search=dialog.getByLabel('Search settings');
  await search.fill('theme');await expect(dialog.getByLabel('App theme')).toBeVisible();await expect(dialog.getByLabel('Syntax theme')).toBeVisible();
  await expect(dialog.getByRole('button',{name:'General',exact:true})).toBeHidden();await expect(dialog.getByRole('button',{name:'Code editor',exact:true})).toBeVisible();
  await page.screenshot({path:'tests/artifacts/settings-redesign-search.png'});
@@ -26,7 +26,7 @@ test('settings search groups matches from different sections and filters sidebar
  await expect(dialog.getByLabel('Canvas zoom (%)',{exact:true})).toHaveValue('150');await page.keyboard.press('Escape');await expect(page.getByLabel('Zoom',{exact:true})).toContainText('150');
 });
 test('settings fits smaller windows without losing close or controls',async({page})=>{
- await page.setViewportSize({width:760,height:560});await page.goto('/');await expect(page.getByRole('button',{name:'Split view',exact:true})).toBeVisible();await page.keyboard.press('Control+,');const dialog=page.getByRole('dialog');
+ await page.setViewportSize({width:760,height:560});await page.goto('/');await expect(page.getByRole('radio',{name:'Somnia Code',exact:true})).toBeVisible();await page.keyboard.press('Control+,');const dialog=page.getByRole('dialog');
  const b=await dialog.boundingBox();expect(b!.x).toBeGreaterThanOrEqual(0);expect(b!.y).toBeGreaterThanOrEqual(0);expect(b!.height).toBeLessThanOrEqual(528);
  await expect(dialog.getByRole('button',{name:'Close settings'})).toBeVisible();await dialog.getByLabel('Density',{exact:true}).selectOption('compact');
  await page.screenshot({path:'tests/artifacts/settings-redesign-small.png'});

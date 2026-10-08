@@ -2,7 +2,7 @@ import {test,expect} from './fixtures';
 import fs from 'node:fs';
 const shotDir=process.env.SOMNIA_SHOTS;
 test('settings: modified view, badges, single and bulk reset',async({page})=>{
- await page.goto('/');await expect(page.getByRole('button',{name:'Split view',exact:true})).toBeVisible();await page.keyboard.press('Control+,');
+ await page.goto('/');await expect(page.getByRole('radio',{name:'Somnia Code',exact:true})).toBeVisible();await page.keyboard.press('Control+,');
  const dialog=page.getByRole('dialog');await expect(dialog).toBeVisible();
  await dialog.getByRole('button',{name:'Modified',exact:true}).click();
  await expect(dialog.getByText('Nothing changed')).toBeVisible();
@@ -24,7 +24,7 @@ test('settings: modified view, badges, single and bulk reset',async({page})=>{
 });
 
 test('settings search: synonyms, @filters and commands in one list',async({page})=>{
- await page.goto('/');await expect(page.getByRole('button',{name:'Split view',exact:true})).toBeVisible();await page.keyboard.press('Control+,');
+ await page.goto('/');await expect(page.getByRole('radio',{name:'Somnia Code',exact:true})).toBeVisible();await page.keyboard.press('Control+,');
  const dialog=page.getByRole('dialog');const search=dialog.getByPlaceholder('Search settings…');
  await search.fill('inches');
  await expect(dialog.getByTestId('result-workflow.units')).toBeVisible();
@@ -40,7 +40,7 @@ test('settings search: synonyms, @filters and commands in one list',async({page}
 });
 
 test('settings export and import roundtrip',async({page})=>{
- await page.goto('/');await expect(page.getByRole('button',{name:'Split view',exact:true})).toBeVisible();await page.keyboard.press('Control+,');
+ await page.goto('/');await expect(page.getByRole('radio',{name:'Somnia Code',exact:true})).toBeVisible();await page.keyboard.press('Control+,');
  const dialog=page.getByRole('dialog');
  await dialog.getByRole('button',{name:/^Editing/}).click();await dialog.getByLabel('Units and paper').selectOption('imperial');
  await dialog.getByRole('button',{name:/^Modified/}).click();

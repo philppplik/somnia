@@ -1,7 +1,7 @@
 import {test, expect} from './fixtures';
 test('cloud consent is explicit, persisted, withdrawable and translated', async ({page}) => {
   await page.goto('/');
-  await expect(page.getByRole('button',{name:'Split view',exact:true})).toBeVisible();
+  await expect(page.getByRole('radio',{name:'Somnia Code',exact:true})).toBeVisible();
   await page.getByRole('button',{name:'Open Somnia Agent',exact:true}).click();await page.getByRole('complementary',{name:'Somnia Agent'}).getByRole('button',{name:'Agent configuration',exact:true}).click();
   const dialog = page.getByRole('dialog');
   await dialog.getByRole('tab',{name:'Privacy & data',exact:true}).click();
@@ -19,7 +19,7 @@ test('cloud consent is explicit, persisted, withdrawable and translated', async 
   await dialog.getByRole('button',{name:'Withdraw cloud consent',exact:true}).click();
   await expect(dialog.getByText('Cloud consent is off.',{exact:true})).toBeVisible();
   await expect(checkbox).not.toBeChecked();
-  await page.reload();await expect(page.getByRole('button',{name:'Split view',exact:true})).toBeVisible();await page.getByRole('button',{name:'Open Somnia Agent',exact:true}).click();await page.getByRole('complementary',{name:'Somnia Agent'}).getByRole('button',{name:'Agent configuration',exact:true}).click();
+  await page.reload();await expect(page.getByRole('radio',{name:'Somnia Code',exact:true})).toBeVisible();await page.getByRole('button',{name:'Open Somnia Agent',exact:true}).click();await page.getByRole('complementary',{name:'Somnia Agent'}).getByRole('button',{name:'Agent configuration',exact:true}).click();
   await dialog.getByRole('tab',{name:'Privacy & data',exact:true}).click();
   await expect(allow).toBeDisabled();
   // German strings for agent.settings.* are not translated yet (falls back to English); see report.
@@ -27,7 +27,7 @@ test('cloud consent is explicit, persisted, withdrawable and translated', async 
 });
 test('consent controls fit a small window and support keyboard use', async ({page}) => {
   await page.setViewportSize({width:760,height:560});
-  await page.goto('/');await expect(page.getByRole('button',{name:'Split view',exact:true})).toBeVisible();
+  await page.goto('/');await expect(page.getByRole('radio',{name:'Somnia Code',exact:true})).toBeVisible();
   await page.getByRole('button',{name:'Open Somnia Agent',exact:true}).click();await page.getByRole('complementary',{name:'Somnia Agent'}).getByRole('button',{name:'Agent configuration',exact:true}).click();const dialog=page.getByRole('dialog');
   await dialog.getByRole('tab',{name:'Privacy & data',exact:true}).click();
   const checkbox=dialog.getByRole('checkbox',{name:/I agree/});await checkbox.focus();await page.keyboard.press('Space');

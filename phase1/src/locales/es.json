@@ -2024,5 +2024,11 @@
   "office.docx.toMd": "Guardar como Markdown",
   "office.docx.frameTitle": "Vista previa de {name}",
   "office.xlsx.title": "Vista previa de XLSX",
-  "office.xlsx.toCsv": "Guardar hoja como CSV"
+  "office.xlsx.toCsv": "Guardar hoja como CSV",
+  "studio.switcher": "Estudios",
+  "studio.code": "Somnia Code",
+  "studio.viewMode": "Modo de vista",
+  "studio.announcement": "Estudio {studio}",
+  "cmd.studio.code": "Cambiar al estudio Code",
+  "studio.shortcutConflict": "Conflicto de atajos: {commands}. Cámbialos en Ajustes > Atajos."
 }

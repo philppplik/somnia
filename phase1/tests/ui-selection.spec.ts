@@ -15,7 +15,7 @@ async function dragText(page:Page,locator:Locator){
 }
 
 test('settings chrome cannot be selected; search input keeps native selection',async({page})=>{
- await page.goto('/');await expect(page.getByRole('button',{name:'Split view',exact:true})).toBeVisible();
+ await page.goto('/');await expect(page.getByRole('radio',{name:'Somnia Code',exact:true})).toBeVisible();
  await page.keyboard.press('Control+,');const dialog=page.getByRole('dialog');
  const heading=dialog.getByRole('heading',{name:'Settings',exact:true});
  await expect(heading).toBeVisible();expect(await dragText(page,heading)).toBe('');
@@ -28,7 +28,7 @@ test('settings chrome cannot be selected; search input keeps native selection',a
 });
 
 test('top navigation menus, panels, tabs and status stay non-selectable',async({page})=>{
- await page.goto('/');await expect(page.getByRole('button',{name:'Split view',exact:true})).toBeVisible();
+ await page.goto('/');await expect(page.getByRole('radio',{name:'Somnia Code',exact:true})).toBeVisible();
  await page.getByRole('button',{name:'Project',exact:true}).click();
  const item=page.getByRole('menuitem',{name:/Open folder/});await expect(item).toBeVisible();
  await expect(item).toHaveCSS('user-select','none');
@@ -62,7 +62,7 @@ test('source, textarea and explicitly copyable content retain mouse selection',a
 
 test('Copy error report action still copies its report, not chrome text',async({page,context})=>{
  await context.grantPermissions(['clipboard-read','clipboard-write']);
- await page.goto('/');await expect(page.getByRole('button',{name:'Split view',exact:true})).toBeVisible();
+ await page.goto('/');await expect(page.getByRole('radio',{name:'Somnia Code',exact:true})).toBeVisible();
  await page.keyboard.press('Control+,');await page.getByRole('button',{name:'About',exact:true}).click();
  await page.getByTestId('copy-error-report').click();
  expect(await page.evaluate(()=>navigator.clipboard.readText())).toContain('Somnia');

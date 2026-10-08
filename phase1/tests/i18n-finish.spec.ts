@@ -57,7 +57,7 @@ for(const tag of ['en','de','es','fr','pt-BR']){
  });
 }
 test('switching locale while settings is open updates visible and accessible text without resetting preferences',async({page})=>{
- await page.goto('/');await expect(page.getByRole('button',{name:'Split view',exact:true})).toBeVisible();await page.keyboard.press('Control+,');const dialog=page.getByRole('dialog');
+ await page.goto('/');await expect(page.getByRole('radio',{name:'Somnia Code',exact:true})).toBeVisible();await page.keyboard.press('Control+,');const dialog=page.getByRole('dialog');
  await dialog.getByRole('button',{name:'General',exact:true}).click();
  let previous='en';
  for(const tag of ['de','es','fr','pt-BR','en']){

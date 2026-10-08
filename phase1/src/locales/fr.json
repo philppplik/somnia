@@ -2024,5 +2024,11 @@
   "office.docx.toMd": "Enregistrer en Markdown",
   "office.docx.frameTitle": "Aperçu de {name}",
   "office.xlsx.title": "Aperçu XLSX",
-  "office.xlsx.toCsv": "Enregistrer la feuille en CSV"
+  "office.xlsx.toCsv": "Enregistrer la feuille en CSV",
+  "studio.switcher": "Studios",
+  "studio.code": "Somnia Code",
+  "studio.viewMode": "Mode d’affichage",
+  "studio.announcement": "Studio {studio}",
+  "cmd.studio.code": "Passer au studio Code",
+  "studio.shortcutConflict": "Conflit de raccourcis : {commands}. Modifiez-les dans Paramètres > Raccourcis."
 }

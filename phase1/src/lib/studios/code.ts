@@ -9,7 +9,7 @@ export const codeStudio:StudioDef={
   bottomBar:{slots:['viewport','cursor','breakpoint','zoom'],viewportPresets:[{width:1280,icon:'Monitor',label:'status.desktop'},{width:820,icon:'Tablet',label:'status.tablet'},{width:390,icon:'Smartphone',label:'status.mobile'}]},
   inspector:'code.inspector',tools:[]
  },commands:[{id:'view.design',label:'cmd.view.design'},{id:'view.split',label:'cmd.view.split'},{id:'view.code',label:'cmd.view.code'}],
- shortcuts:{'view.code':'Mod+1','view.design':'Mod+2','view.split':'Mod+3'},menus:{view:['view.design','view.split','view.code']},canvas:'code.canvas',
+ shortcuts:{'studio.code':'Mod+1','view.design':'Mod+Alt+1','view.split':'Mod+Alt+2','view.code':'Mod+Alt+3'},menus:{view:['view.design','view.split','view.code']},canvas:'code.canvas',
  agent:{tools:[],contextProviders:['activeDocument','selection'],quickActions:[]},deriveContext:context=>context
 };
 registerStudio(codeStudio);

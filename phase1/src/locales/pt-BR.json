@@ -2024,5 +2024,11 @@
   "office.docx.toMd": "Salvar como Markdown",
   "office.docx.frameTitle": "Pré-visualização de {name}",
   "office.xlsx.title": "Pré-visualização de XLSX",
-  "office.xlsx.toCsv": "Salvar planilha como CSV"
+  "office.xlsx.toCsv": "Salvar planilha como CSV",
+  "studio.switcher": "Estúdios",
+  "studio.code": "Somnia Code",
+  "studio.viewMode": "Modo de visualização",
+  "studio.announcement": "Estúdio {studio}",
+  "cmd.studio.code": "Mudar para o estúdio Code",
+  "studio.shortcutConflict": "Conflito de atalhos: {commands}. Altere em Configurações > Atalhos."
 }

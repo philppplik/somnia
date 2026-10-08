@@ -2,14 +2,14 @@ import {test,expect} from './fixtures';
 import type {Page} from '@playwright/test';
 const addText=(page:Page,name:string,text:string)=>page.evaluate(async([n,t]:string[])=>{const m=await import('/src/lib/projectActions.ts');m.addTextFiles([{name:n,text:t}]);},[name,text]);
 const long=Array.from({length:60},(_,i)=>`## Section ${i+1}\n\nParagraph ${i+1} with some text that is long enough to wrap in a narrow pane. `.repeat(1)+'Lorem ipsum dolor sit amet, consectetur adipiscing elit.\n\n- item a\n- item b\n  - nested\n').join('\n');
-async function open(page:Page,text:string,name='doc.md'){await page.goto('/');await expect(page.locator('[data-storage]')).toBeVisible();await addText(page,name,text);await page.getByRole('button',{name:'Split',exact:true}).waitFor();}
-async function split(page:Page){await page.keyboard.press('Control+3');await expect(page.locator('.cm-content')).toBeVisible();await expect(page.getByTestId('md-pane')).toBeVisible();}
+async function open(page:Page,text:string,name='doc.md'){await page.goto('/');await expect(page.locator('[data-storage]')).toBeVisible();await addText(page,name,text);await page.getByRole('radio',{name:'Somnia Code',exact:true}).waitFor();}
+async function split(page:Page){await page.keyboard.press('Control+Alt+2');await expect(page.locator('.cm-content')).toBeVisible();await expect(page.getByTestId('md-pane')).toBeVisible();}
 const src=(page:Page)=>page.locator('.cm-content');
 const setDoc=(page:Page,text:string)=>page.evaluate(async t=>{const m=await import('/src/lib/mdBridge.ts');const v=m.getMdSource()!;v.dispatch({changes:{from:0,to:v.state.doc.length,insert:t}});},text);
 const docText=(page:Page)=>page.evaluate(async()=>(await import('/src/lib/mdBridge.ts')).getMdSource()!.state.doc.toString());
 test('markdown gets Source / Split / Preview, syntax highlighting and live preview',async({page})=>{
  await open(page,'# Hello\n\nSome **bold** text\n');
- await expect(page.getByRole('button',{name:'Split',exact:true})).toBeVisible();await expect(page.getByRole('button',{name:'Preview',exact:true}).first()).toBeVisible();await expect(page.getByRole('button',{name:'Source',exact:true})).toBeVisible();
+ await page.getByRole('button',{name:'View',exact:true}).click();for(const mode of ['Split','Preview','Source'])await expect(page.getByRole('menuitemradio',{name:new RegExp('^'+mode)})).toBeVisible();await page.keyboard.press('Escape');
  await split(page);
  await expect(page.getByTestId('md-toolbar')).toBeVisible();await expect(page.getByTestId('md-preview').getByRole('heading',{name:'Hello'})).toBeVisible();
  await expect(page.locator('.cm-content .tok-heading, .cm-content [class*="ͼ"]').first()).toBeVisible();
@@ -20,9 +20,9 @@ test('markdown gets Source / Split / Preview, syntax highlighting and live previ
 });
 test('view shortcuts work from the Markdown editor; Mod+B is Bold there and sidebar elsewhere',async({page})=>{
  await open(page,'word\n');await split(page);await src(page).click();
- await page.keyboard.press('Control+1');await expect(page.getByTestId('md-pane')).toHaveCount(0);
- await page.keyboard.press('Control+2');await expect(page.getByTestId('md-pane')).toBeVisible();await expect(page.getByTestId('md-toolbar')).toHaveCount(0);
- await page.keyboard.press('Control+3');await src(page).click();await page.keyboard.press('Control+a');
+ await page.keyboard.press('Control+Alt+3');await expect(page.getByTestId('md-pane')).toHaveCount(0);
+ await page.keyboard.press('Control+Alt+1');await expect(page.getByTestId('md-pane')).toBeVisible();await expect(page.getByTestId('md-toolbar')).toHaveCount(0);
+ await page.keyboard.press('Control+Alt+2');await src(page).click();await page.keyboard.press('Control+a');
  const sidebar=await page.evaluate(async()=>(await import('/src/store/appStore.ts')).getState().sidebarOpen);
  await page.keyboard.press('Control+b');expect(await docText(page)).toBe('**word**\n');
  expect(await page.evaluate(async()=>(await import('/src/store/appStore.ts')).getState().sidebarOpen)).toBe(sidebar);
@@ -90,7 +90,7 @@ test('typing does not scroll the preview and edits above keep the reading positi
 });
 test('relative md links open project tabs, fragments scroll, missing files report a neutral error',async({page})=>{
  await open(page,'[other](other.md#target) [gone](missing.md) [top](#intro)\n\n# Intro\n','index.md');await addText(page,'other.md','# Other\n\n'+'filler\n\n'.repeat(80)+'## Target\n\nend\n');
- await page.getByRole('tab',{name:/index\.md/}).click();await page.keyboard.press('Control+2');
+ await page.getByRole('tab',{name:/index\.md/}).click();await page.keyboard.press('Control+Alt+1');
  const md=page.getByTestId('md-preview');await md.getByRole('link',{name:'gone'}).click();await expect(page.getByRole('status').filter({hasText:'missing.md'})).toBeVisible();
  await md.getByRole('link',{name:'other'}).click();await expect(md.getByRole('heading',{name:'Other'})).toBeVisible();
  await expect.poll(()=>page.getByTestId('md-scroll').evaluate(e=>e.scrollTop)).toBeGreaterThan(200);
@@ -104,5 +104,5 @@ test('dark theme and screenshots',async({page})=>{
  await open(page,'# Dark\n\n```js\nconst a = 1;\n```\n\n| a | b |\n|---|---|\n| 1 | 2 |\n\n> quote\n');await split(page);
  await page.evaluate(async()=>{(await import('/src/store/appStore.ts')).patchState({themeChoice:'dark',theme:'dark'});});
  await expect(page.getByTestId('md-preview').locator('table')).toBeVisible();await page.screenshot({path:'test-results/markdown-split-dark.png'});
- await page.keyboard.press('Control+2');await page.screenshot({path:'test-results/markdown-preview-dark.png'});
+ await page.keyboard.press('Control+Alt+1');await page.screenshot({path:'test-results/markdown-preview-dark.png'});
 });

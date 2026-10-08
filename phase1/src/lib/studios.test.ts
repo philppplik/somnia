@@ -19,3 +19,7 @@ test('manual selection wins, pending tools never commit, documents/history and g
  patchState({activeFile:'other.html'});assert.equal(getState().activeStudio,'code');patchState({activeFile:'index.html'});assert.equal(getState().activeStudio,'test.ready');
  requestStudio('code');off();patchState({activeFile:'',studioByTab:{},files:{},isDirty:false,agentOpen:false,revision:0});
 });
+test('Studio labels and command strings exist in all five catalogues',async()=>{
+ const {CATALOGUES}=await import('./i18n');
+ for(const catalogue of Object.values(CATALOGUES))for(const key of ['studio.code','studio.switcher','studio.viewMode','studio.announcement','studio.shortcutConflict','cmd.studio.code'])assert.ok(catalogue[key],key);
+});
