@@ -23,6 +23,8 @@ import { Zap } from '../lib/icons';
 import { DEFAULT_CANVAS_PREFS, type CanvasPrefs } from "../lib/canvasPrefs";
 import { DEFAULT_WORKFLOW_PREFS } from "../lib/workflowPrefs";
 import { sanitizeUnitPref } from "../lib/units";
+import { ModifiedSettings } from "./ModifiedSettings";
+import { modifiedCountBySection, modifiedSettings, resetPatch, type SettingEntry } from "../lib/settingsRegistry";
 import { Pencil } from '../lib/icons';
 import { DEFAULT_UI_PREFS } from "../lib/uiPrefs";
 import { parseShortcutFile } from "../lib/shortcutTransfer";
@@ -311,7 +313,11 @@ export function Settings() {
       setNativeBusy(false);
     }
   };
+  const resetSettings = (entries: readonly SettingEntry[]) => change(resetPatch(state, entries) as Partial<AppState>);
+  const modifiedCounts = modifiedCountBySection(state);
+  const modifiedTotal = modifiedSettings(state).length;
   const sections = [
+    { name: "Modified", key: "modified", group: "", icon: RefreshCw },
     { name: "General", key: "general", group: "App", icon: SettingsIcon },
     { name: "Appearance", key: "appearance", group: "App", icon: Palette },
     ...(isTauri()
@@ -342,6 +348,7 @@ export function Settings() {
   const renderSection = (section: string) => (
     <section data-settings-section={section} aria-label={sectionTitle(section)} key={section}>
       <h2>{sectionTitle(section)}</h2>
+      {section === "Modified" && <ModifiedSettings state={state} onReset={resetSettings} onOpenSection={(name) => { setQuery(""); setSection(name); }} />}
       {section === "Collaboration" && <CollabPreferences/>}
       {section === "AI" && <AgentSettings searchQuery={query} legacyPrivacy={["AI Privacy","AI privacy"].includes(state.settingsSection)}/>}
       {section === "Advanced" && (
@@ -2043,6 +2050,11 @@ export function Settings() {
                 >
                   <item.icon size={16} />
                   {sectionTitle(item.name)}
+                  {(item.name === "Modified" ? modifiedTotal : modifiedCounts[item.name]) > 0 && (
+                    <span className="settings-badge" aria-label={t("settings.modified.badge", { n: item.name === "Modified" ? modifiedTotal : modifiedCounts[item.name] })}>
+                      {item.name === "Modified" ? modifiedTotal : modifiedCounts[item.name]}
+                    </span>
+                  )}
                 </button>
               </div>
             ))}
@@ -2065,7 +2077,7 @@ export function Settings() {
               <p role="status">{t("redesign.noResults")}</p>
             )}
             {query
-              ? sections.map((item) => renderSection(item.name))
+              ? sections.filter((item) => item.name !== "Modified").map((item) => renderSection(item.name))
               : renderSection(
                   sections.some((x) => x.name === section)
                     ? section

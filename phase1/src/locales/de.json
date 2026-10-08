@@ -1805,5 +1805,16 @@
   "imageeditor.op.invert": "Invertieren",
   "imageeditor.op.vignette": "Vignette",
   "imageeditor.op.filter": "Filter",
-  "imageeditor.op.other": "Änderung"
+  "imageeditor.op.other": "Änderung",
+  "set.section.modified": "Geändert",
+  "settings.modified.none": "Nichts geändert. Alle Einstellungen stehen auf Standard.",
+  "settings.modified.hint": "Einstellungen, die vom Standard abweichen. Einzeln oder alle zurücksetzen (Rückgängig mit Strg+Z).",
+  "settings.modified.defaultLabel": "Standard",
+  "settings.modified.on": "an",
+  "settings.modified.off": "aus",
+  "settings.modified.reset": "Zurücksetzen",
+  "settings.modified.resetAll": "Alle zurücksetzen",
+  "settings.modified.badge": "{n} geändert",
+  "settings.modified.projectChip": "Pro Projekt abweichend möglich",
+  "settings.modified.projectHint": "Ein Projekt kann diese Einstellung überschreiben."
 }
