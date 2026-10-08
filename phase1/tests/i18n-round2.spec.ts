@@ -34,9 +34,9 @@ for(const locale of ['en','de','es','fr','pt-BR']){
   expect(confirmationText).toBe(t('finish2.comparison.confirm',{path:'source-ä.html'}));
   expect(await page.evaluate(()=>(window as any).__reviewed)).toBeUndefined();
   await dialog.getByRole('button',{name:t('rest.diskComparison.cancel'),exact:true}).click();
-  // Markdown files now open in the Markdown editor (no separate empty-preview message), so only the SVG empty state is checked here.
+  // Markdown files now open in the Markdown editor (no separate empty-preview message), so only the SVG empty state is checked here (the inline SVG editor shows its invalid-source message for an empty file).
   await page.evaluate(async()=>{const {addTextFiles}=await import('/src/lib/projectActions.ts' as string);addTextFiles([{name:'empty.svg',text:''}]);});
-  await expect(page.getByText(t('finish2.media.svgEmpty'),{exact:true})).toBeVisible();
+  await expect(page.getByText(t('svg.invalid'),{exact:true})).toBeVisible();
  });
  test(`${locale}: empty layer state`,async({page})=>{
   await page.addInitScript(l=>{sessionStorage.setItem('somnia.nofixture','1');localStorage.setItem('somnia.locale.v1',l);},locale);
