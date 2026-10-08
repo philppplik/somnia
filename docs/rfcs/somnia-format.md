@@ -1,4 +1,4 @@
-# RFC: Somnia project container (.som)
+# RFC: Somnia project container (.somnia)
 
 Date: 2026-10-08
 Status: draft, not implemented
@@ -14,7 +14,7 @@ lossless import of third-party documents.
 ## 1. Decision and boundaries
 
 Use ZIP with UTF-8 JSON and ordinary assets for editable Somnia project state.
-`.som` is a working extension. An unpacked folder carries the same logical
+`.somnia` is the file extension (owner decision, 2026-10-08). An unpacked folder carries the same logical
 payload and is a first-class equivalent, not a reduced export.
 
 Keep original sources, operation stacks, layers/masks, vector scenes, layout
@@ -22,7 +22,7 @@ pages, timeline references, studio links and export recipes. Each studio owns
 its versioned model. Do not force every editor into one flattened canvas schema.
 
 **A project is not a delivery format.** PNG/JPEG/WebP, SVG, HTML/CSS, PDF, WAV,
-MP4 and appropriate standards remain delivery/interchange formats. Saving `.som`
+MP4 and appropriate standards remain delivery/interchange formats. Saving `.somnia`
 MUST NOT replace a source PNG, MP4, PDF or imported native file. Simple HTML,
 SVG, Markdown and images MAY remain ordinary standalone files.
 
@@ -33,11 +33,13 @@ full AI chats, automatic cloud access or permanent undo/collaboration history.
 
 ## 2. Naming and registration
 
-A brief check on 2026-10-08 found existing `.som` uses. Webopedia lists Paradox
+The extension is `.somnia` (owner decision, 2026-10-08). A brief check on
+2026-10-08 found existing uses of the shorter `.som`: Webopedia lists Paradox
 sort information and Quattro Pro network serial numbers; fileextension.info
-also lists Corel Paradox sort information [1, 2]. These are secondary catalogues,
-not exhaustive registries or legal clearance. The extension is ambiguous.
-Consider `.somnia` before release, but this RFC has not cleared that alternative.
+also lists Corel Paradox sort information [1, 2]. These are secondary
+catalogues, not exhaustive registries or legal clearance. That ambiguity is why
+the shorter `.som` was not chosen. A check for existing `.somnia` uses has not
+been done and is not legal clearance.
 
 `application/vnd.somnia.project+zip` is the proposed media type, not a verified
 registered assignment. No registration was submitted here. The IANA vendor-tree
@@ -103,18 +105,18 @@ stable document ID. Old unreferenced revisions are not current state.
 Folder-only operational state:
 
 ```text
-.som-work/lock.json
-.som-work/recovery/<generation-id>/manifest.json
-.som-work/journal/<segment-id>.jsonl
-.som-work/cache/
-.som-work/local-links.json
+.somnia-work/lock.json
+.somnia-work/recovery/<generation-id>/manifest.json
+.somnia-work/journal/<segment-id>.jsonl
+.somnia-work/cache/
+.somnia-work/local-links.json
 ```
 
-`.som-work/` MUST NOT be packed. It holds locks, recovery roots, uncommitted
+`.somnia-work/` MUST NOT be packed. It holds locks, recovery roots, uncommitted
 journals, disposable caches and local filesystem grants, not another canonical
 model. Unpack into staging/a new folder; never merge into existing work blindly.
 
-Git tracks canonical JSON/assets, ignores `.som-work/` and temporary files.
+Git tracks canonical JSON/assets, ignores `.somnia-work/` and temporary files.
 Large media MAY use Git LFS by explicit choice. Missing LFS objects are missing
 assets. Thin projects need accompanying media or an agreed external workflow.
 Git history is not a backup policy. Packing takes a validated snapshot, not an
@@ -361,7 +363,7 @@ export or require reviewed degraded export to a new file.
 
 Packaging has a privacy review for originals, metadata, fonts, opaque extensions
 and thumbnails. Do not automatically include provider keys/tokens, full AI chats,
-local machine paths or `.som-work/`. Sensitive original content stays sensitive
+local machine paths or `.somnia-work/`. Sensitive original content stays sensitive
 when bundled; a hash does not redact it.
 
 ## 8. Atomic save, autosave and recovery
@@ -396,7 +398,7 @@ verification failure retains old-good and recoverable work, never false saved st
 1. Write new immutable content-addressed payloads via sibling temps; flush, verify
    and atomically install. Never replace differing bytes at an existing hash path.
 2. Build a manifest referencing only durable installed payloads.
-3. Save/flush a verified previous root under `.som-work/recovery/`.
+3. Save/flush a verified previous root under `.somnia-work/recovery/`.
 4. Under writer lock/expected-root checks, atomically replace `manifest.json`,
    then sync its directory where supported.
 5. Read back and validate the committed root before updating saved status.
@@ -517,7 +519,7 @@ At the reviewed base, image state has `schemaVersion: 1` and operations with
 `id/type/version/enabled/params`; vector operations share that wire pattern.
 These guide adapters, not prove a complete persistence layer. Layers/masks,
 layout/timeline, algorithm pinning and studio links here require implementation.
-Do not rename an old project ZIP to `.som` and call this RFC implemented.
+Do not rename an old project ZIP to `.somnia` and call this RFC implemented.
 
 ## 12. Acceptance and release gates
 
