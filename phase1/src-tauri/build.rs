@@ -46,6 +46,8 @@ fn main() {
             "recovery_read",
             "recovery_restore",
             "recovery_discard",
+            "recovery_history_list",
+            "recovery_restore_safe",
             "close_project",
             "log_write",
             "log_tail",

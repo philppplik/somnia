@@ -123,6 +123,21 @@ pub struct RecoveryRecord {
     pub content: String,
     pub updated_at_ms: u64,
 }
+/// Immutable local safety snapshots. They are separate from the disposable autosave journal.
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RecoveryHistoryEntry {
+    pub id: String,
+    pub kind: String,
+    pub record: RecoveryRecord,
+}
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RecoverySafeRestore {
+    pub event: StateEvent,
+    pub content: String,
+    pub safety_ids: Vec<String>,
+}
 #[derive(Debug)]
 struct Document {
     base: Revision,
@@ -658,6 +673,79 @@ impl Project {
             return Ok(self.event(path));
         }
         Ok(event)
+    }
+    pub fn recovery_history_list(&self) -> Result<Vec<RecoveryHistoryEntry>> {
+        let mut entries = self.recovery_list()?.into_iter().map(|record| {
+            let id = format!("journal-{}", hash(&serde_json::to_vec(&record).unwrap()));
+            RecoveryHistoryEntry { id, kind: "recovery".into(), record }
+        }).collect::<Vec<_>>();
+        for entry in self.recovery.entries()? {
+            let entry = entry?;
+            let name = entry.file_name();
+            if !name.to_string_lossy().ends_with(".safety") { continue; }
+            if entries.len() >= MAX_DOCS { return Err(AppError::Limit); }
+            entries.push(self.read_safety(&name)?);
+        }
+        Ok(entries)
+    }
+    fn read_safety(&self, name: &std::ffi::OsStr) -> Result<RecoveryHistoryEntry> {
+        let mut file = self.recovery.open(name)?;
+        let mut bytes = Vec::new();
+        Read::by_ref(&mut file).take((MAX_BYTES * 6 + 8193) as u64).read_to_end(&mut bytes)?;
+        if bytes.len() > MAX_BYTES * 6 + 8192 { return Err(AppError::Limit); }
+        let entry: RecoveryHistoryEntry = serde_json::from_slice(&bytes)
+            .map_err(|e| AppError::Invalid(e.to_string()))?;
+        self.safe_path(&entry.record.path)?;
+        if entry.kind != "safety" || entry.record.schema != 1 || entry.record.content.len() > MAX_BYTES
+            || name != std::ffi::OsStr::new(&format!("{}.safety", entry.id)) {
+            return Err(AppError::Invalid("Safety identity/schema mismatch".into()));
+        }
+        Ok(entry)
+    }
+    fn archive_recovery(&self, record: RecoveryRecord) -> Result<String> {
+        // Enforce a bound without ever evicting existing snapshots.
+        if self.recovery_history_list()?.len() >= MAX_DOCS { return Err(AppError::Limit); }
+        let id = format!("safety-{}", Uuid::new_v4());
+        let entry = RecoveryHistoryEntry { id: id.clone(), kind: "safety".into(), record };
+        atomic_write(&self.recovery, Path::new(&format!("{}.safety", id)),
+            &serde_json::to_vec(&entry).map_err(|e| AppError::Invalid(e.to_string()))?)?;
+        Ok(id)
+    }
+    /// Never deletes. Archive the selected snapshot AND current disk/pending data before staging.
+    /// The staged restoration is held from autosave until the user explicitly saves it.
+    pub fn recovery_restore_safe(&mut self, id: &str, path: &str, revision: u64,
+        expected: &Revision) -> Result<RecoverySafeRestore> {
+        self.safe_path(path)?;
+        let history = self.recovery_history_list()?;
+        let current_journal = history.iter().find(|e| e.kind == "recovery" && e.record.path == path).map(|e| e.record.clone());
+        let target = history.into_iter()
+            .find(|e| e.id == id && e.record.path == path)
+            .ok_or(AppError::StaleRevision)?.record;
+        self.ensure_doc(path)?;
+        if revision <= self.documents[path].client_revision { return Err(AppError::StaleRevision); }
+        let (content, disk) = self.disk(path)?;
+        if &disk != expected { return Err(AppError::Conflict); }
+        // Preflight capacity for up to three archives. No journal or disk mutation on limit.
+        if self.recovery_history_list()?.len() + 3 > MAX_DOCS { return Err(AppError::Limit); }
+        let mut safety_ids = vec![self.archive_recovery(target.clone())?];
+        if let Some(content) = content {
+            safety_ids.push(self.archive_recovery(RecoveryRecord {
+                schema: 1, path: path.into(), base_revision: disk.clone(),
+                client_revision: self.documents[path].client_revision, content, updated_at_ms: now_ms(),
+            })?);
+        }
+        if let Some(record) = current_journal {
+            safety_ids.push(self.archive_recovery(record)?);
+        }
+        // Restore the old document base if journal persistence fails.
+        let old_base = self.documents[path].base.clone();
+        self.documents.get_mut(path).unwrap().base = disk;
+        let event = match self.stage(path, target.content.clone(), revision) {
+            Ok(event) => event,
+            Err(e) => { self.documents.get_mut(path).unwrap().base = old_base; return Err(e); }
+        };
+        self.autosave_holds.insert(path.into());
+        Ok(RecoverySafeRestore { event, content: target.content, safety_ids })
     }
     pub fn recovery_discard(&self, path: &str) -> Result<()> {
         self.safe_path(path)?;

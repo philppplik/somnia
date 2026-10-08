@@ -1,5 +1,5 @@
 use crate::drop_grant::DropGrant;
-use crate::service::{AppError, Project, ReadReply, RecoveryRecord, Result, Revision, StateEvent};
+use crate::service::{AppError, Project, ReadReply, RecoveryHistoryEntry, RecoverySafeRestore, RecoveryRecord, Result, Revision, StateEvent};
 use serde::Serialize;
 use std::{
     collections::BTreeMap,
@@ -955,6 +955,20 @@ async fn recovery_restore(
     Ok(event)
 }
 #[tauri::command]
+async fn recovery_history_list(window: WebviewWindow, state: State<'_, Shared>, project_id: String) -> Result<Vec<RecoveryHistoryEntry>> {
+    gate(&window)?;
+    work(state.inner().clone(), move |b| project(b, &project_id)?.recovery_history_list()).await
+}
+#[tauri::command]
+async fn recovery_restore_safe(window: WebviewWindow, state: State<'_, Shared>, project_id: String,
+    id: String, path: String, client_revision: u64, expected_revision: Revision) -> Result<RecoverySafeRestore> {
+    gate(&window)?;
+    let result = work(state.inner().clone(), move |b|
+        project(b, &project_id)?.recovery_restore_safe(&id, &path, client_revision, &expected_revision)).await?;
+    emit(&window, &result.event);
+    Ok(result)
+}
+#[tauri::command]
 async fn recovery_discard(
     window: WebviewWindow,
     state: State<'_, Shared>,
@@ -1198,6 +1212,8 @@ pub fn run() {
             recovery_read,
             recovery_restore,
             recovery_discard,
+            recovery_history_list,
+            recovery_restore_safe,
             close_project,
             log_write,
             log_tail,

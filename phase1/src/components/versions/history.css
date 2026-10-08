@@ -1,0 +1,14 @@
+.versions-history {color:var(--text-primary); padding:12px; min-width:0; overflow:auto; height:100%; font-size:12px;}
+.versions-history header {display:flex; align-items:center; gap:8px; flex-wrap:wrap;}
+.versions-history h2 {font-size:14px; margin:0; flex:1;}
+.versions-history .history-hint {opacity:.7;}
+.history-timeline {list-style:none; padding:0; margin:12px 0; display:grid; gap:10px;}
+.history-timeline li {border:1px solid var(--border-default); border-radius:25px; padding:12px; display:flex; flex-direction:column; gap:7px; min-width:0;}
+.history-timeline strong, .history-timeline span {overflow-wrap:anywhere; white-space:pre-wrap;}
+.history-timeline button {align-self:flex-start;}
+.history-kind {display:flex; align-items:center; gap:6px;}
+.versions-history [role=alert] {padding:8px; border:1px solid var(--border-default); border-radius:12px; overflow-wrap:anywhere;}
+/* Explicit local tokens also cover isolated mounts outside the main workspace. */
+.versions-history button {color:var(--text-primary); background:var(--bg-elevated); border:1px solid var(--border-default);}
+.versions-history button:hover:not(:disabled) {background:var(--bg-hover);}
+.versions-history button:disabled {opacity:.4;}

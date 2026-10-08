@@ -66,6 +66,8 @@
     "allow-recovery-read",
     "allow-recovery-restore",
     "allow-recovery-discard",
+    "allow-recovery-history-list",
+    "allow-recovery-restore-safe",
     "allow-close-project",
     "allow-log-write",
     "allow-log-tail",
