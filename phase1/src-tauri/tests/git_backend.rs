@@ -32,6 +32,8 @@ fn repo_with_commit() -> (TempDir, PathBuf) {
     git(&root, &["init", "-q", "-b", "main", "."]);
     git(&root, &["config", "user.name", "Somnia Test"]);
     git(&root, &["config", "user.email", "somnia@test.invalid"]);
+    git(&root, &["config", "core.autocrlf", "false"]);
+    git(&root, &["config", "core.longpaths", "true"]);
     fs::write(root.join("index.html"), "v1\n").unwrap();
     git(&root, &["add", "-A"]);
     git(&root, &["commit", "-qm", "initial"]);
@@ -44,6 +46,8 @@ fn empty_repo() -> (TempDir, PathBuf) {
     git(&root, &["init", "-q", "-b", "main", "."]);
     git(&root, &["config", "user.name", "Somnia Test"]);
     git(&root, &["config", "user.email", "somnia@test.invalid"]);
+    git(&root, &["config", "core.autocrlf", "false"]);
+    git(&root, &["config", "core.longpaths", "true"]);
     (dir, root)
 }
 

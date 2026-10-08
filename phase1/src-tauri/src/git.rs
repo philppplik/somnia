@@ -416,6 +416,8 @@ fn run_git(
     cmd.current_dir(cwd)
         .arg("-c")
         .arg("core.quotepath=false")
+        .arg("-c")
+        .arg("core.longpaths=true")
         .args(args)
         .stdin(if stdin_bytes.is_some() { Stdio::piped() } else { Stdio::null() })
         .stdout(Stdio::piped())
@@ -1400,7 +1402,7 @@ pub fn diff_file(project_root: &Path, path: &str, base: DiffBase, target: DiffTa
         let mut text = String::from_utf8_lossy(&out.stdout).into_owned();
         if out.code == Some(0) && text.is_empty() && after.is_some() && before.is_none() {
             // Untracked file: synthesize the add diff.
-            let null_dev: &OsStr = OsStr::new(if cfg!(windows) { "NUL" } else { "/dev/null" });
+            let null_dev: &OsStr = OsStr::new("/dev/null") /* Git for Windows maps /dev/null itself; a literal NUL fails there */;
             let abs = root.join(&repo_path).into_os_string();
             let alt = run_git(
                 &root,
