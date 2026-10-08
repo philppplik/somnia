@@ -1606,7 +1606,10 @@ fn safety_copy(root: &Path, info: &GitRepoInfo, scope: &[String]) -> GResult<(St
         .duration_since(UNIX_EPOCH)
         .map(|d| d.subsec_nanos())
         .unwrap_or(0);
-    let tmp_index = std::env::temp_dir().join(format!("somnia-git-index-{}-{nanos}", std::process::id()));
+    // pid + clock + process-wide counter: parallel callers (and macOS's microsecond clock) must never share a scratch index.
+    static INDEX_SEQ: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+    let seq = INDEX_SEQ.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+    let tmp_index = std::env::temp_dir().join(format!("somnia-git-index-{}-{nanos}-{seq}", std::process::id()));
     let tmp_index_os = tmp_index.clone().into_os_string();
     let env: [(&str, &OsStr); 1] = [("GIT_INDEX_FILE", tmp_index_os.as_os_str())];
     let cleanup = |tmp: &Path| {
