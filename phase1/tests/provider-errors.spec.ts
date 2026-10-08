@@ -5,8 +5,8 @@ async function configure(page:import('@playwright/test').Page){
  await page.goto('/');await page.getByRole('button',{name:'Open Somnia Agent'}).click();
  const panel=page.getByRole('complementary',{name:'Somnia Agent'});
  await panel.getByRole('button',{name:'Agent configuration',exact:true}).click();
- await panel.getByLabel('Model',{exact:true}).fill('fixture-local');
- await panel.getByRole('button',{name:'Use configuration',exact:true}).click();return panel;
+ const S=page.getByRole('dialog');await S.getByLabel('Model',{exact:true}).fill('fixture-local');
+ await S.getByRole('button',{name:'Save AI settings',exact:true}).click();await S.getByText('Configuration saved.',{exact:true}).waitFor();await S.getByRole('button',{name:'Close settings',exact:true}).click();return panel;
 }
 test('partial provider failure remains visible and retry uses the retained prompt',async({page})=>{
  let calls=0;const prompts:string[]=[];
