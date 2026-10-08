@@ -19,7 +19,7 @@ test('panels translate live without changing selection, CSS properties, or accor
  await inspector.getByRole('button',{name:'Typografie',exact:true}).click();
  await locale(page,'en');
  await expect(page.getByLabel('Width computed',{exact:true})).toBeVisible();
- await expect(page.getByLabel('Font computed',{exact:true})).not.toBeVisible();
+ await expect(page.locator('[data-context-section="typography"]')).not.toHaveAttribute('open');
  await locale(page,'de');
  await page.screenshot({path:'/tmp/panels-inspector-de.png',fullPage:true});
  await page.getByRole('button',{name:'Files panel',exact:true}).click();

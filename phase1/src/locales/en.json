@@ -2092,5 +2092,7 @@
   "ctx.align.vmiddle": "Center vertically",
   "ctx.align.bottom": "Bottom",
   "ctx.distribute.h": "Distribute horizontally",
-  "ctx.distribute.v": "Distribute vertically"
+  "ctx.distribute.v": "Distribute vertically",
+  "ctx.decorative": "Decorative image",
+  "ctx.filesLayers": "Files / Layers"
 }

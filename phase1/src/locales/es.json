@@ -2092,5 +2092,7 @@
   "ctx.align.vmiddle": "Centrar verticalmente",
   "ctx.align.bottom": "Abajo",
   "ctx.distribute.h": "Distribuir horizontalmente",
-  "ctx.distribute.v": "Distribuir verticalmente"
+  "ctx.distribute.v": "Distribuir verticalmente",
+  "ctx.decorative": "Imagen decorativa",
+  "ctx.filesLayers": "Archivos / Capas"
 }

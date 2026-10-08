@@ -1,3 +1,5 @@
+import {Button} from './ui/button';
+import {resetContextSections} from './ContextSections';
 import {CollabPreferences} from './CollabPreferences';
 import {AgentSettings} from './agent/AgentSettings';
 import {initializeAgentSettings} from '../lib/agent/settingsRuntime';
@@ -703,6 +705,8 @@ export function Settings() {
               }
             />
           </label>
+          {(['contextChips','panelFollowsContext','floatingFormat'] as const).map((key,i)=><label key={key}>{t(['ctx.chips','ctx.follow','ctx.floating'][i])}<input type="checkbox" aria-label={t(['ctx.chips','ctx.follow','ctx.floating'][i])} checked={state.workflowPrefs[key]} onChange={e=>change({workflowPrefs:{...state.workflowPrefs,[key]:e.target.checked}})}/></label>)}
+          <Button variant="outline" onClick={resetContextSections}>{t('ctx.reset')}</Button>
           <label>
             {t("redesign.confirmDelete")}
             <input

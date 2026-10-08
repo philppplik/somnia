@@ -14,7 +14,7 @@ let snapshot=derive(),key=JSON.stringify(snapshot),timer:ReturnType<typeof setTi
 const listeners=new Set<()=>void>();
 function publish(){const next=derive(),nextKey=JSON.stringify(next);if(nextKey!==key){snapshot=next;key=nextKey;listeners.forEach(fn=>fn());}}
 let selectionKey='';
-subscribe(()=>{const s=getState(),next=[s.selectedElementId,...s.selectedElementIds].join('|');if(next!==selectionKey){selectionKey=next;clearTimeout(timer);timer=setTimeout(publish,120);}else{clearTimeout(timer);publish();}});
+subscribe(()=>{const s=getState(),next=[s.selectedElementId,...s.selectedElementIds].join('|');if(next!==selectionKey){selectionKey=next;clearTimeout(timer);timer=setTimeout(()=>{timer=undefined;publish();},120);}else if(!timer){publish();}});
 subscribeMedia(publish);
 export function setUiToolState(next:ToolStates){tools=next;publish();}
 export const getUiContext=()=>snapshot;

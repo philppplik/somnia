@@ -2092,5 +2092,7 @@
   "ctx.align.vmiddle": "Centrer verticalement",
   "ctx.align.bottom": "Bas",
   "ctx.distribute.h": "Distribuer horizontalement",
-  "ctx.distribute.v": "Distribuer verticalement"
+  "ctx.distribute.v": "Distribuer verticalement",
+  "ctx.decorative": "Image décorative",
+  "ctx.filesLayers": "Fichiers / Calques"
 }

@@ -2092,5 +2092,7 @@
   "ctx.align.vmiddle": "Centralizar verticalmente",
   "ctx.align.bottom": "Base",
   "ctx.distribute.h": "Distribuir horizontalmente",
-  "ctx.distribute.v": "Distribuir verticalmente"
+  "ctx.distribute.v": "Distribuir verticalmente",
+  "ctx.decorative": "Imagem decorativa",
+  "ctx.filesLayers": "Arquivos / Camadas"
 }

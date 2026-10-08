@@ -1,0 +1,2 @@
+import {test} from 'node:test';import assert from 'node:assert/strict';import {CATALOGUES} from './i18n';
+test('all five context catalogues have the same keys and placeholders',()=>{const keys=Object.keys(CATALOGUES.en).filter(k=>k.startsWith('ctx.')).sort();for(const [locale,cat] of Object.entries(CATALOGUES)){assert.deepEqual(Object.keys(cat).filter(k=>k.startsWith('ctx.')).sort(),keys,locale);for(const key of keys)assert.deepEqual(cat[key].match(/\{\w+\}/g),CATALOGUES.en[key].match(/\{\w+\}/g),`${locale}:${key}`);}});

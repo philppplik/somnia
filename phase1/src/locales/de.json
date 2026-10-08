@@ -2092,5 +2092,7 @@
   "ctx.align.vmiddle": "Vertikal mittig",
   "ctx.align.bottom": "Unten",
   "ctx.distribute.h": "Horizontal verteilen",
-  "ctx.distribute.v": "Vertikal verteilen"
+  "ctx.distribute.v": "Vertikal verteilen",
+  "ctx.decorative": "Dekoratives Bild",
+  "ctx.filesLayers": "Dateien / Ebenen"
 }

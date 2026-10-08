@@ -1,3 +1,4 @@
+import {useUiContext} from '../lib/uiContextStore';
 import type {RefObject} from 'react';
 import {useAppStore} from '../store/appStore';
 import {alignSelection, distributeSelection, lockedIds} from '../lib/alignApply';
@@ -18,10 +19,10 @@ const DISTRIBUTE: Array<[Axis, string, string]> = [
 
 /** Shown when two or more elements are selected. Distribute needs three. Locked elements are skipped. */
 export function AlignToolbar({frame}: {frame: RefObject<HTMLIFrameElement | null>}) {
-  const s = useAppStore();
+  const s = useAppStore();const context=useUiContext();
   const locked = lockedIds(s.nodes);
   const ids = s.selectedElementIds.filter(id => !locked.has(id));
-  if (s.selectedElementIds.length < 2) return null;
+  if (context.domain!=='web'||context.surface==='code'||context.selection.kind!=='multi') return null;
   return <div role="toolbar" aria-label="Align and distribute" className="align-toolbar">
     {ALIGN.map(([mode, label, d]) => <button key={mode} type="button" title={label} aria-label={label} disabled={ids.length < 2} onClick={() => alignSelection(frame.current, mode)}><Glyph d={d}/></button>)}
     <span className="align-sep" aria-hidden="true"/>
