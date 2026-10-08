@@ -1,6 +1,8 @@
 import {test,expect} from './fixtures';
 import type {Page} from '@playwright/test';
 const open=async(page:Page)=>{await page.goto('/');await page.getByRole('button',{name:'Open Somnia Agent'}).click();return page.getByRole('complementary',{name:'Somnia Agent'});};
+const saveAI=async(page:Page)=>{const s=page.getByRole('dialog');await s.getByRole('button',{name:'Save AI settings',exact:true}).click();await s.getByText('Configuration saved.',{exact:true}).waitFor();await s.getByRole('button',{name:'Close settings',exact:true}).click();};
+const tab=(page:Page,name:string)=>page.getByRole('dialog').getByRole('tab',{name,exact:true}).click();
 async function model(page:Page){
  await page.route('http://127.0.0.1:11434/api/show',r=>r.fulfill({json:{model_info:{architecture:'fixture'}}}));
  const panel=await open(page);await panel.getByRole('button',{name:'Agent configuration',exact:true}).click();
@@ -44,8 +46,8 @@ test('stop cancels a real provider run without review; streaming state visible',
  await panel.getByRole('button',{name:'Stop'}).click();await expect(panel.getByRole('button',{name:'Send'})).toBeVisible();await page.waitForTimeout(1500);await expect(panel.locator('.ag-review')).toHaveCount(0);
 });
 test('cloud consent modal explicit and shortcut works',async({page})=>{await page.goto('/');await expect(page.getByRole('button',{name:'Open Somnia Agent'})).toBeVisible();await page.keyboard.press('Control+Alt+a');const panel=page.getByRole('complementary',{name:'Somnia Agent'});await expect(panel).toBeVisible();
- await panel.getByRole('button',{name:'Cloud data consent',exact:true}).click();const modal=page.getByRole('dialog',{name:'Cloud data consent'});await expect(modal.getByRole('button',{name:'Allow cloud AI',exact:true})).toBeDisabled();
- await expect(modal.getByRole('checkbox')).not.toBeChecked();await page.screenshot({path:'tests/artifacts/agent-consent-integrated.png'});await modal.getByRole('button',{name:'Close consent'}).click();await expect(modal).toHaveCount(0);
+ await panel.getByRole('button',{name:'Cloud data consent',exact:true}).click();const modal=page.getByRole('dialog');await expect(modal.getByRole('button',{name:'Allow cloud AI',exact:true})).toBeDisabled();
+ await expect(modal.getByRole('checkbox',{name:/I agree/})).not.toBeChecked();await page.screenshot({path:'tests/artifacts/agent-consent-integrated.png'});await modal.getByRole('button',{name:'Close settings',exact:true}).click();await expect(modal).toHaveCount(0);
 });
 test('unconfigured core fails honestly instead of demo reply',async({page})=>{const panel=await open(page);await panel.getByLabel('Message to Somnia Agent').fill('Hi');await panel.getByRole('button',{name:'Send',exact:true}).click();await expect(panel.getByRole('alert')).toContainText('Choose a provider and model');await expect(panel.locator('.ag-review')).toHaveCount(0);});
 test('true NDJSON text streaming is labelled and cancellable',async({page})=>{
@@ -58,7 +60,7 @@ test('true NDJSON text streaming is labelled and cancellable',async({page})=>{
  });
  await new Promise<void>((resolve,reject)=>{server.once('error',reject);server.listen(11434,'127.0.0.1',resolve);});
  try{
-  const panel=await open(page);await panel.getByRole('button',{name:'Agent configuration',exact:true}).click();await panel.getByLabel('Model',{exact:true}).fill('stream-fixture');await panel.getByRole('button',{name:'Use configuration'}).click();
+  const panel=await open(page);await panel.getByRole('button',{name:'Agent configuration',exact:true}).click();await page.getByRole('dialog').getByLabel('Model',{exact:true}).fill('stream-fixture');await saveAI(page);
   await panel.getByLabel('Message to Somnia Agent').fill('Explain streaming');await panel.getByRole('button',{name:'Send',exact:true}).click();
   await expect(panel.getByText('This is streamed AI text.',{exact:false})).toBeVisible();await expect(panel.locator('.ag-caret')).toBeVisible();await expect(panel.getByRole('button',{name:'Stop'})).toBeVisible();
   await page.screenshot({path:'tests/artifacts/agent-streaming-integrated.png'});await panel.getByRole('button',{name:'Stop'}).click();await expect(panel.getByRole('button',{name:'Send',exact:true})).toBeVisible();
@@ -70,21 +72,20 @@ test('declining file access never exposes an applicable proposal',async({page})=
 });
 test('OpenRouter never starts inference without explicit cloud consent',async({page})=>{
  let requests=0;await page.route('https://openrouter.ai/api/v1/chat/completions',r=>{requests++;return r.abort();});
- const panel=await open(page);await panel.getByRole('button',{name:'Agent configuration',exact:true}).click();await panel.getByRole('combobox',{name:'Provider',exact:true}).selectOption('openrouter');await panel.getByLabel('Model',{exact:true}).fill('fixture/model');await panel.getByLabel('API key').fill('fixture-not-a-real-key');await panel.getByRole('button',{name:'Use configuration'}).click();
+ const panel=await open(page);await panel.getByRole('button',{name:'Agent configuration',exact:true}).click();await page.getByRole('dialog').getByRole('combobox',{name:'Provider',exact:true}).selectOption('openrouter');await page.getByRole('dialog').getByLabel('Model',{exact:true}).fill('fixture/model');await page.getByRole('dialog').getByLabel('API key').fill('fixture-not-a-real-key');await saveAI(page);
  await panel.getByLabel('Message to Somnia Agent').fill('Hello cloud');await panel.getByRole('button',{name:'Send',exact:true}).click();await expect(panel.getByRole('alert')).toBeVisible();expect(requests).toBe(0);await expect(panel.getByRole('region',{name:'Review agent changes'})).toHaveCount(0);
 });
 test('saved model and custom prompts survive reload; preview never stores API key',async({page})=>{
  const panel=await open(page);await panel.getByRole('button',{name:'Agent configuration',exact:true}).click();
- await panel.getByRole('combobox',{name:'Provider',exact:true}).selectOption('openrouter');await panel.getByLabel('Model',{exact:true}).fill('fixture/persistent');
- await panel.getByLabel('API key',{exact:true}).fill('fixture-not-real');await panel.getByRole('button',{name:'Add custom prompt'}).click();
- await panel.getByRole('textbox',{name:'Prompt name 1',exact:true}).fill('My style');await panel.getByRole('textbox',{name:'Prompt text 1',exact:true}).fill('Use short sentences.');
- await panel.getByRole('button',{name:'Use configuration',exact:true}).click();
+ const S=page.getByRole('dialog');
+ await S.getByRole('combobox',{name:'Provider',exact:true}).selectOption('openrouter');await S.getByLabel('Model',{exact:true}).fill('fixture/persistent');
+ await S.getByLabel('API key',{exact:true}).fill('fixture-not-real');await tab(page,'Instructions');await S.getByRole('button',{name:'Add custom prompt'}).click();
+ await S.getByLabel('Prompt name 1',{exact:true}).fill('My style');await S.getByLabel('Prompt text 1',{exact:true}).fill('Use short sentences.');
+ await saveAI(page);
  const prefs=await page.evaluate(()=>localStorage.getItem('somnia.agent.preferences.v1'));expect(prefs).not.toContain('fixture-not-real');expect(prefs).not.toContain('allowActiveFile');
- await expect(panel.getByRole('form',{name:'Agent configuration'})).toHaveCount(0);await page.reload();await page.getByRole('button',{name:'Open Somnia Agent',exact:true}).click();const restored=page.getByRole('complementary',{name:'Somnia Agent'});
- await restored.getByRole('button',{name:'Agent configuration',exact:true}).click();await expect(restored.getByLabel('Model',{exact:true})).toHaveValue('fixture/persistent');await expect(restored.getByLabel('API key',{exact:true})).toHaveValue('');
- await expect(restored.getByRole('textbox',{name:'Prompt text 1',exact:true})).toHaveValue('Use short sentences.');await expect(restored.getByRole('checkbox',{name:'Enable prompt 1',exact:true})).toBeChecked();
- await page.screenshot({path:'test-results/agent-persistent-settings.png'});
- await restored.getByRole('button',{name:'Use configuration',exact:true}).scrollIntoViewIfNeeded();await page.screenshot({path:'test-results/agent-persistent-settings-bottom.png'});
- await restored.getByRole('checkbox',{name:'Enable prompt 1',exact:true}).uncheck();await restored.getByRole('button',{name:'Use configuration',exact:true}).click();
- await restored.getByRole('button',{name:'Agent configuration',exact:true}).click();await restored.getByRole('button',{name:'Delete prompt 1',exact:true}).click();await expect(restored.getByRole('textbox',{name:'Prompt text 1',exact:true})).toHaveCount(0);
+ await page.reload();await page.getByRole('button',{name:'Open Somnia Agent',exact:true}).click();const restored=page.getByRole('complementary',{name:'Somnia Agent'});
+ await restored.getByRole('button',{name:'Agent configuration',exact:true}).click();await expect(S.getByLabel('Model',{exact:true})).toHaveValue('fixture/persistent');await expect(S.getByLabel('API key',{exact:true})).toHaveValue('');
+ await tab(page,'Instructions');await expect(S.getByLabel('Prompt text 1',{exact:true})).toHaveValue('Use short sentences.');await expect(S.getByRole('checkbox',{name:'Enable prompt 1',exact:true})).toBeChecked();
+ await S.getByRole('checkbox',{name:'Enable prompt 1',exact:true}).uncheck();await saveAI(page);
+ await restored.getByRole('button',{name:'Agent configuration',exact:true}).click();await tab(page,'Instructions');await S.getByRole('button',{name:'Delete prompt 1',exact:true}).click();await expect(S.getByLabel('Prompt text 1',{exact:true})).toHaveCount(0);
 });
