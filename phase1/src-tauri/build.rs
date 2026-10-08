@@ -26,6 +26,7 @@ fn main() {
             "image_read",
             "image_save_pick",
             "image_save_write",
+            "image_overwrite_prepare",
             "agent_account_status",
             "mcp_servers_list",
             "mcp_server_save",

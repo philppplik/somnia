@@ -23,3 +23,15 @@ test('save sends raw bytes with the save token header',async()=>{
  assert.equal(await nativeImageHost(invoke).save(new Blob([new Uint8Array([7,8])]),'x.png'),true);
  assert.ok(seen.body instanceof Uint8Array);assert.deepEqual([...(seen.body as Uint8Array)],[7,8]);assert.equal(seen.headers?.['x-somnia-token'],'s9');});
 test('edited name keeps the stem and swaps the extension',()=>{assert.equal(editedName('photo.v2.jpg','png'),'photo.v2-edited.png');assert.equal(editedName('','webp'),'image-edited.webp');});
+test('overwrite asks Rust for a grant for the same format and reports a format change',async()=>{
+ const calls:string[]=[];let fail=false;
+ const invoke:HostInvoke=async<T,>(c:string,a?:unknown)=>{calls.push(c);
+  if(c==='image_overwrite_prepare'){assert.deepEqual(a,{originToken:'o1',extension:'png'});if(fail)throw Error('format-differs');return {token:'s1',name:'a.png',size:0} as T;}
+  return undefined as T;};
+ const host=nativeImageHost(invoke);
+ assert.equal(await host.overwrite!(new Blob([new Uint8Array(1)]),'o1','png'),'saved');assert.deepEqual(calls,['image_overwrite_prepare','image_save_write']);
+ fail=true;calls.length=0;assert.equal(await host.overwrite!(new Blob([new Uint8Array(1)]),'o1','png'),'format-differs');assert.deepEqual(calls,['image_overwrite_prepare']);
+});
+test('a failed overwrite grant never writes bytes',async()=>{
+ const calls:string[]=[];const invoke:HostInvoke=async(c:string)=>{calls.push(c);throw Error('Original file is no longer available');};
+ assert.equal(await nativeImageHost(invoke).overwrite!(new Blob([new Uint8Array(1)]),'o1','png'),'unavailable');assert.deepEqual(calls,['image_overwrite_prepare']);});

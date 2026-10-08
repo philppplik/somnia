@@ -16,6 +16,7 @@ import {FILTER_TYPES,newFilterOperation,registerFilterOps,type FilterType} from 
 import {TRANSFORM_HANDLERS} from '../lib/imgedit/handlers';
 import type {AspectPreset,CropRect} from '../lib/imgedit/transform';
 import {DEFAULT_ADJUST_PARAMS,adjustHandler,adjustToJson,isNeutralAdjust,type AdjustParams} from '../lib/imageedit/adjust';
+import {getState} from '../store/appStore';
 import {defaultImageHost,editedName,type ImageEditorHost} from '../lib/imageEditorHost';
 import '../styles/image-editor-dialog.css';
 
@@ -33,7 +34,7 @@ function sizeAfter(width:number,height:number,stack:readonly ImageOperation[]){
 export function ImageEditorDialog({host:injected}:{host?:ImageEditorHost}){
  const {t}=useT();
  const [open,setOpen]=useState(false);
- const [source,setSource]=useState<{loaded:LoadedImage;renderer:ImageEditorRenderer;name:string}|null>(null);
+ const [source,setSource]=useState<{loaded:LoadedImage;renderer:ImageEditorRenderer;name:string;originToken?:string}|null>(null);
  const [snap,setSnap]=useState<Snapshot>(EMPTY);const [past,setPast]=useState<Snapshot[]>([]);const [future,setFuture]=useState<Snapshot[]>([]);
  const [frame,setFrame]=useState<HTMLCanvasElement|null>(null);const [backend,setBackend]=useState('');
  const [cropRect,setCropRect]=useState<CropRect|null>(null);const [aspect,setAspect]=useState<AspectPreset>('free');
@@ -71,7 +72,7 @@ export function ImageEditorDialog({host:injected}:{host?:ImageEditorHost}){
    const loaded=await loadImage(picked.blob,picked.name);
    if(id!==generation.current){loaded.dispose();return;}
    release();
-   setSource({loaded,renderer:new ImageEditorRenderer(loaded,registry),name:picked.name});
+   setSource({loaded,renderer:new ImageEditorRenderer(loaded,registry),name:picked.name,originToken:picked.originToken});
    setSnap(EMPTY);setPast([]);setFuture([]);setCropRect(null);setAspect('free');setFrame(null);setSelection(null);setSelectMode(false);
   }catch(e){setError(e instanceof Error?e.message:String(e));}finally{setBusy(false);}
  };
@@ -81,8 +82,14 @@ export function ImageEditorDialog({host:injected}:{host?:ImageEditorHost}){
    const {extension}=exportSettings({format});
    const blob=await exportImage(source.renderer,doc,{format,quality:quality/100});
    hostRef.current??=await defaultImageHost();
-   const saved=await hostRef.current.save(blob,editedName(source.name,extension));
-   setStatus(saved?t('imageeditor.saved'):'');
+   const host=hostRef.current;
+   if(getState().workflowPrefs.imageSaveMode==='overwrite'&&host.overwrite&&source.originToken){
+    const r=await host.overwrite(blob,source.originToken,extension);
+    if(r==='saved'){setStatus(t('imageeditor.savedOverwrite'));return;}
+    if(r==='format-differs')setStatus(t('imageeditor.savedCopyFormat'));
+   }
+   const saved=await host.save(blob,editedName(source.name,extension));
+   if(saved)setStatus(t('imageeditor.saved'));
   }catch(e){setError(e instanceof Error?e.message:String(e));}finally{setBusy(false);}
  };
  const close=()=>{if(busy)return;generation.current++;release();setSource(null);setFrame(null);setSnap(EMPTY);setPast([]);setFuture([]);setError('');setStatus('');setOpen(false);};

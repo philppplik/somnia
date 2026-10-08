@@ -737,6 +737,8 @@ async fn read_media(
 struct ImageGrants {
     read: Mutex<Option<crate::image_io::ImageGrant>>,
     save: Mutex<Option<crate::image_io::ImageGrant>>,
+    /// Path of the last picked image, kept for save mode "overwrite". Never sent to the renderer.
+    origin: Mutex<Option<(String, std::path::PathBuf)>>,
 }
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -744,6 +746,7 @@ struct ImageGrantReply {
     token: String,
     name: String,
     size: u64,
+    origin_token: Option<String>,
 }
 fn image_name(path: &std::path::Path) -> String {
     path.file_name().unwrap_or_default().to_string_lossy().into_owned()
@@ -762,10 +765,12 @@ async fn image_pick(window: WebviewWindow, grants: State<'_, ImageGrants>) -> Re
     let path = selected.into_path().map_err(|e| AppError::Invalid(e.to_string()))?;
     let size = crate::image_io::checked_image_size(&path)?;
     let name = image_name(&path);
+    let origin_token = uuid::Uuid::new_v4().to_string();
+    *grants.origin.lock().map_err(|e| AppError::Io(e.to_string()))? = Some((origin_token.clone(), path.clone()));
     let grant = crate::image_io::ImageGrant::new(path);
     let token = grant.token().to_owned();
     *grants.read.lock().map_err(|e| AppError::Io(e.to_string()))? = Some(grant);
-    Ok(Some(ImageGrantReply { token, name, size }))
+    Ok(Some(ImageGrantReply { token, name, size, origin_token: Some(origin_token) }))
 }
 /// Raw bytes (no base64) of the file granted by image_pick. The grant works once.
 #[tauri::command]
@@ -800,7 +805,31 @@ async fn image_save_pick(window: WebviewWindow, grants: State<'_, ImageGrants>, 
     let grant = crate::image_io::ImageGrant::new(path);
     let token = grant.token().to_owned();
     *grants.save.lock().map_err(|e| AppError::Io(e.to_string()))? = Some(grant);
-    Ok(Some(ImageGrantReply { token, name, size: 0 }))
+    Ok(Some(ImageGrantReply { token, name, size: 0, origin_token: None }))
+}
+/// Save mode "overwrite": a one-time save grant for the file that image_pick opened, only when the export keeps its format.
+/// The write itself still goes through image_save_write (atomic, once). Nothing is written here.
+#[tauri::command]
+async fn image_overwrite_prepare(window: WebviewWindow, grants: State<'_, ImageGrants>, origin_token: String, extension: String) -> Result<ImageGrantReply> {
+    gate(&window)?;
+    let path = {
+        let slot = grants.origin.lock().map_err(|e| AppError::Io(e.to_string()))?;
+        match slot.as_ref() {
+            Some((t, p)) if *t == origin_token => p.clone(),
+            _ => return Err(AppError::Denied("Original file is no longer available. Save as a copy.".into())),
+        }
+    };
+    if !crate::image_io::same_image_format(&path, &extension) {
+        return Err(AppError::Denied("format-differs".into()));
+    }
+    if !path.is_file() {
+        return Err(AppError::Denied("Original file is no longer available. Save as a copy.".into()));
+    }
+    let name = image_name(&path);
+    let grant = crate::image_io::ImageGrant::new(path);
+    let token = grant.token().to_owned();
+    *grants.save.lock().map_err(|e| AppError::Io(e.to_string()))? = Some(grant);
+    Ok(ImageGrantReply { token, name, size: 0, origin_token: None })
 }
 /// Raw request body = file bytes, header x-somnia-token = token from image_save_pick. Written atomically, once.
 #[tauri::command]
@@ -1511,6 +1540,7 @@ pub fn run() {
             image_read,
             image_save_pick,
             image_save_write,
+            image_overwrite_prepare,
             hold_autosave,
             stage_edit,
             save_file,

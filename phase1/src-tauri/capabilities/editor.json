@@ -44,6 +44,7 @@
     "allow-image-read",
     "allow-image-save-pick",
     "allow-image-save-write",
+    "allow-image-overwrite-prepare",
     "allow-agent-account-status",
     "allow-mcp-servers-list",
     "allow-mcp-server-save",

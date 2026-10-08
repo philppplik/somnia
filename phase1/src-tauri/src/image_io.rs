@@ -36,6 +36,12 @@ impl ImageGrant {
     }
 }
 
+/// True when saving `extension` over `original` keeps the same image format (jpg and jpeg are one format).
+pub fn same_image_format(original: &Path, extension: &str) -> bool {
+    let norm = |e: &str| match e.to_lowercase().as_str() { "jpeg" => "jpg".to_string(), other => other.to_string() };
+    original.extension().map(|e| norm(&e.to_string_lossy()) == norm(extension)).unwrap_or(false)
+}
+
 pub fn has_image_extension(path: &Path) -> bool {
     path.extension()
         .map(|e| IMAGE_EXTENSIONS.contains(&e.to_string_lossy().to_lowercase().as_str()))
@@ -100,6 +106,13 @@ pub fn save_image_atomic(path: &Path, bytes: &[u8]) -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn overwrite_needs_the_same_format() {
+        assert!(same_image_format(Path::new("/x/a.JPG"), "jpeg"));
+        assert!(same_image_format(Path::new("/x/a.png"), "png"));
+        assert!(!same_image_format(Path::new("/x/a.png"), "jpg"));
+        assert!(!same_image_format(Path::new("/x/noext"), "png"));
+    }
     #[test]
     fn grant_is_exact_once_and_wrong_token_keeps_it() {
         let mut slot = Some(ImageGrant::new(PathBuf::from("/tmp/a.png")));

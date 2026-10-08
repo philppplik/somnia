@@ -772,6 +772,25 @@ export function Settings() {
             />
           </label>
           <p>{t("redesign.draftHint")}</p>
+          <label>
+            {t("redesign.imageSaveMode")}
+            <select
+              aria-label={t("redesign.imageSaveMode")}
+              value={state.workflowPrefs.imageSaveMode}
+              onChange={(e) =>
+                change({
+                  workflowPrefs: {
+                    ...state.workflowPrefs,
+                    imageSaveMode: e.target.value === "copy" ? "copy" : "overwrite",
+                  },
+                })
+              }
+            >
+              <option value="overwrite">{t("redesign.imageSaveOverwrite")}</option>
+              <option value="copy">{t("redesign.imageSaveCopy")}</option>
+            </select>
+          </label>
+          <p>{t("redesign.imageSaveHint")}</p>
         </>
       )}
       {section === "Canvas" && (
