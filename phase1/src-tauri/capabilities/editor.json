@@ -72,6 +72,14 @@
     "allow-log-write",
     "allow-log-tail",
     "allow-log-dir",
+    "allow-git-detect",
+    "allow-git-status",
+    "allow-git-diff-file",
+    "allow-git-init",
+    "allow-git-commit",
+    "allow-git-log",
+    "allow-git-restore-as-new-version",
+    "allow-git-trust-repo",
     "core:window:allow-set-always-on-top",
     "core:window:allow-set-decorations"
   ]

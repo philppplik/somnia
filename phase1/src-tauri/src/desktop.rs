@@ -3,6 +3,7 @@ use crate::service::{AppError, Project, ReadReply, RecoveryHistoryEntry, Recover
 use serde::Serialize;
 use std::{
     collections::BTreeMap,
+    path::PathBuf,
     sync::{Arc, Mutex},
     time::Duration,
 };
@@ -1094,6 +1095,167 @@ fn set_window_background(window: WebviewWindow, glass: bool, dark: bool) -> std:
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
+
+// ---- Git backend (contract: docs/git/CONTRACT.md; logic in crate::git) ----
+fn git_trust_path(window: &WebviewWindow) -> std::result::Result<PathBuf, String> {
+    window
+        .app_handle()
+        .path()
+        .app_config_dir()
+        .map(|d| d.join("git-trusted-repos.json"))
+        .map_err(|_| "App config directory is unavailable".to_string())
+}
+fn git_project_root(backend: &Backend) -> std::result::Result<PathBuf, String> {
+    match backend.projects.len() {
+        1 => Ok(backend
+            .projects
+            .values()
+            .next()
+            .map(|p| p.root_path().to_path_buf())
+            .expect("one project present")),
+        0 => Err(crate::git::GitError::new(
+            crate::git::GitErrorCode::NotARepo,
+            "Open a project folder first",
+        )
+        .to_json()),
+        _ => Err(crate::git::GitError::new(
+            crate::git::GitErrorCode::Unknown,
+            "Git works with exactly one open project",
+        )
+        .to_json()),
+    }
+}
+fn git_gate(window: &WebviewWindow) -> std::result::Result<(), String> {
+    gate(window).map_err(|_| {
+        crate::git::GitError::new(
+            crate::git::GitErrorCode::Unknown,
+            "Only the trusted editor window may use Git",
+        )
+        .to_json()
+    })
+}
+async fn git_work<T: Send + 'static>(
+    state: Shared,
+    f: impl FnOnce(&mut Backend) -> std::result::Result<T, String> + Send + 'static,
+) -> std::result::Result<T, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        let mut backend = state.lock().map_err(|e| e.to_string())?;
+        f(&mut backend)
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+fn git_store(window: &WebviewWindow) -> std::result::Result<crate::git::TrustStore, String> {
+    crate::git::TrustStore::load(&git_trust_path(window)?).map_err(|e| e.to_json())
+}
+#[tauri::command]
+async fn git_detect(
+    window: WebviewWindow,
+    state: State<'_, Shared>,
+) -> std::result::Result<crate::git::GitRepoState, String> {
+    git_gate(&window)?;
+    let store = git_store(&window)?;
+    git_work(state.inner().clone(), move |b| {
+        let root = git_project_root(b)?;
+        Ok(crate::git::detect(&root, Some(&store)))
+    })
+    .await
+}
+#[tauri::command]
+async fn git_status(
+    window: WebviewWindow,
+    state: State<'_, Shared>,
+) -> std::result::Result<crate::git::GitStatus, String> {
+    git_gate(&window)?;
+    git_work(state.inner().clone(), move |b| {
+        let root = git_project_root(b)?;
+        crate::git::status(&root).map_err(|e| e.to_json())
+    })
+    .await
+}
+#[tauri::command]
+async fn git_diff_file(
+    window: WebviewWindow,
+    state: State<'_, Shared>,
+    path: String,
+    base: crate::git::DiffBase,
+    target: crate::git::DiffTarget,
+) -> std::result::Result<crate::git::GitFileDiff, String> {
+    git_gate(&window)?;
+    git_work(state.inner().clone(), move |b| {
+        let root = git_project_root(b)?;
+        crate::git::diff_file(&root, &path, base, target).map_err(|e| e.to_json())
+    })
+    .await
+}
+#[tauri::command]
+async fn git_init(
+    window: WebviewWindow,
+    state: State<'_, Shared>,
+) -> std::result::Result<crate::git::GitRepoState, String> {
+    git_gate(&window)?;
+    let store = git_store(&window)?;
+    git_work(state.inner().clone(), move |b| {
+        let root = git_project_root(b)?;
+        crate::git::init(&root, Some(&store)).map_err(|e| e.to_json())
+    })
+    .await
+}
+#[tauri::command]
+async fn git_commit(
+    window: WebviewWindow,
+    state: State<'_, Shared>,
+    request: crate::git::GitCommitRequest,
+) -> std::result::Result<crate::git::GitVersion, String> {
+    git_gate(&window)?;
+    let store = git_store(&window)?;
+    git_work(state.inner().clone(), move |b| {
+        let root = git_project_root(b)?;
+        crate::git::commit(&root, &request, &store).map_err(|e| e.to_json())
+    })
+    .await
+}
+#[tauri::command]
+async fn git_log(
+    window: WebviewWindow,
+    state: State<'_, Shared>,
+    request: crate::git::GitLogRequest,
+) -> std::result::Result<Vec<crate::git::GitVersion>, String> {
+    git_gate(&window)?;
+    git_work(state.inner().clone(), move |b| {
+        let root = git_project_root(b)?;
+        crate::git::log(&root, &request).map_err(|e| e.to_json())
+    })
+    .await
+}
+#[tauri::command]
+async fn git_restore_as_new_version(
+    window: WebviewWindow,
+    state: State<'_, Shared>,
+    request: crate::git::GitRestoreRequest,
+) -> std::result::Result<crate::git::GitRestoreResult, String> {
+    git_gate(&window)?;
+    let store = git_store(&window)?;
+    git_work(state.inner().clone(), move |b| {
+        let root = git_project_root(b)?;
+        crate::git::restore_as_new_version(&root, &request, &store).map_err(|e| e.to_json())
+    })
+    .await
+}
+#[tauri::command]
+async fn git_trust_repo(
+    window: WebviewWindow,
+    state: State<'_, Shared>,
+) -> std::result::Result<crate::git::GitRepoState, String> {
+    git_gate(&window)?;
+    let mut store = git_store(&window)?;
+    git_work(state.inner().clone(), move |b| {
+        let root = git_project_root(b)?;
+        crate::git::trust_repo(&root, &mut store).map_err(|e| e.to_json())
+    })
+    .await
+}
+
 pub fn run() {
     let shared = Shared::default();
     tauri::Builder::default()
@@ -1217,7 +1379,15 @@ pub fn run() {
             close_project,
             log_write,
             log_tail,
-            log_dir
+            log_dir,
+            git_detect,
+            git_status,
+            git_diff_file,
+            git_init,
+            git_commit,
+            git_log,
+            git_restore_as_new_version,
+            git_trust_repo
         ])
         .run(tauri::generate_context!())
         .unwrap_or_else(|error| {

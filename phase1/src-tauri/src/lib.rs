@@ -17,3 +17,4 @@ pub mod oauth_login;
 pub mod oauth_store;
 
 pub mod provider_transport;
+pub mod git;

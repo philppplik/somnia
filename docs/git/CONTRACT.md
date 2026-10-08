@@ -44,3 +44,15 @@ Shared files: `src/lib/git/types.ts` changes only via a PR/patch that updates th
 
 ## Test gates (from the research; each package covers its part)
 Status/diff, commit selection (no unreviewed extra content), file safety (CRLF/LF, Unicode, spaces, long Windows paths, case-only rename), recovery (discard, app abort mid-commit, safety copy), Git states (no git, invalid repo, `.git` file, detached, unborn, index.lock, merge/rebase running), trust/hooks, UI/A11y (keyboard only, not only red/green, dark theme, small window, long names). Integration tests use real temporary repos; UI tests use the fake backend. Interactive Windows/macOS behavior stays unverified until Philipp tests it.
+
+## CONTRACT-A addendum (git-core, branch agent/git-git-core)
+
+Additive only; nothing above changes meaning.
+
+- **`git_trust_repo`** (new command, args none, returns `GitRepoState`): rule 1 requires a one-time user confirmation per repo root before commands that can run hooks (commit, restore). The original command list had no way to record that confirmation, so package A adds this command. The trusted roots live in app config (`git-trusted-repos.json`, atomic write, 0600), never in the repo. `git_detect` reports `blocked/untrusted-repo` (with full `GitRepoInfo` attached) until trust is given; reads (`git_status`, `git_diff_file`, `git_log`) never check trust because they never run hooks. Trust failures from `git_commit`/`git_restore_as_new_version` are `GitError { code: "blocked", detail: "untrusted-repo" }`.
+- **`GitRepoInfo.shallow` / `GitRepoInfo.sparseCheckout`** (optional booleans): rule 9 asks to "detect and report" shallow clones and sparse checkouts, but `GitRepoInfo` had no field. Reported only; the backend still works on them as far as the local object store allows, and the UI should show the "not fully supported" hint.
+- **`GitStatus.stagedOutsidePrefix`** (optional number): rule 3 says files staged outside the project subtree are "reported, never committed". This counts them; the UI can surface "N staged files outside this project are not included".
+- **`GitBlockReason` usage**: a `.git` file (submodule or linked worktree) and a `gitdir != common-dir` layout both map to `unsupported-worktree`. LFS and submodules stay flags on `GitRepoInfo`, as typed.
+- **Hook-failed mapping**: git gives no machine-readable hook marker. Commit failures are classified in order identity → signing → nothing-to-commit → (an active non-sample pre-commit/commit-msg/prepare-commit-msg/post-commit hook exists → `hook-failed`) → `unknown`. Documented so package B/C can word the UI accordingly.
+- **Cancellation**: the 30 s / 60 s timeouts are enforced and the child is killed; UI-initiated cancel is not wired (no channel yet) and `cancelled` is reserved.
+- **Limit**: `git_log.limit` is clamped to 1-200 per call; paginate with `before` (first-parent based).

@@ -52,6 +52,14 @@ fn main() {
             "log_write",
             "log_tail",
             "log_dir",
+            "git_detect",
+            "git_status",
+            "git_diff_file",
+            "git_init",
+            "git_commit",
+            "git_log",
+            "git_restore_as_new_version",
+            "git_trust_repo",
         ]),
     ))
     .expect("Tauri build configuration failed");

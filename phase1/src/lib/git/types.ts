@@ -18,6 +18,10 @@ export interface GitRepoInfo {
   root: string;
   /** Project folder relative to root ('' when the project is the root). Status/commit are limited to it. */
   projectPrefix: string;
+  /** CONTRACT-A addendum: shallow clone, detected and reported only (rule 9). */
+  shallow?: boolean;
+  /** CONTRACT-A addendum: sparse checkout active, detected and reported only (rule 9). */
+  sparseCheckout?: boolean;
   branch: string | null;        // null when detached
   detached: boolean;
   unborn: boolean;              // no commit yet
@@ -48,6 +52,8 @@ export interface GitStatus {
   /** Opaque token of index+HEAD+worktree state. Commit must pass it back; a mismatch means "review again". */
   stateToken: string;
   truncated: boolean;           // more than 5000 entries
+  /** CONTRACT-A addendum: staged changes outside the project subtree (rule 3). Reported, never committed. */
+  stagedOutsidePrefix?: number;
 }
 
 export interface GitFileDiff {
@@ -104,7 +110,9 @@ export interface GitBackend {
   commit(req: GitCommitRequest): Promise<GitVersion>;
   log(req: GitLogRequest): Promise<GitVersion[]>;
   restoreAsNewVersion(req: GitRestoreRequest): Promise<GitRestoreResult>;
+  /** CONTRACT-A addendum: user confirmed trust for this repo root once; commit/restore unblock. */
+  trustRepo(): Promise<GitRepoState>;
 }
 /** Tauri command names (Rust side must use exactly these; build.rs + capabilities/editor.json entries required). */
-export const GIT_COMMANDS = ['git_detect', 'git_status', 'git_diff_file', 'git_init', 'git_commit', 'git_log', 'git_restore_as_new_version'] as const;
+export const GIT_COMMANDS = ['git_detect', 'git_status', 'git_diff_file', 'git_init', 'git_commit', 'git_log', 'git_restore_as_new_version', 'git_trust_repo'] as const;
 export type GitCommandName = typeof GIT_COMMANDS[number];

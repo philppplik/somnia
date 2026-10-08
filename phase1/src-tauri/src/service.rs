@@ -171,6 +171,10 @@ impl Project {
         Self::open_inner(root, recovery_base, None)
     }
     /// Opens one file in place: the project is rooted at the file's folder but only that file is listed, readable and writable.
+    /// Canonical project root on disk; the Git backend runs against it.
+    pub fn root_path(&self) -> &Path {
+        &self.canonical_root
+    }
     pub fn open_file(file: &Path, recovery_base: &Path) -> Result<Self> {
         let canonical = file.canonicalize()?;
         if !canonical.is_file() {
