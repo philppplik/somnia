@@ -2054,7 +2054,7 @@ export function Settings() {
                   <item.icon size={16} />
                   {sectionTitle(item.name)}
                   {(item.name === "Modified" ? modifiedTotal : modifiedCounts[item.name]) > 0 && (
-                    <span className="settings-badge" aria-label={t("settings.modified.badge", { n: item.name === "Modified" ? modifiedTotal : modifiedCounts[item.name] })}>
+                    <span className="settings-badge" aria-hidden="true" title={t("settings.modified.badge", { n: item.name === "Modified" ? modifiedTotal : modifiedCounts[item.name] })}>
                       {item.name === "Modified" ? modifiedTotal : modifiedCounts[item.name]}
                     </span>
                   )}

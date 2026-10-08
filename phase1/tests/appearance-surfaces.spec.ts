@@ -68,9 +68,9 @@ test('legacy look migrates; new strings exist in all shipped locales',async({pag
   await page.locator('.settings-search input').fill(labels[0]);
   await expect(page.getByRole('slider',{name:labels[0],exact:true})).toBeVisible();
   await page.locator('.settings-search input').fill('');
-  await page.locator('.settings-sidebar nav button').nth(1).click();
+  await page.locator('.settings-sidebar nav button').nth(2).click();
   await expect(page.getByRole('slider',{name:labels[1],exact:true})).toHaveValue('9');
   // Go back to General using stable section order rather than English-only labels.
-  await page.locator('.settings-sidebar nav button').first().click();
+  await page.locator('.settings-sidebar nav button').nth(1).click();
  }
 });
