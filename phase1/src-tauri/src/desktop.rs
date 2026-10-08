@@ -214,6 +214,87 @@ async fn agent_account_set_method(window: WebviewWindow, provider: String, metho
     blocking_store(move |s| s.set_method(method)).await.map_err(|_| "Connect your OpenAI account first".to_string())?;
     tauri::async_runtime::spawn_blocking(|| { let _g = AGENT_SETTINGS_LOCK.lock().map_err(|_| "Credential store is busy".to_string())?; account_status_now() }).await.map_err(|_| "Could not access credential store")?
 }
+// ---- GitHub account (OAuth device flow): see docs/agent/github-account-login.md ----
+// The token lives only in the OS credential store and this process. The renderer sees
+// github_account::Status (state, public login/name, user code while pending), never a token or device code.
+fn github_store() -> crate::github_account::Store<KeyringBackend> { crate::github_account::Store::new(KeyringBackend) }
+/// User code of a login in flight (shown in the UI); None when idle.
+static GITHUB_PENDING: std::sync::Mutex<Option<String>> = std::sync::Mutex::new(None);
+static GITHUB_CANCEL: tokio::sync::Notify = tokio::sync::Notify::const_new();
+fn github_status_now() -> std::result::Result<crate::github_account::Status, String> {
+    let _g = AGENT_SETTINGS_LOCK.lock().map_err(|_| "Credential store is busy".to_string())?;
+    let pending = GITHUB_PENDING.lock().map_err(|_| "Credential store is busy".to_string())?.clone();
+    github_store().status(pending.as_deref()).map_err(|e| e.to_string())
+}
+fn github_client() -> std::result::Result<reqwest::Client, crate::github_account::LoginError> {
+    reqwest::Client::builder().no_proxy().redirect(reqwest::redirect::Policy::none()).connect_timeout(Duration::from_secs(15)).timeout(Duration::from_secs(30)).user_agent("Somnia").build().map_err(|_| crate::github_account::LoginError::Request)
+}
+async fn github_post(client: &reqwest::Client, url: &str, body: String) -> std::result::Result<String, crate::github_account::LoginError> {
+    use crate::github_account::LoginError as E;
+    let r = client.post(url).header("accept", "application/json").header("content-type", "application/x-www-form-urlencoded").body(body).send().await.map_err(|_| E::Request)?;
+    if !r.status().is_success() { return Err(E::Response); }
+    r.text().await.map_err(|_| E::Response)
+}
+/// The whole login runs here: device code, browser, polling, profile lookup, keyring save.
+async fn github_login_flow() -> std::result::Result<(), crate::github_account::LoginError> {
+    use crate::github_account as g;
+    use g::LoginError as E;
+    if g::CLIENT_ID.is_empty() { return Err(E::NotConfigured); }
+    let client = github_client()?;
+    let dc = g::parse_device_code(&github_post(&client, g::DEVICE_CODE_URL, g::device_code_body()).await?)?;
+    *GITHUB_PENDING.lock().map_err(|_| E::Store)? = Some(dc.user_code.clone());
+    let _ = open_browser(g::VERIFICATION_URI); // the user can also open the page by hand; the code is shown in the UI
+    let deadline = tokio::time::Instant::now() + Duration::from_secs(dc.expires_in);
+    let mut interval = dc.interval;
+    let token = loop {
+        tokio::select! {
+            _ = tokio::time::sleep(Duration::from_secs(interval)) => {},
+            _ = GITHUB_CANCEL.notified() => return Err(E::Cancelled),
+        }
+        if tokio::time::Instant::now() >= deadline { return Err(E::Expired); }
+        match g::parse_poll(&github_post(&client, g::TOKEN_URL, g::poll_body(&dc.device_code)).await?) {
+            g::Poll::Token(t) => break t,
+            g::Poll::Pending => {}
+            g::Poll::SlowDown(i) => interval = g::slowed(interval, i),
+            g::Poll::Expired => return Err(E::Expired),
+            g::Poll::Denied => return Err(E::Denied),
+            g::Poll::Failed => return Err(E::Response),
+        }
+    };
+    let r = client.get(g::USER_URL).header("accept", "application/vnd.github+json").header("authorization", format!("Bearer {token}")).send().await.map_err(|_| E::Request)?;
+    if !r.status().is_success() { return Err(E::Response); }
+    let account = g::account_from_user(&token, &r.text().await.map_err(|_| E::Response)?)?;
+    tauri::async_runtime::spawn_blocking(move || { let _g = AGENT_SETTINGS_LOCK.lock().map_err(|_| E::Store)?; github_store().save(&account).map_err(|_| E::Store) }).await.map_err(|_| E::Store)?
+}
+#[tauri::command]
+async fn github_account_status(window: WebviewWindow) -> std::result::Result<crate::github_account::Status, String> {
+    gate(&window).map_err(|_| "Only the trusted editor may inspect credentials")?;
+    tauri::async_runtime::spawn_blocking(github_status_now).await.map_err(|_| "Could not access credential store")?
+}
+#[tauri::command]
+async fn github_account_start(window: WebviewWindow) -> std::result::Result<crate::github_account::Status, String> {
+    gate(&window).map_err(|_| "Only the trusted editor may sign in")?;
+    if crate::github_account::CLIENT_ID.is_empty() { return Err("GitHub sign-in is not configured in this build".into()); }
+    let already = { let mut p = GITHUB_PENDING.lock().map_err(|_| "Sign-in is busy".to_string())?; if p.is_some() { true } else { *p = Some(String::new()); false } }; // reserve before the code exists so a double click cannot start two logins
+    if already { return tauri::async_runtime::spawn_blocking(github_status_now).await.map_err(|_| "Could not access credential store")?; }
+    tauri::async_runtime::spawn(async {
+        let _ = github_login_flow().await;
+        if let Ok(mut p) = GITHUB_PENDING.lock() { *p = None; }
+    });
+    tauri::async_runtime::spawn_blocking(github_status_now).await.map_err(|_| "Could not access credential store")?
+}
+#[tauri::command]
+async fn github_account_cancel(window: WebviewWindow) -> std::result::Result<crate::github_account::Status, String> {
+    gate(&window).map_err(|_| "Only the trusted editor may cancel sign-in")?;
+    GITHUB_CANCEL.notify_waiters();
+    tauri::async_runtime::spawn_blocking(github_status_now).await.map_err(|_| "Could not access credential store")?
+}
+#[tauri::command]
+async fn github_account_disconnect(window: WebviewWindow) -> std::result::Result<crate::github_account::Status, String> {
+    gate(&window).map_err(|_| "Only the trusted editor may delete credentials")?;
+    GITHUB_CANCEL.notify_waiters();
+    tauri::async_runtime::spawn_blocking(|| { { let _g = AGENT_SETTINGS_LOCK.lock().map_err(|_| "Credential store is busy".to_string())?; github_store().disconnect().map_err(|e| e.to_string())?; } github_status_now() }).await.map_err(|_| "Could not access credential store")?
+}
 // Credentials are independent of preferences: saving an Ollama configuration must
 // never delete an OpenRouter key. No raw backend/credential error reaches the UI.
 struct NativeResponse { receiver: tokio::sync::Mutex<tokio::sync::mpsc::Receiver<std::result::Result<Vec<u8>, String>>>, task: tokio::task::AbortHandle, expires: std::time::Instant }
@@ -1522,6 +1603,10 @@ pub fn run() {
             agent_account_set_method,
             agent_account_start,
             agent_account_cancel,
+            github_account_status,
+            github_account_start,
+            github_account_cancel,
+            github_account_disconnect,
             agent_settings_load,
             agent_settings_save,
             set_window_background,

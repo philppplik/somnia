@@ -20,6 +20,7 @@ import {
 } from "../lib/account";
 import { Check } from "../lib/icons";
 import { Button } from "./ui/button";
+import { GithubConnection } from "./GithubConnection";
 import {
   Dialog,
   DialogContent,
@@ -46,6 +47,14 @@ function User({
     >
       <circle cx="12" cy="8" r="4" />
       <path d="M4 21v-2a8 8 0 0 1 16 0v2" />
+    </svg>
+  );
+}
+function Plug({ size = 14, ...props }: { size?: number; "aria-hidden"?: "true" }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" {...props}>
+      <path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1" />
+      <path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1" />
     </svg>
   );
 }
@@ -270,6 +279,7 @@ export function Account() {
     setError(updateProfile(patch) ? "" : "account.storageError");
   const sections = [
     { id: "profile", Icon: User },
+    { id: "connections", Icon: Plug },
     { id: "activity", Icon: ActivityIcon },
     { id: "plan", Icon: Sparkles },
   ];
@@ -386,6 +396,7 @@ export function Account() {
                     </div>
                   </>
                 )}
+                {section === "connections" && <GithubConnection />}
                 {section === "activity" && <Heatmap />}
                 {section === "plan" && (
                   <>
