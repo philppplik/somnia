@@ -7,9 +7,9 @@ for(const locale of ['en','de','es','fr','pt-BR']){
  test(`${locale}: toolbar, consent, errors, conflict review and media empties retain source data`,async({page})=>{
   const t=(k:string,p?:Record<string,string|number>)=>tr(locale,k,p);
   await page.addInitScript(l=>localStorage.setItem('somnia.locale.v1',l),locale);
-  await page.goto('/');await expect(page.getByRole('button',{name:t('cmd.view.split'),exact:true})).toBeVisible();
+  await page.goto('/');await expect(page.getByRole('radio',{name:t('studio.code'),exact:true})).toBeVisible();
   await expect(page.getByRole('button',{name:t('cmd.edit.undo'),exact:true})).toBeVisible();
-  await page.getByTestId('empty-state').getByRole('button',{name:t('empty.newFile'),exact:true}).click();await page.getByRole('button',{name:t('cmd.view.split'),exact:true}).click();
+  await page.getByTestId('empty-state').getByRole('button',{name:t('empty.newFile'),exact:true}).click();await page.keyboard.press('Control+Alt+2');
   const source='<!doctype html><html><body><h1>Untranslated source</h1><script>throw new Error("raw boom")</script></body></html>';
   await page.evaluate(async text=>{const m=await import('/src/store/appStore.ts' as string);(window as any).__somnia.setSource('index.html',text);m.patchState({livePreview:true});},source);
   const preview=page.getByLabel(t('rest.livePreview.livePreview'),{exact:true});
