@@ -1,0 +1,4 @@
+<!doctype html><title>PdfCraft worker runtime</title><canvas id="out"></canvas><pre id="metrics"></pre>
+<script type="module">
+window.run=bytes=>new Promise(resolve=>{const begin=performance.now();const w=new Worker('./worker.mjs',{type:'module'});w.onmessage=({data})=>{data.roundTripMs=performance.now()-begin;if(data.rgba){out.width=data.width;out.height=data.height;out.getContext('2d').putImageData(new ImageData(new Uint8ClampedArray(data.rgba),data.width,data.height),0,0);}const {rgba,...metrics}=data;document.querySelector('#metrics').textContent=JSON.stringify(metrics,null,2);w.terminate();resolve(metrics)};w.onerror=e=>resolve({error:e.message});w.postMessage(new Uint8Array(bytes).buffer)});
+</script>

@@ -1,0 +1,22 @@
+[package]
+name = "somnia-pdf-craft"
+version = "0.1.0"
+edition = "2024"
+[workspace]
+[lib]
+crate-type = ["cdylib", "rlib"]
+[dependencies]
+wasm-bindgen = "=0.2.129"
+pdfcraft-render = {git="https://github.com/philppplik/pdfcraft", rev="f70c4caac902086fdc4cfbec7fc94c109f4a89d2"}
+serde_json = "1"
+[patch.crates-io]
+hayro = {git="https://github.com/philppplik/pdfcraft", rev="f70c4caac902086fdc4cfbec7fc94c109f4a89d2"}
+hayro-interpret = {git="https://github.com/philppplik/pdfcraft", rev="f70c4caac902086fdc4cfbec7fc94c109f4a89d2"}
+hayro-syntax = {git="https://github.com/philppplik/pdfcraft", rev="f70c4caac902086fdc4cfbec7fc94c109f4a89d2"}
+hayro-jbig2 = {git="https://github.com/philppplik/pdfcraft", rev="f70c4caac902086fdc4cfbec7fc94c109f4a89d2"}
+lopdf = {git="https://github.com/philppplik/pdfcraft", rev="f70c4caac902086fdc4cfbec7fc94c109f4a89d2"}
+[profile.release]
+opt-level = "s"
+lto = "fat"
+codegen-units = 1
+strip = true

@@ -1,0 +1,17 @@
+This isolated bridge uses PdfCraft render at f70c4caac902086fdc4cfbec7fc94c109f4a89d2.
+PdfCraft Copyright (c) 2026 ArtCraft Team and contributors, MIT OR Apache-2.0.
+No ArtCraft names/logos or product UI assets are included in Somnia's UI.
+Root patches retain the vendored hayro, hayro-interpret, hayro-syntax,
+hayro-jbig2 (MIT OR Apache-2.0) and lopdf (MIT) implementations.
+The narrow render graph embeds standard-14 substitute fonts:
+Copyright 2014 PDFium Authors. Original code copyright 2014 Foxit Software Inc.
+BSD-3-Clause, licenses/Foxit-BSD.txt.
+Adobe CMap resources: Copyright 1990-2023 Adobe, BSD-3-Clause,
+licenses/Adobe-CMap-BSD.txt. No endorsement is implied.
+CGATS001Compat-v2-micro.icc: CC0-1.0, Clinton Ingram.
+LAB.icc: generated with LittleCMS 2 by hayro authors, MIT OR Apache-2.0.
+Full Cargo metadata inventory is dependency-inventory.json. This records
+upstream license expressions, not a finished distribution compliance audit.
+Before distributing a linked bridge, include the license texts of every
+transitive crate and re-run the asset/license review. This spike is NOT
+loaded into the Somnia production UI bundle.
