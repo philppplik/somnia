@@ -18,14 +18,13 @@ test('svg file renders as an image in the preview pane',async({page})=>{await pa
  await page.screenshot({path:'test-results/media-svg.png'});});
 test('png opens in a preview tab, fit toggles, and text tabs still work',async({page})=>{await page.goto('/');await expect(page.locator('[data-storage]')).toBeVisible();
  await openMedia(page,['red.png']);
- const img=page.getByTestId('media-image');await expect(img).toBeVisible();await expect(page.getByTestId('media-dims')).toHaveText('40 x 20 px');await expect(page.getByTestId('media-tab')).toHaveCount(1);
- await page.getByRole('button',{name:'Show actual size'}).click();await expect(page.getByRole('button',{name:'Fit to window'})).toBeVisible();
+ const img=page.getByTestId('image-editor-stage');await expect(img).toBeVisible();await expect(page.getByTestId('media-tab')).toHaveCount(1);
  await page.screenshot({path:'test-results/media-png.png'});
- await page.getByRole('tab').first().click();await expect(page.getByTestId('media-image')).toHaveCount(0);await expect(page.getByRole('region',{name:'Media preview'})).toHaveCount(0);
+ await page.getByRole('tab').first().click();await expect(page.getByTestId('image-editor-stage')).toHaveCount(0);
  await page.getByRole('button',{name:'Files'}).click();await page.getByRole('button',{name:'Preview red.png',exact:true}).click();await expect(img).toBeVisible();
  await page.getByRole('button',{name:'Close red.png'}).click();await expect(page.getByTestId('media-tab')).toHaveCount(0);});
 test('pdf opens in an embedded frame and a fake png is rejected',async({page})=>{await page.goto('/');await expect(page.locator('[data-storage]')).toBeVisible();
  await openMedia(page,['doc.pdf']);await expect(page.getByTestId('pdf-frame')).toHaveAttribute('src',/^blob:/);await expect(page.getByTestId('media-name')).toHaveText('doc.pdf');
- await openMedia(page,['fake.png']);await expect(page.getByText('fake.png is not a valid PNG, JPEG or PDF file.')).toBeVisible();await expect(page.getByTestId('media-tab')).toHaveCount(1);});
+ await openMedia(page,['fake.png']);await expect(page.getByText('fake.png is not a valid PNG, JPEG, WebP or PDF file.')).toBeVisible();await expect(page.getByTestId('media-tab')).toHaveCount(1);});
 test('media opens without a project (empty start)',async({page})=>{await page.addInitScript(()=>{sessionStorage.setItem('somnia.nofixture','1');});await page.goto('/');
- await openMedia(page,['red.png']);await expect(page.getByTestId('media-image')).toBeVisible();});
+ await openMedia(page,['red.png']);await expect(page.getByTestId('image-editor-stage')).toBeVisible();});

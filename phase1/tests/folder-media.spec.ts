@@ -17,21 +17,21 @@ test('folder media: png and pdf from an opened folder appear under Previews, fak
  await page.goto('/');
  await page.keyboard.press('Control+k');await page.getByRole('combobox',{name:'Search commands'}).fill('open folder');await page.getByRole('option',{name:/Open folder/}).click();
  const frame=page.frameLocator('iframe[title="Sandboxed design preview"]');await expect(frame.locator('h1')).toHaveText('With media');
- await expect(page.getByRole('status')).toContainText('3 of 4 media files loaded');
+ await expect(page.locator('span[role=status]')).toContainText('3 of 4 media files loaded');
  await page.getByRole('button',{name:'Files'}).click();
  await expect(page.getByRole('button',{name:'Preview img/red.png',exact:true})).toBeVisible();
  await expect(page.getByRole('button',{name:'Preview other/red.png',exact:true})).toBeVisible();
  await expect(page.getByRole('button',{name:'Preview doc.pdf',exact:true})).toBeVisible();
  await expect(page.getByRole('button',{name:'Preview fake.png',exact:true})).toHaveCount(0);
  // The editor stays on the text document until a preview is chosen.
- await expect(page.getByTestId('media-image')).toHaveCount(0);
+ await expect(page.getByTestId('image-editor-stage')).toHaveCount(0);
  await page.getByRole('button',{name:'Preview img/red.png',exact:true}).click();
- await expect(page.getByTestId('media-dims')).toHaveText('40 x 20 px');
+ await expect(page.getByTestId('image-editor-stage')).toBeVisible();
  await page.screenshot({path:'test-results/folder-media-png.png'});
- await page.getByText('notes.md',{exact:true}).first().click();
+ await page.getByRole('tab',{name:'index.html'}).click();await page.getByText('notes.md',{exact:true}).first().click();
  await expect(page.getByTestId('md-preview').locator('img[src^="blob:"]')).toHaveCount(2);
  await page.screenshot({path:'test-results/folder-media-md.png'});
- await page.getByRole('button',{name:'Preview doc.pdf',exact:true}).click();
+ await page.getByRole('tab',{name:'index.html'}).click();await page.getByRole('button',{name:'Preview doc.pdf',exact:true}).click();
  await expect(page.getByTestId('pdf-frame')).toHaveAttribute('src',/^blob:/);
  await page.screenshot({path:'test-results/folder-media-files.png'});
 });

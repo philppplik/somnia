@@ -4,11 +4,11 @@ import path from 'node:path';
 const shotDir=process.env.SOMNIA_SHOTS;
 test('image editor history: timeline, jump back, toggle and remove an edit',async({page})=>{
  await page.goto('/');
- await page.evaluate(()=>window.dispatchEvent(new Event('somnia:edit-image')));
- const dlg=page.getByRole('dialog');
  const chooser=page.waitForEvent('filechooser');
- await dlg.getByRole('button',{name:/open/i}).first().click();
+ await page.evaluate(async()=>{const m=await import('/src/lib/commands.ts');void m.executeCommand('project.openMedia');});
  await (await chooser).setFiles(path.join(process.cwd(),'tests','assets','red.png'));
+ const dlg=page;
+ await page.getByRole('tab',{name:'History',exact:true}).click();
  const hist=page.getByTestId('image-editor-history');
  await expect(hist).toBeVisible();
  await expect(hist.locator('summary')).toContainText('History (1)');
