@@ -7,8 +7,8 @@ export const getGitBackend=()=>current;
 export function createTauriGitBackend(invoke:<T>(cmd:string,args?:Record<string,unknown>)=>Promise<T>):GitBackend{
  return{detect:()=>invoke('git_detect'),status:()=>invoke('git_status'),
   diff:(path,base,target)=>invoke('git_diff_file',{path,base,target}),init:()=>invoke('git_init'),
-  commit:req=>invoke('git_commit',{req}),log:req=>invoke('git_log',{req}),
-  restoreAsNewVersion:req=>invoke('git_restore_as_new_version',{req})};}
+  commit:req=>invoke('git_commit',{request:req}),log:req=>invoke('git_log',{request:req}),
+  restoreAsNewVersion:req=>invoke('git_restore_as_new_version',{request:req})};}
 /** Commands reject with a JSON string; anything else becomes `unknown` with no detail. */
 export function parseGitError(e:unknown):GitError{
  const raw=typeof e==='string'?e:e instanceof Error?e.message:'';
