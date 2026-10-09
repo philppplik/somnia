@@ -52,20 +52,23 @@ points, no placeholders, original files never modified.
    reorder, per-clip mute/gain, keyboard-first editing. Preview plays the edit across clip
    boundaries; export letterboxes mixed resolutions to the first clip's size and resamples all
    audio to 48 kHz stereo through mediabunny's transform.
-3. **P3 - filmstrip and titles**: WebCodecs still thumbnails on the timeline, title/text overlay
-   clips, crossfade transitions.
+3. **P3 - filmstrip and titles** (in progress): WebCodecs still thumbnails on the timeline,
+   title/text clips, crossfade transitions. User-facing behaviour and open API details are in
+   [`video.md`](video.md#package-3-filmstrip-titles-crossfades).
 4. **P4 - agent tools**: `video_inspect` / `video_propose_edits` as a module (not wired into
    `panelBridge.ts`; the integrator owns that shared file, exactly like Sound P4).
 5. **P5 - desktop pass**: native save dialog (`video_save_pick`/`video_save_write` grants modelled
    on `audio_save_*`), Windows verification, timeline accessibility hardening.
 
-## Honest limits (P1/P2)
+## Honest limits (P1/P2/P3)
 
 - The shared media store caps files at 25 MB; larger videos are rejected with a clear message
   (same rule as Sound).
 - MKV opens for probe/export where the browser cannot play it for preview; the workspace says so
   instead of pretending.
-- Preview plays the edit (source swap per clip boundary, gain is export-only). Visual effects land
-  in P3; the exported copy is the single source of rendered truth.
+- Preview plays the edit (source swap per clip boundary, gain is export-only). Titles and crossfades
+  (P3) are approximated in preview; the exported copy is the single source of rendered truth.
 - Encoding speed depends on the platform's hardware encoders; progress is real (per processed
   second) and cancellable.
+- P3: filmstrips need a decodable source, so platforms that cannot play a codec show plain clip
+  blocks. Crossfades shorten the timeline by the fade length and are rendered per frame at export.

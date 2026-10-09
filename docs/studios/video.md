@@ -1,4 +1,4 @@
-# Video Studio (packages 1 and 2)
+# Video Studio (packages 1 to 3)
 
 Video files open as media tabs (mp4, m4v, mov, webm, mkv, content-sniffed) and are edited in the
 Video Studio. Preview is the platform's own `<video>` element; container probing and the export
@@ -43,6 +43,93 @@ of ffmpeg.wasm) live in [`VIDEO-PLAN.md`](VIDEO-PLAN.md).
   same source share one in-flight probe, so adding a clip whose tab is still probing cannot race.
   Original bytes are never touched; the exported copy is the only materialized result.
 
+## Package 3: filmstrip, titles, crossfades
+
+> Status: written from the P3 lead's contracts and final report, not re-checked against the
+> code by the docs author. No open TODOs.
+
+### Filmstrip thumbnails
+
+- Each clip block on the timeline shows a strip of still frames from its source range, so you can
+  find a scene without scrubbing. Frames are decoded with WebCodecs in the worker, never on the UI
+  thread, and are generated lazily for the visible part of the timeline.
+- Thumbnails are a view aid only. They are not part of the edit, are never exported and are
+  discarded when the tab closes.
+- Trimming, splitting or moving a clip updates its strip. Until new frames arrive the block shows
+  its plain colour, never stale frames from another range.
+- Timeline element test id: `video-filmstrip`.
+- Thumbnails are bucketed by source time: tiles cover the clip's source range, not timeline
+  positions. They are cached in memory in an LRU of 400 bitmaps (nothing is persisted). Trim, split,
+  move and reorder invalidate nothing, so the strip does not flicker while editing. Sources register
+  with the cache on open and unregister on close. Density follows the strip layout (`layoutStrip`)
+  at a device pixel ratio of at most 2.
+- Platform note: a source the platform cannot decode (for example H.264 in a codec-free Chromium)
+  gets no filmstrip. The block stays plain and the workspace does not show a broken image.
+
+### Title / text clips
+
+- A title clip (`kind: 'title'`) is a timeline clip without a source video, in its own slot. It
+  has `{ text, size, color, background }` and is a still: no motion, no audio. Per-clip gain and
+  mute do not apply.
+- Its duration is its `out_s`, at most 3600 s. It takes part in the edit list like any other clip,
+  so split, ripple delete, reorder and trim work on it.
+- Add one from the timeline panel in the inspector ("Add title", test id `video-add-title`). The
+  selected-title panel edits text, size, colour and background (`video-title-*`).
+- Titles are drawn on the canvas in preview and at export, at the first clip's frame size.
+- Defaults for a new title: text "Title", 3 s, 72 px at 1080p, white (#ffffff) on #111827,
+  Sans, bold, centred horizontally and vertically, fade-in and fade-out 0.
+- Controls: text, length, size, background, text colour, font, bold, italic, horizontal and
+  vertical alignment, fade-in/out, move, remove, and the transition field.
+- "Add title" does not insert at the playhead. The new title goes right after the selected clip
+  (at its timeline end), or at the end of the timeline when nothing is selected. The new title is
+  then selected.
+
+### Crossfade transitions
+
+- Each clip carries `crossfade_s`, the dissolve into the next clip. The picture blends from the
+  outgoing to the incoming clip and the audio fades against each other.
+- Set the duration in the selected-clip panel (`video-clip-transition-duration`). The transition
+  marker on the timeline is `video-transition`.
+- The value is clamped to [0, min(own duration, next clip's duration)]. The last clip is always 0.
+- A crossfade shortens the timeline by the fade length: export duration is the sum of clip
+  durations minus the fades, and the inspector total accounts for it.
+- Negative or non-finite values mean a hard cut. Sanitising the edit list re-clamps stored values.
+- Splitting a clip gives the right-hand part the original fade; the left part gets none.
+- Dissolves also work at title boundaries (clip to title, title to clip, title to title).
+- Preview shows the blend approximately. Export is the reference result (see limits below).
+
+### Keyboard and mouse reference (all packages)
+
+| Input | Action |
+|---|---|
+| Space | Play / pause |
+| Left / Right | Step one frame (transport) |
+| I / O | Trim in / out of the clip under the playhead |
+| S | Split at the playhead |
+| Delete | Ripple-remove the selected clip |
+| Alt+Left / Alt+Right | Move the selected clip earlier / later |
+| M | Mute the selected clip |
+| Mod+6 | Switch to the Video studio |
+| Click on timeline | Move the playhead |
+| Click on a clip block | Select it |
+| Drag a clip block | Reorder |
+| Drag a clip edge handle | Trim the selected clip |
+
+P3 adds no new shortcuts: titles and crossfades are inspector controls only.
+
+### Honest limits (package 3)
+
+- Filmstrips depend on the platform decoder. Where preview is impossible, filmstrips are too.
+- Preview is still an approximation. Crossfades and titles in the player can differ slightly from
+  the export in timing at clip boundaries. The exported file is the rendered truth.
+- Titles and crossfades are rendered in the export on the canvas, so export time grows with the
+  number of frames they cover.
+- A crossfade between clips of different sizes blends the letterboxed frames at the first clip's
+  dimensions.
+- The 25 MB media cap, the encoder capability probing and the "video only" MP4 rule from packages
+  1 and 2 are unchanged.
+- Native save dialog and agent tools remain packages 4 and 5.
+
 ## Shell touch points (all additive)
 
 | File | Change |
@@ -70,7 +157,7 @@ video playback, and mediabunny is plain TypeScript.
   possible instead of showing a black square.
 - Preview is a live preview of the edit, not a frame-exact render: clip boundaries can cost a
   beat while the element swaps sources, and per-clip gain is export-only (the preview keeps
-  element volume). Thumbnails and title clips are later packages (`VIDEO-PLAN.md`).
+  element volume).
 - Mixed resolutions are letterboxed to the first clip's dimensions; mixed frame rates stay
   variable-rate. A clip whose source tab was closed renders as "missing" and blocks the export
   with a clear message instead of failing midway.

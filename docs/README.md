@@ -11,6 +11,7 @@ Start here:
 - [Provider account authentication](auth/README.md): current API-key user/developer guides, account-OAuth integration status and security/policy checks.
 - [Extensions](extensions/README.md): build, install and secure Somnia extensions.
 - [Live collaboration](collaboration.md): share a project, join by link, your name and picture, session chat, encryption and its limits.
+- [Video Studio](studios/video.md) ([plan](studios/VIDEO-PLAN.md)): open, trim, multi-clip edit, filmstrip, titles, crossfades and export, with the honest platform limits.
 - [Logging and error handling](LOGGING.md), [Window background](WINDOW-BACKGROUND.md), [Folder drop](FOLDER-DROP.md).
 - [Roadmap](ROADMAP.md), [Performance budgets](PERFORMANCE-BUDGETS.md), [Large projects](PERF-LARGE-PROJECTS.md).
 - [LaTeX math (Stage 1)](features/latex-math.md): Markdown formulas, .tex math preview, errors, safety and settings.
