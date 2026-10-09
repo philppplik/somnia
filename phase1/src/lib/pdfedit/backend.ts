@@ -1,4 +1,10 @@
 import {
+  commentsFromDocument,
+  changeComment,
+  type PdfComment,
+  type PdfCommentChange,
+} from "./comments";
+import {
   PDFDocument,
   PDFName,
   PDFDict,
@@ -15,11 +21,13 @@ export interface PdfPageInfo {
   rotation: number;
 }
 export interface PdfEditInfo {
+  comments: PdfComment[];
   pages: PdfPageInfo[];
   signed: boolean;
   encrypted: boolean;
 }
 export type PdfEditOperation =
+  | PdfCommentChange
   | { kind: "rotate"; page: number }
   | { kind: "delete"; page: number }
   | { kind: "move"; from: number; to: number }
@@ -59,6 +67,7 @@ export async function inspectPdf(bytes: Uint8Array): Promise<PdfEditInfo> {
     .enumerateIndirectObjects()
     .some(([, o]) => signature(o));
   return {
+    comments: doc.isEncrypted ? [] : commentsFromDocument(doc),
     encrypted: doc.isEncrypted,
     signed,
     pages: doc
@@ -83,6 +92,8 @@ export async function applyPdfEdit(
     if (!Number.isInteger(p) || p < 0 || p >= count)
       throw Error("Page does not exist.");
   };
+  if (op.kind === "comment.update" || op.kind === "comment.delete")
+    changeComment(doc, op);
   if (op.kind === "rotate") {
     valid(op.page);
     const p = doc.getPage(op.page);
