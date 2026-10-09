@@ -1,6 +1,14 @@
 import {test,expect} from './fixtures';
 import path from 'node:path';
 import {readFileSync} from 'node:fs';
+// Cold Vite dev server: the first load of the video engine can re-optimise dependencies and reload the page. Warm it before the tests run.
+test.beforeAll(async({browser})=>{
+ for(let i=0;i<3;i++){
+  const page=await browser.newPage();
+  try{await page.goto('http://127.0.0.1:1420/');await page.evaluate(async()=>{await import('/src/lib/video/pipeline.ts');});await page.waitForTimeout(2500);}catch{/* a reload during warm-up is expected */}
+  await page.close();
+ }
+});
 const asset=(n:string)=>path.join(import.meta.dirname,'assets',n);
 async function openVideo(page:any,file='clip.webm'){
  await page.goto('/');await expect(page.locator('[data-storage]')).toBeVisible();
@@ -18,7 +26,7 @@ async function probeDuration(page:any,bytes:Uint8Array){
 test('Video Studio: open WebM, play, trim with I/O, export a real trimmed WebM',async({page})=>{
  await openVideo(page);
  await expect(page.getByRole('radio',{name:'Somnia Video'})).toHaveAttribute('aria-checked','true');
- await expect(page.getByTestId('video-info')).toContainText('320×180');
+ await expect(page.getByTestId('video-info')).toContainText('320×180',{timeout:30000});
  await expect(page.getByTestId('video-info')).toContainText('vp9');
  await expect(page.getByTestId('video-controls')).toBeVisible();
  await expect(page.getByTestId('video-result')).toContainText('No edits yet');
