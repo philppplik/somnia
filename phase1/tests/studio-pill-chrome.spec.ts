@@ -48,7 +48,7 @@ test('keyboard focus exposes short names and keeps roving studio selection',asyn
  await expect(page.getByRole('tooltip')).toHaveCount(0);
  await expect(docs).toBeFocused();
  await page.keyboard.press('End');
- await expect(pill.getByRole('radio',{name:'Somnia Video',exact:true})).toBeFocused();
+ await expect(pill.getByRole('radio',{name:'Somnia Photos',exact:true})).toBeFocused();
  await page.keyboard.press('Home');
  await expect(pill.getByRole('radio',{name:'Somnia Code',exact:true})).toBeFocused();
 });

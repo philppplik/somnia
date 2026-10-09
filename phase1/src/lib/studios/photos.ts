@@ -5,7 +5,7 @@ import {registerStudio,type StudioDef} from './registry';
  * honestly that develop does not cover it yet (the Code studio keeps the read-only PSD preview).
  */
 export const photosStudio:StudioDef={
- id:'photos',label:'studio.photos',icon:'Aperture',order:70,
+ id:'photos',label:'studio.photos',icon:'Aperture',order:8,
  formats:[...['jpg','jpeg','png'].map(ext=>({ext,mime:ext==='png'?'image/png':'image/jpeg',priority:50})),{ext:'psd',mime:'image/vnd.adobe.photoshop',priority:50}],
  shell:{
   leftRail:[{id:'files',label:'Files',icon:'Files',global:true}],

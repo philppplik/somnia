@@ -30,7 +30,7 @@ test('unreadable candidate and forged token preserve the current disk project',a
  await page.evaluate(()=>{(window as any).dropMode='denied';(window as any).fireDrop('forged');});await expect(page.getByRole('status')).toContainText('forged');await expect(page.getByText('Dropped site',{exact:true})).toBeVisible();
 });
 test('multiple native files import copies; a mixed folder/file selection is refused',async({page})=>{
- await native(page);await page.evaluate(()=>(window as any).fireDrop('files',2));await expect(page.getByRole('status')).toContainText('Opened one.txt, two.txt');await expect(page.locator('[data-storage]')).toHaveAttribute('data-storage','memory');
+ await native(page);await page.evaluate(()=>(window as any).fireDrop('files',2));await expect(page.getByRole('status')).toContainText('Opened 2 files');await expect(page.locator('[data-storage]')).toHaveAttribute('data-storage','memory');
  await page.evaluate(()=>{(window as any).dropMode='mixed';(window as any).fireDrop('mixed',2);});await expect(page.getByRole('status')).toContainText('Drop one folder alone');
 });
 test('single native file uses the in-place project command',async({page})=>{await native(page);await page.evaluate(()=>(window as any).fireDrop('file'));await expect(page.getByText('single.html',{exact:true})).toBeVisible();await expect(page.locator('[data-storage]')).toHaveAttribute('data-storage','disk');});

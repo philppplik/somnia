@@ -1,7 +1,7 @@
 import {registerStudio,type StudioDef} from './registry';
 /** Vector Studio: path and shape engine on the vectorio document model, node editing, strict SVG import and clean SVG/PNG export. */
 export const vectorStudio:StudioDef={
- id:'vector',label:'studio.vector',icon:'Pencil',order:70,
+ id:'vector',label:'studio.vector',icon:'Pencil',order:7,
  formats:[{ext:'svg',priority:5}],
  shell:{
   leftRail:[{id:'files',label:'Files',icon:'Files',global:true}],

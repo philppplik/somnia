@@ -1,7 +1,7 @@
 import {registerStudio,type StudioDef} from './registry';
 /** Sound Studio: SoundCraft decode and offline DSP in a WASM worker. Documents are media tabs; the Code studio is untouched. */
 export const soundStudio:StudioDef={
- id:'sound',label:'studio.sound',icon:'AudioWaveform',order:50,
+ id:'sound',label:'studio.sound',icon:'AudioWaveform',order:4,
  formats:['mp3','wav','flac','ogg','oga','aif','aiff'].map(ext=>({ext,priority:10})),
  shell:{
   leftRail:[{id:'files',label:'Files',icon:'Files',global:true}],

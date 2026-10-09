@@ -1,7 +1,7 @@
 import {registerStudio,type StudioDef} from './registry';
 /** Video Studio: mediabunny demux/mux and WebCodecs encode in a worker. Documents are media tabs; the Code studio is untouched. */
 export const videoStudio:StudioDef={
- id:'video',label:'studio.video',icon:'Film',order:60,
+ id:'video',label:'studio.video',icon:'Film',order:5,
  formats:['mp4','m4v','mov','webm','mkv'].map(ext=>({ext,priority:10})),
  shell:{
   leftRail:[{id:'files',label:'Files',icon:'Files',global:true}],

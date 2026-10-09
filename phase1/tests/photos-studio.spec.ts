@@ -87,7 +87,7 @@ test('Photos Studio: switching to Code keeps the photo session intact',async({pa
  await page.getByRole('radio',{name:'Somnia Code'}).click();
  // an image tab outside the Photos studio keeps the existing raster editor
  await expect(page.getByRole('region',{name:'Image editing viewport'})).toBeVisible();
- await page.keyboard.press('Control+7');
+ await page.keyboard.press('Control+9');
  await expect(page.getByTestId('photos-workspace')).toBeVisible();
  await expect(page.getByTestId('photos-value-exposure')).toContainText('1');
 });
@@ -96,7 +96,7 @@ for(const locale of ['de','es','fr','pt-BR'])test(`Photos Studio strings: ${loca
  const pill=page.locator('header [role="radiogroup"]');
  await expect(pill.getByRole('radio')).toHaveCount(9);
  await expect(pill).not.toContainText('studio.photos');
- await pill.getByRole('radio').nth(6).click();
+ await pill.getByRole('radio').nth(8).click();
  await expect(page.getByTestId('photos-start')).toBeVisible();
  await expect(page.getByTestId('photos-start')).not.toContainText('photos.');
 });

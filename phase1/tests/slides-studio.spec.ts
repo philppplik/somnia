@@ -18,7 +18,7 @@ test('Slides Studio opens independent PPTX in real worker, navigates, rejects ba
  await page.getByLabel('Open PPTX',{exact:true}).setInputFiles({name:'invalid.pptx',mimeType:'application/vnd.openxmlformats-officedocument.presentationml.presentation',buffer:Buffer.from('bad zip')});
  await expect(page.getByRole('alert')).toContainText('not a valid PPTX');
  await page.getByRole('button',{name:'Close presentation'}).click();
- await expect(page.getByText('Open a presentation',{exact:true})).toBeVisible();
+ await expect(page.getByTestId('slides-start')).toBeVisible();
  expect(errors).toEqual([]);
 });
 test('switching studios retains preview without changing the source document',async({page})=>{
@@ -92,5 +92,5 @@ test('edit text undo redo and save copy retains original',async({page})=>{
 test('dirty deck close requires explicit discard and can be cancelled',async({page})=>{
  await page.goto('/');await page.getByRole('radio',{name:'Slides',exact:true}).click();await page.getByLabel('Open PPTX',{exact:true}).setInputFiles(path.resolve('slides-engine/fixtures/independent.pptx'));await expect(page.getByRole('region',{name:'Slide preview'})).toHaveAttribute('aria-busy','false');await page.getByRole('textbox',{name:'Text run 1',exact:true}).fill('Unsaved title');await page.getByRole('button',{name:'Apply text',exact:true}).first().click();await expect(page.getByRole('region',{name:'Slide preview'})).toHaveAttribute('aria-busy','false');
  page.once('dialog',d=>d.dismiss());await page.getByRole('button',{name:'Close presentation',exact:true}).click();await expect(page.getByRole('textbox',{name:'Text run 1',exact:true})).toHaveValue('Unsaved title');
- page.once('dialog',d=>d.accept());await page.getByRole('button',{name:'Close presentation',exact:true}).click();await expect(page.getByText('Open a presentation',{exact:true})).toBeVisible();
+ page.once('dialog',d=>d.accept());await page.getByRole('button',{name:'Close presentation',exact:true}).click();await expect(page.getByTestId('slides-start')).toBeVisible();
 });
