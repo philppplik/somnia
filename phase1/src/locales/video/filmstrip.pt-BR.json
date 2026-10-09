@@ -1,0 +1,6 @@
+{
+ "video.filmstrip": "Miniaturas",
+ "video.filmstripAria": "Faixa de miniaturas de {name}",
+ "video.filmstripLoading": "Carregando miniaturas…",
+ "video.filmstripUnavailable": "Sem miniaturas para este clipe: {message}"
+}

@@ -1,0 +1,6 @@
+{
+ "video.filmstrip": "Vorschaubilder",
+ "video.filmstripAria": "Vorschaubild-Leiste von {name}",
+ "video.filmstripLoading": "Vorschaubilder werden geladen…",
+ "video.filmstripUnavailable": "Keine Vorschaubilder für diesen Clip: {message}"
+}

@@ -1,0 +1,6 @@
+{
+ "video.filmstrip": "Vignettes",
+ "video.filmstripAria": "Bande de vignettes de {name}",
+ "video.filmstripLoading": "Chargement des vignettes…",
+ "video.filmstripUnavailable": "Pas de vignettes pour ce clip : {message}"
+}

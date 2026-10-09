@@ -1,0 +1,2 @@
+import {defineConfig} from '@playwright/test';
+export default defineConfig({testDir:'/home/sandbox/somnia/phase1/tests',testMatch:'filmstrip-harness.spec.ts',use:{baseURL:'http://127.0.0.1:1420',viewport:{width:1440,height:900},launchOptions:{executablePath:'/usr/bin/google-chrome',args:['--no-sandbox']}},webServer:{command:'npx vite --port 1420 --host 127.0.0.1',cwd:'/home/sandbox/somnia/phase1',url:'http://127.0.0.1:1420/tests/harness/filmstrip.html',reuseExistingServer:false,timeout:60000},reporter:'list'});

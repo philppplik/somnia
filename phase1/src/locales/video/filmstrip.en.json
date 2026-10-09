@@ -1,0 +1,6 @@
+{
+ "video.filmstrip": "Thumbnails",
+ "video.filmstripAria": "Thumbnail strip of {name}",
+ "video.filmstripLoading": "Loading thumbnails…",
+ "video.filmstripUnavailable": "No thumbnails for this clip: {message}"
+}

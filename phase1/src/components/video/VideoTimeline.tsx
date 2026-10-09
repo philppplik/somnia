@@ -1,4 +1,4 @@
-import {useCallback,useRef} from 'react';
+import {useCallback,useRef,type ReactNode} from 'react';
 import {clipRanges,fadeOf,timelineDuration,type TimelineClip} from '../../lib/video/timeline';
 import {useT} from '../../lib/useT';
 import {VolumeX} from '../../lib/icons';
@@ -9,9 +9,11 @@ interface Props{
  clips:TimelineClip[];selectedId:string|null;position:number;missing:Set<string>;
  onSeek:(s:number)=>void;onSelect:(id:string|null)=>void;onTrim:(id:string,edge:'in'|'out',sourceTime:number)=>void;onMove:(id:string,by:number)=>void;
  label:string;
+ /** Optional thumbnail layer painted behind each clip's label (see lib/video/INTEGRATION.md). `trackHeight` (px) lets the track grow for it. */
+ renderStrip?:(clip:TimelineClip,index:number)=>ReactNode;trackHeight?:number;
 }
 /** Segmented timeline: one block per clip, drag to reorder, edge handles trim the selected clip, the playhead seeks. */
-export function VideoTimeline({clips,selectedId,position,missing,onSeek,onSelect,onTrim,onMove,label}:Props){
+export function VideoTimeline({clips,selectedId,position,missing,onSeek,onSelect,onTrim,onMove,label,renderStrip,trackHeight}:Props){
  const {t}=useT();
  const track=useRef<HTMLDivElement>(null);
  const duration=timelineDuration(clips);
@@ -55,8 +57,8 @@ export function VideoTimeline({clips,selectedId,position,missing,onSeek,onSelect
   window.addEventListener('pointermove',move);window.addEventListener('pointerup',up);
  };
  const ticks:number[]=[];const step=tickStep(duration);for(let s=0;s<=duration+1e-6;s+=step)ticks.push(s);
- return <div className="relative h-12 w-full select-none" aria-label={label} data-testid="video-timeline">
-  <div ref={track} className="absolute inset-x-0 top-1/2 flex h-6 -translate-y-1/2 cursor-pointer gap-px rounded-sm bg-hover" onPointerDown={seek}>
+ return <div className={`relative w-full select-none ${trackHeight&&trackHeight>24?'':'h-12'}`} style={trackHeight&&trackHeight>24?{height:trackHeight+24}:undefined} aria-label={label} data-testid="video-timeline">
+  <div ref={track} style={{height:trackHeight??24}} className="absolute inset-x-0 top-1/2 flex -translate-y-1/2 cursor-pointer gap-px rounded-sm bg-hover" onPointerDown={seek}>
    {ranges.map((r,i)=>{
     const selected=r.clip.id===selectedId,gone=missing.has(r.clip.source);
     const left=((r.start)/duration*100),width=(Math.max(0.5,(r.end-r.start)/duration*100));
@@ -66,7 +68,8 @@ export function VideoTimeline({clips,selectedId,position,missing,onSeek,onSelect
      onPointerDown={reorderDrag(r.clip.id)}
      onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();onSelect(selected?null:r.clip.id);}}}
      data-testid="video-clip" data-clip-id={r.clip.id} data-selected={selected||undefined}>
-     <span className="pointer-events-none absolute inset-x-1 top-1/2 -translate-y-1/2 truncate text-[10px] text-ink">
+     {renderStrip?.(r.clip,i)}
+     <span className={`pointer-events-none absolute inset-x-1 ${renderStrip?'bottom-0.5':'top-1/2 -translate-y-1/2'} truncate text-[10px] ${renderStrip?'text-white [text-shadow:0_0_3px_rgba(0,0,0,.9)]':'text-ink'}`}>
       {shortName(r.clip.source)}{ranges.filter(x=>x.clip.source===r.clip.source).length>1?` · ${ranges.filter(x=>x.clip.source===r.clip.source).findIndex(x=>x.clip.id===r.clip.id)+1}`:''}
       {r.clip.muted&&<VolumeX size={10} className="ml-1 inline-block align-[-1px]" aria-label={t('video.clipMuted')}/>}
       {gone&&<span className="ml-1 text-[var(--danger)]">{t('video.missingSource')}</span>}
