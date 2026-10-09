@@ -111,7 +111,12 @@ export async function applyPdfEdit(
   };
   if (op.kind === "comment.update" || op.kind === "comment.delete")
     changeComment(doc, op);
-  if (op.kind === "field.create" || op.kind === "field.properties")
+  if (
+    op.kind === "field.create" ||
+    op.kind === "field.properties" ||
+    op.kind === "field.rename" ||
+    op.kind === "field.delete"
+  )
     await applyFieldDesign(doc, op);
   if (op.kind === "rotate") {
     valid(op.page);

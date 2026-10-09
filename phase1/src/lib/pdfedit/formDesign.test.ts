@@ -326,3 +326,105 @@ test("multi-select dropdowns stay view-only and existing widgets cannot move pag
     /between pages/,
   );
 });
+
+test("rename preserves field/widget refs and delete removes actual page annotations", async () => {
+  let b = await applyPdfEdit(await blank(), {
+    kind: "field.create",
+    name: "Old",
+    fieldKind: "checkbox",
+    properties: properties({ width: 20, height: 20, value: true }),
+  });
+  const old = await PDFDocument.load(b),
+    ref = old.getForm().getField("Old").ref.toString();
+  const widgetRef = old.getPage(0).node.Annots()!.get(0).toString();
+  let e = (await inspectPdf(b)).designFields[0];
+  b = await applyPdfEdit(b, {
+    kind: "field.rename",
+    name: "Old",
+    expected: e.expected,
+    newName: "Reviewed",
+  });
+  const d = await PDFDocument.load(b);
+  assert.equal(d.getForm().getCheckBox("Reviewed").ref.toString(), ref);
+  assert.equal(d.getForm().getCheckBox("Reviewed").isChecked(), true);
+  assert.equal(d.getPage(0).node.Annots()!.get(0).toString(), widgetRef);
+  await assert.rejects(
+    () =>
+      applyPdfEdit(b, {
+        kind: "field.delete",
+        name: "Reviewed",
+        expected: e.expected,
+      }),
+    /stale/,
+  );
+  e = (await inspectPdf(b)).designFields[0];
+  b = await applyPdfEdit(b, {
+    kind: "field.delete",
+    name: e.name,
+    expected: e.expected,
+  });
+  const removed = await PDFDocument.load(b);
+  assert.equal(removed.getForm().getFields().length, 0);
+  assert.equal(removed.getPage(0).node.Annots()!.size(), 0);
+  assert.ok(
+    !removed.context
+      .enumerateIndirectObjects()
+      .some(([r]) => r.toString() === ref || r.toString() === widgetRef),
+  );
+});
+test("rename rejects collisions, invalid names, hierarchy and action/calculation forms", async () => {
+  let b = await applyPdfEdit(await blank(), {
+    kind: "field.create",
+    name: "One",
+    fieldKind: "text",
+    properties: properties(),
+  });
+  b = await applyPdfEdit(b, {
+    kind: "field.create",
+    name: "Two",
+    fieldKind: "text",
+    properties: properties({ y: 100 }),
+  });
+  const e = (await inspectPdf(b)).designFields[0];
+  for (const newName of ["", "a.b", "Two"])
+    await assert.rejects(() =>
+      applyPdfEdit(b, {
+        kind: "field.rename",
+        name: e.name,
+        expected: e.expected,
+        newName,
+      }),
+    );
+  const d = await PDFDocument.load(b);
+  d.getForm()
+    .getField("One")
+    .acroField.dict.set(PDFName.of("AA"), d.context.obj({}));
+  const action = await d.save(),
+    ae = (await inspectPdf(action)).designFields[0];
+  for (const kind of ["field.rename", "field.delete"] as const)
+    await assert.rejects(
+      () =>
+        applyPdfEdit(action, {
+          kind,
+          name: ae.name,
+          expected: ae.expected,
+          newName: "New",
+        }),
+      /actions or calculations/,
+    );
+  const h = await PDFDocument.create(),
+    p = h.addPage([400, 500]);
+  h.getForm().createTextField("Group.Child").addToPage(p);
+  const hb = await h.save(),
+    he = (await inspectPdf(hb)).designFields[0];
+  await assert.rejects(
+    () =>
+      applyPdfEdit(hb, {
+        kind: "field.rename",
+        name: he.name,
+        expected: he.expected,
+        newName: "New",
+      }),
+    /Hierarchical/,
+  );
+});

@@ -5,6 +5,7 @@ import {
   PDFDropdown,
   PDFName,
   PDFDict,
+  PDFArray,
   StandardFonts,
   rgb,
   type PDFField,
@@ -33,6 +34,8 @@ export interface DesignField {
   reason: string | null;
 }
 export type FormDesignOperation =
+  | { kind: "field.rename"; name: string; expected: string; newName: string }
+  | { kind: "field.delete"; name: string; expected: string }
   | {
       kind: "field.create";
       name: string;
@@ -121,10 +124,91 @@ export function designFields(doc: PDFDocument): DesignField[] {
     ];
   });
 }
+function validateName(name: string) {
+  if (
+    typeof name !== "string" ||
+    !name.trim() ||
+    name.length > 100 ||
+    /[.\x00-\x1f]/.test(name)
+  )
+    throw Error(
+      "Choose a unique field name, up to 100 characters, without dots or control characters.",
+    );
+}
 export async function applyFieldDesign(
   doc: PDFDocument,
   op: FormDesignOperation,
 ) {
+  if (
+    doc.catalog
+      .lookupMaybe(PDFName.of("AcroForm"), PDFDict)
+      ?.has(PDFName.of("XFA"))
+  )
+    throw Error("XFA form design is not supported.");
+  if (op.kind === "field.rename" || op.kind === "field.delete") {
+    const form = doc.getForm();
+    const f = form.getField(op.name);
+    if (snapshot(f) !== op.expected)
+      throw Error("Field target is stale. Refresh the properties.");
+    const entry = designFields(doc).find((e) => e.name === op.name);
+    if (!entry?.editable)
+      throw Error(entry?.reason ?? "Cannot redesign this field.");
+    if (f.acroField.getParent())
+      throw Error("Hierarchical field rename/delete is not supported.");
+    const seen = new Set<unknown>();
+    const unsafe = (obj: unknown): boolean => {
+      if (seen.has(obj)) return false;
+      seen.add(obj);
+      if (obj instanceof PDFDict) {
+        if (
+          ["A", "AA", "JS", "JavaScript", "CO", "OpenAction"].some((key) =>
+            obj.has(PDFName.of(key)),
+          )
+        )
+          return true;
+        return obj.values().some(unsafe);
+      }
+      return obj instanceof PDFArray && obj.asArray().some(unsafe);
+    };
+    if (doc.context.enumerateIndirectObjects().some(([, obj]) => unsafe(obj)))
+      throw Error(
+        "Forms with actions or calculations cannot be renamed or deleted safely.",
+      );
+    if (op.kind === "field.rename") {
+      validateName(op.newName);
+      if (
+        form
+          .getFields()
+          .some(
+            (field) =>
+              field.getName() !== op.name &&
+              (field.getName() === op.newName ||
+                field.getName().startsWith(op.newName + ".")),
+          )
+      )
+        throw Error("A field with this name already exists.");
+      f.acroField.setPartialName(op.newName);
+    } else {
+      // pdf-lib removeField uses the appearance ref, not the widget ref, when
+      // removing Annots. Resolve dictionaries ourselves to avoid dangling refs.
+      const widgets = f.acroField.getWidgets().map((w) => w.dict);
+      for (const page of doc.getPages()) {
+        const annots = page.node.Annots();
+        if (!annots) continue;
+        for (let i = annots.size() - 1; i >= 0; i--) {
+          const value = annots.get(i);
+          const dict = doc.context.lookup(value);
+          if (dict === f.acroField.dict || widgets.includes(dict as PDFDict))
+            annots.remove(i);
+        }
+      }
+      form.acroForm.removeField(f.acroField);
+      for (const [ref, dict] of doc.context.enumerateIndirectObjects())
+        if (widgets.includes(dict as PDFDict)) doc.context.delete(ref);
+      doc.context.delete(f.ref);
+    }
+    return;
+  }
   const p = op.properties;
   const pages = doc.getPages();
   if (!Number.isInteger(p.page) || !pages[p.page])
@@ -163,15 +247,7 @@ export async function applyFieldDesign(
   let f: PDFField;
   let kind: DesignFieldKind;
   if (op.kind === "field.create") {
-    if (
-      typeof op.name !== "string" ||
-      !op.name.trim() ||
-      op.name.length > 100 ||
-      /[.\x00-\x1f]/.test(op.name)
-    )
-      throw Error(
-        "Choose a unique field name, up to 100 characters, without dots or control characters.",
-      );
+    validateName(op.name);
     if (form.getFields().some((f) => f.getName() === op.name))
       throw Error("A field with this name already exists.");
     kind = op.fieldKind;
