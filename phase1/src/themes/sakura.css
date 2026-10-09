@@ -1,0 +1,49 @@
+/* Sakura Pink: pale blossom paper by day, warm plum charcoal by night.
+ * Import after tokens.css. Keep document/artboard colours independent.
+ * High-contrast mode remains owned by the app's existing accessibility rules.
+ */
+:root[data-theme=light][data-palette=sakura]:not([data-contrast=high]) {
+  --bg-base: #fbf3f6;
+  --bg-panel: #fff9fb;
+  --bg-elevated: #fffdfd;
+  --bg-surface: #f4e5ec;
+  --bg-hover: #ead4df;
+  --border-subtle: #ead6e0;
+  --border-default: #cba7b9;
+  --text-primary: #34232e;
+  --text-secondary: #654b5b;
+  --text-tertiary: #735567;
+  --accent: #a33165;
+  --accent-fill: #a33165;
+  --accent-ink: #ffffff;
+  --accent-soft: #a3316517;
+  --warning: #875500;
+  --danger: #b42343;
+  --canvas-bg: #efdee7;
+  --shell-bg: #f1e4eb;
+  --shadow: 0 24px 60px -20px #42213633;
+  --card-shadow: 0 1px 2px #4221360d, 0 8px 24px -12px #42213624;
+}
+
+:root[data-theme=dark][data-palette=sakura]:not([data-contrast=high]) {
+  --bg-base: #1c171d;
+  --bg-panel: #231d25;
+  --bg-elevated: #2a222d;
+  --bg-surface: #342a37;
+  --bg-hover: #413445;
+  --border-subtle: #443346;
+  --border-default: #73546e;
+  --text-primary: #faedf4;
+  --text-secondary: #d9bdcf;
+  --text-tertiary: #c9a6bd;
+  --accent: #f0a6ca;
+  --accent-fill: #b44172;
+  --accent-ink: #34232e;
+  --accent-soft: #f0a6ca24;
+  --warning: #e9bf72;
+  --danger: #ff9bae;
+  --canvas-bg: #18131a;
+  --shell-bg: #151117;
+  --shadow: 0 24px 60px -20px #09050dcc;
+  --card-shadow: 0 1px 0 #f0a6ca0b inset;
+}
