@@ -1,3 +1,4 @@
+import { PdfCommentsPanel } from "./PdfCommentsPanel";
 import { useEffect, useRef, useState } from "react";
 import { pdfjsBackend } from "../../lib/pdfview/pdfjsBrowser";
 import {
@@ -163,15 +164,13 @@ export function PdfPagesPanel() {
                     pdfError(s.name, "PDF exceeds 25 MB.");
                     return;
                   }
-                  void file
-                    .arrayBuffer()
-                    .then((b) =>
-                      editPdf(s.name, {
-                        kind: "insert",
-                        data: new Uint8Array(b),
-                        after: s.page - 1,
-                      }),
-                    );
+                  void file.arrayBuffer().then((b) =>
+                    editPdf(s.name, {
+                      kind: "insert",
+                      data: new Uint8Array(b),
+                      after: s.page - 1,
+                    }),
+                  );
                 }}
               />
             </label>
@@ -303,7 +302,7 @@ export function PdfPagesPanel() {
 }
 export function PdfPropertiesPanel() {
   const s = usePdfSession();
-  const [tab, setTab] = useState<"add" | "fields">("add");
+  const [tab, setTab] = useState<"add" | "fields" | "comments">("add");
   const [text, setText] = useState("");
   const [x, setX] = useState(36);
   const [y, setY] = useState(60);
@@ -341,9 +340,19 @@ export function PdfPropertiesPanel() {
         >
           Fields
         </button>
+        <button
+          className={pdfButton}
+          role="tab"
+          aria-selected={tab === "comments"}
+          onClick={() => setTab("comments")}
+        >
+          Comments
+        </button>
       </div>
       <div className="min-h-0 flex-1 overflow-auto p-3 text-xs text-ink-2">
-        {tab === "add" ? (
+        {tab === "comments" ? (
+          <PdfCommentsPanel />
+        ) : tab === "add" ? (
           <>
             <p className="mb-3 text-ink-3">
               {s.editing
