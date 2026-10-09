@@ -83,7 +83,7 @@ export function PdfInlineEditor({ item }: { item: MediaItem }) {
         {s?.error ?? "Opening PDF…"}
       </div>
     );
-  const viewOnly = !s.info || s.info.encrypted || s.info.signed;
+  const viewOnly = !s.info || s.info.encrypted || s.info.signed || s.info.xfa;
   return (
     <section
       className="flex min-h-0 flex-1 flex-col"
@@ -99,15 +99,17 @@ export function PdfInlineEditor({ item }: { item: MediaItem }) {
           Edit PDF
         </button>
         <span className="text-xs text-ink-3">
-          {s.info?.signed
-            ? "Signed · view only"
-            : s.info?.encrypted
-              ? "Encrypted · view only"
-              : !s.info
-                ? "View only"
-                : s.editing
-                  ? "Editing a copy"
-                  : "Read only"}
+          {s.info?.xfa
+            ? "XFA · view only"
+            : s.info?.signed
+              ? "Signed · view only"
+              : s.info?.encrypted
+                ? "Encrypted · view only"
+                : !s.info
+                  ? "View only"
+                  : s.editing
+                    ? "Editing a copy"
+                    : "Read only"}
         </span>
         <span className="flex-1" />
         <button

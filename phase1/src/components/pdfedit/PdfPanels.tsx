@@ -1,4 +1,5 @@
 import { PdfCommentsPanel } from "./PdfCommentsPanel";
+import { PdfFormDesigner } from "./PdfFormDesigner";
 import { useEffect, useRef, useState } from "react";
 import { pdfjsBackend } from "../../lib/pdfview/pdfjsBrowser";
 import {
@@ -535,6 +536,7 @@ export function PdfPropertiesPanel() {
                 Apply field values
               </button>
             </form>
+            <PdfFormDesigner />
           </>
         )}
       </div>
