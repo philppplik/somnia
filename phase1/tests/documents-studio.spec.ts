@@ -53,7 +53,7 @@ test('a broken or encrypted DOCX shows a readable error and can be closed; engin
 test('manual Code choice wins and the studio is reachable by keyboard; inspector shows facts',async({page})=>{
  await page.goto('/');await expect(page.locator('[data-storage]')).toBeVisible();
  await page.keyboard.press('Control+2');await expect(page.getByRole('radio',{name:'Somnia Documents'})).toHaveAttribute('aria-checked','true');
- await expect(page.getByText('Open a .docx file to see its pages here.')).toBeVisible();await page.screenshot({path:shot('empty')});
+ await expect(page.getByTestId('documents-start')).toBeVisible();await page.screenshot({path:shot('empty')});
  await page.keyboard.press('Control+1');await expect(page.getByRole('radio',{name:'Somnia Code'})).toHaveAttribute('aria-checked','true');
  await openBuffers(page,[{name:'sample.docx',mimeType:DOCX,buffer:sample()}]);
  await expect(page.getByTestId('docx-frame')).toBeVisible();

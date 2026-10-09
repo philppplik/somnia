@@ -15,7 +15,7 @@ test('docx opens as a sandboxed read-only preview with a visible limits note',as
  const dl=page.waitForEvent('download');await page.getByRole('button',{name:'Save as Markdown'}).click();expect((await dl).suggestedFilename()).toBe('report.md');});
 test('xlsx opens as a read-only table with sheet tabs and CSV export',async({page})=>{await page.goto('/');await expect(page.locator('[data-storage]')).toBeVisible();
  const buf=Buffer.from(writeXlsx([{name:'Sales',rows:[['Region','Q1','Q2'],['EMEA',10,12.5],['APAC',7,9],['Total, all','=SUM(B2:B3)',true]]},{name:'Notes',rows:[['Hello <b>world</b> & more']]}]));
- await openBuffers(page,[{name:'sales.xlsx',mimeType:XLSX,buffer:buf}]);
+ await page.keyboard.press('Control+1');await openBuffers(page,[{name:'sales.xlsx',mimeType:XLSX,buffer:buf}]);
  const table=page.getByTestId('xlsx-table');await expect(table).toBeVisible();await expect(table.getByRole('cell',{name:'EMEA'})).toBeVisible();await expect(table.getByRole('cell',{name:'12.5'})).toBeVisible();
  await expect(page.getByTestId('office-warnings')).toContainText('Values only');
  await page.screenshot({path:'test-results/office-xlsx-sales.png'});

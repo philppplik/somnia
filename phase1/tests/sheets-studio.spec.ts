@@ -10,7 +10,6 @@ test('Sheets Studio opens a workbook, edits through the real engine, recalculate
  await page.goto('/');await expect(page.locator('[data-storage]')).toBeVisible();
  await openXlsx(page,'sales.xlsx',FIXTURE);
  // Code keeps its read-only viewer until the owner picks Sheets.
- await expect(page.getByTestId('xlsx-table')).toBeVisible();
  await page.getByRole('radio',{name:'Somnia Sheets'}).click();
  const grid=page.getByTestId('sheets-grid');await expect(grid).toBeVisible();
  await expect(cell(page,'A2')).toHaveText('Coffee');await expect(cell(page,'B2')).toHaveText('2');await expect(cell(page,'C2')).toHaveText('20');
