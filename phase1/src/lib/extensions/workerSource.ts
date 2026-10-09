@@ -1,4 +1,4 @@
-/** Source of the extension worker bootstrap. Runs inside a dedicated Worker created from a Blob URL. Best-effort hardening: network and storage globals are removed before extension code runs. A strict CSP (connect-src 'none' for blob workers) is the real boundary and is tracked in ADR-003. */
+/** Source of the extension worker bootstrap, the single source of truth. Desktop (Tauri): the Rust side must serve exactly this text as the response of somnia-ext://worker/<ext-id> with its own CSP (script-src 'unsafe-eval'; connect-src 'none'). Web/dev: runtime.ts creates a blob worker from it under the page CSP. Network and storage globals are removed before extension code runs (defence in depth; the response CSP is the boundary on desktop). */
 export const WORKER_SOURCE=`
 'use strict';
 for(const k of ['fetch','XMLHttpRequest','WebSocket','EventSource','importScripts','indexedDB','caches','BroadcastChannel','SharedWorker','Worker','WebTransport','navigator']){try{Object.defineProperty(self,k,{value:undefined,configurable:false,writable:false});}catch(e){}}
