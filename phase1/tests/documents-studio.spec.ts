@@ -86,3 +86,17 @@ test('edit a paragraph, undo/redo, tables stay locked, save a copy contains the 
  await expect(page.getByTestId('documents-editor').getByRole('textbox').first()).toHaveValue('Geändert: '+old);
  await page.screenshot({path:shot('edited-copy')});
 });
+test('two far-apart changes in one paragraph apply as one undoable edit; heading keeps its bold',async({page})=>{
+ await page.goto('/');await expect(page.locator('[data-storage]')).toBeVisible();
+ await openBuffers(page,[{name:'sample.docx',mimeType:DOCX,buffer:sample()}]);
+ await expect(page.getByTestId('documents-pages')).toHaveText('1 pages');
+ const first=page.getByTestId('documents-editor').getByRole('textbox').first();const old=await first.inputValue();
+ const next='Neu: '+old.replace('worker','Somnia')+' (final)';
+ await first.fill(next);await first.blur();
+ await expect.poll(()=>first.inputValue()).toBe(next);await expect(page.getByTestId('documents-edit-error')).toHaveCount(0);
+ const img=page.getByTestId('documents-page').first().locator('img');
+ await expect.poll(()=>img.evaluate((i:HTMLImageElement)=>i.complete&&i.naturalWidth)).toBeGreaterThan(300);await page.waitForTimeout(400);
+ await page.getByTestId('documents-page').first().screenshot({path:shot('format-kept')});
+ await page.getByTestId('documents-undo').click();await expect.poll(()=>first.inputValue()).toBe(old);
+ await expect(page.getByTestId('documents-undo')).toBeDisabled();
+});

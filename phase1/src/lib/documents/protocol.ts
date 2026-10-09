@@ -7,7 +7,7 @@ export type DocumentsRequest=
  |{id:number;kind:'render';page:number;scale:number}
  |{id:number;kind:'insert';block:number;utf8Offset:number;text:string}
  |{id:number;kind:'blocks'}
- |{id:number;kind:'replace';block:number;utf8Start:number;utf8End:number;text:string}
+ |{id:number;kind:'replace';block:number;hunks:import('./edit').Hunk[]}
  |{id:number;kind:'save'}
  |{id:number;kind:'close'};
 export type DocumentsResponse=

@@ -70,28 +70,41 @@ test('inspectDocx reports risky parts without inflating',()=>{
  assert.equal(inspectDocx(strToU8('nope')).ok,false);
  assert.equal(inspectDocx(fixture('sample.docx')).ok,true);
 });
-import {diffEdit,inverseOf,UndoStack} from './edit';
-test('diffEdit finds one minimal replacement in UTF-8 bytes and never splits surrogates',()=>{
+import {diffEdit,applyEdit,inverseOf,UndoStack} from './edit';
+test('diffEdit gives minimal hunks in UTF-8 bytes, never splits surrogates, and round-trips',()=>{
  assert.equal(diffEdit(0,'same','same'),null);
- assert.deepEqual(diffEdit(2,'Hello world','Hello brave world'),{block:2,utf8Start:6,utf8End:6,text:'brave '});
- assert.deepEqual(diffEdit(0,'aéb','aXb'),{block:0,utf8Start:1,utf8End:3,text:'X'});
- const e=diffEdit(0,'a😀b','a😁b')!;assert.equal(e.text,'😁');assert.equal(e.utf8Start,1);assert.equal(e.utf8End,5);
- assert.deepEqual(diffEdit(0,'abc',''),{block:0,utf8Start:0,utf8End:3,text:''});
+ assert.deepEqual(diffEdit(2,'Hello world','Hello brave world'),{block:2,hunks:[{start:6,end:6,text:'brave '}]});
+ assert.deepEqual(diffEdit(0,'aéb','aXb'),{block:0,hunks:[{start:1,end:3,text:'X'}]});
+ const e=diffEdit(0,'a😀b','a😁b')!;assert.deepEqual(e.hunks,[{start:1,end:5,text:'😁'}]);
+ assert.deepEqual(diffEdit(0,'abc','')!.hunks,[{start:0,end:3,text:''}]);
+ const far=diffEdit(0,'The quick brown fox jumps over the lazy dog','A quick brown fox jumps over the lazy cat')!;
+ assert.equal(far.hunks.length,2);
+ for(const [x,y] of [['The quick brown fox jumps over the lazy dog','A quick brown fox jumps over the lazy cat'],['äöü€😀 text','ö€ new text 😀'],['','new'],['aaaa','aa'],['abcabc','cabcab']])assert.equal(applyEdit(x,diffEdit(0,x,y)!),y,x+'->'+y);
 });
-test('inverseOf reverses an edit',()=>{
- const before='Hello world',e=diffEdit(0,before,'Hello brave world')!;const inv=inverseOf(before,e);
- assert.deepEqual(inv,{block:0,utf8Start:6,utf8End:12,text:''});
- const e2=diffEdit(0,'aéb','aXb')!;assert.deepEqual(inverseOf('aéb',e2),{block:0,utf8Start:1,utf8End:2,text:'é'});
+test('inverseOf reverses single and multi hunk edits',()=>{
+ for(const [x,y] of [['Hello world','Hello brave world'],['aéb','aXb'],['The quick brown fox jumps over the lazy dog','A quick brown fox jumps over the lazy cat'],['äöü€😀 text','ö€ new text 😀']]){
+  const e=diffEdit(0,x,y)!;const inv=inverseOf(x,e);assert.equal(applyEdit(y,inv),x,x+'<-'+y);
+ }
 });
-test('UndoStack clears redo on a new edit',()=>{const u=new UndoStack();u.push({block:0,utf8Start:0,utf8End:0,text:''});const x=u.popUndo()!;u.pushRedo(x.inverse);assert.equal(u.canRedo,true);u.push(x.inverse);assert.equal(u.canRedo,false);});
+test('UndoStack clears redo on a new edit',()=>{const u=new UndoStack();u.push({block:0,hunks:[]});const x=u.popUndo()!;u.pushRedo(x.inverse);assert.equal(u.canRedo,true);u.push(x.inverse);assert.equal(u.canRedo,false);});
 test('real engine: blocks and replace through the core, undo by inverse, tables locked',{skip:!haveWasm},async()=>{
  const core=await realCore();core.handle({id:1,kind:'open',bytes:ab(fixture('sample.docx'))});
  const b0=core.handle({id:2,kind:'blocks'}).res;assert.ok(b0.ok&&b0.kind==='blocks');
  const blocks=(b0 as Extract<DocumentsResponse,{kind:'blocks'}>).blocks;
  const table=blocks.find(b=>b.kind==='table');assert.ok(table&&!table.editable);
- assert.equal(core.handle({id:3,kind:'replace',block:table!.index,utf8Start:0,utf8End:0,text:'x'}).res.ok,false);
+ assert.equal(core.handle({id:3,kind:'replace',block:table!.index,hunks:[{start:0,end:0,text:'x'}]}).res.ok,false);
  const p=blocks[0];const edit=diffEdit(0,p.text!,'Edited '+p.text!)!;const inv=inverseOf(p.text!,edit);
- const r=core.handle({id:4,kind:'replace',...edit}).res;assert.ok(r.ok&&r.kind==='edited'&&r.document.text.startsWith('Edited '));
- const u=core.handle({id:5,kind:'replace',...inv}).res;assert.ok(u.ok&&u.kind==='edited'&&u.document.text.startsWith(p.text!));
- assert.equal(core.handle({id:6,kind:'replace',block:0,utf8Start:0,utf8End:0,text:'a\nb'}).res.ok,false);
+ const r=core.handle({id:4,kind:'replace',block:edit.block,hunks:edit.hunks}).res;assert.ok(r.ok&&r.kind==='edited'&&r.document.text.startsWith('Edited '));
+ const u=core.handle({id:5,kind:'replace',block:inv.block,hunks:inv.hunks}).res;assert.ok(u.ok&&u.kind==='edited'&&u.document.text.startsWith(p.text!));
+ assert.equal(core.handle({id:6,kind:'replace',block:0,hunks:[{start:0,end:0,text:'a\nb'}]}).res.ok,false);
+});
+
+test('real engine: multi-hunk edit applies atomically, bad second hunk changes nothing',{skip:!haveWasm},async()=>{
+ const core=await realCore();core.handle({id:1,kind:'open',bytes:ab(fixture('sample.docx'))});
+ const blocks=(core.handle({id:2,kind:'blocks'}).res as Extract<DocumentsResponse,{kind:'blocks'}>).blocks;const t=blocks[0].text!;
+ const next='A '+t.replace('worker','Somnia')+'!';const e=diffEdit(0,t,next)!;assert.ok(e.hunks.length>=3);
+ const r=core.handle({id:3,kind:'replace',block:0,hunks:e.hunks}).res;assert.ok(r.ok&&r.kind==='edited'&&r.document.text.startsWith(next));
+ const bl=(core.handle({id:4,kind:'blocks'}).res as Extract<DocumentsResponse,{kind:'blocks'}>).blocks[0].text;assert.equal(bl,next);
+ const bad=core.handle({id:5,kind:'replace',block:0,hunks:[{start:0,end:1,text:''},{start:99999,end:99999,text:'x'}]}).res;assert.equal(bad.ok,false);
+ assert.equal((core.handle({id:6,kind:'blocks'}).res as Extract<DocumentsResponse,{kind:'blocks'}>).blocks[0].text,next);
 });

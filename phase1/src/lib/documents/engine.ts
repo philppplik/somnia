@@ -37,7 +37,7 @@ export class DocumentsEngine{
  async render(page:number,scale:number):Promise<Blob>{const r=await this.call('rendered',id=>({id,kind:'render',page,scale}));return new Blob([r.png],{type:'image/png'});}
  async insert(block:number,utf8Offset:number,text:string):Promise<OpenedDocument>{return(await this.call('edited',id=>({id,kind:'insert',block,utf8Offset,text}))).document;}
  async blocks():Promise<import('./edit').DocBlock[]>{return(await this.call('blocks',id=>({id,kind:'blocks'}))).blocks;}
- async replace(e:import('./edit').TextEdit):Promise<OpenedDocument>{return(await this.call('edited',id=>({id,kind:'replace',block:e.block,utf8Start:e.utf8Start,utf8End:e.utf8End,text:e.text}))).document;}
+ async replace(e:import('./edit').TextEdit):Promise<OpenedDocument>{return(await this.call('edited',id=>({id,kind:'replace',block:e.block,hunks:e.hunks}))).document;}
  async save():Promise<Uint8Array>{return new Uint8Array((await this.call('saved',id=>({id,kind:'save'}))).bytes);}
  async close(){if(!this.disposed)await this.call('closed',id=>({id,kind:'close'}));}
  dispose(error=new Error('Documents engine was closed.')){

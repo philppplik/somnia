@@ -22,7 +22,7 @@ The main thread only holds UI state and receives PNG blobs.
   (index, kind, text, editable) and an atomic `replace_range` (UTF-8 byte range, checked on a clone, tables and
   paragraphs with inline objects such as images/fields/comments are refused, no line breaks). The host sends the
   minimal diff of a paragraph (`edit.ts`), keeps its own undo/redo of inverse edits, and re-renders pages.
-- New text takes the formatting of the first replaced character; a pure insertion at paragraph start uses the paragraph mark, so it can lose bold of the following run. Replacing text that spans several runs flattens it to the first run's formatting.
+- Package 3 (run-exact edits): the host sends a code-point diff as several hunks (`replace_ranges`, ascending non-overlapping UTF-8 ranges, applied atomically on a clone), so untouched runs keep their formatting. Inserted text inherits: first replaced char (replacement), char before (insertion), char after (paragraph start), paragraph mark (empty paragraph). Remaining limits: replaced text takes the first replaced char's format; no per-run formatting UI.
 - No on-page caret, selection, IME on canvas, clipboard, styles, tables, line breaks or paragraph split/merge.
 
 ## Next packages

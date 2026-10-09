@@ -11,6 +11,10 @@ export class DocSession {
     paginate(): number;
     render_png(page: number, scale: number): Uint8Array;
     replace_range(block: number, utf8_start: number, utf8_end: number, text: string): void;
+    /**
+     * `hunks_json`: `[[start, end, "text"], ...]`, ascending offsets in the original paragraph.
+     */
+    replace_ranges(block: number, hunks_json: string): void;
     save(): Uint8Array;
     text(): string;
 }
@@ -27,6 +31,7 @@ export interface InitOutput {
     readonly docsession_paginate: (a: number) => number;
     readonly docsession_render_png: (a: number, b: number, c: number) => [number, number, number, number];
     readonly docsession_replace_range: (a: number, b: number, c: number, d: number, e: number, f: number) => [number, number];
+    readonly docsession_replace_ranges: (a: number, b: number, c: number, d: number) => [number, number];
     readonly docsession_save: (a: number) => [number, number, number, number];
     readonly docsession_text: (a: number) => [number, number];
     readonly __wbindgen_externrefs: WebAssembly.Table;

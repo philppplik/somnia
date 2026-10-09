@@ -47,45 +47,69 @@ impl DocSession {
             .collect();
         serde_json::Value::Array(items).to_string()
     }
-    /// Replaces UTF-8 byte range `start..end` of one top-level paragraph. All checks happen on a
-    /// clone, so any failure leaves the document unchanged. The new text takes the formatting of
-    /// the first replaced character (or of the character before an insertion point).
-    fn do_replace(&mut self, block: usize, start: usize, end: usize, text: &str) -> Result<(), String> {
-        if text.len() > 1024 * 1024 {
+    /// Applies several non-overlapping replacements (UTF-8 byte ranges in the ORIGINAL paragraph text,
+    /// sorted ascending) to one top-level paragraph. Everything is done on a clone and committed only
+    /// if every hunk is valid, so a failure leaves the document unchanged. Text outside the hunks keeps
+    /// its runs untouched. Inserted text takes the formatting of the first replaced character; a pure
+    /// insertion takes the character before it (Word behaviour), or the character after at paragraph start.
+    fn do_replace_many(&mut self, block: usize, hunks: &[(usize, usize, String)]) -> Result<(), String> {
+        if hunks.is_empty() {
+            return Ok(());
+        }
+        if hunks.len() > 10_000 {
+            return Err("too many hunks".into());
+        }
+        let mut total = 0usize;
+        for (_, _, t) in hunks {
+            total += t.len();
+            if t.chars().any(|c| c == OBJ || c == '\n' || c == '\r') {
+                return Err("replacement text must not contain line breaks or object marks".into());
+            }
+        }
+        if total > 1024 * 1024 {
             return Err("adapter edit limit: 1 MiB".into());
-        }
-        if text.chars().any(|c| c == OBJ || c == '\n' || c == '\r') {
-            return Err("replacement text must not contain line breaks or object marks".into());
-        }
-        if start > end {
-            return Err("range start is after its end".into());
         }
         let Some(b) = self.doc.body.get(block) else { return Err(format!("no block {block}")) };
         let Block::Para(orig) = &**b else { return Err(format!("block {block} is a table, not a paragraph")) };
         if orig.text.contains(OBJ) || !orig.objects.is_empty() {
             return Err(format!("paragraph {block} contains inline objects and cannot be edited as text"));
         }
-        for off in [start, end] {
-            if off > orig.text.len() || !orig.text.is_char_boundary(off) {
-                return Err(format!("offset {off} is not a character boundary inside paragraph {block}"));
+        let mut prev_end = 0usize;
+        for (start, end, _) in hunks {
+            if start > end || *start < prev_end {
+                return Err("hunks must be ascending, non-overlapping, with start <= end".into());
             }
+            for off in [*start, *end] {
+                if off > orig.text.len() || !orig.text.is_char_boundary(off) {
+                    return Err(format!("offset {off} is not a character boundary inside paragraph {block}"));
+                }
+            }
+            prev_end = *end;
         }
         let mut p = orig.clone();
-        let props = if start < p.text.len() && start < end {
-            p.props_of_char(start).clone()
-        } else if start > 0 {
-            let prev = p.text[..start.min(p.text.len())].char_indices().next_back().map(|(i, _)| i).unwrap_or(0);
-            p.props_of_char(prev).clone()
-        } else {
-            p.mark.clone()
-        };
-        p.delete(start, end).map_err(|e| e.to_string())?;
-        if !text.is_empty() {
-            p.insert_text(start, text, &props).map_err(|e| e.to_string())?;
+        for (start, end, text) in hunks.iter().rev() {
+            let (start, end) = (*start, *end);
+            let props = if start < end {
+                p.props_of_char(start).clone()
+            } else if start > 0 {
+                let prev = p.text[..start].char_indices().next_back().map(|(i, _)| i).unwrap_or(0);
+                p.props_of_char(prev).clone()
+            } else if !p.text.is_empty() {
+                p.props_of_char(0).clone()
+            } else {
+                p.mark.clone()
+            };
+            p.delete(start, end).map_err(|e| e.to_string())?;
+            if !text.is_empty() {
+                p.insert_text(start, text, &props).map_err(|e| e.to_string())?;
+            }
         }
         self.doc.body[block] = Arc::new(Block::Para(p));
         self.pages = DocLayout::default();
         Ok(())
+    }
+    fn do_replace(&mut self, block: usize, start: usize, end: usize, text: &str) -> Result<(), String> {
+        self.do_replace_many(block, &[(start, end, text.to_string())])
     }
 }
 
@@ -93,6 +117,11 @@ impl DocSession {
 impl DocSession {
     pub fn blocks(&self) -> String {
         self.block_list()
+    }
+    /// `hunks_json`: `[[start, end, "text"], ...]`, ascending offsets in the original paragraph.
+    pub fn replace_ranges(&mut self, block: usize, hunks_json: &str) -> Result<(), JsValue> {
+        let v: Vec<(usize, usize, String)> = serde_json::from_str(hunks_json).map_err(|e| JsValue::from_str(&format!("bad hunks: {e}")))?;
+        self.do_replace_many(block, &v).map_err(|e| JsValue::from_str(&e))
     }
     pub fn replace_range(&mut self, block: usize, utf8_start: usize, utf8_end: usize, text: &str) -> Result<(), JsValue> {
         self.do_replace(block, utf8_start, utf8_end, text).map_err(|e| JsValue::from_str(&e))
@@ -183,6 +212,42 @@ mod tests {
         assert!(s.do_replace(0, 0, 0, "a\nb").is_err());
         assert_eq!(now, s.text());
         assert_ne!(before, now);
+    }
+    fn run_props(s: &DocSession, block: usize) -> Vec<(usize, bool)> {
+        let Block::Para(p) = &*s.doc.body[block] else { panic!() };
+        p.runs.iter().map(|r| (r.len, r.props.bold.unwrap_or(false))).collect()
+    }
+    #[test]
+    fn multi_hunk_edit_is_atomic_and_keeps_untouched_runs() {
+        let mut s = DocSession::from_bytes(FIXTURE).unwrap();
+        let t0 = match &*s.doc.body[0] { Block::Para(p) => p.text.clone(), _ => panic!() };
+        let runs_before = run_props(&s, 0);
+        // Two far-apart hunks; the text between them must keep its run structure.
+        let last = t0.len();
+        s.do_replace_many(0, &[(0, 0, "A".into()), (last, last, "Z".into())]).unwrap();
+        let t1 = match &*s.doc.body[0] { Block::Para(p) => p.text.clone(), _ => panic!() };
+        assert_eq!(t1, format!("A{t0}Z"));
+        let runs_after = run_props(&s, 0);
+        assert_eq!(runs_after.iter().map(|r| r.0).sum::<usize>(), t1.len());
+        // Bold of the original text survives (insertions inherit neighbours).
+        assert_eq!(runs_before.iter().any(|r| r.1), runs_after.iter().any(|r| r.1));
+        let snapshot = s.text();
+        // Second hunk invalid: nothing may change.
+        assert!(s.do_replace_many(0, &[(0, 1, "".into()), (5000, 5001, "x".into())]).is_err());
+        assert!(s.do_replace_many(0, &[(3, 4, "".into()), (2, 3, "".into())]).is_err());
+        assert_eq!(snapshot, s.text());
+    }
+    #[test]
+    fn insertion_at_paragraph_start_inherits_following_run() {
+        let mut s = DocSession::from_bytes(FIXTURE).unwrap();
+        let first = run_props(&s, 0)[0];
+        s.do_replace(0, 0, 0, "X").unwrap();
+        let after = run_props(&s, 0)[0];
+        assert_eq!(after.1, first.1, "inserted text must share the formatting of what follows it");
+        assert_eq!(after.0, first.0 + 1);
+        let saved = wordcraft_docx::write(&s.doc).unwrap();
+        let again = DocSession::from_bytes(&saved).unwrap();
+        assert_eq!(run_props(&again, 0)[0], after, "formatting must survive DOCX export and reopen");
     }
     #[test]
     fn replace_range_refuses_tables_and_non_boundaries() {
