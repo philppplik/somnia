@@ -13,6 +13,160 @@
       "sha256": "4415d00be5ed5714655688c39be8711c7b1b7b1d7a9a5b1f1624835cd546c798",
       "apiVersion": 1,
       "permissions": []
+    },
+    {
+      "id": "somnia.accessibility-audit",
+      "name": "Accessibility Audit",
+      "version": "1.0.0",
+      "author": "Somnia",
+      "description": "Checks HTML files for missing alt text and names, duplicate IDs, invalid ARIA references and other common accessibility problems. Read-only.",
+      "repo": "https://github.com/philppplik/somnia",
+      "download": "https://raw.githubusercontent.com/philppplik/somnia/phase1-foundation/docs/extensions/catalog/packages/accessibility-audit-1.0.0.zip",
+      "sha256": "711ebbb088ac278a6c6197515414874e3b169b9635c7a3e22f73ca1735d19c63",
+      "apiVersion": 1,
+      "permissions": [
+        "project.read"
+      ],
+      "category": "Tools"
+    },
+    {
+      "id": "somnia.seo-preflight",
+      "name": "SEO Preflight",
+      "version": "1.0.0",
+      "author": "Somnia",
+      "description": "Checks title, description, canonical, robots, Open Graph, h1 and lang per HTML file and finds duplicates across pages. Read-only.",
+      "repo": "https://github.com/philppplik/somnia",
+      "download": "https://raw.githubusercontent.com/philppplik/somnia/phase1-foundation/docs/extensions/catalog/packages/seo-preflight-1.0.0.zip",
+      "sha256": "e5a849b64a6c236c1417938fcc5a70b6c6898d59e71b6e3a701938357bfd7fde",
+      "apiVersion": 1,
+      "permissions": [
+        "project.read"
+      ],
+      "category": "Tools"
+    },
+    {
+      "id": "somnia.local-link-check",
+      "name": "Local Link & Asset Check",
+      "version": "1.0.0",
+      "author": "Somnia",
+      "description": "Checks href, src and srcset references in HTML files against the files in the open project. Read-only.",
+      "repo": "https://github.com/philppplik/somnia",
+      "download": "https://raw.githubusercontent.com/philppplik/somnia/phase1-foundation/docs/extensions/catalog/packages/local-link-check-1.0.0.zip",
+      "sha256": "49ea987925120f5ca27d7f2bbc422bfc32308677490916f70d2942a7897cace4",
+      "apiVersion": 1,
+      "permissions": [
+        "project.read"
+      ],
+      "category": "Tools"
+    },
+    {
+      "id": "somnia.heading-outline",
+      "name": "Heading Outline",
+      "version": "1.0.0",
+      "author": "Somnia",
+      "description": "Shows the H1 to H6 outline of every HTML file in the project with filters by file and level. Read-only.",
+      "repo": "https://github.com/philppplik/somnia",
+      "download": "https://raw.githubusercontent.com/philppplik/somnia/phase1-foundation/docs/extensions/catalog/packages/heading-outline-1.0.0.zip",
+      "sha256": "6c91ac4b0c5baed6ca97afce86ddabbb0ca8c1bcabd305f0923632945cb62d88",
+      "apiVersion": 1,
+      "permissions": [
+        "project.read"
+      ],
+      "category": "Tools"
+    },
+    {
+      "id": "somnia.editorial-metrics",
+      "name": "Editorial Metrics",
+      "version": "1.0.0",
+      "author": "Somnia",
+      "description": "Words, characters, reading time and identical paragraphs across the project text. Read-only; stores only the reading speed.",
+      "repo": "https://github.com/philppplik/somnia",
+      "download": "https://raw.githubusercontent.com/philppplik/somnia/phase1-foundation/docs/extensions/catalog/packages/editorial-metrics-1.0.0.zip",
+      "sha256": "cb2d38fdf9bf4de68cfb66d7740ffbcb2eb9d22da7dbcfeb3882cad8346f80dc",
+      "apiVersion": 1,
+      "permissions": [
+        "project.read",
+        "storage"
+      ],
+      "category": "Productivity"
+    },
+    {
+      "id": "somnia.todo-navigator",
+      "name": "TODO Navigator",
+      "version": "1.0.0",
+      "author": "Somnia",
+      "description": "Lists TODO, FIXME and HACK comments from HTML, CSS, JS and Markdown files with file and line. Read-only.",
+      "repo": "https://github.com/philppplik/somnia",
+      "download": "https://raw.githubusercontent.com/philppplik/somnia/phase1-foundation/docs/extensions/catalog/packages/todo-navigator-1.0.0.zip",
+      "sha256": "3c4662f8a4b3061ef5d5d6f540d01d77d3e4dde27d66b17879154d7002754714",
+      "apiVersion": 1,
+      "permissions": [
+        "project.read",
+        "storage"
+      ],
+      "category": "Productivity"
+    },
+    {
+      "id": "somnia.css-variable-inventory",
+      "name": "CSS Variable Inventory",
+      "version": "1.0.0",
+      "author": "Somnia",
+      "description": "Lists CSS custom properties with definitions, uses, color swatches, and missing or unused tokens. Read-only.",
+      "repo": "https://github.com/philppplik/somnia",
+      "download": "https://raw.githubusercontent.com/philppplik/somnia/phase1-foundation/docs/extensions/catalog/packages/css-variable-inventory-1.0.0.zip",
+      "sha256": "939f9cf02fd6fb00f2b0230197e036a142706f03981079813ffffb7ecfc4eb68",
+      "apiVersion": 1,
+      "permissions": [
+        "project.read"
+      ],
+      "category": "Tools"
+    },
+    {
+      "id": "somnia.locale-parity",
+      "name": "Locale Parity",
+      "version": "1.0.0",
+      "author": "Somnia",
+      "description": "Compares locale JSON files against a base language: missing and extra keys and placeholder differences. Read-only.",
+      "repo": "https://github.com/philppplik/somnia",
+      "download": "https://raw.githubusercontent.com/philppplik/somnia/phase1-foundation/docs/extensions/catalog/packages/locale-parity-1.0.0.zip",
+      "sha256": "f79609d38362f3f5a59b3df441bccbaa7e62665f5667a010b8d30e2e4d484b48",
+      "apiVersion": 1,
+      "permissions": [
+        "project.read",
+        "storage"
+      ],
+      "category": "Tools"
+    },
+    {
+      "id": "somnia.data-workbench",
+      "name": "Data Workbench",
+      "version": "1.0.0",
+      "author": "Somnia",
+      "description": "Loads a CSV, TSV or JSON file from the project as a table and validates it. Read-only; remembers the last file.",
+      "repo": "https://github.com/philppplik/somnia",
+      "download": "https://raw.githubusercontent.com/philppplik/somnia/phase1-foundation/docs/extensions/catalog/packages/data-workbench-1.0.0.zip",
+      "sha256": "e66b3e2f3f738e7c424d554958c8f9f6d1b82d6caf1d6659010e36601b89848a",
+      "apiVersion": 1,
+      "permissions": [
+        "project.read",
+        "storage"
+      ],
+      "category": "Tools"
+    },
+    {
+      "id": "somnia.form-kit",
+      "name": "Form Kit",
+      "version": "1.0.0",
+      "author": "Somnia",
+      "description": "Seven accessible form snippets and a panel that checks an HTML file for form accessibility problems. Read-only.",
+      "repo": "https://github.com/philppplik/somnia",
+      "download": "https://raw.githubusercontent.com/philppplik/somnia/phase1-foundation/docs/extensions/catalog/packages/form-kit-1.0.0.zip",
+      "sha256": "d48d3d3dfe7e33fbff1ae9f5ff91e4007069196701792fe07dfdc6fef9f2c218",
+      "apiVersion": 1,
+      "permissions": [
+        "project.read"
+      ],
+      "category": "Editing"
     }
   ]
 }
