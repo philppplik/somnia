@@ -4,6 +4,8 @@ Install: Settings > Extensions > "Add from a .json file", pick `somnia-extension
 
 - `word-count`: counts words of index.html. Permissions: commands, project.read, ui.notify.
 - `section-kit`: snippets and an info panel, no permissions, no code. Index-eligible; used by the authoring kit tests.
+- `css-variable-inventory`: right panel listing CSS custom properties with definitions, uses, color swatches, missing and unused tokens. Permissions: project.read. No code, index-eligible.
+- `locale-parity`: right panel comparing locale JSON files against a base language (missing and extra keys, placeholder differences). Permissions: project.read, storage. No code, index-eligible.
 - `safe-links`: sets target=_blank and rel=noopener noreferrer on the selected link. Permissions: commands, selection, project.write, ui.notify. The change is one undoable editor transaction.
 - `accessibility-audit`: right-side panel that checks HTML files for missing alt text and names, duplicate IDs, invalid ARIA references and landmark problems. Permission: project.read. Panel only, index-eligible. Source in `panel.html`, run `node build.mjs` to regenerate the manifest.
 - `seo-preflight`: right-side panel that checks title, description, canonical, robots, Open Graph, h1 and lang per HTML file, finds duplicates between files and shows a text preview (not a Google snippet). Permission: project.read. Panel only, index-eligible.
