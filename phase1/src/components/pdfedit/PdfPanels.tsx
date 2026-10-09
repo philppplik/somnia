@@ -1,3 +1,4 @@
+import { PdfAnnotationCreator } from "./PdfAnnotationCreator";
 import { PdfCommentsPanel } from "./PdfCommentsPanel";
 import { PdfFormDesigner } from "./PdfFormDesigner";
 import { useEffect, useRef, useState } from "react";
@@ -9,6 +10,7 @@ import {
   searchPdf,
   pdfError,
   fillPdf,
+  placePdfAnnotation,
 } from "../../lib/pdfedit/session";
 import type { PdfFieldValue } from "../../lib/pdfforms";
 import { pdfButton } from "./PdfInlineEditor";
@@ -308,9 +310,6 @@ export function PdfPropertiesPanel() {
   const [x, setX] = useState(36);
   const [y, setY] = useState(60);
   const [size, setSize] = useState(14);
-  const [kind, setKind] = useState<
-    "note" | "highlight" | "underline" | "strikeout"
-  >("note");
   const [values, setValues] = useState<Record<string, PdfFieldValue>>({});
   useEffect(() => setValues({}), [s?.bytes]);
   if (!s) return null;
@@ -337,7 +336,10 @@ export function PdfPropertiesPanel() {
           className={pdfButton}
           role="tab"
           aria-selected={tab === "fields"}
-          onClick={() => setTab("fields")}
+          onClick={() => {
+            placePdfAnnotation(s.name, null);
+            setTab("fields");
+          }}
         >
           Fields
         </button>
@@ -345,7 +347,10 @@ export function PdfPropertiesPanel() {
           className={pdfButton}
           role="tab"
           aria-selected={tab === "comments"}
-          onClick={() => setTab("comments")}
+          onClick={() => {
+            placePdfAnnotation(s.name, null);
+            setTab("comments");
+          }}
         >
           Comments
         </button>
@@ -362,7 +367,7 @@ export function PdfPropertiesPanel() {
             </p>
             <fieldset disabled={disabled} className="grid gap-2">
               <label>
-                Text or comment
+                Page text
                 <textarea
                   aria-label="PDF text or comment"
                   className="mt-1 min-h-20 w-full rounded-sm border border-subtle bg-transparent p-2 text-xs select-text"
@@ -417,45 +422,8 @@ export function PdfPropertiesPanel() {
               >
                 Add text
               </button>
-              <hr className="my-2 border-subtle" />
-              <label>
-                Annotation
-                <select
-                  aria-label="PDF annotation type"
-                  className="mt-1 w-full rounded-sm border border-subtle bg-panel p-1"
-                  value={kind}
-                  onChange={(e) => setKind(e.target.value as typeof kind)}
-                >
-                  {["note", "highlight", "underline", "strikeout"].map((k) => (
-                    <option key={k}>{k}</option>
-                  ))}
-                </select>
-              </label>
-              <p className="text-ink-3">
-                Notes use X/Y as their anchor. Marks cover 160 × 18 pt starting
-                at X/Y.
-              </p>
-              <button
-                className={pdfButton + " bg-hover"}
-                onClick={() =>
-                  void editPdf(s.name, {
-                    kind: "annotation",
-                    annotation: {
-                      page: s.page - 1,
-                      color: [1, 0.7, 0],
-                      opacity: kind === "note" ? 1 : 0.4,
-                      contents: text,
-                      author: "",
-                      ...(kind === "note"
-                        ? { kind: "note" as const, position: { x, y } }
-                        : { kind, rects: [{ x, y, width: 160, height: 18 }] }),
-                    },
-                  })
-                }
-              >
-                Add annotation
-              </button>
             </fieldset>
+            <PdfAnnotationCreator />
           </>
         ) : (
           <>

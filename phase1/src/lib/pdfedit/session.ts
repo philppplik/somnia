@@ -14,8 +14,10 @@ import {
   readFieldsInWorker as readFormFields,
   fillPdfInWorker,
 } from "./workerClient";
+import type { PdfAnnotation } from "../pdfannotate/types";
 import type { FormDesignOperation } from "./formDesign";
 export interface PdfSession {
+  annotationPlacement: PdfAnnotation | null;
   formLayout: boolean;
   formSelected: string | null;
   formPlacement: Extract<FormDesignOperation, { kind: "field.create" }> | null;
@@ -102,6 +104,7 @@ export async function openPdfSession(name: string) {
   if (!media || media.kind !== "pdf") return;
   if (sessions.get(name)?.source === media.url) return;
   const initial: PdfSession = {
+    annotationPlacement: null,
     formLayout: false,
     formSelected: null,
     formPlacement: null,
@@ -145,6 +148,7 @@ export function selectPdfPage(name: string, page: number) {
   if (!s) return;
   set(name, {
     page: Math.max(1, Math.min(s.info?.pages.length ?? 2000, page)),
+    annotationPlacement: null,
   });
 }
 export function setPdfEditing(name: string) {
@@ -153,10 +157,18 @@ export function setPdfEditing(name: string) {
   set(name, { editing: true, error: null });
 }
 export function layoutPdfFields(name: string, active: boolean) {
-  set(name, { formLayout: active, formPlacement: null });
+  set(name, {
+    formLayout: active,
+    formPlacement: null,
+    annotationPlacement: null,
+  });
 }
 export function selectPdfField(name: string, field: string | null) {
-  set(name, { formSelected: field, formPlacement: null });
+  set(name, {
+    formSelected: field,
+    formPlacement: null,
+    annotationPlacement: null,
+  });
 }
 export function placePdfField(
   name: string,
@@ -164,7 +176,24 @@ export function placePdfField(
 ) {
   const s = sessions.get(name);
   if (!s?.editing || s.busy) return;
-  set(name, { formPlacement: operation, formSelected: null, formLayout: true });
+  set(name, {
+    formPlacement: operation,
+    formSelected: null,
+    formLayout: true,
+    annotationPlacement: null,
+  });
+}
+export function placePdfAnnotation(
+  name: string,
+  annotation: PdfAnnotation | null,
+) {
+  const s = sessions.get(name);
+  if (!s?.editing || s.busy) return;
+  set(name, {
+    annotationPlacement: annotation,
+    formLayout: false,
+    formPlacement: null,
+  });
 }
 export function pdfError(name: string, error: string | null) {
   set(name, { error });
