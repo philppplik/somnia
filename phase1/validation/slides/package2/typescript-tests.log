@@ -1,0 +1,514 @@
+TAP version 13
+# Subtest: RPC serial IDs, errors, disposal and later requests fail closed
+ok 1 - RPC serial IDs, errors, disposal and later requests fail closed
+  ---
+  duration_ms: 2.422917
+  type: 'test'
+  ...
+# Subtest: worker failure rejects all pending calls and terminates execution
+ok 2 - worker failure rejects all pending calls and terminates execution
+  ---
+  duration_ms: 0.262132
+  type: 'test'
+  ...
+# Subtest: PPTX intake rejects wrong formats and compressed input cap
+ok 3 - PPTX intake rejects wrong formats and compressed input cap
+  ---
+  duration_ms: 1.240321
+  type: 'test'
+  ...
+# Subtest: Slides only advertises its implemented read-only surface
+ok 4 - Slides only advertises its implemented read-only surface
+  ---
+  duration_ms: 0.705525
+  type: 'test'
+  ...
+# Subtest: PPTX routes via existing media identity, respects manual Studio and readonly context
+ok 5 - PPTX routes via existing media identity, respects manual Studio and readonly context
+  ---
+  duration_ms: 8.728978
+  type: 'test'
+  ...
+# Subtest: folder media loader delivers PPTX binary identity through safe project port
+ok 6 - folder media loader delivers PPTX binary identity through safe project port
+  ---
+  duration_ms: 6.630715
+  type: 'test'
+  ...
+# Subtest: runtime-ready studios register without changing Code context
+ok 7 - runtime-ready studios register without changing Code context
+  ---
+  duration_ms: 1.80724
+  type: 'test'
+  ...
+# Subtest: manual selection wins, pending tools never commit, documents/history and global Agent stay untouched
+ok 8 - manual selection wins, pending tools never commit, documents/history and global Agent stay untouched
+  ---
+  duration_ms: 0.425846
+  type: 'test'
+  ...
+# Subtest: Studio labels and command strings exist in all five catalogues
+ok 9 - Studio labels and command strings exist in all five catalogues
+  ---
+  duration_ms: 74.171518
+  type: 'test'
+  ...
+# Subtest: domain index.html
+ok 10 - domain index.html
+  ---
+  duration_ms: 1.781849
+  type: 'test'
+  ...
+# Subtest: domain a.svg
+ok 11 - domain a.svg
+  ---
+  duration_ms: 0.200741
+  type: 'test'
+  ...
+# Subtest: domain a.md
+ok 12 - domain a.md
+  ---
+  duration_ms: 0.125825
+  type: 'test'
+  ...
+# Subtest: domain a.css
+ok 13 - domain a.css
+  ---
+  duration_ms: 0.2043
+  type: 'test'
+  ...
+# Subtest: domain a.js
+ok 14 - domain a.js
+  ---
+  duration_ms: 0.098198
+  type: 'test'
+  ...
+# Subtest: domain a.json
+ok 15 - domain a.json
+  ---
+  duration_ms: 0.078945
+  type: 'test'
+  ...
+# Subtest: domain a.tex
+ok 16 - domain a.tex
+  ---
+  duration_ms: 0.18413
+  type: 'test'
+  ...
+# Subtest: domain a.ts
+ok 17 - domain a.ts
+  ---
+  duration_ms: 0.094858
+  type: 'test'
+  ...
+# Subtest: design h1
+ok 18 - design h1
+  ---
+  duration_ms: 1.246314
+  type: 'test'
+  ...
+# Subtest: split h1
+ok 19 - split h1
+  ---
+  duration_ms: 0.454708
+  type: 'test'
+  ...
+# Subtest: design h2
+ok 20 - design h2
+  ---
+  duration_ms: 0.135907
+  type: 'test'
+  ...
+# Subtest: split h2
+ok 21 - split h2
+  ---
+  duration_ms: 0.095525
+  type: 'test'
+  ...
+# Subtest: design h3
+ok 22 - design h3
+  ---
+  duration_ms: 0.085103
+  type: 'test'
+  ...
+# Subtest: split h3
+ok 23 - split h3
+  ---
+  duration_ms: 0.088666
+  type: 'test'
+  ...
+# Subtest: design h4
+ok 24 - design h4
+  ---
+  duration_ms: 0.080378
+  type: 'test'
+  ...
+# Subtest: split h4
+ok 25 - split h4
+  ---
+  duration_ms: 0.082822
+  type: 'test'
+  ...
+# Subtest: design h5
+ok 26 - design h5
+  ---
+  duration_ms: 0.145856
+  type: 'test'
+  ...
+# Subtest: split h5
+ok 27 - split h5
+  ---
+  duration_ms: 0.134542
+  type: 'test'
+  ...
+# Subtest: design h6
+ok 28 - design h6
+  ---
+  duration_ms: 0.088431
+  type: 'test'
+  ...
+# Subtest: split h6
+ok 29 - split h6
+  ---
+  duration_ms: 0.078458
+  type: 'test'
+  ...
+# Subtest: design p
+ok 30 - design p
+  ---
+  duration_ms: 0.089431
+  type: 'test'
+  ...
+# Subtest: split p
+ok 31 - split p
+  ---
+  duration_ms: 0.079597
+  type: 'test'
+  ...
+# Subtest: design span
+ok 32 - design span
+  ---
+  duration_ms: 0.076563
+  type: 'test'
+  ...
+# Subtest: split span
+ok 33 - split span
+  ---
+  duration_ms: 0.077032
+  type: 'test'
+  ...
+# Subtest: design a
+ok 34 - design a
+  ---
+  duration_ms: 0.106482
+  type: 'test'
+  ...
+# Subtest: split a
+ok 35 - split a
+  ---
+  duration_ms: 0.09364
+  type: 'test'
+  ...
+# Subtest: design li
+ok 36 - design li
+  ---
+  duration_ms: 0.08118
+  type: 'test'
+  ...
+# Subtest: split li
+ok 37 - split li
+  ---
+  duration_ms: 0.077917
+  type: 'test'
+  ...
+# Subtest: design button
+ok 38 - design button
+  ---
+  duration_ms: 0.075681
+  type: 'test'
+  ...
+# Subtest: split button
+ok 39 - split button
+  ---
+  duration_ms: 0.075033
+  type: 'test'
+  ...
+# Subtest: design label
+ok 40 - design label
+  ---
+  duration_ms: 0.075757
+  type: 'test'
+  ...
+# Subtest: split label
+ok 41 - split label
+  ---
+  duration_ms: 0.076702
+  type: 'test'
+  ...
+# Subtest: design img
+ok 42 - design img
+  ---
+  duration_ms: 0.166976
+  type: 'test'
+  ...
+# Subtest: split img
+ok 43 - split img
+  ---
+  duration_ms: 0.178246
+  type: 'test'
+  ...
+# Subtest: design picture
+ok 44 - design picture
+  ---
+  duration_ms: 1.143049
+  type: 'test'
+  ...
+# Subtest: split picture
+ok 45 - split picture
+  ---
+  duration_ms: 0.118728
+  type: 'test'
+  ...
+# Subtest: design svg
+ok 46 - design svg
+  ---
+  duration_ms: 0.083467
+  type: 'test'
+  ...
+# Subtest: split svg
+ok 47 - split svg
+  ---
+  duration_ms: 0.076541
+  type: 'test'
+  ...
+# Subtest: design video
+ok 48 - design video
+  ---
+  duration_ms: 0.149675
+  type: 'test'
+  ...
+# Subtest: split video
+ok 49 - split video
+  ---
+  duration_ms: 0.079623
+  type: 'test'
+  ...
+# Subtest: design audio
+ok 50 - design audio
+  ---
+  duration_ms: 0.114064
+  type: 'test'
+  ...
+# Subtest: split audio
+ok 51 - split audio
+  ---
+  duration_ms: 0.746027
+  type: 'test'
+  ...
+# Subtest: design iframe
+ok 52 - design iframe
+  ---
+  duration_ms: 0.097478
+  type: 'test'
+  ...
+# Subtest: split iframe
+ok 53 - split iframe
+  ---
+  duration_ms: 0.12217
+  type: 'test'
+  ...
+# Subtest: design input
+ok 54 - design input
+  ---
+  duration_ms: 0.153793
+  type: 'test'
+  ...
+# Subtest: split input
+ok 55 - split input
+  ---
+  duration_ms: 0.081381
+  type: 'test'
+  ...
+# Subtest: design select
+ok 56 - design select
+  ---
+  duration_ms: 0.142531
+  type: 'test'
+  ...
+# Subtest: split select
+ok 57 - split select
+  ---
+  duration_ms: 0.079144
+  type: 'test'
+  ...
+# Subtest: design textarea
+ok 58 - design textarea
+  ---
+  duration_ms: 0.07189
+  type: 'test'
+  ...
+# Subtest: split textarea
+ok 59 - split textarea
+  ---
+  duration_ms: 0.071401
+  type: 'test'
+  ...
+# Subtest: design form
+ok 60 - design form
+  ---
+  duration_ms: 0.070774
+  type: 'test'
+  ...
+# Subtest: split form
+ok 61 - split form
+  ---
+  duration_ms: 0.071174
+  type: 'test'
+  ...
+# Subtest: design div
+ok 62 - design div
+  ---
+  duration_ms: 0.147002
+  type: 'test'
+  ...
+# Subtest: split div
+ok 63 - split div
+  ---
+  duration_ms: 0.085089
+  type: 'test'
+  ...
+# Subtest: design section
+ok 64 - design section
+  ---
+  duration_ms: 0.073874
+  type: 'test'
+  ...
+# Subtest: split section
+ok 65 - split section
+  ---
+  duration_ms: 0.069803
+  type: 'test'
+  ...
+# Subtest: design article
+ok 66 - design article
+  ---
+  duration_ms: 0.071238
+  type: 'test'
+  ...
+# Subtest: split article
+ok 67 - split article
+  ---
+  duration_ms: 0.067895
+  type: 'test'
+  ...
+# Subtest: empty and media precedence
+ok 68 - empty and media precedence
+  ---
+  duration_ms: 0.170875
+  type: 'test'
+  ...
+# Subtest: code uses cursor rather than stale canvas selection
+ok 69 - code uses cursor rather than stale canvas selection
+  ---
+  duration_ms: 0.11451
+  type: 'test'
+  ...
+# Subtest: mixed and locked multi
+ok 70 - mixed and locked multi
+  ---
+  duration_ms: 0.572591
+  type: 'test'
+  ...
+# Subtest: tool selections and flags
+ok 71 - tool selections and flags
+  ---
+  duration_ms: 0.135341
+  type: 'test'
+  ...
+# Subtest: selection cost does not depend on 5000-node index
+ok 72 - selection cost does not depend on 5000-node index
+  ---
+  duration_ms: 22.753837
+  type: 'test'
+  ...
+# Subtest: additional raster adapters are read-only, not native RasterEditor tools
+ok 73 - additional raster adapters are read-only, not native RasterEditor tools
+  ---
+  duration_ms: 0.313079
+  type: 'test'
+  ...
+# Subtest: lists files, skips hidden folders, reads content with a sha256 revision
+ok 74 - lists files, skips hidden folders, reads content with a sha256 revision
+  ---
+  duration_ms: 9.450089
+  type: 'test'
+  ...
+# Subtest: stage then save writes, verifies and clears the journal
+ok 75 - stage then save writes, verifies and clears the journal
+  ---
+  duration_ms: 2.530068
+  type: 'test'
+  ...
+# Subtest: external change before save is a conflict and the disk file stays untouched
+ok 76 - external change before save is a conflict and the disk file stays untouched
+  ---
+  duration_ms: 1.608532
+  type: 'test'
+  ...
+# Subtest: stale revisions and unsafe paths are rejected, recovery is listed and discardable
+ok 77 - stale revisions and unsafe paths are rejected, recovery is listed and discardable
+  ---
+  duration_ms: 1.030216
+  type: 'test'
+  ...
+# Subtest: close_project without keepRecovery drops the journal, with keepRecovery keeps it
+ok 78 - close_project without keepRecovery drops the journal, with keepRecovery keeps it
+  ---
+  duration_ms: 0.340248
+  type: 'test'
+  ...
+# Subtest: reconnect reuses the remembered handle only after the browser grants permission
+ok 79 - reconnect reuses the remembered handle only after the browser grants permission
+  ---
+  duration_ms: 0.532239
+  type: 'test'
+  ...
+# Subtest: new files in new folders are created on save and deleted only with a matching revision
+ok 80 - new files in new folders are created on save and deleted only with a matching revision
+  ---
+  duration_ms: 3.717086
+  type: 'test'
+  ...
+# Subtest: indexes 1000 text documents plus assets without the old 64/256 caps
+ok 81 - indexes 1000 text documents plus assets without the old 64/256 caps
+  ---
+  duration_ms: 26.590659
+  type: 'test'
+  ...
+# Subtest: deep projects are not silently cut off after eight levels
+ok 82 - deep projects are not silently cut off after eight levels
+  ---
+  duration_ms: 1.412311
+  type: 'test'
+  ...
+# Subtest: custom document limit does not count binary assets
+ok 83 - custom document limit does not count binary assets
+  ---
+  duration_ms: 1.363448
+  type: 'test'
+  ...
+# Subtest: additional media reads stay rooted and return original bytes
+ok 84 - additional media reads stay rooted and return original bytes
+  ---
+  duration_ms: 1.450947
+  type: 'test'
+  ...
+1..84
+# tests 84
+# suites 0
+# pass 84
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 1730.468557

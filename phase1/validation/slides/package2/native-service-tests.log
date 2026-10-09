@@ -1,0 +1,195 @@
+   Compiling somnia-desktop v0.1.0 (/home/sandbox/somnia/phase1/src-tauri)
+warning: variable does not need to be mutable
+    --> src/git.rs:1403:13
+     |
+1403 |         let mut capped_out = out.capped;
+     |             ----^^^^^^^^^^
+     |             |
+     |             help: remove this `mut`
+     |
+     = note: `#[warn(unused_mut)]` (part of `#[warn(unused)]`) on by default
+
+warning: field `tool_router` is never read
+   --> src/mcp_host.rs:196:19
+    |
+196 |     struct Calc { tool_router: ToolRouter<Self> }
+    |            ----   ^^^^^^^^^^^
+    |            |
+    |            field in this struct
+    |
+    = note: `Calc` has a derived impl for the trait `Clone`, but this is intentionally ignored during dead code analysis
+    = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: `somnia-desktop` (lib) generated 1 warning (run `cargo fix --lib -p somnia-desktop` to apply 1 suggestion)
+warning: `somnia-desktop` (lib test) generated 2 warnings (1 duplicate)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 3.96s
+     Running unittests src/lib.rs (src-tauri/target/debug/deps/somnia_desktop-210af1923dea8ec1)
+
+running 67 tests
+test agent_settings::tests::invalid_and_corrupt_fail_closed ... ok
+test applog::tests::context_secret_fields_are_masked ... ok
+test agent_settings::tests::round_trip_and_no_secret_field ... ok
+test applog::tests::redacts_keys_tokens_and_bearer ... ok
+test applog::tests::timestamp_format_is_rfc3339 ... ok
+test applog::tests::rotates_and_keeps_limited_files ... ok
+test drop_grant::tests::expired_and_oversized_grants_are_refused ... ok
+test drop_grant::tests::grant_is_exact_once_and_wrong_token_does_not_consume ... ok
+test git::tests::numstat_line_classifier ... ok
+test git::tests::numstat_rename_counts_postimage ... ok
+test applog::tests::unknown_level_and_long_messages_are_bounded ... ok
+test git::tests::parses_branch_headers_and_ordinary_changes ... ok
+test git::tests::parses_rename_new_then_old_path ... ok
+test git::tests::parses_unmerged_and_numstat ... ok
+test git::tests::path_validation_rejects_traversal ... ok
+test github_account::tests::bodies_are_form_encoded ... ok
+test github_account::tests::corrupt_store_is_reported ... ok
+test github_account::tests::device_code_parses_and_hides_secret ... ok
+test github_account::tests::device_code_rejects_foreign_verification_page ... ok
+test github_account::tests::interval_and_lifetime_are_bounded ... ok
+test github_account::tests::old_stored_tokens_without_scope_still_load ... ok
+test github_account::tests::poll_outcomes ... ok
+test github_account::tests::requested_scope_is_profile_plus_repo ... ok
+test github_account::tests::slow_down_never_decreases ... ok
+test github_account::tests::scope_upgrade_is_detected ... ok
+test github_account::tests::user_profile_maps_to_account ... ok
+test github_account::tests::store_roundtrip_status_and_logout ... ok
+test image_io::tests::expired_grant_is_refused ... ok
+test image_io::tests::grant_is_exact_once_and_wrong_token_keeps_it ... ok
+test image_io::tests::only_image_files_are_read_and_written ... ok
+test image_io::tests::overwrite_needs_the_same_format ... ok
+test lan_host::tests::explicit_lifecycle_and_real_fanout ... ok
+test image_io::tests::atomic_save_replaces_and_leaves_no_temp_file ... ok
+test lan_host::tests::occupied_port_fails_without_live_status ... ok
+test mcp_host::tests::config_validation ... ok
+test mcp_host::tests::lists_and_calls_tools ... ok
+test mcp_host::tests::output_is_capped_and_bad_calls_fail ... ok
+test mcp_host::tests::server_list_roundtrip_and_limits ... ok
+test oauth_login::tests::authorize_url_carries_required_params ... ok
+test oauth_login::tests::callback_checks ... ok
+test oauth_login::tests::exchange_builds_tokens_and_fails_closed ... ok
+test oauth_login::tests::id_token_verification ... ok
+test oauth_login::tests::loopback_takes_one_valid_callback ... ok
+test lan_host::tests::lan_binding_and_drop_close_listener ... ok
+test oauth_login::tests::pkce_matches_rfc7636_example ... ok
+test oauth_login::tests::request_line_parsing ... ok
+test oauth_store::tests::client_id_required_and_kept_on_refresh ... ok
+test oauth_store::tests::corrupt_and_invalid_rejected ... ok
+test oauth_store::tests::disconnect_keeps_api_key_and_falls_back ... ok
+test oauth_store::tests::failure_classification ... ok
+test oauth_store::tests::issuer_is_exact_and_fail_closed ... ok
+test oauth_store::tests::jwt_exp_parse ... ok
+test oauth_store::tests::method_switch_is_explicit_and_guarded ... ok
+test oauth_store::tests::pending_only_without_tokens ... ok
+test oauth_store::tests::reauth_state ... ok
+test oauth_store::tests::refresh_body_is_form_encoded ... ok
+test oauth_store::tests::refresh_merge ... ok
+test oauth_store::tests::refresh_timing ... ok
+test oauth_store::tests::roundtrip_and_default_method ... ok
+test oauth_store::tests::status_never_serializes_secrets ... ok
+test pdf_io::tests::restricted_pdf_save ... ok
+test provider_transport::tests::fixed_hosts_and_routes_only ... ok
+test service::decode_tests::bom_is_stripped ... ok
+test service::decode_tests::utf16_le_bom ... ok
+test service::decode_tests::utf8_passes_through ... ok
+test service::decode_tests::windows_1252_falls_back ... ok
+test oauth_login::tests::loopback_timeout_and_cancel ... ok
+
+test result: ok. 67 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.20s
+
+     Running tests/file_service.rs (src-tauri/target/debug/deps/file_service-b88be958399c97e7)
+
+running 26 tests
+test creates_new_file_in_new_folder_and_deletes_with_revision_check ... ok
+test creates_new_file_with_explicit_missing_revision ... ok
+test deletion_is_a_conflict_not_an_implicit_recreate ... ok
+test denies_escaping_and_reserved_paths ... ok
+test dirty_recovery_cannot_be_discarded ... ok
+test exclusive_lock_prevents_second_process_session ... ok
+test explorer_skips_reserved_directories ... ok
+test external_change_blocks_save_and_preserves_both_versions ... ok
+test autosave_runs_off_ui_and_returns_matching_revision ... ok
+test extra_raster_formats_preserve_media_path_validation ... ok
+test failed_save_stays_error_and_preserves_recovery ... ok
+test held_agent_edits_never_autosave_until_explicit_save ... ok
+test media_over_the_limit_is_rejected_and_symlinks_are_denied ... ok
+test oversized_stage_is_rejected_before_journaling ... ok
+test preserves_original_unix_permissions ... ok
+test project_settings_roundtrip_and_stay_hidden ... ok
+test reads_media_bytes_but_only_media_inside_the_project ... ok
+test rejects_out_of_order_edits ... ok
+test external_clean_change_emits_revision_without_self_echo ... ok
+test restore_external_changes_requires_merge ... ok
+test reviewed_merge_uses_new_disk_revision ... ok
+test saves_exact_bytes_and_removes_journal ... ok
+test single_file_project_exposes_only_that_file ... ok
+test symlink_escape_is_denied_for_reads_and_writes ... ok
+test thousand_documents_read_and_last_document_save ... ok
+test restart_discovers_recovery_without_auto_overwriting_disk ... ok
+
+test result: ok. 26 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 5.83s
+
+     Running tests/git_backend.rs (src-tauri/target/debug/deps/git_backend-05caf741ebb89937)
+
+running 25 tests
+test blocked_states_are_detected ... ok
+test commit_crlf_and_binary_roundtrip ... ok
+test commit_deep_windows_style_paths ... ok
+test commit_exact_selection_only ... ok
+test commit_nothing_and_path_rejection ... ok
+test commit_preserves_pre_staged_outside_selection ... ok
+test commit_state_token_mismatch_rejected ... ok
+test commit_requires_trust_and_reports_hook_identity_failures ... ok
+test commit_unicode_spaces_and_newline_paths ... ok
+test detect_no_repo_and_init_flow ... ok
+test diff_file_sides_and_binary ... ok
+test detect_untrusted_repo_blocks_commit_side ... ok
+test diff_too_large_flags ... ok
+test diff_rejects_bad_paths ... ok
+test diff_untracked_gets_synthesized_unified ... ok
+test linked_worktree_is_unsupported ... ok
+test error_serializes_as_contract_json ... ok
+test log_lists_versions_project_scoped_with_pagination ... ok
+test restore_as_new_version_never_deletes_without_safety_copy ... ok
+test restore_partial_paths_only ... ok
+test status_kinds_and_state_token ... ok
+test status_rename_detection ... ok
+test restore_state_mismatch_and_nothing ... ok
+test subfolder_project_is_scoped ... ok
+test unborn_and_first_commit ... ok
+
+test result: ok. 25 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 9.03s
+
+     Running tests/git_variants.rs (src-tauri/target/debug/deps/git_variants-cfd9952c8c58dc6b)
+
+running 12 tests
+test bad_names_are_rejected ... ok
+test combine_binary_conflict_needs_explicit_side ... ok
+test combine_choose_theirs_and_abort ... ok
+test combine_conflict_requires_explicit_resolution_then_finishes ... ok
+test combine_delete_vs_modify_conflict_accepts_deletion_explicitly ... ok
+test combine_fast_forward ... ok
+test combine_refuses_dirty_project_and_stale_tips ... ok
+test create_open_list_rename ... ok
+test delete_merged_variant_needs_no_confirmation ... ok
+test delete_protects_current_unmerged_and_keeps_backup ... ok
+test untrusted_repo_cannot_switch ... ok
+test open_refuses_dirty_files_and_stale_token ... ok
+
+test result: ok. 12 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 13.29s
+
+     Running tests/recovery_history.rs (src-tauri/target/debug/deps/recovery_history-eb939ec498de9806)
+
+running 4 tests
+test paths_and_revision_checks_precede_archiving ... ok
+test restored_safety_preserves_a_reopened_journal_without_pending_document ... ok
+test stale_snapshot_or_disk_revision_cannot_overwrite ... ok
+test safe_restore_archives_disk_target_and_pending_and_never_autosaves ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.12s
+
+   Doc-tests somnia_desktop
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+

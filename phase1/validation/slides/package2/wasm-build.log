@@ -1,0 +1,11 @@
+
+> @somnia/desktop-shell@0.1.0 craft:build
+> sh craft/build.sh && npm run raster:wasm
+
+    Finished `release` profile [optimized] target(s) in 0.03s
+    Finished `release` profile [optimized] target(s) in 0.07s
+
+> @somnia/desktop-shell@0.1.0 raster:wasm
+> sh scripts/build-raster-wasm.sh
+
+    Finished `release` profile [optimized] target(s) in 0.03s
