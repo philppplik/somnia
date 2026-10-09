@@ -1,0 +1,3 @@
+/upstream/
+/pkg/*
+!/pkg/wordcraft_somnia_worker.d.ts

@@ -27,6 +27,8 @@ jobs:
       - run: npm ci
       - name: Build headless PhotoCraft assets before frontend/Tauri
         run: npm run craft:build
+      - name: Build headless WordCraft document engine (Documents Studio)
+        run: npm run documents:build
       - run: npm run build && npm run test:core
       - name: Test performance-budget validation
         run: node --test scripts/performance/report.test.mjs
@@ -69,6 +71,8 @@ jobs:
       - run: npm ci
       - name: Build headless PhotoCraft assets before frontend/Tauri
         run: npm run craft:build
+      - name: Build headless WordCraft document engine (Documents Studio)
+        run: npm run documents:build
       - run: cargo test --manifest-path src-tauri/Cargo.toml --no-default-features --locked
       - run: cargo check --manifest-path src-tauri/Cargo.toml --locked
       - name: Sync app version (and enable signed updater artifacts when the signing key secret exists)
@@ -111,6 +115,8 @@ jobs:
       - run: npm ci
       - name: Build headless PhotoCraft assets before frontend/Tauri
         run: npm run craft:build
+      - name: Build headless WordCraft document engine (Documents Studio)
+        run: npm run documents:build
       - run: cargo test --manifest-path src-tauri/Cargo.toml --no-default-features --locked
       - name: Sync app version (and enable signed updater artifacts when the signing key secret exists)
         run: node scripts/sync-version.mjs ${{ secrets.TAURI_SIGNING_PRIVATE_KEY != '' && '--updater' || '' }}
@@ -161,6 +167,8 @@ jobs:
       - run: npm ci
       - name: Build headless PhotoCraft assets before frontend/Tauri
         run: npm run craft:build
+      - name: Build headless WordCraft document engine (Documents Studio)
+        run: npm run documents:build
       - run: cargo test --manifest-path src-tauri/Cargo.toml --no-default-features --locked
       - name: Updater harness tests (no secrets, no network)
         run: npm run test:updater

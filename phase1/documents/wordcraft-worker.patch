@@ -1,0 +1,2060 @@
+diff --git a/Cargo.lock b/Cargo.lock
+index da37ae4..7feb9c0 100644
+--- a/Cargo.lock
++++ b/Cargo.lock
+@@ -5000,6 +5000,18 @@ dependencies = [
+  "wordcraft-layout",
+ ]
+ 
++[[package]]
++name = "wordcraft-somnia-worker"
++version = "0.3.0"
++dependencies = [
++ "serde_json",
++ "wasm-bindgen",
++ "wordcraft-doc",
++ "wordcraft-docx",
++ "wordcraft-layout",
++ "wordcraft-render",
++]
++
+ [[package]]
+ name = "wordcraft-ui-egui"
+ version = "0.3.0"
+diff --git a/crates/somnia-worker/Cargo.toml b/crates/somnia-worker/Cargo.toml
+new file mode 100644
+index 0000000..6cee126
+--- /dev/null
++++ b/crates/somnia-worker/Cargo.toml
+@@ -0,0 +1,14 @@
++[package]
++name = "wordcraft-somnia-worker"
++version.workspace = true
++edition.workspace = true
++license.workspace = true
++[lib]
++crate-type = ["cdylib", "rlib"]
++[dependencies]
++wordcraft-doc.workspace = true
++wordcraft-docx.workspace = true
++wordcraft-layout.workspace = true
++wordcraft-render.workspace = true
++serde_json.workspace = true
++wasm-bindgen = "=0.2.129"
+diff --git a/crates/somnia-worker/src/lib.rs b/crates/somnia-worker/src/lib.rs
+new file mode 100644
+index 0000000..bf57180
+--- /dev/null
++++ b/crates/somnia-worker/src/lib.rs
+@@ -0,0 +1,102 @@
++//! Experimental headless adapter. No DOM, egui, filesystem or UI thread access.
++use wasm_bindgen::prelude::*;
++use wordcraft_doc::{CharProps, Document, Pos, StoryRef};
++use wordcraft_layout::{DocLayout, LayoutCache, LayoutOptions};
++
++#[wasm_bindgen]
++pub struct DocSession {
++    doc: Document,
++    cache: LayoutCache,
++    pages: DocLayout,
++}
++
++impl DocSession {
++    fn from_bytes(bytes: &[u8]) -> Result<Self, String> {
++        if bytes.len() > 16 * 1024 * 1024 {
++            return Err("adapter input limit: 16 MiB".into());
++        }
++        let doc = wordcraft_docx::read(bytes).map_err(|e| e.to_string())?;
++        Ok(Self { doc, cache: LayoutCache::new(), pages: DocLayout::default() })
++    }
++    fn do_insert(&mut self, block: usize, offset: usize, text: &str) -> Result<(), String> {
++        if text.len() > 1024 * 1024 {
++            return Err("adapter edit limit: 1 MiB".into());
++        }
++        self.doc.insert_text(&Pos::body(block, offset), text, &CharProps::default()).map_err(|e| e.to_string())?;
++        // Invalidate placed pages; paragraph cache is revision-aware upstream.
++        self.pages = DocLayout::default();
++        Ok(())
++    }
++}
++
++#[wasm_bindgen]
++impl DocSession {
++    #[wasm_bindgen(constructor)]
++    pub fn new(bytes: &[u8]) -> Result<DocSession, JsValue> {
++        Self::from_bytes(bytes).map_err(|e| JsValue::from_str(&e))
++    }
++    pub fn text(&self) -> String {
++        self.doc.plain_text(StoryRef::Body)
++    }
++    pub fn insert(&mut self, block: usize, utf8_byte_offset: usize, text: &str) -> Result<(), JsValue> {
++        self.do_insert(block, utf8_byte_offset, text).map_err(|e| JsValue::from_str(&e))
++    }
++    pub fn paginate(&mut self) -> usize {
++        self.pages = wordcraft_layout::layout(&self.doc, &mut self.cache, &LayoutOptions::default());
++        self.pages.pages.len()
++    }
++    pub fn page_info(&self) -> String {
++        serde_json::json!({"pages": self.pages.pages.iter().map(|p| serde_json::json!({"width":p.w,"height":p.h})).collect::<Vec<_>>(),
++            "cacheHits":self.cache.hits,"cacheMisses":self.cache.misses})
++        .to_string()
++    }
++    pub fn render_png(&self, page: usize, scale: f32) -> Result<Vec<u8>, JsValue> {
++        if !scale.is_finite() || !(0.1..=2.0).contains(&scale) {
++            return Err(JsValue::from_str("scale must be 0.1..2.0"));
++        }
++        let p = self.pages.pages.get(page).ok_or_else(|| JsValue::from_str("paginate first; invalid page"))?;
++        if p.w * scale > 2400.0 || p.h * scale > 2400.0 {
++            return Err(JsValue::from_str("adapter raster limit: 2400 px per side"));
++        }
++        Ok(wordcraft_render::render_page(&self.doc, p, scale, &Default::default()).to_png())
++    }
++    pub fn save(&self) -> Result<Vec<u8>, JsValue> {
++        wordcraft_docx::write(&self.doc).map_err(|e| JsValue::from_str(&e.to_string()))
++    }
++}
++
++#[cfg(test)]
++mod tests {
++    use super::*;
++    const FIXTURE: &[u8] = include_bytes!("../../../spikes/somnia-documents/fixtures/sample.docx");
++    #[test]
++    fn open_edit_export_reopen() {
++        let mut s = DocSession::from_bytes(FIXTURE).unwrap();
++        assert!(s.text().contains("Somnia Documents"));
++        s.do_insert(0, 0, "Edited: ").unwrap();
++        let saved = wordcraft_docx::write(&s.doc).unwrap();
++        let reopened = DocSession::from_bytes(&saved).unwrap();
++        assert_eq!(s.text(), reopened.text());
++        assert!(reopened.text().starts_with("Edited: "));
++    }
++    #[test]
++    fn malformed_package_rejected() {
++        assert!(DocSession::from_bytes(b"not a zip").is_err());
++    }
++    #[test]
++    fn bad_offset_and_path_rejected_without_mutation() {
++        let mut s = DocSession::from_bytes(FIXTURE).unwrap();
++        let old = s.text();
++        assert!(s.do_insert(999, 0, "x").is_err());
++        assert!(s.do_insert(0, 999999, "x").is_err());
++        assert_eq!(old, s.text());
++    }
++    #[test]
++    fn unicode_offsets_are_bytes_not_utf16() {
++        let mut s = DocSession::from_bytes(FIXTURE).unwrap();
++        s.do_insert(0, 0, "é").unwrap();
++        assert!(s.do_insert(0, 1, "x").is_err());
++        s.do_insert(0, 2, "x").unwrap();
++        assert!(s.text().starts_with("éx"));
++    }
++}
+diff --git a/spikes/somnia-documents/.gitignore b/spikes/somnia-documents/.gitignore
+new file mode 100644
+index 0000000..c59dce7
+--- /dev/null
++++ b/spikes/somnia-documents/.gitignore
+@@ -0,0 +1,7 @@
++node_modules/
++web/pkg/
++web/fixtures/
++results/*.png
++notices/dependencies/
++
++fixtures/*.docx
+diff --git a/spikes/somnia-documents/README.md b/spikes/somnia-documents/README.md
+new file mode 100644
+index 0000000..3271a7d
+--- /dev/null
++++ b/spikes/somnia-documents/README.md
+@@ -0,0 +1,161 @@
++# Somnia Documents: WordCraft worker spike
++
++Pinned upstream: `7584b9b2930ffddfe7db96b6eba977262e55135c`.
++Date: 2026-10-08. No Somnia changes, no remote push or merge.
++
++## Result
++
++GO for a bounded document-engine integration prototype. NOT a claim of Word-level
++DOCX fidelity or an editor ready to ship. A dedicated module Worker loads headless
++Rust/WASM, reads an actual OOXML ZIP, extracts body text (including table cells),
++paginates through WordCraft layout, rasterises page one with WordCraft's CPU
++renderer, inserts text through the Rust document model, exports DOCX and reopens
++it. The sample's heading, table, Unicode and inserted text were visually inspected
++in `results/after.png` and `results/page-one.png`.
++
++All parsing, layout, edits, raster and serialization run in the Worker. The main
++thread handles file input, presentation and RPC only. No egui, Window, DOM,
++OffscreenCanvas, GPU, SharedArrayBuffer, COOP/COEP or native UI dependencies.
++This is single-threaded WASM *inside* a dedicated Worker, not WASM thread support.
++
++## Run the prebuilt demo
++
++```
++python3 -m http.server 8765 --directory web
++# Open http://localhost:8765
++```
++
++Use Open fixture, open your own DOCX, insert a prefix, export DOCX. Do not open
++index.html via file://: module Workers/WASM need an HTTP origin. This demo is
++local-only, has no upload server, telemetry or external runtime requests. Serve
++with application/wasm MIME for the WASM file. Modern Chrome tested; other browsers
++and Windows Tauri WebView2 not tested.
++
++## Reproduce from upstream + patch
++
++```
++git clone https://github.com/storytold/wordcraft.git
++cd wordcraft
++git checkout 7584b9b2930ffddfe7db96b6eba977262e55135c
++git apply /path/to/wordcraft-worker.patch
++rustup target add wasm32-unknown-unknown
++# Install wasm-bindgen-cli EXACTLY 0.2.129 (prebuilt upstream release or cargo install)
++spikes/somnia-documents/scripts/build.sh
++cargo test --locked -p wordcraft-somnia-worker --lib
++cd spikes/somnia-documents
++npm ci
++CHROME_PATH=/usr/bin/google-chrome npm test
++```
++
++Build used Rust 1.99.0, wasm-bindgen 0.2.129, Playwright 1.58.2, Linux x86_64,
++headless Chrome 154.0.0.0. Rust sources retain upstream's >=1.90 requirement, but
++older compiler compatibility was not independently tested. Lockfile is included.
++Prebuilt WASM and JS are in the bundle, not the patch. Source fixture generation
++uses Python's standard library only, creates WordprocessingML ZIPs independently
++of WordCraft, and releases its original fixture text as CC0. These are real DOCX
++packages but synthetic fixtures, NOT Word-produced or customer documents.
++
++## Measurements
++
++Local HTTP, five sequential warmed 1-page samples, performance.now measured in
++Worker (not upstream DocLayout.ms, which is always zero on wasm). These are smoke
++measurements on this machine, not product performance guarantees.
++
++| Measurement | Result |
++|---|---:|
++| Release WASM | 10,033,084 bytes (9.57 MiB) |
++| gzip WASM | 4,075,188 bytes (3.89 MiB) |
++| JS wrapper | 10,323 bytes |
++| Cold fetch + compile + init | 104.4 ms |
++| Cold parse / layout | 8.4 / 28.6 ms |
++| Warm median parse / layout | 0.3 / 1.4 ms |
++| Warm median render page 1 PNG | 17.9 ms |
++| Warm median insert / incremental layout | 0.1 / 0.5 ms |
++| Warm median DOCX export | 1.2 ms |
++| 500-paragraph fixture | 34 pages |
++| Large parse / layout / page 1 render | 2.6 / 55.6 / 27.5 ms |
++| Main-thread timer ticks during large open | 11 in 59.5 ms wall time |
++
++Raw samples and browser identification are in results/metrics.json. Timer ticks
++show main-thread activity, not a guarantee of input latency. PNG rendering includes
++PNG encoding. Transfer/RPC and browser image decoding are not counted in Worker
++stage timings. Heap peak, long sessions and low-end hardware were not measured.
++
++## Tests
++
++Rust adapter tests: parse-edit-export-reopen equality, malformed ZIP rejection,
++invalid paragraph/path/offset does not mutate content, UTF-8 boundary validation.
++Browser tests: 5 export/reopen text equalities, malformed input rejected, invalid
++edit rejected, later session remains usable, 34-page pagination, main-thread ticks,
++actual raster PNG and screenshot, no page errors. Browser test found and fixed an
++adapter lifecycle bug: null the released session before opening the next file, so
++a failed open cannot leave a freed pointer. No upstream/vendor source patch needed.
++
++## Integration estimate (planning judgment, one experienced developer)
++
++- 2-4 working days: pin/vendor the headless crates and notices, typed Worker RPC,
++  open/save bridge for web and Tauri, cancellation by terminating a Worker,
++  viewport page virtualisation and error states. This is a viewing/export milestone.
++- Another 2-4 weeks: real editable page interaction (hit-test mapping, caret,
++  selection, keyboard, IME, clipboard, undo, styles/tables), model command adapter,
++  accessibility and Windows WebView2 verification. This spike only inserts text;
++  it does not wrap all 389 upstream commands or the engine session layer.
++- 2-6+ additional weeks for a representative external DOCX corpus, unsupported-part
++  detection/preservation, fidelity fixes, resource budgets and regression gates.
++  Complex Word workflows may exceed this. Do not use upstream roadmap hour estimates
++  as a Somnia delivery promise.
++
++Recommended host boundary: transfer file ArrayBuffers to a worker; keep the Rust
++Document and layout cache there; render only visible pages; return raster buffers
++or display lists and selection geometry. Persist approved exports through Somnia's
++existing file bridge, with original files preserved and explicit format-loss warnings.
++
++## Concrete limits / release gates
++
++- Only body plain text, top-level paragraph byte-offset insertion, paginate,
++  page-index raster and save exposed. No selection, IME, undo, comments UI,
++  command registry, table editing UI or accessible document tree in this adapter.
++- UTF-8 byte offsets are NOT JavaScript UTF-16 caret offsets. Host needs conversion.
++  Inserted text uses default CharProps, not surrounding character-style inheritance.
++- Upstream roadmap says charts, SmartArt and OLE are dropped; real-world DOCX corpus
++  fidelity was not started. Unknown XML is skipped by reader. Saving can silently
++  lose unsupported content. Keep the original, warn or block save until detection
++  and preservation have been validated. This is not a lossless OOXML package editor.
++- Synthetic fixture only; no Word/LibreOffice open validation, imported images,
++  footnotes, revisions, pagination parity or arbitrary documents tested here.
++- Bundled fonts are used; system fonts unavailable in WASM. No optional Japanese
++  craft-fonts build input. Fonts, glyph coverage and layout differ from Word.
++- Input capped at 16 MiB; edit text capped at 1 MiB; scale 0.1..2.0; raster side
++  capped at 2400 px. Upstream adds ZIP/XML limits. These are guardrails, not a full
++  memory budget: images, decompressed data and pagination can still allocate heavily.
++- RPC has no cancellation/backpressure/deadline in demo. Worker termination is
++  required for stalled parsing. Production needs a bounded operation queue,
++  timeouts, explicit disposal, raster LRU, and untrusted-file fuzz tests.
++- PNG per-page roundtrip is convenient, not ideal for active editing. Consider
++  raw RGBA/ImageBitmap or a draw-list renderer after interaction requirements settle.
++- No browser portability, Tauri filesystem integration, CSP or sustained-memory
++  validation. No Somnia integration performed or implied.
++
++## License and provenance
++
++WordCraft code is MIT OR Apache-2.0; choose MIT for Somnia vendoring, keep copyright,
++LICENSE-MIT, NOTICE and attribution. Copies of both upstream licenses and NOTICE
++are included. Embedded fonts are OFL-1.1; preserve the four OFL texts. Public-domain
++Moby dictionary / CC0 hyphenation retain attribution. Transitive dependencies have
++permissive SPDX declarations, including Unicode-3.0 obligations (not merely MIT
++and Apache). `notices/dependency-licenses.json` inventories this adapter's resolved
++non-dev WASM dependency closure and dependency license/notice files are bundled.
++Metadata audit is not legal advice or a complete SBOM/security audit.
++
++Do NOT copy docs/brand ArtCraft trademarks/logos into Somnia. They are excluded
++from the open-source grant; the upstream README says modified forks must remove
++them. No brand assets or upstream UI/icons were used by this demo. No CRAFT_FONTS_DIR
++optional fonts included. Any broader vendoring requires re-auditing new assets
++and dependencies. All adapter changes are new files and Cargo.lock updates;
++existing upstream engine source is unchanged.
++
++Sources inspected:
++- https://github.com/storytold/wordcraft
++- https://github.com/storytold/wordcraft/blob/main/LICENSE-MIT
++- https://github.com/storytold/wordcraft/blob/main/NOTICE
++- Local pinned upstream ROADMAP.md, ATTRIBUTION.md, Cargo manifests and renderer/layout APIs.
+diff --git a/spikes/somnia-documents/notices/ATTRIBUTION.md b/spikes/somnia-documents/notices/ATTRIBUTION.md
+new file mode 100644
+index 0000000..09d8d16
+--- /dev/null
++++ b/spikes/somnia-documents/notices/ATTRIBUTION.md
+@@ -0,0 +1,60 @@
++# Asset attribution
++
++Every non-code asset in this repository (fonts, icons, images, example documents) is listed here with its author, source and licence. `cargo xtask assets` (part of `cargo xtask ci`) fails if an asset file is missing from this table.
++
++**Policy (mandatory):** WordCraft contains **no Microsoft, Adobe, Avid or Autodesk iconography, images, templates, themes, clip art, fonts or other assets**. Every asset is original work by WordCraft contributors or third-party material under an open licence (OSI open source, public domain / CC0, or a Creative Commons licence that allows redistribution). Screenshots of other vendors' software are never committed. New font files go to [storytold/craft-fonts](https://github.com/storytold/craft-fonts), not this repo. The one exception is the ArtCraft brand files in `docs/brand/`: ArtCraft trademarks, not open source, used under `docs/brand/LICENSE-brand.txt`.
++
++Generated-in-code art is original and has no file to list: the UI icon set (`crates/ui-egui/src/icons.rs`), the sample documents and templates (`crates/engine/src/sample.rs`), the table and style previews, and theme colours (`crates/engine/src/cmd/design.rs`).
++
++| Asset | Author | Source | Licence | Notes |
++|---|---|---|---|---|
++| `assets/hyphenation/en-us.pat` | DesignCraft contributors (generated) | trained from the Moby list by DesignCraft's patgen | Public Domain (CC0-1.0) | Our own Liang hyphenation patterns (no TeX patterns) |
++| `assets/hyphenation/en-us.dic` | Grady Ward (Moby Hyphenator II word list); converted by DesignCraft contributors | https://www.gutenberg.org/ebooks/3204 (file `mhyph.txt`, SHA-256 `eeb30474c86b8af3469035ec1a0913e35905325ca885290db9dfed9881e230ac`), via DesignCraft | Public Domain | ~165k words with break points; drives spelling and hyphenation |
++| `assets/app-icon/wordcraft-1024.png` | WordCraft contributors | original artwork drawn in SVG (`assets/app-icon/wordcraft.svg`), rendered by `packaging/icons.sh` | MIT OR Apache-2.0 | Placeholder app icon until the WordCraft mascot drawing lands |
++| `assets/app-icon/wordcraft-macos-512.png` | WordCraft contributors | original artwork drawn in SVG (`assets/app-icon/wordcraft.svg`), rendered by `packaging/icons.sh` | MIT OR Apache-2.0 | Placeholder app icon until the WordCraft mascot drawing lands |
++| `assets/app-icon/wordcraft.icns` | WordCraft contributors | original artwork drawn in SVG (`assets/app-icon/wordcraft.svg`), rendered by `packaging/icons.sh` | MIT OR Apache-2.0 | Placeholder app icon until the WordCraft mascot drawing lands |
++| `assets/app-icon/wordcraft.ico` | WordCraft contributors | original artwork drawn in SVG (`assets/app-icon/wordcraft.svg`), rendered by `packaging/icons.sh` | MIT OR Apache-2.0 | Placeholder app icon until the WordCraft mascot drawing lands |
++| `assets/app-icon/wordcraft.svg` | WordCraft contributors | original artwork drawn in SVG (`assets/app-icon/wordcraft.svg`), rendered by `packaging/icons.sh` | MIT OR Apache-2.0 | Placeholder app icon until the WordCraft mascot drawing lands |
++| `assets/app-icon/hicolor/16x16/apps/ai.storyteller.wordcraft.png` | WordCraft contributors | original artwork drawn in SVG (`assets/app-icon/wordcraft.svg`), rendered by `packaging/icons.sh` | MIT OR Apache-2.0 | Placeholder app icon until the WordCraft mascot drawing lands |
++| `assets/app-icon/hicolor/64x64/apps/ai.storyteller.wordcraft.png` | WordCraft contributors | original artwork drawn in SVG (`assets/app-icon/wordcraft.svg`), rendered by `packaging/icons.sh` | MIT OR Apache-2.0 | Placeholder app icon until the WordCraft mascot drawing lands |
++| `assets/app-icon/hicolor/32x32/apps/ai.storyteller.wordcraft.png` | WordCraft contributors | original artwork drawn in SVG (`assets/app-icon/wordcraft.svg`), rendered by `packaging/icons.sh` | MIT OR Apache-2.0 | Placeholder app icon until the WordCraft mascot drawing lands |
++| `assets/app-icon/hicolor/24x24/apps/ai.storyteller.wordcraft.png` | WordCraft contributors | original artwork drawn in SVG (`assets/app-icon/wordcraft.svg`), rendered by `packaging/icons.sh` | MIT OR Apache-2.0 | Placeholder app icon until the WordCraft mascot drawing lands |
++| `assets/app-icon/hicolor/128x128/apps/ai.storyteller.wordcraft.png` | WordCraft contributors | original artwork drawn in SVG (`assets/app-icon/wordcraft.svg`), rendered by `packaging/icons.sh` | MIT OR Apache-2.0 | Placeholder app icon until the WordCraft mascot drawing lands |
++| `assets/app-icon/hicolor/256x256/apps/ai.storyteller.wordcraft.png` | WordCraft contributors | original artwork drawn in SVG (`assets/app-icon/wordcraft.svg`), rendered by `packaging/icons.sh` | MIT OR Apache-2.0 | Placeholder app icon until the WordCraft mascot drawing lands |
++| `assets/app-icon/hicolor/scalable/apps/ai.storyteller.wordcraft.svg` | WordCraft contributors | original artwork drawn in SVG (`assets/app-icon/wordcraft.svg`), rendered by `packaging/icons.sh` | MIT OR Apache-2.0 | Placeholder app icon until the WordCraft mascot drawing lands |
++| `assets/app-icon/hicolor/48x48/apps/ai.storyteller.wordcraft.png` | WordCraft contributors | original artwork drawn in SVG (`assets/app-icon/wordcraft.svg`), rendered by `packaging/icons.sh` | MIT OR Apache-2.0 | Placeholder app icon until the WordCraft mascot drawing lands |
++| `assets/app-icon/hicolor/512x512/apps/ai.storyteller.wordcraft.png` | WordCraft contributors | original artwork drawn in SVG (`assets/app-icon/wordcraft.svg`), rendered by `packaging/icons.sh` | MIT OR Apache-2.0 | Placeholder app icon until the WordCraft mascot drawing lands |
++| `assets/fonts/Inter-Medium.ttf` | Rasmus Andersson / The Inter Project Authors | https://github.com/rsms/inter | OFL-1.1 (`assets/fonts/OFL-Inter.txt`) | Open-source typeface (Latin UI/document font, carried over from DesignCraft) |
++| `assets/fonts/Inter-Regular.ttf` | Rasmus Andersson / The Inter Project Authors | https://github.com/rsms/inter | OFL-1.1 (`assets/fonts/OFL-Inter.txt`) | Open-source typeface (Latin UI/document font, carried over from DesignCraft) |
++| `assets/fonts/Inter-SemiBold.ttf` | Rasmus Andersson / The Inter Project Authors | https://github.com/rsms/inter | OFL-1.1 (`assets/fonts/OFL-Inter.txt`) | Open-source typeface (Latin UI/document font, carried over from DesignCraft) |
++| `assets/fonts/JetBrainsMono-Regular.ttf` | The JetBrains Mono Project Authors | https://github.com/JetBrains/JetBrainsMono | OFL-1.1 (`assets/fonts/OFL-JetBrainsMono.txt`) | Open-source typeface (Latin UI/document font, carried over from DesignCraft) |
++| `assets/fonts/OFL-Inter.txt` | (licence text) | upstream project | — |  |
++| `assets/fonts/OFL-JetBrainsMono.txt` | (licence text) | upstream project | — |  |
++| `assets/fonts/OFL-SourceSans3.txt` | (licence text) | upstream project | — |  |
++| `assets/fonts/OFL-SourceSerif4.txt` | (licence text) | upstream project | — |  |
++| `assets/fonts/SourceSans3-Bold.ttf` | Paul D. Hunt / Frank Grießhammer, Adobe (released as open source) | https://github.com/adobe-fonts/source-sans · https://github.com/adobe-fonts/source-serif | OFL-1.1 (`assets/fonts/OFL-SourceSans3.txt`, `OFL-SourceSerif4.txt`) | Open-source typeface (Latin UI/document font, carried over from DesignCraft) |
++| `assets/fonts/SourceSans3-It.ttf` | Paul D. Hunt / Frank Grießhammer, Adobe (released as open source) | https://github.com/adobe-fonts/source-sans · https://github.com/adobe-fonts/source-serif | OFL-1.1 (`assets/fonts/OFL-SourceSans3.txt`, `OFL-SourceSerif4.txt`) | Open-source typeface (Latin UI/document font, carried over from DesignCraft) |
++| `assets/fonts/SourceSans3-Regular.ttf` | Paul D. Hunt / Frank Grießhammer, Adobe (released as open source) | https://github.com/adobe-fonts/source-sans · https://github.com/adobe-fonts/source-serif | OFL-1.1 (`assets/fonts/OFL-SourceSans3.txt`, `OFL-SourceSerif4.txt`) | Open-source typeface (Latin UI/document font, carried over from DesignCraft) |
++| `assets/fonts/SourceSans3-Semibold.ttf` | Paul D. Hunt / Frank Grießhammer, Adobe (released as open source) | https://github.com/adobe-fonts/source-sans · https://github.com/adobe-fonts/source-serif | OFL-1.1 (`assets/fonts/OFL-SourceSans3.txt`, `OFL-SourceSerif4.txt`) | Open-source typeface (Latin UI/document font, carried over from DesignCraft) |
++| `assets/fonts/SourceSerif4-Bold.ttf` | Paul D. Hunt / Frank Grießhammer, Adobe (released as open source) | https://github.com/adobe-fonts/source-sans · https://github.com/adobe-fonts/source-serif | OFL-1.1 (`assets/fonts/OFL-SourceSans3.txt`, `OFL-SourceSerif4.txt`) | Open-source typeface (Latin UI/document font, carried over from DesignCraft) |
++| `assets/fonts/SourceSerif4-BoldIt.ttf` | Paul D. Hunt / Frank Grießhammer, Adobe (released as open source) | https://github.com/adobe-fonts/source-sans · https://github.com/adobe-fonts/source-serif | OFL-1.1 (`assets/fonts/OFL-SourceSans3.txt`, `OFL-SourceSerif4.txt`) | Open-source typeface (Latin UI/document font, carried over from DesignCraft) |
++| `assets/fonts/SourceSerif4-It.ttf` | Paul D. Hunt / Frank Grießhammer, Adobe (released as open source) | https://github.com/adobe-fonts/source-sans · https://github.com/adobe-fonts/source-serif | OFL-1.1 (`assets/fonts/OFL-SourceSans3.txt`, `OFL-SourceSerif4.txt`) | Open-source typeface (Latin UI/document font, carried over from DesignCraft) |
++| `assets/fonts/SourceSerif4-Regular.ttf` | Paul D. Hunt / Frank Grießhammer, Adobe (released as open source) | https://github.com/adobe-fonts/source-sans · https://github.com/adobe-fonts/source-serif | OFL-1.1 (`assets/fonts/OFL-SourceSans3.txt`, `OFL-SourceSerif4.txt`) | Open-source typeface (Latin UI/document font, carried over from DesignCraft) |
++| `assets/fonts/SourceSerif4-Semibold.ttf` | Paul D. Hunt / Frank Grießhammer, Adobe (released as open source) | https://github.com/adobe-fonts/source-sans · https://github.com/adobe-fonts/source-serif | OFL-1.1 (`assets/fonts/OFL-SourceSans3.txt`, `OFL-SourceSerif4.txt`) | Open-source typeface (Latin UI/document font, carried over from DesignCraft) |
++| `docs/images/review.png` | WordCraft contributors | screenshot of WordCraft itself (sample document written for WordCraft, rendered by `ui_shot`) | MIT OR Apache-2.0 | Original; no Microsoft UI or assets |
++| `docs/images/references.png` | WordCraft contributors | screenshot of WordCraft itself (sample document written for WordCraft, rendered by `ui_shot`) | MIT OR Apache-2.0 | Original; no Microsoft UI or assets |
++| `docs/images/hero.png` | WordCraft contributors | screenshot of WordCraft itself (sample document written for WordCraft, rendered by `ui_shot`) | MIT OR Apache-2.0 | Original; no Microsoft UI or assets |
++| `docs/images/design.png` | WordCraft contributors | screenshot of WordCraft itself (sample document written for WordCraft, rendered by `ui_shot`) | MIT OR Apache-2.0 | Original; no Microsoft UI or assets |
++| `docs/images/dark.png` | WordCraft contributors | screenshot of WordCraft itself (sample document written for WordCraft, rendered by `ui_shot`) | MIT OR Apache-2.0 | Original; no Microsoft UI or assets |
++| `docs/images/backstage.png` | WordCraft contributors | screenshot of WordCraft itself (sample document written for WordCraft, rendered by `ui_shot`) | MIT OR Apache-2.0 | Original; no Microsoft UI or assets |
++| `docs/images/layout.png` | WordCraft contributors | screenshot of WordCraft itself (sample document written for WordCraft, rendered by `ui_shot`) | MIT OR Apache-2.0 | Original; no Microsoft UI or assets |
++| `docs/brand/LICENSE-brand.txt` | ArtCraft Team | craftrules `assets/brand/` | ArtCraft trademark, `docs/brand/LICENSE-brand.txt` | Not open source; usable unmodified only |
++| `docs/brand/artcraft-logo-white.png` | ArtCraft Team | craftrules `assets/brand/` | ArtCraft trademark, `docs/brand/LICENSE-brand.txt` | Not open source; usable unmodified only |
++| `docs/brand/artcraft-logo-white.svg` | ArtCraft Team | craftrules `assets/brand/` | ArtCraft trademark, `docs/brand/LICENSE-brand.txt` | Not open source; usable unmodified only |
++| `docs/brand/artcraft-logo.png` | ArtCraft Team | craftrules `assets/brand/` | ArtCraft trademark, `docs/brand/LICENSE-brand.txt` | Not open source; usable unmodified only |
++| `docs/brand/artcraft-logo.svg` | ArtCraft Team | craftrules `assets/brand/` | ArtCraft trademark, `docs/brand/LICENSE-brand.txt` | Not open source; usable unmodified only |
++| `docs/brand/artcraft-mark-black.png` | ArtCraft Team | craftrules `assets/brand/` | ArtCraft trademark, `docs/brand/LICENSE-brand.txt` | Not open source; usable unmodified only |
++| `docs/brand/artcraft-mark-black.svg` | ArtCraft Team | craftrules `assets/brand/` | ArtCraft trademark, `docs/brand/LICENSE-brand.txt` | Not open source; usable unmodified only |
++| `docs/brand/artcraft-mark.png` | ArtCraft Team | craftrules `assets/brand/` | ArtCraft trademark, `docs/brand/LICENSE-brand.txt` | Not open source; usable unmodified only |
++| `docs/brand/artcraft-mark.svg` | ArtCraft Team | craftrules `assets/brand/` | ArtCraft trademark, `docs/brand/LICENSE-brand.txt` | Not open source; usable unmodified only |
++| craft-fonts (optional build input, not files in this repo): BIZ UDPGothic, BIZ UDMincho, Shippori Mincho | see https://github.com/storytold/craft-fonts/blob/main/ATTRIBUTION.md | embedded only when built with `CRAFT_FONTS_DIR` (all official releases) | OFL-1.1 | Japanese UI and document fallback |
+diff --git a/spikes/somnia-documents/notices/LICENSE-APACHE b/spikes/somnia-documents/notices/LICENSE-APACHE
+new file mode 100644
+index 0000000..f433b1a
+--- /dev/null
++++ b/spikes/somnia-documents/notices/LICENSE-APACHE
+@@ -0,0 +1,177 @@
++
++                                 Apache License
++                           Version 2.0, January 2004
++                        http://www.apache.org/licenses/
++
++   TERMS AND CONDITIONS FOR USE, REPRODUCTION, AND DISTRIBUTION
++
++   1. Definitions.
++
++      "License" shall mean the terms and conditions for use, reproduction,
++      and distribution as defined by Sections 1 through 9 of this document.
++
++      "Licensor" shall mean the copyright owner or entity authorized by
++      the copyright owner that is granting the License.
++
++      "Legal Entity" shall mean the union of the acting entity and all
++      other entities that control, are controlled by, or are under common
++      control with that entity. For the purposes of this definition,
++      "control" means (i) the power, direct or indirect, to cause the
++      direction or management of such entity, whether by contract or
++      otherwise, or (ii) ownership of fifty percent (50%) or more of the
++      outstanding shares, or (iii) beneficial ownership of such entity.
++
++      "You" (or "Your") shall mean an individual or Legal Entity
++      exercising permissions granted by this License.
++
++      "Source" form shall mean the preferred form for making modifications,
++      including but not limited to software source code, documentation
++      source, and configuration files.
++
++      "Object" form shall mean any form resulting from mechanical
++      transformation or translation of a Source form, including but
++      not limited to compiled object code, generated documentation,
++      and conversions to other media types.
++
++      "Work" shall mean the work of authorship, whether in Source or
++      Object form, made available under the License, as indicated by a
++      copyright notice that is included in or attached to the work
++      (an example is provided in the Appendix below).
++
++      "Derivative Works" shall mean any work, whether in Source or Object
++      form, that is based on (or derived from) the Work and for which the
++      editorial revisions, annotations, elaborations, or other modifications
++      represent, as a whole, an original work of authorship. For the purposes
++      of this License, Derivative Works shall not include works that remain
++      separable from, or merely link (or bind by name) to the interfaces of,
++      the Work and Derivative Works thereof.
++
++      "Contribution" shall mean any work of authorship, including
++      the original version of the Work and any modifications or additions
++      to that Work or Derivative Works thereof, that is intentionally
++      submitted to Licensor for inclusion in the Work by the copyright owner
++      or by an individual or Legal Entity authorized to submit on behalf of
++      the copyright owner. For the purposes of this definition, "submitted"
++      means any form of electronic, verbal, or written communication sent
++      to the Licensor or its representatives, including but not limited to
++      communication on electronic mailing lists, source code control systems,
++      and issue tracking systems that are managed by, or on behalf of, the
++      Licensor for the purpose of discussing and improving the Work, but
++      excluding communication that is conspicuously marked or otherwise
++      designated in writing by the copyright owner as "Not a Contribution."
++
++      "Contributor" shall mean Licensor and any individual or Legal Entity
++      on behalf of whom a Contribution has been received by Licensor and
++      subsequently incorporated within the Work.
++
++   2. Grant of Copyright License. Subject to the terms and conditions of
++      this License, each Contributor hereby grants to You a perpetual,
++      worldwide, non-exclusive, no-charge, royalty-free, irrevocable
++      copyright license to reproduce, prepare Derivative Works of,
++      publicly display, publicly perform, sublicense, and distribute the
++      Work and such Derivative Works in Source or Object form.
++
++   3. Grant of Patent License. Subject to the terms and conditions of
++      this License, each Contributor hereby grants to You a perpetual,
++      worldwide, non-exclusive, no-charge, royalty-free, irrevocable
++      (except as stated in this section) patent license to make, have made,
++      use, offer to sell, sell, import, and otherwise transfer the Work,
++      where such license applies only to those patent claims licensable
++      by such Contributor that are necessarily infringed by their
++      Contribution(s) alone or by combination of their Contribution(s)
++      with the Work to which such Contribution(s) was submitted. If You
++      institute patent litigation against any entity (including a
++      cross-claim or counterclaim in a lawsuit) alleging that the Work
++      or a Contribution incorporated within the Work constitutes direct
++      or contributory patent infringement, then any patent licenses
++      granted to You under this License for that Work shall terminate
++      as of the date such litigation is filed.
++
++   4. Redistribution. You may reproduce and distribute copies of the
++      Work or Derivative Works thereof in any medium, with or without
++      modifications, and in Source or Object form, provided that You
++      meet the following conditions:
++
++      (a) You must give any other recipients of the Work or
++          Derivative Works a copy of this License; and
++
++      (b) You must cause any modified files to carry prominent notices
++          stating that You changed the files; and
++
++      (c) You must retain, in the Source form of any Derivative Works
++          that You distribute, all copyright, patent, trademark, and
++          attribution notices from the Source form of the Work,
++          excluding those notices that do not pertain to any part of
++          the Derivative Works; and
++
++      (d) If the Work includes a "NOTICE" text file as part of its
++          distribution, then any Derivative Works that You distribute must
++          include a readable copy of the attribution notices contained
++          within such NOTICE file, excluding those notices that do not
++          pertain to any part of the Derivative Works, in at least one
++          of the following places: within a NOTICE text file distributed
++          as part of the Derivative Works; within the Source form or
++          documentation, if provided along with the Derivative Works; or,
++          within a display generated by the Derivative Works, if and
++          wherever such third-party notices normally appear. The contents
++          of the NOTICE file are for informational purposes only and
++          do not modify the License. You may add Your own attribution
++          notices within Derivative Works that You distribute, alongside
++          or as an addendum to the NOTICE text from the Work, provided
++          that such additional attribution notices cannot be construed
++          as modifying the License.
++
++      You may add Your own copyright statement to Your modifications and
++      may provide additional or different license terms and conditions
++      for use, reproduction, or distribution of Your modifications, or
++      for any such Derivative Works as a whole, provided Your use,
++      reproduction, and distribution of the Work otherwise complies with
++      the conditions stated in this License.
++
++   5. Submission of Contributions. Unless You explicitly state otherwise,
++      any Contribution intentionally submitted for inclusion in the Work
++      by You to the Licensor shall be under the terms and conditions of
++      this License, without any additional terms or conditions.
++      Notwithstanding the above, nothing herein shall supersede or modify
++      the terms of any separate license agreement you may have executed
++      with Licensor regarding such Contributions.
++
++   6. Trademarks. This License does not grant permission to use the trade
++      names, trademarks, service marks, or product names of the Licensor,
++      except as required for reasonable and customary use in describing the
++      origin of the Work and reproducing the content of the NOTICE file.
++
++   7. Disclaimer of Warranty. Unless required by applicable law or
++      agreed to in writing, Licensor provides the Work (and each
++      Contributor provides its Contributions) on an "AS IS" BASIS,
++      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
++      implied, including, without limitation, any warranties or conditions
++      of TITLE, NON-INFRINGEMENT, MERCHANTABILITY, or FITNESS FOR A
++      PARTICULAR PURPOSE. You are solely responsible for determining the
++      appropriateness of using or redistributing the Work and assume any
++      risks associated with Your exercise of permissions under this License.
++
++   8. Limitation of Liability. In no event and under no legal theory,
++      whether in tort (including negligence), contract, or otherwise,
++      unless required by applicable law (such as deliberate and grossly
++      negligent acts) or agreed to in writing, shall any Contributor be
++      liable to You for damages, including any direct, indirect, special,
++      incidental, or consequential damages of any character arising as a
++      result of this License or out of the use or inability to use the
++      Work (including but not limited to damages for loss of goodwill,
++      work stoppage, computer failure or malfunction, or any and all
++      other commercial damages or losses), even if such Contributor
++      has been advised of the possibility of such damages.
++
++   9. Accepting Warranty or Additional Liability. While redistributing
++      the Work or Derivative Works thereof, You may choose to offer,
++      and charge a fee for, acceptance of support, warranty, indemnity,
++      or other liability obligations and/or rights consistent with this
++      License. However, in accepting such obligations, You may act only
++      on Your own behalf and on Your sole responsibility, not on behalf
++      of any other Contributor, and only if You agree to indemnify,
++      defend, and hold each Contributor harmless for any liability
++      incurred by, or claims asserted against, such Contributor by reason
++      of your accepting any such warranty or additional liability.
++
++   END OF TERMS AND CONDITIONS
+diff --git a/spikes/somnia-documents/notices/LICENSE-MIT b/spikes/somnia-documents/notices/LICENSE-MIT
+new file mode 100644
+index 0000000..c2c4a1c
+--- /dev/null
++++ b/spikes/somnia-documents/notices/LICENSE-MIT
+@@ -0,0 +1,21 @@
++MIT License
++
++Copyright (c) 2026 ArtCraft Team and the WordCraft contributors
++
++Permission is hereby granted, free of charge, to any person obtaining a copy
++of this software and associated documentation files (the "Software"), to deal
++in the Software without restriction, including without limitation the rights
++to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
++copies of the Software, and to permit persons to whom the Software is
++furnished to do so, subject to the following conditions:
++
++The above copyright notice and this permission notice shall be included in all
++copies or substantial portions of the Software.
++
++THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
++IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
++FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
++AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
++LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
++OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
++SOFTWARE.
+diff --git a/spikes/somnia-documents/notices/NOTICE b/spikes/somnia-documents/notices/NOTICE
+new file mode 100644
+index 0000000..4bc9002
+--- /dev/null
++++ b/spikes/somnia-documents/notices/NOTICE
+@@ -0,0 +1,31 @@
++WordCraft
++Copyright (c) 2026 ArtCraft Team and the WordCraft contributors.
++Licensed under the MIT License or the Apache License, Version 2.0, at your option
++(LICENSE-MIT, LICENSE-APACHE).
++
++The ArtCraft name, wordmark and logos in docs/brand/ are trademarks of the ArtCraft Team. They are
++not open source and are not covered by the license above; their terms are in
++docs/brand/LICENSE-brand.txt.
++
++Third-party material
++
++This product bundles third-party material under its own licenses, listed below. The per-file
++list (author, source, license) is in ATTRIBUTION.md.
++
++- Source Sans 3 and Source Serif 4 (assets/fonts/Source*) — SIL Open Font License 1.1. See assets/fonts/OFL-SourceSans3.txt, OFL-SourceSerif4.txt.
++- Inter (assets/fonts/Inter-*.ttf) — SIL Open Font License 1.1. See assets/fonts/OFL-Inter.txt.
++- JetBrains Mono (assets/fonts/JetBrainsMono-*.ttf) — SIL Open Font License 1.1. See assets/fonts/OFL-JetBrainsMono.txt.
++- Japanese fonts (craft-fonts): builds made with craft-fonts (CRAFT_FONTS_DIR; all official
++  releases) embed the fonts listed in
++  https://github.com/storytold/craft-fonts/blob/main/ATTRIBUTION.md (BIZ UDPGothic, BIZ UDMincho,
++  Shippori Mincho), under the SIL Open Font License 1.1. Their licence texts ship with the
++  packages as OFL-<family>.txt. Builds without CRAFT_FONTS_DIR do not include them.
++- English word list (assets/hyphenation/en-us.dic) — derived from the Moby Hyphenator II list by
++  Grady Ward, public domain (Project Gutenberg eBook #3204). The hyphenation patterns
++  (assets/hyphenation/en-us.pat) were trained from it and are released as CC0-1.0.
++- All UI icons are drawn in code (crates/ui-egui/src/icons.rs) and are original work, MIT OR Apache-2.0.
++
++Rust dependencies (egui, eframe, vello_cpu, skrifa, harfrust, krilla, quick-xml, zip, image, …)
++are permissively licensed (MIT/Apache-2.0/BSD/ISC/Zlib) and fetched through crates.io.
++
++No Microsoft, Adobe, Avid or Autodesk icons, images, templates or artwork are included.
+diff --git a/spikes/somnia-documents/notices/OFL-Inter.txt b/spikes/somnia-documents/notices/OFL-Inter.txt
+new file mode 100644
+index 0000000..9b2ca37
+--- /dev/null
++++ b/spikes/somnia-documents/notices/OFL-Inter.txt
+@@ -0,0 +1,92 @@
++Copyright (c) 2016 The Inter Project Authors (https://github.com/rsms/inter)
++
++This Font Software is licensed under the SIL Open Font License, Version 1.1.
++This license is copied below, and is also available with a FAQ at:
++http://scripts.sil.org/OFL
++
++-----------------------------------------------------------
++SIL OPEN FONT LICENSE Version 1.1 - 26 February 2007
++-----------------------------------------------------------
++
++PREAMBLE
++The goals of the Open Font License (OFL) are to stimulate worldwide
++development of collaborative font projects, to support the font creation
++efforts of academic and linguistic communities, and to provide a free and
++open framework in which fonts may be shared and improved in partnership
++with others.
++
++The OFL allows the licensed fonts to be used, studied, modified and
++redistributed freely as long as they are not sold by themselves. The
++fonts, including any derivative works, can be bundled, embedded,
++redistributed and/or sold with any software provided that any reserved
++names are not used by derivative works. The fonts and derivatives,
++however, cannot be released under any other type of license. The
++requirement for fonts to remain under this license does not apply
++to any document created using the fonts or their derivatives.
++
++DEFINITIONS
++"Font Software" refers to the set of files released by the Copyright
++Holder(s) under this license and clearly marked as such. This may
++include source files, build scripts and documentation.
++
++"Reserved Font Name" refers to any names specified as such after the
++copyright statement(s).
++
++"Original Version" refers to the collection of Font Software components as
++distributed by the Copyright Holder(s).
++
++"Modified Version" refers to any derivative made by adding to, deleting,
++or substituting -- in part or in whole -- any of the components of the
++Original Version, by changing formats or by porting the Font Software to a
++new environment.
++
++"Author" refers to any designer, engineer, programmer, technical
++writer or other person who contributed to the Font Software.
++
++PERMISSION AND CONDITIONS
++Permission is hereby granted, free of charge, to any person obtaining
++a copy of the Font Software, to use, study, copy, merge, embed, modify,
++redistribute, and sell modified and unmodified copies of the Font
++Software, subject to the following conditions:
++
++1) Neither the Font Software nor any of its individual components,
++in Original or Modified Versions, may be sold by itself.
++
++2) Original or Modified Versions of the Font Software may be bundled,
++redistributed and/or sold with any software, provided that each copy
++contains the above copyright notice and this license. These can be
++included either as stand-alone text files, human-readable headers or
++in the appropriate machine-readable metadata fields within text or
++binary files as long as those fields can be easily viewed by the user.
++
++3) No Modified Version of the Font Software may use the Reserved Font
++Name(s) unless explicit written permission is granted by the corresponding
++Copyright Holder. This restriction only applies to the primary font name as
++presented to the users.
++
++4) The name(s) of the Copyright Holder(s) or the Author(s) of the Font
++Software shall not be used to promote, endorse or advertise any
++Modified Version, except to acknowledge the contribution(s) of the
++Copyright Holder(s) and the Author(s) or with their explicit written
++permission.
++
++5) The Font Software, modified or unmodified, in part or in whole,
++must be distributed entirely under this license, and must not be
++distributed under any other license. The requirement for fonts to
++remain under this license does not apply to any document created
++using the Font Software.
++
++TERMINATION
++This license becomes null and void if any of the above conditions are
++not met.
++
++DISCLAIMER
++THE FONT SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
++EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO ANY WARRANTIES OF
++MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT
++OF COPYRIGHT, PATENT, TRADEMARK, OR OTHER RIGHT. IN NO EVENT SHALL THE
++COPYRIGHT HOLDER BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
++INCLUDING ANY GENERAL, SPECIAL, INDIRECT, INCIDENTAL, OR CONSEQUENTIAL
++DAMAGES, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
++FROM, OUT OF THE USE OR INABILITY TO USE THE FONT SOFTWARE OR FROM
++OTHER DEALINGS IN THE FONT SOFTWARE.
+diff --git a/spikes/somnia-documents/notices/OFL-JetBrainsMono.txt b/spikes/somnia-documents/notices/OFL-JetBrainsMono.txt
+new file mode 100644
+index 0000000..5ceee00
+--- /dev/null
++++ b/spikes/somnia-documents/notices/OFL-JetBrainsMono.txt
+@@ -0,0 +1,93 @@
++Copyright 2020 The JetBrains Mono Project Authors (https://github.com/JetBrains/JetBrainsMono)
++
++This Font Software is licensed under the SIL Open Font License, Version 1.1.
++This license is copied below, and is also available with a FAQ at:
++https://openfontlicense.org
++
++
++-----------------------------------------------------------
++SIL OPEN FONT LICENSE Version 1.1 - 26 February 2007
++-----------------------------------------------------------
++
++PREAMBLE
++The goals of the Open Font License (OFL) are to stimulate worldwide
++development of collaborative font projects, to support the font creation
++efforts of academic and linguistic communities, and to provide a free and
++open framework in which fonts may be shared and improved in partnership
++with others.
++
++The OFL allows the licensed fonts to be used, studied, modified and
++redistributed freely as long as they are not sold by themselves. The
++fonts, including any derivative works, can be bundled, embedded, 
++redistributed and/or sold with any software provided that any reserved
++names are not used by derivative works. The fonts and derivatives,
++however, cannot be released under any other type of license. The
++requirement for fonts to remain under this license does not apply
++to any document created using the fonts or their derivatives.
++
++DEFINITIONS
++"Font Software" refers to the set of files released by the Copyright
++Holder(s) under this license and clearly marked as such. This may
++include source files, build scripts and documentation.
++
++"Reserved Font Name" refers to any names specified as such after the
++copyright statement(s).
++
++"Original Version" refers to the collection of Font Software components as
++distributed by the Copyright Holder(s).
++
++"Modified Version" refers to any derivative made by adding to, deleting,
++or substituting -- in part or in whole -- any of the components of the
++Original Version, by changing formats or by porting the Font Software to a
++new environment.
++
++"Author" refers to any designer, engineer, programmer, technical
++writer or other person who contributed to the Font Software.
++
++PERMISSION & CONDITIONS
++Permission is hereby granted, free of charge, to any person obtaining
++a copy of the Font Software, to use, study, copy, merge, embed, modify,
++redistribute, and sell modified and unmodified copies of the Font
++Software, subject to the following conditions:
++
++1) Neither the Font Software nor any of its individual components,
++in Original or Modified Versions, may be sold by itself.
++
++2) Original or Modified Versions of the Font Software may be bundled,
++redistributed and/or sold with any software, provided that each copy
++contains the above copyright notice and this license. These can be
++included either as stand-alone text files, human-readable headers or
++in the appropriate machine-readable metadata fields within text or
++binary files as long as those fields can be easily viewed by the user.
++
++3) No Modified Version of the Font Software may use the Reserved Font
++Name(s) unless explicit written permission is granted by the corresponding
++Copyright Holder. This restriction only applies to the primary font name as
++presented to the users.
++
++4) The name(s) of the Copyright Holder(s) or the Author(s) of the Font
++Software shall not be used to promote, endorse or advertise any
++Modified Version, except to acknowledge the contribution(s) of the
++Copyright Holder(s) and the Author(s) or with their explicit written
++permission.
++
++5) The Font Software, modified or unmodified, in part or in whole,
++must be distributed entirely under this license, and must not be
++distributed under any other license. The requirement for fonts to
++remain under this license does not apply to any document created
++using the Font Software.
++
++TERMINATION
++This license becomes null and void if any of the above conditions are
++not met.
++
++DISCLAIMER
++THE FONT SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
++EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO ANY WARRANTIES OF
++MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT
++OF COPYRIGHT, PATENT, TRADEMARK, OR OTHER RIGHT. IN NO EVENT SHALL THE
++COPYRIGHT HOLDER BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
++INCLUDING ANY GENERAL, SPECIAL, INDIRECT, INCIDENTAL, OR CONSEQUENTIAL
++DAMAGES, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
++FROM, OUT OF THE USE OR INABILITY TO USE THE FONT SOFTWARE OR FROM
++OTHER DEALINGS IN THE FONT SOFTWARE.
+diff --git a/spikes/somnia-documents/notices/OFL-SourceSans3.txt b/spikes/somnia-documents/notices/OFL-SourceSans3.txt
+new file mode 100644
+index 0000000..22c601b
+--- /dev/null
++++ b/spikes/somnia-documents/notices/OFL-SourceSans3.txt
+@@ -0,0 +1,93 @@
++Copyright 2010-2024 Adobe (http://www.adobe.com/), with Reserved Font Name 'Source'. All Rights Reserved. Source is a trademark of Adobe in the United States and/or other countries.
++
++This Font Software is licensed under the SIL Open Font License, Version 1.1.
++
++This license is copied below, and is also available with a FAQ at: http://scripts.sil.org/OFL
++
++
++-----------------------------------------------------------
++SIL OPEN FONT LICENSE Version 1.1 - 26 February 2007
++-----------------------------------------------------------
++
++PREAMBLE
++The goals of the Open Font License (OFL) are to stimulate worldwide
++development of collaborative font projects, to support the font creation
++efforts of academic and linguistic communities, and to provide a free and
++open framework in which fonts may be shared and improved in partnership
++with others.
++
++The OFL allows the licensed fonts to be used, studied, modified and
++redistributed freely as long as they are not sold by themselves. The
++fonts, including any derivative works, can be bundled, embedded, 
++redistributed and/or sold with any software provided that any reserved
++names are not used by derivative works. The fonts and derivatives,
++however, cannot be released under any other type of license. The
++requirement for fonts to remain under this license does not apply
++to any document created using the fonts or their derivatives.
++
++DEFINITIONS
++"Font Software" refers to the set of files released by the Copyright
++Holder(s) under this license and clearly marked as such. This may
++include source files, build scripts and documentation.
++
++"Reserved Font Name" refers to any names specified as such after the
++copyright statement(s).
++
++"Original Version" refers to the collection of Font Software components as
++distributed by the Copyright Holder(s).
++
++"Modified Version" refers to any derivative made by adding to, deleting,
++or substituting -- in part or in whole -- any of the components of the
++Original Version, by changing formats or by porting the Font Software to a
++new environment.
++
++"Author" refers to any designer, engineer, programmer, technical
++writer or other person who contributed to the Font Software.
++
++PERMISSION & CONDITIONS
++Permission is hereby granted, free of charge, to any person obtaining
++a copy of the Font Software, to use, study, copy, merge, embed, modify,
++redistribute, and sell modified and unmodified copies of the Font
++Software, subject to the following conditions:
++
++1) Neither the Font Software nor any of its individual components,
++in Original or Modified Versions, may be sold by itself.
++
++2) Original or Modified Versions of the Font Software may be bundled,
++redistributed and/or sold with any software, provided that each copy
++contains the above copyright notice and this license. These can be
++included either as stand-alone text files, human-readable headers or
++in the appropriate machine-readable metadata fields within text or
++binary files as long as those fields can be easily viewed by the user.
++
++3) No Modified Version of the Font Software may use the Reserved Font
++Name(s) unless explicit written permission is granted by the corresponding
++Copyright Holder. This restriction only applies to the primary font name as
++presented to the users.
++
++4) The name(s) of the Copyright Holder(s) or the Author(s) of the Font
++Software shall not be used to promote, endorse or advertise any
++Modified Version, except to acknowledge the contribution(s) of the
++Copyright Holder(s) and the Author(s) or with their explicit written
++permission.
++
++5) The Font Software, modified or unmodified, in part or in whole,
++must be distributed entirely under this license, and must not be
++distributed under any other license. The requirement for fonts to
++remain under this license does not apply to any document created
++using the Font Software.
++
++TERMINATION
++This license becomes null and void if any of the above conditions are
++not met.
++
++DISCLAIMER
++THE FONT SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
++EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO ANY WARRANTIES OF
++MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT
++OF COPYRIGHT, PATENT, TRADEMARK, OR OTHER RIGHT. IN NO EVENT SHALL THE
++COPYRIGHT HOLDER BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
++INCLUDING ANY GENERAL, SPECIAL, INDIRECT, INCIDENTAL, OR CONSEQUENTIAL
++DAMAGES, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
++FROM, OUT OF THE USE OR INABILITY TO USE THE FONT SOFTWARE OR FROM
++OTHER DEALINGS IN THE FONT SOFTWARE.
+diff --git a/spikes/somnia-documents/notices/OFL-SourceSerif4.txt b/spikes/somnia-documents/notices/OFL-SourceSerif4.txt
+new file mode 100644
+index 0000000..5871e1f
+--- /dev/null
++++ b/spikes/somnia-documents/notices/OFL-SourceSerif4.txt
+@@ -0,0 +1,93 @@
++Copyright 2014 - 2023 Adobe (http://www.adobe.com/), with Reserved Font Name ‘Source’. All Rights Reserved. Source is a trademark of Adobe in the United States and/or other countries.
++
++This Font Software is licensed under the SIL Open Font License, Version 1.1.
++
++This license is copied below, and is also available with a FAQ at: http://scripts.sil.org/OFL
++
++
++-----------------------------------------------------------
++SIL OPEN FONT LICENSE Version 1.1 - 26 February 2007
++-----------------------------------------------------------
++
++PREAMBLE
++The goals of the Open Font License (OFL) are to stimulate worldwide
++development of collaborative font projects, to support the font creation
++efforts of academic and linguistic communities, and to provide a free and
++open framework in which fonts may be shared and improved in partnership
++with others.
++
++The OFL allows the licensed fonts to be used, studied, modified and
++redistributed freely as long as they are not sold by themselves. The
++fonts, including any derivative works, can be bundled, embedded,
++redistributed and/or sold with any software provided that any reserved
++names are not used by derivative works. The fonts and derivatives,
++however, cannot be released under any other type of license. The
++requirement for fonts to remain under this license does not apply
++to any document created using the fonts or their derivatives.
++
++DEFINITIONS
++"Font Software" refers to the set of files released by the Copyright
++Holder(s) under this license and clearly marked as such. This may
++include source files, build scripts and documentation.
++
++"Reserved Font Name" refers to any names specified as such after the
++copyright statement(s).
++
++"Original Version" refers to the collection of Font Software components as
++distributed by the Copyright Holder(s).
++
++"Modified Version" refers to any derivative made by adding to, deleting,
++or substituting -- in part or in whole -- any of the components of the
++Original Version, by changing formats or by porting the Font Software to a
++new environment.
++
++"Author" refers to any designer, engineer, programmer, technical
++writer or other person who contributed to the Font Software.
++
++PERMISSION & CONDITIONS
++Permission is hereby granted, free of charge, to any person obtaining
++a copy of the Font Software, to use, study, copy, merge, embed, modify,
++redistribute, and sell modified and unmodified copies of the Font
++Software, subject to the following conditions:
++
++1) Neither the Font Software nor any of its individual components,
++in Original or Modified Versions, may be sold by itself.
++
++2) Original or Modified Versions of the Font Software may be bundled,
++redistributed and/or sold with any software, provided that each copy
++contains the above copyright notice and this license. These can be
++included either as stand-alone text files, human-readable headers or
++in the appropriate machine-readable metadata fields within text or
++binary files as long as those fields can be easily viewed by the user.
++
++3) No Modified Version of the Font Software may use the Reserved Font
++Name(s) unless explicit written permission is granted by the corresponding
++Copyright Holder. This restriction only applies to the primary font name as
++presented to the users.
++
++4) The name(s) of the Copyright Holder(s) or the Author(s) of the Font
++Software shall not be used to promote, endorse or advertise any
++Modified Version, except to acknowledge the contribution(s) of the
++Copyright Holder(s) and the Author(s) or with their explicit written
++permission.
++
++5) The Font Software, modified or unmodified, in part or in whole,
++must be distributed entirely under this license, and must not be
++distributed under any other license. The requirement for fonts to
++remain under this license does not apply to any document created
++using the Font Software.
++
++TERMINATION
++This license becomes null and void if any of the above conditions are
++not met.
++
++DISCLAIMER
++THE FONT SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
++EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO ANY WARRANTIES OF
++MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT
++OF COPYRIGHT, PATENT, TRADEMARK, OR OTHER RIGHT. IN NO EVENT SHALL THE
++COPYRIGHT HOLDER BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
++INCLUDING ANY GENERAL, SPECIAL, INDIRECT, INCIDENTAL, OR CONSEQUENTIAL
++DAMAGES, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
++FROM, OUT OF THE USE OR INABILITY TO USE THE FONT SOFTWARE OR FROM
++OTHER DEALINGS IN THE FONT SOFTWARE.
+diff --git a/spikes/somnia-documents/notices/dependency-licenses.json b/spikes/somnia-documents/notices/dependency-licenses.json
+new file mode 100644
+index 0000000..7129f86
+--- /dev/null
++++ b/spikes/somnia-documents/notices/dependency-licenses.json
+@@ -0,0 +1,608 @@
++[
++  {
++    "name": "wordcraft-doc",
++    "version": "0.3.0",
++    "license": "MIT OR Apache-2.0",
++    "repository": null
++  },
++  {
++    "name": "wordcraft-docx",
++    "version": "0.3.0",
++    "license": "MIT OR Apache-2.0",
++    "repository": null
++  },
++  {
++    "name": "wordcraft-fonts",
++    "version": "0.3.0",
++    "license": "MIT OR Apache-2.0",
++    "repository": null
++  },
++  {
++    "name": "wordcraft-geom",
++    "version": "0.3.0",
++    "license": "MIT OR Apache-2.0",
++    "repository": null
++  },
++  {
++    "name": "wordcraft-layout",
++    "version": "0.3.0",
++    "license": "MIT OR Apache-2.0",
++    "repository": null
++  },
++  {
++    "name": "wordcraft-proof",
++    "version": "0.3.0",
++    "license": "MIT OR Apache-2.0",
++    "repository": null
++  },
++  {
++    "name": "wordcraft-render",
++    "version": "0.3.0",
++    "license": "MIT OR Apache-2.0",
++    "repository": null
++  },
++  {
++    "name": "wordcraft-somnia-worker",
++    "version": "0.3.0",
++    "license": "MIT OR Apache-2.0",
++    "repository": null
++  },
++  {
++    "name": "adler2",
++    "version": "2.0.1",
++    "license": "0BSD OR MIT OR Apache-2.0",
++    "repository": "https://github.com/oyvindln/adler2"
++  },
++  {
++    "name": "arrayvec",
++    "version": "0.7.8",
++    "license": "MIT OR Apache-2.0",
++    "repository": "https://github.com/bluss/arrayvec"
++  },
++  {
++    "name": "autocfg",
++    "version": "1.5.1",
++    "license": "Apache-2.0 OR MIT",
++    "repository": "https://github.com/cuviper/autocfg"
++  },
++  {
++    "name": "bitflags",
++    "version": "2.13.2",
++    "license": "MIT OR Apache-2.0",
++    "repository": "https://github.com/bitflags/bitflags"
++  },
++  {
++    "name": "bumpalo",
++    "version": "3.20.3",
++    "license": "MIT OR Apache-2.0",
++    "repository": "https://github.com/fitzgen/bumpalo"
++  },
++  {
++    "name": "bytemuck",
++    "version": "1.25.2",
++    "license": "Zlib OR Apache-2.0 OR MIT",
++    "repository": "https://github.com/Lokathor/bytemuck"
++  },
++  {
++    "name": "bytemuck_derive",
++    "version": "1.12.1",
++    "license": "Zlib OR Apache-2.0 OR MIT",
++    "repository": "https://github.com/Lokathor/bytemuck"
++  },
++  {
++    "name": "byteorder-lite",
++    "version": "0.1.0",
++    "license": "Unlicense OR MIT",
++    "repository": "https://github.com/image-rs/byteorder-lite"
++  },
++  {
++    "name": "cfg-if",
++    "version": "1.0.5",
++    "license": "MIT OR Apache-2.0",
++    "repository": "https://github.com/rust-lang/cfg-if"
++  },
++  {
++    "name": "color",
++    "version": "0.3.3",
++    "license": "Apache-2.0 OR MIT",
++    "repository": "https://github.com/linebender/color"
++  },
++  {
++    "name": "color_quant",
++    "version": "1.1.0",
++    "license": "MIT",
++    "repository": "https://github.com/image-rs/color_quant.git"
++  },
++  {
++    "name": "crc32fast",
++    "version": "1.5.2",
++    "license": "MIT OR Apache-2.0",
++    "repository": "https://github.com/srijs/rust-crc32fast"
++  },
++  {
++    "name": "crossbeam-channel",
++    "version": "0.5.17",
++    "license": "MIT OR Apache-2.0",
++    "repository": "https://github.com/crossbeam-rs/crossbeam"
++  },
++  {
++    "name": "crossbeam-deque",
++    "version": "0.8.8",
++    "license": "MIT OR Apache-2.0",
++    "repository": "https://github.com/crossbeam-rs/crossbeam"
++  },
++  {
++    "name": "crossbeam-epoch",
++    "version": "0.9.21",
++    "license": "MIT OR Apache-2.0",
++    "repository": "https://github.com/crossbeam-rs/crossbeam"
++  },
++  {
++    "name": "crossbeam-utils",
++    "version": "0.8.23",
++    "license": "MIT OR Apache-2.0",
++    "repository": "https://github.com/crossbeam-rs/crossbeam"
++  },
++  {
++    "name": "either",
++    "version": "1.19.0",
++    "license": "MIT OR Apache-2.0",
++    "repository": "https://github.com/rayon-rs/either"
++  },
++  {
++    "name": "equivalent",
++    "version": "1.0.2",
++    "license": "Apache-2.0 OR MIT",
++    "repository": "https://github.com/indexmap-rs/equivalent"
++  },
++  {
++    "name": "euclid",
++    "version": "0.22.14",
++    "license": "MIT OR Apache-2.0",
++    "repository": "https://github.com/servo/euclid"
++  },
++  {
++    "name": "fax",
++    "version": "0.2.7",
++    "license": "MIT",
++    "repository": "https://github.com/pdf-rs/fax"
++  },
++  {
++    "name": "fdeflate",
++    "version": "0.3.7",
++    "license": "MIT OR Apache-2.0",
++    "repository": "https://github.com/image-rs/fdeflate"
++  },
++  {
++    "name": "fearless_simd",
++    "version": "0.4.1",
++    "license": "Apache-2.0 OR MIT",
++    "repository": "https://github.com/linebender/fearless_simd"
++  },
++  {
++    "name": "flate2",
++    "version": "1.1.10",
++    "license": "MIT OR Apache-2.0",
++    "repository": "https://github.com/rust-lang/flate2-rs"
++  },
++  {
++    "name": "foldhash",
++    "version": "0.2.0",
++    "license": "Zlib",
++    "repository": "https://github.com/orlp/foldhash"
++  },
++  {
++    "name": "font-types",
++    "version": "0.12.6",
++    "license": "MIT OR Apache-2.0",
++    "repository": "https://github.com/googlefonts/fontations"
++  },
++  {
++    "name": "gif",
++    "version": "0.14.2",
++    "license": "MIT OR Apache-2.0",
++    "repository": "https://github.com/image-rs/image-gif"
++  },
++  {
++    "name": "glifo",
++    "version": "0.3.0",
++    "license": "Apache-2.0 OR MIT",
++    "repository": "https://github.com/linebender/vello"
++  },
++  {
++    "name": "guillotiere",
++    "version": "0.7.0",
++    "license": "MIT/Apache-2.0",
++    "repository": "https://github.com/nical/guillotiere"
++  },
++  {
++    "name": "half",
++    "version": "2.7.1",
++    "license": "MIT OR Apache-2.0",
++    "repository": "https://github.com/VoidStarKat/half-rs"
++  },
++  {
++    "name": "harfrust",
++    "version": "0.13.3",
++    "license": "MIT",
++    "repository": "https://github.com/harfbuzz/harfrust"
++  },
++  {
++    "name": "hashbrown",
++    "version": "0.17.1",
++    "license": "MIT OR Apache-2.0",
++    "repository": "https://github.com/rust-lang/hashbrown"
++  },
++  {
++    "name": "image-webp",
++    "version": "0.2.4",
++    "license": "MIT OR Apache-2.0",
++    "repository": "https://github.com/image-rs/image-webp"
++  },
++  {
++    "name": "image",
++    "version": "0.25.10",
++    "license": "MIT OR Apache-2.0",
++    "repository": "https://github.com/image-rs/image"
++  },
++  {
++    "name": "indexmap",
++    "version": "2.14.2",
++    "license": "Apache-2.0 OR MIT",
++    "repository": "https://github.com/indexmap-rs/indexmap"
++  },
++  {
++    "name": "itoa",
++    "version": "1.0.18",
++    "license": "MIT OR Apache-2.0",
++    "repository": "https://github.com/dtolnay/itoa"
++  },
++  {
++    "name": "kurbo",
++    "version": "0.13.1",
++    "license": "Apache-2.0 OR MIT",
++    "repository": "https://github.com/linebender/kurbo"
++  },
++  {
++    "name": "libm",
++    "version": "0.2.16",
++    "license": "MIT",
++    "repository": "https://github.com/rust-lang/compiler-builtins"
++  },
++  {
++    "name": "linebender_resource_handle",
++    "version": "0.1.1",
++    "license": "Apache-2.0 OR MIT",
++    "repository": "https://github.com/linebender/raw_resource_handle"
++  },
++  {
++    "name": "log",
++    "version": "0.4.34",
++    "license": "MIT OR Apache-2.0",
++    "repository": "https://github.com/rust-lang/log"
++  },
++  {
++    "name": "memchr",
++    "version": "2.8.3",
++    "license": "Unlicense OR MIT",
++    "repository": "https://github.com/BurntSushi/memchr"
++  },
++  {
++    "name": "miniz_oxide",
++    "version": "0.8.9",
++    "license": "MIT OR Zlib OR Apache-2.0",
++    "repository": "https://github.com/Frommi/miniz_oxide/tree/master/miniz_oxide"
++  },
++  {
++    "name": "miniz_oxide",
++    "version": "0.9.1",
++    "license": "MIT OR Zlib OR Apache-2.0",
++    "repository": "https://github.com/Frommi/miniz_oxide/tree/master/miniz_oxide"
++  },
++  {
++    "name": "moxcms",
++    "version": "0.8.1",
++    "license": "BSD-3-Clause OR Apache-2.0",
++    "repository": "https://github.com/awxkee/moxcms.git"
++  },
++  {
++    "name": "num-traits",
++    "version": "0.2.19",
++    "license": "MIT OR Apache-2.0",
++    "repository": "https://github.com/rust-num/num-traits"
++  },
++  {
++    "name": "once_cell",
++    "version": "1.21.4",
++    "license": "MIT OR Apache-2.0",
++    "repository": "https://github.com/matklad/once_cell"
++  },
++  {
++    "name": "ordered-channel",
++    "version": "1.2.0",
++    "license": "MIT OR Apache-2.0",
++    "repository": "https://gitlab.com/kornelski/ordered-channel"
++  },
++  {
++    "name": "peniko",
++    "version": "0.6.1",
++    "license": "Apache-2.0 OR MIT",
++    "repository": "https://github.com/linebender/peniko"
++  },
++  {
++    "name": "png",
++    "version": "0.18.1",
++    "license": "MIT OR Apache-2.0",
++    "repository": "https://github.com/image-rs/image-png"
++  },
++  {
++    "name": "polycool",
++    "version": "0.4.0",
++    "license": "MIT OR Apache-2.0",
++    "repository": "https://github.com/linebender/kurbo"
++  },
++  {
++    "name": "proc-macro2",
++    "version": "1.0.107",
++    "license": "MIT OR Apache-2.0",
++    "repository": "https://github.com/dtolnay/proc-macro2"
++  },
++  {
++    "name": "pxfm",
++    "version": "0.1.30",
++    "license": "BSD-3-Clause OR Apache-2.0",
++    "repository": "https://github.com/awxkee/pxfm"
++  },
++  {
++    "name": "quick-error",
++    "version": "2.0.1",
++    "license": "MIT/Apache-2.0",
++    "repository": "http://github.com/tailhook/quick-error"
++  },
++  {
++    "name": "quick-xml",
++    "version": "0.38.4",
++    "license": "MIT",
++    "repository": "https://github.com/tafia/quick-xml"
++  },
++  {
++    "name": "quote",
++    "version": "1.0.47",
++    "license": "MIT OR Apache-2.0",
++    "repository": "https://github.com/dtolnay/quote"
++  },
++  {
++    "name": "rayon-core",
++    "version": "1.13.0",
++    "license": "MIT OR Apache-2.0",
++    "repository": "https://github.com/rayon-rs/rayon"
++  },
++  {
++    "name": "rayon",
++    "version": "1.12.0",
++    "license": "MIT OR Apache-2.0",
++    "repository": "https://github.com/rayon-rs/rayon"
++  },
++  {
++    "name": "read-fonts",
++    "version": "0.41.0",
++    "license": "MIT OR Apache-2.0",
++    "repository": "https://github.com/googlefonts/fontations"
++  },
++  {
++    "name": "read-fonts",
++    "version": "0.43.3",
++    "license": "MIT OR Apache-2.0",
++    "repository": "https://github.com/googlefonts/fontations"
++  },
++  {
++    "name": "read-fonts",
++    "version": "0.44.0",
++    "license": "MIT OR Apache-2.0",
++    "repository": "https://github.com/googlefonts/fontations"
++  },
++  {
++    "name": "rustversion",
++    "version": "1.0.23",
++    "license": "MIT OR Apache-2.0",
++    "repository": "https://github.com/dtolnay/rustversion"
++  },
++  {
++    "name": "serde",
++    "version": "1.0.229",
++    "license": "MIT OR Apache-2.0",
++    "repository": "https://github.com/serde-rs/serde"
++  },
++  {
++    "name": "serde_core",
++    "version": "1.0.229",
++    "license": "MIT OR Apache-2.0",
++    "repository": "https://github.com/serde-rs/serde"
++  },
++  {
++    "name": "serde_derive",
++    "version": "1.0.229",
++    "license": "MIT OR Apache-2.0",
++    "repository": "https://github.com/serde-rs/serde"
++  },
++  {
++    "name": "serde_json",
++    "version": "1.0.151",
++    "license": "MIT OR Apache-2.0",
++    "repository": "https://github.com/serde-rs/json"
++  },
++  {
++    "name": "simd-adler32",
++    "version": "0.3.10",
++    "license": "MIT",
++    "repository": "https://github.com/mcountryman/simd-adler32"
++  },
++  {
++    "name": "skrifa",
++    "version": "0.44.0",
++    "license": "MIT OR Apache-2.0",
++    "repository": "https://github.com/googlefonts/fontations"
++  },
++  {
++    "name": "skrifa",
++    "version": "0.47.0",
++    "license": "MIT OR Apache-2.0",
++    "repository": "https://github.com/googlefonts/fontations"
++  },
++  {
++    "name": "smallvec",
++    "version": "1.16.2",
++    "license": "MIT OR Apache-2.0",
++    "repository": "https://github.com/servo/rust-smallvec"
++  },
++  {
++    "name": "syn",
++    "version": "2.0.119",
++    "license": "MIT OR Apache-2.0",
++    "repository": "https://github.com/dtolnay/syn"
++  },
++  {
++    "name": "syn",
++    "version": "3.0.6",
++    "license": "MIT OR Apache-2.0",
++    "repository": "https://github.com/dtolnay/syn"
++  },
++  {
++    "name": "thiserror-impl",
++    "version": "2.0.21",
++    "license": "MIT OR Apache-2.0",
++    "repository": "https://github.com/dtolnay/thiserror"
++  },
++  {
++    "name": "thiserror",
++    "version": "2.0.21",
++    "license": "MIT OR Apache-2.0",
++    "repository": "https://github.com/dtolnay/thiserror"
++  },
++  {
++    "name": "thread_local",
++    "version": "1.1.10",
++    "license": "MIT OR Apache-2.0",
++    "repository": "https://github.com/Amanieu/thread_local-rs"
++  },
++  {
++    "name": "tiff",
++    "version": "0.11.3",
++    "license": "MIT",
++    "repository": "https://github.com/image-rs/image-tiff"
++  },
++  {
++    "name": "unicode-bidi",
++    "version": "0.3.18",
++    "license": "MIT OR Apache-2.0",
++    "repository": "https://github.com/servo/unicode-bidi"
++  },
++  {
++    "name": "unicode-ident",
++    "version": "1.0.26",
++    "license": "(MIT OR Apache-2.0) AND Unicode-3.0",
++    "repository": "https://github.com/dtolnay/unicode-ident"
++  },
++  {
++    "name": "unicode-linebreak",
++    "version": "0.1.5",
++    "license": "Apache-2.0",
++    "repository": "https://github.com/axelf4/unicode-linebreak"
++  },
++  {
++    "name": "unicode-segmentation",
++    "version": "1.13.3",
++    "license": "MIT OR Apache-2.0",
++    "repository": "https://github.com/unicode-rs/unicode-segmentation"
++  },
++  {
++    "name": "vello_common",
++    "version": "0.2.0",
++    "license": "Apache-2.0 OR MIT",
++    "repository": "https://github.com/linebender/vello"
++  },
++  {
++    "name": "vello_cpu",
++    "version": "0.2.0",
++    "license": "Apache-2.0 OR MIT",
++    "repository": "https://github.com/linebender/vello"
++  },
++  {
++    "name": "wasm-bindgen-macro-support",
++    "version": "0.2.129",
++    "license": "MIT OR Apache-2.0",
++    "repository": "https://github.com/wasm-bindgen/wasm-bindgen/tree/main/crates/macro-support"
++  },
++  {
++    "name": "wasm-bindgen-macro",
++    "version": "0.2.129",
++    "license": "MIT OR Apache-2.0",
++    "repository": "https://github.com/wasm-bindgen/wasm-bindgen/tree/master/crates/macro"
++  },
++  {
++    "name": "wasm-bindgen-shared",
++    "version": "0.2.129",
++    "license": "MIT OR Apache-2.0",
++    "repository": "https://github.com/wasm-bindgen/wasm-bindgen/tree/master/crates/shared"
++  },
++  {
++    "name": "wasm-bindgen",
++    "version": "0.2.129",
++    "license": "MIT OR Apache-2.0",
++    "repository": "https://github.com/wasm-bindgen/wasm-bindgen"
++  },
++  {
++    "name": "weezl",
++    "version": "0.1.12",
++    "license": "MIT OR Apache-2.0",
++    "repository": "https://github.com/image-rs/weezl"
++  },
++  {
++    "name": "zerocopy-derive",
++    "version": "0.8.61",
++    "license": "BSD-2-Clause OR Apache-2.0 OR MIT",
++    "repository": "https://github.com/google/zerocopy"
++  },
++  {
++    "name": "zerocopy",
++    "version": "0.8.61",
++    "license": "BSD-2-Clause OR Apache-2.0 OR MIT",
++    "repository": "https://github.com/google/zerocopy"
++  },
++  {
++    "name": "zip",
++    "version": "3.0.0",
++    "license": "MIT",
++    "repository": "https://github.com/zip-rs/zip2.git"
++  },
++  {
++    "name": "zlib-rs",
++    "version": "0.6.8",
++    "license": "Zlib",
++    "repository": "https://github.com/trifectatechfoundation/zlib-rs"
++  },
++  {
++    "name": "zmij",
++    "version": "1.0.23",
++    "license": "MIT",
++    "repository": "https://github.com/dtolnay/zmij"
++  },
++  {
++    "name": "zopfli",
++    "version": "0.8.3",
++    "license": "Apache-2.0",
++    "repository": "https://github.com/zopfli-rs/zopfli"
++  },
++  {
++    "name": "zune-core",
++    "version": "0.5.3",
++    "license": "MIT OR Apache-2.0 OR Zlib",
++    "repository": "https://github.com/etemesi254/zune-image"
++  },
++  {
++    "name": "zune-jpeg",
++    "version": "0.5.15",
++    "license": "MIT OR Apache-2.0 OR Zlib",
++    "repository": "https://github.com/etemesi254/zune-image/tree/dev/crates/zune-jpeg"
++  }
++]
+\ No newline at end of file
+diff --git a/spikes/somnia-documents/package-lock.json b/spikes/somnia-documents/package-lock.json
+new file mode 100644
+index 0000000..03ea70e
+--- /dev/null
++++ b/spikes/somnia-documents/package-lock.json
+@@ -0,0 +1,59 @@
++{
++  "name": "somnia-documents",
++  "lockfileVersion": 3,
++  "requires": true,
++  "packages": {
++    "": {
++      "devDependencies": {
++        "playwright": "1.58.2"
++      }
++    },
++    "node_modules/fsevents": {
++      "version": "2.3.2",
++      "resolved": "https://registry.npmjs.org/fsevents/-/fsevents-2.3.2.tgz",
++      "integrity": "sha512-xiqMQR4xAeHTuB9uWm+fFRcIOgKBMiOBP+eXiyT7jsgVCq1bkVygt00oASowB7EdtpOHaaPgKt812P9ab+DDKA==",
++      "dev": true,
++      "hasInstallScript": true,
++      "license": "MIT",
++      "optional": true,
++      "os": [
++        "darwin"
++      ],
++      "engines": {
++        "node": "^8.16.0 || ^10.6.0 || >=11.0.0"
++      }
++    },
++    "node_modules/playwright": {
++      "version": "1.58.2",
++      "resolved": "https://registry.npmjs.org/playwright/-/playwright-1.58.2.tgz",
++      "integrity": "sha512-vA30H8Nvkq/cPBnNw4Q8TWz1EJyqgpuinBcHET0YVJVFldr8JDNiU9LaWAE1KqSkRYazuaBhTpB5ZzShOezQ6A==",
++      "dev": true,
++      "license": "Apache-2.0",
++      "dependencies": {
++        "playwright-core": "1.58.2"
++      },
++      "bin": {
++        "playwright": "cli.js"
++      },
++      "engines": {
++        "node": ">=18"
++      },
++      "optionalDependencies": {
++        "fsevents": "2.3.2"
++      }
++    },
++    "node_modules/playwright-core": {
++      "version": "1.58.2",
++      "resolved": "https://registry.npmjs.org/playwright-core/-/playwright-core-1.58.2.tgz",
++      "integrity": "sha512-yZkEtftgwS8CsfYo7nm0KE8jsvm6i/PTgVtB8DL726wNf6H2IMsDuxCpJj59KDaxCtSnrWan2AeDqM7JBaultg==",
++      "dev": true,
++      "license": "Apache-2.0",
++      "bin": {
++        "playwright-core": "cli.js"
++      },
++      "engines": {
++        "node": ">=18"
++      }
++    }
++  }
++}
+diff --git a/spikes/somnia-documents/package.json b/spikes/somnia-documents/package.json
+new file mode 100644
+index 0000000..3309b77
+--- /dev/null
++++ b/spikes/somnia-documents/package.json
+@@ -0,0 +1,10 @@
++{
++  "private": true,
++  "type": "module",
++  "scripts": {
++    "test": "node scripts/browser-test.mjs && python3 scripts/sizes.py"
++  },
++  "devDependencies": {
++    "playwright": "1.58.2"
++  }
++}
+diff --git a/spikes/somnia-documents/results/metrics.json b/spikes/somnia-documents/results/metrics.json
+new file mode 100644
+index 0000000..7f0f2d8
+--- /dev/null
++++ b/spikes/somnia-documents/results/metrics.json
+@@ -0,0 +1,83 @@
++{
++  "samples": [
++    {
++      "openMs": 0.5,
++      "layoutMs": 3.1000000000349246,
++      "renderMs": 17.20000000001164,
++      "editMs": 0.5999999999767169,
++      "editLayoutMs": 0.5,
++      "saveMs": 9.700000000011642,
++      "roundtrip": true,
++      "pages": 1
++    },
++    {
++      "openMs": 0.20000000001164153,
++      "layoutMs": 1.5,
++      "renderMs": 15.600000000034925,
++      "editMs": 0,
++      "editLayoutMs": 0.5,
++      "saveMs": 1.1000000000349246,
++      "roundtrip": true,
++      "pages": 1
++    },
++    {
++      "openMs": 0.40000000002328306,
++      "layoutMs": 1.3999999999650754,
++      "renderMs": 25,
++      "editMs": 0.09999999997671694,
++      "editLayoutMs": 0.9000000000232831,
++      "saveMs": 1.400000000023283,
++      "roundtrip": true,
++      "pages": 1
++    },
++    {
++      "openMs": 0.29999999998835847,
++      "layoutMs": 1.2999999999883585,
++      "renderMs": 24.5,
++      "editMs": 0.30000000004656613,
++      "editLayoutMs": 0.5,
++      "saveMs": 1.2000000000116415,
++      "roundtrip": true,
++      "pages": 1
++    },
++    {
++      "openMs": 0.29999999998835847,
++      "layoutMs": 1.2000000000116415,
++      "renderMs": 17.899999999965075,
++      "editMs": 0,
++      "editLayoutMs": 0.3999999999650754,
++      "saveMs": 1,
++      "roundtrip": true,
++      "pages": 1
++    }
++  ],
++  "invalid": true,
++  "badOffset": true,
++  "validAfterError": true,
++  "large": {
++    "openMs": 2.599999999976717,
++    "layoutMs": 55.600000000034925,
++    "pages": 34,
++    "renderMs": 27.5,
++    "wallMs": 59.5,
++    "mainThreadTicks": 11
++  },
++  "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/154.0.0.0 Safari/537.36",
++  "coldInitMs": 104.39999999996508,
++  "coldOpenMs": 8.400000000023283,
++  "coldLayoutMs": 28.599999999976717,
++  "errors": [],
++  "size": {
++    "wasmBytes": 10033084,
++    "gzipBytes": 4075188,
++    "jsBytes": 10323
++  },
++  "medians": {
++    "openMs": 0.29999999998835847,
++    "layoutMs": 1.3999999999650754,
++    "renderMs": 17.899999999965075,
++    "editMs": 0.09999999997671694,
++    "editLayoutMs": 0.5,
++    "saveMs": 1.2000000000116415
++  }
++}
+\ No newline at end of file
+diff --git a/spikes/somnia-documents/results/rust-tests.log b/spikes/somnia-documents/results/rust-tests.log
+new file mode 100644
+index 0000000..e906211
+--- /dev/null
++++ b/spikes/somnia-documents/results/rust-tests.log
+@@ -0,0 +1,12 @@
++   Compiling wordcraft-somnia-worker v0.3.0 (/home/sandbox/wordcraft/crates/somnia-worker)
++    Finished `test` profile [optimized + debuginfo] target(s) in 0.73s
++     Running unittests src/lib.rs (target/debug/deps/wordcraft_somnia_worker-8ee5870594eec0ef)
++
++running 4 tests
++test tests::malformed_package_rejected ... ok
++test tests::bad_offset_and_path_rejected_without_mutation ... ok
++test tests::unicode_offsets_are_bytes_not_utf16 ... ok
++test tests::open_edit_export_reopen ... ok
++
++test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
++
+diff --git a/spikes/somnia-documents/results/wasm-build.log b/spikes/somnia-documents/results/wasm-build.log
+new file mode 100644
+index 0000000..2155cd2
+--- /dev/null
++++ b/spikes/somnia-documents/results/wasm-build.log
+@@ -0,0 +1,2 @@
++    Blocking waiting for file lock on build directory
++    Finished `release` profile [optimized] target(s) in 13.88s
+diff --git a/spikes/somnia-documents/scripts/browser-test.mjs b/spikes/somnia-documents/scripts/browser-test.mjs
+new file mode 100644
+index 0000000..f70d5f0
+--- /dev/null
++++ b/spikes/somnia-documents/scripts/browser-test.mjs
+@@ -0,0 +1,52 @@
++import { chromium } from 'playwright';
++import fs from 'node:fs';
++import assert from 'node:assert/strict';
++import {spawn} from 'node:child_process';
++import path from 'node:path';
++import {fileURLToPath} from 'node:url';
++const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
++const server=spawn('python3',['-m','http.server','8765','--bind','127.0.0.1','--directory',path.join(root,'web')],{stdio:'ignore'});
++const browser=await chromium.launch({executablePath:process.env.CHROME_PATH||'/usr/bin/google-chrome',headless:true,args:['--no-sandbox']});
++try {
++ await new Promise(r=>setTimeout(r,500));
++ const page=await browser.newPage({viewport:{width:1400,height:1100}});
++ const errors=[]; page.on('pageerror',e=>errors.push(String(e)));
++ await page.goto('http://127.0.0.1:8765');
++ await page.waitForFunction(()=>window.done||window.error,{},{timeout:60000});
++ assert.equal(await page.evaluate(()=>window.error),undefined);
++ await page.locator('#page').evaluate(img=>img.decode());
++ await page.screenshot({path:path.join(root,'results','before.png'),fullPage:true});
++ const baseline=await page.evaluate(()=>window.latest);
++ assert.ok(baseline.text.includes('Somnia Documents')); assert.ok(baseline.text.includes('Engine: WordCraft'));
++ const report=await page.evaluate(async()=>{
++  const samples=[];
++  for(let i=0;i<5;i++) {
++   const bytes=await(await fetch('./fixtures/sample.docx')).arrayBuffer();
++   const opened=await rpc('open',{bytes});const rendered=await rpc('render');
++   const edit=await rpc('insert',{block:0,offset:0,text:'Edited: '});
++   const saved=await rpc('save'); const reopened=await rpc('open',{bytes:saved.bytes});
++   samples.push({openMs:opened.openMs,layoutMs:opened.layoutMs,renderMs:rendered.renderMs,editMs:edit.editMs,editLayoutMs:edit.layoutMs,saveMs:saved.saveMs,roundtrip:reopened.text===edit.text,pages:opened.pages});
++  }
++  let invalid=false;try {await rpc('open',{bytes:new Uint8Array([1,2,3]).buffer});}catch(e){invalid=true;}
++  const bytes=await(await fetch('./fixtures/large.docx')).arrayBuffer();
++  let ticks=0;const timer=setInterval(()=>ticks++,5);const t=performance.now();
++  const large=await rpc('open',{bytes});const wallMs=performance.now()-t;clearInterval(timer);
++  const largeRender=await rpc('render');
++  let badOffset=false;try {await rpc('insert',{block:0,offset:999999,text:'x'});}catch(e){badOffset=true;}
++  const validAfterError=await rpc('save');
++  const small=await(await fetch('./fixtures/sample.docx')).arrayBuffer();await rpc('open',{bytes:small});
++  return {samples,invalid,badOffset,validAfterError:validAfterError.bytes.byteLength>0,
++   large:{openMs:large.openMs,layoutMs:large.layoutMs,pages:large.pages,renderMs:largeRender.renderMs,wallMs,mainThreadTicks:ticks},userAgent:navigator.userAgent};
++ });
++ assert.ok(report.samples.every(s=>s.roundtrip));assert.ok(report.invalid&&report.badOffset&&report.validAfterError);
++ assert.ok(report.large.pages>1);assert.ok(report.large.mainThreadTicks>0);
++ await page.locator('#edit').click();await page.waitForFunction(()=>document.querySelector('#text').textContent.startsWith('Edited: '));
++ await page.locator('#page').evaluate(img=>img.decode());
++ await page.screenshot({path:path.join(root,'results','after.png'),fullPage:true});
++ const image=await page.evaluate(async()=>{const r=await rpc('render');return Array.from(new Uint8Array(r.bytes));});
++ fs.writeFileSync(path.join(root,'results','page-one.png'),Buffer.from(image));
++ report.coldInitMs=baseline.initMs;report.coldOpenMs=baseline.openMs;report.coldLayoutMs=baseline.layoutMs;report.errors=errors;
++ assert.deepEqual(errors,[]);
++ fs.writeFileSync(path.join(root,'results','metrics.json'),JSON.stringify(report,null,2));
++ console.log(JSON.stringify(report,null,2));
++} finally {await browser.close();server.kill();}
+diff --git a/spikes/somnia-documents/scripts/build.sh b/spikes/somnia-documents/scripts/build.sh
+new file mode 100755
+index 0000000..74bf8ee
+--- /dev/null
++++ b/spikes/somnia-documents/scripts/build.sh
+@@ -0,0 +1,9 @@
++#!/usr/bin/env bash
++set -euo pipefail
++cd "$(dirname "$0")/../../.."
++python3 spikes/somnia-documents/scripts/fixtures.py
++cargo build --locked --release -p wordcraft-somnia-worker --target wasm32-unknown-unknown
++wasm-bindgen target/wasm32-unknown-unknown/release/wordcraft_somnia_worker.wasm --target web --out-dir spikes/somnia-documents/web/pkg
++mkdir -p spikes/somnia-documents/web/fixtures
++cp spikes/somnia-documents/fixtures/*.docx spikes/somnia-documents/web/fixtures/
++python3 spikes/somnia-documents/scripts/notices.py
+diff --git a/spikes/somnia-documents/scripts/fixtures.py b/spikes/somnia-documents/scripts/fixtures.py
+new file mode 100644
+index 0000000..1f724c2
+--- /dev/null
++++ b/spikes/somnia-documents/scripts/fixtures.py
+@@ -0,0 +1,27 @@
++"""Original CC0 fixtures. Independent OOXML ZIP assembly, not WordCraft's writer."""
++from pathlib import Path
++from zipfile import ZipFile, ZipInfo, ZIP_DEFLATED
++from html import escape
++root = Path(__file__).resolve().parents[1] / 'fixtures'
++root.mkdir(exist_ok=True)
++ct = '''<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/></Types>'''
++rels = '''<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>'''
++def para(text, bold=False):
++    return '<w:p><w:r>' + ('<w:rPr><w:b/></w:rPr>' if bold else '') + '<w:t xml:space="preserve">' + escape(text) + '</w:t></w:r></w:p>'
++def make(name, n):
++    body = para('Somnia Documents - worker proof', True)
++    body += para('Real OOXML package. Read, edit, paginate and rasterise in a dedicated Worker.')
++    body += para('Unicode: Grüße, café, Ελληνικά. No Microsoft fonts or artwork.')
++    body += '<w:tbl><w:tblPr><w:tblW w:w="9000" w:type="dxa"/></w:tblPr><w:tblGrid><w:gridCol w:w="4500"/><w:gridCol w:w="4500"/></w:tblGrid><w:tr>'
++    for t in ['Engine: WordCraft', 'Host: Somnia']:
++        body += '<w:tc><w:tcPr><w:tcW w:w="4500" w:type="dxa"/></w:tcPr>' + para(t) + '</w:tc>'
++    body += '</w:tr></w:tbl>'
++    for i in range(n): body += para(f'Paragraph {i+1}. Local-first documents keep your files on disk. This fixture exercises text shaping, line breaks and pagination without a desktop UI.')
++    body += '<w:sectPr><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1440" w:right="1440" w:bottom="1440" w:left="1440"/></w:sectPr>'
++    xml = '<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>' + body + '</w:body></w:document>'
++    with ZipFile(root / name, 'w', ZIP_DEFLATED) as z:
++        for path, content in [('[Content_Types].xml',ct),('_rels/.rels',rels),('word/document.xml',xml)]:
++            info = ZipInfo(path, (2026, 10, 8, 0, 0, 0)); info.compress_type = ZIP_DEFLATED
++            z.writestr(info, content)
++make('sample.docx', 5)
++make('large.docx', 500)
+diff --git a/spikes/somnia-documents/scripts/notices.py b/spikes/somnia-documents/scripts/notices.py
+new file mode 100644
+index 0000000..0fb56d5
+--- /dev/null
++++ b/spikes/somnia-documents/scripts/notices.py
+@@ -0,0 +1,25 @@
++"""Collect resolved WASM non-dev dependency license texts from cargo metadata."""
++import json, pathlib, shutil, subprocess
++repo=pathlib.Path(__file__).resolve().parents[3]
++root=repo/'spikes/somnia-documents/notices'
++j=json.loads(subprocess.check_output(['cargo','metadata','--locked','--format-version','1','--filter-platform','wasm32-unknown-unknown'],cwd=repo))
++pkgs={p['id']:p for p in j['packages']};nodes={n['id']:n for n in j['resolve']['nodes']}
++start=next(k for k,p in pkgs.items() if p['name']=='wordcraft-somnia-worker');seen=set()
++def visit(k):
++    if k in seen:return
++    seen.add(k)
++    for d in nodes[k]['deps']:
++        if any(t['kind']!='dev' for t in d['dep_kinds']):visit(d['pkg'])
++visit(start)
++root.mkdir(parents=True,exist_ok=True)
++rows=[]
++for k in sorted(seen):
++    p=pkgs[k];rows.append({a:p[a] for a in ['name','version','license','repository']})
++    if p['source']:
++        folder=pathlib.Path(p['manifest_path']).parent
++        out=root/'dependencies'/(p['name']+'-'+p['version']);out.mkdir(parents=True,exist_ok=True)
++        for f in folder.iterdir():
++            if f.is_file() and any(t in f.name.lower() for t in ['license','copying','notice']):shutil.copy(f,out/f.name)
++(root/'dependency-licenses.json').write_text(json.dumps(rows,indent=2))
++for name in ['LICENSE-MIT','LICENSE-APACHE','NOTICE','ATTRIBUTION.md']:shutil.copy(repo/name,root/name)
++for f in (repo/'assets/fonts').glob('OFL*'):shutil.copy(f,root/f.name)
+diff --git a/spikes/somnia-documents/scripts/sizes.py b/spikes/somnia-documents/scripts/sizes.py
+new file mode 100644
+index 0000000..9be2d0c
+--- /dev/null
++++ b/spikes/somnia-documents/scripts/sizes.py
+@@ -0,0 +1,7 @@
++import pathlib,json,gzip,statistics
++root=pathlib.Path(__file__).resolve().parents[1]
++p=root/'results/metrics.json'
++m=json.loads(p.read_text()); data=(root/'web/pkg/wordcraft_somnia_worker_bg.wasm').read_bytes()
++m['size']={'wasmBytes':len(data),'gzipBytes':len(gzip.compress(data,mtime=0)),'jsBytes':(root/'web/pkg/wordcraft_somnia_worker.js').stat().st_size}
++m['medians']={k:statistics.median(s[k] for s in m['samples']) for k in ['openMs','layoutMs','renderMs','editMs','editLayoutMs','saveMs']}
++p.write_text(json.dumps(m,indent=2))
+diff --git a/spikes/somnia-documents/web/index.html b/spikes/somnia-documents/web/index.html
+new file mode 100644
+index 0000000..33860b9
+--- /dev/null
++++ b/spikes/somnia-documents/web/index.html
+@@ -0,0 +1,19 @@
++<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
++<title>Somnia Documents · Worker proof</title>
++<style>body{font:15px system-ui;margin:0;background:#f8f9fb;color:#192238}header{padding:24px 32px}h1{font-size:24px;margin:0 0 8px}button,input{margin:5px}main{display:flex;gap:24px;padding:0 32px 32px}section{background:white;border-radius:20px;padding:20px;min-width:300px}pre{white-space:pre-wrap;max-width:510px;font-size:12px}img{width:595px;max-width:100%;box-shadow:0 2px 15px #ccd}#status{color:#6051cc}</style>
++<header><h1>Somnia Documents</h1><div>Headless Rust / WASM engine in a dedicated browser Worker. Integration spike, not the finished editor.</div><div id="status">Loading…</div></header>
++<main><section><button id="sample">Open fixture</button><input id="file" type="file" accept=".docx"><br><button id="edit">Insert "Edited: "</button><button id="save">Export DOCX</button><pre id="metrics"></pre><pre id="text"></pre></section><section><img id="page" alt="WordCraft raster of DOCX page one"></section></main>
++<script type="module">
++const worker=new Worker('./worker.js',{type:'module'}); let seq=0;const pending=new Map();
++worker.onmessage=({data})=>{const p=pending.get(data.id);pending.delete(data.id);data.ok?p.resolve(data.value):p.reject(new Error(data.error));};
++worker.onerror=e=>document.querySelector('#status').textContent='Worker error: '+e.message;
++const rpc=(op,args={})=>new Promise((resolve,reject)=>{const id=++seq;pending.set(id,{resolve,reject});worker.postMessage({id,op,...args},args.bytes?[args.bytes]:[]);});
++window.rpc=rpc;window.done=false;let imageUrl;
++async function show(v){document.querySelector('#metrics').textContent=JSON.stringify({...v,text:undefined},null,2);document.querySelector('#text').textContent=v.text;const img=await rpc('render'); if(imageUrl)URL.revokeObjectURL(imageUrl);imageUrl=URL.createObjectURL(new Blob([img.bytes],{type:'image/png'}));document.querySelector('#page').src=imageUrl; document.querySelector('#status').textContent=`${v.pages} page(s) · rendered off the UI thread`;return img;}
++async function open(bytes){const v=await rpc('open',{bytes});await show(v);window.done=true;window.latest=v;return v;}
++document.querySelector('#sample').onclick=async()=>open(await(await fetch('./fixtures/sample.docx')).arrayBuffer());
++document.querySelector('#file').onchange=async e=>open(await e.target.files[0].arrayBuffer());
++document.querySelector('#edit').onclick=async()=>show(await rpc('insert',{block:0,offset:0,text:'Edited: '}));
++document.querySelector('#save').onclick=async()=>{const s=await rpc('save');const u=URL.createObjectURL(new Blob([s.bytes]));const a=document.createElement('a');a.href=u;a.download='somnia-edited.docx';a.click();setTimeout(()=>URL.revokeObjectURL(u),1000);};
++open(await(await fetch('./fixtures/sample.docx')).arrayBuffer()).catch(e=>{document.querySelector('#status').textContent=e.message;window.error=String(e);});
++</script></html>
+diff --git a/spikes/somnia-documents/web/worker.js b/spikes/somnia-documents/web/worker.js
+new file mode 100644
+index 0000000..6c79e6a
+--- /dev/null
++++ b/spikes/somnia-documents/web/worker.js
+@@ -0,0 +1,28 @@
++import init, { DocSession } from './pkg/wordcraft_somnia_worker.js';
++let session;
++const loaded = (async () => { const t = performance.now(); await init(); return performance.now()-t; })();
++self.onmessage = async ({data}) => {
++ const {id, op} = data;
++ try {
++  const initMs = await loaded;
++  const timed = fn => {const t=performance.now(); const result=fn(); return {result,ms:performance.now()-t};};
++  let value, transfer=[];
++  if(op==='open') {
++   if(session) {session.free();session=null;}
++   const opened=timed(()=>new DocSession(new Uint8Array(data.bytes))); session=opened.result;
++   const pages=timed(()=>session.paginate());
++   value={initMs,openMs:opened.ms,layoutMs:pages.ms,pages:pages.result,text:session.text(),info:JSON.parse(session.page_info())};
++  } else if(op==='insert') {
++   const edit=timed(()=>session.insert(data.block,data.offset,data.text));
++   const pages=timed(()=>session.paginate());
++   value={editMs:edit.ms,layoutMs:pages.ms,pages:pages.result,text:session.text(),info:JSON.parse(session.page_info())};
++  } else if(op==='render') {
++   const img=timed(()=>session.render_png(data.page??0,data.scale??1));
++   value={renderMs:img.ms,bytes:img.result.buffer}; transfer=[value.bytes];
++  } else if(op==='save') {
++   const saved=timed(()=>session.save()); value={saveMs:saved.ms,bytes:saved.result.buffer}; transfer=[value.bytes];
++  } else if(op==='close') {session?.free();session=null;value={closed:true};}
++  else throw new Error('Unknown operation');
++  self.postMessage({id,ok:true,value},transfer);
++ } catch(e) {self.postMessage({id,ok:false,error:String(e)});}
++};

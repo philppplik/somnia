@@ -22,6 +22,7 @@
     "bench:projects": "tsx scripts/bench-projects.ts",
     "test:documents": "tsx --test src/lib/convert/*.test.ts src/lib/conversion/*.test.ts",
     "craft:build": "sh craft/build.sh && sh sheets-craft/build.sh && npm run raster:wasm",
+    "documents:build": "sh documents/build.sh",
     "raster:wasm": "sh scripts/build-raster-wasm.sh"
   },
   "dependencies": {
