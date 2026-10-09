@@ -2192,9 +2192,15 @@
   "documents.inspector.pages": "Páginas",
   "documents.inspector.words": "Palavras",
   "documents.inspector.engine": "Abertura e layout",
-  "documents.inspector.readonly": "Ver e salvar uma cópia. A edição virá depois. O layout pode diferir do Word.",
+  "documents.inspector.readonly": "Edite o texto simples dos parágrafos e salve uma cópia. O layout pode diferir do Word.",
   "documents.inspector.risks": "Partes que uma cópia salva pode perder:",
   "cmd.documents.saveCopy": "Salvar uma cópia do documento",
   "cmd.documents.zoomIn": "Aumentar o documento",
-  "cmd.documents.zoomOut": "Diminuir o documento"
+  "cmd.documents.zoomOut": "Diminuir o documento",
+  "documents.undo": "Desfazer edição de texto",
+  "documents.redo": "Refazer edição de texto",
+  "documents.edit.title": "Editar texto",
+  "documents.edit.paragraph": "Parágrafo {n}",
+  "documents.edit.table": "O bloco {n} é uma tabela. Ainda não é possível editar tabelas.",
+  "documents.edit.objects": "O bloco {n} contém imagens, campos ou outros objetos. Ainda não pode ser editado como texto."
 }

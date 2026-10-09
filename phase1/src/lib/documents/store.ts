@@ -1,8 +1,10 @@
 import {useSyncExternalStore} from 'react';
 import type {RiskId} from './inspect';
+import type {DocBlock} from './edit';
+import type {PageSize} from './protocol';
 export type DocStatus='idle'|'loading'|'ready'|'error';
-export interface DocumentsState{status:DocStatus;name:string;error:string;pages:number;zoom:number;risks:readonly RiskId[];words:number;engineMs:number|null;saving:boolean}
-const initial:DocumentsState={status:'idle',name:'',error:'',pages:0,zoom:1,risks:[],words:0,engineMs:null,saving:false};
+export interface DocumentsState{status:DocStatus;name:string;error:string;pages:number;zoom:number;risks:readonly RiskId[];words:number;engineMs:number|null;saving:boolean;blocks:readonly DocBlock[];pageSizes:readonly PageSize[];rev:number;canUndo:boolean;canRedo:boolean;editError:string;edited:boolean}
+const initial:DocumentsState={status:'idle',name:'',error:'',pages:0,zoom:1,risks:[],words:0,engineMs:null,saving:false,blocks:[],pageSizes:[],rev:0,canUndo:false,canRedo:false,editError:'',edited:false};
 let state=initial;const listeners=new Set<()=>void>();
 export const getDocumentsState=()=>state;
 export function patchDocuments(p:Partial<DocumentsState>){state={...state,...p};listeners.forEach(l=>l());}

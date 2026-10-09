@@ -2192,9 +2192,15 @@
   "documents.inspector.pages": "Pages",
   "documents.inspector.words": "Words",
   "documents.inspector.engine": "Open and layout",
-  "documents.inspector.readonly": "View and save a copy. Editing comes later. Layout can differ from Word.",
+  "documents.inspector.readonly": "Edit plain paragraph text and save a copy. Layout can differ from Word.",
   "documents.inspector.risks": "Parts a saved copy may lose:",
   "cmd.documents.saveCopy": "Save a copy of the document",
   "cmd.documents.zoomIn": "Zoom in on the document",
-  "cmd.documents.zoomOut": "Zoom out of the document"
+  "cmd.documents.zoomOut": "Zoom out of the document",
+  "documents.undo": "Undo text edit",
+  "documents.redo": "Redo text edit",
+  "documents.edit.title": "Edit text",
+  "documents.edit.paragraph": "Paragraph {n}",
+  "documents.edit.table": "Block {n} is a table. Tables cannot be edited yet.",
+  "documents.edit.objects": "Block {n} contains images, fields or other objects. It cannot be edited as text yet."
 }

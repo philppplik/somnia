@@ -2192,9 +2192,15 @@
   "documents.inspector.pages": "Seiten",
   "documents.inspector.words": "Wörter",
   "documents.inspector.engine": "Öffnen und Layout",
-  "documents.inspector.readonly": "Ansehen und Kopie speichern. Bearbeiten folgt später. Das Layout kann von Word abweichen.",
+  "documents.inspector.readonly": "Reinen Absatztext bearbeiten und eine Kopie speichern. Das Layout kann von Word abweichen.",
   "documents.inspector.risks": "Teile, die eine gespeicherte Kopie verlieren kann:",
   "cmd.documents.saveCopy": "Kopie des Dokuments speichern",
   "cmd.documents.zoomIn": "Dokument vergrößern",
-  "cmd.documents.zoomOut": "Dokument verkleinern"
+  "cmd.documents.zoomOut": "Dokument verkleinern",
+  "documents.undo": "Textänderung rückgängig",
+  "documents.redo": "Textänderung wiederholen",
+  "documents.edit.title": "Text bearbeiten",
+  "documents.edit.paragraph": "Absatz {n}",
+  "documents.edit.table": "Block {n} ist eine Tabelle. Tabellen lassen sich noch nicht bearbeiten.",
+  "documents.edit.objects": "Block {n} enthält Bilder, Felder oder andere Objekte. Er lässt sich noch nicht als Text bearbeiten."
 }

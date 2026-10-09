@@ -2192,9 +2192,15 @@
   "documents.inspector.pages": "Pages",
   "documents.inspector.words": "Mots",
   "documents.inspector.engine": "Ouverture et mise en page",
-  "documents.inspector.readonly": "Afficher et enregistrer une copie. La modification viendra plus tard. La mise en page peut différer de Word.",
+  "documents.inspector.readonly": "Modifiez le texte simple des paragraphes et enregistrez une copie. La mise en page peut différer de Word.",
   "documents.inspector.risks": "Parties qu'une copie enregistrée peut perdre :",
   "cmd.documents.saveCopy": "Enregistrer une copie du document",
   "cmd.documents.zoomIn": "Agrandir le document",
-  "cmd.documents.zoomOut": "Réduire le document"
+  "cmd.documents.zoomOut": "Réduire le document",
+  "documents.undo": "Annuler la modification du texte",
+  "documents.redo": "Rétablir la modification du texte",
+  "documents.edit.title": "Modifier le texte",
+  "documents.edit.paragraph": "Paragraphe {n}",
+  "documents.edit.table": "Le bloc {n} est un tableau. Les tableaux ne sont pas encore modifiables.",
+  "documents.edit.objects": "Le bloc {n} contient des images, des champs ou d'autres objets. Il n'est pas encore modifiable comme texte."
 }

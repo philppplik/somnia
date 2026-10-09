@@ -62,3 +62,27 @@ test('manual Code choice wins and the studio is reachable by keyboard; inspector
  await expect(page.getByTestId('documents-inspector')).toBeVisible();await expect(page.getByTestId('documents-info-pages')).toHaveText('1');
  await page.screenshot({path:shot('inspector')});
 });
+
+test('edit a paragraph, undo/redo, tables stay locked, save a copy contains the edit',async({page})=>{
+ await page.goto('/');await expect(page.locator('[data-storage]')).toBeVisible();
+ await openBuffers(page,[{name:'sample.docx',mimeType:DOCX,buffer:sample()}]);
+ await expect(page.getByTestId('documents-pages')).toHaveText('1 pages');
+ const editor=page.getByTestId('documents-editor');await expect(editor).toBeVisible();
+ await expect(page.getByTestId('documents-block-locked').first()).toContainText('table');
+ const first=editor.getByRole('textbox').first();const old=await first.inputValue();
+ await first.fill('Geändert: '+old);await first.blur();
+ await expect(page.getByTestId('documents-undo')).toBeEnabled();
+ await expect.poll(async()=>(await first.inputValue()).startsWith('Geändert: ')).toBe(true);
+ await expect(page.getByTestId('documents-edit-error')).toHaveCount(0);
+ await page.waitForTimeout(400);await page.screenshot({path:shot('edited')});
+ await page.getByTestId('documents-undo').click();await expect.poll(()=>first.inputValue()).toBe(old);
+ await expect(page.getByTestId('documents-redo')).toBeEnabled();
+ await page.getByTestId('documents-redo').click();await expect.poll(()=>first.inputValue()).toBe('Geändert: '+old);
+ const download=page.waitForEvent('download');await page.getByTestId('documents-save-copy').click();
+ const d=await download;expect(d.suggestedFilename()).toBe('sample (Somnia copy).docx');
+ const out=readFileSync((await d.path())!);
+ await openBuffers(page,[{name:'copy.docx',mimeType:DOCX,buffer:out}]);
+ await expect(page.getByTestId('documents-name')).toHaveText('copy.docx');
+ await expect(page.getByTestId('documents-editor').getByRole('textbox').first()).toHaveValue('Geändert: '+old);
+ await page.screenshot({path:shot('edited-copy')});
+});
