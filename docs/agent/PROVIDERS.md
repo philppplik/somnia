@@ -6,8 +6,8 @@ Status: 6 October 2026. OpenRouter and Ollama adapters are implemented on `somni
 
 | Route | Authentication | Processing location | Readiness |
 | --- | --- | --- | --- |
-| OpenRouter | User's API key | OpenRouter and routed model provider | Implemented (`openRouter.ts`), key kept in session memory, fake-provider tests only |
-| Ollama, local model | Local daemon; deployment-specific auth if needed | User's local daemon/model | Implemented (`providers/ollama.ts`) with local verification, tested with a mocked daemon only |
+| OpenRouter | User's API key | OpenRouter and routed model provider | Implemented (`openRouter.ts`), key in the OS credential store on desktop (session memory in a browser preview), mocked-`fetch` tests only; see [openrouter-provider.md](openrouter-provider.md) |
+| Ollama, local model | Local daemon; deployment-specific auth if needed | User's local daemon/model | Implemented (`providers/ollama.ts`) with local verification, tested with a mocked daemon only; see [ollama-provider.md](ollama-provider.md) |
 | Ollama remote/cloud route | Server-specific configuration | Configured remote server/cloud provider | Not a local-only privacy exception |
 | ChatGPT/Codex subscription | Official supported agent login/flow, if eligible | Relevant OpenAI service | Official open-source route documented; implementation and eligibility checks pending |
 | Claude/Claude Code subscription | Official supported agent login/flow, if permitted | Relevant Anthropic service | Not permitted for third-party Pro/Max login under current policy |

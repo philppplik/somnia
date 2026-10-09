@@ -117,10 +117,10 @@ Failures go through `lib/log.ts` with these sources: `agent.provider` (provider 
 
 ## Known gaps
 
-- **Webview CSP.** `connect-src` in `tauri.conf.json` allows `ipc:`, GitHub hosts and `ws:`/`wss:`, but not `https://openrouter.ai` or `http://127.0.0.1:11434`. Provider `fetch` calls from the packaged desktop webview are therefore expected to be blocked until the hosts are added (or the requests move to the Rust backend). The dev CSP has the same gap. Not yet verified on a real Windows run.
-- **No credential storage.** The OpenRouter key is session-memory only. Native secure storage is a later step.
+- **Webview CSP.** `connect-src` in `tauri.conf.json` now lists `https://openrouter.ai` and `http://127.0.0.1:11434` / `http://localhost:11434`. OpenRouter requests go through the native Rust transport. Ollama uses the webview `fetch`, so the daemon must accept the app's origin; not verified on a real Windows or macOS run.
+- **Credentials.** OpenRouter keys are stored in the OS credential store by the desktop app (`agent_key_save`); only a browser preview keeps them in session memory. See [openrouter-provider.md](openrouter-provider.md).
 - **No persistence of chats.** `snapshot()` and `restore()` exist but the panel does not use them.
-- **No model discovery in the panel.** The model name is typed in; `OllamaProvider.listModels` and `health` exist but are not wired to the UI.
+- **Model discovery.** Settings > AI > Providers has a Refresh models button for both providers (suggestions only, no capability check). The Ollama `health()` helper is unused.
 - **No MCP, ACP, ChatGPT sign-in or direct provider APIs.** See [MCP-ACP.md](MCP-ACP.md) and [PROVIDERS.md](PROVIDERS.md).
 - **Real provider runs.** Tests use fake providers; no paid inference has been run against a real model from the packaged app.
 

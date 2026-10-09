@@ -1,6 +1,6 @@
 # Ollama provider (Somnia Agent)
 
-Local models through the Ollama daemon. Code: `phase1/src/lib/agent/providers/ollama.ts`. Tests: `ollama.test.ts` (mocked `fetch`, no daemon needed; run via `npm run test:core`).
+Local models through the Ollama daemon. Code: `phase1/src/lib/agent/providers/ollama.ts`. Tests: `ollama.test.ts` (mocked `fetch`, no daemon needed; run via `npm run test:core`). Setup and troubleshooting: [Using OpenRouter and Ollama](using-openrouter-and-ollama.md). The cloud counterpart is [openrouter-provider.md](openrouter-provider.md).
 
 ## Contract
 
@@ -19,7 +19,7 @@ Local models through the Ollama daemon. Code: `phase1/src/lib/agent/providers/ol
 | Finish | `tool_calls` if any call was emitted, `length` on `done_reason: length`, else `stop`. |
 | Abort | Aborted signal ends the stream with `{type:'finish', reason:'aborted'}`, no throw. |
 | Context window | Optional `numCtx` constructor option, sent as `options.num_ctx` (positive integer). Unset means the daemon default. Ollama may clamp it to what the model or memory allows, so a larger value is a request, not a guarantee; do not advertise context sizes in the UI. |
-| Extras (not in contract) | `listModels()` (`GET /api/tags`, sorted, with size/details) and `health()` (`GET /api/version`, never throws). Meant for a model picker; the panel does not use them yet (the model name is typed in). 5 s timeout on those. |
+| Extras (not in contract) | `listModels()` (`GET /api/tags`, sorted, with size/details) and `health()` (`GET /api/version`, never throws). `listModels()` feeds the model suggestions in Settings > AI > Providers (`modelCatalog.ts`); `health()` is not used by the panel. The panel's connection test (`testProviderAuthentication('ollama')`) calls `GET /api/tags` itself. 5 s timeout on these calls. |
 
 ## Local verification (`verifyLocalModel`)
 
@@ -49,6 +49,15 @@ Confirmed by Core: errors throw typed `ProviderError`; `finish: 'aborted'` is tr
 5. **Model support for tools varies.** Models without tool support return an HTTP 400 from Ollama; this surfaces as `ProviderError('http')` with Ollama's message.
 6. **Only `num_ctx` is configurable** (see table). No `keep_alive` or sampling options. Without `numCtx`, Ollama's small default context can silently truncate long project contexts.
 
+## Wiring in the app
+
+- `panelBridge.createProvider('ollama')` returns `guardedOllama(new OllamaProvider())`: always the default endpoint `http://127.0.0.1:11434`, no `numCtx`. Neither the endpoint nor the context size is configurable in the UI; a different endpoint exists only as a constructor option in code.
+- Requests use the webview's own `fetch`, not the native Rust transport that OpenRouter uses. No credentials are involved (`loadProviderKey('ollama')` returns an empty string, and the keyring commands reject `ollama`).
+- `guardedOllama` calls `verifyLocalModel` before each request and throws "Native studio mode requires a verified local Ollama model" unless it returns `{ local: true }`. A non-local result is refused, not sent through the consent flow. It then streams inside `agentPrivacy.run` with `processing: 'local'`, which `isLocalOllama` accepts only for an `http:` loopback endpoint without credentials, so no cloud consent is needed.
+- The panel's per-run disclosure checkbox and the `agentPrivacy.assert` call apply to every provider except Ollama.
+- The webview CSP (`tauri.conf.json`, `csp` and `devCsp`) allows `http://127.0.0.1:11434` and `http://localhost:11434` in `connect-src`.
+- Error mapping (`errors.ts`, `toAgentError`): `unreachable` becomes `network`, `model-not-found` stays, `timeout` stays, `not-local` becomes `consent`, `http` and `protocol` become `server` and `protocol`. HTTP failures before the stream go through the shared retry policy ([provider-errors.md](provider-errors.md)); a 400 whose body says the model has no tool support becomes `no-tool-support`.
+
 ## Not verified
 
-Not run against a live Ollama daemon (none available in the build environment). In the packaged desktop app the webview CSP does not yet allow `http://127.0.0.1:11434` (see [ARCHITECTURE.md](ARCHITECTURE.md#known-gaps)). Wire format follows Ollama's documented `/api/chat`, `/api/tags`, `/api/version`; check against a real daemon in the evening test.
+Not run against a live Ollama daemon (none available in the build environment). Wire format follows Ollama's documented `/api/chat`, `/api/tags`, `/api/show`, `/api/version`. Whether Ollama accepts requests from the packaged webview's origin is not tested on a real run; the CSP side is allowed in the config, the daemon's origin check is a separate matter.
