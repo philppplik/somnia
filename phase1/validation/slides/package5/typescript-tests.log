@@ -1,0 +1,118 @@
+TAP version 13
+# Subtest: strict deck parse rejects unknown keys layouts ranges nested shapes and oversized/control text
+ok 1 - strict deck parse rejects unknown keys layouts ranges nested shapes and oversized/control text
+  ---
+  duration_ms: 2.523056
+  type: 'test'
+  ...
+# Subtest: canonical notes/layout extraction returns plain strings without binary parts
+ok 2 - canonical notes/layout extraction returns plain strings without binary parts
+  ---
+  duration_ms: 49.690994
+  type: 'test'
+  ...
+# Subtest: inspect read-only; proposal stages partial validated JSON without applying, with whitelist/abort/stale guards
+ok 3 - inspect read-only; proposal stages partial validated JSON without applying, with whitelist/abort/stale guards
+  ---
+  duration_ms: 4.791099
+  type: 'test'
+  ...
+# Subtest: reviewed text-only output preserves original parts and rejects metadata mutations
+ok 4 - reviewed text-only output preserves original parts and rejects metadata mutations
+  ---
+  duration_ms: 65.875873
+  type: 'test'
+  ...
+# Subtest: RPC serial IDs, errors, disposal and later requests fail closed
+ok 5 - RPC serial IDs, errors, disposal and later requests fail closed
+  ---
+  duration_ms: 2.770152
+  type: 'test'
+  ...
+# Subtest: worker failure rejects all pending calls and terminates execution
+ok 6 - worker failure rejects all pending calls and terminates execution
+  ---
+  duration_ms: 0.261217
+  type: 'test'
+  ...
+# Subtest: mixed-producer corpus yields explicit structural limits, never silent parity
+ok 7 - mixed-producer corpus yields explicit structural limits, never silent parity
+  ---
+  duration_ms: 303.401844
+  type: 'test'
+  ...
+# Subtest: deterministic malformed ZIP fuzz has bounded sample and input budget
+ok 8 - deterministic malformed ZIP fuzz has bounded sample and input budget
+  ---
+  duration_ms: 7.898378
+  type: 'test'
+  ...
+# Subtest: copy edits one exact run and preserves every other original OOXML part byte-for-byte
+ok 9 - copy edits one exact run and preserves every other original OOXML part byte-for-byte
+  ---
+  duration_ms: 64.216979
+  type: 'test'
+  ...
+# Subtest: stale selection and illegal XML characters fail before output
+ok 10 - stale selection and illegal XML characters fail before output
+  ---
+  duration_ms: 9.043248
+  type: 'test'
+  ...
+# Subtest: multiple edits preserve XML whitespace attributes and reject byte-size cap
+ok 11 - multiple edits preserve XML whitespace attributes and reject byte-size cap
+  ---
+  duration_ms: 32.606518
+  type: 'test'
+  ...
+# Subtest: PPTX intake rejects wrong formats and compressed input cap
+ok 12 - PPTX intake rejects wrong formats and compressed input cap
+  ---
+  duration_ms: 1.173328
+  type: 'test'
+  ...
+# Subtest: Slides only advertises its implemented module-only tool surface
+ok 13 - Slides only advertises its implemented module-only tool surface
+  ---
+  duration_ms: 0.680304
+  type: 'test'
+  ...
+# Subtest: PPTX routes via existing media identity, respects manual Studio and readonly context
+ok 14 - PPTX routes via existing media identity, respects manual Studio and readonly context
+  ---
+  duration_ms: 6.231533
+  type: 'test'
+  ...
+# Subtest: folder media loader delivers PPTX binary identity through safe project port
+ok 15 - folder media loader delivers PPTX binary identity through safe project port
+  ---
+  duration_ms: 7.122848
+  type: 'test'
+  ...
+# Subtest: runtime-ready studios register without changing Code context
+ok 16 - runtime-ready studios register without changing Code context
+  ---
+  duration_ms: 2.002529
+  type: 'test'
+  ...
+# Subtest: manual selection wins, pending tools never commit, documents/history and global Agent stay untouched
+ok 17 - manual selection wins, pending tools never commit, documents/history and global Agent stay untouched
+  ---
+  duration_ms: 0.469707
+  type: 'test'
+  ...
+# Subtest: Studio labels and command strings exist in all five catalogues
+ok 18 - Studio labels and command strings exist in all five catalogues
+  ---
+  duration_ms: 83.876592
+  type: 'test'
+  ...
+1..18
+# tests 18
+# suites 0
+# pass 18
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 2529.716109

@@ -1,0 +1,6 @@
+
+Running 1 test using 1 worker
+
+  ✓  1 tests/slides-agent.spec.ts:2:1 › module-only deck tool stages without apply; reviewed apply/undo protects manual history and reopen identity (5.8s)
+
+  1 passed (8.9s)
