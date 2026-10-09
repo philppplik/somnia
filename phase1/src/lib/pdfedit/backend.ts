@@ -5,6 +5,12 @@ import {
   type PdfCommentChange,
 } from "./comments";
 import {
+  designFields,
+  applyFieldDesign,
+  type DesignField,
+  type FormDesignOperation,
+} from "./formDesign";
+import {
   PDFDocument,
   PDFName,
   PDFDict,
@@ -22,12 +28,15 @@ export interface PdfPageInfo {
 }
 export interface PdfEditInfo {
   comments: PdfComment[];
+  designFields: DesignField[];
+  xfa: boolean;
   pages: PdfPageInfo[];
   signed: boolean;
   encrypted: boolean;
 }
 export type PdfEditOperation =
   | PdfCommentChange
+  | FormDesignOperation
   | { kind: "rotate"; page: number }
   | { kind: "delete"; page: number }
   | { kind: "move"; from: number; to: number }
@@ -66,8 +75,14 @@ export async function inspectPdf(bytes: Uint8Array): Promise<PdfEditInfo> {
   const signed = doc.context
     .enumerateIndirectObjects()
     .some(([, o]) => signature(o));
+  const xfa =
+    doc.catalog
+      .lookupMaybe(PDFName.of("AcroForm"), PDFDict)
+      ?.has(PDFName.of("XFA")) ?? false;
   return {
     comments: doc.isEncrypted ? [] : commentsFromDocument(doc),
+    xfa,
+    designFields: doc.isEncrypted || xfa ? [] : designFields(doc),
     encrypted: doc.isEncrypted,
     signed,
     pages: doc
@@ -84,6 +99,8 @@ export async function applyPdfEdit(
     throw Error(
       "Encrypted PDFs are view-only. Save a decrypted copy in a trusted PDF tool before editing.",
     );
+  if (info.xfa)
+    throw Error("XFA PDFs are view-only. Form design is not supported.");
   if (info.signed)
     throw Error("Signed PDFs are view-only to protect their signatures.");
   const doc = await PDFDocument.load(bytes);
@@ -94,6 +111,8 @@ export async function applyPdfEdit(
   };
   if (op.kind === "comment.update" || op.kind === "comment.delete")
     changeComment(doc, op);
+  if (op.kind === "field.create" || op.kind === "field.properties")
+    await applyFieldDesign(doc, op);
   if (op.kind === "rotate") {
     valid(op.page);
     const p = doc.getPage(op.page);
@@ -156,8 +175,8 @@ export async function applyPdfEdit(
     if (!Number.isInteger(op.after) || op.after < 0 || op.after >= count)
       throw Error("Page does not exist.");
     const otherInfo = await inspectPdf(op.data);
-    if (otherInfo.encrypted || otherInfo.signed)
-      throw Error("Cannot combine encrypted or signed PDFs.");
+    if (otherInfo.encrypted || otherInfo.signed || otherInfo.xfa)
+      throw Error("Cannot combine encrypted, signed or XFA PDFs.");
     const other = await PDFDocument.load(op.data);
     if (other.getForm().getFields().length)
       throw Error(

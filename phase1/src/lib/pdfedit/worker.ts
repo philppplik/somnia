@@ -19,7 +19,8 @@ self.onmessage = async ({ data }: MessageEvent<Request>) => {
       result = await applyPdfEdit(data.bytes, data.operation);
     } else {
       const info = await inspectPdf(data.bytes);
-      if (info.signed || info.encrypted) throw Error("This PDF is view-only.");
+      if (info.signed || info.encrypted || info.xfa)
+        throw Error("This PDF is view-only.");
       const filled = await fillForm(data.bytes, data.values ?? {});
       if (filled.errors.length)
         throw Error(filled.errors.map((e) => e.message).join(" "));

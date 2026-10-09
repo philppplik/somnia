@@ -142,7 +142,7 @@ export function selectPdfPage(name: string, page: number) {
 }
 export function setPdfEditing(name: string) {
   const s = sessions.get(name);
-  if (!s?.info || s.info.signed || s.info.encrypted) return;
+  if (!s?.info || s.info.signed || s.info.encrypted || s.info.xfa) return;
   set(name, { editing: true, error: null });
 }
 export function pdfError(name: string, error: string | null) {
@@ -183,7 +183,7 @@ export const editPdf = (name: string, op: PdfEditOperation) =>
   commit(name, (s) => applyPdfEdit(s.bytes!, op));
 export const fillPdf = (name: string, values: Record<string, PdfFieldValue>) =>
   commit(name, async (s) => {
-    if (s.info?.signed || s.info?.encrypted)
+    if (s.info?.signed || s.info?.encrypted || s.info?.xfa)
       throw Error("This PDF is view-only.");
     return fillPdfInWorker(s.bytes!, values);
   });
