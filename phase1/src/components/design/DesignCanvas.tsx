@@ -2,6 +2,7 @@ import {useRef,useState} from 'react';
 import {createNode,exportArtboardSVG,parseDesignDocument,serializeDesignDocument,type DesignNode} from '../../lib/design/model';
 import {downloadDesign,editDesign,redoDesign,selectDesignNode,startDesign,undoDesign,useDesignState,loadDesign} from '../../lib/design/session';
 import {Button} from '../ui/button';
+import {StudioEmptyState} from '../studios/StudioEmptyState';
 
 export function DesignCanvas(){
  const s=useDesignState();const input=useRef<HTMLInputElement>(null);const [error,setError]=useState('');const [zoom,setZoom]=useState(0.65);
@@ -18,7 +19,7 @@ export function DesignCanvas(){
   if(event.key==='Delete'&&board&&s.selection){event.preventDefault();editDesign(doc=>({...doc,artboards:doc.artboards.map(a=>a.id===board.id?{...a,nodes:a.nodes.filter(n=>n.id!==s.selection||n.locked)}:a)}));selectDesignNode(null);}
  }}>
  <input ref={input} data-testid="design-import-input" className="hidden" type="file" accept=".somdesign,application/json" onChange={async event=>{const file=event.target.files?.[0];event.target.value='';if(!file)return;try{if(file.size>5_000_000)throw new Error('Design files must be under 5 MB.');const doc=parseDesignDocument(await file.text());guardReplace(()=>loadDesign(doc));setError('');}catch(error){setError(error instanceof Error?error.message:'Could not open design.');}}}/>
- {!board||!s.document?<div className="flex h-full flex-col items-center justify-center gap-4 p-8 text-center"><div className="rounded-2xl bg-hover p-5 text-3xl" aria-hidden="true">▧</div><h1 className="text-2xl font-semibold">Create beautiful layouts inside Design Studio</h1><p className="max-w-md text-sm text-ink-2">Shape your ideas on artboards. Arrange text and shapes, fine-tune each layer, and export an editable project or a clean SVG.</p><div className="flex gap-3"><Button data-testid="design-open" variant="outline" onClick={()=>input.current?.click()}>Open design project</Button><Button data-testid="design-create-blank" onClick={startDesign}>Create blank project</Button></div></div>:<>
+ {!board||!s.document?<StudioEmptyState studio="design" icon={<span>▧</span>} onOpen={()=>input.current?.click()} onCreate={startDesign}/>:<>
  <div className="flex shrink-0 flex-wrap items-center gap-2 border-b border-subtle p-3">
  <span className="mr-auto text-sm font-medium">{s.document.name}<span className="ml-2 text-xs text-ink-2">{s.dirty?'Unsaved changes':'Opened project'}</span></span>
  <Button size="compact" data-testid="design-open" variant="outline" onClick={()=>input.current?.click()}>Open</Button>
