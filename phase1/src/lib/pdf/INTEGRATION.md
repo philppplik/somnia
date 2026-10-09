@@ -150,3 +150,44 @@ CHROME_PATH=/usr/bin/google-chrome node src/lib/pdf/inspection-chromium.mjs
 Set `PDF_INSPECTION_OUTPUT` to change the output directory. The script closes the
 browser and local server after inspection. Screenshot generation alone is not
 visual approval; inspect the rendered images before accepting changes.
+
+# PDF edit integration
+
+Baseline: `1d014e1`. All code is additive. Nothing changes the active PDF studio until the host wires these touchpoints.
+
+## Existing studio read first
+
+`src/components/pdfedit/PdfInlineEditor.tsx`, `PdfPanels.tsx`, `src/lib/pdfedit/session.ts` and `backend.ts` currently edit a byte copy and store byte snapshots in undo/redo. `pdfannotate` already exports real Highlight and StrikeOut objects; `pdfforms` supports AcroForm inspection and filling. This module reuses those MIT helpers without rewriting the studio.
+
+## New public surface
+
+- `inspectPdfEditSource(source)` returns editing guards, page info, field descriptions and initial metadata.
+- `createPdfEditDocument`, `applyPdfEditCommand`, `extractPdfPages`, JSON parse/serialize, and bounded history helpers store only JSON metadata. Rotation, deletion and order never change source bytes. Annotations target original zero-based source-page identities, not the changing display index.
+- `exportPdfEdits(source, metadata)` composes a private copy. Output annotations remain actual PDF annotation objects, including visible FreeText with an embedded appearance stream. AcroForm values remain editable. Existing annotations and original page references are preserved.
+- `PdfEditInspector` is a controlled inspector. It has no filesystem access or automatic export. Page extraction returns selected original identities in current display order. It includes keyboard reorder buttons, native form controls, alerts and all five locale catalogues.
+
+## Host touchpoints (not changed by this patch)
+
+1. In `pdfedit/session.ts`, retain immutable original bytes separately from preview bytes. Bind persisted metadata to the source identity/content hash in the project container; `commands.ts` supplies revision-token matching and per-command capability gating for this boundary; page count alone is not a fingerprint. Initialize a `PdfEditHistory` only after inspection. Do not persist form values to logs or telemetry.
+2. Wire `PdfEditInspector` into the inspector slot in `App.tsx` / `PdfPanels.tsx`, passing `getLocale()` and subscribing to locale changes with the existing i18n hook. Studio-owned `PDF_EDIT_LOCALES` avoids edits to shared locale files. It is intentionally not merged into the global catalogue.
+3. Route inspector commands through `commitPdfEdits`. Record metadata as dirty project state, not a rewritten PDF. Wire undo/redo, clear errors on success, and map active source-page identity to current display position. If the active page is deleted, select the next visible identity.
+4. For interactive preview, render original source pages in metadata order with rotation offsets. Draw metadata annotations in an overlay after converting bottom-left PDF coordinates through the PDF.js viewport matrix (including crop-box offsets and original rotation). Do not mutate source bytes merely to preview. Coordinate inspector values are unrotated points; annotation geometry gets checked against the source crop box at export.
+5. Save export through the existing user-selected copy destination. Do not overwrite the original path. Run `exportPdfEdits` in the PDF worker for large documents and guard repeated exports with a busy flag. The exporter snapshots metadata and source at invocation.
+6. Extraction uses `extractPdfPages(history.present, identities)` and a separate copy export. Never replace the current document with the extraction result unless the user explicitly opens that copy.
+
+## Safety and limitations
+
+- View-only for encrypted, signed or XFA documents, following existing studio guards; cap 25 MB source / 2000 pages.
+- Removing any page containing form widgets is refused at export, including extraction that would omit those pages. This avoids orphan widgets and silent form loss. Reordering keeps the original page references intact. For such documents, flatten a separate copy in a trusted PDF tool first; no silent flattening occurs.
+- Form-fill errors abort the copy export rather than emitting partially filled output. Read-only fields, invalid options, unknown names, unsupported field types and unsupported glyphs are reported.
+- FreeText uses Helvetica/WinAnsi, supports explicit line breaks, rejects text wider/taller than its rectangle and unsupported characters. No silent truncation or font substitution. Arbitrary Unicode requires a licensed embedded-font provider in a later integration.
+- Existing content is not rewritten: no paragraph reflow, OCR, arbitrary existing-text replacement, signature editing or form design here.
+- No new dependency, downloaded font, GPL/AGPL or MPL code. Uses existing MIT `pdf-lib`. Verification imports PDF.js Apache-2.0 build/worker only, not `standard_fonts`, Liberation assets, or `standardFontDataUrl`.
+
+## Verification
+
+A PDF.js console font-fallback warning was observed for the synthetic Standard-14 fixture; no licensed fallback font assets were fetched or bundled. Chromium pixel checks confirm visible test text and annotations, not general font fidelity.
+
+Run `npx tsx --test src/lib/pdf/*.test.ts`. Tests cover immutable source and metadata, history, stable identities, validation, real annotations/appearance, reordered page rotations, editable forms, failure paths and exact five-locale key parity.
+
+Standalone real-browser harness: launch Vite directly and open `/src/lib/pdf/verification/index.html?locale=en` (or `de`, `es`, `fr`, `pt-BR`). It renders a synthetic original and exported PDF side by side using PDF.js and the actual controlled inspector, without needing Tauri or missing studio WASM builds. It is not part of the application bundle because nothing in the app imports it. This proves the additive inspector/export module, not completed host integration.

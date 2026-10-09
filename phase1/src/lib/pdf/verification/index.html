@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Somnia PDF edit verification</title>
+    <style>
+      body {
+        margin: 0;
+        background: #15191f;
+        color: #e4e7ed;
+        font: 14px system-ui;
+      }
+      .layout {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 320px;
+        height: 100vh;
+      }
+      .preview {
+        padding: 20px;
+        overflow: auto;
+      }
+      header {
+        display: flex;
+        justify-content: space-between;
+        gap: 16px;
+        margin-bottom: 24px;
+      }
+      header span {
+        color: #aeb6c5;
+        font-size: 12px;
+      }
+      .sheets {
+        display: flex;
+        gap: 22px;
+        flex-wrap: wrap;
+      }
+      article {
+        flex: 1;
+        min-width: 280px;
+      }
+      article h2 {
+        font-size: 13px;
+        color: #aeb6c5;
+        font-weight: 500;
+      }
+      canvas {
+        width: 100%;
+        max-width: 506px;
+        background: white;
+        box-shadow: 0 8px 24px #0005;
+      }
+      .preview p {
+        color: #aeb6c5;
+        font-size: 12px;
+      }
+      @media (max-width: 700px) {
+        .layout {
+          display: flex;
+          flex-direction: column;
+          height: auto;
+        }
+        .preview {
+          padding: 12px;
+        }
+        .layout > .pdf-edit-inspector {
+          height: auto;
+        }
+        header {
+          flex-direction: column;
+        }
+        .sheets {
+          display: block;
+        }
+        canvas {
+          width: 100%;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="./demo.tsx"></script>
+  </body>
+</html>

@@ -1,0 +1,138 @@
+.pdf-edit-inspector {
+  font:
+    13px/1.45 system-ui,
+    sans-serif;
+  color: var(--color-ink, #e4e7ed);
+  background: var(--color-panel, #20242b);
+  padding: 16px;
+  width: 100%;
+  box-sizing: border-box;
+  overflow: auto;
+  height: 100%;
+}
+.pdf-edit-inspector h2 {
+  font-size: 17px;
+  margin: 0 0 8px;
+}
+.pdf-edit-inspector h3 {
+  font-size: 14px;
+  margin: 0 0 10px;
+}
+.pdf-edit-inspector section {
+  border-top: 1px solid var(--color-subtle, #3a404c);
+  padding-top: 15px;
+  margin-top: 16px;
+}
+.pdf-edit-hint {
+  color: var(--color-ink-3, #aeb6c5);
+  font-size: 12px;
+}
+.pdf-edit-inspector button,
+.pdf-edit-inspector input,
+.pdf-edit-inspector textarea,
+.pdf-edit-inspector select {
+  font: inherit;
+  border-radius: 5px;
+  border: 1px solid var(--color-subtle, #434b59);
+  background: var(--color-panel, #292f39);
+  color: inherit;
+  padding: 7px;
+  box-sizing: border-box;
+  min-width: 0;
+}
+.pdf-edit-inspector button {
+  cursor: pointer;
+}
+.pdf-edit-inspector button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+.pdf-edit-inspector button:focus-visible,
+.pdf-edit-inspector input:focus-visible,
+.pdf-edit-inspector select:focus-visible,
+.pdf-edit-inspector textarea:focus-visible {
+  outline: 2px solid #79aaff;
+  outline-offset: 2px;
+}
+.pdf-edit-inspector label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 9px;
+}
+.pdf-edit-inspector textarea {
+  resize: vertical;
+  min-height: 54px;
+  width: 100%;
+}
+.pdf-edit-inspector select {
+  width: 100%;
+}
+.pdf-edit-actions {
+  display: flex;
+  gap: 5px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.pdf-edit-page {
+  padding: 8px;
+  margin: 7px 0;
+  border: 1px solid #3c4452;
+  border-radius: 6px;
+}
+.pdf-edit-page .pdf-edit-actions + .pdf-edit-actions {
+  margin-top: 7px;
+}
+.pdf-edit-inspector .pdf-edit-active {
+  border-color: #79aaff;
+  background: #283e5e;
+}
+.pdf-edit-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.pdf-edit-grid input {
+  width: 100%;
+}
+.pdf-edit-inspector fieldset {
+  padding: 0;
+  margin: 0;
+  border: 0;
+}
+.pdf-edit-field {
+  margin: 10px 0;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #3c4452;
+}
+.pdf-edit-field small {
+  display: block;
+  color: #aeb6c5;
+  margin-bottom: 5px;
+}
+.pdf-edit-field input[type="checkbox"] {
+  align-self: flex-start;
+}
+.pdf-edit-annotation {
+  display: flex;
+  gap: 8px;
+  justify-content: space-between;
+  align-items: start;
+  padding-top: 8px;
+}
+.pdf-edit-annotation span {
+  overflow-wrap: anywhere;
+  min-width: 0;
+}
+.pdf-edit-inspector footer {
+  padding-top: 12px;
+}
+.pdf-edit-inspector .pdf-edit-export {
+  width: 100%;
+  background: #28558c;
+  border-color: #638fc8;
+}
+.pdf-edit-error {
+  color: #ffb1a9;
+  overflow-wrap: anywhere;
+}
