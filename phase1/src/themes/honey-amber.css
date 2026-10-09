@@ -1,0 +1,52 @@
+/* Honey Amber: candlelit walnut at night, warm honey paper by day.
+ * Import after styles/tokens.css. Existing component and geometry tokens stay intact.
+ * The canvas document retains --page-bg/--page-ink: this themes the editor, not user files.
+ */
+:root[data-theme='dark'][data-palette='honey-amber'] {
+  color-scheme: dark;
+  --bg-base: #1c160d;
+  --bg-panel: #231b10;
+  --bg-elevated: #2b2215;
+  --bg-surface: #332819;
+  --bg-hover: #42341f;
+  --border-subtle: #493921;
+  --border-default: #79603a;
+  --text-primary: #fff5df;
+  --text-secondary: #dec9a3;
+  --text-tertiary: #c5af89;
+  --accent: #f3bc54;
+  --accent-ink: #24190b;
+  /* Filled controls elsewhere use white labels, so keep this darker than --accent. */
+  --accent-fill: #965b12;
+  --accent-soft: #f3bc5424;
+  --warning: #ffd275;
+  --danger: #ff9890;
+  --canvas-bg: #181209;
+  --shell-bg: #140f08;
+  --card-shadow: 0 1px 0 #ffe7b00a inset, 0 8px 24px -12px #09060080;
+  --shadow: 0 24px 60px -20px #090600b3;
+}
+
+:root[data-theme='light'][data-palette='honey-amber'] {
+  color-scheme: light;
+  --bg-base: #faf0d9;
+  --bg-panel: #fff8e9;
+  --bg-elevated: #fffcf3;
+  --bg-surface: #f3e4c2;
+  --bg-hover: #ead7ac;
+  --border-subtle: #dcca9e;
+  --border-default: #a18a58;
+  --text-primary: #30230d;
+  --text-secondary: #604920;
+  --text-tertiary: #71562a;
+  --accent: #825008;
+  --accent-ink: #ffffff;
+  --accent-fill: #925912;
+  --accent-soft: #ad720b1f;
+  --warning: #7b4d00;
+  --danger: #ad2920;
+  --canvas-bg: #efe0ba;
+  --shell-bg: #eadbb6;
+  --card-shadow: 0 1px 2px #5c3c0b0d, 0 8px 24px -12px #5c3c0b26;
+  --shadow: 0 24px 60px -20px #57370c45;
+}

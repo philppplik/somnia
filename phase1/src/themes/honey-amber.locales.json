@@ -1,0 +1,22 @@
+{
+  "en": {
+    "finish.settings.theme.honey-amber-light": "Honey Amber (light)",
+    "finish.settings.theme.honey-amber-dark": "Honey Amber (dark)"
+  },
+  "de": {
+    "finish.settings.theme.honey-amber-light": "Honey Amber (hell)",
+    "finish.settings.theme.honey-amber-dark": "Honey Amber (dunkel)"
+  },
+  "es": {
+    "finish.settings.theme.honey-amber-light": "Honey Amber (claro)",
+    "finish.settings.theme.honey-amber-dark": "Honey Amber (oscuro)"
+  },
+  "fr": {
+    "finish.settings.theme.honey-amber-light": "Honey Amber (clair)",
+    "finish.settings.theme.honey-amber-dark": "Honey Amber (sombre)"
+  },
+  "pt-BR": {
+    "finish.settings.theme.honey-amber-light": "Honey Amber (claro)",
+    "finish.settings.theme.honey-amber-dark": "Honey Amber (escuro)"
+  }
+}
