@@ -32,3 +32,9 @@ The main thread only holds UI state and receives PNG blobs.
 2. Save in place through the project file bridge with backup and loss-detection gates.
 3. Real-world DOCX corpus, fidelity fixes, fuzzing, memory budget, WebView2 check on Windows.
 4. Agent tools for the Documents Studio (read text, propose edits) via the studio manifest.
+
+## Verification (package 6)
+- Corpus: `documents/corpus/gen_corpus.py` writes 11 small hand-written DOCX files (multi-run formatting, Unicode/RTL, table, hyperlink and field, numbering, tracked changes, section break, header, line breaks, empty paragraphs, a 900-word paragraph, 300 paragraphs). They are synthetic, not real Word output.
+- `cargo test -p wordcraft-somnia-worker --lib` (run by `documents/build.sh`, so by CI) opens, paginates, renders and saves every corpus file and requires save-then-reopen to keep all block texts. A seeded fuzz test applies random replace/split/merge/snapshot-restore/render steps against a plain text model and checks, after every step, that engine and model agree and that locked blocks refuse edits; it saves and reopens every 40 steps. `SOMNIA_FUZZ_ITERS` (default 150) and `SOMNIA_CORPUS_DIR` tune it. 3000 iterations over all 12 files pass locally.
+- Measured on the corpus: an unedited save keeps tracked changes, hyperlinks, fields, numbering, section breaks, tables, header parts, bold/italic/colour runs and all text (counts compared in the saved document.xml).
+- Not covered: real Word/LibreOffice/Google Docs files, Windows/WebView2 (real IME, clipboard permission, keyboard layouts, high DPI), macOS WebKit, touch, screen readers. Manual WebView2 checklist: open a real .docx; click, type, Backspace/Delete, Enter, Ctrl+Z/Y, Ctrl+C/X/V; type with a Japanese or Chinese IME and confirm the committed text lands at the caret; use dead keys (e.g. German ^ + e); zoom 50% and 200% at 125% display scaling; Save a copy and open it in Word.

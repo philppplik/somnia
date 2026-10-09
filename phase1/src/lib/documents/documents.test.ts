@@ -142,3 +142,14 @@ test('real engine: split, merge and snapshot restore through the core; tables an
  for(const bad of [{kind:'merge',block:0},{kind:'merge',block:4},{kind:'split',block:3,off:0},{kind:'split',block:1,off:99999}] as const)assert.equal(core.handle({id:7,...bad}).res.ok,false,JSON.stringify(bad));
  assert.deepEqual(blocks(),orig);
 });
+test('randomised: diffEdit/applyEdit/inverseOf round-trip on mixed Unicode (seeded)',()=>{
+ let seed=12345;const rnd=(n:number)=>{seed=(seed*1103515245+12345)&0x7fffffff;return seed%n;};
+ const alpha=['a','b',' ','é','ß','€','😀','日','م','x y','Z','👨‍👩‍👧'];
+ const mk=()=>Array.from({length:rnd(40)},()=>alpha[rnd(alpha.length)]).join('');
+ for(let i=0;i<600;i++){
+  const a=mk();let b=a;for(let k=0;k<1+rnd(4);k++){const cp=Array.from(b);const at=rnd(cp.length+1);cp.splice(at,rnd(3),...Array.from({length:rnd(3)},()=>alpha[rnd(alpha.length)]));b=cp.join('');}
+  const e=diffEdit(0,a,b);if(a===b){assert.equal(e,null);continue;}
+  assert.ok(e,JSON.stringify([a,b]));assert.equal(applyEdit(a,e),b,JSON.stringify([a,b]));assert.equal(applyEdit(b,inverseOf(a,e)),a,JSON.stringify([a,b]));
+  for(let j=1;j<e.hunks.length;j++)assert.ok(e.hunks[j].start>=e.hunks[j-1].end);
+ }
+});

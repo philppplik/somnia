@@ -388,4 +388,144 @@ mod tests {
         let saved = wordcraft_docx::write(&s.doc).unwrap();
         assert_eq!(DocSession::from_bytes(&saved).unwrap().text(), before);
     }
+
+    // ---- corpus + fuzz (package 6) ----
+    struct Rng(u64);
+    impl Rng {
+        fn next(&mut self) -> u64 {
+            self.0 ^= self.0 << 13;
+            self.0 ^= self.0 >> 7;
+            self.0 ^= self.0 << 17;
+            self.0
+        }
+        fn below(&mut self, n: usize) -> usize {
+            if n == 0 { 0 } else { (self.next() % n as u64) as usize }
+        }
+    }
+    fn corpus_files() -> Vec<(String, Vec<u8>)> {
+        let dir = std::env::var("SOMNIA_CORPUS_DIR").unwrap_or_else(|_| concat!(env!("CARGO_MANIFEST_DIR"), "/../../../corpus").into());
+        let mut v = vec![("sample.docx".to_string(), FIXTURE.to_vec())];
+        if let Ok(rd) = std::fs::read_dir(&dir) {
+            let mut names: Vec<_> = rd.filter_map(|e| e.ok()).map(|e| e.path()).filter(|p| p.extension().map_or(false, |x| x == "docx")).collect();
+            names.sort();
+            for p in names {
+                v.push((p.file_name().unwrap().to_string_lossy().to_string(), std::fs::read(&p).unwrap()));
+            }
+        }
+        v
+    }
+    /// (editable, text) per top-level block, taken from the adapter's own block list.
+    fn model_of(s: &DocSession) -> Vec<(bool, String)> {
+        let v: serde_json::Value = serde_json::from_str(&s.block_list()).unwrap();
+        v.as_array().unwrap().iter().map(|b| (b["editable"].as_bool().unwrap(), b["text"].as_str().unwrap_or("").to_string())).collect()
+    }
+    fn structural_ok(s: &DocSession, i: usize) -> bool {
+        s.plain_para(i).is_ok()
+    }
+    #[test]
+    fn corpus_opens_paginates_renders_and_roundtrips() {
+        let files = corpus_files();
+        assert!(files.len() >= 2, "corpus missing: set SOMNIA_CORPUS_DIR or run documents/corpus/gen_corpus.py");
+        for (name, bytes) in files {
+            let mut s = DocSession::from_bytes(&bytes).unwrap_or_else(|e| panic!("{name}: open failed: {e}"));
+            let pages = s.paginate();
+            assert!(pages >= 1, "{name}: no pages");
+            s.render_png(0, 1.0).unwrap_or_else(|_| panic!("{name}: render failed"));
+            let saved = wordcraft_docx::write(&s.doc).unwrap_or_else(|e| panic!("{name}: save failed: {e}"));
+            if let Ok(out) = std::env::var("SOMNIA_CORPUS_OUT") {
+                std::fs::create_dir_all(&out).unwrap();
+                std::fs::write(format!("{out}/{name}"), &saved).unwrap();
+            }
+            let again = DocSession::from_bytes(&saved).unwrap_or_else(|e| panic!("{name}: reopen failed: {e}"));
+            let m = model_of(&s);
+            eprintln!("corpus {name}: {} blocks, {} editable, {pages} pages", m.len(), m.iter().filter(|b| b.0).count());
+            assert_eq!(m, model_of(&again), "{name}: unedited save->reopen changed block texts");
+        }
+    }
+    #[test]
+    fn fuzz_edit_operations_against_a_text_model() {
+        let alphabet: Vec<&str> = vec!["a", "b", " ", "é", "ß", "€", "😀", "日", "م", "x y", "Z"];
+        let iters: usize = std::env::var("SOMNIA_FUZZ_ITERS").ok().and_then(|v| v.parse().ok()).unwrap_or(150);
+        for (fi, (name, bytes)) in corpus_files().into_iter().enumerate() {
+            let mut rng = Rng(0x9E3779B97F4A7C15 ^ (fi as u64 + 1) * 0x1234567);
+            let mut s = DocSession::from_bytes(&bytes).unwrap();
+            let mut model = model_of(&s);
+            let mut snaps: Vec<(u32, Vec<(bool, String)>)> = Vec::new();
+            for step in 0..iters {
+                let ctx = format!("{name} step {step}");
+                match rng.below(10) {
+                    0..=4 => {
+                        let b = rng.below(model.len());
+                        let (editable, text) = model[b].clone();
+                        let mut cuts = [0usize; 2];
+                        for c in cuts.iter_mut() {
+                            let idx: Vec<usize> = text.char_indices().map(|(i, _)| i).chain(std::iter::once(text.len())).collect();
+                            *c = idx[rng.below(idx.len())];
+                        }
+                        let (a, z) = (cuts[0].min(cuts[1]), cuts[0].max(cuts[1]));
+                        let ins = if rng.below(4) == 0 { String::new() } else { (0..1 + rng.below(3)).map(|_| alphabet[rng.below(alphabet.len())]).collect::<String>() };
+                        let r = s.do_replace(b, a, z, &ins);
+                        if editable {
+                            r.unwrap_or_else(|e| panic!("{ctx}: replace refused: {e}"));
+                            model[b].1 = format!("{}{}{}", &text[..a], ins, &text[z..]);
+                        } else {
+                            assert!(r.is_err(), "{ctx}: replace on a locked block must be refused");
+                        }
+                    }
+                    5 | 6 => {
+                        let b = rng.below(model.len());
+                        let text = model[b].1.clone();
+                        let idx: Vec<usize> = text.char_indices().map(|(i, _)| i).chain(std::iter::once(text.len())).collect();
+                        let off = idx[rng.below(idx.len())];
+                        let ok = structural_ok(&s, b);
+                        let r = s.do_split(b, off);
+                        if ok {
+                            r.unwrap_or_else(|e| panic!("{ctx}: split refused: {e}"));
+                            model[b].1 = text[..off].to_string();
+                            model.insert(b + 1, (true, text[off..].to_string()));
+                        } else {
+                            assert!(r.is_err(), "{ctx}: split on a locked block must be refused");
+                        }
+                    }
+                    7 => {
+                        let b = rng.below(model.len());
+                        let ok = b > 0 && structural_ok(&s, b) && structural_ok(&s, b - 1);
+                        let r = s.do_merge(b);
+                        if ok {
+                            r.unwrap_or_else(|e| panic!("{ctx}: merge refused: {e}"));
+                            let t = model.remove(b);
+                            model[b - 1].1.push_str(&t.1);
+                        } else {
+                            assert!(r.is_err(), "{ctx}: merge of locked neighbours must be refused");
+                        }
+                    }
+                    8 => {
+                        if snaps.len() < 4 || rng.below(2) == 0 {
+                            snaps.push((s.snapshot(), model.clone()));
+                        } else {
+                            let (id, m) = snaps[rng.below(snaps.len())].clone();
+                            s.restore(id).unwrap();
+                            model = m;
+                        }
+                    }
+                    _ => {
+                        s.paginate();
+                        if !model.is_empty() {
+                            let pg = s.pages.pages.len();
+                            s.render_png(rng.below(pg), 0.5).unwrap_or_else(|_| panic!("{ctx}: render failed"));
+                        }
+                    }
+                }
+                assert_eq!(model_of(&s), model, "{ctx}: engine and model diverged");
+                if step % 40 == 39 {
+                    let saved = wordcraft_docx::write(&s.doc).unwrap_or_else(|e| panic!("{ctx}: save failed: {e}"));
+                    let again = DocSession::from_bytes(&saved).unwrap_or_else(|e| panic!("{ctx}: reopen failed: {e}"));
+                    let got = model_of(&again);
+                    let exp: Vec<_> = model.iter().filter(|m| m.0).map(|m| m.1.clone()).collect();
+                    let got_t: Vec<_> = got.iter().filter(|m| m.0).map(|m| m.1.clone()).collect();
+                    assert_eq!(got_t, exp, "{ctx}: save->reopen changed editable text");
+                }
+            }
+        }
+    }
 }
