@@ -40,3 +40,22 @@ test('worker load error is surfaced once',()=>{
  const w=fake();new ExtensionRuntime(manifest,deps,()=>w,20);
  w.onerror!({message:'blocked'});w.onerror!({message:'blocked'});
 });
+test('desktop falls back to the relay when the scheme worker throws (SecurityError)',()=>{
+ const relay=fake();const asked:string[]=[];
+ const env:WorkerEnv={tauri:true,windowsStyle:false,create:()=>{throw new Error('SecurityError');},createFromSource:()=>fake(),createRelay:id=>{asked.push(id);return relay;}};
+ const w=browserWorker(WORKER_SOURCE,'acme.demo',env);w.postMessage({type:'activate'});
+ assert.deepEqual(asked,['acme.demo']);assert.equal(relay.sent.length,1);
+});
+test('desktop falls back once after an error event before the first message and replays sent messages',()=>{
+ const direct=fake();const relay=fake();let relays=0;
+ const env:WorkerEnv={tauri:true,windowsStyle:false,create:()=>direct,createFromSource:()=>fake(),createRelay:()=>{relays++;return relay;}};
+ const w=browserWorker(WORKER_SOURCE,'acme.demo',env);w.postMessage({type:'activate'});
+ direct.onerror?.({message:'x'});assert.equal(relays,1);assert.equal(direct.ended,true);assert.equal(relay.sent.length,1);
+ relay.onerror?.({message:'y'});let surfaced=0;w.onerror=()=>{surfaced++;};relay.onerror?.({message:'z'});assert.equal(surfaced,1);assert.equal(relays,1);
+});
+test('an error after the worker answered is not retried through the relay',()=>{
+ const direct=fake();let relays=0;
+ const env:WorkerEnv={tauri:true,windowsStyle:false,create:()=>direct,createFromSource:()=>fake(),createRelay:()=>{relays++;return fake();}};
+ const w=browserWorker(WORKER_SOURCE,'acme.demo',env);let errs=0;w.onerror=()=>{errs++;};
+ direct.onmessage?.({data:{type:'activated'}});direct.onerror?.({message:'late'});assert.equal(relays,0);assert.equal(errs,1);
+});

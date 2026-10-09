@@ -3,6 +3,7 @@ import {callApi,type ApiDeps} from './api';
 import {WORKER_SOURCE} from './workerSource';
 import type {ExtensionManifest} from './types';
 import {log,reportError} from '../log';
+import {relayWorker,closeExtDocuments} from './nativeScheme';
 export interface WorkerLike{postMessage(m:unknown):void;terminate():void;onmessage:((e:{data:any})=>void)|null;onerror?:((e:unknown)=>void)|null}
 /** One sandboxed worker per extension. All traffic is JSON over postMessage; each api.call is checked in callApi. */
 export class ExtensionRuntime{
@@ -33,7 +34,21 @@ export class ExtensionRuntime{
 export const WORKER_SCHEME='somnia-ext';
 export function workerUrl(extId:string,windowsStyle:boolean):string{const id=encodeURIComponent(extId);return windowsStyle?`http://${WORKER_SCHEME}.localhost/worker/${id}`:`${WORKER_SCHEME}://worker/${id}`;}
 const windowsStyleScheme=()=>typeof navigator!=='undefined'&&/Windows|Android/i.test(navigator.userAgent);
-export interface WorkerEnv{tauri:boolean;windowsStyle:boolean;create(url:string):WorkerLike;createFromSource(source:string):WorkerLike}
-const defaultEnv=():WorkerEnv=>({tauri:isTauri(),windowsStyle:windowsStyleScheme(),create:url=>new Worker(url) as unknown as WorkerLike,createFromSource:source=>{const url=URL.createObjectURL(new Blob([source],{type:'text/javascript'}));const w=new Worker(url);URL.revokeObjectURL(url);return w as unknown as WorkerLike;}});
-/** Desktop (Tauri): load the worker from somnia-ext://worker/<id>; there is deliberately no blob: fallback, because the app CSP (worker-src 'self') would block it and a blob worker would not get the strict worker CSP anyway. Web/dev (no Tauri): blob worker under the page CSP, hardening is best effort only (no connect-src 'none' boundary). */
-export const browserWorker=(source:string,extId='',env:WorkerEnv=defaultEnv()):WorkerLike=>env.tauri?env.create(workerUrl(extId,env.windowsStyle)):env.createFromSource(source);
+export interface WorkerEnv{tauri:boolean;windowsStyle:boolean;create(url:string):WorkerLike;createFromSource(source:string):WorkerLike;/** Same-origin relay used when the engine refuses a cross-origin Worker URL. */createRelay?(extId:string):WorkerLike}
+const defaultEnv=():WorkerEnv=>({createRelay:relayWorker,tauri:isTauri(),windowsStyle:windowsStyleScheme(),create:url=>new Worker(url) as unknown as WorkerLike,createFromSource:source=>{const url=URL.createObjectURL(new Blob([source],{type:'text/javascript'}));const w=new Worker(url);URL.revokeObjectURL(url);return w as unknown as WorkerLike;}});
+/** Desktop (Tauri): start the worker from somnia-ext://worker/<id> (own response, own CSP). A Worker URL must be same-origin with its creator, so engines that refuse the cross-origin scheme (sync SecurityError, or an error event before the first message) fall back ONCE to the trusted same-origin relay (ext_worker_open). If neither starts, onerror fires and the runtime reports a visible failure: execution fails closed. There is deliberately no blob: fallback on desktop (app CSP worker-src would block it and it would not get the strict worker CSP). Web/dev (no Tauri): blob worker under the page CSP, hardening is best effort only (no connect-src 'none' boundary). */
+export function desktopWorker(extId:string,env:WorkerEnv):WorkerLike{
+ const outer:WorkerLike={onmessage:null,onerror:null,postMessage(m){sent.push(m);inner.postMessage(m);},terminate(){inner.terminate();if(env.createRelay)closeExtDocuments(extId);}};
+ const sent:unknown[]=[];let seen=false;let fellBack=false;
+ const wire=(w:WorkerLike,direct:boolean)=>{
+  w.onmessage=e=>{seen=true;outer.onmessage?.(e);};
+  w.onerror=e=>{
+   if(direct&&!seen&&!fellBack&&env.createRelay){fellBack=true;try{w.terminate();}catch{/* already gone */}inner=wire(env.createRelay(extId),false);sent.forEach(m=>inner.postMessage(m));return;}
+   outer.onerror?.(e);};
+  return w;};
+ let inner:WorkerLike;
+ try{inner=wire(env.create(workerUrl(extId,env.windowsStyle)),true);}
+ catch(e){if(!env.createRelay)throw e;fellBack=true;inner=wire(env.createRelay(extId),false);}
+ return outer;
+}
+export const browserWorker=(source:string,extId='',env:WorkerEnv=defaultEnv()):WorkerLike=>env.tauri?desktopWorker(extId,env):env.createFromSource(source);
