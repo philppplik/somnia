@@ -1,0 +1,51 @@
+/* Sunset Orange: apricot daylight and burnt-orange dusk.
+ * Integration: import immediately after tokens.css, before high-contrast rules.
+ * Both choices use data-palette="sunset-orange" with their respective data-theme.
+ * Editor syntax and document/page colours deliberately remain independent.
+ * Existing --accent-ink keeps light-on-fill and dark-on-accent buttons readable.
+ */
+:root[data-theme=light][data-palette=sunset-orange]:where(:not([data-contrast=high])) {
+  --bg-base: #fff0e5;
+  --bg-panel: #fff8f2;
+  --bg-elevated: #fffaf6;
+  --bg-surface: #fbe4d5;
+  --bg-hover: #f6d6c3;
+  --border-subtle: #eed1bd;
+  --border-default: #c79a7f;
+  --text-primary: #341e16;
+  --text-secondary: #674438;
+  --text-tertiary: #785243;
+  --accent: #9a3d0c;
+  --accent-fill: #a84316;
+  --accent-ink: #ffffff;
+  --accent-soft: #c953181f;
+  --warning: #875600;
+  --danger: #b12435;
+  --canvas-bg: #f5ddcc;
+  --shell-bg: #f9e3d4;
+  --shadow: 0 24px 60px -20px #50251540;
+  --card-shadow: 0 1px 2px #5025150d, 0 8px 24px -12px #50251524;
+}
+
+:root[data-theme=dark][data-palette=sunset-orange]:where(:not([data-contrast=high])) {
+  --bg-base: #211510;
+  --bg-panel: #291b16;
+  --bg-elevated: #33221b;
+  --bg-surface: #3b271f;
+  --bg-hover: #482b24;
+  --border-subtle: #4a3026;
+  --border-default: #79513e;
+  --text-primary: #fff5eb;
+  --text-secondary: #e2b9a0;
+  --text-tertiary: #c69d87;
+  --accent: #ffab75;
+  --accent-fill: #a84316;
+  --accent-ink: #241510;
+  --accent-soft: #ff905326;
+  --warning: #f7c269;
+  --danger: #ff9b9d;
+  --canvas-bg: #1a110e;
+  --shell-bg: #180f0c;
+  --shadow: 0 24px 60px -20px #0009;
+  --card-shadow: 0 1px 0 #ffd4b510 inset;
+}
