@@ -179,3 +179,14 @@ export function convertToPath(key:string):boolean{
  return commit(applyPatches(text,[{from:el.from,to:el.to,insert:open}]));}
 export function setPathData(key:string,d:string):boolean{return setAttrOn(key,{d});}
 export const contoursOf=(el:XEl)=>el.tag==='path'?pathToContours(attr(el,'d')??''):null;
+
+// ---- snapping targets ---------------------------------------------------------------------------------------
+/** Boxes (root space) of visible, unlocked leaf elements outside `exclude`, used as snap targets. Capped so huge documents stay responsive. */
+export function snapTargets(exclude:string[],cap=400):Box[]{
+ const svg=view.svg;const {root}=scan();if(!svg||!root)return[];const ex=exclude.map(parsePathKey);const out:Box[]=[];
+ for(const el of Array.from(svg.querySelectorAll('[data-sp]'))){if(out.length>=cap)break;const key=el.getAttribute('data-sp')!;if(!key)continue;
+  const sp=elementAt(root,parsePathKey(key));if(!sp||!isLeaf(sp))continue;
+  if(el.closest('defs,clipPath,mask,pattern,symbol,marker,linearGradient,radialGradient,filter'))continue;
+  const p=parsePathKey(key);if(ex.some(q=>q.length<=p.length&&q.every((v,i)=>p[i]===v)))continue;
+  if(getComputedStyle(el).display==='none')continue;const b=boxOfEl(el);if(b.w===0&&b.h===0)continue;out.push(b);}
+ return out;}

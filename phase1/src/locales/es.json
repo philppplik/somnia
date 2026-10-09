@@ -2111,5 +2111,19 @@
   "svg.bool.exclude": "Excluir solapamiento",
   "svg.placeImage": "Colocar imagen",
   "svg.trace.colors": "Colores",
-  "svg.trace.run": "Vectorizar"
+  "svg.trace.run": "Vectorizar",
+  "svg.snap.title": "Ajuste",
+  "svg.snap.on": "Ajustar a objetos, guías y cuadrícula",
+  "svg.snap.grid": "Cuadrícula",
+  "svg.snap.hint": "Mantén Ctrl o Cmd al arrastrar para no ajustar. Tamaño 0 desactiva la cuadrícula.",
+  "svg.guides": "Guías",
+  "svg.guide.pos": "Posición",
+  "svg.guide.vertical": "Vertical",
+  "svg.guide.horizontal": "Horizontal",
+  "svg.guide.remove": "Quitar guía",
+  "svg.clip.make": "Crear trazado de recorte (la forma superior recorta el resto)",
+  "svg.mask.make": "Crear máscara (la forma superior enmascara el resto)",
+  "svg.clip.release": "Soltar recorte o máscara",
+  "svg.clip.clipped": "Recortado",
+  "svg.clip.masked": "Enmascarado"
 }

@@ -2111,5 +2111,19 @@
   "svg.bool.exclude": "Überlappung ausschließen",
   "svg.placeImage": "Bild platzieren",
   "svg.trace.colors": "Farben",
-  "svg.trace.run": "In Vektor umwandeln"
+  "svg.trace.run": "In Vektor umwandeln",
+  "svg.snap.title": "Einrasten",
+  "svg.snap.on": "An Objekten, Hilfslinien und Raster einrasten",
+  "svg.snap.grid": "Raster",
+  "svg.snap.hint": "Beim Ziehen Strg oder Cmd halten, um nicht einzurasten. Rastergröße 0 schaltet das Raster aus.",
+  "svg.guides": "Hilfslinien",
+  "svg.guide.pos": "Position",
+  "svg.guide.vertical": "Vertikal",
+  "svg.guide.horizontal": "Horizontal",
+  "svg.guide.remove": "Hilfslinie entfernen",
+  "svg.clip.make": "Beschneidungspfad erstellen (oberste Form beschneidet den Rest)",
+  "svg.mask.make": "Maske erstellen (oberste Form maskiert den Rest)",
+  "svg.clip.release": "Beschneidung oder Maske aufheben",
+  "svg.clip.clipped": "Beschnitten",
+  "svg.clip.masked": "Maskiert"
 }

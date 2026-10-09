@@ -9,14 +9,17 @@ import {HANDLES,invert,apply,rotateAbout,resizeDelta,translate,changesForDelta,m
 import {pathToContours,contoursToPath,moveNode,moveHandle,nearestOnContour,insertNode,deleteNode,setKind,type Contour} from '../../lib/svgedit/pathnodes';
 import {serializeContour} from '../../lib/vectorio/serialize';
 import type {Point,VectorNode} from '../../lib/vectorio/types';
+import {buildLines,snapBox,snapPoint,type SnapLine} from '../../lib/svgedit/snap';
 import {SvgOptionsBar} from './SvgOptionsBar';
 import {SvgFooter} from './SvgFooter';
 
 const PAD=56;
+interface SnapCtx{box:Box|null;lines:SnapLine[]}
 type Session=
  |{k:'pan';sx:number;sy:number;l:number;t:number}
- |{k:'move';start:Point;keys:string[];moved:boolean;sx:number;sy:number}
- |{k:'resize';handle:Handle;box:Box;keys:string[]}
+ |{k:'move';start:Point;keys:string[];moved:boolean;sx:number;sy:number;ctx:SnapCtx}
+ |{k:'guide';i:number}
+ |{k:'resize';handle:Handle;box:Box;keys:string[];ctx:SnapCtx}
  |{k:'rotate';box:Box;keys:string[];start:number}
  |{k:'marquee';start:Point;additive:boolean}
  |{k:'shape';tool:Tool;start:Point;parent:string}
@@ -32,7 +35,7 @@ export function SvgEditor({file,text}:{file:string;text:string}){
  const [marquee,setMarquee]=useState<Box|null>(null);const [shapePrev,setShapePrev]=useState<{tool:Tool;a:Point;b:Point;shift:boolean;alt:boolean}|null>(null);
  const [draft,setDraft]=useState<{parent:string;nodes:VectorNode[]}|null>(null);const [hover,setHover]=useState<Point|null>(null);
  const [nodeDraft,setNodeDraft]=useState<Contour[]|null>(null);const [editing,setEditing]=useState<{key:string;value:string}|null>(null);
- const [spaceDown,setSpaceDown]=useState(false);const [error,setError]=useState('');
+ const [snapShown,setSnapShown]=useState<SnapLine[]>([]);const [spaceDown,setSpaceDown]=useState(false);const [error,setError]=useState('');
  const display=useMemo(()=>{const d=buildDisplay(text);setError(d?'':t('svg.invalid'));return d;},[text]);// eslint-disable-line react-hooks/exhaustive-deps
  const scanned=C.scan();const root=scanned.root;
 
@@ -72,19 +75,29 @@ export function SvgEditor({file,text}:{file:string;text:string}){
  const hitKey=(target:EventTarget|null):string|null=>{let n=target as Element|null;while(n&&!(n instanceof SVGElement&&n.hasAttribute('data-sp'))){n=n.parentElement;if(n===host.current)return null;}
   if(!n)return null;const key=n.getAttribute('data-sp')!;if(key==='')return null;
   const p=parsePathKey(key);for(let i=1;i<=p.length;i++)if(getUi().locked.includes(pathKey(p.slice(0,i))))return null;return key;};
+ const snapCtx=(keys:string[]):SnapCtx=>({box:C.boxOfKeys(C.topKeys(keys)),lines:buildLines(C.snapTargets(keys),C.docBox(),getUi().guides)});
+ const snapOn=(e:{ctrlKey:boolean;metaKey:boolean})=>getUi().snap&&!(e.ctrlKey||e.metaKey);
+ const thr=()=>6/(zoom||1);
+ const moveOf=(s:Extract<Session,{k:'move'}>,p:Point,e:React.PointerEvent):{dx:number;dy:number;lines:SnapLine[]}=>{
+  let dx=p.x-s.start.x,dy=p.y-s.start.y;if(e.shiftKey){if(Math.abs(dx)>Math.abs(dy))dy=0;else dx=0;}
+  if(snapOn(e)&&s.ctx.box){const r=snapBox({...s.ctx.box,x:s.ctx.box.x+dx,y:s.ctx.box.y+dy},s.ctx.lines,thr(),getUi().grid,{x:!(e.shiftKey&&dx===0),y:!(e.shiftKey&&dy===0)});return{dx:dx+r.dx,dy:dy+r.dy,lines:r.lines};}
+  return{dx,dy,lines:[]};};
+ const resizePt=(s:Extract<Session,{k:'resize'}>,p:Point,e:React.PointerEvent):{p:Point;lines:SnapLine[]}=>{
+  if(!snapOn(e))return{p,lines:[]};const h=s.handle;const r=snapPoint(p,s.ctx.lines,thr(),getUi().grid,{x:h.includes('e')||h.includes('w'),y:h.includes('n')||h.includes('s')});return{p:{x:r.x,y:r.y},lines:r.lines};};
  const onDown=(e:React.PointerEvent)=>{
   if(!display||!root||e.button===2)return;scroller.current?.focus({preventScroll:true});
   const tgt=e.target as Element;const hd=tgt.getAttribute?.('data-h');const nd=tgt.getAttribute?.('data-n');
   const capture=()=>wrap.current?.setPointerCapture(e.pointerId);
   if(e.button===1||spaceDown||(e.button===0&&getUi().tool==='select'&&false)){session.current={k:'pan',sx:e.clientX,sy:e.clientY,l:scroller.current!.scrollLeft,t:scroller.current!.scrollTop};capture();return;}
+  const gd=tgt.getAttribute?.('data-guide');if(gd!==null&&gd!==undefined&&gd!==''){session.current={k:'guide',i:+gd};capture();return;}
   const p=rootPt(e);const tool=getUi().tool;const sel=getUi().selection;
   if(tool==='select'){
    if(hd){const box=selBox();if(!box)return;capture();
     if(hd==='rot'){const cx=box.x+box.w/2,cy=box.y+box.h/2;session.current={k:'rotate',box,keys:sel,start:Math.atan2(p.y-cy,p.x-cx)};}
-    else session.current={k:'resize',handle:hd as Handle,box,keys:sel};return;}
+    else session.current={k:'resize',handle:hd as Handle,box,keys:sel,ctx:snapCtx(sel)};return;}
    const key=hitKey(e.target);capture();
    if(key){if(e.shiftKey){patchUi({selection:sel.includes(key)?sel.filter(k=>k!==key):[...sel,key]});session.current=null;return;}
-    const keys=sel.includes(key)?sel:[key];if(keys!==sel)patchUi({selection:keys});session.current={k:'move',start:p,keys,moved:false,sx:e.clientX,sy:e.clientY};return;}
+    const keys=sel.includes(key)?sel:[key];if(keys!==sel)patchUi({selection:keys});session.current={k:'move',start:p,keys,moved:false,sx:e.clientX,sy:e.clientY,ctx:snapCtx(keys)};return;}
    session.current={k:'marquee',start:p,additive:e.shiftKey};if(!e.shiftKey)patchUi({selection:[]});return;}
   if(tool==='node'){
    const key1=sel.length===1?sel[0]:null;capture();
@@ -104,8 +117,9 @@ export function SvgEditor({file,text}:{file:string;text:string}){
   if(!s){if(getUi().tool==='pen'&&draft){setHover(rootPt(e));}return;}
   if(s.k==='pan'){scroller.current!.scrollLeft=s.l-(e.clientX-s.sx);scroller.current!.scrollTop=s.t-(e.clientY-s.sy);return;}
   const p=rootPt(e);
-  if(s.k==='move'){if(!s.moved&&Math.hypot(e.clientX-s.sx,e.clientY-s.sy)<3)return;s.moved=true;let dx=p.x-s.start.x,dy=p.y-s.start.y;if(e.shiftKey){if(Math.abs(dx)>Math.abs(dy))dy=0;else dx=0;}previewDelta(s.keys,translate(dx,dy));}
-  else if(s.k==='resize'){previewDelta(s.keys,resizeDelta(s.box,s.handle,p,e.shiftKey,e.altKey));}
+  if(s.k==='move'){if(!s.moved&&Math.hypot(e.clientX-s.sx,e.clientY-s.sy)<3)return;s.moved=true;const m=moveOf(s,p,e);setSnapShown(m.lines);previewDelta(s.keys,translate(m.dx,m.dy));}
+  else if(s.k==='guide'){const g=getUi().guides[s.i];if(g)patchUi({guides:getUi().guides.map((x,i)=>i===s.i?{...x,pos:Math.round((g.axis==='x'?p.x:p.y)*10)/10}:x)});}
+  else if(s.k==='resize'){const r=resizePt(s,p,e);setSnapShown(r.lines);previewDelta(s.keys,resizeDelta(s.box,s.handle,r.p,e.shiftKey,e.altKey));}
   else if(s.k==='rotate'){const cx=s.box.x+s.box.w/2,cy=s.box.y+s.box.h/2;let a=(Math.atan2(p.y-cy,p.x-cx)-s.start)*180/Math.PI;if(e.shiftKey)a=Math.round(a/15)*15;previewDelta(s.keys,rotateAbout(a,cx,cy));}
   else if(s.k==='marquee'){setMarquee({x:Math.min(s.start.x,p.x),y:Math.min(s.start.y,p.y),w:Math.abs(p.x-s.start.x),h:Math.abs(p.y-s.start.y)});}
   else if(s.k==='shape'){setShapePrev({tool:s.tool,a:s.start,b:p,shift:e.shiftKey,alt:e.altKey});}
@@ -117,8 +131,8 @@ export function SvgEditor({file,text}:{file:string;text:string}){
  const onUp=(e:React.PointerEvent)=>{
   const s=session.current;session.current=null;if(!s)return;try{wrap.current?.releasePointerCapture(e.pointerId);}catch{/* not captured */}
   const p=rootPt(e);
-  if(s.k==='move'){if(!s.moved){return;}let dx=p.x-s.start.x,dy=p.y-s.start.y;if(e.shiftKey){if(Math.abs(dx)>Math.abs(dy))dy=0;else dx=0;}C.transformKeys(s.keys,translate(dx,dy));redraw();}
-  else if(s.k==='resize'){C.transformKeys(s.keys,resizeDelta(s.box,s.handle,p,e.shiftKey,e.altKey));}
+  if(s.k==='move'){setSnapShown([]);if(!s.moved){return;}const m=moveOf(s,p,e);C.transformKeys(s.keys,translate(m.dx,m.dy));redraw();}
+  else if(s.k==='resize'){setSnapShown([]);C.transformKeys(s.keys,resizeDelta(s.box,s.handle,resizePt(s,p,e).p,e.shiftKey,e.altKey));}
   else if(s.k==='rotate'){const cx=s.box.x+s.box.w/2,cy=s.box.y+s.box.h/2;let a=(Math.atan2(p.y-cy,p.x-cx)-s.start)*180/Math.PI;if(e.shiftKey)a=Math.round(a/15)*15;C.transformKeys(s.keys,rotateAbout(a,cx,cy));}
   else if(s.k==='marquee'){const r=marquee;setMarquee(null);if(r&&(r.w>2||r.h>2))marqueeSelect(r,s.additive);}
   else if(s.k==='shape'){setShapePrev(null);finishShape(s,p,e.shiftKey,e.altKey);}
@@ -143,6 +157,7 @@ export function SvgEditor({file,text}:{file:string;text:string}){
   const ns=nodes.map(n=>({...n}));if(ns.length<2){setDraft(null);return;}
   const d=serializeContour(ns,closed);setDraft(null);setHover(null);C.addElement(C.pathSrc(d,closed),parent);patchUi({tool:'node'});};
  const onDouble=(e:React.PointerEvent|React.MouseEvent)=>{
+  const gd=(e.target as Element).getAttribute?.('data-guide');if(gd){patchUi({guides:getUi().guides.filter((_,i)=>i!==+gd)});return;}
   const tool=getUi().tool;if(tool==='pen'&&draft){const nodes=draft.nodes.slice(0,-1);finishPen(draft.parent,nodes.length>=2?nodes:draft.nodes,false);return;}
   if(tool==='node'&&root&&getUi().selection.length===1){const key=getUi().selection[0];const el=elementAt(root,parsePathKey(key));if(!el)return;const cs=C.contoursOf(el);if(!cs)return;
    const lp=clientToLocal(key,e.clientX,e.clientY);const scale=Math.abs(M(C.domEl(key)?.getScreenCTM())[0])||1;let best:{c:number;seg:number;t:number;dist:number}|null=null;
@@ -192,7 +207,7 @@ export function SvgEditor({file,text}:{file:string;text:string}){
   let d=`M${pts[0].x} ${pts[0].y}`;for(let i=1;i<pts.length;i++){const a=pts[i-1],b=pts[i];d+=(a.out||b.in)?`C${(a.out??a).x} ${(a.out??a).y} ${(b.in??b).x} ${(b.in??b).y} ${b.x} ${b.y}`:`L${b.x} ${b.y}`;}
   if(hover){const a=pts[pts.length-1];const h=toOv(hover);d+=a.out?`C${a.out.x} ${a.out.y} ${h.x} ${h.y} ${h.x} ${h.y}`:`L${h.x} ${h.y}`;}return{d,pts};})():null;
  const cursor=spaceDown?'grab':ui.tool==='select'?'default':ui.tool==='node'?'default':'crosshair';
- const hs=7;
+ const hs=7;const docB=display?C.docBox():{x:0,y:0,w:0,h:0};
 
  if(error&&!display)return <section className="svg-editor" aria-label={t('svg.editor')}><SvgOptionsBar/><div className="grid flex-1 place-items-center p-6 text-center text-[12px] text-ink-3" role="alert">{error}</div></section>;
  return <section className="svg-editor" aria-label={t('svg.editor')}>
@@ -201,6 +216,10 @@ export function SvgEditor({file,text}:{file:string;text:string}){
    <div ref={wrap} className="svg-wrap" style={{width:wrapW,height:wrapH,padding:PAD,cursor}} onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp} onDoubleClick={onDouble} onPointerLeave={()=>setCursor(null)}>
     <div ref={host} className="svg-host" data-testid="svg-host"/>
     <svg className="svg-overlay" width={wrapW} height={wrapH} aria-hidden="true">
+     {ui.grid>0&&display&&ui.grid*zoom*(display.w/(docB.w||display.w))>=4&&(()=>{const o=toOv({x:docB.x,y:docB.y});const gs=ui.grid*zoom*(display.w/(docB.w||display.w));return <g data-testid="svg-grid" opacity={.55}><defs><pattern id="svg-grid-pat" width={gs} height={gs} patternUnits="userSpaceOnUse" x={o.x} y={o.y}><path d={`M${gs} 0H0V${gs}`} fill="none" stroke={accent} strokeWidth={.5}/></pattern></defs><rect x={o.x} y={o.y} width={display.w*zoom} height={display.h*zoom} fill="url(#svg-grid-pat)"/></g>;})()}
+     {ui.guides.map((g,i)=>{const a=toOv(g.axis==='x'?{x:g.pos,y:docB.y}:{x:docB.x,y:g.pos});const x1=g.axis==='x'?a.x:0,x2=g.axis==='x'?a.x:wrapW,y1=g.axis==='x'?0:a.y,y2=g.axis==='x'?wrapH:a.y;
+      return <g key={i}><line x1={x1} y1={y1} x2={x2} y2={y2} stroke="#18b6c9" strokeWidth={1} data-testid="svg-guide"/><line data-guide={i} x1={x1} y1={y1} x2={x2} y2={y2} stroke="transparent" strokeWidth={9} style={{pointerEvents:'all',cursor:g.axis==='x'?'col-resize':'row-resize'}}/></g>;})}
+     {snapShown.map((l,i)=>{const a=toOv(l.axis==='x'?{x:l.pos,y:l.from}:{x:l.from,y:l.pos}),b=toOv(l.axis==='x'?{x:l.pos,y:l.to}:{x:l.to,y:l.pos});return <line key={i} data-testid="svg-snapline" data-kind={l.kind} x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke={l.kind==='grid'?accent:'#ff3d8b'} strokeWidth={1}/>;})}
      {singleBoxes.map((b,i)=>{const p=boxPx(b);return <rect key={i} x={p.x} y={p.y} width={p.w} height={p.h} fill="none" stroke={accent} strokeWidth={1} opacity={.6}/>;})}
      {ubPx&&ui.tool!=='node'&&<rect x={ubPx.x} y={ubPx.y} width={ubPx.w} height={ubPx.h} fill="none" stroke={accent} strokeWidth={1.5} data-testid="svg-selection"/>}
      {showHandles&&ubPx&&<>

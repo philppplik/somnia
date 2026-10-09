@@ -2111,5 +2111,19 @@
   "svg.bool.exclude": "Excluir sobreposição",
   "svg.placeImage": "Inserir imagem",
   "svg.trace.colors": "Cores",
-  "svg.trace.run": "Vetorizar"
+  "svg.trace.run": "Vetorizar",
+  "svg.snap.title": "Ajuste",
+  "svg.snap.on": "Ajustar a objetos, guias e grade",
+  "svg.snap.grid": "Grade",
+  "svg.snap.hint": "Segure Ctrl ou Cmd ao arrastar para não ajustar. Tamanho 0 desliga a grade.",
+  "svg.guides": "Guias",
+  "svg.guide.pos": "Posição",
+  "svg.guide.vertical": "Vertical",
+  "svg.guide.horizontal": "Horizontal",
+  "svg.guide.remove": "Remover guia",
+  "svg.clip.make": "Criar caminho de recorte (a forma de cima recorta o resto)",
+  "svg.mask.make": "Criar máscara (a forma de cima mascara o resto)",
+  "svg.clip.release": "Soltar recorte ou máscara",
+  "svg.clip.clipped": "Recortado",
+  "svg.clip.masked": "Mascarado"
 }

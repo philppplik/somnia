@@ -2111,5 +2111,19 @@
   "svg.bool.exclude": "Exclure le chevauchement",
   "svg.placeImage": "Placer une image",
   "svg.trace.colors": "Couleurs",
-  "svg.trace.run": "Vectoriser"
+  "svg.trace.run": "Vectoriser",
+  "svg.snap.title": "Magnétisme",
+  "svg.snap.on": "Aimanter aux objets, repères et grille",
+  "svg.snap.grid": "Grille",
+  "svg.snap.hint": "Maintenez Ctrl ou Cmd pendant le glissement pour ignorer l'aimantation. Une taille de 0 désactive la grille.",
+  "svg.guides": "Repères",
+  "svg.guide.pos": "Position",
+  "svg.guide.vertical": "Vertical",
+  "svg.guide.horizontal": "Horizontal",
+  "svg.guide.remove": "Supprimer le repère",
+  "svg.clip.make": "Créer un tracé de détourage (la forme du dessus détoure le reste)",
+  "svg.mask.make": "Créer un masque (la forme du dessus masque le reste)",
+  "svg.clip.release": "Libérer le détourage ou le masque",
+  "svg.clip.clipped": "Détouré",
+  "svg.clip.masked": "Masqué"
 }

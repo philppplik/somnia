@@ -2,6 +2,7 @@ import {useRef} from 'react';
 import {booleanOp,booleanable,type BoolOp} from '../../lib/svgedit/booleans';
 import {traceImage,isTraceable,placeImage,DEFAULT_TRACE} from '../../lib/svgedit/trace';
 import {useState} from 'react';
+import {canClip,makeClip,clipInfo,releaseClip} from '../../lib/svgedit/clip';
 import {useT} from '../../lib/useT';
 import {Button} from '../ui/button';
 import {useSvgUi,patchUi} from '../../lib/svgedit/store';
@@ -12,6 +13,11 @@ import {attr} from '../../lib/svgedit/source';
 import type {AlignKind} from '../../lib/svgedit/geometry';
 import {AlignStartVertical,AlignCenterVertical,AlignEndVertical,AlignStartHorizontal,AlignCenterHorizontal,AlignEndHorizontal,ArrowUpToLine,ArrowDownToLine,ArrowUp,ArrowDown,ArrowLeftRight,ArrowUpDown,RotateCw,RotateCcw,Container,SquareDashed,Image as ImageIcon,PencilLine,Minus} from '../../lib/icons';
 const BoolGlyph=({op}:{op:BoolOp})=><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4" aria-hidden="true"><defs><clipPath id={`bc-${op}`}><rect x="6" y="6" width="8" height="8" rx="1"/></clipPath></defs>{op==='unite'&&<path d="M2 2h8v4h4v8H6v-4H2z" fill="currentColor" fillOpacity=".25"/>}{op==='subtract'&&<><path d="M2 2h8v4H6v4H2z" fill="currentColor" fillOpacity=".25"/><path d="M6 6h8v8H6z" strokeDasharray="2 2"/></>}{op==='intersect'&&<><rect x="2" y="2" width="8" height="8" rx="1" strokeDasharray="2 2"/><rect x="6" y="6" width="8" height="8" rx="1" strokeDasharray="2 2"/><rect x="6" y="6" width="4" height="4" fill="currentColor" fillOpacity=".35"/></>}{op==='exclude'&&<><path d="M2 2h8v4H6v4H2z" fill="currentColor" fillOpacity=".25"/><path d="M10 6h4v8H6v-4h4z" fill="currentColor" fillOpacity=".25"/></>}</svg>;
+const ClipGlyph=({kind}:{kind:'clip'|'mask'|'release'|'snap'})=><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4" aria-hidden="true">
+ {kind==='clip'&&<><rect x="1.5" y="1.5" width="9" height="9" rx="1" strokeDasharray="2 2"/><circle cx="9.5" cy="9.5" r="4.5" fill="currentColor" fillOpacity=".25"/></>}
+ {kind==='mask'&&<><rect x="1.5" y="1.5" width="13" height="13" rx="1.5"/><path d="M2 14L14 2" strokeWidth="2.2" strokeOpacity=".5"/><circle cx="8" cy="8" r="3" fill="currentColor" fillOpacity=".4"/></>}
+ {kind==='release'&&<><circle cx="8" cy="8" r="5" strokeDasharray="2.2 2"/><path d="M5.5 8h5M8.5 6l2 2-2 2"/></>}
+ {kind==='snap'&&<><path d="M3 2v6a5 5 0 0010 0V2"/><path d="M3 5h3M10 5h3"/></>}</svg>;
 const Sep=()=><span className="mx-1 h-4 w-px bg-[var(--border-subtle)]" aria-hidden="true"/>;
 export function SvgOptionsBar(){
  const {t}=useT();const ui=useSvgUi();const sel=ui.selection;const has=sel.length>0;const {root}=C.scan();
@@ -34,6 +40,10 @@ export function SvgOptionsBar(){
   {btn(t('svg.toPath'),<PencilLine size={15}/>,()=>sel.forEach(k=>C.convertToPath(k)),!one||!C.convertible(one))}
   <Sep/>
   {(['unite','subtract','intersect','exclude'] as const).map(op=>btn(t('svg.bool.'+op),<BoolGlyph op={op}/>,()=>void run(()=>booleanOp(sel,op)),!canBool||busy))}
+  <Sep/>
+  {btn(t('svg.clip.make'),<ClipGlyph kind="clip"/>,()=>makeClip(sel,'clip'),!canClip(sel))}{btn(t('svg.mask.make'),<ClipGlyph kind="mask"/>,()=>makeClip(sel,'mask'),!canClip(sel))}{btn(t('svg.clip.release'),<ClipGlyph kind="release"/>,()=>one&&releaseClip(sel[0]),!one||!clipInfo(one))}
+  <Sep/>
+  {btn(t('svg.snap.on'),<ClipGlyph kind="snap"/>,()=>patchUi({snap:!ui.snap}),false,ui.snap)}
   <Sep/>
   {btn(t('svg.placeImage'),<ImageIcon size={15}/>,()=>file.current?.click())}<input ref={file} type="file" hidden accept="image/png,image/jpeg,image/webp,image/gif" data-testid="svg-place-input" onChange={e=>{const f=e.target.files?.[0];e.target.value='';if(f)void run(()=>placeImage(f));}}/>
   {one&&isTraceable(one)&&<>

@@ -49,3 +49,19 @@ resvg-exact export becomes a requirement.
   gradients is rewritten to the editor's bounding-box form on the next edit.
 - Trace: Place image (embeds PNG/JPEG/WebP/GIF as data URI, max 3 MB), select the `<image>`, pick colours, Trace to vector.
   The result is a `<g id="trace">` of filled paths next to the image (downscaled to 512 px for tracing). The image stays.
+
+## B3 (snapping, guides, clip and mask)
+
+- Snapping: while moving or resizing, edges and centres snap to other objects, the document box (edges and centre),
+  guides and an optional grid. Threshold is 6 screen pixels. Pink lines show what matched. Hold Ctrl/Cmd to skip it,
+  or switch it off with the magnet button. Targets are visible leaf elements, capped at 400 per drag.
+  Rotation and node editing do not snap. Snapping uses the rendered bounding box (strokes and filters included as the
+  browser reports them).
+- Guides: Inspector > Design > Snapping. Add a vertical or horizontal guide by position (empty = centre), drag it on
+  the canvas, double-click or use the x to remove. Guides live in the editor session only, they are not written to the SVG.
+  There are no rulers to drag them from.
+- Clip and mask: select 2+ siblings, the topmost selected shape (rect, circle, ellipse, path, polygon, polyline, line)
+  becomes the `<clipPath>` or `<mask>` in `<defs>`, the rest is wrapped in `<g clip-path|mask="url(#id)">`.
+  One commit, one undo. A mask uses the shape's own paint as luminance (white shows, black hides; a gradient fill gives a fade).
+  Release (button or Inspector) puts the shapes back as visible siblings, removes the reference and the unused def.
+  Editing a clip shape in place is not supported, release and redo. Clips with objectBoundingBox units are refused on release.

@@ -5,6 +5,8 @@ import {useSvgUi,patchUi} from '../../lib/svgedit/store';
 import * as C from '../../lib/svgedit/controller';
 import {elementAt,parsePathKey,attr,walk} from '../../lib/svgedit/source';
 import {GradientEditor} from './GradientEditor';
+import {SnapPanel} from './SnapPanel';
+import {clipInfo,releaseClip} from '../../lib/svgedit/clip';
 import {translate,scaleAbout} from '../../lib/svgedit/geometry';
 const fmt=(n:number)=>String(Math.round(n*100)/100);
 function Num({label,value,onCommit,disabled,testid}:{label:string;value:number|null;onCommit:(v:number)=>void;disabled?:boolean;testid?:string}){
@@ -39,6 +41,7 @@ export function SvgInspector(){
    {el?.tag==='rect'&&<Num label={t('svg.radius')} testid="svg-radius" value={parseFloat(attr(el,'rx')??'0')||0} onCommit={v=>C.setAttrOn(sel[0],{rx:v>0?fmt(v):null,ry:null})}/>}
    {el?.tag==='text'&&<><label className="svg-field"><span>{t('svg.textContent')}</span><input data-testid="svg-text" aria-label={t('svg.textContent')} defaultValue={C.textOf(el,sc.text)} key={sel[0]+sc.text.length} onBlur={e=>{if(e.target.value!==C.textOf(el,sc.text))C.setTextContent(sel[0],e.target.value);}} onKeyDown={e=>{e.stopPropagation();if(e.key==='Enter')e.currentTarget.blur();}}/></label>
     <Num label={t('svg.fontSize')} value={parseFloat(C.readPaint(el,'font-size')??'16')||16} onCommit={v=>C.setPaint(sel,{'font-size':fmt(v)})}/></>}
+   {el&&clipInfo(el)&&<div className="svg-field" data-testid="svg-clip-status"><span style={{width:'auto',flex:1,textTransform:'none',letterSpacing:0}}>{clipInfo(el)!.kind==='clip'?t('svg.clip.clipped'):t('svg.clip.masked')}</span><button className="svg-none" style={{width:'auto',padding:'0 8px'}} data-testid="svg-clip-release" onClick={()=>releaseClip(sel[0])}>{t('svg.clip.release')}</button></div>}
    <h4>{t('svg.fill')}</h4><GradientEditor keys={sel} fill={paintOf('fill')}/>{!/^url\(/.test(paintOf('fill')??'')&&<Paint label={t('svg.fill')} testid="svg-fill" value={paintOf('fill')??'#000000'} onCommit={v=>C.setPaint(sel,{fill:v})}/>}
    <h4>{t('svg.stroke')}</h4><Paint label={t('svg.stroke')} testid="svg-stroke" value={paintOf('stroke')??'none'} onCommit={v=>C.setPaint(sel,{stroke:v,...(paintOf('stroke-width')===undefined&&v!=='none'?{'stroke-width':'1'}:{})})}/>
    <Num label={t('svg.strokeWidth')} testid="svg-sw" value={parseFloat(paintOf('stroke-width')??'1')||0} onCommit={v=>C.setPaint(sel,{'stroke-width':fmt(v)})}/>
@@ -46,6 +49,7 @@ export function SvgInspector(){
   </div>:<div className="svg-section"><h3>{t('svg.document')}</h3>
    {root&&['width','height','viewBox'].map(a=><label key={a} className="svg-field"><span>{a}</span><input data-testid={`svg-doc-${a}`} aria-label={a} defaultValue={attr(root,a)??''} key={a+sc.text.length} onBlur={e=>{if(e.target.value!==(attr(root,a)??''))C.setDocument({[a]:e.target.value});}} onKeyDown={e=>{e.stopPropagation();if(e.key==='Enter')e.currentTarget.blur();}}/></label>)}
    <p className="text-[11px] text-ink-3">{t('svg.docHint')}</p></div>)}
+  {tab==='design'&&<SnapPanel/>}
   {tab==='color'&&<div className="svg-section"><h3>{t('svg.docColors')}</h3>{colors.length?<div className="svg-swatches" data-testid="svg-swatches">{colors.map(c=><button key={c} title={c} aria-label={c} style={{background:c}} onClick={()=>sel.length&&C.setPaint(sel,{fill:c})}/>)}</div>:<p className="text-[11px] text-ink-3">{t('svg.noColors')}</p>}<p className="mt-2 text-[11px] text-ink-3">{t('svg.swatchHint')}</p>
    <h4>{t('svg.newShapes')}</h4><Paint label={t('svg.fill')} testid="svg-draw-fill" value={ui.draw.fill} onCommit={v=>patchUi({draw:{...ui.draw,fill:v}})}/><Paint label={t('svg.stroke')} testid="svg-draw-stroke" value={ui.draw.stroke} onCommit={v=>patchUi({draw:{...ui.draw,stroke:v}})}/>
    <Num label={t('svg.strokeWidth')} value={ui.draw.strokeWidth} onCommit={v=>patchUi({draw:{...ui.draw,strokeWidth:Math.max(0,v)}})}/></div>}

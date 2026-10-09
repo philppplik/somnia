@@ -2111,5 +2111,19 @@
   "svg.bool.exclude": "Exclude overlap",
   "svg.placeImage": "Place image",
   "svg.trace.colors": "Colours",
-  "svg.trace.run": "Trace to vector"
+  "svg.trace.run": "Trace to vector",
+  "svg.snap.title": "Snapping",
+  "svg.snap.on": "Snap to objects, guides and grid",
+  "svg.snap.grid": "Grid",
+  "svg.snap.hint": "Hold Ctrl or Cmd while dragging to skip snapping. Grid size 0 turns the grid off.",
+  "svg.guides": "Guides",
+  "svg.guide.pos": "Position",
+  "svg.guide.vertical": "Vertical",
+  "svg.guide.horizontal": "Horizontal",
+  "svg.guide.remove": "Remove guide",
+  "svg.clip.make": "Make clipping path (topmost shape clips the rest)",
+  "svg.mask.make": "Make mask (topmost shape masks the rest)",
+  "svg.clip.release": "Release clip or mask",
+  "svg.clip.clipped": "Clipped",
+  "svg.clip.masked": "Masked"
 }
