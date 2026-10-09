@@ -287,6 +287,6 @@ mod tests {
         let w = std::fs::read_to_string(dir.join("workerSource.ts")).unwrap();
         let a = w.find('`').unwrap() + 1;
         let b = w.rfind('`').unwrap();
-        assert_eq!(w[a..b].trim_start_matches('\n'), WORKER_JS);
+        assert_eq!(w[a..b].trim_start_matches(['\r', '\n']), WORKER_JS);
     }
 }
