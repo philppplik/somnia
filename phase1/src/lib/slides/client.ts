@@ -1,3 +1,4 @@
+import type {SlidesDiagnostics} from './diagnostics';
 import type {TextRun,TextEdit} from './editCopy';
 import type {DeckSummary,SlidesReply,SlidesRequest} from './protocol';
 type Request=SlidesRequest extends infer R?R extends SlidesRequest?Omit<R,'id'>:never:never;
@@ -10,6 +11,8 @@ export class SlidesClient {
  async open(bytes:Uint8Array):Promise<DeckSummary>{await this.request({op:'init'});return await this.request({op:'open',bytes}) as DeckSummary;}
  async render(index:number,scale:number):Promise<Uint8Array>{return await this.request({op:'render',index,scale}) as Uint8Array;}
  async read(index:number):Promise<{index:number;texts:string[]}>{return await this.request({op:'read',index}) as {index:number;texts:string[]};}
+ async memory(){return await this.request({op:'memory'}) as {wasmBytes:number};}
+ async diagnostics(bytes:Uint8Array){return await this.request({op:'diagnostics',bytes}) as SlidesDiagnostics;}
  async runs(bytes:Uint8Array){return await this.request({op:'runs',bytes}) as TextRun[];}
  async copy(bytes:Uint8Array,edits:TextEdit[]){return await this.request({op:'copy',bytes,edits}) as Uint8Array;}
  dispose(error=new Error('Slides operation cancelled')){if(this.closed)return;this.closed=true;this.worker.terminate();for(const p of this.pending.values()){clearTimeout(p.timer);p.reject(error);}this.pending.clear();}

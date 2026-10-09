@@ -28,6 +28,7 @@ jobs:
       - run: npx tsx --test src/lib/slides/*.test.ts src/lib/studios.test.ts
       - run: npx playwright install --with-deps chromium
       - run: npx playwright test -c playwright.slides.config.ts
+      - run: SOMNIA_CORPUS=1 npx playwright test -c playwright.slides.config.ts
       - uses: actions/upload-artifact@v7
         if: always()
         with:

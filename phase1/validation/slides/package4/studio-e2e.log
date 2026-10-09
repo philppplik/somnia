@@ -1,0 +1,14 @@
+
+Running 9 tests using 1 worker
+
+  ✓  1 tests/slides-studio.spec.ts:5:1 › Slides Studio opens independent PPTX in real worker, navigates, rejects bad input and closes (2.1s)
+  ✓  2 tests/slides-studio.spec.ts:24:1 › switching studios retains preview without changing the source document (1.6s)
+  ✓  3 tests/slides-studio.spec.ts:35:1 › dark theme presentation stays readable (1.6s)
+  ✓  4 tests/slides-studio.spec.ts:45:1 › shared FileTabs retain multiple decks and thumbnails (1.8s)
+  ✓  5 tests/slides-studio.spec.ts:57:1 › Project Open File routes PPTX automatically and source tabs return to Code (1.7s)
+  ✓  6 tests/slides-studio.spec.ts:65:1 › source FileTab leaves Slides without assigning the deck Studio to the source (2.0s)
+  ✓  7 tests/slides-studio.spec.ts:74:1 › closing evicted and current decks leaves remaining tabs usable (3.1s)
+  ✓  8 tests/slides-studio.spec.ts:82:1 › edit text undo redo and save copy retains original (3.6s)
+  ✓  9 tests/slides-studio.spec.ts:92:1 › dirty deck close requires explicit discard and can be cancelled (2.2s)
+
+  9 passed (22.0s)

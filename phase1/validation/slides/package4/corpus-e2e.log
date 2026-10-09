@@ -1,0 +1,14 @@
+
+Running 9 tests using 1 worker
+
+  ✓  1 tests/slides-corpus.spec.ts:3:86 › corpus 3columns.pptx (2.7s)
+  ✓  2 tests/slides-corpus.spec.ts:3:86 › corpus ShapePlusImage.pptx (2.4s)
+  ✓  3 tests/slides-corpus.spec.ts:3:86 › corpus chart_pt_color_bg1.pptx (1.9s)
+  ✓  4 tests/slides-corpus.spec.ts:3:86 › corpus google-slides-clipboard-textbox-2026-05-16.pptx (2.3s)
+  ✓  5 tests/slides-corpus.spec.ts:3:86 › corpus google-slides-effects-transitions-2026-05-08.pptx (1.8s)
+  ✓  6 tests/slides-corpus.spec.ts:3:86 › corpus libreoffice-7.3.7-roundtrip.pptx (1.8s)
+  ✓  7 tests/slides-corpus.spec.ts:3:86 › corpus rightToLeftParagraph.pptx (2.2s)
+  ✓  8 tests/slides-corpus.spec.ts:3:86 › corpus smartart-cycle.pptx (1.9s)
+  ✓  9 tests/slides-corpus.spec.ts:3:86 › corpus table-list.pptx (1.8s)
+
+  9 passed (21.5s)

@@ -1,7 +1,8 @@
+import type {SlidesDiagnostics} from './diagnostics';
 import type {TextRun,TextEdit} from './editCopy';
 export interface DeckSummary {slides:number;widthPt:number;heightPt:number}
-export type SlidesRequest={id:number;op:'init'}|{id:number;op:'open';bytes:Uint8Array}|{id:number;op:'render';index:number;scale:number}|{id:number;op:'read';index:number}|{id:number;op:'runs';bytes:Uint8Array}|{id:number;op:'copy';bytes:Uint8Array;edits:TextEdit[]};
-export type SlidesReply={id:number;result?:true|DeckSummary|Uint8Array|TextRun[]|{index:number;texts:string[]};error?:string};
+export type SlidesRequest={id:number;op:'init'}|{id:number;op:'open';bytes:Uint8Array}|{id:number;op:'render';index:number;scale:number}|{id:number;op:'read';index:number}|{id:number;op:'memory'}|{id:number;op:'diagnostics';bytes:Uint8Array}|{id:number;op:'runs';bytes:Uint8Array}|{id:number;op:'copy';bytes:Uint8Array;edits:TextEdit[]};
+export type SlidesReply={id:number;result?:true|{wasmBytes:number}|SlidesDiagnostics|DeckSummary|Uint8Array|TextRun[]|{index:number;texts:string[]};error?:string};
 export const MAX_PPTX_BYTES=32*1024*1024;
 export function assertPptx(file:{name:string;size:number}) {
  if(!/\.pptx$/i.test(file.name))throw new Error('Choose a .pptx presentation');

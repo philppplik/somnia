@@ -1,0 +1,88 @@
+[
+  {
+    "file": "3columns.pptx",
+    "sha256": "e639064968d29c4cf5cc3ad4dae28e825ec9d2567ae78aac895c870e91170d71",
+    "bytes": 39915,
+    "producerMetadata": [
+      "Microsoft Office PowerPoint"
+    ],
+    "source": "https://github.com/LibreOffice/core/blob/12728e3e42bed829bed1e2aed20baf9309489bee/sd/qa/unit/data/pptx/3columns.pptx",
+    "license": "MPL-2.0 (repository fixtures; no relicensing)"
+  },
+  {
+    "file": "ShapePlusImage.pptx",
+    "sha256": "5b4016ca717d6ca552e6bdf06f0b756f72c98c2ee3798a04d4de07baf9116d51",
+    "bytes": 36088,
+    "producerMetadata": [
+      "Microsoft Office PowerPoint"
+    ],
+    "source": "https://github.com/LibreOffice/core/blob/12728e3e42bed829bed1e2aed20baf9309489bee/sd/qa/unit/data/pptx/ShapePlusImage.pptx",
+    "license": "MPL-2.0 (repository fixtures; no relicensing)"
+  },
+  {
+    "file": "chart_pt_color_bg1.pptx",
+    "sha256": "11b8fbd9710c79a9e0d7bc466f27a071dc7a8f0de3078eaf79e7967af46d5c1e",
+    "bytes": 31934,
+    "producerMetadata": [
+      "Microsoft Office PowerPoint"
+    ],
+    "source": "https://github.com/LibreOffice/core/blob/12728e3e42bed829bed1e2aed20baf9309489bee/sd/qa/unit/data/pptx/chart_pt_color_bg1.pptx",
+    "license": "MPL-2.0 (repository fixtures; no relicensing)"
+  },
+  {
+    "file": "google-slides-clipboard-textbox-2026-05-16.pptx",
+    "sha256": "b704b3cd76c524f82615383bff2daa15ee6fa271a91a93bb308c29da0901a372",
+    "bytes": 879772,
+    "producerMetadata": [],
+    "source": "https://github.com/BramAlkema/openxml-audit/blob/88059833630fd8073e3751138dc3e5b19ed607b7/data/corpus/gsuite_native_export/pptx/google-slides-clipboard-textbox-2026-05-16.pptx",
+    "license": "MIT (repository, provenance README)"
+  },
+  {
+    "file": "google-slides-effects-transitions-2026-05-08.pptx",
+    "sha256": "b96285625afe52d187168e7e15490a1889b2542fb4d8118d8f0456174b06fb86",
+    "bytes": 49984,
+    "producerMetadata": [],
+    "source": "https://github.com/BramAlkema/openxml-audit/blob/88059833630fd8073e3751138dc3e5b19ed607b7/data/corpus/gsuite_native_export/pptx/google-slides-effects-transitions-2026-05-08.pptx",
+    "license": "MIT (repository, provenance README)"
+  },
+  {
+    "file": "libreoffice-7.3.7-roundtrip.pptx",
+    "sha256": "a7c450043f06fcea0e562057bff0b57a0f9b51e1e83f249c190d4bec87038c66",
+    "bytes": 25728,
+    "producerMetadata": [
+      "LibreOffice/7.3.7.2$Linux_X86_64 LibreOffice_project/30$Build-2"
+    ],
+    "source": "local LibreOffice 7.3.7.2 conversion of independently generated fixture",
+    "license": "own generated MIT"
+  },
+  {
+    "file": "rightToLeftParagraph.pptx",
+    "sha256": "2533a51c70ca3e3a0e86032f13ff818be900bc8a559d6571d48d63cc570adf0a",
+    "bytes": 31841,
+    "producerMetadata": [
+      "Microsoft Office PowerPoint"
+    ],
+    "source": "https://github.com/LibreOffice/core/blob/12728e3e42bed829bed1e2aed20baf9309489bee/sd/qa/unit/data/pptx/rightToLeftParagraph.pptx",
+    "license": "MPL-2.0 (repository fixtures; no relicensing)"
+  },
+  {
+    "file": "smartart-cycle.pptx",
+    "sha256": "11b660611f00e297661a663a0904d7247fbbe173caa67ee36dbad68b1dfd9e0c",
+    "bytes": 35322,
+    "producerMetadata": [
+      "Microsoft Office PowerPoint"
+    ],
+    "source": "https://github.com/LibreOffice/core/blob/12728e3e42bed829bed1e2aed20baf9309489bee/sd/qa/unit/data/pptx/smartart-cycle.pptx",
+    "license": "MPL-2.0 (repository fixtures; no relicensing)"
+  },
+  {
+    "file": "table-list.pptx",
+    "sha256": "45bbdf87ec5bcf7d27ccd4edc0e5fc4e11f24b5b15a08a8596e1ca52a25aba49",
+    "bytes": 52249,
+    "producerMetadata": [
+      "Microsoft Office PowerPoint"
+    ],
+    "source": "https://github.com/LibreOffice/core/blob/12728e3e42bed829bed1e2aed20baf9309489bee/sd/qa/unit/data/pptx/table-list.pptx",
+    "license": "MPL-2.0 (repository fixtures; no relicensing)"
+  }
+]

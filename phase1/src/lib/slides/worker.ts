@@ -1,16 +1,19 @@
+import {diagnosePptx} from './diagnostics';
 import {readRuns,makeEditedCopy} from './editCopy';
 /// <reference lib="webworker" />
 import init,{SlidesEngine} from '../../../slides-engine/pkg/somnia_slides.js';
 import type {SlidesRequest,SlidesReply} from './protocol';
-let engine:SlidesEngine|undefined;
+let engine:SlidesEngine|undefined;let wasmMemory:WebAssembly.Memory|undefined;
 // Serialize even asynchronous initialization. No user-defined method invocation.
 let queue=Promise.resolve();
 self.onmessage=({data}:{data:SlidesRequest})=>{queue=queue.then(async()=>{
  try{
   let result:SlidesReply['result'];
   switch(data.op){
-   case 'init':await init();engine?.free();engine=new SlidesEngine();result=true;break;
+   case 'init':wasmMemory=(await init()).memory;engine?.free();engine=new SlidesEngine();result=true;break;
    case 'open':if(!engine)throw new Error('Worker not initialized');result=JSON.parse(engine.open(data.bytes));break;
+   case 'memory':result={wasmBytes:wasmMemory?.buffer.byteLength??0};break;
+   case 'diagnostics':result=diagnosePptx(data.bytes);break;
    case 'runs':result=readRuns(data.bytes);break;
    case 'copy':result=makeEditedCopy(data.bytes,data.edits);break;
    case 'read':if(!engine)throw new Error('Worker not initialized');result=JSON.parse(engine.read_slide(data.index));break;

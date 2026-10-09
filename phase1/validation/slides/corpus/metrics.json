@@ -1,0 +1,137 @@
+[
+  {
+    "file": "3columns.pptx",
+    "workerWasmAllocated": "WASM allocated memory: 14 MiB",
+    "wallMs": 1049.1000000000931,
+    "chromeMainHeap": [
+      {
+        "name": "JSHeapUsedSize",
+        "value": 13650264
+      },
+      {
+        "name": "JSHeapTotalSize",
+        "value": 16863232
+      }
+    ]
+  },
+  {
+    "file": "ShapePlusImage.pptx",
+    "workerWasmAllocated": "WASM allocated memory: 10 MiB",
+    "wallMs": 939.3999999999069,
+    "chromeMainHeap": [
+      {
+        "name": "JSHeapUsedSize",
+        "value": 12314608
+      },
+      {
+        "name": "JSHeapTotalSize",
+        "value": 15290368
+      }
+    ]
+  },
+  {
+    "file": "chart_pt_color_bg1.pptx",
+    "workerWasmAllocated": "WASM allocated memory: 10 MiB",
+    "wallMs": 411.79999999981374,
+    "chromeMainHeap": [
+      {
+        "name": "JSHeapUsedSize",
+        "value": 12852276
+      },
+      {
+        "name": "JSHeapTotalSize",
+        "value": 15290368
+      }
+    ]
+  },
+  {
+    "file": "google-slides-clipboard-textbox-2026-05-16.pptx",
+    "workerWasmAllocated": "WASM allocated memory: 11 MiB",
+    "wallMs": 947.5,
+    "chromeMainHeap": [
+      {
+        "name": "JSHeapUsedSize",
+        "value": 12329908
+      },
+      {
+        "name": "JSHeapTotalSize",
+        "value": 15290368
+      }
+    ]
+  },
+  {
+    "file": "google-slides-effects-transitions-2026-05-08.pptx",
+    "workerWasmAllocated": "WASM allocated memory: 10 MiB",
+    "wallMs": 447.89999999990687,
+    "chromeMainHeap": [
+      {
+        "name": "JSHeapUsedSize",
+        "value": 12362488
+      },
+      {
+        "name": "JSHeapTotalSize",
+        "value": 15290368
+      }
+    ]
+  },
+  {
+    "file": "libreoffice-7.3.7-roundtrip.pptx",
+    "workerWasmAllocated": "WASM allocated memory: 9 MiB",
+    "wallMs": 380.5,
+    "chromeMainHeap": [
+      {
+        "name": "JSHeapUsedSize",
+        "value": 12500856
+      },
+      {
+        "name": "JSHeapTotalSize",
+        "value": 15028224
+      }
+    ]
+  },
+  {
+    "file": "rightToLeftParagraph.pptx",
+    "workerWasmAllocated": "WASM allocated memory: 10 MiB",
+    "wallMs": 452.39999999990687,
+    "chromeMainHeap": [
+      {
+        "name": "JSHeapUsedSize",
+        "value": 12845224
+      },
+      {
+        "name": "JSHeapTotalSize",
+        "value": 15552512
+      }
+    ]
+  },
+  {
+    "file": "smartart-cycle.pptx",
+    "workerWasmAllocated": "WASM allocated memory: 10 MiB",
+    "wallMs": 408.10000000009313,
+    "chromeMainHeap": [
+      {
+        "name": "JSHeapUsedSize",
+        "value": 12912444
+      },
+      {
+        "name": "JSHeapTotalSize",
+        "value": 15552512
+      }
+    ]
+  },
+  {
+    "file": "table-list.pptx",
+    "workerWasmAllocated": "WASM allocated memory: 10 MiB",
+    "wallMs": 379.5,
+    "chromeMainHeap": [
+      {
+        "name": "JSHeapUsedSize",
+        "value": 12530404
+      },
+      {
+        "name": "JSHeapTotalSize",
+        "value": 15290368
+      }
+    ]
+  }
+]
