@@ -8,6 +8,11 @@ import {
   PDFRef,
   PDFNumber,
 } from "pdf-lib";
+import {
+  inspectMarkup,
+  type MarkupInspection,
+  type MarkupProperties,
+} from "./markupProperties";
 import { buildAnnotation } from "../pdfannotate/export";
 export interface PdfCommentTarget {
   page: number;
@@ -27,8 +32,14 @@ export interface PdfComment {
   parentObject: string | null;
   replyType: string | null;
   canReply: boolean;
+  markup?: MarkupInspection;
 }
 export type PdfCommentChange =
+  | {
+      kind: "comment.properties";
+      target: PdfCommentTarget;
+      properties: MarkupProperties;
+    }
   | { kind: "comment.reply"; target: PdfCommentTarget; contents: string }
   | { kind: "comment.update"; target: PdfCommentTarget; contents: string }
   | { kind: "comment.delete"; target: PdfCommentTarget };
@@ -102,12 +113,22 @@ export function commentsFromDocument(doc: PDFDocument): PdfComment[] {
         parentObject: a.dict.get(key("IRT"))?.toString() ?? null,
         replyType: a.dict.lookupMaybe(key("RT"), PDFName)?.decodeText() ?? null,
         canReply: !locked && !reply && a.raw instanceof PDFRef,
+        markup:
+          a.raw instanceof PDFRef
+            ? inspectMarkup(a.dict)
+            : {
+                properties: null,
+                reason: "Direct annotation geometry is view-only.",
+              },
       },
     ];
   });
 }
 /** Guard by page, array slot, original object ref and full dictionary snapshot. Never patch a look-alike comment. */
-export function changeComment(doc: PDFDocument, op: PdfCommentChange) {
+export function changeComment(
+  doc: PDFDocument,
+  op: Exclude<PdfCommentChange, { kind: "comment.properties" }>,
+) {
   const a = arrays(doc, op.target.page);
   if (
     !a ||

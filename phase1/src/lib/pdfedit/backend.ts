@@ -1,3 +1,4 @@
+import { changeMarkup } from "./markupProperties";
 import {
   commentsFromDocument,
   changeComment,
@@ -110,6 +111,7 @@ export async function applyPdfEdit(
     if (!Number.isInteger(p) || p < 0 || p >= count)
       throw Error("Page does not exist.");
   };
+  if (op.kind === "comment.properties") changeMarkup(doc, op);
   if (
     op.kind === "comment.update" ||
     op.kind === "comment.delete" ||
