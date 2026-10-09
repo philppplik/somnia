@@ -32,6 +32,11 @@ The engine is the headless SoundCraft core (`soundcraft-audio-io` decode/encode,
 
 Drag on the waveform (or keys `I` / `O` at the playhead, `Esc` clears) to select. The inspector offers Crop, Cut, and Edit selection only (the other steps run on the selection and are spliced back). One region per clip, in original-clip seconds, applied before all other steps (`Recipe.region`). Crop and Cut lock the selection; "Undo and adjust" removes the region. Save as WAV opens the OS save dialog in the desktop app (`audio_save_*`); on the web it is a download.
 
+## Progress and plugin parameters (Paket 3)
+
+The engine reports each stage (decode, region, trim, reverse, pitch, plugin, fade, normalize, encode) right before it starts (`run_with`, `process_with_progress`); the worker forwards it and the status line and a progress bar show "stage (n/m)". Granularity is per stage: a single slow stage (pitch shift on a long file) shows no inner percentage. The worker timeout is now 10 minutes.
+Plugins are listed with their parameter metadata (`list_plugins`: id, range, default, unit, taper, choices). The inspector renders one control per parameter (log taper aware, choice and toggle types); only values that differ from the default enter the recipe. Parameter names come from the DSP crate and are English. The step summary under the controls is localized from the engine's step lines (`lib/sound/steps.ts`).
+
 ## Licensing
 
 SoundCraft is MIT OR Apache-2.0 (copyright line kept in `sound/NOTICE`; brand files and the ArtCraft name are not used). The 16 `symphonia-*` crates are MPL-2.0 (file-level copyleft, linked unmodified); their notice ships through `src/lib/thirdParty.json`. No MP3 encoder is included (shine-rs and LAME are LGPL): export is WAV only.
@@ -45,8 +50,7 @@ wasm 1.5 MB raw in this build; 3.5 s stereo MP3 decode + trim + normalize 20-40 
 1. Agent tools for the Sound Studio (manifest `agent.tools` is empty): inspect, propose recipe, preview.
 2. Copy/paste of regions and several regions per clip (Paket 2 has one region: crop, cut, or effects only on the selection).
 3. Writing back into the project folder. Media is not part of the project text-file store, so Save As (native dialog on desktop, download on web) is all that exists.
-4. Plugin parameters UI (the engine accepts a parameter map; the UI uses defaults).
-5. Streaming playback and progress for long files (currently a full offline render, 25 MB media limit).
-6. Encoders beyond WAV (FLAC/OGG) after a licensing decision for each.
-7. Recording, multitrack and session/mixer from SoundCraft (not part of the spike scope).
-8. A Windows desktop pass: media-src CSP, blob fetch under connect-src, audio output device.
+4. True streaming and an inner progress percentage for long single stages (progress is per stage today; 25 MB media limit, full offline render).
+5. Encoders beyond WAV (FLAC/OGG) after a licensing decision for each.
+6. Recording, multitrack and session/mixer from SoundCraft (not part of the spike scope).
+7. A Windows desktop pass: media-src CSP, blob fetch under connect-src, audio output device.

@@ -103,3 +103,26 @@ fn decode_ch(wav: &[u8]) -> Vec<i16> {
     let data = wav.windows(4).position(|w| w == b"data").expect("data chunk") + 8;
     wav[data..].chunks_exact(2).map(|b| i16::from_le_bytes([b[0], b[1]])).collect()
 }
+
+#[test]
+fn progress_reports_each_stage_in_order() {
+    let r = recipe(r#"{"region":{"start_s":0.5,"end_s":2.0,"mode":"only"},"reverse":true,"plugin":{"id":"plate_reverb"},"normalize_db":-1}"#);
+    let mut seen: Vec<(String, usize, usize)> = Vec::new();
+    somnia_sound::run_with(MP3, Some("mp3"), &r, &mut |s, i, t| seen.push((s.to_string(), i, t))).expect("run");
+    let names: Vec<&str> = seen.iter().map(|(s, _, _)| s.as_str()).collect();
+    assert_eq!(names, ["decode", "region", "reverse", "plugin", "normalize", "encode"]);
+    assert!(seen.iter().enumerate().all(|(k, (_, i, t))| *i == k && *t == 6));
+    assert_eq!(somnia_sound::stage_names(&recipe("{}")), ["decode", "encode"]);
+}
+
+#[test]
+fn plugin_params_change_the_result_and_bad_ones_are_rejected() {
+    let dry = run(MP3, Some("mp3"), &recipe(r#"{"plugin":{"id":"plate_reverb","params":{"mix":0}}}"#)).expect("dry");
+    let wet = run(MP3, Some("mp3"), &recipe(r#"{"plugin":{"id":"plate_reverb","params":{"mix":100,"decay":8}}}"#)).expect("wet");
+    assert!(wet.report.output.rms_db != dry.report.output.rms_db);
+    assert!(run(MP3, Some("mp3"), &recipe(r#"{"plugin":{"id":"plate_reverb","params":{"nope":1}}}"#)).is_err());
+    let list: serde_json::Value = serde_json::from_str(&somnia_sound::list_plugins()).unwrap();
+    let plate = list.as_array().unwrap().iter().find(|p| p["id"] == "plate_reverb").unwrap();
+    assert_eq!(plate["params"][0]["id"], "mix");
+    assert_eq!(plate["params"][2]["taper"], "Log");
+}

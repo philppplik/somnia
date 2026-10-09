@@ -134,8 +134,49 @@ pub fn waveform_columns(b: &AudioBuffer, cols: usize) -> Vec<f32> {
     out
 }
 
+/// Stage names `run_with` reports, in order. Only stages the recipe uses are reported.
+pub fn stage_names(recipe: &Recipe) -> Vec<&'static str> {
+    let mut v = vec!["decode"];
+    if recipe.region.is_some() {
+        v.push("region");
+    }
+    if recipe.trim_silence_db.is_some() {
+        v.push("trim");
+    }
+    if recipe.reverse {
+        v.push("reverse");
+    }
+    if recipe.pitch_semitones.is_some_and(|s| s.abs() > f32::EPSILON) {
+        v.push("pitch");
+    }
+    if recipe.plugin.is_some() {
+        v.push("plugin");
+    }
+    if recipe.fade_in_ms.is_some_and(|m| m > 0.0) || recipe.fade_out_ms.is_some_and(|m| m > 0.0) {
+        v.push("fade");
+    }
+    if recipe.normalize_db.is_some() {
+        v.push("normalize");
+    }
+    v.push("encode");
+    v
+}
+
 /// Pure-Rust entry point (also used by the tests).
 pub fn run(bytes: &[u8], ext: Option<&str>, recipe: &Recipe) -> Result<Output, String> {
+    run_with(bytes, ext, recipe, &mut |_, _, _| {})
+}
+
+/// Like [`run`], and calls `progress(stage, index, total)` right before each stage starts (index counts from 0).
+pub fn run_with(bytes: &[u8], ext: Option<&str>, recipe: &Recipe, progress: &mut dyn FnMut(&str, usize, usize)) -> Result<Output, String> {
+    let names = stage_names(recipe);
+    let total = names.len();
+    let mut idx = 0usize;
+    let mut stage = |name: &str, progress: &mut dyn FnMut(&str, usize, usize)| {
+        progress(name, idx, total);
+        idx += 1;
+    };
+    stage("decode", progress);
     let (info, mut buf) = decode(bytes, ext).map_err(|e| format!("decode: {e}"))?;
     if buf.frames() == 0 || buf.num_channels() == 0 {
         return Err("decode: file contains no audio".into());
@@ -146,6 +187,7 @@ pub fn run(bytes: &[u8], ext: Option<&str>, recipe: &Recipe) -> Result<Output, S
     let mut trimmed = None;
     let (mut head, mut tail): (Vec<Vec<f32>>, Vec<Vec<f32>>) = (Vec::new(), Vec::new());
     if let Some(r) = &recipe.region {
+        stage("region", progress);
         let total = buf.frames();
         if !r.start_s.is_finite() || !r.end_s.is_finite() || r.start_s < 0.0 || r.end_s <= r.start_s {
             return Err("region: start must be before end and not negative".into());
@@ -178,6 +220,7 @@ pub fn run(bytes: &[u8], ext: Option<&str>, recipe: &Recipe) -> Result<Output, S
         }
     }
     if let Some(thr) = recipe.trim_silence_db {
+        stage("trim", progress);
         let pad = ms_to_frames(20.0, sr);
         let ranges = offline::non_silent_ranges(&buf.channels, thr, ms_to_frames(100.0, sr), pad, pad);
         if let (Some(first), Some(last)) = (ranges.first(), ranges.last()) {
@@ -190,10 +233,12 @@ pub fn run(bytes: &[u8], ext: Option<&str>, recipe: &Recipe) -> Result<Output, S
         }
     }
     if recipe.reverse {
+        stage("reverse", progress);
         offline::reverse(&mut buf.channels);
         steps.push("reverse".into());
     }
     if let Some(st) = recipe.pitch_semitones.filter(|s| s.abs() > f32::EPSILON) {
+        stage("pitch", progress);
         if !st.is_finite() || st.abs() > 24.0 {
             return Err("pitch_semitones must be within -24..24".into());
         }
@@ -201,6 +246,7 @@ pub fn run(bytes: &[u8], ext: Option<&str>, recipe: &Recipe) -> Result<Output, S
         steps.push(format!("pitch_shift {st:+} st"));
     }
     if let Some(spec) = &recipe.plugin {
+        stage("plugin", progress);
         let mut p = soundcraft_dsp::create(&spec.id).ok_or_else(|| format!("unknown plugin `{}`", spec.id))?;
         for (k, v) in &spec.params {
             if !p.set_param(k, *v) {
@@ -216,10 +262,12 @@ pub fn run(bytes: &[u8], ext: Option<&str>, recipe: &Recipe) -> Result<Output, S
     }
     let (fi, fo) = (ms_to_frames(recipe.fade_in_ms.unwrap_or(0.0), sr), ms_to_frames(recipe.fade_out_ms.unwrap_or(0.0), sr));
     if fi > 0 || fo > 0 {
+        stage("fade", progress);
         offline::fade(&mut buf.channels, fi, fo, FadeShape::EqualPower);
         steps.push(format!("fade in {fi} / out {fo} frames"));
     }
     if let Some(t) = recipe.normalize_db {
+        stage("normalize", progress);
         offline::normalize(&mut buf.channels, t, false);
         steps.push(format!("normalize {t} dB"));
     }
@@ -236,6 +284,7 @@ pub fn run(bytes: &[u8], ext: Option<&str>, recipe: &Recipe) -> Result<Output, S
         return Err("output too long".into());
     }
 
+    stage("encode", progress);
     let opts = EncodeOptions { format: FileFormat::Wav, bit_depth: BitDepth::Int16, dither: true, bwf: None };
     let wav = encode(&buf, &opts).map_err(|e| format!("encode: {e}"))?;
     let peaks = waveform_columns(&buf, recipe.columns.unwrap_or(800));
@@ -275,6 +324,26 @@ impl SoundResult {
 pub fn process(bytes: &[u8], ext: &str, recipe_json: &str) -> Result<SoundResult, JsError> {
     let recipe: Recipe = serde_json::from_str(recipe_json).map_err(|e| JsError::new(&format!("recipe: {e}")))?;
     let out = run(bytes, Some(ext), &recipe).map_err(|e| JsError::new(&e))?;
+    finish(out)
+}
+
+#[wasm_bindgen]
+extern "C" {
+    /// A JS object `{ report(stage, index, total) }`.
+    pub type Progress;
+    #[wasm_bindgen(method)]
+    fn report(this: &Progress, stage: &str, index: u32, total: u32);
+}
+
+/// Same as [`process`], reporting each stage to `progress.report(stage, index, total)` just before it starts.
+#[wasm_bindgen]
+pub fn process_with_progress(bytes: &[u8], ext: &str, recipe_json: &str, progress: &Progress) -> Result<SoundResult, JsError> {
+    let recipe: Recipe = serde_json::from_str(recipe_json).map_err(|e| JsError::new(&format!("recipe: {e}")))?;
+    let out = run_with(bytes, Some(ext), &recipe, &mut |s, i, t| progress.report(s, i as u32, t as u32)).map_err(|e| JsError::new(&e))?;
+    finish(out)
+}
+
+fn finish(out: Output) -> Result<SoundResult, JsError> {
     let report = serde_json::to_string(&out.report).map_err(|e| JsError::new(&e.to_string()))?;
     Ok(SoundResult { wav: out.wav, report, peaks: out.peaks })
 }
@@ -282,7 +351,11 @@ pub fn process(bytes: &[u8], ext: &str, recipe_json: &str) -> Result<SoundResult
 /// Plugin ids the engine offers, as JSON `[{id,name}]`.
 #[wasm_bindgen]
 pub fn list_plugins() -> String {
-    let v: Vec<_> =
-        soundcraft_dsp::plugins().iter().map(|p| serde_json::json!({"id": p.id, "name": p.name, "instrument": p.is_instrument})).collect();
+    let v: Vec<_> = soundcraft_dsp::plugins()
+        .iter()
+        .map(|p| {
+            serde_json::json!({"id": p.id, "name": p.name, "instrument": p.is_instrument, "offline": p.audiosuite, "params": p.params})
+        })
+        .collect();
     serde_json::to_string(&v).unwrap_or_else(|_| "[]".into())
 }

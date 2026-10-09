@@ -39,7 +39,7 @@ test('Sound Studio: open MP3, edit in the WASM worker, A/B, play, export WAV',as
 test('Sound Studio: a file that is not audio is rejected and an engine error is shown, not swallowed',async({page})=>{
  await openAudio(page);
  await page.getByTestId('sound-pitch').fill('2');await page.getByTestId('sound-trim').check();
- await page.evaluate(async()=>{const m=await import('/src/lib/sound/session.ts');m.updateSoundSettings('arpeggio.mp3',s=>({...s,effect:{id:'not_a_plugin',keepTail:false}}));});
+ await page.evaluate(async()=>{const m=await import('/src/lib/sound/session.ts');m.updateSoundSettings('arpeggio.mp3',s=>({...s,effect:{id:'not_a_plugin',keepTail:false,params:{}}}));});
  await expect(page.getByTestId('sound-status')).toContainText('unknown plugin',{timeout:20000});
  await page.screenshot({path:'test-results/sound-error.png'});
 });
@@ -88,4 +88,35 @@ test('Sound Studio: drag a selection, crop, cut and edit only the selection',asy
  const bytes=readFileSync(await d.path()!);expect(bytes.subarray(0,4).toString()).toBe('RIFF');
  // 3.5 s stereo 16-bit 44.1k stays about the same length with "only"
  expect(bytes.length).toBeGreaterThan(600_000);
+});
+test('Sound Studio: plugin parameters change the render and the step line is localized',async({page})=>{
+ await openAudio(page);
+ await expect(page.getByTestId('sound-params')).toHaveCount(0);
+ await page.getByTestId('sound-effect').selectOption('plate_reverb');
+ await expect(page.getByTestId('sound-params')).toBeVisible();
+ await expect(page.getByTestId('sound-result')).toContainText('peak',{timeout:20000});
+ const dur=async()=>Number(/([\d.]+) s/.exec(await page.getByTestId('sound-result').innerText())?.[1]??0);
+ const d0=await dur();
+ await expect(page.getByTestId('sound-params-reset')).toBeDisabled();
+ await page.getByTestId('sound-param-decay').fill('1');
+ await expect(page.getByTestId('sound-param-decay-value')).toContainText('20');
+ await expect(page.getByTestId('sound-params-reset')).toBeEnabled();
+ await expect.poll(dur,{timeout:20000}).toBeGreaterThan(d0);
+ await page.screenshot({path:'test-results/sound-params.png'});
+ await expect(page.getByTestId('sound-controls')).toContainText('Effect plate_reverb');
+ await page.getByTestId('sound-params-reset').click();
+ await expect(page.getByTestId('sound-param-decay-value')).toContainText('2.50');
+ await page.getByTestId('sound-effect').selectOption('');
+ await expect(page.getByTestId('sound-params')).toHaveCount(0);
+});
+test('Sound Studio: step line follows the UI language',async({page})=>{
+ await page.addInitScript(()=>localStorage.setItem('somnia.locale.v1','de'));
+ await page.goto('/');await expect(page.locator('[data-storage]')).toBeVisible();
+ await page.locator('header [role="radiogroup"]').getByRole('radio').nth(1).click();
+ const chooser=page.waitForEvent('filechooser');await page.getByTestId('sound-open').click();(await chooser).setFiles(asset('arpeggio.mp3'));
+ await expect(page.getByTestId('sound-info')).toContainText('44100 Hz');
+ await page.getByTestId('sound-reverse').check();
+ await expect(page.getByTestId('sound-controls')).toContainText('Umgekehrt',{timeout:20000});
+ await expect(page.getByTestId('sound-controls')).not.toContainText('sound.step');
+ await page.screenshot({path:'test-results/sound-de.png'});
 });

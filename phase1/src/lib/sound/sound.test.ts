@@ -2,6 +2,9 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync,existsSync} from 'node:fs';
 import {sniffAudio,AUDIO_FILE} from './format';
+import type {SoundParam} from './protocol';
+import {fromNorm,toNorm,formatParam,isDefault} from './params';
+import {stageKey,stepLabel} from './steps';
 import {DEFAULT_SETTINGS,exportName,isNeutral,normalizeSelection,sanitizeSettings,toRecipe} from './recipe';
 import {closeSound,exportSound,getSoundSession,openSound,resetSoundSettings,setSoundEngineFactory,updateSoundSettings} from './session';
 import type {SoundEngineLike,SoundResult} from './engine';
@@ -29,18 +32,18 @@ test('format sniffing recognises the five containers and rejects text and images
 
 test('settings map to the engine recipe; off steps add nothing; values are clamped',()=>{
  assert.deepEqual(toRecipe(DEFAULT_SETTINGS,64),{columns:64});assert.ok(isNeutral(DEFAULT_SETTINGS));
- const s=sanitizeSettings({...DEFAULT_SETTINGS,trim:{on:true,db:-500},pitch:99.4,fadeInMs:-5,fadeOutMs:1e9,reverse:true,effect:{id:'plate_reverb',keepTail:true},normalize:{on:true,db:5}});
+ const s=sanitizeSettings({...DEFAULT_SETTINGS,trim:{on:true,db:-500},pitch:99.4,fadeInMs:-5,fadeOutMs:1e9,reverse:true,effect:{id:'plate_reverb',keepTail:true,params:{}},normalize:{on:true,db:5}});
  assert.deepEqual(toRecipe(s,10),{columns:10,trim_silence_db:-80,reverse:true,pitch_semitones:12,plugin:{id:'plate_reverb',keep_tail:true},fade_out_ms:5000,normalize_db:0});
  assert.equal(sanitizeSettings({...DEFAULT_SETTINGS,pitch:Number.NaN}).pitch,-12);
  assert.equal(exportName('dir/My Song.mp3',DEFAULT_SETTINGS),'My Song.wav');assert.equal(exportName('a.flac',{...DEFAULT_SETTINGS,reverse:true}),'a-edited.wav');
 });
 
 type Wasm=typeof import('../../../sound/pkg/somnia_sound.js');
-async function realEngine():Promise<SoundEngineLike&{calls:SoundRecipe[]}>{
+async function realEngine():Promise<SoundEngineLike&{calls:SoundRecipe[];stages:string[]}>{
  const wasm:Wasm=await import('../../../sound/pkg/somnia_sound.js');wasm.initSync({module:readFileSync(WASM)});
- const calls:SoundRecipe[]=[];
- return{calls,async init(){return JSON.parse(wasm.list_plugins()) as SoundPlugin[];},
-  async process(buf,ext,recipe):Promise<SoundResult>{calls.push(recipe);const r=wasm.process(new Uint8Array(buf),ext,JSON.stringify(recipe));try{const wav=r.wav,peaks=r.peaks;return{wav:wav.buffer.slice(wav.byteOffset,wav.byteOffset+wav.byteLength) as ArrayBuffer,peaks:new Float32Array(peaks),report:JSON.parse(r.report) as SoundReport,ms:0};}finally{r.free();}},
+ const calls:SoundRecipe[]=[];const stages:string[]=[];
+ return{calls,stages,async init(){return JSON.parse(wasm.list_plugins()) as SoundPlugin[];},
+  async process(buf,ext,recipe,onProgress):Promise<SoundResult>{calls.push(recipe);const r=wasm.process_with_progress(new Uint8Array(buf),ext,JSON.stringify(recipe),{report:(stage:string,index:number,total:number)=>{stages.push(stage);onProgress?.({stage,index,total});}});try{const wav=r.wav,peaks=r.peaks;return{wav:wav.buffer.slice(wav.byteOffset,wav.byteOffset+wav.byteLength) as ArrayBuffer,peaks:new Float32Array(peaks),report:JSON.parse(r.report) as SoundReport,ms:0};}finally{r.free();}},
   dispose(){}};
 }
 test('real WASM core: decode, trim, pitch, reverb tail and WAV render on a real MP3',{skip:!built&&'sound/pkg not built (npm run sound:build)'},async()=>{
@@ -69,11 +72,13 @@ test('session: opens a media item, re-renders on edits, keeps the original, expo
  const before=e.calls.length;await wait(600);
  const s1=getSoundSession('arpeggio.mp3')!;assert.equal(s1.status,'ready',s1.error);assert.equal(e.calls.length-before,1);
  assert.deepEqual(e.calls.at(-1),{columns:1200,trim_silence_db:-50,pitch_semitones:7,normalize_db:-1});
+ assert.deepEqual(e.stages.slice(-5),['decode','trim','pitch','normalize','encode'],'engine reports each stage');
+ assert.equal(s1.progress,null);
  assert.notEqual(s1.processed,s1.original);assert.equal(s1.original,s0.original,'original render is kept for A/B');
  assert.ok(s1.processed!.report.output.duration_s<s1.original!.report.input.duration_s-0.4);
  const out=exportSound('arpeggio.mp3')!;assert.equal(out.fileName,'arpeggio-edited.wav');assert.equal(out.blob.size,s1.processed!.report.wav_bytes);
  // a recipe the engine rejects is reported, and the last good render stays
- updateSoundSettings('arpeggio.mp3',x=>({...x,effect:{id:'not_a_plugin',keepTail:false}}));await wait(600);
+ updateSoundSettings('arpeggio.mp3',x=>({...x,effect:{id:'not_a_plugin',keepTail:false,params:{}}}));await wait(600);
  const s2=getSoundSession('arpeggio.mp3')!;assert.equal(s2.status,'error');assert.match(s2.error,/unknown plugin/);assert.equal(s2.processed,s1.processed);
  resetSoundSettings('arpeggio.mp3');await wait(400);
  const s3=getSoundSession('arpeggio.mp3')!;assert.equal(s3.status,'ready');assert.equal(s3.processed,s3.original);
@@ -95,4 +100,25 @@ test('selection normalization and region recipe',()=>{
  const s=sanitizeSettings({...DEFAULT_SETTINGS,region:{start:1,end:2,mode:'cut'}});
  assert.deepEqual(toRecipe(s,8).region,{start_s:1,end_s:2,mode:'cut'});assert.ok(!isNeutral(s));
  assert.equal(sanitizeSettings({...DEFAULT_SETTINGS,region:{start:2,end:1,mode:'bogus'} as never}).region,null);
+});
+
+test('plugin parameters: log/linear mapping round-trips, defaults stay out of the recipe, junk is dropped',()=>{
+ const lin:SoundParam={id:'mix',name:'Mix',min:0,max:100,default:30,unit:'Percent',taper:'Linear',choices:[]};
+ const log:SoundParam={id:'decay',name:'Decay',min:0.1,max:20,default:2.5,unit:'Seconds',taper:'Log',choices:[]};
+ assert.equal(toNorm(lin,50),0.5);assert.equal(fromNorm(lin,0.25),25);
+ assert.ok(Math.abs(fromNorm(log,toNorm(log,2.5))-2.5)<1e-9);assert.equal(fromNorm(log,0),0.1);assert.ok(Math.abs(fromNorm(log,1)-20)<1e-9);
+ assert.equal(fromNorm(lin,Number.NaN),0);assert.equal(toNorm(lin,Number.NaN),0.3);
+ const choice:SoundParam={id:'m',name:'M',min:0,max:2,default:0,unit:'Choice',taper:'Linear',choices:['a','b','c']};
+ assert.equal(formatParam(choice,1.4),'b');assert.equal(formatParam(lin,50),'50.0 %');assert.ok(isDefault(lin,undefined)&&isDefault(lin,30)&&!isDefault(lin,31));
+ const s=sanitizeSettings({...DEFAULT_SETTINGS,effect:{id:'plate_reverb',keepTail:true,params:{mix:80,bad:Number.NaN,worse:'x' as never}}});
+ assert.deepEqual(toRecipe(s,8).plugin,{id:'plate_reverb',keep_tail:true,params:{mix:80}});
+ assert.deepEqual(toRecipe({...s,effect:{...s.effect,params:{}}},8).plugin,{id:'plate_reverb',keep_tail:true});
+});
+test('step lines and stages map to locale keys',()=>{
+ assert.deepEqual(stepLabel('selection 100..200 only'),{key:'sound.step.only',args:{start:'100',end:'200'}});
+ assert.deepEqual(stepLabel('pitch_shift +7 st'),{key:'sound.step.pitch',args:{st:'+7'}});
+ assert.deepEqual(stepLabel('normalize -1 dB'),{key:'sound.step.normalize',args:{db:'-1'}});
+ assert.deepEqual(stepLabel('trim_silence -50 dB -> frames 1..2'),{key:'sound.step.trim',args:{db:'-50'}});
+ assert.equal(stepLabel('plugin plate_reverb {} +tail').args.id,'plate_reverb');assert.equal(stepLabel('something new').key,'sound.step.other');
+ assert.equal(stageKey('encode'),'sound.stage.encode');assert.equal(stageKey('zzz'),'sound.stage.other');
 });

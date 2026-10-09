@@ -2,6 +2,7 @@ import {useCallback,useEffect,useRef,useState} from 'react';
 import {Pause,Play,Download} from '../../lib/icons';
 import {Button} from '../ui/button';
 import {useT} from '../../lib/useT';
+import {stageKey} from '../../lib/sound/steps';
 import {openSound,saveSound,setSoundListen,setSoundSelection,useSoundSession} from '../../lib/sound/session';
 import {isNeutral} from '../../lib/sound/recipe';
 import {getState,patchState,requestStudio,useAppStore} from '../../store/appStore';
@@ -42,7 +43,7 @@ export function SoundWorkspace({item,withPanel=false}:{item:MediaItem;withPanel?
   else if(e.key==='Home'){e.preventDefault();seek(0);}
   else if(e.key==='End'){e.preventDefault();seek(duration);}
  };
- const status=!session||session.status==='loading'?t('sound.loading'):session.status==='processing'?t('sound.processing'):session.status==='error'?t('sound.error',{message:session.error}):'';
+ const status=!session||session.status==='loading'?t('sound.loading'):session.status==='processing'?(session.progress?t('sound.processingStage',{stage:t(stageKey(session.progress.stage)),current:session.progress.index+1,total:session.progress.total}):t('sound.processing')):session.status==='error'?t('sound.error',{message:session.error}):'';
  const info=session?.original?.report.input;const edited=!!session&&!isNeutral(session.settings);
  const channels=info?(info.channels===1?t('sound.mono'):info.channels===2?t('sound.stereo'):t('sound.channelsN',{count:info.channels})):'';
  const out=session?.processed?.report;
@@ -66,6 +67,7 @@ export function SoundWorkspace({item,withPanel=false}:{item:MediaItem;withPanel?
      <span className="tabular-nums" data-testid="sound-time">{fmt(time)} / {fmt(duration)}</span>
      <span className="flex-1 truncate text-ink-3" data-testid="sound-result">{edited&&out&&session.status==='ready'?t('sound.result',{duration:out.output.duration_s.toFixed(2),peak:out.output.peak_db.toFixed(1),steps:out.steps.length}):''}</span>
      <span className="text-ink-3" role="status" aria-live="polite" data-testid="sound-note">{note}</span>
+     {session?.status==='processing'?<progress className="h-1.5 w-24 accent-[var(--accent)]" max={session.progress?.total??1} value={session.progress?session.progress.index:undefined} aria-label={t('sound.processing')} data-testid="sound-progress"/>:null}
      <span role="status" aria-live="polite" className="text-ink-3" style={session?.status==='error'?{color:'var(--danger)'}:undefined} data-testid="sound-status">{status}</span>
     </div>
    </div>

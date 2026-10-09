@@ -1,5 +1,5 @@
 /// <reference lib="webworker" />
-import init,{process,list_plugins} from '../../../sound/pkg/somnia_sound.js';
+import init,{process_with_progress,list_plugins} from '../../../sound/pkg/somnia_sound.js';
 import type {SoundRequest,SoundResponse,SoundPlugin} from './protocol';
 const scope=self as unknown as DedicatedWorkerGlobalScope;
 let ready:Promise<unknown>|undefined;
@@ -12,7 +12,8 @@ scope.onmessage=async({data}:MessageEvent<SoundRequest>)=>{
   }
   if(!ready)throw new Error('Sound engine not initialized');await ready;
   const start=performance.now();
-  const result=process(new Uint8Array(data.bytes),data.ext,JSON.stringify(data.recipe));
+  const progress={report:(stage:string,index:number,total:number)=>send({id:data.id,ok:true,kind:'progress',stage,index,total})};
+  const result=process_with_progress(new Uint8Array(data.bytes),data.ext,JSON.stringify(data.recipe),progress);
   try{
    const wav=result.wav,peaks=result.peaks,report=JSON.parse(result.report);
    // wasm-bindgen returns owned copies, so their buffers can be transferred.

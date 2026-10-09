@@ -1,6 +1,8 @@
 import {Button} from '../ui/button';
 import {useT} from '../../lib/useT';
 import {useMedia} from '../../lib/media';
+import {PluginParams} from './PluginParams';
+import {stepLabel} from '../../lib/sound/steps';
 import {LIMITS,isNeutral} from '../../lib/sound/recipe';
 import {applySoundRegion,clearSoundRegion,resetSoundSettings,setSoundSelection,updateSoundSettings,useSoundSession} from '../../lib/sound/session';
 const row='grid gap-1.5 border-b border-subtle px-3 py-3 text-xs text-ink-2';
@@ -13,6 +15,7 @@ export function SoundControls({name}:{name:string}){
  const {t}=useT();const s=useSoundSession(name);
  if(!s)return <p className="p-3 text-xs text-ink-3">{t('sound.loading')}</p>;
  const c=s.settings,set=(f:(x:typeof c)=>typeof c)=>updateSoundSettings(name,f),ready=!!s.original;
+ const plugin=s.plugins.find(p=>p.id===c.effect.id);
  const sel=s.selection,reg=c.region,dur=s.original?.report.input.duration_s??0;
  return <fieldset disabled={!ready} className="m-0 min-w-0 border-0 p-0" data-testid="sound-controls">
   <div className={row} data-testid="sound-selection">
@@ -43,8 +46,9 @@ export function SoundControls({name}:{name:string}){
   </div>
   <div className={row}>
    <label className="text-ink" htmlFor="sound-effect">{t('sound.effect')}</label>
-   <select id="sound-effect" className={field} value={c.effect.id} onChange={e=>set(x=>({...x,effect:{...x.effect,id:e.target.value}}))} data-testid="sound-effect"><option value="">{t('sound.effect.none')}</option>{s.plugins.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}</select>
+   <select id="sound-effect" className={field} value={c.effect.id} onChange={e=>set(x=>({...x,effect:{...x.effect,id:e.target.value,params:{}}}))} data-testid="sound-effect"><option value="">{t('sound.effect.none')}</option>{s.plugins.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}</select>
    <label className="flex items-center gap-2"><input type="checkbox" className={check} checked={c.effect.keepTail} disabled={!c.effect.id} onChange={e=>set(x=>({...x,effect:{...x.effect,keepTail:e.target.checked}}))}/>{t('sound.effect.tail')}</label>
+   {plugin?.params?.length?<PluginParams params={plugin.params} values={c.effect.params} onChange={(id,v)=>set(x=>{const params={...x.effect.params};if(v===null)delete params[id];else params[id]=v;return{...x,effect:{...x.effect,params}};})} onReset={()=>set(x=>({...x,effect:{...x.effect,params:{}}}))}/>:null}
   </div>
   <div className={`${row} grid-cols-2`}>
    <label>{t('sound.fadeIn')}<input type="number" className={`${field} mt-1`} min={LIMITS.fadeMs[0]} max={LIMITS.fadeMs[1]} step={10} value={c.fadeInMs} onChange={e=>set(x=>({...x,fadeInMs:Number(e.target.value)}))} data-testid="sound-fade-in"/></label>
@@ -56,7 +60,7 @@ export function SoundControls({name}:{name:string}){
    <span className="text-ink-3">{t('sound.normalizeDb',{db:c.normalize.db})}</span>
   </div>
   <div className="grid gap-2 px-3 py-3 text-xs text-ink-3">
-   <p className="m-0">{isNeutral(c)?t('sound.untouched'):(s.processed?.report.steps??[]).join(' · ')}</p>
+   <p className="m-0">{isNeutral(c)?t('sound.untouched'):(s.processed?.report.steps??[]).map(st=>{const l=stepLabel(st);return t(l.key,l.args);}).join(' · ')}</p>
    <p className="m-0">{t('sound.note')}</p>
    <Button size="compact" className="justify-self-start" disabled={isNeutral(c)} onClick={()=>resetSoundSettings(name)} data-testid="sound-reset">{t('sound.reset')}</Button>
   </div>

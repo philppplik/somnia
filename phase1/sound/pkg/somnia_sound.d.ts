@@ -32,6 +32,11 @@ export function list_plugins(): string;
  */
 export function process(bytes: Uint8Array, ext: string, recipe_json: string): SoundResult;
 
+/**
+ * Same as [`process`], reporting each stage to `progress.report(stage, index, total)` just before it starts.
+ */
+export function process_with_progress(bytes: Uint8Array, ext: string, recipe_json: string, progress: any): SoundResult;
+
 export type InitInput = RequestInfo | URL | Response | BufferSource | WebAssembly.Module;
 
 export interface InitOutput {
@@ -39,6 +44,7 @@ export interface InitOutput {
     readonly __wbg_soundresult_free: (a: number, b: number) => void;
     readonly list_plugins: () => [number, number];
     readonly process: (a: number, b: number, c: number, d: number, e: number, f: number) => [number, number, number];
+    readonly process_with_progress: (a: number, b: number, c: number, d: number, e: number, f: number, g: any) => [number, number, number];
     readonly soundresult_peaks: (a: number) => [number, number];
     readonly soundresult_report: (a: number) => [number, number];
     readonly soundresult_wav: (a: number) => [number, number];

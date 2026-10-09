@@ -4,11 +4,11 @@ import {DEFAULT_SETTINGS,exportName,isNeutral,normalizeSelection,sanitizeSetting
 import type {SoundRegionMode} from './protocol';
 import {fileExtension,sniffAudio} from './format';
 import {getMedia,subscribeMedia} from '../media';
-import type {SoundPlugin,SoundReport} from './protocol';
+import type {SoundPlugin,SoundProgress,SoundReport} from './protocol';
 /** One rendered result: a WAV blob (also what the player plays), its waveform columns and the engine report. */
 export interface SoundVersion{blob:Blob;url:string;peaks:Float32Array;report:SoundReport;ms:number}
 export type SoundStatus='loading'|'ready'|'processing'|'error';
-export interface SoundSession{name:string;status:SoundStatus;error:string;settings:SoundSettings;plugins:readonly SoundPlugin[];original:SoundVersion|null;processed:SoundVersion|null;listen:'original'|'processed';selection:{start:number;end:number}|null}
+export interface SoundSession{name:string;status:SoundStatus;error:string;settings:SoundSettings;plugins:readonly SoundPlugin[];original:SoundVersion|null;processed:SoundVersion|null;listen:'original'|'processed';selection:{start:number;end:number}|null;progress:SoundProgress|null}
 const DEBOUNCE_MS=200;
 let factory:()=>SoundEngineLike=()=>new SoundEngine();
 let engine:SoundEngineLike|undefined,engineReady:Promise<readonly SoundPlugin[]>|undefined;
@@ -38,7 +38,7 @@ export function useSoundSession(name:string|null|undefined){return useSyncExtern
 export async function openSound(item:{name:string;url:string}):Promise<void>{
  if(sessions.has(item.name))return;
  stopMediaSync??=subscribeMedia(()=>{const live=new Set(getMedia().items.map(i=>i.name));for(const n of [...sessions.keys()])if(!live.has(n))closeSound(n);});
- put({name:item.name,status:'loading',error:'',settings:DEFAULT_SETTINGS,plugins:[],original:null,processed:null,listen:'processed',selection:null});
+ put({name:item.name,status:'loading',error:'',settings:DEFAULT_SETTINGS,plugins:[],original:null,processed:null,listen:'processed',selection:null,progress:null});
  try{
   const bytes=await fetch(item.url).then(r=>r.arrayBuffer());
   const ext=sniffAudio(new Uint8Array(bytes,0,Math.min(bytes.byteLength,16)))?.ext??fileExtension(item.name);
@@ -47,7 +47,7 @@ export async function openSound(item:{name:string;url:string}):Promise<void>{
   const first=await e.process(bytes.slice(0),ext,toRecipe(DEFAULT_SETTINGS));
   if(!sessions.has(item.name))return;
   const original=version(first);
-  patch(item.name,{status:'ready',error:'',plugins:plugins.filter(p=>!p.instrument),original,processed:original});
+  patch(item.name,{status:'ready',error:'',plugins:plugins.filter(p=>!p.instrument&&p.offline!==false),original,processed:original});
   if(!isNeutral(sessions.get(item.name)!.settings))schedule(item.name,0);
  }catch(e){resetEngine(e);if(sessions.has(item.name))patch(item.name,{status:'error',error:message(e)});}
 }
@@ -57,13 +57,13 @@ function schedule(name:string,delay=DEBOUNCE_MS){
 async function render(name:string){
  const s=sessions.get(name),src=sources.get(name);if(!s||!src||!s.original)return;
  if(isNeutral(s.settings)){revoke(s.processed,s.original);runs.set(name,(runs.get(name)??0)+1);patch(name,{status:'ready',error:'',processed:s.original});return;}
- const run=(runs.get(name)??0)+1;runs.set(name,run);patch(name,{status:'processing',error:''});
+ const run=(runs.get(name)??0)+1;runs.set(name,run);patch(name,{status:'processing',error:'',progress:null});
  try{
   const {engine:e,ready}=getEngine();await ready;
-  const r=await e.process(src.bytes.slice(0),src.ext,toRecipe(s.settings));
+  const r=await e.process(src.bytes.slice(0),src.ext,toRecipe(s.settings),p=>{if(runs.get(name)===run)patch(name,{progress:p});});
   if(runs.get(name)!==run||!sessions.has(name))return;
-  const next=version(r),cur=sessions.get(name)!;revoke(cur.processed,cur.original);patch(name,{status:'ready',error:'',processed:next});
- }catch(e){resetEngine(e);if(runs.get(name)===run&&sessions.has(name))patch(name,{status:'error',error:message(e)});}
+  const next=version(r),cur=sessions.get(name)!;revoke(cur.processed,cur.original);patch(name,{status:'ready',error:'',processed:next,progress:null});
+ }catch(e){resetEngine(e);if(runs.get(name)===run&&sessions.has(name))patch(name,{status:'error',error:message(e),progress:null});}
 }
 export function updateSoundSettings(name:string,change:(s:SoundSettings)=>SoundSettings){
  const s=sessions.get(name);if(!s)return;put({...s,settings:sanitizeSettings(change(s.settings))});schedule(name);
