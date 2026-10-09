@@ -1,0 +1,10 @@
+import React from 'react';
+import {createRoot} from 'react-dom/client';
+import {StudioEmptyState} from '../../src/components/studios/StudioEmptyState';
+import {Code2,FileText,Table2,Presentation,AudioWaveform,Film,Image,Palette} from '../../src/lib/icons';
+import '../../src/styles/global.css';
+import '../../src/styles/bento.css';
+const url=new URL(location.href);const studio=url.searchParams.get('studio') as any||'video';
+const icons:any={code:Code2,documents:FileText,sheets:Table2,slides:Presentation,sound:AudioWaveform,video:Film,photos:Image,vector:Palette,design:FileText};const Icon=icons[studio];
+document.documentElement.dataset.theme=url.searchParams.get('theme')||'light';
+createRoot(document.getElementById('root')!).render(<main style={{display:'flex',height:'100%',padding:8}}><div style={{display:'flex',width:'100%',background:'var(--bg-panel)',borderRadius:25}}><StudioEmptyState studio={studio} icon={<Icon/>} onOpen={()=>{document.body.dataset.action='open';}} onCreate={async()=>{document.body.dataset.action='create';if(url.searchParams.has('fail'))throw Error('Could not create this project.');if(url.searchParams.has('slow'))await new Promise(r=>setTimeout(r,2000));}}/></div></main>);

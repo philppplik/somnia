@@ -1,4 +1,4 @@
-/** English product copy shared by every studio starter, including the forthcoming registered hosts. */
+/** English product copy shared by every studio starter, including additional registered hosts. */
 export const studioStarterCopy={
  code:{headline:'Build something great inside Code Studio',description:'Design websites with a live visual canvas and real code. Open an existing file or start a blank page, then shape it your way.',openLabel:'Open file'},
  documents:{headline:'Bring your words to life inside Documents Studio',description:'Write and edit documents on the page. Open a Word document or start fresh, then save a copy without changing your original.',openLabel:'Open DOCX'},
@@ -8,6 +8,6 @@ export const studioStarterCopy={
  video:{headline:'Create amazing edits inside Video Studio',description:'Arrange clips on a timeline, trim your footage and export your edit. Open a video or start a blank project and add media when you are ready.',openLabel:'Open MP4'},
  photos:{headline:'Make every image your own inside Photos Studio',description:'Crop, adjust and refine images with non-destructive edits. Open a photo or start a blank canvas for your next creation.',openLabel:'Open image'},
  vector:{headline:'Draw your next idea inside Vector Studio',description:'Create scalable artwork with shapes, paths and layers. Open an SVG or start a blank canvas and build your design from scratch.',openLabel:'Open SVG'},
- design:{headline:'Give your ideas a page inside Design Studio',description:'Arrange text and graphics into page layouts. Open a PDF or start a blank page for your next design.',openLabel:'Open PDF'}
+ design:{headline:'Create beautiful layouts inside Design Studio',description:'Arrange text and shapes on artboards. Start a blank design or open an editable project, then export your layout as SVG.',openLabel:'Open design project'}
 } as const;
 export type StarterStudioId=keyof typeof studioStarterCopy;

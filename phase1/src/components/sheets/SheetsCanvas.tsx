@@ -1,8 +1,10 @@
+import {StudioEmptyState} from '../studios/StudioEmptyState';
+import {createBlankProject} from '../../lib/studios/blank';
 import {useCallback,useEffect,useMemo,useRef,useState,type KeyboardEvent} from 'react';
 import {FileTabs} from '../FileTabs';
 import {Button} from '../ui/button';
-import {Redo2,Undo2} from '../../lib/icons';
-import {formatBytes,useMedia,type MediaItem} from '../../lib/media';
+import {Table2,Redo2,Undo2} from '../../lib/icons';
+import {addMediaFile,formatBytes,useMedia,type MediaItem} from '../../lib/media';
 import {useT} from '../../lib/useT';
 import {SheetsEngine} from '../../lib/sheets/engine';
 import type {SheetInfo,SheetLayout,ViewCell,WorkbookInfo} from '../../lib/sheets/protocol';
@@ -16,7 +18,7 @@ function download(name:string,data:Uint8Array){const url=URL.createObjectURL(new
 type Phase={kind:'loading'}|{kind:'error';message:string}|{kind:'ready'};
 export function SheetsCanvas(){
  const media=useMedia();const {t}=useT();const item=media.items.find(i=>i.name===media.active&&i.kind==='xlsx');
- if(!item)return <main className="center" aria-label={t('sheets.workspace')}><div className="workspace"><section className="code-pane" aria-label={t('sheets.workspace')}><FileTabs/><div className="grid flex-1 place-items-center p-6 text-center text-[13px] text-ink-3" role="status" data-testid="sheets-empty">{t('sheets.empty')}</div></section></div></main>;
+ if(!item)return <main className="center" aria-label={t('sheets.workspace')}><div className="workspace"><section className="code-pane" aria-label={t('sheets.workspace')}><FileTabs/><StudioEmptyState studio="sheets" icon={<Table2/>} onOpen={()=>new Promise<void>((resolve,reject)=>{const input=document.createElement('input');input.type='file';input.accept='.xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';input.oncancel=()=>resolve();input.onchange=async()=>{try{const file=input.files?.[0];if(file){const result=await addMediaFile(file,file.name);if('error' in result)throw Error(result.error);}resolve();}catch(e){reject(e);}};input.click();})} onCreate={()=>createBlankProject('sheets')} testId="sheets-empty"/></section></div></main>;
  return <main className="center" aria-label={t('sheets.workspace')}><div className="workspace"><section className="code-pane" aria-label={t('sheets.workspace')}><FileTabs/><Workbook key={item.url} item={item}/></section></div></main>;
 }
 function Workbook({item}:{item:MediaItem}){

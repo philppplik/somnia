@@ -1,3 +1,5 @@
+import {StudioEmptyState} from '../studios/StudioEmptyState';
+import {createBlankProject} from '../../lib/studios/blank';
 import {useCallback,useEffect,useMemo,useRef,useState} from 'react';
 import {FileText,Minus,Plus,Undo2,Redo2} from '../../lib/icons';
 import {addMediaFile,findMedia,formatBytes,MEDIA_ACCEPT,useMedia} from '../../lib/media';
@@ -83,9 +85,8 @@ export function DocumentsCanvas(){
  const onVisible=useCallback((i:number,v:boolean)=>setNear(prev=>{if(prev.has(i)===v)return prev;const n=new Set(prev);v?n.add(i):n.delete(i);return n;}),[]);
  const pick=async()=>{const input=document.createElement('input');input.type='file';input.accept=MEDIA_ACCEPT.split(',').filter(x=>/docx|wordprocessingml/.test(x)).join(',');input.onchange=async()=>{const f=input.files?.[0];if(f){const r=await addMediaFile(f,f.name);if('error' in r)patchDocuments({status:'error',error:r.error});}};input.click();};
  const doSave=async()=>{setConfirm(false);patchDocuments({saving:true});try{await saveCopy(engineRef.current!,doc.name);}catch(err){patchDocuments({status:'error',error:err instanceof Error?err.message:String(err)});}finally{patchDocuments({saving:false});}};
- if(!item)return <section className="canvas-stage grid min-h-0 flex-1 place-items-center" aria-label={t('documents.title')}>
-  <div className="grid max-w-sm justify-items-center gap-3 text-center"><FileText size={28} aria-hidden="true"/><p className="text-[13px] text-ink-2">{t('documents.empty')}</p>
-  <button className={tool+' border border-subtle'} onClick={pick}>{t('documents.open')}</button></div></section>;
+ if(!item)return <section className="canvas-stage flex min-h-0 flex-1" aria-label={t('documents.title')}>
+  <StudioEmptyState studio="documents" icon={<FileText/>} onOpen={pick} onCreate={()=>createBlankProject('documents')}/></section>;
  return <section className="canvas-stage flex min-h-0 flex-1 flex-col" aria-label={t('documents.title')}>
   <div className={bar}><span className="truncate" data-testid="documents-name">{item.name}</span><span className="text-ink-3">{formatBytes(item.size)}</span>
    {doc.status==='ready'&&<span className="text-ink-3" data-testid="documents-pages">{t('documents.pages',{n:doc.pages})}</span>}<span className="flex-1"/>
