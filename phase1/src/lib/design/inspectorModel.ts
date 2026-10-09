@@ -33,8 +33,8 @@ export function normalizeHex(input: string): string | null {
   return `#${h.toLowerCase()}`;
 }
 export const FIELD_RULES = {
-  width: {min: 0.01}, height: {min: 0.01}, rotation: {min: -360, max: 360}, opacity: {min: 0, max: 100},
-  radius: {min: 0}, strokeWidth: {min: 0}, fontSize: {min: 1, max: 1000}, x: {}, y: {},
+  width: {min: 0.01, max: 16384}, height: {min: 0.01, max: 16384}, rotation: {min: -360, max: 360}, opacity: {min: 0, max: 100},
+  radius: {min: 0, max: 8192}, strokeWidth: {min: 0, max: 8192}, fontSize: {min: 1, max: 1000}, x: {min: -32768, max: 32768}, y: {min: -32768, max: 32768},
 } as const satisfies Record<string, NumberRule>;
 
 const box = (n: DesignNodeView) => ({l: n.x, r: n.x + n.width, t: n.y, b: n.y + n.height, cx: n.x + n.width / 2, cy: n.y + n.height / 2});

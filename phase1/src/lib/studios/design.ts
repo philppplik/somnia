@@ -1,3 +1,5 @@
+import {registerBlankProjectFactory} from './blank';
+import {startDesign} from '../design/session';
 import {registerStudio,type StudioDef} from './registry';
 /** Layout/design workspace, deliberately separate from SVG/Vector editing. */
 export const designStudio:StudioDef={
@@ -7,3 +9,5 @@ export const designStudio:StudioDef={
  agent:{tools:[],contextProviders:[],quickActions:[]},deriveContext:context=>context
 };
 registerStudio(designStudio);
+
+registerBlankProjectFactory('design',startDesign);
