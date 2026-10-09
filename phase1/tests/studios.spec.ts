@@ -2,10 +2,10 @@ import {test,expect} from './fixtures';
 import {join} from 'node:path';
 import {mkdirSync} from 'node:fs';
 const artifacts=join('test-results','studios');
-test('Code, Documents, Slides and Sheets pills are visible, keyboard accessible; View group/status/palette agree',async({page})=>{
+test('Code, Documents, Slides, Sheets and Sound pills are visible, keyboard accessible; View group/status/palette agree',async({page})=>{
  await page.goto('/');const pill=page.getByRole('radiogroup',{name:'Studios',exact:true});
- await expect(pill.getByRole('radio')).toHaveCount(4);const code=pill.getByRole('radio',{name:'Somnia Code'});
- await expect(code).toHaveAttribute('aria-checked','true');await code.focus();for(const i of [1,2,3]){await page.keyboard.press('ArrowRight');await expect(pill.getByRole('radio').nth(i)).toBeFocused();}await page.keyboard.press('Home');await expect(code).toBeFocused();await expect(code).toHaveAttribute('aria-checked','true');
+ await expect(pill.getByRole('radio')).toHaveCount(5);const code=pill.getByRole('radio',{name:'Somnia Code'});
+ await expect(code).toHaveAttribute('aria-checked','true');await code.focus();for(const i of [1,2,3,4]){await page.keyboard.press('ArrowRight');await expect(pill.getByRole('radio').nth(i)).toBeFocused();}await page.keyboard.press('Home');await expect(code).toBeFocused();await expect(code).toHaveAttribute('aria-checked','true');
  await page.keyboard.press('Control+1');await expect(code).toHaveAttribute('aria-checked','true');
  await expect(page.locator('header').getByRole('button',{name:'Split view',exact:true})).toHaveCount(0);
  await page.getByRole('button',{name:'View',exact:true}).click();await expect(page.getByRole('menuitemradio')).toHaveCount(3);
@@ -19,7 +19,7 @@ test('Code, Documents, Slides and Sheets pills are visible, keyboard accessible;
 });
 test('shortcut collision never selects an arbitrary command, and unavailable Studio keys do nothing',async({page})=>{
  await page.goto('/');await page.getByRole('radio',{name:'Somnia Code'}).focus();
- await page.keyboard.press('Control+2');await expect(page.getByTestId('studio-view-context')).toHaveText('Visual');
+ await page.keyboard.press('Control+3');await expect(page.getByTestId('studio-view-context')).toHaveText('Visual');
  await page.evaluate(()=>localStorage.setItem('somnia.shortcuts.v1',JSON.stringify({'view.code':'Mod+1'})));
  await page.keyboard.press('Control+1');await expect(page.getByRole('status').filter({hasText:'Shortcut conflict:'})).toBeVisible();
  await expect(page.getByTestId('studio-view-context')).toHaveText('Visual');

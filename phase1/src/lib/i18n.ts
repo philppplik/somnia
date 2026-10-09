@@ -3,6 +3,7 @@ import de from '../locales/de.json';
 import es from '../locales/es.json';
 import fr from '../locales/fr.json';
 import ptBR from '../locales/pt-BR.json';
+import {SOUND_CATALOGUES} from './sound/i18n';
 /**
  * Small in-house i18n layer (no dependency, no network).
  * Keys are flat strings. Plurals use `_one` / `_other` suffixes picked with Intl.PluralRules.
@@ -12,6 +13,8 @@ export type Catalogue = Record<string, string>;
 export const BASE_LOCALE = 'en';
 /** Languages with a catalogue. Add a file in src/locales and an entry here. */
 export const CATALOGUES: Record<string, Catalogue> = {en, de, es, fr, 'pt-BR': ptBR};
+// Studio-owned strings live next to their studio and merge here, so the shared catalogues stay free of merge hotspots.
+for (const [tag, extra] of Object.entries(SOUND_CATALOGUES)) Object.assign(CATALOGUES[tag], extra);
 /** Native names for the language picker. */
 export const LOCALE_NAMES: Record<string, string> = {en:'English', de:'Deutsch', es:'Español', fr:'Français', 'pt-BR':'Português (Brasil)'};
 export const LOCALE_KEY = 'somnia.locale.v1';

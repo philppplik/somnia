@@ -1,5 +1,6 @@
 import {SlidesCanvas} from './slides/SlidesCanvas';
 import {PsdViewer} from './PsdViewer';
+import {SoundWorkspace} from './sound/SoundWorkspace';
 import {lazy,Suspense} from 'react';
 const PdfInlineEditor=lazy(()=>import('./pdfedit/PdfInlineEditor').then(m=>({default:m.PdfInlineEditor})));
 const DocxViewer=lazy(()=>import('./OfficeViewer').then(m=>({default:m.DocxViewer})));
@@ -23,6 +24,7 @@ function FitImage({src,alt,onSize}:{src:string;alt:string;onSize?:(w:number,h:nu
   <div className="media-stage min-h-0 flex-1 overflow-auto p-4"><div className="grid min-h-full place-items-center"><img src={src} alt={alt} data-testid="media-image" draggable={false} onLoad={e=>{const i=e.currentTarget;setDim([i.naturalWidth,i.naturalHeight]);onSize?.(i.naturalWidth,i.naturalHeight);}} className="media-checker rounded-sm shadow-sm" style={fit?{maxWidth:'100%',maxHeight:'100%',objectFit:'contain'}:undefined}/></div></div></>;}
 /** Preview for an opened PNG, JPEG or PDF. */
 export function MediaViewer({item}:{item:MediaItem}){const {t}=useT();
+ if(item.kind==='audio')return <SoundWorkspace key={item.name} item={item} withPanel/>;
  if(item.kind==='psd')return <PsdViewer key={item.url} item={item}/>;
  if(item.kind==='pdf')return <Suspense fallback={<div role="status" className="grid flex-1 place-items-center text-xs">Opening PDF…</div>}><PdfInlineEditor key={item.name} item={item}/></Suspense>;
  if(item.kind==='pptx')return <SlidesCanvas/>;

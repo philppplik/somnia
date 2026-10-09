@@ -6,6 +6,7 @@ test('only runtime-ready Studios are registered (Code first, Documents); context
  assert.equal(listStudios()[0].id,'code');assert.ok(listStudios().some(s=>s.id==='documents'));
  assert.equal(acceptsFormat(getStudio('documents'),'a.docx'),true);assert.equal(acceptsFormat(getStudio('documents'),'a.html'),false);
  assert.ok(listStudios().some(s=>s.id==='slides'));
+ assert.ok(listStudios().some(s=>s.id==='sound'));
  for(const domain of ['web','markdown','code-only','empty']){const context={domain};assert.equal(codeStudio.deriveContext(context),context);}
  assert.deepEqual(codeStudio.shell.leftRail.map(x=>x.id),['layers','files','search','components','css','versions']);
  assert.deepEqual(codeStudio.shell.rightRail.map(x=>x.id),['design','prototype']);
@@ -23,5 +24,5 @@ test('manual selection wins, pending tools never commit, documents/history and g
 });
 test('Studio labels and command strings exist in all five catalogues',async()=>{
  const {CATALOGUES}=await import('./i18n');
- for(const catalogue of Object.values(CATALOGUES))for(const key of ['studio.code','studio.switcher','studio.viewMode','studio.announcement','studio.shortcutConflict','cmd.studio.code','studio.sheets','cmd.studio.sheets'])assert.ok(catalogue[key],key);
+ for(const catalogue of Object.values(CATALOGUES))for(const key of ['studio.code','studio.switcher','studio.viewMode','studio.announcement','studio.shortcutConflict','cmd.studio.code','studio.sheets','cmd.studio.sheets','studio.sound','cmd.studio.sound'])assert.ok(catalogue[key],key);
 });

@@ -9,11 +9,13 @@ import {DocumentsCanvas,DocumentsInspector} from '../documents/DocumentsCanvas';
 import {Inspector} from '../Inspector';
 import {getStudio} from '../../lib/studios';
 import {useAppStore} from '../../store/appStore';
+import {SoundCanvas} from '../sound/SoundCanvas';
+import {SoundInspector} from '../sound/SoundInspector';
 const SheetsCanvas=lazy(()=>import('../sheets/SheetsCanvas').then(m=>({default:m.SheetsCanvas})));
 const SheetsInspector=lazy(()=>import('../sheets/SheetsInspector').then(m=>({default:m.SheetsInspector})));
 const lazyHost=(Host:React.ComponentType)=>()=><Suspense fallback={null}><Host/></Suspense>;
-const canvasHosts={'code.canvas':Canvas,'documents.canvas':DocumentsCanvas,'sheets.canvas':lazyHost(SheetsCanvas),'slides.canvas':SlidesCanvas};
-const inspectorRegistries={'code.inspector':Inspector,'documents.inspector':DocumentsInspector,'sheets.inspector':lazyHost(SheetsInspector),'slides.inspector':SlidesInspector};
+const canvasHosts={'code.canvas':Canvas,'documents.canvas':DocumentsCanvas,'sheets.canvas':lazyHost(SheetsCanvas),'slides.canvas':SlidesCanvas,'sound.canvas':SoundCanvas};
+const inspectorRegistries={'code.inspector':Inspector,'documents.inspector':DocumentsInspector,'sheets.inspector':lazyHost(SheetsInspector),'slides.inspector':SlidesInspector,'sound.inspector':SoundInspector};
 export function StudioCanvas(){const s=useAppStore();const Host=canvasHosts[getStudio(useHostStudio(s.activeStudio)).canvas as keyof typeof canvasHosts];if(!Host)throw new Error('Studio canvas unavailable');return <Host/>;}
 export function StudioInspector(){const s=useAppStore();const Host=inspectorRegistries[getStudio(useHostStudio(s.activeStudio)).shell.inspector as keyof typeof inspectorRegistries];if(!Host)throw new Error('Studio inspector unavailable');return <Host/>;}
 
