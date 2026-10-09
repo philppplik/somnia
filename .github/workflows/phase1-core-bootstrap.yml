@@ -29,6 +29,8 @@ jobs:
         run: npm run craft:build
       - name: Build headless WordCraft document engine (Documents Studio)
         run: npm run documents:build
+      - name: Sound Studio core tests (native, real MP3 fixture)
+        run: cargo +1.95.0 test --locked --manifest-path sound/Cargo.toml
       - run: npm run build && npm run test:core
       - name: Test performance-budget validation
         run: node --test scripts/performance/report.test.mjs

@@ -1,0 +1,13 @@
+Somnia Sound Studio uses the headless crates soundcraft-audio-io and soundcraft-dsp from SoundCraft:
+https://github.com/storytold/soundcraft
+Pinned revision: c51e5d5ec52f11c6264b72e26661fa712feb5345 (v0.3.0)
+Copyright (c) 2026 ArtCraft Team and the SoundCraft contributors.
+Licensed MIT OR Apache-2.0. License texts are in licenses/.
+
+No upstream UI, brand files (docs/brand), logos, product marks or the ArtCraft name are copied.
+The above name and copyright are legal attribution only, not Somnia branding.
+
+Audio decoding uses the Symphonia crates (symphonia-*), licensed MPL-2.0 (file-level copyleft).
+Somnia links them unmodified. The MPL-2.0 notice and source location (https://github.com/pdeljanov/Symphonia)
+must ship with distributed builds; licenses/dependency-inventory.json lists every crate in the WASM build.
+Do not add an MP3 encoder casually: shine-rs and LAME are LGPL and need a deliberate licensing decision.

@@ -11,6 +11,8 @@ seen.set('Vadivam (icons)',{name:'Vadivam (icons)',version:'0.0.46',license:'MIT
 seen.set('Momo Signature (font)',{name:'Momo Signature (font)',version:'1.0',license:'OFL-1.1',homepage:'https://github.com/typeassociates/MomoSignature'});
 // Headless Rust/WASM dependencies carry their own pinned inventory and notice.
 if(existsSync('craft/licenses/dependency-inventory.json'))for(const p of JSON.parse(readFileSync('craft/licenses/dependency-inventory.json','utf8')))seen.set('craft:'+p.name,{name:p.name+' (PhotoCraft WASM)',version:p.version,license:p.license,homepage:p.source?.startsWith('git+')?'https://github.com/philppplik/photocraft':'https://crates.io/crates/'+p.name});
+// Sound Studio WASM (SoundCraft + Symphonia, the latter MPL-2.0) carries its own pinned inventory.
+if(existsSync('sound/licenses/dependency-inventory.json'))for(const p of JSON.parse(readFileSync('sound/licenses/dependency-inventory.json','utf8')))seen.set('sound:'+p.name+'@'+p.version,{name:p.name+' (Sound Studio WASM)',version:p.version,license:p.license,homepage:p.source||''});
 for(const item of JSON.parse(readFileSync('packages/raster-codec/license-inventory.json','utf8')))seen.set('raster:'+item.name+'@'+item.version,item);
 const list=[...seen.values()].sort((a,b)=>a.name.localeCompare(b.name));
 writeFileSync('src/lib/thirdParty.json',JSON.stringify(list,null,1)+'\n');

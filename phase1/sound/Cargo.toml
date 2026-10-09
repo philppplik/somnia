@@ -1,0 +1,33 @@
+[package]
+name = "somnia-sound"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.95"
+license = "MIT"
+publish = false
+
+# Deliberately independent of src-tauri and the other headless WASM crates.
+[workspace]
+resolver = "3"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+wasm-bindgen = "=0.2.129"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+soundcraft-audio-io = { git = "https://github.com/storytold/soundcraft", rev = "c51e5d5ec52f11c6264b72e26661fa712feb5345" }
+soundcraft-dsp = { git = "https://github.com/storytold/soundcraft", rev = "c51e5d5ec52f11c6264b72e26661fa712feb5345" }
+
+[profile.release]
+opt-level = "s"
+lto = "fat"
+codegen-units = 1
+panic = "abort"
+strip = "debuginfo"
+
+[profile.release.package.soundcraft-dsp]
+opt-level = 3
+[profile.release.package.soundcraft-audio-io]
+opt-level = 3

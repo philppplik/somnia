@@ -294,10 +294,28 @@
   "homepage": ""
  },
  {
+  "name": "arrayvec (Sound Studio WASM)",
+  "version": "0.7.8",
+  "license": "MIT OR Apache-2.0",
+  "homepage": "registry+https://github.com/rust-lang/crates.io-index"
+ },
+ {
+  "name": "autocfg (Sound Studio WASM)",
+  "version": "1.5.1",
+  "license": "Apache-2.0 OR MIT",
+  "homepage": "registry+https://github.com/rust-lang/crates.io-index"
+ },
+ {
   "name": "base64-js",
   "version": "1.5.1",
   "license": "MIT",
   "homepage": "https://github.com/beatgammit/base64-js"
+ },
+ {
+  "name": "bitflags (Sound Studio WASM)",
+  "version": "1.3.2",
+  "license": "MIT/Apache-2.0",
+  "homepage": "registry+https://github.com/rust-lang/crates.io-index"
  },
  {
   "name": "brotli",
@@ -316,6 +334,18 @@
   "version": "3.20.3",
   "license": "MIT OR Apache-2.0",
   "homepage": "https://crates.io/crates/bumpalo"
+ },
+ {
+  "name": "bumpalo (Sound Studio WASM)",
+  "version": "3.20.3",
+  "license": "MIT OR Apache-2.0",
+  "homepage": "registry+https://github.com/rust-lang/crates.io-index"
+ },
+ {
+  "name": "bytemuck (Sound Studio WASM)",
+  "version": "1.25.2",
+  "license": "Zlib OR Apache-2.0 OR MIT",
+  "homepage": "registry+https://github.com/rust-lang/crates.io-index"
  },
  {
   "name": "call-bind",
@@ -340,6 +370,12 @@
   "version": "1.0.5",
   "license": "MIT OR Apache-2.0",
   "homepage": "https://crates.io/crates/cfg-if"
+ },
+ {
+  "name": "cfg-if (Sound Studio WASM)",
+  "version": "1.0.5",
+  "license": "MIT OR Apache-2.0",
+  "homepage": "registry+https://github.com/rust-lang/crates.io-index"
  },
  {
   "name": "class-variance-authority",
@@ -468,6 +504,12 @@
   "homepage": "https://github.com/emmetio/emmet#readme"
  },
  {
+  "name": "encoding_rs (Sound Studio WASM)",
+  "version": "0.8.42",
+  "license": "(Apache-2.0 OR MIT) AND BSD-3-Clause",
+  "homepage": "registry+https://github.com/rust-lang/crates.io-index"
+ },
+ {
   "name": "entities",
   "version": "6.0.1",
   "license": "BSD-2-Clause",
@@ -490,6 +532,12 @@
   "version": "1.1.2",
   "license": "MIT",
   "homepage": "https://github.com/ljharb/es-object-atoms#readme"
+ },
+ {
+  "name": "extended (Sound Studio WASM)",
+  "version": "0.1.0",
+  "license": "MIT",
+  "homepage": "registry+https://github.com/rust-lang/crates.io-index"
  },
  {
   "name": "fflate",
@@ -624,6 +672,12 @@
   "homepage": "https://crates.io/crates/itoa"
  },
  {
+  "name": "itoa (Sound Studio WASM)",
+  "version": "1.0.18",
+  "license": "MIT OR Apache-2.0",
+  "homepage": "registry+https://github.com/rust-lang/crates.io-index"
+ },
+ {
   "name": "jpeg-exif",
   "version": "1.1.4",
   "license": "MIT",
@@ -642,6 +696,12 @@
   "homepage": "https://katex.org"
  },
  {
+  "name": "lazy_static (Sound Studio WASM)",
+  "version": "1.5.1",
+  "license": "MIT OR Apache-2.0",
+  "homepage": "registry+https://github.com/rust-lang/crates.io-index"
+ },
+ {
   "name": "lib0",
   "version": "0.2.119",
   "license": "MIT",
@@ -658,6 +718,12 @@
   "version": "6.1.0",
   "license": "MIT",
   "homepage": "https://github.com/markdown-it/linkify-it"
+ },
+ {
+  "name": "log (Sound Studio WASM)",
+  "version": "0.4.34",
+  "license": "MIT OR Apache-2.0",
+  "homepage": "registry+https://github.com/rust-lang/crates.io-index"
  },
  {
   "name": "lop",
@@ -708,6 +774,12 @@
   "homepage": "https://crates.io/crates/memchr"
  },
  {
+  "name": "memchr (Sound Studio WASM)",
+  "version": "2.8.3",
+  "license": "Unlicense OR MIT",
+  "homepage": "registry+https://github.com/rust-lang/crates.io-index"
+ },
+ {
   "name": "minimalistic-assert",
   "version": "1.0.1",
   "license": "ISC",
@@ -726,10 +798,34 @@
   "homepage": "https://github.com/typeassociates/MomoSignature"
  },
  {
+  "name": "multiversion_no_op (Sound Studio WASM)",
+  "version": "1.0.0",
+  "license": "Apache-2.0 OR MIT",
+  "homepage": "registry+https://github.com/rust-lang/crates.io-index"
+ },
+ {
   "name": "nanoid",
   "version": "3.3.19",
   "license": "MIT",
   "homepage": ""
+ },
+ {
+  "name": "num-complex (Sound Studio WASM)",
+  "version": "0.4.6",
+  "license": "MIT OR Apache-2.0",
+  "homepage": "registry+https://github.com/rust-lang/crates.io-index"
+ },
+ {
+  "name": "num-integer (Sound Studio WASM)",
+  "version": "0.1.47",
+  "license": "MIT OR Apache-2.0",
+  "homepage": "registry+https://github.com/rust-lang/crates.io-index"
+ },
+ {
+  "name": "num-traits (Sound Studio WASM)",
+  "version": "0.2.19",
+  "license": "MIT OR Apache-2.0",
+  "homepage": "registry+https://github.com/rust-lang/crates.io-index"
  },
  {
   "name": "object-is",
@@ -748,6 +844,12 @@
   "version": "1.21.4",
   "license": "MIT OR Apache-2.0",
   "homepage": "https://crates.io/crates/once_cell"
+ },
+ {
+  "name": "once_cell (Sound Studio WASM)",
+  "version": "1.21.4",
+  "license": "MIT OR Apache-2.0",
+  "homepage": "registry+https://github.com/rust-lang/crates.io-index"
  },
  {
   "name": "option",
@@ -858,10 +960,22 @@
   "homepage": "https://prettier.io"
  },
  {
+  "name": "primal-check (Sound Studio WASM)",
+  "version": "0.3.4",
+  "license": "MIT OR Apache-2.0",
+  "homepage": "registry+https://github.com/rust-lang/crates.io-index"
+ },
+ {
   "name": "proc-macro2 (PhotoCraft WASM)",
   "version": "1.0.107",
   "license": "MIT OR Apache-2.0",
   "homepage": "https://crates.io/crates/proc-macro2"
+ },
+ {
+  "name": "proc-macro2 (Sound Studio WASM)",
+  "version": "1.0.107",
+  "license": "MIT OR Apache-2.0",
+  "homepage": "registry+https://github.com/rust-lang/crates.io-index"
  },
  {
   "name": "process-nextick-args",
@@ -880,6 +994,12 @@
   "version": "1.0.47",
   "license": "MIT OR Apache-2.0",
   "homepage": "https://crates.io/crates/quote"
+ },
+ {
+  "name": "quote (Sound Studio WASM)",
+  "version": "1.0.47",
+  "license": "MIT OR Apache-2.0",
+  "homepage": "registry+https://github.com/rust-lang/crates.io-index"
  },
  {
   "name": "rayon (PhotoCraft WASM)",
@@ -1200,10 +1320,22 @@
   "homepage": "https://github.com/etemesi254/zune-image/tree/dev/crates/zune-jpeg"
  },
  {
+  "name": "rustfft (Sound Studio WASM)",
+  "version": "6.4.1",
+  "license": "MIT OR Apache-2.0",
+  "homepage": "registry+https://github.com/rust-lang/crates.io-index"
+ },
+ {
   "name": "rustversion (PhotoCraft WASM)",
   "version": "1.0.23",
   "license": "MIT OR Apache-2.0",
   "homepage": "https://crates.io/crates/rustversion"
+ },
+ {
+  "name": "rustversion (Sound Studio WASM)",
+  "version": "1.0.23",
+  "license": "MIT OR Apache-2.0",
+  "homepage": "registry+https://github.com/rust-lang/crates.io-index"
  },
  {
   "name": "safe-buffer",
@@ -1230,10 +1362,22 @@
   "homepage": "https://react.dev/"
  },
  {
+  "name": "scopeguard (Sound Studio WASM)",
+  "version": "1.2.0",
+  "license": "MIT OR Apache-2.0",
+  "homepage": "registry+https://github.com/rust-lang/crates.io-index"
+ },
+ {
   "name": "serde (PhotoCraft WASM)",
   "version": "1.0.229",
   "license": "MIT OR Apache-2.0",
   "homepage": "https://crates.io/crates/serde"
+ },
+ {
+  "name": "serde (Sound Studio WASM)",
+  "version": "1.0.229",
+  "license": "MIT OR Apache-2.0",
+  "homepage": "registry+https://github.com/rust-lang/crates.io-index"
  },
  {
   "name": "serde_core (PhotoCraft WASM)",
@@ -1242,16 +1386,34 @@
   "homepage": "https://crates.io/crates/serde_core"
  },
  {
+  "name": "serde_core (Sound Studio WASM)",
+  "version": "1.0.229",
+  "license": "MIT OR Apache-2.0",
+  "homepage": "registry+https://github.com/rust-lang/crates.io-index"
+ },
+ {
   "name": "serde_derive (PhotoCraft WASM)",
   "version": "1.0.229",
   "license": "MIT OR Apache-2.0",
   "homepage": "https://crates.io/crates/serde_derive"
  },
  {
+  "name": "serde_derive (Sound Studio WASM)",
+  "version": "1.0.229",
+  "license": "MIT OR Apache-2.0",
+  "homepage": "registry+https://github.com/rust-lang/crates.io-index"
+ },
+ {
   "name": "serde_json (PhotoCraft WASM)",
   "version": "1.0.151",
   "license": "MIT OR Apache-2.0",
   "homepage": "https://crates.io/crates/serde_json"
+ },
+ {
+  "name": "serde_json (Sound Studio WASM)",
+  "version": "1.0.151",
+  "license": "MIT OR Apache-2.0",
+  "homepage": "registry+https://github.com/rust-lang/crates.io-index"
  },
  {
   "name": "set-function-length",
@@ -1284,6 +1446,24 @@
   "homepage": "https://crates.io/crates/somnia-craft"
  },
  {
+  "name": "soundcraft-audio-io (Sound Studio WASM)",
+  "version": "0.3.0",
+  "license": "MIT OR Apache-2.0",
+  "homepage": "git+https://github.com/storytold/soundcraft"
+ },
+ {
+  "name": "soundcraft-dsp (Sound Studio WASM)",
+  "version": "0.3.0",
+  "license": "MIT OR Apache-2.0",
+  "homepage": "git+https://github.com/storytold/soundcraft"
+ },
+ {
+  "name": "strength_reduce (Sound Studio WASM)",
+  "version": "0.2.4",
+  "license": "MIT OR Apache-2.0",
+  "homepage": "registry+https://github.com/rust-lang/crates.io-index"
+ },
+ {
   "name": "string_decoder",
   "version": "1.1.1",
   "license": "MIT",
@@ -1296,10 +1476,112 @@
   "homepage": "https://code.haverbeke.berlin/marijn/style-mod"
  },
  {
+  "name": "symphonia (Sound Studio WASM)",
+  "version": "0.5.5",
+  "license": "MPL-2.0",
+  "homepage": "registry+https://github.com/rust-lang/crates.io-index"
+ },
+ {
+  "name": "symphonia-bundle-flac (Sound Studio WASM)",
+  "version": "0.5.5",
+  "license": "MPL-2.0",
+  "homepage": "registry+https://github.com/rust-lang/crates.io-index"
+ },
+ {
+  "name": "symphonia-bundle-mp3 (Sound Studio WASM)",
+  "version": "0.5.5",
+  "license": "MPL-2.0",
+  "homepage": "registry+https://github.com/rust-lang/crates.io-index"
+ },
+ {
+  "name": "symphonia-codec-aac (Sound Studio WASM)",
+  "version": "0.5.5",
+  "license": "MPL-2.0",
+  "homepage": "registry+https://github.com/rust-lang/crates.io-index"
+ },
+ {
+  "name": "symphonia-codec-adpcm (Sound Studio WASM)",
+  "version": "0.5.5",
+  "license": "MPL-2.0",
+  "homepage": "registry+https://github.com/rust-lang/crates.io-index"
+ },
+ {
+  "name": "symphonia-codec-alac (Sound Studio WASM)",
+  "version": "0.5.5",
+  "license": "MPL-2.0",
+  "homepage": "registry+https://github.com/rust-lang/crates.io-index"
+ },
+ {
+  "name": "symphonia-codec-pcm (Sound Studio WASM)",
+  "version": "0.5.5",
+  "license": "MPL-2.0",
+  "homepage": "registry+https://github.com/rust-lang/crates.io-index"
+ },
+ {
+  "name": "symphonia-codec-vorbis (Sound Studio WASM)",
+  "version": "0.5.5",
+  "license": "MPL-2.0",
+  "homepage": "registry+https://github.com/rust-lang/crates.io-index"
+ },
+ {
+  "name": "symphonia-core (Sound Studio WASM)",
+  "version": "0.5.5",
+  "license": "MPL-2.0",
+  "homepage": "registry+https://github.com/rust-lang/crates.io-index"
+ },
+ {
+  "name": "symphonia-format-caf (Sound Studio WASM)",
+  "version": "0.5.5",
+  "license": "MPL-2.0",
+  "homepage": "registry+https://github.com/rust-lang/crates.io-index"
+ },
+ {
+  "name": "symphonia-format-isomp4 (Sound Studio WASM)",
+  "version": "0.5.5",
+  "license": "MPL-2.0",
+  "homepage": "registry+https://github.com/rust-lang/crates.io-index"
+ },
+ {
+  "name": "symphonia-format-mkv (Sound Studio WASM)",
+  "version": "0.5.5",
+  "license": "MPL-2.0",
+  "homepage": "registry+https://github.com/rust-lang/crates.io-index"
+ },
+ {
+  "name": "symphonia-format-ogg (Sound Studio WASM)",
+  "version": "0.5.5",
+  "license": "MPL-2.0",
+  "homepage": "registry+https://github.com/rust-lang/crates.io-index"
+ },
+ {
+  "name": "symphonia-format-riff (Sound Studio WASM)",
+  "version": "0.5.5",
+  "license": "MPL-2.0",
+  "homepage": "registry+https://github.com/rust-lang/crates.io-index"
+ },
+ {
+  "name": "symphonia-metadata (Sound Studio WASM)",
+  "version": "0.5.5",
+  "license": "MPL-2.0",
+  "homepage": "registry+https://github.com/rust-lang/crates.io-index"
+ },
+ {
+  "name": "symphonia-utils-xiph (Sound Studio WASM)",
+  "version": "0.5.5",
+  "license": "MPL-2.0",
+  "homepage": "registry+https://github.com/rust-lang/crates.io-index"
+ },
+ {
   "name": "syn (PhotoCraft WASM)",
   "version": "3.0.6",
   "license": "MIT OR Apache-2.0",
   "homepage": "https://crates.io/crates/syn"
+ },
+ {
+  "name": "syn (Sound Studio WASM)",
+  "version": "3.0.6",
+  "license": "MIT OR Apache-2.0",
+  "homepage": "registry+https://github.com/rust-lang/crates.io-index"
  },
  {
   "name": "tailwind-merge",
@@ -1314,16 +1596,34 @@
   "homepage": "https://crates.io/crates/thiserror"
  },
  {
+  "name": "thiserror (Sound Studio WASM)",
+  "version": "2.0.21",
+  "license": "MIT OR Apache-2.0",
+  "homepage": "registry+https://github.com/rust-lang/crates.io-index"
+ },
+ {
   "name": "thiserror-impl (PhotoCraft WASM)",
   "version": "2.0.21",
   "license": "MIT OR Apache-2.0",
   "homepage": "https://crates.io/crates/thiserror-impl"
  },
  {
+  "name": "thiserror-impl (Sound Studio WASM)",
+  "version": "2.0.21",
+  "license": "MIT OR Apache-2.0",
+  "homepage": "registry+https://github.com/rust-lang/crates.io-index"
+ },
+ {
   "name": "tiny-inflate",
   "version": "1.0.3",
   "license": "MIT",
   "homepage": "https://github.com/devongovett/tiny-inflate"
+ },
+ {
+  "name": "transpose (Sound Studio WASM)",
+  "version": "0.2.3",
+  "license": "MIT OR Apache-2.0",
+  "homepage": "registry+https://github.com/rust-lang/crates.io-index"
  },
  {
   "name": "tslib",
@@ -1366,6 +1666,12 @@
   "version": "1.0.26",
   "license": "(MIT OR Apache-2.0) AND Unicode-3.0",
   "homepage": "https://crates.io/crates/unicode-ident"
+ },
+ {
+  "name": "unicode-ident (Sound Studio WASM)",
+  "version": "1.0.26",
+  "license": "(MIT OR Apache-2.0) AND Unicode-3.0",
+  "homepage": "registry+https://github.com/rust-lang/crates.io-index"
  },
  {
   "name": "unicode-properties",
@@ -1416,10 +1722,22 @@
   "homepage": "https://crates.io/crates/wasm-bindgen"
  },
  {
+  "name": "wasm-bindgen (Sound Studio WASM)",
+  "version": "0.2.129",
+  "license": "MIT OR Apache-2.0",
+  "homepage": "registry+https://github.com/rust-lang/crates.io-index"
+ },
+ {
   "name": "wasm-bindgen-macro (PhotoCraft WASM)",
   "version": "0.2.129",
   "license": "MIT OR Apache-2.0",
   "homepage": "https://crates.io/crates/wasm-bindgen-macro"
+ },
+ {
+  "name": "wasm-bindgen-macro (Sound Studio WASM)",
+  "version": "0.2.129",
+  "license": "MIT OR Apache-2.0",
+  "homepage": "registry+https://github.com/rust-lang/crates.io-index"
  },
  {
   "name": "wasm-bindgen-macro-support (PhotoCraft WASM)",
@@ -1428,10 +1746,22 @@
   "homepage": "https://crates.io/crates/wasm-bindgen-macro-support"
  },
  {
+  "name": "wasm-bindgen-macro-support (Sound Studio WASM)",
+  "version": "0.2.129",
+  "license": "MIT OR Apache-2.0",
+  "homepage": "registry+https://github.com/rust-lang/crates.io-index"
+ },
+ {
   "name": "wasm-bindgen-shared (PhotoCraft WASM)",
   "version": "0.2.129",
   "license": "MIT OR Apache-2.0",
   "homepage": "https://crates.io/crates/wasm-bindgen-shared"
+ },
+ {
+  "name": "wasm-bindgen-shared (Sound Studio WASM)",
+  "version": "0.2.129",
+  "license": "MIT OR Apache-2.0",
+  "homepage": "registry+https://github.com/rust-lang/crates.io-index"
  },
  {
   "name": "xml",
@@ -1486,5 +1816,11 @@
   "version": "1.0.23",
   "license": "MIT",
   "homepage": "https://crates.io/crates/zmij"
+ },
+ {
+  "name": "zmij (Sound Studio WASM)",
+  "version": "1.0.23",
+  "license": "MIT",
+  "homepage": "registry+https://github.com/rust-lang/crates.io-index"
  }
 ]
