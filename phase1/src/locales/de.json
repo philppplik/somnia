@@ -2047,6 +2047,8 @@
   "sheets.address": "Zelle",
   "sheets.formulaBar": "Formelleiste",
   "sheets.edited": "Bearbeitet",
+  "sheets.rangeTooLarge": "Der Bereich ist zu gross (Limit 10.000 Zellen).",
+  "sheets.copyFailed": "Zum Kopieren grosser Bereiche braucht Somnia Zugriff auf die Zwischenablage.",
   "sheets.exportCopy": "Kopie exportieren",
   "sheets.exported": "Kopie gespeichert. Die Originaldatei wurde nicht verändert.",
   "sheets.fidelity": "Änderungen werden als Kopie (.xlsx) gespeichert. Diagramme, Pivots, Makros und Funktionen, die Somnia nicht lesen kann, können in der Kopie fehlen.",

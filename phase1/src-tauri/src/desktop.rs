@@ -1132,6 +1132,52 @@ async fn slides_save_write(window: WebviewWindow, grants: State<'_, SlidesGrants
         .map_err(|e| AppError::Io(e.to_string()))?
 }
 #[derive(Default)]
+struct SheetsGrants { save: Mutex<Option<crate::sheets_io::SheetsGrant>> }
+/// OS save dialog. Copy-only: selecting an existing target is rejected at write. Nothing is written yet.
+#[tauri::command]
+async fn sheets_save_pick(window: WebviewWindow, grants: State<'_, SheetsGrants>, suggested_name: String) -> Result<Option<ImageGrantReply>> {
+    gate(&window)?;
+    let app = window.app_handle().clone();
+    let suggested: String = suggested_name.chars().filter(|c| !matches!(c, '/' | '\\' | '\0')).take(120).collect();
+    let selected = tauri::async_runtime::spawn_blocking(move || {
+        app.dialog().file().add_filter("XLSX", &crate::sheets_io::SHEETS_EXTENSIONS).set_file_name(suggested).blocking_save_file()
+    })
+    .await
+    .map_err(|e| AppError::Io(e.to_string()))?;
+    let Some(selected) = selected else { return Ok(None) };
+    let path = selected.into_path().map_err(|e| AppError::Invalid(e.to_string()))?;
+    if !crate::sheets_io::has_sheets_extension(&path) {
+        return Err(AppError::Denied("Save as XLSX".into()));
+    }
+    let name = image_name(&path);
+    let grant = crate::sheets_io::SheetsGrant::new(path);
+    let token = grant.token().to_owned();
+    *grants.save.lock().map_err(|e| AppError::Io(e.to_string()))? = Some(grant);
+    Ok(Some(ImageGrantReply { token, name, size: 0, origin_token: None }))
+}
+/// Raw request body = file bytes, header x-somnia-token = token from sheets_save_pick. Written atomically, once.
+#[tauri::command]
+async fn sheets_save_write(window: WebviewWindow, grants: State<'_, SheetsGrants>, request: tauri::ipc::Request<'_>) -> Result<()> {
+    gate(&window)?;
+    let token = request
+        .headers()
+        .get("x-somnia-token")
+        .and_then(|v| v.to_str().ok())
+        .map(str::to_owned)
+        .ok_or_else(|| AppError::Denied("Missing save token".into()))?;
+    let bytes = match request.body() {
+        tauri::ipc::InvokeBody::Raw(b) => b.clone(),
+        _ => return Err(AppError::Invalid("Expected raw XLSX bytes".into())),
+    };
+    let path = {
+        let mut slot = grants.save.lock().map_err(|e| AppError::Io(e.to_string()))?;
+        crate::sheets_io::SheetsGrant::consume(&mut slot, &token)?
+    };
+    tauri::async_runtime::spawn_blocking(move || crate::sheets_io::save_sheets_copy(&path, &bytes))
+        .await
+        .map_err(|e| AppError::Io(e.to_string()))?
+}
+#[derive(Default)]
 struct AudioGrants { save: Mutex<Option<crate::audio_io::AudioGrant>> }
 /// OS save dialog for the Sound Studio. Choosing an existing file makes the OS ask about overwriting. Nothing is written yet.
 #[tauri::command]
@@ -1891,7 +1937,7 @@ pub fn run() {
         .plugin(tauri_plugin_process::init())
         .manage(shared.clone())
         .manage(ImageGrants::default())
-        .manage(PdfGrants::default()).manage(SlidesGrants::default())
+        .manage(PdfGrants::default()).manage(SlidesGrants::default()).manage(SheetsGrants::default())
         .manage(AudioGrants::default())
         .manage(crate::lan_host::LanHost::default())
         .setup(move |app| {
@@ -2012,6 +2058,8 @@ pub fn run() {
             pdf_save_write,
             slides_save_pick,
             slides_save_write,
+            sheets_save_pick,
+            sheets_save_write,
             audio_save_pick,
             audio_save_write,
             image_save_pick,

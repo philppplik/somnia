@@ -79,3 +79,38 @@ test('Sheets Studio paints borders, merged cells, fonts and frozen panes from th
  await grid.evaluate(el=>{el.scrollTop=0;});await expect(cell(page,'A2')).toHaveText('Percent');
  await page.screenshot({path:'test-results/sheets-borders.png'});
 });
+test('Sheets Studio selects ranges, copies and cuts as TSV, pastes blocks and clears ranges',async({page})=>{
+ await page.goto('/');await expect(page.locator('[data-storage]')).toBeVisible();
+ await openXlsx(page,'formats.xlsx',FORMATS);await page.getByRole('radio',{name:'Somnia Sheets'}).click();
+ await cell(page,'A2').click();await cell(page,'B3').click({modifiers:['Shift']});
+ await expect(page.locator('[role=gridcell][aria-selected=true]')).toHaveCount(4);
+ const clip=(type:string,text?:string)=>page.getByTestId('sheets-grid').evaluate((el,[type,text])=>{const dt=new DataTransfer();if(text!==undefined)dt.setData('text/plain',text);const ev=new ClipboardEvent(type,{clipboardData:dt,bubbles:true,cancelable:true});el.dispatchEvent(ev);return dt.getData('text/plain');},[type,text] as [string,string|undefined]);
+ const copied=await clip('copy');expect(copied.split('\r\n')).toHaveLength(2);expect(copied.split('\r\n')[0].split('\t')[0]).toBe('Percent');expect(copied.split('\r\n')[1].split('\t')[0]).toBe('Currency');
+ // Keyboard extension: shift+arrow grows the range from the anchor.
+ await cell(page,'A12').click();await page.keyboard.press('Shift+ArrowDown');await page.keyboard.press('Shift+ArrowRight');
+ await expect(page.locator('[role=gridcell][aria-selected=true]')).toHaveCount(4);
+ // Paste a 2x2 block at the range origin.
+ await clip('paste','p\t"q r"\r\ns\tt\r\n');
+ await expect(cell(page,'A12')).toHaveText('p');await expect(cell(page,'B12')).toHaveText('q r');await expect(cell(page,'A13')).toHaveText('s');await expect(cell(page,'B13')).toHaveText('t');
+ await expect(page.getByTestId('sheets-dirty')).toBeVisible();
+ await page.screenshot({path:'test-results/sheets-range.png'});
+ // Cut removes the range; Delete clears it too.
+ await cell(page,'A12').click();await cell(page,'B13').click({modifiers:['Shift']});
+ const cut=await clip('cut');expect(cut).toBe('p\tq r\r\ns\tt');
+ await expect(cell(page,'A12')).toHaveText('');await expect(cell(page,'B13')).toHaveText('');
+});
+test('Sheets Studio asks before closing a workbook with unsaved edits',async({page})=>{
+ await page.goto('/');await expect(page.locator('[data-storage]')).toBeVisible();
+ await openXlsx(page,'sales.xlsx',FIXTURE);await page.getByRole('radio',{name:'Somnia Sheets'}).click();
+ await cell(page,'B2').click();await page.keyboard.type('9');await page.keyboard.press('Enter');
+ await expect(page.getByTestId('sheets-dirty')).toBeVisible();
+ // Closing the tab asks first (the unload guard shares the same dirty registry); dismissing keeps the file open.
+ const messages:string[]=[];page.on('dialog',d=>{messages.push(d.message());void d.dismiss();});
+ await page.getByTestId('media-tab').filter({hasText:'sales.xlsx'}).getByRole('button').click();
+ await expect.poll(()=>messages.length).toBe(1);expect(messages[0]).toContain('sales.xlsx');
+ await expect(page.getByTestId('sheets-grid')).toBeVisible();
+ // Accepting discards the workbook.
+ page.removeAllListeners('dialog');page.on('dialog',d=>void d.accept());
+ await page.getByTestId('media-tab').filter({hasText:'sales.xlsx'}).getByRole('button').click();
+ await expect(page.getByTestId('media-tab')).toHaveCount(0);
+});

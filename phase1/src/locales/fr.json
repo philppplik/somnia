@@ -2047,6 +2047,8 @@
   "sheets.address": "Cellule",
   "sheets.formulaBar": "Barre de formule",
   "sheets.edited": "Modifié",
+  "sheets.rangeTooLarge": "La plage est trop grande (limite 10 000 cellules).",
+  "sheets.copyFailed": "Copier une grande plage demande l'acces au presse-papiers.",
   "sheets.exportCopy": "Exporter une copie",
   "sheets.exported": "Copie enregistrée. Le fichier d'origine n'a pas été modifié.",
   "sheets.fidelity": "Les modifications sont enregistrées dans une copie (.xlsx). Les graphiques, tableaux croisés, macros et fonctions que Somnia ne sait pas lire peuvent être perdus dans la copie.",

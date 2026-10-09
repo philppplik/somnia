@@ -38,7 +38,7 @@ can go away. `prepare-upstream.sh` clones into `.upstream/` (ignored) and is ide
   worker; the client terminates it after 30 s and keeps the original bytes outside the worker.
 - Not supported: macros, encrypted workbooks, legacy .xls, external links, pivot or chart editing.
   The writer rebuilds the package from the model, so unknown parts can be lost: Somnia only
-  exports a copy and never overwrites the source.
+  exports a copy and never overwrites the source. On desktop the copy goes through a native save dialog (one-time grant, create-only, never replaces an existing path); in the browser it is a download. Closing a workbook with unsaved edits asks first.
 - `NOW()`/`TODAY()` return a constant in WASM until the host supplies a time source.
 - Number formats and styles from the file are not rendered by the grid yet.
 

@@ -24,5 +24,6 @@ pub mod github_account;
 pub mod provider_transport;
 pub mod git;
 
+pub mod sheets_io;
 pub mod slides_io;
 pub mod ext_scheme;

@@ -1,6 +1,6 @@
 import {StudioEmptyState} from '../studios/StudioEmptyState';
 import {createBlankProject} from '../../lib/studios/blank';
-import {useCallback,useEffect,useMemo,useRef,useState,type KeyboardEvent} from 'react';
+import {useCallback,useEffect,useMemo,useRef,useState,type ClipboardEvent,type KeyboardEvent} from 'react';
 import {FileTabs} from '../FileTabs';
 import {Button} from '../ui/button';
 import {Table2,Redo2,Undo2} from '../../lib/icons';
@@ -11,10 +11,11 @@ import type {SheetInfo,SheetLayout,ViewCell,WorkbookInfo} from '../../lib/sheets
 import {Geometry} from '../../lib/sheets/geometry';
 import {MAX_CELL_BYTES} from '../../lib/sheets/protocol';
 import {addressOf,cellText,colName,displayValue,editText,isErrorValue,cellAlign} from '../../lib/sheets/format';
+import {inRect,parseTsv,pasteRect,rectCells,rectOf,toTsv} from '../../lib/sheets/clipboard';
+import {MAX_READ_CELLS} from '../../lib/sheets/protocol';
+import {saveSheetsCopy,setSheetsDirty} from '../../lib/sheets/session';
 import {setSheetsSelection} from '../../lib/sheets/sheetsStore';
 const HEAD_W=48,HEAD_H=24;
-const stem=(n:string)=>n.replace(/^.*[\\/]/,'').replace(/\.[^.]+$/,'');
-function download(name:string,data:Uint8Array){const url=URL.createObjectURL(new Blob([data as BlobPart],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}));const a=document.createElement('a');a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}
 type Phase={kind:'loading'}|{kind:'error';message:string}|{kind:'ready'};
 export function SheetsCanvas(){
  const media=useMedia();const {t}=useT();const item=media.items.find(i=>i.name===media.active&&i.kind==='xlsx');
@@ -26,7 +27,7 @@ function Workbook({item}:{item:MediaItem}){
  const engine=useRef<SheetsEngine|null>(null);const original=useRef<Uint8Array|null>(null);
  const [phase,setPhase]=useState<Phase>({kind:'loading'});const [book,setBook]=useState<WorkbookInfo|null>(null);
  const [sheet,setSheet]=useState(0);const [info,setInfo]=useState<SheetInfo|null>(null);
- const [sel,setSel]=useState({row:0,col:0});const [draft,setDraftState]=useState<string|null>(null);const draftRef=useRef<string|null>(null);const formulaRef=useRef<HTMLInputElement>(null);
+ const [sel,setSel]=useState({row:0,col:0});const [ext,setExt]=useState<{row:number;col:number}|null>(null);const dragging=useRef(false);const [draft,setDraftState]=useState<string|null>(null);const draftRef=useRef<string|null>(null);const formulaRef=useRef<HTMLInputElement>(null);
  const setDraft=(v:string|null)=>{draftRef.current=v;setDraftState(v);};
  const startEdit=(v:string)=>{setDraft(v);requestAnimationFrame(()=>{const el=formulaRef.current;if(el){el.focus();el.setSelectionRange(v.length,v.length);}});};
  const [cells,setCells]=useState<Map<string,ViewCell>>(new Map());const [layout,setLayout]=useState<SheetLayout|null>(null);const [rev,setRev]=useState(0);const [dirty,setDirty]=useState(false);
@@ -49,21 +50,42 @@ function Workbook({item}:{item:MediaItem}){
   const rects=[win];if(fr>0)rects.push({row:0,col:win.col,rows:fr,cols:win.cols});if(fc>0)rects.push({row:win.row,col:0,rows:win.rows,cols:fc});if(fr>0&&fc>0)rects.push({row:0,col:0,rows:fr,cols:fc});
   Promise.all(rects.map(w=>eng.view(sheet,w.row,w.col,Math.max(1,Math.min(w.rows,100)),Math.max(1,Math.min(w.cols,60))))).then(rs=>{if(!live)return;const m=new Map<string,ViewCell>();for(const r of rs)for(const c of r.cells)m.set(c.address,c);setCells(m);}).catch(fail);return()=>{live=false;};},[phase,sheet,win,geo,rev,fail]);
  useEffect(()=>{const el=scroller.current;if(!el)return;const measure=()=>setView(v=>({...v,w:el.clientWidth,h:el.clientHeight}));measure();const ro=new ResizeObserver(measure);ro.observe(el);return()=>ro.disconnect();},[phase.kind]);
+ useEffect(()=>{const up=()=>{dragging.current=false;};window.addEventListener('mouseup',up);return()=>window.removeEventListener('mouseup',up);},[]);
  const address=addressOf(sel.row,sel.col);const cur=cells.get(address);
  useEffect(()=>{if(phase.kind!=='ready')return;setSheetsSelection({file:item.name,sheet,sheetName:book?.sheets[sheet]?.name??'',address,kind:cur?.value.t??'Empty',text:displayValue(cur?.value),formula:cur?.formula??null,dirty,canUndo:!!info?.canUndo,canRedo:!!info?.canRedo});},[phase.kind,item.name,sheet,book,address,cur,dirty,info]);
  const commit=async(input:string)=>{
   setDraft(null);if(new TextEncoder().encode(input).length>MAX_CELL_BYTES){setNotice(t('sheets.tooLong'));return;}
   const before=editText(cur?.value,cur?.formula);if(input===before)return;
   try{await engine.current!.set(sheet,address,input);setDirty(true);setNotice('');setRev(r=>r+1);}catch(e){fail(e);}};
- const move=(dr:number,dc:number)=>setSel(s=>{let row=s.row,col=s.col;const step=(v:number,d:number,max:number,size:(i:number)=>number)=>{let n=v;for(let k=0;k<max&&d!==0;k++){const t=n+d;if(t<0||t>=max)break;n=t;if(size(t)>0)break;}return n;};
+ const move=(dr:number,dc:number,extend=false)=>{const s=extend?(ext??sel):sel;let row=s.row,col=s.col;const step=(v:number,d:number,max:number,size:(i:number)=>number)=>{let n=v;for(let k=0;k<max&&d!==0;k++){const t=n+d;if(t<0||t>=max)break;n=t;if(size(t)>0)break;}return n;};
    row=step(row,dr,totalRows,r=>geo.rowHeight(r));col=step(col,dc,totalCols,c=>geo.colWidth(c));
-   const next={row,col};const el=scroller.current;if(el){const top=geo.rowTop(row),left=geo.colLeft(col),h=geo.rowHeight(row),w=geo.colWidth(col);if(top<el.scrollTop)el.scrollTop=top;else if(top+h>el.scrollTop+el.clientHeight-HEAD_H)el.scrollTop=top+h-el.clientHeight+HEAD_H;if(left<el.scrollLeft)el.scrollLeft=left;else if(left+w>el.scrollLeft+el.clientWidth-HEAD_W)el.scrollLeft=left+w-el.clientWidth+HEAD_W;}return next;});
+   const next={row,col};const el=scroller.current;if(el){const top=geo.rowTop(row),left=geo.colLeft(col),h=geo.rowHeight(row),w=geo.colWidth(col);if(top<el.scrollTop)el.scrollTop=top;else if(top+h>el.scrollTop+el.clientHeight-HEAD_H)el.scrollTop=top+h-el.clientHeight+HEAD_H;if(left<el.scrollLeft)el.scrollLeft=left;else if(left+w>el.scrollLeft+el.clientWidth-HEAD_W)el.scrollLeft=left+w-el.clientWidth+HEAD_W;}if(extend)setExt(next);else{setSel(next);setExt(null);}};
+
+ const range=rectOf(sel,ext??sel);const multi=rectCells(range)>1;
+ const readRange=async()=>{if(rectCells(range)>MAX_READ_CELLS){setNotice(t('sheets.rangeTooLarge'));return null;}
+  const r=await engine.current!.range(sheet,range.r0,range.c0,range.r1-range.r0+1,range.c1-range.c0+1);const m=new Map(r.cells.map(c=>[c.address,c]));
+  return Array.from({length:range.r1-range.r0+1},(_,i)=>Array.from({length:range.c1-range.c0+1},(_,j)=>displayValue(m.get(addressOf(range.r0+i,range.c0+j))?.value)));};
+ const clearRange=async()=>{if(!multi){await commit('');return;}
+  if(rectCells(range)>MAX_READ_CELLS){setNotice(t('sheets.rangeTooLarge'));return;}
+  try{for(let r=range.r0;r<=range.r1;r++)for(let c=range.c0;c<=range.c1;c++)await engine.current!.set(sheet,addressOf(r,c),'');setDirty(true);setNotice('');setRev(x=>x+1);}catch(e){fail(e);}};
+ const onCopy=(e:ClipboardEvent<HTMLDivElement>,cut:boolean)=>{if(draft!==null||phase.kind!=='ready')return;e.preventDefault();
+  if(rectCells(range)>MAX_READ_CELLS){setNotice(t('sheets.rangeTooLarge'));return;}
+  const after=(rows:string[][])=>{const text=toTsv(rows);return text;};
+  // clipboardData is only writable synchronously: ranges inside the loaded window use the cells already read, bigger ones fall back to the async clipboard API.
+  const inWin=range.r0>=win.row&&range.r1<win.row+win.rows&&range.c0>=win.col&&range.c1<win.col+win.cols;
+  if(inWin){const rows=Array.from({length:range.r1-range.r0+1},(_,i)=>Array.from({length:range.c1-range.c0+1},(_,j)=>displayValue(cells.get(addressOf(range.r0+i,range.c0+j))?.value)));e.clipboardData.setData('text/plain',after(rows));if(cut)void clearRange();return;}
+  void readRange().then(async rows=>{if(!rows)return;try{await navigator.clipboard.writeText(after(rows));}catch{setNotice(t('sheets.copyFailed'));return;}if(cut)await clearRange();}).catch(fail);};
+ const onPaste=(e:ClipboardEvent<HTMLDivElement>)=>{if(draft!==null||phase.kind!=='ready')return;e.preventDefault();const text=e.clipboardData.getData('text/plain');const data=parseTsv(text);
+  const origin={row:range.r0,col:range.c0};const rect=pasteRect(origin,data);if(!rect){setNotice(t('sheets.rangeTooLarge'));return;}
+  void (async()=>{try{for(let i=0;i<data.length;i++)for(let j=0;j<data[i].length;j++){const input=data[i][j];if(new TextEncoder().encode(input).length>MAX_CELL_BYTES){setNotice(t('sheets.tooLong'));continue;}if(origin.row+i>rect.r1||origin.col+j>rect.c1)continue;await engine.current!.set(sheet,addressOf(origin.row+i,origin.col+j),input);}
+   setSel({row:rect.r0,col:rect.c0});setExt(rectCells(rect)>1?{row:rect.r1,col:rect.c1}:null);setDirty(true);setRev(x=>x+1);}catch(err){fail(err);}})();};
  const onGridKey=(e:KeyboardEvent)=>{
   if(draft!==null)return;
   const k=e.key;
-  if(k==='ArrowDown'){e.preventDefault();move(1,0);}else if(k==='ArrowUp'){e.preventDefault();move(-1,0);}else if(k==='ArrowRight'){e.preventDefault();move(0,1);}else if(k==='ArrowLeft'){e.preventDefault();move(0,-1);}
+  if(k==='ArrowDown'){e.preventDefault();move(1,0,e.shiftKey);}else if(k==='ArrowUp'){e.preventDefault();move(-1,0,e.shiftKey);}else if(k==='ArrowRight'){e.preventDefault();move(0,1,e.shiftKey);}else if(k==='ArrowLeft'){e.preventDefault();move(0,-1,e.shiftKey);}
   else if(k==='Tab'){e.preventDefault();move(0,e.shiftKey?-1:1);}else if(k==='Enter'||k==='F2'){e.preventDefault();startEdit(editText(cur?.value,cur?.formula));}
-  else if(k==='Delete'||k==='Backspace'){e.preventDefault();void commit('');}
+  else if(k==='Delete'||k==='Backspace'){e.preventDefault();void clearRange();}
+  else if((e.ctrlKey||e.metaKey)&&k.toLowerCase()==='a'){e.preventDefault();setSel({row:0,col:0});setExt({row:Math.max(0,(info?.rows??1)-1),col:Math.max(0,(info?.cols??1)-1)});}
   else if((e.ctrlKey||e.metaKey)&&k.toLowerCase()==='z'){e.preventDefault();void history(e.shiftKey?'redo':'undo');}
   else if((e.ctrlKey||e.metaKey)&&k.toLowerCase()==='y'){e.preventDefault();void history('redo');}
   else if(k.length===1&&!e.ctrlKey&&!e.metaKey&&!e.altKey){e.preventDefault();startEdit(k);}
@@ -81,14 +103,15 @@ function Workbook({item}:{item:MediaItem}){
     fontFamily:st?.font?`"${st.font}", system-ui, sans-serif`:undefined,fontSize:st?.size?`${Math.round(st.size*96/72*10)/10}px`:undefined,
     fontWeight:st?.bold?700:undefined,fontStyle:st?.italic?'italic':undefined,textDecoration:[st?.underline?'underline':'',st?.strike?'line-through':''].filter(Boolean).join(' ')||undefined,
     color:isErrorValue(cell?.value)?undefined:(cell?.fmtColor??st?.color??undefined),backgroundColor:st?.fill??((frozenR||frozenC)?'var(--surface, #fff)':undefined),
-    borderLeft:side(bd?.l),borderRight:side(bd?.r),borderTop:side(bd?.t),borderBottom:side(bd?.b),boxSizing:'border-box',
+    borderLeft:side(bd?.l),borderRight:side(bd?.r),backgroundImage:multi&&inRect(range,r,c)&&!selected?'linear-gradient(rgba(59,130,246,0.16),rgba(59,130,246,0.16))':undefined,borderTop:side(bd?.t),borderBottom:side(bd?.b),boxSizing:'border-box',
     whiteSpace:st?.wrap?'pre-wrap':'nowrap',overflow:'hidden',textOverflow:st?.wrap?'clip':'ellipsis',lineHeight:st?.wrap?'16px':`${Math.max(16,box.height-1)}px`};
-   out.push(<div key={a} role="gridcell" aria-selected={selected} aria-rowindex={r+1} aria-colindex={c+1} data-address={a} data-frozen={frozenR||frozenC?'true':undefined} data-merged={geo.mergeCovering(r,c)?'true':undefined}
+   out.push(<div key={a} role="gridcell" aria-selected={selected||(multi&&inRect(range,r,c))} aria-rowindex={r+1} aria-colindex={c+1} data-address={a} data-frozen={frozenR||frozenC?'true':undefined} data-merged={geo.mergeCovering(r,c)?'true':undefined}
     className={'border-b border-r border-subtle px-1.5 text-[12px] '+(selected?(st?.fill?'':'bg-hover ')+'outline outline-2 -outline-offset-2 outline-accent':'')+(isErrorValue(cell?.value)?' text-red-600':'')}
     style={css}
-    onMouseDown={e=>{e.preventDefault();if(draftRef.current!==null)void commit(draftRef.current);setSel({row:r,col:c});scroller.current?.focus();}} onDoubleClick={()=>startEdit(editText(cell?.value,cell?.formula))}>{cellText(cell)}</div>);}
+    onMouseDown={e=>{e.preventDefault();if(draftRef.current!==null)void commit(draftRef.current);if(e.shiftKey)setExt({row:r,col:c});else{setSel({row:r,col:c});setExt(null);dragging.current=true;}scroller.current?.focus();}} onMouseEnter={()=>{if(dragging.current)setExt(x=>x&&x.row===r&&x.col===c?x:{row:r,col:c});}} onDoubleClick={()=>startEdit(editText(cell?.value,cell?.formula))}>{cellText(cell)}</div>);}
   return out;};
- const exportCopy=async()=>{try{const bytes=await engine.current!.save();download(`${stem(item.name)}-edited.xlsx`,bytes);setNotice(t('sheets.exported'));}catch(e){fail(e);}};
+ const exportCopy=async()=>{try{const bytes=await engine.current!.save();const r=await saveSheetsCopy(item.name,bytes);if(r==='cancelled')return;if(r==='saved')setDirty(false);setNotice(t('sheets.exported'));}catch(e){fail(e);}};
+ useEffect(()=>{setSheetsDirty(item.name,dirty);return()=>setSheetsDirty(item.name,false);},[dirty,item.name]);
  const restart=()=>{if(original.current)window.location.reload();};
  if(phase.kind==='error')return <div className="flex flex-1 flex-col items-center justify-center gap-3 p-6 text-center" role="alert" data-testid="sheets-error"><p className="text-[13px] text-red-600">{phase.message}</p><p className="text-[12px] text-ink-3">{t('sheets.errorHint')}</p>{original.current&&<Button onClick={restart}>{t('sheets.reopen')}</Button>}</div>;
  const names=book?.sheets??[];
@@ -112,7 +135,7 @@ function Workbook({item}:{item:MediaItem}){
     onBlur={()=>{if(draftRef.current!==null)void commit(draftRef.current);}}/>
   </div>
   <div ref={scroller} role="grid" tabIndex={0} aria-label={t('sheets.grid',{sheet:names[sheet]?.name??''})} aria-rowcount={totalRows} aria-colcount={totalCols} data-testid="sheets-grid"
-   className="relative min-h-0 flex-1 overflow-auto outline-none focus-visible:ring-2 focus-visible:ring-accent" onKeyDown={onGridKey}
+   className="relative min-h-0 flex-1 overflow-auto outline-none focus-visible:ring-2 focus-visible:ring-accent" onKeyDown={onGridKey} onCopy={e=>onCopy(e,false)} onCut={e=>onCopy(e,true)} onPaste={onPaste}
    onScroll={e=>{const el=e.currentTarget;setView(v=>({...v,top:el.scrollTop,left:el.scrollLeft}));}}>
    <div style={{width:HEAD_W+geo.width,height:HEAD_H+geo.height,position:'relative'}}>
     <div style={{position:'sticky',top:0,zIndex:2,height:HEAD_H,width:HEAD_W+geo.width}} aria-hidden="false">
@@ -126,7 +149,7 @@ function Workbook({item}:{item:MediaItem}){
    </div>
   </div>
   <div role="tablist" aria-label={t('sheets.tabs')} className="flex w-full gap-1 border-t border-subtle px-3 py-1">
-   {names.filter(s=>s.visibility==='Visible').map(s=><button key={s.index} role="tab" aria-selected={s.index===sheet} className={'h-7 cursor-pointer rounded-sm border-0 bg-transparent px-2 text-[12px] text-ink-2 hover:bg-hover'+(s.index===sheet?' bg-hover font-semibold':'')} onClick={()=>{setSheet(s.index);setSel({row:0,col:0});setDraft(null);scroller.current?.scrollTo(0,0);}}>{s.name}</button>)}
+   {names.filter(s=>s.visibility==='Visible').map(s=><button key={s.index} role="tab" aria-selected={s.index===sheet} className={'h-7 cursor-pointer rounded-sm border-0 bg-transparent px-2 text-[12px] text-ink-2 hover:bg-hover'+(s.index===sheet?' bg-hover font-semibold':'')} onClick={()=>{setSheet(s.index);setSel({row:0,col:0});setExt(null);setDraft(null);scroller.current?.scrollTo(0,0);}}>{s.name}</button>)}
   </div>
  </section>;
 }

@@ -2047,6 +2047,8 @@
   "sheets.address": "Cell",
   "sheets.formulaBar": "Formula bar",
   "sheets.edited": "Edited",
+  "sheets.rangeTooLarge": "Range is too large (limit 10,000 cells).",
+  "sheets.copyFailed": "Copying a large range needs clipboard permission.",
   "sheets.exportCopy": "Export copy",
   "sheets.exported": "Saved a copy. The original file was not changed.",
   "sheets.fidelity": "Edits are saved as a copy (.xlsx). Charts, pivots, macros and features Somnia cannot read may be lost in the copy.",

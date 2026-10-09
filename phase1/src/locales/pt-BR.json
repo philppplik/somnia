@@ -2047,6 +2047,8 @@
   "sheets.address": "Célula",
   "sheets.formulaBar": "Barra de fórmulas",
   "sheets.edited": "Editado",
+  "sheets.rangeTooLarge": "O intervalo e grande demais (limite de 10.000 celulas).",
+  "sheets.copyFailed": "Copiar um intervalo grande requer acesso a area de transferencia.",
   "sheets.exportCopy": "Exportar cópia",
   "sheets.exported": "Cópia salva. O arquivo original não foi alterado.",
   "sheets.fidelity": "As alterações são salvas como cópia (.xlsx). Gráficos, tabelas dinâmicas, macros e recursos que o Somnia não consegue ler podem se perder na cópia.",

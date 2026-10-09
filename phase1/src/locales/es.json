@@ -2047,6 +2047,8 @@
   "sheets.address": "Celda",
   "sheets.formulaBar": "Barra de fórmulas",
   "sheets.edited": "Editado",
+  "sheets.rangeTooLarge": "El rango es demasiado grande (limite 10.000 celdas).",
+  "sheets.copyFailed": "Copiar un rango grande requiere acceso al portapapeles.",
   "sheets.exportCopy": "Exportar copia",
   "sheets.exported": "Copia guardada. El archivo original no se modificó.",
   "sheets.fidelity": "Los cambios se guardan como copia (.xlsx). Los gráficos, tablas dinámicas, macros y funciones que Somnia no puede leer pueden perderse en la copia.",

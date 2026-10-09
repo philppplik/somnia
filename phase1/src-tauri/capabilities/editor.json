@@ -50,6 +50,8 @@
     "allow-pdf-save-write",
     "allow-slides-save-pick",
     "allow-slides-save-write",
+    "allow-sheets-save-pick",
+    "allow-sheets-save-write",
     "allow-audio-save-pick",
     "allow-audio-save-write",
     "allow-image-save-pick",
