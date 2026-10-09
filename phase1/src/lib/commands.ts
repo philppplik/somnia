@@ -58,7 +58,7 @@ ui('inspector.toggle','Toggle inspector','Mod+Alt+I',()=>patchState({inspectorOp
 ui('problems.toggle','Toggle problems','Mod+J',()=>patchState({problemsOpen:!getState().problemsOpen}));
 const canUseCodeMode=(mode:string)=>studioModes(getStudio(getState().activeStudio)).some(m=>m.command==='view.'+mode)&&!['raster','vector','pdf'].includes(getUiContext().domain);
 for(const [mode,title,key] of [['code','Code',3],['design','Design',1],['split','Split',2]] as const)registerCommand({id:'view.'+mode,title:title+' view',category:'View',shortcut:'Mod+Alt+'+key,enabled:()=>canUseCodeMode(mode),run:()=>patchState({viewMode:mode})});
-for(const [index,studio] of listStudios().entries())registerCommand({id:'studio.'+studio.id,title:'Switch to '+studio.id+' Studio',category:'View',shortcut:index<6?'Mod+'+(index+1):undefined,allowInInput:true,run:()=>{requestStudio(studio.id);}});
+for(const [index,studio] of listStudios().entries())registerCommand({id:'studio.'+studio.id,title:'Switch to '+studio.id+' Studio',category:'View',shortcut:index<9?'Mod+'+(index+1):undefined,allowInInput:true,run:()=>{requestStudio(studio.id);}});
 registerCommand({id:'split.vertical',title:'Split: code and design side by side',category:'View',enabled:()=>canUseCodeMode('split'),run:()=>patchState({viewMode:'split',splitLayout:'vertical'})});
 registerCommand({id:'split.horizontal',title:'Split: code above, design below',category:'View',enabled:()=>canUseCodeMode('split'),run:()=>patchState({viewMode:'split',splitLayout:'horizontal'})});
 registerCommand({id:'split.swap',title:'Split: swap code and design',category:'View',enabled:()=>canUseCodeMode('split'),run:()=>patchState({viewMode:'split',splitSwap:!getState().splitSwap})});

@@ -1,5 +1,6 @@
 import {validateDevelop,validatePhotoInput,type DevelopSettings} from './registry';
-export type PhotosRequest={id:number;wasmUrl:string}&({op:'load';bytes:ArrayBuffer}|{op:'render';settings:DevelopSettings}|{op:'export';settings:DevelopSettings;format:'png'|'jpeg'});
+import {sanitizePhotoSettings,type PhotoSettings} from './studioSettings';
+export type PhotosRequest={id:number;wasmUrl:string}&({op:'load';bytes:ArrayBuffer}|{op:'render';settings:DevelopSettings}|{op:'export';settings:DevelopSettings;format:'png'|'jpeg'}|{op:'render-photo';settings:PhotoSettings}|{op:'export-photo';settings:PhotoSettings;format:'png'|'jpeg'});
 export interface PhotosResponse{id:number;ok:boolean;error?:string;bytes?:ArrayBuffer;width?:number;height?:number;raw?:boolean}
 /** A single source per scoped instance. Disposal cancels CPU work by terminating the worker. */
 export class PhotosEngine{
@@ -12,5 +13,7 @@ export class PhotosEngine{
  load(bytes:ArrayBuffer){validatePhotoInput(bytes);return this.request({...this.base(),op:'load',bytes},[bytes]);}
  render(settings:DevelopSettings){validateDevelop(settings);return this.request({...this.base(),op:'render',settings});}
  export(settings:DevelopSettings,format:'png'|'jpeg'){validateDevelop(settings);return this.request({...this.base(),op:'export',settings,format});}
+ renderPhoto(settings:PhotoSettings){sanitizePhotoSettings(settings);return this.request({...this.base(),op:'render-photo',settings});}
+ exportPhoto(settings:PhotoSettings,format:'png'|'jpeg'){sanitizePhotoSettings(settings);return this.request({...this.base(),op:'export-photo',settings,format});}
  dispose(error=Error('Develop engine disposed.')){if(this.disposed)return;this.disposed=true;this.worker.terminate();for(const p of this.pending.values()){clearTimeout(p.timer);p.reject(error);}this.pending.clear();}
 }

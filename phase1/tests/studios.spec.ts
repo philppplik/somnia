@@ -4,7 +4,7 @@ import {mkdirSync} from 'node:fs';
 const artifacts=join('test-results','studios');
 test('Code, Documents, Slides, Sheets and Sound pills are visible, keyboard accessible; View group/status/palette agree',async({page})=>{
  await page.goto('/');const pill=page.getByRole('radiogroup',{name:'Studios',exact:true});
- await expect(pill.getByRole('radio')).toHaveCount(6);const code=pill.getByRole('radio',{name:'Somnia Code'});
+ await expect(pill.getByRole('radio')).toHaveCount(7);const code=pill.getByRole('radio',{name:'Somnia Code'});
  await expect(code).toHaveAttribute('aria-checked','true');await code.focus();for(const i of [1,2,3,4]){await page.keyboard.press('ArrowRight');await expect(pill.getByRole('radio').nth(i)).toBeFocused();}await page.keyboard.press('Home');await expect(code).toBeFocused();await expect(code).toHaveAttribute('aria-checked','true');
  await page.keyboard.press('Control+1');await expect(code).toHaveAttribute('aria-checked','true');
  await expect(page.locator('header').getByRole('button',{name:'Split view',exact:true})).toHaveCount(0);

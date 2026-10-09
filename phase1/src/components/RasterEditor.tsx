@@ -49,7 +49,7 @@ export function RasterEditorProvider({children,host:injected}:{children:ReactNod
  const registry=useMemo(buildRegistry,[]),sources=useRef(new Map<string,Source>()),grants=useRef(new Map<string,{originToken?:string;host:ImageEditorHost}>());
  const hostRef=useRef<ImageEditorHost|null>(injected??(isTauri()?null:webImageHost())),savingName=useRef<string|null>(null),liveBase=useRef<{name:string;snapshot:RasterSnapshot}|null>(null),mounted=useRef(true);
  const item=media.items.find(i=>i.name===media.active&&i.kind==='image');const name=item?.name??null;
- const active=!!item||(requested&&!media.active);const cached=name?sources.current.get(name):null;const source=cached?.url===item?.url?cached??null:null;
+ const active=app.activeStudio!=='photos'&&(!!item||(requested&&!media.active));const cached=name?sources.current.get(name):null;const source=cached?.url===item?.url?cached??null:null;
  const docState=name?app.rasterDoc[name]??EMPTY_STATE:EMPTY_STATE;const snap=docState.now;const selectMode=app.editorTool==='selection';
  const notice=(message:string)=>patchState({notice:message});
  const selectionBridge=useRef<CraftSelectionBridge|null>(null);
