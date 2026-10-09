@@ -134,7 +134,7 @@ export function VideoWorkspace({item,withPanel=false}:{item:MediaItem;withPanel?
   <div className="flex min-h-0 w-full flex-1">
    <div className="flex min-h-0 min-w-0 flex-1 flex-col">
     <div className="relative flex min-h-0 flex-1 items-center justify-center bg-black/90" data-testid="video-stage">
-     {!clips.length?<div className="grid justify-items-center gap-3 text-center text-[13px] text-white" data-testid="video-empty-timeline"><p>Your timeline is empty. Add clips to start editing.</p><Button variant="outline" onClick={()=>void addTimelineClipsFromDialog(item.name)}>Add video clips</Button></div>:playable?[slotA,slotB].map((slot,idx)=>{
+     {!clips.length?<div className="grid justify-items-center gap-3 text-center text-[13px] text-white" data-testid="video-empty-timeline"><p>Your timeline is empty. Add clips to start editing.</p><Button variant="outline" onClick={()=>void addTimelineClipsFromDialog(item.name)}>Add video clips</Button></div>:playable&&blend.some(e=>needsSourceFile(e.range.clip))?[slotA,slotB].map((slot,idx)=>{
       const e=blend.find(x=>(x.range.index%2)===idx);
       return <video key={idx} ref={slot} className="absolute inset-0 h-full w-full object-contain p-2" preload="auto"
        style={{opacity:e?(main&&e.range.index===main.range.index?e.video:1):0,visibility:e?'visible':'hidden',zIndex:e&&main&&e.range.index===main.range.index?1:0,pointerEvents:'none'}}
