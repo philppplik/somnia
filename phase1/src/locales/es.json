@@ -2094,5 +2094,6 @@
   "ctx.distribute.h": "Distribuir horizontalmente",
   "ctx.distribute.v": "Distribuir verticalmente",
   "ctx.decorative": "Imagen decorativa",
-  "ctx.filesLayers": "Archivos / Capas"
+  "ctx.filesLayers": "Archivos / Capas",
+  "project.overrideThis": "Only for this project"
 }

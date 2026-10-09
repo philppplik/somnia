@@ -1,3 +1,4 @@
+import {effectiveWorkflow} from '../lib/projectSettingsIO';
 import {registerRasterPhotoPort,notifyRasterPhotoChange,savePhotoCopy} from '../lib/agent/photoWorkspace';
 import {LayerSession,type CraftLayerQuery} from '../lib/craft/layerSession';
 import {CraftSelectionBridge} from '../lib/craft/selectionBridge';
@@ -82,7 +83,7 @@ export function RasterEditorProvider({children,host:injected}:{children:ReactNod
  const redo=()=>{if(source?.layerSession){void layerCommand('redo');return;}endLive();if(name)update(name,rasterRedo);setSelection(null);setCropRect(null);};
  const openFile=async()=>{if(busy)return;setBusy(true);try{hostRef.current??=await defaultImageHost();const picked=await hostRef.current.pick();if(!picked)return;const result=await addMediaFile(picked.blob,picked.name);if('error' in result){notice(result.error);return;}const it=getMedia().items.find(i=>i.name===result.name)!;grants.current.set(it.url,{originToken:picked.originToken,host:hostRef.current});setRequested(false);patchState({sidebarOpen:true,inspectorOpen:true});}catch(e){notice(e instanceof Error?e.message:String(e));}finally{setBusy(false);}};
  const save=async()=>{if(!source||!doc||!name||busy)return;endLive();setBusy(true);savingName.current=name;const signature=rasterSignature(snap);try{const {extension}=exportSettings({format});const composite=source.layerSession?await source.layerSession.render():null;const blob=composite?await encodeComposite(composite,format,quality/100):await exportImage(source.renderer,doc,{format,quality:quality/100});hostRef.current??=await defaultImageHost();const host=source.host??hostRef.current;let saved=false;
-  if(getState().workflowPrefs.imageSaveMode==='overwrite'&&host.overwrite&&source.originToken){const r=await host.overwrite(blob,source.originToken,extension);saved=r==='saved';if(saved)notice(t('imageeditor.savedOverwrite'));}
+  if(effectiveWorkflow().imageSaveMode==='overwrite'&&host.overwrite&&source.originToken){const r=await host.overwrite(blob,source.originToken,extension);saved=r==='saved';if(saved)notice(t('imageeditor.savedOverwrite'));}
   if(!saved){saved=await host.save(blob,editedName(name,extension));if(saved)notice(t('imageeditor.saved'));}
   if(saved){source.layerSession?.markSaved();update(name,d=>({...d,saved:signature,layerDirty:false}));}
  }catch(e){notice(e instanceof Error?e.message:String(e));}finally{savingName.current=null;setBusy(false);}};

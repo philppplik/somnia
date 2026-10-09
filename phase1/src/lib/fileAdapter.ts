@@ -12,6 +12,7 @@ import {downloadProject} from './exportProject';
 import {loadFolderMedia} from './folderMedia';
 import {readProjectDocuments} from './projectIndex';
 import {setVersionsSession} from './versionsSession';
+import {attachProjectSettings,detachProjectSettings} from './projectSettingsIO';
 export type Revision={exists:boolean;hash:string|null};
 export type FileEvent={projectId:string;path:string;clientRevision:number;state:'dirty'|'saving'|'saved'|'error'|'conflict';diskRevision:Revision;error:string|null;durability:string|null};
 export type Read={content:string|null;revision:Revision;status:FileEvent};
@@ -73,11 +74,12 @@ export async function installFileAdapter(port:FilePort){
    if(event.clientRevision!==snapshot.revision)throw Error(`Save revision changed for ${path}. Review unsaved edits.`);
   }
  };
- const close=async(keepRecovery:boolean)=>{if(heldAgentPaths().length&&getState().isDirty&&!window.confirm('Applied AI changes are only in editor memory and are not in disk recovery. Discard these unsaved changes and close the project?'))throw Error('Close cancelled. Save the applied AI changes first, or explicitly discard them.');await queue;if(projectId)await port.invoke('close_project',{projectId,keepRecovery});unsubscribe();disconnect();projectId=null;model=null;restoreHeld.clear();setVersionsSession(null);clearAgentAutosaveHolds();patchState({nativeConnected:false,storage:'memory',diskComparison:null});};
+ const close=async(keepRecovery:boolean)=>{if(heldAgentPaths().length&&getState().isDirty&&!window.confirm('Applied AI changes are only in editor memory and are not in disk recovery. Discard these unsaved changes and close the project?'))throw Error('Close cancelled. Save the applied AI changes first, or explicitly discard them.');await queue;if(projectId)await port.invoke('close_project',{projectId,keepRecovery});unsubscribe();disconnect();detachProjectSettings();projectId=null;model=null;restoreHeld.clear();setVersionsSession(null);clearAgentAutosaveHolds();patchState({nativeConnected:false,storage:'memory',diskComparison:null});};
  const attach=async(selected:{projectId:string;name:string},files:Record<string,string>,nextBaselines:Map<string,Revision>,candidate?:EditorProject)=>{
   clearAgentAutosaveHolds();restoreHeld.clear();projectId=selected.projectId;counter=0;baselines=nextBaselines;current=new Map();staged=new Map();saved=new Map(Object.entries(files));
   model=candidate??new EditorProject(files);disconnect=connectEditorProject(model,{name:selected.name,alreadySaved:true});
   unsubscribe=model.subscribe('internal',tx=>{if(suppressStage)return;const changes:Record<string,string>={};const removed:string[]=[];for(const path of tx.changedFiles)if(model&&path in model.files)changes[path]=model.files[path];else removed.push(path);enqueueStage(changes);removed.forEach(enqueueDelete);});
+  {const pid=selected.projectId;await attachProjectSettings({read:()=>port.invoke<string|null>('read_project_settings',{projectId:pid}),write:async content=>{await port.invoke('write_project_settings',{projectId:pid,content});}});}
   patchState({nativeConnected:true,storage:port.volatile?'tab':'disk',notice:port.connectNotice??'Folder connected. Native autosave after 1s idle / 5s continuous edits.'});
    {const pid=selected.projectId;setVersionsSession({projectId:pid,port,nextRevision:()=>++counter,
    hasUnsavedBuffers:()=>pendingWork>0||restoreHeld.size>0||(!!model&&Object.entries(model.files).some(([f,c])=>c!==saved.get(f))),

@@ -2094,5 +2094,6 @@
   "ctx.distribute.h": "Distribuer horizontalement",
   "ctx.distribute.v": "Distribuer verticalement",
   "ctx.decorative": "Image décorative",
-  "ctx.filesLayers": "Fichiers / Calques"
+  "ctx.filesLayers": "Fichiers / Calques",
+  "project.overrideThis": "Only for this project"
 }

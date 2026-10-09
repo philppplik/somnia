@@ -2094,5 +2094,6 @@
   "ctx.distribute.h": "Distribuir horizontalmente",
   "ctx.distribute.v": "Distribuir verticalmente",
   "ctx.decorative": "Imagem decorativa",
-  "ctx.filesLayers": "Arquivos / Camadas"
+  "ctx.filesLayers": "Arquivos / Camadas",
+  "project.overrideThis": "Only for this project"
 }

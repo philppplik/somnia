@@ -1,11 +1,12 @@
-import {readDocumentPrefs,cleanExportHtml} from './documentPrefs';
+import {effectiveDocument} from './projectSettingsIO';
+import {cleanExportHtml} from './documentPrefs';
 import {ensureUtf8Charset} from './textEncoding';
 import {htmlToMarkdown} from '@somnia/editor-core';
 import {zipSync,strToU8} from 'fflate';
 export function projectArchive(files:Readonly<Record<string,string>>,exact=false){
  const entries:Record<string,Uint8Array>={};for(const [path,source] of Object.entries(files)){
   if(path.startsWith('/')||path.split('/').some(p=>p==='..'||!p)||path.includes('\\'))throw Error(`Unsafe export path: ${path}`);
-  entries[path]=strToU8(/\.html?$/i.test(path)?ensureUtf8Charset(!exact?cleanExportHtml(source,readDocumentPrefs()):source):source);
+  entries[path]=strToU8(/\.html?$/i.test(path)?ensureUtf8Charset(!exact?cleanExportHtml(source,effectiveDocument()):source):source);
  }
  if(!Object.keys(entries).length)throw Error('No project files to export.');return zipSync(entries);
 }
@@ -28,4 +29,4 @@ export function inlineHtml(files:Readonly<Record<string,string>>,htmlPath:string
  return out;}
 /** Single-file export text: inlined page declaring UTF-8. */
 export function singleFileHtml(files:Readonly<Record<string,string>>,htmlPath:string,opts:{css:boolean;js:boolean}):string{return ensureUtf8Charset(inlineHtml(files,htmlPath,opts));}
-export function downloadText(text:string,name:string,type='text/html'){if(type==='text/html')text=cleanExportHtml(text,readDocumentPrefs());const blob=new Blob([text],{type:/^text\//.test(type)&&!/charset/i.test(type)?`${type};charset=utf-8`:type});const url=URL.createObjectURL(blob);const link=document.createElement('a');link.href=url;link.download=name;link.click();setTimeout(()=>URL.revokeObjectURL(url),60_000);}
+export function downloadText(text:string,name:string,type='text/html'){if(type==='text/html')text=cleanExportHtml(text,effectiveDocument());const blob=new Blob([text],{type:/^text\//.test(type)&&!/charset/i.test(type)?`${type};charset=utf-8`:type});const url=URL.createObjectURL(blob);const link=document.createElement('a');link.href=url;link.download=name;link.click();setTimeout(()=>URL.revokeObjectURL(url),60_000);}

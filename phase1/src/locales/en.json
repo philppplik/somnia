@@ -2094,5 +2094,6 @@
   "ctx.distribute.h": "Distribute horizontally",
   "ctx.distribute.v": "Distribute vertically",
   "ctx.decorative": "Decorative image",
-  "ctx.filesLayers": "Files / Layers"
+  "ctx.filesLayers": "Files / Layers",
+  "project.overrideThis": "Only for this project"
 }

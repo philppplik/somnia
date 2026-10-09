@@ -2094,5 +2094,6 @@
   "ctx.distribute.h": "Horizontal verteilen",
   "ctx.distribute.v": "Vertikal verteilen",
   "ctx.decorative": "Dekoratives Bild",
-  "ctx.filesLayers": "Dateien / Ebenen"
+  "ctx.filesLayers": "Dateien / Ebenen",
+  "project.overrideThis": "Only for this project"
 }

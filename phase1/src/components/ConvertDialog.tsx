@@ -1,5 +1,5 @@
+import {effectiveWorkflow} from '../lib/projectSettingsIO';
 import {paperFor} from '../lib/units';
-import {readWorkflowPrefs} from '../lib/workflowPrefs';
 import {useCallback,useEffect,useMemo,useRef,useState} from 'react';
 import {Dialog,DialogContent,DialogTitle,DialogDescription} from './ui/dialog';
 import {Button} from './ui/button';
@@ -39,7 +39,7 @@ export function ConvertPanel({onClose}:{onClose:()=>void}){
   const ac=new AbortController();abort.current=ac;
   try{
    const sink=folder?folderSink(folder):downloadSink();
-   const r=await runBatch(rows,{target:chosen,sink,signal:ac.signal,rasterize:canvasRasterizer,quality:quality/100,paper:paperFor(readWorkflowPrefs().units,typeof navigator!=='undefined'?navigator.language:undefined),onProgress:p=>setProgress(prev=>({...prev,[p.id]:p}))});
+   const r=await runBatch(rows,{target:chosen,sink,signal:ac.signal,rasterize:canvasRasterizer,quality:quality/100,paper:paperFor(effectiveWorkflow().units,typeof navigator!=='undefined'?navigator.language:undefined),onProgress:p=>setProgress(prev=>({...prev,[p.id]:p}))});
    setSummary(t('convert.summary',{done:r.done,failed:r.failed,skipped:r.skipped}));
    const warn=[...new Set(r.items.flatMap(i=>i.warnings??[]))];if(warn.length)setProblems(warn);
    if(r.done)patchState({notice:t('convert.notice',{count:r.done})});

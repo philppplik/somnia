@@ -37,6 +37,7 @@ import { ExtensionCatalog } from "./ExtensionCatalog";
 import { readFormatPrefs, saveFormatPrefs } from "../lib/format";
 import { openExternal, REPO_URL } from "../lib/openExternal";
 import { useState, useRef, useEffect } from "react";
+import { projectSettingsAvailable, setProjectOverride } from "../lib/projectSettingsIO";
 import {
   Settings as SettingsIcon,
   Palette,
@@ -120,6 +121,27 @@ export function Settings() {
     message?: string;
   }>({ state: "idle" });
   const [query, setQuery] = useState("");
+  const overridden = (id: string) => Object.hasOwn(state.projectOverrides, id);
+  const effective = <T,>(id: string, user: T): T => (overridden(id) ? (state.projectOverrides[id] as unknown as T) : user);
+  /** Edits the project override when one is active for this setting, else the user value. */
+  const scoped = (id: string, value: unknown, userChange: () => void) => {
+    if (!overridden(id)) return userChange();
+    setProjectOverride(id, value).catch((e) => setErrs((x) => [...x, String(e?.message ?? e)]));
+  };
+  const projectToggle = (id: string, label: string, current: unknown) =>
+    projectSettingsAvailable() && state.nativeConnected ? (
+      <label className="project-scope-toggle">
+        <input
+          type="checkbox"
+          aria-label={`${t("project.overrideThis")}: ${label}`}
+          checked={overridden(id)}
+          onChange={(e) => {
+            setProjectOverride(id, current, !e.target.checked).catch((err) => setErrs((x) => [...x, String(err?.message ?? err)]));
+          }}
+        />
+        {t("project.overrideThis")}
+      </label>
+    ) : null;
   const [nativeBusy, setNativeBusy] = useState(false);
   const [backups, setBackups] = useState(listProjectBackups);
   const [tick, setTick] = useState(0);
@@ -567,33 +589,27 @@ export function Settings() {
             <input
               type="checkbox"
               aria-label={t("docPref.stripIds")}
-              checked={state.documentPrefs.stripEditorIds}
-              onChange={(e) =>
-                change({
-                  documentPrefs: {
-                    ...state.documentPrefs,
-                    stripEditorIds: e.target.checked,
-                  },
-                })
-              }
+              checked={effective("document.stripEditorIds", state.documentPrefs.stripEditorIds)}
+              onChange={(e) => {
+                const v = e.target.checked;
+                scoped("document.stripEditorIds", v, () => change({ documentPrefs: { ...state.documentPrefs, stripEditorIds: v } }));
+              }}
             />
           </label>
+          {projectToggle("document.stripEditorIds", t("docPref.stripIds"), effective("document.stripEditorIds", state.documentPrefs.stripEditorIds))}
           <label>
             {t("docPref.comments")}
             <input
               type="checkbox"
               aria-label={t("docPref.comments")}
-              checked={state.documentPrefs.keepComments}
-              onChange={(e) =>
-                change({
-                  documentPrefs: {
-                    ...state.documentPrefs,
-                    keepComments: e.target.checked,
-                  },
-                })
-              }
+              checked={effective("document.keepComments", state.documentPrefs.keepComments)}
+              onChange={(e) => {
+                const v = e.target.checked;
+                scoped("document.keepComments", v, () => change({ documentPrefs: { ...state.documentPrefs, keepComments: v } }));
+              }}
             />
           </label>
+          {projectToggle("document.keepComments", t("docPref.comments"), effective("document.keepComments", state.documentPrefs.keepComments))}
         </>
       )}
       {section === "Projects" && (
@@ -791,40 +807,34 @@ export function Settings() {
             {t("redesign.imageSaveMode")}
             <select
               aria-label={t("redesign.imageSaveMode")}
-              value={state.workflowPrefs.imageSaveMode}
-              onChange={(e) =>
-                change({
-                  workflowPrefs: {
-                    ...state.workflowPrefs,
-                    imageSaveMode: e.target.value === "copy" ? "copy" : "overwrite",
-                  },
-                })
-              }
+              value={effective("workflow.imageSaveMode", state.workflowPrefs.imageSaveMode)}
+              onChange={(e) => {
+                const v = e.target.value === "copy" ? "copy" : "overwrite";
+                scoped("workflow.imageSaveMode", v, () => change({ workflowPrefs: { ...state.workflowPrefs, imageSaveMode: v } }));
+              }}
             >
               <option value="overwrite">{t("redesign.imageSaveOverwrite")}</option>
               <option value="copy">{t("redesign.imageSaveCopy")}</option>
             </select>
           </label>
+          {projectToggle("workflow.imageSaveMode", t("redesign.imageSaveMode"), effective("workflow.imageSaveMode", state.workflowPrefs.imageSaveMode))}
           <p>{t("redesign.imageSaveHint")}</p>
           <label>
             {t("redesign.units")}
             <select
               aria-label={t("redesign.units")}
-              value={state.workflowPrefs.units}
-              onChange={(e) =>
-                change({
-                  workflowPrefs: {
-                    ...state.workflowPrefs,
-                    units: sanitizeUnitPref(e.target.value),
-                  },
-                })
-              }
+              value={effective("workflow.units", state.workflowPrefs.units)}
+              onChange={(e) => {
+                const v = sanitizeUnitPref(e.target.value);
+                scoped("workflow.units", v, () => change({ workflowPrefs: { ...state.workflowPrefs, units: v } }));
+              }}
             >
               <option value="auto">{t("redesign.unitsAuto")}</option>
               <option value="metric">{t("redesign.unitsMetric")}</option>
               <option value="imperial">{t("redesign.unitsImperial")}</option>
             </select>
           </label>
+          {projectToggle("workflow.units", t("redesign.units"), effective("workflow.units", state.workflowPrefs.units))}
           <p>{t("redesign.unitsHint")}</p>
         </>
       )}
