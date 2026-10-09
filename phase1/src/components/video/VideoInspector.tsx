@@ -56,7 +56,7 @@ export function VideoControls({name}:{name:string}){
    <div className="flex flex-wrap gap-2">
     <Button size="compact" variant="outline" disabled={selectedIndex<=0} onClick={()=>moveTimelineClip(name,selected.id,-1)} data-testid="video-clip-left">{t('video.moveLeft')}</Button>
     <Button size="compact" variant="outline" disabled={selectedIndex<0||selectedIndex>=s.clips.length-1} onClick={()=>moveTimelineClip(name,selected.id,1)} data-testid="video-clip-right">{t('video.moveRight')}</Button>
-    <Button size="compact" variant="ghost" disabled={s.clips.length<=1} onClick={()=>{deleteTimelineClip(name,selected.id);selectTimelineClip(name,null);}} data-testid="video-clip-delete">{t('video.deleteClip')}</Button>
+    <Button size="compact" variant="ghost" disabled={s.clips.length<=1&&media.items.find(i=>i.name===name)?.kind!=='video-project'} onClick={()=>{deleteTimelineClip(name,selected.id);selectTimelineClip(name,null);}} data-testid="video-clip-delete">{t('video.deleteClip')}</Button>
    </div>
    <p className="m-0 text-ink-3">{t('video.clipHint')}</p>
   </div>}
@@ -77,6 +77,6 @@ export function VideoControls({name}:{name:string}){
 /** Right-panel host: the settings of the active video tab. */
 export function VideoInspector(){
  const media=useMedia();const item=media.items.find(i=>i.name===media.active);
- if(item?.kind!=='video')return null;
+ if(item?.kind!=='video'&&item?.kind!=='video-project')return null;
  return <VideoControls key={item.name} name={item.name}/>;
 }

@@ -4,7 +4,7 @@ import {RASTER_EXTENSIONS,RASTER_ACCEPT,sniffRaster,decodeRasterPreview} from '.
 import {useSyncExternalStore} from 'react';
 import {AUDIO_EXTENSIONS,sniffAudio} from './sound/format';
 import {VIDEO_EXTENSIONS,sniffVideo} from './video/format';
-export type MediaKind='image'|'pdf'|'psd'|'docx'|'xlsx'|'pptx'|'raster-preview'|'audio'|'video';
+export type MediaKind='image'|'pdf'|'psd'|'docx'|'xlsx'|'pptx'|'raster-preview'|'audio'|'video'|'video-project';
 export interface MediaItem{name:string;kind:MediaKind;mime:string;url:string;size:number;sourceUrl?:string;warning?:string}
 export const MEDIA_FILE=new RegExp(`\\.(${RASTER_EXTENSIONS}|pdf|psd|docx|xlsx|pptx|${AUDIO_EXTENSIONS}|${VIDEO_EXTENSIONS})$`,'i');
 export const MAX_MEDIA_BYTES=25_000_000;
@@ -59,3 +59,11 @@ export function setActiveMedia(name:string|null){if(state.active!==name)set({...
 export function closeMedia(name:string){const it=findMedia(name);if(!it||!canClose(name))return;URL.revokeObjectURL(it.url);if(it.sourceUrl)URL.revokeObjectURL(it.sourceUrl);set({items:state.items.filter(i=>i!==it),active:state.active===it.name?null:state.active});}
 export function clearMedia(){if(!state.items.every(it=>canClose(it.name)))return false;state.items.forEach(i=>{URL.revokeObjectURL(i.url);if(i.sourceUrl)URL.revokeObjectURL(i.sourceUrl);});set({items:[],active:null});return true;}
 export const formatBytes=(n:number)=>n<1024?`${n} B`:n<1_048_576?`${(n/1024).toFixed(1)} KB`:`${(n/1_048_576).toFixed(1)} MB`;
+
+/** Empty edit-list project. Not a video source and never sent to a decoder. */
+export function addBlankVideoProject(name:string):void{
+ if(findMedia(name))throw Error('A project with this name is already open.');
+ const url=URL.createObjectURL(new Blob([], {type:'application/x-somnia-video-project'}));
+ const item:MediaItem={name,kind:'video-project',mime:'application/x-somnia-video-project',url,size:0};
+ set({items:[...state.items,item],active:name});
+}

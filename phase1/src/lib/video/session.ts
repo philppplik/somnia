@@ -47,6 +47,7 @@ export async function openVideo(item:{name:string;url:string}):Promise<void>{
 async function openVideoFresh(item:{name:string;url:string}):Promise<void>{
  stopMediaSync??=subscribeMedia(()=>{const live=new Set(getMedia().items.map(i=>i.name));for(const n of [...sessions.keys()])if(!live.has(n))closeVideo(n);});
  put({name:item.name,status:'loading',error:'',probe:null,capabilities:null,clips:[],selectedClipId:null,format:DEFAULT_FORMAT,progress:null,result:null,ext:fileExtension(item.name)});
+ if(getMedia().items.find(i=>i.name===item.name)?.kind==='video-project'){patch(item.name,{status:'ready',ext:''});return;}
  try{
   const bytes=await fetch(item.url).then(r=>r.arrayBuffer());
   const sniffed=sniffVideo(new Uint8Array(bytes,0,Math.min(bytes.byteLength,512)));
@@ -71,6 +72,7 @@ function editTimeline(root:string,edit:(clips:TimelineClip[])=>TimelineClip[]|nu
 export async function addTimelineClip(root:string,item:{name:string;url:string}){
  await openVideo(item);
  const probe=sessions.get(item.name)?.probe;if(!probe)return;
+ if(!sessions.get(root)?.probe)patch(root,{probe,capabilities:sessions.get(item.name)?.capabilities??null});
  const clip=fullClip(item.name,probe.duration);
  editTimeline(root,clips=>[...clips,clip]);
  patch(root,{selectedClipId:clip.id});
@@ -85,7 +87,7 @@ export async function addTimelineClipsFromDialog(root:string){
 }
 export const splitTimelineAt=(root:string,time:number)=>editTimeline(root,clips=>splitAt(clips,time));
 export function deleteTimelineClip(root:string,id:string){
- editTimeline(root,clips=>clips.length>1?rippleDelete(clips,id):clips);
+ editTimeline(root,clips=>clips.length>1||getMedia().items.find(i=>i.name===root)?.kind==='video-project'?rippleDelete(clips,id):clips);
 }
 export const moveTimelineClip=(root:string,id:string,by:number)=>editTimeline(root,clips=>{const i=clips.findIndex(c=>c.id===id);return i<0?clips:moveClip(clips,id,i+by);});
 export const trimTimelineClip=(root:string,id:string,edge:'in'|'out',at:number)=>editTimeline(root,clips=>setClipEdge(clips,id,edge,at));
@@ -98,7 +100,9 @@ export function toggleTimelineClipMute(root:string,id:string){
 export const selectTimelineClip=(root:string,id:string|null)=>patch(root,{selectedClipId:id});
 /** Back to the original: one full-length clip of the root source, output format kept. */
 export function resetTimeline(root:string){
- const s=sessions.get(root);if(!s?.probe)return;
+ const s=sessions.get(root);if(!s)return;
+ if(getMedia().items.find(i=>i.name===root)?.kind==='video-project'){revoke(s.result);put({...s,clips:[],selectedClipId:null,result:null});return;}
+ if(!s.probe)return;
  revoke(s.result);
  put({...s,clips:[fullClip(root,s.probe.duration)],selectedClipId:null,result:null});
 }
@@ -106,7 +110,7 @@ export const setVideoFormat=(root:string,format:VideoFormat)=>patch(root,{format
 /** Runs the export in the worker and keeps the result on the session. Cancel rejects quietly. */
 export async function runVideoExport(name:string):Promise<'exported'|'cancelled'|'unavailable'>{
  const s=sessions.get(name);
- if(!s||!s.probe||!s.clips.length)return'unavailable';
+ if(!s||!s.clips.length)return'unavailable';
  const clipSources:Record<string,ArrayBuffer>={};
  for(const n of new Set(s.clips.map(c=>c.source))){
   const bytes=sources.get(n);

@@ -2,7 +2,7 @@ import {useCallback,useEffect,useRef,useState} from 'react';
 import {ChevronsLeft,ChevronsRight,Download,Pause,Play,Scissors,Volume2,VolumeX} from '../../lib/icons';
 import {Button} from '../ui/button';
 import {useT} from '../../lib/useT';
-import {cancelVideoExport,deleteTimelineClip,exportVideoFile,moveTimelineClip,openVideo,selectTimelineClip,splitTimelineAt,toggleTimelineClipMute,trimTimelineClip,useVideoSession,videoIsEdited} from '../../lib/video/session';
+import {addTimelineClipsFromDialog,cancelVideoExport,deleteTimelineClip,exportVideoFile,moveTimelineClip,openVideo,selectTimelineClip,splitTimelineAt,toggleTimelineClipMute,trimTimelineClip,useVideoSession,videoIsEdited} from '../../lib/video/session';
 import {clipRanges,locate,timelineDuration} from '../../lib/video/timeline';
 import {formatTime} from '../../lib/video/recipe';
 import {formatBytes,getState,patchState,requestStudio,useAppStore,useMedia,type MediaItem} from './workspace-deps';
@@ -91,7 +91,7 @@ export function VideoWorkspace({item,withPanel=false}:{item:MediaItem;withPanel?
   <div className="flex min-h-0 w-full flex-1">
    <div className="flex min-h-0 min-w-0 flex-1 flex-col">
     <div className="flex min-h-0 flex-1 items-center justify-center bg-black/90 p-2">
-     {playable?<video key={currentSource??item.name} ref={video} src={currentUrl} className="max-h-full max-w-full" muted={muted} preload="auto"
+     {!clips.length?<div className="grid justify-items-center gap-3 text-center text-[13px] text-white" data-testid="video-empty-timeline"><p>Your timeline is empty. Add clips to start editing.</p><Button variant="outline" onClick={()=>void addTimelineClipsFromDialog(item.name)}>Add video clips</Button></div>:playable?<video key={currentSource??item.name} ref={video} src={currentUrl} className="max-h-full max-w-full" muted={muted} preload="auto"
       onLoadedMetadata={e=>{e.currentTarget.volume=volume;if(entry)e.currentTarget.currentTime=entry.sourceTime;if(playingRef.current)void e.currentTarget.play().catch(()=>{});}}
       onTimeUpdate={e=>{const el=e.currentTarget;if(!entry)return;
        setPlayhead(Math.min(duration,entry.range.start+(el.currentTime-entry.range.clip.in_s)));

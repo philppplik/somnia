@@ -26,7 +26,7 @@ function FitImage({src,alt,onSize}:{src:string;alt:string;onSize?:(w:number,h:nu
 /** Preview for an opened PNG, JPEG or PDF. */
 export function MediaViewer({item}:{item:MediaItem}){const {t}=useT();
  if(item.kind==='audio')return <SoundWorkspace key={item.name} item={item} withPanel/>;
- if(item.kind==='video')return <VideoWorkspace key={item.name} item={item} withPanel/>;
+ if(item.kind==='video'||item.kind==='video-project')return <VideoWorkspace key={item.name} item={item} withPanel/>;
  if(item.kind==='psd')return <PsdViewer key={item.url} item={item}/>;
  if(item.kind==='pdf')return <Suspense fallback={<div role="status" className="grid flex-1 place-items-center text-xs">Opening PDF…</div>}><PdfInlineEditor key={item.name} item={item}/></Suspense>;
  if(item.kind==='pptx')return <SlidesCanvas/>;
