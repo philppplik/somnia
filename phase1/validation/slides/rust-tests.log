@@ -1,0 +1,21 @@
+   Compiling somnia-slides v0.1.0 (/home/sandbox/somnia/phase1/slides-engine)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 3.38s
+     Running unittests src/lib.rs (slides-engine/target/debug/deps/somnia_slides-d031a6f01fac3b26)
+
+running 7 tests
+test tests::compressed_cap ... ok
+test tests::expansion_cap ... ok
+test tests::invalid_zip ... ok
+test tests::missing_presentation ... ok
+test tests::fixture ... ok
+test tests::traversal_rejected ... ok
+test tests::total_expansion_rejected ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.97s
+
+   Doc-tests somnia_slides
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+

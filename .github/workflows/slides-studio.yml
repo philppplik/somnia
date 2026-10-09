@@ -1,0 +1,35 @@
+name: Slides Studio validation
+on:
+  pull_request:
+    paths: ['phase1/slides-engine/**', 'phase1/src/lib/slides/**', 'phase1/src/components/slides/**', 'phase1/src/lib/studios/**', 'phase1/src/components/studios/**', 'phase1/tests/slides-studio.spec.ts', '.github/workflows/slides-studio.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  slides:
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: phase1
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - uses: dtolnay/rust-toolchain@1.95.0
+        with:
+          targets: wasm32-unknown-unknown
+      - run: cargo install wasm-bindgen-cli --version 0.2.129 --locked
+      - run: npm ci
+      - run: sh slides-engine/build.sh
+      - run: cargo test --locked --manifest-path slides-engine/Cargo.toml
+      - run: npm run craft:build
+      - run: npm run build
+      - run: npx tsx --test src/lib/slides/*.test.ts src/lib/studios.test.ts
+      - run: npx playwright install --with-deps chromium
+      - run: npx playwright test -c playwright.slides.config.ts
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: slides-studio-evidence
+          path: phase1/validation/slides/

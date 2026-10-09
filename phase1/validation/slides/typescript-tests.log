@@ -1,0 +1,52 @@
+TAP version 13
+# Subtest: RPC serial IDs, errors, disposal and later requests fail closed
+ok 1 - RPC serial IDs, errors, disposal and later requests fail closed
+  ---
+  duration_ms: 2.153971
+  type: 'test'
+  ...
+# Subtest: worker failure rejects all pending calls and terminates execution
+ok 2 - worker failure rejects all pending calls and terminates execution
+  ---
+  duration_ms: 0.246156
+  type: 'test'
+  ...
+# Subtest: PPTX intake rejects wrong formats and compressed input cap
+ok 3 - PPTX intake rejects wrong formats and compressed input cap
+  ---
+  duration_ms: 1.038828
+  type: 'test'
+  ...
+# Subtest: Slides only advertises its implemented read-only surface
+ok 4 - Slides only advertises its implemented read-only surface
+  ---
+  duration_ms: 0.638614
+  type: 'test'
+  ...
+# Subtest: runtime-ready studios register without changing Code context
+ok 5 - runtime-ready studios register without changing Code context
+  ---
+  duration_ms: 1.570862
+  type: 'test'
+  ...
+# Subtest: manual selection wins, pending tools never commit, documents/history and global Agent stay untouched
+ok 6 - manual selection wins, pending tools never commit, documents/history and global Agent stay untouched
+  ---
+  duration_ms: 0.337163
+  type: 'test'
+  ...
+# Subtest: Studio labels and command strings exist in all five catalogues
+ok 7 - Studio labels and command strings exist in all five catalogues
+  ---
+  duration_ms: 62.996679
+  type: 'test'
+  ...
+1..7
+# tests 7
+# suites 0
+# pass 7
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 710.34018

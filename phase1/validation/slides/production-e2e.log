@@ -1,0 +1,8 @@
+
+Running 3 tests using 1 worker
+
+  ✓  1 tests/slides-studio.spec.ts:3:1 › Slides Studio opens independent PPTX in real worker, navigates, rejects bad input and closes (1.6s)
+  ✓  2 tests/slides-studio.spec.ts:22:1 › switching studios retains preview without changing the source document (1.2s)
+  ✓  3 tests/slides-studio.spec.ts:33:1 › dark theme presentation stays readable (1.1s)
+
+  3 passed (5.4s)
