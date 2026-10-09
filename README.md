@@ -1,4 +1,4 @@
-<p align="center"><img src="docs/assets/readme/logo-mark.svg" alt="Somnia logo" width="72"></p>
+<p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="docs/assets/readme/logo-mark-white.svg"><source media="(prefers-color-scheme: light)" srcset="docs/assets/readme/logo-mark-black.svg"><img src="docs/assets/readme/logo-mark-black.svg" alt="Somnia logo" width="72"></picture></p>
 
 # Somnia
 
