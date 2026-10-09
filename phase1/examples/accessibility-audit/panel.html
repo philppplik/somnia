@@ -1,0 +1,226 @@
+<style>
+:root{color-scheme:light dark;--bg:#f8f9fb;--card:#fff;--ink:#1f2430;--mute:#5b6270;--line:#e3e6ee;--acc:#4f46e5;--accbg:#ece9ff;--err:#b42318;--errbg:#fde8e6;--note:#92400e;--notebg:#fdf0d5;--ok:#166534;--okbg:#dcf5e3;--code:#f1f2f8}
+@media (prefers-color-scheme:dark){:root{--bg:#15171d;--card:#1e2129;--ink:#eceef4;--mute:#a4abba;--line:#323744;--acc:#a5a0ff;--accbg:#2b2a52;--err:#ff9d94;--errbg:#472220;--note:#f6c673;--notebg:#43341a;--ok:#86e0a0;--okbg:#1b3a27;--code:#161920}}
+*{box-sizing:border-box}
+body{margin:0;padding:12px;background:var(--bg);color:var(--ink);font:13px/1.45 system-ui,sans-serif}
+h1{font-size:18px;margin:2px 0 4px;line-height:1.2}
+h2{font-size:12px;margin:0;color:var(--mute);text-transform:uppercase;letter-spacing:.04em;font-weight:600}
+p{margin:0}
+.top{display:flex;gap:8px;align-items:flex-start;justify-content:space-between;flex-wrap:wrap}
+.eyebrow{font-size:11px;color:var(--mute);text-transform:uppercase;letter-spacing:.05em}
+.lead{color:var(--mute);margin:4px 0 10px}
+button,select{font:inherit;color:inherit}
+button{cursor:pointer}
+button:focus-visible,select:focus-visible,summary:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+.primary{background:#4f46e5;color:#fff;border:0;border-radius:999px;padding:6px 14px;font-weight:600}
+.primary[disabled]{opacity:.6;cursor:default}
+.metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(86px,1fr));gap:8px;margin-bottom:10px}
+.metric{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:8px 10px}
+.metric b{display:block;font-size:22px;line-height:1.1}
+.metric span{color:var(--mute);font-size:12px}
+.pills{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}
+.pill{border:1px solid var(--line);background:var(--card);border-radius:999px;padding:3px 10px;font-size:12px}
+.pill[aria-pressed=true]{background:var(--accbg);border-color:var(--acc);color:var(--acc);font-weight:600}
+.filebar{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin:6px 0 8px}
+.filebar label{color:var(--mute);font-size:12px}
+select{max-width:100%;border:1px solid var(--line);background:var(--card);border-radius:8px;padding:3px 6px}
+.list{display:grid;gap:8px;padding:0;margin:8px 0;list-style:none}
+.item{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:9px 10px;min-width:0}
+.head{display:flex;gap:8px;align-items:flex-start;flex-wrap:wrap}
+.badge{flex:none;font-size:11px;font-weight:700;border-radius:999px;padding:1px 8px}
+.badge.error{background:var(--errbg);color:var(--err)}
+.badge.notice{background:var(--notebg);color:var(--note)}
+.title{font-weight:600;flex:1 1 140px;min-width:0;overflow-wrap:anywhere}
+.where{font:11px ui-monospace,Consolas,monospace;color:var(--mute);margin-top:4px;overflow-wrap:anywhere}
+code.el{display:block;margin-top:6px;background:var(--code);border-radius:8px;padding:5px 7px;font:11px ui-monospace,Consolas,monospace;white-space:pre-wrap;overflow-wrap:anywhere;max-height:5.5em;overflow:auto}
+details{margin-top:6px}
+summary{cursor:pointer;color:var(--acc);font-size:12px}
+details p{margin-top:4px;color:var(--mute)}
+.note{font-size:12px;background:var(--card);border:1px dashed var(--line);border-radius:14px;padding:9px 10px;color:var(--mute);margin:8px 0}
+.empty{text-align:center;padding:16px 8px}
+.err{color:var(--err)}
+.foot{display:flex;justify-content:space-between;gap:6px 12px;flex-wrap:wrap;border-top:1px solid var(--line);margin-top:10px;padding-top:8px;color:var(--mute);font-size:11px}
+</style>
+<main aria-labelledby="t">
+<div class="top"><div><div class="eyebrow">Code studio / Web project</div><h1 id="t">Accessibility Audit</h1></div>
+<button type="button" class="primary" id="run">Re-check</button></div>
+<p class="lead">Static check of your HTML files. Reports findings, not a WCAG pass or fail.</p>
+<div class="metrics" id="metrics" role="group" aria-label="Summary"></div>
+<div class="pills" id="cats" role="group" aria-label="Filter by category"></div>
+<div class="filebar" id="filebar" hidden><label for="file">File</label><select id="file"></select></div>
+<p class="eyebrow" id="listhead" aria-live="polite"></p>
+<ul class="list" id="list"></ul>
+<div class="note" id="skipnote" hidden></div>
+<div class="note">Not covered here: color contrast, keyboard use, focus order, the quality of alt text, and anything that scripts add at run time. Check those by hand or with a browser tool.</div>
+<div class="foot"><span>Read only &middot; Offline &middot; No automatic changes</span><span id="stamp">Snapshot &middot; refresh manually</span></div>
+</main>
+<script>
+(function(){
+'use strict';
+var CATS=[['all','All'],['labels','Alt & labels'],['ids','IDs & ARIA'],['landmarks','Landmarks']];
+var RULES={
+'img-alt':['labels','error','Image without alt attribute','Screen readers read out the file name when alt is missing.','Describe the image in alt. For purely decorative images use alt="" on purpose.'],
+'img-alt-file':['labels','notice','Alt text looks like a file name','Alt text that repeats a file name tells people nothing about the image.','Describe what the image shows or why it is there.'],
+'input-image':['labels','error','Image button without alt text','An input of type image acts as a button. Without alt it has no name.','Add alt (for example "Search") or aria-label.'],
+'area-alt':['labels','error','Image map area without alt text','A clickable area without alt has no name for assistive technology.','Add alt that says where the area leads.'],
+'control-name':['labels','error','Form field without an accessible name','There is no label, aria-label, title or valid aria-labelledby. A placeholder is not a label.','Add a label element linked with for and id, or wrap the field in a label.'],
+'button-name':['labels','error','Button without an accessible name','The button has no text, aria-label or labelled image, so its purpose is unknown.','Add visible text or an aria-label.'],
+'link-name':['labels','error','Link without an accessible name','A link with no text or label is announced as just "link".','Add link text, an image with alt, or an aria-label.'],
+'label-target':['ids','error','Label points to a missing field','The for attribute of this label does not match any id in the file, so the label is not connected to a field.','Fix the for value or the id of the field.'],
+'dup-id':['ids','error','Duplicate ID','Two or more elements share one id. Labels, links and ARIA references then point at the wrong element or only the first.','Make each id unique in the file.'],
+'labelledby':['ids','error','aria-labelledby points to a missing ID','The id list has an entry that is not in this file. The name may be empty or incomplete.','Fix the id or remove the attribute.'],
+'aria-ref':['ids','notice','ARIA reference target not found','An id referenced by this attribute is not in the file. It may be created by a script, so check it manually.','Fix the id or remove the attribute if it is not needed.'],
+'aria-empty':['ids','notice','ARIA reference is empty','The attribute is present but lists no id.','Add an id or remove the attribute.'],
+'aria-hidden-focus':['ids','error','Focusable element hidden with aria-hidden','Keyboard users can reach this element, but screen readers are told to ignore it.','Remove aria-hidden, or make the element not focusable (hidden, disabled or tabindex="-1").'],
+'main-missing':['landmarks','notice','No main landmark','A main element lets screen reader users jump straight to the page content.','Wrap the primary content in one main element.'],
+'main-multiple':['landmarks','error','More than one visible main landmark','A page should have one main landmark. Extra ones confuse landmark navigation.','Keep one main. Mark others hidden if they are alternates.'],
+'landmark-label':['landmarks','notice','Several landmarks of one type without labels','Users cannot tell these apart in a landmark list.','Give each an aria-label, for example "Main" and "Footer".'],
+'page-lang':['landmarks','notice','Page has no lang attribute','Screen readers use lang to choose the pronunciation.','Add lang to the html element, for example lang="en".'],
+'page-title':['landmarks','notice','Page has no title','The title is the first thing a screen reader announces and shows in tabs.','Add a short title that describes the page.']
+};
+var $=function(i){return document.getElementById(i)};
+function h(t,c,x){var e=document.createElement(t);if(c)e.className=c;if(x!=null)e.textContent=x;return e}
+var state={findings:[],files:[],skipped:[],cat:'all',file:'all',error:'',busy:false,done:false};
+
+function blank(s){return s.replace(/[^\n]/g,' ')}
+function tokenLines(src){
+ var s=src.replace(/<!--[\s\S]*?-->/g,blank).replace(/(<(script|style|textarea|title)\b[^>]*>)([\s\S]*?)(<\/\2\s*>)/gi,function(m,a,b,c,d){return a+blank(c)+d});
+ var out=[],re=/<([a-zA-Z][a-zA-Z0-9:-]*)/g,m,line=1,last=0;
+ while((m=re.exec(s))){for(var i=last;i<m.index;i++){if(s.charCodeAt(i)===10)line++}last=m.index;out.push([m[1].toLowerCase(),line])}
+ return out;
+}
+function lineMap(doc,src){
+ var toks=tokenLines(src),map=new Map(),j=0,els=doc.querySelectorAll('*');
+ for(var i=0;i<els.length;i++){
+  var tag=els[i].localName;
+  if(j<toks.length&&toks[j][0]===tag){map.set(els[i],toks[j][1]);j++;continue}
+  for(var k=j+1;k<Math.min(toks.length,j+6);k++){if(toks[k][0]===tag){map.set(els[i],toks[k][1]);j=k+1;break}}
+ }
+ return map;
+}
+function snippet(el){
+ var s='<'+el.localName,a=el.attributes;
+ for(var i=0;i<a.length;i++){var v=a[i].value;if(v.length>60)v=v.slice(0,57)+'...';s+=' '+a[i].name+'="'+v+'"'}
+ s+='>';return s.length>200?s.slice(0,197)+'...>':s;
+}
+function hiddenUp(el){for(var n=el;n&&n.nodeType===1;n=n.parentElement){if(n.hasAttribute('hidden')||n.getAttribute('aria-hidden')==='true')return true}return false}
+function txt(el){return (el.textContent||'').replace(/\s+/g,' ').trim()}
+function ids(v){return (v||'').split(/\s+/).filter(Boolean)}
+function refText(doc,v){var t='';ids(v).forEach(function(i){var e=doc.getElementById(i);if(e)t+=' '+txt(e)+(e.getAttribute('aria-label')||'')});return t.trim()}
+function imgNamed(el){var i=el.querySelector('img[alt]:not([alt=""]),svg[aria-label],svg title,[role=img][aria-label]');return !!i}
+function hasName(doc,el,inner){
+ if(el.hasAttribute('aria-labelledby'))return true; /* judged by the ARIA rules */
+ if((el.getAttribute('aria-label')||'').trim())return true;
+ if((el.getAttribute('title')||'').trim())return true;
+ if(inner&&(txt(el)||imgNamed(el)))return true;
+ return false;
+}
+function controlNamed(doc,el){
+ if(hasName(doc,el,false))return true;
+ var id=el.getAttribute('id');
+ if(id){var ls=doc.querySelectorAll('label[for]');for(var i=0;i<ls.length;i++){if(ls[i].getAttribute('for')===id&&(txt(ls[i])||imgNamed(ls[i])))return true}}
+ var w=el.closest('label');
+ return !!(w&&(txt(w).length>0||imgNamed(w)));
+}
+function analyse(path,text){
+ var doc=new DOMParser().parseFromString(text,'text/html');
+ var lines=lineMap(doc,text),out=[];
+ var fullDoc=/<html[\s>]/i.test(text)||/<body[\s>]/i.test(text);
+ function add(rule,el,extra){var r=RULES[rule];out.push({rule:rule,cat:r[0],sev:r[1],title:r[2]+(extra?': '+extra:''),why:r[3],fix:r[4],file:path,line:el?lines.get(el)||0:0,el:el?snippet(el):''})}
+ doc.querySelectorAll('img:not([alt])').forEach(function(e){var r=e.getAttribute('role');if(r==='presentation'||r==='none'||hiddenUp(e))return;add('img-alt',e)});
+ doc.querySelectorAll('img[alt]').forEach(function(e){if(/^[^\s]+\.(png|jpe?g|gif|webp|avif|svg|bmp)$/i.test(e.getAttribute('alt').trim()))add('img-alt-file',e)});
+ doc.querySelectorAll('input[type=image]').forEach(function(e){if(!(e.getAttribute('alt')||'').trim()&&!hasName(doc,e,false))add('input-image',e)});
+ doc.querySelectorAll('area[href]').forEach(function(e){if(!(e.getAttribute('alt')||'').trim()&&!hasName(doc,e,false))add('area-alt',e)});
+ doc.querySelectorAll('input:not([type=hidden]):not([type=submit]):not([type=reset]):not([type=button]):not([type=image]),select,textarea').forEach(function(e){if(hiddenUp(e))return;if(!controlNamed(doc,e))add('control-name',e)});
+ doc.querySelectorAll('input[type=button],input[type=reset]').forEach(function(e){if(!(e.getAttribute('value')||'').trim()&&!hasName(doc,e,false))add('button-name',e)});
+ doc.querySelectorAll('button').forEach(function(e){if(!hiddenUp(e)&&!hasName(doc,e,true))add('button-name',e)});
+ doc.querySelectorAll('a[href]').forEach(function(e){if(!hiddenUp(e)&&!hasName(doc,e,true))add('link-name',e)});
+ doc.querySelectorAll('label[for]').forEach(function(e){var f=e.getAttribute('for');if(f&&!doc.getElementById(f))add('label-target',e,f)});
+ var seen={};
+ doc.querySelectorAll('[id]').forEach(function(e){var i=e.getAttribute('id');if(!i)return;(seen[i]=seen[i]||[]).push(e)});
+ Object.keys(seen).forEach(function(i){var l=seen[i];if(l.length>1){add('dup-id',l[0],'#'+i+' (x'+l.length+')');var f=out[out.length-1];var ln=l.map(function(x){return lines.get(x)}).filter(Boolean).filter(function(v,i,a){return a.indexOf(v)===i});if(ln.length>1)f.lineList=ln}});
+ ['aria-labelledby','aria-describedby','aria-controls','aria-owns','aria-activedescendant','aria-details','aria-errormessage','aria-flowto'].forEach(function(attr){
+  doc.querySelectorAll('['+attr+']').forEach(function(e){
+   var l=ids(e.getAttribute(attr));
+   if(!l.length){add('aria-empty',e,attr);return}
+   var miss=l.filter(function(i){return !doc.getElementById(i)});
+   if(miss.length)add(attr==='aria-labelledby'?'labelledby':'aria-ref',e,(attr==='aria-labelledby'?'':attr+' ')+'"'+miss.join(' ')+'"');
+  });
+ });
+ doc.querySelectorAll('[aria-hidden="true"]').forEach(function(e){
+  var ti=e.getAttribute('tabindex');
+  var foc=(/^(button|select|textarea)$/.test(e.localName)||(e.localName==='a'&&e.hasAttribute('href'))||(e.localName==='input'&&e.getAttribute('type')!=='hidden')||(ti!==null&&ti!=='-1'))&&!e.hasAttribute('disabled')&&ti!=='-1';
+  if(foc)add('aria-hidden-focus',e);
+ });
+ if(fullDoc){
+  var mains=[].filter.call(doc.querySelectorAll('main,[role=main]'),function(e){return !e.hasAttribute('hidden')});
+  if(!mains.length)add('main-missing',null);
+  else if(mains.length>1)add('main-multiple',mains[1],mains.length+' found');
+  ['nav','aside'].forEach(function(t){
+   var l=[].filter.call(doc.querySelectorAll(t),function(e){return !hiddenUp(e)});
+   var un=l.filter(function(e){return !(e.getAttribute('aria-label')||'').trim()&&!e.hasAttribute('aria-labelledby')});
+   if(l.length>1&&un.length)add('landmark-label',un[0],t+' x'+l.length);
+  });
+  if(/<html[\s>]/i.test(text)&&!(doc.documentElement.getAttribute('lang')||'').trim())add('page-lang',doc.documentElement);
+  if(/<head[\s>]/i.test(text)&&!txt(doc.querySelector('title')||doc.createElement('i')))add('page-title',null);
+ }
+ return {findings:out,fragment:!fullDoc};
+}
+async function scan(){
+ state.busy=true;state.error='';render();
+ var findings=[],files=[],skipped=[];
+ try{
+  var all=await somnia.project.listFiles();
+  var html=all.filter(function(p){return /\.(html?|xhtml)$/i.test(p)});
+  for(var i=0;i<html.length;i++){
+   var p=html[i],t;
+   try{t=await somnia.project.readFile(p)}catch(e){skipped.push(p+': could not be read');continue}
+   if(typeof t!=='string'){skipped.push(p+': no text content');continue}
+   if(t.length>1500000){skipped.push(p+': larger than 1.5 MB, skipped');continue}
+   var r=analyse(p,t);
+   files.push(p);
+   if(r.fragment)skipped.push(p+': partial page, page-level checks (main, lang, title) skipped');
+   r.findings.sort(function(a,b){return a.line-b.line});
+   findings=findings.concat(r.findings);
+  }
+  state.total=all.length;
+ }catch(e){state.error=e&&e.message?e.message:String(e);findings=[];files=[]}
+ state.findings=findings;state.files=files;state.skipped=skipped;state.done=true;state.busy=false;
+ state.stamp=new Date().toLocaleTimeString();
+ if(state.file!=='all'&&files.indexOf(state.file)<0)state.file='all';
+ render();
+}
+function render(){
+ var run=$('run');run.disabled=state.busy;run.textContent=state.busy?'Checking...':'Re-check';
+ var F=state.findings,errs=F.filter(function(f){return f.sev==='error'}).length;
+ var m=$('metrics');m.textContent='';
+ [[F.length,'Findings'],[state.files.length,'HTML files'],[F.length-errs,'Check manually']].forEach(function(x){var d=h('div','metric');d.appendChild(h('b',null,String(x[0])));d.appendChild(h('span',null,x[1]));m.appendChild(d)});
+ var cats=$('cats');cats.textContent='';
+ CATS.forEach(function(c){var n=c[0]==='all'?F.length:F.filter(function(f){return f.cat===c[0]}).length;var b=h('button','pill',c[1]+' '+n);b.type='button';b.setAttribute('aria-pressed',String(state.cat===c[0]));b.onclick=function(){state.cat=c[0];render()};cats.appendChild(b)});
+ var fb=$('filebar'),sel=$('file');
+ fb.hidden=state.files.length<2;
+ if(!fb.hidden){sel.textContent='';[['all','All files']].concat(state.files.map(function(f){return [f,f]})).forEach(function(o){var op=h('option',null,o[1]);op.value=o[0];sel.appendChild(op)});sel.value=state.file}
+ var list=$('list');list.textContent='';
+ var shown=F.filter(function(f){return (state.cat==='all'||f.cat===state.cat)&&(state.file==='all'||f.file===state.file)});
+ $('listhead').textContent=state.done&&!state.error?'Findings'+(state.file==='all'?'':' - '+state.file)+' ('+shown.length+')':'';
+ if(state.error){var e=h('li','item');e.appendChild(h('p','err','Could not read the project: '+state.error));e.appendChild(h('p',null,'This extension needs the project.read permission. Check Settings > Extensions.'));list.appendChild(e)}
+ else if(state.done&&!state.files.length){list.appendChild(h('li','item empty','No HTML files in the open project.'))}
+ else if(state.done&&!shown.length){list.appendChild(h('li','item empty',F.length?'No findings in this filter.':'No findings in '+state.files.length+' file'+(state.files.length===1?'':'s')+'. That does not mean the pages are accessible; see the limits below.'))}
+ shown.slice(0,300).forEach(function(f){
+  var li=h('li','item'),hd=h('div','head');
+  hd.appendChild(h('span','badge '+f.sev,f.sev==='error'?'Error':'Notice'));
+  hd.appendChild(h('span','title',f.title));li.appendChild(hd);
+  li.appendChild(h('div','where',f.file+(f.lineList?' (lines '+f.lineList.join(', ')+')':f.line?' (line '+f.line+')':'')));
+  if(f.el)li.appendChild(h('code','el',f.el));
+  var d=h('details');d.appendChild(h('summary',null,'Why it matters and how to fix'));d.appendChild(h('p',null,f.why));d.appendChild(h('p',null,'Fix: '+f.fix));li.appendChild(d);
+  list.appendChild(li);
+ });
+ if(shown.length>300)list.appendChild(h('li','note','Showing the first 300 of '+shown.length+' findings. Use the filters to narrow down.'));
+ var sn=$('skipnote');sn.hidden=!state.skipped.length;sn.textContent='';
+ if(state.skipped.length){sn.appendChild(h('div',null,'Notes:'));state.skipped.slice(0,8).forEach(function(s){sn.appendChild(h('div',null,'- '+s))});if(state.skipped.length>8)sn.appendChild(h('div',null,'- and '+(state.skipped.length-8)+' more'))}
+ $('stamp').textContent=state.stamp?'Snapshot at '+state.stamp+' \u00b7 refresh manually':'Snapshot \u00b7 refresh manually';
+}
+$('run').onclick=scan;$('file').onchange=function(){state.file=this.value;render()};
+render();scan();
+})();
+</script>

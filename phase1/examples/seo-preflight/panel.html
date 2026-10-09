@@ -1,0 +1,215 @@
+<style>
+:root{color-scheme:light dark;--bg:#f8f9fb;--card:#fff;--ink:#1f2430;--mute:#5b6270;--line:#e3e6ee;--acc:#4f46e5;--accbg:#ece9ff;--err:#b42318;--errbg:#fde8e6;--note:#92400e;--notebg:#fdf0d5;--ok:#166534;--okbg:#dcf5e3;--code:#f1f2f8}
+@media (prefers-color-scheme:dark){:root{--bg:#15171d;--card:#1e2129;--ink:#eceef4;--mute:#a4abba;--line:#323744;--acc:#a5a0ff;--accbg:#2b2a52;--err:#ff9d94;--errbg:#472220;--note:#f6c673;--notebg:#43341a;--ok:#86e0a0;--okbg:#1b3a27;--code:#161920}}
+*{box-sizing:border-box}
+body{margin:0;padding:12px;background:var(--bg);color:var(--ink);font:13px/1.45 system-ui,sans-serif}
+h1{font-size:18px;margin:2px 0 4px;line-height:1.2}
+h2{font-size:12px;margin:0;color:var(--mute);text-transform:uppercase;letter-spacing:.04em;font-weight:600}
+p{margin:0}
+.top{display:flex;gap:8px;align-items:flex-start;justify-content:space-between;flex-wrap:wrap}
+.eyebrow{font-size:11px;color:var(--mute);text-transform:uppercase;letter-spacing:.05em}
+.lead{color:var(--mute);margin:4px 0 10px}
+button,select{font:inherit;color:inherit}
+button{cursor:pointer}
+button:focus-visible,select:focus-visible,summary:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+.primary{background:#4f46e5;color:#fff;border:0;border-radius:999px;padding:6px 14px;font-weight:600}
+.primary[disabled]{opacity:.6;cursor:default}
+.metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(86px,1fr));gap:8px;margin-bottom:10px}
+.metric{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:8px 10px}
+.metric b{display:block;font-size:22px;line-height:1.1;white-space:nowrap}
+.metric span{color:var(--mute);font-size:12px}
+.pills{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}
+.pill{border:1px solid var(--line);background:var(--card);border-radius:999px;padding:3px 10px;font-size:12px}
+.pill[aria-pressed=true]{background:var(--accbg);border-color:var(--acc);color:var(--acc);font-weight:600}
+.filebar{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin:6px 0 8px}
+.filebar label{color:var(--mute);font-size:12px}
+select{max-width:100%;border:1px solid var(--line);background:var(--card);border-radius:8px;padding:3px 6px}
+.list{display:grid;gap:8px;padding:0;margin:8px 0;list-style:none}
+.item{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:9px 10px;min-width:0}
+.head{display:flex;gap:8px;align-items:flex-start;flex-wrap:wrap}
+.badge{flex:none;font-size:11px;font-weight:700;border-radius:999px;padding:1px 8px}
+.badge.error{background:var(--errbg);color:var(--err)}
+.badge.missing{background:var(--errbg);color:var(--err)}
+.badge.ok{background:var(--okbg);color:var(--ok)}
+.badge.notice{background:var(--notebg);color:var(--note)}
+.title{font-weight:600;flex:1 1 140px;min-width:0;overflow-wrap:anywhere}
+.where{font:11px ui-monospace,Consolas,monospace;color:var(--mute);margin-top:4px;overflow-wrap:anywhere}
+code.el{display:block;margin-top:6px;background:var(--code);border-radius:8px;padding:5px 7px;font:11px ui-monospace,Consolas,monospace;white-space:pre-wrap;overflow-wrap:anywhere;max-height:5.5em;overflow:auto}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:9px 10px;margin:8px 0;min-width:0}
+.card>summary{font-weight:600;color:var(--ink);font-size:13px;overflow-wrap:anywhere}
+.card .sub{color:var(--mute);font-weight:400;font-size:12px}
+.checks{list-style:none;padding:0;margin:8px 0 0;display:grid;gap:6px}
+.checks li{border-top:1px solid var(--line);padding-top:6px}
+.pv{background:var(--code);border-radius:10px;padding:8px 10px;margin-top:8px;overflow-wrap:anywhere}
+.pv .pt{color:#4f46e5;font-size:15px;font-weight:600;line-height:1.25}
+@media (prefers-color-scheme:dark){.pv .pt{color:var(--acc)}}
+.pv .pu{color:var(--mute);font-size:11px;margin:2px 0}
+.pv .pd{font-size:12px}
+.pv .pm{color:var(--mute);font-size:11px;margin-top:4px}
+details{margin-top:6px}
+summary{cursor:pointer;color:var(--acc);font-size:12px}
+details p{margin-top:4px;color:var(--mute)}
+.note{font-size:12px;background:var(--card);border:1px dashed var(--line);border-radius:14px;padding:9px 10px;color:var(--mute);margin:8px 0}
+.empty{text-align:center;padding:16px 8px}
+.err{color:var(--err)}
+.foot{display:flex;justify-content:space-between;gap:6px 12px;flex-wrap:wrap;border-top:1px solid var(--line);margin-top:10px;padding-top:8px;color:var(--mute);font-size:11px}
+</style>
+<main aria-labelledby="t">
+<div class="top"><div><div class="eyebrow">Code studio / Web project</div><h1 id="t">SEO Preflight</h1></div>
+<button type="button" class="primary" id="run">Re-check</button></div>
+<p class="lead">Checks the metadata in your HTML files. No rankings, no online lookups.</p>
+<div class="metrics" id="metrics" role="group" aria-label="Summary"></div>
+<div class="pills" id="views" role="group" aria-label="View"></div>
+<p class="eyebrow" id="listhead" aria-live="polite"></p>
+<div id="out"></div>
+<div class="note" id="skipnote" hidden></div>
+<div class="note">The length hints are editorial guide values, not ranking rules. The text preview is a rough sketch of title, address and description. It is not what Google will show; search engines pick their own titles and snippets.</div>
+<div class="foot"><span>Read only &middot; Offline &middot; No automatic changes</span><span id="stamp">Snapshot &middot; refresh manually</span></div>
+</main>
+<script>
+(function(){
+'use strict';
+var VIEWS=[['pages','Pages'],['missing','Missing'],['dups','Duplicates'],['preview','Preview']];
+var $=function(i){return document.getElementById(i)};
+function h(t,c,x){var e=document.createElement(t);if(c)e.className=c;if(x!=null)e.textContent=x;return e}
+var state={pages:[],skipped:[],dups:[],view:'pages',error:'',busy:false,done:false};
+function norm(s){return (s||'').replace(/\s+/g,' ').trim()}
+function meta(doc,sel,attr){var e=doc.querySelector(sel);return e?norm(e.getAttribute(attr||'content')):null}
+function count(s){return Array.from(s).length}
+function check(id,label,status,detail,sel,why){return {id:id,label:label,status:status,detail:detail,sel:sel,why:why}}
+function analyse(path,text){
+ var doc=new DOMParser().parseFromString(text,'text/html');
+ var isDoc=/<html[\s>]/i.test(text)||/<head[\s>]/i.test(text);
+ if(!isDoc)return null;
+ var P={path:path,checks:[],noindex:false};
+ var te=doc.querySelector('head title')||doc.querySelector('title');
+ var title=te?norm(te.textContent):'';
+ P.title=title;
+ if(!title)P.checks.push(check('title','Page title','missing','No title element, or it is empty.','title','The title is the main label of the page in browser tabs and search results.'));
+ else if(count(title)<10||count(title)>60)P.checks.push(check('title','Page title','notice',title+' ('+count(title)+' characters; about 10 to 60 is a common guide)','title','Very short or very long titles are often rewritten or cut off in results.'));
+ else P.checks.push(check('title','Page title','ok',title,'title',''));
+ var desc=meta(doc,'meta[name="description" i]');
+ P.desc=desc||'';
+ if(!desc)P.checks.push(check('desc','Meta description','missing','No short summary is set.','meta[name=description]','The description is a common source for the text under a result. Without one, search engines pick text from the page.'));
+ else if(count(desc)<50||count(desc)>160)P.checks.push(check('desc','Meta description','notice',count(desc)+' characters; about 50 to 160 is a common guide','meta[name=description]','Very short or very long descriptions may be replaced or cut off.'));
+ else P.checks.push(check('desc','Meta description','ok',count(desc)+' characters','meta[name=description]',''));
+ var cans=doc.querySelectorAll('link[rel~="canonical" i]');
+ var can=cans.length?norm(cans[0].getAttribute('href')):'';
+ P.canonical=can;
+ if(cans.length>1)P.checks.push(check('canonical','Canonical link','missing',cans.length+' canonical links. Only one is allowed.','link[rel=canonical]','When several canonical links disagree, search engines ignore them.'));
+ else if(!cans.length)P.checks.push(check('canonical','Canonical link','notice','None set. Optional for simple sites.','link[rel=canonical]','A canonical link names the preferred address when the same page is reachable under several URLs.'));
+ else if(!can)P.checks.push(check('canonical','Canonical link','missing','The href is empty.','link[rel=canonical]','An empty canonical link has no effect.'));
+ else if(!/^https?:\/\//i.test(can))P.checks.push(check('canonical','Canonical link','notice','Relative address: '+can+'. Use the full URL when you publish.','link[rel=canonical]','Canonical links should be absolute URLs. This tool does not open them.'));
+ else P.checks.push(check('canonical','Canonical link','ok',can,'link[rel=canonical]',''));
+ var rb=meta(doc,'meta[name="robots" i]'),gb=meta(doc,'meta[name="googlebot" i]');
+ var rv=((rb||'')+','+(gb||'')).toLowerCase();
+ if(/noindex|none/.test(rv)){P.noindex=true;P.checks.push(check('robots','Robots meta','notice','Page is excluded from search ('+(rb||gb)+'). Intended?','meta[name=robots]','noindex asks search engines to leave this page out of results.'))}
+ else P.checks.push(check('robots','Robots meta','ok',rb||gb?(rb||gb):'Not set (default: indexable)','meta[name=robots]',''));
+ [['og:title','Open Graph title'],['og:description','Open Graph description'],['og:image','Open Graph image']].forEach(function(o){
+  var v=meta(doc,'meta[property="'+o[0]+'" i]');
+  if(o[0]==='og:image')P.og=v||'';
+  if(!v)P.checks.push(check(o[0],o[1],'notice','Not set. Link previews on social sites will use guesses.','meta[property="'+o[0]+'"]','Open Graph tags control how the page looks when shared in chats and social posts.'));
+  else P.checks.push(check(o[0],o[1],'ok',v.length>80?v.slice(0,77)+'...':v,'meta[property="'+o[0]+'"]',''));
+ });
+ var hs=[].filter.call(doc.querySelectorAll('h1'),function(e){return !e.closest('[hidden]')});
+ var h1=hs.length?norm(hs[0].textContent):'';
+ P.h1=h1;
+ if(!hs.length||!h1)P.checks.push(check('h1','Main heading (h1)','missing',hs.length?'The h1 is empty.':'No h1 on the page.','h1','A clear h1 states the topic of the page. This is a content guideline, not a hard rule.'));
+ else if(hs.length>1)P.checks.push(check('h1','Main heading (h1)','notice',hs.length+' h1 elements. Valid HTML, but one is the usual choice.','h1','Several h1 headings can blur the topic of the page.'));
+ else P.checks.push(check('h1','Main heading (h1)','ok',h1.length>80?h1.slice(0,77)+'...':h1,'h1',''));
+ var lang=norm(doc.documentElement.getAttribute('lang'));
+ if(!lang)P.checks.push(check('lang','Page language','missing','The html element has no lang attribute.','html[lang]','lang helps search engines and browsers pick the right language.'));
+ else P.checks.push(check('lang','Page language','ok',lang,'html[lang]',''));
+ return P;
+}
+function dupGroups(pages){
+ var out=[];
+ [['title','Same title'],['desc','Same description'],['canonical','Same canonical link'],['h1','Same h1']].forEach(function(k){
+  var map={};
+  pages.forEach(function(p){var v=norm(p[k[0]]).toLowerCase();if(v)(map[v]=map[v]||[]).push(p)});
+  Object.keys(map).forEach(function(v){var l=map[v];if(l.length>1)out.push({kind:k[1],value:l[0][k[0]],files:l.map(function(p){return p.path})})});
+ });
+ return out;
+}
+async function scan(){
+ state.busy=true;state.error='';render();
+ var pages=[],skipped=[];
+ try{
+  var all=await somnia.project.listFiles();
+  var html=all.filter(function(p){return /\.(html?|xhtml)$/i.test(p)});
+  for(var i=0;i<html.length;i++){
+   var t;
+   try{t=await somnia.project.readFile(html[i])}catch(e){skipped.push(html[i]+': could not be read');continue}
+   if(typeof t!=='string'){skipped.push(html[i]+': no text content');continue}
+   if(t.length>1500000){skipped.push(html[i]+': larger than 1.5 MB, skipped');continue}
+   var p=analyse(html[i],t);
+   if(!p)skipped.push(html[i]+': partial page (no html or head), skipped');else pages.push(p);
+  }
+ }catch(e){state.error=e&&e.message?e.message:String(e);pages=[]}
+ state.pages=pages;state.skipped=skipped;state.dups=dupGroups(pages);state.done=true;state.busy=false;state.stamp=new Date().toLocaleTimeString();
+ render();
+}
+function checkRow(c,file){
+ var li=h('li'),hd=h('div','head');
+ hd.appendChild(h('span','badge '+c.status,c.status==='ok'?'OK':c.status==='missing'?'Missing':'Notice'));
+ hd.appendChild(h('span','title',c.label));li.appendChild(hd);
+ if(file)li.appendChild(h('div','where',file));
+ li.appendChild(h('div','where',c.detail));
+ li.appendChild(h('div','where',c.sel));
+ if(c.why&&c.status!=='ok'){var d=h('details');d.appendChild(h('summary',null,'Why it matters'));d.appendChild(h('p',null,c.why));li.appendChild(d)}
+ return li;
+}
+function cut(s,n){var a=Array.from(s);return a.length>n?a.slice(0,n-1).join('').trim()+'\u2026':s}
+function render(){
+ var run=$('run');run.disabled=state.busy;run.textContent=state.busy?'Checking...':'Re-check';
+ var P=state.pages,all=[],ok=0;P.forEach(function(p){p.checks.forEach(function(c){all.push(c);if(c.status==='ok')ok++})});
+ var m=$('metrics');m.textContent='';
+ [[all.length-ok,'Notices'],[P.length,'HTML files'],[ok+'/'+all.length,'Checks met']].forEach(function(x){var d=h('div','metric');d.appendChild(h('b',null,String(x[0])));d.appendChild(h('span',null,x[1]));m.appendChild(d)});
+ var miss=all.filter(function(c){return c.status==='missing'}).length;
+ var counts={pages:'',missing:' '+miss,dups:' '+state.dups.length,preview:''};
+ var v=$('views');v.textContent='';
+ VIEWS.forEach(function(x){var b=h('button','pill',x[1]+counts[x[0]]);b.type='button';b.setAttribute('aria-pressed',String(state.view===x[0]));b.onclick=function(){state.view=x[0];render()};v.appendChild(b)});
+ var out=$('out');out.textContent='';
+ var head={pages:'Checks per page',missing:'Missing items',dups:'Shared between files',preview:'Text preview'}[state.view];
+ $('listhead').textContent=state.done&&!state.error?head:'';
+ if(state.error){var e=h('div','card');e.appendChild(h('p','err','Could not read the project: '+state.error));e.appendChild(h('p',null,'This extension needs the project.read permission. Check Settings > Extensions.'));out.appendChild(e)}
+ else if(state.done&&!P.length){out.appendChild(h('div','card empty','No full HTML pages in the open project.'))}
+ else if(state.view==='pages'){
+  P.forEach(function(p,i){
+   var bad=p.checks.filter(function(c){return c.status!=='ok'}).length;
+   var d=h('details','card');if(bad&&i<3)d.open=true;
+   var s=h('summary',null,p.path+' ');s.appendChild(h('span','sub',(p.checks.length-bad)+' of '+p.checks.length+' checks met'));d.appendChild(s);
+   var ul=h('ul','checks');p.checks.forEach(function(c){ul.appendChild(checkRow(c))});d.appendChild(ul);out.appendChild(d);
+  });
+ }else if(state.view==='missing'){
+  var any=false,ul=h('ul','list');
+  P.forEach(function(p){p.checks.forEach(function(c){if(c.status==='missing'){any=true;var li=h('li','item');li.appendChild(checkRow(c,p.path));ul.appendChild(li)}})});
+  out.appendChild(any?ul:h('div','card empty','Nothing missing. Notices may still remain on the Pages view.'));
+ }else if(state.view==='dups'){
+  if(!state.dups.length)out.appendChild(h('div','card empty','No title, description, canonical or h1 is shared between files.'));
+  state.dups.forEach(function(g){
+   var c=h('div','card'),hd=h('div','head');hd.appendChild(h('span','badge notice','Notice'));hd.appendChild(h('span','title',g.kind+' in '+g.files.length+' files'));c.appendChild(hd);
+   c.appendChild(h('code','el',cut(g.value,160)));
+   g.files.forEach(function(f){c.appendChild(h('div','where',f))});
+   var d=h('details');d.appendChild(h('summary',null,'Why it matters'));d.appendChild(h('p',null,'Search engines and people cannot tell these pages apart. Give each page its own text, unless the pages really are copies.'));c.appendChild(d);
+   out.appendChild(c);
+  });
+ }else{
+  P.forEach(function(p){
+   var c=h('div','card');c.appendChild(h('div','eyebrow','Text preview \u00b7 not a Google snippet'));
+   var pv=h('div','pv');
+   pv.appendChild(h('div','pt',p.title?cut(p.title,60):'(no title)'));
+   pv.appendChild(h('div','pu',p.canonical||p.path));
+   pv.appendChild(h('div','pd',p.desc?cut(p.desc,160):'No meta description. Search engines will choose text from the page.'));
+   pv.appendChild(h('div','pm','Title '+Array.from(p.title).length+' characters \u00b7 description '+Array.from(p.desc).length+' characters'+(p.noindex?' \u00b7 noindex':'')));
+   c.appendChild(h('div','where',p.path));c.appendChild(pv);out.appendChild(c);
+  });
+ }
+ var sn=$('skipnote');sn.hidden=!state.skipped.length;sn.textContent='';
+ if(state.skipped.length){sn.appendChild(h('div',null,'Notes:'));state.skipped.slice(0,8).forEach(function(s){sn.appendChild(h('div',null,'- '+s))});if(state.skipped.length>8)sn.appendChild(h('div',null,'- and '+(state.skipped.length-8)+' more'))}
+ $('stamp').textContent=state.stamp?'Snapshot at '+state.stamp+' \u00b7 refresh manually':'Snapshot \u00b7 refresh manually';
+}
+$('run').onclick=scan;
+render();scan();
+})();
+</script>
