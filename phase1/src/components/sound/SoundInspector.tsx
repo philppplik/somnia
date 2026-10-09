@@ -2,7 +2,7 @@ import {Button} from '../ui/button';
 import {useT} from '../../lib/useT';
 import {useMedia} from '../../lib/media';
 import {LIMITS,isNeutral} from '../../lib/sound/recipe';
-import {resetSoundSettings,updateSoundSettings,useSoundSession} from '../../lib/sound/session';
+import {applySoundRegion,clearSoundRegion,resetSoundSettings,setSoundSelection,updateSoundSettings,useSoundSession} from '../../lib/sound/session';
 const row='grid gap-1.5 border-b border-subtle px-3 py-3 text-xs text-ink-2';
 const check='!size-4 !w-4 shrink-0 accent-[var(--accent)]';
 const input='w-full accent-[var(--accent)]';
@@ -13,7 +13,23 @@ export function SoundControls({name}:{name:string}){
  const {t}=useT();const s=useSoundSession(name);
  if(!s)return <p className="p-3 text-xs text-ink-3">{t('sound.loading')}</p>;
  const c=s.settings,set=(f:(x:typeof c)=>typeof c)=>updateSoundSettings(name,f),ready=!!s.original;
+ const sel=s.selection,reg=c.region,dur=s.original?.report.input.duration_s??0;
  return <fieldset disabled={!ready} className="m-0 min-w-0 border-0 p-0" data-testid="sound-controls">
+  <div className={row} data-testid="sound-selection">
+   <span className="text-ink">{t('sound.selection')}</span>
+   {reg?<><span className="text-ink-3" data-testid="sound-region-chip">{t('sound.region.'+reg.mode,{start:reg.start.toFixed(2),end:reg.end.toFixed(2)})}</span><Button size="compact" className="justify-self-start" onClick={()=>clearSoundRegion(name)} data-testid="sound-region-clear">{t('sound.region.clear')}</Button></>:<>
+    <div className="grid grid-cols-2 gap-2">
+     <label>{t('sound.selStart')}<input type="number" className={`${field} mt-1`} min={0} max={dur} step={0.01} value={sel?sel.start:''} onChange={e=>setSoundSelection(name,{start:Number(e.target.value),end:sel?.end??dur})} data-testid="sound-sel-start"/></label>
+     <label>{t('sound.selEnd')}<input type="number" className={`${field} mt-1`} min={0} max={dur} step={0.01} value={sel?sel.end:''} onChange={e=>setSoundSelection(name,{start:sel?.start??0,end:Number(e.target.value)})} data-testid="sound-sel-end"/></label>
+    </div>
+    <p className="m-0 text-ink-3">{sel?t('sound.selLength',{seconds:(sel.end-sel.start).toFixed(2)}):t('sound.selHint')}</p>
+    <div className="flex flex-wrap gap-1">
+     <Button size="compact" disabled={!sel} onClick={()=>applySoundRegion(name,'crop')} data-testid="sound-crop">{t('sound.crop')}</Button>
+     <Button size="compact" disabled={!sel} onClick={()=>applySoundRegion(name,'cut')} data-testid="sound-cut">{t('sound.cut')}</Button>
+     <Button size="compact" disabled={!sel} onClick={()=>applySoundRegion(name,'only')} data-testid="sound-only">{t('sound.only')}</Button>
+     <Button size="compact" disabled={!sel} onClick={()=>setSoundSelection(name,null)}>{t('sound.selClear')}</Button>
+    </div></>}
+  </div>
   <div className={row}>
    <label className="flex items-center gap-2 text-ink"><input type="checkbox" className={check} checked={c.trim.on} onChange={e=>set(x=>({...x,trim:{...x.trim,on:e.target.checked}}))} data-testid="sound-trim"/>{t('sound.trim')}</label>
    <input type="range" className={input} min={LIMITS.trimDb[0]} max={LIMITS.trimDb[1]} step={1} value={c.trim.db} disabled={!c.trim.on} aria-label={t('sound.trimDb',{db:c.trim.db})} onChange={e=>set(x=>({...x,trim:{...x.trim,db:Number(e.target.value)}}))}/>

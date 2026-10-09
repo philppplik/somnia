@@ -1,13 +1,14 @@
 import {useSyncExternalStore} from 'react';
 import {SoundEngine,type SoundEngineLike} from './engine';
-import {DEFAULT_SETTINGS,exportName,isNeutral,sanitizeSettings,toRecipe,type SoundSettings} from './recipe';
+import {DEFAULT_SETTINGS,exportName,isNeutral,normalizeSelection,sanitizeSettings,toRecipe,type SoundSettings} from './recipe';
+import type {SoundRegionMode} from './protocol';
 import {fileExtension,sniffAudio} from './format';
 import {getMedia,subscribeMedia} from '../media';
 import type {SoundPlugin,SoundReport} from './protocol';
 /** One rendered result: a WAV blob (also what the player plays), its waveform columns and the engine report. */
 export interface SoundVersion{blob:Blob;url:string;peaks:Float32Array;report:SoundReport;ms:number}
 export type SoundStatus='loading'|'ready'|'processing'|'error';
-export interface SoundSession{name:string;status:SoundStatus;error:string;settings:SoundSettings;plugins:readonly SoundPlugin[];original:SoundVersion|null;processed:SoundVersion|null;listen:'original'|'processed'}
+export interface SoundSession{name:string;status:SoundStatus;error:string;settings:SoundSettings;plugins:readonly SoundPlugin[];original:SoundVersion|null;processed:SoundVersion|null;listen:'original'|'processed';selection:{start:number;end:number}|null}
 const DEBOUNCE_MS=200;
 let factory:()=>SoundEngineLike=()=>new SoundEngine();
 let engine:SoundEngineLike|undefined,engineReady:Promise<readonly SoundPlugin[]>|undefined;
@@ -37,7 +38,7 @@ export function useSoundSession(name:string|null|undefined){return useSyncExtern
 export async function openSound(item:{name:string;url:string}):Promise<void>{
  if(sessions.has(item.name))return;
  stopMediaSync??=subscribeMedia(()=>{const live=new Set(getMedia().items.map(i=>i.name));for(const n of [...sessions.keys()])if(!live.has(n))closeSound(n);});
- put({name:item.name,status:'loading',error:'',settings:DEFAULT_SETTINGS,plugins:[],original:null,processed:null,listen:'processed'});
+ put({name:item.name,status:'loading',error:'',settings:DEFAULT_SETTINGS,plugins:[],original:null,processed:null,listen:'processed',selection:null});
  try{
   const bytes=await fetch(item.url).then(r=>r.arrayBuffer());
   const ext=sniffAudio(new Uint8Array(bytes,0,Math.min(bytes.byteLength,16)))?.ext??fileExtension(item.name);
@@ -80,4 +81,32 @@ export function exportSound(name:string):{blob:Blob;fileName:string}|null{
 export function downloadSound(name:string){
  const out=exportSound(name);if(!out)return false;
  const url=URL.createObjectURL(out.blob);const a=document.createElement('a');a.href=url;a.download=out.fileName;a.click();setTimeout(()=>URL.revokeObjectURL(url),30_000);return true;
+}
+
+/** Pending selection in seconds of the original clip (not yet an edit). Clamped to the clip; null clears it. */
+export function setSoundSelection(name:string,range:{start:number;end:number}|null){
+ const s=sessions.get(name);if(!s)return;
+ const d=s.original?.report.input.duration_s??0;
+ patch(name,{selection:range?normalizeSelection(range.start,range.end,d):null});
+}
+/** Turns the pending selection into an edit: crop, cut, or "apply the other steps to the selection only". */
+export function applySoundRegion(name:string,mode:SoundRegionMode){
+ const s=sessions.get(name);if(!s?.selection)return;
+ put({...s,selection:null,settings:sanitizeSettings({...s.settings,region:{mode,...s.selection}}),listen:'processed'});schedule(name,0);
+}
+/** Drops the region edit and shows its range as the selection again, so it can be adjusted. */
+export function clearSoundRegion(name:string){
+ const s=sessions.get(name);if(!s?.settings.region)return;
+ const {start,end}=s.settings.region;put({...s,selection:{start,end},settings:{...s.settings,region:null}});schedule(name,0);
+}
+export type SaveOutcome='saved'|'cancelled'|'downloaded'|'unavailable';
+/** Desktop: OS save dialog and an atomic write through a one-time grant. Browser: a download. Same bytes either way. */
+export async function saveSound(name:string):Promise<SaveOutcome>{
+ const out=exportSound(name);if(!out)return 'unavailable';
+ const {isTauri,invoke}=await import('@tauri-apps/api/core');
+ if(!isTauri())return downloadSound(name)?'downloaded':'unavailable';
+ const grant=await invoke<{token:string}|null>('audio_save_pick',{suggestedName:out.fileName});
+ if(!grant)return 'cancelled';
+ await invoke('audio_save_write',new Uint8Array(await out.blob.arrayBuffer()),{headers:{'x-somnia-token':grant.token}});
+ return 'saved';
 }

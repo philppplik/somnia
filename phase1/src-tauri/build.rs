@@ -28,6 +28,8 @@ fn main() {
             "pdf_save_write",
             "slides_save_pick",
             "slides_save_write",
+            "audio_save_pick",
+            "audio_save_write",
             "image_save_pick",
             "image_save_write",
             "image_overwrite_prepare",

@@ -1131,6 +1131,52 @@ async fn slides_save_write(window: WebviewWindow, grants: State<'_, SlidesGrants
         .await
         .map_err(|e| AppError::Io(e.to_string()))?
 }
+#[derive(Default)]
+struct AudioGrants { save: Mutex<Option<crate::audio_io::AudioGrant>> }
+/// OS save dialog for the Sound Studio. Choosing an existing file makes the OS ask about overwriting. Nothing is written yet.
+#[tauri::command]
+async fn audio_save_pick(window: WebviewWindow, grants: State<'_, AudioGrants>, suggested_name: String) -> Result<Option<ImageGrantReply>> {
+    gate(&window)?;
+    let app = window.app_handle().clone();
+    let suggested: String = suggested_name.chars().filter(|c| !matches!(c, '/' | '\\' | '\0')).take(120).collect();
+    let selected = tauri::async_runtime::spawn_blocking(move || {
+        app.dialog().file().add_filter("WAV audio", &crate::audio_io::AUDIO_EXTENSIONS).set_file_name(suggested).blocking_save_file()
+    })
+    .await
+    .map_err(|e| AppError::Io(e.to_string()))?;
+    let Some(selected) = selected else { return Ok(None) };
+    let path = selected.into_path().map_err(|e| AppError::Invalid(e.to_string()))?;
+    if !crate::audio_io::has_audio_extension(&path) {
+        return Err(AppError::Denied("Save as WAV".into()));
+    }
+    let name = image_name(&path);
+    let grant = crate::audio_io::AudioGrant::new(path);
+    let token = grant.token().to_owned();
+    *grants.save.lock().map_err(|e| AppError::Io(e.to_string()))? = Some(grant);
+    Ok(Some(ImageGrantReply { token, name, size: 0, origin_token: None }))
+}
+/// Raw request body = WAV bytes, header x-somnia-token = token from audio_save_pick. Written atomically, once.
+#[tauri::command]
+async fn audio_save_write(window: WebviewWindow, grants: State<'_, AudioGrants>, request: tauri::ipc::Request<'_>) -> Result<()> {
+    gate(&window)?;
+    let token = request
+        .headers()
+        .get("x-somnia-token")
+        .and_then(|v| v.to_str().ok())
+        .map(str::to_owned)
+        .ok_or_else(|| AppError::Denied("Missing save token".into()))?;
+    let bytes = match request.body() {
+        tauri::ipc::InvokeBody::Raw(b) => b.clone(),
+        _ => return Err(AppError::Invalid("Expected raw WAV bytes".into())),
+    };
+    let path = {
+        let mut slot = grants.save.lock().map_err(|e| AppError::Io(e.to_string()))?;
+        crate::audio_io::AudioGrant::consume(&mut slot, &token)?
+    };
+    tauri::async_runtime::spawn_blocking(move || crate::audio_io::save_audio_atomic(&path, &bytes))
+        .await
+        .map_err(|e| AppError::Io(e.to_string()))?
+}
 #[tauri::command]
 async fn hold_autosave(
     window: WebviewWindow,
@@ -1720,6 +1766,7 @@ pub fn run() {
         .manage(shared.clone())
         .manage(ImageGrants::default())
         .manage(PdfGrants::default()).manage(SlidesGrants::default())
+        .manage(AudioGrants::default())
         .manage(crate::lan_host::LanHost::default())
         .setup(move |app| {
             tauri::async_runtime::spawn(oauth_refresh_loop());
@@ -1832,6 +1879,8 @@ pub fn run() {
             pdf_save_write,
             slides_save_pick,
             slides_save_write,
+            audio_save_pick,
+            audio_save_write,
             image_save_pick,
             image_save_write,
             image_overwrite_prepare,

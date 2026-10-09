@@ -8,7 +8,7 @@ The engine is the headless SoundCraft core (`soundcraft-audio-io` decode/encode,
 - `phase1/sound/`: isolated Rust crate `somnia-sound` (own workspace, Rust 1.95, wasm-bindgen 0.2.129, like `craft/`). SoundCraft is pinned by git revision (`c51e5d5`, v0.3.0). Derived from the SoundCraft wasm spike; adds a lock file, 6 native tests on a real MP3 fixture, NOTICE, licence texts and a dependency inventory.
 - `npm run sound:build` (also part of `npm run craft:build`, so every CI job and release build gets it). The wasm lands in `sound/pkg/` (git-ignored except the `.d.ts`).
 - `src/lib/sound/`: protocol, worker, engine, recipe (settings to engine recipe), session store, format sniffing, i18n.
-- `src/components/sound/`: canvas (start screen, waveform with original and edited overlay, A/B listening, transport, export WAV) and inspector (trim silence, reverse, pitch, effect + reverb tail, fades, normalize, reset).
+- `src/components/sound/`: canvas (start screen, waveform with original and edited overlay, A/B listening, transport, export WAV) and inspector (selection, trim silence, reverse, pitch, effect + reverb tail, fades, normalize, reset).
 - Studio manifest `src/lib/studios/sound.ts`, registered additively next to `code`.
 - Original files are never modified. Every edit renders a copy; playback and export use the same rendered WAV.
 
@@ -25,7 +25,12 @@ The engine is the headless SoundCraft core (`soundcraft-audio-io` decode/encode,
 | `lib/i18n.ts` | merges `locales/sound/*.json` (studio-owned strings, 5 languages) |
 | `lib/icons.tsx` | AudioWaveform, Pause, Download (Vadivam) |
 | `src-tauri/tauri.conf.json` | CSP `media-src 'self' blob:` (needed for blob audio playback in the desktop app) |
+| `src-tauri/build.rs`, `src-tauri/capabilities/editor.json`, `src-tauri/src/desktop.rs`, `src-tauri/src/lib.rs`, new `src-tauri/src/audio_io.rs` | Paket 2: `audio_save_pick` / `audio_save_write` (native save dialog, one-time token, atomic WAV write), modelled on `pdf_save_*`; one `AudioGrants` state, two handler entries, one `mod` line |
 | `package.json`, `scripts/check-craft.mjs`, `scripts/licenses.mjs`, CI | build chain, asset check, licence inventory, native crate tests |
+
+## Selection and save (Paket 2)
+
+Drag on the waveform (or keys `I` / `O` at the playhead, `Esc` clears) to select. The inspector offers Crop, Cut, and Edit selection only (the other steps run on the selection and are spliced back). One region per clip, in original-clip seconds, applied before all other steps (`Recipe.region`). Crop and Cut lock the selection; "Undo and adjust" removes the region. Save as WAV opens the OS save dialog in the desktop app (`audio_save_*`); on the web it is a download.
 
 ## Licensing
 
@@ -38,8 +43,8 @@ wasm 1.5 MB raw in this build; 3.5 s stereo MP3 decode + trim + normalize 20-40 
 ## Not in this package (rest plan)
 
 1. Agent tools for the Sound Studio (manifest `agent.tools` is empty): inspect, propose recipe, preview.
-2. Selections and region edits (cut, copy, paste, per-region effects). The engine recipe is whole-clip.
-3. Save to disk through the desktop save dialog (export is a browser download today) and writing back into a project folder.
+2. Copy/paste of regions and several regions per clip (Paket 2 has one region: crop, cut, or effects only on the selection).
+3. Writing back into the project folder. Media is not part of the project text-file store, so Save As (native dialog on desktop, download on web) is all that exists.
 4. Plugin parameters UI (the engine accepts a parameter map; the UI uses defaults).
 5. Streaming playback and progress for long files (currently a full offline render, 25 MB media limit).
 6. Encoders beyond WAV (FLAC/OGG) after a licensing decision for each.

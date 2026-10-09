@@ -46,6 +46,8 @@
     "allow-pdf-save-write",
     "allow-slides-save-pick",
     "allow-slides-save-write",
+    "allow-audio-save-pick",
+    "allow-audio-save-write",
     "allow-image-save-pick",
     "allow-image-save-write",
     "allow-image-overwrite-prepare",

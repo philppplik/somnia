@@ -6,6 +6,8 @@ mod drop_grant;
 mod image_io;
 #[cfg(any(feature = "desktop", test))]
 mod pdf_io;
+#[cfg(any(feature = "desktop", test))]
+mod audio_io;
 pub mod applog;
 pub mod service;
 #[cfg(feature = "desktop")]

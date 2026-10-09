@@ -57,3 +57,35 @@ for(const locale of ['de','es','fr','pt-BR'])test(`Sound Studio strings: ${local
  await page.locator('header [role="radiogroup"]').getByRole('radio').nth(1).click();
  await expect(page.getByTestId('sound-start')).toBeVisible();await expect(page.getByTestId('sound-start')).not.toContainText('sound.');
 });
+
+async function dragSelect(page:any,from:number,to:number){
+ const box=(await page.getByTestId('sound-waveform').boundingBox())!;
+ await page.mouse.move(box.x+box.width*from,box.y+box.height/2);await page.mouse.down();
+ await page.mouse.move(box.x+box.width*((from+to)/2),box.y+box.height/2,{steps:4});
+ await page.mouse.move(box.x+box.width*to,box.y+box.height/2,{steps:4});await page.mouse.up();
+}
+test('Sound Studio: drag a selection, crop, cut and edit only the selection',async({page})=>{
+ await openAudio(page);
+ await dragSelect(page,0.2,0.6);
+ const len=await page.getByTestId('sound-sel-end').inputValue();const st=await page.getByTestId('sound-sel-start').inputValue();
+ expect(Number(len)-Number(st)).toBeGreaterThan(1);
+ await page.screenshot({path:'test-results/sound-selection.png'});
+ await page.getByTestId('sound-crop').click();
+ await expect(page.getByTestId('sound-region-chip')).toContainText('Cropped');
+ await expect(page.getByTestId('sound-result')).toContainText('1.',{timeout:20000});
+ await page.screenshot({path:'test-results/sound-cropped.png'});
+ await page.getByTestId('sound-region-clear').click();
+ await dragSelect(page,0.1,0.3);await page.getByTestId('sound-cut').click();
+ await expect(page.getByTestId('sound-region-chip')).toContainText('Cut');
+ await expect(page.getByRole('radio',{name:'Edited'})).toBeEnabled({timeout:20000});
+ await page.getByTestId('sound-region-clear').click();
+ await dragSelect(page,0.1,0.3);await page.getByTestId('sound-only').click();
+ await page.getByTestId('sound-normalize').check();
+ await expect(page.getByTestId('sound-region-chip')).toContainText('only');
+ await expect(page.getByTestId('sound-result')).toContainText('peak',{timeout:20000});
+ await page.screenshot({path:'test-results/sound-only.png'});
+ const download=page.waitForEvent('download');await page.getByTestId('sound-export').click();const d=await download;
+ const bytes=readFileSync(await d.path()!);expect(bytes.subarray(0,4).toString()).toBe('RIFF');
+ // 3.5 s stereo 16-bit 44.1k stays about the same length with "only"
+ expect(bytes.length).toBeGreaterThan(600_000);
+});

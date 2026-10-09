@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync,existsSync} from 'node:fs';
 import {sniffAudio,AUDIO_FILE} from './format';
-import {DEFAULT_SETTINGS,exportName,isNeutral,sanitizeSettings,toRecipe} from './recipe';
+import {DEFAULT_SETTINGS,exportName,isNeutral,normalizeSelection,sanitizeSettings,toRecipe} from './recipe';
 import {closeSound,exportSound,getSoundSession,openSound,resetSoundSettings,setSoundEngineFactory,updateSoundSettings} from './session';
 import type {SoundEngineLike,SoundResult} from './engine';
 import type {SoundPlugin,SoundRecipe,SoundReport} from './protocol';
@@ -87,4 +87,12 @@ test('session: a file that is not audio fails with a message instead of hanging'
  const url=URL.createObjectURL(new Blob([new Uint8Array(64)]));
  await openSound({name:'broken.mp3',url});const s=getSoundSession('broken.mp3')!;
  assert.equal(s.status,'error');assert.match(s.error,/decode/);closeSound('broken.mp3');URL.revokeObjectURL(url);
+});
+test('selection normalization and region recipe',()=>{
+ assert.deepEqual(normalizeSelection(2,1,3.5),{start:1,end:2});
+ assert.deepEqual(normalizeSelection(-1,99,3.5),{start:0,end:3.5});
+ assert.equal(normalizeSelection(1,1.001,3.5),null);assert.equal(normalizeSelection(Number.NaN,1,3.5),null);assert.equal(normalizeSelection(0,1,0),null);
+ const s=sanitizeSettings({...DEFAULT_SETTINGS,region:{start:1,end:2,mode:'cut'}});
+ assert.deepEqual(toRecipe(s,8).region,{start_s:1,end_s:2,mode:'cut'});assert.ok(!isNeutral(s));
+ assert.equal(sanitizeSettings({...DEFAULT_SETTINGS,region:{start:2,end:1,mode:'bogus'} as never}).region,null);
 });

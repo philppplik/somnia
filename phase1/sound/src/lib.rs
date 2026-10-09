@@ -42,8 +42,26 @@ pub struct Recipe {
     pub fade_in_ms: Option<f32>,
     pub fade_out_ms: Option<f32>,
     pub normalize_db: Option<f32>,
+    /// Selection in seconds of the decoded input, and what to do with it. Applied before every other step.
+    pub region: Option<Region>,
     /// Number of waveform columns to return (default 800, max 8192).
     pub columns: Option<usize>,
+}
+
+/// `crop` keeps only the selection, `cut` removes it, `only` runs the remaining steps on the selection and leaves the rest as is.
+#[derive(Debug, Clone, Copy, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "lowercase")]
+pub enum RegionMode {
+    Crop,
+    Cut,
+    Only,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct Region {
+    pub start_s: f64,
+    pub end_s: f64,
+    pub mode: RegionMode,
 }
 
 #[derive(Debug, Clone, Serialize, PartialEq)]
@@ -126,7 +144,39 @@ pub fn run(bytes: &[u8], ext: Option<&str>, recipe: &Recipe) -> Result<Output, S
     let sr = buf.sample_rate;
     let mut steps = Vec::new();
     let mut trimmed = None;
-
+    let (mut head, mut tail): (Vec<Vec<f32>>, Vec<Vec<f32>>) = (Vec::new(), Vec::new());
+    if let Some(r) = &recipe.region {
+        let total = buf.frames();
+        if !r.start_s.is_finite() || !r.end_s.is_finite() || r.start_s < 0.0 || r.end_s <= r.start_s {
+            return Err("region: start must be before end and not negative".into());
+        }
+        let s0 = ((r.start_s * f64::from(sr)).round() as usize).min(total);
+        let e0 = ((r.end_s * f64::from(sr)).round() as usize).min(total);
+        if e0 <= s0 + 1 {
+            return Err("region: selection is empty".into());
+        }
+        match r.mode {
+            RegionMode::Crop => {
+                buf.channels.iter_mut().for_each(|c| *c = c[s0..e0].to_vec());
+                steps.push(format!("crop {s0}..{e0}"));
+            }
+            RegionMode::Cut => {
+                if e0 - s0 >= total {
+                    return Err("region: cutting the whole clip leaves nothing".into());
+                }
+                buf.channels.iter_mut().for_each(|c| {
+                    c.drain(s0..e0);
+                });
+                steps.push(format!("cut {s0}..{e0}"));
+            }
+            RegionMode::Only => {
+                head = buf.channels.iter().map(|c| c[..s0].to_vec()).collect();
+                tail = buf.channels.iter().map(|c| c[e0..].to_vec()).collect();
+                buf.channels.iter_mut().for_each(|c| *c = c[s0..e0].to_vec());
+                steps.push(format!("selection {s0}..{e0} only"));
+            }
+        }
+    }
     if let Some(thr) = recipe.trim_silence_db {
         let pad = ms_to_frames(20.0, sr);
         let ranges = offline::non_silent_ranges(&buf.channels, thr, ms_to_frames(100.0, sr), pad, pad);
@@ -172,6 +222,15 @@ pub fn run(bytes: &[u8], ext: Option<&str>, recipe: &Recipe) -> Result<Output, S
     if let Some(t) = recipe.normalize_db {
         offline::normalize(&mut buf.channels, t, false);
         steps.push(format!("normalize {t} dB"));
+    }
+    if !head.is_empty() || !tail.is_empty() {
+        // The processed selection goes back between the untouched parts. Channel counts always match (same decoder output).
+        for (i, c) in buf.channels.iter_mut().enumerate() {
+            let mut joined = head.get(i).cloned().unwrap_or_default();
+            joined.append(c);
+            joined.extend_from_slice(tail.get(i).map(Vec::as_slice).unwrap_or(&[]));
+            *c = joined;
+        }
     }
     if buf.frames() > MAX_FRAMES {
         return Err("output too long".into());

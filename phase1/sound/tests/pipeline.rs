@@ -60,3 +60,46 @@ fn errors_are_clean() {
     assert!(run(MP3, Some("mp3"), &recipe(r#"{"pitch_semitones":99}"#)).is_err());
     assert!(run(&[], Some("wav"), &recipe("{}")).is_err());
 }
+
+#[test]
+fn region_crop_cut_and_only() {
+    let full = run(MP3, Some("mp3"), &recipe("{}")).expect("full");
+    let crop = run(MP3, Some("mp3"), &recipe(r#"{"region":{"start_s":1.0,"end_s":2.0,"mode":"crop"}}"#)).expect("crop");
+    assert!((crop.report.output.duration_s - 1.0).abs() < 0.001, "{}", crop.report.output.duration_s);
+    let cut = run(MP3, Some("mp3"), &recipe(r#"{"region":{"start_s":1.0,"end_s":2.0,"mode":"cut"}}"#)).expect("cut");
+    assert!((cut.report.output.duration_s - (full.report.output.duration_s - 1.0)).abs() < 0.001);
+    // an effect on the selection only keeps the total length and leaves the outside untouched
+    let only = run(MP3, Some("mp3"), &recipe(r#"{"region":{"start_s":1.0,"end_s":2.0,"mode":"only"},"reverse":true}"#)).expect("only");
+    assert_eq!(only.report.output.frames, full.report.output.frames);
+    let again = run(&only.wav, Some("wav"), &recipe("{}")).expect("decode only");
+    let orig = run(&full.wav, Some("wav"), &recipe("{}")).expect("decode full");
+    assert_eq!(again.report.output.frames, orig.report.output.frames);
+    // outside the selection the render matches the original (dither allows +-2 LSB); inside it differs a lot. Samples are interleaved stereo.
+    let n = (0.9 * 44100.0) as usize * 2;
+    let (a, b) = (decode_ch(&again.wav), decode_ch(&orig.wav));
+    let worst = |x: &[i16], y: &[i16]| x.iter().zip(y).map(|(p, q)| (i32::from(*p) - i32::from(*q)).abs()).max().unwrap_or(0);
+    assert!(worst(&a[..n], &b[..n]) <= 2, "head changed");
+    assert!(worst(&a[2 * 88200..], &b[2 * 88200..]) <= 2, "tail changed");
+    assert!(worst(&a[2 * 44100..2 * 88200], &b[2 * 44100..2 * 88200]) > 1000, "selection unchanged");
+    // peak normalisation inside a selection does not touch the rest
+    let norm = run(MP3, Some("mp3"), &recipe(r#"{"region":{"start_s":2.0,"end_s":3.0,"mode":"only"},"normalize_db":-20}"#)).expect("norm");
+    assert_eq!(norm.report.output.frames, full.report.output.frames);
+}
+
+#[test]
+fn region_errors_are_clean() {
+    for r in [
+        r#"{"region":{"start_s":2.0,"end_s":1.0,"mode":"crop"}}"#,
+        r#"{"region":{"start_s":-1.0,"end_s":1.0,"mode":"cut"}}"#,
+        r#"{"region":{"start_s":50.0,"end_s":60.0,"mode":"crop"}}"#,
+        r#"{"region":{"start_s":0.0,"end_s":100.0,"mode":"cut"}}"#,
+    ] {
+        assert!(run(MP3, Some("mp3"), &recipe(r)).is_err(), "{r}");
+    }
+}
+
+fn decode_ch(wav: &[u8]) -> Vec<i16> {
+    // 16-bit PCM after the 44 byte header written by the encoder (checked by the RIFF assert in other tests)
+    let data = wav.windows(4).position(|w| w == b"data").expect("data chunk") + 8;
+    wav[data..].chunks_exact(2).map(|b| i16::from_le_bytes([b[0], b[1]])).collect()
+}
