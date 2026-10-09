@@ -1,12 +1,16 @@
 import { AgentToolRegistry, toolSchemaHash } from './toolRegistry';
 import type { AgentToolSpec } from './toolRegistry';
 import type { AgentToolDefinition } from './types';
+import { validateMcpArgs } from './mcpSchema';
 
 /** Mirrors the Rust McpToolInfo. Everything here comes from an external server: untrusted. */
 export interface McpToolInfo { server: string; name: string; description: string; input_schema: Record<string, unknown> }
 export interface McpBridge {
   call(server: string, tool: string, args: Record<string, unknown>): Promise<string>;
 }
+/** One finished (or refused) call, for the activity log. Arguments are never stored, only their size. */
+export interface McpCallRecord { at: number; server: string; tool: string; argBytes: number; outcome: 'ok' | 'denied' | 'invalid' | 'error'; ms: number; detail?: string }
+export type McpCallObserver = (record: McpCallRecord) => void;
 /** Called before every single MCP tool call. Must resolve true only after a human decision. */
 export type McpCallApproval = (call: { server: string; tool: string; args: Record<string, unknown> }, signal: AbortSignal) => Promise<boolean>;
 /** Granted tools: model-facing name -> schema hash the user approved. */
@@ -38,20 +42,28 @@ export function grantedMcpTools(tools: readonly McpToolInfo[], grants: McpGrants
 }
 const MAX_ARGS_BYTES = 64 * 1024;
 /** Register granted MCP tools at level "execute". Each call needs a human approval. */
-export function registerMcpTools(registry: AgentToolRegistry, tools: readonly McpToolInfo[], grants: McpGrants, bridge: McpBridge, approve: McpCallApproval): string[] {
+export function registerMcpTools(registry: AgentToolRegistry, tools: readonly McpToolInfo[], grants: McpGrants, bridge: McpBridge, approve: McpCallApproval, observe?: McpCallObserver): string[] {
   const names: string[] = [];
   for (const t of grantedMcpTools(tools, grants)) {
     const definition = mcpDefinition(t);
     const spec: AgentToolSpec = {
       definition, level: 'execute',
       async run(args, _ctx, signal) {
-        if (JSON.stringify(args).length > MAX_ARGS_BYTES) throw Error('MCP tool arguments are too large.');
+        const started = Date.now();
+        const argBytes = JSON.stringify(args).length;
+        const log = (outcome: McpCallRecord['outcome'], detail?: string) => observe?.({ at: started, server: t.server, tool: t.name, argBytes, outcome, ms: Date.now() - started, detail: detail?.slice(0, 200) });
+        if (argBytes > MAX_ARGS_BYTES) { log('invalid', 'arguments too large'); throw Error('MCP tool arguments are too large.'); }
+        const problems = validateMcpArgs(args, t.input_schema);
+        if (problems.length) { log('invalid', problems[0]); throw Error(`Invalid arguments for this tool: ${problems.join('; ')}.`); }
         const ok = await approve({ server: t.server, tool: t.name, args }, signal);
         signal.throwIfAborted();
-        if (ok !== true) throw Error('The user did not approve this tool call.');
-        const text = await bridge.call(t.server, t.name, args);
-        signal.throwIfAborted();
-        return JSON.stringify({ source: 'mcp', server: t.server, tool: t.name, untrusted: true, text });
+        if (ok !== true) { log('denied'); throw Error('The user did not approve this tool call.'); }
+        try {
+          const text = await bridge.call(t.server, t.name, args);
+          signal.throwIfAborted();
+          log('ok');
+          return JSON.stringify({ source: 'mcp', server: t.server, tool: t.name, untrusted: true, text });
+        } catch (e) { if (!signal.aborted) log('error', e instanceof Error ? e.message : String(e)); throw e; }
       },
     };
     registry.register(spec);

@@ -25,6 +25,10 @@ export function McpSettings({runtime=getMcpRuntime()}:{runtime?:McpRuntime|null}
    {s.running&&<ul className="m-0 mt-2 list-none p-0" aria-label={t('mcp.tools')}>{toolsOf(s.config.id).map(tool=><li key={tool.name}><label className="flex items-start justify-start! gap-2 text-left"><input type="checkbox" className="mt-1 size-4 shrink-0 grow-0 basis-4" checked={runtime.isGranted(tool)} onChange={e=>runtime.setGranted(tool,e.target.checked)}/><span className="min-w-0 flex-1 text-left"><strong>{tool.name}</strong><br/><small>{t('mcp.untrustedText')} {tool.description.slice(0,200)}</small></span></label></li>)}{!toolsOf(s.config.id).length&&<li><small>{t('mcp.noTools')}</small></li>}</ul>}
   </li>)}</ul>
   {!snap.servers.length&&<p>{t('mcp.noServers')}</p>}
+  <section className="mt-3" aria-label={t('mcp.activity')} data-testid="mcp-activity">
+   <div className="flex items-center justify-between"><strong>{t('mcp.activity')}</strong>{snap.activity.length>0&&<Button onClick={()=>runtime.clearActivity()}>{t('mcp.activityClear')}</Button>}</div>
+   {snap.activity.length===0?<p><small>{t('mcp.activityEmpty')}</small></p>:<ul className="m-0 list-none p-0">{snap.activity.map((a,i)=><li key={`${a.at}-${i}`} data-testid="mcp-activity-row"><small>{new Date(a.at).toLocaleTimeString()} · {a.server}/{a.tool} · {t(`mcp.outcome.${a.outcome}`)} · {a.ms} ms{a.detail?` · ${a.detail}`:''}</small></li>)}</ul>}
+  </section>
   <fieldset className="mt-3 flex flex-col gap-2"><legend>{t('mcp.add')}</legend>
    <label>{t('mcp.id')}<input value={form.id} onChange={e=>setForm({...form,id:e.target.value})} placeholder="files"/></label>
    <label>{t('mcp.command')}<input value={form.command} onChange={e=>setForm({...form,command:e.target.value})} placeholder="/usr/local/bin/my-mcp-server"/></label>
