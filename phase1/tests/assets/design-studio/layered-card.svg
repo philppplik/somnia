@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="480" viewBox="0 0 640 480">
+  <rect id="background" x="0" y="0" width="640" height="480" fill="#ffffff"/>
+  <rect id="card" x="80" y="80" width="480" height="320" rx="24" fill="#1648ff"/>
+  <ellipse id="badge" cx="480" cy="160" rx="40" ry="40" fill="#ffcf40"/>
+  <text id="headline" x="120" y="220" font-family="sans-serif" font-size="32" fill="#ffffff">Design locally</text>
+  <text id="unicode" x="120" y="280" font-family="sans-serif" font-size="20" fill="#ffffff">Café · 東京 · مرحبا · A &amp; B</text>
+</svg>

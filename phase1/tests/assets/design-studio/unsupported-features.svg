@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="320" height="240" viewBox="0 0 320 240">
+  <defs><linearGradient id="gradient"><stop offset="0" stop-color="#002aff"/><stop offset="1" stop-color="#ee00ff"/></linearGradient></defs>
+  <g id="transformed" transform="translate(20 30) rotate(15)"><rect id="gradient-box" width="120" height="80" fill="url(#gradient)"/></g>
+  <path id="curve" d="M20 180 C80 80 160 240 280 120" fill="none" stroke="#112233" stroke-width="4"/>
+  <rect id="hidden" x="0" y="0" width="10" height="10" display="none"/>
+</svg>
