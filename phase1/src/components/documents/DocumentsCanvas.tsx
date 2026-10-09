@@ -3,7 +3,7 @@ import {FileText,Minus,Plus,Undo2,Redo2} from '../../lib/icons';
 import {addMediaFile,findMedia,formatBytes,MEDIA_ACCEPT,useMedia} from '../../lib/media';
 import {DocumentsEngine,inspectDocx,type OpenedDocument} from '../../lib/documents';
 import {patchDocuments,resetDocuments,stepZoom,useDocuments} from '../../lib/documents/store';
-import {attachEngine,clearCaret,deleteAtCaret,dragTo,editParagraph,loadBlocks,moveCaret,pointerAt,redoEdit,selectAllInParagraph,selectedText,syncGeometry,typeText,undoEdit} from '../../lib/documents/session';
+import {attachEngine,clearCaret,deleteAtCaret,dragTo,editParagraph,loadBlocks,moveCaret,pointerAt,redoEdit,selectAllInParagraph,selectedText,splitAtCaret,syncGeometry,typeText,undoEdit} from '../../lib/documents/session';
 import {saveCopy} from '../../lib/documents/saveCopy';
 import {useT} from '../../lib/useT';
 import {getState,patchState} from '../../store/appStore';
@@ -47,7 +47,7 @@ function CaretInput({left,top}:{left:number;top:number}){
    if(keys[e.key]&&!mod&&!e.altKey){e.preventDefault();void moveCaret(keys[e.key],e.shiftKey);return;}
    if(e.key==='Backspace'||e.key==='Delete'){e.preventDefault();void deleteAtCaret(e.key==='Backspace'?-1:1);return;}
    if(e.key==='Escape'){e.preventDefault();clearCaret();return;}
-   if(e.key==='Enter'){e.preventDefault();return;}
+   if(e.key==='Enter'){e.preventDefault();void splitAtCaret();return;}
    if(mod&&e.key.toLowerCase()==='a'){e.preventDefault();selectAllInParagraph();return;}
    if(mod&&e.key.toLowerCase()==='z'){e.preventDefault();void(e.shiftKey?redoEdit():undoEdit());return;}
    if(mod&&e.key.toLowerCase()==='y'){e.preventDefault();void redoEdit();}

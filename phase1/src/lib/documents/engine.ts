@@ -38,6 +38,10 @@ export class DocumentsEngine{
  async insert(block:number,utf8Offset:number,text:string):Promise<OpenedDocument>{return(await this.call('edited',id=>({id,kind:'insert',block,utf8Offset,text}))).document;}
  async blocks():Promise<import('./edit').DocBlock[]>{return(await this.call('blocks',id=>({id,kind:'blocks'}))).blocks;}
  async replace(e:import('./edit').TextEdit):Promise<OpenedDocument>{return(await this.call('edited',id=>({id,kind:'replace',block:e.block,hunks:e.hunks}))).document;}
+ async split(block:number,off:number):Promise<OpenedDocument>{return(await this.call('edited',id=>({id,kind:'split',block,off}))).document;}
+ async merge(block:number):Promise<OpenedDocument>{return(await this.call('edited',id=>({id,kind:'merge',block}))).document;}
+ async snapshot():Promise<number>{return(await this.call('snapshot',id=>({id,kind:'snapshot'}))).snap;}
+ async restore(snap:number):Promise<OpenedDocument>{return(await this.call('edited',id=>({id,kind:'restore',snap}))).document;}
  async hit(page:number,x:number,y:number){return(await this.call('hit',id=>({id,kind:'hit',page,x,y}))).hit;}
  async caret(block:number,off:number){return(await this.call('caret',id=>({id,kind:'caret',block,off}))).caret;}
  async rects(block:number,a:number,b:number){return(await this.call('rects',id=>({id,kind:'rects',block,a,b}))).rects;}

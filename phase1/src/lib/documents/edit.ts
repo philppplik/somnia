@@ -52,7 +52,9 @@ export function caretAfterEdit(edit:TextEdit):number{
  let delta=0,pos=0;for(const h of edit.hunks){pos=h.start+delta+bytes(h.text);delta+=bytes(h.text)-(h.end-h.start);}return pos;
 }
 /** Host-side undo: one entry per applied edit holding the inverse edit. */
-export interface UndoEntry{inverse:TextEdit}
+/** Structural step (split/merge, or a replacement plus split): undone by restoring engine snapshots. */
+export interface SnapStep{before:number;after:number;caretBefore:{block:number;off:number};caretAfter:{block:number;off:number}}
+export interface UndoEntry{inverse:TextEdit;snap?:SnapStep}
 export class UndoStack{
  private undoS:UndoEntry[]=[];private redoS:UndoEntry[]=[];
  get canUndo(){return this.undoS.length>0;}get canRedo(){return this.redoS.length>0;}
@@ -60,12 +62,14 @@ export class UndoStack{
  /** `merge`: consecutive typing in one place within `windowMs` becomes one undo step. */
  push(inverse:TextEdit,merge=false,now=Date.now(),windowMs=1200){
   const top=this.undoS[this.undoS.length-1];const h=inverse.hunks[0];
-  if(merge&&top&&now-this.mergeAt<=windowMs&&top.inverse.block===inverse.block&&top.inverse.hunks.length===1&&inverse.hunks.length===1&&h.text===''&&h.start===top.inverse.hunks[0].end){
+  if(merge&&top&&!top.snap&&now-this.mergeAt<=windowMs&&top.inverse.block===inverse.block&&top.inverse.hunks.length===1&&inverse.hunks.length===1&&h.text===''&&h.start===top.inverse.hunks[0].end){
    const t=top.inverse.hunks[0];this.undoS[this.undoS.length-1]={inverse:{block:inverse.block,hunks:[{start:t.start,end:h.end,text:t.text}]}};this.mergeAt=now;this.redoS=[];return;
   }
   this.undoS.push({inverse});this.redoS=[];this.mergeAt=merge?now:-Infinity;
  }
  popUndo(){this.mergeAt=-Infinity;return this.undoS.pop();}popRedo(){return this.redoS.pop();}
  pushRedo(inverse:TextEdit){this.redoS.push({inverse});}pushUndo(inverse:TextEdit){this.undoS.push({inverse});}
+ pushSnap(snap:SnapStep){this.undoS.push({inverse:{block:snap.caretBefore.block,hunks:[]},snap});this.redoS=[];this.mergeAt=-Infinity;}
+ pushRedoEntry(x:UndoEntry){this.redoS.push(x);}pushUndoEntry(x:UndoEntry){this.undoS.push(x);}
  clear(){this.undoS=[];this.redoS=[];}
 }

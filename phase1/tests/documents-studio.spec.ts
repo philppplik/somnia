@@ -131,3 +131,24 @@ test('on-page caret: click, type, select, delete, undo as one step; tables are l
  const b2=(await pg.boundingBox())!;await page.mouse.click(b2.x+b2.width*0.15,b2.y+b2.height*0.19);
  await expect(page.getByTestId('documents-caret-locked')).toBeVisible();await expect(page.getByTestId('documents-caret')).toHaveCount(0);
 });
+test('Enter splits a paragraph, Backspace at its start joins it again, undo/redo walk both steps',async({page})=>{
+ await page.goto('/');await expect(page.locator('[data-storage]')).toBeVisible();
+ await openBuffers(page,[{name:'sample.docx',mimeType:DOCX,buffer:sample()}]);
+ await expect(page.getByTestId('documents-pages')).toHaveText('1 pages');
+ const pg=page.getByTestId('documents-page').first();const img=pg.locator('img');
+ await expect.poll(()=>img.evaluate((i:HTMLImageElement)=>i.complete&&i.naturalWidth)).toBeGreaterThan(300);
+ const boxes=page.getByTestId('documents-editor').getByRole('textbox');const n=await boxes.count();const old2=await boxes.nth(1).inputValue();
+ const b=(await pg.boundingBox())!;await page.mouse.click(b.x+b.width*0.2,b.y+b.height*0.127);
+ await expect(page.getByTestId('documents-caret')).toBeVisible();
+ await page.keyboard.press('Enter');
+ await expect(boxes).toHaveCount(n+1);
+ const a1=await boxes.nth(1).inputValue(),a2=await boxes.nth(2).inputValue();expect(a1.length).toBeGreaterThan(0);expect(a1+a2).toBe(old2);
+ await page.getByTestId('documents-page').first().screenshot({path:shot('split')});
+ await page.keyboard.type('Z');await expect.poll(()=>boxes.nth(2).inputValue()).toBe('Z'+a2);
+ await page.keyboard.press('Home');await page.keyboard.press('Backspace');
+ await expect(boxes).toHaveCount(n);await expect.poll(()=>boxes.nth(1).inputValue()).toBe(a1+'Z'+a2);
+ for(let i=0;i<5;i++){if(await page.getByTestId('documents-undo').isDisabled())break;await page.getByTestId('documents-undo').click();await page.waitForTimeout(200);}
+ await expect(boxes).toHaveCount(n);await expect.poll(()=>boxes.nth(1).inputValue()).toBe(old2);
+ await page.getByTestId('documents-redo').click();await expect(boxes).toHaveCount(n+1);
+ await expect(page.getByTestId('documents-edit-error')).toHaveCount(0);
+});

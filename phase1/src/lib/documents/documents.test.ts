@@ -132,3 +132,13 @@ test('real engine: hit test, caret and selection rectangles agree',{skip:!haveWa
  const rects=(core.handle({id:4,kind:'rects',block:1,a:0,b:4}).res as Extract<DocumentsResponse,{kind:'rects'}>).rects;assert.ok(rects.length>0&&rects[0][3]>0);
  const tbl=(core.handle({id:5,kind:'hit',page:0,x:90,y:155}).res as Extract<DocumentsResponse,{kind:'hit'}>).hit!;assert.deepEqual([tbl.block,tbl.editable],[null,false]);
 });
+test('real engine: split, merge and snapshot restore through the core; tables and bad offsets refused',{skip:!haveWasm},async()=>{
+ const core=await realCore();core.handle({id:1,kind:'open',bytes:ab(fixture('sample.docx'))});
+ const blocks=()=>(core.handle({id:9,kind:'blocks'}).res as Extract<DocumentsResponse,{kind:'blocks'}>).blocks;
+ const orig=blocks();const snap=(core.handle({id:2,kind:'snapshot'}).res as Extract<DocumentsResponse,{kind:'snapshot'}>).snap;
+ assert.ok(core.handle({id:3,kind:'split',block:1,off:4}).res.ok);const sp=blocks();assert.equal(sp.length,orig.length+1);assert.equal(sp[1].text!+sp[2].text,orig[1].text);
+ assert.ok(core.handle({id:4,kind:'merge',block:2}).res.ok);assert.deepEqual(blocks(),orig);
+ assert.ok(core.handle({id:5,kind:'split',block:1,off:4}).res.ok);assert.ok(core.handle({id:6,kind:'restore',snap}).res.ok);assert.deepEqual(blocks(),orig);
+ for(const bad of [{kind:'merge',block:0},{kind:'merge',block:4},{kind:'split',block:3,off:0},{kind:'split',block:1,off:99999}] as const)assert.equal(core.handle({id:7,...bad}).res.ok,false,JSON.stringify(bad));
+ assert.deepEqual(blocks(),orig);
+});

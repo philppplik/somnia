@@ -14,6 +14,10 @@ export type DocumentsRequest=
  |{id:number;kind:'hit';page:number;x:number;y:number}
  |{id:number;kind:'caret';block:number;off:number}
  |{id:number;kind:'rects';block:number;a:number;b:number}
+ |{id:number;kind:'split';block:number;off:number}
+ |{id:number;kind:'merge';block:number}
+ |{id:number;kind:'snapshot'}
+ |{id:number;kind:'restore';snap:number}
  |{id:number;kind:'save'}
  |{id:number;kind:'close'};
 export type DocumentsResponse=
@@ -25,6 +29,7 @@ export type DocumentsResponse=
  |{id:number;ok:true;kind:'hit';hit:HitResult|null}
  |{id:number;ok:true;kind:'caret';caret:CaretBox|null}
  |{id:number;ok:true;kind:'rects';rects:Rect5[]}
+ |{id:number;ok:true;kind:'snapshot';snap:number}
  |{id:number;ok:true;kind:'saved';bytes:ArrayBuffer;saveMs:number}
  |{id:number;ok:true;kind:'closed'}
  |{id:number;ok:false;error:string};

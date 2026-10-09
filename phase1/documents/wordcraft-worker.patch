@@ -43,10 +43,10 @@ index 0000000..6cee126
 +wasm-bindgen = "=0.2.129"
 diff --git a/crates/somnia-worker/src/lib.rs b/crates/somnia-worker/src/lib.rs
 new file mode 100644
-index 0000000..87d2f14
+index 0000000..623f11d
 --- /dev/null
 +++ b/crates/somnia-worker/src/lib.rs
-@@ -0,0 +1,315 @@
+@@ -0,0 +1,391 @@
 +//! Experimental headless adapter. No DOM, egui, filesystem or UI thread access.
 +use wasm_bindgen::prelude::*;
 +use std::sync::Arc;
@@ -59,6 +59,8 @@ index 0000000..87d2f14
 +    doc: Document,
 +    cache: LayoutCache,
 +    pages: DocLayout,
++    snaps: std::collections::HashMap<u32, wordcraft_doc::Blocks>,
++    next_snap: u32,
 +}
 +
 +impl DocSession {
@@ -67,7 +69,7 @@ index 0000000..87d2f14
 +            return Err("adapter input limit: 16 MiB".into());
 +        }
 +        let doc = wordcraft_docx::read(bytes).map_err(|e| e.to_string())?;
-+        Ok(Self { doc, cache: LayoutCache::new(), pages: DocLayout::default() })
++        Ok(Self { doc, cache: LayoutCache::new(), pages: DocLayout::default(), snaps: Default::default(), next_snap: 1 })
 +    }
 +    fn do_insert(&mut self, block: usize, offset: usize, text: &str) -> Result<(), String> {
 +        if text.len() > 1024 * 1024 {
@@ -157,6 +159,40 @@ index 0000000..87d2f14
 +        self.pages = DocLayout::default();
 +        Ok(())
 +    }
++    fn plain_para(&self, block: usize) -> Result<&wordcraft_doc::Paragraph, String> {
++        match self.doc.body.get(block).map(|b| &**b) {
++            None => Err(format!("no block {block}")),
++            Some(Block::Table(_)) => Err(format!("block {block} is a table, not a paragraph")),
++            Some(Block::Para(p)) if p.text.contains(OBJ) || !p.objects.is_empty() => Err(format!("paragraph {block} contains inline objects and cannot be edited as text")),
++            Some(Block::Para(p)) if p.section.is_some() => Err(format!("paragraph {block} carries a section break and cannot be split or merged")),
++            Some(Block::Para(p)) => Ok(p),
++        }
++    }
++    /// Splits a top-level paragraph at a UTF-8 offset. The new paragraph copies the paragraph properties.
++    fn do_split(&mut self, block: usize, off: usize) -> Result<(), String> {
++        let mut p = self.plain_para(block)?.clone();
++        if off > p.text.len() || !p.text.is_char_boundary(off) {
++            return Err(format!("offset {off} is not a character boundary inside paragraph {block}"));
++        }
++        let tail = p.split_off(off).map_err(|e| e.to_string())?;
++        self.doc.body[block] = Arc::new(Block::Para(p));
++        self.doc.body.insert(block + 1, Arc::new(Block::Para(tail)));
++        self.pages = DocLayout::default();
++        Ok(())
++    }
++    /// Joins paragraph `block` onto the end of `block - 1`; the first paragraph keeps its properties.
++    fn do_merge(&mut self, block: usize) -> Result<(), String> {
++        if block == 0 {
++            return Err("there is no previous paragraph".into());
++        }
++        let tail = self.plain_para(block)?.clone();
++        let mut head = self.plain_para(block - 1)?.clone();
++        head.append(tail);
++        self.doc.body[block - 1] = Arc::new(Block::Para(head));
++        self.doc.body.remove(block);
++        self.pages = DocLayout::default();
++        Ok(())
++    }
 +    fn do_replace(&mut self, block: usize, start: usize, end: usize, text: &str) -> Result<(), String> {
 +        self.do_replace_many(block, &[(start, end, text.to_string())])
 +    }
@@ -205,6 +241,25 @@ index 0000000..87d2f14
 +            .map(|(pg, r)| serde_json::json!([pg, r.x, r.y, r.w, r.h]))
 +            .collect();
 +        serde_json::Value::Array(r).to_string()
++    }
++    pub fn split_block(&mut self, block: usize, utf8_off: usize) -> Result<(), JsValue> {
++        self.do_split(block, utf8_off).map_err(|e| JsValue::from_str(&e))
++    }
++    pub fn merge_with_previous(&mut self, block: usize) -> Result<(), JsValue> {
++        self.do_merge(block).map_err(|e| JsValue::from_str(&e))
++    }
++    /// Cheap structural snapshot of the body (blocks are shared, not copied). Used for undo of split/merge.
++    pub fn snapshot(&mut self) -> u32 {
++        let id = self.next_snap;
++        self.next_snap += 1;
++        self.snaps.insert(id, self.doc.body.clone());
++        id
++    }
++    pub fn restore(&mut self, id: u32) -> Result<(), JsValue> {
++        let b = self.snaps.get(&id).ok_or_else(|| JsValue::from_str("unknown snapshot"))?.clone();
++        self.doc.body = b;
++        self.pages = DocLayout::default();
++        Ok(())
 +    }
 +    #[wasm_bindgen(constructor)]
 +    pub fn new(bytes: &[u8]) -> Result<DocSession, JsValue> {
@@ -360,6 +415,27 @@ index 0000000..87d2f14
 +        assert_eq!((h["block"].as_u64(), h["off"].as_u64()), (Some(0), Some(3)));
 +        let r: serde_json::Value = serde_json::from_str(&s.selection_rects(0, 0, 4)).unwrap();
 +        assert!(!r.as_array().unwrap().is_empty());
++    }
++    #[test]
++    fn split_merge_snapshot_roundtrip() {
++        let mut s = DocSession::from_bytes(FIXTURE).unwrap();
++        let before = s.text();
++        let snap0 = s.snapshot();
++        let n = s.doc.body.len();
++        s.do_split(1, 5).unwrap();
++        assert_eq!(s.doc.body.len(), n + 1);
++        assert_eq!(s.text().replace('\n', ""), before.replace('\n', ""));
++        s.do_merge(2).unwrap();
++        assert_eq!(s.text(), before);
++        s.do_split(1, 5).unwrap();
++        s.restore(snap0).unwrap();
++        assert_eq!(s.text(), before);
++        assert!(s.do_merge(0).is_err());
++        assert!(s.do_merge(4).is_err(), "block 3 is a table");
++        assert!(s.do_split(3, 0).is_err());
++        assert!(s.do_split(1, 99999).is_err());
++        let saved = wordcraft_docx::write(&s.doc).unwrap();
++        assert_eq!(DocSession::from_bytes(&saved).unwrap().text(), before);
 +    }
 +}
 diff --git a/spikes/somnia-documents/.gitignore b/spikes/somnia-documents/.gitignore

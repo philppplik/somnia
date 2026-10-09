@@ -1,5 +1,5 @@
 import type {DocumentsEngine} from './engine';
-import {caretAfterEdit,diffEdit,inverseOf,UndoStack,type TextEdit} from './edit';
+import {caretAfterEdit,diffEdit,inverseOf,UndoStack,type TextEdit,type UndoEntry} from './edit';
 import {stepBoundary,utf16ToUtf8Offset,utf8ToUtf16Offset} from './text';
 import {getDocumentsState,patchDocuments} from './store';
 /** The one open document: engine, undo history and the refresh after each edit. UI components only call these functions. */
@@ -29,9 +29,21 @@ export const editParagraph=(index:number,next:string)=>run(async()=>{
  if(/[\r\n\uFFFC]/.test(next))throw new Error('Line breaks are not supported in this version. Edit one paragraph at a time.');
  const edit=diffEdit(index,block.text,next);if(!edit)return;await apply(edit,'new');
 });
-export const undoEdit=()=>run(async()=>{const x=undo.popUndo();if(x)await apply(x.inverse,'undo');});
-export const redoEdit=()=>run(async()=>{const x=undo.popRedo();if(x)await apply(x.inverse,'redo');});
+async function restoreSnap(x:UndoEntry,to:'before'|'after'){
+ const e=engine!;const sn=x.snap!;const d=await e.restore(to==='before'?sn.before:sn.after);const c=to==='before'?sn.caretBefore:sn.caretAfter;
+ patchDocuments({edited:true,editError:'',caretLocked:false,caret:{block:c.block,anchor:c.off,head:c.off}});await refresh(d);
+}
+export const undoEdit=()=>run(async()=>{const x=undo.popUndo();if(!x)return;if(x.snap){await restoreSnap(x,'before');undo.pushRedoEntry(x);}else await apply(x.inverse,'undo');});
+export const redoEdit=()=>run(async()=>{const x=undo.popRedo();if(!x)return;if(x.snap){await restoreSnap(x,'after');undo.pushUndoEntry(x);}else await apply(x.inverse,'redo');});
 
+type Spot={block:number;off:number};
+/** Paragraph split/join. One undo step restores the engine's pre-edit block list from a cheap snapshot; a failure part-way restores it at once. */
+async function structural(op:(e:DocumentsEngine)=>Promise<import('./protocol').OpenedDocument>,before:Spot,after:Spot){
+ const e=engine;if(!e)return;const b=await e.snapshot();let d;
+ try{d=await op(e);}catch(err){await e.restore(b).catch(()=>undefined);throw err;}
+ const a=await e.snapshot();undo.pushSnap({before:b,after:a,caretBefore:before,caretAfter:after});
+ patchDocuments({edited:true,editError:'',caretLocked:false,caret:{block:after.block,anchor:after.off,head:after.off}});await refresh(d);
+}
 /* ---- On-page caret (package 4): all offsets are UTF-8 bytes of the paragraph's current text ---- */
 const enc=new TextEncoder();const u8=(s:string)=>enc.encode(s).length;
 const blockText=(i:number)=>{const b=getDocumentsState().blocks.find(x=>x.index===i);return b&&b.editable?b.text??'':null;};
@@ -60,7 +72,7 @@ export const typeText=(text:string)=>run(async()=>{
 /** Backspace/Delete by one user-perceived character. At a paragraph edge nothing happens (merge is not supported yet). */
 export const deleteAtCaret=(dir:-1|1)=>run(async()=>{
  const c=getDocumentsState().caret;if(!c)return;const t=blockText(c.block);if(t===null)return;let [a,b]=range(c);goalX=null;
- if(a===b){const i=utf8ToUtf16Offset(t,a);const j=stepBoundary(t,i,dir);if(j===i)return;const k=utf16ToUtf8Offset(t,j);[a,b]=dir<0?[k,a]:[a,k];}
+ if(a===b){const i=utf8ToUtf16Offset(t,a);const j=stepBoundary(t,i,dir);if(j===i){await joinAtEdge(c.block,t,dir);return;}const k=utf16ToUtf8Offset(t,j);[a,b]=dir<0?[k,a]:[a,k];}
  await applyAtCaret({start:a,end:b,text:''});
 });
 export const selectAllInParagraph=()=>{const c=getDocumentsState().caret;if(!c)return;const t=blockText(c.block);if(t!==null)patchDocuments({caret:{...c,anchor:0,head:u8(t)}});};
@@ -91,4 +103,14 @@ export async function syncGeometry(){
   const [box,rects]=await Promise.all([e.caret(c.block,c.head),c.anchor!==c.head?e.rects(c.block,...range(c)):Promise.resolve([])]);
   if(getDocumentsState().caret===c)patchDocuments({caretBox:box,selRects:rects});
  }catch{if(getDocumentsState().caret===c)patchDocuments({caret:null,caretBox:null,selRects:[]});}
+}
+/** Enter: replaces the selection (if any) and splits the paragraph there. The new paragraph copies the paragraph properties. */
+export const splitAtCaret=()=>run(async()=>{
+ const c=getDocumentsState().caret;if(!c)return;const t=blockText(c.block);if(t===null)return;const [a,b]=range(c);goalX=null;
+ await structural(async e=>{if(a!==b)await e.replace({block:c.block,hunks:[{start:a,end:b,text:''}]});return e.split(c.block,a);},{block:c.block,off:c.head},{block:c.block+1,off:0});
+});
+async function joinAtEdge(block:number,t:string,dir:-1|1){
+ const nb=nearbyBlock(block,dir);if(!nb){if(getDocumentsState().blocks.some(x=>x.index===block+dir))patchDocuments({caretLocked:true});return;}
+ if(dir<0)await structural(e=>e.merge(block),{block,off:0},{block:block-1,off:u8(nb.text!)});
+ else await structural(e=>e.merge(block+1),{block,off:u8(t)},{block,off:u8(t)});
 }

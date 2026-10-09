@@ -16,6 +16,7 @@ export class DocSession {
      */
     hit_test(page: number, x: number, y: number): string;
     insert(block: number, utf8_byte_offset: number, text: string): void;
+    merge_with_previous(block: number): void;
     constructor(bytes: Uint8Array);
     page_info(): string;
     paginate(): number;
@@ -25,11 +26,17 @@ export class DocSession {
      * `hunks_json`: `[[start, end, "text"], ...]`, ascending offsets in the original paragraph.
      */
     replace_ranges(block: number, hunks_json: string): void;
+    restore(id: number): void;
     save(): Uint8Array;
     /**
      * Highlight rectangles inside one top-level paragraph: `[[page,x,y,w,h],...]`.
      */
     selection_rects(block: number, a: number, b: number): string;
+    /**
+     * Cheap structural snapshot of the body (blocks are shared, not copied). Used for undo of split/merge.
+     */
+    snapshot(): number;
+    split_block(block: number, utf8_off: number): void;
     text(): string;
 }
 
@@ -42,14 +49,18 @@ export interface InitOutput {
     readonly docsession_caret_at: (a: number, b: number, c: number) => [number, number];
     readonly docsession_hit_test: (a: number, b: number, c: number, d: number) => [number, number];
     readonly docsession_insert: (a: number, b: number, c: number, d: number, e: number) => [number, number];
+    readonly docsession_merge_with_previous: (a: number, b: number) => [number, number];
     readonly docsession_new: (a: number, b: number) => [number, number, number];
     readonly docsession_page_info: (a: number) => [number, number];
     readonly docsession_paginate: (a: number) => number;
     readonly docsession_render_png: (a: number, b: number, c: number) => [number, number, number, number];
     readonly docsession_replace_range: (a: number, b: number, c: number, d: number, e: number, f: number) => [number, number];
     readonly docsession_replace_ranges: (a: number, b: number, c: number, d: number) => [number, number];
+    readonly docsession_restore: (a: number, b: number) => [number, number];
     readonly docsession_save: (a: number) => [number, number, number, number];
     readonly docsession_selection_rects: (a: number, b: number, c: number, d: number) => [number, number];
+    readonly docsession_snapshot: (a: number) => number;
+    readonly docsession_split_block: (a: number, b: number, c: number) => [number, number];
     readonly docsession_text: (a: number) => [number, number];
     readonly __wbindgen_externrefs: WebAssembly.Table;
     readonly __wbindgen_free: (a: number, b: number, c: number) => void;

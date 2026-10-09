@@ -24,10 +24,11 @@ The main thread only holds UI state and receives PNG blobs.
   minimal diff of a paragraph (`edit.ts`), keeps its own undo/redo of inverse edits, and re-renders pages.
 - Package 3 (run-exact edits): the host sends a code-point diff as several hunks (`replace_ranges`, ascending non-overlapping UTF-8 ranges, applied atomically on a clone), so untouched runs keep their formatting. Inserted text inherits: first replaced char (replacement), char before (insertion), char after (paragraph start), paragraph mark (empty paragraph). Remaining limits: replaced text takes the first replaced char's format; no per-run formatting UI.
 - Package 4 (on-page caret): click places a caret, drag or Shift+arrows select, inside one top-level paragraph. Geometry comes only from the engine (`hit_test`, `caret_at`, `selection_rects`, page units; the host scales by zoom). Keyboard, IME and clipboard go through an invisible textarea that never holds document text: typing, Backspace/Delete (by grapheme), Left/Right (cross into neighbouring editable paragraphs), Up/Down/Home/End (via line geometry), Ctrl+A (paragraph), copy/cut/paste as plain text, Ctrl+Z/Y. Consecutive typing within 1.2 s is one undo step. Clicks on tables or paragraphs with objects show a notice and place no caret.
-- Limits: no paragraph split/merge (Enter is ignored, pasted line breaks become spaces), selections stay inside one paragraph, no word-wise movement, IME composition is committed at the end and not previewed on the page, Up/Down does not cross page boundaries, no formatting UI.
+- Package 5 (split/join): Enter replaces the selection and splits the paragraph (`split_block`, new paragraph copies the paragraph properties); Backspace at paragraph start or Delete at its end joins neighbouring plain paragraphs (`merge_with_previous`, the first paragraph keeps its properties). Paragraphs with section breaks, objects, or tables are refused. Undo/redo of these steps restores cheap block-list snapshots (`snapshot`/`restore`, blocks are shared not copied).
+- Limits: pasted line breaks become spaces, selections stay inside one paragraph, no word-wise movement, IME composition is committed at the end and not previewed on the page, Up/Down does not cross page boundaries, no formatting UI.
 
 ## Next packages
-1. Paragraph split/merge, multi-paragraph selection, word-wise movement, IME preview, per-run formatting commands.
+1. Multi-paragraph selection, word-wise movement, IME preview, per-run formatting commands.
 2. Save in place through the project file bridge with backup and loss-detection gates.
 3. Real-world DOCX corpus, fidelity fixes, fuzzing, memory budget, WebView2 check on Windows.
 4. Agent tools for the Documents Studio (read text, propose edits) via the studio manifest.
