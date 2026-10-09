@@ -2,10 +2,10 @@ import {test,expect} from './fixtures';
 import {join} from 'node:path';
 import {mkdirSync} from 'node:fs';
 const artifacts=join('test-results','studios');
-test('only Code pill is visible, keyboard accessible; View group/status/palette agree',async({page})=>{
+test('only runtime-ready pills (Code, Sheets) are visible, keyboard accessible; View group/status/palette agree',async({page})=>{
  await page.goto('/');const pill=page.getByRole('radiogroup',{name:'Studios',exact:true});
- await expect(pill.getByRole('radio')).toHaveCount(1);const code=pill.getByRole('radio',{name:'Somnia Code'});
- await expect(code).toHaveAttribute('aria-checked','true');await code.focus();await page.keyboard.press('ArrowRight');await expect(code).toBeFocused();
+ await expect(pill.getByRole('radio')).toHaveCount(2);const code=pill.getByRole('radio',{name:'Somnia Code'});
+ await expect(code).toHaveAttribute('aria-checked','true');await code.focus();await page.keyboard.press('ArrowRight');await expect(pill.getByRole('radio',{name:'Somnia Sheets'})).toBeFocused();await page.keyboard.press('ArrowLeft');await expect(code).toBeFocused();await expect(code).toHaveAttribute('aria-checked','true');
  await page.keyboard.press('Control+1');await expect(code).toHaveAttribute('aria-checked','true');
  await expect(page.locator('header').getByRole('button',{name:'Split view',exact:true})).toHaveCount(0);
  await page.getByRole('button',{name:'View',exact:true}).click();await expect(page.getByRole('menuitemradio')).toHaveCount(3);

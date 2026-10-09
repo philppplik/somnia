@@ -1,6 +1,7 @@
 from pathlib import Path
 from openpyxl import load_workbook
-p=Path(__file__).resolve().parents[1]/'results'/'edited.xlsx'
+import sys
+p=Path(sys.argv[1])
 f=load_workbook(p); v=load_workbook(p,data_only=True)
 assert f.sheetnames == ['Sales','Summary']
 assert f['Sales']['B2'].value==7

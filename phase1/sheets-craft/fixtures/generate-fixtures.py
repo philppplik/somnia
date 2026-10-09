@@ -3,7 +3,7 @@ from pathlib import Path
 from openpyxl import Workbook
 from openpyxl.styles import Font
 from openpyxl.chart import BarChart, Reference
-root = Path(__file__).resolve().parents[1] / 'web'
+root = Path(__file__).resolve().parents[0]
 w = Workbook(); s = w.active; s.title = 'Sales'
 s.append(['Product', 'Quantity', 'Total'])
 s.append(['Coffee', 2, '=B2*10']); s.append(['Tea', 3, '=B3*5'])
