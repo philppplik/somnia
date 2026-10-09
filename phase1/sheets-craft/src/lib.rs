@@ -119,6 +119,7 @@ impl HeadlessWorkbook {
             .map(|(r, i)| json!({"i": r, "h": px(sh.row_height(*r)), "hidden": i.hidden})).collect();
         Ok(json!({"sheet":sheet,"defaultColWidth":px(sh.default_col_width),"defaultRowHeight":px(sh.default_row_height),
             "cols":cols,"rows":rows,"showGridlines":sh.show_gridlines,
+            "freeze": sh.freeze.map(|(r, c)| json!({"rows": r.min(20), "cols": c.min(20)})),
             "merges": sh.merges.iter().map(|m| json!({"r0":m.start.row,"c0":m.start.col,"r1":m.end.row,"c1":m.end.col})).collect::<Vec<_>>()}).to_string())
     }
 
@@ -159,6 +160,20 @@ fn format_color(c: FormatColor) -> String {
     .into()
 }
 
+fn border_json(b: &gridcraft_engine::model::style::BorderLine, theme: &gridcraft_engine::model::style::Theme) -> serde_json::Value {
+    use gridcraft_engine::model::style::BorderStyle as B;
+    if b.is_none() {
+        return serde_json::Value::Null;
+    }
+    let css = match b.style {
+        B::Dashed | B::MediumDashed | B::DashDot | B::MediumDashDot | B::DashDotDot | B::MediumDashDotDot | B::SlantDashDot => "dashed",
+        B::Dotted | B::Hair => "dotted",
+        B::Double => "double",
+        _ => "solid",
+    };
+    json!({"w": b.style.width(), "style": css, "color": b.color.hex(theme).unwrap_or_else(|| "#000000".into())})
+}
+
 fn style_json(st: &Style, theme: &gridcraft_engine::model::style::Theme) -> serde_json::Value {
     let hex = |c: &Color| c.hex(theme);
     let fill = if st.fill.pattern == gridcraft_engine::model::style::PatternType::Solid { hex(&st.fill.fg) } else { None };
@@ -168,6 +183,11 @@ fn style_json(st: &Style, theme: &gridcraft_engine::model::style::Theme) -> serd
         "color": hex(&st.font.color), "fill": fill,
         "h": match st.align.h { HAlign::Left => "left", HAlign::Center | HAlign::CenterAcross => "center", HAlign::Right => "right", _ => "general" },
         "wrap": st.align.wrap, "fmt": st.num_fmt.as_str(),
+        "font": st.font.name, "size": st.font.size,
+        "borders": {
+            "l": border_json(&st.borders.left, theme), "r": border_json(&st.borders.right, theme),
+            "t": border_json(&st.borders.top, theme), "b": border_json(&st.borders.bottom, theme),
+        },
     })
 }
 
@@ -242,6 +262,16 @@ mod tests {
         let col = |i: u64| l["cols"].as_array().unwrap().iter().find(|c| c["i"] == i).cloned();
         assert!(col(0).unwrap()["w"].as_f64().unwrap() > 150.0, "A is wider than the default");
         assert_eq!(col(2).unwrap()["hidden"], true);
+        assert_eq!(l["freeze"]["rows"], 1);
+        assert_eq!(l["freeze"]["cols"], 1);
+        assert_eq!(l["merges"][0]["c1"], 1, "A10:B10 merge");
+        let b: serde_json::Value = serde_json::from_str(&book.view_range(0, 8, 0, 1, 1).unwrap()).unwrap();
+        let bs = &b["cells"][0]["style"];
+        assert_eq!(bs["borders"]["b"]["style"], "solid");
+        assert_eq!(bs["borders"]["b"]["color"], "#0000FF");
+        assert!(bs["borders"]["t"].is_null());
+        assert_eq!(bs["font"], "Courier New");
+        assert_eq!(bs["size"], 16.0);
         assert!(col(3).unwrap()["w"].as_f64().unwrap() < l["defaultColWidth"].as_f64().unwrap());
     }
     #[test]

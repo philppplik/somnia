@@ -26,6 +26,11 @@ g['A5'] = 'Negative red'; g['B5'] = -42; g['B5'].number_format = '0;[Red]-0'
 g['A6'] = 'Centered'; g['B6'] = 'mid'; g['B6'].alignment = Alignment(horizontal='center')
 g['A7'] = 'Right text'; g['B7'] = 'right'; g['B7'].alignment = Alignment(horizontal='right')
 g['A8'] = 'Plain'; g['B8'] = 3.14159265358979
+from openpyxl.styles import Border, Side
+g['A9'] = 'Boxed'; g['A9'].border = Border(bottom=Side(style='medium', color='FF0000FF')); g['A9'].font = Font(name='Courier New', size=16)
+g['A10'] = 'Merged across two columns'; g.merge_cells('A10:B10'); g['A10'].alignment = Alignment(horizontal='center')
+for i in range(11, 61): g.cell(row=i, column=1, value=f'Row {i}')
+g.freeze_panes = 'B2'
 g.column_dimensions['A'].width = 30; g.column_dimensions['B'].width = 18; g.column_dimensions['C'].hidden = True
 g.column_dimensions['D'].width = 8; g['D1'] = 'narrow'
 f.save(root/'formats.xlsx')

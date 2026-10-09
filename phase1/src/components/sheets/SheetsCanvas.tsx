@@ -42,7 +42,10 @@ function Workbook({item}:{item:MediaItem}){
  const geo=useMemo(()=>new Geometry(layout,totalRows,totalCols),[layout,totalRows,totalCols]);
  // Bounded viewport read (values, formats and styles) for the visible window only.
  const win=useMemo(()=>geo.window(view.top,view.left,view.w-HEAD_W,view.h-HEAD_H),[geo,view]);
- useEffect(()=>{if(phase.kind!=='ready')return;let live=true;engine.current?.view(sheet,win.row,win.col,win.rows,win.cols).then(r=>{if(!live)return;const m=new Map<string,ViewCell>();for(const c of r.cells)m.set(c.address,c);setCells(m);}).catch(fail);return()=>{live=false;};},[phase,sheet,win,rev,fail]);
+ useEffect(()=>{if(phase.kind!=='ready'||!engine.current)return;let live=true;const eng=engine.current;const fr=geo.freezeRows,fc=geo.freezeCols;
+  // Main window plus the frozen strips, so frozen rows/columns stay painted while scrolling.
+  const rects=[win];if(fr>0)rects.push({row:0,col:win.col,rows:fr,cols:win.cols});if(fc>0)rects.push({row:win.row,col:0,rows:win.rows,cols:fc});if(fr>0&&fc>0)rects.push({row:0,col:0,rows:fr,cols:fc});
+  Promise.all(rects.map(w=>eng.view(sheet,w.row,w.col,Math.max(1,Math.min(w.rows,100)),Math.max(1,Math.min(w.cols,60))))).then(rs=>{if(!live)return;const m=new Map<string,ViewCell>();for(const r of rs)for(const c of r.cells)m.set(c.address,c);setCells(m);}).catch(fail);return()=>{live=false;};},[phase,sheet,win,geo,rev,fail]);
  useEffect(()=>{const el=scroller.current;if(!el)return;const measure=()=>setView(v=>({...v,w:el.clientWidth,h:el.clientHeight}));measure();const ro=new ResizeObserver(measure);ro.observe(el);return()=>ro.disconnect();},[phase.kind]);
  const address=addressOf(sel.row,sel.col);const cur=cells.get(address);
  useEffect(()=>{if(phase.kind!=='ready')return;setSheetsSelection({file:item.name,sheet,sheetName:book?.sheets[sheet]?.name??'',address,kind:cur?.value.t??'Empty',text:displayValue(cur?.value),formula:cur?.formula??null,dirty,canUndo:!!info?.canUndo,canRedo:!!info?.canRedo});},[phase.kind,item.name,sheet,book,address,cur,dirty,info]);
@@ -64,6 +67,25 @@ function Workbook({item}:{item:MediaItem}){
   else if(k.length===1&&!e.ctrlKey&&!e.metaKey&&!e.altKey){e.preventDefault();startEdit(k);}
  };
  const history=async(kind:'undo'|'redo')=>{try{await (kind==='undo'?engine.current!.undo():engine.current!.redo());setDirty(true);setRev(r=>r+1);}catch(e){fail(e);}};
+ const side=(b:{w:number;style:string;color:string}|null|undefined)=>b?`${Math.max(1,Math.min(3,Math.round(b.w)))}px ${b.style} ${b.color}`:undefined;
+ const renderCells=()=>{
+  const fr=geo.freezeRows,fc=geo.freezeCols;const out:React.ReactNode[]=[];const seen=new Set<string>();
+  const rowsList=[...new Set([...Array.from({length:fr},(_,i)=>i),...Array.from({length:win.rows},(_,i)=>win.row+i)])],colsList=[...new Set([...Array.from({length:fc},(_,i)=>i),...Array.from({length:win.cols},(_,j)=>win.col+j)])];
+  for(const r of rowsList)for(const c of colsList){
+   const box=geo.box(r,c);if(!box||box.width===0||box.height===0)continue;
+   const a=addressOf(r,c);if(seen.has(a))continue;seen.add(a);const cell=cells.get(a);const selected=r===sel.row&&c===sel.col;const st=cell?.style;
+   const frozenR=r<fr,frozenC=c<fc;const align=cellAlign(st?.h,cell);const bd=st?.borders;
+   const css:React.CSSProperties={position:'absolute',left:HEAD_W+box.left+(frozenC?view.left:0),top:HEAD_H+box.top+(frozenR?view.top:0),width:box.width,height:box.height,textAlign:align,zIndex:frozenR&&frozenC?3:frozenR||frozenC?2:undefined,
+    fontFamily:st?.font?`"${st.font}", system-ui, sans-serif`:undefined,fontSize:st?.size?`${Math.round(st.size*96/72*10)/10}px`:undefined,
+    fontWeight:st?.bold?700:undefined,fontStyle:st?.italic?'italic':undefined,textDecoration:[st?.underline?'underline':'',st?.strike?'line-through':''].filter(Boolean).join(' ')||undefined,
+    color:isErrorValue(cell?.value)?undefined:(cell?.fmtColor??st?.color??undefined),backgroundColor:st?.fill??((frozenR||frozenC)?'var(--surface, #fff)':undefined),
+    borderLeft:side(bd?.l),borderRight:side(bd?.r),borderTop:side(bd?.t),borderBottom:side(bd?.b),boxSizing:'border-box',
+    whiteSpace:st?.wrap?'pre-wrap':'nowrap',overflow:'hidden',textOverflow:st?.wrap?'clip':'ellipsis',lineHeight:st?.wrap?'16px':`${Math.max(16,box.height-1)}px`};
+   out.push(<div key={a} role="gridcell" aria-selected={selected} aria-rowindex={r+1} aria-colindex={c+1} data-address={a} data-frozen={frozenR||frozenC?'true':undefined} data-merged={geo.mergeCovering(r,c)?'true':undefined}
+    className={'border-b border-r border-subtle px-1.5 text-[12px] '+(selected?(st?.fill?'':'bg-hover ')+'outline outline-2 -outline-offset-2 outline-accent':'')+(isErrorValue(cell?.value)?' text-red-600':'')}
+    style={css}
+    onMouseDown={e=>{e.preventDefault();if(draftRef.current!==null)void commit(draftRef.current);setSel({row:r,col:c});scroller.current?.focus();}} onDoubleClick={()=>startEdit(editText(cell?.value,cell?.formula))}>{cellText(cell)}</div>);}
+  return out;};
  const exportCopy=async()=>{try{const bytes=await engine.current!.save();download(`${stem(item.name)}-edited.xlsx`,bytes);setNotice(t('sheets.exported'));}catch(e){fail(e);}};
  const restart=()=>{if(original.current)window.location.reload();};
  if(phase.kind==='error')return <div className="flex flex-1 flex-col items-center justify-center gap-3 p-6 text-center" role="alert" data-testid="sheets-error"><p className="text-[13px] text-red-600">{phase.message}</p><p className="text-[12px] text-ink-3">{t('sheets.errorHint')}</p>{original.current&&<Button onClick={restart}>{t('sheets.reopen')}</Button>}</div>;
@@ -92,24 +114,13 @@ function Workbook({item}:{item:MediaItem}){
    onScroll={e=>{const el=e.currentTarget;setView(v=>({...v,top:el.scrollTop,left:el.scrollLeft}));}}>
    <div style={{width:HEAD_W+geo.width,height:HEAD_H+geo.height,position:'relative'}}>
     <div style={{position:'sticky',top:0,zIndex:2,height:HEAD_H,width:HEAD_W+geo.width}} aria-hidden="false">
-     {Array.from({length:win.cols},(_,i)=>win.col+i).map(c=><div key={'h'+c} role="columnheader" aria-colindex={c+1} className="border-b border-r border-subtle bg-hover text-center text-[11px] leading-6 text-ink-3" style={{position:'absolute',left:HEAD_W+geo.colLeft(c),top:0,width:geo.colWidth(c),height:HEAD_H,display:geo.colWidth(c)===0?'none':undefined}}>{colName(c)}</div>)}
+     {[...new Set([...Array.from({length:geo.freezeCols},(_,i)=>i),...Array.from({length:win.cols},(_,i)=>win.col+i)])].map(c=><div key={'h'+c} role="columnheader" aria-colindex={c+1} className="border-b border-r border-subtle bg-hover text-center text-[11px] leading-6 text-ink-3" style={{position:'absolute',left:HEAD_W+geo.colLeft(c)+(c<geo.freezeCols?view.left:0),top:0,zIndex:c<geo.freezeCols?2:undefined,width:geo.colWidth(c),height:HEAD_H,display:geo.colWidth(c)===0?'none':undefined}}>{colName(c)}</div>)}
     </div>
     <div style={{position:'sticky',left:0,zIndex:1,width:HEAD_W,height:0}}>
-     {Array.from({length:win.rows},(_,i)=>win.row+i).map(r=><div key={'r'+r} role="rowheader" aria-rowindex={r+1} className="border-b border-r border-subtle bg-hover text-center text-[11px] leading-6 text-ink-3" style={{position:'absolute',left:0,top:geo.rowTop(r),width:HEAD_W,height:geo.rowHeight(r),display:geo.rowHeight(r)===0?'none':undefined}}>{r+1}</div>)}
+     {[...new Set([...Array.from({length:geo.freezeRows},(_,i)=>i),...Array.from({length:win.rows},(_,i)=>win.row+i)])].map(r=><div key={'r'+r} role="rowheader" aria-rowindex={r+1} className="border-b border-r border-subtle bg-hover text-center text-[11px] leading-6 text-ink-3" style={{position:'absolute',left:0,top:geo.rowTop(r)+(r<geo.freezeRows?view.top:0),zIndex:r<geo.freezeRows?2:undefined,width:HEAD_W,height:geo.rowHeight(r),display:geo.rowHeight(r)===0?'none':undefined}}>{r+1}</div>)}
     </div>
     <div aria-hidden="true" className="border-b border-r border-subtle bg-hover" style={{position:'sticky',left:0,top:0,zIndex:3,width:HEAD_W,height:HEAD_H,marginTop:-HEAD_H}}/>
-    {Array.from({length:win.rows},(_,i)=>win.row+i).flatMap(r=>Array.from({length:win.cols},(_,j)=>win.col+j).map(c=>{
-     const w=geo.colWidth(c),h=geo.rowHeight(r);if(w===0||h===0)return null;
-     const a=addressOf(r,c);const cell=cells.get(a);const selected=r===sel.row&&c===sel.col;const st=cell?.style;
-     const align=cellAlign(st?.h,cell);
-     const css:React.CSSProperties={position:'absolute',left:HEAD_W+geo.colLeft(c),top:HEAD_H+geo.rowTop(r),width:w,height:h,textAlign:align,
-      fontWeight:st?.bold?700:undefined,fontStyle:st?.italic?'italic':undefined,textDecoration:[st?.underline?'underline':'',st?.strike?'line-through':''].filter(Boolean).join(' ')||undefined,
-      color:isErrorValue(cell?.value)?undefined:(cell?.fmtColor??st?.color??undefined),backgroundColor:st?.fill??undefined,
-      whiteSpace:st?.wrap?'pre-wrap':'nowrap',overflow:'hidden',textOverflow:st?.wrap?'clip':'ellipsis',lineHeight:st?.wrap?'16px':`${Math.max(16,h-1)}px`};
-     return <div key={a} role="gridcell" aria-selected={selected} aria-rowindex={r+1} aria-colindex={c+1} data-address={a}
-      className={'border-b border-r border-subtle px-1.5 text-[12px] '+(selected?(st?.fill?'':'bg-hover ')+'outline outline-2 -outline-offset-2 outline-accent':'')+(isErrorValue(cell?.value)?' text-red-600':'')}
-      style={css}
-      onMouseDown={e=>{e.preventDefault();if(draftRef.current!==null)void commit(draftRef.current);setSel({row:r,col:c});scroller.current?.focus();}} onDoubleClick={()=>startEdit(editText(cell?.value,cell?.formula))}>{cellText(cell)}</div>;}))}
+    {renderCells()}
    </div>
   </div>
   <div role="tablist" aria-label={t('sheets.tabs')} className="flex w-full gap-1 border-t border-subtle px-3 py-1">

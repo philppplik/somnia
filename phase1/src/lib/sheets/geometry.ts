@@ -1,12 +1,26 @@
 import type {SheetLayout} from './protocol';
 /** Column/row positions with per-line sizes from the file. Lines without an entry use the default. Hidden lines have size 0. */
+export interface Merge{r0:number;c0:number;r1:number;c1:number}
 export class Geometry{
+ private mergeAt=new Map<string,Merge>();
+ /** Merge whose anchor (top-left) is this cell, or the merge covering it. */
+ mergeCovering(r:number,c:number):Merge|undefined{return this.mergeAt.get(r+':'+c);}
+ get freezeRows(){return Math.min(this.layout?.freeze?.rows??0,this.totalRows);}
+ get freezeCols(){return Math.min(this.layout?.freeze?.cols??0,this.totalCols);}
+ /** Pixel box of a cell, spanning its whole merge when it is the anchor. */
+ box(r:number,c:number){const m=this.mergeAt.get(r+':'+c);
+  if(m&&(m.r0!==r||m.c0!==c))return null;
+  const r1=m?m.r1:r,c1=m?m.c1:c;
+  return{left:this.colLeft(c),top:this.rowTop(r),width:this.colLeft(c1+1)-this.colLeft(c),height:this.rowTop(r1+1)-this.rowTop(r)};}
  private colStarts:number[]=[];private rowStarts:number[]=[];
  private colSize=new Map<number,number>();private rowSize=new Map<number,number>();
  constructor(readonly layout:SheetLayout|null,readonly totalRows:number,readonly totalCols:number){
   const dw=layout?.defaultColWidth??104,dh=layout?.defaultRowHeight??24;
   for(const c of layout?.cols??[])this.colSize.set(c.i,c.hidden?0:Math.max(0,c.w));
   for(const r of layout?.rows??[])this.rowSize.set(r.i,r.hidden?0:Math.max(0,r.h));
+  for(const m of layout?.merges??[]){if(m.r1<m.r0||m.c1<m.c0||m.r0>=totalRows||m.c0>=totalCols)continue;
+   const r1=Math.min(m.r1,totalRows-1),c1=Math.min(m.c1,totalCols-1);if((r1-m.r0+1)*(c1-m.c0+1)>10_000)continue;
+   const mm={r0:m.r0,c0:m.c0,r1,c1};for(let r=mm.r0;r<=r1;r++)for(let c=mm.c0;c<=c1;c++)this.mergeAt.set(r+':'+c,mm);}
   let x=0;for(let c=0;c<totalCols;c++){this.colStarts.push(x);x+=this.colSize.get(c)??dw;}this.colStarts.push(x);
   let y=0;for(let r=0;r<totalRows;r++){this.rowStarts.push(y);y+=this.rowSize.get(r)??dh;}this.rowStarts.push(y);
  }
@@ -23,6 +37,8 @@ export class Geometry{
  window(scrollTop:number,scrollLeft:number,width:number,height:number,overscan=2){
   const r0=Math.max(0,this.rowAt(scrollTop)-overscan),c0=Math.max(0,this.colAt(scrollLeft)-overscan);
   const r1=Math.min(this.totalRows-1,this.rowAt(scrollTop+height)+overscan),c1=Math.min(this.totalCols-1,this.colAt(scrollLeft+width)+overscan);
-  const rows=Math.min(r1-r0+1,100),cols=Math.min(c1-c0+1,60);
-  return{row:r0,col:c0,rows:Math.max(1,rows),cols:Math.max(1,cols)};}
+  // A merge that reaches into the window needs its anchor cell's data.
+  let wr0=r0,wc0=c0;for(let r=r0;r<=Math.min(r1,r0+3);r++)for(let c=c0;c<=Math.min(c1,c0+3);c++){const m=this.mergeAt.get(r+':'+c);if(m){wr0=Math.min(wr0,m.r0);wc0=Math.min(wc0,m.c0);}}
+  const rows=Math.min(r1-wr0+1,100);
+  return{row:wr0,col:wc0,rows:Math.max(1,rows),cols:Math.max(1,Math.min(c1-wc0+1,60))};}
 }

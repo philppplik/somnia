@@ -4,10 +4,11 @@ export interface SheetMeta{index:number;name:string;visibility:string}
 export interface WorkbookInfo{sheets:SheetMeta[];warnings:string[]}
 export interface SheetInfo{sheet:number;rows:number;cols:number;canUndo:boolean;canRedo:boolean}
 export interface RangeCell{address:string;value:CellValue;formula:string|null}
-export interface CellStyle{bold:boolean;italic:boolean;strike:boolean;underline:boolean;color:string|null;fill:string|null;h:'left'|'center'|'right'|'general';wrap:boolean;fmt:string}
+export interface CellStyle{bold:boolean;italic:boolean;strike:boolean;underline:boolean;color:string|null;fill:string|null;h:'left'|'center'|'right'|'general';wrap:boolean;fmt:string;font:string;size:number;borders:{l:BorderSide|null;r:BorderSide|null;t:BorderSide|null;b:BorderSide|null}}
+export interface BorderSide{w:number;style:'solid'|'dashed'|'dotted'|'double';color:string}
 export interface ViewCell extends RangeCell{text:string;numeric:boolean;fmtColor:string|null;style:CellStyle}
 export interface ViewResult{sheet:number;row:number;col:number;rows:number;cols:number;cells:ViewCell[]}
-export interface SheetLayout{sheet:number;defaultColWidth:number;defaultRowHeight:number;cols:{i:number;w:number;hidden:boolean}[];rows:{i:number;h:number;hidden:boolean}[];showGridlines:boolean;merges:{r0:number;c0:number;r1:number;c1:number}[]}
+export interface SheetLayout{sheet:number;defaultColWidth:number;defaultRowHeight:number;cols:{i:number;w:number;hidden:boolean}[];rows:{i:number;h:number;hidden:boolean}[];showGridlines:boolean;freeze:{rows:number;cols:number}|null;merges:{r0:number;c0:number;r1:number;c1:number}[]}
 export interface RangeResult{sheet:number;row:number;col:number;rows:number;cols:number;cells:RangeCell[]}
 export type SheetsRequest=
  |{id:number;op:'init';wasmUrl:string}
