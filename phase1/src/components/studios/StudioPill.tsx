@@ -10,7 +10,7 @@ import './studio-pill.css';
 /** Only registered, runtime-ready Studios appear. This is not the document tablist. */
 export function StudioPill(){
  const s=useAppStore();const {t}=useT();const studios=listStudios();const tooltipPrefix=useId();
- return <Tooltip.Provider delay={250}><div role="radiogroup" aria-label={t('studio.switcher')} className="studio-pill absolute left-1/2 -translate-x-1/2 flex gap-1 rounded-[var(--r-control)] bg-hover p-1" onKeyDown={e=>{
+ return <Tooltip.Provider delay={250}><div role="radiogroup" aria-label={t('studio.switcher')} className="studio-pill relative flex shrink-0 gap-1 rounded-[var(--r-control)] bg-hover p-1" onKeyDown={e=>{
   const index=studios.findIndex(x=>x.id===s.activeStudio);
   const next=e.key==='Home'?0:e.key==='End'?studios.length-1:e.key==='ArrowRight'||e.key==='ArrowDown'?(index+1)%studios.length:e.key==='ArrowLeft'||e.key==='ArrowUp'?(index+studios.length-1)%studios.length:-1;
   if(next<0)return;e.preventDefault();requestStudio(studios[next].id);e.currentTarget.querySelectorAll<HTMLButtonElement>('[role="radio"]')[next]?.focus();
