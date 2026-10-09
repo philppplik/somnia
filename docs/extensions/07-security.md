@@ -38,4 +38,4 @@ A separate `somnia-ext://` transport with host-owned response CSPs is being revi
 
 Open an issue at https://github.com/philppplik/somnia/issues. Do not include secrets or private project content.
 
-Next: [Tutorial](08-tutorial.md).
+Next: [Tutorial](08-tutorial.md). The planned apiVersion 2 model is in [Security model v2](14-security-model-v2.md).

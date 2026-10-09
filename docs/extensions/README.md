@@ -19,6 +19,7 @@ Applies to: Somnia v9.5 and later, extension `apiVersion` 1.
 | 11 | [Versioning](11-versioning.md) | plan for API changes |
 | 12 | [Authoring kit](12-authoring-kit.md) | start, validate and pack an extension from the command line |
 | 13 | [Publish to the index](13-publish-to-index.md) | list your extension in Browse GitHub extensions |
+| 14 | [Security model v2 (design proposal)](14-security-model-v2.md) | review the planned apiVersion 2 permission, isolation, catalog and review requirements |
 
 Working examples are in [`phase1/examples/`](../../phase1/examples/README.md). The design record is [ADR-003](../../phase1/notes/ADR-003-extension-sdk.md).
 
