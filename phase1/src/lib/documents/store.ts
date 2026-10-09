@@ -14,3 +14,5 @@ export const resetDocuments=()=>patchDocuments({...initial,zoom:state.zoom});
 export const useDocuments=()=>useSyncExternalStore(fn=>{listeners.add(fn);return()=>{listeners.delete(fn);};},getDocumentsState,getDocumentsState);
 export const ZOOMS=[0.5,0.75,1,1.25,1.5,2] as const;
 export const stepZoom=(dir:1|-1)=>{const i=ZOOMS.findIndex(z=>z>=state.zoom-1e-6);const next=ZOOMS[Math.min(ZOOMS.length-1,Math.max(0,(i<0?2:i)+dir))];patchDocuments({zoom:next});};
+
+export const subscribeDocuments=(fn:()=>void)=>{listeners.add(fn);return()=>{listeners.delete(fn);};};

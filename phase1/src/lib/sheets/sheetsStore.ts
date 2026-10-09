@@ -5,3 +5,5 @@ let state:SheetsSelection|null=null;const listeners=new Set<()=>void>();
 export const getSheetsSelection=()=>state;
 export function setSheetsSelection(next:SheetsSelection|null){state=next;listeners.forEach(l=>l());}
 export const useSheetsSelection=()=>useSyncExternalStore(fn=>{listeners.add(fn);return()=>{listeners.delete(fn);};},getSheetsSelection,getSheetsSelection);
+
+export const subscribeSheets=(fn:()=>void)=>{listeners.add(fn);return()=>{listeners.delete(fn);};};

@@ -52,7 +52,8 @@ test('workspace: apply goes through the session; undo only when nothing changed 
  updateSoundSettings('a.mp3',s=>({...s,reverse:true}));
  assert.throws(()=>undoSound('a.mp3','ai:1'),/Not restoring/);
  updateSoundSettings('a.mp3',s=>({...s,reverse:false}));
- undoSound('a.mp3','ai:1');assert.equal(soundFiles()['a.mp3'],before);
+ assert.throws(()=>undoSound('a.mp3','ai:1'),/Not restoring/);assert.equal(soundFiles()['a.mp3'],next);
+ applySound('a.mp3',before,'ai:3');undoSound('a.mp3','ai:3');assert.equal(soundFiles()['a.mp3'],next);
  closeSound('a.mp3');clearMedia();
 });
 import {diffSound} from './soundReview';
