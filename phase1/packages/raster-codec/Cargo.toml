@@ -1,0 +1,23 @@
+[package]
+name = "somnia-raster-codec"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.95"
+publish = false
+license = "MIT"
+
+[workspace]
+resolver = "3"
+
+[lib]
+crate-type = ["rlib", "cdylib"]
+
+[features]
+default = []
+# AVIF decoding uses a system libdav1d. Never enable this in browser WASM.
+avif-native = ["image/avif-native"]
+wasm = ["dep:wasm-bindgen"]
+
+[dependencies]
+image = { version = "=0.25.9", default-features = false, features = ["png", "jpeg", "webp", "gif", "bmp", "ico", "tga", "tiff", "qoi", "pnm"] }
+wasm-bindgen = { version = "=0.2.129", optional = true }

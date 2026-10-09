@@ -1,0 +1,50 @@
+# Raster codec third-party notices
+
+Generated from the resolved default + WASM graph. AVIF-native is excluded and needs its own distribution audit.
+
+- adler2 2.0.1: 0BSD OR MIT OR Apache-2.0; https://github.com/oyvindln/adler2. Included: LICENSE-APACHE, LICENSE-MIT, LICENSE-0BSD
+- autocfg 1.5.1: Apache-2.0 OR MIT; https://github.com/cuviper/autocfg. Included: LICENSE-APACHE, LICENSE-MIT
+- bitflags 2.13.2: MIT OR Apache-2.0; https://github.com/bitflags/bitflags. Included: LICENSE-APACHE, LICENSE-MIT
+- bumpalo 3.20.3: MIT OR Apache-2.0; https://github.com/fitzgen/bumpalo. Included: LICENSE-APACHE, LICENSE-MIT
+- bytemuck 1.25.2: Zlib OR Apache-2.0 OR MIT; https://github.com/Lokathor/bytemuck. Included: LICENSE-ZLIB, LICENSE-APACHE, LICENSE-MIT
+- byteorder-lite 0.1.0: Unlicense OR MIT; https://github.com/image-rs/byteorder-lite. Included: LICENSE-MIT, UNLICENSE
+- cfg-if 1.0.5: MIT OR Apache-2.0; https://github.com/rust-lang/cfg-if. Included: LICENSE-APACHE, LICENSE-MIT
+- color_quant 1.1.0: MIT; https://github.com/image-rs/color_quant.git. Included: LICENSE
+- crc32fast 1.5.2: MIT OR Apache-2.0; https://github.com/srijs/rust-crc32fast. Included: LICENSE-APACHE, LICENSE-MIT
+- crunchy 0.2.4: MIT; https://github.com/eira-fransham/crunchy. Included: LICENSE
+- fax 0.2.7: MIT; https://github.com/pdf-rs/fax. Included: LICENSE
+- fdeflate 0.3.7: MIT OR Apache-2.0; https://github.com/image-rs/fdeflate. Included: LICENSE-APACHE, LICENSE-MIT
+- flate2 1.1.10: MIT OR Apache-2.0; https://github.com/rust-lang/flate2-rs. Included: LICENSE-APACHE, LICENSE-MIT
+- gif 0.14.2: MIT OR Apache-2.0; https://github.com/image-rs/image-gif. Included: LICENSE-APACHE, LICENSE-MIT
+- half 2.7.1: MIT OR Apache-2.0; https://github.com/VoidStarKat/half-rs. Included: LICENSE-APACHE, LICENSE-MIT
+- image 0.25.9: MIT OR Apache-2.0; https://github.com/image-rs/image. Included: LICENSE-APACHE, LICENSE-MIT
+- image-webp 0.2.4: MIT OR Apache-2.0; https://github.com/image-rs/image-webp. Included: LICENSE-APACHE, LICENSE-MIT
+- miniz_oxide 0.8.9: MIT OR Zlib OR Apache-2.0; https://github.com/Frommi/miniz_oxide/tree/master/miniz_oxide. Included: LICENSE-APACHE.md, LICENSE, LICENSE-MIT.md, LICENSE-ZLIB.md
+- miniz_oxide 0.9.1: MIT OR Zlib OR Apache-2.0; https://github.com/Frommi/miniz_oxide/tree/master/miniz_oxide. Included: LICENSE-APACHE.md, LICENSE, LICENSE-MIT.md, LICENSE-ZLIB.md
+- moxcms 0.7.11: BSD-3-Clause OR Apache-2.0; https://github.com/awxkee/moxcms.git. Included: LICENSE-APACHE.md, LICENSE.md
+- num-traits 0.2.19: MIT OR Apache-2.0; https://github.com/rust-num/num-traits. Included: LICENSE-APACHE, LICENSE-MIT
+- once_cell 1.21.4: MIT OR Apache-2.0; https://github.com/matklad/once_cell. Included: LICENSE-APACHE, LICENSE-MIT
+- png 0.18.1: MIT OR Apache-2.0; https://github.com/image-rs/image-png. Included: LICENSE-APACHE, LICENSE-MIT
+- proc-macro2 1.0.107: MIT OR Apache-2.0; https://github.com/dtolnay/proc-macro2. Included: LICENSE-APACHE, LICENSE-MIT
+- pxfm 0.1.30: BSD-3-Clause OR Apache-2.0; https://github.com/awxkee/pxfm. Included: LICENSE-APACHE.md, LICENSE.md
+- qoi 0.4.1: MIT/Apache-2.0; https://github.com/aldanor/qoi-rust. Included: LICENSE-APACHE, LICENSE-MIT
+- quick-error 2.0.1: MIT/Apache-2.0; http://github.com/tailhook/quick-error. Included: LICENSE-APACHE, LICENSE-MIT
+- quote 1.0.47: MIT OR Apache-2.0; https://github.com/dtolnay/quote. Included: LICENSE-APACHE, LICENSE-MIT
+- rustversion 1.0.23: MIT OR Apache-2.0; https://github.com/dtolnay/rustversion. Included: LICENSE-APACHE, LICENSE-MIT
+- simd-adler32 0.3.10: MIT; https://github.com/mcountryman/simd-adler32. Included: LICENSE.md
+- syn 2.0.119: MIT OR Apache-2.0; https://github.com/dtolnay/syn. Included: LICENSE-APACHE, LICENSE-MIT
+- syn 3.0.6: MIT OR Apache-2.0; https://github.com/dtolnay/syn. Included: LICENSE-APACHE, LICENSE-MIT
+- tiff 0.10.3: MIT; https://github.com/image-rs/image-tiff. Included: LICENSE
+- unicode-ident 1.0.26: (MIT OR Apache-2.0) AND Unicode-3.0; https://github.com/dtolnay/unicode-ident. Included: LICENSE-APACHE, LICENSE-MIT, LICENSE-UNICODE
+- wasm-bindgen 0.2.129: MIT OR Apache-2.0; https://github.com/wasm-bindgen/wasm-bindgen. Included: LICENSE-APACHE, LICENSE-MIT
+- wasm-bindgen-macro 0.2.129: MIT OR Apache-2.0; https://github.com/wasm-bindgen/wasm-bindgen/tree/master/crates/macro. Included: LICENSE-APACHE, LICENSE-MIT
+- wasm-bindgen-macro-support 0.2.129: MIT OR Apache-2.0; https://github.com/wasm-bindgen/wasm-bindgen/tree/main/crates/macro-support. Included: LICENSE-APACHE, LICENSE-MIT
+- wasm-bindgen-shared 0.2.129: MIT OR Apache-2.0; https://github.com/wasm-bindgen/wasm-bindgen/tree/master/crates/shared. Included: LICENSE-APACHE, LICENSE-MIT
+- weezl 0.1.12: MIT OR Apache-2.0; https://github.com/image-rs/weezl. Included: LICENSE-APACHE, LICENSE-MIT
+- zerocopy 0.8.62: BSD-2-Clause OR Apache-2.0 OR MIT; https://github.com/google/zerocopy. Included: LICENSE-APACHE, LICENSE-BSD, LICENSE-MIT
+- zerocopy-derive 0.8.62: BSD-2-Clause OR Apache-2.0 OR MIT; https://github.com/google/zerocopy. Included: LICENSE-APACHE, LICENSE-BSD, LICENSE-MIT
+- zlib-rs 0.6.8: Zlib; https://github.com/trifectatechfoundation/zlib-rs. Included: LICENSE
+- zune-core 0.4.12: MIT OR Apache-2.0 OR Zlib; . Included: LICENSE-MIT, LICENSE-APACHE (upstream workspace licenses, https://github.com/etemesi254/zune-image/tree/dev)
+- zune-core 0.5.3: MIT OR Apache-2.0 OR Zlib; https://github.com/etemesi254/zune-image. Included: LICENSE-ZLIB, LICENSE-APACHE, LICENSE-MIT
+- zune-jpeg 0.4.21: MIT OR Apache-2.0 OR Zlib; https://github.com/etemesi254/zune-image/tree/dev/crates/zune-jpeg. Included: LICENSE-MIT, LICENSE-APACHE (upstream workspace licenses, https://github.com/etemesi254/zune-image/tree/dev)
+- zune-jpeg 0.5.15: MIT OR Apache-2.0 OR Zlib; https://github.com/etemesi254/zune-image/tree/dev/crates/zune-jpeg. Included: LICENSE-ZLIB, LICENSE-APACHE, LICENSE-MIT
