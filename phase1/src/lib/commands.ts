@@ -1,4 +1,6 @@
-import {listStudios} from './studios';
+import {listStudios,getStudio} from './studios';
+import {studioModes} from './studios/modes';
+import {getUiContext} from './uiContextStore';
 import {requestStudio} from '../store/appStore';
 import {copyErrorReport} from './log';
 import {t,tOr} from './i18n';
@@ -54,13 +56,12 @@ ui('agent.toggle','Toggle Somnia Agent','Mod+Alt+A',()=>patchState({agentOpen:!g
 registerCommand({id:'chat.toggle',title:'Toggle session chat',category:'View',shortcut:'Mod+Alt+C',allowInInput:true,enabled:()=>!!getChatSession(),run:()=>toggleSessionChat()});
 ui('inspector.toggle','Toggle inspector','Mod+Alt+I',()=>patchState({inspectorOpen:!getState().inspectorOpen}));
 ui('problems.toggle','Toggle problems','Mod+J',()=>patchState({problemsOpen:!getState().problemsOpen}));
-ui('view.code','Code view','Mod+Alt+3',()=>patchState({viewMode:'code'}));
-ui('view.design','Design view','Mod+Alt+1',()=>patchState({viewMode:'design'}));
-ui('view.split','Split view','Mod+Alt+2',()=>patchState({viewMode:'split'}));
+const canUseCodeMode=(mode:string)=>studioModes(getStudio(getState().activeStudio)).some(m=>m.command==='view.'+mode)&&!['raster','vector','pdf'].includes(getUiContext().domain);
+for(const [mode,title,key] of [['code','Code',3],['design','Design',1],['split','Split',2]] as const)registerCommand({id:'view.'+mode,title:title+' view',category:'View',shortcut:'Mod+Alt+'+key,enabled:()=>canUseCodeMode(mode),run:()=>patchState({viewMode:mode})});
 for(const [index,studio] of listStudios().entries())registerCommand({id:'studio.'+studio.id,title:'Switch to '+studio.id+' Studio',category:'View',shortcut:index<6?'Mod+'+(index+1):undefined,allowInInput:true,run:()=>{requestStudio(studio.id);}});
-ui('split.vertical','Split: code and design side by side',undefined,()=>patchState({viewMode:'split',splitLayout:'vertical'}));
-ui('split.horizontal','Split: code above, design below',undefined,()=>patchState({viewMode:'split',splitLayout:'horizontal'}));
-ui('split.swap','Split: swap code and design',undefined,()=>patchState({viewMode:'split',splitSwap:!getState().splitSwap}));
+registerCommand({id:'split.vertical',title:'Split: code and design side by side',category:'View',enabled:()=>canUseCodeMode('split'),run:()=>patchState({viewMode:'split',splitLayout:'vertical'})});
+registerCommand({id:'split.horizontal',title:'Split: code above, design below',category:'View',enabled:()=>canUseCodeMode('split'),run:()=>patchState({viewMode:'split',splitLayout:'horizontal'})});
+registerCommand({id:'split.swap',title:'Split: swap code and design',category:'View',enabled:()=>canUseCodeMode('split'),run:()=>patchState({viewMode:'split',splitSwap:!getState().splitSwap})});
 ui('zoom.in','Zoom in','Mod+=',()=>patchState({zoom:Math.min(200,getState().zoom+10)}));
 ui('zoom.out','Zoom out','Mod+-',()=>patchState({zoom:Math.max(25,getState().zoom-10)}));
 ui('zoom.reset','Actual size','Mod+0',()=>patchState({zoom:100}));

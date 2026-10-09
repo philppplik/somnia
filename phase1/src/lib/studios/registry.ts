@@ -6,6 +6,7 @@ export interface RailItem<T extends string=string> {id:T;label:string;icon:strin
 export interface StudioCommand {id:string;label:string}
 export interface StudioTool {id:string;command:string}
 export interface StudioDef {
+ modes?:readonly import('./modes').StudioMode[];
  id:StudioId;label:string;icon:string;order:number;formats:readonly FormatClaim[];
  shell:{leftRail:readonly RailItem<'layers'|'files'|'search'|'assets'|'components'|'css'|'versions'>[];rightRail:readonly RailItem<'design'|'prototype'|'code'>[];
   header:{menus:readonly ('Project'|'Edit'|'View'|'Insert'|'Tools'|'Help')[];views:readonly {mode:StudioViewMode;icon:string;command:string}[]};
