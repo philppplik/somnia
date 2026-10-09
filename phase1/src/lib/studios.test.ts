@@ -2,8 +2,9 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {codeStudio,getStudio,listStudios,registerStudio,acceptsFormat} from './studios';
 import {getState,patchState,requestStudio} from '../store/appStore';
-test('only runtime-ready Code is registered; context adapter is an identity',()=>{
- assert.ok(listStudios().some(s=>s.id==='code'));assert.equal(listStudios()[0].id,'code');
+test('only runtime-ready Studios are registered (Code first, Documents); context adapter is an identity',()=>{
+ assert.equal(listStudios()[0].id,'code');assert.ok(listStudios().some(s=>s.id==='documents'));
+ assert.equal(acceptsFormat(getStudio('documents'),'a.docx'),true);assert.equal(acceptsFormat(getStudio('documents'),'a.html'),false);
  for(const domain of ['web','markdown','code-only','empty']){const context={domain};assert.equal(codeStudio.deriveContext(context),context);}
  assert.deepEqual(codeStudio.shell.leftRail.map(x=>x.id),['layers','files','search','components','css','versions']);
  assert.deepEqual(codeStudio.shell.rightRail.map(x=>x.id),['design','prototype']);
