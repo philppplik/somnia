@@ -11,6 +11,6 @@ export const soundStudio:StudioDef={
   inspector:'sound.inspector',tools:[]
  },
  commands:[],shortcuts:{'studio.sound':'Mod+5'},menus:{view:[]},canvas:'sound.canvas',
- agent:{tools:[],contextProviders:['activeDocument'],quickActions:[]},deriveContext:context=>context
+ agent:{tools:['sound_inspect','sound_propose_settings'],contextProviders:['activeDocument'],quickActions:[]},deriveContext:context=>context
 };
 registerStudio(soundStudio);

@@ -1,5 +1,5 @@
 /** Native AI document boundary. No disk, shell, network, or model-owned acceptance. */
-export type StudioKind = 'code' | 'photo' | 'designer' | 'documents' | 'unsupported';
+export type StudioKind = 'code' | 'photo' | 'designer' | 'documents' | 'sound' | 'unsupported';
 export interface DocumentRef { documentId:string; path:string; studioKind:StudioKind; revision:number; adapter:string|null }
 export interface SelectionRef { from:number; to:number; nodeId?:string }
 export interface DocumentSnapshot { ref:DocumentRef; text:string }
@@ -10,6 +10,7 @@ export function studioFor(path:string):StudioKind {
  if(/\.(png|jpe?g|webp)$/i.test(path))return 'photo';
  if(/\.svg$/i.test(path))return 'designer';
  if(/\.(pdf|docx)$/i.test(path))return 'documents';
+ if(/\.(mp3|wav|flac|ogg|oga|aiff?)$/i.test(path))return 'sound';
  return 'unsupported';
 }
 export class DocumentRegistry {
