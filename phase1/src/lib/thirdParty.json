@@ -768,6 +768,12 @@
   "homepage": "https://github.com/markdown-it/mdurl"
  },
  {
+  "name": "mediabunny",
+  "version": "1.61.3",
+  "license": "MPL-2.0",
+  "homepage": "https://mediabunny.dev"
+ },
+ {
   "name": "memchr (PhotoCraft WASM)",
   "version": "2.8.3",
   "license": "Unlicense OR MIT",
