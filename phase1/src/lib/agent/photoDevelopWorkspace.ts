@@ -1,0 +1,13 @@
+/** Reviewed Develop acceptance only. Raster photoWorkspace is intentionally unchanged. */
+import {getDevelopSession,subscribeDevelop,developRevision,updateDevelopSettings,historyDevelop} from '../photos/session';
+import {findMedia,getMedia} from '../media';
+import {parsePhotoSettings,serializePhotoSettings} from './photoStudio';
+const applied=new Map<string,{origin:string;identity:string;before:string;after:string;revision:number;pastLength:number;beforeRevision:number}[]>();
+export const subscribePhotoDevelop=subscribeDevelop;
+export const photoDevelopRevision=developRevision;
+export function getPhotoDevelop(path:string){const media=findMedia(path);const s=media?getDevelopSession(media.url):null;return media?.kind==='image'&&s?.ready&&s.metadata?{path,text:serializePhotoSettings(s.now),session:s}:null;}
+export function photoDevelopFiles(){return Object.fromEntries(getMedia().items.flatMap(m=>{const e=getPhotoDevelop(m.name);return e?[[m.name,e.text]]:[];}));}
+export function assertPhotoDevelop(path:string){const e=getPhotoDevelop(path);if(!e)throw Error('Photo Develop is no longer open or still loading.');return e;}
+export function applyPhotoDevelop(path:string,text:string,origin:string){if(!origin)throw Error('Missing AI origin.');const e=assertPhotoDevelop(path),next=parsePhotoSettings(text),after=serializePhotoSettings(next);if(after===e.text)throw Error('Proposal makes no change.');const beforeRevision=e.session.revision;updateDevelopSettings(e.session.identity,next);const stack=applied.get(path)??[];stack.push({origin,identity:e.session.identity,before:e.text,after,revision:e.session.revision,pastLength:e.session.past.length,beforeRevision});applied.set(path,stack);}
+export function undoPhotoDevelop(path:string,origin:string){const e=assertPhotoDevelop(path),stack=applied.get(path)??[],head=stack.at(-1);if(!head||head.origin!==origin||head.identity!==e.session.identity)throw Error('A later AI change or replacement exists.');if(e.text!==head.after||e.session.revision!==head.revision||e.session.past.length!==head.pastLength)throw Error('Manual edits happened after this AI change. Not restoring.');historyDevelop(e.session.identity,false);if(serializePhotoSettings(e.session.now)!==head.before)throw Error('Photo undo readback failed.');stack.pop();const previous=stack.at(-1);if(previous&&previous.identity===e.session.identity&&previous.after===serializePhotoSettings(e.session.now)&&previous.revision===head.beforeRevision){previous.revision=e.session.revision;previous.pastLength=e.session.past.length;}}
+export const forgetPhotoDevelop=(path:string)=>{applied.delete(path);};

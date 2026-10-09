@@ -45,3 +45,35 @@ export function createPhotoStudioRegistry(host:PhotoToolHost):AgentToolRegistry 
  .register(add('raster_crop','propose','Append a bounded non-destructive crop in integer pixels. Preview shows exact output dimensions.',{x:{type:'integer'},y:{type:'integer'},width:{type:'integer'},height:{type:'integer'}},['x','y','width','height'],async(a,c,signal)=>stage({id:id(),type:'crop',version:1,enabled:true,params:a as ImageOperation['params']},c,signal)));
 }
 export async function renderPhoto(source:RasterImage,text:string,signal?:AbortSignal){const doc=validatePhoto(text);return renderStack(source,doc,photoRegistry(),{signal});}
+
+/** Develop tools are separate from raster_* tools. Same Studio kind, distinct adapter. */
+import {neutralDevelop,validateDevelop,type DevelopSettings} from '../photos/registry';
+const DEVELOP_KEYS=['exposure','contrast','saturation'] as const;
+export function parsePhotoSettings(text:string):DevelopSettings {
+ if(text.length>4096)throw Error('Photo settings exceed size limit.');
+ let raw:unknown;try{raw=JSON.parse(text);}catch{throw Error('Photo settings are not valid JSON.');}
+ if(!raw||typeof raw!=='object'||Array.isArray(raw))throw Error('Photo settings must be an object.');
+ for(const key of Object.keys(raw))if(!DEVELOP_KEYS.includes(key as typeof DEVELOP_KEYS[number]))throw Error(`Unknown Photo setting: ${key}`);
+ const next={...neutralDevelop,...raw};validateDevelop(next);return next;
+}
+export function serializePhotoSettings(s:DevelopSettings){validateDevelop(s);const next=parsePhotoSettings(JSON.stringify(s));return JSON.stringify({exposure:next.exposure,contrast:next.contrast,saturation:next.saturation},null,1);}
+export const photoDevelopAdapter:DocumentAdapter={id:'photo-develop-settings-v1',kind:'photo',validate(text){parsePhotoSettings(text);}};
+export interface PhotoDevelopToolHost {
+ snapshot():DocumentSnapshot;
+ info():{name:string;mime:string;width:number;height:number}|null;
+ /** Host stages review only. No automatic settings application. */
+ propose(after:string):void;
+}
+export function createPhotoDevelopRegistry(host:PhotoDevelopToolHost):AgentToolRegistry {
+ const snap=()=>{const s=host.snapshot();if(s.ref.studioKind!=='photo'||s.ref.adapter!==photoDevelopAdapter.id)throw Error('Unsupported Photo adapter.');parsePhotoSettings(s.text);return s;};
+ const object=(properties:Record<string,unknown>,required:string[]=[])=>({type:'object',properties,required,additionalProperties:false});
+ const spec=(name:string,level:'read'|'propose',description:string,properties:Record<string,unknown>,required:string[],run:AgentToolSpec['run']):AgentToolSpec=>({level,definition:{name,description,parameters:object(properties,required)},run:async(a,c,sig)=>{sig.throwIfAborted();if(Object.keys(a).some(k=>!Object.hasOwn(properties,k)))throw Error('Unexpected Photo arguments.');return run(a,c,sig);}});
+ return new AgentToolRegistry()
+ .register(spec('photo_inspect','read','Inspect decoded photo metadata and current Develop settings. No pixels, file URLs, EXIF, location or original bytes are returned.',{},[],async()=>{const s=snap(),i=host.info();if(!i)throw Error('Photo development is still loading.');return JSON.stringify({document:s.ref,image:{name:i.name,mime:i.mime,width:i.width,height:i.height},settings:parsePhotoSettings(s.text),limits:{exposure:[-3,3],contrast:[-100,100],saturation:[-100,100]},pixelsDisclosed:false});}))
+ .register(spec('photo_propose_settings','propose','Stage partial Develop settings for user review. Omitted controls keep their current value. Never applies settings or saves the original.',{settings:object({exposure:{type:'number',minimum:-3,maximum:3},contrast:{type:'number',minimum:-100,maximum:100},saturation:{type:'number',minimum:-100,maximum:100}})},['settings'],async(a,_c,sig)=>{const s=snap();if(!host.info())throw Error('Photo development is still loading.');if(!a.settings||typeof a.settings!=='object'||Array.isArray(a.settings))throw Error('settings must be an object.');
+ // Validate partial shape before merging, including keys whose value would disappear in JSON.
+ const patch=a.settings as Record<string,unknown>;for(const [key,value] of Object.entries(patch)){if(!DEVELOP_KEYS.includes(key as typeof DEVELOP_KEYS[number]))throw Error(`Unknown Photo setting: ${key}`);if(typeof value!=='number'||!Number.isFinite(value))throw Error(`Invalid ${key}.`);}
+ const after=serializePhotoSettings(parsePhotoSettings(JSON.stringify({...parsePhotoSettings(s.text),...patch})));
+ if(after===serializePhotoSettings(parsePhotoSettings(s.text)))throw Error('Proposal makes no change.');sig.throwIfAborted();host.propose(after);return 'Staged for review. Nothing is applied until the user accepts.';
+ }));
+}
