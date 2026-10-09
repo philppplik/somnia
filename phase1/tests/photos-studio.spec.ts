@@ -94,7 +94,7 @@ test('Photos Studio: switching to Code keeps the photo session intact',async({pa
 for(const locale of ['de','es','fr','pt-BR'])test(`Photos Studio strings: ${locale}`,async({page})=>{
  await page.addInitScript(l=>localStorage.setItem('somnia.locale.v1',l),locale);await page.goto('/');
  const pill=page.locator('header [role="radiogroup"]');
- await expect(pill.getByRole('radio')).toHaveCount(7);
+ await expect(pill.getByRole('radio')).toHaveCount(9);
  await expect(pill).not.toContainText('studio.photos');
  await pill.getByRole('radio').nth(6).click();
  await expect(page.getByTestId('photos-start')).toBeVisible();
