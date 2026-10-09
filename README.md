@@ -6,7 +6,7 @@ Local-first visual web editor and Dreamweaver successor. Design canvas and code 
 
 ![Somnia tour: design view, split view, command palette, settings](docs/assets/readme/tour.gif)
 
-**Status: beta.** Current pre-release: [v11.3.0-beta.4](https://github.com/philppplik/somnia/releases/tag/v11.3.0-beta.4). It has been checked in a browser against mocked desktop commands and in CI builds, but not on real Windows or macOS desktops yet. Installers are unsigned (SmartScreen warning on Windows, macOS is ad-hoc signed and not notarized).
+**Status: beta.** Current pre-release: [v11.3.0-beta.5](https://github.com/philppplik/somnia/releases/tag/v11.3.0-beta.5). It has been checked in a browser against mocked desktop commands and in CI builds, but not on real Windows or macOS desktops yet. Installers are unsigned (SmartScreen warning on Windows, macOS is ad-hoc signed and not notarized).
 
 ## What it does today
 
