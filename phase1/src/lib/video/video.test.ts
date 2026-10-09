@@ -8,7 +8,7 @@ import {probeVideo} from './pipeline';
 import {addTimelineClip,closeVideo,deleteTimelineClip,exportVideo,getVideoSession,moveTimelineClip,openVideo,resetTimeline,runVideoExport,setTimelineClipGain,setVideoEngineFactory,setVideoFormat,splitTimelineAt,toggleTimelineClipMute,trimTimelineClip} from './session';
 import type {VideoEngineLike,VideoResult} from './engine';
 import type {VideoProbe,VideoReport} from './protocol';
-import {MEDIA_FILE,sniffMedia} from '../media';
+import {MEDIA_FILE,sniffMedia,addBlankVideoProject,addMediaFile,getMedia,closeMedia} from '../media';
 const MP4=new URL('../../../tests/assets/clip.mp4',import.meta.url);
 const WEBM=new URL('../../../tests/assets/clip.webm',import.meta.url);
 const bytes=(u:URL)=>new Uint8Array(readFileSync(u));
@@ -146,4 +146,19 @@ test('session: a file that is not video fails with a message instead of hanging'
  assert.equal(s.status,'error');assert.match(s.error,/not a supported video/);
  closeVideo('broken.webm');URL.revokeObjectURL(url);
  await wait(10);
+});
+
+
+test('blank Video starts with zero clips and no decoder, accepts clips, exports and resets to empty',async()=>{
+ const fake=fakeEngine();let probes=0;const oldProbe=fake.probe;fake.probe=async b=>{probes++;return oldProbe(b);};setVideoEngineFactory(()=>fake);
+ const name='Blank.video-project';addBlankVideoProject(name);const item=getMedia().items.find(i=>i.name===name)!;
+ await openVideo(item);assert.equal(probes,0);assert.equal(getVideoSession(name)?.status,'ready');assert.deepEqual(getVideoSession(name)?.clips,[]);
+ assert.equal(await runVideoExport(name),'unavailable');assert.equal(fake.exports,0);
+ const added=await addMediaFile(new Blob([bytes(WEBM).buffer as ArrayBuffer]),'blank-source.webm');assert.ok('name' in added);
+ const source=getMedia().items.find(i=>i.name==='blank-source.webm')!;await addTimelineClip(name,source);
+ assert.equal(probes,1);assert.equal(getVideoSession(name)?.clips.length,1);assert.ok(getVideoSession(name)?.capabilities?.webmVideo);
+ assert.equal(await runVideoExport(name),'exported');assert.deepEqual(fake.last?.sources,['blank-source.webm']);
+ deleteTimelineClip(name,getVideoSession(name)!.clips[0].id);assert.equal(getVideoSession(name)?.clips.length,0,'last clip can be deleted from a blank project');
+ await addTimelineClip(name,source);resetTimeline(name);assert.deepEqual(getVideoSession(name)?.clips,[],'reset never invents a source clip for the project');
+ closeMedia(name);closeMedia(source.name);assert.equal(getVideoSession(name),null);
 });

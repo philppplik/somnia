@@ -1,6 +1,3 @@
-import {addMediaFile,addBlankVideoProject,getMedia} from '../media';
-import {addTextFiles,newBlankFile} from '../projectActions';
-import {getState,patchState,requestStudio} from '../../store/appStore';
 import {listStudios} from './registry';
 import {blankDocx,blankXlsx,blankPptx,blankWav,blankName} from './blankFiles';
 
@@ -11,16 +8,17 @@ export function registerBlankProjectFactory(studioId:string,factory:BlankProject
  if(factories.has(studioId))throw Error(`Blank project factory already registered: ${studioId}`);
  factories.set(studioId,factory);return()=>{if(factories.get(studioId)===factory)factories.delete(studioId);};
 }
-const taken=()=>[...Object.keys(getState().files),...getMedia().items.map(i=>i.name)];
-async function addBlank(bytes:Uint8Array,name:string){
- const result=await addMediaFile(new Blob([new Uint8Array(bytes)]),blankName(name,taken()));
- if('error' in result)throw Error(result.error);
-}
 const creating=new Map<string,Promise<void>>();
 /** Creates an unsaved local project without opening a file picker. Errors reject, never silently succeed. */
 export function createBlankProject(studioId:string):Promise<void>{
  const existing=creating.get(studioId);if(existing)return existing;
  const operation=(async()=>{
+  // Dynamic imports keep module-load factory registration independent of appStore/studio cycles.
+  const {addMediaFile,addBlankVideoProject,getMedia}=await import('../media');
+  const {addTextFiles,newBlankFile}=await import('../projectActions');
+  const {getState,patchState,requestStudio}=await import('../../store/appStore');
+  const taken=()=>[...Object.keys(getState().files),...getMedia().items.map(i=>i.name)];
+  const addBlank=async(bytes:Uint8Array,name:string)=>{const result=await addMediaFile(new Blob([new Uint8Array(bytes)]),blankName(name,taken()));if('error' in result)throw Error(result.error);};
   const factory=factories.get(studioId);
   if(factory)await factory();
   else switch(studioId){
