@@ -1,5 +1,6 @@
 import {useCallback,useRef,type ReactNode} from 'react';
 import {clipRanges,fadeOf,timelineDuration,type TimelineClip} from '../../lib/video/timeline';
+import {clipDisplayName,needsSourceFile} from '../../lib/video/titles';
 import {useT} from '../../lib/useT';
 import {VolumeX} from '../../lib/icons';
 /** Ticks adapt to the timeline length so the ruler never crowds. */
@@ -60,7 +61,7 @@ export function VideoTimeline({clips,selectedId,position,missing,onSeek,onSelect
  return <div className={`relative w-full select-none ${trackHeight&&trackHeight>24?'':'h-12'}`} style={trackHeight&&trackHeight>24?{height:trackHeight+24}:undefined} aria-label={label} data-testid="video-timeline">
   <div ref={track} style={{height:trackHeight??24}} className="absolute inset-x-0 top-1/2 flex -translate-y-1/2 cursor-pointer gap-px rounded-sm bg-hover" onPointerDown={seek}>
    {ranges.map((r,i)=>{
-    const selected=r.clip.id===selectedId,gone=missing.has(r.clip.source);
+    const selected=r.clip.id===selectedId,gone=needsSourceFile(r.clip)&&missing.has(r.clip.source);
     const left=((r.start)/duration*100),width=(Math.max(0.5,(r.end-r.start)/duration*100));
     return <div key={r.clip.id} role="button" tabIndex={0} aria-pressed={selected} aria-label={t('video.clipLabel',{index:i+1,name:shortName(r.clip.source)})}
      className={`group absolute top-0 bottom-0 overflow-hidden rounded-sm outline-1 ${selected?'bg-[var(--accent)]/30 outline-[var(--accent)]':'bg-[var(--accent)]/10 outline-transparent hover:bg-[var(--accent)]/20'} ${gone?'opacity-40 outline-dashed outline-[var(--danger)]':''}`}
@@ -70,7 +71,7 @@ export function VideoTimeline({clips,selectedId,position,missing,onSeek,onSelect
      data-testid="video-clip" data-clip-id={r.clip.id} data-selected={selected||undefined}>
      {renderStrip?.(r.clip,i)}
      <span className={`pointer-events-none absolute inset-x-1 ${renderStrip?'bottom-0.5':'top-1/2 -translate-y-1/2'} truncate text-[10px] ${renderStrip?'text-white [text-shadow:0_0_3px_rgba(0,0,0,.9)]':'text-ink'}`}>
-      {shortName(r.clip.source)}{ranges.filter(x=>x.clip.source===r.clip.source).length>1?` · ${ranges.filter(x=>x.clip.source===r.clip.source).findIndex(x=>x.clip.id===r.clip.id)+1}`:''}
+      {clipDisplayName(r.clip,shortName(r.clip.source))}{needsSourceFile(r.clip)&&ranges.filter(x=>x.clip.source===r.clip.source).length>1?` · ${ranges.filter(x=>x.clip.source===r.clip.source).findIndex(x=>x.clip.id===r.clip.id)+1}`:''}
       {r.clip.muted&&<VolumeX size={10} className="ml-1 inline-block align-[-1px]" aria-label={t('video.clipMuted')}/>}
       {gone&&<span className="ml-1 text-[var(--danger)]">{t('video.missingSource')}</span>}
      </span>

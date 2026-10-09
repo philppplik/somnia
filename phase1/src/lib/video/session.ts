@@ -2,6 +2,9 @@ import {useSyncExternalStore} from 'react';
 import {VideoEngine,type VideoEngineLike} from './engine';
 import {DEFAULT_FORMAT,exportName,type VideoFormat} from './recipe';
 import {fullClip,isNeutralTimeline,moveClip,rippleDelete,sanitizeClips,setClipEdge,setCrossfade,splitAt,timelineDuration,type TimelineClip} from './timeline';
+import {needsSourceFile} from './titles';
+import {FilmstripController} from './filmstrip-controller';
+import {FilmstripEngine} from './filmstrip-engine';
 import {fileExtension,sniffVideo} from './format';
 import {openVideoDialog} from './open';
 import {getMedia,setActiveMedia,subscribeMedia} from '../media';
@@ -10,6 +13,15 @@ export type VideoStatus='loading'|'ready'|'error'|'exporting';
 export interface VideoResult{blob:Blob;url:string;report:VideoReport}
 export interface VideoSession{name:string;status:VideoStatus;error:string;probe:VideoProbe|null;capabilities:VideoCapabilities|null;clips:TimelineClip[];selectedClipId:string|null;format:VideoFormat;progress:VideoProgress|null;result:VideoResult|null;ext:string}
 const sessions=new Map<string,VideoSession>();
+let filmstrip:FilmstripController|null|undefined;
+/** One filmstrip controller per app run; null where workers are unavailable (unit tests, SSR). */
+export function getFilmstrip(){
+ if(filmstrip===undefined){
+  try{filmstrip=typeof Worker==='undefined'?null:new FilmstripController(new FilmstripEngine(),{dpr:typeof window==='undefined'?1:window.devicePixelRatio});}
+  catch{filmstrip=null;}
+ }
+ return filmstrip;
+}
 const sources=new Map<string,ArrayBuffer>();
 const listeners=new Set<()=>void>();
 let stopMediaSync:(()=>void)|undefined;
@@ -53,6 +65,7 @@ async function openVideoFresh(item:{name:string;url:string}):Promise<void>{
   const sniffed=sniffVideo(new Uint8Array(bytes,0,Math.min(bytes.byteLength,512)));
   if(!sniffed)throw new Error('not a supported video file');
   sources.set(item.name,bytes);
+  getFilmstrip()?.register(item.name,bytes.slice(0));
   const {engine:e,caps}=getEngine();
   const probe=await e.probe(bytes.slice(0));
   if(!sessions.has(item.name))return;
@@ -61,7 +74,7 @@ async function openVideoFresh(item:{name:string;url:string}):Promise<void>{
  }catch(e){resetEngine(e);if(sessions.has(item.name))patch(item.name,{status:'error',error:message(e)});}
 }
 /** Applies a timeline edit and keeps every clip inside its source bounds. */
-function editTimeline(root:string,edit:(clips:TimelineClip[])=>TimelineClip[]|null){
+export function editTimeline(root:string,edit:(clips:TimelineClip[])=>TimelineClip[]|null){
  const s=sessions.get(root);if(!s)return;
  const next=edit(s.clips);
  if(!next)return;
@@ -113,7 +126,7 @@ export async function runVideoExport(name:string):Promise<'exported'|'cancelled'
  const s=sessions.get(name);
  if(!s||!s.clips.length)return'unavailable';
  const clipSources:Record<string,ArrayBuffer>={};
- for(const n of new Set(s.clips.map(c=>c.source))){
+ for(const n of new Set(s.clips.filter(needsSourceFile).map(c=>c.source))){
   const bytes=sources.get(n);
   if(!bytes){patch(name,{status:'error',error:`Clip source "${n}" is no longer open. Re-open the file to export this timeline.`});return'unavailable';}
   clipSources[n]=bytes.slice(0);
@@ -151,6 +164,7 @@ export async function exportVideoFile(name:string):Promise<'downloaded'|'cancell
 export function cancelVideoExport(name:string){if(sessions.get(name)?.status==='exporting')engine?.cancelExport();}
 export function closeVideo(name:string){
  sources.delete(name);
+ getFilmstrip()?.unregister(name);
  const s=sessions.get(name);if(!s)return;revoke(s.result);sessions.delete(name);emit();
 }
 export const videoIsEdited=(s:VideoSession|null)=>!!s&&!isNeutralTimeline(s.clips,s.name,s.probe?.duration??0);

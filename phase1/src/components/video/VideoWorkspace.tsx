@@ -2,7 +2,11 @@ import {useCallback,useEffect,useRef,useState} from 'react';
 import {ChevronsLeft,ChevronsRight,Download,Pause,Play,Scissors,Volume2,VolumeX} from '../../lib/icons';
 import {Button} from '../ui/button';
 import {useT} from '../../lib/useT';
-import {addTimelineClipsFromDialog,cancelVideoExport,deleteTimelineClip,exportVideoFile,moveTimelineClip,openVideo,selectTimelineClip,splitTimelineAt,toggleTimelineClipMute,trimTimelineClip,useVideoSession,videoIsEdited} from '../../lib/video/session';
+import {addTimelineClipsFromDialog,cancelVideoExport,deleteTimelineClip,exportVideoFile,getFilmstrip,moveTimelineClip,openVideo,selectTimelineClip,splitTimelineAt,toggleTimelineClipMute,trimTimelineClip,useVideoSession,videoIsEdited} from '../../lib/video/session';
+import {clipDisplayName,isTitleClip,needsSourceFile} from '../../lib/video/titles';
+import {TitlePreview} from './TitlePreview';
+import {useTitlePlayback} from './useTitlePlayback';
+import {FilmstripStrip} from './FilmstripStrip';
 import {blendAt,clipRanges,locate,timelineDuration} from '../../lib/video/timeline';
 import {formatTime} from '../../lib/video/recipe';
 import {formatBytes,getState,patchState,requestStudio,useAppStore,useMedia,type MediaItem} from './workspace-deps';
@@ -33,7 +37,7 @@ export function VideoWorkspace({item,withPanel=false}:{item:MediaItem;withPanel?
  const main=blend.length?blend[blend.length-1]:null;
  const slotOf=(index:number)=>index%2===0?slotA:slotB;
  // Sources of clips that lost their media tab render as missing and block the export with a clear message.
- const missing=new Set(clips.map(c=>c.source).filter((n:string)=>!media.items.some((i:MediaItem)=>i.name===n)));
+ const missing=new Set(clips.filter(needsSourceFile).map(c=>c.source).filter((n:string)=>!media.items.some((i:MediaItem)=>i.name===n)));
  const urlOf=(source:string)=>media.items.find((i:MediaItem)=>i.name===source)?.url??item.url;
  const seek=useCallback((s:number)=>{setPlayhead(Math.min(Math.max(0,s),duration||s));},[duration]);
  // Every active slot sits on its clip's source and frame; scrubbing corrects drift over 350 ms, playback drift is left alone.
@@ -70,11 +74,10 @@ export function VideoWorkspace({item,withPanel=false}:{item:MediaItem;withPanel?
  },[ranges,duration]);
  const pauseAll=useCallback(()=>{playingRef.current=false;setPlaying(false);slotA.current?.pause();slotB.current?.pause();},[]);
  const toggle=useCallback(()=>{
-  const els=[slotA.current,slotB.current].filter((el):el is HTMLVideoElement=>!!el);
-  if(els.some(el=>!el.paused)){pauseAll();return;}
+  if(playing){pauseAll();return;}
   if(playhead>=duration-0.02)setPlayhead(0);
   playingRef.current=true;setPlaying(true);
- },[playhead,duration,pauseAll]);
+ },[playing,playhead,duration,pauseAll]);
  const step=(dir:1|-1)=>{pauseAll();seek(playhead+dir/fps);};
  const mainEl=()=>main?slotOf(main.range.index).current:null;
  // The element clock is fresher than the React playhead (timeupdate lags a frame), so cuts land where the frame actually is.
@@ -107,6 +110,11 @@ export function VideoWorkspace({item,withPanel=false}:{item:MediaItem;withPanel?
   else if(e.key==='Home'){e.preventDefault();seek(0);}
   else if(e.key==='End'){e.preventDefault();seek(duration);}
  };
+ // Title cards have no <video>; this rAF clock plays through them and advances at the card end.
+ const titleMain=main&&isTitleClip(main.range.clip)?main:null;
+ useTitlePlayback({running:playing&&!!titleMain,from:playhead,limit:titleMain?.range.end??0,onTime:setPlayhead,onEnd:()=>{if(titleMain)advance(titleMain.range.index);}});
+ const filmstrip=getFilmstrip();
+ const shortName=(n:string)=>n.replace(/^.*[\\/]/,'').replace(/\.[^.]+$/,'');
  const doExport=async()=>{setNote('');const r=await exportVideoFile(item.name);
   if(r==='downloaded')setNote(t('video.downloaded'));else if(r==='cancelled')setNote(t('video.cancelled'));};
  const status=session?.status==='loading'?t('video.loading'):session?.status==='error'?t('video.error',{message:session.error}):'';
@@ -132,6 +140,9 @@ export function VideoWorkspace({item,withPanel=false}:{item:MediaItem;withPanel?
        onTimeUpdate={onTime(idx)} onEnded={onTime(idx)} onError={()=>setPlayable(false)}
        data-testid={idx===0?'video-player':'video-player-b'} data-clip-id={e?.range.clip.id}/>;
      }):<p className="max-w-[420px] p-4 text-center text-[13px] text-ink-2" data-testid="video-nopreview">{t('video.noPreview',{ext:session?.ext??item.name.split('.').pop()??''})}</p>}
+     {playable&&blend.map(e=>isTitleClip(e.range.clip)?<div key={e.range.clip.id} className="absolute inset-0 flex items-center justify-center p-2" style={{opacity:e.video,zIndex:main&&e.range.index===main.range.index?1:0,pointerEvents:'none'}}>
+      <TitlePreview clip={e.range.clip} time={e.sourceTime} aspect={(probe?.video?.width??16)/(probe?.video?.height??9)} label={clipDisplayName(e.range.clip,'Title')}/>
+     </div>:null)}
     </div>
     <div className="flex items-center gap-3 px-4 pt-2 text-[12px] text-ink-2">
      <Button size="icon" variant="outline" aria-label={t(playing?'video.pause':'video.play')} aria-pressed={playing} disabled={!playable||!clips.length} onClick={toggle} data-testid="video-play">{playing?<Pause size={16}/>:<Play size={16}/>}</Button>
@@ -139,7 +150,7 @@ export function VideoWorkspace({item,withPanel=false}:{item:MediaItem;withPanel?
      <Button size="icon" variant="ghost" aria-label={t('video.frameFwd')} disabled={!playable||!clips.length} onClick={()=>step(1)} data-testid="video-frame-fwd"><ChevronsRight size={16}/></Button>
      <span className="tabular-nums" data-testid="video-time">{formatTime(playhead)} / {formatTime(duration)}</span>
      <Button size="icon" variant="ghost" aria-label={t('video.split')} title={t('video.splitHint')} disabled={!entry||exporting} onClick={splitHere} data-testid="video-split"><Scissors size={16}/></Button>
-     {selectedClip&&<span className="rounded-full bg-[var(--accent)]/15 px-2 py-0.5 text-[11px] text-ink" data-testid="video-selected-chip">{t('video.selectedClip',{name:selectedClip.source.replace(/^.*[\\/]/,''),length:(selectedClip.out_s-selectedClip.in_s).toFixed(2)})}</span>}
+     {selectedClip&&<span className="rounded-full bg-[var(--accent)]/15 px-2 py-0.5 text-[11px] text-ink" data-testid="video-selected-chip">{t('video.selectedClip',{name:clipDisplayName(selectedClip,selectedClip.source.replace(/^.*[\\/]/,'')),length:(selectedClip.out_s-selectedClip.in_s).toFixed(2)})}</span>}
      <span className="flex-1"/>
      <Button size="icon" variant="ghost" aria-label={t(muted?'video.unmute':'video.mute')} aria-pressed={muted} onClick={()=>setMuted(m=>!m)} data-testid="video-mute">{muted?<VolumeX size={16}/>:<Volume2 size={16}/>}</Button>
      <input type="range" className="w-20 accent-[var(--accent)]" min={0} max={1} step={0.05} value={volume} aria-label={t('video.volume')} onChange={e=>{const n=Number(e.target.value);setVolume(n);}} data-testid="video-volume"/>
@@ -149,6 +160,8 @@ export function VideoWorkspace({item,withPanel=false}:{item:MediaItem;withPanel?
       onSeek={seek} onSelect={id=>selectTimelineClip(item.name,id)}
       onTrim={(id,edge,at)=>trimTimelineClip(item.name,id,edge,at)}
       onMove={(id,by)=>moveTimelineClip(item.name,id,by)}
+      trackHeight={48}
+      renderStrip={c=>needsSourceFile(c)&&filmstrip?<FilmstripStrip controller={filmstrip} source={c.source} in_s={c.in_s} out_s={c.out_s} name={shortName(c.source)}/>:null}
       label={t('video.timeline',{name:item.name})}/>
     </div>
     <div className="flex items-center gap-3 px-4 pb-2 text-[12px] text-ink-2">

@@ -1,7 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {blendAt,clipRanges,fadeOf,sanitizeClips,setCrossfade,splitAt,timelineDuration,titleClip,type TimelineClip} from './timeline';
+import {blendAt,clipRanges,fadeOf,sanitizeClips,setCrossfade,splitAt,timelineDuration,type TimelineClip} from './timeline';
+import {newTitleClip} from './titles';
 import {addTimelineClip,closeVideo,getVideoSession,openVideo,runVideoExport,setTimelineClipCrossfade,setVideoEngineFactory} from './session';
 import type {VideoEngineLike,VideoResult} from './engine';
 import type {VideoProbe,VideoReport} from './protocol';
@@ -48,11 +49,11 @@ test('timeline: a split cuts hard on the left and keeps the fade on the right',(
 });
 
 test('timeline: title clips sanitize to source-less cards and join the fade math',()=>{
- const card=titleClip({text:'Hi',size:64,color:'#fff',background:'#000'},9999);
+ const card=newTitleClip({text:'Hi',size:64,color:'#fff',background:'#000'},9999);
  const clean=sanitizeClips([card],{});
  assert.equal(clean[0].in_s,0);assert.equal(clean[0].out_s,3600,'title duration clamps to the cap');
  assert.equal(clean[0].gain,1);assert.equal(clean[0].muted,false);
- const pair=sanitizeClips([{...titleClip({text:'A',size:64,color:'#fff',background:'#000'},3),crossfade_s:9},{id:'m',source:'m',in_s:0,out_s:2,gain:1,muted:false}],{m:2});
+ const pair=sanitizeClips([{...newTitleClip({text:'A',size:64,color:'#fff',background:'#000'},3),crossfade_s:9},{id:'m',source:'m',in_s:0,out_s:2,gain:1,muted:false}],{m:2});
  assert.equal(fadeOf(pair[0]),2,'a fade out of a title clamps to the next clip');
 });
 

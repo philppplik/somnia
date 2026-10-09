@@ -3,6 +3,8 @@ import {ALL_FORMATS,AudioSample,AudioSampleSink,AudioSampleSource,BufferSource,B
 import type {AudioCodec,VideoCodec} from 'mediabunny';
 import type {VideoFormat} from './recipe';
 import {clipRanges,fadeOf,timelineDuration,type ClipRange,type TimelineClip} from './timeline';
+import {drawTitleCard,isTitleClip,needsSourceFile} from './titles';
+import {renderTitleSpan} from './titleExport';
 import type {VideoCapabilities,VideoProbe,VideoReport} from './protocol';
 const inputOf=(bytes:ArrayBuffer)=>new Input({source:new BufferSource(bytes),formats:ALL_FORMATS});
 /** Container facts without decoding a single frame; safe in Node and in the worker. */
@@ -81,7 +83,7 @@ export async function exportTimeline(sources:Record<string,ArrayBuffer>,clips:Ti
  if(!clips.length)throw new Error('The timeline is empty.');
  const steps:string[]=[];
  const inputs=new Map<string,{input:Input;probe:VideoProbe}>();
- const names=[...new Set(clips.map(c=>c.source))];
+ const names=[...new Set(clips.filter(needsSourceFile).map(c=>c.source))];
  try{
   for(const n of names){
    const bytes=sources[n];
@@ -91,12 +93,13 @@ export async function exportTimeline(sources:Record<string,ArrayBuffer>,clips:Ti
    if(!probe.video){input.dispose();throw new Error(`"${n}" has no video track and cannot be on a video timeline.`);}
    inputs.set(n,{input,probe});
   }
-  const first=inputs.get(clips[0].source)!.probe.video!;
+  const firstMedia=clips.find(needsSourceFile);
+  const first=firstMedia?inputs.get(firstMedia.source)!.probe.video!:{codec:null,width:1280,height:720,fps:null};
   const outW=first.width,outH=first.height;
   const caps=await probeCapabilities(outW,outH);
   const videoCodec=format==='webm'?caps.webmVideo:caps.mp4Video;
   if(!videoCodec)throw new Error(format==='webm'?'This platform cannot encode VP9 or VP8 video.':'This platform cannot encode H.264 (AVC) video. Try WebM instead.');
-  const anyAudio=clips.some(c=>!c.muted&&inputs.get(c.source)!.probe.audio!==null);
+  const anyAudio=clips.some(c=>needsSourceFile(c)&&!c.muted&&inputs.get(c.source)!.probe.audio!==null);
   let audioCodec:string|null=null;
   if(anyAudio){
    audioCodec=format==='webm'?(caps.opus?'opus':null):(caps.aac?'aac':null);
@@ -138,11 +141,42 @@ export async function exportTimeline(sources:Record<string,ArrayBuffer>,clips:Ti
    if(!s){const{input}=inputs.get(ranges[i].clip.source)!;const track=(await input.getVideoTracks())[0];s=new CanvasSink(track,{width:outW,height:outH,fit:'contain',poolSize:3});videoSinks.set(i,s);}
    return s;
   };
-  const fpsOf=(i:number)=>{const f=inputs.get(ranges[i].clip.source)!.probe.video!.fps;return f&&f>1?f:30;};
+  const fpsOf=(i:number)=>{const c=ranges[i].clip;if(isTitleClip(c))return first.fps&&first.fps>1?first.fps:30;const f=inputs.get(c.source)!.probe.video!.fps;return f&&f>1?f:30;};
+  let titlesRendered=false;
+  // One scratch canvas per clip index for the card side of a dissolve; keyed redraws skip static frames.
+  const cards=new Map<number,{canvas:OffscreenCanvas;ctx:OffscreenCanvasRenderingContext2D;key:string}>();
+  const sideFrame=async(i:number,t:number):Promise<OffscreenCanvas|HTMLCanvasElement|ImageBitmap|VideoFrame|null>=>{
+   const r=ranges[i],c=r.clip;
+   if(isTitleClip(c)){
+    let card=cards.get(i);
+    if(!card){
+     const canvas=new OffscreenCanvas(outW,outH),ctx2=canvas.getContext('2d');
+     if(!ctx2)return null;
+     card={canvas,ctx:ctx2,key:''};cards.set(i,card);
+    }
+    const local=Math.max(0,t-r.start),key=`${local.toFixed(4)}`;
+    if(card.key!==key){drawTitleCard(card.ctx,c,outW,outH,local);card.key=key;}
+    return card.canvas;
+   }
+   const sink=await sinkFor(i);
+   const src=Math.min(c.out_s-1e-3,c.in_s+(t-r.start));
+   const f=await sink.getCanvas(src);
+   return f?f.canvas:null;
+  };
   for(const z of zones){
    checkCancel();
    if(z.kind==='solo'){
     const r=ranges[z.a],c=r.clip;
+    if(isTitleClip(c)){
+     titlesRendered=true;
+     await renderTitleSpan({clip:c,start:z.start,width:outW,height:outH,fps:fpsOf(z.a),ctx,checkCancel,
+      addFrame:(t,d)=>videoSource.add(t,d),
+      silenceFormat:{channels:2,rate:48_000},
+      addSilence:audioSource?async chunk=>{await audioSource.add(new AudioSample({data:chunk.data,format:'f32',numberOfChannels:chunk.channels,sampleRate:chunk.rate,timestamp:chunk.timestamp}));}:undefined,
+      onFrame:note});
+     note(z.end);
+     continue;
+    }
     const{input,probe}=inputs.get(c.source)!;
     const srcStart=c.in_s+(z.start-r.start),srcEnd=c.out_s-(r.end-z.end);
     const sink=await sinkFor(z.a);
@@ -160,16 +194,16 @@ export async function exportTimeline(sources:Record<string,ArrayBuffer>,clips:Ti
     }else if(probe.audio===null&&audioSource&&z===zones[0])steps.push(`No audio track in ${c.source}.`);
    }else{
     const ra=ranges[z.a],rb=ranges[z.b],d=z.end-z.start;
-    const[sinkA,sinkB]=await Promise.all([sinkFor(z.a),sinkFor(z.b)]);
+    if(isTitleClip(ra.clip)||isTitleClip(rb.clip))titlesRendered=true;
     const fps=fpsOf(z.a),n=Math.max(1,Math.ceil(d*fps));
     for(let k=0;k<n;k++){
      checkCancel();
      const t=z.start+k/fps,p=Math.min(1,(t-z.start)/d);
-     const ta=Math.min(ra.clip.out_s-1e-3,ra.clip.in_s+(t-ra.start));
-     const tb=Math.min(rb.clip.out_s-1e-3,rb.clip.in_s+(t-rb.start));
-     const[fa,fb]=await Promise.all([sinkA.getCanvas(ta),sinkB.getCanvas(tb)]);
-     if(fa){ctx.globalAlpha=1;ctx.drawImage(fa.canvas,0,0);}
-     if(fb){ctx.globalAlpha=p;ctx.drawImage(fb.canvas,0,0);ctx.globalAlpha=1;}
+     const[fa,fb]=await Promise.all([sideFrame(z.a,t),sideFrame(z.b,t)]);
+     ctx.globalAlpha=1;ctx.fillStyle='#000';ctx.fillRect(0,0,outW,outH);
+     if(fa){ctx.globalAlpha=1-p;ctx.drawImage(fa as CanvasImageSource,0,0);}
+     if(fb){ctx.globalAlpha=p;ctx.drawImage(fb as CanvasImageSource,0,0);}
+     ctx.globalAlpha=1;
      await videoSource.add(t,1/fps);
      note(t);
     }
@@ -180,7 +214,7 @@ export async function exportTimeline(sources:Record<string,ArrayBuffer>,clips:Ti
      let any=false;
      for(const side of[{r:ra,sign:'out' as const},{r:rb,sign:'in' as const}]){
       const c=side.r.clip;
-      if(c.muted)continue;
+      if(c.muted||isTitleClip(c))continue;
       const{input,probe}=inputs.get(c.source)!;
       if(!probe.audio)continue;
       const srcStart=c.in_s+(z.start-side.r.start),srcEnd=c.in_s+(z.end-side.r.start);
@@ -222,6 +256,7 @@ export async function exportTimeline(sources:Record<string,ArrayBuffer>,clips:Ti
   if(!buffer)throw new Error('The export produced no output.');
   if(clips.length>1)steps.unshift(`${clips.length} clips joined.`);
   if(ranges.some((r,i)=>i<ranges.length-1&&fadeOf(r.clip)>0))steps.push('Crossfades applied.');
+  if(titlesRendered)steps.push('Title cards rendered.');
   if(clips.some(c=>c.muted))steps.push('Muted clips kept as silence.');
   if(clips.some(c=>c.gain!==1&&!c.muted))steps.push('Per-clip gain applied.');
   const report:VideoReport={format,duration_s:total,bytes:buffer.byteLength,videoCodec,audioCodec,steps};

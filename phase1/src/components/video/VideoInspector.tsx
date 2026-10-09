@@ -3,7 +3,10 @@ import {Button} from '../ui/button';
 import {useT} from '../../lib/useT';
 import {useMedia} from '../../lib/media';
 import {addTimelineClip,addTimelineClipsFromDialog,cancelVideoExport,deleteTimelineClip,moveTimelineClip,resetTimeline,setTimelineClipCrossfade,setTimelineClipGain,setVideoFormat,selectTimelineClip,toggleTimelineClipMute,trimTimelineClip,useVideoSession} from '../../lib/video/session';
-import {clipDuration,fadeOf,MAX_GAIN,timelineDuration} from '../../lib/video/timeline';
+import {clipDuration,clipRanges,fadeOf,MAX_GAIN,timelineDuration} from '../../lib/video/timeline';
+import {isTitleClip} from '../../lib/video/titles';
+import {addTitleClip,setTitleLength,updateTitle} from '../../lib/video/titleSession';
+import {TitleAddRow,TitleInspector} from './TitleInspector';
 const row='grid gap-1.5 border-b border-subtle px-3 py-3 text-xs text-ink-2';
 const check='!size-4 !w-4 shrink-0 accent-[var(--accent)]';
 const field='h-7 w-full rounded-sm border border-subtle bg-transparent px-2 text-xs text-ink select-text';
@@ -42,7 +45,21 @@ export function VideoControls({name}:{name:string}){
    </div>
    <p className="m-0 text-ink-3">{t('video.timelineHint')}</p>
   </div>
-  {selected&&<div className={row} data-testid="video-clip-panel">
+  <TitleAddRow disabled={!ready} onAdd={()=>addTitleClip(name,selectedIndex>=0?clipRanges(s.clips)[selectedIndex].end:Number.MAX_SAFE_INTEGER)}/>
+  {selected&&isTitleClip(selected)&&<>
+   <TitleInspector clip={selected} onChange={p2=>updateTitle(name,selected.id,p2)} onDuration={d=>setTitleLength(name,selected.id,d)}/>
+   <div className={row}>
+    <div className="flex flex-wrap gap-2">
+     <Button size="compact" variant="outline" disabled={selectedIndex<=0} onClick={()=>moveTimelineClip(name,selected.id,-1)} data-testid="video-clip-left">{t('video.moveLeft')}</Button>
+     <Button size="compact" variant="outline" disabled={selectedIndex<0||selectedIndex>=s.clips.length-1} onClick={()=>moveTimelineClip(name,selected.id,1)} data-testid="video-clip-right">{t('video.moveRight')}</Button>
+     <Button size="compact" variant="ghost" disabled={s.clips.length<=1} onClick={()=>{deleteTimelineClip(name,selected.id);selectTimelineClip(name,null);}} data-testid="video-clip-delete">{t('video.deleteClip')}</Button>
+    </div>
+    {selectedIndex>=0&&selectedIndex<s.clips.length-1&&<label>{t('video.transition')}
+     <input type="number" className={`${field} mt-1`} min={0} max={clipDuration(selected)} step={0.1} value={fadeOf(selected)} onChange={e=>setTimelineClipCrossfade(name,selected.id,Number(e.target.value))} data-testid="video-clip-transition-duration"/>
+    </label>}
+   </div>
+  </>}
+  {selected&&!isTitleClip(selected)&&<div className={row} data-testid="video-clip-panel">
    <span className="text-ink">{t('video.clipTitle',{index:selectedIndex+1})}</span>
    <span className="truncate text-ink-3" data-testid="video-clip-source">{selected.source}</span>
    <div className="grid grid-cols-2 gap-2">
