@@ -36,7 +36,7 @@ registerOpenHandler({id:'open.video',studioId:'video',kinds:['video'],priority:1
 // it stays inert until a Studio with id 'vector' registers itself.
 registerOpenHandler({id:'open.vector',studioId:'vector',kinds:['svg'],priority:50,capability:'edit'});
 // QUEUED (Builder): Photos Studio for raster/psd. Until it registers, raster/pdf/psd keep the existing read-only preview in Code.
-registerOpenHandler({id:'open.photos',studioId:'photos',kinds:['image','raster-preview','psd'],priority:50,capability:'edit'});
+registerOpenHandler({id:'open.photos',studioId:'photos',kinds:['image','psd'],priority:50,capability:'edit'});
 // Code: verified text and svg source, plus the existing read-only previews. NOT a binary catch-all.
 registerOpenHandler({id:'open.code.text',studioId:'code',kinds:['text','svg'],priority:0,capability:'edit'});
 registerOpenHandler({id:'open.code.preview',studioId:'code',kinds:['image','raster-preview','psd','pdf'],priority:0,capability:'preview'});
