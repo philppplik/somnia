@@ -45,8 +45,8 @@ It runs inside the existing killable edit worker, with the 20-second deadline.
   Covered: imported list; Unicode update/AP/popup/link preservation; stale
   target rejection; direct/indirect flags; exact delete; popup removal;
   locked comments; replies/thread safety; reorder page targets; long contents.
-- Core run before the last indirect-flag test: 1647 passed, 0 failed,
-  18 skipped, 26 TODO. The final focused suite includes the new sixth test.
+- Final core run: 1649 passed, 0 failed, 18 skipped, 26 TODO.
+  Includes six comment tests and the localized guidance regression.
 - Browser harness: `node pdf-craft/spike/comments-test.mjs` from `phase1`.
   Dedicated local port 1488, real worker-backed app, actual imported PDF.
   Checks read-only controls, list, edit, page jump, filter, delete, undo/redo,
@@ -61,6 +61,7 @@ move/resize, redaction, signatures, OCR or incremental save is claimed.
 English labels match the existing PDF module; localization remains future work.
 No desktop runtime or Acrobat/Preview compatibility test was performed.
 
-Upstream UI caveat: the global PDF studio strip on this base still reports
-"Inline tools are not available yet", despite the working inline PDF panel.
-That shared context-UI defect is not changed by this focused series.
+The third small commit replaces the false PDF native-mode guidance with
+localized inline-workspace guidance in context sections and the rail’s
+screen-reader hint. Raster/vector guidance is deliberately unchanged.
+A pure regression test and the browser harness check the PDF correction.

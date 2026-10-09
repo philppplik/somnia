@@ -2069,6 +2069,7 @@
   "ctx.viewUnavailable": "Dieses Format hat keine Code- oder Split-Ansicht.",
   "ctx.announcement": "Auswahl: {selection}",
   "ctx.chipReason": "Kontext: {domain}. Auswahl: {selection}.",
+  "ctx.pdfInlineHint": "Nutze den Inline-PDF-Arbeitsbereich mit Seiten, Hinzufügen, Feldern und Kommentaren. Wähle Edit PDF, um eine Kopie zu bearbeiten.",
   "ctx.nativeUnavailable": "Editor über Werkzeuge öffnen. Inline-Werkzeuge sind noch nicht verfügbar.",
   "ctx.domain.web": "Web",
   "ctx.domain.markdown": "Markdown",

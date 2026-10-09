@@ -2069,6 +2069,7 @@
   "ctx.viewUnavailable": "Ce format ne propose pas de vue code ou partagée.",
   "ctx.announcement": "Sélection : {selection}",
   "ctx.chipReason": "Contexte : {domain}. Sélection : {selection}.",
+  "ctx.pdfInlineHint": "Utilisez l’espace PDF intégré et ses panneaux de pages, de contenu, de champs et de commentaires. Choisissez Edit PDF pour modifier une copie.",
   "ctx.nativeUnavailable": "Ouvrez l'éditeur via Outils. Les outils intégrés ne sont pas encore disponibles.",
   "ctx.domain.web": "Web",
   "ctx.domain.markdown": "Markdown",

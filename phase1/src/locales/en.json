@@ -2069,6 +2069,7 @@
   "ctx.viewUnavailable": "This format has no code or split view.",
   "ctx.announcement": "Selection: {selection}",
   "ctx.chipReason": "Context: {domain}. Selection: {selection}.",
+  "ctx.pdfInlineHint": "Use the inline PDF workspace and its Pages, Add, Fields and Comments panels. Choose Edit PDF to change a copy.",
   "ctx.nativeUnavailable": "Open the dedicated editor from Tools. Inline tools are not available yet.",
   "ctx.domain.web": "Web",
   "ctx.domain.markdown": "Markdown",
