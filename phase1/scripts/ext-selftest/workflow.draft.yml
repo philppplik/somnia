@@ -1,0 +1,43 @@
+# DRAFT - not active. To enable: copy to .github/workflows/ext-native-selftest.yml after the somnia-ext:// scheme and the
+# `ext-selftest` cargo feature exist (see docs/extensions/14-native-selftest.md). Public repo: standard runners are free.
+name: Extension native self-test
+on:
+  workflow_dispatch:
+  pull_request:
+    paths: ['phase1/src/lib/extensions/**', 'phase1/src/components/ExtensionPanel.tsx', 'phase1/src-tauri/**', 'phase1/scripts/ext-selftest/**']
+permissions:
+  contents: read
+concurrency: {group: ext-selftest-${{ github.ref }}, cancel-in-progress: true}
+jobs:
+  selftest:
+    name: ext self-test (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {os: windows-latest, bin: 'src-tauri/target/release/somnia.exe', run: ''}
+          - {os: macos-latest,   bin: 'src-tauri/target/release/somnia',     run: ''}
+          - {os: ubuntu-24.04,   bin: 'src-tauri/target/release/somnia',     run: 'xvfb-run -a'}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 45
+    defaults: {run: {working-directory: phase1}}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with: {node-version: '24'}
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Linux WebKitGTK + xvfb
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev xvfb
+      - run: npm ci
+      - name: Package (release build, prod CSP, self-test feature compiled in)
+        run: npm run tauri -- build --features ext-selftest
+        shell: bash
+      - name: Run packaged app self-test
+        shell: bash
+        env: {SELFTEST_TIMEOUT_MS: '180000'}
+        # The binary name above must match productName/mainBinaryName in tauri.conf.json; adjust on first run.
+        run: node scripts/ext-selftest/check.mjs -- ${{ matrix.run }} ${{ matrix.bin }}
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with: {name: 'ext-selftest-${{ matrix.os }}', path: '${{ runner.temp }}/somnia-ext-*/out.json', if-no-files-found: ignore}
