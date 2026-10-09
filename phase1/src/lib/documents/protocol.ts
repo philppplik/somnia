@@ -6,6 +6,8 @@ export type DocumentsRequest=
  |{id:number;kind:'open';bytes:ArrayBuffer}
  |{id:number;kind:'render';page:number;scale:number}
  |{id:number;kind:'insert';block:number;utf8Offset:number;text:string}
+ |{id:number;kind:'blocks'}
+ |{id:number;kind:'replace';block:number;utf8Start:number;utf8End:number;text:string}
  |{id:number;kind:'save'}
  |{id:number;kind:'close'};
 export type DocumentsResponse=
@@ -13,6 +15,7 @@ export type DocumentsResponse=
  |{id:number;ok:true;kind:'opened';document:OpenedDocument}
  |{id:number;ok:true;kind:'rendered';png:ArrayBuffer;renderMs:number}
  |{id:number;ok:true;kind:'edited';document:OpenedDocument}
+ |{id:number;ok:true;kind:'blocks';blocks:import('./edit').DocBlock[]}
  |{id:number;ok:true;kind:'saved';bytes:ArrayBuffer;saveMs:number}
  |{id:number;ok:true;kind:'closed'}
  |{id:number;ok:false;error:string};

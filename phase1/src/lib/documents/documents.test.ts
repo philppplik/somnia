@@ -70,3 +70,28 @@ test('inspectDocx reports risky parts without inflating',()=>{
  assert.equal(inspectDocx(strToU8('nope')).ok,false);
  assert.equal(inspectDocx(fixture('sample.docx')).ok,true);
 });
+import {diffEdit,inverseOf,UndoStack} from './edit';
+test('diffEdit finds one minimal replacement in UTF-8 bytes and never splits surrogates',()=>{
+ assert.equal(diffEdit(0,'same','same'),null);
+ assert.deepEqual(diffEdit(2,'Hello world','Hello brave world'),{block:2,utf8Start:6,utf8End:6,text:'brave '});
+ assert.deepEqual(diffEdit(0,'aéb','aXb'),{block:0,utf8Start:1,utf8End:3,text:'X'});
+ const e=diffEdit(0,'a😀b','a😁b')!;assert.equal(e.text,'😁');assert.equal(e.utf8Start,1);assert.equal(e.utf8End,5);
+ assert.deepEqual(diffEdit(0,'abc',''),{block:0,utf8Start:0,utf8End:3,text:''});
+});
+test('inverseOf reverses an edit',()=>{
+ const before='Hello world',e=diffEdit(0,before,'Hello brave world')!;const inv=inverseOf(before,e);
+ assert.deepEqual(inv,{block:0,utf8Start:6,utf8End:12,text:''});
+ const e2=diffEdit(0,'aéb','aXb')!;assert.deepEqual(inverseOf('aéb',e2),{block:0,utf8Start:1,utf8End:2,text:'é'});
+});
+test('UndoStack clears redo on a new edit',()=>{const u=new UndoStack();u.push({block:0,utf8Start:0,utf8End:0,text:''});const x=u.popUndo()!;u.pushRedo(x.inverse);assert.equal(u.canRedo,true);u.push(x.inverse);assert.equal(u.canRedo,false);});
+test('real engine: blocks and replace through the core, undo by inverse, tables locked',{skip:!haveWasm},async()=>{
+ const core=await realCore();core.handle({id:1,kind:'open',bytes:ab(fixture('sample.docx'))});
+ const b0=core.handle({id:2,kind:'blocks'}).res;assert.ok(b0.ok&&b0.kind==='blocks');
+ const blocks=(b0 as Extract<DocumentsResponse,{kind:'blocks'}>).blocks;
+ const table=blocks.find(b=>b.kind==='table');assert.ok(table&&!table.editable);
+ assert.equal(core.handle({id:3,kind:'replace',block:table!.index,utf8Start:0,utf8End:0,text:'x'}).res.ok,false);
+ const p=blocks[0];const edit=diffEdit(0,p.text!,'Edited '+p.text!)!;const inv=inverseOf(p.text!,edit);
+ const r=core.handle({id:4,kind:'replace',...edit}).res;assert.ok(r.ok&&r.kind==='edited'&&r.document.text.startsWith('Edited '));
+ const u=core.handle({id:5,kind:'replace',...inv}).res;assert.ok(u.ok&&u.kind==='edited'&&u.document.text.startsWith(p.text!));
+ assert.equal(core.handle({id:6,kind:'replace',block:0,utf8Start:0,utf8End:0,text:'a\nb'}).res.ok,false);
+});

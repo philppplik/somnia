@@ -4,11 +4,13 @@
 export class DocSession {
     free(): void;
     [Symbol.dispose](): void;
+    blocks(): string;
     insert(block: number, utf8_byte_offset: number, text: string): void;
     constructor(bytes: Uint8Array);
     page_info(): string;
     paginate(): number;
     render_png(page: number, scale: number): Uint8Array;
+    replace_range(block: number, utf8_start: number, utf8_end: number, text: string): void;
     save(): Uint8Array;
     text(): string;
 }
@@ -18,18 +20,20 @@ export type InitInput = RequestInfo | URL | Response | BufferSource | WebAssembl
 export interface InitOutput {
     readonly memory: WebAssembly.Memory;
     readonly __wbg_docsession_free: (a: number, b: number) => void;
+    readonly docsession_blocks: (a: number) => [number, number];
     readonly docsession_insert: (a: number, b: number, c: number, d: number, e: number) => [number, number];
     readonly docsession_new: (a: number, b: number) => [number, number, number];
     readonly docsession_page_info: (a: number) => [number, number];
     readonly docsession_paginate: (a: number) => number;
     readonly docsession_render_png: (a: number, b: number, c: number) => [number, number, number, number];
+    readonly docsession_replace_range: (a: number, b: number, c: number, d: number, e: number, f: number) => [number, number];
     readonly docsession_save: (a: number) => [number, number, number, number];
     readonly docsession_text: (a: number) => [number, number];
     readonly __wbindgen_externrefs: WebAssembly.Table;
+    readonly __wbindgen_free: (a: number, b: number, c: number) => void;
     readonly __wbindgen_malloc: (a: number, b: number) => number;
     readonly __wbindgen_realloc: (a: number, b: number, c: number, d: number) => number;
     readonly __externref_table_dealloc: (a: number) => void;
-    readonly __wbindgen_free: (a: number, b: number, c: number) => void;
     readonly __wbindgen_start: () => void;
 }
 

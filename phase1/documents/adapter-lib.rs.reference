@@ -1,6 +1,8 @@
 //! Experimental headless adapter. No DOM, egui, filesystem or UI thread access.
 use wasm_bindgen::prelude::*;
-use wordcraft_doc::{CharProps, Document, Pos, StoryRef};
+use std::sync::Arc;
+use wordcraft_doc::para::OBJ;
+use wordcraft_doc::{Block, CharProps, Document, Pos, StoryRef};
 use wordcraft_layout::{DocLayout, LayoutCache, LayoutOptions};
 
 #[wasm_bindgen]
@@ -27,10 +29,74 @@ impl DocSession {
         self.pages = DocLayout::default();
         Ok(())
     }
+    /// Top-level body blocks. A paragraph is `editable` only when it has no inline objects
+    /// (images, fields, equations, comment anchors), because their offsets are not text.
+    fn block_list(&self) -> String {
+        let items: Vec<_> = self
+            .doc
+            .body
+            .iter()
+            .enumerate()
+            .map(|(i, b)| match &**b {
+                Block::Para(p) => {
+                    let editable = !p.text.contains(OBJ) && p.objects.is_empty();
+                    serde_json::json!({"index": i, "kind": "para", "text": if editable { p.text.clone() } else { p.plain_text() }, "editable": editable})
+                }
+                Block::Table(_) => serde_json::json!({"index": i, "kind": "table", "editable": false}),
+            })
+            .collect();
+        serde_json::Value::Array(items).to_string()
+    }
+    /// Replaces UTF-8 byte range `start..end` of one top-level paragraph. All checks happen on a
+    /// clone, so any failure leaves the document unchanged. The new text takes the formatting of
+    /// the first replaced character (or of the character before an insertion point).
+    fn do_replace(&mut self, block: usize, start: usize, end: usize, text: &str) -> Result<(), String> {
+        if text.len() > 1024 * 1024 {
+            return Err("adapter edit limit: 1 MiB".into());
+        }
+        if text.chars().any(|c| c == OBJ || c == '\n' || c == '\r') {
+            return Err("replacement text must not contain line breaks or object marks".into());
+        }
+        if start > end {
+            return Err("range start is after its end".into());
+        }
+        let Some(b) = self.doc.body.get(block) else { return Err(format!("no block {block}")) };
+        let Block::Para(orig) = &**b else { return Err(format!("block {block} is a table, not a paragraph")) };
+        if orig.text.contains(OBJ) || !orig.objects.is_empty() {
+            return Err(format!("paragraph {block} contains inline objects and cannot be edited as text"));
+        }
+        for off in [start, end] {
+            if off > orig.text.len() || !orig.text.is_char_boundary(off) {
+                return Err(format!("offset {off} is not a character boundary inside paragraph {block}"));
+            }
+        }
+        let mut p = orig.clone();
+        let props = if start < p.text.len() && start < end {
+            p.props_of_char(start).clone()
+        } else if start > 0 {
+            let prev = p.text[..start.min(p.text.len())].char_indices().next_back().map(|(i, _)| i).unwrap_or(0);
+            p.props_of_char(prev).clone()
+        } else {
+            p.mark.clone()
+        };
+        p.delete(start, end).map_err(|e| e.to_string())?;
+        if !text.is_empty() {
+            p.insert_text(start, text, &props).map_err(|e| e.to_string())?;
+        }
+        self.doc.body[block] = Arc::new(Block::Para(p));
+        self.pages = DocLayout::default();
+        Ok(())
+    }
 }
 
 #[wasm_bindgen]
 impl DocSession {
+    pub fn blocks(&self) -> String {
+        self.block_list()
+    }
+    pub fn replace_range(&mut self, block: usize, utf8_start: usize, utf8_end: usize, text: &str) -> Result<(), JsValue> {
+        self.do_replace(block, utf8_start, utf8_end, text).map_err(|e| JsValue::from_str(&e))
+    }
     #[wasm_bindgen(constructor)]
     pub fn new(bytes: &[u8]) -> Result<DocSession, JsValue> {
         Self::from_bytes(bytes).map_err(|e| JsValue::from_str(&e))
@@ -90,6 +156,46 @@ mod tests {
         assert!(s.do_insert(999, 0, "x").is_err());
         assert!(s.do_insert(0, 999999, "x").is_err());
         assert_eq!(old, s.text());
+    }
+    #[test]
+    fn blocks_list_paragraphs_and_tables() {
+        let s = DocSession::from_bytes(FIXTURE).unwrap();
+        let v: serde_json::Value = serde_json::from_str(&s.block_list()).unwrap();
+        let a = v.as_array().unwrap();
+        assert!(a.iter().any(|b| b["kind"] == "table" && b["editable"] == false));
+        assert!(a[0]["kind"] == "para" && a[0]["text"].as_str().unwrap().contains("Somnia Documents"));
+        for (i, b) in a.iter().enumerate() {
+            assert_eq!(b["index"], i);
+        }
+    }
+    #[test]
+    fn replace_range_roundtrips_and_is_atomic() {
+        let mut s = DocSession::from_bytes(FIXTURE).unwrap();
+        let before = s.text();
+        s.do_replace(0, 0, "Somnia".len(), "Hello").unwrap();
+        assert!(s.text().starts_with("Hello Documents"));
+        let saved = wordcraft_docx::write(&s.doc).unwrap();
+        assert_eq!(DocSession::from_bytes(&saved).unwrap().text(), s.text());
+        let now = s.text();
+        assert!(s.do_replace(0, 3, 2, "x").is_err());
+        assert!(s.do_replace(0, 0, 99999, "x").is_err());
+        assert!(s.do_replace(999, 0, 0, "x").is_err());
+        assert!(s.do_replace(0, 0, 0, "a\nb").is_err());
+        assert_eq!(now, s.text());
+        assert_ne!(before, now);
+    }
+    #[test]
+    fn replace_range_refuses_tables_and_non_boundaries() {
+        let mut s = DocSession::from_bytes(FIXTURE).unwrap();
+        let v: serde_json::Value = serde_json::from_str(&s.block_list()).unwrap();
+        let t = v.as_array().unwrap().iter().find(|b| b["kind"] == "table").unwrap()["index"].as_u64().unwrap() as usize;
+        assert!(s.do_replace(t, 0, 0, "x").is_err());
+        s.do_replace(0, 0, 0, "é").unwrap();
+        let old = s.text();
+        assert!(s.do_replace(0, 1, 1, "x").is_err());
+        assert_eq!(old, s.text());
+        s.do_replace(0, 0, 2, "").unwrap();
+        assert!(!s.text().starts_with("é"));
     }
     #[test]
     fn unicode_offsets_are_bytes_not_utf16() {

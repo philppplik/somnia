@@ -1,7 +1,7 @@
 import type {DocumentsRequest,DocumentsResponse,OpenedDocument} from './protocol';
 import {MAX_DOCX_BYTES,MAX_SCALE,MIN_SCALE} from './protocol';
 /** The slice of the wasm DocSession the host uses. Lets tests run the real engine without a Worker. */
-export interface DocSessionLike{free():void;insert(block:number,utf8Offset:number,text:string):void;page_info():string;paginate():number;render_png(page:number,scale:number):Uint8Array;save():Uint8Array;text():string}
+export interface DocSessionLike{free():void;blocks():string;replace_range(block:number,start:number,end:number,text:string):void;insert(block:number,utf8Offset:number,text:string):void;page_info():string;paginate():number;render_png(page:number,scale:number):Uint8Array;save():Uint8Array;text():string}
 export interface DocSessionCtor{new(bytes:Uint8Array):DocSessionLike}
 const ab=(u:Uint8Array):ArrayBuffer=>u.byteOffset===0&&u.byteLength===u.buffer.byteLength?u.buffer as ArrayBuffer:u.slice().buffer as ArrayBuffer;
 /** Owns one open session. Every failure leaves the previous state usable and never keeps a freed pointer. */
@@ -30,6 +30,13 @@ export class DocumentsCore{
    }
    if(req.kind==='insert'){
     const s=this.need();const [,editMs]=this.timed(()=>s.insert(req.block,req.utf8Offset,req.text));const [pages,layoutMs]=this.timed(()=>s.paginate());
+    return{res:{id:req.id,ok:true,kind:'edited',document:this.describe(editMs,layoutMs,pages)},transfer:[]};
+   }
+   if(req.kind==='blocks'){
+    return{res:{id:req.id,ok:true,kind:'blocks',blocks:JSON.parse(this.need().blocks())},transfer:[]};
+   }
+   if(req.kind==='replace'){
+    const s=this.need();const [,editMs]=this.timed(()=>s.replace_range(req.block,req.utf8Start,req.utf8End,req.text));const [pages,layoutMs]=this.timed(()=>s.paginate());
     return{res:{id:req.id,ok:true,kind:'edited',document:this.describe(editMs,layoutMs,pages)},transfer:[]};
    }
    if(req.kind==='save'){
