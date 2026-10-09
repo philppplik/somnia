@@ -1755,9 +1755,99 @@ async fn git_combine_abort(
     .await
 }
 
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct ExtDocReply {
+    url: String,
+    session: String,
+}
+
+fn ext_url(kind_path: &str, nonce: &str) -> String {
+    let base = crate::ext_scheme::scheme_base();
+    let sep = if base.ends_with('/') { "" } else { "/" };
+    format!("{base}{sep}{kind_path}?n={nonce}")
+}
+
+/// Register the complete panel document (built by the frontend, e.g. panelDocument(html, null)) and return its single-use URL. The frontend appends `#<token>` itself. Frontend-only (editor capability).
+#[tauri::command]
+fn ext_panel_open(
+    reg: State<'_, crate::ext_scheme::ExtRegistry>,
+    ext_id: String,
+    panel_id: String,
+    document: String,
+) -> std::result::Result<ExtDocReply, String> {
+    let n = reg.open_panel(&ext_id, &panel_id, &document).map_err(str::to_owned)?;
+    Ok(ExtDocReply { url: ext_url(&format!("panel/{ext_id}/{panel_id}"), &n), session: n })
+}
+
+/// Register the worker relay document and return its single-use URL.
+#[tauri::command]
+fn ext_worker_open(
+    reg: State<'_, crate::ext_scheme::ExtRegistry>,
+    ext_id: String,
+) -> std::result::Result<ExtDocReply, String> {
+    let n = reg.open_worker(&ext_id).map_err(str::to_owned)?;
+    Ok(ExtDocReply { url: ext_url(&format!("worker/{ext_id}/host"), &n), session: n })
+}
+
+/// Plain bootstrap-script URL (no nonce): somnia-ext://worker/<id> or the Windows form.
+#[tauri::command]
+fn ext_worker_url(ext_id: String) -> std::result::Result<String, String> {
+    if !crate::ext_scheme::valid_id(&ext_id) {
+        return Err("invalid id".into());
+    }
+    let base = crate::ext_scheme::scheme_base();
+    let sep = if base.ends_with('/') { "" } else { "/" };
+    Ok(format!("{base}{sep}worker/{ext_id}"))
+}
+
+/// Invalidate all documents of an extension (dispose, disable, uninstall, panel close).
+#[tauri::command]
+fn ext_close(reg: State<'_, crate::ext_scheme::ExtRegistry>, ext_id: String, panel_id: Option<String>) {
+    match panel_id {
+        Some(p) => reg.close_panel(&ext_id, &p),
+        None => reg.close_ext(&ext_id),
+    }
+}
+
+fn ext_navigation_plugin<R: tauri::Runtime>() -> tauri::plugin::TauriPlugin<R> {
+    // Defence in depth: the main frame must never navigate into extension documents.
+    // Sub-frame coverage differs per engine and is verified by the manual test plan.
+    tauri::plugin::Builder::new("somnia-ext-nav")
+        .on_navigation(|_wv, url| {
+            let h = url.host_str().unwrap_or("");
+            !(url.scheme() == crate::ext_scheme::SCHEME || h == "somnia-ext.localhost")
+        })
+        .build()
+}
+
+fn ext_scheme_response(
+    reg: &crate::ext_scheme::ExtRegistry,
+    req: &tauri::http::Request<Vec<u8>>,
+) -> tauri::http::Response<Vec<u8>> {
+    let uri = req.uri();
+    let (kind, path, query) = crate::ext_scheme::split_uri(uri.host(), uri.path(), uri.query());
+    let r = reg.serve(req.method().as_str(), &kind, &path, &query);
+    tauri::http::Response::builder()
+        .status(r.status)
+        .header("Content-Type", r.content_type)
+        .header("Content-Security-Policy", r.csp)
+        .header("X-Content-Type-Options", "nosniff")
+        .header("Cache-Control", "no-store")
+        .header("Referrer-Policy", "no-referrer")
+                .body(r.body)
+        .unwrap_or_else(|_| tauri::http::Response::new(Vec::new()))
+}
+
 pub fn run() {
     let shared = Shared::default();
     tauri::Builder::default()
+        .manage(crate::ext_scheme::ExtRegistry::default())
+        .register_uri_scheme_protocol(crate::ext_scheme::SCHEME, |ctx, request| {
+            let reg = ctx.app_handle().state::<crate::ext_scheme::ExtRegistry>();
+            ext_scheme_response(&reg, &request)
+        })
+        .plugin(ext_navigation_plugin())
         .manage(ProviderNetwork::default())
         .manage(crate::mcp_host::McpHost::new())
         .plugin(tauri_plugin_dialog::init())
@@ -1831,6 +1921,10 @@ pub fn run() {
             }
         })
         .invoke_handler(tauri::generate_handler![
+            ext_panel_open,
+            ext_worker_open,
+            ext_worker_url,
+            ext_close,
             provider_http_start,
             provider_http_next,
             provider_http_cancel,

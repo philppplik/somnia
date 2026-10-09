@@ -2,6 +2,10 @@ fn main() {
     #[cfg(feature = "desktop")]
     tauri_build::try_build(tauri_build::Attributes::new().app_manifest(
         tauri_build::AppManifest::new().commands(&[
+            "ext_panel_open",
+            "ext_worker_open",
+            "ext_worker_url",
+            "ext_close",
             "provider_http_start",
             "provider_http_next",
             "provider_http_cancel",

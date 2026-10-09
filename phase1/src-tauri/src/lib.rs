@@ -25,3 +25,4 @@ pub mod provider_transport;
 pub mod git;
 
 pub mod slides_io;
+pub mod ext_scheme;
