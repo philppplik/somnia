@@ -1,6 +1,8 @@
+import { commentThreads } from "../../lib/pdfedit/commentThreads";
 import { useState } from "react";
 import {
   editPdf,
+  getPdfSession,
   selectPdfPage,
   usePdfSession,
 } from "../../lib/pdfedit/session";
@@ -16,7 +18,9 @@ function CommentCard({
   disabled: boolean;
 }) {
   const [editing, setEditing] = useState(false),
-    [draft, setDraft] = useState(comment.contents);
+    [draft, setDraft] = useState(comment.contents),
+    [replying, setReplying] = useState(false),
+    [replyText, setReplyText] = useState("");
   const page = comment.target.page + 1;
   return (
     <article
@@ -85,6 +89,52 @@ function CommentCard({
           {comment.contents || "No comment text"}
         </p>
       )}
+      {replying && (
+        <form
+          className="mt-3 grid gap-2"
+          onSubmit={(e) => {
+            e.preventDefault();
+            void editPdf(name, {
+              kind: "comment.reply",
+              target: comment.target,
+              contents: replyText,
+            }).then(() => {
+              if (!getPdfSession(name)?.error) {
+                setReplying(false);
+                setReplyText("");
+              }
+            });
+          }}
+        >
+          <label>
+            Reply
+            <textarea
+              aria-label="Write PDF reply"
+              maxLength={20000}
+              disabled={disabled}
+              className="mt-1 min-h-24 w-full rounded-sm border border-subtle bg-transparent p-2 select-text"
+              value={replyText}
+              onChange={(e) => setReplyText(e.target.value)}
+            />
+          </label>
+          <div className="flex gap-1">
+            <button
+              className={pdfButton + " bg-hover"}
+              disabled={disabled || !replyText.trim()}
+            >
+              Add reply
+            </button>
+            <button
+              type="button"
+              className={pdfButton}
+              disabled={disabled}
+              onClick={() => setReplying(false)}
+            >
+              Cancel reply
+            </button>
+          </div>
+        </form>
+      )}
       {comment.locked && <p className="mt-2 text-ink-3">Locked · view only</p>}
       {comment.hasReplies && (
         <p className="mt-2 text-ink-3">
@@ -100,6 +150,15 @@ function CommentCard({
           >
             Edit comment
           </button>
+          {comment.canReply && (
+            <button
+              className={pdfButton}
+              disabled={disabled || replying}
+              onClick={() => setReplying(true)}
+            >
+              Reply to comment
+            </button>
+          )}
           <button
             className={pdfButton}
             disabled={disabled || !comment.editable || comment.hasReplies}
@@ -128,18 +187,30 @@ export function PdfCommentsPanel() {
   const [currentOnly, setCurrentOnly] = useState(false);
   if (!s) return null;
   const all = s.info?.comments ?? [];
-  const comments = all.filter(
-    (c) =>
-      (!currentOnly || c.target.page === s.page - 1) &&
-      `${c.contents} ${c.author} ${c.subtype}`
-        .toLocaleLowerCase()
-        .includes(query.toLocaleLowerCase()),
+  const match = (c: PdfComment) =>
+    (!currentOnly || c.target.page === s.page - 1) &&
+    `${c.contents} ${c.author} ${c.subtype}`
+      .toLocaleLowerCase()
+      .includes(query.toLocaleLowerCase());
+  const threads = commentThreads(all).filter(
+    (t) => match(t.root) || t.replies.some(match),
+  );
+  const comments = all.filter(match);
+  const card = (c: PdfComment) => (
+    <CommentCard
+      key={`${s.name}:${c.target.page}:${c.target.index}:${c.target.object}:${c.target.expected}`}
+      comment={c}
+      name={s.name}
+      disabled={!s.editing || s.busy}
+    />
   );
   return (
     <section aria-label="PDF comments" className="grid gap-3">
       <p className="text-ink-3">
         Notes and markup comments in this PDF. Editing text keeps the markup;
-        deleting removes it. Links, form widgets and actions are not comments.
+        deleting removes it. Replies stay with their original comment; thread
+        deletion is disabled. Filters keep matching threads together. Links,
+        form widgets and actions are not comments.
       </p>
       <label>
         Filter comments
@@ -174,13 +245,27 @@ export function PdfCommentsPanel() {
             : "No supported comments in this PDF."}
         </p>
       )}
-      {comments.map((c) => (
-        <CommentCard
-          key={`${s.name}:${c.target.page}:${c.target.index}:${c.target.object}:${c.target.expected}`}
-          comment={c}
-          name={s.name}
-          disabled={!s.editing || s.busy}
-        />
+      {threads.map((t) => (
+        <section
+          key={`${t.root.target.page}:${t.root.target.object}:${t.root.target.index}`}
+          aria-label="PDF comment thread"
+          className="grid gap-2"
+        >
+          {t.orphan && (
+            <p className="text-ink-3">
+              Reply shown separately: parent thread could not be grouped.
+            </p>
+          )}
+          {card(t.root)}
+          {!!t.replies.length && (
+            <div
+              className="ml-3 grid gap-2 border-l-2 border-subtle pl-3"
+              aria-label="Thread replies"
+            >
+              {t.replies.map(card)}
+            </div>
+          )}
+        </section>
       ))}
     </section>
   );
