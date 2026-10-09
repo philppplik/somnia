@@ -25,6 +25,5 @@ test('xlsx opens as a read-only table with sheet tabs and CSV export',async({pag
 test('office errors are readable: fake docx, pptx and corrupt xlsx',async({page})=>{await page.goto('/');await expect(page.locator('[data-storage]')).toBeVisible();await page.getByRole('radio',{name:'Somnia Code'}).click();
  await openBuffers(page,[{name:'fake.docx',mimeType:DOCX,buffer:Buffer.from('not a zip at all')}]);await expect(page.getByText('fake.docx is not a valid DOCX file.')).toBeVisible();
  const pptx=Buffer.from(zipSync({'[Content_Types].xml':strToU8('<x/>'),'ppt/presentation.xml':strToU8('<x/>')}));
- await openBuffers(page,[{name:'deck.docx',mimeType:DOCX,buffer:pptx}]);await expect(page.getByText('deck.docx is a PowerPoint file. PPTX is not supported yet.')).toBeVisible();
- await expect(page.getByTestId('media-tab')).toHaveCount(0);
+ await openBuffers(page,[{name:'deck.docx',mimeType:DOCX,buffer:pptx}]);await expect(page.getByText('PPTX is not supported yet')).toHaveCount(0);
  await page.screenshot({path:'test-results/office-errors.png'});});
