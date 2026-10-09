@@ -4,7 +4,7 @@ import {markdownToDocx} from '../src/lib/convert/docConvert';
 import {zipSync,strToU8} from 'fflate';
 async function openBuffers(page:any,files:{name:string;mimeType:string;buffer:Buffer}[]){const chooser=page.waitForEvent('filechooser');await page.evaluate(async()=>{const m=await import('/src/lib/commands.ts');void m.executeCommand('project.openMedia');});(await chooser).setFiles(files);}
 const DOCX='application/vnd.openxmlformats-officedocument.wordprocessingml.document',XLSX='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
-test('docx opens as a sandboxed read-only preview with a visible limits note',async({page})=>{await page.goto('/');await expect(page.locator('[data-storage]')).toBeVisible();
+test('docx opens as a sandboxed read-only preview with a visible limits note',async({page})=>{await page.goto('/');await expect(page.locator('[data-storage]')).toBeVisible();await page.getByRole('radio',{name:'Somnia Code'}).click();
  const buf=Buffer.from(await markdownToDocx('# Quarterly report\n\nRevenue grew **12 %** in Q3. Umlaute: äöü.\n\n- First point\n- Second point\n\n| Region | Value |\n|---|---|\n| EMEA | 42 |\n| APAC | 17 |\n'));
  await openBuffers(page,[{name:'report.docx',mimeType:DOCX,buffer:buf}]);
  await expect(page.getByTestId('media-name')).toHaveText('report.docx');await expect(page.getByTestId('office-readonly')).toBeVisible();
@@ -22,7 +22,7 @@ test('xlsx opens as a read-only table with sheet tabs and CSV export',async({pag
  await page.getByRole('tab',{name:'Notes',exact:true}).click();await expect(table.getByRole('cell',{name:'Hello <b>world</b> & more'})).toBeVisible();await expect(table.locator('b')).toHaveCount(0);
  await page.getByRole('tab',{name:'Sales',exact:true}).click();
  const dl=page.waitForEvent('download');await page.getByRole('button',{name:'Save sheet as CSV'}).click();expect((await dl).suggestedFilename()).toBe('sales-Sales.csv');});
-test('office errors are readable: fake docx, pptx and corrupt xlsx',async({page})=>{await page.goto('/');await expect(page.locator('[data-storage]')).toBeVisible();
+test('office errors are readable: fake docx, pptx and corrupt xlsx',async({page})=>{await page.goto('/');await expect(page.locator('[data-storage]')).toBeVisible();await page.getByRole('radio',{name:'Somnia Code'}).click();
  await openBuffers(page,[{name:'fake.docx',mimeType:DOCX,buffer:Buffer.from('not a zip at all')}]);await expect(page.getByText('fake.docx is not a valid DOCX file.')).toBeVisible();
  const pptx=Buffer.from(zipSync({'[Content_Types].xml':strToU8('<x/>'),'ppt/presentation.xml':strToU8('<x/>')}));
  await openBuffers(page,[{name:'deck.docx',mimeType:DOCX,buffer:pptx}]);await expect(page.getByText('deck.docx is a PowerPoint file. PPTX is not supported yet.')).toBeVisible();

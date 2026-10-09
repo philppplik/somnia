@@ -4,7 +4,7 @@ import {useUiContext} from '../lib/uiContextStore';
 import {railFor} from '../lib/contextRegistry';
 
 import type {LucideIcon} from '../lib/icons';
-import {PanelLeft,PanelRight,Files,Layers,Search,Image,Boxes,SlidersHorizontal,Play,Puzzle,Blocks,Paintbrush,Settings as Gear,Code2} from '../lib/icons';
+import {PanelLeft,PanelRight,Files,Layers,Search,Image,Boxes,SlidersHorizontal,Play,Puzzle,Blocks,Paintbrush,Settings as Gear,Code2,FileText} from '../lib/icons';
 import {Button} from './ui/button';
 import {AgentRailButton} from './agent/AgentRailButton';
 import {ChatRailButton} from './ChatRailButton';
@@ -14,7 +14,7 @@ import {patchState,useAppStore} from '../store/appStore';
 import type {AppState} from '../store/appStore';
 import {cn} from '../lib/cn';
 import {useT} from '../lib/useT';
-const railIcons:Record<string,LucideIcon>={Code2,Layers,Files,Search,Boxes,Paintbrush,VersionsIcon,SlidersHorizontal,Play};
+const railIcons:Record<string,LucideIcon>={Code2,Layers,Files,Search,Boxes,Paintbrush,VersionsIcon,SlidersHorizontal,Play,FileText};
 /** Narrow icon strip beside each side panel. Always visible; a click opens that panel, a second click on the active icon collapses it. */
 export function IconRail({side}:{side:'left'|'right'}){const {t}=useT();
  const s=useAppStore();const context=useUiContext();const studio=getStudio(s.activeStudio).shell;const studioItems:{id:string;label:string;icon:string}[]=[...(side==='left'?studio.leftRail:studio.rightRail)];if(side==='right'&&context.surface==='code')studioItems.push({id:'code',label:'Code',icon:'Code2'});const native=side==='left'&&['raster','vector','pdf'].includes(context.domain);const items=(native?[]:railFor(context.domain,side)).map(id=>studioItems.find(i=>i.id===id)!).filter(Boolean);const open=side==='left'?s.sidebarOpen:s.inspectorOpen;const active=side==='left'?s.leftTab:s.rightTab;

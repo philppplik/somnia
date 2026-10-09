@@ -5,6 +5,7 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { EditorProject } from '@somnia/editor-core';
 import { App } from './App';
+import {startDocumentsRouting} from './lib/studios/documentsRouting';
 import { connectEditorProject, applyOperations } from './store/appStore';
 import './styles/global.css';
 import './styles/bento.css';
@@ -50,6 +51,7 @@ applyLook(getState().look);
 applyUiPrefs(getState().uiPrefs);
 setNoticeSink(text=>patchState({notice:text}));
 logInfo('app','Somnia started',{desktop:isTauri()});
+startDocumentsRouting();
 createRoot(document.getElementById('root')!).render(<StrictMode><ErrorBoundary label="Somnia"><App/><McpApprovalDialog/></ErrorBoundary></StrictMode>);
 
 if(!isTauri())installBeforeUnload(()=>getState().isDirty&&getState().storage!=='disk');
