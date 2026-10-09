@@ -1,0 +1,5 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {validateDevelop,validatePhotoInput,neutralDevelop,photosEngines} from './photos/registry';
+test('Develop validates exact finite bounded controls',()=>{assert.deepEqual(validateDevelop(neutralDevelop),{light:{exposure:0,contrast:0},color:{saturation:0}});for(const n of [NaN,Infinity,3.1,-3.1])assert.throws(()=>validateDevelop({...neutralDevelop,exposure:n}));assert.throws(()=>validateDevelop({...neutralDevelop,contrast:101}));assert.throws(()=>validateDevelop({...neutralDevelop,saturation:-101}));assert.throws(()=>validateDevelop({...neutralDevelop,unknown:1} as any));});
+test('input ownership budget and engine capabilities are honest',()=>{assert.throws(()=>validatePhotoInput(new ArrayBuffer(0)));assert.throws(()=>validatePhotoInput(new ArrayBuffer(16*1024*1024+1)));validatePhotoInput(new ArrayBuffer(10));assert.deepEqual(photosEngines.lightcraft.input,['jpeg','png']);assert.equal(photosEngines.lightcraft.aiTools,false);assert.equal(photosEngines.lightcraft.sourceEdge,2048);});

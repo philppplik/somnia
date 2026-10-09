@@ -1,0 +1,30 @@
+name: Photos LightCraft validation
+on:
+  pull_request:
+    paths: ['phase1/photos-engine/**', 'phase1/src/lib/photos/**', 'phase1/src/lib/photos.test.ts', 'phase1/src/components/photos/**', 'phase1/tests/photos-develop.spec.ts', '.github/workflows/photos-lightcraft.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  photos:
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: phase1
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - run: rustup toolchain install 1.95.0 --profile minimal && rustup target add wasm32-unknown-unknown --toolchain 1.95.0
+      - run: cargo +1.95.0 install wasm-bindgen-cli --version 0.2.129 --locked
+      - run: npm ci
+      - run: sh photos-engine/build.sh && npm run craft:build
+      - run: npm run build && npx tsx --test src/lib/photos.test.ts src/lib/agent/photoStudio.test.ts
+      - run: npx playwright install --with-deps chromium
+      - run: npx playwright test tests/photos-develop.spec.ts tests/ai-photo.spec.ts
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: photos-develop-evidence
+          path: phase1/tests/artifacts/photos-*.png
