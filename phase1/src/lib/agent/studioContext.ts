@@ -10,6 +10,7 @@ const contexts:Record<string,StudioAgentContext>={
  photos:{label:'Photos',scope:'Develop settings and dimensions, no pixels',actions:['Suggest balanced exposure','Explain the current photo settings','Suggest a subtle contrast adjustment']},
  photo:{label:'Photos',scope:'Non-destructive operations and dimensions, no pixels',actions:['Suggest a subtle photo adjustment','Explain the operation stack','Suggest a crop']},
  designer:{label:'Vector',scope:'SVG source, read-only AI context',actions:['Review this SVG structure','Suggest accessible SVG labels','Explain the vector shapes']},
+ vector:{label:'Vector',scope:'SVG source, read-only AI context',actions:['Review this SVG structure','Suggest accessible SVG labels','Explain the vector shapes']},
  design:{label:'Design',scope:'Source and selected element',actions:['Review the visual hierarchy','Suggest accessible layout improvements','Explain this design']},
 };
 export function studioAgentContext(studio:string,path:string,editorKind?:string|null):StudioAgentContext {

@@ -3,6 +3,6 @@ export function activeStudioDocument(app:{activeStudio:string;activeFile:string;
  const item=media.items.find(m=>m.name===media.active);
  const domains:Record<string,string>={documents:'docx',sheets:'xlsx',slides:'pptx',sound:'audio',video:'video',photos:'image'};
  if(item&&(app.activeStudio==='code'||domains[app.activeStudio]===item.kind||(app.editorKind==='raster'&&item.kind==='image')))return {path:item.name,media:true};
- if(app.activeStudio==='code'||app.activeStudio==='design'||app.activeStudio==='designer'||app.editorKind==='vector')return {path:app.activeFile,media:false};
+ if(app.activeStudio==='code'||app.activeStudio==='design'||app.activeStudio==='designer'||app.activeStudio==='vector'||app.editorKind==='vector')return {path:app.activeFile,media:false};
  return {path:'',media:false};
 }
