@@ -2,11 +2,12 @@ import {requestStudio} from '../store/appStore';
 /** Media resources. Native raster inputs keep the editor path; additional codecs are read-only previews. */
 import {RASTER_EXTENSIONS,RASTER_ACCEPT,sniffRaster,decodeRasterPreview} from './rasterPreview';
 import {useSyncExternalStore} from 'react';
-export type MediaKind='image'|'pdf'|'psd'|'docx'|'xlsx'|'pptx'|'raster-preview';
+import {AUDIO_EXTENSIONS,sniffAudio} from './sound/format';
+export type MediaKind='image'|'pdf'|'psd'|'docx'|'xlsx'|'pptx'|'raster-preview'|'audio';
 export interface MediaItem{name:string;kind:MediaKind;mime:string;url:string;size:number;sourceUrl?:string;warning?:string}
-export const MEDIA_FILE=new RegExp(`\\.(${RASTER_EXTENSIONS}|pdf|psd|docx|xlsx|pptx)$`,'i');
+export const MEDIA_FILE=new RegExp(`\\.(${RASTER_EXTENSIONS}|pdf|psd|docx|xlsx|pptx|${AUDIO_EXTENSIONS})$`,'i');
 export const MAX_MEDIA_BYTES=25_000_000;
-export const MEDIA_ACCEPT=RASTER_ACCEPT+',.psd,.png,.jpg,.jpeg,.webp,.pdf,image/png,image/jpeg,image/webp,application/pdf,.docx,.xlsx,.pptx,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+export const MEDIA_ACCEPT=RASTER_ACCEPT+',.psd,.png,.jpg,.jpeg,.webp,.pdf,image/png,image/jpeg,image/webp,application/pdf,.docx,.xlsx,.pptx,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,.mp3,.wav,.flac,.ogg,.oga,.aif,.aiff,audio/mpeg,audio/wav,audio/flac,audio/ogg,audio/aiff';
 const OFFICE_MIME={pptx:'application/vnd.openxmlformats-officedocument.presentationml.presentation',docx:'application/vnd.openxmlformats-officedocument.wordprocessingml.document',xlsx:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'} as const;
 export const isMarkdown=(f:string)=>/\.(md|markdown)$/i.test(f);
 export const isSvg=(f:string)=>/\.svg$/i.test(f);
@@ -21,7 +22,8 @@ export function sniffMedia(bytes:Uint8Array):{kind:MediaKind;mime:string}|null{
  if(b(0xff,0xd8,0xff))return{kind:'image',mime:'image/jpeg'};
  if(b(0x52,0x49,0x46,0x46)&&bytes[8]===0x57&&bytes[9]===0x45&&bytes[10]===0x42&&bytes[11]===0x50)return{kind:'image',mime:'image/webp'};
  if(b(0x25,0x50,0x44,0x46,0x2d))return{kind:'pdf',mime:'application/pdf'};
- const raster=sniffRaster(bytes);return raster?{kind:'raster-preview',mime:raster}:null;}
+ const raster=sniffRaster(bytes);if(raster)return{kind:'raster-preview',mime:raster};
+ const audio=sniffAudio(bytes);return audio?{kind:'audio',mime:audio.mime}:null;}
 interface MediaState{items:MediaItem[];active:string|null}
 let state:MediaState={items:[],active:null};
 const listeners=new Set<()=>void>();
