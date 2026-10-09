@@ -2125,5 +2125,19 @@
   "svg.mask.make": "Criar máscara (a forma de cima mascara o resto)",
   "svg.clip.release": "Soltar recorte ou máscara",
   "svg.clip.clipped": "Recortado",
-  "svg.clip.masked": "Mascarado"
+  "svg.clip.masked": "Mascarado",
+  "settings.sync.title": "Sync folder",
+  "settings.sync.hint": "Keep settings and shortcuts in sync across your computers through a folder you choose (Dropbox, iCloud Drive, Syncthing...). Only one file, somnia-sync.json, is read and written. The newer version wins.",
+  "settings.sync.none": "No sync folder selected.",
+  "settings.sync.folder": "Folder",
+  "settings.sync.choose": "Choose folder",
+  "settings.sync.change": "Change folder",
+  "settings.sync.now": "Sync now",
+  "settings.sync.stop": "Stop syncing",
+  "settings.sync.wrote": "Your settings were written to the sync folder.",
+  "settings.sync.applied": "Settings and shortcuts from the sync folder were applied.",
+  "settings.sync.same": "Already up to date.",
+  "settings.sync.newerWon": "Both sides had changed; the newer one was used.",
+  "settings.sync.failed": "Sync failed. Check that the folder is still available.",
+  "settings.sync.stopped": "Syncing stopped. The folder and its file were left as they are."
 }

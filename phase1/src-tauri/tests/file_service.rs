@@ -1,4 +1,4 @@
-use somnia_desktop::service::{validate_path, AppError, FileState, Project, Revision};
+use somnia_desktop::service::{validate_path, AppError, FileState, Project, Revision, SyncFolder};
 use std::{fs, thread, time::Duration};
 use tempfile::TempDir;
 fn setup() -> (TempDir, TempDir, Project) {
@@ -455,4 +455,21 @@ fn extra_raster_formats_preserve_media_path_validation() {
     for name in ["asset.heic", "asset.raw", "asset.exe"] {
         assert!(!is_media_path(name));
     }
+}
+
+#[test]
+fn sync_folder_reads_and_writes_only_its_file() {
+    let dir = TempDir::new().unwrap();
+    fs::write(dir.path().join("other.txt"), "private").unwrap();
+    let sync = SyncFolder::open(dir.path()).unwrap();
+    assert!(sync.read().unwrap().is_none());
+    sync.write("{\"kind\":\"sync\"}").unwrap();
+    let read = sync.read().unwrap().unwrap();
+    assert!(read.content.contains("sync"));
+    assert!(read.modified_ms > 0);
+    assert!(dir.path().join("somnia-sync.json").is_file());
+    assert_eq!(fs::read_to_string(dir.path().join("other.txt")).unwrap(), "private");
+    assert!(sync.write(&"x".repeat(300_000)).is_err());
+    assert!(SyncFolder::open(&dir.path().join("missing")).is_err());
+    assert!(SyncFolder::open(&dir.path().join("other.txt")).is_err());
 }

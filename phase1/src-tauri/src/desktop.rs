@@ -1,5 +1,5 @@
 use crate::drop_grant::DropGrant;
-use crate::service::{AppError, Project, ReadReply, RecoveryHistoryEntry, RecoverySafeRestore, RecoveryRecord, Result, Revision, StateEvent};
+use crate::service::{AppError, Project, SyncFolder, SyncRead, ReadReply, RecoveryHistoryEntry, RecoverySafeRestore, RecoveryRecord, Result, Revision, StateEvent};
 use serde::Serialize;
 use std::{
     collections::BTreeMap,
@@ -12,6 +12,7 @@ use tauri_plugin_dialog::DialogExt;
 
 #[derive(Default)]
 struct Backend {
+    sync: Option<SyncFolder>,
     projects: BTreeMap<String, Project>,
     drop_grant: Option<DropGrant>,
 }
@@ -795,6 +796,91 @@ async fn read_file(
     gate(&window)?;
     work(state.inner().clone(), move |b| {
         project(b, &project_id)?.read(&path)
+    })
+    .await
+}
+/// The sync folder path is stored host-side only, written from a native folder dialog result, never from renderer input.
+fn sync_pointer(app: &tauri::AppHandle) -> Result<std::path::PathBuf> {
+    Ok(app
+        .path()
+        .app_local_data_dir()
+        .map_err(|e| AppError::Io(e.to_string()))?
+        .join("sync-v1")
+        .join("folder.txt"))
+}
+fn sync_load<'a>(backend: &'a mut Backend, pointer: &std::path::Path) -> Result<Option<&'a SyncFolder>> {
+    if backend.sync.is_none() {
+        if let Ok(text) = std::fs::read_to_string(pointer) {
+            let path = std::path::PathBuf::from(text.trim());
+            if !text.trim().is_empty() {
+                backend.sync = SyncFolder::open(&path).ok();
+            }
+        }
+    }
+    Ok(backend.sync.as_ref())
+}
+#[tauri::command]
+async fn sync_status(window: WebviewWindow, state: State<'_, Shared>) -> Result<Option<String>> {
+    gate(&window)?;
+    let pointer = sync_pointer(window.app_handle())?;
+    work(state.inner().clone(), move |b| Ok(sync_load(b, &pointer)?.map(|f| f.name().to_string()))).await
+}
+#[tauri::command]
+async fn sync_choose(window: WebviewWindow, state: State<'_, Shared>) -> Result<Option<String>> {
+    gate(&window)?;
+    let app = window.app_handle().clone();
+    let selected = tauri::async_runtime::spawn_blocking(move || app.dialog().file().blocking_pick_folder())
+        .await
+        .map_err(|e| AppError::Io(e.to_string()))?;
+    let Some(selected) = selected else {
+        return Ok(None);
+    };
+    let path = selected.into_path().map_err(|e| AppError::Invalid(e.to_string()))?;
+    let pointer = sync_pointer(window.app_handle())?;
+    work(state.inner().clone(), move |b| {
+        let folder = SyncFolder::open(&path)?;
+        let canonical = path.canonicalize()?;
+        if let Some(dir) = pointer.parent() {
+            std::fs::create_dir_all(dir)?;
+        }
+        std::fs::write(&pointer, canonical.to_string_lossy().as_bytes())?;
+        let name = folder.name().to_string();
+        b.sync = Some(folder);
+        Ok(Some(name))
+    })
+    .await
+}
+#[tauri::command]
+async fn sync_read(window: WebviewWindow, state: State<'_, Shared>) -> Result<Option<SyncRead>> {
+    gate(&window)?;
+    let pointer = sync_pointer(window.app_handle())?;
+    work(state.inner().clone(), move |b| match sync_load(b, &pointer)? {
+        Some(f) => f.read(),
+        None => Err(AppError::Denied("No sync folder selected".into())),
+    })
+    .await
+}
+#[tauri::command]
+async fn sync_write(window: WebviewWindow, state: State<'_, Shared>, content: String) -> Result<()> {
+    gate(&window)?;
+    let pointer = sync_pointer(window.app_handle())?;
+    work(state.inner().clone(), move |b| match sync_load(b, &pointer)? {
+        Some(f) => f.write(&content),
+        None => Err(AppError::Denied("No sync folder selected".into())),
+    })
+    .await
+}
+#[tauri::command]
+async fn sync_clear(window: WebviewWindow, state: State<'_, Shared>) -> Result<()> {
+    gate(&window)?;
+    let pointer = sync_pointer(window.app_handle())?;
+    work(state.inner().clone(), move |b| {
+        b.sync = None;
+        match std::fs::remove_file(&pointer) {
+            Ok(()) => Ok(()),
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(()),
+            Err(e) => Err(e.into()),
+        }
     })
     .await
 }
@@ -1671,6 +1757,11 @@ pub fn run() {
             agent_account_cancel,
             github_account_status,
             read_project_settings,
+            sync_status,
+            sync_choose,
+            sync_read,
+            sync_write,
+            sync_clear,
             write_project_settings,
             github_account_start,
             github_account_cancel,

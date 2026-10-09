@@ -877,6 +877,69 @@ fn sync_dir(dir: &Dir) -> Result<&'static str> {
         Ok("file_synced_directory_flush_unavailable")
     }
 }
+const MAX_SYNC_BYTES: usize = 256 * 1024;
+pub const SYNC_FILE: &str = "somnia-sync.json";
+/// Content and modification time (ms since epoch) of the sync file.
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SyncRead {
+    pub content: String,
+    pub modified_ms: u64,
+}
+/// A user-chosen folder that holds exactly one file (`somnia-sync.json`) with portable settings. It never exposes other files.
+pub struct SyncFolder {
+    root: Dir,
+    name: String,
+}
+impl SyncFolder {
+    pub fn open(path: &Path) -> Result<Self> {
+        let canonical = path.canonicalize()?;
+        if !canonical.is_dir() {
+            return Err(AppError::Denied("Not a directory".into()));
+        }
+        let name = canonical
+            .file_name()
+            .map(|n| n.to_string_lossy().into_owned())
+            .unwrap_or_else(|| canonical.to_string_lossy().into_owned());
+        let root = Dir::open_ambient_dir(&canonical, ambient_authority())?;
+        Ok(Self { root, name })
+    }
+    pub fn name(&self) -> &str {
+        &self.name
+    }
+    pub fn read(&self) -> Result<Option<SyncRead>> {
+        let mut file = match self.root.open(SYNC_FILE) {
+            Ok(f) => f,
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(None),
+            Err(e) => return Err(e.into()),
+        };
+        let meta = file.metadata()?;
+        if !meta.is_file() {
+            return Err(AppError::Denied("Not a regular file".into()));
+        }
+        let modified_ms = meta
+            .modified()
+            .ok()
+            .and_then(|t| t.into_std().duration_since(UNIX_EPOCH).ok())
+            .map(|d| d.as_millis() as u64)
+            .unwrap_or(0);
+        let mut bytes = Vec::new();
+        Read::by_ref(&mut file)
+            .take((MAX_SYNC_BYTES + 1) as u64)
+            .read_to_end(&mut bytes)?;
+        if bytes.len() > MAX_SYNC_BYTES {
+            return Err(AppError::Limit);
+        }
+        Ok(Some(SyncRead { content: decode_text(bytes), modified_ms }))
+    }
+    pub fn write(&self, content: &str) -> Result<()> {
+        if content.len() > MAX_SYNC_BYTES {
+            return Err(AppError::Limit);
+        }
+        atomic_write(&self.root, Path::new(SYNC_FILE), content.as_bytes())
+    }
+}
+
 fn atomic_write(dir: &Dir, path: &Path, content: &[u8]) -> Result<()> {
     let temp = PathBuf::from(format!(".somnia-write-{}.tmp", Uuid::new_v4()));
     let result = (|| {
