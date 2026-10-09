@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {addressOf,colName,displayValue,editText,parseAddress,visibleWindow,MAX_COLS,MAX_ROWS} from './format';
+import {cellAlign,cellText,addressOf,colName,displayValue,editText,parseAddress,visibleWindow,MAX_COLS,MAX_ROWS} from './format';
 test('column names and addresses round-trip',()=>{
  assert.equal(colName(0),'A');assert.equal(colName(25),'Z');assert.equal(colName(26),'AA');assert.equal(colName(MAX_COLS-1),'XFD');
  assert.equal(addressOf(1,2),'C2');assert.deepEqual(parseAddress('c2'),{row:1,col:2});assert.deepEqual(parseAddress('XFD1048576'),{row:MAX_ROWS-1,col:MAX_COLS-1});
@@ -18,4 +18,9 @@ test('viewport reads stay below the engine cap and inside the sheet',()=>{
  const w=visibleWindow(0,0,4000,3000,24,104,1_048_576,16_384);assert.ok(w.rows*w.cols<=10_000);assert.equal(w.row,0);
  const end=visibleWindow(24*1_048_570,104*16_380,800,400,24,104,1_048_576,16_384);assert.ok(end.row+end.rows<=1_048_576&&end.col+end.cols<=16_384);
  const tiny=visibleWindow(0,0,0,0,24,104,1,1);assert.deepEqual([tiny.rows,tiny.cols],[1,1]);
+});
+test('formatted text and alignment',()=>{
+ assert.equal(cellText({text:'25.6%',value:{t:'Number',v:0.256}}),'25.6%');assert.equal(cellText({value:{t:'Number',v:3}}),'3');assert.equal(cellText(undefined),'');
+ assert.equal(cellAlign('center',{value:{t:'Number',v:1}}),'center');assert.equal(cellAlign('general',{value:{t:'Number',v:1}}),'right');
+ assert.equal(cellAlign('general',{value:{t:'Text',v:'a'}}),'left');assert.equal(cellAlign(undefined,{value:{t:'Bool',v:true}}),'center');assert.equal(cellAlign(undefined,undefined),'left');
 });

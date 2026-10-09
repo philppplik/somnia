@@ -16,6 +16,8 @@ scope.onmessage=({data}:MessageEvent<SheetsRequest>)=>{queue=queue.then(async()=
    case 'open':{const next=new HeadlessWorkbook(new Uint8Array(data.bytes));book?.free();book=next;result=JSON.parse(next.sheets());break;}
    case 'info':result=JSON.parse(need().sheet_info(data.sheet));break;
    case 'range':result=JSON.parse(need().range(data.sheet,data.row,data.col,data.rows,data.cols));break;
+   case 'view':result=JSON.parse(need().view_range(data.sheet,data.row,data.col,data.rows,data.cols));break;
+   case 'layout':result=JSON.parse(need().layout(data.sheet));break;
    case 'set':result=JSON.parse(need().set_cell(data.sheet,data.address,data.input));break;
    case 'undo':result=JSON.parse(need().undo());break;
    case 'redo':result=JSON.parse(need().redo());break;

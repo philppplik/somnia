@@ -6,6 +6,11 @@ export class HeadlessWorkbook {
     [Symbol.dispose](): void;
     export_xlsx(): Uint8Array;
     /**
+     * Sparse column widths and row heights (CSS px at 96 dpi from points), hidden lines and the
+     * frozen pane, so the grid can place cells without reading them.
+     */
+    layout(sheet: number): string;
+    /**
      * Import atomically: a failed open does not destroy the previous document.
      */
     constructor(bytes: Uint8Array);
@@ -24,6 +29,11 @@ export class HeadlessWorkbook {
     sheet_info(sheet: number): string;
     sheets(): string;
     undo(): string;
+    /**
+     * Like `range`, plus what the grid needs to paint each cell: the display text with the
+     * cell's number format applied and the resolved style. Same bounds as `range`.
+     */
+    view_range(sheet: number, row: number, col: number, rows: number, cols: number): string;
 }
 
 export type InitInput = RequestInfo | URL | Response | BufferSource | WebAssembly.Module;
@@ -32,6 +42,7 @@ export interface InitOutput {
     readonly memory: WebAssembly.Memory;
     readonly __wbg_headlessworkbook_free: (a: number, b: number) => void;
     readonly headlessworkbook_export_xlsx: (a: number) => [number, number, number, number];
+    readonly headlessworkbook_layout: (a: number, b: number) => [number, number, number, number];
     readonly headlessworkbook_new: (a: number, b: number) => [number, number, number];
     readonly headlessworkbook_range: (a: number, b: number, c: number, d: number, e: number, f: number) => [number, number, number, number];
     readonly headlessworkbook_redo: (a: number) => [number, number, number, number];
@@ -39,6 +50,7 @@ export interface InitOutput {
     readonly headlessworkbook_sheet_info: (a: number, b: number) => [number, number, number, number];
     readonly headlessworkbook_sheets: (a: number) => [number, number, number, number];
     readonly headlessworkbook_undo: (a: number) => [number, number, number, number];
+    readonly headlessworkbook_view_range: (a: number, b: number, c: number, d: number, e: number, f: number) => [number, number, number, number];
     readonly __wbindgen_free: (a: number, b: number, c: number) => void;
     readonly __wbindgen_malloc: (a: number, b: number) => number;
     readonly __wbindgen_realloc: (a: number, b: number, c: number, d: number) => number;

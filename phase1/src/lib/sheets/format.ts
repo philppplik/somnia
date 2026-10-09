@@ -29,3 +29,11 @@ export function visibleWindow(scrollTop:number,scrollLeft:number,width:number,he
  const row=Math.max(0,Math.floor(scrollTop/rowH)-overscan),col=Math.max(0,Math.floor(scrollLeft/colW)-overscan);
  const rows=Math.min(totalRows-row,Math.ceil(height/rowH)+overscan*2+1,100),cols=Math.min(totalCols-col,Math.ceil(width/colW)+overscan*2+1,60);
  return{row,col,rows:Math.max(1,rows),cols:Math.max(1,cols)};}
+/** Text to paint: the file's number format when the engine supplied one, else plain display text. */
+export function cellText(cell:{text?:string;value:CellValue}|undefined):string{
+ if(!cell)return '';return cell.text!==undefined?cell.text:displayValue(cell.value);}
+/** Explicit horizontal alignment from the file wins; General aligns numbers and dates right, errors and booleans centered like spreadsheets do, text left. */
+export function cellAlign(h:'left'|'center'|'right'|'general'|undefined,cell:{value:CellValue;numeric?:boolean}|undefined):'left'|'center'|'right'{
+ if(h&&h!=='general')return h;if(!cell)return 'left';
+ if(cell.value.t==='Bool'||cell.value.t==='Error')return 'center';
+ return cell.value.t==='Number'||cell.numeric?'right':'left';}

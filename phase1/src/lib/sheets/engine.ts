@@ -1,4 +1,4 @@
-import type {RangeResult,SheetInfo,SheetsRequest,SheetsResponse,WorkbookInfo} from './protocol';
+import type {RangeResult,SheetInfo,SheetLayout,SheetsRequest,SheetsResponse,ViewResult,WorkbookInfo} from './protocol';
 import {MAX_INPUT_BYTES} from './protocol';
 type Req=SheetsRequest extends infer R?R extends {id:number}?Omit<R,'id'>:never:never;
 /** One module Worker per open workbook. A timeout or crash discards the session: callers must keep the original bytes. */
@@ -31,6 +31,8 @@ export class SheetsEngine{
   return this.result<WorkbookInfo>({op:'open',bytes:copy} as Req) as Promise<WorkbookInfo>;}
  info(sheet:number){return this.result<SheetInfo>({op:'info',sheet});}
  range(sheet:number,row:number,col:number,rows:number,cols:number){return this.result<RangeResult>({op:'range',sheet,row,col,rows,cols});}
+ view(sheet:number,row:number,col:number,rows:number,cols:number){return this.result<ViewResult>({op:'view',sheet,row,col,rows,cols});}
+ layout(sheet:number){return this.result<SheetLayout>({op:'layout',sheet});}
  set(sheet:number,address:string,input:string){return this.result<unknown>({op:'set',sheet,address,input});}
  undo(){return this.result<unknown>({op:'undo'});}
  redo(){return this.result<unknown>({op:'redo'});}

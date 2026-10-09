@@ -41,3 +41,20 @@ test('Sheets Studio without a workbook shows a hint and keeps the shell',async({
  await page.getByRole('radio',{name:'Somnia Sheets'}).click();await expect(page.getByTestId('sheets-empty')).toBeVisible();
  await page.getByRole('radio',{name:'Somnia Code'}).click();await expect(page.getByTestId('sheets-empty')).toHaveCount(0);
 });
+const FORMATS=readFileSync(new URL('../sheets-craft/fixtures/formats.xlsx',import.meta.url));
+test('Sheets Studio shows number formats, bold/italic, fills, alignment and column widths from the file',async({page})=>{
+ await page.goto('/');await expect(page.locator('[data-storage]')).toBeVisible();
+ await openXlsx(page,'formats.xlsx',FORMATS);await page.getByRole('radio',{name:'Somnia Sheets'}).click();
+ await expect(cell(page,'B2')).toHaveText('25.6%');await expect(cell(page,'B3')).toHaveText('1,234.50 EUR');await expect(cell(page,'B4')).toHaveText('2026-10-09');
+ await expect(cell(page,'B5')).toHaveText('-42');await expect(cell(page,'B5')).toHaveCSS('color','rgb(255, 0, 0)');
+ await expect(cell(page,'A1')).toHaveCSS('font-weight','700');await expect(cell(page,'A1')).toHaveCSS('font-style','italic');await expect(cell(page,'A1')).toHaveCSS('background-color','rgb(255, 242, 204)');
+ await expect(cell(page,'B6')).toHaveCSS('text-align','center');await expect(cell(page,'B7')).toHaveCSS('text-align','right');await expect(cell(page,'B2')).toHaveCSS('text-align','right');await expect(cell(page,'A2')).toHaveCSS('text-align','left');
+ // Widths from the file: A (30 chars) is wider than B (18), D (8) is narrow, hidden column C is not painted.
+ const w=async(a:string)=>(await cell(page,a).boundingBox())!.width;
+ expect(await w('A2')).toBeGreaterThan(await w('B2'));expect(await w('B2')).toBeGreaterThan(await w('D1'));await expect(cell(page,'C2')).toHaveCount(0);
+ // The editor still shows the raw value, not the formatted text.
+ await cell(page,'B2').click();await expect(page.getByTestId('sheets-formula')).toHaveValue('0.256');
+ await page.screenshot({path:'test-results/sheets-formats.png'});
+ // Arrow right from B skips the hidden column.
+ await cell(page,'B2').click();await page.keyboard.press('ArrowRight');await expect(page.getByTestId('sheets-address')).toHaveText('D2');
+});
