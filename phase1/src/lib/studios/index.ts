@@ -13,3 +13,6 @@ export {slidesStudio} from './slides';
 export {soundStudio} from './sound';
 export {videoStudio} from './video';
 export {vectorStudio} from './vector';
+
+import './design';
+export {designStudio} from './design';
