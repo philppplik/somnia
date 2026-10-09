@@ -6,7 +6,7 @@ import {getUi,patchUi,setCursor,useSvgUi,type Tool} from '../../lib/svgedit/stor
 import * as C from '../../lib/svgedit/controller';
 import {elementAt,parsePathKey,pathKey,attr,type XEl} from '../../lib/svgedit/source';
 import {HANDLES,invert,apply,rotateAbout,resizeDelta,translate,changesForDelta,mul,type Box,type Handle,type Matrix} from '../../lib/svgedit/geometry';
-import {pathToContours,contoursToPath,moveNode,moveHandle,nearestOnContour,insertNode,deleteNode,setKind,type Contour} from '../../lib/svgedit/pathnodes';
+import {pathToContours,contoursToPath,moveNode,moveHandle,nearestOnContour,insertNode,deleteNode,setKind,cloneContours,contourEndingAt,dragSegment,type Contour} from '../../lib/svgedit/pathnodes';
 import {serializeContour} from '../../lib/vectorio/serialize';
 import type {Point,VectorNode} from '../../lib/vectorio/types';
 import {buildLines,snapBox,snapPoint,type SnapLine} from '../../lib/svgedit/snap';
@@ -25,6 +25,7 @@ type Session=
  |{k:'shape';tool:Tool;start:Point;parent:string}
  |{k:'pen-handle';node:VectorNode}
  |{k:'node';c:number;i:number;part:'node'|'in'|'out';key:string}
+ |{k:'seg';key:string;c:number;seg:number;t:number;orig:Contour[]}
 const M=(m:DOMMatrix|null|undefined):Matrix=>m?[m.a,m.b,m.c,m.d,m.e,m.f]:[1,0,0,1,0,0];
 const attrsOf=(el:XEl)=>({tag:el.tag,get:(n:string)=>attr(el,n)});
 
@@ -33,7 +34,7 @@ export function SvgEditor({file,text}:{file:string;text:string}){
  const scroller=useRef<HTMLDivElement>(null),wrap=useRef<HTMLDivElement>(null),host=useRef<HTMLDivElement>(null);
  const session=useRef<Session|null>(null);const [tick,setTick]=useState(0);const redraw=useCallback(()=>setTick(n=>n+1),[]);
  const [marquee,setMarquee]=useState<Box|null>(null);const [shapePrev,setShapePrev]=useState<{tool:Tool;a:Point;b:Point;shift:boolean;alt:boolean}|null>(null);
- const [draft,setDraft]=useState<{parent:string;nodes:VectorNode[]}|null>(null);const [hover,setHover]=useState<Point|null>(null);
+ const [draft,setDraft]=useState<{parent:string;nodes:VectorNode[];target?:{key:string;ci:number}}|null>(null);const [hover,setHover]=useState<Point|null>(null);
  const [nodeDraft,setNodeDraft]=useState<Contour[]|null>(null);const [editing,setEditing]=useState<{key:string;value:string}|null>(null);
  const [snapShown,setSnapShown]=useState<SnapLine[]>([]);const [spaceDown,setSpaceDown]=useState(false);const [error,setError]=useState('');
  const display=useMemo(()=>{const d=buildDisplay(text);setError(d?'':t('svg.invalid'));return d;},[text]);// eslint-disable-line react-hooks/exhaustive-deps
@@ -84,6 +85,18 @@ export function SvgEditor({file,text}:{file:string;text:string}){
   return{dx,dy,lines:[]};};
  const resizePt=(s:Extract<Session,{k:'resize'}>,p:Point,e:React.PointerEvent):{p:Point;lines:SnapLine[]}=>{
   if(!snapOn(e))return{p,lines:[]};const h=s.handle;const r=snapPoint(p,s.ctx.lines,thr(),getUi().grid,{x:h.includes('e')||h.includes('w'),y:h.includes('n')||h.includes('s')});return{p:{x:r.x,y:r.y},lines:r.lines};};
+ /** Pen on the selected path: click an end anchor to continue it, click another anchor to delete it, click a segment to add an anchor. */
+ const penOnSelected=(e:React.PointerEvent,key:string):boolean=>{
+  const el=root&&elementAt(root,parsePathKey(key));const cs=el&&el.tag==='path'?C.contoursOf(el):null;if(!cs||!cs.length)return false;
+  const lp=clientToLocal(key,e.clientX,e.clientY);const sc=Math.abs(M(C.domEl(key)?.getScreenCTM())[0])||1;
+  for(let ci=0;ci<cs.length;ci++)for(let i=0;i<cs[ci].nodes.length;i++){const n=cs[ci].nodes[i];if(Math.hypot(n.x-lp.x,n.y-lp.y)*sc<8){
+   const cont=contourEndingAt(cs[ci],i);
+   if(cont){setDraft({parent:key,nodes:cont.nodes.map(x=>({...x})),target:{key,ci}});session.current=null;return true;}
+   if(deleteNode(cs[ci],i)){C.setPathData(key,contoursToPath(cs));}else patchUi({notice:'A path needs at least two anchors. Delete the path instead.'});return true;}}
+  let best:{c:number;seg:number;t:number;dist:number}|null=null;cs.forEach((c,ci)=>{const h=nearestOnContour(c,lp);if(h&&(!best||h.dist<best.dist))best={c:ci,seg:h.seg,t:h.t,dist:h.dist};});
+  const b=best as {c:number;seg:number;t:number;dist:number}|null;
+  if(b&&b.dist*sc<6){insertNode(cs[b.c],b.seg,b.t);C.setPathData(key,contoursToPath(cs));return true;}
+  return false;};
  const onDown=(e:React.PointerEvent)=>{
   if(!display||!root||e.button===2)return;scroller.current?.focus({preventScroll:true});
   const tgt=e.target as Element;const hd=tgt.getAttribute?.('data-h');const nd=tgt.getAttribute?.('data-n');
@@ -102,14 +115,20 @@ export function SvgEditor({file,text}:{file:string;text:string}){
   if(tool==='node'){
    const key1=sel.length===1?sel[0]:null;capture();
    if(nd&&key1){const [c,i,part]=nd.split(':');const ci=+c,ii=+i;patchUi({node:{c:ci,i:ii}});session.current={k:'node',c:ci,i:ii,part:part as 'node'|'in'|'out',key:key1};const el=elementAt(root,parsePathKey(key1));setNodeDraft(el&&C.contoursOf(el));return;}
+   if(key1&&!nd){const el1=elementAt(root,parsePathKey(key1));const cs1=el1&&C.contoursOf(el1);
+    if(cs1){const lp=clientToLocal(key1,e.clientX,e.clientY);const sc=Math.abs(M(C.domEl(key1)?.getScreenCTM())[0])||1;let b:{c:number;seg:number;t:number;dist:number}|null=null;
+     cs1.forEach((c,ci)=>{const h=nearestOnContour(c,lp);if(h&&(!b||h.dist<b.dist))b={c:ci,seg:h.seg,t:h.t,dist:h.dist};});
+     const hit=b as {c:number;seg:number;t:number;dist:number}|null;
+     if(hit&&hit.dist*sc<7){session.current={k:'seg',key:key1,c:hit.c,seg:hit.seg,t:hit.t,orig:cloneContours(cs1)};return;}}}
    const key=hitKey(e.target);if(key){patchUi({selection:[key],node:null});}else{patchUi({selection:[],node:null});}session.current=null;return;}
   if(tool==='rect'||tool==='ellipse'||tool==='line'){capture();const parent=C.insertionParent();session.current={k:'shape',tool,start:p,parent};setShapePrev({tool,a:p,b:p,shift:false,alt:false});return;}
   if(tool==='text'){const parent=C.insertionParent();const lp=apply(invert(C.keyToRoot(parent)),p.x,p.y);const size=Math.max(8,Math.round(display.w/20));
    if(C.addElement(C.textSrc(lp.x,lp.y,t('svg.textDefault'),size),parent)){requestAnimationFrame(()=>setEditing({key:getUi().selection[0],value:t('svg.textDefault')}));}return;}
+  if(tool==='pen'&&!draft&&sel.length===1&&penOnSelected(e,sel[0]))return;
   if(tool==='pen'){capture();const parent=draft?.parent??C.insertionParent();const lp=apply(invert(C.keyToRoot(parent)),p.x,p.y);
    const nodes=draft?.nodes??[];
    if(nodes.length>=2){const first=toOv(apply(C.keyToRoot(parent),nodes[0].x,nodes[0].y));const here=toOv(p);if(Math.hypot(first.x-here.x,first.y-here.y)<9){finishPen(parent,nodes,true);return;}}
-   const node:VectorNode={id:`d${nodes.length}`,x:lp.x,y:lp.y,kind:'corner'};setDraft({parent,nodes:[...nodes,node]});session.current={k:'pen-handle',node};return;}
+   const node:VectorNode={id:`d${nodes.length}`,x:lp.x,y:lp.y,kind:'corner'};setDraft({...(draft??{}),parent,nodes:[...nodes,node]});session.current={k:'pen-handle',node};return;}
  };
  const onMove=(e:React.PointerEvent)=>{
   if(display){const p=rootPt(e);setCursor({x:p.x,y:p.y});}
@@ -123,7 +142,8 @@ export function SvgEditor({file,text}:{file:string;text:string}){
   else if(s.k==='rotate'){const cx=s.box.x+s.box.w/2,cy=s.box.y+s.box.h/2;let a=(Math.atan2(p.y-cy,p.x-cx)-s.start)*180/Math.PI;if(e.shiftKey)a=Math.round(a/15)*15;previewDelta(s.keys,rotateAbout(a,cx,cy));}
   else if(s.k==='marquee'){setMarquee({x:Math.min(s.start.x,p.x),y:Math.min(s.start.y,p.y),w:Math.abs(p.x-s.start.x),h:Math.abs(p.y-s.start.y)});}
   else if(s.k==='shape'){setShapePrev({tool:s.tool,a:s.start,b:p,shift:e.shiftKey,alt:e.altKey});}
-  else if(s.k==='pen-handle'&&draft){const m=C.keyToRoot(draft.parent);const lp=apply(invert(m),p.x,p.y);const n=s.node;if(Math.hypot(lp.x-n.x,lp.y-n.y)>2/ (zoom||1)){n.out={x:lp.x,y:lp.y};n.in={x:2*n.x-lp.x,y:2*n.y-lp.y};n.kind='symmetric';setDraft({...draft,nodes:[...draft.nodes]});}}
+  else if(s.k==='pen-handle'&&draft){const m=C.keyToRoot(draft.parent);const lp=apply(invert(m),p.x,p.y);const n=s.node;if(Math.hypot(lp.x-n.x,lp.y-n.y)>2/ (zoom||1)){n.out={x:lp.x,y:lp.y};if(e.altKey){n.kind='corner';}else{n.in={x:2*n.x-lp.x,y:2*n.y-lp.y};n.kind='symmetric';}setDraft({...draft,nodes:[...draft.nodes]});}}
+  else if(s.k==='seg'){const lp=clientToLocal(s.key,e.clientX,e.clientY);const cs=cloneContours(s.orig);dragSegment(cs[s.c],s.seg,s.t,lp);setNodeDraft(cs);C.domEl(s.key)?.setAttribute('d',contoursToPath(cs));}
   else if(s.k==='node'){const lp=clientToLocal(s.key,e.clientX,e.clientY);setNodeDraft(prev=>{if(!prev)return prev;const cs=prev.map(c=>({closed:c.closed,nodes:c.nodes.map(n=>({...n}))}));const n=cs[s.c].nodes[s.i];
     if(s.part==='node'){const st=n;moveNode(st,lp.x-st.x,lp.y-st.y);}else moveHandle(n,s.part,lp,e.altKey);
     const dom=C.domEl(s.key);dom?.setAttribute('d',contoursToPath(cs));return cs;});}
@@ -136,7 +156,7 @@ export function SvgEditor({file,text}:{file:string;text:string}){
   else if(s.k==='rotate'){const cx=s.box.x+s.box.w/2,cy=s.box.y+s.box.h/2;let a=(Math.atan2(p.y-cy,p.x-cx)-s.start)*180/Math.PI;if(e.shiftKey)a=Math.round(a/15)*15;C.transformKeys(s.keys,rotateAbout(a,cx,cy));}
   else if(s.k==='marquee'){const r=marquee;setMarquee(null);if(r&&(r.w>2||r.h>2))marqueeSelect(r,s.additive);}
   else if(s.k==='shape'){setShapePrev(null);finishShape(s,p,e.shiftKey,e.altKey);}
-  else if(s.k==='node'){const cs=nodeDraft;setNodeDraft(null);if(cs)C.setPathData(s.key,contoursToPath(cs));}
+  else if(s.k==='node'||s.k==='seg'){const cs=nodeDraft;setNodeDraft(null);if(cs)C.setPathData(s.key,contoursToPath(cs));}
  };
  const marqueeSelect=(r:Box,additive:boolean)=>{const svg=C.view.svg;if(!svg)return;const found:string[]=[];
   svg.querySelectorAll('[data-sp]').forEach(el=>{const key=el.getAttribute('data-sp')!;if(!key)return;const sp=elementAt(root!,parsePathKey(key));if(!sp||!C.isLeaf(sp))return;
@@ -155,7 +175,11 @@ export function SvgEditor({file,text}:{file:string;text:string}){
   C.addElement(srcText,s.parent);patchUi({tool:'select'});};
  const finishPen=(parent:string,nodes:VectorNode[],closed:boolean)=>{
   const ns=nodes.map(n=>({...n}));if(ns.length<2){setDraft(null);return;}
+  const tg=draft?.target;
+  if(tg&&root){const el=elementAt(root,parsePathKey(tg.key));const cs=el&&C.contoursOf(el);if(cs&&cs[tg.ci]){cs[tg.ci]={closed,nodes:ns};setDraft(null);setHover(null);C.setPathData(tg.key,contoursToPath(cs));patchUi({tool:'node',selection:[tg.key]});return;}}
   const d=serializeContour(ns,closed);setDraft(null);setHover(null);C.addElement(C.pathSrc(d,closed),parent);patchUi({tool:'node'});};
+ /** Escape and Backspace while drawing. Escape ends the current gesture first, then finishes a path that has two or more anchors, else drops it. Shift+Escape discards. */
+ const discardDraft=()=>{setDraft(null);setHover(null);session.current=null;};
  const onDouble=(e:React.PointerEvent|React.MouseEvent)=>{
   const gd=(e.target as Element).getAttribute?.('data-guide');if(gd){patchUi({guides:getUi().guides.filter((_,i)=>i!==+gd)});return;}
   const tool=getUi().tool;if(tool==='pen'&&draft){const nodes=draft.nodes.slice(0,-1);finishPen(draft.parent,nodes.length>=2?nodes:draft.nodes,false);return;}
@@ -173,10 +197,20 @@ export function SvgEditor({file,text}:{file:string;text:string}){
   const tools:Record<string,Tool>={v:'select',a:'node',r:'rect',o:'ellipse',e:'ellipse',l:'line',p:'pen',t:'text'};
   if(!mod&&!e.altKey&&tools[e.key.toLowerCase()]&&e.key.length===1){patchUi({tool:tools[e.key.toLowerCase()]});handled();return;}
   if(e.key===' '){setSpaceDown(true);handled();return;}
+  if(e.key==='Escape'&&session.current&&(session.current.k==='node'||session.current.k==='seg'||session.current.k==='pen-handle'||session.current.k==='move'||session.current.k==='resize'||session.current.k==='rotate')){
+   const s=session.current;session.current=null;try{wrap.current?.releasePointerCapture(0);}catch{/* not captured */}
+   if(s.k==='pen-handle'&&draft){s.node.in=undefined;s.node.out=undefined;delete s.node.in;delete s.node.out;s.node.kind='corner';setDraft({...draft,nodes:[...draft.nodes]});}
+   else if(s.k==='node'||s.k==='seg'){setNodeDraft(null);const el=root&&elementAt(root,parsePathKey(s.key));const dom=C.domEl(s.key);if(el&&dom)dom.setAttribute('d',attr(el,'d')??'');}
+   else redraw();
+   setSnapShown([]);handled();return;}
+  if(e.key==='Escape'&&draft&&e.shiftKey){discardDraft();handled();return;}
+  if(e.key==='Escape'&&draft){if(draft.nodes.length>=2)finishPen(draft.parent,draft.nodes,false);else discardDraft();handled();return;}
+  if((e.key==='Backspace'||e.key==='Delete')&&draft){const ns=draft.nodes.slice(0,-1);if(ns.length<1||(draft.target&&ns.length<1))discardDraft();else{const last=ns[ns.length-1];if(last){delete last.out;}setDraft({...draft,nodes:ns});}handled();return;}
   if(e.key==='Escape'){if(draft){setDraft(null);setHover(null);}else if(getUi().node)patchUi({node:null});else patchUi({selection:[],tool:getUi().tool==='select'?'select':'select'});handled();return;}
   if(e.key==='Enter'&&draft){finishPen(draft.parent,draft.nodes,false);handled();return;}
   if(e.key==='Delete'||e.key==='Backspace'){
    if(getUi().tool==='node'&&getUi().node&&sel.length===1&&root){const el=elementAt(root,parsePathKey(sel[0]));const cs=el&&C.contoursOf(el);const nn=getUi().node!;if(cs&&cs[nn.c]){if(deleteNode(cs[nn.c],nn.i)){patchUi({node:null});C.setPathData(sel[0],contoursToPath(cs));}else C.remove(sel);}handled();return;}
+   if(getUi().tool==='node'){handled();return;}
    if(sel.length){C.remove(sel);handled();}return;}
   if(mod&&e.key.toLowerCase()==='d'&&sel.length){C.duplicate(sel);handled();return;}
   if(mod&&e.key.toLowerCase()==='g'){if(e.shiftKey){sel.forEach(k=>C.ungroup(k));}else C.group(sel);handled();return;}
@@ -243,6 +277,9 @@ export function SvgEditor({file,text}:{file:string;text:string}){
     {editing&&root&&(()=>{const b=C.boxOfKey(editing.key);if(!b)return null;const p=boxPx(b);return <input autoFocus className="svg-text-input" style={{left:p.x,top:p.y-2,minWidth:Math.max(80,p.w+16)}} aria-label={t('svg.textContent')} value={editing.value} onChange={e=>setEditing({...editing,value:e.target.value})} onKeyDown={e=>{e.stopPropagation();if(e.key==='Enter'){C.setTextContent(editing.key,editing.value);setEditing(null);scroller.current?.focus();}if(e.key==='Escape'){setEditing(null);scroller.current?.focus();}}} onBlur={()=>{if(editing){C.setTextContent(editing.key,editing.value);setEditing(null);}}}/>;})()}
    </div>
   </div>
+  {(draft||ui.tool==='pen')&&<div className="svg-pen-bar" data-testid="svg-pen-bar" role="status">
+   <span>{draft?(draft.target?t('svg.pen.continuing'):t('svg.pen.drawing',{n:draft.nodes.length})):t('svg.pen.hint')}</span>
+   {draft&&<><button data-testid="svg-pen-finish" disabled={draft.nodes.length<2} onClick={()=>finishPen(draft.parent,draft.nodes,false)}>{t('svg.pen.finish')}</button><button data-testid="svg-pen-discard" onClick={discardDraft}>{t('svg.pen.discard')}</button></>}</div>}
   <SvgFooter size={display?{w:display.w,h:display.h}:null} zoom={zoom} onFit={()=>patchUi({fit:true})}/>
  </section>;
 }

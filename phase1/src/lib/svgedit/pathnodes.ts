@@ -56,3 +56,27 @@ export function insertNode(c:Contour,seg:number,t:number){
   a.out=q0;b.in=q2;mid.x=m.x;mid.y=m.y;mid.in=r0;mid.out=r1;mid.kind='smooth';}
  c.nodes.splice(seg+1,0,mid);return mid;}
 export function contoursBox(cs:Contour[]){let x0=Infinity,y0=Infinity,x1=-Infinity,y1=-Infinity;for(const c of cs)for(const n of c.nodes)for(const p of[n,n.in,n.out]){if(!p)continue;x0=Math.min(x0,p.x);y0=Math.min(y0,p.y);x1=Math.max(x1,p.x);y1=Math.max(y1,p.y);}return{x0,y0,x1,y1};}
+
+// ---- pen and path UX helpers ----------------------------------------------------------------------------------
+export const cloneContours=(cs:Contour[]):Contour[]=>cs.map(c=>({closed:c.closed,nodes:c.nodes.map(n=>({...n,in:n.in&&{...n.in},out:n.out&&{...n.out}}))}));
+/** Reverse the direction of a contour. Handles swap sides, so every curve keeps its exact shape. */
+export function reverseContour(c:Contour):Contour{
+ return{closed:c.closed,nodes:[...c.nodes].reverse().map(n=>{const r:VectorNode={...n,in:n.out&&{...n.out},out:n.in&&{...n.in}};if(!r.in)delete r.in;if(!r.out)delete r.out;return r;})};}
+/** Endpoint of an open contour: index of the node when `i` is its first or last node, else null. */
+export const isEndpoint=(c:Contour,i:number)=>!c.closed&&c.nodes.length>=1&&(i===0||i===c.nodes.length-1);
+/** A copy of the contour arranged so that node `i` (an endpoint) is the last node, ready to be continued from there. */
+export function contourEndingAt(c:Contour,i:number):Contour|null{
+ if(!isEndpoint(c,i))return null;const k=cloneContours([c])[0];return i===c.nodes.length-1?k:reverseContour(k);}
+/** Pull the segment `seg` of contour `c` so that the curve point at `t` follows `to`. Both end handles move by the same
+ *  amount, weighted by 1/(3t(1-t)) so the point lands exactly on `to`. Straight segments become curves. Smooth and
+ *  symmetric end nodes keep their other handle collinear. */
+export function dragSegment(c:Contour,seg:number,t:number,to:Point){
+ const a=c.nodes[seg],b=c.nodes[(seg+1)%c.nodes.length];const pts=segmentPoints(a,b);const at=bezierAt(pts,t);
+ const tt=Math.min(0.85,Math.max(0.15,t));const w=1/(3*tt*(1-tt));
+ const dx=(to.x-at.x)*w,dy=(to.y-at.y)*w;
+ const p1=a.out??{x:a.x,y:a.y},p2=b.in??{x:b.x,y:b.y};
+ // a straight segment first gets its handles at the thirds so the pull starts from the same shape
+ const base1=a.out?p1:{x:a.x+(b.x-a.x)/3,y:a.y+(b.y-a.y)/3},base2=b.in?p2:{x:b.x-(b.x-a.x)/3,y:b.y-(b.y-a.y)/3};
+ moveHandle(a,'out',{x:base1.x+dx,y:base1.y+dy});moveHandle(b,'in',{x:base2.x+dx,y:base2.y+dy});}
+/** Remove an anchor and heal the path: neighbours keep their own handles, the shape changes only around the anchor. */
+export function removeAnchor(c:Contour,i:number):boolean{return deleteNode(c,i);}

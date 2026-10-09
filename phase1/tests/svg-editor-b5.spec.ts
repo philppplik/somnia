@@ -1,0 +1,85 @@
+import {test,expect} from './fixtures';
+const SVG=`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" width="400" height="300">
+  <path id="p1" d="M60 220 L160 140 L260 220" fill="none" stroke="#111" stroke-width="6"/>
+</svg>
+`;
+const open=async(page:any,text=SVG)=>{await page.goto('/');await expect(page.locator('[data-storage]')).toBeVisible();
+ await page.evaluate(async(t:string)=>{const m=await import('/src/lib/projectActions.ts');m.addTextFiles([{name:'b5.svg',text:t}]);},text);
+ await expect(page.getByTestId('svg-host')).toBeVisible();};
+const src=(page:any)=>page.evaluate(async()=>{const s=await import('/src/store/appStore.ts');return s.getState().files['b5.svg'] as string;});
+/** document coordinates to client pixels */
+const at=async(page:any,x:number,y:number)=>{const b=await page.getByTestId('svg-host').locator('svg').first().boundingBox();const k=b.width/400;return{x:b.x+x*k,y:b.y+y*k};};
+const click=async(page:any,x:number,y:number)=>{const p=await at(page,x,y);await page.mouse.click(p.x,p.y);};
+const sel=async(page:any,id:string)=>page.getByTestId('svg-layer').filter({hasText:id}).click();
+const tool=(page:any,t:string)=>page.locator(`[data-tool="${t}"]`).click();
+const paths=(s:string)=>s.match(/<path /g)?.length??0;
+const dOf=(s:string,id:string)=>new RegExp(`id="${id}"[^>]*? d="([^"]+)"|d="([^"]+)"[^>]*?id="${id}"`).exec(s)!.slice(1).find(Boolean)!;
+const nodes=(d:string)=>(d.match(/[ML]|C/g)??[]).length;
+
+test('segment drag reshapes a straight segment into a curve through the cursor, one undo step',async({page})=>{await open(page);
+ await sel(page,'p1');await tool(page,'node');
+ const a=await at(page,110,180),b=await at(page,110,110);
+ await page.mouse.move(a.x,a.y);await page.mouse.down();await page.mouse.move(b.x,(a.y+b.y)/2,{steps:4});await page.mouse.move(b.x,b.y,{steps:4});
+ await page.screenshot({path:'test-results/b5-segment-drag.png'});await page.mouse.up();
+ const d=dOf(await src(page),'p1');expect(d).toMatch(/C/);
+ const on=await page.evaluate(()=>{const p=document.querySelector('[data-testid="svg-host"] #p1') as SVGGeometryElement;return p.isPointInStroke(new DOMPoint(110,110));});
+ expect(on).toBe(true);
+ await page.evaluate(async()=>{const m=await import('/src/lib/commands.ts');void m.executeCommand('edit.undo');});
+ await expect.poll(()=>src(page)).toBe(SVG);});
+test('Escape during a segment drag restores the path and commits nothing',async({page})=>{await open(page);
+ await sel(page,'p1');await tool(page,'node');
+ const a=await at(page,110,180),b=await at(page,110,100);
+ await page.mouse.move(a.x,a.y);await page.mouse.down();await page.mouse.move(b.x,b.y,{steps:6});await page.keyboard.press('Escape');await page.mouse.up();
+ expect(await src(page)).toBe(SVG);
+ const d=await page.evaluate(()=>document.querySelector('[data-testid="svg-host"] #p1')!.getAttribute('d'));expect(d).toBe('M60 220 L160 140 L260 220');});
+test('pen continues the selected path from its last anchor',async({page})=>{await open(page);
+ await sel(page,'p1');await tool(page,'pen');await expect(page.getByTestId('svg-pen-bar')).toBeVisible();
+ await click(page,260,220);await expect(page.getByTestId('svg-pen-bar')).toContainText('Continuing');
+ await click(page,320,150);await page.screenshot({path:'test-results/b5-continue.png'});await page.keyboard.press('Enter');
+ const out=await src(page);expect(paths(out)).toBe(1);const d=dOf(out,'p1');expect(nodes(d)).toBe(4);expect(d).toMatch(/^M60 220 ?L160 140 ?L260 220 ?L320 150/);});
+test('pen continues from the first anchor too (path is reversed, curves unchanged)',async({page})=>{
+ await open(page,`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" width="400" height="300"><path id="p1" d="M60 220 C 100 100, 200 100, 260 220" fill="none" stroke="#111" stroke-width="6"/></svg>
+`);
+ await sel(page,'p1');await tool(page,'pen');await click(page,60,220);await click(page,20,160);await page.keyboard.press('Escape');
+ const out=await src(page);expect(paths(out)).toBe(1);const d=dOf(out,'p1');expect(d).toMatch(/^M260 220 ?C ?200 100 ?100 100 ?60 220 ?L20 160/);});
+test('Escape finishes a path with two or more anchors; a single anchor is dropped',async({page})=>{await open(page);
+ await tool(page,'pen');await click(page,50,50);await click(page,150,60);await page.keyboard.press('Escape');
+ await expect.poll(async()=>paths(await src(page))).toBe(2);
+ await tool(page,'pen');await click(page,50,250);await page.keyboard.press('Escape');
+ await page.waitForTimeout(150);expect(paths(await src(page))).toBe(2);await expect(page.getByTestId('svg-pen-finish')).toHaveCount(0);});
+test('Shift+Escape and the Discard button drop the draft',async({page})=>{await open(page);
+ await tool(page,'pen');await click(page,50,50);await click(page,150,60);await click(page,200,100);await page.keyboard.press('Shift+Escape');
+ await page.waitForTimeout(150);expect(paths(await src(page))).toBe(1);
+ await click(page,50,50);await click(page,150,60);await page.getByTestId('svg-pen-discard').click();
+ await page.waitForTimeout(150);expect(paths(await src(page))).toBe(1);});
+test('Backspace removes the last draft anchor',async({page})=>{await open(page);
+ await tool(page,'pen');await click(page,50,50);await click(page,150,60);await click(page,200,100);await page.keyboard.press('Backspace');await page.keyboard.press('Enter');
+ await expect.poll(async()=>paths(await src(page))).toBe(2);
+ const s=await src(page);const added=[...s.matchAll(/<path [^>]*d="([^"]+)"/g)].map(m=>m[1]).find(d=>!d.startsWith('M60'))!;expect(nodes(added)).toBe(2);});
+test('Escape during a pen handle drag drops the handle, the anchor stays a corner',async({page})=>{await open(page);
+ await tool(page,'pen');await click(page,50,50);
+ const a=await at(page,150,100),b=await at(page,200,160);
+ await page.mouse.move(a.x,a.y);await page.mouse.down();await page.mouse.move(b.x,b.y,{steps:5});await page.keyboard.press('Escape');await page.mouse.up();
+ await page.keyboard.press('Enter');await expect.poll(async()=>paths(await src(page))).toBe(2);
+ const s=await src(page);const added=[...s.matchAll(/<path [^>]*d="([^"]+)"/g)].map(m=>m[1]).find(d=>!d.startsWith('M60'))!;expect(added).not.toMatch(/C/);expect(nodes(added)).toBe(2);});
+test('Alt while dragging a pen handle decouples it: line in, curve out',async({page})=>{await open(page);
+ await tool(page,'pen');await click(page,50,60);
+ const a=await at(page,150,60),b=await at(page,210,10);
+ await page.keyboard.down('Alt');await page.mouse.move(a.x,a.y);await page.mouse.down();await page.mouse.move(b.x,b.y,{steps:5});await page.mouse.up();await page.keyboard.up('Alt');
+ await click(page,260,70);await page.keyboard.press('Enter');
+ await expect.poll(async()=>paths(await src(page))).toBe(2);
+ const s=await src(page);const added=[...s.matchAll(/<path [^>]*d="([^"]+)"/g)].map(m=>m[1]).find(d=>!d.startsWith('M60'))!;
+ expect(added).toMatch(/^M[\d. ]+L[\d. ]+C/);});
+test('pen adds an anchor on a segment of the selected path and deletes one by clicking it',async({page})=>{await open(page);
+ await sel(page,'p1');await tool(page,'pen');await click(page,210,180);
+ let d=dOf(await src(page),'p1');expect(nodes(d)).toBe(4);
+ await click(page,160,140);d=dOf(await src(page),'p1');expect(nodes(d)).toBe(3);
+ await page.screenshot({path:'test-results/b5-anchors.png'});
+ await page.evaluate(async()=>{const m=await import('/src/lib/commands.ts');void m.executeCommand('edit.undo');void m.executeCommand('edit.undo');});
+ await expect.poll(()=>src(page)).toBe(SVG);});
+test('Delete in node mode with no anchor picked does not delete the object',async({page})=>{await open(page);
+ await sel(page,'p1');await tool(page,'node');await page.getByTestId('svg-stage').focus();await page.keyboard.press('Delete');
+ await page.waitForTimeout(150);expect(await src(page)).toBe(SVG);});
+test('pen click away from the selected path still starts a new path',async({page})=>{await open(page);
+ await sel(page,'p1');await tool(page,'pen');await click(page,50,40);await click(page,120,40);await page.keyboard.press('Enter');
+ await expect.poll(async()=>paths(await src(page))).toBe(2);expect(dOf(await src(page),'p1')).toBe('M60 220 L160 140 L260 220');});

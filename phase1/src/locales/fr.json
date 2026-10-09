@@ -2227,5 +2227,10 @@
   "svg.strokeToPath": "Contour en tracé (contour en forme remplie)",
   "svg.export.scale": "Échelle PNG",
   "svg.export.white": "Blanc",
-  "svg.export.png": "Exporter en PNG"
+  "svg.export.png": "Exporter en PNG",
+  "svg.pen.hint": "Plume : clic pour les angles, glisser pour les courbes. Sélectionnez d'abord un tracé pour le prolonger depuis une extrémité, cliquez un segment pour ajouter un point d'ancrage, cliquez un point pour le supprimer.",
+  "svg.pen.drawing": "Dessin, {n} points. Entrée ou Échap termine, Retour arrière retire le dernier point, Maj+Échap annule.",
+  "svg.pen.continuing": "Tracé prolongé. Entrée ou Échap termine, Retour arrière retire le dernier point, Maj+Échap annule.",
+  "svg.pen.finish": "Terminer",
+  "svg.pen.discard": "Annuler"
 }

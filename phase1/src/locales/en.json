@@ -2227,5 +2227,10 @@
   "svg.strokeToPath": "Stroke to path (outline the stroke as a filled shape)",
   "svg.export.scale": "PNG scale",
   "svg.export.white": "White",
-  "svg.export.png": "Export as PNG"
+  "svg.export.png": "Export as PNG",
+  "svg.pen.hint": "Pen: click for corners, drag for curves. Select a path first to continue it from an end anchor, click a segment to add an anchor, click an anchor to delete it.",
+  "svg.pen.drawing": "Drawing, {n} anchors. Enter or Esc finishes, Backspace removes the last anchor, Shift+Esc discards.",
+  "svg.pen.continuing": "Continuing path. Enter or Esc finishes, Backspace removes the last anchor, Shift+Esc discards.",
+  "svg.pen.finish": "Finish",
+  "svg.pen.discard": "Discard"
 }

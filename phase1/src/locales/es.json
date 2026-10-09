@@ -2227,5 +2227,10 @@
   "svg.strokeToPath": "Trazo a trazado (contorno como forma rellena)",
   "svg.export.scale": "Escala PNG",
   "svg.export.white": "Blanco",
-  "svg.export.png": "Exportar como PNG"
+  "svg.export.png": "Exportar como PNG",
+  "svg.pen.hint": "Pluma: clic para esquinas, arrastrar para curvas. Selecciona antes un trazado para continuarlo desde un extremo, clic en un segmento añade un ancla, clic en un ancla la elimina.",
+  "svg.pen.drawing": "Dibujando, {n} anclas. Intro o Esc termina, Retroceso quita la última ancla, Mayús+Esc descarta.",
+  "svg.pen.continuing": "Continuando el trazado. Intro o Esc termina, Retroceso quita la última ancla, Mayús+Esc descarta.",
+  "svg.pen.finish": "Terminar",
+  "svg.pen.discard": "Descartar"
 }

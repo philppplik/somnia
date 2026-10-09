@@ -2227,5 +2227,10 @@
   "svg.strokeToPath": "Kontur in Pfad umwandeln (Kontur als gefüllte Form)",
   "svg.export.scale": "PNG-Skalierung",
   "svg.export.white": "Weiß",
-  "svg.export.png": "Als PNG exportieren"
+  "svg.export.png": "Als PNG exportieren",
+  "svg.pen.hint": "Stift: Klick für Ecken, Ziehen für Kurven. Pfad vorher auswählen, um ihn an einem Endpunkt fortzusetzen, Segment anklicken fügt einen Ankerpunkt hinzu, Ankerpunkt anklicken löscht ihn.",
+  "svg.pen.drawing": "Zeichnen, {n} Ankerpunkte. Enter oder Esc beendet, Rücktaste entfernt den letzten Punkt, Umschalt+Esc verwirft.",
+  "svg.pen.continuing": "Pfad wird fortgesetzt. Enter oder Esc beendet, Rücktaste entfernt den letzten Punkt, Umschalt+Esc verwirft.",
+  "svg.pen.finish": "Fertig",
+  "svg.pen.discard": "Verwerfen"
 }

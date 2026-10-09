@@ -81,3 +81,28 @@ resvg-exact export becomes a requirement.
   with `registerRasterizer({id:'native',...})` and is then preferred automatically; none ships yet. The canvas backend uses the
   webview's own SVG renderer, so fonts and filters match what the editor shows, but output can differ slightly between webviews.
   Tests do not depend on a native backend.
+
+## B5 (pen and path UX, after docs/PEN-PATH-UX-RESEARCH.md)
+
+Scope: the pen and node tools of this editor only. Everything is ordinary `<path d>` editing, no new file format and no
+metadata. Smooth/symmetric/corner is inferred from the handle geometry when a path is read, so a decoupled handle survives
+save and reload as geometry. Constraints that geometry cannot express (for example a symmetric node whose handles happen to be
+collinear and unequal) are not remembered after external edits. That is the "SVG metadata persistence" decision from the
+handover, left open on purpose.
+
+- Continue a path: select an open path, press P, click its first or last anchor, keep clicking. Enter, Esc or Finish writes the
+  result back into the same `<path>` (id and attributes kept; clicking the first anchor reverses the path without changing any
+  curve). Only the clicked sub-path of a compound path changes.
+- Add and delete anchors with the pen on the selected path: click a segment to add one (shape unchanged), click an interior
+  anchor to delete it (the path needs two anchors left).
+- Drag a segment (node tool, with the path selected): the curve point under the cursor follows the pointer. Both end handles move
+  by the same amount, straight segments become curves, smooth/symmetric neighbours keep their other handle collinear.
+- Escape: during a drag (node, segment, pen handle, move, resize, rotate) it cancels only that gesture and restores the
+  geometry. While drawing it finishes a path with two or more anchors and drops a single anchor. Shift+Escape or the Discard
+  button throws the whole draft away. Backspace removes the last anchor of the draft.
+- Handle uncoupling: Alt while dragging a handle (node tool, or while creating an anchor with the pen) moves only that handle
+  and makes the anchor a corner.
+- Delete in node mode with no anchor picked does nothing, it no longer deletes the whole object.
+
+Not done: vector networks (branching paths), joining two open paths, Shape Builder, segment selection and multi-anchor
+selection, Remove-handles command, keyboard-only anchor editing.

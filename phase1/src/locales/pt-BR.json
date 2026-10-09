@@ -2227,5 +2227,10 @@
   "svg.strokeToPath": "Contorno para caminho (contorno como forma preenchida)",
   "svg.export.scale": "Escala PNG",
   "svg.export.white": "Branco",
-  "svg.export.png": "Exportar como PNG"
+  "svg.export.png": "Exportar como PNG",
+  "svg.pen.hint": "Caneta: clique para cantos, arraste para curvas. Selecione antes um caminho para continuá-lo a partir de uma ponta, clique num segmento para adicionar uma âncora, clique numa âncora para excluí-la.",
+  "svg.pen.drawing": "Desenhando, {n} âncoras. Enter ou Esc termina, Backspace remove a última âncora, Shift+Esc descarta.",
+  "svg.pen.continuing": "Continuando o caminho. Enter ou Esc termina, Backspace remove a última âncora, Shift+Esc descarta.",
+  "svg.pen.finish": "Concluir",
+  "svg.pen.discard": "Descartar"
 }

@@ -38,3 +38,5 @@
 .svg-seg button[aria-pressed=true]{background:var(--bg-panel);color:var(--accent);box-shadow:0 1px 2px #0002}
 .svg-seg button:focus-visible{outline:2px solid var(--accent)}
 .svg-grad-bar{height:14px;border-radius:7px;border:1px solid var(--border-subtle)}
+
+.svg-editor{position:relative}.svg-pen-bar{position:absolute;left:50%;bottom:44px;transform:translateX(-50%);display:flex;align-items:center;gap:8px;padding:5px 8px 5px 12px;border-radius:10px;background:var(--bg-panel);box-shadow:var(--card-shadow);border:1px solid var(--border-subtle);font-size:11px;color:var(--text-secondary);z-index:5;max-width:92%}.svg-pen-bar button{height:24px;padding:0 10px;border-radius:6px;border:1px solid var(--border-subtle);background:var(--bg-surface);font-size:11px;color:var(--text-primary)}.svg-pen-bar button:disabled{opacity:.45}
