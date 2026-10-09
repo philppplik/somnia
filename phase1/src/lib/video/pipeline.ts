@@ -201,7 +201,7 @@ export async function exportTimeline(sources:Record<string,ArrayBuffer>,clips:Ti
      const t=z.start+k/fps,p=Math.min(1,(t-z.start)/d);
      const[fa,fb]=await Promise.all([sideFrame(z.a,t),sideFrame(z.b,t)]);
      ctx.globalAlpha=1;ctx.fillStyle='#000';ctx.fillRect(0,0,outW,outH);
-     if(fa){ctx.globalAlpha=1-p;ctx.drawImage(fa as CanvasImageSource,0,0);}
+     if(fa){ctx.globalAlpha=1;ctx.drawImage(fa as CanvasImageSource,0,0);}
      if(fb){ctx.globalAlpha=p;ctx.drawImage(fb as CanvasImageSource,0,0);}
      ctx.globalAlpha=1;
      await videoSource.add(t,1/fps);

@@ -40,19 +40,20 @@ export function VideoWorkspace({item,withPanel=false}:{item:MediaItem;withPanel?
  const missing=new Set(clips.filter(needsSourceFile).map(c=>c.source).filter((n:string)=>!media.items.some((i:MediaItem)=>i.name===n)));
  const urlOf=(source:string)=>media.items.find((i:MediaItem)=>i.name===source)?.url??item.url;
  const seek=useCallback((s:number)=>{setPlayhead(Math.min(Math.max(0,s),duration||s));},[duration]);
- // Every active slot sits on its clip's source and frame; scrubbing corrects drift over 350 ms, playback drift is left alone.
+ // Every active slot sits on its clip's source and frame. A paused transport (seek, frame step) always syncs the
+ // frame; while playing, only drift over 350 ms is corrected so the element's own clock does the smooth work.
  useEffect(()=>{
   for(const e of blend){
    const el=slotOf(e.range.index).current;if(!el)continue;
    const url=urlOf(e.range.clip.source);
-   if(el.dataset.slotClip!==e.range.clip.id){el.dataset.slotClip=e.range.clip.id;if(el.src!==url)el.src=url;}
-   if(Math.abs(el.currentTime-e.sourceTime)>0.35)el.currentTime=e.sourceTime;
+   if(el.dataset.slotClip!==e.range.clip.id){el.dataset.slotClip=e.range.clip.id;if(el.src!==url){el.src=url;el.currentTime=e.sourceTime;}}
+   if(!playing||Math.abs(el.currentTime-e.sourceTime)>0.35)el.currentTime=e.sourceTime;
   }
   for(const slot of [slotA,slotB]){
    const el=slot.current;
    if(el&&!blend.some(e=>slotOf(e.range.index)===slot))el.pause();
   }
- },[blend,media]);
+ },[blend,media,playing]);
  // Play/pause follows the transport for every slot that is part of the current blend.
  useEffect(()=>{
   for(const e of blend){
@@ -136,11 +137,11 @@ export function VideoWorkspace({item,withPanel=false}:{item:MediaItem;withPanel?
      {!clips.length?<div className="grid justify-items-center gap-3 text-center text-[13px] text-white" data-testid="video-empty-timeline"><p>Your timeline is empty. Add clips to start editing.</p><Button variant="outline" onClick={()=>void addTimelineClipsFromDialog(item.name)}>Add video clips</Button></div>:playable?[slotA,slotB].map((slot,idx)=>{
       const e=blend.find(x=>(x.range.index%2)===idx);
       return <video key={idx} ref={slot} className="absolute inset-0 h-full w-full object-contain p-2" preload="auto"
-       style={{opacity:e?e.video:0,visibility:e?'visible':'hidden',zIndex:e&&main&&e.range.index===main.range.index?1:0,pointerEvents:'none'}}
+       style={{opacity:e?(main&&e.range.index===main.range.index?e.video:1):0,visibility:e?'visible':'hidden',zIndex:e&&main&&e.range.index===main.range.index?1:0,pointerEvents:'none'}}
        onTimeUpdate={onTime(idx)} onEnded={onTime(idx)} onError={()=>setPlayable(false)}
        data-testid={idx===0?'video-player':'video-player-b'} data-clip-id={e?.range.clip.id}/>;
      }):<p className="max-w-[420px] p-4 text-center text-[13px] text-ink-2" data-testid="video-nopreview">{t('video.noPreview',{ext:session?.ext??item.name.split('.').pop()??''})}</p>}
-     {playable&&blend.map(e=>isTitleClip(e.range.clip)?<div key={e.range.clip.id} className="absolute inset-0 flex items-center justify-center p-2" style={{opacity:e.video,zIndex:main&&e.range.index===main.range.index?1:0,pointerEvents:'none'}}>
+     {playable&&blend.map(e=>isTitleClip(e.range.clip)?<div key={e.range.clip.id} className="absolute inset-0 flex items-center justify-center p-2" style={{opacity:main&&e.range.index===main.range.index?e.video:1,zIndex:main&&e.range.index===main.range.index?1:0,pointerEvents:'none'}}>
       <TitlePreview clip={e.range.clip} time={e.sourceTime} aspect={(probe?.video?.width??16)/(probe?.video?.height??9)} label={clipDisplayName(e.range.clip,'Title')}/>
      </div>:null)}
     </div>

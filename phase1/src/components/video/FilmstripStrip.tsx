@@ -44,6 +44,9 @@ export function FilmstripStrip({controller,source,in_s,out_s,name,className}:Pro
   }
  },[controller,source,in_s,out_s,box.w,box.h,tick,owner]);
  const state=controller.state(source);
- return <canvas ref={ref} className={className??'absolute inset-0 h-full w-full'} style={{width:'100%',height:'100%'}} role="img"
-  aria-label={t('video.filmstripAria',{name})} aria-busy={state==='opening'||undefined} data-testid="video-filmstrip" data-state={state}/>;
+ // The test id sits on a wrapper so DOM probes find the drawing canvas as a descendant.
+ return <div className={className??'absolute inset-0 h-full w-full'} role="img"
+  aria-label={t('video.filmstripAria',{name})} aria-busy={state==='opening'||undefined} data-testid="video-filmstrip" data-state={state}>
+  <canvas ref={ref} className="absolute inset-0 h-full w-full" style={{width:'100%',height:'100%'}}/>
+ </div>;
 }
