@@ -6,6 +6,8 @@ import {setActiveMedia} from '../media';
 import {createOpenCoordinator,type OpenDeps,type OpenInput,type PreparedOpen,type OpenReport,type BatchOptions} from './openCoordinator';
 import {MAX_OPEN_TEXT_BYTES} from './openResolver';
 import './openHandlers';
+import {importSvg} from '../vectorio';
+import {openSvgSource} from '../vectorstudio/session';
 /**
  * App wiring of the Smart Open coordinator: the single entry for EXPLICIT Open (Project > Open file, starter Open buttons, global drop,
  * native dropped copies). Not used by: Video "add source", canvas Place image, chat/convert drops (import / attach), folder media
@@ -20,7 +22,13 @@ export const appDeps:OpenDeps={
   if(TEXT_KINDS.has(resolution.kind)){
    if(input.bytes.length>MAX_OPEN_TEXT_BYTES)throw new Error('larger than 2 MB');
    const text=decodeFileBytes(input.name,input.bytes).text;let added:string[]=[];let live=true;
-   return{name:input.name,studioId,dispose(){live=false;},
+   // Vector rule: only SVG the strict importer accepts goes to Vector Studio. Anything else stays source in Code (never silently dropped).
+   let target=studioId;
+   if(studioId==='vector'){try{importSvg(text,{strict:true});}catch{target='code';}}
+   if(target==='vector')return{name:input.name,studioId:target,dispose(){live=false;},
+    commit(){if(!live)return{ok:false,error:'cancelled'};if(!openSvgSource(text,input.name,{strict:true}))return{ok:false,error:'Vector Studio kept the current document.'};added=commitTextFiles([{name:input.name,text}],{activate:false});return{ok:true,key:added[0]};},
+    focus(key){openFileTab(key);}};
+   return{name:input.name,studioId:target,dispose(){live=false;},
     commit(){if(!live)return{ok:false,error:'cancelled'};added=commitTextFiles([{name:input.name,text}],{activate:false});return{ok:true,key:added[0]};},
     focus(key){openFileTab(key);}};
   }

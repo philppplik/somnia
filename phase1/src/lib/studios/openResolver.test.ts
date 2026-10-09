@@ -42,16 +42,12 @@ test('unknown binary stays unopened; unknown verified text is only offered for C
  assert.equal(looksLikeText(bin),false);assert.equal(looksLikeText(Uint8Array.from([0xff,0xfe,0x41,0])),true);
 });
 test('oversized text is unsupported',()=>{assert.equal(resolveOpen('big.txt',new Uint8Array(2_000_001).fill(65)).status,'unsupported');});
-test('svg: Code today; Vector rule sits behind the registry and activates when a vector Studio registers',()=>{
+test('svg: Vector Studio when registered and the SVG is strict-importable; Code otherwise or when overridden',()=>{
  const svg=enc('<svg xmlns="http://www.w3.org/2000/svg"><rect/></svg>');
- assert.equal(readyHandlersFor('svg').some(h=>h.studioId==='vector'),false,'queued: not advertised');
- assert.equal(studioOf('a.svg',svg),'code');
- const off=registerStudio({...codeStudio,id:'vector',order:70});
- try{assert.equal(studioOf('a.svg',svg),'vector');assert.equal(studioOf('a.svg',svg,{target:'code'}),'code');assert.equal(studioOf('a.svg',svg,{preferred:'code'}),'code','per-document override');
-  assert.equal(studioOf('a.html',enc('<p/>'),{preferred:'vector'}),'code','incompatible override ignored');
-  assert.equal(studioOf('a.svg',enc('not really svg'),{}),'code','svg suffix without svg content is plain text');
- }finally{off();}
- assert.equal(studioOf('a.svg',svg),'code');
+ assert.equal(readyHandlersFor('svg').some(h=>h.studioId==='vector'),true,'vector studio is registered in the app registry');
+ assert.equal(studioOf('a.svg',svg),'vector');assert.equal(studioOf('a.svg',svg,{target:'code'}),'code');assert.equal(studioOf('a.svg',svg,{preferred:'code'}),'code','per-document override');
+ assert.equal(studioOf('a.html',enc('<p/>'),{preferred:'vector'}),'code','incompatible override ignored');
+ assert.equal(studioOf('a.svg',enc('not really svg'),{}),'code','svg suffix without svg content is plain text');
 });
 test('equal-priority ready handlers ask instead of depending on registration order; a default breaks the tie',()=>{
  const a=registerStudio({...codeStudio,id:'t.a',order:80}),b=registerStudio({...codeStudio,id:'t.b',order:81});

@@ -91,6 +91,8 @@ test('shortcuts: no duplicates inside a scope, no clash with registered command 
   const registered = new Set<string>();
   for (const f of readdirSync(resolve(root, 'phase1/src'), {recursive: true}) as string[]) {
     if (!/\.tsx?$/.test(f) || /\.test\.tsx?$/.test(f)) continue;
+    // Studio-scoped tool keys (Vector and Design) are active only inside their own Studio; they are not global commands.
+    if (/(^|\/)(vectorstudio|design)(\/|$)/.test(f)) continue;
     for (const m of read('phase1/src/' + f).matchAll(/shortcut:\s*'([^']+)'/g)) registered.add(norm(m[1]));
   }
   assert.ok(registered.has('mod+s'));
