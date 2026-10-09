@@ -5,3 +5,4 @@ playwright-report/
 tests/artifacts/
 *.tsbuildinfo
 src-tauri/target/
+public/raster-codec/

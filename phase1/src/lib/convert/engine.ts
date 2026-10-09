@@ -23,7 +23,7 @@ export async function convertFile(name:string,bytes:Uint8Array,from:FormatId,to:
   if(!opt.rasterize)throw Error('Image conversion needs a browser canvas');
   const q=Math.min(1,Math.max(0.1,opt.quality??0.92));
   const data=await opt.rasterize(bytes,from,to as 'png'|'jpg'|'webp',q);
-  return {name:`${title}.${info.ext}`,bytes:data,mime:info.mime};}
+  return {name:`${title}.${info.ext}`,bytes:data,mime:info.mime,...(['gif','bmp','ico','tga','tiff','qoi','pnm','avif'].includes(from)?{warnings:['First image/frame only. Layers, animation, metadata, ICC/CMYK and high bit depth are not preserved.']}: {})};}
  if(bytes.length>MAX_TEXT_BYTES)throw Error('Text file is larger than 8 MB');
  const text=decodeUtf8(bytes);
  switch(`${from}>${to}`){

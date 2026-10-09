@@ -566,7 +566,7 @@ impl Project {
     pub fn read_media(&self, path: &str) -> Result<Vec<u8>> {
         if !is_media_path(path) {
             return Err(AppError::Denied(
-                "Only PNG, JPEG and PDF files can be previewed".into(),
+                "Only supported media files can be previewed".into(),
             ));
         }
         let p = self.safe_path(path)?;
@@ -811,7 +811,7 @@ pub fn is_media_path(path: &str) -> bool {
     Path::new(path)
         .extension()
         .map(|e| e.to_string_lossy().to_ascii_lowercase())
-        .is_some_and(|e| matches!(e.as_str(), "png" | "jpg" | "jpeg" | "pdf"))
+        .is_some_and(|e| matches!(e.as_str(), "png" | "jpg" | "jpeg" | "gif" | "avif" | "bmp" | "ico" | "tga" | "tif" | "tiff" | "qoi" | "ppm" | "pnm" | "webp" | "psd" | "docx" | "xlsx" | "pdf"))
 }
 const PROJECT_SETTINGS_DIR: &str = ".somnia";
 const PROJECT_SETTINGS_FILE: &str = "settings.json";

@@ -78,3 +78,13 @@ test('custom document limit does not count binary assets',async()=>{
  const port=createWebFsPort({pickDirectory:async()=>root as never,journal:memoryJournal(),maxFiles:1});const {projectId}=await port.invoke<{projectId:string}>('choose_project');assert.equal((await port.invoke<string[]>('list_files',{projectId})).length,101);
  root.items.set('b.txt',new FakeFile('b'));await assert.rejects(port.invoke('list_files',{projectId}),/1 text documents/);
 });
+
+test('additional media reads stay rooted and return original bytes',async()=>{
+ const {root,port,projectId}=await setup();
+ for(const extension of ['tiff','tga','qoi','gif','avif','webp','psd','docx','xlsx']){
+  const name=`photo.${extension}`;root.items.set(name,new FakeFile('original bytes'));
+  const bytes=await port.invoke<string>('read_media',{projectId,path:name});assert.equal(atob(bytes),'original bytes');
+  await assert.rejects(port.invoke('read_media',{projectId,path:'../'+name}),/Invalid project path/);
+ }
+ await assert.rejects(port.invoke('read_media',{projectId,path:'asset.heic'}),/Only/);
+});

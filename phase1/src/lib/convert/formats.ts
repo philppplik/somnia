@@ -1,5 +1,6 @@
+import {sniffRaster} from '../rasterPreview';
 /** Conversion formats: detection (magic bytes first, then extension, then content) and the source to target matrix. */
-export type FormatId='md'|'html'|'txt'|'csv'|'tsv'|'json'|'svg'|'png'|'jpg'|'webp'|'gif'|'bmp'|'pdf'|'docx'|'unknown';
+export type FormatId='md'|'html'|'txt'|'csv'|'tsv'|'json'|'svg'|'png'|'jpg'|'webp'|'gif'|'bmp'|'ico'|'tga'|'tiff'|'qoi'|'pnm'|'avif'|'pdf'|'docx'|'unknown';
 export interface FormatInfo{id:FormatId;ext:string;mime:string;label:string;kind:'text'|'image'|'binary'}
 export const FORMATS:Readonly<Record<Exclude<FormatId,'unknown'>,FormatInfo>>={
  md:{id:'md',ext:'md',mime:'text/markdown;charset=utf-8',label:'Markdown',kind:'text'},
@@ -14,6 +15,12 @@ export const FORMATS:Readonly<Record<Exclude<FormatId,'unknown'>,FormatInfo>>={
  webp:{id:'webp',ext:'webp',mime:'image/webp',label:'WebP',kind:'image'},
  gif:{id:'gif',ext:'gif',mime:'image/gif',label:'GIF',kind:'image'},
  bmp:{id:'bmp',ext:'bmp',mime:'image/bmp',label:'BMP',kind:'image'},
+ ico:{id:'ico',ext:'ico',mime:'image/x-icon',label:'ICO',kind:'image'},
+ tga:{id:'tga',ext:'tga',mime:'image/x-tga',label:'TGA',kind:'image'},
+ tiff:{id:'tiff',ext:'tiff',mime:'image/tiff',label:'TIFF',kind:'image'},
+ qoi:{id:'qoi',ext:'qoi',mime:'image/qoi',label:'QOI',kind:'image'},
+ pnm:{id:'pnm',ext:'pnm',mime:'image/x-portable-anymap',label:'PNM',kind:'image'},
+ avif:{id:'avif',ext:'avif',mime:'image/avif',label:'AVIF',kind:'image'},
  pdf:{id:'pdf',ext:'pdf',mime:'application/pdf',label:'PDF',kind:'binary'},
  docx:{id:'docx',ext:'docx',mime:'application/vnd.openxmlformats-officedocument.wordprocessingml.document',label:'Word (DOCX)',kind:'binary'},
 };
@@ -21,9 +28,9 @@ const RASTER_OUT:FormatId[]=['png','jpg','webp'];
 /** Which targets each source can reach. Anything not listed is not convertible (no placeholders). */
 export const TARGETS:Readonly<Record<FormatId,readonly FormatId[]>>={
  md:['html','txt','pdf'],html:['md','txt'],txt:['html','md'],csv:['json','tsv','html'],tsv:['csv','json'],json:['csv'],
- svg:RASTER_OUT,png:['jpg','webp'],jpg:['png','webp'],webp:['png','jpg'],gif:RASTER_OUT,bmp:RASTER_OUT,pdf:['txt','docx'],docx:['md'],unknown:[],
+ svg:RASTER_OUT,png:['jpg','webp'],jpg:['png','webp'],webp:['png','jpg'],gif:RASTER_OUT,bmp:RASTER_OUT,ico:RASTER_OUT,tga:RASTER_OUT,tiff:RASTER_OUT,qoi:RASTER_OUT,pnm:RASTER_OUT,avif:RASTER_OUT,pdf:['txt','docx'],docx:['md'],unknown:[],
 };
-const EXT:Record<string,FormatId>={md:'md',markdown:'md',mdown:'md',html:'html',htm:'html',txt:'txt',text:'txt',csv:'csv',tsv:'tsv',tab:'tsv',json:'json',svg:'svg',png:'png',jpg:'jpg',jpeg:'jpg',jpe:'jpg',webp:'webp',gif:'gif',bmp:'bmp',pdf:'pdf',docx:'docx'};
+const EXT:Record<string,FormatId>={md:'md',markdown:'md',mdown:'md',html:'html',htm:'html',txt:'txt',text:'txt',csv:'csv',tsv:'tsv',tab:'tsv',json:'json',svg:'svg',png:'png',jpg:'jpg',jpeg:'jpg',jpe:'jpg',webp:'webp',gif:'gif',bmp:'bmp',ico:'ico',tga:'tga',tif:'tiff',tiff:'tiff',qoi:'qoi',ppm:'pnm',pnm:'pnm',avif:'avif',pdf:'pdf',docx:'docx'};
 export function extensionOf(name:string){const m=/\.([A-Za-z0-9]+)$/.exec(name);return m?m[1].toLowerCase():'';}
 export function baseName(name:string){const leaf=name.split(/[\\/]/).pop()||name;return leaf.replace(/\.[^.]*$/,'')||'file';}
 const startsWith=(b:Uint8Array,sig:number[],at=0)=>sig.every((v,i)=>b[at+i]===v);
@@ -35,7 +42,8 @@ export function sniffBinary(b:Uint8Array):FormatId|undefined{
  if(b.length>=12&&startsWith(b,[0x52,0x49,0x46,0x46])&&startsWith(b,[0x57,0x45,0x42,0x50],8))return 'webp';
  if(b.length>=2&&startsWith(b,[0x42,0x4d])&&b.length>=26)return 'bmp';
  if(b.length>=5&&startsWith(b,[0x25,0x50,0x44,0x46,0x2d]))return 'pdf';
- return undefined;}
+ const mime=sniffRaster(b);const extra:Record<string,FormatId>={'image/x-icon':'ico','image/tiff':'tiff','image/qoi':'qoi','image/x-portable-anymap':'pnm','image/avif':'avif'};
+ return mime?extra[mime]:undefined;}
 function looksBinary(b:Uint8Array){const n=Math.min(b.length,4096);let bad=0;for(let i=0;i<n;i++){const c=b[i];if(c===0)return true;if(c<9||(c>13&&c<32&&c!==27))bad++;}return n>0&&bad/n>0.05;}
 export function decodeUtf8(b:Uint8Array){
  if(b.length>=2&&b[0]===0xff&&b[1]===0xfe)return new TextDecoder('utf-16le').decode(b.subarray(2));
@@ -54,10 +62,12 @@ function sniffText(text:string):FormatId{
 export function detectFormat(name:string,bytes:Uint8Array):FormatId{
  const bin=sniffBinary(bytes);if(bin)return bin;
  if(extensionOf(name)==='docx'&&bytes.length>=4&&startsWith(bytes,[0x50,0x4b,0x03,0x04]))return 'docx';
+ // TGA lacks a signature; only a .tga hint reaches its validating decoder.
+ if(extensionOf(name)==='tga')return 'tga';
  if(looksBinary(bytes))return 'unknown';
  const byExt=EXT[extensionOf(name)];
  // An extension that promises a binary format without its signature is a corrupt or mislabelled file.
- if(byExt&&['png','jpg','gif','webp','bmp','pdf','docx'].includes(byExt))return 'unknown';
+ if(byExt&&['png','jpg','gif','webp','bmp','ico','tiff','qoi','pnm','avif','pdf','docx'].includes(byExt))return 'unknown';
  if(byExt)return byExt;
  return sniffText(decodeUtf8(bytes));}
 /** Targets every file in the batch can reach. Empty when the batch has no common target. */

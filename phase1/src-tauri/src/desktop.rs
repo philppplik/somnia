@@ -579,7 +579,7 @@ struct DroppedTextFile {
     #[serde(skip_serializing_if = "Option::is_none")]
     base64: Option<String>,
 }
-const MEDIA_EXTENSIONS: [&str; 4] = ["png", "jpg", "jpeg", "pdf"];
+const MEDIA_EXTENSIONS: [&str; 18] = ["png", "jpg", "jpeg", "webp", "gif", "avif", "bmp", "ico", "tga", "tif", "tiff", "qoi", "ppm", "pnm", "pdf", "psd", "docx", "xlsx"];
 const MAX_MEDIA_BYTES: usize = 25_000_000;
 const MAX_MEDIA_TOTAL: usize = 60_000_000;
 /// Standard base64 with padding. Small and dependency free, used only for dropped media files.

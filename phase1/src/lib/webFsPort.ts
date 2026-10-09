@@ -1,3 +1,4 @@
+import {MEDIA_FILE} from './media';
 import {decodeFileBytes} from './textEncoding';
 import {MAX_PROJECT_DOCUMENTS,MAX_PROJECT_FILES,MAX_PROJECT_DEPTH,isEditablePath} from './projectIndex';
 import type {FilePort,FileEvent,Read,Revision,Recovery} from './fileAdapter';
@@ -58,7 +59,7 @@ export function createWebFsPort(options:WebFsOptions={}):FilePort{
   },
   async list_files({projectId}){const out:string[]=[];await walk(project(projectId).root,'',out,options.maxFiles??MAX_PROJECT_DOCUMENTS,0,{documents:0,entries:0});return out.sort();},
   async read_file({projectId,path}){const {root}=project(projectId);const content=await readText(root,String(path));const revision=await revisionOf(content);return{content,revision,status:event(String(projectId),String(path),0,'saved',revision)} satisfies Read;},
-  async read_media({projectId,path}){const {root}=project(projectId);const p=String(path);if(!/\.(png|jpe?g|pdf)$/i.test(p))throw Error('Only PNG, JPEG and PDF files can be previewed.');const file=await (await fileHandle(root,p,false)).getFile();if(file.size>25_000_000)throw Error('File is too large to preview.');
+  async read_media({projectId,path}){const {root}=project(projectId);const p=String(path);if(!MEDIA_FILE.test(p))throw Error('Only supported media files can be previewed.');const file=await (await fileHandle(root,p,false)).getFile();if(file.size>25_000_000)throw Error('File is too large to preview.');
    const bytes=new Uint8Array(await file.arrayBuffer());let bin='';for(let i=0;i<bytes.length;i+=0x8000)bin+=String.fromCharCode(...bytes.subarray(i,i+0x8000));return btoa(bin);},
   async stage_edit({projectId,path,content,clientRevision}){
    const id=String(projectId),p=String(path),rev=Number(clientRevision);parts(p);const k=key(id,p);const previous=await journal.get(k);

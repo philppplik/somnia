@@ -83,7 +83,7 @@ export function ConvertPanel({onClose}:{onClose:()=>void}){
    </section>}
    {busy&&<div className="cv-progress"><progress max={rows.length} value={finished} aria-label={t('convert.running',{done:finished,total:rows.length})}/><span role="status">{t('convert.running',{done:finished,total:rows.length})}</span></div>}
    {summary&&<p role="status" className="cv-summary">{summary}</p>}
-   {rows.length===1&&['png','jpg','webp','svg'].includes(rows[0].format)&&!busy&&<Button size="compact" variant="outline" onClick={()=>{const r=rows[0];const f=new globalThis.File([r.bytes as Uint8Array<ArrayBuffer>],r.name);onClose();window.dispatchEvent(new CustomEvent('somnia:convert-image',{detail:f}));}}>{t('convert.imageOptions')}</Button>}
+   {rows.length===1&&FORMATS[rows[0].format as Exclude<FormatId,'unknown'>]?.kind==='image'&&!busy&&<Button size="compact" variant="outline" onClick={()=>{const r=rows[0];const f=new globalThis.File([r.bytes as Uint8Array<ArrayBuffer>],r.name);onClose();window.dispatchEvent(new CustomEvent('somnia:convert-image',{detail:f}));}}>{t('convert.imageOptions')}</Button>}
    {problems.map((p,i)=><p key={i} role="alert" className="export-error">{p}</p>)}
   </div>
   <footer className="export-foot">

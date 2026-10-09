@@ -18,7 +18,7 @@ export function addTextFiles(incoming:IncomingFile[]):string[]{
  if(media.length){void addMediaFiles(media);if(!incoming.length)return [];}
  const usable=incoming.filter(f=>TEXT_FILE.test(f.name)&&f.text.length<=MAX_BYTES);
  const skipped=incoming.length-usable.length;
- if(!usable.length){patchState({notice:'Somnia opens .html, .css, .js, .json, .svg, .txt, .md, .tex, .png, .jpg and .pdf files (text up to 2 MB).'});return [];}
+ if(!usable.length){patchState({notice:'Somnia opens .html, .css, .js, .json, .svg, .txt, .md, .tex, .png, .jpg, .webp, .gif, .avif, .bmp, .ico, .tga, .tiff, .qoi, .pnm, .pdf, .psd, .docx and .xlsx files (text up to 2 MB).'});return [];}
  const st=getState();const added:string[]=[];
  if(!st.coreConnected){const files:Record<string,string>={};for(const f of usable){const n=unique(safeName(f.name),Object.keys(files));files[n]=f.text;added.push(n);}
   connectEditorProject(new EditorProject(files),{name:added.length===1?added[0]:'Untitled project',alreadySaved:false});openFileTab(added.find(n=>/\.html?$/i.test(n))??added[0]);}

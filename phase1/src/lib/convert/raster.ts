@@ -1,10 +1,12 @@
+import {decodeRasterPreview} from '../rasterPreview';
 import {FORMATS,sniffBinary,type FormatId} from './formats';
 import type {Rasterizer} from './engine';
 const MAX_PIXELS=16_000_000;const MAX_SIDE=16_384;
 /** Browser rasterizer: decodes with the platform image decoder, redraws on a canvas, encodes. JPEG gets a white background (no alpha). */
 export const canvasRasterizer:Rasterizer=async(bytes,from,to,quality)=>{
  const src=FORMATS[from as Exclude<FormatId,'unknown'>];
- const blob=new Blob([bytes as Uint8Array<ArrayBuffer>],{type:src.mime});
+ const original=new Blob([bytes as Uint8Array<ArrayBuffer>],{type:src.mime});
+ const blob=['gif','bmp','ico','tga','tiff','qoi','pnm','avif'].includes(from)?(await decodeRasterPreview(original,`image.${src.ext}`,src.mime)).blob:original;
  const url=URL.createObjectURL(blob);
  try{
   const img=await new Promise<HTMLImageElement>((ok,fail)=>{const i=new Image();i.onload=()=>ok(i);i.onerror=()=>fail(Error('This image could not be decoded'));i.src=url;});

@@ -440,3 +440,19 @@ fn project_settings_roundtrip_and_stay_hidden() {
     assert!(!project.list_files().unwrap().iter().any(|f| f.contains(".somnia")));
     assert!(project.write_project_settings(&"x".repeat(70_000)).is_err());
 }
+
+#[test]
+fn extra_raster_formats_preserve_media_path_validation() {
+    use somnia_desktop::service::is_media_path;
+    for extension in ["bmp", "ico", "tga", "tif", "tiff", "qoi", "ppm", "pnm", "gif", "avif", "png", "jpg", "webp", "psd", "pdf", "docx", "xlsx"] {
+        let (root, _recovery, project) = setup();
+        let name = format!("asset.{extension}");
+        fs::write(root.path().join(&name), b"original bytes").unwrap();
+        assert!(is_media_path(&name));
+        assert_eq!(project.read_media(&name).unwrap(), b"original bytes");
+        assert!(project.read_media(&format!("../{name}")).is_err());
+    }
+    for name in ["asset.heic", "asset.raw", "asset.exe"] {
+        assert!(!is_media_path(name));
+    }
+}

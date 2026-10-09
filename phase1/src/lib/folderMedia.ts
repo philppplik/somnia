@@ -18,6 +18,6 @@ export async function loadFolderMedia(invoke:Invoke,projectId:string,paths:strin
   }catch{skipped.push(path);}
  }
  setActiveMedia(null);
- const notice=!media.length?'':skipped.length?`${loaded.length} of ${media.length} media files loaded for preview. Skipped: ${skipped.slice(0,3).join(', ')}${skipped.length>3?` and ${skipped.length-3} more`:''} (duplicate path, too large, unreadable or not a real PNG/JPEG/PDF).`:`${loaded.length} media file${loaded.length===1?'':'s'} from the folder available in Files > Previews.`;
+ const notice=!media.length?'':skipped.length?`${loaded.length} of ${media.length} media files loaded for preview. Skipped: ${skipped.slice(0,3).join(', ')}${skipped.length>3?` and ${skipped.length-3} more`:''} (duplicate path, too large, unreadable or not a supported media file).`:`${loaded.length} media file${loaded.length===1?'':'s'} from the folder available in Files > Previews.`;
  return{loaded,skipped,notice};
 }

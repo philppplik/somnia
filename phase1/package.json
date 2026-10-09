@@ -21,7 +21,8 @@
     "tauri": "tauri",
     "bench:projects": "tsx scripts/bench-projects.ts",
     "test:documents": "tsx --test src/lib/convert/*.test.ts src/lib/conversion/*.test.ts",
-    "craft:build": "sh craft/build.sh"
+    "craft:build": "sh craft/build.sh && npm run raster:wasm",
+    "raster:wasm": "sh scripts/build-raster-wasm.sh"
   },
   "dependencies": {
     "@base-ui/react": "1.8.0",

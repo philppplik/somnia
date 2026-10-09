@@ -924,6 +924,282 @@
   "homepage": "https://github.com/reduxjs/reselect"
  },
  {
+  "name": "Rust: adler2",
+  "version": "2.0.1",
+  "license": "0BSD OR MIT OR Apache-2.0",
+  "homepage": "https://github.com/oyvindln/adler2"
+ },
+ {
+  "name": "Rust: autocfg",
+  "version": "1.5.1",
+  "license": "Apache-2.0 OR MIT",
+  "homepage": "https://github.com/cuviper/autocfg"
+ },
+ {
+  "name": "Rust: bitflags",
+  "version": "2.13.2",
+  "license": "MIT OR Apache-2.0",
+  "homepage": "https://github.com/bitflags/bitflags"
+ },
+ {
+  "name": "Rust: bumpalo",
+  "version": "3.20.3",
+  "license": "MIT OR Apache-2.0",
+  "homepage": "https://github.com/fitzgen/bumpalo"
+ },
+ {
+  "name": "Rust: bytemuck",
+  "version": "1.25.2",
+  "license": "Zlib OR Apache-2.0 OR MIT",
+  "homepage": "https://github.com/Lokathor/bytemuck"
+ },
+ {
+  "name": "Rust: byteorder-lite",
+  "version": "0.1.0",
+  "license": "Unlicense OR MIT",
+  "homepage": "https://github.com/image-rs/byteorder-lite"
+ },
+ {
+  "name": "Rust: cfg-if",
+  "version": "1.0.5",
+  "license": "MIT OR Apache-2.0",
+  "homepage": "https://github.com/rust-lang/cfg-if"
+ },
+ {
+  "name": "Rust: color_quant",
+  "version": "1.1.0",
+  "license": "MIT",
+  "homepage": "https://github.com/image-rs/color_quant.git"
+ },
+ {
+  "name": "Rust: crc32fast",
+  "version": "1.5.2",
+  "license": "MIT OR Apache-2.0",
+  "homepage": "https://github.com/srijs/rust-crc32fast"
+ },
+ {
+  "name": "Rust: crunchy",
+  "version": "0.2.4",
+  "license": "MIT",
+  "homepage": "https://github.com/eira-fransham/crunchy"
+ },
+ {
+  "name": "Rust: fax",
+  "version": "0.2.7",
+  "license": "MIT",
+  "homepage": "https://github.com/pdf-rs/fax"
+ },
+ {
+  "name": "Rust: fdeflate",
+  "version": "0.3.7",
+  "license": "MIT OR Apache-2.0",
+  "homepage": "https://github.com/image-rs/fdeflate"
+ },
+ {
+  "name": "Rust: flate2",
+  "version": "1.1.10",
+  "license": "MIT OR Apache-2.0",
+  "homepage": "https://github.com/rust-lang/flate2-rs"
+ },
+ {
+  "name": "Rust: gif",
+  "version": "0.14.2",
+  "license": "MIT OR Apache-2.0",
+  "homepage": "https://github.com/image-rs/image-gif"
+ },
+ {
+  "name": "Rust: half",
+  "version": "2.7.1",
+  "license": "MIT OR Apache-2.0",
+  "homepage": "https://github.com/VoidStarKat/half-rs"
+ },
+ {
+  "name": "Rust: image",
+  "version": "0.25.9",
+  "license": "MIT OR Apache-2.0",
+  "homepage": "https://github.com/image-rs/image"
+ },
+ {
+  "name": "Rust: image-webp",
+  "version": "0.2.4",
+  "license": "MIT OR Apache-2.0",
+  "homepage": "https://github.com/image-rs/image-webp"
+ },
+ {
+  "name": "Rust: miniz_oxide",
+  "version": "0.8.9",
+  "license": "MIT OR Zlib OR Apache-2.0",
+  "homepage": "https://github.com/Frommi/miniz_oxide/tree/master/miniz_oxide"
+ },
+ {
+  "name": "Rust: miniz_oxide",
+  "version": "0.9.1",
+  "license": "MIT OR Zlib OR Apache-2.0",
+  "homepage": "https://github.com/Frommi/miniz_oxide/tree/master/miniz_oxide"
+ },
+ {
+  "name": "Rust: moxcms",
+  "version": "0.7.11",
+  "license": "BSD-3-Clause OR Apache-2.0",
+  "homepage": "https://github.com/awxkee/moxcms.git"
+ },
+ {
+  "name": "Rust: num-traits",
+  "version": "0.2.19",
+  "license": "MIT OR Apache-2.0",
+  "homepage": "https://github.com/rust-num/num-traits"
+ },
+ {
+  "name": "Rust: once_cell",
+  "version": "1.21.4",
+  "license": "MIT OR Apache-2.0",
+  "homepage": "https://github.com/matklad/once_cell"
+ },
+ {
+  "name": "Rust: png",
+  "version": "0.18.1",
+  "license": "MIT OR Apache-2.0",
+  "homepage": "https://github.com/image-rs/image-png"
+ },
+ {
+  "name": "Rust: proc-macro2",
+  "version": "1.0.107",
+  "license": "MIT OR Apache-2.0",
+  "homepage": "https://github.com/dtolnay/proc-macro2"
+ },
+ {
+  "name": "Rust: pxfm",
+  "version": "0.1.30",
+  "license": "BSD-3-Clause OR Apache-2.0",
+  "homepage": "https://github.com/awxkee/pxfm"
+ },
+ {
+  "name": "Rust: qoi",
+  "version": "0.4.1",
+  "license": "MIT/Apache-2.0",
+  "homepage": "https://github.com/aldanor/qoi-rust"
+ },
+ {
+  "name": "Rust: quick-error",
+  "version": "2.0.1",
+  "license": "MIT/Apache-2.0",
+  "homepage": "http://github.com/tailhook/quick-error"
+ },
+ {
+  "name": "Rust: quote",
+  "version": "1.0.47",
+  "license": "MIT OR Apache-2.0",
+  "homepage": "https://github.com/dtolnay/quote"
+ },
+ {
+  "name": "Rust: rustversion",
+  "version": "1.0.23",
+  "license": "MIT OR Apache-2.0",
+  "homepage": "https://github.com/dtolnay/rustversion"
+ },
+ {
+  "name": "Rust: simd-adler32",
+  "version": "0.3.10",
+  "license": "MIT",
+  "homepage": "https://github.com/mcountryman/simd-adler32"
+ },
+ {
+  "name": "Rust: syn",
+  "version": "2.0.119",
+  "license": "MIT OR Apache-2.0",
+  "homepage": "https://github.com/dtolnay/syn"
+ },
+ {
+  "name": "Rust: syn",
+  "version": "3.0.6",
+  "license": "MIT OR Apache-2.0",
+  "homepage": "https://github.com/dtolnay/syn"
+ },
+ {
+  "name": "Rust: tiff",
+  "version": "0.10.3",
+  "license": "MIT",
+  "homepage": "https://github.com/image-rs/image-tiff"
+ },
+ {
+  "name": "Rust: unicode-ident",
+  "version": "1.0.26",
+  "license": "(MIT OR Apache-2.0) AND Unicode-3.0",
+  "homepage": "https://github.com/dtolnay/unicode-ident"
+ },
+ {
+  "name": "Rust: wasm-bindgen",
+  "version": "0.2.129",
+  "license": "MIT OR Apache-2.0",
+  "homepage": "https://github.com/wasm-bindgen/wasm-bindgen"
+ },
+ {
+  "name": "Rust: wasm-bindgen-macro",
+  "version": "0.2.129",
+  "license": "MIT OR Apache-2.0",
+  "homepage": "https://github.com/wasm-bindgen/wasm-bindgen/tree/master/crates/macro"
+ },
+ {
+  "name": "Rust: wasm-bindgen-macro-support",
+  "version": "0.2.129",
+  "license": "MIT OR Apache-2.0",
+  "homepage": "https://github.com/wasm-bindgen/wasm-bindgen/tree/main/crates/macro-support"
+ },
+ {
+  "name": "Rust: wasm-bindgen-shared",
+  "version": "0.2.129",
+  "license": "MIT OR Apache-2.0",
+  "homepage": "https://github.com/wasm-bindgen/wasm-bindgen/tree/master/crates/shared"
+ },
+ {
+  "name": "Rust: weezl",
+  "version": "0.1.12",
+  "license": "MIT OR Apache-2.0",
+  "homepage": "https://github.com/image-rs/weezl"
+ },
+ {
+  "name": "Rust: zerocopy",
+  "version": "0.8.62",
+  "license": "BSD-2-Clause OR Apache-2.0 OR MIT",
+  "homepage": "https://github.com/google/zerocopy"
+ },
+ {
+  "name": "Rust: zerocopy-derive",
+  "version": "0.8.62",
+  "license": "BSD-2-Clause OR Apache-2.0 OR MIT",
+  "homepage": "https://github.com/google/zerocopy"
+ },
+ {
+  "name": "Rust: zlib-rs",
+  "version": "0.6.8",
+  "license": "Zlib",
+  "homepage": "https://github.com/trifectatechfoundation/zlib-rs"
+ },
+ {
+  "name": "Rust: zune-core",
+  "version": "0.4.12",
+  "license": "MIT OR Apache-2.0 OR Zlib",
+  "homepage": "https://crates.io/crates/zune-core"
+ },
+ {
+  "name": "Rust: zune-core",
+  "version": "0.5.3",
+  "license": "MIT OR Apache-2.0 OR Zlib",
+  "homepage": "https://github.com/etemesi254/zune-image"
+ },
+ {
+  "name": "Rust: zune-jpeg",
+  "version": "0.4.21",
+  "license": "MIT OR Apache-2.0 OR Zlib",
+  "homepage": "https://github.com/etemesi254/zune-image/tree/dev/crates/zune-jpeg"
+ },
+ {
+  "name": "Rust: zune-jpeg",
+  "version": "0.5.15",
+  "license": "MIT OR Apache-2.0 OR Zlib",
+  "homepage": "https://github.com/etemesi254/zune-image/tree/dev/crates/zune-jpeg"
+ },
+ {
   "name": "rustversion (PhotoCraft WASM)",
   "version": "1.0.23",
   "license": "MIT OR Apache-2.0",

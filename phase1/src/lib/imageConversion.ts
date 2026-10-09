@@ -1,4 +1,5 @@
-/** Local-only conversion. Browser codecs avoid shipping another native/WASM decoder. */
+import {RASTER_ACCEPT,sniffRaster,decodeRasterPreview} from './rasterPreview';
+/** Local-only conversion, with bounded WASM adapters for additional raster formats. */
 export type ImageFormat = 'png' | 'jpeg' | 'webp';
 export interface ImageSize { width: number; height: number }
 export interface ImageConversionOptions { format: ImageFormat; width?: number; height?: number; quality?: number; background?: string }
@@ -6,7 +7,7 @@ export interface ConvertedImage extends ImageSize { blob: Blob; filename: string
 export const MAX_IMAGE_BYTES = 25_000_000;
 export const MAX_IMAGE_PIXELS = 32_000_000;
 export const MAX_IMAGE_EDGE = 8192;
-export const IMAGE_CONVERSION_ACCEPT = '.svg,.png,.jpg,.jpeg,.webp';
+export const IMAGE_CONVERSION_ACCEPT = '.svg,'+RASTER_ACCEPT;
 export const imageMime = (format: ImageFormat) => ({png:'image/png',jpeg:'image/jpeg',webp:'image/webp'}[format]);
 export function validateImageSize(size: ImageSize): ImageSize {
  if (![size.width,size.height].every(v=>Number.isInteger(v)&&v>0&&v<=MAX_IMAGE_EDGE) || size.width*size.height>MAX_IMAGE_PIXELS)
@@ -63,11 +64,13 @@ function checkSvgCss(value:string){
  if(/\\|\/\*|@import|@font-face|javascript:|https?:|file:|data:|expression\(/i.test(value.replace(/^http:\/\/www\.w3\.org\/(2000\/svg|1999\/xlink)$/, '')))throw Error('SVG external resources and escaped CSS are not supported.');
  for(const match of value.matchAll(/url\s*\(([^)]*)\)/gi))if(!/^['"]?#[A-Za-z_][\w:.-]*['"]?$/.test(match[1].trim()))throw Error('SVG external resources are not supported.');
 }
-export async function loadConversionImage(file: Blob): Promise<{image:HTMLImageElement;size:ImageSize;dispose:()=>void}> {
+export async function loadConversionImage(file: Blob, name=''): Promise<{image:HTMLImageElement;size:ImageSize;dispose:()=>void}> {
  if(!file.size||file.size>MAX_IMAGE_BYTES)throw Error('Choose an image of at most 25 MB.');
- const mime=rasterImageMime(new Uint8Array(await file.slice(0,16).arrayBuffer()));
- const svg=mime?null:standaloneSvg(await file.text());
- const blob=svg?.blob??new Blob([file],{type:mime!});const url=URL.createObjectURL(blob);const image=new Image();
+ const mime=sniffRaster(new Uint8Array(await file.slice(0,256).arrayBuffer()));
+ const native=mime&&['image/png','image/jpeg','image/webp'].includes(mime);
+ const raster=native?{blob:new Blob([file],{type:mime})}:mime||/\.tga$/i.test(name)?await decodeRasterPreview(file,name,mime):null;
+ const svg=raster?null:standaloneSvg(await file.text());
+ const blob=svg?.blob??raster!.blob;const url=URL.createObjectURL(blob);const image=new Image();
  try{
   await new Promise<void>((resolve,reject)=>{const timer=setTimeout(()=>{image.src='';reject(Error('Image decoding timed out.'));},15_000);image.onload=()=>{clearTimeout(timer);resolve();};image.onerror=()=>{clearTimeout(timer);reject(Error('This image is damaged or its format is not supported.'));};image.src=url;});
   const size=validateImageSize(svg?.size??{width:image.naturalWidth,height:image.naturalHeight});
@@ -78,7 +81,7 @@ export async function convertImage(file: Blob, name: string, options: ImageConve
  if(!['png','jpeg','webp'].includes(options.format))throw Error('Choose PNG, JPEG or WebP.');
  const quality=options.quality??0.92;if(!Number.isFinite(quality)||quality<0||quality>1)throw Error('Quality must be between 0 and 1.');
  const background=options.background??'#ffffff';if(!/^#[0-9a-f]{6}$/i.test(background))throw Error('Background must be a six-digit hex colour.');
- const source=await loadConversionImage(file);
+ const source=await loadConversionImage(file,name);
  try{
   const size=targetImageSize(source.size,options.width,options.height);const canvas=document.createElement('canvas');canvas.width=size.width;canvas.height=size.height;
   try{
