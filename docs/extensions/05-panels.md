@@ -17,8 +17,9 @@ The panel id becomes `<extension id>.<panel id>`. Requires no permission to exis
 
 ## How it runs
 
-- The HTML is placed in an iframe with `sandbox="allow-scripts"` (no same-origin access, no top navigation, no forms, no popups). The frame can still navigate itself; Somnia removes it on any second load (see 07-security.md).
-- A Content-Security-Policy of `default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; font-src data:` blocks all network requests. Inline scripts and styles work; external scripts, fonts, images and fetch do not. Use `data:` URLs for images.
+- In the desktop app each panel is served as its own document at `somnia-ext://panel/<extension id>/<panel id>` and shown in an iframe with `sandbox="allow-scripts"` (opaque origin, no top navigation, no popups). Web builds use `srcdoc` with the same document.
+- The document carries the Content-Security-Policy `default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; font-src data:; form-action 'none'; base-uri 'none'` (an HTTP header natively, a meta tag in web builds). Inline scripts and styles work. External scripts, fonts, images, `fetch`, form posts and `<base>` do not. Use `data:` URLs for images.
+- A CSP cannot stop a page from navigating its own frame (`location.href`, links, meta refresh). Somnia handles that outside the CSP: the app only allows its own panel scheme as a frame source, API calls only work over a per-session channel that dies with the first document, and a panel that loads a second document is removed. See 07-security.md.
 - The page body has 12px padding and a system font. Style it yourself.
 
 ## Panel API
