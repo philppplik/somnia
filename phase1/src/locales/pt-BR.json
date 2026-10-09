@@ -2232,5 +2232,6 @@
   "svg.pen.drawing": "Desenhando, {n} âncoras. Enter ou Esc termina, Backspace remove a última âncora, Shift+Esc descarta.",
   "svg.pen.continuing": "Continuando o caminho. Enter ou Esc termina, Backspace remove a última âncora, Shift+Esc descarta.",
   "svg.pen.finish": "Concluir",
-  "svg.pen.discard": "Descartar"
+  "svg.pen.discard": "Descartar",
+  "panels.extension.navigationBlocked": "Este painel tentou navegar para outra página e foi removido."
 }

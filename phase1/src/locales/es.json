@@ -2232,5 +2232,6 @@
   "svg.pen.drawing": "Dibujando, {n} anclas. Intro o Esc termina, Retroceso quita la última ancla, Mayús+Esc descarta.",
   "svg.pen.continuing": "Continuando el trazado. Intro o Esc termina, Retroceso quita la última ancla, Mayús+Esc descarta.",
   "svg.pen.finish": "Terminar",
-  "svg.pen.discard": "Descartar"
+  "svg.pen.discard": "Descartar",
+  "panels.extension.navigationBlocked": "Este panel intentó navegar a otra página y se eliminó."
 }

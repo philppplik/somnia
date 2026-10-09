@@ -2232,5 +2232,6 @@
   "svg.pen.drawing": "Dessin, {n} points. Entrée ou Échap termine, Retour arrière retire le dernier point, Maj+Échap annule.",
   "svg.pen.continuing": "Tracé prolongé. Entrée ou Échap termine, Retour arrière retire le dernier point, Maj+Échap annule.",
   "svg.pen.finish": "Terminer",
-  "svg.pen.discard": "Annuler"
+  "svg.pen.discard": "Annuler",
+  "panels.extension.navigationBlocked": "Ce panneau a tenté de naviguer ailleurs et a été retiré."
 }

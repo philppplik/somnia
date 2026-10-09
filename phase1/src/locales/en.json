@@ -2232,5 +2232,6 @@
   "svg.pen.drawing": "Drawing, {n} anchors. Enter or Esc finishes, Backspace removes the last anchor, Shift+Esc discards.",
   "svg.pen.continuing": "Continuing path. Enter or Esc finishes, Backspace removes the last anchor, Shift+Esc discards.",
   "svg.pen.finish": "Finish",
-  "svg.pen.discard": "Discard"
+  "svg.pen.discard": "Discard",
+  "panels.extension.navigationBlocked": "This panel tried to navigate away and was removed."
 }

@@ -2232,5 +2232,6 @@
   "svg.pen.drawing": "Zeichnen, {n} Ankerpunkte. Enter oder Esc beendet, Rücktaste entfernt den letzten Punkt, Umschalt+Esc verwirft.",
   "svg.pen.continuing": "Pfad wird fortgesetzt. Enter oder Esc beendet, Rücktaste entfernt den letzten Punkt, Umschalt+Esc verwirft.",
   "svg.pen.finish": "Fertig",
-  "svg.pen.discard": "Verwerfen"
+  "svg.pen.discard": "Verwerfen",
+  "panels.extension.navigationBlocked": "Dieses Panel hat versucht, die Seite zu wechseln, und wurde entfernt."
 }

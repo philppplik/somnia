@@ -17,7 +17,7 @@ The panel id becomes `<extension id>.<panel id>`. Requires no permission to exis
 
 ## How it runs
 
-- The HTML is placed in an iframe with `sandbox="allow-scripts"` (no same-origin access, no top navigation, no forms, no popups).
+- The HTML is placed in an iframe with `sandbox="allow-scripts"` (no same-origin access, no top navigation, no forms, no popups). The frame can still navigate itself; Somnia removes it on any second load (see 07-security.md).
 - A Content-Security-Policy of `default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; font-src data:` blocks all network requests. Inline scripts and styles work; external scripts, fonts, images and fetch do not. Use `data:` URLs for images.
 - The page body has 12px padding and a system font. Style it yourself.
 

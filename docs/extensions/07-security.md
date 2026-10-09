@@ -7,7 +7,7 @@ Somnia assumes an extension may be buggy or hostile. The design limits what a ba
 | Surface | Isolation | Strength |
 | ------- | --------- | -------- |
 | Worker code | Dedicated Web Worker from a Blob, no DOM, network and storage globals (`fetch`, `XMLHttpRequest`, `WebSocket`, `indexedDB`, `importScripts`, nested workers and similar) removed before your code runs | Best effort. A strict worker CSP is tracked in [ADR-003](../../phase1/notes/ADR-003-extension-sdk.md) |
-| Panel HTML | Sandboxed iframe (`allow-scripts` only, opaque origin) with a CSP that blocks all network access | Browser-enforced boundary |
+| Panel HTML | Sandboxed iframe (`allow-scripts` only, opaque origin) with a CSP that blocks subresource requests (fetch, images, forms, base). A script can still navigate its own frame; Somnia removes the frame on any second load and the packaged app's CSP (`frame-src 'self' blob:`) refuses external frame navigation. Treat panels as not network-proof: a navigation request to the app origin or, in unpackaged web builds, to an external URL can still leave one request | Partly browser-enforced; navigation guard enforced in Somnia |
 | Host API | Every call is validated: permission, argument types, size limits, file names | Enforced in Somnia |
 | Project changes | Whitelisted editor operations in one undoable transaction; no `replaceSource`; no direct disk write | Enforced in Somnia |
 
