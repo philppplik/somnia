@@ -1,0 +1,53 @@
+/* Ocean Blue: deep Atlantic surfaces, sea-glass blue accents.
+ * Load after global.css. Select with data-palette="ocean-blue" and the
+ * existing data-theme="light" / "dark". Geometry, code syntax, document
+ * colours and user-selected accents remain owned by their existing systems.
+ * High contrast deliberately falls back to Somnia's accessibility palette.
+ */
+:root[data-theme="dark"][data-palette="ocean-blue"]:not([data-contrast="high"]) {
+  color-scheme: dark;
+  --shell-bg: #061523;
+  --canvas-bg: #081b2b;
+  --bg-base: #0b2033;
+  --bg-panel: #102a40;
+  --bg-elevated: #16354e;
+  --bg-surface: #1a3b54;
+  --bg-hover: #214963;
+  --border-subtle: #2d526b;
+  --border-default: #527a93;
+  --text-primary: #edf7ff;
+  --text-secondary: #bfd8e9;
+  --text-tertiary: #a7c6da;
+  --accent: #80d4ff;
+  --accent-fill: #176e9d;
+  --accent-ink: #082335;
+  --accent-soft: #80d4ff24;
+  --warning: #ffd18a;
+  --danger: #ffacb2;
+  --shadow: 0 24px 60px -20px #020e1bd9;
+  --card-shadow: 0 1px 0 #b9e5ff0c inset, 0 8px 24px -12px #020e1b66;
+}
+
+:root[data-theme="light"][data-palette="ocean-blue"]:not([data-contrast="high"]) {
+  color-scheme: light;
+  --shell-bg: #dceaf3;
+  --canvas-bg: #d5e5f0;
+  --bg-base: #edf4fa;
+  --bg-panel: #f7fbff;
+  --bg-elevated: #ffffff;
+  --bg-surface: #e1edf6;
+  --bg-hover: #d3e5f2;
+  --border-subtle: #c0d5e5;
+  --border-default: #6b8fa9;
+  --text-primary: #12334e;
+  --text-secondary: #365873;
+  --text-tertiary: #41627c;
+  --accent: #075d96;
+  --accent-fill: #075d96;
+  --accent-ink: #ffffff;
+  --accent-soft: #075d961a;
+  --warning: #845100;
+  --danger: #ad263c;
+  --shadow: 0 24px 60px -20px #12334e40;
+  --card-shadow: 0 1px 2px #12334e0a, 0 8px 24px -12px #12334e26;
+}
