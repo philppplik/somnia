@@ -19,7 +19,7 @@ test('every shipped Studio is reached from its validated content, whichever Stud
  assert.equal(studioOf('clip.wav',WAV),'sound');
  assert.equal(studioOf('index.html',enc('<p>hi</p>')),'code');
  assert.equal(studioOf('notes.md',enc('# hi')),'code');
- assert.equal(studioOf('pic.png',PNG),'code');
+ assert.equal(studioOf('pic.png',PNG),'photos');
  assert.equal(studioOf('doc.pdf',PDF),'code');
 });
 test('content wins over suffix: renamed audio is audio, a JPEG named .docx asks instead of silently opening or converting',()=>{
