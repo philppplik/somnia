@@ -1,3 +1,4 @@
+import {SlidesCanvas} from './slides/SlidesCanvas';
 import {PsdViewer} from './PsdViewer';
 import {lazy,Suspense} from 'react';
 const PdfInlineEditor=lazy(()=>import('./pdfedit/PdfInlineEditor').then(m=>({default:m.PdfInlineEditor})));
@@ -24,6 +25,7 @@ function FitImage({src,alt,onSize}:{src:string;alt:string;onSize?:(w:number,h:nu
 export function MediaViewer({item}:{item:MediaItem}){const {t}=useT();
  if(item.kind==='psd')return <PsdViewer key={item.url} item={item}/>;
  if(item.kind==='pdf')return <Suspense fallback={<div role="status" className="grid flex-1 place-items-center text-xs">Opening PDF…</div>}><PdfInlineEditor key={item.name} item={item}/></Suspense>;
+ if(item.kind==='pptx')return <SlidesCanvas/>;
  if(item.kind==='docx'||item.kind==='xlsx')return <Suspense fallback={null}>{item.kind==='docx'?<DocxViewer item={item}/>:<XlsxViewer item={item}/>}</Suspense>;
  return <section className="canvas-stage flex min-h-0 flex-1 flex-col" aria-label={t('finish2.media.image')}>
   {item.warning&&<p className="px-3 py-2 text-xs text-ink-2" role="note" data-testid="raster-warning">{item.warning}</p>}

@@ -811,7 +811,7 @@ pub fn is_media_path(path: &str) -> bool {
     Path::new(path)
         .extension()
         .map(|e| e.to_string_lossy().to_ascii_lowercase())
-        .is_some_and(|e| matches!(e.as_str(), "png" | "jpg" | "jpeg" | "gif" | "avif" | "bmp" | "ico" | "tga" | "tif" | "tiff" | "qoi" | "ppm" | "pnm" | "webp" | "psd" | "docx" | "xlsx" | "pdf"))
+        .is_some_and(|e| matches!(e.as_str(), "png" | "jpg" | "jpeg" | "gif" | "avif" | "bmp" | "ico" | "tga" | "tif" | "tiff" | "qoi" | "ppm" | "pnm" | "webp" | "psd" | "docx" | "xlsx" | "pptx" | "pdf"))
 }
 const PROJECT_SETTINGS_DIR: &str = ".somnia";
 const PROJECT_SETTINGS_FILE: &str = "settings.json";

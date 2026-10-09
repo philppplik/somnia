@@ -1,4 +1,4 @@
-import {getStudio,type StudioId} from '../lib/studios';
+import {getStudio,acceptsFormat,type StudioId} from '../lib/studios';
 import {recordActivity} from '../lib/account';
 import {readBackupPrefs,saveBackupPrefs,type BackupPrefs} from '../lib/projectBackups';
 import {readDocumentPrefs,saveDocumentPrefs,type DocumentPrefs} from '../lib/documentPrefs';
@@ -84,7 +84,7 @@ export function getSavedFile(file:string):string{return savedFiles[file]??'';}
 export function markFileSaved(file:string,content:string){recordActivity('save');savedFiles[file]=content;patchState({isDirty:isDirty(),lastSavedAt:new Date().toISOString(),notice:'Saved to disk.'});}
 
 /** Open a project file in a tab and make it the active source file. */
-export function openFileTab(path:string){if(!(path in state.files))return;setActiveMedia(null);patchState({openFiles:state.openFiles.includes(path)?state.openFiles:[...state.openFiles,path],activeFile:path,selectedElementId:null});refreshProject();}
+export function openFileTab(path:string){if(!(path in state.files))return;setActiveMedia(null);patchState({openFiles:state.openFiles.includes(path)?state.openFiles:[...state.openFiles,path],activeFile:path,activeStudio:state.studioByTab[path]&&acceptsFormat(getStudio(state.studioByTab[path]),path)?state.studioByTab[path]:'code',selectedElementId:null});refreshProject();}
 /** Close a tab; the neighbouring tab becomes active. The last tab stays open. */
 export function closeFileTab(path:string){if(state.openFiles.length<=1)return;const i=state.openFiles.indexOf(path);const next=state.openFiles.filter(f=>f!==path);patchState({openFiles:next,...(state.activeFile===path?{activeFile:next[Math.max(0,i-1)],selectedElementId:null}:{})});refreshProject();}
 
@@ -99,11 +99,11 @@ export function jumpToLine(file:string,line:number,col=1){openFileTab(file);cons
 export function closeCore(){if(!clearMedia())return false;projectGeneration++;unsubscribeCore?.();unsubscribeCore=null;core=null;savedFiles={};patchState({responsiveScope:'auto',coreConnected:false,files:{},nodes:[],openFiles:[],activeFile:'',designFile:'',selectedElementId:null,selectedElementIds:[],isDirty:false,lastSavedAt:null,storage:'memory',nativeConnected:false,projectName:'',notice:'Project closed.'});return true;}
 
 /** Switch shell only. No save, conversion, tool commit, history or agent side effects. */
-export function requestStudio(id:StudioId,source:'manual'|'automatic'='manual',pendingTool=false):'changed'|'unchanged'|'pending-tool'|'manual-wins' {
+export function requestStudio(id:StudioId,source:'manual'|'automatic'='manual',pendingTool=false,tabKey=state.activeFile):'changed'|'unchanged'|'pending-tool'|'manual-wins' {
  getStudio(id);
  if(source==='automatic'&&state.studioChoice==='manual')return 'manual-wins';
  if(pendingTool&&id!==state.activeStudio)return 'pending-tool';
  const changed=id!==state.activeStudio;
- patchState({activeStudio:id,studioChoice:source,studioByTab:state.activeFile?{...state.studioByTab,[state.activeFile]:id}:state.studioByTab});
+ patchState({activeStudio:id,studioChoice:source,studioByTab:tabKey?{...state.studioByTab,[tabKey]:id}:state.studioByTab});
  return changed?'changed':'unchanged';
 }

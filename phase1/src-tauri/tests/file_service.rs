@@ -444,7 +444,7 @@ fn project_settings_roundtrip_and_stay_hidden() {
 #[test]
 fn extra_raster_formats_preserve_media_path_validation() {
     use somnia_desktop::service::is_media_path;
-    for extension in ["bmp", "ico", "tga", "tif", "tiff", "qoi", "ppm", "pnm", "gif", "avif", "png", "jpg", "webp", "psd", "pdf", "docx", "xlsx"] {
+    for extension in ["bmp", "ico", "tga", "tif", "tiff", "qoi", "ppm", "pnm", "gif", "avif", "png", "jpg", "webp", "psd", "pdf", "docx", "xlsx", "pptx"] {
         let (root, _recovery, project) = setup();
         let name = format!("asset.{extension}");
         fs::write(root.path().join(&name), b"original bytes").unwrap();
