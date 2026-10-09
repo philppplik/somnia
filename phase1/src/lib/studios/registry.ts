@@ -9,7 +9,7 @@ export interface StudioDef {
  id:StudioId;label:string;icon:string;order:number;formats:readonly FormatClaim[];
  shell:{leftRail:readonly RailItem<'layers'|'files'|'search'|'assets'|'components'|'css'|'versions'>[];rightRail:readonly RailItem<'design'|'prototype'|'code'>[];
   header:{menus:readonly ('Project'|'Edit'|'View'|'Insert'|'Tools'|'Help')[];views:readonly {mode:StudioViewMode;icon:string;command:string}[]};
-  bottomBar:{viewportPresets:readonly {width:number;icon:string;label:string}[];slots:readonly string[]};inspector:string;tools:readonly StudioTool[]};
+  sidebar?:string;bottomBar:{viewportPresets:readonly {width:number;icon:string;label:string}[];slots:readonly string[]};inspector:string;tools:readonly StudioTool[]};
  commands:readonly StudioCommand[];shortcuts:Readonly<Record<string,string>>;menus:{view:readonly string[]};canvas:string;
  agent:{tools:readonly string[];contextProviders:readonly string[];quickActions:readonly string[]};
  /** Adapter hook: preserves the existing context derivation, rather than guessing document state. */
