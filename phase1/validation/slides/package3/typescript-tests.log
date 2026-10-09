@@ -1,0 +1,82 @@
+TAP version 13
+# Subtest: RPC serial IDs, errors, disposal and later requests fail closed
+ok 1 - RPC serial IDs, errors, disposal and later requests fail closed
+  ---
+  duration_ms: 2.795538
+  type: 'test'
+  ...
+# Subtest: worker failure rejects all pending calls and terminates execution
+ok 2 - worker failure rejects all pending calls and terminates execution
+  ---
+  duration_ms: 0.328546
+  type: 'test'
+  ...
+# Subtest: copy edits one exact run and preserves every other original OOXML part byte-for-byte
+ok 3 - copy edits one exact run and preserves every other original OOXML part byte-for-byte
+  ---
+  duration_ms: 72.666583
+  type: 'test'
+  ...
+# Subtest: stale selection and illegal XML characters fail before output
+ok 4 - stale selection and illegal XML characters fail before output
+  ---
+  duration_ms: 20.834137
+  type: 'test'
+  ...
+# Subtest: multiple edits preserve XML whitespace attributes and reject byte-size cap
+ok 5 - multiple edits preserve XML whitespace attributes and reject byte-size cap
+  ---
+  duration_ms: 31.609448
+  type: 'test'
+  ...
+# Subtest: PPTX intake rejects wrong formats and compressed input cap
+ok 6 - PPTX intake rejects wrong formats and compressed input cap
+  ---
+  duration_ms: 1.857479
+  type: 'test'
+  ...
+# Subtest: Slides only advertises its implemented read-only surface
+ok 7 - Slides only advertises its implemented read-only surface
+  ---
+  duration_ms: 0.961307
+  type: 'test'
+  ...
+# Subtest: PPTX routes via existing media identity, respects manual Studio and readonly context
+ok 8 - PPTX routes via existing media identity, respects manual Studio and readonly context
+  ---
+  duration_ms: 10.512658
+  type: 'test'
+  ...
+# Subtest: folder media loader delivers PPTX binary identity through safe project port
+ok 9 - folder media loader delivers PPTX binary identity through safe project port
+  ---
+  duration_ms: 11.94386
+  type: 'test'
+  ...
+# Subtest: runtime-ready studios register without changing Code context
+ok 10 - runtime-ready studios register without changing Code context
+  ---
+  duration_ms: 1.996317
+  type: 'test'
+  ...
+# Subtest: manual selection wins, pending tools never commit, documents/history and global Agent stay untouched
+ok 11 - manual selection wins, pending tools never commit, documents/history and global Agent stay untouched
+  ---
+  duration_ms: 0.453873
+  type: 'test'
+  ...
+# Subtest: Studio labels and command strings exist in all five catalogues
+ok 12 - Studio labels and command strings exist in all five catalogues
+  ---
+  duration_ms: 80.522925
+  type: 'test'
+  ...
+1..12
+# tests 12
+# suites 0
+# pass 12
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 1670.409849

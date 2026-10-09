@@ -1,0 +1,1 @@
+Independent python-pptx and XML roundtrip passed; only slide1.xml changed, every other uncompressed part byte-identical
