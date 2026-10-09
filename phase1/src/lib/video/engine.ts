@@ -1,11 +1,12 @@
 import type {VideoCapabilities,VideoProbe,VideoProgress,VideoReport,VideoRequest,VideoResponse} from './protocol';
-import type {VideoRecipe} from './recipe';
+import type {VideoFormat} from './recipe';
+import type {TimelineClip} from './timeline';
 export interface VideoResult{bytes:ArrayBuffer;mime:string;report:VideoReport}
 /** What the session needs from an engine; tests substitute a fake. */
 export interface VideoEngineLike{
  probe(bytes:ArrayBuffer):Promise<VideoProbe>;
  capabilities():Promise<VideoCapabilities>;
- export(bytes:ArrayBuffer,recipe:VideoRecipe,onProgress?:(p:VideoProgress)=>void):Promise<VideoResult>;
+ export(sources:Record<string,ArrayBuffer>,clips:TimelineClip[],format:VideoFormat,onProgress?:(p:VideoProgress)=>void):Promise<VideoResult>;
  cancelExport():void;
  dispose():void;
 }
@@ -44,10 +45,10 @@ export class VideoEngine implements VideoEngineLike{
   const r=await this.request({id:this.nextId++,kind:'capabilities'},[],60_000);
   if(!r.ok||r.kind!=='capabilities')throw new Error('Unexpected video capabilities response');return r.capabilities;
  }
- /** Takes ownership of `bytes`: the caller's ArrayBuffer is detached by the transfer. */
- async export(bytes:ArrayBuffer,recipe:VideoRecipe,onProgress?:(p:VideoProgress)=>void):Promise<VideoResult>{
+ /** Takes ownership of the source buffers: the caller's ArrayBuffers are detached by the transfer. */
+ async export(sources:Record<string,ArrayBuffer>,clips:TimelineClip[],format:VideoFormat,onProgress?:(p:VideoProgress)=>void):Promise<VideoResult>{
   const id=this.nextId++;this.exportId=id;
-  const r=await this.request({id,kind:'export',bytes,recipe},[bytes],3_600_000,onProgress);
+  const r=await this.request({id,kind:'export',sources,clips,format},Object.values(sources),3_600_000,onProgress);
   if(!r.ok||r.kind!=='export')throw new Error('Unexpected video export response');
   return{bytes:r.bytes,mime:r.mime,report:r.report};
  }

@@ -1,4 +1,5 @@
-import type {VideoRecipe} from './recipe';
+import type {VideoFormat} from './recipe';
+import type {TimelineClip} from './timeline';
 /** Messages between the Video Studio and its worker (mediabunny demux/mux + WebCodecs encode). */
 export interface VideoTrackInfo{codec:string|null;width:number;height:number;fps:number|null}
 export interface AudioTrackInfo{codec:string|null;channels:number;rate:number}
@@ -10,7 +11,7 @@ export interface VideoProgress{stage:string;ratio:number;processed_s:number}
 export type VideoRequest=
  |{id:number;kind:'probe';bytes:ArrayBuffer}
  |{id:number;kind:'capabilities'}
- |{id:number;kind:'export';bytes:ArrayBuffer;recipe:VideoRecipe}
+ |{id:number;kind:'export';sources:Record<string,ArrayBuffer>;clips:TimelineClip[];format:VideoFormat}
  |{id:number;kind:'cancel'};
 export type VideoResponse=
  |{id:number;ok:true;kind:'probe';probe:VideoProbe}

@@ -48,8 +48,10 @@ points, no placeholders, original files never modified.
    - Five locales, unit tests (sniffing, recipe, session with fake engine, probe), Playwright E2E
      with screenshots on generated fixtures (the local ffmpeg binary is a test-tooling detail only;
      nothing of it ships).
-2. **P2 - multi-clip timeline**: several sources in one project, split at playhead, ripple delete,
-   reorder, per-clip mute/gain, keyboard-first editing.
+2. **P2 - multi-clip timeline** (shipped): several sources in one project, split at playhead, ripple delete,
+   reorder, per-clip mute/gain, keyboard-first editing. Preview plays the edit across clip
+   boundaries; export letterboxes mixed resolutions to the first clip's size and resamples all
+   audio to 48 kHz stereo through mediabunny's transform.
 3. **P3 - filmstrip and titles**: WebCodecs still thumbnails on the timeline, title/text overlay
    clips, crossfade transitions.
 4. **P4 - agent tools**: `video_inspect` / `video_propose_edits` as a module (not wired into
@@ -57,13 +59,13 @@ points, no placeholders, original files never modified.
 5. **P5 - desktop pass**: native save dialog (`video_save_pick`/`video_save_write` grants modelled
    on `audio_save_*`), Windows verification, timeline accessibility hardening.
 
-## Honest limits (P1)
+## Honest limits (P1/P2)
 
 - The shared media store caps files at 25 MB; larger videos are rejected with a clear message
   (same rule as Sound).
 - MKV opens for probe/export where the browser cannot play it for preview; the workspace says so
   instead of pretending.
-- Preview shows the original (narrowed to the trim range). Visual effects land in P3; the exported
-  copy is the single source of rendered truth.
+- Preview plays the edit (source swap per clip boundary, gain is export-only). Visual effects land
+  in P3; the exported copy is the single source of rendered truth.
 - Encoding speed depends on the platform's hardware encoders; progress is real (per processed
   second) and cancellable.
