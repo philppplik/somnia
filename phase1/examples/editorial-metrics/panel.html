@@ -1,0 +1,171 @@
+<style>
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{padding:12px;color:#18181b;font:13px/1.45 "Segoe UI",system-ui,Arial,sans-serif;background:transparent}
+button,input{font:inherit;color:inherit}
+button{border:0;cursor:pointer}
+button:focus-visible,input:focus-visible,summary:focus-visible{outline:2px solid #4f46e5;outline-offset:2px}
+.head{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px}
+h1{margin:0;font-size:18px;font-weight:650;letter-spacing:-.3px}
+h2{margin:18px 0 8px;font-size:11px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:#52525a}
+.primary{background:#4f46e5;color:#fff;border-radius:18px;padding:6px 13px;font-size:12px}
+.primary:hover{background:#4338ca}
+.primary[disabled]{opacity:.6;cursor:default}
+.intro{margin:6px 0 12px;color:#52525a;font-size:12px}
+.stats{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}
+.stat{flex:1 1 110px;background:#f1f2f6;border-radius:14px;padding:8px 12px}
+.stat strong{display:block;white-space:nowrap;font-size:20px;line-height:1.2;font-weight:650}
+.stat span{display:block;font-size:11px;line-height:1.3;color:#52525a}
+.controls{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-bottom:6px}
+.chip{border-radius:16px;padding:5px 11px;background:#e9e9f0;color:#3f3f46;font-size:11px;white-space:nowrap}
+.chip[aria-pressed=true]{background:#e0ddfb;color:#3730a3;font-weight:600}
+.wpm{display:flex;align-items:center;gap:6px;margin:6px 0 4px;font-size:12px;color:#3f3f46}
+.wpm input{width:70px;border:1px solid #c9c9d3;border-radius:8px;padding:4px 6px;background:#fff}
+.files{list-style:none;margin:0;padding:0}
+.file{padding:8px 0;border-bottom:1px solid #e6e6ee}
+.file .line{display:flex;flex-wrap:wrap;justify-content:space-between;gap:2px 10px}
+.name{font-weight:600;overflow-wrap:anywhere;min-width:0}
+.num{white-space:nowrap;color:#3f3f46;font-variant-numeric:tabular-nums}
+.sub{font-size:11px;color:#52525a;margin-top:2px}
+.bar{height:4px;background:#e0ddfb;border-radius:2px;margin-top:5px}
+.bar i{display:block;height:4px;background:#6d63e8;border-radius:2px}
+.dups{list-style:none;margin:0;padding:0}
+.dup{border:1px solid #e1e1ea;border-radius:12px;padding:9px 11px;margin-bottom:7px;background:#fff}
+.tag{display:inline-block;font-size:10px;font-weight:600;border-radius:10px;padding:2px 8px;background:#fff0d9;color:#7a4a00;margin-right:6px}
+.excerpt{margin:4px 0 4px;font-size:12px;color:#27272a;overflow-wrap:anywhere}
+.where{font:11px/1.6 Consolas,"Courier New",monospace;color:#52525a;overflow-wrap:anywhere}
+.rules{margin-top:14px;background:#f1f2f6;border-radius:12px;padding:10px 12px;font-size:12px}
+.rules summary{cursor:pointer;font-weight:600}
+.rules ul{margin:8px 0 0;padding-left:18px}
+.rules li{margin:3px 0}
+.empty,.err{padding:10px 12px;border-radius:10px;font-size:12px}
+.empty{background:#f1f2f6;color:#3f3f46}
+.err{background:#fdecec;color:#991b1b}
+.note{margin-top:14px;padding-top:8px;border-top:1px solid #e6e6ee;font-size:11px;color:#52525a;display:flex;flex-wrap:wrap;justify-content:space-between;gap:4px 10px}
+</style>
+<div class="head"><h1>Editorial Metrics</h1><button id="scan" class="primary" type="button">Rescan &#8635;</button></div>
+<p class="intro">Text length and repeated paragraphs across your HTML files. Everything stays local.</p>
+<div id="err" role="alert" hidden></div>
+<div class="stats" id="stats" aria-label="Project totals"></div>
+<div class="controls" role="group" aria-label="Options">
+ <button class="chip" id="skip" type="button" aria-pressed="false">Skip nav &amp; footer</button>
+ <button class="chip" id="vAll" type="button" aria-pressed="true">All results</button>
+ <button class="chip" id="vDup" type="button" aria-pressed="false">Repeats only</button>
+</div>
+<label class="wpm">Reading speed <input id="wpm" type="number" min="100" max="600" step="10" value="240" aria-describedby="wpmHelp"> words/min</label>
+<div class="sub" id="wpmHelp">Saved in this extension's storage. Allowed: 100 to 600.</div>
+<section id="textSec"><h2 id="textH">Text length</h2><ul class="files" id="files" aria-labelledby="textH"></ul></section>
+<section id="dupSec"><h2 id="dupH">Identical paragraphs</h2><ul class="dups" id="dups" aria-labelledby="dupH"></ul></section>
+<details class="rules"><summary>How things are counted</summary><ul id="rules"></ul></details>
+<div class="note"><span>Read-only &middot; Offline &middot; Changes nothing</span><span id="status" role="status" aria-live="polite">Not scanned yet</span></div>
+<script>
+(()=>{
+'use strict';
+const MIN_WORDS=12,MAX_FILES=300,MAX_GROUPS=50,KEY='settings';
+const S={wpm:240,skip:false,view:'all'};
+let last=null;
+const $=id=>document.getElementById(id);
+function h(tag,cls,...kids){const e=document.createElement(tag);if(cls)e.className=cls;for(const k of kids.flat()){if(k==null)continue;e.append(typeof k==='object'?k:document.createTextNode(String(k)));}return e;}
+const fmt=n=>n.toLocaleString('en-US');
+const seg=(typeof Intl!=='undefined'&&Intl.Segmenter)?new Intl.Segmenter(undefined,{granularity:'word'}):null;
+const WORD=/[\p{L}\p{N}]+(?:['\u2019-][\p{L}\p{N}]+)*/gu;
+function words(t){if(seg){let n=0;for(const s of seg.segment(t))if(s.isWordLike)n++;return n;}return(t.match(WORD)||[]).length;}
+const norm=t=>t.normalize('NFKC').toLowerCase().replace(/[^\p{L}\p{N}]+/gu,' ').trim();
+function minutes(w){const m=w/S.wpm;if(w===0)return '0 min';if(m<1)return '< 1 min';if(m<60)return '\u2248 '+Math.round(m)+' min';return '\u2248 '+Math.floor(m/60)+' h '+Math.round(m%60)+' min';}
+const BLOCKS='address,article,aside,blockquote,br,dd,details,div,dl,dt,fieldset,figcaption,figure,footer,form,h1,h2,h3,h4,h5,h6,header,hr,li,main,nav,ol,p,pre,section,summary,table,tbody,td,th,thead,tr,ul';
+const UNITS='p,li,blockquote,dd,figcaption';
+const INNER='p,li,blockquote,dd,figcaption,ul,ol,dl,table';
+/* Parses inertly with DOMParser: no script runs, no resource loads. */
+function analyse(src,skip){
+ const doc=new DOMParser().parseFromString(src,'text/html');const body=doc.body;
+ if(!body)return{words:0,chars:0,charsNoSpace:0,paras:[]};
+ body.querySelectorAll('script,style,template,noscript'+(skip?',nav,footer':'')).forEach(e=>e.remove());
+ body.querySelectorAll(BLOCKS).forEach(e=>{e.before(' ');e.after(' ');});
+ const text=(body.textContent||'').replace(/\s+/g,' ').trim();
+ const paras=[];
+ body.querySelectorAll(UNITS).forEach(e=>{if(e.querySelector(INNER))return;const t=(e.textContent||'').replace(/\s+/g,' ').trim();if(!t)return;const n=norm(t);if(words(n)>=MIN_WORDS)paras.push({text:t,key:n});});
+ return{words:words(text),chars:[...text].length,charsNoSpace:[...text.replace(/ /g,'')].length,paras};
+}
+function showError(msg){const e=$('err');e.className='err';e.hidden=!msg;e.textContent=msg||'';}
+async function loadSettings(){
+ try{const raw=await somnia.storage.get(KEY);if(!raw)return;const o=JSON.parse(raw);
+  if(Number.isFinite(o.wpm)&&o.wpm>=100&&o.wpm<=600)S.wpm=Math.round(o.wpm);
+  if(typeof o.skip==='boolean')S.skip=o.skip;
+  if(o.view==='dups')S.view='dups';
+ }catch(e){/* storage missing or revoked: defaults apply */}
+}
+async function saveSettings(){try{await somnia.storage.set(KEY,JSON.stringify({wpm:S.wpm,skip:S.skip,view:S.view}));}catch(e){showError('Settings were not saved: '+(e&&e.message||e));}}
+function syncControls(){
+ $('wpm').value=String(S.wpm);
+ $('skip').setAttribute('aria-pressed',String(S.skip));
+ $('vAll').setAttribute('aria-pressed',String(S.view==='all'));
+ $('vDup').setAttribute('aria-pressed',String(S.view==='dups'));
+}
+function rules(){
+ const ul=$('rules');ul.textContent='';
+ const items=[
+  'Files: .html and .htm files of the open project, including unsaved edits. Other files are ignored.',
+  'Parsing: each file is parsed as inert HTML. Project scripts never run.',
+  'Left out: script, style, template and noscript content'+(S.skip?', plus nav and footer (switched on).':'. Nav and footer are counted unless you switch them off.'),
+  'Counted: text nodes in the page body only. Tags, attributes, alt text and the head are not counted.',
+  'Words: '+(seg?'Intl.Segmenter word boundaries (word-like segments only).':'letters and digits runs, with inner apostrophes or hyphens kept together (fallback, Intl.Segmenter is not available).'),
+  'Characters: after whitespace is collapsed to single spaces. The second figure leaves spaces out.',
+  'Reading time: words divided by your reading speed ('+S.wpm+' words/min), rounded to the minute. It is an estimate.',
+  'Paragraph: a p, li, blockquote, dd or figcaption with none of those inside it.',
+  'Identical paragraph: same text after Unicode normalization, lower-casing and removing punctuation and spacing differences, with at least '+MIN_WORDS+' words. Exact matches only, no similarity scoring.',
+  'Repeated text is a hint, for example boilerplate or copy-paste. It says nothing about copying from other sources and is not a plagiarism check.'
+ ];
+ items.forEach(t=>ul.append(h('li',null,t)));
+}
+function render(){
+ syncControls();rules();
+ const stats=$('stats'),files=$('files'),dups=$('dups');stats.textContent='';files.textContent='';dups.textContent='';
+ if(!last){return;}
+ const rows=last.rows,groups=last.groups;
+ const tw=rows.reduce((a,r)=>a+r.words,0),tc=rows.reduce((a,r)=>a+r.chars,0);
+ [[fmt(tw),'Words'],[fmt(tc),'Characters'],[minutes(tw),'At '+S.wpm+' words/min'],[String(groups.length),'Repeated paragraphs']].forEach(([v,l])=>stats.append(h('div','stat',h('strong',null,v),h('span',null,l))));
+ $('textSec').hidden=S.view==='dups';
+ $('textH').textContent='Text length \u00b7 '+rows.length+' HTML file'+(rows.length===1?'':'s');
+ if(!rows.length)files.append(h('li','empty','No HTML files in the open project.'));
+ const max=Math.max(1,...rows.map(r=>r.words));
+ rows.forEach(r=>{files.append(h('li','file',
+  h('div','line',h('span','name',r.file),h('span','num',fmt(r.words)+' words \u00b7 '+minutes(r.words))),
+  h('div','sub',fmt(r.chars)+' characters ('+fmt(r.charsNoSpace)+' without spaces)'),
+  (()=>{const b=h('div','bar');const i=document.createElement('i');i.style.width=Math.round(r.words/max*100)+'%';b.append(i);return b;})()));});
+ $('dupH').textContent='Identical paragraphs \u00b7 at least '+MIN_WORDS+' words';
+ if(!groups.length){dups.append(h('li','empty','No identical paragraphs of '+MIN_WORDS+' or more words found.'));}
+ groups.slice(0,MAX_GROUPS).forEach(g=>{
+  const ex=g.text.split(' ').slice(0,12).join(' ')+(g.text.split(' ').length>12?' \u2026':'');
+  const where=[...g.files].map(([f,n])=>f+(n>1?' \u00d7'+n:'')).join('\n');
+  const w=h('div','where');w.style.whiteSpace='pre-line';w.textContent=where;
+  dups.append(h('li','dup',h('div',null,h('span','tag','Repeat'),h('strong',null,g.count+' times in '+g.files.size+' file'+(g.files.size===1?'':'s'))),h('p','excerpt','\u201c'+ex+'\u201d'),w));});
+ if(groups.length>MAX_GROUPS)dups.append(h('li','empty','Showing the first '+MAX_GROUPS+' of '+groups.length+' groups.'));
+}
+async function scan(){
+ const btn=$('scan');btn.disabled=true;showError('');$('status').textContent='Scanning\u2026';
+ try{
+  const all=await somnia.project.listFiles();
+  const html=all.filter(f=>/\.html?$/i.test(f));
+  const capped=html.slice(0,MAX_FILES);
+  const rows=[],map=new Map();
+  for(const file of capped){
+   const src=await somnia.project.readFile(file);
+   const a=analyse(src,S.skip);
+   rows.push({file,words:a.words,chars:a.chars,charsNoSpace:a.charsNoSpace});
+   for(const p of a.paras){let g=map.get(p.key);if(!g){g={text:p.text,count:0,files:new Map()};map.set(p.key,g);}g.count++;g.files.set(file,(g.files.get(file)||0)+1);}
+   await new Promise(r=>setTimeout(r,0));
+  }
+  const groups=[...map.values()].filter(g=>g.count>1).sort((a,b)=>b.count-a.count||a.text.localeCompare(b.text));
+  last={rows,groups};render();
+  $('status').textContent='Scanned '+rows.length+' file'+(rows.length===1?'':'s')+(html.length>MAX_FILES?' (first '+MAX_FILES+' of '+html.length+')':'')+' at '+new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+ }catch(e){showError('Scan failed: '+(e&&e.message||e));$('status').textContent='Scan failed';}
+ finally{btn.disabled=false;}
+}
+$('scan').addEventListener('click',scan);
+$('skip').addEventListener('click',()=>{S.skip=!S.skip;saveSettings();scan();});
+$('vAll').addEventListener('click',()=>{S.view='all';saveSettings();render();});
+$('vDup').addEventListener('click',()=>{S.view='dups';saveSettings();render();});
+$('wpm').addEventListener('change',e=>{const v=Math.round(Number(e.target.value));if(!Number.isFinite(v)||v<100||v>600){e.target.value=String(S.wpm);return;}S.wpm=v;saveSettings();render();});
+loadSettings().then(()=>{syncControls();return scan();});
+})();
+</script>

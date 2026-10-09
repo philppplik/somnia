@@ -1,0 +1,190 @@
+<style>
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{padding:12px;color:#18181b;font:13px/1.45 "Segoe UI",system-ui,Arial,sans-serif;background:transparent}
+button,input,select{font:inherit;color:inherit}
+button{border:0;cursor:pointer}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid #4f46e5;outline-offset:2px}
+.head{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px}
+h1{margin:0;font-size:18px;font-weight:650;letter-spacing:-.3px}
+.primary{background:#4f46e5;color:#fff;border-radius:18px;padding:6px 13px;font-size:12px}
+.primary:hover{background:#4338ca}
+.primary[disabled]{opacity:.6;cursor:default}
+.intro{margin:6px 0 12px;color:#52525a;font-size:12px}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}
+.chip{border-radius:16px;padding:5px 11px;background:#e9e9f0;color:#3f3f46;font-size:11px;white-space:nowrap}
+.chip[aria-pressed=true]{background:#e0ddfb;color:#3730a3;font-weight:600}
+.row{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px}
+.row label{display:flex;flex-direction:column;gap:2px;font-size:11px;color:#52525a;flex:1 1 120px;min-width:0}
+.row input,.row select{width:100%;border:1px solid #c9c9d3;border-radius:8px;padding:6px 8px;background:#fff;font-size:12px;min-width:0}
+h2{margin:14px 0 6px;font-size:11px;font-weight:600;letter-spacing:.02em;color:#3f3f46;overflow-wrap:anywhere}
+.list{list-style:none;margin:0;padding:0}
+.item{border:1px solid #e1e1ea;border-radius:12px;padding:8px 11px;margin-bottom:7px;background:#fff}
+.msg{display:flex;gap:8px;align-items:flex-start}
+.msg span.t{overflow-wrap:anywhere;min-width:0}
+.badge{flex:none;font-size:10px;font-weight:700;border-radius:10px;padding:2px 8px;margin-top:2px}
+.TODO{background:#e3e1fb;color:#3730a3}
+.FIXME{background:#fde4e4;color:#991b1b}
+.HACK{background:#fff0d9;color:#7a4a00}
+.owner{color:#52525a}
+.loc{margin:3px 0 0;font:11px/1.5 Consolas,"Courier New",monospace;color:#52525a;overflow-wrap:anywhere}
+.count{font-size:11px;color:#52525a;margin:0 0 6px}
+.empty,.err{padding:10px 12px;border-radius:10px;font-size:12px}
+.empty{background:#f1f2f6;color:#3f3f46}
+.err{background:#fdecec;color:#991b1b;margin-bottom:8px}
+.rules{margin-top:14px;background:#f1f2f6;border-radius:12px;padding:10px 12px;font-size:12px}
+.rules summary{cursor:pointer;font-weight:600}
+.rules summary:focus-visible{outline:2px solid #4f46e5;outline-offset:2px}
+.rules ul{margin:8px 0 0;padding-left:18px}
+.rules li{margin:3px 0}
+.note{margin-top:14px;padding-top:8px;border-top:1px solid #e6e6ee;font-size:11px;color:#52525a;display:flex;flex-wrap:wrap;justify-content:space-between;gap:4px 10px}
+</style>
+<div class="head"><h1>TODO Navigator</h1><button id="scan" class="primary" type="button">Rescan &#8635;</button></div>
+<p class="intro">TODO, FIXME and HACK comments in HTML, CSS, JS and Markdown files.</p>
+<div id="err" role="alert" hidden></div>
+<div class="chips" id="chips" role="group" aria-label="Filter by type"></div>
+<div class="row">
+ <label>Search<input id="q" type="search" placeholder="Search comments"></label>
+ <label>Group by<select id="g"><option value="file">File</option><option value="type">Type</option><option value="none">No grouping</option></select></label>
+</div>
+<p class="count" id="count" role="status" aria-live="polite"></p>
+<div id="out"></div>
+<details class="rules"><summary>What is collected</summary><ul id="rules"></ul></details>
+<div class="note"><span>Read-only &middot; Offline &middot; Changes nothing</span><span id="status" role="status" aria-live="polite">Not scanned yet</span></div>
+<script>
+(()=>{
+'use strict';
+const KEY='filter',MAX_FILES=500,MAX_BYTES=1500000,MAX_ITEMS=1000;
+const TYPES=['TODO','FIXME','HACK'];
+const F={type:'all',group:'file',query:''};
+let items=null;
+const $=id=>document.getElementById(id);
+function h(tag,cls,...kids){const e=document.createElement(tag);if(cls)e.className=cls;for(const k of kids.flat()){if(k==null)continue;e.append(typeof k==='object'?k:document.createTextNode(String(k)));}return e;}
+const MARK=/(?:^|[^A-Za-z0-9_])(TODO|FIXME|HACK)\b(?:\(([^)]*)\))?[\s:\-\u2013\u2014]*(.*)$/;
+/* Approximate comment finders. They return [start,end] ranges of comment text. Strings end at a line break, so a stray quote in a regex cannot hide the rest of a file. */
+function jsComments(s,from,to,out){
+ let i=from;
+ while(i<to){const c=s[i],d=s[i+1];
+  if(c==='/'&&d==='/'){let e=s.indexOf('\n',i);if(e<0||e>to)e=to;out.push([i+2,e]);i=e;}
+  else if(c==='/'&&d==='*'){let e=s.indexOf('*/',i+2);if(e<0||e>to)e=to;out.push([i+2,e]);i=e+2;}
+  else if(c==='"'||c==="'"){i++;while(i<to&&s[i]!==c&&s[i]!=='\n'){if(s[i]==='\\')i++;i++;}i++;}
+  else if(c==='`'){i++;while(i<to&&s[i]!=='`'){if(s[i]==='\\')i++;i++;}i++;}
+  else i++;}
+}
+function cssComments(s,from,to,out){
+ let i=from;
+ while(i<to){const c=s[i];
+  if(c==='/'&&s[i+1]==='*'){let e=s.indexOf('*/',i+2);if(e<0||e>to)e=to;out.push([i+2,e]);i=e+2;}
+  else if(c==='"'||c==="'"){i++;while(i<to&&s[i]!==c&&s[i]!=='\n'){if(s[i]==='\\')i++;i++;}i++;}
+  else i++;}
+}
+function htmlComments(s,out){
+ const re=/<!--|<script\b[^>]*>|<style\b[^>]*>/gi;let m;
+ while((m=re.exec(s))){
+  const tok=m[0].toLowerCase();
+  if(tok==='<!--'){let e=s.indexOf('-->',re.lastIndex);if(e<0)e=s.length;out.push([re.lastIndex,e]);re.lastIndex=e+3;}
+  else{const isScript=tok.startsWith('<script');const close=isScript?'</script':'</style';
+   let e=s.toLowerCase().indexOf(close,re.lastIndex);if(e<0)e=s.length;
+   const type=(/\btype\s*=\s*["']?([^"'\s>]+)/i.exec(m[0])||[])[1]||'';
+   if(!isScript)cssComments(s,re.lastIndex,e,out);
+   else if(!type||/javascript|ecmascript|module/i.test(type))jsComments(s,re.lastIndex,e,out);
+   re.lastIndex=e;}
+ }
+}
+function collect(file,src){
+ const ext=(/\.([a-z0-9]+)$/i.exec(file)||[])[1].toLowerCase();
+ const starts=[0];for(let i=0;i<src.length;i++)if(src.charCodeAt(i)===10)starts.push(i+1);
+ const lineAt=pos=>{let lo=0,hi=starts.length-1;while(lo<hi){const mid=(lo+hi+1)>>1;if(starts[mid]<=pos)lo=mid;else hi=mid-1;}return lo+1;};
+ const ranges=[];
+ if(ext==='md'||ext==='markdown')ranges.push([0,src.length]);
+ else if(ext==='css')cssComments(src,0,src.length,ranges);
+ else if(ext==='js'||ext==='mjs'||ext==='cjs')jsComments(src,0,src.length,ranges);
+ else htmlComments(src,ranges);
+ const out=[];
+ for(const [a,b] of ranges){
+  let pos=a;
+  for(const raw of src.slice(a,b).split('\n')){
+   const m=MARK.exec(raw);
+   if(m){let msg=m[3].replace(/\s*(\*\/|-->)\s*$/,'').replace(/^\*+\s*/,'').trim();
+    out.push({type:m[1],file,line:lineAt(pos),owner:m[2]?m[2].trim():'',msg:msg.length>200?msg.slice(0,199)+'\u2026':msg||'(no description)'});}
+   pos+=raw.length+1;
+  }
+ }
+ return out;
+}
+function showError(msg){const e=$('err');e.className='err';e.hidden=!msg;e.textContent=msg||'';}
+async function loadFilter(){
+ try{const raw=await somnia.storage.get(KEY);if(!raw)return;const o=JSON.parse(raw);
+  if(o.type==='all'||TYPES.includes(o.type))F.type=o.type;
+  if(['file','type','none'].includes(o.group))F.group=o.group;
+  if(typeof o.query==='string')F.query=o.query.slice(0,100);
+ }catch(e){/* storage missing or revoked: defaults apply */}
+}
+async function saveFilter(){try{await somnia.storage.set(KEY,JSON.stringify(F));}catch(e){showError('Filter was not saved: '+(e&&e.message||e));}}
+function rules(){
+ const ul=$('rules');ul.textContent='';
+ ['Files: .html, .htm, .css, .js, .mjs, .cjs, .md and .markdown, including unsaved edits.',
+  'Markers: the uppercase words TODO, FIXME and HACK, optionally followed by (owner) and a colon, at the start of a comment line or after a non-word character.',
+  'HTML, CSS and JS: only inside comments (<!-- -->, /* */, //). Comment finding is approximate, not a full parser.',
+  'Inline <script> and <style> blocks in HTML are checked for comments too. Scripts of the project never run.',
+  'Markdown: every line is checked, because Markdown has no comment syntax for notes.',
+  'Line numbers are the line where the marker appears, starting at 1.',
+  'Lowercase "todo" and words such as TODOS are ignored.'
+ ].forEach(t=>ul.append(h('li',null,t)));
+}
+function visible(){
+ const q=F.query.trim().toLowerCase();
+ return items.filter(it=>(F.type==='all'||it.type===F.type)&&(!q||(it.msg+' '+it.owner+' '+it.file).toLowerCase().includes(q)));
+}
+function itemEl(it,showFile){
+ const t=h('span','t',it.msg,it.owner?[' ',h('span','owner','('+it.owner+')')]:null);
+ return h('li','item',h('div','msg',h('span','badge '+it.type,it.type),t),h('div','loc',it.file+':'+it.line));
+}
+function render(){
+ $('g').value=F.group;$('q').value=F.query;
+ const chips=$('chips');chips.textContent='';
+ const out=$('out');out.textContent='';
+ if(!items){return;}
+ const counts={all:items.length};TYPES.forEach(t=>counts[t]=items.filter(i=>i.type===t).length);
+ [['all','All'],...TYPES.map(t=>[t,t])].forEach(([k,l])=>{
+  const b=h('button','chip',l+' '+counts[k]);b.type='button';b.setAttribute('aria-pressed',String(F.type===k));
+  b.addEventListener('click',()=>{F.type=k;saveFilter();render();});chips.append(b);});
+ const list=visible();
+ $('count').textContent=items.length?('Showing '+list.length+' of '+items.length):'';
+ if(!items.length){out.append(h('div','empty','No TODO, FIXME or HACK comments found.'));return;}
+ if(!list.length){out.append(h('div','empty','Nothing matches this filter.'));return;}
+ const shown=list.slice(0,MAX_ITEMS);
+ const groups=new Map();
+ shown.forEach(it=>{const k=F.group==='file'?it.file:F.group==='type'?it.type:'';if(!groups.has(k))groups.set(k,[]);groups.get(k).push(it);});
+ const keys=[...groups.keys()];
+ if(F.group==='type')keys.sort((a,b)=>TYPES.indexOf(a)-TYPES.indexOf(b));
+ keys.forEach(k=>{
+  if(F.group!=='none')out.append(h('h2',null,k+' ('+groups.get(k).length+')'));
+  const ul=h('ul','list');groups.get(k).forEach(it=>ul.append(itemEl(it)));out.append(ul);});
+ if(list.length>MAX_ITEMS)out.append(h('div','empty','Showing the first '+MAX_ITEMS+' results. Narrow the search to see more.'));
+}
+async function scan(){
+ const btn=$('scan');btn.disabled=true;showError('');$('status').textContent='Scanning\u2026';
+ try{
+  const all=await somnia.project.listFiles();
+  const files=all.filter(f=>/\.(html?|css|m?js|cjs|md|markdown)$/i.test(f)).slice(0,MAX_FILES);
+  const found=[];let skipped=0;
+  for(const f of files){
+   const src=await somnia.project.readFile(f);
+   if(src.length>MAX_BYTES){skipped++;continue;}
+   found.push(...collect(f,src));
+   await new Promise(r=>setTimeout(r,0));
+  }
+  found.sort((a,b)=>a.file.localeCompare(b.file)||a.line-b.line);
+  items=found;render();
+  $('status').textContent='Scanned '+(files.length-skipped)+' file'+(files.length-skipped===1?'':'s')+(skipped?' ('+skipped+' too large, skipped)':'')+' at '+new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+ }catch(e){showError('Scan failed: '+(e&&e.message||e));$('status').textContent='Scan failed';}
+ finally{btn.disabled=false;}
+}
+$('scan').addEventListener('click',scan);
+$('q').addEventListener('input',e=>{F.query=e.target.value.slice(0,100);saveFilter();render();$('q').focus();});
+$('g').addEventListener('change',e=>{F.group=e.target.value;saveFilter();render();});
+rules();
+loadFilter().then(()=>{render();return scan();});
+})();
+</script>
