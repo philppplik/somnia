@@ -47,13 +47,25 @@ export function inverseOf(before:string,edit:TextEdit):TextEdit{
  }
  return{block:edit.block,hunks};
 }
+/** UTF-8 offset just after the last inserted text once `edit` has been applied. */
+export function caretAfterEdit(edit:TextEdit):number{
+ let delta=0,pos=0;for(const h of edit.hunks){pos=h.start+delta+bytes(h.text);delta+=bytes(h.text)-(h.end-h.start);}return pos;
+}
 /** Host-side undo: one entry per applied edit holding the inverse edit. */
 export interface UndoEntry{inverse:TextEdit}
 export class UndoStack{
  private undoS:UndoEntry[]=[];private redoS:UndoEntry[]=[];
  get canUndo(){return this.undoS.length>0;}get canRedo(){return this.redoS.length>0;}
- push(inverse:TextEdit){this.undoS.push({inverse});this.redoS=[];}
- popUndo(){return this.undoS.pop();}popRedo(){return this.redoS.pop();}
+ private mergeAt=-Infinity;
+ /** `merge`: consecutive typing in one place within `windowMs` becomes one undo step. */
+ push(inverse:TextEdit,merge=false,now=Date.now(),windowMs=1200){
+  const top=this.undoS[this.undoS.length-1];const h=inverse.hunks[0];
+  if(merge&&top&&now-this.mergeAt<=windowMs&&top.inverse.block===inverse.block&&top.inverse.hunks.length===1&&inverse.hunks.length===1&&h.text===''&&h.start===top.inverse.hunks[0].end){
+   const t=top.inverse.hunks[0];this.undoS[this.undoS.length-1]={inverse:{block:inverse.block,hunks:[{start:t.start,end:h.end,text:t.text}]}};this.mergeAt=now;this.redoS=[];return;
+  }
+  this.undoS.push({inverse});this.redoS=[];this.mergeAt=merge?now:-Infinity;
+ }
+ popUndo(){this.mergeAt=-Infinity;return this.undoS.pop();}popRedo(){return this.redoS.pop();}
  pushRedo(inverse:TextEdit){this.redoS.push({inverse});}pushUndo(inverse:TextEdit){this.undoS.push({inverse});}
  clear(){this.undoS=[];this.redoS=[];}
 }

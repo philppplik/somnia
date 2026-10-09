@@ -2202,5 +2202,7 @@
   "documents.edit.title": "Text bearbeiten",
   "documents.edit.paragraph": "Absatz {n}",
   "documents.edit.table": "Block {n} ist eine Tabelle. Tabellen lassen sich noch nicht bearbeiten.",
-  "documents.edit.objects": "Block {n} enthält Bilder, Felder oder andere Objekte. Er lässt sich noch nicht als Text bearbeiten."
+  "documents.edit.objects": "Block {n} enthält Bilder, Felder oder andere Objekte. Er lässt sich noch nicht als Text bearbeiten.",
+  "documents.caret.input": "Auf der Seite tippen",
+  "documents.caret.locked": "Dieser Teil (Tabelle, Bild, Feld oder anderes Objekt) lässt sich noch nicht auf der Seite bearbeiten."
 }

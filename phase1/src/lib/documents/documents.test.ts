@@ -5,7 +5,7 @@ import {zipSync,strToU8} from 'fflate';
 import {DocumentsCore} from './core';
 import {DocumentsEngine,type WorkerLike} from './engine';
 import {inspectDocx} from './inspect';
-import {utf16ToUtf8Offset} from './text';
+import {utf16ToUtf8Offset,utf8ToUtf16Offset,stepBoundary} from './text';
 import type {DocumentsRequest,DocumentsResponse} from './protocol';
 const wasm=new URL('../../../documents/pkg/wordcraft_somnia_worker_bg.wasm',import.meta.url);
 const haveWasm=existsSync(wasm);
@@ -107,4 +107,28 @@ test('real engine: multi-hunk edit applies atomically, bad second hunk changes n
  const bl=(core.handle({id:4,kind:'blocks'}).res as Extract<DocumentsResponse,{kind:'blocks'}>).blocks[0].text;assert.equal(bl,next);
  const bad=core.handle({id:5,kind:'replace',block:0,hunks:[{start:0,end:1,text:''},{start:99999,end:99999,text:'x'}]}).res;assert.equal(bad.ok,false);
  assert.equal((core.handle({id:6,kind:'blocks'}).res as Extract<DocumentsResponse,{kind:'blocks'}>).blocks[0].text,next);
+});
+test('utf8ToUtf16Offset inverts utf16ToUtf8Offset and refuses mid-character offsets',()=>{
+ const s='aé€😀b';for(let i=0;i<=s.length;i++){if(i===4)continue;assert.equal(utf8ToUtf16Offset(s,utf16ToUtf8Offset(s,i)),i);}
+ assert.throws(()=>utf8ToUtf16Offset('é',1));assert.throws(()=>utf8ToUtf16Offset('é',9));
+});
+test('stepBoundary moves over whole characters and emoji sequences',()=>{
+ assert.equal(stepBoundary('a😀b',1,1),3);assert.equal(stepBoundary('a😀b',3,-1),1);assert.equal(stepBoundary('ab',0,-1),0);assert.equal(stepBoundary('ab',2,1),2);
+ const fam='👨‍👩‍👧';assert.equal(stepBoundary(fam+'x',0,1),fam.length);
+});
+test('UndoStack merges consecutive typing into one step but not distant or late edits',()=>{
+ const ins=(at:number,n=1)=>({block:0,hunks:[{start:at,end:at+n,text:''}]});
+ const u=new UndoStack();u.push(ins(5),true,1000);u.push(ins(6),true,1500);u.push(ins(7),true,1900);
+ assert.deepEqual(u.popUndo()!.inverse.hunks,[{start:5,end:8,text:''}]);assert.equal(u.canUndo,false);
+ u.push(ins(5),true,1000);u.push(ins(9),true,1100);assert.equal(u.popUndo()!.inverse.hunks[0].start,9);u.clear();
+ u.push(ins(5),true,1000);u.push(ins(6),true,5000);assert.equal(u.popUndo()!.inverse.hunks[0].start,6);
+ u.clear();u.push(ins(5),false,1000);u.push(ins(6),true,1100);assert.equal(u.popUndo()!.inverse.hunks[0].start,6);
+});
+test('real engine: hit test, caret and selection rectangles agree',{skip:!haveWasm},async()=>{
+ const core=await realCore();core.handle({id:1,kind:'open',bytes:ab(fixture('sample.docx'))});
+ const car=(core.handle({id:2,kind:'caret',block:1,off:5}).res as Extract<DocumentsResponse,{kind:'caret'}>).caret!;
+ const hit=(core.handle({id:3,kind:'hit',page:car.page,x:car.x,y:car.top+car.height/2}).res as Extract<DocumentsResponse,{kind:'hit'}>).hit!;
+ assert.deepEqual([hit.block,hit.off,hit.editable],[1,5,true]);
+ const rects=(core.handle({id:4,kind:'rects',block:1,a:0,b:4}).res as Extract<DocumentsResponse,{kind:'rects'}>).rects;assert.ok(rects.length>0&&rects[0][3]>0);
+ const tbl=(core.handle({id:5,kind:'hit',page:0,x:90,y:155}).res as Extract<DocumentsResponse,{kind:'hit'}>).hit!;assert.deepEqual([tbl.block,tbl.editable],[null,false]);
 });

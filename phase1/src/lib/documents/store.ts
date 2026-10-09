@@ -3,8 +3,10 @@ import type {RiskId} from './inspect';
 import type {DocBlock} from './edit';
 import type {PageSize} from './protocol';
 export type DocStatus='idle'|'loading'|'ready'|'error';
-export interface DocumentsState{status:DocStatus;name:string;error:string;pages:number;zoom:number;risks:readonly RiskId[];words:number;engineMs:number|null;saving:boolean;blocks:readonly DocBlock[];pageSizes:readonly PageSize[];rev:number;canUndo:boolean;canRedo:boolean;editError:string;edited:boolean}
-const initial:DocumentsState={status:'idle',name:'',error:'',pages:0,zoom:1,risks:[],words:0,engineMs:null,saving:false,blocks:[],pageSizes:[],rev:0,canUndo:false,canRedo:false,editError:'',edited:false};
+export interface DocumentsState{status:DocStatus;name:string;error:string;pages:number;zoom:number;risks:readonly RiskId[];words:number;engineMs:number|null;saving:boolean;blocks:readonly DocBlock[];pageSizes:readonly PageSize[];rev:number;canUndo:boolean;canRedo:boolean;editError:string;edited:boolean;caret:Caret|null;caretLocked:boolean;caretBox:import('./protocol').CaretBox|null;selRects:readonly import('./protocol').Rect5[]}
+/** Selection in one top-level paragraph; offsets are UTF-8 bytes of its current text. head is the moving end. */
+export interface Caret{block:number;anchor:number;head:number}
+const initial:DocumentsState={status:'idle',name:'',error:'',pages:0,zoom:1,risks:[],words:0,engineMs:null,saving:false,blocks:[],pageSizes:[],rev:0,canUndo:false,canRedo:false,editError:'',edited:false,caret:null,caretLocked:false,caretBox:null,selRects:[]};
 let state=initial;const listeners=new Set<()=>void>();
 export const getDocumentsState=()=>state;
 export function patchDocuments(p:Partial<DocumentsState>){state={...state,...p};listeners.forEach(l=>l());}

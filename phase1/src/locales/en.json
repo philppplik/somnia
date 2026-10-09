@@ -2202,5 +2202,7 @@
   "documents.edit.title": "Edit text",
   "documents.edit.paragraph": "Paragraph {n}",
   "documents.edit.table": "Block {n} is a table. Tables cannot be edited yet.",
-  "documents.edit.objects": "Block {n} contains images, fields or other objects. It cannot be edited as text yet."
+  "documents.edit.objects": "Block {n} contains images, fields or other objects. It cannot be edited as text yet.",
+  "documents.caret.input": "Type on the page",
+  "documents.caret.locked": "This part (table, image, field or other object) cannot be edited on the page yet."
 }

@@ -43,10 +43,10 @@ index 0000000..6cee126
 +wasm-bindgen = "=0.2.129"
 diff --git a/crates/somnia-worker/src/lib.rs b/crates/somnia-worker/src/lib.rs
 new file mode 100644
-index 0000000..bdd5079
+index 0000000..87d2f14
 --- /dev/null
 +++ b/crates/somnia-worker/src/lib.rs
-@@ -0,0 +1,273 @@
+@@ -0,0 +1,315 @@
 +//! Experimental headless adapter. No DOM, egui, filesystem or UI thread access.
 +use wasm_bindgen::prelude::*;
 +use std::sync::Arc;
@@ -174,6 +174,37 @@ index 0000000..bdd5079
 +    }
 +    pub fn replace_range(&mut self, block: usize, utf8_start: usize, utf8_end: usize, text: &str) -> Result<(), JsValue> {
 +        self.do_replace(block, utf8_start, utf8_end, text).map_err(|e| JsValue::from_str(&e))
++    }
++    /// Page-space hit test (page units, same space as `page_info`). JSON: `null` when nothing is hit,
++    /// `{"block":i,"off":utf8,"editable":bool}` for a top-level paragraph, `{"block":null,"editable":false}`
++    /// for text inside a table cell or another story. Never guesses: offsets come from the layout.
++    pub fn hit_test(&self, page: usize, x: f32, y: f32) -> String {
++        match self.pages.hit(page, x, y, StoryRef::Body) {
++            None => "null".into(),
++            Some(pos) if pos.path.depth() == 0 && pos.path.0.len() == 1 => {
++                let b = pos.path.last();
++                let editable = matches!(self.doc.body.get(b).map(|b| &**b), Some(Block::Para(p)) if !p.text.contains(OBJ) && p.objects.is_empty());
++                serde_json::json!({"block": b, "off": pos.off, "editable": editable}).to_string()
++            }
++            Some(_) => serde_json::json!({"block": null, "editable": false}).to_string(),
++        }
++    }
++    /// Caret rectangle for a top-level paragraph offset: `{"page","x","top","height"}` or `null`.
++    pub fn caret_at(&self, block: usize, utf8_off: usize) -> String {
++        match self.pages.caret(&Pos::body(block, utf8_off)) {
++            Some(c) => serde_json::json!({"page": c.page, "x": c.x, "top": c.top, "height": c.height}).to_string(),
++            None => "null".into(),
++        }
++    }
++    /// Highlight rectangles inside one top-level paragraph: `[[page,x,y,w,h],...]`.
++    pub fn selection_rects(&self, block: usize, a: usize, b: usize) -> String {
++        let r: Vec<_> = self
++            .pages
++            .selection_rects(&self.doc, &Pos::body(block, a), &Pos::body(block, b), 0)
++            .into_iter()
++            .map(|(pg, r)| serde_json::json!([pg, r.x, r.y, r.w, r.h]))
++            .collect();
++        serde_json::Value::Array(r).to_string()
 +    }
 +    #[wasm_bindgen(constructor)]
 +    pub fn new(bytes: &[u8]) -> Result<DocSession, JsValue> {
@@ -318,6 +349,17 @@ index 0000000..bdd5079
 +        assert!(s.do_insert(0, 1, "x").is_err());
 +        s.do_insert(0, 2, "x").unwrap();
 +        assert!(s.text().starts_with("éx"));
++    }
++    #[test]
++    fn hit_and_caret_roundtrip() {
++        let mut s = DocSession::from_bytes(FIXTURE).unwrap();
++        s.paginate();
++        let c: serde_json::Value = serde_json::from_str(&s.caret_at(0, 3)).unwrap();
++        let (x, y) = (c["x"].as_f64().unwrap() as f32, (c["top"].as_f64().unwrap() + c["height"].as_f64().unwrap() / 2.0) as f32);
++        let h: serde_json::Value = serde_json::from_str(&s.hit_test(c["page"].as_u64().unwrap() as usize, x, y)).unwrap();
++        assert_eq!((h["block"].as_u64(), h["off"].as_u64()), (Some(0), Some(3)));
++        let r: serde_json::Value = serde_json::from_str(&s.selection_rects(0, 0, 4)).unwrap();
++        assert!(!r.as_array().unwrap().is_empty());
 +    }
 +}
 diff --git a/spikes/somnia-documents/.gitignore b/spikes/somnia-documents/.gitignore

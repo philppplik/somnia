@@ -2202,5 +2202,7 @@
   "documents.edit.title": "Editar texto",
   "documents.edit.paragraph": "Parágrafo {n}",
   "documents.edit.table": "O bloco {n} é uma tabela. Ainda não é possível editar tabelas.",
-  "documents.edit.objects": "O bloco {n} contém imagens, campos ou outros objetos. Ainda não pode ser editado como texto."
+  "documents.edit.objects": "O bloco {n} contém imagens, campos ou outros objetos. Ainda não pode ser editado como texto.",
+  "documents.caret.input": "Digitar na página",
+  "documents.caret.locked": "Esta parte (tabela, imagem, campo ou outro objeto) ainda não pode ser editada na página."
 }

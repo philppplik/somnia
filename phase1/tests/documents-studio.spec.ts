@@ -100,3 +100,34 @@ test('two far-apart changes in one paragraph apply as one undoable edit; heading
  await page.getByTestId('documents-undo').click();await expect.poll(()=>first.inputValue()).toBe(old);
  await expect(page.getByTestId('documents-undo')).toBeDisabled();
 });
+test('on-page caret: click, type, select, delete, undo as one step; tables are locked',async({page})=>{
+ await page.goto('/');await expect(page.locator('[data-storage]')).toBeVisible();
+ await openBuffers(page,[{name:'sample.docx',mimeType:DOCX,buffer:sample()}]);
+ await expect(page.getByTestId('documents-pages')).toHaveText('1 pages');
+ const pg=page.getByTestId('documents-page').first();const img=pg.locator('img');
+ await expect.poll(()=>img.evaluate((i:HTMLImageElement)=>i.complete&&i.naturalWidth)).toBeGreaterThan(300);
+ const box=(await pg.boundingBox())!;const first=page.getByTestId('documents-editor').getByRole('textbox').first();const old=await first.inputValue();
+ // second paragraph text line (y ~ 86 of 842 on the page), click near its start
+ const second=page.getByTestId('documents-editor').getByRole('textbox').nth(1);const old2=await second.inputValue();
+ await page.mouse.click(box.x+box.width*0.125,box.y+box.height*0.127);
+ await expect(page.getByTestId('documents-caret')).toBeVisible();
+ await expect(page.getByTestId('documents-input')).toBeFocused();
+ await page.keyboard.type('Hey ');
+ await expect.poll(()=>second.inputValue()).toBe('Hey '+old2);
+ await expect(page.getByTestId('documents-caret')).toBeVisible();
+ await page.keyboard.press('Backspace');
+ await expect.poll(()=>second.inputValue()).toBe('Hey'+old2);
+ await page.keyboard.press('Shift+ArrowRight');await page.keyboard.press('Shift+ArrowRight');
+ await expect(page.getByTestId('documents-selection').first()).toBeVisible();
+ await page.getByTestId('documents-page').first().screenshot({path:shot('caret-selection')});
+ await page.keyboard.type('X');
+ await expect.poll(()=>second.inputValue()).toBe('HeyX'+old2.slice(2));
+ await page.keyboard.press('ArrowLeft');await page.keyboard.press('Home');
+ await page.keyboard.type('>');
+ await expect.poll(()=>second.inputValue()).toBe('>HeyX'+old2.slice(2));
+ for(let i=0;i<6;i++){if(await page.getByTestId('documents-undo').isDisabled())break;await page.getByTestId('documents-undo').click();await page.waitForTimeout(150);}
+ await expect.poll(()=>second.inputValue()).toBe(old2);expect(await first.inputValue()).toBe(old);
+ // table row is locked
+ const b2=(await pg.boundingBox())!;await page.mouse.click(b2.x+b2.width*0.15,b2.y+b2.height*0.19);
+ await expect(page.getByTestId('documents-caret-locked')).toBeVisible();await expect(page.getByTestId('documents-caret')).toHaveCount(0);
+});

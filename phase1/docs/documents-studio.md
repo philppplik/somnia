@@ -23,10 +23,11 @@ The main thread only holds UI state and receives PNG blobs.
   paragraphs with inline objects such as images/fields/comments are refused, no line breaks). The host sends the
   minimal diff of a paragraph (`edit.ts`), keeps its own undo/redo of inverse edits, and re-renders pages.
 - Package 3 (run-exact edits): the host sends a code-point diff as several hunks (`replace_ranges`, ascending non-overlapping UTF-8 ranges, applied atomically on a clone), so untouched runs keep their formatting. Inserted text inherits: first replaced char (replacement), char before (insertion), char after (paragraph start), paragraph mark (empty paragraph). Remaining limits: replaced text takes the first replaced char's format; no per-run formatting UI.
-- No on-page caret, selection, IME on canvas, clipboard, styles, tables, line breaks or paragraph split/merge.
+- Package 4 (on-page caret): click places a caret, drag or Shift+arrows select, inside one top-level paragraph. Geometry comes only from the engine (`hit_test`, `caret_at`, `selection_rects`, page units; the host scales by zoom). Keyboard, IME and clipboard go through an invisible textarea that never holds document text: typing, Backspace/Delete (by grapheme), Left/Right (cross into neighbouring editable paragraphs), Up/Down/Home/End (via line geometry), Ctrl+A (paragraph), copy/cut/paste as plain text, Ctrl+Z/Y. Consecutive typing within 1.2 s is one undo step. Clicks on tables or paragraphs with objects show a notice and place no caret.
+- Limits: no paragraph split/merge (Enter is ignored, pasted line breaks become spaces), selections stay inside one paragraph, no word-wise movement, IME composition is committed at the end and not previewed on the page, Up/Down does not cross page boundaries, no formatting UI.
 
 ## Next packages
-1. On-page editing: caret/selection geometry from the engine, keyboard and IME input, clipboard, paragraph split/merge, per-run formatting preserved.
+1. Paragraph split/merge, multi-paragraph selection, word-wise movement, IME preview, per-run formatting commands.
 2. Save in place through the project file bridge with backup and loss-detection gates.
 3. Real-world DOCX corpus, fidelity fixes, fuzzing, memory budget, WebView2 check on Windows.
 4. Agent tools for the Documents Studio (read text, propose edits) via the studio manifest.

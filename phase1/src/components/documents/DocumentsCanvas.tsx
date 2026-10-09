@@ -3,7 +3,7 @@ import {FileText,Minus,Plus,Undo2,Redo2} from '../../lib/icons';
 import {addMediaFile,findMedia,formatBytes,MEDIA_ACCEPT,useMedia} from '../../lib/media';
 import {DocumentsEngine,inspectDocx,type OpenedDocument} from '../../lib/documents';
 import {patchDocuments,resetDocuments,stepZoom,useDocuments} from '../../lib/documents/store';
-import {attachEngine,editParagraph,loadBlocks,redoEdit,undoEdit} from '../../lib/documents/session';
+import {attachEngine,clearCaret,deleteAtCaret,dragTo,editParagraph,loadBlocks,moveCaret,pointerAt,redoEdit,selectAllInParagraph,selectedText,syncGeometry,typeText,undoEdit} from '../../lib/documents/session';
 import {saveCopy} from '../../lib/documents/saveCopy';
 import {useT} from '../../lib/useT';
 import {getState,patchState} from '../../store/appStore';
@@ -20,10 +20,43 @@ function Page({engine,index,width,height,zoom,rev,visible,onVisible}:{engine:Doc
   engine.render(index,scale).then(b=>{if(!live)return;url=URL.createObjectURL(b);setSrc(url);}).catch(()=>{if(live)setFailed(true);});
   return()=>{live=false;if(url)URL.revokeObjectURL(url);};
  },[engine,index,zoom,visible,rev]);
- return <div ref={ref} className="documents-page relative mx-auto shrink-0 bg-white shadow-sm ring-1 ring-black/10" style={{width:width*zoom,height:height*zoom}} data-testid="documents-page" data-page={index+1} role="img" aria-label={t('documents.page',{n:index+1})}>
+ const doc=useDocuments();const down=useRef(false);
+ const at=(e:React.PointerEvent)=>{const r=ref.current!.getBoundingClientRect();return[(e.clientX-r.left)/zoom,(e.clientY-r.top)/zoom] as const;};
+ const box=doc.caretBox&&doc.caretBox.page===index?doc.caretBox:null;
+ return <div ref={ref} className="documents-page relative mx-auto shrink-0 cursor-text bg-white shadow-sm ring-1 ring-black/10" style={{width:width*zoom,height:height*zoom}} data-testid="documents-page" data-page={index+1} role="img" aria-label={t('documents.page',{n:index+1})}
+  onPointerDown={e=>{if(e.button!==0)return;e.preventDefault();down.current=true;e.currentTarget.setPointerCapture(e.pointerId);const [x,y]=at(e);void pointerAt(index,x,y,e.shiftKey);}}
+  onPointerMove={e=>{if(down.current&&e.buttons&1){const [x,y]=at(e);dragTo(index,x,y);}}} onPointerUp={()=>{down.current=false;}} onPointerCancel={()=>{down.current=false;}}>
   {src&&<img src={src} alt="" draggable={false} className="absolute inset-0 h-full w-full select-none"/>}
   {failed&&<span role="alert" className="absolute inset-0 grid place-items-center text-[12px] text-ink-3">{t('documents.pageFailed')}</span>}
+  {doc.selRects.filter(r=>r[0]===index).map((r,i)=><span key={i} aria-hidden="true" className="pointer-events-none absolute bg-sky-500/30" data-testid="documents-selection" style={{left:r[1]*zoom,top:r[2]*zoom,width:r[3]*zoom,height:r[4]*zoom}}/>)}
+  {box&&<><span aria-hidden="true" className="documents-caret pointer-events-none absolute bg-black" data-testid="documents-caret" style={{left:box.x*zoom-0.5,top:box.top*zoom,width:1.5,height:box.height*zoom}}/>
+   <CaretInput left={box.x*zoom} top={box.top*zoom}/></>}
  </div>;
+}
+/** Invisible textarea that owns keyboard focus, IME and clipboard for the on-page caret. It never holds document text. */
+function CaretInput({left,top}:{left:number;top:number}){
+ const {t}=useT();const ref=useRef<HTMLTextAreaElement>(null);const composing=useRef(false);
+ useEffect(()=>{const el=ref.current;if(!el)return;el.focus({preventScroll:true});
+  /* React's onBeforeInput is a keypress shim without inputType, so this listens natively. */
+  const h=(n:InputEvent)=>{if(composing.current||n.isComposing||n.inputType==='insertCompositionText')return;n.preventDefault();if((n.inputType==='insertText'||n.inputType==='insertReplacementText')&&n.data)void typeText(n.data);};
+  el.addEventListener('beforeinput',h);return()=>el.removeEventListener('beforeinput',h);},[]);
+ const keys:Record<string,'left'|'right'|'up'|'down'|'home'|'end'>={ArrowLeft:'left',ArrowRight:'right',ArrowUp:'up',ArrowDown:'down',Home:'home',End:'end'};
+ return <textarea ref={ref} data-testid="documents-input" aria-label={t('documents.caret.input')} className="absolute m-0 h-4 w-px resize-none overflow-hidden border-0 bg-transparent p-0 opacity-0" style={{left,top}} autoCapitalize="off" autoCorrect="off" spellCheck={false}
+  onKeyDown={e=>{
+   if(composing.current||e.nativeEvent.isComposing)return;const mod=e.ctrlKey||e.metaKey;
+   if(keys[e.key]&&!mod&&!e.altKey){e.preventDefault();void moveCaret(keys[e.key],e.shiftKey);return;}
+   if(e.key==='Backspace'||e.key==='Delete'){e.preventDefault();void deleteAtCaret(e.key==='Backspace'?-1:1);return;}
+   if(e.key==='Escape'){e.preventDefault();clearCaret();return;}
+   if(e.key==='Enter'){e.preventDefault();return;}
+   if(mod&&e.key.toLowerCase()==='a'){e.preventDefault();selectAllInParagraph();return;}
+   if(mod&&e.key.toLowerCase()==='z'){e.preventDefault();void(e.shiftKey?redoEdit():undoEdit());return;}
+   if(mod&&e.key.toLowerCase()==='y'){e.preventDefault();void redoEdit();}
+  }}
+  onCompositionStart={()=>{composing.current=true;}}
+  onCompositionEnd={e=>{composing.current=false;const d=e.data;if(ref.current)ref.current.value='';if(d)void typeText(d);}}
+  onPaste={e=>{e.preventDefault();const d=e.clipboardData.getData('text/plain');if(d)void typeText(d);}}
+  onCopy={e=>{const x=selectedText();if(x){e.preventDefault();e.clipboardData.setData('text/plain',x);}}}
+  onCut={e=>{const x=selectedText();if(x){e.preventDefault();e.clipboardData.setData('text/plain',x);void deleteAtCaret(-1);}}}/>;
 }
 export function DocumentsCanvas(){
  const {t}=useT();const media=useMedia();const doc=useDocuments();
@@ -31,6 +64,7 @@ export function DocumentsCanvas(){
  const engineRef=useRef<DocumentsEngine|null>(null);const [engine,setEngine]=useState<DocumentsEngine|null>(null);
  const [near,setNear]=useState<Set<number>>(new Set([0]));const [attempt,setAttempt]=useState(0);const [confirm,setConfirm]=useState(false);
  const bytesRef=useRef<Uint8Array|null>(null);
+ useEffect(()=>{void syncGeometry();},[doc.caret,doc.rev,doc.zoom]);
  /** The Layers tree belongs to the web page, not to a document: land on Files when this studio opens. */
  useEffect(()=>{if(!['files','search','versions'].includes(getState().leftTab))patchState({leftTab:'files'});},[]);
  useEffect(()=>{
@@ -63,6 +97,7 @@ export function DocumentsCanvas(){
    <button className={tool} disabled={doc.status!=='ready'||doc.saving} onClick={()=>doc.risks.length?setConfirm(true):void doSave()} data-testid="documents-save-copy">{t('documents.saveCopy')}</button></div>
   {doc.status==='loading'&&<div role="status" className="grid flex-1 place-items-center text-[12px] text-ink-3">{t('documents.loading')}</div>}
   {doc.status==='error'&&<div role="alert" className="grid flex-1 place-items-center"><div className="grid max-w-md justify-items-center gap-2 text-center"><p className="text-[13px] text-ink" data-testid="documents-error">{doc.error}</p><button className={tool+' border border-subtle'} onClick={()=>setAttempt(a=>a+1)}>{t('documents.retry')}</button></div></div>}
+  {doc.caretLocked&&<p role="status" className="border-b border-subtle px-3 py-1 text-[12px] text-ink-3" data-testid="documents-caret-locked">{t('documents.caret.locked')}</p>}
   {doc.status==='ready'&&engine&&<div className="min-h-0 flex-1 overflow-auto bg-hover/40 p-6" data-testid="documents-scroll"><div className="flex flex-col gap-4">
    {doc.pageSizes.map((p,i)=><Page key={i} engine={engine} index={i} width={p.width} height={p.height} zoom={doc.zoom} rev={doc.rev} visible={near.has(i)} onVisible={onVisible}/>)}</div></div>}
   {confirm&&<div role="alertdialog" aria-modal="true" aria-labelledby="documents-confirm-title" className="absolute inset-0 z-20 grid place-items-center bg-black/30"><div className="grid max-w-md gap-3 rounded-[var(--r-popup,25px)] bg-surface p-5 shadow-xl">

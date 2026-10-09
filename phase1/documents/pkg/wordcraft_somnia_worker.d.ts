@@ -5,6 +5,16 @@ export class DocSession {
     free(): void;
     [Symbol.dispose](): void;
     blocks(): string;
+    /**
+     * Caret rectangle for a top-level paragraph offset: `{"page","x","top","height"}` or `null`.
+     */
+    caret_at(block: number, utf8_off: number): string;
+    /**
+     * Page-space hit test (page units, same space as `page_info`). JSON: `null` when nothing is hit,
+     * `{"block":i,"off":utf8,"editable":bool}` for a top-level paragraph, `{"block":null,"editable":false}`
+     * for text inside a table cell or another story. Never guesses: offsets come from the layout.
+     */
+    hit_test(page: number, x: number, y: number): string;
     insert(block: number, utf8_byte_offset: number, text: string): void;
     constructor(bytes: Uint8Array);
     page_info(): string;
@@ -16,6 +26,10 @@ export class DocSession {
      */
     replace_ranges(block: number, hunks_json: string): void;
     save(): Uint8Array;
+    /**
+     * Highlight rectangles inside one top-level paragraph: `[[page,x,y,w,h],...]`.
+     */
+    selection_rects(block: number, a: number, b: number): string;
     text(): string;
 }
 
@@ -25,6 +39,8 @@ export interface InitOutput {
     readonly memory: WebAssembly.Memory;
     readonly __wbg_docsession_free: (a: number, b: number) => void;
     readonly docsession_blocks: (a: number) => [number, number];
+    readonly docsession_caret_at: (a: number, b: number, c: number) => [number, number];
+    readonly docsession_hit_test: (a: number, b: number, c: number, d: number) => [number, number];
     readonly docsession_insert: (a: number, b: number, c: number, d: number, e: number) => [number, number];
     readonly docsession_new: (a: number, b: number) => [number, number, number];
     readonly docsession_page_info: (a: number) => [number, number];
@@ -33,6 +49,7 @@ export interface InitOutput {
     readonly docsession_replace_range: (a: number, b: number, c: number, d: number, e: number, f: number) => [number, number];
     readonly docsession_replace_ranges: (a: number, b: number, c: number, d: number) => [number, number];
     readonly docsession_save: (a: number) => [number, number, number, number];
+    readonly docsession_selection_rects: (a: number, b: number, c: number, d: number) => [number, number];
     readonly docsession_text: (a: number) => [number, number];
     readonly __wbindgen_externrefs: WebAssembly.Table;
     readonly __wbindgen_free: (a: number, b: number, c: number) => void;

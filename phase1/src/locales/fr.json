@@ -2202,5 +2202,7 @@
   "documents.edit.title": "Modifier le texte",
   "documents.edit.paragraph": "Paragraphe {n}",
   "documents.edit.table": "Le bloc {n} est un tableau. Les tableaux ne sont pas encore modifiables.",
-  "documents.edit.objects": "Le bloc {n} contient des images, des champs ou d'autres objets. Il n'est pas encore modifiable comme texte."
+  "documents.edit.objects": "Le bloc {n} contient des images, des champs ou d'autres objets. Il n'est pas encore modifiable comme texte.",
+  "documents.caret.input": "Saisir sur la page",
+  "documents.caret.locked": "Cette partie (tableau, image, champ ou autre objet) n'est pas encore modifiable sur la page."
 }

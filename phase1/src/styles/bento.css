@@ -118,3 +118,4 @@ input,select,textarea{border-radius:var(--r-sm)}
 .md-preview .md-missing-image{color:var(--text-tertiary);border:1px dashed var(--border-default);border-radius:4px;padding:0 .4em}
 .md-preview a:focus-visible,.md-preview :focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 @media (prefers-reduced-motion:reduce){.md-preview .md-reveal-flash{transition:none}}
+.documents-caret{animation:doc-cb 1s steps(1) infinite}@keyframes doc-cb{50%{opacity:0}}
