@@ -21,7 +21,7 @@ desktop = ["dep:tauri", "dep:tauri-plugin-dialog", "dep:tauri-plugin-updater", "
 
 [dependencies]
 somnia-relay = { path = "../../relay" }
-tokio = { version = "1", features = ["rt-multi-thread", "net", "sync", "time", "macros"] }
+tokio = { version = "1", features = ["rt-multi-thread", "net", "sync", "time", "macros", "io-util"] }
 if-addrs = "0.13"
 cap-std = "3"
 serde = { version = "1", features = ["derive"] }

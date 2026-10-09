@@ -36,3 +36,12 @@ tested but no external client can reach it.
 ## Tests
 
 `npx tsx --test src/lib/agent/studioMcpServer.test.ts`
+
+## Rust drafts (CI to verify)
+
+Added unverified, with unit tests that CI must run (`cargo test -p somnia mcp_`; no cargo was available when written):
+
+- `src-tauri/src/mcp_gateway.rs`: the loopback HTTP transport described above. Not started by anything yet.
+- `src-tauri/src/mcp_health.rs`: restart policy for servers that exit by themselves (1, 2, 4, 8, 16 s, then gives up; a run of 60 s resets the count; a user Stop is never restarted). Not wired into `McpHost`.
+- `src-tauri/src/mcp_http.rs`: MCP client over HTTP (https, or http to localhost; JSON or SSE replies). Not wired into the server list or UI yet.
+- `Cargo.toml`: tokio feature `io-util` added for the gateway.
