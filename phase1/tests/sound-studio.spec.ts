@@ -52,9 +52,9 @@ test('Sound Studio: switching to Code keeps the audio tab and the Code studio is
 });
 for(const locale of ['de','es','fr','pt-BR'])test(`Sound Studio strings: ${locale}`,async({page})=>{
  await page.addInitScript(l=>localStorage.setItem('somnia.locale.v1',l),locale);await page.goto('/');
- await expect(page.locator('header [role="radiogroup"]').getByRole('radio')).toHaveCount(2);
+ await expect(page.locator('header [role="radiogroup"]').getByRole('radio')).toHaveCount(5);
  await expect(page.locator('header [role="radiogroup"]')).not.toContainText('studio.sound');
- await page.locator('header [role="radiogroup"]').getByRole('radio').nth(1).click();
+ await page.locator('header [role="radiogroup"]').getByRole('radio').nth(4).click();
  await expect(page.getByTestId('sound-start')).toBeVisible();await expect(page.getByTestId('sound-start')).not.toContainText('sound.');
 });
 
@@ -112,7 +112,7 @@ test('Sound Studio: plugin parameters change the render and the step line is loc
 test('Sound Studio: step line follows the UI language',async({page})=>{
  await page.addInitScript(()=>localStorage.setItem('somnia.locale.v1','de'));
  await page.goto('/');await expect(page.locator('[data-storage]')).toBeVisible();
- await page.locator('header [role="radiogroup"]').getByRole('radio').nth(1).click();
+ await page.locator('header [role="radiogroup"]').getByRole('radio').nth(4).click();
  const chooser=page.waitForEvent('filechooser');await page.getByTestId('sound-open').click();(await chooser).setFiles(asset('arpeggio.mp3'));
  await expect(page.getByTestId('sound-info')).toContainText('44100 Hz');
  await page.getByTestId('sound-reverse').check();
