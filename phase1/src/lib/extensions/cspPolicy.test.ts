@@ -91,3 +91,20 @@ for (const mod of ['./extScheme', './extCsp', './scheme']) {
     if (m.panelCsp ?? m.PANEL_CSP) assert.deepEqual(checkPanelCsp(get(m.panelCsp ? 'panelCsp' : 'PANEL_CSP')), []);
   });
 }
+
+// The real generator is the Rust scheme handler: read its policy constants straight from the source.
+const rust = readFileSync(new URL('../../../src-tauri/src/ext_scheme.rs', import.meta.url), 'utf8');
+const rustConst = (name: string) => { const m = new RegExp(`pub const ${name}: &str = "((?:[^"\\\\]|\\\\.)*)";`).exec(rust); assert.ok(m, `${name} not found in ext_scheme.rs`); return m![1].replace(/\\"/g, '"'); };
+test('Rust WORKER_CSP passes the worker policy checks', () => { assert.deepEqual(checkWorkerCsp(rustConst('WORKER_CSP')), []); });
+test('Rust PANEL_CSP passes the panel policy checks', () => { assert.deepEqual(checkPanelCsp(rustConst('PANEL_CSP')), []); });
+test('Rust PANEL_CSP forces an opaque origin and never grants same-origin or forms', () => {
+  const c = rustConst('PANEL_CSP'); assert.match(c, /sandbox allow-scripts$/); assert.ok(!/allow-same-origin|allow-forms|allow-top-navigation|allow-popups/.test(c));
+});
+test('Rust RELAY_CSP: no network, no eval, workers only from self, never sandboxed with same-origin', () => {
+  const m = parseCsp(rustConst('RELAY_CSP'));
+  assert.deepEqual(m.get('connect-src'), ["'none'"]); assert.deepEqual(m.get('worker-src'), ["'self'"]); assert.deepEqual(m.get('default-src'), ["'none'"]);
+  assert.ok(!(m.get('script-src') ?? []).includes("'unsafe-eval'"));
+});
+test('Rust serves the CSP as a response header', () => {
+  assert.ok(/"Content-Security-Policy"/.test(readFileSync(new URL('../../../src-tauri/src/desktop.rs', import.meta.url), 'utf8')));
+});
