@@ -77,5 +77,18 @@
  "sound.step.plugin": "Effet {id}",
  "sound.step.fade": "Fondus",
  "sound.step.normalize": "Normalisé à {db} dB",
- "sound.step.other": "{step}"
+ "sound.step.other": "{step}",
+ "sound.review.title": "Modifications proposées",
+ "sound.review.region": "Sélection",
+ "sound.review.trim": "Suppression du silence",
+ "sound.review.reverse": "Inverser",
+ "sound.review.pitch": "Hauteur",
+ "sound.review.effect": "Effet",
+ "sound.review.fadeIn": "Fondu d'entrée",
+ "sound.review.fadeOut": "Fondu de sortie",
+ "sound.review.normalize": "Normaliser",
+ "sound.review.param": "Effet : {name}",
+ "sound.review.preview": "Écouter la proposition",
+ "sound.review.none": "Aucune modification.",
+ "sound.review.invalid": "Ces réglages ne sont pas valides."
 }

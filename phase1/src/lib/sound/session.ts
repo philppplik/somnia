@@ -65,6 +65,13 @@ async function render(name:string){
   const next=version(r),cur=sessions.get(name)!;revoke(cur.processed,cur.original);patch(name,{status:'ready',error:'',processed:next,progress:null});
  }catch(e){resetEngine(e);if(runs.get(name)===run&&sessions.has(name))patch(name,{status:'error',error:message(e),progress:null});}
 }
+/** Renders settings to a throwaway WAV URL for listening (review of an AI proposal). Does not touch the session; the caller revokes the URL. */
+export async function renderSoundPreview(name:string,settings:SoundSettings):Promise<string>{
+ const s=sessions.get(name),src=sources.get(name);if(!s||!src||!s.original)throw new Error('Audio is not ready.');
+ const {engine:e,ready}=getEngine();await ready;
+ const r=await e.process(src.bytes.slice(0),src.ext,toRecipe(sanitizeSettings(settings),8));
+ return URL.createObjectURL(new Blob([r.wav],{type:'audio/wav'}));
+}
 export function updateSoundSettings(name:string,change:(s:SoundSettings)=>SoundSettings){
  const s=sessions.get(name);if(!s)return;put({...s,settings:sanitizeSettings(change(s.settings))});schedule(name);
 }

@@ -41,6 +41,7 @@ Plugins are listed with their parameter metadata (`list_plugins`: id, range, def
 
 `lib/agent/soundStudio.ts`: the native-AI "document" of a clip is its edit settings as JSON (never audio bytes). Tools: `sound_inspect` (read: clip facts, settings, last render stats, effects with parameter ranges) and `sound_propose_settings` (propose: partial settings merged into the current ones, strictly validated, staged for review, never applied). `parseSound` rejects unknown keys, out-of-range values, unknown effects/parameters and bad regions instead of clamping silently. `lib/agent/soundWorkspace.ts`: settings text of open clips, `applySound` through the session store, `undoSound` only when it is the newest AI change and nothing was edited since.
 Shared-file touch (additive): `documentCore.ts` gets `'sound'` in `StudioKind` and audio extensions in `studioFor`.
+Review view (prepared, not mounted): `lib/agent/soundReview.ts` (`diffSound`: settings diff) and `components/sound/SoundProposalReview.tsx` (change list plus an audible render of the proposed settings via `renderSoundPreview`, which never touches the session). The panel host mounts it with the clip name, the before text and the proposed text.
 Not wired yet: `panelBridge.ts` still handles Code and Photo only. Needed there: `soundAdapter` in the `DocumentRegistry`, `soundFiles()` in `syncDocuments`, a sound branch in the transaction port (`hold`, `apply`, `undo`), `createSoundStudioRegistry` in `createTools`, `nativePath` for sound, and 'sound' in the studio-kind allow-list of the run start. Left out on purpose because that file is shared and security-sensitive and other studios are changing it.
 
 ## Licensing
@@ -53,7 +54,7 @@ wasm 1.5 MB raw in this build; 3.5 s stereo MP3 decode + trim + normalize 20-40 
 
 ## Not in this package (rest plan)
 
-1. Wire the agent tools into `panelBridge.ts` (see above) plus a review view for sound proposals (settings diff and an audible preview of the proposed render).
+1. Wire the agent tools and `components/sound/SoundProposalReview.tsx` into `panelBridge.ts` and the panel (integrator owns this; see above).
 2. Copy/paste of regions and several regions per clip (Paket 2 has one region: crop, cut, or effects only on the selection).
 3. Writing back into the project folder. Media is not part of the project text-file store, so Save As (native dialog on desktop, download on web) is all that exists.
 4. True streaming and an inner progress percentage for long single stages (progress is per stage today; 25 MB media limit, full offline render).

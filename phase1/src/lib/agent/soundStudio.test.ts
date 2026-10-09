@@ -55,3 +55,13 @@ test('workspace: apply goes through the session; undo only when nothing changed 
  undoSound('a.mp3','ai:1');assert.equal(soundFiles()['a.mp3'],before);
  closeSound('a.mp3');clearMedia();
 });
+import {diffSound} from './soundReview';
+test('diffSound lists exactly what changed, including effect parameters',()=>{
+ const a=serializeSound(DEFAULT_SETTINGS);
+ assert.deepEqual(diffSound(a,a),[]);
+ const b=serializeSound({...DEFAULT_SETTINGS,pitch:3,reverse:true,normalize:{on:true,db:-1},region:{mode:'cut',start:1,end:2},effect:{id:'plate_reverb',keepTail:false,params:{mix:80}}});
+ assert.deepEqual(diffSound(a,b).map(c=>c.id),['region','reverse','pitch','effect','effect.mix','normalize']);
+ assert.deepEqual(diffSound(a,b).find(c=>c.id==='effect.mix'),{id:'effect.mix',before:'default',after:'80'});
+ assert.deepEqual(diffSound(b,a).find(c=>c.id==='pitch'),{id:'pitch',before:'3 st',after:'0 st'});
+ assert.throws(()=>diffSound(a,'{"pitch":99}'));
+});

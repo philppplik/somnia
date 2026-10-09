@@ -77,5 +77,18 @@
  "sound.step.plugin": "Effect {id}",
  "sound.step.fade": "Fades",
  "sound.step.normalize": "Normalize to {db} dB",
- "sound.step.other": "{step}"
+ "sound.step.other": "{step}",
+ "sound.review.title": "Proposed changes",
+ "sound.review.region": "Region",
+ "sound.review.trim": "Trim silence",
+ "sound.review.reverse": "Reverse",
+ "sound.review.pitch": "Pitch",
+ "sound.review.effect": "Effect",
+ "sound.review.fadeIn": "Fade in",
+ "sound.review.fadeOut": "Fade out",
+ "sound.review.normalize": "Normalize",
+ "sound.review.param": "Effect: {name}",
+ "sound.review.preview": "Hear the proposal",
+ "sound.review.none": "No changes.",
+ "sound.review.invalid": "These settings are not valid."
 }
