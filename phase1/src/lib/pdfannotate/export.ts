@@ -1,7 +1,7 @@
 import {
   PDFArray, PDFDict, PDFDocument, PDFHexString, PDFName, PDFRef, PDFString, type PDFContext,
 } from 'pdf-lib';
-import { PdfAnnotError, rectToQuadPoints, resolveAnnotations } from './model';
+import { PdfAnnotError, rectToQuadPoints, resolveAnnotations, normalizeAnnotation } from './model';
 import type { PdfAnnotOp, PdfAnnotation, Rect, ResolvedAnnotation } from './types';
 
 const n = (v: number) => (Math.round(v * 1000) / 1000).toString();
@@ -34,18 +34,23 @@ function appearance(a: PdfAnnotation): string | null {
     case 'ink':
       return `/GS gs ${c} RG ${n(a.width)} w 1 J 1 j\n` +
         a.strokes.map((s) => s.map((p, i) => `${n(p.x)} ${n(p.y)} ${i === 0 ? 'm' : 'l'}`).join(' ') + ' S').join('\n');
-    case 'note':
-      return null; // viewers draw the standard note icon
+    case 'note': {
+      const x=a.position.x,y=a.position.y-20;
+      return `/GS gs ${c} rg 0.25 0.2 0.1 RG 1 w\n` +
+        `${n(x+1)} ${n(y+1)} 18 18 re B\n` +
+        [6,10,14].map(d=>`${n(x+4)} ${n(y+d)} m ${n(x+16)} ${n(y+d)} l S`).join('\n');
+    }
   }
 }
 
 const SUBTYPE = { highlight: 'Highlight', underline: 'Underline', strikeout: 'StrikeOut', note: 'Text', ink: 'Ink' } as const;
 
-function buildAnnotation(ctx: PDFContext, a: PdfAnnotation, id: string): PDFRef {
+function buildAnnotation(ctx: PDFContext, a: PdfAnnotation, id: string, pageRef: PDFRef): PDFRef {
   const b = bounds(a);
   const rect = [b.x, b.y, b.x + b.width, b.y + b.height];
   const dict: Record<string, unknown> = {
     Type: 'Annot',
+    P: pageRef,
     Subtype: SUBTYPE[a.kind],
     Rect: rect,
     F: 4, // Print
@@ -99,7 +104,8 @@ export async function exportAnnotatedPdf(
   for (const { id, annotation } of resolved) {
     const page = pages[annotation.page];
     if (!page) { skipped.push({ id, reason: `page ${annotation.page} does not exist (document has ${pages.length})` }); continue; }
-    const ref = buildAnnotation(doc.context, annotation, id);
+    const normalized = normalizeAnnotation(annotation);
+    const ref = buildAnnotation(doc.context, normalized, id, page.ref);
     let annots = page.node.lookupMaybe(PDFName.of('Annots'), PDFArray);
     if (!annots) {
       annots = doc.context.obj([]);

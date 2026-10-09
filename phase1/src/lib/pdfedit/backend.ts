@@ -19,6 +19,7 @@ import {
   degrees,
   rgb,
 } from "pdf-lib";
+import { validateCreatedAnnotation } from "./annotationCreation";
 import { exportAnnotatedPdf } from "../pdfannotate/export";
 import type { PdfAnnotation } from "../pdfannotate/types";
 export interface PdfPageInfo {
@@ -151,7 +152,7 @@ export async function applyPdfEdit(
     doc.insertPage(op.to, p);
   }
   if (op.kind === "annotation") {
-    valid(op.annotation.page);
+    validateCreatedAnnotation(doc, op.annotation);
     const result = await exportAnnotatedPdf(bytes, [
       { id: crypto.randomUUID(), annotation: op.annotation },
     ]);
