@@ -1,0 +1,97 @@
+[
+  {
+    "file": "blank.svg",
+    "outcome": "accept",
+    "paths": 0
+  },
+  {
+    "file": "primitives.svg",
+    "outcome": "accept",
+    "paths": 6
+  },
+  {
+    "file": "curves.svg",
+    "outcome": "accept",
+    "paths": 2
+  },
+  {
+    "file": "compound-hole.svg",
+    "outcome": "accept",
+    "paths": 2
+  },
+  {
+    "file": "nested-transforms.svg",
+    "outcome": "accept",
+    "paths": 2
+  },
+  {
+    "file": "offset-viewbox.svg",
+    "outcome": "accept",
+    "paths": 1
+  },
+  {
+    "file": "styles-hidden.svg",
+    "outcome": "accept",
+    "paths": 3
+  },
+  {
+    "file": "reject-script.svg",
+    "outcome": "reject",
+    "diagnostic": "script"
+  },
+  {
+    "file": "reject-event.svg",
+    "outcome": "reject",
+    "diagnostic": "event attribute"
+  },
+  {
+    "file": "reject-external-image.svg",
+    "outcome": "reject",
+    "diagnostic": "image"
+  },
+  {
+    "file": "reject-use.svg",
+    "outcome": "reject",
+    "diagnostic": "use"
+  },
+  {
+    "file": "reject-foreign-object.svg",
+    "outcome": "reject",
+    "diagnostic": "foreignObject"
+  },
+  {
+    "file": "reject-gradient.svg",
+    "outcome": "reject",
+    "diagnostic": "not supported"
+  },
+  {
+    "file": "reject-css.svg",
+    "outcome": "reject",
+    "diagnostic": "not supported"
+  },
+  {
+    "file": "reject-nested-svg.svg",
+    "outcome": "reject",
+    "diagnostic": "nested"
+  },
+  {
+    "file": "reject-malformed.svg",
+    "outcome": "reject",
+    "diagnostic": "Invalid XML"
+  },
+  {
+    "file": "reject-entity.svg",
+    "outcome": "reject",
+    "diagnostic": "entities"
+  },
+  {
+    "file": "reject-path-tail.svg",
+    "outcome": "reject",
+    "diagnostic": "path"
+  },
+  {
+    "file": "unicode-names.svg",
+    "outcome": "accept",
+    "paths": 1
+  }
+]
