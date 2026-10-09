@@ -19,7 +19,7 @@ test('Code, Documents, Slides, Sheets and Sound pills are visible, keyboard acce
 });
 test('shortcut collision never selects an arbitrary command, and unavailable Studio keys do nothing',async({page})=>{
  await page.goto('/');await page.getByRole('radio',{name:'Somnia Code'}).focus();
- await page.keyboard.press('Control+3');await expect(page.getByTestId('studio-view-context')).toHaveText('Visual');
+ await page.keyboard.press('Control+2');await expect(page.getByTestId('studio-view-context')).toHaveText('Visual');
  await page.evaluate(()=>localStorage.setItem('somnia.shortcuts.v1',JSON.stringify({'view.code':'Mod+1'})));
  await page.keyboard.press('Control+1');await expect(page.getByRole('status').filter({hasText:'Shortcut conflict:'})).toBeVisible();
  await expect(page.getByTestId('studio-view-context')).toHaveText('Visual');
