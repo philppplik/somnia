@@ -1,0 +1,54 @@
+{
+  "format": "somnia-design",
+  "version": 1,
+  "name": "QA layered card",
+  "artboards": [
+    {
+      "id": "qa-board",
+      "name": "Artboard 1",
+      "width": 640,
+      "height": 480,
+      "background": "#ffffff",
+      "nodes": [
+        {
+          "id": "qa-card",
+          "kind": "script",
+          "name": "Blue card",
+          "x": 80,
+          "y": 80,
+          "width": 480,
+          "height": 320,
+          "fill": "#1648ff",
+          "text": "",
+          "fontSize": 24,
+          "radius": 0,
+          "hidden": false,
+          "locked": false,
+          "stroke": null,
+          "strokeWidth": 0,
+          "opacity": 1,
+          "rotation": 0
+        },
+        {
+          "id": "qa-headline",
+          "kind": "text",
+          "name": "Unicode headline",
+          "x": 120,
+          "y": 180,
+          "width": 380,
+          "height": 80,
+          "fill": "#ffffff",
+          "text": "Café · 東京 · مرحبا · <Design> & \"quotes\"",
+          "fontSize": 24,
+          "radius": 0,
+          "hidden": false,
+          "locked": false,
+          "stroke": null,
+          "strokeWidth": 0,
+          "opacity": 1,
+          "rotation": 0
+        }
+      ]
+    }
+  ]
+}

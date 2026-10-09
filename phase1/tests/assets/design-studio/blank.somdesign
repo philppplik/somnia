@@ -1,0 +1,15 @@
+{
+  "format": "somnia-design",
+  "version": 1,
+  "name": "QA blank",
+  "artboards": [
+    {
+      "id": "qa-board",
+      "name": "Artboard 1",
+      "width": 640,
+      "height": 480,
+      "background": "#ffffff",
+      "nodes": []
+    }
+  ]
+}

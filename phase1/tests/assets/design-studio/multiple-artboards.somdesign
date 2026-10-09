@@ -1,0 +1,82 @@
+{
+  "format": "somnia-design",
+  "version": 1,
+  "name": "QA multiple artboards",
+  "artboards": [
+    {
+      "id": "qa-board",
+      "name": "Artboard 1",
+      "width": 640,
+      "height": 480,
+      "background": "#ffffff",
+      "nodes": [
+        {
+          "id": "qa-card",
+          "kind": "rectangle",
+          "name": "Blue card",
+          "x": 80,
+          "y": 80,
+          "width": 480,
+          "height": 320,
+          "fill": "#1648ff",
+          "text": "",
+          "fontSize": 24,
+          "radius": 0,
+          "hidden": false,
+          "locked": false,
+          "stroke": null,
+          "strokeWidth": 0,
+          "opacity": 1,
+          "rotation": 0
+        },
+        {
+          "id": "qa-headline",
+          "kind": "text",
+          "name": "Unicode headline",
+          "x": 120,
+          "y": 180,
+          "width": 380,
+          "height": 80,
+          "fill": "#ffffff",
+          "text": "Café · 東京 · مرحبا · <Design> & \"quotes\"",
+          "fontSize": 24,
+          "radius": 0,
+          "hidden": false,
+          "locked": false,
+          "stroke": null,
+          "strokeWidth": 0,
+          "opacity": 1,
+          "rotation": 0
+        }
+      ]
+    },
+    {
+      "id": "qa-board-2",
+      "name": "Second artboard",
+      "width": 320,
+      "height": 240,
+      "background": "#ffcf40",
+      "nodes": [
+        {
+          "id": "qa-other",
+          "kind": "rectangle",
+          "name": "Other rectangle",
+          "x": 20,
+          "y": 20,
+          "width": 120,
+          "height": 80,
+          "fill": "#112233",
+          "text": "",
+          "fontSize": 24,
+          "radius": 0,
+          "hidden": false,
+          "locked": false,
+          "stroke": null,
+          "strokeWidth": 0,
+          "opacity": 1,
+          "rotation": 0
+        }
+      ]
+    }
+  ]
+}
