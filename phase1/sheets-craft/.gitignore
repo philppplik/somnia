@@ -1,0 +1,4 @@
+/target/
+/.upstream/
+/pkg/*
+!/pkg/somnia_sheets_craft.d.ts

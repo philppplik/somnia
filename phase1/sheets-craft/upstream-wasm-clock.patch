@@ -1,0 +1,55 @@
+diff --git a/crates/engine/src/cmd/mod.rs b/crates/engine/src/cmd/mod.rs
+index 397a05c..436b1d9 100644
+--- a/crates/engine/src/cmd/mod.rs
++++ b/crates/engine/src/cmd/mod.rs
+@@ -217,8 +217,23 @@ pub(crate) fn edit<R>(s: &mut Session, f: impl FnOnce(&mut Ctx) -> Result<R>) ->
+ }
+ 
+ pub(crate) fn commit<R>(d: &mut DocState, f: impl FnOnce(&mut Ctx) -> Result<R>) -> Result<R> {
++    #[cfg(not(target_arch = "wasm32"))]
+     let prof = std::env::var_os("GRIDCRAFT_PROFILE").is_some();
++    #[cfg(target_arch = "wasm32")]
++    let prof = false;
++    // std::time::Instant panics on wasm32-unknown-unknown, even when profiling is off.
++    #[cfg(not(target_arch = "wasm32"))]
+     let t0 = std::time::Instant::now();
++    let elapsed = || {
++        #[cfg(not(target_arch = "wasm32"))]
++        {
++            t0.elapsed()
++        }
++        #[cfg(target_arch = "wasm32")]
++        {
++            std::time::Duration::ZERO
++        }
++    };
+     let mut sel = d.selection.clone();
+     let mut ctx = Ctx { wb: (*d.wb).clone(), changed: Vec::new(), structural: false, sel: &mut sel, fit_rows: Vec::new() };
+     let r = f(&mut ctx)?;
+@@ -227,7 +242,7 @@ pub(crate) fn commit<R>(d: &mut DocState, f: impl FnOnce(&mut Ctx) -> Result<R>)
+         fit_rows.extend(changed.iter().map(|(s, c)| (*s, c.row)));
+     }
+     if prof {
+-        eprintln!("commit: edit {:?}, {} changed", t0.elapsed(), changed.len());
++        eprintln!("commit: edit {:?}, {} changed", elapsed(), changed.len());
+     }
+     if structural {
+         d.calc.recalc_all(&mut wb);
+@@ -235,7 +250,7 @@ pub(crate) fn commit<R>(d: &mut DocState, f: impl FnOnce(&mut Ctx) -> Result<R>)
+         d.calc.cells_changed(&mut wb, &changed);
+     }
+     if prof {
+-        eprintln!("commit: + recalc {:?}", t0.elapsed());
++        eprintln!("commit: + recalc {:?}", elapsed());
+     }
+     fit_rows.sort_unstable();
+     fit_rows.dedup();
+@@ -243,7 +258,7 @@ pub(crate) fn commit<R>(d: &mut DocState, f: impl FnOnce(&mut Ctx) -> Result<R>)
+         auto_row_height(&mut wb, si, row);
+     }
+     if prof {
+-        eprintln!("commit: + rows {:?}", t0.elapsed());
++        eprintln!("commit: + rows {:?}", elapsed());
+     }
+     d.wb = std::sync::Arc::new(wb);
+     d.selection = sel;

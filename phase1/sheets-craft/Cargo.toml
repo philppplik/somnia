@@ -1,0 +1,31 @@
+[package]
+name = "somnia-sheets-craft"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.95"
+license = "MIT"
+publish = false
+
+# Deliberately independent of src-tauri and its toolchain (same isolation as ../craft).
+[workspace]
+resolver = "3"
+exclude = [".upstream"]
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+# GridCraft is fetched at a pinned commit and patched by ./prepare-upstream.sh
+# (one wasm32 clock fix). Run it before any cargo command.
+[dependencies]
+gridcraft-engine = { path = ".upstream/gridcraft/crates/engine" }
+gridcraft-xlsx = { path = ".upstream/gridcraft/crates/xlsx" }
+serde_json = "1"
+wasm-bindgen = "=0.2.129"
+console_error_panic_hook = "0.1.7"
+
+[profile.release]
+opt-level = "s"
+lto = "fat"
+codegen-units = 1
+panic = "abort"
+strip = "debuginfo"
