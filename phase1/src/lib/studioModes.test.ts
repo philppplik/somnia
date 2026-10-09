@@ -28,11 +28,11 @@ test('tab and studio round trips restore views without editing documents or Agen
  const files={'a.html':'a','b.html':'b'};
  patchState({activeStudio:'code',activeFile:'a.html',files,studioByTab:{},studioModeByDocument:{},viewMode:'split',isDirty:true,agentOpen:true,revision:17});
  assert.equal(studioDocumentKey(),'text:a.html');
- patchState({activeFile:'b.html'});assert.equal(getState().viewMode,'design');
+ patchState({activeFile:'b.html'});assert.equal(getState().viewMode,'split');/* no remembered mode: the current view stays */
  patchState({viewMode:'code'});
  patchState({activeFile:'a.html'});assert.equal(getState().viewMode,'split');
  assert.equal(requestStudio('mode-test','manual',true),'pending-tool');assert.equal(getState().viewMode,'split');
- requestStudio('mode-test');assert.equal(getState().viewMode,'design');
+ requestStudio('mode-test');assert.equal(getState().viewMode,'split');
  patchState({viewMode:'code'});requestStudio('code');assert.equal(getState().viewMode,'split');
  assert.equal(getState().files,files);assert.equal(getState().revision,17);assert.equal(getState().isDirty,true);assert.equal(getState().agentOpen,true);
  requestStudio('code');off();patchState({activeFile:'',files:{},studioByTab:{},studioModeByDocument:{},viewMode:'design',agentOpen:false,isDirty:false,revision:0});
