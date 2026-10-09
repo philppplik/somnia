@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import type { MediaItem } from "../../lib/media";
+import { PdfFieldOverlay } from "./PdfFieldOverlay";
 import { PdfViewer } from "./PdfViewer";
 import {
   editPdf,
@@ -158,6 +159,13 @@ export function PdfInlineEditor({ item }: { item: MediaItem }) {
         data={s.bytes}
         name={item.name}
         textLayer
+        renderOverlay={(geometry) => (
+          <PdfFieldOverlay
+            key={`${item.name}:${geometry.page}`}
+            name={item.name}
+            geometry={geometry}
+          />
+        )}
         requestedPage={s.page}
         onPageChange={(n) => {
           if (s.page !== n) selectPdfPage(item.name, n);

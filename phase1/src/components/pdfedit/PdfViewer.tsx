@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import {useCallback,useEffect,useMemo,useRef,useState} from 'react';
 import {
  createPageCache,goToPage,initialViewState,loadPdf,nextPage,panBy,parsePageInput,prevPage,relayout,rotate,rotatedSize,
@@ -14,11 +15,12 @@ export interface PdfViewerProps{
  onError?:(e:PdfLoadError)=>void;
  onPageChange?:(page:number)=>void;
  requestedPage?:number;
+ renderOverlay?:(geometry:{page:number;transform:number[];bounds:number[];width:number;height:number})=>ReactNode;
 }
 const btn='whitespace-nowrap grid h-7 min-w-7 cursor-pointer place-items-center rounded-sm border-0 bg-transparent px-2 text-[12px] text-ink-2 hover:bg-hover disabled:cursor-default disabled:opacity-40';
 const MAX_CANVAS_PX=16_777_216;
 /** Single-page PDF viewer: canvas render, zoom (wheel+Ctrl, buttons, keys), drag-pan, page navigation. */
-export function PdfViewer({data,name,backend=pdfjsBackend,textLayer=false,onError,onPageChange,requestedPage}:PdfViewerProps){
+export function PdfViewer({data,name,backend=pdfjsBackend,textLayer=false,onError,onPageChange,requestedPage,renderOverlay}:PdfViewerProps){
  const stageRef=useRef<HTMLDivElement>(null);
  const canvasRef=useRef<HTMLCanvasElement>(null);
  const textRef=useRef<HTMLDivElement>(null);
@@ -41,7 +43,7 @@ export function PdfViewer({data,name,backend=pdfjsBackend,textLayer=false,onErro
    if(ac.signal.aborted){void d.destroy();return;}
    opened=d;cache.current=createPageCache(d);setNeedPassword(false);setDoc(d);setView(goToPage(initialViewState(d.pageCount),requestedPage??1));
   }).catch((e:PdfLoadError)=>{
-   if(e.code==='aborted')return;
+   if(ac.signal.aborted||e.code==='aborted')return;
    if(e.code==='password'){setNeedPassword(true);return;}
    setError(e);onError?.(e);});
   return()=>{ac.abort();cache.current?.clear();cache.current=null;if(opened)void opened.destroy();};
@@ -146,6 +148,7 @@ export function PdfViewer({data,name,backend=pdfjsBackend,textLayer=false,onErro
    <div className="absolute left-0 top-0 bg-white shadow-md" style={{transform:`translate(${view.pan.x}px,${view.pan.y}px)`,width:rotatedSize(pageSize,view.rotation).width*view.zoom,height:rotatedSize(pageSize,view.rotation).height*view.zoom}}>
     <canvas ref={canvasRef} aria-label={`Page ${view.page} of ${view.pageCount}`} role="img"/>
     {textLayer&&<div ref={textRef} className="textLayer absolute inset-0 overflow-hidden leading-none" style={{color:'transparent',userSelect:'text'}}/>}
+    {page?.coordinates && renderOverlay?.({page:view.page,...page.coordinates(view.zoom,view.rotation),width:rotatedSize(pageSize,view.rotation).width*view.zoom,height:rotatedSize(pageSize,view.rotation).height*view.zoom})}
    </div>
   </div>
  </section>;

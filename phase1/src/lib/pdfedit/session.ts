@@ -14,7 +14,11 @@ import {
   readFieldsInWorker as readFormFields,
   fillPdfInWorker,
 } from "./workerClient";
+import type { FormDesignOperation } from "./formDesign";
 export interface PdfSession {
+  formLayout: boolean;
+  formSelected: string | null;
+  formPlacement: Extract<FormDesignOperation, { kind: "field.create" }> | null;
   name: string;
   source: string;
   bytes: Uint8Array | null;
@@ -98,6 +102,9 @@ export async function openPdfSession(name: string) {
   if (!media || media.kind !== "pdf") return;
   if (sessions.get(name)?.source === media.url) return;
   const initial: PdfSession = {
+    formLayout: false,
+    formSelected: null,
+    formPlacement: null,
     name,
     source: media.url,
     bytes: null,
@@ -144,6 +151,20 @@ export function setPdfEditing(name: string) {
   const s = sessions.get(name);
   if (!s?.info || s.info.signed || s.info.encrypted || s.info.xfa) return;
   set(name, { editing: true, error: null });
+}
+export function layoutPdfFields(name: string, active: boolean) {
+  set(name, { formLayout: active, formPlacement: null });
+}
+export function selectPdfField(name: string, field: string | null) {
+  set(name, { formSelected: field, formPlacement: null });
+}
+export function placePdfField(
+  name: string,
+  operation: PdfSession["formPlacement"],
+) {
+  const s = sessions.get(name);
+  if (!s?.editing || s.busy) return;
+  set(name, { formPlacement: operation, formSelected: null, formLayout: true });
 }
 export function pdfError(name: string, error: string | null) {
   set(name, { error });

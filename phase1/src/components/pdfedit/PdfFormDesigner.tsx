@@ -3,6 +3,10 @@ import {
   usePdfSession,
   editPdf,
   selectPdfPage,
+  selectPdfField,
+  placePdfField,
+  layoutPdfFields,
+  getPdfSession,
 } from "../../lib/pdfedit/session";
 import type {
   DesignField,
@@ -219,6 +223,23 @@ function Editor({
             </label>
           ))}
         </div>
+        {!entry && (
+          <button
+            type="button"
+            className={pdfButton + " bg-hover"}
+            disabled={!fieldName.trim()}
+            onClick={() =>
+              placePdfField(name, {
+                kind: "field.create",
+                name: fieldName,
+                fieldKind: kind,
+                properties: { ...p, page },
+              })
+            }
+          >
+            Place on page (click or drag)
+          </button>
+        )}
         <button
           className={pdfButton + " bg-hover"}
           disabled={!fieldName.trim()}
@@ -236,10 +257,10 @@ function Editor({
 }
 export function PdfFormDesigner() {
   const s = usePdfSession();
-  const [selected, setSelected] = useState<string | null>(null);
+
   if (!s) return null;
   const fields = s.info?.designFields ?? [];
-  const entry = fields.find((f) => f.name === selected);
+  const entry = fields.find((f) => f.name === s.formSelected);
   return (
     <section
       className="mt-4 grid gap-3 border-t border-subtle pt-3"
@@ -250,13 +271,27 @@ export function PdfFormDesigner() {
         Create text fields, checkboxes and dropdowns, or change an existing
         single-widget field. Save a copy to preserve the original.
       </p>
+      <button
+        className={pdfButton + " border border-subtle"}
+        aria-pressed={s.formLayout}
+        disabled={!s.editing || s.busy}
+        onClick={() => layoutPdfFields(s.name, !s.formLayout)}
+      >
+        {s.formLayout ? "Exit field layout" : "Select / move / resize fields"}
+      </button>
+      {s.formPlacement && (
+        <p role="status">
+          Click for default size, or drag a rectangle on the page. Escape
+          cancels.
+        </p>
+      )}
       <label>
         Field properties
         <select
           aria-label="Choose field properties"
           className={input}
           value={entry?.name ?? ""}
-          onChange={(e) => setSelected(e.target.value || null)}
+          onChange={(e) => selectPdfField(s.name, e.target.value || null)}
         >
           <option value="">Create new field</option>
           {fields.map((f) => (
@@ -266,6 +301,14 @@ export function PdfFormDesigner() {
           ))}
         </select>
       </label>
+      {entry && (
+        <FieldActions
+          key={entry.name}
+          name={s.name}
+          entry={entry}
+          disabled={!s.editing || s.busy || !entry.editable}
+        />
+      )}
       {entry && (
         <button
           className={pdfButton + " text-left"}
@@ -282,5 +325,70 @@ export function PdfFormDesigner() {
         disabled={!s.editing || s.busy}
       />
     </section>
+  );
+}
+
+function FieldActions({
+  name,
+  entry,
+  disabled,
+}: {
+  name: string;
+  entry: DesignField;
+  disabled: boolean;
+}) {
+  const [newName, setNewName] = useState(entry.name);
+  return (
+    <fieldset key={entry.expected} disabled={disabled} className="grid gap-2">
+      <label>
+        New field name
+        <input
+          aria-label="Rename field to"
+          className={input}
+          value={newName}
+          onChange={(e) => setNewName(e.target.value)}
+        />
+      </label>
+      <div className="flex gap-2">
+        <button
+          className={pdfButton}
+          disabled={!newName.trim() || newName === entry.name}
+          onClick={() =>
+            void editPdf(name, {
+              kind: "field.rename",
+              name: entry.name,
+              expected: entry.expected,
+              newName,
+            }).then(() => {
+              if (
+                getPdfSession(name)?.info?.designFields.some(
+                  (f) => f.name === newName,
+                )
+              )
+                selectPdfField(name, newName);
+            })
+          }
+        >
+          Rename field
+        </button>
+        <button
+          className={pdfButton + " text-red-600"}
+          onClick={() => {
+            if (
+              window.confirm(
+                `Delete field "${entry.name}" and its widget? Undo can restore it.`,
+              )
+            )
+              void editPdf(name, {
+                kind: "field.delete",
+                name: entry.name,
+                expected: entry.expected,
+              });
+          }}
+        >
+          Delete field
+        </button>
+      </div>
+    </fieldset>
   );
 }

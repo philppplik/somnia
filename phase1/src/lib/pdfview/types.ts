@@ -12,6 +12,8 @@ export interface PdfPageHandle {
   getText?(): Promise<string>;
   /** Mounts selectable text spans into `container`. Returns a cancel function. */
   renderTextLayer?(container: HTMLElement, scale: number, rotation: number): Promise<() => void>;
+  /** PDF user space to CSS viewport, including crop origin and page rotation. */
+  coordinates?(scale: number, rotation: number): { transform: number[]; bounds: number[] };
   cleanup(): void;
 }
 export interface PdfDocumentHandle {

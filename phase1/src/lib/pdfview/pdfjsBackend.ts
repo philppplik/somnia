@@ -57,6 +57,10 @@ function wrapDoc(pdfjs: PdfJs, doc: import('pdfjs-dist').PDFDocumentProxy, task:
           await layer.render();
           return () => layer.cancel();
         },
+        coordinates(scale, rotation) {
+          const vp = page.getViewport({ scale, rotation: (page.rotate + rotation) % 360 });
+          return { transform: vp.transform, bounds: page.view };
+        },
         cleanup() { page.cleanup(); },
       };
       return handle;
