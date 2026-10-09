@@ -3,7 +3,7 @@ import {useEffect,useState} from 'react';
 import {isTauri} from '@tauri-apps/api/core';
 import {getCurrentWindow} from '@tauri-apps/api/window';
 import {patchState} from '../store/appStore';
-import {addTextFiles,readFiles} from '../lib/projectActions';
+import {openIncoming,readFiles} from '../lib/projectActions';
 /** Browser file import stays on the File API. Desktop OS drops use native grants in fileAdapter. */
 export function DropOverlay(){
  const [active,setActive]=useState(false);
@@ -17,7 +17,7 @@ export function DropOverlay(){
   const enter=(e:DragEvent)=>{if(inChat(e)){depth=0;setActive(false);return;}if(!hasFiles(e))return;e.preventDefault();depth+=1;setActive(true);};
   const over=(e:DragEvent)=>{if(hasFiles(e))e.preventDefault();};
   const leave=(e:DragEvent)=>{if(!hasFiles(e))return;depth=Math.max(0,depth-1);if(!depth)setActive(false);};
-  const drop=(e:DragEvent)=>{if(inChat(e)){depth=0;setActive(false);return;}if(!hasFiles(e))return;e.preventDefault();depth=0;setActive(false);const list=e.dataTransfer?.files;if(list?.length)void readFiles(list).then(addTextFiles).catch(error=>patchState({notice:`File import failed: ${String(error)}`}));};
+  const drop=(e:DragEvent)=>{if(inChat(e)){depth=0;setActive(false);return;}if(!hasFiles(e))return;e.preventDefault();depth=0;setActive(false);const list=e.dataTransfer?.files;if(list?.length)void readFiles(list).then(openIncoming).catch(error=>patchState({notice:`File import failed: ${String(error)}`}));};
   window.addEventListener('dragenter',enter);window.addEventListener('dragover',over);window.addEventListener('dragleave',leave);window.addEventListener('drop',drop);
   return()=>{window.removeEventListener('dragenter',enter);window.removeEventListener('dragover',over);window.removeEventListener('dragleave',leave);window.removeEventListener('drop',drop);};},[]);
  if(!active)return null;

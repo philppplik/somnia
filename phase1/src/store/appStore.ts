@@ -109,11 +109,14 @@ export function jumpToLine(file:string,line:number,col=1){openFileTab(file);cons
 export function closeCore(){if(!clearMedia())return false;projectGeneration++;unsubscribeCore?.();unsubscribeCore=null;core=null;savedFiles={};patchState({studioModeByDocument:{},responsiveScope:'auto',coreConnected:false,files:{},nodes:[],openFiles:[],activeFile:'',designFile:'',selectedElementId:null,selectedElementIds:[],isDirty:false,lastSavedAt:null,storage:'memory',nativeConnected:false,projectName:'',notice:'Project closed.'});return true;}
 
 /** Switch shell only. No save, conversion, tool commit, history or agent side effects. */
-export function requestStudio(id:StudioId,source:'manual'|'automatic'='manual',pendingTool=false,tabKey=getMedia().active?'media:'+getMedia().active:state.activeFile):'changed'|'unchanged'|'pending-tool'|'manual-wins' {
+/** `source`: 'manual' = the user visited a Studio (pill/command). 'automatic' = navigation routing; a manual visit wins over it.
+ * 'open' = an explicit Open of a document (Smart Open): never vetoed by an earlier manual visit and leaves NO manual lock behind,
+ * the choice belongs to the opened document (studioByTab), not to the whole session. */
+export function requestStudio(id:StudioId,source:'manual'|'automatic'|'open'='manual',pendingTool=false,tabKey=getMedia().active?'media:'+getMedia().active:state.activeFile):'changed'|'unchanged'|'pending-tool'|'manual-wins' {
  getStudio(id);
  if(source==='automatic'&&state.studioChoice==='manual')return 'manual-wins';
  if(pendingTool&&id!==state.activeStudio)return 'pending-tool';
  const changed=id!==state.activeStudio;
- patchState({activeStudio:id,studioChoice:source,studioByTab:tabKey?{...state.studioByTab,[tabKey]:id}:state.studioByTab});
+ patchState({activeStudio:id,studioChoice:source==='manual'?'manual':'automatic',studioByTab:tabKey?{...state.studioByTab,[tabKey]:id}:state.studioByTab});
  return changed?'changed':'unchanged';
 }

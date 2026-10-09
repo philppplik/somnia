@@ -27,3 +27,4 @@ export function getStudio(id:StudioId):StudioDef {const studio=registry.get(id);
 export function acceptsFormat(studio:StudioDef,path:string):boolean {
  const ext=path.split('.').pop()?.toLowerCase()??'';return studio.formats.some(f=>f.ext===ext||f.ext==='*');
 }
+export const hasStudio=(id:StudioId)=>registry.has(id);

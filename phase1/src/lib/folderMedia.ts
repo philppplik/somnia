@@ -12,7 +12,7 @@ export async function loadFolderMedia(invoke:Invoke,projectId:string,paths:strin
   const lower=path.toLowerCase();
   if(loaded.length>=MAX_FOLDER_MEDIA_FILES||seen.has(lower)||total>=MAX_FOLDER_MEDIA_TOTAL){skipped.push(path);continue;}
   try{const blob=base64ToBlob(await invoke<string>('read_media',{projectId,path}));
-   const r=await addMediaFile(blob,path,path);
+   const r=await addMediaFile(blob,path,path,{activate:false});
    if('error' in r){skipped.push(path);continue;}
    seen.add(lower);loaded.push(path);total+=blob.size;
   }catch{skipped.push(path);}

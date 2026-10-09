@@ -1,4 +1,3 @@
-import {requestStudio} from '../store/appStore';
 /** Media resources. Native raster inputs keep the editor path; additional codecs are read-only previews. */
 import {RASTER_EXTENSIONS,RASTER_ACCEPT,sniffRaster,decodeRasterPreview} from './rasterPreview';
 import {useSyncExternalStore} from 'react';
@@ -38,9 +37,9 @@ const closeGuards=new Set<(name:string)=>boolean>();
 export function registerMediaCloseGuard(guard:(name:string)=>boolean){closeGuards.add(guard);return()=>{closeGuards.delete(guard);};}
 const canClose=(name:string)=>[...closeGuards].every(guard=>guard(name));
 const baseName=(n:string)=>n.replace(/^.*[\\/]/,'');
-/** Adds one media file. Returns the stored name, or an error text. A file with the same name is replaced. */
-/** `key` (folder-relative path, e.g. img/a.png) keeps same-named files in different subfolders apart; without it the file name is the key. */
-export async function addMediaFile(file:Blob,rawName:string,key?:string):Promise<{name:string}|{error:string}>{
+export interface PreparedMedia{item:MediaItem;name:string;commit(opts?:{activate?:boolean}):{name:string}|{error:string};dispose():void}
+/** Validates and decodes one media file WITHOUT touching the media list (prepare step of prepare-then-commit). Creates object URLs: call `dispose()` if the result is not committed. */
+export async function prepareMediaFile(file:Blob,rawName:string,key?:string):Promise<PreparedMedia|{error:string}>{
  const name=key??baseName(rawName);
  if(file.size>MAX_MEDIA_BYTES)return{error:`${name} is larger than ${MAX_MEDIA_BYTES/1_000_000} MB.`};
  let sniffed=sniffMedia(new Uint8Array(await file.slice(0,256).arrayBuffer()));
@@ -51,11 +50,27 @@ export async function addMediaFile(file:Blob,rawName:string,key?:string):Promise
  if(!sniffed)return{error:/\.(docx|xlsx|pptx)$/i.test(name)?`${name} is not a valid ${name.slice(-4).toUpperCase()} file.`:/\.psd$/i.test(name)?`${name} is not a valid PSD v1 file.`:`${name} is not a valid supported raster image or PDF file.`};
  let preview:{blob:Blob;mime:string;warning?:string}={blob:file,mime:sniffed.mime};
  if(sniffed.kind==='raster-preview')try{preview=await decodeRasterPreview(file,name,sniffed.mime);}catch(error){return{error:`${name}: ${error instanceof Error?error.message:String(error)}`};}
- const old=findMedia(name);if(old&&!canClose(name))return{error:'Replacing the image was cancelled.'};if(old){URL.revokeObjectURL(old.url);if(old.sourceUrl)URL.revokeObjectURL(old.sourceUrl);}
  const url=URL.createObjectURL(new Blob([preview.blob],{type:preview.mime}));
  const item:MediaItem={name,kind:sniffed.kind,mime:preview.mime,url,size:file.size,warning:preview.warning,...(sniffed.kind==='raster-preview'?{sourceUrl:URL.createObjectURL(file)}:{})};
- set({items:[...state.items.filter(i=>i!==old),item],active:name});if(item.kind==='pptx')requestStudio('slides','automatic',false,'media:'+name);return{name};}
-export function setActiveMedia(name:string|null){if(state.active!==name)set({...state,active:name});if(name&&findMedia(name)?.kind==='pptx')requestStudio('slides','automatic',false,'media:'+name);}
+ let done=false;
+ const dispose=()=>{if(done)return;done=true;URL.revokeObjectURL(url);if(item.sourceUrl)URL.revokeObjectURL(item.sourceUrl);};
+ return{item,name,dispose,commit(opts={}){
+  if(done)return{error:`${name} was already released.`};
+  // Guards run at commit time: the session may have changed while the file was being prepared.
+  const old=findMedia(name);if(old&&!canClose(name)){dispose();return{error:'Replacing the image was cancelled.'};}
+  if(old){URL.revokeObjectURL(old.url);if(old.sourceUrl)URL.revokeObjectURL(old.sourceUrl);}
+  done=true;
+  const active=opts.activate===false?(old&&state.active===old.name?null:state.active):name;
+  set({items:[...state.items.filter(i=>i!==old),item],active});return{name};}};
+}
+/** Adds one media file. Returns the stored name, or an error text. A file with the same name is replaced.
+ * `key` (folder-relative path, e.g. img/a.png) keeps same-named files in different subfolders apart; without it the file name is the key.
+ * `activate:false` registers availability only (folder load, background intake): it never changes the active item and so never routes the Studio. */
+export async function addMediaFile(file:Blob,rawName:string,key?:string,opts:{activate?:boolean}={}):Promise<{name:string}|{error:string}>{
+ const prepared=await prepareMediaFile(file,rawName,key);if('error' in prepared)return prepared;return prepared.commit(opts);}
+/** Studio routing for active media lives in `studios/studioRouting.ts` (one coordinator), not here. */
+export function setActiveMedia(name:string|null){if(state.active!==name)set({...state,active:name});}
+export const canReplaceMedia=(name:string)=>!findMedia(name)||canClose(name);
 export function closeMedia(name:string){const it=findMedia(name);if(!it||!canClose(name))return;URL.revokeObjectURL(it.url);if(it.sourceUrl)URL.revokeObjectURL(it.sourceUrl);set({items:state.items.filter(i=>i!==it),active:state.active===it.name?null:state.active});}
 export function clearMedia(){if(!state.items.every(it=>canClose(it.name)))return false;state.items.forEach(i=>{URL.revokeObjectURL(i.url);if(i.sourceUrl)URL.revokeObjectURL(i.sourceUrl);});set({items:[],active:null});return true;}
 export const formatBytes=(n:number)=>n<1024?`${n} B`:n<1_048_576?`${(n/1024).toFixed(1)} KB`:`${(n/1_048_576).toFixed(1)} MB`;

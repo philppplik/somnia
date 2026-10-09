@@ -6,7 +6,7 @@ import {EditorProject} from '@somnia/editor-core';
 import {connectEditorProject,getState,markFileSaved,patchState,refreshProject} from '../store/appStore';
 import {registerCommand,executeNativeMenuCommand} from './commands';
 import {setSaveHandlers} from './saveFlow';
-import {addTextFiles,closeMemoryProject} from './projectActions';
+import {addTextFiles,closeMemoryProject,openIncoming} from './projectActions';
 import {clearDraft} from './draftSession';
 import {downloadProject} from './exportProject';
 import {loadFolderMedia} from './folderMedia';
@@ -172,7 +172,7 @@ export async function installFileAdapter(port:FilePort){
   if(consumeNativeChatDrop()){void port.invoke<{name:string;text:string;base64?:string}[]>('read_dropped_files',{token,chat:true}).then(files=>{const attachments=files.map(f=>new File([f.base64===undefined?new TextEncoder().encode(f.text):Uint8Array.from(atob(f.base64),c=>c.charCodeAt(0))],f.name));window.dispatchEvent(new CustomEvent('somnia:chat-drop',{detail:attachments}));}).catch(fail);return;}
   if(count===1&&!media)void open(false,false,token).catch(fail);
   else if(opening)fail('Another project is opening. Wait, then drop again.');
-  else void port.invoke<{name:string;text:string;base64?:string}[]>('read_dropped_files',{token}).then(files=>addTextFiles(files.map(f=>f.base64===undefined?{name:f.name,text:f.text}:{name:f.name,text:'',blob:new Blob([Uint8Array.from(atob(f.base64),c=>c.charCodeAt(0))])}))).catch(fail);
+  else void port.invoke<{name:string;text:string;base64?:string}[]>('read_dropped_files',{token}).then(files=>openIncoming(files.map(f=>f.base64===undefined?{name:f.name,text:f.text}:{name:f.name,text:'',blob:new Blob([Uint8Array.from(atob(f.base64),c=>c.charCodeAt(0))])}))).catch(fail);
  }));
  if(port.shell)cleanups.push(await port.listen<string>('somnia://menu',event=>{void executeNativeMenuCommand(event.payload);}));
  if(port.shell){const shell=port.shell;setCloseHandlers('disk',{saveAndClose:async()=>{await save();if(getState().isDirty)throw Error('Some edits are still unsaved. Close was cancelled.');await close(false);await shell.destroyWindow();},discardAndClose:async()=>{await close(true);await shell.destroyWindow();}});cleanups.push(()=>setCloseHandlers('disk',null));cleanups.push(await port.listen('somnia://close-blocked',()=>requestClose('disk')));}

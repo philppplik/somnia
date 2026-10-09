@@ -16,8 +16,6 @@ export function SoundWorkspace({item,withPanel=false}:{item:MediaItem;withPanel?
  const {t}=useT();const studio=useAppStore().activeStudio;const session=useSoundSession(item.name);
  const audio=useRef<HTMLAudioElement>(null);const [time,setTime]=useState(0),[playing,setPlaying]=useState(false);
  useEffect(()=>{void openSound(item);},[item]);
- // Opening audio takes you to the Sound Studio unless you picked a studio yourself.
- useEffect(()=>{if(studio!=='sound')requestStudio('sound','automatic');},[studio]);
  // The Sound rail offers Files only, so do not leave the HTML Layers tree open beside audio.
  useEffect(()=>{if(studio==='sound'&&!['files','search'].includes(getState().leftTab))patchState({leftTab:'files'});},[studio]);
  const shown=session?.listen==='original'?session.original:session?.processed??null;

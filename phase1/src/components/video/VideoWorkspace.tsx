@@ -20,7 +20,6 @@ export function VideoWorkspace({item,withPanel=false}:{item:MediaItem;withPanel?
  const playingRef=useRef(false);
  useEffect(()=>{void openVideo(item);},[item]);
  // Opening a video takes you to the Video Studio unless you picked a studio yourself.
- useEffect(()=>{if(studio!=='video')requestStudio('video','automatic');},[studio]);
  // The Video rail offers Files only, so do not leave the HTML Layers tree open beside video.
  useEffect(()=>{if(studio==='video'&&!['files','search'].includes(getState().leftTab))patchState({leftTab:'files'});},[studio]);
  const clips=session?.clips??[];
