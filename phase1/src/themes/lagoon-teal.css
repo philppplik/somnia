@@ -1,0 +1,51 @@
+/**
+ * Lagoon Teal: fresh turquoise highlights over calm petrol surfaces.
+ * Register lagoon-teal-light / lagoon-teal-dark with palette: 'lagoon-teal'.
+ * Import after tokens.css but before the global high-contrast rules.
+ * Only chrome tokens change; document colours and code themes stay independent.
+ */
+:root[data-theme='light'][data-palette='lagoon-teal']:not([data-contrast='high']) {
+  --bg-base: #eaf5f3;
+  --bg-panel: #f7fcfb;
+  --bg-elevated: #ffffff;
+  --bg-surface: #dcefeb;
+  --bg-hover: #cce5e0;
+  --border-subtle: #c2ddd7;
+  --border-default: #93b9b0;
+  --text-primary: #103932;
+  --text-secondary: #365b53;
+  --text-tertiary: #45665f;
+  --accent: #006c62;
+  --accent-fill: #00766b;
+  --accent-ink: #ffffff;
+  --accent-soft: #00766b1f;
+  --warning: #895200;
+  --danger: #b42335;
+  --canvas-bg: #d6eae5;
+  --shell-bg: #e1f0ec;
+  --shadow: 0 24px 60px -20px #10393240;
+  --card-shadow: 0 1px 2px #1039320d, 0 8px 24px -12px #10393224;
+}
+
+:root[data-theme='dark'][data-palette='lagoon-teal']:not([data-contrast='high']) {
+  --bg-base: #0c1b1c;
+  --bg-panel: #102527;
+  --bg-elevated: #153033;
+  --bg-surface: #1b3a3e;
+  --bg-hover: #23484c;
+  --border-subtle: #25494c;
+  --border-default: #3c6669;
+  --text-primary: #e7faf6;
+  --text-secondary: #b2d4cd;
+  --text-tertiary: #9ec4bd;
+  --accent: #5ee3cf;
+  --accent-fill: #007f73;
+  --accent-ink: #082925;
+  --accent-soft: #5ee3cf24;
+  --warning: #ffd085;
+  --danger: #ff98a4;
+  --canvas-bg: #081617;
+  --shell-bg: #071314;
+  --shadow: 0 24px 60px -20px #000000aa;
+  --card-shadow: 0 1px 0 #b9f5e90a inset;
+}
