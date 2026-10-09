@@ -8,6 +8,7 @@ import {
   PDFRef,
   PDFNumber,
 } from "pdf-lib";
+import { buildAnnotation } from "../pdfannotate/export";
 export interface PdfCommentTarget {
   page: number;
   index: number;
@@ -23,8 +24,12 @@ export interface PdfComment {
   locked: boolean;
   reply: boolean;
   hasReplies: boolean;
+  parentObject: string | null;
+  replyType: string | null;
+  canReply: boolean;
 }
 export type PdfCommentChange =
+  | { kind: "comment.reply"; target: PdfCommentTarget; contents: string }
   | { kind: "comment.update"; target: PdfCommentTarget; contents: string }
   | { kind: "comment.delete"; target: PdfCommentTarget };
 const SUPPORTED = new Set([
@@ -94,6 +99,9 @@ export function commentsFromDocument(doc: PDFDocument): PdfComment[] {
         locked,
         reply,
         hasReplies,
+        parentObject: a.dict.get(key("IRT"))?.toString() ?? null,
+        replyType: a.dict.lookupMaybe(key("RT"), PDFName)?.decodeText() ?? null,
+        canReply: !locked && !reply && a.raw instanceof PDFRef,
       },
     ];
   });
@@ -120,6 +128,59 @@ export function changeComment(doc: PDFDocument, op: PdfCommentChange) {
   if (!SUPPORTED.has(subtype))
     throw Error("This annotation type is view-only.");
   if (flags(d).locked) throw Error("This comment is locked or read-only.");
+  if (op.kind === "comment.reply") {
+    if (!(raw instanceof PDFRef))
+      throw Error("Direct-dictionary comments cannot receive replies.");
+    if (d.has(key("IRT")))
+      throw Error("Reply to the thread's original comment, not to a reply.");
+    if (
+      typeof op.contents !== "string" ||
+      !op.contents.trim() ||
+      op.contents.length > 20000
+    )
+      throw Error("Write a reply of 1-20,000 characters.");
+    if (allAnnotations(doc).length >= 10000)
+      throw Error("Comment inspection is limited to 10,000 annotations.");
+    const page = doc.getPage(op.target.page),
+      box = page.getCropBox();
+    if (box.width < 20 || box.height < 20)
+      throw Error("Page crop is too small for a reply annotation.");
+    const r = d.lookupMaybe(key("Rect"), PDFArray);
+    const x = r?.lookupMaybe(0, PDFNumber)?.asNumber() ?? box.x;
+    const top = r?.lookupMaybe(3, PDFNumber)?.asNumber() ?? box.y + 20;
+    const reply = buildAnnotation(
+      doc.context,
+      {
+        kind: "note",
+        page: op.target.page,
+        position: {
+          x: Math.max(
+            box.x,
+            Math.min(box.x + box.width - 20, Number.isFinite(x) ? x : box.x),
+          ),
+          y: Math.max(
+            box.y + 20,
+            Math.min(
+              box.y + box.height,
+              Number.isFinite(top) ? top : box.y + 20,
+            ),
+          ),
+        },
+        color: [1, 0.8, 0],
+        opacity: 1,
+        contents: op.contents,
+        author: "",
+      },
+      crypto.randomUUID(),
+      page.ref,
+    );
+    const rd = doc.context.lookup(reply, PDFDict);
+    rd.set(key("IRT"), raw);
+    rd.set(key("RT"), PDFName.of("R"));
+    rd.set(key("F"), doc.context.obj(2)); // Hidden: replies live in threads, not as duplicate page icons.
+    a.push(reply);
+    return;
+  }
   if (op.kind === "comment.update") {
     if (typeof op.contents !== "string" || op.contents.length > 20_000)
       throw Error("Comment text is limited to 20,000 characters.");

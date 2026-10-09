@@ -45,7 +45,7 @@ function appearance(a: PdfAnnotation): string | null {
 
 const SUBTYPE = { highlight: 'Highlight', underline: 'Underline', strikeout: 'StrikeOut', note: 'Text', ink: 'Ink' } as const;
 
-function buildAnnotation(ctx: PDFContext, a: PdfAnnotation, id: string, pageRef: PDFRef): PDFRef {
+export function buildAnnotation(ctx: PDFContext, a: PdfAnnotation, id: string, pageRef: PDFRef): PDFRef {
   const b = bounds(a);
   const rect = [b.x, b.y, b.x + b.width, b.y + b.height];
   const dict: Record<string, unknown> = {

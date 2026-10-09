@@ -110,7 +110,11 @@ export async function applyPdfEdit(
     if (!Number.isInteger(p) || p < 0 || p >= count)
       throw Error("Page does not exist.");
   };
-  if (op.kind === "comment.update" || op.kind === "comment.delete")
+  if (
+    op.kind === "comment.update" ||
+    op.kind === "comment.delete" ||
+    op.kind === "comment.reply"
+  )
     changeComment(doc, op);
   if (
     op.kind === "field.create" ||

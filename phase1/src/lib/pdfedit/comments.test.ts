@@ -214,3 +214,122 @@ test("direct dictionaries and indirect flags are handled without bypassing locks
   });
   assert.equal((await inspectPdf(out)).comments.length, 0);
 });
+
+test("new reply roundtrips IRT/RT/page/AP/unicode without adding a visible duplicate icon", async () => {
+  let b = await fixture(),
+    root = (await inspectPdf(b)).comments[0];
+  b = await applyPdfEdit(b, {
+    kind: "comment.reply",
+    target: root.target,
+    contents: "Antwort 漢字",
+  });
+  let info = await inspectPdf(b);
+  assert.equal(info.comments.length, 2);
+  assert.equal(info.comments[0].hasReplies, true);
+  assert.equal(info.comments[1].parentObject, root.target.object);
+  assert.equal(info.comments[1].replyType, "R");
+  assert.equal(info.comments[1].canReply, false);
+  const doc = await PDFDocument.load(b),
+    a = doc.getPage(1).node.Annots()!,
+    reply = a.lookup(a.size() - 1, PDFDict);
+  assert.equal(reply.get(PDFName.of("IRT"))!.toString(), root.target.object);
+  assert.equal(
+    reply.get(PDFName.of("P"))!.toString(),
+    doc.getPage(1).ref.toString(),
+  );
+  assert.equal(reply.get(PDFName.of("RT")), PDFName.of("R"));
+  assert.equal(reply.lookup(PDFName.of("F"))!.toString(), "2");
+  assert.ok(
+    reply.lookup(PDFName.of("AP"), PDFDict).get(PDFName.of("N")) instanceof
+      PDFRef,
+  );
+  await assert.rejects(
+    () =>
+      applyPdfEdit(b, {
+        kind: "comment.delete",
+        target: info.comments[0].target,
+      }),
+    /replies/,
+  );
+  await assert.rejects(
+    () =>
+      applyPdfEdit(b, {
+        kind: "comment.reply",
+        target: info.comments[1].target,
+        contents: "nested",
+      }),
+    /original/,
+  );
+  b = await applyPdfEdit(b, {
+    kind: "comment.update",
+    target: info.comments[1].target,
+    contents: "Edited reply",
+  });
+  info = await inspectPdf(b);
+  assert.equal(info.comments[1].contents, "Edited reply");
+  b = await applyPdfEdit(b, {
+    kind: "comment.delete",
+    target: info.comments[1].target,
+  });
+  assert.equal((await inspectPdf(b)).comments[0].hasReplies, false);
+});
+test("reply validates content, stale/locked/direct parents and source signature/XFA", async () => {
+  const b = await fixture(),
+    t = (await inspectPdf(b)).comments[0].target;
+  for (const contents of ["", " ", "x".repeat(20001)])
+    await assert.rejects(
+      () => applyPdfEdit(b, { kind: "comment.reply", target: t, contents }),
+      /reply/,
+    );
+  await assert.rejects(
+    () =>
+      applyPdfEdit(b, {
+        kind: "comment.reply",
+        target: { ...t, object: "999 0 R" },
+        contents: "wrong",
+      }),
+    /stale/,
+  );
+  for (const type of ["lock", "sig", "xfa", "direct"]) {
+    const d = await PDFDocument.load(b),
+      a = d.getPage(1).node.Annots()!,
+      c = a.lookup(0, PDFDict);
+    if (type === "lock") c.set(PDFName.of("F"), d.context.obj(128));
+    if (type === "sig")
+      d.catalog.set(
+        PDFName.of("TestSig"),
+        d.context.obj({ Type: "Sig", ByteRange: [0, 1, 2, 3] }),
+      );
+    if (type === "xfa")
+      d.getForm().acroForm.dict.set(
+        PDFName.of("XFA"),
+        d.context.obj("unsupported"),
+      );
+    if (type === "direct") {
+      const clone = d.context.obj({
+        Type: "Annot",
+        Subtype: "Text",
+        Rect: [20, 20, 40, 40],
+        Contents: PDFHexString.fromText("Direct"),
+      });
+      a.set(0, clone);
+    }
+    const bytes = await d.save({ updateFieldAppearances: false }),
+      target = (await inspectPdf(bytes)).comments[0].target;
+    await assert.rejects(
+      () =>
+        applyPdfEdit(bytes, {
+          kind: "comment.reply",
+          target,
+          contents: "reply",
+        }),
+      type === "lock"
+        ? /locked/
+        : type === "sig"
+          ? /Signed/
+          : type === "xfa"
+            ? /XFA/
+            : /Direct/,
+    );
+  }
+});
