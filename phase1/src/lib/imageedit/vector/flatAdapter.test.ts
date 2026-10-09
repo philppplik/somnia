@@ -77,3 +77,144 @@ test('real SVG import -> scene -> flat -> export keeps path count', () => {
   assert.ok(back.paths.length >= 2);
   assert.match(exportSvg(back), /<path/);
 });
+
+test('layer runs preserve paint order instead of moving later paths before intervening roots', () => {
+  const paths = ['a', 'b', 'c', 'd'].map((id, i) => ({ ...doc.paths[1], id, name: id, hidden: undefined, layer: i === 1 ? undefined : 'Same' }));
+  const scene = flatToScene({ ...doc, paths }).value;
+  assert.equal(scene.roots.length, 3);
+  assert.deepEqual(sceneToFlat(scene).value.paths.map((p) => p.id), ['a', 'b', 'c', 'd']);
+});
+
+test('reserved, duplicate and generated-id collisions are deterministic and safe', () => {
+  const paths = ['constructor', 'toString', '__proto__', 'n1', 'n1', ''].map((id) => ({ ...doc.paths[1], id, layer: 'L' }));
+  const result = flatToScene({ ...doc, paths }).value;
+  validateScene(result);
+  assert.equal(Object.keys(result.nodes).length, 7);
+  assert.deepEqual(result, flatToScene({ ...doc, paths }).value);
+});
+
+test('supported CSS colours include shorthand and rgb/rgba', () => {
+  const warnings: string[] = [], warn = (m: string) => warnings.push(m);
+  assert.deepEqual(paintFromFlat('#0f08', 0.5, warn, 'fill'), { kind: 'solid', rgba: [0, 255, 0, 0.267] });
+  assert.deepEqual(paintFromFlat('rgba(255,0,128,0.5)', 1, warn, 'fill'), { kind: 'solid', rgba: [255, 0, 128, 0.502] });
+  assert.deepEqual(warnings, []);
+});
+
+test('invalid dimensions and style values fail rather than silently clamping', () => {
+  for (const width of [0, -1, NaN, Infinity, 100_001]) assert.throws(() => flatToScene({ ...doc, width }));
+  for (const style of [{ opacity: NaN }, { strokeWidth: -1 }, { dashArray: [-1] }, { dashArray: [0, 0] }, { fillOpacity: 2 }])
+    assert.throws(() => flatToScene({ ...doc, paths: [{ ...doc.paths[0], style }] }));
+});
+
+test('single-anchor closed cubic retains both handles', () => {
+  const input: VectorDocument = { width: 20, height: 20, paths: [{ id: 'loop', closed: true,
+    nodes: [{ id: 'n', x: 0, y: 0, kind: 'corner', in: { x: 10, y: 0 }, out: { x: 0, y: 10 } }] }] };
+  const back = sceneToFlat(flatToScene(input).value).value.paths[0];
+  assert.equal(back.nodes.length, 1);
+  assert.deepEqual(back.nodes[0].in, { x: 10, y: 0 });
+  assert.deepEqual(back.nodes[0].out, { x: 0, y: 10 });
+});
+
+test('compound first-contour semantics match vectorio and warn about conflicting metadata', () => {
+  const first = { ...doc.paths[0], compound: '', id: 'one' };
+  const second = { ...doc.paths[1], compound: '', id: 'two' };
+  const result = flatToScene({ ...doc, paths: [first, second] });
+  assert.equal(Object.keys(result.value.nodes).length, 2);
+  assert.match(result.warnings[0].message, /first contour/);
+});
+
+test('export preserves first-contour identity and avoids split-contour ID collisions', () => {
+  const scene = flatToScene({ ...doc, paths: [{ ...doc.paths[0], id: 'p1' }, ...doc.paths.slice(2)] }).value;
+  const flat = sceneToFlat(scene).value;
+  assert.equal(flat.paths[0].id, 'p1');
+  assert.equal(flat.paths[1].id, 'h1');
+  assert.equal(new Set(flat.paths.map((p) => p.id)).size, flat.paths.length);
+});
+
+function transformedScene(transform: readonly [number, number, number, number, number, number], groupOpacity = 1) {
+  const base = flatToScene({ ...doc, paths: [{ ...doc.paths[1], hidden: undefined, layer: 'L', style: { stroke: 'blue', strokeWidth: 2, dashArray: [2, 4], dashOffset: 1 } }] }).value;
+  const g = base.roots[0];
+  return validateScene({ ...base, nodes: { ...base.nodes, [g]: { ...base.nodes[g], transform, opacity: groupOpacity } } });
+}
+
+test('uniform/reflected world scale also scales stroke and dash metrics', () => {
+  const result = sceneToFlat(transformedScene([-3, 0, 0, 3, 0, 0]));
+  assert.equal(result.value.paths[0].style!.strokeWidth, 6);
+  assert.deepEqual(result.value.paths[0].style!.dashArray, [6, 12]);
+  assert.equal(result.value.paths[0].style!.dashOffset, 3);
+  assert.deepEqual(result.warnings, []);
+});
+
+test('group opacity is reported even when all descendant shape opacities are one', () => {
+  const result = sceneToFlat(transformedScene([1, 0, 0, 1, 0, 0], 0));
+  assert.equal(result.value.paths[0].style!.opacity, 0);
+  assert.match(result.warnings[0].message, /Group opacity/);
+});
+
+test('anisotropic stroke, output-size differences, locks and nested/empty groups warn', () => {
+  const base = transformedScene([2, 0, 0, 1, 0, 0]);
+  const result = sceneToFlat(validateScene({ ...base, outputSize: { width: 200, height: 100 }, nodes: { ...base.nodes, b: { ...base.nodes.b, locked: true } } }));
+  assert.equal(result.value.paths[0].style!.strokeWidth, 2);
+  assert.equal(result.warnings.length, 3);
+  const g = base.roots[0];
+  const nested = validateScene({ ...base, nodes: { ...base.nodes, [g]: { ...base.nodes[g], kind: 'group', children: ['empty', 'b'] },
+    empty: { ...base.nodes[g], id: 'empty', kind: 'group', children: [] } } });
+  assert.ok(sceneToFlat(nested).warnings.some((w) => /Nested groups/.test(w.message)));
+  assert.ok(sceneToFlat(nested).warnings.some((w) => /Empty groups/.test(w.message)));
+});
+
+test('adapter does not mutate inputs and validated scenes are deeply frozen', () => {
+  const original = structuredClone(doc), scene = flatToScene(doc).value;
+  assert.deepEqual(doc, original);
+  assert.ok(Object.isFrozen(scene.nodes.a));
+  const before = JSON.stringify(scene);
+  const flat = sceneToFlat(scene).value;
+  flat.paths[0].nodes[0].x = 999;
+  flat.paths[0].style!.dashArray!.push(9);
+  assert.equal(JSON.stringify(scene), before);
+});
+
+test('quad and arc conversion bakes controls and endpoints through world matrix', () => {
+  const base = flatToScene({ ...doc, paths: [doc.paths[1]] }).value;
+  const shape = base.nodes.b;
+  const scene = validateScene({ ...base, viewBox: [5, 7, 100, 50], nodes: { b: { ...shape, transform: [2, 0, 0, 2, 3, 4],
+    kind: 'path', segments: [{ kind: 'M', x: 0, y: 0 }, { kind: 'Q', x1: 3, y1: 6, x: 6, y: 0 }, { kind: 'A', rx: 3, ry: 3, rotation: 0, largeArc: false, sweep: true, x: 12, y: 0 }] } } });
+  const nodes = sceneToFlat(scene).value.paths[0].nodes;
+  assert.deepEqual(nodes[0].out, { x: 2, y: 5 });
+  assert.deepEqual(nodes[1].in, { x: 6, y: 5 });
+  assert.deepEqual([nodes.at(-1)!.x, nodes.at(-1)!.y], [22, -3]);
+  assert.ok(nodes.length > 2);
+});
+
+test('ellipse, polygon and line become flat contours without losing closed state', () => {
+  const base = flatToScene({ ...doc, paths: [doc.paths[1]] }).value;
+  const node = base.nodes.b;
+  if (node.kind !== 'path') throw new Error('expected path');
+  const { segments: _segments, kind: _kind, ...common } = node;
+  const scene = validateScene({ ...base, roots: ['ellipse', 'polygon', 'line'], nodes: {
+    ellipse: { ...common, id: 'ellipse', kind: 'ellipse', cx: 20, cy: 20, rx: 5, ry: 8 },
+    polygon: { ...common, id: 'polygon', kind: 'polygon', cx: 20, cy: 20, radius: 8, sides: 5, rotation: 0 },
+    line: { ...common, id: 'line', kind: 'line', x1: 0, y1: 0, x2: 4, y2: 6 },
+  } });
+  const flat = sceneToFlat(scene).value;
+  assert.deepEqual(flat.paths.map((p) => [p.id, p.closed, p.nodes.length]), [['ellipse', true, 4], ['polygon', true, 5], ['line', false, 2]]);
+  assert.ok(flat.paths[0].nodes.every((n) => n.in && n.out));
+});
+
+test('generated layer IDs never steal a later valid path ID', () => {
+  const scene = flatToScene({ ...doc, paths: [{ ...doc.paths[1], id: 'a', layer: 'L' }, { ...doc.paths[1], id: 'n1' }] }).value;
+  assert.equal(scene.nodes.n1.kind, 'path');
+});
+
+test('prototype-like paint names are unsupported, not object prototype lookups', () => {
+  const warnings: string[] = [];
+  for (const name of ['constructor', 'toString', '__proto__'])
+    assert.deepEqual(paintFromFlat(name, 1, (m) => warnings.push(m), 'fill'), { kind: 'none' });
+  assert.equal(warnings.length, 3);
+});
+
+test('compound segment limit is enforced after subpaths are combined', () => {
+  const nodes = Array.from({ length: 50_000 }, (_, i) => ({ id: `n${i}`, x: i, y: 0, kind: 'corner' as const }));
+  const path = { id: 'a', closed: false, compound: 'c', nodes };
+  assert.throws(() => flatToScene({ width: 100, height: 100, paths: [path, { ...path, id: 'b' }, { ...path, id: 'c' }] }), RangeError);
+});

@@ -1,20 +1,23 @@
 /**
  * Adapter between the flat pen/vectorcore/vectorio document ({@link FlatDocument}: paths with absolute-handle nodes)
- * and the structured {@link VectorScene}. Both directions validate through validateScene, so scene limits apply
- * (nodes, depth, segments). Anything that cannot be carried over is returned as a warning, never dropped silently.
+ * and the structured {@link VectorScene}. Both directions validate the scene through validateScene, so scene limits apply
+ * (nodes, depth, segments). Structural/paint losses are reported as warnings; flat output uses vectorio's canonical three-decimal precision.
  *
  * flat -> scene: one path node per flat path (subpaths sharing `compound` become ONE path node), layers become groups
- * (in first-seen order), hidden -> visible:false, style opacity -> node opacity, fill/stroke opacity folded into paint alpha.
+ * (contiguous layer runs in paint order), hidden -> visible:false, style opacity -> node opacity, fill/stroke opacity folded into paint alpha.
  * scene -> flat: transforms are baked into coordinates, shapes become paths, arcs/quads become cubics, ancestor
  * opacity is multiplied in, the top-level group name becomes the layer. Gradients (url(#..)) have no scene paint and become 'none'.
  */
 import type { Diagnostic, Style, VectorDocument as FlatDocument, VectorNode as FlatNode, VectorPath as FlatPath } from '../../vectorio/types';
 import { DEFAULT_STYLE } from '../../vectorio/types';
+import { normalizePaint } from '../../vectorio/color';
+import type { VectorDocument as CoreDocument } from '../../vectorcore/types';
 import { inferKind, r3 } from '../../vectorio/nodes';
 import { arcToCubics } from '../../vectorio/pathData';
 import type { Matrix, NodeId, Paint, PathSegment, ShapeStyle, VectorNode, VectorScene } from './types';
 import { applyMatrix, multiply } from './math';
-import { geometryOf, geometryToSegments } from './path';
+import { geometryOf, geometryToSegments, num } from './path';
+import { validateStyle } from './style';
 import { LIMITS, emptyNodeFields, parentIndex, validateScene, worldMatrix } from './scene';
 
 const NAMED: Record<string, [number, number, number]> = {
@@ -28,12 +31,12 @@ export interface AdapterResult<T> { readonly value: T; readonly warnings: readon
 
 /** Flat colour string -> scene paint. `currentColor`, url(#..) and unknown values need a warning and become none. */
 export function paintFromFlat(v: string | undefined, alpha: number, warn: (m: string) => void, what: string): Paint {
-  const s = (v ?? 'none').trim().toLowerCase();
+  const s = (normalizePaint(v ?? 'none') ?? v ?? 'none').trim().toLowerCase();
   if (s === 'none' || s === 'transparent') return { kind: 'none' };
   let rgb: [number, number, number] | undefined, a = 1;
   const m = /^#([0-9a-f]{6})([0-9a-f]{2})?$/.exec(s);
   if (m) { rgb = [0, 2, 4].map((i) => parseInt(m[1].slice(i, i + 2), 16)) as [number, number, number]; if (m[2]) a = parseInt(m[2], 16) / 255; }
-  else if (NAMED[s]) rgb = NAMED[s];
+  else if (Object.hasOwn(NAMED, s)) rgb = NAMED[s];
   if (!rgb) { warn(`${what} "${v}" has no scene equivalent and became none`); return { kind: 'none' }; }
   return { kind: 'solid', rgba: [rgb[0], rgb[1], rgb[2], Math.round(clamp01(a * alpha) * 1000) / 1000] };
 }
@@ -45,14 +48,14 @@ export function paintToFlat(p: Paint): { color: string; alpha: number } {
 
 function styleFromFlat(s: Partial<Style> | undefined, warn: (m: string) => void): { style: ShapeStyle; opacity: number } {
   const t = { ...DEFAULT_STYLE, ...(s ?? {}) };
-  const dash = t.dashArray.filter((d) => Number.isFinite(d) && d >= 0).slice(0, 16);
   return {
-    opacity: clamp01(t.opacity),
-    style: {
-      fill: paintFromFlat(t.fill, t.fillOpacity, warn, 'fill'), stroke: paintFromFlat(t.stroke, t.strokeOpacity, warn, 'stroke'),
-      strokeWidth: Math.max(0, Math.min(10_000, t.strokeWidth)), fillRule: t.fillRule, lineCap: t.lineCap, lineJoin: t.lineJoin,
-      miterLimit: Math.max(1, Math.min(1000, t.miterLimit)), dash: dash.length && dash.some((d) => d > 0) ? dash : [], dashOffset: t.dashOffset,
-    },
+    opacity: num(t.opacity, 'opacity', 0, 1),
+    style: validateStyle({
+      fill: paintFromFlat(t.fill, num(t.fillOpacity, 'fillOpacity', 0, 1), warn, 'fill'),
+      stroke: paintFromFlat(t.stroke, num(t.strokeOpacity, 'strokeOpacity', 0, 1), warn, 'stroke'),
+      strokeWidth: t.strokeWidth, fillRule: t.fillRule, lineCap: t.lineCap, lineJoin: t.lineJoin,
+      miterLimit: t.miterLimit, dash: t.dashArray, dashOffset: t.dashOffset,
+    }),
   };
 }
 
@@ -64,10 +67,11 @@ function contourSegments(nodes: readonly FlatNode[], closed: boolean): PathSegme
     else out.push({ kind: 'L', x: b.x, y: b.y });
   };
   for (let i = 1; i < nodes.length; i++) edge(nodes[i - 1], nodes[i]);
-  if (closed) { if (nodes.length > 1) edge(nodes[nodes.length - 1], nodes[0]); out.push({ kind: 'Z' }); }
+  if (closed) { if (nodes.length > 1 || nodes[0].in || nodes[0].out) edge(nodes[nodes.length - 1], nodes[0]); out.push({ kind: 'Z' }); }
   return out;
 }
 
+const RESERVED_IDS = new Set(['__proto__', 'constructor', 'prototype', 'hasOwnProperty', 'toString', 'valueOf']);
 const SAFE_ID = /^[A-Za-z0-9_-]{1,64}$/;
 /** Flat document -> validated scene. Throws RangeError when scene limits are exceeded. */
 export function flatToScene(doc: FlatDocument): AdapterResult<VectorScene> {
@@ -75,36 +79,45 @@ export function flatToScene(doc: FlatDocument): AdapterResult<VectorScene> {
   const warn = (m: string) => { if (!seenWarn.has(m)) { seenWarn.add(m); warnings.push({ severity: 'warning', message: m }); } };
   const nodes: Record<NodeId, VectorNode> = {};
   const used = new Set<string>();
+  const reserved = new Set(doc.paths.map((p) => p.id).filter((id) => SAFE_ID.test(id) && !RESERVED_IDS.has(id)));
   let counter = 0;
   const fresh = (preferred?: string) => {
-    if (preferred && SAFE_ID.test(preferred) && !used.has(preferred) && preferred !== '__proto__') { used.add(preferred); return preferred; }
-    let id: string; do { id = `n${++counter}`; } while (used.has(id));
+    if (preferred && SAFE_ID.test(preferred) && !used.has(preferred) && !RESERVED_IDS.has(preferred)) { used.add(preferred); return preferred; }
+    let id: string; do { id = `n${++counter}`; } while (used.has(id) || reserved.has(id));
     used.add(id); return id;
   };
-  const groups = new Map<string, NodeId>(), roots: NodeId[] = [], kids = new Map<NodeId, NodeId[]>();
+  const roots: NodeId[] = [], kids = new Map<NodeId, NodeId[]>(), groups: { name: string; id: NodeId }[] = [];
+  let lastLayer: string | undefined, lastGroup: NodeId | undefined;
   const compound = new Map<string, { id: NodeId; segs: PathSegment[]; first: FlatPath }>();
   const placeIn = (layer: string | undefined, id: NodeId) => {
-    if (!layer) { roots.push(id); return; }
-    let g = groups.get(layer);
-    if (!g) { g = fresh(); groups.set(layer, g); roots.push(g); kids.set(g, []); }
-    kids.get(g)!.push(id);
+    if (layer === undefined) { roots.push(id); lastLayer = undefined; lastGroup = undefined; return; }
+    if (lastLayer !== layer || !lastGroup) {
+      lastGroup = fresh(); groups.push({ name: layer, id: lastGroup }); roots.push(lastGroup); kids.set(lastGroup, []);
+    }
+    lastLayer = layer;
+    kids.get(lastGroup)!.push(id);
   };
   for (const p of doc.paths) {
     const segs = contourSegments(p.nodes, p.closed);
     if (segs.length === 0) { warn('Empty path skipped'); continue; }
-    const hit = p.compound ? compound.get(p.compound) : undefined;
-    if (hit) { hit.segs.push(...segs); continue; }
+    const hit = p.compound !== undefined ? compound.get(p.compound) : undefined;
+    if (hit) {
+      if (p.layer !== hit.first.layer || p.hidden !== hit.first.hidden || p.name !== hit.first.name
+        || JSON.stringify({ ...DEFAULT_STYLE, ...p.style }) !== JSON.stringify({ ...DEFAULT_STYLE, ...hit.first.style }))
+        warn(`Compound "${p.compound}" uses its first contour's style, layer, visibility and name`);
+      hit.segs.push(...segs); continue;
+    }
     const id = fresh(p.id);
     const { style, opacity } = styleFromFlat(p.style, warn);
     const common = { ...emptyNodeFields, id, name: (p.name ?? p.layer ?? `Path ${counter + 1}`).slice(0, LIMITS.name) || 'Path', opacity, visible: !p.hidden };
     const node = { ...common, kind: 'path' as const, segments: segs, style } as VectorNode & { segments: PathSegment[] };
     nodes[id] = node;
-    if (p.compound) compound.set(p.compound, { id, segs: node.segments as PathSegment[], first: p });
+    if (p.compound !== undefined) compound.set(p.compound, { id, segs: node.segments as PathSegment[], first: p });
     placeIn(p.layer, id);
   }
-  for (const [layer, gid] of groups) nodes[gid] = { ...emptyNodeFields, id: gid, name: layer.slice(0, LIMITS.name) || 'Layer', kind: 'group', children: kids.get(gid)! };
-  const w = Math.max(1e-6, Math.min(100_000, doc.width)), h = Math.max(1e-6, Math.min(100_000, doc.height));
-  const scene = validateScene({ viewBox: [0, 0, doc.width > 0 ? doc.width : w, doc.height > 0 ? doc.height : h], outputSize: { width: w, height: h }, roots, nodes });
+  for (const { name: layer, id: gid } of groups) nodes[gid] = { ...emptyNodeFields, id: gid, name: layer.slice(0, LIMITS.name) || 'Layer', kind: 'group', children: kids.get(gid)! };
+  const w = num(doc.width, 'width', 1e-6, 100_000), h = num(doc.height, 'height', 1e-6, 100_000);
+  const scene = validateScene({ viewBox: [0, 0, w, h], outputSize: { width: w, height: h }, roots, nodes });
   return { value: scene, warnings };
 }
 
@@ -148,22 +161,36 @@ export function sceneToFlat(input: VectorScene): AdapterResult<FlatDocument> {
   const parents = parentIndex(scene);
   const [vx, vy, vw, vh] = scene.viewBox, origin: Matrix = [1, 0, 0, 1, -vx, -vy];
   const paths: FlatPath[] = [];
-  let pid = 0, nid = 0, cid = 0, sawOpacityFlatten = false;
+  let pid = 0, nid = 0, cid = 0;
+  const usedIds = new Set(Object.keys(scene.nodes));
+  const freshPath = () => { let id: string; do { id = `p${++pid}`; } while (usedIds.has(id)); usedIds.add(id); return id; };
+  const warn = (message: string) => { if (!warnings.some((w) => w.message === message)) warnings.push({ severity: 'warning', message }); };
+  if (scene.outputSize.width !== vw || scene.outputSize.height !== vh) warn('Output size differs from viewBox; flat dimensions use viewBox units');
   const walk = (ids: readonly NodeId[], layer: string | undefined, hidden: boolean, opacity: number) => {
     for (const id of ids) {
       const n = scene.nodes[id];
       const hid = hidden || !n.visible, op = opacity * n.opacity;
-      if (n.kind === 'group') { walk(n.children, layer ?? n.name, hid, op); continue; }
-      if (op !== 1 && opacity !== 1) sawOpacityFlatten = true;
+      if (n.locked) warn('Editor locks have no flat equivalent');
+      if (n.kind === 'group') {
+        if (n.opacity !== 1) warn('Group opacity was multiplied into each path (flat paths have no group compositing)');
+        if (layer !== undefined) warn('Nested groups were flattened into their top-level layer');
+        if (!n.children.length) warn('Empty groups have no flat equivalent');
+        walk(n.children, layer ?? n.name, hid, op); continue;
+      }
       const m = multiply(origin, worldMatrix(scene, id, parents));
+      const sx = Math.hypot(m[0], m[1]), sy = Math.hypot(m[2], m[3]);
+      const similarity = Math.abs(sx - sy) <= 1e-9 * Math.max(1, sx, sy) && Math.abs(m[0] * m[2] + m[1] * m[3]) <= 1e-9 * Math.max(1, sx * sy);
+      const strokeScale = similarity ? sx : 1;
+      if (!similarity && n.style.stroke.kind !== 'none' && n.style.strokeWidth > 0)
+        warn('Non-uniform or skew transforms cannot preserve stroke outlines in flat paths; stroke metrics kept unchanged');
       const contours = toContours(geometryToSegments(geometryOf(n)), m);
       const fill = paintToFlat(n.style.fill), stroke = paintToFlat(n.style.stroke);
       const style: Partial<Style> = {
-        fill: fill.color, stroke: stroke.color, strokeWidth: n.style.strokeWidth, fillOpacity: fill.alpha, strokeOpacity: stroke.alpha, opacity: op,
-        fillRule: n.style.fillRule, lineCap: n.style.lineCap, lineJoin: n.style.lineJoin, miterLimit: n.style.miterLimit, dashArray: [...n.style.dash], dashOffset: n.style.dashOffset,
+        fill: fill.color, stroke: stroke.color, strokeWidth: n.style.strokeWidth * strokeScale, fillOpacity: fill.alpha, strokeOpacity: stroke.alpha, opacity: op,
+        fillRule: n.style.fillRule, lineCap: n.style.lineCap, lineJoin: n.style.lineJoin, miterLimit: n.style.miterLimit, dashArray: n.style.dash.map((d) => d * strokeScale), dashOffset: n.style.dashOffset * strokeScale,
       };
       const comp = contours.length > 1 ? `c${++cid}` : undefined;
-      for (const c of contours) {
+      for (const [index, c] of contours.entries()) {
         const nodes = c.nodes.map((q): FlatNode => {
           const node: FlatNode = { id: `n${++nid}`, x: r3(q.x), y: r3(q.y), kind: 'corner' };
           if (q.in) node.in = { x: r3(q.in.x), y: r3(q.in.y) };
@@ -171,8 +198,8 @@ export function sceneToFlat(input: VectorScene): AdapterResult<FlatDocument> {
           node.kind = inferKind(node.x, node.y, node.in, node.out);
           return node;
         });
-        const p: FlatPath = { id: `p${++pid}`, closed: c.closed, nodes, style: { ...style }, name: n.name };
-        if (layer) p.layer = layer;
+        const p: FlatPath = { id: index === 0 ? n.id : freshPath(), closed: c.closed, nodes, style: { ...style, dashArray: [...style.dashArray!] }, name: n.name };
+        if (layer !== undefined) p.layer = layer;
         if (comp) p.compound = comp;
         if (hid) p.hidden = true;
         paths.push(p);
@@ -180,6 +207,28 @@ export function sceneToFlat(input: VectorScene): AdapterResult<FlatDocument> {
     }
   };
   walk(scene.roots, undefined, false, 1);
-  if (sawOpacityFlatten) warnings.push({ severity: 'warning', message: 'Group opacity was multiplied into each path (flat paths have no group compositing)' });
   return { value: { width: vw, height: vh, paths }, warnings };
+}
+
+/** vectorcore has top-level paint fields, not vectorio's `style` extension. Use this explicit boundary. */
+export function coreToScene(doc: CoreDocument): AdapterResult<VectorScene> {
+  return flatToScene({ ...doc, paths: doc.paths.map((p) => ({
+    id: p.id, closed: p.closed, nodes: p.nodes,
+    style: { fill: p.fill ?? 'none', stroke: p.stroke === undefined ? '#000000' : p.stroke ?? 'none', strokeWidth: p.strokeWidth ?? 1, fillRule: p.fillRule ?? 'nonzero' },
+  })) });
+}
+
+/** Reduced core format loses richer vectorio metadata and paint alpha; report that loss. */
+export function sceneToCore(scene: VectorScene): AdapterResult<CoreDocument> {
+  const flat = sceneToFlat(scene), warnings = [...flat.warnings];
+  const warn = (message: string) => { if (!warnings.some((w) => w.message === message)) warnings.push({ severity: 'warning', message }); };
+  const paths = flat.value.paths.map((p) => {
+    const s = { ...DEFAULT_STYLE, ...p.style };
+    if (p.layer !== undefined || p.compound !== undefined || p.hidden || p.name) warn('vectorcore does not carry layers, compounds, visibility or names');
+    if (s.opacity !== 1 || s.fillOpacity !== 1 || s.strokeOpacity !== 1 || s.dashArray.length || s.dashOffset !== 0
+      || s.lineCap !== 'butt' || s.lineJoin !== 'miter' || s.miterLimit !== 4) warn('vectorcore does not carry opacity or extended stroke styles');
+    return { id: p.id, closed: p.closed, nodes: p.nodes.map((n) => ({ ...n, kind: n.kind === 'corner' ? 'corner' as const : 'smooth' as const })),
+      fill: s.fill === 'none' ? null : s.fill, stroke: s.stroke === 'none' ? null : s.stroke, strokeWidth: s.strokeWidth, fillRule: s.fillRule };
+  });
+  return { value: { width: flat.value.width, height: flat.value.height, paths }, warnings };
 }
