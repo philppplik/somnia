@@ -2,7 +2,7 @@
 
 [Overview](README.md) / Shared Studio direction
 
-**Status: planned / under construction at the implementation baseline.** The Studio S0/S1 rebase is not present at `d91046f`. This page maps the existing repository concept to the implementation evidence without inventing a future API or claiming a completed migration.
+**Status: S0 and S1 are integrated on `somnia-agent` (merged as fe58afd, after d91046f).** The shared Studio shell, the Header Studio pill and the status-bar slot are shipped. Sections 2 and 3 below still describe the full concept, which is larger than S0/S1. Sources: `phase1/src/lib/studios/`, tests `phase1/src/lib/studios.test.ts`, `phase1/tests/studios.spec.ts`, `phase1/tests/studio-inline-rebase.spec.ts`, `phase1/tests/studio-shell-snapshot.spec.ts`; details in [S0/S1 notes](../../studios/S0-S1.md). Windows/macOS were not checked on real desktops.
 
 ## 1. Concept source
 

@@ -93,7 +93,7 @@ These findings are from source inspection, not newly filed bugs or implemented f
 | Hardcoded colors/motion remain | Status dots, math styles, drag ghost, toolbar constants | Token inventory/contrast audit before normalization |
 | Incomplete localization evidence | Hardcoded rail labels/PDF command titles among translated surfaces | Catalogue and screen-reader string audit |
 | No complete accessibility certification | Partial focused tests and algorithm checks | Full state/contrast/keyboard review |
-| S0/S1 integration not in pinned baseline | No integrated shared Studio implementation at this SHA | Re-audit after rebase/merge; update [Studio direction](studio-direction.md) |
+| S0/S1 integration not in pinned baseline | Integrated after this SHA (fe58afd on somnia-agent); this audit was not repeated against it | Re-audit the pinned findings against the Studio shell; see [Studio direction](studio-direction.md) |
 
 Do not quietly fix these while writing docs. Runtime changes belong in their own reviewed branch with behavior tests.
 
