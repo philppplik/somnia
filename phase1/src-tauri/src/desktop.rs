@@ -1085,6 +1085,52 @@ async fn pdf_save_write(window: WebviewWindow, grants: State<'_, PdfGrants>, req
         .await
         .map_err(|e| AppError::Io(e.to_string()))?
 }
+#[derive(Default)]
+struct SlidesGrants { save: Mutex<Option<crate::slides_io::SlidesGrant>> }
+/// OS save dialog. Copy-only: selecting an existing target is rejected at write. Nothing is written yet.
+#[tauri::command]
+async fn slides_save_pick(window: WebviewWindow, grants: State<'_, SlidesGrants>, suggested_name: String) -> Result<Option<ImageGrantReply>> {
+    gate(&window)?;
+    let app = window.app_handle().clone();
+    let suggested: String = suggested_name.chars().filter(|c| !matches!(c, '/' | '\\' | '\0')).take(120).collect();
+    let selected = tauri::async_runtime::spawn_blocking(move || {
+        app.dialog().file().add_filter("PPTX", &crate::slides_io::SLIDES_EXTENSIONS).set_file_name(suggested).blocking_save_file()
+    })
+    .await
+    .map_err(|e| AppError::Io(e.to_string()))?;
+    let Some(selected) = selected else { return Ok(None) };
+    let path = selected.into_path().map_err(|e| AppError::Invalid(e.to_string()))?;
+    if !crate::slides_io::has_slides_extension(&path) {
+        return Err(AppError::Denied("Save as PPTX".into()));
+    }
+    let name = image_name(&path);
+    let grant = crate::slides_io::SlidesGrant::new(path);
+    let token = grant.token().to_owned();
+    *grants.save.lock().map_err(|e| AppError::Io(e.to_string()))? = Some(grant);
+    Ok(Some(ImageGrantReply { token, name, size: 0, origin_token: None }))
+}
+/// Raw request body = file bytes, header x-somnia-token = token from slides_save_pick. Written atomically, once.
+#[tauri::command]
+async fn slides_save_write(window: WebviewWindow, grants: State<'_, SlidesGrants>, request: tauri::ipc::Request<'_>) -> Result<()> {
+    gate(&window)?;
+    let token = request
+        .headers()
+        .get("x-somnia-token")
+        .and_then(|v| v.to_str().ok())
+        .map(str::to_owned)
+        .ok_or_else(|| AppError::Denied("Missing save token".into()))?;
+    let bytes = match request.body() {
+        tauri::ipc::InvokeBody::Raw(b) => b.clone(),
+        _ => return Err(AppError::Invalid("Expected raw PPTX bytes".into())),
+    };
+    let path = {
+        let mut slot = grants.save.lock().map_err(|e| AppError::Io(e.to_string()))?;
+        crate::slides_io::SlidesGrant::consume(&mut slot, &token)?
+    };
+    tauri::async_runtime::spawn_blocking(move || crate::slides_io::save_slides_copy(&path, &bytes))
+        .await
+        .map_err(|e| AppError::Io(e.to_string()))?
+}
 #[tauri::command]
 async fn hold_autosave(
     window: WebviewWindow,
@@ -1673,7 +1719,7 @@ pub fn run() {
         .plugin(tauri_plugin_process::init())
         .manage(shared.clone())
         .manage(ImageGrants::default())
-        .manage(PdfGrants::default())
+        .manage(PdfGrants::default()).manage(SlidesGrants::default())
         .manage(crate::lan_host::LanHost::default())
         .setup(move |app| {
             tauri::async_runtime::spawn(oauth_refresh_loop());
@@ -1784,6 +1830,8 @@ pub fn run() {
             image_read,
             pdf_save_pick,
             pdf_save_write,
+            slides_save_pick,
+            slides_save_write,
             image_save_pick,
             image_save_write,
             image_overwrite_prepare,

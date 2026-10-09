@@ -26,6 +26,8 @@ fn main() {
             "image_read",
             "pdf_save_pick",
             "pdf_save_write",
+            "slides_save_pick",
+            "slides_save_write",
             "image_save_pick",
             "image_save_write",
             "image_overwrite_prepare",

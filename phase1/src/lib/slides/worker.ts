@@ -1,3 +1,4 @@
+import {readRuns,makeEditedCopy} from './editCopy';
 /// <reference lib="webworker" />
 import init,{SlidesEngine} from '../../../slides-engine/pkg/somnia_slides.js';
 import type {SlidesRequest,SlidesReply} from './protocol';
@@ -10,6 +11,8 @@ self.onmessage=({data}:{data:SlidesRequest})=>{queue=queue.then(async()=>{
   switch(data.op){
    case 'init':await init();engine?.free();engine=new SlidesEngine();result=true;break;
    case 'open':if(!engine)throw new Error('Worker not initialized');result=JSON.parse(engine.open(data.bytes));break;
+   case 'runs':result=readRuns(data.bytes);break;
+   case 'copy':result=makeEditedCopy(data.bytes,data.edits);break;
    case 'read':if(!engine)throw new Error('Worker not initialized');result=JSON.parse(engine.read_slide(data.index));break;
    case 'render':if(!engine)throw new Error('Worker not initialized');result=engine.render_png(data.index,data.scale);break;
    default:throw new Error('Unknown Slides operation');
