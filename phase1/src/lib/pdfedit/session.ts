@@ -17,6 +17,7 @@ import {
 import type { PdfAnnotation } from "../pdfannotate/types";
 import type { FormDesignOperation } from "./formDesign";
 export interface PdfSession {
+  markupSelected: string | null;
   annotationPlacement: PdfAnnotation | null;
   formLayout: boolean;
   formSelected: string | null;
@@ -104,6 +105,7 @@ export async function openPdfSession(name: string) {
   if (!media || media.kind !== "pdf") return;
   if (sessions.get(name)?.source === media.url) return;
   const initial: PdfSession = {
+    markupSelected: null,
     annotationPlacement: null,
     formLayout: false,
     formSelected: null,
@@ -158,6 +160,7 @@ export function setPdfEditing(name: string) {
 }
 export function layoutPdfFields(name: string, active: boolean) {
   set(name, {
+    markupSelected: null,
     formLayout: active,
     formPlacement: null,
     annotationPlacement: null,
@@ -177,6 +180,7 @@ export function placePdfField(
   const s = sessions.get(name);
   if (!s?.editing || s.busy) return;
   set(name, {
+    markupSelected: null,
     formPlacement: operation,
     formSelected: null,
     formLayout: true,
@@ -190,9 +194,18 @@ export function placePdfAnnotation(
   const s = sessions.get(name);
   if (!s?.editing || s.busy) return;
   set(name, {
+    markupSelected: null,
     annotationPlacement: annotation,
     formLayout: false,
     formPlacement: null,
+  });
+}
+export function selectPdfMarkup(name: string, object: string | null) {
+  set(name, {
+    markupSelected: object,
+    formLayout: false,
+    formPlacement: null,
+    annotationPlacement: null,
   });
 }
 export function pdfError(name: string, error: string | null) {

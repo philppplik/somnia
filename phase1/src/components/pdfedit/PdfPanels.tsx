@@ -11,6 +11,7 @@ import {
   pdfError,
   fillPdf,
   placePdfAnnotation,
+  selectPdfMarkup,
 } from "../../lib/pdfedit/session";
 import type { PdfFieldValue } from "../../lib/pdfforms";
 import { pdfButton } from "./PdfInlineEditor";
@@ -328,7 +329,10 @@ export function PdfPropertiesPanel() {
           className={pdfButton}
           role="tab"
           aria-selected={tab === "add"}
-          onClick={() => setTab("add")}
+          onClick={() => {
+            selectPdfMarkup(s.name, null);
+            setTab("add");
+          }}
         >
           Add
         </button>
@@ -338,6 +342,7 @@ export function PdfPropertiesPanel() {
           aria-selected={tab === "fields"}
           onClick={() => {
             placePdfAnnotation(s.name, null);
+            selectPdfMarkup(s.name, null);
             setTab("fields");
           }}
         >

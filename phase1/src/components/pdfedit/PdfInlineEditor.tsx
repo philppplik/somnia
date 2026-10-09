@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import type { MediaItem } from "../../lib/media";
+import { PdfMarkupOverlay } from "./PdfMarkupOverlay";
 import { PdfAnnotationOverlay } from "./PdfAnnotationOverlay";
 import { PdfFieldOverlay } from "./PdfFieldOverlay";
 import { PdfViewer } from "./PdfViewer";
@@ -164,6 +165,11 @@ export function PdfInlineEditor({ item }: { item: MediaItem }) {
           <>
             <PdfFieldOverlay
               key={`${item.name}:${geometry.page}`}
+              name={item.name}
+              geometry={geometry}
+            />
+            <PdfMarkupOverlay
+              key={`markup:${item.name}:${geometry.page}`}
               name={item.name}
               geometry={geometry}
             />

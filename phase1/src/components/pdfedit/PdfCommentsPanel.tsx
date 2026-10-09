@@ -1,3 +1,4 @@
+import { PdfMarkupProperties } from "./PdfMarkupProperties";
 import { commentThreads } from "../../lib/pdfedit/commentThreads";
 import { useState } from "react";
 import {
@@ -135,6 +136,12 @@ function CommentCard({
           </div>
         </form>
       )}
+      <PdfMarkupProperties
+        key={comment.target.expected}
+        comment={comment}
+        name={name}
+        disabled={disabled || !comment.editable}
+      />
       {comment.locked && <p className="mt-2 text-ink-3">Locked · view only</p>}
       {comment.hasReplies && (
         <p className="mt-2 text-ink-3">
