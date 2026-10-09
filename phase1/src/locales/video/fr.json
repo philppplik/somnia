@@ -65,5 +65,7 @@
  "video.moveRight": "Déplacer →",
  "video.deleteClip": "Retirer le clip",
  "video.clipHint": "La plage et le gain ne s’appliquent qu’à ce clip ; le fichier original n’est jamais modifié.",
- "video.addOpen": "Ajouter depuis un fichier…"
+ "video.addOpen": "Ajouter depuis un fichier…",
+ "video.transition": "Fondu vers le suivant (s)",
+ "video.transitionLabel": "Fondu {seconds} s"
 }

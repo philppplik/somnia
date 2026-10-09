@@ -2,8 +2,8 @@ import {useMemo,useState} from 'react';
 import {Button} from '../ui/button';
 import {useT} from '../../lib/useT';
 import {useMedia} from '../../lib/media';
-import {addTimelineClip,addTimelineClipsFromDialog,cancelVideoExport,deleteTimelineClip,moveTimelineClip,resetTimeline,setTimelineClipGain,setVideoFormat,selectTimelineClip,toggleTimelineClipMute,trimTimelineClip,useVideoSession} from '../../lib/video/session';
-import {MAX_GAIN,timelineDuration} from '../../lib/video/timeline';
+import {addTimelineClip,addTimelineClipsFromDialog,cancelVideoExport,deleteTimelineClip,moveTimelineClip,resetTimeline,setTimelineClipCrossfade,setTimelineClipGain,setVideoFormat,selectTimelineClip,toggleTimelineClipMute,trimTimelineClip,useVideoSession} from '../../lib/video/session';
+import {clipDuration,fadeOf,MAX_GAIN,timelineDuration} from '../../lib/video/timeline';
 const row='grid gap-1.5 border-b border-subtle px-3 py-3 text-xs text-ink-2';
 const check='!size-4 !w-4 shrink-0 accent-[var(--accent)]';
 const field='h-7 w-full rounded-sm border border-subtle bg-transparent px-2 text-xs text-ink select-text';
@@ -53,6 +53,9 @@ export function VideoControls({name}:{name:string}){
     <input type="range" className="accent-[var(--accent)]" min={0} max={MAX_GAIN} step={0.05} value={selected.gain} onChange={e=>setTimelineClipGain(name,selected.id,Number(e.target.value))} data-testid="video-clip-gain"/>
    </label>
    <label className="flex items-center gap-2"><input type="checkbox" className={check} checked={selected.muted} onChange={()=>toggleTimelineClipMute(name,selected.id)} data-testid="video-clip-mute"/>{t('video.clipMute')}</label>
+   {selectedIndex>=0&&selectedIndex<s.clips.length-1&&<label>{t('video.transition')}
+    <input type="number" className={`${field} mt-1`} min={0} max={Math.min(clipDuration(selected),clipDuration(s.clips[selectedIndex+1]))} step={0.1} value={fadeOf(selected)} onChange={e=>setTimelineClipCrossfade(name,selected.id,Number(e.target.value))} data-testid="video-clip-transition-duration"/>
+   </label>}
    <div className="flex flex-wrap gap-2">
     <Button size="compact" variant="outline" disabled={selectedIndex<=0} onClick={()=>moveTimelineClip(name,selected.id,-1)} data-testid="video-clip-left">{t('video.moveLeft')}</Button>
     <Button size="compact" variant="outline" disabled={selectedIndex<0||selectedIndex>=s.clips.length-1} onClick={()=>moveTimelineClip(name,selected.id,1)} data-testid="video-clip-right">{t('video.moveRight')}</Button>

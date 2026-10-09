@@ -65,5 +65,7 @@
  "video.moveRight": "Nach rechts →",
  "video.deleteClip": "Clip entfernen",
  "video.clipHint": "Schnittbereich und Verstärkung gelten nur für diesen Clip; die Originaldatei bleibt unverändert.",
- "video.addOpen": "Aus Datei hinzufügen…"
+ "video.addOpen": "Aus Datei hinzufügen…",
+ "video.transition": "Überblendung zum nächsten (s)",
+ "video.transitionLabel": "Überblendung {seconds} s"
 }

@@ -65,5 +65,7 @@
  "video.moveRight": "Mover →",
  "video.deleteClip": "Remover clipe",
  "video.clipHint": "O corte e o ganho valem só para este clipe; o arquivo original nunca é alterado.",
- "video.addOpen": "Adicionar de arquivo…"
+ "video.addOpen": "Adicionar de arquivo…",
+ "video.transition": "Transição para o próximo (s)",
+ "video.transitionLabel": "Transição {seconds} s"
 }

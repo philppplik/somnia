@@ -1,5 +1,5 @@
 import {useCallback,useRef} from 'react';
-import {clipRanges,timelineDuration,type TimelineClip} from '../../lib/video/timeline';
+import {clipRanges,fadeOf,timelineDuration,type TimelineClip} from '../../lib/video/timeline';
 import {useT} from '../../lib/useT';
 import {VolumeX} from '../../lib/icons';
 /** Ticks adapt to the timeline length so the ruler never crowds. */
@@ -81,6 +81,12 @@ export function VideoTimeline({clips,selectedId,position,missing,onSeek,onSelect
        data-testid={edge==='in'?'video-clip-in':'video-clip-out'}/>;
      })}
     </div>;
+   })}
+   {ranges.slice(1).map((r,j)=>{
+    const d=fadeOf(clips[j]);if(d<=0||duration<=0)return null;
+    return <div key={`fade-${r.clip.id}`} className="pointer-events-none absolute top-0 bottom-0" aria-label={t('video.transitionLabel',{seconds:d.toFixed(1)})}
+     style={{left:`${r.start/duration*100}%`,width:`${d/duration*100}%`,background:'linear-gradient(to top right, transparent 44%, var(--accent) 44%, var(--accent) 56%, transparent 56%), linear-gradient(to bottom right, transparent 44%, var(--accent) 44%, var(--accent) 56%, transparent 56%)'}}
+     data-testid="video-transition"/>;
    })}
    <div className="pointer-events-none absolute top-[-4px] bottom-[-4px] w-0.5 -translate-x-1/2 bg-ink" style={{left:pct(position)}} data-testid="video-playhead"/>
   </div>

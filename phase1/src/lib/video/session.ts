@@ -1,7 +1,7 @@
 import {useSyncExternalStore} from 'react';
 import {VideoEngine,type VideoEngineLike} from './engine';
 import {DEFAULT_FORMAT,exportName,type VideoFormat} from './recipe';
-import {fullClip,isNeutralTimeline,moveClip,rippleDelete,sanitizeClips,setClipEdge,splitAt,timelineDuration,type TimelineClip} from './timeline';
+import {fullClip,isNeutralTimeline,moveClip,rippleDelete,sanitizeClips,setClipEdge,setCrossfade,splitAt,timelineDuration,type TimelineClip} from './timeline';
 import {fileExtension,sniffVideo} from './format';
 import {openVideoDialog} from './open';
 import {getMedia,setActiveMedia,subscribeMedia} from '../media';
@@ -91,6 +91,7 @@ export function deleteTimelineClip(root:string,id:string){
 }
 export const moveTimelineClip=(root:string,id:string,by:number)=>editTimeline(root,clips=>{const i=clips.findIndex(c=>c.id===id);return i<0?clips:moveClip(clips,id,i+by);});
 export const trimTimelineClip=(root:string,id:string,edge:'in'|'out',at:number)=>editTimeline(root,clips=>setClipEdge(clips,id,edge,at));
+export const setTimelineClipCrossfade=(root:string,id:string,seconds:number)=>editTimeline(root,clips=>setCrossfade(clips,id,seconds));
 export function setTimelineClipGain(root:string,id:string,gain:number){
  editTimeline(root,clips=>clips.map(c=>c.id===id?{...c,gain}:c));
 }
