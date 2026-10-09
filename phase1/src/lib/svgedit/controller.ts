@@ -159,7 +159,7 @@ export function setDocument(p:{width?:string;height?:string;viewBox?:string}):bo
 
 // ---- shape to path ------------------------------------------------------------------------------------------
 const K=0.5522847498;
-function shapeD(el:XEl):string|null{
+export function shapeD(el:XEl):string|null{
  const n=(k:string)=>{const v=parseFloat(attr(el,k)??'0');return Number.isFinite(v)?v:0;};
  switch(el.tag){
   case'rect':{const x=n('x'),y=n('y'),w=n('width'),h=n('height');let rx=attr(el,'rx')!==undefined?n('rx'):n('ry'),ry=attr(el,'ry')!==undefined?n('ry'):rx;rx=Math.min(rx,w/2);ry=Math.min(ry,h/2);

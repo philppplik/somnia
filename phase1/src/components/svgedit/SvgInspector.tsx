@@ -4,6 +4,7 @@ import {useAppStore} from '../../store/appStore';
 import {useSvgUi,patchUi} from '../../lib/svgedit/store';
 import * as C from '../../lib/svgedit/controller';
 import {elementAt,parsePathKey,attr,walk} from '../../lib/svgedit/source';
+import {GradientEditor} from './GradientEditor';
 import {translate,scaleAbout} from '../../lib/svgedit/geometry';
 const fmt=(n:number)=>String(Math.round(n*100)/100);
 function Num({label,value,onCommit,disabled,testid}:{label:string;value:number|null;onCommit:(v:number)=>void;disabled?:boolean;testid?:string}){
@@ -38,7 +39,7 @@ export function SvgInspector(){
    {el?.tag==='rect'&&<Num label={t('svg.radius')} testid="svg-radius" value={parseFloat(attr(el,'rx')??'0')||0} onCommit={v=>C.setAttrOn(sel[0],{rx:v>0?fmt(v):null,ry:null})}/>}
    {el?.tag==='text'&&<><label className="svg-field"><span>{t('svg.textContent')}</span><input data-testid="svg-text" aria-label={t('svg.textContent')} defaultValue={C.textOf(el,sc.text)} key={sel[0]+sc.text.length} onBlur={e=>{if(e.target.value!==C.textOf(el,sc.text))C.setTextContent(sel[0],e.target.value);}} onKeyDown={e=>{e.stopPropagation();if(e.key==='Enter')e.currentTarget.blur();}}/></label>
     <Num label={t('svg.fontSize')} value={parseFloat(C.readPaint(el,'font-size')??'16')||16} onCommit={v=>C.setPaint(sel,{'font-size':fmt(v)})}/></>}
-   <h4>{t('svg.fill')}</h4><Paint label={t('svg.fill')} testid="svg-fill" value={paintOf('fill')??'#000000'} onCommit={v=>C.setPaint(sel,{fill:v})}/>
+   <h4>{t('svg.fill')}</h4><GradientEditor keys={sel} fill={paintOf('fill')}/>{!/^url\(/.test(paintOf('fill')??'')&&<Paint label={t('svg.fill')} testid="svg-fill" value={paintOf('fill')??'#000000'} onCommit={v=>C.setPaint(sel,{fill:v})}/>}
    <h4>{t('svg.stroke')}</h4><Paint label={t('svg.stroke')} testid="svg-stroke" value={paintOf('stroke')??'none'} onCommit={v=>C.setPaint(sel,{stroke:v,...(paintOf('stroke-width')===undefined&&v!=='none'?{'stroke-width':'1'}:{})})}/>
    <Num label={t('svg.strokeWidth')} testid="svg-sw" value={parseFloat(paintOf('stroke-width')??'1')||0} onCommit={v=>C.setPaint(sel,{'stroke-width':fmt(v)})}/>
    <Num label={t('svg.opacity')} testid="svg-opacity" value={Math.round(parseFloat(paintOf('opacity')??'1')*100)} onCommit={v=>C.setPaint(sel,{opacity:fmt(Math.min(100,Math.max(0,v))/100)})}/>

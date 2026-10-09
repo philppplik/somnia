@@ -31,3 +31,10 @@
 .svg-swatches{display:flex;flex-wrap:wrap;gap:6px}.svg-swatches button{width:24px;height:24px;border-radius:6px;border:1px solid var(--border-subtle);cursor:pointer;padding:0}
 .svg-code{width:100%;min-height:220px;resize:vertical;font:11px/1.5 var(--mono-font,monospace);padding:8px;border-radius:8px}
 .svg-apply{margin-top:8px;height:28px;padding:0 12px;border-radius:8px;border:1px solid var(--accent);background:var(--accent-soft);color:var(--accent);cursor:pointer}
+
+.svg-grad{display:flex;flex-direction:column;gap:6px;margin-bottom:6px}
+.svg-seg{display:flex;gap:2px;padding:2px;border-radius:8px;background:var(--bg-surface)}
+.svg-seg button{flex:1;height:24px;border:0;border-radius:6px;background:transparent;color:var(--text-secondary);font-size:11px;cursor:pointer}
+.svg-seg button[aria-pressed=true]{background:var(--bg-panel);color:var(--accent);box-shadow:0 1px 2px #0002}
+.svg-seg button:focus-visible{outline:2px solid var(--accent)}
+.svg-grad-bar{height:14px;border-radius:7px;border:1px solid var(--border-subtle)}

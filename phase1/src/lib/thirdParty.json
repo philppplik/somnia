@@ -282,6 +282,12 @@
   "homepage": "https://github.com/xmldom/xmldom"
  },
  {
+  "name": "adler2 (PhotoCraft WASM)",
+  "version": "2.0.1",
+  "license": "0BSD OR MIT OR Apache-2.0",
+  "homepage": "https://crates.io/crates/adler2"
+ },
+ {
   "name": "argparse",
   "version": "3.0.2",
   "license": "PSF-2.0",
@@ -364,6 +370,12 @@
   "version": "1.0.3",
   "license": "MIT",
   "homepage": "git://github.com/isaacs/core-util-is"
+ },
+ {
+  "name": "crc32fast (PhotoCraft WASM)",
+  "version": "1.5.2",
+  "license": "MIT OR Apache-2.0",
+  "homepage": "https://crates.io/crates/crc32fast"
  },
  {
   "name": "crelt",
@@ -486,6 +498,12 @@
   "homepage": "https://101arrowz.github.io/fflate"
  },
  {
+  "name": "flate2 (PhotoCraft WASM)",
+  "version": "1.1.10",
+  "license": "MIT OR Apache-2.0",
+  "homepage": "https://crates.io/crates/flate2"
+ },
+ {
   "name": "function-bind",
   "version": "1.1.2",
   "license": "MIT",
@@ -550,6 +568,12 @@
   "version": "0.6.3",
   "license": "MIT",
   "homepage": "https://github.com/ashtuchkin/iconv-lite"
+ },
+ {
+  "name": "imagetracerjs",
+  "version": "1.2.6",
+  "license": "Unlicense",
+  "homepage": "https://github.com/jankovicsandras/imagetracerjs#readme"
  },
  {
   "name": "immediate",
@@ -690,6 +714,12 @@
   "homepage": "https://github.com/calvinmetcalf/minimalistic-assert"
  },
  {
+  "name": "miniz_oxide (PhotoCraft WASM)",
+  "version": "0.9.1",
+  "license": "MIT OR Zlib OR Apache-2.0",
+  "homepage": "https://crates.io/crates/miniz_oxide"
+ },
+ {
   "name": "Momo Signature (font)",
   "version": "1.0",
   "license": "OFL-1.1",
@@ -730,6 +760,12 @@
   "version": "1.0.11",
   "license": "(MIT AND Zlib)",
   "homepage": "https://github.com/nodeca/pako"
+ },
+ {
+  "name": "paper",
+  "version": "0.12.18",
+  "license": "MIT",
+  "homepage": "http://paperjs.org"
  },
  {
   "name": "parse5",
@@ -787,6 +823,12 @@
  },
  {
   "name": "photocraft-geom (PhotoCraft WASM)",
+  "version": "0.5.0",
+  "license": "MIT OR Apache-2.0",
+  "homepage": "https://github.com/philppplik/photocraft"
+ },
+ {
+  "name": "photocraft-psd (PhotoCraft WASM)",
   "version": "0.5.0",
   "license": "MIT OR Apache-2.0",
   "homepage": "https://github.com/philppplik/photocraft"
@@ -954,6 +996,18 @@
   "homepage": ""
  },
  {
+  "name": "simd-adler32 (PhotoCraft WASM)",
+  "version": "0.3.10",
+  "license": "MIT",
+  "homepage": "https://crates.io/crates/simd-adler32"
+ },
+ {
+  "name": "somnia-craft (PhotoCraft WASM)",
+  "version": "0.1.0",
+  "license": "MIT",
+  "homepage": "https://crates.io/crates/somnia-craft"
+ },
+ {
   "name": "string_decoder",
   "version": "1.1.1",
   "license": "MIT",
@@ -976,6 +1030,18 @@
   "version": "3.7.0",
   "license": "MIT",
   "homepage": "https://github.com/dcastil/tailwind-merge"
+ },
+ {
+  "name": "thiserror (PhotoCraft WASM)",
+  "version": "2.0.21",
+  "license": "MIT OR Apache-2.0",
+  "homepage": "https://crates.io/crates/thiserror"
+ },
+ {
+  "name": "thiserror-impl (PhotoCraft WASM)",
+  "version": "2.0.21",
+  "license": "MIT OR Apache-2.0",
+  "homepage": "https://crates.io/crates/thiserror-impl"
  },
  {
   "name": "tiny-inflate",
@@ -1132,6 +1198,12 @@
   "version": "13.6.33",
   "license": "MIT",
   "homepage": "https://docs.yjs.dev"
+ },
+ {
+  "name": "zlib-rs (PhotoCraft WASM)",
+  "version": "0.6.8",
+  "license": "Zlib",
+  "homepage": "https://crates.io/crates/zlib-rs"
  },
  {
   "name": "zmij (PhotoCraft WASM)",

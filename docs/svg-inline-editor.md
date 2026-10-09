@@ -34,3 +34,18 @@ contour serializer are reused.
 - Groups carrying a class or paint attributes cannot be ungrouped (the look would change); the editor says so.
 - Lock state is per session and is not stored in the file.
 - Other locales (de, es, fr, pt-BR) use machine translations, like the rest of the app.
+
+## B2 (booleans, gradients, trace)
+
+All three are TypeScript, no WASM engine. Decision: paper.js (MIT, lazy chunk) does curve-preserving booleans,
+imagetracerjs (Unlicense, lazy chunk) traces bitmaps. The designcraft engine stays unused; reconsider only if
+resvg-exact export becomes a requirement.
+
+- Booleans: select 2+ paths or basic shapes, Unite / Subtract (front shapes cut from the back one) / Intersect / Exclude.
+  Result is one `<path>` that keeps the back shape's paint and id; one undo step. Text is rejected with a message.
+- Gradients: Inspector > Design > Fill. Solid / Linear / Radial, angle, stops (colour, %, alpha), add/remove stop.
+  Written as normal `<linearGradient>`/`<radialGradient>` in `<defs>` (objectBoundingBox units), edited in place.
+  Gradients that use userSpaceOnUse, gradientTransform or href chains are read when they have stops; geometry of such
+  gradients is rewritten to the editor's bounding-box form on the next edit.
+- Trace: Place image (embeds PNG/JPEG/WebP/GIF as data URI, max 3 MB), select the `<image>`, pick colours, Trace to vector.
+  The result is a `<g id="trace">` of filled paths next to the image (downscaled to 512 px for tracing). The image stays.

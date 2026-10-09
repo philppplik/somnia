@@ -2095,5 +2095,20 @@
   "ctx.distribute.v": "Distribuir verticalmente",
   "ctx.decorative": "Imagem decorativa",
   "ctx.filesLayers": "Arquivos / Camadas",
-  "project.overrideThis": "Only for this project"
+  "project.overrideThis": "Only for this project",
+  "svg.gradient": "Gradiente",
+  "svg.grad.solid": "Sólido",
+  "svg.grad.linear": "Linear",
+  "svg.grad.radial": "Radial",
+  "svg.grad.angle": "Ângulo",
+  "svg.grad.stop": "Ponto",
+  "svg.grad.addStop": "Adicionar ponto",
+  "svg.grad.removeStop": "Remover ponto",
+  "svg.bool.unite": "Unir",
+  "svg.bool.subtract": "Subtrair (frente do fundo)",
+  "svg.bool.intersect": "Interseção",
+  "svg.bool.exclude": "Excluir sobreposição",
+  "svg.placeImage": "Inserir imagem",
+  "svg.trace.colors": "Cores",
+  "svg.trace.run": "Vetorizar"
 }

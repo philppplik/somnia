@@ -2095,5 +2095,20 @@
   "ctx.distribute.v": "Vertikal verteilen",
   "ctx.decorative": "Dekoratives Bild",
   "ctx.filesLayers": "Dateien / Ebenen",
-  "project.overrideThis": "Only for this project"
+  "project.overrideThis": "Only for this project",
+  "svg.gradient": "Verlauf",
+  "svg.grad.solid": "Einfarbig",
+  "svg.grad.linear": "Linear",
+  "svg.grad.radial": "Radial",
+  "svg.grad.angle": "Winkel",
+  "svg.grad.stop": "Farbstopp",
+  "svg.grad.addStop": "Stopp hinzufügen",
+  "svg.grad.removeStop": "Stopp entfernen",
+  "svg.bool.unite": "Vereinen",
+  "svg.bool.subtract": "Subtrahieren (vorne von hinten)",
+  "svg.bool.intersect": "Schnittmenge",
+  "svg.bool.exclude": "Überlappung ausschließen",
+  "svg.placeImage": "Bild platzieren",
+  "svg.trace.colors": "Farben",
+  "svg.trace.run": "In Vektor umwandeln"
 }
