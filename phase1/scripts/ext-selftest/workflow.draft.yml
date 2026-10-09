@@ -31,7 +31,7 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev xvfb
       - run: npm ci
       - name: Package (release build, prod CSP, self-test feature compiled in)
-        run: npm run tauri -- build --features ext-selftest
+        run: npm run tauri -- build --no-bundle --features ext-selftest --config src-tauri/tauri.ext-selftest.conf.json
         shell: bash
       - name: Run packaged app self-test
         shell: bash

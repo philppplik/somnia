@@ -1,0 +1,8 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "ext-selftest",
+  "description": "CI-only. Not listed in tauri.conf.json, so release builds never grant it. Enabled by tauri.ext-selftest.conf.json together with the ext-selftest cargo feature.",
+  "local": true,
+  "windows": ["main"],
+  "permissions": ["allow-selftest-env", "allow-selftest-write", "allow-selftest-exit"]
+}

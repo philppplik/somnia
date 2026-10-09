@@ -1810,6 +1810,42 @@ fn ext_close(reg: State<'_, crate::ext_scheme::ExtRegistry>, ext_id: String, pan
     }
 }
 
+#[derive(Serialize)]
+struct SelftestEnv {
+    out: String,
+    evil: String,
+}
+
+/// L3 self-test gate. Returns None unless built with `--features ext-selftest` AND SOMNIA_EXT_SELFTEST is set.
+/// The command is also not granted by the default capability (see capabilities/ext-selftest.json).
+#[tauri::command]
+fn selftest_env() -> Option<SelftestEnv> {
+    if !cfg!(feature = "ext-selftest") {
+        return None;
+    }
+    let out = std::env::var("SOMNIA_EXT_SELFTEST").ok().filter(|v| !v.is_empty())?;
+    Some(SelftestEnv { out, evil: std::env::var("SOMNIA_EXT_SELFTEST_EVIL").unwrap_or_default() })
+}
+
+/// Writes the report, and only to the exact path given in SOMNIA_EXT_SELFTEST.
+#[tauri::command]
+fn selftest_write(path: String, content: String) -> std::result::Result<(), String> {
+    if !cfg!(feature = "ext-selftest") {
+        return Err("self-test is not enabled".into());
+    }
+    match std::env::var("SOMNIA_EXT_SELFTEST") {
+        Ok(p) if !p.is_empty() && p == path && content.len() <= 1 << 20 => std::fs::write(&path, content).map_err(|e| e.to_string()),
+        _ => Err("path is not the self-test output".into()),
+    }
+}
+
+#[tauri::command]
+fn selftest_exit(app: tauri::AppHandle, code: i32) {
+    if cfg!(feature = "ext-selftest") {
+        app.exit(code);
+    }
+}
+
 fn ext_navigation_plugin<R: tauri::Runtime>() -> tauri::plugin::TauriPlugin<R> {
     // Defence in depth: the main frame must never navigate into extension documents.
     // Sub-frame coverage differs per engine and is verified by the manual test plan.
@@ -1925,6 +1961,9 @@ pub fn run() {
             ext_worker_open,
             ext_worker_url,
             ext_close,
+            selftest_env,
+            selftest_write,
+            selftest_exit,
             provider_http_start,
             provider_http_next,
             provider_http_cancel,

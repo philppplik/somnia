@@ -16,6 +16,7 @@ required-features = ["desktop"]
 
 [features]
 default = ["desktop"]
+ext-selftest = ["desktop"]
 desktop = ["dep:tauri", "dep:tauri-plugin-dialog", "dep:tauri-plugin-updater", "dep:tauri-plugin-process", "dep:tauri-build", "dep:window-vibrancy", "dep:keyring", "dep:reqwest"]
 
 [dependencies]
