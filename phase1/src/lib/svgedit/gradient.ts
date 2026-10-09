@@ -24,7 +24,8 @@ export function gradientSource(id:string,g:Grad):string{
 const sortStops=(g:Grad):Grad=>({...g,stops:[...g.stops].map(s=>({...s,offset:Math.min(1,Math.max(0,s.offset))})).sort((a,b)=>a.offset-b.offset)});
 function uniqueId(root:XEl,base:string){let n=1;while(findById(root,`${base}${n}`))n++;return `${base}${n}`;}
 /** One commit: write the gradient into defs (new, or in place when `reuse` points at one) and point the fill of every key at it. */
-export function applyGradient(keys:string[],grad:Grad,reuse?:string|null):boolean{
+export type PaintProp='fill'|'stroke';
+export function applyGradient(keys:string[],grad:Grad,reuse?:string|null,prop:PaintProp='fill'):boolean{
  const g=sortStops(grad);let {root,text}=C.scan();if(!root)return false;
  const ks=C.topKeys(keys);if(!ks.length)return false;
  const existing=reuse&&findById(root,reuse);
@@ -33,7 +34,7 @@ export function applyGradient(keys:string[],grad:Grad,reuse?:string|null):boolea
  const id=uniqueId(root,'grad');
  // 1. fills
  const fp:Patch[]=[];for(const k of ks){const el=elementAt(root,parsePathKey(k));if(!el||!el.parent)continue;
-  const walkLeaf=(e:XEl)=>{if(C.isLeaf(e)||!e.children.length)fp.push(...attrPatches(e,paintChange(e,`url(#${id})`),text));else e.children.forEach(walkLeaf);};walkLeaf(el);}
+  const walkLeaf=(e:XEl)=>{if(C.isLeaf(e)||!e.children.length)fp.push(...attrPatches(e,paintChange(e,`url(#${id})`,prop),text));else e.children.forEach(walkLeaf);};walkLeaf(el);}
  text=applyPatches(text,fp);const r=scanSvg(text);if(!r.ok)return false;root=r.root;
  // 2. defs
  let defs=root.children.find(c=>c.tag==='defs')??null;
@@ -41,6 +42,6 @@ export function applyGradient(keys:string[],grad:Grad,reuse?:string|null):boolea
  if(!defs){text=insertChild(text,root,root.children[0]??null,`<defs>${gradientSource(id,g)}</defs>`);sel=ks.map(k=>{const p=parsePathKey(k);p[0]+=1;return p.join('.');});}
  else text=insertChild(text,defs,null,gradientSource(id,g));
  return C.commit(text,sel);}
-function paintChange(el:XEl,value:string):Record<string,string|null>{
- const st=attr(el,'style');if(st&&/(^|;)\s*fill\s*:/.test(st))return{style:st.replace(/((?:^|;)\s*fill\s*:)[^;]*/,`$1${value}`)};return{fill:value};}
-export const solidFill=(keys:string[],color:string)=>C.setPaint(keys,{fill:color});
+function paintChange(el:XEl,value:string,prop:PaintProp='fill'):Record<string,string|null>{
+ const st=attr(el,'style');if(st&&new RegExp(`(^|;)\\s*${prop}\\s*:`).test(st))return{style:st.replace(new RegExp(`((?:^|;)\\s*${prop}\\s*:)[^;]*`),`$1${value}`)};return{[prop]:value};}
+export const solidFill=(keys:string[],color:string,prop:PaintProp='fill')=>C.setPaint(keys,{[prop]:color});

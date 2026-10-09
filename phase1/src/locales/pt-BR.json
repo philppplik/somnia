@@ -2223,5 +2223,9 @@
   "finish.settings.theme.sunset-orange-light": "Sunset Orange (claro)",
   "finish.settings.theme.sunset-orange-dark": "Sunset Orange (escuro)",
   "finish.settings.theme.lagoon-teal-light": "Lagoon Teal (claro)",
-  "finish.settings.theme.lagoon-teal-dark": "Lagoon Teal (escuro)"
+  "finish.settings.theme.lagoon-teal-dark": "Lagoon Teal (escuro)",
+  "svg.strokeToPath": "Contorno para caminho (contorno como forma preenchida)",
+  "svg.export.scale": "Escala PNG",
+  "svg.export.white": "Branco",
+  "svg.export.png": "Exportar como PNG"
 }

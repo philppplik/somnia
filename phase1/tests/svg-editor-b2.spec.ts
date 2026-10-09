@@ -24,7 +24,7 @@ test('boolean undo restores the original',async({page})=>{await open(page);await
  await expect.poll(()=>src(page)).toBe(SVG);});
 test('gradient editor: linear, stops, radial, solid, in one defs entry',async({page})=>{await open(page);
  await page.getByTestId('svg-layer').filter({hasText:"box"}).click();
- await page.locator('[data-grad-mode="linear"]').click();
+ await page.locator('[data-grad-prop="fill"][data-grad-mode="linear"]').click();
  await expect.poll(src.bind(null,page)).toMatch(/<defs><linearGradient id="grad1"[^>]*>.*<\/linearGradient><\/defs>/s);
  let out=await src(page);expect(out).toContain('id="box"');expect(out).toMatch(/id="box"[^>]*fill="url\(#grad1\)"|fill="url\(#grad1\)"[^>]*id="box"/);
  await expect(page.getByTestId('svg-stop')).toHaveCount(2);
@@ -33,11 +33,11 @@ test('gradient editor: linear, stops, radial, solid, in one defs entry',async({p
  await expect.poll(async()=>(await src(page)).match(/<stop /g)?.length).toBe(3);
  out=await src(page);expect(out).toMatch(/x1="0.5" y1="0" x2="0.5" y2="1"/);
  await page.screenshot({path:'test-results/b2-gradient-linear.png'});
- await page.locator('[data-grad-mode="radial"]').click();
+ await page.locator('[data-grad-prop="fill"][data-grad-mode="radial"]').click();
  await expect.poll(async()=>(await src(page)).includes('<radialGradient id="grad1"')).toBe(true);
  expect((await src(page)).match(/<defs>/g)?.length).toBe(1);
  await page.screenshot({path:'test-results/b2-gradient-radial.png'});
- await page.locator('[data-grad-mode="solid"]').click();
+ await page.locator('[data-grad-prop="fill"][data-grad-mode="solid"]').click();
  await expect.poll(async()=>(await src(page)).includes('id="box" x="60" y="60" width="140" height="140" fill="#2a6bff"')).toBe(true);});
 test('bitmap trace turns an embedded image into vector paths',async({page})=>{
  await open(page,`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" width="400" height="300"></svg>\n`,'t.svg');

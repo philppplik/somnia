@@ -65,3 +65,19 @@ resvg-exact export becomes a requirement.
   One commit, one undo. A mask uses the shape's own paint as luminance (white shows, black hides; a gradient fill gives a fade).
   Release (button or Inspector) puts the shapes back as visible siblings, removes the reference and the unused def.
   Editing a clip shape in place is not supported, release and redo. Clips with objectBoundingBox units are refused on release.
+
+## B4 (stroke gradients, stroke to path, PNG export)
+
+- Stroke gradients: Inspector > Design > Stroke has the same Solid / Linear / Radial editor as Fill. The gradient is a normal
+  `<linearGradient>`/`<radialGradient>` in `<defs>` and `stroke="url(#id)"`. Gradients use objectBoundingBox units, so a
+  perfectly horizontal or vertical `<line>` (zero-size box) will not show a gradient stroke. That is SVG behaviour, not an editor bug.
+- Stroke to path: turns the stroke into a filled outline (paperjs-offset on paper.js, MIT, lazy chunk). A shape that also has a fill
+  keeps it (stroke attributes removed) and the outline is added right after it; a stroke-only shape is replaced in place (id kept).
+  Joins (miter/round/bevel), miter limit and butt/round/square caps are honoured. Dashed strokes are refused with a message.
+  A gradient stroke becomes a gradient fill on the outline, in the outline's own bounding box (the look shifts slightly).
+  One commit, one undo.
+- PNG export: options bar, scale 1x-4x and optional white background. Limit 64 megapixels. The backend sits behind
+  `SvgRasterizer` (src/lib/svgedit/raster.ts). Built in is the browser canvas. A native backend (resvg or CoreGraphics) registers
+  with `registerRasterizer({id:'native',...})` and is then preferred automatically; none ships yet. The canvas backend uses the
+  webview's own SVG renderer, so fonts and filters match what the editor shows, but output can differ slightly between webviews.
+  Tests do not depend on a native backend.

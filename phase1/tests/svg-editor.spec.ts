@@ -41,7 +41,7 @@ test('resize handle, inspector fields and colour',async({page})=>{await open(pag
  await expect(page.getByTestId('svg-w')).toHaveValue('160');
  const se=page.locator('[data-h="se"]');const hb=await se.boundingBox();await page.mouse.move(hb!.x+4,hb!.y+4);await page.mouse.down();await page.mouse.move(hb!.x+44,hb!.y+34,{steps:5});await page.mouse.up();
  await expect.poll(async()=>(await src(page)).match(/id="card"[^>]*/)?.[0]).not.toContain('width="160"');
- await page.locator('[data-grad-mode="solid"]').click();await page.getByTestId('svg-fill').fill('#00aa55');await page.getByTestId('svg-fill').blur();
+ await page.locator('[data-grad-prop="fill"][data-grad-mode="solid"]').click();await page.getByTestId('svg-fill').fill('#00aa55');await page.getByTestId('svg-fill').blur();
  expect(await src(page)).toContain('fill="#00aa55"');
  await page.getByTestId('svg-radius').fill('30');await page.getByTestId('svg-radius').blur();expect(await src(page)).toContain('rx="30"');
  await page.screenshot({path:'test-results/svg-3-resized.png'});});

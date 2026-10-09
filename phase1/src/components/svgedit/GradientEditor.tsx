@@ -1,17 +1,17 @@
 import {useT} from '../../lib/useT';
 import {Button} from '../ui/button';
 import * as C from '../../lib/svgedit/controller';
-import {readGradient,applyGradient,solidFill,urlId,DEFAULT_GRAD,type Grad,type Stop} from '../../lib/svgedit/gradient';
+import {readGradient,applyGradient,solidFill,urlId,DEFAULT_GRAD,type Grad,type Stop,type PaintProp} from '../../lib/svgedit/gradient';
 import {Plus,Trash2} from '../../lib/icons';
-export function GradientEditor({keys,fill}:{keys:string[];fill:string|undefined}){
+export function GradientEditor({keys,fill,prop='fill'}:{keys:string[];fill:string|undefined;prop?:PaintProp}){
  const {t}=useT();const {root}=C.scan();const id=urlId(fill);const grad=id&&root?readGradient(root,id):null;
- const set=(g:Grad)=>applyGradient(keys,g,grad?id:null);
+ const set=(g:Grad)=>applyGradient(keys,g,grad?id:null,prop);
  const mode=grad?grad.type:'solid';
  const css=grad?`linear-gradient(90deg,${[...grad.stops].sort((a,b)=>a.offset-b.offset).map(s=>`${s.color} ${Math.round(s.offset*100)}%`).join(',')})`:'none';
  const stopSet=(i:number,p:Partial<Stop>)=>grad&&set({...grad,stops:grad.stops.map((s,j)=>j===i?{...s,...p}:s)});
  const hex=(c:string)=>/^#[0-9a-f]{6}$/i.test(c)?c:'#000000';
- return <div data-testid="svg-gradient" className="svg-grad">
-  <div className="svg-seg" role="group" aria-label={t('svg.gradient')}>{(['solid','linear','radial'] as const).map(m=><button key={m} data-grad-mode={m} aria-pressed={mode===m} onClick={()=>{if(m===mode)return;if(m==='solid'){solidFill(keys,grad?.stops[0].color??'#000000');return;}
+ return <div data-testid={prop==='fill'?"svg-gradient":"svg-gradient-"+prop} className="svg-grad">
+  <div className="svg-seg" role="group" aria-label={t('svg.gradient')}>{(['solid','linear','radial'] as const).map(m=><button key={m} data-grad-mode={m} data-grad-prop={prop} aria-pressed={mode===m} onClick={()=>{if(m===mode)return;if(m==='solid'){solidFill(keys,grad?.stops[0].color??'#000000',prop);return;}
    const base=grad??DEFAULT_GRAD;const cur=/^#/.test(fill??'')?fill!:null;set({...base,type:m,stops:grad||!cur?base.stops:[{...base.stops[0],color:cur},base.stops[1]]});}}>{t('svg.grad.'+m)}</button>)}</div>
   {grad&&<>
    <div className="svg-grad-bar" style={{background:css}} aria-hidden="true"/>
