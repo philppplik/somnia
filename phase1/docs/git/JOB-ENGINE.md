@@ -1,0 +1,27 @@
+# Shared Git job engine (R1)
+
+Native API: `somnia_desktop::git::{context,command,jobs}`. These modules are host-neutral; no Tauri or renderer dependency. The legacy local commands are not migrated by this slice.
+
+## Stable integration surface
+
+- `RepoContext::discover(project: &Path, workspace: WorkspaceState) -> Result<RepoContext, GitJobError>` discovers canonical root, common Git directory and worktree Git directory using system Git, including linked worktrees. `repo_id` hashes the canonical common directory; `checkout_id` hashes the canonical root. Includes `branch`, `head`, `project_prefix`, optional `task_id`, `workspace`. Detached/unborn branches have optional HEAD/branch.
+- `WorkspaceState { generation: u64, editor_state_known: bool, editor_leases: Vec<String>, dirty_buffers: Vec<String>, ai_holds: Vec<String> }`. Default is **unknown**, not clean. Hosts must send authoritative editor state. A watcher can bump generation but cannot clear unsaved state.
+- `GitJobRunner::new(lock_directory: PathBuf)` requires a private, same-user directory shared by desktop and CLI. `update_workspace(root: &Path, state: WorkspaceState)` publishes editor state; `workspace(root)` reads it. IPC peer authentication and cross-host editor-state exchange are host responsibilities. OS file locks coordinate processes, not editor buffers.
+- `runner.submit(context, GitJobRequest, operation)` queues immediately and returns `GitJobHandle`. Operation is `FnOnce(&JobExecution) -> Result<GitJobResult, GitJobError> + Send + 'static`. `handle.cancel()`, async `handle.wait() -> GitJobOutcome`, and `handle.progress() -> Vec<GitJobProgress>`.
+- `GitJobRequest::new(action, scope, origin)` initializes an operation UUID. Fields: `request_id`, `action`, `scope: JobScope::{Read,CheckoutWrite,SharedWrite}`, `origin: JobOrigin::{Human,Agent}`, optional `account_id`, `auth_route`, `plan_id`. None are credentials. Plan/apply layers own exact content/identity/destination review binding; a plan ID alone is not approval.
+- `JobExecution::run(&GitCommand) -> Result<GitCommandOutput, GitJobError>` runs argv, no shell. `GitCommand::new(iterable args)` defaults local/read, 30 seconds, bounded output; `network(may_publish: bool)` removes local deadline, `timeout(Duration)` sets an explicit one, `stdin(Vec<u8>)`, `output_limit(usize)`, `write()` sets local-write mode. Network transport layers must install their operation-scoped credential helper before use; this slice provides no token transport or account fallback.
+- `GitCommandOutput { code: Option<i32>, stdout: Vec<u8>, stderr: Vec<u8>, truncated: bool }` is native-only, not serializable/loggable. `run` returns all exit codes for parsers; `checked` maps a nonzero exit to typed, secret-free errors. Treat `truncated` as a parser error for complete-object workflows.
+- `GitJobResult { shas: Vec<String>, destinations: Vec<String> }` contains actual verified outputs, populated by the semantic operation, not inferred from request metadata.
+- Outcomes: `Success`, `Failed`, `NeedsInput`, `StalePlan`, `Uncertain`, serde tagged `outcome` in kebab-case. Error codes distinguish missing Git/identity, signing, auth/reconnect, SSO/permission, protection, dirty state, divergence, transport, cancellation, timeout, stale plan, I/O and unsupported commands.
+
+## Lock and execution rules
+
+Jobs use blocking workers, not the app file-service mutex. All jobs take a shared common-directory lock; SharedWrite takes exclusive common-directory lock. Reads take shared checkout lock; both write scopes take exclusive checkout lock. Lock order is common directory then checkout. Different checkout writes can overlap, shared refs/config writes cannot. FIFO ticket order is enforced for conflicting jobs within a runner; OS locks provide cross-process exclusion (not cross-process FIFO). Cancellation works while queued and while running. Native process trees are stopped on cancellation/deadline; cancellation after a potentially publishing command starts is uncertain and requires remote reconciliation, never an automatic retry.
+
+Workspace generation is checked at execution and before each Git command. Agent jobs, including reads, reject unknown editor state, unsaved buffers and AI holds. Human jobs retain manual disk behavior. Hosts must coordinate editor leases and transmit changes while jobs run; this module does not invent a remote authority grant or freeze React buffers.
+
+Commands are trusted native calls, not a raw renderer/CLI command endpoint. Semantic layers must validate refs/pathspecs/destinations, choose lock scope and read/write mode correctly, disable unwanted external diff/textconv, enforce trust, establish safety refs and bind reviewed content. No raw argv or child output appears in events/errors. No secrets in argv, environment, URLs or logs; only allowlisted ambient environment is inherited. Process output is drained concurrently with bounded retention; stdout/stderr and stdin cannot deadlock each other.
+
+## S2 boundary
+
+S2 can add native semantic functions using the above API without changing S1: immutable `git_diff_refs` in Read jobs, safety writes in SharedWrite jobs, safety listing in Read jobs, status refresh through `update_workspace` with generation advancement. S2 must preserve editor-state fields when invalidating generations. Old desktop APIs still have their old runner and guards until a host integration switches them to this service.
