@@ -5,12 +5,12 @@ import {activityTabs,canInstall,groupByDay,resultKey,timeOf,toActivityFilter,typ
 import type {ActivityEvent} from '../../lib/extensions/securityActivity';
 import {InlineError,Logo,VerifiedBadge,useApiLabel,useInlineError} from './parts';
 
-const ERR_KEYS:Record<string,string>={malformed:'ext.add.err.malformed',wrongType:'ext.add.err.wrongType',unknownPermission:'ext.add.err.unknownPermission',missingEntry:'ext.add.err.missingEntry',unsupportedApp:'ext.add.err.unsupportedApp',badHash:'ext.add.err.badHash',duplicate:'ext.add.err.duplicate',failed:'ext.add.err.failed'};
+const ERR_KEYS:Record<string,string>={malformed:'ext.add.err.malformed',wrongType:'ext.add.err.wrongType',unknownPermission:'ext.add.err.unknownPermission',missingEntry:'ext.add.err.missingEntry',unsupportedApp:'ext.add.err.unsupportedApp',badHash:'ext.add.err.badHash',duplicate:'ext.add.err.duplicate',blocked:'ext.add.err.blocked',failed:'ext.add.err.failed'};
 
 export function CandidateReview({c,host,onInstalled}:{c:Extract<CandidateState,{kind:'ready'}>;host:ExtensionsPopupHost;onInstalled:()=>void}){
  const {t}=useT();const [reviewed,setReviewed]=useState(false);const [busy,setBusy]=useState(false);const {error,setError,id}=useInlineError();
  const ok=canInstall(c,host.developerMode(),reviewed);
- const go=async()=>{setBusy(true);setError(null);try{await host.install(c.id);onInstalled();}catch(e){setError(e instanceof Error&&e.message&&e.message!=='failed'?e.message:t('ext.add.err.failed'));}finally{setBusy(false);}};
+ const go=async()=>{setBusy(true);setError(null);try{await host.install(c.id);onInstalled();}catch(e){if(e instanceof Error&&e.message==='cancelled')return;setError(e instanceof Error&&e.message&&e.message!=='failed'?e.message:t('ext.add.err.failed'));}finally{setBusy(false);}};
  return <section className="ext-panel" aria-labelledby="ext-rv-h"><h3 id="ext-rv-h" className="ext-eyebrow">{t('ext.add.review')}</h3>
   <dl className="ext-dl"><dt>{t('ext.add.identity')}</dt><dd>{c.name} {c.version} <code>{c.id}</code></dd><dt>{t('ext.add.origin')}</dt><dd>{c.origin}</dd><dt>{t('ext.add.engine')}</dt><dd>{c.engine}</dd><dt>{t('ext.add.verification')}</dt><dd>{t(c.verification==='signed-match'?'ext.source.match':c.verification==='invalid'?'ext.source.invalid':'ext.source.noMatch')}</dd></dl>
   {c.native?<div className="ext-callout" role="alert"><strong>{t('ext.add.native.title')}</strong> {host.developerMode()?t('ext.add.native.body'):t('ext.add.native.gate')}</div>:null}
@@ -23,11 +23,16 @@ export function CandidateReview({c,host,onInstalled}:{c:Extract<CandidateState,{
 
 export function ExtensionCandidateInput({host,onInstalled}:{host:ExtensionsPopupHost;onInstalled:()=>void}){
  const {t}=useT();const [text,setText]=useState('');const [state,setState]=useState<CandidateState>({kind:'empty'});const [hover,setHover]=useState(false);const fileRef=useRef<HTMLInputElement>(null);const folderRef=useRef<HTMLInputElement>(null);
- const inspect=async(manifestText:string,packageName?:string)=>{setState({kind:'inspecting'});try{setState(await host.inspect({manifestText,packageName}));}catch{setState({kind:'error',code:'failed'});}};
+ const inspect=async(manifestText:string,packageName?:string,extra?:{bytes?:Uint8Array;files?:Record<string,Uint8Array>})=>{setState({kind:'inspecting'});try{setState(await host.inspect({manifestText,packageName,...extra}));}catch{setState({kind:'error',code:'failed'});}};
  const onFile=async(files:FileList|File[]|null)=>{const f=files?Array.from(files):[];if(f.length===0)return;const one=f[0];
   if(f.length===1&&!one.name.endsWith('.somniax')&&!one.name.endsWith('.zip')&&!one.name.endsWith('.toml')&&!one.name.endsWith('.json')){setState({kind:'error',code:'wrongType'});return;}
   if(one.name.endsWith('.toml')||one.name.endsWith('.json')){const body=await one.text();setText(body);await inspect(body,one.name);return;}
-  await inspect(text,one.name);};
+  if(f.length>1||(one as File&{webkitRelativePath?:string}).webkitRelativePath){
+   const files:Record<string,Uint8Array>={};let total=0;
+   for(const x of f){total+=x.size;if(total>25*1024*1024){setState({kind:'error',code:'failed'});return;}files[(x as File&{webkitRelativePath?:string}).webkitRelativePath||x.name]=new Uint8Array(await x.arrayBuffer());}
+   await inspect('',one.name,{files});return;}
+  if(one.size>25*1024*1024){setState({kind:'error',code:'failed'});return;}
+  await inspect('',one.name,{bytes:new Uint8Array(await one.arrayBuffer())});};
  const err=state.kind==='error'?state:null;
  return <div className="ext-view ext-add">
   <div className="ext-split">

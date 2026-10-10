@@ -2422,6 +2422,7 @@
   "ext.add.err.unknownPermission": "El manifiesto usa un permiso desconocido.",
   "ext.add.err.missingEntry": "Falta un archivo de entrada.",
   "ext.add.err.unsupportedApp": "Esta extensión necesita otra versión de Somnia.",
+  "ext.add.err.blocked": "Esta versión está en la lista de bloqueo de seguridad y no se puede instalar.",
   "ext.add.err.badHash": "Falló la comprobación de hash o firma. No hay forma de omitirla.",
   "ext.add.err.duplicate": "Ya hay una extensión instalada con este ID.",
   "ext.add.err.failed": "La instalación falló. Se conserva tu texto.",

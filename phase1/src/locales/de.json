@@ -2422,6 +2422,7 @@
   "ext.add.err.unknownPermission": "Das Manifest nutzt eine unbekannte Berechtigung.",
   "ext.add.err.missingEntry": "Eine Einstiegsdatei fehlt.",
   "ext.add.err.unsupportedApp": "Diese Erweiterung braucht eine andere Somnia-Version.",
+  "ext.add.err.blocked": "Diese Version steht auf der Sicherheits-Sperrliste und kann nicht installiert werden.",
   "ext.add.err.badHash": "Hash- oder Signaturprüfung fehlgeschlagen. Es gibt keine Umgehung.",
   "ext.add.err.duplicate": "Eine Erweiterung mit dieser ID ist bereits installiert.",
   "ext.add.err.failed": "Installation fehlgeschlagen. Dein Text bleibt erhalten.",

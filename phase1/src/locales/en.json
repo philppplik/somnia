@@ -2422,6 +2422,7 @@
   "ext.add.err.unknownPermission": "The manifest uses an unknown permission.",
   "ext.add.err.missingEntry": "An entry file is missing.",
   "ext.add.err.unsupportedApp": "This extension needs a different Somnia version.",
+  "ext.add.err.blocked": "This version is on the security blocklist and cannot be installed.",
   "ext.add.err.badHash": "Hash or signature check failed. There is no way around this.",
   "ext.add.err.duplicate": "An extension with this ID is already installed.",
   "ext.add.err.failed": "Installing failed. Your text is kept.",

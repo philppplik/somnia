@@ -125,7 +125,7 @@ export function describeChange(code:string):{key:string; arg?:string}{
 /** Add flow state machine inputs. Manifest-only text never enables install. */
 export type CandidateState=
  |{kind:'empty'}|{kind:'inspecting'}
- |{kind:'error'; code:'malformed'|'wrongType'|'unknownPermission'|'missingEntry'|'unsupportedApp'|'badHash'|'duplicate'|'failed'; detail?:string; line?:number; column?:number}
+ |{kind:'error'; code:'malformed'|'wrongType'|'unknownPermission'|'missingEntry'|'unsupportedApp'|'badHash'|'duplicate'|'blocked'|'failed'; detail?:string; line?:number; column?:number}
  |{kind:'manifestOnly'; id:string; name:string; version:string}
  |{kind:'mismatch'; pastedHash:string; packageHash:string}
  |{kind:'ready'; id:string; name:string; version:string; origin:string; engine:string; verification:SourceInfo['verification']; native:boolean; grants:GrantRow[]}

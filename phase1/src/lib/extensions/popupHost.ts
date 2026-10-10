@@ -27,7 +27,9 @@ export interface ExtensionsPopupHost {
   exportActivity(filter:ActivityFilter):Promise<string|null>;
   copyText(text:string):Promise<void>;
   openExternal(url:string):Promise<void>;
-  inspect(input:{manifestText:string; packageName?:string}):Promise<CandidateState>;
+  /** `bytes` is a picked .somniax/.zip, `files` a picked folder (relative paths). Otherwise `manifestText` is judged. */
+  inspect(input:{manifestText:string; packageName?:string; bytes?:Uint8Array; files?:Record<string,Uint8Array>}):Promise<CandidateState>;
+  /** Opens the trusted consent review for the last inspected candidate. Resolves only after it is committed; rejects with message 'cancelled' when the user closes the review. */
   install(candidateId:string):Promise<void>;
   browse(signal?:AbortSignal):Promise<BrowseResult>;
   reviewInstall(id:string):Promise<CandidateState>;

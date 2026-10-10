@@ -132,6 +132,16 @@ export class PermissionBroker {
     const e=this.entry(id);e.folders[operation]=(e.folders[operation]??[]).filter(p=>p!==canonicalFolder);this.persist();await this.invalidate(id,'folder-revoked');
   }
   /** Called only by the host's verified-index blocklist controller. Retains all data and secrets. */
+  /** User re-enables a disabled extension. A policy block stays in force until the blocklist clears it. */
+  async enable(id:string):Promise<void> {
+    const e=this.entry(id); if(!e.approved) throw new PermissionError('E_PERMISSION_DENIED'); if(e.blocked) throw new PermissionError('E_BLOCKLISTED');
+    e.enabled=true;this.persist();await this.invalidate(id,'enabled');
+  }
+  /** Forgets approval, grants and folders for an uninstalled extension. Package bytes and data are removed by the caller. */
+  async forget(id:string):Promise<void> {
+    if(own(this.state.extensions,id)) delete this.state.extensions[id];
+    this.persist();await this.invalidate(id,'removed');
+  }
   async setBlocked(id:string,reason:string|null):Promise<void> {
     const e=this.entry(id); e.blocked=reason??undefined;if(reason)e.enabled=false;this.persist();
     if(reason) {await this.invalidate(id,'blocklisted');await this.hooks.notify?.({extensionId:id,code:'E_BLOCKLISTED',message:reason});}
