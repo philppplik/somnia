@@ -21,9 +21,12 @@ use std::process::{Command, Stdio};
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 pub mod variants;
-pub mod context;
 pub mod command;
+pub mod context;
 pub mod jobs;
+pub mod ref_reads;
+pub mod ref_contract;
+pub mod invalidation;
 
 const READ_TIMEOUT: Duration = Duration::from_secs(30);
 const LOG_TIMEOUT: Duration = Duration::from_secs(60);
@@ -1604,6 +1607,9 @@ fn ls_tree(root: &Path, rev: &str, scope: &[String]) -> GResult<BTreeSet<String>
 /// Captures the project subtree including untracked, non-ignored files and
 /// leaves the user's index and worktree untouched (contract rule 7).
 fn safety_copy(root: &Path, info: &GitRepoInfo, scope: &[String]) -> GResult<(String, GitVersion)> {
+    safety_copy_for(root, info, scope, "other")
+}
+fn safety_copy_for(root: &Path, info: &GitRepoInfo, scope: &[String], operation: &str) -> GResult<(String, GitVersion)> {
     let stamp = unix_now();
     let nanos = SystemTime::now()
         .duration_since(UNIX_EPOCH)
@@ -1646,7 +1652,10 @@ fn safety_copy(root: &Path, info: &GitRepoInfo, scope: &[String]) -> GResult<(St
         ct_args.push(head.clone().into());
     }
     let ct_refs: Vec<&OsStr> = ct_args.iter().map(|a| a.as_os_str()).collect();
-    let message = format!("Somnia safety copy {}", stamp);
+    let relative_scope: Vec<String> = scope.iter().filter_map(|path| {
+        if path == "." || path == &info.project_prefix { None } else { strip_prefix(&info.project_prefix, path).map(str::to_owned) }
+    }).collect();
+    let message = format!("Somnia safety copy {}\n\nSomnia-Safety-Scope: {}\nSomnia-Safety-Operation: {}\n", stamp, serde_json::to_string(&relative_scope).unwrap_or_default(), operation);
     let ct = run_git(root, &ct_refs, Mode::Write, READ_TIMEOUT, Some(message.as_bytes()), &[])?;
     if ct.code != Some(0) {
         let combined = format!("{}\n{}", ct.stderr, String::from_utf8_lossy(&ct.stdout)).to_lowercase();
@@ -1659,10 +1668,10 @@ fn safety_copy(root: &Path, info: &GitRepoInfo, scope: &[String]) -> GResult<(St
         return Err(GitError::detail(GitErrorCode::Unknown, "Could not create the safety copy", ct.stderr));
     }
     let commit = String::from_utf8_lossy(&ct.stdout).trim().to_string();
-    let refname = format!("refs/somnia/safety/{stamp}");
+    let refname = format!("refs/somnia/safety/{stamp}-{}-{nanos}-{seq}", std::process::id());
     git_write(
         root,
-        &[OsStr::new("update-ref"), OsStr::new(&refname), OsStr::new(&commit)],
+        &[OsStr::new("update-ref"), OsStr::new(&refname), OsStr::new(&commit), OsStr::new(&"0".repeat(commit.len()))],
         None,
         &[],
     )?;
@@ -1717,7 +1726,7 @@ pub fn restore_as_new_version(
         return Err(GitError::new(GitErrorCode::NothingToCommit, "The project already matches that version"));
     }
 
-    let (refname, safety_version) = safety_copy(&root, info, &scope)?;
+    let (refname, safety_version) = safety_copy_for(&root, info, &scope, "restore")?;
     // Everything after this point keeps the safety copy; failures report it.
     let finish = |result: GResult<GitRestoreResult>| -> GResult<GitRestoreResult> {
         result.map_err(|e| {

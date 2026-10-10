@@ -1,4 +1,5 @@
 import {useEffect, useState} from 'react';
+import {useGitInvalidation} from './useGitInvalidation';
 import {History, ShieldCheck} from 'lucide-react';
 import {ConfirmShell, FileCard} from '../ConfirmShell';
 import {Button} from '../ui/button';
@@ -10,13 +11,13 @@ export interface HistoryTabProps {
  onRestored: (outcome: RestoreOutcome) => Promise<void>;
 }
 export function HistoryTab({controller, onRestored}: HistoryTabProps) {
- const {t, locale} = useT();
+ const {t, locale} = useT(); const revision=useGitInvalidation();
  const [page, setPage] = useState<HistoryPage | null>(null), [review, setReview] = useState<RestoreReview | null>(null);
  const [busy, setBusy] = useState(false), [error, setError] = useState(''), [notice, setNotice] = useState('');
  useEffect(() => {let active = true; setPage(null); setReview(null); setError('');
   controller.load().then(p => {if (active) setPage(p);}).catch(e => {if (active) setError(String(e));});
   return () => {active = false;};
- }, [controller]);
+ }, [controller,revision]);
  const title = (entry: TimelineEntry) => entry.kind === 'version' ? entry.version.subject : entry.recovery.record.path;
  const startReview = async (entry: TimelineEntry) => {setBusy(true); setError(''); setNotice(''); try {setReview(await controller.review(entry));} catch(e) {setError(String(e));} finally {setBusy(false);}};
  const restore = async () => {

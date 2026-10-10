@@ -235,6 +235,17 @@ impl GitJobRunner {
         workspaces.insert(root, state);
         Ok(())
     }
+    /// Atomic watcher hint: preserves every editor field even if an editor update races it.
+    /// This is invalidation only, never clean-state assertion or write permission.
+    pub fn invalidate_workspace(&self, root: &Path) -> Result<u64, GitJobError> {
+        let root = root
+            .canonicalize()
+            .map_err(|_| GitJobError::new(GitJobErrorCode::Io))?;
+        let mut workspaces = self.inner.workspaces.lock().unwrap();
+        let state = workspaces.entry(root).or_default();
+        state.generation = state.generation.saturating_add(1);
+        Ok(state.generation)
+    }
     pub fn workspace(&self, root: &Path) -> Option<WorkspaceState> {
         let root = root.canonicalize().ok()?;
         self.inner.workspaces.lock().unwrap().get(&root).cloned()

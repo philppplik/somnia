@@ -689,7 +689,7 @@ pub fn combine_start(project_root: &Path, req: &GitCombineStartRequest, trust: &
         return Err(blocked("These variants share no common history", "unrelated-histories"));
     }
     let scope = vec![if info.project_prefix.is_empty() { ".".to_string() } else { info.project_prefix.clone() }];
-    let (_refname, safety) = safety_copy(&root, info, &scope)?;
+    let (_refname, safety) = safety_copy_for(&root, info, &scope, "combine")?;
     let proposed = format!("Combined variant {name} into {current}");
     let target = variant_ref(&name);
 
