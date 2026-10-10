@@ -84,17 +84,15 @@ pub fn set_intake_policy(
     Ok(())
 }
 
-/// Run one intake command while Backend is locked, then emit pending events
-/// through the canonical sink exactly once. The outer cmd wrapper must preserve
-/// a nonempty incident_id WITHOUT emitting a second causal failure.
-#[allow(clippy::result_large_err)] // Canonical command wire DTO, shared with cmd.rs.
-pub fn execute_with<T>(
+/// Drain the queue's native events into the sink exactly once and return the incident id of the
+/// event that matches `error` (empty when none). Every path that mutates the queue, including the
+/// single-instance callback and cold-start worker, flushes through here so no event is logged twice
+/// or dropped, and the command wrapper then sees a nonempty incident_id and does not re-log.
+pub fn flush_events(
     sink: &dyn crate::applog::EventSink,
     queue: &mut OpenQueue,
-    run: impl FnOnce(&mut OpenQueue) -> Result<T, IntakeError>,
-) -> Result<T, crate::app_command_error::AppCommandError> {
-    let result = run(queue);
-    let error = result.as_ref().err();
+    error: Option<&IntakeError>,
+) -> String {
     let mut incident_id = String::new();
     for event in queue.take_events() {
         let context = serde_json::json!({ "ordinal": event.ordinal, "cause": event.cause, "count": event.count,
@@ -127,6 +125,20 @@ pub fn execute_with<T>(
             }
         }
     }
+    incident_id
+}
+
+/// Run one intake command while Backend is locked, then emit pending events
+/// through the canonical sink exactly once. The outer cmd wrapper must preserve
+/// a nonempty incident_id WITHOUT emitting a second causal failure.
+#[allow(clippy::result_large_err)] // Canonical command wire DTO, shared with cmd.rs.
+pub fn execute_with<T>(
+    sink: &dyn crate::applog::EventSink,
+    queue: &mut OpenQueue,
+    run: impl FnOnce(&mut OpenQueue) -> Result<T, IntakeError>,
+) -> Result<T, crate::app_command_error::AppCommandError> {
+    let result = run(queue);
+    let incident_id = flush_events(sink, queue, result.as_ref().err());
     result.map_err(|error| {
         let mut wire = crate::app_command_error::AppCommandError::new(
             error.id,

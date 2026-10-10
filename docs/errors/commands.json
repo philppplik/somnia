@@ -5,7 +5,7 @@
     {
       "name": "ack_open_request",
       "domain": "intake",
-      "status": "planned",
+      "status": "native",
       "wrapped": true,
       "boundary": "B7",
       "params": [
@@ -210,7 +210,7 @@
     {
       "name": "claim_open_request",
       "domain": "intake",
-      "status": "planned",
+      "status": "native",
       "wrapped": true,
       "boundary": "B7",
       "params": [
@@ -316,7 +316,7 @@
     {
       "name": "drain_open_requests",
       "domain": "intake",
-      "status": "planned",
+      "status": "native",
       "wrapped": true,
       "boundary": "B7",
       "params": [],
@@ -413,7 +413,7 @@
     {
       "name": "get_intake_policy",
       "domain": "intake",
-      "status": "planned",
+      "status": "native",
       "wrapped": true,
       "boundary": "B7",
       "params": [],
@@ -943,15 +943,6 @@
       ]
     },
     {
-      "name": "open_startup_file",
-      "domain": "app",
-      "status": "native",
-      "wrapped": false,
-      "boundary": "B1",
-      "params": [],
-      "args": []
-    },
-    {
       "name": "pdf_save_pick",
       "domain": "fs",
       "status": "native",
@@ -1024,7 +1015,7 @@
     {
       "name": "read_by_grant",
       "domain": "intake",
-      "status": "planned",
+      "status": "native",
       "wrapped": true,
       "boundary": "B7",
       "params": [
@@ -1202,7 +1193,7 @@
     {
       "name": "release_candidate",
       "domain": "intake",
-      "status": "planned",
+      "status": "native",
       "wrapped": true,
       "boundary": "B7",
       "params": [
@@ -1215,7 +1206,7 @@
     {
       "name": "retry_open_item",
       "domain": "intake",
-      "status": "planned",
+      "status": "native",
       "wrapped": true,
       "boundary": "B7",
       "params": [
@@ -1286,7 +1277,7 @@
     {
       "name": "set_intake_policy",
       "domain": "intake",
-      "status": "planned",
+      "status": "native",
       "wrapped": true,
       "boundary": "B7",
       "params": [

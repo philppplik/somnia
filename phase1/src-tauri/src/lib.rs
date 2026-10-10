@@ -3,8 +3,6 @@ mod desktop;
 #[cfg(any(feature = "desktop", test))]
 mod drop_grant;
 #[cfg(any(feature = "desktop", test))]
-mod startup_file;
-#[cfg(any(feature = "desktop", test))]
 mod image_io;
 #[cfg(any(feature = "desktop", test))]
 mod pdf_io;
@@ -14,6 +12,7 @@ pub mod applog;
 pub mod app_command_error;
 pub mod cmd;
 pub mod ignore;
+pub mod intake;
 pub mod service;
 #[cfg(feature = "desktop")]
 pub use desktop::run;

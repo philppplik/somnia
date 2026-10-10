@@ -15,8 +15,8 @@ struct Backend {
     sync: Option<SyncFolder>,
     projects: BTreeMap<String, Project>,
     drop_grant: Option<DropGrant>,
-    /// File the OS asked us to open at launch (file association / "Open with"). One-shot.
-    startup_file: Option<std::path::PathBuf>,
+    /// Bounded native open-request queue (cold argv, second instance). Same mutex as `projects`.
+    intake: crate::intake::queue::OpenQueue,
 }
 type Shared = Arc<Mutex<Backend>>;
 #[derive(Serialize)]
@@ -801,41 +801,134 @@ async fn choose_file(
     })
     .await
 }
-/// Open the file the OS passed at launch (file association). One-shot: the stored path is
-/// consumed, and the renderer never supplies a path. Returns None when the app was not
-/// launched with a file.
-#[tauri::command]
-async fn open_startup_file(
-    window: WebviewWindow,
-    state: State<'_, Shared>,
-) -> Result<Option<ProjectReply>> {
-    gate(&window)?;
-    let recovery_base = window
-        .app_handle()
-        .path()
-        .app_local_data_dir()
-        .map_err(|e| AppError::Io(e.to_string()))?
-        .join("recovery-v1");
-    work(state.inner().clone(), move |backend| {
-        let Some(path) = backend.startup_file.take() else {
-            return Ok(None);
+/// Single-instance activation. Panic-free: no unwrap/expect/panic, no indexing.
+mod intake_activation {
+    #![deny(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
+    use std::sync::atomic::{AtomicBool, Ordering};
+    use tauri::{Manager, UserAttentionType};
+
+    /// Set while an activation is owed but the main window does not exist yet. `setup` sets it for
+    /// the cold start; the first activation that finds the window clears it.
+    #[derive(Default)]
+    pub struct Pending(pub AtomicBool);
+
+    pub fn now_ms() -> u64 {
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_millis() as u64)
+            .unwrap_or(0)
+    }
+
+    /// Raise the main window once per batch. `pending` is set BEFORE the window lookup so a window
+    /// created right after is still activated; it stays true when there is no window and is
+    /// cleared when one is found. Window calls are best-effort; attention is requested only when
+    /// taking focus fails.
+    pub fn activate_main_window(app: &tauri::AppHandle, pending: &AtomicBool) {
+        pending.store(true, Ordering::SeqCst);
+        let Some(window) = app.get_webview_window("main") else {
+            return;
         };
-        if backend.projects.len() >= 4 {
-            return Err(AppError::Limit);
+        pending.store(false, Ordering::SeqCst);
+        crate::ignore!(crate::ignore::IgnoreReason::BestEffortWindow, window.show());
+        crate::ignore!(crate::ignore::IgnoreReason::BestEffortWindow, window.unminimize());
+        if window.set_focus().is_err() {
+            crate::ignore!(
+                crate::ignore::IgnoreReason::BestEffortWindow,
+                window.request_user_attention(Some(UserAttentionType::Informational))
+            );
         }
-        let project = Project::open_file(&path, &recovery_base)?;
-        let reply = ProjectReply {
-            project_id: project.id.clone(),
-            name: path
-                .file_name()
-                .unwrap_or_default()
-                .to_string_lossy()
-                .into_owned(),
-        };
-        backend.projects.insert(project.id.clone(), project);
-        Ok(Some(reply))
+    }
+}
+use intake_activation::{activate_main_window, now_ms, Pending};
+
+/// Parse (no Backend lock, no file reads beyond stat), enqueue and flush events under one short
+/// lock, then activate the window with the lock released. Runs on the blocking pool; the
+/// single-instance plugin waits on its callback, so nothing here may wait on the UI thread.
+fn intake_dispatch(
+    app: tauri::AppHandle,
+    shared: Shared,
+    source: crate::intake::queue::OpenSource,
+    args: Vec<std::ffi::OsString>,
+    cwd: PathBuf,
+) {
+    tauri::async_runtime::spawn_blocking(move || {
+        let policy = shared.lock().map(|b| b.intake.policy()).unwrap_or_default();
+        let parsed = crate::intake::parse::parse_open_args(args, &cwd, &policy);
+        let enqueued = shared.lock().ok().map(|mut backend| {
+            let report = backend.intake.enqueue(source, parsed, now_ms());
+            crate::intake::commands::flush_events(&crate::applog::Global, &mut backend.intake, None);
+            (report, backend.intake.pending_count())
+        });
+        // Backend mutex released: window activation and emit never run under it.
+        if let Some((report, count)) = enqueued {
+          if report.request_id.is_some() {
+            crate::ignore!(
+                crate::ignore::IgnoreReason::BestEffortWindow,
+                app.emit_to("main", "somnia://open-requests", serde_json::json!({ "count": count }))
+            );
+          }
+        }
+        activate_main_window(&app, &app.state::<Pending>().0);
+    });
+}
+
+type CmdResult<T> = std::result::Result<T, crate::app_command_error::AppCommandError>;
+/// Run one intake command core under the Backend mutex on the blocking pool. Events are flushed
+/// once inside `execute`; the cmd wrapper keeps a nonempty incident_id and does not log again.
+async fn intake_cmd<T: Send + 'static>(
+    name: &'static str,
+    window: &WebviewWindow,
+    state: &Shared,
+    run: impl FnOnce(&str, &mut crate::intake::queue::OpenQueue, u64) -> std::result::Result<T, crate::intake::queue::IntakeError>
+        + Send
+        + 'static,
+) -> CmdResult<T> {
+    let label = window.label().to_owned();
+    let state = state.clone();
+    let ctx_label = label.clone();
+    crate::cmd::cmd_async(name, Some(&ctx_label), async move {
+        tauri::async_runtime::spawn_blocking(move || {
+            let mut backend = state
+                .lock()
+                .map_err(|e| crate::app_command_error::AppCommandError::from(AppError::Io(e.to_string())))?;
+            crate::intake::commands::execute(&mut backend.intake, |q| run(&label, q, now_ms()))
+        })
+        .await
+        .map_err(|e| crate::app_command_error::AppCommandError::from(AppError::Io(e.to_string())))?
     })
     .await
+}
+#[tauri::command]
+async fn drain_open_requests(window: WebviewWindow, state: State<'_, Shared>) -> CmdResult<Vec<crate::intake::queue::OpenRequestSummary>> {
+    intake_cmd("drain_open_requests", &window, state.inner(), |w, q, now| crate::intake::commands::drain_open_requests(w, q, now)).await
+}
+#[tauri::command]
+async fn claim_open_request(window: WebviewWindow, state: State<'_, Shared>, request_id: String) -> CmdResult<crate::intake::queue::ClaimReply> {
+    intake_cmd("claim_open_request", &window, state.inner(), move |w, q, now| crate::intake::commands::claim_open_request(w, q, &request_id, now)).await
+}
+#[tauri::command]
+async fn read_by_grant(window: WebviewWindow, state: State<'_, Shared>, grant: String) -> CmdResult<crate::intake::queue::GrantRead> {
+    intake_cmd("read_by_grant", &window, state.inner(), move |w, q, now| crate::intake::commands::read_by_grant(w, q, &grant, now)).await
+}
+#[tauri::command]
+async fn ack_open_request(window: WebviewWindow, state: State<'_, Shared>, request_id: String, outcomes: Vec<crate::intake::queue::ItemOutcome>) -> CmdResult<crate::intake::queue::AckReply> {
+    intake_cmd("ack_open_request", &window, state.inner(), move |w, q, now| crate::intake::commands::ack_open_request(w, q, &request_id, outcomes, now)).await
+}
+#[tauri::command]
+async fn release_candidate(window: WebviewWindow, state: State<'_, Shared>, request_id: String) -> CmdResult<()> {
+    intake_cmd("release_candidate", &window, state.inner(), move |w, q, _| crate::intake::commands::release_candidate(w, q, &request_id)).await
+}
+#[tauri::command]
+async fn retry_open_item(window: WebviewWindow, state: State<'_, Shared>, request_id: String, ordinal: u32, retry_token: String) -> CmdResult<crate::intake::queue::ClaimReply> {
+    intake_cmd("retry_open_item", &window, state.inner(), move |w, q, now| crate::intake::commands::retry_open_item(w, q, &request_id, ordinal, &retry_token, now)).await
+}
+#[tauri::command]
+async fn get_intake_policy(window: WebviewWindow, state: State<'_, Shared>) -> CmdResult<crate::intake::policy::IntakePolicy> {
+    intake_cmd("get_intake_policy", &window, state.inner(), |w, q, _| crate::intake::commands::get_intake_policy(w, q)).await
+}
+#[tauri::command]
+async fn set_intake_policy(window: WebviewWindow, state: State<'_, Shared>, allow_unc: bool) -> CmdResult<()> {
+    intake_cmd("set_intake_policy", &window, state.inner(), move |w, q, _| crate::intake::commands::set_intake_policy(w, q, allow_unc)).await
 }
 #[tauri::command]
 async fn list_files(
@@ -1986,12 +2079,19 @@ fn ext_scheme_response(
 
 pub fn run() {
     let shared = Shared::default();
-    // File association launch: Windows "Open with Somnia" passes the file in argv. Captured here,
-    // pulled by the renderer once via open_startup_file; never renderer-supplied.
-    if let Ok(mut backend) = shared.lock() {
-        backend.startup_file = crate::startup_file::capture(std::env::args_os(), |p| p.is_file());
-    }
     tauri::Builder::default()
+        // Must be the first plugin. The callback runs in the second process's message handler and
+        // the plugin waits on it: capture state, hand parse/enqueue to the blocking pool, return.
+        .plugin(tauri_plugin_single_instance::init({
+            let shared = shared.clone();
+            move |app, args, cwd| intake_dispatch(
+                app.clone(),
+                shared.clone(),
+                crate::intake::queue::OpenSource::SecondInstance,
+                args.into_iter().map(std::ffi::OsString::from).collect(),
+                PathBuf::from(cwd),
+            )
+        }))
         .manage(crate::ext_scheme::ExtRegistry::default())
         .register_uri_scheme_protocol(crate::ext_scheme::SCHEME, |ctx, request| {
             let reg = ctx.app_handle().state::<crate::ext_scheme::ExtRegistry>();
@@ -2005,11 +2105,22 @@ pub fn run() {
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_process::init())
         .manage(shared.clone())
+        .manage(Pending::default())
         .manage(ImageGrants::default())
         .manage(PdfGrants::default()).manage(SlidesGrants::default()).manage(SheetsGrants::default())
         .manage(AudioGrants::default())
         .manage(crate::lan_host::LanHost::default())
         .setup(move |app| {
+            // Cold start: same worker pipeline as a second instance. The flag owes the main window
+            // one activation even if it is not created yet.
+            app.state::<Pending>().0.store(true, std::sync::atomic::Ordering::SeqCst);
+            intake_dispatch(
+                app.handle().clone(),
+                shared.clone(),
+                crate::intake::queue::OpenSource::ColdArgv,
+                std::env::args_os().collect(),
+                std::env::current_dir().unwrap_or_default(),
+            );
             tauri::async_runtime::spawn(oauth_refresh_loop());
             if let Ok(dir) = app.path().app_data_dir() {
                 crate::applog::init(dir.join("logs"));
@@ -2121,7 +2232,14 @@ pub fn run() {
             collab_lan_status,
             choose_project,
             choose_file,
-            open_startup_file,
+            drain_open_requests,
+            claim_open_request,
+            read_by_grant,
+            ack_open_request,
+            release_candidate,
+            retry_open_item,
+            get_intake_policy,
+            set_intake_policy,
             open_dropped_project,
             read_dropped_files,
             is_store_package,

@@ -13,6 +13,12 @@ const srcDir = join(phase1, 'src-tauri/src');
 const MANIFEST = join(repo, 'docs/errors/commands.json');
 const NAMES_TS = join(phase1, 'src/generated/commandNames.ts');
 
+// Native handlers that already return AppCommandError through cmd() (wrapped from day 1).
+const WRAPPED = new Map([
+  ['drain_open_requests', 'B7'], ['claim_open_request', 'B7'], ['read_by_grant', 'B7'], ['ack_open_request', 'B7'],
+  ['release_candidate', 'B7'], ['retry_open_item', 'B7'], ['get_intake_policy', 'B7'], ['set_intake_policy', 'B7'],
+]);
+
 // Parameters injected by Tauri (never part of the JS call).
 const INJECTED = /^(tauri::)?(WebviewWindow|Window|AppHandle|State\b|Webview\b)|^State</;
 // Raw binary request body: JS passes the payload (+ headers), not named args.
@@ -20,15 +26,6 @@ const RAW = /tauri::ipc::Request/;
 
 /** Planned commands (design D1/D2/D3, errata applied). params are Rust snake_case names. */
 export const PLANNED = [
-  // D2 intake (B7). All via cmd(), wrapped from day 1.
-  { name: 'drain_open_requests', domain: 'intake', boundary: 'B7', params: [] },
-  { name: 'claim_open_request', domain: 'intake', boundary: 'B7', params: ['request_id'] },
-  { name: 'read_by_grant', domain: 'intake', boundary: 'B7', params: ['grant'] },
-  { name: 'ack_open_request', domain: 'intake', boundary: 'B7', params: ['request_id', 'outcomes'] },
-  { name: 'release_candidate', domain: 'intake', boundary: 'B7', params: ['request_id'] },
-  { name: 'retry_open_item', domain: 'intake', boundary: 'B7', params: ['request_id', 'ordinal', 'retry_token'] },
-  { name: 'get_intake_policy', domain: 'intake', boundary: 'B7', params: [] },
-  { name: 'set_intake_policy', domain: 'intake', boundary: 'B7', params: ['allow_unc'] },
   // D3 diagnostics + crash/incident store (D1 errata 4/5, D3 overrides).
   { name: 'build_diagnostic_zip', domain: 'diagnostics', boundary: 'B1', params: ['selection', 'renderer_entries'] },
   { name: 'write_diagnostic_zip', domain: 'diagnostics', boundary: 'B1', params: ['snapshot_id'] },
@@ -40,6 +37,7 @@ export const PLANNED = [
 ];
 
 const DOMAIN_RULES = [
+  [/^(drain_open_requests|claim_open_request|read_by_grant|ack_open_request|release_candidate|retry_open_item|get_intake_policy|set_intake_policy)$/, 'intake'],
   [/^git_/, 'git'],
   [/^(agent_account_|github_account_)/, 'auth'],
   [/^(agent_settings_|agent_key_|mcp_|studio_mcp_)/, 'agent'],
@@ -93,7 +91,7 @@ export function build() {
     if (!sig) throw new Error(`no #[tauri::command] fn found for handler ${name}`);
     const raw = sig.params.some((p) => RAW.test(p.type));
     const params = sig.params.filter((p) => !INJECTED.test(p.type) && !RAW.test(p.type)).map((p) => p.name);
-    entries.push({ name, domain: domainOf(name), status: 'native', wrapped: false, boundary: 'B1',
+    entries.push({ name, domain: domainOf(name), status: 'native', wrapped: WRAPPED.has(name), boundary: WRAPPED.get(name) ?? 'B1',
       params, args: params.map(camel), ...(raw ? { raw: true } : {}) });
   }
   for (const p of PLANNED) {
