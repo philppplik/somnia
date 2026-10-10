@@ -35,9 +35,9 @@ export async function addMediaFiles(files:IncomingFile[]):Promise<string[]>{cons
  patchState({notice:problems.length?problems.join(' '):`Previewing ${names.join(', ')}.`});return names;}
 export async function readFiles(list:FileList|File[]):Promise<IncomingFile[]>{return Promise.all([...list].map(async f=>MEDIA_FILE.test(f.name)?{name:f.name,text:'',blob:f}:{name:f.name,text:f.size<=MAX_BYTES?decodeFileBytes(f.name,await f.arrayBuffer()).text:'',blob:f}));}
 /** Smart Open entry (installed by studios/openIntake.ts, which depends on this module). Until installed, falls back to the text/media importer. */
-let openIncomingHook:(files:IncomingFile[])=>Promise<unknown>=async files=>{addTextFiles(files);};
-export const installOpenIncoming=(fn:(files:IncomingFile[])=>Promise<unknown>)=>{openIncomingHook=fn;};
-export const openIncoming=(files:IncomingFile[])=>openIncomingHook(files);
+let openIncomingHook:(files:IncomingFile[],opts?:import('./studios/openCoordinator').BatchOptions)=>Promise<unknown>=async files=>{addTextFiles(files);};
+export const installOpenIncoming=(fn:(files:IncomingFile[],opts?:import('./studios/openCoordinator').BatchOptions)=>Promise<unknown>)=>{openIncomingHook=fn;};
+export const openIncoming=(files:IncomingFile[],opts?:import('./studios/openCoordinator').BatchOptions)=>openIncomingHook(files,opts);
 /** Open File: pick one or more text files with the system file dialog. */
 export function openFileDialog(){return new Promise<void>(resolve=>{const input=document.createElement('input');input.type='file';input.multiple=true;input.accept='.html,.htm,.css,.js,.json,.svg,.txt,.md,.tex,text/*,'+MEDIA_ACCEPT;
  input.onchange=async()=>{if(input.files?.length)await openIncomingHook(await readFiles(input.files));resolve();};input.oncancel=()=>resolve();input.click();});}

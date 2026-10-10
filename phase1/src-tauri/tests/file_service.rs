@@ -473,3 +473,29 @@ fn sync_folder_reads_and_writes_only_its_file() {
     assert!(SyncFolder::open(&dir.path().join("missing")).is_err());
     assert!(SyncFolder::open(&dir.path().join("other.txt")).is_err());
 }
+
+#[test]
+fn smart_open_reads_exact_bytes_only_from_native_single_file_grant() {
+    let root = tempfile::tempdir().unwrap();
+    let recovery = tempfile::tempdir().unwrap();
+    let bytes = b"\x00\x01\x02\xffRIFF";
+    std::fs::write(root.path().join("unknown.anything"), bytes).unwrap();
+    std::fs::write(root.path().join("other.txt"), "private").unwrap();
+    {
+        let file = Project::open_file(&root.path().join("unknown.anything"), recovery.path()).unwrap();
+        assert_eq!(file.read_open_bytes("unknown.anything").unwrap(), bytes);
+        assert!(file.read_open_bytes("other.txt").is_err());
+        assert!(file.read_open_bytes("../unknown.anything").is_err());
+    }
+    let folder = Project::open(root.path(), recovery.path()).unwrap();
+    assert!(folder.read_open_bytes("unknown.anything").is_err());
+}
+
+#[test]
+fn smart_open_rejects_oversized_selected_file() {
+    let root = tempfile::tempdir().unwrap();
+    let recovery = tempfile::tempdir().unwrap();
+    std::fs::write(root.path().join("large.bin"), vec![0; somnia_desktop::service::MAX_MEDIA_BYTES + 1]).unwrap();
+    let file = Project::open_file(&root.path().join("large.bin"), recovery.path()).unwrap();
+    assert!(matches!(file.read_open_bytes("large.bin"), Err(AppError::Limit)));
+}

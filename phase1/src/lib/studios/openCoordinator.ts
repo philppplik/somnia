@@ -27,12 +27,14 @@ export interface OpenDeps{
  notify(text:string):void;
  /** A drag, text edit or tool gesture that cannot be abandoned: the whole open is cancelled untouched. */
  pendingGesture?():boolean;
+ /** Ask only for compatible handlers. Null means cancel, never guess. */
+ choose?(input:OpenInput,resolution:Extract<OpenResolution,{status:'choose-handler'|'safe-text-offer'|'unsupported'|'invalid'}>,suggested?:StudioId):Promise<StudioId|null>;
  /** Per-document Studio override for this input (compatible only; the resolver checks compatibility). */
  preferred?(input:OpenInput):StudioId|undefined;
 }
 export interface OpenOutcome{name:string;studioId?:StudioId;status:'opened'|'choose-handler'|'safe-text-offer'|'unsupported'|'invalid'|'failed'|'cancelled';reason?:string;preview?:boolean}
 export interface OpenReport{generation:number;superseded:boolean;cancelled:boolean;outcomes:OpenOutcome[];focused:OpenOutcome|null;summary:string}
-export interface BatchOptions extends ResolveOptions{intent?:OpenIntent}
+export interface BatchOptions extends ResolveOptions{intent?:OpenIntent;source?:'picker'|'drop'|'os';suggestedStudio?:StudioId}
 export function createOpenCoordinator(deps:OpenDeps){
  let generation=0;
  const label=(id:StudioId)=>id.charAt(0).toUpperCase()+id.slice(1);
@@ -43,7 +45,13 @@ export function createOpenCoordinator(deps:OpenDeps){
   const disposeAll=()=>{for(const x of prepared)x.p.dispose();};
   const report=(over:Partial<OpenReport>,summary:string):OpenReport=>({generation:gen,superseded:false,cancelled:false,outcomes,focused:null,summary,...over});
   for(const input of inputs){
-   const resolution=resolveOpen(input.name,input.bytes,{...opts,preferred:opts.preferred??deps.preferred?.(input)});
+   let resolution=resolveOpen(input.name,input.bytes,{...opts,preferred:opts.preferred??deps.preferred?.(input)});
+   if(resolution.status!=='ready'&&deps.choose){
+    const target=await deps.choose(input,resolution,opts.suggestedStudio);
+    if(stale()){disposeAll();return report({superseded:true},'');}
+    if(!target){outcomes.push({name:input.name,status:resolution.status==='unsupported'||resolution.status==='invalid'?resolution.status:'cancelled',reason:resolution.reason});continue;}
+    resolution=resolveOpen(input.name,input.bytes,{target,acceptTextOffer:true});
+   }
    if(resolution.status!=='ready'&&resolution.status!=='safe-text-offer'){
     outcomes.push({name:input.name,status:resolution.status,reason:resolution.reason});continue;}
    if(resolution.status==='safe-text-offer'){outcomes.push({name:input.name,status:'safe-text-offer',studioId:resolution.handler.studioId,reason:resolution.reason});continue;}

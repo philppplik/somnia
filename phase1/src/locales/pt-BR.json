@@ -2255,5 +2255,14 @@
   "mcp.server.document": "Documento exposto",
   "mcp.server.noDocument": "Nenhum documento compatível. Abra um documento em um estúdio para expor suas ferramentas.",
   "mcp.server.activity": "Atividade do servidor",
-  "set.ext.networkNotice": "As extensões podem abrir conexões de rede com qualquer host (WebSocket). Instale apenas extensões em que você confia."
+  "set.ext.networkNotice": "As extensões podem abrir conexões de rede com qualquer host (WebSocket). Instale apenas extensões em que você confia.",
+  "openRouter.title": "Em qual estúdio você quer abrir este arquivo?",
+  "openRouter.description": "Escolha um editor para este arquivo.",
+  "openRouter.file": "Arquivo para abrir",
+  "openRouter.studio": "Estúdio",
+  "openRouter.suggested": "(destino do arraste)",
+  "openRouter.preview": "(prévia somente leitura)",
+  "openRouter.safe": "Somente estúdios que podem ler este arquivo são oferecidos. Cancelar mantém seu trabalho atual.",
+  "openRouter.open": "Abrir arquivo",
+  "openRouter.unavailable": "Nenhum estúdio instalado pode ler este arquivo com segurança. Ele pode estar danificado ou usar um formato não compatível. Nada foi alterado."
 }

@@ -2255,5 +2255,14 @@
   "mcp.server.document": "Documento expuesto",
   "mcp.server.noDocument": "Ningún documento compatible. Abre un documento en un estudio para exponer sus herramientas.",
   "mcp.server.activity": "Actividad del servidor",
-  "set.ext.networkNotice": "Las extensiones pueden abrir conexiones de red a cualquier host (WebSocket). Instala solo extensiones en las que confíes."
+  "set.ext.networkNotice": "Las extensiones pueden abrir conexiones de red a cualquier host (WebSocket). Instala solo extensiones en las que confíes.",
+  "openRouter.title": "¿En qué estudio quieres abrir este archivo?",
+  "openRouter.description": "Elige un editor para este archivo.",
+  "openRouter.file": "Archivo para abrir",
+  "openRouter.studio": "Estudio",
+  "openRouter.suggested": "(destino de arrastre)",
+  "openRouter.preview": "(vista previa de solo lectura)",
+  "openRouter.safe": "Solo se ofrecen estudios que pueden leer este archivo. Cancelar no cambia tu trabajo actual.",
+  "openRouter.open": "Abrir archivo",
+  "openRouter.unavailable": "Ningún estudio instalado puede leer este archivo de forma segura. Puede estar dañado o usar un formato no compatible. No se ha cambiado nada."
 }

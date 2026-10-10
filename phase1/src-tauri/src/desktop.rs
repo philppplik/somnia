@@ -15,8 +15,8 @@ struct Backend {
     sync: Option<SyncFolder>,
     projects: BTreeMap<String, Project>,
     drop_grant: Option<DropGrant>,
-    /// File the OS asked us to open at launch (file association / "Open with"). One-shot.
-    startup_file: Option<std::path::PathBuf>,
+    /// Native launch/open-event queue. Renderer consumes one selected file at a time.
+    startup_files: std::collections::VecDeque<std::path::PathBuf>,
 }
 type Shared = Arc<Mutex<Backend>>;
 #[derive(Serialize)]
@@ -635,7 +635,7 @@ fn base64_encode(bytes: &[u8]) -> String {
     }
     out
 }
-/// Multiple dropped files retain the existing import-as-copies behavior. Reads are bounded.
+/// Multiple dropped files retain import-as-copies behavior. Exact bytes are bounded; suffix does not grant an editor.
 #[tauri::command]
 async fn read_dropped_files(
     window: WebviewWindow,
@@ -656,11 +656,6 @@ async fn read_dropped_files(
         let mut total = 0;
         let mut media_total = 0;
         for path in paths {
-            let ext = path
-                .extension()
-                .unwrap_or_default()
-                .to_string_lossy()
-                .to_ascii_lowercase();
             if chat.unwrap_or(false) {
                 if files.len() >= 5 {
                     return Err(AppError::Limit);
@@ -687,51 +682,14 @@ async fn read_dropped_files(
                 });
                 continue;
             }
-            if MEDIA_EXTENSIONS.contains(&ext.as_str()) {
-                let mut bytes = Vec::new();
-                std::fs::File::open(&path)?
-                    .take(MAX_MEDIA_BYTES as u64 + 1)
-                    .read_to_end(&mut bytes)?;
-                if bytes.len() > MAX_MEDIA_BYTES {
-                    return Err(AppError::Limit);
-                }
-                media_total += bytes.len();
-                if media_total > MAX_MEDIA_TOTAL {
-                    return Err(AppError::Limit);
-                }
-                files.push(DroppedTextFile {
-                    name: path
-                        .file_name()
-                        .unwrap_or_default()
-                        .to_string_lossy()
-                        .into_owned(),
-                    text: String::new(),
-                    base64: Some(base64_encode(&bytes)),
-                });
-                continue;
-            }
-            if !["html", "htm", "css", "js", "json", "svg", "txt", "md", "tex"].contains(&ext.as_str()) {
-                continue;
-            }
             let mut bytes = Vec::new();
-            std::fs::File::open(&path)?
-                .take(2_000_001)
-                .read_to_end(&mut bytes)?;
-            if bytes.len() > 2_000_000 {
-                return Err(AppError::Limit);
-            }
-            total += bytes.len();
-            if total > 8_000_000 {
-                return Err(AppError::Limit);
-            }
+            std::fs::File::open(&path)?.take(MAX_MEDIA_BYTES as u64 + 1).read_to_end(&mut bytes)?;
+            if bytes.len() > MAX_MEDIA_BYTES { return Err(AppError::Limit); }
+            media_total += bytes.len();
+            if media_total > MAX_MEDIA_TOTAL || files.len() >= 200 { return Err(AppError::Limit); }
             files.push(DroppedTextFile {
-                name: path
-                    .file_name()
-                    .unwrap_or_default()
-                    .to_string_lossy()
-                    .into_owned(),
-                text: crate::service::decode_text(bytes),
-                base64: None,
+                name: path.file_name().unwrap_or_default().to_string_lossy().into_owned(),
+                text: String::new(), base64: Some(base64_encode(&bytes)),
             });
         }
         Ok(files)
@@ -743,8 +701,9 @@ async fn read_dropped_files(
 struct DropReply {
     token: String,
     count: usize,
-    /// True when every dropped path is a PNG, JPEG or PDF file (media, not a project).
+    /// Compatibility hint for old renderers. New intake uses actual directory identity, never this extension hint.
     media: bool,
+    directory: bool,
     /// Physical drop position for routing to the visible session-chat target.
     position: [f64; 2],
 }
@@ -817,7 +776,7 @@ async fn open_startup_file(
         .map_err(|e| AppError::Io(e.to_string()))?
         .join("recovery-v1");
     work(state.inner().clone(), move |backend| {
-        let Some(path) = backend.startup_file.take() else {
+        let Some(path) = backend.startup_files.pop_front() else {
             return Ok(None);
         };
         if backend.projects.len() >= 4 {
@@ -836,6 +795,11 @@ async fn open_startup_file(
         Ok(Some(reply))
     })
     .await
+}
+#[tauri::command]
+async fn read_open_bytes(window: WebviewWindow, state: State<'_, Shared>, project_id: String, path: String) -> Result<String> {
+    gate(&window)?;
+    work(state.inner().clone(), move |b| Ok(base64_encode(&project(b, &project_id)?.read_open_bytes(&path)?))).await
 }
 #[tauri::command]
 async fn list_files(
@@ -1989,9 +1953,19 @@ pub fn run() {
     // File association launch: Windows "Open with Somnia" passes the file in argv. Captured here,
     // pulled by the renderer once via open_startup_file; never renderer-supplied.
     if let Ok(mut backend) = shared.lock() {
-        backend.startup_file = crate::startup_file::capture(std::env::args_os(), |p| p.is_file());
+        backend.startup_files.extend(crate::startup_file::capture_all(std::env::args_os(), |p| p.is_file()));
     }
-    tauri::Builder::default()
+    let app = tauri::Builder::default()
+        // First plugin: second Windows/Linux launches forward to the existing editor.
+        .plugin(tauri_plugin_single_instance::init(|app, args, cwd| {
+            let paths = crate::startup_file::capture_all(args.into_iter().map(std::ffi::OsString::from), |p| {
+                let path = if p.is_absolute() { p.to_path_buf() } else { std::path::Path::new(&cwd).join(p) };
+                path.is_file()
+            }).into_iter().map(|p| if p.is_absolute() { p } else { std::path::Path::new(&cwd).join(p) });
+            if let Ok(mut backend) = app.state::<Shared>().lock() { backend.startup_files.extend(paths); }
+            if let Some(window) = app.get_webview_window("main") { let _ = window.show(); let _ = window.set_focus(); }
+            let _ = app.emit("somnia://os-open", ());
+        }))
         .manage(crate::ext_scheme::ExtRegistry::default())
         .register_uri_scheme_protocol(crate::ext_scheme::SCHEME, |ctx, request| {
             let reg = ctx.app_handle().state::<crate::ext_scheme::ExtRegistry>();
@@ -2046,6 +2020,7 @@ pub fn run() {
                             token: grant.token().to_owned(),
                             count: paths.len(),
                             position: [position.x, position.y],
+                            directory: paths.len() == 1 && paths[0].is_dir(),
                             media: paths.iter().all(|p| {
                                 p.extension()
                                     .map(|e| e.to_string_lossy().to_ascii_lowercase())
@@ -2126,6 +2101,7 @@ pub fn run() {
             list_files,
             read_file,
             read_media,
+            read_open_bytes,
             image_pick,
             image_read,
             pdf_save_pick,
@@ -2174,11 +2150,20 @@ pub fn run() {
             git_combine_finish,
             git_combine_abort
         ])
-        .run(tauri::generate_context!())
+        .build(tauri::generate_context!())
         .unwrap_or_else(|error| {
             crate::applog::write("error", "rust.startup", &error.to_string(), None);
             panic!("Unable to start Somnia: {error}");
         });
+    #[allow(unused_variables)]
+    app.run(|app, event| {
+        #[cfg(any(target_os = "macos", target_os = "ios"))]
+        if let tauri::RunEvent::Opened { urls } = event {
+            let paths: Vec<_> = urls.into_iter().filter_map(|url| url.to_file_path().ok()).filter(|p| p.is_file()).collect();
+            if let Ok(mut backend) = app.state::<Shared>().lock() { backend.startup_files.extend(paths); }
+            let _ = app.emit("somnia://os-open", ());
+        }
+    });
 }
 
 #[cfg(test)]

@@ -2255,5 +2255,14 @@
   "mcp.server.document": "Freigegebenes Dokument",
   "mcp.server.noDocument": "Kein kompatibles Dokument. Öffne ein Dokument in einem Studio, um seine Werkzeuge freizugeben.",
   "mcp.server.activity": "Server-Aktivität",
-  "set.ext.networkNotice": "Erweiterungen können Netzwerkverbindungen zu beliebigen Hosts öffnen (WebSocket). Installiere nur Erweiterungen, denen du vertraust."
+  "set.ext.networkNotice": "Erweiterungen können Netzwerkverbindungen zu beliebigen Hosts öffnen (WebSocket). Installiere nur Erweiterungen, denen du vertraust.",
+  "openRouter.title": "In welchem Studio möchtest du diese Datei öffnen?",
+  "openRouter.description": "Wähle einen Editor für diese Datei.",
+  "openRouter.file": "Zu öffnende Datei",
+  "openRouter.studio": "Studio",
+  "openRouter.suggested": "(Drop-Ziel)",
+  "openRouter.preview": "(schreibgeschützte Vorschau)",
+  "openRouter.safe": "Es werden nur Studios angeboten, die diese Datei lesen können. Abbrechen lässt deine aktuelle Arbeit unverändert.",
+  "openRouter.open": "Datei öffnen",
+  "openRouter.unavailable": "Kein installiertes Studio kann diese Datei sicher lesen. Sie ist möglicherweise beschädigt oder verwendet ein nicht unterstütztes Format. Nichts wurde geändert."
 }

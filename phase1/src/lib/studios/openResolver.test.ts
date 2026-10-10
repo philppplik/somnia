@@ -58,3 +58,9 @@ test('equal-priority ready handlers ask instead of depending on registration ord
  try{assert.equal(studioOf('c.wav',WAV),'sound');}finally{hd();}
  assert.throws(()=>getStudio('t.a'));
 });
+test('SVG content is recognized independently of suffix, while inline SVG in HTML stays Code',()=>{
+ assert.equal(studioOf('graphic.txt',enc('<svg xmlns="http://www.w3.org/2000/svg"><rect/></svg>')),'vector');
+ assert.equal(studioOf('page.html',enc('<html><body><svg><rect/></svg></body></html>')),'code');
+ const text='<svg xmlns="http://www.w3.org/2000/svg"><rect/></svg>';const bytes=new Uint8Array(2+text.length*2);bytes[0]=255;bytes[1]=254;for(let i=0;i<text.length;i++)bytes[2+i*2]=text.charCodeAt(i);
+ assert.equal(studioOf('graphic.svg',bytes),'vector');
+});

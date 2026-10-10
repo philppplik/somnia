@@ -6,6 +6,7 @@ import {setActiveMedia} from '../media';
 import {createOpenCoordinator,type OpenDeps,type OpenInput,type PreparedOpen,type OpenReport,type BatchOptions} from './openCoordinator';
 import {MAX_OPEN_TEXT_BYTES} from './openResolver';
 import './openHandlers';
+import {answerOpenChoice,askOpenStudio} from './openChoice';
 import {importSvg} from '../vectorio';
 import {openSvgSource} from '../vectorstudio/session';
 /**
@@ -17,6 +18,7 @@ export const TEXT_KINDS=new Set(['text','svg']);
 const textEncoder=new TextEncoder();
 async function bytesOf(f:IncomingFile):Promise<Uint8Array>{return f.blob?new Uint8Array(await f.blob.arrayBuffer()):textEncoder.encode(f.text);}
 export const appDeps:OpenDeps={
+ choose:askOpenStudio,
  async prepare(input,resolution):Promise<PreparedOpen>{
   const studioId=resolution.handler.studioId;
   if(TEXT_KINDS.has(resolution.kind)){
@@ -44,8 +46,10 @@ export const appDeps:OpenDeps={
 };
 export const coordinator=createOpenCoordinator(appDeps);
 export async function openIncoming(files:IncomingFile[],opts:BatchOptions={}):Promise<OpenReport>{
+ answerOpenChoice(null);
  const inputs:OpenInput[]=[];
  for(const f of files)inputs.push({name:f.name,bytes:await bytesOf(f)});
- return coordinator.openFiles(inputs,opts);
+ // OS opens have no target context or remembered document override. Drops only suggest the visible Studio.
+ return coordinator.openFiles(inputs,opts.source==='os'?{...opts,preferred:'',target:undefined}:opts);
 }
-installOpenIncoming(files=>openIncoming(files));
+installOpenIncoming(openIncoming);
