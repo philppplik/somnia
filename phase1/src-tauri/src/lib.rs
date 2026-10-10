@@ -11,6 +11,9 @@ mod pdf_io;
 #[cfg(any(feature = "desktop", test))]
 mod audio_io;
 pub mod applog;
+pub mod app_command_error;
+pub mod cmd;
+pub mod ignore;
 pub mod service;
 #[cfg(feature = "desktop")]
 pub use desktop::run;

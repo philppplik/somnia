@@ -155,14 +155,22 @@ impl Logger {
     }
     /// Never panics and never returns an error to the caller: logging must not break the app.
     pub fn write(&self, level: &str, source: &str, message: &str, context: Option<&Value>) {
+        self.write_entry(level, source, message, context, &[]);
+    }
+    fn write_entry(&self, level: &str, source: &str, message: &str, context: Option<&Value>, extra: &[(&str, Value)]) {
         let level = if LEVELS.contains(&level) { level } else { "info" };
-        let entry = json!({
+        let mut entry = json!({
             "ts": timestamp(),
             "level": level,
             "source": truncate(&redact(source), 80),
             "message": truncate(&redact(message), MAX_MESSAGE),
             "context": context.map(|c| truncate(&redact_value(c).to_string(), MAX_MESSAGE)).and_then(|s| serde_json::from_str::<Value>(&s).ok()),
         });
+        if let Some(map) = entry.as_object_mut() {
+            for (k, v) in extra {
+                map.insert((*k).to_owned(), redact_value(v));
+            }
+        }
         let line = format!("{entry}\n");
         let _guard = self.lock.lock().unwrap_or_else(|e| e.into_inner());
         let path = self.file(0);
@@ -172,6 +180,20 @@ impl Logger {
         if let Ok(mut f) = OpenOptions::new().create(true).append(true).open(&path) {
             let _ = f.write_all(line.as_bytes());
         }
+    }
+    /// Writes ONE typed event line (`id`, `expected`, `incident_id`). Returns the incident id for
+    /// unexpected warn/error events; expected events and info/debug never get one.
+    pub fn event(&self, spec: &EventSpec<'_>) -> Option<IncidentId> {
+        let incident = spec.needs_incident().then(IncidentId::new);
+        let mut extra: Vec<(&str, Value)> = vec![("id", json!(spec.id)), ("expected", json!(spec.expected))];
+        if let Some(i) = &incident {
+            extra.push(("incident_id", json!(i.as_str())));
+        }
+        if let Some(c) = spec.corr {
+            extra.push(("corr", json!(c)));
+        }
+        self.write_entry(spec.level, spec.source, spec.message, spec.context, &extra);
+        incident
     }
     /// Last `max_lines` entries across the current and previous files, oldest first.
     pub fn tail(&self, max_lines: usize) -> String {
@@ -203,6 +225,78 @@ impl Logger {
     }
 }
 
+/// Opaque incident identifier (26-char Crockford base32, ULID layout: 48-bit ms time + 80 random bits).
+/// Minted per unexpected warn/error event, never derived from a request id.
+#[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[serde(transparent)]
+pub struct IncidentId(String);
+
+impl IncidentId {
+    pub fn new() -> Self {
+        let ms = SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or_default().as_millis() as u64;
+        Self::from_parts(ms, *uuid::Uuid::new_v4().as_bytes())
+    }
+    /// Deterministic constructor for tests: `random` supplies the low 80 bits (first 10 bytes used).
+    pub fn from_parts(ms: u64, random: [u8; 16]) -> Self {
+        const ALPHABET: &[u8; 32] = b"0123456789ABCDEFGHJKMNPQRSTVWXYZ";
+        let mut value: u128 = u128::from(ms & 0xFFFF_FFFF_FFFF) << 80;
+        let mut low: u128 = 0;
+        for b in &random[..10] {
+            low = (low << 8) | u128::from(*b);
+        }
+        value |= low;
+        let mut out = [0u8; 26];
+        for (i, slot) in out.iter_mut().enumerate() {
+            let shift = 5 * (25 - i);
+            *slot = ALPHABET[((value >> shift) & 0x1F) as usize];
+        }
+        Self(String::from_utf8_lossy(&out).into_owned())
+    }
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+    pub fn into_string(self) -> String {
+        self.0
+    }
+}
+impl Default for IncidentId {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+/// One typed event. `id` is a registry id such as `SOM-FS-006` (validated by the generated registry in CI, not here).
+pub struct EventSpec<'a> {
+    pub id: &'a str,
+    pub level: &'a str,
+    pub source: &'a str,
+    pub message: &'a str,
+    pub context: Option<&'a Value>,
+    pub expected: bool,
+    pub corr: Option<&'a str>,
+}
+impl EventSpec<'_> {
+    fn needs_incident(&self) -> bool {
+        !self.expected && matches!(self.level, "warn" | "error")
+    }
+}
+
+/// Destination for typed events; `Global` is the app logger, `Logger` is used by tests.
+pub trait EventSink {
+    fn event(&self, spec: &EventSpec<'_>) -> Option<IncidentId>;
+}
+impl EventSink for Logger {
+    fn event(&self, spec: &EventSpec<'_>) -> Option<IncidentId> {
+        Logger::event(self, spec)
+    }
+}
+pub struct Global;
+impl EventSink for Global {
+    fn event(&self, spec: &EventSpec<'_>) -> Option<IncidentId> {
+        event(spec)
+    }
+}
+
 /// Starts the global logger and routes Rust panics into it. Safe to call twice.
 pub fn init(dir: impl Into<PathBuf>) {
     let first = GLOBAL.set(Logger::new(dir)).is_ok();
@@ -229,6 +323,14 @@ pub fn global() -> Option<&'static Logger> {
 pub fn write(level: &str, source: &str, message: &str, context: Option<&Value>) {
     if let Some(l) = GLOBAL.get() {
         l.write(level, source, message, context);
+    }
+}
+/// Typed event on the global logger. An unexpected warn/error still yields an incident id when the
+/// logger is not initialised (early start, unit tests), so callers can always show one.
+pub fn event(spec: &EventSpec<'_>) -> Option<IncidentId> {
+    match GLOBAL.get() {
+        Some(l) => l.event(spec),
+        None => spec.needs_incident().then(IncidentId::new),
     }
 }
 
