@@ -2368,6 +2368,7 @@
   "ext.activity.unreadable": "Aktivitätsprotokoll konnte nicht gelesen werden.",
   "ext.activity.unreadable.body": "Das ist ein Lesefehler, kein leerer Verlauf.",
   "ext.source.match": "Entspricht signiertem Indexeintrag",
+  "ext.source.hashMatch": "SHA-256 mit dem Katalog abgeglichen",
   "ext.source.noMatch": "Kein Treffer im signierten Index",
   "ext.source.invalid": "Signatur oder Hash ungültig. Installation blockiert.",
   "ext.source.copy": "Vollständigen Hash kopieren",

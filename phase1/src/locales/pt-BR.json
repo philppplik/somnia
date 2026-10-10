@@ -2368,6 +2368,7 @@
   "ext.activity.unreadable": "Não foi possível ler o registro de atividade.",
   "ext.activity.unreadable.body": "É uma falha de leitura, não um histórico vazio.",
   "ext.source.match": "Corresponde à entrada assinada do índice",
+  "ext.source.hashMatch": "SHA-256 verificado com o catálogo",
   "ext.source.noMatch": "Sem correspondência no índice assinado",
   "ext.source.invalid": "Assinatura ou hash inválidos. Instalação bloqueada.",
   "ext.source.copy": "Copiar hash completo",

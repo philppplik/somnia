@@ -2368,6 +2368,7 @@
   "ext.activity.unreadable": "Le journal d’activité n’a pas pu être lu.",
   "ext.activity.unreadable.body": "C’est une erreur de lecture, pas un historique vide.",
   "ext.source.match": "Correspond à l’entrée signée de l’index",
+  "ext.source.hashMatch": "SHA-256 vérifié par rapport au catalogue",
   "ext.source.noMatch": "Aucune correspondance dans l’index signé",
   "ext.source.invalid": "Signature ou hash invalide. Installation bloquée.",
   "ext.source.copy": "Copier le hash complet",

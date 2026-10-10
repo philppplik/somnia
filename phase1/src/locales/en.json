@@ -2368,6 +2368,7 @@
   "ext.activity.unreadable": "Activity log could not be read.",
   "ext.activity.unreadable.body": "This is a read failure, not an empty history.",
   "ext.source.match": "Matches signed index entry",
+  "ext.source.hashMatch": "SHA-256 verified against catalog",
   "ext.source.noMatch": "No signed index match",
   "ext.source.invalid": "Signature or hash invalid. Installation is blocked.",
   "ext.source.copy": "Copy full hash",
