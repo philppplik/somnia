@@ -14,8 +14,7 @@ for(const context of ['empty','web','markdown','code-only'] as const){
   },context);
   await page.evaluate(()=>document.fonts.ready);
   await expect(page.locator('header').first()).toBeVisible();
-  // TEMPORARY: 1400 (was 400) because the studio pill now lists nine studios inline in the header flow (~1300 px diff). Regenerate the baselines in CI and lower this again once CI can update snapshots.
-  // The new Somnia logo mark changes ~270 header pixels versus the d91046f baselines (maxDiffPixels was 0).
-  await expect(page).toHaveScreenshot(`studio-code-${context}.png`,{animations:'disabled',maxDiffPixels:1400});
+  // 400 covers anti-aliasing jitter; the CI snapshots job (update_snapshots input) regenerates baselines when the header changes.
+  await expect(page).toHaveScreenshot(`studio-code-${context}.png`,{animations:'disabled',maxDiffPixels:400});
  });
 }
