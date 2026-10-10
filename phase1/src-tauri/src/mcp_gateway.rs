@@ -156,7 +156,14 @@ mod tests {
         assert!(ok.starts_with("HTTP/1.1 200") && ok.ends_with(r#"{"echo":{"id":1}}"#), "{ok}");
         assert!(post(g.addr, Some(&g.token), "/mcp", r#"{"method":"notifications/initialized"}"#).await.starts_with("HTTP/1.1 202"));
         let big = "x".repeat(MAX_BODY + 1);
-        assert!(post(g.addr, Some(&g.token), "/mcp", &big).await.starts_with("HTTP/1.1 413"));
+        // Windows can drop the 413 response when the server closes right after answering
+        // (RST discards buffered but unread data), so allow a few fresh-connection attempts.
+        let mut too_large = String::new();
+        for _ in 0..5 {
+            too_large = post(g.addr, Some(&g.token), "/mcp", &big).await;
+            if too_large.starts_with("HTTP/1.1 413") { break; }
+        }
+        assert!(too_large.starts_with("HTTP/1.1 413"), "{too_large}");
         let addr = g.addr;
         g.stop();
         tokio::time::sleep(Duration::from_millis(50)).await;
