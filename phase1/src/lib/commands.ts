@@ -126,7 +126,7 @@ registerCommand({id:'project.openMedia',title:'Open image or PDF to preview',cat
 registerCommand({id:'project.newFile',title:'New blank page',category:'Project',keywords:['new','blank','file'],run:()=>newBlankFile()});
 
 ui('settings.open','Settings','Mod+,',()=>patchState({settingsOpen:true}));
-ui('extensions.open','Extensions',undefined,()=>patchState({settingsOpen:true,settingsSection:'Extensions'}));
+ui('extensions.open','Extensions',undefined,()=>patchState({extensionsOpen:true}));
 
 registerCommand({id:'project.export.md',title:'Export active file as Markdown',category:'Project',keywords:['md','markdown'],enabled:()=>getState().coreConnected&&/\.html?$/i.test(getState().activeFile),run:()=>{try{downloadMarkdown(getState().files,getState().activeFile);patchState({notice:'Markdown download requested. The source file is unchanged.'});}catch(error){patchState({notice:error instanceof Error?error.message:'Markdown export failed.'});}}});
 /** Tools menu groups app-level utilities; registered after all commands exist. */

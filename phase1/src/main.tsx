@@ -14,6 +14,7 @@ import './styles/agent.css';
 import './styles/svg-editor.css';
 import './styles/collab-chat.css';
 import './styles/variants.css';
+import './styles/extensions-popup.css';
 import {isTauri} from '@tauri-apps/api/core';
 import {setStoreManaged} from './lib/updates';
 import {initLocale} from './lib/i18n';
