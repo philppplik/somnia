@@ -64,6 +64,9 @@ struct RunArgs {
     /// Limit the agent to these project-relative roots (repeatable).
     #[arg(long = "allow-root")]
     allow_root: Vec<String>,
+    /// Speak the TUI protocol v1 (NDJSON on stdout/stdin) instead of human output; enables hunk review.
+    #[arg(long, conflicts_with_all = ["json", "detach", "print"])]
+    tui_stdio: bool,
     #[arg(long)]
     max_tokens: Option<u64>,
     #[arg(long)]
@@ -182,6 +185,10 @@ fn run_cmd(a: RunArgs) -> Result<i32> {
             return detach(&spec, a.json);
         }
         let engine = SidecarEngine::from_env()?;
+        if a.tui_stdio {
+            let stdin = std::io::BufReader::new(std::io::stdin());
+            return crate::tui_adapter::run(&spec, &engine, stdin, std::io::stdout());
+        }
         run_foreground(&spec, &engine, a.json)
     })();
     if res.is_err() {
