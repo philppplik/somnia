@@ -1,0 +1,25 @@
+{
+  "name": "@somnia/extension-store-tools",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": "^22.22.2 || ^24.15.0 || >=26.0.0"
+  },
+  "scripts": {
+    "test": "tsx --test ../../phase1/src/lib/extensions/store/*.test.ts *.test.ts",
+    "typecheck": "tsc --noEmit",
+    "catalog": "tsx cli.ts"
+  },
+  "dependencies": {
+    "@tufjs/models": "5.0.0",
+    "tuf-js": "6.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "24.0.0",
+    "tsx": "4.21.0",
+    "typescript": "5.9.3"
+  },
+  "overrides": {
+    "esbuild": "^0.28.1"
+  }
+}
