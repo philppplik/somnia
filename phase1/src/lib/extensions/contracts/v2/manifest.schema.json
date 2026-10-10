@@ -1,0 +1,618 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 180
+    },
+    "manifestVersion": {
+      "const": 2
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9-]*\\.[a-z0-9][a-z0-9-]*$",
+      "maxLength": 100
+    },
+    "publisher": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9-]*$",
+      "maxLength": 40
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 80
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)(?:\\+[0-9A-Za-z-]+(?:\\.[0-9A-Za-z-]+)*)?$",
+      "maxLength": 64
+    },
+    "description": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 300
+    },
+    "license": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 180
+    },
+    "engines": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "somnia": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100
+        },
+        "api": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100
+        }
+      },
+      "required": [
+        "somnia",
+        "api"
+      ]
+    },
+    "runtime": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "type": {
+              "const": "declarative"
+            }
+          },
+          "required": [
+            "type"
+          ]
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "type": {
+              "const": "wasm"
+            },
+            "entry": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 180,
+              "pattern": "^(?!/)(?!.*\\\\)(?!.*(?:^|/)\\.\\.?(?:/|$))[^\\u0000-\\u001f]+$"
+            },
+            "abi": {
+              "const": "somnia-json-1"
+            }
+          },
+          "required": [
+            "type",
+            "entry",
+            "abi"
+          ]
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "type": {
+              "const": "js"
+            },
+            "entry": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 180,
+              "pattern": "^(?!/)(?!.*\\\\)(?!.*(?:^|/)\\.\\.?(?:/|$))[^\\u0000-\\u001f]+$"
+            }
+          },
+          "required": [
+            "type",
+            "entry"
+          ]
+        }
+      ]
+    },
+    "activationEvents": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "maxLength": 180,
+        "pattern": "^(?:onCommand:[a-z0-9][a-z0-9-]*\\.[a-z0-9][a-z0-9-]*\\.[a-z0-9][a-z0-9-]*|onPanel:[a-z0-9][a-z0-9-]*\\.[a-z0-9][a-z0-9-]*\\.[a-z0-9][a-z0-9-]*|onLanguage:[a-z][a-z0-9-]*|onStudio:(?:code|documents|sheets|slides|sound|photos|video)|onDocument:[a-z0-9]+|workspaceContains:[^\\r\\n]+|onProjectOpened|onSelectionChanged|onStartupFinished|\\*)$"
+      },
+      "maxItems": 64,
+      "uniqueItems": true
+    },
+    "permissions": {
+      "type": "array",
+      "items": {
+        "enum": [
+          "commands",
+          "project.read",
+          "project.write",
+          "selection",
+          "ui.notify",
+          "storage"
+        ]
+      },
+      "maxItems": 6,
+      "uniqueItems": true
+    },
+    "capabilities": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "untrustedWorkspaces": {
+          "oneOf": [
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "supported": {
+                  "enum": [
+                    "supported",
+                    "unsupported"
+                  ]
+                }
+              },
+              "required": [
+                "supported"
+              ]
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "supported": {
+                  "const": "limited"
+                },
+                "description": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 300
+                },
+                "allowedPermissions": {
+                  "type": "array",
+                  "items": {
+                    "enum": [
+                      "commands",
+                      "project.read",
+                      "project.write",
+                      "selection",
+                      "ui.notify",
+                      "storage"
+                    ]
+                  },
+                  "maxItems": 6,
+                  "uniqueItems": true,
+                  "minItems": 1
+                }
+              },
+              "required": [
+                "supported",
+                "description",
+                "allowedPermissions"
+              ]
+            }
+          ]
+        },
+        "virtualWorkspaces": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "supported": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "supported"
+          ]
+        }
+      },
+      "required": [
+        "untrustedWorkspaces",
+        "virtualWorkspaces"
+      ]
+    },
+    "contributes": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "commands": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[a-z0-9][a-z0-9-]*\\.[a-z0-9][a-z0-9-]*\\.[a-z0-9][a-z0-9-]*$",
+                "maxLength": 150
+              },
+              "title": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 80
+              },
+              "category": {
+                "enum": [
+                  "Project",
+                  "Edit",
+                  "View",
+                  "Insert",
+                  "Tools",
+                  "Help"
+                ]
+              },
+              "icon": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 180,
+                "pattern": "^(?!/)(?!.*\\\\)(?!.*(?:^|/)\\.\\.?(?:/|$))[^\\u0000-\\u001f]+$"
+              },
+              "when": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256
+              },
+              "argumentsSchema": {
+                "type": "object",
+                "maxProperties": 32,
+                "description": "Restricted JSON Schema subset. Semantic validator rejects external references and unsupported keywords."
+              },
+              "resultSchema": {
+                "type": "object",
+                "maxProperties": 32,
+                "description": "Restricted JSON Schema subset. Semantic validator rejects external references and unsupported keywords."
+              }
+            },
+            "required": [
+              "id",
+              "title",
+              "category"
+            ]
+          },
+          "maxItems": 200
+        },
+        "panels": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[a-z0-9][a-z0-9-]*$",
+                "maxLength": 40
+              },
+              "title": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 40
+              },
+              "side": {
+                "enum": [
+                  "left",
+                  "right"
+                ]
+              },
+              "kind": {
+                "enum": [
+                  "declarative",
+                  "webview"
+                ]
+              },
+              "path": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 180,
+                "pattern": "^(?!/)(?!.*\\\\)(?!.*(?:^|/)\\.\\.?(?:/|$))[^\\u0000-\\u001f]+$"
+              },
+              "icon": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 180,
+                "pattern": "^(?!/)(?!.*\\\\)(?!.*(?:^|/)\\.\\.?(?:/|$))[^\\u0000-\\u001f]+$"
+              },
+              "when": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256
+              },
+              "studios": {
+                "type": "array",
+                "items": {
+                  "enum": [
+                    "code",
+                    "documents",
+                    "sheets",
+                    "slides",
+                    "sound",
+                    "photos",
+                    "video"
+                  ]
+                },
+                "maxItems": 7,
+                "uniqueItems": true
+              },
+              "scripts": {
+                "type": "boolean",
+                "default": false
+              }
+            },
+            "required": [
+              "id",
+              "title",
+              "side",
+              "kind",
+              "path"
+            ],
+            "allOf": [
+              {
+                "if": {
+                  "properties": {
+                    "kind": {
+                      "const": "declarative"
+                    }
+                  }
+                },
+                "then": {
+                  "properties": {
+                    "scripts": {
+                      "const": false
+                    }
+                  }
+                }
+              }
+            ]
+          },
+          "maxItems": 200
+        },
+        "themes": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[a-z0-9][a-z0-9-]*$",
+                "maxLength": 40
+              },
+              "label": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 80
+              },
+              "kind": {
+                "enum": [
+                  "code",
+                  "ui"
+                ]
+              },
+              "mode": {
+                "enum": [
+                  "light",
+                  "dark"
+                ]
+              },
+              "path": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 180,
+                "pattern": "^(?!/)(?!.*\\\\)(?!.*(?:^|/)\\.\\.?(?:/|$))[^\\u0000-\\u001f]+$"
+              }
+            },
+            "required": [
+              "id",
+              "label",
+              "kind",
+              "mode",
+              "path"
+            ]
+          },
+          "maxItems": 200
+        },
+        "snippets": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[a-z0-9][a-z0-9-]*$",
+                "maxLength": 40
+              },
+              "label": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 80
+              },
+              "language": {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9-]*$",
+                "maxLength": 40
+              },
+              "path": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 180,
+                "pattern": "^(?!/)(?!.*\\\\)(?!.*(?:^|/)\\.\\.?(?:/|$))[^\\u0000-\\u001f]+$"
+              },
+              "prefix": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 80
+              },
+              "description": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 300
+              },
+              "studios": {
+                "type": "array",
+                "items": {
+                  "enum": [
+                    "code",
+                    "documents",
+                    "sheets",
+                    "slides",
+                    "sound",
+                    "photos",
+                    "video"
+                  ]
+                },
+                "maxItems": 7,
+                "uniqueItems": true
+              }
+            },
+            "required": [
+              "id",
+              "label",
+              "language",
+              "path"
+            ]
+          },
+          "maxItems": 200
+        }
+      },
+      "required": []
+    },
+    "dependencies": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "ecosystem": {
+            "enum": [
+              "npm",
+              "cargo",
+              "other"
+            ]
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 180
+          },
+          "version": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "license": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 180
+          },
+          "sourceIntegrity": {
+            "type": "string",
+            "pattern": "^sha256:[0-9a-f]{64}$"
+          }
+        },
+        "required": [
+          "ecosystem",
+          "name",
+          "version",
+          "license",
+          "sourceIntegrity"
+        ]
+      },
+      "maxItems": 2000
+    },
+    "proposedApis": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9-]*$",
+            "maxLength": 40
+          },
+          "revision": {
+            "type": "integer",
+            "minimum": 1
+          }
+        },
+        "required": [
+          "id",
+          "revision"
+        ]
+      },
+      "maxItems": 32
+    },
+    "repository": {
+      "type": "string",
+      "pattern": "^https://",
+      "maxLength": 300
+    },
+    "homepage": {
+      "type": "string",
+      "pattern": "^https://",
+      "maxLength": 300
+    },
+    "icon": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 180,
+      "pattern": "^(?!/)(?!.*\\\\)(?!.*(?:^|/)\\.\\.?(?:/|$))[^\\u0000-\\u001f]+$"
+    }
+  },
+  "required": [
+    "manifestVersion",
+    "id",
+    "publisher",
+    "name",
+    "version",
+    "description",
+    "license",
+    "engines",
+    "runtime",
+    "activationEvents",
+    "permissions",
+    "capabilities",
+    "contributes",
+    "dependencies"
+  ],
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Somnia extension manifest v2",
+  "description": "Structural schema. Package, namespace, activation, semver, inventory, theme and asset semantic checks in architecture.md are also mandatory.",
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "runtime": {
+            "properties": {
+              "type": {
+                "const": "declarative"
+              }
+            }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "activationEvents": {
+            "maxItems": 0
+          },
+          "contributes": {
+            "properties": {
+              "commands": {
+                "maxItems": 0
+              }
+            }
+          }
+        }
+      }
+    }
+  ]
+}

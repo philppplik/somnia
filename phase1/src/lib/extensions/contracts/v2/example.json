@@ -1,0 +1,60 @@
+{
+  "$schema": "./somnia-extension-v2.schema.json",
+  "manifestVersion": 2,
+  "id": "acme.word-count",
+  "publisher": "acme",
+  "name": "Word count",
+  "version": "1.0.0",
+  "description": "Counts words in the current project document without saving to disk.",
+  "license": "MIT",
+  "engines": {
+    "somnia": ">=11.0.0 <12.0.0",
+    "api": ">=2.0.0 <3.0.0"
+  },
+  "runtime": {
+    "type": "js",
+    "entry": "dist/extension.js"
+  },
+  "activationEvents": [
+    "onCommand:acme.word-count.count",
+    "onPanel:acme.word-count.summary"
+  ],
+  "permissions": [
+    "commands",
+    "project.read",
+    "ui.notify"
+  ],
+  "capabilities": {
+    "untrustedWorkspaces": {
+      "supported": "unsupported"
+    },
+    "virtualWorkspaces": {
+      "supported": true
+    }
+  },
+  "contributes": {
+    "commands": [
+      {
+        "id": "acme.word-count.count",
+        "title": "Count words",
+        "category": "Tools",
+        "when": "hasProject && studio == \"code\""
+      }
+    ],
+    "panels": [
+      {
+        "id": "summary",
+        "title": "Word count",
+        "side": "right",
+        "kind": "declarative",
+        "path": "panels/summary.json",
+        "studios": [
+          "code"
+        ]
+      }
+    ],
+    "themes": [],
+    "snippets": []
+  },
+  "dependencies": []
+}
