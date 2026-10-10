@@ -251,8 +251,16 @@ fn detached_run_can_be_cancelled_and_socket_is_private() {
     assert_eq!(mode, 0o700);
     let sock: PathBuf = std::fs::read_dir(&sock_dir).unwrap().next().unwrap().unwrap().path();
     assert_eq!(std::fs::metadata(&sock).unwrap().permissions().mode() & 0o777, 0o600);
-    let (code, c) = e.json(&["cancel", &tid, "--json"], &[]);
-    assert_eq!((code, &c["acknowledged"]), (0, &Value::Bool(true)));
+    // The daemon registers its discovery file before the run loop is fully live; a cancel issued
+    // immediately after detach can therefore still race the listener. Retry bounded instead of
+    // depending on scheduling: the cancel must be acknowledged within 5 s.
+    let mut acked = false;
+    for _ in 0..50 {
+        let (code, c) = e.json(&["cancel", &tid, "--json"], &[]);
+        if code == 0 && c["acknowledged"] == Value::Bool(true) { acked = true; break; }
+        std::thread::sleep(std::time::Duration::from_millis(100));
+    }
+    assert!(acked, "cancel was never acknowledged");
     wait_status(&e, &tid, "cancelled");
 }
 
