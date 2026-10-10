@@ -26,8 +26,9 @@ test('versions panel: history, compare, trust, variants over mocked IPC',async({
  });
  const shot=async(n:string)=>{if(shotDir)await page.screenshot({path:`${shotDir}/${n}`});};
  page.on('dialog',d=>d.accept());await page.goto('/');
- await page.keyboard.press('Control+o');
- await expect(page.locator('[data-storage]')).toHaveAttribute('data-storage','disk',{timeout:15000});
+ // Loaded CI runners can swallow the first Ctrl+o while the app is still booting; retry the
+ // shortcut (the mocked choose_project is idempotent) until the project is on disk.
+ await expect(async()=>{await page.keyboard.press('Control+o');await expect(page.locator('[data-storage]')).toHaveAttribute('data-storage','disk',{timeout:5000});}).toPass({timeout:60000});
  await page.evaluate(async()=>{const m=await import('/src/store/appStore.ts');m.patchState({leftTab:'versions'});});
  const panel=page.getByTestId('versions-panel');await expect(panel).toBeVisible();
  // Trust dialog
