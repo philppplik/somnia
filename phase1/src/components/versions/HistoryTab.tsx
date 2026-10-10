@@ -1,5 +1,6 @@
-import {useEffect, useState} from 'react';
+import {useEffect, useState, useSyncExternalStore} from 'react';
 import {useGitInvalidation} from './useGitInvalidation';
+import {getAdvanced,subscribeAdvanced} from './vocab';
 import {History, ShieldCheck} from 'lucide-react';
 import {ConfirmShell, FileCard} from '../ConfirmShell';
 import {Button} from '../ui/button';
@@ -12,6 +13,7 @@ export interface HistoryTabProps {
 }
 export function HistoryTab({controller, onRestored}: HistoryTabProps) {
  const {t, locale} = useT(); const revision=useGitInvalidation();
+ const advanced = useSyncExternalStore(subscribeAdvanced,getAdvanced,getAdvanced);
  const [page, setPage] = useState<HistoryPage | null>(null), [review, setReview] = useState<RestoreReview | null>(null);
  const [busy, setBusy] = useState(false), [error, setError] = useState(''), [notice, setNotice] = useState('');
  useEffect(() => {let active = true; setPage(null); setReview(null); setError('');
@@ -44,10 +46,10 @@ export function HistoryTab({controller, onRestored}: HistoryTabProps) {
   {!page && !error && <p role="status">{t('versions.history.loading')}</p>}
   {page?.entries.length === 0 && <p>{t('versions.history.empty')}</p>}
   <ol className="history-timeline">{page?.entries.map(entry => <li key={entry.id}>
-   <span className="history-kind">{entry.kind === 'version' ? <History size={15} aria-hidden="true"/> : <ShieldCheck size={15} aria-hidden="true"/>}{t(`versions.history.${entry.kind === 'version' && entry.safety ? 'safety' : entry.kind}`)}</span>
+   <span className="history-kind">{entry.kind === 'version' ? <History size={15} aria-hidden="true"/> : <ShieldCheck size={15} aria-hidden="true"/>}{entry.kind === 'version' && !entry.safety ? t('publication.state.versioned') : t(`versions.history.${entry.kind === 'version' && entry.safety ? 'safety' : entry.kind}`)}</span>
    <strong title={title(entry)}>{title(entry)}</strong>
    <span>{entry.timeMs === null ? t('versions.history.undated') : new Intl.DateTimeFormat(locale, {dateStyle:'medium', timeStyle:'short'}).format(entry.timeMs)}</span>
-   {entry.kind === 'version' && <span>{entry.version.authorName} · {entry.version.sha.slice(0,8)} · {t('versions.history.files', {count: entry.version.changedFiles})}</span>}
+   {entry.kind === 'version' && <span>{entry.version.authorName}{advanced && <> · <code title={entry.version.sha}>{entry.version.sha.slice(0,8)}</code></>} · {t('versions.history.files', {count: entry.version.changedFiles})}</span>}
    <Button size="compact" variant="outline" disabled={busy} onClick={() => void startReview(entry)}>{t('versions.history.review')}</Button>
   </li>)}</ol>
   {page?.moreBefore && <Button disabled={busy} onClick={() => void loadMore()}>{t('versions.history.more')}</Button>}
