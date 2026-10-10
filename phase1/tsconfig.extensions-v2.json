@@ -1,0 +1,15 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "resolveJsonModule": true,
+    "types": [
+      "node"
+    ]
+  },
+  "include": [
+    "src/lib/extensions/manifestV2.ts",
+    "src/lib/extensions/packageV2.ts",
+    "src/lib/extensions/manifestV2.test.ts",
+    "src/lib/extensions/packageV2.test.ts"
+  ]
+}

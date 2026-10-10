@@ -1,0 +1,30 @@
+name: Extension manifest v2
+on:
+  push:
+    branches: ['ext/manifest-schema', 'somnia-agent']
+    paths: ['phase1/src/lib/extensions/**', 'phase1/package*.json', '.github/workflows/extensions-manifest-v2.yml']
+  pull_request:
+    paths: ['phase1/src/lib/extensions/**', 'phase1/package*.json', '.github/workflows/extensions-manifest-v2.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  manifest:
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: phase1
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: phase1/package-lock.json
+      - run: npm ci
+      - name: Check extension contract types without generated studio engines
+        run: npx tsc -p tsconfig.extensions-v2.json
+      - name: Test v2 manifest and malicious package fixtures
+        run: npx tsx --test src/lib/extensions/manifestV2.test.ts src/lib/extensions/packageV2.test.ts
+      - name: Check legacy extension tests remain valid
+        run: npx tsx --test src/lib/extensions/manifest.test.ts src/lib/extensions/packageInstall.test.ts
