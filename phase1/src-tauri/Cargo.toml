@@ -36,7 +36,7 @@ tauri-plugin-dialog = { version = "2", optional = true }
 tauri-plugin-updater = { version = "2", optional = true }
 tauri-plugin-process = { version = "2", optional = true }
 
-reqwest = { version = "0.12", optional = true, default-features = false, features = ["rustls-tls", "stream"] }
+reqwest = { version = "0.12", optional = true, default-features = false, features = ["rustls-tls", "stream", "json"] }
 keyring = { version = "=3.6.3", optional = true, features = ["apple-native", "windows-native", "sync-secret-service", "crypto-rust", "vendored"] }
 jsonwebtoken = { version = "=9.3.1", default-features = false }
 rmcp = { version = "=3.5.1", default-features = false, features = ["client", "transport-child-process"] }
