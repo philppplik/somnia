@@ -36,6 +36,10 @@ jobs:
         run: npm run documents:build
       - name: Sound Studio core tests (native, real MP3 fixture)
         run: cargo +1.95.0 test --locked --manifest-path sound/Cargo.toml
+      - name: Headless CLI and TUI crate tests (native)
+        run: |
+          cargo +1.95.0 test --locked --manifest-path cli/Cargo.toml
+          cargo +1.95.0 test --locked --manifest-path crates/somnia-tui/Cargo.toml
       - run: npm run build && npm run test:core
       - name: Test performance-budget validation
         run: node --test scripts/performance/report.test.mjs
