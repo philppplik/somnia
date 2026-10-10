@@ -3,7 +3,7 @@ import {validateManifest} from './manifest';
 import {installExtension} from './registry';
 import {API_VERSION,type ExtensionManifest,type Permission} from './types';
 
-export const CATALOG_URL='https://raw.githubusercontent.com/philppplik/somnia/phase1-foundation/docs/extensions/catalog/index.json';
+export const CATALOG_URL='https://raw.githubusercontent.com/philppplik/somnia/main/docs/extensions/catalog/index.json';
 const MAX_INDEX=300_000,MAX_ZIP=2_000_000;
 export interface CatalogEntry {id:string;name:string;version:string;author:string;description:string;repo:string;download:string;sha256:string;apiVersion:number;permissions:Permission[];category?:string}
 export interface ReviewedPackage {entry:CatalogEntry;manifest:ExtensionManifest}
