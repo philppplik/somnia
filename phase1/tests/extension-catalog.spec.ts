@@ -1,4 +1,5 @@
 import {test,expect} from './fixtures';
+test.beforeEach(async({page})=>{await page.addInitScript(()=>localStorage.setItem('somnia.extensions.security.v2',JSON.stringify({version:2,acknowledged:true,restricted:false,developerMode:false,extensions:{}})));});
 import {createHash} from 'node:crypto';
 import {strToU8,zipSync} from 'fflate';
 const manifest={id:'acme.colors',name:'Calm Colors',version:'1.0.0',apiVersion:1,permissions:[],contributes:{codeThemes:[{id:'calm',label:'Calm',light:{'--syntax-tag':'#123456'},dark:{'--syntax-tag':'#abcdef'}}]}};

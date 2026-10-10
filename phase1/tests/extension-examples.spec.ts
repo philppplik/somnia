@@ -1,4 +1,5 @@
 import {test,expect} from './fixtures';
+test.beforeEach(async({page})=>{await page.addInitScript(()=>localStorage.setItem('somnia.extensions.security.v2',JSON.stringify({version:2,acknowledged:true,restricted:false,developerMode:false,extensions:{}})));});
 async function install(page:any,name:string){await page.goto('/');await page.keyboard.press('Control+,');await page.getByRole('button',{name:'Extensions'}).click();
  await page.getByLabel('Extension file').setInputFiles(`examples/${name}/somnia-extension.json`);}
 test('word-count example installs from a file and reports words',async({page})=>{await install(page,'word-count');
