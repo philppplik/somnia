@@ -1,6 +1,6 @@
 import {useSyncExternalStore} from 'react';
 import {PhotosEngine,type PhotosResponse} from './engine';
-import {getMedia,registerMediaCloseGuard,subscribeMedia} from '../media';
+import {getMedia,registerMediaCloseCleanup,registerMediaCloseGuard,subscribeMedia} from '../media';
 import {defaultImageHost,editedName} from '../imageEditorHost';
 import {t} from '../i18n';
 import {isNeutralPhoto,neutralPhotoSettings,photoSignature,sanitizePhotoSettings,PHOTO_INPUT,type PhotoCrop,type PhotoSettings} from './studioSettings';
@@ -151,8 +151,8 @@ export function markPhotoExportedForTest(name:string,snapshot:PhotoSettings){pat
 if(typeof window!=='undefined'){
  registerMediaCloseGuard(name=>{
   const s=getPhotoSession(name);
-  if(s&&dirtyPhoto(s)&&!window.confirm(t('photos.discard',{name})))return false;
-  closePhoto(name);return true;
+  return!s||!dirtyPhoto(s)||window.confirm(t('photos.discard',{name}));
  });
+ registerMediaCloseCleanup(name=>closePhoto(name));
  window.addEventListener('beforeunload',e=>{if(allPhotoSessions().some(dirtyPhoto)){e.preventDefault();e.returnValue='';}});
 }

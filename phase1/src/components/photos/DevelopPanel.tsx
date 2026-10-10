@@ -4,9 +4,10 @@ import {useRasterEditor} from '../RasterEditor';
 import {PhotosEngine,type PhotosResponse} from '../../lib/photos/engine';
 import {neutralDevelop,photosEngines,type DevelopSettings} from '../../lib/photos/registry';
 import {defaultImageHost,editedName} from '../../lib/imageEditorHost';
-import {getMedia,registerMediaCloseGuard} from '../../lib/media';
+import {getMedia,registerMediaCloseCleanup,registerMediaCloseGuard} from '../../lib/media';
 import {ensureDevelopSession,allDevelopSessions,getDevelopSession,forgetDevelopSession,dirtyDevelop,developSignature as signature,subscribeDevelop,configureDevelopSession,setDevelopReady,updateDevelopSettings,historyDevelop,markDevelopSaved} from '../../lib/photos/session';
-registerMediaCloseGuard(name=>{const url=getMedia().items.find(i=>i.name===name)?.url;const s=url?getDevelopSession(url):null;if(!s)return true;if(dirtyDevelop(s)&&!window.confirm('Discard session-only Develop edits? Export a copy to keep the developed image.'))return false;forgetDevelopSession(url!);return true;});
+registerMediaCloseGuard(name=>{const url=getMedia().items.find(i=>i.name===name)?.url;const s=url?getDevelopSession(url):null;if(!s)return true;return!dirtyDevelop(s)||window.confirm('Discard session-only Develop edits? Export a copy to keep the developed image.');});
+registerMediaCloseCleanup(name=>{const url=getMedia().items.find(i=>i.name===name)?.url;if(url)forgetDevelopSession(url);});
 if(typeof window!=='undefined')window.addEventListener('beforeunload',e=>{if(allDevelopSessions().some(dirtyDevelop)){e.preventDefault();e.returnValue='';}});
 function draw(canvas:HTMLCanvasElement|null,r:PhotosResponse){if(!canvas||!r.bytes||!r.width||!r.height)return;canvas.width=r.width;canvas.height=r.height;canvas.getContext('2d')!.putImageData(new ImageData(new Uint8ClampedArray(r.bytes),r.width,r.height),0,0);}
 export function DevelopPanel(){

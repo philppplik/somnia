@@ -35,6 +35,10 @@ export const useMedia=()=>useSyncExternalStore(subscribeMedia,getMedia,getMedia)
 export const findMedia=(name:string)=>state.items.find(i=>i.name.toLowerCase()===name.toLowerCase());
 const closeGuards=new Set<(name:string)=>boolean>();
 export function registerMediaCloseGuard(guard:(name:string)=>boolean){closeGuards.add(guard);return()=>{closeGuards.delete(guard);};}
+const closeCleanups=new Set<(name:string)=>void>();
+/** Runs only after EVERY guard approved the close - guards stay side-effect-free so a later cancel destroys nothing. */
+export function registerMediaCloseCleanup(cleanup:(name:string)=>void){closeCleanups.add(cleanup);return()=>{closeCleanups.delete(cleanup);};}
+const runCloseCleanups=(name:string)=>{for(const c of [...closeCleanups])c(name);};
 const canClose=(name:string)=>[...closeGuards].every(guard=>guard(name));
 const baseName=(n:string)=>n.replace(/^.*[\\/]/,'');
 export interface PreparedMedia{item:MediaItem;name:string;commit(opts?:{activate?:boolean}):{name:string}|{error:string};dispose():void}
@@ -71,8 +75,8 @@ export async function addMediaFile(file:Blob,rawName:string,key?:string,opts:{ac
 /** Studio routing for active media lives in `studios/studioRouting.ts` (one coordinator), not here. */
 export function setActiveMedia(name:string|null){if(state.active!==name)set({...state,active:name});}
 export const canReplaceMedia=(name:string)=>!findMedia(name)||canClose(name);
-export function closeMedia(name:string){const it=findMedia(name);if(!it||!canClose(name))return;URL.revokeObjectURL(it.url);if(it.sourceUrl)URL.revokeObjectURL(it.sourceUrl);set({items:state.items.filter(i=>i!==it),active:state.active===it.name?null:state.active});}
-export function clearMedia(){if(!state.items.every(it=>canClose(it.name)))return false;state.items.forEach(i=>{URL.revokeObjectURL(i.url);if(i.sourceUrl)URL.revokeObjectURL(i.sourceUrl);});set({items:[],active:null});return true;}
+export function closeMedia(name:string){const it=findMedia(name);if(!it||!canClose(name))return;runCloseCleanups(name);URL.revokeObjectURL(it.url);if(it.sourceUrl)URL.revokeObjectURL(it.sourceUrl);set({items:state.items.filter(i=>i!==it),active:state.active===it.name?null:state.active});}
+export function clearMedia(){const names=state.items.map(i=>i.name);if(!names.every(n=>canClose(n)))return false;names.forEach(runCloseCleanups);state.items.forEach(i=>{URL.revokeObjectURL(i.url);if(i.sourceUrl)URL.revokeObjectURL(i.sourceUrl);});set({items:[],active:null});return true;}
 export const formatBytes=(n:number)=>n<1024?`${n} B`:n<1_048_576?`${(n/1024).toFixed(1)} KB`:`${(n/1_048_576).toFixed(1)} MB`;
 
 /** Empty edit-list project. Not a video source and never sent to a decoder. */

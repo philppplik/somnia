@@ -20,8 +20,11 @@ import {isTauri} from '@tauri-apps/api/core';
 import {setStoreManaged} from './lib/updates';
 import {initLocale} from './lib/i18n';
 import {installGlobalErrorHandlers,setNoticeSink,reportError,logInfo,recentLog,copyErrorReport} from './lib/log';
+import {restoreNativeDialogs} from './lib/nativeDialogs';
 import {ErrorBoundary} from './components/ErrorBoundary';
 installGlobalErrorHandlers();
+// Must run before any guard can fire: removes tauri-plugin-dialog's async window.confirm/alert overrides.
+restoreNativeDialogs();
 initLocale();
 import {installDesktopAdapter} from './lib/desktopAdapter';
 import {installFileAdapter} from './lib/fileAdapter';

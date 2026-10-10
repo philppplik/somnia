@@ -4,7 +4,7 @@ import {invoke,isTauri} from '@tauri-apps/api/core';
 import {listen} from '@tauri-apps/api/event';
 import {getCurrentWindow} from '@tauri-apps/api/window';
 import {setCloseHandlers,requestClose} from './closeFlow';
-import {clearDraft} from './draftSession';
+import {clearDraft,saveDraft} from './draftSession';
 import {getState} from '../store/appStore';
 import {restoreWindowState} from './windowState';
 import {installFileAdapter} from './fileAdapter';
@@ -13,7 +13,12 @@ export async function installDesktopAdapter(){
  if(!isTauri())return ()=>{};
  void restoreWindowState().catch(e=>console.error(e));
  // Memory-only and ZIP projects have no backend project, so the Rust close guard cannot see their edits. Guard them here.
- setCloseHandlers('memory',{discardAndClose:async()=>{clearDraft();await getCurrentWindow().destroy();},saveAndClose:async()=>{await getCurrentWindow().destroy();}});
+ setCloseHandlers('memory',{discardAndClose:async()=>{clearDraft();await getCurrentWindow().destroy();},saveAndClose:async()=>{
+  // "Keep draft and close" must persist NOW - the debounced autosave can lag behind the last edit.
+  const st=getState();
+  if(!saveDraft({files:{...st.files},activeFile:st.activeFile,openFiles:[...st.openFiles]}))throw Error('The draft is too large for local recovery. Save the project to disk first.');
+  await getCurrentWindow().destroy();
+ }});
  await getCurrentWindow().onCloseRequested(e=>{const st=getState();const dirtyImages=Object.entries(st.rasterDoc).filter(([,d])=>rasterDirty(d));if(dirtyImages.length&&!window.confirm(`Discard unsaved image edits to ${dirtyImages.map(([name])=>name).join(', ')} and close Somnia?`)){e.preventDefault();return;}if(hasDirtyPdfs()){e.preventDefault();if(window.confirm('Discard unsaved PDF edits and close Somnia?')){if(!st.isDirty)void getCurrentWindow().destroy();else requestClose(st.storage==='disk'?'disk':'memory');}return;}if(st.isDirty){e.preventDefault();requestClose(st.storage==='disk'?'disk':'memory');}});
  return installFileAdapter({
   invoke:(command,args)=>invoke(command,args),
