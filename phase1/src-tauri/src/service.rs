@@ -708,10 +708,14 @@ impl Project {
         for entry in self.recovery.entries()? {
             let entry = entry?;
             if entry.file_name().to_string_lossy().ends_with(".json") {
+                let record = self.recovery_read_name(&entry.file_name())?;
+                if self.only.as_deref().is_some_and(|only| record.path != only) {
+                    continue;
+                }
                 if records.len() >= MAX_DOCS {
                     return Err(AppError::Limit);
                 }
-                records.push(self.recovery_read_name(&entry.file_name())?);
+                records.push(record);
             }
         }
         records.sort_by(|a, b| a.path.cmp(&b.path));
@@ -1479,5 +1483,91 @@ mod project_lock_tests {
         drop(first);
         assert!(Project::open_file(&root.path().join("second.html"), recovery.path()).is_ok());
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod single_file_recovery_scope_tests {
+    use super::*;
+    use tempfile::TempDir;
+
+    type TestResult = std::result::Result<(), Box<dyn std::error::Error>>;
+
+    #[cfg(not(feature = "folder-lock-interim"))]
+    #[test]
+    fn concurrent_single_file_projects_list_only_their_own_journal() -> TestResult {
+        let root = TempDir::new()?;
+        let recovery = TempDir::new()?;
+        fs::write(root.path().join("first.html"), "first")?;
+        fs::write(root.path().join("second.html"), "second")?;
+        let mut first = Project::open_file(&root.path().join("first.html"), recovery.path())?;
+        let mut second = Project::open_file(&root.path().join("second.html"), recovery.path())?;
+        first.stage("first.html", "first draft".into(), 1)?;
+        second.stage("second.html", "second draft".into(), 1)?;
+        let first_records = first.recovery_list()?;
+        let second_records = second.recovery_list()?;
+        assert_eq!(first_records.len(), 1);
+        assert_eq!(second_records.len(), 1);
+        assert_eq!(first_records[0].path, "first.html");
+        assert_eq!(first_records[0].content, "first draft");
+        assert_eq!(second_records[0].path, "second.html");
+        assert_eq!(second_records[0].content, "second draft");
+        assert!(matches!(
+            first.recovery_restore("second.html", 2),
+            Err(AppError::Denied(_))
+        ));
+        assert!(matches!(
+            second.recovery_restore("first.html", 2),
+            Err(AppError::Denied(_))
+        ));
+        assert_eq!(fs::read_to_string(root.path().join("first.html"))?, "first");
+        assert_eq!(
+            fs::read_to_string(root.path().join("second.html"))?,
+            "second"
+        );
+        Ok(())
+    }
+
+    fn retained_sibling_journals(sibling_count: usize) -> TestResult {
+        let root = TempDir::new()?;
+        let recovery = TempDir::new()?;
+        fs::write(root.path().join("own.html"), "own disk")?;
+        // Write valid recovery records through the shipping folder service before opening a file.
+        // Sequential ownership also verifies the interim build's old folder lease.
+        let mut folder = Project::open(root.path(), recovery.path())?;
+        for i in 0..sibling_count {
+            folder.stage(
+                &format!("sibling-{i}.html"),
+                format!("sibling draft {i}"),
+                1,
+            )?;
+        }
+        drop(folder);
+        let mut own = Project::open_file(&root.path().join("own.html"), recovery.path())?;
+        own.stage("own.html", "own draft".into(), 1)?;
+        let records = own.recovery_list()?;
+        assert_eq!(records.len(), 1);
+        assert_eq!(records[0].path, "own.html");
+        assert_eq!(records[0].content, "own draft");
+        assert!(matches!(
+            own.recovery_restore("sibling-0.html", 2),
+            Err(AppError::Denied(_))
+        ));
+        assert_eq!(
+            fs::read_to_string(root.path().join("own.html"))?,
+            "own disk"
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn sixty_four_sibling_journals_do_not_count_toward_the_file_limit() -> TestResult {
+        retained_sibling_journals(64)
+    }
+
+    #[test]
+    fn max_docs_sibling_journals_do_not_count_toward_the_file_limit() -> TestResult {
+        // 64 alone cannot expose the old MAX_DOCS=2048 defect. Test the actual boundary too.
+        retained_sibling_journals(MAX_DOCS)
     }
 }
