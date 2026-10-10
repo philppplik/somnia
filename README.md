@@ -1,4 +1,4 @@
-<p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="[docs/assets/brand/somnia-app-icon.png]"><source media="(prefers-color-scheme: light)" srcset="docs/assets/readme/logo-mark-black.svg"><img src="docs/assets/readme/logo-mark-black.svg" alt="Somnia logo" width="72"></picture></p>
+<p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="docs/assets/readme/somnia-app-icon.png"><source media="(prefers-color-scheme: light)" srcset="docs/assets/readme/somnia-app-icon.png"><img src="docs/assets/readme/somnia-app-icon.png" alt="Somnia logo" width="72"></picture></p>
 
 # Somnia
 
