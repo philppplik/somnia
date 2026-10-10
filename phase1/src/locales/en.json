@@ -2254,5 +2254,6 @@
   "mcp.server.copied": "Copied",
   "mcp.server.document": "Exposed document",
   "mcp.server.noDocument": "No compatible document. Open a document in a studio to expose its tools.",
-  "mcp.server.activity": "Server activity"
+  "mcp.server.activity": "Server activity",
+  "set.ext.networkNotice": "Extensions can open network connections to any host (WebSocket). Install only extensions you trust."
 }

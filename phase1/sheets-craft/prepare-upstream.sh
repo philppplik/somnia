@@ -1,13 +1,16 @@
 #!/bin/sh
-# Fetch GridCraft at the pinned commit and apply the wasm32 clock fix. Idempotent.
+# Stage the vendored GridCraft tree (pinned rev + wasm clock fix, see vendor/)
+# into .upstream/. Idempotent and fully offline. The Cargo.toml path
+# dependencies point at .upstream/gridcraft/...
 set -eu
 cd "$(dirname "$0")"
-rev=fb823899c57b41703edcad2b6476cf4b8a01dfc4
+src=vendor/gridcraft
 dir=.upstream/gridcraft
-if [ ! -d "$dir/.git" ]; then
+stamp="$dir/.vendor-stamp"
+want=$(cat vendor/REVISION)
+if [ ! -d "$dir" ] || [ ! -f "$stamp" ] || [ "$(cat "$stamp")" != "$want" ]; then
+  rm -rf .upstream
   mkdir -p .upstream
-  git clone --quiet https://github.com/storytold/gridcraft.git "$dir"
+  cp -R "$src" "$dir"
+  echo "$want" > "$stamp"
 fi
-git -C "$dir" checkout --quiet --detach "$rev"
-git -C "$dir" reset --quiet --hard "$rev"
-git -C "$dir" apply ../../upstream-wasm-clock.patch

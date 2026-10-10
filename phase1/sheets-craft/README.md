@@ -16,7 +16,7 @@ Same isolated toolchain as `../craft`: Rust 1.95.0, `wasm32-unknown-unknown`,
 
 ```sh
 cd phase1/sheets-craft
-./build.sh              # fetches GridCraft at the pinned commit, applies the clock patch, builds pkg/
+./build.sh              # stages the vendored GridCraft tree (pinned rev + clock patch), builds pkg/
 cargo +1.95.0 test      # adapter tests (3), run after prepare-upstream.sh
 ```
 
@@ -28,8 +28,9 @@ and ignored, except `somnia_sheets_craft.d.ts`.
 `upstream-wasm-clock.patch` is the only change to GridCraft. `Session::commit`
 called `std::time::Instant::now()` unconditionally, which panics on
 wasm32-unknown-unknown and aborted every edit in the browser. The patch skips that
-clock on wasm32. Preferably this becomes a fork or an upstream PR, so the patch step
-can go away. `prepare-upstream.sh` clones into `.upstream/` (ignored) and is idempotent.
+clock on wasm32. GridCraft is vendored under `vendor/gridcraft/` (pinned rev, patch
+applied, offline build; see `vendor/README.md`), so no fork or mirror is needed.
+`prepare-upstream.sh` stages the vendor tree into `.upstream/` (ignored) and is idempotent.
 
 ## Adapter limits
 

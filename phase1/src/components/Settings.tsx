@@ -1400,6 +1400,7 @@ export function Settings() {
       ) : null}
       {section === "Extensions" ? (
         <div>
+          <p className="text-[12px]">{t("set.ext.networkNotice")}</p>
           <button
             onClick={() => {
               const old = enabledIds();

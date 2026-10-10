@@ -40,6 +40,8 @@ The audit confirmed the following current state. Severity is the impact if a mal
 | F11 | `selection.get` deliberately returns only id and tag (no attributes), narrowing data exposure. Keep this principle; v2 adds `selection.attrs` as a separate grant instead of widening the default. | `host.ts`, ADR-003 | Strength, keep |
 | F12 | Settings and secrets (Somnia Agent API keys, BYOK provider credentials, profile data) are unreachable from the extension API today. This must become an explicit invariant, not an accident of the current API surface. | `api.ts` surface | Invariant for v2 |
 
+**Accepted risks (owner decision 2026-10-10).** F4 is accepted: the app `connect-src` keeps the blanket `ws:`/`wss:` entries. The risk is disclosed to users in Settings > Extensions ("Extensions can open network connections to any host (WebSocket). Install only extensions you trust."). SEC-W7 below remains the recommended hardening and is deferred, not cancelled.
+
 ## 2. Assets and actors
 
 **Assets**
@@ -107,7 +109,7 @@ The core decision: **extension code never executes on the app origin.** The v1 m
 - **SEC-W4 (defense in depth).** The global-removal list from v1 (fetch, XHR, WebSocket, indexedDB, nested Worker outside the W2 path, etc.) is retained inside the sandbox, but documentation and review never treat it as a boundary.
 - **SEC-W5 (blocking).** Lifecycle limits: activation timeout 5 s (closes F8), command timeout 5 s (v1 rule kept), and the whole sandbox (iframe + workers) is terminated on timeout, disable, remove, or profile switch. Termination is the only recovery from a hung extension; there is no "keep running" state.
 - **SEC-W6 (blocking).** One sandbox per extension. No shared workers, no BroadcastChannel between extensions, no shared storage. The host message protocol (JSON over postMessage) is unchanged in shape but gains a per-activation random channel token: the iframe must echo the token on every `api.call`, and the host binds replies to the frame and token. This hardens F10 for future multi-frame layouts.
-- **SEC-W7 (blocking).** App CSP cleanup: `connect-src` loses the blanket `ws: wss:` entries; collaboration relays are listed explicitly or negotiated through a dedicated, audited connect mechanism. The AI provider endpoints stay scoped to the agent feature and are never reachable from extension sandboxes (they inherit the app document's CSP only on the app origin, which extensions no longer share). Closes F4.
+- **SEC-W7 (deferred; F4 accepted 2026-10-10, see Accepted risks above).** App CSP cleanup: `connect-src` loses the blanket `ws: wss:` entries; collaboration relays are listed explicitly or negotiated through a dedicated, audited connect mechanism. The AI provider endpoints stay scoped to the agent feature and are never reachable from extension sandboxes (they inherit the app document's CSP only on the app origin, which extensions no longer share). Closes F4.
 - **SEC-W8.** Resource ceilings are best effort and stated honestly: a sandbox can burn CPU inside its process until terminated; per-extension memory caps are not enforceable from the web platform. Mitigation is W5 termination plus a visible "extension is busy / stop" affordance in Settings. Tauri process isolation (extensions in a separate webview/process) is listed as a future hardening option, not a v2 requirement.
 
 ## 5. Network mediation
@@ -237,7 +239,7 @@ Marked honestly; each needs a maintainer decision or an implementation check bef
 | SEC-W4 | Global removal kept as defense in depth only | yes |
 | SEC-W5 | Activation/command timeouts with full teardown | yes |
 | SEC-W6 | Per-activation channel tokens, one sandbox per extension | yes |
-| SEC-W7 | Remove blanket `ws:`/`wss:` from app `connect-src` | yes |
+| SEC-W7 | Remove blanket `ws:`/`wss:` from app `connect-src` | deferred (accepted risk, see above) |
 | SEC-W8 | Busy indicator + documented CPU/memory honesty | no |
 | SEC-N1 | Declared HTTPS origins only, SSRF guard | yes |
 | SEC-N2 | Host-mediated request API with caps and no credentials | yes |

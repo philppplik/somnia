@@ -14,8 +14,9 @@ exclude = [".upstream"]
 [lib]
 crate-type = ["cdylib", "rlib"]
 
-# GridCraft is fetched at a pinned commit and patched by ./prepare-upstream.sh
-# (one wasm32 clock fix). Run it before any cargo command.
+# GridCraft is vendored under vendor/gridcraft (pinned rev + one wasm32 clock
+# fix, see vendor/README.md) and staged into .upstream/ by ./prepare-upstream.sh.
+# Run it before any cargo command.
 [dependencies]
 gridcraft-engine = { path = ".upstream/gridcraft/crates/engine" }
 gridcraft-xlsx = { path = ".upstream/gridcraft/crates/xlsx" }
