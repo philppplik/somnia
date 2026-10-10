@@ -1,0 +1,796 @@
+{
+ "schema": 1,
+ "note": "SEED, severity fatal->error+fatal flag; expected/recoverable/since to be filled by D1-A",
+ "entries": [
+  {
+   "id": "SOM-APP-001",
+   "slug": "boot-import-failure",
+   "domain": "APP",
+   "category": "internal",
+   "default_severity": "error",
+   "fatal": true,
+   "status": "active",
+   "user_message_key": "err.app.001"
+  },
+  {
+   "id": "SOM-APP-002",
+   "slug": "open-request-item-failed",
+   "domain": "APP",
+   "category": "io",
+   "default_severity": "error",
+   "fatal": false,
+   "status": "active",
+   "user_message_key": "err.app.002"
+  },
+  {
+   "id": "SOM-APP-003",
+   "slug": "startup-file-none",
+   "domain": "APP",
+   "category": "info",
+   "default_severity": "debug",
+   "fatal": false,
+   "status": "deprecated",
+   "user_message_key": null
+  },
+  {
+   "id": "SOM-APP-004",
+   "slug": "window-restore-failed",
+   "domain": "APP",
+   "category": "io",
+   "default_severity": "warn",
+   "fatal": false,
+   "status": "active",
+   "user_message_key": "err.app.004"
+  },
+  {
+   "id": "SOM-APP-005",
+   "slug": "update-check-failed",
+   "domain": "APP",
+   "category": "network",
+   "default_severity": "warn",
+   "fatal": false,
+   "status": "active",
+   "user_message_key": "err.app.005"
+  },
+  {
+   "id": "SOM-APP-006",
+   "slug": "update-install-failed",
+   "domain": "APP",
+   "category": "io",
+   "default_severity": "error",
+   "fatal": false,
+   "status": "active",
+   "user_message_key": "err.app.006"
+  },
+  {
+   "id": "SOM-APP-007",
+   "slug": "second-instance-callback-rejected",
+   "domain": "APP",
+   "category": "internal",
+   "default_severity": "error",
+   "fatal": false,
+   "status": "active",
+   "user_message_key": "err.app.007"
+  },
+  {
+   "id": "SOM-APP-008",
+   "slug": "open-request-queue-overflow",
+   "domain": "APP",
+   "category": "limit",
+   "default_severity": "warn",
+   "fatal": false,
+   "status": "active",
+   "user_message_key": "err.app.008"
+  },
+  {
+   "id": "SOM-APP-009",
+   "slug": "panic",
+   "domain": "APP",
+   "category": "internal",
+   "default_severity": "error",
+   "fatal": true,
+   "status": "active",
+   "user_message_key": "err.app.009"
+  },
+  {
+   "id": "SOM-APP-010",
+   "slug": "previous-run-unclean",
+   "domain": "APP",
+   "category": "info",
+   "default_severity": "warn",
+   "fatal": false,
+   "status": "active",
+   "user_message_key": "err.app.010"
+  },
+  {
+   "id": "SOM-APP-011",
+   "slug": "open-request-rejected-input",
+   "domain": "APP",
+   "category": "user-input",
+   "default_severity": "warn",
+   "fatal": false,
+   "status": "active",
+   "user_message_key": "err.app.011"
+  },
+  {
+   "id": "SOM-APP-012",
+   "slug": "open-request-reset",
+   "domain": "APP",
+   "category": "internal",
+   "default_severity": "warn",
+   "fatal": false,
+   "status": "active",
+   "user_message_key": "err.app.012"
+  },
+  {
+   "id": "SOM-APP-013",
+   "slug": "diagnostics-snapshot-unavailable",
+   "domain": "APP",
+   "category": "internal",
+   "default_severity": "warn",
+   "fatal": false,
+   "status": "active",
+   "user_message_key": "err.app.013"
+  },
+  {
+   "id": "SOM-APP-014",
+   "slug": "incident-store-corrupt",
+   "domain": "APP",
+   "category": "data-integrity",
+   "default_severity": "warn",
+   "fatal": false,
+   "status": "active",
+   "user_message_key": "err.app.014"
+  },
+  {
+   "id": "SOM-APP-099",
+   "slug": "legacy-untyped",
+   "domain": "APP",
+   "category": "internal",
+   "default_severity": "warn",
+   "fatal": false,
+   "status": "reserved",
+   "user_message_key": null
+  },
+  {
+   "id": "SOM-UI-001",
+   "slug": "render-failed",
+   "domain": "UI",
+   "category": "internal",
+   "default_severity": "error",
+   "fatal": false,
+   "status": "active",
+   "user_message_key": "err.ui.001"
+  },
+  {
+   "id": "SOM-UI-002",
+   "slug": "render-loop-repeat",
+   "domain": "UI",
+   "category": "internal",
+   "default_severity": "error",
+   "fatal": false,
+   "status": "active",
+   "user_message_key": "err.ui.002"
+  },
+  {
+   "id": "SOM-UI-003",
+   "slug": "resource-load-failed",
+   "domain": "UI",
+   "category": "network",
+   "default_severity": "warn",
+   "fatal": false,
+   "status": "active",
+   "user_message_key": "err.ui.003"
+  },
+  {
+   "id": "SOM-UI-004",
+   "slug": "unhandled-error",
+   "domain": "UI",
+   "category": "internal",
+   "default_severity": "error",
+   "fatal": false,
+   "status": "active",
+   "user_message_key": "err.ui.004"
+  },
+  {
+   "id": "SOM-UI-005",
+   "slug": "unhandled-rejection",
+   "domain": "UI",
+   "category": "internal",
+   "default_severity": "error",
+   "fatal": false,
+   "status": "active",
+   "user_message_key": "err.ui.005"
+  },
+  {
+   "id": "SOM-UI-006",
+   "slug": "confirm-failed-closed",
+   "domain": "UI",
+   "category": "internal",
+   "default_severity": "error",
+   "fatal": false,
+   "status": "active",
+   "user_message_key": "err.ui.006"
+  },
+  {
+   "id": "SOM-UI-007",
+   "slug": "dialog-denied",
+   "domain": "UI",
+   "category": "permission",
+   "default_severity": "error",
+   "fatal": false,
+   "status": "active",
+   "user_message_key": "err.ui.007"
+  },
+  {
+   "id": "SOM-UI-008",
+   "slug": "module-cycle-ordering",
+   "domain": "UI",
+   "category": "internal",
+   "default_severity": "error",
+   "fatal": false,
+   "status": "active",
+   "user_message_key": "err.ui.008"
+  },
+  {
+   "id": "SOM-FS-001",
+   "slug": "conflict",
+   "domain": "FS",
+   "category": "conflict",
+   "default_severity": "warn",
+   "fatal": false,
+   "status": "active",
+   "user_message_key": "err.fs.001"
+  },
+  {
+   "id": "SOM-FS-002",
+   "slug": "denied-path",
+   "domain": "FS",
+   "category": "permission",
+   "default_severity": "error",
+   "fatal": false,
+   "status": "active",
+   "user_message_key": "err.fs.002"
+  },
+  {
+   "id": "SOM-FS-003",
+   "slug": "io",
+   "domain": "FS",
+   "category": "io",
+   "default_severity": "error",
+   "fatal": false,
+   "status": "active",
+   "user_message_key": "err.fs.003"
+  },
+  {
+   "id": "SOM-FS-004",
+   "slug": "stale-revision",
+   "domain": "FS",
+   "category": "conflict",
+   "default_severity": "warn",
+   "fatal": false,
+   "status": "active",
+   "user_message_key": "err.fs.004"
+  },
+  {
+   "id": "SOM-FS-005",
+   "slug": "limit-exceeded",
+   "domain": "FS",
+   "category": "user-input",
+   "default_severity": "warn",
+   "fatal": false,
+   "status": "active",
+   "user_message_key": "err.fs.005"
+  },
+  {
+   "id": "SOM-FS-006",
+   "slug": "project-locked",
+   "domain": "FS",
+   "category": "conflict",
+   "default_severity": "warn",
+   "fatal": false,
+   "status": "active",
+   "user_message_key": "err.fs.006"
+  },
+  {
+   "id": "SOM-FS-007",
+   "slug": "unknown-project",
+   "domain": "FS",
+   "category": "internal",
+   "default_severity": "error",
+   "fatal": false,
+   "status": "active",
+   "user_message_key": "err.fs.007"
+  },
+  {
+   "id": "SOM-FS-008",
+   "slug": "invalid-or-corrupt",
+   "domain": "FS",
+   "category": "data-integrity",
+   "default_severity": "error",
+   "fatal": false,
+   "status": "active",
+   "user_message_key": "err.fs.008"
+  },
+  {
+   "id": "SOM-FS-009",
+   "slug": "dirty-blocked",
+   "domain": "FS",
+   "category": "user-input",
+   "default_severity": "info",
+   "fatal": false,
+   "status": "active",
+   "user_message_key": "err.fs.009"
+  },
+  {
+   "id": "SOM-FS-010",
+   "slug": "draft-autosave-failed",
+   "domain": "FS",
+   "category": "io",
+   "default_severity": "warn",
+   "fatal": false,
+   "status": "active",
+   "user_message_key": "err.fs.010"
+  },
+  {
+   "id": "SOM-FS-011",
+   "slug": "backup-failed",
+   "domain": "FS",
+   "category": "io",
+   "default_severity": "warn",
+   "fatal": false,
+   "status": "active",
+   "user_message_key": "err.fs.011"
+  },
+  {
+   "id": "SOM-FS-012",
+   "slug": "recovery-record-corrupt",
+   "domain": "FS",
+   "category": "data-integrity",
+   "default_severity": "error",
+   "fatal": false,
+   "status": "active",
+   "user_message_key": "err.fs.012"
+  },
+  {
+   "id": "SOM-FS-013",
+   "slug": "tmp-cleanup-failed",
+   "domain": "FS",
+   "category": "io",
+   "default_severity": "debug",
+   "fatal": false,
+   "status": "active",
+   "user_message_key": "err.fs.013"
+  },
+  {
+   "id": "SOM-FS-014",
+   "slug": "diagnostics-zip-write-failed",
+   "domain": "FS",
+   "category": "io",
+   "default_severity": "error",
+   "fatal": false,
+   "status": "active",
+   "user_message_key": "err.fs.014"
+  },
+  {
+   "id": "SOM-DOC-001",
+   "slug": "operation-failed",
+   "domain": "DOC",
+   "category": "internal",
+   "default_severity": "error",
+   "fatal": false,
+   "status": "active",
+   "user_message_key": "err.doc.001"
+  },
+  {
+   "id": "SOM-DOC-002",
+   "slug": "rollback-failed",
+   "domain": "DOC",
+   "category": "data-integrity",
+   "default_severity": "error",
+   "fatal": true,
+   "status": "active",
+   "user_message_key": "err.doc.002"
+  },
+  {
+   "id": "SOM-DOC-003",
+   "slug": "history-restore-failed",
+   "domain": "DOC",
+   "category": "data-integrity",
+   "default_severity": "error",
+   "fatal": false,
+   "status": "active",
+   "user_message_key": "err.doc.003"
+  },
+  {
+   "id": "SOM-GIT-001",
+   "slug": "git-missing",
+   "domain": "GIT",
+   "category": "dependency",
+   "default_severity": "error",
+   "fatal": false,
+   "status": "active",
+   "user_message_key": "err.git.001"
+  },
+  {
+   "id": "SOM-GIT-002",
+   "slug": "not-a-repo",
+   "domain": "GIT",
+   "category": "user-input",
+   "default_severity": "info",
+   "fatal": false,
+   "status": "active",
+   "user_message_key": "err.git.002"
+  },
+  {
+   "id": "SOM-GIT-003",
+   "slug": "blocked",
+   "domain": "GIT",
+   "category": "conflict",
+   "default_severity": "warn",
+   "fatal": false,
+   "status": "active",
+   "user_message_key": "err.git.003"
+  },
+  {
+   "id": "SOM-GIT-004",
+   "slug": "state-changed",
+   "domain": "GIT",
+   "category": "conflict",
+   "default_severity": "warn",
+   "fatal": false,
+   "status": "active",
+   "user_message_key": "err.git.004"
+  },
+  {
+   "id": "SOM-GIT-005",
+   "slug": "nothing-to-commit",
+   "domain": "GIT",
+   "category": "user-input",
+   "default_severity": "info",
+   "fatal": false,
+   "status": "active",
+   "user_message_key": "err.git.005"
+  },
+  {
+   "id": "SOM-GIT-006",
+   "slug": "hook-failed",
+   "domain": "GIT",
+   "category": "user-input",
+   "default_severity": "warn",
+   "fatal": false,
+   "status": "active",
+   "user_message_key": "err.git.006"
+  },
+  {
+   "id": "SOM-GIT-007",
+   "slug": "signing-failed",
+   "domain": "GIT",
+   "category": "dependency",
+   "default_severity": "warn",
+   "fatal": false,
+   "status": "active",
+   "user_message_key": "err.git.007"
+  },
+  {
+   "id": "SOM-GIT-008",
+   "slug": "identity-missing",
+   "domain": "GIT",
+   "category": "user-input",
+   "default_severity": "warn",
+   "fatal": false,
+   "status": "active",
+   "user_message_key": "err.git.008"
+  },
+  {
+   "id": "SOM-GIT-009",
+   "slug": "path-rejected",
+   "domain": "GIT",
+   "category": "security",
+   "default_severity": "error",
+   "fatal": false,
+   "status": "active",
+   "user_message_key": "err.git.009"
+  },
+  {
+   "id": "SOM-GIT-010",
+   "slug": "timeout",
+   "domain": "GIT",
+   "category": "timeout",
+   "default_severity": "error",
+   "fatal": false,
+   "status": "active",
+   "user_message_key": "err.git.010"
+  },
+  {
+   "id": "SOM-GIT-011",
+   "slug": "cancelled",
+   "domain": "GIT",
+   "category": "cancelled",
+   "default_severity": "info",
+   "fatal": false,
+   "status": "active",
+   "user_message_key": "err.git.011"
+  },
+  {
+   "id": "SOM-GIT-012",
+   "slug": "too-large",
+   "domain": "GIT",
+   "category": "user-input",
+   "default_severity": "warn",
+   "fatal": false,
+   "status": "active",
+   "user_message_key": "err.git.012"
+  },
+  {
+   "id": "SOM-GIT-013",
+   "slug": "io",
+   "domain": "GIT",
+   "category": "io",
+   "default_severity": "error",
+   "fatal": false,
+   "status": "active",
+   "user_message_key": "err.git.013"
+  },
+  {
+   "id": "SOM-GIT-014",
+   "slug": "unknown",
+   "domain": "GIT",
+   "category": "internal",
+   "default_severity": "error",
+   "fatal": false,
+   "status": "active",
+   "user_message_key": "err.git.014"
+  },
+  {
+   "id": "SOM-AUTH-001",
+   "slug": "login-denied",
+   "domain": "AUTH",
+   "category": "permission",
+   "default_severity": "warn",
+   "fatal": false,
+   "status": "active",
+   "user_message_key": "err.auth.001"
+  },
+  {
+   "id": "SOM-AUTH-002",
+   "slug": "state-mismatch",
+   "domain": "AUTH",
+   "category": "security",
+   "default_severity": "error",
+   "fatal": false,
+   "status": "active",
+   "user_message_key": "err.auth.002"
+  },
+  {
+   "id": "SOM-AUTH-003",
+   "slug": "timeout",
+   "domain": "AUTH",
+   "category": "timeout",
+   "default_severity": "warn",
+   "fatal": false,
+   "status": "active",
+   "user_message_key": "err.auth.003"
+  },
+  {
+   "id": "SOM-AUTH-004",
+   "slug": "exchange-failed",
+   "domain": "AUTH",
+   "category": "network",
+   "default_severity": "error",
+   "fatal": false,
+   "status": "active",
+   "user_message_key": "err.auth.004"
+  },
+  {
+   "id": "SOM-AUTH-005",
+   "slug": "refresh-permanent-failure",
+   "domain": "AUTH",
+   "category": "permission",
+   "default_severity": "warn",
+   "fatal": false,
+   "status": "active",
+   "user_message_key": "err.auth.005"
+  },
+  {
+   "id": "SOM-AUTH-006",
+   "slug": "store-corrupt",
+   "domain": "AUTH",
+   "category": "data-integrity",
+   "default_severity": "error",
+   "fatal": false,
+   "status": "active",
+   "user_message_key": "err.auth.006"
+  },
+  {
+   "id": "SOM-AUTH-007",
+   "slug": "id-token-invalid",
+   "domain": "AUTH",
+   "category": "security",
+   "default_severity": "error",
+   "fatal": false,
+   "status": "active",
+   "user_message_key": "err.auth.007"
+  },
+  {
+   "id": "SOM-EXT-001",
+   "slug": "permission-denied",
+   "domain": "EXT",
+   "category": "permission",
+   "default_severity": "warn",
+   "fatal": false,
+   "status": "active",
+   "user_message_key": "err.ext.001"
+  },
+  {
+   "id": "SOM-EXT-002",
+   "slug": "handler-missing",
+   "domain": "EXT",
+   "category": "internal",
+   "default_severity": "error",
+   "fatal": false,
+   "status": "active",
+   "user_message_key": "err.ext.002"
+  },
+  {
+   "id": "SOM-EXT-003",
+   "slug": "cancelled",
+   "domain": "EXT",
+   "category": "cancelled",
+   "default_severity": "info",
+   "fatal": false,
+   "status": "active",
+   "user_message_key": "err.ext.003"
+  },
+  {
+   "id": "SOM-EXT-004",
+   "slug": "worker-error",
+   "domain": "EXT",
+   "category": "extension-fault",
+   "default_severity": "error",
+   "fatal": false,
+   "status": "active",
+   "user_message_key": "err.ext.004"
+  },
+  {
+   "id": "SOM-EXT-005",
+   "slug": "activate-failed",
+   "domain": "EXT",
+   "category": "extension-fault",
+   "default_severity": "error",
+   "fatal": false,
+   "status": "active",
+   "user_message_key": "err.ext.005"
+  },
+  {
+   "id": "SOM-EXT-006",
+   "slug": "store-schema-invalid",
+   "domain": "EXT",
+   "category": "data-integrity",
+   "default_severity": "error",
+   "fatal": false,
+   "status": "active",
+   "user_message_key": "err.ext.006"
+  },
+  {
+   "id": "SOM-EXT-007",
+   "slug": "publisher-change",
+   "domain": "EXT",
+   "category": "security",
+   "default_severity": "warn",
+   "fatal": false,
+   "status": "active",
+   "user_message_key": "err.ext.007"
+  },
+  {
+   "id": "SOM-EXT-008",
+   "slug": "catalog-load-failed",
+   "domain": "EXT",
+   "category": "network",
+   "default_severity": "warn",
+   "fatal": false,
+   "status": "active",
+   "user_message_key": "err.ext.008"
+  },
+  {
+   "id": "SOM-EXT-009",
+   "slug": "index-invalid-json",
+   "domain": "EXT",
+   "category": "data-integrity",
+   "default_severity": "warn",
+   "fatal": false,
+   "status": "active",
+   "user_message_key": "err.ext.009"
+  },
+  {
+   "id": "SOM-AGT-001",
+   "slug": "provider-request-failed",
+   "domain": "AGT",
+   "category": "network",
+   "default_severity": "error",
+   "fatal": false,
+   "status": "active",
+   "user_message_key": "err.agt.001"
+  },
+  {
+   "id": "SOM-AGT-002",
+   "slug": "protocol-error",
+   "domain": "AGT",
+   "category": "network",
+   "default_severity": "error",
+   "fatal": false,
+   "status": "active",
+   "user_message_key": "err.agt.002"
+  },
+  {
+   "id": "SOM-AGT-003",
+   "slug": "tool-failed",
+   "domain": "AGT",
+   "category": "internal",
+   "default_severity": "error",
+   "fatal": false,
+   "status": "active",
+   "user_message_key": "err.agt.003"
+  },
+  {
+   "id": "SOM-AGT-004",
+   "slug": "apply-failed",
+   "domain": "AGT",
+   "category": "data-integrity",
+   "default_severity": "error",
+   "fatal": false,
+   "status": "active",
+   "user_message_key": "err.agt.004"
+  },
+  {
+   "id": "SOM-NET-001",
+   "slug": "mcp-gateway-error",
+   "domain": "NET",
+   "category": "network",
+   "default_severity": "error",
+   "fatal": false,
+   "status": "active",
+   "user_message_key": "err.net.001"
+  },
+  {
+   "id": "SOM-NET-002",
+   "slug": "lan-host-error",
+   "domain": "NET",
+   "category": "network",
+   "default_severity": "error",
+   "fatal": false,
+   "status": "active",
+   "user_message_key": "err.net.002"
+  },
+  {
+   "id": "SOM-NET-003",
+   "slug": "collab-peer-failed",
+   "domain": "NET",
+   "category": "network",
+   "default_severity": "warn",
+   "fatal": false,
+   "status": "active",
+   "user_message_key": "err.net.003"
+  },
+  {
+   "id": "SOM-ACL-001",
+   "slug": "ipc-denied",
+   "domain": "ACL",
+   "category": "permission",
+   "default_severity": "error",
+   "fatal": false,
+   "status": "active",
+   "user_message_key": "err.acl.001"
+  },
+  {
+   "id": "SOM-ACL-002",
+   "slug": "capability-description-drift",
+   "domain": "ACL",
+   "category": "config",
+   "default_severity": "error",
+   "fatal": false,
+   "status": "ci-only",
+   "user_message_key": null
+  }
+ ]
+}

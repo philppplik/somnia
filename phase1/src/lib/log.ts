@@ -1,4 +1,7 @@
 import {invoke,isTauri} from '@tauri-apps/api/core';
+import {ERROR_META,type ErrorId} from '../generated/errorIds';
+import type {IncidentId,ReportedFailure} from './diagnostics/ids';
+import {CONTEXT_ALLOW,EXPORT_CONTEXT_ALLOW,LEVELS_V2,type BuildIdentity,type Ctx,type Level,type LogLine,type SafeLogEvent} from './log.types';
 /**
  * One logging path for the whole app. Entries go to an in-memory ring buffer and, in the desktop app, to the rotating log file
  * in the app data folder (written by the Rust service, which also records its own errors and panics there).
@@ -90,4 +93,184 @@ export async function buildErrorReport(lines=150):Promise<string>{
 export async function copyErrorReport():Promise<boolean>{
  try{const text=await buildErrorReport();await navigator.clipboard.writeText(text);log('info','log','Error report copied');noticeSink?.('Error report copied. Paste it into a message to send it.');return true;}
  catch(e){reportError('log','Could not copy the error report',{level:'warn'});noticeSink?.('Could not copy the error report (clipboard not available).');void e;return false;}
+}
+
+/* ---------------------------------------------------------------------------------------------
+ * Schema v2: typed events with registry ids (logEvent). The functions above stay as the legacy
+ * path (no id) until the call sites are migrated.
+ * ------------------------------------------------------------------------------------------- */
+export type {ReportedFailure,IncidentId,RequestId,SafeLogEvent as SafeLogEventDto,BuildIdentity} from './diagnostics/ids';
+export type {LogLine,Level,Ctx} from './log.types';
+const RING_MAX=500,RATE_CAPACITY=5,RATE_REFILL_MS=60_000/5,RATE_TABLE_MAX=200,CAUSE_MAX=500,CTX_STRING_MAX=64;
+const CROCKFORD='0123456789ABCDEFGHJKMNPQRSTVWXYZ';
+function randomBytes(n:number):Uint8Array{
+ const a=new Uint8Array(n);
+ try{globalThis.crypto.getRandomValues(a);}catch{for(let i=0;i<n;i++)a[i]=Math.floor(Math.random()*256);}
+ return a;
+}
+/** ULID: 48-bit ms timestamp plus 80 random bits, Crockford base32, 26 characters. */
+export function newUlid(now=Date.now()):string{
+ let t=now,time='';
+ for(let i=0;i<10;i++){time=CROCKFORD[t%32]+time;t=Math.floor(t/32);}
+ let rand='';for(const b of randomBytes(16))rand+=CROCKFORD[b%32];
+ return time+rand.slice(0,16);
+}
+const SESSION=newUlid();
+let seqCounter=0;
+const ring:LogLine[]=[];
+const subscribers=new Set<(f:ReportedFailure)=>void>();
+const health={ringDropped:0,droppedFields:0,suppressed:0,expected:0,lastWriteError:undefined as string|undefined};
+const buckets=new Map<string,{tokens:number;at:number;suppressed:number}>();
+/** Session id of this renderer process (ULID). Part of the merge key (session, source, seq). */
+export const logSession=SESSION;
+function buildIdentity():BuildIdentity{
+ const release=typeof __APP_RELEASE__!=='undefined'?__APP_RELEASE__:'dev';
+ const app=typeof __APP_VERSION__!=='undefined'?__APP_VERSION__:'dev';
+ return{release,sha:'unknown',channel:'unknown',arch:'unknown',frontend_build:app};
+}
+const FNV_OFFSET=0xcbf29ce484222325n,FNV_PRIME=0x100000001b3n,MASK64=(1n<<64n)-1n;
+/** FNV-1a 64 bit over the UTF-8 bytes, as 16 lowercase hex characters. The Rust side must implement the same function. */
+export function fp64(input:string):string{
+ let h=FNV_OFFSET;
+ for(const b of new TextEncoder().encode(input)){h^=BigInt(b);h=(h*FNV_PRIME)&MASK64;}
+ return h.toString(16).padStart(16,'0');
+}
+/** Normalizes redacted text so equal failures share a fingerprint: paths, ids, long hex and digits are replaced. */
+export function normalizeForFingerprint(text:string):string{
+ return redactText(text)
+  .replace(/(?:[A-Za-z]:\\|\\\\|\/)[^\s"'<>|]*[\\\/][^\s"'<>|]*/g,'<path>')
+  .replace(/\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b/gi,'<id>')
+  .replace(/\b[0-7][0-9A-HJKMNP-TV-Z]{25}\b/g,'<id>')
+  .replace(/\b[0-9a-f]{8,}\b/gi,'<hex>')
+  .replace(/\d+/g,'#');
+}
+function topFrames(stack:string|undefined,n=3):string{
+ if(!stack)return'';
+ return stack.split('\n').slice(1).map(l=>l.trim()).filter(l=>/^at\s/.test(l)).slice(0,n).map(l=>normalizeForFingerprint(l.replace(/\(.*[\\\/]([^\\\/)]*)\)/,'($1)'))).join(';');
+}
+function sanitizeContext(ctx:Record<string,unknown>|undefined):Ctx{
+ const out:Ctx={};
+ if(!ctx)return out;
+ for(const [k,v] of Object.entries(ctx)){
+  const kind=Object.prototype.hasOwnProperty.call(CONTEXT_ALLOW,k)?CONTEXT_ALLOW[k]:undefined;
+  if(kind==='number'&&typeof v==='number'&&Number.isFinite(v))out[k]=v;
+  else if(kind==='string'&&typeof v==='string')out[k]=clip(redactText(v).replace(/(?:[A-Za-z]:\\|\\\\|\/)[^\s]*[\\\/][^\s]*/g,'<path>').replace(/[\u0000-\u001f\u007f-\u009f\u202a-\u202e\u2066-\u2069]/g,''),CTX_STRING_MAX);
+  else health.droppedFields++;
+ }
+ return out;
+}
+function rateAllow(fp:string,now:number):{allow:boolean;suppressed:number}{
+ let b=buckets.get(fp);
+ if(!b){
+  if(buckets.size>=RATE_TABLE_MAX){const first=buckets.keys().next().value;if(first!==undefined)buckets.delete(first);}
+  b={tokens:RATE_CAPACITY,at:now,suppressed:0};buckets.set(fp,b);
+ }
+ b.tokens=Math.min(RATE_CAPACITY,b.tokens+(now-b.at)/RATE_REFILL_MS);b.at=now;
+ if(b.tokens<1){b.suppressed++;return{allow:false,suppressed:0};}
+ b.tokens-=1;const sup=b.suppressed;b.suppressed=0;return{allow:true,suppressed:sup};
+}
+export interface LogEventOptions{
+ /** Free text cause or the thrown value. Redacted and normalized before it is stored. */
+ cause?:string|unknown;
+ context?:Record<string,unknown>;
+ expected?:boolean;corr?:string;level?:Level|string;
+ /** Requests fatal. Honored only when the registry marks the id as fatal. */
+ fatal?:boolean;
+ window?:string;dur_ms?:number;
+}
+function pushRing(line:LogLine){
+ ring.push(line);
+ if(ring.length>RING_MAX){ring.shift();health.ringDropped++;}
+ if(!isTauri())return;
+ try{void invoke('log_write',{level:line.level,source:line.source,message:`${line.id} ${line.message}`,context:{...line.context,v:2,id:line.id,session:line.session,seq:line.seq,fingerprint:line.fingerprint,incident_id:line.incident_id,corr:line.corr,expected:line.expected,fatal:line.fatal}}).catch((e:unknown)=>{health.lastWriteError=describeError(e,200);});}
+ catch(e){health.lastWriteError=describeError(e,200);}
+}
+/**
+ * Logs a typed event. Returns a ReportedFailure for the UI, or null when the event is expected,
+ * below warn level, or suppressed by the per-fingerprint rate limit. Never throws.
+ * Subscribers of subscribeReportedFailures run synchronously after the write.
+ */
+export function logEvent(id:ErrorId,o:LogEventOptions={}):ReportedFailure|null{
+ try{
+  const meta=ERROR_META[id];
+  const now=Date.now();
+  let level:Level,levelRaw:string|undefined;
+  const wanted=o.level??meta.severity;
+  if((LEVELS_V2 as readonly string[]).includes(wanted as string))level=wanted as Level;else{level='error';levelRaw=String(wanted).slice(0,32);}
+  const err=o.cause instanceof Error?o.cause:undefined;
+  const causeText=o.cause===undefined?'':err?describeError(err,CAUSE_MAX):typeof o.cause==='string'?o.cause:describeError(o.cause,CAUSE_MAX);
+  const message=clip(normalizeCauseForStorage(causeText),CAUSE_MAX);
+  const fingerprint=fp64(`${id}|${normalizeForFingerprint(causeText)}|${topFrames(err?.stack)}`);
+  const expected=o.expected??meta.expected;
+  const gate=rateAllow(fingerprint,now);
+  if(!gate.allow){health.suppressed++;return null;}
+  if(expected)health.expected++;
+  const fatal=o.fatal===true&&meta.fatal;
+  const context=sanitizeContext(o.context);
+  const reportable=!expected&&(level==='warn'||level==='error');
+  const incidentId=reportable?newUlid(now):undefined;
+  const line:LogLine={v:2,ts:new Date(now).toISOString(),level,...(levelRaw?{level_raw:levelRaw}:{}),...(fatal?{fatal:true}:{}),source:'ts',id,category:meta.category,message,context,session:SESSION,seq:++seqCounter,...(incidentId?{incident_id:incidentId}:{}),...(o.corr?{corr:clip(o.corr,64)}:{}),build:buildIdentity(),...(o.window?{window:clip(o.window,CTX_STRING_MAX)}:{}),...(typeof o.dur_ms==='number'?{dur_ms:o.dur_ms}:{}),expected,fingerprint,...(gate.suppressed>0?{suppressed:gate.suppressed}:{})};
+  pushRing(line);
+  if(!reportable||!incidentId)return null;
+  const failure:ReportedFailure={id,incidentId:incidentId as IncidentId,expected,level:level as 'warn'|'error',fatal,fingerprint,userMessageKey:meta.messageKey,...(line.corr?{corr:line.corr}:{}),...(typeof context.ordinal==='number'?{ordinal:context.ordinal}:{})};
+  publishReportedFailure(failure);
+  return failure;
+ }catch(e){health.lastWriteError=describeError(e,200);return null;}
+}
+function normalizeCauseForStorage(text:string):string{
+ return redactText(text).replace(/(?:[A-Za-z]:\\|\\\\|\/)[^\s"'<>|]*[\\\/][^\s"'<>|]*/g,'<path>').replace(/[\u0000-\u0008\u000b-\u001f\u007f-\u009f\u202a-\u202e\u2066-\u2069]/g,'');
+}
+/** Convenience for fatal events: same as logEvent with fatal:true (honored only for registry-fatal ids). */
+export function logFatal(id:ErrorId,o:Omit<LogEventOptions,'fatal'>={}):ReportedFailure|null{return logEvent(id,{...o,fatal:true});}
+/** Subscribes to failures worth showing the user. Fires synchronously after the log write. Returns the unsubscribe function. */
+export function subscribeReportedFailures(fn:(f:ReportedFailure)=>void):()=>void{subscribers.add(fn);return()=>{subscribers.delete(fn);};}
+/** Delivers a failure that originated outside logEvent (Rust event som://failure, cmd() errors). Payload must already be allowlisted. Subscriber errors never propagate. */
+export function publishReportedFailure(f:ReportedFailure):void{
+ for(const fn of [...subscribers]){try{fn(f);}catch{/* a failing subscriber must not break logging */}}
+}
+/** The v2 ring (last 500 lines). Lines keep their (session, source, seq) key when copied into reports. */
+export function getRing():LogLine[]{return ring.slice();}
+export function clearRing():void{ring.length=0;buckets.clear();health.ringDropped=0;health.droppedFields=0;health.suppressed=0;health.expected=0;health.lastWriteError=undefined;}
+export interface LoggerHealth{ok:boolean;lastWriteError?:string;ringSize:number;dropped:number;droppedFields:number;suppressed:number;expected:number;sinceSeq:number;session:string}
+export function getLoggerHealth():LoggerHealth{
+ return{ok:health.lastWriteError===undefined,...(health.lastWriteError?{lastWriteError:health.lastWriteError}:{}),ringSize:ring.length,dropped:health.ringDropped,droppedFields:health.droppedFields,suppressed:health.suppressed,expected:health.expected,sinceSeq:seqCounter,session:SESSION};
+}
+export interface BootEntry{ts?:string;id:ErrorId;cause?:string;context?:Record<string,unknown>}
+/** Moves events collected before the app booted into the log. Uses the normal path, so redaction, allowlist and rate limit apply. */
+export function adoptBootBuffer(buf:BootEntry[]):void{for(const e of buf.slice(0,100))logEvent(e.id,{cause:e.cause,context:e.context});}
+/**
+ * Export contract: converts a line to the form allowed in the diagnostics ZIP and error report.
+ * Free text (message, cause) is dropped. Only ids, flags, the merge key and allowlisted
+ * technical context (counters and short tokens) survive. Legacy lines without a v2 id are dropped (null).
+ */
+export function toSafeLogEvent(line:unknown):SafeLogEvent|null{
+ try{
+  const l=line as Partial<LogLine>|null;
+  if(!l||typeof l!=='object'||l.v!==2||typeof l.id!=='string'||!Object.prototype.hasOwnProperty.call(ERROR_META,l.id))return null;
+  if(typeof l.session!=='string'||typeof l.seq!=='number'||typeof l.ts!=='string')return null;
+  const lvl=(LEVELS_V2 as readonly string[]).includes(l.level as string)?l.level as Level:'error';
+  const ctx:Record<string,string|number|boolean>={};
+  for(const k of EXPORT_CONTEXT_ALLOW){
+   const v=(l.context as Record<string,unknown>|undefined)?.[k];
+   if(typeof v==='number'&&Number.isFinite(v))ctx[k]=v;
+   else if(typeof v==='string'&&/^[A-Za-z0-9_.:-]{1,64}$/.test(v))ctx[k]=v;
+  }
+  const tok=(v:unknown)=>typeof v==='string'&&/^[A-Za-z0-9_.:-]{1,64}$/.test(v)?v:undefined;
+  const b=l.build as Partial<BuildIdentity>|undefined;
+  const build:BuildIdentity={release:tok(b?.release)??'unknown',sha:tok(b?.sha)??'unknown',channel:tok(b?.channel)??'unknown',arch:tok(b?.arch)??'unknown',frontend_build:tok(b?.frontend_build)??'unknown'};
+  const out:SafeLogEvent={v:2,ts:l.ts,level:lvl,source:l.source==='rust'?'rust':'ts',id:l.id as ErrorId,session:tok(l.session)??'unknown',seq:l.seq,expected:l.expected===true,fingerprint:tok(l.fingerprint)??'unknown',build,context:ctx};
+  if(l.fatal===true)out.fatal=true;
+  const w=tok(l.window);if(w)out.window=w;
+  const inc=tok(l.incident_id);if(inc)out.incident_id=inc;
+  const c=tok(l.corr);if(c)out.corr=c;
+  if(typeof l.suppressed==='number')out.suppressed=l.suppressed;
+  if(typeof l.dur_ms==='number')out.dur_ms=l.dur_ms;
+  return out;
+ }catch{return null;}
+}
+/** Maps many lines through toSafeLogEvent, drops rejects, dedupes by (session, source, seq) and sorts by that key (ts only breaks ties between sessions). */
+export function toSafeLogEvents(lines:readonly unknown[]):SafeLogEvent[]{
+ const seen=new Map<string,SafeLogEvent>();
+ for(const l of lines){const e=toSafeLogEvent(l);if(e)seen.set(`${e.session}|${e.source}|${e.seq}`,e);}
+ return [...seen.values()].sort((a,b)=>a.ts<b.ts?-1:a.ts>b.ts?1:a.seq-b.seq);
 }
