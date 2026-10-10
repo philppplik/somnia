@@ -74,6 +74,6 @@ export function ChangesView({backend,s,c,t,unsavedFiles,advanced,onSaveFiles,onS
    <Button variant="primary" size="normal" data-testid="versions-save" disabled={!c.canSave()} onClick={()=>{void c.commit().then(v=>{if(v)onSaved?.();});}}>{saving?t('versions.saving'):withGit(t('versions.save'),'commit',advanced)}</Button>
   </div>
   {s.reviewAgain&&<div role="alert" data-testid="versions-review-again" className="rounded-sm border border-subtle p-2 text-[11px] text-ink">{t('versions.reviewAgain')}</div>}
-  {s.saved&&<div role="status" data-testid="versions-saved" className="rounded-sm border border-subtle p-2 text-[11px] text-ink">{t('versions.saved',{subject:s.saved.subject})}{advanced&&<span className="ml-1 font-mono">{s.saved.sha.slice(0,7)}</span>}</div>}
+  {s.saved&&<div role="status" data-testid="versions-saved" className="rounded-sm border border-subtle p-2 text-[11px] text-ink">{t('publication.state.versioned')}: {t('versions.saved',{subject:s.saved.subject})}{advanced&&<span className="ml-1 font-mono">{s.saved.sha.slice(0,7)}</span>}</div>}
   {errMsg}
  </div>;}
