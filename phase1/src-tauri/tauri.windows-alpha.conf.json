@@ -31,7 +31,7 @@
         "decorations": false,
         "dragDropEnabled": true,
         "shadow": false,
-        "transparent": true,
+        "transparent": false,
         "width": 1440,
         "height": 900,
         "minWidth": 960,
