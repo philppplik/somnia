@@ -1,10 +1,11 @@
 import {Component,type ErrorInfo,type ReactNode} from 'react';
-import {copyErrorReport,reportError} from '../lib/log';
+import {copyErrorReport} from '../lib/diagnostics/hostStore';
+import {reportError} from '../lib/log';
 /** Keeps a failing part of the UI (a panel, a lazily loaded tool) from taking the whole app down. The error is logged; the user gets a quiet in-place message. */
-export class ErrorBoundary extends Component<{label:string;children:ReactNode;compact?:boolean},{failed:boolean}>{
+export class ErrorBoundary extends Component<{label:string;children:ReactNode;compact?:boolean;onFatal?:()=>void},{failed:boolean}>{
  state={failed:false};
  static getDerivedStateFromError(){return{failed:true};}
- componentDidCatch(error:unknown,info:ErrorInfo){reportError(`ui.${this.props.label}`,error,{message:`${this.props.label} failed to render`,context:{componentStack:info.componentStack?.split('\n').slice(0,6).join('\n')}});}
+ componentDidCatch(error:unknown,info:ErrorInfo){reportError(`ui.${this.props.label}`,error,{message:`${this.props.label} failed to render`,context:{componentStack:info.componentStack?.split('\n').slice(0,6).join('\n')}});this.props.onFatal?.();}
  render(){
   if(!this.state.failed)return this.props.children;
   return <div role="alert" className="flex flex-col items-start gap-2 p-4 text-[12px] text-ink-2" data-testid="error-boundary">

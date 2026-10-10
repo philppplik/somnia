@@ -17,6 +17,9 @@ const NAMES_TS = join(phase1, 'src/generated/commandNames.ts');
 const WRAPPED = new Map([
   ['drain_open_requests', 'B7'], ['claim_open_request', 'B7'], ['read_by_grant', 'B7'], ['ack_open_request', 'B7'],
   ['release_candidate', 'B7'], ['retry_open_item', 'B7'], ['get_intake_policy', 'B7'], ['set_intake_policy', 'B7'],
+  ['build_diagnostic_zip', 'B1'], ['write_diagnostic_zip', 'B1'], ['discard_diagnostic_snapshot', 'B1'],
+  ['list_crash_reports', 'B1'], ['mark_crash_reports_reviewed', 'B1'], ['delete_crash_reports', 'B1'],
+  ['record_frontend_fatal', 'B1'],
 ]);
 
 // Parameters injected by Tauri (never part of the JS call).
@@ -26,18 +29,11 @@ const RAW = /tauri::ipc::Request/;
 
 /** Planned commands (design D1/D2/D3, errata applied). params are Rust snake_case names. */
 export const PLANNED = [
-  // D3 diagnostics + crash/incident store (D1 errata 4/5, D3 overrides).
-  { name: 'build_diagnostic_zip', domain: 'diagnostics', boundary: 'B1', params: ['selection', 'renderer_entries'] },
-  { name: 'write_diagnostic_zip', domain: 'diagnostics', boundary: 'B1', params: ['snapshot_id'] },
-  { name: 'discard_diagnostic_snapshot', domain: 'diagnostics', boundary: 'B1', params: ['snapshot_id'] },
-  { name: 'list_crash_reports', domain: 'diagnostics', boundary: 'B1', params: [] },
-  { name: 'mark_crash_reports_reviewed', domain: 'diagnostics', boundary: 'B1', params: ['ids'] },
-  { name: 'delete_crash_reports', domain: 'diagnostics', boundary: 'B1', params: ['ids'] },
-  { name: 'record_frontend_fatal', domain: 'diagnostics', boundary: 'B1', params: ['entry'] },
 ];
 
 const DOMAIN_RULES = [
   [/^(drain_open_requests|claim_open_request|read_by_grant|ack_open_request|release_candidate|retry_open_item|get_intake_policy|set_intake_policy)$/, 'intake'],
+  [/^(build_diagnostic_zip|write_diagnostic_zip|discard_diagnostic_snapshot|list_crash_reports|mark_crash_reports_reviewed|delete_crash_reports|record_frontend_fatal)$/, 'diagnostics'],
   [/^git_/, 'git'],
   [/^(agent_account_|github_account_)/, 'auth'],
   [/^(agent_settings_|agent_key_|mcp_|studio_mcp_)/, 'agent'],

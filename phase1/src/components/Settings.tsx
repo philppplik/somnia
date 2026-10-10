@@ -66,7 +66,7 @@ import {
 } from "../lib/i18n";
 import { useT } from "../lib/useT";
 import { tOr } from "../lib/i18n";
-import { copyErrorReport } from "../lib/log";
+import { copyErrorReport } from "../lib/diagnostics/hostStore";
 import {
   Dialog,
   DialogContent,

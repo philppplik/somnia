@@ -2,7 +2,7 @@ import {listStudios,getStudio} from './studios';
 import {studioModes} from './studios/modes';
 import {getUiContext} from './uiContextStore';
 import {requestStudio} from '../store/appStore';
-import {copyErrorReport} from './log';
+import {copyErrorReport} from './diagnostics/hostStore';
 import {t,tOr} from './i18n';
 import {openExternal,REPO_URL} from './openExternal';
 import {formatCode,langFor} from './format';

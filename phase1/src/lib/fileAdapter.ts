@@ -13,8 +13,8 @@ import {loadFolderMedia} from './folderMedia';
 import {readProjectDocuments} from './projectIndex';
 import {setVersionsSession} from './versionsSession';
 import {attachProjectSettings,detachProjectSettings} from './projectSettingsIO';
-/** Starts the native open-request intake (D2-E orchestrator). Installed by the app bootstrap; absent in the web build. Returns its cleanup. */
-export type IntakeStarter=(port:FilePort)=>Promise<()=>void>;
+/** Starts the native open-request intake (D2-E orchestrator). Installed by the app bootstrap; absent in the web build. The adapter hands over its project-focus callback for activated-existing items. Returns its cleanup. */
+export type IntakeStarter=(port:FilePort,focusProject:(projectId:string)=>void)=>Promise<()=>void>;
 let intakeStarter:IntakeStarter|null=null;
 export const installIntakeStarter=(fn:IntakeStarter|null)=>{intakeStarter=fn;};
 export type Revision={exists:boolean;hash:string|null};
@@ -182,9 +182,11 @@ export async function installFileAdapter(port:FilePort){
  // File association launch / second-instance opens: the host queues them (cold argv and warm opens take the same path) and the
  // intake orchestrator (installed via installIntakeStarter) drains the queue through the normal #166 open pipeline.
  // Failures are surfaced, never swallowed: an empty queue is the only silent result.
- if(port.shell&&intakeStarter)cleanups.push(await intakeStarter(port).catch(error=>{fail(error);return()=>{};}));
- // consumes it Rust-side (the renderer never supplies the path) and the normal open pipeline runs.
- if(port.shell)void port.invoke<{projectId:string;name:string}|null>('open_startup_file').then(sel=>{if(sel)return open(false,false,undefined,sel);}).catch(()=>{/* no startup file or already consumed */});
+ // Activated-existing: the file is already open in a live project. Same project: the native
+ // window activation is enough. Another project: switch over through the normal open path,
+ // which keeps the dirty guards; the host project id is trusted, never renderer input.
+ const focusProject=(pid:string)=>{if(pid===projectId)return;void open(false,false,undefined,{projectId:pid,name:''}).catch(()=>patchState({notice:'That file is already open in another project.'}));};
+ if(port.shell&&intakeStarter)cleanups.push(await intakeStarter(port,focusProject).catch(error=>{fail(error);return()=>{};}));
  if(port.shell){const shell=port.shell;setCloseHandlers('disk',{saveAndClose:async()=>{await save();if(getState().isDirty)throw Error('Some edits are still unsaved. Close was cancelled.');await close(false);await shell.destroyWindow();},discardAndClose:async()=>{await close(true);await shell.destroyWindow();}});cleanups.push(()=>setCloseHandlers('disk',null));cleanups.push(await port.listen('somnia://close-blocked',()=>requestClose('disk')));}
  return ()=>{cleanups.forEach(fn=>fn());unsubscribe();disconnect();};
 }

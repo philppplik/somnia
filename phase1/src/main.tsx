@@ -19,7 +19,12 @@ import './styles/extensions-store.css';
 import {isTauri} from '@tauri-apps/api/core';
 import {setStoreManaged} from './lib/updates';
 import {initLocale} from './lib/i18n';
-import {installGlobalErrorHandlers,setNoticeSink,reportError,logInfo,recentLog,copyErrorReport,reportAclDenied} from './lib/log';
+import {installGlobalErrorHandlers,setNoticeSink,reportError,logInfo,recentLog,reportAclDenied} from './lib/log';
+import {copyErrorReport} from './lib/diagnostics/hostStore';
+import {initDiagnostics,disposeDiagnosticsSurface} from './lib/diagnostics/bootstrap';
+import {requestConfirm} from './lib/confirmService';
+import {installConfirmAction} from './lib/studios/openIntake';
+import {installNativeIntake} from './lib/intake/installNativeIntake';
 import {setCommandReporter} from './lib/invokeCmd';
 import {restoreNativeDialogs} from './lib/nativeDialogs';
 import {ErrorBoundary} from './components/ErrorBoundary';
@@ -28,6 +33,13 @@ installGlobalErrorHandlers();
 setCommandReporter({aclDenied:reportAclDenied});
 // Must run before any guard can fire: removes tauri-plugin-dialog's async window.confirm/alert overrides.
 restoreNativeDialogs();
+// D3: creates the diagnostics client/stores and starts the crash review synchronously, BEFORE the
+// intake orchestrator can start (it acquires the initial-review pause in this turn).
+initDiagnostics();
+// S9: async replace/delete approvals run through the app confirm dialog (ConfirmHost), never window.confirm.
+installConfirmAction(requestConfirm);
+// D2-E: native open-request intake (file associations, second instance). Web build installs nothing.
+installNativeIntake();
 initLocale();
 import {installDesktopAdapter} from './lib/desktopAdapter';
 import {installFileAdapter} from './lib/fileAdapter';
@@ -73,7 +85,7 @@ applyUiPrefs(getState().uiPrefs);
 setNoticeSink(text=>patchState({notice:text}));
 logInfo('app','Somnia started',{desktop:isTauri()});
 startStudioRouting();
-createRoot(document.getElementById('root')!).render(<StrictMode><ErrorBoundary label="Somnia"><App/><McpApprovalDialog/></ErrorBoundary></StrictMode>);
+createRoot(document.getElementById('root')!).render(<StrictMode><ErrorBoundary label="Somnia" onFatal={disposeDiagnosticsSurface}><App/><McpApprovalDialog/></ErrorBoundary></StrictMode>);
 
 if(!isTauri())installBeforeUnload(()=>getState().isDirty&&getState().storage!=='disk');
 if(import.meta.env.DEV)(window as unknown as {__somnia:object}).__somnia={patch:patchState,recentLog,copyErrorReport,requestClose,setSource:(file:string,text:string)=>applyOperations([{type:'replaceSource',file,text}] as never)};

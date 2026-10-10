@@ -173,7 +173,7 @@
     {
       "name": "build_diagnostic_zip",
       "domain": "diagnostics",
-      "status": "planned",
+      "status": "native",
       "wrapped": true,
       "boundary": "B1",
       "params": [
@@ -273,7 +273,7 @@
     {
       "name": "delete_crash_reports",
       "domain": "diagnostics",
-      "status": "planned",
+      "status": "native",
       "wrapped": true,
       "boundary": "B1",
       "params": [
@@ -303,7 +303,7 @@
     {
       "name": "discard_diagnostic_snapshot",
       "domain": "diagnostics",
-      "status": "planned",
+      "status": "native",
       "wrapped": true,
       "boundary": "B1",
       "params": [
@@ -765,7 +765,7 @@
     {
       "name": "list_crash_reports",
       "domain": "diagnostics",
-      "status": "planned",
+      "status": "native",
       "wrapped": true,
       "boundary": "B1",
       "params": [],
@@ -828,7 +828,7 @@
     {
       "name": "mark_crash_reports_reviewed",
       "domain": "diagnostics",
-      "status": "planned",
+      "status": "native",
       "wrapped": true,
       "boundary": "B1",
       "params": [
@@ -1086,7 +1086,7 @@
     {
       "name": "record_frontend_fatal",
       "domain": "diagnostics",
-      "status": "planned",
+      "status": "native",
       "wrapped": true,
       "boundary": "B1",
       "params": [
@@ -1461,7 +1461,7 @@
     {
       "name": "write_diagnostic_zip",
       "domain": "diagnostics",
-      "status": "planned",
+      "status": "native",
       "wrapped": true,
       "boundary": "B1",
       "params": [

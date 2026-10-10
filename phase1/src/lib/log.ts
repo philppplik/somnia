@@ -261,6 +261,8 @@ export function toSafeLogEvent(line:unknown):SafeLogEvent|null{
  }catch{return null;}
 }
 /** Maps many lines through toSafeLogEvent, drops rejects, dedupes by (session, source, seq) and sorts by that key (ts only breaks ties between sessions). */
+/** D3 diagnostics store getter: safe, deduped export view of the v2 ring. Never raw recentLog(). */
+export function recentSafeEvents():SafeLogEvent[]{return toSafeLogEvents(ring);}
 export function toSafeLogEvents(lines:readonly unknown[]):SafeLogEvent[]{
  const seen=new Map<string,SafeLogEvent>();
  for(const l of lines){const e=toSafeLogEvent(l);if(e)seen.set(`${e.session}|${e.source}|${e.seq}`,e);}

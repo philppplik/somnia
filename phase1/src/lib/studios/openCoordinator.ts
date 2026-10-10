@@ -57,6 +57,12 @@ type Ready=Extract<OpenResolution,{status:'ready'}>;
 type Planned={index:number;input:OpenInput;p:PreparedOpen;out:OpenOutcome;resolution:Ready};
 export function createOpenCoordinator(deps:OpenDeps){
  let generation=0;
+ // D3: the diagnostics host waits for any in-flight destructive approval before opening a surface.
+ let approvalsInFlight=0;
+ const approvalWaiters:(()=>void)[]=[];
+ const approvalBegin=()=>{approvalsInFlight++;};
+ const approvalEnd=()=>{approvalsInFlight--;if(approvalsInFlight===0){const w=approvalWaiters.splice(0);for(const f of w)f();}};
+ const whenDestructiveApprovalIdle=():Promise<void>=>approvalsInFlight===0?Promise.resolve():new Promise(r=>{approvalWaiters.push(r);});
  const label=(id:StudioId)=>id.charAt(0).toUpperCase()+id.slice(1);
  async function openFiles(inputs:readonly OpenInput[],opts:BatchOptions={}):Promise<OpenReport>{
   let gen=++generation;const intent=opts.intent??'open';
@@ -120,8 +126,10 @@ export function createOpenCoordinator(deps:OpenDeps){
    if(!planned.length)break;
    if(gestureBlocked()){disposeAll();deps.notify(gestureText);return cancelAll(gestureText,'cancelled');}
    let verdict:'approved'|'cancelled';
+   approvalBegin();
    try{verdict=await deps.approve(plan!);}
    catch(error){verdict='cancelled';try{deps.approvalFailed?.(requestId,error);}catch{/* logging must never break the fail-closed path */}}
+   finally{approvalEnd();}
    if(stale()){disposeAll();return report({superseded:true},'');}
    if(verdict!=='approved'){disposeAll();return cancelAll('Cancelled.','cancelled');}
    if(gestureBlocked()){disposeAll();deps.notify(gestureText);return cancelAll(gestureText,'cancelled');}
@@ -156,5 +164,5 @@ export function createOpenCoordinator(deps:OpenDeps){
   deps.notify(summary);
   return report({focused},summary);
  }
- return{openFiles,generation:()=>generation};
+ return{openFiles,generation:()=>generation,whenDestructiveApprovalIdle};
 }
