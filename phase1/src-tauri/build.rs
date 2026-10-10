@@ -107,6 +107,8 @@ fn main() {
             "git_combine_resolve",
             "git_combine_finish",
             "git_combine_abort",
+            "extension_activity_query",
+            "extension_activity_export",
         ]),
     ))
     .expect("Tauri build configuration failed");

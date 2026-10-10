@@ -124,6 +124,8 @@
     "allow-git-combine-resolve",
     "allow-git-combine-finish",
     "allow-git-combine-abort",
+    "allow-extension-activity-query",
+    "allow-extension-activity-export",
     "core:window:allow-set-always-on-top",
     "core:window:allow-set-decorations"
   ]
