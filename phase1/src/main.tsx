@@ -19,10 +19,13 @@ import './styles/extensions-store.css';
 import {isTauri} from '@tauri-apps/api/core';
 import {setStoreManaged} from './lib/updates';
 import {initLocale} from './lib/i18n';
-import {installGlobalErrorHandlers,setNoticeSink,reportError,logInfo,recentLog,copyErrorReport} from './lib/log';
+import {installGlobalErrorHandlers,setNoticeSink,reportError,logInfo,recentLog,copyErrorReport,reportAclDenied} from './lib/log';
+import {setCommandReporter} from './lib/invokeCmd';
 import {restoreNativeDialogs} from './lib/nativeDialogs';
 import {ErrorBoundary} from './components/ErrorBoundary';
 installGlobalErrorHandlers();
+// invokeCmd never logs itself; the bootstrap attaches the logger here (keeps log.ts and invokeCmd.ts free of an import cycle).
+setCommandReporter({aclDenied:reportAclDenied});
 // Must run before any guard can fire: removes tauri-plugin-dialog's async window.confirm/alert overrides.
 restoreNativeDialogs();
 initLocale();
