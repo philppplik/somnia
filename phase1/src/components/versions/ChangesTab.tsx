@@ -6,6 +6,7 @@ import {Button} from '../ui/button';
 import {ChangesController,blockedKey,errorKey,type ChangesState} from './controller';
 import {isSelectable,kindGlyph,kindKey} from './selection';
 import {withGit} from './vocab';
+import {useGitInvalidation} from './useGitInvalidation';
 import {TrustRepo} from './TrustRepo';
 
 export interface ChangesTabProps{
@@ -31,7 +32,9 @@ export function ChangesTab({backend,unsavedFiles,onSaveFiles,advanced,onVersionS
  const {t}=useT();const c=useChangesController(backend,controller);
  c.setTranslate(t);
  const s=useSyncExternalStore(c.subscribe,c.getState,c.getState);
+ const revision=useGitInvalidation();
  useEffect(()=>{void c.refresh();},[c]);
+ useEffect(()=>{if(revision)c.invalidate();},[c,revision]);
  const saveFirst=async()=>{await onSaveFiles();await c.refresh();};
  return <ChangesView backend={backend} s={s} c={c} t={t} unsavedFiles={unsavedFiles} advanced={advanced} onSaveFiles={saveFirst} onSaved={onVersionSaved}/>;}
 

@@ -23,7 +23,7 @@ const initial=():ChangesState=>({phase:'loading',repoState:null,status:null,sele
  * commit() runs only from an explicit user action and sends exactly the ticked paths with the reviewed stateToken.
  */
 export class ChangesController{
- private s:ChangesState=initial();private ls=new Set<()=>void>();private seq=0;
+ private s:ChangesState=initial();private ls=new Set<()=>void>();private seq=0;private invalidated=false;
  constructor(private b:GitBackend,private t:Translate){}
  /** Called during render: never notify here (a notification re-renders the caller forever). The suggestion refreshes on the next user or refresh action. */
  setTranslate(t:Translate){this.t=t;}
@@ -35,6 +35,9 @@ export class ChangesController{
  canSave():boolean{const s=this.s;return s.phase==='ready'&&!s.busy&&s.selected.size>0&&validSubject(s.subject);}
  private autoSubject(){if(this.s.subjectTouched||this.s.phase!=='ready')return;this.s={...this.s,subject:suggestSubject(this.selectedChanges(),this.t)};this.ls.forEach(f=>f());}
 
+ /** Never race a commit/init with watcher refresh; replay the hint after the mutation settles. */
+ invalidate(){if(this.s.busy){this.invalidated=true;return;}void this.refresh();}
+ private drainInvalidation(){if(this.invalidated&&!this.s.busy){this.invalidated=false;void this.refresh();}}
  async refresh(opts:{keepSaved?:boolean}={}){
   const my=++this.seq;this.set({busy:'refresh',error:null,...(opts.keepSaved?{}:{saved:null})});
   try{
@@ -45,13 +48,14 @@ export class ChangesController{
    const selected=this.s.status?reconcileSelection(this.s.selected,before,status.changes):defaultSelection(status.changes);
    this.s={...this.s,phase:'ready',repoState:st,status,selected,busy:null};this.autoSubject();this.set({});
   }catch(e){if(my!==this.seq)return;const g=parseGitError(e);this.set({phase:'error',busy:null,error:{code:g.code,detail:g.detail}});}
+  finally {this.drainInvalidation();}
  }
  toggle(path:string){const c=this.visible().find(x=>x.path===path);if(!c||!isSelectable(c))return;
   const n=new Set(this.s.selected);n.has(path)?n.delete(path):n.add(path);this.s={...this.s,selected:n,saved:null};this.autoSubject();this.set({});}
  selectAll(on:boolean){this.s={...this.s,selected:on?new Set(this.visible().filter(isSelectable).map(c=>c.path)):new Set(),saved:null};this.autoSubject();this.set({});}
  setSubject(v:string){this.s={...this.s,subject:v,subjectTouched:v.trim()!=='',saved:null};if(!this.s.subjectTouched)this.autoSubject();this.set({});}
  setBody(v:string){this.set({body:v});}
- async init(){this.set({busy:'init',error:null});try{await this.b.init();}catch(e){const g=parseGitError(e);this.set({busy:null,error:{code:g.code,detail:g.detail}});return;}await this.refresh();}
+ async init(){this.set({busy:'init',error:null});try{await this.b.init();}catch(e){const g=parseGitError(e);this.set({busy:null,error:{code:g.code,detail:g.detail}});this.drainInvalidation();return;}await this.refresh();}
 
  /** Save a version of the ticked files. Returns the version or null when it did not happen. */
  async commit():Promise<GitVersion|null>{
@@ -60,13 +64,13 @@ export class ChangesController{
   this.set({busy:'commit',error:null,saved:null,reviewAgain:false});
   try{
    const v=await this.b.commit({paths,subject:this.s.subject.trim(),body:this.s.body.trim()||undefined,stateToken:token});
-   this.s={...this.s,subject:'',subjectTouched:false,body:''};await this.refresh({keepSaved:true});this.set({saved:v});return v;
+   this.s={...this.s,subject:'',subjectTouched:false,body:''};await this.refresh({keepSaved:true});this.set({saved:v});this.drainInvalidation();return v;
   }catch(e){
    const g=parseGitError(e);
    if(g.code==='state-changed'){await this.refresh();this.set({reviewAgain:true});return null;}
    this.set({busy:null,error:{code:g.code,detail:g.detail}});
    if(g.code==='nothing-to-commit')void this.refresh();
-   return null;}
+   this.drainInvalidation();return null;}
  }
 }
 /** Message key for an error code. Messages never include raw detail unless the Advanced view asks for it. */

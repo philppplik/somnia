@@ -1650,6 +1650,46 @@ async fn git_diff_file(
     })
     .await
 }
+// One native runner for these read commands; common/checkout locks shared with other hosts.
+static GIT_READ_RUNNER: std::sync::OnceLock<crate::git::jobs::GitJobRunner> = std::sync::OnceLock::new();
+fn git_read_runner(window: &WebviewWindow) -> std::result::Result<&'static crate::git::jobs::GitJobRunner, String> {
+    if let Some(runner) = GIT_READ_RUNNER.get() { return Ok(runner); }
+    let dir = window.app_handle().path().app_config_dir().map_err(|_| "App config directory is unavailable")?.join("git-job-locks");
+    let runner = crate::git::jobs::GitJobRunner::new(dir).map_err(|e| e.to_string())?;
+    let _ = GIT_READ_RUNNER.set(runner);
+    Ok(GIT_READ_RUNNER.get().expect("runner installed"))
+}
+async fn git_read_context(state: &Shared, runner: &crate::git::jobs::GitJobRunner) -> std::result::Result<crate::git::context::RepoContext, String> {
+    let root = { let b = state.lock().map_err(|e| e.to_string())?; git_project_root(&b)? };
+    let workspace = runner.workspace(&root).unwrap_or_default();
+    tauri::async_runtime::spawn_blocking(move || crate::git::context::RepoContext::discover(&root, workspace).map_err(|e| serde_json::to_string(&e).unwrap_or_else(|_| e.to_string()))).await.map_err(|e| e.to_string())?
+}
+#[tauri::command]
+async fn git_diff_refs(window: WebviewWindow, state: State<'_, Shared>, request: crate::git::ref_contract::DiffRequest) -> std::result::Result<crate::git::ref_contract::DiffResult, String> {
+    git_gate(&window)?;
+    let runner = git_read_runner(&window)?;
+    let context = git_read_context(state.inner(), runner).await?;
+    crate::git::ref_contract::diff_job(runner, context, crate::git::jobs::JobOrigin::Human, request).await.map_err(|e| serde_json::to_string(&e).unwrap_or_else(|_| e.to_string()))
+}
+#[tauri::command]
+async fn git_safety_list(window: WebviewWindow, state: State<'_, Shared>) -> std::result::Result<Vec<crate::git::ref_contract::SafetyEntry>, String> {
+    git_gate(&window)?;
+    let runner = git_read_runner(&window)?;
+    let context = git_read_context(state.inner(), runner).await?;
+    crate::git::ref_contract::safety_job(runner, context, crate::git::jobs::JobOrigin::Human).await.map_err(|e| serde_json::to_string(&e).unwrap_or_else(|_| e.to_string()))
+}
+#[tauri::command]
+async fn git_ref_tree(window: WebviewWindow, state: State<'_, Shared>, git_ref: String) -> std::result::Result<crate::git::ref_contract::RefTree, String> {
+    git_gate(&window)?; let runner = git_read_runner(&window)?;
+    let context = git_read_context(state.inner(), runner).await?;
+    crate::git::ref_contract::tree_job(runner, context, crate::git::jobs::JobOrigin::Human, git_ref).await.map_err(|e| serde_json::to_string(&e).unwrap_or_else(|_| e.to_string()))
+}
+#[tauri::command]
+async fn git_read_blob(window: WebviewWindow, state: State<'_, Shared>, blob: String) -> std::result::Result<crate::git::ref_contract::BlobRead, String> {
+    git_gate(&window)?; let runner = git_read_runner(&window)?;
+    let context = git_read_context(state.inner(), runner).await?;
+    crate::git::ref_contract::blob_job(runner, context, crate::git::jobs::JobOrigin::Human, blob).await.map_err(|e| serde_json::to_string(&e).unwrap_or_else(|_| e.to_string()))
+}
 #[tauri::command]
 async fn git_init(
     window: WebviewWindow,
@@ -2015,11 +2055,35 @@ pub fn run() {
                 crate::applog::init(dir.join("logs"));
             }
             let app_handle = app.handle().clone();
-            std::thread::spawn(move || loop {
+            std::thread::spawn(move || {
+              let mut watchers: std::collections::BTreeMap<String, crate::git::invalidation::GitStatusWatcher> = Default::default();
+              let mut retry: std::collections::BTreeMap<String, std::time::Instant> = Default::default();
+              loop {
                 std::thread::sleep(Duration::from_millis(250));
                 let Some(window) = app_handle.get_webview_window("main") else {
                     break;
                 };
+                // Copy identities only. Watch setup and event draining do not hold the file mutex.
+                let projects = match shared.lock() {
+                    Ok(b) => b.projects.values().map(|p| (p.id.clone(), p.root_path().to_path_buf())).collect::<Vec<_>>(),
+                    Err(_) => break,
+                };
+                watchers.retain(|id, _| projects.iter().any(|(p, _)| p == id));
+                retry.retain(|id, _| projects.iter().any(|(p, _)| p == id));
+                for (id, root) in projects {
+                    if !watchers.contains_key(&id) && retry.get(&id).map_or(true, |t| t.elapsed() >= Duration::from_secs(5)) {
+                        retry.insert(id.clone(), std::time::Instant::now());
+                        if let Ok(w) = crate::git::invalidation::GitStatusWatcher::new(&root) { watchers.insert(id.clone(), w); }
+                    }
+                    if let Some(event) = watchers.get_mut(&id).and_then(|w| w.drain(&id)) {
+                        if let Some(runner) = GIT_READ_RUNNER.get() {
+                            if let Ok(ctx) = crate::git::context::RepoContext::discover(&root, Default::default()) {
+                                let _ = crate::git::invalidation::advance_workspace_generation(runner, &ctx.root);
+                            }
+                        }
+                        let _ = window.emit("somnia://git-invalidated", event);
+                    }
+                }
                 let events = match shared.lock() {
                     Ok(mut backend) => backend
                         .projects
@@ -2031,6 +2095,7 @@ pub fn run() {
                 for event in events {
                     emit(&window, &event);
                 }
+              }
             });
             Ok(())
         })
@@ -2159,6 +2224,10 @@ pub fn run() {
             git_detect,
             git_status,
             git_diff_file,
+            git_diff_refs,
+            git_safety_list,
+            git_ref_tree,
+            git_read_blob,
             git_init,
             git_commit,
             git_log,
