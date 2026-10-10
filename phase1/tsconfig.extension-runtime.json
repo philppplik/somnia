@@ -1,0 +1,13 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {"types": ["node"]},
+  "include": [
+    "src/lib/extensions/contracts/v2/*.ts",
+    "src/lib/extensions/activation.ts", "src/lib/extensions/broker.ts",
+    "src/lib/extensions/contributions.ts", "src/lib/extensions/supervisor.ts",
+    "src/lib/extensions/v2/rpc.ts", "src/lib/extensions/v2/sdk.ts",
+    "src/lib/extensions/v2/compatibility.ts", "src/lib/extensions/v2/wasm.ts",
+    "src/lib/extensions/v2/wasmWorker.ts", "src/lib/extensions/v2/browserWasmTransport.ts",
+    "src/lib/extensions/v2/runtime.test.ts", "src/lib/extensions/v2/editorService.ts", "src/lib/extensions/legacy/*.ts"
+  ]
+}

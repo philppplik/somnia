@@ -78,3 +78,10 @@ test('F8: an activation timeout terminates the worker',async()=>{
  assert.equal(w.ended,true);
  rt.dispose();
 });
+
+test('legacy disposal rejects an in-flight command and ignores late callbacks',async()=>{
+ const manifest:ExtensionManifest={id:'test.dispose',name:'Dispose',version:'1.0.0',apiVersion:1,permissions:[],code:'',contributes:{commands:[],snippets:[],codeThemes:[],panels:[]}};
+ let worker!:WorkerLike;let terminated=0;
+ const runtime=new ExtensionRuntime(manifest,{files:()=>({}),selection:()=>null,notify(){},log(){}},()=>worker={postMessage(){},terminate(){terminated++;},onmessage:null},100);
+ const run=runtime.runCommand('test.dispose.run');const rejected=assert.rejects(run,/disposed/);runtime.dispose();await rejected;assert.equal(terminated,1);worker.onmessage?.({data:{type:'api.call',requestId:1,method:'ui.notify',args:['late']}});
+});
