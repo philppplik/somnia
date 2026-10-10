@@ -1,0 +1,37 @@
+manifestVersion = 2
+id = "acme.hello-panel"
+publisher = "acme"
+name = "Hello panel"
+version = "1.0.0"
+description = "A command that greets you and a side panel that hosts it."
+license = "MIT"
+activationEvents = [ "onCommand:acme.hello-panel.say-hello", "onPanel:acme.hello-panel.hello" ]
+permissions = [ "commands", "ui.notify" ]
+dependencies = []
+
+[engines]
+somnia = ">=11.0.0 <12.0.0"
+api = ">=2.0.0 <3.0.0"
+
+[runtime]
+type = "js"
+entry = "extension.js"
+
+[capabilities.untrustedWorkspaces]
+supported = "supported"
+
+[capabilities.virtualWorkspaces]
+supported = true
+
+[[contributes.commands]]
+id = "acme.hello-panel.say-hello"
+title = "Say hello"
+category = "Tools"
+
+[[contributes.panels]]
+id = "hello"
+title = "Hello"
+side = "right"
+kind = "declarative"
+path = "panels/hello.json"
+studios = [ "code" ]

@@ -1,0 +1,37 @@
+manifestVersion = 2
+id = "acme.network-host-scope"
+publisher = "acme"
+name = "Release feed"
+version = "1.0.0"
+description = "Checks one declared host for new Somnia releases and reports offline honestly."
+license = "MIT"
+activationEvents = [ "onCommand:acme.network-host-scope.check-releases" ]
+permissions = [ "commands", "ui.notify" ]
+dependencies = []
+
+[engines]
+somnia = ">=11.0.0 <12.0.0"
+api = ">=2.0.0 <3.0.0"
+
+[runtime]
+type = "js"
+entry = "extension.js"
+
+[capabilities.untrustedWorkspaces]
+supported = "unsupported"
+
+[capabilities.virtualWorkspaces]
+supported = false
+
+[[contributes.commands]]
+id = "acme.network-host-scope.check-releases"
+title = "Check for new releases"
+category = "Help"
+
+[security]
+tier = "A"
+
+[[security.network]]
+host = "api.github.com"
+paths = ["/repos/philppplik/somnia/releases*"]
+reason = "Fetch release metadata for the project you opened from the declared host"

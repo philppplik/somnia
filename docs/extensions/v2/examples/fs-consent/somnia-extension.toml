@@ -1,0 +1,38 @@
+manifestVersion = 2
+id = "acme.fs-consent"
+publisher = "acme"
+name = "Import text file"
+version = "1.0.0"
+description = "Imports one text file from outside the project, only after you allow it."
+license = "MIT"
+activationEvents = [ "onCommand:acme.fs-consent.import-file" ]
+permissions = [ "commands", "ui.notify" ]
+dependencies = []
+
+[engines]
+somnia = ">=11.0.0 <12.0.0"
+api = ">=2.0.0 <3.0.0"
+
+[runtime]
+type = "js"
+entry = "extension.js"
+
+[capabilities.untrustedWorkspaces]
+supported = "limited"
+description = "Runs without filesystem access; the import command stays hidden."
+allowedPermissions = [ "commands", "ui.notify" ]
+
+[capabilities.virtualWorkspaces]
+supported = true
+
+[[contributes.commands]]
+id = "acme.fs-consent.import-file"
+title = "Import a text file"
+category = "Project"
+
+[security]
+tier = "A"
+
+[security.fs]
+read = "ask"
+write = "none"

@@ -1,0 +1,7 @@
+{
+  "type": "group",
+  "children": [
+    { "type": "text", "text": "Your first panel. The button below runs the command." },
+    { "type": "button", "label": "Say hello", "command": "acme.hello-panel.say-hello" }
+  ]
+}
