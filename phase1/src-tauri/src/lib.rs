@@ -19,6 +19,7 @@ pub mod agent_settings;
 pub mod mcp_host;
 pub mod mcp_health;
 pub mod mcp_gateway;
+#[cfg(feature = "desktop")]
 pub mod mcp_studio;
 #[cfg(feature = "desktop")]
 pub mod mcp_http;
