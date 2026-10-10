@@ -1273,13 +1273,15 @@ mod project_lock_tests {
         // Simulate a stale file left behind by a terminated process. Never truncate it.
         fs::write(&lock_path, "stale marker")?;
         let reopened = Project::open_file(&file, recovery.path())?;
-        assert_eq!(fs::read_to_string(&lock_path)?, "stale marker");
         assert!(matches!(
             Project::open_file(&file, recovery.path()),
             Err(AppError::Locked)
         ));
+        // Windows byte-range locks are mandatory: the stale content can only be
+        // re-read from another handle after the lease is dropped.
         drop(reopened);
         assert!(lock_path.exists());
+        assert_eq!(fs::read_to_string(&lock_path)?, "stale marker");
         Ok(())
     }
 
