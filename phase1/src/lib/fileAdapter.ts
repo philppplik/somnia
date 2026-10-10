@@ -13,6 +13,10 @@ import {loadFolderMedia} from './folderMedia';
 import {readProjectDocuments} from './projectIndex';
 import {setVersionsSession} from './versionsSession';
 import {attachProjectSettings,detachProjectSettings} from './projectSettingsIO';
+/** Starts the native open-request intake (D2-E orchestrator). Installed by the app bootstrap; absent in the web build. Returns its cleanup. */
+export type IntakeStarter=(port:FilePort)=>Promise<()=>void>;
+let intakeStarter:IntakeStarter|null=null;
+export const installIntakeStarter=(fn:IntakeStarter|null)=>{intakeStarter=fn;};
 export type Revision={exists:boolean;hash:string|null};
 export type FileEvent={projectId:string;path:string;clientRevision:number;state:'dirty'|'saving'|'saved'|'error'|'conflict';diskRevision:Revision;error:string|null;durability:string|null};
 export type Read={content:string|null;revision:Revision;status:FileEvent};
@@ -175,7 +179,10 @@ export async function installFileAdapter(port:FilePort){
   else void port.invoke<{name:string;text:string;base64?:string}[]>('read_dropped_files',{token}).then(files=>openIncoming(files.map(f=>f.base64===undefined?{name:f.name,text:f.text}:{name:f.name,text:'',blob:new Blob([Uint8Array.from(atob(f.base64),c=>c.charCodeAt(0))])}))).catch(fail);
  }));
  if(port.shell)cleanups.push(await port.listen<string>('somnia://menu',event=>{void executeNativeMenuCommand(event.payload);}));
- // File association launch ("Open with Somnia"): the OS passed a file in argv; open_startup_file
+ // File association launch / second-instance opens: the host queues them (cold argv and warm opens take the same path) and the
+ // intake orchestrator (installed via installIntakeStarter) drains the queue through the normal #166 open pipeline.
+ // Failures are surfaced, never swallowed: an empty queue is the only silent result.
+ if(port.shell&&intakeStarter)cleanups.push(await intakeStarter(port).catch(error=>{fail(error);return()=>{};}));
  // consumes it Rust-side (the renderer never supplies the path) and the normal open pipeline runs.
  if(port.shell)void port.invoke<{projectId:string;name:string}|null>('open_startup_file').then(sel=>{if(sel)return open(false,false,undefined,sel);}).catch(()=>{/* no startup file or already consumed */});
  if(port.shell){const shell=port.shell;setCloseHandlers('disk',{saveAndClose:async()=>{await save();if(getState().isDirty)throw Error('Some edits are still unsaved. Close was cancelled.');await close(false);await shell.destroyWindow();},discardAndClose:async()=>{await close(true);await shell.destroyWindow();}});cleanups.push(()=>setCloseHandlers('disk',null));cleanups.push(await port.listen('somnia://close-blocked',()=>requestClose('disk')));}
