@@ -80,7 +80,7 @@ function StoreBrowse({cards,offline,fetchedAt,q,setQ,cat,setCat,onOpen,act,onExp
 function StoreCardItem({card,act,onOpen,onExplain}:{card:StoreCard;act:Act;onOpen:(id:string)=>void;onExplain:()=>void}){
  const {t}=useT();const e=act.err?.id===card.id?act.err:null;
  return <li className="store-card" data-state={card.state}>
-  <div className="store-card-head"><StoreLogo card={card}/><div className="store-card-id"><div className="ext-name-row"><button type="button" className="store-card-open" aria-label={t('store.openAria',{name:card.name})} onClick={()=>onOpen(card.id)}><h3 className="ext-name">{card.name}</h3></button>{card.verified?<StoreBadge onExplain={onExplain}/>:null}{card.deprecated?<span className="store-tag store-tag-amber">{t('store.deprecated')}</span>:null}</div><p className="ext-meta">{card.publisherName}</p></div></div>
+  <div className="store-card-head"><StoreLogo card={card}/><div className="store-card-id"><div className="ext-name-row"><button type="button" className="store-card-open" aria-label={t('store.openAria',{name:card.name})} onClick={()=>onOpen(card.id)}><h3 className="ext-name">{card.name}</h3></button>{card.verified?<StoreBadge onExplain={onExplain}/>:<span className="store-tag" title={t('store.unreviewed.body')}>{t('store.unreviewed')}</span>}{card.deprecated?<span className="store-tag store-tag-amber">{t('store.deprecated')}</span>:null}</div><p className="ext-meta">{card.publisherName}</p></div></div>
   <p className="store-card-desc">{card.summary}</p>
   <AccessTags card={card}/>
   <div className="store-card-foot"><span className="ext-version">v{card.release.version}</span><ActionButton card={card} act={act}/></div>
@@ -99,7 +99,7 @@ function StoreDetail({card,store,host,snapshot,now,act,onBack,onExplain}:{card:S
  const meta=[card.publisherName,card.verified&&pub?.domain?pub.domain.name:null,t('store.header.version',{version:r.version}),t('store.header.size',{size:Math.round(r.artifact.bytes/1024)})].filter(Boolean).join(' · ');
  return <div className="store-detail">
   <button type="button" className="store-back" onClick={onBack}><ArrowLeft size={16} aria-hidden="true"/>{t('store.back')}</button>
-  <header className="store-dhead"><StoreLogo card={card} size={72}/><div className="store-dhead-id"><div className="ext-name-row"><h2 className="store-dname">{card.name}</h2>{card.verified?<StoreBadge size={22} onExplain={onExplain}/>:null}{card.official?<span className="store-tag store-tag-official">{t('store.official')}</span>:null}</div><p className="ext-meta">{meta}</p></div><ActionButton card={card} act={act} large/></header>
+  <header className="store-dhead"><StoreLogo card={card} size={72}/><div className="store-dhead-id"><div className="ext-name-row"><h2 className="store-dname">{card.name}</h2>{card.verified?<StoreBadge size={22} onExplain={onExplain}/>:<span className="store-tag" title={t('store.unreviewed.body')}>{t('store.unreviewed')}</span>}{card.official?<span className="store-tag store-tag-official">{t('store.official')}</span>:null}</div><p className="ext-meta">{meta}</p></div><ActionButton card={card} act={act} large/></header>
   {e?<p role="alert" className="ext-error">{t(e.key)}</p>:null}
   {card.state==='blocked'?<p className="store-banner store-banner-red" role="status">{t('store.banner.blocked')}</p>:card.deprecated?<p className="store-banner store-banner-amber" role="status">{t('store.banner.deprecated')}</p>:null}
   {act.paused?<p id="store-paused" className="ext-callout" role="status">{t('store.paused')}</p>:null}
@@ -145,7 +145,7 @@ function StoreDetail({card,store,host,snapshot,now,act,onBack,onExplain}:{card:S
      <EvidenceList rows={rows} now={now} lastTrustedCheck={snapshot.lastTrustedCheck} hasEvidence={!!ev}/>
      <p className="ext-meta store-signed">{t('store.ev.signed',{digest:shortDigest(r.evidence.sha256)})} · <button type="button" className="ext-link" onClick={()=>setTab('evidence')}>{t('store.ev.full')}</button></p></section>
     <section className="store-rail-card" aria-label={t('store.pub.title')}><h3 className="store-ph">{t('store.pub.title')}</h3>
-     <div className="ext-name-row"><strong>{card.publisherName}</strong>{card.verified?<StoreBadge onExplain={onExplain}/>:null}</div>
+     <div className="ext-name-row"><strong>{card.publisherName}</strong>{card.verified?<StoreBadge onExplain={onExplain}/>:<span className="store-tag" title={t('store.unreviewed.body')}>{t('store.unreviewed')}</span>}</div>
      {ind?<div className="ext-tags">{ind.githubLinked?<span className="store-tag">{t('store.pub.github')}</span>:null}{ind.domainVerified?<span className="store-tag">{t('store.pub.domain')}</span>:null}{ind.declaresTwoFactor?<span className="store-tag">{t('store.pub.twofa')}</span>:null}</div>:null}
      <button type="button" className="ext-link" onClick={onExplain}>{t('store.pub.explain')}</button></section>
     <section className="store-rail-card store-report-card"><span className="store-report-q"><Flag size={16} aria-hidden="true"/>{t('store.report.card')}</span><button type="button" className="ext-btn" onClick={()=>setReport(true)}>{t('store.report.open')}</button></section>

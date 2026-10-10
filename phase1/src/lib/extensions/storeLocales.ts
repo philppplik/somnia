@@ -1,6 +1,9 @@
 /** Store UI strings. Own catalogue file, merged in i18n.ts, so the shared locale files stay free of merge hotspots. */
 export const STORE_CATALOGUES:Record<string,Record<string,string>> = {
  "en": {
+  "ext.source.hashMatch": "SHA-256 verified against catalog",
+  "store.unreviewed": "Unreviewed",
+  "store.unreviewed.body": "Publisher identity has not been verified. Listing and package review are separate from publisher verification.",
   "store.title": "Store",
   "store.search": "Search extensions, publishers, permissions",
   "store.cat.aria": "Categories",
@@ -211,6 +214,9 @@ export const STORE_CATALOGUES:Record<string,Record<string,string>> = {
   "store.err.failed": "Could not prepare the review. Try again."
  },
  "de": {
+  "ext.source.hashMatch": "SHA-256 mit dem Katalog abgeglichen",
+  "store.unreviewed": "Nicht überprüft",
+  "store.unreviewed.body": "Die Identität des Herausgebers wurde nicht überprüft. Katalog- und Paketprüfung sind von der Herausgeberprüfung getrennt.",
   "store.title": "Store",
   "store.search": "Erweiterungen, Herausgeber, Berechtigungen suchen",
   "store.cat.aria": "Kategorien",
@@ -421,6 +427,9 @@ export const STORE_CATALOGUES:Record<string,Record<string,string>> = {
   "store.err.failed": "Die Prüfung konnte nicht vorbereitet werden. Versuche es erneut."
  },
  "es": {
+  "ext.source.hashMatch": "SHA-256 verificado con el catálogo",
+  "store.unreviewed": "Sin revisar",
+  "store.unreviewed.body": "La identidad del editor no se ha verificado. La revisión del catálogo y del paquete es independiente de la verificación del editor.",
   "store.title": "Tienda",
   "store.search": "Buscar extensiones, editores, permisos",
   "store.cat.aria": "Categorías",
@@ -631,6 +640,9 @@ export const STORE_CATALOGUES:Record<string,Record<string,string>> = {
   "store.err.failed": "No se pudo preparar la revisión. Inténtalo de nuevo."
  },
  "fr": {
+  "ext.source.hashMatch": "SHA-256 vérifié par rapport au catalogue",
+  "store.unreviewed": "Non vérifié",
+  "store.unreviewed.body": "L'identité de l'éditeur n'a pas été vérifiée. La vérification du catalogue et du paquet est distincte de celle de l'éditeur.",
   "store.title": "Store",
   "store.search": "Rechercher des extensions, éditeurs, autorisations",
   "store.cat.aria": "Catégories",
@@ -841,6 +853,9 @@ export const STORE_CATALOGUES:Record<string,Record<string,string>> = {
   "store.err.failed": "La revue n'a pas pu être préparée. Réessayez."
  },
  "pt-BR": {
+  "ext.source.hashMatch": "SHA-256 verificado com o catálogo",
+  "store.unreviewed": "Não verificado",
+  "store.unreviewed.body": "A identidade do editor não foi verificada. A revisão do catálogo e do pacote é separada da verificação do editor.",
   "store.title": "Loja",
   "store.search": "Pesquisar extensões, editores, permissões",
   "store.cat.aria": "Categorias",

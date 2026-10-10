@@ -77,7 +77,7 @@ export type Translate=(key:string,params?:Record<string,string|number>)=>string;
 /** Search covers name, publisher and the plain-language permission text the user sees on the card and Access tab. */
 export function permissionText(card:StoreCard,t:Translate):string{
  const parts:string[]=[card.files==='write'?t('store.tag.write'):card.files==='read'?t('store.tag.read'):t('store.tag.noFiles')];
- parts.push(card.network.kind==='none'?t('store.tag.noNetwork'):card.network.kind==='many'?t('store.tag.manyHosts'):t('store.tag.hosts',{count:card.network.count}));
+ parts.push(card.network.kind==='none'?t('store.tag.noNetwork'):card.network.kind==='many'?t('store.tag.manyHosts'):t('store.tag.host',{count:card.network.count}));
  for(const r of accessRows(card.release))parts.push(t(r.titleKey,r.params));
  for(const h of networkHosts(card.release))parts.push(h);
  return parts.join(' ');

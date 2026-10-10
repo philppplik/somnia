@@ -11,7 +11,7 @@ export interface GrantRow {
   /** toggle: revocable on/off. ask: runtime-only, nothing to toggle. info: shown, never a switch. */
   control:'toggle'|'ask'|'info'; granted:boolean; required?:boolean;
 }
-export interface SourceInfo {provider:string; repository?:string; release?:string; sha256?:string; url?:string; verification:'signed-match'|'no-signed-match'|'invalid'}
+export interface SourceInfo {provider:string; repository?:string; release?:string; sha256?:string; url?:string; verification:'signed-match'|'hash-match'|'no-signed-match'|'invalid'}
 export type UpdateState={kind:'current'}|{kind:'checking'}|{kind:'error'}|{kind:'silent'; version:string}|{kind:'consent'; version:string; added:string[]; keepsRunning:boolean};
 export interface PopupExtension {
   id:string; name:string; version:string; description:string; publisher:string;

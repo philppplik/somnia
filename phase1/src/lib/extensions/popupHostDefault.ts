@@ -9,17 +9,19 @@ import {queryExtensionActivity,exportExtensionActivity} from './securityActivity
 import {type CandidateState,type GrantRow,type PopupExtension} from './popupModel';
 import type {BrowseEntry,ExtensionsPopupHost} from './popupHost';
 import type {ExtensionManifest} from './types';
-import {inspectCandidate,type Staged} from './candidateInspect';
+import {inspectCandidate,sha256Hex,type Staged} from './candidateInspect';
 import {V2PackageStore} from './v2PackageStore';
-import {getConsentBroker,requestConsentReview,consentChanged,type ConsentCandidate} from './consentUiHost';
+import {getConsentBroker,requestInstallConsent,consentChanged,type ConsentCandidate} from './consentUiHost';
 import {createCatalogStoreHost} from './storeHostDefault';
 import {grantsFromManifest} from './popupModel';
 import {securityOf} from './securityPolicy';
 import type {ManifestV2} from './manifestV2';
 import type {BlocklistService} from './blocklist';
+import {migrateLegacy} from './legacy/migrate';
 import {storagePrefix} from './storageKeys';
 
 const label=(p:string)=>p;
+const legacyConsent=(m:ExtensionManifest)=>migrateLegacy(m,{somniaRange:'>=1.0.0 <99.0.0',apiRange:'>=2.0.0 <3.0.0',license:'SEE LICENSE IN LICENSE',description:m.name}).manifest;
 const DECLINED='somnia.extensions.declined.v1';
 const declined=():Record<string,string[]>=>{try{const v=JSON.parse(localStorage.getItem(DECLINED)||'{}');return v&&typeof v==='object'&&!Array.isArray(v)?v:{};}catch{return{};}};
 /** Updates found by an explicit user check. Nothing is fetched in the background. */
@@ -38,7 +40,7 @@ const toPopup=(m:ExtensionManifest,on:string[]):PopupExtension=>({
  update:staged.has(m.id)?{kind:'consent',version:staged.get(m.id)!.review.entry.version,added:staged.get(m.id)!.added.map(p=>p),keepsRunning:true}:{kind:'current'},
  status:on.includes(m.id)?'running':'disabled',
 });
-const asCandidate=(e:CatalogEntry,r:ReviewedPackage):CandidateState=>({kind:'ready',id:e.id,name:e.name,version:e.version,origin:e.repo,engine:`API ${e.apiVersion}`,verification:'signed-match',native:false,
+const asCandidate=(e:CatalogEntry,r:ReviewedPackage):CandidateState=>({kind:'ready',id:e.id,name:e.name,version:e.version,origin:e.repo,engine:`API ${e.apiVersion}`,verification:'hash-match',native:false,
  grants:r.manifest.permissions.filter(p=>p==='project.read'||p==='project.write').map(p=>({id:p,key:p as 'project.read',control:'toggle' as const,granted:true}))});
 
 /** Host adapter over the current registry, catalog and the persistent activity bridge. Branch 4 broker wiring replaces rows/grant calls at integration. */
@@ -69,6 +71,7 @@ export function createDefaultHost(options:DefaultHostOptions={}):ExtensionsPopup
   },
   setEnabled:async(id,on)=>{
    if(v2Ids().has(id)&&!loadExtensions().some(m=>m.id===id)){const p=packages.get(id);if(on){if(p&&blocked(id,p.manifest.version))throw new Error('blocked');await broker().enable(id);}else await broker().disable(id);consentChanged();return;}
+   if(on){const p=loadExtensions().find(m=>m.id===id);if(p&&blocked(id,p.version))throw new Error('blocked');if(broker().snapshot().restricted)throw new Error('E_RESTRICTED_MODE');if(broker().snapshot().extensions[id])await broker().enable(id);}
    setExtensionEnabled(id,on);},
   disableAll:async()=>{enabledIds().forEach(id=>setExtensionEnabled(id,false));for(const id of v2Ids())await broker().disable(id);consentChanged();},
   setGrant:async(id,row,on)=>{
@@ -101,38 +104,41 @@ export function createDefaultHost(options:DefaultHostOptions={}):ExtensionsPopup
    stagedById.clear();if(r.staged)stagedById.set(r.staged.manifest.id,r.staged);
    return r.state;
   },
-  install:id=>{
+  install:async id=>{
    const r=reviews.get(id);
-   if(r){installReviewedPackage(r);return Promise.resolve();}
-   const st=stagedById.get(id);if(!st)return Promise.reject(new Error('failed'));
-   if(blocked(st.manifest.id,st.manifest.version))return Promise.reject(new Error('blocked'));
-   if(st.lane==='legacy'){
-    const res=installExtension(JSON.stringify(st.manifest),{disabled:true});
-    if(!res.ok)return Promise.reject(new Error(res.errors[0]??'failed'));
-    stagedById.delete(id);return Promise.resolve();
-   }
-   const prior=broker().snapshot().extensions[st.manifest.id]?.approved;
-   const candidate:ConsentCandidate={manifest:st.manifest,artifactHash:st.artifactHash,manifestHash:st.manifestHash,validation:'valid',source:'manual',sourcePath:st.origin,...(prior?{previous:prior}:{})};
-   return new Promise<void>((resolve,reject)=>{
-    let done=false;
-    requestConsentReview({candidate,
-     revalidate:async()=>{
-      if(blocked(st.manifest.id,st.manifest.version))throw new Error('blocked');
-      return candidate;},
-     commit:async(c,approve)=>{
-      if(c.artifactHash!==st.artifactHash||c.manifestHash!==st.manifestHash||JSON.stringify(c.manifest)!==JSON.stringify(st.manifest))throw new Error('changed');
-      // Bytes first, approval second. A failed approval removes the bytes again so nothing half-installed stays.
-      const undo=packages.put(st.manifest,st.files,{artifactHash:st.artifactHash,manifestHash:st.manifestHash,origin:st.origin});
+   const st=stagedById.get(id);
+   if(!r&&!st)throw new Error('failed');
+   const manifest=r?legacyConsent(r.manifest):st!.lane==='legacy'?legacyConsent(st!.manifest):st!.manifest;
+   if(blocked(manifest.id,manifest.version))throw new Error('blocked');
+   const old=loadExtensions().find(m=>m.id===id);
+   const prior=broker().snapshot().extensions[id]?.approved??(old?legacyConsent(old):undefined);
+   const candidate:ConsentCandidate={manifest,artifactHash:r?r.entry.sha256:st!.artifactHash,
+    manifestHash:r?await sha256Hex(new TextEncoder().encode(JSON.stringify(r.manifest))):st!.manifestHash,
+    validation:'valid',source:r?'store':'manual',sourcePath:r?r.entry.repo:st!.origin,...(prior?{previous:prior}:{})};
+   await requestInstallConsent(candidate,{
+    revalidate:async()=>{if(blocked(manifest.id,manifest.version))throw new Error('blocked');return candidate;},
+    commit:async(c,approve)=>{
+     if(blocked(manifest.id,manifest.version))throw new Error('blocked');
+     if(c.artifactHash!==candidate.artifactHash||c.manifestHash!==candidate.manifestHash||JSON.stringify(c.manifest)!==JSON.stringify(manifest))throw new Error('changed');
+     if(r||st!.lane==='legacy'){
+      // Legacy packages stay disabled until a separate broker-checked enable action.
+      // No registry write happens when the review is cancelled or approval fails.
+      await approve();
+      const result=r?installReviewedPackage(r):installExtension(JSON.stringify(st!.manifest),{disabled:true});
+      if(!result.ok){await broker().disable(id);throw new Error(result.errors[0]??'failed');}
+      await broker().disable(id);
+     }else{
+      const v2=st as Extract<Staged,{lane:'v2'}>;
+      const undo=packages.put(v2.manifest,v2.files,{artifactHash:v2.artifactHash,manifestHash:v2.manifestHash,origin:v2.origin});
       try{await approve();}catch(e){undo();throw e;}
-      done=true;stagedById.delete(id);resolve();
-     },
-     onClose:()=>{if(!done)reject(new Error('cancelled'));},
-    });
+     }
+     stagedById.delete(id);reviews.delete(id);
+    },
    });
   },
   browse:async signal=>{
    try{const entries=await fetchCatalog(signal);const inst=loadExtensions();
-    const list:BrowseEntry[]=entries.map(e=>{const s=installStateOf(e,inst).state;return{id:e.id,name:e.name,description:e.description,publisher:e.author,badge:null,permissionLabels:e.permissions.filter(p=>p==='project.read'||p==='project.write'),verified:true,state:s==='update-available'?'update-consent':s==='not-installed'?'available':'installed'};});
+    const list:BrowseEntry[]=entries.map(e=>{const s=installStateOf(e,inst).state;return{id:e.id,name:e.name,description:e.description,publisher:e.author,badge:null,permissionLabels:e.permissions.filter(p=>p==='project.read'||p==='project.write'),verified:false,state:s==='update-available'?'update-consent':s==='not-installed'?'available':'installed'};});
     entries.forEach(e=>reviews.delete(e.id));return{status:'ready',entries:list,fetchedAt:new Date().toISOString(),offline:false};
    }catch{return{status:'unavailable'};}
   },

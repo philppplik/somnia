@@ -111,7 +111,7 @@ export function DetailView({ext,host,log,focusSection,onBack,onChanged,onActivit
      <p className="ext-meta">{t('ext.grant.offWarn')}</p></section>
     <section className="ext-panel" aria-labelledby="ext-src-h"><h3 id="ext-src-h" className="ext-eyebrow">{t('ext.detail.source')}</h3>
      <div>{src.provider}{src.repository?` · ${src.repository}`:''}{src.release?` · ${src.release}`:''}</div>
-     {src.sha256?<div className="ext-meta">SHA-256 · {showsSignedMatch(src)?t('ext.source.match'):src.verification==='invalid'?t('ext.source.invalid'):t('ext.source.noMatch')}</div>:null}
+     {src.sha256?<div className="ext-meta">SHA-256 · {showsSignedMatch(src)?t('ext.source.match'):src.verification==='hash-match'?t('ext.source.hashMatch'):src.verification==='invalid'?t('ext.source.invalid'):t('ext.source.noMatch')}</div>:null}
      {src.sha256?<div className="ext-hash"><code title={src.sha256} aria-label={t('ext.source.hashAria',{hash:src.sha256})}>{shortHash(src.sha256)}</code><button type="button" className="ext-link" onClick={async()=>{try{await host.copyText(src.sha256!);setCopied(true);}catch{setError(t('ext.error.generic'));}}}>{copied?t('ext.source.copied'):t('ext.source.copy')}</button></div>:null}
      {src.url?<button type="button" className="ext-link" onClick={()=>host.openExternal(src.url!)}>{t('ext.source.open')}</button>:null}</section>
    </div>

@@ -43,7 +43,21 @@ export interface ConsentReviewRequest {
   onClose?:()=>void;
   onActivity?:(extensionId:string)=>void;
 }
-/** Called only by the trusted package/store controller after staging a candidate. */
+/** Called only by the trusted package/store controller after staging a candidate.
+ * The mounted shell acknowledges receipt synchronously; never leave an install waiting for absent UI. */
 export function requestConsentReview(request:ConsentReviewRequest):void {
-  window.dispatchEvent(new CustomEvent(CONSENT_REVIEW,{detail:request}));
+  const event=new CustomEvent(CONSENT_REVIEW,{detail:request,cancelable:true});
+  window.dispatchEvent(event);
+  if(!event.defaultPrevented)throw new Error('E_CONSENT_HOST_UNAVAILABLE');
+}
+export type InstallConsentHost=Omit<ConsentReviewRequest,'candidate'>;
+/** Resolves after the host transaction, not merely after opening a review or recording approval. */
+export function requestInstallConsent(candidate:ConsentCandidate,host:InstallConsentHost):Promise<void> {
+  return new Promise((resolve,reject)=>{
+    let committed=false;
+    requestConsentReview({...host,candidate:structuredClone(candidate),
+      commit:async(next,approve)=>{await host.commit(next,approve);committed=true;resolve();},
+      onClose:()=>{try{host.onClose?.();}finally{if(!committed)reject(new Error('E_CONSENT_CANCELLED'));}},
+    });
+  });
 }
