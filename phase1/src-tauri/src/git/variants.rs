@@ -333,6 +333,7 @@ fn find_variant(root: &Path, info: &GitRepoInfo, name: &str) -> GResult<GitVaria
 
 /// Contract command `git_variant_create`.
 pub fn variant_create(project_root: &Path, req: &GitVariantCreateRequest, trust: &TrustStore) -> GResult<GitVariant> {
+    let _lock = worktrees::lock_repo(project_root)?;
     let collected = collect(project_root, if req.open { Some(trust) } else { None })?;
     let info = &collected.info;
     let root = PathBuf::from(&info.root);
@@ -373,6 +374,7 @@ pub fn variant_create(project_root: &Path, req: &GitVariantCreateRequest, trust:
 
 /// Contract command `git_variant_open`: switch the project to another variant.
 pub fn variant_open(project_root: &Path, req: &GitVariantOpenRequest, trust: &TrustStore) -> GResult<GitRepoState> {
+    let _lock = worktrees::lock_repo(project_root)?;
     let collected = collect(project_root, Some(trust))?;
     let info = &collected.info;
     let root = PathBuf::from(&info.root);
@@ -406,6 +408,7 @@ pub fn variant_open(project_root: &Path, req: &GitVariantOpenRequest, trust: &Tr
 
 /// Contract command `git_variant_rename`. Never overwrites an existing variant.
 pub fn variant_rename(project_root: &Path, req: &GitVariantRenameRequest) -> GResult<GitVariant> {
+    let _lock = worktrees::lock_repo(project_root)?;
     let info = ready_info(project_root, None)?;
     let root = PathBuf::from(&info.root);
     let from = validate_name(&root, &req.from)?;
@@ -427,6 +430,7 @@ pub fn variant_rename(project_root: &Path, req: &GitVariantRenameRequest) -> GRe
 /// Contract command `git_variant_delete`. Refuses the open variant. A variant with
 /// versions that exist nowhere else needs `confirm_unmerged` and keeps a hidden backup ref.
 pub fn variant_delete(project_root: &Path, req: &GitVariantDeleteRequest) -> GResult<GitVariantDeleteResult> {
+    let _lock = worktrees::lock_repo(project_root)?;
     let info = ready_info(project_root, None)?;
     let root = PathBuf::from(&info.root);
     let name = validate_name(&root, &req.name)?;
@@ -658,6 +662,7 @@ fn abort_quietly(root: &Path) {
 /// Contract command `git_combine_start`. Requires a clean, reviewed project. Takes a safety
 /// copy, then merges without committing. Conflicts are returned, never resolved.
 pub fn combine_start(project_root: &Path, req: &GitCombineStartRequest, trust: &TrustStore) -> GResult<GitCombineSession> {
+    let _lock = worktrees::lock_repo(project_root)?;
     let collected = collect(project_root, Some(trust))?;
     let info = &collected.info;
     let root = PathBuf::from(&info.root);
@@ -739,6 +744,7 @@ pub fn combine_start(project_root: &Path, req: &GitCombineStartRequest, trust: &
 /// Contract command `git_combine_resolve`: applies explicit choices for named files only.
 /// Validates everything before touching anything.
 pub fn combine_resolve(project_root: &Path, req: &GitCombineResolveRequest, trust: &TrustStore) -> GResult<GitCombineSession> {
+    let _lock = worktrees::lock_repo(project_root)?;
     let p = merge_ctx(project_root, Some(trust))?;
     let root = p.root.clone();
     if merge_head(&p).is_none() {
@@ -821,6 +827,7 @@ fn write_raw_ok(root: &Path, args: &[&str]) -> GResult<()> {
 
 /// Contract command `git_combine_finish`: commits the merge once nothing is conflicted.
 pub fn combine_finish(project_root: &Path, req: &GitCombineFinishRequest, trust: &TrustStore) -> GResult<GitVersion> {
+    let _lock = worktrees::lock_repo(project_root)?;
     let p = merge_ctx(project_root, Some(trust))?;
     let root = p.root.clone();
     if merge_head(&p).is_none() {
@@ -846,6 +853,7 @@ pub fn combine_finish(project_root: &Path, req: &GitCombineFinishRequest, trust:
 
 /// Contract command `git_combine_abort`: back to the state before the combine started.
 pub fn combine_abort(project_root: &Path, trust: Option<&TrustStore>) -> GResult<GitRepoState> {
+    let _lock = worktrees::lock_repo(project_root)?;
     let p = merge_ctx(project_root, None)?;
     if merge_head(&p).is_none() {
         return Err(blocked("No combine is running", "no-merge"));

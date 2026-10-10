@@ -16,6 +16,11 @@ export type GitBlockReason =
 export interface GitRepoInfo {
   /** Absolute repo root as seen by the host. Never sent to a model or remote. */
   root: string;
+  /** Canonical native repo/worktree identities. Local only; absent in older hosts. */
+  repoId?: string;
+  worktreeId?: string;
+  gitDir?: string;
+  commonDir?: string;
   /** Project folder relative to root ('' when the project is the root). Status/commit are limited to it. */
   projectPrefix: string;
   /** CONTRACT-A addendum: shallow clone, detected and reported only (rule 9). */

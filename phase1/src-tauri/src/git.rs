@@ -21,6 +21,7 @@ use std::process::{Command, Stdio};
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 pub mod variants;
+pub mod worktrees;
 
 const READ_TIMEOUT: Duration = Duration::from_secs(30);
 const LOG_TIMEOUT: Duration = Duration::from_secs(60);
@@ -108,6 +109,11 @@ pub enum GitBlockReason {
 #[serde(rename_all = "camelCase")]
 pub struct GitRepoInfo {
     pub root: String,
+    /// Canonical split-directory identity, private to local hosts.
+    pub repo_id: String,
+    pub worktree_id: String,
+    pub git_dir: String,
+    pub common_dir: String,
     pub project_prefix: String,
     pub branch: Option<String>,
     pub detached: bool,
@@ -761,7 +767,11 @@ fn probe(project_root: &Path) -> GResult<RepoProbe> {
         let c = PathBuf::from(&common_dir);
         if c.is_absolute() { c } else { project_root.join(c) }
     };
-    Ok(RepoProbe { root, prefix, git_dir: PathBuf::from(git_dir), common_dir: common_abs })
+    let git_dir = PathBuf::from(git_dir).canonicalize()
+        .map_err(|_| GitError::new(GitErrorCode::Io, "Could not resolve the Git directory"))?;
+    let common_dir = common_abs.canonicalize()
+        .map_err(|_| GitError::new(GitErrorCode::Io, "Could not resolve the common Git directory"))?;
+    Ok(RepoProbe { root: canonical_project_root(&root), prefix, git_dir, common_dir })
 }
 
 fn same_dir(a: &Path, b: &Path) -> bool {
@@ -775,10 +785,6 @@ fn same_dir(a: &Path, b: &Path) -> bool {
 }
 
 fn blocked_reason(probe: &RepoProbe) -> Option<GitBlockReason> {
-    if !same_dir(&probe.git_dir, &probe.common_dir) || probe.root.join(".git").is_file() {
-        // Linked worktree or submodule: out of scope for this wave (contract rule 9).
-        return Some(GitBlockReason::UnsupportedWorktree);
-    }
     if probe.git_dir.join("index.lock").exists() {
         return Some(GitBlockReason::IndexLock);
     }
@@ -840,6 +846,10 @@ fn gather_info(probe: &RepoProbe, git_version: &str) -> GResult<GitRepoInfo> {
     .unwrap_or(false);
     Ok(GitRepoInfo {
         root: probe.root.to_string_lossy().into_owned(),
+        repo_id: worktrees::identity(&probe.common_dir),
+        worktree_id: worktrees::identity(&probe.git_dir),
+        git_dir: probe.git_dir.to_string_lossy().into_owned(),
+        common_dir: probe.common_dir.to_string_lossy().into_owned(),
         project_prefix: probe.prefix.clone(),
         branch,
         detached,
@@ -983,7 +993,11 @@ fn compute_state_token(info: &GitRepoInfo, changes: &[RawChange]) -> String {
         .map(|o| String::from_utf8_lossy(&o.stdout).trim().to_string())
         .unwrap_or_else(|| "unmerged-index".to_string());
     let mut h = Sha256::new();
-    h.update(b"somnia-git-state-v1\n");
+    h.update(b"somnia-git-state-v2\n");
+    h.update(info.root.as_bytes());
+    h.update(b"\0");
+    h.update(info.branch.as_deref().unwrap_or("detached").as_bytes());
+    h.update(b"\0");
     h.update(head.as_bytes());
     h.update(b"\n");
     h.update(tree.as_bytes());
@@ -1016,6 +1030,19 @@ fn compute_state_token(info: &GitRepoInfo, changes: &[RawChange]) -> String {
             })
             .unwrap_or_else(|| "-".to_string());
         h.update(stat.as_bytes());
+        let path = root.join(&c.repo_path);
+        if let Ok(target) = std::fs::read_link(&path) {
+            h.update(target.as_os_str().as_encoded_bytes());
+        } else if let Ok(mut file) = std::fs::File::open(&path) {
+            let mut buf = [0u8; 65536];
+            loop {
+                match file.read(&mut buf) {
+                    Ok(0) => break,
+                    Ok(n) => h.update(&buf[..n]),
+                    Err(_) => { h.update(b"unreadable"); break; }
+                }
+            }
+        }
         h.update(b"\n");
     }
     format!("{:x}", h.finalize())
@@ -1468,7 +1495,10 @@ pub fn init(project_root: &Path, trust: Option<&TrustStore>) -> GResult<GitRepoS
 // ---------------------------------------------------------------- commit
 
 fn hooks_dir_active(root: &Path) -> bool {
-    let hooks = root.join(".git").join("hooks");
+    let hooks = match probe(root) {
+        Ok(p) => p.common_dir.join("hooks"),
+        Err(_) => return false,
+    };
     std::fs::read_dir(hooks)
         .map(|entries| {
             entries.flatten().any(|e| {
@@ -1525,6 +1555,7 @@ fn validate_message(subject: &str, body: Option<&str>) -> GResult<String> {
 /// Contract command `git_commit`: commits exactly the selected paths.
 /// Anything already staged outside the selection stays staged (rule 5).
 pub fn commit(project_root: &Path, req: &GitCommitRequest, trust: &TrustStore) -> GResult<GitVersion> {
+    let _lock = worktrees::lock_repo(project_root)?;
     let message = validate_message(&req.subject, req.body.as_deref())?;
     if req.paths.is_empty() {
         return Err(GitError::new(GitErrorCode::NothingToCommit, "No paths selected"));
@@ -1673,6 +1704,7 @@ pub fn restore_as_new_version(
     req: &GitRestoreRequest,
     trust: &TrustStore,
 ) -> GResult<GitRestoreResult> {
+    let _lock = worktrees::lock_repo(project_root)?;
     let collected = collect(project_root, Some(trust))?;
     let info = &collected.info;
     if info.unborn {
