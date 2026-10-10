@@ -16,19 +16,30 @@ export class ExtensionRuntime{
  /** A worker that cannot load (for example the somnia-ext scheme is missing or blocked by CSP) never answers, so surface it once instead of waiting for command timeouts. */
  private failed=false;
  private onWorkerError(e:unknown){if(this.failed)return;this.failed=true;const detail=e&&typeof e==='object'&&'message' in e?String((e as {message:unknown}).message):'worker error';reportError('extensions.worker',`Extension ${this.manifest.name} (${this.manifest.id}) worker failed: ${detail.slice(0,300)}`,{notify:`Extension ${this.manifest.name} could not be started.`});}
- activate(){this.worker.postMessage({type:'activate',code:this.manifest.code??''});}
+ private activateTimer:ReturnType<typeof setTimeout>|null=null;
+ activate(){this.activateTimer=setTimeout(()=>this.failHard('activation timed out'),this.timeoutMs);this.worker.postMessage({type:'activate',code:this.manifest.code??''});}
+ /** A hung or crashed worker keeps running forever and burns a core; a timeout kills it and the extension stays failed until reload (fail closed, report once). */
+ private failHard(detail:string){
+  if(this.failed)return;this.failed=true;
+  if(this.activateTimer){clearTimeout(this.activateTimer);this.activateTimer=null;}
+  try{this.worker.terminate();}catch{/* worker may already be gone */}
+  for(const r of this.runs.values()){clearTimeout(r.timer);r.reject(new Error(`${this.manifest.name} was stopped.`));}
+  this.runs.clear();
+  reportError('extensions.worker',`Extension ${this.manifest.name} (${this.manifest.id}) was stopped: ${detail}`,{notify:`Extension ${this.manifest.name} was stopped: ${detail}`});
+ }
  private onMessage(m:any){
   if(!m||typeof m!=='object')return;
   if(m.type==='api.call'){
    const reply=(extra:object)=>this.worker.postMessage({type:'api.result',requestId:m.requestId,...extra});
    try{const value=callApi(this.manifest,String(m.method),Array.isArray(m.args)?m.args:[],{...this.deps,registerHandler:()=>{}});reply({ok:true,value});}
    catch(error){log('warn','extensions.api',`${this.manifest.name} api call ${String(m.method)} failed: ${error instanceof Error?error.message:String(error)}`);reply({ok:false,error:error instanceof Error?error.message:String(error)});}
-  }else if(m.type==='activated'&&m.error){reportError('extensions.activate',`Extension ${this.manifest.name} (${this.manifest.id}) failed to start`,{notify:`Extension ${this.manifest.name} could not be started.`});
+  }else if(m.type==='activated'){if(this.activateTimer){clearTimeout(this.activateTimer);this.activateTimer=null;}
+   if(m.error){this.failed=true;reportError('extensions.activate',`Extension ${this.manifest.name} (${this.manifest.id}) failed to start`,{notify:`Extension ${this.manifest.name} could not be started.`});}
   }else if(m.type==='log'){if(m.level==='error')log('error','extensions.worker',`${this.manifest.name}: ${String(m.text).slice(0,500)}`);this.deps.log(`${this.manifest.name}: ${String(m.text).slice(0,200)}`);}
   else if(m.type==='command.done'){const r=this.runs.get(m.requestId);if(!r)return;clearTimeout(r.timer);this.runs.delete(m.requestId);m.error?r.reject(new Error(String(m.error))):r.resolve();}
  }
- runCommand(id:string){return new Promise<void>((resolve,reject)=>{const requestId=++this.n;const timer=setTimeout(()=>{this.runs.delete(requestId);log('warn','extensions.command',`${this.manifest.name} command ${id} timed out`);reject(new Error(`${this.manifest.name} did not finish in time.`));},this.timeoutMs);this.runs.set(requestId,{resolve,reject,timer});this.worker.postMessage({type:'command.run',id,requestId});});}
- dispose(){for(const r of this.runs.values())clearTimeout(r.timer);this.runs.clear();this.worker.terminate();}
+ runCommand(id:string){return new Promise<void>((resolve,reject)=>{if(this.failed){reject(new Error(`${this.manifest.name} is stopped.`));return;}const requestId=++this.n;const timer=setTimeout(()=>{this.runs.delete(requestId);reject(new Error(`${this.manifest.name} did not finish in time.`));this.failHard(`command ${id} timed out`);},this.timeoutMs);this.runs.set(requestId,{resolve,reject,timer});this.worker.postMessage({type:'command.run',id,requestId});});}
+ dispose(){if(this.activateTimer)clearTimeout(this.activateTimer);for(const r of this.runs.values())clearTimeout(r.timer);this.runs.clear();this.worker.terminate();}
 }
 /** URL contract with the Rust side: the worker bootstrap is a separate response with its own CSP (script-src 'unsafe-eval'; connect-src 'none'). Windows and Android WebViews expose custom schemes as http://<scheme>.localhost/. */
 export const WORKER_SCHEME='somnia-ext';

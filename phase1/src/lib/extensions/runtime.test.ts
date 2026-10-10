@@ -28,6 +28,7 @@ test('runtime passes the extension id to the factory, keeps timeout and dispose'
  const rt=new ExtensionRuntime(manifest,deps,(s,id)=>{got=[s,id];return w;},20);
  assert.equal(got[1],'acme.demo');assert.equal(got[0],WORKER_SOURCE);
  rt.activate();assert.equal(w.sent[0].type,'activate');
+ w.onmessage!({data:{type:'activated'}});
  await assert.rejects(rt.runCommand('acme.demo.x'),/did not finish in time/);
  rt.dispose();assert.equal(w.ended,true);
 });
@@ -58,4 +59,22 @@ test('an error after the worker answered is not retried through the relay',()=>{
  const env:WorkerEnv={tauri:true,windowsStyle:false,create:()=>direct,createFromSource:()=>fake(),createRelay:()=>{relays++;return fake();}};
  const w=browserWorker(WORKER_SOURCE,'acme.demo',env);let errs=0;w.onerror=()=>{errs++;};
  direct.onmessage?.({data:{type:'activated'}});direct.onerror?.({message:'late'});assert.equal(relays,0);assert.equal(errs,1);
+});
+test('F8: a command timeout terminates the worker and fails the extension closed',async()=>{
+ const w=fake();
+ const rt=new ExtensionRuntime(manifest,deps,()=>w,20);
+ rt.activate();
+ w.onmessage!({data:{type:'activated'}});
+ await assert.rejects(rt.runCommand('acme.demo.x'),/did not finish in time/);
+ assert.equal(w.ended,true);
+ await assert.rejects(rt.runCommand('acme.demo.x'),/is stopped/);
+ rt.dispose();
+});
+test('F8: an activation timeout terminates the worker',async()=>{
+ const w=fake();
+ const rt=new ExtensionRuntime(manifest,deps,()=>w,20);
+ rt.activate();
+ await new Promise(r=>setTimeout(r,60));
+ assert.equal(w.ended,true);
+ rt.dispose();
 });

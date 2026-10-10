@@ -5,7 +5,7 @@ const NEED:Record<string,Permission>={'commands.register':'commands','project.li
 /** replaceSource is deliberately not allowed: extensions edit through structured operations that stay undoable and never write to disk. */
 export const WRITE_OPS=['formatText','setText','setAttribute','setStyle','insertHTML','remove','move'];
 export function callApi(manifest:ExtensionManifest,method:string,args:unknown[],deps:ApiDeps):unknown{
- const need=NEED[method];if(!need)throw Error(`Unknown API method: ${method}`);
+ if(!Object.hasOwn(NEED,method))throw Error(`Unknown API method: ${method}`);const need=NEED[method];
  if(!manifest.permissions.includes(need))throw Error(`${method} needs the "${need}" permission, which ${manifest.name} did not declare.`);
  switch(method){
   case 'commands.register':{const id=args[0];if(typeof id!=='string'||!manifest.contributes.commands.some(c=>c.id===id))throw Error('Command ids must be declared in the manifest.');deps.registerHandler(id);return null;}
