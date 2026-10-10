@@ -2,7 +2,7 @@ import {test,expect} from './fixtures';
 const strips=(page:any)=>page.getByTestId('video-filmstrip');
 /** Counts non-transparent pixel columns of a strip canvas and returns a coarse signature. */
 const sig=(page:any,i:number)=>page.evaluate((i:number)=>{
- const c=document.querySelectorAll('canvas[data-testid=video-filmstrip]')[i] as HTMLCanvasElement;
+ const c=document.querySelectorAll('[data-testid=video-filmstrip] canvas')[i] as HTMLCanvasElement;
  const d=c.getContext('2d')!.getImageData(0,0,c.width,c.height).data;let filled=0,sum=0;
  for(let x=0;x<c.width;x++){const a=d[(Math.floor(c.height/2)*c.width+x)*4+3];if(a>0)filled++;}
  for(let k=0;k<d.length;k+=4*37)sum=(sum*31+d[k]+d[k+1]*3+d[k+2]*7+d[k+3])>>>0;
@@ -19,7 +19,7 @@ test('filmstrip: real decode fills every clip strip, trim reuses cache, no blank
  const before=await page.evaluate(()=>(window as any).__h.getBatches());
  await page.evaluate(()=>{
   (window as any).__blank=0;
-  const c=document.querySelectorAll('canvas[data-testid=video-filmstrip]')[0] as HTMLCanvasElement;
+  const c=document.querySelectorAll('[data-testid=video-filmstrip] canvas')[0] as HTMLCanvasElement;
   const t=()=>{const d=c.getContext('2d')!.getImageData(0,0,c.width,1).data;let f=0;for(let x=0;x<c.width;x++)if(d[x*4+3]>0)f++;if(f/c.width<0.9)(window as any).__blank++;requestAnimationFrame(t);};t();
  });
  await page.evaluate(()=>{const w=(window as any).__h;w.setClips((cs:any[])=>cs.map((c,i)=>i===0?{...c,out_s:1.2}:c));});
