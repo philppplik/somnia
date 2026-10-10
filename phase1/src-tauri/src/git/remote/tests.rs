@@ -937,3 +937,42 @@ fn progress_lines_are_parsed_and_not_kept_as_errors() {
         assert!(p.percent.map(|v| v <= 100).unwrap_or(true));
     }
 }
+
+#[test]
+fn lease_config_allow_list() {
+    use super::net::{allowed_lease_config as c, allowed_lease_env as e};
+    for (k, v) in [("credential.helper", "!x"), ("credential.helper", ""), ("credential.useHttpPath", "true"), ("core.askPass", ""), ("http.extraHeader", ""), ("http.followRedirects", "false"), ("protocol.allow", "never"), ("protocol.https.allow", "always")] {
+        assert!(c(k, v), "{k}={v}");
+    }
+    for (k, v) in [("core.sshCommand", "x"), ("core.askPass", "/evil"), ("http.extraHeader", "Authorization: x"), ("http.proxy", "x"), ("protocol.allow", "always"), ("url.x.insteadOf", "y"), ("credential.helper", "a\nb"), ("core.fsmonitor", "x"), ("alias.x", "!y")] {
+        assert!(!c(k, v), "{k}={v}");
+    }
+    assert!(e("SOMNIA_GIT_LEASE_ENDPOINT", "x") && e("GIT_TERMINAL_PROMPT", "0") && e("GCM_INTERACTIVE", "never"));
+    assert!(!e("GIT_ASKPASS", "x") && !e("GIT_TERMINAL_PROMPT", "1") && !e("GIT_SSH_COMMAND", "x") && !e("HOME", "/x"));
+}
+
+#[test]
+fn auth_rejected_by_the_bridge_is_classified_as_auth_required() {
+    struct Rej;
+    impl CredentialLease for Rej {
+        fn account_login(&self) -> &str { "t" }
+        fn host(&self) -> &str { "127.0.0.1" }
+        fn repo_path(&self) -> &str { "o/r" }
+        fn scopes(&self) -> &[String] { &[] }
+        fn is_expired(&self) -> bool { false }
+        fn git_config(&self) -> Vec<(String, String)> { vec![] }
+        fn env(&self) -> Vec<(String, String)> { vec![] }
+        fn auth_rejected(&self) -> bool { true }
+    }
+    let f = fx();
+    // a server that answers 500 gives an unclassifiable error; the bridge flag decides
+    let port = server(|mut s| {
+        let mut b = [0u8; 4096];
+        let _ = s.read(&mut b);
+        let _ = s.write_all(b"HTTP/1.1 500 Oops\r\nContent-Length: 0\r\nConnection: close\r\n\r\n");
+    });
+    let url = format!("http://127.0.0.1:{port}/o/r.git");
+    let args: Vec<OsString> = ["ls-remote", "--", url.as_str()].iter().map(OsString::from).collect();
+    let out = net::run_net(&f.b, &Policy::for_tests(), &args, Some(&Rej), &NetCtx::detached(), Duration::from_secs(20), "x").unwrap();
+    assert_eq!(classify_transport(&out.stderr), RemoteErrorCode::AuthRequired, "{}", out.stderr);
+}

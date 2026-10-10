@@ -184,8 +184,9 @@ pub(crate) fn friendly(code: RemoteErrorCode) -> &'static str {
 /// A credential lease (S3 contract). One lease per job: one account, one validated HTTPS
 /// host, one canonical repository path, an expiry. The implementer exposes **no token**:
 /// it only describes the opaque helper git should call (bundled helper over a private
-/// pipe). `git_config` may only contain `credential.*` keys and `env` only `SOMNIA_*`
-/// names; anything else is rejected before git starts.
+/// pipe). `git_config` is checked against an allow-list (`credential.*`, empty `core.askPass` /
+/// `http.extraHeader`, `http.followRedirects`, `protocol.*.allow`) and `env` only `SOMNIA_*`
+/// plus `GIT_TERMINAL_PROMPT=0` / `GCM_INTERACTIVE=never`; anything else is rejected before git starts.
 pub trait CredentialLease: Send + Sync {
     fn account_login(&self) -> &str;
     fn host(&self) -> &str;
@@ -197,6 +198,12 @@ pub trait CredentialLease: Send + Sync {
     /// `credential.helper` entries etc. Applied after a helper-list reset.
     fn git_config(&self) -> Vec<(String, String)>;
     fn env(&self) -> Vec<(String, String)>;
+    /// Called when the job is cancelled or times out: stop serving credentials.
+    fn cancel(&self) {}
+    /// The credential helper saw git report the credential rejected.
+    fn auth_rejected(&self) -> bool {
+        false
+    }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

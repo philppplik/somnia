@@ -198,6 +198,30 @@ fn kill_tree(pid: u32) {
     }
 }
 
+/// Allow-list for what a lease may put on the git command line. Anything that could change
+/// where git connects, what it executes or which headers it sends is refused.
+pub(crate) fn allowed_lease_config(k: &str, v: &str) -> bool {
+    if v.contains('\n') || v.contains('\0') || k.contains('=') || k.contains(char::is_whitespace) {
+        return false;
+    }
+    match k {
+        "credential.helper" | "credential.useHttpPath" | "credential.interactive" => true,
+        "core.askPass" | "http.extraHeader" => v.is_empty(),
+        "http.followRedirects" => v == "false" || v == "initial",
+        _ => {
+            // protocol.<scheme>.allow = always|never and protocol.allow = never|user
+            (k == "protocol.allow" && (v == "never" || v == "user"))
+                || (k != "protocol.allow" && k.starts_with("protocol.") && k.ends_with(".allow") && (v == "always" || v == "never" || v == "user"))
+        }
+    }
+}
+
+pub(crate) fn allowed_lease_env(k: &str, v: &str) -> bool {
+    k.starts_with("SOMNIA_") && !k.contains('=')
+        || (k == "GIT_TERMINAL_PROMPT" && v == "0")
+        || (k == "GCM_INTERACTIVE" && v == "never")
+}
+
 fn config_args(policy: &Policy, lease: Option<&dyn CredentialLease>) -> RResult<Vec<OsString>> {
     let mut a: Vec<String> = Vec::new();
     let mut c = |kv: &str| {
@@ -220,7 +244,7 @@ fn config_args(policy: &Policy, lease: Option<&dyn CredentialLease>) -> RResult<
     }
     if let Some(l) = lease {
         for (k, v) in l.git_config() {
-            if !k.starts_with("credential.") || k.contains('=') || k.contains(char::is_whitespace) || v.contains('\n') || v.contains('\0') {
+            if !allowed_lease_config(&k, &v) {
                 return Err(RemoteError::detail(RemoteErrorCode::UrlRejected, "The credential setup is not allowed", "lease-config-key"));
             }
             c(&format!("{k}={v}"));
@@ -280,7 +304,7 @@ pub(crate) fn run_net(
     }
     if let Some(l) = lease {
         for (k, v) in l.env() {
-            if !k.starts_with("SOMNIA_") || k.contains('=') {
+            if !allowed_lease_env(&k, &v) {
                 return Err(RemoteError::detail(RemoteErrorCode::UrlRejected, "The credential setup is not allowed", "lease-env-key"));
             }
             cmd.env(k, v);
@@ -379,7 +403,18 @@ pub(crate) fn run_net(
             }
         }
     };
+    if cancelled || timed_out {
+        if let Some(l) = lease {
+            l.cancel();
+        }
+    }
     let stdout = out_t.join().unwrap_or_default();
-    let stderr = redact(&String::from_utf8_lossy(&err_t.join().unwrap_or_default()));
+    let mut stderr = redact(&String::from_utf8_lossy(&err_t.join().unwrap_or_default()));
+    if let (Some(l), Some(code)) = (lease, status.and_then(|s| s.code())) {
+        // The bridge saw git report the credential rejected (revoked token, SSO not authorized, no access).
+        if code != 0 && l.auth_rejected() && classify_transport(&stderr) == RemoteErrorCode::Unknown {
+            stderr.push_str("\nauthentication failed (credential rejected by GitHub)");
+        }
+    }
     Ok(NetOut { code: status.and_then(|s| s.code()), stdout, stderr, cancelled, timed_out })
 }
