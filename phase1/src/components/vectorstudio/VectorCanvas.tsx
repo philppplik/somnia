@@ -42,10 +42,11 @@ export function VectorCanvas(){
 
  const selected=s.doc.paths.filter(p=>s.selection.includes(p.id));
  // Live preview of an in-progress drag; committed as one undo step on pointer up.
+ const shiftHeld=useRef(false);
  const preview=(p:VectorPath):VectorPath=>{
   if(!drag)return p;
   if(drag.kind==='move'&&s.selection.includes(p.id))return translatePath(p,drag.dx,drag.dy);
-  if(drag.kind==='scale'&&s.selection.includes(p.id)){const to=scaledBox(drag);return to?fitPath(p,drag.from,to):p;}
+  if(drag.kind==='scale'&&s.selection.includes(p.id)){const to=scaledBox(drag,shiftHeld.current);return to?fitPath(p,drag.from,to):p;}
   if(drag.kind==='node'&&p.id===drag.path)return {...p,nodes:p.nodes.map(n=>n.id!==drag.node?n:moved(n,drag.part,drag.cur))};
   return p;};
  const paths=s.doc.paths.map(preview);
@@ -82,14 +83,13 @@ export function VectorCanvas(){
  const onUp=()=>{
   const d=drag;setDrag(null);if(!d)return;
   if(d.kind==='move'&&(d.dx||d.dy)){commit({...s.doc,paths:s.doc.paths.map(p=>s.selection.includes(p.id)?translatePath(p,d.dx,d.dy):p)});}
-  else if(d.kind==='scale'){const to=scaledBox(d);if(to)commit({...s.doc,paths:s.doc.paths.map(p=>s.selection.includes(p.id)?fitPath(p,d.from,to):p)});}
+  else if(d.kind==='scale'){const to=scaledBox(d,shiftHeld.current);if(to)commit({...s.doc,paths:s.doc.paths.map(p=>s.selection.includes(p.id)?fitPath(p,d.from,to):p)});}
   else if(d.kind==='node'){moveNode(d.path,d.node,d.cur,d.part);}
   else if(d.kind==='marquee'){const b:Box={minX:Math.min(d.start.x,d.cur.x),minY:Math.min(d.start.y,d.cur.y),maxX:Math.max(d.start.x,d.cur.x),maxY:Math.max(d.start.y,d.cur.y)};
    if(b.maxX-b.minX>2||b.maxY-b.minY>2)select(s.doc.paths.filter(p=>{const pb=pathBox(p);return !p.hidden&&pb&&pb.minX>=b.minX&&pb.maxX<=b.maxX&&pb.minY>=b.minY&&pb.maxY<=b.maxY;}).map(p=>p.id));}
   else if(d.kind==='shape'){const tiny=Math.hypot(d.cur.x-d.start.x,d.cur.y-d.start.y)<3;
    const end=tiny?{x:d.start.x+(d.tool==='line'?120:100),y:d.start.y+(d.tool==='line'?0:100)}:d.cur;
    const from=d.tool==='line'||!shiftHeld.current?d.start:d.start;addPath(buildShape(d.tool,from,end));setTool('select');}};
- const shiftHeld=useRef(false);
  const onDouble=(e:RPointerEvent<SVGSVGElement>|React.MouseEvent<SVGSVGElement>)=>{
   const pt=toDoc(e);
   if(s.tool==='pen'){finishPen(false);return;}
@@ -143,9 +143,9 @@ export function VectorCanvas(){
   </div>
  </section></div></main>;
 
- function scaledBox(d:{corner:number;from:Box;cur:Point}):Box|null{
+ function scaledBox(d:{corner:number;from:Box;cur:Point},shift:boolean):Box|null{
   const [cx,cy]=CORNERS[d.corner];const ax=cx?d.from.minX:d.from.maxX,ay=cy?d.from.minY:d.from.maxY;
-  let x=d.cur.x,y=d.cur.y;if(shiftHeld.current){const w=d.from.maxX-d.from.minX||1,h=d.from.maxY-d.from.minY||1;const k=Math.max(Math.abs(x-ax)/w,Math.abs(y-ay)/h);x=ax+Math.sign(x-ax||1)*w*k;y=ay+Math.sign(y-ay||1)*h*k;}
+  let x=d.cur.x,y=d.cur.y;if(shift){const w=d.from.maxX-d.from.minX||1,h=d.from.maxY-d.from.minY||1;const k=Math.max(Math.abs(x-ax)/w,Math.abs(y-ay)/h);x=ax+Math.sign(x-ax||1)*w*k;y=ay+Math.sign(y-ay||1)*h*k;}
   const b={minX:Math.min(ax,x),minY:Math.min(ay,y),maxX:Math.max(ax,x),maxY:Math.max(ay,y)};return b.maxX-b.minX<1||b.maxY-b.minY<1?null:b;}
 }
 function moved(n:VectorNode,part:'anchor'|'in'|'out',to:Point):VectorNode{
