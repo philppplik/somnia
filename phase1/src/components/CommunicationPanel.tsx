@@ -1,4 +1,6 @@
-import { useEffect } from "react";
+import { AgentBoardHost } from "./agentBoard/AgentBoardHost";
+import { Dialog, DialogContent, DialogTitle } from "./ui/dialog";
+import { useEffect, useState } from "react";
 import { AgentPanel } from "./agent/AgentPanel";
 import { SessionChat } from "./SessionChat";
 import { useT } from "../lib/useT";
@@ -9,6 +11,7 @@ import {
 import { getChatSession } from "../lib/collab/chatSession";
 import { patchState } from "../store/appStore";
 export function CommunicationPanel() {
+  const [boardOpen,setBoardOpen]=useState(false);
   const tab = useCommunicationTab(),
     { t } = useT();
   useEffect(
@@ -50,6 +53,7 @@ export function CommunicationPanel() {
         >
           {t("chat.tab")}
         </button>
+        <button onClick={()=>setBoardOpen(true)}>{t("board.title")}</button>
         <button
           className="communication-close"
           aria-label={t("chat.close")}
@@ -58,6 +62,7 @@ export function CommunicationPanel() {
           ×
         </button>
       </div>
+      <Dialog open={boardOpen} onOpenChange={setBoardOpen}><DialogContent className="ab-board-popup" aria-label={t("board.title")}><DialogTitle className="sr-only">{t("board.title")}</DialogTitle><AgentBoardHost/></DialogContent></Dialog>
       <div
         className="communication-content"
         id="communication-content"

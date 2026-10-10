@@ -72,6 +72,9 @@ export function VariantsList(p: VariantsListProps) {
 
 export interface VariantsTabProps {
   deps: VariantsDeps;
+  /** Agent Board handoff. Uses this existing Combine flow, not a second merge path. */
+  initialCombineTarget?: string;
+  beforeCombine?: () => void;
   /** The project files on disk changed (switch, combine, abort): reload them in the editor. */
   onDiskChanged(): void;
   /** Jump to the Changes tab so the user can save a version first. */
@@ -82,7 +85,7 @@ export interface VariantsTabProps {
 
 type Pending = GuardBlock | Dirty | FlowError | { kind: 'text'; key: string } | null;
 
-export function VariantsTab({ deps, onDiskChanged, onSaveVersion, onRepoChanged }: VariantsTabProps) {
+export function VariantsTab({ deps, onDiskChanged, onSaveVersion, onRepoChanged, initialCombineTarget, beforeCombine }: VariantsTabProps) {
   const { t } = useT();
   const [variants, setVariants] = useState<GitVariant[]>([]);
   const [busy, setBusy] = useState(false);
@@ -133,12 +136,14 @@ export function VariantsTab({ deps, onDiskChanged, onSaveVersion, onRepoChanged 
     if (r.kind === 'deleted') { setDel(null); changed(); }
   });
   const doPreview = (v: GitVariant) => run(async () => {
+    try { beforeCombine?.(); } catch { return setNotice({kind:'text',key:'board.error.stale'}); }
     const r = await previewCombine(deps, v.name);
     if (r.kind === 'error') return setNotice(r);
     setPreview(r.preview);
   });
   const doStart = () => run(async () => {
     if (!preview) return;
+    try { beforeCombine?.(); } catch { setPreview(null); return setNotice({kind:'text',key:'board.error.stale'}); }
     const r = await startCombine(deps, preview);
     if (r.kind === 'guard' || r.kind === 'dirty' || r.kind === 'error') { setPreview(null); return setNotice(r); }
     setPreview(null);
@@ -158,6 +163,14 @@ export function VariantsTab({ deps, onDiskChanged, onSaveVersion, onRepoChanged 
     setResolver(null); onDiskChanged(); changed();
   });
 
+  useEffect(() => {
+    if (!initialCombineTarget) return;
+    let active = true;
+    try { beforeCombine?.(); } catch { setNotice({kind:'text',key:'board.error.stale'}); return; }
+    void previewCombine(deps,initialCombineTarget).then(r=>{if(active){if(r.kind==='preview')setPreview(r.preview);else setNotice(r);}});
+    return()=>{active=false;};
+  }, [deps, initialCombineTarget]);
+
   return (
     <div className="vt-root">
       <form className="vt-new" onSubmit={e => { e.preventDefault(); void create(true); }}>
@@ -169,7 +182,7 @@ export function VariantsTab({ deps, onDiskChanged, onSaveVersion, onRepoChanged 
         <p className="vt-hint">{t('variants.new.hint')}</p>
       </form>
       {notice && <Notice n={notice} onSaveVersion={onSaveVersion} />}
-      <VariantsList variants={variants} busy={busy} onOpen={doOpen} onCombine={doPreview} onRename={v => setRename({ v, value: v.name })} onDelete={setDel} />
+      <VariantsList variants={initialCombineTarget?variants.filter(v=>v.name===initialCombineTarget):variants} busy={busy} onOpen={doOpen} onCombine={doPreview} onRename={v => setRename({ v, value: v.name })} onDelete={setDel} />
 
       <Dialog open={!!rename} onOpenChange={o => { if (!o) setRename(null); }}>
         <DialogContent className="dlg-popup" aria-label={t('variants.rename.title')}>
