@@ -28,7 +28,7 @@ export function sectionsFor(studio:StudioPointId,selectionKind:string){
 }
 export function commandsFor(studio:StudioPointId,selectionKind?:string){
  if(!STUDIO_POINTS[studio].mounted)return[];
- return all().flatMap(([extId,c])=>c.commands.filter(x=>x.studio.includes(studio)&&(!x.when||(selectionKind!==undefined&&x.when.includes(selectionKind)))).map(x=>({...x})));
+ return all().flatMap(([,c])=>c.commands.filter(x=>x.studio.includes(studio)&&(!x.when||(selectionKind!==undefined&&x.when.includes(selectionKind)))).map(x=>({...x})));
 }
 export interface SlotLayout{slot:PanelSlot;shown:{key:string;title:string;extId:string;html:string}[];overflow:string[]}
 /** Panels per host-owned slot, capped. Panels never touch rails, toolbox or canvas: a Studio without a slot (Photos has no rail slots) simply cannot receive one, and validation rejects the manifest. Overflow keys are listed, not mounted, so the host can offer them in a "More" menu. */
