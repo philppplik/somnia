@@ -2,7 +2,7 @@
 
 Status: Rust host and TypeScript tool bridge implemented and tested with an in-memory fixture server. **Not yet reachable from the UI** and never run against a real third-party server.
 
-Approved by the owner on 2026-10-08 (WhatsApp, reply to the wave plan that named the new rmcp dependency). Design background: MCP-ACP.md. Research: RMCP-SPIKE.md.
+Design background: MCP-ACP.md. Research: RMCP-SPIKE.md.
 
 ## What exists
 - `src-tauri/src/mcp_host.rs`: `McpHost` using `rmcp =3.5.1` (features: client, transport-child-process). Starts a stdio server, lists tools, calls a tool.
