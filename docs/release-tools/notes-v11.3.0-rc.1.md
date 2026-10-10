@@ -20,10 +20,10 @@ Release candidate. Built from `somnia-agent` at acf0995 (CI 4/4 green, run 38034
 ## Known issues
 - Nothing here is production-verified. The UI was checked in a real browser against mocked Tauri commands, not in the desktop app. Windows and macOS interactive behaviour is untested; the Windows checklist (docs/release-tools/windows-checklist.md) now includes the file-association checks.
 - File associations: a second launch while the app is already running is not forwarded (no single-instance plugin yet). Explorer registration itself must be verified on a real Windows install.
-- The connect-src policy still allows ws:/wss: to any host because LAN collaboration guests join arbitrary ws:// hosts by design (accepted risk, pending owner decision).
+- The connect-src policy still allows ws:/wss: to any host because LAN collaboration guests join arbitrary ws:// hosts by design (accepted risk, owner decision 2026-10-10; disclosed in Settings > Extensions from the next build).
 - CI: some specs remain flaky; the CI config retries a failed spec once, which can hide flakes.
 - The example extension repositories (link-atlas, content-lens, metadata-preflight, token-scout, email-craft) are not published yet.
-- The Sheets engine fetches GridCraft from the upstream repository at a pinned commit; a mirror under the owner's account is still missing (token cannot fork or create repos, owner action needed).
+- The Sheets engine fetches GridCraft from the upstream repository at a pinned commit. Resolved after this RC: GridCraft is now vendored into the repo (phase1/sheets-craft/vendor, offline build); the fix ships in the next build.
 - macOS is Apple Silicon only, ad-hoc signed, not notarized. Windows installers are unsigned (SmartScreen warning). No auto-update metadata.
 - Build requirements: Rust 1.95, the wasm32 target, wasm-bindgen, and `npm run craft:build` (now also builds the isolated pdf-craft spike).
 
