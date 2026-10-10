@@ -395,6 +395,31 @@ struct McpServerView { config: crate::mcp_host::McpServerConfig, running: bool }
 fn mcp_path(window: &WebviewWindow) -> std::result::Result<std::path::PathBuf, String> {
     window.app_handle().path().app_config_dir().map(|d| d.join("mcp-servers.json")).map_err(|_| "App config directory is unavailable".to_string())
 }
+/// Starts the loopback MCP tool server (Somnia as MCP server) and returns port and per-session token.
+#[tauri::command]
+async fn studio_mcp_start(window: WebviewWindow, state: State<'_, crate::mcp_studio::StudioMcp>) -> std::result::Result<crate::mcp_studio::StudioMcpInfo, String> {
+    gate(&window).map_err(|_| "Only the trusted editor may run the MCP tool server")?;
+    state.start(&window).await
+}
+/// Stops the loopback MCP tool server. Restarting rotates the token.
+#[tauri::command]
+async fn studio_mcp_stop(window: WebviewWindow, state: State<'_, crate::mcp_studio::StudioMcp>) -> std::result::Result<(), String> {
+    gate(&window).map_err(|_| "Only the trusted editor may run the MCP tool server")?;
+    state.stop().await;
+    Ok(())
+}
+#[tauri::command]
+async fn studio_mcp_status(window: WebviewWindow, state: State<'_, crate::mcp_studio::StudioMcp>) -> std::result::Result<crate::mcp_studio::StudioMcpInfo, String> {
+    gate(&window).map_err(|_| "Only the trusted editor may run the MCP tool server")?;
+    Ok(state.status().await)
+}
+/// The WebView answered one forwarded JSON-RPC message.
+#[tauri::command]
+async fn studio_mcp_respond(window: WebviewWindow, state: State<'_, crate::mcp_studio::StudioMcp>, id: u64, response: Option<String>) -> std::result::Result<(), String> {
+    gate(&window).map_err(|_| "Only the trusted editor may run the MCP tool server")?;
+    state.respond(id, response).await;
+    Ok(())
+}
 #[tauri::command]
 async fn mcp_servers_list(window: WebviewWindow, host: State<'_, crate::mcp_host::McpHost>) -> std::result::Result<Vec<McpServerView>, String> {
     gate(&window).map_err(|_| "Only the trusted editor may manage MCP servers")?;
@@ -1932,6 +1957,7 @@ pub fn run() {
         .plugin(ext_navigation_plugin())
         .manage(ProviderNetwork::default())
         .manage(crate::mcp_host::McpHost::new())
+        .manage(crate::mcp_studio::StudioMcp::default())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_process::init())
@@ -2017,6 +2043,10 @@ pub fn run() {
             agent_key_save,
             agent_key_delete,
             agent_account_status,
+            studio_mcp_start,
+            studio_mcp_stop,
+            studio_mcp_status,
+            studio_mcp_respond,
             mcp_servers_list,
             mcp_server_save,
             mcp_server_remove,

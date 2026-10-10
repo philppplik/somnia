@@ -2242,5 +2242,17 @@
   "svg.pen.continuing": "Continuando o caminho. Enter ou Esc termina, Backspace remove a última âncora, Shift+Esc descarta.",
   "svg.pen.finish": "Concluir",
   "svg.pen.discard": "Descartar",
-  "panels.extension.navigationBlocked": "Este painel tentou navegar para outra página e foi removido."
+  "panels.extension.navigationBlocked": "Este painel tentou navegar para outra página e foi removido.",
+  "mcp.outcome.limited": "limite atingido",
+  "mcp.server.title": "Somnia como servidor MCP",
+  "mcp.server.hint": "Clientes MCP externos (por exemplo o Claude Desktop) podem ler o documento ativo e propor alterações. Apenas ferramentas de leitura e proposta, nunca aplicar; você revisa cada alteração no painel do agente. Um novo token é criado a cada início.",
+  "mcp.server.start": "Ligar o servidor",
+  "mcp.server.stop": "Desligar o servidor",
+  "mcp.server.url": "URL",
+  "mcp.server.token": "Token de sessão",
+  "mcp.server.copy": "Copiar",
+  "mcp.server.copied": "Copiado",
+  "mcp.server.document": "Documento exposto",
+  "mcp.server.noDocument": "Nenhum documento compatível. Abra um documento em um estúdio para expor suas ferramentas.",
+  "mcp.server.activity": "Atividade do servidor"
 }

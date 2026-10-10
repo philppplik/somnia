@@ -1,6 +1,6 @@
 import type { AIProvenance } from './privacy';
 import type { AgentToolCall, AgentToolDefinition } from './types';
-import type { AgentEditorAccess, AgentToolGrants, AgentToolRegistry } from './toolRegistry';
+import type { AgentEditorAccess, AgentToolContext, AgentToolGrants, AgentToolRegistry } from './toolRegistry';
 
 export interface AgentProjectAccess {
   readonly projectId: string;
@@ -52,6 +52,12 @@ export class AgentProjectTools {
     this.staged.set(path, { path, before: pending ? pending.before : original, after: content });
     return JSON.stringify({ path, state: 'proposed', saved: false });
   }
+  /** Studio registry for hosts that drive tools directly, e.g. the MCP server protocol layer. */
+  get registry(): AgentToolRegistry | undefined { return this.extra?.registry; }
+  /** The same files/propose surface the agent loop passes to registry tools (see runToolCall). */
+  toolContext(): AgentToolContext { return { files: () => this.readableFiles(), propose: async (p, c, sig) => { await this.stage(p, c, sig); }, editor: this.extra?.editor }; }
+  /** Drops staged proposals without applying, e.g. after a host published them elsewhere. */
+  discardStaged(): void { this.staged.clear(); }
   get projectId(): string { return this.access.projectId; }
   proposals(): AgentFileProposal[] { return structuredClone([...this.staged.values()]); }
   markProvenance(provenance: AIProvenance): void { for (const p of this.staged.values()) p.provenance = structuredClone(provenance); }

@@ -34,6 +34,18 @@ import {invoke as tauriInvoke} from '@tauri-apps/api/core';
 import {installMcpRuntime} from './lib/agent/mcpRuntime';
 import {McpApprovalDialog} from './components/agent/McpApprovalDialog';
 if(isTauri())void installMcpRuntime(tauriInvoke as never).refresh();
+// Somnia as MCP server: the Rust gateway forwards JSON-RPC to the WebView; the host owns the protocol server.
+if(isTauri())void (async()=>{
+ const [{installStudioMcpHost},{createStudioMcpSource},{activeStudioDocument},{getMedia},{listen}]=await Promise.all([
+  import('./lib/agent/studioMcpHost'),import('./lib/agent/panelBridge'),import('./lib/agent/studioTarget'),import('./lib/media'),import('@tauri-apps/api/event')]);
+ void installStudioMcpHost({
+  invoke:tauriInvoke as never,
+  listen:listen as never,
+  source:createStudioMcpSource,
+  target:()=>({path:activeStudioDocument(getState(),getMedia()).path}),
+  version:typeof __APP_VERSION__!=='undefined'?__APP_VERSION__:'dev',
+ }).attach();
+})();
 // Somnia starts empty: either the last unsaved session (draft) or the empty state. The sample project below exists only for automated tests (dev build, opt-in flag).
 const fixture=import.meta.env.DEV&&localStorage.getItem('somnia.fixture')==='starter'?{
  'index.html':'<!doctype html>\n<html lang="en">\n<head>\n  <meta charset="UTF-8">\n  <title>Untitled project</title>\n  <link rel="stylesheet" href="styles.css">\n</head>\n<body>\n  <header id="header"><nav>Somnia studio</nav></header>\n  <main id="main">\n    <section class="hero">\n      <h1>Make room for something new.</h1>\n      <p>Your first idea starts here.</p>\n      <button>Explore</button>\n    </section>\n  </main>\n  <footer>Made locally.</footer>\n</body>\n</html>\n',

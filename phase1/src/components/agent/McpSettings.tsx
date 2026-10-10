@@ -2,6 +2,7 @@ import {useState,useSyncExternalStore} from 'react';
 import {useT} from '../../lib/useT';
 import {Button} from '../ui/button';
 import {getMcpRuntime,type McpRuntime,type McpServerConfig} from '../../lib/agent/mcpRuntime';
+import {getStudioMcpHost,type StudioMcpHost,type StudioMcpSnapshot} from '../../lib/agent/studioMcpHost';
 const none={subscribe:()=>()=>{},getSnapshot:()=>null};
 const parseArgs=(s:string)=>s.split('\n').map(x=>x.trim()).filter(Boolean);
 const parseEnv=(s:string):Record<string,string>|null=>{const o:Record<string,string>={};for(const line of s.split('\n').map(x=>x.trim()).filter(Boolean)){const i=line.indexOf('=');if(i<1)return null;o[line.slice(0,i)]=line.slice(i+1);}return o;};
@@ -9,6 +10,8 @@ const parseEnv=(s:string):Record<string,string>|null=>{const o:Record<string,str
 export function McpSettings({runtime=getMcpRuntime()}:{runtime?:McpRuntime|null}){
  const {t}=useT();
  const snap=useSyncExternalStore(runtime?.subscribe??none.subscribe,runtime?.getSnapshot??none.getSnapshot as never,runtime?.getSnapshot??none.getSnapshot as never) as ReturnType<McpRuntime['getSnapshot']>|null;
+ const host=getStudioMcpHost();
+ const hsnap=useSyncExternalStore(host?.subscribe??none.subscribe,host?.getSnapshot??none.getSnapshot as never,host?.getSnapshot??none.getSnapshot as never) as StudioMcpSnapshot|null;
  const [form,setForm]=useState({id:'',command:'',args:'',env:''}),[formError,setFormError]=useState('');
  if(!runtime||!snap)return <p role="status" data-testid="mcp-desktop-only">{t('mcp.desktopOnly')}</p>;
  const add=async()=>{const env=parseEnv(form.env);if(!env){setFormError(t('mcp.envInvalid'));return;}setFormError('');
@@ -37,4 +40,32 @@ export function McpSettings({runtime=getMcpRuntime()}:{runtime?:McpRuntime|null}
    <p><small>{t('mcp.saveHint')}</small></p>
    {formError&&<p role="alert">{formError}</p>}
    <Button variant="primary" onClick={()=>void add()} disabled={snap.busy||!form.id.trim()||!form.command.trim()} data-testid="mcp-save">{t('mcp.save')}</Button></fieldset>
+  {host&&hsnap&&<StudioServerSection host={host} snap={hsnap}/>}
  </div>;}
+
+/** Somnia as MCP server: switch, loopback URL, per-session token and the call activity. */
+function StudioServerSection({host,snap}:{host:StudioMcpHost;snap:StudioMcpSnapshot}){
+ const {t}=useT();
+ const [copied,setCopied]=useState(false);
+ const copy=async(text:string)=>{try{await navigator.clipboard.writeText(text);setCopied(true);setTimeout(()=>setCopied(false),1500);}catch{/* clipboard unavailable */}};
+ const url=`http://127.0.0.1:${snap.port}/mcp`;
+ return <section className="mt-3" aria-label={t('mcp.server.title')} data-testid="mcp-server-section">
+  <strong>{t('mcp.server.title')}</strong>
+  <p className="pr-8"><small>{t('mcp.server.hint')}</small></p>
+  {snap.error&&<p role="alert">{snap.error}</p>}
+  {snap.running?<div className="flex flex-col gap-2">
+    <label>{t('mcp.server.url')}<input readOnly value={url} data-testid="mcp-server-url" onFocus={e=>e.target.select()}/></label>
+    <label>{t('mcp.server.token')}<input readOnly value={snap.token} data-testid="mcp-server-token" onFocus={e=>e.target.select()}/></label>
+    <div className="flex gap-2">
+     <Button onClick={()=>void copy(`${url}\n${snap.token}`)}>{t(copied?'mcp.server.copied':'mcp.server.copy')}</Button>
+     <Button onClick={()=>void host.stop()} disabled={snap.busy} data-testid="mcp-server-stop">{t('mcp.server.stop')}</Button>
+    </div>
+    <p><small>{t('mcp.server.document')}: {snap.document||t('mcp.server.noDocument')}</small></p>
+   </div>
+   :<Button variant="primary" onClick={()=>void host.start()} disabled={snap.busy} data-testid="mcp-server-start">{t('mcp.server.start')}</Button>}
+  {snap.activity.length>0&&<div className="mt-2" data-testid="mcp-server-activity">
+   <strong>{t('mcp.server.activity')}</strong>
+   <ul className="m-0 list-none p-0">{snap.activity.map((a,i)=><li key={`${a.at}-${i}`}><small>{new Date(a.at).toLocaleTimeString()} · {a.studio}/{a.tool} · {t(`mcp.outcome.${a.outcome}`)} · {a.ms} ms</small></li>)}</ul>
+  </div>}
+ </section>;
+}

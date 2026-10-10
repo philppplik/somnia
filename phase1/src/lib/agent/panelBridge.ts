@@ -29,10 +29,10 @@ import {DocumentRegistry,PolicyGateway,TransactionManager,buildContext,type Cont
 import {codeAdapter,createCodeStudioRegistry,validateHTML} from './codeStudio';
 import {getCollabEngine} from '../collab/store';
 import {readActiveSelection} from '../editorBridge';
-import type {AgentEditorAccess} from './toolRegistry';
+import type {AgentEditorAccess,AgentToolContext,AgentToolRegistry} from './toolRegistry';
 import {OllamaProvider} from './providers/ollama';
 import {OpenRouterProvider} from './openRouter';
-import {agentPrivacy,type AIProvenance} from './privacy';
+import {agentPrivacy,createAIProvenance,type AIProvenance} from './privacy';
 import {reviewChangeSet,type ChangeSet} from '../agentDiff';
 import {holdAgentAutosave} from './autosaveHold';
 import {applyOperations,getState,getProjectGeneration,subscribe,patchState,undoAIGroup,subscribeProjectTransactions} from '../../store/appStore';
@@ -176,6 +176,52 @@ function panelProposal(set:ChangeSet):AgentProposal {
  const reviews=reviewChangeSet(set);const lines=reviews.flatMap(r=>r.ops.flatMap<DiffLine>(op=>op.t==='same'?[{kind:'ctx' as const,text:op.text}]:[...op.removed.map(text=>({kind:'del' as const,text})),...op.added.map(text=>({kind:'add' as const,text}))]));
  return {id:set.id,file:set.files.map(f=>f.path).join(', '),changeSet:set,lines,added:lines.filter(l=>l.kind==='add').length,removed:lines.filter(l=>l.kind==='del').length};
 }
+// --- Somnia as MCP server (docs/MCP-SERVER.md): the active document becomes one read/propose tool source. ---
+let mcpProposalList:AgentProposal[]=[];
+const mcpProposalMap=new Map<string,AgentProposal>();
+const mcpProposalListeners=new Set<()=>void>();
+/** Proposals staged by an external MCP client, pending user review. Rendered by AgentPanel. */
+export const subscribeMcpProposalList=(f:()=>void)=>{mcpProposalListeners.add(f);return()=>{mcpProposalListeners.delete(f);};};
+export const mcpProposalSnapshot=()=>mcpProposalList;
+function syncMcpProposals(){mcpProposalList=[...mcpProposalMap.values()];mcpProposalListeners.forEach(f=>f());}
+function publishMcpProposal(p:AgentProposal){mcpProposalMap.set(p.id,p);syncMcpProposals();}
+function dropMcpProposal(id:string){if(mcpProposalMap.delete(id))syncMcpProposals();}
+let mcpSerial=0;
+/**
+ * Builds the tool source for one open document, scoped exactly like the agent panel's pinned
+ * document (same adapters, same proposal store, same review UI). Returns null when the document
+ * has no safe context. Proposals carry provenance provider 'mcp' and surface in the agent panel.
+ */
+export function createStudioMcpSource(path:string):{studio:string;registry:AgentToolRegistry;context:AgentToolContext}|null{
+ syncDocuments();
+ let base:ReturnType<DocumentRegistry['snapshot']>;
+ try{base=documents.snapshot(path);if(base.ref.studioKind==='unsupported')return null;}catch{return null;}
+ const context=buildContext(documents,policy,base.ref.path,null);
+ const tools=createTools('mcp',context,[]);
+ const registry=tools.registry;
+ if(!registry)return null;
+ const inner=registry.run.bind(registry);
+ registry.run=async(name,args,ctx,signal,g)=>{
+  // The agent run loop revokes inspect grants at turn start; re-pin this document for MCP calls.
+  policy.grant({effect:'inspect',documentIds:[base.ref.documentId]});
+  const out=await inner(name,args,ctx,signal,g);
+  const staged=tools.proposals();
+  for(const p of staged){
+   try{
+    syncDocuments();
+    if(documents.snapshot(p.path).text!==p.before)continue; // stale base: the client must read again
+    const native=transactions.propose(`mcp-${++mcpSerial}`,base.ref,p.after);
+    const set:ChangeSet={id:`mcp-${getProjectGeneration()}-${mcpSerial}`,complete:true,provenance:createAIProvenance('mcp','external-client'),files:[{path:p.path,kind:'edit',baseText:p.before??'',proposedText:p.after}]};
+    proposals.set(set.id,set);nativeIds.set(set.id,native.id);
+    publishMcpProposal({...panelProposal(set),native});
+   }catch{/* document changed under the call: skip publishing, the tool result still says proposed */}
+  }
+  if(staged.length)tools.discardStaged();
+  return out;
+ };
+ return {studio:base.ref.studioKind,registry,context:tools.toolContext()};
+}
+
 export const realCore:AgentCore={
  run(request,onEvent){
   if(session?.status==='running'||proposals.size){queueMicrotask(()=>onEvent({type:'error',message:'Stop the active turn or review the pending proposal first.'}));return {cancel(){}};}
@@ -183,7 +229,7 @@ export const realCore:AgentCore={
   const deliver=(e:AgentEvent)=>{if(!stopped&&runId===runGeneration)onEvent(e);};send=deliver;
   if(!config.model.trim()){queueMicrotask(()=>deliver({type:'error',message:'Choose a provider and model in Settings > AI first.'}));return {cancel(){stopped=true;}};}
   const generation=getProjectGeneration();
-  if(epoch!==generation){session?.cancel();session=null;sessionSerial++;proposals.clear();permissions.clear();appliedAgentProvenance.clear();documents.clear();transactions.clear();nativeIds.clear();epoch=generation;}
+  if(epoch!==generation){session?.cancel();session=null;sessionSerial++;proposals.clear();permissions.clear();appliedAgentProvenance.clear();documents.clear();transactions.clear();nativeIds.clear();mcpProposalMap.clear();syncMcpProposals();epoch=generation;}
   photoPreviews.clear();policy.revoke();syncDocuments();
   void (async()=>{
    if(request.context.activeMedia){if(Object.hasOwn(currentFiles(),request.context.activeMedia))throw Error('A text buffer and media asset share this path. Close or rename one before using AI.');if(getPhoto(request.context.activeMedia))await preparePhoto(request.context.activeMedia,controller.signal);syncDocuments();}
@@ -237,6 +283,7 @@ export const realCore:AgentCore={
  },
  async applyProposal(id,decisions){
   if(epoch!==getProjectGeneration())throw Error('Project changed. Proposal is no longer valid.');
+  dropMcpProposal(id);
   const set=proposals.get(id);if(!set){const n=nativeIds.get(id);if(n&&transactions.get(n).state==='accepted')return;throw Error('Proposal no longer exists.');}
   const nativeId=nativeIds.get(id);
   if(nativeId){
@@ -249,8 +296,8 @@ export const realCore:AgentCore={
   throw Error('Legacy proposals are not supported in native studio mode.');
 
  },
- async rejectProposal(id){const set=proposals.get(id);if(set)for(const f of set.files)photoPreviews.delete(f.proposedText);const n=nativeIds.get(id);if(n)transactions.reject(n);proposals.delete(id);session?.discardProposals();},
- async revertProposal(id){const n=nativeIds.get(id);if(!n)throw Error('No native AI transaction.');await transactions.undo(n);photoPreviews.delete(transactions.get(n).after);patchState({notice:'AI transaction undone, not saved.'});},
+ async rejectProposal(id){dropMcpProposal(id);const set=proposals.get(id);if(set)for(const f of set.files)photoPreviews.delete(f.proposedText);const n=nativeIds.get(id);if(n)transactions.reject(n);proposals.delete(id);session?.discardProposals();},
+ async revertProposal(id){dropMcpProposal(id);const n=nativeIds.get(id);if(!n)throw Error('No native AI transaction.');await transactions.undo(n);photoPreviews.delete(transactions.get(n).after);patchState({notice:'AI transaction undone, not saved.'});},
  clear(){photoPreviews.clear();activeController?.abort();activeController=null;runGeneration++;sessionSerial++;session?.cancel();session=null;proposals.clear();permissions.clear();policy.revoke();send=null;}
 };
 subscribeProjectTransactions(tx=>{for(const op of tx.operations??[])if(op.type==='renameFile'){try{documents.rename(op.file,op.to);}catch{/* document not registered yet */}}});

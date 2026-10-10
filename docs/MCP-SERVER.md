@@ -24,14 +24,21 @@ Tool names are unique across Studios, and the server refuses to start if two col
 - The activity callback receives tool, Studio, outcome and duration. Arguments and results are not logged.
 - Protocol versions 2025-06-18, 2025-03-26 and 2024-11-05. Unknown versions are answered with the newest supported one.
 
-## Transport (desktop host) - not implemented yet, needs Rust CI
+## Transport (desktop host)
 
-The host must run a loopback-only listener (127.0.0.1, random port) with a random per-session bearer token
-shown in Settings > AI > Tools, which the user copies into the client config. Each HTTP POST body is one JSON-RPC
-message; the host forwards it to the WebView (`invoke` event), calls `handle()` and returns the response.
-Requirements: reject non-loopback peers, reject missing or wrong token with 401, cap body size at 256 KiB,
-rotate the token whenever the switch is turned off. Until this lands, the protocol layer is complete and
-tested but no external client can reach it.
+`src-tauri/src/mcp_gateway.rs` runs a loopback-only listener (127.0.0.1, random port) with a random
+per-session bearer token shown in Settings > AI > Tools ("Somnia as MCP server"), which the user copies into
+the client config. Each HTTP POST to `/mcp` carries one JSON-RPC message; `src-tauri/src/mcp_studio.rs`
+forwards it to the WebView (`somnia://studio-mcp` event), the protocol layer answers, and
+`studio_mcp_respond` returns the response. Non-loopback peers are rejected, a missing or wrong token gets
+401, bodies are capped at 256 KiB, and turning the switch off and on rotates the token. Client config shape:
+URL `http://127.0.0.1:<port>/mcp`, header `Authorization: Bearer <token>`.
+
+The WebView side is `phase1/src/lib/agent/studioMcpHost.ts`. The exposed tool set always matches the
+currently active studio document (same scope as the agent panel's pinned document) via
+`createStudioMcpSource` in `panelBridge.ts`; proposals staged by a client appear in the agent panel with
+provenance `mcp` and are reviewed and applied exactly like agent proposals. The server answers with an
+empty tool set while no compatible document is open.
 
 ## Tests
 

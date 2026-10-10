@@ -2242,5 +2242,17 @@
   "svg.pen.continuing": "Tracé prolongé. Entrée ou Échap termine, Retour arrière retire le dernier point, Maj+Échap annule.",
   "svg.pen.finish": "Terminer",
   "svg.pen.discard": "Annuler",
-  "panels.extension.navigationBlocked": "Ce panneau a tenté de naviguer ailleurs et a été retiré."
+  "panels.extension.navigationBlocked": "Ce panneau a tenté de naviguer ailleurs et a été retiré.",
+  "mcp.outcome.limited": "limite atteinte",
+  "mcp.server.title": "Somnia comme serveur MCP",
+  "mcp.server.hint": "Les clients MCP externes (par exemple Claude Desktop) peuvent lire le document actif et proposer des modifications. Outils de lecture et de proposition uniquement, jamais d’application ; vous révisez chaque changement dans le panneau de l’agent. Un nouveau jeton est créé à chaque démarrage.",
+  "mcp.server.start": "Activer le serveur",
+  "mcp.server.stop": "Désactiver le serveur",
+  "mcp.server.url": "URL",
+  "mcp.server.token": "Jeton de session",
+  "mcp.server.copy": "Copier",
+  "mcp.server.copied": "Copié",
+  "mcp.server.document": "Document exposé",
+  "mcp.server.noDocument": "Aucun document compatible. Ouvrez un document dans un studio pour exposer ses outils.",
+  "mcp.server.activity": "Activité du serveur"
 }

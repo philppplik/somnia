@@ -2242,5 +2242,17 @@
   "svg.pen.continuing": "Pfad wird fortgesetzt. Enter oder Esc beendet, Rücktaste entfernt den letzten Punkt, Umschalt+Esc verwirft.",
   "svg.pen.finish": "Fertig",
   "svg.pen.discard": "Verwerfen",
-  "panels.extension.navigationBlocked": "Dieses Panel hat versucht, die Seite zu wechseln, und wurde entfernt."
+  "panels.extension.navigationBlocked": "Dieses Panel hat versucht, die Seite zu wechseln, und wurde entfernt.",
+  "mcp.outcome.limited": "Limit erreicht",
+  "mcp.server.title": "Somnia als MCP-Server",
+  "mcp.server.hint": "Externe MCP-Clients (z. B. Claude Desktop) können das aktive Dokument lesen und Änderungen vorschlagen. Nur Lese- und Vorschlagswerkzeuge, niemals anwenden; du prüfst jede Änderung im Agent-Panel. Bei jedem Start wird ein neues Token erzeugt.",
+  "mcp.server.start": "Server einschalten",
+  "mcp.server.stop": "Server ausschalten",
+  "mcp.server.url": "URL",
+  "mcp.server.token": "Sitzungs-Token",
+  "mcp.server.copy": "Kopieren",
+  "mcp.server.copied": "Kopiert",
+  "mcp.server.document": "Freigegebenes Dokument",
+  "mcp.server.noDocument": "Kein kompatibles Dokument. Öffne ein Dokument in einem Studio, um seine Werkzeuge freizugeben.",
+  "mcp.server.activity": "Server-Aktivität"
 }
