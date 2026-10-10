@@ -38,6 +38,7 @@
     "allow-collab-lan-status",
     "allow-choose-project",
     "allow-choose-file",
+    "allow-open-startup-file",
     "allow-open-dropped-project",
     "allow-read-dropped-files",
     "allow-is-store-package",

@@ -15,6 +15,8 @@ struct Backend {
     sync: Option<SyncFolder>,
     projects: BTreeMap<String, Project>,
     drop_grant: Option<DropGrant>,
+    /// File the OS asked us to open at launch (file association / "Open with"). One-shot.
+    startup_file: Option<std::path::PathBuf>,
 }
 type Shared = Arc<Mutex<Backend>>;
 #[derive(Serialize)]
@@ -782,6 +784,42 @@ async fn choose_file(
         .map_err(|e| AppError::Io(e.to_string()))?
         .join("recovery-v1");
     work(state.inner().clone(), move |backend| {
+        if backend.projects.len() >= 4 {
+            return Err(AppError::Limit);
+        }
+        let project = Project::open_file(&path, &recovery_base)?;
+        let reply = ProjectReply {
+            project_id: project.id.clone(),
+            name: path
+                .file_name()
+                .unwrap_or_default()
+                .to_string_lossy()
+                .into_owned(),
+        };
+        backend.projects.insert(project.id.clone(), project);
+        Ok(Some(reply))
+    })
+    .await
+}
+/// Open the file the OS passed at launch (file association). One-shot: the stored path is
+/// consumed, and the renderer never supplies a path. Returns None when the app was not
+/// launched with a file.
+#[tauri::command]
+async fn open_startup_file(
+    window: WebviewWindow,
+    state: State<'_, Shared>,
+) -> Result<Option<ProjectReply>> {
+    gate(&window)?;
+    let recovery_base = window
+        .app_handle()
+        .path()
+        .app_local_data_dir()
+        .map_err(|e| AppError::Io(e.to_string()))?
+        .join("recovery-v1");
+    work(state.inner().clone(), move |backend| {
+        let Some(path) = backend.startup_file.take() else {
+            return Ok(None);
+        };
         if backend.projects.len() >= 4 {
             return Err(AppError::Limit);
         }
@@ -1948,6 +1986,11 @@ fn ext_scheme_response(
 
 pub fn run() {
     let shared = Shared::default();
+    // File association launch: Windows "Open with Somnia" passes the file in argv. Captured here,
+    // pulled by the renderer once via open_startup_file; never renderer-supplied.
+    if let Ok(mut backend) = shared.lock() {
+        backend.startup_file = crate::startup_file::capture(std::env::args_os(), |p| p.is_file());
+    }
     tauri::Builder::default()
         .manage(crate::ext_scheme::ExtRegistry::default())
         .register_uri_scheme_protocol(crate::ext_scheme::SCHEME, |ctx, request| {
@@ -2076,6 +2119,7 @@ pub fn run() {
             collab_lan_status,
             choose_project,
             choose_file,
+            open_startup_file,
             open_dropped_project,
             read_dropped_files,
             is_store_package,

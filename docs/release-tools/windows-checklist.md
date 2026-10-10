@@ -9,6 +9,7 @@ Files and projects
 - Open a folder project, edit, save, reopen. Open a ZIP project.
 - Open DOCX, XLSX, PPTX, PDF, an audio file and an image from the file dialog.
 - Drag and drop a file onto the window.
+- File associations (#164): right click an .html, .svg, .docx, .xlsx, .pptx, .pdf, an audio and an image file, "Open with Somnia" opens it in the right Studio. Somnia must NOT become the default app. Second launch while the app is already running is a known gap (no single-instance forwarding yet).
 
 Studios
 - Switch Code, Documents, Slides, Sheets, Sound with the pills and Ctrl+1..5.

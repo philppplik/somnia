@@ -105,14 +105,14 @@ export async function installFileAdapter(port:FilePort){
   if(recoveries.length)patchState({notice:`${recoveries.length} recovery snapshots available. Open Commands and choose Restore recovery. Nothing restored automatically.`});
  };
  let opening=false;
- const open=async(reconnect=false,single=false,dropToken?:string)=>{
+ const open=async(reconnect=false,single=false,dropToken?:string,preselected?:{projectId:string;name:string}|null)=>{
   if(opening)throw Error('Another project is opening. Wait, then drop again.');
   opening=true;try{
   const startRevision=getState().revision,startFiles=getState().files;
   if(projectId&&getState().isDirty&&!window.confirm('Keep unsaved edits in recovery and open another folder?'))return;
   if(!projectId&&getState().isDirty&&!window.confirm('Replace the in-memory project? It cannot be recovered from disk.'))return;
   // Keep the current project alive until the picker and all candidate reads succeed.
-  const selected=await port.invoke<{projectId:string;name:string}|null>(dropToken?'open_dropped_project':single?'choose_file':'choose_project',dropToken?{token:dropToken}:reconnect?{reconnect:true}:undefined);if(!selected)return;
+  const selected=preselected!==undefined?preselected:await port.invoke<{projectId:string;name:string}|null>(dropToken?'open_dropped_project':single?'choose_file':'choose_project',dropToken?{token:dropToken}:reconnect?{reconnect:true}:undefined);if(!selected)return;
   const files:Record<string,string>={},nextBaselines=new Map<string,Revision>();let candidate:EditorProject;let mediaPaths:string[]=[];
   try{
    const paths=await port.invoke<string[]>('list_files',{projectId:selected.projectId});
@@ -175,6 +175,9 @@ export async function installFileAdapter(port:FilePort){
   else void port.invoke<{name:string;text:string;base64?:string}[]>('read_dropped_files',{token}).then(files=>openIncoming(files.map(f=>f.base64===undefined?{name:f.name,text:f.text}:{name:f.name,text:'',blob:new Blob([Uint8Array.from(atob(f.base64),c=>c.charCodeAt(0))])}))).catch(fail);
  }));
  if(port.shell)cleanups.push(await port.listen<string>('somnia://menu',event=>{void executeNativeMenuCommand(event.payload);}));
+ // File association launch ("Open with Somnia"): the OS passed a file in argv; open_startup_file
+ // consumes it Rust-side (the renderer never supplies the path) and the normal open pipeline runs.
+ if(port.shell)void port.invoke<{projectId:string;name:string}|null>('open_startup_file').then(sel=>{if(sel)return open(false,false,undefined,sel);}).catch(()=>{/* no startup file or already consumed */});
  if(port.shell){const shell=port.shell;setCloseHandlers('disk',{saveAndClose:async()=>{await save();if(getState().isDirty)throw Error('Some edits are still unsaved. Close was cancelled.');await close(false);await shell.destroyWindow();},discardAndClose:async()=>{await close(true);await shell.destroyWindow();}});cleanups.push(()=>setCloseHandlers('disk',null));cleanups.push(await port.listen('somnia://close-blocked',()=>requestClose('disk')));}
  return ()=>{cleanups.forEach(fn=>fn());unsubscribe();disconnect();};
 }

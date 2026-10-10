@@ -40,6 +40,119 @@
     "icon": [
       "icons/icon.png",
       "icons/icon.ico"
+    ],
+    "fileAssociations": [
+      {
+        "ext": [
+          "html",
+          "htm"
+        ],
+        "name": "HTML document",
+        "description": "Open with Somnia",
+        "role": "Editor"
+      },
+      {
+        "ext": [
+          "svg"
+        ],
+        "name": "SVG image",
+        "description": "Open with Somnia",
+        "role": "Editor"
+      },
+      {
+        "ext": [
+          "css"
+        ],
+        "name": "CSS stylesheet",
+        "description": "Open with Somnia",
+        "role": "Editor"
+      },
+      {
+        "ext": [
+          "md"
+        ],
+        "name": "Markdown document",
+        "description": "Open with Somnia",
+        "role": "Editor"
+      },
+      {
+        "ext": [
+          "docx"
+        ],
+        "name": "Word document",
+        "description": "Open with Somnia",
+        "role": "Editor",
+        "mimeType": "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+      },
+      {
+        "ext": [
+          "xlsx"
+        ],
+        "name": "Excel spreadsheet",
+        "description": "Open with Somnia",
+        "role": "Editor",
+        "mimeType": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+      },
+      {
+        "ext": [
+          "pptx"
+        ],
+        "name": "PowerPoint presentation",
+        "description": "Open with Somnia",
+        "role": "Editor",
+        "mimeType": "application/vnd.openxmlformats-officedocument.presentationml.presentation"
+      },
+      {
+        "ext": [
+          "pdf"
+        ],
+        "name": "PDF document",
+        "description": "Open with Somnia",
+        "role": "Viewer",
+        "mimeType": "application/pdf"
+      },
+      {
+        "ext": [
+          "png",
+          "jpg",
+          "jpeg",
+          "webp",
+          "gif",
+          "avif",
+          "bmp",
+          "tif",
+          "tiff"
+        ],
+        "name": "Image",
+        "description": "Open with Somnia",
+        "role": "Viewer",
+        "mimeType": "image/png"
+      },
+      {
+        "ext": [
+          "mp3",
+          "wav",
+          "ogg",
+          "flac",
+          "m4a"
+        ],
+        "name": "Audio",
+        "description": "Open with Somnia",
+        "role": "Viewer",
+        "mimeType": "audio/mpeg"
+      },
+      {
+        "ext": [
+          "mp4",
+          "webm",
+          "mov",
+          "mkv"
+        ],
+        "name": "Video",
+        "description": "Open with Somnia",
+        "role": "Viewer",
+        "mimeType": "video/mp4"
+      }
     ]
   },
   "mainBinaryName": "somnia",

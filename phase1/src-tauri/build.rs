@@ -23,6 +23,7 @@ fn main() {
             "collab_lan_status",
             "choose_project",
             "choose_file",
+            "open_startup_file",
             "open_dropped_project",
             "read_dropped_files",
             "is_store_package",
