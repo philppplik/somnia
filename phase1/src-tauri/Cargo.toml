@@ -17,7 +17,7 @@ required-features = ["desktop"]
 [features]
 default = ["desktop"]
 ext-selftest = ["desktop"]
-desktop = ["dep:tauri", "dep:tauri-plugin-dialog", "dep:tauri-plugin-updater", "dep:tauri-plugin-process", "dep:tauri-build", "dep:window-vibrancy", "dep:keyring", "dep:reqwest"]
+desktop = ["dep:tauri", "dep:tauri-plugin-dialog", "dep:tauri-plugin-updater", "dep:tauri-plugin-process", "dep:tauri-plugin-single-instance", "dep:tauri-build", "dep:window-vibrancy", "dep:keyring", "dep:reqwest"]
 
 [dependencies]
 somnia-relay = { path = "../../relay" }
@@ -36,6 +36,7 @@ tauri = { version = "2", optional = true, features = ["macos-private-api"] }
 tauri-plugin-dialog = { version = "2", optional = true }
 tauri-plugin-updater = { version = "2", optional = true }
 tauri-plugin-process = { version = "2", optional = true }
+tauri-plugin-single-instance = { version = "=2.4.0", optional = true }
 
 reqwest = { version = "0.12", optional = true, default-features = false, features = ["rustls-tls", "stream", "json"] }
 keyring = { version = "=3.6.3", optional = true, features = ["apple-native", "windows-native", "sync-secret-service", "crypto-rust", "vendored"] }

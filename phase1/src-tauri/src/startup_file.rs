@@ -15,10 +15,24 @@ pub fn capture(
     }).map(PathBuf::from)
 }
 
+/// All native file arguments in their original order. No renderer paths or URI arguments.
+pub fn capture_all(args: impl IntoIterator<Item = OsString>, is_file: impl Fn(&std::path::Path) -> bool) -> Vec<PathBuf> {
+    args.into_iter().skip(1).filter(|arg| {
+        let text = arg.to_string_lossy();
+        !text.starts_with('-') && !text.is_empty() && is_file(std::path::Path::new(arg.as_os_str()))
+    }).map(PathBuf::from).collect()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use std::collections::HashSet;
+
+    #[test]
+    fn all_files_keep_os_order_and_skip_flags() {
+        let args = ["somnia", "a.wav", "--flag", "b.docx", "missing"].into_iter().map(OsString::from);
+        assert_eq!(capture_all(args, |p| p == std::path::Path::new("a.wav") || p == std::path::Path::new("b.docx")), vec![PathBuf::from("a.wav"), PathBuf::from("b.docx")]);
+    }
 
     #[test]
     fn picks_the_first_real_file_and_skips_flags() {

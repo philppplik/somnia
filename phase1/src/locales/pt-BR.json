@@ -2612,5 +2612,14 @@
   "versions.safety.err.unsupported": "Projetos com LFS ou submódulos não podem ser restaurados aqui.",
   "versions.safety.err.conflicts": "Resolva os conflitos primeiro.",
   "versions.safety.err.changed": "Esta cópia mudou ou não existe mais. Atualize e tente de novo.",
-  "versions.safety.err.busy": "Já há uma restauração em andamento."
+  "versions.safety.err.busy": "Já há uma restauração em andamento.",
+  "openRouter.title": "Em qual estúdio você quer abrir este arquivo?",
+  "openRouter.description": "Escolha um editor para este arquivo.",
+  "openRouter.file": "Arquivo para abrir",
+  "openRouter.studio": "Estúdio",
+  "openRouter.suggested": "(destino do arraste)",
+  "openRouter.preview": "(prévia somente leitura)",
+  "openRouter.safe": "Somente estúdios que podem ler este arquivo são oferecidos. Cancelar mantém seu trabalho atual.",
+  "openRouter.open": "Abrir arquivo",
+  "openRouter.unavailable": "Nenhum estúdio instalado pode ler este arquivo com segurança. Ele pode estar danificado ou usar um formato não compatível. Nada foi alterado."
 }

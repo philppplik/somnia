@@ -1,3 +1,4 @@
+import {decodeFileBytes} from '../textEncoding';
 import {sniffMedia} from '../media';
 import {sniffOffice,isZip,type OfficeKind} from '../office/zipProbe';
 import {readyHandlersFor,handlerForStudio,type OpenHandler,type OpenKind} from './openHandlers';
@@ -29,7 +30,7 @@ export function looksLikeText(b:Uint8Array):boolean{
  for(let i=0;i<n;i++){const c=b[i];if(c===0)return false;if(c<32&&c!==9&&c!==10&&c!==13&&c!==12&&c!==27)bad++;}
  return bad/n<0.02;
 }
-function sniffSvg(b:Uint8Array):boolean{return /<svg[\s>]/i.test(new TextDecoder('utf-8').decode(b.subarray(0,Math.min(b.length,4096))));}
+function sniffSvg(b:Uint8Array):boolean{const text=decodeFileBytes('file.svg',b.subarray(0,Math.min(b.length,8192))).text;return /^\s*(?:<\?xml[^>]*>\s*)?(?:<!--[^]*?-->\s*)*(?:<!DOCTYPE[^>]*>\s*)?<svg[\s>]/i.test(text);}
 export interface ClassifyResult{kind:OpenKind|null;error?:string;unsupported?:string;mismatch?:string;textOffer?:boolean}
 /** Kind from content. `full` is only read for Office packages. */
 export function classify(name:string,bytes:Uint8Array):ClassifyResult{
@@ -40,7 +41,9 @@ export function classify(name:string,bytes:Uint8Array):ClassifyResult{
   const mismatch=officeExt&&office!==e?`${name} is a ${office.toUpperCase()} document, not a ${e.toUpperCase()}.`:undefined;
   return{kind:office,mismatch};
  }
- const media=sniffMedia(bytes);
+ // UTF-16 BOM FF FE resembles an MPEG frame sync. Encoding evidence wins before audio magic.
+ const utf16=(bytes[0]===0xff&&bytes[1]===0xfe)||(bytes[0]===0xfe&&bytes[1]===0xff);
+ const media=utf16?null:sniffMedia(bytes);
  if(media){
   const kind=media.kind as OpenKind;
   const mismatch=implied&&implied!==kind&&!(implied==='image'&&kind==='raster-preview')?`${name} contains ${kind==='raster-preview'?'image':kind} data, not ${implied}.`:undefined;
@@ -53,7 +56,7 @@ export function classify(name:string,bytes:Uint8Array):ClassifyResult{
  if(isZip(bytes))return{kind:null,unsupported:`${name} is a ZIP package Somnia has no editor for.`};
  if(!looksLikeText(bytes))return{kind:null,unsupported:`${name} is a binary file Somnia has no editor for.`};
  if(bytes.length>MAX_OPEN_TEXT_BYTES)return{kind:null,unsupported:`${name} is larger than ${MAX_OPEN_TEXT_BYTES/1_000_000} MB and cannot be opened as text.`};
- if(e==='svg'||(!KNOWN_TEXT.test(e)&&sniffSvg(bytes)))return sniffSvg(bytes)?{kind:'svg'}:{kind:'text'};
+ if(e==='svg'||sniffSvg(bytes))return sniffSvg(bytes)?{kind:'svg'}:{kind:'text'};
  return{kind:'text',textOffer:!KNOWN_TEXT.test(e)};
 }
 /** Picks a handler. Order: explicit target, compatible per-document override, priority; equal priority without a default asks. */
@@ -70,6 +73,7 @@ export function resolveOpen(name:string,bytes:Uint8Array,opts:ResolveOptions={})
  if(c.unsupported||!c.kind)return{status:'unsupported',reason:c.unsupported??`${name} cannot be opened.`};
  // A content/suffix mismatch never renames or converts. It asks, and the explicit target (the user's "Open as ...") confirms it.
  if(c.mismatch&&!opts.target)return{status:'choose-handler',kind:c.kind,candidates:readyHandlersFor(c.kind),reason:c.mismatch};
+ if(opts.target&&!handlerForStudio(c.kind,opts.target))return{status:'unsupported',reason:`The selected Studio cannot open ${name}.`};
  const picked=pickHandler(c.kind,opts);
  if(!picked){
   // Text-like kinds always have Code. Anything else without a ready handler is reported, never forced into the current Studio.

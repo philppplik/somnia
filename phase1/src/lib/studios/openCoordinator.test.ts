@@ -1,3 +1,4 @@
+import {resolveOpen as resolveOpenForTest} from './openResolver';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
@@ -78,4 +79,14 @@ test('per-document preference is honoured only when compatible',async()=>{
  const h=harness({preferred:undefined});const deps2=harness();void deps2;
  const c=createOpenCoordinator({...({} as OpenDeps),async prepare(i,r){return{name:i.name,studioId:r.handler.studioId,commit:()=>({ok:true,key:i.name}),dispose(){},focus(){}};},switchStudio(id){h.shell.studio=id;},notify(){},preferred:()=>'sound'});
  await c.openFiles([docx()]);assert.equal(h.shell.studio,'documents','sound cannot read docx: override ignored');
+});
+test('chooser confirms unknown text before any commit, cancellation keeps session',async()=>{
+ const h=harness();let asks=0;
+ const deps:OpenDeps={prepare:async(input,res)=>({name:input.name,studioId:res.handler.studioId,commit(){h.log.push('commit');return{ok:true,key:input.name};},dispose(){},focus(){}}),switchStudio(){},notify(){},choose:async()=>{asks++;return null;}};
+ const c=createOpenCoordinator(deps);const input={name:'notes.unknown',bytes:enc('hello')};
+ const cancelled=await c.openFiles([input],{source:'drop',suggestedStudio:'video'});assert.equal(asks,1);assert.equal(cancelled.outcomes[0].status,'cancelled');assert.deepEqual(h.log,[]);
+ deps.choose=async()=> 'code';const accepted=await c.openFiles([input]);assert.equal(accepted.focused?.studioId,'code');assert.deepEqual(h.log,['commit']);
+});
+test('incompatible explicit target never silently opens elsewhere',()=>{
+ assert.equal(resolveOpenForTest('a.wav',WAV,{target:'video'}).status,'unsupported');
 });

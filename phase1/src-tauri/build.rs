@@ -111,6 +111,7 @@ fn main() {
             "git_combine_resolve",
             "git_combine_finish",
             "git_combine_abort",
+            "read_open_bytes",
             "extension_activity_query",
             "extension_activity_export",
         ]),

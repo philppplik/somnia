@@ -583,6 +583,19 @@ impl Project {
         }
         Ok(bytes)
     }
+    /// Exact bytes for Smart Open classification. Only a native-granted single-file project.
+    pub fn read_open_bytes(&self, path: &str) -> Result<Vec<u8>> {
+        if self.only.as_deref() != Some(path) {
+            return Err(AppError::Denied("Only the native-selected file can be classified".into()));
+        }
+        let p = self.safe_path(path)?;
+        let mut file = self.root.open(p)?;
+        if !file.metadata()?.is_file() { return Err(AppError::Denied("Not a regular file".into())); }
+        let mut bytes = Vec::new();
+        Read::by_ref(&mut file).take((MAX_MEDIA_BYTES + 1) as u64).read_to_end(&mut bytes)?;
+        if bytes.len() > MAX_MEDIA_BYTES { return Err(AppError::Limit); }
+        Ok(bytes)
+    }
     /// Per-project settings file `.somnia/settings.json` (UI preferences only, max 64 KB). The folder is reserved, so the normal file layer never touches it.
     pub fn read_project_settings(&self) -> Result<Option<String>> {
         let dir = match self.root.open_dir(PROJECT_SETTINGS_DIR) {

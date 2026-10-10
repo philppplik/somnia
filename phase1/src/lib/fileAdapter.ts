@@ -1,3 +1,9 @@
+import {resolveOpen} from './studios/openResolver';
+import {askOpenStudio} from './studios/openChoice';
+import {appDeps} from './studios/openIntake';
+import {decodeBytes,decodeFileBytes} from './textEncoding';
+import {base64ToBlob} from './folderMedia';
+import {requestStudio,openFileTab} from '../store/appStore';
 import {folderNameFor} from './folderName';
 import {trackNativeDrop,consumeNativeChatDrop,consumeNativeConvertDrop} from './collab/nativeChatDrop';
 import {installHoldBackend,isAgentAutosaveHeld,releaseAgentAutosave,clearAgentAutosaveHolds,heldAgentPaths} from './agent/autosaveHold';
@@ -105,7 +111,47 @@ export async function installFileAdapter(port:FilePort){
   if(recoveries.length)patchState({notice:`${recoveries.length} recovery snapshots available. Open Commands and choose Restore recovery. Nothing restored automatically.`});
  };
  let opening=false;
+ /** Native selected files retain in-place saving for source documents; binary editors retain their existing export model. */
+ let fileQueue:Promise<void>=Promise.resolve();
+ const openSelectedFile=(selected:{projectId:string;name:string},source:'os'|'drop'|'picker')=>{
+  const next=fileQueue.then(()=>openSelectedFileNow(selected,source));fileQueue=next.catch(()=>{});return next;
+ };
+ const openSelectedFileNow=async(selected:{projectId:string;name:string},source:'os'|'drop'|'picker')=>{
+  let retained=false;
+  const suggested=source==='drop'?getState().activeStudio:undefined;
+  try{
+   if(opening)throw Error('Another project is opening. Wait, then open this file again.');
+   const blob=base64ToBlob(await port.invoke<string>('read_open_bytes',{projectId:selected.projectId,path:selected.name}));
+   const input={name:selected.name,bytes:new Uint8Array(await blob.arrayBuffer())};
+   let resolution=resolveOpen(input.name,input.bytes);
+   if(resolution.status!=='ready'){
+    const target=await askOpenStudio(input,resolution,suggested);
+    if(!target)return;
+    resolution=resolveOpen(input.name,input.bytes,{target,acceptTextOffer:true});
+   }
+   if(resolution.status!=='ready'){patchState({notice:resolution.reason});return;}
+   // Non-Code handlers use the same prepare/commit path as browser opens, without replacing an unrelated disk project.
+   if(resolution.kind!=='text'&&!(resolution.kind==='svg'&&resolution.studioId==='code')){
+    const prepared=await appDeps.prepare(input,resolution);
+    const committed=prepared.commit();
+    if(!committed.ok){prepared.dispose();throw Error(committed.error);}
+    prepared.focus(committed.key);appDeps.switchStudio(prepared.studioId,committed.key);return;
+   }
+   const revision=getState().revision,oldFiles=getState().files;
+   if(getState().isDirty&&!window.confirm(projectId?'Keep unsaved edits in recovery and open another file?':'Replace the unsaved in-memory project?'))return;
+   const read=await port.invoke<Read>('read_file',{projectId:selected.projectId,path:selected.name});
+   const decoded=decodeFileBytes(selected.name,input.bytes).text;
+   if(read.content!==decodeBytes(input.bytes).text)throw Error('The selected file changed while opening. Try again.');
+   const files={[selected.name]:decoded};
+   const candidate=new EditorProject(files);
+   if(getState().revision!==revision||getState().files!==oldFiles)throw Error('The current project changed while opening. Try again.');
+   if(projectId)await close(true);
+   await attach(selected,files,new Map([[selected.name,read.revision]]),candidate);retained=true;
+   openFileTab(selected.name);requestStudio('code','open',false,selected.name);
+  }finally{if(!retained)await port.invoke('close_project',{projectId:selected.projectId,keepRecovery:false});}
+ };
  const open=async(reconnect=false,single=false,dropToken?:string,preselected?:{projectId:string;name:string}|null)=>{
+  if(single){const selected=await port.invoke<{projectId:string;name:string}|null>('choose_file');if(selected)await openSelectedFile(selected,'picker');return;}
   if(opening)throw Error('Another project is opening. Wait, then drop again.');
   opening=true;try{
   const startRevision=getState().revision,startFiles=getState().files;
@@ -165,19 +211,23 @@ export async function installFileAdapter(port:FilePort){
  const compare=async()=>{await queue;if(!projectId||!model)return;const path=getState().activeFile;const read=await port.invoke<Read>('read_file',{projectId,path});if(read.content===null)throw Error('The disk file is missing. This alpha cannot resolve disk deletion through merge.');const id=projectId;const openedModel=model;const reviewedEditor=model.files[path];patchState({diskComparison:{path,disk:read.content,editor:reviewedEditor,apply:async(content)=>{if(projectId!==id||model!==openedModel)throw Error('The project changed during comparison.');await queue;if(model!.files[path]!==reviewedEditor)throw Error('Editor changed after comparison opened. Reopen comparison before saving.');const revision=++counter;current.set(path,revision);const event=await port.invoke<FileEvent>('stage_edit',{projectId,path,content,clientRevision:revision});staged.set(path,{revision,content});model!.transact({origin:'internal',operations:[{type:'replaceSource',file:path,text:content}]});refreshProject();await handle(event);const savedEvent=await port.invoke<FileEvent>('save_file',{projectId,path,expectedRevision:read.revision});await handle(savedEvent);if(savedEvent.state!=='saved')throw Error(savedEvent.error||'Reviewed save was not accepted. Edits remain unsaved.');patchState({diskComparison:null});}}});};
  const cleanups=[installHoldBackend(async paths=>{await queue;if(projectId&&port.shell)await port.invoke('hold_autosave',{projectId,paths});else if(projectId)for(const path of paths)await port.invoke('read_file',{projectId,path});}),registerCommand({id:'project.compare',title:'Resolve conflict: compare active file with disk',category:'Tools',enabled:()=>!!projectId,run:compare}),registerCommand({id:'project.open',title:'Open folder',category:'Project',shortcut:'Mod+O',run:()=>open()}),...(port.shell?[registerCommand({id:'project.openFile',title:'Open file',category:'Project',keywords:['open','file','single'],run:()=>open(false,true)})]:[]),...(port.canReconnect?[registerCommand({id:'project.reconnect',title:'Reconnect last folder',category:'Project',keywords:['reload','permission','folder'],run:()=>open(true)})]:[]),registerCommand({id:'project.save',title:'Save project',category:'Project',shortcut:'Mod+S',allowInInput:true,enabled:()=>true,run:saveCommand}),registerCommand({id:'project.close',title:'Close project',category:'Project',enabled:()=>!!projectId||getState().coreConnected,run:()=>{if(projectId)return close(true);if(getState().isDirty)patchState({closeProjectPrompt:true});else closeMemoryProject();}})];
  cleanups.push(await port.listen<FileEvent>('somnia://file-state',event=>{void handle(event.payload).catch(fail);}));
- if(port.shell)cleanups.push(await port.listen<{token:string;count:number;media?:boolean;position?:[number,number]}>('somnia://os-drop',event=>{
-  const {token,count,media,position}=event.payload;
+ if(port.shell)cleanups.push(await port.listen<{token:string;count:number;media?:boolean;position?:[number,number];directory?:boolean}>('somnia://os-drop',event=>{
+  const {token,count,directory,position}=event.payload;
   if(position)trackNativeDrop('drop',{x:position[0],y:position[1]});
   if(consumeNativeConvertDrop()){void port.invoke<{name:string;text:string;base64?:string}[]>('read_dropped_files',{token,chat:true}).then(files=>{const list=files.map(f=>new File([f.base64===undefined?new TextEncoder().encode(f.text):Uint8Array.from(atob(f.base64),c=>c.charCodeAt(0))],f.name));window.dispatchEvent(new CustomEvent('somnia:convert-drop',{detail:list}));}).catch(fail);return;}
   if(consumeNativeChatDrop()){void port.invoke<{name:string;text:string;base64?:string}[]>('read_dropped_files',{token,chat:true}).then(files=>{const attachments=files.map(f=>new File([f.base64===undefined?new TextEncoder().encode(f.text):Uint8Array.from(atob(f.base64),c=>c.charCodeAt(0))],f.name));window.dispatchEvent(new CustomEvent('somnia:chat-drop',{detail:attachments}));}).catch(fail);return;}
-  if(count===1&&!media)void open(false,false,token).catch(fail);
+  if(directory)void open(false,false,token).catch(fail);
+  else if(count===1)void port.invoke<{projectId:string;name:string}>('open_dropped_project',{token}).then(sel=>openSelectedFile(sel,'drop')).catch(fail);
   else if(opening)fail('Another project is opening. Wait, then drop again.');
-  else void port.invoke<{name:string;text:string;base64?:string}[]>('read_dropped_files',{token}).then(files=>openIncoming(files.map(f=>f.base64===undefined?{name:f.name,text:f.text}:{name:f.name,text:'',blob:new Blob([Uint8Array.from(atob(f.base64),c=>c.charCodeAt(0))])}))).catch(fail);
+  else void port.invoke<{name:string;text:string;base64?:string}[]>('read_dropped_files',{token}).then(files=>openIncoming(files.map(f=>f.base64===undefined?{name:f.name,text:f.text}:{name:f.name,text:'',blob:base64ToBlob(f.base64)}),{source:'drop',suggestedStudio:getState().activeStudio})).catch(fail);
  }));
  if(port.shell)cleanups.push(await port.listen<string>('somnia://menu',event=>{void executeNativeMenuCommand(event.payload);}));
- // File association launch ("Open with Somnia"): the OS passed a file in argv; open_startup_file
- // consumes it Rust-side (the renderer never supplies the path) and the normal open pipeline runs.
- if(port.shell)void port.invoke<{projectId:string;name:string}|null>('open_startup_file').then(sel=>{if(sel)return open(false,false,undefined,sel);}).catch(()=>{/* no startup file or already consumed */});
+ // Subscribe before draining the Rust-owned queue, so macOS opens arriving during startup cannot be lost.
+ let osQueue:Promise<void>=Promise.resolve();
+ const drainOsFiles=()=>{osQueue=osQueue.then(async()=>{
+  for(;;){const selected=await port.invoke<{projectId:string;name:string}|null>('open_startup_file');if(!selected)break;await openSelectedFile(selected,'os');}
+ }).catch(fail);};
+ if(port.shell){cleanups.push(await port.listen('somnia://os-open',drainOsFiles));drainOsFiles();}
  if(port.shell){const shell=port.shell;setCloseHandlers('disk',{saveAndClose:async()=>{await save();if(getState().isDirty)throw Error('Some edits are still unsaved. Close was cancelled.');await close(false);await shell.destroyWindow();},discardAndClose:async()=>{await close(true);await shell.destroyWindow();}});cleanups.push(()=>setCloseHandlers('disk',null));cleanups.push(await port.listen('somnia://close-blocked',()=>requestClose('disk')));}
  return ()=>{cleanups.forEach(fn=>fn());unsubscribe();disconnect();};
 }

@@ -1,0 +1,14 @@
+import React from 'react';
+import {createRoot} from 'react-dom/client';
+import '../../src/styles/global.css';
+import '../../src/styles/bento.css';
+import {OpenStudioDialog} from '../../src/components/studios/OpenStudioDialog';
+import {askOpenStudio} from '../../src/lib/studios/openChoice';
+import {resolveOpen} from '../../src/lib/studios/openResolver';
+import {setLocale} from '../../src/lib/i18n';
+import '../../src/lib/studios';
+const bytes=new TextEncoder().encode('hello');const resolution=resolveOpen('unknown.notes',bytes);
+if(resolution.status==='safe-text-offer')void askOpenStudio({name:'unknown.notes',bytes},resolution,'code').then(studio=>{document.body.dataset.answer=studio??'cancelled';});
+setLocale(new URLSearchParams(location.search).get('lang')??'en');
+const theme=new URLSearchParams(location.search).get('theme')??'light';document.documentElement.dataset.theme=theme;document.documentElement.dataset.palette=theme;
+createRoot(document.getElementById('root')!).render(<div className="app-frame h-dvh bg-shell"><OpenStudioDialog/></div>);

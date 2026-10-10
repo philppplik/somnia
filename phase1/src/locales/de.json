@@ -2612,5 +2612,14 @@
   "versions.safety.err.unsupported": "Projekte mit LFS oder Submodulen lassen sich hier nicht wiederherstellen.",
   "versions.safety.err.conflicts": "Löse zuerst die Konflikte.",
   "versions.safety.err.changed": "Diese Sicherung hat sich geändert oder existiert nicht mehr. Aktualisiere und versuche es erneut.",
-  "versions.safety.err.busy": "Eine Wiederherstellung läuft bereits."
+  "versions.safety.err.busy": "Eine Wiederherstellung läuft bereits.",
+  "openRouter.title": "In welchem Studio möchtest du diese Datei öffnen?",
+  "openRouter.description": "Wähle einen Editor für diese Datei.",
+  "openRouter.file": "Zu öffnende Datei",
+  "openRouter.studio": "Studio",
+  "openRouter.suggested": "(Drop-Ziel)",
+  "openRouter.preview": "(schreibgeschützte Vorschau)",
+  "openRouter.safe": "Es werden nur Studios angeboten, die diese Datei lesen können. Abbrechen lässt deine aktuelle Arbeit unverändert.",
+  "openRouter.open": "Datei öffnen",
+  "openRouter.unavailable": "Kein installiertes Studio kann diese Datei sicher lesen. Sie ist möglicherweise beschädigt oder verwendet ein nicht unterstütztes Format. Nichts wurde geändert."
 }
