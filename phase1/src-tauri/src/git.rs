@@ -21,6 +21,7 @@ use std::process::{Command, Stdio};
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 pub mod variants;
+pub mod remote;
 
 const READ_TIMEOUT: Duration = Duration::from_secs(30);
 const LOG_TIMEOUT: Duration = Duration::from_secs(60);
