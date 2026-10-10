@@ -1,4 +1,4 @@
-Release candidate. Built from `somnia-agent` at <SHA> (CI 4/4 green, run <RUN>). Bundles everything since beta.5. If no blocking issue is found, this content becomes stable 11.3.0 after the owner's explicit decision.
+Release candidate. Built from `somnia-agent` at acf0995 (CI 4/4 green, run 38034423274). Bundles everything since beta.5. If no blocking issue is found, this content becomes stable 11.3.0 after the owner's explicit decision.
 
 ## Highlights
 - Photos Studio (9th Studio, Ctrl/Cmd+9): develop settings, preview and export through a WASM worker, session and inspector, in all five languages. PNG and the other raster formats open here directly.
@@ -33,5 +33,5 @@ Release candidate. Built from `somnia-agent` at <SHA> (CI 4/4 green, run <RUN>).
 
 ## Checksums
 - `SHA256SUMS.txt` lists the SHA-256 of every installer. `macos-verification.txt` has the CI signature/image checks.
-- CI: https://github.com/philppplik/somnia/actions/runs/<RUN> (native, macos, windows, frontend all passed).
+- CI: https://github.com/philppplik/somnia/actions/runs/38034423274 (native, macos, windows, frontend all passed).
 - All WASM in this release was built by CI from repo source. No prebuilt WASM files from outside the repo are included.
