@@ -1,4 +1,4 @@
-import {fetchCatalog,reviewCatalogPackage,installReviewedPackage,permissionExplanation,type CatalogEntry,type ReviewedPackage} from './catalog';
+import {fetchCatalog,reviewCatalogPackage,installReviewedPackage,classifyFetchError,permissionExplanation,type CatalogEntry,type ReviewedPackage} from './catalog';
 import {loadExtensions} from './registry';
 import {migrateLegacy} from './legacy/migrate';
 import {getConsentBroker,type ConsentCandidate} from './consentUiHost';
@@ -62,7 +62,7 @@ export function createCatalogStoreHost(deps:CatalogStoreDeps={}):StoreHost{
     const catalog:StoreCatalog={catalogSchemaVersion:1,sequence:0,generatedAt:at,policyRevision:'',publishers,extensions,tombstones:[]};
     const snapshot:StoreSnapshot={catalog,feed:EMPTY_FEED(at),fetchedAt:at,offline:false,lastTrustedCheck:now()};
     return {status:'ready',snapshot} satisfies StoreLoad;
-   }catch{return {status:'unavailable'};}
+   }catch(e){return {status:'unavailable',reason:classifyFetchError(e)};}
   },
   /** The shipping index publishes no gate evidence. Never inferred. */
   evidence:async()=>null,

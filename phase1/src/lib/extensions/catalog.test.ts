@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {webcrypto,createHash} from 'node:crypto';
 import {readFileSync} from 'node:fs';
 import {zipSync,strToU8} from 'fflate';
-import {validateCatalog,rawGithubURL,fetchCatalog,reviewCatalogPackage,installReviewedPackage,CATALOG_URL,type CatalogEntry} from './catalog';
+import {classifyFetchError,validateCatalog,rawGithubURL,fetchCatalog,reviewCatalogPackage,installReviewedPackage,CATALOG_URL,type CatalogEntry} from './catalog';
 import {loadExtensions,setExtensionEnabled,enabledIds} from './registry';
 import {parsePackageZip} from './packageInstall';
 const manifest={id:'acme.theme',name:'Theme',version:'1.0.0',apiVersion:1,permissions:[]};
@@ -57,4 +57,12 @@ test('malformed ZIP and hostile download identity fail without replacing install
  const before=JSON.stringify(loadExtensions());const bad=strToU8('not a zip');serve(bad);await assert.rejects(reviewCatalogPackage(entry(bad)),/Invalid ZIP/);
  const bytes=zip({...manifest,apiVersion:99});serve(bytes);await assert.rejects(reviewCatalogPackage(entry(bytes)),/apiVersion/);
  assert.equal(JSON.stringify(loadExtensions()),before);globalThis.fetch=originalFetch;
+});
+
+test('classifyFetchError maps 429 and 5xx to distinct reasons, unknown stays network',()=>{
+ assert.equal(classifyFetchError(new Error('GitHub download failed (429).')),'rate-limited');
+ assert.equal(classifyFetchError(new Error('GitHub download failed (503).')),'server-error');
+ assert.equal(classifyFetchError(new Error('GitHub download failed (404).')),'network');
+ assert.equal(classifyFetchError(new Error('Extension index is not valid JSON.')),'invalid');
+ assert.equal(classifyFetchError(new TypeError('fetch failed')),'network');
 });

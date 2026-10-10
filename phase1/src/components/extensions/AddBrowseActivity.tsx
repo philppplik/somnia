@@ -65,7 +65,8 @@ export function BrowseView({host,installedIds,onOpenInstalled,onReviewUpdate,onI
  const openReview=async(id:string)=>{setReview({kind:'inspecting'});setReview(await host.reviewInstall(id));};
  if(review)return <div className="ext-view"><button type="button" className="ext-btn ext-back" onClick={()=>setReview(null)}>{t('ext.back.browse')}</button>{review.kind==='ready'?<CandidateReview c={review} host={host} onInstalled={()=>{setReview(null);onInstalled();}}/>:review.kind==='error'?<div className="ext-callout ext-callout-error" role="alert">{t(ERR_KEYS[review.code])}</div>:<p className="ext-meta">{t('ext.add.inspecting')}</p>}</div>;
  if(!res)return <p className="ext-meta ext-pad" role="status">{t('ext.loading')}</p>;
- if(res.status==='unavailable')return <div className="ext-empty"><h3>{t('ext.browse.unavailable')}</h3><p>{t('ext.browse.unavailable.body')}</p><button type="button" className="ext-btn ext-btn-primary" onClick={load}>{t('ext.retry')}</button></div>;
+ if(res.status==='unavailable'){const rk=res.reason==='rate-limited'?'.rateLimited':res.reason==='server-error'?'.serverError':'';
+  return <div className="ext-empty"><h3>{t(`ext.browse.unavailable${rk}`)}</h3><p>{t(`ext.browse.unavailable${rk}.body`)}</p><button type="button" className="ext-btn ext-btn-primary" onClick={load}>{t('ext.retry')}</button></div>;}
  const shown=res.entries.filter(e=>(!q||`${e.name} ${e.description}`.toLowerCase().includes(q.toLowerCase())));
  void cat;void setCat;void installedIds;
  return <div className="ext-view"><div className="ext-toolbar"><input type="search" aria-label={t('ext.search.browse')} placeholder={t('ext.search.browse')} value={q} onChange={e=>setQ(e.target.value)}/></div>

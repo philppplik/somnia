@@ -46,7 +46,8 @@ export function StoreScreen({host,store,installed,detailId,onOpen,onOpenInstalle
  };
  const act={start,busy,err,paused,onOpenInstalled};
  if(!res)return <p className="ext-meta ext-pad" role="status">{t('store.loading')}</p>;
- if(!snap)return <div className="ext-empty"><h3>{t('store.unavailable')}</h3><p>{t('store.unavailable.body')}</p><button type="button" className="ext-btn ext-btn-primary" onClick={reload}>{t('store.retry')}</button></div>;
+ if(!snap){const reason=res.status==='unavailable'?res.reason:undefined;const rk=reason==='rate-limited'?'.rateLimited':reason==='server-error'?'.serverError':'';
+  return <div className="ext-empty"><h3>{t(`store.unavailable${rk}`)}</h3><p>{t(`store.unavailable${rk}.body`)}</p><button type="button" className="ext-btn ext-btn-primary" onClick={reload}>{t('store.retry')}</button></div>;}
  const detail=detailId?cards.find(c=>c.id===detailId)??null:null;
  return <>
   {detailId?(detail?<StoreDetail key={detail.id} card={detail} store={store} host={host} snapshot={snap} now={now} act={act} onBack={onBack} onExplain={()=>setExplain(true)}/>:<div className="ext-empty"><h3>{t('ext.detail.gone')}</h3><button type="button" className="ext-btn" onClick={onBack}>{t('store.back')}</button></div>)

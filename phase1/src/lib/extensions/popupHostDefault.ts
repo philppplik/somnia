@@ -1,4 +1,4 @@
-import {fetchCatalog,reviewCatalogPackage,installReviewedPackage,type CatalogEntry,type ReviewedPackage} from './catalog';
+import {classifyFetchError,fetchCatalog,reviewCatalogPackage,installReviewedPackage,type CatalogEntry,type ReviewedPackage} from './catalog';
 import {installStateOf} from './catalogView';
 import type {Permission} from './types';
 import {installExtension,loadExtensions,removeExtension,setExtensionEnabled,enabledIds,revokedPermissions,setPermissionRevoked} from './registry';
@@ -140,7 +140,7 @@ export function createDefaultHost(options:DefaultHostOptions={}):ExtensionsPopup
    try{const entries=await fetchCatalog(signal);const inst=loadExtensions();
     const list:BrowseEntry[]=entries.map(e=>{const s=installStateOf(e,inst).state;return{id:e.id,name:e.name,description:e.description,publisher:e.author,badge:null,permissionLabels:e.permissions.filter(p=>p==='project.read'||p==='project.write'),verified:false,state:s==='update-available'?'update-consent':s==='not-installed'?'available':'installed'};});
     entries.forEach(e=>reviews.delete(e.id));return{status:'ready',entries:list,fetchedAt:new Date().toISOString(),offline:false};
-   }catch{return{status:'unavailable'};}
+   }catch(e){return{status:'unavailable',reason:classifyFetchError(e)};}
   },
   reviewInstall:async id=>{const e=(await fetchCatalog()).find(x=>x.id===id);if(!e)return{kind:'error',code:'failed'};try{const r=await reviewCatalogPackage(e);reviews.set(id,r);return asCandidate(e,r);}catch(err){return{kind:'error',code:/hash|sha/i.test(String(err))?'badHash':'failed'};}},
   developerMode:()=>broker().snapshot().developerMode,

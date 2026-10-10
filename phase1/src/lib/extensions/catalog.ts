@@ -39,6 +39,15 @@ async function fetchBytes(url:string,max:number,signal?:AbortSignal):Promise<Uin
  catch(error){await reader.cancel().catch(()=>{});throw error;}finally{reader.releaseLock();}
  const bytes=new Uint8Array(size);let offset=0;for(const chunk of chunks){bytes.set(chunk,offset);offset+=chunk.length;}return bytes;
 }
+/** Classify a catalog fetch failure for the UI. HTTP status is read from the fetch error message; anything unrecognized stays a generic network failure. */
+export type StoreUnavailableReason='rate-limited'|'server-error'|'invalid'|'network';
+export function classifyFetchError(e:unknown):StoreUnavailableReason{
+ const m=String(e);
+ if(/\(429\)|rate.?limit/i.test(m))return 'rate-limited';
+ if(/\(5\d{2}\)/.test(m))return 'server-error';
+ if(/not valid JSON|Invalid|schema/i.test(m))return 'invalid';
+ return 'network';
+}
 export async function fetchCatalog(signal?:AbortSignal):Promise<CatalogEntry[]>{
  const bytes=await fetchBytes(CATALOG_URL,MAX_INDEX,signal);let json:unknown;try{json=JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(bytes));}catch{throw new Error('Extension index is not valid JSON.');}return validateCatalog(json);
 }

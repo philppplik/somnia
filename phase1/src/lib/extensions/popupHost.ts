@@ -3,7 +3,8 @@ import type {StoreHost} from './storeHost';
 import type {CandidateState,PopupExtension,SourceInfo} from './popupModel';
 
 export interface BrowseEntry {id:string; name:string; description:string; publisher:string; badge:{criterion:string}|null; permissionLabels:string[]; state:'available'|'installed'|'update-consent'; verified:boolean}
-export type BrowseResult={status:'ready'; entries:BrowseEntry[]; fetchedAt:string|null; offline:boolean}|{status:'unavailable'};
+import type {StoreUnavailableReason} from './catalog';
+export type BrowseResult={status:'ready'; entries:BrowseEntry[]; fetchedAt:string|null; offline:boolean}|{status:'unavailable'; /** Why the catalog could not be loaded, when known. */ reason?:StoreUnavailableReason};
 export interface UpdateDiff {version:string; added:string[]; blocked:boolean}
 /**
  * Everything the popup needs from the trusted host. Every mutation resolves only after the host acknowledges it

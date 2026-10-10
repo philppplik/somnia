@@ -3,7 +3,8 @@ import type {ConsentReviewRequest} from './consentUiHost';
 
 /** One verified snapshot. `catalog` and `feed` must come from the signed delivery adapter, never from raw JSON. */
 export interface StoreSnapshot {catalog:StoreCatalog; feed:SecurityFeed; fetchedAt:string|null; offline:boolean; /** Epoch ms of the last verified refresh, null when unknown. */ lastTrustedCheck:number|null}
-export type StoreLoad={status:'ready'; snapshot:StoreSnapshot}|{status:'unavailable'};
+import type {StoreUnavailableReason} from './catalog';
+export type StoreLoad={status:'ready'; snapshot:StoreSnapshot}|{status:'unavailable'; /** Why the catalog could not be loaded, when known. */ reason?:StoreUnavailableReason};
 export type StageErrorCode='blocked'|'stale'|'incompatible'|'mismatch'|'failed';
 /** The staging controller (Store catalog branch) owns bytes, integrity and the atomic swap. The UI only hands the result to the consent UI. */
 export type StageResult={kind:'staged'; request:Pick<ConsentReviewRequest,'candidate'|'revalidate'|'commit'>}|{kind:'error'; code:StageErrorCode};
