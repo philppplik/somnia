@@ -1524,8 +1524,11 @@ mod overlap_tests {
             })
             .collect();
         let mut q = OpenQueue::default();
+        // Contract takes a canonical root: tempfile paths are symlinked on macOS
+        // (/var -> /private/var), so canonicalize like the real callers do.
+        let canonical_root = root.path().canonicalize().unwrap();
         assert!(q
-            .check_folder_open(root.path(), &access, "folder-request")
+            .check_folder_open(&canonical_root, &access, "folder-request")
             .is_err());
         assert_eq!(access.len(), 2);
         let events = q.take_events();
@@ -1535,7 +1538,7 @@ mod overlap_tests {
         assert!(!serde_json::to_string(&events).unwrap().contains("private-"));
         let outside = tempfile::TempDir::new().unwrap();
         assert!(q
-            .check_folder_open(outside.path(), &access, "other")
+            .check_folder_open(&outside.path().canonicalize().unwrap(), &access, "other")
             .is_ok());
         assert!(q.take_events().is_empty());
     }
