@@ -16,3 +16,8 @@ test('fatal is opt-in and free text, paths, credentials and recovery claims do n
  assert.equal(reportEvent({ ...entry, v: 1 }), null);
  assert.equal(reportEvent({ ...entry, seq: -1 }), null);
 });
+
+test('technical token alphabet does not bypass secret-prefix redaction', () => {
+ const text=JSON.stringify(reportEvent({...entry,session:'ghp_abcdefghijklmno12345',context:{cmd:'github_pat_abcdefghijklmno12345'}}));
+ assert.doesNotMatch(text,/abcdefghijklmno/);
+});

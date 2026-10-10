@@ -311,7 +311,7 @@ pub fn sanitize_build(mut b: BuildIdentity) -> BuildIdentity {
         &mut b.arch,
         &mut b.frontend_build,
     ] {
-        if !safe_source(value) {
+        if !safe_token(value) {
             *value = "unknown".into();
         }
     }

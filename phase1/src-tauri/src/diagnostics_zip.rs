@@ -356,6 +356,16 @@ mod tests {
         assert_eq!(merge_events(&out, &[with_window]).len(), 3);
     }
     #[test]
+    fn prefixed_secrets_in_technical_tokens_are_rejected() {
+        let mut v = entry("ts");
+        v["context"] = serde_json::json!({"cmd":"ghp_abcdefghijklmno12345"});
+        v["session"] = "github_pat_abcdefghijklmno12345".into();
+        assert!(safe_event(&v).is_none());
+        v["session"] = "session-1".into();
+        let projected = safe_event(&v).unwrap();
+        assert!(!projected.to_string().contains("abcdefghijklmno"));
+    }
+    #[test]
     fn renderer_sentinels_and_locks_are_never_exported() {
         let d = tempfile::tempdir().unwrap();
         std::fs::create_dir(d.path().join("locks")).unwrap();

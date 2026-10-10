@@ -5,7 +5,7 @@ import { getRing, versionInfo, redactText, toSafeLogEvent } from './log';
 export function reportEvent(value: unknown): Record<string, unknown> | null {
   const e = toSafeLogEvent(value);
   if (!e || !Number.isSafeInteger(e.seq) || e.seq < 0 || !/^\d{4}-\d{2}-\d{2}T[\d:.]+Z$/.test(e.ts)) return null;
-  return e as unknown as Record<string, unknown>;
+  return JSON.parse(redactText(JSON.stringify(e))) as Record<string, unknown>;
 }
 export function mergeReportEntries(native: readonly unknown[], renderer: readonly unknown[]): Record<string, unknown>[] {
   const merged = new Map<string, Record<string, unknown>>();

@@ -227,6 +227,7 @@ pub fn safe_token(s: &str) -> bool {
         && s.len() <= 64
         && s.bytes()
             .all(|c| c.is_ascii_alphanumeric() || b"_.:-".contains(&c))
+        && crate::applog::redact(s) == s
 }
 pub fn merge_events(native: &[Value], renderer: &[Value]) -> Vec<Value> {
     let mut map = BTreeMap::new();
