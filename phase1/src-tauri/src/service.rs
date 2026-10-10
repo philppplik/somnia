@@ -1,4 +1,5 @@
 //! No network, shell execution, or ambient project-path APIs are exposed to IPC.
+use crate::intake::identity::{identity_of, FileIdentity};
 use cap_std::{
     ambient_authority,
     fs::{Dir, OpenOptions},
@@ -152,11 +153,16 @@ struct Document {
 
 pub struct Project {
     pub id: String,
+    /// File identity used by intake to activate an already-open document. Folders have none.
+    pub identity: Option<FileIdentity>,
     root: Dir,
     canonical_root: PathBuf,
     autosave_holds: std::collections::BTreeSet<String>,
     recovery: Dir,
     _lock: fs::File,
+    /// Held for the whole project lifetime; dropping releases ancestor overlap leases.
+    #[cfg(not(feature = "folder-lock-interim"))]
+    _directory_locks: Vec<fs::File>,
     documents: BTreeMap<String, Document>,
     _watcher: Option<RecommendedWatcher>,
     changed: Arc<AtomicBool>,
@@ -168,7 +174,7 @@ pub struct Project {
 /// Only called by the native picker or OS drop grant adapter, never with a renderer-supplied root.
 impl Project {
     pub fn open(root: &Path, recovery_base: &Path) -> Result<Self> {
-        Self::open_inner(root, recovery_base, None)
+        Self::open_inner(root, recovery_base, None, None)
     }
     /// Opens one file in place: the project is rooted at the file's folder but only that file is listed, readable and writable.
     /// Canonical project root on disk; the Git backend runs against it.
@@ -177,9 +183,11 @@ impl Project {
     }
     pub fn open_file(file: &Path, recovery_base: &Path) -> Result<Self> {
         let canonical = file.canonicalize()?;
-        if !canonical.is_file() {
+        let metadata = fs::metadata(&canonical)?;
+        if !metadata.is_file() {
             return Err(AppError::Denied("Not a file".into()));
         }
+        let identity = identity_of(&canonical, &metadata)?;
         let name = canonical
             .file_name()
             .map(|n| n.to_string_lossy().into_owned())
@@ -187,9 +195,14 @@ impl Project {
         let parent = canonical
             .parent()
             .ok_or_else(|| AppError::Denied("File has no folder".into()))?;
-        Self::open_inner(parent, recovery_base, Some(name))
+        Self::open_inner(parent, recovery_base, Some(name), Some(identity))
     }
-    fn open_inner(root: &Path, recovery_base: &Path, only: Option<String>) -> Result<Self> {
+    fn open_inner(
+        root: &Path,
+        recovery_base: &Path,
+        only: Option<String>,
+        identity: Option<FileIdentity>,
+    ) -> Result<Self> {
         let root_path = root.canonicalize()?;
         if !root_path.is_dir() {
             return Err(AppError::Denied("Not a directory".into()));
@@ -202,13 +215,40 @@ impl Project {
             use std::os::unix::fs::PermissionsExt;
             fs::set_permissions(&recovery_path, fs::Permissions::from_mode(0o700))?;
         }
-        let lock = fs::OpenOptions::new()
-            .create(true)
-            .truncate(false)
-            .read(true)
-            .write(true)
-            .open(recovery_path.join("session.lock"))?;
-        lock.try_lock_exclusive().map_err(|_| AppError::Locked)?;
+        // Keep the recovery namespace unchanged: existing journals need no migration.
+        // The opt-in interim build retains the old one-session-per-folder lease.
+        #[cfg(feature = "folder-lock-interim")]
+        let lock_path = recovery_path.join("session.lock");
+        #[cfg(not(feature = "folder-lock-interim"))]
+        let (lock_path, directory_locks) = {
+            let locks = recovery_base.join("locks");
+            fs::create_dir_all(&locks)?;
+            #[cfg(unix)]
+            {
+                use std::os::unix::fs::PermissionsExt;
+                fs::set_permissions(&locks, fs::Permissions::from_mode(0o700))?;
+            }
+            // Shared ancestor leases make overlap checks atomic without an index or gate.
+            // Acquire root-to-leaf, never upgrade a held shared lease to exclusive.
+            let mut ancestors: Vec<_> = root_path.ancestors().collect();
+            ancestors.reverse();
+            let mut directory_locks = Vec::with_capacity(ancestors.len());
+            for directory in ancestors {
+                let key = directory_lock_key(directory);
+                let exclusive = identity.is_none() && directory == root_path;
+                directory_locks.push(acquire_lease(
+                    &locks.join(format!("dir-{key}.lock")),
+                    exclusive,
+                )?);
+            }
+            let parent_key = directory_lock_key(&root_path);
+            let lock_key = match &identity {
+                Some(identity) => format!("file-{parent_key}-{}", identity.token()),
+                None => format!("folder-{parent_key}"),
+            };
+            (locks.join(format!("{lock_key}.lock")), directory_locks)
+        };
+        let lock = acquire_project_lock(&lock_path)?;
         let root = Dir::open_ambient_dir(&root_path, ambient_authority())?;
         let recovery = Dir::open_ambient_dir(&recovery_path, ambient_authority())?;
         let changed = Arc::new(AtomicBool::new(false));
@@ -232,11 +272,14 @@ impl Project {
         });
         Ok(Self {
             id: Uuid::new_v4().to_string(),
+            identity,
             root,
             canonical_root: root_path,
             autosave_holds: Default::default(),
             recovery,
             _lock: lock,
+            #[cfg(not(feature = "folder-lock-interim"))]
+            _directory_locks: directory_locks,
             documents: BTreeMap::new(),
             _watcher: watcher,
             changed,
@@ -848,6 +891,43 @@ pub fn validate_path(path: &str) -> Result<PathBuf> {
     }
     Ok(p.to_path_buf())
 }
+/// Empty, persistent lease files must never be removed on close: an opener may already
+/// hold the same inode. Only OS contention maps to Locked; other failures remain I/O.
+fn acquire_project_lock(path: &Path) -> Result<fs::File> {
+    acquire_lease(path, true)
+}
+
+fn acquire_lease(path: &Path, exclusive: bool) -> Result<fs::File> {
+    let lock = fs::OpenOptions::new()
+        .create(true)
+        .truncate(false)
+        .read(true)
+        .write(true)
+        .open(path)?;
+    if exclusive {
+        FileExt::try_lock_exclusive(&lock)
+    } else {
+        FileExt::try_lock_shared(&lock)
+    }
+    .map_err(project_lock_error)?;
+    Ok(lock)
+}
+
+fn project_lock_error(error: std::io::Error) -> AppError {
+    // fs2's platform error includes Windows ERROR_LOCK_VIOLATION.
+    if error.raw_os_error() == fs2::lock_contended_error().raw_os_error() {
+        AppError::Locked
+    } else {
+        error.into()
+    }
+}
+
+#[cfg(not(feature = "folder-lock-interim"))]
+fn directory_lock_key(directory: &Path) -> String {
+    let normalized = directory.to_string_lossy().to_lowercase();
+    hash(normalized.as_bytes())[..16].to_owned()
+}
+
 fn recovery_name(path: &str) -> String {
     format!("{}.json", hash(path.as_bytes()))
 }
@@ -1013,5 +1093,391 @@ mod decode_tests {
     #[test]
     fn utf16_le_bom() {
         assert_eq!(decode_text(vec![0xFF, 0xFE, 0xFC, 0x00, b'b', 0x00]), "üb");
+    }
+}
+
+#[cfg(test)]
+mod project_lock_tests {
+    use super::*;
+    use tempfile::TempDir;
+
+    type TestResult = std::result::Result<(), Box<dyn std::error::Error>>;
+
+    fn files() -> std::io::Result<(TempDir, TempDir)> {
+        let root = TempDir::new()?;
+        let recovery = TempDir::new()?;
+        fs::write(root.path().join("first.html"), "first")?;
+        fs::write(root.path().join("second.html"), "second")?;
+        Ok((root, recovery))
+    }
+
+    #[test]
+    fn same_file_conflicts_and_drop_releases_the_lease() -> TestResult {
+        let (root, recovery) = files()?;
+        let file = root.path().join("first.html");
+        let first = Project::open_file(&file, recovery.path())?;
+        let identity = first.identity.clone();
+        assert!(identity.is_some());
+        assert!(matches!(
+            Project::open_file(&file, recovery.path()),
+            Err(AppError::Locked)
+        ));
+        drop(first);
+        let reopened = Project::open_file(&file, recovery.path())?;
+        assert_eq!(reopened.identity, identity);
+        Ok(())
+    }
+
+    #[test]
+    fn canonical_alias_uses_the_same_file_lease() -> TestResult {
+        let (root, recovery) = files()?;
+        let first = Project::open_file(&root.path().join("first.html"), recovery.path())?;
+        assert!(matches!(
+            Project::open_file(&root.path().join("./first.html"), recovery.path()),
+            Err(AppError::Locked)
+        ));
+        drop(first);
+        Ok(())
+    }
+
+    #[test]
+    fn folder_projects_keep_exclusive_leases_and_have_no_file_identity() -> TestResult {
+        let (root, recovery) = files()?;
+        let folder = Project::open(root.path(), recovery.path())?;
+        assert!(folder.identity.is_none());
+        assert_eq!(folder.list_files()?, ["first.html", "second.html"]);
+        assert!(matches!(
+            Project::open(root.path(), recovery.path()),
+            Err(AppError::Locked)
+        ));
+        drop(folder);
+        assert!(Project::open(root.path(), recovery.path()).is_ok());
+        Ok(())
+    }
+
+    #[test]
+    fn cancelled_candidate_is_removed_and_can_be_opened_again() -> TestResult {
+        let (root, recovery) = files()?;
+        let file = root.path().join("first.html");
+        // Exercise real candidate ownership and OS lease release, not a mocked lock.
+        let candidate = Project::open_file(&file, recovery.path())?;
+        let mut candidates = BTreeMap::from([(candidate.id.clone(), candidate)]);
+        assert_eq!(candidates.len(), 1);
+        candidates.clear();
+        assert_eq!(candidates.len(), 0);
+        let reopened = Project::open_file(&file, recovery.path())?;
+        assert_eq!(reopened.list_files()?, ["first.html"]);
+        assert_eq!(fs::read_to_string(&file)?, "first");
+        Ok(())
+    }
+
+    #[test]
+    fn journals_keep_the_existing_recovery_namespace_across_reopen() -> TestResult {
+        let (root, recovery) = files()?;
+        let canonical_root = root.path().canonicalize()?;
+        let legacy = recovery
+            .path()
+            .join(hash(canonical_root.to_string_lossy().as_bytes()));
+        let mut file = Project::open_file(&root.path().join("first.html"), recovery.path())?;
+        file.stage("first.html", "retained draft".into(), 1)?;
+        assert!(legacy.join(recovery_name("first.html")).is_file());
+        drop(file);
+        let reopened = Project::open_file(&root.path().join("first.html"), recovery.path())?;
+        assert_eq!(
+            reopened.recovery_read("first.html")?.content,
+            "retained draft"
+        );
+        assert_eq!(fs::read_to_string(root.path().join("first.html"))?, "first");
+        Ok(())
+    }
+
+    #[test]
+    fn invalid_open_never_creates_a_lock() -> TestResult {
+        let (root, recovery) = files()?;
+        assert!(matches!(
+            Project::open_file(root.path(), recovery.path()),
+            Err(AppError::Denied(_))
+        ));
+        assert!(matches!(
+            Project::open_file(&root.path().join("missing.html"), recovery.path()),
+            Err(AppError::Io(_))
+        ));
+        assert_eq!(fs::read_dir(recovery.path())?.count(), 0);
+        Ok(())
+    }
+
+    #[cfg(not(feature = "folder-lock-interim"))]
+    #[test]
+    fn separate_files_in_one_folder_open_and_save_independently() -> TestResult {
+        let (root, recovery) = files()?;
+        let mut first = Project::open_file(&root.path().join("first.html"), recovery.path())?;
+        let mut second = Project::open_file(&root.path().join("second.html"), recovery.path())?;
+        assert_ne!(first.identity, second.identity);
+        assert!(matches!(
+            first.read("second.html"),
+            Err(AppError::Denied(_))
+        ));
+        assert!(matches!(
+            second.read("first.html"),
+            Err(AppError::Denied(_))
+        ));
+        let first_revision = first.read("first.html")?.revision;
+        let second_revision = second.read("second.html")?.revision;
+        first.stage("first.html", "first edited".into(), 1)?;
+        second.stage("second.html", "second edited".into(), 1)?;
+        first.save("first.html", &first_revision)?;
+        second.save("second.html", &second_revision)?;
+        assert_eq!(
+            fs::read_to_string(root.path().join("first.html"))?,
+            "first edited"
+        );
+        assert_eq!(
+            fs::read_to_string(root.path().join("second.html"))?,
+            "second edited"
+        );
+        Ok(())
+    }
+
+    #[cfg(not(feature = "folder-lock-interim"))]
+    #[test]
+    fn lock_namespace_is_separate_from_recovery_and_stale_files_are_harmless() -> TestResult {
+        let (root, recovery) = files()?;
+        let file = root.path().join("first.html");
+        let project = Project::open_file(&file, recovery.path())?;
+        let identity = project
+            .identity
+            .as_ref()
+            .ok_or("single-file identity missing")?;
+        let lock_path = recovery.path().join("locks").join(format!(
+            "file-{}-{}.lock",
+            &hash(
+                root.path()
+                    .canonicalize()?
+                    .to_string_lossy()
+                    .to_lowercase()
+                    .as_bytes()
+            )[..16],
+            identity.token()
+        ));
+        assert!(lock_path.is_file());
+        assert_eq!(fs::metadata(&lock_path)?.len(), 0);
+        drop(project);
+        // Simulate a stale file left behind by a terminated process. Never truncate it.
+        fs::write(&lock_path, "stale marker")?;
+        let reopened = Project::open_file(&file, recovery.path())?;
+        assert_eq!(fs::read_to_string(&lock_path)?, "stale marker");
+        assert!(matches!(
+            Project::open_file(&file, recovery.path()),
+            Err(AppError::Locked)
+        ));
+        drop(reopened);
+        assert!(lock_path.exists());
+        Ok(())
+    }
+
+    #[cfg(not(feature = "folder-lock-interim"))]
+    #[test]
+    fn folder_lock_uses_the_documented_normalized_key() -> TestResult {
+        let (root, recovery) = files()?;
+        let folder = Project::open(root.path(), recovery.path())?;
+        let normalized = root.path().canonicalize()?.to_string_lossy().to_lowercase();
+        let digest = hash(normalized.as_bytes());
+        let lock_path = recovery
+            .path()
+            .join("locks")
+            .join(format!("folder-{}.lock", &digest[..16]));
+        assert!(lock_path.is_file());
+        drop(folder);
+        Ok(())
+    }
+
+    #[cfg(not(feature = "folder-lock-interim"))]
+    #[test]
+    fn file_and_folder_projects_cannot_overlap_in_either_open_order() -> TestResult {
+        let (root, recovery) = files()?;
+        let first = Project::open_file(&root.path().join("first.html"), recovery.path())?;
+        assert!(matches!(
+            Project::open(root.path(), recovery.path()),
+            Err(AppError::Locked)
+        ));
+        drop(first);
+        let folder = Project::open(root.path(), recovery.path())?;
+        assert!(matches!(
+            Project::open_file(&root.path().join("first.html"), recovery.path()),
+            Err(AppError::Locked)
+        ));
+        drop(folder);
+        assert!(Project::open_file(&root.path().join("first.html"), recovery.path()).is_ok());
+        Ok(())
+    }
+
+    #[cfg(not(feature = "folder-lock-interim"))]
+    #[test]
+    fn cross_process_nested_overlap_and_crash_release() -> TestResult {
+        use std::process::{Command, Stdio};
+        let (root, recovery) = files()?;
+        fs::create_dir(root.path().join("nested"))?;
+        let nested = root.path().join("nested");
+        let nested_file = nested.join("child.html");
+        fs::write(&nested_file, "child")?;
+        for kind in ["folder", "file"] {
+            let ready = recovery.path().join(format!("ready-{kind}"));
+            let child = Command::new(std::env::current_exe()?)
+                .args([
+                    "--exact",
+                    "service::project_lock_tests::child_process_holds_project",
+                    "--nocapture",
+                ])
+                .env("SOMNIA_LOCK_TEST_KIND", kind)
+                .env("SOMNIA_LOCK_TEST_ROOT", root.path())
+                .env("SOMNIA_LOCK_TEST_FILE", &nested_file)
+                .env("SOMNIA_LOCK_TEST_RECOVERY", recovery.path())
+                .env("SOMNIA_LOCK_TEST_READY", &ready)
+                .stdout(Stdio::null())
+                .stderr(Stdio::null())
+                .spawn()?;
+            struct ChildGuard(std::process::Child);
+            impl Drop for ChildGuard {
+                fn drop(&mut self) {
+                    let _ = self.0.kill();
+                    let _ = self.0.wait();
+                }
+            }
+            let mut child = ChildGuard(child);
+            let deadline = Instant::now() + Duration::from_secs(10);
+            while !ready.exists() {
+                if child.0.try_wait()?.is_some() || Instant::now() >= deadline {
+                    return Err("child failed to acquire project lease".into());
+                }
+                std::thread::sleep(Duration::from_millis(10));
+            }
+            if kind == "folder" {
+                assert!(matches!(
+                    Project::open_file(&nested_file, recovery.path()),
+                    Err(AppError::Locked)
+                ));
+                assert!(matches!(
+                    Project::open(&nested, recovery.path()),
+                    Err(AppError::Locked)
+                ));
+            } else {
+                assert!(matches!(
+                    Project::open(root.path(), recovery.path()),
+                    Err(AppError::Locked)
+                ));
+                assert!(matches!(
+                    Project::open_file(&nested_file, recovery.path()),
+                    Err(AppError::Locked)
+                ));
+            }
+            // Abrupt termination verifies the OS releases both primary and ancestor locks.
+            drop(child);
+            let folder = Project::open(root.path(), recovery.path())?;
+            drop(folder);
+            assert!(Project::open_file(&nested_file, recovery.path()).is_ok());
+        }
+        Ok(())
+    }
+
+    #[cfg(not(feature = "folder-lock-interim"))]
+    #[test]
+    fn child_process_holds_project() -> TestResult {
+        let Some(kind) = std::env::var_os("SOMNIA_LOCK_TEST_KIND") else {
+            return Ok(());
+        };
+        let root = std::env::var_os("SOMNIA_LOCK_TEST_ROOT").ok_or("missing child root")?;
+        let file = std::env::var_os("SOMNIA_LOCK_TEST_FILE").ok_or("missing child file")?;
+        let recovery =
+            std::env::var_os("SOMNIA_LOCK_TEST_RECOVERY").ok_or("missing child recovery")?;
+        let ready = std::env::var_os("SOMNIA_LOCK_TEST_READY").ok_or("missing child ready")?;
+        let _project = if kind == "folder" {
+            Project::open(Path::new(&root), Path::new(&recovery))?
+        } else {
+            Project::open_file(Path::new(&file), Path::new(&recovery))?
+        };
+        fs::write(ready, "ready")?;
+        std::thread::sleep(Duration::from_secs(30));
+        Ok(())
+    }
+
+    #[cfg(not(feature = "folder-lock-interim"))]
+    #[test]
+    fn simultaneous_folder_and_file_open_cannot_both_acquire_leases() -> TestResult {
+        let (root, recovery) = files()?;
+        let start = Arc::new(std::sync::Barrier::new(2));
+        let finish = Arc::new(std::sync::Barrier::new(2));
+        let file = root.path().join("first.html");
+        let recovery_path = recovery.path().to_path_buf();
+        let file_start = start.clone();
+        let file_finish = finish.clone();
+        let worker = std::thread::spawn(move || {
+            file_start.wait();
+            let result = Project::open_file(&file, &recovery_path);
+            file_finish.wait();
+            result
+        });
+        start.wait();
+        let folder_result = Project::open(root.path(), recovery.path());
+        finish.wait();
+        let file_result = worker.join().map_err(|_| "file opener panicked")?;
+        assert_ne!(folder_result.is_ok(), file_result.is_ok());
+        let failure = if folder_result.is_ok() {
+            file_result.err()
+        } else {
+            folder_result.err()
+        };
+        assert!(matches!(failure, Some(AppError::Locked)));
+        Ok(())
+    }
+
+    #[cfg(not(feature = "folder-lock-interim"))]
+    #[test]
+    fn disjoint_folder_branches_share_ancestors_and_failed_open_unwinds() -> TestResult {
+        let (root, recovery) = files()?;
+        let left = root.path().join("left");
+        let right = root.path().join("right");
+        fs::create_dir(&left)?;
+        fs::create_dir(&right)?;
+        let folder = Project::open(&left, recovery.path())?;
+        let other = Project::open(&right, recovery.path())?;
+        assert!(matches!(
+            Project::open(root.path(), recovery.path()),
+            Err(AppError::Locked)
+        ));
+        drop(folder);
+        drop(other);
+        // A failed ancestor-exclusive acquisition must leave no partial shared handles.
+        let parent = Project::open(root.path(), recovery.path())?;
+        assert!(matches!(
+            Project::open(&left, recovery.path()),
+            Err(AppError::Locked)
+        ));
+        drop(parent);
+        assert!(Project::open(&left, recovery.path()).is_ok());
+        Ok(())
+    }
+
+    #[cfg(feature = "folder-lock-interim")]
+    #[test]
+    fn interim_keeps_the_old_folder_lease_and_identity_for_activation() -> TestResult {
+        let (root, recovery) = files()?;
+        let first = Project::open_file(&root.path().join("first.html"), recovery.path())?;
+        assert!(first.identity.is_some());
+        assert!(matches!(
+            Project::open_file(&root.path().join("second.html"), recovery.path()),
+            Err(AppError::Locked)
+        ));
+        assert!(matches!(
+            Project::open(root.path(), recovery.path()),
+            Err(AppError::Locked)
+        ));
+        let legacy = recovery.path().join(hash(
+            root.path().canonicalize()?.to_string_lossy().as_bytes(),
+        ));
+        assert!(legacy.join("session.lock").is_file());
+        assert!(!recovery.path().join("locks").exists());
+        drop(first);
+        assert!(Project::open_file(&root.path().join("second.html"), recovery.path()).is_ok());
+        Ok(())
     }
 }
