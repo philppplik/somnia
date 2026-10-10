@@ -2124,6 +2124,26 @@ pub fn run() {
             tauri::async_runtime::spawn(oauth_refresh_loop());
             if let Ok(dir) = app.path().app_data_dir() {
                 crate::applog::init(dir.join("logs"));
+                // S3 native diagnostics: incident store under app data, then the lock-free panic
+                // writer (it replaces the logger-lock hook from applog::init, never chains it).
+                let incidents_dir = dir.join("incidents");
+                let boot_nanos = std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .map(|d| d.as_nanos())
+                    .unwrap_or_default();
+                crate::panic_report::install(
+                    incidents_dir.clone(),
+                    format!("rust-{}-{}", std::process::id(), boot_nanos),
+                );
+                match crate::diagnostics_commands::DiagnosticsState::new(incidents_dir) {
+                    Ok(diag) => app.manage(diag),
+                    Err(e) => crate::applog::write(
+                        "error",
+                        "diagnostics",
+                        "incident store unavailable; crash review disabled",
+                        Some(&serde_json::json!({ "code": e.code() })),
+                    ),
+                }
             }
             let app_handle = app.handle().clone();
             std::thread::spawn(move || loop {
@@ -2232,6 +2252,13 @@ pub fn run() {
             collab_lan_status,
             choose_project,
             choose_file,
+            crate::diagnostics_commands::build_diagnostic_zip,
+            crate::diagnostics_commands::write_diagnostic_zip,
+            crate::diagnostics_commands::discard_diagnostic_snapshot,
+            crate::diagnostics_commands::list_crash_reports,
+            crate::diagnostics_commands::mark_crash_reports_reviewed,
+            crate::diagnostics_commands::delete_crash_reports,
+            crate::diagnostics_commands::record_frontend_fatal,
             drain_open_requests,
             claim_open_request,
             read_by_grant,
