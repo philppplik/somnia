@@ -32,8 +32,10 @@ export function createBlankVector(width=1024,height=1024,name='Untitled.svg'):bo
  state={...fresh(),name,doc:{width:w,height:h,paths:[]},open:true};listeners.forEach(l=>l());return true;}
 const clampSize=(n:number)=>Number.isFinite(n)?Math.min(16384,Math.max(1,Math.round(n))):1024;
 /** Opens SVG source. Strict import: unsupported SVG features are shown as diagnostics instead of being dropped silently. Returns false on failure; the error stays in session.error. */
-export function openSvgSource(source:string,name='Imported.svg',opts:{strict?:boolean}={}):boolean{
- try{const r=importSvg(source,{strict:opts.strict??true});if(!confirmReplacement())return false;past=[];future=[];
+/** `confirmed`: the caller already obtained (and revalidated) approval to replace unsaved work, so no second dialog is shown. */
+export function openSvgSource(source:string,name='Imported.svg',
+ opts:{strict?:boolean;confirmed?:boolean}={}):boolean{
+ try{const r=importSvg(source,{strict:opts.strict??true});if(!opts.confirmed&&!confirmReplacement())return false;past=[];future=[];
   state={...fresh(),name,doc:normalizeDoc(r.doc),diagnostics:r.warnings,open:true};listeners.forEach(l=>l());return true;}
  catch(e){const diagnostics=e instanceof SvgImportError?e.diagnostics:[];
   set({error:e instanceof Error?e.message:String(e),diagnostics});return false;}}

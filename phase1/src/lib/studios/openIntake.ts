@@ -58,7 +58,7 @@ export const appDeps:OpenDeps={
    let target=studioId;
    if(studioId==='vector'){try{importSvg(text,{strict:true});}catch{target='code';}}
    if(target==='vector')return{name:input.name,studioId:target,affectedDocs:vectorAffected,dispose(){live=false;},
-    commit(){if(!live)return{ok:false,error:'cancelled'};if(!openSvgSource(text,input.name,{strict:true}))return{ok:false,error:'Vector Studio kept the current document.'};added=commitTextFiles([{name:input.name,text}],{activate:false});return{ok:true,key:added[0]};},
+    commit(){if(!live)return{ok:false,error:'cancelled'};if(!openSvgSource(text,input.name,{strict:true,confirmed:true}))return{ok:false,error:'Vector Studio kept the current document.'};added=commitTextFiles([{name:input.name,text}],{activate:false});return{ok:true,key:added[0]};},
     focus(key){openFileTab(key);}};
    return{name:input.name,studioId:target,affectedDocs:textAffected,dispose(){live=false;},
     commit(){if(!live)return{ok:false,error:'cancelled'};added=commitTextFiles([{name:input.name,text}],{activate:false});return{ok:true,key:added[0]};},

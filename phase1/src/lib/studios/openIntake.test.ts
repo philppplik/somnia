@@ -68,3 +68,10 @@ test('intake through the app: dirty replace confirmed opens; same identity opene
  const gone=await openIncoming([{name:'x.html',text:'<p/>',identityToken:'GONE'}]);assert.equal(gone.outcomes[0].status,'opened','stale identity entry ignored once the document is closed');
  installConfirmAction(null);stop();patchState({activeStudio:'code',activeFile:'',files:{},openFiles:[]});
 });
+test('approved vector replace shows no second dialog (commit passes confirmed)',async()=>{
+ dirtyVector();let dialogs=0;const g=globalThis as {window?:{confirm:()=>boolean}};const prev=g.window;g.window={...(prev??{}),confirm:()=>{dialogs++;return false;}} as never;
+ installConfirmAction(async()=>true);
+ try{const r=await openIncoming([{name:'n.svg',text:SVG,requestId:'R',ordinal:0}]);
+  assert.equal(r.outcomes[0].status,'opened');assert.equal(dialogs,0);assert.equal(getVectorSession().name,'n.svg');}
+ finally{g.window=prev as never;installConfirmAction(null);resetVectorSession();}
+});
