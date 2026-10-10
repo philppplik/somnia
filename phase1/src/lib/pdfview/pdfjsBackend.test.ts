@@ -34,3 +34,13 @@ test('real pdf.js: garbage with a PDF header maps to invalid', async () => {
   await assert.rejects(loadPdf(pdfjsBackend, new TextEncoder().encode('%PDF-1.4\nnot really')), (e: { code: string }) => e.code === 'invalid');
 });
 test('abort during deferred library import never opens an orphan worker',async()=>{let resolve!:(lib:never)=>void;let calls=0;const backend=createPdfjsBackend(undefined,()=>new Promise(r=>{resolve=r;}));const ac=new AbortController();const opened=backend.open(tinyPdf(1),{signal:ac.signal});ac.abort();resolve({getDocument:()=>{calls++;throw Error('should never be called');},GlobalWorkerOptions:{}} as never);await assert.rejects(opened,(e:{code:string})=>e.code==='aborted');assert.equal(calls,0);});
+test('bundled asset urls are passed to getDocument',async()=>{
+ let seen:Record<string,unknown>|null=null;
+ const fakeDoc={numPages:0,getPage:()=>Promise.reject(new Error('no pages')),destroy:()=>Promise.resolve()};
+ const lib={getDocument:(p:Record<string,unknown>)=>{seen=p;return {promise:Promise.resolve(fakeDoc),destroy:()=>Promise.resolve()};},GlobalWorkerOptions:{}} as never;
+ const backend=createPdfjsBackend(undefined,()=>Promise.resolve(lib),{standardFontDataUrl:'https://x/pdfjs/standard_fonts/',cMapUrl:'https://x/pdfjs/cmaps/',wasmUrl:'https://x/pdfjs/wasm/',iccUrl:'https://x/pdfjs/iccs/'});
+ await backend.open(tinyPdf(1));
+ assert.equal(seen!.standardFontDataUrl,'https://x/pdfjs/standard_fonts/');
+ assert.equal(seen!.cMapUrl,'https://x/pdfjs/cmaps/');assert.equal(seen!.cMapPacked,true);
+ assert.equal(seen!.wasmUrl,'https://x/pdfjs/wasm/');assert.equal(seen!.iccUrl,'https://x/pdfjs/iccs/');
+});

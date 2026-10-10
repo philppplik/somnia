@@ -5,7 +5,17 @@ type PdfJs = typeof import('pdfjs-dist');
  * `workerSrc` is the URL of pdf.js's worker module. The browser entry (pdfjsBrowser.ts) supplies the
  * bundler URL; without it (Node tests) pdf.js falls back to its own in-process fake worker.
  */
-export function createPdfjsBackend(workerSrc?: string, importLib: () => Promise<PdfJs> = () => import('pdfjs-dist')): PdfBackend {
+export interface PdfjsAssetUrls {
+  /** Bundled standard_fonts/ for PDFs that reference the non-embedded base-14 fonts. */
+  standardFontDataUrl?: string;
+  /** Bundled cmaps/ for CJK text extraction and rendering. */
+  cMapUrl?: string;
+  /** Bundled wasm/ image decoders (JBIG2, OpenJPEG, qcms). */
+  wasmUrl?: string;
+  /** Bundled iccs/ color profiles. */
+  iccUrl?: string;
+}
+export function createPdfjsBackend(workerSrc?: string, importLib: () => Promise<PdfJs> = () => import('pdfjs-dist'), assets: PdfjsAssetUrls = {}): PdfBackend {
   let lib: Promise<PdfJs> | null = null;
   const loadLib = (): Promise<PdfJs> => {
     lib ??= importLib().then(m => {
@@ -22,6 +32,10 @@ export function createPdfjsBackend(workerSrc?: string, importLib: () => Promise<
     const task = pdfjs.getDocument({
       data: data.slice(), password: opts?.password,
       stopAtErrors: false,
+      standardFontDataUrl: assets.standardFontDataUrl,
+      cMapUrl: assets.cMapUrl, cMapPacked: true,
+      wasmUrl: assets.wasmUrl,
+      iccUrl: assets.iccUrl,
     });
     const onAbort = () => { void task.destroy(); };
     opts?.signal?.addEventListener('abort', onAbort, { once: true });
