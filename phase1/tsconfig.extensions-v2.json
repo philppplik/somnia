@@ -10,6 +10,12 @@
     "src/lib/extensions/manifestV2.ts",
     "src/lib/extensions/packageV2.ts",
     "src/lib/extensions/manifestV2.test.ts",
-    "src/lib/extensions/packageV2.test.ts"
+    "src/lib/extensions/packageV2.test.ts",
+    "src/lib/extensions/securityPolicy.ts",
+    "src/lib/extensions/permissionBroker.ts",
+    "src/lib/extensions/securityServices.ts",
+    "src/lib/extensions/permissionBroker.test.ts",
+    "src/lib/extensions/secretSlots.ts",
+    "src/lib/extensions/secretSlots.test.ts"
   ]
 }

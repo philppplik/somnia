@@ -1,3 +1,4 @@
+import {extensionsRestricted} from './restrictedMode';
 import {validateManifest} from './manifest';
 import type {ExtensionManifest} from './types';
 const notify=()=>window.dispatchEvent(new Event('somnia:extensions-changed'));
@@ -17,7 +18,7 @@ const OFF='somnia.extensions.enabled.v1';
 /** Extensions are off until the user switches them on (ADR-003). Only ids in this list run. */
 export function enabledIds():string[]{try{const raw=JSON.parse(localStorage.getItem(OFF)||'[]');return Array.isArray(raw)?raw.filter((x):x is string=>typeof x==='string'):[];}catch{return[];}}
 export function setExtensionEnabled(id:string,on:boolean){const next=enabledIds().filter(x=>x!==id);if(on)next.push(id);localStorage.setItem(OFF,JSON.stringify(next));notify();}
-export const loadActiveExtensions=()=>{const on=enabledIds();return loadExtensions().filter(x=>on.includes(x.id)).map(effectiveManifest);};
+export const loadActiveExtensions=()=>{if(extensionsRestricted(localStorage))return [];const on=enabledIds();return loadExtensions().filter(x=>on.includes(x.id)).map(effectiveManifest);};
 const REV='somnia.extensions.revoked.v1';
 /** Permissions the user switched off after install, per extension id. Revoked permissions are removed from the manifest before it runs. */
 export function revokedPermissions():Record<string,string[]>{try{const v=JSON.parse(localStorage.getItem(REV)||'{}');return v&&typeof v==='object'&&!Array.isArray(v)?v:{};}catch{return{};}}

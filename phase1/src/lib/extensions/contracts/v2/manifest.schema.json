@@ -565,6 +565,168 @@
       "minLength": 1,
       "maxLength": 180,
       "pattern": "^(?!/)(?!.*\\\\)(?!.*(?:^|/)\\.\\.?(?:/|$))[^\\u0000-\\u001f]+$"
+    },
+    "security": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "tier": {
+          "enum": [
+            "A",
+            "B"
+          ]
+        },
+        "fs": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "read": {
+              "enum": [
+                "none",
+                "project",
+                "ask"
+              ]
+            },
+            "write": {
+              "enum": [
+                "none",
+                "project",
+                "ask"
+              ]
+            }
+          },
+          "required": [
+            "read",
+            "write"
+          ]
+        },
+        "network": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "host": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 253,
+                "pattern": "^[a-z0-9]+(?:[.-][a-z0-9]+)*$"
+              },
+              "paths": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 512
+                },
+                "uniqueItems": true,
+                "maxItems": 64
+              },
+              "reason": {
+                "type": "string",
+                "minLength": 20,
+                "maxLength": 280,
+                "pattern": "^[^<>\\u0000-\\u001f\\u007f]+$"
+              }
+            },
+            "required": [
+              "host",
+              "reason"
+            ]
+          },
+          "uniqueItems": true,
+          "maxItems": 64
+        },
+        "secrets": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[A-Za-z][A-Za-z0-9_-]{0,63}$"
+          },
+          "uniqueItems": true,
+          "maxItems": 32
+        },
+        "inject": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "secret": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_-]{0,63}$"
+              },
+              "host": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 253,
+                "pattern": "^[a-z0-9]+(?:[.-][a-z0-9]+)*$"
+              },
+              "header": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9-]{0,63}$"
+              },
+              "prefix": {
+                "type": "string",
+                "maxLength": 100,
+                "pattern": "^[^\\u0000-\\u001f\\u007f]*$"
+              }
+            },
+            "required": [
+              "secret",
+              "host",
+              "header"
+            ]
+          },
+          "uniqueItems": true,
+          "maxItems": 32
+        },
+        "agent": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "models": {
+              "type": "array",
+              "items": {
+                "const": "host-default"
+              },
+              "minItems": 1,
+              "maxItems": 1
+            },
+            "reason": {
+              "type": "string",
+              "minLength": 20,
+              "maxLength": 280,
+              "pattern": "^[^<>\\u0000-\\u001f\\u007f]+$"
+            }
+          },
+          "required": [
+            "models",
+            "reason"
+          ]
+        },
+        "clipboardRead": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "reason": {
+              "type": "string",
+              "minLength": 20,
+              "maxLength": 280,
+              "pattern": "^[^<>\\u0000-\\u001f\\u007f]+$"
+            }
+          },
+          "required": [
+            "reason"
+          ]
+        },
+        "clipboardWrite": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "tier"
+      ]
     }
   },
   "required": [

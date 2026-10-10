@@ -3,6 +3,7 @@ import {parse as parseToml} from 'smol-toml';
 import {Range, satisfies, valid} from 'semver';
 import parseSpdx from 'spdx-expression-parse';
 import schema from './contracts/v2/manifest.schema.json';
+import {validHost,validNetworkPath,type ExtensionSecurity} from './securityPolicy';
 
 export const MANIFEST_V2_FILENAME = 'somnia-extension.toml';
 export const PACKAGE_V2_SUFFIX = '.somniax';
@@ -12,7 +13,7 @@ export interface ExtensionDiagnostic {code: ExtensionDiagnosticCode; path: strin
 export type ValidationResult<T> = {ok:true; manifest:T} | {ok:false; errors:ExtensionDiagnostic[]};
 export interface ContributionV2 {id:string; path?:string; icon?:string; when?:string; [key:string]:unknown}
 export interface ManifestV2 {
-  manifestVersion:2; id:string; publisher:string; name:string; version:string; description:string; license:string;
+  security?:ExtensionSecurity; manifestVersion:2; id:string; publisher:string; name:string; version:string; description:string; license:string;
   engines:{somnia:string; api:string}; runtime:{type:'declarative'|'js'|'wasm'; entry?:string; abi?:string};
   activationEvents:string[]; permissions:string[];
   capabilities:{untrustedWorkspaces:{supported:'supported'|'unsupported'|'limited'; description?:string; allowedPermissions?:string[]}; virtualWorkspaces:{supported:boolean}};
@@ -146,6 +147,22 @@ export function validateManifestV2(input:unknown,options:ManifestValidationOptio
       if(!m.permissions.includes('project.read')||glob.length>128||!isSafePackagePath(glob)||/[{}!()[\]]/.test(glob)) fail(p,'Workspace glob requires project.read and a safe bounded glob.');
     }
     if(options.lane==='store'&&event==='*') fail(p,'Eager activation is not allowed in the Store lane.');
+  }
+  if(m.security) {
+    const security=m.security;
+    if(options.lane==='store' && security.tier==='B') fail('/security/tier','Tier B packages require manual .somniax installation and Developer Mode.','SOM-EXT-010');
+    const seenHosts=new Set<string>();
+    for(const [i,scope] of (security.network??[]).entries()) {
+      if(!validHost(scope.host)||seenHosts.has(scope.host)) fail(`/security/network/${i}/host`,'Expected a unique exact lowercase DNS host.','SOM-EXT-010');
+      seenHosts.add(scope.host);
+      for(const [j,path] of (scope.paths??[]).entries()) if(!validNetworkPath(path)) fail(`/security/network/${i}/paths/${j}`,'Expected a safe absolute path prefix with optional trailing star.','SOM-EXT-010');
+    }
+    const injected=new Set<string>();
+    for(const [i,injection] of (security.inject??[]).entries()) {
+      const key=injection.host+':'+injection.header.toLowerCase();
+      if(!security.secrets?.includes(injection.secret)||!seenHosts.has(injection.host)||injected.has(key)||['host','connection','content-length','transfer-encoding','cookie','proxy-authorization'].includes(injection.header.toLowerCase())) fail(`/security/inject/${i}`,'Injection requires a declared secret, approved host and unique safe header.','SOM-EXT-010');
+      injected.add(key);
+    }
   }
   const untrusted=m.capabilities.untrustedWorkspaces;
   if(untrusted.allowedPermissions?.some(p=>!m.permissions.includes(p))) fail('/capabilities/untrustedWorkspaces/allowedPermissions','Limited permissions must be a subset of declared permissions.');
