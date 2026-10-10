@@ -29,6 +29,7 @@ use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 use std::time::Duration;
 
+pub mod bridge;
 pub mod net;
 pub mod pull;
 pub mod push;
