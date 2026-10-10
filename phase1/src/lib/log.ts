@@ -10,7 +10,7 @@ const LEVELS:LogLevel[]=['debug','info','warn','error'];
 const BUFFER_MAX=300,MAX_MESSAGE=4000,SENSITIVE_KEY=/key|token|secret|password|passwd|authorization|credential|cookie/i;
 const TOKEN_PREFIX=/\b(?:sk-[A-Za-z0-9_-]{8,}|gh[pousr]_[A-Za-z0-9]{12,}|github_pat_[A-Za-z0-9_]{12,}|xox[a-z]-[A-Za-z0-9-]{8,}|AIza[A-Za-z0-9_-]{20,}|glpat-[A-Za-z0-9_-]{10,})/g;
 const BEARER=/(\bbearer\s+)[^\s"',;]+/gi;
-const KEY_VALUE=/([\w-]*(?:key|token|secret|password|passwd|authorization|credential)[\w-]*["']?\s*[:=]\s*["']?)(?!\/\/)[^\s"',;&]+/gi;
+const KEY_VALUE=/([\w-]*(?:key|token|secret|password|passwd|authorization|credential|cookie)[\w-]*["']?\s*[:=]\s*["']?)(?!\/\/)[^\s"',;&]+/gi;
 /** Masks secrets in free text. */
 export function redactText(input:string):string{return input.replace(TOKEN_PREFIX,'[redacted]').replace(BEARER,'$1[redacted]').replace(KEY_VALUE,'$1[redacted]');}
 const clip=(s:string,n=MAX_MESSAGE)=>s.length>n?s.slice(0,n)+'...[truncated]':s;
@@ -79,8 +79,11 @@ export function versionInfo():string{
 /** Version header plus the latest log lines. Secrets are masked again here in case an older file predates a rule. */
 export async function buildErrorReport(lines=150):Promise<string>{
  let body='';
- if(isTauri()){try{body=await invoke<string>('log_tail',{lines});}catch(e){body=`(log file unavailable: ${describeError(e)})\n`;}}
- if(!body)body=buffer.slice(-lines).map(e=>JSON.stringify(e)).join('\n');
+ let tailFailed=false;
+ if(isTauri()){try{body=await invoke<string>('log_tail',{lines});}catch(e){body=`(log file unavailable: ${describeError(e)})\n`;tailFailed=true;}}
+ // Frontend lines normally reach the file via log_write, so only fall back to the ring buffer when the tail failed or is empty.
+ const ring=buffer.slice(-lines).map(e=>JSON.stringify(e)).join('\n');
+ if(!body)body=ring;else if(tailFailed)body+=ring;
  return redactText(`${versionInfo()}\nCreated ${new Date().toISOString()}\n\n--- last ${lines} log lines ---\n${body}\n`);
 }
 /** Puts the error report on the clipboard. Returns false (and says so) when the clipboard is not available. */

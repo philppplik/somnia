@@ -39,3 +39,11 @@ test('global handlers log unhandled errors and rejections once installed',()=>{
  const m=recentLog().map(e=>e.source+':'+e.message).join('|');
  assert.match(m,/frontend\.rejection:.*async boom/);assert.match(m,/frontend\.unhandled:.*sync boom/);
 });
+test('cookie and passwd values are masked in free text and object keys',()=>{
+ assert.doesNotMatch(redactText('set-cookie: session=abc123def456ghi789'),/abc123def456/);
+ assert.doesNotMatch(redactText('cookie=abc123def456ghi789'),/abc123def456/);
+ assert.doesNotMatch(redactText('passwd: sup3rsecretvalue'),/sup3rsecret/);
+ const v=redactValue({sessionCookie:'abc123def456ghi789',passwd:'hunter2hunter2'}) as Record<string,unknown>;
+ assert.equal(v.sessionCookie,'[redacted]');
+ assert.equal(v.passwd,'[redacted]');
+});

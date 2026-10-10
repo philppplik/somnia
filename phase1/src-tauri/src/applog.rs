@@ -27,7 +27,7 @@ static GLOBAL: OnceLock<Logger> = OnceLock::new();
 /// Masks API keys, tokens and passwords. Applied to every message and context value before it is written.
 pub fn redact(input: &str) -> String {
     const PREFIXES: [&str; 8] = ["sk-", "ghp_", "gho_", "ghs_", "github_pat_", "xox", "AIza", "glpat-"];
-    const KEYS: [&str; 8] = ["key", "token", "secret", "password", "passwd", "authorization", "credential", "bearer"];
+    const KEYS: [&str; 9] = ["key", "token", "secret", "password", "passwd", "authorization", "credential", "bearer", "cookie"];
     let is_sep = |c: char| c.is_whitespace() || matches!(c, '"' | '\'' | ',' | ';' | '&' | '(' | ')' | '<' | '>' | '{' | '}' | '[' | ']');
     let mut out = String::with_capacity(input.len());
     let mut mask_next = false;
@@ -90,7 +90,7 @@ fn redact_value(v: &Value) -> Value {
             m.iter()
                 .map(|(k, x)| {
                     let kl = k.to_ascii_lowercase();
-                    let sensitive = ["key", "token", "secret", "password", "authorization", "credential"].iter().any(|s| kl.contains(s));
+                    let sensitive = ["key", "token", "secret", "password", "passwd", "authorization", "credential", "cookie"].iter().any(|s| kl.contains(s));
                     (k.clone(), if sensitive { Value::String("[redacted]".into()) } else { redact_value(x) })
                 })
                 .collect(),
@@ -246,6 +246,8 @@ mod tests {
         assert!(!redact("Authorization: Bearer abc123secretvalue").contains("abc123secretvalue"));
         assert!(!redact("https://x.test/?api_key=hunter2hunter2&a=1").contains("hunter2"));
         assert!(redact("https://x.test/?api_key=hunter2hunter2&a=1").contains("a=1"));
+        assert!(!redact("set-cookie: session=abc123def456ghi789").contains("abc123def456"));
+        assert!(!redact("passwd: sup3rsecretvalue").contains("sup3rsecret"));
         assert!(!redact("token: ghp_abcdefghijklmnop1234").contains("abcdefghij"));
         assert_eq!(redact("plain message about index.html"), "plain message about index.html");
         assert_eq!(redact("https://github.com/x/y"), "https://github.com/x/y");
