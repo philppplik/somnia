@@ -124,6 +124,7 @@
     "allow-git-combine-resolve",
     "allow-git-combine-finish",
     "allow-git-combine-abort",
+    "allow-read-open-bytes",
     "core:window:allow-set-always-on-top",
     "core:window:allow-set-decorations"
   ]
