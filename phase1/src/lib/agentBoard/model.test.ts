@@ -1,0 +1,20 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {fixtureTask,createBoardFixture} from './fixtures';
+import {bindingFor,reviewIsCurrent,verificationIsCurrent,assertRequest,requestFor,columnFor} from './model';
+import {exportPreview} from './export';
+import {BOARD_CATALOGUES} from './i18n';
+import {registerAgentBoardPort,getAgentBoardPort} from './registry';
+test('review and verification bind exact content and invalidate on content-only edits',()=>{
+ const f=createBoardFixture(),t=f.port.getSnapshot().tasks.find(t=>t.status==='done')!,b=bindingFor(t,f.port.getSnapshot())!;
+ assert.equal(reviewIsCurrent(t,b),true);assert.equal(verificationIsCurrent(t,b),true);
+ f.stale(t.taskId);const newer=bindingFor(t,f.port.getSnapshot());assert.equal(reviewIsCurrent(t,newer),false);assert.equal(verificationIsCurrent(t,newer),false);
+ assert.throws(()=>assertRequest(f.port.getSnapshot(),requestFor(t,b)),/stale/);
+});
+test('generation and HEAD changes make evidence unavailable',()=>{const f=createBoardFixture(),s=f.port.getSnapshot(),t=s.tasks[0];assert.equal(bindingFor({...t,workspaceGeneration:2},s),null);assert.equal(bindingFor({...t,headSha:'other'},s),null);assert.equal(bindingFor(t,{...s,contents:{}}),null);});
+test('wrong repo/worktree and external producer cannot reuse approval',()=>{const f=createBoardFixture(),s=f.port.getSnapshot(),t=s.tasks[0],r=requestFor(t,bindingFor(t,s)!);assert.throws(()=>assertRequest(s,{...r,repoId:'other'}));assert.throws(()=>assertRequest(s,{...r,worktreeId:'other'}));assert.throws(()=>assertRequest({...s,tasks:[{...t,producer:{...t.producer,kind:'external'}}]},r));});
+test('private export excludes all free text, paths, logs, credentials, URLs and unknown fields',()=>{const json=exportPreview({taskId:'task-1',status:'done',headSha:'a'.repeat(40),contentHash:'b'.repeat(64),title:'sk-secret',transcript:'raw',toolLog:'helper stdout',env:'TOKEN=secret',path:'/private/a',url:'https://host/?token=secret',apiKey:'secret'});assert.match(json,/task-1/);assert.doesNotMatch(json,/secret|transcript|toolLog|TOKEN|private|host/);assert.throws(()=>exportPreview({taskId:'../bad'}));});
+test('all five locale keysets and placeholders match, no em dash',()=>{const en=Object.keys(BOARD_CATALOGUES.en).sort();for(const cat of Object.values(BOARD_CATALOGUES)){assert.deepEqual(Object.keys(cat).sort(),en);for(const k of en){const value=(cat as Record<string,string>)[k];assert.ok(value);assert.ok(!value.includes('\u2014'));assert.deepEqual(value.match(/\{\w+\}/g), (BOARD_CATALOGUES.en as Record<string,string>)[k].match(/\{\w+\}/g));}}});
+test('status mapping preserves explicit waiting/cancelled labels',()=>{for(const status of ['queued','preparing','running','waiting-input','review','done','failed','cancelled'] as const)assert.ok(['queue','running','review','done','failed'].includes(columnFor(status)));assert.equal(columnFor('waiting-input'),'review');assert.equal(columnFor('cancelled'),'failed');});
+test('registry cleanup cannot remove a replacement engine',()=>{const a=createBoardFixture(),b=createBoardFixture(),drop=registerAgentBoardPort(a.port),dropB=registerAgentBoardPort(b.port);drop();assert.equal(getAgentBoardPort(),b.port);dropB();assert.equal(getAgentBoardPort(),null);});
+test('fixture is built-in, explicit default-off auto-commit',()=>{assert.equal(fixtureTask().autoCommit,false);assert.equal(fixtureTask().producer.kind,'builtin');});
