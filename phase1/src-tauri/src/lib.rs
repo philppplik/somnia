@@ -44,3 +44,11 @@ pub mod extension_activity;
 pub mod extension_activity_commands;
 
 pub mod extension_block_state;
+
+pub mod diagnostics_types;
+pub mod incidents;
+pub mod diagnostics_zip;
+pub mod panic_report;
+
+#[cfg(feature = "desktop")]
+pub mod diagnostics_commands;

@@ -79,16 +79,8 @@ export function versionInfo():string{
  const nav=typeof navigator!=='undefined'?navigator.userAgent:'node';
  return `Somnia ${release} (app ${app}) · ${isTauri()?'desktop':'web'} · ${nav}`;
 }
-/** Version header plus the latest log lines. Secrets are masked again here in case an older file predates a rule. */
-export async function buildErrorReport(lines=150):Promise<string>{
- let body='';
- let tailFailed=false;
- if(isTauri()){try{body=await invoke<string>('log_tail',{lines});}catch(e){body=`(log file unavailable: ${describeError(e)})\n`;tailFailed=true;}}
- // Frontend lines normally reach the file via log_write, so only fall back to the ring buffer when the tail failed or is empty.
- const ring=buffer.slice(-lines).map(e=>JSON.stringify(e)).join('\n');
- if(!body)body=ring;else if(tailFailed)body+=ring;
- return redactText(`${versionInfo()}\nCreated ${new Date().toISOString()}\n\n--- last ${lines} log lines ---\n${body}\n`);
-}
+import { buildErrorReport } from './errorReport';
+export { buildErrorReport } from './errorReport';
 /** Puts the error report on the clipboard. Returns false (and says so) when the clipboard is not available. */
 export async function copyErrorReport():Promise<boolean>{
  try{const text=await buildErrorReport();await navigator.clipboard.writeText(text);log('info','log','Error report copied');noticeSink?.('Error report copied. Paste it into a message to send it.');return true;}

@@ -27,15 +27,28 @@ export interface AckReply { accepted: number[]; retryTokens: RetryToken[] }
 export interface IntakePolicy { allowUnc: boolean }
 
 // ---- D3 diagnostics ZIP + crash/incident store (D1 errata 4/5) ----
-// DiagnosticsSelection / DiagnosticSnapshot are owned by D3 (diagnostics UI). The shapes below are the
-// minimum this boundary relies on; D3 may narrow them by replacing these aliases.
-export interface DiagnosticsSelection { [toggle: string]: boolean }
-export interface DiagnosticFilePreview { name: string; bytes: number; text: string }
+// D1-owned native diagnostics DTOs; canonical save tag is kind.
+export interface DiagnosticsSelection {
+  incidentIds: readonly string[];
+  includeLogs: boolean;
+  includeIncidentDetails: boolean;
+  includeCapabilityHealth: boolean;
+}
+export interface DiagnosticFilePreview {
+  name: 'manifest.json'|'incidents.jsonl'|'logs.jsonl'|'swallow-counters.json'|'health.json';
+  utf8Bytes: number;
+  text: string;
+}
 export interface DiagnosticSnapshot {
   snapshotId: string;
-  files: DiagnosticFilePreview[];
+  createdAt: string;
+  selection: DiagnosticsSelection;
+  files: readonly DiagnosticFilePreview[];
   reportText: string;
-  omissions: string[];
+  totalUncompressedBytes: number;
+  expiresAt: string;
+  health: 'complete'|'partial'|'unavailable';
+  omissions: readonly string[];
 }
 export type SaveOutcome = { kind: 'saved'; bytes: number } | { kind: 'cancelled' };
 export type IncidentKind = 'native-panic' | 'frontend-fatal' | 'unclean-exit';
@@ -45,12 +58,12 @@ export interface CrashMeta {
   occurredAt: string;
   errorId: string;
   reviewedAt: string | null;
-  build: Record<string, unknown>;
-  recovery: Array<Record<string, unknown>>;
+  build: import('./diagnostics/ids').BuildIdentity;
+  recovery: import('./diagnostics/ids').RecoveryEvidence[];
   artifacts: Array<{ kind: 'incident' | 'log'; bytes: number; available: boolean }>;
 }
-/** Allowlist DTO for a renderer-side fatal (boot reporter / error boundary). */
-export interface FrontendFatalEntry { errorId: string; ts: string; message: string; boundary?: string; corr?: string }
+/** Fatal export-safe event; no free-text exception payload is accepted. */
+export type FrontendFatalEntry = import('./diagnostics/ids').SafeLogEvent & {fatal:true};
 
 type Contract<A, R> = { args: A; result: R };
 

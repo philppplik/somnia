@@ -4443,6 +4443,7 @@ dependencies = [
  "tokio-tungstenite",
  "uuid",
  "window-vibrancy",
+ "zip",
 ]
 
 [[package]]

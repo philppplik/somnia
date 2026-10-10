@@ -1,0 +1,18 @@
+{
+  "extends": "./tsconfig.json",
+  "include": [
+    "src/lib/errorReport.ts",
+    "src/lib/errorReport.test.ts",
+    "src/lib/log.ts",
+    "src/lib/log.types.ts",
+    "src/lib/diagnostics/ids.ts",
+    "src/generated/errorIds.ts",
+    "src/vite-env.d.ts",
+    "src/lib/commandContracts.ts"
+  ],
+  "compilerOptions": {
+    "types": [
+      "node"
+    ]
+  }
+}

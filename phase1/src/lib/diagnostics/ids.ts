@@ -23,3 +23,9 @@ export interface ReportedFailure{
  corr?:string;
  ordinal?:number;
 }
+
+/** Recovery producer proof only; absence of that producer always stays unknown. */
+export type RecoveryEvidence =
+ | {kind:'unknown'}
+ | {kind:'draft-present';count:number;newestAgeSec:number;verified:boolean}
+ | {kind:'incident-scoped';scope:string;checkpointAt:string;session:string;snapshotCorrelated:true};

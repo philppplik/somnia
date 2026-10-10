@@ -1,6 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {redactText,redactValue,describeError,log,reportError,recentLog,clearLogBuffer,setNoticeSink,buildErrorReport,installGlobalErrorHandlers} from './log';
+import {clearRing, logEvent} from './log';
+import {ERROR_IDS} from '../generated/errorIds';
 import {ProviderError} from './agent/errors';
 test('secrets are masked in text',()=>{
  for(const s of ['failed sk-or-v1-abcdef1234567890 now','Authorization: Bearer abc123def456ghi','https://x.test/v1?api_key=hunter2hunter2&a=1','{"apiKey":"zzzzzzzz1234"}','token=ghp_abcdefghijklmnop1234','password: s3cretvalue'])
@@ -27,10 +29,10 @@ test('ring buffer, dedupe and notify hint',()=>{
  const last=recentLog().at(-1)!;assert.equal(last.level,'error');assert.equal(last.source,'ext.load');assert.match(last.message,/module x failed/);assert.ok(Date.parse(last.ts));
  setNoticeSink(null);
 });
-test('error report has version header and redacted log lines',async()=>{
- clearLogBuffer();log('warn','t','oops token=abcdefabcdef123456');
+test('error report exports v2 technical data, never legacy free text',async()=>{
+ clearRing();logEvent(ERROR_IDS.DOC_002,{fatal:true,cause:'poison-document.html token=abcdefabcdef123456'});
  const r=await buildErrorReport();
- assert.match(r,/^Somnia /);assert.match(r,/oops/);assert.doesNotMatch(r,/abcdefabcdef123456/);
+ assert.match(r,/^Somnia /);assert.match(r,/SOM-DOC-002/);assert.doesNotMatch(r,/poison-document|abcdefabcdef123456/);
 });
 test('global handlers log unhandled errors and rejections once installed',()=>{
  clearLogBuffer();const l:Record<string,(e:any)=>void>={};
