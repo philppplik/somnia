@@ -7,7 +7,9 @@ import {createPublicationBackend} from '../../lib/git/publication/types';
 import {getAdvanced,subscribeAdvanced} from './vocab';
 import {useSyncExternalStore} from 'react';
 import {VersionsPanel} from './VersionsPanel';
-import {createTauriGitBackend,getGitBackend} from './backend';
+import {createTauriGitBackend,getGitBackend,getGitRefsBackend} from './backend';
+import {createTauriRefsBackend,type GitRefsBackend} from '../../lib/git/refs/contract';
+import {ExplainTab} from './ExplainTab';
 import type {GitBackend} from '../../lib/git/types';
 import {HistoryHost} from './HistoryHost';
 import {CompareTab} from './CompareTab';
@@ -20,9 +22,14 @@ let tauri:GitBackend|null=null;
 export function resolveBackend():GitBackend|null{
  const set=getGitBackend();if(set)return set;
  if(!isTauri())return null;return tauri??=createTauriGitBackend(invoke);}
+let tauriRefs:GitRefsBackend|null=null;
+/** Ref-level reads (explain, snapshot compare, safety list): registered fake or the Tauri adapter. */
+export function resolveRefsBackend():GitRefsBackend|null{
+ const set=getGitRefsBackend();if(set)return set;
+ if(!isTauri())return null;return tauriRefs??=createTauriRefsBackend(invoke);}
 /** Sidebar entry: wires the app store (unsaved buffers, save command) into the panel. */
 export function VersionsHost(){
  const s=useAppStore();const unsaved=useMemo(()=>countUnsaved(s.files,getSavedFile),[s.files,s.isDirty,s.lastSavedAt]);
- const backend=resolveBackend();const advanced=useSyncExternalStore(subscribeAdvanced,getAdvanced,getAdvanced);
+ const backend=resolveBackend();const advanced=useSyncExternalStore(subscribeAdvanced,getAdvanced,getAdvanced);const refs=resolveRefsBackend();
  const publication=useMemo(()=>isTauri()?createPublicationBackend(invoke):null,[]);
- return <VersionsPanel publicationSlot={publication?<PublicationReview backend={publication} unsavedFiles={unsaved} advanced={advanced}/>:undefined} backend={backend} unsavedFiles={unsaved} onSaveFiles={async()=>{await executeCommand('project.save');}} historySlot={backend?<HistoryHost backend={backend}/>:undefined} variantsSlot={backend?go=>(<VariantsHost backend={backend} onSaveVersion={go}/>):undefined} compareSlot={backend?<CompareTab backend={backend}/>:undefined}/>;}
+ return <VersionsPanel publicationSlot={publication?<PublicationReview backend={publication} unsavedFiles={unsaved} advanced={advanced}/>:undefined} backend={backend} unsavedFiles={unsaved} onSaveFiles={async()=>{await executeCommand('project.save');}} historySlot={backend?<HistoryHost backend={backend} refs={refs??undefined}/>:undefined} explainSlot={backend&&refs?<ExplainTab backend={backend} refs={refs}/>:undefined} variantsSlot={backend?go=>(<VariantsHost backend={backend} onSaveVersion={go}/>):undefined} compareSlot={backend?<CompareTab backend={backend} refs={refs??undefined}/>:undefined}/>;}
