@@ -13,6 +13,13 @@ rl.once("line", async (line) => {
   if (p.includes("fail")) return out({ event: "failed", message: "engine exploded" });
   if (p.includes("ask")) return out({ event: "needs-input", reason: "which page?" });
   if (p.includes("noop")) return out({ event: "done", summary: "nothing to do", tokens: 1, cost: 0 });
+  if (p.includes("multihunk")) {
+    const f = path.join(task.cwd, "site", "big.txt");
+    const l = fs.readFileSync(f, "utf8").split("\n");
+    l[1] = "line 2 EDITED"; l[39] = "line 40 EDITED";
+    fs.writeFileSync(f, l.join("\n"));
+    return out({ event: "done", summary: "edited", tokens: 1, cost: 0 });
+  }
   fs.mkdirSync(path.join(task.cwd, "site"), { recursive: true });
   fs.writeFileSync(path.join(task.cwd, "site", "index.html"), "<h1>hi</h1>\n");
   if (p.includes("outside")) fs.writeFileSync(path.join(task.cwd, "stray.txt"), "x\n");

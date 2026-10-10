@@ -5,9 +5,11 @@ pub mod gitops;
 pub mod guard;
 pub mod protocol;
 pub mod record;
+pub mod review;
 pub mod runner;
 pub mod server;
 pub mod transport;
+pub mod tui_adapter;
 
 #[cfg(test)]
 mod tests {
