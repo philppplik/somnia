@@ -542,6 +542,14 @@ async fn choose_project(
         if backend.projects.len() >= 4 {
             return Err(AppError::Limit);
         }
+        // A folder cannot replace live single-file projects inside its tree (SOM-FS-006).
+        let canonical = path.canonicalize()?;
+        let access = build_project_access(backend);
+        let corr = format!("folder-open-{}", now_ms());
+        if let Err(e) = backend.intake.check_folder_open(&canonical, &access, &corr) {
+            crate::intake::commands::flush_events(&crate::applog::Global, &mut backend.intake, None);
+            return Err(AppError::Denied(e.message.to_owned()));
+        }
         let project = Project::open(&path, &recovery_base)?;
         let reply = ProjectReply {
             project_id: project.id.clone(),
@@ -581,6 +589,15 @@ async fn open_dropped_project(
             return Err(AppError::Limit);
         }
         let path = &paths[0];
+        if path.is_dir() {
+            let canonical = path.canonicalize()?;
+            let access = build_project_access(backend);
+            let corr = format!("folder-open-{}", now_ms());
+            if let Err(e) = backend.intake.check_folder_open(&canonical, &access, &corr) {
+                crate::intake::commands::flush_events(&crate::applog::Global, &mut backend.intake, None);
+                return Err(AppError::Denied(e.message.to_owned()));
+            }
+        }
         let project = if path.is_dir() {
             Project::open(path, &recovery_base)?
         } else {
@@ -873,12 +890,46 @@ fn intake_dispatch(
 }
 
 type CmdResult<T> = std::result::Result<T, crate::app_command_error::AppCommandError>;
+/// Live registry for intake Claim/Retry: every open project as seen by the host, built fresh
+/// under the Backend mutex. Single-file projects match by native identity; folder projects by
+/// canonical root plus the currently visible file set (joined to root and canonicalized).
+fn build_project_access(backend: &Backend) -> Vec<crate::intake::queue::ProjectAccess> {
+    let mut access = Vec::with_capacity(backend.projects.len());
+    for project in backend.projects.values() {
+        match (&project.identity, project.single_file_name()) {
+            (Some(identity), Some(name)) => {
+                access.push(crate::intake::queue::ProjectAccess::SingleFile {
+                    project_id: project.id.clone(),
+                    canonical_file: project.root_path().join(name),
+                    identity: identity.clone(),
+                });
+            }
+            (None, _) => {
+                let root = project.root_path().to_path_buf();
+                let visible_files = project
+                    .list_files()
+                    .unwrap_or_default()
+                    .into_iter()
+                    .filter_map(|rel| root.join(rel).canonicalize().ok())
+                    .collect();
+                access.push(crate::intake::queue::ProjectAccess::Folder {
+                    project_id: project.id.clone(),
+                    canonical_root: root,
+                    visible_files,
+                });
+            }
+            (Some(_), None) => {}
+        }
+    }
+    access
+}
 /// Run one intake command core under the Backend mutex on the blocking pool. Events are flushed
 /// once inside `execute`; the cmd wrapper keeps a nonempty incident_id and does not log again.
 async fn intake_cmd<T: Send + 'static>(
     name: &'static str,
     window: &WebviewWindow,
     state: &Shared,
+    refresh_access: bool,
     run: impl FnOnce(&str, &mut crate::intake::queue::OpenQueue, u64) -> std::result::Result<T, crate::intake::queue::IntakeError>
         + Send
         + 'static,
@@ -891,6 +942,11 @@ async fn intake_cmd<T: Send + 'static>(
             let mut backend = state
                 .lock()
                 .map_err(|e| crate::app_command_error::AppCommandError::from(AppError::Io(e.to_string())))?;
+            // Claim/Retry must see the live project registry; rebuild it under the same lock.
+            if refresh_access {
+                let access = build_project_access(&backend);
+                backend.intake.refresh_project_access(&access);
+            }
             crate::intake::commands::execute(&mut backend.intake, |q| run(&label, q, now_ms()))
         })
         .await
@@ -900,35 +956,48 @@ async fn intake_cmd<T: Send + 'static>(
 }
 #[tauri::command]
 async fn drain_open_requests(window: WebviewWindow, state: State<'_, Shared>) -> CmdResult<Vec<crate::intake::queue::OpenRequestSummary>> {
-    intake_cmd("drain_open_requests", &window, state.inner(), |w, q, now| crate::intake::commands::drain_open_requests(w, q, now)).await
+    let app = window.app_handle().clone();
+    let (summaries, resets, count) = intake_cmd("drain_open_requests", &window, state.inner(), false, |w, q, now| {
+        // Maintenance runs before the core (which gates, resets again as a no-op, then drains) so
+        // the adapter can see whether a stale claim was requeued and notify the renderer once.
+        let resets = if w == "main" { q.reset_stale(now).len() } else { 0 };
+        crate::intake::commands::drain_open_requests(w, q, now).map(|s| (s, resets, q.pending_count()))
+    }).await?;
+    if resets > 0 {
+        crate::ignore!(
+            crate::ignore::IgnoreReason::BestEffortWindow,
+            app.emit_to("main", "somnia://open-requests", serde_json::json!({ "count": count }))
+        );
+    }
+    Ok(summaries)
 }
 #[tauri::command]
 async fn claim_open_request(window: WebviewWindow, state: State<'_, Shared>, request_id: String) -> CmdResult<crate::intake::queue::ClaimReply> {
-    intake_cmd("claim_open_request", &window, state.inner(), move |w, q, now| crate::intake::commands::claim_open_request(w, q, &request_id, now)).await
+    intake_cmd("claim_open_request", &window, state.inner(), true, move |w, q, now| crate::intake::commands::claim_open_request(w, q, &request_id, now)).await
 }
 #[tauri::command]
 async fn read_by_grant(window: WebviewWindow, state: State<'_, Shared>, grant: String) -> CmdResult<crate::intake::queue::GrantRead> {
-    intake_cmd("read_by_grant", &window, state.inner(), move |w, q, now| crate::intake::commands::read_by_grant(w, q, &grant, now)).await
+    intake_cmd("read_by_grant", &window, state.inner(), false, move |w, q, now| crate::intake::commands::read_by_grant(w, q, &grant, now)).await
 }
 #[tauri::command]
 async fn ack_open_request(window: WebviewWindow, state: State<'_, Shared>, request_id: String, outcomes: Vec<crate::intake::queue::ItemOutcome>) -> CmdResult<crate::intake::queue::AckReply> {
-    intake_cmd("ack_open_request", &window, state.inner(), move |w, q, now| crate::intake::commands::ack_open_request(w, q, &request_id, outcomes, now)).await
+    intake_cmd("ack_open_request", &window, state.inner(), false, move |w, q, now| crate::intake::commands::ack_open_request(w, q, &request_id, outcomes, now)).await
 }
 #[tauri::command]
 async fn release_candidate(window: WebviewWindow, state: State<'_, Shared>, request_id: String) -> CmdResult<()> {
-    intake_cmd("release_candidate", &window, state.inner(), move |w, q, _| crate::intake::commands::release_candidate(w, q, &request_id)).await
+    intake_cmd("release_candidate", &window, state.inner(), false, move |w, q, _| crate::intake::commands::release_candidate(w, q, &request_id)).await
 }
 #[tauri::command]
 async fn retry_open_item(window: WebviewWindow, state: State<'_, Shared>, request_id: String, ordinal: u32, retry_token: String) -> CmdResult<crate::intake::queue::ClaimReply> {
-    intake_cmd("retry_open_item", &window, state.inner(), move |w, q, now| crate::intake::commands::retry_open_item(w, q, &request_id, ordinal, &retry_token, now)).await
+    intake_cmd("retry_open_item", &window, state.inner(), true, move |w, q, now| crate::intake::commands::retry_open_item(w, q, &request_id, ordinal, &retry_token, now)).await
 }
 #[tauri::command]
 async fn get_intake_policy(window: WebviewWindow, state: State<'_, Shared>) -> CmdResult<crate::intake::policy::IntakePolicy> {
-    intake_cmd("get_intake_policy", &window, state.inner(), |w, q, _| crate::intake::commands::get_intake_policy(w, q)).await
+    intake_cmd("get_intake_policy", &window, state.inner(), false, |w, q, _| crate::intake::commands::get_intake_policy(w, q)).await
 }
 #[tauri::command]
 async fn set_intake_policy(window: WebviewWindow, state: State<'_, Shared>, allow_unc: bool) -> CmdResult<()> {
-    intake_cmd("set_intake_policy", &window, state.inner(), move |w, q, _| crate::intake::commands::set_intake_policy(w, q, allow_unc)).await
+    intake_cmd("set_intake_policy", &window, state.inner(), false, move |w, q, _| crate::intake::commands::set_intake_policy(w, q, allow_unc)).await
 }
 #[tauri::command]
 async fn list_files(

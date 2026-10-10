@@ -181,6 +181,10 @@ impl Project {
     pub fn root_path(&self) -> &Path {
         &self.canonical_root
     }
+    /// Root-relative name of the single visible file, when this is a single-file project.
+    pub fn single_file_name(&self) -> Option<&str> {
+        self.only.as_deref()
+    }
     pub fn open_file(file: &Path, recovery_base: &Path) -> Result<Self> {
         let canonical = file.canonicalize()?;
         let metadata = fs::metadata(&canonical)?;
