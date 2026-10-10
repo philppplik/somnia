@@ -1,4 +1,5 @@
 import {CONSENT_CATALOGUES} from './extensions/consentLocales';
+import {STORE_CATALOGUES} from './extensions/storeLocales';
 import en from '../locales/en.json';
 import de from '../locales/de.json';
 import es from '../locales/es.json';
@@ -25,6 +26,7 @@ for (const [tag, extra] of Object.entries(VIDEO_CATALOGUES)) Object.assign(CATAL
 for (const [tag, extra] of Object.entries(VECTOR_CATALOGUES)) Object.assign(CATALOGUES[tag], extra);
 for (const [tag, extra] of Object.entries(DESIGN_CATALOGUES)) Object.assign(CATALOGUES[tag], extra);
 for (const [tag, extra] of Object.entries(CONSENT_CATALOGUES)) Object.assign(CATALOGUES[tag], extra);
+for (const [tag, extra] of Object.entries(STORE_CATALOGUES)) Object.assign(CATALOGUES[tag], extra);
 /** Native names for the language picker. */
 export const LOCALE_NAMES: Record<string, string> = {en:'English', de:'Deutsch', es:'Español', fr:'Français', 'pt-BR':'Português (Brasil)'};
 export const LOCALE_KEY = 'somnia.locale.v1';

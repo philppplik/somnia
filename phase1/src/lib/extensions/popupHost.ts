@@ -1,4 +1,5 @@
 import type {ActivityFilter,ActivityPage} from './securityActivity';
+import type {StoreHost} from './storeHost';
 import type {CandidateState,PopupExtension,SourceInfo} from './popupModel';
 
 export interface BrowseEntry {id:string; name:string; description:string; publisher:string; badge:{criterion:string}|null; permissionLabels:string[]; state:'available'|'installed'|'update-consent'; verified:boolean}
@@ -9,6 +10,8 @@ export interface UpdateDiff {version:string; added:string[]; blocked:boolean}
  * and rejects with an Error whose message is shown once, inline. None of these are exposed to extension RPC.
  */
 export interface ExtensionsPopupHost {
+  /** Verified Store surface. Absent until the signed catalog adapter is wired; the legacy browse list is used then. */
+  store?:StoreHost;
   list():Promise<PopupExtension[]>;
   setEnabled(id:string,on:boolean):Promise<void>;
   disableAll():Promise<void>;

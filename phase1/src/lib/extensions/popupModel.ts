@@ -3,7 +3,7 @@ import {securityOf} from './securityPolicy';
 import type {ActivityEvent,ActivityFilter,ActivityKind} from './securityActivity';
 
 /** View model for the Extensions popup. Host truth in, plain display data out. No React, no I/O. */
-export type PopupView='installed'|'browse'|'updates'|'activity'|'add'|'detail';
+export type PopupView='installed'|'browse'|'updates'|'activity'|'add'|'detail'|'store-detail';
 export type RuntimeStatus='running'|'disabled'|'crashed'|'blocked'|'update-consent';
 export type GrantKey='project.read'|'project.write'|'network'|'clipboard'|'folders'|'agent';
 export interface GrantRow {
