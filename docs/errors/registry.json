@@ -1,6 +1,6 @@
 {
  "schema": 1,
- "note": "SEED, severity fatal->error+fatal flag; expected/recoverable/since to be filled by D1-A",
+ "note": "SEED + expected/recoverable derived by rule (see docs below); since/test_ref/legacy_code still open. expected=true only for cancelled/user-input categories at info/debug severity; recoverable=true for non-fatal io, network, timeout, conflict, permission, user-input, limit, config, dependency. APP-011 stays expected:false, emissions override it.",
  "entries": [
   {
    "id": "SOM-APP-001",
@@ -10,7 +10,9 @@
    "default_severity": "error",
    "fatal": true,
    "status": "active",
-   "user_message_key": "err.app.001"
+   "user_message_key": "err.app.001",
+   "expected": false,
+   "recoverable": false
   },
   {
    "id": "SOM-APP-002",
@@ -20,7 +22,9 @@
    "default_severity": "error",
    "fatal": false,
    "status": "active",
-   "user_message_key": "err.app.002"
+   "user_message_key": "err.app.002",
+   "expected": false,
+   "recoverable": true
   },
   {
    "id": "SOM-APP-003",
@@ -30,7 +34,9 @@
    "default_severity": "debug",
    "fatal": false,
    "status": "deprecated",
-   "user_message_key": null
+   "user_message_key": null,
+   "expected": false,
+   "recoverable": false
   },
   {
    "id": "SOM-APP-004",
@@ -40,7 +46,9 @@
    "default_severity": "warn",
    "fatal": false,
    "status": "active",
-   "user_message_key": "err.app.004"
+   "user_message_key": "err.app.004",
+   "expected": false,
+   "recoverable": true
   },
   {
    "id": "SOM-APP-005",
@@ -50,7 +58,9 @@
    "default_severity": "warn",
    "fatal": false,
    "status": "active",
-   "user_message_key": "err.app.005"
+   "user_message_key": "err.app.005",
+   "expected": false,
+   "recoverable": true
   },
   {
    "id": "SOM-APP-006",
@@ -60,7 +70,9 @@
    "default_severity": "error",
    "fatal": false,
    "status": "active",
-   "user_message_key": "err.app.006"
+   "user_message_key": "err.app.006",
+   "expected": false,
+   "recoverable": true
   },
   {
    "id": "SOM-APP-007",
@@ -70,7 +82,9 @@
    "default_severity": "error",
    "fatal": false,
    "status": "active",
-   "user_message_key": "err.app.007"
+   "user_message_key": "err.app.007",
+   "expected": false,
+   "recoverable": false
   },
   {
    "id": "SOM-APP-008",
@@ -80,7 +94,9 @@
    "default_severity": "warn",
    "fatal": false,
    "status": "active",
-   "user_message_key": "err.app.008"
+   "user_message_key": "err.app.008",
+   "expected": false,
+   "recoverable": true
   },
   {
    "id": "SOM-APP-009",
@@ -90,7 +106,9 @@
    "default_severity": "error",
    "fatal": true,
    "status": "active",
-   "user_message_key": "err.app.009"
+   "user_message_key": "err.app.009",
+   "expected": false,
+   "recoverable": false
   },
   {
    "id": "SOM-APP-010",
@@ -100,7 +118,9 @@
    "default_severity": "warn",
    "fatal": false,
    "status": "active",
-   "user_message_key": "err.app.010"
+   "user_message_key": "err.app.010",
+   "expected": false,
+   "recoverable": false
   },
   {
    "id": "SOM-APP-011",
@@ -110,7 +130,9 @@
    "default_severity": "warn",
    "fatal": false,
    "status": "active",
-   "user_message_key": "err.app.011"
+   "user_message_key": "err.app.011",
+   "expected": false,
+   "recoverable": true
   },
   {
    "id": "SOM-APP-012",
@@ -120,7 +142,9 @@
    "default_severity": "warn",
    "fatal": false,
    "status": "active",
-   "user_message_key": "err.app.012"
+   "user_message_key": "err.app.012",
+   "expected": false,
+   "recoverable": false
   },
   {
    "id": "SOM-APP-013",
@@ -130,7 +154,9 @@
    "default_severity": "warn",
    "fatal": false,
    "status": "active",
-   "user_message_key": "err.app.013"
+   "user_message_key": "err.app.013",
+   "expected": false,
+   "recoverable": false
   },
   {
    "id": "SOM-APP-014",
@@ -140,7 +166,9 @@
    "default_severity": "warn",
    "fatal": false,
    "status": "active",
-   "user_message_key": "err.app.014"
+   "user_message_key": "err.app.014",
+   "expected": false,
+   "recoverable": false
   },
   {
    "id": "SOM-APP-099",
@@ -150,7 +178,9 @@
    "default_severity": "warn",
    "fatal": false,
    "status": "reserved",
-   "user_message_key": null
+   "user_message_key": null,
+   "expected": false,
+   "recoverable": false
   },
   {
    "id": "SOM-UI-001",
@@ -160,7 +190,9 @@
    "default_severity": "error",
    "fatal": false,
    "status": "active",
-   "user_message_key": "err.ui.001"
+   "user_message_key": "err.ui.001",
+   "expected": false,
+   "recoverable": false
   },
   {
    "id": "SOM-UI-002",
@@ -170,7 +202,9 @@
    "default_severity": "error",
    "fatal": false,
    "status": "active",
-   "user_message_key": "err.ui.002"
+   "user_message_key": "err.ui.002",
+   "expected": false,
+   "recoverable": false
   },
   {
    "id": "SOM-UI-003",
@@ -180,7 +214,9 @@
    "default_severity": "warn",
    "fatal": false,
    "status": "active",
-   "user_message_key": "err.ui.003"
+   "user_message_key": "err.ui.003",
+   "expected": false,
+   "recoverable": true
   },
   {
    "id": "SOM-UI-004",
@@ -190,7 +226,9 @@
    "default_severity": "error",
    "fatal": false,
    "status": "active",
-   "user_message_key": "err.ui.004"
+   "user_message_key": "err.ui.004",
+   "expected": false,
+   "recoverable": false
   },
   {
    "id": "SOM-UI-005",
@@ -200,7 +238,9 @@
    "default_severity": "error",
    "fatal": false,
    "status": "active",
-   "user_message_key": "err.ui.005"
+   "user_message_key": "err.ui.005",
+   "expected": false,
+   "recoverable": false
   },
   {
    "id": "SOM-UI-006",
@@ -210,7 +250,9 @@
    "default_severity": "error",
    "fatal": false,
    "status": "active",
-   "user_message_key": "err.ui.006"
+   "user_message_key": "err.ui.006",
+   "expected": false,
+   "recoverable": false
   },
   {
    "id": "SOM-UI-007",
@@ -220,7 +262,9 @@
    "default_severity": "error",
    "fatal": false,
    "status": "active",
-   "user_message_key": "err.ui.007"
+   "user_message_key": "err.ui.007",
+   "expected": false,
+   "recoverable": true
   },
   {
    "id": "SOM-UI-008",
@@ -230,7 +274,9 @@
    "default_severity": "error",
    "fatal": false,
    "status": "active",
-   "user_message_key": "err.ui.008"
+   "user_message_key": "err.ui.008",
+   "expected": false,
+   "recoverable": false
   },
   {
    "id": "SOM-FS-001",
@@ -240,7 +286,9 @@
    "default_severity": "warn",
    "fatal": false,
    "status": "active",
-   "user_message_key": "err.fs.001"
+   "user_message_key": "err.fs.001",
+   "expected": false,
+   "recoverable": true
   },
   {
    "id": "SOM-FS-002",
@@ -250,7 +298,9 @@
    "default_severity": "error",
    "fatal": false,
    "status": "active",
-   "user_message_key": "err.fs.002"
+   "user_message_key": "err.fs.002",
+   "expected": false,
+   "recoverable": true
   },
   {
    "id": "SOM-FS-003",
@@ -260,7 +310,9 @@
    "default_severity": "error",
    "fatal": false,
    "status": "active",
-   "user_message_key": "err.fs.003"
+   "user_message_key": "err.fs.003",
+   "expected": false,
+   "recoverable": true
   },
   {
    "id": "SOM-FS-004",
@@ -270,7 +322,9 @@
    "default_severity": "warn",
    "fatal": false,
    "status": "active",
-   "user_message_key": "err.fs.004"
+   "user_message_key": "err.fs.004",
+   "expected": false,
+   "recoverable": true
   },
   {
    "id": "SOM-FS-005",
@@ -280,7 +334,9 @@
    "default_severity": "warn",
    "fatal": false,
    "status": "active",
-   "user_message_key": "err.fs.005"
+   "user_message_key": "err.fs.005",
+   "expected": false,
+   "recoverable": true
   },
   {
    "id": "SOM-FS-006",
@@ -290,7 +346,9 @@
    "default_severity": "warn",
    "fatal": false,
    "status": "active",
-   "user_message_key": "err.fs.006"
+   "user_message_key": "err.fs.006",
+   "expected": false,
+   "recoverable": true
   },
   {
    "id": "SOM-FS-007",
@@ -300,7 +358,9 @@
    "default_severity": "error",
    "fatal": false,
    "status": "active",
-   "user_message_key": "err.fs.007"
+   "user_message_key": "err.fs.007",
+   "expected": false,
+   "recoverable": false
   },
   {
    "id": "SOM-FS-008",
@@ -310,7 +370,9 @@
    "default_severity": "error",
    "fatal": false,
    "status": "active",
-   "user_message_key": "err.fs.008"
+   "user_message_key": "err.fs.008",
+   "expected": false,
+   "recoverable": false
   },
   {
    "id": "SOM-FS-009",
@@ -320,7 +382,9 @@
    "default_severity": "info",
    "fatal": false,
    "status": "active",
-   "user_message_key": "err.fs.009"
+   "user_message_key": "err.fs.009",
+   "expected": true,
+   "recoverable": true
   },
   {
    "id": "SOM-FS-010",
@@ -330,7 +394,9 @@
    "default_severity": "warn",
    "fatal": false,
    "status": "active",
-   "user_message_key": "err.fs.010"
+   "user_message_key": "err.fs.010",
+   "expected": false,
+   "recoverable": true
   },
   {
    "id": "SOM-FS-011",
@@ -340,7 +406,9 @@
    "default_severity": "warn",
    "fatal": false,
    "status": "active",
-   "user_message_key": "err.fs.011"
+   "user_message_key": "err.fs.011",
+   "expected": false,
+   "recoverable": true
   },
   {
    "id": "SOM-FS-012",
@@ -350,7 +418,9 @@
    "default_severity": "error",
    "fatal": false,
    "status": "active",
-   "user_message_key": "err.fs.012"
+   "user_message_key": "err.fs.012",
+   "expected": false,
+   "recoverable": false
   },
   {
    "id": "SOM-FS-013",
@@ -360,7 +430,9 @@
    "default_severity": "debug",
    "fatal": false,
    "status": "active",
-   "user_message_key": "err.fs.013"
+   "user_message_key": "err.fs.013",
+   "expected": false,
+   "recoverable": true
   },
   {
    "id": "SOM-FS-014",
@@ -370,7 +442,9 @@
    "default_severity": "error",
    "fatal": false,
    "status": "active",
-   "user_message_key": "err.fs.014"
+   "user_message_key": "err.fs.014",
+   "expected": false,
+   "recoverable": true
   },
   {
    "id": "SOM-DOC-001",
@@ -380,7 +454,9 @@
    "default_severity": "error",
    "fatal": false,
    "status": "active",
-   "user_message_key": "err.doc.001"
+   "user_message_key": "err.doc.001",
+   "expected": false,
+   "recoverable": false
   },
   {
    "id": "SOM-DOC-002",
@@ -390,7 +466,9 @@
    "default_severity": "error",
    "fatal": true,
    "status": "active",
-   "user_message_key": "err.doc.002"
+   "user_message_key": "err.doc.002",
+   "expected": false,
+   "recoverable": false
   },
   {
    "id": "SOM-DOC-003",
@@ -400,7 +478,9 @@
    "default_severity": "error",
    "fatal": false,
    "status": "active",
-   "user_message_key": "err.doc.003"
+   "user_message_key": "err.doc.003",
+   "expected": false,
+   "recoverable": false
   },
   {
    "id": "SOM-GIT-001",
@@ -410,7 +490,9 @@
    "default_severity": "error",
    "fatal": false,
    "status": "active",
-   "user_message_key": "err.git.001"
+   "user_message_key": "err.git.001",
+   "expected": false,
+   "recoverable": true
   },
   {
    "id": "SOM-GIT-002",
@@ -420,7 +502,9 @@
    "default_severity": "info",
    "fatal": false,
    "status": "active",
-   "user_message_key": "err.git.002"
+   "user_message_key": "err.git.002",
+   "expected": true,
+   "recoverable": true
   },
   {
    "id": "SOM-GIT-003",
@@ -430,7 +514,9 @@
    "default_severity": "warn",
    "fatal": false,
    "status": "active",
-   "user_message_key": "err.git.003"
+   "user_message_key": "err.git.003",
+   "expected": false,
+   "recoverable": true
   },
   {
    "id": "SOM-GIT-004",
@@ -440,7 +526,9 @@
    "default_severity": "warn",
    "fatal": false,
    "status": "active",
-   "user_message_key": "err.git.004"
+   "user_message_key": "err.git.004",
+   "expected": false,
+   "recoverable": true
   },
   {
    "id": "SOM-GIT-005",
@@ -450,7 +538,9 @@
    "default_severity": "info",
    "fatal": false,
    "status": "active",
-   "user_message_key": "err.git.005"
+   "user_message_key": "err.git.005",
+   "expected": true,
+   "recoverable": true
   },
   {
    "id": "SOM-GIT-006",
@@ -460,7 +550,9 @@
    "default_severity": "warn",
    "fatal": false,
    "status": "active",
-   "user_message_key": "err.git.006"
+   "user_message_key": "err.git.006",
+   "expected": false,
+   "recoverable": true
   },
   {
    "id": "SOM-GIT-007",
@@ -470,7 +562,9 @@
    "default_severity": "warn",
    "fatal": false,
    "status": "active",
-   "user_message_key": "err.git.007"
+   "user_message_key": "err.git.007",
+   "expected": false,
+   "recoverable": true
   },
   {
    "id": "SOM-GIT-008",
@@ -480,7 +574,9 @@
    "default_severity": "warn",
    "fatal": false,
    "status": "active",
-   "user_message_key": "err.git.008"
+   "user_message_key": "err.git.008",
+   "expected": false,
+   "recoverable": true
   },
   {
    "id": "SOM-GIT-009",
@@ -490,7 +586,9 @@
    "default_severity": "error",
    "fatal": false,
    "status": "active",
-   "user_message_key": "err.git.009"
+   "user_message_key": "err.git.009",
+   "expected": false,
+   "recoverable": false
   },
   {
    "id": "SOM-GIT-010",
@@ -500,7 +598,9 @@
    "default_severity": "error",
    "fatal": false,
    "status": "active",
-   "user_message_key": "err.git.010"
+   "user_message_key": "err.git.010",
+   "expected": false,
+   "recoverable": true
   },
   {
    "id": "SOM-GIT-011",
@@ -510,7 +610,9 @@
    "default_severity": "info",
    "fatal": false,
    "status": "active",
-   "user_message_key": "err.git.011"
+   "user_message_key": "err.git.011",
+   "expected": true,
+   "recoverable": false
   },
   {
    "id": "SOM-GIT-012",
@@ -520,7 +622,9 @@
    "default_severity": "warn",
    "fatal": false,
    "status": "active",
-   "user_message_key": "err.git.012"
+   "user_message_key": "err.git.012",
+   "expected": false,
+   "recoverable": true
   },
   {
    "id": "SOM-GIT-013",
@@ -530,7 +634,9 @@
    "default_severity": "error",
    "fatal": false,
    "status": "active",
-   "user_message_key": "err.git.013"
+   "user_message_key": "err.git.013",
+   "expected": false,
+   "recoverable": true
   },
   {
    "id": "SOM-GIT-014",
@@ -540,7 +646,9 @@
    "default_severity": "error",
    "fatal": false,
    "status": "active",
-   "user_message_key": "err.git.014"
+   "user_message_key": "err.git.014",
+   "expected": false,
+   "recoverable": false
   },
   {
    "id": "SOM-AUTH-001",
@@ -550,7 +658,9 @@
    "default_severity": "warn",
    "fatal": false,
    "status": "active",
-   "user_message_key": "err.auth.001"
+   "user_message_key": "err.auth.001",
+   "expected": false,
+   "recoverable": true
   },
   {
    "id": "SOM-AUTH-002",
@@ -560,7 +670,9 @@
    "default_severity": "error",
    "fatal": false,
    "status": "active",
-   "user_message_key": "err.auth.002"
+   "user_message_key": "err.auth.002",
+   "expected": false,
+   "recoverable": false
   },
   {
    "id": "SOM-AUTH-003",
@@ -570,7 +682,9 @@
    "default_severity": "warn",
    "fatal": false,
    "status": "active",
-   "user_message_key": "err.auth.003"
+   "user_message_key": "err.auth.003",
+   "expected": false,
+   "recoverable": true
   },
   {
    "id": "SOM-AUTH-004",
@@ -580,7 +694,9 @@
    "default_severity": "error",
    "fatal": false,
    "status": "active",
-   "user_message_key": "err.auth.004"
+   "user_message_key": "err.auth.004",
+   "expected": false,
+   "recoverable": true
   },
   {
    "id": "SOM-AUTH-005",
@@ -590,7 +706,9 @@
    "default_severity": "warn",
    "fatal": false,
    "status": "active",
-   "user_message_key": "err.auth.005"
+   "user_message_key": "err.auth.005",
+   "expected": false,
+   "recoverable": true
   },
   {
    "id": "SOM-AUTH-006",
@@ -600,7 +718,9 @@
    "default_severity": "error",
    "fatal": false,
    "status": "active",
-   "user_message_key": "err.auth.006"
+   "user_message_key": "err.auth.006",
+   "expected": false,
+   "recoverable": false
   },
   {
    "id": "SOM-AUTH-007",
@@ -610,7 +730,9 @@
    "default_severity": "error",
    "fatal": false,
    "status": "active",
-   "user_message_key": "err.auth.007"
+   "user_message_key": "err.auth.007",
+   "expected": false,
+   "recoverable": false
   },
   {
    "id": "SOM-EXT-001",
@@ -620,7 +742,9 @@
    "default_severity": "warn",
    "fatal": false,
    "status": "active",
-   "user_message_key": "err.ext.001"
+   "user_message_key": "err.ext.001",
+   "expected": false,
+   "recoverable": true
   },
   {
    "id": "SOM-EXT-002",
@@ -630,7 +754,9 @@
    "default_severity": "error",
    "fatal": false,
    "status": "active",
-   "user_message_key": "err.ext.002"
+   "user_message_key": "err.ext.002",
+   "expected": false,
+   "recoverable": false
   },
   {
    "id": "SOM-EXT-003",
@@ -640,7 +766,9 @@
    "default_severity": "info",
    "fatal": false,
    "status": "active",
-   "user_message_key": "err.ext.003"
+   "user_message_key": "err.ext.003",
+   "expected": true,
+   "recoverable": false
   },
   {
    "id": "SOM-EXT-004",
@@ -650,7 +778,9 @@
    "default_severity": "error",
    "fatal": false,
    "status": "active",
-   "user_message_key": "err.ext.004"
+   "user_message_key": "err.ext.004",
+   "expected": false,
+   "recoverable": false
   },
   {
    "id": "SOM-EXT-005",
@@ -660,7 +790,9 @@
    "default_severity": "error",
    "fatal": false,
    "status": "active",
-   "user_message_key": "err.ext.005"
+   "user_message_key": "err.ext.005",
+   "expected": false,
+   "recoverable": false
   },
   {
    "id": "SOM-EXT-006",
@@ -670,7 +802,9 @@
    "default_severity": "error",
    "fatal": false,
    "status": "active",
-   "user_message_key": "err.ext.006"
+   "user_message_key": "err.ext.006",
+   "expected": false,
+   "recoverable": false
   },
   {
    "id": "SOM-EXT-007",
@@ -680,7 +814,9 @@
    "default_severity": "warn",
    "fatal": false,
    "status": "active",
-   "user_message_key": "err.ext.007"
+   "user_message_key": "err.ext.007",
+   "expected": false,
+   "recoverable": false
   },
   {
    "id": "SOM-EXT-008",
@@ -690,7 +826,9 @@
    "default_severity": "warn",
    "fatal": false,
    "status": "active",
-   "user_message_key": "err.ext.008"
+   "user_message_key": "err.ext.008",
+   "expected": false,
+   "recoverable": true
   },
   {
    "id": "SOM-EXT-009",
@@ -700,7 +838,9 @@
    "default_severity": "warn",
    "fatal": false,
    "status": "active",
-   "user_message_key": "err.ext.009"
+   "user_message_key": "err.ext.009",
+   "expected": false,
+   "recoverable": false
   },
   {
    "id": "SOM-AGT-001",
@@ -710,7 +850,9 @@
    "default_severity": "error",
    "fatal": false,
    "status": "active",
-   "user_message_key": "err.agt.001"
+   "user_message_key": "err.agt.001",
+   "expected": false,
+   "recoverable": true
   },
   {
    "id": "SOM-AGT-002",
@@ -720,7 +862,9 @@
    "default_severity": "error",
    "fatal": false,
    "status": "active",
-   "user_message_key": "err.agt.002"
+   "user_message_key": "err.agt.002",
+   "expected": false,
+   "recoverable": true
   },
   {
    "id": "SOM-AGT-003",
@@ -730,7 +874,9 @@
    "default_severity": "error",
    "fatal": false,
    "status": "active",
-   "user_message_key": "err.agt.003"
+   "user_message_key": "err.agt.003",
+   "expected": false,
+   "recoverable": false
   },
   {
    "id": "SOM-AGT-004",
@@ -740,7 +886,9 @@
    "default_severity": "error",
    "fatal": false,
    "status": "active",
-   "user_message_key": "err.agt.004"
+   "user_message_key": "err.agt.004",
+   "expected": false,
+   "recoverable": false
   },
   {
    "id": "SOM-NET-001",
@@ -750,7 +898,9 @@
    "default_severity": "error",
    "fatal": false,
    "status": "active",
-   "user_message_key": "err.net.001"
+   "user_message_key": "err.net.001",
+   "expected": false,
+   "recoverable": true
   },
   {
    "id": "SOM-NET-002",
@@ -760,7 +910,9 @@
    "default_severity": "error",
    "fatal": false,
    "status": "active",
-   "user_message_key": "err.net.002"
+   "user_message_key": "err.net.002",
+   "expected": false,
+   "recoverable": true
   },
   {
    "id": "SOM-NET-003",
@@ -770,7 +922,9 @@
    "default_severity": "warn",
    "fatal": false,
    "status": "active",
-   "user_message_key": "err.net.003"
+   "user_message_key": "err.net.003",
+   "expected": false,
+   "recoverable": true
   },
   {
    "id": "SOM-ACL-001",
@@ -780,7 +934,9 @@
    "default_severity": "error",
    "fatal": false,
    "status": "active",
-   "user_message_key": "err.acl.001"
+   "user_message_key": "err.acl.001",
+   "expected": false,
+   "recoverable": true
   },
   {
    "id": "SOM-ACL-002",
@@ -790,7 +946,9 @@
    "default_severity": "error",
    "fatal": false,
    "status": "ci-only",
-   "user_message_key": null
+   "user_message_key": null,
+   "expected": false,
+   "recoverable": false
   }
  ]
 }

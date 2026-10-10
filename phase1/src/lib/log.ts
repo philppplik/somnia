@@ -274,3 +274,13 @@ export function toSafeLogEvents(lines:readonly unknown[]):SafeLogEvent[]{
  for(const l of lines){const e=toSafeLogEvent(l);if(e)seen.set(`${e.session}|${e.source}|${e.seq}`,e);}
  return [...seen.values()].sort((a,b)=>a.ts<b.ts?-1:a.ts>b.ts?1:a.seq-b.seq);
 }
+/**
+ * Reporter for invokeCmd: an IPC command was denied by the capability layer (SOM-ACL-001).
+ * invokeCmd itself never logs. The app bootstrap (main.tsx) attaches this with setCommandReporter,
+ * which avoids an import cycle between log.ts and invokeCmd.ts.
+ * Only the command name and the window label are logged. `message` is ignored on purpose:
+ * it can contain user-controlled names.
+ */
+export function reportAclDenied(info:{cmd:string;window:string;message?:string}):void{
+ logEvent('SOM-ACL-001',{context:{cmd:info.cmd,window:info.window}});
+}

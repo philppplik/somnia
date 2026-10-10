@@ -146,3 +146,18 @@ test('toSafeLogEvents dedupes by (session, source, seq) and keeps the original k
 test('swallow reasons include best-effort-window and are a closed set',()=>{
  assert.ok(SWALLOW_REASONS.includes('best-effort-window'));assert.equal(new Set(SWALLOW_REASONS).size,SWALLOW_REASONS.length);
 });
+
+import {reportAclDenied} from './log';
+test('reportAclDenied logs SOM-ACL-001 with cmd and window only, never the message',()=>{
+ reset();let seen:string|undefined;const off=subscribeReportedFailures(f=>{seen=f.id;});
+ reportAclDenied({cmd:'read_file',window:'main',message:'denied for /home/bob/Taxes 2025.pdf'});
+ const l=getRing().at(-1)!;
+ assert.equal(l.id,'SOM-ACL-001');assert.deepEqual(l.context,{cmd:'read_file',window:'main'});
+ assert.doesNotMatch(JSON.stringify(l),/bob|Taxes/);assert.equal(seen,'SOM-ACL-001');off();
+});
+test('registry flags: expected only for cancelled/user-input at info or debug; fatal ids are never recoverable',()=>{
+ for(const id of Object.values(ERROR_IDS)){const m=ERROR_META[id];
+  if(m.expected){assert.ok(['cancelled','user-input'].includes(m.category),id);assert.ok(['info','debug'].includes(m.severity),id);}
+  if(m.fatal)assert.equal(m.recoverable,false,id);}
+ assert.equal(ERROR_META['SOM-APP-011'].expected,false);
+});
