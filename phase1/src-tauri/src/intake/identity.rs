@@ -11,16 +11,21 @@ pub struct FileIdentity {
 pub fn identity_of(path: &Path, metadata: &Metadata) -> io::Result<FileIdentity> {
     #[cfg(windows)]
     let source = {
-        use std::os::windows::fs::MetadataExt;
-        match (metadata.volume_serial_number(), metadata.file_index()) {
-            (Some(volume), Some(index)) => format!("windows:{volume}:{index}"),
-            _ => {
-                return Err(io::Error::new(
-                    io::ErrorKind::Unsupported,
-                    "File identity unavailable",
-                ))
-            }
+        // std's MetadataExt::volume_serial_number/file_index are unstable
+        // (windows_by_handle, #63010); query the same BY_HANDLE_FILE_INFORMATION
+        // fields through windows-sys on stable Rust instead.
+        use std::os::windows::io::AsRawHandle;
+        use windows_sys::Win32::Storage::FileSystem::{
+            GetFileInformationByHandle, BY_HANDLE_FILE_INFORMATION,
+        };
+        let _ = metadata;
+        let file = std::fs::File::open(path)?;
+        let mut info: BY_HANDLE_FILE_INFORMATION = unsafe { std::mem::zeroed() };
+        if unsafe { GetFileInformationByHandle(file.as_raw_handle() as _, &mut info) } == 0 {
+            return Err(io::Error::last_os_error());
         }
+        let index = ((info.nFileIndexHigh as u64) << 32) | info.nFileIndexLow as u64;
+        format!("windows:{}:{}", info.dwVolumeSerialNumber, index)
     };
     #[cfg(unix)]
     let source = {
