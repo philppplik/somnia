@@ -1,0 +1,32 @@
+.dialog-popup.diag-popup { width: min(880px, calc(100vw - 32px)); font-family: var(--font-ui, system-ui, sans-serif); max-height: calc(100dvh - 32px); display: flex; flex-direction: column; gap: 16px; padding: 24px; border-radius: 25px; background: var(--bg-panel); color: var(--text-primary); font-size: 13px; overflow: hidden; }
+.diag-popup header h2 { margin: 0 0 8px; font-size: 20px; }
+.diag-popup header p, .diag-popup p { color: var(--text-secondary); line-height: 1.5; }
+.diag-body { min-height: 0; overflow: auto; scrollbar-width: thin; }
+.diag-popup button, .diag-notice button, .diag-boundary button { border: 1px solid var(--border-subtle); border-radius: var(--r-control, 8px); background: var(--bg-surface); color: var(--text-primary); padding: 8px 12px; cursor: pointer; font: inherit; }
+.diag-popup button:disabled { opacity: .55; cursor: default; }
+.diag-popup button:focus-visible, .diag-popup input:focus-visible, .diag-preview:focus-visible, .diag-notice button:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.diag-tabs, .diag-files, .diag-footer { display: flex; flex-wrap: wrap; gap: 8px; }
+.diag-tabs [aria-pressed=true], .diag-files [aria-pressed=true], .diag-incident-list [aria-current=true] { border-color: var(--accent); }
+.diag-footer { padding-top: 16px; border-top: 1px solid var(--border-subtle); justify-content: flex-end; }
+.diag-preview, .diag-incident-detail pre { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 12px; padding: 16px; border: 1px solid var(--border-subtle); border-radius: var(--r-control, 8px); background: var(--bg-surface); user-select: text; }
+.diag-popup [data-copyable] { user-select: text; overflow-wrap: anywhere; }
+.diag-popup fieldset { margin: 12px 0; border: 1px solid var(--border-subtle); border-radius: var(--r-control, 8px); padding: 12px; }
+.diag-popup fieldset label { display: flex; gap: 8px; align-items: center; margin: 8px 0; }
+.diag-split { display: grid; grid-template-columns: minmax(180px, 1fr) minmax(0, 2fr); gap: 20px; }
+.diag-incident-list { display: flex; flex-direction: column; gap: 8px; }
+.diag-incident-list button { text-align: start; display: flex; flex-direction: column; gap: 6px; overflow-wrap: anywhere; }
+.diag-incident-list time, .diag-incident-list span { color: var(--text-secondary); font-size: 12px; }
+.diag-recovery { padding: 12px; border: 1px solid var(--border-subtle); border-radius: var(--r-control, 8px); }
+.diag-notice { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; font-size: 12px; position: relative; }
+.diag-history { max-height: 40vh; overflow: auto; scrollbar-width: thin; list-style: none; padding: 8px; border: 1px solid var(--border-subtle); border-radius: var(--r-panel, 25px); background: var(--bg-panel); }
+.diag-history li { margin: 4px 0; }
+.diag-boundary { padding: 24px; color: var(--text-primary); }
+@media (max-width: 640px) { .diag-split { grid-template-columns: minmax(0, 1fr); } .diag-popup { padding: 16px; } .diag-footer button { flex: 1 1 160px; } }
+@media (forced-colors: active) { .diag-popup button[aria-pressed=true], .diag-incident-list [aria-current=true] { outline: 2px solid Highlight; } }
+/* Override the generic palette popup position; keep the footer inside short/zoomed viewports. */
+.dialog-popup.diag-popup { top: 50%; left: 50%; transform: translate(-50%, -50%); box-sizing: border-box; }
+.diag-popup header, .diag-tabs, .diag-footer { flex-shrink: 0; }
+.diag-popup input[type=checkbox] { width: 16px; height: 16px; flex: 0 0 16px; padding: 0; margin: 0; accent-color: var(--accent); }
+@media (max-height: 420px) { .dialog-popup.diag-popup { gap: 8px; padding: 12px; } .diag-popup header p { max-height: 40px; overflow: auto; margin: 6px 0; } .diag-footer { padding-top: 8px; } .diag-footer button { flex: 1 1 100px; padding: 6px 8px; } }
+/* At 200% on the minimum shell, scroll the whole surface rather than shrinking the body to zero. */
+@media (max-height: 420px) { .dialog-popup.diag-popup { overflow-y: auto; scrollbar-width: thin; } .diag-popup .diag-body { flex-shrink: 0; overflow: visible; } .diag-popup header p { max-height: none; overflow: visible; } }
