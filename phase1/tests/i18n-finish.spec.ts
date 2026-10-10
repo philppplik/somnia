@@ -13,6 +13,7 @@ for(const tag of ['en','de','es','fr','pt-BR']){
  test(`${tag}: settings, catalogue review/install/error and palette use translated labels`,async({page})=>{
   const t=(key:string,params?:Record<string,string|number>)=>tr(tag,key,params);
   await page.addInitScript(l=>localStorage.setItem('somnia.locale.v1',l),tag);
+  await page.addInitScript(()=>localStorage.setItem('somnia.extensions.security.v2',JSON.stringify({version:2,acknowledged:true,restricted:false,developerMode:false,extensions:{}})));
   let fail=false;
   await page.route('https://raw.githubusercontent.com/**',route=>{
    if(fail)return route.fulfill({status:429,body:'rate limit'});
