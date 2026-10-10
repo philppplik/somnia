@@ -1,3 +1,4 @@
+(window as unknown as {__bootMark?:(m:string)=>void}).__bootMark?.('main.tsx: module body reached - all imports evaluated OK');
 import {heldAgentPaths} from './lib/agent/autosaveHold';
 import {newBlankFile} from './lib/projectActions';
 import {zipWebFsOptions} from './lib/zipWorkingCopy';
@@ -70,6 +71,7 @@ applyUiPrefs(getState().uiPrefs);
 setNoticeSink(text=>patchState({notice:text}));
 logInfo('app','Somnia started',{desktop:isTauri()});
 startStudioRouting();
+(window as unknown as {__bootMark?:(m:string)=>void}).__bootMark?.('main.tsx: React render() about to be called');
 createRoot(document.getElementById('root')!).render(<StrictMode><ErrorBoundary label="Somnia"><App/><McpApprovalDialog/></ErrorBoundary></StrictMode>);
 
 if(!isTauri())installBeforeUnload(()=>getState().isDirty&&getState().storage!=='disk');
