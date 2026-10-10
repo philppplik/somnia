@@ -31,6 +31,7 @@ pub mod github_account;
 
 pub mod provider_transport;
 pub mod git;
+pub mod git_credential;
 
 pub mod sheets_io;
 pub mod slides_io;
