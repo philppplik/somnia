@@ -856,7 +856,7 @@ mod intake_activation {
         }
     }
 }
-use intake_activation::{activate_main_window, now_ms, Pending};
+use intake_activation::{activate_main_window, Pending};
 
 /// Parse (no Backend lock, no file reads beyond stat), enqueue and flush events under one short
 /// lock, then activate the window with the lock released. Runs on the blocking pool; the
@@ -2205,7 +2205,7 @@ pub fn run() {
                     format!("rust-{}-{}", std::process::id(), boot_nanos),
                 );
                 match crate::diagnostics_commands::DiagnosticsState::new(incidents_dir) {
-                    Ok(diag) => app.manage(diag),
+                    Ok(diag) => { app.manage(diag); }
                     Err(e) => crate::applog::write(
                         "error",
                         "diagnostics",
