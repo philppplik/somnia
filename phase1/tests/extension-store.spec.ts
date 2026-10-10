@@ -22,7 +22,7 @@ test('browse: cards, badges, tags and button states',async({page})=>{
  await expect(card(page,'CSS Tidy').getByRole('button',{name:'Update'})).toBeVisible();
  await expect(card(page,'Quick Fonts').getByRole('button',{name:'Blocked'})).toBeDisabled();
  await expect(page.getByRole('heading',{name:'Hidden Tool'})).toHaveCount(0);
- await expect(page.getByText('Listed means this version passed review. It is not a guarantee of safety.')).toBeVisible();
+ await expect(page.getByText('Listings are unreviewed unless the publisher is verified. Listing is not a guarantee of safety.')).toBeVisible();
  // verified mark must not be colour only: it has a name, and no score or stars exist anywhere
  await expect(page.locator('.ext-popup')).not.toContainText(/stars?|rating|score|%/i);
 });
