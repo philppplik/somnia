@@ -6,6 +6,11 @@ on:
   pull_request:
     paths: [phase1/**, .github/workflows/phase1-core-bootstrap.yml]
   workflow_dispatch:
+    inputs:
+      update_snapshots:
+        description: Regenerate studio-shell screenshot baselines and commit them to this ref
+        type: boolean
+        default: false
 permissions:
   contents: read
 jobs:
@@ -53,6 +58,41 @@ jobs:
             phase1/validation/bench/*.md
       - run: npx playwright install --with-deps chromium
       - run: npm run test:e2e
+  snapshots:
+    if: ${{ inputs.update_snapshots }}
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    defaults:
+      run:
+        working-directory: phase1
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Install isolated PhotoCraft WASM toolchain
+        run: |
+          rustup toolchain install 1.95.0 --profile minimal
+          rustup target add wasm32-unknown-unknown --toolchain 1.95.0
+          cargo +1.95.0 install wasm-bindgen-cli --version 0.2.129 --locked
+      - run: npm ci
+      - name: Build headless PhotoCraft assets before frontend/Tauri
+        run: npm run craft:build
+      - name: Build headless WordCraft document engine (Documents Studio)
+        run: npm run documents:build
+      - run: npx playwright install --with-deps chromium
+      - name: Regenerate shell baselines
+        run: npx playwright test tests/studio-shell-snapshot.spec.ts --update-snapshots
+      - name: Commit updated baselines
+        run: |
+          git config user.name "somnia-ci"
+          git config user.email "somnia-ci@users.noreply.github.com"
+          git add tests/studio-shell-snapshot.spec.ts-snapshots
+          if git diff --cached --quiet; then echo "no snapshot changes"; else
+            git commit -m "test(e2e): regenerate studio shell baselines in CI [skip ci]"
+            git push origin "HEAD:${{ github.ref_name }}"
+          fi
   native:
     runs-on: ubuntu-24.04
     defaults:
