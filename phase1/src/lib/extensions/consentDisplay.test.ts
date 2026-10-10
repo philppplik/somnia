@@ -1,0 +1,13 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import example from './contracts/v2/example.json';
+import type {ManifestV2} from './manifestV2';
+import {permissionRows,diffPermissionRows} from './consentDisplay';
+import {candidateIdentity} from './consentUiHost';
+import {CONSENT_CATALOGUES} from './consentLocales';
+const manifest=()=>structuredClone(example) as ManifestV2;
+test('write only never invents read access; runtime rows marked not granted',()=>{const m=manifest();m.permissions=[];m.security={tier:'A',fs:{read:'none',write:'ask'},clipboardRead:{reason:'Paste selected text'}};const rows=permissionRows(m);assert.equal(rows[0].title,'filesWrite');assert.equal(rows.find(r=>r.id==='fs.write')?.runtime,true);assert.equal(rows.find(r=>r.id==='clipboard.read')?.runtime,true);});
+test('all host prefixes, reasons, and secret injection destinations are text',()=>{const m=manifest();m.security={tier:'A',network:[{host:'api.example.com',paths:['/repos/*'],reason:'<script>alert(1)</script>'}],secrets:['token'],inject:[{secret:'token',host:'api.example.com',header:'Authorization'}]};const rows=permissionRows(m);assert.deepEqual(rows.find(r=>r.id==='network.api.example.com')?.targets,['api.example.com','/repos/']);assert.equal(rows.find(r=>r.id==='network.api.example.com')?.reason,'<script>alert(1)</script>');assert(rows.find(r=>r.id==='secret.token')?.targets?.includes('api.example.com / Authorization'));});
+test('before/after scopes and pure removals are retained',()=>{const a=manifest(),b=manifest();a.security={tier:'A',network:[{host:'api.example.com',paths:['/one/'],reason:'Request public metadata'}],clipboardWrite:true};b.security={tier:'A',network:[{host:'api.example.com',reason:'Request public metadata'}]};const diff=diffPermissionRows(a,b);assert.equal(diff.changed[0].before?.description,'pathPrefix');assert.equal(diff.changed[0].row.description,'allPaths');assert(diff.removed.some(r=>r.id==='clipboard.write'));});
+test('consent target includes bytes, reason changes and previous version',()=>{const candidate={manifest:manifest(),artifactHash:'a'.repeat(64),manifestHash:'b'.repeat(64),validation:'valid' as const,source:'manual' as const};const next=structuredClone(candidate);next.artifactHash='c'.repeat(64);assert.notEqual(candidateIdentity(candidate),candidateIdentity(next));});
+test('every locale has all consent keys and no missing placeholders',()=>{const en=CONSENT_CATALOGUES.en;for(const catalogue of Object.values(CONSENT_CATALOGUES)){assert.deepEqual(Object.keys(catalogue).sort(),Object.keys(en).sort());for(const [key,value] of Object.entries(en))assert.deepEqual(catalogue[key].match(/\{\w+\}/g)?.sort()??[],value.match(/\{\w+\}/g)?.sort()??[]);}});

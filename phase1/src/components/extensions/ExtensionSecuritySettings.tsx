@@ -1,0 +1,17 @@
+import {useEffect,useState} from 'react';
+import {Button} from '../ui/button';
+import {useT} from '../../lib/useT';
+import {CONSENT_CHANGED,consentChanged,getConsentBroker} from '../../lib/extensions/consentUiHost';
+import type {PermissionBroker} from '../../lib/extensions/permissionBroker';
+import './consent.css';
+/** Opening this section is read-only. Only Enable extensions acknowledges first run. */
+export function ExtensionSecuritySettings({broker=getConsentBroker()}:{broker?:PermissionBroker}){
+ const {t}=useT();const [,refresh]=useState(0);const [error,setError]=useState(''),[result,setResult]=useState('');const [busy,setBusy]=useState(false);const state=broker.snapshot();
+ useEffect(()=>{const re=()=>refresh(n=>n+1);window.addEventListener(CONSENT_CHANGED,re);return()=>window.removeEventListener(CONSENT_CHANGED,re);},[]);
+ const change=async(action:()=>void|Promise<void>)=>{setBusy(true);setError('');try{await action();consentChanged();refresh(n=>n+1);}catch(e){setError(String(e));}finally{setBusy(false);}};
+ return <section className="ec-settings" aria-label={t('extConsent.securitySettings')}>
+ {!state.acknowledged?<><div className="ec-eyebrow">{t('extConsent.firstSetup')}</div><h2>{t('extConsent.startPaused')}</h2><p>{t('extConsent.firstBody')}</p><div className="ec-card"><div><div className="ec-setting-row"><h3>{t('extConsent.restricted')}</h3><span className="ec-pill">{t('extConsent.onPaused')}</span></div><p>{t('extConsent.pausedBody')}</p></div></div><h3>{t('extConsent.control')}</h3><p>{t('extConsent.controlBody')}</p><p>{t('extConsent.pauseAnytime')}</p><div className="ec-notice">{t('extConsent.enableNotice')}</div><div className="ec-settings-actions"><Button variant="outline" onClick={()=>setResult(t('extConsent.stillPaused'))}>{t('extConsent.keepPaused')}</Button><Button variant="primary" disabled={busy} onClick={()=>void change(()=>broker.acknowledgeFirstRun())}>{t('extConsent.enableExtensions')}</Button></div></>:<label className="ec-card ec-setting-row"><span><strong>{t('extConsent.restricted')}</strong><p>{t('extConsent.pausedBody')}</p></span><input type="checkbox" disabled={busy} checked={state.restricted} onChange={e=>void change(()=>broker.setRestrictedMode(e.target.checked))}/></label>}
+ <label className="ec-card ec-setting-row"><span><strong>{t('extConsent.developer')}</strong><p>{t('extConsent.developerBody')}</p></span><input type="checkbox" disabled={busy} checked={state.developerMode} onChange={e=>void change(()=>broker.setDeveloperMode(e.target.checked))}/></label>
+ {Object.entries(state.extensions).map(([id,entry])=><section key={id} aria-label={entry.approved?.name||id}><h3>{entry.approved?.name||id}</h3>{entry.blocked&&<p className="ec-warning">{t('extConsent.disabledSafety')}: {entry.blocked}</p>}{Object.entries(entry.folders).flatMap(([op,paths])=>paths.map(path=><div className="ec-card" key={op+path}><div><strong>{t(op==='read'?'extConsent.filesRead':'extConsent.filesWrite')}</strong><div className="ec-target">{path}</div></div><Button variant="outline" disabled={busy} onClick={()=>void change(async()=>{await broker.revokeFolder(id,op as 'read'|'write',path);setResult(t('extConsent.revoked'));})}>{t('extConsent.revoke')}</Button></div>))}{entry.clipboard&&<Button variant="outline" disabled={busy} onClick={()=>void change(async()=>{await broker.setRevoked(id,'clipboard.read',true);setResult(t('extConsent.revoked'));})}>{t('extConsent.revokeClipboard')}</Button>}</section>)}
+ {result&&<p role="status">{result}</p>}{error&&<p role="alert">{error}</p>}</section>;
+}

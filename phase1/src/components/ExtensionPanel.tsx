@@ -32,5 +32,5 @@ export function ExtensionPanel({id}:{id:string}){
  if(!panel)return null;
  const native=isTauri();
  const src=native?{src:nativeSrc??undefined}:{srcDoc:panelSrcdoc(panel.html,token)};
- return <aside className="panel sidebar" aria-label={panel.title}><h2 className="m-0 px-3 pt-3 text-[13px]">{panel.title}</h2>{navigated||nativeError?<p role="alert" className="m-0 p-3 text-[12px]">{t('panels.extension.navigationBlocked')}</p>:(native&&!nativeSrc)||!session?null:<iframe key={token} ref={frame} onLoad={()=>session?.onLoad()} title={t('panels.extension.title',{title:panel.title})} sandbox="allow-scripts" {...src} className="min-h-0 w-full flex-1 border-0 bg-transparent"/>}</aside>;
+ return <aside data-extension-id={panel.extId} className="panel sidebar" aria-label={panel.title}><h2 className="m-0 px-3 pt-3 text-[13px]">{panel.title}</h2>{navigated||nativeError?<p role="alert" className="m-0 p-3 text-[12px]">{t('panels.extension.navigationBlocked')}</p>:(native&&!nativeSrc)||!session?null:<iframe key={token} ref={frame} onLoad={()=>session?.onLoad()} title={t('panels.extension.title',{title:panel.title})} sandbox="allow-scripts" {...src} className="min-h-0 w-full flex-1 border-0 bg-transparent"/>}</aside>;
 }

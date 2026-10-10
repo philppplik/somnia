@@ -34,6 +34,7 @@ import { Pencil } from '../lib/icons';
 import { DEFAULT_UI_PREFS } from "../lib/uiPrefs";
 import { parseShortcutFile } from "../lib/shortcutTransfer";
 import { downloadText } from "../lib/exportProject";
+import {ExtensionSecuritySettings} from "./extensions/ExtensionSecuritySettings";
 import { ExtensionCatalog } from "./ExtensionCatalog";
 import { readFormatPrefs, saveFormatPrefs } from "../lib/format";
 import { openExternal, REPO_URL } from "../lib/openExternal";
@@ -1400,7 +1401,7 @@ export function Settings() {
       ) : null}
       {section === "Extensions" ? (
         <div>
-          <p className="text-[12px]">{t("set.ext.networkNotice")}</p>
+          <ExtensionSecuritySettings />
           <button
             onClick={() => {
               const old = enabledIds();
