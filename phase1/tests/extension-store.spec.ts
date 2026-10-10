@@ -167,3 +167,126 @@ test('screenshots: all screens, light and dark, plus de and a narrow window',asy
  await page.setViewportSize({width:760,height:700});await open(page,'theme=light');await page.screenshot({path:`${SHOTS}/07-browse-narrow.png`});
  await open(page,'offline=1&theme=light');await page.setViewportSize({width:1440,height:900});await page.screenshot({path:`${SHOTS}/08-browse-offline.png`});
 });
+
+/** A6 product E2E additions. Exported signatures: none. HTTP is stubbed; the app host is not. */
+import {test as appTest} from './fixtures';
+import {createHash} from 'node:crypto';
+import {strToU8,zipSync} from 'fflate';
+const APP_SECURITY='somnia.extensions.security.v2';
+const appManifest=(version='1.0.0',permissions:string[]=[])=>({id:'e2e.store',name:'Store Example',version,apiVersion:1,permissions,contributes:{}});
+const appBytes=(version='1.0.0',permissions:string[]=[])=>Buffer.from(zipSync({'somnia-extension.json':strToU8(JSON.stringify(appManifest(version,permissions)))},{mtime:new Date('2020-01-01T00:00:00Z')}));
+const appEntry=(version='1.0.0',permissions:string[]=[])=>({
+ ...appManifest(version,permissions),author:'E2E Publisher',description:'An inert catalog package.',category:'Tools',
+ repo:'https://github.com/e2e/store',download:'https://raw.githubusercontent.com/e2e/store/main/package.zip',
+ sha256:createHash('sha256').update(appBytes(version,permissions)).digest('hex'),
+});
+async function openAppStore(page:Page){
+ await page.goto('/',{waitUntil:'domcontentloaded'});await page.getByRole('button',{name:/Commands/}).waitFor({state:'visible'});await page.keyboard.press('Control+,');
+ await page.getByRole('button',{name:'Extensions',exact:true}).click();
+ await page.getByRole('button',{name:'Open Extensions',exact:true}).click();
+ await expect(page.locator('.ext-popup')).toBeVisible();
+ await page.getByRole('tab',{name:'Browse',exact:true}).click();
+}
+const appRegistry=(page:Page)=>page.evaluate(()=>JSON.parse(localStorage.getItem('somnia.extensions.v1')||'[]'));
+const appSecurity=(page:Page)=>page.evaluate(key=>JSON.parse(localStorage.getItem(key)||'{}'),APP_SECURITY);
+appTest.describe('real app: catalog store adapter',()=>{
+ appTest.beforeEach(async({page})=>{
+  await page.addInitScript(key=>{
+   localStorage.setItem('somnia.locale.v1','en');
+   localStorage.setItem(key,JSON.stringify({version:2,acknowledged:true,restricted:false,developerMode:false,extensions:{}}));
+  },APP_SECURITY);
+ });
+ appTest('browse, search, detail and stage run through the shipping adapter',async({page})=>{
+  let downloads=0;
+  await page.route('https://raw.githubusercontent.com/**',route=>{
+   if(route.request().url().endsWith('index.json'))return route.fulfill({json:{schemaVersion:1,extensions:[appEntry()]}});
+   downloads++;return route.fulfill({body:appBytes(),contentType:'application/zip'});
+  });
+  await openAppStore(page);await expect(card(page,'Store Example')).toBeVisible();expect(downloads).toBe(0);
+  const search=page.getByRole('searchbox',{name:'Search extensions, publishers, permissions'});
+  await search.fill('no-match');await expect(page.getByText('No extensions match.')).toBeVisible();
+  await search.fill('E2E Publisher');await expect(card(page,'Store Example')).toBeVisible();
+  await openDetail(page,'Store Example');
+  await expect(page.getByRole('tab',{name:'Access',exact:true})).toHaveAttribute('aria-selected','true');
+  const evidence=page.getByRole('region',{name:'Evidence for v1.0.0'});
+  await expect(evidence.getByText('Not run',{exact:true})).toHaveCount(5);
+  // The shipping index does not carry publisher verification or review evidence.
+  await expect(page.getByRole('button',{name:'Verified publisher',exact:true})).toHaveCount(0);
+  await page.locator('.ext-popup').getByRole('button',{name:'Install',exact:true}).click();
+  await expect(page.locator('.ext-consent')).toBeVisible();expect(downloads).toBe(1);
+  expect(await appRegistry(page)).toEqual([]);
+  await page.getByRole('button',{name:'Install and enable',exact:true}).click();
+  await expect.poll(async()=>(await appRegistry(page)).map((m:{id:string})=>m.id)).toEqual(['e2e.store']);
+  expect(downloads).toBe(2); // Commit revalidates the downloaded bytes, not just the original listing.
+  expect((await appSecurity(page)).extensions['e2e.store'].approved.version).toBe('1.0.0');
+  await expect(page.locator('.ext-popup').getByRole('button',{name:'Installed',exact:true})).toBeVisible();
+ });
+ appTest('hash mismatch refuses consent and leaves both registry and approval empty',async({page})=>{
+  await page.route('https://raw.githubusercontent.com/**',route=>route.fulfill(route.request().url().endsWith('index.json')?
+   {json:{schemaVersion:1,extensions:[{...appEntry(),sha256:'0'.repeat(64)}]}}:{body:appBytes()}));
+  await openAppStore(page);await card(page,'Store Example').getByRole('button',{name:'Install',exact:true}).click();
+  await expect(page.getByRole('alert').filter({hasText:'does not match the reviewed listing'})).toBeVisible();
+  await expect(page.locator('.ext-consent')).toHaveCount(0);expect(await appRegistry(page)).toEqual([]);
+  expect((await appSecurity(page)).extensions['e2e.store']).toBeUndefined();
+ });
+ for(const scenario of ['rate-limited','server-error','invalid','network'] as const){
+  appTest(`catalog ${scenario} failure has its own explanation and can retry`,async({page})=>{
+   let fail=true;
+   await page.route('https://raw.githubusercontent.com/**',route=>{
+    if(!fail)return route.fulfill({json:{schemaVersion:1,extensions:[appEntry()]}});
+    if(scenario==='network')return route.abort('failed');
+    return route.fulfill(scenario==='invalid'?{body:'not JSON',contentType:'application/json'}:{status:scenario==='rate-limited'?429:503,body:'Unavailable'});
+   });
+   await openAppStore(page);const heading={'rate-limited':'The catalog is rate-limited','server-error':'The catalog server is having trouble',invalid:'Store unavailable',network:'Store unavailable'}[scenario];
+   await expect(page.getByRole('heading',{name:heading,exact:true})).toBeVisible();
+   const message={
+    'rate-limited':'GitHub is throttling requests',
+    'server-error':'GitHub returned a server error',
+    invalid:'Unverified listings are not shown',
+    network:'Unverified listings are not shown',
+   }[scenario];
+   await expect(page.locator('.ext-popup')).toContainText(message);
+   expect(await appRegistry(page)).toEqual([]);fail=false;
+   await page.getByRole('button',{name:'Try again',exact:true}).click();await expect(card(page,'Store Example')).toBeVisible();
+  });
+ }
+ appTest('report log is opt-in, comes from local activity, and failed private send never claims success',async({page})=>{
+  await page.route('https://raw.githubusercontent.com/**',route=>route.fulfill({json:{schemaVersion:1,extensions:[appEntry()]}}));
+  // Browser-only run: emulate only the native activity read command, not the extension/store host.
+  await page.addInitScript(()=>{
+   const scope=window as unknown as {__TAURI_INTERNALS__:{invoke:(cmd:string,args?:Record<string,unknown>)=>Promise<unknown>}};
+   scope.__TAURI_INTERNALS__={invoke:async(cmd,args)=>{
+    if(cmd==='extension_activity_query')return {events:[{id:'denied-1',ts:'2026-10-10T12:00:00Z',extensionId:'e2e.store',extensionName:'Store Example',api:'project.read',target:null,decision:'denied',kind:'permission',latencyMs:null,scope:null}],total:1,nextOffset:null};
+    if(cmd==='extension_activity_export')return null;
+    throw new Error(`Unexpected native command: ${cmd} ${JSON.stringify(args)}`);
+   }};
+  });
+  await openAppStore(page);await openDetail(page,'Store Example');await page.getByRole('button',{name:'Report a concern',exact:true}).click();
+  const dialog=page.getByRole('dialog',{name:'Report a concern',exact:true});
+  await expect(dialog.getByRole('checkbox')).not.toBeChecked();await expect(dialog.locator('pre')).toHaveCount(0);
+  await dialog.getByRole('checkbox').check();await expect(dialog.locator('pre')).toHaveText('2026-10-10T12:00:00Z denied project.read');
+  await dialog.getByRole('button',{name:'Send report',exact:true}).click();
+  await expect(dialog.getByRole('alert')).toHaveText('The report could not be sent. Try again.');
+  await expect(dialog.getByRole('button',{name:'Send report',exact:true})).toBeEnabled();
+  await expect(dialog.getByText(/Reference SR-/)).toHaveCount(0);
+ });
+ appTest('store update consent keeps old bytes until approval and binds the added permission',async({page})=>{
+  let version='1.0.0';let permissions:string[]=[];
+  await page.route('https://raw.githubusercontent.com/**',route=>route.fulfill(route.request().url().endsWith('index.json')?
+   {json:{schemaVersion:1,extensions:[appEntry(version,permissions)]}}:{body:appBytes(version,permissions)}));
+  await openAppStore(page);await card(page,'Store Example').getByRole('button',{name:'Install',exact:true}).click();
+  await page.getByRole('button',{name:'Install and enable',exact:true}).click();
+  await expect.poll(async()=>(await appRegistry(page))[0]?.version).toBe('1.0.0');
+  version='1.1.0';permissions=['project.read'];
+  await page.getByRole('tab',{name:/^Installed/}).click();await page.getByRole('tab',{name:'Browse',exact:true}).click();
+  await card(page,'Store Example').getByRole('button',{name:'Update',exact:true}).click();
+  await expect(page.locator('.ext-consent')).toContainText('Version 1.1.0 is downloaded, but not running. Version 1.0.0 is still active.');
+  expect((await appRegistry(page))[0].version).toBe('1.0.0');
+  await page.getByRole('button',{name:'Keep 1.0.0',exact:true}).click();
+  expect((await appRegistry(page))[0].version).toBe('1.0.0');
+  await card(page,'Store Example').getByRole('button',{name:'Update',exact:true}).click();
+  await page.getByRole('button',{name:'Approve and update',exact:true}).click();
+  await expect.poll(async()=>(await appRegistry(page))[0]?.version).toBe('1.1.0');
+  expect((await appSecurity(page)).extensions['e2e.store'].approved.permissions).toContain('project.read');
+ });
+});
