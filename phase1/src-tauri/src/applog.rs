@@ -192,6 +192,9 @@ impl Logger {
         if let Some(c) = spec.corr {
             extra.push(("corr", json!(c)));
         }
+        if let Some(o) = spec.ordinal {
+            extra.push(("ordinal", json!(o)));
+        }
         self.write_entry(spec.level, spec.source, spec.message, spec.context, &extra);
         incident
     }
@@ -274,6 +277,7 @@ pub struct EventSpec<'a> {
     pub context: Option<&'a Value>,
     pub expected: bool,
     pub corr: Option<&'a str>,
+    pub ordinal: Option<u64>,
 }
 impl EventSpec<'_> {
     fn needs_incident(&self) -> bool {
