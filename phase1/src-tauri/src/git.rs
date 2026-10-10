@@ -28,6 +28,7 @@ pub mod ref_reads;
 pub mod ref_contract;
 pub mod invalidation;
 pub mod worktrees;
+pub mod remote;
 
 const READ_TIMEOUT: Duration = Duration::from_secs(30);
 const LOG_TIMEOUT: Duration = Duration::from_secs(60);
