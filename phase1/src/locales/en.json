@@ -2255,5 +2255,22 @@
   "mcp.server.document": "Exposed document",
   "mcp.server.noDocument": "No compatible document. Open a document in a studio to expose its tools.",
   "mcp.server.activity": "Server activity",
-  "set.ext.networkNotice": "Extensions can open network connections to any host (WebSocket). Install only extensions you trust."
+  "set.ext.networkNotice": "Extensions can open network connections to any host (WebSocket). Install only extensions you trust.",
+  "ext.security.blocked": "Blocked",
+  "ext.security.disabled": "Disabled",
+  "ext.security.reason": "View security notice",
+  "ext.security.offline": "Offline: using the last verified blocklist",
+  "ext.security.invalidFeed": "The security feed could not be verified. The last verified policy still applies.",
+  "ext.security.historyError": "Activity history could not be read. Results may be incomplete.",
+  "ext.security.export": "Export log",
+  "ext.security.all": "All events",
+  "ext.security.allowed": "Allowed",
+  "ext.security.denied": "Denied",
+  "ext.security.prompts": "Prompts",
+  "ext.security.changes": "Changes",
+  "ext.security.network": "Network",
+  "ext.security.noCalls": "No permission calls",
+  "ext.security.disabledNotice": "{name} was disabled because this version is blocked. Your data is kept.",
+  "ext.security.retained": "History stays after restart",
+  "ext.security.exportAllConfirm": "Export all saved history rather than the current filter?"
 }

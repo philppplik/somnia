@@ -2255,5 +2255,22 @@
   "mcp.server.document": "Freigegebenes Dokument",
   "mcp.server.noDocument": "Kein kompatibles Dokument. Öffne ein Dokument in einem Studio, um seine Werkzeuge freizugeben.",
   "mcp.server.activity": "Server-Aktivität",
-  "set.ext.networkNotice": "Erweiterungen können Netzwerkverbindungen zu beliebigen Hosts öffnen (WebSocket). Installiere nur Erweiterungen, denen du vertraust."
+  "set.ext.networkNotice": "Erweiterungen können Netzwerkverbindungen zu beliebigen Hosts öffnen (WebSocket). Installiere nur Erweiterungen, denen du vertraust.",
+  "ext.security.blocked": "Blockiert",
+  "ext.security.disabled": "Deaktiviert",
+  "ext.security.reason": "Sicherheitshinweis anzeigen",
+  "ext.security.offline": "Offline: letzte verifizierte Sperrliste wird verwendet",
+  "ext.security.invalidFeed": "Der Sicherheitsfeed konnte nicht verifiziert werden. Die letzte verifizierte Richtlinie gilt weiterhin.",
+  "ext.security.historyError": "Der Aktivitätsverlauf konnte nicht gelesen werden. Ergebnisse sind möglicherweise unvollständig.",
+  "ext.security.export": "Protokoll exportieren",
+  "ext.security.all": "Alle Ereignisse",
+  "ext.security.allowed": "Erlaubt",
+  "ext.security.denied": "Abgelehnt",
+  "ext.security.prompts": "Anfragen",
+  "ext.security.changes": "Änderungen",
+  "ext.security.network": "Netzwerk",
+  "ext.security.noCalls": "Keine Berechtigungsaufrufe",
+  "ext.security.disabledNotice": "{name} wurde deaktiviert, weil diese Version blockiert ist. Deine Daten bleiben erhalten.",
+  "ext.security.retained": "Der Verlauf bleibt nach einem Neustart erhalten",
+  "ext.security.exportAllConfirm": "Den gesamten gespeicherten Verlauf statt des aktuellen Filters exportieren?"
 }

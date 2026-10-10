@@ -2255,5 +2255,22 @@
   "mcp.server.document": "Documento expuesto",
   "mcp.server.noDocument": "Ningún documento compatible. Abre un documento en un estudio para exponer sus herramientas.",
   "mcp.server.activity": "Actividad del servidor",
-  "set.ext.networkNotice": "Las extensiones pueden abrir conexiones de red a cualquier host (WebSocket). Instala solo extensiones en las que confíes."
+  "set.ext.networkNotice": "Las extensiones pueden abrir conexiones de red a cualquier host (WebSocket). Instala solo extensiones en las que confíes.",
+  "ext.security.blocked": "Bloqueada",
+  "ext.security.disabled": "Desactivada",
+  "ext.security.reason": "Ver aviso de seguridad",
+  "ext.security.offline": "Sin conexión: se usa la última lista de bloqueo verificada",
+  "ext.security.invalidFeed": "No se pudo verificar el canal de seguridad. Se sigue aplicando la última política verificada.",
+  "ext.security.historyError": "No se pudo leer el historial de actividad. Los resultados pueden estar incompletos.",
+  "ext.security.export": "Exportar registro",
+  "ext.security.all": "Todos los eventos",
+  "ext.security.allowed": "Permitidos",
+  "ext.security.denied": "Denegados",
+  "ext.security.prompts": "Solicitudes",
+  "ext.security.changes": "Cambios",
+  "ext.security.network": "Red",
+  "ext.security.noCalls": "Sin llamadas de permisos",
+  "ext.security.disabledNotice": "{name} se desactivó porque esta versión está bloqueada. Tus datos se conservan.",
+  "ext.security.retained": "El historial se conserva después de reiniciar",
+  "ext.security.exportAllConfirm": "¿Exportar todo el historial guardado en lugar del filtro actual?"
 }

@@ -2073,6 +2073,8 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             ext_panel_open,
+            crate::extension_activity_commands::extension_activity_query,
+            crate::extension_activity_commands::extension_activity_export,
             ext_worker_open,
             ext_worker_url,
             ext_close,

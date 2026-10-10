@@ -35,3 +35,10 @@ pub mod git;
 pub mod sheets_io;
 pub mod slides_io;
 pub mod ext_scheme;
+
+pub mod extension_activity;
+
+#[cfg(feature = "desktop")]
+pub mod extension_activity_commands;
+
+pub mod extension_block_state;

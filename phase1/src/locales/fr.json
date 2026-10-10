@@ -2255,5 +2255,22 @@
   "mcp.server.document": "Document exposé",
   "mcp.server.noDocument": "Aucun document compatible. Ouvrez un document dans un studio pour exposer ses outils.",
   "mcp.server.activity": "Activité du serveur",
-  "set.ext.networkNotice": "Les extensions peuvent ouvrir des connexions réseau vers n'importe quel hôte (WebSocket). N'installez que des extensions en lesquelles vous avez confiance."
+  "set.ext.networkNotice": "Les extensions peuvent ouvrir des connexions réseau vers n'importe quel hôte (WebSocket). N'installez que des extensions en lesquelles vous avez confiance.",
+  "ext.security.blocked": "Bloquée",
+  "ext.security.disabled": "Désactivée",
+  "ext.security.reason": "Voir l'avis de sécurité",
+  "ext.security.offline": "Hors ligne : utilisation de la dernière liste de blocage vérifiée",
+  "ext.security.invalidFeed": "Le flux de sécurité n'a pas pu être vérifié. La dernière politique vérifiée reste applicable.",
+  "ext.security.historyError": "Impossible de lire l'historique d'activité. Les résultats peuvent être incomplets.",
+  "ext.security.export": "Exporter le journal",
+  "ext.security.all": "Tous les événements",
+  "ext.security.allowed": "Autorisés",
+  "ext.security.denied": "Refusés",
+  "ext.security.prompts": "Demandes",
+  "ext.security.changes": "Modifications",
+  "ext.security.network": "Réseau",
+  "ext.security.noCalls": "Aucun appel de permission",
+  "ext.security.disabledNotice": "{name} a été désactivée car cette version est bloquée. Vos données sont conservées.",
+  "ext.security.retained": "L'historique est conservé après un redémarrage",
+  "ext.security.exportAllConfirm": "Exporter tout l'historique enregistré plutôt que le filtre actuel ?"
 }
