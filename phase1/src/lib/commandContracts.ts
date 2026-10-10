@@ -21,7 +21,8 @@ export interface ClaimReply { items: ClaimedItem[] }
 export interface GrantRead { name: string; ext: string; size: number; identityToken: string; dataBase64: string }
 export type ItemOutcomeStatus = 'opened' | 'failed' | 'cancelled' | 'deferred' | 'activated-existing' | 'rejected';
 export interface ItemOutcome { ordinal: number; status: ItemOutcomeStatus; cause?: string }
-export interface RetryToken { ordinal: number; token: string }
+/** Single-use token for one item. `expiresAt` is epoch milliseconds (UTC); the host mints a 60 s TTL. After it, no retry. */
+export interface RetryToken { ordinal: number; token: string; expiresAt: number }
 export interface AckReply { accepted: number[]; retryTokens: RetryToken[] }
 export interface IntakePolicy { allowUnc: boolean }
 

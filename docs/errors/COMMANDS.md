@@ -29,3 +29,10 @@ one per command and window per minute.
 ## Deliberate best-effort failures
 
 `ignore!(IgnoreReason::X, expr)` (`ignore.rs`) and `swallow(reason, x)` (`swallow.ts`) count instead of logging.
+
+## Intake ack reply
+
+`ack_open_request` returns `{ accepted: number[], retryTokens: { ordinal, token, expiresAt }[] }`.
+`expiresAt` is epoch milliseconds (UTC); the host mints tokens with a 60 s TTL and each token works once.
+The frontend shows a retry action (or auto-retries once for a locked file) only while `Date.now() < expiresAt`.
+Rust DTO: `#[serde(rename_all = "camelCase")] struct RetryToken { ordinal: u32, token: String, expires_at: u64 }`.

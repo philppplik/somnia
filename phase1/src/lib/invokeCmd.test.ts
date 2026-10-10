@@ -121,9 +121,10 @@ describe('invokeCmd: error normalization', () => {
 
 describe('typed contracts (compile-time + runtime)', () => {
   it('typed call sites compile and return the DTO', async () => {
-    __testing.setTransport(async () => ({ accepted: [0], retryTokens: [{ ordinal: 1, token: 't' }] }));
+    __testing.setTransport(async () => ({ accepted: [0], retryTokens: [{ ordinal: 1, token: 't', expiresAt: 1_700_000_060_000 }] }));
     const r = await invokeCmd('ack_open_request', { requestId: 'r', outcomes: [{ ordinal: 0, status: 'opened' }] }, { corr: 'r' });
     assert.deepEqual(r.accepted, [0]);
+    assert.equal(r.retryTokens[0].expiresAt, 1_700_000_060_000);
     __testing.setTransport(async () => ({ allowUnc: false }));
     assert.equal((await invokeCmd('get_intake_policy')).allowUnc, false);
     // @ts-expect-error missing required arg
