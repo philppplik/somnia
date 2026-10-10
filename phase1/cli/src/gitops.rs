@@ -5,7 +5,7 @@ use std::path::Path;
 use std::process::{Command, Stdio};
 
 const ALLOWED: &[&str] = &[
-    "rev-parse", "status", "switch", "update-ref", "add", "commit", "config", "diff", "check-ref-format", "show-ref", "symbolic-ref", "reset",
+    "rev-parse", "status", "switch", "update-ref", "add", "commit", "config", "diff", "check-ref-format", "show-ref", "symbolic-ref", "reset", "apply",
 ];
 
 pub fn git(root: &Path, args: &[&str], stdin: Option<&str>) -> Result<String> {
@@ -36,6 +36,20 @@ pub fn git(root: &Path, args: &[&str], stdin: Option<&str>) -> Result<String> {
         return Err(CliError::new(ErrorKind::Internal, format!("git {sub} failed: {}", String::from_utf8_lossy(&out.stderr).trim())));
     }
     Ok(String::from_utf8_lossy(&out.stdout).trim_end().to_string())
+}
+
+/// Like `git` but keeps the output byte-exact (no trailing-newline trimming): needed for patches.
+pub fn git_raw(root: &Path, args: &[&str]) -> Result<String> {
+    let sub = args.first().copied().unwrap_or("");
+    if !ALLOWED.contains(&sub) {
+        return Err(CliError::new(ErrorKind::Internal, format!("git subcommand not allowed in headless core: {sub}")));
+    }
+    let out = Command::new("git").current_dir(root).args(args).env("GIT_TERMINAL_PROMPT", "0").env("GIT_OPTIONAL_LOCKS", "0")
+        .stdin(Stdio::null()).output().map_err(|_| CliError::new(ErrorKind::GitMissing, "git executable not found on PATH"))?;
+    if !out.status.success() {
+        return Err(CliError::new(ErrorKind::Internal, format!("git {sub} failed: {}", String::from_utf8_lossy(&out.stderr).trim())));
+    }
+    Ok(String::from_utf8_lossy(&out.stdout).into_owned())
 }
 
 pub fn git_available() -> Result<()> {
