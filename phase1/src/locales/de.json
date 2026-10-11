@@ -927,6 +927,7 @@
   "share.err.start-failed": "Teilen konnte nicht gestartet werden.",
   "finish.settings.snapshots": "Lokale Projekt-Snapshots",
   "finish.settings.accentPresets": "Akzentvorlagen",
+  "finish.settings.accentExtensionPresets": "Akzentpaletten aus Erweiterungen",
   "finish.settings.accentName": "Akzent {name}",
   "finish.settings.importFailed": "Tastenkürzel konnten nicht importiert werden.",
   "finish.settings.shortcutTooLarge": "Die Tastenkürzeldatei ist größer als 100 KB.",

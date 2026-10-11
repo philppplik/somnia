@@ -927,6 +927,7 @@
   "share.err.start-failed": "Could not start sharing.",
   "finish.settings.snapshots": "Local project snapshots",
   "finish.settings.accentPresets": "Accent presets",
+  "finish.settings.accentExtensionPresets": "Extension accent palettes",
   "finish.settings.accentName": "{name} accent",
   "finish.settings.importFailed": "Could not import shortcuts.",
   "finish.settings.shortcutTooLarge": "Shortcut file exceeds 100 KB.",

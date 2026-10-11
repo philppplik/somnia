@@ -927,6 +927,7 @@
   "share.err.start-failed": "No se pudo empezar a compartir.",
   "finish.settings.snapshots": "Instantáneas locales del proyecto",
   "finish.settings.accentPresets": "Colores de acento predefinidos",
+  "finish.settings.accentExtensionPresets": "Paletas de acento de extensiones",
   "finish.settings.accentName": "Acento {name}",
   "finish.settings.importFailed": "No se pudieron importar los atajos.",
   "finish.settings.shortcutTooLarge": "El archivo de atajos supera los 100 KB.",

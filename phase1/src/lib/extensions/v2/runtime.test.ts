@@ -98,7 +98,7 @@ test('invalid asset means zero contributions, transaction failure rolls back',()
  assert.equal(evaluateWhen('hasProject && studio == "code"',{studio:'code',language:'html',hasProject:true,hasSelection:false,workspaceTrusted:true,isReadonly:false}),true);
 });
 test('legacy migration yields new TOML and assets, preserves literal snippet dollars; v1 adapter stays v1',()=>{
- const legacy={id:'acme.legacy',name:'Legacy',version:'1.0.0',apiVersion:1,permissions:['project.read' as const],contributes:{commands:[],panels:[],codeThemes:[],snippets:[{language:'html' as const,label:'Literal',body:'$1'}]}};
+ const legacy={id:'acme.legacy',name:'Legacy',version:'1.0.0',apiVersion:1,permissions:['project.read' as const],contributes:{commands:[],panels:[],codeThemes:[],accentPalettes:[],snippets:[{language:'html' as const,label:'Literal',body:'$1'}]}};
  const migration=migrateLegacy(legacy,{somniaRange:'>=11.0.0 <12.0.0',apiRange:'>=2.0.0 <3.0.0',license:'MIT',description:'Migrated legacy package'});assert.equal(JSON.parse(migration.files['snippets/snippet-0.json']).body,'\\$1');
  assert.equal(parseVersionedManifest(migration.files['somnia-extension.toml'],'somnia-extension.toml').lane,'v2');assert.equal(parseVersionedManifest(JSON.stringify(legacy),'somnia-extension.json').lane,'legacy');
  assert.throws(()=>legacyApiAdapter(legacy,{} as never,{renewedEnablement:false,lane:'local'}));

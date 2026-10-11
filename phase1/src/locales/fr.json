@@ -927,6 +927,7 @@
   "share.err.start-failed": "Impossible de démarrer le partage.",
   "finish.settings.snapshots": "Instantanés locaux du projet",
   "finish.settings.accentPresets": "Couleurs d’accent prédéfinies",
+  "finish.settings.accentExtensionPresets": "Palettes d’accent des extensions",
   "finish.settings.accentName": "Accent {name}",
   "finish.settings.importFailed": "Impossible d’importer les raccourcis.",
   "finish.settings.shortcutTooLarge": "Le fichier de raccourcis dépasse 100 Ko.",

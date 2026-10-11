@@ -927,6 +927,7 @@
   "share.err.start-failed": "Não foi possível começar a compartilhar.",
   "finish.settings.snapshots": "Snapshots locais do projeto",
   "finish.settings.accentPresets": "Cores de destaque predefinidas",
+  "finish.settings.accentExtensionPresets": "Paletas de destaque de extensões",
   "finish.settings.accentName": "Destaque {name}",
   "finish.settings.importFailed": "Não foi possível importar os atalhos.",
   "finish.settings.shortcutTooLarge": "O arquivo de atalhos excede 100 KB.",
