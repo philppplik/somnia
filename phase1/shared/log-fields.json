@@ -1,0 +1,14 @@
+{
+  "schema": 1,
+  "note": "Single source for the schema v2 context allowlist. Unknown keys are dropped and counted. D1-D owns this file long term; S1 created the minimal version so log.ts has an allowlist to read.",
+  "context": {
+    "ordinal": "number",
+    "ext": "string",
+    "code": "string",
+    "size": "number",
+    "count": "number",
+    "cmd": "string",
+    "window": "string"
+  },
+  "export_context": ["ordinal", "size", "count", "code", "cmd"]
+}

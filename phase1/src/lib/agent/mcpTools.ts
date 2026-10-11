@@ -1,7 +1,7 @@
 import { AgentToolRegistry, toolSchemaHash } from './toolRegistry';
 import type { AgentToolSpec } from './toolRegistry';
 import type { AgentToolDefinition } from './types';
-import { validateMcpArgs } from './mcpSchema';
+import { checkMcpArgs, McpArgsError } from './mcpSchema';
 
 /** Mirrors the Rust McpToolInfo. Everything here comes from an external server: untrusted. */
 export interface McpToolInfo { server: string; name: string; description: string; input_schema: Record<string, unknown> }
@@ -53,8 +53,8 @@ export function registerMcpTools(registry: AgentToolRegistry, tools: readonly Mc
         const argBytes = JSON.stringify(args).length;
         const log = (outcome: McpCallRecord['outcome'], detail?: string) => observe?.({ at: started, server: t.server, tool: t.name, argBytes, outcome, ms: Date.now() - started, detail: detail?.slice(0, 200) });
         if (argBytes > MAX_ARGS_BYTES) { log('invalid', 'arguments too large'); throw Error('MCP tool arguments are too large.'); }
-        const problems = validateMcpArgs(args, t.input_schema);
-        if (problems.length) { log('invalid', problems[0]); throw Error(`Invalid arguments for this tool: ${problems.join('; ')}.`); }
+        const checked = checkMcpArgs(args, t.input_schema);
+        if (!checked.ok) { const e = new McpArgsError(checked.issues); log('invalid', `${e.errorId} ${checked.issues[0].code}`); throw e; }
         const ok = await approve({ server: t.server, tool: t.name, args }, signal);
         signal.throwIfAborted();
         if (ok !== true) { log('denied'); throw Error('The user did not approve this tool call.'); }

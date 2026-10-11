@@ -66,7 +66,7 @@ import {
 } from "../lib/i18n";
 import { useT } from "../lib/useT";
 import { tOr } from "../lib/i18n";
-import { copyErrorReport } from "../lib/log";
+import { copyErrorReport } from "../lib/diagnostics/hostStore";
 import {
   Dialog,
   DialogContent,
@@ -1502,6 +1502,34 @@ export function Settings() {
               ))}
               <code>{state.look.accent ?? "#6366f1"}</code>
             </div>
+            {state.extensionAccents.length > 0 && (
+              <div
+                className="settings-accent-presets"
+                aria-label={t("finish.settings.accentExtensionPresets")}
+              >
+                {state.extensionAccents.map((palette) => (
+                  <button
+                    key={palette.id}
+                    aria-label={t("finish.settings.accentName", {name:palette.label})}
+                    title={palette.label}
+                    style={{
+                      background: `linear-gradient(135deg, ${palette.light} 50%, ${palette.dark} 50%)`,
+                    }}
+                    onClick={() =>
+                      change({
+                        look: {
+                          ...state.look,
+                          accent:
+                            state.theme === "dark"
+                              ? palette.dark
+                              : palette.light,
+                        },
+                      })
+                    }
+                  />
+                ))}
+              </div>
+            )}
             {state.look.accent &&
               (() => {
                 const bg = state.theme === "dark" ? "#131316" : "#ffffff";

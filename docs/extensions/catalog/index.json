@@ -167,6 +167,19 @@
         "project.read"
       ],
       "category": "Editing"
+    },
+    {
+      "id": "somnia.accent-palettes",
+      "name": "Accent Palettes",
+      "version": "1.0.0",
+      "author": "Somnia",
+      "category": "Themes",
+      "description": "Curated accent palettes from the Somnia theme wave (Ocean Blue, Sakura Pink, Honey Amber, Lagoon Teal, Nord Frost, Slate Mono, Sunset Orange), applied in Settings > Appearance. No code and no host permissions.",
+      "repo": "https://github.com/philppplik/somnia",
+      "download": "https://raw.githubusercontent.com/philppplik/somnia/main/docs/extensions/catalog/packages/accent-palettes-1.0.0.zip",
+      "sha256": "c7e44cd2b29443dab19f0d59fa1732c1e8135e5a11554b1d0f9ea479ffa65204",
+      "apiVersion": 1,
+      "permissions": []
     }
   ]
 }

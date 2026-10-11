@@ -1,3 +1,4 @@
+import {reportError} from '../../lib/log';
 import {useState} from 'react';
 import {ArrowDown,ArrowUp,Copy,Download,Eye,EyeOff} from '../../lib/icons';
 import {ToFrontIcon} from './icons';
@@ -19,7 +20,7 @@ export function VectorInspector(){
  const nodeSelection=s.nodePath&&s.selectedNode?[{pathId:s.nodePath,nodeId:s.selectedNode}]:[];
  const fill=first?.style?.fill??'#000000',stroke=first?.style?.stroke??'none',sw=first?.style?.strokeWidth??1,op=first?.style?.opacity??1;
  const num=(v:string)=>{const n=Number(v);return Number.isFinite(n)?n:null;};
- const pngExport=async()=>{setBusy(true);setNote('');try{await downloadPng(s.name,s.doc.width,s.doc.height,2);}catch(e){setNote(e instanceof Error?e.message:String(e));}finally{setBusy(false);}};
+ const pngExport=async()=>{setBusy(true);setNote('');try{await downloadPng(s.name,s.doc.width,s.doc.height,2);}catch(e){reportError('vector.operation',e,{context:{studio:'vector'}});setNote(e instanceof Error?e.message:String(e));}finally{setBusy(false);}};
  const importActive=/\.svg$/i.test(app.activeFile)&&app.activeFile in app.files;
  return <aside className="flex min-h-0 flex-1 flex-col overflow-auto text-[12px]" aria-label={t('vector.inspector')} data-testid="vector-inspector">
   <section className={section}><VectorToolsPanel value={s.doc} selection={s.selection} onSelectionChange={select} tool={s.tool==='node'?'node':'select'} onToolChange={setTool} exportName={s.name}

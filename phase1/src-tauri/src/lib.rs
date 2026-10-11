@@ -3,14 +3,16 @@ mod desktop;
 #[cfg(any(feature = "desktop", test))]
 mod drop_grant;
 #[cfg(any(feature = "desktop", test))]
-mod startup_file;
-#[cfg(any(feature = "desktop", test))]
 mod image_io;
 #[cfg(any(feature = "desktop", test))]
 mod pdf_io;
 #[cfg(any(feature = "desktop", test))]
 mod audio_io;
 pub mod applog;
+pub mod app_command_error;
+pub mod cmd;
+pub mod ignore;
+pub mod intake;
 pub mod service;
 #[cfg(feature = "desktop")]
 pub use desktop::run;
@@ -42,3 +44,11 @@ pub mod extension_activity;
 pub mod extension_activity_commands;
 
 pub mod extension_block_state;
+
+pub mod diagnostics_types;
+pub mod incidents;
+pub mod diagnostics_zip;
+pub mod panic_report;
+
+#[cfg(feature = "desktop")]
+pub mod diagnostics_commands;

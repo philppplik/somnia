@@ -1,3 +1,4 @@
+import {reportError} from '../log';
 import {useSyncExternalStore} from 'react';
 import {SoundEngine,type SoundEngineLike} from './engine';
 import {DEFAULT_SETTINGS,exportName,isNeutral,normalizeSelection,sanitizeSettings,toRecipe,type SoundSettings} from './recipe';
@@ -20,7 +21,7 @@ const listeners=new Set<()=>void>();
 let stopMediaSync:(()=>void)|undefined;
 const emit=()=>listeners.forEach(l=>l());
 const put=(s:SoundSession)=>{sessions.set(s.name,s);emit();};
-const patch=(name:string,p:Partial<SoundSession>)=>{const s=sessions.get(name);if(s)put({...s,...p});};
+const patch=(name:string,p:Partial<SoundSession>,cause?:unknown)=>{if(p.error)reportError('sound.engine',cause??p.error,{context:{studio:'sound',file:name}});const s=sessions.get(name);if(s)put({...s,...p});};
 /** Tests replace the engine; production uses the WASM worker. Drops all sessions. */
 export function setSoundEngineFactory(f:()=>SoundEngineLike){for(const n of [...sessions.keys()])closeSound(n);engine?.dispose();engine=undefined;engineReady=undefined;factory=f;}
 function getEngine(){
@@ -49,7 +50,7 @@ export async function openSound(item:{name:string;url:string}):Promise<void>{
   const original=version(first);
   patch(item.name,{status:'ready',error:'',plugins:plugins.filter(p=>!p.instrument&&p.offline!==false),original,processed:original});
   if(!isNeutral(sessions.get(item.name)!.settings))schedule(item.name,0);
- }catch(e){resetEngine(e);if(sessions.has(item.name))patch(item.name,{status:'error',error:message(e)});}
+ }catch(e){resetEngine(e);if(sessions.has(item.name))patch(item.name,{status:'error',error:message(e)},e);}
 }
 function schedule(name:string,delay=DEBOUNCE_MS){
  clearTimeout(timers.get(name));timers.set(name,setTimeout(()=>{timers.delete(name);void render(name);},delay));
@@ -63,7 +64,7 @@ async function render(name:string){
   const r=await e.process(src.bytes.slice(0),src.ext,toRecipe(s.settings),p=>{if(runs.get(name)===run)patch(name,{progress:p});});
   if(runs.get(name)!==run||!sessions.has(name))return;
   const next=version(r),cur=sessions.get(name)!;revoke(cur.processed,cur.original);patch(name,{status:'ready',error:'',processed:next,progress:null});
- }catch(e){resetEngine(e);if(runs.get(name)===run&&sessions.has(name))patch(name,{status:'error',error:message(e),progress:null});}
+ }catch(e){resetEngine(e);if(runs.get(name)===run&&sessions.has(name))patch(name,{status:'error',error:message(e),progress:null},e);}
 }
 /** Renders settings to a throwaway WAV URL for listening (review of an AI proposal). Does not touch the session; the caller revokes the URL. */
 export async function renderSoundPreview(name:string,settings:SoundSettings):Promise<string>{

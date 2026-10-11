@@ -927,6 +927,7 @@
   "share.err.start-failed": "Impossible de démarrer le partage.",
   "finish.settings.snapshots": "Instantanés locaux du projet",
   "finish.settings.accentPresets": "Couleurs d’accent prédéfinies",
+  "finish.settings.accentExtensionPresets": "Palettes d’accent des extensions",
   "finish.settings.accentName": "Accent {name}",
   "finish.settings.importFailed": "Impossible d’importer les raccourcis.",
   "finish.settings.shortcutTooLarge": "Le fichier de raccourcis dépasse 100 Ko.",
@@ -2489,5 +2490,12 @@
   "ext.col.extension": "Extension",
   "ext.col.action": "Action",
   "ext.col.target": "Cible",
-  "ext.col.result": "Résultat"
+  "ext.col.result": "Résultat",
+  "problems.clearRuntime": "Effacer l’historique d’exécution",
+  "problems.empty": "Aucun problème détecté. Les erreurs d’exécution apparaissent ici quand elles surviennent.",
+  "problems.application": "Application",
+  "problems.noSource": "Aucun emplacement source",
+  "problems.details": "Détails techniques",
+  "problems.session": "L’historique d’exécution est local à cette session. L’effacer ne corrige pas les erreurs et ne supprime pas les diagnostics de syntaxe.",
+  "problems.dropped": "{count} anciennes entrées d’exécution ont été supprimées."
 }

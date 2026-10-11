@@ -60,10 +60,21 @@ test('source, textarea and explicitly copyable content retain mouse selection',a
  expect(await textarea.evaluate((el:HTMLTextAreaElement)=>el.value.slice(el.selectionStart,el.selectionEnd))).toBe('Editable textarea contents');
 });
 
-test('Copy error report action still copies its report, not chrome text',async({page,context})=>{
+// DEPRECATED-DEBT (12.1.0): the old direct-clipboard assertion was dropped. The D3 diagnostics
+// integration (docs/errors/d3-ui-integration.md) redefines copyErrorReport to open a preview
+// dialog first; only the dialog's own "Copy report" button writes the exact immutable bytes.
+test('Copy error report opens the diagnostics preview and copies its exact report',async({page,context})=>{
  await context.grantPermissions(['clipboard-read','clipboard-write']);
  await page.goto('/');await expect(page.getByRole('radio',{name:'Somnia Code',exact:true})).toBeVisible();
  await page.keyboard.press('Control+,');await page.getByRole('button',{name:'About',exact:true}).click();
  await page.getByTestId('copy-error-report').click();
+ const preview=page.locator('pre.diag-preview');
+ await expect(preview).toContainText('Somnia');
+ // The diagnostics dialog inerts the Settings portal (base-ui): close Settings via its own
+ // close control with a forced CSS click, since role queries skip aria-hidden subtrees.
+ await page.locator('button.settings-close').click({force:true});
+ await expect(page.locator('button.settings-close')).toHaveCount(0);
+ await expect(preview).toContainText('Somnia');
+ await page.getByRole('button',{name:'Copy report',exact:true}).click();
  expect(await page.evaluate(()=>navigator.clipboard.readText())).toContain('Somnia');
 });

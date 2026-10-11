@@ -927,6 +927,7 @@
   "share.err.start-failed": "No se pudo empezar a compartir.",
   "finish.settings.snapshots": "Instantáneas locales del proyecto",
   "finish.settings.accentPresets": "Colores de acento predefinidos",
+  "finish.settings.accentExtensionPresets": "Paletas de acento de extensiones",
   "finish.settings.accentName": "Acento {name}",
   "finish.settings.importFailed": "No se pudieron importar los atajos.",
   "finish.settings.shortcutTooLarge": "El archivo de atajos supera los 100 KB.",
@@ -2489,5 +2490,12 @@
   "ext.col.extension": "Extensión",
   "ext.col.action": "Acción",
   "ext.col.target": "Destino",
-  "ext.col.result": "Resultado"
+  "ext.col.result": "Resultado",
+  "problems.clearRuntime": "Borrar historial de ejecución",
+  "problems.empty": "No se detectaron problemas. Los errores de ejecución aparecen aquí cuando ocurren.",
+  "problems.application": "Aplicación",
+  "problems.noSource": "Sin ubicación de origen",
+  "problems.details": "Detalles técnicos",
+  "problems.session": "El historial de ejecución es local a esta sesión. Borrarlo no corrige errores ni elimina diagnósticos de sintaxis.",
+  "problems.dropped": "Se descartaron {count} entradas de ejecución antiguas."
 }

@@ -927,6 +927,7 @@
   "share.err.start-failed": "Não foi possível começar a compartilhar.",
   "finish.settings.snapshots": "Snapshots locais do projeto",
   "finish.settings.accentPresets": "Cores de destaque predefinidas",
+  "finish.settings.accentExtensionPresets": "Paletas de destaque de extensões",
   "finish.settings.accentName": "Destaque {name}",
   "finish.settings.importFailed": "Não foi possível importar os atalhos.",
   "finish.settings.shortcutTooLarge": "O arquivo de atalhos excede 100 KB.",
@@ -2489,5 +2490,12 @@
   "ext.col.extension": "Extensão",
   "ext.col.action": "Ação",
   "ext.col.target": "Destino",
-  "ext.col.result": "Resultado"
+  "ext.col.result": "Resultado",
+  "problems.clearRuntime": "Limpar histórico de execução",
+  "problems.empty": "Nenhum problema detectado. Os erros de execução aparecem aqui quando ocorrem.",
+  "problems.application": "Aplicativo",
+  "problems.noSource": "Sem local de origem",
+  "problems.details": "Detalhes técnicos",
+  "problems.session": "O histórico de execução é local a esta sessão. Limpá-lo não corrige erros nem remove diagnósticos de sintaxe.",
+  "problems.dropped": "{count} entradas antigas de execução foram descartadas."
 }

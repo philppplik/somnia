@@ -17,7 +17,7 @@ export function lintPackage(files:Record<string,Uint8Array>):LintResult{
  const hasCode=typeof m.code==='string';
  if(hasCode)warnings.push('Contains worker code. The GitHub index currently refuses worker code; this package can only be installed locally.');
  if(!hasCode&&typeof raw.main==='string')warnings.push('Uses "main". It is inlined into code at install time (see above).');
- if(m.permissions.length===0&&!m.contributes.commands.length&&!m.contributes.snippets.length&&!m.contributes.codeThemes.length&&!m.contributes.panels.length&&!hasCode)warnings.push('The extension contributes nothing.');
+ if(m.permissions.length===0&&!m.contributes.commands.length&&!m.contributes.snippets.length&&!m.contributes.codeThemes.length&&!m.contributes.accentPalettes.length&&!m.contributes.panels.length&&!hasCode)warnings.push('The extension contributes nothing.');
  if(m.permissions.includes('project.write'))warnings.push('Requests project.write. Reviewers will check that every write is necessary.');
  for(const p of m.contributes.panels){if(/https?:\/\//i.test(p.html))warnings.push(`Panel "${p.id}" mentions an http(s) URL. Panels cannot load network resources (CSP).`);}
  return{ok:true,errors:[],warnings,manifest:m,catalogReady:!hasCode};

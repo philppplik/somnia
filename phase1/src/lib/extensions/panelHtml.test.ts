@@ -3,7 +3,8 @@ import assert from 'node:assert/strict';
 import {panelSrcdoc,panelDocument,panelUrl,isPanelUrl,PANEL_CSP} from './panelHtml';
 test('panel CSP forbids network, forms and base changes',()=>{
   for(const d of ["default-src 'none'","script-src 'unsafe-inline'","form-action 'none'","base-uri 'none'"])assert.ok(PANEL_CSP.includes(d));
-  assert.match(panelSrcdoc('<p>x</p>','tok'),/Content-Security-Policy/);
+  const d=panelSrcdoc('<p>x</p>','tok');
+  assert.match(d,/Content-Security-Policy/);assert.match(d,/form-action 'none'/);assert.match(d,/base-uri 'none'/);
 });
 test('native document carries no meta CSP (header) and reads the token from the fragment',()=>{
   const d=panelDocument('<p>x</p>');assert.ok(!d.includes('Content-Security-Policy'));assert.match(d,/location\.hash/);

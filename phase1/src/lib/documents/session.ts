@@ -22,7 +22,7 @@ async function apply(edit:TextEdit,record:'new'|'undo'|'redo',o:{merge?:boolean;
  const at=record==='new'?o.caret:caretAfterEdit(edit);
  patchDocuments({edited:true,editError:'',caretLocked:false,caret:at==null?null:{block:edit.block,anchor:at,head:at}});await refresh(d);
 }
-const run=(fn:()=>Promise<void>)=>{chain=chain.then(fn).catch(err=>patchDocuments({editError:err instanceof Error?err.message:String(err)}));return chain;};
+const run=(fn:()=>Promise<void>)=>{chain=chain.then(fn).catch(err=>patchDocuments({editError:err instanceof Error?err.message:String(err)},err));return chain;};
 /** Applies the difference between the paragraph's current text and `next` as one replacement. */
 export const editParagraph=(index:number,next:string)=>run(async()=>{
  const block=getDocumentsState().blocks.find(b=>b.index===index);if(!block||!block.editable||block.text===undefined)throw new Error('This paragraph cannot be edited as text.');

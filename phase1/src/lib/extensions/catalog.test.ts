@@ -51,6 +51,10 @@ test('shipped index and package match the pinned hash',()=>{
  const list=validateCatalog(JSON.parse(readFileSync(new URL('index.json',root),'utf8')));
  const bytes=readFileSync(new URL('packages/quiet-colors-1.0.0.zip',root));assert.equal(createHash('sha256').update(bytes).digest('hex'),list[0].sha256);
  const r=parsePackageZip(bytes);assert.equal(r.ok,true);if(r.ok){assert.equal(r.manifest.id,list[0].id);assert.equal(r.manifest.code,undefined);assert.deepEqual(r.manifest.permissions,[]);}
+ const accents=list.find(e=>e.id==='somnia.accent-palettes');assert.ok(accents,'accent-palettes entry in the shipped index');
+ const ab=readFileSync(new URL('packages/accent-palettes-1.0.0.zip',root));assert.equal(createHash('sha256').update(ab).digest('hex'),accents.sha256);
+ const ar=parsePackageZip(ab);assert.equal(ar.ok,true);if(ar.ok){const m=ar.manifest;assert.equal(m.id,accents.id);assert.equal(m.version,accents.version);assert.equal(m.code,undefined);assert.deepEqual(m.permissions,[]);
+  assert.equal(m.contributes.accentPalettes.length,7);for(const p of m.contributes.accentPalettes){assert.match(p.light,/^#[0-9a-f]{6}$/);assert.match(p.dark,/^#[0-9a-f]{6}$/);}}
 });
 
 test('malformed ZIP and hostile download identity fail without replacing installed data',async()=>{

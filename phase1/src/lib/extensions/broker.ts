@@ -41,7 +41,13 @@ export class ExtensionBroker {
  assertLaunch():void {this.check('panels.postMessage');}
  validateCommand(id:string,value:Json,result=false):void {
   const command=this.manifest.contributes.commands?.find(c=>c.id===id);if(!command)invalid();const schema=command[result?'resultSchema':'argumentsSchema'];
-  checkJson(value);if(schema&&!schemas.compile(schema as object)(value))invalid();
+  checkJson(value);
+  if(schema){
+    let validate:((v:unknown)=>boolean);
+    try {validate=schemas.compile(schema as object) as (v:unknown)=>boolean;}
+    catch {throw new ExtensionError('E_INVALID_ARGUMENT','Command argument schema cannot be compiled in this build (CSP-safe runtime, no unsafe-eval); rejecting the call. A non-codegen validator lands in 12.1.0.');}
+    if(!validate(value))invalid();
+  }
  }
  async call<M extends ApiMethod>(method:M,params:ApiMethods[M]['params'],signal:AbortSignal):Promise<ApiMethods[M]['result']> {
   if(!Object.hasOwn(API_PERMISSIONS,method))invalid();checkJson(params);if(new TextEncoder().encode(JSON.stringify(params)).length>MAX_RPC_BYTES)throw new ExtensionError('E_RESOURCE_LIMIT','API request exceeds 1 MiB.');

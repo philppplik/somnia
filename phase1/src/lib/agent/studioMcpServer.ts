@@ -13,7 +13,7 @@
  * - arguments are validated against the tool's schema before the tool runs.
  */
 import type { AgentToolContext, AgentToolGrants, AgentToolRegistry } from './toolRegistry';
-import { validateMcpArgs } from './mcpSchema';
+import { checkMcpArgs } from './mcpSchema';
 
 export const SUPPORTED_PROTOCOLS = ['2025-06-18', '2025-03-26', '2024-11-05'] as const;
 const EXPOSED: AgentToolGrants = { levels: ['read', 'propose'] };
@@ -94,8 +94,9 @@ export class StudioMcpServer {
     if (!isObj(args)) { report('invalid'); return err(id, -32602, 'Arguments must be an object'); }
     if (this.limited()) { report('limited'); return text('Rate limit reached. Try again in a minute.', true); }
     const def = src.registry.definitions(EXPOSED).find(d => d.name === name);
-    const problems = validateMcpArgs(args, def?.parameters);
-    if (problems.length) { report('invalid'); return text(`Invalid arguments: ${problems.join('; ')}.`, true); }
+    if (!def) { report('invalid'); return text('Invalid arguments: tool schema unavailable.', true); }
+    const checked = checkMcpArgs(args, def.parameters);
+    if (!checked.ok) { report('invalid'); return text(`Invalid arguments: ${checked.issues.map(i => i.message).join('; ')}.`, true); }
     try {
       const out = await src.registry.run(name, args, this.o.context(), signal, EXPOSED);
       report('ok');

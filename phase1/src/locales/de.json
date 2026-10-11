@@ -927,6 +927,7 @@
   "share.err.start-failed": "Teilen konnte nicht gestartet werden.",
   "finish.settings.snapshots": "Lokale Projekt-Snapshots",
   "finish.settings.accentPresets": "Akzentvorlagen",
+  "finish.settings.accentExtensionPresets": "Akzentpaletten aus Erweiterungen",
   "finish.settings.accentName": "Akzent {name}",
   "finish.settings.importFailed": "Tastenkürzel konnten nicht importiert werden.",
   "finish.settings.shortcutTooLarge": "Die Tastenkürzeldatei ist größer als 100 KB.",
@@ -2489,5 +2490,12 @@
   "ext.col.extension": "Erweiterung",
   "ext.col.action": "Aktion",
   "ext.col.target": "Ziel",
-  "ext.col.result": "Ergebnis"
+  "ext.col.result": "Ergebnis",
+  "problems.clearRuntime": "Laufzeitverlauf leeren",
+  "problems.empty": "Keine erkannten Probleme. Laufzeitfehler erscheinen hier, sobald sie auftreten.",
+  "problems.application": "Anwendung",
+  "problems.noSource": "Kein Quellort",
+  "problems.details": "Technische Details",
+  "problems.session": "Der Laufzeitverlauf gilt nur für diese Sitzung. Leeren behebt keine Fehler und entfernt keine Syntaxdiagnosen.",
+  "problems.dropped": "{count} ältere Laufzeiteinträge wurden verworfen."
 }
