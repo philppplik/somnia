@@ -1,6 +1,7 @@
 # Vibe Space - concept for Somnia 12.2.0 ("Vibe Studio")
 
-Status: All decisions D1-D12 made and locked by Philipp, incl. Linux tier plan (2026-10-11).
+Status: All decisions D1-D12 made and locked by Philipp, incl. Linux tier plan (2026-10-11). Skills library (4.4) added 2026-10-11 on Philipp's GO. 
+Target path when approved: `docs/concepts/vibespace.md`
 Basis: Phase 1 decisions plus 20 Phase 2 research reports (snapshot 2026-10-10).
 Naming (fixed with Philipp): **Vibe Space** = the container. **Studios** = sessions inside it.
 
@@ -81,6 +82,7 @@ Naming is RESOLVED (D8): sessions are called "Studio" in the UI, the main contai
 | A9 | Local inference: Ollama/LM Studio adapters default. Optional embedded backend later via llama-cpp-2 in an isolated worker (or mistral.rs). No own engine | WAIT/optional | p6 |
 | A10 | Models: local trial baseline Qwen3.5-9B; benchmark Qwen3.8-27B and Gemma4 for high-memory tier. Llama 4 is not a safe EU default (licence). Cloud adapters must handle provider API differences (OpenAI Responses API, Claude forced-tool limits) | ADOPT + BUILD adapters | p12 |
 | A11 | Skills: adopt the Agent Skills `SKILL.md` format. Small Rust layer for discovery, activation, permissions, validation. Keep rules, skills, memory and effect permissions separate. Import Cursor rules / Fabric patterns as content only | ADOPT + BUILD | p14 |
+| A19 | Skills library: Agent Skills `SKILL.md` unchanged; sources GitHub repos, skills.sh-compatible index (read-only), local, Somnia curated index; own Skills tab in the extension-store UI; skill `allowed-tools` never auto-approved; scripts sandboxed and consent-gated; trust tiers Unreviewed/Scanned/Verified tied to D10. See 4.4 | BUILD on A11 + A15 | 4.4 |
 | A12 | Frontend: adopt assistant-ui selectively via ExternalStoreRuntime, with a Somnia event adapter. Today agent loop, consent and chat state are still TypeScript on branch `somnia-agent`, so they move to Rust | ADOPT presentation only | p11 |
 | A13 | Evals: Inspect AI as dev-only runner against the real Rust binary, plus Somnia artifact validators and a DE+EN task suite. Not embedded in the app | ADOPT (dev) | p3 |
 | A14 | Security baseline: OWASP LLM Top 10 2025 and Agentic Top 10 2026. Tool descriptions and results are untrusted data. Dry-run/diff preview plus confirmation for high-impact actions | ADOPT as checklist | p8 |
@@ -177,6 +179,36 @@ Sourced from crates.io, docs, vendor docs; nothing built or run.
 
 Still unverified: real-world reliability of ashpd RemoteDesktop on GNOME 4x/KDE Plasma 6 in our Tauri app, Flatpak/Snap packaging impact (portals behave differently when sandboxed), and whether Somnia's AppImage/deb installs can hold persistent portal grants.
 
+### 4.4 Skills library (Philipp's GO, 2026-10-11)
+
+Builds on A11. A skill is a folder with a `SKILL.md` (YAML frontmatter + Markdown) plus optional `scripts/`, `references/`, `assets/`. Browse, install and share skills in the same store UI as extensions, as its own **Skills** tab.
+
+**Ecosystem state (checked 2026-10-11, search/docs level):**
+- Open standard: https://agentskills.io (spec https://agentskills.io/specification , repo https://github.com/agentskills/agentskills). Required frontmatter `name` (max 64 chars, lowercase/digits/hyphens) and `description` (max 1024 chars); optional `license` and others. `allowed-tools` is marked **experimental** in the standard, widely used in Claude Code (third-party frontmatter reference, not the spec page). Adopted by Codex (https://developers.openai.com/codex/skills) and Cursor (https://cursor.com/docs/skills); a third-party site claims 33+ products, not verified.
+- skills.sh (https://vercel.com/changelog/introducing-skills-the-open-agent-skills-ecosystem): Vercel's directory and leaderboard for skill packages (browse by category/popularity, install stats), plus the `skills` CLI (`npx skills add <owner/repo>`, repo https://github.com/vercel-labs/skills , MIT, 33.5k stars, 1,082 open issues; README says it supports "Claude Code, Codex, Cursor and 75 more"). Skill packages are plain GitHub repos. A package can hold many skills (`--skill <name>`).
+- Takeaway: there is no central registry to run. Distribution is GitHub repos, and skills.sh is an index on top. Somnia does not need to invent a format or a host.
+
+**Design:**
+1. **Format:** Agent Skills `SKILL.md` as-is, no Somnia fork. Somnia-only metadata goes in a sidecar or the spec's metadata field, never in new top-level keys.
+2. **Sources (import/share):** (a) GitHub repo URL / `owner/repo` (same convention as `npx skills add`), (b) a skills.sh-compatible index as a read-only discovery source, (c) local folder / zip, (d) Somnia's own curated index in the extension-store catalog (A15). Sharing = publish a repo, or export a skill folder; "Share" in the UI copies the repo reference.
+3. **Skills tab in the store:** search, categories, publisher, source, version/commit pin, last scan result, requested permissions, "installed in: this Vibe Space / all". Same install flow, trust badges and revocation metadata as extensions (A15).
+4. **Scopes:** per Vibe Space (stored in the project) or user-wide. Project skills never auto-activate in other spaces.
+5. **Activation (A11):** discovery reads metadata only; the body loads when the agent picks the skill or the user invokes it; resources load on demand. Keep main instructions under the standard's recommendation (500 lines / 5k tokens).
+6. **Permissions:** a skill's instructions grant nothing. Anything a skill does still goes through the consent broker. `allowed-tools` from a skill is **ignored as pre-approval** by default and shown as "requested", because the field is experimental and skills are untrusted input. Scripts inside a skill run only in the sandbox (A5) and only after consent.
+7. **Trust tiers (ties to D10):** restricted mode is the default. Installing a skill never executes its scripts. Tiers: *Unreviewed* (instructions readable only, scripts disabled), *Scanned* (automated checks passed, scripts need per-run consent), *Verified* (review by Somnia, as for verified extensions in D10). Unverified skills can still be used as pure instructions, with a banner.
+8. **Scanning on install and on update:** show the full SKILL.md and every script before first activation, diff on update, pin to a commit, flag hidden/obfuscated text and instructions like "do not tell the user", network calls, credential paths, shell piping. A clean scan is not a safety guarantee.
+9. **Import of other formats:** Cursor rules and Fabric patterns import as skills (content only, A11).
+
+**Why the security part is not optional (sources):**
+- USENIX Security 2026 study of 98,380 skills from two registries: skills "execute with full user privileges" and malicious ones exist in the wild (https://www.usenix.org/system/files/usenixsecurity26-liu-yi.pdf).
+- CSA research note (2026-06-24): over 1,184 malicious skills confirmed in one marketplace between Feb and May 2026, delivering a credential stealer; metadata-only attacks can manipulate discovery ranking (https://labs.cloudsecurityalliance.org/research/csa-research-note-ai-skill-supply-chain-attacks-20260624-csa/).
+- OWASP Agentic Skills Top 10, AST01 malicious skills hide payloads in SKILL.md prose as well as scripts (https://owasp.org/www-project-agentic-skills-top-10/ast01.html).
+- Consequence: popularity rankings (installs, stars) are not trust signals in the Somnia UI. Do not sort the default view by installs alone.
+
+**Open for Philipp (not blocking):** (a) default skills source list: GitHub + skills.sh read-only, ok? (b) should Somnia ship a small set of first-party skills per studio (Code, Documents, Slides...)? recommend yes, as the "Verified" seed. (c) Do skills run in scheduled/background runs? recommend yes for instruction-only skills, no for script-bearing skills without a per-schedule opt-in.
+
+Not verified: skills.sh's own listing/review process and API (no documented API read), licence per skill in the wild, how many Agent Skills products really implement the standard.
+
 ## 5. UX sketches (text)
 
 ### 5.1 Vibe Space home
@@ -212,7 +244,8 @@ What, where, why, scope (path/domain/command), Allow once / Allow for this run /
 4. Task board.
 5. Memory, skills.
 6. Desktop control (opt-in, A18): Windows and Linux only (Philipp, 2026-10-11). **macOS is dropped until further notice.** External MCP providers first (Cua Driver, Windows-MCP), own thin layer later.
-7. Optional: ACP client, embedded inference, voice.
+7. Skills library (4.4): install from GitHub/skills.sh, Skills tab, scan + trust tiers; seed with first-party skills. Needs A15 store UI and consent broker (step 2).
+8. Optional: ACP client, embedded inference, voice.
 
 Rough effort numbers exist only for goose spikes (p1): 3-5 days for a `goose-agent` spike, 2-4 days for an ACP spike. Everything else is not estimated.
 
