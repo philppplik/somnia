@@ -13,7 +13,6 @@
 //! `#![deny(unsafe_code)]` is lifted locally with a per-call SAFETY note.
 
 use super::{ExecSpec, ProcessError, ProcessLauncher, ProcessLimits};
-use std::path::PathBuf;
 
 /// AppContainer (zero-capability) launcher.
 pub struct AppContainerLauncher {
@@ -57,11 +56,13 @@ fn run_appcontainer(
     spec: &ExecSpec,
     limits: &ProcessLimits,
 ) -> Result<super::ExecReceipt, ProcessError> {
-    use std::io::Read;
-    use std::os::windows::io::FromRawHandle;
     use std::time::{Duration, Instant};
     use windows_sys::Win32::Foundation::*;
-    use windows_sys::Win32::Security::*;
+    use windows_sys::Win32::Security::Isolation::{
+        CreateAppContainerProfile, DeleteAppContainerProfile,
+        DeriveAppContainerSidFromAppContainerName,
+    };
+    use windows_sys::Win32::Security::SECURITY_CAPABILITIES;
     use windows_sys::Win32::System::Threading::*;
 
     // The whole body is one audited unsafe block: raw Win32 profile + attribute + process
@@ -81,13 +82,14 @@ fn run_appcontainer(
             &mut sid,
         );
         let mut owned_profile = false;
-        let sid = if hr >= 0 && !sid.is_null() {
+        // All three profile functions return HRESULT: 0 (S_OK) is success.
+        let sid = if hr == 0 && !sid.is_null() {
             owned_profile = true;
             sid
         } else {
             // Profile exists already: derive its SID.
             let mut derived: *mut std::ffi::c_void = std::ptr::null_mut();
-            if DeriveAppContainerSidFromAppContainerName(profile_name.as_ptr(), &mut derived) == 0
+            if DeriveAppContainerSidFromAppContainerName(profile_name.as_ptr(), &mut derived) != 0
                 || derived.is_null()
             {
                 return Err(ProcessError::IsolationUnavailable(
@@ -104,21 +106,21 @@ fn run_appcontainer(
             if owned_profile {
                 DeleteAppContainerProfile(profile_name.as_ptr());
             }
-            let _ = LocalFree(sid as isize);
+            let _ = LocalFree(sid);
             return Err(ProcessError::SpawnFailed);
         }
         let mut buf = vec![0u8; size];
-        let list = buf.as_mut_ptr() as *mut _PROC_THREAD_ATTRIBUTE_LIST;
+        let list = buf.as_mut_ptr() as LPPROC_THREAD_ATTRIBUTE_LIST;
         if InitializeProcThreadAttributeList(list, 1, 0, &mut size) == 0 {
             if owned_profile {
                 DeleteAppContainerProfile(profile_name.as_ptr());
             }
-            let _ = LocalFree(sid as isize);
+            let _ = LocalFree(sid);
             return Err(ProcessError::SpawnFailed);
         }
         let mut caps = SECURITY_CAPABILITIES {
             AppContainerSid: sid,
-            Capabilities: std::ptr::null(),
+            Capabilities: std::ptr::null_mut(),
             CapabilityCount: 0,
             Reserved: 0,
         };
@@ -137,7 +139,7 @@ fn run_appcontainer(
             if owned_profile {
                 DeleteAppContainerProfile(profile_name.as_ptr());
             }
-            let _ = LocalFree(sid as isize);
+            let _ = LocalFree(sid);
             return Err(ProcessError::SpawnFailed);
         }
 
@@ -172,7 +174,7 @@ fn run_appcontainer(
         if owned_profile {
             DeleteAppContainerProfile(profile_name.as_ptr());
         }
-        let _ = LocalFree(sid as isize);
+        let _ = LocalFree(sid);
         if ok == 0 {
             return Err(ProcessError::SpawnFailed);
         }
@@ -198,7 +200,6 @@ fn run_appcontainer(
             }
             std::thread::sleep(Duration::from_millis(10));
         };
-        let _ = Read; // silence unused when PoC has no pipe capture
         Ok(super::ExecReceipt {
             exit_code: exit,
             stdout: String::new(),
