@@ -1,0 +1,19 @@
+{
+ "vs.model.title": "Configuración del modelo local",
+ "vs.model.intro": "Vibe Space puede usar un modelo que se ejecuta en este equipo. No se descarga nada automáticamente.",
+ "vs.model.trial": "Modelo de prueba: Qwen3.5-9B",
+ "vs.model.provider.ollama": "Ollama",
+ "vs.model.provider.lmstudio": "LM Studio",
+ "vs.model.status.checking": "Comprobando...",
+ "vs.model.status.ready": "Listo: {model}",
+ "vs.model.status.missing": "Servidor encontrado, Qwen3.5-9B no está instalado",
+ "vs.model.status.down": "El servidor no está en ejecución",
+ "vs.model.status.error": "No se pudo leer la lista de modelos",
+ "vs.model.hint.ollamaDown": "Instala e inicia Ollama y luego ejecuta el comando de abajo.",
+ "vs.model.hint.ollamaPull": "Ejecuta el comando de abajo en una terminal. La descarga pesa unos 6 GB y solo empieza cuando lo ejecutas.",
+ "vs.model.hint.lmsDown": "Inicia el servidor local de LM Studio y luego carga Qwen3.5-9B.",
+ "vs.model.hint.lmsLoad": "En LM Studio, descarga y carga Qwen3.5-9B. No se descarga por ti.",
+ "vs.model.installed": "Modelos instalados: {count}",
+ "vs.model.recheck": "Comprobar de nuevo",
+ "vs.model.localOnly": "Esta comprobación solo se comunica con 127.0.0.1 en este equipo."
+}

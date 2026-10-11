@@ -11,6 +11,7 @@ import {SOUND_CATALOGUES} from './sound/i18n';
 import {VIDEO_CATALOGUES} from './video/i18n';
 import {VECTOR_CATALOGUES} from './vectorstudio/i18n';
 import {DESIGN_CATALOGUES} from './design/i18n';
+import {VIBESPACE_CATALOGUES} from './vibespace/i18n';
 /**
  * Small in-house i18n layer (no dependency, no network).
  * Keys are flat strings. Plurals use `_one` / `_other` suffixes picked with Intl.PluralRules.
@@ -26,6 +27,7 @@ for (const [tag, extra] of Object.entries(SOUND_CATALOGUES)) Object.assign(CATAL
 for (const [tag, extra] of Object.entries(VIDEO_CATALOGUES)) Object.assign(CATALOGUES[tag], extra);
 for (const [tag, extra] of Object.entries(VECTOR_CATALOGUES)) Object.assign(CATALOGUES[tag], extra);
 for (const [tag, extra] of Object.entries(DESIGN_CATALOGUES)) Object.assign(CATALOGUES[tag], extra);
+for (const [tag, extra] of Object.entries(VIBESPACE_CATALOGUES)) Object.assign(CATALOGUES[tag], extra);
 for (const [tag, extra] of Object.entries(CONSENT_CATALOGUES)) Object.assign(CATALOGUES[tag], extra);
 for (const [tag, extra] of Object.entries(STORE_CATALOGUES)) Object.assign(CATALOGUES[tag], extra);
 for (const [tag, extra] of Object.entries(DIAGNOSTIC_LOCALES)) Object.assign(CATALOGUES[tag], extra);

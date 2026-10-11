@@ -1,0 +1,27 @@
+/** Offline UI check for ModelSetup: screenshots go to test-results/, never /downloads. */
+import {build} from 'esbuild';
+import {chromium} from '@playwright/test';
+import {mkdtemp,readFile,mkdir,writeFile,rm} from 'node:fs/promises';
+import {tmpdir} from 'node:os';
+import {join,dirname} from 'node:path';
+import {fileURLToPath} from 'node:url';
+import assert from 'node:assert/strict';
+const here=dirname(fileURLToPath(import.meta.url));
+const out=await mkdtemp(join(tmpdir(),'vs-model-'));
+const entry=join(here,'.model-setup-entry.tsx');await writeFile(entry,`import {createRoot} from 'react-dom/client';import {ModelSetup} from ${JSON.stringify(join(here,'ModelSetup.tsx'))};
+import ${JSON.stringify(join(here,'vibespace.css'))};let n=0;const probe=async(p:string)=>{n++;(window as any).probeCalls=n;if(p==='ollama')return {state:'model-missing',hintKey:'vs.model.hint.ollamaPull',installed:[{id:'llama3:8b'}]};return {state:'server-down',hintKey:'vs.model.hint.lmsDown'};};
+createRoot(document.getElementById('root')!).render(<ModelSetup probe={probe as any}/>);`);
+await build({entryPoints:[entry],outfile:join(out,'f.js'),bundle:true,format:'iife',jsx:'automatic',loader:{'.css':'css','.json':'json'},absWorkingDir:join(here,'../../..')});
+await rm(entry);const js=await readFile(join(out,'f.js'),'utf8'),css=await readFile(join(out,'f.css'),'utf8');
+const shots=process.env.VIBESPACE_SCREENSHOTS??'test-results/vibespace';await mkdir(shots,{recursive:true});
+const browser=await chromium.launch({headless:true,args:['--no-sandbox']});const page=await browser.newPage({viewport:{width:700,height:600}});
+const errors=[];page.on('pageerror',e=>errors.push(e.message));
+await page.setContent('<html><body style="font-family:Arial;padding:20px"><div id="root" class="vs-root"></div></body></html>');
+await page.addStyleTag({content:css});await page.addScriptTag({content:js});
+await page.getByText('Server found, Qwen3.5-9B not installed').waitFor();
+assert.ok(await page.getByText('ollama pull qwen3.5:9b').isVisible());
+assert.equal(await page.getByRole('button',{name:/download|install/i}).count(),0);
+await page.screenshot({path:join(shots,'vibespace-model-setup.png')});
+const before=await page.evaluate(()=>window.probeCalls);await page.getByRole('button',{name:'Check again'}).first().click();
+await page.waitForFunction(b=>window.probeCalls>b,before);
+assert.deepEqual(errors,[]);await browser.close();console.log('model setup ui ok');
