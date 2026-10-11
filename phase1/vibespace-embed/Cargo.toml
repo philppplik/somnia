@@ -1,0 +1,24 @@
+[package]
+name = "somnia-vibespace-embed"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.90"
+license = "MIT"
+description = "Controlled model download and local multilingual-e5-small embedding for Vibe Space memory."
+
+[dependencies]
+somnia-vibespace-storage = { path = "../vibespace-storage" }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+sha2 = "0.10"
+ureq = { version = "2", default-features = false, features = ["tls"] }
+fastembed = { version = "7.1.1", default-features = false, optional = true }
+
+[features]
+# The real ONNX runtime backend. Off by default so the download manager and tests stay light.
+fastembed = ["dep:fastembed", "fastembed/ort-download-binaries-rustls-tls"]
+
+[dev-dependencies]
+tempfile = "3"
+
+[workspace]
