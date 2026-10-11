@@ -843,9 +843,27 @@ impl Runtime {
     pub fn list_snapshots(&self) -> Result<Vec<w::SnapshotReply>> {
         let mut result = vec![];
         for space in self.store.list_spaces(500)? {
-            for run in self.store.list_runs(&space.id, None, 500)? {
+            let mut runs = self.store.list_runs(&space.id, None, 500)?;
+            // A busy Studio may have an older latest run than the recent-history
+            // page. Never return an orphan latestRunId in the collection.
+            for studio in self.store.list_studios(&space.id, 500)? {
+                if let Some(latest) = self
+                    .store
+                    .list_runs(&space.id, Some(&studio.id), 1)?
+                    .into_iter()
+                    .next()
+                {
+                    if !runs.iter().any(|r| r.id == latest.id) {
+                        runs.push(latest);
+                    }
+                }
+            }
+            for run in runs {
                 result.push(self.snapshot(&run.id)?);
             }
+        }
+        if result.len() > 1000 {
+            return Err(CoreError("run collection exceeds alpha presentation limit"));
         }
         Ok(result)
     }

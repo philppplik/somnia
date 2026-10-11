@@ -287,3 +287,20 @@ test('QA F-3: checkedReviewRequest accepts the exact selection and rejects any w
   assert.throws(()=>checkedReviewRequest(cmd,bad as Record<string,unknown>),/Review request/,JSON.stringify(bad));
  assert.throws(()=>checkedReviewRequest(cmd,null as unknown as Record<string,unknown>));
 });
+
+test('broken artifact review remains discardable but cannot apply bytes',async()=>{
+ const snapshot=fixtureSnapshot();snapshot.studios=snapshot.studios.map(s=>s.runId==='run-copy'?{...s,review:{revision:'1:unavailable',summary:'Cannot verify isolated changes. Discard only.',files:[],conflicts:[],checks:[]},failure:{code:'artifact_review_failed',message:'No files can be applied.',retryable:false},capabilities:{...s.capabilities,apply:false}}:s);
+ const x=await ready(snapshot);
+ assert.equal(await x.controller.execute({type:'review',runId:'run-copy',reviewRevision:'1:unavailable',decision:'apply',paths:['index.html']}),false);
+ assert.equal(x.h.calls.length,0);await x.controller.refresh();
+ assert.equal(await x.controller.execute({type:'review',runId:'run-copy',reviewRevision:'1:unavailable',decision:'discard',paths:[]}),true);
+});
+
+test('native capabilities refresh starts closed and removed start is not fired',async()=>{
+ const snap=draftSnap();let available:VibeSpaceTransport['capabilities']=[];const calls:string[]=[];
+ const io:NativeVibeIO={invoke:async(command)=>{calls.push(command);return null;},listen:async()=>()=>{}};
+ const t=createNativeVibeSpaceTransport({io,capabilities:[],readCapabilities:async()=>available,listSpaces:async()=>snap.spaces,listStudios:async()=>snap.sessions,createStudio:async r=>({studioId:'s',...r,canStart:true,latestRunId:null}),readSnapshot:async()=>({revision:snap.revision,models:snap.models,runs:snap.studios.map(({sequence,...run})=>({protocolVersion:1,sequence,snapshot:run}))}),reviewRequest:c=>({runId:c.runId,paths:c.paths,reviewRevision:c.reviewRevision})});
+ assert.deepEqual(t.capabilities,[]);await t.snapshot();await assert.rejects(t.execute({...base,type:'start',studioId:'studio-draft'}),/unavailable/);
+ available=['start'];await t.snapshot();assert.deepEqual(t.capabilities,['start']);
+ available=[];await t.snapshot();await assert.rejects(t.execute({...base,type:'start',studioId:'studio-draft'}),/unavailable/);assert.equal(calls.length,0);
+});
