@@ -15,11 +15,13 @@ pub fn load() -> Option<Options> {
     serde_json::from_value(v.get("options")?.clone()).ok()
 }
 
-pub fn save(o: &Options, version: &str) -> std::io::Result<()> {
+pub fn save(o: &Options, version: &str, fresh_install: bool) -> std::io::Result<()> {
     let p = path().ok_or_else(|| std::io::Error::new(std::io::ErrorKind::NotFound, "APPDATA unset"))?;
     if let Some(d) = p.parent() { std::fs::create_dir_all(d)?; }
     let body = serde_json::json!({
         "schema": 1, "written_by": "Somnia-Setup", "version": version,
+        "fresh_install": fresh_install,
+        "written_at": std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_secs()).unwrap_or(0),
         // flat fields the app reads on first start to seed its own settings
         "auto_update_check": o.auto_update_check, "launch_at_signin": o.launch_at_signin,
         "options": o,

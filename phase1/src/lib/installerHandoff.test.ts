@@ -1,0 +1,11 @@
+import test from 'node:test';import assert from 'node:assert/strict';import {seedFromInstaller,shouldSeed,SEEDED_KEY,type Handoff} from './installerHandoff';
+const h=(o:Partial<Handoff>={}):Handoff=>({fresh_install:true,written_at:100,auto_update_check:false,...o});
+const mem=()=>{const m=new Map<string,string>();return {getItem:(k:string)=>m.get(k)??null,setItem:(k:string,v:string)=>{m.set(k,v);},m};};
+test('fresh install applies the installer choice once',async()=>{const s=mem();const got:boolean[]=[];
+ assert.equal(await seedFromInstaller(async()=>h(),s,on=>got.push(on)),true);assert.deepEqual(got,[false]);assert.equal(s.m.get(SEEDED_KEY),'100');
+ assert.equal(await seedFromInstaller(async()=>h(),s,on=>got.push(on)),false);assert.deepEqual(got,[false]);});
+test('a newer installer run on a fresh install applies again',async()=>{const s=mem();s.setItem(SEEDED_KEY,'100');const got:boolean[]=[];
+ assert.equal(await seedFromInstaller(async()=>h({written_at:200,auto_update_check:true}),s,on=>got.push(on)),true);assert.deepEqual(got,[true]);});
+test('upgrades and non-installer starts never touch the setting',async()=>{const s=mem();const got:boolean[]=[];
+ assert.equal(await seedFromInstaller(async()=>h({fresh_install:false}),s,on=>got.push(on)),false);
+ assert.equal(await seedFromInstaller(async()=>null,s,on=>got.push(on)),false);assert.deepEqual(got,[]);assert.equal(shouldSeed(null,null),false);});

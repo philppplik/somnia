@@ -41,6 +41,7 @@ fn main() {
             "open_dropped_project",
             "read_dropped_files",
             "is_store_package",
+            "installer_handoff_take",
             "list_files",
             "read_file",
             "read_media",

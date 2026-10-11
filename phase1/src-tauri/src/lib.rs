@@ -3,6 +3,8 @@ mod desktop;
 #[cfg(any(feature = "desktop", test))]
 mod drop_grant;
 #[cfg(any(feature = "desktop", test))]
+pub mod installer_handoff;
+#[cfg(any(feature = "desktop", test))]
 mod image_io;
 #[cfg(any(feature = "desktop", test))]
 mod pdf_io;

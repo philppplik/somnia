@@ -768,6 +768,11 @@ struct DropReply {
     position: [f64; 2],
 }
 /// True when the app runs from a Microsoft Store (MSIX) package. Such installs are updated by the Store, so the GitHub updater stays off.
+/// First-start handoff from the custom installer (Somnia-Setup). None when the app was not installed by it.
+#[tauri::command]
+fn installer_handoff_take(window: WebviewWindow) -> Option<crate::installer_handoff::Handoff> {
+    crate::installer_handoff::read(&window.app_handle().path().app_config_dir().ok()?)
+}
 #[tauri::command]
 fn is_store_package() -> bool {
     std::env::current_exe()
@@ -2723,6 +2728,7 @@ pub fn run() {
             open_dropped_project,
             read_dropped_files,
             is_store_package,
+            installer_handoff_take,
             list_files,
             read_file,
             read_media,

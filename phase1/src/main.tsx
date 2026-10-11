@@ -18,7 +18,8 @@ import './styles/variants.css';
 import './styles/extensions-popup.css';
 import './styles/extensions-store.css';
 import {isTauri} from '@tauri-apps/api/core';
-import {setStoreManaged} from './lib/updates';
+import {setStoreManaged,setSeedReady} from './lib/updates';
+import {seedFromInstaller} from './lib/installerHandoff';
 import {initLocale} from './lib/i18n';
 import {installGlobalErrorHandlers,setNoticeSink,reportError,logInfo,recentLog,reportAclDenied} from './lib/log';
 import {copyErrorReport} from './lib/diagnostics/hostStore';
@@ -98,6 +99,7 @@ if(isTauri())void import('./lib/extensions/selftestApp').then(m=>m.maybeRunNativ
 // LAN-Direct hosting is a desktop feature: register the Rust host with the collab engine only inside Tauri.
 if(isTauri())void import('./lib/collab/lanHost').then(m=>import('./lib/collab/lanHostPort').then(p=>p.registerLanHost({startLanHost:m.startLanHost,stopLanHost:m.stopLanHost,createLanSessionLinks:m.createLanSessionLinks}))).catch(e=>reportError('startup.lan-host',e,{message:'LAN hosting could not be loaded',notify:'LAN hosting is unavailable.'}));
 if(isTauri())setStoreManaged(import('@tauri-apps/api/core').then(m=>m.invoke<boolean>('is_store_package')).catch(e=>{reportError('startup.store-package',e,{level:'warn'});return false;}));
+if(isTauri())setSeedReady(import('@tauri-apps/api/core').then(m=>seedFromInstaller(c=>m.invoke<import('./lib/installerHandoff').Handoff|null>(c))).catch(e=>{reportError('startup.installer-handoff',e,{level:'warn'});}));
 if(isTauri())void installDesktopAdapter().catch(error=>reportError('startup.desktop-adapter',error,{message:'Desktop file access did not start',notify:'File access is unavailable. Saving to disk may not work.'}));
 else if(webFsSupported()&&!location.search.includes('fallback=zip'))void installFileAdapter(createWebFsPort()).catch(error=>reportError('startup.file-adapter',error,{message:'Browser file access did not start',notify:'File access is unavailable in this browser session.'}));
 else void installFileAdapter(createWebFsPort({...zipWebFsOptions(),canReconnect:false})).catch(error=>console.error(error));

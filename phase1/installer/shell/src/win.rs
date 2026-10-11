@@ -63,7 +63,7 @@ impl Platform for WinPlatform {
     fn env(&self, name: &str) -> Option<String> { std::env::var(name).ok() }
 }
 
-pub struct WinExecutor { cancel: Arc<AtomicBool>, child: Arc<Mutex<Option<Child>>>, dir_existed: bool, tmp: PathBuf }
+pub struct WinExecutor { upgrading: bool, cancel: Arc<AtomicBool>, child: Arc<Mutex<Option<Child>>>, dir_existed: bool, tmp: PathBuf }
 
 impl WinExecutor {
     fn programs_dir() -> Option<PathBuf> { std::env::var_os("APPDATA").map(|a| PathBuf::from(a).join(r"Microsoft\Windows\Start Menu\Programs")) }
@@ -127,7 +127,7 @@ impl Executor for WinExecutor {
     }
     fn app_config(&mut self, o: &Options) -> Result<(), InstallError> {
         let g = |e: std::io::Error| InstallError::Generic { detail: format!("config: {e}") };
-        handoff::save(o, VERSION).map_err(g)?;
+        handoff::save(o, VERSION, !self.upgrading).map_err(g)?;
         let (run, _) = RegKey::predef(HKEY_CURRENT_USER).create_subkey(RUN_KEY).map_err(g)?;
         if o.launch_at_signin { run.set_value("Somnia", &format!("\"{}\"", Self::exe(&self.install_dir_hint()).display())).map_err(g)?; }
         else { let _ = run.delete_value("Somnia"); }
@@ -227,14 +227,14 @@ pub fn run() {
                         let o: Options = serde_json::from_value(args[0].clone()).unwrap_or_default();
                         if running.swap(true, Ordering::SeqCst) { reply(&webview, json!(null)); return; }
                         cancel.store(false, Ordering::SeqCst); current = o.clone();
-                        let (p, c, r) = (proxy.clone(), cancel.clone(), running.clone());
+                        let (p, c, r) = (proxy.clone(), cancel.clone(), running.clone()); let upgrading = existing.is_some();
                         std::thread::spawn(move || {
                             let send = |v: Value| { let _ = p.send_event(Ui::Js(json!({"event": v}).to_string())); };
                             send(json!({"type": "phase", "phase": "preparing"}));
                             let dir = options::expand(&WinPlatform, &o.install_dir);
                             *INSTALL_DIR.lock().unwrap() = Some(PathBuf::from(&dir));
                             let tmp = std::env::temp_dir().join(format!("somnia-setup-{}", std::process::id()));
-                            let mut ex = WinExecutor { cancel: c, child: Arc::new(Mutex::new(None)), dir_existed: false, tmp };
+                            let mut ex = WinExecutor { upgrading, cancel: c, child: Arc::new(Mutex::new(None)), dir_existed: false, tmp };
                             log(&format!("start {VERSION} -> {dir}"));
                             let out = runner::run(&WinPlatform, &mut ex, &o, required, &mut |pr| send(json!({"type": "progress", "step": pr.step, "fraction": pr.fraction, "cancellable": pr.cancellable})));
                             match out {
