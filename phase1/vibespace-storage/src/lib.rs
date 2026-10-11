@@ -1,8 +1,8 @@
 //! Vibe Space persistence: spaces, studios, runs, sequenced event log, checkpoint
 //! references and scoped memory, on SQLite (bundled, FTS5).
 //!
-//! UNVERIFIED DRAFT: this crate was written without a Rust toolchain and has not
-//! been compiled or tested by its author. See docs/vibespace/storage.md.
+//! Originally authored without a toolchain; the integrator compiled and ran
+//! its 40 Linux tests on Rust 1.95.0. See docs/vibespace/storage.md for limits.
 //!
 //! The raw `rusqlite::Connection` is never exposed. All inputs/outputs are
 //! serializable DTOs (camelCase fields, snake_case enum values, `schemaVersion`).

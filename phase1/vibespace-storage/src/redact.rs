@@ -9,12 +9,28 @@ const MAX_DEPTH: usize = 16;
 const PREVIEW_CHARS: usize = 512;
 
 const SENSITIVE_KEYS: &[&str] = &[
-    "apikey", "accesskey", "token", "secret", "password", "passwd", "passphrase", "authorization",
-    "credential", "cookie", "privatekey", "bearer", "sessionid", "clientsecret",
+    "apikey",
+    "accesskey",
+    "token",
+    "secret",
+    "password",
+    "passwd",
+    "passphrase",
+    "authorization",
+    "credential",
+    "cookie",
+    "privatekey",
+    "bearer",
+    "sessionid",
+    "clientsecret",
 ];
 
 fn key_is_sensitive(key: &str) -> bool {
-    let k: String = key.chars().filter(|c| *c != '_' && *c != '-').collect::<String>().to_lowercase();
+    let k: String = key
+        .chars()
+        .filter(|c| *c != '_' && *c != '-')
+        .collect::<String>()
+        .to_lowercase();
     SENSITIVE_KEYS.iter().any(|s| k.contains(s))
 }
 
@@ -28,12 +44,27 @@ pub fn string_looks_secret(s: &str) -> bool {
     if lower.contains("-----begin") && lower.contains("private key") {
         return true;
     }
-    for p in ["sk-", "ghp_", "gho_", "ghs_", "github_pat_", "xoxb-", "xoxp-", "xoxa-", "sk_live_", "rk_live_"] {
+    for p in [
+        "sk-",
+        "ghp_",
+        "gho_",
+        "ghs_",
+        "github_pat_",
+        "xoxb-",
+        "xoxp-",
+        "xoxa-",
+        "sk_live_",
+        "rk_live_",
+    ] {
         if t.starts_with(p) && t.len() >= 16 {
             return true;
         }
     }
-    if t.len() == 20 && t.starts_with("AKIA") && t.chars().all(|c| c.is_ascii_uppercase() || c.is_ascii_digit()) {
+    if t.len() == 20
+        && t.starts_with("AKIA")
+        && t.chars()
+            .all(|c| c.is_ascii_uppercase() || c.is_ascii_digit())
+    {
         return true;
     }
     false

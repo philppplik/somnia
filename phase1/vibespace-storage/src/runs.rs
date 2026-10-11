@@ -3,7 +3,9 @@
 use crate::error::{Error, Result};
 use crate::model::*;
 use crate::redact::sanitize_payload;
-use crate::store::{check_text, clamp_limit, enum_col, ensure_space, get_studio_conn, new_id, Store};
+use crate::store::{
+    check_text, clamp_limit, ensure_space, enum_col, get_studio_conn, new_id, Store,
+};
 use crate::time::format_millis;
 use crate::{limits, DTO_SCHEMA_VERSION, PROTOCOL_VERSION};
 use rusqlite::{params, Connection, OptionalExtension, Row, Transaction};
@@ -45,37 +47,71 @@ fn run_from_row(r: &Row<'_>) -> rusqlite::Result<Run> {
 }
 
 fn get_run_conn(c: &Connection, id: &str) -> Result<Run> {
-    c.query_row(&format!("SELECT {RUN_COLS} FROM runs WHERE id=?1"), params![id], run_from_row)
-        .optional()?
-        .ok_or_else(|| Error::NotFound { entity: "run", id: id.to_string() })
+    c.query_row(
+        &format!("SELECT {RUN_COLS} FROM runs WHERE id=?1"),
+        params![id],
+        run_from_row,
+    )
+    .optional()?
+    .ok_or_else(|| Error::NotFound {
+        entity: "run",
+        id: id.to_string(),
+    })
 }
 
 fn get_run_by_request_conn(c: &Connection, request_id: &str) -> Result<Option<Run>> {
-    Ok(c.query_row(&format!("SELECT {RUN_COLS} FROM runs WHERE request_id=?1"), params![request_id], run_from_row).optional()?)
+    Ok(c.query_row(
+        &format!("SELECT {RUN_COLS} FROM runs WHERE request_id=?1"),
+        params![request_id],
+        run_from_row,
+    )
+    .optional()?)
 }
 
 fn valid_kind(kind: &str) -> bool {
     !kind.is_empty()
         && kind.len() <= 64
-        && kind.chars().all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || matches!(c, '_' | '.' | ':' | '-'))
+        && kind.chars().all(|c| {
+            c.is_ascii_lowercase() || c.is_ascii_digit() || matches!(c, '_' | '.' | ':' | '-')
+        })
 }
 
 /// Appends one event inside the caller's transaction. The sequence is allocated by
 /// bumping `runs.last_sequence` under the IMMEDIATE write lock, so sequences per run are
 /// strictly increasing and gap-free; a rollback of the transaction rolls the bump back too.
-fn append_event_tx(tx: &Transaction<'_>, run_id: &str, kind: &str, payload: &Value, ts: &str, reserve: bool) -> Result<RunEventRecord> {
+fn append_event_tx(
+    tx: &Transaction<'_>,
+    run_id: &str,
+    kind: &str,
+    payload: &Value,
+    ts: &str,
+    reserve: bool,
+) -> Result<RunEventRecord> {
     if !valid_kind(kind) {
         return Err(Error::InvalidInput(format!("invalid event kind {kind:?}")));
     }
     let (clean, truncated) = sanitize_payload(payload, limits::MAX_EVENT_PAYLOAD_BYTES);
-    let n = tx.execute("UPDATE runs SET last_sequence = last_sequence + 1 WHERE id = ?1", params![run_id])?;
+    let n = tx.execute(
+        "UPDATE runs SET last_sequence = last_sequence + 1 WHERE id = ?1",
+        params![run_id],
+    )?;
     if n == 0 {
-        return Err(Error::NotFound { entity: "run", id: run_id.to_string() });
+        return Err(Error::NotFound {
+            entity: "run",
+            id: run_id.to_string(),
+        });
     }
-    let seq: i64 = tx.query_row("SELECT last_sequence FROM runs WHERE id = ?1", params![run_id], |r| r.get(0))?;
+    let seq: i64 = tx.query_row(
+        "SELECT last_sequence FROM runs WHERE id = ?1",
+        params![run_id],
+        |r| r.get(0),
+    )?;
     let cap = limits::MAX_EVENTS_PER_RUN + if reserve { limits::EVENT_RESERVE } else { 0 };
     if seq > cap {
-        return Err(Error::LimitExceeded(format!("run {run_id} reached {} events", limits::MAX_EVENTS_PER_RUN)));
+        return Err(Error::LimitExceeded(format!(
+            "run {run_id} reached {} events",
+            limits::MAX_EVENTS_PER_RUN
+        )));
     }
     tx.execute(
         "INSERT INTO run_events (run_id, sequence, timestamp_utc, kind, payload_json, truncated) VALUES (?1,?2,?3,?4,?5,?6)",
@@ -116,10 +152,14 @@ fn valid_content_ref(s: &str) -> bool {
         Some((algo, hex)) => {
             !algo.is_empty()
                 && algo.len() <= 16
-                && algo.chars().all(|c| c.is_ascii_lowercase() || c.is_ascii_digit())
+                && algo
+                    .chars()
+                    .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit())
                 && hex.len() >= 16
                 && hex.len() <= 128
-                && hex.chars().all(|c| c.is_ascii_digit() || ('a'..='f').contains(&c))
+                && hex
+                    .chars()
+                    .all(|c| c.is_ascii_digit() || ('a'..='f').contains(&c))
         }
         None => false,
     }
@@ -171,8 +211,12 @@ impl Store {
             )?;
             Ok(true)
         })?;
-        let run = self.read(|c| get_run_by_request_conn(c, &request_id))?
-            .ok_or_else(|| Error::NotFound { entity: "run", id: request_id.clone() })?;
+        let run = self
+            .read(|c| get_run_by_request_conn(c, &request_id))?
+            .ok_or_else(|| Error::NotFound {
+                entity: "run",
+                id: request_id.clone(),
+            })?;
         Ok(StartRunOutcome { run, created })
     }
 
@@ -197,7 +241,12 @@ impl Store {
         self.read(|c| get_run_conn(c, run_id))
     }
 
-    pub fn list_runs(&self, space_id: &str, studio_id: Option<&str>, limit: usize) -> Result<Vec<Run>> {
+    pub fn list_runs(
+        &self,
+        space_id: &str,
+        studio_id: Option<&str>,
+        limit: usize,
+    ) -> Result<Vec<Run>> {
         let lim = clamp_limit(limit)?;
         self.read(|c| {
             let mut st = c.prepare(&format!(
@@ -232,9 +281,17 @@ impl Store {
 
     /// Appends one agent/core event. `run.`-prefixed kinds are reserved for the store.
     /// Rejected for terminal runs and for a stale fencing token.
-    pub fn append_event(&self, run_id: &str, kind: &str, payload: &Value, fencing_token: Option<i64>) -> Result<RunEventRecord> {
+    pub fn append_event(
+        &self,
+        run_id: &str,
+        kind: &str,
+        payload: &Value,
+        fencing_token: Option<i64>,
+    ) -> Result<RunEventRecord> {
         if kind.starts_with("run.") {
-            return Err(Error::InvalidInput("event kinds starting with \"run.\" are reserved".into()));
+            return Err(Error::InvalidInput(
+                "event kinds starting with \"run.\" are reserved".into(),
+            ));
         }
         let now = self.now_str();
         self.write(|tx| {
@@ -245,14 +302,22 @@ impl Store {
                 }
             }
             if run.execution.is_terminal() {
-                return Err(Error::Conflict(format!("run is {}; no more events accepted", run.execution.as_str())));
+                return Err(Error::Conflict(format!(
+                    "run is {}; no more events accepted",
+                    run.execution.as_str()
+                )));
             }
             append_event_tx(tx, run_id, kind, payload, &now, false)
         })
     }
 
     /// Events with `sequence > after_sequence`, ascending.
-    pub fn list_events(&self, run_id: &str, after_sequence: i64, limit: usize) -> Result<Vec<RunEventRecord>> {
+    pub fn list_events(
+        &self,
+        run_id: &str,
+        after_sequence: i64,
+        limit: usize,
+    ) -> Result<Vec<RunEventRecord>> {
         let lim = clamp_limit(limit)?;
         self.read(|c| {
             get_run_conn(c, run_id)?;
@@ -270,7 +335,12 @@ impl Store {
     }
 
     /// Claims a pending run: pending -> claimed, new fencing token, lease. One winner under concurrency.
-    pub fn claim_run(&self, run_id: &str, instance_id: &str, lease_ttl_ms: i64) -> Result<TransitionOutcome> {
+    pub fn claim_run(
+        &self,
+        run_id: &str,
+        instance_id: &str,
+        lease_ttl_ms: i64,
+    ) -> Result<TransitionOutcome> {
         let instance = check_text("instanceId", instance_id, 200, false)?;
         if lease_ttl_ms < 1 || lease_ttl_ms > limits::MAX_LEASE_TTL_MS {
             return Err(Error::InvalidInput("leaseTtlMs out of range".into()));
@@ -303,7 +373,10 @@ impl Store {
             )?;
             Ok(ev)
         })?;
-        Ok(TransitionOutcome { run: self.get_run(run_id)?, event: outcome })
+        Ok(TransitionOutcome {
+            run: self.get_run(run_id)?,
+            event: outcome,
+        })
     }
 
     /// Extends the lease of a claimed/running/paused run. No event is written.
@@ -319,10 +392,19 @@ impl Store {
             if fencing_token != run.fencing_token {
                 return Err(Error::FencingMismatch);
             }
-            if !matches!(run.execution, ExecutionState::Claimed | ExecutionState::Running | ExecutionState::Paused) {
-                return Err(Error::Conflict(format!("run is {}; no lease to extend", run.execution.as_str())));
+            if !matches!(
+                run.execution,
+                ExecutionState::Claimed | ExecutionState::Running | ExecutionState::Paused
+            ) {
+                return Err(Error::Conflict(format!(
+                    "run is {}; no lease to extend",
+                    run.execution.as_str()
+                )));
             }
-            tx.execute("UPDATE runs SET lease_expires_at=?1, updated_at=?2 WHERE id=?3", params![lease, now, run_id])?;
+            tx.execute(
+                "UPDATE runs SET lease_expires_at=?1, updated_at=?2 WHERE id=?3",
+                params![lease, now, run_id],
+            )?;
             Ok(())
         })?;
         self.get_run(run_id)
@@ -330,16 +412,24 @@ impl Store {
 
     /// Atomically validates and applies an execution and/or review transition and appends
     /// one `run.state_changed` event. On any error nothing is changed and no event is written.
-    pub fn transition_run(&self, run_id: &str, req: TransitionRequest) -> Result<TransitionOutcome> {
+    pub fn transition_run(
+        &self,
+        run_id: &str,
+        req: TransitionRequest,
+    ) -> Result<TransitionOutcome> {
         check_version(req.schema_version)?;
         if req.execution.is_none() && req.review.is_none() {
-            return Err(Error::InvalidInput("a transition needs execution and/or review".into()));
+            return Err(Error::InvalidInput(
+                "a transition needs execution and/or review".into(),
+            ));
         }
         if req.execution == Some(ExecutionState::Claimed) {
             return Err(Error::InvalidInput("use claim_run to claim a run".into()));
         }
         if req.execution == Some(ExecutionState::Paused) && !self.enable_paused {
-            return Err(Error::Unsupported("pause/resume is not enabled in this store".into()));
+            return Err(Error::Unsupported(
+                "pause/resume is not enabled in this store".into(),
+            ));
         }
         let now = self.now_str();
         let ev = self.write(|tx| {
@@ -415,7 +505,10 @@ impl Store {
             });
             append_event_tx(tx, run_id, "run.state_changed", &payload, &now, true)
         })?;
-        Ok(TransitionOutcome { run: self.get_run(run_id)?, event: ev })
+        Ok(TransitionOutcome {
+            run: self.get_run(run_id)?,
+            event: ev,
+        })
     }
 
     /// Marks interrupted runs `crashed` (visible, `interrupted = true`) and writes a
@@ -479,7 +572,9 @@ impl Store {
         check_version(req.schema_version)?;
         let label = check_text("label", &req.label, limits::MAX_NAME_CHARS, false)?;
         if !valid_content_ref(&req.content_ref) {
-            return Err(Error::InvalidInput("contentRef must be `algo:hex` (16-128 lowercase hex chars)".into()));
+            return Err(Error::InvalidInput(
+                "contentRef must be `algo:hex` (16-128 lowercase hex chars)".into(),
+            ));
         }
         let id = new_id();
         let now = self.now_str();
@@ -514,11 +609,19 @@ impl Store {
                 cp_from_row,
             )
             .optional()?
-            .ok_or_else(|| Error::NotFound { entity: "checkpoint", id: id.to_string() })
+            .ok_or_else(|| Error::NotFound {
+                entity: "checkpoint",
+                id: id.to_string(),
+            })
         })
     }
 
-    pub fn list_checkpoints(&self, space_id: &str, run_id: Option<&str>, limit: usize) -> Result<Vec<Checkpoint>> {
+    pub fn list_checkpoints(
+        &self,
+        space_id: &str,
+        run_id: Option<&str>,
+        limit: usize,
+    ) -> Result<Vec<Checkpoint>> {
         let lim = clamp_limit(limit)?;
         self.read(|c| {
             ensure_space(c, space_id)?;

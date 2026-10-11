@@ -175,3 +175,18 @@ All text rejects NUL. `contentRef` must be `algo:hex` (16..128 lowercase hex).
 7. Checkpoint restore and file isolation are outside this crate: it stores references and events only.
 8. `delete_space` does not exist yet (cascades are in the schema); add it with the Space lifecycle work.
 9. Paused state is storable but gated off; do not enable it before the orchestrator implements durable pause/resume.
+
+## Integrator verification
+
+Both delivered patches were applied to `feat/vibespace` after an apply check.
+The integrator compiled the crate on Rust 1.95.0 and ran all **40 tests**, passing
+on Linux. The generated Cargo.lock is committed and `cargo test --locked` passes.
+Rustfmt is applied. Windows, Desktop UI and composition with the engine/policy/
+artifact crates are still unverified. Vector retrieval remains unavailable.
+
+The storage scope currently contains a folder-grant reference, not a durable
+canonical scope root. The native core must consume the one-shot folder grant and
+persist its own validated scope anchor, otherwise a Space cannot safely recover
+its folder after restart. Never treat an expired grant ID as filesystem authority.
+Recovery::AllActive is appropriate only when the caller owns the database's sole
+runtime. An additional read handle must not use that recovery mode.

@@ -11,7 +11,10 @@ pub struct Migration {
 
 pub const SCHEMA_VERSION: i64 = 1;
 
-pub const MIGRATIONS: &[Migration] = &[Migration { version: 1, sql: V1 }];
+pub const MIGRATIONS: &[Migration] = &[Migration {
+    version: 1,
+    sql: V1,
+}];
 
 const V1: &str = r#"
 CREATE TABLE spaces (
@@ -131,7 +134,10 @@ pub fn check_openable(conn: &Connection, migrations: &[Migration]) -> Result<()>
     let latest = latest(migrations);
     let uv = user_version(conn)?;
     if uv > latest {
-        return Err(Error::NewerSchema { found: uv, supported: latest });
+        return Err(Error::NewerSchema {
+            found: uv,
+            supported: latest,
+        });
     }
     if uv == 0 {
         let n: i64 = conn.query_row(
@@ -153,19 +159,31 @@ pub fn migrate(conn: &mut Connection, migrations: &[Migration]) -> Result<i64> {
     for m in migrations {
         expected += 1;
         if m.version != expected {
-            return Err(Error::Migration { version: m.version, message: "migration versions must be contiguous from 1".into() });
+            return Err(Error::Migration {
+                version: m.version,
+                message: "migration versions must be contiguous from 1".into(),
+            });
         }
     }
     let latest = latest(migrations);
     let tx = conn.transaction_with_behavior(TransactionBehavior::Immediate)?;
     let cur = user_version(&tx)?;
     if cur > latest {
-        return Err(Error::NewerSchema { found: cur, supported: latest });
+        return Err(Error::NewerSchema {
+            found: cur,
+            supported: latest,
+        });
     }
     for m in migrations.iter().filter(|m| m.version > cur) {
-        tx.execute_batch(m.sql).map_err(|e| Error::Migration { version: m.version, message: e.to_string() })?;
+        tx.execute_batch(m.sql).map_err(|e| Error::Migration {
+            version: m.version,
+            message: e.to_string(),
+        })?;
         tx.execute_batch(&format!("PRAGMA user_version = {}", m.version))
-            .map_err(|e| Error::Migration { version: m.version, message: e.to_string() })?;
+            .map_err(|e| Error::Migration {
+                version: m.version,
+                message: e.to_string(),
+            })?;
     }
     tx.commit()?;
     Ok(latest)

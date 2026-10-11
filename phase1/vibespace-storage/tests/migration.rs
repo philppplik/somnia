@@ -4,13 +4,17 @@ use somnia_vibespace_storage::*;
 
 fn v2_ok() -> Vec<Migration> {
     let mut m = MIGRATIONS.to_vec();
-    m.push(Migration { version: 2, sql: "ALTER TABLE spaces ADD COLUMN note TEXT;" });
+    m.push(Migration {
+        version: 2,
+        sql: "ALTER TABLE spaces ADD COLUMN note TEXT;",
+    });
     m
 }
 
 fn user_version(path: &std::path::Path) -> i64 {
     let c = rusqlite::Connection::open(path).unwrap();
-    c.query_row("PRAGMA user_version", [], |r| r.get(0)).unwrap()
+    c.query_row("PRAGMA user_version", [], |r| r.get(0))
+        .unwrap()
 }
 
 #[test]
@@ -82,13 +86,26 @@ fn newer_schema_fails_visibly_without_touching_the_file() {
     }
     let before = std::fs::read(&path).unwrap();
     let err = Store::open(&path, opts_none()).unwrap_err();
-    assert!(matches!(err, Error::NewerSchema { found: 99, supported: 1 }), "{err}");
+    assert!(
+        matches!(
+            err,
+            Error::NewerSchema {
+                found: 99,
+                supported: 1
+            }
+        ),
+        "{err}"
+    );
     assert_eq!(err.code(), "newer_schema");
     assert_eq!(user_version(&path), 99);
     let raw = rusqlite::Connection::open(&path).unwrap();
-    let x: String = raw.query_row("SELECT x FROM from_the_future", [], |r| r.get(0)).unwrap();
+    let x: String = raw
+        .query_row("SELECT x FROM from_the_future", [], |r| r.get(0))
+        .unwrap();
     assert_eq!(x, "data");
-    let n: i64 = raw.query_row("SELECT count(*) FROM spaces", [], |r| r.get(0)).unwrap();
+    let n: i64 = raw
+        .query_row("SELECT count(*) FROM spaces", [], |r| r.get(0))
+        .unwrap();
     assert_eq!(n, 1);
     drop(raw);
     // main database file bytes are unchanged (WAL side files may exist)
@@ -102,14 +119,23 @@ fn foreign_database_is_rejected_unmodified() {
     let path = dir.path().join("foreign.db");
     {
         let raw = rusqlite::Connection::open(&path).unwrap();
-        raw.execute_batch("CREATE TABLE notes (t TEXT); INSERT INTO notes VALUES ('mine');").unwrap();
+        raw.execute_batch("CREATE TABLE notes (t TEXT); INSERT INTO notes VALUES ('mine');")
+            .unwrap();
     }
     let err = Store::open(&path, opts_none()).unwrap_err();
     assert!(matches!(err, Error::ForeignDatabase));
     let raw = rusqlite::Connection::open(&path).unwrap();
-    let t: String = raw.query_row("SELECT t FROM notes", [], |r| r.get(0)).unwrap();
+    let t: String = raw
+        .query_row("SELECT t FROM notes", [], |r| r.get(0))
+        .unwrap();
     assert_eq!(t, "mine");
-    let n: i64 = raw.query_row("SELECT count(*) FROM sqlite_master WHERE name='spaces'", [], |r| r.get(0)).unwrap();
+    let n: i64 = raw
+        .query_row(
+            "SELECT count(*) FROM sqlite_master WHERE name='spaces'",
+            [],
+            |r| r.get(0),
+        )
+        .unwrap();
     assert_eq!(n, 0);
 }
 
@@ -117,15 +143,29 @@ fn foreign_database_is_rejected_unmodified() {
 fn non_sqlite_file_fails_visibly() {
     let dir = tempfile::tempdir().unwrap();
     let path = dir.path().join("garbage.db");
-    std::fs::write(&path, "this is definitely not a sqlite database, it is only text. ".repeat(10).as_bytes()).unwrap();
+    std::fs::write(
+        &path,
+        "this is definitely not a sqlite database, it is only text. "
+            .repeat(10)
+            .as_bytes(),
+    )
+    .unwrap();
     assert!(Store::open(&path, opts_none()).is_err());
-    assert!(std::fs::read(&path).unwrap().starts_with(b"this is definitely"));
+    assert!(std::fs::read(&path)
+        .unwrap()
+        .starts_with(b"this is definitely"));
 }
 
 #[test]
 fn non_contiguous_migrations_are_rejected() {
     let dir = tempfile::tempdir().unwrap();
     let path = dir.path().join("gap.db");
-    let gap = [Migration { version: 2, sql: "SELECT 1;" }];
-    assert!(matches!(Store::open_with_migrations(&path, opts_none(), &gap), Err(Error::Migration { .. })));
+    let gap = [Migration {
+        version: 2,
+        sql: "SELECT 1;",
+    }];
+    assert!(matches!(
+        Store::open_with_migrations(&path, opts_none(), &gap),
+        Err(Error::Migration { .. })
+    ));
 }

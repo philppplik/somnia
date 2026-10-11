@@ -51,7 +51,13 @@ str_enum!(SearchMode { Fts5 => "fts5", LikeFallback => "like_fallback" });
 
 impl ExecutionState {
     pub fn is_terminal(&self) -> bool {
-        matches!(self, ExecutionState::Done | ExecutionState::Failed | ExecutionState::Stopped | ExecutionState::Crashed)
+        matches!(
+            self,
+            ExecutionState::Done
+                | ExecutionState::Failed
+                | ExecutionState::Stopped
+                | ExecutionState::Crashed
+        )
     }
     /// The allowed execution transition table. Terminal states have no exits:
     /// a retry is a new run, so a crashed run can never silently re-run effects.
@@ -134,7 +140,10 @@ impl NewSpace {
         NewSpace {
             schema_version: DTO_SCHEMA_VERSION,
             name: name.to_string(),
-            scope: SpaceScope { kind: ScopeKind::Project, folder_grant_id: Some(folder_grant_id.to_string()) },
+            scope: SpaceScope {
+                kind: ScopeKind::Project,
+                folder_grant_id: Some(folder_grant_id.to_string()),
+            },
             autonomy: None,
         }
     }
@@ -142,7 +151,10 @@ impl NewSpace {
         NewSpace {
             schema_version: DTO_SCHEMA_VERSION,
             name: name.to_string(),
-            scope: SpaceScope { kind: ScopeKind::Personal, folder_grant_id: None },
+            scope: SpaceScope {
+                kind: ScopeKind::Personal,
+                folder_grant_id: None,
+            },
             autonomy: None,
         }
     }
@@ -325,10 +337,18 @@ impl Default for TransitionRequest {
 
 impl TransitionRequest {
     pub fn execution(to: ExecutionState) -> TransitionRequest {
-        TransitionRequest { schema_version: DTO_SCHEMA_VERSION, execution: Some(to), ..Default::default() }
+        TransitionRequest {
+            schema_version: DTO_SCHEMA_VERSION,
+            execution: Some(to),
+            ..Default::default()
+        }
     }
     pub fn review(to: ReviewState) -> TransitionRequest {
-        TransitionRequest { schema_version: DTO_SCHEMA_VERSION, review: Some(to), ..Default::default() }
+        TransitionRequest {
+            schema_version: DTO_SCHEMA_VERSION,
+            review: Some(to),
+            ..Default::default()
+        }
     }
 }
 
@@ -445,7 +465,11 @@ pub struct MemoryListOptions {
 }
 impl Default for MemoryListOptions {
     fn default() -> Self {
-        MemoryListOptions { include_pending: false, limit: limits::DEFAULT_LIST_LIMIT, offset: 0 }
+        MemoryListOptions {
+            include_pending: false,
+            limit: limits::DEFAULT_LIST_LIMIT,
+            offset: 0,
+        }
     }
 }
 
@@ -456,7 +480,10 @@ pub struct SearchOptions {
 }
 impl Default for SearchOptions {
     fn default() -> Self {
-        SearchOptions { include_pending: false, limit: limits::DEFAULT_LIST_LIMIT }
+        SearchOptions {
+            include_pending: false,
+            limit: limits::DEFAULT_LIST_LIMIT,
+        }
     }
 }
 

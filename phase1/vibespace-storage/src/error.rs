@@ -8,20 +8,35 @@ pub enum Error {
     Sqlite(rusqlite::Error),
     Json(serde_json::Error),
     /// The database was written by a newer version of this crate. It is left untouched.
-    NewerSchema { found: i64, supported: i64 },
+    NewerSchema {
+        found: i64,
+        supported: i64,
+    },
     /// The file is a non-empty SQLite database that is not a Vibe Space database.
     ForeignDatabase,
-    Migration { version: i64, message: String },
-    NotFound { entity: &'static str, id: String },
+    Migration {
+        version: i64,
+        message: String,
+    },
+    NotFound {
+        entity: &'static str,
+        id: String,
+    },
     InvalidInput(String),
-    InvalidTransition { axis: &'static str, from: String, to: String },
+    InvalidTransition {
+        axis: &'static str,
+        from: String,
+        to: String,
+    },
     /// A feature that is deliberately not available (e.g. pause/resume).
     Unsupported(String),
     LimitExceeded(String),
     FencingMismatch,
     /// Optimistic concurrency or state conflict (stale expected state/revision, terminal run).
     Conflict(String),
-    UnsupportedDtoVersion { found: u32 },
+    UnsupportedDtoVersion {
+        found: u32,
+    },
     LockPoisoned,
 }
 
@@ -47,7 +62,11 @@ impl Error {
     }
 
     pub fn to_dto(&self) -> ErrorDto {
-        ErrorDto { schema_version: crate::DTO_SCHEMA_VERSION, code: self.code().to_string(), message: self.to_string() }
+        ErrorDto {
+            schema_version: crate::DTO_SCHEMA_VERSION,
+            code: self.code().to_string(),
+            message: self.to_string(),
+        }
     }
 }
 
