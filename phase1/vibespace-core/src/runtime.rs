@@ -63,9 +63,33 @@ pub struct Runtime {
     instance: String,
     /// Windows effects stay unavailable until native Windows test evidence exists.
     enable_files: bool,
+    // Last field: release ownership only after storage, broker and workers drop.
+    // Active engine observers retain an Arc, so no new owner can recover live work.
+    _owner: crate::ownership::OwnershipGuard,
 }
 impl Runtime {
     pub fn open(data: &Path, enable_files: bool) -> Result<Arc<Self>> {
+        Self::open_owned(data, enable_files, crate::ownership::OwnerKind::Gui, false)
+    }
+    /// Sole opening route. Lock acquisition precedes vault/SQLite AllActive recovery;
+    /// all active runs therefore belong to a previous, explicitly recovered owner.
+    pub fn open_owned(
+        data: &Path,
+        enable_files: bool,
+        kind: crate::ownership::OwnerKind,
+        takeover: bool,
+    ) -> Result<Arc<Self>> {
+        let owner = crate::ownership::OwnershipGuard::acquire(data, kind, takeover).map_err(
+            |e| match e {
+                crate::ownership::OwnershipError::Busy(_) => {
+                    CoreError("Vibe Space is owned by another GUI/CLI; close it before opening")
+                }
+                crate::ownership::OwnershipError::RecoveryRequired(_) => {
+                    CoreError("Vibe Space has a stale/unclean owner; explicit takeover required")
+                }
+                _ => CoreError("cannot acquire Vibe Space ownership lock"),
+            },
+        )?;
         std::fs::create_dir_all(data)
             .map_err(|_| CoreError("cannot create native data directory"))?;
         let vault = cp::Vault::open(data.join("artifacts"))?;
@@ -81,6 +105,7 @@ impl Runtime {
             policy::ConsentBroker::new().map_err(|_| CoreError("cannot create consent broker"))?;
         let (events, _) = broadcast::channel(256);
         let runtime = Arc::new(Self {
+            _owner: owner,
             store,
             vault,
             broker,

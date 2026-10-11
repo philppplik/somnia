@@ -207,6 +207,7 @@ async fn blocker_committed_apply_with_deleted_copy_makes_open_fail_forever() {
     )
     .unwrap();
 
+    drop(f.rt); // Release the previous owner before recovery.
     let reopened = Runtime::open(f.data.path(), true);
     assert!(
         reopened.is_ok(),
@@ -242,6 +243,7 @@ async fn blocker_committed_apply_with_deleted_project_makes_open_fail_forever() 
     inject_postcommit_failure(&f, &run, &revision);
     std::fs::remove_dir_all(f.project.path()).unwrap();
 
+    drop(f.rt); // Release the previous owner before recovery.
     let reopened = Runtime::open(f.data.path(), true);
     assert!(
         reopened.is_ok(),
@@ -292,6 +294,7 @@ async fn crash_between_intent_and_first_write_aborts_and_allows_retry() {
     drop(vault);
 
     // Restart: journal rolled back, op aborted, originals untouched, no replay.
+    drop(f.rt); // A restart cannot coexist with the previous runtime owner.
     let rt2 = Runtime::open(f.data.path(), true).unwrap();
     assert!(rt2.store.pending_artifact_applies().unwrap().is_empty());
     assert_eq!(
@@ -355,6 +358,7 @@ async fn crash_mid_plan_rolls_back_partial_original_writes() {
     );
     assert!(matches!(crashed, Err(cp::Error::InjectedCrash)));
 
+    drop(f.rt); // A restart cannot coexist with the previous runtime owner.
     let rt2 = Runtime::open(f.data.path(), true).unwrap();
     assert!(rt2.store.pending_artifact_applies().unwrap().is_empty());
     assert_eq!(
@@ -549,6 +553,7 @@ async fn crash_after_restore_commit_reconciles_without_review_axis_change() {
         .unwrap();
     drop(conn);
 
+    drop(f.rt); // Release the previous owner before recovery.
     let reopened = Runtime::open(f.data.path(), true);
     assert!(
         reopened.is_ok(),

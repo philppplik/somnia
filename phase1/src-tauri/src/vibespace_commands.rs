@@ -82,7 +82,7 @@ impl CollectionVersion {
 /// Managed once per app. Configured refs are supplied by native setup, not IPC.
 /// Runtime::open performs artifact recovery. The cached result prevents repeat recovery.
 pub struct VibeSpaceState {
-    runtime: OnceLock<std::result::Result<Arc<Runtime>, ()>>,
+    runtime: OnceLock<std::result::Result<Arc<Runtime>, AppCommandError>>,
     version: Arc<Mutex<CollectionVersion>>,
     configured: Vec<w::ModelReference>,
 }
@@ -103,9 +103,11 @@ impl VibeSpaceState {
     fn runtime(&self, app: &tauri::AppHandle) -> Result<Arc<Runtime>> {
         self.runtime
             .get_or_init(|| {
-                let data = app.path().app_data_dir().map_err(|_| ())?.join("vibespace");
+                let data = app.path().app_data_dir().map_err(failed)?.join("vibespace");
                 // Platform gate is compiled natively, never enabled by renderer settings.
-                let runtime = Runtime::open(&data, native_files_enabled()).map_err(|_| ())?;
+                let runtime = Runtime::open_owned(&data, native_files_enabled(),
+                    somnia_vibespace_core::ownership::OwnerKind::Gui, false)
+                    .map_err(|e| AppCommandError::new("SOM-FS-006", "vibespace_ownership_or_recovery", e.0, true))?;
                 // Subscribe before commands can start a run. Exactly one publisher per owning state.
                 let mut receiver = runtime.subscribe();
                 let app = app.clone();
@@ -147,7 +149,7 @@ impl VibeSpaceState {
             })
             .as_ref()
             .cloned()
-            .map_err(failed)
+            .map_err(Clone::clone)
     }
     fn changed(&self) -> Result<()> {
         self.version.lock().map_err(failed)?.changed()

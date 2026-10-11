@@ -233,24 +233,23 @@ fn add_memory(rt: &Arc<Runtime>, space: &str, content: &str) -> db::MemoryItem {
 /// active run crashed, the studio can start again, and nothing was applied.
 #[tokio::test]
 async fn crash_restart_marks_active_run_crashed_and_unblocks_studio() {
-    let f = setup();
-    let started =
-        f.rt.start(start_request(&f.studio), Arc::new(Waiting), local_config())
-            .await
-            .unwrap();
-    let id = started.snapshot.run_id;
-    wait_for(
-        &f.rt,
-        &id,
-        |s| s.snapshot.execution_state == ExecutionState::Running,
-        "running",
+    let data = tempfile::tempdir().unwrap();
+    let output = std::process::Command::new(std::env::current_exe().unwrap())
+        .args(["--exact", "ownership_crash_child", "--nocapture"])
+        .env("SOMNIA_CRASH_TEST_DATA", data.path())
+        .output()
+        .unwrap();
+    assert!(output.status.success());
+    let (studio, id): (StudioSummary, String) =
+        serde_json::from_slice(&std::fs::read(data.path().join("fixture.json")).unwrap()).unwrap();
+    assert!(Runtime::open(data.path(), true).is_err());
+    let rt2 = Runtime::open_owned(
+        data.path(),
+        true,
+        somnia_vibespace_core::ownership::OwnerKind::Gui,
+        true,
     )
-    .await;
-
-    // Simulated crash: a fresh process image opens the same data directory while
-    // the old one (still "running" here) never persisted a terminal state.
-    let rt2 = Runtime::open(f.data.path(), true).unwrap();
-
+    .unwrap();
     let crashed = rt2.snapshot(&id).unwrap();
     assert_eq!(crashed.snapshot.execution_state, ExecutionState::Crashed);
     assert_eq!(
@@ -266,7 +265,7 @@ async fn crash_restart_marks_active_run_crashed_and_unblocks_studio() {
         .list_studios()
         .unwrap()
         .into_iter()
-        .find(|s| s.studio_id == f.studio.studio_id)
+        .find(|s| s.studio_id == studio.studio_id)
         .unwrap();
     assert!(studio.can_start, "crashed run must not block the studio");
 
@@ -287,7 +286,13 @@ async fn crash_restart_marks_active_run_crashed_and_unblocks_studio() {
     .await;
     assert_eq!(done.snapshot.execution_state, ExecutionState::Done);
     assert_eq!(
-        std::fs::read_to_string(f.project.path().join("hello.txt")).unwrap(),
+        std::fs::read_to_string(
+            data.path()
+                .with_extension("project")
+                .as_path()
+                .join("hello.txt")
+        )
+        .unwrap(),
         "before"
     );
 }
@@ -297,25 +302,23 @@ async fn crash_restart_marks_active_run_crashed_and_unblocks_studio() {
 /// original is untouched.
 #[tokio::test]
 async fn crash_with_pending_consent_leaves_no_dangling_effect_path() {
-    let f = setup();
-    let started =
-        f.rt.start(
-            start_request(&f.studio),
-            Arc::new(WriteThenDone(AtomicUsize::new(0))),
-            local_config(),
-        )
-        .await
+    let data = tempfile::tempdir().unwrap();
+    let output = std::process::Command::new(std::env::current_exe().unwrap())
+        .args(["--exact", "ownership_crash_child", "--nocapture"])
+        .env("SOMNIA_CRASH_TEST_DATA", data.path())
+        .env("SOMNIA_CRASH_TEST_CONSENT", "1")
+        .output()
         .unwrap();
-    let id = started.snapshot.run_id;
-    wait_for(
-        &f.rt,
-        &id,
-        |s| !s.snapshot.pending_consents.is_empty(),
-        "pending consent",
+    assert!(output.status.success());
+    let (studio, id): (StudioSummary, String) =
+        serde_json::from_slice(&std::fs::read(data.path().join("fixture.json")).unwrap()).unwrap();
+    let rt2 = Runtime::open_owned(
+        data.path(),
+        true,
+        somnia_vibespace_core::ownership::OwnerKind::Gui,
+        true,
     )
-    .await;
-
-    let rt2 = Runtime::open(f.data.path(), true).unwrap();
+    .unwrap();
     let crashed = rt2.snapshot(&id).unwrap();
     assert_eq!(crashed.snapshot.execution_state, ExecutionState::Crashed);
     assert!(
@@ -326,12 +329,18 @@ async fn crash_with_pending_consent_leaves_no_dangling_effect_path() {
         rt2.list_studios()
             .unwrap()
             .iter()
-            .find(|s| s.studio_id == f.studio.studio_id)
+            .find(|s| s.studio_id == studio.studio_id)
             .unwrap()
             .can_start
     );
     assert_eq!(
-        std::fs::read_to_string(f.project.path().join("hello.txt")).unwrap(),
+        std::fs::read_to_string(
+            data.path()
+                .with_extension("project")
+                .as_path()
+                .join("hello.txt")
+        )
+        .unwrap(),
         "before"
     );
 }
@@ -349,6 +358,7 @@ async fn blocker_pending_run_is_unrecoverable_and_wedges_studio() {
     assert_eq!(orphan.execution, db::ExecutionState::Pending);
 
     // Restart: single-process recovery.
+    drop(f.rt); // A restart cannot coexist with the previous runtime owner.
     let rt2 = Runtime::open(f.data.path(), true).unwrap();
     let run = rt2.store.get_run(&orphan.id).unwrap();
     let studio = rt2
@@ -1201,6 +1211,7 @@ async fn apply_postcommit_db_failure_reconciles_on_restart_without_replay() {
     conn.execute_batch("DROP TRIGGER fail_apply_finish")
         .unwrap();
     drop(conn);
+    drop(f.rt); // Release the previous owner before recovery.
     let reopened = Runtime::open(f.data.path(), true).unwrap();
     assert!(reopened
         .store
@@ -1317,6 +1328,7 @@ async fn restore_postcommit_db_failure_keeps_undo_and_reconciles_without_replay(
         .unwrap();
     drop(conn);
     std::fs::write(f.project.path().join("hello.txt"), "later user edit").unwrap();
+    drop(f.rt); // Release the previous owner before recovery.
     let reopened = Runtime::open(f.data.path(), true).unwrap();
     assert!(reopened
         .store
@@ -1377,4 +1389,65 @@ async fn collection_includes_studio_latest_outside_recent_space_history() {
                 .any(|r| r.snapshot.run_id == latest && r.snapshot.studio_id == studio.studio_id));
         }
     }
+}
+
+#[tokio::test]
+async fn ownership_crash_child() {
+    let Some(data) = std::env::var_os("SOMNIA_CRASH_TEST_DATA") else {
+        return;
+    };
+    let data = std::path::PathBuf::from(data);
+    // Parent opens this same directory after our abrupt process exit.
+    let rt = Runtime::open(&data, true).unwrap();
+    // Project must not overlap private runtime data; bind an adjacent persistent scope.
+    let project = data.with_extension("project");
+    std::fs::create_dir(&project).unwrap();
+    std::fs::write(project.join("hello.txt"), "before").unwrap();
+    let grant = rt.grant_native_folder("main", &project).unwrap();
+    let space = rt
+        .create_space(
+            "main",
+            CreateSpace {
+                name: "crash".into(),
+                folder_grant_id: grant,
+            },
+        )
+        .unwrap();
+    let studio = rt
+        .create_studio(CreateStudio {
+            space_id: space.space_id,
+            goal: "wait".into(),
+            model: ModelReference {
+                provider: "ollama".into(),
+                model: MODEL.into(),
+                locality: ModelLocality::Local,
+            },
+        })
+        .unwrap();
+    let pending = std::env::var_os("SOMNIA_CRASH_TEST_CONSENT").is_some();
+    let transport: Arc<dyn engine::ModelTransport> = if pending {
+        Arc::new(WriteThenDone(AtomicUsize::new(0)))
+    } else {
+        Arc::new(Waiting)
+    };
+    let run = rt
+        .start(start_request(&studio), transport, local_config())
+        .await
+        .unwrap();
+    if pending {
+        wait_for(
+            &rt,
+            &run.snapshot.run_id,
+            |s| !s.snapshot.pending_consents.is_empty(),
+            "pending consent before crash",
+        )
+        .await;
+    }
+
+    std::fs::write(
+        data.join("fixture.json"),
+        serde_json::to_vec(&(studio, run.snapshot.run_id)).unwrap(),
+    )
+    .unwrap();
+    std::process::exit(0); // No destructors: stale metadata and an actual released OS lock.
 }
