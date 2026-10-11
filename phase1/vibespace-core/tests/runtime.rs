@@ -217,3 +217,92 @@ async fn concurrent_project_edit_conflicts_without_clobber() {
         "user edit"
     );
 }
+
+struct Waiting;
+#[async_trait]
+impl engine::ModelTransport for Waiting {
+    async fn complete(&self, _: engine::ModelInput) -> Result<engine::ModelReply, engine::Failure> {
+        std::future::pending().await
+    }
+}
+#[tokio::test]
+async fn stop_during_inference_revokes_and_preserves_project() {
+    let (_data, project, rt, studio) = setup();
+    let started = rt
+        .start(
+            StartRun {
+                studio_id: studio.studio_id,
+                request_id: uuid::Uuid::new_v4().to_string(),
+                retry_of_run_id: None,
+            },
+            Arc::new(Waiting),
+            engine::ModelConfig::Local {
+                endpoint: "http://127.0.0.1:11434/v1/chat/completions".into(),
+                model: "qwen3.5:9b".into(),
+            },
+        )
+        .await
+        .unwrap();
+    let id = started.snapshot.run_id;
+    rt.stop(&id).await.unwrap();
+    for _ in 0..100 {
+        if rt.snapshot(&id).unwrap().snapshot.execution_state == ExecutionState::Stopped {
+            assert_eq!(
+                std::fs::read_to_string(project.path().join("hello.txt")).unwrap(),
+                "before"
+            );
+            return;
+        }
+        tokio::time::sleep(std::time::Duration::from_millis(10)).await;
+    }
+    panic!("run did not stop");
+}
+#[tokio::test]
+async fn stop_with_pending_consent_never_writes_late() {
+    let (_data, project, rt, studio) = setup();
+    let started = rt
+        .start(
+            StartRun {
+                studio_id: studio.studio_id,
+                request_id: uuid::Uuid::new_v4().to_string(),
+                retry_of_run_id: None,
+            },
+            Arc::new(Script(AtomicUsize::new(0))),
+            engine::ModelConfig::Local {
+                endpoint: "http://127.0.0.1:11434/v1/chat/completions".into(),
+                model: "qwen3.5:9b".into(),
+            },
+        )
+        .await
+        .unwrap();
+    let id = started.snapshot.run_id;
+    let mut request_id = None;
+    for _ in 0..100 {
+        let s = rt.snapshot(&id).unwrap();
+        if let Some(consent) = s.snapshot.pending_consents.first() {
+            request_id = Some(consent.request_id.clone());
+            break;
+        }
+        tokio::time::sleep(std::time::Duration::from_millis(10)).await;
+    }
+    let request_id = request_id.expect("pending consent");
+    rt.stop(&id).await.unwrap();
+    assert!(rt
+        .decide(ConsentDecision {
+            run_id: id.clone(),
+            request_id,
+            choice: ConsentChoice::AllowOnce
+        })
+        .is_err());
+    for _ in 0..100 {
+        if rt.snapshot(&id).unwrap().snapshot.execution_state == ExecutionState::Stopped {
+            assert_eq!(
+                std::fs::read_to_string(project.path().join("hello.txt")).unwrap(),
+                "before"
+            );
+            return;
+        }
+        tokio::time::sleep(std::time::Duration::from_millis(10)).await;
+    }
+    panic!("pending run did not stop");
+}

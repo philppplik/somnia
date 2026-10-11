@@ -409,6 +409,20 @@ impl Runtime {
         }
     }
     fn fail_run(&self, id: &str, code: &str) -> Result<()> {
+        // Persistence failure must stop future effects, not only paint a failed card.
+        if let Ok(run) = policy::RunId::new(id) {
+            self.broker
+                .runs
+                .cancel_run(&run, Duration::from_secs(2))
+                .ok();
+        }
+        if let Ok(handles) = self.handles.lock() {
+            if let Some(handle) = handles.get(id) {
+                if let Ok(handle) = handle.try_lock() {
+                    handle.cancel();
+                }
+            }
+        }
         let state = self.store.get_run(id)?.execution;
         if state.is_terminal() {
             return Ok(());
@@ -548,6 +562,27 @@ impl Runtime {
         Ok(())
     }
     pub fn decide(&self, decision: w::ConsentDecision) -> Result<()> {
+        let run =
+            policy::RunId::new(&decision.run_id).map_err(|_| CoreError("invalid consent run"))?;
+        let pending = self
+            .broker
+            .ui
+            .pending_for_run(&run)
+            .map_err(|_| CoreError("cannot read pending consent"))?;
+        if !pending
+            .iter()
+            .any(|request| request.request_id.as_str() == decision.request_id)
+        {
+            return Err(CoreError("consent request changed or expired"));
+        }
+        // Persist the owner decision attempt before unblocking an effect. Storage
+        // failure must never permit an effect whose consent cannot be audited.
+        self.store.append_event(
+            &decision.run_id,
+            "consent.decision_requested",
+            &serde_json::json!({"requestId":decision.request_id,"choice":decision.choice}),
+            None,
+        )?;
         self.broker
             .ui
             .decide_wire(
@@ -560,12 +595,6 @@ impl Runtime {
                 },
             )
             .map_err(|_| CoreError("consent request changed or expired"))?;
-        self.store.append_event(
-            &decision.run_id,
-            "consent.decided",
-            &serde_json::json!({}),
-            None,
-        )?;
         self.publish(&decision.run_id)
     }
     pub async fn stop(&self, id: &str) -> Result<()> {
@@ -604,6 +633,15 @@ impl Runtime {
         Ok(())
     }
     pub fn snapshot(&self, id: &str) -> Result<w::SnapshotReply> {
+        for _ in 0..5 {
+            let snapshot = self.snapshot_once(id)?;
+            if self.store.get_run(id)?.last_sequence as u64 == snapshot.sequence {
+                return Ok(snapshot);
+            }
+        }
+        Err(CoreError("run changed during read; reconcile again"))
+    }
+    fn snapshot_once(&self, id: &str) -> Result<w::SnapshotReply> {
         let run = self.store.get_run(id)?;
         let studio = self.store.get_studio(&run.studio_id)?;
         let events = self.all_events(id)?;
@@ -723,9 +761,29 @@ impl Runtime {
             goal: studio.goal,
             model: model(&studio.model),
             last_step,
-            started_at_utc: run.started_at,
-            finished_at_utc: run.finished_at,
-            elapsed_ms: 0,
+            started_at_utc: run.started_at.clone(),
+            finished_at_utc: run.finished_at.clone(),
+            elapsed_ms: run
+                .started_at
+                .as_deref()
+                .and_then(|value| {
+                    chrono::DateTime::parse_from_rfc3339(value)
+                        .ok()
+                        .map(|date| date.timestamp_millis())
+                })
+                .map(|started| {
+                    let end = run
+                        .finished_at
+                        .as_deref()
+                        .and_then(|value| {
+                            chrono::DateTime::parse_from_rfc3339(value)
+                                .ok()
+                                .map(|date| date.timestamp_millis())
+                        })
+                        .unwrap_or_else(db::time::now_millis);
+                    end.saturating_sub(started).max(0) as u64
+                })
+                .unwrap_or(0),
             usage: Some(usage),
             messages,
             pending_consents,
