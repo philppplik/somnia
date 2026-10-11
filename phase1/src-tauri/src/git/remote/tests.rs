@@ -782,13 +782,20 @@ fn cancelled_push_is_reconciled_as_not_published() {
     let f = fx();
     let mut t = T::new(&f.b);
     commit_file(&f.b, "x.txt", "x\n", "x");
-    install_hook(&f.b.join(".git"), "pre-push", "#!/bin/sh\nsleep 30\n");
+    // Deterministic: cancel only after the push is actually in flight (the hook
+    // touches a marker), never on a blind timer that can land before the op starts.
+    let marker = f.b.join("push-started");
+    let hook = format!("#!/bin/sh\ntouch '{}'\nsleep 30\n", marker.display());
+    install_hook(&f.b.join(".git"), "pre-push", &hook);
     let plan = push_plan(&t.env(), &push_req(&f.b, "main")).unwrap();
     let before = git(&f.bare, &["rev-parse", "main"]);
     let net = NetCtx::new(None);
     t.net = net.clone();
     let h = std::thread::spawn(move || {
-        std::thread::sleep(Duration::from_millis(1500));
+        let deadline = Instant::now() + Duration::from_secs(20);
+        while !marker.exists() && Instant::now() < deadline {
+            std::thread::sleep(Duration::from_millis(50));
+        }
         net.cancel();
     });
     let start = Instant::now();
@@ -807,12 +814,17 @@ fn interrupted_push_that_did_land_is_reconciled_as_published() {
     let mut t = T::new(&f.b);
     let sha = commit_file(&f.b, "x.txt", "x\n", "x");
     // the ref updates, then the server hook keeps the client waiting
-    install_hook(&f.bare, "post-receive", "#!/bin/sh\nsleep 30\n");
+    let marker = f.bare.join("push-received");
+    let hook = format!("#!/bin/sh\ntouch '{}'\nsleep 30\n", marker.display());
+    install_hook(&f.bare, "post-receive", &hook);
     let plan = push_plan(&t.env(), &push_req(&f.b, "main")).unwrap();
     let net = NetCtx::new(None);
     t.net = net.clone();
     let h = std::thread::spawn(move || {
-        std::thread::sleep(Duration::from_millis(1500));
+        let deadline = Instant::now() + Duration::from_secs(20);
+        while !marker.exists() && Instant::now() < deadline {
+            std::thread::sleep(Duration::from_millis(50));
+        }
         net.cancel();
     });
     let res = push_apply(&t.env(), &push_apply_req(&f.b, "main", &plan.plan_id, human())).unwrap();
