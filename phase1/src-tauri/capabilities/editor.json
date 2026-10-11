@@ -120,7 +120,6 @@
     "allow-log-tail",
     "allow-log-dir",
     "allow-git-detect",
-    "allow-read-open-bytes",
     "allow-git-status",
     "allow-git-diff-file",
     "allow-git-diff-refs",
