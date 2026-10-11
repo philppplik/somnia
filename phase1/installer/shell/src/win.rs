@@ -162,11 +162,11 @@ fn webview2_present() -> bool {
 
 fn message_box(title: &str, body: &str) {
     use windows_sys::Win32::UI::WindowsAndMessaging::{MessageBoxW, MB_ICONWARNING, MB_OK};
-    unsafe { MessageBoxW(0, wide(body).as_ptr(), wide(title).as_ptr(), MB_OK | MB_ICONWARNING); }
+    unsafe { MessageBoxW(std::ptr::null_mut(), wide(body).as_ptr(), wide(title).as_ptr(), MB_OK | MB_ICONWARNING); }
 }
 fn open_shell(target: &str) {
     use windows_sys::Win32::UI::Shell::ShellExecuteW;
-    unsafe { ShellExecuteW(0, wide("open").as_ptr(), wide(target).as_ptr(), std::ptr::null(), std::ptr::null(), 1); }
+    unsafe { ShellExecuteW(std::ptr::null_mut(), wide("open").as_ptr(), wide(target).as_ptr(), std::ptr::null(), std::ptr::null(), 1); }
 }
 
 pub fn run() {
