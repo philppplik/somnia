@@ -48,6 +48,8 @@ pub enum NetError {
     ListenFailed,
     /// Connect or relay failed (class only).
     RelayFailed,
+    /// TLS handshake or certificate verification failed (fail closed, no opt-out).
+    TlsFailed,
     /// Response exceeded the configured cap.
     TooLarge,
     /// I/O failure (kind only).
@@ -64,6 +66,7 @@ impl NetError {
             NetError::PrivateDestination => "private_destination",
             NetError::ListenFailed => "listen_failed",
             NetError::RelayFailed => "relay_failed",
+            NetError::TlsFailed => "tls_failed",
             NetError::TooLarge => "too_large",
             NetError::Io(_) => "io",
         }
@@ -133,6 +136,9 @@ pub struct ProxyConfig {
     pub connect_timeout: Duration,
     /// Test seam: also allow loopback/private destinations. Never set in production.
     pub allow_private_targets: bool,
+    /// TLS root store for host-side https fetches. `None` uses the bundled webpki
+    /// roots. Test seam / custom-CA environments; certificate verification is always on.
+    pub tls_roots: Option<rustls::RootCertStore>,
 }
 
 impl Default for ProxyConfig {
@@ -142,6 +148,7 @@ impl Default for ProxyConfig {
             max_response_bytes: 8 * 1024 * 1024,
             connect_timeout: Duration::from_secs(10),
             allow_private_targets: false,
+            tls_roots: None,
         }
     }
 }
@@ -395,8 +402,9 @@ pub fn resolve_checked(host: &str, port: u16, cfg: &ProxyConfig) -> Result<Socke
 /// One plain-HTTP request the agent wants the runtime to make host-side.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct FetchRequest {
-    /// Full URL, `http://` only in this alpha (https comes with the MCP wave; the CONNECT
-    /// relay already covers sandbox-side https).
+    /// Full URL, `http://` or `https://`. https is terminated on the host with mandatory
+    /// certificate verification against the configured root store (fail closed, no
+    /// opt-out); the CONNECT relay covers sandbox-side https.
     pub url: String,
 }
 
@@ -405,7 +413,8 @@ impl FetchRequest {
     pub fn parse(url: &str) -> Result<Self, NetError> {
         let rest = url
             .strip_prefix("http://")
-            .ok_or(NetError::InvalidTarget("only http:// in this alpha"))?;
+            .or_else(|| url.strip_prefix("https://"))
+            .ok_or(NetError::InvalidTarget("only http:// and https://"))?;
         let authority = rest.split('/').next().unwrap_or("");
         if authority.contains('@') {
             return Err(NetError::InvalidTarget("userinfo"));
@@ -420,9 +429,22 @@ impl FetchRequest {
         })
     }
 
+    /// URL scheme: `http` or `https`.
+    pub fn scheme(&self) -> &'static str {
+        if self.url.starts_with("https://") {
+            "https"
+        } else {
+            "http"
+        }
+    }
+
     /// Domain of the URL.
     pub fn domain(&self) -> Domain {
-        let rest = self.url.strip_prefix("http://").unwrap_or("");
+        let rest = self
+            .url
+            .strip_prefix("http://")
+            .or_else(|| self.url.strip_prefix("https://"))
+            .unwrap_or("");
         let authority = rest.split('/').next().unwrap_or("");
         Domain(authority.split(':').next().unwrap_or("").to_ascii_lowercase())
     }
@@ -432,6 +454,24 @@ impl FetchRequest {
             .part("url", self.url.as_bytes())
             .finish()
     }
+}
+
+/// Return the body once the buffered response is complete per its Content-Length.
+/// `None` while the head is incomplete, the header is absent, or the body is short.
+fn complete_body(buf: &[u8]) -> Option<Vec<u8>> {
+    let pos = buf.windows(4).position(|w| w == b"\r\n\r\n")?;
+    let head = std::str::from_utf8(&buf[..pos]).ok()?;
+    let mut len: Option<usize> = None;
+    for line in head.split("\r\n").skip(1) {
+        if let Some((name, value)) = line.split_once(':') {
+            if name.trim().eq_ignore_ascii_case("content-length") {
+                len = value.trim().parse().ok();
+            }
+        }
+    }
+    let len = len?;
+    let body = &buf[pos + 4..];
+    (body.len() >= len).then(|| body[..len].to_vec())
 }
 
 /// Host-side network executor for one run scope: proposes and performs fetches under
@@ -495,13 +535,59 @@ impl NetworkExecutor {
     }
 
     fn fetch_inner(&self, req: &FetchRequest) -> Result<Vec<u8>, NetError> {
-        let rest = self.url_parts(req)?;
-        let (host, port, path) = rest;
+        let (host, port, path) = self.url_parts(req)?;
         let addr = resolve_checked(&host, port, &self.cfg)?;
-        let mut s = TcpStream::connect_timeout(&addr, self.cfg.connect_timeout)
+        let tcp = TcpStream::connect_timeout(&addr, self.cfg.connect_timeout)
             .map_err(|_| NetError::RelayFailed)?;
-        s.set_read_timeout(Some(Duration::from_secs(30)))
+        tcp.set_read_timeout(Some(Duration::from_secs(30)))
             .map_err(|e| NetError::Io(e.kind()))?;
+        if req.scheme() == "https" {
+            let mut tls = self.tls_wrap(tcp, &host)?;
+            Self::roundtrip(&mut tls, &host, &path, self.cfg.max_response_bytes)
+        } else {
+            let mut tcp = tcp;
+            Self::roundtrip(&mut tcp, &host, &path, self.cfg.max_response_bytes)
+        }
+    }
+
+    /// Wrap a connected TCP stream in TLS with mandatory certificate verification against
+    /// the configured roots (webpki roots by default). The handshake is driven to
+    /// completion here, so any certificate or protocol failure is a visible `tls_failed`
+    /// before a single request byte leaves the host. There is no verification opt-out.
+    fn tls_wrap(
+        &self,
+        mut tcp: TcpStream,
+        host: &str,
+    ) -> Result<rustls::StreamOwned<rustls::ClientConnection, TcpStream>, NetError> {
+        use std::sync::Arc;
+        let roots = match &self.cfg.tls_roots {
+            Some(r) => r.clone(),
+            None => {
+                let mut r = rustls::RootCertStore::empty();
+                r.extend(webpki_roots::TLS_SERVER_ROOTS.iter().cloned());
+                r
+            }
+        };
+        let config = rustls::ClientConfig::builder()
+            .with_root_certificates(roots)
+            .with_no_client_auth();
+        let name = rustls::pki_types::ServerName::try_from(host.to_string())
+            .map_err(|_| NetError::InvalidTarget("dns name"))?;
+        let mut conn =
+            rustls::ClientConnection::new(Arc::new(config), name).map_err(|_| NetError::TlsFailed)?;
+        while conn.is_handshaking() {
+            conn.complete_io(&mut tcp).map_err(|_| NetError::TlsFailed)?;
+        }
+        Ok(rustls::StreamOwned::new(conn, tcp))
+    }
+
+    /// One HTTP/1.1 GET over any byte stream; returns only the body, capped.
+    fn roundtrip<S: Read + Write>(
+        s: &mut S,
+        host: &str,
+        path: &str,
+        max_response_bytes: usize,
+    ) -> Result<Vec<u8>, NetError> {
         let req_line = format!(
             "GET {} HTTP/1.1\r\nHost: {}\r\nUser-Agent: somnia-vibespace-proxy/0.1\r\nAccept: */*\r\nConnection: close\r\n\r\n",
             path, host
@@ -515,10 +601,19 @@ impl NetworkExecutor {
                 Ok(0) => break,
                 Ok(n) => {
                     buf.extend_from_slice(&chunk[..n]);
-                    if buf.len() > self.cfg.max_response_bytes {
+                    if buf.len() > max_response_bytes {
                         return Err(NetError::TooLarge);
                     }
+                    // Stop as soon as a Content-Length-complete body has arrived; TLS
+                    // peers that skip close_notify would otherwise surface as errors
+                    // after the full response is already in hand.
+                    if let Some(body) = complete_body(&buf) {
+                        return Ok(body);
+                    }
                 }
+                // A read error after data arrived is treated like EOF: TLS servers that
+                // close without close_notify land here (plain TCP close is Ok(0) above).
+                Err(_) if !buf.is_empty() => break,
                 Err(_) => return Err(NetError::RelayFailed),
             }
         }
@@ -531,9 +626,11 @@ impl NetworkExecutor {
     }
 
     fn url_parts(&self, req: &FetchRequest) -> Result<(String, u16, String), NetError> {
+        let default_port: u16 = if req.scheme() == "https" { 443 } else { 80 };
         let rest = req
             .url
             .strip_prefix("http://")
+            .or_else(|| req.url.strip_prefix("https://"))
             .ok_or(NetError::InvalidTarget("scheme"))?;
         let (authority, path) = match rest.find('/') {
             Some(i) => (&rest[..i], &rest[i..]),
@@ -543,8 +640,8 @@ impl NetworkExecutor {
             Some((h, p)) if !h.is_empty() && p.bytes().all(|b| b.is_ascii_digit()) => {
                 (h.to_string(), p.parse().map_err(|_| NetError::InvalidTarget("port"))?)
             }
-            Some((h, _)) if !h.is_empty() => (h.to_string(), 80),
-            _ if !authority.contains(':') => (authority.to_string(), 80),
+            Some((h, _)) if !h.is_empty() => (h.to_string(), default_port),
+            _ if !authority.contains(':') => (authority.to_string(), default_port),
             _ => return Err(NetError::InvalidTarget("authority")),
         };
         if !self.cfg.allowed_ports.contains(&port) {
