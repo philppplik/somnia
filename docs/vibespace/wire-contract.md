@@ -65,3 +65,13 @@ as an estimate, and an absent price is not displayed as zero.
 
 These tests currently verify encoding, rejection of credential/scope-extension
 fields and cost-display rules. They do not validate a composed run or native UI.
+
+## Native folder grants
+
+`FolderGrants` is a one-shot, main-window-bound registry for results of the
+native directory picker. It expires after 120 seconds and holds at most 16
+pending grants. Root directories, missing directories and symlink selections
+are rejected. An unknown or cross-window token does not consume the real grant.
+After consumption, the caller uses the selected folder only as a scope anchor;
+all file operations still require the policy/checkpoint confinement mechanism.
+Canonicalization is not a sandbox or a race-free directory handle.
