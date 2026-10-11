@@ -19,6 +19,13 @@ fn run(root: &Path, args: &[&str]) -> String {
     );
     String::from_utf8(out.stdout).unwrap()
 }
+fn plain(p: PathBuf) -> PathBuf {
+    let text = p.to_string_lossy().into_owned();
+    match text.strip_prefix(r"\\?\") {
+        Some(rest) if !rest.starts_with("UNC\\") => PathBuf::from(rest),
+        _ => p,
+    }
+}
 struct Fixture {
     _dir: TempDir,
     root: PathBuf,
@@ -28,13 +35,9 @@ struct Fixture {
 impl Fixture {
     fn new() -> Self {
         let dir = TempDir::new().unwrap();
-        // macOS temp dirs live behind the /var -> /private/var symlink; Git and the
-        // worktree code report canonical paths, so build every fixture path from the
-        // canonical base. (Not on Windows: canonicalize adds a \\?\ prefix there.)
-        #[cfg(unix)]
-        let base = dir.path().canonicalize().unwrap();
-        #[cfg(not(unix))]
-        let base = dir.path().to_path_buf();
+        // Fixture paths must match what Git reports: canonical (macOS /var -> /private/var, Windows
+        // 8.3 RUNNER~1 -> runneradmin). canonicalize adds a \\?\ prefix on Windows, which we strip.
+        let base = plain(dir.path().canonicalize().unwrap());
         let root = base.join("repo");
         fs::create_dir(&root).unwrap();
         run(&root, &["init", "-q", "-b", "main"]);
