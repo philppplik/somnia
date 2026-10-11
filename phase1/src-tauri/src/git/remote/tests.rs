@@ -413,7 +413,8 @@ fn pull_fast_forward_flow() {
     assert_eq!((r.old_head.as_str(), r.new_head.as_str()), (old.as_str(), a2.as_str()));
     assert!(f.b.join("a2.txt").exists());
     assert_eq!(git(&f.b, &["rev-parse", &r.safety_ref]), old, "safety ref points at the previous head");
-    assert!(git(&f.b, &["status", "--porcelain"]).is_empty());
+    let porcelain = git(&f.b, &["status", "--porcelain"]);
+    assert!(porcelain.is_empty(), "worktree dirty after pull_apply; porcelain = {porcelain:?}; untracked/ignored = {:?}; core config = {:?}", git(&f.b, &["status", "--porcelain", "--ignored", "-uall"]), git(&f.b, &["config", "--show-origin", "--get-regexp", "^core\\."]));
     assert_eq!(pull_plan(&t.env(), &pull_req(&f.b)).unwrap().status, PullStatus::UpToDate);
 }
 
@@ -798,6 +799,8 @@ fn cancelled_push_is_reconciled_as_not_published() {
     commit_file(&f.b, "x.txt", "x\n", "x");
     // Deterministic: cancel only after the push is actually in flight (the hook
     // touches a marker), never on a blind timer that can land before the op starts.
+    // Windows: sh spawn and process-tree kill are much slower, so widen the budgets.
+    let (marker_wait, budget) = if cfg!(windows) { (60, 45) } else { (20, 15) };
     let marker = f.b.join("push-started");
     let hook = format!("#!/bin/sh\ntouch '{}'\nsleep 30\n", marker.display());
     install_hook(&f.b.join(".git"), "pre-push", &hook);
@@ -806,7 +809,7 @@ fn cancelled_push_is_reconciled_as_not_published() {
     let net = NetCtx::new(None);
     t.net = net.clone();
     let h = std::thread::spawn(move || {
-        let deadline = Instant::now() + Duration::from_secs(20);
+        let deadline = Instant::now() + Duration::from_secs(marker_wait);
         while !marker.exists() && Instant::now() < deadline {
             std::thread::sleep(Duration::from_millis(50));
         }
@@ -815,7 +818,7 @@ fn cancelled_push_is_reconciled_as_not_published() {
     let start = Instant::now();
     let res = push_apply(&t.env(), &push_apply_req(&f.b, "main", &plan.plan_id, human())).unwrap();
     h.join().unwrap();
-    assert!(start.elapsed() < Duration::from_secs(15));
+    assert!(start.elapsed() < Duration::from_secs(budget));
     assert!(matches!(res.outcome, PushOutcome::NotPublished { reason: RemoteErrorCode::Cancelled, .. }), "{:?}", res.outcome);
     assert_eq!(res.job_outcome, JobOutcome::Failed);
     assert_eq!(git(&f.bare, &["rev-parse", "main"]), before);
