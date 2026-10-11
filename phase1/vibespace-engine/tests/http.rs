@@ -125,3 +125,32 @@ async fn http_failure_not_provider_body() {
     ));
     server.join().unwrap();
 }
+
+#[tokio::test]
+async fn malformed_or_empty_success_bodies_fail_visibly() {
+    for body in [
+        r#"{"choices":[{"message":{}}]}"#,
+        r#"{"choices":[{"message":{"content":42}}]}"#,
+        r#"{"choices":[{"message":{"content":" ","tool_calls":[]}}]}"#,
+        r#"{"choices":[{"message":{"content":"ok","tool_calls":{}}}]}"#,
+        r#"{"choices":[{"message":null}]}"#,
+        r#"{"choices":[{"message":{"tool_calls":[{"id":"x","function":{"name":"somnia_propose_effect","arguments":"{\"name\":\"write\",\"arguments\":{},\"approved\":true}"}}]}}]}"#,
+    ] {
+        let (endpoint, server) = server(body, "200 OK");
+        let c = config(endpoint);
+        let model = HttpModel::new(c.clone(), None, true).unwrap();
+        assert!(
+            matches!(
+                model
+                    .complete(ModelInput {
+                        config: c,
+                        messages: vec![]
+                    })
+                    .await,
+                Err(Failure::Model)
+            ),
+            "{body}"
+        );
+        server.join().unwrap();
+    }
+}

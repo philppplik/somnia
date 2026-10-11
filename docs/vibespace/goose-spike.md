@@ -225,3 +225,12 @@ platform packaging checks, adopt this assembly only if its behavior and cost fit
 If a strict 1.90-only consumer is later required, use an explicitly approved isolated
 1.95 worker boundary or revisit the SDK choice. Do not bypass rust-version or embed
 full goose to hide that incompatibility.
+
+## Integrator validation
+
+The integration branch regenerated and committed a standalone Cargo.lock, then
+reran the suite with `--locked` on Rust 1.95.0. The host adapter now also rejects
+empty or malformed success bodies, malformed tool arrays and extra effect-wrapper
+keys rather than reporting a successful run from invalid model output. The added
+HTTP regression test brings the deterministic suite to 18 passing tests. This
+still does not constitute real-model, Windows or Desktop composition evidence.

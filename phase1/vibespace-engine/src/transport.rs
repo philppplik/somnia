@@ -112,6 +112,18 @@ impl ModelTransport for HttpModel {
         let value: serde_json::Value =
             serde_json::from_slice(&bytes).map_err(|_| Failure::Model)?;
         let message = value.pointer("/choices/0/message").ok_or(Failure::Model)?;
+        if !message.is_object() {
+            return Err(Failure::Model);
+        }
+        if message
+            .get("content")
+            .is_some_and(|content| !content.is_null() && !content.is_string())
+            || message
+                .get("tool_calls")
+                .is_some_and(|calls| !calls.is_null() && !calls.is_array())
+        {
+            return Err(Failure::Model);
+        }
         let text = message
             .get("content")
             .and_then(|v| v.as_str())
@@ -134,6 +146,13 @@ impl ModelTransport for HttpModel {
                     .ok_or(Failure::Model)?,
             )
             .map_err(|_| Failure::Model)?;
+            let object = args.as_object().ok_or(Failure::Model)?;
+            if object.len() != 2
+                || !object.contains_key("name")
+                || !object.contains_key("arguments")
+            {
+                return Err(Failure::Model);
+            }
             Some(ToolProposal {
                 call_id: call
                     .get("id")
@@ -154,6 +173,16 @@ impl ModelTransport for HttpModel {
         } else {
             None
         };
+        // A malformed or empty response cannot become a successful agent run.
+        if tool.is_none() && text.trim().is_empty() {
+            return Err(Failure::Model);
+        }
+        if tool
+            .as_ref()
+            .is_some_and(|tool| tool.call_id.is_empty() || tool.name.is_empty())
+        {
+            return Err(Failure::Model);
+        }
         Ok(ModelReply {
             message: text,
             tool,
