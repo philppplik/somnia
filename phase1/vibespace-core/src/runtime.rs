@@ -876,9 +876,10 @@ impl Runtime {
                 conflict,
             });
         }
-        let digest =
-            cp::Digest::of(&serde_json::to_vec(&review).map_err(|_| CoreError("invalid review"))?)
-                .to_hex();
+        let digest = cp::Digest::of(
+            &serde_json::to_vec(&(&review, &files)).map_err(|_| CoreError("invalid review"))?,
+        )
+        .to_hex();
         Ok(w::ReviewProjection {
             revision: format!("{}:{}", run.review_revision, digest),
             summary: format!("{} files changed in the isolated copy", files.len()),

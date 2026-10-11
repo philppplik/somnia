@@ -306,3 +306,78 @@ async fn stop_with_pending_consent_never_writes_late() {
     }
     panic!("pending run did not stop");
 }
+
+struct TwoEdits(AtomicUsize);
+#[async_trait]
+impl engine::ModelTransport for TwoEdits {
+    async fn complete(&self, _: engine::ModelInput) -> Result<engine::ModelReply, engine::Failure> {
+        let n = self.0.fetch_add(1, Ordering::SeqCst);
+        Ok(engine::ModelReply {
+            message: "edit".into(),
+            tool: if n < 2 {
+                Some(engine::ToolProposal {
+                    call_id: format!("write-{n}"),
+                    name: "write_file".into(),
+                    arguments: serde_json::json!({"path":if n==0{"hello.txt"}else{"second.txt"},"content":"after"}),
+                })
+            } else {
+                None
+            },
+            usage: Default::default(),
+        })
+    }
+}
+#[tokio::test]
+async fn selected_file_apply_keeps_remaining_changes_ready() {
+    let (_data, project, rt, studio) = setup();
+    let started = rt
+        .start(
+            StartRun {
+                studio_id: studio.studio_id,
+                request_id: uuid::Uuid::new_v4().to_string(),
+                retry_of_run_id: None,
+            },
+            Arc::new(TwoEdits(AtomicUsize::new(0))),
+            engine::ModelConfig::Local {
+                endpoint: "http://127.0.0.1:11434/v1/chat/completions".into(),
+                model: "qwen3.5:9b".into(),
+            },
+        )
+        .await
+        .unwrap();
+    let id = started.snapshot.run_id;
+    for _ in 0..300 {
+        let snapshot = rt.snapshot(&id).unwrap();
+        if let Some(c) = snapshot.snapshot.pending_consents.first() {
+            rt.decide(ConsentDecision {
+                run_id: id.clone(),
+                request_id: c.request_id.clone(),
+                choice: ConsentChoice::AllowOnce,
+            })
+            .unwrap();
+        }
+        if snapshot.snapshot.review_state == ReviewState::Ready {
+            break;
+        }
+        tokio::time::sleep(std::time::Duration::from_millis(10)).await;
+    }
+    let review = rt.snapshot(&id).unwrap().snapshot.review.unwrap();
+    assert_eq!(review.files.len(), 2);
+    rt.apply(&id, &review.revision, vec!["project/hello.txt".into()])
+        .unwrap();
+    let partial = rt.snapshot(&id).unwrap();
+    assert_eq!(partial.snapshot.review_state, ReviewState::Ready);
+    let remaining = partial.snapshot.review.unwrap();
+    assert_eq!(remaining.files.len(), 1);
+    assert_eq!(remaining.files[0].path, "project/second.txt");
+    assert!(!project.path().join("second.txt").exists());
+    assert!(rt
+        .apply(&id, &review.revision, vec!["project/second.txt".into()])
+        .is_err());
+    rt.apply(&id, &remaining.revision, vec!["project/second.txt".into()])
+        .unwrap();
+    assert_eq!(
+        rt.snapshot(&id).unwrap().snapshot.review_state,
+        ReviewState::Applied
+    );
+}
