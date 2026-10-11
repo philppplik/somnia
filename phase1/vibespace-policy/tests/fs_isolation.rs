@@ -388,3 +388,42 @@ fn windows_reserved_and_stream_names_refused() {
         );
     }
 }
+
+/// GHSA-hp8f-xmx4-4qrg trigger shapes through the actual broker-bound executor.
+/// Removing a caller slash is insufficient: indirect symlink targets can carry it.
+#[cfg(unix)]
+#[test]
+fn advisory_trailing_slash_and_indirect_symlink_targets_cannot_escape() {
+    use std::os::unix::fs::symlink;
+    let e=env();
+    std::fs::write(e.outside.join("secret.txt"),b"OUTSIDE").unwrap();
+    symlink("../outside",e.root.join("evil")).unwrap();
+    symlink("evil/",e.root.join("indirect")).unwrap();
+    symlink("../outside/",e.root.join("x")).unwrap();
+    symlink("x/",e.root.join("indirect_x")).unwrap();
+    symlink("/",e.root.join("root_link")).unwrap();
+    for rel in ["evil/secret.txt","evil//secret.txt","indirect/secret.txt","indirect_x/secret.txt","root_link/etc/passwd","root_link//etc/passwd"] {
+        assert!(e.read(rel).is_err(),"read escaped through {rel}");
+        assert!(e.write(rel,b"PWNED").is_err(),"write escaped through {rel}");
+        assert!(e.delete(rel).is_err(),"delete escaped through {rel}");
+    }
+    for rel in ["evil/","indirect/","indirect_x/","root_link/"] {
+        assert!(e.read(rel).is_err(),"trailing slash read escaped {rel}");
+        assert!(e.write(rel,b"PWNED").is_err(),"trailing slash write escaped {rel}");
+    }
+    assert_eq!(std::fs::read(e.outside.join("secret.txt")).unwrap(),b"OUTSIDE");
+    assert!(std::fs::symlink_metadata(e.root.join("evil")).unwrap().is_symlink());
+}
+
+#[cfg(windows)]
+#[test]
+fn advisory_trailing_slash_junction_paths_cannot_escape() {
+    let e=env();std::fs::write(e.outside.join("secret.txt"),b"OUTSIDE").unwrap();
+    let status=std::process::Command::new("cmd").args(["/C","mklink","/J"]).arg(e.root.join("evil")).arg(&e.outside).output().expect("mklink");
+    assert!(status.status.success(),"junction creation failed: {status:?}");
+    for rel in ["evil/secret.txt","evil//secret.txt","evil\\secret.txt","evil\\\\secret.txt"] {
+        assert!(e.read(rel).is_err());assert!(e.write(rel,b"PWNED").is_err());assert!(e.delete(rel).is_err());
+    }
+    for rel in ["evil/","evil\\"] {assert!(e.read(rel).is_err());assert!(e.write(rel,b"PWNED").is_err());}
+    assert_eq!(std::fs::read(e.outside.join("secret.txt")).unwrap(),b"OUTSIDE");
+}

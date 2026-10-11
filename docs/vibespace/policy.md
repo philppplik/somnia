@@ -98,3 +98,22 @@ Runnable: `cargo run --example core_call` in `phase1/vibespace-policy`.
 6. Unconsumed auto-allowed read tokens count against `max_tokens_per_run` (256) until they expire (5 minutes) or the run ends.
 7. A hard link or symlink created by an effect outside this crate (for example a copy builder that hard-links files) is refused by design, which may need a copy builder that copies bytes.
 8. Time of effect: the checkpoint is immediately before rename/unlink, not atomic with it. Cancel waits for the guard, so ordering is preserved, but a stuck filesystem call delays `drained`.
+
+## cap-std advisory floor and regression coverage
+
+Official advisory GHSA-hp8f-xmx4-4qrg:
+https://github.com/bytecodealliance/cap-std/security/advisories/GHSA-hp8f-xmx4-4qrg
+
+The current policy, Core and Desktop lockfiles already resolve cap-std,
+cap-primitives and cap-fs-ext 3.4.6, an explicitly patched release. Manifests
+now require at least 3.4.6 in the 3.x line, including native Windows and the
+Unix cap-layer test feature. No vulnerable-version emergency upgrade was
+needed. Do not use canonicalize alone as proof of confinement.
+
+A public FileExecutor regression covers caller trailing slashes, evil/
+symlinks, indirect targets ending in evil/ and x/, root_link/ and doubled
+separators. Read/write/delete are refused and outside bytes remain unchanged.
+Linux default and cap-layer paths pass. Windows junction regression is included
+but awaits native CI. These test executor defense in depth; they do not force
+cap-std's Linux openat2 fallback with seccomp, nor claim a Windows symlink test
+ran when privilege prevented creation.
