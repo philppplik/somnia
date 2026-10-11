@@ -18,11 +18,15 @@ required-features = ["desktop"]
 default = ["desktop"]
 ext-selftest = ["desktop"]
 folder-lock-interim = []
+# Links the ONNX runtime for local multilingual-e5-small. Off: vector search reports "not available in this build".
+vibespace-fastembed = ["somnia-vibespace-embed/fastembed"]
 desktop = ["dep:tauri", "dep:tauri-plugin-dialog", "dep:tauri-plugin-updater", "dep:tauri-plugin-process", "dep:tauri-plugin-single-instance", "dep:tauri-build", "dep:window-vibrancy", "dep:keyring", "dep:reqwest"]
 
 [dependencies]
 somnia-vibespace-sched = { path = "../vibespace-sched" }
 somnia-vibespace-core = { path = "../vibespace-core" }
+somnia-vibespace-embed = { path = "../vibespace-embed" }
+somnia-vibespace-skills = { path = "../vibespace-skills" }
 somnia-relay = { path = "../../relay" }
 tokio = { version = "1", features = ["rt-multi-thread", "net", "sync", "time", "macros", "io-util"] }
 if-addrs = "0.13"

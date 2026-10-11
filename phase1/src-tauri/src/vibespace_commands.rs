@@ -1105,3 +1105,290 @@ pub async fn vibespace_request_changes(
     })
     .await
 }
+// ---------------------------------------------------------------------------------------------
+// Package A6: memory (opt-in vector search) and skills (data only). Appended block.
+// Nothing here downloads by itself: the model download needs the exact size acknowledged, and the
+// vector index exists only after an explicit per-space opt-in. Skills are stored, never executed.
+// ---------------------------------------------------------------------------------------------
+use somnia_vibespace_embed as embed;
+use somnia_vibespace_skills as skills;
+use std::sync::atomic::{AtomicBool, Ordering};
+
+/// True only when this build links the ONNX backend (`vibespace-fastembed` feature).
+const EMBEDDER_COMPILED: bool = cfg!(feature = "vibespace-fastembed");
+
+#[derive(Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct MemorySearchRequest {
+    pub space_id: String,
+    pub query: String,
+}
+#[derive(Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct MemoryReviewRequest {
+    pub space_id: String,
+    pub memory_id: String,
+    pub approve: bool,
+}
+#[derive(Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct SpaceOnly {
+    pub space_id: String,
+}
+#[derive(Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct VectorEnableRequest {
+    pub space_id: String,
+    pub acknowledged: bool,
+}
+#[derive(Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct NoArgs {}
+#[derive(Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct ModelDownloadRequest {
+    pub acknowledged_bytes: u64,
+}
+#[derive(Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct ModelStateReply {
+    pub model_id: String,
+    /// missing | ready | downloading | error
+    pub status: String,
+    pub total_bytes: u64,
+    pub downloaded_bytes: u64,
+    pub error: Option<String>,
+}
+
+struct DownloadState {
+    running: bool,
+    downloaded: u64,
+    error: Option<String>,
+    cancel: Arc<AtomicBool>,
+}
+fn download_state() -> &'static Mutex<DownloadState> {
+    static S: OnceLock<Mutex<DownloadState>> = OnceLock::new();
+    S.get_or_init(|| {
+        Mutex::new(DownloadState { running: false, downloaded: 0, error: None, cancel: Arc::new(AtomicBool::new(false)) })
+    })
+}
+fn model_store(window: &WebviewWindow) -> Result<embed::ModelStore> {
+    let dir = window.app_handle().path().app_data_dir().map_err(failed)?.join("models");
+    Ok(embed::ModelStore::new(dir))
+}
+fn model_reply(window: &WebviewWindow) -> Result<ModelStateReply> {
+    let spec = embed::e5_small();
+    let store = model_store(window)?;
+    let st = download_state().lock().map_err(failed)?;
+    let (status, downloaded) = if st.running {
+        ("downloading", st.downloaded)
+    } else if store.status(&spec) == embed::ModelStatus::Ready {
+        ("ready", spec.total_bytes())
+    } else if st.error.is_some() {
+        ("error", 0)
+    } else {
+        ("missing", 0)
+    };
+    Ok(ModelStateReply {
+        model_id: spec.id.clone(),
+        status: status.to_string(),
+        total_bytes: spec.total_bytes(),
+        downloaded_bytes: downloaded,
+        error: st.error.clone(),
+    })
+}
+
+#[cfg(feature = "vibespace-fastembed")]
+fn embedder(window: &WebviewWindow) -> Option<Arc<embed::embedder::E5Embedder>> {
+    static E: OnceLock<Mutex<Option<Arc<embed::embedder::E5Embedder>>>> = OnceLock::new();
+    let cell = E.get_or_init(|| Mutex::new(None));
+    let mut g = cell.lock().ok()?;
+    if g.is_none() {
+        // Loading never downloads: a missing model leaves this None and search falls back to FTS.
+        *g = embed::embedder::E5Embedder::load(&model_store(window).ok()?, &embed::e5_small()).ok().map(Arc::new);
+    }
+    g.clone()
+}
+#[cfg(feature = "vibespace-fastembed")]
+fn spawn_index(window: &WebviewWindow, runtime: Arc<Runtime>, space_id: String) {
+    static BUSY: AtomicBool = AtomicBool::new(false);
+    if BUSY.swap(true, Ordering::SeqCst) {
+        return;
+    }
+    let window = window.clone();
+    std::thread::spawn(move || {
+        if let Some(e) = embedder(&window) {
+            while let Ok(n) = runtime.store.vector_index_pending(&space_id, &*e, 32) {
+                if n == 0 {
+                    break;
+                }
+            }
+        }
+        BUSY.store(false, Ordering::SeqCst);
+    });
+}
+#[cfg(not(feature = "vibespace-fastembed"))]
+fn spawn_index(_window: &WebviewWindow, _runtime: Arc<Runtime>, _space_id: String) {}
+
+fn vector_reply(mut s: db::VectorStatus) -> db::VectorStatus {
+    s.compiled_in = s.compiled_in && EMBEDDER_COMPILED;
+    s
+}
+
+sync_command!(
+    vibespace_memory_search,
+    MemorySearchRequest,
+    db::HybridResponse,
+    false,
+    |runtime, request, window, _state| {
+        #[cfg(feature = "vibespace-fastembed")]
+        let emb = embedder(window);
+        #[cfg(feature = "vibespace-fastembed")]
+        let emb_ref: Option<&dyn db::Embedder> = emb.as_deref().map(|e| e as &dyn db::Embedder);
+        #[cfg(not(feature = "vibespace-fastembed"))]
+        let emb_ref: Option<&dyn db::Embedder> = {
+            let _ = window;
+            None
+        };
+        runtime
+            .store
+            .search_memory_hybrid(&request.space_id, &request.query, &db::SearchOptions::default(), emb_ref)
+            .map_err(failed)
+    }
+);
+sync_command!(vibespace_memory_review, MemoryReviewRequest, bool, true, |runtime, request, _window, _state| {
+    runtime.store.review_memory(&request.space_id, &request.memory_id, request.approve).map_err(failed)
+});
+sync_command!(vibespace_memory_clear, SpaceOnly, usize, true, |runtime, request, _window, _state| {
+    runtime.store.delete_all_memory(&request.space_id).map_err(failed)
+});
+sync_command!(vibespace_memory_vector_status, SpaceOnly, db::VectorStatus, false, |runtime, request, window, _state| {
+    let s = runtime.store.vector_status(&request.space_id).map_err(failed)?;
+    if s.enabled && s.indexed < s.total {
+        spawn_index(window, runtime.clone(), request.space_id.clone());
+    }
+    Ok(vector_reply(s))
+});
+sync_command!(vibespace_memory_vector_enable, VectorEnableRequest, db::VectorStatus, true, |runtime, request, window, _state| {
+    if !request.acknowledged || !EMBEDDER_COMPILED {
+        return Err(error("vibespace_vector_not_allowed", true));
+    }
+    let spec = embed::e5_small();
+    if model_store(window)?.status(&spec) != embed::ModelStatus::Ready {
+        return Err(error("vibespace_model_missing", true));
+    }
+    let s = runtime
+        .store
+        .vector_enable(db::VectorOptIn { space_id: request.space_id.clone(), model_id: spec.id.clone(), dims: spec.dims, acknowledged: true })
+        .map_err(failed)?;
+    spawn_index(window, runtime.clone(), request.space_id);
+    Ok(vector_reply(s))
+});
+sync_command!(vibespace_memory_vector_disable, SpaceOnly, db::VectorStatus, true, |runtime, request, _window, _state| {
+    runtime.store.vector_disable(&request.space_id).map(vector_reply).map_err(failed)
+});
+sync_command!(vibespace_memory_model_state, NoArgs, ModelStateReply, false, |_runtime, _request, window, _state| {
+    model_reply(window)
+});
+sync_command!(vibespace_memory_model_download, ModelDownloadRequest, ModelStateReply, false, |_runtime, request, window, _state| {
+    let spec = embed::e5_small();
+    // The consent token only exists for the exact size the UI showed.
+    let consent = embed::DownloadConsent::acknowledge(&spec, request.acknowledged_bytes)
+        .map_err(|_| error("vibespace_download_consent_mismatch", true))?;
+    let store = model_store(window)?;
+    {
+        let mut st = download_state().lock().map_err(failed)?;
+        if st.running {
+            return model_reply(window);
+        }
+        st.running = true;
+        st.downloaded = 0;
+        st.error = None;
+        st.cancel = Arc::new(AtomicBool::new(false));
+    }
+    let cancel = download_state().lock().map_err(failed)?.cancel.clone();
+    std::thread::spawn(move || {
+        let result = store.download(&spec, embed::model::HF_BASE, consent, &cancel, &mut |p| {
+            if let Ok(mut st) = download_state().lock() {
+                st.downloaded = p.downloaded;
+            }
+        });
+        if let Ok(mut st) = download_state().lock() {
+            st.running = false;
+            st.error = match result {
+                Ok(()) | Err(embed::DownloadError::Cancelled) => None,
+                Err(_) => Some("vibespace_download_failed".to_string()),
+            };
+        }
+    });
+    model_reply(window)
+});
+sync_command!(vibespace_memory_model_cancel, NoArgs, ModelStateReply, false, |_runtime, _request, window, _state| {
+    if let Ok(st) = download_state().lock() {
+        st.cancel.store(true, Ordering::SeqCst);
+    }
+    model_reply(window)
+});
+
+#[derive(Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct SkillsInstallRequest {
+    /// `space` | `user`
+    pub scope: String,
+    pub space_id: Option<String>,
+    /// The renderer may only install `local` skills in this release. github/index need a fetch path
+    /// with its own consent; builtin is app-owned.
+    pub source: String,
+    pub source_ref: Option<String>,
+    pub skill_md: String,
+    pub files: Vec<db::skills::SkillFile>,
+}
+#[derive(Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct SkillIdRequest {
+    pub id: String,
+}
+#[derive(Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct SkillVersionRequest {
+    pub id: String,
+    pub version: i64,
+}
+
+sync_command!(vibespace_skills_list, SpaceOnly, Vec<db::skills::SkillSummary>, false, |runtime, request, _window, _state| {
+    runtime.store.list_skills(Some(&request.space_id)).map_err(failed)
+});
+sync_command!(vibespace_skills_install, SkillsInstallRequest, db::skills::SkillSummary, true, |runtime, request, _window, _state| {
+    if request.source != "local" {
+        return Err(error("vibespace_skill_source_not_allowed", true));
+    }
+    let scope = match request.scope.as_str() {
+        "space" => db::skills::SkillScope::Space,
+        "user" => db::skills::SkillScope::User,
+        _ => return Err(error("vibespace_skill_scope_invalid", true)),
+    };
+    skills::install_from_files(
+        &runtime.store,
+        scope,
+        request.space_id.as_deref(),
+        db::skills::SkillSource::Local,
+        request.source_ref.as_deref(),
+        None,
+        &request.skill_md,
+        request.files,
+        None,
+    )
+    .map_err(failed)
+});
+sync_command!(vibespace_skills_get_version, SkillVersionRequest, Option<db::skills::SkillVersion>, false, |runtime, request, _window, _state| {
+    runtime.store.get_skill_version(&request.id, request.version).map_err(failed)
+});
+sync_command!(vibespace_skills_accept_update, SkillIdRequest, db::skills::SkillSummary, true, |runtime, request, _window, _state| {
+    runtime.store.accept_skill_update(&request.id).map_err(failed)
+});
+sync_command!(vibespace_skills_reject_update, SkillIdRequest, db::skills::SkillSummary, true, |runtime, request, _window, _state| {
+    runtime.store.reject_skill_update(&request.id).map_err(failed)
+});
+sync_command!(vibespace_skills_uninstall, SkillIdRequest, bool, true, |runtime, request, _window, _state| {
+    runtime.store.uninstall_skill(&request.id).map_err(failed)
+});
