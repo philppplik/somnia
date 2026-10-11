@@ -3,3 +3,4 @@ relay/target
 
 # Packed SDK v2 extension artifacts
 docs/extensions/v2/examples/*.somniax
+phase1/installer/target/
