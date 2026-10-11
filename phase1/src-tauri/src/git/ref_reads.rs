@@ -437,6 +437,13 @@ mod tests {
         git(d, &["commit", "-qm", "version"]);
         git(d, &["rev-parse", "HEAD"])
     }
+    // Unix allows control characters in file names, Windows forbids them. Both
+    // names force Git's C-style path quoting (control escapes / core.quotePath
+    // UTF-8 octal escapes), which is the parser behavior this test exercises.
+    #[cfg(unix)]
+    const RENAMED_QUOTED: &str = "new\nfile.txt";
+    #[cfg(not(unix))]
+    const RENAMED_QUOTED: &str = "n\u{e9}w f\u{ed}le.txt";
     #[test]
     fn rename_binary_added_deleted_and_resolved_refs() {
         let d = repo();
@@ -444,7 +451,7 @@ mod tests {
         std::fs::write(p.join("old file.txt"), "unchanged\n").unwrap();
         std::fs::write(p.join("removed.txt"), "removed\n").unwrap();
         let a = commit(p);
-        std::fs::rename(p.join("old file.txt"), p.join("new\nfile.txt")).unwrap();
+        std::fs::rename(p.join("old file.txt"), p.join(RENAMED_QUOTED)).unwrap();
         std::fs::remove_file(p.join("removed.txt")).unwrap();
         std::fs::write(p.join("binary.bin"), [0, 1, 2, 3]).unwrap();
         std::fs::write(p.join("added.txt"), "new\n").unwrap();
@@ -463,7 +470,7 @@ mod tests {
         let rename = out
             .files
             .iter()
-            .find(|f| f.path == "new\nfile.txt")
+            .find(|f| f.path == RENAMED_QUOTED)
             .unwrap();
         assert_eq!(rename.kind, GitChangeKind::Renamed);
         assert_eq!(rename.old_path.as_deref(), Some("old file.txt"));
