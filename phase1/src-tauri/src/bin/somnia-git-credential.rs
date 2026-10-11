@@ -32,7 +32,20 @@ fn connect(endpoint: &str) -> std::io::Result<impl Read + Write> {
 }
 #[cfg(windows)]
 fn connect(endpoint: &str) -> std::io::Result<impl Read + Write> {
-    std::fs::OpenOptions::new().read(true).write(true).open(endpoint)
+    // ERROR_PIPE_BUSY (231) / ERROR_FILE_NOT_FOUND (2) can appear for a moment between two server
+    // instances; retry briefly instead of failing the whole git auth round.
+    let mut last = None;
+    for _ in 0..40 {
+        match std::fs::OpenOptions::new().read(true).write(true).open(endpoint) {
+            Ok(f) => return Ok(f),
+            Err(e) if matches!(e.raw_os_error(), Some(231) | Some(2)) => {
+                last = Some(e);
+                std::thread::sleep(std::time::Duration::from_millis(50));
+            }
+            Err(e) => return Err(e),
+        }
+    }
+    Err(last.unwrap())
 }
 
 fn main() {

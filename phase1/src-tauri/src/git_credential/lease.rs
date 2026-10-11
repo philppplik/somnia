@@ -378,7 +378,7 @@ mod transport {
                         Ok(Err(_)) => break,
                         Ok(Ok(())) => {}
                     }
-                    let Ok(next) = ServerOptions::new().reject_remote_clients(true).create(&pipe) else { break };
+                    let Ok(next) = ServerOptions::new().reject_remote_clients(true).max_instances(2).create(&pipe) else { break };
                     let mut conn = std::mem::replace(&mut server, next);
                     let _ = tokio::time::timeout(Duration::from_secs(5), async {
                         let mut line = String::new();
@@ -394,6 +394,10 @@ mod transport {
                             out.push('\n');
                             let _ = conn.write_all(out.as_bytes()).await;
                             let _ = conn.flush().await;
+                            // DisconnectNamedPipe discards unread data: wait until the client has read the
+                            // reply and closed its end (EOF/error), bounded by the 5s timeout around this block.
+                            let mut b = [0u8; 1];
+                            let _ = conn.read(&mut b).await;
                         }
                     })
                     .await;
