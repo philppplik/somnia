@@ -97,6 +97,8 @@ pub enum Error {
         cause: Box<Error>,
         rollback: RollbackReport,
     },
+    /// The isolated-copy marker is missing or was modified. Apply refuses.
+    IsolatedTampered(String),
     /// Test hook: simulated crash (no rollback performed).
     InjectedCrash,
     /// Test hook: simulated failure.
@@ -186,6 +188,9 @@ impl fmt::Display for Error {
                 rollback.preserved.len(),
                 rollback.failures.len()
             ),
+            Error::IsolatedTampered(p) => {
+                write!(f, "isolated copy marker missing or modified: {p}")
+            }
             Error::InjectedCrash => write!(f, "injected crash"),
             Error::InjectedFailure => write!(f, "injected failure"),
             Error::Unsupported(m) => write!(f, "unsupported: {m}"),

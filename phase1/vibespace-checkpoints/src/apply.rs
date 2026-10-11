@@ -562,6 +562,10 @@ impl Vault {
             return Err(Error::UnknownIsolatedCopy(req.review.isolated_id.clone()));
         }
         let real = self.open_isolated(&req.copy.id)?;
+        // the recorded markers are authoritative, not the caller's struct
+        if let Some(p) = self.tampered_markers(&real).into_iter().next() {
+            return Err(Error::IsolatedTampered(p));
+        }
         let base = self.load_checkpoint(&expected)?;
 
         let reviewed: BTreeMap<&str, &Change> = req

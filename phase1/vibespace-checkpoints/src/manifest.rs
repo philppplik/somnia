@@ -144,6 +144,13 @@ impl Walker<'_> {
                 });
                 continue;
             }
+            if name.eq_ignore_ascii_case(crate::MARKER_NAME) {
+                self.skipped.push(Skipped {
+                    path: key,
+                    reason: "isolated-copy marker is never captured".into(),
+                });
+                continue;
+            }
             if self.excluded(&key) {
                 self.skipped.push(Skipped {
                     path: key,

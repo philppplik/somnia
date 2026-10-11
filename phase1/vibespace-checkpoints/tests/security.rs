@@ -306,3 +306,141 @@ fn selection_paths_are_validated() {
         Err(Error::EmptySelection)
     ));
 }
+
+#[test]
+fn marker_is_written_readonly_never_captured_and_tamper_blocks_apply() {
+    let e = env();
+    let id = cp(&e, &scope(&e.project)).unwrap();
+    let copy = e.vault.isolated_copy(&id).unwrap();
+    let m = copy.root_dir("proj").join(MARKER_NAME);
+    assert!(m.is_file());
+    assert!(fs::metadata(&m).unwrap().permissions().readonly());
+    // marker and a planted .git are not changes
+    write(&copy.root_dir("proj").join(".git/HEAD"), "x");
+    write(
+        &copy.root_dir("proj").join("sub/.vibespace-isolated"),
+        "nested",
+    );
+    write(&copy.root_dir("proj").join("a.txt"), "edited\n");
+    let r = review(&e.vault, &id, &copy);
+    assert_eq!(r.changes.len(), 1);
+    assert!(r.skipped.iter().any(|s| s.path == "proj/.git"));
+    assert!(
+        !r.skipped
+            .iter()
+            .any(|s| s.reason.contains("missing or modified"))
+    );
+    assert!(apply(&e.vault, &id, &copy, &r, Selection::All).is_ok());
+    // a marker in the original project is never captured either
+    write(&e.project.join(MARKER_NAME), "from original");
+    let id2 = cp(&e, &scope(&e.project)).unwrap();
+    let c = e.vault.load_checkpoint(&id2).unwrap();
+    assert!(c.manifest.entries.keys().all(|k| !k.contains(MARKER_NAME)));
+    // tampering: agent replaces or deletes the marker
+    let copy2 = e.vault.isolated_copy(&id2).unwrap();
+    let m2 = copy2.root_dir("proj").join(MARKER_NAME);
+    write(&copy2.root_dir("proj").join("a.txt"), "again\n");
+    let r2 = review(&e.vault, &id2, &copy2);
+    #[allow(clippy::permissions_set_readonly_false)]
+    {
+        let mut p = fs::metadata(&m2).unwrap().permissions();
+        p.set_readonly(false);
+        fs::set_permissions(&m2, p).unwrap();
+    }
+    fs::write(&m2, "forged").unwrap();
+    let cs = e.vault.diff(&id2, &copy2).unwrap();
+    assert!(
+        cs.skipped
+            .iter()
+            .any(|s| s.path == "proj/.vibespace-isolated"
+                && s.reason.contains("missing or modified"))
+    );
+    assert!(cs.changes.iter().all(|c| !c.path.contains(MARKER_NAME)));
+    let before = tree(&e.project);
+    assert!(matches!(
+        apply(&e.vault, &id2, &copy2, &r2, Selection::All),
+        Err(Error::IsolatedTampered(_))
+    ));
+    // forged handle without markers cannot bypass: the vault's own record decides
+    let mut forged = copy2.clone();
+    forged.markers.clear();
+    assert!(matches!(
+        apply(&e.vault, &id2, &forged, &r2, Selection::All),
+        Err(Error::IsolatedTampered(_))
+    ));
+    fs::remove_file(&m2).unwrap();
+    assert!(matches!(
+        apply(&e.vault, &id2, &copy2, &r2, Selection::All),
+        Err(Error::IsolatedTampered(_))
+    ));
+    assert_eq!(tree(&e.project), before);
+}
+
+#[test]
+fn marker_policies() {
+    let e = env();
+    let id = cp(&e, &scope(&e.project)).unwrap();
+    let c = e
+        .vault
+        .isolated_copy_with(
+            &id,
+            &IsolatedCopyOptions {
+                marker: MarkerPolicy::Bytes(b"POLICY-V1".to_vec()),
+            },
+        )
+        .unwrap();
+    assert_eq!(
+        fs::read(c.root_dir("proj").join(MARKER_NAME)).unwrap(),
+        b"POLICY-V1"
+    );
+    let c = e
+        .vault
+        .isolated_copy_with(
+            &id,
+            &IsolatedCopyOptions {
+                marker: MarkerPolicy::None,
+            },
+        )
+        .unwrap();
+    assert!(!c.root_dir("proj").join(MARKER_NAME).exists());
+    assert!(c.markers.is_empty());
+    // caller-created marker is excluded from review, nothing to verify
+    write(&c.root_dir("proj").join(MARKER_NAME), "caller");
+    assert!(e.vault.diff(&id, &c).unwrap().changes.is_empty());
+    let reopened = e.vault.open_isolated(&c.id).unwrap();
+    assert_eq!(reopened, c);
+}
+
+#[cfg(unix)]
+#[test]
+fn isolated_files_are_byte_copies_not_links() {
+    use std::os::unix::fs::MetadataExt;
+    let e = env();
+    let id = cp(&e, &scope(&e.project)).unwrap();
+    let copy = e.vault.isolated_copy(&id).unwrap();
+    let cpv = e.vault.load_checkpoint(&id).unwrap();
+    for (key, entry) in &cpv.manifest.entries {
+        let rel = key.strip_prefix("proj/").unwrap();
+        let c = fs::symlink_metadata(copy.root_dir("proj").join(rel)).unwrap();
+        let o = fs::metadata(e.project.join(rel)).unwrap();
+        let obj = fs::metadata(e.vault.store().object_path(&entry.digest)).unwrap();
+        assert!(c.file_type().is_file());
+        assert_eq!(c.nlink(), 1, "{key}");
+        assert!(
+            (c.dev(), c.ino()) != (o.dev(), o.ino()),
+            "{key} shares an inode with the original"
+        );
+        assert!(
+            (c.dev(), c.ino()) != (obj.dev(), obj.ino()),
+            "{key} shares an inode with a store object"
+        );
+    }
+    // writing through the copy leaves originals and objects intact
+    let a = copy.root_dir("proj").join("a.txt");
+    fs::write(&a, "overwritten in place").unwrap();
+    assert_eq!(
+        fs::read(e.project.join("a.txt")).unwrap(),
+        b"alpha\nbeta\ngamma\n"
+    );
+    assert!(e.vault.verify_store().unwrap().is_empty());
+}

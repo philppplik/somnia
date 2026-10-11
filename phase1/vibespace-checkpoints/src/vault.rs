@@ -49,6 +49,26 @@ pub struct IsolatedCopy {
     pub dir: PathBuf,
     pub baseline: CheckpointId,
     pub roots: Vec<String>,
+    /// Expected digest of each root's marker file (root name -> digest). Empty if no marker was written.
+    #[serde(default)]
+    pub markers: BTreeMap<String, Digest>,
+}
+
+/// What to put into the `.vibespace-isolated` marker file of each root.
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub enum MarkerPolicy {
+    /// Write a small JSON document (format, isolated id, baseline, root name). Default.
+    #[default]
+    Default,
+    /// Write exactly these bytes (for the policy layer's own marker format) into every root.
+    Bytes(Vec<u8>),
+    /// Do not write a marker (the caller creates it). No tamper check is possible then.
+    None,
+}
+
+#[derive(Clone, Debug, Default)]
+pub struct IsolatedCopyOptions {
+    pub marker: MarkerPolicy,
 }
 
 impl IsolatedCopy {
@@ -278,6 +298,16 @@ impl Vault {
     /// Materialize a full copy of a checkpoint under `<vault>/isolated/<id>/<root name>/`.
     /// Contains no `.git`. The originals are never referenced by the copy.
     pub fn isolated_copy(&self, checkpoint: &CheckpointId) -> Result<IsolatedCopy> {
+        self.isolated_copy_with(checkpoint, &IsolatedCopyOptions::default())
+    }
+
+    /// Like `isolated_copy`, with control over the marker file. Files are byte copies (no hard
+    /// links, no reflinks): editing a file in the copy can never change an original or a store object.
+    pub fn isolated_copy_with(
+        &self,
+        checkpoint: &CheckpointId,
+        opts: &IsolatedCopyOptions,
+    ) -> Result<IsolatedCopy> {
         let cp = self.load_checkpoint(checkpoint)?;
         let hex = checkpoint.to_hex();
         let base = self.root.join("isolated");
@@ -291,11 +321,16 @@ impl Vault {
                 Err(e) => return Err(Error::io("create isolated dir", e)),
             }
         };
-        let res = self.materialize(&cp, &dir);
-        if let Err(e) = res {
-            let _ = fs::remove_dir_all(&dir);
-            return Err(e);
-        }
+        let res = self
+            .materialize(&cp, &dir)
+            .and_then(|_| self.write_markers(&cp, &id, &dir, &opts.marker));
+        let markers = match res {
+            Ok(m) => m,
+            Err(e) => {
+                let _ = fs::remove_dir_all(&dir);
+                return Err(e);
+            }
+        };
         let copy = IsolatedCopy {
             id: id.clone(),
             dir,
@@ -307,6 +342,7 @@ impl Vault {
                 .iter()
                 .map(|r| r.name.clone())
                 .collect(),
+            markers,
         };
         let rec = serde_json::to_vec(&copy).unwrap();
         if let Err(e) = write_atomic(&base.join(format!("{id}.json")), &rec) {
@@ -314,6 +350,60 @@ impl Vault {
             return Err(e);
         }
         Ok(copy)
+    }
+
+    fn write_markers(
+        &self,
+        cp: &Checkpoint,
+        id: &str,
+        dir: &Path,
+        policy: &MarkerPolicy,
+    ) -> Result<BTreeMap<String, Digest>> {
+        let mut out = BTreeMap::new();
+        for r in &cp.record.scope.roots {
+            let bytes = match policy {
+                MarkerPolicy::None => continue,
+                MarkerPolicy::Bytes(b) => b.clone(),
+                MarkerPolicy::Default => serde_json::to_vec(&serde_json::json!({
+                    "format": 1, "isolated": id, "baseline": cp.id.to_hex(), "root": r.name
+                }))
+                .unwrap(),
+            };
+            let p = dir.join(&r.name).join(crate::MARKER_NAME);
+            let mut f = OpenOptions::new()
+                .write(true)
+                .create_new(true)
+                .open(&p)
+                .map_err(|e| Error::io("create marker", e))?;
+            std::io::Write::write_all(&mut f, &bytes).map_err(|e| Error::io("write marker", e))?;
+            f.sync_all().map_err(|e| Error::io("sync marker", e))?;
+            drop(f);
+            // best effort: read-only bit. Real protection is the sandbox policy, not file modes.
+            if let Ok(md) = fs::metadata(&p) {
+                let mut perm = md.permissions();
+                perm.set_readonly(true);
+                let _ = fs::set_permissions(&p, perm);
+            }
+            out.insert(r.name.clone(), Digest::of(&bytes));
+        }
+        Ok(out)
+    }
+
+    /// Roots whose marker file is missing, not a regular file, or changed.
+    pub(crate) fn tampered_markers(&self, copy: &IsolatedCopy) -> Vec<String> {
+        let mut bad = Vec::new();
+        for (root, want) in &copy.markers {
+            let p = copy.dir.join(root).join(crate::MARKER_NAME);
+            let ok = fs::symlink_metadata(&p)
+                .ok()
+                .filter(|md| md.is_file() && !is_link_like(md))
+                .and_then(|_| fs::read(&p).ok())
+                .is_some_and(|b| Digest::of(&b) == *want);
+            if !ok {
+                bad.push(format!("{root}/{}", crate::MARKER_NAME));
+            }
+        }
+        bad
     }
 
     fn materialize(&self, cp: &Checkpoint, dir: &Path) -> Result<()> {
@@ -401,7 +491,13 @@ impl Vault {
             });
         }
         let cp = self.load_checkpoint(baseline)?;
-        let now = self.scan_isolated(&cp, copy)?;
+        let mut now = self.scan_isolated(&cp, copy)?;
+        for p in self.tampered_markers(copy) {
+            now.skipped.push(crate::manifest::Skipped {
+                path: p,
+                reason: "isolated-copy marker missing or modified (never applied)".into(),
+            });
+        }
         Ok(ChangeSet {
             baseline: *baseline,
             changes: diff_manifests(&cp.manifest.entries, &now.entries),

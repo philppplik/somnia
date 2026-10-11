@@ -28,4 +28,11 @@ pub use error::{Conflict, ConflictKind, Error, Result, RollbackReport};
 pub use manifest::{Entry, Manifest, Skipped};
 pub use scope::{Limits, Scope, ScopeRoot, SymlinkPolicy};
 pub use store::{CorruptEntry, ObjectStore};
-pub use vault::{Checkpoint, CheckpointRecord, IsolatedCopy, RunMetadata, Vault};
+pub use vault::{
+    Checkpoint, CheckpointRecord, IsolatedCopy, IsolatedCopyOptions, MarkerPolicy, RunMetadata,
+    Vault,
+};
+
+/// Name of the marker file placed at the top of every root of an isolated copy. It is never
+/// captured, diffed, reviewed or applied, in any directory, in any scan.
+pub const MARKER_NAME: &str = ".vibespace-isolated";

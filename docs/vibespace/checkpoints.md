@@ -47,6 +47,13 @@ Guarantees per call:
 - `discard`: removes only `<vault>/isolated/<id>` (validated id, never the caller's path) and its record. It cannot reach the original project.
 - `restore`: makes the scope match a checkpoint. Takes a checkpoint of the current state first. Files absent from the checkpoint are kept unless `remove_extra` is set. Restore never deletes directories.
 
+## Byte copies and the marker file
+
+- Isolated files are real byte copies (`create_new` plus streamed, verified write). No hard links, symlinks or reflinks. A test asserts `nlink == 1` and no shared inode with either the original or any store object, so editing a file in the copy can never change an original or an immutable object.
+- Every root of a copy gets a marker file `.vibespace-isolated` (`MARKER_NAME`) at its top. Default content is a small JSON document (format, isolated id, baseline, root name). `IsolatedCopyOptions { marker: MarkerPolicy::Bytes(..) }` writes the policy layer's own bytes instead, and `MarkerPolicy::None` leaves creation to the caller (call `isolated_copy_with` and then initialize the root; there is then nothing to tamper-check). The marker is created read-only as a best effort. File modes do not stop a same-user process, the sandbox policy must.
+- `.git` and the marker are excluded from every scan, at any depth and in any case: never captured from originals, never part of a diff, review or apply. Whatever an agent puts there shows up in `ChangeSet::skipped` and is ignored.
+- The expected marker digest per root is recorded by the vault. If the marker is missing or modified, `diff`/`review_changes` list it in `skipped` and `explicit_apply` fails with `Error::IsolatedTampered` before touching anything (the vault's own record is used, not the caller's `IsolatedCopy` struct).
+
 ## Apply sequence
 
 1. Take the vault lock (advisory `File::try_lock`, released by the OS if the process dies). Refuse if an interrupted apply/restore is pending (`PendingRecovery`).
@@ -122,4 +129,4 @@ Other limits: network filesystems may not honor `try_lock` or rename atomicity. 
 
 ## Tests
 
-`cargo test` in `phase1/vibespace-checkpoints` (38 tests): original untouched during isolated edits, exact binary roundtrip (3 MB random, empty, CRLF, non-UTF-8, Unicode names), idempotent and deduplicated checkpoints, `.git` exclusion, text and binary review, discard safety (forged handles), traversal and hostile manifests, symlinks (scope, isolated copy, parent swapped after baseline, target path), sockets, overlapping roots and vault, case collisions, Windows names, quotas, selection validation, conflicts (modified, deleted, already existing), selected-only apply, stale review, pre-apply backup and restore, deletion, case-only rename, permissions, injected failure rollback (4 failure points, dirs cleaned), simulated crash with recovery (plus user edit preserved during recovery), corrupt and missing objects, vault lock.
+`cargo test` in `phase1/vibespace-checkpoints` (41 tests): original untouched during isolated edits, exact binary roundtrip (3 MB random, empty, CRLF, non-UTF-8, Unicode names), idempotent and deduplicated checkpoints, `.git` exclusion, text and binary review, discard safety (forged handles), traversal and hostile manifests, symlinks (scope, isolated copy, parent swapped after baseline, target path), sockets, overlapping roots and vault, case collisions, Windows names, quotas, selection validation, conflicts (modified, deleted, already existing), selected-only apply, stale review, pre-apply backup and restore, deletion, case-only rename, permissions, injected failure rollback (4 failure points, dirs cleaned), simulated crash with recovery (plus user edit preserved during recovery), corrupt and missing objects, vault lock.

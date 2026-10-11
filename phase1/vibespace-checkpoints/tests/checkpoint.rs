@@ -63,7 +63,12 @@ fn binary_roundtrip_is_exact() {
         .checkpoint(&scope(&e.project), RunMetadata::default())
         .unwrap();
     let copy = e.vault.isolated_copy(&cp).unwrap();
-    assert_eq!(tree(&copy.root_dir("proj")), before);
+    let mut copied = tree(&copy.root_dir("proj"));
+    assert!(
+        copied.remove(MARKER_NAME).is_some(),
+        "marker present, everything else identical"
+    );
+    assert_eq!(copied, before);
     // restore into a wrecked project is also byte exact
     for f in before.keys() {
         write(&e.project.join(f), b"wrecked");
@@ -224,6 +229,7 @@ fn discard_never_touches_original() {
         dir: e.project.clone(),
         baseline: cp,
         roots: vec![],
+        markers: Default::default(),
     };
     assert!(e.vault.discard(&forged).is_err());
     let forged = IsolatedCopy {
@@ -231,6 +237,7 @@ fn discard_never_touches_original() {
         dir: e.project.clone(),
         baseline: cp,
         roots: vec![],
+        markers: Default::default(),
     };
     assert!(!e.vault.discard(&forged).unwrap());
     assert_eq!(tree(&e.project), before);
