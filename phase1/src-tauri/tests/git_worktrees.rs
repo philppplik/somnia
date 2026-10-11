@@ -28,7 +28,14 @@ struct Fixture {
 impl Fixture {
     fn new() -> Self {
         let dir = TempDir::new().unwrap();
-        let root = dir.path().join("repo");
+        // macOS temp dirs live behind the /var -> /private/var symlink; Git and the
+        // worktree code report canonical paths, so build every fixture path from the
+        // canonical base. (Not on Windows: canonicalize adds a \\?\ prefix there.)
+        #[cfg(unix)]
+        let base = dir.path().canonicalize().unwrap();
+        #[cfg(not(unix))]
+        let base = dir.path().to_path_buf();
+        let root = base.join("repo");
         fs::create_dir(&root).unwrap();
         run(&root, &["init", "-q", "-b", "main"]);
         run(&root, &["config", "user.name", "Worktree Test"]);
@@ -38,7 +45,7 @@ impl Fixture {
         run(&root, &["commit", "-qm", "base"]);
         let mut trust = TrustStore::load(&dir.path().join("trust.json")).unwrap();
         git::trust_repo(&root, &mut trust).unwrap();
-        let outside = dir.path().to_path_buf();
+        let outside = base;
         Self {
             _dir: dir,
             root,
