@@ -40,6 +40,8 @@ CREATE TABLE runs (
     id                 TEXT PRIMARY KEY NOT NULL,
     studio_id          TEXT NOT NULL REFERENCES studios(id) ON DELETE CASCADE,
     space_id           TEXT NOT NULL REFERENCES spaces(id) ON DELETE CASCADE,
+    request_id         TEXT NOT NULL UNIQUE,
+    retry_of_run_id    TEXT REFERENCES runs(id),
     execution_state    TEXT NOT NULL DEFAULT 'pending'
                        CHECK (execution_state IN ('pending','claimed','running','paused','stopped','done','failed','crashed')),
     review_state       TEXT NOT NULL DEFAULT 'none'

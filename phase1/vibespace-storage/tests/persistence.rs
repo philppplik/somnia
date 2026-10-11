@@ -80,3 +80,75 @@ fn capabilities_are_explicit_about_vector_and_pause() {
     assert!(!degraded.capabilities().fts5);
     assert_eq!(degraded.capabilities().search_mode, SearchMode::LikeFallback);
 }
+
+#[test]
+fn start_run_is_idempotent_and_retry_creates_a_new_run() {
+    let store = mem_store();
+    let (_s, studio, first) = setup(&store);
+    let rid = "3f2b8c1e-6a4d-4f57-9a0e-1c2d3e4f5a6b".to_string();
+    let req = StartRunRequest { schema_version: 1, studio_id: studio.id.clone(), request_id: rid.clone(), retry_of_run_id: None };
+    let a = store.start_run(req.clone()).unwrap();
+    assert!(a.created);
+    let b = store.start_run(req.clone()).unwrap(); // ambiguous transport retry
+    assert!(!b.created);
+    assert_eq!(a.run.id, b.run.id);
+    assert_eq!(store.list_events(&a.run.id, 0, 10).unwrap().len(), 1, "replay writes nothing");
+    assert_eq!(store.get_run_by_request(&rid.to_uppercase()).unwrap().unwrap().id, a.run.id);
+    assert!(store.get_run_by_request("00000000-0000-4000-8000-000000000000").unwrap().is_none());
+    // same request id, different parameters
+    let mut other = req.clone();
+    other.retry_of_run_id = Some(first.id.clone());
+    assert!(matches!(store.start_run(other), Err(Error::Conflict(_))));
+    // bad request id
+    let mut bad = req.clone();
+    bad.request_id = "not-a-uuid".into();
+    assert!(store.start_run(bad).is_err());
+
+    // retry: only failed/stopped/crashed runs of the same studio
+    let retry = |rid: &str, of: &str| StartRunRequest {
+        schema_version: 1,
+        studio_id: studio.id.clone(),
+        request_id: rid.into(),
+        retry_of_run_id: Some(of.into()),
+    };
+    assert!(matches!(store.start_run(retry("11111111-1111-4111-8111-111111111111", &a.run.id)), Err(Error::Conflict(_))));
+    store.transition_run(&a.run.id, TransitionRequest::execution(ExecutionState::Stopped)).unwrap();
+    let r = store.start_run(retry("22222222-2222-4222-8222-222222222222", &a.run.id)).unwrap();
+    assert!(r.created);
+    assert_ne!(r.run.id, a.run.id);
+    assert_eq!(r.run.retry_of_run_id.as_deref(), Some(a.run.id.as_str()));
+    assert_eq!(r.run.execution, ExecutionState::Pending);
+    assert_eq!(store.get_run(&a.run.id).unwrap().execution, ExecutionState::Stopped, "old history untouched");
+    // retry of a run from another studio is rejected
+    let (_s2, _st2, foreign) = setup(&store);
+    store.transition_run(&foreign.id, TransitionRequest::execution(ExecutionState::Stopped)).unwrap();
+    assert!(store.start_run(retry("33333333-3333-4333-8333-333333333333", &foreign.id)).is_err());
+    // unknown studio
+    let none = StartRunRequest { schema_version: 1, studio_id: "x".into(), request_id: "44444444-4444-4444-8444-444444444444".into(), retry_of_run_id: None };
+    assert!(matches!(store.start_run(none), Err(Error::NotFound { .. })));
+}
+
+#[test]
+fn concurrent_start_with_same_request_id_creates_one_run() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = std::sync::Arc::new(dir.path().join("s.db"));
+    let studio_id = {
+        let store = Store::open(&*path, opts_none()).unwrap();
+        setup(&store).1.id
+    };
+    let hs: Vec<_> = (0..6)
+        .map(|_| {
+            let path = path.clone();
+            let studio_id = studio_id.clone();
+            std::thread::spawn(move || {
+                let store = Store::open(&*path, opts_none()).unwrap();
+                let req = StartRunRequest { schema_version: 1, studio_id, request_id: "55555555-5555-4555-8555-555555555555".into(), retry_of_run_id: None };
+                let o = store.start_run(req).unwrap();
+                (o.run.id, o.created)
+            })
+        })
+        .collect();
+    let res: Vec<_> = hs.into_iter().map(|h| h.join().unwrap()).collect();
+    assert_eq!(res.iter().filter(|r| r.1).count(), 1);
+    assert!(res.iter().all(|r| r.0 == res[0].0));
+}

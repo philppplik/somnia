@@ -34,7 +34,13 @@ store.list_spaces(50)?; store.get_space(&space.id)?; store.set_autonomy(&space.i
 // Studios and runs
 let studio = store.create_studio(NewStudio { schema_version: 1, space_id: space.id.clone(), goal: "Refactor X".into(),
     model: ModelRef { provider: "ollama".into(), model: "qwen3.5:9b".into(), locality: ModelLocality::Local } })?;
-let run = store.create_run(&studio.id)?;                 // pending / review none, event #1 = run.created
+// Idempotent start (wire StartRun {studioId, requestId, retryOfRunId}). requestId = UUID per user firing.
+let out = store.start_run(StartRunRequest { schema_version: 1, studio_id: studio.id.clone(),
+    request_id: "3f2b8c1e-6a4d-4f57-9a0e-1c2d3e4f5a6b".into(), retry_of_run_id: None })?;
+let run = out.run;                                       // out.created=false on a replay of the same requestId
+store.get_run_by_request("3f2b8c1e-...")?;              // reconcile after a command timeout (Option<Run>)
+// explicit retry: NEW requestId + retry_of_run_id = failed/stopped/crashed run of the same studio -> new run
+// store.create_run(&studio.id) is a convenience that uses a fresh requestId.
 store.list_runs(&space.id, None, 50)?;                   // optionally filter by studio
 store.list_attention_runs(&space.id, 50)?;               // interrupted, crashed, failed, review ready/conflict
 
@@ -81,13 +87,16 @@ Codes: `sqlite json newer_schema foreign_database migration_failed not_found inv
 | `vibespace_list_spaces` / `create_space` | `list_spaces` / `create_space` (adapter turns `folderGrantId` into `NewSpace::project`) |
 | `vibespace_create_studio` / `list_studios` | `create_studio` / `list_studios` |
 | `vibespace_get_run` | `get_run` + `list_events` |
-| `vibespace_start_run` | `create_run` then `claim_run`, then `transition_run(Running)` |
+| `vibespace_start_run` | `start_run` (idempotent, persists requestId->run in the same transaction as the run and event #1), then `claim_run`, then `transition_run(Running)`. On timeout call `get_run_by_request`, never mint a new id |
 | `vibespace_stop_run` | `transition_run(Stopped)` (valid from pending/claimed/running) |
 | `vibespace_decide_consent` | not stored here beyond events (`append_event` with kind e.g. `consent.decided`); the broker owns the proposal |
 | `vibespace_review_run` / `apply_run` / `discard_run` | `transition_run` review axis (`ready`, `applied`, `discarded`, `conflict`) with `expected_review_revision` |
 | `vibespace_list_checkpoints` / `restore_checkpoint` | `list_checkpoints`; restore itself is a file operation outside this crate (record it with `add_checkpoint`/events) |
 | `vibespace_list_memory` / `add_memory` / `delete_memory` | same names, explicit `spaceId` |
 | `vibespace_choose_folder`, `steer_run` | not storage concerns |
+
+## Start and retry semantics
+`runs.request_id` is UNIQUE. `start_run` looks the id up inside the IMMEDIATE transaction: found => returns that run with `created=false` and writes nothing; found with different `studioId`/`retryOfRunId` => `conflict`; otherwise it inserts the run (+ `retry_of_run_id`) and event #1 `run.created` (payload has requestId and retryOfRunId) atomically. Concurrent starts with one id yield exactly one run. A retry requires a failed/stopped/crashed run in the SAME studio (else `conflict`/`invalid_input`), never mutates the old run, and needs a new requestId. Checkpoint 0 / isolated copy / AgentBackend.start happen outside this crate, after `start_run` returned.
 
 ## State machines
 
@@ -148,7 +157,7 @@ Open sequence: (1) read-only check: `user_version` greater than supported => `Ne
 All text rejects NUL. `contentRef` must be `algo:hex` (16..128 lowercase hex).
 
 ## Tests (`tests/*.rs`, plus unit tests in `src/`)
-- `persistence`: temp-file DB reopened after drop; UUID v4 ids; defaults (ask_for_writes, pending/none); validation; capabilities.
+- `persistence`: idempotent start_run, retry rules, concurrent same-requestId start; temp-file DB reopened after drop; UUID v4 ids; defaults (ask_for_writes, pending/none); validation; capabilities.
 - `memory`: space isolation (list/search/get/delete), FTS ranking and prefix, FTS delete, SQL/FTS injection and LIKE-wildcard arguments, explicit fallback, provenance/pending, limits and secret guard.
 - `events`: monotonic gap-free sequences, redaction/truncation/kind validation, wire envelope keys, failed transition leaves state and log unchanged, fencing, 8 concurrent writers on separate connections (unique contiguous sequences), concurrent claim has one winner.
 - `transitions`: full execution matrix (every from/to pair), pause gating, review axis and revisions, DB CHECK and append-only trigger.

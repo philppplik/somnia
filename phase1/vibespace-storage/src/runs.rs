@@ -10,7 +10,8 @@ use rusqlite::{params, Connection, OptionalExtension, Row, Transaction};
 use serde_json::{json, Value};
 
 const RUN_COLS: &str = "id, studio_id, space_id, execution_state, review_state, review_revision, claimed_by, fencing_token, \
-lease_expires_at, interrupted, interrupted_reason, last_sequence, result_json, created_at, updated_at, started_at, finished_at";
+lease_expires_at, interrupted, interrupted_reason, last_sequence, result_json, created_at, updated_at, started_at, finished_at, \
+request_id, retry_of_run_id";
 
 fn run_from_row(r: &Row<'_>) -> rusqlite::Result<Run> {
     let result_json: Option<String> = r.get(12)?;
@@ -38,6 +39,8 @@ fn run_from_row(r: &Row<'_>) -> rusqlite::Result<Run> {
         updated_at: r.get(14)?,
         started_at: r.get(15)?,
         finished_at: r.get(16)?,
+        request_id: r.get(17)?,
+        retry_of_run_id: r.get(18)?,
     })
 }
 
@@ -45,6 +48,10 @@ fn get_run_conn(c: &Connection, id: &str) -> Result<Run> {
     c.query_row(&format!("SELECT {RUN_COLS} FROM runs WHERE id=?1"), params![id], run_from_row)
         .optional()?
         .ok_or_else(|| Error::NotFound { entity: "run", id: id.to_string() })
+}
+
+fn get_run_by_request_conn(c: &Connection, request_id: &str) -> Result<Option<Run>> {
+    Ok(c.query_row(&format!("SELECT {RUN_COLS} FROM runs WHERE request_id=?1"), params![request_id], run_from_row).optional()?)
 }
 
 fn valid_kind(kind: &str) -> bool {
@@ -119,20 +126,71 @@ fn valid_content_ref(s: &str) -> bool {
 }
 
 impl Store {
-    /// Creates a pending run for a studio and writes event #1 (`run.created`) atomically.
-    pub fn create_run(&self, studio_id: &str) -> Result<Run> {
+    /// Idempotent explicit firing. Same `requestId` => same run, nothing written (`created=false`).
+    /// A reused requestId with different studio/retry parameters is a `Conflict`.
+    /// New run: pending/review none, event #1 `run.created`, in one transaction together with the
+    /// request-to-run mapping. A retry creates a NEW run in the same studio (old history untouched)
+    /// and requires `retryOfRunId` to be a failed/stopped/crashed run of that studio.
+    /// After a transport timeout, reconcile with `get_run_by_request` / call this again with the same id.
+    pub fn start_run(&self, req: StartRunRequest) -> Result<StartRunOutcome> {
+        check_version(req.schema_version)?;
+        if uuid::Uuid::parse_str(&req.request_id).is_err() {
+            return Err(Error::InvalidInput("requestId must be a UUID".into()));
+        }
+        let request_id = req.request_id.to_lowercase();
         let id = new_id();
         let now = self.now_str();
-        self.write(|tx| {
-            let studio = get_studio_conn(tx, studio_id)?;
+        let created = self.write(|tx| {
+            if let Some(existing) = get_run_by_request_conn(tx, &request_id)? {
+                if existing.studio_id != req.studio_id || existing.retry_of_run_id != req.retry_of_run_id {
+                    return Err(Error::Conflict("requestId was already used with different parameters".into()));
+                }
+                return Ok(false);
+            }
+            let studio = get_studio_conn(tx, &req.studio_id)?;
+            if let Some(prev_id) = &req.retry_of_run_id {
+                let prev = get_run_conn(tx, prev_id)?;
+                if prev.studio_id != studio.id {
+                    return Err(Error::InvalidInput("retryOfRunId belongs to a different studio".into()));
+                }
+                if !matches!(prev.execution, ExecutionState::Failed | ExecutionState::Stopped | ExecutionState::Crashed) {
+                    return Err(Error::Conflict(format!("cannot retry a {} run", prev.execution.as_str())));
+                }
+            }
             tx.execute(
-                "INSERT INTO runs (id, studio_id, space_id, created_at, updated_at) VALUES (?1,?2,?3,?4,?4)",
-                params![id, studio.id, studio.space_id, now],
+                "INSERT INTO runs (id, studio_id, space_id, request_id, retry_of_run_id, created_at, updated_at) VALUES (?1,?2,?3,?4,?5,?6,?6)",
+                params![id, studio.id, studio.space_id, request_id, req.retry_of_run_id, now],
             )?;
-            append_event_tx(tx, &id, "run.created", &json!({"studioId": studio.id, "spaceId": studio.space_id}), &now, true)?;
-            Ok(())
+            append_event_tx(
+                tx,
+                &id,
+                "run.created",
+                &json!({"studioId": studio.id, "spaceId": studio.space_id, "requestId": request_id, "retryOfRunId": req.retry_of_run_id}),
+                &now,
+                true,
+            )?;
+            Ok(true)
         })?;
-        self.get_run(&id)
+        let run = self.read(|c| get_run_by_request_conn(c, &request_id))?
+            .ok_or_else(|| Error::NotFound { entity: "run", id: request_id.clone() })?;
+        Ok(StartRunOutcome { run, created })
+    }
+
+    /// Convenience: start a run with a fresh request id.
+    pub fn create_run(&self, studio_id: &str) -> Result<Run> {
+        let req = StartRunRequest {
+            schema_version: DTO_SCHEMA_VERSION,
+            studio_id: studio_id.to_string(),
+            request_id: new_id(),
+            retry_of_run_id: None,
+        };
+        Ok(self.start_run(req)?.run)
+    }
+
+    /// Reconcile after an ambiguous timeout: the run for this request id, if it was persisted.
+    pub fn get_run_by_request(&self, request_id: &str) -> Result<Option<Run>> {
+        let rid = request_id.to_lowercase();
+        self.read(|c| get_run_by_request_conn(c, &rid))
     }
 
     pub fn get_run(&self, run_id: &str) -> Result<Run> {

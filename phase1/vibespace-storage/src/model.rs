@@ -196,6 +196,26 @@ pub struct Studio {
 
 // ---------------------------------------------------------------- runs
 
+/// Mirrors the wire `StartRun`. `request_id` is a UUID, stable per user firing and NEW for an
+/// explicit retry. The same request id always returns the same run.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct StartRunRequest {
+    #[serde(default = "v1")]
+    pub schema_version: u32,
+    pub studio_id: String,
+    pub request_id: String,
+    pub retry_of_run_id: Option<String>,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct StartRunOutcome {
+    pub run: Run,
+    /// False when the request id already existed (idempotent replay): nothing was written.
+    pub created: bool,
+}
+
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Run {
@@ -204,6 +224,10 @@ pub struct Run {
     pub id: String,
     pub studio_id: String,
     pub space_id: String,
+    /// Stable id of the user firing that created this run (unique).
+    pub request_id: String,
+    /// Set for an explicit retry: the earlier failed/stopped/crashed run in the same studio.
+    pub retry_of_run_id: Option<String>,
     pub execution: ExecutionState,
     pub review: ReviewState,
     /// Incremented on every review state change; use as `expectedReviewRevision`.
