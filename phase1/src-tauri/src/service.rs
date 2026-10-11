@@ -856,6 +856,10 @@ impl Project {
     pub fn has_dirty(&self) -> bool {
         self.documents.values().any(|d| d.pending.is_some())
     }
+    /// Root-relative paths of files with unsaved editor content (Git buffer guard).
+    pub fn dirty_paths(&self) -> Vec<String> {
+        self.documents.iter().filter(|(_, d)| d.pending.is_some()).map(|(p, _)| p.clone()).collect()
+    }
 }
 /// True for file names with a PNG, JPEG or PDF extension (case-insensitive).
 pub fn is_media_path(path: &str) -> bool {

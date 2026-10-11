@@ -17,6 +17,8 @@ struct Backend {
     drop_grant: Option<DropGrant>,
     /// Bounded native open-request queue (cold argv, second instance). Same mutex as `projects`.
     intake: crate::intake::queue::OpenQueue,
+    /// Reviewed publication plans awaiting their single-use apply. Same mutex as `projects`.
+    publication: crate::git::publication::PublicationRegistry,
 }
 type Shared = Arc<Mutex<Backend>>;
 #[derive(Serialize)]
@@ -2066,6 +2068,323 @@ async fn git_combine_abort(
     .await
 }
 
+// ---- Publication: native side of the renderer review contract ----
+// Contract: src/lib/git/publication/types.ts, boundary: docs/git/PUBLICATION-REVIEW.md,
+// integration: docs/git/PUBLICATION-HOST.md. No credential crosses this seam.
+
+/// Unsaved editor buffers for the current project, snapshotted for one remote job.
+struct HostBuffers {
+    project_root: PathBuf,
+    dirty: Vec<String>,
+}
+impl crate::git::remote::BufferGuard for HostBuffers {
+    fn unsaved_paths(&self, repo_root: &std::path::Path) -> Vec<String> {
+        match self.project_root.strip_prefix(repo_root) {
+            Ok(rel) if rel.as_os_str().is_empty() => self.dirty.clone(),
+            Ok(rel) => {
+                let prefix = rel.to_string_lossy().replace('\\', "/");
+                self.dirty.iter().map(|p| format!("{prefix}/{p}")).collect()
+            }
+            // The repo is not the project tree: fail closed so a dirty buffer is never missed.
+            Err(_) => vec!["(unsaved editor buffer)".into()],
+        }
+    }
+}
+
+/// Agent grants have no UI yet: no agent apply is permitted through this seam.
+struct NoGrants;
+impl crate::git::remote::PublishGrants for NoGrants {
+    fn permits(&self, _grant_id: &str, _action: crate::git::remote::GrantAction, _plan_id: &str) -> bool {
+        false
+    }
+}
+
+/// Per-job environment for the remote transport: policy, lease provider, buffers, grants,
+/// cancel/progress context. Detached NetCtx: cancellation lands with git_network_cancel.
+struct RemoteJob {
+    policy: crate::git::remote::Policy,
+    leases: crate::git::remote::bridge::BridgeLeases,
+    buffers: HostBuffers,
+    grants: NoGrants,
+    net: crate::git::remote::NetCtx,
+}
+impl RemoteJob {
+    fn env(&self, trust: &crate::git::TrustStore) -> crate::git::remote::RemoteEnv<'_> {
+        crate::git::remote::RemoteEnv {
+            policy: &self.policy,
+            trust: Some(trust),
+            leases: &self.leases,
+            buffers: &self.buffers,
+            grants: &self.grants,
+            net: &self.net,
+        }
+    }
+}
+
+/// The credential-bridge lease provider over the connected GitHub account. The helper
+/// binary ships next to the app executable (Tauri sidecar); the token stays inside the
+/// bridge: this process hands git only an opaque helper path.
+fn bridge_leases(account: &crate::github_account::Account) -> std::result::Result<crate::git::remote::bridge::BridgeLeases, String> {
+    let exe = std::env::current_exe().map_err(|e| e.to_string())?;
+    let helper = exe
+        .parent()
+        .ok_or_else(|| "The credential helper is missing".to_string())?
+        .join(format!("somnia-git-credential{}", std::env::consts::EXE_SUFFIX));
+    Ok(crate::git::remote::bridge::BridgeLeases {
+        source: Arc::new(crate::git_credential::StoreTokenSource::new(KeyringBackend)) as Arc<dyn crate::git_credential::TokenSource>,
+        helper,
+        account_login: account.login.clone(),
+        scopes: account.scope.split(|c: char| c == ',' || c == ' ').filter(|s| !s.is_empty()).map(str::to_string).collect(),
+        ttl: Duration::from_secs(10 * 60),
+        policy: crate::git_credential::Policy::github(),
+    })
+}
+
+/// The connected GitHub account, or a typed needs-auth error. Keyring access is
+/// serialized like the other credential commands.
+async fn github_account_now() -> std::result::Result<crate::github_account::Account, crate::git::remote::RemoteError> {
+    use crate::git::remote::{RemoteError, RemoteErrorCode as C};
+    tauri::async_runtime::spawn_blocking(|| {
+        let _g = AGENT_SETTINGS_LOCK.lock().map_err(|_| RemoteError::new(C::AuthRequired, "The credential store is busy"))?;
+        match github_store().load() {
+            Ok(Some(a)) => Ok(a),
+            _ => Err(RemoteError::new(C::AuthRequired, "Connect your GitHub account in Settings first")),
+        }
+    })
+    .await
+    .map_err(|_| RemoteError::new(C::AuthRequired, "Could not access the credential store"))?
+}
+
+/// Classifies a GitHub API response without surfacing its body.
+fn classify_api(status: u16, rate_limited: bool, saml: bool) -> crate::git::remote::RemoteError {
+    use crate::git::remote::{friendly, RemoteError, RemoteErrorCode as C};
+    let code = match (status, rate_limited, saml) {
+        (401, _, _) => C::AuthRequired,
+        (403, _, true) => C::SsoRequired,
+        (403, true, _) | (429, _, _) => C::RateLimited,
+        (403, _, _) => C::PermissionDenied,
+        (404, _, _) => C::NotFound,
+        _ => C::Unknown,
+    };
+    RemoteError::new(code, friendly(code))
+}
+
+/// Live validation of the selected account and the destination repository, as the review
+/// contract requires ("resolve and validate the selected account and repository visibility
+/// live; no inferred account fallback"). The token never leaves this process: it appears
+/// only in the Authorization header of these two calls. Response bodies are parsed for
+/// public identity fields and never surfaced, logged or returned.
+async fn github_live_check(
+    account: &crate::github_account::Account,
+    repo_path: &str,
+) -> std::result::Result<crate::git::publication::RepoVisibility, crate::git::remote::RemoteError> {
+    use crate::git::remote::{friendly, RemoteError, RemoteErrorCode as C};
+    let client = reqwest::Client::builder()
+        .no_proxy()
+        .redirect(reqwest::redirect::Policy::none())
+        .connect_timeout(Duration::from_secs(10))
+        .timeout(Duration::from_secs(20))
+        .build()
+        .map_err(|_| RemoteError::new(C::Unknown, "The GitHub check is unavailable"))?;
+    let api = |url: String| {
+        let c = client.clone();
+        let token = account.access_token.clone();
+        async move {
+            c.get(url)
+                .header("authorization", format!("Bearer {token}"))
+                .header("accept", "application/vnd.github+json")
+                .header("user-agent", "somnia-desktop")
+                .header("x-github-api-version", "2022-11-28")
+                .send()
+                .await
+        }
+    };
+    let read = |r: reqwest::Response| async move {
+        let status = r.status().as_u16();
+        let rate_limited = r.headers().get("x-ratelimit-remaining").and_then(|v| v.to_str().ok()) == Some("0");
+        let body = r.text().await.unwrap_or_default();
+        (status, rate_limited, body)
+    };
+    let offline = || RemoteError::new(C::Offline, friendly(C::Offline));
+
+    // 1. The token still belongs to the account the plan binds.
+    let (status, rate_limited, body) = read(api("https://api.github.com/user".into()).await.map_err(|_| offline())?).await;
+    if status != 200 {
+        return Err(classify_api(status, rate_limited, body.contains("SAML")));
+    }
+    let user: serde_json::Value = serde_json::from_str(&body).map_err(|_| RemoteError::new(C::Unknown, "GitHub returned an unexpected answer"))?;
+    let login = user.get("login").and_then(|l| l.as_str()).unwrap_or("");
+    if login.is_empty() || !login.eq_ignore_ascii_case(&account.login) {
+        return Err(RemoteError::new(C::AuthRequired, "The connected GitHub account changed. Reconnect it in Settings."));
+    }
+
+    // 2. The destination repository exists for this account, under this exact name.
+    let (status, rate_limited, body) = read(api(format!("https://api.github.com/repos/{repo_path}")).await.map_err(|_| offline())?).await;
+    if status != 200 {
+        return Err(classify_api(status, rate_limited, body.contains("SAML")));
+    }
+    let repo: serde_json::Value = serde_json::from_str(&body).map_err(|_| RemoteError::new(C::Unknown, "GitHub returned an unexpected answer"))?;
+    let full_name = repo.get("full_name").and_then(|n| n.as_str()).unwrap_or("");
+    if !full_name.eq_ignore_ascii_case(repo_path) {
+        return Err(RemoteError::new(C::NotFound, "The repository moved on GitHub. Update the remote in the project."));
+    }
+    match repo.get("visibility").and_then(|v| v.as_str()) {
+        Some("private") => Ok(crate::git::publication::RepoVisibility::Private),
+        Some("public") => Ok(crate::git::publication::RepoVisibility::Public),
+        Some("internal") => Ok(crate::git::publication::RepoVisibility::Internal),
+        _ => match repo.get("private").and_then(|p| p.as_bool()) {
+            Some(true) => Ok(crate::git::publication::RepoVisibility::Private),
+            Some(false) => Ok(crate::git::publication::RepoVisibility::Public),
+            None => Err(RemoteError::new(C::Unknown, "GitHub returned an unexpected answer")),
+        },
+    }
+}
+
+/// Project root and unsaved-buffer snapshot for one remote job. Exactly one open project,
+/// same rule as the local Git commands. The state lock is never held across git/network.
+fn publication_snapshot(state: &Shared) -> std::result::Result<(PathBuf, Vec<String>), String> {
+    let backend = state.lock().map_err(|e| e.to_string())?;
+    let root = git_project_root(&backend)?;
+    let dirty = backend.projects.values().next().map(|p| p.dirty_paths()).unwrap_or_default();
+    Ok((root, dirty))
+}
+
+#[tauri::command]
+async fn git_push_plan(
+    window: WebviewWindow,
+    state: State<'_, Shared>,
+    request: crate::git::publication::PublicationTarget,
+) -> std::result::Result<crate::git::publication::PublicationPlan, String> {
+    git_gate(&window)?;
+    crate::git::publication::check_target(&request).map_err(|e| e.to_json())?;
+    let account = github_account_now().await.map_err(|e| e.to_json())?;
+    if !account.login.eq_ignore_ascii_case(&request.account_id) {
+        return Err(crate::git::remote::RemoteError::new(
+            crate::git::remote::RemoteErrorCode::AuthRequired,
+            "The selected account is not the connected GitHub account",
+        )
+        .to_json());
+    }
+    let store = git_store(&window)?;
+    let (root, dirty) = publication_snapshot(&state)?;
+    let unsaved_buffers = dirty.len();
+    let job = RemoteJob {
+        policy: crate::git::remote::Policy::github(),
+        leases: bridge_leases(&account)?,
+        buffers: HostBuffers { project_root: root.clone(), dirty },
+        grants: NoGrants,
+        net: crate::git::remote::NetCtx::detached(),
+    };
+    let plan_request = crate::git::remote::push::PushPlanRequest {
+        project_root: root.to_string_lossy().into_owned(),
+        remote: Some(request.remote.clone()),
+        local_branch: request.source_branch.clone(),
+        target_branch: Some(request.target_branch.clone()),
+        set_upstream: false,
+    };
+    let stored_request = plan_request.clone();
+    let blocking_root = root.clone();
+    let (native, untracked, excluded) = tauri::async_runtime::spawn_blocking(move || {
+        let env = job.env(&store);
+        let native = crate::git::remote::push::push_plan(&env, &plan_request)?;
+        // Informational listings; a listing failure never blocks a review.
+        let untracked = crate::git::publication::local_untracked(&blocking_root).unwrap_or_default();
+        let excluded = crate::git::publication::local_excluded(&blocking_root).unwrap_or_default();
+        Ok::<_, crate::git::remote::RemoteError>((native, untracked, excluded))
+    })
+    .await
+    .map_err(|e| e.to_string())?
+    .map_err(|e| e.to_json())?;
+    let visibility = github_live_check(&account, &native.repo).await.map_err(|e| e.to_json())?;
+    let view = crate::git::publication::plan_view(&native, &request, visibility, untracked, excluded, unsaved_buffers);
+    {
+        let mut backend = state.lock().map_err(|e| e.to_string())?;
+        backend.publication.put(stored_request, &native.plan_id, &native.local_tree);
+    }
+    Ok(view)
+}
+
+#[tauri::command]
+async fn git_push_apply(
+    window: WebviewWindow,
+    state: State<'_, Shared>,
+    request: crate::git::publication::PublicationApply,
+) -> std::result::Result<crate::git::publication::PublicationOutcome, String> {
+    use crate::git::publication::{error_outcome, outcome_view, PublicationOutcome as Out, Take};
+    git_gate(&window)?;
+    if !request.confirmed {
+        // The contract sends confirmed: true from the reviewed dialog. Anything else fails closed.
+        return Ok(Out::Failed);
+    }
+    let reviewed = {
+        let mut backend = state.lock().map_err(|e| e.to_string())?;
+        backend.publication.take(&request.plan_id, &request.content_hash)
+    };
+    let Take::Ready(reviewed) = reviewed else {
+        return Ok(Out::StalePlan);
+    };
+    let remote_name = reviewed.request.remote.clone().unwrap_or_else(|| "origin".into());
+    let account = match github_account_now().await {
+        Ok(a) => a,
+        Err(e) => return Ok(error_outcome(&e)),
+    };
+    let store = git_store(&window)?;
+    // Project state is best-effort here: the apply replays the stored plan inputs, and a
+    // missing snapshot degrades to the fail-closed buffer marker, never to a rejected invoke.
+    let (root, dirty) = publication_snapshot(&state).unwrap_or_else(|_| (PathBuf::new(), vec!["(unsaved editor buffer)".into()]));
+    let job = RemoteJob {
+        policy: crate::git::remote::Policy::github(),
+        leases: bridge_leases(&account)?,
+        buffers: HostBuffers { project_root: root, dirty },
+        grants: NoGrants,
+        net: crate::git::remote::NetCtx::detached(),
+    };
+    let apply_request = crate::git::remote::push::PushApplyRequest {
+        request: reviewed.request,
+        plan_id: request.plan_id,
+        // Built by the host from the real confirmation in the review dialog, never from a plan object.
+        authority: crate::git::remote::Authority::Human { confirmed: true },
+    };
+    let result = tauri::async_runtime::spawn_blocking(move || {
+        let env = job.env(&store);
+        crate::git::remote::push::push_apply(&env, &apply_request)
+    })
+    .await
+    .map_err(|e| e.to_string())?;
+    Ok(match result {
+        Ok(res) => outcome_view(&res, &remote_name),
+        Err(e) => error_outcome(&e),
+    })
+}
+
+#[tauri::command]
+async fn git_fetch(
+    window: WebviewWindow,
+    state: State<'_, Shared>,
+    request: crate::git::publication::PublicationFetch,
+) -> std::result::Result<crate::git::remote::FetchResult, String> {
+    git_gate(&window)?;
+    crate::git::publication::check_fetch(&request).map_err(|e| e.to_json())?;
+    let account = github_account_now().await.map_err(|e| e.to_json())?;
+    let store = git_store(&window)?;
+    let (root, dirty) = publication_snapshot(&state)?;
+    let job = RemoteJob {
+        policy: crate::git::remote::Policy::github(),
+        leases: bridge_leases(&account)?,
+        buffers: HostBuffers { project_root: root.clone(), dirty },
+        grants: NoGrants,
+        net: crate::git::remote::NetCtx::detached(),
+    };
+    let fetch_request = crate::git::remote::FetchRequest { project_root: root.to_string_lossy().into_owned(), remote: Some(request.remote) };
+    tauri::async_runtime::spawn_blocking(move || {
+        let env = job.env(&store);
+        crate::git::remote::fetch(&env, &fetch_request)
+    })
+    .await
+    .map_err(|e| e.to_string())?
+    .map_err(|e| e.to_json())
+}
+
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 struct ExtDocReply {
@@ -2457,7 +2776,10 @@ pub fn run() {
             git_combine_status,
             git_combine_resolve,
             git_combine_finish,
-            git_combine_abort
+            git_combine_abort,
+            git_push_plan,
+            git_push_apply,
+            git_fetch
         ])
         .run(tauri::generate_context!())
         .unwrap_or_else(|error| {
