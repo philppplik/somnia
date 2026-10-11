@@ -2,7 +2,7 @@
 
 This directory is the initial reviewed index. It lives in the Somnia repository so the first version needs no separate repository. The app reads `index.json` on `main` only after the user chooses **Browse GitHub extensions**. Moving it to `somnia-extensions` later needs a change to `CATALOG_URL` and a review of the download hosts/CSP.
 
-`packages/quiet-colors.json` is the readable source of the first-party, permission-free Quiet Colors theme. Its ZIP is checked into this directory and hash-pinned in the index. Do not overwrite published package versions; add a new versioned ZIP and update the entry through a reviewed PR.
+`packages/quiet-colors.json` and `packages/accent-palettes.json` are the readable sources of the first-party, permission-free Quiet Colors theme and Accent Palettes packages. Their ZIPs are checked into this directory and hash-pinned in the index. Do not overwrite published package versions; add a new versioned ZIP and update the entry through a reviewed PR.
 
 ## Entry format
 

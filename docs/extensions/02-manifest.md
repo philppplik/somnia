@@ -54,6 +54,14 @@ Each list may hold at most 200 items.
 - `id` lowercase letters, digits and dashes. The theme is registered as `<extension id>.<theme id>`.
 - `light` and `dark` may only set `--syntax-tag`, `--syntax-keyword`, `--syntax-string`, `--syntax-number`, each to a hex color (`#rgb` up to `#rrggbbaa`).
 
+### `accentPalettes`
+
+`{ "id", "label", "light", "dark" }`
+
+- `id` lowercase letters, digits and dashes. The palette is registered as `<extension id>.<palette id>`.
+- `label` up to 80 characters, shown on the swatch.
+- `light` and `dark` are the accent colors Somnia applies when the user picks the palette in Settings > Appearance, one `#rrggbb` hex per theme mode. Picking a palette sets the accent once; it stays the user's color afterwards.
+
 ### `panels`
 
 `{ "id", "title", "side": "left" | "right", "html" }`
