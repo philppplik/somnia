@@ -542,6 +542,19 @@
       ]
     },
     {
+      "name": "git_fetch",
+      "domain": "git",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "request"
+      ],
+      "args": [
+        "request"
+      ]
+    },
+    {
       "name": "git_init",
       "domain": "git",
       "status": "native",
@@ -552,6 +565,32 @@
     },
     {
       "name": "git_log",
+      "domain": "git",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "request"
+      ],
+      "args": [
+        "request"
+      ]
+    },
+    {
+      "name": "git_push_apply",
+      "domain": "git",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "request"
+      ],
+      "args": [
+        "request"
+      ]
+    },
+    {
+      "name": "git_push_plan",
       "domain": "git",
       "status": "native",
       "wrapped": false,
