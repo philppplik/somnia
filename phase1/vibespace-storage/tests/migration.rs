@@ -5,7 +5,7 @@ use somnia_vibespace_storage::*;
 fn v2_ok() -> Vec<Migration> {
     let mut m = MIGRATIONS.to_vec();
     m.push(Migration {
-        version: 2,
+        version: SCHEMA_VERSION + 1,
         sql: "ALTER TABLE spaces ADD COLUMN note TEXT;",
     });
     m
@@ -38,9 +38,9 @@ fn upgrade_preserves_data() {
     drop(s);
     let s = Store::open_with_migrations(&path, opts_none(), &v2_ok()).unwrap();
     assert_eq!(s.get_space(&id).unwrap().name, "old");
-    assert_eq!(s.capabilities().db_schema_version, 2);
+    assert_eq!(s.capabilities().db_schema_version, SCHEMA_VERSION + 1);
     drop(s);
-    assert_eq!(user_version(&path), 2);
+    assert_eq!(user_version(&path), SCHEMA_VERSION + 1);
 }
 
 #[test]
@@ -52,12 +52,15 @@ fn failed_migration_rolls_back_completely() {
     drop(s);
     let mut bad = MIGRATIONS.to_vec();
     bad.push(Migration {
-        version: 2,
+        version: SCHEMA_VERSION + 1,
         sql: "ALTER TABLE spaces ADD COLUMN half_done TEXT; INSERT INTO table_that_does_not_exist VALUES (1);",
     });
     let err = Store::open_with_migrations(&path, opts_none(), &bad).unwrap_err();
-    assert!(matches!(err, Error::Migration { version: 2, .. }), "{err}");
-    assert_eq!(user_version(&path), 1, "version unchanged");
+    assert!(
+        matches!(err, Error::Migration { version, .. } if version == SCHEMA_VERSION + 1),
+        "{err}"
+    );
+    assert_eq!(user_version(&path), SCHEMA_VERSION, "version unchanged");
     let raw = rusqlite::Connection::open(&path).unwrap();
     let cols: Vec<String> = raw
         .prepare("SELECT name FROM pragma_table_info('spaces')")
@@ -91,7 +94,7 @@ fn newer_schema_fails_visibly_without_touching_the_file() {
             err,
             Error::NewerSchema {
                 found: 99,
-                supported: 1
+                supported: SCHEMA_VERSION
             }
         ),
         "{err}"
@@ -161,7 +164,7 @@ fn non_contiguous_migrations_are_rejected() {
     let dir = tempfile::tempdir().unwrap();
     let path = dir.path().join("gap.db");
     let gap = [Migration {
-        version: 2,
+        version: SCHEMA_VERSION + 1,
         sql: "SELECT 1;",
     }];
     assert!(matches!(

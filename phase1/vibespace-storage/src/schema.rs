@@ -9,12 +9,12 @@ pub struct Migration {
     pub sql: &'static str,
 }
 
-pub const SCHEMA_VERSION: i64 = 1;
+pub const SCHEMA_VERSION: i64 = 2;
 
-pub const MIGRATIONS: &[Migration] = &[Migration {
-    version: 1,
-    sql: V1,
-}];
+pub const MIGRATIONS: &[Migration] = &[
+    Migration { version: 1, sql: V1 },
+    Migration { version: 2, sql: "CREATE TABLE native_scope_anchors (space_id TEXT PRIMARY KEY NOT NULL REFERENCES spaces(id) ON DELETE CASCADE, canonical_root TEXT NOT NULL);" },
+];
 
 const V1: &str = r#"
 CREATE TABLE spaces (

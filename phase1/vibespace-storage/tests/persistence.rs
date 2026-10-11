@@ -251,3 +251,40 @@ fn concurrent_start_with_same_request_id_creates_one_run() {
     assert_eq!(res.iter().filter(|r| r.1).count(), 1);
     assert!(res.iter().all(|r| r.0 == res[0].0));
 }
+
+#[test]
+fn native_scope_anchor_survives_restart_and_is_not_a_renderer_grant() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("anchors.db");
+    let store = Store::open(&path, opts_none()).unwrap();
+    let space = store
+        .create_space(NewSpace::project("scope", "consumed-grant"))
+        .unwrap();
+    store
+        .bind_native_scope(&space.id, "/validated/native/project")
+        .unwrap();
+    assert!(store.bind_native_scope(&space.id, "/replacement").is_err());
+    let personal = store.create_space(NewSpace::personal("personal")).unwrap();
+    assert!(store.bind_native_scope(&personal.id, "/project").is_err());
+    drop(store);
+    let reopened = Store::open(&path, opts_none()).unwrap();
+    assert_eq!(
+        reopened.native_scope_anchor(&space.id).unwrap().unwrap(),
+        "/validated/native/project"
+    );
+}
+
+#[test]
+fn schema_one_upgrades_with_existing_spaces() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("v1.db");
+    let store = Store::open_with_migrations(&path, opts_none(), &MIGRATIONS[..1]).unwrap();
+    let space = store
+        .create_space(NewSpace::project("old", "grant"))
+        .unwrap();
+    drop(store);
+    let reopened = Store::open(&path, opts_none()).unwrap();
+    assert_eq!(reopened.get_space(&space.id).unwrap().name, "old");
+    assert_eq!(reopened.native_scope_anchor(&space.id).unwrap(), None);
+    reopened.bind_native_scope(&space.id, "/validated").unwrap();
+}

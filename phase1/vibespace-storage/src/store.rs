@@ -266,6 +266,38 @@ impl Store {
         self.get_space(&id)
     }
 
+    /// Trusted-native scope binding after a one-shot folder grant is consumed.
+    /// This API is not an IPC command and must never receive an arbitrary renderer path.
+    pub fn bind_native_scope(&self, space_id: &str, canonical_root: &str) -> Result<()> {
+        if canonical_root.is_empty() || canonical_root.contains('\0') {
+            return Err(Error::InvalidInput("invalid native scope anchor".into()));
+        }
+        self.write(|tx| {
+            let space = get_space_conn(tx, space_id)?;
+            if space.scope.kind != ScopeKind::Project {
+                return Err(Error::InvalidInput("project scope required".into()));
+            }
+            tx.execute(
+                "INSERT INTO native_scope_anchors(space_id, canonical_root) VALUES (?1,?2)",
+                params![space_id, canonical_root],
+            )?;
+            Ok(())
+        })
+    }
+    /// Returns a native-only persisted anchor. A folder-grant ID is not authority.
+    pub fn native_scope_anchor(&self, space_id: &str) -> Result<Option<String>> {
+        self.read(|conn| {
+            get_space_conn(conn, space_id)?;
+            Ok(conn
+                .query_row(
+                    "SELECT canonical_root FROM native_scope_anchors WHERE space_id=?1",
+                    params![space_id],
+                    |row| row.get(0),
+                )
+                .optional()?)
+        })
+    }
+
     pub fn get_space(&self, id: &str) -> Result<Space> {
         self.read(|c| get_space_conn(c, id))
     }
