@@ -8,3 +8,9 @@ test('connect-src allows user-chosen ws/wss hosts for collaboration, and nothing
   assert.ok(c.includes('ws:')&&c.includes('wss:'));
   assert.equal(c.includes('*'),false);assert.equal(c.includes('http:'),false);assert.equal(c.includes('https:'),false);}
  assert.match(conf.csp,/default-src 'self'/);assert.match(conf.csp,/object-src 'none'/);});
+test('connect-src allows blob: so studios can fetch() the blob URLs of opened local files',()=>{
+ for(const csp of [conf.csp,conf.devCsp]){assert.ok(connect(csp).includes('blob:'),'connect-src must include blob: (fetch(item.url) of opened files)');}
+});
+test('every studio that reads opened files via fetch(item.url) is covered by blob: in connect-src',()=>{
+ for(const csp of [conf.csp,conf.devCsp]){const c=connect(csp);assert.equal(c.includes('data:'),false);assert.equal(c.includes('filesystem:'),false);}
+});
