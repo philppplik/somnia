@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Smart Open keeps recognized files automatic. Ambiguous handlers now show a studio chooser; unknown-type files with verified text show an explicit "Open as text?" confirmation. Cancel leaves that file unopened. Unsupported or invalid files only notify. Choosing a studio still uses the normal prepare, unsaved-change approval, revision validation and commit flow. A newer open request closes an older unanswered chooser.
+
 ## 11.2.0-beta.1 - 2026-10-07
 
 - Direct OpenAI/Claude BYOK providers, live catalogs and metadata-only auth.

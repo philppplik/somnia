@@ -2617,7 +2617,7 @@
   "openRouter.description": "Choose an editor for this file.",
   "openRouter.file": "File to open",
   "openRouter.studio": "Studio",
-  "openRouter.suggested": "(drop target)",
+  "openRouter.suggested": "(suggested)",
   "openRouter.preview": "(read-only preview)",
   "openRouter.safe": "Only studios that can read this file are offered. Cancel keeps your current work unchanged.",
   "openRouter.open": "Open file",
@@ -2633,5 +2633,7 @@
   "versions.review.title": "Review version",
   "versions.review.footer": "Attribution footer",
   "versions.review.cancel": "Back to editing",
-  "versions.review.confirm": "Confirm and save version"
+  "versions.review.confirm": "Confirm and save version",
+  "openRouter.textTitle": "Open as text?",
+  "openRouter.textDescription": "This file has an unknown type, but its contents are valid text. Confirm to open it in Code."
 }

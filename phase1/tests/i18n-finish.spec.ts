@@ -74,3 +74,11 @@ test('switching locale while settings is open updates visible and accessible tex
   previous=tag;
  }
 });
+
+test('Open fallback keys have five-locale parity and matching placeholders',()=>{
+ const keys=Object.keys(catalogues.en).filter(key=>key.startsWith('openRouter.'));expect(keys.length).toBeGreaterThan(0);
+ for(const [tag,cat] of Object.entries(catalogues)){
+  expect(Object.keys(cat).filter(key=>key.startsWith('openRouter.')).sort(),tag).toEqual([...keys].sort());
+  for(const key of keys){expect(cat[key].trim(),`${tag}:${key}`).not.toBe('');expect(cat[key].match(/\{\w+\}/g)??[],`${tag}:${key}`).toEqual(catalogues.en[key].match(/\{\w+\}/g)??[]);}
+ }
+});

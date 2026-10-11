@@ -2617,7 +2617,7 @@
   "openRouter.description": "Wähle einen Editor für diese Datei.",
   "openRouter.file": "Zu öffnende Datei",
   "openRouter.studio": "Studio",
-  "openRouter.suggested": "(Drop-Ziel)",
+  "openRouter.suggested": "(empfohlen)",
   "openRouter.preview": "(schreibgeschützte Vorschau)",
   "openRouter.safe": "Es werden nur Studios angeboten, die diese Datei lesen können. Abbrechen lässt deine aktuelle Arbeit unverändert.",
   "openRouter.open": "Datei öffnen",
@@ -2633,5 +2633,7 @@
   "versions.review.title": "Version prüfen",
   "versions.review.footer": "Urheberhinweis",
   "versions.review.cancel": "Zurück zum Bearbeiten",
-  "versions.review.confirm": "Bestätigen und Version speichern"
+  "versions.review.confirm": "Bestätigen und Version speichern",
+  "openRouter.textTitle": "Als Text öffnen?",
+  "openRouter.textDescription": "Der Dateityp ist unbekannt, aber der Inhalt ist gültiger Text. Bestätige, um die Datei in Code zu öffnen."
 }
