@@ -15,3 +15,25 @@
 .vs-transcript{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:14px}.vs-transcript time{display:block;font-size:11px;color:var(--text-secondary)}.vs-transcript p{white-space:pre-wrap;overflow-wrap:anywhere}
 .vs-model-row{display:flex;flex-direction:column;align-items:flex-start;gap:6px;padding-top:12px;border-top:1px solid var(--border-subtle,#e7e8ec)}.vs-model-row p{margin:0}
 .vs-hunk-option{padding:12px;border:1px solid var(--border-subtle,#ddd);border-radius:14px}.vs-hunk-option>span{display:flex;align-items:center;gap:8px}.vs-hunk-option pre{background:var(--bg-surface,#f4f5f8);border-radius:10px;color:var(--text-primary,#222)}.vs-artifact-preview{width:100%;height:240px;background:white;border:1px solid var(--border-subtle,#ddd);border-radius:14px}.vs-usage{font-size:12px}.vs-usage dl{display:grid;grid-template-columns:max-content max-content;gap:4px 16px}.vs-usage dd{margin:0}
+
+/* A8 multi-agent board: columns over parallel runs, schedule strip, aggregate usage. */
+.vs-boardview{display:flex;flex-direction:column;gap:18px}
+.vs-board-summary{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.vs-sched-strip{display:flex;flex-direction:column;gap:10px}
+.vs-sched-strip ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.vs-sched-item{display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:12px 14px;border:1px solid var(--border-subtle,#e7e8ec);border-radius:16px;background:var(--bg-elevated,#fff)}
+.vs-sched-item[data-conflict]{border-color:#e9a940}
+.vs-board-cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(260px,100%),1fr));gap:16px;align-items:start}
+.vs-col{display:flex;flex-direction:column;gap:10px;min-width:0}
+.vs-col>h3{color:var(--text-secondary,#555a69)}
+.vs-col>h3>span{margin-left:6px;font-weight:400}
+.vs-run-card{display:flex;flex-direction:column;gap:10px;padding:14px;border:1px solid var(--border-subtle,#e7e8ec);border-radius:20px;background:var(--bg-elevated,#fff);min-width:0}
+.vs-root .vs-run-open{display:flex;flex-direction:column;align-items:stretch;justify-content:flex-start;text-align:left;gap:10px;background:none;border:none;padding:0;min-height:0;white-space:normal}
+.vs-root .vs-run-open:hover:not(:disabled){background:none}
+.vs-run-open:hover>strong{text-decoration:underline}
+.vs-run-open>strong{font-size:14px;font-weight:550}
+.vs-run-review{font-size:11px;color:var(--text-secondary,#555a69)}
+.vs-run-controls{display:flex;gap:8px;flex-wrap:wrap}
+.vs-run-controls button{padding:5px 10px;min-height:28px;font-size:12px}
+.vs-steer-inline{display:flex;flex-direction:column;gap:8px}
+.vs-steer-inline .vs-actions{display:flex;gap:8px}

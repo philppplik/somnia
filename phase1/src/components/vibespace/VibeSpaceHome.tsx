@@ -2,12 +2,12 @@ import {useEffect,useMemo,useState,useSyncExternalStore} from 'react';
 import {StudioScheduleButton} from './StudioScheduleButton';
 import {Plus} from '../../lib/icons';
 import {VibeSpaceController} from '../../lib/vibespace/controller';
-import {studioState} from '../../lib/vibespace/state';
 import type {VibeIntent,VibeSpaceTransport} from '../../lib/vibespace/types';
 import {CreateSpaceForm,CreateStudioForm,studioTemplates} from './CreateForms';
-import {stateLabels,StudioDetail,StudioMetrics} from './StudioDetail';
+import {StudioDetail} from './StudioDetail';
+import {BoardView} from './BoardView';
 import {t} from '../../lib/i18n';
-import {nativeScheduleTransport,readScheduleCursor,storeScheduleCursor,type ReturnCard} from '../../lib/vibespace/schedule';
+import {nativeScheduleTransport,readScheduleCursor,storeScheduleCursor,type ReturnCard,type Schedule} from '../../lib/vibespace/schedule';
 import {MemoryPanel} from './MemoryPanel';
 import {SkillsTab} from './SkillsTab';
 import {nativeMemoryTransport,nativeSkillsTransport} from '../../lib/vibespace/memorySkillsTransport';
@@ -24,6 +24,13 @@ export function VibeSpaceHome({transport}:{transport:VibeSpaceTransport}){
   if(transport.mode!=='native'||!nativeScheduleTransport.returnCard)return;
   let alive=true;
   nativeScheduleTransport.returnCard(readScheduleCursor()).then(card=>{if(alive)setReturnCard(card);}).catch(()=>{});
+  return()=>{alive=false;};
+ },[transport]);
+ const [schedules,setSchedules]=useState<Schedule[]|null>(null),[scheduleError,setScheduleError]=useState(false);
+ useEffect(()=>{
+  if(transport.mode!=='native')return;
+  let alive=true;setScheduleError(false);
+  nativeScheduleTransport.list().then(list=>{if(alive)setSchedules(list);}).catch(()=>{if(alive){setSchedules(null);setScheduleError(true);}});
   return()=>{alive=false;};
  },[transport]);
  const snapshot=state.snapshot;const space=snapshot?.spaces.find(s=>s.spaceId===spaceId)??snapshot?.spaces[0];
@@ -47,7 +54,7 @@ export function VibeSpaceHome({transport}:{transport:VibeSpaceTransport}){
      {transport.mode==='native'&&spacePanel==='memory'&&<MemoryPanel transport={nativeMemoryTransport} spaceId={space.spaceId} locale={getLocale()}/>}
      {transport.mode==='native'&&spacePanel==='skills'&&<SkillsTab transport={nativeSkillsTransport} spaceId={space.spaceId} locale={getLocale()}/>}
      {!snapshot.sessions.some(s=>s.spaceId===space.spaceId)?<div className="vs-empty"><h2>What should your first Studio do?</h2><p>Choose a starting point, then review the goal and model before creating it.</p><div className="vs-templates">{studioTemplates.map(t=><button type="button" key={t.title} disabled={busy||!supports('create-studio')} onClick={()=>newStudio(t.goal)}><strong>{t.title}</strong><span>{t.goal}</span></button>)}</div></div>:
-     <div className="vs-board">{snapshot.sessions.filter(s=>s.spaceId===space.spaceId&&s.latestRunId===null).map(session=><section className="vs-card" key={session.studioId}><p className="vs-eyebrow">Draft Studio</p><h3>{session.goal.split('\n')[0].slice(0,100)}</h3><p>{session.model.provider} / {session.model.model}</p><p className="vs-muted">No run yet. Starting creates an isolated copy and checkpoint before work begins.</p><button type="button" className="vs-primary" disabled={busy||!session.canStart||!supports('start')} onClick={()=>void controller.execute({type:'start',studioId:session.studioId})}>Start Studio</button>{transport.mode==='native'&&<StudioScheduleButton studioId={session.studioId} disabled={busy}/>}</section>)}{(['needs-you','ready','running','draft','paused','done','stopped','applied','discarded','failed','crashed'] as const).map(group=>{const studios=snapshot.studios.filter(s=>s.spaceId===space.spaceId&&studioState(s)===group);return studios.length>0&&<section className="vs-group" key={group} aria-label={stateLabels[group]}><h3>{stateLabels[group]} <span>{studios.length}</span></h3>{studios.map(s=><button className="vs-studio-card" type="button" key={s.runId} onClick={()=>setStudioId(s.runId)}><strong>{s.goal.split('\n')[0].slice(0,100)}</strong><StudioMetrics studio={s}/><span className="vs-last-step">{s.failure?.message||s.pendingConsents[0]?.reason||s.lastStep||'No step recorded yet.'}</span></button>)}</section>;})}</div>}
+     <BoardView space={space} snapshot={snapshot} schedules={transport.mode==='native'?schedules:null} schedulesError={scheduleError} pending={busy} capabilities={transport.capabilities} mode={transport.mode} onAction={intent=>controller.execute(intent)} onOpenRun={runId=>setStudioId(runId)}/>}
     </>}
   </div>}
   {studio&&transport.mode==='native'&&<StudioScheduleButton studioId={studio.studioId} disabled={busy}/>}

@@ -2,6 +2,7 @@ import {DIAGNOSTIC_LOCALES} from './diagnostics/locales';
 import {CONSENT_CATALOGUES} from './extensions/consentLocales';
 import {STORE_CATALOGUES} from './extensions/storeLocales';
 import {SCHEDULE_CATALOGUES} from './vibespace/scheduleI18n';
+import {BOARD_CATALOGUES} from './vibespace/boardI18n';
 import en from '../locales/en.json';
 import de from '../locales/de.json';
 import es from '../locales/es.json';
@@ -34,6 +35,7 @@ for (const [tag, extra] of Object.entries(STORE_CATALOGUES)) Object.assign(CATAL
 for (const [tag, extra] of Object.entries(DIAGNOSTIC_LOCALES)) Object.assign(CATALOGUES[tag], extra);
 for (const [tag, extra] of Object.entries(SCHEDULE_CATALOGUES)) Object.assign(CATALOGUES[tag], extra);
 for (const [tag, extra] of Object.entries(VIBESPACE_CATALOGUES)) Object.assign(CATALOGUES[tag], extra);
+for (const [tag, extra] of Object.entries(BOARD_CATALOGUES)) Object.assign(CATALOGUES[tag], extra);
 /** Native names for the language picker. */
 export const LOCALE_NAMES: Record<string, string> = {en:'English', de:'Deutsch', es:'Español', fr:'Français', 'pt-BR':'Português (Brasil)'};
 export const LOCALE_KEY = 'somnia.locale.v1';
