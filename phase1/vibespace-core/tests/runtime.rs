@@ -28,6 +28,7 @@ impl engine::ModelTransport for Script {
                 usage: engine::Usage {
                     input_tokens: 2,
                     output_tokens: 3,
+                    ..Default::default()
                 },
             })
         } else {
@@ -37,6 +38,7 @@ impl engine::ModelTransport for Script {
                 usage: engine::Usage {
                     input_tokens: 4,
                     output_tokens: 1,
+                    ..Default::default()
                 },
             })
         }

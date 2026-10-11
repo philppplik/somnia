@@ -196,14 +196,11 @@ pub(crate) fn parse_openai_reply(value: &serde_json::Value, propose: bool) -> Re
         message: text,
         tool,
         usage: Usage {
-            input_tokens: value
-                .pointer("/usage/prompt_tokens")
-                .and_then(|v| v.as_u64())
-                .unwrap_or(0),
-            output_tokens: value
-                .pointer("/usage/completion_tokens")
-                .and_then(|v| v.as_u64())
-                .unwrap_or(0),
+            input_tokens: value.pointer("/usage/prompt_tokens").and_then(|v| v.as_u64()).unwrap_or(0),
+            output_tokens: value.pointer("/usage/completion_tokens").and_then(|v| v.as_u64()).unwrap_or(0),
+            cache_read_tokens: value.pointer("/usage/prompt_tokens_details/cached_tokens").and_then(|v| v.as_u64()),
+            cache_write_tokens: value.pointer("/usage/prompt_tokens_details/cache_write_tokens").and_then(|v| v.as_u64()),
+            ..Usage::default()
         },
     })
 }

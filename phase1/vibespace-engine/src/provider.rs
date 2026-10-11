@@ -99,7 +99,15 @@ pub fn encode_request(
 /// over-permissive replies fail visibly (`Failure::Model`).
 pub fn decode_response(kind: ProviderKind, value: &Value, propose: bool) -> Result<ModelReply, Failure> {
     if kind != ProviderKind::Anthropic {
-        return parse_openai_reply(value, propose);
+        let mut reply = parse_openai_reply(value, propose)?;
+        if kind == ProviderKind::OpenRouter {
+            // Cost is copied only when the response reports a sane number; never computed.
+            if let Some(c) = value.pointer("/usage/cost").and_then(|v| v.as_f64()).filter(|c| c.is_finite() && *c >= 0.0) {
+                reply.usage.cost_usd = Some(c);
+                reply.usage.cost_source = Some(CostSource::ProviderReported);
+            }
+        }
+        return Ok(reply);
     }
     let blocks = value.get("content").and_then(|v| v.as_array()).ok_or(Failure::Model)?;
     let mut text = String::new();
@@ -130,7 +138,8 @@ pub fn decode_response(kind: ProviderKind, value: &Value, propose: bool) -> Resu
         return Err(Failure::Model);
     }
     let n = |p: &str| value.pointer(p).and_then(|v| v.as_u64()).unwrap_or(0);
-    Ok(ModelReply { message: text, tool, usage: Usage { input_tokens: n("/usage/input_tokens"), output_tokens: n("/usage/output_tokens") } })
+    let opt = |p: &str| value.pointer(p).and_then(|v| v.as_u64());
+    Ok(ModelReply { message: text, tool, usage: Usage { input_tokens: n("/usage/input_tokens"), output_tokens: n("/usage/output_tokens"), cache_read_tokens: opt("/usage/cache_read_input_tokens"), cache_write_tokens: opt("/usage/cache_creation_input_tokens"), ..Usage::default() } })
 }
 
 /// Transport for any supported provider. Local kinds: numeric loopback http, no credential.

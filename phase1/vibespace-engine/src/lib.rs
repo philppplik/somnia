@@ -95,8 +95,26 @@ pub struct ToolProposal {
 }
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct Usage {
+    /// As reported by the provider. NOTE: Anthropic reports uncached input only; OpenAI-style
+    /// `prompt_tokens` already includes cached tokens. Cache fields below are never added in.
     pub input_tokens: u64,
     pub output_tokens: u64,
+    /// `None` = the provider did not report it (distinct from a reported 0).
+    pub cache_read_tokens: Option<u64>,
+    pub cache_write_tokens: Option<u64>,
+    /// Only ever copied from a provider response. No price tables, no estimates.
+    pub cost_usd: Option<f64>,
+    pub cost_source: Option<CostSource>,
+}
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum CostSource {
+    /// The provider response itself carried the cost (e.g. OpenRouter `usage.cost`).
+    ProviderReported,
+}
+impl Usage {
+    pub fn tokens(input_tokens: u64, output_tokens: u64) -> Self {
+        Self { input_tokens, output_tokens, ..Self::default() }
+    }
 }
 #[derive(Clone, Debug)]
 pub struct ModelReply {

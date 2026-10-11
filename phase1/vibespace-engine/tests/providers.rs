@@ -149,3 +149,27 @@ async fn eval_harness_produces_report_from_recorded_fixtures() {
     assert!(markdown(&r).contains("FAIL"));
     assert_eq!(r.by_lang.len(), 2);
 }
+
+#[test]
+fn usage_cache_and_cost_come_only_from_provider_responses() {
+    // OpenAI-style: cached tokens inside prompt_tokens_details; no cost field -> None, never estimated.
+    let v = json!({"choices":[{"message":{"content":"x"}}],"usage":{"prompt_tokens":100,"completion_tokens":5,"prompt_tokens_details":{"cached_tokens":64}}});
+    let u = decode_response(ProviderKind::OpenAi, &v, false).unwrap().usage;
+    assert_eq!((u.input_tokens, u.cache_read_tokens, u.cache_write_tokens, u.cost_usd, u.cost_source), (100, Some(64), None, None, None));
+    // OpenRouter: provider-reported cost is copied with its source.
+    let v = json!({"choices":[{"message":{"content":"x"}}],"usage":{"prompt_tokens":10,"completion_tokens":2,"cost":0.00123,"prompt_tokens_details":{"cached_tokens":0,"cache_write_tokens":4}}});
+    let u = decode_response(ProviderKind::OpenRouter, &v, false).unwrap().usage;
+    assert_eq!((u.cost_usd, u.cost_source, u.cache_read_tokens, u.cache_write_tokens), (Some(0.00123), Some(CostSource::ProviderReported), Some(0), Some(4)));
+    // Same field on a non-OpenRouter route is ignored; bad values are ignored.
+    let v = json!({"choices":[{"message":{"content":"x"}}],"usage":{"cost":9.0}});
+    assert_eq!(decode_response(ProviderKind::Ollama, &v, false).unwrap().usage.cost_usd, None);
+    let v = json!({"choices":[{"message":{"content":"x"}}],"usage":{"cost":-1.0}});
+    assert_eq!(decode_response(ProviderKind::OpenRouter, &v, false).unwrap().usage.cost_usd, None);
+    // Anthropic cache fields.
+    let v = json!({"content":[{"type":"text","text":"x"}],"usage":{"input_tokens":5,"output_tokens":2,"cache_read_input_tokens":900,"cache_creation_input_tokens":30}});
+    let u = decode_response(ProviderKind::Anthropic, &v, false).unwrap().usage;
+    assert_eq!((u.input_tokens, u.cache_read_tokens, u.cache_write_tokens, u.cost_usd), (5, Some(900), Some(30), None));
+    // Local server without usage details: unknown stays unknown.
+    let v = json!({"choices":[{"message":{"content":"x"}}],"usage":{"prompt_tokens":1,"completion_tokens":1}});
+    assert_eq!(decode_response(ProviderKind::Ollama, &v, false).unwrap().usage.cache_read_tokens, None);
+}

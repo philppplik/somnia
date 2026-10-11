@@ -35,6 +35,7 @@ fn reply(tool: bool) -> ModelReply {
         usage: Usage {
             input_tokens: 2,
             output_tokens: 3,
+            ..Default::default()
         },
     }
 }
