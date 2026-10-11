@@ -9,12 +9,13 @@ pub struct Migration {
     pub sql: &'static str,
 }
 
-pub const SCHEMA_VERSION: i64 = 3;
+pub const SCHEMA_VERSION: i64 = 4;
 
 pub const MIGRATIONS: &[Migration] = &[
     Migration { version: 1, sql: V1 },
     Migration { version: 2, sql: "CREATE TABLE native_scope_anchors (space_id TEXT PRIMARY KEY NOT NULL REFERENCES spaces(id) ON DELETE CASCADE, canonical_root TEXT NOT NULL);" },
     Migration { version: 3, sql: "CREATE TABLE artifact_operations (id TEXT PRIMARY KEY NOT NULL, run_id TEXT NOT NULL REFERENCES runs(id), review_revision INTEGER NOT NULL, state TEXT NOT NULL CHECK(state IN ('prepared','committed','aborted')), created_at TEXT NOT NULL); CREATE UNIQUE INDEX idx_one_pending_artifact ON artifact_operations(run_id) WHERE state='prepared';" },
+    Migration { version: 4, sql: "ALTER TABLE artifact_operations ADD COLUMN kind TEXT NOT NULL DEFAULT 'apply' CHECK(kind IN ('apply','restore')); UPDATE artifact_operations SET kind='restore' WHERE id LIKE 'restore-%';" },
 ];
 
 const V1: &str = r#"

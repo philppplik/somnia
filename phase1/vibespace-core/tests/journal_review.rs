@@ -6,9 +6,9 @@
 //! Everything else pins an invariant of the repair (green).
 
 use async_trait::async_trait;
+use somnia_vibespace_checkpoints as cp;
 use somnia_vibespace_core::{runtime::Runtime, wire::*};
 use somnia_vibespace_storage as db;
-use somnia_vibespace_checkpoints as cp;
 use std::sync::{
     atomic::{AtomicUsize, Ordering},
     Arc,
@@ -66,7 +66,13 @@ fn setup() -> Fixture {
             },
         })
         .unwrap();
-    Fixture { data, project, rt, space, studio }
+    Fixture {
+        data,
+        project,
+        rt,
+        space,
+        studio,
+    }
 }
 
 struct WriteThenDone(AtomicUsize);
@@ -124,7 +130,10 @@ async fn drive(rt: &Arc<Runtime>, id: &str) -> SnapshotReply {
         }
         if matches!(
             snapshot.snapshot.execution_state,
-            ExecutionState::Done | ExecutionState::Failed | ExecutionState::Stopped | ExecutionState::Crashed
+            ExecutionState::Done
+                | ExecutionState::Failed
+                | ExecutionState::Stopped
+                | ExecutionState::Crashed
         ) {
             return snapshot;
         }
@@ -139,13 +148,12 @@ async fn completed_run(f: &Fixture, edits_two: bool) -> (String, String) {
     } else {
         Arc::new(WriteThenDone(AtomicUsize::new(0)))
     };
-    let run = f
-        .rt
-        .start(start_request(&f.studio), transport, local_config())
-        .await
-        .unwrap()
-        .snapshot
-        .run_id;
+    let run =
+        f.rt.start(start_request(&f.studio), transport, local_config())
+            .await
+            .unwrap()
+            .snapshot
+            .run_id;
     let done = drive(&f.rt, &run).await;
     let revision = done.snapshot.review.unwrap().revision;
     (run, revision)
@@ -166,9 +174,13 @@ fn prepared_ids(f: &Fixture, run: &str) -> (cp::Digest, String) {
 fn inject_postcommit_failure(f: &Fixture, run: &str, revision: &str) {
     let conn = rusqlite::Connection::open(f.data.path().join("vibespace.sqlite")).unwrap();
     conn.execute_batch("CREATE TRIGGER fail_apply_finish BEFORE UPDATE ON artifact_operations WHEN NEW.state='committed' BEGIN SELECT RAISE(ABORT,'injected postcommit DB failure'); END;").unwrap();
-    assert!(f.rt.apply(run, revision, vec!["project/hello.txt".into()]).is_err());
+    assert!(f
+        .rt
+        .apply(run, revision, vec!["project/hello.txt".into()])
+        .is_err());
     assert_eq!(f.rt.store.pending_artifact_applies().unwrap().len(), 1);
-    conn.execute_batch("DROP TRIGGER fail_apply_finish").unwrap();
+    conn.execute_batch("DROP TRIGGER fail_apply_finish")
+        .unwrap();
     drop(conn);
 }
 
@@ -189,7 +201,11 @@ async fn blocker_committed_apply_with_deleted_copy_makes_open_fail_forever() {
     inject_postcommit_failure(&f, &run, &revision);
     let (_, isolated) = prepared_ids(&f, &run);
     std::fs::remove_dir_all(
-        f.data.path().join("artifacts").join("isolated").join(&isolated),
+        f.data
+            .path()
+            .join("artifacts")
+            .join("isolated")
+            .join(&isolated),
     )
     .unwrap();
 
@@ -201,13 +217,20 @@ async fn blocker_committed_apply_with_deleted_copy_makes_open_fail_forever() {
     );
     let rt2 = reopened.unwrap();
     assert!(rt2.store.pending_artifact_applies().unwrap().is_empty());
-    assert!(rt2
-        .list_studios()
-        .unwrap()
-        .iter()
-        .find(|s| s.studio_id == f.studio.studio_id)
-        .unwrap()
-        .can_start);
+    let unavailable = rt2.snapshot(&run).unwrap().snapshot;
+    assert_eq!(unavailable.review_state, ReviewState::Ready);
+    assert!(!unavailable.capabilities.apply);
+    let review = unavailable.review.unwrap();
+    assert!(review.revision.ends_with(":unavailable"));
+    rt2.discard(&run, &review.revision).unwrap();
+    assert!(
+        rt2.list_studios()
+            .unwrap()
+            .iter()
+            .find(|s| s.studio_id == f.studio.studio_id)
+            .unwrap()
+            .can_start
+    );
 }
 
 /// Same wedge through a different, non-adversarial trigger: the user deletes
@@ -256,8 +279,7 @@ async fn crash_between_intent_and_first_write_aborts_and_allows_retry() {
             },
         },
         |operation, preapply| {
-            f.rt
-                .store
+            f.rt.store
                 .begin_artifact_apply(
                     operation,
                     &run,
@@ -278,7 +300,10 @@ async fn crash_between_intent_and_first_write_aborts_and_allows_retry() {
         std::fs::read_to_string(f.project.path().join("hello.txt")).unwrap(),
         "before"
     );
-    assert_eq!(rt2.store.get_run(&run).unwrap().review, db::ReviewState::Ready);
+    assert_eq!(
+        rt2.store.get_run(&run).unwrap().review,
+        db::ReviewState::Ready
+    );
 
     // Retry with the same revision now succeeds.
     rt2.apply(&run, &revision, vec!["project/hello.txt".into()])
@@ -287,7 +312,10 @@ async fn crash_between_intent_and_first_write_aborts_and_allows_retry() {
         std::fs::read_to_string(f.project.path().join("hello.txt")).unwrap(),
         "after"
     );
-    assert_eq!(rt2.store.get_run(&run).unwrap().review, db::ReviewState::Applied);
+    assert_eq!(
+        rt2.store.get_run(&run).unwrap().review,
+        db::ReviewState::Applied
+    );
 }
 
 /// Crash window 2: process dies MID-PLAN (first file written, second not).
@@ -317,8 +345,7 @@ async fn crash_mid_plan_rolls_back_partial_original_writes() {
             },
         },
         |operation, preapply| {
-            f.rt
-                .store
+            f.rt.store
                 .begin_artifact_apply(
                     operation,
                     &run,
@@ -338,7 +365,10 @@ async fn crash_mid_plan_rolls_back_partial_original_writes() {
         "partial original write must be rolled back"
     );
     assert!(!f.project.path().join("second.txt").exists());
-    assert_eq!(rt2.store.get_run(&run).unwrap().review, db::ReviewState::Ready);
+    assert_eq!(
+        rt2.store.get_run(&run).unwrap().review,
+        db::ReviewState::Ready
+    );
 
     rt2.apply(
         &run,
@@ -350,7 +380,10 @@ async fn crash_mid_plan_rolls_back_partial_original_writes() {
         std::fs::read_to_string(f.project.path().join("second.txt")).unwrap(),
         "after"
     );
-    assert_eq!(rt2.store.get_run(&run).unwrap().review, db::ReviewState::Applied);
+    assert_eq!(
+        rt2.store.get_run(&run).unwrap().review,
+        db::ReviewState::Applied
+    );
 }
 
 /// Broken projection degrades to an explicitly unavailable review: apply
@@ -362,7 +395,11 @@ async fn broken_projection_exposes_unavailable_review_and_epoch_bound_discard() 
     let (run, _) = completed_run(&f, false).await;
     let (_, isolated) = prepared_ids(&f, &run);
     std::fs::remove_dir_all(
-        f.data.path().join("artifacts").join("isolated").join(&isolated),
+        f.data
+            .path()
+            .join("artifacts")
+            .join("isolated")
+            .join(&isolated),
     )
     .unwrap();
 
@@ -395,15 +432,14 @@ async fn restore_persists_labeled_undo_and_keeps_review_axis() {
     let (run, revision) = completed_run(&f, false).await;
     f.rt.apply(&run, &revision, vec!["project/hello.txt".into()])
         .unwrap();
-    let undo = f
-        .rt
-        .snapshot(&run)
-        .unwrap()
-        .snapshot
-        .checkpoints
-        .into_iter()
-        .find(|c| c.label == "Before Apply (Undo)")
-        .unwrap();
+    let undo =
+        f.rt.snapshot(&run)
+            .unwrap()
+            .snapshot
+            .checkpoints
+            .into_iter()
+            .find(|c| c.label == "Before Apply (Undo)")
+            .unwrap();
     f.rt.restore(&run, &undo.checkpoint_id).unwrap();
     assert_eq!(
         std::fs::read_to_string(f.project.path().join("hello.txt")).unwrap(),
@@ -411,9 +447,14 @@ async fn restore_persists_labeled_undo_and_keeps_review_axis() {
     );
     let checkpoints = f.rt.snapshot(&run).unwrap().snapshot.checkpoints;
     assert!(
-        checkpoints.iter().any(|c| c.label == "Before Restore (Undo)"),
+        checkpoints
+            .iter()
+            .any(|c| c.label == "Before Restore (Undo)"),
         "restore must persist its own labeled Undo: {:?}",
-        checkpoints.iter().map(|c| c.label.clone()).collect::<Vec<_>>()
+        checkpoints
+            .iter()
+            .map(|c| c.label.clone())
+            .collect::<Vec<_>>()
     );
     assert_eq!(
         f.rt.store.get_run(&run).unwrap().review,
@@ -421,4 +462,46 @@ async fn restore_persists_labeled_undo_and_keeps_review_axis() {
         "restore must not rewrite the review axis"
     );
     assert!(f.rt.store.pending_artifact_applies().unwrap().is_empty());
+}
+
+#[tokio::test]
+async fn artifact_operation_kind_and_id_are_checked_before_persistence() {
+    let f = setup();
+    let (run, _) = completed_run(&f, false).await;
+    let revision = f.rt.store.get_run(&run).unwrap().review_revision;
+    let reference = format!("sha256:{}", "a".repeat(64));
+    for id in [
+        "restore-forged",
+        "../apply-escape",
+        "apply/bad",
+        "arbitrary",
+    ] {
+        assert!(f
+            .rt
+            .store
+            .begin_artifact_apply(id, &run, revision, &reference)
+            .is_err());
+    }
+    assert!(f.rt.store.pending_artifact_operations().unwrap().is_empty());
+    f.rt.store
+        .begin_artifact_operation(
+            "restore-native-test",
+            &run,
+            revision,
+            &reference,
+            db::ArtifactOperationKind::Restore,
+        )
+        .unwrap();
+    assert_eq!(
+        f.rt.store.pending_artifact_operations().unwrap()[0].2,
+        db::ArtifactOperationKind::Restore
+    );
+    f.rt.store
+        .finish_artifact_apply("restore-native-test", true, false)
+        .unwrap();
+    assert_eq!(
+        f.rt.store.get_run(&run).unwrap().review,
+        db::ReviewState::Ready
+    );
+    assert_eq!(f.rt.store.get_run(&run).unwrap().review_revision, revision);
 }

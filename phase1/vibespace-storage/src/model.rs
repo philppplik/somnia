@@ -39,6 +39,7 @@ str_enum!(
 );
 str_enum!(ModelLocality { Local => "local", Cloud => "cloud" });
 str_enum!(ScopeKind { Project => "project", Personal => "personal" });
+str_enum!(ArtifactOperationKind { Apply => "apply", Restore => "restore" });
 str_enum!(CheckpointKind { Baseline => "baseline", Auto => "auto", PreApply => "pre_apply", Manual => "manual" });
 str_enum!(MemoryKind { Fact => "fact", Preference => "preference", Note => "note" });
 str_enum!(MemorySource { User => "user", Agent => "agent", Imported => "imported", Skill => "skill" });

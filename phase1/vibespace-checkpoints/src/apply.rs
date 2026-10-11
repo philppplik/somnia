@@ -561,9 +561,12 @@ impl Vault {
             Ok(bytes) => {
                 let receipt: serde_json::Value = serde_json::from_slice(&bytes)
                     .map_err(|_| Error::CorruptRecord("apply receipt".into()))?;
-                if receipt["id"] != id
-                    || !(receipt["kind"] == "apply" || receipt["kind"] == "restore")
-                {
+                let expected_kind = if id.starts_with("restore-") {
+                    "restore"
+                } else {
+                    "apply"
+                };
+                if receipt["id"] != id || receipt["kind"] != expected_kind {
                     return Err(Error::CorruptRecord("apply receipt mismatch".into()));
                 }
                 Ok(true)

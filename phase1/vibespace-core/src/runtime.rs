@@ -951,11 +951,13 @@ impl Runtime {
         })
     }
     fn reconcile_applies(&self) -> Result<()> {
-        for (operation, run) in self.store.pending_artifact_applies()? {
+        for (operation, run, kind) in self.store.pending_artifact_operations()? {
             let committed = self.vault.apply_committed(&operation)?;
             let complete = committed
-                && !operation.starts_with("restore-")
-                && self.review_projection(&run)?.files.is_empty();
+                && kind == db::ArtifactOperationKind::Apply
+                && self
+                    .review_projection(&run)
+                    .is_ok_and(|review| review.files.is_empty());
             self.store
                 .finish_artifact_apply(&operation, committed, complete)?;
         }
@@ -1076,11 +1078,12 @@ impl Runtime {
             &cp::RestoreOptions::default(),
             |operation, preapply| {
                 self.store
-                    .begin_artifact_apply(
+                    .begin_artifact_operation(
                         operation,
                         id,
                         run.review_revision,
                         &format!("sha256:{}", preapply.to_hex()),
+                        db::ArtifactOperationKind::Restore,
                     )
                     .map_err(|_| {
                         cp::Error::CorruptRecord(

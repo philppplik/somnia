@@ -264,3 +264,14 @@ existing unavailable-review projection) instead of failing open.
   coordinator's restore test). Consequence: the isolated copy with the agent's
   changes has no re-apply/discard path afterwards (both require
   `ready|conflict`). Accepted design; artifact cleanup remains open.
+
+### Repair of independent journal finding (e)
+
+The coordinator reproduced both red cases. Reconciliation now treats projection
+read failure as committed/incomplete, not as a veto on journal completion or
+Runtime::open. The explicit unavailable review keeps Apply off; the user can
+discard it by its persisted epoch. The deleted-copy test now checks that safe
+state, then explicitly discards and verifies canStart. It no longer requires
+canStart immediately while the unknown proposal intentionally remains Ready.
+Typed schema4 operation kind removes id-prefix decisions from DB review-axis
+transitions; private id kind/grammar is checked before persistence.

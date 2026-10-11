@@ -138,7 +138,7 @@ Review (independent of execution): `none -> ready -> applied | discarded | confl
 
 ## Schema and migrations
 
-`PRAGMA user_version` is the schema version (`SCHEMA_VERSION = 3`). Tables: `spaces, studios, runs, run_events, checkpoints, memory_items, memory_fts (+ triggers)`; full DDL is `V1` in `src/schema.rs`. Foreign keys are on; state/enum columns have `CHECK` constraints.
+`PRAGMA user_version` is the schema version (`SCHEMA_VERSION = 4`). Tables: `spaces, studios, runs, run_events, checkpoints, memory_items, memory_fts (+ triggers)`; full DDL is `V1` in `src/schema.rs`. Foreign keys are on; state/enum columns have `CHECK` constraints.
 
 Open sequence: (1) read-only check: `user_version` greater than supported => `NewerSchema` (nothing written); version 0 with existing tables => `ForeignDatabase`; (2) set WAL, `synchronous=FULL`, `foreign_keys=ON`; (3) apply all pending migrations in ONE `BEGIN IMMEDIATE` transaction, re-reading `user_version` inside it (safe for concurrent openers); any failure rolls back DDL and version (`Migration` error). Migrations must be contiguous from 1. Add a new one by appending `Migration { version: N+1, sql }` and bumping `SCHEMA_VERSION`.
 
@@ -198,3 +198,8 @@ reconciled by Core against Vault receipts on open and before artifact commands.
 Manual checkpoint events cannot consume lifecycle reserve. Undo references sort
 first in bounded checkpoint reads. AllActive restart includes unclaimed pending
 and paused runs as well as claimed/running; ExpiredLeases semantics are unchanged.
+
+Schema 4 records checked artifact operation kind (`apply` or `restore`) explicitly.
+State transitions use the stored kind, not id-prefix guesses. Native-generated
+ids must match the kind and a narrow character/length grammar. Legacy schema3
+operations migrate by their native-generated prefixes once.

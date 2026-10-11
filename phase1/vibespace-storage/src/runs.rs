@@ -614,35 +614,63 @@ impl Store {
         revision: i64,
         content_ref: &str,
     ) -> Result<()> {
+        self.begin_artifact_operation(
+            id,
+            run_id,
+            revision,
+            content_ref,
+            ArtifactOperationKind::Apply,
+        )
+    }
+    pub fn begin_artifact_operation(
+        &self,
+        id: &str,
+        run_id: &str,
+        revision: i64,
+        content_ref: &str,
+        kind: ArtifactOperationKind,
+    ) -> Result<()> {
+        let prefix = format!("{}-", kind.as_str());
+        if !id.starts_with(&prefix)
+            || id.len() > 128
+            || !id.chars().all(|c| c.is_ascii_alphanumeric() || c == '-')
+        {
+            return Err(Error::InvalidInput("invalid artifact operation id".into()));
+        }
         if !valid_content_ref(content_ref) {
             return Err(Error::InvalidInput("invalid undo reference".into()));
         }
         let now = self.now_str();
         self.write(|tx| {
             let run = get_run_conn(tx, run_id)?;
-            if !run.execution.is_terminal() || (!id.starts_with("restore-") && !matches!(run.review, ReviewState::Ready | ReviewState::Conflict)) || run.review_revision != revision { return Err(Error::Conflict("review changed".into())); }
+            if !run.execution.is_terminal() || (kind == ArtifactOperationKind::Apply && !matches!(run.review, ReviewState::Ready | ReviewState::Conflict)) || run.review_revision != revision { return Err(Error::Conflict("review changed".into())); }
             if run.last_sequence > limits::MAX_EVENTS_PER_RUN + limits::EVENT_RESERVE - 3 { return Err(Error::LimitExceeded("no durable apply event capacity".into())); }
             let checkpoint = new_id();
             let event = append_event_tx(tx, run_id, "run.checkpoint_created", &json!({"checkpointId":checkpoint,"kind":"pre_apply","contentRef":content_ref}), &now, true)?;
-            tx.execute("INSERT INTO checkpoints (id,space_id,run_id,kind,label,content_ref,event_sequence,created_at) VALUES (?1,?2,?3,'pre_apply',?4,?5,?6,?7)", params![checkpoint,run.space_id,run_id,if id.starts_with("restore-") {"Before Restore (Undo)"} else {"Before Apply (Undo)"},content_ref,event.sequence,now])?;
+            tx.execute("INSERT INTO checkpoints (id,space_id,run_id,kind,label,content_ref,event_sequence,created_at) VALUES (?1,?2,?3,'pre_apply',?4,?5,?6,?7)", params![checkpoint,run.space_id,run_id,if kind == ArtifactOperationKind::Restore {"Before Restore (Undo)"} else {"Before Apply (Undo)"},content_ref,event.sequence,now])?;
             append_event_tx(tx, run_id, "core.apply_prepared", &json!({"operationId":id}), &now, true)?;
-            tx.execute("INSERT INTO artifact_operations VALUES (?1,?2,?3,'prepared',?4)", params![id,run_id,revision,now])?;
+            tx.execute("INSERT INTO artifact_operations (id,run_id,review_revision,state,created_at,kind) VALUES (?1,?2,?3,'prepared',?4,?5)", params![id,run_id,revision,now,kind.as_str()])?;
             Ok(())
         })
     }
     pub fn pending_artifact_applies(&self) -> Result<Vec<(String, String)>> {
         self.read(|conn| { let mut stmt=conn.prepare("SELECT id,run_id FROM artifact_operations WHERE state='prepared' ORDER BY created_at,id")?; let rows=stmt.query_map([], |r| Ok((r.get(0)?,r.get(1)?)))?; Ok(rows.collect::<rusqlite::Result<Vec<_>>>()?) })
     }
+    pub fn pending_artifact_operations(
+        &self,
+    ) -> Result<Vec<(String, String, ArtifactOperationKind)>> {
+        self.read(|conn| { let mut stmt=conn.prepare("SELECT id,run_id,kind FROM artifact_operations WHERE state='prepared' ORDER BY created_at,id")?; let rows=stmt.query_map([], |r| Ok((r.get(0)?,r.get(1)?,enum_col(r,2,ArtifactOperationKind::parse)?)))?; Ok(rows.collect::<rusqlite::Result<Vec<_>>>()?) })
+    }
     /// Uses the reserved event. Atomic and idempotent, even after an event-budget failure.
     pub fn finish_artifact_apply(&self, id: &str, committed: bool, complete: bool) -> Result<()> {
         let now = self.now_str();
         self.write(|tx| {
-            let pending: Option<(String,i64)> = tx.query_row("SELECT run_id,review_revision FROM artifact_operations WHERE id=?1 AND state='prepared'", params![id], |r| Ok((r.get(0)?,r.get(1)?))).optional()?;
-            let Some((run_id,revision))=pending else { return Ok(()); };
+            let pending: Option<(String,i64,String)> = tx.query_row("SELECT run_id,review_revision,kind FROM artifact_operations WHERE id=?1 AND state='prepared'", params![id], |r| Ok((r.get(0)?,r.get(1)?,r.get(2)?))).optional()?;
+            let Some((run_id,revision,kind))=pending else { return Ok(()); };
             let run=get_run_conn(tx,&run_id)?;
             if run.review_revision!=revision { return Err(Error::Conflict("operation review changed".into())); }
             tx.execute("UPDATE artifact_operations SET state=?1 WHERE id=?2",params![if committed {"committed"} else {"aborted"},id])?;
-            if committed && !id.starts_with("restore-") { tx.execute("UPDATE runs SET review_state=?1,review_revision=review_revision+1,updated_at=?2 WHERE id=?3", params![if complete {"applied"} else {"ready"},now,run_id])?; }
+            if committed && kind == "apply" { tx.execute("UPDATE runs SET review_state=?1,review_revision=review_revision+1,updated_at=?2 WHERE id=?3", params![if complete {"applied"} else {"ready"},now,run_id])?; }
             append_event_tx(tx,&run_id,"core.apply_reconciled",&json!({"operationId":id,"committed":committed,"complete":complete}),&now,true)?;
             Ok(())
         })
