@@ -22,7 +22,7 @@ for(const mode of ['light','dark'])test(`real Changes UI reviews the exact app f
  await expect(page.getByTestId('versions-review-footer')).toHaveText(footer);
  const exact=await page.getByTestId('versions-review-message').innerText();expect(exact).not.toContain('Forged');
  expect(await page.evaluate(()=>(window as any).ipcCalls.filter((x:any)=>x.cmd==='git_commit'))).toHaveLength(0);
- await page.screenshot({path:`/downloads/commit-review-${mode}.png`});
+ await page.screenshot({path:`test-results/commit-review-${mode}.png`});
  // Editing revokes the snapshot, then re-review binds the changed body.
  await page.getByTestId('versions-body').fill('Reviewed notes');await expect(page.getByTestId('versions-commit-review')).toHaveCount(0);
  await page.getByTestId('versions-save').click();
