@@ -8,14 +8,14 @@ unverified here.
 ## Run
 
 ```sh
-npx tsx --test src/lib/vibespace/*.test.ts src/components/vibespace/*.test.tsx
+npx tsx --test src/lib/vibespace/*.test.ts src/components/vibespace/*.test.tsx test/vibespace/*.test.tsx
 npx tsc --ignoreConfig --noEmit --strict --skipLibCheck --types node,react --jsx react-jsx \
   --target ES2022 --module ESNext --moduleResolution Bundler \
-  src/lib/vibespace/*.ts src/components/vibespace/*.tsx src/components/vibespace/assets.d.ts
+  src/lib/vibespace/*.ts src/components/vibespace/*.tsx src/components/vibespace/assets.d.ts test/vibespace/*.ts test/vibespace/*.tsx
 VIBESPACE_SCREENSHOTS=/tmp/vs node src/components/vibespace/browser-fixture.mjs
 ```
 
-`vibespace.qa.test.tsx` needs `jsdom` (scratch install only). `qa-dom.ts` installs jsdom globals before react-dom loads.
+`test/vibespace/vibespace.qa.test.tsx` needs `jsdom` and its types (scratch install only). `test/vibespace/qa-dom.ts` installs jsdom globals before react-dom loads. Both live outside production `tsconfig.json`'s `src` include. Production code never imports this harness. Explicit QA typecheck: `npx tsc -p test/vibespace/tsconfig.json`. Run QA only when its scratch dependencies are supplied; production build does not require jsdom.
 
 ## Findings (all fixed; regression tests in the QA suites, 0 todo/skip)
 

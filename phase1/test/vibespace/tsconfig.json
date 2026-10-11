@@ -1,0 +1,11 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {"types": ["node", "react"]},
+  "include": [
+    "../../src/lib/vibespace/*.ts",
+    "../../src/components/vibespace/*.tsx",
+    "../../src/components/vibespace/assets.d.ts",
+    "./*.ts",
+    "./*.tsx"
+  ]
+}

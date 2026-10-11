@@ -3,8 +3,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {dom} from './qa-dom';
 import {createRoot} from 'react-dom/client';import {act} from 'react';
-import {VibeSpaceHome} from './VibeSpaceHome';import {CreateStudioForm} from './CreateForms';
-import {createFixtureVibeSpaceTransport,fixtureSnapshot} from '../../lib/vibespace/fixture';
+import {VibeSpaceHome} from '../../src/components/vibespace/VibeSpaceHome';import {CreateStudioForm} from '../../src/components/vibespace/CreateForms';
+import {createFixtureVibeSpaceTransport,fixtureSnapshot} from '../../src/lib/vibespace/fixture';
 const flush=()=>act(async()=>{await new Promise(r=>setTimeout(r,5));});
 const mount=async(node:React.ReactElement)=>{const el=document.createElement('div');document.body.appendChild(el);const root=createRoot(el);await act(async()=>{root.render(node);});await flush();return {el,root};};
 const btn=(el:Element,name:RegExp)=>[...el.querySelectorAll('button')].find(b=>name.test(b.textContent??''))!;
@@ -47,7 +47,7 @@ test('QA component F-6: Create Studio submits the model the user chose even if t
 });
 
 test('QA N2: a consumed folder grant is dropped after Create Space (success or failure); a fresh Choose folder is required to retry',async()=>{
- const {CreateSpaceForm}=await import('./CreateForms');
+ const {CreateSpaceForm}=await import('../../src/components/vibespace/CreateForms');
  const el=document.createElement('div');document.body.appendChild(el);const root=createRoot(el);const sent:string[]=[];let chosen=0;let ok=false;
  await act(async()=>{root.render(<CreateSpaceForm busy={false} onChoose={async()=>({folderGrantId:`g${++chosen}`,folder:'/f'})} onCreate={async i=>{sent.push((i as {folderGrantId:string}).folderGrantId);return ok;}} onClose={()=>{}}/>);});
  const set=Object.getOwnPropertyDescriptor(dom.window.HTMLInputElement.prototype,'value')!.set!;const input=el.querySelector('input')!;
