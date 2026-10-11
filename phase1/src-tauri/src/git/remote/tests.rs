@@ -45,9 +45,23 @@ struct Fx {
 }
 
 /// bare remote with one commit on main; `a` is the pusher; `b` is a plain clone (the project under test).
+/// On Windows `canonicalize` returns verbatim `\\?\` paths, which Git cannot parse as a
+/// local remote URL ("hostname contains invalid characters"). Strip the prefix so the
+/// fixture remote stays a plain drive-letter path Git accepts.
+fn fixture_base(tmp: &tempfile::TempDir) -> PathBuf {
+    let canonical = tmp.path().canonicalize().unwrap();
+    #[cfg(windows)]
+    {
+        let text = canonical.to_string_lossy();
+        if let Some(stripped) = text.strip_prefix("\\\\?\\") {
+            return PathBuf::from(stripped);
+        }
+    }
+    canonical
+}
 fn fx() -> Fx {
     let tmp = tempfile::tempdir().unwrap();
-    let base = tmp.path().canonicalize().unwrap();
+    let base = fixture_base(&tmp);
     let bare = base.join("remote.git");
     std::fs::create_dir_all(&bare).unwrap();
     git(&bare, &["init", "-q", "--bare", "-b", "main"]);
