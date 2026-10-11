@@ -268,7 +268,12 @@ pub fn pull_apply(env: &RemoteEnv, req: &PullApplyRequest) -> RResult<PullResult
 fn gr_merge(root: &Path, target: &str) -> RResult<()> {
     let os = ["merge", "--ff-only", "--no-edit", "--no-verify", target];
     let args: Vec<&OsStr> = os.iter().map(|a| OsStr::new(*a)).collect();
-    let out = run_git(root, &args, Mode::Write, Duration::from_secs(120), None, &[])?;
+    // Same isolated config as every read in this module: otherwise a system-level
+    // core.autocrlf (Git for Windows default) makes the merge checkout write CRLF
+    // while the isolated status/diff reads expect the committed bytes.
+    let env = super::iso_env();
+    let env_ref: Vec<(&str, &OsStr)> = env.iter().map(|(k, v)| (*k, v.as_os_str())).collect();
+    let out = run_git(root, &args, Mode::Write, Duration::from_secs(120), None, &env_ref)?;
     if out.code == Some(0) {
         return Ok(());
     }
