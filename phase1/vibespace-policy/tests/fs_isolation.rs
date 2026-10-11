@@ -430,7 +430,7 @@ fn advisory_trailing_slash_junction_paths_cannot_escape() {
 #[test]
 fn invalid_advisory_path_forms_are_refused_at_proposal_without_fixture_panic() {
     let e=env();
-    for rel in [r"evil\secret.txt", r"evil\secret.txt", r"evil", "../outside/secret.txt", "/outside/secret.txt"] {
+    for rel in ["evil\\secret.txt", "evil\\\\secret.txt", "evil\\", "../outside/secret.txt", "/outside/secret.txt"] {
         assert!(matches!(e.read(rel),Err(ExecError::Fs(FsError::InvalidPath))));
         assert!(matches!(e.write(rel,b"PWNED"),Err(ExecError::Fs(FsError::InvalidPath))));
         assert!(matches!(e.delete(rel),Err(ExecError::Fs(FsError::InvalidPath))));
