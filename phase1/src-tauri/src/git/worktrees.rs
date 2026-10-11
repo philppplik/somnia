@@ -182,7 +182,23 @@ fn destination(project_root: &Path, value: &str) -> GResult<PathBuf> {
             ));
         }
     }
-    Ok(dest)
+    Ok(plain_path(dest))
+}
+
+/// `canonicalize` yields `\\?\C:\...` on Windows, which Git cannot create directories under
+/// ("could not create leading directories of '//?/C:/..'"). All containment checks above run on the
+/// canonical form; only the path handed to Git and returned to callers drops the verbatim prefix.
+fn plain_path(p: PathBuf) -> PathBuf {
+    #[cfg(windows)]
+    {
+        let text = p.to_string_lossy();
+        if let Some(rest) = text.strip_prefix(r"\\?\") {
+            if !rest.starts_with("UNC\\") {
+                return PathBuf::from(rest.to_owned());
+            }
+        }
+    }
+    p
 }
 
 fn validate_branch(root: &Path, name: &str) -> GResult<()> {

@@ -369,12 +369,13 @@ fn porcelain_paths_with_quotes_unicode_and_spaces_roundtrip() {
     let mut req = f.req("quoted");
     req.destination = f
         .outside
-        .join("space \" café")
+        .join(if cfg!(windows) { "space café" } else { "space \" café" })
         .to_string_lossy()
         .into_owned();
     let plan = git_worktree_plan(&f.root, &req, &clean(), &f.trust).unwrap();
     let a = git_worktree_add(&f.root, &plan, &clean(), &f.trust).unwrap();
-    assert_eq!(a.root, req.destination);
+    // Git lists Windows paths with forward slashes.
+    assert_eq!(a.root.replace('\\', "/"), req.destination.replace('\\', "/"));
     git::trust_repo(Path::new(&a.root), &mut f.trust).unwrap();
     git_worktree_remove(&f.root, &f.remove_req(&a, false), &clean(), &f.trust).unwrap();
 }
