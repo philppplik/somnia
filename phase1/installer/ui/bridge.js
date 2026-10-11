@@ -7,7 +7,7 @@ function dispatch(m) {
   else if (m.event) listeners.forEach((l) => l(m.event));
 }
 function call(method, args) {
-  return new Promise((res) => { const id = nextId++; pending.set(id, res); wv.postMessage({ id, method, args }); });
+  return new Promise((res) => { const id = nextId++; pending.set(id, res); wv.postMessage(JSON.stringify({ id, method, args })); });
 }
 async function mockBridge() {
   const flag = new URLSearchParams(location.search).get('mock') || 'ok';
@@ -36,7 +36,9 @@ async function mockBridge() {
 }
 export async function createBridge() {
   if (!wv) { const b = await mockBridge(); b.mock = true; b.onEvent = (cb) => listeners.push(cb); return b; }
-  wv.addEventListener('message', (e) => dispatch(typeof e.data === 'string' ? JSON.parse(e.data) : e.data));
+  window.__somniaDispatch = dispatch; // the shell calls this via evaluate_script
+  // borderless window: dragging the top strip (outside controls) moves it
+  document.addEventListener('mousedown', (e) => { if (e.button === 0 && e.clientY < 44 && !e.target.closest('button')) wv.postMessage(JSON.stringify({ method: 'drag', args: [] })); });
   const b = {}; for (const m of ['init', 'validate', 'browse', 'start', 'cancel', 'launch', 'close', 'openLog', 'openUrl']) b[m] = (...a) => call(m, a);
   b.onEvent = (cb) => listeners.push(cb); return b;
 }
