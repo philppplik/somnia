@@ -481,7 +481,9 @@ fn run_helper(args: &[&str], env: &[(&str, &str)], stdin: &str) -> (Option<i32>,
         c.env(k, v);
     }
     let mut ch = c.spawn().unwrap();
-    ch.stdin.take().unwrap().write_all(stdin.as_bytes()).unwrap();
+    // The helper exits immediately on failure modes (no lease env etc.); the
+    // write can then race its exit (EPIPE). The asserted outputs are the real check.
+    let _ = ch.stdin.take().unwrap().write_all(stdin.as_bytes());
     let o = ch.wait_with_output().unwrap();
     (o.status.code(), String::from_utf8_lossy(&o.stdout).into_owned(), String::from_utf8_lossy(&o.stderr).into_owned())
 }
