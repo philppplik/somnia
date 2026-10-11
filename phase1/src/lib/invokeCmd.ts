@@ -61,6 +61,8 @@ type Result<N extends CommandName> = N extends keyof CommandContracts ? CommandC
 
 /** Receives boundary facts the logger (log.ts, D1-B) turns into events. invokeCmd itself never logs. */
 export interface CommandReporter {
+  /** Unexpected command rejection. The app attaches the local Problems sink. */
+  failed?(error: CommandError): void;
   /** ACL/capability denial. Already rate-limited to 1/min per cmd+window. */
   aclDenied(info: { cmd: string; window: string; message: string }): void;
 }
@@ -136,6 +138,8 @@ export async function invokeCmd<N extends CommandName>(name: N, ...rest: Rest<N>
   try {
     return (await transport(name, args)) as Result<N>;
   } catch (raw) {
-    throw normalize(name, raw, opts);
+    const error = normalize(name, raw, opts);
+    if (!error.expected) { try { reporter.failed?.(error); } catch { /* diagnostics cannot change IPC semantics */ } }
+    throw error;
   }
 }

@@ -2490,5 +2490,12 @@
   "ext.col.extension": "Extension",
   "ext.col.action": "Action",
   "ext.col.target": "Target",
-  "ext.col.result": "Result"
+  "ext.col.result": "Result",
+  "problems.clearRuntime": "Clear runtime history",
+  "problems.empty": "No detected problems. Runtime errors appear here when they occur.",
+  "problems.application": "Application",
+  "problems.noSource": "No source location",
+  "problems.details": "Technical details",
+  "problems.session": "Runtime history is local to this session. Clearing it does not fix errors or clear syntax diagnostics.",
+  "problems.dropped": "{count} older runtime entries were discarded."
 }

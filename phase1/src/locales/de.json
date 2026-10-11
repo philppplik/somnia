@@ -2490,5 +2490,12 @@
   "ext.col.extension": "Erweiterung",
   "ext.col.action": "Aktion",
   "ext.col.target": "Ziel",
-  "ext.col.result": "Ergebnis"
+  "ext.col.result": "Ergebnis",
+  "problems.clearRuntime": "Laufzeitverlauf leeren",
+  "problems.empty": "Keine erkannten Probleme. Laufzeitfehler erscheinen hier, sobald sie auftreten.",
+  "problems.application": "Anwendung",
+  "problems.noSource": "Kein Quellort",
+  "problems.details": "Technische Details",
+  "problems.session": "Der Laufzeitverlauf gilt nur für diese Sitzung. Leeren behebt keine Fehler und entfernt keine Syntaxdiagnosen.",
+  "problems.dropped": "{count} ältere Laufzeiteinträge wurden verworfen."
 }

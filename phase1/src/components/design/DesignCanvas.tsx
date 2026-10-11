@@ -1,3 +1,4 @@
+import {reportError} from '../../lib/log';
 import {DesignToolbox} from './DesignToolbox';
 import {chooseDesignTool,deleteDesignNodes} from '../../lib/design/panelAdapter';
 import {toolForKey} from '../../lib/design/tools';
@@ -22,7 +23,7 @@ export function DesignCanvas(){
   if((event.ctrlKey||event.metaKey)&&event.key.toLowerCase()==='z'){event.preventDefault();if(event.shiftKey)redoDesign();else undoDesign();}
   if(event.key==='Delete'&&board&&s.selection){event.preventDefault();deleteDesignNodes(s.selectedIds);}
  }}>
- <input ref={input} data-testid="design-import-input" className="hidden" type="file" accept=".somdesign,application/json" onChange={async event=>{const file=event.target.files?.[0];event.target.value='';if(!file)return;try{if(file.size>5_000_000)throw new Error('Design files must be under 5 MB.');const doc=parseDesignDocument(await file.text());guardReplace(()=>loadDesign(doc));setError('');}catch(error){setError(error instanceof Error?error.message:'Could not open design.');}}}/>
+ <input ref={input} data-testid="design-import-input" className="hidden" type="file" accept=".somdesign,application/json" onChange={async event=>{const file=event.target.files?.[0];event.target.value='';if(!file)return;try{if(file.size>5_000_000)throw new Error('Design files must be under 5 MB.');const doc=parseDesignDocument(await file.text());guardReplace(()=>loadDesign(doc));setError('');}catch(error){reportError('design.import',error,{context:{studio:'design',file:file.name}});setError(error instanceof Error?error.message:'Could not open design.');}}}/>
  {!board||!s.document?<StudioEmptyState studio="design" icon={<span>▧</span>} onOpen={()=>input.current?.click()} onCreate={startDesign}/>:<>
  <div className="flex shrink-0 flex-wrap items-center gap-2 border-b border-subtle p-3">
  <span className="mr-auto text-sm font-medium">{s.document.name}<span className="ml-2 text-xs text-ink-2">{s.dirty?'Unsaved changes':'Opened project'}</span></span>

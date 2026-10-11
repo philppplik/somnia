@@ -2490,5 +2490,12 @@
   "ext.col.extension": "Extensão",
   "ext.col.action": "Ação",
   "ext.col.target": "Destino",
-  "ext.col.result": "Resultado"
+  "ext.col.result": "Resultado",
+  "problems.clearRuntime": "Limpar histórico de execução",
+  "problems.empty": "Nenhum problema detectado. Os erros de execução aparecem aqui quando ocorrem.",
+  "problems.application": "Aplicativo",
+  "problems.noSource": "Sem local de origem",
+  "problems.details": "Detalhes técnicos",
+  "problems.session": "O histórico de execução é local a esta sessão. Limpá-lo não corrige erros nem remove diagnósticos de sintaxe.",
+  "problems.dropped": "{count} entradas antigas de execução foram descartadas."
 }

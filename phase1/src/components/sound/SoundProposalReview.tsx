@@ -1,3 +1,4 @@
+import {reportError} from '../../lib/log';
 import {useEffect,useMemo,useState} from 'react';
 import {Button} from '../ui/button';
 import {useT} from '../../lib/useT';
@@ -12,7 +13,7 @@ export function SoundProposalReview({name,beforeText,afterText}:{name:string;bef
  useEffect(()=>{setUrl('');setError('');},[afterText]);
  useEffect(()=>()=>{if(url)URL.revokeObjectURL(url);},[url]);
  const label=(id:string)=>id.startsWith('effect.')?t('sound.review.param',{name:id.slice(7)}):t(`sound.review.${id}`);
- const preview=async()=>{setBusy(true);setError('');try{setUrl(await renderSoundPreview(name,parseSound(afterText)));}catch(e){setError(e instanceof Error?e.message:String(e));}finally{setBusy(false);}};
+ const preview=async()=>{setBusy(true);setError('');try{setUrl(await renderSoundPreview(name,parseSound(afterText)));}catch(e){reportError('sound.operation',e,{context:{studio:'sound'}});setError(e instanceof Error?e.message:String(e));}finally{setBusy(false);}};
  return <div className="grid gap-2 text-xs text-ink-2" data-testid="sound-review">
   {changes===null?<p className="m-0" role="alert">{t('sound.review.invalid')}</p>
   :changes.length===0?<p className="m-0">{t('sound.review.none')}</p>

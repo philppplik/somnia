@@ -1,3 +1,4 @@
+import {reportError} from '../log';
 /** Vector Studio session: one open vector document, selection, tool, view and undo history. Framework-agnostic store plus a React hook. */
 import {useSyncExternalStore} from 'react';
 import {exportSvg,importSvg,normalizeDoc,SvgImportError,type Diagnostic,type Point,type Style,type VectorDocument,type VectorPath} from '../vectorio';
@@ -20,7 +21,7 @@ let past:VectorDocument[]=[],future:VectorDocument[]=[];
 const fresh=():VectorSession=>({name:'Untitled.svg',doc:{width:1024,height:1024,paths:[]},selection:[],tool:'select',zoom:1,pan:{x:0,y:0},dirty:false,canUndo:false,canRedo:false,diagnostics:[],error:null,open:false,nodePath:null,selectedNode:null});
 let state:VectorSession=fresh();
 const listeners=new Set<()=>void>();
-const set=(patch:Partial<VectorSession>)=>{state={...state,...patch,canUndo:past.length>0,canRedo:future.length>0};listeners.forEach(l=>l());};
+const set=(patch:Partial<VectorSession>)=>{if(patch.error)reportError('vector.engine',patch.error,{context:{studio:'vector',file:patch.name??state.name}});state={...state,...patch,canUndo:past.length>0,canRedo:future.length>0};listeners.forEach(l=>l());};
 export const getVectorSession=()=>state;
 export const subscribeVector=(fn:()=>void)=>{listeners.add(fn);return()=>{listeners.delete(fn);};};
 export const useVectorSession=()=>useSyncExternalStore(subscribeVector,getVectorSession,getVectorSession);
@@ -37,7 +38,7 @@ export function openSvgSource(source:string,name='Imported.svg',
  opts:{strict?:boolean;confirmed?:boolean}={}):boolean{
  try{const r=importSvg(source,{strict:opts.strict??true});if(!opts.confirmed&&!confirmReplacement())return false;past=[];future=[];
   state={...fresh(),name,doc:normalizeDoc(r.doc),diagnostics:r.warnings,open:true};listeners.forEach(l=>l());return true;}
- catch(e){const diagnostics=e instanceof SvgImportError?e.diagnostics:[];
+ catch(e){reportError('vector.import',e,{context:{studio:'vector',file:name}});const diagnostics=e instanceof SvgImportError?e.diagnostics:[];
   set({error:e instanceof Error?e.message:String(e),diagnostics});return false;}}
 const finite=(...values:number[])=>{if(!values.every(Number.isFinite))throw new RangeError('Coordinates and style numbers must be finite.');};
 /** Validate before touching history or state. Do not normalise away invalid caller input. */

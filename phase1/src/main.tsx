@@ -1,3 +1,4 @@
+import {problemsStore,reportCommandProblem,installProblemsFetch} from './lib/problemsRuntime';
 import {heldAgentPaths} from './lib/agent/autosaveHold';
 import {newBlankFile} from './lib/projectActions';
 import {zipWebFsOptions} from './lib/zipWorkingCopy';
@@ -28,9 +29,12 @@ import {installNativeIntake} from './lib/intake/installNativeIntake';
 import {setCommandReporter} from './lib/invokeCmd';
 import {restoreNativeDialogs} from './lib/nativeDialogs';
 import {ErrorBoundary} from './components/ErrorBoundary';
+problemsStore.start();
+const stopProblemsFetch=installProblemsFetch();
+if(import.meta.hot)import.meta.hot.dispose(()=>{problemsStore.stop();stopProblemsFetch();});
 installGlobalErrorHandlers();
 // invokeCmd never logs itself; the bootstrap attaches the logger here (keeps log.ts and invokeCmd.ts free of an import cycle).
-setCommandReporter({aclDenied:reportAclDenied});
+setCommandReporter({aclDenied:reportAclDenied,failed:reportCommandProblem});
 // Must run before any guard can fire: removes tauri-plugin-dialog's async window.confirm/alert overrides.
 restoreNativeDialogs();
 // D3: creates the diagnostics client/stores and starts the crash review synchronously, BEFORE the

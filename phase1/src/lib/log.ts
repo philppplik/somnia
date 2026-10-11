@@ -33,6 +33,9 @@ export function describeError(error:unknown,max=1000):string{
  return clip(redactText(typeof error==='string'?error:(()=>{try{return JSON.stringify(error)??String(error);}catch{return String(error);}})()),1000);
 }
 const buffer:LogEntry[]=[];
+const logSubscribers=new Set<(entry:LogEntry)=>void>();
+/** Live local diagnostics, including legacy engine errors. Entries are already redacted. */
+export function subscribeLogEntries(fn:(entry:LogEntry)=>void){logSubscribers.add(fn);return()=>{logSubscribers.delete(fn);};}
 let noticeSink:((text:string)=>void)|null=null;
 let lastKey='',lastAt=0,suppressed=0;
 /** The UI registers how a non-blocking hint is shown (the status notice). Kept out of this module to avoid import cycles. */
@@ -46,15 +49,17 @@ function toNative(entry:LogEntry){
 export function log(level:LogLevel,source:string,message:string,context?:unknown):void{
  try{
   if(!LEVELS.includes(level))level='info';
-  const key=`${level}|${source}|${message}`,now=Date.now();
+  const entry:LogEntry={ts:new Date().toISOString(),level,source:clip(redactText(source),80),message:clip(redactText(message)),context:context===undefined?undefined:redactValue(context)};
+  const key=`${level}|${entry.source}|${entry.message}|${JSON.stringify(entry.context)}`,now=Date.now();
   // An error inside a render loop must not flood the file: identical entries within a second are counted, not repeated.
-  if(key===lastKey&&now-lastAt<1000){suppressed++;lastAt=now;return;}
+  if(key===lastKey&&now-lastAt<1000){suppressed++;lastAt=now;publishLogEntry(entry);return;}
   lastKey=key;lastAt=now;
   if(suppressed>0){const n=suppressed;suppressed=0;push({ts:new Date().toISOString(),level:'info',source:'log',message:`${n} identical entries suppressed`});}
-  push({ts:new Date().toISOString(),level,source:clip(redactText(source),80),message:clip(redactText(message)),context:context===undefined?undefined:redactValue(context)});
+  push(entry);
  }catch{/* logging must never throw */}
 }
-function push(entry:LogEntry){buffer.push(entry);if(buffer.length>BUFFER_MAX)buffer.shift();toNative(entry);if(import.meta.env?.DEV&&entry.level==='error')console.error(`[${entry.source}] ${entry.message}`);}
+function publishLogEntry(entry:LogEntry){for(const fn of [...logSubscribers]){try{fn(entry);}catch{/* observers must never break logging */}}}
+function push(entry:LogEntry){buffer.push(entry);if(buffer.length>BUFFER_MAX)buffer.shift();toNative(entry);publishLogEntry(entry);if(import.meta.env?.DEV&&entry.level==='error')console.error(`[${entry.source}] ${entry.message}`);}
 export const logInfo=(source:string,message:string,context?:unknown)=>log('info',source,message,context);
 export const logWarn=(source:string,message:string,context?:unknown)=>log('warn',source,message,context);
 /** Logs an error. With `notify`, also shows a short non-blocking hint in the UI (the log keeps the detail). */

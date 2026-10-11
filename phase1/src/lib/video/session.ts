@@ -1,3 +1,4 @@
+import {reportError} from '../log';
 import {useSyncExternalStore} from 'react';
 import {VideoEngine,type VideoEngineLike} from './engine';
 import {DEFAULT_FORMAT,exportName,type VideoFormat} from './recipe';
@@ -29,7 +30,7 @@ let factory:()=>VideoEngineLike=()=>new VideoEngine();
 let engine:VideoEngineLike|undefined,capsPromise:Promise<VideoCapabilities>|undefined;
 const emit=()=>listeners.forEach(l=>l());
 const put=(s:VideoSession)=>{sessions.set(s.name,s);emit();};
-const patch=(name:string,p:Partial<VideoSession>)=>{const s=sessions.get(name);if(s)put({...s,...p});};
+const patch=(name:string,p:Partial<VideoSession>,cause?:unknown)=>{if(p.error)reportError('video.engine',cause??p.error,{context:{studio:'video',file:name}});const s=sessions.get(name);if(s)put({...s,...p});};
 /** Tests replace the engine; production uses the mediabunny/WebCodecs worker. Drops all sessions. */
 export function setVideoEngineFactory(f:()=>VideoEngineLike){for(const n of [...sessions.keys()])closeVideo(n);engine?.dispose();engine=undefined;capsPromise=undefined;factory=f;}
 function getEngine(){
@@ -71,7 +72,7 @@ async function openVideoFresh(item:{name:string;url:string}):Promise<void>{
   if(!sessions.has(item.name))return;
   if(!probe.video)throw new Error('no video track');
   patch(item.name,{status:'ready',error:'',probe,ext:sniffed.ext,capabilities:await caps.catch(()=>null),clips:[fullClip(item.name,probe.duration)]});
- }catch(e){resetEngine(e);if(sessions.has(item.name))patch(item.name,{status:'error',error:message(e)});}
+ }catch(e){resetEngine(e);if(sessions.has(item.name))patch(item.name,{status:'error',error:message(e)},e);}
 }
 /** Applies a timeline edit and keeps every clip inside its source bounds. */
 export function editTimeline(root:string,edit:(clips:TimelineClip[])=>TimelineClip[]|null){
@@ -141,7 +142,7 @@ export async function runVideoExport(name:string):Promise<'exported'|'cancelled'
   return'exported';
  }catch(e){
   if(e instanceof Error&&e.name==='ExportCancelled'){patch(name,{status:'ready',progress:null});return'cancelled';}
-  resetEngine(e);if(sessions.has(name))patch(name,{status:'error',error:message(e),progress:null});
+  resetEngine(e);if(sessions.has(name))patch(name,{status:'error',error:message(e),progress:null},e);
   return'unavailable';
  }
 }

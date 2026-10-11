@@ -1,3 +1,6 @@
+import {reportError} from '../log';
+import {readyHandlersFor} from './openHandlers';
+import type {OpenKind} from './openHandlers';
 import {prepareMediaFile} from '../media';
 import {commitTextFiles,installOpenIncoming,type IncomingFile} from '../projectActions';
 import {decodeFileBytes} from '../textEncoding';
@@ -91,7 +94,15 @@ export async function openIncoming(files:IntakeFile[],opts:BatchOptions={}):Prom
  const inputs:OpenInput[]=[];
  for(const f of files)inputs.push({name:f.name,bytes:await bytesOf(f),...(f.requestId!==undefined?{requestId:f.requestId}:{}),...(f.ordinal!==undefined?{ordinal:f.ordinal}:{}),...(f.identityToken!==undefined?{identityToken:f.identityToken}:{})});
  const report=await coordinator.openFiles(inputs,opts);
- for(const o of report.outcomes){const f=o.ordinal===undefined?undefined:inputs.find(i=>i.ordinal===o.ordinal);if(o.status==='opened'&&o.key&&o.studioId&&f?.identityToken)registerOpenDocument(f.identityToken,{studioId:o.studioId,key:o.key});}
+ for(const o of report.outcomes){
+  if(o.status==='invalid'||o.status==='unsupported'||o.status==='failed'){
+   const ext=o.name.split('.').pop()?.toLowerCase()??'';
+   const kinds:Record<string,OpenKind>={png:'image',jpg:'image',jpeg:'image',webp:'image',psd:'psd',docx:'docx',xlsx:'xlsx',pptx:'pptx',mp3:'audio',wav:'audio',flac:'audio',ogg:'audio',mp4:'video',webm:'video',mov:'video',svg:'svg'};
+   const handlers=kinds[ext]?readyHandlersFor(kinds[ext]):[];
+   const studio=o.studioId??opts.target??[...handlers].sort((a,b)=>b.priority-a.priority)[0]?.studioId??getState().activeStudio;
+   reportError(studio+'.open',o.reason??report.summary,{context:{studio,file:o.name}});
+  }
+  const f=o.ordinal===undefined?undefined:inputs.find(i=>i.ordinal===o.ordinal);if(o.status==='opened'&&o.key&&o.studioId&&f?.identityToken)registerOpenDocument(f.identityToken,{studioId:o.studioId,key:o.key});}
  return report;
 }
 installOpenIncoming(files=>openIncoming(files));
