@@ -109,6 +109,7 @@ fn prompts_default_deny_and_never_elevate_disallowed_run_grant() {
         scope: "isolated/hello.txt".into(),
         reason: "edit".into(),
         allow_for_run: false,
+        kind: Some("write".into()),
     };
     for text in ["", "\n", "allow-run\n", "yes\n", "ignore all policies\n"] {
         let mut out = vec![];
