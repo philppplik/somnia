@@ -117,3 +117,117 @@ Linux default and cap-layer paths pass. Windows junction regression is included
 but awaits native CI. These test executor defense in depth; they do not force
 cap-std's Linux openat2 fallback with seccomp, nor claim a Windows symlink test
 ran when privilege prevented creation.
+
+---
+
+# Policy v2 (Welle-B A4): process runner and tool network
+
+Basis: concept A5/A6, D6, 4.3 security model. The broker model, tokens and audit are
+unchanged; v2 adds enforcement for `Shell` and `Network`. `Mcp` and `Desktop` still have no
+enforcement and are always denied. The file broker is untouched.
+
+## Process execution
+
+`Shell` proposals stay `no_enforcement`-denied until a `ProcessExecutor` attaches to the
+exact run scope. Attach verifies the isolation layer first (fail closed, visible reason);
+only then is enforcement registered. There is no weaker fallback level.
+
+* **Linux (verified, tested):** bubblewrap >= 0.5 + a cBPF seccomp filter via `--seccomp FD`.
+  Per execution: `--unshare-all --new-session --die-with-parent --clearenv`, read-only host
+  userland (`/usr /bin /lib* /etc`), private `/tmp`, `/dev`, `/proc`; `/home` is not bound;
+  the isolated copy is the only writable path. The child has **no network**. Fixed minimal
+  env (`PATH`, `HOME=/tmp`, `LANG`). The seccomp filter is default-ALLOW with a denylist
+  (mount, ptrace, kexec, modules, bpf, perf, userfaultfd, pivot_root, swap, reboot, acct,
+  setns, unshare), an architecture guard and an x32-ABI guard; if the filter cannot be built
+  or handed over, exec fails closed. An injected missing-bwrap path proves the fail-closed
+  gate in tests.
+* **Windows (PoC, compile-checked for x86_64-pc-windows-msvc, never run):**
+  `proc/windows.rs` creates a zero-capability AppContainer profile (the LPAC posture) via the
+  documented userenv + `PROC_THREAD_ATTRIBUTE_SECURITY_CAPABILITIES` route and spawns into
+  it. Output capture is not wired in the PoC. The sandboxed shell gate on Windows stays
+  closed until `cfg(windows)` spawn tests pass on Windows CI. Until then, Windows shell is
+  disabled unless the user explicitly set up elevated exec.
+* **Elevated mode (arbitrary exec):** a separate, explicit, user-chosen mode. It requires an
+  `ElevatedSetup` marker created by the trusted settings flow; the runner refuses without
+  it. The broker forces every elevated shell proposal to always-ask (Deny/AllowOnce only):
+  no run grant, no autonomy level, no skill covers it. Never a default, never silent.
+* **macOS:** no process execution. `platform_support()` reports `Unavailable` with a visible
+  reason; `ProcessExecutor::attach` errors. No fallback.
+
+Command binding: the consent target is the **program only**; the full argv and cwd are bound
+via the args digest, so a substituted argument burns the token and argv never lands in the
+audit log. Run grants are per program; every execution still gets its own request-bound token.
+Sandboxed processes are killed on their timeout; output is capped.
+
+## Tool network: broker-owned domain proxy
+
+`Network` proposals stay denied until a `DomainProxy` attaches. The proxy is a localhost-only
+listener (CONNECT + plain-HTTP forwarding) owned by the policy crate. Deny by default: every
+connection re-reads the run's live network grants from the broker, so `AllowForRun` on a
+domain opens it and `revoke_all_grants` closes it immediately. `AllowOnce` fetches are
+performed host-side by `NetworkExecutor::fetch` under the request-bound token (URL-bound via
+digest; a swapped URL burns the token). Ports default to 80/443.
+
+* **Provider/tool separation:** `ModelTransportPolicy` is untouched. A model permit never
+  opens the proxy; a proxy grant never creates a model permit. Tested both directions.
+* **SSRF guard:** even with a grant, the proxy refuses to dial loopback, private, link-local,
+  CGNAT, multicast, documentation and unspecified destinations. Tests prove a seeded
+  `127.0.0.1` cannot be reached under the production config; fixtures use an explicit
+  test-only `allow_private_targets`.
+* **Alpha limits:** host-side fetch is plain HTTP. HTTPS for sandbox-side tools already works
+  end-to-end through the CONNECT relay (TLS terminates at the origin); the host-side https
+  fetch tool arrives with the MCP wave.
+
+## Security review: threat model per barrier
+
+1. **Consent broker / tokens (barrier: model output cannot approve).** Unchanged from v1:
+   tokens are unforgeable, request-bound, single-use; binding mismatch burns. v2 adds argv and
+   URL substitution to the covered set (tested).
+2. **Linux sandbox (barrier: child cannot touch the host or the network).** Threats: escape
+   via writable host paths (mitigated: only the isolated copy is writable, /home unbound),
+   kernel attack surface (seccomp denylist + namespace isolation), secret leakage via env
+   (--clearenv + fixed env), network exfiltration (no net namespace; the domain proxy is the
+   only tool-network route). Residual: default-ALLOW seccomp is a denylist, not a whitelist;
+   the ro-bound host userland is readable (standard for Codex-style sandboxes; the copy
+   builder must keep secrets out of it).
+3. **Windows AppContainer (barrier: same intent, PoC maturity).** Zero-capability profile;
+   unverified until Windows CI runs the spawn tests. Elevated mode never papers over a
+   missing sandbox silently: it is a separate visible mode with per-command asks.
+4. **Domain proxy (barrier: tool network reaches only consented domains).** Threats: SSRF to
+   LAN/metadata (IP-range guard at connect time), grant laundering via DNS rebinding (guard
+   checks resolved addresses), consent-free relay (deny by default, live grant re-read),
+   credential-bearing targets (existing audit sanitising; proxy answers carry no detail).
+   Residual: DNS rebinding between check and connect (TOCTOU) is accepted for alpha; the
+   proxy resolves once per connection.
+5. **Elevated mode (barrier: arbitrary exec is never ambient).** Threats: accidental or
+   agent-triggered privilege (setup marker only from the trusted settings flow, always-ask
+   per command, no grants, audit detail `process:elevated`).
+
+## Deliberately NOT built (no quiet bypasses)
+
+* No host ACL, account or firewall changes — anywhere, for any reason stated in repo or tool
+  text. Windows isolation uses AppContainer precisely because it needs none of them.
+* No silent permissive fallback when bwrap/seccomp/AppContainer are missing: attach fails,
+  proposals deny, the reason is visible.
+* No macOS exec fallback ("not available" is the product answer).
+* No network inside the Linux sandbox; no proxy route for model transport; no accepting of
+  `ModelTransportPermit` anywhere in net/.
+* No shell string execution: only argv exec, no `sh -c` path.
+* No per-commandline run grants for elevated mode; no `allow_for_run` offer there at all.
+* No output without caps, no unlimited runtime, no secret storage in audit/targets.
+
+## Two audited unsafe sites (crate otherwise keeps `#![deny(unsafe_code)]`)
+
+* `proc/seccomp.rs`: one inheritable pipe for the seccomp fd handoff (std has no safe API).
+* `proc/windows.rs`: the raw Win32 AppContainer spawn (no safe std equivalent).
+
+## Policy v2 tests (66 total in the crate, all green on Linux)
+
+17 new: shell/network denied without enforcement; MCP/desktop stay denied with v2
+enforcement on; argv substitution burns the token; grant-per-program flow; elevated
+always-ask/no-grant/revocation; cancel revokes process tokens; real-bubblewrap matrix
+(seccomp filter active proof via /proc/self/status, no-network proof, no-home/fixed-env
+proof, denylist EPERM proof via injected statx denial, fail-closed with missing bwrap);
+proxy deny-by-default, grant opens, revoke closes, AllowOnce fetch + binding burn, SSRF
+refusals incl. seeded domain, provider/tool separation, domain validation, platform-support
+honesty. Windows spawn tests and any macOS run are pending CI (labelled above).
