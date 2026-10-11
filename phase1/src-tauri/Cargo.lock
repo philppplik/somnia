@@ -4697,6 +4697,7 @@ dependencies = [
  "somnia-vibespace-checkpoints",
  "somnia-vibespace-storage",
  "tokio",
+ "tokio-util",
  "uuid",
  "vibespace-engine",
  "vibespace-policy",
