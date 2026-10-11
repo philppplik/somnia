@@ -150,28 +150,27 @@ fn std_capture_file(
     Ok((h, path))
 }
 
+/// AppContainer profile SIDs are created once per profile name and cached process-wide.
+/// Creating AND deleting the profile per spawn races when several sandboxed spawns run in
+/// parallel (the CI test suite does): a spawn that derives its SID between another spawn's
+/// create and delete fails CreateProcess against the deleted profile (SpawnFailed). The
+/// profile is harmless, capability-less state on the host. The lock also serializes
+/// create-vs-derive across threads. SIDs are intentionally never freed or deleted.
 #[cfg(windows)]
-fn run_appcontainer(
-    profile_name: &[u16],
-    spec: &ExecSpec,
-    limits: &ProcessLimits,
-) -> Result<super::ExecReceipt, ProcessError> {
-    use std::time::{Duration, Instant};
-    use windows_sys::Win32::Foundation::*;
+fn cached_profile_sid(profile_name: &[u16]) -> Result<*mut std::ffi::c_void, ProcessError> {
+    use std::sync::{Mutex, OnceLock};
     use windows_sys::Win32::Security::Isolation::{
-        CreateAppContainerProfile, DeleteAppContainerProfile,
-        DeriveAppContainerSidFromAppContainerName,
+        CreateAppContainerProfile, DeriveAppContainerSidFromAppContainerName,
     };
-    use windows_sys::Win32::Security::SECURITY_CAPABILITIES;
-    use windows_sys::Win32::System::Threading::*;
-
-    // The whole body is one audited unsafe block: raw Win32 profile + attribute + process
-    // creation APIs have no safe std equivalent. Every call checks its return code and every
-    // handle is closed/freed on all paths; failures map to fixed error classes.
+    static CACHE: OnceLock<Mutex<std::collections::HashMap<Vec<u16>, usize>>> = OnceLock::new();
+    let cache = CACHE.get_or_init(|| Mutex::new(std::collections::HashMap::new()));
+    let mut guard = cache.lock().map_err(|_| ProcessError::SpawnFailed)?;
+    if let Some(&sid) = guard.get(profile_name) {
+        return Ok(sid as *mut std::ffi::c_void);
+    }
+    // Raw Win32 profile APIs (part of this module's single audited unsafe site).
     #[allow(unsafe_code)]
     unsafe {
-        // 1. Create (or reuse) the AppContainer profile with ZERO capabilities. A capability-
-        //    less AppContainer is the LPAC posture: no device, file or registry capability.
         let mut sid: *mut std::ffi::c_void = std::ptr::null_mut();
         let hr = CreateAppContainerProfile(
             profile_name.as_ptr(),
@@ -181,13 +180,11 @@ fn run_appcontainer(
             0,
             &mut sid,
         );
-        let mut owned_profile = false;
-        // All three profile functions return HRESULT: 0 (S_OK) is success.
+        // All profile functions return HRESULT: 0 (S_OK) is success. On failure (for
+        // example the profile exists already) fall back to deriving its SID.
         let sid = if hr == 0 && !sid.is_null() {
-            owned_profile = true;
             sid
         } else {
-            // Profile exists already: derive its SID.
             let mut derived: *mut std::ffi::c_void = std::ptr::null_mut();
             if DeriveAppContainerSidFromAppContainerName(profile_name.as_ptr(), &mut derived) != 0
                 || derived.is_null()
@@ -198,24 +195,40 @@ fn run_appcontainer(
             }
             derived
         };
+        guard.insert(profile_name.to_vec(), sid as usize);
+        Ok(sid)
+    }
+}
+
+#[cfg(windows)]
+fn run_appcontainer(
+    profile_name: &[u16],
+    spec: &ExecSpec,
+    limits: &ProcessLimits,
+) -> Result<super::ExecReceipt, ProcessError> {
+    use std::time::{Duration, Instant};
+    use windows_sys::Win32::Foundation::*;
+    use windows_sys::Win32::Security::SECURITY_CAPABILITIES;
+    use windows_sys::Win32::System::Threading::*;
+
+    // The whole body is one audited unsafe block: raw Win32 profile + attribute + process
+    // creation APIs have no safe std equivalent. Every call checks its return code and every
+    // handle is closed/freed on all paths; failures map to fixed error classes.
+    #[allow(unsafe_code)]
+    unsafe {
+        // 1. Profile SID from the process-wide cache (created once, never deleted:
+        //    per-spawn create+delete races parallel spawns into CreateProcess failures).
+        let sid = cached_profile_sid(profile_name)?;
 
         // 2. Attribute list with SECURITY_CAPABILITIES { AppContainerSid, no capabilities }.
         let mut size = 0usize;
         InitializeProcThreadAttributeList(std::ptr::null_mut(), 2, 0, &mut size);
         if size == 0 {
-            if owned_profile {
-                DeleteAppContainerProfile(profile_name.as_ptr());
-            }
-            let _ = LocalFree(sid);
             return Err(ProcessError::SpawnFailed);
         }
         let mut buf = vec![0u8; size];
         let list = buf.as_mut_ptr() as LPPROC_THREAD_ATTRIBUTE_LIST;
         if InitializeProcThreadAttributeList(list, 2, 0, &mut size) == 0 {
-            if owned_profile {
-                DeleteAppContainerProfile(profile_name.as_ptr());
-            }
-            let _ = LocalFree(sid);
             return Err(ProcessError::SpawnFailed);
         }
         let mut caps = SECURITY_CAPABILITIES {
@@ -236,10 +249,6 @@ fn run_appcontainer(
         ) == 0
         {
             DeleteProcThreadAttributeList(list);
-            if owned_profile {
-                DeleteAppContainerProfile(profile_name.as_ptr());
-            }
-            let _ = LocalFree(sid);
             return Err(ProcessError::SpawnFailed);
         }
 
@@ -250,10 +259,6 @@ fn run_appcontainer(
             Ok(v) => v,
             Err(e) => {
                 DeleteProcThreadAttributeList(list);
-                if owned_profile {
-                    DeleteAppContainerProfile(profile_name.as_ptr());
-                }
-                let _ = LocalFree(sid);
                 return Err(e);
             }
         };
@@ -263,10 +268,6 @@ fn run_appcontainer(
                 CloseHandle(h_out);
                 let _ = std::fs::remove_file(&out_path);
                 DeleteProcThreadAttributeList(list);
-                if owned_profile {
-                    DeleteAppContainerProfile(profile_name.as_ptr());
-                }
-                let _ = LocalFree(sid);
                 return Err(e);
             }
         };
@@ -278,10 +279,6 @@ fn run_appcontainer(
                 let _ = std::fs::remove_file(&out_path);
                 let _ = std::fs::remove_file(&err_path);
                 DeleteProcThreadAttributeList(list);
-                if owned_profile {
-                    DeleteAppContainerProfile(profile_name.as_ptr());
-                }
-                let _ = LocalFree(sid);
                 return Err(e);
             }
         };
@@ -303,10 +300,6 @@ fn run_appcontainer(
             let _ = std::fs::remove_file(&out_path);
             let _ = std::fs::remove_file(&err_path);
             DeleteProcThreadAttributeList(list);
-            if owned_profile {
-                DeleteAppContainerProfile(profile_name.as_ptr());
-            }
-            let _ = LocalFree(sid);
             return Err(ProcessError::SpawnFailed);
         }
 
@@ -341,10 +334,6 @@ fn run_appcontainer(
             &mut pi,
         );
         DeleteProcThreadAttributeList(list);
-        if owned_profile {
-            DeleteAppContainerProfile(profile_name.as_ptr());
-        }
-        let _ = LocalFree(sid);
         // The child owns inherited copies now; the parent's handles are only for setup.
         CloseHandle(h_in);
         CloseHandle(h_out);
