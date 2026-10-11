@@ -513,7 +513,13 @@ impl JobExecution {
             };
             match result {
                 Ok(()) => return Ok(()),
-                Err(error) if error.kind() == std::io::ErrorKind::WouldBlock => {
+                // fs2 reports contention as EWOULDBLOCK on Unix and as
+                // ERROR_LOCK_VIOLATION on Windows; the raw comparison is the
+                // only portable "try again" signal (service.rs does the same).
+                Err(error)
+                    if error.raw_os_error()
+                        == fs2::lock_contended_error().raw_os_error() =>
+                {
                     std::thread::sleep(Duration::from_millis(10))
                 }
                 Err(_) => return Err(GitJobError::new(GitJobErrorCode::Io)),
