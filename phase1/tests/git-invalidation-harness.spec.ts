@@ -14,5 +14,5 @@ for(const mode of ['light','dark'])test(`watcher refreshes Changes and Compare w
  await expect(page.frameLocator('iframe[title^="After"]').getByRole('heading')).toHaveText('Refreshed');
  await page.getByRole('button',{name:'Only changes',exact:true}).click();
  await expect(page.getByRole('table',{name:'Changed source lines'})).toContainText('Refreshed');
- await page.screenshot({path:`/downloads/git-invalidation-${mode}.png`});
+ await page.screenshot({path:`test-results/git-invalidation-${mode}.png`});
 });
