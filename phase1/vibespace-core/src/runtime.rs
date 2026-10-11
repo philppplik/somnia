@@ -688,6 +688,9 @@ impl Runtime {
             .ui
             .pending_for_run(&policy::RunId::new(id).map_err(|_| CoreError("invalid run id"))?)
             .map_err(|_| CoreError("cannot read consent state"))?;
+        if pending.len() > 100 {
+            return Err(CoreError("pending consent exceeds presentation limit"));
+        }
         let pending_consents = pending
             .into_iter()
             .map(|p| w::PendingConsent {
@@ -752,7 +755,7 @@ impl Runtime {
         } else {
             None
         };
-        let active = lock(&self.handles)?.contains_key(id);
+        let active = !run.execution.is_terminal() && lock(&self.handles)?.contains_key(id);
         let execution_state = serde_json::from_value(
             serde_json::to_value(run.execution).map_err(|_| CoreError("invalid state"))?,
         )
@@ -761,6 +764,11 @@ impl Runtime {
             serde_json::to_value(run.review).map_err(|_| CoreError("invalid review state"))?,
         )
         .map_err(|_| CoreError("invalid review state"))?;
+        // Transcript remains a bounded window; the complete bounded event history
+        // stays durable in storage for an explicit history reader.
+        if messages.len() > 1000 {
+            messages.drain(..messages.len() - 1000);
+        }
         let snapshot = w::RunSnapshot {
             run_id: id.into(),
             studio_id: run.studio_id,
