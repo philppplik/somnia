@@ -2,7 +2,9 @@
 
 S2 adds immutable native reads under S1 Read GitJobs. No network, hooks, external diff or textconv execution. Read jobs do not hold the app file-service mutex. Agent callers use the native job APIs with Agent origin: unknown editor state, unsaved buffers and pending AI review block even reads. Desktop buttons use Human origin and preserve the existing manual disk semantics. Watcher events cannot authorize writes or make reviews valid.
 
-## Registered desktop commands
+## Desktop command wiring (restored after the 12.1.0 merge)
+
+The merge preserved the native modules and ACL/build declarations but lost the desktop wrappers, handler registrations and watcher loop. This restoration reinstates those seams only; it does not restore the superseded `read_open_bytes` or OS-open flow. Native compilation and packaged behavior still need CI verification.
 
 Wire shapes match the S6 `phase1/src/lib/git/refs/contract.ts` consumer:
 

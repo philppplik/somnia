@@ -529,6 +529,19 @@
       ]
     },
     {
+      "name": "git_diff_refs",
+      "domain": "git",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "request"
+      ],
+      "args": [
+        "request"
+      ]
+    },
+    {
       "name": "git_init",
       "domain": "git",
       "status": "native",
@@ -551,6 +564,32 @@
       ]
     },
     {
+      "name": "git_read_blob",
+      "domain": "git",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "blob"
+      ],
+      "args": [
+        "blob"
+      ]
+    },
+    {
+      "name": "git_ref_tree",
+      "domain": "git",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "git_ref"
+      ],
+      "args": [
+        "gitRef"
+      ]
+    },
+    {
       "name": "git_restore_as_new_version",
       "domain": "git",
       "status": "native",
@@ -562,6 +601,15 @@
       "args": [
         "request"
       ]
+    },
+    {
+      "name": "git_safety_list",
+      "domain": "git",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [],
+      "args": []
     },
     {
       "name": "git_status",
