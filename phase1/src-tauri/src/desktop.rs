@@ -2181,6 +2181,7 @@ pub fn run() {
         .manage(crate::lan_host::LanHost::default())
         .setup(move |app| {
             crate::vibespace_commands::manage(app.handle(), Vec::new())?;
+            app.manage(crate::vibespace_schedule_commands::VibeScheduleState::default());
             // Cold start: same worker pipeline as a second instance. The flag owes the main window
             // one activation even if it is not created yet.
             app.state::<Pending>().0.store(true, std::sync::atomic::Ordering::SeqCst);
@@ -2273,6 +2274,11 @@ pub fn run() {
             }
         })
         .invoke_handler(tauri::generate_handler![
+            crate::vibespace_schedule_commands::vibespace_schedule_preview,
+            crate::vibespace_schedule_commands::vibespace_schedule_create,
+            crate::vibespace_schedule_commands::vibespace_schedule_list,
+            crate::vibespace_schedule_commands::vibespace_schedule_set_enabled,
+            crate::vibespace_schedule_commands::vibespace_schedule_return_card,
             crate::vibespace_commands::vibespace_choose_folder,
             crate::vibespace_commands::vibespace_create_space,
             crate::vibespace_commands::vibespace_create_studio,

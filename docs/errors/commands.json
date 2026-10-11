@@ -1459,6 +1459,270 @@
       ]
     },
     {
+      "name": "vibespace_apply_run",
+      "domain": "fs",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "request"
+      ],
+      "args": [
+        "request"
+      ]
+    },
+    {
+      "name": "vibespace_capabilities",
+      "domain": "fs",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [],
+      "args": []
+    },
+    {
+      "name": "vibespace_choose_folder",
+      "domain": "fs",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [],
+      "args": []
+    },
+    {
+      "name": "vibespace_create_space",
+      "domain": "fs",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "request"
+      ],
+      "args": [
+        "request"
+      ]
+    },
+    {
+      "name": "vibespace_create_studio",
+      "domain": "fs",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "request"
+      ],
+      "args": [
+        "request"
+      ]
+    },
+    {
+      "name": "vibespace_decide_consent",
+      "domain": "fs",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "request"
+      ],
+      "args": [
+        "request"
+      ]
+    },
+    {
+      "name": "vibespace_discard_run",
+      "domain": "fs",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "request"
+      ],
+      "args": [
+        "request"
+      ]
+    },
+    {
+      "name": "vibespace_list_spaces",
+      "domain": "fs",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [],
+      "args": []
+    },
+    {
+      "name": "vibespace_list_studios",
+      "domain": "fs",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [],
+      "args": []
+    },
+    {
+      "name": "vibespace_memory_add",
+      "domain": "fs",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "request"
+      ],
+      "args": [
+        "request"
+      ]
+    },
+    {
+      "name": "vibespace_memory_delete",
+      "domain": "fs",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "request"
+      ],
+      "args": [
+        "request"
+      ]
+    },
+    {
+      "name": "vibespace_memory_list",
+      "domain": "fs",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "request"
+      ],
+      "args": [
+        "request"
+      ]
+    },
+    {
+      "name": "vibespace_read_snapshot",
+      "domain": "fs",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [],
+      "args": []
+    },
+    {
+      "name": "vibespace_restore_checkpoint",
+      "domain": "fs",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "request"
+      ],
+      "args": [
+        "request"
+      ]
+    },
+    {
+      "name": "vibespace_schedule_create",
+      "domain": "fs",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "request"
+      ],
+      "args": [
+        "request"
+      ]
+    },
+    {
+      "name": "vibespace_schedule_list",
+      "domain": "fs",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [],
+      "args": []
+    },
+    {
+      "name": "vibespace_schedule_preview",
+      "domain": "fs",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "request"
+      ],
+      "args": [
+        "request"
+      ]
+    },
+    {
+      "name": "vibespace_schedule_return_card",
+      "domain": "fs",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "since_seq"
+      ],
+      "args": [
+        "sinceSeq"
+      ]
+    },
+    {
+      "name": "vibespace_schedule_set_enabled",
+      "domain": "fs",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "schedule_id",
+        "enabled"
+      ],
+      "args": [
+        "scheduleId",
+        "enabled"
+      ]
+    },
+    {
+      "name": "vibespace_start_run",
+      "domain": "fs",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "request"
+      ],
+      "args": [
+        "request"
+      ]
+    },
+    {
+      "name": "vibespace_steer_run",
+      "domain": "fs",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "request"
+      ],
+      "args": [
+        "request"
+      ]
+    },
+    {
+      "name": "vibespace_stop_run",
+      "domain": "fs",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "request"
+      ],
+      "args": [
+        "request"
+      ]
+    },
+    {
       "name": "write_diagnostic_zip",
       "domain": "diagnostics",
       "status": "native",

@@ -55,3 +55,5 @@ pub mod diagnostics_commands;
 
 #[cfg(feature = "desktop")]
 pub mod vibespace_commands;
+#[cfg(feature = "desktop")]
+pub mod vibespace_schedule_commands;
