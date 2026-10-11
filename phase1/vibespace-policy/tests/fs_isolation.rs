@@ -62,19 +62,18 @@ impl Env {
         }
     }
     fn read(&self, rel: &str) -> Result<Vec<u8>, ExecError> {
-        let t = self.token(self.fx.propose_read(rel, "t", Origin::Model).unwrap());
+        let t = self.token(self.fx.propose_read(rel, "t", Origin::Model)?);
         self.fx.read(t, rel)
     }
     fn write(&self, rel: &str, data: &[u8]) -> Result<WriteReceipt, ExecError> {
         let t = self.token(
             self.fx
-                .propose_write(rel, data, "t", Origin::Model)
-                .unwrap(),
+                .propose_write(rel, data, "t", Origin::Model)?,
         );
         self.fx.write(t, rel, data)
     }
     fn delete(&self, rel: &str) -> Result<(), ExecError> {
-        let t = self.token(self.fx.propose_delete(rel, "t", Origin::Model).unwrap());
+        let t = self.token(self.fx.propose_delete(rel, "t", Origin::Model)?);
         self.fx.delete(t, rel)
     }
 }
@@ -426,4 +425,14 @@ fn advisory_trailing_slash_junction_paths_cannot_escape() {
     }
     for rel in ["evil/","evil\\"] {assert!(e.read(rel).is_err());assert!(e.write(rel,b"PWNED").is_err());}
     assert_eq!(std::fs::read(e.outside.join("secret.txt")).unwrap(),b"OUTSIDE");
+}
+
+#[test]
+fn invalid_advisory_path_forms_are_refused_at_proposal_without_fixture_panic() {
+    let e=env();
+    for rel in [r"evil\secret.txt", r"evil\secret.txt", r"evil", "../outside/secret.txt", "/outside/secret.txt"] {
+        assert!(matches!(e.read(rel),Err(ExecError::Fs(FsError::InvalidPath))));
+        assert!(matches!(e.write(rel,b"PWNED"),Err(ExecError::Fs(FsError::InvalidPath))));
+        assert!(matches!(e.delete(rel),Err(ExecError::Fs(FsError::InvalidPath))));
+    }
 }
