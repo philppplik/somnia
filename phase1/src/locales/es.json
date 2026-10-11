@@ -2629,5 +2629,9 @@
   "problems.noSource": "Sin ubicación de origen",
   "problems.details": "Detalles técnicos",
   "problems.session": "El historial de ejecución es local a esta sesión. Borrarlo no corrige errores ni elimina diagnósticos de sintaxis.",
-  "problems.dropped": "Se descartaron {count} entradas de ejecución antiguas."
+  "problems.dropped": "Se descartaron {count} entradas de ejecución antiguas.",
+  "versions.review.title": "Revisar versión",
+  "versions.review.footer": "Pie de atribución",
+  "versions.review.cancel": "Volver a editar",
+  "versions.review.confirm": "Confirmar y guardar versión"
 }

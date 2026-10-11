@@ -2629,5 +2629,9 @@
   "problems.noSource": "Sem local de origem",
   "problems.details": "Detalhes técnicos",
   "problems.session": "O histórico de execução é local a esta sessão. Limpá-lo não corrige erros nem remove diagnósticos de sintaxe.",
-  "problems.dropped": "{count} entradas antigas de execução foram descartadas."
+  "problems.dropped": "{count} entradas antigas de execução foram descartadas.",
+  "versions.review.title": "Revisar versão",
+  "versions.review.footer": "Rodapé de atribuição",
+  "versions.review.cancel": "Voltar à edição",
+  "versions.review.confirm": "Confirmar e salvar versão"
 }

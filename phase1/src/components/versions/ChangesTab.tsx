@@ -3,7 +3,7 @@ import type {GitBackend} from '../../lib/git/types';
 import {useT} from '../../lib/useT';
 import {cn} from '../../lib/cn';
 import {Button} from '../ui/button';
-import {ChangesController,blockedKey,errorKey,type ChangesState} from './controller';
+import {ChangesController,blockedKey,errorKey,type ChangesState,type CommitContext} from './controller';
 import {isSelectable,kindGlyph,kindKey} from './selection';
 import {withGit} from './vocab';
 import {useGitInvalidation} from './useGitInvalidation';
@@ -11,6 +11,8 @@ import {TrustRepo} from './TrustRepo';
 
 export interface ChangesTabProps{
  backend:GitBackend;
+ /** Explicit host-owned app commit context; ordinary manual Changes commits are human. */
+ commitContext?:CommitContext;
  /** Number of files with edits in the editor that are not on disk yet. The backend only sees disk. */
  unsavedFiles:number;
  /** Saves editor buffers to disk (the app's project.save). */
@@ -28,12 +30,13 @@ export function useChangesController(backend:GitBackend,given?:ChangesController
  if(!ref.current||ref.current.b!==backend)ref.current={b:backend,c:new ChangesController(backend,t)};
  return ref.current.c;}
 
-export function ChangesTab({backend,unsavedFiles,onSaveFiles,advanced,onVersionSaved,controller}:ChangesTabProps){
+export function ChangesTab({backend,unsavedFiles,onSaveFiles,advanced,onVersionSaved,controller,commitContext}:ChangesTabProps){
  const {t}=useT();const c=useChangesController(backend,controller);
  c.setTranslate(t);
  const s=useSyncExternalStore(c.subscribe,c.getState,c.getState);
  const revision=useGitInvalidation();
  useEffect(()=>{void c.refresh();},[c]);
+ useEffect(()=>{c.setCommitContext(commitContext??{origin:'human',aiDrafted:false,substantive:false});},[c,commitContext]);
  useEffect(()=>{if(revision)c.invalidate();},[c,revision]);
  const saveFirst=async()=>{await onSaveFiles();await c.refresh();};
  return <ChangesView backend={backend} s={s} c={c} t={t} unsavedFiles={unsavedFiles} advanced={advanced} onSaveFiles={saveFirst} onSaved={onVersionSaved}/>;}
@@ -74,8 +77,15 @@ export function ChangesView({backend,s,c,t,unsavedFiles,advanced,onSaveFiles,onS
    <label className="flex flex-col gap-1 text-[11px] text-ink-2">{withGit(t('versions.subject.label'),'commit message',advanced)}<input data-testid="versions-subject" value={s.subject} maxLength={200} placeholder={t('versions.subject.placeholder')} onChange={e=>c.setSubject(e.target.value)} className="h-8 rounded-sm border border-subtle bg-transparent px-2 text-xs text-ink"/></label>
    {!s.subjectTouched&&s.subject&&<p className="m-0 text-[10px] text-ink-3">{t('versions.subject.suggested')}</p>}
    <label className="flex flex-col gap-1 text-[11px] text-ink-2">{t('versions.body.label')}<textarea data-testid="versions-body" rows={2} value={s.body} onChange={e=>c.setBody(e.target.value)} className="rounded-sm border border-subtle bg-transparent p-2 text-xs text-ink"/></label>
-   <Button variant="primary" size="normal" data-testid="versions-save" disabled={!c.canSave()} onClick={()=>{void c.commit().then(v=>{if(v)onSaved?.();});}}>{saving?t('versions.saving'):withGit(t('versions.save'),'commit',advanced)}</Button>
+   <Button variant="primary" size="normal" data-testid="versions-save" disabled={!c.canSave()} onClick={()=>{c.reviewCommit();}}>{saving?t('versions.saving'):withGit(t('versions.save'),'commit',advanced)}</Button>
   </div>
+  {s.review&&<section role="region" aria-label={t('versions.review.title')} data-testid="versions-commit-review" className="flex flex-col gap-2 rounded-sm border border-subtle p-3">
+   <h4 className="m-0 text-xs font-medium">{t('versions.review.title')}</h4>
+   <ul className="m-0 max-h-24 overflow-auto pl-4 text-[11px]">{s.review.request.paths.map(path=><li key={path} className="break-all">{path}</li>)}</ul>
+   <pre data-testid="versions-review-message" className="m-0 max-h-48 overflow-auto whitespace-pre-wrap break-words font-mono text-[11px]">{s.review.message}</pre>
+   {s.review.footer.length>0&&<div><span className="text-[10px] text-ink-3">{t('versions.review.footer')}</span><pre data-testid="versions-review-footer" className="m-0 whitespace-pre-wrap break-words font-mono text-[11px]">{s.review.footer.join('\n')}</pre></div>}
+   <div className="flex flex-wrap gap-2"><Button variant="outline" onClick={()=>c.cancelReview()}>{t('versions.review.cancel')}</Button><Button variant="primary" data-testid="versions-commit-confirm" disabled={!c.canSave()} onClick={()=>{const reviewed=s.review;void c.commit(reviewed).then(v=>{if(v)onSaved?.();});}}>{t('versions.review.confirm')}</Button></div>
+  </section>}
   {s.reviewAgain&&<div role="alert" data-testid="versions-review-again" className="rounded-sm border border-subtle p-2 text-[11px] text-ink">{t('versions.reviewAgain')}</div>}
   {s.saved&&<div role="status" data-testid="versions-saved" className="rounded-sm border border-subtle p-2 text-[11px] text-ink">{t('publication.state.versioned')}: {t('versions.saved',{subject:s.saved.subject})}{advanced&&<span className="ml-1 font-mono">{s.saved.sha.slice(0,7)}</span>}</div>}
   {errMsg}

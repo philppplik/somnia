@@ -3,8 +3,8 @@
  * and outside its control: any trailer the model wrote under the reserved keys is removed, and the footer
  * is rebuilt only from the project's opt-in policy plus the task id the host owns.
  *
- * Not wired into the commit UI yet. Integration point: call `finalizeCommitMessage` where the commit
- * request is built (ChangesTab) and show `footer` verbatim in the commit review before `git_commit`.
+ * ChangesController finalizes once and ChangesTab displays the exact subject/body/footer for review
+ * before git_commit. The host declares origin separately from model-drafted message text.
  */
 export interface AttributionPolicy {
   /** Project opt-in (decision D2). Default off. */

@@ -2629,5 +2629,9 @@
   "problems.noSource": "Kein Quellort",
   "problems.details": "Technische Details",
   "problems.session": "Der Laufzeitverlauf gilt nur für diese Sitzung. Leeren behebt keine Fehler und entfernt keine Syntaxdiagnosen.",
-  "problems.dropped": "{count} ältere Laufzeiteinträge wurden verworfen."
+  "problems.dropped": "{count} ältere Laufzeiteinträge wurden verworfen.",
+  "versions.review.title": "Version prüfen",
+  "versions.review.footer": "Urheberhinweis",
+  "versions.review.cancel": "Zurück zum Bearbeiten",
+  "versions.review.confirm": "Bestätigen und Version speichern"
 }

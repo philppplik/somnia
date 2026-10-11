@@ -2629,5 +2629,9 @@
   "problems.noSource": "Aucun emplacement source",
   "problems.details": "Détails techniques",
   "problems.session": "L’historique d’exécution est local à cette session. L’effacer ne corrige pas les erreurs et ne supprime pas les diagnostics de syntaxe.",
-  "problems.dropped": "{count} anciennes entrées d’exécution ont été supprimées."
+  "problems.dropped": "{count} anciennes entrées d’exécution ont été supprimées.",
+  "versions.review.title": "Vérifier la version",
+  "versions.review.footer": "Mention d’attribution",
+  "versions.review.cancel": "Revenir à la modification",
+  "versions.review.confirm": "Confirmer et enregistrer la version"
 }

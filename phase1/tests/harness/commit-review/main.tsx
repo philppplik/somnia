@@ -1,0 +1,11 @@
+import React from 'react';
+import {createRoot} from 'react-dom/client';
+import {invoke} from '@tauri-apps/api/core';
+import {ChangesTab} from '../../../src/components/versions/ChangesTab';
+import {createTauriGitBackend} from '../../../src/components/versions/backend';
+import '../../../src/styles/global.css';
+const mode=new URLSearchParams(location.search).get('mode')||'light';
+document.documentElement.dataset.theme=mode;document.documentElement.classList.toggle('dark',mode==='dark');
+const backend=createTauriGitBackend(invoke);
+const context={origin:'app' as const,aiDrafted:true,substantive:true,sessionId:'host-task-1'};
+createRoot(document.getElementById('root')!).render(<div className="panel" style={{width:320,height:900,margin:'24px auto',overflow:'auto'}}><ChangesTab backend={backend} unsavedFiles={0} onSaveFiles={()=>{}} advanced={false} commitContext={context}/></div>);

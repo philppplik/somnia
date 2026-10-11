@@ -2629,5 +2629,9 @@
   "problems.noSource": "No source location",
   "problems.details": "Technical details",
   "problems.session": "Runtime history is local to this session. Clearing it does not fix errors or clear syntax diagnostics.",
-  "problems.dropped": "{count} older runtime entries were discarded."
+  "problems.dropped": "{count} older runtime entries were discarded.",
+  "versions.review.title": "Review version",
+  "versions.review.footer": "Attribution footer",
+  "versions.review.cancel": "Back to editing",
+  "versions.review.confirm": "Confirm and save version"
 }

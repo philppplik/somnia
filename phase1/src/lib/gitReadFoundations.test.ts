@@ -23,7 +23,7 @@ test('watcher refresh queues while commit is running and keeps user message',asy
  const backend={detect:async()=>({kind:'ready',repo}),status:async()=>{statusReads++;return status;},commit:async()=>{await new Promise<void>(r=>release=r);return {sha:'b'.repeat(40),subject:'User title',body:'',authorName:'Test',time:1,parents:[],changedFiles:1};}} as unknown as GitBackend;
  const controller=new ChangesController(backend,(key)=>key);await controller.refresh();
  controller.setSubject('User title');controller.setBody('User notes');
- const committing=controller.commit();controller.invalidate();controller.invalidate();
+ controller.reviewCommit();const committing=controller.commit();controller.invalidate();controller.invalidate();
  assert.equal(statusReads,1);assert.equal(controller.getState().busy,'commit');
  release();await committing;await new Promise(resolve=>setTimeout(resolve,0));
  assert.equal(controller.getState().busy,null);assert.ok(statusReads>=2);
