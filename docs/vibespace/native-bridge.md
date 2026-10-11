@@ -14,7 +14,7 @@ no bridge filesystem tool implementation.
 
 ## Integration
 
-The coordinator wired the dependency, gated module, once-only setup and all 17 commands. Desktop bindings now read validated native capabilities during each collection refresh, starting with no enabled actions. The headless Desktop check passes; it does not compile this desktop-feature module. Full native compile and tests remain a gate.
+The coordinator wired the dependency, gated module, once-only setup and all 17 commands. The separately reviewed ACL append enumerates the same 17 commands in `build.rs` and only `capabilities/editor.json`; no extension or remote-origin permissions were added. Desktop bindings now read validated native capabilities during each collection refresh, starting with no enabled actions. The headless Desktop check passes; it does not compile this desktop-feature module. Full native compile and tests remain a gate.
 
 1. Add the local `somnia-vibespace-core` dependency to the desktop manifest.
    Core must export `pub use vibespace_engine as engine;` and
