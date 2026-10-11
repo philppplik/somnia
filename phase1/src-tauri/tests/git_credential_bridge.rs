@@ -526,7 +526,7 @@ fn push_authenticates_for_receive_pack_with_explicit_refspec() {
     // The fake only speaks upload-pack, so git fails after authenticating: what matters is who got credentials.
     assert_ne!(out.code, Some(0));
     let auth = f.authorized();
-    assert!(auth.iter().any(|s| s.path.contains("git-receive-pack")), "{auth:?} / {:?}", f.seen.lock().unwrap());
+    assert!(auth.iter().any(|s| s.path.contains("git-receive-pack")), "{auth:?} / {:?} / stderr: {}", f.seen.lock().unwrap(), out.stderr);
     assert!(auth.iter().all(|s| s.path.starts_with("/o/r.git/")));
     assert_no_token("push output", &format!("{}{}", out.stdout, out.stderr));
 }
