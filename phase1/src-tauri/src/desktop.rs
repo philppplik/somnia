@@ -2109,7 +2109,7 @@ struct RemoteJob {
     net: crate::git::remote::NetCtx,
 }
 impl RemoteJob {
-    fn env(&self, trust: &crate::git::TrustStore) -> crate::git::remote::RemoteEnv<'_> {
+    fn env<'a>(&'a self, trust: &'a crate::git::TrustStore) -> crate::git::remote::RemoteEnv<'a> {
         crate::git::remote::RemoteEnv {
             policy: &self.policy,
             trust: Some(trust),
