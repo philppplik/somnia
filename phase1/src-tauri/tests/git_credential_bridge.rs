@@ -297,7 +297,8 @@ fn connect_raw(lease: &CredentialLease) -> (String, String) {
 fn rpc(endpoint: &str, line: &str) -> String {
     let mut s = std::os::unix::net::UnixStream::connect(endpoint).unwrap();
     s.set_read_timeout(Some(Duration::from_secs(5))).unwrap();
-    s.write_all(line.as_bytes()).unwrap();
+    // The server drops bad requests on purpose; on macOS its FIN can beat this write (BrokenPipe/reset). The empty reply is the real assertion.
+    let _ = s.write_all(line.as_bytes());
     let mut out = String::new();
     let _ = s.read_to_string(&mut out);
     out
