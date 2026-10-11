@@ -275,3 +275,9 @@ state, then explicitly discards and verifies canStart. It no longer requires
 canStart immediately while the unknown proposal intentionally remains Ready.
 Typed schema4 operation kind removes id-prefix decisions from DB review-axis
 transitions; private id kind/grammar is checked before persistence.
+
+Current coordinator totals after independent finding (e) repair: Core 47 Linux
+tests (20 original, 20 security, 7 journal) pass; all-targets clippy with warnings
+denied passes. The latest-run cardinality regression was independently confirmed
+red without the union fix and green with it. Collections above 1000 runs return
+an explicit error rather than partial/orphaned data; pagination remains follow-up.
