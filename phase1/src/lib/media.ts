@@ -45,6 +45,7 @@ export interface PreparedMedia{item:MediaItem;name:string;commit(opts?:{activate
 /** Validates and decodes one media file WITHOUT touching the media list (prepare step of prepare-then-commit). Creates object URLs: call `dispose()` if the result is not committed. */
 export async function prepareMediaFile(file:Blob,rawName:string,key?:string):Promise<PreparedMedia|{error:string}>{
  const name=key??baseName(rawName);
+ if(/\.(gdoc|gsheet|gslides)$/i.test(name)){const g=await import('./office/googleLink');return{error:g.googleLinkMessage(name)};}
  if(file.size>MAX_MEDIA_BYTES)return{error:`${name} is larger than ${MAX_MEDIA_BYTES/1_000_000} MB.`};
  let sniffed=sniffMedia(new Uint8Array(await file.slice(0,256).arrayBuffer()));
  if(!sniffed&&/\.(docx|xlsx|pptx)$/i.test(name)){const {sniffOffice}=await import('./office/zipProbe');const k=sniffOffice(new Uint8Array(await file.arrayBuffer()));
