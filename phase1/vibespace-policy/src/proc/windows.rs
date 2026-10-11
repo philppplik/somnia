@@ -13,6 +13,8 @@
 //! `#![deny(unsafe_code)]` is lifted locally with a per-call SAFETY note.
 
 use super::{ExecSpec, ProcessError, ProcessLauncher, ProcessLimits};
+#[cfg(windows)]
+use std::time::Duration;
 
 /// AppContainer (zero-capability) launcher.
 pub struct AppContainerLauncher {
@@ -24,8 +26,9 @@ fn wide(s: &str) -> Vec<u16> {
 }
 
 impl AppContainerLauncher {
-    /// Probe: AppContainer requires Windows 8+; every supported target qualifies, so the
-    /// probe only verifies the profile APIs link. Real proof is the CI spawn test.
+    /// Probe: AppContainer requires Windows 8+; every supported target qualifies, so
+    /// detection only verifies the profile APIs link. The real capability check (an
+    /// actual sandboxed spawn) happens in `check`.
     pub fn detect() -> Result<Self, ProcessError> {
         Ok(Self {
             profile_name: wide("SomniaVibeSpaceSandbox"),
@@ -42,7 +45,28 @@ impl AppContainerLauncher {
 
 impl ProcessLauncher for AppContainerLauncher {
     fn check(&self) -> Result<(), ProcessError> {
-        Ok(())
+        // Capability probe (same contract as the linux bwrap probe): one minimal real
+        // sandboxed spawn. Hosts where AppContainer spawning does not work (some CI
+        // runners refuse it) report unavailable - fail closed, visible reason, no partial
+        // sandbox. Tests skip on this; capable hosts run the full assertions.
+        let probe = ExecSpec {
+            program: "cmd.exe".into(),
+            args: vec!["/c".into(), "exit".into(), "0".into()],
+            cwd: None,
+        };
+        let limits = ProcessLimits {
+            timeout: Duration::from_secs(15),
+            max_output_bytes: 4096,
+        };
+        match self.run(&probe, &limits) {
+            Ok(r) if r.exit_code == Some(0) => Ok(()),
+            Ok(_) => Err(ProcessError::IsolationUnavailable(
+                "AppContainer probe exec failed (host cannot spawn AppContainer processes)",
+            )),
+            Err(_) => Err(ProcessError::IsolationUnavailable(
+                "AppContainer probe spawn failed (host cannot spawn AppContainer processes)",
+            )),
+        }
     }
 
     fn run(&self, spec: &ExecSpec, limits: &ProcessLimits) -> Result<super::ExecReceipt, ProcessError> {
