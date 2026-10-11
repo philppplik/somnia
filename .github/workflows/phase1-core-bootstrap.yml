@@ -11,6 +11,10 @@ on:
         description: Regenerate studio-shell screenshot baselines and commit them to this ref
         type: boolean
         default: false
+      full-matrix:
+        description: Run the full 3-platform matrix including macOS (tags always run it, except alpha tags)
+        type: boolean
+        default: false
 permissions:
   contents: read
 jobs:
@@ -191,6 +195,9 @@ jobs:
             phase1/src-tauri/target/release/bundle/nsis/*.exe.sig
             phase1/src-tauri/target/release/bundle/msi/*.msi
   macos:
+    # Philipp's matrix policy (2026-10-11): dev/alpha runs Windows + Linux only;
+    # beta and stable tags run the full 3-platform matrix. Force via full-matrix input.
+    if: ${{ (github.ref_type == 'tag' && !contains(github.ref_name, 'alpha')) || inputs.full-matrix }}
     runs-on: macos-latest
     defaults:
       run:
