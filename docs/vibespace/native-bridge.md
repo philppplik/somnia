@@ -221,15 +221,16 @@ in this command module.
 - Rust DTO/provider/gate/counter/redaction tests: **NOT RUN**. Tests are included
   in the module and run after integration via
   `cargo test --manifest-path phase1/src-tauri/Cargo.toml --features desktop vibespace_commands`.
-- Native full build / clippy / Windows tests: **NOT RUN**. This environment has
-  no rustc/cargo and no GTK 3 or WebKitGTK 4.1 development pkg-config entries.
-  CI on supported native builders is the compile/test gate. Syntax parsing and
-  API inspection are not substitute compile evidence.
+- Initial bridge author native build/tests: NOT RUN in that environment.
+  Subsequent native Windows/Linux CI run38146543284: PASS for pure suites,
+  policy default/cap-layer, five native command tests, Desktop checks and packages.
+  Local coordinator full Desktop remains GTK/WebKit-blocked; headless check PASS.
+  The new compiled platform-gate regression requires a fresh native CI run.
 - Qwen trial smoke: **NOT RUN**. No local model or real endpoint availability was
   asserted or fabricated.
 
 After wiring, compile first, run the included tests, run Core regressions, then
 exercise native folder cancel/grants, restart recovery, duplicate starts,
 consent/apply stale revisions, subscription gaps and extension-origin rejection
-on actual native platforms. Windows file actions remain off until their native
-safety evidence exists.
+on actual native platforms. Windows/Linux scoped file actions are now gated by
+the reviewed native evidence above; real-model smoke remains separate.
