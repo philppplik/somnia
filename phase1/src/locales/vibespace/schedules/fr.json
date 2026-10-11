@@ -25,5 +25,9 @@
   "vs.schedule.autoConsent": "L'application automatique exige une permission autonome dans le périmètre.",
   "vs.schedule.failed": "La planification native a échoué. Rien n'a été enregistré.",
   "vs.schedule.saving": "Enregistrement...",
-  "vs.schedule.previewRequired": "Vérifiez le planning actuel avant de l’enregistrer."
+  "vs.schedule.previewRequired": "Vérifiez le planning actuel avant de l’enregistrer.",
+  "vs.schedule.returnTitle": "Le travail planifié a besoin de vous",
+  "vs.schedule.returnNeedsYou": "en attente de votre décision",
+  "vs.schedule.returnFailed": "échoué",
+  "vs.schedule.returnDismiss": "Ignorer"
 }

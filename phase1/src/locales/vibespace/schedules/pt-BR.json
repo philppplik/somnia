@@ -25,5 +25,9 @@
   "vs.schedule.autoConsent": "A aplicação automática exige permissão autônoma no escopo.",
   "vs.schedule.failed": "O agendamento nativo falhou. Nada foi salvo.",
   "vs.schedule.saving": "Salvando...",
-  "vs.schedule.previewRequired": "Confira o agendamento atual antes de salvar."
+  "vs.schedule.previewRequired": "Confira o agendamento atual antes de salvar.",
+  "vs.schedule.returnTitle": "O trabalho agendado precisa de você",
+  "vs.schedule.returnNeedsYou": "aguardando sua decisão",
+  "vs.schedule.returnFailed": "com falha",
+  "vs.schedule.returnDismiss": "Dispensar"
 }

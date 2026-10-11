@@ -103,6 +103,7 @@ impl VibeSpaceState {
     fn runtime(&self, app: &tauri::AppHandle) -> Result<Arc<Runtime>> {
         self.runtime
             .get_or_init(|| {
+                let bind_app = app.clone();
                 let data = app.path().app_data_dir().map_err(failed)?.join("vibespace");
                 // Platform gate is compiled natively, never enabled by renderer settings.
                 let runtime = Runtime::open_owned(&data, native_files_enabled(),
@@ -145,6 +146,10 @@ impl VibeSpaceState {
                         }
                     }
                 });
+                // A3 integration: scheduling binds onto the same database and owner.
+                // A failed bind leaves every schedule command fail-closed (unbound);
+                // the runtime itself stays open.
+                let _ = crate::vibespace_schedule_commands::bind(&bind_app, runtime.clone());
                 Ok(runtime)
             })
             .as_ref()
@@ -154,7 +159,7 @@ impl VibeSpaceState {
     fn changed(&self) -> Result<()> {
         self.version.lock().map_err(failed)?.changed()
     }
-    fn models(&self, app: &tauri::AppHandle) -> Result<Vec<w::ModelReference>> {
+    pub(crate) fn models(&self, app: &tauri::AppHandle) -> Result<Vec<w::ModelReference>> {
         let mut refs = self.configured.clone();
         let path = app
             .path()
@@ -272,7 +277,7 @@ fn provider_config(reference: &w::ModelReference) -> Result<engine::ModelConfig>
         },
     })
 }
-fn resolve(
+pub(crate) fn resolve(
     reference: &w::ModelReference,
 ) -> Result<(Arc<dyn engine::ModelTransport>, engine::ModelConfig)> {
     let config = provider_config(reference)?;

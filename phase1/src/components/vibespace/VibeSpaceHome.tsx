@@ -6,12 +6,21 @@ import {studioState} from '../../lib/vibespace/state';
 import type {VibeIntent,VibeSpaceTransport} from '../../lib/vibespace/types';
 import {CreateSpaceForm,CreateStudioForm,studioTemplates} from './CreateForms';
 import {stateLabels,StudioDetail,StudioMetrics} from './StudioDetail';
+import {t} from '../../lib/i18n';
+import {nativeScheduleTransport,readScheduleCursor,storeScheduleCursor,type ReturnCard} from '../../lib/vibespace/schedule';
 /** Mount with a stable transport. There is no global fallback and no app-store mutation. */
 export function VibeSpaceHome({transport}:{transport:VibeSpaceTransport}){
  const controller=useMemo(()=>new VibeSpaceController(transport),[transport]);
  const state=useSyncExternalStore(controller.subscribe,controller.getSnapshot,controller.getSnapshot);
  const [spaceId,setSpaceId]=useState(''),[studioId,setStudioId]=useState<string|null>(null),[form,setForm]=useState<'space'|'studio'|null>(null),[template,setTemplate]=useState('');
  useEffect(()=>{void controller.connect();return()=>controller.disconnect();},[controller]);
+ const [returnCard,setReturnCard]=useState<ReturnCard|null>(null);
+ useEffect(()=>{
+  if(transport.mode!=='native'||!nativeScheduleTransport.returnCard)return;
+  let alive=true;
+  nativeScheduleTransport.returnCard(readScheduleCursor()).then(card=>{if(alive)setReturnCard(card);}).catch(()=>{});
+  return()=>{alive=false;};
+ },[transport]);
  const snapshot=state.snapshot;const space=snapshot?.spaces.find(s=>s.spaceId===spaceId)??snapshot?.spaces[0];
  const studio=snapshot?.studios.find(s=>s.runId===studioId&&s.spaceId===space?.spaceId);
  const busy=state.pending||state.loading||!!state.error;
@@ -20,6 +29,7 @@ export function VibeSpaceHome({transport}:{transport:VibeSpaceTransport}){
  return <section className="vs-root" aria-label="Vibe Space" aria-busy={state.loading||state.pending}>
   <header className="vs-header"><div className="vs-brand"><BotIcon/><h1>Vibe Space</h1></div><div className="vs-actions"><button type="button" disabled={busy||!supports('create-space')} onClick={()=>setForm('space')}><Plus size={15}/>New space</button>{space&&<button type="button" className="vs-primary" disabled={busy||!supports('create-studio')} onClick={()=>newStudio()}><Plus size={15}/>New Studio</button>}</div></header>
   {transport.mode==='fixture'&&<p className="vs-fixture" role="status">Fixture mode · Test data only. No native actions or project writes.</p>}
+  {returnCard&&(returnCard.needsYou.length>0||returnCard.failed.length>0||returnCard.misfires.length>0)&&<div className="vs-card vs-error" role="status" data-testid="schedule-return-card"><strong>{t('vs.schedule.returnTitle')}</strong><p>{returnCard.needsYou.length} {t('vs.schedule.returnNeedsYou')} · {returnCard.failed.length} {t('vs.schedule.returnFailed')} · {returnCard.misfires.length} {t('vs.schedule.misfire')}</p><button type="button" onClick={()=>{storeScheduleCursor(returnCard.lastSeq);setReturnCard(null);}}>{t('vs.schedule.returnDismiss')}</button></div>}
   {state.error&&<div className="vs-error vs-card" role="alert"><strong>Vibe Space needs attention</strong><p data-copyable>{state.error}</p><p>Actions are disabled until the native state is loaded again. No fallback data is used.</p><button type="button" disabled={state.pending} onClick={()=>void controller.connect()}>Reload native state</button></div>}
   {state.loading&&<p className="vs-muted" role="status">Loading Vibe Space...</p>}
   {snapshot&&<div className="vs-body">

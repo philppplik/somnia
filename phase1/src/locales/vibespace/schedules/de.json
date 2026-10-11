@@ -25,5 +25,9 @@
   "vs.schedule.autoConsent": "Automatisches Anwenden erfordert autonome Freigabe im Bereich.",
   "vs.schedule.failed": "Native Planung fehlgeschlagen. Nichts wurde gespeichert.",
   "vs.schedule.saving": "Wird gespeichert...",
-  "vs.schedule.previewRequired": "Aktuellen Zeitplan vor dem Speichern prüfen."
+  "vs.schedule.previewRequired": "Aktuellen Zeitplan vor dem Speichern prüfen.",
+  "vs.schedule.returnTitle": "Geplante Arbeit braucht dich",
+  "vs.schedule.returnNeedsYou": "warten auf deine Entscheidung",
+  "vs.schedule.returnFailed": "fehlgeschlagen",
+  "vs.schedule.returnDismiss": "Verwerfen"
 }

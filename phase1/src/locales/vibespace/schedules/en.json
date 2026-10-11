@@ -25,5 +25,9 @@
   "vs.schedule.autoConsent": "Auto-apply requires autonomous-in-scope consent.",
   "vs.schedule.failed": "Native scheduling failed. Nothing was saved.",
   "vs.schedule.saving": "Saving...",
-  "vs.schedule.previewRequired": "Preview the current schedule before saving."
+  "vs.schedule.previewRequired": "Preview the current schedule before saving.",
+  "vs.schedule.returnTitle": "Scheduled work needs you",
+  "vs.schedule.returnNeedsYou": "waiting for your decision",
+  "vs.schedule.returnFailed": "failed",
+  "vs.schedule.returnDismiss": "Dismiss"
 }

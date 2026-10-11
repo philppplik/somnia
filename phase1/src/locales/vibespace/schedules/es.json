@@ -25,5 +25,9 @@
   "vs.schedule.autoConsent": "La aplicación automática requiere permiso autónomo en el ámbito.",
   "vs.schedule.failed": "La programación nativa falló. No se guardó nada.",
   "vs.schedule.saving": "Guardando...",
-  "vs.schedule.previewRequired": "Revisa el horario actual antes de guardarlo."
+  "vs.schedule.previewRequired": "Revisa el horario actual antes de guardarlo.",
+  "vs.schedule.returnTitle": "El trabajo programado te necesita",
+  "vs.schedule.returnNeedsYou": "esperando tu decisión",
+  "vs.schedule.returnFailed": "con errores",
+  "vs.schedule.returnDismiss": "Descartar"
 }
