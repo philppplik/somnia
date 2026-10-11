@@ -6545,9 +6545,11 @@ dependencies = [
  "cap-std",
  "getrandom 0.3.4",
  "libc",
+ "rustls",
  "serde",
  "serde_json",
  "sha2",
+ "webpki-roots 0.26.11",
  "windows-sys 0.59.0",
 ]
 
