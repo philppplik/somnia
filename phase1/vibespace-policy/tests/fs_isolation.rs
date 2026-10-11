@@ -3,6 +3,7 @@
 use std::sync::Arc;
 use vibespace_policy::*;
 
+#[allow(dead_code)]
 struct Env {
     _tmp: tempfile::TempDir,
     root: std::path::PathBuf,
@@ -204,7 +205,7 @@ fn unsafe_mkfifo(c: &std::ffi::CStr) -> i32 {
     unsafe { mkfifo(c.as_ptr(), 0o600) }
 }
 
-#[cfg(unix)]
+#[cfg(all(unix, not(feature = "cap-layer")))]
 #[test]
 fn hardlink_to_outside_file_rejected() {
     let e = env();
@@ -316,4 +317,74 @@ fn failed_effect_is_audited_without_content() {
     let json = serde_json::to_string(&e.b.ui.audit(100).unwrap()).unwrap();
     assert!(json.contains("effect_failed"));
     assert!(!json.contains("TOPSECRET"));
+}
+
+// ---- Windows (cap-std layer). Compile-checked here; must run on Windows CI. ----------------
+
+/// Symlink creation needs Developer Mode or elevation on Windows; skip (loudly) without it.
+#[cfg(windows)]
+#[test]
+fn windows_symlinks_and_junctions_cannot_be_followed() {
+    use std::os::windows::fs::{symlink_dir, symlink_file};
+    let e = env();
+    std::fs::write(e.outside.join("secret.txt"), b"OUTSIDE").unwrap();
+
+    // Junction (no privilege needed).
+    let status = std::process::Command::new("cmd")
+        .args(["/C", "mklink", "/J"])
+        .arg(e.root.join("junc"))
+        .arg(&e.outside)
+        .output()
+        .expect("mklink");
+    assert!(
+        status.status.success(),
+        "junction creation failed: {status:?}"
+    );
+    assert!(e.read("junc/secret.txt").is_err());
+    assert!(e.write("junc/new.txt", b"PWNED").is_err());
+    assert!(e.delete("junc/secret.txt").is_err());
+    assert!(!e.outside.join("new.txt").exists());
+    assert_eq!(
+        std::fs::read(e.outside.join("secret.txt")).unwrap(),
+        b"OUTSIDE"
+    );
+
+    // Directory and file symlinks (may be unavailable).
+    if symlink_dir(&e.outside, e.root.join("dlink")).is_ok() {
+        assert!(e.read("dlink/secret.txt").is_err());
+        assert!(e.write("dlink/new.txt", b"PWNED").is_err());
+        assert!(!e.outside.join("new.txt").exists());
+    } else {
+        eprintln!("SKIPPED: symlink_dir needs Developer Mode or elevation");
+    }
+    if symlink_file(e.outside.join("secret.txt"), e.root.join("flink.txt")).is_ok() {
+        assert!(e.read("flink.txt").is_err());
+        assert!(e.write("flink.txt", b"PWNED").is_err());
+        assert!(e.delete("flink.txt").is_err());
+        assert_eq!(
+            std::fs::read(e.outside.join("secret.txt")).unwrap(),
+            b"OUTSIDE"
+        );
+    } else {
+        eprintln!("SKIPPED: symlink_file needs Developer Mode or elevation");
+    }
+}
+
+#[cfg(windows)]
+#[test]
+fn windows_reserved_and_stream_names_refused() {
+    let e = env();
+    for p in [
+        "file.txt:stream",
+        "NUL",
+        "aux.txt",
+        "dir\\x",
+        "trailing.",
+        "trailing ",
+    ] {
+        assert!(
+            e.fx.propose_write(p, b"x", "t", Origin::Model).is_err(),
+            "{p}"
+        );
+    }
 }

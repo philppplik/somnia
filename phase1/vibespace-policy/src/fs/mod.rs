@@ -3,15 +3,15 @@
 
 pub mod path;
 
-#[cfg(unix)]
+#[cfg(all(unix, not(feature = "cap-layer")))]
 mod unix;
-#[cfg(unix)]
+#[cfg(all(unix, not(feature = "cap-layer")))]
 pub(crate) use unix::Root;
 
-#[cfg(not(unix))]
-mod fallback;
-#[cfg(not(unix))]
-pub(crate) use fallback::Root;
+#[cfg(any(not(unix), feature = "cap-layer"))]
+mod windows;
+#[cfg(any(not(unix), feature = "cap-layer"))]
+pub(crate) use windows::Root;
 
 use std::fmt;
 
@@ -83,14 +83,13 @@ impl From<std::io::Error> for FsError {
     }
 }
 
-/// How strongly escapes are prevented on this platform.
+/// How escapes are prevented. There is deliberately no weaker level: a platform that cannot
+/// resolve paths relative to a held directory handle gets no writable file executor.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum IsolationLevel {
-    /// Every component is opened relative to a held directory handle with no-follow semantics.
+    /// Every component is opened relative to a held directory handle (`openat` with
+    /// `O_NOFOLLOW` on Unix, `cap-std` on Windows).
     HandleRelative,
-    /// Components are checked by path before use. A concurrent local process that can swap
-    /// directories can still race it. Off unless explicitly allowed.
-    PathValidatedBestEffort,
 }
 
 /// Name of the marker file that identifies an isolated copy.

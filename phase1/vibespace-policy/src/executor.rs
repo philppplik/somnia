@@ -23,8 +23,6 @@ pub struct FileLimits {
     pub max_write_bytes: u64,
     /// Create missing parent directories on write.
     pub create_parents: bool,
-    /// Allow the weaker path-validated layer on platforms without handle-relative access.
-    pub allow_path_validated_fallback: bool,
     /// Path components that are never readable or writable (ASCII case-insensitive).
     pub protected_components: Vec<String>,
 }
@@ -35,7 +33,6 @@ impl Default for FileLimits {
             max_read_bytes: 8 * 1024 * 1024,
             max_write_bytes: 8 * 1024 * 1024,
             create_parents: true,
-            allow_path_validated_fallback: false,
             protected_components: vec![".git".into(), ISOLATED_MARKER.into()],
         }
     }
@@ -121,13 +118,6 @@ impl FileExecutor {
         root: IsolatedRoot,
         limits: FileLimits,
     ) -> Result<Self, ExecError> {
-        if Root::level() == IsolationLevel::PathValidatedBestEffort
-            && !limits.allow_path_validated_fallback
-        {
-            return Err(ExecError::Fs(FsError::Unsupported(
-                "handle-relative access unavailable on this platform",
-            )));
-        }
         agent.attach_file_enforcement(&run_id, &scope_id)?;
         Ok(Self {
             agent: agent.clone(),
