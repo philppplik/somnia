@@ -1,0 +1,22 @@
+[package]
+name = "somnia-vibespace-cli"
+version = "0.1.0-alpha.1"
+edition = "2021"
+license = "MIT"
+publish = false
+[[bin]]
+name = "somnia-vibe"
+path = "src/main.rs"
+[dependencies]
+somnia-vibespace-core = { path = "../vibespace-core" }
+somnia-vibespace-storage = { path = "../vibespace-storage" }
+somnia-vibespace-checkpoints = { path = "../vibespace-checkpoints" }
+vibespace-policy = { path = "../vibespace-policy" }
+vibespace-engine = { path = "../vibespace-engine" }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "time", "signal"] }
+uuid = { version = "1", features = ["v4"] }
+[dev-dependencies]
+tempfile = "3"
+async-trait = "0.1"
