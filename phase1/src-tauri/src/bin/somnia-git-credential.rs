@@ -8,15 +8,6 @@ mod wire;
 
 use std::io::{BufRead, BufReader, Read, Write};
 
-/// Temporary Windows diagnostics: only when SOMNIA_GIT_CRED_DIAG names a file; records the stage, never a secret.
-fn diag(stage: &str, detail: &str) {
-    if let Some(p) = std::env::var_os("SOMNIA_GIT_CRED_DIAG") {
-        if let Ok(mut f) = std::fs::OpenOptions::new().create(true).append(true).open(p) {
-            let _ = writeln!(f, "pid={} args={:?} stage={stage} detail={detail}", std::process::id(), std::env::args().skip(1).collect::<Vec<_>>());
-        }
-    }
-}
-
 fn fail() -> ! {
     eprintln!("somnia credential helper: unavailable");
     std::process::exit(1);
@@ -55,44 +46,23 @@ fn main() {
         // `store` (and anything else) is a no-op: the host owns token storage.
         _ => return,
     };
-    diag("start", "");
-    let (Ok(endpoint), Ok(nonce)) = (std::env::var(wire::ENV_ENDPOINT), std::env::var(wire::ENV_NONCE)) else {
-        diag("env-missing", "");
-        fail()
-    };
+    let (Ok(endpoint), Ok(nonce)) = (std::env::var(wire::ENV_ENDPOINT), std::env::var(wire::ENV_NONCE)) else { fail() };
     let mut input = String::new();
-    if let Err(e) = std::io::stdin().take(wire::MAX_GIT_INPUT as u64 + 1).read_to_string(&mut input) {
-        diag("stdin", &e.to_string());
+    if std::io::stdin().take(wire::MAX_GIT_INPUT as u64 + 1).read_to_string(&mut input).is_err() {
         fail();
     }
-    let Ok(query) = wire::parse_git_query(&input) else {
-        diag("parse-query", &format!("{input:?}"));
-        fail()
-    };
-    diag("query", &format!("{input:?}"));
-    let mut conn = match connect(&endpoint) {
-        Ok(c) => c,
-        Err(e) => {
-            diag("connect", &format!("{e} os={:?}", e.raw_os_error()));
-            fail()
-        }
-    };
-    if let Err(e) = conn.write_all(wire::request_line(&nonce, op, &query).as_bytes()).and_then(|_| conn.flush()) {
-        diag("write", &format!("{e} os={:?}", e.raw_os_error()));
+    let Ok(query) = wire::parse_git_query(&input) else { fail() };
+    let Ok(mut conn) = connect(&endpoint) else { fail() };
+    if conn.write_all(wire::request_line(&nonce, op, &query).as_bytes()).is_err() || conn.flush().is_err() {
         fail();
     }
     let mut line = String::new();
     let mut reader = BufReader::new(conn.take(wire::MAX_LINE as u64));
-    if let Err(e) = reader.read_line(&mut line) {
-        diag("read", &format!("{e} os={:?}", e.raw_os_error()));
+    if reader.read_line(&mut line).is_err() {
         fail();
     }
-    let Ok(resp) = serde_json::from_str::<wire::Response>(line.trim_end()) else {
-        diag("parse-response", &format!("len={}", line.len()));
-        fail()
-    };
+    let Ok(resp) = serde_json::from_str::<wire::Response>(line.trim_end()) else { fail() };
     if !resp.ok {
-        diag("refused", &format!("{:?}", resp.code));
         fail();
     }
     if op == wire::Op::Get {
