@@ -92,3 +92,22 @@ sequence values at or below the last accepted value. On a gap, suspend effect
 controls and reconcile with `readSnapshot`; do not apply partial events blindly.
 An initial/reconciliation read only replaces state if its sequence is at least
 the last accepted value. Fixture mode cannot substitute for failed native reads.
+
+## Create versus start and retry
+
+Creating a Studio persists the session only and does not call the model. An
+explicit `vibespace_start_run` takes `{studioId, requestId, retryOfRunId: null}`.
+The caller generates one requestId for that user firing. The native service
+persists the request-to-run mapping and returns the same run on an ambiguous
+transport retry. Checkpoint 0 and the isolated copy precede AgentBackend.start,
+which itself starts the SDK run immediately.
+
+Retry takes the same studioId, a new requestId and retryOfRunId referring to a
+failed/stopped/crashed run in that studio. It creates a new run and fresh isolated
+copy, preserving prior history. It never mutates/reuses the failed run's identity.
+Do not advertise Start/Retry until the composed implementation exists.
+
+Review files also carry bounded currentText/null, currentBytes and conflict for a
+current-project versus proposed comparison. Binary contents stay out of text
+fields. Selected files are the initial alpha unit; selected-hunk support and
+preview URLs require actual native implementation before controls are enabled.

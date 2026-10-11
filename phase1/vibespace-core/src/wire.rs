@@ -258,6 +258,10 @@ pub struct ReviewFile {
     pub after_text: Option<String>,
     pub before_bytes: u64,
     pub after_bytes: u64,
+    /// Current project content for conflict comparison, bounded and UTF-8 only.
+    pub current_text: Option<String>,
+    pub current_bytes: u64,
+    pub conflict: bool,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -345,4 +349,14 @@ mod snapshot_tests {
         assert_eq!(event.payload["review"], serde_json::Value::Null);
         assert_eq!(event.payload["capabilities"]["pause"], false);
     }
+}
+
+/// An explicit user firing, distinct from creating a studio. The same request ID
+/// must return the same run after an ambiguous transport retry.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct StartRun {
+    pub studio_id: String,
+    pub request_id: String,
+    pub retry_of_run_id: Option<String>,
 }
