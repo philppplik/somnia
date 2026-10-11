@@ -1,0 +1,22 @@
+[package]
+name = "somnia-vibespace-storage"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.90"
+license = "MIT"
+description = "Standalone SQLite persistence and scoped memory for Vibe Space (no UI/Tauri dependency)."
+
+[dependencies]
+# `bundled` compiles SQLite from source with FTS5 enabled; no system SQLite is needed.
+rusqlite = { version = "0.32", features = ["bundled"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+uuid = { version = "1", features = ["v4"] }
+
+[dev-dependencies]
+tempfile = "3"
+
+# NOTE: there is intentionally no `fastembed` / `sqlite-vec` feature in this version.
+# Vector search is reported as `unavailable` in `Capabilities` (see docs/vibespace/storage.md).
+
+[workspace]
