@@ -19,6 +19,11 @@ fn main() {
             "vibespace_steer_run",
             "vibespace_decide_consent",
             "vibespace_apply_run",
+            "vibespace_review_hunks",
+            "vibespace_run_timeline",
+            "vibespace_apply_hunks",
+            "vibespace_request_changes",
+
             "vibespace_discard_run",
             "vibespace_restore_checkpoint",
             "vibespace_memory_list",

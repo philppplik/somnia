@@ -20,8 +20,8 @@ pub use apply::{
     Selection,
 };
 pub use diff::{
-    Change, ChangeKind, ChangeSet, ContentDiff, MAX_TEXT_DIFF_BYTES, Review, ReviewedChange,
-    unified_diff,
+    apply_text_hunks, text_hunks, unified_diff, Change, ChangeKind, ChangeSet, ContentDiff,
+    HunkSelection, Review, ReviewedChange, TextHunk, MAX_TEXT_DIFF_BYTES,
 };
 pub use digest::{CheckpointId, Digest};
 pub use error::{Conflict, ConflictKind, Error, Result, RollbackReport};

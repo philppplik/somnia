@@ -717,10 +717,10 @@ pub fn vibespace_capabilities(
             "review",
         ];
         if native_files_enabled() {
-            actions.push("restore");
+            actions.extend(["restore", "apply-hunks"]);
         }
         if transport {
-            actions.extend(["start", "retry"]);
+            actions.extend(["start", "retry", "request-changes"]);
         }
         Ok(NativeCapabilities {
             transport,
@@ -1034,4 +1034,74 @@ mod tests {
                 && !text.contains("transport response")
         );
     }
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct ReviewRunRead {
+    pub run_id: String,
+}
+sync_command!(
+    vibespace_review_hunks,
+    ReviewRunRead,
+    w::ReviewHunks,
+    false,
+    |runtime, request, _window, _state| { runtime.review_hunks(&request.run_id).map_err(failed) }
+);
+sync_command!(
+    vibespace_run_timeline,
+    ReviewRunRead,
+    Vec<w::TimelineEntry>,
+    false,
+    |runtime, request, _window, _state| { runtime.timeline(&request.run_id).map_err(failed) }
+);
+sync_command!(
+    vibespace_apply_hunks,
+    w::HunkApply,
+    (),
+    true,
+    |runtime, request, _window, _state| {
+        require_native_files()?;
+        runtime.apply_hunks(request).map_err(failed)
+    }
+);
+#[tauri::command]
+pub async fn vibespace_request_changes(
+    window: WebviewWindow,
+    webview: Webview,
+    state: State<'_, VibeSpaceState>,
+    request: w::RequestChanges,
+) -> Result<w::SnapshotReply> {
+    let label = window.label().to_string();
+    crate::cmd::cmd_async("vibespace_request_changes", Some(&label), async {
+        gate(&window, &webview)?;
+        let runtime = state.runtime(window.app_handle())?;
+        // Validate provider readiness BEFORE creating the durable successor.
+        let old = runtime.snapshot(&request.run_id).map_err(failed)?.snapshot;
+        if !state.models(window.app_handle())?.contains(&old.model) {
+            return Err(error("vibespace_model_not_configured", true));
+        }
+        let reference = old.model;
+        let (transport, config) = tauri::async_runtime::spawn_blocking(move || resolve(&reference))
+            .await
+            .map_err(failed)??;
+        gate(&window, &webview)?;
+        let studio = runtime.prepare_request_changes(&request).map_err(failed)?;
+        let mut reply = runtime
+            .start(
+                w::StartRun {
+                    studio_id: studio.studio_id,
+                    request_id: request.request_id,
+                    retry_of_run_id: None,
+                },
+                transport,
+                config,
+            )
+            .await
+            .map_err(failed)?;
+        restrict_platform_snapshot(&mut reply.snapshot);
+        state.changed()?;
+        Ok(reply)
+    })
+    .await
 }

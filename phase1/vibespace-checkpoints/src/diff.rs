@@ -257,3 +257,95 @@ mod tests {
         assert_eq!(unified_diff("same\n", "same\n", "x", "y").0, "");
     }
 }
+
+/// Stable hunk IDs bind a selection to both reviewed byte sequences and its range.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct TextHunk {
+    pub id: String,
+    pub old_start: usize,
+    pub old_count: usize,
+    pub new_start: usize,
+    pub new_count: usize,
+    pub diff: String,
+}
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct HunkSelection {
+    pub path: String,
+    pub hunk_ids: Vec<String>,
+}
+
+pub fn text_hunks(old: &str, new: &str) -> Vec<TextHunk> {
+    let unified = unified_diff(old, new, "before", "proposed").0;
+    let mut hunks: Vec<TextHunk> = vec![];
+    for line in unified.split_inclusive('\n').skip(2) {
+        if line.starts_with("@@ ") {
+            let fields: Vec<_> = line.split_whitespace().collect();
+            let range = |s: &str| {
+                let mut parts = s[1..].split(',');
+                (
+                    parts.next().unwrap().parse::<usize>().unwrap(),
+                    parts.next().unwrap().parse::<usize>().unwrap(),
+                )
+            };
+            let (os, oc) = range(fields[1]);
+            let (ns, nc) = range(fields[2]);
+            let id = Digest::of(
+                format!(
+                    "{}:{}:{os}:{oc}:{ns}:{nc}",
+                    Digest::of(old.as_bytes()).to_hex(),
+                    Digest::of(new.as_bytes()).to_hex()
+                )
+                .as_bytes(),
+            )
+            .to_hex();
+            hunks.push(TextHunk {
+                id,
+                old_start: if oc == 0 { os } else { os - 1 },
+                old_count: oc,
+                new_start: if nc == 0 { ns } else { ns - 1 },
+                new_count: nc,
+                diff: line.into(),
+            });
+        } else if let Some(h) = hunks.last_mut() {
+            h.diff.push_str(line);
+        }
+    }
+    hunks
+}
+/// Caller supplies IDs only, never replacement text or offsets. Duplicate/overlapping selections fail closed.
+pub fn apply_text_hunks(old: &str, new: &str, ids: &[String]) -> crate::Result<String> {
+    let hunks = text_hunks(old, new);
+    let mut selected = vec![];
+    let mut seen = std::collections::BTreeSet::new();
+    for id in ids {
+        if !seen.insert(id) {
+            return Err(crate::Error::UnknownSelection(id.clone()));
+        }
+        selected.push(
+            hunks
+                .iter()
+                .find(|h| &h.id == id)
+                .ok_or_else(|| crate::Error::UnknownSelection(id.clone()))?,
+        );
+    }
+    if selected.is_empty() {
+        return Err(crate::Error::EmptySelection);
+    }
+    selected.sort_by_key(|h| h.old_start);
+    let a: Vec<_> = old.split_inclusive('\n').collect();
+    let b: Vec<_> = new.split_inclusive('\n').collect();
+    let mut out = String::new();
+    let mut cursor = 0;
+    for h in selected {
+        if h.old_start < cursor {
+            return Err(crate::Error::UnknownSelection(h.id.clone()));
+        }
+        out.extend(a[cursor..h.old_start].iter().copied());
+        out.extend(b[h.new_start..h.new_start + h.new_count].iter().copied());
+        cursor = h.old_start + h.old_count;
+    }
+    out.extend(a[cursor..].iter().copied());
+    Ok(out)
+}

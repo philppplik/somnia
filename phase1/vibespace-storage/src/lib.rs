@@ -16,6 +16,7 @@ pub mod time;
 
 mod memory;
 mod runs;
+mod review;
 
 pub use error::{Error, ErrorDto, Result};
 pub use model::*;

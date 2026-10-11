@@ -17,7 +17,7 @@ use crate::manifest::{Entry, FORMAT};
 use crate::path::{check_case_collisions, split_key};
 use crate::scope::ScopeRoot;
 use crate::store::hash_reader;
-use crate::vault::{IsolatedCopy, RunMetadata, Vault, key_path, set_exec};
+use crate::vault::{key_path, set_exec, IsolatedCopy, RunMetadata, Vault};
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, BTreeSet, HashSet};
 use std::fs::{self, OpenOptions};
@@ -28,6 +28,11 @@ use std::path::{Path, PathBuf};
 pub enum Selection {
     /// Every change in the review.
     All,
+    /// Whole paths plus text hunks. A path may not appear in both selections.
+    Hunks {
+        paths: Vec<String>,
+        hunks: Vec<crate::diff::HunkSelection>,
+    },
     /// Only these snapshot keys (`"<root>/<rel>"`), each of which must appear in the review.
     Paths(Vec<String>),
 }
@@ -634,6 +639,15 @@ impl Vault {
                 }
                 set.into_iter().map(|p| reviewed[p]).collect()
             }
+            Selection::Hunks { paths, hunks } => {
+                let mut seen = BTreeSet::new();
+                for p in paths.iter().chain(hunks.iter().map(|h| &h.path)) {
+                    if !seen.insert(p.as_str()) || !reviewed.contains_key(p.as_str()) {
+                        return Err(Error::UnknownSelection(p.clone()));
+                    }
+                }
+                seen.into_iter().map(|p| reviewed[p]).collect()
+            }
         };
         if selected.is_empty() {
             return Err(Error::EmptySelection);
@@ -664,9 +678,41 @@ impl Vault {
             }
         }
 
+        // Synthesize only selected reviewed text hunks AFTER checking the complete isolated digest.
+        // Originals, conflict detection, pre-apply checkpoint and journal are unchanged.
+        let mut partial = BTreeMap::new();
+        if let Selection::Hunks { hunks, .. } = &req.selection {
+            for selection in hunks {
+                let c = reviewed[selection.path.as_str()];
+                if c.kind != ChangeKind::Modified {
+                    return Err(Error::UnknownSelection(selection.path.clone()));
+                }
+                let before = c.before.as_ref().ok_or(Error::EmptySelection)?;
+                let after = c.after.as_ref().ok_or(Error::EmptySelection)?;
+                if before.exec != after.exec {
+                    return Err(Error::UnknownSelection(selection.path.clone()));
+                }
+                let a = self.store.get_bytes(&before.digest)?;
+                let b = self.store.get_bytes(&after.digest)?;
+                let a = crate::diff::as_text(&a)
+                    .ok_or_else(|| Error::UnknownSelection(selection.path.clone()))?;
+                let b = crate::diff::as_text(&b)
+                    .ok_or_else(|| Error::UnknownSelection(selection.path.clone()))?;
+                let text = crate::diff::apply_text_hunks(a, b, &selection.hunk_ids)?;
+                let mut entry = after.clone();
+                entry.digest = self.store.put_bytes(text.as_bytes())?;
+                entry.size = text.len() as u64;
+                partial.insert(selection.path.clone(), entry);
+            }
+        }
+
         // 2. Backup checkpoint of the originals, and conflict detection against it.
         let scope = self.current_scope(&base)?;
-        let apply_id = unique_name("apply");
+        let apply_id = unique_name(if matches!(req.selection, Selection::Hunks { .. }) {
+            "apply-hunks"
+        } else {
+            "apply"
+        });
         let mut meta = RunMetadata {
             label: Some("pre-apply".into()),
             ..Default::default()
@@ -680,7 +726,12 @@ impl Vault {
         let mut conflicts = Vec::new();
         let mut items = Vec::new();
         let mut already = Vec::new();
-        for c in &selected {
+        for original_change in &selected {
+            let mut changed = (*original_change).clone();
+            if let Some(entry) = partial.get(&changed.path) {
+                changed.after = Some(entry.clone());
+            }
+            let c = &changed;
             let now = cur.get(&c.path);
             match c.kind {
                 ChangeKind::Added => match now {

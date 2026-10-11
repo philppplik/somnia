@@ -1,0 +1,4 @@
+import {createRoot} from 'react-dom/client';import {VibeSpaceHome} from '../../src/components/vibespace/VibeSpaceHome';import {createFixtureVibeSpaceTransport,fixtureSnapshot} from '../../src/lib/vibespace/fixture';import {setLocale} from '../../src/lib/i18n';import '../../src/components/vibespace/vibespace.css';
+const snapshot=fixtureSnapshot();snapshot.studios[0].review!.conflicts=[];snapshot.studios[0].review!.files=snapshot.studios[0].review!.files.filter(f=>!f.conflict);snapshot.studios[0].usage!.cachedTokens=900;
+setLocale(new URLSearchParams(location.search).get('locale')??'en');
+const transport=createFixtureVibeSpaceTransport('development',snapshot);Object.assign(window,{reviewFixture:transport});document.body.style.cssText='font-family:system-ui;margin:24px;background:#f3f4f7;height:calc(100vh - 48px)';document.getElementById('root')!.style.height='100%';createRoot(document.getElementById('root')!).render(<VibeSpaceHome transport={transport}/>);

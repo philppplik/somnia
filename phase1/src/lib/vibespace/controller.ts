@@ -83,6 +83,7 @@ export class VibeSpaceController {
     if(!controls.consent||!consent||intent.choice==='allow_for_run'&&!consent.allowForRun){this.error(new Error('Consent request changed. Reload and review it again.'));return false;}
    }
    if(intent.type==='review'&&(!controls.review||intent.reviewRevision!==studio.review?.revision||!reviewPathsAllowed(studio,intent.decision,intent.paths))){this.error(new Error('Review changed or contains conflicts. Reload and review it again.'));return false;}
+   if((intent.type==='apply-hunks'||intent.type==='request-changes')&&(!controls.review||studio.review?.revision!==intent.reviewRevision)){this.error(new Error('Review changed. Reload before acting.'));return false;}
    if(intent.type==='restore'&&!studio.checkpoints.some(c=>c.checkpointId===intent.checkpointId&&c.restorable)){this.error(new Error('Checkpoint is not restorable.'));return false;}
   }
   const generation=this.generation;

@@ -24,7 +24,7 @@ export function parseRun(value:unknown):RunSnapshot{
  text(p.goal,'goal');model(p.model,'model');nullableText(p.lastStep,'lastStep');nullableDate(p.startedAtUtc,'startedAtUtc');nullableDate(p.finishedAtUtc,'finishedAtUtc');integer(p.elapsedMs,'elapsedMs');
  if(!['pending','claimed','running','paused','stopped','done','failed','crashed'].includes(p.executionState as string))fail('executionState');
  if(!['none','ready','applied','discarded','conflict'].includes(p.reviewState as string))fail('reviewState');
- if(p.usage!==null){const u=record(p.usage,'usage',['inputTokens','outputTokens','cacheReadTokens','cacheWriteTokens','costUsd','costSource']);for(const k of ['inputTokens','outputTokens'])integer(u[k],k);for(const k of ['cacheReadTokens','cacheWriteTokens']){if(u[k]!==null)integer(u[k],k);}if(u.costUsd!==null)number(u.costUsd,'costUsd');nullableText(u.costSource,'costSource',256);}
+ if(p.usage!==null){usageValue(p.usage);}
  const messages=array(p.messages,'messages');messages.forEach(v=>{const m=record(v,'message',['id','role','text','timestampUtc']);text(m.id,'message.id',256);text(m.role,'message.role',64);text(m.text,'message.text',500000,true);date(m.timestampUtc,'message.timestampUtc');});unique(messages,'id','messages');
  const consents=array(p.pendingConsents,'pendingConsents',100);consents.forEach(v=>{const c=record(v,'consent',['requestId','action','scope','reason','allowForRun']);for(const k of ['requestId','action','scope','reason'])text(c[k],k);boolean(c.allowForRun,'allowForRun');});unique(consents,'requestId','consents');
  const checkpoints=array(p.checkpoints,'checkpoints');checkpoints.forEach(v=>{const c=record(v,'checkpoint',['checkpointId','label','createdAtUtc','fileCount','restorable']);text(c.checkpointId,'checkpointId',256);text(c.label,'label',256);date(c.createdAtUtc,'createdAtUtc');integer(c.fileCount,'fileCount');boolean(c.restorable,'restorable');});unique(checkpoints,'checkpointId','checkpoints');
@@ -67,7 +67,7 @@ export function parseReadProjection(value:unknown):VibeSnapshot{
 export function parseFolderGrant(value:unknown):FolderGrant{const g=record(value,'folderGrant',['folderGrantId','folder']);text(g.folderGrantId,'folderGrantId',256);text(g.folder,'folder',4096);return value as FolderGrant;}
 export function validateCommand(command:VibeCommand):void{
  const extra:Record<string,string[]>={
- 'create-space':['name','folderGrantId'],'create-studio':['spaceId','goal','model'],start:['studioId'],stop:['runId'],steer:['runId','message'],consent:['runId','requestId','choice'],review:['runId','reviewRevision','decision','paths'],restore:['runId','checkpointId'],retry:['runId']};
+ 'create-space':['name','folderGrantId'],'create-studio':['spaceId','goal','model'],start:['studioId'],stop:['runId'],steer:['runId','message'],consent:['runId','requestId','choice'],review:['runId','reviewRevision','decision','paths'],restore:['runId','checkpointId'],retry:['runId'],'request-changes':['runId','reviewRevision','message'],'apply-hunks':['runId','reviewRevision','paths','hunks']};
  record(command,'command',['type','commandId','expectedRevision',...(extra[command.type]??[])]);
  text(command.commandId,'commandId',256);integer(command.expectedRevision,'expectedRevision');if('runId'in command)text(command.runId,'runId',256);
  switch(command.type){
@@ -75,6 +75,8 @@ export function validateCommand(command:VibeCommand):void{
  case 'create-studio':text(command.spaceId,'spaceId',256);text(command.goal,'goal');model(command.model,'model');break;
  case 'steer':text(command.message,'message');break;
  case 'consent':text(command.requestId,'requestId',256);if(!['allow_once','allow_for_run','deny'].includes(command.choice))fail('choice');break;
+ case 'request-changes':text(command.reviewRevision,'reviewRevision',256);text(command.message,'message',2048);break;
+ case 'apply-hunks':text(command.reviewRevision,'reviewRevision',256);array(command.paths,'paths').forEach(v=>text(v,'path',4096));array(command.hunks,'hunks').forEach(v=>{const h=record(v,'hunkSelection',['path','hunkIds']);text(h.path,'hunk.path',4096);const ids=array(h.hunkIds,'hunkIds');if(!ids.length||new Set(ids).size!==ids.length)fail('hunkIds');ids.forEach(id=>text(id,'hunk.id',256));});if(!command.paths.length&&!command.hunks.length)fail('empty apply');if(new Set([...command.paths,...command.hunks.map(h=>h.path)]).size!==command.paths.length+command.hunks.length)fail('overlapping selection');break;
  case 'review':text(command.reviewRevision,'reviewRevision',256);if(!['apply','discard'].includes(command.decision))fail('decision');array(command.paths,'paths').forEach(v=>text(v,'path',4096));if(new Set(command.paths).size!==command.paths.length)fail('duplicate path');if(command.decision==='apply'&&!command.paths.length)fail('empty apply');break;
  case 'restore':text(command.checkpointId,'checkpointId',256);break;
  case 'start':text(command.studioId,'studioId',256);break;
@@ -89,4 +91,18 @@ export function parseStudioSummaries(value:unknown):import('./wire').StudioSumma
 
 export function parseSpaceSummaries(value:unknown):import('./wire').SpaceSummary[]{
  const spaces=array(value,'spaces');spaces.forEach(v=>{const p=record(v,'space',['spaceId','name','autonomy','scopeLabel','studioCount']);text(p.spaceId,'spaceId',256);text(p.name,'space.name',120);text(p.scopeLabel,'scopeLabel',4096);integer(p.studioCount,'studioCount');if(p.autonomy!=='ask_for_writes')fail('autonomy');});unique(spaces,'spaceId','spaces');return value as import('./wire').SpaceSummary[];
+}
+
+export function parseReviewDetails(hunks:unknown, log:unknown):import('./types').ReviewDetails {
+ const timeline=array(log,'timeline',11000).map(v=>{const raw=v as Record<string,unknown>;const e=record(v,'timeline.entry',['sequence','timestampUtc','kind','detail',...('usage' in raw?['usage']:[])]);if(e.usage!==undefined)usageValue(e.usage);integer(e.sequence,'timeline.sequence');date(e.timestampUtc,'timeline.timestamp');text(e.kind,'timeline.kind',128);text(e.detail,'timeline.detail',256,true);return v as import('./types').TimelineEntry;});unique(timeline,'sequence','timeline');
+ if(hunks===null)return {revision:null,files:[],timeline};
+ const r=record(hunks,'reviewHunks',['revision','files']);text(r.revision,'revision',256);
+ const files=array(r.files,'hunkFiles').map(v=>{const f=record(v,'hunkFile',['path','hunks']);text(f.path,'path',4096);const hs=array(f.hunks,'hunks');hs.forEach(v=>{const h=record(v,'textHunk',['id','oldStart','oldCount','newStart','newCount','diff']);text(h.id,'hunk.id',256);for(const k of ['oldStart','oldCount','newStart','newCount'])integer(h[k],k);text(h.diff,'hunk.diff',500000);});unique(hs,'id','hunks');return v as import('./types').ReviewDetails['files'][number];});unique(files,'path','hunkFiles');return {revision:r.revision as string,files,timeline};
+}
+
+function usageValue(value:unknown){
+ const u=record(value,'usage',['inputTokens','outputTokens','cacheReadTokens','cacheWriteTokens','costUsd','costSource']);
+ for(const k of ['inputTokens','outputTokens'])integer(u[k],k);
+ for(const k of ['cacheReadTokens','cacheWriteTokens'])if(u[k]!==null)integer(u[k],k);
+ if(u.costUsd!==null)number(u.costUsd,'costUsd');nullableText(u.costSource,'costSource',256);
 }

@@ -28,7 +28,10 @@ impl engine::ModelTransport for Script {
                 usage: engine::Usage {
                     input_tokens: 2,
                     output_tokens: 3,
-                    ..Default::default()
+                    cache_read_tokens: Some(900),
+                    cache_write_tokens: Some(30),
+                    cost_usd: Some(0.01),
+                    cost_source: Some(engine::CostSource::ProviderReported),
                 },
             })
         } else {
@@ -382,4 +385,79 @@ async fn selected_file_apply_keeps_remaining_changes_ready() {
         rt.snapshot(&id).unwrap().snapshot.review_state,
         ReviewState::Applied
     );
+}
+
+#[tokio::test]
+async fn final_hunk_selection_has_durable_checkpoint_and_new_change_request_is_idempotent() {
+    let (_data, project, rt, studio) = setup();
+    let done = complete(&rt, &studio).await;
+    let id = done.snapshot.run_id;
+    let review = rt.snapshot(&id).unwrap().snapshot.review.unwrap();
+    let metered = rt.snapshot(&id).unwrap().snapshot.usage.unwrap();
+    assert_eq!(metered.input_tokens, 6);
+    assert_eq!(metered.cache_read_tokens, Some(900));
+    assert_eq!(metered.cache_write_tokens, Some(30));
+    assert_eq!(metered.cost_usd, Some(0.01));
+    assert_eq!(
+        metered.cost_source.as_deref(),
+        Some("provider_reported_partial")
+    );
+    assert!(rt.timeline(&id).unwrap().iter().any(|e| e
+        .usage
+        .as_ref()
+        .is_some_and(|u| u.cache_read_tokens == Some(900))));
+    let detail = rt.review_hunks(&id).unwrap();
+    assert_eq!(detail.revision, review.revision);
+    assert!(!detail.files[0].hunks.is_empty());
+    let request = RequestChanges {
+        run_id: id.clone(),
+        review_revision: review.revision.clone(),
+        request_id: uuid::Uuid::new_v4().to_string(),
+        message: "Keep it short".into(),
+    };
+    let next = rt.prepare_request_changes(&request).unwrap();
+    assert_ne!(next.studio_id, studio.studio_id);
+    assert_eq!(
+        rt.prepare_request_changes(&request).unwrap().studio_id,
+        next.studio_id
+    );
+    assert_eq!(
+        std::fs::read_to_string(project.path().join("hello.txt")).unwrap(),
+        "before"
+    );
+    assert!(rt
+        .timeline(&id)
+        .unwrap()
+        .iter()
+        .any(|e| e.kind == "review.changes_requested"));
+    let revised = rt.snapshot(&id).unwrap().snapshot.review.unwrap();
+    assert!(rt
+        .apply_hunks(HunkApply {
+            run_id: id.clone(),
+            review_revision: "stale".into(),
+            paths: vec![],
+            hunks: vec![]
+        })
+        .is_err());
+    rt.apply_hunks(HunkApply {
+        run_id: id.clone(),
+        review_revision: revised.revision,
+        paths: vec![],
+        hunks: vec![somnia_vibespace_checkpoints::HunkSelection {
+            path: detail.files[0].path.clone(),
+            hunk_ids: vec![detail.files[0].hunks[0].id.clone()],
+        }],
+    })
+    .unwrap();
+    assert_eq!(
+        std::fs::read_to_string(project.path().join("hello.txt")).unwrap(),
+        "after"
+    );
+    let applied = rt.snapshot(&id).unwrap();
+    assert_eq!(applied.snapshot.review_state, ReviewState::Applied);
+    assert!(applied
+        .snapshot
+        .checkpoints
+        .iter()
+        .any(|cp| cp.label == "Before apply" || cp.label.to_lowercase().contains("apply")));
 }

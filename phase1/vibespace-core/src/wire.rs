@@ -386,3 +386,43 @@ pub struct SpaceSummary {
     pub autonomy: String,
     pub studio_count: u64,
 }
+
+/// Native review extension, separate from v1 whole-path review DTOs.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct HunkApply {
+    pub run_id: String,
+    pub review_revision: String,
+    pub paths: Vec<String>,
+    pub hunks: Vec<somnia_vibespace_checkpoints::HunkSelection>,
+}
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct RequestChanges {
+    pub run_id: String,
+    pub review_revision: String,
+    pub request_id: String,
+    pub message: String,
+}
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct ReviewHunks {
+    pub revision: String,
+    pub files: Vec<FileHunks>,
+}
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct FileHunks {
+    pub path: String,
+    pub hunks: Vec<somnia_vibespace_checkpoints::TextHunk>,
+}
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct TimelineEntry {
+    pub sequence: u64,
+    pub timestamp_utc: String,
+    pub kind: String,
+    pub detail: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub usage: Option<Usage>,
+}

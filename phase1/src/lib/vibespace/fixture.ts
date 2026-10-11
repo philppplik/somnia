@@ -14,7 +14,8 @@ export function fixtureSnapshot():VibeSnapshot{
 export function createFixtureVibeSpaceTransport(environment:'development'|'test',initial:VibeSnapshot=fixtureSnapshot()):VibeSpaceTransport & {calls:VibeCommand[];emit:(event:VibeEvent)=>void;failNext:Error|null}{
  if(!['development','test'].includes(environment))throw new Error('Fixture mode is limited to explicit development or test use.');
  let snapshot=parseSnapshot(structuredClone(initial));let listener:((e:VibeEvent)=>void)|undefined;
- const transport={mode:'fixture' as const,capabilities:['create-space','create-studio','start','stop','steer','consent','review','restore','retry'] as const,calls:[] as VibeCommand[],failNext:null as Error|null,
+ const transport={mode:'fixture' as const,capabilities:['create-space','create-studio','start','stop','steer','consent','review','restore','retry','apply-hunks','request-changes'] as const,calls:[] as VibeCommand[],failNext:null as Error|null,
+  reviewDetails:async(runId:string)=>({revision:snapshot.studios.find(s=>s.runId===runId)?.review?.revision??null,files:[{path:'index.html',hunks:[{id:'fixture-hunk-1',oldStart:0,oldCount:1,newStart:0,newCount:1,diff:'@@ -1,1 +1,1 @@\n-<h1>Welcome</h1>\n+<h1>New headline</h1>\n'},{id:'fixture-hunk-2',oldStart:9,oldCount:1,newStart:9,newCount:1,diff:'@@ -10,1 +10,1 @@\n-<p>Before</p>\n+<p>After</p>\n'}]}],timeline:[{sequence:1,timestampUtc:'2026-10-11T10:00:00Z',kind:'agent.step',detail:'Review baseline'},{sequence:2,timestampUtc:'2026-10-11T10:00:01Z',kind:'consent.decision_requested',detail:'deny'}]}),
   snapshot:async()=>structuredClone(snapshot),chooseFolder:async()=>({folderGrantId:'fixture-grant',folder:'/projects/fixture'}),
   subscribe:async(onEvent:(e:VibeEvent)=>void)=>{listener=onEvent;return()=>{listener=undefined;};},
   emit(event:VibeEvent){listener?.(event);},
@@ -28,12 +29,14 @@ export function createFixtureVibeSpaceTransport(environment:'development'|'test'
     if(command.type==='stop'){next.executionState='stopped';next.pendingConsents=[];next.capabilities={...next.capabilities,stop:false,steer:false};next.lastStep='Stopped. Partial work stays isolated.';}
     if(command.type==='steer')next.lastStep='Direction received for the next step.';
     if(command.type==='consent'){next.pendingConsents=s.pendingConsents.filter(c=>c.requestId!==command.requestId);next.lastStep=command.choice==='deny'?'Request denied. Waiting for the next native step.':'Consent recorded.';}
+    if(command.type==='apply-hunks'){next.reviewState='applied';next.capabilities={...next.capabilities,apply:false};next.review=null;}
     if(command.type==='review'){next.reviewState=command.decision==='apply'?'applied':'discarded';next.capabilities={...next.capabilities,apply:false};}
     return next;
    });
    let spaces=snapshot.spaces;let sessions=snapshot.sessions;
    if(command.type==='create-space')spaces=[...spaces,{spaceId:`space-${spaces.length}`,name:command.name,scopeLabel:'/projects/fixture',autonomy:'ask_for_writes',studioCount:0}];
    if(command.type==='create-studio')sessions=[...sessions,{studioId:`studio-${sessions.length}`,spaceId:command.spaceId,goal:command.goal,model:command.model,canStart:true,latestRunId:null}];
+   if(command.type==='request-changes'){const old=studios.find(s=>s.runId===command.runId)!;const next=fixtureRun({...old,runId:`run-${studios.length}`,studioId:`changes-${studios.length}`,goal:command.message,review:null,reviewState:'none',executionState:'running',lastStep:'New reviewed run',sequence:1,pendingConsents:[],capabilities:{stop:true,steer:true,pause:false,resume:false,apply:false,restore:false}});studios.push(next);sessions=[...sessions,{studioId:next.studioId,spaceId:next.spaceId,goal:next.goal,model:next.model,canStart:false,latestRunId:next.runId}];}
    if(command.type==='start'){
     const session=sessions.find(s=>s.studioId===command.studioId);if(!session)throw new Error('Fixture session missing');
     const run=fixtureRun({runId:`run-${studios.length}`,studioId:session.studioId,spaceId:session.spaceId,goal:session.goal,model:session.model,review:null,reviewState:'none',executionState:'running',lastStep:'Starting...',elapsedMs:0,startedAtUtc:null,finishedAtUtc:null,usage:null,checkpoints:[],capabilities:{stop:true,steer:true,pause:false,resume:false,apply:false,restore:false}});studios.push(run);sessions=sessions.map(s=>s.studioId===session.studioId?{...s,canStart:false,latestRunId:run.runId}:s);

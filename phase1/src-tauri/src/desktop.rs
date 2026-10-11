@@ -2291,6 +2291,11 @@ pub fn run() {
             crate::vibespace_commands::vibespace_steer_run,
             crate::vibespace_commands::vibespace_decide_consent,
             crate::vibespace_commands::vibespace_apply_run,
+            crate::vibespace_commands::vibespace_review_hunks,
+            crate::vibespace_commands::vibespace_run_timeline,
+            crate::vibespace_commands::vibespace_apply_hunks,
+            crate::vibespace_commands::vibespace_request_changes,
+
             crate::vibespace_commands::vibespace_discard_run,
             crate::vibespace_commands::vibespace_restore_checkpoint,
             crate::vibespace_commands::vibespace_memory_list,

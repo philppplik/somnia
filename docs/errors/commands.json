@@ -1459,6 +1459,19 @@
       ]
     },
     {
+      "name": "vibespace_apply_hunks",
+      "domain": "fs",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "request"
+      ],
+      "args": [
+        "request"
+      ]
+    },
+    {
       "name": "vibespace_apply_run",
       "domain": "fs",
       "status": "native",
@@ -1608,7 +1621,46 @@
       "args": []
     },
     {
+      "name": "vibespace_request_changes",
+      "domain": "fs",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "request"
+      ],
+      "args": [
+        "request"
+      ]
+    },
+    {
       "name": "vibespace_restore_checkpoint",
+      "domain": "fs",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "request"
+      ],
+      "args": [
+        "request"
+      ]
+    },
+    {
+      "name": "vibespace_review_hunks",
+      "domain": "fs",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "request"
+      ],
+      "args": [
+        "request"
+      ]
+    },
+    {
+      "name": "vibespace_run_timeline",
       "domain": "fs",
       "status": "native",
       "wrapped": false,
