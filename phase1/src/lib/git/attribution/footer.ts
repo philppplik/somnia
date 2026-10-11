@@ -12,7 +12,11 @@ export interface AttributionPolicy {
   coAuthorName: string;
   coAuthorEmail: string;
 }
-export const DEFAULT_ATTRIBUTION_POLICY: AttributionPolicy = {enabled: false, coAuthorName: 'Somnia Agent', coAuthorEmail: ''};
+export const DEFAULT_ATTRIBUTION_POLICY: AttributionPolicy = {
+  enabled: true,
+  coAuthorName: 'somnia-agent',
+  coAuthorEmail: '340778888+somnia-agent@users.noreply.github.com',
+};
 export interface FinalizeInput {
   subject: string;
   body?: string;
@@ -50,7 +54,8 @@ export function finalizeCommitMessage(i: FinalizeInput): FinalizeResult {
   const subject = i.subject.replace(/[\r\n]+/g, ' ').trim();
   // Human-written text is left alone; model text may not carry reserved trailers.
   const {body, stripped} = i.aiDrafted ? stripReserved(i.body ?? '') : {body: (i.body ?? '').trim(), stripped: 0};
-  const footer = buildFooter(i.policy, i.substantive, i.sessionId);
+  // Attribution is for app-generated commits only; human/dev commits never get an automatic trailer.
+  const footer = buildFooter(i.policy, i.aiDrafted && i.substantive, i.sessionId);
   const humanHasReserved = !i.aiDrafted && body.split('\n').some(l => RESERVED.test(l.trim()));
   const out = footer.length && !humanHasReserved ? [body, footer.join('\n')].filter(Boolean).join('\n\n') : body;
   return {subject, body: out, footer: humanHasReserved ? [] : footer, applied: footer.length > 0 && !humanHasReserved, strippedModelTrailers: stripped};

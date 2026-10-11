@@ -2,8 +2,17 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {buildFooter, finalizeCommitMessage, DEFAULT_ATTRIBUTION_POLICY, type AttributionPolicy} from './footer';
 const on: AttributionPolicy = {enabled: true, coAuthorName: 'Somnia Agent', coAuthorEmail: 'agent@example.com'};
-test('off by default: no footer even when substantive', () => {
-  assert.deepEqual(buildFooter(DEFAULT_ATTRIBUTION_POLICY, true, 'task-1'), []);
+test('default app attribution uses Somnia Agent identity for substantive app commits', () => {
+  assert.equal(DEFAULT_ATTRIBUTION_POLICY.enabled, true);
+  assert.deepEqual(buildFooter(DEFAULT_ATTRIBUTION_POLICY, true, 'task-1'), [
+    'Co-authored-by: somnia-agent <340778888+somnia-agent@users.noreply.github.com>',
+    'X-Somnia-Session: task-1',
+  ]);
+});
+test('finalized app commit receives the configured Somnia Agent trailer', () => {
+  const r = finalizeCommitMessage({subject: 's', body: 'App change', aiDrafted: true, substantive: true, policy: DEFAULT_ATTRIBUTION_POLICY});
+  assert.equal(r.body, 'App change\n\nCo-authored-by: somnia-agent <340778888+somnia-agent@users.noreply.github.com>');
+  assert.equal(r.applied, true);
 });
 test('opt-in and substantive yields exactly two trailer lines', () => {
   assert.deepEqual(buildFooter(on, true, 'task-1'), ['Co-authored-by: Somnia Agent <agent@example.com>', 'X-Somnia-Session: task-1']);
@@ -28,7 +37,9 @@ test('idempotent and rejects bad identity or session ids', () => {
   assert.deepEqual(buildFooter({...on, coAuthorName: 'A\nB'}, true), []);
   assert.deepEqual(buildFooter(on, true, 'bad id; rm'), ['Co-authored-by: Somnia Agent <agent@example.com>']);
 });
-test('human-written message is untouched apart from the footer', () => {
-  const r = finalizeCommitMessage({subject: 's', body: 'Mine', aiDrafted: false, substantive: false, policy: on});
-  assert.equal(r.body, 'Mine'); assert.equal(r.applied, false);
+test('human-written commits do not receive the default app attribution even when substantive is true', () => {
+  const r = finalizeCommitMessage({subject: 's', body: 'Mine', aiDrafted: false, substantive: true, policy: DEFAULT_ATTRIBUTION_POLICY});
+  assert.equal(r.body, 'Mine');
+  assert.equal(r.applied, false);
+  assert.deepEqual(r.footer, []);
 });
