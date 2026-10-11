@@ -157,3 +157,28 @@ and/or the runtime needs a run-abort transition for wedged reviews.
   live processes on the same data dir would crash each other's runs (observed
   while simulating restart); acceptable for the alpha, worth a lockfile later.
 
+
+## Coordinator repairs after reproduction
+
+The coordinator independently reproduced 13 green / 3 red, then repaired all
+three. Current Linux composed suite: 18 green / 0 red plus 20 original tests.
+
+- AllActive recovery includes pending and paused, without replaying effects.
+- Discard resolves a persisted, validated private isolated id, not live content.
+  Broken projections expose an explicit unavailable review with Apply disabled
+  and discard still reachable through UI; its persisted revision epoch is checked.
+- Schema 3 adds a durable artifact operation intent. The Vault callback must
+  persist intent and an Undo reference before first original write. Intent reserves
+  its completion event. Manual checkpoints no longer consume lifecycle reserve.
+  Committed Vault receipts survive crash recovery. Open/apply/discard/restore
+  reconcile pending operations against verified private receipts without replaying
+  writes. Pre-apply references sort first so Undo cannot fall out of bounded reads.
+
+The original event-budget test was changed to require successful Apply with Undo
+and a startable Studio: manual checkpoint flooding cannot exhaust commit reserve.
+This is not used as evidence of a postcommit failure recovery. Two new SQLite
+trigger tests separately force failure before intent insertion (original unchanged,
+transaction rolled back, retry safe after repair) and after originals commit
+(pending intent + Undo survive, restart finalizes metadata, a later user file stays
+untouched, Undo restores original). Independent journal review and full native
+Windows/Linux builds remain open gates.

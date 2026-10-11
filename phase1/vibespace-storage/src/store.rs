@@ -18,7 +18,7 @@ pub enum Recovery {
     None,
     /// Mark claimed/running runs with an expired (or missing) lease as crashed.
     ExpiredLeases,
-    /// Mark every claimed/running run as crashed (single-process app restart). Default.
+    /// Mark every pending/claimed/running/paused run as crashed (single-process app restart). Default.
     AllActive,
 }
 

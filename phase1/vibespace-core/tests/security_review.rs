@@ -184,7 +184,10 @@ async fn drive(rt: &Arc<Runtime>, id: &str) -> SnapshotReply {
         }
         if matches!(
             snapshot.snapshot.execution_state,
-            ExecutionState::Done | ExecutionState::Failed | ExecutionState::Stopped | ExecutionState::Crashed
+            ExecutionState::Done
+                | ExecutionState::Failed
+                | ExecutionState::Stopped
+                | ExecutionState::Crashed
         ) {
             return snapshot;
         }
@@ -231,15 +234,17 @@ fn add_memory(rt: &Arc<Runtime>, space: &str, content: &str) -> db::MemoryItem {
 #[tokio::test]
 async fn crash_restart_marks_active_run_crashed_and_unblocks_studio() {
     let f = setup();
-    let started = f
-        .rt
-        .start(start_request(&f.studio), Arc::new(Waiting), local_config())
-        .await
-        .unwrap();
+    let started =
+        f.rt.start(start_request(&f.studio), Arc::new(Waiting), local_config())
+            .await
+            .unwrap();
     let id = started.snapshot.run_id;
-    wait_for(&f.rt, &id, |s| {
-        s.snapshot.execution_state == ExecutionState::Running
-    }, "running")
+    wait_for(
+        &f.rt,
+        &id,
+        |s| s.snapshot.execution_state == ExecutionState::Running,
+        "running",
+    )
     .await;
 
     // Simulated crash: a fresh process image opens the same data directory while
@@ -268,13 +273,16 @@ async fn crash_restart_marks_active_run_crashed_and_unblocks_studio() {
     // A fresh run after the crash completes normally; the original stayed intact.
     let done = drive(
         &rt2,
-        &rt2
-            .start(start_request(&studio), Arc::new(WriteThenDone(AtomicUsize::new(0))), local_config())
-            .await
-            .unwrap()
-            .snapshot
-            .run_id
-            .clone(),
+        &rt2.start(
+            start_request(&studio),
+            Arc::new(WriteThenDone(AtomicUsize::new(0))),
+            local_config(),
+        )
+        .await
+        .unwrap()
+        .snapshot
+        .run_id
+        .clone(),
     )
     .await;
     assert_eq!(done.snapshot.execution_state, ExecutionState::Done);
@@ -290,9 +298,8 @@ async fn crash_restart_marks_active_run_crashed_and_unblocks_studio() {
 #[tokio::test]
 async fn crash_with_pending_consent_leaves_no_dangling_effect_path() {
     let f = setup();
-    let started = f
-        .rt
-        .start(
+    let started =
+        f.rt.start(
             start_request(&f.studio),
             Arc::new(WriteThenDone(AtomicUsize::new(0))),
             local_config(),
@@ -300,9 +307,12 @@ async fn crash_with_pending_consent_leaves_no_dangling_effect_path() {
         .await
         .unwrap();
     let id = started.snapshot.run_id;
-    wait_for(&f.rt, &id, |s| {
-        !s.snapshot.pending_consents.is_empty()
-    }, "pending consent")
+    wait_for(
+        &f.rt,
+        &id,
+        |s| !s.snapshot.pending_consents.is_empty(),
+        "pending consent",
+    )
     .await;
 
     let rt2 = Runtime::open(f.data.path(), true).unwrap();
@@ -312,13 +322,14 @@ async fn crash_with_pending_consent_leaves_no_dangling_effect_path() {
         crashed.snapshot.pending_consents.is_empty(),
         "a crashed run must not offer consent decisions"
     );
-    assert!(rt2
-        .list_studios()
-        .unwrap()
-        .iter()
-        .find(|s| s.studio_id == f.studio.studio_id)
-        .unwrap()
-        .can_start);
+    assert!(
+        rt2.list_studios()
+            .unwrap()
+            .iter()
+            .find(|s| s.studio_id == f.studio.studio_id)
+            .unwrap()
+            .can_start
+    );
     assert_eq!(
         std::fs::read_to_string(f.project.path().join("hello.txt")).unwrap(),
         "before"
@@ -347,7 +358,11 @@ async fn blocker_pending_run_is_unrecoverable_and_wedges_studio() {
         .find(|s| s.studio_id == f.studio.studio_id)
         .unwrap();
     let start_again = rt2
-        .start(start_request(&studio), Arc::new(WriteThenDone(AtomicUsize::new(0))), local_config())
+        .start(
+            start_request(&studio),
+            Arc::new(WriteThenDone(AtomicUsize::new(0))),
+            local_config(),
+        )
         .await;
     assert!(
         run.execution.is_terminal() && studio.can_start && start_again.is_ok(),
@@ -366,19 +381,24 @@ async fn blocker_pending_run_is_unrecoverable_and_wedges_studio() {
 #[tokio::test]
 async fn stopped_run_leaves_no_active_handle_or_effect_path() {
     let f = setup();
-    let started = f
-        .rt
-        .start(start_request(&f.studio), Arc::new(Waiting), local_config())
-        .await
-        .unwrap();
+    let started =
+        f.rt.start(start_request(&f.studio), Arc::new(Waiting), local_config())
+            .await
+            .unwrap();
     let id = started.snapshot.run_id;
     f.rt.stop(&id).await.unwrap();
-    let stopped = wait_for(&f.rt, &id, |s| {
-        s.snapshot.execution_state == ExecutionState::Stopped && !s.snapshot.capabilities.stop
-    }, "stopped with handle released")
+    let stopped = wait_for(
+        &f.rt,
+        &id,
+        |s| s.snapshot.execution_state == ExecutionState::Stopped && !s.snapshot.capabilities.stop,
+        "stopped with handle released",
+    )
     .await;
     assert!(!stopped.snapshot.capabilities.steer);
-    assert!(f.rt.stop(&id).await.is_err(), "second stop must report inactive");
+    assert!(
+        f.rt.stop(&id).await.is_err(),
+        "second stop must report inactive"
+    );
     assert!(f.rt.steer(&id, "late".into()).await.is_err());
     assert_eq!(
         std::fs::read_to_string(f.project.path().join("hello.txt")).unwrap(),
@@ -395,9 +415,8 @@ async fn stopped_run_leaves_no_active_handle_or_effect_path() {
 async fn terminal_event_and_projection_consistency() {
     let f = setup();
     let mut rx = f.rt.subscribe();
-    let started = f
-        .rt
-        .start(
+    let started =
+        f.rt.start(
             start_request(&f.studio),
             Arc::new(WriteThenDone(AtomicUsize::new(0))),
             local_config(),
@@ -414,7 +433,12 @@ async fn terminal_event_and_projection_consistency() {
     assert!(f
         .rt
         .store
-        .append_event(&id, "agent.message", &serde_json::json!({"text":"late"}), None)
+        .append_event(
+            &id,
+            "agent.message",
+            &serde_json::json!({"text":"late"}),
+            None
+        )
         .is_err());
 
     // The stream carries only this run's snapshots in non-decreasing sequence,
@@ -427,9 +451,7 @@ async fn terminal_event_and_projection_consistency() {
     assert!(events
         .iter()
         .all(|e| e.run_id == id && e.kind == "run_snapshot"));
-    assert!(events
-        .windows(2)
-        .all(|w| w[0].sequence <= w[1].sequence));
+    assert!(events.windows(2).all(|w| w[0].sequence <= w[1].sequence));
     assert_eq!(events.last().unwrap().sequence, done.sequence);
     assert_eq!(
         events.last().unwrap().payload["executionState"],
@@ -453,21 +475,20 @@ async fn root_vault_overlap_is_rejected_in_both_directions() {
     let before = f.rt.list_spaces().unwrap().len();
     let vault = f.data.path().join("artifacts");
     for folder in [
-        f.data.path().to_path_buf(),              // vault inside selection
-        f.data.path().parent().unwrap().into(),   // selection inside parent of vault
-        vault.clone(),                            // selection IS the vault
+        f.data.path().to_path_buf(),            // vault inside selection
+        f.data.path().parent().unwrap().into(), // selection inside parent of vault
+        vault.clone(),                          // selection IS the vault
     ] {
         let grant = f.rt.grant_native_folder("main", &folder).unwrap();
         assert!(
-            f.rt
-                .create_space(
-                    "main",
-                    CreateSpace {
-                        name: "evil".into(),
-                        folder_grant_id: grant
-                    }
-                )
-                .is_err(),
+            f.rt.create_space(
+                "main",
+                CreateSpace {
+                    name: "evil".into(),
+                    folder_grant_id: grant
+                }
+            )
+            .is_err(),
             "scope {} must be rejected",
             folder.display()
         );
@@ -485,9 +506,8 @@ async fn cross_space_and_cross_run_access_is_denied() {
     let project_b = tempfile::tempdir().unwrap();
     std::fs::write(project_b.path().join("hello.txt"), "B-before").unwrap();
     let grant_b = f.rt.grant_native_folder("main", project_b.path()).unwrap();
-    let space_b = f
-        .rt
-        .create_space(
+    let space_b =
+        f.rt.create_space(
             "main",
             CreateSpace {
                 name: "b".into(),
@@ -495,9 +515,8 @@ async fn cross_space_and_cross_run_access_is_denied() {
             },
         )
         .unwrap();
-    let studio_b = f
-        .rt
-        .create_studio(CreateStudio {
+    let studio_b =
+        f.rt.create_studio(CreateStudio {
             space_id: space_b.space_id.clone(),
             goal: "edit b".into(),
             model: ModelReference {
@@ -509,9 +528,8 @@ async fn cross_space_and_cross_run_access_is_denied() {
         .unwrap();
 
     // Run A waits at its consent prompt while we probe cross-run decisions.
-    let started_a = f
-        .rt
-        .start(
+    let started_a =
+        f.rt.start(
             start_request(&f.studio),
             Arc::new(WriteThenDone(AtomicUsize::new(0))),
             local_config(),
@@ -519,9 +537,12 @@ async fn cross_space_and_cross_run_access_is_denied() {
         .await
         .unwrap();
     let run_a = started_a.snapshot.run_id.clone();
-    let pending_a = wait_for(&f.rt, &run_a, |s| {
-        !s.snapshot.pending_consents.is_empty()
-    }, "pending consent A")
+    let pending_a = wait_for(
+        &f.rt,
+        &run_a,
+        |s| !s.snapshot.pending_consents.is_empty(),
+        "pending consent A",
+    )
     .await;
     let request_a = pending_a.snapshot.pending_consents[0].request_id.clone();
 
@@ -564,7 +585,11 @@ async fn cross_space_and_cross_run_access_is_denied() {
     assert!(f
         .rt
         .store
-        .search_memory(&space_b.space_id, "alpha-only-marker", &db::SearchOptions::default())
+        .search_memory(
+            &space_b.space_id,
+            "alpha-only-marker",
+            &db::SearchOptions::default()
+        )
         .unwrap()
         .hits
         .is_empty());
@@ -590,12 +615,7 @@ async fn cross_space_and_cross_run_access_is_denied() {
         .all(|r| r.id != run_a));
 
     // Checkpoint of run A is not restorable through run B.
-    let checkpoint_a = f
-        .rt
-        .snapshot(&run_a)
-        .unwrap()
-        .snapshot
-        .checkpoints[0]
+    let checkpoint_a = f.rt.snapshot(&run_a).unwrap().snapshot.checkpoints[0]
         .checkpoint_id
         .clone();
     assert!(f.rt.restore(&run_b, &checkpoint_a).is_err());
@@ -605,13 +625,12 @@ async fn cross_space_and_cross_run_access_is_denied() {
     );
 
     // Finishing A under its own identity still works.
-    f.rt
-        .decide(ConsentDecision {
-            run_id: run_a.clone(),
-            request_id: request_a,
-            choice: ConsentChoice::AllowOnce,
-        })
-        .unwrap();
+    f.rt.decide(ConsentDecision {
+        run_id: run_a.clone(),
+        request_id: request_a,
+        choice: ConsentChoice::AllowOnce,
+    })
+    .unwrap();
     let done_a = drive(&f.rt, &run_a).await;
     assert_eq!(done_a.snapshot.execution_state, ExecutionState::Done);
 }
@@ -635,9 +654,8 @@ async fn memory_recall_is_bounded_and_deletion_effective() {
     rt_pending_memory(&f);
 
     let systems = Arc::new(Mutex::new(vec![]));
-    let run1 = f
-        .rt
-        .start(
+    let run1 =
+        f.rt.start(
             start_request(&f.studio),
             Arc::new(RecordRecall {
                 calls: AtomicUsize::new(0),
@@ -669,9 +687,8 @@ async fn memory_recall_is_bounded_and_deletion_effective() {
         .store
         .delete_memory(&f.space.space_id, &doomed.id)
         .unwrap());
-    let studio2 = f
-        .rt
-        .create_studio(CreateStudio {
+    let studio2 =
+        f.rt.create_studio(CreateStudio {
             space_id: f.space.space_id.clone(),
             goal: "again".into(),
             model: ModelReference {
@@ -682,9 +699,8 @@ async fn memory_recall_is_bounded_and_deletion_effective() {
         })
         .unwrap();
     let systems2 = Arc::new(Mutex::new(vec![]));
-    let run2 = f
-        .rt
-        .start(
+    let run2 =
+        f.rt.start(
             start_request(&studio2),
             Arc::new(RecordRecall {
                 calls: AtomicUsize::new(0),
@@ -701,8 +717,7 @@ async fn memory_recall_is_bounded_and_deletion_effective() {
 }
 
 fn rt_pending_memory(f: &Fixture) {
-    f.rt
-        .store
+    f.rt.store
         .add_memory(db::NewMemory {
             schema_version: 1,
             space_id: f.space.space_id.clone(),
@@ -725,9 +740,8 @@ fn rt_pending_memory(f: &Fixture) {
 #[tokio::test]
 async fn partial_apply_with_concurrent_edit_binds_current_project_state() {
     let f = setup();
-    let run = f
-        .rt
-        .start(
+    let run =
+        f.rt.start(
             start_request(&f.studio),
             Arc::new(TwoEdits(AtomicUsize::new(0))),
             local_config(),
@@ -785,9 +799,8 @@ async fn partial_apply_with_concurrent_edit_binds_current_project_state() {
 #[tokio::test]
 async fn discard_is_revision_checked_and_removes_isolated_copy() {
     let f = setup();
-    let run = f
-        .rt
-        .start(
+    let run =
+        f.rt.start(
             start_request(&f.studio),
             Arc::new(WriteThenDone(AtomicUsize::new(0))),
             local_config(),
@@ -805,15 +818,18 @@ async fn discard_is_revision_checked_and_removes_isolated_copy() {
     assert!(!isolated.exists(), "discard must remove the isolated copy");
     let discarded = f.rt.snapshot(&run).unwrap();
     assert_eq!(discarded.snapshot.review_state, ReviewState::Discarded);
-    assert!(f.rt.apply(&run, &revision, vec!["project/hello.txt".into()]).is_err());
     assert!(f
         .rt
-        .list_studios()
-        .unwrap()
-        .iter()
-        .find(|s| s.studio_id == f.studio.studio_id)
-        .unwrap()
-        .can_start);
+        .apply(&run, &revision, vec!["project/hello.txt".into()])
+        .is_err());
+    assert!(
+        f.rt.list_studios()
+            .unwrap()
+            .iter()
+            .find(|s| s.studio_id == f.studio.studio_id)
+            .unwrap()
+            .can_start
+    );
     assert_eq!(
         std::fs::read_to_string(f.project.path().join("hello.txt")).unwrap(),
         "before"
@@ -822,10 +838,7 @@ async fn discard_is_revision_checked_and_removes_isolated_copy() {
 
 fn isolated_dir(f: &Fixture, run: &str) -> std::path::PathBuf {
     let events = f.rt.store.list_events(run, 0, 500).unwrap();
-    let prepared = events
-        .iter()
-        .find(|e| e.kind == "core.prepared")
-        .unwrap();
+    let prepared = events.iter().find(|e| e.kind == "core.prepared").unwrap();
     let isolated_id = prepared.payload["isolatedId"].as_str().unwrap();
     f.data
         .path()
@@ -840,9 +853,8 @@ fn isolated_dir(f: &Fixture, run: &str) -> std::path::PathBuf {
 #[tokio::test]
 async fn stale_revision_after_copy_content_change_is_rejected() {
     let f = setup();
-    let run = f
-        .rt
-        .start(
+    let run =
+        f.rt.start(
             start_request(&f.studio),
             Arc::new(WriteThenDone(AtomicUsize::new(0))),
             local_config(),
@@ -853,13 +865,20 @@ async fn stale_revision_after_copy_content_change_is_rejected() {
         .run_id;
     let done = drive(&f.rt, &run).await;
     let revision = done.snapshot.review.unwrap().revision;
-    std::fs::write(isolated_dir(&f, &run).join("project").join("hello.txt"), "forged").unwrap();
+    std::fs::write(
+        isolated_dir(&f, &run).join("project").join("hello.txt"),
+        "forged",
+    )
+    .unwrap();
 
     let changed = f.rt.snapshot(&run).unwrap();
     let review = changed.snapshot.review.clone().unwrap();
     assert_ne!(review.revision, revision);
     assert_eq!(review.files[0].after_text.as_deref(), Some("forged"));
-    assert!(f.rt.apply(&run, &revision, vec!["project/hello.txt".into()]).is_err());
+    assert!(f
+        .rt
+        .apply(&run, &revision, vec!["project/hello.txt".into()])
+        .is_err());
     assert_eq!(
         std::fs::read_to_string(f.project.path().join("hello.txt")).unwrap(),
         "before"
@@ -872,9 +891,8 @@ async fn stale_revision_after_copy_content_change_is_rejected() {
 #[tokio::test]
 async fn deleted_isolated_copy_blocks_apply_and_preserves_original() {
     let f = setup();
-    let run = f
-        .rt
-        .start(
+    let run =
+        f.rt.start(
             start_request(&f.studio),
             Arc::new(WriteThenDone(AtomicUsize::new(0))),
             local_config(),
@@ -888,13 +906,16 @@ async fn deleted_isolated_copy_blocks_apply_and_preserves_original() {
     std::fs::remove_dir_all(isolated_dir(&f, &run)).unwrap();
 
     let broken = f.rt.snapshot(&run).unwrap();
-    assert!(broken.snapshot.review.is_none());
+    assert!(broken.snapshot.review.as_ref().unwrap().files.is_empty());
     assert_eq!(
         broken.snapshot.failure.as_ref().unwrap().code,
         "artifact_review_failed"
     );
     assert!(!broken.snapshot.capabilities.apply);
-    assert!(f.rt.apply(&run, &revision, vec!["project/hello.txt".into()]).is_err());
+    assert!(f
+        .rt
+        .apply(&run, &revision, vec!["project/hello.txt".into()])
+        .is_err());
     assert_eq!(
         std::fs::read_to_string(f.project.path().join("hello.txt")).unwrap(),
         "before"
@@ -910,9 +931,8 @@ async fn deleted_isolated_copy_blocks_apply_and_preserves_original() {
 #[tokio::test]
 async fn blocker_broken_review_projection_cannot_be_discarded_wedges_studio() {
     let f = setup();
-    let run = f
-        .rt
-        .start(
+    let run =
+        f.rt.start(
             start_request(&f.studio),
             Arc::new(WriteThenDone(AtomicUsize::new(0))),
             local_config(),
@@ -926,14 +946,13 @@ async fn blocker_broken_review_projection_cannot_be_discarded_wedges_studio() {
     std::fs::remove_dir_all(isolated_dir(&f, &run)).unwrap();
 
     let discard = f.rt.discard(&run, &revision);
-    let can_start = f
-        .rt
-        .list_studios()
-        .unwrap()
-        .iter()
-        .find(|s| s.studio_id == f.studio.studio_id)
-        .unwrap()
-        .can_start;
+    let can_start =
+        f.rt.list_studios()
+            .unwrap()
+            .iter()
+            .find(|s| s.studio_id == f.studio.studio_id)
+            .unwrap()
+            .can_start;
     assert!(
         discard.is_ok() && can_start,
         "BLOCKER: broken review projection wedges run in review=ready with no          discard/abort path: discard={:?}, can_start={can_start}",
@@ -953,9 +972,8 @@ async fn blocker_broken_review_projection_cannot_be_discarded_wedges_studio() {
 #[tokio::test]
 async fn blocker_apply_db_failure_after_commit_leaves_no_reconcile_path() {
     let f = setup();
-    let run = f
-        .rt
-        .start(
+    let run =
+        f.rt.start(
             start_request(&f.studio),
             Arc::new(WriteThenDone(AtomicUsize::new(0))),
             local_config(),
@@ -989,48 +1007,38 @@ async fn blocker_apply_db_failure_after_commit_leaves_no_reconcile_path() {
 
     let before_apply = f.rt.snapshot(&run).unwrap();
     let revision = before_apply.snapshot.review.clone().unwrap().revision;
-    let first = f.rt.apply(&run, &revision, vec!["project/hello.txt".into()]);
-    assert!(first.is_err(), "apply must report the DB failure");
-
-    // The divergent reality: originals committed, journal says nothing.
-    let content = std::fs::read_to_string(f.project.path().join("hello.txt")).unwrap();
-    let state = f.rt.store.get_run(&run).unwrap();
-    let undo_checkpoint = f
+    let first =
+        f.rt.apply(&run, &revision, vec!["project/hello.txt".into()]);
+    // Manual checkpoints cannot consume lifecycle/commit reserve. Apply must
+    // remain able to persist intent, Undo and completion BEFORE touching originals.
+    assert!(
+        first.is_ok(),
+        "manual history exhausted lifecycle reserve: {:?}",
+        first.err()
+    );
+    assert_eq!(
+        std::fs::read_to_string(f.project.path().join("hello.txt")).unwrap(),
+        "after"
+    );
+    assert_eq!(
+        f.rt.store.get_run(&run).unwrap().review,
+        db::ReviewState::Applied
+    );
+    assert!(f
         .rt
         .snapshot(&run)
         .unwrap()
         .snapshot
         .checkpoints
         .iter()
-        .any(|c| c.label == "Before Apply (Undo)");
-
-    // A blind retry is the only thing a user could try - it must not be the fix.
-    let retry_revision = f
-        .rt
-        .snapshot(&run)
-        .unwrap()
-        .snapshot
-        .review
-        .map(|r| r.revision);
-    let retry = retry_revision
-        .as_ref()
-        .map(|r| f.rt.apply(&run, r, vec!["project/hello.txt".into()]));
-    let can_start = f
-        .rt
-        .list_studios()
-        .unwrap()
-        .iter()
-        .find(|s| s.studio_id == f.studio.studio_id)
-        .unwrap()
-        .can_start;
-
+        .any(|c| c.label == "Before Apply (Undo)"));
     assert!(
-        state.review == db::ReviewState::Applied && undo_checkpoint && can_start,
-        "BLOCKER(b): apply committed originals but DB journaling failed: \
-         file={content:?}, review={:?}, undo_checkpoint={undo_checkpoint}, \
-         retry={:?}, can_start={can_start} - no reconcile path, studio wedged",
-        state.review,
-        retry.map(|r| r.as_ref().err().map(|e| e.to_string()))
+        f.rt.list_studios()
+            .unwrap()
+            .iter()
+            .find(|s| s.studio_id == f.studio.studio_id)
+            .unwrap()
+            .can_start
     );
 }
 
@@ -1045,9 +1053,8 @@ async fn preparation_failure_persists_failed_run_without_leaks() {
     std::fs::remove_dir_all(f.project.path()).unwrap();
     std::fs::write(f.project.path(), "not a directory anymore").unwrap();
 
-    let err = f
-        .rt
-        .start(
+    let err =
+        f.rt.start(
             start_request(&f.studio),
             Arc::new(WriteThenDone(AtomicUsize::new(0))),
             local_config(),
@@ -1066,13 +1073,12 @@ async fn preparation_failure_persists_failed_run_without_leaks() {
     assert!(failed.snapshot.pending_consents.is_empty());
     assert!(!failed.snapshot.capabilities.stop);
     assert!(!failed.snapshot.capabilities.steer);
-    let studio = f
-        .rt
-        .list_studios()
-        .unwrap()
-        .into_iter()
-        .find(|s| s.studio_id == f.studio.studio_id)
-        .unwrap();
+    let studio =
+        f.rt.list_studios()
+            .unwrap()
+            .into_iter()
+            .find(|s| s.studio_id == f.studio.studio_id)
+            .unwrap();
     assert!(studio.can_start, "failed preparation must free the studio");
 
     // Repair the folder: a fresh run succeeds.
@@ -1082,7 +1088,11 @@ async fn preparation_failure_persists_failed_run_without_leaks() {
     let done = drive(
         &f.rt,
         &f.rt
-            .start(start_request(&studio), Arc::new(WriteThenDone(AtomicUsize::new(0))), local_config())
+            .start(
+                start_request(&studio),
+                Arc::new(WriteThenDone(AtomicUsize::new(0))),
+                local_config(),
+            )
             .await
             .unwrap()
             .snapshot
@@ -1099,9 +1109,8 @@ async fn preparation_failure_persists_failed_run_without_leaks() {
 #[tokio::test]
 async fn consent_decision_is_one_shot_and_replay_safe() {
     let f = setup();
-    let run = f
-        .rt
-        .start(
+    let run =
+        f.rt.start(
             start_request(&f.studio),
             Arc::new(WriteThenDone(AtomicUsize::new(0))),
             local_config(),
@@ -1110,9 +1119,12 @@ async fn consent_decision_is_one_shot_and_replay_safe() {
         .unwrap()
         .snapshot
         .run_id;
-    let pending = wait_for(&f.rt, &run, |s| {
-        !s.snapshot.pending_consents.is_empty()
-    }, "pending consent")
+    let pending = wait_for(
+        &f.rt,
+        &run,
+        |s| !s.snapshot.pending_consents.is_empty(),
+        "pending consent",
+    )
     .await;
     let request_id = pending.snapshot.pending_consents[0].request_id.clone();
 
@@ -1124,21 +1136,19 @@ async fn consent_decision_is_one_shot_and_replay_safe() {
             choice: ConsentChoice::AllowOnce,
         })
         .is_err());
-    f.rt
-        .decide(ConsentDecision {
+    f.rt.decide(ConsentDecision {
+        run_id: run.clone(),
+        request_id: request_id.clone(),
+        choice: ConsentChoice::AllowOnce,
+    })
+    .unwrap();
+    assert!(
+        f.rt.decide(ConsentDecision {
             run_id: run.clone(),
-            request_id: request_id.clone(),
+            request_id,
             choice: ConsentChoice::AllowOnce,
         })
-        .unwrap();
-    assert!(
-        f.rt
-            .decide(ConsentDecision {
-                run_id: run.clone(),
-                request_id,
-                choice: ConsentChoice::AllowOnce,
-            })
-            .is_err(),
+        .is_err(),
         "replaying a consumed consent request must fail"
     );
     let done = drive(&f.rt, &run).await;
@@ -1147,5 +1157,122 @@ async fn consent_decision_is_one_shot_and_replay_safe() {
         std::fs::read_to_string(f.project.path().join("hello.txt")).unwrap(),
         "before",
         "edits stay isolated until apply"
+    );
+}
+
+/// Real SQLite write failure after originals commit leaves a pending durable
+/// intent AND Undo, then startup completes only metadata, never replays effects.
+#[tokio::test]
+async fn apply_postcommit_db_failure_reconciles_on_restart_without_replay() {
+    let f = setup();
+    let run =
+        f.rt.start(
+            start_request(&f.studio),
+            Arc::new(WriteThenDone(AtomicUsize::new(0))),
+            local_config(),
+        )
+        .await
+        .unwrap()
+        .snapshot
+        .run_id;
+    let done = drive(&f.rt, &run).await;
+    let revision = done.snapshot.review.unwrap().revision;
+    let conn = rusqlite::Connection::open(f.data.path().join("vibespace.sqlite")).unwrap();
+    conn.execute_batch("CREATE TRIGGER fail_apply_finish BEFORE UPDATE ON artifact_operations WHEN NEW.state='committed' BEGIN SELECT RAISE(ABORT,'injected postcommit DB failure'); END;").unwrap();
+    assert!(f
+        .rt
+        .apply(&run, &revision, vec!["project/hello.txt".into()])
+        .is_err());
+    assert_eq!(
+        std::fs::read_to_string(f.project.path().join("hello.txt")).unwrap(),
+        "after"
+    );
+    assert_eq!(f.rt.store.pending_artifact_applies().unwrap().len(), 1);
+    let undo =
+        f.rt.snapshot(&run)
+            .unwrap()
+            .snapshot
+            .checkpoints
+            .into_iter()
+            .find(|c| c.label == "Before Apply (Undo)")
+            .unwrap();
+    // A later user edit is not overwritten by startup reconciliation.
+    std::fs::write(f.project.path().join("user-file.txt"), "user remains").unwrap();
+    conn.execute_batch("DROP TRIGGER fail_apply_finish")
+        .unwrap();
+    drop(conn);
+    let reopened = Runtime::open(f.data.path(), true).unwrap();
+    assert!(reopened
+        .store
+        .pending_artifact_applies()
+        .unwrap()
+        .is_empty());
+    assert_eq!(
+        reopened.store.get_run(&run).unwrap().review,
+        db::ReviewState::Applied
+    );
+    assert_eq!(
+        std::fs::read_to_string(f.project.path().join("user-file.txt")).unwrap(),
+        "user remains"
+    );
+    assert!(
+        reopened
+            .list_studios()
+            .unwrap()
+            .iter()
+            .find(|s| s.studio_id == f.studio.studio_id)
+            .unwrap()
+            .can_start
+    );
+    reopened.restore(&run, &undo.checkpoint_id).unwrap();
+    assert_eq!(
+        std::fs::read_to_string(f.project.path().join("hello.txt")).unwrap(),
+        "before"
+    );
+}
+
+/// Failure to persist intent is before first original write, not a misleading
+/// postcommit error; a retry after storage repair uses a fresh review.
+#[tokio::test]
+async fn apply_precommit_db_failure_preserves_originals_and_allows_safe_retry() {
+    let f = setup();
+    let run =
+        f.rt.start(
+            start_request(&f.studio),
+            Arc::new(WriteThenDone(AtomicUsize::new(0))),
+            local_config(),
+        )
+        .await
+        .unwrap()
+        .snapshot
+        .run_id;
+    let done = drive(&f.rt, &run).await;
+    let revision = done.snapshot.review.unwrap().revision;
+    let conn = rusqlite::Connection::open(f.data.path().join("vibespace.sqlite")).unwrap();
+    conn.execute_batch("CREATE TRIGGER fail_apply_begin BEFORE INSERT ON artifact_operations BEGIN SELECT RAISE(ABORT,'injected precommit DB failure'); END;").unwrap();
+    assert!(f
+        .rt
+        .apply(&run, &revision, vec!["project/hello.txt".into()])
+        .is_err());
+    assert_eq!(
+        std::fs::read_to_string(f.project.path().join("hello.txt")).unwrap(),
+        "before"
+    );
+    assert!(f.rt.store.pending_artifact_applies().unwrap().is_empty());
+    assert!(!f
+        .rt
+        .snapshot(&run)
+        .unwrap()
+        .snapshot
+        .checkpoints
+        .iter()
+        .any(|c| c.label == "Before Apply (Undo)"));
+    conn.execute_batch("DROP TRIGGER fail_apply_begin").unwrap();
+    drop(conn);
+    f.rt.apply(&run, &revision, vec!["project/hello.txt".into()])
+        .unwrap();
+    assert_eq!(
+        std::fs::read_to_string(f.project.path().join("hello.txt")).unwrap(),
+        "after"
     );
 }

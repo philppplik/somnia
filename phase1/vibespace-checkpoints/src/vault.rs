@@ -448,13 +448,18 @@ impl Vault {
     /// Delete an isolated copy and its record. Only ever removes `<vault>/isolated/<id>`; the
     /// original project is never touched. Returns false if it was already gone.
     pub fn discard(&self, copy: &IsolatedCopy) -> Result<bool> {
-        if !valid_isolated_id(&copy.id) {
-            return Err(Error::UnknownIsolatedCopy(copy.id.clone()));
+        self.discard_id(&copy.id)
+    }
+
+    /// Delete by validated private artifact id even when the isolated record is lost.
+    pub fn discard_id(&self, id: &str) -> Result<bool> {
+        if !valid_isolated_id(id) {
+            return Err(Error::UnknownIsolatedCopy(id.to_string()));
         }
         // Do not trust the caller's struct for the path.
         let base = self.root.join("isolated");
-        let dir = base.join(&copy.id);
-        let rec = base.join(format!("{}.json", copy.id));
+        let dir = base.join(id);
+        let rec = base.join(format!("{id}.json"));
         let existed = match fs::symlink_metadata(&dir) {
             Ok(md) => {
                 if is_link_like(&md) || !md.is_dir() {

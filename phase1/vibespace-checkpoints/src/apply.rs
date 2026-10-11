@@ -536,6 +536,39 @@ impl Vault {
         self.remove_journal(&j.id)
     }
 
+    fn write_apply_receipt(
+        &self,
+        id: &str,
+        kind: &str,
+        preapply: Digest,
+        paths: &[String],
+    ) -> Result<()> {
+        write_atomic(
+            &self.root.join("applies").join(format!("{id}.json")),
+            serde_json::json!({"id":id,"kind":kind,"preapply":preapply.to_hex(),"paths":paths})
+                .to_string()
+                .as_bytes(),
+        )
+    }
+    /// Validates a private operation id, never accepts a caller path.
+    pub fn apply_committed(&self, id: &str) -> Result<bool> {
+        if !id.starts_with("apply-") || !id.chars().all(|c| c.is_ascii_alphanumeric() || c == '-') {
+            return Err(Error::CorruptRecord("invalid apply id".into()));
+        }
+        match fs::read(self.root.join("applies").join(format!("{id}.json"))) {
+            Ok(bytes) => {
+                let receipt: serde_json::Value = serde_json::from_slice(&bytes)
+                    .map_err(|_| Error::CorruptRecord("apply receipt".into()))?;
+                if receipt["id"] != id || receipt["kind"] != "apply" {
+                    return Err(Error::CorruptRecord("apply receipt mismatch".into()));
+                }
+                Ok(true)
+            }
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(false),
+            Err(e) => Err(Error::io("read apply receipt", e)),
+        }
+    }
+
     /// Apply selected reviewed changes from an isolated copy to the original project.
     ///
     /// Order of events: validate the request, copy the selected result files into the object
@@ -543,6 +576,14 @@ impl Vault {
     /// them against the baseline and refuse on any conflict (nothing is written), then write
     /// through the journal.
     pub fn explicit_apply(&self, req: &ApplyRequest<'_>) -> Result<ApplyReport> {
+        self.explicit_apply_before_commit(req, |_, _| Ok(()))
+    }
+    /// Host must persist its intent and Undo reference before the first original write.
+    pub fn explicit_apply_before_commit(
+        &self,
+        req: &ApplyRequest<'_>,
+        before_commit: impl FnOnce(&str, Digest) -> Result<()>,
+    ) -> Result<ApplyReport> {
         let _guard = self.lock()?;
         self.refuse_if_pending()?;
         let expected = req.expected_baseline;
@@ -700,6 +741,7 @@ impl Vault {
             check_case_collisions(result.iter().copied())?;
         }
         let applied: Vec<String> = items.iter().map(|i| i.key.clone()).collect();
+        before_commit(&apply_id, pre_id)?;
         if !items.is_empty() {
             self.run_plan(
                 "apply",
@@ -709,6 +751,10 @@ impl Vault {
                 items,
                 req.options.inject,
             )?;
+        }
+        // Also receipt no-op already-applied selections; host reconciliation stays exact.
+        if applied.is_empty() {
+            self.write_apply_receipt(&apply_id, "apply", pre_id, &already)?;
         }
         Ok(ApplyReport {
             id: apply_id,
@@ -828,6 +874,12 @@ impl Vault {
             }
             match j.state {
                 State::Committed => {
+                    self.write_apply_receipt(
+                        &j.id,
+                        &j.kind,
+                        j.preapply,
+                        &j.ops.iter().map(|o| o.key.clone()).collect::<Vec<_>>(),
+                    )?;
                     self.cleanup_stages(&j);
                     self.remove_journal(&id)?;
                     rep.resolved.push(id);

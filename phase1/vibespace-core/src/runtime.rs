@@ -79,7 +79,7 @@ impl Runtime {
         let broker =
             policy::ConsentBroker::new().map_err(|_| CoreError("cannot create consent broker"))?;
         let (events, _) = broadcast::channel(256);
-        Ok(Arc::new(Self {
+        let runtime = Arc::new(Self {
             store,
             vault,
             broker,
@@ -89,7 +89,9 @@ impl Runtime {
             events,
             instance: uuid::Uuid::new_v4().to_string(),
             enable_files,
-        }))
+        });
+        runtime.reconcile_applies()?;
+        Ok(runtime)
     }
     pub fn subscribe(&self) -> broadcast::Receiver<w::RunEvent> {
         self.events.subscribe()
@@ -338,6 +340,7 @@ impl Runtime {
                     (run, workspace, backend)
                 }
                 Err(error) => {
+                    self.finish_policy(&run.id);
                     self.store.transition_run(
                         &run.id,
                         db::TransitionRequest {
@@ -371,6 +374,7 @@ impl Runtime {
         let mut handle = match started {
             Ok(handle) => handle,
             Err(_) => {
+                self.finish_policy(&run.id);
                 self.store.transition_run(
                     &run.id,
                     db::TransitionRequest {
@@ -543,7 +547,7 @@ impl Runtime {
         }
         Ok(events)
     }
-    fn prepared(&self, id: &str) -> Result<(cp::CheckpointId, cp::IsolatedCopy)> {
+    fn prepared_ids(&self, id: &str) -> Result<(cp::CheckpointId, String)> {
         let events = self.all_events(id)?;
         let event = events
             .iter()
@@ -555,12 +559,15 @@ impl Runtime {
                 .ok_or(CoreError("baseline unavailable"))?,
         )
         .ok_or(CoreError("invalid baseline"))?;
-        let copy = self.vault.open_isolated(
-            event.payload["isolatedId"]
-                .as_str()
-                .ok_or(CoreError("isolated copy unavailable"))?,
-        )?;
+        let copy = event.payload["isolatedId"]
+            .as_str()
+            .ok_or(CoreError("isolated copy unavailable"))?
+            .to_string();
         Ok((baseline, copy))
+    }
+    fn prepared(&self, id: &str) -> Result<(cp::CheckpointId, cp::IsolatedCopy)> {
+        let (baseline, copy) = self.prepared_ids(id)?;
+        Ok((baseline, self.vault.open_isolated(&copy)?))
     }
     fn publish(&self, id: &str) -> Result<()> {
         let snapshot = self.snapshot(id)?;
@@ -749,12 +756,19 @@ impl Runtime {
                             .into(),
                         retryable: false,
                     });
-                    None
+                    Some(w::ReviewProjection {
+                        revision: format!("{}:unavailable", run.review_revision),
+                        summary: "Cannot verify these isolated changes. Only discard is available; no files can be applied.".into(),
+                        files: vec![], conflicts: vec![], checks: vec![],
+                    })
                 }
             }
         } else {
             None
         };
+        let artifact_failed = failure
+            .as_ref()
+            .is_some_and(|f| f.code == "artifact_review_failed");
         let active = !run.execution.is_terminal() && lock(&self.handles)?.contains_key(id);
         let execution_state = serde_json::from_value(
             serde_json::to_value(run.execution).map_err(|_| CoreError("invalid state"))?,
@@ -812,7 +826,7 @@ impl Runtime {
                 steer: active,
                 pause: false,
                 resume: false,
-                apply: review.as_ref().is_some_and(|r| r.conflicts.is_empty()),
+                apply: !artifact_failed && review.as_ref().is_some_and(|r| r.conflicts.is_empty()),
                 restore: run.execution.is_terminal(),
             },
         };
@@ -914,8 +928,18 @@ impl Runtime {
             }],
         })
     }
+    fn reconcile_applies(&self) -> Result<()> {
+        for (operation, run) in self.store.pending_artifact_applies()? {
+            let committed = self.vault.apply_committed(&operation)?;
+            let complete = committed && self.review_projection(&run)?.files.is_empty();
+            self.store
+                .finish_artifact_apply(&operation, committed, complete)?;
+        }
+        Ok(())
+    }
     pub fn apply(&self, id: &str, revision: &str, paths: Vec<String>) -> Result<()> {
         let _guard = lock(&self.command)?;
+        self.reconcile_applies()?;
         let run = self.store.get_run(id)?;
         if !matches!(
             run.review,
@@ -933,53 +957,70 @@ impl Runtime {
         }
         let (baseline, copy) = self.prepared(id)?;
         let review = self.vault.review_changes(&baseline, &copy)?;
-        let report = self.vault.explicit_apply(&cp::ApplyRequest {
-            expected_baseline: baseline,
-            copy: &copy,
-            review: &review,
-            selection: cp::Selection::Paths(paths),
-            options: Default::default(),
-        })?;
-        self.store.add_checkpoint(db::NewCheckpoint {
-            schema_version: 1,
-            space_id: run.space_id,
-            run_id: id.into(),
-            kind: db::CheckpointKind::PreApply,
-            label: "Before Apply (Undo)".into(),
-            content_ref: format!("sha256:{}", report.preapply_checkpoint.to_hex()),
-        })?;
-        if run.review == db::ReviewState::Conflict {
-            self.store
-                .transition_run(id, db::TransitionRequest::review(db::ReviewState::Ready))?;
-        }
-        if self.review_projection(id)?.files.is_empty() {
-            self.store.transition_run(
-                id,
-                db::TransitionRequest {
-                    review: Some(db::ReviewState::Applied),
-                    expected_review_revision: if run.review == db::ReviewState::Ready {
-                        Some(run.review_revision)
-                    } else {
-                        None
-                    },
-                    ..Default::default()
-                },
-            )?;
+        let applied = self.vault.explicit_apply_before_commit(
+            &cp::ApplyRequest {
+                expected_baseline: baseline,
+                copy: &copy,
+                review: &review,
+                selection: cp::Selection::Paths(paths),
+                options: Default::default(),
+            },
+            |operation, preapply| {
+                self.store
+                    .begin_artifact_apply(
+                        operation,
+                        id,
+                        run.review_revision,
+                        &format!("sha256:{}", preapply.to_hex()),
+                    )
+                    .map_err(|_| {
+                        cp::Error::CorruptRecord(
+                            "cannot persist pre-apply intent; nothing applied".into(),
+                        )
+                    })
+            },
+        );
+        match applied {
+            Ok(_) => self.reconcile_applies()?,
+            Err(error) => {
+                // Vault first resolves prepared rollback or committed receipt. No blind retry.
+                let recovery = self.vault.recover()?;
+                if !recovery.failed.is_empty() {
+                    return Err(CoreError(
+                        "apply recovery incomplete; originals require review",
+                    ));
+                }
+                self.reconcile_applies()?;
+                return Err(error.into());
+            }
         }
         self.publish(id)
     }
     pub fn discard(&self, id: &str, revision: &str) -> Result<()> {
         let _guard = lock(&self.command)?;
+        self.reconcile_applies()?;
         let run = self.store.get_run(id)?;
-        if !matches!(
-            run.review,
-            db::ReviewState::Ready | db::ReviewState::Conflict
-        ) || self.review_projection(id)?.revision != revision
+        if !run.execution.is_terminal()
+            || !matches!(
+                run.review,
+                db::ReviewState::Ready | db::ReviewState::Conflict
+            )
         {
-            return Err(CoreError("review changed; reload"));
+            return Err(CoreError("run is not ready to discard"));
         }
-        let (_, copy) = self.prepared(id)?;
-        self.vault.discard(&copy)?;
+        match self.review_projection(id) {
+            Ok(review) if review.revision == revision => {}
+            Ok(_) => return Err(CoreError("review changed; reload")),
+            Err(_) => {
+                // Discard can never apply bytes. Bind the persisted review epoch when
+                // content projection is broken, then remove only a private artifact id.
+                if !revision.starts_with(&format!("{}:", run.review_revision)) {
+                    return Err(CoreError("review changed; reload"));
+                }
+            }
+        }
+        let (_, copy) = self.prepared_ids(id)?;
+        self.vault.discard_id(&copy)?;
         self.store.transition_run(
             id,
             db::TransitionRequest {
@@ -992,6 +1033,7 @@ impl Runtime {
     }
     pub fn restore(&self, id: &str, checkpoint_id: &str) -> Result<()> {
         let _guard = lock(&self.command)?;
+        self.reconcile_applies()?;
         let run = self.store.get_run(id)?;
         if !run.execution.is_terminal() {
             return Err(CoreError("stop the run before restoring"));

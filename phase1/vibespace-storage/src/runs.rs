@@ -107,7 +107,12 @@ fn append_event_tx(
         |r| r.get(0),
     )?;
     let cap = limits::MAX_EVENTS_PER_RUN + if reserve { limits::EVENT_RESERVE } else { 0 };
-    if seq > cap {
+    let reserved: i64 = tx.query_row(
+        "SELECT count(*) FROM artifact_operations WHERE run_id=?1 AND state='prepared'",
+        params![run_id],
+        |r| r.get(0),
+    )?;
+    if seq > cap - reserved {
         return Err(Error::LimitExceeded(format!(
             "run {run_id} reached {} events",
             limits::MAX_EVENTS_PER_RUN
@@ -519,7 +524,7 @@ impl Store {
         let now = format_millis(now_ms);
         self.write(|tx| {
             let sql = match mode {
-                RecoveryMode::AllActive => "SELECT id, space_id, execution_state FROM runs WHERE execution_state IN ('claimed','running') ORDER BY created_at, id",
+                RecoveryMode::AllActive => "SELECT id, space_id, execution_state FROM runs WHERE execution_state IN ('pending','claimed','running','paused') ORDER BY created_at, id",
                 RecoveryMode::ExpiredLeases => {
                     "SELECT id, space_id, execution_state FROM runs WHERE execution_state IN ('claimed','running') \
                      AND (lease_expires_at IS NULL OR lease_expires_at < ?1) ORDER BY created_at, id"
@@ -590,7 +595,7 @@ impl Store {
                 "run.checkpoint_created",
                 &json!({"checkpointId": id, "kind": req.kind.as_str(), "contentRef": req.content_ref}),
                 &now,
-                true,
+                req.kind != CheckpointKind::Manual,
             )?;
             tx.execute(
                 "INSERT INTO checkpoints (id, space_id, run_id, kind, label, content_ref, event_sequence, created_at) VALUES (?1,?2,?3,?4,?5,?6,?7,?8)",
@@ -599,6 +604,48 @@ impl Store {
             Ok(())
         })?;
         self.get_checkpoint(&req.space_id, &id)
+    }
+
+    /// Reserve the final event and persist Undo plus intent BEFORE any originals change.
+    pub fn begin_artifact_apply(
+        &self,
+        id: &str,
+        run_id: &str,
+        revision: i64,
+        content_ref: &str,
+    ) -> Result<()> {
+        if !valid_content_ref(content_ref) {
+            return Err(Error::InvalidInput("invalid undo reference".into()));
+        }
+        let now = self.now_str();
+        self.write(|tx| {
+            let run = get_run_conn(tx, run_id)?;
+            if !run.execution.is_terminal() || !matches!(run.review, ReviewState::Ready | ReviewState::Conflict) || run.review_revision != revision { return Err(Error::Conflict("review changed".into())); }
+            if run.last_sequence > limits::MAX_EVENTS_PER_RUN + limits::EVENT_RESERVE - 3 { return Err(Error::LimitExceeded("no durable apply event capacity".into())); }
+            let checkpoint = new_id();
+            let event = append_event_tx(tx, run_id, "run.checkpoint_created", &json!({"checkpointId":checkpoint,"kind":"pre_apply","contentRef":content_ref}), &now, true)?;
+            tx.execute("INSERT INTO checkpoints (id,space_id,run_id,kind,label,content_ref,event_sequence,created_at) VALUES (?1,?2,?3,'pre_apply','Before Apply (Undo)',?4,?5,?6)", params![checkpoint,run.space_id,run_id,content_ref,event.sequence,now])?;
+            append_event_tx(tx, run_id, "core.apply_prepared", &json!({"operationId":id}), &now, true)?;
+            tx.execute("INSERT INTO artifact_operations VALUES (?1,?2,?3,'prepared',?4)", params![id,run_id,revision,now])?;
+            Ok(())
+        })
+    }
+    pub fn pending_artifact_applies(&self) -> Result<Vec<(String, String)>> {
+        self.read(|conn| { let mut stmt=conn.prepare("SELECT id,run_id FROM artifact_operations WHERE state='prepared' ORDER BY created_at,id")?; let rows=stmt.query_map([], |r| Ok((r.get(0)?,r.get(1)?)))?; Ok(rows.collect::<rusqlite::Result<Vec<_>>>()?) })
+    }
+    /// Uses the reserved event. Atomic and idempotent, even after an event-budget failure.
+    pub fn finish_artifact_apply(&self, id: &str, committed: bool, complete: bool) -> Result<()> {
+        let now = self.now_str();
+        self.write(|tx| {
+            let pending: Option<(String,i64)> = tx.query_row("SELECT run_id,review_revision FROM artifact_operations WHERE id=?1 AND state='prepared'", params![id], |r| Ok((r.get(0)?,r.get(1)?))).optional()?;
+            let Some((run_id,revision))=pending else { return Ok(()); };
+            let run=get_run_conn(tx,&run_id)?;
+            if run.review_revision!=revision { return Err(Error::Conflict("operation review changed".into())); }
+            tx.execute("UPDATE artifact_operations SET state=?1 WHERE id=?2",params![if committed {"committed"} else {"aborted"},id])?;
+            if committed { tx.execute("UPDATE runs SET review_state=?1,review_revision=review_revision+1,updated_at=?2 WHERE id=?3", params![if complete {"applied"} else {"ready"},now,run_id])?; }
+            append_event_tx(tx,&run_id,"core.apply_reconciled",&json!({"operationId":id,"committed":committed,"complete":complete}),&now,true)?;
+            Ok(())
+        })
     }
 
     pub fn get_checkpoint(&self, space_id: &str, id: &str) -> Result<Checkpoint> {
@@ -626,7 +673,7 @@ impl Store {
         self.read(|c| {
             ensure_space(c, space_id)?;
             let mut st = c.prepare(&format!(
-                "SELECT {CP_COLS} FROM checkpoints WHERE space_id=?1 AND (?2 IS NULL OR run_id=?2) ORDER BY created_at, event_sequence, id LIMIT ?3"
+                "SELECT {CP_COLS} FROM checkpoints WHERE space_id=?1 AND (?2 IS NULL OR run_id=?2) ORDER BY CASE WHEN kind='pre_apply' THEN 0 ELSE 1 END, created_at DESC, event_sequence DESC, id LIMIT ?3"
             ))?;
             let rows = st.query_map(params![space_id, run_id, lim], cp_from_row)?;
             let mut out = Vec::new();

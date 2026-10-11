@@ -36,8 +36,8 @@ fn restart_marks_interrupted_runs_visibly_and_never_resumes_them() {
     }
     let store = Store::open(&path, StoreOptions::default()).unwrap(); // default = AllActive recovery
     let report = store.startup_recovery();
-    assert_eq!(report.recovered.len(), 2);
-    for id in [&running_id, &claimed_id] {
+    assert_eq!(report.recovered.len(), 3);
+    for id in [&running_id, &claimed_id, &pending_id] {
         let run = store.get_run(id).unwrap();
         assert_eq!(run.execution, ExecutionState::Crashed);
         assert!(run.interrupted);
@@ -50,7 +50,7 @@ fn restart_marks_interrupted_runs_visibly_and_never_resumes_them() {
     }
     assert_eq!(
         store.get_run(&pending_id).unwrap().execution,
-        ExecutionState::Pending
+        ExecutionState::Crashed
     );
     assert_eq!(
         store.get_run(&done_id).unwrap().execution,
