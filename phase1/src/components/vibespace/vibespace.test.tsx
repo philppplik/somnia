@@ -35,3 +35,9 @@ test('applied or discarded history never claims an unchanged project or offers a
  const html=renderToStaticMarkup(<ReviewChanges studio={fixtureRun({reviewState:'applied'})} disabled={true} onAction={onAction}/>);
  assert.match(html,/These changes were applied/);assert.ok(!html.includes('Your project has not changed'));assert.ok(!html.includes('Apply selected'));
 });
+
+test('consent with a policy-v2 kind shows its sandbox gate line, visibly, never silent',()=>{
+ const html=renderToStaticMarkup(<ConsentCard studio={fixtureSnapshot().studios[1]} disabled={false} runAllowed={true} onAction={onAction}/>);
+ assert.match(html,/data-gate="/);
+ assert.match(html,/Isolation|Tool network|Process execution is not available/);
+});

@@ -3,6 +3,8 @@ import {ReviewExtensions,UsageDetails} from './ReviewExtensions';
 import {useState} from 'react';
 import {Check,RotateCcw,Send,Square,X} from '../../lib/icons';
 import {canApply,costLabel,duration,studioControls,studioState} from '../../lib/vibespace/state';
+import {defaultProcessSupport,describeConsentGate,detectGatePlatform} from '../../lib/vibespace/consentPresentation';
+import {t} from '../../lib/i18n';
 import type {Studio,VibeIntent,Space,VibeSpaceTransport} from '../../lib/vibespace/types';
 export const stateLabels={draft:'Draft',running:'Running',paused:'Paused',done:'Done','needs-you':'Needs you',ready:'Ready for review',stopped:'Stopped',applied:'Applied',discarded:'Discarded',failed:'Failed',crashed:'Crashed'};
 export function StudioMetrics({studio}:{studio:Studio}){
@@ -14,7 +16,9 @@ export function ConsentCard({studio,disabled,runAllowed,onAction}:{studio:Studio
  return <>{studio.pendingConsents.map(consent=><ConsentRequestView key={consent.requestId} consent={consent} studio={studio} disabled={disabled} runAllowed={runAllowed} onAction={onAction}/>)}</>;
 }
 function ConsentRequestView({consent,studio,disabled,runAllowed,onAction}:{consent:Studio["pendingConsents"][number];studio:Studio;disabled:boolean;runAllowed:boolean;onAction:(intent:VibeIntent)=>Promise<boolean>}){
- return <section className="vs-card vs-consent" aria-label="Needs you consent"><h3>Needs you</h3><strong>{consent.action}</strong><dl><dt>Scope</dt><dd data-copyable>{consent.scope}</dd><dt>Why</dt><dd>{consent.reason}</dd></dl>
+ const platform=detectGatePlatform();
+ const gate=describeConsentGate(consent.kind,platform,defaultProcessSupport(platform));
+ return <section className="vs-card vs-consent" aria-label="Needs you consent"><h3>Needs you</h3><strong>{consent.action}</strong>{gate&&<p className="vs-notice" role="status" data-gate={gate.level}>{t(gate.levelKey)}{gate.noteKey?` ${t(gate.noteKey)}`:''}</p>}<dl><dt>Scope</dt><dd data-copyable>{consent.scope}</dd><dt>Why</dt><dd>{consent.reason}</dd></dl>
   <p className="vs-muted">Allow applies only to this exact request. It does not extend the folder scope.</p>
   <div className="vs-actions">{(['allow_once','allow_for_run','deny'] as const).map(choice=><button type="button" key={choice} disabled={disabled||(choice==='allow_for_run'&&(!consent.allowForRun||!runAllowed))} onClick={()=>void onAction({type:'consent',runId:studio.runId,requestId:consent.requestId,choice})}>{({allow_once:'Allow once',allow_for_run:'Allow for this run',deny:'Deny'})[choice]}</button>)}</div>
  </section>;

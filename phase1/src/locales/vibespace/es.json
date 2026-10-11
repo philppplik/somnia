@@ -1,4 +1,10 @@
 {
+ "vibespace.consent.gate.strong": "Aislamiento: fuerte (proceso en sandbox, sin red, sin entorno del anfitrión).",
+ "vibespace.consent.gate.poc": "Aislamiento: prueba de concepto en Windows. La puerta de shell permanece cerrada hasta que las pruebas de CI pasen.",
+ "vibespace.consent.gate.proxy": "Red de herramientas: pasa por el proxy de dominios del broker. Solo son accesibles los dominios que permitas.",
+ "vibespace.consent.gate.elevated": "Modo elevado: este comando se ejecuta SIN sandbox. Configuraste este modo explícitamente; cada comando se pregunta por separado.",
+ "vibespace.consent.gate.unavailable": "La ejecución de procesos no está disponible en esta plataforma.",
+ "vibespace.consent.gate.unavailable.macos": "La ejecución de procesos no está disponible en macOS en esta alfa. No hay alternativa.",
  "vs.model.title": "Configuración del modelo local",
  "vs.model.intro": "Vibe Space puede usar un modelo que se ejecuta en este equipo. No se descarga nada automáticamente.",
  "vs.model.trial": "Modelo de prueba: Qwen3.5-9B",
