@@ -100,6 +100,9 @@ impl Runtime {
             .map_err(|_| CoreError("invalid native folder selection"))
     }
     pub fn create_space(&self, window: &str, request: w::CreateSpace) -> Result<w::SpaceSummary> {
+        if request.name.trim().is_empty() || request.name.chars().count() > 120 {
+            return Err(CoreError("Space name must contain 1-120 characters"));
+        }
         let _guard = lock(&self.command)?;
         let root = lock(&self.grants)?
             .consume(window, &request.folder_grant_id)
@@ -142,6 +145,12 @@ impl Runtime {
             .collect()
     }
     pub fn create_studio(&self, request: w::CreateStudio) -> Result<w::StudioSummary> {
+        if request.goal.trim().is_empty()
+            || request.goal.encode_utf16().count() > 8192
+            || request.model.model.encode_utf16().count() > 256
+        {
+            return Err(CoreError("Studio goal or model exceeds alpha limits"));
+        }
         if !matches!(
             (request.model.provider.as_str(), &request.model.locality),
             ("ollama" | "lmstudio", w::ModelLocality::Local)
@@ -818,6 +827,11 @@ impl Runtime {
         let run = self.store.get_run(id)?;
         let (baseline, copy) = self.prepared(id)?;
         let review = self.vault.review_changes(&baseline, &copy)?;
+        if review.changes.len() > 1000 {
+            return Err(CoreError(
+                "too many changes for alpha review; split the task",
+            ));
+        }
         let original = self.vault.load_checkpoint(&baseline)?;
         // Snapshot current originals through the trusted checkpoint service, never a model tool.
         let current = self
