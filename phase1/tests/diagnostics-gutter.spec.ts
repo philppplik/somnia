@@ -1,5 +1,7 @@
 import {test,expect} from './fixtures';
 import {showCode} from './helpers';
+// Keep unrelated update/catalog network failures out of these local diagnostics assertions.
+test.beforeEach(async({page})=>{await page.route('https://**/*',route=>route.fulfill({status:200,contentType:'application/json',body:'[]'}));});
 
 const broken='<html lang="en">\n<head>\n<title>Gutter diagnostics</title>\n<link rel="stylesheet" href="missing.css">\n</head>\n<body>\n<h1>Diagnostics example</h1>\n<img src="hero.png">\n<div><span>Broken nesting</div>\n</body>\n</html>';
 test('gutter matches Problems, prioritizes errors, shows hover messages, and clears after edits',async({page})=>{

@@ -22,7 +22,9 @@ export interface ManifestV2 {
   proposedApis?:{id:string; revision:number}[]; icon?:string; repository?:string; homepage?:string; $schema?:string;
 }
 export interface ManifestValidationOptions {somniaVersion?:string; apiVersion?:string; lane?:'local'|'store'|'experimental'}
-const validator = new Ajv2020({allErrors:true, strict:false}).compile(schema);
+// Precompiled at build time (scripts/generate-manifest-validator.mjs): ajv's runtime
+// compile uses `new Function`, which the production CSP forbids (12.0.0 black screen).
+import {validate as validator} from './contracts/v2/manifest.validator.js';
 const pointer = (value:string) => value.replace(/~/g,'~0').replace(/\//g,'~1');
 export const diagnostic = (code:ExtensionDiagnosticCode,path:string,message:string):ExtensionDiagnostic => ({code,path,message});
 
@@ -95,7 +97,12 @@ function checkArgumentSchema(value:unknown,path:string,errors:ExtensionDiagnosti
     else if(key==='items'||(key==='additionalProperties'&&typeof child==='object')) checkArgumentSchema(child,p,errors,depth+1);
   }
   if(errors.some(e=>e.path.startsWith(path))) return;
-  try {new Ajv2020({strict:false}).compile(value as object);} catch {errors.push(diagnostic('SOM-EXT-003',path,'Invalid argument schema.'));}
+  try {new Ajv2020({strict:false}).compile(value as object);} catch (e) {
+    // Under the production CSP ajv cannot compile at all (no 'unsafe-eval'); skip the
+    // self-check there instead of false-rejecting every manifest. The broker fail-closes
+    // when such a schema is actually used. A real schema error still surfaces in dev.
+    if (!(e instanceof EvalError)) errors.push(diagnostic('SOM-EXT-003',path,'Invalid argument schema.'));
+  }
 }
 export function validateManifestV2(input:unknown,options:ManifestValidationOptions={}):ValidationResult<ManifestV2> {
   const errors:ExtensionDiagnostic[]=[]; safeTree(input,'',errors);

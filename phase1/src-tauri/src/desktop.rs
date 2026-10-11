@@ -15,8 +15,8 @@ struct Backend {
     sync: Option<SyncFolder>,
     projects: BTreeMap<String, Project>,
     drop_grant: Option<DropGrant>,
-    /// Native launch/open-event queue. Renderer consumes one selected file at a time.
-    startup_files: std::collections::VecDeque<std::path::PathBuf>,
+    /// Bounded native open-request queue (cold argv, second instance). Same mutex as `projects`.
+    intake: crate::intake::queue::OpenQueue,
 }
 type Shared = Arc<Mutex<Backend>>;
 #[derive(Serialize)]
@@ -542,6 +542,14 @@ async fn choose_project(
         if backend.projects.len() >= 4 {
             return Err(AppError::Limit);
         }
+        // A folder cannot replace live single-file projects inside its tree (SOM-FS-006).
+        let canonical = path.canonicalize()?;
+        let access = build_project_access(backend);
+        let corr = format!("folder-open-{}", now_ms());
+        if let Err(e) = backend.intake.check_folder_open(&canonical, &access, &corr) {
+            crate::intake::commands::flush_events(&crate::applog::Global, &mut backend.intake, None);
+            return Err(AppError::Denied(e.message.to_owned()));
+        }
         let project = Project::open(&path, &recovery_base)?;
         let reply = ProjectReply {
             project_id: project.id.clone(),
@@ -581,6 +589,15 @@ async fn open_dropped_project(
             return Err(AppError::Limit);
         }
         let path = &paths[0];
+        if path.is_dir() {
+            let canonical = path.canonicalize()?;
+            let access = build_project_access(backend);
+            let corr = format!("folder-open-{}", now_ms());
+            if let Err(e) = backend.intake.check_folder_open(&canonical, &access, &corr) {
+                crate::intake::commands::flush_events(&crate::applog::Global, &mut backend.intake, None);
+                return Err(AppError::Denied(e.message.to_owned()));
+            }
+        }
         let project = if path.is_dir() {
             Project::open(path, &recovery_base)?
         } else {
@@ -635,7 +652,7 @@ fn base64_encode(bytes: &[u8]) -> String {
     }
     out
 }
-/// Multiple dropped files retain import-as-copies behavior. Exact bytes are bounded; suffix does not grant an editor.
+/// Multiple dropped files retain the existing import-as-copies behavior. Reads are bounded.
 #[tauri::command]
 async fn read_dropped_files(
     window: WebviewWindow,
@@ -656,6 +673,11 @@ async fn read_dropped_files(
         let mut total = 0;
         let mut media_total = 0;
         for path in paths {
+            let ext = path
+                .extension()
+                .unwrap_or_default()
+                .to_string_lossy()
+                .to_ascii_lowercase();
             if chat.unwrap_or(false) {
                 if files.len() >= 5 {
                     return Err(AppError::Limit);
@@ -682,14 +704,51 @@ async fn read_dropped_files(
                 });
                 continue;
             }
+            if MEDIA_EXTENSIONS.contains(&ext.as_str()) {
+                let mut bytes = Vec::new();
+                std::fs::File::open(&path)?
+                    .take(MAX_MEDIA_BYTES as u64 + 1)
+                    .read_to_end(&mut bytes)?;
+                if bytes.len() > MAX_MEDIA_BYTES {
+                    return Err(AppError::Limit);
+                }
+                media_total += bytes.len();
+                if media_total > MAX_MEDIA_TOTAL {
+                    return Err(AppError::Limit);
+                }
+                files.push(DroppedTextFile {
+                    name: path
+                        .file_name()
+                        .unwrap_or_default()
+                        .to_string_lossy()
+                        .into_owned(),
+                    text: String::new(),
+                    base64: Some(base64_encode(&bytes)),
+                });
+                continue;
+            }
+            if !["html", "htm", "css", "js", "json", "svg", "txt", "md", "tex"].contains(&ext.as_str()) {
+                continue;
+            }
             let mut bytes = Vec::new();
-            std::fs::File::open(&path)?.take(MAX_MEDIA_BYTES as u64 + 1).read_to_end(&mut bytes)?;
-            if bytes.len() > MAX_MEDIA_BYTES { return Err(AppError::Limit); }
-            media_total += bytes.len();
-            if media_total > MAX_MEDIA_TOTAL || files.len() >= 200 { return Err(AppError::Limit); }
+            std::fs::File::open(&path)?
+                .take(2_000_001)
+                .read_to_end(&mut bytes)?;
+            if bytes.len() > 2_000_000 {
+                return Err(AppError::Limit);
+            }
+            total += bytes.len();
+            if total > 8_000_000 {
+                return Err(AppError::Limit);
+            }
             files.push(DroppedTextFile {
-                name: path.file_name().unwrap_or_default().to_string_lossy().into_owned(),
-                text: String::new(), base64: Some(base64_encode(&bytes)),
+                name: path
+                    .file_name()
+                    .unwrap_or_default()
+                    .to_string_lossy()
+                    .into_owned(),
+                text: crate::service::decode_text(bytes),
+                base64: None,
             });
         }
         Ok(files)
@@ -701,9 +760,8 @@ async fn read_dropped_files(
 struct DropReply {
     token: String,
     count: usize,
-    /// Compatibility hint for old renderers. New intake uses actual directory identity, never this extension hint.
+    /// True when every dropped path is a PNG, JPEG or PDF file (media, not a project).
     media: bool,
-    directory: bool,
     /// Physical drop position for routing to the visible session-chat target.
     position: [f64; 2],
 }
@@ -760,46 +818,186 @@ async fn choose_file(
     })
     .await
 }
-/// Open the file the OS passed at launch (file association). One-shot: the stored path is
-/// consumed, and the renderer never supplies a path. Returns None when the app was not
-/// launched with a file.
-#[tauri::command]
-async fn open_startup_file(
-    window: WebviewWindow,
-    state: State<'_, Shared>,
-) -> Result<Option<ProjectReply>> {
-    gate(&window)?;
-    let recovery_base = window
-        .app_handle()
-        .path()
-        .app_local_data_dir()
-        .map_err(|e| AppError::Io(e.to_string()))?
-        .join("recovery-v1");
-    work(state.inner().clone(), move |backend| {
-        let Some(path) = backend.startup_files.pop_front() else {
-            return Ok(None);
+/// Single-instance activation. Panic-free: no unwrap/expect/panic, no indexing.
+mod intake_activation {
+    #![deny(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
+    use std::sync::atomic::{AtomicBool, Ordering};
+    use tauri::{Manager, UserAttentionType};
+
+    /// Set while an activation is owed but the main window does not exist yet. `setup` sets it for
+    /// the cold start; the first activation that finds the window clears it.
+    #[derive(Default)]
+    pub struct Pending(pub AtomicBool);
+
+    pub fn now_ms() -> u64 {
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_millis() as u64)
+            .unwrap_or(0)
+    }
+
+    /// Raise the main window once per batch. `pending` is set BEFORE the window lookup so a window
+    /// created right after is still activated; it stays true when there is no window and is
+    /// cleared when one is found. Window calls are best-effort; attention is requested only when
+    /// taking focus fails.
+    pub fn activate_main_window(app: &tauri::AppHandle, pending: &AtomicBool) {
+        pending.store(true, Ordering::SeqCst);
+        let Some(window) = app.get_webview_window("main") else {
+            return;
         };
-        if backend.projects.len() >= 4 {
-            return Err(AppError::Limit);
+        pending.store(false, Ordering::SeqCst);
+        crate::ignore!(crate::ignore::IgnoreReason::BestEffortWindow, window.show());
+        crate::ignore!(crate::ignore::IgnoreReason::BestEffortWindow, window.unminimize());
+        if window.set_focus().is_err() {
+            crate::ignore!(
+                crate::ignore::IgnoreReason::BestEffortWindow,
+                window.request_user_attention(Some(UserAttentionType::Informational))
+            );
         }
-        let project = Project::open_file(&path, &recovery_base)?;
-        let reply = ProjectReply {
-            project_id: project.id.clone(),
-            name: path
-                .file_name()
-                .unwrap_or_default()
-                .to_string_lossy()
-                .into_owned(),
-        };
-        backend.projects.insert(project.id.clone(), project);
-        Ok(Some(reply))
+    }
+}
+use intake_activation::{activate_main_window, Pending};
+
+/// Parse (no Backend lock, no file reads beyond stat), enqueue and flush events under one short
+/// lock, then activate the window with the lock released. Runs on the blocking pool; the
+/// single-instance plugin waits on its callback, so nothing here may wait on the UI thread.
+fn intake_dispatch(
+    app: tauri::AppHandle,
+    shared: Shared,
+    source: crate::intake::queue::OpenSource,
+    args: Vec<std::ffi::OsString>,
+    cwd: PathBuf,
+) {
+    tauri::async_runtime::spawn_blocking(move || {
+        let policy = shared.lock().map(|b| b.intake.policy()).unwrap_or_default();
+        let parsed = crate::intake::parse::parse_open_args(args, &cwd, &policy);
+        let enqueued = shared.lock().ok().map(|mut backend| {
+            let report = backend.intake.enqueue(source, parsed, now_ms());
+            crate::intake::commands::flush_events(&crate::applog::Global, &mut backend.intake, None);
+            (report, backend.intake.pending_count())
+        });
+        // Backend mutex released: window activation and emit never run under it.
+        if let Some((report, count)) = enqueued {
+          if report.request_id.is_some() {
+            crate::ignore!(
+                crate::ignore::IgnoreReason::BestEffortWindow,
+                app.emit_to("main", "somnia://open-requests", serde_json::json!({ "count": count }))
+            );
+          }
+        }
+        activate_main_window(&app, &app.state::<Pending>().0);
+    });
+}
+
+type CmdResult<T> = std::result::Result<T, crate::app_command_error::AppCommandError>;
+/// Live registry for intake Claim/Retry: every open project as seen by the host, built fresh
+/// under the Backend mutex. Single-file projects match by native identity; folder projects by
+/// canonical root plus the currently visible file set (joined to root and canonicalized).
+fn build_project_access(backend: &Backend) -> Vec<crate::intake::queue::ProjectAccess> {
+    let mut access = Vec::with_capacity(backend.projects.len());
+    for project in backend.projects.values() {
+        match (&project.identity, project.single_file_name()) {
+            (Some(identity), Some(name)) => {
+                access.push(crate::intake::queue::ProjectAccess::SingleFile {
+                    project_id: project.id.clone(),
+                    canonical_file: project.root_path().join(name),
+                    identity: identity.clone(),
+                });
+            }
+            (None, _) => {
+                let root = project.root_path().to_path_buf();
+                let visible_files = project
+                    .list_files()
+                    .unwrap_or_default()
+                    .into_iter()
+                    .filter_map(|rel| root.join(rel).canonicalize().ok())
+                    .collect();
+                access.push(crate::intake::queue::ProjectAccess::Folder {
+                    project_id: project.id.clone(),
+                    canonical_root: root,
+                    visible_files,
+                });
+            }
+            (Some(_), None) => {}
+        }
+    }
+    access
+}
+/// Run one intake command core under the Backend mutex on the blocking pool. Events are flushed
+/// once inside `execute`; the cmd wrapper keeps a nonempty incident_id and does not log again.
+async fn intake_cmd<T: Send + 'static>(
+    name: &'static str,
+    window: &WebviewWindow,
+    state: &Shared,
+    refresh_access: bool,
+    run: impl FnOnce(&str, &mut crate::intake::queue::OpenQueue, u64) -> std::result::Result<T, crate::intake::queue::IntakeError>
+        + Send
+        + 'static,
+) -> CmdResult<T> {
+    let label = window.label().to_owned();
+    let state = state.clone();
+    let ctx_label = label.clone();
+    crate::cmd::cmd_async(name, Some(&ctx_label), async move {
+        tauri::async_runtime::spawn_blocking(move || {
+            let mut backend = state
+                .lock()
+                .map_err(|e| crate::app_command_error::AppCommandError::from(AppError::Io(e.to_string())))?;
+            // Claim/Retry must see the live project registry; rebuild it under the same lock.
+            if refresh_access {
+                let access = build_project_access(&backend);
+                backend.intake.refresh_project_access(&access);
+            }
+            crate::intake::commands::execute(&mut backend.intake, |q| run(&label, q, now_ms()))
+        })
+        .await
+        .map_err(|e| crate::app_command_error::AppCommandError::from(AppError::Io(e.to_string())))?
     })
     .await
 }
 #[tauri::command]
-async fn read_open_bytes(window: WebviewWindow, state: State<'_, Shared>, project_id: String, path: String) -> Result<String> {
-    gate(&window)?;
-    work(state.inner().clone(), move |b| Ok(base64_encode(&project(b, &project_id)?.read_open_bytes(&path)?))).await
+async fn drain_open_requests(window: WebviewWindow, state: State<'_, Shared>) -> CmdResult<Vec<crate::intake::queue::OpenRequestSummary>> {
+    let app = window.app_handle().clone();
+    let (summaries, resets, count) = intake_cmd("drain_open_requests", &window, state.inner(), false, |w, q, now| {
+        // Maintenance runs before the core (which gates, resets again as a no-op, then drains) so
+        // the adapter can see whether a stale claim was requeued and notify the renderer once.
+        let resets = if w == "main" { q.reset_stale(now).len() } else { 0 };
+        crate::intake::commands::drain_open_requests(w, q, now).map(|s| (s, resets, q.pending_count()))
+    }).await?;
+    if resets > 0 {
+        crate::ignore!(
+            crate::ignore::IgnoreReason::BestEffortWindow,
+            app.emit_to("main", "somnia://open-requests", serde_json::json!({ "count": count }))
+        );
+    }
+    Ok(summaries)
+}
+#[tauri::command]
+async fn claim_open_request(window: WebviewWindow, state: State<'_, Shared>, request_id: String) -> CmdResult<crate::intake::queue::ClaimReply> {
+    intake_cmd("claim_open_request", &window, state.inner(), true, move |w, q, now| crate::intake::commands::claim_open_request(w, q, &request_id, now)).await
+}
+#[tauri::command]
+async fn read_by_grant(window: WebviewWindow, state: State<'_, Shared>, grant: String) -> CmdResult<crate::intake::queue::GrantRead> {
+    intake_cmd("read_by_grant", &window, state.inner(), false, move |w, q, now| crate::intake::commands::read_by_grant(w, q, &grant, now)).await
+}
+#[tauri::command]
+async fn ack_open_request(window: WebviewWindow, state: State<'_, Shared>, request_id: String, outcomes: Vec<crate::intake::queue::ItemOutcome>) -> CmdResult<crate::intake::queue::AckReply> {
+    intake_cmd("ack_open_request", &window, state.inner(), false, move |w, q, now| crate::intake::commands::ack_open_request(w, q, &request_id, outcomes, now)).await
+}
+#[tauri::command]
+async fn release_candidate(window: WebviewWindow, state: State<'_, Shared>, request_id: String) -> CmdResult<()> {
+    intake_cmd("release_candidate", &window, state.inner(), false, move |w, q, _| crate::intake::commands::release_candidate(w, q, &request_id)).await
+}
+#[tauri::command]
+async fn retry_open_item(window: WebviewWindow, state: State<'_, Shared>, request_id: String, ordinal: u32, retry_token: String) -> CmdResult<crate::intake::queue::ClaimReply> {
+    intake_cmd("retry_open_item", &window, state.inner(), true, move |w, q, now| crate::intake::commands::retry_open_item(w, q, &request_id, ordinal, &retry_token, now)).await
+}
+#[tauri::command]
+async fn get_intake_policy(window: WebviewWindow, state: State<'_, Shared>) -> CmdResult<crate::intake::policy::IntakePolicy> {
+    intake_cmd("get_intake_policy", &window, state.inner(), false, |w, q, _| crate::intake::commands::get_intake_policy(w, q)).await
+}
+#[tauri::command]
+async fn set_intake_policy(window: WebviewWindow, state: State<'_, Shared>, allow_unc: bool) -> CmdResult<()> {
+    intake_cmd("set_intake_policy", &window, state.inner(), false, move |w, q, _| crate::intake::commands::set_intake_policy(w, q, allow_unc)).await
 }
 #[tauri::command]
 async fn list_files(
@@ -1614,46 +1812,6 @@ async fn git_diff_file(
     })
     .await
 }
-// One native runner for these read commands; common/checkout locks shared with other hosts.
-static GIT_READ_RUNNER: std::sync::OnceLock<crate::git::jobs::GitJobRunner> = std::sync::OnceLock::new();
-fn git_read_runner(window: &WebviewWindow) -> std::result::Result<&'static crate::git::jobs::GitJobRunner, String> {
-    if let Some(runner) = GIT_READ_RUNNER.get() { return Ok(runner); }
-    let dir = window.app_handle().path().app_config_dir().map_err(|_| "App config directory is unavailable")?.join("git-job-locks");
-    let runner = crate::git::jobs::GitJobRunner::new(dir).map_err(|e| e.to_string())?;
-    let _ = GIT_READ_RUNNER.set(runner);
-    Ok(GIT_READ_RUNNER.get().expect("runner installed"))
-}
-async fn git_read_context(state: &Shared, runner: &crate::git::jobs::GitJobRunner) -> std::result::Result<crate::git::context::RepoContext, String> {
-    let root = { let b = state.lock().map_err(|e| e.to_string())?; git_project_root(&b)? };
-    let workspace = runner.workspace(&root).unwrap_or_default();
-    tauri::async_runtime::spawn_blocking(move || crate::git::context::RepoContext::discover(&root, workspace).map_err(|e| serde_json::to_string(&e).unwrap_or_else(|_| e.to_string()))).await.map_err(|e| e.to_string())?
-}
-#[tauri::command]
-async fn git_diff_refs(window: WebviewWindow, state: State<'_, Shared>, request: crate::git::ref_contract::DiffRequest) -> std::result::Result<crate::git::ref_contract::DiffResult, String> {
-    git_gate(&window)?;
-    let runner = git_read_runner(&window)?;
-    let context = git_read_context(state.inner(), runner).await?;
-    crate::git::ref_contract::diff_job(runner, context, crate::git::jobs::JobOrigin::Human, request).await.map_err(|e| serde_json::to_string(&e).unwrap_or_else(|_| e.to_string()))
-}
-#[tauri::command]
-async fn git_safety_list(window: WebviewWindow, state: State<'_, Shared>) -> std::result::Result<Vec<crate::git::ref_contract::SafetyEntry>, String> {
-    git_gate(&window)?;
-    let runner = git_read_runner(&window)?;
-    let context = git_read_context(state.inner(), runner).await?;
-    crate::git::ref_contract::safety_job(runner, context, crate::git::jobs::JobOrigin::Human).await.map_err(|e| serde_json::to_string(&e).unwrap_or_else(|_| e.to_string()))
-}
-#[tauri::command]
-async fn git_ref_tree(window: WebviewWindow, state: State<'_, Shared>, git_ref: String) -> std::result::Result<crate::git::ref_contract::RefTree, String> {
-    git_gate(&window)?; let runner = git_read_runner(&window)?;
-    let context = git_read_context(state.inner(), runner).await?;
-    crate::git::ref_contract::tree_job(runner, context, crate::git::jobs::JobOrigin::Human, git_ref).await.map_err(|e| serde_json::to_string(&e).unwrap_or_else(|_| e.to_string()))
-}
-#[tauri::command]
-async fn git_read_blob(window: WebviewWindow, state: State<'_, Shared>, blob: String) -> std::result::Result<crate::git::ref_contract::BlobRead, String> {
-    git_gate(&window)?; let runner = git_read_runner(&window)?;
-    let context = git_read_context(state.inner(), runner).await?;
-    crate::git::ref_contract::blob_job(runner, context, crate::git::jobs::JobOrigin::Human, blob).await.map_err(|e| serde_json::to_string(&e).unwrap_or_else(|_| e.to_string()))
-}
 #[tauri::command]
 async fn git_init(
     window: WebviewWindow,
@@ -1990,21 +2148,18 @@ fn ext_scheme_response(
 
 pub fn run() {
     let shared = Shared::default();
-    // File association launch: Windows "Open with Somnia" passes the file in argv. Captured here,
-    // pulled by the renderer once via open_startup_file; never renderer-supplied.
-    if let Ok(mut backend) = shared.lock() {
-        backend.startup_files.extend(crate::startup_file::capture_all(std::env::args_os(), |p| p.is_file()));
-    }
-    let app = tauri::Builder::default()
-        // First plugin: second Windows/Linux launches forward to the existing editor.
-        .plugin(tauri_plugin_single_instance::init(|app, args, cwd| {
-            let paths = crate::startup_file::capture_all(args.into_iter().map(std::ffi::OsString::from), |p| {
-                let path = if p.is_absolute() { p.to_path_buf() } else { std::path::Path::new(&cwd).join(p) };
-                path.is_file()
-            }).into_iter().map(|p| if p.is_absolute() { p } else { std::path::Path::new(&cwd).join(p) });
-            if let Ok(mut backend) = app.state::<Shared>().lock() { backend.startup_files.extend(paths); }
-            if let Some(window) = app.get_webview_window("main") { let _ = window.show(); let _ = window.set_focus(); }
-            let _ = app.emit("somnia://os-open", ());
+    tauri::Builder::default()
+        // Must be the first plugin. The callback runs in the second process's message handler and
+        // the plugin waits on it: capture state, hand parse/enqueue to the blocking pool, return.
+        .plugin(tauri_plugin_single_instance::init({
+            let shared = shared.clone();
+            move |app, args, cwd| intake_dispatch(
+                app.clone(),
+                shared.clone(),
+                crate::intake::queue::OpenSource::SecondInstance,
+                args.into_iter().map(std::ffi::OsString::from).collect(),
+                PathBuf::from(cwd),
+            )
         }))
         .manage(crate::ext_scheme::ExtRegistry::default())
         .register_uri_scheme_protocol(crate::ext_scheme::SCHEME, |ctx, request| {
@@ -2019,45 +2174,52 @@ pub fn run() {
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_process::init())
         .manage(shared.clone())
+        .manage(Pending::default())
         .manage(ImageGrants::default())
         .manage(PdfGrants::default()).manage(SlidesGrants::default()).manage(SheetsGrants::default())
         .manage(AudioGrants::default())
         .manage(crate::lan_host::LanHost::default())
         .setup(move |app| {
+            // Cold start: same worker pipeline as a second instance. The flag owes the main window
+            // one activation even if it is not created yet.
+            app.state::<Pending>().0.store(true, std::sync::atomic::Ordering::SeqCst);
+            intake_dispatch(
+                app.handle().clone(),
+                shared.clone(),
+                crate::intake::queue::OpenSource::ColdArgv,
+                std::env::args_os().collect(),
+                std::env::current_dir().unwrap_or_default(),
+            );
             tauri::async_runtime::spawn(oauth_refresh_loop());
             if let Ok(dir) = app.path().app_data_dir() {
                 crate::applog::init(dir.join("logs"));
+                // S3 native diagnostics: incident store under app data, then the lock-free panic
+                // writer (it replaces the logger-lock hook from applog::init, never chains it).
+                let incidents_dir = dir.join("incidents");
+                let boot_nanos = std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .map(|d| d.as_nanos())
+                    .unwrap_or_default();
+                crate::panic_report::install(
+                    incidents_dir.clone(),
+                    format!("rust-{}-{}", std::process::id(), boot_nanos),
+                );
+                match crate::diagnostics_commands::DiagnosticsState::new(incidents_dir) {
+                    Ok(diag) => { app.manage(diag); }
+                    Err(e) => crate::applog::write(
+                        "error",
+                        "diagnostics",
+                        "incident store unavailable; crash review disabled",
+                        Some(&serde_json::json!({ "code": e.code() })),
+                    ),
+                }
             }
             let app_handle = app.handle().clone();
-            std::thread::spawn(move || {
-              let mut watchers: std::collections::BTreeMap<String, crate::git::invalidation::GitStatusWatcher> = Default::default();
-              let mut retry: std::collections::BTreeMap<String, std::time::Instant> = Default::default();
-              loop {
+            std::thread::spawn(move || loop {
                 std::thread::sleep(Duration::from_millis(250));
                 let Some(window) = app_handle.get_webview_window("main") else {
                     break;
                 };
-                // Copy identities only. Watch setup and event draining do not hold the file mutex.
-                let projects = match shared.lock() {
-                    Ok(b) => b.projects.values().map(|p| (p.id.clone(), p.root_path().to_path_buf())).collect::<Vec<_>>(),
-                    Err(_) => break,
-                };
-                watchers.retain(|id, _| projects.iter().any(|(p, _)| p == id));
-                retry.retain(|id, _| projects.iter().any(|(p, _)| p == id));
-                for (id, root) in projects {
-                    if !watchers.contains_key(&id) && retry.get(&id).map_or(true, |t| t.elapsed() >= Duration::from_secs(5)) {
-                        retry.insert(id.clone(), std::time::Instant::now());
-                        if let Ok(w) = crate::git::invalidation::GitStatusWatcher::new(&root) { watchers.insert(id.clone(), w); }
-                    }
-                    if let Some(event) = watchers.get_mut(&id).and_then(|w| w.drain(&id)) {
-                        if let Some(runner) = GIT_READ_RUNNER.get() {
-                            if let Ok(ctx) = crate::git::context::RepoContext::discover(&root, Default::default()) {
-                                let _ = crate::git::invalidation::advance_workspace_generation(runner, &ctx.root);
-                            }
-                        }
-                        let _ = window.emit("somnia://git-invalidated", event);
-                    }
-                }
                 let events = match shared.lock() {
                     Ok(mut backend) => backend
                         .projects
@@ -2069,7 +2231,6 @@ pub fn run() {
                 for event in events {
                     emit(&window, &event);
                 }
-              }
             });
             Ok(())
         })
@@ -2085,7 +2246,6 @@ pub fn run() {
                             token: grant.token().to_owned(),
                             count: paths.len(),
                             position: [position.x, position.y],
-                            directory: paths.len() == 1 && paths[0].is_dir(),
                             media: paths.iter().all(|p| {
                                 p.extension()
                                     .map(|e| e.to_string_lossy().to_ascii_lowercase())
@@ -2161,14 +2321,27 @@ pub fn run() {
             collab_lan_status,
             choose_project,
             choose_file,
-            open_startup_file,
+            crate::diagnostics_commands::build_diagnostic_zip,
+            crate::diagnostics_commands::write_diagnostic_zip,
+            crate::diagnostics_commands::discard_diagnostic_snapshot,
+            crate::diagnostics_commands::list_crash_reports,
+            crate::diagnostics_commands::mark_crash_reports_reviewed,
+            crate::diagnostics_commands::delete_crash_reports,
+            crate::diagnostics_commands::record_frontend_fatal,
+            drain_open_requests,
+            claim_open_request,
+            read_by_grant,
+            ack_open_request,
+            release_candidate,
+            retry_open_item,
+            get_intake_policy,
+            set_intake_policy,
             open_dropped_project,
             read_dropped_files,
             is_store_package,
             list_files,
             read_file,
             read_media,
-            read_open_bytes,
             image_pick,
             image_read,
             pdf_save_pick,
@@ -2200,10 +2373,6 @@ pub fn run() {
             git_detect,
             git_status,
             git_diff_file,
-            git_diff_refs,
-            git_safety_list,
-            git_ref_tree,
-            git_read_blob,
             git_init,
             git_commit,
             git_log,
@@ -2221,20 +2390,11 @@ pub fn run() {
             git_combine_finish,
             git_combine_abort
         ])
-        .build(tauri::generate_context!())
+        .run(tauri::generate_context!())
         .unwrap_or_else(|error| {
             crate::applog::write("error", "rust.startup", &error.to_string(), None);
             panic!("Unable to start Somnia: {error}");
         });
-    #[allow(unused_variables)]
-    app.run(|app, event| {
-        #[cfg(any(target_os = "macos", target_os = "ios"))]
-        if let tauri::RunEvent::Opened { urls } = event {
-            let paths: Vec<_> = urls.into_iter().filter_map(|url| url.to_file_path().ok()).filter(|p| p.is_file()).collect();
-            if let Ok(mut backend) = app.state::<Shared>().lock() { backend.startup_files.extend(paths); }
-            let _ = app.emit("somnia://os-open", ());
-        }
-    });
 }
 
 #[cfg(test)]

@@ -1,3 +1,4 @@
+import {reportError} from '../../lib/log';
 import {useCallback,useEffect,useRef,useState} from 'react';
 import {Check,Download,Eye,Frame,RotateCcw,Undo2,Redo2,X,ZoomIn,ZoomOut,Maximize2,Minimize2} from '../../lib/icons';
 import {Button} from '../ui/button';
@@ -89,7 +90,7 @@ export function PhotosWorkspace({item}:{item:MediaItem}){
   setPhotoCropDraft(item.name,next);
  };
  const onCropUp=()=>{if(drag.current?.crop)drag.current=null;};
- const doExport=async(format:'png'|'jpeg')=>{setNote('');try{const r=await exportPhotoCopy(item.name,format);if(r==='saved')setNote(t('photos.saved'));}catch(e){setNote(t('photos.saveFailed',{message:e instanceof Error?e.message:String(e)}));}};
+ const doExport=async(format:'png'|'jpeg')=>{setNote('');try{const r=await exportPhotoCopy(item.name,format);if(r==='saved')setNote(t('photos.saved'));}catch(e){reportError('photos.operation',e,{context:{studio:'photos'}});setNote(t('photos.saveFailed',{message:e instanceof Error?e.message:String(e)}));}};
  const status=!session||session.status==='loading'?t('photos.loading'):session.status==='processing'?t('photos.processing'):session.status==='error'?t('photos.error',{message:session.error}):'';
  const ready=session?.status==='ready'||session?.status==='processing';
  const dirty=session?dirtyPhoto(session):false;

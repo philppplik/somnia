@@ -1,3 +1,4 @@
+import {reportError} from '../../lib/log';
 import {useCallback,useEffect,useRef,useState} from 'react';
 import {Pause,Play,Download} from '../../lib/icons';
 import {Button} from '../ui/button';
@@ -27,7 +28,7 @@ export function SoundWorkspace({item,withPanel=false}:{item:MediaItem;withPanel?
   el.addEventListener('loadedmetadata',onMeta,{once:true});return()=>el.removeEventListener('loadedmetadata',onMeta);
  },[url]);
  const [note,setNote]=useState('');
- const doSave=async()=>{setNote('');try{const r=await saveSound(item.name);if(r==='saved')setNote(t('sound.saved'));else if(r==='downloaded')setNote(t('sound.downloaded'));}catch(e){setNote(t('sound.saveFailed',{message:e instanceof Error?e.message:String(e)}));}};
+ const doSave=async()=>{setNote('');try{const r=await saveSound(item.name);if(r==='saved')setNote(t('sound.saved'));else if(r==='downloaded')setNote(t('sound.downloaded'));}catch(e){reportError('sound.operation',e,{context:{studio:'sound'}});setNote(t('sound.saveFailed',{message:e instanceof Error?e.message:String(e)}));}};
  const toggle=useCallback(()=>{const el=audio.current;if(!el||!el.src)return;if(el.paused)void el.play().catch(()=>{});else el.pause();},[]);
  const seek=useCallback((s:number)=>{const el=audio.current;if(!el)return;el.currentTime=Math.min(s,el.duration||s);setTime(el.currentTime);},[]);
  const duration=shown?.report.output.duration_s??0;

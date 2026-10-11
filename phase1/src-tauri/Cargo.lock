@@ -4444,6 +4444,8 @@ dependencies = [
  "tokio-tungstenite",
  "uuid",
  "window-vibrancy",
+ "windows-sys 0.59.0",
+ "zip",
 ]
 
 [[package]]
@@ -4882,14 +4884,15 @@ dependencies = [
 
 [[package]]
 name = "tauri-plugin-single-instance"
-version = "2.4.0"
+version = "2.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "dc61e4822b8f74d68278e09161d3e3fdd1b14b9eb781e24edccaabf10c420e8c"
+checksum = "8bed24ed0f31939002fad4568e04ba87ba717cd22f85318b867fc427ab88e11b"
 dependencies = [
  "serde",
  "serde_json",
  "tauri",
  "thiserror 2.0.21",
+ "tokio",
  "tracing",
  "windows-sys 0.60.2",
  "zbus 5.19.0",

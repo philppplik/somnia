@@ -1,3 +1,4 @@
+import {reportError} from '../../lib/log';
 import {useEffect,useRef,useState} from 'react';
 import {Button} from '../ui/button';
 import {useRasterEditor} from '../RasterEditor';
@@ -26,11 +27,11 @@ export function DevelopPanel(){
   if(running.current)return;const e=engine.current;if(!e)return;const g=generation.current;
   running.current=true;setBusy(true);let seen:DevelopSettings|undefined;
   try{while(engine.current===e&&seen!==wanted.current){seen=wanted.current;const r=await e.render(seen);if(engine.current===e&&seen===wanted.current)draw(after.current,r);}}
-  catch(error){if(engine.current===e)setError(String(error));}finally{running.current=false;if(g===generation.current)setBusy(false);}
+  catch(error){reportError('photos.operation',error,{context:{studio:'photos'}});if(engine.current===e)setError(String(error));}finally{running.current=false;if(g===generation.current)setBusy(false);}
  },120);return()=>clearTimeout(timer);},[ready,now]);
  const change=(next:DevelopSettings)=>updateDevelopSettings(url,next);
  const history=(redo:boolean)=>historyDevelop(url,redo);
- const save=async(format:'png'|'jpeg')=>{const e=engine.current;if(!e||busy)return;setBusy(true);setError('');const snapshot=state.now;try{const r=await e.export(snapshot,format);if(!r.bytes)throw Error('Export returned no bytes.');const host=await defaultImageHost();if(await host.save(new Blob([r.bytes],{type:format==='png'?'image/png':'image/jpeg'}),editedName(name,format==='png'?'png':'jpg'))){markDevelopSaved(url,snapshot);}}catch(e){setError(String(e));}finally{setBusy(false);}};
+ const save=async(format:'png'|'jpeg')=>{const e=engine.current;if(!e||busy)return;setBusy(true);setError('');const snapshot=state.now;try{const r=await e.export(snapshot,format);if(!r.bytes)throw Error('Export returned no bytes.');const host=await defaultImageHost();if(await host.save(new Blob([r.bytes],{type:format==='png'?'image/png':'image/jpeg'}),editedName(name,format==='png'?'png':'jpg'))){markDevelopSaved(url,snapshot);}}catch(e){reportError('photos.operation',e,{context:{studio:'photos'}});setError(String(e));}finally{setBusy(false);}};
  return <section className="p-3 flex flex-col gap-3 text-xs" aria-label="LightCraft Develop">
  <strong>{photosEngines.lightcraft.label}</strong>
  <p>Separate original-photo development. Raster edits, selections, layers and raster AI proposals are not applied here. Develop AI settings require review.</p>

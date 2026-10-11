@@ -1,8 +1,9 @@
+import {reportError} from './log';
 import {listStudios,getStudio} from './studios';
 import {studioModes} from './studios/modes';
 import {getUiContext} from './uiContextStore';
 import {requestStudio} from '../store/appStore';
-import {copyErrorReport} from './log';
+import {copyErrorReport} from './diagnostics/hostStore';
 import {t,tOr} from './i18n';
 import {openExternal,REPO_URL} from './openExternal';
 import {formatCode,langFor} from './format';
@@ -43,7 +44,7 @@ export async function executeCommand(id:string,payload?:unknown){
  const command=scoped(id)??registry.get(id);if(!command)throw new Error(`Unknown command: ${id}`);
  if(!commandEnabled(command)){patchState({notice:`${command.title} is unavailable until its service is connected.`});return false;}
  try{await command.run(payload);patchState({recentCommands:[id,...getState().recentCommands.filter(c=>c!==id)].slice(0,5)});return true;}
- catch(error){patchState({notice:error instanceof Error?error.message:'Command failed.'});return false;}
+ catch(error){if(!(error&&typeof error==='object'&&'expected' in error&&error.expected===true))reportError('app_command_error',error,{context:{studio:getState().activeStudio,file:getState().activeFile,cmd:id}});patchState({notice:error instanceof Error?error.message:'Command failed.'});return false;}
 }
 /** Wire Tauri menu IDs directly to this function. Never run project JS or add a privileged iframe bridge. */
 export const executeNativeMenuCommand=executeCommand;

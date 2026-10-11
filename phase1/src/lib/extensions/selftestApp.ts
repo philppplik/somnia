@@ -12,7 +12,7 @@ const token=()=>{const b=new Uint8Array(16);crypto.getRandomValues(b);return Arr
 const fail=(error:string):ProbeReport=>({started:false,api_roundtrip:false,network_blocked:false,dom_blocked:false,attempts:{},violations:[],error});
 
 async function runWorkerProbe(evil:string):Promise<ProbeReport>{
- const manifest={id:PROBE_EXTENSION_ID,name:'Selftest probe',version:'1.0.0',apiVersion:1,code:PROBE_EXTENSION_CODE(evil),permissions:['project.read','commands','ui.notify'],contributes:{commands:[],snippets:[],codeThemes:[],panels:[]}} as unknown as ExtensionManifest;
+ const manifest={id:PROBE_EXTENSION_ID,name:'Selftest probe',version:'1.0.0',apiVersion:1,code:PROBE_EXTENSION_CODE(evil),permissions:['project.read','commands','ui.notify'],contributes:{commands:[],snippets:[],codeThemes:[],accentPalettes:[],panels:[]}} as unknown as ExtensionManifest;
  let report:ProbeReport|null=null;
  const rt=new ExtensionRuntime(manifest,{files:()=>({}),applyOperations(){},selection:()=>null,storage:{get:()=>null,set(){}},notify:t=>{if(t.startsWith('SELFTEST_REPORT '))try{report=JSON.parse(t.slice(16));}catch{/* ignore */}},log:()=>{}},browserWorker);
  rt.activate();

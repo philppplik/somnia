@@ -2621,5 +2621,13 @@
   "openRouter.preview": "(vista previa de solo lectura)",
   "openRouter.safe": "Solo se ofrecen estudios que pueden leer este archivo. Cancelar no cambia tu trabajo actual.",
   "openRouter.open": "Abrir archivo",
-  "openRouter.unavailable": "Ningún estudio instalado puede leer este archivo de forma segura. Puede estar dañado o usar un formato no compatible. No se ha cambiado nada."
+  "openRouter.unavailable": "Ningún estudio instalado puede leer este archivo de forma segura. Puede estar dañado o usar un formato no compatible. No se ha cambiado nada.",
+  "finish.settings.accentExtensionPresets": "Paletas de acento de extensiones",
+  "problems.clearRuntime": "Borrar historial de ejecución",
+  "problems.empty": "No se detectaron problemas. Los errores de ejecución aparecen aquí cuando ocurren.",
+  "problems.application": "Aplicación",
+  "problems.noSource": "Sin ubicación de origen",
+  "problems.details": "Detalles técnicos",
+  "problems.session": "El historial de ejecución es local a esta sesión. Borrarlo no corrige errores ni elimina diagnósticos de sintaxis.",
+  "problems.dropped": "Se descartaron {count} entradas de ejecución antiguas."
 }

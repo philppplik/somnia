@@ -1,3 +1,4 @@
+import {reportError} from '../../../lib/log';
 import { useRef, useState, type CSSProperties } from 'react';
 import type { VectorDocument } from '../../../lib/vectorio';
 import { SvgImportError } from '../../../lib/vectorio';
@@ -26,7 +27,7 @@ export function VectorToolsPanel({ value, selection, onSelectionChange, onCommit
   const locked = disabled || busy;
   const apply = (label: string, change: () => VectorDocument) => {
     try { const after = change(); setMessage(''); if (JSON.stringify(value) !== JSON.stringify(after)) onCommit({ before: value, after, label }); }
-    catch (error) { setMessage(error instanceof Error ? error.message : 'The change could not be applied.'); }
+    catch (error) {reportError('vector.operation',error,{context:{studio:'vector'}}); setMessage(error instanceof Error ? error.message : 'The change could not be applied.'); }
   };
   const setDimension = (dimension: 'x' | 'y' | 'width' | 'height', next: number) => {
     if (!box || !Number.isFinite(next)) return;
@@ -61,11 +62,11 @@ export function VectorToolsPanel({ value, selection, onSelectionChange, onCommit
         const selected = e.currentTarget.files?.[0]; e.currentTarget.value = ''; if (!selected || locked || importing.current) return;
         importing.current = true; setBusy(true); setMessage('');
         try { const { doc, warnings } = await readSvgFile(selected); if (currentValue.current !== value) throw new Error('The document changed while opening SVG. Open the file again to avoid overwriting edits.'); onCommit({ before: value, after: doc, label: `Open ${selected.name}` }); onSelectionChange([]); setMessage(warnings.map(w => w.message).join(' ')); }
-        catch (error) { setMessage(error instanceof SvgImportError ? [error.message, ...error.diagnostics.map(d => d.message)].join(' ') : error instanceof Error ? error.message : 'SVG could not be opened.'); }
+        catch (error) {reportError('vector.operation',error,{context:{studio:'vector'}}); setMessage(error instanceof SvgImportError ? [error.message, ...error.diagnostics.map(d => d.message)].join(' ') : error instanceof Error ? error.message : 'SVG could not be opened.'); }
         finally { importing.current = false; setBusy(false); }
       }} />
       <button type="button" data-testid="vector-import-svg" style={vectorControlStyle} disabled={locked} title="Open SVG as the current document. Undo restores the previous document." onClick={() => file.current?.click()}>{busy ? 'Opening SVG...' : 'Open SVG'}</button>
-      <button type="button" data-testid="vector-export-svg" style={vectorControlStyle} disabled={locked} onClick={() => { try { if (onExport) onExport(value); else downloadSvg(value, exportName); setMessage(''); } catch (error) { setMessage(error instanceof Error ? error.message : 'SVG could not be exported.'); } }}>Export SVG</button>
+      <button type="button" data-testid="vector-export-svg" style={vectorControlStyle} disabled={locked} onClick={() => { try { if (onExport) onExport(value); else downloadSvg(value, exportName); setMessage(''); } catch (error) {reportError('vector.operation',error,{context:{studio:'vector'}}); setMessage(error instanceof Error ? error.message : 'SVG could not be exported.'); } }}>Export SVG</button>
     </div>
     {message && <p role="status" data-testid="vector-io-status" style={{ margin: 0, overflowWrap: 'anywhere' }}>{message}</p>}
   </section>;

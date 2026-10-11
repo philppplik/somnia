@@ -2621,5 +2621,13 @@
   "openRouter.preview": "(read-only preview)",
   "openRouter.safe": "Only studios that can read this file are offered. Cancel keeps your current work unchanged.",
   "openRouter.open": "Open file",
-  "openRouter.unavailable": "No installed studio can safely read this file. It may be damaged or use an unsupported format. Nothing has been changed."
+  "openRouter.unavailable": "No installed studio can safely read this file. It may be damaged or use an unsupported format. Nothing has been changed.",
+  "finish.settings.accentExtensionPresets": "Extension accent palettes",
+  "problems.clearRuntime": "Clear runtime history",
+  "problems.empty": "No detected problems. Runtime errors appear here when they occur.",
+  "problems.application": "Application",
+  "problems.noSource": "No source location",
+  "problems.details": "Technical details",
+  "problems.session": "Runtime history is local to this session. Clearing it does not fix errors or clear syntax diagnostics.",
+  "problems.dropped": "{count} older runtime entries were discarded."
 }

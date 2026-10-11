@@ -12,9 +12,11 @@ export function activateExtensions(list:ExtensionManifest[]){
  const rule=(sel:string,vars:Record<string,string>)=>`${sel}{${Object.entries(vars).map(([k,v])=>`${k}:${v}`).join(';')}}`;
  style.textContent=themes.map(({id,t})=>rule(`:root[data-code-theme="${id}"]`,t.light)+rule(`:root[data-theme=dark][data-code-theme="${id}"]`,t.dark)).join('\n');
  document.head.appendChild(style);patchState({extensionThemes:themes.map(({id,label})=>({id,label}))});
+ const accentPalettes=list.flatMap(e=>e.contributes.accentPalettes.map(p=>({id:`${e.id}.${p.id}`,label:`${p.label} (${e.name})`,light:p.light,dark:p.dark})));
+ patchState({extensionAccents:accentPalettes});
  const panels=list.flatMap(e=>e.contributes.panels.map(p=>({id:`${e.id}.${p.id}`,extId:e.id,title:p.title,side:p.side,html:p.html})));
  patchState({extensionPanels:panels});
- disposers.push(()=>{style.remove();patchState({extensionThemes:[],extensionPanels:[],activePanel:{left:null,right:null}});});
+ disposers.push(()=>{style.remove();patchState({extensionThemes:[],extensionAccents:[],extensionPanels:[],activePanel:{left:null,right:null}});});
  for(const ext of list){
   let runtime:ExtensionRuntime|null=null;
   if(ext.code){try{migrateStorageKeys(ext.id,localStorage);runtime=new ExtensionRuntime(ext,{files:()=>getState().files as Record<string,string>,applyOperations:ops=>{applyOperations(ops as never);},selection:()=>{const id=getState().selectedElementId;let hit:{id:string;tag:string}|null=null;const walk=(ns:{id:string;tag:string;children:any[]}[])=>ns.forEach(n=>{if(n.id===id)hit={id:n.id,tag:n.tag};walk(n.children);});walk(getState().nodes as never);return hit;},storage:{get:k=>localStorage.getItem(`${storagePrefix(ext.id)}${k}`),set:(k,v)=>{if(localStorage.getItem(`${storagePrefix(ext.id)}${k}`)===null&&countStorageKeys(ext.id,localStorage)>=MAX_STORAGE_KEYS)throw Error(`Storage is limited to ${MAX_STORAGE_KEYS} keys per extension.`);localStorage.setItem(`${storagePrefix(ext.id)}${k}`,v);}},notify:text=>patchState({notice:text}),log:text=>patchState({notice:text})},browserWorker);runtime.activate();}catch(e){runtime=null;reportError('extensions.load',e,{message:`Extension ${ext.name} (${ext.id}) could not be loaded`,notify:`Extension ${ext.name} could not be loaded.`});}if(runtime){const rt=runtime;disposers.push(()=>rt.dispose());}}

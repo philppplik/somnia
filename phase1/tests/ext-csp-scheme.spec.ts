@@ -198,10 +198,13 @@ test.describe('panel navigation', () => {
     await page.evaluate(() => { (window as any).__panel.events.length = 0; (window as any).__legacyPending = true; });
     const frame = page.frames().find(f => f.url().includes('/__ext/panel'))!;
     await frame.evaluate(t => { location.href = t; }, `${ORIGIN}/__ext/panel?mode=legacy&nav=1`);
-    await page.waitForTimeout(800);
+    // Deterministic: wait for the second document to be fully live (element + bridge) and prove
+    // the roundtrip before asserting; fixed timeouts raced under CI load and masked the finding.
     const nav = page.frames().find(f => f.url().includes('nav=1'))!;
-    await nav.evaluate(() => { (window as any).__call('project.listFiles', []).catch(() => {}); });
-    await page.waitForTimeout(400);
+    await nav.waitForSelector('#nav-target');
+    await nav.waitForFunction(() => typeof (window as any).__call === 'function');
+    await nav.evaluate(() => (window as any).__call('project.listFiles', []).catch(() => {}));
+    await page.waitForTimeout(200);
     const events = await page.evaluate(() => (window as any).__panel.events as string[]);
     expect(events.filter(e => e.startsWith('allowed:'))).toEqual([]); // fails today: the second document is served
   });

@@ -1,0 +1,38 @@
+name: WASM pkg bundle
+on:
+  push:
+    branches: ['ci/wasm-pkg']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  pkg:
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: phase1
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Rust toolchain
+        run: |
+          rustup toolchain install 1.95.0 --profile minimal
+          rustup target add wasm32-unknown-unknown --toolchain 1.95.0
+          cargo +1.95.0 install wasm-bindgen-cli --version 0.2.129 --locked
+      - run: npm ci
+      - run: npm run craft:build
+      - run: npm run documents:build
+      - run: sh slides-engine/build.sh
+      - run: sh pdf-craft/build.sh
+        continue-on-error: true
+      - name: Pack pkg folders
+        run: |
+          find . -path ./node_modules -prune -o -type d -name pkg -print | grep -v target | tee /tmp/pkgs
+          tar czf /tmp/somnia-wasm-pkg.tgz $(cat /tmp/pkgs) public/slides public/sound 2>/dev/null || tar czf /tmp/somnia-wasm-pkg.tgz $(cat /tmp/pkgs)
+          tar tzf /tmp/somnia-wasm-pkg.tgz | grep -c wasm
+      - uses: actions/upload-artifact@v7
+        with:
+          name: somnia-wasm-pkg
+          path: /tmp/somnia-wasm-pkg.tgz

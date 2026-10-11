@@ -4,7 +4,7 @@ import {browserWorker,workerUrl,ExtensionRuntime,type WorkerLike,type WorkerEnv}
 import {WORKER_SOURCE} from './workerSource';
 import type {ExtensionManifest} from './types';
 
-const manifest={id:'acme.demo',name:'Demo',version:'1.0.0',apiVersion:1,code:'1',permissions:[],contributes:{commands:[],snippets:[],codeThemes:[],panels:[]}} as unknown as ExtensionManifest;
+const manifest={id:'acme.demo',name:'Demo',version:'1.0.0',apiVersion:1,code:'1',permissions:[],contributes:{commands:[],snippets:[],codeThemes:[],accentPalettes:[],panels:[]}} as unknown as ExtensionManifest;
 const fake=():WorkerLike&{sent:any[];ended:boolean}=>({sent:[],ended:false,onmessage:null,onerror:null,postMessage(m){this.sent.push(m);},terminate(){this.ended=true;}});
 const deps={files:()=>({}),applyOperations(){},selection:()=>null,storage:{get:()=>null,set(){}},notify(){},log(){}};
 
@@ -80,7 +80,7 @@ test('F8: an activation timeout terminates the worker',async()=>{
 });
 
 test('legacy disposal rejects an in-flight command and ignores late callbacks',async()=>{
- const manifest:ExtensionManifest={id:'test.dispose',name:'Dispose',version:'1.0.0',apiVersion:1,permissions:[],code:'',contributes:{commands:[],snippets:[],codeThemes:[],panels:[]}};
+ const manifest:ExtensionManifest={id:'test.dispose',name:'Dispose',version:'1.0.0',apiVersion:1,permissions:[],code:'',contributes:{commands:[],snippets:[],codeThemes:[],accentPalettes:[],panels:[]}};
  let worker!:WorkerLike;let terminated=0;
  const runtime=new ExtensionRuntime(manifest,{files:()=>({}),selection:()=>null,notify(){},log(){}},()=>worker={postMessage(){},terminate(){terminated++;},onmessage:null},100);
  const run=runtime.runCommand('test.dispose.run');const rejected=assert.rejects(run,/disposed/);runtime.dispose();await rejected;assert.equal(terminated,1);worker.onmessage?.({data:{type:'api.call',requestId:1,method:'ui.notify',args:['late']}});

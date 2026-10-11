@@ -2621,5 +2621,13 @@
   "openRouter.preview": "(aperçu en lecture seule)",
   "openRouter.safe": "Seuls les studios capables de lire ce fichier sont proposés. Annuler ne modifie pas votre travail actuel.",
   "openRouter.open": "Ouvrir le fichier",
-  "openRouter.unavailable": "Aucun studio installé ne peut lire ce fichier de façon sûre. Il est peut-être endommagé ou dans un format non pris en charge. Rien n’a été modifié."
+  "openRouter.unavailable": "Aucun studio installé ne peut lire ce fichier de façon sûre. Il est peut-être endommagé ou dans un format non pris en charge. Rien n’a été modifié.",
+  "finish.settings.accentExtensionPresets": "Palettes d’accent des extensions",
+  "problems.clearRuntime": "Effacer l’historique d’exécution",
+  "problems.empty": "Aucun problème détecté. Les erreurs d’exécution apparaissent ici quand elles surviennent.",
+  "problems.application": "Application",
+  "problems.noSource": "Aucun emplacement source",
+  "problems.details": "Détails techniques",
+  "problems.session": "L’historique d’exécution est local à cette session. L’effacer ne corrige pas les erreurs et ne supprime pas les diagnostics de syntaxe.",
+  "problems.dropped": "{count} anciennes entrées d’exécution ont été supprimées."
 }

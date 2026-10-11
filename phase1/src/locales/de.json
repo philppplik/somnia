@@ -2621,5 +2621,13 @@
   "openRouter.preview": "(schreibgeschützte Vorschau)",
   "openRouter.safe": "Es werden nur Studios angeboten, die diese Datei lesen können. Abbrechen lässt deine aktuelle Arbeit unverändert.",
   "openRouter.open": "Datei öffnen",
-  "openRouter.unavailable": "Kein installiertes Studio kann diese Datei sicher lesen. Sie ist möglicherweise beschädigt oder verwendet ein nicht unterstütztes Format. Nichts wurde geändert."
+  "openRouter.unavailable": "Kein installiertes Studio kann diese Datei sicher lesen. Sie ist möglicherweise beschädigt oder verwendet ein nicht unterstütztes Format. Nichts wurde geändert.",
+  "finish.settings.accentExtensionPresets": "Akzentpaletten aus Erweiterungen",
+  "problems.clearRuntime": "Laufzeitverlauf leeren",
+  "problems.empty": "Keine erkannten Probleme. Laufzeitfehler erscheinen hier, sobald sie auftreten.",
+  "problems.application": "Anwendung",
+  "problems.noSource": "Kein Quellort",
+  "problems.details": "Technische Details",
+  "problems.session": "Der Laufzeitverlauf gilt nur für diese Sitzung. Leeren behebt keine Fehler und entfernt keine Syntaxdiagnosen.",
+  "problems.dropped": "{count} ältere Laufzeiteinträge wurden verworfen."
 }

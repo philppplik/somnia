@@ -2621,5 +2621,13 @@
   "openRouter.preview": "(prévia somente leitura)",
   "openRouter.safe": "Somente estúdios que podem ler este arquivo são oferecidos. Cancelar mantém seu trabalho atual.",
   "openRouter.open": "Abrir arquivo",
-  "openRouter.unavailable": "Nenhum estúdio instalado pode ler este arquivo com segurança. Ele pode estar danificado ou usar um formato não compatível. Nada foi alterado."
+  "openRouter.unavailable": "Nenhum estúdio instalado pode ler este arquivo com segurança. Ele pode estar danificado ou usar um formato não compatível. Nada foi alterado.",
+  "finish.settings.accentExtensionPresets": "Paletas de destaque de extensões",
+  "problems.clearRuntime": "Limpar histórico de execução",
+  "problems.empty": "Nenhum problema detectado. Os erros de execução aparecem aqui quando ocorrem.",
+  "problems.application": "Aplicativo",
+  "problems.noSource": "Sem local de origem",
+  "problems.details": "Detalhes técnicos",
+  "problems.session": "O histórico de execução é local a esta sessão. Limpá-lo não corrige erros nem remove diagnósticos de sintaxe.",
+  "problems.dropped": "{count} entradas antigas de execução foram descartadas."
 }

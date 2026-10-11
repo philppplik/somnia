@@ -1,3 +1,4 @@
+import {reportError} from '../log';
 import {useSyncExternalStore} from 'react';
 import {PhotosEngine,type PhotosResponse} from './engine';
 import {getMedia,registerMediaCloseCleanup,registerMediaCloseGuard,subscribeMedia} from '../media';
@@ -36,7 +37,7 @@ const listeners=new Set<()=>void>();
 let stopMediaSync:(()=>void)|undefined;
 const emit=()=>listeners.forEach(l=>l());
 const put=(s:PhotoSession)=>{sessions.set(s.name,s);emit();};
-const patch=(name:string,p:Partial<PhotoSession>)=>{const s=sessions.get(name);if(s)put({...s,...p});};
+const patch=(name:string,p:Partial<PhotoSession>,cause?:unknown)=>{if(p.error)reportError('photos.engine',cause??p.error,{context:{studio:'photos',file:name}});const s=sessions.get(name);if(s)put({...s,...p});};
 export const getPhotoSession=(name:string|null|undefined)=>name?sessions.get(name)??null:null;
 export const allPhotoSessions=()=>[...sessions.values()];
 export function subscribePhotos(fn:()=>void){listeners.add(fn);return()=>{listeners.delete(fn);};}
@@ -69,7 +70,7 @@ export async function openPhoto(item:{name:string;url:string;mime:string}):Promi
   const current=frameOf(await e.renderPhoto(effective(session)));
   if(!sessions.has(item.name))return;
   patch(item.name,{status:'ready',error:'',sourceWidth:loaded.width??0,sourceHeight:loaded.height??0,original,frame:current});
- }catch(e){resetEngine(e);sources.delete(item.name);if(sessions.has(item.name))patch(item.name,{status:'error',error:message(e)});}
+ }catch(e){resetEngine(e);sources.delete(item.name);if(sessions.has(item.name))patch(item.name,{status:'error',error:message(e)},e);}
 }
 function schedule(name:string,delay=DEBOUNCE_MS){clearTimeout(timers.get(name));timers.set(name,setTimeout(()=>{timers.delete(name);void render(name);},delay));}
 async function render(name:string){
@@ -80,7 +81,7 @@ async function render(name:string){
   const r=frameOf(await e.renderPhoto(effective(s)));
   if(runs.get(name)!==run||!sessions.has(name))return;
   patch(name,{status:'ready',error:'',frame:r});
- }catch(e){resetEngine(e);if(runs.get(name)===run&&sessions.has(name))patch(name,{status:'error',error:message(e)});}
+ }catch(e){resetEngine(e);if(runs.get(name)===run&&sessions.has(name))patch(name,{status:'error',error:message(e)},e);}
 }
 /** Starts a coalesced edit gesture (a slider drag, a crop drag): one gesture is one undo step. */
 export function beginPhotoGesture(name:string){const s=sessions.get(name);if(s&&!gestures.has(name))gestures.set(name,{...s.now});}
