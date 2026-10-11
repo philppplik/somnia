@@ -168,6 +168,10 @@ pub struct RunHandle {
     task: tokio::task::JoinHandle<()>,
 }
 impl RunHandle {
+    /// Clone for host cancellation without taking an async RunHandle lock.
+    pub fn cancellation(&self) -> CancellationToken {
+        self.cancel.clone()
+    }
     pub fn cancel(&self) {
         self.cancel.cancel();
     }

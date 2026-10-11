@@ -1276,3 +1276,59 @@ async fn apply_precommit_db_failure_preserves_originals_and_allows_safe_retry() 
         "after"
     );
 }
+
+#[tokio::test]
+async fn restore_postcommit_db_failure_keeps_undo_and_reconciles_without_replay() {
+    let f = setup();
+    let run =
+        f.rt.start(
+            start_request(&f.studio),
+            Arc::new(WriteThenDone(AtomicUsize::new(0))),
+            local_config(),
+        )
+        .await
+        .unwrap()
+        .snapshot
+        .run_id;
+    let done = drive(&f.rt, &run).await;
+    f.rt.apply(
+        &run,
+        &done.snapshot.review.unwrap().revision,
+        vec!["project/hello.txt".into()],
+    )
+    .unwrap();
+    let undo =
+        f.rt.snapshot(&run)
+            .unwrap()
+            .snapshot
+            .checkpoints
+            .into_iter()
+            .find(|c| c.label == "Before Apply (Undo)")
+            .unwrap();
+    let conn = rusqlite::Connection::open(f.data.path().join("vibespace.sqlite")).unwrap();
+    conn.execute_batch("CREATE TRIGGER fail_restore_finish BEFORE UPDATE ON artifact_operations WHEN NEW.id LIKE 'restore-%' AND NEW.state='committed' BEGIN SELECT RAISE(ABORT,'injected restore DB failure'); END;").unwrap();
+    assert!(f.rt.restore(&run, &undo.checkpoint_id).is_err());
+    assert_eq!(
+        std::fs::read_to_string(f.project.path().join("hello.txt")).unwrap(),
+        "before"
+    );
+    assert_eq!(f.rt.store.pending_artifact_applies().unwrap().len(), 1);
+    conn.execute_batch("DROP TRIGGER fail_restore_finish")
+        .unwrap();
+    drop(conn);
+    std::fs::write(f.project.path().join("hello.txt"), "later user edit").unwrap();
+    let reopened = Runtime::open(f.data.path(), true).unwrap();
+    assert!(reopened
+        .store
+        .pending_artifact_applies()
+        .unwrap()
+        .is_empty());
+    assert_eq!(
+        reopened.store.get_run(&run).unwrap().review,
+        db::ReviewState::Applied
+    );
+    assert_eq!(
+        std::fs::read_to_string(f.project.path().join("hello.txt")).unwrap(),
+        "later user edit"
+    );
+}

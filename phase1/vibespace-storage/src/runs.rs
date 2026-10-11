@@ -620,11 +620,11 @@ impl Store {
         let now = self.now_str();
         self.write(|tx| {
             let run = get_run_conn(tx, run_id)?;
-            if !run.execution.is_terminal() || !matches!(run.review, ReviewState::Ready | ReviewState::Conflict) || run.review_revision != revision { return Err(Error::Conflict("review changed".into())); }
+            if !run.execution.is_terminal() || (!id.starts_with("restore-") && !matches!(run.review, ReviewState::Ready | ReviewState::Conflict)) || run.review_revision != revision { return Err(Error::Conflict("review changed".into())); }
             if run.last_sequence > limits::MAX_EVENTS_PER_RUN + limits::EVENT_RESERVE - 3 { return Err(Error::LimitExceeded("no durable apply event capacity".into())); }
             let checkpoint = new_id();
             let event = append_event_tx(tx, run_id, "run.checkpoint_created", &json!({"checkpointId":checkpoint,"kind":"pre_apply","contentRef":content_ref}), &now, true)?;
-            tx.execute("INSERT INTO checkpoints (id,space_id,run_id,kind,label,content_ref,event_sequence,created_at) VALUES (?1,?2,?3,'pre_apply','Before Apply (Undo)',?4,?5,?6)", params![checkpoint,run.space_id,run_id,content_ref,event.sequence,now])?;
+            tx.execute("INSERT INTO checkpoints (id,space_id,run_id,kind,label,content_ref,event_sequence,created_at) VALUES (?1,?2,?3,'pre_apply',?4,?5,?6,?7)", params![checkpoint,run.space_id,run_id,if id.starts_with("restore-") {"Before Restore (Undo)"} else {"Before Apply (Undo)"},content_ref,event.sequence,now])?;
             append_event_tx(tx, run_id, "core.apply_prepared", &json!({"operationId":id}), &now, true)?;
             tx.execute("INSERT INTO artifact_operations VALUES (?1,?2,?3,'prepared',?4)", params![id,run_id,revision,now])?;
             Ok(())
@@ -642,7 +642,7 @@ impl Store {
             let run=get_run_conn(tx,&run_id)?;
             if run.review_revision!=revision { return Err(Error::Conflict("operation review changed".into())); }
             tx.execute("UPDATE artifact_operations SET state=?1 WHERE id=?2",params![if committed {"committed"} else {"aborted"},id])?;
-            if committed { tx.execute("UPDATE runs SET review_state=?1,review_revision=review_revision+1,updated_at=?2 WHERE id=?3", params![if complete {"applied"} else {"ready"},now,run_id])?; }
+            if committed && !id.starts_with("restore-") { tx.execute("UPDATE runs SET review_state=?1,review_revision=review_revision+1,updated_at=?2 WHERE id=?3", params![if complete {"applied"} else {"ready"},now,run_id])?; }
             append_event_tx(tx,&run_id,"core.apply_reconciled",&json!({"operationId":id,"committed":committed,"complete":complete}),&now,true)?;
             Ok(())
         })

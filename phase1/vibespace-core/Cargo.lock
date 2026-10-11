@@ -1626,6 +1626,7 @@ dependencies = [
  "somnia-vibespace-storage",
  "tempfile",
  "tokio",
+ "tokio-util",
  "uuid",
  "vibespace-engine",
  "vibespace-policy",

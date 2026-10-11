@@ -182,3 +182,10 @@ transaction rolled back, retry safe after repair) and after originals commit
 (pending intent + Undo survive, restart finalizes metadata, a later user file stays
 untouched, Undo restores original). Independent journal review and full native
 Windows/Linux builds remain open gates.
+
+Follow-up: Restore now uses the same prewrite intent/Undo callback and durable
+commit receipt. A separate real SQLite postcommit Restore failure test verifies
+reconciliation retains the terminal review axis and never overwrites later user
+edits. RunHandle cancellation is cloned into a lock-independent map; fail_run
+can cancel SDK execution even while steer/stop holds the async handle lock.
+Current composed Core total: 39 Linux tests (19 adversarial), all pass.

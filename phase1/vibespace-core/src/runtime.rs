@@ -58,6 +58,7 @@ pub struct Runtime {
     /// Serializes user lifecycle/artifact operations, including baseline and Apply.
     command: Mutex<()>,
     handles: Mutex<HashMap<String, Arc<tokio::sync::Mutex<engine::RunHandle>>>>,
+    cancellations: Mutex<HashMap<String, tokio_util::sync::CancellationToken>>,
     events: broadcast::Sender<w::RunEvent>,
     instance: String,
     /// Windows effects stay unavailable until native Windows test evidence exists.
@@ -86,6 +87,7 @@ impl Runtime {
             grants: Mutex::new(FolderGrants::default()),
             command: Mutex::new(()),
             handles: Mutex::new(HashMap::new()),
+            cancellations: Mutex::new(HashMap::new()),
             events,
             instance: uuid::Uuid::new_v4().to_string(),
             enable_files,
@@ -389,6 +391,7 @@ impl Runtime {
         };
         let (_, dummy) = tokio::sync::mpsc::unbounded_channel();
         let mut incoming = std::mem::replace(&mut handle.events, dummy);
+        lock(&self.cancellations)?.insert(run.id.clone(), handle.cancellation());
         let handle = Arc::new(tokio::sync::Mutex::new(handle));
         lock(&self.handles)?.insert(run.id.clone(), handle);
         let runtime = self.clone();
@@ -406,6 +409,9 @@ impl Runtime {
                 }
             }
             runtime.finish_policy(&id);
+            if let Ok(mut cancellations) = runtime.cancellations.lock() {
+                cancellations.remove(&id);
+            }
             if let Ok(mut handles) = runtime.handles.lock() {
                 handles.remove(&id);
             }
@@ -429,11 +435,9 @@ impl Runtime {
                 .cancel_run(&run, Duration::from_secs(2))
                 .ok();
         }
-        if let Ok(handles) = self.handles.lock() {
-            if let Some(handle) = handles.get(id) {
-                if let Ok(handle) = handle.try_lock() {
-                    handle.cancel();
-                }
+        if let Ok(cancellations) = self.cancellations.lock() {
+            if let Some(cancel) = cancellations.get(id) {
+                cancel.cancel();
             }
         }
         let state = self.store.get_run(id)?.execution;
@@ -931,7 +935,9 @@ impl Runtime {
     fn reconcile_applies(&self) -> Result<()> {
         for (operation, run) in self.store.pending_artifact_applies()? {
             let committed = self.vault.apply_committed(&operation)?;
-            let complete = committed && self.review_projection(&run)?.files.is_empty();
+            let complete = committed
+                && !operation.starts_with("restore-")
+                && self.review_projection(&run)?.files.is_empty();
             self.store
                 .finish_artifact_apply(&operation, committed, complete)?;
         }
@@ -1047,17 +1053,37 @@ impl Runtime {
             .strip_prefix("sha256:")
             .and_then(cp::Digest::from_hex)
             .ok_or(CoreError("invalid checkpoint"))?;
-        let report = self
-            .vault
-            .restore(&digest, &cp::RestoreOptions::default())?;
-        self.store.add_checkpoint(db::NewCheckpoint {
-            schema_version: 1,
-            space_id: run.space_id,
-            run_id: id.into(),
-            kind: db::CheckpointKind::PreApply,
-            label: "Before Restore".into(),
-            content_ref: format!("sha256:{}", report.preapply_checkpoint.to_hex()),
-        })?;
+        let restored = self.vault.restore_before_commit(
+            &digest,
+            &cp::RestoreOptions::default(),
+            |operation, preapply| {
+                self.store
+                    .begin_artifact_apply(
+                        operation,
+                        id,
+                        run.review_revision,
+                        &format!("sha256:{}", preapply.to_hex()),
+                    )
+                    .map_err(|_| {
+                        cp::Error::CorruptRecord(
+                            "cannot persist pre-restore intent; nothing restored".into(),
+                        )
+                    })
+            },
+        );
+        match restored {
+            Ok(_) => self.reconcile_applies()?,
+            Err(error) => {
+                let recovery = self.vault.recover()?;
+                if !recovery.failed.is_empty() {
+                    return Err(CoreError(
+                        "restore recovery incomplete; originals require review",
+                    ));
+                }
+                self.reconcile_applies()?;
+                return Err(error.into());
+            }
+        }
         self.publish(id)
     }
 }

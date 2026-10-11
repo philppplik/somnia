@@ -117,7 +117,7 @@ Review (independent of execution): `none -> ready -> applied | discarded | confl
 - The sequence is allocated by incrementing `runs.last_sequence` inside the same IMMEDIATE transaction as the insert. Per run it is strictly increasing and gap-free; a rolled-back transaction rolls the counter back.
 - Caller kinds match `[a-z0-9_.:-]{1,64}`; kinds starting with `run.` are reserved (`run.created`, `run.state_changed`, `run.interrupted`, `run.checkpoint_created`).
 - Payloads are redacted (sensitive key names such as apiKey/token/secret/password/authorization/cookie, and well-known secret shapes like `sk-...`, `Bearer ...`, `ghp_...`, PEM private keys; numbers and booleans are never redacted) and bounded to 16 KiB. Larger payloads are replaced by `{truncated:true, originalBytes, preview}` and flagged `truncated`. Redaction is best effort: do not put secrets into events.
-- At most 10,000 events per run (+64 reserved for state/interrupt/checkpoint events). Past that, `append_event` returns `limit_exceeded`.
+- At most 10,000 events per run (+64 reserved for lifecycle and artifact completion; Manual checkpoints use the normal budget). Past that, `append_event` returns `limit_exceeded`.
 - Persist before publish: publish `RunEventRecord::wire()` only after the storage call returned.
 - Terminal runs reject `append_event` (`conflict`). A non-None `fencingToken` must equal the run's current token.
 
@@ -134,11 +134,11 @@ Review (independent of execution): `none -> ready -> applied | discarded | confl
 - Ranking: `bm25(memory_fts, 5.0, 1.0)` (title weighted); `score = -bm25` (higher is better).
 - **Explicit fallback:** if FTS5 is disabled/unavailable, FTS errors, or the query has no searchable tokens, the store runs an escaped literal `LIKE` search and returns `mode: "like_fallback"` with `fallbackReason` (`fts5_unavailable_or_disabled`, `no_searchable_tokens`, or `fts5_error: ...`). Fallback hits have `score: null`. A normal FTS query with zero hits is `mode: "fts5"` with no hits (no silent widening).
 - Provenance (`source`, `sourceRef`, `consent`) lives in its own object. `instructionAuthority` is always `"none"`: memory content is untrusted data and must not be placed in a system/instruction channel. `pending_review` items are hidden from list/search unless `include_pending`. Content that looks like a credential is rejected.
-- **Vector search is not implemented.** `Capabilities.vector = {status:"unavailable", ...}`. There is no `fastembed`/`sqlite-vec` feature in this version, no model download, and nothing may report embeddings as ready until a backend plus tests exist. A later opt-in feature must add its own table (migration v2) and never touch the FTS path.
+- **Vector search is not implemented.** `Capabilities.vector = {status:"unavailable", ...}`. There is no `fastembed`/`sqlite-vec` feature in this version, no model download, and nothing may report embeddings as ready until a backend plus tests exist. A later opt-in feature must add its own table (a future migration) and never touch the FTS path.
 
 ## Schema and migrations
 
-`PRAGMA user_version` is the schema version (`SCHEMA_VERSION = 1`). Tables: `spaces, studios, runs, run_events, checkpoints, memory_items, memory_fts (+ triggers)`; full DDL is `V1` in `src/schema.rs`. Foreign keys are on; state/enum columns have `CHECK` constraints.
+`PRAGMA user_version` is the schema version (`SCHEMA_VERSION = 3`). Tables: `spaces, studios, runs, run_events, checkpoints, memory_items, memory_fts (+ triggers)`; full DDL is `V1` in `src/schema.rs`. Foreign keys are on; state/enum columns have `CHECK` constraints.
 
 Open sequence: (1) read-only check: `user_version` greater than supported => `NewerSchema` (nothing written); version 0 with existing tables => `ForeignDatabase`; (2) set WAL, `synchronous=FULL`, `foreign_keys=ON`; (3) apply all pending migrations in ONE `BEGIN IMMEDIATE` transaction, re-reading `user_version` inside it (safe for concurrent openers); any failure rolls back DDL and version (`Migration` error). Migrations must be contiguous from 1. Add a new one by appending `Migration { version: N+1, sql }` and bumping `SCHEMA_VERSION`.
 
@@ -166,7 +166,7 @@ All text rejects NUL. `contentRef` must be `algo:hex` (16..128 lowercase hex).
 - `dto`: enum strings, camelCase, unknown-field rejection, schemaVersion, roundtrip.
 
 ## Risks and open points for the integrator
-1. **Never compiled.** Likely first fixes: rusqlite API details (`query_map` closure types, `Transaction` deref coercions), unused imports, version of `rusqlite`/`uuid`.
+1. Compiled and tested by the coordinator on Linux Rust 1.95.0 (42 tests). Native Windows execution remains unverified.
 2. SQL `bm25()` in a join with `memory_fts MATCH` and the `ESCAPE '\'` string are the most SQL-sensitive spots; `memory` tests cover them.
 3. Default `Recovery::AllActive` is only right for a single owning process (see above).
 4. One `Mutex<Connection>` per `Store`: reads serialize within a handle. Use several handles for parallelism (WAL allows it); the concurrency tests do this.
@@ -190,3 +190,11 @@ persist its own validated scope anchor, otherwise a Space cannot safely recover
 its folder after restart. Never treat an expired grant ID as filesystem authority.
 Recovery::AllActive is appropriate only when the caller owns the database's sole
 runtime. An additional read handle must not use that recovery mode.
+
+Schema 2 adds `native_scope_anchors`; schema 3 adds `artifact_operations`.
+Artifact operations persist Undo and intent before original writes, reserve one
+completion event, and complete atomically and idempotently. Pending intents are
+reconciled by Core against Vault receipts on open and before artifact commands.
+Manual checkpoint events cannot consume lifecycle reserve. Undo references sort
+first in bounded checkpoint reads. AllActive restart includes unclaimed pending
+and paused runs as well as claimed/running; ExpiredLeases semantics are unchanged.

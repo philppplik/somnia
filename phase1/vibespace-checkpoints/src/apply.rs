@@ -552,14 +552,18 @@ impl Vault {
     }
     /// Validates a private operation id, never accepts a caller path.
     pub fn apply_committed(&self, id: &str) -> Result<bool> {
-        if !id.starts_with("apply-") || !id.chars().all(|c| c.is_ascii_alphanumeric() || c == '-') {
+        if !(id.starts_with("apply-") || id.starts_with("restore-"))
+            || !id.chars().all(|c| c.is_ascii_alphanumeric() || c == '-')
+        {
             return Err(Error::CorruptRecord("invalid apply id".into()));
         }
         match fs::read(self.root.join("applies").join(format!("{id}.json"))) {
             Ok(bytes) => {
                 let receipt: serde_json::Value = serde_json::from_slice(&bytes)
                     .map_err(|_| Error::CorruptRecord("apply receipt".into()))?;
-                if receipt["id"] != id || receipt["kind"] != "apply" {
+                if receipt["id"] != id
+                    || !(receipt["kind"] == "apply" || receipt["kind"] == "restore")
+                {
                     return Err(Error::CorruptRecord("apply receipt mismatch".into()));
                 }
                 Ok(true)
@@ -772,6 +776,14 @@ impl Vault {
         checkpoint: &CheckpointId,
         opts: &RestoreOptions,
     ) -> Result<RestoreReport> {
+        self.restore_before_commit(checkpoint, opts, |_, _| Ok(()))
+    }
+    pub fn restore_before_commit(
+        &self,
+        checkpoint: &CheckpointId,
+        opts: &RestoreOptions,
+        before_commit: impl FnOnce(&str, Digest) -> Result<()>,
+    ) -> Result<RestoreReport> {
         let _guard = self.lock()?;
         self.refuse_if_pending()?;
         let cp = self.load_checkpoint(checkpoint)?;
@@ -824,6 +836,10 @@ impl Vault {
                 result.insert(it.key.as_str());
             }
             check_case_collisions(result.iter().copied())?;
+        }
+        before_commit(&id, pre_id)?;
+        if items.is_empty() {
+            self.write_apply_receipt(&id, "restore", pre_id, &[])?;
         }
         if !items.is_empty() {
             self.run_plan(
