@@ -52,8 +52,10 @@ export function parseSnapshot(value:unknown):VibeSnapshot{
  const s=record(value,'snapshot',['revision','spaces','sessions','studios','models']);integer(s.revision,'revision');
  const spaces=parseSpaceSummaries(s.spaces);
  const models=array(s.models,'models',200);models.forEach(v=>model(v,'model'));
+ const modelKeys=models.map(v=>JSON.stringify([(v as Record<string,string>).provider,(v as Record<string,string>).model,(v as Record<string,string>).locality]));if(new Set(modelKeys).size!==modelKeys.length)fail('duplicate model');
  const spaceIds=new Set(spaces.map(v=>(v as {spaceId:string}).spaceId));const sessions=parseStudioSummaries(s.sessions);sessions.forEach(v=>{if(!spaceIds.has(v.spaceId))fail('orphan session');});const studios=array(s.studios,'studios');
- studios.forEach(v=>{const {sequence,...run}=v as Record<string,unknown>;integer(sequence,'sequence');parseRun(run);if(!spaceIds.has(run.spaceId as string))fail('orphan run');});unique(studios,'runId','studios');
+ studios.forEach(v=>{const {sequence,...run}=v as Record<string,unknown>;integer(sequence,'sequence');parseRun(run);if(!spaceIds.has(run.spaceId as string))fail('orphan run');const session=sessions.find(x=>x.studioId===run.studioId);if(!session||session.spaceId!==run.spaceId)fail('orphan run studio');});unique(studios,'runId','studios');
+ const runIds=new Set(studios.map(v=>(v as {runId:string}).runId));sessions.forEach(x=>{if(x.latestRunId!==null){if(!runIds.has(x.latestRunId))fail('orphan latestRunId');const run=(studios as {runId:string;studioId:string}[]).find(r=>r.runId===x.latestRunId)!;if(run.studioId!==x.studioId)fail('latestRunId studio mismatch');}});
  return value as VibeSnapshot;
 }
 /** Binding collection conversion is explicit; every native read is a SnapshotReply. */

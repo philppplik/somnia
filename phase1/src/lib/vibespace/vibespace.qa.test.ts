@@ -1,9 +1,10 @@
-/** QA race/edge suite. Findings that currently fail are marked todo with an F-id (see docs/vibespace/qa.md). */
+/** QA race/edge suite. F-ids refer to docs/vibespace/qa.md. All tests pass; there are no todo/skip tests. */
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {VibeSpaceController} from './controller';
 import {fixtureRun,fixtureSnapshot} from './fixture';
-import {createNativeVibeSpaceTransport} from './native';
+import {createNativeVibeSpaceTransport,checkedReviewRequest} from './native';
+import {parseSnapshot} from './validation';
 import type {NativeVibeIO} from './native';
 import type {VibeCommand,VibeEvent,VibeSnapshot,VibeSpaceTransport,Studio} from './types';
 
@@ -68,7 +69,7 @@ test('QA event: an event for an unknown run locks and reconciles instead of inve
  assert.equal(x.controller.getSnapshot().snapshot!.studios.some(s=>s.runId==='run-ghost'),false);
  assert.ok(x.controller.getSnapshot().error,'locked until native lists the run');
 });
-test('QA read F-4: a stale (lower revision) reconciliation must not unlock after an ambiguous mutation',{todo:'F-4 reducer ignores stale snapshot but controller still clears the lock'},async()=>{
+test('QA read F-4: a stale (lower revision) reconciliation must not unlock after an ambiguous mutation',async()=>{
  const x=await ready();const before=clone(x.h.snap);before.revision=5;x.h.set(before);await x.controller.refresh();
  x.h.execError=new Error('timeout');assert.equal(await x.controller.execute({type:'stop',runId:'run-images'}),false);assert.ok(x.controller.getSnapshot().error);
  const stale=clone(before);stale.revision=4;x.h.set(stale);await x.controller.refresh();
@@ -150,7 +151,7 @@ test('QA review: applied/discarded runs cannot be reviewed again',async()=>{
  assert.equal(await x.controller.execute({type:'review',runId:'run-copy',reviewRevision:'review-1',decision:'discard',paths:[]}),false);
  assert.equal(await x.controller.execute({type:'review',runId:'run-copy',reviewRevision:'review-1',decision:'apply',paths:['index.html']}),false);assert.equal(x.h.calls.length,0);
 });
-test('QA review F-1: discard must not carry paths outside the shown review',{todo:'F-1 controller/native accept arbitrary discard paths'},async()=>{
+test('QA review F-1: discard must not carry paths outside the shown review',async()=>{
  const x=await ready();
  assert.equal(await x.controller.execute({type:'review',runId:'run-copy',reviewRevision:'review-1',decision:'discard',paths:['../../secret']}),false);assert.equal(x.h.calls.length,0);
 });
@@ -187,8 +188,9 @@ test('QA retry: only a failed/crashed run whose failure is retryable',async()=>{
  const nr=fixtureSnapshot();nr.studios=nr.studios.map(s=>s.runId==='run-failed'?{...s,failure:{...s.failure!,retryable:false}}:s);const y=await ready(nr);
  assert.equal(await y.controller.execute({type:'retry',runId:'run-failed'}),false);
 });
-test('QA retry F-2: retry of a failed run that is not the studio\'s latestRun must be refused',{todo:'F-2 retry ignores StudioSummary.latestRunId/canStart'},async()=>{
- const s=fixtureSnapshot();s.sessions=s.sessions.map(x=>x.studioId==='studio-failed'?{...x,latestRunId:'run-newer'}:x);
+const newerRun=()=>{const s=fixtureSnapshot();s.sessions=s.sessions.map(x=>x.studioId==='studio-failed'?{...x,latestRunId:'run-newer'}:x);s.studios.push(fixtureRun({runId:'run-newer',studioId:'studio-failed',executionState:'running',reviewState:'none',review:null,failure:null,capabilities:{stop:true,steer:true,pause:false,resume:false,apply:false,restore:false}}));return s;};
+test('QA retry F-2: retry of a failed run that is not the studio\'s latestRun must be refused',async()=>{
+ const s=newerRun();
  const x=await ready(s);assert.equal(await x.controller.execute({type:'retry',runId:'run-failed'}),false);assert.equal(x.h.calls.length,0);
 });
 
@@ -211,7 +213,7 @@ test('QA destroyed: reconnect (StrictMode remount) does not let the old generati
  const x=harness();x.h.readGate=deferred<void>();const a=x.controller.connect();await tick();x.controller.disconnect();const b=x.controller.connect();await tick();
  x.h.readGate.resolve();await Promise.all([a,b]);assert.equal(x.controller.getSnapshot().error,null);assert.ok(x.controller.getSnapshot().snapshot);assert.equal(x.h.unsubscribed,1);
 });
-test('QA destroyed F-5: execute after disconnect must not fire a native command',{todo:'F-5 execute() does not check connected/disconnected state'},async()=>{
+test('QA destroyed F-5: execute after disconnect must not fire a native command',async()=>{
  const x=await ready();x.controller.disconnect();
  // state survives for display; effects must not be fireable after the view is gone
  assert.equal(await x.controller.execute({type:'stop',runId:'run-images'}),false);assert.equal(x.h.calls.length,0);
@@ -249,21 +251,39 @@ test('QA native: no-run studio start needs canStart in the adapter\'s own read, 
  const n=nativeSetup();const s=draftSnap({canStart:false});n.set(s);await n.t.snapshot();
  await assert.rejects(n.t.execute({...base,type:'start',studioId:'studio-draft'}),/cannot start/);assert.equal(n.calls.length,0);
 });
-test('QA native F-3: review request built by the binding is validated to preserve runId/paths/revision (no widening)',{todo:'F-3 reviewRequest output is passed to native unchecked'},async()=>{
+test('QA native F-3: review request built by the binding is validated to preserve runId/paths/revision (no widening)',async()=>{
  const n=nativeSetup();await n.t.snapshot();n.setReview(c=>({runId:c.runId,paths:[...c.paths,'about.html','../../x'],reviewRevision:c.reviewRevision}));
  await assert.rejects(n.t.execute({...base,type:'review',runId:'run-copy',reviewRevision:'review-1',decision:'apply',paths:['index.html']}));
  assert.equal(n.calls.length,0);
 });
-test('QA native F-1: discard with unknown paths is not forwarded',{todo:'F-1'},async()=>{
+test('QA native F-1: discard with unknown paths is not forwarded',async()=>{
  const n=nativeSetup();await n.t.snapshot();
  await assert.rejects(n.t.execute({...base,type:'review',runId:'run-copy',reviewRevision:'review-1',decision:'discard',paths:['../../x']}));assert.equal(n.calls.length,0);
 });
-test('QA native F-2: retry of a non-latest failed run is not forwarded',{todo:'F-2'},async()=>{
- const n=nativeSetup();const s=fixtureSnapshot();s.sessions=s.sessions.map(x=>x.studioId==='studio-failed'?{...x,latestRunId:'run-newer'}:x);n.set(s);await n.t.snapshot();
+test('QA native F-2: retry of a non-latest failed run is not forwarded',async()=>{
+ const n=nativeSetup();const s=newerRun();n.set(s);await n.t.snapshot();
  await assert.rejects(n.t.execute({...base,type:'retry',runId:'run-failed'}));assert.equal(n.calls.length,0);
 });
 test('QA native: command with extra/unknown field and prototype key are rejected',async()=>{
  const n=nativeSetup();await n.t.snapshot();
  await assert.rejects(n.t.execute({...base,type:'stop',runId:'run-images',extra:1} as unknown as VibeCommand));
  await assert.rejects(n.t.execute(JSON.parse('{"type":"stop","commandId":"c","expectedRevision":1,"runId":"run-images","__proto__":{"x":1}}') as VibeCommand));
+});
+
+// ---------- N3 projection integrity ----------
+test('QA N3: orphan run studio, orphan latestRunId, run/studio mismatch and duplicate models are rejected',()=>{
+ const base=()=>fixtureSnapshot();
+ const a=base();a.studios[0]={...a.studios[0],studioId:'studio-missing'};assert.throws(()=>parseSnapshot(a),/orphan run studio/);
+ const b=base();b.sessions[0]={...b.sessions[0],latestRunId:'run-nowhere'};assert.throws(()=>parseSnapshot(b),/orphan latestRunId/);
+ const c=base();c.sessions[0]={...c.sessions[0],latestRunId:c.studios[1].runId};assert.throws(()=>parseSnapshot(c),/latestRunId studio mismatch/);
+ const d=base();d.models=[d.models[0],{...d.models[0]}];assert.throws(()=>parseSnapshot(d),/duplicate model/);
+ assert.ok(parseSnapshot(base()));
+});
+// ---------- F-3 positive/negative matrix ----------
+test('QA F-3: checkedReviewRequest accepts the exact selection and rejects any widening',()=>{
+ const cmd={...base,type:'review' as const,runId:'run-copy',reviewRevision:'review-1',decision:'apply' as const,paths:['index.html']};
+ const ok={runId:'run-copy',paths:['index.html'],reviewRevision:'review-1'};assert.equal(checkedReviewRequest(cmd,ok),ok);
+ for(const bad of [{...ok,runId:'other'},{...ok,paths:[]},{...ok,paths:['index.html','x']},{...ok,paths:['x']},{...ok,reviewRevision:'r0'},{runId:'run-copy',paths:['index.html']},{...ok,expectedRevision:'review-1'},{...ok,extra:'/'},{...ok,decision:'discard'}])
+  assert.throws(()=>checkedReviewRequest(cmd,bad as Record<string,unknown>),/Review request/,JSON.stringify(bad));
+ assert.throws(()=>checkedReviewRequest(cmd,null as unknown as Record<string,unknown>));
 });

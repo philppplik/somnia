@@ -43,6 +43,17 @@ export function canApply(studio:Studio,paths:string[],pending:boolean):boolean{
  const review=studio.review;
  return studioControls(studio,pending).review&&studio.capabilities.apply&&!!review&&paths.length>0&&new Set(paths).size===paths.length&&paths.every(path=>review.files.some(f=>f.path===path&&!f.conflict)&&!review.conflicts.includes(path));
 }
+/** Retry is only offered for the Studio's latest run and only while native reports canStart. */
+export function canRetry(snapshot:VibeSnapshot,studio:Studio):boolean{
+ const session=snapshot.sessions.find(s=>s.studioId===studio.studioId&&s.spaceId===studio.spaceId);
+ return studioControls(studio,false).retry&&!!session&&session.canStart&&session.latestRunId===studio.runId;
+}
+/** Apply needs selectable non-conflict files; discard may only name files in the shown review (the UI sends none). */
+export function reviewPathsAllowed(studio:Studio,decision:'apply'|'discard',paths:string[]):boolean{
+ if(decision==='apply')return canApply(studio,paths,false);
+ const review=studio.review;
+ return !!review&&new Set(paths).size===paths.length&&paths.every(p=>review.files.some(f=>f.path===p));
+}
 export function duration(ms:number):string{const seconds=Math.floor(ms/1000);return `${Math.floor(seconds/60)}:${String(seconds%60).padStart(2,'0')}`;}
 export function costLabel(studio:Studio):string|null{
  const cost=studio.usage?.costUsd;

@@ -35,7 +35,7 @@ await page.getByRole('button',{name:'Back to Vibe Space',exact:true}).click();
 await page.getByRole('button',{name:'New space',exact:true}).click();await page.getByRole('textbox',{name:'Name',exact:true}).fill('New design project');
 assert.ok(await page.getByRole('button',{name:'Create Vibe Space',exact:true}).isDisabled());await page.getByRole('button',{name:'Choose folder',exact:true}).click();
 await page.screenshot({path:join(screenshotDir,'vibespace-create.png'),fullPage:true});await page.getByRole('button',{name:'Cancel',exact:true}).click();
-await page.getByRole('button',{name:'New Studio',exact:true}).click();await page.getByRole('textbox',{name:'Goal',exact:true}).fill('Draft an accessible landing page');await page.getByRole('combobox',{name:'Model',exact:true}).selectOption('1');
+await page.getByRole('button',{name:'New Studio',exact:true}).click();await page.getByRole('textbox',{name:'Goal',exact:true}).fill('Draft an accessible landing page');await page.getByRole('combobox',{name:'Model',exact:true}).selectOption({index:2});
 await page.screenshot({path:join(screenshotDir,'vibespace-create-studio.png'),fullPage:true});
 await page.getByRole('button',{name:'Create Studio',exact:true}).click();await page.getByText('Draft Studio',{exact:true}).waitFor();
 assert.equal(await page.evaluate(()=>window.vibeFixture.calls.at(-1).type),'create-studio');

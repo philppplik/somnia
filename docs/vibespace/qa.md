@@ -15,23 +15,24 @@ npx tsc --ignoreConfig --noEmit --strict --skipLibCheck --types node,react --jsx
 VIBESPACE_SCREENSHOTS=/tmp/vs node src/components/vibespace/browser-fixture.mjs
 ```
 
-`vibespace.qa.test.tsx` needs `jsdom` (scratch install only). Tests marked `todo` are open
-findings: they assert the desired behavior and currently fail without failing the run.
-Remove `todo` when fixed.
+`vibespace.qa.test.tsx` needs `jsdom` (scratch install only). `qa-dom.ts` installs jsdom globals before react-dom loads.
 
-## Findings
+## Findings (all fixed; regression tests in the QA suites, 0 todo/skip)
 
-| id | sev | where | issue |
-|----|-----|-------|-------|
-| F-1 | med | controller.execute, native.execute | `review` with `decision:'discard'` skips path checks; arbitrary `paths` are forwarded to `reviewRequest`/native. UI sends `[]`, so only non-UI callers are affected. |
-| F-2 | med | controller.execute, native retry | Retry only checks failed/crashed + `failure.retryable`. It ignores `StudioSummary.latestRunId`/`canStart`, so an old failed run can be retried after a newer run exists (duplicate firing risk). |
-| F-3 | med | NativeVibeBindings.reviewRequest | ui.md says the adapter validates preserved selections; only the input is validated. The binding's returned DTO goes to native unchecked, so it can widen paths/runId/revision. |
-| F-4 | med | controller.read/reducer | A reconciliation read with a lower `revision` is ignored by the reducer but `read()` still clears the lock. After an ambiguous mutation, a stale read unlocks actions with stale state. |
-| F-5 | low | controller.execute | No connected check: after `disconnect()` a command can still fire. Not reachable from the UI. |
-| F-6 | med | CreateStudioForm | Model is held as a numeric index into `models[]`. If the model list reorders/changes while the form is open, a different model than the one shown is submitted (cloud vs local matters). |
-| N-1 | note | controller | Any local refusal (stale review, consent changed) sets the global error and locks all actions until Reload. Safe, but heavy-handed. |
-| N-2 | note | CreateSpaceForm | Folder grant is kept after a failed create and reused; if grants are single-use natively, the retry fails. Needs native contract. |
-| N-3 | note | parseSnapshot | Does not check run.studioId exists in sessions, nor model uniqueness. |
+| id | issue | fix |
+|----|-------|-----|
+| F-1 | discard forwarded arbitrary paths | `reviewPathsAllowed`: discard paths must be unique files of the shown review (UI sends none); used by controller and native |
+| F-2 | retry of an old failed run | `canRetry`: retryable failed/crashed run AND it is the Studio's `latestRunId` AND native `canStart` |
+| F-3 | binding reviewRequest output unchecked | `checkedReviewRequest`: only runId/paths/one revision key/decision allowed; runId, exact ordered paths and reviewRevision must equal the command, else throw before invoke |
+| F-4 | stale (lower revision) read cleared the lock | stale reads and stale mutation results now raise a lock instead |
+| F-5 | execute after disconnect | controller tracks `connected`; execute refused until subscribed |
+| F-6 | model chosen by array index | option value is the stable `[provider,model,locality]` identity; a vanished model deselects |
+| N-2 | consumed folder grant reused | grant cleared on submit; a fresh Choose folder is required after failure |
+| N-3 | orphan run/studio, duplicate models | parseSnapshot rejects: run without matching session/space, orphan or mismatched latestRunId, duplicate models |
+| N-1 | any local refusal locks until Reload | unchanged (safe, deliberate) |
+
+Contract decision to confirm: `latestRunId` of every session must be present in the read's `runs`
+(history included). If native lists only active runs, N-3 will reject valid data.
 
 ## Verified (tests)
 
