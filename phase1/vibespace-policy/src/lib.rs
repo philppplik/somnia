@@ -6,7 +6,10 @@
 //!   back Ask, Deny, or an [`ApprovalToken`] bound to exactly that proposal.
 //! * Only the [`UiHandle`] can answer a pending request. Model output has no path to it.
 //! * [`FileExecutor`] re-checks the token against its own arguments at execution time.
-//! * Shell, MCP, desktop and tool network have no enforcement here and are always denied.
+//! * Policy v2: shell runs only through a [`proc::ProcessExecutor`] (OS-isolated, fail-closed;
+//!   elevated arbitrary exec is a separate explicit mode), tool network only through the
+//!   broker-owned [`net::DomainProxy`]. MCP and desktop still have no enforcement and are
+//!   always denied. macOS has no process execution ("not available", no fallback).
 //!
 //! ```
 //! use vibespace_policy::*;
@@ -37,6 +40,8 @@ pub mod error;
 pub mod executor;
 pub mod fs;
 pub mod impact;
+pub mod net;
+pub mod proc;
 pub mod sanitize;
 pub mod token;
 pub mod transport;
@@ -53,6 +58,13 @@ pub use digest::ArgsDigest;
 pub use error::{ConsumeError, PolicyError};
 pub use executor::{ExecError, FileExecutor, FileLimits, IsolatedRoot, WriteReceipt};
 pub use fs::{FsError, IsolationLevel, ISOLATED_MARKER};
+pub use net::{
+    is_public_ip, Domain, DomainProxy, FetchRequest, NetError, NetworkExecutor, ProxyConfig,
+};
+pub use proc::{
+    platform_support, Command, ElevatedSetup, ExecMode, ExecReceipt, ExecSpec, ProcessError,
+    ProcessExecutor, ProcessLauncher, ProcessLimits, ProcessSupport,
+};
 pub use token::ApprovalToken;
 pub use transport::{ModelTransportPermit, ModelTransportPolicy};
 pub use ui::{ConsentDecisionWire, PendingView};

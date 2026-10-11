@@ -45,6 +45,10 @@ pub enum AuditKind {
     EffectFailed,
     /// Guard dropped without completing.
     EffectAbandoned,
+    /// Domain proxy relayed a connection (target = domain).
+    ProxyRelay,
+    /// Domain proxy refused a connection (detail = reason class).
+    ProxyRefused,
 }
 
 /// One audit line.

@@ -254,6 +254,11 @@ struct RunRec {
     grants: Vec<(GrantId, ActionKind, String)>,
     in_flight: usize,
     file_enforced: bool,
+    process_enforced: bool,
+    /// True when process enforcement was attached in elevated mode: every shell proposal is
+    /// always-ask and no run grant can be created for it.
+    elevated_exec: bool,
+    network_enforced: bool,
 }
 
 struct Inner {
@@ -629,6 +634,66 @@ impl AgentHandle {
         Ok(())
     }
 
+    pub(crate) fn attach_process_enforcement(
+        &self,
+        run: &RunId,
+        scope: &ScopeId,
+        elevated: bool,
+    ) -> Result<(), PolicyError> {
+        let mut g = self.shared.lock()?;
+        let rec = g.runs.get_mut(run).ok_or(PolicyError::UnknownRun)?;
+        if &rec.scope.scope_id != scope {
+            return Err(PolicyError::InvalidProposal("scope mismatch"));
+        }
+        if rec.state != RunState::Active {
+            return Err(PolicyError::RunNotActive);
+        }
+        rec.process_enforced = true;
+        rec.elevated_exec = elevated;
+        g.log(
+            AuditKind::EnforcementAttached,
+            Some(run),
+            Some(scope),
+            None,
+            None,
+            "",
+            None,
+            if elevated {
+                "process:elevated"
+            } else {
+                "process:sandboxed"
+            },
+        );
+        Ok(())
+    }
+
+    pub(crate) fn attach_network_enforcement(
+        &self,
+        run: &RunId,
+        scope: &ScopeId,
+    ) -> Result<(), PolicyError> {
+        let mut g = self.shared.lock()?;
+        let rec = g.runs.get_mut(run).ok_or(PolicyError::UnknownRun)?;
+        if &rec.scope.scope_id != scope {
+            return Err(PolicyError::InvalidProposal("scope mismatch"));
+        }
+        if rec.state != RunState::Active {
+            return Err(PolicyError::RunNotActive);
+        }
+        rec.network_enforced = true;
+        g.log(
+            AuditKind::EnforcementAttached,
+            Some(run),
+            Some(scope),
+            None,
+            None,
+            "",
+            None,
+            "network:domain-proxy",
+        );
+        Ok(())
+    }
+
     /// Submit a proposal. Never performs an effect.
     pub fn propose(&self, p: Proposal) -> Result<ProposeResult, PolicyError> {
         let mut g = self.shared.lock()?;
@@ -664,16 +729,28 @@ impl AgentHandle {
         }
 
         // 1. Run and scope.
-        let (scope, state, enforced, granted) = match g.runs.get(&p.run_id) {
+        let (scope, state, enforced, elevated_exec, granted) = match g.runs.get(&p.run_id) {
             None => deny!(DenyReason::UnknownRun),
-            Some(r) => (
-                r.scope.clone(),
-                r.state,
-                r.file_enforced,
-                r.grants
-                    .iter()
-                    .any(|(_, k, t)| *k == p.kind && *t == p.target),
-            ),
+            Some(r) => {
+                let enforced = match p.kind {
+                    ActionKind::Read | ActionKind::Write | ActionKind::Delete => r.file_enforced,
+                    ActionKind::Shell => r.process_enforced,
+                    ActionKind::Network => r.network_enforced,
+                    // MCP and desktop control have no enforcement in this crate (Welle-B A4
+                    // scope: process + tool network only). They stay denied even when a scope
+                    // lists them, even from a Verified skill.
+                    ActionKind::Mcp | ActionKind::Desktop => false,
+                };
+                (
+                    r.scope.clone(),
+                    r.state,
+                    enforced,
+                    r.elevated_exec,
+                    r.grants
+                        .iter()
+                        .any(|(_, k, t)| *k == p.kind && *t == p.target),
+                )
+            }
         };
         if state != RunState::Active {
             deny!(DenyReason::RunNotActive);
@@ -684,13 +761,11 @@ impl AgentHandle {
         if !scope.allowed_kinds.contains(&p.kind) {
             deny!(DenyReason::KindNotInScope);
         }
-        // 2. Deny capabilities without enforcement. Only file kinds can be enforced here, and
-        //    only after a FileExecutor was attached to this exact run scope.
-        let file_kind = matches!(
-            p.kind,
-            ActionKind::Read | ActionKind::Write | ActionKind::Delete
-        );
-        if !file_kind || !enforced {
+        // 2. Deny capabilities without enforcement. A kind is enforceable only after the
+        //    matching executor (file, process or network) was attached to this exact run
+        //    scope. There is no fallback level: without verified isolation the action fails
+        //    closed and the executor's attach error carries the visible reason.
+        if !enforced {
             deny!(DenyReason::NoEnforcement);
         }
         // 3. Autonomy ceiling.
@@ -700,8 +775,10 @@ impl AgentHandle {
             deny!(DenyReason::ReadOnly);
         }
         // 4. Baseline always-ask. Skills, origins and autonomy are not inputs here.
+        //    Elevated-mode shell is always-ask by design (arbitrary exec is a separate,
+        //    explicit, per-command decision; no run grant can ever cover it).
         let impact = classify(p.kind, &p.target, &p.declared_impact);
-        let always_ask = !impact.is_empty();
+        let always_ask = !impact.is_empty() || (p.kind == ActionKind::Shell && elevated_exec);
 
         if !always_ask {
             let auto = if p.kind == ActionKind::Read {
@@ -1173,6 +1250,9 @@ impl RunControl {
                 grants: Vec::new(),
                 in_flight: 0,
                 file_enforced: false,
+                process_enforced: false,
+                elevated_exec: false,
+                network_enforced: false,
             },
         );
         g.log(
