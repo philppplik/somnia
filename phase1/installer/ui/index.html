@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'self'">
+<title>Somnia Setup</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="window" id="window" role="dialog" aria-modal="true" aria-labelledby="win-title">
+  <img class="logo" src="mark.svg" alt="" aria-hidden="true">
+  <button class="close" id="btn-close" type="button" data-i18n-label="close.label" title="Close installer"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3 3l14 14M17 3L3 17"/></svg></button>
+  <div class="surface" aria-hidden="true"><div class="wash"></div><div class="fade"></div></div>
+  <span id="win-title" class="sr-only" data-i18n="window.title">Somnia Setup</span>
+  <div id="live" class="sr-only" aria-live="polite"></div>
+
+  <main id="screens">
+    <!-- Welcome -->
+    <section class="screen" id="s-welcome" data-screen="welcome" hidden aria-describedby="welcome-pitch">
+      <div class="hero">
+        <h1 tabindex="-1" id="h-welcome" data-i18n-label="welcome.heading" aria-label="Welcome to Somnia"><span class="eyebrow" aria-hidden="true" data-i18n="welcome.eyebrow">Welcome to</span><span class="wordmark" aria-hidden="true">Somnia</span></h1>
+        <p class="tagline" lang="la">Per aspera ad astra</p>
+      </div>
+      <div class="card pitch">
+        <p id="welcome-pitch" data-i18n="welcome.pitch"></p>
+        <button class="btn primary" id="btn-install" type="button"><span class="btn-visual" data-i18n="welcome.install">Install Somnia</span></button>
+      </div>
+      <button class="link below" id="btn-options" type="button" data-i18n="welcome.options">Choose options</button>
+      <p class="foot" id="welcome-foot"></p>
+    </section>
+
+    <!-- Update (existing install) -->
+    <section class="screen" id="s-update" data-screen="update" hidden>
+      <div class="hero small">
+        <h1 tabindex="-1" id="h-update"></h1>
+      </div>
+      <div class="card pitch">
+        <p data-i18n="update.body"></p>
+        <button class="btn primary" id="btn-update" type="button"><span class="btn-visual" data-i18n="button.update">Update</span></button>
+        <button class="link" id="btn-update-cancel" type="button" data-i18n="button.cancel">Cancel</button>
+      </div>
+    </section>
+
+    <!-- Options -->
+    <section class="screen" id="s-options" data-screen="options" hidden>
+      <div class="hero small"><h1 tabindex="-1" id="h-options" data-i18n="options.title">Make it yours</h1><p class="sub" id="options-sub" data-i18n="options.subtitle"></p></div>
+      <div class="card opts">
+        <label class="field-label" for="in-dir" data-i18n="options.folder">Install folder</label>
+        <div class="row">
+          <input id="in-dir" type="text" spellcheck="false" autocomplete="off" aria-describedby="dir-error">
+          <button class="btn secondary" id="btn-browse" type="button" data-i18n="options.browse">Browse...</button>
+        </div>
+        <p class="field-error" id="dir-error" role="alert" hidden></p>
+        <label class="opt"><input type="checkbox" id="o-startmenu"><span class="box" aria-hidden="true"></span><span data-i18n="options.startmenu"></span></label>
+        <label class="opt"><input type="checkbox" id="o-desktop"><span class="box" aria-hidden="true"></span><span data-i18n="options.desktop"></span></label>
+        <label class="opt"><input type="checkbox" id="o-signin"><span class="box" aria-hidden="true"></span><span data-i18n="options.signin"></span></label>
+        <label class="opt"><input type="checkbox" id="o-assoc"><span class="box" aria-hidden="true"></span><span data-i18n="options.assoc"></span></label>
+        <label class="opt"><input type="checkbox" id="o-updates"><span class="box" aria-hidden="true"></span><span data-i18n="options.updates"></span></label>
+      </div>
+      <div class="nav"><button class="btn secondary" id="opt-back" type="button" data-i18n="button.back">Back</button><button class="btn primary" id="opt-next" type="button"><span class="btn-visual" data-i18n="license.cta">Next</span></button></div>
+    </section>
+
+    <!-- License + Privacy -->
+    <section class="screen" id="s-license" data-screen="license" hidden>
+      <div class="hero small"><h1 tabindex="-1" id="h-license" data-i18n="license.title">Before you start</h1><p class="sub" data-i18n="license.subtitle"></p></div>
+      <div class="tabs" role="tablist">
+        <button role="tab" id="tab-license" aria-selected="true" aria-controls="panel-text" type="button" data-i18n="tab.license"></button>
+        <button role="tab" id="tab-privacy" aria-selected="false" aria-controls="panel-text" tabindex="-1" type="button" data-i18n="tab.privacy"></button>
+      </div>
+      <div class="card textcard" id="panel-text" role="tabpanel" tabindex="0" aria-labelledby="tab-license"></div>
+      <p class="hint" id="scroll-hint" data-i18n="license.scrollhint"></p>
+      <label class="opt accept"><input type="checkbox" id="o-accept" disabled><span class="box" aria-hidden="true"></span><span data-i18n="license.accept"></span></label>
+      <div class="nav"><button class="btn secondary" id="lic-back" type="button" data-i18n="button.back">Back</button><button class="btn primary" id="lic-go" type="button" aria-disabled="true" title=""><span class="btn-visual" data-i18n="license.cta"></span></button></div>
+    </section>
+
+    <!-- Progress -->
+    <section class="screen" id="s-progress" data-screen="progress" hidden>
+      <div class="hero small"><h1 tabindex="-1" id="h-progress" data-i18n="progress.title">Setting up Somnia</h1></div>
+      <div class="card prog">
+        <p class="step" id="step-label"></p>
+        <div class="bar" id="bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-labelledby="step-label"><div class="fill" id="fill"></div></div>
+        <p class="pct" id="pct" aria-hidden="true"></p>
+        <p class="sub" id="step-count"></p>
+      </div>
+      <div class="nav center"><button class="btn secondary" id="prog-cancel" type="button" data-i18n="button.cancel">Cancel</button></div>
+    </section>
+
+    <!-- Finish -->
+    <section class="screen" id="s-finish" data-screen="finish" hidden>
+      <div class="ring" aria-hidden="true"><svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="46"/><path class="check" d="M30 52l14 14 27-30"/></svg></div>
+      <div class="hero small"><h1 tabindex="-1" id="h-finish" data-i18n="finish.title">You're in.</h1></div>
+      <div class="card finish">
+        <p id="finish-body"></p>
+        <label class="opt"><input type="checkbox" id="o-launch" checked><span class="box" aria-hidden="true"></span><span data-i18n="finish.launch"></span></label>
+        <button class="btn primary" id="btn-start" type="button"><span class="btn-visual" data-i18n="finish.start">Start creating</span></button>
+        <button class="link" id="btn-finish-close" type="button" data-i18n="finish.close">Close</button>
+      </div>
+      <button class="link tiny below2" id="btn-whatsnew" type="button"></button>
+    </section>
+
+    <!-- Error -->
+    <section class="screen err" id="s-error" data-screen="error" hidden>
+      <div class="icon" id="err-icon" aria-hidden="true"></div>
+      <div class="hero small"><h1 tabindex="-1" id="h-error"></h1></div>
+      <div class="card errcard" role="alert"><p id="err-body"></p><p class="code" id="err-code"></p></div>
+      <div class="nav center"><button class="btn primary" id="err-retry" type="button"><span class="btn-visual" data-i18n="button.retry">Retry</span></button><button class="btn secondary" id="err-secondary" type="button"></button><button class="link" id="err-log" type="button" data-i18n="button.openlog" hidden>Open log</button></div>
+    </section>
+
+    <!-- Cancelled -->
+    <section class="screen err" id="s-cancelled" data-screen="cancelled" hidden>
+      <div class="icon purple" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M15 9l-6 6M9 9l6 6"/></svg></div>
+      <div class="hero small"><h1 tabindex="-1" id="h-cancelled" data-i18n="cancelled.title"></h1></div>
+      <div class="card errcard"><p data-i18n="cancelled.body"></p></div>
+      <div class="nav center"><button class="btn primary" id="can-resume" type="button"><span class="btn-visual" data-i18n="cancelled.resume"></span></button><button class="btn secondary" id="can-close" type="button" data-i18n="button.close">Close</button></div>
+    </section>
+  </main>
+
+  <!-- Cancel confirmation (modal inside the window) -->
+  <div class="scrim" id="confirm" hidden>
+    <div class="card dlg" role="alertdialog" aria-modal="true" aria-labelledby="cf-title" aria-describedby="cf-body">
+      <h2 id="cf-title"></h2><p id="cf-body"></p>
+      <div class="nav center"><button class="btn primary" id="cf-keep" type="button"><span class="btn-visual" data-i18n="cancel.keep"></span></button><button class="btn secondary" id="cf-stop" type="button"></button></div>
+    </div>
+  </div>
+</div>
+<script type="module" src="app.js"></script>
+</body>
+</html>
