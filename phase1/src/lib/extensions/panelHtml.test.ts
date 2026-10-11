@@ -19,3 +19,9 @@ test('panel url follows the somnia-ext contract and encodes ids',()=>{
   assert.ok(!isPanelUrl('https://evil.example/'));assert.ok(!isPanelUrl('somnia-ext://panel/a/b/c'));
   assert.ok(!panelUrl('a/../b','x','t').includes('a/../b'));
 });
+import {DARK_PANEL_THEME,LIGHT_PANEL_THEME} from './panelHtml';
+test('panel document declares the app colour scheme so a dark app never gets an opaque white frame',()=>{
+  const d=panelDocument('<p>x</p>',null,DARK_PANEL_THEME);
+  assert.match(d,/<meta name="color-scheme" content="dark">/);assert.match(d,/color-scheme:dark/);assert.match(d,/background:transparent/);assert.match(d,/color:#fafafa/);
+  assert.match(panelDocument('',null,LIGHT_PANEL_THEME),/color-scheme:light/);
+});
