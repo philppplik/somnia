@@ -55,3 +55,19 @@ test('activity log records approved, denied and failed calls, newest first, capp
  for(let i=0;i<60;i++){const p=r.run(n,{},ctx,new AbortController().signal,g);await new Promise(x=>setTimeout(x,0));rt.decide(rt.getSnapshot().pending[0].id,false);await assert.rejects(p);}
  assert.equal(rt.getSnapshot().activity.length,50);rt.clearActivity();assert.equal(rt.getSnapshot().activity.length,0);
 });
+const failClosedTools=[
+ {server:'files',name:'uses_ref',description:'r',input_schema:{type:'object',properties:{p:{$ref:'#/$defs/x'}}}},
+ {server:'files',name:'no_extra',description:'r',input_schema:{type:'object',additionalProperties:false,properties:{p:{type:'string'}}}},
+];
+test('fail-closed: unsupported schema keywords and extra arguments never reach approval or the bridge',async()=>{
+ const calls:string[]=[];
+ const rt=new McpRuntime(async<T,>(c:string)=>{calls.push(c);if(c==='mcp_server_start')return failClosedTools as T;if(c==='mcp_servers_list')return [{config:{id:'files',command:'/bin/x',args:[],env:{}},running:true}] as T;return undefined as T;});
+ await rt.start('files');for(const t of failClosedTools)rt.setGranted(t,true);
+ const r=createEditorToolRegistry({allowExecute:true});const names=rt.register(r);assert.equal(names.length,2);
+ const g={levels:['read','propose','execute'] as const};const ctx={files:()=>({}),propose:async()=>{}} as never;const sig=new AbortController().signal;
+ await assert.rejects(r.run(names[0],{p:'a'},ctx,sig,g),(e:Error)=>e.name==='McpArgsError');
+ await assert.rejects(r.run(names[1],{p:'a',extra:1},ctx,sig,g),(e:Error)=>e.name==='McpArgsError'&&/not an allowed argument/.test(e.message));
+ assert.equal(rt.getSnapshot().pending.length,0);assert.equal(calls.includes('mcp_tool_call'),false);
+ assert.deepEqual(rt.getSnapshot().activity.map(a=>a.outcome),['invalid','invalid']);
+ assert.match(rt.getSnapshot().activity[0].detail??'',/^SOM-AGT-003 /);
+});
