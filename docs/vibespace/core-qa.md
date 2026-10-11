@@ -281,3 +281,33 @@ tests (20 original, 20 security, 7 journal) pass; all-targets clippy with warnin
 denied passes. The latest-run cardinality regression was independently confirmed
 red without the union fix and green with it. Collections above 1000 runs return
 an explicit error rather than partial/orphaned data; pagination remains follow-up.
+
+### Independent recheck of repair 426956a (final round)
+
+Both previously red blockers are green as regression tests under their original
+names. Verified claims against the live tree: core 47 PASS (11 unit + 4
+effect_port + 7 journal_review + 5 runtime + 20 security_review), storage 42
+PASS, checkpoints 41 PASS, `cargo clippy --all-targets` clean on
+vibespace-core. Schema4 stores a typed `ArtifactOperationKind` with a CHECK
+constraint and backfills from the id prefix; `begin_artifact_operation`
+validates id prefix/length/charset against the kind before persistence;
+reconcile branches on the stored kind, so the DB no longer guesses from id
+prefixes. Projection read failure in reconcile degrades to `complete=false`
+(`is_ok_and`) instead of vetoing journal completion or `Runtime::open`; the
+unavailable review keeps Apply off and is discardable by its persisted epoch,
+which unlocks `canStart`.
+
+Adversarial recheck for remaining wedge paths: discard and apply reconcile
+pending operations before mutating the review epoch, so a pending operation
+cannot be orphaned by a revision bump; reconcile retries converge across
+restarts because the vault receipt makes commit state durable. One uncovered
+branch remained: restore (not apply) with a crash between the durable vault
+commit and the journal finish. Added
+`crash_after_restore_commit_reconciles_without_review_axis_change` (green):
+open reconciles the pending restore, review state stays `Applied`, the review
+revision is not bumped, and the restored bytes stay on disk.
+
+Inspection notes (accepted design, no test needed): a corrupt vault apply
+receipt still fails `Runtime::open` loudly until repaired, which is the honest
+failure for actual vault corruption; the schema4 backfill trusts the id prefix
+once, which is safe because pre-validation ids were only generated internally.

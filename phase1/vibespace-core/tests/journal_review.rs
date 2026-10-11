@@ -503,3 +503,68 @@ async fn artifact_operation_kind_and_id_are_checked_before_persistence() {
     );
     assert_eq!(f.rt.store.get_run(&run).unwrap().review_revision, revision);
 }
+
+/// Restore with a crash between the durable vault commit and the journal
+/// finish must reconcile on reopen without touching the review axis: open
+/// succeeds, the pending restore operation completes, the review state and
+/// revision stay exactly as the completed apply left them.
+#[tokio::test]
+async fn crash_after_restore_commit_reconciles_without_review_axis_change() {
+    let f = setup();
+    let (run, _) = completed_run(&f, false).await;
+    f.rt.apply(
+        &run,
+        &f.rt
+            .snapshot(&run)
+            .unwrap()
+            .snapshot
+            .review
+            .unwrap()
+            .revision,
+        vec!["project/hello.txt".into()],
+    )
+    .unwrap();
+    let undo =
+        f.rt.snapshot(&run)
+            .unwrap()
+            .snapshot
+            .checkpoints
+            .into_iter()
+            .find(|c| c.label == "Before Apply (Undo)")
+            .unwrap();
+    let revision_before = f.rt.store.get_run(&run).unwrap().review_revision;
+
+    let conn = rusqlite::Connection::open(f.data.path().join("vibespace.sqlite")).unwrap();
+    conn.execute_batch("CREATE TRIGGER fail_restore_finish BEFORE UPDATE ON artifact_operations WHEN NEW.state='committed' BEGIN SELECT RAISE(ABORT,'injected postcommit DB failure'); END;").unwrap();
+    assert!(f.rt.restore(&run, &undo.checkpoint_id).is_err());
+    let pending = f.rt.store.pending_artifact_operations().unwrap();
+    assert_eq!(pending.len(), 1);
+    assert_eq!(pending[0].2, db::ArtifactOperationKind::Restore);
+    assert_eq!(
+        std::fs::read_to_string(f.project.path().join("hello.txt")).unwrap(),
+        "before",
+        "vault restore committed bytes before the injected journal failure"
+    );
+    conn.execute_batch("DROP TRIGGER fail_restore_finish")
+        .unwrap();
+    drop(conn);
+
+    let reopened = Runtime::open(f.data.path(), true);
+    assert!(
+        reopened.is_ok(),
+        "open must reconcile a committed restore: {:?}",
+        reopened.err()
+    );
+    let rt2 = reopened.unwrap();
+    assert!(rt2.store.pending_artifact_operations().unwrap().is_empty());
+    let restored = rt2.store.get_run(&run).unwrap();
+    assert_eq!(restored.review, db::ReviewState::Applied);
+    assert_eq!(
+        restored.review_revision, revision_before,
+        "restore reconcile must not bump the review revision"
+    );
+    assert_eq!(
+        std::fs::read_to_string(f.project.path().join("hello.txt")).unwrap(),
+        "before"
+    );
+}
