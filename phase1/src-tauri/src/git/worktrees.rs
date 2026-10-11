@@ -201,6 +201,25 @@ fn plain_path(p: PathBuf) -> PathBuf {
     p
 }
 
+/// Git lists Windows worktrees as `C:/Users/..`; the rest of the app (and the plan destination) uses
+/// the native `C:\Users\..` form. Normalize once at the read boundary. Identity elsewhere.
+fn native_path(p: &str) -> String {
+    if cfg!(windows) {
+        p.replace('/', "\\")
+    } else {
+        p.to_owned()
+    }
+}
+
+/// Path equality for read-back matching: exact on Unix, slash- and case-insensitive on Windows.
+fn same_path(a: &str, b: &str) -> bool {
+    if cfg!(windows) {
+        native_path(a).eq_ignore_ascii_case(&native_path(b))
+    } else {
+        a == b
+    }
+}
+
 fn validate_branch(root: &Path, name: &str) -> GResult<()> {
     if name.starts_with('-') || name.len() > 200 || name.contains('\0') {
         return Err(GitError::new(
@@ -367,7 +386,7 @@ pub fn git_worktree_add(
     // Trust is deliberately NOT inherited. Register via trust_repo after host approval.
     git_worktree_list(root)?
         .into_iter()
-        .find(|w| w.root == plan.destination)
+        .find(|w| same_path(&w.root, &plan.destination))
         .ok_or_else(|| {
             GitError::new(
                 GitErrorCode::Unknown,
@@ -450,7 +469,7 @@ fn list_raw(root: &Path) -> GResult<Vec<GitWorktree>> {
                 result.push(w);
             }
             item = Some(GitWorktree {
-                root: path.to_string(),
+                root: native_path(path),
                 context: None,
                 head: None,
                 branch: None,
@@ -628,7 +647,7 @@ pub fn git_worktree_remove(
     }
     args.extend([OsStr::new("--"), OsStr::new(&target.root)]);
     git_write(root, &args, None, &[])?;
-    if list_raw(root)?.iter().any(|w| w.root == target.root) {
+    if list_raw(root)?.iter().any(|w| same_path(&w.root, &target.root)) {
         return Err(GitError::new(
             GitErrorCode::Unknown,
             "Removal read-back failed; reconcile before retry",
