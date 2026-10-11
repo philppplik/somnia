@@ -190,14 +190,22 @@ Cloud key retrieval fails closed; OAuth/Claude/Responses are not a fallback.
 
 ## Capabilities and platform gates
 
-Pause, resume and catalog are false. Start/retry are included only when native
-transport configuration resolves. Apply/restore also require per-run Core
-review/checkpoint conditions. On Windows, `files: false` is unconditional in
-this patch. Runtime opens with file tools disabled; the bridge additionally
-rejects Apply and Restore and forces corresponding read/event capabilities and
-checkpoint `restorable` fields false. Discard is still available to clean up an
-isolated artifact. No settings option enables Windows file effects. Native
-Windows tests and a reviewed gate change are required first.
+Pause, resume and catalog are false. Start/retry require configured native
+transport, not model reachability. Apply/restore require per-run Core conditions.
+Broker-scoped file effects and review Apply/Restore are enabled on Windows and
+Linux after native CI run38146543284 passed pure crate suites, policy default
+and cap-layer including junction/advisory regressions, desktop bridge tests,
+Desktop checks and native packages. Other platforms remain readonly until
+native evidence exists. No renderer setting can widen this compiled gate.
+
+Evidence: https://github.com/philppplik/somnia/actions/runs/38146543284
+Windows job: https://github.com/philppplik/somnia/actions/runs/38146543284/job/114490995366
+Linux job: https://github.com/philppplik/somnia/actions/runs/38146543284/job/114490995395
+This gate covers scoped built-in FileExecutor operations, not arbitrary child
+processes, OS sandboxing, real Qwen smoke, or all host filesystem configurations.
+Windows symlink creation may be privilege-skipped; junction tests actually run.
+Hardlink limitations remain documented in the file layer. Patched cap-std3.4.6
+is required. The gate-change commit must pass the same CI before distribution.
 
 Creating a Studio is not firing a run. Only explicit `start_run` starts one.
 Filesystem effects remain in the Core's isolated workspace/consent broker, never

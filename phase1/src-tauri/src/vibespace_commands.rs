@@ -104,8 +104,8 @@ impl VibeSpaceState {
         self.runtime
             .get_or_init(|| {
                 let data = app.path().app_data_dir().map_err(|_| ())?.join("vibespace");
-                // Windows file effects are NEVER enabled by configuration or renderer requests.
-                let runtime = Runtime::open(&data, !cfg!(target_os = "windows")).map_err(|_| ())?;
+                // Platform gate is compiled natively, never enabled by renderer settings.
+                let runtime = Runtime::open(&data, native_files_enabled()).map_err(|_| ())?;
                 // Subscribe before commands can start a run. Exactly one publisher per owning state.
                 let mut receiver = runtime.subscribe();
                 let app = app.clone();
@@ -114,7 +114,7 @@ impl VibeSpaceState {
                     loop {
                         match receiver.recv().await {
                             Ok(mut event) => {
-                                restrict_windows_event(&mut event);
+                                restrict_platform_event(&mut event);
                                 let bumped =
                                     version.lock().map_err(failed).and_then(|mut v| v.changed());
                                 if bumped.is_err() {
@@ -200,14 +200,19 @@ fn publication_problem(app: &tauri::AppHandle, code: &'static str) {
     );
 }
 
+/// Windows and Linux broker/file/journal suites passed native CI run38146543284.
+/// This does not grant arbitrary exec or claim an OS sandbox.
+fn native_files_enabled() -> bool {
+    cfg!(any(target_os = "windows", target_os = "linux"))
+}
 fn require_native_files() -> Result<()> {
-    if cfg!(target_os = "windows") {
-        return Err(error("vibespace_windows_files_not_verified", true));
+    if !native_files_enabled() {
+        return Err(error("vibespace_platform_files_not_verified", true));
     }
     Ok(())
 }
-fn restrict_windows_snapshot(snapshot: &mut w::RunSnapshot) {
-    if cfg!(target_os = "windows") {
+fn restrict_platform_snapshot(snapshot: &mut w::RunSnapshot) {
+    if !native_files_enabled() {
         snapshot.capabilities.apply = false;
         snapshot.capabilities.restore = false;
         for checkpoint in &mut snapshot.checkpoints {
@@ -215,8 +220,8 @@ fn restrict_windows_snapshot(snapshot: &mut w::RunSnapshot) {
         }
     }
 }
-fn restrict_windows_event(event: &mut w::RunEvent) {
-    if cfg!(target_os = "windows") {
+fn restrict_platform_event(event: &mut w::RunEvent) {
+    if !native_files_enabled() {
         if let Some(capabilities) = event
             .payload
             .get_mut("capabilities")
@@ -656,12 +661,12 @@ pub fn vibespace_read_snapshot(
             let models = state.models(window.app_handle())?;
             let mut runs = runtime.list_snapshots().map_err(failed)?;
             for run in &mut runs {
-                restrict_windows_snapshot(&mut run.snapshot);
+                restrict_platform_snapshot(&mut run.snapshot);
             }
             let fingerprint = collection_fingerprint(&spaces, &studios, &models, &runs)?;
             let mut again_runs = runtime.list_snapshots().map_err(failed)?;
             for run in &mut again_runs {
-                restrict_windows_snapshot(&mut run.snapshot);
+                restrict_platform_snapshot(&mut run.snapshot);
             }
             let again = collection_fingerprint(
                 &runtime.list_spaces().map_err(failed)?,
@@ -704,7 +709,7 @@ pub fn vibespace_capabilities(
             "consent",
             "review",
         ];
-        if !cfg!(target_os = "windows") {
+        if native_files_enabled() {
             actions.push("restore");
         }
         if transport {
@@ -712,7 +717,7 @@ pub fn vibespace_capabilities(
         }
         Ok(NativeCapabilities {
             transport,
-            files: !cfg!(target_os = "windows"),
+            files: native_files_enabled(),
             actions: actions.into_iter().map(String::from).collect(),
             pause: false,
             resume: false,
@@ -741,7 +746,7 @@ pub async fn vibespace_start_run(
                 return Err(error("vibespace_request_identity_conflict", true));
             }
             let mut reply = runtime.snapshot(&old.id).map_err(failed)?;
-            restrict_windows_snapshot(&mut reply.snapshot);
+            restrict_platform_snapshot(&mut reply.snapshot);
             return Ok(reply);
         }
         // Resolve ONLY the saved Studio model. No endpoint/key/model override in StartRun.
@@ -763,7 +768,7 @@ pub async fn vibespace_start_run(
             .start(request, transport, config)
             .await
             .map_err(failed)?;
-        restrict_windows_snapshot(&mut result.snapshot);
+        restrict_platform_snapshot(&mut result.snapshot);
         state.changed()?;
         Ok(result)
     })
@@ -832,6 +837,30 @@ mod tests {
             );
             value.as_object_mut().unwrap().remove(field);
         }
+    }
+    #[test]
+    fn files_gate_enables_only_native_verified_alpha_platforms() {
+        assert_eq!(
+            native_files_enabled(),
+            cfg!(any(target_os = "windows", target_os = "linux"))
+        );
+        assert_eq!(require_native_files().is_ok(), native_files_enabled());
+        let mut payload = serde_json::json!({"capabilities":{"apply":true,"restore":true},"checkpoints":[{"restorable":true}]});
+        let mut event = w::RunEvent {
+            protocol_version: 1,
+            run_id: "r".into(),
+            sequence: 1,
+            timestamp_utc: "2026-10-11T15:00:00Z".into(),
+            kind: "run_snapshot".into(),
+            payload: payload.clone(),
+        };
+        restrict_platform_event(&mut event);
+        if !native_files_enabled() {
+            payload["capabilities"]["apply"] = false.into();
+            payload["capabilities"]["restore"] = false.into();
+            payload["checkpoints"][0]["restorable"] = false.into();
+        }
+        assert_eq!(event.payload, payload);
     }
     #[test]
     fn request_dtos_reject_renderer_authority() {

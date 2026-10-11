@@ -14,10 +14,10 @@
 //! swapped between check and use; the remaining race can only redirect inside the isolated
 //! copy. Hard-link counts are not available on stable Rust for Windows, so a hard link to an
 //! outside file is NOT detected here. Creating one needs write access to the outside file, but
-//! the copy builder must not hard-link. STATUS: compile-checked for `x86_64-pc-windows-gnu`,
-//! never executed (no Windows machine in the build sandbox). The tests in
-//! `tests/fs_isolation.rs` marked `cfg(windows)` must run on Windows CI before the writable gate
-//! opens.
+//! the copy builder must not hard-link. STATUS: Windows native CI run38146543284 passed policy default/cap-layer,
+//! junction and trailing-slash advisory regressions, composed Core and journals.
+//! Symlink subcases may skip without privilege; no arbitrary-exec sandbox claim.
+//! https://github.com/philppplik/somnia/actions/runs/38146543284
 
 use super::{path::RelPath, FsError, IsolationLevel, ISOLATED_MARKER};
 use cap_fs_ext::{DirExt, FollowSymlinks, OpenOptionsFollowExt};
