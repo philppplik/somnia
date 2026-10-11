@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { AgentPanel } from "./agent/AgentPanel";
 import { SessionChat } from "./SessionChat";
+import { DesktopVibeSpacePanel } from "./vibespace/DesktopVibeSpacePanel";
 import { useT } from "../lib/useT";
 import {
   useCommunicationTab,
@@ -26,7 +27,8 @@ export function CommunicationPanel() {
         onKeyDown={(e) => {
           if (e.key === "ArrowLeft" || e.key === "ArrowRight") {
             e.preventDefault();
-            const next = tab === "agent" ? "chat" : "agent";
+            const tabs = ["agent", "vibespace", "chat"] as const;
+            const next = tabs[(tabs.indexOf(tab) + (e.key === "ArrowRight" ? 1 : 2)) % tabs.length];
             selectCommunication(next);
             document.getElementById("communication-" + next)?.focus();
           }
@@ -40,6 +42,10 @@ export function CommunicationPanel() {
           onClick={() => selectCommunication("agent")}
         >
           {t("chat.agent")}
+        </button>
+        <button id="communication-vibespace" role="tab" aria-selected={tab === "vibespace"}
+          aria-controls="communication-content" onClick={() => selectCommunication("vibespace")}>
+          Vibe Space
         </button>
         <button
           id="communication-chat"
@@ -67,6 +73,7 @@ export function CommunicationPanel() {
         <div className="communication-agent" hidden={tab !== "agent"}>
           <AgentPanel />
         </div>
+        {tab === "vibespace" && <DesktopVibeSpacePanel />}
         {tab === "chat" && <SessionChat />}
       </div>
     </div>

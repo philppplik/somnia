@@ -2,6 +2,23 @@ fn main() {
     #[cfg(feature = "desktop")]
     tauri_build::try_build(tauri_build::Attributes::new().app_manifest(
         tauri_build::AppManifest::new().commands(&[
+            "vibespace_choose_folder",
+            "vibespace_create_space",
+            "vibespace_create_studio",
+            "vibespace_list_spaces",
+            "vibespace_list_studios",
+            "vibespace_read_snapshot",
+            "vibespace_capabilities",
+            "vibespace_start_run",
+            "vibespace_stop_run",
+            "vibespace_steer_run",
+            "vibespace_decide_consent",
+            "vibespace_apply_run",
+            "vibespace_discard_run",
+            "vibespace_restore_checkpoint",
+            "vibespace_memory_list",
+            "vibespace_memory_add",
+            "vibespace_memory_delete",
             "ext_panel_open",
             "ext_worker_open",
             "ext_worker_url",

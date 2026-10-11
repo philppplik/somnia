@@ -52,3 +52,6 @@ pub mod panic_report;
 
 #[cfg(feature = "desktop")]
 pub mod diagnostics_commands;
+
+#[cfg(feature = "desktop")]
+pub mod vibespace_commands;

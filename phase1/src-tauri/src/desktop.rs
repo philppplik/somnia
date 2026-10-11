@@ -2180,6 +2180,7 @@ pub fn run() {
         .manage(AudioGrants::default())
         .manage(crate::lan_host::LanHost::default())
         .setup(move |app| {
+            crate::vibespace_commands::manage(app.handle(), Vec::new())?;
             // Cold start: same worker pipeline as a second instance. The flag owes the main window
             // one activation even if it is not created yet.
             app.state::<Pending>().0.store(true, std::sync::atomic::Ordering::SeqCst);
@@ -2272,6 +2273,23 @@ pub fn run() {
             }
         })
         .invoke_handler(tauri::generate_handler![
+            crate::vibespace_commands::vibespace_choose_folder,
+            crate::vibespace_commands::vibespace_create_space,
+            crate::vibespace_commands::vibespace_create_studio,
+            crate::vibespace_commands::vibespace_list_spaces,
+            crate::vibespace_commands::vibespace_list_studios,
+            crate::vibespace_commands::vibespace_read_snapshot,
+            crate::vibespace_commands::vibespace_capabilities,
+            crate::vibespace_commands::vibespace_start_run,
+            crate::vibespace_commands::vibespace_stop_run,
+            crate::vibespace_commands::vibespace_steer_run,
+            crate::vibespace_commands::vibespace_decide_consent,
+            crate::vibespace_commands::vibespace_apply_run,
+            crate::vibespace_commands::vibespace_discard_run,
+            crate::vibespace_commands::vibespace_restore_checkpoint,
+            crate::vibespace_commands::vibespace_memory_list,
+            crate::vibespace_commands::vibespace_memory_add,
+            crate::vibespace_commands::vibespace_memory_delete,
             ext_panel_open,
             crate::extension_activity_commands::extension_activity_query,
             crate::extension_activity_commands::extension_activity_export,

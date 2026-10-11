@@ -1,0 +1,21 @@
+[package]
+name = "vibespace-engine"
+version = "0.1.0-alpha.1"
+edition = "2021"
+rust-version = "1.94.1"
+license = "MIT"
+publish = false
+
+# Standalone spike, deliberately outside the desktop workspace.
+[workspace]
+
+[dependencies]
+goose-agent = "=0.1.0-alpha.9"
+goose-provider-types = "=0.1.0-alpha.9"
+anyhow = "1"
+async-trait = "0.1"
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "sync", "time"] }
+tokio-util = "0.7"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+reqwest = { version = "=0.12.28", default-features = false, features = ["json", "rustls-tls"] }

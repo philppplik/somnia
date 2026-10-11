@@ -120,6 +120,16 @@ jobs:
       - name: Build headless WordCraft document engine (Documents Studio)
         run: npm run documents:build
       - run: cargo test --manifest-path src-tauri/Cargo.toml --no-default-features --locked
+      - name: Vibespace pure crate suites (locked)
+        run: |
+          cargo test --locked --manifest-path vibespace-core/Cargo.toml
+          cargo test --locked --manifest-path vibespace-storage/Cargo.toml
+          cargo test --locked --manifest-path vibespace-checkpoints/Cargo.toml
+          cargo test --locked --manifest-path vibespace-engine/Cargo.toml
+          cargo test --locked --manifest-path vibespace-policy/Cargo.toml
+          cargo test --locked --manifest-path vibespace-policy/Cargo.toml --features cap-layer
+      - name: Vibespace desktop command module tests
+        run: cargo test --manifest-path src-tauri/Cargo.toml --features desktop vibespace_commands
       - run: cargo check --manifest-path src-tauri/Cargo.toml --locked
       - name: Sync app version (and enable signed updater artifacts when the signing key secret exists)
         run: node scripts/sync-version.mjs ${{ secrets.TAURI_SIGNING_PRIVATE_KEY != '' && '--updater' || '' }}
@@ -164,6 +174,16 @@ jobs:
       - name: Build headless WordCraft document engine (Documents Studio)
         run: npm run documents:build
       - run: cargo test --manifest-path src-tauri/Cargo.toml --no-default-features --locked
+      - name: Vibespace pure crate suites (locked)
+        run: |
+          cargo test --locked --manifest-path vibespace-core/Cargo.toml
+          cargo test --locked --manifest-path vibespace-storage/Cargo.toml
+          cargo test --locked --manifest-path vibespace-checkpoints/Cargo.toml
+          cargo test --locked --manifest-path vibespace-engine/Cargo.toml
+          cargo test --locked --manifest-path vibespace-policy/Cargo.toml
+          cargo test --locked --manifest-path vibespace-policy/Cargo.toml --features cap-layer
+      - name: Vibespace desktop command module tests
+        run: cargo test --manifest-path src-tauri/Cargo.toml --features desktop vibespace_commands
       - name: Sync app version (and enable signed updater artifacts when the signing key secret exists)
         run: node scripts/sync-version.mjs ${{ secrets.TAURI_SIGNING_PRIVATE_KEY != '' && '--updater' || '' }}
       - name: Build private unsigned Windows alpha
