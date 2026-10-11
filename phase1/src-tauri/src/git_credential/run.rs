@@ -61,7 +61,7 @@ pub fn run_git_with_lease(
     }
     let mut cmd = Command::new("git");
     cmd.env_clear();
-    for k in ["PATH", "HOME", "USERPROFILE", "HOMEDRIVE", "HOMEPATH", "SystemRoot", "TEMP", "TMP", "TMPDIR", "LANG", "XDG_CONFIG_HOME"] {
+    for k in ["PATH", "HOME", "USERPROFILE", "HOMEDRIVE", "HOMEPATH", "SystemRoot", "TEMP", "TMP", "TMPDIR", "LANG", "XDG_CONFIG_HOME", "SOMNIA_GIT_CRED_DIAG"] {
         if let Some(v) = std::env::var_os(k) {
             cmd.env(k, v);
         }

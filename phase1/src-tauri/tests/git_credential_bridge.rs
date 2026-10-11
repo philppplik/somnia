@@ -522,7 +522,11 @@ fn push_authenticates_for_receive_pack_with_explicit_refspec() {
     let work = repo(&remote.url);
     git(work.path(), &["-c", "user.name=T", "-c", "user.email=t@test.invalid", "commit", "-q", "--allow-empty", "-m", "x"]);
     let args: Vec<OsString> = ["push", "--porcelain", remote.url.as_str(), "refs/heads/main:refs/heads/main"].iter().map(|s| (*s).into()).collect();
+    let diag_file = work.path().join("helper-diag.log");
+    std::env::set_var("SOMNIA_GIT_CRED_DIAG", &diag_file);
     let out = run_git_with_lease(&lease, &remote, work.path(), &args, Duration::from_secs(30), None).unwrap();
+    std::env::remove_var("SOMNIA_GIT_CRED_DIAG");
+    eprintln!("helper diag:\n{}\nlease outcome: {:?}", std::fs::read_to_string(&diag_file).unwrap_or_default(), lease.outcome());
     // The fake only speaks upload-pack, so git fails after authenticating: what matters is who got credentials.
     assert_ne!(out.code, Some(0));
     let auth = f.authorized();
