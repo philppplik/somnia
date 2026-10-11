@@ -115,7 +115,7 @@ fn capabilities_are_explicit_about_vector_and_pause() {
     let caps = store.capabilities();
     assert!(caps.fts5);
     assert_eq!(caps.search_mode, SearchMode::Fts5);
-    assert_eq!(caps.vector.status, "unavailable");
+    assert_eq!(caps.vector.status, "opt_in");
     assert!(!caps.pause_resume);
     assert_eq!(caps.db_schema_version, SCHEMA_VERSION);
     let degraded = Store::open_in_memory(StoreOptions {

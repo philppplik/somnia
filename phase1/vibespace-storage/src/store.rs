@@ -120,6 +120,7 @@ impl Store {
     }
 
     pub fn open_in_memory(opts: StoreOptions) -> Result<Store> {
+        crate::vector::prepare_process();
         let conn = Connection::open_in_memory()?;
         Store::init(conn, opts, schema::MIGRATIONS)
     }
@@ -131,6 +132,7 @@ impl Store {
         opts: StoreOptions,
         migrations: &[Migration],
     ) -> Result<Store> {
+        crate::vector::prepare_process();
         let conn = Connection::open(path)?;
         Store::init(conn, opts, migrations)
     }
@@ -193,10 +195,9 @@ impl Store {
                 SearchMode::LikeFallback
             },
             vector: VectorCapability {
-                status: "unavailable".to_string(),
-                reason:
-                    "no embedding backend is compiled in; no model is ever downloaded automatically"
-                        .to_string(),
+                status: if crate::vector::compiled_in() { "opt_in" } else { "unavailable" }.to_string(),
+                reason: "vector search is off until the user opts in per space; no model is downloaded automatically"
+                    .to_string(),
             },
             pause_resume: self.enable_paused,
             limits: LimitsDto {

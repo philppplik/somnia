@@ -13,6 +13,8 @@ pub mod redact;
 pub mod schema;
 pub mod store;
 pub mod time;
+pub mod skills;
+pub mod vector;
 
 mod memory;
 mod runs;
@@ -21,6 +23,7 @@ mod review;
 pub use error::{Error, ErrorDto, Result};
 pub use model::*;
 pub use schema::{Migration, MIGRATIONS, SCHEMA_VERSION};
+pub use vector::{EmbedKind, Embedder, HybridHit, HybridMode, HybridResponse, VectorOptIn, VectorStatus};
 pub use store::{Clock, Recovery, Store, StoreOptions};
 
 /// Version of the serialized DTO shapes in this crate.
