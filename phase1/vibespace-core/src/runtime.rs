@@ -547,7 +547,16 @@ impl Runtime {
                 )?;
             }
             Usage(usage) => {
-                self.store.append_event(id,"agent.usage",&serde_json::json!({"inputTokens":usage.input_tokens,"outputTokens":usage.output_tokens}),None)?;
+                self.store.append_event(id,"agent.usage",&serde_json::json!({
+                    "inputTokens":usage.input_tokens,
+                    "outputTokens":usage.output_tokens,
+                    "cacheReadTokens":usage.cache_read_tokens,
+                    "cacheWriteTokens":usage.cache_write_tokens,
+                    "costUsd":usage.cost_usd,
+                    "costSource":usage.cost_source.map(|source| match source {
+                        engine::CostSource::ProviderReported => "provider_reported",
+                    }),
+                }),None)?;
             }
             ToolProposed(proposal) => {
                 self.store.append_event(
@@ -695,7 +704,8 @@ impl Runtime {
         let mut usage = w::Usage {
             input_tokens: 0,
             output_tokens: 0,
-            cached_tokens: 0,
+            cache_read_tokens: None,
+            cache_write_tokens: None,
             cost_usd: None,
             cost_source: None,
         };
@@ -715,6 +725,22 @@ impl Runtime {
                     usage.output_tokens = usage
                         .output_tokens
                         .saturating_add(event.payload["outputTokens"].as_u64().unwrap_or(0));
+                    // Only ever sums provider-reported values; absence stays None, never 0.
+                    if let Some(n) = event.payload["cacheReadTokens"].as_u64() {
+                        usage.cache_read_tokens =
+                            Some(usage.cache_read_tokens.unwrap_or(0).saturating_add(n));
+                    }
+                    if let Some(n) = event.payload["cacheWriteTokens"].as_u64() {
+                        usage.cache_write_tokens =
+                            Some(usage.cache_write_tokens.unwrap_or(0).saturating_add(n));
+                    }
+                    if let Some(c) = event.payload["costUsd"].as_f64() {
+                        usage.cost_usd = Some(usage.cost_usd.unwrap_or(0.0) + c);
+                    }
+                    if usage.cost_source.is_none() {
+                        usage.cost_source =
+                            event.payload["costSource"].as_str().map(str::to_string);
+                    }
                 }
                 _ => {}
             }

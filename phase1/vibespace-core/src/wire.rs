@@ -93,7 +93,9 @@ pub struct RunEvent {
 pub struct Usage {
     pub input_tokens: u64,
     pub output_tokens: u64,
-    pub cached_tokens: u64,
+    /// `None` = the provider did not report it (distinct from a reported 0).
+    pub cache_read_tokens: Option<u64>,
+    pub cache_write_tokens: Option<u64>,
     pub cost_usd: Option<f64>,
     pub cost_source: Option<String>,
 }
@@ -153,7 +155,8 @@ mod tests {
             let usage = Usage {
                 input_tokens: 1,
                 output_tokens: 2,
-                cached_tokens: 0,
+                cache_read_tokens: None,
+                cache_write_tokens: None,
                 cost_usd: cost,
                 cost_source: None,
             };
@@ -162,7 +165,8 @@ mod tests {
         let usage = Usage {
             input_tokens: 1,
             output_tokens: 2,
-            cached_tokens: 0,
+            cache_read_tokens: Some(600),
+            cache_write_tokens: None,
             cost_usd: Some(0.1),
             cost_source: Some("provider_reported".into()),
         };
