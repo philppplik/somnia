@@ -34,7 +34,7 @@ for(const theme of ['light','dark'])test(`chat and cursor ${theme}: mentions, re
  await page.evaluate(async()=>{const aw=await import('/node_modules/.vite/deps/y-protocols_awareness.js');const f=(window as any).__chatFixture;aw.applyAwarenessUpdate(f.project.awareness,aw.encodeAwarenessUpdate(f.remote,[f.remote.clientID]),'fixture');});
  await panel.locator('input[type=file]').setInputFiles({name:'hero-mobile.png',mimeType:'image/png',buffer:await page.evaluate(async()=>{const canvas=document.createElement('canvas');canvas.width=290;canvas.height=150;const ctx=canvas.getContext('2d')!;const gradient=ctx.createLinearGradient(0,0,290,150);gradient.addColorStop(0,'#002AFF');gradient.addColorStop(.5,'#EE00FF');gradient.addColorStop(1,'#FF001E');ctx.fillStyle=gradient;ctx.fillRect(0,0,290,150);const blob=await new Promise<Blob>(res=>canvas.toBlob(b=>res(b!)));return Array.from(new Uint8Array(await blob.arrayBuffer()));}).then(bytes=>Buffer.from(bytes))});await panel.getByRole('button',{name:'Send',exact:false}).click();await expect(panel.getByRole('img',{name:'hero-mobile.png'})).toBeVisible();
  await page.waitForTimeout(250);await page.screenshot({path:`test-results/session-chat-${theme}.png`});
- await page.evaluate(async()=>{const f=(window as any).__chatFixture;f.chat.destroy();const {setChatSession}=await import('/src/lib/collab/chatSession.ts');setChatSession(null);f.client.leave();f.remote.destroy();f.second.destroy();f.project.destroy();});await expect(page.getByTestId('chat-rail-open')).toHaveCount(0);await expect(page.getByRole('tab',{name:'Agent'})).toHaveAttribute('aria-selected','true');
+ await page.evaluate(async()=>{const f=(window as any).__chatFixture;f.chat.destroy();const {setChatSession}=await import('/src/lib/collab/chatSession.ts');setChatSession(null);f.client.leave();f.remote.destroy();f.second.destroy();f.project.destroy();});await expect(page.getByTestId('chat-rail-open')).toHaveCount(0);await expect(page.getByRole('button',{name:'Open Somnia Agent',exact:true})).toHaveAttribute('aria-pressed','true');
 });
 test('cursor activity fades, hover restores, Never and other-file scope',async({page})=>{
  await session(page);const badge=page.locator('.cm-ySelectionInfo',{hasText:'Mara'}).first();await expect(badge).toBeAttached();await expect(badge).toHaveCSS('opacity','1');await page.waitForTimeout(4400);await expect(badge).toHaveCSS('opacity','0');await badge.locator('..').hover();await expect(badge).toHaveCSS('opacity','1');
@@ -65,16 +65,16 @@ test('badge Settings segments, never hover, text i18n and no-focus-stealing shor
  await page.keyboard.press('Escape');await page.evaluate(async()=>{const {setLocale}=await import('/src/lib/i18n.ts');setLocale('de');});await expect(page.getByRole('region',{name:'Session-Chat'}).getByText('Nur in dieser Session')).toBeVisible();await expect(page.getByRole('button',{name:'Senden',exact:false})).toBeVisible();
 });
 
-test('chat rail button: session-only, toggles, 9+ badge, AI click switches tab, shortcut',async({page})=>{
+test('chat rail button: session-only, toggles, 9+ badge, AI rail click switches panel, shortcut',async({page})=>{
  await page.goto('/');await expect(page.getByTestId('chat-rail-open')).toHaveCount(0);
- await session(page);const chatBtn=page.getByTestId('chat-rail-open'),ai=page.getByRole('button',{name:'Open Somnia Agent'});
+ await session(page);await expect(page.locator('.communication-tabs')).toHaveCount(0);const chatBtn=page.getByTestId('chat-rail-open'),ai=page.getByRole('button',{name:'Open Somnia Agent'});
  await expect(chatBtn).toBeVisible();await expect(page.locator('.collab-chat-open')).toHaveCount(0);await expect(chatBtn).toHaveAttribute('aria-pressed','false');
  await page.evaluate(()=>{const f=(window as any).__chatFixture;f.chat.unread=12;f.chat.changed();});
  await expect(page.locator('.collab-unread')).toHaveText('9+');
  await chatBtn.click();await expect(page.getByRole('region',{name:'Session chat'})).toBeVisible();await expect(chatBtn).toHaveAttribute('aria-pressed','true');await expect(page.locator('.collab-unread')).toHaveCount(0);
- await ai.click();await expect(page.locator('.communication-panel')).toBeVisible();await expect(page.getByRole('tab',{name:'Agent'})).toHaveAttribute('aria-selected','true');await expect(chatBtn).toHaveAttribute('aria-pressed','false');
+ await ai.click();await expect(page.locator('.communication-panel')).toBeVisible();await expect(page.getByRole('button',{name:'Open Somnia Agent',exact:true})).toHaveAttribute('aria-pressed','true');await expect(chatBtn).toHaveAttribute('aria-pressed','false');
  await chatBtn.click();await expect(chatBtn).toHaveAttribute('aria-pressed','true');await chatBtn.click();await expect(page.locator('.communication-panel')).toHaveCount(0);
  await page.keyboard.press('Control+Alt+c');await expect(page.locator('.communication-panel')).toBeVisible();await expect(chatBtn).toHaveAttribute('aria-pressed','true');
  await page.evaluate(async()=>{const {setChatSession}=await import('/src/lib/collab/chatSession.ts');setChatSession(null);});
- await expect(chatBtn).toHaveCount(0);await expect(page.getByRole('tab',{name:'Agent'})).toHaveAttribute('aria-selected','true');
+ await expect(chatBtn).toHaveCount(0);await expect(page.getByRole('button',{name:'Open Somnia Agent',exact:true})).toHaveAttribute('aria-pressed','true');
 });
