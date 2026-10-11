@@ -564,6 +564,9 @@ impl Vault {
                 if Digest::of(&v) != e.digest {
                     return Err(Error::StaleReview(c.path.clone()));
                 }
+                // Keep the reviewed bytes in immutable verified storage so native
+                // projections never reopen mutable paths to display proposed text.
+                self.store.put_bytes(&v)?;
                 v
             }
             None => Vec::new(),

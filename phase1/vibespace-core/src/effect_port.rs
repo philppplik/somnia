@@ -63,6 +63,7 @@ pub struct ScopedEffectPort {
     executor: Arc<FileExecutor>,
     agent: AgentHandle,
     authorized: Mutex<HashMap<String, Authorized>>,
+    on_pending: Option<Arc<dyn Fn() + Send + Sync>>,
 }
 impl ScopedEffectPort {
     pub fn new(
@@ -77,7 +78,12 @@ impl ScopedEffectPort {
             executor,
             agent,
             authorized: Mutex::new(HashMap::new()),
+            on_pending: None,
         }
+    }
+    pub fn with_pending_observer(mut self, observer: Arc<dyn Fn() + Send + Sync>) -> Self {
+        self.on_pending = Some(observer);
+        self
     }
     fn check(&self, run: &str, scope: &WorkspaceScope) -> Result<(), Failure> {
         if run != self.run_id || scope.root() != self.root {
@@ -115,13 +121,18 @@ impl EffectPort for ScopedEffectPort {
         let token = match proposed {
             ProposeResult::Denied(_) => return Ok(Decision::Deny),
             ProposeResult::Approved { token, .. } => token,
-            ProposeResult::Pending(id) => loop {
-                match self.agent.poll(&id).map_err(|_| Failure::Policy)? {
-                    PollResult::Approved { token, .. } => break token,
-                    PollResult::Denied(_) | PollResult::Gone => return Ok(Decision::Deny),
-                    PollResult::Pending => tokio::time::sleep(Duration::from_millis(25)).await,
+            ProposeResult::Pending(id) => {
+                if let Some(observer) = &self.on_pending {
+                    observer();
                 }
-            },
+                loop {
+                    match self.agent.poll(&id).map_err(|_| Failure::Policy)? {
+                        PollResult::Approved { token, .. } => break token,
+                        PollResult::Denied(_) | PollResult::Gone => return Ok(Decision::Deny),
+                        PollResult::Pending => tokio::time::sleep(Duration::from_millis(25)).await,
+                    }
+                }
+            }
         };
         let mut granted = self.authorized.lock().map_err(|_| Failure::Policy)?;
         // Exactly one outstanding proposal per call ID. Never overwrite approval.

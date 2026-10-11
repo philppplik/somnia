@@ -134,3 +134,20 @@ broker run as well as the SDK handle before reporting a stopped native run.
 Four Linux composition tests verify denied-before-effect, argument substitution,
 one-shot reads/writes, cancellation before commit, and protected/unknown tools.
 The full native orchestrator and real model remain separate gates.
+
+## Runtime composition evidence and limits
+
+The single native Runtime composes storage, checkpoints, goose StateMachine,
+scoped memory, held broker consent, confined effects, full run projections and
+explicit selected-file Apply/Discard/Restore. Native folder anchors persist in
+schema v2. It recovers artifact journals before starting and crashes interrupted
+runs without replay. Its ModelTransport argument must come from native model
+settings resolution, never from the renderer. File tools remain unavailable on
+Windows until the native Windows test gate is met.
+
+Two deterministic-provider tests run the actual SDK and native services through
+checkpoint/memory/consent/edit/review/apply/undo/restart and concurrent-user-edit
+conflict/discard. These are composition tests, not a real Qwen model evaluation
+or a native Tauri UI test. Pause/resume, schedules, shell, network tools and MCP
+are not exposed by this runtime slice. Runtime ownership must be exclusive;
+additional database handles must not trigger AllActive recovery.
