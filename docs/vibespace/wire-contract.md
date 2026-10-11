@@ -111,3 +111,12 @@ Review files also carry bounded currentText/null, currentBytes and conflict for 
 current-project versus proposed comparison. Binary contents stay out of text
 fields. Selected files are the initial alpha unit; selected-hunk support and
 preview URLs require actual native implementation before controls are enabled.
+
+## Draft studios and spaces
+
+`listStudios(spaceId)` returns normalized `StudioSummary[]`. `createStudio`
+returns a StudioSummary and the frontend reconciles with listStudios. A fresh
+studio has latestRunId null, not a fictitious pending run snapshot. canStart is
+computed by the native composed core, not inferred by the frontend from a goal.
+SpaceSummary holds spaceId, name, scopeLabel, autonomy and studioCount. Initial
+autonomy is ask_for_writes. scopeLabel is display-only, never an access grant.

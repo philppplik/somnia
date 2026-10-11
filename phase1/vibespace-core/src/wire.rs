@@ -360,3 +360,25 @@ pub struct StartRun {
     pub request_id: String,
     pub retry_of_run_id: Option<String>,
 }
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct StudioSummary {
+    pub studio_id: String,
+    pub space_id: String,
+    pub goal: String,
+    pub model: ModelReference,
+    pub can_start: bool,
+    pub latest_run_id: Option<String>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct SpaceSummary {
+    pub space_id: String,
+    pub name: String,
+    /// Display only; never an access grant or an executor root.
+    pub scope_label: String,
+    pub autonomy: String,
+    pub studio_count: u64,
+}
