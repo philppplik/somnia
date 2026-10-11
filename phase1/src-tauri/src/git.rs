@@ -1435,7 +1435,7 @@ pub fn diff_file(project_root: &Path, path: &str, base: DiffBase, target: DiffTa
         args.push(repo_path.clone().into());
         let refs: Vec<&OsStr> = args.iter().map(|a| a.as_os_str()).collect();
         let out = run_git(&root, &refs, Mode::Read, READ_TIMEOUT, None, &[])?;
-        let mut capped_out = out.capped;
+        let capped_out = out.capped;
         let mut text = String::from_utf8_lossy(&out.stdout).into_owned();
         if out.code == Some(0) && text.is_empty() && after.is_some() && before.is_none() {
             // Untracked file: synthesize the add diff in-process. `git diff
