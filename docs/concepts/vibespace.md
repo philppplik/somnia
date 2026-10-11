@@ -1,6 +1,6 @@
 # Vibe Space - concept for Somnia 12.2.0 ("Vibe Studio")
 
-Status: All decisions D1-D12 made and locked by Philipp, incl. Linux tier plan (2026-10-11). Skills library (4.4) added 2026-10-11 on Philipp's GO. 
+Status: All decisions D1-D12 made and locked by Philipp, incl. Linux tier plan (2026-10-11). Skills library (4.4) added and its decisions locked 2026-10-11. 
 Target path when approved: `docs/concepts/vibespace.md`
 Basis: Phase 1 decisions plus 20 Phase 2 research reports (snapshot 2026-10-10).
 Naming (fixed with Philipp): **Vibe Space** = the container. **Studios** = sessions inside it.
@@ -205,7 +205,10 @@ Builds on A11. A skill is a folder with a `SKILL.md` (YAML frontmatter + Markdow
 - OWASP Agentic Skills Top 10, AST01 malicious skills hide payloads in SKILL.md prose as well as scripts (https://owasp.org/www-project-agentic-skills-top-10/ast01.html).
 - Consequence: popularity rankings (installs, stars) are not trust signals in the Somnia UI. Do not sort the default view by installs alone.
 
-**Open for Philipp (not blocking):** (a) default skills source list: GitHub + skills.sh read-only, ok? (b) should Somnia ship a small set of first-party skills per studio (Code, Documents, Slides...)? recommend yes, as the "Verified" seed. (c) Do skills run in scheduled/background runs? recommend yes for instruction-only skills, no for script-bearing skills without a per-schedule opt-in.
+**Decided (Philipp, 2026-10-11) - LOCKED:**
+- (a) Default skill sources: GitHub repos plus skills.sh as a read-only discovery index.
+- (b) Somnia ships first-party skills per studio (Code, Documents, Slides, ...) as the "Verified" seed.
+- (c) Scheduled/background runs: only instruction-only skills run by default. Script-bearing skills need an explicit opt-in per schedule.
 
 Not verified: skills.sh's own listing/review process and API (no documented API read), licence per skill in the wild, how many Agent Skills products really implement the standard.
 
