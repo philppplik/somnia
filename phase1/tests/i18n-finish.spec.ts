@@ -52,7 +52,7 @@ for(const tag of ['en','de','es','fr','pt-BR']){
   await dialog.getByRole('button',{name:t('set.section.code'),exact:true}).click();
   await expect(dialog.getByLabel(t('set.ce.syntax')).locator('option').filter({hasText:'User theme'})).toHaveText('User theme '+t('set.ce.syntax.ext'));
   await page.keyboard.press('Escape');
-  await page.getByRole('button',{name:t('rest.iconRail.extensions'),exact:true}).click();
+  await page.getByRole('toolbar',{name:'Sidebar panels'}).getByRole('button',{name:t('rest.iconRail.extensions'),exact:true}).click();
   fail=true;await popup.getByRole('tab',{name:t('ext.nav.browse'),exact:true}).click();
   await expect(popup.getByRole('heading',{name:t('store.unavailable.rateLimited'),exact:true})).toBeVisible();
   await expect(popup.getByRole('button',{name:t('store.retry'),exact:true})).toBeVisible();

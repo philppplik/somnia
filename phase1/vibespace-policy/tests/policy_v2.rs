@@ -391,15 +391,22 @@ fn linux_seccomp_denylist_blocks_listed_syscall() {
     };
     // statx is normally allowed; denying it must break a stat-using command visibly.
     let launcher = base.with_extra_denied(vec![libc::SYS_statx as u32]);
-    let px = ProcessExecutor::attach_with_launcher(
+    let px = match ProcessExecutor::attach_with_launcher(
         &b.agent,
         run.clone(),
         scope.clone(),
         ExecMode::Sandboxed,
         Box::new(launcher),
         ProcessLimits::default(),
-    )
-    .unwrap();
+    ) {
+        Ok(px) => px,
+        // Same capability detection as the other real-bwrap tests (e.g. CI runners
+        // restricting netns/loopback setup): skip with a visible reason.
+        Err(e) => {
+            eprintln!("SKIP: linux sandbox capability probe failed on this host: {e}");
+            return;
+        }
+    };
     let cmd = Command::new("/usr/bin/stat", ["/proc/self/status"]).unwrap();
     let ProposeResult::Pending(id) = px.propose_exec(&cmd, "stat", Origin::Model).unwrap() else {
         panic!()
