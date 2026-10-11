@@ -120,3 +120,17 @@ studio has latestRunId null, not a fictitious pending run snapshot. canStart is
 computed by the native composed core, not inferred by the frontend from a goal.
 SpaceSummary holds spaceId, name, scopeLabel, autonomy and studioCount. Initial
 autonomy is ask_for_writes. scopeLabel is display-only, never an access grant.
+
+## Engine-to-policy composition
+
+`ScopedEffectPort` binds one SDK run and its isolated root to the native
+FileExecutor. Only read_file/write_file/delete_file with strictly parsed argument
+objects are installed. Approvals stay in a private map and bind the exact tool
+proposal; execute consumes them once, rechecks the run/root and delegates all IO
+to the policy executor. There are no detached file tasks, raw std::fs tools,
+shell/MCP/network effects or model-visible UiHandle. Cancellation must revoke the
+broker run as well as the SDK handle before reporting a stopped native run.
+
+Four Linux composition tests verify denied-before-effect, argument substitution,
+one-shot reads/writes, cancellation before commit, and protected/unknown tools.
+The full native orchestrator and real model remain separate gates.
