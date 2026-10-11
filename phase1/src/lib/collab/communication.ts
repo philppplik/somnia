@@ -1,11 +1,11 @@
 import { useSyncExternalStore } from "react";
 import { getState, patchState } from "../../store/appStore";
 import { getChatSession, subscribeChat } from "./chatSession";
-let tab: "agent" | "chat" = "agent";
+let tab: "agent" | "chat" | "vibespace" = "agent";
 const listeners = new Set<() => void>();
-export function selectCommunication(next: "agent" | "chat") {
+export function selectCommunication(next: "agent" | "chat" | "vibespace") {
   tab = next;
-  if(next==='agent')getChatSession()?.setOpen(false);
+  if(next!=='chat')getChatSession()?.setOpen(false);
   listeners.forEach((f) => f());
 }
 export function openSessionChat() {

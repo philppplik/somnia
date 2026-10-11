@@ -108,3 +108,13 @@ test('a new session while the chat tab is open keeps the chat tab', () => {
   assert.equal(getState().agentOpen, true);
   reset();
 });
+
+test('Vibe Space tab hides chat without replacing the session or agent tab', () => {
+  reset();
+  const {stub,setOpenCalls}=stubChat();setChatSession(stub);
+  selectCommunication('chat');selectCommunication('vibespace');
+  assert.equal(getCommunicationTab(),'vibespace');
+  assert.equal(setOpenCalls.at(-1),false);
+  selectCommunication('agent');assert.equal(getCommunicationTab(),'agent');
+  reset();
+});
