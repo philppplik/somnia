@@ -384,7 +384,7 @@ pub fn local_excluded(root: &Path) -> RResult<Vec<String>> {
 
 #[cfg(test)]
 mod tests {
-    use super::remote::push::{PlanCommit, PushRelation, PushStatus};
+    use crate::git::remote::push::{PlanCommit, PushRelation, PushStatus};
     use super::*;
 
     fn target() -> PublicationTarget {
@@ -527,7 +527,7 @@ mod tests {
             outcome_view(
                 &PushResult {
                     outcome: PushOutcome::Uncertain { reason: RemoteErrorCode::Offline, message: "m".into() },
-                    job_outcome: super::remote::JobOutcome::Uncertain,
+                    job_outcome: crate::git::remote::JobOutcome::Uncertain,
                     local_sha: String::new(),
                     target_ref: String::new(),
                     remote_url: String::new(),
@@ -551,7 +551,7 @@ mod tests {
     fn push_result(outcome: PushOutcome) -> PushResult {
         PushResult {
             outcome,
-            job_outcome: super::remote::JobOutcome::Failed,
+            job_outcome: crate::git::remote::JobOutcome::Failed,
             local_sha: "a".repeat(40),
             target_ref: "refs/heads/main".into(),
             remote_url: "https://github.com/philppplik/demo.git".into(),
