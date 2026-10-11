@@ -75,3 +75,20 @@ are rejected. An unknown or cross-window token does not consume the real grant.
 After consumption, the caller uses the selected folder only as a scope anchor;
 all file operations still require the policy/checkpoint confinement mechanism.
 Canonicalization is not a sandbox or a race-free directory handle.
+
+## Full run projection
+
+`run_snapshot` carries the entire `RunSnapshot` defined in `wire.rs`. The full
+read reply is `{protocolVersion, sequence, snapshot}` using the same persisted
+sequence as the event envelope. Nested DTOs for messages, consent, checkpoints,
+review files/checks, failures and capabilities are defined in the same module.
+Absent values are null; empty collections are arrays. No guessed state is added.
+
+P5 uses injected `readSnapshot` and `reviewRequest` bindings. The integrator maps
+the actual package APIs to these projections, not a raw SDK or storage response.
+
+Reject incompatible versions and mismatched envelope/payload run IDs. Ignore
+sequence values at or below the last accepted value. On a gap, suspend effect
+controls and reconcile with `readSnapshot`; do not apply partial events blindly.
+An initial/reconciliation read only replaces state if its sequence is at least
+the last accepted value. Fixture mode cannot substitute for failed native reads.

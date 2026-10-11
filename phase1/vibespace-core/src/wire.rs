@@ -175,3 +175,174 @@ mod tests {
         assert!(serde_json::from_str::<ConsentDecision>(value).is_err());
     }
 }
+
+/// Full immutable projection assembled from durable native state.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct RunSnapshot {
+    pub run_id: String,
+    pub studio_id: String,
+    pub space_id: String,
+    pub execution_state: ExecutionState,
+    pub review_state: ReviewState,
+    pub goal: String,
+    pub model: ModelReference,
+    pub last_step: Option<String>,
+    pub started_at_utc: Option<String>,
+    pub finished_at_utc: Option<String>,
+    pub elapsed_ms: u64,
+    pub usage: Option<Usage>,
+    pub messages: Vec<TranscriptMessage>,
+    pub pending_consents: Vec<PendingConsent>,
+    pub checkpoints: Vec<CheckpointSummary>,
+    pub review: Option<ReviewProjection>,
+    pub failure: Option<FailureSummary>,
+    pub capabilities: RunCapabilities,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct SnapshotReply {
+    pub protocol_version: u32,
+    pub sequence: u64,
+    pub snapshot: RunSnapshot,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct TranscriptMessage {
+    pub id: String,
+    pub role: String,
+    pub text: String,
+    pub timestamp_utc: String,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct PendingConsent {
+    pub request_id: String,
+    pub action: String,
+    pub scope: String,
+    pub reason: String,
+    pub allow_for_run: bool,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct CheckpointSummary {
+    pub checkpoint_id: String,
+    pub label: String,
+    pub created_at_utc: String,
+    pub file_count: u64,
+    pub restorable: bool,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct ReviewProjection {
+    pub revision: String,
+    pub summary: String,
+    pub files: Vec<ReviewFile>,
+    pub conflicts: Vec<String>,
+    pub checks: Vec<CheckSummary>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct ReviewFile {
+    pub path: String,
+    /// added/modified/deleted; binary content is never decoded as text.
+    pub change: String,
+    pub binary: bool,
+    pub before_text: Option<String>,
+    pub after_text: Option<String>,
+    pub before_bytes: u64,
+    pub after_bytes: u64,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct CheckSummary {
+    pub name: String,
+    /// passed/failed/not_run. Skipped checks are never success.
+    pub status: String,
+    pub detail: Option<String>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct FailureSummary {
+    pub code: String,
+    pub message: String,
+    pub retryable: bool,
+}
+
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct RunCapabilities {
+    pub stop: bool,
+    pub steer: bool,
+    pub pause: bool,
+    pub resume: bool,
+    pub apply: bool,
+    pub restore: bool,
+}
+
+impl SnapshotReply {
+    /// A snapshot event and a read share the exact same projection and sequence.
+    pub fn into_event(self, timestamp_utc: String) -> Result<RunEvent, serde_json::Error> {
+        Ok(RunEvent {
+            protocol_version: self.protocol_version,
+            run_id: self.snapshot.run_id.clone(),
+            sequence: self.sequence,
+            timestamp_utc,
+            kind: "run_snapshot".into(),
+            payload: serde_json::to_value(self.snapshot)?,
+        })
+    }
+}
+
+#[cfg(test)]
+mod snapshot_tests {
+    use super::*;
+    #[test]
+    fn full_read_and_event_use_same_projection() {
+        let snapshot = RunSnapshot {
+            run_id: "r".into(),
+            studio_id: "s".into(),
+            space_id: "p".into(),
+            execution_state: ExecutionState::Running,
+            review_state: ReviewState::None,
+            goal: "Edit".into(),
+            model: ModelReference {
+                provider: "ollama".into(),
+                model: "qwen3.5:9b".into(),
+                locality: ModelLocality::Local,
+            },
+            last_step: None,
+            started_at_utc: None,
+            finished_at_utc: None,
+            elapsed_ms: 0,
+            usage: None,
+            messages: vec![],
+            pending_consents: vec![],
+            checkpoints: vec![],
+            review: None,
+            failure: None,
+            capabilities: RunCapabilities::default(),
+        };
+        let reply = SnapshotReply {
+            protocol_version: PROTOCOL_VERSION,
+            sequence: 7,
+            snapshot,
+        };
+        let read = serde_json::to_value(&reply).unwrap();
+        let event = reply.into_event("2026-10-11T11:05:00Z".into()).unwrap();
+        assert_eq!(event.sequence, 7);
+        assert_eq!(event.kind, "run_snapshot");
+        assert_eq!(event.payload, read["snapshot"]);
+        assert_eq!(event.payload["runId"], event.run_id);
+        assert_eq!(event.payload["review"], serde_json::Value::Null);
+        assert_eq!(event.payload["capabilities"]["pause"], false);
+    }
+}
