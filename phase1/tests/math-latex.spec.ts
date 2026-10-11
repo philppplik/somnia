@@ -26,7 +26,7 @@ test('formula errors are isolated, listed in Problems and shown in the status ba
  expect(await page.evaluate(()=>(window as any).__xss)).toBeUndefined();
  await expect(page.getByTestId('math-pill-errors')).toContainText('3');
  await openProblems(page);
- const panel=page.getByTestId('problems-panel');await expect(panel).toContainText('Math:');await expect(panel).toContainText('disabled in Somnia (security)');await expect(panel.locator('li')).toHaveCount(3);
+ const panel=page.getByTestId('problems-panel');await expect(panel).toContainText('Math:');await expect(panel).toContainText('disabled in Somnia (security)');await expect(panel.locator('li',{hasText:'Math:'})).toHaveCount(3);
  await panel.locator('li button').first().click();
  await page.screenshot({path:'test-results/math-errors.png'});});
 test('unclosed $$ only warns and keeps the rest of the page',async({page})=>{
