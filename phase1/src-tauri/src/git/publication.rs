@@ -384,7 +384,8 @@ pub fn local_excluded(root: &Path) -> RResult<Vec<String>> {
 
 #[cfg(test)]
 mod tests {
-    use crate::git::remote::push::{PlanCommit, PushRelation, PushStatus};
+    use crate::git::remote::push::{PushRelation, PushStatus};
+    use crate::git::remote::PlanCommit;
     use super::*;
 
     fn target() -> PublicationTarget {
