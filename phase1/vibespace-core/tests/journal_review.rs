@@ -36,7 +36,6 @@ struct Fixture {
     data: tempfile::TempDir,
     project: tempfile::TempDir,
     rt: Arc<Runtime>,
-    space: SpaceSummary,
     studio: StudioSummary,
 }
 
@@ -70,7 +69,6 @@ fn setup() -> Fixture {
         data,
         project,
         rt,
-        space,
         studio,
     }
 }
