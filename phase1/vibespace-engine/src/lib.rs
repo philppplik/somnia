@@ -1,6 +1,9 @@
 //! Standalone goose-agent compatibility spike. No desktop wiring or built-in tools.
 mod goose;
 mod transport;
+pub mod evals;
+pub mod inventory;
+pub mod provider;
 use async_trait::async_trait;
 pub use goose::GooseBackend;
 use serde::{Deserialize, Serialize};

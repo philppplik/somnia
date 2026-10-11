@@ -8,6 +8,9 @@ use std::{fmt, time::Duration};
 /// Deliberately not Clone/Serialize. Never logged; Debug is redacted.
 pub struct Secret(String);
 impl Secret {
+    pub(crate) fn expose(&self) -> String {
+        self.0.clone()
+    }
     pub fn new(value: String) -> Self {
         Self(value)
     }
@@ -111,91 +114,96 @@ impl ModelTransport for HttpModel {
         }
         let value: serde_json::Value =
             serde_json::from_slice(&bytes).map_err(|_| Failure::Model)?;
-        let message = value.pointer("/choices/0/message").ok_or(Failure::Model)?;
-        if !message.is_object() {
-            return Err(Failure::Model);
-        }
-        if message
-            .get("content")
-            .is_some_and(|content| !content.is_null() && !content.is_string())
-            || message
-                .get("tool_calls")
-                .is_some_and(|calls| !calls.is_null() && !calls.is_array())
-        {
-            return Err(Failure::Model);
-        }
-        let text = message
-            .get("content")
-            .and_then(|v| v.as_str())
-            .unwrap_or("")
-            .to_string();
-        let calls = message.get("tool_calls").and_then(|v| v.as_array());
-        let tool = if let Some(calls) = calls.filter(|v| !v.is_empty()) {
-            if !self.propose || calls.len() != 1 {
-                return Err(Failure::Model);
-            }
-            let call = &calls[0];
-            if call.pointer("/function/name").and_then(|v| v.as_str())
-                != Some("somnia_propose_effect")
-            {
-                return Err(Failure::Model);
-            }
-            let args: serde_json::Value = serde_json::from_str(
-                call.pointer("/function/arguments")
-                    .and_then(|v| v.as_str())
-                    .ok_or(Failure::Model)?,
-            )
-            .map_err(|_| Failure::Model)?;
-            let object = args.as_object().ok_or(Failure::Model)?;
-            if object.len() != 2
-                || !object.contains_key("name")
-                || !object.contains_key("arguments")
-            {
-                return Err(Failure::Model);
-            }
-            Some(ToolProposal {
-                call_id: call
-                    .get("id")
-                    .and_then(|v| v.as_str())
-                    .ok_or(Failure::Model)?
-                    .into(),
-                name: args
-                    .get("name")
-                    .and_then(|v| v.as_str())
-                    .ok_or(Failure::Model)?
-                    .into(),
-                arguments: args
-                    .get("arguments")
-                    .filter(|v| v.is_object())
-                    .ok_or(Failure::Model)?
-                    .clone(),
-            })
-        } else {
-            None
-        };
-        // A malformed or empty response cannot become a successful agent run.
-        if tool.is_none() && text.trim().is_empty() {
-            return Err(Failure::Model);
-        }
-        if tool
-            .as_ref()
-            .is_some_and(|tool| tool.call_id.is_empty() || tool.name.is_empty())
-        {
-            return Err(Failure::Model);
-        }
-        Ok(ModelReply {
-            message: text,
-            tool,
-            usage: Usage {
-                input_tokens: value
-                    .pointer("/usage/prompt_tokens")
-                    .and_then(|v| v.as_u64())
-                    .unwrap_or(0),
-                output_tokens: value
-                    .pointer("/usage/completion_tokens")
-                    .and_then(|v| v.as_u64())
-                    .unwrap_or(0),
-            },
-        })
+        parse_openai_reply(&value, self.propose)
     }
+}
+
+/// Shared OpenAI-compatible reply parser (also used by provider adapters).
+pub(crate) fn parse_openai_reply(value: &serde_json::Value, propose: bool) -> Result<ModelReply, Failure> {
+    let message = value.pointer("/choices/0/message").ok_or(Failure::Model)?;
+    if !message.is_object() {
+        return Err(Failure::Model);
+    }
+    if message
+        .get("content")
+        .is_some_and(|content| !content.is_null() && !content.is_string())
+        || message
+            .get("tool_calls")
+            .is_some_and(|calls| !calls.is_null() && !calls.is_array())
+    {
+        return Err(Failure::Model);
+    }
+    let text = message
+        .get("content")
+        .and_then(|v| v.as_str())
+        .unwrap_or("")
+        .to_string();
+    let calls = message.get("tool_calls").and_then(|v| v.as_array());
+    let tool = if let Some(calls) = calls.filter(|v| !v.is_empty()) {
+        if !propose || calls.len() != 1 {
+            return Err(Failure::Model);
+        }
+        let call = &calls[0];
+        if call.pointer("/function/name").and_then(|v| v.as_str())
+            != Some("somnia_propose_effect")
+        {
+            return Err(Failure::Model);
+        }
+        let args: serde_json::Value = serde_json::from_str(
+            call.pointer("/function/arguments")
+                .and_then(|v| v.as_str())
+                .ok_or(Failure::Model)?,
+        )
+        .map_err(|_| Failure::Model)?;
+        let object = args.as_object().ok_or(Failure::Model)?;
+        if object.len() != 2
+            || !object.contains_key("name")
+            || !object.contains_key("arguments")
+        {
+            return Err(Failure::Model);
+        }
+        Some(ToolProposal {
+            call_id: call
+                .get("id")
+                .and_then(|v| v.as_str())
+                .ok_or(Failure::Model)?
+                .into(),
+            name: args
+                .get("name")
+                .and_then(|v| v.as_str())
+                .ok_or(Failure::Model)?
+                .into(),
+            arguments: args
+                .get("arguments")
+                .filter(|v| v.is_object())
+                .ok_or(Failure::Model)?
+                .clone(),
+        })
+    } else {
+        None
+    };
+    // A malformed or empty response cannot become a successful agent run.
+    if tool.is_none() && text.trim().is_empty() {
+        return Err(Failure::Model);
+    }
+    if tool
+        .as_ref()
+        .is_some_and(|tool| tool.call_id.is_empty() || tool.name.is_empty())
+    {
+        return Err(Failure::Model);
+    }
+    Ok(ModelReply {
+        message: text,
+        tool,
+        usage: Usage {
+            input_tokens: value
+                .pointer("/usage/prompt_tokens")
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0),
+            output_tokens: value
+                .pointer("/usage/completion_tokens")
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0),
+        },
+    })
 }
