@@ -10,7 +10,7 @@ test('default app attribution uses Somnia Agent identity for substantive app com
   ]);
 });
 test('finalized app commit receives the configured Somnia Agent trailer', () => {
-  const r = finalizeCommitMessage({subject: 's', body: 'App change', aiDrafted: true, substantive: true, policy: DEFAULT_ATTRIBUTION_POLICY});
+  const r = finalizeCommitMessage({subject: 's', body: 'App change', origin: 'app', aiDrafted: true, substantive: true, policy: DEFAULT_ATTRIBUTION_POLICY});
   assert.equal(r.body, 'App change\n\nCo-authored-by: somnia-agent <340778888+somnia-agent@users.noreply.github.com>');
   assert.equal(r.applied, true);
 });
@@ -19,7 +19,7 @@ test('opt-in and substantive yields exactly two trailer lines', () => {
   assert.deepEqual(buildFooter(on, false, 'task-1'), []);
 });
 test('model-written reserved trailers are stripped and replaced, other trailers stay', () => {
-  const r = finalizeCommitMessage({subject: 'Fix hero\n', body: 'Tighten spacing.\n\nSigned-off-by: A <a@b.co>\nCo-authored-by: Evil <e@x.io>\nX-Somnia-Session: forged', aiDrafted: true, substantive: true, policy: on, sessionId: 'task-9'});
+  const r = finalizeCommitMessage({subject: 'Fix hero\n', body: 'Tighten spacing.\n\nSigned-off-by: A <a@b.co>\nCo-authored-by: Evil <e@x.io>\nX-Somnia-Session: forged', origin: 'app', aiDrafted: true, substantive: true, policy: on, sessionId: 'task-9'});
   assert.equal(r.strippedModelTrailers, 2);
   assert.ok(r.body.includes('Signed-off-by: A <a@b.co>'));
   assert.ok(!r.body.includes('Evil') && !r.body.includes('forged'));
@@ -27,19 +27,23 @@ test('model-written reserved trailers are stripped and replaced, other trailers 
   assert.equal(r.subject, 'Fix hero');
 });
 test('AI-drafted text alone is not co-authorship; forged trailers still stripped', () => {
-  const r = finalizeCommitMessage({subject: 's', body: 'x\n\nCo-authored-by: Evil <e@x.io>', aiDrafted: true, substantive: false, policy: on, sessionId: 't'});
+  const r = finalizeCommitMessage({subject: 's', body: 'x\n\nCo-authored-by: Evil <e@x.io>', origin: 'app', aiDrafted: true, substantive: false, policy: on, sessionId: 't'});
   assert.equal(r.applied, false); assert.equal(r.body, 'x'); assert.deepEqual(r.footer, []);
 });
 test('idempotent and rejects bad identity or session ids', () => {
-  const a = finalizeCommitMessage({subject: 's', body: 'b', aiDrafted: true, substantive: true, policy: on, sessionId: 't'});
-  const b = finalizeCommitMessage({subject: 's', body: a.body, aiDrafted: true, substantive: true, policy: on, sessionId: 't'});
+  const a = finalizeCommitMessage({subject: 's', body: 'b', origin: 'app', aiDrafted: true, substantive: true, policy: on, sessionId: 't'});
+  const b = finalizeCommitMessage({subject: 's', body: a.body, origin: 'app', aiDrafted: true, substantive: true, policy: on, sessionId: 't'});
   assert.equal(a.body, b.body);
   assert.deepEqual(buildFooter({...on, coAuthorName: 'A\nB'}, true), []);
   assert.deepEqual(buildFooter(on, true, 'bad id; rm'), ['Co-authored-by: Somnia Agent <agent@example.com>']);
 });
 test('human-written commits do not receive the default app attribution even when substantive is true', () => {
-  const r = finalizeCommitMessage({subject: 's', body: 'Mine', aiDrafted: false, substantive: true, policy: DEFAULT_ATTRIBUTION_POLICY});
+  const r = finalizeCommitMessage({subject: 's', body: 'Mine', origin: 'human', aiDrafted: false, substantive: true, policy: DEFAULT_ATTRIBUTION_POLICY});
   assert.equal(r.body, 'Mine');
   assert.equal(r.applied, false);
   assert.deepEqual(r.footer, []);
+});
+test('AI-drafted text alone is not an app origin: human-origin commit with drafted text gets no footer', () => {
+  const r = finalizeCommitMessage({subject: 's', body: 'x', origin: 'human', aiDrafted: true, substantive: true, policy: DEFAULT_ATTRIBUTION_POLICY});
+  assert.equal(r.applied, false); assert.deepEqual(r.footer, []); assert.equal(r.body, 'x');
 });

@@ -17,10 +17,14 @@ export const DEFAULT_ATTRIBUTION_POLICY: AttributionPolicy = {
   coAuthorName: 'somnia-agent',
   coAuthorEmail: '340778888+somnia-agent@users.noreply.github.com',
 };
+export type CommitOrigin = 'human' | 'app';
 export interface FinalizeInput {
   subject: string;
   body?: string;
-  /** Text came from a model. Drafting alone is never co-authorship. */
+  /** Who produces the commit. Only 'app' commits can carry attribution. AI-drafted text alone
+   *  is never an app origin: the host declares the origin explicitly (decision D2, rebase audit). */
+  origin: CommitOrigin;
+  /** Text came from a model. Controls reserved-trailer stripping; drafting alone is never co-authorship. */
   aiDrafted: boolean;
   /** Accepted AI changes are a substantive part of the versioned content. */
   substantive: boolean;
@@ -55,7 +59,7 @@ export function finalizeCommitMessage(i: FinalizeInput): FinalizeResult {
   // Human-written text is left alone; model text may not carry reserved trailers.
   const {body, stripped} = i.aiDrafted ? stripReserved(i.body ?? '') : {body: (i.body ?? '').trim(), stripped: 0};
   // Attribution is for app-generated commits only; human/dev commits never get an automatic trailer.
-  const footer = buildFooter(i.policy, i.aiDrafted && i.substantive, i.sessionId);
+  const footer = buildFooter(i.policy, i.origin === 'app' && i.substantive, i.sessionId);
   const humanHasReserved = !i.aiDrafted && body.split('\n').some(l => RESERVED.test(l.trim()));
   const out = footer.length && !humanHasReserved ? [body, footer.join('\n')].filter(Boolean).join('\n\n') : body;
   return {subject, body: out, footer: humanHasReserved ? [] : footer, applied: footer.length > 0 && !humanHasReserved, strippedModelTrailers: stripped};
