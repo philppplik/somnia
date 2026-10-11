@@ -22,7 +22,7 @@ test('the active studio stays white on hover, in light and dark shells',async({p
 test('every registered studio shows a compact name on hover without changing selection',async({page})=>{
  await page.goto('/');
  const pill=page.getByRole('radiogroup',{name:'Studios',exact:true});
- for(const [name,short] of [['Somnia Code','Code'],['Somnia Documents','Docs'],['Somnia Sheets','Sheets'],['Slides','Slides'],['Somnia Sound','Sounds'],['Somnia Video','Video']]){
+ for(const [name,short] of [['Somnia Code','Code'],['Somnia Documents','Docs'],['Somnia Sheets','Sheets'],['Slides','Slides'],['Somnia Sound','Sounds'],['Somnia Video','Video'],['Design','Design'],['Somnia Vector','Vector'],['Somnia Photos','Photos'],['Vibe Space','Vibe Space']]){
   const button=pill.getByRole('radio',{name,exact:true});
   await button.hover();
   await expect(page.getByRole('tooltip')).toHaveText(short);
@@ -48,7 +48,10 @@ test('keyboard focus exposes short names and keeps roving studio selection',asyn
  await expect(page.getByRole('tooltip')).toHaveCount(0);
  await expect(docs).toBeFocused();
  await page.keyboard.press('End');
- await expect(pill.getByRole('radio',{name:'Somnia Photos',exact:true})).toBeFocused();
+ const vibe=pill.getByRole('radio',{name:'Vibe Space',exact:true});
+ await expect(vibe).toBeFocused();
+ await expect(vibe).toHaveAttribute('aria-checked','true');
+ await expect(vibe).toHaveAttribute('tabindex','0');
  await page.keyboard.press('Home');
  await expect(pill.getByRole('radio',{name:'Somnia Code',exact:true})).toBeFocused();
 });
