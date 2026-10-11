@@ -1332,3 +1332,49 @@ async fn restore_postcommit_db_failure_keeps_undo_and_reconciles_without_replay(
         "later user edit"
     );
 }
+
+/// Collection history is bounded per space, but each listed Studio's latest
+/// must be included even when another Studio fills the entire recent page.
+#[tokio::test]
+async fn collection_includes_studio_latest_outside_recent_space_history() {
+    let f = setup();
+    let old = f.rt.store.create_run(&f.studio.studio_id).unwrap();
+    f.rt.store
+        .transition_run(
+            &old.id,
+            db::TransitionRequest::execution(db::ExecutionState::Stopped),
+        )
+        .unwrap();
+    tokio::time::sleep(std::time::Duration::from_millis(3)).await;
+    let newer =
+        f.rt.create_studio(CreateStudio {
+            space_id: f.space.space_id.clone(),
+            goal: "many newer runs".into(),
+            model: f.studio.model.clone(),
+        })
+        .unwrap();
+    for _ in 0..501 {
+        let run = f.rt.store.create_run(&newer.studio_id).unwrap();
+        f.rt.store
+            .transition_run(
+                &run.id,
+                db::TransitionRequest::execution(db::ExecutionState::Stopped),
+            )
+            .unwrap();
+    }
+    assert!(!f
+        .rt
+        .store
+        .list_runs(&f.space.space_id, None, 500)
+        .unwrap()
+        .iter()
+        .any(|r| r.id == old.id));
+    let collection = f.rt.list_snapshots().unwrap();
+    for studio in f.rt.list_studios().unwrap() {
+        if let Some(latest) = studio.latest_run_id {
+            assert!(collection
+                .iter()
+                .any(|r| r.snapshot.run_id == latest && r.snapshot.studio_id == studio.studio_id));
+        }
+    }
+}
