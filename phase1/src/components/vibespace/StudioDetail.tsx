@@ -4,7 +4,6 @@ import {useState} from 'react';
 import {Check,RotateCcw,Send,Square,X} from '../../lib/icons';
 import {canApply,costLabel,duration,studioControls,studioState} from '../../lib/vibespace/state';
 import {defaultProcessSupport,describeConsentGate,detectGatePlatform} from '../../lib/vibespace/consentPresentation';
-import {t} from '../../lib/i18n';
 import type {Studio,VibeIntent,Space,VibeSpaceTransport} from '../../lib/vibespace/types';
 export const stateLabels={draft:'Draft',running:'Running',paused:'Paused',done:'Done','needs-you':'Needs you',ready:'Ready for review',stopped:'Stopped',applied:'Applied',discarded:'Discarded',failed:'Failed',crashed:'Crashed'};
 export function StudioMetrics({studio}:{studio:Studio}){

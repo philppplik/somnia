@@ -762,12 +762,16 @@ impl Runtime {
         }
         let pending_consents = pending
             .into_iter()
-            .map(|p| w::PendingConsent {
-                request_id: p.request_id.as_str().into(),
-                action: p.kind.as_str().into(),
-                scope: p.target,
-                reason: p.reason,
-                allow_for_run: p.offered.contains(&policy::UserDecision::AllowForRun),
+            .map(|p| {
+                let kind = p.kind.as_str();
+                w::PendingConsent {
+                    request_id: p.request_id.as_str().into(),
+                    action: kind.into(),
+                    scope: p.target,
+                    reason: p.reason,
+                    allow_for_run: p.offered.contains(&policy::UserDecision::AllowForRun),
+                    kind: Some(kind.into()),
+                }
             })
             .collect();
         let mut checkpoints = vec![];

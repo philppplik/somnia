@@ -229,6 +229,9 @@ pub struct PendingConsent {
     pub scope: String,
     pub reason: String,
     pub allow_for_run: bool,
+    /// Policy v2 action kind ("shell"/"network"/...); absent on legacy projections.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub kind: Option<String>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
