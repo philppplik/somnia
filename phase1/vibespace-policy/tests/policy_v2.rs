@@ -187,6 +187,10 @@ fn elevated_mode_always_asks_and_never_grants() {
     let setup = ElevatedSetup::establish(dir.path()).unwrap();
     let px = ProcessExecutor::attach_elevated(&b.agent, run.clone(), scope.clone(), &setup, ProcessLimits::default()).unwrap();
     assert_eq!(px.mode(), ExecMode::Elevated);
+    // Elevated exec is a direct host spawn: use the platform's own echo.
+    #[cfg(windows)]
+    let cmd = Command::new("cmd.exe", ["/c", "echo", "x"]).unwrap();
+    #[cfg(not(windows))]
     let cmd = Command::new("/bin/echo", ["x"]).unwrap();
     let ProposeResult::Pending(id) = px.propose_exec(&cmd, "r", Origin::Model).unwrap() else {
         panic!("elevated exec must ask")
@@ -246,8 +250,14 @@ fn cancel_revokes_process_tokens() {
 
 #[cfg(target_os = "linux")]
 fn real_executor(b: &BrokerHandles, run: &RunId, scope: &ScopeId) -> Option<ProcessExecutor> {
-    let launcher = vibespace_policy::proc::linux::BwrapLauncher::detect().ok()?;
-    ProcessExecutor::attach_with_launcher(
+    let launcher = match vibespace_policy::proc::linux::BwrapLauncher::detect() {
+        Ok(l) => l,
+        Err(e) => {
+            eprintln!("SKIP: bubblewrap detection failed on this host: {e}");
+            return None;
+        }
+    };
+    match ProcessExecutor::attach_with_launcher(
         &b.agent,
         run.clone(),
         scope.clone(),
@@ -257,8 +267,16 @@ fn real_executor(b: &BrokerHandles, run: &RunId, scope: &ScopeId) -> Option<Proc
             timeout: Duration::from_secs(20),
             ..Default::default()
         },
-    )
-    .ok()
+    ) {
+        Ok(px) => Some(px),
+        // Capability detection: the launcher probe found this host cannot actually run
+        // the sandbox (e.g. CI runners restricting netns/loopback setup). Skip with a
+        // visible reason; the assertions below stay strict on capable hosts.
+        Err(e) => {
+            eprintln!("SKIP: linux sandbox capability probe failed on this host: {e}");
+            None
+        }
+    }
 }
 
 #[cfg(target_os = "linux")]
@@ -292,7 +310,7 @@ fn linux_bwrap_absent_fails_closed() {
 fn linux_sandboxed_exec_real() {
     let (b, run, scope) = broker_with_run(&[ActionKind::Shell]);
     let Some(px) = real_executor(&b, &run, &scope) else {
-        eprintln!("SKIP: bubblewrap unavailable in this environment");
+        eprintln!("SKIP: real bubblewrap sandbox not usable on this host");
         return;
     };
     // grep reads its own /proc/self/status: proves /proc works and the seccomp filter
@@ -330,7 +348,7 @@ fn linux_sandboxed_exec_real() {
 fn linux_sandbox_no_home_and_env() {
     let (b, run, scope) = broker_with_run(&[ActionKind::Shell]);
     let Some(px) = real_executor(&b, &run, &scope) else {
-        eprintln!("SKIP: bubblewrap unavailable in this environment");
+        eprintln!("SKIP: real bubblewrap sandbox not usable on this host");
         return;
     };
     // Host env (PATH, HOME, any secrets) must not leak: printenv SECRET_TEST must be empty.

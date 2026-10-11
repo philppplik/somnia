@@ -182,12 +182,49 @@ impl ProcessLauncher for BwrapLauncher {
         if self.bwrap.is_absolute() && !self.bwrap.exists() {
             return Err(ProcessError::IsolationUnavailable("bubblewrap vanished"));
         }
-        self.filter_program().map(|_| ())
+        // Capability probe: one minimal real sandbox exec with the BASE filter (the
+        // extra_denied test seam is not part of a host-capability check). On hosts where
+        // unprivileged namespace or loopback setup is restricted (some CI runners deny
+        // bwrap's RTM_NEWADDR inside the new netns), the probe fails and the sandbox
+        // reports unavailable - fail closed, visible reason, no partial sandbox.
+        let program = seccomp::build_filter().ok_or(ProcessError::IsolationUnavailable(
+            "seccomp filter not available for this architecture",
+        ))?;
+        let probe = ExecSpec {
+            program: "/bin/true".into(),
+            args: Vec::new(),
+            cwd: None,
+        };
+        let limits = ProcessLimits {
+            timeout: Duration::from_secs(15),
+            max_output_bytes: 4096,
+        };
+        match self.run_filtered(&program, &probe, &limits) {
+            Ok(r) if r.exit_code == Some(0) => Ok(()),
+            Ok(_) => Err(ProcessError::IsolationUnavailable(
+                "sandbox probe exec failed (host cannot run bubblewrap sandboxes)",
+            )),
+            Err(_) => Err(ProcessError::IsolationUnavailable(
+                "sandbox probe spawn failed (host cannot run bubblewrap sandboxes)",
+            )),
+        }
     }
 
     fn run(&self, spec: &ExecSpec, limits: &ProcessLimits) -> Result<super::ExecReceipt, ProcessError> {
         let program = self.filter_program()?;
-        let fd = seccomp::filter_fd(&program)
+        self.run_filtered(&program, spec, limits)
+    }
+}
+
+impl BwrapLauncher {
+    /// Execute with an explicit prebuilt filter (shared by `run` and the check probe).
+    fn run_filtered(
+        &self,
+        program: &[u8],
+        spec: &ExecSpec,
+        limits: &ProcessLimits,
+    ) -> Result<super::ExecReceipt, ProcessError> {
+        let fd = seccomp::filter_fd(program)
             .map_err(|_| ProcessError::IsolationUnavailable("seccomp handoff failed"))?;
         let argv = self.build_argv(spec)?;
         let mut cmd = Command::new(&self.bwrap);
