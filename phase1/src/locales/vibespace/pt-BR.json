@@ -1,4 +1,5 @@
 {
+ "studio.vibespace": "Vibe Space",
  "vibespace.consent.gate.strong": "Isolamento: forte (processo em sandbox, sem rede, sem ambiente do host).",
  "vibespace.consent.gate.poc": "Isolamento: prova de conceito no Windows. O acesso shell permanece fechado até os testes de CI passarem.",
  "vibespace.consent.gate.proxy": "Rede de ferramentas: passa pelo proxy de domínios do broker. Apenas domínios permitidos são acessíveis.",

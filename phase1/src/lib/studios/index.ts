@@ -18,3 +18,6 @@ export {vectorStudio} from './vector';
 
 import './design';
 export {designStudio} from './design';
+
+import './vibespace';
+export {vibespaceStudio} from './vibespace';

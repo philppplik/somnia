@@ -1,4 +1,5 @@
 {
+ "studio.vibespace": "Vibe Space",
  "vibespace.consent.gate.strong": "Isolation: stark (Sandbox-Worker, kein Netzwerk, keine Host-Umgebung).",
  "vibespace.consent.gate.poc": "Isolation: Proof of Concept unter Windows. Das Shell-Gate bleibt geschlossen, bis die CI-Checks grün sind.",
  "vibespace.consent.gate.proxy": "Tool-Netzwerk: läuft über den Broker-eigenen Domain-Proxy. Nur freigegebene Domains sind erreichbar.",

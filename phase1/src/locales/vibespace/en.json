@@ -1,4 +1,5 @@
 {
+ "studio.vibespace": "Vibe Space",
  "vibespace.consent.gate.strong": "Isolation: strong (sandboxed worker, no network, no host environment).",
  "vibespace.consent.gate.poc": "Isolation: proof of concept on Windows. The shell gate stays closed until its CI checks pass.",
  "vibespace.consent.gate.proxy": "Tool network: goes through the broker-owned domain proxy. Only domains you allow are reachable.",

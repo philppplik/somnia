@@ -1,3 +1,4 @@
+import {DesktopVibeSpacePanel} from '../vibespace/DesktopVibeSpacePanel';
 import {DesignCanvas} from '../design/DesignCanvas';
 import {DesignInspector} from '../design/DesignInspector';
 import {lazy,Suspense} from 'react';
@@ -22,8 +23,8 @@ import {SoundInspector} from '../sound/SoundInspector';
 const SheetsCanvas=lazy(()=>import('../sheets/SheetsCanvas').then(m=>({default:m.SheetsCanvas})));
 const SheetsInspector=lazy(()=>import('../sheets/SheetsInspector').then(m=>({default:m.SheetsInspector})));
 const lazyHost=(Host:React.ComponentType)=>()=><Suspense fallback={null}><Host/></Suspense>;
-const canvasHosts={'photos.canvas':PhotosCanvas,'design.canvas':DesignCanvas,'code.canvas':Canvas,'documents.canvas':DocumentsCanvas,'sheets.canvas':lazyHost(SheetsCanvas),'slides.canvas':SlidesCanvas,'sound.canvas':SoundCanvas,'video.canvas':VideoCanvas,'vector.canvas':VectorCanvas};
-const inspectorRegistries={'photos.inspector':PhotosInspector,'design.inspector':DesignInspector,'code.inspector':Inspector,'documents.inspector':DocumentsInspector,'sheets.inspector':lazyHost(SheetsInspector),'slides.inspector':SlidesInspector,'sound.inspector':SoundInspector,'video.inspector':VideoInspector,'vector.inspector':VectorInspector};
+const canvasHosts={'vibespace.canvas':DesktopVibeSpacePanel,'photos.canvas':PhotosCanvas,'design.canvas':DesignCanvas,'code.canvas':Canvas,'documents.canvas':DocumentsCanvas,'sheets.canvas':lazyHost(SheetsCanvas),'slides.canvas':SlidesCanvas,'sound.canvas':SoundCanvas,'video.canvas':VideoCanvas,'vector.canvas':VectorCanvas};
+const inspectorRegistries={'vibespace.inspector':()=>null,'photos.inspector':PhotosInspector,'design.inspector':DesignInspector,'code.inspector':Inspector,'documents.inspector':DocumentsInspector,'sheets.inspector':lazyHost(SheetsInspector),'slides.inspector':SlidesInspector,'sound.inspector':SoundInspector,'video.inspector':VideoInspector,'vector.inspector':VectorInspector};
 export function StudioCanvas(){const s=useAppStore();const Host=canvasHosts[getStudio(useHostStudio(s.activeStudio)).canvas as keyof typeof canvasHosts];if(!Host)throw new Error('Studio canvas unavailable');return <Host/>;}
 export function StudioInspector(){const s=useAppStore();const Host=inspectorRegistries[getStudio(useHostStudio(s.activeStudio)).shell.inspector as keyof typeof inspectorRegistries];if(!Host)throw new Error('Studio inspector unavailable');return <Host/>;}
 
