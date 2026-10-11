@@ -189,3 +189,78 @@ reconciliation retains the terminal review axis and never overwrites later user
 edits. RunHandle cancellation is cloned into a lock-independent map; fail_run
 can cancel SDK execution even while steer/stop holds the async handle lock.
 Current composed Core total: 39 Linux tests (19 adversarial), all pass.
+
+## Independent journal review (99f5f5f + e3680f0)
+
+Reviewed the coordinator's artifact-operation journal repairs against the live
+tree (`phase1/vibespace-core/tests/journal_review.rs`, 6 composed tests).
+Base note: 99f5f5f was generated against a base containing one unlisted change
+(`capabilities.active` bound to `!execution.is_terminal()`); it was hand-merged
+faithfully (hunk 7) before review. Verified: Core 39/39 PASS, deterministic
+across runs; all prior red blockers ((a) pending recovery, (b) apply DB
+failure, broken-projection discard) now pass as green regression tests.
+
+### RED - new reproducible blockers
+
+#### (e) Committed apply op + broken review projection wedges `Runtime::open` forever
+
+`blocker_committed_apply_with_deleted_copy_makes_open_fail_forever`,
+`blocker_committed_apply_with_deleted_project_makes_open_fail_forever`
+
+Crash window: originals committed, durable vault receipt written, DB completion
+injected to fail (real SQLite trigger on `artifact_operations` UPDATE) - exactly
+the state 99f5f5f is designed to reconcile. If the review projection is ALSO
+broken when the process comes back (isolated copy deleted, or the user deleted
+the broken project folder while down - both realistic, the second not even
+adversarial), `reconcile_applies` computes
+`complete = committed && self.review_projection(&run)?.files.is_empty()` and the
+`?` propagates. `Runtime::open` calls `reconcile_applies()?`, so open fails with
+"checkpoint operation failed; originals may require recovery" - permanently, for
+the whole data directory, including unrelated spaces. Every
+open/apply/discard/restore re-hits it. Only manual DB surgery
+(`DELETE FROM artifact_operations`) recovers.
+
+Direction: reconcile must not let a projection READ veto journal COMPLETION.
+The vault receipt already proves the commit; on projection error, finish the op
+as committed with `complete=false` (review stays `ready`, surfaces as the
+existing unavailable-review projection) instead of failing open.
+
+### GREEN - invariants of the repair verified by composed tests
+
+- `crash_between_intent_and_first_write_aborts_and_allows_retry` (crash after
+  durable intent+Undo, before op 0: prepared journal rolled back, op aborted,
+  originals untouched, no replay, same-revision retry succeeds).
+- `crash_mid_plan_rolls_back_partial_original_writes` (crash after first of two
+  file writes: partial original write rolled back, op aborted, full retry
+  succeeds).
+- `broken_projection_exposes_unavailable_review_and_epoch_bound_discard`
+  (`N:unavailable` revision, apply capability off, wrong epoch rejected,
+  epoch-bound discard works without any content projection).
+- `restore_persists_labeled_undo_and_keeps_review_axis` ("Before Restore
+  (Undo)" label, restore op never rewrites the review axis, no pending ops
+  left).
+- Coordinator's own trigger tests cover: precommit INSERT failure (nothing
+  written, safe retry), apply/restore postcommit UPDATE failure (pending intent
+  + Undo survive, restart reconciles metadata-only, later user edits preserved,
+  Undo restores original).
+
+### Review-by-inspection notes on the journal repair
+
+- `begin_artifact_apply` / `finish_artifact_apply` are public `Store` API and
+  distinguish apply vs restore by `id.starts_with("restore-")`. Ids are
+  vault-generated (`unique_name`), so the runtime path is safe; a host-side
+  caller passing a crafted id (e.g. path chars) would make
+  `Vault::apply_committed` reject it and wedge `open` the same way as (e).
+  Host-only misuse, but the boundary is stringly-typed; consider an op-kind
+  column instead of id-prefix checks.
+- `apply`'s vault-error path (`recover` + `reconcile`, then `Err(error)`) can
+  return an error to the user although reconcile just completed the apply
+  (e.g. receipt write or `remove_journal` failed after commit). State is
+  consistent; the error is misleading. Rare (filesystem failure after commit).
+- `list_checkpoints` ordering changed: `pre_apply` kinds sort first, remaining
+  entries newest-first (was oldest-first). UI consumers must not assume
+  chronological order.
+- Restore after Applied intentionally keeps `review=applied` (pinned by the
+  coordinator's restore test). Consequence: the isolated copy with the agent's
+  changes has no re-apply/discard path afterwards (both require
+  `ready|conflict`). Accepted design; artifact cleanup remains open.
