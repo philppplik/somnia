@@ -3,7 +3,7 @@
 use crate::app_command_error::AppCommandError;
 use somnia_vibespace_sched::{Manager as Scheduler, Preview, ReturnCard, Schedule, ScheduleSpec};
 use std::sync::Mutex;
-use tauri::{State, Webview, WebviewWindow};
+use tauri::{Manager, State, Webview, WebviewWindow};
 #[derive(Default)]
 pub struct VibeScheduleState(pub Mutex<Option<Scheduler>>);
 impl VibeScheduleState {
