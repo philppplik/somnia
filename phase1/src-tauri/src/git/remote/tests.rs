@@ -414,6 +414,11 @@ fn pull_fast_forward_flow() {
     assert!(f.b.join("a2.txt").exists());
     assert_eq!(git(&f.b, &["rev-parse", &r.safety_ref]), old, "safety ref points at the previous head");
     let porcelain = git(&f.b, &["status", "--porcelain"]);
+    if !porcelain.is_empty() {
+        // Is it CRLF from an un-isolated merge checkout? Show the raw bytes and the system autocrlf.
+        eprintln!("a2.txt bytes on disk = {:?}", std::fs::read(f.b.join("a2.txt")).unwrap());
+        eprintln!("system autocrlf (un-isolated) = {:?}", std::process::Command::new("git").args(["config", "--system", "--get", "core.autocrlf"]).output().map(|o| String::from_utf8_lossy(&o.stdout).into_owned()));
+    }
     assert!(porcelain.is_empty(), "worktree dirty after pull_apply; porcelain = {porcelain:?}; untracked/ignored = {:?}; core config = {:?}", git(&f.b, &["status", "--porcelain", "--ignored", "-uall"]), git(&f.b, &["config", "--show-origin", "--get-regexp", "^core\\."]));
     assert_eq!(pull_plan(&t.env(), &pull_req(&f.b)).unwrap().status, PullStatus::UpToDate);
 }
