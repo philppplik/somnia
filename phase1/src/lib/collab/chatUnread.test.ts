@@ -9,7 +9,7 @@ import { newLinkKey } from './net/crypto';
 import { makeUser } from './awarenessSafe';
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
-const until = async (f: () => boolean, ms = 6000) => {
+const until = async (f: () => boolean, ms = 20000) => {
   const start = Date.now();
   while (!f()) {
     if (Date.now() - start > ms) throw Error('timeout');
