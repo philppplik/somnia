@@ -100,7 +100,7 @@ impl VibeSpaceState {
             configured,
         })
     }
-    fn runtime(&self, app: &tauri::AppHandle) -> Result<Arc<Runtime>> {
+    pub(crate) fn runtime(&self, app: &tauri::AppHandle) -> Result<Arc<Runtime>> {
         self.runtime
             .get_or_init(|| {
                 let bind_app = app.clone();
