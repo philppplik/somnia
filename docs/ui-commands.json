@@ -1,0 +1,993 @@
+{
+  "version": 1,
+  "source": "scripts/dump-ui-commands.ts",
+  "commands": [
+    {
+      "id": "agent.toggle",
+      "title": "Toggle Somnia Agent",
+      "category": "View",
+      "shortcut": "Mod+Alt+A",
+      "hasEnabled": false
+    },
+    {
+      "id": "chat.toggle",
+      "title": "Toggle session chat",
+      "category": "View",
+      "shortcut": "Mod+Alt+C",
+      "allowInInput": true,
+      "hasEnabled": true
+    },
+    {
+      "id": "collab.join",
+      "title": "Join shared project...",
+      "category": "Tools",
+      "keywords": [
+        "collaborate",
+        "guest",
+        "invite",
+        "link"
+      ],
+      "hasEnabled": false
+    },
+    {
+      "id": "collab.share",
+      "title": "Share project...",
+      "category": "Tools",
+      "keywords": [
+        "collaborate",
+        "host",
+        "invite",
+        "live"
+      ],
+      "hasEnabled": false
+    },
+    {
+      "id": "css.open",
+      "title": "CSS variables and classes",
+      "category": "View",
+      "hasEnabled": false
+    },
+    {
+      "id": "edit.decodeEntities",
+      "title": "Decode special characters (HTML entities)",
+      "category": "Edit",
+      "keywords": [
+        "entities",
+        "escape",
+        "html",
+        "special characters",
+        "unescape"
+      ],
+      "hasEnabled": false
+    },
+    {
+      "id": "edit.delete",
+      "title": "Delete selected element",
+      "category": "Edit",
+      "shortcut": "Delete",
+      "hasEnabled": true
+    },
+    {
+      "id": "edit.duplicate",
+      "title": "Duplicate selected element",
+      "category": "Edit",
+      "shortcut": "Mod+D",
+      "hasEnabled": true
+    },
+    {
+      "id": "edit.encodeEntities",
+      "title": "Encode special characters (HTML entities)",
+      "category": "Edit",
+      "keywords": [
+        "entities",
+        "escape",
+        "html",
+        "special characters",
+        "unescape"
+      ],
+      "hasEnabled": false
+    },
+    {
+      "id": "edit.format",
+      "title": "Apply formatting",
+      "category": "Edit",
+      "shortcut": "Alt+Shift+F",
+      "keywords": [
+        "beautify",
+        "format",
+        "indent",
+        "prettier"
+      ],
+      "allowInInput": true,
+      "hasEnabled": false
+    },
+    {
+      "id": "edit.redo",
+      "title": "Redo",
+      "category": "Edit",
+      "shortcut": "Mod+Shift+Z",
+      "hasEnabled": true
+    },
+    {
+      "id": "edit.undo",
+      "title": "Undo",
+      "category": "Edit",
+      "shortcut": "Mod+Z",
+      "hasEnabled": true
+    },
+    {
+      "id": "edit.unwrap",
+      "title": "Unwrap selected element (keep content)",
+      "category": "Edit",
+      "keywords": [
+        "remove wrapper",
+        "ungroup",
+        "unwrap"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "edit.wrap",
+      "title": "Wrap selected element in a div",
+      "category": "Edit",
+      "keywords": [
+        "container",
+        "group",
+        "wrap"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "experimental.fastParse",
+      "title": "Experimental: toggle fast parsing",
+      "category": "Tools",
+      "keywords": [
+        "experimental",
+        "incremental",
+        "parse",
+        "performance"
+      ],
+      "hasEnabled": false
+    },
+    {
+      "id": "extensions.open",
+      "title": "Extensions",
+      "category": "View",
+      "hasEnabled": false
+    },
+    {
+      "id": "help.errorReport",
+      "title": "Copy error report (log excerpt and version)",
+      "category": "Help",
+      "keywords": [
+        "bug",
+        "copy",
+        "diagnostics",
+        "error",
+        "help",
+        "log",
+        "report"
+      ],
+      "hasEnabled": false
+    },
+    {
+      "id": "help.github",
+      "title": "Somnia on GitHub (source, releases, issues)",
+      "category": "Help",
+      "keywords": [
+        "github",
+        "help",
+        "issues",
+        "releases",
+        "repo",
+        "source"
+      ],
+      "hasEnabled": false
+    },
+    {
+      "id": "help.shortcuts",
+      "title": "Keyboard shortcuts",
+      "category": "Help",
+      "keywords": [
+        "help",
+        "keyboard"
+      ],
+      "hasEnabled": false
+    },
+    {
+      "id": "insert.element.0",
+      "title": "Section",
+      "category": "Insert",
+      "keywords": [
+        "add",
+        "element",
+        "insert",
+        "section"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "insert.element.1",
+      "title": "Heading",
+      "category": "Insert",
+      "keywords": [
+        "add",
+        "element",
+        "heading",
+        "insert"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "insert.element.2",
+      "title": "Paragraph",
+      "category": "Insert",
+      "keywords": [
+        "add",
+        "element",
+        "insert",
+        "paragraph"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "insert.element.3",
+      "title": "Button",
+      "category": "Insert",
+      "keywords": [
+        "add",
+        "button",
+        "element",
+        "insert"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "insert.element.4",
+      "title": "Container",
+      "category": "Insert",
+      "keywords": [
+        "add",
+        "container",
+        "element",
+        "insert"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "insert.element.5",
+      "title": "Card",
+      "category": "Insert",
+      "keywords": [
+        "add",
+        "card",
+        "element",
+        "insert"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "insert.element.6",
+      "title": "Feature list",
+      "category": "Insert",
+      "keywords": [
+        "add",
+        "element",
+        "feature list",
+        "insert"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "insert.element.7",
+      "title": "Hero block",
+      "category": "Insert",
+      "keywords": [
+        "add",
+        "element",
+        "hero block",
+        "insert"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "insert.element.8",
+      "title": "FAQ block",
+      "category": "Insert",
+      "keywords": [
+        "add",
+        "element",
+        "faq block",
+        "insert"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "insert.element.9",
+      "title": "Contact fields",
+      "category": "Insert",
+      "keywords": [
+        "add",
+        "contact fields",
+        "element",
+        "insert"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "inspector.toggle",
+      "title": "Toggle inspector",
+      "category": "View",
+      "shortcut": "Mod+Alt+I",
+      "hasEnabled": false
+    },
+    {
+      "id": "md.bold",
+      "title": "Markdown: Bold",
+      "category": "Insert",
+      "shortcut": "Mod+B",
+      "keywords": [
+        "markdown"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "md.bullet",
+      "title": "Markdown: Bulleted list",
+      "category": "Insert",
+      "keywords": [
+        "markdown"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "md.code",
+      "title": "Markdown: Inline code",
+      "category": "Insert",
+      "keywords": [
+        "markdown"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "md.codeblock",
+      "title": "Markdown: Code block",
+      "category": "Insert",
+      "keywords": [
+        "markdown"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "md.h1",
+      "title": "Markdown: Heading 1",
+      "category": "Insert",
+      "keywords": [
+        "markdown"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "md.h2",
+      "title": "Markdown: Heading 2",
+      "category": "Insert",
+      "keywords": [
+        "markdown"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "md.h3",
+      "title": "Markdown: Heading 3",
+      "category": "Insert",
+      "keywords": [
+        "markdown"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "md.h4",
+      "title": "Markdown: Heading 4",
+      "category": "Insert",
+      "keywords": [
+        "markdown"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "md.h5",
+      "title": "Markdown: Heading 5",
+      "category": "Insert",
+      "keywords": [
+        "markdown"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "md.h6",
+      "title": "Markdown: Heading 6",
+      "category": "Insert",
+      "keywords": [
+        "markdown"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "md.italic",
+      "title": "Markdown: Italic",
+      "category": "Insert",
+      "shortcut": "Mod+I",
+      "keywords": [
+        "markdown"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "md.number",
+      "title": "Markdown: Numbered list",
+      "category": "Insert",
+      "keywords": [
+        "markdown"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "md.quote",
+      "title": "Markdown: Quote",
+      "category": "Insert",
+      "keywords": [
+        "markdown"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "md.reveal",
+      "title": "Markdown: Reveal current preview block in source",
+      "category": "Insert",
+      "keywords": [
+        "markdown"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "md.strike",
+      "title": "Markdown: Strikethrough",
+      "category": "Insert",
+      "keywords": [
+        "markdown"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "md.sync",
+      "title": "Markdown: Toggle scroll sync",
+      "category": "Insert",
+      "keywords": [
+        "markdown"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "md.table",
+      "title": "Markdown: Table",
+      "category": "Insert",
+      "keywords": [
+        "markdown"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "md.task",
+      "title": "Markdown: Task list",
+      "category": "Insert",
+      "keywords": [
+        "markdown"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "palette.open",
+      "title": "Command palette",
+      "category": "Tools",
+      "shortcut": "Mod+K",
+      "hasEnabled": false
+    },
+    {
+      "id": "panels.hideAll",
+      "title": "Hide / show all panels",
+      "category": "View",
+      "shortcut": "F4",
+      "keywords": [
+        "dreamweaver",
+        "panels"
+      ],
+      "hasEnabled": false
+    },
+    {
+      "id": "problems.toggle",
+      "title": "Toggle problems",
+      "category": "Tools",
+      "shortcut": "Mod+J",
+      "hasEnabled": false
+    },
+    {
+      "id": "project.closeAll",
+      "title": "Close all files",
+      "category": "Project",
+      "keywords": [
+        "all",
+        "close",
+        "every",
+        "studios",
+        "tabs"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "project.export",
+      "title": "Export project...",
+      "category": "Project",
+      "keywords": [
+        "download",
+        "folder",
+        "single file",
+        "zip"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "project.export.md",
+      "title": "Export active file as Markdown",
+      "category": "Project",
+      "keywords": [
+        "markdown",
+        "md"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "project.newFile",
+      "title": "New blank page",
+      "category": "Project",
+      "keywords": [
+        "blank",
+        "file",
+        "new"
+      ],
+      "hasEnabled": false
+    },
+    {
+      "id": "project.open",
+      "title": "Open folder",
+      "category": "Project",
+      "shortcut": "Mod+O",
+      "hasEnabled": true
+    },
+    {
+      "id": "project.openFile",
+      "title": "Open file",
+      "category": "Project",
+      "keywords": [
+        "file",
+        "open"
+      ],
+      "hasEnabled": false
+    },
+    {
+      "id": "project.openMedia",
+      "title": "Open image or PDF to preview",
+      "category": "Project",
+      "keywords": [
+        "image",
+        "jpeg",
+        "jpg",
+        "media",
+        "pdf",
+        "png",
+        "preview"
+      ],
+      "hasEnabled": false
+    },
+    {
+      "id": "project.save",
+      "title": "Save project",
+      "category": "Project",
+      "shortcut": "Mod+S",
+      "allowInInput": true,
+      "hasEnabled": true
+    },
+    {
+      "id": "project.saveAll",
+      "title": "Save all files",
+      "category": "Project",
+      "keywords": [
+        "all",
+        "every",
+        "save",
+        "studios"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "search.project",
+      "title": "Search in project",
+      "category": "View",
+      "shortcut": "Mod+Shift+F",
+      "hasEnabled": false
+    },
+    {
+      "id": "settings.open",
+      "title": "Settings",
+      "category": "Tools",
+      "shortcut": "Mod+,",
+      "hasEnabled": false
+    },
+    {
+      "id": "sidebar.toggle",
+      "title": "Toggle sidebar",
+      "category": "View",
+      "shortcut": "Mod+B",
+      "hasEnabled": false
+    },
+    {
+      "id": "split.horizontal",
+      "title": "Split: code above, design below",
+      "category": "View",
+      "hasEnabled": true
+    },
+    {
+      "id": "split.swap",
+      "title": "Split: swap code and design",
+      "category": "View",
+      "hasEnabled": true
+    },
+    {
+      "id": "split.vertical",
+      "title": "Split: code and design side by side",
+      "category": "View",
+      "hasEnabled": true
+    },
+    {
+      "id": "studio.code",
+      "title": "Switch to Code Studio",
+      "category": "View",
+      "shortcut": "Mod+1",
+      "allowInInput": true,
+      "hasEnabled": false
+    },
+    {
+      "id": "studio.design",
+      "title": "Switch to design Studio",
+      "category": "View",
+      "shortcut": "Mod+7",
+      "allowInInput": true,
+      "hasEnabled": false
+    },
+    {
+      "id": "studio.documents",
+      "title": "Switch to documents Studio",
+      "category": "View",
+      "shortcut": "Mod+2",
+      "allowInInput": true,
+      "hasEnabled": false
+    },
+    {
+      "id": "studio.photos",
+      "title": "Switch to Photos Studio",
+      "category": "View",
+      "shortcut": "Mod+9",
+      "allowInInput": true,
+      "hasEnabled": false
+    },
+    {
+      "id": "studio.sheets",
+      "title": "Switch to Sheets Studio",
+      "category": "View",
+      "shortcut": "Mod+3",
+      "allowInInput": true,
+      "hasEnabled": false
+    },
+    {
+      "id": "studio.slides",
+      "title": "Switch to slides Studio",
+      "category": "View",
+      "shortcut": "Mod+4",
+      "allowInInput": true,
+      "hasEnabled": false
+    },
+    {
+      "id": "studio.sound",
+      "title": "Switch to Sound Studio",
+      "category": "View",
+      "shortcut": "Mod+5",
+      "allowInInput": true,
+      "hasEnabled": false
+    },
+    {
+      "id": "studio.vector",
+      "title": "Switch to Vector Studio",
+      "category": "View",
+      "shortcut": "Mod+8",
+      "allowInInput": true,
+      "hasEnabled": false
+    },
+    {
+      "id": "studio.vibespace",
+      "title": "Switch to vibespace Studio",
+      "category": "View",
+      "allowInInput": true,
+      "hasEnabled": false
+    },
+    {
+      "id": "studio.video",
+      "title": "Switch to Video Studio",
+      "category": "View",
+      "shortcut": "Mod+6",
+      "allowInInput": true,
+      "hasEnabled": false
+    },
+    {
+      "id": "tab.close",
+      "title": "Close current tab",
+      "category": "View",
+      "shortcut": "Mod+W",
+      "hasEnabled": true
+    },
+    {
+      "id": "tab.next",
+      "title": "Next tab",
+      "category": "View",
+      "shortcut": "Mod+Alt+ArrowRight",
+      "hasEnabled": false
+    },
+    {
+      "id": "tab.prev",
+      "title": "Previous tab",
+      "category": "View",
+      "shortcut": "Mod+Alt+ArrowLeft",
+      "hasEnabled": false
+    },
+    {
+      "id": "table.col.delete",
+      "title": "Table: delete column",
+      "category": "Insert",
+      "keywords": [
+        "cell",
+        "column",
+        "row",
+        "table"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "table.col.left",
+      "title": "Table: add column left",
+      "category": "Insert",
+      "keywords": [
+        "cell",
+        "column",
+        "row",
+        "table"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "table.col.right",
+      "title": "Table: add column right",
+      "category": "Insert",
+      "keywords": [
+        "cell",
+        "column",
+        "row",
+        "table"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "table.header",
+      "title": "Table: toggle header row",
+      "category": "Insert",
+      "keywords": [
+        "cell",
+        "column",
+        "row",
+        "table"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "table.insert",
+      "title": "Insert table (3 x 3, header row, caption)",
+      "category": "Insert",
+      "keywords": [
+        "columns",
+        "grid",
+        "rows",
+        "table"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "table.merge",
+      "title": "Table: merge cell with right neighbour",
+      "category": "Insert",
+      "keywords": [
+        "cell",
+        "column",
+        "row",
+        "table"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "table.row.above",
+      "title": "Table: add row above",
+      "category": "Insert",
+      "keywords": [
+        "cell",
+        "column",
+        "row",
+        "table"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "table.row.below",
+      "title": "Table: add row below",
+      "category": "Insert",
+      "keywords": [
+        "cell",
+        "column",
+        "row",
+        "table"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "table.row.delete",
+      "title": "Table: delete row",
+      "category": "Insert",
+      "keywords": [
+        "cell",
+        "column",
+        "row",
+        "table"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "theme.dark",
+      "title": "Use dark theme",
+      "category": "View",
+      "hasEnabled": false
+    },
+    {
+      "id": "theme.light",
+      "title": "Use light theme",
+      "category": "View",
+      "hasEnabled": false
+    },
+    {
+      "id": "theme.toggle",
+      "title": "Toggle light / dark theme",
+      "category": "Tools",
+      "hasEnabled": false
+    },
+    {
+      "id": "tools.convert",
+      "title": "Convert files...",
+      "category": "Tools",
+      "keywords": [
+        "batch",
+        "convert",
+        "csv",
+        "docx",
+        "format",
+        "html",
+        "image",
+        "jpg",
+        "json",
+        "markdown",
+        "pdf",
+        "png",
+        "svg",
+        "webp"
+      ],
+      "hasEnabled": false
+    },
+    {
+      "id": "tools.diff",
+      "title": "Toggle diff split (compare in editor)",
+      "category": "Tools",
+      "keywords": [
+        "changes",
+        "compare",
+        "diff",
+        "saved version"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "tools.editImage",
+      "title": "Edit image...",
+      "category": "Tools",
+      "keywords": [
+        "brightness",
+        "contrast",
+        "crop",
+        "edit",
+        "flip",
+        "image",
+        "photo",
+        "resize",
+        "rotate"
+      ],
+      "hasEnabled": false
+    },
+    {
+      "id": "view.code",
+      "title": "Code view",
+      "category": "View",
+      "shortcut": "Mod+Alt+3",
+      "hasEnabled": true
+    },
+    {
+      "id": "view.design",
+      "title": "Design view",
+      "category": "View",
+      "shortcut": "Mod+Alt+1",
+      "hasEnabled": true
+    },
+    {
+      "id": "view.livePreview",
+      "title": "Toggle live preview",
+      "category": "View",
+      "keywords": [
+        "browser",
+        "preview",
+        "run",
+        "scripts"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "view.split",
+      "title": "Split view",
+      "category": "View",
+      "shortcut": "Mod+Alt+2",
+      "hasEnabled": true
+    },
+    {
+      "id": "view.toggleCodeDesign",
+      "title": "Toggle code / design view",
+      "category": "View",
+      "shortcut": "Mod+`",
+      "keywords": [
+        "dreamweaver",
+        "switch"
+      ],
+      "hasEnabled": false
+    },
+    {
+      "id": "zoom.in",
+      "title": "Zoom in",
+      "category": "View",
+      "shortcut": "Mod+=",
+      "hasEnabled": false
+    },
+    {
+      "id": "zoom.out",
+      "title": "Zoom out",
+      "category": "View",
+      "shortcut": "Mod+-",
+      "hasEnabled": false
+    },
+    {
+      "id": "zoom.reset",
+      "title": "Actual size",
+      "category": "View",
+      "shortcut": "Mod+0",
+      "hasEnabled": false
+    }
+  ]
+}
