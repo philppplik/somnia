@@ -2578,5 +2578,21 @@
   "vibe.review.event.core_apply_reconciled": "Aplicação reconciliada",
   "vibe.review.cacheWrite": "Tokens gravados em cache",
   "vibe.review.partialSource": "Subtotal informado (algumas etapas sem custo informado)",
-  "vibe.review.reportedCost": "Custo informado"
+  "vibe.review.reportedCost": "Custo informado",
+  "cmd.project.saveAll": "Salvar todos os arquivos",
+  "cmd.project.closeAll": "Fechar todos os arquivos",
+  "workdocs.nothingToSave": "Nada para salvar.",
+  "workdocs.saved": "{count} arquivos salvos.",
+  "workdocs.saveStopped": "{saved} salvos. Parou em {name}; {open} ainda não salvos.",
+  "workdocs.closed": "Todos os arquivos fechados.",
+  "workdocs.closedKept": "Todos os arquivos fechados. {count} arquivos não puderam ser revertidos e mantêm suas alterações.",
+  "workdocs.notClosed": "Nada foi fechado. Alguns arquivos ainda não foram salvos.",
+  "workdocs.savedClosed": "Todos os arquivos salvos e fechados.",
+  "workdocs.dialog.aria": "Fechar todos os arquivos",
+  "workdocs.dialog.title": "Fechar todos os arquivos?",
+  "workdocs.dialog.desc": "{count} arquivos têm alterações não salvas. Salve-os primeiro ou descarte as alterações.",
+  "workdocs.dialog.unsaved": "Alterações não salvas",
+  "workdocs.dialog.more": "e mais {count}",
+  "workdocs.dialog.discard": "Descartar e fechar",
+  "workdocs.dialog.save": "Salvar tudo e fechar"
 }

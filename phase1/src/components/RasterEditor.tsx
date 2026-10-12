@@ -27,6 +27,7 @@ import {createRasterState,rasterCommit,rasterDirty,rasterRedo,rasterSignature,ra
 import {isTauri} from '@tauri-apps/api/core';
 import {defaultImageHost,webImageHost,editedName,type ImageEditorHost} from '../lib/imageEditorHost';
 import {addMediaFile,closeMedia,getMedia,registerMediaCloseGuard,setActiveMedia,useMedia} from '../lib/media';
+import {registerDocSaver} from '../lib/workDocs';
 import {registerCommandScope,type Command} from '../lib/commands';
 import '../styles/image-editor-dialog.css';
 
@@ -97,6 +98,7 @@ export function RasterEditorProvider({children,host:injected}:{children:ReactNod
  const addOp=(op:ImageOperation)=>{setSelection(null);commit({...snap,stack:[...snap.stack,op]});setCropRect(null);setAspect('free');};
  // Stable scope resolver reads the current context, never stale snapshots. Shared menu/palette/shortcuts route here.
  const actions=useRef({active,name,busy,docState,source,openFile,save,close,undo,redo,commit,snap});actions.current={active,name,busy,docState,source,openFile,save,close,undo,redo,commit,snap};
+ useEffect(()=>name?registerDocSaver('image',name,async()=>{await actions.current.save();return !rasterDirty(getState().rasterDoc[name]??createRasterState());}):undefined,[name]);
  useEffect(()=>registerCommandScope(id=>{const a=actions.current;if(!a.active)return;const commands:Record<string,Command>={
   'edit.undo':{id:'edit.undo',title:t('imageeditor.undo'),category:'Edit',shortcut:'Mod+Z',enabled:()=>!a.busy&&!!(a.source?.layerSession?.query?.undo??a.docState.past.length),run:a.undo},
   'edit.redo':{id:'edit.redo',title:t('imageeditor.redo'),category:'Edit',shortcut:'Mod+Shift+Z',enabled:()=>!a.busy&&!!(a.source?.layerSession?.query?.redo??a.docState.future.length),run:a.redo},

@@ -14,7 +14,8 @@ import {MAX_CELL_BYTES} from '../../lib/sheets/protocol';
 import {addressOf,cellText,colName,displayValue,editText,isErrorValue,cellAlign} from '../../lib/sheets/format';
 import {inRect,parseTsv,pasteRect,rectCells,rectOf,toTsv} from '../../lib/sheets/clipboard';
 import {MAX_READ_CELLS} from '../../lib/sheets/protocol';
-import {saveSheetsCopy,setSheetsDirty} from '../../lib/sheets/session';
+import {saveSheetsCopy,setSheetsDirty,sheetsIsDirty} from '../../lib/sheets/session';
+import {registerDocSaver} from '../../lib/workDocs';
 import {setSheetsSelection} from '../../lib/sheets/sheetsStore';
 const HEAD_W=48,HEAD_H=24;
 type Phase={kind:'loading'}|{kind:'error';message:string}|{kind:'ready'};
@@ -112,6 +113,8 @@ function Workbook({item}:{item:MediaItem}){
     onMouseDown={e=>{e.preventDefault();if(draftRef.current!==null)void commit(draftRef.current);if(e.shiftKey)setExt({row:r,col:c});else{setSel({row:r,col:c});setExt(null);dragging.current=true;}scroller.current?.focus();}} onMouseEnter={()=>{if(dragging.current)setExt(x=>x&&x.row===r&&x.col===c?x:{row:r,col:c});}} onDoubleClick={()=>startEdit(editText(cell?.value,cell?.formula))}>{cellText(cell)}</div>);}
   return out;};
  const exportCopy=async()=>{try{const bytes=await engine.current!.save();const r=await saveSheetsCopy(item.name,bytes);if(r==='cancelled')return;if(r==='saved')setDirty(false);setNotice(t('sheets.exported'));}catch(e){fail(e);}};
+ const exportRef=useRef(exportCopy);exportRef.current=exportCopy;
+ useEffect(()=>registerDocSaver('sheets',item.name,async()=>{await exportRef.current();await new Promise(r=>setTimeout(r,100));return !sheetsIsDirty(item.name);}),[item.name]);
  useEffect(()=>{setSheetsDirty(item.name,dirty);return()=>setSheetsDirty(item.name,false);},[dirty,item.name]);
  const restart=()=>{if(original.current)window.location.reload();};
  if(phase.kind==='error')return <div className="flex flex-1 flex-col items-center justify-center gap-3 p-6 text-center" role="alert" data-testid="sheets-error"><p className="text-[13px] text-red-600">{phase.message}</p><p className="text-[12px] text-ink-3">{t('sheets.errorHint')}</p>{original.current&&<Button onClick={restart}>{t('sheets.reopen')}</Button>}</div>;

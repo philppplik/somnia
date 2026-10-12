@@ -14,6 +14,7 @@ import {downloadProject,downloadMarkdown} from './exportProject';
 import {elements,insertElement} from './structureCommands';
 import { applyHistory, getState, patchState } from '../store/appStore';
 import { EditorProject } from '@somnia/editor-core';
+import {canSaveAll,canCloseAll,saveAllFiles,requestCloseAll} from './workDocsActions';
 import {getChatSession} from './collab/chatSession';
 import {toggleSessionChat} from './collab/communication';
 /** Experimental fast parsing (partial reparse). On by default; the stored choice 'off' turns it off for good, a full parse is always the fallback. */
@@ -120,6 +121,8 @@ export function attachKeyboardShortcuts(target:Window=window){
 registerCommand({id:'tools.diff',title:'Toggle diff split (compare in editor)',category:'Tools',keywords:['diff','compare','changes','saved version'],enabled:()=>getState().coreConnected,run:()=>{const st=getState();patchState({diffSplit:!st.diffSplit,...(st.viewMode==='design'?{viewMode:'split' as const}:{})});}});
 registerCommand({id:'tools.editImage',title:'Edit image...',category:'Tools',keywords:['image','edit','crop','resize','rotate','flip','brightness','contrast','photo'],run:()=>{window.dispatchEvent(new Event('somnia:edit-image'));}});
 registerCommand({id:'tools.convert',title:'Convert files...',category:'Tools',keywords:['convert','format','image','png','jpg','webp','svg','pdf','docx','markdown','html','csv','json','batch'],run:()=>patchState({convertDialog:true})});
+registerCommand({id:'project.saveAll',title:'Save all files',category:'Project',keywords:['save','all','every','studios'],enabled:()=>canSaveAll(),run:()=>{void saveAllFiles();}});
+registerCommand({id:'project.closeAll',title:'Close all files',category:'Project',keywords:['close','all','every','tabs','studios'],enabled:()=>canCloseAll(),run:()=>requestCloseAll()});
 registerCommand({id:'project.export',title:'Export project...',category:'Project',keywords:['zip','folder','single file','download'],enabled:()=>getState().coreConnected,run:()=>patchState({exportDialog:true})});
 registerCommand({id:'experimental.fastParse',title:'Experimental: toggle fast parsing',category:'Tools',keywords:['incremental','parse','performance','experimental'],run:()=>{const on=!EditorProject.incremental.enabled;EditorProject.incremental.enabled=on;try{localStorage.setItem(FAST_KEY,on?'on':'off');}catch{/* storage unavailable */}patchState({notice:on?'Fast parsing is on (experimental). Unsure cases still use the full parser.':'Fast parsing is off. Every edit uses the full parser.'});}});
 registerCommand({id:'project.openFile',title:'Open file',category:'Project',keywords:['open','file'],run:()=>openFileDialog()});

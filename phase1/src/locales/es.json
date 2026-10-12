@@ -2578,5 +2578,21 @@
   "vibe.review.event.core_apply_reconciled": "Aplicación conciliada",
   "vibe.review.cacheWrite": "Tokens escritos en caché",
   "vibe.review.partialSource": "Subtotal informado por el proveedor (algunos pasos sin coste)",
-  "vibe.review.reportedCost": "Coste informado"
+  "vibe.review.reportedCost": "Coste informado",
+  "cmd.project.saveAll": "Guardar todos los archivos",
+  "cmd.project.closeAll": "Cerrar todos los archivos",
+  "workdocs.nothingToSave": "No hay nada que guardar.",
+  "workdocs.saved": "{count} archivos guardados.",
+  "workdocs.saveStopped": "{saved} guardados. Se detuvo en {name}; {open} sin guardar.",
+  "workdocs.closed": "Todos los archivos cerrados.",
+  "workdocs.closedKept": "Todos los archivos cerrados. {count} archivos no se pudieron revertir y conservan sus cambios.",
+  "workdocs.notClosed": "No se cerró nada. Algunos archivos siguen sin guardar.",
+  "workdocs.savedClosed": "Todos los archivos guardados y cerrados.",
+  "workdocs.dialog.aria": "Cerrar todos los archivos",
+  "workdocs.dialog.title": "¿Cerrar todos los archivos?",
+  "workdocs.dialog.desc": "{count} archivos tienen cambios sin guardar. Guárdalos primero o descarta los cambios.",
+  "workdocs.dialog.unsaved": "Cambios sin guardar",
+  "workdocs.dialog.more": "y {count} más",
+  "workdocs.dialog.discard": "Descartar y cerrar",
+  "workdocs.dialog.save": "Guardar todo y cerrar"
 }

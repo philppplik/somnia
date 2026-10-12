@@ -2578,5 +2578,21 @@
   "vibe.review.event.core_apply_reconciled": "Apply reconciled",
   "vibe.review.cacheWrite": "Cache write tokens",
   "vibe.review.partialSource": "Provider-reported subtotal (some steps did not report cost)",
-  "vibe.review.reportedCost": "Reported cost"
+  "vibe.review.reportedCost": "Reported cost",
+  "cmd.project.saveAll": "Save all files",
+  "cmd.project.closeAll": "Close all files",
+  "workdocs.nothingToSave": "Nothing to save.",
+  "workdocs.saved": "Saved {count} files.",
+  "workdocs.saveStopped": "Saved {saved}. Stopped at {name}; {open} still unsaved.",
+  "workdocs.closed": "All files closed.",
+  "workdocs.closedKept": "All files closed. {count} files could not be reverted and keep their changes.",
+  "workdocs.notClosed": "Nothing was closed. Some files are still unsaved.",
+  "workdocs.savedClosed": "Saved and closed all files.",
+  "workdocs.dialog.aria": "Close all files",
+  "workdocs.dialog.title": "Close all files?",
+  "workdocs.dialog.desc": "{count} files have unsaved changes. Save them first, or discard the changes.",
+  "workdocs.dialog.unsaved": "Unsaved changes",
+  "workdocs.dialog.more": "and {count} more",
+  "workdocs.dialog.discard": "Discard and close",
+  "workdocs.dialog.save": "Save all and close"
 }

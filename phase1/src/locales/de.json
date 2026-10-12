@@ -2578,5 +2578,21 @@
   "vibe.review.event.core_apply_reconciled": "Übernahme abgeglichen",
   "vibe.review.cacheWrite": "Cache-Schreib-Tokens",
   "vibe.review.partialSource": "Vom Anbieter gemeldete Teilsumme (einige Schritte ohne Kostenangabe)",
-  "vibe.review.reportedCost": "Gemeldete Kosten"
+  "vibe.review.reportedCost": "Gemeldete Kosten",
+  "cmd.project.saveAll": "Alle Dateien speichern",
+  "cmd.project.closeAll": "Alle Dateien schließen",
+  "workdocs.nothingToSave": "Nichts zu speichern.",
+  "workdocs.saved": "{count} Dateien gespeichert.",
+  "workdocs.saveStopped": "{saved} gespeichert. Gestoppt bei {name}; {open} noch ungespeichert.",
+  "workdocs.closed": "Alle Dateien geschlossen.",
+  "workdocs.closedKept": "Alle Dateien geschlossen. {count} Dateien konnten nicht zurückgesetzt werden und behalten ihre Änderungen.",
+  "workdocs.notClosed": "Nichts wurde geschlossen. Einige Dateien sind noch ungespeichert.",
+  "workdocs.savedClosed": "Alle Dateien gespeichert und geschlossen.",
+  "workdocs.dialog.aria": "Alle Dateien schließen",
+  "workdocs.dialog.title": "Alle Dateien schließen?",
+  "workdocs.dialog.desc": "{count} Dateien haben ungespeicherte Änderungen. Speichere sie zuerst oder verwirf die Änderungen.",
+  "workdocs.dialog.unsaved": "Ungespeicherte Änderungen",
+  "workdocs.dialog.more": "und {count} weitere",
+  "workdocs.dialog.discard": "Verwerfen und schließen",
+  "workdocs.dialog.save": "Alle speichern und schließen"
 }

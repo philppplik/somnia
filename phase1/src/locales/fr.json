@@ -2578,5 +2578,21 @@
   "vibe.review.event.core_apply_reconciled": "Application vérifiée",
   "vibe.review.cacheWrite": "Tokens écrits en cache",
   "vibe.review.partialSource": "Sous-total communiqué (certains coûts ne sont pas communiqués)",
-  "vibe.review.reportedCost": "Coût communiqué"
+  "vibe.review.reportedCost": "Coût communiqué",
+  "cmd.project.saveAll": "Enregistrer tous les fichiers",
+  "cmd.project.closeAll": "Fermer tous les fichiers",
+  "workdocs.nothingToSave": "Rien à enregistrer.",
+  "workdocs.saved": "{count} fichiers enregistrés.",
+  "workdocs.saveStopped": "{saved} enregistrés. Arrêt sur {name} ; {open} non enregistrés.",
+  "workdocs.closed": "Tous les fichiers sont fermés.",
+  "workdocs.closedKept": "Tous les fichiers sont fermés. {count} fichiers n'ont pas pu être rétablis et gardent leurs modifications.",
+  "workdocs.notClosed": "Rien n'a été fermé. Certains fichiers ne sont pas enregistrés.",
+  "workdocs.savedClosed": "Tous les fichiers ont été enregistrés et fermés.",
+  "workdocs.dialog.aria": "Fermer tous les fichiers",
+  "workdocs.dialog.title": "Fermer tous les fichiers ?",
+  "workdocs.dialog.desc": "{count} fichiers ont des modifications non enregistrées. Enregistrez-les d'abord ou abandonnez les modifications.",
+  "workdocs.dialog.unsaved": "Modifications non enregistrées",
+  "workdocs.dialog.more": "et {count} de plus",
+  "workdocs.dialog.discard": "Abandonner et fermer",
+  "workdocs.dialog.save": "Tout enregistrer et fermer"
 }
