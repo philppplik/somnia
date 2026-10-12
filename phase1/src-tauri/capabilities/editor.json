@@ -141,6 +141,8 @@
     "allow-mcp-server-start",
     "allow-mcp-server-stop",
     "allow-mcp-tool-call",
+    "allow-mcp-grants-list",
+    "allow-mcp-grant-revoke",
     "allow-agent-account-disconnect",
     "allow-agent-account-set-method",
     "allow-agent-account-start",

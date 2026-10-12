@@ -23,6 +23,7 @@ pub mod lan_host;
 
 pub mod agent_settings;
 pub mod mcp_host;
+pub mod mcp_broker;
 pub mod mcp_health;
 pub mod mcp_gateway;
 #[cfg(feature = "desktop")]

@@ -1,12 +1,19 @@
-//! DRAFT (unverified, needs CI): MCP client over HTTP ("Streamable HTTP" POST, JSON or SSE reply).
+//! MCP client over HTTP ("Streamable HTTP" POST, JSON or SSE reply).
 //! Independent of rmcp so it does not depend on rmcp's transport features. Desktop only (reqwest).
 //!
-//! Rules: https only, except http to loopback; no redirects; 20 s connect / 60 s total timeout;
+//! Network path: the client reaches the network ONLY through the broker-owned `DomainProxy`
+//! (see `mcp_broker::McpBroker::authorize_http`): deny-default domain grant, SSRF guard, live grant
+//! check on every connection. Connections are never pooled, so a revoke takes effect on the next call.
+//!
+//! Rules: https only; no redirects; 20 s connect / 60 s total timeout;
 //! replies capped at 1 MiB; the optional bearer token comes from the vault entry named in the
 //! server config and is never logged; results use the same 64 KiB text cap as stdio servers.
 //! A reply may be `application/json` or `text/event-stream`; for SSE the whole (capped) body is
 //! read and the `data:` event carrying our request id is used. Server-initiated requests are ignored.
+use crate::mcp_broker::{Choice, McpBroker, NetRoute};
 use crate::mcp_host::{McpToolInfo, MAX_RESULT_BYTES};
+use std::collections::HashMap;
+use vibespace_policy as policy;
 use reqwest::header::{ACCEPT, AUTHORIZATION, CONTENT_TYPE};
 use serde_json::{json, Map, Value};
 use std::time::Duration;
@@ -16,13 +23,10 @@ const PROTOCOL: &str = "2025-06-18";
 
 pub fn validate_url(url: &str) -> Result<reqwest::Url, String> {
     let u = reqwest::Url::parse(url).map_err(|_| "Server URL is not valid.".to_string())?;
-    let loopback = matches!(u.host_str(), Some("localhost") | Some("127.0.0.1") | Some("[::1]"));
-    match u.scheme() {
-        "https" => {}
-        "http" if loopback => {}
-        _ => return Err("Server URL must use https (http is allowed for localhost only).".into()),
-    }
+    // https only: loopback http would bypass the broker's SSRF guard, so it is gone.
+    if u.scheme() != "https" { return Err("Server URL must use https.".into()); }
     if !u.username().is_empty() || u.password().is_some() { return Err("Server URL must not contain credentials.".into()); }
+    if u.port().is_some() { return Err("Server URL must not set a port.".into()); }
     Ok(u)
 }
 
@@ -46,17 +50,25 @@ pub struct HttpMcpClient {
     token: Option<String>,
     session: Option<String>,
     next_id: u64,
+    digests: HashMap<String, policy::ArgsDigest>,
+    server: String,
 }
 
 impl HttpMcpClient {
-    pub fn new(url: &str, token: Option<String>) -> Result<Self, String> {
+    /// `route` comes from `McpBroker::authorize_http` (the only way to get one); the URL host must
+    /// be the routed domain.
+    pub fn new(server: &str, url: &str, token: Option<String>, route: &NetRoute) -> Result<Self, String> {
         let url = validate_url(url)?;
+        if url.host_str().map(|h| h.to_ascii_lowercase()) != Some(route.domain.clone()) { return Err("mcp_domain_not_allowed".into()); }
+        let proxy = reqwest::Proxy::all(route.proxy_url.as_str()).map_err(|_| "Could not create the HTTP client.".to_string())?;
         let http = reqwest::Client::builder()
+            .proxy(proxy)
+            .pool_max_idle_per_host(0)
             .redirect(reqwest::redirect::Policy::none())
             .connect_timeout(Duration::from_secs(20))
             .timeout(Duration::from_secs(60))
             .build().map_err(|_| "Could not create the HTTP client.".to_string())?;
-        Ok(Self { http, url, token, session: None, next_id: 0 })
+        Ok(Self { http, url, token, session: None, next_id: 0, digests: HashMap::new(), server: server.to_string() })
     }
 
     async fn rpc(&mut self, method: &str, params: Value, notify: bool) -> Result<Value, String> {
@@ -87,15 +99,28 @@ impl HttpMcpClient {
 
     pub async fn tools(&mut self, server: &str) -> Result<Vec<McpToolInfo>, String> {
         let r = self.rpc("tools/list", json!({}), false).await?;
-        Ok(r.get("tools").and_then(Value::as_array).map(|a| a.iter().take(200).filter_map(|t| Some(McpToolInfo {
-            server: server.to_string(),
-            name: t.get("name")?.as_str()?.to_string(),
-            description: t.get("description").and_then(Value::as_str).unwrap_or("").chars().take(2000).collect(),
-            input_schema: t.get("inputSchema").cloned().unwrap_or_else(|| json!({"type": "object"})),
-        })).collect()).unwrap_or_default())
+        let list: Vec<McpToolInfo> = r.get("tools").and_then(Value::as_array).map(|a| a.iter().take(200).filter_map(|t| Some(McpToolInfo::new(
+            server,
+            t.get("name")?.as_str()?.to_string(),
+            t.get("description").and_then(Value::as_str).unwrap_or("").chars().take(2000).collect(),
+            t.get("inputSchema").cloned().unwrap_or_else(|| json!({"type": "object"})),
+        ))).collect()).unwrap_or_default();
+        self.digests = list.iter().filter_map(|t| Some((t.name.clone(), policy::ArgsDigest::from_hex(&t.schema_digest)?))).collect();
+        Ok(list)
     }
 
-    pub async fn call(&mut self, tool: &str, args: Map<String, Value>) -> Result<String, String> {
+    /// Tool call through the broker's MCP route (digest-bound grant or the user's relayed answer).
+    pub async fn call_via_broker(&mut self, broker: &McpBroker, tool: &str, args: Map<String, Value>, choice: Option<Choice>) -> Result<String, String> {
+        let digest = *self.digests.get(tool).ok_or("mcp_unknown_tool")?;
+        let canonical = serde_json::to_vec(&Value::Object(args.clone())).map_err(|_| "mcp_invalid_arguments".to_string())?;
+        let (permit, _) = broker.authorize_call(&self.server, tool, digest, &canonical, choice)?;
+        match self.call(tool, args).await {
+            Ok(o) => { permit.complete_ok(o.len() as u64); Ok(o) }
+            Err(e) => { permit.complete_failed("call_failed"); Err(e) }
+        }
+    }
+
+    async fn call(&mut self, tool: &str, args: Map<String, Value>) -> Result<String, String> {
         let r = self.rpc("tools/call", json!({"name": tool, "arguments": args}), false).await?;
         let mut out = String::new();
         for b in r.get("content").and_then(Value::as_array).into_iter().flatten() {
@@ -118,9 +143,7 @@ mod tests {
     #[test]
     fn url_rules() {
         assert!(validate_url("https://example.com/mcp").is_ok());
-        assert!(validate_url("http://127.0.0.1:8080/mcp").is_ok());
-        assert!(validate_url("http://localhost/mcp").is_ok());
-        for bad in ["http://example.com/mcp", "ftp://x/y", "https://user:pw@example.com/", "nonsense"] { assert!(validate_url(bad).is_err(), "{bad}"); }
+        for bad in ["http://127.0.0.1:8080/mcp", "http://localhost/mcp", "https://example.com:8443/mcp", "http://example.com/mcp", "ftp://x/y", "https://user:pw@example.com/", "nonsense"] { assert!(validate_url(bad).is_err(), "{bad}"); }
     }
 
     #[test]

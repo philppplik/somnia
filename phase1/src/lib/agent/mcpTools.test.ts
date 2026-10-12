@@ -51,3 +51,27 @@ test('default grants never reach MCP tools', async () => {
   await assert.rejects(run(t, 'mcp_docs__search', { q: 'x' }), /Unknown agent tool/);
   assert.ok(!t.definitions().some(d => d.name.startsWith('mcp_')));
 });
+
+test('AllowForRun and granted decisions reach the bridge as the broker expects, and a revoked grant asks again', async () => {
+  const reg = createMcpRegistry(), t = info();
+  const sent: any[] = [];
+  let revoked = false;
+  const decisions: any[] = ['granted', 'allow_for_run'];
+  const asked: any[] = [];
+  registerMcpTools(reg, [t], grantFor(t), { call: async (_s, _n, _a, choice) => { sent.push(choice); if (!choice && revoked) throw Error('mcp_consent_required'); return 'hit'; } }, async (_c, _s, opts) => { asked.push(!!opts?.forcePrompt); return decisions.shift(); });
+  const tools = new AgentProjectTools({ projectId: 'p', files: () => ({}), allowed: () => true }, undefined, undefined, { registry: reg, grants: { levels: ['read', 'propose', 'execute'] } });
+  // 1: an existing grant covers the call: no choice is sent.
+  await run(tools, 'mcp_docs__search', { q: 'x' });
+  assert.deepEqual(sent, [undefined]);
+  // 2: the grant was revoked meanwhile: the broker says consent is required, the user is asked once (forced prompt) and the answer is sent.
+  revoked = true; decisions.unshift('granted');
+  await run(tools, 'mcp_docs__search', { q: 'x' });
+  assert.deepEqual(sent, [undefined, undefined, 'allow_for_run']);
+  assert.deepEqual(asked, [false, false, true]);
+});
+test('a revoked grant never loops: a second "granted" answer is refused', async () => {
+  const reg = createMcpRegistry(), t = info();
+  registerMcpTools(reg, [t], grantFor(t), { call: async () => { throw Error('mcp_consent_required'); } }, async () => 'granted');
+  const tools = new AgentProjectTools({ projectId: 'p', files: () => ({}), allowed: () => true }, undefined, undefined, { registry: reg, grants: { levels: ['read', 'propose', 'execute'] } });
+  await assert.rejects(run(tools, 'mcp_docs__search', { q: 'x' }), /did not approve/);
+});

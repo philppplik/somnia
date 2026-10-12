@@ -449,13 +449,30 @@ async fn mcp_server_remove(window: WebviewWindow, host: State<'_, crate::mcp_hos
     host.stop(&id).await;
     Ok(())
 }
+/// The one app-level broker scope of the MCP host (built lazily on the app's single consent broker).
+#[derive(Default)]
+struct McpBrokerState(std::sync::OnceLock<std::result::Result<std::sync::Arc<crate::mcp_broker::McpBroker>, String>>);
+async fn mcp_broker(window: &WebviewWindow, st: &McpBrokerState) -> std::result::Result<std::sync::Arc<crate::mcp_broker::McpBroker>, String> {
+    if let Some(r) = st.0.get() { return r.clone(); }
+    let app = window.app_handle().clone();
+    let built = tauri::async_runtime::spawn_blocking(move || -> std::result::Result<std::sync::Arc<crate::mcp_broker::McpBroker>, String> {
+        let vs = app.state::<crate::vibespace_commands::VibeSpaceState>();
+        let runtime = vs.runtime(&app).map_err(|_| "mcp_broker_failed".to_string())?;
+        let work = app.path().app_data_dir().map_err(|_| "mcp_broker_failed".to_string())?.join("mcp").join("work");
+        crate::mcp_broker::McpBroker::open(runtime.acp_broker(), crate::mcp_broker::platform_executor(&work)).map(std::sync::Arc::new).map_err(String::from)
+    }).await.map_err(|_| "mcp_broker_failed".to_string())?;
+    st.0.get_or_init(|| built).clone()
+}
+/// Starts an approved stdio server. It only ever starts through the broker: `choice` is the user's answer to the
+/// consent request (none when a program grant already covers it; the broker then answers `mcp_consent_required` if not).
 #[tauri::command]
-async fn mcp_server_start(window: WebviewWindow, host: State<'_, crate::mcp_host::McpHost>, id: String) -> std::result::Result<Vec<crate::mcp_host::McpToolInfo>, String> {
+async fn mcp_server_start(window: WebviewWindow, host: State<'_, crate::mcp_host::McpHost>, broker: State<'_, McpBrokerState>, id: String, choice: Option<crate::mcp_broker::Choice>) -> std::result::Result<Vec<crate::mcp_host::McpToolInfo>, String> {
     gate(&window).map_err(|_| "Only the trusted editor may manage MCP servers")?;
     let path = mcp_path(&window)?;
     let list = tauri::async_runtime::spawn_blocking(move || crate::mcp_host::load_servers(&path)).await.map_err(|_| "Could not read MCP servers")??;
     let cfg = list.into_iter().find(|c| c.id == id).ok_or("Unknown MCP server")?;
-    host.start(&cfg).await?;
+    let b = mcp_broker(&window, &broker).await?;
+    host.start_via_broker(b, &cfg, choice).await?;
     host.tools(&id).await
 }
 #[tauri::command]
@@ -464,10 +481,24 @@ async fn mcp_server_stop(window: WebviewWindow, host: State<'_, crate::mcp_host:
     host.stop(&id).await;
     Ok(())
 }
+/// One tool call, through the broker's MCP route (digest-bound grant, or `choice` = the user's answer to this call).
 #[tauri::command]
-async fn mcp_tool_call(window: WebviewWindow, host: State<'_, crate::mcp_host::McpHost>, server: String, tool: String, arguments: serde_json::Map<String, serde_json::Value>) -> std::result::Result<String, String> {
+async fn mcp_tool_call(window: WebviewWindow, host: State<'_, crate::mcp_host::McpHost>, broker: State<'_, McpBrokerState>, server: String, tool: String, arguments: serde_json::Map<String, serde_json::Value>, choice: Option<crate::mcp_broker::Choice>) -> std::result::Result<String, String> {
     gate(&window).map_err(|_| "Only the trusted editor may call MCP tools")?;
-    host.call(&server, &tool, arguments).await
+    let b = mcp_broker(&window, &broker).await?;
+    host.call_via_broker(&b, &server, &tool, arguments, choice).await
+}
+/// Grants of the MCP scope (program, domain and digest-bound tool grants), for the grants view.
+#[tauri::command]
+async fn mcp_grants_list(window: WebviewWindow, broker: State<'_, McpBrokerState>) -> std::result::Result<crate::mcp_broker::McpGrantsReply, String> {
+    gate(&window).map_err(|_| "Only the trusted editor may manage MCP grants")?;
+    mcp_broker(&window, &broker).await?.grants().map_err(String::from)
+}
+/// Revoke one grant of the MCP scope. `kind` is shell, network or mcp.
+#[tauri::command]
+async fn mcp_grant_revoke(window: WebviewWindow, broker: State<'_, McpBrokerState>, kind: String, grant_id: String) -> std::result::Result<usize, String> {
+    gate(&window).map_err(|_| "Only the trusted editor may manage MCP grants")?;
+    mcp_broker(&window, &broker).await?.revoke(&kind, &grant_id).map_err(String::from)
 }
 #[tauri::command]
 async fn agent_settings_load(window: WebviewWindow) -> std::result::Result<AgentSettingsReply, String> {
@@ -2169,6 +2200,7 @@ pub fn run() {
         .plugin(ext_navigation_plugin())
         .manage(ProviderNetwork::default())
         .manage(crate::mcp_host::McpHost::new())
+        .manage(McpBrokerState::default())
         .manage(crate::mcp_studio::StudioMcp::default())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
@@ -2349,6 +2381,8 @@ pub fn run() {
             mcp_server_start,
             mcp_server_stop,
             mcp_tool_call,
+            mcp_grants_list,
+            mcp_grant_revoke,
             agent_account_disconnect,
             agent_account_set_method,
             agent_account_start,

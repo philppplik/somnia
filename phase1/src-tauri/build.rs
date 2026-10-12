@@ -127,6 +127,8 @@ fn main() {
             "mcp_server_start",
             "mcp_server_stop",
             "mcp_tool_call",
+            "mcp_grants_list",
+            "mcp_grant_revoke",
             "agent_account_disconnect",
             "agent_account_set_method",
             "agent_account_start",

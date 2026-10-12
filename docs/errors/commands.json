@@ -839,6 +839,30 @@
       ]
     },
     {
+      "name": "mcp_grant_revoke",
+      "domain": "agent",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "kind",
+        "grant_id"
+      ],
+      "args": [
+        "kind",
+        "grantId"
+      ]
+    },
+    {
+      "name": "mcp_grants_list",
+      "domain": "agent",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [],
+      "args": []
+    },
+    {
       "name": "mcp_server_remove",
       "domain": "agent",
       "status": "native",
@@ -871,10 +895,12 @@
       "wrapped": false,
       "boundary": "B1",
       "params": [
-        "id"
+        "id",
+        "choice"
       ],
       "args": [
-        "id"
+        "id",
+        "choice"
       ]
     },
     {
@@ -908,12 +934,14 @@
       "params": [
         "server",
         "tool",
-        "arguments"
+        "arguments",
+        "choice"
       ],
       "args": [
         "server",
         "tool",
-        "arguments"
+        "arguments",
+        "choice"
       ]
     },
     {
