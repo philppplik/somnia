@@ -1,17 +1,21 @@
 import {useEffect,useMemo,useRef,useState} from 'react';
 import {jumpToLine,patchState,useAppStore} from '../store/appStore';
 import {Button} from './ui/button';
-import {buildPreview} from '../lib/livePreview';
+import type {buildPreview} from "../lib/livePreview";
+import {buildPreviewWithAssets} from '../lib/livePreviewAssets';
+import {PreviewAssetCache} from '../lib/previewAssetCache';
+import {getPreviewAssetLoader} from '../lib/previewAssetLoader';
 import {mapPreviewErrorLocation,type PreviewSourceLocation} from '../lib/previewErrorLocation';
 import {useT} from '../lib/useT';
 const key=(name:string)=>`somnia.preview.scripts.${name}`;
 const read=(name:string):boolean|null=>{try{const v=localStorage.getItem(key(name));return v==null?null:v==='1';}catch{return null;}};
 /** Opt-in live preview. Scripts only run after a one-time choice per project; the iframe has an opaque origin and no network. */
 export function LivePreview(){const {t}=useT();
- const s=useAppStore();const [allow,setAllow]=useState<boolean|null>(()=>read(s.projectName));const [auto,setAuto]=useState(true);const [tick,setTick]=useState(0);const [errors,setErrors]=useState<Array<{message:string;location:PreviewSourceLocation|null}>>([]);const [doc,setDoc]=useState('');const [blocked,setBlocked]=useState<string[]>([]);const frame=useRef<HTMLIFrameElement>(null);const scroll=useRef(0);const preview=useRef<ReturnType<typeof buildPreview>|null>(null);
+ const s=useAppStore();const [allow,setAllow]=useState<boolean|null>(()=>read(s.projectName));const [auto,setAuto]=useState(true);const [tick,setTick]=useState(0);const [errors,setErrors]=useState<Array<{message:string;location:PreviewSourceLocation|null}>>([]);const [doc,setDoc]=useState('');const [blocked,setBlocked]=useState<string[]>([]);const frame=useRef<HTMLIFrameElement>(null);const scroll=useRef(0);const assetCache=useRef(new PreviewAssetCache());const lastTick=useRef(0);const preview=useRef<ReturnType<typeof buildPreview>|null>(null);
  const previewFile=s.designFile||s.activeFile;const text=s.files[s.activeFile]??'';const sig=useMemo(()=>Object.keys(s.files).map(k=>k+':'+s.files[k].length+':'+s.files[k].slice(0,2000)).join('|'),[s.files]);
- useEffect(()=>{setAllow(read(s.projectName));},[s.projectName]);
- useEffect(()=>{if(allow===null)return;const run=()=>{setErrors([]);const built=buildPreview(s.files,previewFile,allow,scroll.current);preview.current=built;setBlocked(built.blocked);setDoc(built.html);};const t=window.setTimeout(run,auto?600:0);return()=>window.clearTimeout(t);},[auto?sig:'',allow,tick,previewFile]);// eslint-disable-line react-hooks/exhaustive-deps
+ useEffect(()=>{setAllow(read(s.projectName));assetCache.current.invalidateAll();},[s.projectName]);
+ useEffect(()=>{const c=assetCache.current;return()=>c.invalidateAll();},[]);
+ useEffect(()=>{if(allow===null)return;let live=true;const run=async()=>{if(lastTick.current!==tick){lastTick.current=tick;assetCache.current.invalidateAll();}const {built,notes}=await buildPreviewWithAssets(s.files,previewFile,allow,scroll.current,assetCache.current,getPreviewAssetLoader());if(!live)return;setErrors([]);preview.current=built;setBlocked(built.blocked.concat(notes));setDoc(built.html);};const t=window.setTimeout(()=>{void run();},auto?600:0);return()=>{live=false;window.clearTimeout(t);};},[auto?sig:'',allow,tick,previewFile]);// eslint-disable-line react-hooks/exhaustive-deps
  useEffect(()=>{const on=(e:MessageEvent)=>{if(e.source!==frame.current?.contentWindow)return;const d=e.data;if(!d||typeof d!=='object'||d.id!==preview.current?.id)return;if(d.somnia==='error'){const message=String(d.message).slice(0,300);const location=mapPreviewErrorLocation({message,filename:typeof d.filename==='string'?d.filename:undefined,line:d.line,col:d.col,syntax:d.syntax===true,stack:typeof d.stack==='string'?d.stack:undefined},preview.current?.scripts??[]);setErrors(x=>[...x.slice(-9),{message,location}]);}if(d.somnia==='scroll'&&typeof d.y==='number')scroll.current=d.y;};window.addEventListener('message',on);return()=>window.removeEventListener('message',on);},[]);
  const choose=(v:boolean)=>{try{localStorage.setItem(key(s.projectName),v?'1':'0');}catch{/* private mode */}setAllow(v);};
  if(allow===null)return <section className="canvas-stage grid place-items-center" aria-label={t('rest.livePreview.livePreview')}><div className="max-w-[420px] p-6 text-center text-[13px] leading-6"><h3 className="mb-2">{t('finish2.preview.consent')}</h3><p className="mb-4 text-ink-2">{t('finish2.preview.consentHint')}</p><div className="flex justify-center gap-2"><Button onClick={()=>choose(true)}>{t('rest.livePreview.runScripts')}</Button><Button onClick={()=>choose(false)}>{t('rest.livePreview.previewWithoutScripts')}</Button></div></div></section>;
