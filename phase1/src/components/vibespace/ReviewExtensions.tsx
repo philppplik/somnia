@@ -1,3 +1,4 @@
+import {AcpPanel} from './AcpPanel';
 import {ComputerUseReview} from './ComputerUseReview';
 import {useEffect,useState,useSyncExternalStore} from 'react';
 import {getLocale,subscribeLocale,t} from '../../lib/i18n';
@@ -6,6 +7,7 @@ import type {Studio,VibeSpaceTransport,VibeIntent,ReviewDetails,HunkSelection} f
 function useText(){useSyncExternalStore(subscribeLocale,getLocale,getLocale);return (key:string)=>t(`vibe.review.${key}`);}
 /** Read-only durable native projection. No agent loop, event synthesis or silent fixture fallback. */
 export function ReviewExtensions({studio,transport,disabled,onAction}:{studio:Studio;transport:VibeSpaceTransport;disabled:boolean;onAction:(i:VibeIntent)=>Promise<boolean>}){
+ const [tab,setTab]=useState<'review'|'acp'>('review');
  const text=useText();const [details,setDetails]=useState<ReviewDetails|null>(null),[error,setError]=useState(false);
  const [selected,setSelected]=useState<Record<string,string[]>>({}),[paths,setPaths]=useState<string[]>([]),[confirm,setConfirm]=useState(false),[message,setMessage]=useState('');
  useEffect(()=>{let active=true;setDetails(null);setError(false);setConfirm(false);setSelected({});setPaths([]);
@@ -17,6 +19,12 @@ export function ReviewExtensions({studio,transport,disabled,onAction}:{studio:St
  const allowed=!!details&&reviewedHunksAllowed(studio,details,paths,hunks)&&!disabled&&transport.capabilities.includes('apply-hunks');
  const changeAllowed=!!review&&['ready','conflict'].includes(studio.reviewState)&&!disabled&&transport.capabilities.includes('request-changes');
  return <>
+  <div className="vs-actions" role="tablist" aria-label={t('vibespace.acp.ui.dock')}>
+   <button role="tab" aria-selected={tab==='review'} aria-controls="vs-review-dock" id="vs-review-tab" onClick={()=>setTab('review')}>{t('vibespace.acp.ui.reviewTab')}</button>
+   <button role="tab" aria-selected={tab==='acp'} aria-controls="vs-acp-dock" id="vs-acp-tab" onClick={()=>setTab('acp')}>{t('vibespace.acp.ui.title')}</button>
+  </div>
+  <div role="tabpanel" id="vs-acp-dock" aria-labelledby="vs-acp-tab" hidden={tab!=='acp'}>{tab==='acp'&&<AcpPanel disabled={disabled}/>}</div>
+  <div role="tabpanel" id="vs-review-dock" aria-labelledby="vs-review-tab" hidden={tab!=='review'}>
   {(studio.pendingConsents.some(c=>c.kind==='desktop')||details?.timeline.some(e=>e.kind.startsWith('computer_use.')))&&<ComputerUseReview/>}
   <section className="vs-card"><h3>{text('pauseTitle')}</h3><p className="vs-muted">{text('pauseGap')}</p><div className="vs-actions"><button disabled>{text('pause')}</button><button disabled>{text('resume')}</button></div></section>
   {error&&<p role="alert" className="vs-notice">{text('readError')}</p>}
@@ -31,6 +39,7 @@ export function ReviewExtensions({studio,transport,disabled,onAction}:{studio:St
   </section>}
   {review&&<form className="vs-card" aria-label={text('requestChanges')} onSubmit={e=>{e.preventDefault();if(!changeAllowed||!message.trim())return;void onAction({type:'request-changes',runId:studio.runId,reviewRevision:review.revision,message:message.trim()}).then(ok=>{if(ok)setMessage('');});}}><h3>{text('requestChanges')}</h3><p className="vs-muted">{text('newRun')}</p><label>{text('changeMessage')}<textarea maxLength={2048} rows={3} disabled={!changeAllowed} value={message} onChange={e=>setMessage(e.target.value)}/></label><button type="submit" disabled={!changeAllowed||!message.trim()}>{text('startNew')}</button></form>}
   <section className="vs-card" aria-label={text('timeline')}><h3>{text('timeline')}</h3>{details?<ol className="vs-timeline">{details.timeline.map(e=><li key={e.sequence}><div><strong>{(t(`vibe.review.event.${e.kind.replaceAll('.','_')}`).startsWith('vibe.review.')?e.kind:text('event.'+e.kind.replaceAll('.','_')))}</strong>{e.detail&&<span data-copyable>{e.detail}</span>}{e.usage&&<UsageDetails studio={{...studio,usage:e.usage}}/>}<time dateTime={e.timestampUtc}>{new Date(e.timestampUtc).toLocaleString(getLocale())}</time></div><small>#{e.sequence}</small></li>)}</ol>:<p className="vs-muted">{transport.reviewDetails?text('loading'):text('historyUnavailable')}</p>}</section>
+  </div>
  </>;
 }
 export function UsageDetails({studio}:{studio:Studio}){

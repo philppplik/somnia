@@ -12,11 +12,11 @@ export const acpCommands={launch:'vibespace_acp_launch',session:'vibespace_acp_s
 
 export type AcpStatus='awaiting_approval'|'ready'|'failed'|'closed';
 export type AcpChoice='allow_once'|'allow_for_run'|'deny';
-export interface AcpPendingConsent{requestId:string;kind:string;target:string;reason:string;allowForRun:boolean;origin:AcpLine|null}
-export interface AcpSessionState{status:AcpStatus;failure:string|null;runId:string;name:string;pending:AcpPendingConsent[];transcript:AcpLine[];lastSessionId:string|null}
+export interface AcpPendingConsent{requestId:string;kind:string;target:string;reason:string;allowForRun:boolean;allowOnce:boolean;origin:AcpLine|null}
+export interface AcpSessionState{status:AcpStatus;failure:string|null;runId:string;name:string;pending:AcpPendingConsent[];transcript:AcpLine[];lastSessionId:string|null;eventCount:number}
 
 const STATUSES:readonly string[]=['awaiting_approval','ready','failed','closed'];
-const str=(v:unknown,max=300):string=>typeof v==='string'?v.slice(0,max):'';
+const str=(v:unknown,max=300):string=>typeof v==='string'?v.replace(/[\u0000-\u001f\u007f\u061c\u200b-\u200f\u202a-\u202e\u2066-\u2069\ufeff]/g,' ').slice(0,max):'';
 
 /** Strict parse of the native state reply; anything unexpected is rejected, never guessed. */
 export function parseAcpState(raw:unknown):AcpSessionState{
@@ -25,11 +25,11 @@ export function parseAcpState(raw:unknown):AcpSessionState{
  const pending=(Array.isArray(r.pending)?r.pending:[]).map((p):AcpPendingConsent=>{
   const o=p as Record<string,unknown>;
   const offered=Array.isArray(o.offered)?o.offered:[];
-  return{requestId:str(o.requestId,128),kind:str(o.kind,20),target:str(o.target,300),reason:str(o.reason,500),allowForRun:offered.includes('allow_for_run'),
+  return{requestId:str(o.requestId,128),kind:str(o.kind,20),target:str(o.target,300),reason:str(o.reason,500),allowForRun:offered.includes('allow_for_run'),allowOnce:offered.includes('allow_once'),
    origin:describeConsentOrigin(o.origin as {type?:string;name?:string}|null)};
  });
  const events=Array.isArray(r.events)?r.events as {kind?:string;data?:Record<string,unknown>}[]:[];
- return{status:r.status as AcpStatus,failure:typeof r.failure==='string'?r.failure:null,runId:str(r.runId,128),name:str(r.name,80),pending,transcript:describeAcpTranscript(events),lastSessionId:typeof r.lastSessionId==='string'?r.lastSessionId:null};
+ return{status:r.status as AcpStatus,failure:typeof r.failure==='string'?r.failure:null,runId:str(r.runId,128),name:str(r.name,80),pending,transcript:describeAcpTranscript(events),eventCount:events.length,lastSessionId:typeof r.lastSessionId==='string'?r.lastSessionId:null};
 }
 
 export interface AcpClientBinding{

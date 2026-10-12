@@ -37,3 +37,12 @@
 .vs-run-controls button{padding:5px 10px;min-height:28px;font-size:12px}
 .vs-steer-inline{display:flex;flex-direction:column;gap:8px}
 .vs-steer-inline .vs-actions{display:flex;gap:8px}
+/* ACP shares the review dock and existing card hierarchy. */
+.vs-acp fieldset{border:1px solid var(--border-subtle,#d8dbe4);border-radius:12px;padding:16px;margin:16px 0;display:grid;gap:12px}
+.vs-acp label{display:grid;gap:6px;margin:12px 0}
+.vs-acp input,.vs-acp textarea{width:100%;box-sizing:border-box;padding:10px;border:1px solid var(--border-subtle,#d8dbe4);border-radius:8px;background:var(--bg-surface,#fff);color:inherit;font:inherit}
+.vs-acp dd{overflow-wrap:anywhere;margin:0 0 10px}
+.vs-acp [data-tone=denied],.vs-acp [data-tone=warn]{color:var(--text-primary,#936000)}
+.vs-acp [data-tone=allowed]{color:var(--text-primary,#166534)}
+.vs-acp .vs-actions{flex-wrap:wrap}
+.vs-acp .vs-consent{margin:16px 0}
