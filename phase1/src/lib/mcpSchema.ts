@@ -35,7 +35,7 @@ const MAX_NODES = 5000;
 const MAX_ITEMS_WALKED = 200;
 const MAX_PATTERN = 256;
 const MAX_PATTERN_INPUT = 4096;
-const ANNOTATIONS = new Set(['$schema', '$id', '$comment', '$defs', 'definitions', 'title', 'description', 'default', 'examples', 'deprecated', 'readOnly', 'writeOnly', 'format', 'contentMediaType', 'contentEncoding']);
+const ANNOTATIONS = new Set(['$schema', '$id', '$comment', '$defs', 'definitions', 'title', 'description', 'default', 'examples', 'deprecated', 'readOnly', 'writeOnly', 'format', 'contentMediaType', 'contentEncoding', 'x-i18n']);
 const KNOWN = new Set(['type', 'enum', 'const', 'required', 'properties', 'additionalProperties', 'items', 'minimum', 'maximum', 'exclusiveMinimum', 'exclusiveMaximum', 'multipleOf', 'minLength', 'maxLength', 'pattern', 'minItems', 'maxItems', 'uniqueItems', 'minProperties', 'maxProperties', 'anyOf', 'oneOf', 'allOf']);
 const TYPES = new Set(['string', 'number', 'integer', 'boolean', 'object', 'array', 'null']);
 

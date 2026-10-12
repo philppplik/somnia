@@ -2625,5 +2625,16 @@
   "cmd.studio.documents": "Switch to Documents Studio",
   "cmd.studio.slides": "Switch to Slides Studio",
   "cmd.studio.vibespace": "Switch to Vibe Space Studio",
-  "cmd.tools.editImage": "Open another image..."
+  "cmd.tools.editImage": "Open another image...",
+  "schemaForm.choose": "Choose a value",
+  "schemaForm.yes": "Yes",
+  "schemaForm.no": "No",
+  "schemaForm.include": "Include {name}",
+  "schemaForm.parameters": "Parameters",
+  "schemaForm.exact": "Exact arguments (JSON)",
+  "schemaForm.fix": "Check the parameters before continuing.",
+  "schemaForm.invalid": "Invalid value: {name}",
+  "schemaForm.failed": "Could not submit. Try again.",
+  "schemaForm.cancel": "Cancel",
+  "schemaForm.submit": "Continue"
 }

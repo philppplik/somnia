@@ -26,6 +26,8 @@ export interface PaletteEntry {
   params: readonly PaletteParam[];
   /** True when the entry comes from a dispatcher spec (false: legacy-only). */
   spec: boolean;
+  /** Full schema for the generic form, including optional and nested parameters. */
+  schema?: Record<string, unknown>;
 }
 
 const isObj = (v: unknown): v is Record<string, unknown> => !!v && typeof v === 'object' && !Array.isArray(v);
@@ -63,6 +65,7 @@ export function buildPaletteEntries(specs: readonly CommandSpec<unknown, unknown
       keywords: spec.keywords ?? mirrored?.keywords ?? [],
       params: paramPrompts(spec.params),
       spec: true,
+      schema: spec.params,
     });
   }
   for (const c of legacy) {

@@ -47,3 +47,10 @@ test('ranking: fuzzy match on title and keywords, recents first for an empty que
   assert.deepEqual(rankEntries(entries, '', ['a.three']).map(e => e.id)[0], 'a.three');
   assert.deepEqual(rankEntries(entries, 'qq', []), []);
 });
+
+test('generic form retains full optional and nested schema, not only scalar prompts', () => {
+  const params = {type:'object',properties:{settings:{type:'object',properties:{amount:{type:'number'}}}},additionalProperties:false};
+  const [entry] = buildPaletteEntries([spec({params})], []);
+  assert.equal(entry.schema, params);
+  assert.deepEqual(entry.params, []);
+});

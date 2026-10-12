@@ -2625,5 +2625,16 @@
   "cmd.studio.documents": "Mudar para o estúdio Documents",
   "cmd.studio.slides": "Mudar para o estúdio Slides",
   "cmd.studio.vibespace": "Mudar para o estúdio Vibe Space",
-  "cmd.tools.editImage": "Abrir outra imagem..."
+  "cmd.tools.editImage": "Abrir outra imagem...",
+  "schemaForm.choose": "Escolha um valor",
+  "schemaForm.yes": "Sim",
+  "schemaForm.no": "Não",
+  "schemaForm.include": "Incluir {name}",
+  "schemaForm.parameters": "Parâmetros",
+  "schemaForm.exact": "Argumentos exatos (JSON)",
+  "schemaForm.fix": "Verifique os parâmetros antes de continuar.",
+  "schemaForm.invalid": "Valor inválido: {name}",
+  "schemaForm.failed": "Não foi possível enviar. Tente novamente.",
+  "schemaForm.cancel": "Cancelar",
+  "schemaForm.submit": "Continuar"
 }
