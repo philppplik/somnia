@@ -196,6 +196,8 @@ export function createStudioMcpSource(path:string):{studio:string;registry:Agent
  syncDocuments();
  let base:ReturnType<DocumentRegistry['snapshot']>;
  try{base=documents.snapshot(path);if(base.ref.studioKind==='unsupported')return null;}catch{return null;}
+ // buildContext requires inspect on this scope; grant it for the chosen document only.
+ policy.grant({effect:'inspect',documentIds:[base.ref.documentId]});
  const context=buildContext(documents,policy,base.ref.path,null);
  const tools=createTools('mcp',context,[]);
  const registry=tools.registry;
