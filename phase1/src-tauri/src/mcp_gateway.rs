@@ -1,4 +1,4 @@
-//! DRAFT (unverified, needs CI): loopback HTTP gateway that lets an external MCP client talk to
+//! Loopback HTTP gateway that lets an external MCP client talk to
 //! Somnia's in-app MCP server (phase1/src/lib/agent/studioMcpServer.ts). See docs/MCP-SERVER.md.
 //!
 //! Rules: bind 127.0.0.1 only; random per-session bearer token compared in constant time; POST to
@@ -155,18 +155,76 @@ mod tests {
         let ok = post(g.addr, Some(&g.token), "/mcp", r#"{"id":1}"#).await;
         assert!(ok.starts_with("HTTP/1.1 200") && ok.ends_with(r#"{"echo":{"id":1}}"#), "{ok}");
         assert!(post(g.addr, Some(&g.token), "/mcp", r#"{"method":"notifications/initialized"}"#).await.starts_with("HTTP/1.1 202"));
-        let big = "x".repeat(MAX_BODY + 1);
-        // Windows can drop the 413 response when the server closes right after answering
-        // (RST discards buffered but unread data), so allow a few fresh-connection attempts.
-        let mut too_large = String::new();
-        for _ in 0..5 {
-            too_large = post(g.addr, Some(&g.token), "/mcp", &big).await;
-            if too_large.starts_with("HTTP/1.1 413") { break; }
-        }
+        // Declare the oversized length without sending an unread body. This avoids Windows
+        // TCP resets discarding the 413 response and makes the guard deterministic in CI.
+        let too_large = raw(g.addr, &format!("POST /mcp HTTP/1.1\r\nAuthorization: Bearer {}\r\nContent-Length: {}\r\n\r\n", g.token, MAX_BODY + 1)).await;
         assert!(too_large.starts_with("HTTP/1.1 413"), "{too_large}");
         let addr = g.addr;
         g.stop();
         tokio::time::sleep(Duration::from_millis(50)).await;
         assert!(TcpStream::connect(addr).await.is_err());
     }
+
+    async fn raw(addr: SocketAddr, request: &str) -> String {
+        let mut socket = TcpStream::connect(addr).await.unwrap();
+        socket.write_all(request.as_bytes()).await.unwrap();
+        let mut response = String::new();
+        tokio::time::timeout(Duration::from_secs(2), socket.read_to_string(&mut response))
+            .await.unwrap().unwrap();
+        response
+    }
+
+    #[tokio::test]
+    async fn gateway_rejects_method_missing_length_and_invalid_utf8_without_forwarding() {
+        use std::sync::atomic::{AtomicUsize, Ordering};
+        let calls = Arc::new(AtomicUsize::new(0));
+        let count = calls.clone();
+        let forward: Forward = Arc::new(move |_| {
+            count.fetch_add(1, Ordering::SeqCst);
+            Box::pin(async { Some("{}".to_string()) })
+        });
+        let gateway = start(forward).await.unwrap();
+        let head = format!("Host: localhost\r\nAuthorization: Bearer {}\r\n", gateway.token);
+        let response = raw(gateway.addr, &format!("GET /mcp HTTP/1.1\r\n{head}Content-Length: 0\r\n\r\n")).await;
+        assert!(response.starts_with("HTTP/1.1 405"), "{response}");
+        let response = raw(gateway.addr, &format!("POST /mcp HTTP/1.1\r\n{head}\r\n")).await;
+        assert!(response.starts_with("HTTP/1.1 411"), "{response}");
+        let mut socket = TcpStream::connect(gateway.addr).await.unwrap();
+        let mut request = format!("POST /mcp HTTP/1.1\r\n{head}Content-Length: 1\r\n\r\n").into_bytes();
+        request.push(0xff);
+        socket.write_all(&request).await.unwrap();
+        let mut response = String::new();
+        tokio::time::timeout(Duration::from_secs(2), socket.read_to_string(&mut response)).await.unwrap().unwrap();
+        assert!(response.starts_with("HTTP/1.1 400"), "{response}");
+        assert_eq!(calls.load(Ordering::SeqCst), 0);
+    }
+
+    #[tokio::test]
+    async fn gateway_waits_for_fragmented_body_and_preserves_rpc_bytes() {
+        let gateway = start(Arc::new(|message| Box::pin(async move { Some(message) }))).await.unwrap();
+        let body = r#"{"jsonrpc":"2.0","id":42,"method":"tools/list"}"#;
+        let mut socket = TcpStream::connect(gateway.addr).await.unwrap();
+        socket.write_all(format!("POST /mcp HTTP/1.1\r\nAuthorization: Bearer {}\r\nContent-Length: {}\r\n\r\n", gateway.token, body.len()).as_bytes()).await.unwrap();
+        for chunk in body.as_bytes().chunks(7) { socket.write_all(chunk).await.unwrap(); }
+        let mut response = String::new();
+        tokio::time::timeout(Duration::from_secs(2), socket.read_to_string(&mut response)).await.unwrap().unwrap();
+        assert!(response.starts_with("HTTP/1.1 200"), "{response}");
+        assert_eq!(response.split_once("\r\n\r\n").unwrap().1, body);
+    }
+
+    #[tokio::test]
+    async fn gateway_restart_rotates_token_and_drop_closes_listener() {
+        let old = start(echo()).await.unwrap();
+        let old_token = old.token.clone();
+        let old_addr = old.addr;
+        drop(old);
+        tokio::time::timeout(Duration::from_secs(2), async {
+            while TcpStream::connect(old_addr).await.is_ok() { tokio::task::yield_now().await; }
+        }).await.unwrap();
+        let new = start(echo()).await.unwrap();
+        assert_ne!(old_token, new.token);
+        assert!(post(new.addr, Some(&old_token), "/mcp", "{}").await.starts_with("HTTP/1.1 401"));
+        assert!(post(new.addr, Some(&new.token), "/mcp", "{}").await.starts_with("HTTP/1.1 200"));
+    }
+
 }

@@ -93,3 +93,60 @@ impl StudioMcp {
         }
     }
 }
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn mcp_studio_defaults_to_off_without_token() {
+        let studio = StudioMcp::default();
+        let info = studio.status().await;
+        assert!(!info.running);
+        assert_eq!(info.port, 0);
+        assert!(info.token.is_empty());
+        studio.stop().await;
+        studio.respond(999, Some("{}".into())).await;
+        assert!(studio.pending.lock().await.is_empty());
+    }
+
+    #[tokio::test]
+    async fn mcp_studio_correlates_responses_and_notifications() {
+        let studio = StudioMcp::default();
+        let (first_tx, first_rx) = oneshot::channel();
+        let (second_tx, mut second_rx) = oneshot::channel();
+        studio.pending.lock().await.insert(1, first_tx);
+        studio.pending.lock().await.insert(2, second_tx);
+        studio.respond(999, Some("stale".into())).await;
+        assert_eq!(studio.pending.lock().await.len(), 2);
+        studio.respond(1, Some("response".into())).await;
+        assert_eq!(first_rx.await.unwrap(), Some("response".into()));
+        assert!(matches!(second_rx.try_recv(), Err(oneshot::error::TryRecvError::Empty)));
+        studio.respond(1, Some("duplicate".into())).await;
+        studio.respond(2, None).await;
+        assert_eq!(second_rx.await.unwrap(), None);
+        assert!(studio.pending.lock().await.is_empty());
+    }
+
+    #[tokio::test]
+    async fn mcp_studio_stop_clears_gateway_and_pending_forwards() {
+        let studio = StudioMcp::default();
+        let gateway = mcp_gateway::start(Arc::new(|_| Box::pin(async { None }))).await.unwrap();
+        let port = gateway.addr.port();
+        *studio.gateway.lock().await = Some(gateway);
+        let info = studio.status().await;
+        assert!(info.running);
+        assert_eq!(info.port, port);
+        assert_eq!(info.token.len(), 64);
+        let (tx, rx) = oneshot::channel();
+        studio.pending.lock().await.insert(3, tx);
+        studio.stop().await;
+        assert!(rx.await.is_err());
+        assert!(studio.pending.lock().await.is_empty());
+        let info = studio.status().await;
+        assert!(!info.running);
+        assert_eq!(info.port, 0);
+        assert!(info.token.is_empty());
+    }
+}
