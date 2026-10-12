@@ -1,4 +1,4 @@
-import {useState,useSyncExternalStore} from 'react';
+import {useEffect,useState,useSyncExternalStore} from 'react';
 import {useT} from '../../lib/useT';
 import {Button} from '../ui/button';
 import {getMcpRuntime,type McpRuntime,type McpServerConfig} from '../../lib/agent/mcpRuntime';
@@ -13,13 +13,15 @@ export function McpSettings({runtime=getMcpRuntime()}:{runtime?:McpRuntime|null}
  const host=getStudioMcpHost();
  const hsnap=useSyncExternalStore(host?.subscribe??none.subscribe,host?.getSnapshot??none.getSnapshot as never,host?.getSnapshot??none.getSnapshot as never) as StudioMcpSnapshot|null;
  const [form,setForm]=useState({id:'',command:'',args:'',env:''}),[formError,setFormError]=useState('');
+ useEffect(()=>{void runtime?.refreshGrants();},[runtime]);
+ const errText=(e:string)=>{const m=/mcp_[a-z_]+/.exec(e)?.[0];if(!m)return e;const k=`mcp.err.${m}`;const s=t(k);return s===k?e:s;};
  if(!runtime||!snap)return <p role="status" data-testid="mcp-desktop-only">{t('mcp.desktopOnly')}</p>;
  const add=async()=>{const env=parseEnv(form.env);if(!env){setFormError(t('mcp.envInvalid'));return;}setFormError('');
   const cfg:McpServerConfig={id:form.id.trim(),command:form.command.trim(),args:parseArgs(form.args),env};await runtime.save(cfg);if(!runtime.getSnapshot().error)setForm({id:'',command:'',args:'',env:''});};
  const toolsOf=(id:string)=>snap.tools.filter(x=>x.server===id);
  return <div className="mcp-settings" data-testid="mcp-settings">
   <p className="pr-8">{t('mcp.intro')}</p>
-  {snap.error&&<p role="alert">{snap.error}</p>}
+  {snap.error&&<p role="alert">{errText(snap.error)}</p>}
   <ul aria-label={t('mcp.servers')} className="m-0 list-none p-0">{snap.servers.map(s=><li key={s.config.id} data-testid="mcp-server" className="mb-3 rounded-sm border border-subtle p-2">
    <strong>{s.config.id}</strong> <code>{[s.config.command,...s.config.args].join(' ')}</code>
    <div className="mt-1 flex gap-2">
@@ -28,6 +30,12 @@ export function McpSettings({runtime=getMcpRuntime()}:{runtime?:McpRuntime|null}
    {s.running&&<ul className="m-0 mt-2 list-none p-0" aria-label={t('mcp.tools')}>{toolsOf(s.config.id).map(tool=><li key={tool.name}><label className="flex items-start justify-start! gap-2 text-left"><input type="checkbox" className="mt-1 size-4 shrink-0 grow-0 basis-4" checked={runtime.isGranted(tool)} onChange={e=>runtime.setGranted(tool,e.target.checked)}/><span className="min-w-0 flex-1 text-left"><strong>{tool.name}</strong><br/><small>{t('mcp.untrustedText')} {tool.description.slice(0,200)}</small></span></label></li>)}{!toolsOf(s.config.id).length&&<li><small>{t('mcp.noTools')}</small></li>}</ul>}
   </li>)}</ul>
   {!snap.servers.length&&<p>{t('mcp.noServers')}</p>}
+  <section className="mt-3" aria-label={t('mcp.grants.title')} data-testid="mcp-grants">
+   <strong>{t('mcp.grants.title')}</strong>
+   <p className="pr-8"><small>{t('mcp.grants.hint')}</small></p>
+   {(()=>{const g=snap.brokerGrants;const rows=[...g.shell.map(x=>({kind:'shell' as const,id:x.grantId,label:x.target??''})),...g.network.map(x=>({kind:'network' as const,id:x.grantId,label:x.target??''})),...g.mcp.map(x=>({kind:'mcp' as const,id:x.grantId,label:`${x.server}/${x.tool}`}))];
+    return rows.length===0?<p><small>{t('mcp.grants.empty')}</small></p>:<ul className="m-0 list-none p-0">{rows.map(r=><li key={`${r.kind}-${r.id}`} data-testid="mcp-grant-row" className="flex items-center justify-between gap-2"><small>{t(`mcp.grants.kind.${r.kind}`)} · <code>{r.label}</code></small><Button onClick={()=>void runtime.revokeGrant(r.kind,r.id)} disabled={snap.busy} data-testid="mcp-grant-revoke">{t('mcp.grants.revoke')}</Button></li>)}</ul>;})()}
+  </section>
   <section className="mt-3" aria-label={t('mcp.activity')} data-testid="mcp-activity">
    <div className="flex items-center justify-between"><strong>{t('mcp.activity')}</strong>{snap.activity.length>0&&<Button onClick={()=>runtime.clearActivity()}>{t('mcp.activityClear')}</Button>}</div>
    {snap.activity.length===0?<p><small>{t('mcp.activityEmpty')}</small></p>:<ul className="m-0 list-none p-0">{snap.activity.map((a,i)=><li key={`${a.at}-${i}`} data-testid="mcp-activity-row"><small>{new Date(a.at).toLocaleTimeString()} · {a.server}/{a.tool} · {t(`mcp.outcome.${a.outcome}`)} · {a.ms} ms{a.detail?` · ${a.detail}`:''}</small></li>)}</ul>}

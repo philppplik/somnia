@@ -1,9 +1,10 @@
 import {test,expect} from './fixtures';
 // A7 e2e: MCP consent dialog, schema-pinned grants, revoke. Everything runs against a mocked
-// Tauri IPC; no real MCP server is started. The broker-side AllowForRun grant (vibespace-policy
-// mcp_grants store) gets its own UI once the host wiring from the A7 follow-up lands; this spec
-// covers the WebView trust model: consent per call, grants pinned to the tool schema, silent
-// grant drop on schema change, immediate revoke, and an activity log without arguments.
+// Tauri IPC; no real MCP server is started. Covers the WebView trust model (consent per call, grants
+// pinned to the tool schema, silent grant drop on schema change, immediate revoke, activity log
+// without arguments) and the broker-side AllowForRun path: the consent dialog offers Deny, Allow
+// once and Allow for this session; the session choice creates a digest-bound grant that shows in
+// the grants view, skips the dialog for the exact same tool definition, and revokes from the view.
 const cfg={id:'files',command:'/usr/bin/my-mcp',args:[],env:{}};
 const toolV1={server:'files',name:'read_note',description:'Reads a note',input_schema:{type:'object',properties:{path:{type:'string'}}}};
 const toolV2={server:'files',name:'read_note',description:'Reads a note, now with folder support',input_schema:{type:'object',required:['path'],properties:{path:{type:'string'},folder:{type:'string'}}}};
@@ -97,4 +98,56 @@ test('mcp consent: deny and allow-once per call, activity log without arguments,
  await expect(rows.last()).toContainText('denied');
  const rowText=await rows.allTextContents();expect(rowText.join(' ')).not.toContain('a.md');expect(rowText.join(' ')).not.toContain('b.md');
  if(process.env.SOMNIA_SHOTS)await page.screenshot({path:`${process.env.SOMNIA_SHOTS}/mcp-activity.png`});
+});
+
+test('mcp consent dialog offers three answers; allow for this session creates a visible grant that revokes',async({page})=>{
+ const digest='c'.repeat(64);
+ await page.addInitScript(()=>{
+  const w=window as any;w.isTauri=true;let next=0;w.ipcCalls=[];let running=false;let grants:any[]=[];
+  const d='c'.repeat(64);
+  w.__TAURI_INTERNALS__={metadata:{currentWindow:{label:'main'},currentWebview:{label:'main'}},transformCallback:()=>++next,invoke:async(cmd:string,args:any)=>{
+   w.ipcCalls.push({cmd,args});if(cmd==='plugin:event|listen')return ++next;
+   if(cmd==='mcp_servers_list')return [{config:{id:'files',command:'/usr/bin/my-mcp',args:[],env:{}},running}];
+   if(cmd==='mcp_server_start'){running=true;return [{server:'files',name:'read_note',description:'Reads a note',input_schema:{type:'object',properties:{path:{type:'string'}}},schema_digest:d}];}
+   if(cmd==='mcp_grants_list')return {shell:[],network:[],mcp:grants};
+   if(cmd==='mcp_tool_call'){if(args.choice==='allow_for_run')grants=[{grantId:'g-1',server:'files',tool:'read_note',schemaDigest:d}];else if(!args.choice&&!grants.length)throw 'mcp_consent_required';return 'ran';}
+   if(cmd==='mcp_grant_revoke'){grants=[];return 1;}
+   return null;
+  }};w.__TAURI_EVENT_PLUGIN_INTERNALS__={unregisterListener:()=>{}};
+ });
+ const s=await openMcpSettings(page);
+ await s.getByRole('button',{name:'Start'}).click();
+ await s.getByRole('checkbox',{name:/read_note/}).check();
+ const kick=async(slot:string)=>page.evaluate(async(slot)=>{
+  const m=await import('/src/lib/agent/mcpRuntime.ts');const t=await import('/src/lib/agent/mcpTools.ts');
+  const r=t.createMcpRegistry();const name=m.getMcpRuntime()!.register(r)[0];
+  const ctx={files:()=>({}),propose:async()=>{}} as any;const g={levels:['read','propose','execute']} as any;
+  (window as any)[slot]=r.run(name,{path:'a.md'},ctx,new AbortController().signal,g).then((v:any)=>({v})).catch((e:any)=>({err:String((e as Error).message||e)}));
+ },slot);
+ await kick('run1');
+ const dlg=page.getByRole('alertdialog');await expect(dlg).toBeVisible();
+ await expect(page.getByTestId('mcp-deny')).toBeVisible();await expect(page.getByTestId('mcp-allow')).toBeVisible();await expect(page.getByTestId('mcp-allow-run')).toBeVisible();
+ if(process.env.SOMNIA_SHOTS)await page.screenshot({path:`${process.env.SOMNIA_SHOTS}/mcp-consent-three-options.png`});
+ await page.getByTestId('mcp-allow-run').click();
+ expect((await page.evaluate(()=>(window as any).run1)).v).toContain('untrusted');
+ const first=await page.evaluate(()=>(window as any).ipcCalls.filter((c:any)=>c.cmd==='mcp_tool_call').map((c:any)=>c.args.choice));
+ expect(first).toEqual(['allow_for_run']);
+ // The grant shows in the grants view; the same tool definition no longer asks.
+ await page.evaluate(async()=>{const m=await import('/src/store/appStore.ts');m.patchState({settingsOpen:true,settingsSection:'AI',settingsAITab:'tools'});});
+ const rows=page.getByTestId('mcp-grant-row');await expect(rows).toHaveCount(1);await expect(rows.first()).toContainText('files/read_note');
+ if(process.env.SOMNIA_SHOTS)await page.screenshot({path:`${process.env.SOMNIA_SHOTS}/mcp-grants-view.png`});
+ await kick('run2');
+ expect((await page.evaluate(()=>(window as any).run2)).v).toContain('untrusted');
+ await expect(page.getByRole('alertdialog')).toHaveCount(0);
+ const second=await page.evaluate(()=>(window as any).ipcCalls.filter((c:any)=>c.cmd==='mcp_tool_call').map((c:any)=>c.args.choice));
+ expect(second).toEqual(['allow_for_run',undefined]);
+ // Revoke from the grants view: it asks again.
+ await page.getByTestId('mcp-grant-revoke').click();
+ await expect(rows).toHaveCount(0);
+ expect(await page.evaluate(()=>(window as any).ipcCalls.some((c:any)=>c.cmd==='mcp_grant_revoke'&&c.args.kind==='mcp'&&c.args.grantId==='g-1'))).toBe(true);
+ await kick('run3');
+ await expect(page.getByRole('alertdialog')).toBeVisible();
+ await page.getByTestId('mcp-deny').click();
+ expect((await page.evaluate(()=>(window as any).run3)).err).toContain('did not approve');
+ void digest;
 });
