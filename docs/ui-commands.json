@@ -27,7 +27,7 @@
         "invite",
         "link"
       ],
-      "hasEnabled": false
+      "hasEnabled": true
     },
     {
       "id": "collab.share",
@@ -39,7 +39,7 @@
         "invite",
         "live"
       ],
-      "hasEnabled": false
+      "hasEnabled": true
     },
     {
       "id": "css.open",
