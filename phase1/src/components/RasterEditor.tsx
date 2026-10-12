@@ -28,7 +28,7 @@ import {isTauri} from '@tauri-apps/api/core';
 import {defaultImageHost,webImageHost,editedName,type ImageEditorHost} from '../lib/imageEditorHost';
 import {addMediaFile,closeMedia,getMedia,registerMediaCloseGuard,setActiveMedia,useMedia} from '../lib/media';
 import {registerDocSaver} from '../lib/workDocs';
-import {registerCommandScope,type Command} from '../lib/commands';
+import {registerRasterCommands} from '../lib/photos/rasterCommands';
 import '../styles/image-editor-dialog.css';
 
 interface Source{loaded:LoadedImage;renderer:ImageEditorRenderer;url:string;originToken?:string;host?:ImageEditorHost;layerSession?:LayerSession}
@@ -99,13 +99,7 @@ export function RasterEditorProvider({children,host:injected}:{children:ReactNod
  // Stable scope resolver reads the current context, never stale snapshots. Shared menu/palette/shortcuts route here.
  const actions=useRef({active,name,busy,docState,source,openFile,save,close,undo,redo,commit,snap});actions.current={active,name,busy,docState,source,openFile,save,close,undo,redo,commit,snap};
  useEffect(()=>name?registerDocSaver('image',name,async()=>{await actions.current.save();return !rasterDirty(getState().rasterDoc[name]??createRasterState());}):undefined,[name]);
- useEffect(()=>registerCommandScope(id=>{const a=actions.current;if(!a.active)return;const commands:Record<string,Command>={
-  'edit.undo':{id:'edit.undo',title:t('imageeditor.undo'),category:'Edit',shortcut:'Mod+Z',enabled:()=>!a.busy&&!!(a.source?.layerSession?.query?.undo??a.docState.past.length),run:a.undo},
-  'edit.redo':{id:'edit.redo',title:t('imageeditor.redo'),category:'Edit',shortcut:'Mod+Shift+Z',enabled:()=>!a.busy&&!!(a.source?.layerSession?.query?.redo??a.docState.future.length),run:a.redo},
-  'project.save':{id:'project.save',title:t('imageeditor.save'),category:'Project',shortcut:'Mod+S',allowInInput:true,enabled:()=>!a.busy&&!!a.source,run:a.save},
-  'tab.close':{id:'tab.close',title:t('imageeditor.close'),category:'View',shortcut:'Mod+W',enabled:()=>!a.busy,run:a.close},
-  'tools.editImage':{id:'tools.editImage',title:t('imageeditor.openOther'),category:'Tools',enabled:()=>!a.busy,run:a.openFile},
- };return commands[id];}),[t]);
+ useEffect(()=>registerRasterCommands(()=>actions.current,t),[t]);
  const photoActions=useRef({selection,busy});photoActions.current={selection,busy};
  useEffect(()=>registerRasterPhotoPort(key=>{
   const src=sources.current.get(key),state=getState().rasterDoc[key];if(!src||!state)return null;
