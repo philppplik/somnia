@@ -1,0 +1,2 @@
+import {defineConfig} from '@playwright/test';
+export default defineConfig({testDir:'../../tests',testMatch:'vibespace-acp.spec.ts',use:{baseURL:'http://127.0.0.1:1423',viewport:{width:1440,height:1100}},webServer:{cwd:process.cwd(),command:'npx vite --config scripts/vibespace-acp/vite.config.ts',url:'http://127.0.0.1:1423',reuseExistingServer:false},outputDir:'test-results/vibespace-acp',reporter:'list'});
