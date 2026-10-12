@@ -1016,6 +1016,96 @@ impl AgentHandle {
         Ok(ProposeResult::Pending(id))
     }
 
+    /// Live run/scope check for the separate computer-use session grant.
+    pub(crate) fn computer_use_run_active(&self, run: &RunId, scope: &ScopeId) -> Result<bool, PolicyError> {
+        let g = self.shared.lock()?;
+        Ok(g.runs.get(run).map(|r| r.state == RunState::Active && &r.scope.scope_id == scope).unwrap_or(false))
+    }
+
+    /// Explicit, crate-private computer-use route. Generic Desktop proposals stay denied.
+    pub(crate) fn propose_computer_use(
+        &self,
+        p: Proposal,
+    ) -> Result<ProposeResult, PolicyError> {
+        let mut g = self.shared.lock()?;
+        g.sweep();
+        if p.kind != ActionKind::Desktop {
+            return Err(PolicyError::InvalidProposal("kind"));
+        }
+        if p.target.is_empty()
+            || p.target.chars().count() > g.cfg.max_target_chars
+            || p.target.chars().any(|c| c.is_control())
+        {
+            return Err(PolicyError::InvalidProposal("target"));
+        }
+        if p.reason.len() > 16 * 1024 {
+            return Err(PolicyError::InvalidProposal("reason too long"));
+        }
+        let binding = ExecutionBinding {
+            run_id: p.run_id.clone(),
+            scope_id: p.scope_id.clone(),
+            kind: p.kind,
+            target: p.target.clone(),
+            args_digest: p.args_digest,
+        };
+        let id = new_proposal_id()?;
+        g.log_b(AuditKind::Proposed, Some(&id), &binding, "");
+
+        macro_rules! deny {
+            ($r:expr) => {{
+                let r: DenyReason = $r;
+                g.log_b(AuditKind::Denied, Some(&id), &binding, r.as_str());
+                return Ok(ProposeResult::Denied(r));
+            }};
+        }
+
+        let (scope, state) = match g.runs.get(&p.run_id) {
+            None => deny!(DenyReason::UnknownRun),
+            Some(r) => (r.scope.clone(), r.state),
+        };
+        if state != RunState::Active {
+            deny!(DenyReason::RunNotActive);
+        }
+        if scope.scope_id != p.scope_id {
+            deny!(DenyReason::ScopeMismatch);
+        }
+        if !scope.allowed_kinds.contains(&ActionKind::Desktop) {
+            deny!(DenyReason::KindNotInScope);
+        }
+
+        // Desktop session starts and every action always ask. No autonomy, folder,
+        // MCP or session grant can mint an action token without a human decision.
+        let impact = classify(p.kind, &p.target, &p.declared_impact);
+        if g.pending.len() >= g.cfg.max_pending_total
+            || g.pending_for_run(&p.run_id) >= g.cfg.max_pending_per_run
+        {
+            deny!(DenyReason::QueueFull);
+        }
+        let offered = vec![UserDecision::Deny, UserDecision::AllowOnce];
+        let now = g.now();
+        let rec = PendingRec {
+            id: id.clone(),
+            binding: binding.clone(),
+            shown_target: sanitize_target(&p.target, g.cfg.max_target_chars),
+            reason: sanitize_text(&p.reason, g.cfg.max_reason_chars),
+            origin: p.origin.clone(),
+            impact,
+            offered,
+            created_at: now,
+            expires_at: now.saturating_add(g.cfg.pending_ttl.as_millis() as u64),
+            mcp: None,
+        };
+        g.pending.insert(id.clone(), rec);
+        g.log_b(
+            AuditKind::Queued,
+            Some(&id),
+            &binding,
+            "computer_use_always_ask",
+        );
+        Ok(ProposeResult::Pending(id))
+    }
+
+
     /// Collect the outcome of a pending proposal.
     pub fn poll(&self, id: &ProposalId) -> Result<PollResult, PolicyError> {
         let mut g = self.shared.lock()?;

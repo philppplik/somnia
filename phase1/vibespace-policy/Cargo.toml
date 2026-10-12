@@ -14,6 +14,8 @@ description = "Vibe Space consent broker, request-bound approval tokens and scop
 name = "vibespace_policy"
 
 [features]
+# Preparation only: no OS adapter is linked by enabling this feature.
+computer-use-linux = []
 # Use the cap-std layer (the Windows implementation) on Unix too. Test-only: lets the Windows
 # code path run on Linux CI. Unix builds use the openat layer by default.
 cap-layer = ["dep:cap-std", "dep:cap-fs-ext"]

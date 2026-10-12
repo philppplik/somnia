@@ -13,7 +13,7 @@
 //! * MCP tool calls have no OS-level enforcement, so the generic propose path still always
 //!   denies them. They run only through the explicit [`mcp::McpRoute`]: its own, stronger
 //!   grant type (digest-bound, stored apart from folder grants), one-time tokens, never a
-//!   silent broker pass. Desktop control has no route and stays denied.
+//!   silent broker pass. Desktop control is preparation-only through [`computer_use`]; the generic path stays denied.
 //! * Extension/MCP trust (publisher, review, digest, runtime permissions as separate axes,
 //!   pinned minisign catalog, signed sequenced revocations, restricted default) lives in
 //!   [`trust`]. It decides what may be installed or offered; the broker still gates effects.
@@ -42,6 +42,7 @@ pub mod action;
 pub mod audit;
 pub mod broker;
 pub mod clock;
+pub mod computer_use;
 pub mod digest;
 pub mod error;
 pub mod executor;

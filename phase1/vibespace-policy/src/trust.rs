@@ -105,6 +105,8 @@ impl PinnedDigest {
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum RuntimePermission {
+    /// Offer computer-use session consent. Never grants input or capture effects.
+    ComputerUse,
     /// Spawn a process (only ever via `ProcessExecutor::propose_exec`).
     SpawnProcess,
     /// Reach the network (only ever via `NetworkExecutor::propose_fetch` / `DomainProxy`).
