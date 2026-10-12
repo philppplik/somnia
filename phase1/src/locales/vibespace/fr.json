@@ -22,5 +22,17 @@
  "vs.model.hint.lmsLoad": "Dans LM Studio, téléchargez et chargez Qwen3.5-9B. Il n'est pas téléchargé pour vous.",
  "vs.model.installed": "Modèles installés : {count}",
  "vs.model.recheck": "Vérifier à nouveau",
- "vs.model.localOnly": "Cette vérification ne communique qu'avec 127.0.0.1 sur cet ordinateur."
+ "vs.model.localOnly": "Cette vérification ne communique qu'avec 127.0.0.1 sur cet ordinateur.",
+ "vibespace.acp.origin": "Agent externe : {name}",
+ "vibespace.acp.launched": "Agent externe démarré dans le sandbox",
+ "vibespace.acp.initialized": "Handshake terminé (ACP v1)",
+ "vibespace.acp.sessionNew": "Session démarrée",
+ "vibespace.acp.sessionResumed": "Session reprise",
+ "vibespace.acp.perm.allowed": "Autorisé : {kind} - {title}",
+ "vibespace.acp.perm.denied": "Refusé : {kind} - {title}",
+ "vibespace.acp.perm.cancelled": "Annulé : {kind} - {title}",
+ "vibespace.acp.cancel": "Annulation demandée",
+ "vibespace.acp.killed": "Agent arrêté (arbre de processus terminé)",
+ "vibespace.acp.closed": "Connexion de l'agent fermée",
+ "vibespace.acp.noElevated": "Les agents externes ne s'exécutent jamais avec des droits élevés."
 }
