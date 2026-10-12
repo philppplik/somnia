@@ -25,9 +25,9 @@ export const agentFileTools: readonly AgentToolDefinition[] = [
 const byteLength = (value: string) => new TextEncoder().encode(value).byteLength;
 export class AgentProjectTools {
   private readonly staged = new Map<string, AgentFileProposal>();
-  constructor(private readonly access: AgentProjectAccess, private readonly maxFileBytes = 256 * 1024, private readonly maxProposalBytes = 1024 * 1024, private readonly extra?: { registry: AgentToolRegistry; editor?: AgentEditorAccess; grants?: AgentToolGrants; nativeOnly?:boolean; nativePath?:(path:string)=>boolean }) {}
+  constructor(private readonly access: AgentProjectAccess, private readonly maxFileBytes = 256 * 1024, private readonly maxProposalBytes = 1024 * 1024, private readonly extra?: { registry: AgentToolRegistry; editor?: AgentEditorAccess; grants?: AgentToolGrants; nativeOnly?:boolean; toolNames?:readonly string[]; nativePath?:(path:string)=>boolean }) {}
   /** Tool definitions sent to the model: the three file tools plus any enabled registry tools. */
-  definitions(): AgentToolDefinition[] { return [...(this.extra?.nativeOnly?[]:agentFileTools), ...(this.extra?.registry.definitions(this.extra.grants) ?? [])]; }
+  definitions(): AgentToolDefinition[] { const tools = [...(this.extra?.nativeOnly?[]:agentFileTools), ...(this.extra?.registry.definitions(this.extra.grants) ?? [])]; return this.extra?.toolNames?tools.filter(t=>this.extra!.toolNames!.includes(t.name)):tools; }
   private readableFiles(): Record<string, string> {
     const out: Record<string, string> = {};
     for (const [path, text] of Object.entries(this.access.files())) {
@@ -64,6 +64,7 @@ export class AgentProjectTools {
   clear(): void { this.staged.clear(); }
   async execute(call: AgentToolCall, signal: AbortSignal): Promise<string> {
     signal.throwIfAborted();
+    if(this.extra?.toolNames&&!this.extra.toolNames.includes(call.name))throw Error('Tool is outside the active studio set.');
     let args: Record<string, unknown>;
     try { args = JSON.parse(call.arguments.trim() || '{}'); } catch { throw Error('Tool arguments must be valid JSON.'); }
     if (!args || typeof args !== 'object' || Array.isArray(args)) throw Error('Tool arguments must be an object.');

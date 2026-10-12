@@ -1,0 +1,2 @@
+import {defineConfig} from '@playwright/test';
+export default defineConfig({testDir:'./tests',testMatch:['studio-agent-context.spec.ts','studio-shell-snapshot.spec.ts'],workers:1,use:{baseURL:'http://127.0.0.1:1420',viewport:{width:1440,height:900},launchOptions:process.env.SOMNIA_CHROME?{executablePath:process.env.SOMNIA_CHROME,args:['--no-sandbox']}:undefined},webServer:{command:'./node_modules/.bin/vite --host 127.0.0.1 --port 1420',url:'http://127.0.0.1:1420'},reporter:'list'});

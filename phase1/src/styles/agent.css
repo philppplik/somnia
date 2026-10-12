@@ -136,3 +136,6 @@
 .ag-native-undo{margin-top:10px;padding:8px 12px;border:1px solid var(--border-default);border-radius:12px;background:var(--bg-hover)}
 .ag-native-previews{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr)}.ag-native-previews iframe{height:110px}
 .ag-photo-previews{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px}.ag-photo-previews figure{margin:0}.ag-photo-previews img{width:100%;max-height:160px;object-fit:contain;background:repeating-conic-gradient(#8882 0% 25%,transparent 0% 50%) 0/12px 12px;border-radius:12px}.ag-photo-previews figcaption{font-size:11px;color:var(--ag-ink2)}
+/* M5: one host-owned studio chip; the panel and conversation are not remounted. */
+.ag-studio-chip{margin:8px 0 0 7px;font-size:10px;line-height:16px;border:1px solid var(--border-subtle);border-radius:6px;padding:0 5px;color:var(--ink-2);white-space:nowrap}
+.ag-chip:disabled{opacity:.45;cursor:not-allowed}

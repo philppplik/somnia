@@ -1,3 +1,8 @@
+import {buildAgentStudioContext,hasAgentContextAdapter,resolveAgentQuickActions,runAgentQuickAction} from '../../lib/agent/studioContextAdapter';
+import {getStudio} from '../../lib/studios';
+import {useUiContext,getUiContext} from '../../lib/uiContextStore';
+import {listCommands,executeCommand} from '../../lib/commands';
+import {scopedCommand} from '../../lib/commandRegistry';
 import {useMedia} from '../../lib/media';
 import {studioAgentContext} from '../../lib/agent/studioContext';
 import {activeStudioDocument} from '../../lib/agent/studioTarget';
@@ -19,6 +24,12 @@ import {AgentErrorNotice,AIGeneratedLabel} from './AgentPrivacy';
 
 export function AgentPanel(){
  const media=useMedia();const app=useAppStore();const target=activeStudioDocument(app,media);const studio=studioAgentContext(app.activeStudio,target.path,app.editorKind);const [disclosure,setDisclosure]=useState<string|null>(null);
+ const ui=useUiContext();const definition=getStudio(app.activeStudio);const adapted=hasAgentContextAdapter(definition)&&!(definition.id==='code'&&(target.media||['raster','vector','pdf'].includes(ui.domain)));
+ const agentContext=adapted?buildAgentStudioContext(definition,target,ui,app.viewMode):undefined;
+ const commandContext=(state:ReturnType<typeof getState>,context:ReturnType<typeof getUiContext>,path:string)=>({studio:state.activeStudio,document:path?{id:path,kind:context.domain,dirty:context.flags.dirty,readOnly:context.flags.readonly}:undefined,mode:state.viewMode,selection:{kind:context.selection.kind==='none'?'none' as const:context.selection.kind==='multi'?'many' as const:'one' as const,count:context.selection.kind==='multi'?context.selection.count:context.selection.kind==='none'?0:1},busy:false,services:{coreConnected:state.coreConnected}});
+ const lookupCommand=(id:string)=>scopedCommand(id)??listCommands().find(c=>c.id===id);
+ const quickActions=adapted?resolveAgentQuickActions(definition,commandContext(app,ui,target.path),lookupCommand):[];
+ const quickAction=(id:string)=>{const state=getState();if(state.activeStudio!==definition.id)return;void runAgentQuickAction(id,getStudio(state.activeStudio),commandContext(state,getUiContext(),target.path),lookupCommand,executeCommand);};
  const {t}=useT();const [chat,dispatch]=useReducer(chatReducer,initialChat);const [draft,setDraft]=useState('');
  const settings=useSyncExternalStore(subscribeAgentSettings,agentSettingsSnapshot,agentSettingsSnapshot);
  const {ready:settingsReady,saving,authBusy,error:settingsError}=settings;
@@ -38,10 +49,10 @@ export function AgentPanel(){
  useEffect(()=>{const last=chat.items.at(-1);setAnnounce(chat.busy?t('agent.input.busy'):last?.kind==='error'?'Generation interrupted. Review the error message.':last?.kind==='stopped'?'Generation stopped.':chat.items.length?t('agent.status.done'):'');},[chat.busy,chat.items,t]);
  const send=useCallback((raw:string)=>{
   const text=raw.trim();if(!text||chat.busy||!settingsReady||saving||authBusy)return;
-  const generation=++requestGeneration.current;dispatch({type:'send',text});setDraft('');setDisclosure(null);pinned.current=true;const s=getState();
+  const pinnedContext=agentContext;const generation=++requestGeneration.current;dispatch({type:'send',text});setDraft('');setDisclosure(null);pinned.current=true;const s=getState();
   stream.current?.close();const sink=createStreamSink(event=>{if(generation===requestGeneration.current)dispatch({type:'event',event});});stream.current=sink;
-  void getAgentCore().then(core=>{if(generation!==requestGeneration.current)return;run.current=core.run({prompt:text,context:{activeFile:target.media?'':target.path,activeMedia:target.media?target.path:undefined,selectedElementId:s.selectedElementId,disclosureProvider:disclosure??undefined}},event=>{if(generation===requestGeneration.current)sink.receive(event);});}).catch(e=>{if(generation!==requestGeneration.current)return;reportError('agent.start',e,{message:'Agent could not start'});sink.receive({type:'error',message:'Agent could not start. Check your configuration and try again.',retryable:true});});
- },[chat.busy,settingsReady,saving,authBusy,disclosure,target.path,target.media]);
+  void getAgentCore().then(core=>{if(generation!==requestGeneration.current)return;run.current=core.run({prompt:text,context:{activeFile:target.media?'':target.path,activeMedia:target.media?target.path:undefined,selectedElementId:s.selectedElementId,disclosureProvider:disclosure??undefined,studio:pinnedContext}},event=>{if(generation===requestGeneration.current)sink.receive(event);});}).catch(e=>{if(generation!==requestGeneration.current)return;reportError('agent.start',e,{message:'Agent could not start'});sink.receive({type:'error',message:'Agent could not start. Check your configuration and try again.',retryable:true});});
+ },[chat.busy,settingsReady,saving,authBusy,disclosure,target.path,target.media,agentContext]);
  const stop=()=>{stream.current?.close(true);requestGeneration.current++;run.current?.cancel();run.current=null;dispatch({type:'stop'});input.current?.focus();};
  const reset=()=>{stop();void getAgentCore().then(c=>c.clear?.());dispatch({type:'reset'});setDraft('');};
  const resolve=async(p:AgentProposal,state:'accepted'|'rejected',decisions?:Decisions)=>{
@@ -52,7 +63,7 @@ export function AgentPanel(){
  const empty=chat.items.length===0;
  return <aside className="ag-panel" aria-label={t('agent.title')}>
   <header className="ag-hd">
-   <button type="button" className="ag-ib ag-hd-left" title={t('agent.newChat')} aria-label={t('agent.newChat')} onClick={reset}><SquarePen size={17}/></button><h2>{t('agent.title')}</h2>
+   <button type="button" className="ag-ib ag-hd-left" title={t('agent.newChat')} aria-label={t('agent.newChat')} onClick={reset}><SquarePen size={17}/></button><h2>{t('agent.title')}</h2>{adapted&&<span className="ag-studio-chip" data-testid="agent-studio-chip" title={agentContext?.selectionSummary}>{agentContext?.label}</span>}
    <div className="ag-hd-right"><button type="button" className="ag-ib" title="Agent configuration" aria-label="Agent configuration" disabled={chat.busy||!settingsReady||saving||authBusy} onClick={openSettings}><Settings size={17}/></button><button type="button" className="ag-ib" title={t('agent.collapse')} aria-label={t('agent.collapse')} onClick={()=>patchState({agentOpen:false})}><PanelRightClose size={17}/></button></div>
   </header>
   <div className="ag-chat" ref={scroller} onScroll={e=>{const el=e.currentTarget;pinned.current=el.scrollHeight-el.scrollTop-el.clientHeight<48;}} role="log" aria-live="off" aria-label={t('agent.title')}>
@@ -62,7 +73,7 @@ export function AgentPanel(){
    <p className="ag-context-chip" role="status">{studio.label}: {target.path||'No document'} · {target.path?studio.scope:'General guidance, no document context'}</p>
    {settings.config.provider!=='ollama'&&target.path&&<label className="ag-context-permission"><input type="checkbox" checked={disclosure===settings.config.provider} disabled={chat.busy} onChange={e=>setDisclosure(e.target.checked?settings.config.provider:null)}/>Disclose this run's active document and selection to {settings.config.provider}. Cloud consent is also required.</label>}
    {settingsError&&<p role="alert">{settingsError}</p>}
-   {empty?<div className="ag-empty"><div className="ag-orb" aria-hidden="true"/><h3>{t('agent.empty.title')}</h3><span>{studio.label==='Code'?t('agent.empty.body'):`Describe what you want to do in ${studio.label}. ${studio.scope}.`}</span><div className="ag-chips">{studio.actions.map(c=><button type="button" key={c} className="ag-chip" onClick={()=>{setDraft(c);input.current?.focus();}}>{c}</button>)}</div><p className="ag-tip">Choose a model, then describe your task. File access and proposed changes need your review.</p></div>:chat.items.map((item,index)=><Row key={item.id} item={item} busy={chat.busy} onRetry={()=>{const last=chat.items.slice(0,index).reverse().find(i=>i.kind==='user');if(last&&last.kind==='user')send(last.text);}} onAccept={(p,d)=>void resolve(p,'accepted',d)} onReject={p=>void resolve(p,'rejected')} onUndo={async p=>{try{await(await getAgentCore()).revertProposal(p.id);dispatch({type:'resolve',proposalId:p.id,state:'undone'});}catch(e){dispatch({type:'event',event:{type:'error',message:e instanceof Error?e.message:String(e)}});}}}/>)}
+   {empty?<div className="ag-empty"><div className="ag-orb" aria-hidden="true"/><h3>{t('agent.empty.title')}</h3><span>{studio.label==='Code'?t('agent.empty.body'):`Describe what you want to do in ${studio.label}. ${studio.scope}.`}</span><div className="ag-chips">{quickActions.map(c=><button type="button" key={c.id} className="ag-chip" disabled={!c.enabled||chat.busy} data-command={c.id} onClick={()=>quickAction(c.id)}>{c.title}</button>)}{studio.actions.map(c=><button type="button" key={c} className="ag-chip" onClick={()=>{setDraft(c);input.current?.focus();}}>{c}</button>)}</div><p className="ag-tip">Choose a model, then describe your task. File access and proposed changes need your review.</p></div>:chat.items.map((item,index)=><Row key={item.id} item={item} busy={chat.busy} onRetry={()=>{const last=chat.items.slice(0,index).reverse().find(i=>i.kind==='user');if(last&&last.kind==='user')send(last.text);}} onAccept={(p,d)=>void resolve(p,'accepted',d)} onReject={p=>void resolve(p,'rejected')} onUndo={async p=>{try{await(await getAgentCore()).revertProposal(p.id);dispatch({type:'resolve',proposalId:p.id,state:'undone'});}catch(e){dispatch({type:'event',event:{type:'error',message:e instanceof Error?e.message:String(e)}});}}}/>)}
    {mcpProposals.map(p=><div key={p.id} className="ag-review" data-state="pending" data-testid="mcp-proposal"><AIGeneratedLabel provenance={p.changeSet?.provenance}/><NativeProposalReview proposal={p} onAccept={(pr,d)=>void resolve(pr,'accepted',d)} onReject={()=>void resolve(p,'rejected')}/></div>)}
   </div>
   <div className="ag-bar" aria-hidden="true"><div className="ag-pb"><i/><i/><i/><i/></div><div className="ag-grad"/></div>

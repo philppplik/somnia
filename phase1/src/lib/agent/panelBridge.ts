@@ -1,3 +1,5 @@
+import {withAgentStudioContext,resolveAgentToolSet} from './studioContextAdapter';
+import type {AgentStudioContext} from './studioContextAdapter';
 import {subscribeMedia} from '../media';
 import {subscribeDocuments} from '../documents/store';
 import {subscribeSheets} from '../sheets/sheetsStore';
@@ -94,6 +96,7 @@ export function createProvider(id:AuthProvider):AgentProvider {
 }
 let activeController:AbortController|null=null;
 let runGeneration=0,sessionSerial=0;
+let sessionProvider='';
 let session:AgentSession|null=null,epoch=-1,send:((event:AgentEvent)=>void)|null=null;
 export const appliedAgentProvenance=new Map<string,AIProvenance>();
 const proposals=new Map<string,ChangeSet>();
@@ -147,7 +150,7 @@ const transactions=new TransactionManager(documents,policy,{
  canAccept:()=>getCollabEngine().snapshot().role!=='guest',
 });
 function syncDocuments(){const {files,bindings}=studioWorkspace();documents.sync(files,undefined,bindings);}
-function createTools(project:string,context:ContextPackage,nodes:ReturnType<typeof getState>['nodes']){
+function createTools(project:string,context:ContextPackage,nodes:ReturnType<typeof getState>['nodes'],studio?:AgentStudioContext){
  const scoped=()=>{policy.assert({effect:'inspect',documentIds:[context.document.documentId]});syncDocuments();return documents.assert(context.document);};
  // Older typed adapters stage through a synchronous host callback. Flush into the same session proposal store.
  let staged:string|undefined;const propose=(after:string)=>{scoped();documents.validate(context.document,after);staged=after;};
@@ -165,7 +168,7 @@ function createTools(project:string,context:ContextPackage,nodes:ReturnType<type
  return new AgentProjectTools({projectId:project,files:()=>{const s=scoped();return {[s.ref.path]:s.text};},
   authorize:async(candidate,_action,signal)=>{signal.throwIfAborted();if(candidate!==path)throw Error('Outside pinned document scope.');scoped();return true;},
   allowed:candidate=>candidate===path
- },undefined,undefined,{registry,nativeOnly:true,nativePath:candidate=>candidate===path&&context.document.studioKind!=='code',get editor(){return editorAccess;}});
+ },undefined,undefined,{registry,nativeOnly:true,...(studio?{toolNames:resolveAgentToolSet(registry.definitions(),studio).map(t=>t.name)}:{}),nativePath:candidate=>candidate===path&&context.document.studioKind!=='code',get editor(){return editorAccess;}});
 }
 function scopedProvider(provider:AgentProvider,context:ContextPackage):AgentProvider {
  return {id:provider.id,locality:provider.locality,async *stream(request){
@@ -242,13 +245,13 @@ export const realCore:AgentCore={
    controller.signal.throwIfAborted();if(runId!==runGeneration)throw Error('Run was replaced.');
    if(!request.context.activeMedia&&!request.context.activeFile){
     // Empty workspaces can ask for guidance, but have no document tools or context.
-    const sessionEpoch=epoch,sessionToken=++sessionSerial;
-    session=new AgentSession({provider:withCustomPrompts(createProvider(config.provider),config.customPrompts),model:config.model,onEvent:event=>{
+    const previous=sessionProvider===config.provider?session?.snapshot():undefined;sessionProvider=config.provider;const sessionEpoch=epoch,sessionToken=++sessionSerial;
+    session=new AgentSession({provider:request.context.studio?withAgentStudioContext(withCustomPrompts(createProvider(config.provider),config.customPrompts),{...request.context.studio,documentRef:null,selectionSummary:'No selection',capabilities:[]}):withCustomPrompts(createProvider(config.provider),config.customPrompts),model:config.model,onEvent:event=>{
      if(sessionEpoch!==epoch||sessionToken!==sessionSerial||controller.signal.aborted)return;
      if(event.type==='text')deliver({type:'text-delta',text:event.text});
      else if(event.type==='notice')deliver({type:'error',message:event.message,code:event.code,retryable:event.retryable});
      else if(event.type==='usage')deliver({type:'usage',...event.usage});
-    }});await session.prompt(request.prompt);deliver({type:'done'});return;
+    }});if(previous)session.restore({...previous,projectId:session.projectId,messages:previous.messages.filter(m=>m.role==='user'||m.role==='assistant'&&!m.toolCalls?.length)});await session.prompt(request.prompt);deliver({type:'done'});return;
    }
   // Pin identity/revision before any approval or provider work, never retarget on a tab switch.
   let base:ReturnType<DocumentRegistry['snapshot']>;
@@ -267,9 +270,10 @@ export const realCore:AgentCore={
     agentPrivacy.assert({provider:config.provider,processing:'cloud'});
    }
    policy.grant({effect:'disclose',documentIds:[base.ref.documentId],destination:config.provider});
-   const sessionEpoch=epoch,sessionToken=++sessionSerial;
-   const provider=scopedProvider(withCustomPrompts(createProvider(config.provider),config.customPrompts),context);
-   session=new AgentSession({provider,model:config.model,tools:createTools(String(generation),context,nodes),onEvent:event=>{
+   const previous=sessionProvider===config.provider?session?.snapshot():undefined;sessionProvider=config.provider;const sessionEpoch=epoch,sessionToken=++sessionSerial;
+   const scoped=scopedProvider(withCustomPrompts(createProvider(config.provider),config.customPrompts),context);
+   const provider=request.context.studio?withAgentStudioContext(scoped,request.context.studio):scoped;
+   session=new AgentSession({provider,model:config.model,tools:createTools(String(generation),context,nodes,request.context.studio),onEvent:event=>{
     if(sessionEpoch!==epoch||sessionToken!==sessionSerial||controller.signal.aborted)return;
     if(event.type==='text')deliver({type:'text-delta',text:event.text});
     else if(event.type==='state'&&event.status==='running')deliver({type:'status',text:`Working on ${base.ref.path} · revision ${base.ref.revision}`});
@@ -283,6 +287,7 @@ export const realCore:AgentCore={
      }catch(e){deliver({type:'error',message:e instanceof Error?e.message:String(e)});}
     }
    }});
+   if(previous)session.restore({...previous,projectId:session.projectId,messages:previous.messages.filter(m=>m.role==='user'||m.role==='assistant'&&!m.toolCalls?.length)});
    await session.prompt(request.prompt);deliver({type:'done'});
   })().catch(e=>deliver({type:'error',message:e instanceof Error?e.message:String(e)}));
   return {cancel(){controller.abort();session?.cancel();stopped=true;}};
