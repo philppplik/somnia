@@ -42,6 +42,18 @@ Known issue: `tsc` reports an existing error in `slides-engine`. Do not "fix" it
 
 Do not mix the two. New user-facing actions should become a UI command with a stable id, not a one-off handler.
 
+## Testing your own UI work (web control loop)
+
+Agents can drive the web build instead of waiting for a human test. Dev and test only; the hook never ships.
+
+1. From `phase1/`, run `npm run agent:harness`. It starts Vite with `VITE_SOMNIA_CONTROL=1` and the starter project, opens it in Chromium, runs a smoke loop and writes PNGs to `tests/artifacts/agent-harness/` (git-ignored). Look at the PNGs.
+2. For your own checks, import `startServer` and `openApp` from `scripts/agent-harness/harness.mjs`. `ctl.inspect()`, `ctl.getState('panels.agentOpen')`, `ctl.runCommand(id, params)`, `ctl.listCommands()`, `ctl.activity()` and `ctl.screenshot(name)` wrap `window.__somniaControl` (source: `src/lib/control/webControl.ts`, wiring in `src/dev/installWebControl.ts`).
+3. `runCommand` goes through the shared dispatcher with origin `control`: params are validated and the activity log records it. `inspect()` returns names and flags, never file contents.
+4. The hook exists only when built with `VITE_SOMNIA_CONTROL=1`; `main.tsx` guards the import. `npm run check:no-control [dir]` fails if `__somniaControl` appears in a release bundle (run it after `npm run build`); add `--expect-present` for a control build (`npm run build:control`, outputs `dist-control/`).
+5. This channel is separate from the user-facing MCP server, which stays read and propose only. Do not route MCP or agent-tool origins through it.
+
+The web harness covers layout and logic. Native chrome (frameless window, rounded corners, folder access) still needs a human test on the real desktop build.
+
 ## Rules
 
 - **Layers.** UI is a client of the engine. `src/lib/**` must not import from `src/components/**`. Studio engines do not import UI. Once `check:layers` exists, do not grow its allow-list.

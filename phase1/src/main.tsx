@@ -94,6 +94,8 @@ createRoot(document.getElementById('root')!).render(<StrictMode><ErrorBoundary l
 
 if(!isTauri())installBeforeUnload(()=>getState().isDirty&&getState().storage!=='disk');
 if(import.meta.env.DEV)(window as unknown as {__somnia:object}).__somnia={patch:patchState,recentLog,copyErrorReport,requestClose,setSource:(file:string,text:string)=>applyOperations([{type:'replaceSource',file,text}] as never)};
+// Dev/test control hook (plan 2.2): the flag is statically replaced by Vite, so release bundles drop this import entirely.
+if(import.meta.env.VITE_SOMNIA_CONTROL==='1'&&!isTauri())void import('./dev/installWebControl').then(m=>m.installWebControl());
 if(isTauri())document.documentElement.dataset.shell='desktop';
 if(isTauri())void import('./lib/extensions/selftestApp').then(m=>m.maybeRunNativeSelftest()).catch(()=>{/* self-test is CI-only */});
 // LAN-Direct hosting is a desktop feature: register the Rust host with the collab engine only inside Tauri.
