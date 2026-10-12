@@ -7,7 +7,7 @@ import {useEffect,useSyncExternalStore} from 'react';
 import {SlidesClient} from './client';
 import {assertPptx,type DeckSummary} from './protocol';
 import {addMediaFile,closeMedia,findMedia,getMedia,setActiveMedia,subscribeMedia,registerMediaCloseGuard} from '../media';
-interface SlidesSession {wasmBytes:number;diagnostics:SlidesDiagnostics|null;name:string;source:string;summary:DeckSummary|null;index:number;image:string;texts:string[];thumbnails:Record<number,string>;busy:boolean;error:string;original:Uint8Array|null;working:Uint8Array|null;runs:TextRun[];dirty:boolean;undo:Uint8Array[];redo:Uint8Array[]}
+export interface SlidesSession {wasmBytes:number;diagnostics:SlidesDiagnostics|null;name:string;source:string;summary:DeckSummary|null;index:number;image:string;texts:string[];thumbnails:Record<number,string>;busy:boolean;error:string;original:Uint8Array|null;working:Uint8Array|null;runs:TextRun[];dirty:boolean;undo:Uint8Array[];redo:Uint8Array[]}
 interface Entry {revision:number;state:SlidesSession;client:SlidesClient;sequence:number;disposed:boolean}
 const bounded=(history:Uint8Array[])=>{let total=0;return history.slice(-10).reverse().filter(b=>(total+=b.byteLength)<=64*1024*1024).reverse();};
 const empty:SlidesSession={wasmBytes:0,diagnostics:null,name:'',source:'',summary:null,index:0,image:'',texts:[],thumbnails:{},busy:false,error:'',original:null,working:null,runs:[],dirty:false,undo:[],redo:[]};
@@ -55,3 +55,6 @@ export async function applyDeckSession(name:string,text:string,expected:{text:st
  const before=e.state.working!,after=editedDeckBytes(before,e.state.summary!,parseDeck(text));
  patch(e,{busy:true,error:''});try{await setWorking(e,after);if(e.disposed)throw Error('Deck closed during apply.');patch(e,{undo:bounded([...e.state.undo,before]),redo:[]});return e.revision;}catch(error){patch(e,{busy:false,error:String(error)},error);throw error;}
 }
+
+/** Snapshot of the active deck session for command enablement (slides/commands.ts). Empty state when no deck is active. */
+export const getSlidesSessionState=():SlidesSession=>current();

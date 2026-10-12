@@ -16,11 +16,12 @@ import {inRect,parseTsv,pasteRect,rectCells,rectOf,toTsv} from '../../lib/sheets
 import {MAX_READ_CELLS} from '../../lib/sheets/protocol';
 import {saveSheetsCopy,setSheetsDirty,sheetsIsDirty} from '../../lib/sheets/session';
 import {registerDocSaver} from '../../lib/workDocs';
+import {registerSheetsCommands,registerSheetsCommandController} from '../../lib/sheets/commands';
 import {setSheetsSelection} from '../../lib/sheets/sheetsStore';
 const HEAD_W=48,HEAD_H=24;
 type Phase={kind:'loading'}|{kind:'error';message:string}|{kind:'ready'};
 export function SheetsCanvas(){
- const media=useMedia();const {t}=useT();const item=media.items.find(i=>i.name===media.active&&i.kind==='xlsx');
+ const media=useMedia();const {t}=useT();useEffect(()=>registerSheetsCommands(),[]);const item=media.items.find(i=>i.name===media.active&&i.kind==='xlsx');
  if(!item)return <main className="center" aria-label={t('sheets.workspace')}><div className="workspace"><section className="code-pane" aria-label={t('sheets.workspace')}><FileTabs/><StudioEmptyState studio="sheets" icon={<Table2/>} onOpen={()=>new Promise<void>((resolve,reject)=>{const input=document.createElement('input');input.type='file';input.accept='.xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';input.oncancel=()=>resolve();input.onchange=async()=>{try{const file=input.files?.[0];if(file){const result=await addMediaFile(file,file.name);if('error' in result)throw Error(result.error);}resolve();}catch(e){reject(e);}};input.click();})} onCreate={()=>createBlankProject('sheets')} testId="sheets-empty"/></section></div></main>;
  return <main className="center" aria-label={t('sheets.workspace')}><div className="workspace"><section className="code-pane" aria-label={t('sheets.workspace')}><FileTabs/><Workbook key={item.url} item={item}/></section></div></main>;
 }
@@ -114,6 +115,9 @@ function Workbook({item}:{item:MediaItem}){
   return out;};
  const exportCopy=async()=>{try{const bytes=await engine.current!.save();const r=await saveSheetsCopy(item.name,bytes);if(r==='cancelled')return;if(r==='saved')setDirty(false);setNotice(t('sheets.exported'));}catch(e){fail(e);}};
  const exportRef=useRef(exportCopy);exportRef.current=exportCopy;
+ const historyRef=useRef(history);historyRef.current=history;const infoRef=useRef(info);infoRef.current=info;
+ // Command layer bridge (sheets/commands.ts): exposes this workbook's engine to the sheets.* command specs while mounted.
+ useEffect(()=>registerSheetsCommandController({ready:()=>!!engine.current&&!engine.current.isDisposed,canUndo:()=>!!infoRef.current?.canUndo,canRedo:()=>!!infoRef.current?.canRedo,undo:()=>historyRef.current('undo'),redo:()=>historyRef.current('redo'),saveCopy:()=>exportRef.current()}),[]);
  useEffect(()=>registerDocSaver('sheets',item.name,async()=>{await exportRef.current();await new Promise(r=>setTimeout(r,100));return !sheetsIsDirty(item.name);}),[item.name]);
  useEffect(()=>{setSheetsDirty(item.name,dirty);return()=>setSheetsDirty(item.name,false);},[dirty,item.name]);
  const restart=()=>{if(original.current)window.location.reload();};
