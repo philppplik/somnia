@@ -3,7 +3,7 @@ import {useCallback,useEffect,useMemo,useRef,useState} from 'react';
 import {isTauri} from '@tauri-apps/api/core';
 import {callApi} from '../lib/extensions/api';
 import {loadActiveExtensions} from '../lib/extensions/registry';
-import {panelSrcdoc,panelDocument} from '../lib/extensions/panelHtml';
+import {panelSrcdoc,panelDocument,currentPanelTheme} from '../lib/extensions/panelHtml';
 import {openPanelDocument,closeExtDocuments} from '../lib/extensions/nativeScheme';
 import {PanelSession} from '../lib/extensions/panelSession';
 import {getState,patchState,useAppStore} from '../store/appStore';
@@ -13,6 +13,7 @@ export function ExtensionPanel({id}:{id:string}){
  const {t}=useT();
  const panel=useAppStore().extensionPanels.find(p=>p.id===id);const frame=useRef<HTMLIFrameElement>(null);
  const [navigated,setNavigated]=useState(false);
+ const appTheme=useAppStore().theme;const theme=useMemo(()=>currentPanelTheme(),[appTheme]);
  const token=useMemo(newToken,[panel?.id,panel?.html]);
  const [session,setSession]=useState<PanelSession|null>(null);
  /** The session is created inside the effect (not memoised): React StrictMode runs effect cleanup once in dev, and a disposed session must never be reused. */
@@ -25,12 +26,12 @@ export function ExtensionPanel({id}:{id:string}){
  /** Native: register the full document with the Rust core (single-use URL), then mount the frame. Revoked on unmount or change. */
  const [nativeSrc,setNativeSrc]=useState<string|null>(null);const [nativeError,setNativeError]=useState(false);
  useEffect(()=>{if(!isTauri()||!panel)return;let live=true;setNativeSrc(null);setNativeError(false);const panelId=panel.id.slice(panel.extId.length+1);
-  openPanelDocument(panel.extId,panelId,panelDocument(panel.html,null)).then(r=>{if(live)setNativeSrc(`${r.url}#${encodeURIComponent(token)}`);}).catch(()=>{if(live)setNativeError(true);});
-  return()=>{live=false;closeExtDocuments(panel.extId,panelId);};},[panel?.id,panel?.html,panel?.extId,token]);
+  openPanelDocument(panel.extId,panelId,panelDocument(panel.html,null,theme)).then(r=>{if(live)setNativeSrc(`${r.url}#${encodeURIComponent(token)}`);}).catch(()=>{if(live)setNativeError(true);});
+  return()=>{live=false;closeExtDocuments(panel.extId,panelId);};},[panel?.id,panel?.html,panel?.extId,token,theme]);
  useEffect(()=>{const sess=makeSession();setSession(sess);if(!sess)return;const on=(e:MessageEvent)=>{sess.onWindowMessage(e.source,frame.current?.contentWindow??null,e.data);};
   window.addEventListener('message',on);return()=>{window.removeEventListener('message',on);sess.dispose();};},[makeSession]);
  if(!panel)return null;
  const native=isTauri();
- const src=native?{src:nativeSrc??undefined}:{srcDoc:panelSrcdoc(panel.html,token)};
+ const src=native?{src:nativeSrc??undefined}:{srcDoc:panelSrcdoc(panel.html,token,theme)};
  return <aside data-extension-id={panel.extId} className="panel sidebar" aria-label={panel.title}><h2 className="m-0 px-3 pt-3 text-[13px]">{panel.title}</h2>{navigated||nativeError?<p role="alert" className="m-0 p-3 text-[12px]">{t('panels.extension.navigationBlocked')}</p>:(native&&!nativeSrc)||!session?null:<iframe key={token} ref={frame} onLoad={()=>session?.onLoad()} title={t('panels.extension.title',{title:panel.title})} sandbox="allow-scripts" {...src} className="min-h-0 w-full flex-1 border-0 bg-transparent"/>}</aside>;
 }
