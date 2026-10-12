@@ -218,7 +218,8 @@ mod tests {
         let old_token = old.token.clone();
         let old_addr = old.addr;
         drop(old);
-        tokio::time::timeout(Duration::from_secs(2), async {
+        // A refused connect takes about 2 s on Windows (SYN retries), so allow several attempts.
+        tokio::time::timeout(Duration::from_secs(15), async {
             while TcpStream::connect(old_addr).await.is_ok() { tokio::task::yield_now().await; }
         }).await.unwrap();
         let new = start(echo()).await.unwrap();
