@@ -45,6 +45,8 @@ jobs:
       - name: Dreamweaver parity checklist is current
         run: npm run check:dreamweaver-parity
       - run: npm run build && npm run test:core
+      - name: Release bundle has no web-control hook
+        run: npm run check:no-control
       - name: Test performance-budget validation
         run: node --test scripts/performance/report.test.mjs
       - name: Editor-core budgets (full parser)
