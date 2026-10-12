@@ -651,6 +651,58 @@ impl Runtime {
             .map_err(|_| CoreError("consent request changed or expired"))?;
         self.publish(&decision.run_id)
     }
+    /// ACP bridge (Welle-B A2): handles to the ONE consent broker of this runtime. External
+    /// agent runs register here, so their consent is decided through the same broker and the
+    /// same UI handle as internal runs; there is no second broker or consent path.
+    pub fn acp_broker(&self) -> policy::BrokerHandles {
+        self.broker.clone()
+    }
+    /// Pending consent of an ACP run (same broker as `decide`).
+    pub fn acp_pending(&self, run_id: &str) -> Result<Vec<policy::PendingView>> {
+        if !run_id.starts_with("acp-") {
+            return Err(CoreError("not an ACP run"));
+        }
+        let run = policy::RunId::new(run_id).map_err(|_| CoreError("invalid consent run"))?;
+        self.broker
+            .ui
+            .pending_for_run(&run)
+            .map_err(|_| CoreError("cannot read pending consent"))
+    }
+    /// Decide a pending ACP consent request. Same broker decision as `decide`, minus the
+    /// run-store audit event (ACP runs have no stored run; their decisions land in the broker
+    /// audit and the ACP event log). Only `acp-` runs are accepted here, and `decide` keeps
+    /// refusing them (no stored run), so neither path can reach the other's runs.
+    pub fn decide_acp(&self, decision: w::ConsentDecision) -> Result<()> {
+        if !decision.run_id.starts_with("acp-") {
+            return Err(CoreError("not an ACP run"));
+        }
+        let run =
+            policy::RunId::new(&decision.run_id).map_err(|_| CoreError("invalid consent run"))?;
+        let pending = self
+            .broker
+            .ui
+            .pending_for_run(&run)
+            .map_err(|_| CoreError("cannot read pending consent"))?;
+        if !pending
+            .iter()
+            .any(|request| request.request_id.as_str() == decision.request_id)
+        {
+            return Err(CoreError("consent request changed or expired"));
+        }
+        self.broker
+            .ui
+            .decide_wire(
+                &decision.run_id,
+                &decision.request_id,
+                match decision.choice {
+                    w::ConsentChoice::AllowOnce => policy::UserDecision::AllowOnce,
+                    w::ConsentChoice::AllowForRun => policy::UserDecision::AllowForRun,
+                    w::ConsentChoice::Deny => policy::UserDecision::Deny,
+                },
+            )
+            .map(|_| ())
+            .map_err(|_| CoreError("consent request changed or expired"))
+    }
     pub async fn stop(&self, id: &str) -> Result<()> {
         if let Ok(run) = policy::RunId::new(id) {
             if self

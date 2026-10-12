@@ -1459,6 +1459,84 @@
       ]
     },
     {
+      "name": "vibespace_acp_cancel",
+      "domain": "fs",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "request"
+      ],
+      "args": [
+        "request"
+      ]
+    },
+    {
+      "name": "vibespace_acp_decide_consent",
+      "domain": "fs",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "request"
+      ],
+      "args": [
+        "request"
+      ]
+    },
+    {
+      "name": "vibespace_acp_launch",
+      "domain": "fs",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "request"
+      ],
+      "args": [
+        "request"
+      ]
+    },
+    {
+      "name": "vibespace_acp_prompt",
+      "domain": "fs",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "request"
+      ],
+      "args": [
+        "request"
+      ]
+    },
+    {
+      "name": "vibespace_acp_session",
+      "domain": "fs",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "request"
+      ],
+      "args": [
+        "request"
+      ]
+    },
+    {
+      "name": "vibespace_acp_state",
+      "domain": "fs",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "request"
+      ],
+      "args": [
+        "request"
+      ]
+    },
+    {
       "name": "vibespace_apply_hunks",
       "domain": "fs",
       "status": "native",

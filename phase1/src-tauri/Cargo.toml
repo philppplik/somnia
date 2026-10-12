@@ -27,6 +27,8 @@ somnia-vibespace-sched = { path = "../vibespace-sched" }
 somnia-vibespace-core = { path = "../vibespace-core" }
 somnia-vibespace-embed = { path = "../vibespace-embed" }
 somnia-vibespace-skills = { path = "../vibespace-skills" }
+vibespace-acp = { path = "../vibespace-acp" }
+vibespace-policy = { path = "../vibespace-policy" }
 somnia-relay = { path = "../../relay" }
 tokio = { version = "1", features = ["rt-multi-thread", "net", "sync", "time", "macros", "io-util"] }
 if-addrs = "0.13"

@@ -181,6 +181,10 @@ pub struct AcpClient {
 }
 
 impl AcpClient {
+    /// Note (Linux): the sandbox lives and dies with the thread that spawned it
+    /// (`--die-with-parent` = PDEATHSIG, which follows the parent thread). Call `launch` from a
+    /// thread that stays alive for the whole session.
+    ///
     /// Propose running the agent (origin = the external agent), wait for the user's decision
     /// up to `approval_wait`, start it in the sandbox, and run the ACP handshake.
     pub fn launch(

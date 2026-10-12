@@ -42,7 +42,7 @@ fn allowed_caller(
             ("http", Some("127.0.0.1"), Some(1420))
         ))
 }
-fn gate(window: &WebviewWindow, webview: &Webview) -> Result<()> {
+pub(crate) fn gate(window: &WebviewWindow, webview: &Webview) -> Result<()> {
     let url = webview.url().map_err(failed)?;
     if !allowed_caller(
         window.label(),

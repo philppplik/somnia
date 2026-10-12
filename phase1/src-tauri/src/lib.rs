@@ -8,6 +8,8 @@ mod image_io;
 mod pdf_io;
 #[cfg(any(feature = "desktop", test))]
 mod audio_io;
+#[cfg(any(feature = "desktop", test))]
+pub mod vibespace_acp;
 pub mod applog;
 pub mod app_command_error;
 pub mod cmd;
@@ -55,5 +57,7 @@ pub mod diagnostics_commands;
 
 #[cfg(feature = "desktop")]
 pub mod vibespace_commands;
+#[cfg(feature = "desktop")]
+pub mod vibespace_acp_commands;
 #[cfg(feature = "desktop")]
 pub mod vibespace_schedule_commands;

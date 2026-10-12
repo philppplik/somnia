@@ -2182,6 +2182,7 @@ pub fn run() {
         .setup(move |app| {
             crate::vibespace_commands::manage(app.handle(), Vec::new())?;
             app.manage(crate::vibespace_schedule_commands::VibeScheduleState::default());
+            app.manage(crate::vibespace_acp_commands::AcpState::default());
             // Cold start: same worker pipeline as a second instance. The flag owes the main window
             // one activation even if it is not created yet.
             app.state::<Pending>().0.store(true, std::sync::atomic::Ordering::SeqCst);
@@ -2316,6 +2317,12 @@ pub fn run() {
             crate::vibespace_commands::vibespace_skills_accept_update,
             crate::vibespace_commands::vibespace_skills_reject_update,
             crate::vibespace_commands::vibespace_skills_uninstall,
+            crate::vibespace_acp_commands::vibespace_acp_launch,
+            crate::vibespace_acp_commands::vibespace_acp_session,
+            crate::vibespace_acp_commands::vibespace_acp_prompt,
+            crate::vibespace_acp_commands::vibespace_acp_decide_consent,
+            crate::vibespace_acp_commands::vibespace_acp_cancel,
+            crate::vibespace_acp_commands::vibespace_acp_state,
             ext_panel_open,
             crate::extension_activity_commands::extension_activity_query,
             crate::extension_activity_commands::extension_activity_export,

@@ -13,3 +13,12 @@
 ## UI
 
 `src/lib/vibespace/acpPresentation.ts` maps the wire origin and the event log to i18n lines (`vibespace.acp.*`, five locales) for the consent card and the review transcript. Wiring the crate into `src-tauri` (commands, capabilities, invoke handler) is not part of this package.
+
+## Desktop bridge (src-tauri)
+
+`src-tauri/src/vibespace_acp.rs` (bridge core, testable without the desktop feature) and `vibespace_acp_commands.rs` (thin tauri adapters, main window only via the same `gate`). Six commands: `vibespace_acp_launch`, `_session` (new or resume), `_prompt`, `_decide_consent`, `_cancel` (grace, or `close` = kill + revoke the run), `_state`. Changes are pushed on the private channel `somnia://vibespace-acp` (`{sessionKey, reason}`); the renderer re-reads with `_state` (status, pending consent with origin, event log). Frontend: `src/lib/vibespace/acpNative.ts`.
+
+- Each session is a run of the Runtime's ONE consent broker (`Runtime::acp_broker`), id `acp-<uuid>`. Pending consent (launch and tool permissions) is decided with `Runtime::decide_acp`, which accepts only `acp-` runs; the regular `decide` refuses them (no stored run).
+- The agent works in its own isolated root under the app data dir (`vibespace/acp/<agent>/sessions/<key>/work`). It has no Space folder and no host home. Only paths inside that root and `/usr /bin /lib* /etc` (read-only) are visible in the sandbox, so the agent binary must live there.
+- No isolation: `launch` fails synchronously with `vibespace_acp_isolation_unavailable`; nothing is spawned. Windows: attach works, spawn fails closed (no AppContainer `spawn_session` yet). macOS: unavailable.
+- Linux: the sandbox lives with the spawning thread (`--die-with-parent` = PDEATHSIG follows the thread). The bridge keeps its launch thread alive for the session.
