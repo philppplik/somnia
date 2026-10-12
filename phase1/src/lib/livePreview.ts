@@ -5,8 +5,10 @@ import type {PreviewScriptLocation} from './previewErrorLocation';
 import {PREVIEW_ASSET_CSP,inlineBinaryAssets,inlineCssAssets} from './previewAssets';
 import {flattenCss} from './previewDeps';
 import {newModuleState,rewriteImports} from './previewModules';
+import {resolveProjectPath} from './previewResources';
 /** Builds the srcDoc for the opt-in live preview. Runs in a sandboxed iframe (allow-scripts only, opaque origin). Project CSS and JS are inlined from the project files; no network. */
-const resolve=(active:string,href:string)=>{if(/^(?:[a-z]+:|\/\/|\/)/i.test(href))return null;const parts=[...active.split('/').slice(0,-1),...href.split(/[?#]/)[0].split('/')],out:string[]=[];for(const p of parts){if(p==='..')out.pop();else if(p&&p!=='.')out.push(p);}return out.join('/');};
+/** Project-relative path of a link, or null for external, root-relative and escaping references. Decodes %-escapes like the resource loader does, so `my%20file.css` finds `my file.css`. */
+const resolve=(active:string,href:string)=>{if(/^(?:[a-z][a-z0-9+.-]*:|\/\/|\/)/i.test(href.trim()))return null;const r=resolveProjectPath(active,href);return typeof r==='string'?r:null;};
 const esc=(s:string)=>s.replace(/<\/(script)/gi,'<\\/$1');
 export function buildPreview(files:Readonly<Record<string,string>>,active:string,scripts:boolean,scrollY=0,assets:ReadonlyMap<string,string>=new Map(),hash=''):{html:string;scripts:PreviewScriptLocation[];id:string;blocked:string[];assetRefs:string[];moduleCycles:string[]}{
  const modules=newModuleState();const blocked:string[]=[];const assetPass={refs:new Set<string>()},linkedStyles=new Set<Element>();

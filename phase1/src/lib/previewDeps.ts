@@ -7,7 +7,7 @@ export type PreviewFiles=Readonly<Record<string,string>>;
 /** Binary files the preview can show (images, fonts, media) plus SVG, which the editor model already holds as text. */
 export const isAssetPath=(p:string)=>!!assetType(p)||/\.svg$/i.test(p);
 const resolveRef=resolveProjectPath;
-const stripComments=(css:string)=>css.replace(/\/\*[\s\S]*?\*\//g,'');
+const stripComments=(css:string)=>css.replace(/\/\*[\s\S]*?(?:\*\/|$)/g,'');
 const IMPORT=/@import\s+(?:url\(\s*)?(?:"([^"]+)"|'([^']+)'|([^"')\s;]+))\s*\)?([^;]*);?/gi;
 const URL_FN=/url\(\s*(?:"([^"]+)"|'([^']+)'|([^"')\s]+))\s*\)/gi;
 /** Stylesheets imported by a CSS text, and assets it references through url(). */
@@ -56,7 +56,7 @@ export function collectDeps(files:PreviewFiles,active:string):PreviewDeps{
 /** Returns the stylesheet with its @import chain inlined (cycle-safe). `transform` runs on every file's own text with that file's path, so url() references resolve against the right folder. */
 export function flattenCss(files:PreviewFiles,path:string,transform:(css:string,path:string)=>string=c=>c,seen:string[]=[]):string{
  const text=files[path];if(text==null||seen.includes(path))return '';
- return transform(text.replace(IMPORT,(_m,a,b,c,rest)=>{const p=resolveRef(path,a??b??c??'');if(!p)return '';const inner=flattenCss(files,p,transform,[...seen,path]);const media=String(rest||'').trim();return media?`@media ${media}{${inner}}`:inner;}),path);
+ return transform(text.replace(IMPORT,(_m,a,b,c,rest)=>{if(/\b(?:layer|supports)\s*\(/i.test(String(rest||'')))return _m;const p=resolveRef(path,a??b??c??'');if(!p)return '';const inner=flattenCss(files,p,transform,[...seen,path]);const media=String(rest||'').trim();return media?`@media ${media}{${inner}}`:inner;}),path);
 }
 export type PreviewPlan=
  |{kind:'none'}

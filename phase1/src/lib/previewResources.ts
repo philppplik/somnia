@@ -51,7 +51,7 @@ export function parseSrcset(value:string):string[]{
  }
  return out;
 }
-const stripComments=(css:string)=>css.replace(/\/\*[\s\S]*?\*\//g,' ');
+const stripComments=(css:string)=>css.replace(/\/\*[\s\S]*?(?:\*\/|$)/g,' ');
 /** url() and @import references of a stylesheet or style attribute. @import targets are kind 'css' (recursed), url() targets are assets. */
 export function scanCssRefs(css:string):Array<{href:string;kind:'css'|'asset'}>{
  const text=stripComments(css),out:Array<{href:string;kind:'css'|'asset'}>=[];
@@ -95,7 +95,13 @@ export function scanHtmlRefs(html:string,active:string):{refs:ResourceRef[];esca
  walk(parse(html));
  return {refs,escaped};
 }
-const utf8=(b64:string):string=>{const bin=atob(b64);const bytes=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)bytes[i]=bin.charCodeAt(i);return new TextDecoder('utf-8').decode(bytes).replace(/^\uFEFF/,'');};
+/** Decodes the bytes of a project text file like the editor does: UTF-16 by BOM, UTF-8 (BOM dropped), otherwise Windows-1252. */
+export function decodeResourceBytes(bytes:Uint8Array):string{
+ if(bytes[0]===0xFF&&bytes[1]===0xFE)return new TextDecoder('utf-16le').decode(bytes.subarray(2));
+ if(bytes[0]===0xFE&&bytes[1]===0xFF)return new TextDecoder('utf-16be').decode(bytes.subarray(2));
+ try{return new TextDecoder('utf-8',{fatal:true}).decode(bytes).replace(/^\uFEFF/,'');}catch{return new TextDecoder('windows-1252').decode(bytes);}
+}
+const utf8=(b64:string):string=>{const bin=atob(b64);const bytes=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)bytes[i]=bin.charCodeAt(i);return decodeResourceBytes(bytes);};
 const isText=(path:string,mime:string)=>/^text\/(?:css|javascript|html|plain)$|^application\/json$/.test(mime)||/\.(?:css|m?js|cjs|json|html?)$/i.test(path);
 const reasonOf=(e:unknown):PreviewResources['failed'][number]['reason']=>{const m=typeof e==='object'&&e&&'code' in e?String((e as {code:unknown}).code):String(e instanceof Error?e.message:e);return /limit|large/i.test(m)?'too-large':/not.?found|no such|NotFound|missing/i.test(m)?'missing':'error';};
 export interface LoadOptions{
@@ -157,7 +163,7 @@ const relativeTo=(fromFile:string,target:string):string=>{const from=fromFile.sp
  */
 export function flattenCssImports(css:string,path:string,text:Readonly<Record<string,string>>,trail:readonly string[]=[]):string{
  return css.replace(IMPORT_RULE,(whole,a,b,c,d,e,media)=>{
-  const href=(a??b??c??d??e??'').trim();const target=resolveProjectPath(path,href);
+  const href=(a??b??c??d??e??'').trim();if(/\b(?:layer|supports)\s*\(/i.test(String(media||'')))return whole;const target=resolveProjectPath(path,href);
   if(!target||trail.includes(target)||target===path)return trail.includes(target??'')||target===path?'':whole;
   const body=text[target];if(body==null)return whole;
   let inner=flattenCssImports(body,target,text,[...trail,path]);
