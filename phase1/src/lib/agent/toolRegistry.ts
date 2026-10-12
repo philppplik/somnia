@@ -53,6 +53,8 @@ export class AgentToolRegistry {
     this.tools.set(n, spec);
     return this;
   }
+  /** Removes a tool. Used by the command bridge when a spec is unregistered. */
+  unregister(name: string): boolean { return this.tools.delete(name); }
   has(name: string): boolean { return this.tools.has(name); }
   level(name: string): AgentToolLevel | undefined { return this.tools.get(name)?.level; }
   private enabled(spec: AgentToolSpec, g: AgentToolGrants): boolean {

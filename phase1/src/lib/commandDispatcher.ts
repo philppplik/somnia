@@ -75,6 +75,7 @@ export class CommandDispatcher {
   private readonly specs = new Map<string, CommandSpec<unknown, unknown>>();
   private readonly activity: CommandActivity[] = [];
   private readonly subscribers = new Set<(entry: CommandActivity) => void>();
+  private readonly registryListeners = new Set<(change: { type: 'added' | 'removed'; id: string }) => void>();
 
   constructor(private readonly options: CommandDispatcherOptions = {}) {}
 
@@ -86,7 +87,18 @@ export class CommandDispatcher {
     if (spec.result !== undefined && !isObj(spec.result)) throw new Error(`Command ${spec.id}: result schema must be an object.`);
     const stored = spec as CommandSpec<unknown, unknown>;
     this.specs.set(spec.id, stored);
-    return () => { if (this.specs.get(spec.id) === stored) this.specs.delete(spec.id); };
+    this.emitRegistry('added', spec.id);
+    return () => { if (this.specs.get(spec.id) === stored) { this.specs.delete(spec.id); this.emitRegistry('removed', spec.id); } };
+  }
+
+  /** Notifies when specs are added or removed (late registration: canvas mounts, vector readiness). Returns the unsubscribe function. */
+  subscribeRegistry(fn: (change: { type: 'added' | 'removed'; id: string }) => void): () => void {
+    this.registryListeners.add(fn);
+    return () => { this.registryListeners.delete(fn); };
+  }
+
+  private emitRegistry(type: 'added' | 'removed', id: string): void {
+    for (const fn of [...this.registryListeners]) { try { fn({ type, id }); } catch { /* observers must never break registration */ } }
   }
 
   has(id: string): boolean { return this.specs.has(id); }
