@@ -7,7 +7,7 @@
       "title": "Toggle Somnia Agent",
       "category": "View",
       "shortcut": "Mod+Alt+A",
-      "hasEnabled": false
+      "hasEnabled": true
     },
     {
       "id": "chat.toggle",
@@ -45,7 +45,7 @@
       "id": "css.open",
       "title": "CSS variables and classes",
       "category": "View",
-      "hasEnabled": false
+      "hasEnabled": true
     },
     {
       "id": "edit.decodeEntities",
@@ -58,7 +58,7 @@
         "special characters",
         "unescape"
       ],
-      "hasEnabled": false
+      "hasEnabled": true
     },
     {
       "id": "edit.delete",
@@ -85,7 +85,7 @@
         "special characters",
         "unescape"
       ],
-      "hasEnabled": false
+      "hasEnabled": true
     },
     {
       "id": "edit.format",
@@ -99,7 +99,7 @@
         "prettier"
       ],
       "allowInInput": true,
-      "hasEnabled": false
+      "hasEnabled": true
     },
     {
       "id": "edit.redo",
@@ -147,13 +147,13 @@
         "parse",
         "performance"
       ],
-      "hasEnabled": false
+      "hasEnabled": true
     },
     {
       "id": "extensions.open",
       "title": "Extensions",
       "category": "View",
-      "hasEnabled": false
+      "hasEnabled": true
     },
     {
       "id": "help.errorReport",
@@ -168,7 +168,7 @@
         "log",
         "report"
       ],
-      "hasEnabled": false
+      "hasEnabled": true
     },
     {
       "id": "help.github",
@@ -182,7 +182,7 @@
         "repo",
         "source"
       ],
-      "hasEnabled": false
+      "hasEnabled": true
     },
     {
       "id": "help.shortcuts",
@@ -192,7 +192,7 @@
         "help",
         "keyboard"
       ],
-      "hasEnabled": false
+      "hasEnabled": true
     },
     {
       "id": "insert.element.0",
@@ -319,7 +319,7 @@
       "title": "Toggle inspector",
       "category": "View",
       "shortcut": "Mod+Alt+I",
-      "hasEnabled": false
+      "hasEnabled": true
     },
     {
       "id": "md.bold",
@@ -490,7 +490,7 @@
       "title": "Command palette",
       "category": "Tools",
       "shortcut": "Mod+K",
-      "hasEnabled": false
+      "hasEnabled": true
     },
     {
       "id": "panels.hideAll",
@@ -501,14 +501,14 @@
         "dreamweaver",
         "panels"
       ],
-      "hasEnabled": false
+      "hasEnabled": true
     },
     {
       "id": "problems.toggle",
       "title": "Toggle problems",
       "category": "Tools",
       "shortcut": "Mod+J",
-      "hasEnabled": false
+      "hasEnabled": true
     },
     {
       "id": "project.closeAll",
@@ -554,7 +554,7 @@
         "file",
         "new"
       ],
-      "hasEnabled": false
+      "hasEnabled": true
     },
     {
       "id": "project.open",
@@ -571,7 +571,7 @@
         "file",
         "open"
       ],
-      "hasEnabled": false
+      "hasEnabled": true
     },
     {
       "id": "project.openMedia",
@@ -586,7 +586,7 @@
         "png",
         "preview"
       ],
-      "hasEnabled": false
+      "hasEnabled": true
     },
     {
       "id": "project.save",
@@ -613,21 +613,21 @@
       "title": "Search in project",
       "category": "View",
       "shortcut": "Mod+Shift+F",
-      "hasEnabled": false
+      "hasEnabled": true
     },
     {
       "id": "settings.open",
       "title": "Settings",
       "category": "Tools",
       "shortcut": "Mod+,",
-      "hasEnabled": false
+      "hasEnabled": true
     },
     {
       "id": "sidebar.toggle",
       "title": "Toggle sidebar",
       "category": "View",
       "shortcut": "Mod+B",
-      "hasEnabled": false
+      "hasEnabled": true
     },
     {
       "id": "split.horizontal",
@@ -653,7 +653,7 @@
       "category": "View",
       "shortcut": "Mod+1",
       "allowInInput": true,
-      "hasEnabled": false
+      "hasEnabled": true
     },
     {
       "id": "studio.design",
@@ -661,7 +661,7 @@
       "category": "View",
       "shortcut": "Mod+7",
       "allowInInput": true,
-      "hasEnabled": false
+      "hasEnabled": true
     },
     {
       "id": "studio.documents",
@@ -669,7 +669,7 @@
       "category": "View",
       "shortcut": "Mod+2",
       "allowInInput": true,
-      "hasEnabled": false
+      "hasEnabled": true
     },
     {
       "id": "studio.photos",
@@ -677,7 +677,7 @@
       "category": "View",
       "shortcut": "Mod+9",
       "allowInInput": true,
-      "hasEnabled": false
+      "hasEnabled": true
     },
     {
       "id": "studio.sheets",
@@ -685,7 +685,7 @@
       "category": "View",
       "shortcut": "Mod+3",
       "allowInInput": true,
-      "hasEnabled": false
+      "hasEnabled": true
     },
     {
       "id": "studio.slides",
@@ -693,7 +693,7 @@
       "category": "View",
       "shortcut": "Mod+4",
       "allowInInput": true,
-      "hasEnabled": false
+      "hasEnabled": true
     },
     {
       "id": "studio.sound",
@@ -701,7 +701,7 @@
       "category": "View",
       "shortcut": "Mod+5",
       "allowInInput": true,
-      "hasEnabled": false
+      "hasEnabled": true
     },
     {
       "id": "studio.vector",
@@ -709,14 +709,14 @@
       "category": "View",
       "shortcut": "Mod+8",
       "allowInInput": true,
-      "hasEnabled": false
+      "hasEnabled": true
     },
     {
       "id": "studio.vibespace",
       "title": "Switch to vibespace Studio",
       "category": "View",
       "allowInInput": true,
-      "hasEnabled": false
+      "hasEnabled": true
     },
     {
       "id": "studio.video",
@@ -724,7 +724,7 @@
       "category": "View",
       "shortcut": "Mod+6",
       "allowInInput": true,
-      "hasEnabled": false
+      "hasEnabled": true
     },
     {
       "id": "tab.close",
@@ -738,14 +738,14 @@
       "title": "Next tab",
       "category": "View",
       "shortcut": "Mod+Alt+ArrowRight",
-      "hasEnabled": false
+      "hasEnabled": true
     },
     {
       "id": "tab.prev",
       "title": "Previous tab",
       "category": "View",
       "shortcut": "Mod+Alt+ArrowLeft",
-      "hasEnabled": false
+      "hasEnabled": true
     },
     {
       "id": "table.col.delete",
@@ -859,19 +859,19 @@
       "id": "theme.dark",
       "title": "Use dark theme",
       "category": "View",
-      "hasEnabled": false
+      "hasEnabled": true
     },
     {
       "id": "theme.light",
       "title": "Use light theme",
       "category": "View",
-      "hasEnabled": false
+      "hasEnabled": true
     },
     {
       "id": "theme.toggle",
       "title": "Toggle light / dark theme",
       "category": "Tools",
-      "hasEnabled": false
+      "hasEnabled": true
     },
     {
       "id": "tools.convert",
@@ -893,7 +893,7 @@
         "svg",
         "webp"
       ],
-      "hasEnabled": false
+      "hasEnabled": true
     },
     {
       "id": "tools.diff",
@@ -922,7 +922,7 @@
         "resize",
         "rotate"
       ],
-      "hasEnabled": false
+      "hasEnabled": true
     },
     {
       "id": "view.code",
@@ -966,28 +966,28 @@
         "dreamweaver",
         "switch"
       ],
-      "hasEnabled": false
+      "hasEnabled": true
     },
     {
       "id": "zoom.in",
       "title": "Zoom in",
       "category": "View",
       "shortcut": "Mod+=",
-      "hasEnabled": false
+      "hasEnabled": true
     },
     {
       "id": "zoom.out",
       "title": "Zoom out",
       "category": "View",
       "shortcut": "Mod+-",
-      "hasEnabled": false
+      "hasEnabled": true
     },
     {
       "id": "zoom.reset",
       "title": "Actual size",
       "category": "View",
       "shortcut": "Mod+0",
-      "hasEnabled": false
+      "hasEnabled": true
     }
   ]
 }

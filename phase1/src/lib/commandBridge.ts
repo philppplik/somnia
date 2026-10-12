@@ -13,7 +13,8 @@
  * Wave C then reads dispatcher.list() for the toolRegistry/MCP bridge and the
  * check:ui-commands manifest instead of touching per-area code.
  */
-import { registerCommand, type Command } from './commands';
+import { registerCommand } from './commandRegistry';
+import type { Command } from './commands';
 import { commandDispatcher, type CommandDispatcher } from './commandDispatcher';
 import type { CommandSpec } from './commandSpec';
 
