@@ -4,6 +4,8 @@ Start here:
 
 - [AGENTS.md](../AGENTS.md): map for AI contributors: layout, commands, rules, release caveats. UI command layer reference: `phase1/src/lib/commandSpec.ts` (spec type) and `phase1/src/lib/commandDispatcher.ts` (dispatch), see the section "Two kinds of command" there.
 
+- [Dreamweaver parity checklist](dreamweaver-parity.md): generated list of which Dreamweaver capabilities Somnia has, partly has or lacks. Source: `phase1/scripts/dreamweaver-parity/catalog.ts`; regenerate with `npm run inventory:dreamweaver-parity` from `phase1/`.
+
 - [Native UI design system](design/native-ui/README.md): exact tokens, theme/appearance cascade, components, UX, context and awareness, Studio direction, and verification.
 
 - [Architecture](ARCHITECTURE.md): Rust backend, command ACL, project service, frontend, storage port, security boundaries, testing.
