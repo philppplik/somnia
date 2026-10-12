@@ -40,6 +40,8 @@ jobs:
         run: npm run documents:build
       - name: Sound Studio core tests (native, real MP3 fixture)
         run: cargo +1.95.0 test --locked --manifest-path sound/Cargo.toml
+      - name: Layer rules (new violations only)
+        run: npm run check:layers
       - run: npm run build && npm run test:core
       - name: Test performance-budget validation
         run: node --test scripts/performance/report.test.mjs

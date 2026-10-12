@@ -1,0 +1,398 @@
+
+  error no-circular: src/lib/video/timeline.ts → 
+      src/lib/video/titles.ts →
+      src/lib/video/timeline.ts
+    No import cycles.
+
+  error no-circular: src/lib/studios/vector.ts → 
+      src/lib/studios/blank.ts →
+      src/store/appStore.ts →
+      src/lib/studios/index.ts →
+      src/lib/studios/vector.ts
+    No import cycles.
+
+  error no-circular: src/lib/studios/index.ts → 
+      src/lib/studios/vector.ts →
+      src/store/appStore.ts →
+      src/lib/studios/index.ts
+    No import cycles.
+
+  error no-circular: src/lib/studios/blank.ts → 
+      src/store/appStore.ts →
+      src/lib/studios/index.ts →
+      src/lib/studios/design.ts →
+      src/lib/studios/blank.ts
+    No import cycles.
+
+  error no-circular: src/lib/projectActions.ts → 
+      src/store/appStore.ts →
+      src/lib/studios/index.ts →
+      src/lib/studios/design.ts →
+      src/lib/studios/blank.ts →
+      src/lib/projectActions.ts
+    No import cycles.
+
+  error no-circular: src/lib/pdfedit/comments.ts → 
+      src/lib/pdfedit/markupProperties.ts →
+      src/lib/pdfedit/comments.ts
+    No import cycles.
+
+  error no-circular: src/lib/fileAdapter.ts → 
+      src/lib/versionsSession.ts →
+      src/lib/fileAdapter.ts
+    No import cycles.
+
+  error no-circular: src/lib/extensions/nativeScheme.ts → 
+      src/lib/extensions/runtime.ts →
+      src/lib/extensions/nativeScheme.ts
+    No import cycles.
+
+  error no-circular: src/lib/extensions/manifestV2.ts → 
+      src/lib/extensions/securityPolicy.ts →
+      src/lib/extensions/manifestV2.ts
+    No import cycles.
+
+  error no-circular: src/lib/errorReport.ts → 
+      src/lib/log.ts →
+      src/lib/errorReport.ts
+    No import cycles.
+
+  error no-circular: src/lib/diagnostics.ts → 
+      src/lib/mathProblems.ts →
+      src/lib/diagnostics.ts
+    No import cycles.
+
+  error no-circular: src/lib/commands.ts → 
+      src/lib/workDocsActions.ts →
+      src/lib/workDocsProviders.ts →
+      src/lib/commands.ts
+    No import cycles.
+
+  error no-circular: src/lib/agent/panelBridge.ts → 
+      src/lib/agent/settings.ts →
+      src/lib/agent/panelBridge.ts
+    No import cycles.
+
+  error no-circular: src/lib/agent/nativeProviderFetch.ts → 
+      src/lib/agent/providerAuth.ts →
+      src/lib/agent/nativeProviderFetch.ts
+    No import cycles.
+
+  error no-circular: src/lib/agent/core.ts → 
+      src/lib/agent/panelBridge.ts →
+      src/lib/agent/core.ts
+    No import cycles.
+
+  error no-circular: src/lib/a11y.ts → 
+      src/lib/diagnostics.ts →
+      src/lib/a11y.ts
+    No import cycles.
+
+  error no-circular: src/components/photos/DevelopPanel.tsx → 
+      src/components/RasterEditor.tsx →
+      src/components/photos/DevelopPanel.tsx
+    No import cycles.
+
+  error lib-not-up: src/lib/workDocsProviders.ts → src/store/rasterState.ts
+    src/lib is non-UI logic: it must not import src/store, src/components, App
+    or main.
+
+  error lib-not-up: src/lib/workDocsProviders.ts → src/store/appStore.ts
+    src/lib is non-UI logic: it must not import src/store, src/components, App
+    or main.
+
+  error lib-not-up: src/lib/workDocsActions.ts → src/store/appStore.ts
+    src/lib is non-UI logic: it must not import src/store, src/components, App
+    or main.
+
+  error lib-not-up: src/lib/vectorstudio/session.ts → src/components/vectorstudio/tools/operations.ts
+    src/lib is non-UI logic: it must not import src/store, src/components, App
+    or main.
+
+  error lib-not-up: src/lib/vectorstudio/open.ts → src/store/appStore.ts
+    src/lib is non-UI logic: it must not import src/store, src/components, App
+    or main.
+
+  error lib-not-up: src/lib/vectorstudio/geometry.ts → src/components/vectorstudio/tools/operations.ts
+    src/lib is non-UI logic: it must not import src/store, src/components, App
+    or main.
+
+  error lib-not-up: src/lib/usePreviewNavigation.ts → src/store/appStore.ts
+    src/lib is non-UI logic: it must not import src/store, src/components, App
+    or main.
+
+  error lib-not-up: src/lib/uiContextStore.ts → src/store/appStore.ts
+    src/lib is non-UI logic: it must not import src/store, src/components, App
+    or main.
+
+  error lib-not-up: src/lib/uiContext.ts → src/store/appStore.ts
+    src/lib is non-UI logic: it must not import src/store, src/components, App
+    or main.
+
+  error lib-not-up: src/lib/tableCommands.ts → src/store/appStore.ts
+    src/lib is non-UI logic: it must not import src/store, src/components, App
+    or main.
+
+  error lib-not-up: src/lib/svgedit/controller.ts → src/store/appStore.ts
+    src/lib is non-UI logic: it must not import src/store, src/components, App
+    or main.
+
+  error lib-not-up: src/lib/studios/vector.ts → src/store/appStore.ts
+    src/lib is non-UI logic: it must not import src/store, src/components, App
+    or main.
+
+  error lib-not-up: src/lib/studios/studioRouting.ts → src/store/appStore.ts
+    src/lib is non-UI logic: it must not import src/store, src/components, App
+    or main.
+
+  error lib-not-up: src/lib/studios/openIntake.ts → src/store/appStore.ts
+    src/lib is non-UI logic: it must not import src/store, src/components, App
+    or main.
+
+  error lib-not-up: src/lib/studios/blank.ts → src/store/appStore.ts
+    src/lib is non-UI logic: it must not import src/store, src/components, App
+    or main.
+
+  error lib-not-up: src/lib/structureCommands.ts → src/store/appStore.ts
+    src/lib is non-UI logic: it must not import src/store, src/components, App
+    or main.
+
+  error lib-not-up: src/lib/saveFlow.ts → src/store/appStore.ts
+    src/lib is non-UI logic: it must not import src/store, src/components, App
+    or main.
+
+  error lib-not-up: src/lib/projectSettingsIO.ts → src/store/appStore.ts
+    src/lib is non-UI logic: it must not import src/store, src/components, App
+    or main.
+
+  error lib-not-up: src/lib/projectActions.ts → src/store/appStore.ts
+    src/lib is non-UI logic: it must not import src/store, src/components, App
+    or main.
+
+  error lib-not-up: src/lib/problemsRuntime.ts → src/store/appStore.ts
+    src/lib is non-UI logic: it must not import src/store, src/components, App
+    or main.
+
+  error lib-not-up: src/lib/pdf/verification/demo.tsx → src/components/pdf/PdfEditInspector.tsx
+    src/lib is non-UI logic: it must not import src/store, src/components, App
+    or main.
+
+  error lib-not-up: src/lib/mdBridge.ts → src/store/appStore.ts
+    src/lib is non-UI logic: it must not import src/store, src/components, App
+    or main.
+
+  error lib-not-up: src/lib/libraryShareActions.ts → src/store/appStore.ts
+    src/lib is non-UI logic: it must not import src/store, src/components, App
+    or main.
+
+  error lib-not-up: src/lib/fileAdapter.ts → src/store/appStore.ts
+    src/lib is non-UI logic: it must not import src/store, src/components, App
+    or main.
+
+  error lib-not-up: src/lib/extensions/host.ts → src/store/appStore.ts
+    src/lib is non-UI logic: it must not import src/store, src/components, App
+    or main.
+
+  error lib-not-up: src/lib/editorBridge.ts → src/store/appStore.ts
+    src/lib is non-UI logic: it must not import src/store, src/components, App
+    or main.
+
+  error lib-not-up: src/lib/desktopAdapter.ts → src/store/rasterState.ts
+    src/lib is non-UI logic: it must not import src/store, src/components, App
+    or main.
+
+  error lib-not-up: src/lib/desktopAdapter.ts → src/store/appStore.ts
+    src/lib is non-UI logic: it must not import src/store, src/components, App
+    or main.
+
+  error lib-not-up: src/lib/componentLibrary.ts → src/store/appStore.ts
+    src/lib is non-UI logic: it must not import src/store, src/components, App
+    or main.
+
+  error lib-not-up: src/lib/componentCatalogStore.ts → src/store/appStore.ts
+    src/lib is non-UI logic: it must not import src/store, src/components, App
+    or main.
+
+  error lib-not-up: src/lib/componentActions.ts → src/store/appStore.ts
+    src/lib is non-UI logic: it must not import src/store, src/components, App
+    or main.
+
+  error lib-not-up: src/lib/commands.ts → src/store/appStore.ts
+    src/lib is non-UI logic: it must not import src/store, src/components, App
+    or main.
+
+  error lib-not-up: src/lib/collab/communication.ts → src/store/appStore.ts
+    src/lib is non-UI logic: it must not import src/store, src/components, App
+    or main.
+
+  error lib-not-up: src/lib/collab/appProject.ts → src/store/appStore.ts
+    src/lib is non-UI logic: it must not import src/store, src/components, App
+    or main.
+
+  error lib-not-up: src/lib/closeFlow.ts → src/store/appStore.ts
+    src/lib is non-UI logic: it must not import src/store, src/components, App
+    or main.
+
+  error lib-not-up: src/lib/canvasDrag.ts → src/store/appStore.ts
+    src/lib is non-UI logic: it must not import src/store, src/components, App
+    or main.
+
+  error lib-not-up: src/lib/alignApply.ts → src/store/appStore.ts
+    src/lib is non-UI logic: it must not import src/store, src/components, App
+    or main.
+
+  error lib-not-up: src/lib/agent/studioWorkspace.ts → src/store/appStore.ts
+    src/lib is non-UI logic: it must not import src/store, src/components, App
+    or main.
+
+  error lib-not-up: src/lib/agent/studioMcpHost.ts → src/store/appStore.ts
+    src/lib is non-UI logic: it must not import src/store, src/components, App
+    or main.
+
+  error lib-not-up: src/lib/agent/photoWorkspace.ts → src/store/rasterState.ts
+    src/lib is non-UI logic: it must not import src/store, src/components, App
+    or main.
+
+  error lib-not-up: src/lib/agent/photoWorkspace.ts → src/store/appStore.ts
+    src/lib is non-UI logic: it must not import src/store, src/components, App
+    or main.
+
+  error lib-not-up: src/lib/agent/panelBridge.ts → src/store/appStore.ts
+    src/lib is non-UI logic: it must not import src/store, src/components, App
+    or main.
+
+  error lib-core-not-up-to-studios: src/lib/workDocsProviders.ts → src/lib/vectorstudio/session.ts
+    Root-level src/lib modules are the low lib layer; they must not import
+    agent/studio libs.
+
+  error lib-core-not-up-to-studios: src/lib/workDocsProviders.ts → src/lib/vectorstudio/exportFiles.ts
+    Root-level src/lib modules are the low lib layer; they must not import
+    agent/studio libs.
+
+  error lib-core-not-up-to-studios: src/lib/workDocsProviders.ts → src/lib/slides/session.ts
+    Root-level src/lib modules are the low lib layer; they must not import
+    agent/studio libs.
+
+  error lib-core-not-up-to-studios: src/lib/workDocsProviders.ts → src/lib/sheets/session.ts
+    Root-level src/lib modules are the low lib layer; they must not import
+    agent/studio libs.
+
+  error lib-core-not-up-to-studios: src/lib/workDocsProviders.ts → src/lib/photos/studioSession.ts
+    Root-level src/lib modules are the low lib layer; they must not import
+    agent/studio libs.
+
+  error lib-core-not-up-to-studios: src/lib/workDocsProviders.ts → src/lib/pdfedit/session.ts
+    Root-level src/lib modules are the low lib layer; they must not import
+    agent/studio libs.
+
+  error lib-core-not-up-to-studios: src/lib/workDocsProviders.ts → src/lib/design/session.ts
+    Root-level src/lib modules are the low lib layer; they must not import
+    agent/studio libs.
+
+  error lib-core-not-up-to-studios: src/lib/workDocsProviders.ts → src/lib/design/model.ts
+    Root-level src/lib modules are the low lib layer; they must not import
+    agent/studio libs.
+
+  error lib-core-not-up-to-studios: src/lib/problemsRuntime.ts → src/lib/studios/registry.ts
+    Root-level src/lib modules are the low lib layer; they must not import
+    agent/studio libs.
+
+  error lib-core-not-up-to-studios: src/lib/media.ts → src/lib/video/format.ts
+    Root-level src/lib modules are the low lib layer; they must not import
+    agent/studio libs.
+
+  error lib-core-not-up-to-studios: src/lib/media.ts → src/lib/sound/format.ts
+    Root-level src/lib modules are the low lib layer; they must not import
+    agent/studio libs.
+
+  error lib-core-not-up-to-studios: src/lib/imageEditorHost.ts → src/lib/image-editor/export.ts
+    Root-level src/lib modules are the low lib layer; they must not import
+    agent/studio libs.
+
+  error lib-core-not-up-to-studios: src/lib/i18n.ts → src/lib/video/i18n.ts
+    Root-level src/lib modules are the low lib layer; they must not import
+    agent/studio libs.
+
+  error lib-core-not-up-to-studios: src/lib/i18n.ts → src/lib/vibespace/scheduleI18n.ts
+    Root-level src/lib modules are the low lib layer; they must not import
+    agent/studio libs.
+
+  error lib-core-not-up-to-studios: src/lib/i18n.ts → src/lib/vibespace/i18n.ts
+    Root-level src/lib modules are the low lib layer; they must not import
+    agent/studio libs.
+
+  error lib-core-not-up-to-studios: src/lib/i18n.ts → src/lib/vibespace/boardI18n.ts
+    Root-level src/lib modules are the low lib layer; they must not import
+    agent/studio libs.
+
+  error lib-core-not-up-to-studios: src/lib/i18n.ts → src/lib/vectorstudio/i18n.ts
+    Root-level src/lib modules are the low lib layer; they must not import
+    agent/studio libs.
+
+  error lib-core-not-up-to-studios: src/lib/i18n.ts → src/lib/sound/i18n.ts
+    Root-level src/lib modules are the low lib layer; they must not import
+    agent/studio libs.
+
+  error lib-core-not-up-to-studios: src/lib/i18n.ts → src/lib/photos/i18n.ts
+    Root-level src/lib modules are the low lib layer; they must not import
+    agent/studio libs.
+
+  error lib-core-not-up-to-studios: src/lib/i18n.ts → src/lib/extensions/storeLocales.ts
+    Root-level src/lib modules are the low lib layer; they must not import
+    agent/studio libs.
+
+  error lib-core-not-up-to-studios: src/lib/i18n.ts → src/lib/extensions/consentLocales.ts
+    Root-level src/lib modules are the low lib layer; they must not import
+    agent/studio libs.
+
+  error lib-core-not-up-to-studios: src/lib/i18n.ts → src/lib/design/i18n.ts
+    Root-level src/lib modules are the low lib layer; they must not import
+    agent/studio libs.
+
+  error lib-core-not-up-to-studios: src/lib/fileAdapter.ts → src/lib/collab/nativeChatDrop.ts
+    Root-level src/lib modules are the low lib layer; they must not import
+    agent/studio libs.
+
+  error lib-core-not-up-to-studios: src/lib/fileAdapter.ts → src/lib/agent/autosaveHold.ts
+    Root-level src/lib modules are the low lib layer; they must not import
+    agent/studio libs.
+
+  error lib-core-not-up-to-studios: src/lib/desktopAdapter.ts → src/lib/pdfedit/session.ts
+    Root-level src/lib modules are the low lib layer; they must not import
+    agent/studio libs.
+
+  error lib-core-not-up-to-studios: src/lib/confirmService.ts → src/lib/studios/openIntake.ts
+    Root-level src/lib modules are the low lib layer; they must not import
+    agent/studio libs.
+
+  error lib-core-not-up-to-studios: src/lib/commands.ts → src/lib/studios/modes.ts
+    Root-level src/lib modules are the low lib layer; they must not import
+    agent/studio libs.
+
+  error lib-core-not-up-to-studios: src/lib/commands.ts → src/lib/studios/index.ts
+    Root-level src/lib modules are the low lib layer; they must not import
+    agent/studio libs.
+
+  error lib-core-not-up-to-studios: src/lib/commands.ts → src/lib/collab/communication.ts
+    Root-level src/lib modules are the low lib layer; they must not import
+    agent/studio libs.
+
+  error lib-core-not-up-to-studios: src/lib/commands.ts → src/lib/collab/chatSession.ts
+    Root-level src/lib modules are the low lib layer; they must not import
+    agent/studio libs.
+
+  error lib-core-not-up-to-studios: src/lib/agentDiff.ts → src/lib/agent/privacy.ts
+    Root-level src/lib modules are the low lib layer; they must not import
+    agent/studio libs.
+
+
+x 90 dependency violations (90 errors, 0 warnings). 1064 modules, 3333 dependencies cruised.
+
+‼ missing-typescript-transpiler: dependency-cruiser detected a TypeScript environment,
+    but not a compatible TypeScript compiler (typescript: >=2.0.0 <7.0.0). This means
+    it's likely to have missed TypeScript sources and dependencies.
+
+    Install typescript to get better results (e.g. npm i -D typescript@^6).
+
+    => Support for typescript@>=7 will follow when its API is published and stable.
+
