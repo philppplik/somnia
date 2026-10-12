@@ -3,6 +3,7 @@ import {installPreviewNavigation} from './previewNavigationBridge';
 import {injectMotionSafe} from './motionSafe';
 import type {PreviewScriptLocation} from './previewErrorLocation';
 import {PREVIEW_ASSET_CSP,inlineBinaryAssets,inlineCssAssets} from './previewAssets';
+import {flattenCss} from './previewDeps';
 /** Builds the srcDoc for the opt-in live preview. Runs in a sandboxed iframe (allow-scripts only, opaque origin). Project CSS and JS are inlined from the project files; no network. */
 const resolve=(active:string,href:string)=>{if(/^(?:[a-z]+:|\/\/|\/)/i.test(href))return null;const parts=[...active.split('/').slice(0,-1),...href.split(/[?#]/)[0].split('/')],out:string[]=[];for(const p of parts){if(p==='..')out.pop();else if(p&&p!=='.')out.push(p);}return out.join('/');};
 const esc=(s:string)=>s.replace(/<\/(script)/gi,'<\\/$1');
@@ -21,7 +22,7 @@ export function buildPreview(files:Readonly<Record<string,string>>,active:string
  const doc=new DOMParser().parseFromString(marked,'text/html');
  const locations:Array<Omit<PreviewScriptLocation,'generatedLine'|'generatedCol'>&{index:string}>=[];
  for(const el of doc.querySelectorAll('base,meta[http-equiv],iframe,object,embed'))el.remove();
- for(const el of doc.querySelectorAll('link[rel=stylesheet]')){const f=resolve(active,el.getAttribute('href')||'');const css=f?files[f]:null;if(css!=null){const s=doc.createElement('style');s.textContent=inlineCssAssets(css,f!,assets,assetPass);linkedStyles.add(s);el.replaceWith(s);}else{const h=el.getAttribute('href');if(h&&/^(?:[a-z]+:)?\/\//i.test(h))blocked.push(h);el.remove();}}
+ for(const el of doc.querySelectorAll('link[rel=stylesheet]')){const f=resolve(active,el.getAttribute('href')||'');const css=f?files[f]:null;if(css!=null){const s=doc.createElement('style');s.textContent=flattenCss(files,f!,(text,path)=>inlineCssAssets(text,path,assets,assetPass));s.setAttribute('data-somnia-css',f!);linkedStyles.add(s);el.replaceWith(s);}else{const h=el.getAttribute('href');if(h&&/^(?:[a-z]+:)?\/\//i.test(h))blocked.push(h);el.remove();}}
  for(const el of doc.querySelectorAll('script')){
   const index=el.getAttribute(marker);const original=index!=null?originals[Number(index)]:null;
   if(!scripts){el.remove();continue;}

@@ -5,6 +5,9 @@ import {Button} from './ui/button';
 import type {buildPreview} from "../lib/livePreview";
 import {buildPreviewWithAssets} from '../lib/livePreviewAssets';
 import {PreviewAssetCache} from '../lib/previewAssetCache';
+import {PreviewAssetWatch} from '../lib/previewAssetWatch';
+import {inlineCssAssets} from '../lib/previewAssets';
+import {flattenCss,planPreviewUpdate} from '../lib/previewDeps';
 import {getPreviewAssetLoader} from '../lib/previewAssetLoader';
 import {mapPreviewErrorLocation,type PreviewSourceLocation} from '../lib/previewErrorLocation';
 import {useT} from '../lib/useT';
@@ -12,11 +15,21 @@ const key=(name:string)=>`somnia.preview.scripts.${name}`;
 const read=(name:string):boolean|null=>{try{const v=localStorage.getItem(key(name));return v==null?null:v==='1';}catch{return null;}};
 /** Opt-in live preview. Scripts only run after a one-time choice per project; the iframe has an opaque origin and no network. */
 export function LivePreview(){const {t}=useT();
- const s=useAppStore();const [allow,setAllow]=useState<boolean|null>(()=>read(s.projectName));const [auto,setAuto]=useState(true);const [tick,setTick]=useState(0);const [errors,setErrors]=useState<Array<{message:string;location:PreviewSourceLocation|null}>>([]);const [doc,setDoc]=useState('');const [blocked,setBlocked]=useState<string[]>([]);const frame=useRef<HTMLIFrameElement>(null);const assetCache=useRef(new PreviewAssetCache());const lastTick=useRef(0);const preview=useRef<ReturnType<typeof buildPreview>|null>(null);
- const nav=usePreviewNavigation(s.files,s.designFile||s.activeFile);const navRef=useRef(nav);navRef.current=nav;const previewFile=nav.file;const text=s.files[s.activeFile]??'';const sig=useMemo(()=>Object.keys(s.files).map(k=>k+':'+s.files[k].length+':'+s.files[k].slice(0,2000)).join('|'),[s.files]);
- useEffect(()=>{setAllow(read(s.projectName));assetCache.current.invalidateAll();},[s.projectName]);
+ const s=useAppStore();const [allow,setAllow]=useState<boolean|null>(()=>read(s.projectName));const [auto,setAuto]=useState(true);const [tick,setTick]=useState(0);const [errors,setErrors]=useState<Array<{message:string;location:PreviewSourceLocation|null}>>([]);const [doc,setDoc]=useState('');const [blocked,setBlocked]=useState<string[]>([]);const frame=useRef<HTMLIFrameElement>(null);const assetCache=useRef(new PreviewAssetCache());const lastTick=useRef(0);const watch=useRef(new PreviewAssetWatch());const built=useRef<{files:Readonly<Record<string,string>>;active:string;allow:boolean}|null>(null);const forceFull=useRef(false);const [assetRev,setAssetRev]=useState(0);const preview=useRef<ReturnType<typeof buildPreview>|null>(null);
+ const nav=usePreviewNavigation(s.files,s.designFile||s.activeFile);const navRef=useRef(nav);navRef.current=nav;const previewFile=nav.file;const text=s.files[s.activeFile]??'';
+ useEffect(()=>{setAllow(read(s.projectName));assetCache.current.invalidateAll();watch.current.reset();built.current=null;},[s.projectName]);
  useEffect(()=>{const c=assetCache.current;return()=>c.invalidateAll();},[]);
- useEffect(()=>{if(allow===null)return;let live=true;const run=async()=>{if(lastTick.current!==tick){lastTick.current=tick;assetCache.current.invalidateAll();}const {built,notes}=await buildPreviewWithAssets(nav.files,previewFile,allow,nav.y,assetCache.current,getPreviewAssetLoader(),nav.hash);if(!live)return;setErrors([]);preview.current=built;setBlocked(built.blocked.concat(notes));setDoc(built.html);};const t=window.setTimeout(()=>{void run();},auto?600:0);return()=>{live=false;window.clearTimeout(t);};},[auto?sig:'',allow,tick,previewFile]);// eslint-disable-line react-hooks/exhaustive-deps
+ // Binary dependencies have no change events: re-check the cached ones while the preview is visible and rebuild when one moved.
+ useEffect(()=>{const load=getPreviewAssetLoader();if(allow===null||!auto||!load)return;let stop=false,busy=false;const round=async()=>{if(busy||stop||document.visibilityState==='hidden')return;busy=true;try{const changed=await watch.current.check(assetCache.current,load);if(!stop&&changed.length){assetCache.current.invalidate(changed);forceFull.current=true;setAssetRev(n=>n+1);}}finally{busy=false;}};const timer=window.setInterval(()=>{void round();},2000);return()=>{stop=true;window.clearInterval(timer);};},[allow,auto,s.projectName]);
+ useEffect(()=>{if(allow===null)return;let live=true;const run=async()=>{const manual=lastTick.current!==tick;if(manual){lastTick.current=tick;assetCache.current.invalidateAll();watch.current.reset();}
+  const n=navRef.current,prev=built.current,next={files:n.files,active:previewFile,allow};
+  // Only a dependency of the visited page moves the preview. Stylesheet edits are swapped in place: no reload, so scroll and page state stay.
+  const plan=!manual&&!forceFull.current&&prev&&prev.allow===allow?planPreviewUpdate(prev,next):{kind:'full' as const};
+  if(plan.kind==='none'){built.current=next;return;}
+  if(plan.kind==='css'&&preview.current&&frame.current?.contentWindow){const pass={refs:new Set<string>()};const updates=plan.paths.map(path=>({path,css:flattenCss(n.files,path,(text,at)=>inlineCssAssets(text,at,assetCache.current.urls,pass))}));
+   if(!pass.refs.size){for(const u of updates)frame.current.contentWindow.postMessage({somnia:'css',id:preview.current.id,path:u.path,css:u.css},'*');built.current=next;return;}}
+  forceFull.current=false;
+  const {built:result,notes}=await buildPreviewWithAssets(n.files,previewFile,allow,n.y,assetCache.current,getPreviewAssetLoader(),n.hash);if(!live)return;built.current=next;setErrors([]);preview.current=result;setBlocked(result.blocked.concat(notes));setDoc(result.html);};const t=window.setTimeout(()=>{void run();},auto?300:0);return()=>{live=false;window.clearTimeout(t);};},[auto?s.files:null,assetRev,allow,tick,previewFile]);// eslint-disable-line react-hooks/exhaustive-deps
  useEffect(()=>{const on=(e:MessageEvent)=>{if(e.source!==frame.current?.contentWindow)return;const d=e.data;if(!d||typeof d!=='object'||d.id!==preview.current?.id)return;if(d.somnia==='error'){const message=String(d.message).slice(0,300);const location=mapPreviewErrorLocation({message,filename:typeof d.filename==='string'?d.filename:undefined,line:d.line,col:d.col,syntax:d.syntax===true,stack:typeof d.stack==='string'?d.stack:undefined},preview.current?.scripts??[]);setErrors(x=>[...x.slice(-9),{message,location}]);}if(d.somnia==='navigate'&&typeof d.href==='string')navRef.current.navigate(d.href);if(d.somnia==='scroll'&&typeof d.y==='number')navRef.current.rememberScroll(d.y);};window.addEventListener('message',on);return()=>window.removeEventListener('message',on);},[]);
  useEffect(()=>{frame.current?.contentWindow?.postMessage({somnia:'navigate-scroll',id:preview.current?.id,hash:nav.hash,y:nav.y},'*');},[nav.hash,nav.visitIndex]);
  const choose=(v:boolean)=>{try{localStorage.setItem(key(s.projectName),v?'1':'0');}catch{/* private mode */}setAllow(v);};
