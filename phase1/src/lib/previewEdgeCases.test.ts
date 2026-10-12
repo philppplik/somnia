@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {decodeResourceBytes,flattenCssImports,loadPreviewResources,mergeTextResources,resolveProjectPathStrict,scanCssRefs,scanHtmlRefs,scanJsImports,type ResourceInvoke} from './previewResources';
 import {findImportSpecs,newModuleState,rewriteImports} from './previewModules';
 import {collectDeps,flattenCss,planPreviewUpdate} from './previewDeps';
+import {describeFailed} from './livePreviewResources';
 const b64=(s:string|Uint8Array)=>Buffer.from(s).toString('base64');
 const disk=(files:Record<string,string|Uint8Array>,mimes:Record<string,string>={}):{invoke:ResourceInvoke;reads:string[]}=>{
  const reads:string[]=[];
@@ -97,4 +98,20 @@ test('plan: deleting or adding a linked module or stylesheet rebuilds, editing a
  assert.deepEqual(planPreviewUpdate(s(base),s({...base,'other.html':'<p>x</p>'})),{kind:'none'});
  assert.deepEqual(planPreviewUpdate(s(base),s({...base,'a.css':'a{color:red}'})),{kind:'css',paths:['a.css']});
  assert.deepEqual(collectDeps({'index.html':'<link rel=stylesheet href="my%20file.css">','my file.css':'a{}'},'index.html').linkedCss,['my file.css']);
+});
+
+test('root-relative resources, imports and dependencies resolve from the project root',async()=>{
+ const files={'pages/deep/index.html':'<link rel="stylesheet" href="/css/my%20style.css"><script type="module" src="/js/app.js"></script><img src="/img/my%20pic.png" srcset="/img/my%20pic.png 1x, /img/missing.png 2x"><img src="/%2e%2e/outside.png"><img src="/">'};
+ const d=disk({'css/my style.css':'@import "/css/base.css";a{background:url(/img/my%20pic.png)}','css/base.css':'b{color:red}','js/app.js':'import {v} from "/js/value.js";export {v} from "/js/value.js";import("/js/value.js");','js/value.js':'export const v=1;','img/my pic.png':'png'});
+ const r=await loadPreviewResources({invoke:d.invoke,projectId:'p',files,active:'pages/deep/index.html'});
+ assert.ok(r.text['css/base.css']);assert.ok(r.text['js/value.js']);assert.ok(r.assets['img/my pic.png']);
+ assert.deepEqual(r.failed.map(describeFailed),['/%2e%2e/outside.png (outside the project folder)','img/missing.png (not found)']);
+ assert.ok(!d.reads.includes('outside.png'));assert.ok(!d.reads.includes(''));
+ const merged=mergeTextResources(files,r),deps=collectDeps(merged,'pages/deep/index.html');
+ assert.deepEqual(deps.linkedCss,['css/my style.css']);assert.deepEqual(deps.js,['js/app.js','js/value.js']);assert.ok(deps.assets.includes('img/my pic.png'));
+ assert.match(flattenCss(merged,'css/my style.css'),/b\{color:red\}/);
+ const st=newModuleState();const js=rewriteImports(merged,'js/app.js',merged['js/app.js'],st);
+ assert.equal(findImportSpecs(js).length,0);assert.equal(st.urls.size,1);
+ const next={...merged,'css/my style.css':'a{color:blue}'};
+ assert.deepEqual(planPreviewUpdate({files:merged,active:'pages/deep/index.html'},{files:next,active:'pages/deep/index.html'}),{kind:'css',paths:['css/my style.css']});
 });

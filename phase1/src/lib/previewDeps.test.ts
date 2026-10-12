@@ -8,8 +8,9 @@ const page='<!doctype html><html><head><link rel="stylesheet" href="css/site.css
 const files={'index.html':page,'css/site.css':'@import "base.css";\n@import url(theme/dark.css) screen;\nbody{background:url(../img/bg.jpg)} @font-face{font-family:F;src:url(../fonts/f.woff2) format("woff2"),url("https://cdn.test/x.woff")}','css/base.css':'/* url(nope.png) */ h1{color:red}@import "site.css";','css/theme/dark.css':'a{color:blue}','js/app.js':'1'};
 test('resolveRef handles relative, parent and non-project references',()=>{
  assert.equal(resolveRef('css/site.css','../img/a.png'),'img/a.png');
+ assert.equal(resolveRef('nested/index.html','/a.css'),'a.css');
  assert.equal(resolveRef('index.html','./a/b.css?v=2#x'),'a/b.css');
- for(const r of ['https://x.test/a.css','//x.test/a.css','/a.css','data:image/png;base64,AA','#top',''])assert.equal(resolveRef('index.html',r),null);
+ for(const r of ['https://x.test/a.css','//x.test/a.css','data:image/png;base64,AA','#top',''])assert.equal(resolveRef('index.html',r),null);
 });
 test('collectDeps walks html, css imports (cycle-safe), url() and srcset',()=>{
  const d=collectDeps(files,'index.html');

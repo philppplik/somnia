@@ -16,14 +16,9 @@ const TYPES:Record<string,{mime:string;kind:PreviewAssetKind}>={
 export function assetType(path:string):{mime:string;kind:PreviewAssetKind}|null{const m=/\.([a-z0-9]+)$/i.exec(path);return m?TYPES[m[1].toLowerCase()]??null:null;}
 /** Directives appended to the preview CSP. Only data: (plus the existing blob: for images) is allowed, so nothing can reach the network. blob: URLs made by the parent do not load in the opaque-origin sandbox (verified in Chromium), so assets are always inlined as data: URLs. */
 export const PREVIEW_ASSET_CSP="img-src data: blob:; font-src data:; media-src data:";
-/** Resolves a reference relative to the file that contains it. Null for absolute, scheme, protocol-relative and root-relative references. */
-export function resolveProjectPath(base:string,href:string):string|null{
- if(/^(?:[a-z][a-z0-9+.-]*:|\/\/|\/|#)/i.test(href.trim()))return null;
- let raw=href.split(/[?#]/)[0];try{raw=decodeURIComponent(raw);}catch{/* keep raw */}
- if(!raw)return null;
- const out:string[]=[];for(const p of [...base.split('/').slice(0,-1),...raw.split('/')]){if(p==='..'){if(!out.length)return null;out.pop();}else if(p&&p!=='.')out.push(p);}
- return out.length?out.join('/'):null;
-}
+/** Shared resolver: relative to the containing file, or to the project root for /paths. */
+export {resolveProjectPath} from './previewResources';
+import {resolveProjectPath} from './previewResources';
 const CSS_URL=/url\(\s*(?:"([^"]*)"|'([^']*)'|([^)\s'"]+))\s*\)/gi;
 /** Rewrites url(...) references in CSS. `swap` returns a replacement URL or null to leave the reference unchanged. */
 export function rewriteCssUrls(css:string,swap:(ref:string)=>string|null):string{
@@ -31,7 +26,18 @@ export function rewriteCssUrls(css:string,swap:(ref:string)=>string|null):string
 }
 /** Rewrites a srcset value (comma separated candidates, each `url [descriptor]`). */
 export function rewriteSrcset(value:string,swap:(ref:string)=>string|null):string{
- return value.split(',').map(part=>{const t=part.trim();if(!t)return t;const i=t.search(/\s/);const url=i<0?t:t.slice(0,i),rest=i<0?'':t.slice(i);const to=swap(url);return(to??url)+rest;}).filter(Boolean).join(', ');
+ const candidates:string[]=[];let i=0;
+ while(i<value.length){
+  while(i<value.length&&/[\s,]/.test(value[i]))i++;
+  const start=i,data=value.slice(i,i+5).toLowerCase()==='data:';
+  while(i<value.length&&!/\s/.test(value[i])&&(data||value[i]!==','))i++;
+  let url=value.slice(start,i);if(!url)continue;
+  // A data URL's comma belongs to the URL, not the candidate list. Keep it intact on rebuilds.
+  if(url.endsWith(',')){url=url.replace(/,+$/,'');candidates.push(swap(url)??url);continue;}
+  const restStart=i;while(i<value.length&&value[i]!==',')i++;
+  const rest=value.slice(restStart,i).trimEnd();candidates.push((swap(url)??url)+rest);
+ }
+ return candidates.join(', ');
 }
 export interface AssetPass{refs:Set<string>}
 /** Replaces project-relative binary references in `doc` with the URLs in `assets` (resolved path to data:/blob: URL).

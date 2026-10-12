@@ -16,7 +16,7 @@ The live preview runs a project's HTML page in a sandboxed iframe, with the page
 
 ## Path resolution
 
-`resolveProjectPathStrict` is the single resolver for text resources. It strips the query and fragment, decodes percent escapes (`my%20file.css` finds `my file.css`), folds `.` and `..`, treats `/x` as project-root relative and returns `escape` when `..` leaves the project. Backslashes, NUL bytes, external URLs, `data:`/`blob:` and bare fragments resolve to nothing. `buildPreview` and the asset helpers apply the same rules, except that root-relative (`/x`) references are not inlined by `buildPreview` or the asset helpers (see Limits).
+`resolveProjectPathStrict` is the shared resolver for text resources and binary assets. It strips the query and fragment, decodes percent escapes (`my%20file.css` finds `my file.css`), folds `.` and `..`, treats `/x` as project-root relative and returns `escape` when `..` leaves the project. Backslashes, NUL bytes, external URLs, `data:`/`blob:` and bare fragments resolve to nothing. `buildPreview`, the asset helpers and the dependency graph use this same resolver. Both document-relative and project-root-relative references are inlined in stylesheet and script links, HTML assets, `srcset`, CSS `url()`/`@import` and module imports. A root-relative path always starts at the project root, even in a nested page or stylesheet. Empty roots and paths escaping that root are not matched; escapes are reported in the banner.
 
 ## CSS
 
@@ -24,7 +24,7 @@ The iframe inlines stylesheets, where a relative `@import` cannot load. `flatten
 
 ## ES modules
 
-`previewModules.ts` rewrites every relative import specifier (static, re-export and dynamic with a string literal) to a `data:text/javascript;base64,...` URL of the imported module, whose own imports were rewritten first. Equal content gives an equal URL, so a module imported from two places is one instance. Bare specifiers and absolute URLs are left alone. A `sourceURL` comment keeps stack traces mapped to project files, and line numbers are preserved. A cycle cannot be expressed with `data:` URLs: the import that closes it points at an empty module and the chain is reported in the banner.
+`previewModules.ts` rewrites every relative or project-root-relative import specifier (static, re-export and dynamic with a string literal) to a `data:text/javascript;base64,...` URL of the imported module, whose own imports were rewritten first. Equal content gives an equal URL, so a module imported from two places is one instance. Bare specifiers and absolute URLs are left alone. A `sourceURL` comment keeps stack traces mapped to project files, and line numbers are preserved. A cycle cannot be expressed with `data:` URLs: the import that closes it points at an empty module and the chain is reported in the banner.
 
 ## Text encoding
 
@@ -49,7 +49,6 @@ Other limits:
 
 - Static site only: no server, no query strings and no network (`fetch` and XHR are blocked by the CSP).
 - Dynamic `import()` is followed only with a string literal. Computed specifiers and import maps are not resolved.
-- Root-relative references (`/img/a.png`) are loaded by the resolver for text files and navigation, but binary assets and `buildPreview` links use document-relative paths only.
 - A module first reached through an import cycle keeps the empty stub for the edge that closed the cycle, even if it is later imported from elsewhere.
 - `<base>`, `<iframe>`, `<object>` and `<embed>` are removed.
 

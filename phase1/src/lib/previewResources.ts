@@ -29,7 +29,7 @@ const EXTERNAL=/^(?:[a-z][a-z0-9+.-]*:|\/\/)/i;
  * Resolves `href` (as written in `from`) to a normalized project-relative path. `/x` is relative to the project root, `..` and `.` are folded.
  * Returns null for external URLs, data:/blob:, fragments, empty values and paths escaping the project root (those are reported as 'outside-project' by the loader via `resolveProjectPathStrict`).
  */
-export function resolveProjectPath(from:string,href:string):string|null{const r=resolveProjectPathStrict(from,href);return typeof r==='string'?r:null;}
+export function resolveProjectPath(from:string,href:string):string|null{const r=resolveProjectPathStrict(from,href);return r==='escape'?null:r;}
 export function resolveProjectPathStrict(from:string,href:string):string|null|'escape'{
  const raw=href.trim();if(!raw||raw.startsWith('#')||EXTERNAL.test(raw))return null;
  let clean=raw.split(/[?#]/)[0];if(!clean)return null;

@@ -2,10 +2,10 @@ import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {assetType,resolveProjectPath,rewriteCssUrls,rewriteSrcset,inlineCssAssets,PREVIEW_ASSET_CSP} from './previewAssets';
 import {PreviewAssetCache,KIND_LIMIT,describeSkipped} from './previewAssetCache';
-test('resolves relative paths and rejects escapes, schemes and absolute refs',()=>{
+test('resolves relative and project-root paths and rejects escapes and external refs',()=>{
  assert.equal(resolveProjectPath('pages/a.html','../img/my%20pic.png?x=1#y'),'img/my pic.png');
  assert.equal(resolveProjectPath('index.html','./a/./b.png'),'a/b.png');
- for(const h of ['https://x.test/a.png','//x.test/a.png','/a.png','data:image/png;base64,AA','#x','','../../a.png'])assert.equal(resolveProjectPath('a/b.html',h),null,h);
+ for(const h of ['https://x.test/a.png','//x.test/a.png','data:image/png;base64,AA','#x','','../../a.png'])assert.equal(resolveProjectPath('a/b.html',h),null,h);
 });
 test('allow-list by extension decides kind and mime',()=>{
  assert.deepEqual(assetType('a/B.JPG'),{mime:'image/jpeg',kind:'image'});
@@ -43,4 +43,22 @@ test('late results from before invalidateAll are discarded',async()=>{
  const cache=new PreviewAssetCache();let release!:()=>void;const gate=new Promise<void>(r=>{release=r;});
  const p=cache.ensure(['a.png'],async()=>{await gate;return {bytes:new Uint8Array([1])};});
  cache.invalidateAll();release();assert.equal(await p,false);assert.equal(cache.urls.size,0);
+});
+
+test('root-relative asset paths ignore the containing folder and share strict resolver rules',()=>{
+ assert.equal(resolveProjectPath('pages/deep/index.html',' /img/my%20pic.png?size=2#part '),'img/my pic.png');
+ assert.equal(resolveProjectPath('pages/index.html','/img/../a.png'),'a.png');
+ for(const href of ['/../a.png','/%2e%2e/a.png','/img/../../a.png','/','/./','/img/..','/?q=1','/#part','/a%5Cb.png','/a%00b.png'])assert.equal(resolveProjectPath('pages/index.html',href),null,href);
+ const refs=new Set<string>();
+ const css=inlineCssAssets('a{background:url(/img/my%20pic.png)}b{background:url(/missing.png)}c{background:url(/../escape.png)}','css/deep/site.css',new Map([['img/my pic.png','data:image/png;base64,AA==']]),{refs});
+ assert.match(css,/url\("data:image\/png;base64,AA=="\)/);
+ assert.deepEqual([...refs],['missing.png']);
+});
+
+test('srcset data URLs survive repeated asset passes without splitting their base64 payload',()=>{
+ const swap=(ref:string)=>ref==='/img/a.png'?'data:image/png;base64,AQID':null;
+ const once=rewriteSrcset('/img/a.png 1x, /img/a.png 2x',swap);
+ assert.equal(once,'data:image/png;base64,AQID 1x, data:image/png;base64,AQID 2x');
+ assert.equal(rewriteSrcset(once,swap),once);
+ assert.equal(rewriteSrcset('/img/a.png,/img/a.png',swap),'data:image/png;base64,AQID, data:image/png;base64,AQID');
 });
