@@ -5,7 +5,7 @@ const updating = process.argv.some(a => /^--update-snapshots(?:=|$)/.test(a) || 
 if (updating) updateScope();
 export default defineConfig({
   updateSnapshots: updating ? 'all' : 'none',
-  testDir: '.', testMatch: 'render.spec.ts', workers: 4, retries: 0, timeout: 30000,
+  testDir: '.', testMatch: ['render.spec.ts', 'overlay-oracle.spec.ts'], workers: 4, retries: 0, timeout: 30000,
   snapshotPathTemplate: '{testDir}/goldens/{arg}{ext}',
   outputDir: '../../../test-results/render', reporter: 'list',
   use: {browserName: 'chromium', baseURL: 'http://127.0.0.1:1420',

@@ -49,3 +49,9 @@ Suggested scripts:
 - `test:render-goldens`: `playwright test --config test/fixtures/render/playwright.config.ts`
 
 CI: `npm ci`, install pinned Playwright Chromium with Linux dependencies, run the two commands above, upload `test-results/render/` on failure. Do not pass update flags in normal CI. An approved regeneration job must receive a reviewed receipt and preserve it alongside the image diff in the PR. Full app screenshots and native Windows/macOS behavior remain separate tests.
+
+## Overlay oracle and determinism (C4)
+
+- `overlay-oracle.spec.ts` (runs with `test:render-goldens`): for up to 80 elements per fixture and viewport it builds selection boxes with the app's `elementOverlayBox()` (`src/lib/overlayGeometry.ts`, used by `DesignCanvas.tsx`) inside the same scaled wrapper as the preview frame, at zoom 1, 0.75 and 0.5, and fails if a box drifts more than 1 screen px from the real element box. It uses an allow-same-origin frame like the design canvas; it does not touch the goldens. Scope: geometry of the shared box function and the scale mapping, not the React overlay component or handles.
+- `npm run test:render-determinism` runs the capture spec twice in separate Playwright runs and requires 64 byte-identical PNGs. It never reads or writes the goldens. Captures stay under `test-results/render-determinism-captures/`.
+- Step 3.2 goldens already existed (A3); no reference PNG was changed or re-baselined here.
