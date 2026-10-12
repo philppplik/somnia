@@ -34,5 +34,12 @@
  "vibespace.acp.cancel": "Cancelación solicitada",
  "vibespace.acp.killed": "Agente detenido (árbol de procesos terminado)",
  "vibespace.acp.closed": "Conexión del agente cerrada",
- "vibespace.acp.noElevated": "Los agentes externos nunca se ejecutan con privilegios elevados."
+ "vibespace.acp.noElevated": "Los agentes externos nunca se ejecutan con privilegios elevados.",
+  "vibespace.computerUse.title": "Control del equipo",
+  "vibespace.computerUse.unavailable": "El control del equipo no está disponible. La preparación de Linux requiere una función habilitada y un adaptador de plataforma revisado. Windows y macOS están desactivados.",
+  "vibespace.computerUse.session": "Un agente externo necesita consentimiento nuevo al iniciar cada sesión y para cada acción de ratón, teclado o captura. Los permisos de carpeta y MCP no se aplican.",
+  "vibespace.computerUse.capture": "Las capturas de pantalla son archivos privados para revisión. No se envían automáticamente al agente externo.",
+  "vibespace.computerUse.allowed": "Control del equipo: {agent}, {action} permitido una vez.",
+  "vibespace.computerUse.denied": "Control del equipo: {agent}, {action} denegado.",
+  "vibespace.computerUse.pending": "Control del equipo: {agent}, {action} pendiente de revisión."
 }

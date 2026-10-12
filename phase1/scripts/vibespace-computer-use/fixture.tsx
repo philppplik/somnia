@@ -1,0 +1,12 @@
+import {createRoot} from 'react-dom/client';
+import {StudioDetail} from '../../src/components/vibespace/StudioDetail';
+import {fixtureRun,fixtureSpace,createFixtureVibeSpaceTransport} from '../../src/lib/vibespace/fixture';
+import {describeAcpEvent} from '../../src/lib/vibespace/acpPresentation';
+import {setLocale,t} from '../../src/lib/i18n';
+import '../../src/components/vibespace/vibespace.css';
+setLocale(new URLSearchParams(location.search).get('locale')??'en');
+const line=describeAcpEvent({kind:'computer_use',data:{agent:'Codex external agent',phase:'screen_capture',decision:'denied'}})!;
+const studio=fixtureRun({executionState:'running',reviewState:'none',pendingConsents:[{requestId:'desktop-1',kind:'desktop',action:'Codex external agent: screen_capture',scope:'computer-use://codex-1/acp-1/foreground-1',reason:'Capture the foreground window for private review.',allowForRun:true}],messages:[{id:'computer-use-decision-1',role:'consent',timestampUtc:'2026-10-12T03:00:00Z',text:t(line.key,line.params)}]});
+const calls:unknown[]=[];Object.assign(window,{computerUseFixture:{calls}});
+document.body.style.cssText='font-family:system-ui;margin:24px;background:#f3f4f7';
+createRoot(document.getElementById('root')!).render(<StudioDetail studio={studio} space={fixtureSpace} pending={false} capabilities={['consent','stop']} transport={createFixtureVibeSpaceTransport('development')} onBack={()=>{}} onAction={async i=>{calls.push(i);return true;}}/>);

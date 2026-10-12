@@ -34,5 +34,12 @@
  "vibespace.acp.cancel": "Cancel requested",
  "vibespace.acp.killed": "Agent stopped (process tree ended)",
  "vibespace.acp.closed": "Agent connection closed",
- "vibespace.acp.noElevated": "External agents never run with elevated access."
+ "vibespace.acp.noElevated": "External agents never run with elevated access.",
+  "vibespace.computerUse.title": "Computer use",
+  "vibespace.computerUse.unavailable": "Computer use is unavailable. Linux preparation requires a feature gate and a reviewed platform adapter. Windows and macOS are disabled.",
+  "vibespace.computerUse.session": "An external agent needs new consent at every session start and for every mouse, keyboard or capture action. Folder and MCP grants do not apply.",
+  "vibespace.computerUse.capture": "Screen captures stay private review artifacts. They are not sent to the external agent automatically.",
+  "vibespace.computerUse.allowed": "Computer use: {agent}, {action} allowed once.",
+  "vibespace.computerUse.denied": "Computer use: {agent}, {action} denied.",
+  "vibespace.computerUse.pending": "Computer use: {agent}, {action} awaiting review."
 }

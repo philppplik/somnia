@@ -15,6 +15,11 @@ export function describeConsentOrigin(origin:{type?:string;name?:string}|null|un
 export function describeAcpEvent(ev:{kind?:string;data?:Record<string,unknown>}|null|undefined):AcpLine|null{
  if(!ev||typeof ev.kind!=='string')return null;
  const d=(ev.data??{}) as Record<string,unknown>;
+ if(ev.kind==='computer_use'){
+  const decision=d.decision;
+  const phase=d.phase;
+  return{key:decision==='allowed'?'vibespace.computerUse.allowed':decision==='denied'?'vibespace.computerUse.denied':'vibespace.computerUse.pending',params:{agent:cleanText(d.agent,80),action:cleanText(phase,40)},tone:decision==='allowed'?'allowed':decision==='denied'?'denied':'warn'};
+ }
  if(ev.kind==='permission'){
   const dec=d.decision;
   const key=dec==='allowed'?'vibespace.acp.perm.allowed':dec==='denied'?'vibespace.acp.perm.denied':'vibespace.acp.perm.cancelled';

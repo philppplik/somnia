@@ -1,3 +1,4 @@
+import {ComputerUseReview} from './ComputerUseReview';
 import {t} from '../../lib/i18n';
 import {ReviewExtensions,UsageDetails} from './ReviewExtensions';
 import {useState} from 'react';
@@ -17,9 +18,10 @@ export function ConsentCard({studio,disabled,runAllowed,onAction}:{studio:Studio
 function ConsentRequestView({consent,studio,disabled,runAllowed,onAction}:{consent:Studio["pendingConsents"][number];studio:Studio;disabled:boolean;runAllowed:boolean;onAction:(intent:VibeIntent)=>Promise<boolean>}){
  const platform=detectGatePlatform();
  const gate=describeConsentGate(consent.kind,platform,defaultProcessSupport(platform));
- return <section className="vs-card vs-consent" aria-label="Needs you consent"><h3>Needs you</h3><strong>{consent.action}</strong>{gate&&<p className="vs-notice" role="status" data-gate={gate.level}>{t(gate.levelKey)}{gate.noteKey?` ${t(gate.noteKey)}`:''}</p>}<dl><dt>Scope</dt><dd data-copyable>{consent.scope}</dd><dt>Why</dt><dd>{consent.reason}</dd></dl>
+ const desktop=consent.kind==='desktop';
+ return <section className="vs-card vs-consent" aria-label="Needs you consent"><h3>Needs you</h3>{desktop&&<ComputerUseReview/>}<strong>{consent.action}</strong>{gate&&<p className="vs-notice" role="status" data-gate={gate.level}>{t(gate.levelKey)}{gate.noteKey?` ${t(gate.noteKey)}`:''}</p>}<dl><dt>Scope</dt><dd data-copyable>{consent.scope}</dd><dt>Why</dt><dd>{consent.reason}</dd></dl>
   <p className="vs-muted">Allow applies only to this exact request. It does not extend the folder scope.</p>
-  <div className="vs-actions">{(['allow_once','allow_for_run','deny'] as const).map(choice=><button type="button" key={choice} disabled={disabled||(choice==='allow_for_run'&&(!consent.allowForRun||!runAllowed))} onClick={()=>void onAction({type:'consent',runId:studio.runId,requestId:consent.requestId,choice})}>{({allow_once:'Allow once',allow_for_run:'Allow for this run',deny:'Deny'})[choice]}</button>)}</div>
+  <div className="vs-actions">{(['allow_once','allow_for_run','deny'] as const).map(choice=><button type="button" key={choice} disabled={disabled||(desktop&&choice!=='deny')||(choice==='allow_for_run'&&(!consent.allowForRun||!runAllowed))} onClick={()=>void onAction({type:'consent',runId:studio.runId,requestId:consent.requestId,choice})}>{({allow_once:'Allow once',allow_for_run:'Allow for this run',deny:'Deny'})[choice]}</button>)}</div>
  </section>;
 }
 export function ReviewChanges({studio,disabled,onAction}:{studio:Studio;disabled:boolean;onAction:(intent:VibeIntent)=>Promise<boolean>}){

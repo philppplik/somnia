@@ -34,5 +34,12 @@
  "vibespace.acp.cancel": "Abbruch angefordert",
  "vibespace.acp.killed": "Agent gestoppt (Prozessbaum beendet)",
  "vibespace.acp.closed": "Agent-Verbindung geschlossen",
- "vibespace.acp.noElevated": "Externe Agenten laufen nie mit erhöhten Rechten."
+ "vibespace.acp.noElevated": "Externe Agenten laufen nie mit erhöhten Rechten.",
+  "vibespace.computerUse.title": "Computer-Steuerung",
+  "vibespace.computerUse.unavailable": "Computer-Steuerung ist nicht verfügbar. Die Linux-Vorbereitung erfordert ein Feature-Gate und einen geprüften Plattform-Adapter. Windows und macOS sind deaktiviert.",
+  "vibespace.computerUse.session": "Ein externer Agent braucht bei jedem Sitzungsstart und für jede Maus-, Tastatur- oder Aufnahmeaktion eine neue Zustimmung. Ordner- und MCP-Freigaben gelten nicht.",
+  "vibespace.computerUse.capture": "Bildschirmaufnahmen bleiben private Prüfartefakte. Sie werden nicht automatisch an den externen Agenten gesendet.",
+  "vibespace.computerUse.allowed": "Computer-Steuerung: {agent}, {action} einmal erlaubt.",
+  "vibespace.computerUse.denied": "Computer-Steuerung: {agent}, {action} abgelehnt.",
+  "vibespace.computerUse.pending": "Computer-Steuerung: {agent}, {action} wartet auf Prüfung."
 }

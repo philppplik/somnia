@@ -34,5 +34,12 @@
  "vibespace.acp.cancel": "Annulation demandée",
  "vibespace.acp.killed": "Agent arrêté (arbre de processus terminé)",
  "vibespace.acp.closed": "Connexion de l'agent fermée",
- "vibespace.acp.noElevated": "Les agents externes ne s'exécutent jamais avec des droits élevés."
+ "vibespace.acp.noElevated": "Les agents externes ne s'exécutent jamais avec des droits élevés.",
+  "vibespace.computerUse.title": "Contrôle de l’ordinateur",
+  "vibespace.computerUse.unavailable": "Le contrôle de l’ordinateur est indisponible. La préparation Linux exige une fonction activée et un adaptateur de plateforme vérifié. Windows et macOS sont désactivés.",
+  "vibespace.computerUse.session": "Un agent externe doit obtenir un nouveau consentement à chaque début de session et pour chaque action de souris, clavier ou capture. Les autorisations de dossier et MCP ne s’appliquent pas.",
+  "vibespace.computerUse.capture": "Les captures d’écran restent des fichiers privés à vérifier. Elles ne sont pas envoyées automatiquement à l’agent externe.",
+  "vibespace.computerUse.allowed": "Contrôle de l’ordinateur : {agent}, {action} autorisé une fois.",
+  "vibespace.computerUse.denied": "Contrôle de l’ordinateur : {agent}, {action} refusé.",
+  "vibespace.computerUse.pending": "Contrôle de l’ordinateur : {agent}, {action} en attente de vérification."
 }

@@ -1,3 +1,4 @@
+import {ComputerUseReview} from './ComputerUseReview';
 import {useEffect,useState,useSyncExternalStore} from 'react';
 import {getLocale,subscribeLocale,t} from '../../lib/i18n';
 import {costLabel,reviewedHunksAllowed} from '../../lib/vibespace/state';
@@ -16,6 +17,7 @@ export function ReviewExtensions({studio,transport,disabled,onAction}:{studio:St
  const allowed=!!details&&reviewedHunksAllowed(studio,details,paths,hunks)&&!disabled&&transport.capabilities.includes('apply-hunks');
  const changeAllowed=!!review&&['ready','conflict'].includes(studio.reviewState)&&!disabled&&transport.capabilities.includes('request-changes');
  return <>
+  {(studio.pendingConsents.some(c=>c.kind==='desktop')||details?.timeline.some(e=>e.kind.startsWith('computer_use.')))&&<ComputerUseReview/>}
   <section className="vs-card"><h3>{text('pauseTitle')}</h3><p className="vs-muted">{text('pauseGap')}</p><div className="vs-actions"><button disabled>{text('pause')}</button><button disabled>{text('resume')}</button></div></section>
   {error&&<p role="alert" className="vs-notice">{text('readError')}</p>}
   {review&&transport.reviewDetails&&<section className="vs-card" aria-label={text('hunks')}><h3>{text('hunks')}</h3><p className="vs-muted">{text('finalSelection')}</p>
