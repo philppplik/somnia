@@ -2608,5 +2608,22 @@
   "workdocs.dialog.discard": "Discard and close",
   "workdocs.dialog.save": "Save all and close",
   "previewNav.back": "Back",
-  "previewNav.forward": "Forward"
+  "previewNav.forward": "Forward",
+  "cmd.help.errorReport": "Copy error report (log excerpt and version)",
+  "cmd.pdf.page.rotate": "PDF: Rotate page clockwise",
+  "cmd.pdf.redo": "PDF: Redo",
+  "cmd.pdf.saveCopy": "PDF: Save edited copy",
+  "cmd.pdf.undo": "PDF: Undo",
+  "cmd.sheets.redo": "Redo workbook change",
+  "cmd.sheets.saveCopy": "Save workbook copy",
+  "cmd.sheets.undo": "Undo workbook change",
+  "cmd.slides.redo": "Redo slide text",
+  "cmd.slides.saveCopy": "Save presentation copy",
+  "cmd.slides.showSlide": "Show slide",
+  "cmd.slides.undo": "Undo slide text",
+  "cmd.studio.design": "Switch to Design Studio",
+  "cmd.studio.documents": "Switch to Documents Studio",
+  "cmd.studio.slides": "Switch to Slides Studio",
+  "cmd.studio.vibespace": "Switch to Vibe Space Studio",
+  "cmd.tools.editImage": "Open another image..."
 }

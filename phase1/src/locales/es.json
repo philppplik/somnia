@@ -2608,5 +2608,22 @@
   "workdocs.dialog.discard": "Descartar y cerrar",
   "workdocs.dialog.save": "Guardar todo y cerrar",
   "previewNav.back": "Atrás",
-  "previewNav.forward": "Adelante"
+  "previewNav.forward": "Adelante",
+  "cmd.help.errorReport": "Copiar informe de error (extracto del registro y versión)",
+  "cmd.pdf.page.rotate": "PDF: Girar página en sentido horario",
+  "cmd.pdf.redo": "PDF: Rehacer",
+  "cmd.pdf.saveCopy": "PDF: Guardar copia editada",
+  "cmd.pdf.undo": "PDF: Deshacer",
+  "cmd.sheets.redo": "Rehacer cambio del libro",
+  "cmd.sheets.saveCopy": "Guardar copia del libro",
+  "cmd.sheets.undo": "Deshacer cambio del libro",
+  "cmd.slides.redo": "Rehacer texto de diapositiva",
+  "cmd.slides.saveCopy": "Guardar copia de la presentación",
+  "cmd.slides.showSlide": "Mostrar diapositiva",
+  "cmd.slides.undo": "Deshacer texto de diapositiva",
+  "cmd.studio.design": "Cambiar al estudio Design",
+  "cmd.studio.documents": "Cambiar al estudio Documents",
+  "cmd.studio.slides": "Cambiar al estudio Slides",
+  "cmd.studio.vibespace": "Cambiar al estudio Vibe Space",
+  "cmd.tools.editImage": "Abrir otra imagen..."
 }
