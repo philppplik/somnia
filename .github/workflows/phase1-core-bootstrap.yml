@@ -64,6 +64,20 @@ jobs:
             phase1/validation/bench/*.md
       - run: npx playwright install --with-deps chromium
       - run: npm run test:e2e
+      - name: Render corpus guards
+        run: npm run test:render-corpus
+      - name: Render goldens probe (non-blocking, checks runner pixel parity)
+        id: render_goldens
+        continue-on-error: true
+        run: npm run test:render-goldens
+      - name: Retain render golden diffs
+        if: ${{ always() && steps.render_goldens.outcome == 'failure' }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: somnia-render-golden-diffs-${{ github.sha }}
+          retention-days: 7
+          if-no-files-found: ignore
+          path: phase1/test-results/render
   snapshots:
     if: ${{ inputs.update_snapshots }}
     runs-on: ubuntu-24.04
