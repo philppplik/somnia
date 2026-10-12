@@ -24,9 +24,9 @@ test('mcp settings: add, start, grant a tool; per-call approval dialog',async({p
  const res=await page.evaluate(async()=>{const m=await import('/src/lib/agent/mcpRuntime.ts');const rt=m.getMcpRuntime()!;(window as any).p=rt.approve({server:'files',tool:'read_note',args:{path:'a.md'}},new AbortController().signal);return rt.getSnapshot().pending.length;});
  expect(res).toBe(1);const dlg=page.getByRole('alertdialog');await expect(dlg).toContainText('read_note');await expect(page.getByTestId('mcp-approval-args')).toContainText('a.md');
  if(process.env.SOMNIA_SHOTS)await page.screenshot({path:`${process.env.SOMNIA_SHOTS}/mcp-approval.png`});
- await page.getByTestId('mcp-deny').click();expect(await page.evaluate(()=>(window as any).p)).toBe(false);
+ await page.getByTestId('mcp-deny').click();expect(await page.evaluate(()=>(window as any).p)).toBe('deny');
  await page.evaluate(async()=>{const m=await import('/src/lib/agent/mcpRuntime.ts');(window as any).q=m.getMcpRuntime()!.approve({server:'files',tool:'read_note',args:{}},new AbortController().signal);});
- await page.getByTestId('mcp-allow').click();expect(await page.evaluate(()=>(window as any).q)).toBe(true);
+ await page.getByTestId('mcp-allow').click();expect(await page.evaluate(()=>(window as any).q)).toBe('allow_once');
  const calls=await page.evaluate(()=>(window as any).ipcCalls.map((c:any)=>c.cmd));expect(calls).toContain('mcp_server_save');expect(calls).not.toContain('mcp_tool_call');
 });
 test('mcp args: fail-closed interpreter rejects before the approval dialog and the bridge',async({page})=>{
