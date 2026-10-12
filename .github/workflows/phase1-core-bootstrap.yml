@@ -66,9 +66,8 @@ jobs:
       - run: npm run test:e2e
       - name: Render corpus guards
         run: npm run test:render-corpus
-      - name: Render goldens probe (non-blocking until goldens are re-baselined on the runner with a Philipp-approval receipt)
+      - name: Render goldens (blocking, runner-baselined with approval receipt 2026-10-12)
         id: render_goldens
-        continue-on-error: true
         run: npm run test:render-goldens
       - name: Retain render golden diffs
         if: ${{ always() && steps.render_goldens.outcome == 'failure' }}
