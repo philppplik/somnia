@@ -21,7 +21,6 @@
     "check:commands": "node scripts/errors/gen-commands.mjs --check",
     "inventory:ui-commands": "tsx scripts/dump-ui-commands.ts",
     "check:ui-commands": "tsx scripts/dump-ui-commands.ts --check",
-    "check:layers": "node -e \"console.log(\"check:layers slot reserved for the dependency-cruiser gate (wave A2).\")\"",
     "tauri": "tauri",
     "bench:projects": "tsx scripts/bench-projects.ts",
     "test:documents": "tsx --test src/lib/convert/*.test.ts src/lib/conversion/*.test.ts",
