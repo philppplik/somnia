@@ -14,7 +14,8 @@ import {
   setPdfEditing,
   usePdfSession,
 } from "../../lib/pdfedit/session";
-import { registerCommand } from "../../lib/commands";
+import { registerCommandSpec } from "../../lib/commandBridge";
+import { pdfCommandSpecs } from "../../lib/pdfedit/commands";
 import { installBeforeUnload } from "../../lib/closeFlow";
 import { hasDirtyPdfs } from "../../lib/pdfedit/session";
 export const pdfButton =
@@ -29,36 +30,13 @@ export function PdfInlineEditor({ item }: { item: MediaItem }) {
     const name = item.name;
     const action = (f: () => Promise<unknown>) =>
       void f().catch((e) => pdfError(name, String(e)));
-    const off = [
-      registerCommand({
-        id: "pdf.saveCopy",
-        title: "PDF: Save edited copy",
-        category: "Project",
-        shortcut: "Mod+Shift+S",
-        run: () => exportPdfCopy(name),
-      }),
-      registerCommand({
-        id: "pdf.page.rotate",
-        title: "PDF: Rotate page clockwise",
-        category: "Tools",
-        enabled: () => !!s?.editing && !s.busy,
-        run: () => editPdf(name, { kind: "rotate", page: (s?.page ?? 1) - 1 }),
-      }),
-      registerCommand({
-        id: "pdf.undo",
-        title: "PDF: Undo",
-        category: "Edit",
-        enabled: () => !!s?.undo.length && !s.busy,
-        run: () => historyPdf(name, "undo"),
-      }),
-      registerCommand({
-        id: "pdf.redo",
-        title: "PDF: Redo",
-        category: "Edit",
-        enabled: () => !!s?.redo.length && !s.busy,
-        run: () => historyPdf(name, "redo"),
-      }),
-    ];
+    const off = pdfCommandSpecs({
+      name,
+      getSession: () => s,
+      exportCopy: exportPdfCopy,
+      rotate: (n, page) => editPdf(n, { kind: "rotate", page }),
+      history: historyPdf,
+    }).map((spec) => registerCommandSpec(spec));
     const key = (e: KeyboardEvent) => {
       if (!(e.ctrlKey || e.metaKey) || e.altKey) return;
       const input =
