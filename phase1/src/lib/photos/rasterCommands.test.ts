@@ -17,16 +17,18 @@ function fixture() {
   const off = registerRasterCommands(() => actions, key => `Photo ${key}`, dispatcher);
   return { actions, calls, dispatcher, off };
 }
+// Vector specs register asynchronously (dynamic import) while this test runs; they are not part of what is compared.
+const notVector = <T extends { id: string }>(xs: T[]): T[] => xs.filter(x => !x.id.startsWith('vector.'));
 const ids = ['edit.undo', 'edit.redo', 'project.save', 'tab.close', 'tools.editImage'];
 
 test('scoped specs preserve palette IDs, shortcuts, translations and global dispatcher entries', async () => {
-  const before = listCommands().map(c => c.id);
-  const global = commandDispatcher.list();
+  const before = notVector(listCommands()).map(c => c.id);
+  const global = notVector(commandDispatcher.list());
   const shortcuts = ids.map(defaultShortcut);
   const f = fixture();
   try {
-    assert.deepEqual(listCommands().map(c => c.id), before);
-    assert.deepEqual(commandDispatcher.list(), global);
+    assert.deepEqual(notVector(listCommands()).map(c => c.id), before);
+    assert.deepEqual(notVector(commandDispatcher.list()), global);
     assert.deepEqual(ids.map(defaultShortcut), shortcuts);
     assert.equal(listCommands().find(c => c.id === 'edit.undo')!.title, 'Photo imageeditor.undo');
     assert.equal(listCommands().find(c => c.id === 'project.save')!.allowInInput, true);
@@ -38,7 +40,7 @@ test('scoped specs preserve palette IDs, shortcuts, translations and global disp
     assert.notEqual(listCommands().find(c => c.id === 'edit.undo')!.title, 'Photo imageeditor.undo');
     assert.equal(f.dispatcher.isEnabled('edit.undo'), false);
   } finally { f.off(); }
-  assert.deepEqual(listCommands().map(c => c.id), before);
+  assert.deepEqual(notVector(listCommands()).map(c => c.id), before);
   assert.deepEqual(f.dispatcher.list(), []);
   f.off(); // teardown is idempotent
 });
