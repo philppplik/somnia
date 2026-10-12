@@ -77,6 +77,8 @@ export function usePdfSession(name?: string | null) {
 export const getPdfSession = (name: string) => sessions.get(name);
 export const hasDirtyPdfs = () => [...sessions.values()].some((s) => s.dirty);
 if (typeof window !== "undefined") installBeforeUnload(hasDirtyPdfs);
+export const dirtyPdfNames = () =>
+  [...sessions].filter(([, s]) => s.dirty).map(([n]) => n);
 export const pdfIsDirty = (name: string) => sessions.get(name)?.dirty ?? false;
 registerMediaCloseGuard(
   (name) =>

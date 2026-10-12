@@ -1,0 +1,11 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {registerWorkProvider,dirtyDocs,saveAllDocs,discardAndCloseAll,closeAllDocs,openDocCount,type WorkProvider} from './workDocs';
+const mk=(studio:string,names:string[],okFor:(n:string)=>boolean=()=>true,log:string[]=[]):WorkProvider=>{let dirty=[...names];let open=names.length;
+ return {studio,dirty:()=>[...dirty],openCount:()=>open,async save(n){log.push(studio+':'+n);if(!okFor(n))return false;dirty=dirty.filter(x=>x!==n);return true;},discard:()=>{dirty=[];return [];},closeAll:()=>{open=0;log.push('close:'+studio);}};};
+test('save all spans studios in order',async()=>{const log:string[]=[];const a=registerWorkProvider(mk('wd-a',['x','y'],()=>true,log));const b=registerWorkProvider(mk('wd-b',['z'],()=>true,log));
+ const r=await saveAllDocs();assert.deepEqual(r.saved.map(d=>d.name),['x','y','z']);assert.equal(r.failed.length,0);assert.deepEqual(dirtyDocs(),[]);a();b();});
+test('a cancelled save stops the run and reports the rest as skipped',async()=>{const a=registerWorkProvider(mk('wd-c',['p','q','r'],n=>n!=='q'));
+ const r=await saveAllDocs();assert.deepEqual(r.saved.map(d=>d.name),['p']);assert.deepEqual(r.failed.map(d=>d.name),['q']);assert.deepEqual(r.skipped.map(d=>d.name),['r']);assert.equal(dirtyDocs().length,2);a();});
+test('discard and close empties every provider; close all alone keeps dirty state untouched',()=>{const a=registerWorkProvider(mk('wd-d',['m']));const b=registerWorkProvider(mk("wd-e",["n"]));
+ assert.equal(openDocCount()>=1,true);discardAndCloseAll();assert.deepEqual(dirtyDocs(),[]);closeAllDocs();assert.equal(openDocCount(),0);a();b();});

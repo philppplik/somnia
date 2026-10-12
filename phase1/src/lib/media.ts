@@ -77,6 +77,8 @@ export async function addMediaFile(file:Blob,rawName:string,key?:string,opts:{ac
 export function setActiveMedia(name:string|null){if(state.active!==name)set({...state,active:name});}
 export const canReplaceMedia=(name:string)=>!findMedia(name)||canClose(name);
 export function closeMedia(name:string){const it=findMedia(name);if(!it||!canClose(name))return;runCloseCleanups(name);URL.revokeObjectURL(it.url);if(it.sourceUrl)URL.revokeObjectURL(it.sourceUrl);set({items:state.items.filter(i=>i!==it),active:state.active===it.name?null:state.active});}
+/** Closes without asking guards: the caller has already offered save or discard (Close all files). */
+export function closeMediaForced(name:string){const it=findMedia(name);if(!it)return;runCloseCleanups(name);URL.revokeObjectURL(it.url);if(it.sourceUrl)URL.revokeObjectURL(it.sourceUrl);set({items:state.items.filter(i=>i!==it),active:state.active===it.name?null:state.active});}
 export function clearMedia(){const names=state.items.map(i=>i.name);if(!names.every(n=>canClose(n)))return false;names.forEach(runCloseCleanups);state.items.forEach(i=>{URL.revokeObjectURL(i.url);if(i.sourceUrl)URL.revokeObjectURL(i.sourceUrl);});set({items:[],active:null});return true;}
 export const formatBytes=(n:number)=>n<1024?`${n} B`:n<1_048_576?`${(n/1024).toFixed(1)} KB`:`${(n/1_048_576).toFixed(1)} MB`;
 

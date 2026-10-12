@@ -4,6 +4,7 @@ import {installBeforeUnload} from '../closeFlow';
 const dirty=new Set<string>();
 export const setSheetsDirty=(name:string,value:boolean)=>{if(value)dirty.add(name);else dirty.delete(name);};
 export const sheetsIsDirty=(name:string)=>dirty.has(name);
+export const dirtySheetNames=()=>[...dirty];
 export const hasDirtySheets=()=>dirty.size>0;
 if(typeof window!=='undefined'){installBeforeUnload(hasDirtySheets);registerMediaCloseGuard(name=>!sheetsIsDirty(name)||window.confirm(`Discard unsaved spreadsheet edits to ${name}?`));}
 export const copyFileName=(name:string)=>name.replace(/^.*[\\/]/,'').replace(/\.xlsx$/i,'')+'-edited.xlsx';

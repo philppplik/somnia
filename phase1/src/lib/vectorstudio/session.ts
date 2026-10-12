@@ -107,6 +107,7 @@ export function setNodeKind(pathId:string,nodeId:string,kind:'corner'|'smooth'|'
   if(n.in&&n.out)return {...n,kind};const ref=n.out??n.in;const r=ref?{x:n.x*2-ref.x,y:n.y*2-ref.y}:{x:n.x+40,y:n.y};const a=n.in?n.in:{x:n.x-(r.x-n.x),y:n.y-(r.y-n.y)};const b=n.out?n.out:{x:r.x,y:r.y};
   return {...n,kind,in:n.in??a,out:n.out??(ref?{x:ref.x,y:ref.y}:b)};})}))([pathId]));}
 export function toggleClosed(pathId:string){commit(mapPaths(p=>({...p,closed:!p.closed}))([pathId]));}
+export const markVectorSaved=()=>set({dirty:false});
 export const toSvg=()=>exportSvg(normalizeDoc(state.doc));
 export const SVG_MIME='image/svg+xml';
 import {insertNode,nearestOnPath} from './geometry';

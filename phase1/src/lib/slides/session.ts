@@ -37,6 +37,7 @@ export async function showSlide(index:number){const e=sessions.get(getMedia().ac
 export async function loadThumbnails(){const e=sessions.get(getMedia().active??'');const summary=e?.state.summary;if(!e||!summary||e.state.busy)return;patch(e,{busy:true});try{for(let index=0;index<summary.slides;index++){if(e.disposed)break;if(e.state.thumbnails[index])continue;const png=await e.client.render(index,Math.min(180/summary.widthPt,110/summary.heightPt));if(e.disposed)break;patch(e,{thumbnails:{...e.state.thumbnails,[index]:blobUrl(png)}});}patch(e,{busy:false});}catch(error){patch(e,{error:String(error),busy:false},error);}}
 export function activateSlides(name:string){setActiveMedia(name);void ensureSlides(name);}
 
+export const dirtySlideNames=()=>[...sessions].filter(([,e])=>e.state.dirty).map(([n])=>n);
 export const slidesIsDirty=(name:string)=>sessions.get(name)?.state.dirty??false;
 if(typeof window!=='undefined')installBeforeUnload(()=>[...sessions.values()].some(e=>e.state.dirty));
 registerMediaCloseGuard(name=>!slidesIsDirty(name)||window.confirm(`Discard unsaved presentation edits to ${name}?`));
