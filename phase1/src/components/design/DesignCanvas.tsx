@@ -1,10 +1,11 @@
 import {reportError} from '../../lib/log';
 import {DesignToolbox} from './DesignToolbox';
-import {chooseDesignTool,deleteDesignNodes} from '../../lib/design/panelAdapter';
+import {addDesignNode,chooseDesignTool,deleteDesignNodes} from '../../lib/design/panelAdapter';
+import {confirmReplaceDesign,registerDesignCommands} from '../../lib/design/commands';
 import {toolForKey} from '../../lib/design/tools';
 import {useEffect,useRef,useState} from 'react';
-import {createNode,exportArtboardSVG,parseDesignDocument,serializeDesignDocument,type DesignNode} from '../../lib/design/model';
-import {downloadDesign,editDesign,redoDesign,selectDesignNode,startDesign,undoDesign,useDesignState,loadDesign,setDesignTool} from '../../lib/design/session';
+import {exportArtboardSVG,parseDesignDocument,serializeDesignDocument,type DesignNode} from '../../lib/design/model';
+import {downloadDesign,editDesign,redoDesign,selectDesignNode,startDesign,undoDesign,useDesignState,loadDesign} from '../../lib/design/session';
 import {Button} from '../ui/button';
 import {StudioEmptyState} from '../studios/StudioEmptyState';
 
@@ -12,9 +13,10 @@ export function DesignCanvas(){
  const s=useDesignState();const input=useRef<HTMLInputElement>(null);const [error,setError]=useState('');const [zoom,setZoom]=useState(0.65);
  const [drag,setDrag]=useState<{id:string;startX:number;startY:number;x:number;y:number;width:number;height:number;dx:number;dy:number;resize:boolean}|null>(null);
  useEffect(()=>{const handler=(event:KeyboardEvent)=>{const tool=toolForKey(event);if(tool&&s.document){event.preventDefault();chooseDesignTool(tool);}};window.addEventListener('keydown',handler);return()=>window.removeEventListener('keydown',handler);},[s.document]);
+ useEffect(()=>registerDesignCommands(),[]);
  const board=s.document?.artboards.find(a=>a.id===s.artboardId);
- const guardReplace=(action:()=>void)=>{if(!s.dirty||window.confirm('Replace this design? Export the project first to keep your changes.'))action();};
- const add=(kind:DesignNode['kind'],at?:{x:number;y:number})=>{if(!board)return;const node={...createNode(kind,board.nodes.length),...at};editDesign(doc=>({...doc,artboards:doc.artboards.map(a=>a.id===board.id?{...a,nodes:[...a.nodes,node]}:a)}));selectDesignNode(node.id);setDesignTool('select');};
+ const guardReplace=(action:()=>void)=>{if(confirmReplaceDesign())action();};
+ const add=addDesignNode;
  const updateDrag=(event:React.PointerEvent)=>{if(!drag)return;setDrag({...drag,dx:(event.clientX-drag.startX)/zoom,dy:(event.clientY-drag.startY)/zoom});};
  const finishDrag=()=>{if(!drag||!board)return;if(drag.resize&&board.nodes.find(n=>n.id===drag.id)?.rotation){setDrag(null);setError('Resize rotated layers with Width and Height in the inspector.');return;}const d=drag;setDrag(null);editDesign(doc=>({...doc,artboards:doc.artboards.map(a=>a.id===board.id?{...a,nodes:a.nodes.map(n=>n.id===d.id?{...n,...(d.resize?{width:Math.max(8,Math.min(16384,d.width+d.dx)),height:Math.max(8,Math.min(16384,d.height+d.dy))}:{x:Math.max(-32768,Math.min(32768,d.x+d.dx)),y:Math.max(-32768,Math.min(32768,d.y+d.dy))})}:n)}:a)}));};
  const begin=(event:React.PointerEvent,node:DesignNode,resize=false)=>{event.stopPropagation();selectDesignNode(node.id,event.ctrlKey||event.metaKey||event.shiftKey);if(node.locked||event.button!==0)return;event.currentTarget.setPointerCapture(event.pointerId);setDrag({id:node.id,startX:event.clientX,startY:event.clientY,x:node.x,y:node.y,width:node.width,height:node.height,dx:0,dy:0,resize});};
