@@ -273,6 +273,62 @@ pub trait ProcessLauncher: Send + Sync {
     fn check(&self) -> Result<(), ProcessError>;
     /// Launch `spec` with captured, capped output and a timeout.
     fn run(&self, spec: &ExecSpec, limits: &ProcessLimits) -> Result<ExecReceipt, ProcessError>;
+    /// Start a long-lived child with piped stdio (ACP stdio agents). Same isolation as
+    /// [`ProcessLauncher::run`]. Launchers without an interactive implementation keep this
+    /// default, which fails closed: no session, no spawn.
+    fn spawn_session(&self, _spec: &ExecSpec) -> Result<Box<dyn SessionProcess>, ProcessError> {
+        Err(ProcessError::IsolationUnavailable(
+            "interactive sessions are not supported by this launcher",
+        ))
+    }
+}
+
+/// Piped stdio of a session child.
+pub struct SessionIo {
+    /// Child stdin.
+    pub stdin: Box<dyn std::io::Write + Send>,
+    /// Child stdout.
+    pub stdout: Box<dyn std::io::Read + Send>,
+    /// Child stderr (must be drained by the owner).
+    pub stderr: Box<dyn std::io::Read + Send>,
+}
+
+/// A running isolated child. Killing is part of the isolation layer, never a caller-side
+/// signal: `kill_tree` takes down the whole sandbox (Linux: the bubblewrap pid namespace).
+pub trait SessionProcess: Send {
+    /// Hand out the stdio pipes once.
+    fn io(&mut self) -> Option<SessionIo>;
+    /// Kill the child and every descendant. Idempotent.
+    fn kill_tree(&mut self) -> Result<(), ProcessError>;
+    /// `Ok(None)` while running, `Ok(Some(code))` after exit (`code` is `None` for a signal).
+    fn try_wait(&mut self) -> Result<Option<Option<i32>>, ProcessError>;
+}
+
+/// Handle to a session child started by [`ProcessExecutor::spawn_session`]. Dropping it kills
+/// the process tree.
+pub struct ProcessSession {
+    inner: Box<dyn SessionProcess>,
+}
+
+impl ProcessSession {
+    /// Take the stdio pipes (once).
+    pub fn io(&mut self) -> Option<SessionIo> {
+        self.inner.io()
+    }
+    /// Kill the child and all descendants through the isolation layer.
+    pub fn kill_tree(&mut self) -> Result<(), ProcessError> {
+        self.inner.kill_tree()
+    }
+    /// Exit status if the child has exited.
+    pub fn try_wait(&mut self) -> Result<Option<Option<i32>>, ProcessError> {
+        self.inner.try_wait()
+    }
+}
+
+impl Drop for ProcessSession {
+    fn drop(&mut self) {
+        let _ = self.inner.kill_tree();
+    }
 }
 
 /// Executor bound to one run, one scope and one mode.
@@ -390,6 +446,37 @@ impl ProcessExecutor {
                     bytes: (r.stdout.len() + r.stderr.len()) as u64,
                 });
                 Ok(r)
+            }
+            Err(e) => {
+                guard.complete(EffectOutcome::Failed { class: e.class() });
+                Err(e)
+            }
+        }
+    }
+}
+
+impl ProcessExecutor {
+    /// Start a long-lived isolated child under an approval (external ACP agents). Same
+    /// token binding as [`ProcessExecutor::exec`]. Elevated executors never start sessions:
+    /// external agents are sandboxed-only. The guard completes at spawn; the run's later
+    /// cancellation is enforced by the owner killing the returned [`ProcessSession`].
+    pub fn spawn_session(&self, token: ApprovalToken, cmd: &Command) -> Result<ProcessSession, ProcessError> {
+        if self.mode == ExecMode::Elevated {
+            return Err(ProcessError::IsolationUnavailable(
+                "external agents never run elevated",
+            ));
+        }
+        let guard = self.agent.consume(token, &self.binding(cmd))?;
+        guard.checkpoint()?;
+        let spec = ExecSpec {
+            program: cmd.program.clone(),
+            args: cmd.args.clone(),
+            cwd: cmd.cwd.clone(),
+        };
+        match self.launcher.spawn_session(&spec) {
+            Ok(inner) => {
+                guard.complete(EffectOutcome::Ok { bytes: 0 });
+                Ok(ProcessSession { inner })
             }
             Err(e) => {
                 guard.complete(EffectOutcome::Failed { class: e.class() });

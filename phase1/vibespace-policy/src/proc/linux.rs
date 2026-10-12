@@ -214,6 +214,55 @@ impl ProcessLauncher for BwrapLauncher {
         let program = self.filter_program()?;
         self.run_filtered(&program, spec, limits)
     }
+
+    fn spawn_session(&self, spec: &ExecSpec) -> Result<Box<dyn super::SessionProcess>, ProcessError> {
+        let program = self.filter_program()?;
+        let fd = seccomp::filter_fd(&program)
+            .map_err(|_| ProcessError::IsolationUnavailable("seccomp handoff failed"))?;
+        let argv = self.build_argv(spec)?;
+        let mut cmd = Command::new(&self.bwrap);
+        cmd.arg("--seccomp")
+            .arg(fd.as_raw().to_string())
+            .args(&argv)
+            .stdin(Stdio::piped())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped());
+        let child = cmd.spawn().map_err(|_| ProcessError::SpawnFailed)?;
+        drop(fd);
+        Ok(Box::new(BwrapSession { child, io_taken: false }))
+    }
+}
+
+/// A bubblewrap session child. bubblewrap runs the payload as init of its own pid namespace
+/// with `--die-with-parent`, so SIGKILL on the bubblewrap process takes down the whole tree.
+struct BwrapSession {
+    child: std::process::Child,
+    io_taken: bool,
+}
+
+impl super::SessionProcess for BwrapSession {
+    fn io(&mut self) -> Option<super::SessionIo> {
+        if self.io_taken {
+            return None;
+        }
+        self.io_taken = true;
+        Some(super::SessionIo {
+            stdin: Box::new(self.child.stdin.take()?),
+            stdout: Box::new(self.child.stdout.take()?),
+            stderr: Box::new(self.child.stderr.take()?),
+        })
+    }
+    fn kill_tree(&mut self) -> Result<(), ProcessError> {
+        let _ = self.child.kill();
+        let _ = self.child.wait();
+        Ok(())
+    }
+    fn try_wait(&mut self) -> Result<Option<Option<i32>>, ProcessError> {
+        self.child
+            .try_wait()
+            .map(|o| o.map(|s| s.code()))
+            .map_err(|e| ProcessError::Io(e.kind()))
+    }
 }
 
 impl BwrapLauncher {

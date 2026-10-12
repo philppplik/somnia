@@ -63,7 +63,8 @@ pub use net::{
 };
 pub use proc::{
     platform_support, Command, ElevatedSetup, ExecMode, ExecReceipt, ExecSpec, ProcessError,
-    ProcessExecutor, ProcessLauncher, ProcessLimits, ProcessSupport,
+    ProcessExecutor, ProcessLauncher, ProcessLimits, ProcessSession, ProcessSupport, SessionIo,
+    SessionProcess,
 };
 pub use token::ApprovalToken;
 pub use transport::{ModelTransportPermit, ModelTransportPolicy};
