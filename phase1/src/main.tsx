@@ -64,7 +64,8 @@ if(isTauri())void (async()=>{
   import('./lib/agent/studioMcpHost'),import('./lib/agent/panelBridge'),import('./lib/agent/studioTarget'),import('./lib/media'),import('@tauri-apps/api/event')]);
  void installStudioMcpHost({
   invoke:tauriInvoke as never,
-  listen:listen as never,
+  // Tauri hands the callback an envelope {event,id,payload}; the host wants the payload ({id,message}).
+  listen:(event:string,cb:(payload:{id:number;message:string})=>void|Promise<void>)=>listen<{id:number;message:string}>(event,e=>{void cb(e.payload);}),
   source:createStudioMcpSource,
   target:()=>({path:activeStudioDocument(getState(),getMedia()).path}),
   version:typeof __APP_VERSION__!=='undefined'?__APP_VERSION__:'dev',
