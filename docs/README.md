@@ -2,6 +2,8 @@
 
 Start here:
 
+- [AGENTS.md](../AGENTS.md): map for AI contributors: layout, commands, rules, release caveats. UI command layer reference: `phase1/src/lib/commandSpec.ts` (spec type) and `phase1/src/lib/commandDispatcher.ts` (dispatch), see the section "Two kinds of command" there.
+
 - [Native UI design system](design/native-ui/README.md): exact tokens, theme/appearance cascade, components, UX, context and awareness, Studio direction, and verification.
 
 - [Architecture](ARCHITECTURE.md): Rust backend, command ACL, project service, frontend, storage port, security boundaries, testing.
