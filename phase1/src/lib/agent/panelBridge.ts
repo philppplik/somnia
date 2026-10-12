@@ -162,7 +162,7 @@ function createTools(project:string,context:ContextPackage,nodes:ReturnType<type
   :adapter===codeAdapter.id?createCodeStudioRegistry({snapshot:scoped,selection:()=>context.selection,nodes:()=>{scoped();return nodes;},propose:after=>{scoped();if(/\.html?$/i.test(path))validateHTML(after);}})
   :createStudioReadOnlyRegistry(scoped);
  // Step 1.6: read/propose CommandSpecs become tools (cmd_*). Snapshot at build time; sessions and the MCP source rebuild per turn/document.
- registerCommandTools(registry,commandDispatcher,{origin:project==='mcp'?'mcp':'agent',guard:()=>{scoped();}});
+ registerCommandTools(registry,commandDispatcher,{origin:project==='mcp'?'mcp':'agent',guard:()=>{scoped();},include:spec=>!spec.id.startsWith('vector.')||context.document.studioKind==='code'});
  const originalRun=registry.run.bind(registry);
  registry.run=async(name,args,host,signal,grants)=>{staged=undefined;const result=await originalRun(name,args,host,signal,grants);if(staged!==undefined){scoped();await host.propose(path,staged,signal);staged=undefined;}return result;};
  return new AgentProjectTools({projectId:project,files:()=>{const s=scoped();return {[s.ref.path]:s.text};},
