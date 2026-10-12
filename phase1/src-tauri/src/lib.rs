@@ -62,3 +62,5 @@ pub mod vibespace_commands;
 pub mod vibespace_acp_commands;
 #[cfg(feature = "desktop")]
 pub mod vibespace_schedule_commands;
+
+pub mod preview_links;

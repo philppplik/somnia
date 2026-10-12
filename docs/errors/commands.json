@@ -971,6 +971,19 @@
       ]
     },
     {
+      "name": "open_preview_external",
+      "domain": "app",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "url"
+      ],
+      "args": [
+        "url"
+      ]
+    },
+    {
       "name": "pdf_save_pick",
       "domain": "fs",
       "status": "native",

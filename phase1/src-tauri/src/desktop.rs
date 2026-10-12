@@ -1592,6 +1592,19 @@ async fn open_external(window: WebviewWindow, url: String) -> Result<()> {
     result.map(|_| ()).map_err(|e| AppError::Io(e.to_string()))
 }
 #[tauri::command]
+async fn open_preview_external(window: WebviewWindow, url: String) -> Result<()> {
+    gate(&window)?;
+    crate::preview_links::validate_external(&url).map_err(|e| AppError::Denied(e.into()))?;
+    #[cfg(target_os = "windows")]
+    let result = std::process::Command::new("rundll32")
+        .args(["url.dll,FileProtocolHandler", url.as_str()]).spawn();
+    #[cfg(target_os = "macos")]
+    let result = std::process::Command::new("open").arg(url.as_str()).spawn();
+    #[cfg(all(not(target_os = "windows"), not(target_os = "macos")))]
+    let result = std::process::Command::new("xdg-open").arg(url.as_str()).spawn();
+    result.map(|_| ()).map_err(|e| AppError::Io(e.to_string()))
+}
+#[tauri::command]
 async fn recovery_list(
     window: WebviewWindow,
     state: State<'_, Shared>,
@@ -2468,6 +2481,7 @@ pub fn run() {
             save_file,
             delete_file,
             open_external,
+            open_preview_external,
             recovery_list,
             recovery_read,
             recovery_restore,

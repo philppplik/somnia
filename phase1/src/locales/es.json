@@ -2594,5 +2594,7 @@
   "workdocs.dialog.unsaved": "Cambios sin guardar",
   "workdocs.dialog.more": "y {count} más",
   "workdocs.dialog.discard": "Descartar y cerrar",
-  "workdocs.dialog.save": "Guardar todo y cerrar"
+  "workdocs.dialog.save": "Guardar todo y cerrar",
+  "previewNav.back": "Atrás",
+  "previewNav.forward": "Adelante"
 }

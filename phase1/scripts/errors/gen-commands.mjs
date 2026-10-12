@@ -39,7 +39,7 @@ const DOMAIN_RULES = [
   [/^(agent_settings_|agent_key_|mcp_|studio_mcp_)/, 'agent'],
   [/^(ext_|extension_activity_)/, 'ext'],
   [/^(provider_http_|collab_lan_)/, 'net'],
-  [/^(selftest_|log_|set_window_background|open_external|is_store_package|open_startup_file)/, 'app'],
+  [/^(selftest_|log_|set_window_background|open_external|open_preview_external|is_store_package|open_startup_file)/, 'app'],
   [/.*/, 'fs'],
 ];
 const domainOf = (n) => DOMAIN_RULES.find(([re]) => re.test(n))[1];

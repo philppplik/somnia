@@ -2594,5 +2594,7 @@
   "workdocs.dialog.unsaved": "Ungespeicherte Änderungen",
   "workdocs.dialog.more": "und {count} weitere",
   "workdocs.dialog.discard": "Verwerfen und schließen",
-  "workdocs.dialog.save": "Alle speichern und schließen"
+  "workdocs.dialog.save": "Alle speichern und schließen",
+  "previewNav.back": "Zurück",
+  "previewNav.forward": "Vorwärts"
 }

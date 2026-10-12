@@ -23,6 +23,7 @@ vibespace-fastembed = ["somnia-vibespace-embed/fastembed"]
 desktop = ["dep:tauri", "dep:tauri-plugin-dialog", "dep:tauri-plugin-updater", "dep:tauri-plugin-process", "dep:tauri-plugin-single-instance", "dep:tauri-build", "dep:window-vibrancy", "dep:keyring", "dep:reqwest"]
 
 [dependencies]
+url = "2"
 somnia-vibespace-sched = { path = "../vibespace-sched" }
 somnia-vibespace-core = { path = "../vibespace-core" }
 somnia-vibespace-embed = { path = "../vibespace-embed" }

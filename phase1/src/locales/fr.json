@@ -2594,5 +2594,7 @@
   "workdocs.dialog.unsaved": "Modifications non enregistrées",
   "workdocs.dialog.more": "et {count} de plus",
   "workdocs.dialog.discard": "Abandonner et fermer",
-  "workdocs.dialog.save": "Tout enregistrer et fermer"
+  "workdocs.dialog.save": "Tout enregistrer et fermer",
+  "previewNav.back": "Retour",
+  "previewNav.forward": "Suivant"
 }
