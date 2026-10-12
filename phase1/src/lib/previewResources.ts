@@ -81,7 +81,7 @@ export function scanHtmlRefs(html:string,active:string):{refs:ResourceRef[];esca
    const el=node as El,tag=el.tagName;
    const style=attr(el,'style');if(style)addCss(style);
    if(tag==='link'){const rel=attr(el,'rel')||'';const m=LINK_RELS.exec(rel);if(m){const as=(attr(el,'as')||'').toLowerCase();const kind:RefKind=/stylesheet/i.test(rel)||(m[1].toLowerCase()==='preload'&&as==='style')?'css':m[1].toLowerCase()==='modulepreload'?'module':'asset';add(active,attr(el,'href'),kind);const set=attr(el,'imagesrcset');if(set)for(const u of parseSrcset(set))add(active,u,'asset');}}
-   else if(tag==='script'){const src=attr(el,'src');const type=(attr(el,'type')||'').trim().toLowerCase();if(src)add(active,src,type==='module'?'module':'script');else if(type==='module')for(const s of scanJsImports(textOf(el)))add(active,s,'module');}
+   else if(tag==='script'){const src=attr(el,'src');const type=(attr(el,'type')||'').trim().toLowerCase();if(src)add(active,src,type==='module'?'module':'script');else if(!type||type==='module'||/^(?:text|application)\/(?:java|ecma)script$/.test(type))for(const s of scanJsImports(textOf(el)))add(active,s,'module');}
    else if(tag==='style')addCss(textOf(el));
    else if(['img','source','video','audio','track','embed'].includes(tag)){add(active,attr(el,'src'),'asset');const set=attr(el,'srcset');if(set)for(const u of parseSrcset(set))add(active,u,'asset');if(tag==='video')add(active,attr(el,'poster'),'asset');}
    else if(tag==='input'&&(attr(el,'type')||'').toLowerCase()==='image')add(active,attr(el,'src'),'asset');
@@ -141,7 +141,7 @@ export async function loadPreviewResources(o:LoadOptions):Promise<PreviewResourc
    }
    out.text[r.path]=text;
    if(r.kind==='css'){for(const c of scanCssRefs(text)){const t=resolveProjectPathStrict(r.path,c.href);if(t==='escape')out.failed.push({path:c.href,from:r.path,reason:'outside-project'});else if(t)next.push({path:t,kind:c.kind,from:r.path});}}
-   else if(r.kind==='module'){for(const s of scanJsImports(text)){const t=resolveProjectPathStrict(r.path,s);if(t==='escape')out.failed.push({path:s,from:r.path,reason:'outside-project'});else if(t)next.push({path:t,kind:'module',from:r.path});}}
+   else if(r.kind==='module'||r.kind==='script'){for(const s of scanJsImports(text)){const t=resolveProjectPathStrict(r.path,s);if(t==='escape')out.failed.push({path:s,from:r.path,reason:'outside-project'});else if(t)next.push({path:t,kind:'module',from:r.path});}}
   };
   for(let i=0;i<queue.length&&!o.signal?.aborted;i+=CONCURRENCY)await Promise.all(queue.slice(i,i+CONCURRENCY).map(work));
   level=next;

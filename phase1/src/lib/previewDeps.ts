@@ -1,5 +1,6 @@
 import {parse,type DefaultTreeAdapterMap} from 'parse5';
 import {assetType,resolveProjectPath} from './previewAssets';
+import {resolveProjectPath as resolveModulePath,scanJsImports} from './previewResources';
 /** Dependency graph of the page shown in the live preview: stylesheets (with @import chains), scripts, images and fonts. Pure (no DOM), so it runs in unit tests. */
 type Node=DefaultTreeAdapterMap['node'];
 export type PreviewFiles=Readonly<Record<string,string>>;
@@ -46,6 +47,9 @@ export function collectDeps(files:PreviewFiles,active:string):PreviewDeps{
   const ss=attr(el,'srcset');if(ss)for(const u of srcset(ss))addAsset(resolveRef(active,u));
   const style=attr(el,'style');if(style)inline(style);
  });
+ // ES modules: imports of the page's scripts (inline or linked), followed transitively, are dependencies too.
+ const visitJs=(from:string,text:string)=>{for(const spec of scanJsImports(text)){const p=resolveModulePath(from,spec);if(p&&!js.includes(p)){js.push(p);if(files[p]!=null)visitJs(p,files[p]);}}};
+ walk(parse(source),el=>{if(el.tagName!=='script')return;const src=attr(el,'src');const p=src?resolveRef(active,src):null;if(src){if(p&&files[p]!=null)visitJs(p,files[p]);}else visitJs(active,el.childNodes.map(c=>'value' in c?c.value:'').join(''));});
  const all=[active,...css,...js,...assets];
  return {linkedCss,css:[...css],js,assets:[...assets],all:[...new Set(all)]};
 }
