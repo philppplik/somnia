@@ -528,7 +528,6 @@ pub fn skill_script_gate(trust: SkillTrust) -> SkillScriptGate {
 mod tests {
     use super::*;
     use crate::action::ActionKind;
-    use ring::rand::SecureRandom;
     use ring::signature::{Ed25519KeyPair, KeyPair};
 
     fn b64_encode(data: &[u8]) -> String {
