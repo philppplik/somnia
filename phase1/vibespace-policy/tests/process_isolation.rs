@@ -6,6 +6,7 @@
 //! contract: a host without the capability keeps the Windows shell gate closed.
 #![cfg(windows)]
 
+use std::io::Read;
 use vibespace_policy::proc::{windows::AppContainerLauncher, ExecSpec, ProcessLauncher, ProcessLimits};
 
 fn limits() -> ProcessLimits {
@@ -77,4 +78,104 @@ fn appcontainer_invalid_profile_fails_closed() {
     launcher
         .run(&spec("cmd.exe", &["/c", "exit", "0"]), &limits())
         .expect_err("invalid profile must fail closed");
+}
+
+// ---------- Interactive sessions (ACP stdio agents) ----------
+
+/// Session capability probe: one minimal real session spawn (same path as the tests).
+/// Hosts that cannot run killable piped AppContainer sessions skip with a visible reason;
+/// capable hosts run every assertion below unchanged.
+fn session_or_skip(launcher: &AppContainerLauncher) -> Option<Box<dyn vibespace_policy::SessionProcess>> {
+    match launcher.spawn_session(&spec("cmd.exe", &["/c", "exit", "0"])) {
+        Ok(mut s) => {
+            s.kill_tree().expect("probe kill must succeed");
+            Some(s)
+        }
+        Err(e) => {
+            eprintln!("SKIP: AppContainer session spawn not usable on this host: {e}");
+            None
+        }
+    }
+}
+
+/// Read a session pipe to EOF with a hard timeout (a stuck reader must fail, never hang).
+fn read_with_timeout(mut r: Box<dyn std::io::Read + Send>, secs: u64) -> String {
+    let (tx, rx) = std::sync::mpsc::channel();
+    std::thread::spawn(move || {
+        let mut buf = Vec::new();
+        let _ = r.read_to_end(&mut buf);
+        let _ = tx.send(buf);
+    });
+    let buf = rx
+        .recv_timeout(std::time::Duration::from_secs(secs))
+        .expect("session pipe read timed out");
+    String::from_utf8_lossy(&buf).into_owned()
+}
+
+#[test]
+fn appcontainer_session_echo_captured() {
+    let Some(launcher) = launcher_or_skip() else { return };
+    let Some(_probe) = session_or_skip(&launcher) else { return };
+    let mut s = launcher
+        .spawn_session(&spec("cmd.exe", &["/c", "echo", "vibespace-acp-session-ok"]))
+        .expect("session spawn must succeed on capable hosts");
+    let mut io = s.io().expect("stdio must be handed out once");
+    let stdout = read_with_timeout(io.stdout, 20);
+    assert!(
+        stdout.contains("vibespace-acp-session-ok"),
+        "session stdout must be captured, got: {stdout}"
+    );
+    let _ = io.stdin; // untouched: the child needed no input
+    let status = s.try_wait().expect("try_wait must work");
+    assert_eq!(status, Some(Some(0)), "echo child must exit 0, got {status:?}");
+    s.kill_tree().unwrap();
+}
+
+#[test]
+fn appcontainer_session_stdin_roundtrip() {
+    let Some(launcher) = launcher_or_skip() else { return };
+    let Some(_probe) = session_or_skip(&launcher) else { return };
+    let mut s = launcher
+        .spawn_session(&spec("cmd.exe", &["/c", "more"]))
+        .expect("session spawn must succeed on capable hosts");
+    let mut io = s.io().unwrap();
+    use std::io::Write;
+    io.stdin
+        .write_all(b"vibespace-acp-stdin\r\n")
+        .expect("session stdin must accept input");
+    drop(io.stdin); // EOF: more flushes and exits
+    let stdout = read_with_timeout(io.stdout, 20);
+    assert!(
+        stdout.contains("vibespace-acp-stdin"),
+        "session stdin must reach the child, got: {stdout}"
+    );
+    s.kill_tree().unwrap();
+}
+
+#[test]
+fn appcontainer_session_kill_tree_stops_child() {
+    let Some(launcher) = launcher_or_skip() else { return };
+    let Some(_probe) = session_or_skip(&launcher) else { return };
+    let mut s = launcher
+        .spawn_session(&spec("cmd.exe", &["/c", "more"]))
+        .expect("session spawn must succeed on capable hosts");
+    let _io = s.io().unwrap(); // stdin stays open: the child keeps running
+    assert_eq!(s.try_wait().unwrap(), None, "child must still be running");
+    s.kill_tree().expect("kill_tree must succeed");
+    assert!(
+        s.try_wait().unwrap().is_some(),
+        "after kill_tree the child must be gone"
+    );
+}
+
+#[test]
+fn appcontainer_session_missing_program_fails_visibly() {
+    let Some(launcher) = launcher_or_skip() else { return };
+    let Some(_probe) = session_or_skip(&launcher) else { return };
+    assert!(
+        launcher
+            .spawn_session(&spec("somnia-not-a-real-binary-9f3b2c.exe", &[]))
+            .is_err(),
+        "missing program must fail, never fall back unsandboxed"
+    );
 }

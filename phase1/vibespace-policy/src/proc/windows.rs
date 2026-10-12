@@ -72,6 +72,10 @@ impl ProcessLauncher for AppContainerLauncher {
     fn run(&self, spec: &ExecSpec, limits: &ProcessLimits) -> Result<super::ExecReceipt, ProcessError> {
         run_appcontainer(&self.profile_name, spec, limits)
     }
+
+    fn spawn_session(&self, spec: &ExecSpec) -> Result<Box<dyn super::SessionProcess>, ProcessError> {
+        session_spawn(&self.profile_name, spec)
+    }
 }
 
 /// MSVCRT command-line quoting: quote only when needed (space, tab, quote, empty). Quoting
@@ -387,5 +391,269 @@ fn run_appcontainer(
             stderr,
             truncated: out_t || err_t,
         })
+    }
+}
+
+// ---------- Interactive sessions (ACP stdio agents) ----------
+
+/// Start a long-lived AppContainer child with piped stdio. Same isolation as `run` (same
+/// cached profile, same zero-capability SECURITY_CAPABILITIES attribute, same MSVCRT
+/// quoting); std handles are anonymous pipes instead of temp files, and the child joins a
+/// kill-on-close job object so `kill_tree` takes down the whole tree, matching the linux
+/// bubblewrap pid-namespace contract. Fail closed: any setup failure cleans up and returns
+/// a fixed error class - there is no unsandboxed or unkillable fallback.
+#[cfg(windows)]
+fn session_spawn(
+    profile_name: &[u16],
+    spec: &ExecSpec,
+) -> Result<Box<dyn super::SessionProcess>, ProcessError> {
+    use windows_sys::Win32::Foundation::*;
+    use windows_sys::Win32::Security::SECURITY_CAPABILITIES;
+    use windows_sys::Win32::Security::SECURITY_ATTRIBUTES;
+    use windows_sys::Win32::System::JobObjects::*;
+    use windows_sys::Win32::System::Pipes::CreatePipe;
+    use windows_sys::Win32::System::Threading::*;
+
+    // The whole body is part of this module's single audited unsafe site (raw Win32
+    // profile, pipe, attribute, job and process APIs). Every call checks its return code;
+    // every handle is closed on every path.
+    #[allow(unsafe_code)]
+    unsafe {
+        let sid = cached_profile_sid(profile_name)?;
+
+        // 1. stdio pipes. Both ends start inheritable; the parent-kept ends are then made
+        //    non-inheritable so only the three child ends travel through the handle list.
+        let sa = SECURITY_ATTRIBUTES {
+            nLength: std::mem::size_of::<SECURITY_ATTRIBUTES>() as u32,
+            lpSecurityDescriptor: std::ptr::null_mut(),
+            bInheritHandle: 1,
+        };
+        let mut r_in: HANDLE = std::ptr::null_mut();
+        let mut w_in: HANDLE = std::ptr::null_mut();
+        let mut r_out: HANDLE = std::ptr::null_mut();
+        let mut w_out: HANDLE = std::ptr::null_mut();
+        let mut r_err: HANDLE = std::ptr::null_mut();
+        let mut w_err: HANDLE = std::ptr::null_mut();
+        /// Close any non-null handle from a cleanup list.
+        macro_rules! close_all {
+            ($($h:expr),*) => { $( if !($h).is_null() { CloseHandle($h); } )* };
+        }
+        if CreatePipe(&mut r_in, &mut w_in, &sa, 0) == 0 {
+            return Err(ProcessError::SpawnFailed);
+        }
+        if CreatePipe(&mut r_out, &mut w_out, &sa, 0) == 0 {
+            close_all!(r_in, w_in);
+            return Err(ProcessError::SpawnFailed);
+        }
+        if CreatePipe(&mut r_err, &mut w_err, &sa, 0) == 0 {
+            close_all!(r_in, w_in, r_out, w_out);
+            return Err(ProcessError::SpawnFailed);
+        }
+        for h in [w_in, r_out, r_err] {
+            if SetHandleInformation(h, HANDLE_FLAG_INHERIT, 0) == 0 {
+                close_all!(r_in, w_in, r_out, w_out, r_err, w_err);
+                return Err(ProcessError::SpawnFailed);
+            }
+        }
+
+        // 2. Attribute list: zero-capability AppContainer + the three child pipe ends.
+        let mut size = 0usize;
+        InitializeProcThreadAttributeList(std::ptr::null_mut(), 2, 0, &mut size);
+        if size == 0 {
+            close_all!(r_in, w_in, r_out, w_out, r_err, w_err);
+            return Err(ProcessError::SpawnFailed);
+        }
+        let mut buf = vec![0u8; size];
+        let list = buf.as_mut_ptr() as LPPROC_THREAD_ATTRIBUTE_LIST;
+        if InitializeProcThreadAttributeList(list, 2, 0, &mut size) == 0 {
+            close_all!(r_in, w_in, r_out, w_out, r_err, w_err);
+            return Err(ProcessError::SpawnFailed);
+        }
+        let mut caps = SECURITY_CAPABILITIES {
+            AppContainerSid: sid,
+            Capabilities: std::ptr::null_mut(),
+            CapabilityCount: 0,
+            Reserved: 0,
+        };
+        const PROC_THREAD_ATTRIBUTE_SECURITY_CAPABILITIES: usize = 0x0002_0009;
+        const PROC_THREAD_ATTRIBUTE_HANDLE_LIST: usize = 0x0002_0002;
+        let mut inherit = [r_in, w_out, w_err];
+        let attrs_ok = UpdateProcThreadAttribute(
+            list,
+            0,
+            PROC_THREAD_ATTRIBUTE_SECURITY_CAPABILITIES,
+            &mut caps as *mut _ as *mut _,
+            std::mem::size_of::<SECURITY_CAPABILITIES>(),
+            std::ptr::null_mut(),
+            std::ptr::null_mut(),
+        ) != 0 && UpdateProcThreadAttribute(
+            list,
+            0,
+            PROC_THREAD_ATTRIBUTE_HANDLE_LIST,
+            inherit.as_mut_ptr() as *mut _,
+            std::mem::size_of_val(&inherit),
+            std::ptr::null_mut(),
+            std::ptr::null_mut(),
+        ) != 0;
+        if !attrs_ok {
+            DeleteProcThreadAttributeList(list);
+            close_all!(r_in, w_in, r_out, w_out, r_err, w_err);
+            return Err(ProcessError::SpawnFailed);
+        }
+
+        // 3. Spawn inside the profile with the pipes wired as std handles.
+        let mut si = STARTUPINFOEXW {
+            StartupInfo: std::mem::zeroed::<STARTUPINFOW>(),
+            lpAttributeList: list,
+        };
+        si.StartupInfo.cb = std::mem::size_of::<STARTUPINFOEXW>() as u32;
+        si.StartupInfo.dwFlags = STARTF_USESTDHANDLES;
+        si.StartupInfo.hStdInput = r_in;
+        si.StartupInfo.hStdOutput = w_out;
+        si.StartupInfo.hStdError = w_err;
+        let line = std::iter::once(spec.program.as_str())
+            .chain(spec.args.iter().map(String::as_str))
+            .map(quote_arg)
+            .collect::<Vec<_>>()
+            .join(" ");
+        let mut cmdline = wide(&line);
+        let cwd_w = spec.cwd.as_ref().map(|c| wide(c));
+        let mut pi: PROCESS_INFORMATION = std::mem::zeroed();
+        let ok = CreateProcessW(
+            std::ptr::null(),
+            cmdline.as_mut_ptr(),
+            std::ptr::null(),
+            std::ptr::null(),
+            1, // bInheritHandles: the three listed pipe ends
+            EXTENDED_STARTUPINFO_PRESENT,
+            std::ptr::null(),
+            cwd_w.as_ref().map(|c| c.as_ptr()).unwrap_or(std::ptr::null()),
+            &mut si as *mut _ as *mut STARTUPINFOW,
+            &mut pi,
+        );
+        DeleteProcThreadAttributeList(list);
+        // The child owns inherited copies; the parent's child-side ends are done either way.
+        close_all!(r_in, w_out, w_err);
+        if ok == 0 {
+            close_all!(w_in, r_out, r_err);
+            return Err(ProcessError::SpawnFailed);
+        }
+        CloseHandle(pi.hThread);
+
+        // 4. Kill-on-close job: the isolation layer owns tree teardown. If the host refuses
+        //    job assignment, the child is killed and the session fails closed - an
+        //    unkillable session is never handed out.
+        let job = CreateJobObjectW(std::ptr::null(), std::ptr::null());
+        if job.is_null() {
+            let _ = TerminateProcess(pi.hProcess, 1);
+            CloseHandle(pi.hProcess);
+            close_all!(w_in, r_out, r_err);
+            return Err(ProcessError::SpawnFailed);
+        }
+        let mut info: JOBOBJECT_EXTENDED_LIMIT_INFORMATION = std::mem::zeroed();
+        info.BasicLimitInformation.LimitFlags = JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE;
+        let job_ok = SetInformationJobObject(
+            job,
+            JobObjectExtendedLimitInformation,
+            &info as *const _ as *const _,
+            std::mem::size_of::<JOBOBJECT_EXTENDED_LIMIT_INFORMATION>() as u32,
+        ) != 0 && AssignProcessToJobObject(job, pi.hProcess) != 0;
+        if !job_ok {
+            let _ = TerminateProcess(pi.hProcess, 1);
+            CloseHandle(pi.hProcess);
+            CloseHandle(job);
+            close_all!(w_in, r_out, r_err);
+            return Err(ProcessError::IsolationUnavailable(
+                "job-object assignment failed (host cannot run killable sessions)",
+            ));
+        }
+
+        use std::os::windows::io::FromRawHandle;
+        Ok(Box::new(WinSession {
+            process: pi.hProcess,
+            job,
+            closed: false,
+            exited: false,
+            stdin: Some(std::fs::File::from_raw_handle(w_in)),
+            stdout: Some(std::fs::File::from_raw_handle(r_out)),
+            stderr: Some(std::fs::File::from_raw_handle(r_err)),
+        }))
+    }
+}
+
+/// An AppContainer session child. Raw process/job handles are thread-safe to use through
+/// their Win32 APIs, so the session can move across threads like the linux child.
+#[cfg(windows)]
+struct WinSession {
+    process: *mut std::ffi::c_void,
+    job: *mut std::ffi::c_void,
+    closed: bool,
+    exited: bool,
+    stdin: Option<std::fs::File>,
+    stdout: Option<std::fs::File>,
+    stderr: Option<std::fs::File>,
+}
+
+#[cfg(windows)]
+#[allow(unsafe_code)]
+unsafe impl Send for WinSession {}
+
+#[cfg(windows)]
+impl super::SessionProcess for WinSession {
+    fn io(&mut self) -> Option<super::SessionIo> {
+        Some(super::SessionIo {
+            stdin: Box::new(self.stdin.take()?),
+            stdout: Box::new(self.stdout.take()?),
+            stderr: Box::new(self.stderr.take()?),
+        })
+    }
+
+    fn kill_tree(&mut self) -> Result<(), ProcessError> {
+        use windows_sys::Win32::Foundation::CloseHandle;
+        use windows_sys::Win32::System::JobObjects::TerminateJobObject;
+        use windows_sys::Win32::System::Threading::WaitForSingleObject;
+        if self.closed {
+            return Ok(());
+        }
+        self.closed = true;
+        self.exited = true;
+        #[allow(unsafe_code)]
+        unsafe {
+            // KILL_ON_JOB_CLOSE also covers a missed TerminateJobObject: closing the last
+            // job handle kills every process in the job.
+            let _ = TerminateJobObject(self.job, 1);
+            let _ = WaitForSingleObject(self.process, 10_000);
+            CloseHandle(self.process);
+            CloseHandle(self.job);
+        }
+        Ok(())
+    }
+
+    fn try_wait(&mut self) -> Result<Option<Option<i32>>, ProcessError> {
+        use windows_sys::Win32::System::Threading::GetExitCodeProcess;
+        if self.exited {
+            return Ok(Some(None));
+        }
+        #[allow(unsafe_code)]
+        let code = unsafe {
+            let mut code: u32 = 0;
+            if GetExitCodeProcess(self.process, &mut code) == 0 {
+                return Err(ProcessError::SpawnFailed);
+            }
+            code
+        };
+        if code == 259 /* STILL_ACTIVE */ {
+            Ok(None)
+        } else {
+            self.exited = true;
+            Ok(Some(Some(code as i32)))
+        }
+    }
+}
+
+#[cfg(windows)]
+impl Drop for WinSession {
+    fn drop(&mut self) {
+        let _ = super::SessionProcess::kill_tree(self);
     }
 }
