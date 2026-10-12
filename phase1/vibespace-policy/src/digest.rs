@@ -7,7 +7,7 @@ use sha2::{Digest, Sha256};
 use std::fmt;
 
 /// SHA-256 digest of the arguments an approval is bound to.
-#[derive(Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct ArgsDigest([u8; 32]);
 
 impl ArgsDigest {

@@ -45,6 +45,7 @@ pub mod proc;
 pub mod sanitize;
 pub mod token;
 pub mod transport;
+pub mod trust;
 pub mod ui;
 
 #[cfg(test)]
@@ -67,5 +68,10 @@ pub use proc::{
     SessionProcess,
 };
 pub use token::ApprovalToken;
+pub use trust::{
+    assess_publisher, skill_script_gate, CatalogKey, PinnedCatalog, PinnedDigest, PublisherTrust,
+    ReviewState, Revocation, RevocationList, RevocationSubject, RuntimePermission,
+    RuntimePermissions, SkillScriptGate, TrustError, TrustPosture,
+};
 pub use transport::{ModelTransportPermit, ModelTransportPolicy};
 pub use ui::{ConsentDecisionWire, PendingView};
