@@ -1,4 +1,5 @@
 import {reportError} from './log';
+import type {CommandMeta} from './shell/commandMeta';
 import {listStudios,getStudio} from './studios';
 import {studioModes} from './studios/modes';
 import {getUiContext} from './uiContextStore';
@@ -20,7 +21,8 @@ import {toggleSessionChat} from './collab/communication';
 /** Experimental fast parsing (partial reparse). On by default; the stored choice 'off' turns it off for good, a full parse is always the fallback. */
 const FAST_KEY='somnia.fastParse.v1';
 try{if(localStorage.getItem(FAST_KEY)==='off')EditorProject.incremental.enabled=false;}catch{/* storage unavailable */}
-export interface Command {id:string;title:string;category:'Project'|'Edit'|'View'|'Insert'|'Tools'|'Help';shortcut?:string;keywords?:string[];allowInInput?:boolean;enabled?:()=>boolean;run:(payload?:unknown)=>void|Promise<void>}
+/** Shell v2 (M1): `when/studio/argsSchema/agentCallable/risk` are optional metadata, see shell/commandMeta.ts. `category` is kept for compatibility; menu placement moves to MenuItemDef (M2). */
+export interface Command extends CommandMeta {id:string;title:string;/** @deprecated read-only compat: menu placement is decided by MenuItemDef */category:'Project'|'Edit'|'View'|'Insert'|'Tools'|'Help';shortcut?:string;keywords?:string[];allowInInput?:boolean;enabled?:()=>boolean;run:(payload?:unknown)=>void|Promise<void>}
 const registry=new Map<string,Command>();
 const scopes=new Set<(id:string)=>Command|undefined>();
 /** Editors can route shared Save/Undo/Close without replacing the project's registrations. */

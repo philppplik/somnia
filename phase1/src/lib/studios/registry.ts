@@ -15,6 +15,9 @@ export interface StudioDef {
  agent:{tools:readonly string[];contextProviders:readonly string[];quickActions:readonly string[]};
  /** Adapter hook: preserves the existing context derivation, rather than guessing document state. */
  deriveContext:<T>(context:T)=>T;
+ /** Shell v2 manifest (optional until the studio is migrated, M2-M6). Old manifests compile unchanged. */
+ shellV2?:import('../shell/types').StudioShellDef;
+ agentV2?:import('../shell/types').StudioAgentDefV2;
 }
 const registry=new Map<StudioId,StudioDef>();
 export function registerStudio(studio:StudioDef):()=>void {
