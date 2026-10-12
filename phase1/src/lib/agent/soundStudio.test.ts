@@ -33,6 +33,8 @@ test('registry: inspect returns metadata only; propose stages a validated full s
  await r.run('sound_propose_settings',{settings:{pitch:5,effect:{id:'plate_reverb',keepTail:true,params:{mix:80}}}},ctx,ac());
  assert.equal(JSON.parse(staged[0]).pitch,5);assert.equal(JSON.parse(staged[0]).effect.params.mix,80);
  await assert.rejects(r.run('sound_propose_settings',{settings:{pitch:50}},ctx,ac()),/pitch/);
+ await assert.rejects(r.run('sound_propose_settings',{settings:{reverse:'true'}},ctx,ac()),/boolean/);
+ await assert.rejects(r.run('sound_propose_settings',{settings:{trim:{on:true,db:-50,extra:1}}},ctx,ac()),/allowed argument/);
  await assert.rejects(r.run('sound_propose_settings',{settings:{}},ctx,ac()),/no change/);
  await assert.rejects(r.run('sound_propose_settings',{settings:{pitch:1},extra:1},ctx,ac()),/Unexpected/);
  await assert.rejects(r.run('sound_inspect',{},ctx,AbortSignal.abort()));
@@ -65,4 +67,48 @@ test('diffSound lists exactly what changed, including effect parameters',()=>{
  assert.deepEqual(diffSound(a,b).find(c=>c.id==='effect.mix'),{id:'effect.mix',before:'default',after:'80'});
  assert.deepEqual(diffSound(b,a).find(c=>c.id==='pitch'),{id:'pitch',before:'3 st',after:'0 st'});
  assert.throws(()=>diffSound(a,'{"pitch":99}'));
+});
+
+test('command specs: real schemas reject malformed nested settings before staging',async()=>{
+ const {createSoundCommandSpecs}=await import('./soundStudio');
+ const {CommandDispatcher,CommandDispatchError}=await import('../commandDispatcher');
+ const docs=new DocumentRegistry([soundAdapter]);const text=serializeSound(DEFAULT_SETTINGS);docs.sync({'a.mp3':text});
+ const staged:string[]=[];
+ const dispatcher=new CommandDispatcher();
+ const host:SoundToolHost={snapshot:()=>docs.snapshot('a.mp3'),info:()=>({name:'a.mp3',duration_s:3.5,sample_rate:44100,channels:2,rendered:null}),plugins:()=>plugins,propose:after=>{staged.push(after);}};
+ const specs=createSoundCommandSpecs(host);specs.forEach(spec=>dispatcher.register(spec));
+ assert.deepEqual(specs.map(s=>[s.id,s.level]),[['sound.inspect','read'],['sound.proposeSettings','propose']]);
+ for(const settings of [{reverse:'true'},{trim:{on:'yes',db:-50}},{trim:null},{normalize:{on:true}},{pitch:13},{fadeInMs:-1},{region:{mode:'bad',start:0,end:1}},{region:{mode:'cut',start:-1,end:1}},{effect:{id:'',keepTail:'yes',params:{}}},{effect:{id:'',keepTail:true,params:{mix:'80'}}},{effect:{id:'',keepTail:true,params:Object.fromEntries(Array.from({length:33},(_,i)=>[String(i),1]))}},{effect:{id:'',keepTail:true,params:{},extra:true}},{extra:true}]){
+  await assert.rejects(dispatcher.runCommand('sound.proposeSettings',{settings},{origin:'mcp'}),e=>e instanceof CommandDispatchError&&e.code==='invalid-params');
+ }
+ await assert.rejects(dispatcher.runCommand('sound.inspect',{extra:true},{origin:'agent'}),e=>e instanceof CommandDispatchError&&e.code==='invalid-params');
+ await assert.rejects(dispatcher.runCommand('sound.proposeSettings',{}, {origin:'agent'}),e=>e instanceof CommandDispatchError&&e.code==='invalid-params');
+ assert.equal(staged.length,0);
+ await dispatcher.runCommand('sound.proposeSettings',{settings:{pitch:4,reverse:true,region:null}},{origin:'mcp'});
+ assert.equal(staged.length,1);assert.equal(JSON.parse(staged[0]).pitch,4);
+ assert.equal(docs.snapshot('a.mp3').text,text,'proposal must not edit the source or its history');
+ const info=JSON.parse(await dispatcher.runCommand<string>('sound.inspect',{}, {origin:'agent'}));assert.equal(info.settings.pitch,0);
+ await assert.rejects(dispatcher.runCommand('sound.proposeSettings',{settings:{pitch:2}},{origin:'agent',signal:AbortSignal.abort()}));
+ assert.equal(staged.length,1);
+ assert.ok(!JSON.stringify(dispatcher.recentActivity()).includes('settings'));
+});
+
+test('command specs: enforce clip bounds and plugin ranges; independent hosts cannot retarget each other',async()=>{
+ const {createSoundCommandSpecs}=await import('./soundStudio');const {CommandDispatcher}=await import('../commandDispatcher');
+ const text=serializeSound(DEFAULT_SETTINGS);const staged:string[][]=[[],[]];
+ const hosts=staged.map((queue,i)=>{
+  const docs=new DocumentRegistry([soundAdapter]);docs.sync({[`${i}.mp3`]:text});
+  const host:SoundToolHost={snapshot:()=>docs.snapshot(`${i}.mp3`),info:()=>({name:`${i}.mp3`,duration_s:3.5,sample_rate:44100,channels:2,rendered:null}),plugins:()=>plugins,propose:a=>{queue.push(a);}};
+  const dispatcher=new CommandDispatcher();createSoundCommandSpecs(host).forEach(s=>dispatcher.register(s));return {dispatcher,host};
+ });
+ for(const {dispatcher} of hosts){
+  await assert.rejects(dispatcher.runCommand('sound.proposeSettings',{settings:{region:{mode:'cut',start:1,end:9}}},{origin:'agent'}),/region/);
+  await assert.rejects(dispatcher.runCommand('sound.proposeSettings',{settings:{region:{mode:'cut',start:1,end:1.005}}},{origin:'agent'}),/10 ms/);
+  await assert.rejects(dispatcher.runCommand('sound.proposeSettings',{settings:{effect:{id:'plate_reverb',keepTail:true,params:{mix:101}}}},{origin:'agent'}),/out of range/);
+ }
+ await hosts[0].dispatcher.runCommand('sound.proposeSettings',{settings:{pitch:2}},{origin:'agent'});
+ assert.equal(staged[0].length,1);assert.equal(staged[1].length,0);
+ assert.equal(JSON.parse(await hosts[1].dispatcher.runCommand<string>('sound.inspect',{}, {origin:'mcp'})).clip.name,'1.mp3');
+ hosts[1].host.snapshot=()=>({ref:{documentId:'wrong',path:'1.mp3',studioKind:'sound',revision:0,adapter:'other'},text});
+ await assert.rejects(hosts[1].dispatcher.runCommand('sound.inspect',{}, {origin:'agent'}),/Unsupported studio/);
 });

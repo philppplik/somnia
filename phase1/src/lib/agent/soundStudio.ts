@@ -1,5 +1,7 @@
 import type {DocumentAdapter,DocumentSnapshot} from './documentCore';
-import {AgentToolRegistry,type AgentToolSpec} from './toolRegistry';
+import {AgentToolRegistry} from './toolRegistry';
+import {CommandDispatcher} from '../commandDispatcher';
+import type {CommandSpec,CommandSchema} from '../commandSpec';
 import {DEFAULT_SETTINGS,LIMITS,sanitizeSettings,type SoundSettings} from '../sound/recipe';
 import type {SoundPlugin} from '../sound/protocol';
 /** Native AI for the Sound Studio. The "document" is the edit settings as JSON: the model never sees or writes audio bytes. */
@@ -39,19 +41,67 @@ export interface SoundToolHost{
  propose(after:string):void;
 }
 const object=(properties:Record<string,unknown>,required:string[]=[])=>({type:'object',properties,required,additionalProperties:false});
+const number=([minimum,maximum]:readonly [number,number])=>({type:'number',minimum,maximum});
+/** Partial at the top level; nested settings replace the whole setting and must be complete. */
+export const soundSettingsSchema:CommandSchema=object({
+ trim:object({on:{type:'boolean'},db:number(LIMITS.trimDb)},['on','db']),
+ reverse:{type:'boolean'},pitch:number(LIMITS.pitch),
+ region:{anyOf:[{type:'null'},object({mode:{type:'string',enum:['crop','cut','only']},start:{type:'number',minimum:0},end:{type:'number',minimum:0}},['mode','start','end'])]},
+ effect:object({id:{type:'string'},keepTail:{type:'boolean'},params:{type:'object',maxProperties:32,additionalProperties:{type:'number'}}},['id','keepTail','params']),
+ fadeInMs:number(LIMITS.fadeMs),fadeOutMs:number(LIMITS.fadeMs),
+ normalize:object({on:{type:'boolean'},db:number(LIMITS.normalizeDb)},['on','db']),
+});
+const inspectDescription='Inspect the open audio clip: duration, sample rate, channels, current edit settings, last render stats and the available effects with parameter ranges. Never returns audio data.';
+const proposeDescription='Stage new edit settings (a JSON object with any of: trim, reverse, pitch, region, effect, fadeInMs, fadeOutMs, normalize) for the user to review. Keys you omit keep their current value. Never applies or saves; the original file is never changed.';
+
+/**
+ * The host is pinned to one document/revision by panelBridge. These specs must not be
+ * registered globally: another concurrent agent run has a different host and consent scope.
+ * There are no legacy Sound UI command registrations to mirror into the palette.
+ */
+export function createSoundCommandSpecs(host:SoundToolHost):readonly CommandSpec<Record<string,unknown>,string>[] {
+ const snap=()=>{const s=host.snapshot();if(s.ref.studioKind!=='sound'||s.ref.adapter!==soundAdapter.id)throw Error('Unsupported studio.');return s;};
+ return [
+  {
+   id:'sound.inspect',title:'Inspect audio clip',category:'Tools',level:'read',params:object({}),result:{type:'string'},
+   run:()=>{
+    // History: none. This command only reads the scoped clip metadata and settings.
+    const s=snap(),i=host.info();if(!i)throw Error('Audio is still loading.');
+    return JSON.stringify({document:s.ref,clip:{name:i.name,duration_s:i.duration_s,sample_rate:i.sample_rate,channels:i.channels},settings:JSON.parse(s.text),render:i.rendered,limits:{pitch_semitones:LIMITS.pitch,fade_ms:LIMITS.fadeMs,trim_db:LIMITS.trimDb,normalize_db:LIMITS.normalizeDb},effects:host.plugins().map(p=>({id:p.id,name:p.name,params:(p.params??[]).map(x=>({id:x.id,name:x.name,min:x.min,max:x.max,default:x.default,unit:x.unit,choices:x.choices}))}))});
+   },
+  },
+  {
+   id:'sound.proposeSettings',title:'Propose audio settings',category:'Tools',level:'propose',
+   params:object({settings:{...soundSettingsSchema,description:'Partial settings, same shape as sound_inspect settings.'}},['settings']),result:{type:'string'},
+   run:a=>{
+    // History: none at proposal time. User acceptance owns the Sound workspace's
+    // applySound/undoSound transaction stack; never edit session settings here.
+    const s=snap(),i=host.info();if(!i)throw Error('Audio is still loading.');
+    const after=serializeSound(parseSound(JSON.stringify({...JSON.parse(s.text),...(a.settings as object)}),host.plugins(),i.duration_s));
+    if(after===s.text)throw Error('Proposal makes no change.');
+    host.propose(after);return 'Staged for review. Nothing is applied until the user accepts.';
+   },
+  },
+ ];
+}
+
 export function createSoundStudioRegistry(host:SoundToolHost):AgentToolRegistry{
- const snap=()=>{const s=host.snapshot();if(s.ref.studioKind!=='sound'||!s.ref.adapter)throw Error('Unsupported studio.');return s;};
- const spec=(name:string,level:'read'|'propose',description:string,properties:Record<string,unknown>,required:string[],run:AgentToolSpec['run']):AgentToolSpec=>({level,definition:{name,description,parameters:object(properties,required)},run:async(a,c,sig)=>{sig.throwIfAborted();if(Object.keys(a).some(k=>!Object.hasOwn(properties,k)))throw Error('Unexpected Sound arguments.');return run(a,c,sig);}});
- return new AgentToolRegistry()
-  .register(spec('sound_inspect','read','Inspect the open audio clip: duration, sample rate, channels, current edit settings, last render stats and the available effects with parameter ranges. Never returns audio data.',{},[],async()=>{
-   const s=snap(),i=host.info();if(!i)throw Error('Audio is still loading.');
-   return JSON.stringify({document:s.ref,clip:{name:i.name,duration_s:i.duration_s,sample_rate:i.sample_rate,channels:i.channels},settings:JSON.parse(s.text),render:i.rendered,limits:{pitch_semitones:LIMITS.pitch,fade_ms:LIMITS.fadeMs,trim_db:LIMITS.trimDb,normalize_db:LIMITS.normalizeDb},effects:host.plugins().map(p=>({id:p.id,name:p.name,params:(p.params??[]).map(x=>({id:x.id,name:x.name,min:x.min,max:x.max,default:x.default,unit:x.unit,choices:x.choices}))}))});
-  }))
-  .register(spec('sound_propose_settings','propose','Stage new edit settings (a JSON object with any of: trim, reverse, pitch, region, effect, fadeInMs, fadeOutMs, normalize) for the user to review. Keys you omit keep their current value. Never applies or saves; the original file is never changed.',{settings:{type:'object',description:'Partial settings, same shape as sound_inspect settings.'}},['settings'],async a=>{
-   const s=snap(),i=host.info();if(!i)throw Error('Audio is still loading.');
-   if(!a.settings||typeof a.settings!=='object'||Array.isArray(a.settings))throw Error('settings must be an object.');
-   const after=serializeSound(parseSound(JSON.stringify({...JSON.parse(s.text),...(a.settings as object)}),host.plugins(),i.duration_s));
-   if(after===s.text)throw Error('Proposal makes no change.');
-   host.propose(after);return 'Staged for review. Nothing is applied until the user accepts.';
-  }));
+ const dispatcher=new CommandDispatcher();
+ const registry=new AgentToolRegistry();
+ const tools=[{name:'sound_inspect',description:inspectDescription},{name:'sound_propose_settings',description:proposeDescription}];
+ createSoundCommandSpecs(host).forEach((command,index)=>{
+  dispatcher.register(command);
+  registry.register({
+   level:command.level as 'read'|'propose',
+   definition:{...tools[index],parameters:command.params!},
+   run:async(args,_context,signal)=>{
+    // Keep the existing unknown-top-level-key error while dispatcher validation also
+    // protects direct command clients and validates all nested settings.
+    const properties=command.params!.properties as Record<string,unknown>;
+    if(Object.keys(args).some(k=>!Object.hasOwn(properties,k)))throw Error('Unexpected Sound arguments.');
+    return dispatcher.runCommand<string>(command.id,args,{origin:'agent',signal});
+   },
+  });
+ });
+ return registry;
 }
