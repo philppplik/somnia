@@ -73,6 +73,9 @@ jobs:
       - name: Render goldens (blocking, runner-baselined with approval receipt 2026-10-12)
         id: render_goldens
         run: npm run test:render-goldens
+      - name: Render determinism probe (two separate runs, identical hashes)
+        continue-on-error: true
+        run: npm run test:render-determinism
       - name: Retain render golden diffs
         if: ${{ always() && steps.render_goldens.outcome == 'failure' }}
         uses: actions/upload-artifact@v7
