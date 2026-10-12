@@ -10,6 +10,7 @@ use crate::action::*;
 use crate::audit::{AuditEvent, AuditKind, AuditLog, AuditSnapshot};
 use crate::clock::{Clock, SystemClock};
 use crate::digest::{ct_eq, hex, random, sha256, ArgsDigest};
+use crate::mcp::{McpGrantRec, McpGrantView, McpPending};
 use crate::error::{ConsumeError, PolicyError};
 use crate::impact::classify;
 use crate::sanitize::{sanitize_target, sanitize_text};
@@ -241,6 +242,8 @@ struct PendingRec {
     offered: Vec<UserDecision>,
     created_at: u64,
     expires_at: u64,
+    /// Set only for MCP requests: the digest-bound data an MCP grant is created from.
+    mcp: Option<McpPending>,
 }
 
 enum Outcome {
@@ -259,6 +262,8 @@ struct RunRec {
     /// always-ask and no run grant can be created for it.
     elevated_exec: bool,
     network_enforced: bool,
+    /// MCP grants: a separate, stronger store (digest-bound), never mixed with folder grants.
+    mcp_grants: Vec<McpGrantRec>,
 }
 
 struct Inner {
@@ -480,8 +485,9 @@ impl Inner {
             return Err(PolicyError::RunNotActive);
         }
         rec.state = to;
-        let dropped_grants = rec.grants.len();
+        let dropped_grants = rec.grants.len() + rec.mcp_grants.len();
         rec.grants.clear();
+        rec.mcp_grants.clear();
         let scope_id = rec.scope.scope_id.clone();
         let mut revoked = 0;
         let ids: Vec<ProposalId> = self
@@ -583,6 +589,45 @@ impl Inner {
         for _ in 0..n {
             self.log(
                 AuditKind::GrantRevoked,
+                Some(run_id),
+                Some(&scope),
+                None,
+                None,
+                "",
+                None,
+                "",
+            );
+        }
+        Ok(n)
+    }
+
+    /// Revoke MCP grants only. Folder/run grants are untouched (separate stores).
+    fn revoke_mcp_grant_inner(
+        &mut self,
+        run_id: &RunId,
+        grant: Option<&GrantId>,
+    ) -> Result<usize, PolicyError> {
+        let rec = self.runs.get_mut(run_id).ok_or(PolicyError::UnknownRun)?;
+        let removed: Vec<GrantId> = rec
+            .mcp_grants
+            .iter()
+            .filter(|mg| grant.map(|x| x == &mg.id).unwrap_or(true))
+            .map(|mg| mg.id.clone())
+            .collect();
+        rec.mcp_grants.retain(|mg| !removed.contains(&mg.id));
+        let n = removed.len();
+        let scope = rec.scope.scope_id.clone();
+        // Tokens minted from a revoked grant die with it.
+        for t in self.tokens.values_mut() {
+            if let Via::Grant(g) = &t.via {
+                if removed.contains(g) && t.state == TokState::Issued {
+                    t.state = TokState::Revoked;
+                }
+            }
+        }
+        for _ in 0..n {
+            self.log(
+                AuditKind::McpGrantRevoked,
                 Some(run_id),
                 Some(&scope),
                 None,
@@ -837,6 +882,129 @@ impl AgentHandle {
             created_at: now,
             expires_at: now.saturating_add(g.cfg.pending_ttl.as_millis() as u64),
             binding: binding.clone(),
+            mcp: None,
+        };
+        g.pending.insert(id.clone(), rec);
+        g.log_b(
+            AuditKind::Queued,
+            Some(&id),
+            &binding,
+            if always_ask { "always_ask" } else { "ask" },
+        );
+        Ok(ProposeResult::Pending(id))
+    }
+
+    /// The explicit MCP route (see [`crate::mcp`]). Never a silent pass: no `Via::Policy`, no
+    /// autonomy level and no folder grant applies. Auto-allows only through an exact,
+    /// digest-bound MCP grant of this run.
+    pub(crate) fn propose_mcp(
+        &self,
+        p: Proposal,
+        mcp: McpPending,
+    ) -> Result<ProposeResult, PolicyError> {
+        let mut g = self.shared.lock()?;
+        g.sweep();
+        if p.kind != ActionKind::Mcp {
+            return Err(PolicyError::InvalidProposal("kind"));
+        }
+        if p.target.is_empty()
+            || p.target.chars().count() > g.cfg.max_target_chars
+            || p.target.chars().any(|c| c.is_control())
+        {
+            return Err(PolicyError::InvalidProposal("target"));
+        }
+        if p.reason.len() > 16 * 1024 {
+            return Err(PolicyError::InvalidProposal("reason too long"));
+        }
+        let binding = ExecutionBinding {
+            run_id: p.run_id.clone(),
+            scope_id: p.scope_id.clone(),
+            kind: p.kind,
+            target: p.target.clone(),
+            args_digest: p.args_digest,
+        };
+        let id = new_proposal_id()?;
+        g.log_b(AuditKind::Proposed, Some(&id), &binding, "");
+
+        macro_rules! deny {
+            ($r:expr) => {{
+                let r: DenyReason = $r;
+                g.log_b(AuditKind::Denied, Some(&id), &binding, r.as_str());
+                return Ok(ProposeResult::Denied(r));
+            }};
+        }
+
+        let (scope, state, granted) = match g.runs.get(&p.run_id) {
+            None => deny!(DenyReason::UnknownRun),
+            Some(r) => (
+                r.scope.clone(),
+                r.state,
+                r.mcp_grants
+                    .iter()
+                    .find(|mg| {
+                        mg.server == mcp.server
+                            && mg.tool == mcp.tool
+                            && mg.schema_digest == mcp.schema_digest
+                    })
+                    .map(|mg| mg.id.clone()),
+            ),
+        };
+        if state != RunState::Active {
+            deny!(DenyReason::RunNotActive);
+        }
+        if scope.scope_id != p.scope_id {
+            deny!(DenyReason::ScopeMismatch);
+        }
+        if !scope.allowed_kinds.contains(&ActionKind::Mcp) {
+            deny!(DenyReason::KindNotInScope);
+        }
+
+        // Baseline always-ask (credential-like targets, send/purchase/payment words): only
+        // Deny / AllowOnce are offered and no MCP grant can be created.
+        let impact = classify(p.kind, &p.target, &p.declared_impact);
+        let always_ask = !impact.is_empty();
+
+        if !always_ask {
+            if let Some(gid) = granted {
+                if g.issued_for_run(&p.run_id) >= g.cfg.max_tokens_per_run {
+                    deny!(DenyReason::QueueFull);
+                }
+                let tok = g.mint(&id, &binding, Via::Grant(gid), self.shared.broker_id)?;
+                g.log_b(AuditKind::AutoAllowed, Some(&id), &binding, "mcp_grant");
+                return Ok(ProposeResult::Approved {
+                    id,
+                    token: tok,
+                    basis: Decision::AllowForRun,
+                });
+            }
+        }
+
+        if g.pending.len() >= g.cfg.max_pending_total
+            || g.pending_for_run(&p.run_id) >= g.cfg.max_pending_per_run
+        {
+            deny!(DenyReason::QueueFull);
+        }
+        let offered = if always_ask {
+            vec![UserDecision::Deny, UserDecision::AllowOnce]
+        } else {
+            vec![
+                UserDecision::Deny,
+                UserDecision::AllowOnce,
+                UserDecision::AllowForRun,
+            ]
+        };
+        let now = g.now();
+        let rec = PendingRec {
+            id: id.clone(),
+            binding: binding.clone(),
+            shown_target: sanitize_target(&p.target, g.cfg.max_target_chars),
+            reason: sanitize_text(&p.reason, g.cfg.max_reason_chars),
+            origin: p.origin.clone(),
+            impact,
+            offered,
+            created_at: now,
+            expires_at: now.saturating_add(g.cfg.pending_ttl.as_millis() as u64),
+            mcp: Some(mcp),
         };
         g.pending.insert(id.clone(), rec);
         g.log_b(
@@ -935,7 +1103,10 @@ impl AgentHandle {
             let live = g
                 .runs
                 .get(&binding.run_id)
-                .map(|r| r.grants.iter().any(|(i, _, _)| i == gid))
+                .map(|r| {
+                    r.grants.iter().any(|(i, _, _)| i == gid)
+                        || r.mcp_grants.iter().any(|mg| &mg.id == gid)
+                })
                 .unwrap_or(false);
             if !live {
                 if let Some(t) = g.tokens.get_mut(&pid) {
@@ -999,7 +1170,9 @@ impl ExecutionGuard {
             return Err(ConsumeError::RunNotActive);
         }
         if let Via::Grant(gid) = &self.via {
-            if !run.grants.iter().any(|(i, _, _)| i == gid) {
+            let live = run.grants.iter().any(|(i, _, _)| i == gid)
+                || run.mcp_grants.iter().any(|mg| &mg.id == gid);
+            if !live {
                 return Err(ConsumeError::Revoked);
             }
         }
@@ -1106,6 +1279,7 @@ impl UiHandle {
             .ok_or(PolicyError::UnknownPending)?;
         let binding = rec.binding.clone();
         let offered = rec.offered.clone();
+        let mcp_pending = rec.mcp.clone();
         let run_state = g.runs.get(&binding.run_id).map(|r| r.state);
         if run_state != Some(RunState::Active) {
             g.pending.remove(request_id);
@@ -1139,26 +1313,61 @@ impl UiHandle {
             UserDecision::AllowForRun => {
                 let gid = GrantId::new(format!("grant-{}", hex(&random::<8>()?)))?;
                 let max = g.cfg.max_grants_per_run;
-                let existing = g.runs.get(&binding.run_id).and_then(|r| {
-                    r.grants
-                        .iter()
-                        .find(|(_, k, t)| *k == binding.kind && *t == binding.target)
-                        .map(|(i, _, _)| i.clone())
-                });
-                let gid = match existing {
-                    Some(e) => e,
-                    None => {
-                        let r = g
-                            .runs
-                            .get_mut(&binding.run_id)
-                            .ok_or(PolicyError::UnknownRun)?;
-                        if r.grants.len() >= max {
-                            return Err(PolicyError::InvalidProposal("grant limit"));
+                let gid = if let Some(mcp) = &mcp_pending {
+                    // MCP grants are their own, stronger type: digest-bound and stored apart
+                    // from folder/run grants.
+                    let existing = g.runs.get(&binding.run_id).and_then(|r| {
+                        r.mcp_grants
+                            .iter()
+                            .find(|mg| {
+                                mg.server == mcp.server
+                                    && mg.tool == mcp.tool
+                                    && mg.schema_digest == mcp.schema_digest
+                            })
+                            .map(|mg| mg.id.clone())
+                    });
+                    match existing {
+                        Some(e) => e,
+                        None => {
+                            let r = g
+                                .runs
+                                .get_mut(&binding.run_id)
+                                .ok_or(PolicyError::UnknownRun)?;
+                            if r.mcp_grants.len() >= max {
+                                return Err(PolicyError::InvalidProposal("grant limit"));
+                            }
+                            r.mcp_grants.push(McpGrantRec {
+                                id: gid.clone(),
+                                server: mcp.server.clone(),
+                                tool: mcp.tool.clone(),
+                                schema_digest: mcp.schema_digest,
+                            });
+                            g.log_b(AuditKind::McpGrantCreated, Some(request_id), &binding, "");
+                            gid
                         }
+                    }
+                } else {
+                    let existing = g.runs.get(&binding.run_id).and_then(|r| {
                         r.grants
-                            .push((gid.clone(), binding.kind, binding.target.clone()));
-                        g.log_b(AuditKind::GrantCreated, Some(request_id), &binding, "");
-                        gid
+                            .iter()
+                            .find(|(_, k, t)| *k == binding.kind && *t == binding.target)
+                            .map(|(i, _, _)| i.clone())
+                    });
+                    match existing {
+                        Some(e) => e,
+                        None => {
+                            let r = g
+                                .runs
+                                .get_mut(&binding.run_id)
+                                .ok_or(PolicyError::UnknownRun)?;
+                            if r.grants.len() >= max {
+                                return Err(PolicyError::InvalidProposal("grant limit"));
+                            }
+                            r.grants
+                                .push((gid.clone(), binding.kind, binding.target.clone()));
+                            g.log_b(AuditKind::GrantCreated, Some(request_id), &binding, "");
+                            gid
+                        }
                     }
                 };
                 let tok = g.mint(request_id, &binding, Via::Grant(gid), self.shared.broker_id)?;
@@ -1209,10 +1418,39 @@ impl UiHandle {
         self.shared.lock()?.revoke_grant_inner(run, None)
     }
 
+    /// Active MCP grants of a run (separate, digest-bound store).
+    pub fn mcp_grants(&self, run: &RunId) -> Result<Vec<McpGrantView>, PolicyError> {
+        mcp_grants(&self.shared, run)
+    }
+
+    /// Revoke one MCP grant (and any unused token minted from it). Folder grants are untouched.
+    pub fn revoke_mcp_grant(&self, run: &RunId, grant: &GrantId) -> Result<usize, PolicyError> {
+        self.shared.lock()?.revoke_mcp_grant_inner(run, Some(grant))
+    }
+
+    /// Revoke all MCP grants of a run. Folder grants are untouched.
+    pub fn revoke_all_mcp_grants(&self, run: &RunId) -> Result<usize, PolicyError> {
+        self.shared.lock()?.revoke_mcp_grant_inner(run, None)
+    }
+
     /// Audit tail.
     pub fn audit(&self, last: usize) -> Result<AuditSnapshot, PolicyError> {
         Ok(self.shared.lock()?.audit.snapshot(last))
     }
+}
+
+fn mcp_grants(shared: &Shared, run: &RunId) -> Result<Vec<McpGrantView>, PolicyError> {
+    let g = shared.lock()?;
+    let r = g.runs.get(run).ok_or(PolicyError::UnknownRun)?;
+    Ok(r.mcp_grants
+        .iter()
+        .map(|mg| McpGrantView {
+            grant_id: mg.id.clone(),
+            server: sanitize_text(&mg.server, 80),
+            tool: sanitize_text(&mg.tool, 128),
+            schema_digest: mg.schema_digest.to_hex(),
+        })
+        .collect())
 }
 
 fn grants(shared: &Shared, run: &RunId) -> Result<Vec<GrantView>, PolicyError> {
@@ -1253,6 +1491,7 @@ impl RunControl {
                 process_enforced: false,
                 elevated_exec: false,
                 network_enforced: false,
+                mcp_grants: Vec::new(),
             },
         );
         g.log(
@@ -1317,6 +1556,21 @@ impl RunControl {
     /// Revoke all grants of a run.
     pub fn revoke_all_grants(&self, run: &RunId) -> Result<usize, PolicyError> {
         self.shared.lock()?.revoke_grant_inner(run, None)
+    }
+
+    /// Active MCP grants of a run (separate, digest-bound store).
+    pub fn mcp_grants(&self, run: &RunId) -> Result<Vec<McpGrantView>, PolicyError> {
+        mcp_grants(&self.shared, run)
+    }
+
+    /// Revoke one MCP grant (and any unused token minted from it). Folder grants are untouched.
+    pub fn revoke_mcp_grant(&self, run: &RunId, grant: &GrantId) -> Result<usize, PolicyError> {
+        self.shared.lock()?.revoke_mcp_grant_inner(run, Some(grant))
+    }
+
+    /// Revoke all MCP grants of a run. Folder grants are untouched.
+    pub fn revoke_all_mcp_grants(&self, run: &RunId) -> Result<usize, PolicyError> {
+        self.shared.lock()?.revoke_mcp_grant_inner(run, None)
     }
 
     /// Audit tail.

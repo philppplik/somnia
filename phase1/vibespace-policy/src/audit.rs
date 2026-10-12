@@ -49,6 +49,10 @@ pub enum AuditKind {
     ProxyRelay,
     /// Domain proxy refused a connection (detail = reason class).
     ProxyRefused,
+    /// MCP grant created (digest-bound, separate from folder/run grants).
+    McpGrantCreated,
+    /// MCP grant revoked.
+    McpGrantRevoked,
 }
 
 /// One audit line.

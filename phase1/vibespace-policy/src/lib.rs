@@ -8,8 +8,15 @@
 //! * [`FileExecutor`] re-checks the token against its own arguments at execution time.
 //! * Policy v2: shell runs only through a [`proc::ProcessExecutor`] (OS-isolated, fail-closed;
 //!   elevated arbitrary exec is a separate explicit mode), tool network only through the
-//!   broker-owned [`net::DomainProxy`]. MCP and desktop still have no enforcement and are
-//!   always denied. macOS has no process execution ("not available", no fallback).
+//!   broker-owned [`net::DomainProxy`]. macOS has no process execution ("not available", no
+//!   fallback).
+//! * MCP tool calls have no OS-level enforcement, so the generic propose path still always
+//!   denies them. They run only through the explicit [`mcp::McpRoute`]: its own, stronger
+//!   grant type (digest-bound, stored apart from folder grants), one-time tokens, never a
+//!   silent broker pass. Desktop control has no route and stays denied.
+//! * Extension/MCP trust (publisher, review, digest, runtime permissions as separate axes,
+//!   pinned minisign catalog, signed sequenced revocations, restricted default) lives in
+//!   [`trust`]. It decides what may be installed or offered; the broker still gates effects.
 //!
 //! ```
 //! use vibespace_policy::*;
@@ -40,6 +47,7 @@ pub mod error;
 pub mod executor;
 pub mod fs;
 pub mod impact;
+pub mod mcp;
 pub mod net;
 pub mod proc;
 pub mod sanitize;
@@ -58,6 +66,7 @@ pub use clock::{Clock, ManualClock, SystemClock};
 pub use digest::ArgsDigest;
 pub use error::{ConsumeError, PolicyError};
 pub use executor::{ExecError, FileExecutor, FileLimits, IsolatedRoot, WriteReceipt};
+pub use mcp::{McpCallPermit, McpError, McpGrantView, McpRoute, McpToolRef, MAX_CALL_ARGS_BYTES};
 pub use fs::{FsError, IsolationLevel, ISOLATED_MARKER};
 pub use net::{
     is_public_ip, Domain, DomainProxy, FetchRequest, NetError, NetworkExecutor, ProxyConfig,

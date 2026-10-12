@@ -1,6 +1,6 @@
 # Vibe Space policy: consent broker, approval tokens, scoped file executor
 
-Crate: `phase1/vibespace-policy` (`vibespace-policy`, lib `vibespace_policy`). Standalone, no Tauri, no shared manifest. Dependencies: `serde`, `serde_json`, `sha2`, `getrandom`, `libc` (unix), `cap-std` 3 and `cap-fs-ext` 3 (non-unix only, or with the test feature `cap-layer`). `cap-std` is already a dependency of `somnia-desktop`; `cap-fs-ext` is new (same author, same version line). Basis: `docs/concepts/vibespace.md` principle 4, A5, A6, A11, A14, A15, 4.4, 5.4 and D5. Verified on Rust 1.95.0 (`rust-toolchain.toml`).
+Crate: `phase1/vibespace-policy` (`vibespace-policy`, lib `vibespace_policy`). Standalone, no Tauri, no shared manifest. Dependencies: `serde`, `serde_json`, `sha2`, `getrandom`, `ring` (Ed25519 verification for the trust layer; already in the tree via `rustls`), `libc` (unix), `cap-std` 3 and `cap-fs-ext` 3 (non-unix only, or with the test feature `cap-layer`). `cap-std` is already a dependency of `somnia-desktop`; `cap-fs-ext` is new (same author, same version line). Basis: `docs/concepts/vibespace.md` principle 4, A5, A6, A11, A14, A15, 4.4, 5.4 and D5. Verified on Rust 1.95.0 (`rust-toolchain.toml`).
 
 ## What it does
 
@@ -25,12 +25,47 @@ Three handles come from `ConsentBroker::new()`:
 
 1. Unknown run, ended run, scope id differing from the registered scope: **Deny**.
 2. Kind not in the run scope's `allowed_kinds`: **Deny**.
-3. **No enforcement for the capability: Deny.** Read/Write/Delete are enforced only for a run scope that has a `FileExecutor` attached. Shell, network, MCP and desktop have no enforcement in this crate and are always denied, even if a scope lists them, even from a Verified skill, even if the host permitted a model endpoint.
+3. **No enforcement for the capability: Deny.** Read/Write/Delete are enforced only for a run scope that has a `FileExecutor` attached. Shell is enforced only with a `ProcessExecutor` attached, network only with a `NetworkExecutor`/`DomainProxy` attached. MCP and desktop have no OS-level enforcement: the generic propose path always denies them, even if a scope lists them, even from a Verified skill, even if the host permitted a model endpoint. MCP calls are possible only through the explicit route below; desktop has no route and stays denied.
 4. `Autonomy::ReadOnly` denies write and delete.
 5. Baseline always-ask (`impact::classify`): delete, anything tagged send / purchase / credential / payment (declared by trusted tool metadata, plus heuristics on the target, for example `.env`, `*.pem`, `.ssh/`, `secrets.json`). Always **Ask**, only `Deny`/`AllowOnce` are offered, no run grant is created or honoured, no autonomy level or skill `allowed-tools` changes this. Heuristics can only add asks.
 6. Otherwise: read in scope is allowed; an existing run grant for the exact kind and target is allowed; write under `AllowWritesInCopy` is allowed; everything else (default D5: writes) is **Ask**.
 
 Unattended (scheduled) runs follow the same rules; their asks wait in the queue (`attended: false` in the view, "needs you"). Nothing auto-allows because nobody is watching.
+
+## MCP route and grant type separation (A7)
+
+The generic `propose()` path keeps denying `ActionKind::Mcp` with `no_enforcement` — never a
+silent broker pass. The only way an MCP tool call happens is `mcp::McpRoute`:
+
+1. `McpRoute::propose_call(tool, args, reason, origin)` submits a proposal whose target is
+   `mcp://<server>/<tool>` and whose args digest covers the pinned schema digest **and** the
+   canonical argument bytes. The scope must list `ActionKind::Mcp` in `allowed_kinds`.
+2. The broker auto-allows only when an **MCP grant** matches exactly: run, server, tool and
+   schema digest. MCP grants are a separate, stronger grant type: they live in their own store,
+   are created only by an `AllowForRun` decision on an MCP ask, are listed and revoked through
+   their own APIs (`mcp_grants`, `revoke_mcp_grant`, `revoke_all_mcp_grants` on `UiHandle` and
+   `RunControl`), and are dropped when the run ends. Folder/run grants never cover MCP calls and
+   MCP grants never cover files; revoking one store leaves the other live. No autonomy level and
+   no `Via::Policy` path applies to MCP.
+3. High-impact targets (send/purchase/credential/payment heuristics) offer only Deny/AllowOnce
+   and cannot create grants.
+4. `McpRoute::call(token, tool, args)` consumes the one-time token against the re-derived
+   binding (substituted server, tool, schema or arguments burn it) and returns an
+   `McpCallPermit`; the host performs the call only while holding it and reports the outcome
+   through it.
+
+## Extension/MCP trust (`trust.rs`, A7)
+
+Four separate axes: **publisher** (minisign signature against a host-pinned `PinnedCatalog`;
+only pure-Ed25519 `Ed` payloads accepted), **review** (unreviewed/scanned/reviewed, never
+inferred from publisher), **content digest** (pinned at install/consent; a change drops derived
+approvals) and **runtime permissions** (restricted default: none granted). Signed, sequenced
+revocations (`RevocationList`): the signer must be a pinned revocation key that is not itself
+revoked, and the sequence must be exactly the next expected one — gaps and replays are rejected.
+`skill_script_gate` maps a skill's trust tier to script behaviour: unreviewed disables scripts;
+scanned/verified still need consent per run, only ever through `ProcessExecutor::propose_exec`
+with `Origin::Skill`. Trust decides what may be installed or offered; the broker still gates
+every effect.
 
 ## Tokens
 
