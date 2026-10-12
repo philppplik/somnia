@@ -66,9 +66,8 @@ jobs:
       - run: npm run test:e2e
       - name: Render corpus guards
         run: npm run test:render-corpus
-      - name: Render goldens probe (non-blocking, checks runner pixel parity)
+      - name: Render goldens (blocking, runner pixel parity verified in two runs)
         id: render_goldens
-        continue-on-error: true
         run: npm run test:render-goldens
       - name: Retain render golden diffs
         if: ${{ always() && steps.render_goldens.outcome == 'failure' }}
