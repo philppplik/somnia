@@ -4,7 +4,8 @@ import {installHoldBackend,isAgentAutosaveHeld,releaseAgentAutosave,clearAgentAu
 import {setCloseHandlers,requestClose} from './closeFlow';
 import {EditorProject} from '@somnia/editor-core';
 import {connectEditorProject,getState,markFileSaved,patchState,refreshProject} from '../store/appStore';
-import {registerCommand,executeNativeMenuCommand} from './commands';
+import {registerCommand} from './commandRegistry';
+import {executeNativeMenuCommand} from './commands';
 import {registerCommandSpec} from './commandBridge';
 import {registerCoreCommandSpec} from './coreCommandRegistration';
 import {commandDispatcher} from './commandDispatcher';

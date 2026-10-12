@@ -8,7 +8,7 @@
  * Palette and shortcut resolution stay in registerCommandScope.
  * No extra palette entries and no cross-studio history are introduced.
  */
-import { registerCommandScope, type Command } from '../commands';
+import { registerCommandScope, type Command } from '../commandRegistry';
 import { specToCommand } from '../commandBridge';
 import { CommandDispatcher } from '../commandDispatcher';
 import type { CommandSpec } from '../commandSpec';

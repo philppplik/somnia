@@ -2,7 +2,10 @@ import {commandRegistry as registry} from './commandRegistry';
 export {registerCommand} from './commandRegistry';
 import {registerCoreCommandSpec,NO_CORE_PARAMS} from './coreCommandRegistration';
 import {reportError} from './log';
-import type {CommandMeta} from './shell/commandMeta';
+import {scopedCommand as scoped} from './commandRegistry';
+import type {Command} from './commandRegistry';
+export {registerCommandScope} from './commandRegistry';
+export type {Command} from './commandRegistry';
 import {listStudios,getStudio} from './studios';
 import {studioModes} from './studios/modes';
 import {getUiContext} from './uiContextStore';
@@ -24,13 +27,6 @@ import {toggleSessionChat} from './collab/communication';
 /** Experimental fast parsing (partial reparse). On by default; the stored choice 'off' turns it off for good, a full parse is always the fallback. */
 const FAST_KEY='somnia.fastParse.v1';
 try{if(localStorage.getItem(FAST_KEY)==='off')EditorProject.incremental.enabled=false;}catch{/* storage unavailable */}
-/** Shell v2 (M1): `when/studio/argsSchema/agentCallable/risk` are optional metadata, see shell/commandMeta.ts. `category` is kept for compatibility; menu placement moves to MenuItemDef (M2). */
-export interface Command extends CommandMeta {id:string;title:string;/** @deprecated read-only compat: menu placement is decided by MenuItemDef */category:'Project'|'Edit'|'View'|'Insert'|'Tools'|'Help';shortcut?:string;keywords?:string[];allowInInput?:boolean;enabled?:()=>boolean;run:(payload?:unknown)=>void|Promise<void>}
-const scopes=new Set<(id:string)=>Command|undefined>();
-/** Editors can route shared Save/Undo/Close without replacing the project's registrations. */
-export function registerCommandScope(resolve:(id:string)=>Command|undefined){scopes.add(resolve);return()=>{scopes.delete(resolve);};}
-const scoped=(id:string)=>[...scopes].reverse().map(resolve=>resolve(id)).find(Boolean);
-
 const SC_KEY='somnia.shortcuts.v1';
 /** User overrides: command id -> shortcut string, '' = disabled. Defaults live on the commands. */
 export function shortcutOverrides():Record<string,string>{try{const v=JSON.parse(localStorage.getItem(SC_KEY)||'{}');return v&&typeof v==='object'&&!Array.isArray(v)?Object.fromEntries(Object.entries(v).filter(([,x])=>typeof x==='string')) as Record<string,string>:{};}catch{return{};}}

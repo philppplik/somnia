@@ -5,7 +5,6 @@
  */
 import { registerCommandSpec } from '../commandBridge';
 import type { CommandSchema, CommandSpec } from '../commandSpec';
-import { getState } from '../../store/appStore';
 import type { Point, Style, VectorDocument, VectorPath } from '../vectorio';
 import * as S from './session';
 
@@ -36,9 +35,6 @@ const path = object({
 }, ['id', 'closed', 'nodes']);
 const document = object({ width: size, height: size, paths: { type: 'array', items: path, maxItems: 200 } }, ['width', 'height', 'paths']);
 const empty = object();
-const active = () => getState().activeStudio === 'vector';
-const open = () => active() && S.getVectorSession().open;
-const selection = () => open() && S.getVectorSession().selection.length > 0;
 const target = (pathId: string, nodeId?: string) => {
   const p = S.getVectorSession().doc.paths.find(p => p.id === pathId);
   if (!p || (nodeId !== undefined && !p.nodes.some(n => n.id === nodeId))) {
@@ -47,8 +43,10 @@ const target = (pathId: string, nodeId?: string) => {
 };
 const nodeParams = { pathId: id, nodeId: id };
 
-/** Pure construction seam for isolated dispatcher tests; registration uses the same specs. */
-export function vectorCommandSpecs(): CommandSpec<any, unknown>[] {
+/** The studio owner supplies live enablement without an upward import to the app store. */
+export function vectorCommandSpecs(active: () => boolean): CommandSpec<any, unknown>[] {
+  const open = () => active() && S.getVectorSession().open;
+  const selection = () => open() && S.getVectorSession().selection.length > 0;
   return [
     { id: 'vector.inspect', title: 'Inspect vector document', category: 'Tools', level: 'read', params: empty,
       run: () => { /* History: none; detached inspection only. */ return structuredClone(S.getVectorSession()); } },
@@ -134,10 +132,10 @@ export function vectorCommandSpecs(): CommandSpec<any, unknown>[] {
 
 let dispose: (() => void) | undefined;
 /** Idempotent install; the studio dynamically loads this module to avoid the commands/studios cycle. */
-export function registerVectorCommands(): () => void {
+export function registerVectorCommands(active: () => boolean): () => void {
   if (dispose) return dispose;
   const off: (() => void)[] = [];
-  try { for (const spec of vectorCommandSpecs()) off.push(registerCommandSpec(spec)); }
+  try { for (const spec of vectorCommandSpecs(active)) off.push(registerCommandSpec(spec)); }
   catch (error) { off.reverse().forEach(fn => fn()); throw error; }
   dispose = () => { off.reverse().forEach(fn => fn()); dispose = undefined; };
   return dispose;

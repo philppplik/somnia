@@ -1,5 +1,5 @@
 /**
- * Bridge between the new command dispatcher and the legacy registry in commands.ts.
+ * Bridge between the new command dispatcher and the legacy palette/menu registry in commandRegistry.ts.
  *
  * `registerCommandSpec` is the one registration point wave B and later waves use: the spec
  * lands in the shared dispatcher (typed params, levels, activity log) AND in the legacy
@@ -14,7 +14,7 @@
  * check:ui-commands manifest instead of touching per-area code.
  */
 import { registerCommand } from './commandRegistry';
-import type { Command } from './commands';
+import type { Command } from './commandRegistry';
 import { commandDispatcher, type CommandDispatcher } from './commandDispatcher';
 import type { CommandSpec } from './commandSpec';
 

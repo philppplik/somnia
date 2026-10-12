@@ -17,7 +17,7 @@
  * until the toolRegistry bridge (plan step 1.6) reads these specs.
  */
 import {registerCommandSpec,specToCommand} from '../commandBridge';
-import type {Command} from '../commands';
+import type {Command} from '../commandRegistry';
 import type {CommandSpec} from '../commandSpec';
 import {getSlidesSessionState,saveSlidesCopy,showSlide,slidesHistory} from './session';
 

@@ -10,9 +10,11 @@ import { VECTOR_CATALOGUES } from './i18n';
 import { rectPath } from './shapes';
 import * as S from './session';
 
+const activeVector = () => getState().activeStudio === 'vector';
+
 function dispatcher() {
   const d = new CommandDispatcher();
-  for (const spec of vectorCommandSpecs()) d.register(spec);
+  for (const spec of vectorCommandSpecs(activeVector)) d.register(spec);
   return d;
 }
 const run = (d: CommandDispatcher, id: string, params?: unknown) => d.runCommand(`vector.${id}`, params, { origin: 'test' });
@@ -22,8 +24,8 @@ test.beforeEach(() => { S.resetVectorSession(); patchState({ activeStudio: 'vect
 
 test('studio loads 28 strict specs into dispatcher and legacy palette with localized titles', async () => {
   await vectorCommandsReady;
-  assert.equal(vectorCommandSpecs().length, 28);
-  for (const spec of vectorCommandSpecs()) {
+  assert.equal(vectorCommandSpecs(activeVector).length, 28);
+  for (const spec of vectorCommandSpecs(activeVector)) {
     assert.equal(commandDispatcher.has(spec.id), true);
     assert.ok(listCommands().find(c => c.id === spec.id));
     assert.equal(spec.params?.type, 'object');
@@ -31,7 +33,7 @@ test('studio loads 28 strict specs into dispatcher and legacy palette with local
     assert.equal(spec.shortcut, undefined, 'no new shortcut binding or override');
     for (const [locale, catalogue] of Object.entries(VECTOR_CATALOGUES)) assert.ok(catalogue[`cmd.${spec.id}`], `${locale}: ${spec.id}`);
   }
-  assert.equal(registerVectorCommands(), await vectorCommandsReady, 'idempotent registration');
+  assert.equal(registerVectorCommands(activeVector), await vectorCommandsReady, 'idempotent registration');
   assert.equal(await executeCommand('vector.createBlank'), true);
   assert.equal(S.getVectorSession().open, true);
 });
@@ -39,7 +41,7 @@ test('studio loads 28 strict specs into dispatcher and legacy palette with local
 test('all immediate actions refuse agent/MCP before touching session, read commands stay callable', async () => {
   const d = dispatcher(); S.createBlankVector();
   const before = structuredClone(S.getVectorSession());
-  for (const spec of vectorCommandSpecs().filter(s => s.level === 'ui')) {
+  for (const spec of vectorCommandSpecs(activeVector).filter(s => s.level === 'ui')) {
     for (const origin of ['agent', 'mcp'] as const) {
       await assert.rejects(d.runCommand(spec.id, {}, { origin }), (e: unknown) => e instanceof CommandDispatchError && e.code === 'forbidden-origin');
     }
@@ -177,11 +179,11 @@ test('view and handle params cannot mutate the session after dispatch', async ()
 
 test('registration disposer removes both registries and permits a clean reinstall', async () => {
   await vectorCommandsReady;
-  const off = registerVectorCommands(); off();
-  for (const spec of vectorCommandSpecs()) {
+  const off = registerVectorCommands(activeVector); off();
+  for (const spec of vectorCommandSpecs(activeVector)) {
     assert.equal(commandDispatcher.has(spec.id), false);
     assert.equal(listCommands().some(c => c.id === spec.id), false);
   }
-  const restored = registerVectorCommands(); assert.notEqual(restored, off);
+  const restored = registerVectorCommands(activeVector); assert.notEqual(restored, off);
   assert.ok(commandDispatcher.has('vector.inspect'));
 });
