@@ -13,7 +13,7 @@
  * - arguments are validated against the tool's schema before the tool runs.
  */
 import type { AgentToolContext, AgentToolGrants, AgentToolRegistry } from './toolRegistry';
-import { checkMcpArgs } from './mcpSchema';
+import { checkMcpArgs } from '../mcpSchema';
 
 export const SUPPORTED_PROTOCOLS = ['2025-06-18', '2025-03-26', '2024-11-05'] as const;
 const EXPOSED: AgentToolGrants = { levels: ['read', 'propose'] };

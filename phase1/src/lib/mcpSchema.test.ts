@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { validateMcpArgs, checkMcpArgs, assertMcpArgs, McpArgsError, MCP_ARG_ERROR_ID } from './mcpSchema';
-import { ERROR_IDS } from '../../generated/errorIds';
+import { ERROR_IDS } from '../generated/errorIds';
 const schema = { type: 'object', required: ['path'], properties: { path: { type: 'string', minLength: 1 }, limit: { type: 'integer', minimum: 1, maximum: 10 }, mode: { enum: ['a', 'b'] }, tags: { type: 'array', items: { type: 'string' }, maxItems: 2 } } };
 test('valid arguments pass', () => { assert.deepEqual(validateMcpArgs({ path: 'x', limit: 3, mode: 'a', tags: ['t'] }, schema), []); });
 test('missing required and wrong types are reported with paths', () => {

@@ -12,7 +12,7 @@
  * shape used at the Tauri boundary: a stable `code`, a message and the `expected` flag the
  * existing executeCommand catch already honours (expected errors never reach the error log).
  */
-import { checkMcpArgs, type McpArgIssue } from './agent/mcpSchema';
+import { checkMcpArgs, type McpArgIssue } from './mcpSchema';
 import {
   INTERACTIVE_ORIGINS,
   assertCommandId,

@@ -14,7 +14,7 @@
  * maximum, exclusiveMinimum, exclusiveMaximum, multipleOf, minLength, maxLength, pattern,
  * minItems, maxItems, uniqueItems, minProperties, maxProperties, anyOf, oneOf, allOf.
  */
-import { ERROR_IDS } from '../../generated/errorIds';
+import { ERROR_IDS } from '../generated/errorIds';
 
 export const MCP_ARG_ERROR_ID = ERROR_IDS.AGT_003;
 export type McpArgIssueCode = 'type' | 'required' | 'enum' | 'const' | 'range' | 'length' | 'pattern' | 'items' | 'unique' | 'additional' | 'combinator' | 'unsupported-schema' | 'limit';

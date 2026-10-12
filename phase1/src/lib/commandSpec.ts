@@ -38,7 +38,7 @@ export interface CommandContext {
   readonly signal?: AbortSignal;
 }
 
-/** JSON Schema subset accepted by the fail-closed validator in agent/mcpSchema.ts. */
+/** JSON Schema subset accepted by the fail-closed validator in mcpSchema.ts. */
 export type CommandSchema = Record<string, unknown>;
 
 export interface CommandSpec<P = unknown, R = unknown> {

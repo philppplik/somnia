@@ -1,7 +1,7 @@
 import { AgentToolRegistry, toolSchemaHash } from './toolRegistry';
 import type { AgentToolSpec } from './toolRegistry';
 import type { AgentToolDefinition } from './types';
-import { checkMcpArgs, McpArgsError } from './mcpSchema';
+import { checkMcpArgs, McpArgsError } from '../mcpSchema';
 
 /** Mirrors the Rust McpToolInfo. Everything here comes from an external server: untrusted. */
 export interface McpToolInfo { server: string; name: string; description: string; input_schema: Record<string, unknown>; /** Hex digest of the tool definition from the Rust host; what an AllowForRun grant is bound to. */ schema_digest?: string }
