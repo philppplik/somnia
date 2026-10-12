@@ -107,6 +107,7 @@
     "allow-read-file",
     "allow-read-media",
     "allow-read-project-resource",
+    "allow-open-preview-external",
     "allow-image-pick",
     "allow-image-read",
     "allow-pdf-save-pick",
