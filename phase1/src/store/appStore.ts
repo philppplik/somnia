@@ -1,3 +1,5 @@
+import {shellLayoutStore} from './shellLayoutStore';
+import {studioPanels,studioDefaultLayout} from '../lib/shell/codePanels';
 import {modeKey,rememberStudioMode,resolveStudioMode,type StudioModeMemory} from '../lib/studios/modes';
 import {getStudio,acceptsFormat,type StudioId} from '../lib/studios';
 import {recordActivity} from '../lib/account';
@@ -36,6 +38,9 @@ const PANELS_KEY='somnia.panels.v1';
 export function readPanels():{sidebarOpen:boolean;inspectorOpen:boolean}{try{const x=JSON.parse(localStorage.getItem(PANELS_KEY)||'{}');return{sidebarOpen:x.sidebarOpen!==false,inspectorOpen:x.inspectorOpen!==false};}catch{return{sidebarOpen:true,inspectorOpen:true};}}
 
 let state:AppState={extensionsOpen:false,studioModeByDocument:{},projectOverrides:{},projectSettingsWarnings:[],activeStudio:'code',studioByTab:{},studioChoice:'automatic',editorKind:null,editorPanel:{left:'transform',right:'adjust'},editorTool:'pan',rasterDoc:{},backupPrefs:readBackupPrefs(),documentPrefs:readDocumentPrefs(),windowPrefs:readWindowPrefs(),updatePrefs:readUpdatePrefs(),canvasPrefs:readCanvasPrefs(),workflowPrefs:readWorkflowPrefs(),uiPrefs:readUiPrefs(),exportDialog:false,convertDialog:false,diffSplit:false,livePreview:false,closeProjectPrompt:false,closeAllPrompt:null,saveDialog:null,jumpTo:null,settingsAITab:'providers',settingsSection:'Appearance',settingsNavigationId:0,look:readLook(),closePrompt:null,viewportHeight:900,...readSplit(),editorPrefs:readEditorPrefs(),themeChoice:readThemeChoice(),settingsOpen:false,extensionThemes:[],extensionAccents:[],extensionPanels:[],activePanel:{left:null,right:null},storage:'memory',...readAppearance(),diskComparison:null,nativeConnected:false,...readPanelWidths(),...readPanels(),agentOpen:false,problemsOpen:false,responsiveScope:'auto',leftTab:'layers',rightTab:'design',zoom:readCanvasPrefs().defaultZoom,viewport:readCanvasPrefs().defaultViewport,viewMode:'design',paletteOpen:false,recentCommands:[],selectedElementId:null,selectedElementIds:[],computedStyle:{},activeFile:'',openFiles:[],designFile:'',cursorLine:1,cursorCol:1,projectName:'',coreConnected:false,revision:0,files:{},nodes:[],isDirty:false,lastSavedAt:null,notice:'No project open.',theme:readTheme()};
+const initialStudio=getStudio(state.activeStudio);const initialPanels=studioPanels(initialStudio);
+if(initialPanels.length){const defaults={...studioDefaultLayout(initialStudio),leftOpen:state.sidebarOpen,rightOpen:state.inspectorOpen,leftWidth:state.sidebarWidth,rightWidth:state.inspectorWidth};const layout=shellLayoutStore.get(initialStudio.id,defaults,initialPanels);state={...state,sidebarOpen:layout.leftOpen,inspectorOpen:layout.rightOpen,sidebarWidth:layout.leftWidth,inspectorWidth:layout.rightWidth,leftTab:(layout.activeLeft??'layers') as LeftTab,rightTab:(layout.activeRight??'design') as RightTab};}
+let legacyShellLayout:Pick<AppState,'sidebarOpen'|'inspectorOpen'|'sidebarWidth'|'inspectorWidth'|'leftTab'|'rightTab'>={sidebarOpen:state.sidebarOpen,inspectorOpen:state.inspectorOpen,sidebarWidth:state.sidebarWidth,inspectorWidth:state.inspectorWidth,leftTab:state.leftTab,rightTab:state.rightTab};
 const listeners=new Set<()=>void>();
 export const getState=()=>state;
 function readSplit():{splitLayout:'vertical'|'horizontal';splitSwap:boolean;splitRatio:number}{try{const x=JSON.parse(localStorage.getItem(SPLIT_KEY)||'{}');return{splitLayout:x.splitLayout==='horizontal'?'horizontal':'vertical',splitSwap:x.splitSwap===true,splitRatio:typeof x.splitRatio==='number'&&x.splitRatio>=0.15&&x.splitRatio<=0.85?x.splitRatio:0.48};}catch{return{splitLayout:'vertical',splitSwap:false,splitRatio:0.48};}}
@@ -45,6 +50,20 @@ export function studioDocumentKey(activeFile=state.activeFile):string{
 }
 export function patchState(patch:Partial<AppState>){
  const nextStudio=patch.activeStudio??(patch.activeFile!==undefined&&patch.activeFile!==state.activeFile?(state.studioByTab[patch.activeFile]??'code'):state.activeStudio);
+
+ const oldStudio=getStudio(state.activeStudio),target=getStudio(nextStudio);
+ const oldPanels=studioPanels(oldStudio),targetPanels=studioPanels(target);
+ if(nextStudio!==state.activeStudio&&!oldPanels.length&&targetPanels.length)legacyShellLayout={sidebarOpen:state.sidebarOpen,inspectorOpen:state.inspectorOpen,sidebarWidth:state.sidebarWidth,inspectorWidth:state.inspectorWidth,leftTab:state.leftTab,rightTab:state.rightTab};
+ if(nextStudio!==state.activeStudio&&oldPanels.length&&!targetPanels.length&&legacyShellLayout)patch={...patch,...legacyShellLayout};
+ if(nextStudio!==state.activeStudio&&oldPanels.length){shellLayoutStore.update(oldStudio.id,{leftOpen:state.sidebarOpen,rightOpen:state.inspectorOpen,leftWidth:state.sidebarWidth,rightWidth:state.inspectorWidth},studioDefaultLayout(oldStudio),oldPanels);}
+ if(nextStudio!==state.activeStudio&&targetPanels.length){const layout=shellLayoutStore.get(target.id,studioDefaultLayout(target),targetPanels);patch={...patch,sidebarOpen:layout.leftOpen,inspectorOpen:layout.rightOpen,sidebarWidth:layout.leftWidth,inspectorWidth:layout.rightWidth,leftTab:(layout.activeLeft??'layers') as LeftTab,rightTab:(layout.activeRight??'design') as RightTab};}
+ if(targetPanels.length){const defaults=studioDefaultLayout(target),current=shellLayoutStore.get(target.id,defaults,targetPanels);const layoutPatch:Partial<import('./shellLayoutStore').PersistedShellLayoutEntry>={};
+ if(patch.sidebarOpen!==undefined)layoutPatch.leftOpen=patch.sidebarOpen;if(patch.inspectorOpen!==undefined)layoutPatch.rightOpen=patch.inspectorOpen;
+ if(patch.sidebarWidth!==undefined)layoutPatch.leftWidth=patch.sidebarWidth;if(patch.inspectorWidth!==undefined)layoutPatch.rightWidth=patch.inspectorWidth;
+ if(nextStudio===state.activeStudio&&patch.leftTab!==undefined&&targetPanels.some(p=>p.id===patch.leftTab&&p.side==='left')){layoutPatch.activeLeft=patch.leftTab;layoutPatch.collapsedPanels=(current.collapsedPanels??[]).filter(id=>id!==patch.leftTab);layoutPatch.leftPanels=current.leftPanels.includes(patch.leftTab)?current.leftPanels:[...current.leftPanels,patch.leftTab];}
+ if(nextStudio===state.activeStudio&&patch.rightTab!==undefined&&targetPanels.some(p=>p.id===patch.rightTab&&p.side==='right')){layoutPatch.activeRight=patch.rightTab;layoutPatch.collapsedPanels=(layoutPatch.collapsedPanels??current.collapsedPanels??[]).filter(id=>id!==patch.rightTab);layoutPatch.rightPanels=current.rightPanels.includes(patch.rightTab)?current.rightPanels:[...current.rightPanels,patch.rightTab];}
+ if(Object.keys(layoutPatch).length)shellLayoutStore.update(target.id,layoutPatch,defaults,targetPanels);
+ }
  const document=studioDocumentKey(patch.activeFile??state.activeFile);
  if(patch.viewMode!==undefined){patch={...patch,studioModeByDocument:rememberStudioMode(getStudio(nextStudio),patch.studioModeByDocument??state.studioModeByDocument,document,patch.viewMode)};}
  else if(patch.activeStudio!==undefined||patch.activeFile!==undefined){const memory=patch.studioModeByDocument??state.studioModeByDocument;/* Only an explicitly remembered mode is restored; otherwise the current view stays (no reset to the first mode on tab switch). */if(memory[modeKey(nextStudio,document)]){const mode=resolveStudioMode(getStudio(nextStudio),memory,document);if(mode?.viewMode)patch={...patch,viewMode:mode.viewMode};}}

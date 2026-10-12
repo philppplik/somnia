@@ -1,3 +1,4 @@
+import type {PanelDef} from '../../lib/shell/types';
 import {DesktopVibeSpacePanel} from '../vibespace/DesktopVibeSpacePanel';
 import {DesignCanvas} from '../design/DesignCanvas';
 import {DesignInspector} from '../design/DesignInspector';
@@ -32,3 +33,12 @@ const sidebarHosts={'slides.sidebar':SlidesSidebar};
 export function StudioSidebar(){const s=useAppStore();const id=getStudio(useHostStudio(s.activeStudio)).shell.sidebar;const Host=id?sidebarHosts[id as keyof typeof sidebarHosts]:LayersPanel;if(!Host)throw new Error('Studio sidebar unavailable');return <Host/>;}
 
 function useHostStudio(id:string){const media=useMedia();const active=media.items.find(m=>m.name===media.active);return id==='slides'&&active&&active.kind!=='pptx'?'code':id;}
+
+/** Explicit host allowlist. A manifest never supplies an executable module path. */
+type PanelComponent=React.ComponentType<{panelId:string}>;
+const panelHosts=new Map<string,PanelComponent>([
+ ...['layers','files','search','components','css','versions'].map(id=>[`code.${id}`,LayersPanel] as [string,PanelComponent]),
+ ...['design','prototype','code'].map(id=>[`code.${id}`,Inspector] as [string,PanelComponent])
+]);
+export function registerPanelHost(id:string,Host:PanelComponent){if(panelHosts.has(id))throw new Error(`Duplicate panel host: ${id}`);panelHosts.set(id,Host);return()=>{if(panelHosts.get(id)===Host)panelHosts.delete(id);};}
+export function PanelHost({panel}:{panel:PanelDef}){const Host=panelHosts.get(panel.component);if(!Host)throw new Error(`Studio panel unavailable: ${panel.component}`);return <Host panelId={panel.id}/>;}
