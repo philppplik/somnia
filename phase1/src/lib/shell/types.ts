@@ -31,14 +31,14 @@ export type ShellLayout=Record<string,ShellLayoutEntry>;
 
 /** v2 additions to a studio manifest. All optional so old manifests compile unchanged. */
 export interface StudioShellDef{
- menus:readonly MenuItemDef[];
- leftRail:readonly RailItemDef[];
- rightRail:readonly RailItemDef[];
- panels:readonly PanelDef[];
- tools:readonly ToolDef[];
- statusSlots:readonly StatusSlotDef[];
+ menus?:readonly MenuItemDef[];
+ leftRail?:readonly RailItemDef[];
+ rightRail?:readonly RailItemDef[];
+ panels?:readonly PanelDef[];
+ tools?:readonly ToolDef[];
+ statusSlots?:readonly StatusSlotDef[];
  problems?:string;
- defaultLayout:StudioLayout;
+ defaultLayout?:StudioLayout;
 }
 export interface StudioAgentDefV2{tools:readonly string[];contextProviders:readonly string[];quickActions:readonly string[];context?:string;}
 export type CommandRisk='none'|'content'|'destructive'|'outbound';
