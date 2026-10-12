@@ -106,6 +106,7 @@
     "allow-list-files",
     "allow-read-file",
     "allow-read-media",
+    "allow-read-project-resource",
     "allow-image-pick",
     "allow-image-read",
     "allow-pdf-save-pick",

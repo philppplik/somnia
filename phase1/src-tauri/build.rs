@@ -92,6 +92,7 @@ fn main() {
             "list_files",
             "read_file",
             "read_media",
+            "read_project_resource",
             "image_pick",
             "image_read",
             "pdf_save_pick",

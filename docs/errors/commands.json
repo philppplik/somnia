@@ -1099,6 +1099,21 @@
       ]
     },
     {
+      "name": "read_project_resource",
+      "domain": "fs",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "project_id",
+        "path"
+      ],
+      "args": [
+        "projectId",
+        "path"
+      ]
+    },
+    {
       "name": "read_project_settings",
       "domain": "fs",
       "status": "native",

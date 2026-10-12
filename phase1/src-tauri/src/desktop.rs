@@ -1174,6 +1174,28 @@ async fn read_media(
     })
     .await
 }
+/// One linked file of the open project (CSS, JS, image, font, media) for the live preview, as base64 plus MIME type. Read only, max 10 MB, never leaves the project root.
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct ResourceReply {
+    mime: String,
+    size: u64,
+    data: String,
+}
+#[tauri::command]
+async fn read_project_resource(
+    window: WebviewWindow,
+    state: State<'_, Shared>,
+    project_id: String,
+    path: String,
+) -> Result<ResourceReply> {
+    gate(&window)?;
+    work(state.inner().clone(), move |b| {
+        let (mime, bytes) = project(b, &project_id)?.read_resource(&path)?;
+        Ok(ResourceReply { mime, size: bytes.len() as u64, data: base64_encode(&bytes) })
+    })
+    .await
+}
 // ---------- image editor file access (one-time grants, raw bytes, atomic save) ----------
 #[derive(Default)]
 struct ImageGrants {
@@ -2427,6 +2449,7 @@ pub fn run() {
             list_files,
             read_file,
             read_media,
+            read_project_resource,
             image_pick,
             image_read,
             pdf_save_pick,
