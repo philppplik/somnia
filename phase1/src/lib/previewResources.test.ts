@@ -56,3 +56,12 @@ test('loader stops on abort and returns what it has; no HTML means nothing to lo
  assert.deepEqual((await loadPreviewResources({invoke,projectId:'p',files:{'x.html':'<link rel=stylesheet href=a.css>'},active:'x.html',signal:c.signal})).text,{});assert.equal(reads.length,0);
  assert.deepEqual((await loadPreviewResources({invoke,projectId:'p',files:{},active:'x.html'})).failed,[]);
 });
+test('loader skips binary assets the consumer already cached but still reads text',async()=>{
+ const {invoke,reads}=disk({'a.css':'.x{}','1.png':new Uint8Array(3),'2.png':new Uint8Array(3)});
+ const r=await loadPreviewResources({invoke,projectId:'p',files:{'x.html':'<link rel=stylesheet href=a.css><img src=1.png><img src=2.png>'},active:'x.html',skip:p=>p==='1.png'});
+ assert.deepEqual(reads.sort(),['2.png','a.css']);assert.ok(r.assets['2.png']&&!r.assets['1.png']);
+});
+test('mergeTextResources flattens stylesheet @imports, keeps media queries, repoints url() and drops cycles',()=>{
+ const m=mergeTextResources({'index.html':'x'},{text:{'css/a.css':'@import "parts/b.css" screen;@import url(https://cdn/x.css);@import "gone.css";.a{}','css/parts/b.css':'@import "../a.css";.b{background:url(img/i.png)}'},assets:{},failed:[]});
+ assert.equal(m['css/a.css'],'@media screen{.b{background:url("parts/img/i.png")}}@import url(https://cdn/x.css);@import "gone.css";.a{}');
+});

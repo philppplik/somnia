@@ -105,6 +105,8 @@ export interface LoadOptions{
  /** Project-relative path of the active HTML document. */
  active:string;
  signal?:AbortSignal;
+ /** Binary assets already cached by the consumer are not read again. */
+ skip?:(path:string)=>boolean;
  maxFiles?:number;maxTotalBytes?:number;maxDepth?:number;
 }
 /**
@@ -123,6 +125,7 @@ export async function loadPreviewResources(o:LoadOptions):Promise<PreviewResourc
   const queue=level.filter(r=>{if(seen.has(r.path))return false;seen.add(r.path);return true;});
   const work=async(r:ResourceRef&{from:string})=>{
    if(o.signal?.aborted)return;
+   if(r.kind==='asset'&&o.skip?.(r.path))return;
    if(count>=maxFiles||total>=maxTotal){out.failed.push({path:r.path,from:r.from,reason:'limit'});return;}
    count++;
    let text:string|undefined=Object.hasOwn(o.files,r.path)&&r.kind!=='asset'?o.files[r.path]:undefined;
@@ -145,8 +148,29 @@ export async function loadPreviewResources(o:LoadOptions):Promise<PreviewResourc
  }
  return out;
 }
-/** Open editor files plus loaded text resources, as the in-memory map buildPreview already understands. Editor text wins. */
-export const mergeTextResources=(files:Readonly<Record<string,string>>,r:PreviewResources):Record<string,string>=>({...r.text,...files});
+const IMPORT_RULE=/@import\s+(?:url\(\s*(?:"([^"]*)"|'([^']*)'|([^)\s]*))\s*\)|"([^"]*)"|'([^']*)')\s*([^;]*);/gi;
+const relativeTo=(fromFile:string,target:string):string=>{const from=fromFile.split('/').slice(0,-1),to=target.split('/');let i=0;while(i<from.length&&i<to.length-1&&from[i]===to[i])i++;return [...from.slice(i).map(()=>'..'),...to.slice(i)].join('/');};
+/**
+ * The sandboxed preview inlines linked stylesheets as <style>, where a relative @import cannot load. This replaces every @import of a project
+ * stylesheet with that sheet's text (recursively, cycles dropped, media query kept as @media) and re-points its url() references at the importing file's folder.
+ * Imports that are external or missing are left untouched.
+ */
+export function flattenCssImports(css:string,path:string,text:Readonly<Record<string,string>>,trail:readonly string[]=[]):string{
+ return css.replace(IMPORT_RULE,(whole,a,b,c,d,e,media)=>{
+  const href=(a??b??c??d??e??'').trim();const target=resolveProjectPath(path,href);
+  if(!target||trail.includes(target)||target===path)return trail.includes(target??'')||target===path?'':whole;
+  const body=text[target];if(body==null)return whole;
+  let inner=flattenCssImports(body,target,text,[...trail,path]);
+  inner=inner.replace(/url\(\s*(?:"([^"]*)"|'([^']*)'|([^)\s'"]+))\s*\)/gi,(w,x,y,z)=>{const ref=(x??y??z??'').trim();const t=resolveProjectPath(target,ref);return t?`url("${relativeTo(path,t)}")`:w;});
+  const q=String(media||'').trim();return q?`@media ${q}{${inner}}`:inner;
+ });
+}
+/** Open editor files plus loaded text resources, as the in-memory map buildPreview already understands. Editor text wins. Stylesheet @imports are flattened. */
+export function mergeTextResources(files:Readonly<Record<string,string>>,r:PreviewResources):Record<string,string>{
+ const merged={...r.text,...files};
+ for(const [p,t] of Object.entries(merged))if(/\.css$/i.test(p)&&/@import/i.test(t))merged[p]=flattenCssImports(t,p,merged);
+ return merged;
+}
 /** Mirrors `resource_mime` in src-tauri/src/service.rs (the web build has no native side). */
 const MIMES:Record<string,string>={html:'text/html',htm:'text/html',css:'text/css',js:'text/javascript',mjs:'text/javascript',cjs:'text/javascript',json:'application/json',map:'application/json',svg:'image/svg+xml',png:'image/png',jpg:'image/jpeg',jpeg:'image/jpeg',gif:'image/gif',webp:'image/webp',avif:'image/avif',bmp:'image/bmp',ico:'image/x-icon',woff:'font/woff',woff2:'font/woff2',ttf:'font/ttf',otf:'font/otf',mp4:'video/mp4',m4v:'video/mp4',webm:'video/webm',ogv:'video/ogg',mov:'video/quicktime',mp3:'audio/mpeg',wav:'audio/wav',ogg:'audio/ogg',oga:'audio/ogg',m4a:'audio/mp4',flac:'audio/flac',txt:'text/plain',wasm:'application/wasm'};
 export const resourceMimeFor=(path:string):string=>MIMES[(path.split('.').pop()||'').toLowerCase()]??'application/octet-stream';
