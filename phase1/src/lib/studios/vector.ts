@@ -19,3 +19,5 @@ import {createBlankVector} from '../vectorstudio/session';
 import {requestStudio} from '../../store/appStore';
 /** "Create blank project" anywhere in the app opens an empty 1024 x 1024 page in the Vector Studio. */
 registerBlankProjectFactory('vector',()=>{createBlankVector(1024,1024);requestStudio('vector','manual');});
+/** commands.ts imports studios; defer the bridge until its legacy registry is initialized. */
+export const vectorCommandsReady=import('../vectorstudio/commands').then(module=>module.registerVectorCommands());
