@@ -2,7 +2,7 @@ import {useT} from '../lib/useT';
 import {useEffect,useMemo,useState,useSyncExternalStore} from 'react';
 import {AlertTriangle,CircleAlert} from '../lib/icons';
 import {useAppStore} from '../store/appStore';
-import {projectProblems} from '../lib/diagnostics';
+import {problemsProviders} from '../lib/problemsProviders';
 import {useMathEngine} from '../lib/mathRender';
 import {canNavigateProblem,navigateProblem,problemsStore} from '../lib/problemsRuntime';
 import type {RuntimeProblem} from '../lib/problemsStore';
@@ -12,7 +12,7 @@ export function ProblemsPanel(){
  const runtime=useSyncExternalStore(problemsStore.subscribe,problemsStore.getSnapshot,problemsStore.getSnapshot);
  useEffect(()=>{const timer=window.setTimeout(()=>setFiles(s.files),300);return()=>window.clearTimeout(timer);},[s.files]);
  const engine=useMathEngine();
- const syntax=useMemo(()=>projectProblems(files).map((p,i):RuntimeProblem=>({...p,studio:'code',key:`syntax:${p.file}:${p.line}:${p.col}:${i}`,source:'syntax',details:'',ts:'',count:1})),[files,engine]);
+ const syntax=useMemo(()=>problemsProviders.collect({files}).map((p):RuntimeProblem=>({...p,details:'',ts:'',count:1})),[files,engine]);
  const problems=[...syntax,...runtime];const errors=problems.filter(p=>p.severity==='error').length;
  const studios=[...new Set(problems.map(p=>p.studio))].sort();
  return <section className="problems-panel !h-auto flex max-h-[30vh] flex-col !p-3" aria-label={t('panels.problems.problems')} data-testid="problems-panel">

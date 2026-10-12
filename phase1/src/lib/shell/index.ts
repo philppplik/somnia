@@ -4,3 +4,5 @@ export * from './contextStore';
 export * from './menuResolver';
 export * from './railResolver';
 export * from './commandMeta';
+export * from './statusSlots';
+export * from './problemsProvider';
