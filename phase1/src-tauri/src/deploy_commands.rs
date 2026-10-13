@@ -177,7 +177,8 @@ pub async fn deploy_bootstrap_run(window: tauri::WebviewWindow, app: tauri::AppH
     // dedicated runtime inside a blocking worker, not as a non-Send Tauri future.
     tauri::async_runtime::spawn_blocking(move || {
         let rt = tokio::runtime::Builder::new_current_thread().enable_all().build().map_err(|_| "deploy:bootstrap-failed".to_string())?;
-        rt.block_on(crate::deploy_setup::run(&svc, &target_id, login_user, login_password, sudo_password, &privilege))
+        let progress = |step: &str| { let _ = window.emit(PROGRESS_EVENT, Progress { target_id: target_id.clone(), step: step.to_string() }); };
+        rt.block_on(crate::deploy_setup::run(&svc, &target_id, login_user, login_password, sudo_password, &privilege, &progress))
     }).await.map_err(|_| "deploy:bootstrap-failed".to_string())?
 }
 #[tauri::command]
