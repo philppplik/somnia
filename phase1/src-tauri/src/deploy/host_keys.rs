@@ -29,6 +29,10 @@ impl HostKey {
                 | "ssh-rsa"
                 | "rsa-sha2-256"
                 | "rsa-sha2-512"
+                // FTP/FTPS targets: certificate chain checked at every connection, pinned leaf certificate, or plain FTP.
+                | "tls-ca"
+                | "tls-leaf"
+                | "plaintext"
         ) {
             return Err(DeployError::InvalidInput);
         }

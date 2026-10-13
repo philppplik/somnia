@@ -15,6 +15,10 @@ pub mod node_app;
 pub mod node_engine;
 pub mod node_admin;
 pub mod node_host;
+pub mod ftp;
+pub mod ftp_engine;
+#[cfg(test)]
+mod ftp_testkit;
 #[cfg(test)]
 mod ssh_testkit;
 

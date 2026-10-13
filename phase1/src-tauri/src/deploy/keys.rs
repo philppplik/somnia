@@ -29,6 +29,12 @@ fn slot(target: &str) -> Result<String> {
     }
     Ok(format!("deploy-key:{target}"))
 }
+fn password_slot(target: &str) -> Result<String> {
+    if !valid_id(target) {
+        return Err(DeployError::InvalidInput);
+    }
+    Ok(format!("deploy-ftp:{target}"))
+}
 pub struct KeyStore<B: SecretBackend> {
     backend: B,
 }
@@ -73,7 +79,32 @@ impl<B: SecretBackend> KeyStore<B> {
     pub fn delete(&self, target: &str) -> Result<()> {
         self.backend
             .delete(&slot(target)?)
+            .map_err(|_| DeployError::Keychain)?;
+        self.backend
+            .delete(&password_slot(target)?)
             .map_err(|_| DeployError::Keychain)
+    }
+    /// FTP password. Lives only in the OS keychain, in its own slot; there is no read path to the renderer.
+    pub fn set_password(&self, target: &str, password: &str) -> Result<()> {
+        if password.is_empty()
+            || password.len() > 1024
+            || password.chars().any(|c| matches!(c, '\r' | '\n' | '\0'))
+        {
+            return Err(DeployError::InvalidInput);
+        }
+        self.backend
+            .set(&password_slot(target)?, password)
+            .map_err(|_| DeployError::Keychain)
+    }
+    pub fn password(&self, target: &str) -> Result<Zeroizing<String>> {
+        self.backend
+            .get(&password_slot(target)?)
+            .map_err(|_| DeployError::Keychain)?
+            .map(Zeroizing::new)
+            .ok_or(DeployError::KeyMissing)
+    }
+    pub fn has_password(&self, target: &str) -> bool {
+        self.password(target).is_ok()
     }
 }
 fn public_status(target: &str, slot: String, key: &PrivateKey) -> Result<PublicKeyStatus> {
@@ -147,5 +178,20 @@ mod tests {
         store.delete("site").unwrap();
         assert!(matches!(store.load("site"), Err(DeployError::KeyMissing)));
         assert!(store.create("../site").is_err());
+    }
+    #[test]
+    fn ftp_password_is_separate_zeroizing_and_deleted_with_the_target() {
+        let store = KeyStore::new(MemoryBackend::default());
+        assert!(!store.has_password("site"));
+        assert!(store.set_password("site", "").is_err());
+        assert!(store.set_password("site", "a\nb").is_err());
+        assert!(store.set_password("../x", "pw").is_err());
+        store.set_password("site", "hunter2").unwrap();
+        assert!(store.has_password("site"));
+        assert_eq!(&*store.password("site").unwrap(), "hunter2");
+        store.set_password("site", "changed").unwrap();
+        assert_eq!(&*store.password("site").unwrap(), "changed");
+        store.delete("site").unwrap();
+        assert!(!store.has_password("site"));
     }
 }

@@ -30,9 +30,9 @@ use std::{
 pub type ProjectSource = Arc<Mutex<Option<PathBuf>>>;
 pub type ObservedKeys = Arc<Mutex<BTreeMap<String, HostKey>>>;
 #[derive(Clone)]
-struct Artifact {
-    manifest: DeployArtifactManifest,
-    bytes: BTreeMap<String, Vec<u8>>,
+pub(super) struct Artifact {
+    pub(super) manifest: DeployArtifactManifest,
+    pub(super) bytes: BTreeMap<String, Vec<u8>>,
 }
 #[derive(Clone, Copy)]
 enum Operation {
@@ -97,38 +97,7 @@ impl<B: SecretBackend> LiveDeployEngine<B> {
         .map_err(connect_error)
     }
     fn artifact(&self) -> Result<Artifact, EngineError> {
-        let root = self
-            .source
-            .lock()
-            .map_err(|_| EngineError::Other)?
-            .clone()
-            .ok_or(EngineError::Preflight)?;
-        let artifact = if root.join("package.json").exists() {
-            let dist = detect_dist(&root).map_err(|_| EngineError::Preflight)?;
-            let collected =
-                collect_static(&root, &dist.dist).map_err(|_| EngineError::Preflight)?;
-            let bytes = collected
-                .files
-                .iter()
-                .map(|f| {
-                    Ok((
-                        f.path.clone(),
-                        read_bounded(&f.abs, fsize(&collected.manifest, &f.path)?)?,
-                    ))
-                })
-                .collect::<Result<BTreeMap<_, _>, EngineError>>()?;
-            Artifact {
-                manifest: collected.manifest,
-                bytes,
-            }
-        } else {
-            collect_plain(&root)?
-        };
-        artifact
-            .manifest
-            .verify_bytes(&artifact.bytes)
-            .map_err(|_| EngineError::Preflight)?;
-        Ok(artifact)
+        collect_artifact(&self.source)
     }
     async fn make_plan(
         &self,
@@ -556,6 +525,41 @@ fn read_bounded(path: &Path, size: u64) -> Result<Vec<u8>, EngineError> {
     }
     Ok(bytes)
 }
+/// Collects and verifies the publishable output of the opened project (shared with the FTP engine).
+pub(super) fn collect_artifact(source: &ProjectSource) -> Result<Artifact, EngineError> {
+    let root = source
+        .lock()
+        .map_err(|_| EngineError::Other)?
+        .clone()
+        .ok_or(EngineError::Preflight)?;
+    let artifact = if root.join("package.json").exists() {
+        let dist = detect_dist(&root).map_err(|_| EngineError::Preflight)?;
+        let collected =
+            collect_static(&root, &dist.dist).map_err(|_| EngineError::Preflight)?;
+        let bytes = collected
+            .files
+            .iter()
+            .map(|f| {
+                Ok((
+                    f.path.clone(),
+                    read_bounded(&f.abs, fsize(&collected.manifest, &f.path)?)?,
+                ))
+            })
+            .collect::<Result<BTreeMap<_, _>, EngineError>>()?;
+        Artifact {
+            manifest: collected.manifest,
+            bytes,
+        }
+    } else {
+        collect_plain(&root)?
+    };
+    artifact
+        .manifest
+        .verify_bytes(&artifact.bytes)
+        .map_err(|_| EngineError::Preflight)?;
+    Ok(artifact)
+}
+
 fn collect_plain(root: &Path) -> Result<Artifact, EngineError> {
     let root = root.canonicalize().map_err(|_| EngineError::Preflight)?;
     let mut bytes = BTreeMap::new();
@@ -854,6 +858,7 @@ mod tests {
                 key_slot: key_slot_for("site"),
                 spa: true,
                 app_port: None,
+                ftp: None,
             })
             .unwrap();
         service.key_create("site").unwrap();

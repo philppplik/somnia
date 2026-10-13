@@ -43,6 +43,9 @@ pub struct DeployArtifactDiff {
 pub fn sha256(bytes: &[u8]) -> String {
     format!("{:x}", Sha256::digest(bytes))
 }
+pub fn sha256_bytes(bytes: &[u8]) -> [u8; 32] {
+    Sha256::digest(bytes).into()
+}
 pub fn valid_id(value: &str) -> bool {
     !value.is_empty()
         && value.len() <= 96

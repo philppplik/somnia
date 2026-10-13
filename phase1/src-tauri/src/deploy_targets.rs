@@ -9,7 +9,40 @@ use std::sync::Mutex;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
-pub enum TargetKind { Static, Node, UploadOnly }
+pub enum TargetKind { Static, Node, UploadOnly, Ftp }
+
+/// FTP/FTPS transport security. Explicit TLS (AUTH TLS, then PROT P) is the default; plain FTP needs an explicit opt-in.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum FtpSecurity { #[default] ExplicitTls, Plain }
+/// How the server certificate is checked. `ca` (default): chain and host name against the system roots.
+/// `pinned`: the certificate fingerprint the person confirmed (self-signed or host-name-mismatch hosting certificates).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum FtpVerify { #[default] Ca, Pinned }
+/// Settings of an FTP target. The password is not here: it lives in the OS keychain.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct FtpSettings {
+    #[serde(default)]
+    pub security: FtpSecurity,
+    #[serde(default)]
+    pub verify: FtpVerify,
+    /// Must be true for `security: plain`. The credentials then cross the network unencrypted.
+    #[serde(default)]
+    pub allow_plain: bool,
+    /// Directory on the server that is the web root, e.g. `/public_html`. `/` means the login directory.
+    #[serde(default = "default_remote_path")]
+    pub remote_path: String,
+}
+fn default_remote_path() -> String { "/".into() }
+/// Absolute, normalised, no `..`, no control or shell-ish characters. Segments are checked one by one.
+pub fn is_remote_path(s: &str) -> bool {
+    s.starts_with('/') && s.len() <= 200 && (s == "/" || (!s.ends_with('/') && s[1..].split('/').all(is_remote_segment)))
+}
+pub fn is_remote_segment(seg: &str) -> bool {
+    !seg.is_empty() && seg.len() <= 120 && seg != "." && seg != ".." && !seg.chars().any(|c| c.is_control() || matches!(c, '\\' | '/' | '*' | '?' | '"' | '<' | '>' | '|' | ':'))
+}
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
@@ -30,6 +63,9 @@ pub struct Target {
     /// Node targets: loopback port the app listens on.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub app_port: Option<u16>,
+    /// Only for `kind: ftp`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub ftp: Option<FtpSettings>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -50,6 +86,9 @@ fn is_user(s: &str) -> bool {
     let b = s.as_bytes();
     !b.is_empty() && b.len() <= 32 && (b[0].is_ascii_lowercase() || b[0] == b'_') && b.iter().all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || matches!(c, b'_' | b'-'))
 }
+fn is_ftp_user(s: &str) -> bool {
+    !s.is_empty() && s.len() <= 128 && s.bytes().all(|c| c.is_ascii_alphanumeric() || matches!(c, b'_' | b'-' | b'.' | b'@' | b'+'))
+}
 fn is_domain(s: &str) -> bool {
     s.len() <= 253 && s.contains('.') && !s.starts_with('.') && !s.ends_with('.') && !s.contains("..")
         && s.split('.').all(|l| !l.is_empty() && l.len() <= 63 && !l.starts_with('-') && !l.ends_with('-') && l.bytes().all(|b| b.is_ascii_alphanumeric() || b == b'-'))
@@ -61,7 +100,18 @@ impl Target {
         if self.name.trim().is_empty() || self.name.chars().count() > 80 || self.name.chars().any(char::is_control) { return Err(TargetError::Invalid("name")); }
         if !is_host(&self.host) { return Err(TargetError::Invalid("host")); }
         if self.port == 0 { return Err(TargetError::Invalid("port")); }
-        if !is_user(&self.user) { return Err(TargetError::Invalid("user")); }
+        if !(if self.kind == TargetKind::Ftp { is_ftp_user(&self.user) } else { is_user(&self.user) }) { return Err(TargetError::Invalid("user")); }
+        match (&self.kind, &self.ftp) {
+            (TargetKind::Ftp, Some(f)) => {
+                if !is_remote_path(&f.remote_path) { return Err(TargetError::Invalid("remotePath")); }
+                if f.security == FtpSecurity::Plain && !f.allow_plain { return Err(TargetError::Invalid("allowPlain")); }
+                if f.security == FtpSecurity::Plain && f.verify == FtpVerify::Pinned { return Err(TargetError::Invalid("verify")); }
+                if self.spa { return Err(TargetError::Invalid("spa")); }
+            }
+            (TargetKind::Ftp, None) => return Err(TargetError::Invalid("ftp")),
+            (_, Some(_)) => return Err(TargetError::Invalid("ftp")),
+            _ => {}
+        }
         if let Some(d) = &self.domain { if !is_domain(&d.to_ascii_lowercase()) { return Err(TargetError::Invalid("domain")); } }
         if self.key_slot != key_slot_for(&self.id) { return Err(TargetError::Invalid("keySlot")); }
         if self.app_port.is_some() && self.kind != TargetKind::Node { return Err(TargetError::Invalid("appPort")); }
@@ -136,7 +186,7 @@ impl TargetStore for FileTargets {
 mod tests {
     use super::*;
     pub(crate) fn sample(id: &str) -> Target {
-        Target { id: id.into(), name: "My site".into(), host: "203.0.113.10".into(), port: 22, user: "somnia".into(), domain: Some("example.com".into()), kind: TargetKind::Static, key_slot: key_slot_for(id), spa: false, app_port: None }
+        Target { id: id.into(), name: "My site".into(), host: "203.0.113.10".into(), port: 22, user: "somnia".into(), domain: Some("example.com".into()), kind: TargetKind::Static, key_slot: key_slot_for(id), spa: false, app_port: None, ftp: None }
     }
     #[test]
     fn validates_fields() {

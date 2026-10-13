@@ -348,7 +348,7 @@ pub(crate) mod tests {
         d
     }
     pub(crate) fn target(domain: Option<&str>) -> Target {
-        Target { id: "shop".into(), name: "Shop".into(), host: "example.org".into(), port: 22, user: "somnia".into(), domain: domain.map(Into::into), kind: TargetKind::Node, key_slot: key_slot_for("shop"), spa: false, app_port: None }
+        Target { id: "shop".into(), name: "Shop".into(), host: "example.org".into(), port: 22, user: "somnia".into(), domain: domain.map(Into::into), kind: TargetKind::Node, key_slot: key_slot_for("shop"), spa: false, app_port: None, ftp: None }
     }
     pub(crate) fn engine(version: &str) -> NodeEngine<Host> {
         let host = Host { project: project(version), server: Shared(Arc::new(Mutex::new(Fake::new()))), fingerprint: Mutex::new("SHA256:AAAA".into()), public: Mutex::new(PublicCheck::Healthy), steps: Mutex::default() };

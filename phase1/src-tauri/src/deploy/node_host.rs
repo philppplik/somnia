@@ -144,7 +144,7 @@ mod tests {
         let root = project.path().to_path_buf();
         let host = DesktopNodeHost { keys, pins: pins.clone(), project_root: Box::new(move |_| Some(root.clone())), options: ConnectOptions::default(), public_probe: Box::new(|_| PublicCheck::NotReachableYet) };
         let engine = NodeEngine::new(host, NodeOptions { health_attempts: 2, health_interval: Duration::ZERO, ..Default::default() }).unwrap();
-        let target = Target { id: "shop".into(), name: "Shop".into(), host: "127.0.0.1".into(), port: server.addr.port(), user: "somnia".into(), domain: Some("example.com".into()), kind: TargetKind::Node, key_slot: key_slot_for("shop"), spa: false, app_port: None };
+        let target = Target { id: "shop".into(), name: "Shop".into(), host: "127.0.0.1".into(), port: server.addr.port(), user: "somnia".into(), domain: Some("example.com".into()), kind: TargetKind::Node, key_slot: key_slot_for("shop"), spa: false, app_port: None, ftp: None };
         let t2 = target.clone();
         // Unpinned host: refused before anything is sent.
         let e = tokio::task::spawn_blocking(move || { let r = engine.plan(&t2, Action::Publish, None); (engine, r) }).await.unwrap();

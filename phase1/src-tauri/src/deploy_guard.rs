@@ -9,7 +9,7 @@
 //! ([`DeployEngine`], [`HostKeyPins`], [`KeyMaker`]) so everything here is unit-tested against
 //! mocks. `desktop.rs` wires the real implementations. Nothing here accepts or returns key
 //! material except the public key, and no error carries lower-level text.
-use crate::deploy_targets::{Target, TargetError, TargetStore};
+use crate::deploy_targets::{Target, TargetError, TargetKind, TargetStore};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::collections::{BTreeMap, BTreeSet};
@@ -65,9 +65,23 @@ pub struct Outcome { pub release_id: String, pub url: Option<String>, pub rolled
 #[serde(rename_all = "camelCase")]
 pub struct HostKeyInfo { pub algorithm: String, pub fingerprint: String }
 
+/// One entry of a read-only server directory listing (FTP targets).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RemoteEntry {
+    pub name: String,
+    pub kind: RemoteKind,
+    pub size: Option<u64>,
+    /// UTC `YYYY-MM-DD HH:MM` when the server reports it.
+    pub modified: Option<String>,
+}
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum RemoteKind { Dir, File, Link }
+
 /// Engine failures are a closed enum: lower layers may not smuggle text through.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum EngineError { Cancelled, ServerNotPrepared, Connect, Auth, HostKeyRejected, Preflight, Upload, Switch, HealthFailedRolledBack, HealthFailedRollbackFailed, NoSuchRelease, NodeMissing, NodeTooOld, InstallFailed, HealthFailed, Other }
+pub enum EngineError { Cancelled, ServerNotPrepared, Connect, Auth, HostKeyRejected, Preflight, Upload, Switch, HealthFailedRolledBack, HealthFailedRollbackFailed, NoSuchRelease, NodeMissing, NodeTooOld, InstallFailed, HealthFailed, TlsRequired, Other }
 
 pub trait DeployEngine: Send + Sync {
     /// Connects with the pinned key (read-only), builds the artifact and diffs against the live release.
@@ -79,6 +93,8 @@ pub trait DeployEngine: Send + Sync {
     fn cancel(&self, _target: &Target) -> bool { false }
     /// Kept releases, newest first (release id only).
     fn releases(&self, target: &Target) -> Result<Vec<String>, EngineError>;
+    /// Read-only listing of one directory below the target's web root. `path` is relative, already validated by the guard.
+    fn list_remote(&self, _target: &Target, _path: &str) -> Result<Vec<RemoteEntry>, EngineError> { Err(EngineError::Other) }
 }
 
 pub trait HostKeyPins: Send + Sync {
@@ -94,6 +110,8 @@ pub trait KeyMaker: Send + Sync {
     fn delete(&self, slot: &str);
     /// Public OpenSSH key only. Never returns private key material.
     fn public_key(&self, _slot: &str) -> Result<String, ()> { Err(()) }
+    /// FTP password into the keychain (replaces an existing one). Write-only: nothing reads it back out.
+    fn set_password(&self, _slot: &str, _password: &str) -> Result<(), ()> { Err(()) }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -131,6 +149,7 @@ impl DeployError {
                 EngineError::HealthFailedRolledBack => "health-failed-rolled-back", EngineError::HealthFailedRollbackFailed => "health-failed-rollback-failed",
                 EngineError::NoSuchRelease => "no-such-release",
                 EngineError::NodeMissing => "node-missing", EngineError::NodeTooOld => "node-too-old", EngineError::InstallFailed => "install-failed", EngineError::HealthFailed => "health-failed",
+                EngineError::TlsRequired => "tls-required",
                 EngineError::Other => "engine-failed",
             },
         }
@@ -255,13 +274,36 @@ impl DeployService {
 
     pub fn key_create(&self, target_id: &str) -> Result<String, DeployError> {
         let t = self.targets.get(target_id)?;
+        if t.kind == TargetKind::Ftp { return Err(DeployError::InvalidInput("kind")); }
         if self.keys.exists(&t.key_slot) { return Err(DeployError::KeyExists); }
         self.keys.create(&t.key_slot).map_err(|_| DeployError::KeyBackend)
     }
 
     pub fn key_public(&self, target_id: &str) -> Result<String, DeployError> {
         let target = self.targets.get(target_id)?;
+        if target.kind == TargetKind::Ftp { return Err(DeployError::InvalidInput("kind")); }
         self.keys.public_key(&target.key_slot).map_err(|_| DeployError::KeyBackend)
+    }
+
+    /// Stores the FTP password in the keychain. Only FTP targets; the password never comes back out.
+    pub fn ftp_password_set(&self, target_id: &str, password: &str) -> Result<(), DeployError> {
+        let t = self.targets.get(target_id)?;
+        if t.kind != TargetKind::Ftp { return Err(DeployError::InvalidInput("kind")); }
+        if password.is_empty() || password.len() > 1024 || password.chars().any(|c| matches!(c, '\r' | '\n' | '\0')) { return Err(DeployError::InvalidInput("password")); }
+        self.keys.set_password(&t.key_slot, password).map_err(|_| DeployError::KeyBackend)
+    }
+
+    /// Read-only directory listing of an FTP target. The server identity must be pinned first, like every other server call.
+    pub fn remote_list(&self, target_id: &str, path: &str) -> Result<Vec<RemoteEntry>, DeployError> {
+        let t = self.targets.get(target_id)?;
+        if t.kind != TargetKind::Ftp { return Err(DeployError::InvalidInput("kind")); }
+        let rel = path.trim_matches('/');
+        if rel.len() > 200 || (!rel.is_empty() && !rel.split('/').all(crate::deploy_targets::is_remote_segment)) { return Err(DeployError::InvalidInput("path")); }
+        if !self.keys.exists(&t.key_slot) { return Err(DeployError::KeyMissing); }
+        self.pins.pinned(&t.host, t.port).ok_or(DeployError::HostKeyUnknown)?;
+        let mut list = self.engine.list_remote(&t, rel).map_err(|e| if e == EngineError::HostKeyRejected { DeployError::HostKeyChanged } else { e.into() })?;
+        list.sort_by(|a, b| (a.kind != RemoteKind::Dir, a.name.to_lowercase()).cmp(&(b.kind != RemoteKind::Dir, b.name.to_lowercase())));
+        Ok(list)
     }
 
     /// Read-only connect: returns the key the server presents so the dialog can show it.
@@ -397,7 +439,7 @@ mod tests {
         let pins = Arc::new(Pins::default());
         let keys = Arc::new(Mutex::new(BTreeSet::new()));
         let svc = DeployService::new(Box::new(MemoryTargets::default()), Box::new(SharedPins(pins.clone())), Box::new(Keys(keys.clone())), Box::new(SharedEngine(eng.clone())));
-        svc.target_save(Target { id: "s1".into(), name: "Site".into(), host: "203.0.113.10".into(), port: 22, user: "somnia".into(), domain: Some("example.com".into()), kind: TargetKind::Static, key_slot: key_slot_for("s1"), spa: false, app_port: None }).unwrap();
+        svc.target_save(Target { id: "s1".into(), name: "Site".into(), host: "203.0.113.10".into(), port: 22, user: "somnia".into(), domain: Some("example.com".into()), kind: TargetKind::Static, key_slot: key_slot_for("s1"), spa: false, app_port: None, ftp: None }).unwrap();
         Fx { svc, eng, pins, keys }
     }
     fn ready() -> Fx { let f = fx(); f.svc.key_create("s1").unwrap(); f.svc.hostkey_trust("s1", "SHA256:good").unwrap(); f }
@@ -469,7 +511,7 @@ mod tests {
     #[test]
     fn token_for_one_target_is_useless_for_another() {
         let f = ready();
-        f.svc.target_save(Target { id: "s2".into(), name: "Two".into(), host: "203.0.113.11".into(), port: 22, user: "somnia".into(), domain: None, kind: TargetKind::Static, key_slot: key_slot_for("s2"), spa: false, app_port: None }).unwrap();
+        f.svc.target_save(Target { id: "s2".into(), name: "Two".into(), host: "203.0.113.11".into(), port: 22, user: "somnia".into(), domain: None, kind: TargetKind::Static, key_slot: key_slot_for("s2"), spa: false, app_port: None, ftp: None }).unwrap();
         f.svc.key_create("s2").unwrap(); f.svc.hostkey_trust("s2", "SHA256:good").unwrap();
         let p1 = f.svc.plan("s1").unwrap(); let _p2 = f.svc.plan("s2").unwrap();
         let tok = f.svc.confirm_issue(&p1.plan_hash, 0).unwrap();
