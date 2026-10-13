@@ -804,7 +804,7 @@ impl<'a, R: NodeRemote> NodeDeployer<'a, R> {
 }
 
 #[cfg(test)]
-mod tests {
+pub(crate) mod tests {
     use super::*;
     use crate::deploy::{
         manifest::{sha256, DeployArtifactFile},
@@ -816,21 +816,21 @@ mod tests {
 
     /// A server in a box: SFTP side is the in-process mock, exec side answers the fixed command
     /// templates the way a Debian host with systemd and Caddy would.
-    struct Fake {
-        t: MockSshTransport,
-        node: Option<(&'static str, &'static str)>,
-        npm: bool,
-        install_ok: bool,
-        caddy_valid: bool,
-        listening: Vec<u16>,
-        app_up: bool,
-        active: &'static str,
-        log: String,
-        commands: Vec<String>,
-        reloads: usize,
+    pub(crate) struct Fake {
+        pub(crate) t: MockSshTransport,
+        pub(crate) node: Option<(&'static str, &'static str)>,
+        pub(crate) npm: bool,
+        pub(crate) install_ok: bool,
+        pub(crate) caddy_valid: bool,
+        pub(crate) listening: Vec<u16>,
+        pub(crate) app_up: bool,
+        pub(crate) active: &'static str,
+        pub(crate) log: String,
+        pub(crate) commands: Vec<String>,
+        pub(crate) reloads: usize,
     }
     impl Fake {
-        fn new() -> Self {
+        pub(crate) fn new() -> Self {
             let mut t = MockSshTransport::default();
             t.entries.insert("/srv".into(), RemoteEntry::Directory);
             t.entries.insert("/srv/somnia".into(), RemoteEntry::Directory);
@@ -929,7 +929,7 @@ mod tests {
     fn launch(install: bool) -> NodeLaunch {
         NodeLaunch { entry: "server.js".into(), install, host_var: "HOSTNAME".into(), port_var: "PORT".into(), wants_origin: false }
     }
-    fn request(version: &str, secs: u64, install: bool, engines: Option<&str>) -> PublishRequest {
+    pub(crate) fn request(version: &str, secs: u64, install: bool, engines: Option<&str>) -> PublishRequest {
         let server = format!("// {version}\nrequire('http').createServer().listen(process.env.PORT);\n");
         let mut files = BTreeMap::new();
         files.insert("server.js".to_string(), server.into_bytes());
@@ -1241,5 +1241,70 @@ mod tests {
         assert_eq!(e.to_string(), "deploy.node.installFailed");
         assert_eq!(NodeError::from(EnvError::Reserved).to_string(), "deploy.node.env.reserved");
         assert_eq!(NodeError::from(DeployError::UntrustedHost).code, NodeErrorCode::Transport);
+    }
+
+    /// Same flow over a real SSH connection and real SFTP into a temporary directory: the
+    /// confinement, hard links, atomic renames and file modes are the production ones.
+    #[tokio::test]
+    async fn publish_and_fail_back_over_real_ssh_and_sftp() {
+        use crate::deploy::{
+            host_keys::{HostKey, HostKeyStore},
+            ssh::{ConnectOptions, Credential, RusshTransport, SshTarget},
+            ssh_testkit::TestServer,
+        };
+        use std::sync::{Arc, Mutex};
+        let server = TestServer::start().await;
+        server.set_password("pw");
+        for d in ["", "/releases", "/shared"] {
+            std::fs::create_dir_all(server.path(&format!("/srv/somnia/{SITE}{d}"))).unwrap();
+        }
+        let app_up = Arc::new(Mutex::new(false));
+        let jail = server.path("/");
+        let up = app_up.clone();
+        server.set_exec(move |c, _| {
+            let ok = |s: &str| (0u32, s.to_string(), String::new());
+            if c.contains("command -v node") {
+                ok("SOMNIA_NODE_PATH /usr/bin/node\nSOMNIA_NODE_VERSION v22.1.0\nSOMNIA_NPM yes\n")
+            } else if c.starts_with("ss -H") || c.contains("wc -c") || c.starts_with("tail -n") {
+                ok("")
+            } else if c.contains(" enable '") {
+                ok("SOMNIA_ENABLED\n")
+            } else if c.contains(" show somnia-") {
+                ok("ActiveState=active\nNRestarts=0\n")
+            } else if c.contains(" restart somnia-") {
+                let link = std::fs::read_link(jail.join(format!("srv/somnia/{SITE}/current"))).unwrap();
+                let body = std::fs::read_to_string(jail.join(format!("srv/somnia/{SITE}")).join(link).join("server.js")).unwrap();
+                *up.lock().unwrap() = !body.contains("BROKEN");
+                ok("SOMNIA_RESTARTED\n")
+            } else if c.contains("SOMNIA_HC_PORT") {
+                ok(if *up.lock().unwrap() { "SOMNIA_HEALTH 200\n" } else { "SOMNIA_HEALTH 502\n" })
+            } else if c.contains("caddy validate") {
+                ok("SOMNIA_CADDY_OK\n")
+            } else if c.contains("caddy reload") {
+                ok("SOMNIA_CADDY_RELOADED\n")
+            } else {
+                (127, String::new(), "unexpected".into())
+            }
+        });
+        let store = Arc::new(HostKeyStore::default());
+        store.trust_new("127.0.0.1", server.addr.port(), &HostKey::from_public_key(server.host_key.public_key())).unwrap();
+        let pw = Zeroizing::new("pw".to_string());
+        let mut t = RusshTransport::connect(&SshTarget::new("127.0.0.1", server.addr.port(), "somnia"), store, Credential::Password(&pw), ConnectOptions::default(), []).await.unwrap();
+        let mut d = NodeDeployer::new(&mut t, SITE, fast()).unwrap();
+        let one = d.publish(request("v1", 1_000, false, None), &noop).await.unwrap();
+        d.env_apply(vec![("TOKEN".into(), Zeroizing::new("abc-123-secret".into()))], &[]).await.unwrap();
+        let err = d.publish(request("BROKEN", 2_000, false, None), &noop).await.unwrap_err();
+        assert_eq!(err.code, NodeErrorCode::HealthFailedRolledBack);
+        let site = server.path(&format!("/srv/somnia/{SITE}"));
+        assert_eq!(std::fs::read_link(site.join("current")).unwrap().to_str().unwrap(), format!("releases/{}", one.release_id));
+        assert_eq!(std::fs::read_dir(site.join("releases")).unwrap().count(), 1);
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            assert_eq!(std::fs::metadata(site.join("shared/.env")).unwrap().permissions().mode() & 0o777, 0o600);
+        }
+        assert!(site.join("Caddyfile").is_file() && site.join(unit_name(SITE)).is_file());
+        let commands = server.state.commands.lock().unwrap().clone();
+        assert!(commands.iter().all(|c| !c.contains("abc-123-secret")));
     }
 }
