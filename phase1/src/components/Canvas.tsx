@@ -1,3 +1,5 @@
+import {FrameworkDetectedBanner} from './FrameworkDetectedBanner';
+import {detectFramework} from '../lib/frameworks/detect';
 import {RasterEditor,useRasterEditor} from './RasterEditor';
 import type {CodeTheme} from '../lib/appearance';
 import {lazy,Suspense} from 'react';
@@ -37,5 +39,5 @@ export function Canvas(){const {t}=useT();const raster=useRasterEditor();
  if(activeMedia)return <main className="center" aria-label={t('rest.canvas.editorWorkspace')}><div className="workspace"><section className="code-pane" aria-label={t('rest.canvas.mediaPreview')}><FileTabs/><MediaViewer item={activeMedia}/></section></div></main>;
  if(!state.coreConnected)return <EmptyState/>;
  const rendered=isRenderedText(state.activeFile);
- return <main className="center" aria-label={t('rest.canvas.editorWorkspace')}>{mdFile&&<FileTabs/>}<div ref={box} className={`workspace workspace-${state.viewMode}${state.viewMode==='split'?` split-${state.splitLayout}${state.splitSwap?' split-swap':''}`:''}`}>{state.viewMode!=='design'&&code}{state.viewMode==='split'&&<SplitDivider box={box} md={mdFile}/>}{state.viewMode!=='code'&&(isSvg(state.activeFile)?<SvgEditor file={state.activeFile} text={state.files[state.activeFile]??''}/>:rendered?<RenderedPreview file={state.activeFile} text={state.files[state.activeFile]??''}/>:state.livePreview?<LivePreview/>:<DesignCanvas/>)}</div></main>;
+ return <main className="center" aria-label={t('rest.canvas.editorWorkspace')}><FrameworkDetectedBanner/>{mdFile&&<FileTabs/>}<div ref={box} className={`workspace workspace-${state.viewMode}${state.viewMode==='split'?` split-${state.splitLayout}${state.splitSwap?' split-swap':''}`:''}`}>{state.viewMode!=='design'&&code}{state.viewMode==='split'&&<SplitDivider box={box} md={mdFile}/>}{state.viewMode!=='code'&&(isSvg(state.activeFile)?<SvgEditor file={state.activeFile} text={state.files[state.activeFile]??''}/>:rendered?<RenderedPreview file={state.activeFile} text={state.files[state.activeFile]??''}/>:(state.livePreview||detectFramework(state.files))?<LivePreview/>:<DesignCanvas/>)}</div></main>;
 }

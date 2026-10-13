@@ -1,3 +1,5 @@
+import {FrameworkPreview} from './FrameworkPreview';
+import {detectFramework} from '../lib/frameworks/detect';
 import {useEffect,useMemo,useRef,useState} from 'react';
 import {jumpToLine,patchState,useAppStore} from '../store/appStore';
 import {usePreviewNavigation} from '../lib/usePreviewNavigation';
@@ -18,7 +20,7 @@ const currentAssetLoader=()=>{const src=getPreviewResourceSource();return src?re
 const key=(name:string)=>`somnia.preview.scripts.${name}`;
 const read=(name:string):boolean|null=>{try{const v=localStorage.getItem(key(name));return v==null?null:v==='1';}catch{return null;}};
 /** Opt-in live preview. Scripts only run after a one-time choice per project; the iframe has an opaque origin and no network. */
-export function LivePreview(){const {t}=useT();
+export function StaticLivePreview(){const {t}=useT();
  const s=useAppStore();const [allow,setAllow]=useState<boolean|null>(()=>read(s.projectName));const [auto,setAuto]=useState(true);const [tick,setTick]=useState(0);const [errors,setErrors]=useState<Array<{message:string;location:PreviewSourceLocation|null}>>([]);const [doc,setDoc]=useState('');const [blocked,setBlocked]=useState<string[]>([]);const [unloaded,setUnloaded]=useState<string[]>([]);const [cycles,setCycles]=useState<string[]>([]);const resText=useRef<Readonly<Record<string,string>>>({});const frame=useRef<HTMLIFrameElement>(null);const assetCache=useRef(new PreviewAssetCache());const lastTick=useRef(0);const watch=useRef(new PreviewAssetWatch());const built=useRef<{files:Readonly<Record<string,string>>;active:string;allow:boolean}|null>(null);const forceFull=useRef(false);const [assetRev,setAssetRev]=useState(0);const preview=useRef<ReturnType<typeof buildPreview>|null>(null);
  const nav=usePreviewNavigation(s.files,s.designFile||s.activeFile);const navRef=useRef(nav);navRef.current=nav;const previewFile=nav.file;const text=s.files[s.activeFile]??'';
  useEffect(()=>{setAllow(read(s.projectName));assetCache.current.invalidateAll();watch.current.reset();built.current=null;resText.current={};setUnloaded([]);setCycles([]);},[s.projectName]);
@@ -46,3 +48,6 @@ export function LivePreview(){const {t}=useT();
   {blocked.length>0&&<div role="status" aria-label={t('rest.livePreview.blockedExternalResources')} className="border-t border-line bg-amber-500/10 px-3 py-1.5 text-[11px]">{t('finish2.preview.blocked',{count:blocked.length,files:blocked.slice(0,3).join(', ')+(blocked.length>3?' …':'')})}</div>}
   {errors.length>0&&<div role="alert" aria-label={t('rest.livePreview.previewErrors')} className="max-h-[30%] overflow-auto border-t border-line bg-red-500/10 px-3 py-2 font-mono text-[11px]"><div className="mb-1 flex"><strong className="flex-1">{t('finish2.preview.errors',{count:errors.length})}</strong><button className="cursor-pointer border-0 bg-transparent text-ink-2" onClick={()=>setErrors([])}>{t('rest.livePreview.dismiss')}</button></div>{errors.map(({message,location},i)=><div key={i}>{location?<button className="cursor-pointer border-0 bg-transparent text-left text-inherit underline hover:no-underline" aria-label={t('finish2.preview.openError',{file:location.file,line:location.line,col:location.col,message})} onClick={()=>jumpToLine(location.file,location.line,location.col)}>{message} ({location.file}:{location.line}:{location.col})</button>:message}</div>)}</div>}
   <span className="sr-only" aria-live="polite">{text?'':t('finish2.preview.empty')}</span></section>;}
+
+/** Framework projects never enter the static data-URL inliner. */
+export function LivePreview(){const state=useAppStore();return detectFramework(state.files)?<FrameworkPreview/>:<StaticLivePreview/>;}

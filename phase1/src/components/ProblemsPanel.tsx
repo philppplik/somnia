@@ -1,3 +1,4 @@
+import {FrameworkRunnerOutput} from './FrameworkRunnerOutput';
 import {useT} from '../lib/useT';
 import {useEffect,useMemo,useState,useSyncExternalStore} from 'react';
 import {AlertTriangle,CircleAlert} from '../lib/icons';
@@ -27,6 +28,7 @@ export function ProblemsPanel(){
     </li>)}</ul></div>;})}
    </div>)}
   </div>
+  <FrameworkRunnerOutput/>
   <p className="!mt-2 text-[10px] text-ink-3">{t('problems.session')}{problemsStore.getDropped()>0&&' '+t('problems.dropped',{count:problemsStore.getDropped()})}</p>
  </section>;
 }

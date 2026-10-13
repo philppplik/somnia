@@ -11,6 +11,7 @@ export function EmptyState(){
   <div className="flex flex-wrap justify-center gap-2">
    <Button autoFocus onClick={()=>void executeCommand('project.open')}><FolderOpen size={14}/>{t('empty.openFolder')}</Button>
    <Button onClick={()=>void executeCommand('project.openFile')}><FileText size={14}/>{t('empty.openFile')}</Button>
+   <Button onClick={()=>void executeCommand('frameworks.newProject')}><FilePlus2 size={14}/>{t('frameworks.newProject')}</Button>
    <Button onClick={()=>void executeCommand('project.newFile')}><FilePlus2 size={14}/>{t('empty.newFile')}</Button>
   </div>
   <p className="text-[11px] text-ink-3">{t('empty.hint')}</p>

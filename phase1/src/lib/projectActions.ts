@@ -7,7 +7,7 @@ import {applyOperations,closeCore,connectEditorProject,getState,openFileTab,patc
 import {clearDraft} from './draftSession';
 import {starterFor} from './fileOps';
 import {MEDIA_ACCEPT,MEDIA_FILE,addMediaFile} from './media';
-export const TEXT_FILE=/\.(html?|css|js|json|svg|txt|md|tex)$/i;
+export const TEXT_FILE=/\.(html?|css|[cm]?js|jsx|ts|tsx|vue|svelte|astro|json|svg|txt|md|tex)$/i;
 const MAX_BYTES=2_000_000;
 export interface IncomingFile{name:string;text:string;blob?:Blob}
 const unique=(name:string,taken:string[])=>{const set=new Set(taken.map(f=>f.toLowerCase()));if(!set.has(name.toLowerCase()))return name;const m=/^(.*?)(\.[^./]+)?$/.exec(name)!;for(let i=2;i<1000;i++){const c=`${m[1]}-${i}${m[2]??''}`;if(!set.has(c.toLowerCase()))return c;}return name;};
@@ -39,7 +39,7 @@ let openIncomingHook:(files:IncomingFile[])=>Promise<unknown>=async files=>{addT
 export const installOpenIncoming=(fn:(files:IncomingFile[])=>Promise<unknown>)=>{openIncomingHook=fn;};
 export const openIncoming=(files:IncomingFile[])=>openIncomingHook(files);
 /** Open File: pick one or more text files with the system file dialog. */
-export function openFileDialog(){return new Promise<void>(resolve=>{const input=document.createElement('input');input.type='file';input.multiple=true;input.accept='.html,.htm,.css,.js,.json,.svg,.txt,.md,.tex,text/*,'+MEDIA_ACCEPT;
+export function openFileDialog(){return new Promise<void>(resolve=>{const input=document.createElement('input');input.type='file';input.multiple=true;input.accept='.html,.htm,.css,.js,.jsx,.ts,.tsx,.mjs,.cjs,.vue,.svelte,.astro,.json,.svg,.txt,.md,.tex,text/*,'+MEDIA_ACCEPT;
  input.onchange=async()=>{if(input.files?.length)await openIncomingHook(await readFiles(input.files));resolve();};input.oncancel=()=>resolve();input.click();});}
 /** Open image or PDF: works the same in the browser and the desktop app (system file dialog, read-only preview). */
 export function openMediaDialog(){return new Promise<void>(resolve=>{const input=document.createElement('input');input.type='file';input.multiple=true;input.accept=MEDIA_ACCEPT;

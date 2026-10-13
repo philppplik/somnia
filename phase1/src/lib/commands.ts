@@ -166,3 +166,5 @@ for(const n of [1,2,3,4,5,6])mdCmd(`md.h${n}`,`Markdown: Heading ${n}`,undefined
 mdCmd('md.reveal','Markdown: Reveal current preview block in source',undefined,()=>{window.dispatchEvent(new Event('somnia:md-reveal'));},()=>/\.(md|markdown)$/i.test(getState().activeFile)&&getState().viewMode!=='code');
 mdCmd('md.sync','Markdown: Toggle scroll sync',undefined,async()=>{const b=await import('./mdBridge');b.setSyncScroll(!b.getSyncScroll());},()=>/\.(md|markdown)$/i.test(getState().activeFile)&&getState().viewMode==='split');
 
+
+registerCoreCommandSpec({level:'ui',params:NO_CORE_PARAMS,id:'frameworks.newProject',title:'New project',category:'Project',keywords:['react','framework','app','template'],run:async()=>{(await import('./frameworks/newProjectFlow')).newProjectFlow.open();}});

@@ -1,3 +1,7 @@
+import {newProjectFlow} from './frameworks/newProjectFlow';
+import {reactTemplate} from './frameworks/templates';
+import {scaffoldProject} from './frameworks/scaffold';
+import {frameworkSession} from './frameworks/runtime';
 import {folderNameFor} from './folderName';
 import {trackNativeDrop,consumeNativeChatDrop,consumeNativeConvertDrop} from './collab/nativeChatDrop';
 import {installHoldBackend,isAgentAutosaveHeld,releaseAgentAutosave,clearAgentAutosaveHolds,heldAgentPaths} from './agent/autosaveHold';
@@ -84,7 +88,7 @@ export async function installFileAdapter(port:FilePort){
    if(event.clientRevision!==snapshot.revision)throw Error(`Save revision changed for ${path}. Review unsaved edits.`);
   }
  };
- const close=async(keepRecovery:boolean)=>{if(heldAgentPaths().length&&getState().isDirty&&!window.confirm('Applied AI changes are only in editor memory and are not in disk recovery. Discard these unsaved changes and close the project?'))throw Error('Close cancelled. Save the applied AI changes first, or explicitly discard them.');await queue;if(projectId)await port.invoke('close_project',{projectId,keepRecovery});unsubscribe();disconnect();detachProjectSettings();projectId=null;model=null;restoreHeld.clear();setVersionsSession(null);setPreviewResourceSource(null);clearAgentAutosaveHolds();patchState({nativeConnected:false,storage:'memory',diskComparison:null});};
+ const close=async(keepRecovery:boolean)=>{await frameworkSession.stop();if(heldAgentPaths().length&&getState().isDirty&&!window.confirm('Applied AI changes are only in editor memory and are not in disk recovery. Discard these unsaved changes and close the project?'))throw Error('Close cancelled. Save the applied AI changes first, or explicitly discard them.');await queue;if(projectId)await port.invoke('close_project',{projectId,keepRecovery});unsubscribe();disconnect();detachProjectSettings();projectId=null;model=null;restoreHeld.clear();setVersionsSession(null);setPreviewResourceSource(null);clearAgentAutosaveHolds();patchState({nativeConnected:false,storage:'memory',diskComparison:null});};
  const attach=async(selected:{projectId:string;name:string},files:Record<string,string>,nextBaselines:Map<string,Revision>,candidate?:EditorProject)=>{
   clearAgentAutosaveHolds();restoreHeld.clear();projectId=selected.projectId;counter=0;baselines=nextBaselines;current=new Map();staged=new Map();saved=new Map(Object.entries(files));
   model=candidate??new EditorProject(files);disconnect=connectEditorProject(model,{name:selected.name,alreadySaved:true});
@@ -157,6 +161,30 @@ export async function installFileAdapter(port:FilePort){
   }catch(error){await port.invoke('close_project',{projectId:selected.projectId,keepRecovery:false}).catch(()=>{});throw error;}
   clearDraft();await attach(selected,files,nextBaselines);patchState({notice:`Saved ${paths.length} file${paths.length===1?'':'s'} to ${selected.name}. Autosave is on.`});return true;
  };
+ const stopFrameworkCreate=newProjectFlow.install(async options=>{
+  if(getState().isDirty)throw Error('frameworks.saveFirst');
+  const startRevision=getState().revision,startFiles=getState().files;
+  const files=scaffoldProject(reactTemplate(options.language),options.name);
+  const selected=await port.invoke<{projectId:string;name:string}|null>('choose_project',{createSubfolder:options.name});if(!selected)return false;
+  const nextBaselines=new Map<string,Revision>();
+  try{
+   const existing=await port.invoke<string[]>('list_files',{projectId:selected.projectId});
+   if(existing.length)throw Error('frameworks.overwrite');
+   if(getState().revision!==startRevision||getState().files!==startFiles)throw Error('frameworks.saveFirst');
+   let revision=0;
+   for(const [path,content] of Object.entries(files)){
+    const read=await port.invoke<Read>('read_file',{projectId:selected.projectId,path});
+    if(read.revision.exists)throw Error('frameworks.overwrite');
+    await port.invoke('stage_edit',{projectId:selected.projectId,path,content,clientRevision:++revision});
+    const event=await port.invoke<FileEvent>('save_file',{projectId:selected.projectId,path,expectedRevision:read.revision});
+    if(event.state!=='saved')throw Error('frameworks.createFailed');nextBaselines.set(path,event.diskRevision);
+   }
+   if(projectId)await close(true);
+   await attach(selected,files,nextBaselines);patchState({activeFile:`src/App.${options.language}x`,openFiles:[`src/App.${options.language}x`],viewMode:'split',livePreview:true,activeStudio:'code',problemsOpen:true});
+   // Creation is an explicit user action. The helper download consent is owned by F1.
+   void frameworkSession.start(selected.projectId,true);return true;
+  }catch(error){await port.invoke('close_project',{projectId:selected.projectId,keepRecovery:true}).catch(()=>{});throw error;}
+ });
  /** Export: write a copy of all files into a chosen folder without switching the current project. Never overwrites. */
  const exportToFolder=async(newFolder:boolean)=>{
   const st=getState();const files={...st.files};const paths=Object.keys(files);if(!paths.length)throw Error('There is nothing to export.');
@@ -199,5 +227,5 @@ export async function installFileAdapter(port:FilePort){
  const focusProject=(pid:string)=>{if(pid===projectId)return;void open(false,false,undefined,{projectId:pid,name:''}).catch(()=>patchState({notice:'That file is already open in another project.'}));};
  if(port.shell&&intakeStarter)cleanups.push(await intakeStarter(port,focusProject).catch(error=>{fail(error);return()=>{};}));
  if(port.shell){const shell=port.shell;setCloseHandlers('disk',{saveAndClose:async()=>{await save();if(getState().isDirty)throw Error('Some edits are still unsaved. Close was cancelled.');await close(false);await shell.destroyWindow();},discardAndClose:async()=>{await close(true);await shell.destroyWindow();}});cleanups.push(()=>setCloseHandlers('disk',null));cleanups.push(await port.listen('somnia://close-blocked',()=>requestClose('disk')));}
- return ()=>{for(const off of recoveryOff.splice(0))off();cleanups.forEach(fn=>fn());unsubscribe();disconnect();};
+ return ()=>{stopFrameworkCreate();void frameworkSession.stop();for(const off of recoveryOff.splice(0))off();cleanups.forEach(fn=>fn());unsubscribe();disconnect();};
 }

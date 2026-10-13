@@ -1,0 +1,11 @@
+{
+  "id": "react-js",
+  "framework": "react",
+  "language": "js",
+  "output": "static",
+  "scripts": {
+    "dev": "dev",
+    "build": "build"
+  },
+  "artifactPath": "dist"
+}

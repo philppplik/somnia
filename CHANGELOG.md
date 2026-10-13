@@ -6,6 +6,12 @@
 - Local project install, build and protected preview runner with credential scrubbing, redacted bounded logs, timeouts and process-tree cleanup.
 - Framework helper status and removal in Settings; isolated native preview with no editor permissions.
 
+## Unreleased - framework projects
+
+- Create React projects from bundled TypeScript or JavaScript templates with pinned lockfiles.
+- Detect framework projects without running code; show helper setup, preview controls and redacted app output.
+- Keep framework previews on token-protected loopback with a dev-only click-to-source plugin.
+
 ## 11.2.0-beta.1 - 2026-10-07
 
 - Direct OpenAI/Claude BYOK providers, live catalogs and metadata-only auth.

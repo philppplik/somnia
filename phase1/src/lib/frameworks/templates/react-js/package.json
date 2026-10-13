@@ -1,0 +1,19 @@
+{
+  "name": "somnia-react-app",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build"
+  },
+  "dependencies": {
+    "react": "19.3.0",
+    "react-dom": "19.3.0"
+  },
+  "devDependencies": {
+    "vite": "8.3.2",
+    "@vitejs/plugin-react": "6.1.1",
+    "@babel/parser": "8.0.7"
+  }
+}
