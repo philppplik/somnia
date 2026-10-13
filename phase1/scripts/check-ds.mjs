@@ -13,6 +13,7 @@ export const exceptions = [
   {path:'src/themes/', metrics:['hexCss'], reason:'Syntax theme palettes are independent of application appearance.'},
   {path:'src/styles/tokens.css', metrics:['hexCss'], reason:'Canonical token definitions own literal colors.'},
   ...['vectorstudio/VectorCanvas.tsx','vectoredit/PenToolEditor.tsx','svgedit/GradientEditor.tsx'].map(name => ({path:`src/components/${name}`,metrics:['hexTsx'],reason:'Vector document colors and editing previews. Controls remain counted.'})),
+  {path:'src/components/XtermHost.tsx', metrics:['hexTsx'], reason:'xterm.js requires concrete colors at construction; the literals are fallbacks behind the app CSS variables. Controls remain counted.'},
 ];
 function files(dir) {
   if (!existsSync(dir)) return [];

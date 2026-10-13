@@ -2479,8 +2479,21 @@
       ]
     },
     {
+      "name": "terminal_attach",
+      "domain": "terminal",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "session_id"
+      ],
+      "args": [
+        "sessionId"
+      ]
+    },
+    {
       "name": "terminal_context",
-      "domain": "fs",
+      "domain": "terminal",
       "status": "native",
       "wrapped": false,
       "boundary": "B1",
@@ -2492,8 +2505,47 @@
       ]
     },
     {
+      "name": "terminal_kill",
+      "domain": "terminal",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "session_id"
+      ],
+      "args": [
+        "sessionId"
+      ]
+    },
+    {
+      "name": "terminal_list",
+      "domain": "terminal",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [],
+      "args": []
+    },
+    {
+      "name": "terminal_resize",
+      "domain": "terminal",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "session_id",
+        "cols",
+        "rows"
+      ],
+      "args": [
+        "sessionId",
+        "cols",
+        "rows"
+      ]
+    },
+    {
       "name": "terminal_run",
-      "domain": "fs",
+      "domain": "terminal",
       "status": "native",
       "wrapped": false,
       "boundary": "B1",
@@ -2511,8 +2563,25 @@
       ]
     },
     {
+      "name": "terminal_spawn",
+      "domain": "terminal",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "cwd",
+        "cols",
+        "rows"
+      ],
+      "args": [
+        "cwd",
+        "cols",
+        "rows"
+      ]
+    },
+    {
       "name": "terminal_status",
-      "domain": "fs",
+      "domain": "terminal",
       "status": "native",
       "wrapped": false,
       "boundary": "B1",
@@ -2525,7 +2594,7 @@
     },
     {
       "name": "terminal_stop",
-      "domain": "fs",
+      "domain": "terminal",
       "status": "native",
       "wrapped": false,
       "boundary": "B1",
@@ -2534,6 +2603,21 @@
       ],
       "args": [
         "runId"
+      ]
+    },
+    {
+      "name": "terminal_write",
+      "domain": "terminal",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "session_id",
+        "data"
+      ],
+      "args": [
+        "sessionId",
+        "data"
       ]
     },
     {

@@ -1970,6 +1970,12 @@ fn git_trust_path(window: &WebviewWindow) -> std::result::Result<PathBuf, String
         .map_err(|_| "App config directory is unavailable".to_string())
 }
 /// Deployment accepts an opened native folder only, never a renderer-provided filesystem path.
+/// Working directory for new inline terminal sessions: the first open project root, if any.
+pub(crate) fn first_project_root(app: &tauri::AppHandle) -> Option<PathBuf> {
+    let shared = app.state::<Shared>();
+    let backend = shared.lock().ok()?;
+    backend.projects.values().next().map(|p| p.root_path().to_path_buf())
+}
 pub(crate) fn deploy_project_root(app: &tauri::AppHandle) -> std::result::Result<PathBuf, String> {
     let state = app.state::<Shared>();
     let backend = state.lock().map_err(|_| "deploy:storage".to_string())?;
@@ -2825,6 +2831,10 @@ pub fn run() {
                     ),
                 }
             }
+            crate::terminal::glue::install_sink(
+                app.state::<crate::terminal::TerminalManager>().inner(),
+                app.handle().clone(),
+            );
             let app_handle = app.handle().clone();
             std::thread::spawn(move || {
               let mut watchers: std::collections::BTreeMap<String, crate::git::invalidation::GitStatusWatcher> = Default::default();
@@ -2897,7 +2907,8 @@ pub fn run() {
             if let tauri::WindowEvent::Destroyed = event {
                 if window.label()=="main"{crate::local_voice::cancel_owned();}
                 window.state::<crate::proc_runner::ProcessRunner>().stop_all();
-                window.state::<crate::command_terminal::CommandTerminal>().stop_owner(window.label());
+                window.state::<crate::command_terminal::CommandTerminal>().stop_owner(window.label());                window.state::<crate::terminal::TerminalManager>().kill_all();
+
             }
             if let tauri::WindowEvent::CloseRequested { api, .. } = event {
                 let shared = window.state::<Shared>();
@@ -2912,10 +2923,12 @@ pub fn run() {
                     let _ = window.emit("somnia://close-blocked", ());
                 } else {
                     window.state::<crate::proc_runner::ProcessRunner>().stop_all();
-                    window.state::<crate::command_terminal::CommandTerminal>().stop_owner(window.label());
+                    window.state::<crate::command_terminal::CommandTerminal>().stop_owner(window.label());                    window.state::<crate::terminal::TerminalManager>().kill_all();
+
                 }
             }
         })
+        .manage(crate::terminal::TerminalManager::default())
         .manage(crate::proc_runner::ProcessRunner::default())
         .manage(crate::command_terminal::CommandTerminal::default())
         .invoke_handler(tauri::generate_handler![
@@ -2924,6 +2937,12 @@ pub fn run() {
             crate::studio_copy::studio_copy_take,
             crate::studio_copy::studio_copy_export,            terminal_context, terminal_run, terminal_status, terminal_stop,            installer_handoff_take,
             runtime_status, runtime_install, runtime_remove, project_run, project_stop, project_status, project_logs, project_stop_all, deploy_artifact_collect, deploy_node_build_collect, preview_open, preview_close,
+            crate::terminal::glue::terminal_spawn,
+            crate::terminal::glue::terminal_list,
+            crate::terminal::glue::terminal_attach,
+            crate::terminal::glue::terminal_write,
+            crate::terminal::glue::terminal_resize,
+            crate::terminal::glue::terminal_kill,
             crate::vibespace_schedule_commands::vibespace_schedule_preview,
             crate::vibespace_schedule_commands::vibespace_schedule_create,
             crate::vibespace_schedule_commands::vibespace_schedule_list,

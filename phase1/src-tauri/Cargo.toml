@@ -23,7 +23,7 @@ folder-lock-interim = []
 vibespace-fastembed = ["somnia-vibespace-embed/fastembed"]
 # Android/iOS shell: webview + dialog only. No desktop plugins, keyring, vibrancy or reqwest. Build with --no-default-features --features mobile.
 mobile = ["dep:tauri", "dep:tauri-build"]
-desktop = ["dep:tauri", "dep:tauri-plugin-dialog", "dep:tauri-plugin-updater", "dep:tauri-plugin-process", "dep:tauri-plugin-single-instance", "dep:tauri-build", "dep:window-vibrancy", "dep:keyring", "dep:reqwest"]
+desktop = ["dep:tauri", "dep:tauri-plugin-dialog", "dep:tauri-plugin-updater", "dep:tauri-plugin-process", "dep:tauri-plugin-single-instance", "dep:tauri-build", "dep:window-vibrancy", "dep:keyring", "dep:reqwest", "dep:portable-pty"]
 
 [dependencies]
 url = "2"
@@ -70,6 +70,8 @@ ignore = "=0.4.25"
 tokio-rustls = { version = "0.26", default-features = false, features = ["ring", "tls12"] }
 rustls-native-certs = "0.8"
 base64 = "0.22"
+# Inline terminal PTY (MIT, wezterm project). ConPTY on Windows: no console window can flash.
+portable-pty = { version = "=0.9.0", optional = true }
 
 [target.'cfg(any(target_os = "windows", target_os = "macos"))'.dependencies]
 window-vibrancy = { version = "=0.8.1", optional = true }

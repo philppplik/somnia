@@ -387,4 +387,6 @@ body{font-size:var(--ui-font-size,13px)}
 @media(forced-colors:active){.menu-item[data-highlighted],.pricing-toggle button[aria-pressed=true],.export-option[data-checked=true],.cv-chip[data-checked=true]{outline:2px solid Highlight}}
 
 /* Reduced transparency: the dialog scrim bypasses the glass tokens, so drop its blur explicitly. */
-@media(prefers-reduced-transparency:reduce){.dialog-backdrop{backdrop-filter:none;background:rgba(0,0,0,.75)}}
+@media(prefers-reduced-transparency:reduce){.dialog-backdrop{backdrop-filter:none;background:rgba(0,0,0,.75)}}/* Bottom-panel terminal: the xterm canvas fills the host; padding stays inside the panel chrome. */
+.terminal-host{overflow:hidden;border-radius:6px;background:var(--bg-base)}
+.terminal-host .xterm{padding:6px 8px}

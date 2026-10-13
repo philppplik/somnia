@@ -302,7 +302,10 @@
 
 - Opt-in tabbed panel docks support cross-side dragging, move controls, per-studio saved layout and reset. Existing layout remains the default.
 - Code text projects can open as independent local window copies with bounded one-shot handoff, export-copy and unsaved-close protection. Media/engine state and live shared editing are not yet supported.
-- Already-open text has explicit compatible Studio links backed by Smart Open kind validation.
+- Already-open text has explicit compatible Studio links backed by Smart Open kind validation.## Unreleased - inline terminal
+
+- The bottom panel has a Terminal tab next to Problems (`Mod+Shift+J`): interactive shells in the project folder with multiple sessions, resize, copy/paste and replay after the panel was closed.
+- Install and dev-server output (npm install, helper packages) shows as a read-only stream in the same tab; no console window pops up anywhere.
 
 ## Unreleased - server frameworks (Next.js, Astro, SvelteKit, Nuxt)
 

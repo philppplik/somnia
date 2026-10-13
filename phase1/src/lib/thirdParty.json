@@ -294,6 +294,18 @@
   "homepage": "https://github.com/xmldom/xmldom"
  },
  {
+  "name": "@xterm/addon-fit",
+  "version": "0.11.0",
+  "license": "MIT",
+  "homepage": ""
+ },
+ {
+  "name": "@xterm/xterm",
+  "version": "6.0.0",
+  "license": "MIT",
+  "homepage": ""
+ },
+ {
   "name": "adler2 (PhotoCraft WASM)",
   "version": "2.0.1",
   "license": "0BSD OR MIT OR Apache-2.0",

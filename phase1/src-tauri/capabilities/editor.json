@@ -241,9 +241,9 @@
     "allow-git-combine-resolve",
     "allow-git-combine-finish",
     "allow-git-combine-abort",
-        "allow-git-push-plan",
-        "allow-git-push-apply",
-        "allow-git-fetch",
+    "allow-git-push-plan",
+    "allow-git-push-apply",
+    "allow-git-fetch",
     "allow-extension-activity-query",
     "allow-extension-activity-export",
     "allow-check-channel-update",
@@ -266,10 +266,15 @@
     "allow-deploy-node-build-collect",
     "allow-preview-open",
     "allow-preview-close",
-
     "core:window:allow-set-always-on-top",
     "core:window:allow-set-decorations",
     "core:menu:default",
-    "allow-studio-copy-open"
+    "allow-studio-copy-open",
+    "allow-terminal-spawn",
+    "allow-terminal-list",
+    "allow-terminal-attach",
+    "allow-terminal-write",
+    "allow-terminal-resize",
+    "allow-terminal-kill"
   ]
 }

@@ -16,7 +16,7 @@ included; the `source` column names the owner. Dynamic sources that stay outside
 
 Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, fr, pt-BR); the gate enforces it.
 
-1138 commands. Categories: Edit, Help, Insert, Project, Tools, View.
+1141 commands. Categories: Edit, Help, Insert, Project, Tools, View.
 
 | id | title | category | source | shortcut |
 | --- | --- | --- | --- | --- |
@@ -1060,6 +1060,9 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `table.row.above` | Table: add row above | Insert | core |  |
 | `table.row.below` | Table: add row below | Insert | core |  |
 | `table.row.delete` | Table: delete row | Insert | core |  |
+| `terminal.close` | Close active terminal session | Tools | core |  |
+| `terminal.new` | New terminal session | Tools | core |  |
+| `terminal.toggle` | Toggle terminal | View | core | `Mod+Shift+J` |
 | `theme.dark` | Use dark theme | View | core |  |
 | `theme.light` | Use light theme | View | core |  |
 | `theme.toggle` | Toggle light / dark theme | Tools | core |  |

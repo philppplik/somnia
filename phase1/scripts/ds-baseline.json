@@ -110,6 +110,13 @@
         "hexTsx"
       ],
       "reason": "Vector document colors and editing previews. Controls remain counted."
+    },
+    {
+      "path": "src/components/XtermHost.tsx",
+      "metrics": [
+        "hexTsx"
+      ],
+      "reason": "xterm.js requires concrete colors at construction; the literals are fallbacks behind the app CSS variables. Controls remain counted."
     }
   ],
   "counts": {
