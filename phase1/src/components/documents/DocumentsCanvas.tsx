@@ -7,6 +7,7 @@ import {DocumentsEngine,inspectDocx,type OpenedDocument} from '../../lib/documen
 import {patchDocuments,resetDocuments,stepZoom,useDocuments} from '../../lib/documents/store';
 import {attachEngine,clearCaret,deleteAtCaret,dragTo,editParagraph,loadBlocks,moveCaret,pointerAt,redoEdit,selectAllInParagraph,selectedText,splitAtCaret,syncGeometry,typeText,undoEdit} from '../../lib/documents/session';
 import {saveCopy} from '../../lib/documents/saveCopy';
+import {registerDocumentPanelCommands} from '../../lib/documents/panelCommands';
 import {registerDocumentsCommands} from '../../lib/documents/commands';
 import {studioContextStore} from '../../lib/shell/studioContext';
 import {useT} from '../../lib/useT';
@@ -70,6 +71,7 @@ export function DocumentsCanvas(){
  const bytesRef=useRef<Uint8Array|null>(null);
  useEffect(()=>{void syncGeometry();},[doc.caret,doc.rev,doc.zoom]);
  useEffect(()=>registerDocumentsCommands(),[]);
+ useEffect(()=>registerDocumentPanelCommands(),[]);
  /** Publish the studio context: the caret paragraph is the selection, `ready`/`risks` gate inspector sections. */
  const claimRef=useRef<ReturnType<typeof studioContextStore.claim>|null>(null);
  useEffect(()=>{if(!item)return;const c=studioContextStore.claim('documents',{id:item.name,kind:'docx',dirty:false,readOnly:false});claimRef.current=c;return()=>{c.release();claimRef.current=null;};},[item?.name]);

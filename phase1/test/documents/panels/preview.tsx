@@ -1,0 +1,15 @@
+import '../../../src/components/documents/documents-panels.css';
+import React from 'react';
+import {createRoot} from 'react-dom/client';
+import {DocumentsOutlinePanel,DocumentsFindPanel,DocumentsInfoPanel,DocumentsSelectionPanel} from '../../../src/components/documents/DocumentsPanelContents';
+import {patchDocuments} from '../../../src/lib/documents/store';
+import {attachEngine} from '../../../src/lib/documents/session';
+import {registerDocumentPanelCommands} from '../../../src/lib/documents/panelCommands';
+import {studioContextStore} from '../../../src/lib/shell/studioContext';
+registerDocumentPanelCommands();
+attachEngine({blocks:async()=>[],caret:async()=>null,rects:async()=>[]} as any);
+patchDocuments({status:'ready',name:'Quarterly report.docx',pages:3,words:327,blocks:[{index:0,kind:'para',editable:true,text:'Quarterly report: ideas, decisions and next steps.'},{index:1,kind:'para',editable:true,text:'The document studio keeps your files local. Review each paragraph and save a copy when ready.'},{index:2,kind:'table',editable:false},{index:3,kind:'para',editable:true,text:'Next steps: finish the prototype and review feedback.'}],pageSizes:[{width:595,height:842},{width:595,height:842},{width:595,height:842}],caret:{block:1,anchor:0,head:19},risks:['images','headers'],canUndo:false});
+const owner=studioContextStore.claim('documents',{id:'Quarterly report.docx',kind:'docx',dirty:false,readOnly:false});owner.report({selection:{kind:'one',count:1,type:'paragraph',ids:['1']}});
+localStorage.setItem('somnia.panelState.v1',JSON.stringify({'documents.find.query':'document'}));
+const context=studioContextStore.get();
+createRoot(document.getElementById('root')!).render(<main style={{display:'grid',gridTemplateColumns:'repeat(4,minmax(0,1fr))',gap:18,padding:24}}>{[['Paragraphs',DocumentsOutlinePanel],['Find and replace',DocumentsFindPanel],['Document',DocumentsInfoPanel],['Paragraph inspector',DocumentsSelectionPanel]].map(([title,C]:any)=><article style={{border:'1px solid #e0e2e6',borderRadius:20,background:'var(--bg-surface)',overflow:'hidden'}}><h2 style={{fontSize:13,padding:'14px 12px 0'}}>{title}</h2><C panelId="preview" context={context}/></article>)}</main>);

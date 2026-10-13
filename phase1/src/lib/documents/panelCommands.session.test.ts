@@ -1,0 +1,11 @@
+import {test} from 'node:test';
+import assert from 'node:assert/strict';
+import {createDocumentPanelCommands} from './panelCommands';
+import {CommandDispatcher} from '../commandDispatcher';
+import {studioContextStore} from '../shell/studioContext';
+import {getDocumentsState,patchDocuments,resetDocuments} from './store';
+import {attachEngine} from './session';
+import {applyEdit,type TextEdit} from './edit';
+import type {DocumentsEngine} from './engine';
+test('replacement preserves UTF-8 text and supports undo/redo; stale drafts are refused',async()=>{let text='Ä 😀 cat cat';const engine={replace:async(edit:TextEdit)=>{text=applyEdit(text,edit);return {pages:1,pageSizes:[],text};},blocks:async()=>[{index:0,kind:'para',editable:true,text}],caret:async()=>null,rects:async()=>[]};attachEngine(engine as unknown as DocumentsEngine);patchDocuments({status:'ready',name:'session.docx',blocks:[{index:0,kind:'para',editable:true,text}],pages:1});const owner=studioContextStore.claim('documents',{id:'session.docx',kind:'docx',dirty:false,readOnly:false});const dispatcher=new CommandDispatcher();for(const spec of createDocumentPanelCommands())dispatcher.register(spec);const run=(id:string,p={})=>dispatcher.runCommand('documents.'+id,p,{origin:'test'});
+ await run('replaceMatch',{block:0,start:8,end:11,expected:'cat',text:'dog'});assert.equal(text,'Ä 😀 dog cat');assert.equal(getDocumentsState().canUndo,true);await run('panelUndo');assert.equal(text,'Ä 😀 cat cat');await run('panelRedo');assert.equal(text,'Ä 😀 dog cat');await assert.rejects(()=>run('commitParagraph',{block:0,before:'old',text:'new'}));await run('replaceMatch',{block:0,start:8,end:11,expected:'dog',text:''});assert.equal(text,'Ä 😀  cat');await run('panelUndo');assert.equal(text,'Ä 😀 dog cat');await run('commitParagraph',{block:0,before:text,text:'Final paragraph'});assert.equal(text,'Final paragraph');await run('panelUndo');assert.equal(text,'Ä 😀 dog cat');owner.release();attachEngine(null);resetDocuments();});

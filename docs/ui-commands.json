@@ -315,6 +315,38 @@
       "hasEnabled": true
     },
     {
+      "id": "documents.clearSelection",
+      "title": "Clear document selection",
+      "category": "View",
+      "source": "documents-panels",
+      "allowInInput": true,
+      "hasEnabled": true
+    },
+    {
+      "id": "documents.commitParagraph",
+      "title": "Apply paragraph text",
+      "category": "Edit",
+      "source": "documents-panels",
+      "allowInInput": true,
+      "hasEnabled": true
+    },
+    {
+      "id": "documents.focusParagraph",
+      "title": "Focus paragraph",
+      "category": "View",
+      "source": "documents-panels",
+      "allowInInput": true,
+      "hasEnabled": true
+    },
+    {
+      "id": "documents.goToPage",
+      "title": "Go to document page",
+      "category": "View",
+      "source": "documents-panels",
+      "allowInInput": true,
+      "hasEnabled": true
+    },
+    {
       "id": "documents.outline.goto",
       "title": "Go to document paragraph",
       "category": "View",
@@ -337,6 +369,22 @@
       "hasEnabled": true
     },
     {
+      "id": "documents.panelRedo",
+      "title": "Redo document edit",
+      "category": "Edit",
+      "source": "documents-panels",
+      "allowInInput": true,
+      "hasEnabled": true
+    },
+    {
+      "id": "documents.panelUndo",
+      "title": "Undo document edit",
+      "category": "Edit",
+      "source": "documents-panels",
+      "allowInInput": true,
+      "hasEnabled": true
+    },
+    {
       "id": "documents.redo",
       "title": "Redo document text edit",
       "category": "View",
@@ -345,6 +393,38 @@
         "document",
         "docx"
       ],
+      "hasEnabled": true
+    },
+    {
+      "id": "documents.replaceMatch",
+      "title": "Replace search result",
+      "category": "Edit",
+      "source": "documents-panels",
+      "allowInInput": true,
+      "hasEnabled": true
+    },
+    {
+      "id": "documents.selectMatch",
+      "title": "Select search result",
+      "category": "View",
+      "source": "documents-panels",
+      "allowInInput": true,
+      "hasEnabled": true
+    },
+    {
+      "id": "documents.selectParagraph",
+      "title": "Select entire paragraph",
+      "category": "View",
+      "source": "documents-panels",
+      "allowInInput": true,
+      "hasEnabled": true
+    },
+    {
+      "id": "documents.setZoom",
+      "title": "Set document zoom",
+      "category": "View",
+      "source": "documents-panels",
+      "allowInInput": true,
       "hasEnabled": true
     },
     {

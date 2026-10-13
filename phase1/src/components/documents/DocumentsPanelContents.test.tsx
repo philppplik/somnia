@@ -1,0 +1,11 @@
+import {test} from 'node:test';
+import assert from 'node:assert/strict';
+import {renderToStaticMarkup} from 'react-dom/server';
+import {DocumentsOutlinePanel,DocumentsFindPanel,DocumentsInfoPanel,DocumentsSelectionPanel} from './DocumentsPanelContents';
+import {patchDocuments,resetDocuments} from '../../lib/documents/store';
+import {studioContextStore} from '../../lib/shell/studioContext';
+import {attachEngine} from '../../lib/documents/session';
+import type {DocumentsEngine} from '../../lib/documents/engine';
+import {EMPTY_STUDIO_CONTEXT} from '../../lib/shell/types';
+test('empty panels do not expose controls for stale or absent documents',()=>{resetDocuments();for(const Host of [DocumentsOutlinePanel,DocumentsFindPanel]){const html=renderToStaticMarkup(<Host panelId="x" context={{...EMPTY_STUDIO_CONTEXT,studio:'documents'}}/>);assert.match(html,/No document is open/);assert.doesNotMatch(html,/<input/);}});
+test('document facts, warnings, selection editor and locked outline have accessible real content',()=>{attachEngine({} as DocumentsEngine);patchDocuments({status:'ready',name:'report.docx',pages:2,words:3,blocks:[{index:0,kind:'para',editable:true,text:'Hi 😀 friend'},{index:1,kind:'table',editable:false}],caret:{block:0,anchor:0,head:2},risks:['images'],pageSizes:[{width:595,height:842}]});const owner=studioContextStore.claim('documents',{id:'report.docx',kind:'docx',dirty:false,readOnly:false});owner.report({selection:{kind:'one',count:1,type:'paragraph',ids:['p0']},data:{block:0}});const context=studioContextStore.get();const info=renderToStaticMarkup(<DocumentsInfoPanel sectionId="document" context={context}/>);assert.match(info,/report.docx/);assert.match(info,/Images/);assert.match(info,/210 × 297/);assert.match(info,/documents-info-pages/);const selection=renderToStaticMarkup(<DocumentsSelectionPanel sectionId="selection" context={context}/>);assert.match(selection,/Hi 😀 friend/);assert.match(selection,/Selected characters/);assert.match(selection,/aria|<label/);const outline=renderToStaticMarkup(<DocumentsOutlinePanel panelId="outline" context={context}/>);assert.match(outline,/disabled/);assert.match(outline,/Locked/);owner.release();attachEngine(null);resetDocuments();});

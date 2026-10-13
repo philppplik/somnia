@@ -1,3 +1,4 @@
+import {registerDocumentPanelCommands} from '../src/lib/documents/panelCommands';
 /**
  * UI command inventory (engine-hardening plan, steps 1.1 and 1.7) and the gate for
  * `npm run check:ui-commands`.
@@ -98,6 +99,7 @@ export async function collect(): Promise<Entry[]> {
   await withSource('vector', () => vectorCommandsReady);
   await withSource('sheets', () => registerSheetsCommands());
   await withSource('documents', () => registerDocumentsCommands());
+  await withSource('documents-panels', () => registerDocumentPanelCommands());
   await withSource('slides', () => registerSlidesCommands());
   await withSource('design', () => registerDesignCommands());
   await withSource('pdfedit', () => { for (const spec of pdfCommandSpecs(pdfStub)) registerCommandSpec(spec); });
