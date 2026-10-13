@@ -124,7 +124,7 @@ example.com, www.example.com {
 
 - `www` handling and HTTP to HTTPS redirect come from Caddy defaults. Single-page apps get an opt-in `try_files {path} /index.html`.
 
-### 6.2 Node app (second tier)
+### 6.2 Node app (in scope for the first release)
 
 - Artifact: a self-contained bundle (built output, `package.json`, lockfile, optional prebuilt `node_modules`). Somnia does not ship a Node runtime. Wizard checks `node --version` on the server against the project's `engines`. If missing: shows the one extra bootstrap line to install it, never installs silently.
 - Runs as a **systemd user service** of `somnia` (`somnia-<site>.service`), working directory `/srv/somnia/<site>/current`, env from `shared/.env`, listening on `127.0.0.1:<port>` (port chosen at setup, stored in state).
@@ -350,17 +350,15 @@ Each is shippable and gated by `tsc`, `vitest`, `check:commands`, i18n parity.
 7. **Node tier**: runtime check, systemd user service, `.env` dialog, health check and automatic rollback.
 8. i18n, docs, screenshot baselines.
 
-Steps 1 to 5 deliver Philipp's one-click wish for static sites. Step 7 is optional and can wait.
+Steps 1 to 5 deliver the one-click path for static sites. Step 7 (Node and SSR apps) is part of the first release by Philipp's decision of 2026-10-13 and runs in parallel with steps 4 to 6 once step 3 is merged.
 
-## 14. Open questions for Philipp
+## 14. Decisions (Philipp, 2026-10-13)
 
-1. Is **static first, Node later** the right order, or do you need Node on day one?
-2. Which servers should the wizard officially support: only Debian/Ubuntu with systemd (proposed)?
-3. Is the **one-time bootstrap script** (run once with sudo/console) acceptable, or must it work on servers where you never get root (then the tier is upload-only, no SSL management)?
-4. Confirmation on every publish: OK even for a quick redeploy? Proposed answer: yes, always, no opt-out.
-5. Reachability check for ports 80/443 needs an external probe. Acceptable to call a small public service, or show instructions only?
-6. Embedded SSH library vs. the system `ssh` binary: proposal is embedded. Any objection to a new Rust dependency?
-7. Keep 5 old releases, or a different number?
+1. The one-time sudo bootstrap is accepted.
+2. **Node and SSR apps are in the first release**, not a later tier. Static stays the default path.
+3. The embedded Rust SSH library (`russh`) is accepted as a new dependency.
+4. Defaults from this document stand: Debian and Ubuntu with systemd are the supported servers, the confirmation dialog appears on every publish and rollback with no opt-out, 5 releases are kept.
+5. Still open and decided during development: the form of the port 80/443 reachability check (external probe or instructions only). Default until decided: instructions only.
 
 ## 15. Risks
 
@@ -373,7 +371,7 @@ Steps 1 to 5 deliver Philipp's one-click wish for static sites. Step 7 is option
 | Layperson confusion at bootstrap | Abandoned setup | Copy-paste block, auto-detect when done, plain "what this does" |
 | Accidental leak of key or `.env` | Critical | Section 10, seeded-secret tests, no secrets in project files |
 | Host-key prompt habituation | Weak TOFU | Pasted-fingerprint path, hard stop on change, fingerprint in every confirmation |
-| Node app restarts drop requests | Short outage | Stated in UI, health check and rollback, socket handoff later |
+| Node app restarts drop requests | Short outage | Stated in UI, health check and automatic rollback, socket handoff is a later improvement |
 | Scope creep to a hosting product | Late delivery | Section 1 non-goals |
 
 ## 16. Out of scope

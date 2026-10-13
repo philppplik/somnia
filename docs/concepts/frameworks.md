@@ -82,7 +82,7 @@ Rules:
 - Limits: one dev server per project, max 2 running at once, idle stop after 10 minutes with the preview closed, build timeout 5 minutes, install timeout 10 minutes, log buffer 5 MB, `node_modules` excluded from indexing, Smart Open, search, agent reads and the file watcher (Vite watches it itself).
 - Fallback: if the managed runtime is missing or fails, a framework project still opens in the code editor. The preview shows one clear message and a "Fix" button, never a blank frame.
 
-### 3.4 Deploy artifact: static by default, Node server later
+### 3.4 Deploy artifact: static by default, Node server in the first release
 
 | Artifact | From | Upload | Host needs | Phase |
 | --- | --- | --- | --- | --- |
@@ -94,7 +94,7 @@ How it fits the live-deployment concept:
 - The deploy step never builds on the remote host. It builds locally with the managed runtime, then uploads a **file list with hashes** (the artifact manifest). The remote listing is compared to the manifest. The confirmation dialog shows what will be added, changed and removed.
 - Static is the same as what a plain HTML project deploys today, so Phase 1 adds **no new deploy code path**, only a "build first" step in front of it.
 - SPA routing: for Vite single-page templates the artifact includes a generated server-rule snippet (for nginx `try_files ... /index.html`, for Apache `.htaccess`) shown to the user, never written to the host without the confirmation dialog listing it.
-- Node bundles need a service restart on the host. That is a second remote command and a bigger risk, so it stays out of scope until the static path is solid (section 9, M7).
+- Node bundles need a service restart on the host (systemd user service, health check, automatic rollback). Philipp decided on 2026-10-13 that SSR and Node apps are part of the first release. The deploy side is specified in live-deployment.md sections 6.2 and 13 step 7. The extra risk review happens inside milestone M4 below.
 
 ### 3.5 Security constraints (binding for all milestones)
 
@@ -203,30 +203,28 @@ No GitHub Actions. Everything runs locally and in the swarm's own gates.
 - **Deploy tests:** against a container OpenSSH server or an in-process mock SSH/SFTP server only. Cases: first-use fingerprint prompt, fingerprint mismatch hard stop, diff correctness (add, change, delete), agent origin cannot confirm, credential never in logs or in `exportState`. A guard test fails if a deploy target resolves to anything but `localhost`, a container name or the mock in the test environment. Philipp's vServer is never a target.
 - **Manual by Philipp (Windows):** first-run helper download, create React app, edit and save, preview updates, close with unsaved changes warns, publish dialog reads clearly. A version becomes stable only after this.
 
-## 9. Milestones (prioritised)
+## 9. Milestones (prioritised, SSR pulled forward)
 
 | M | Scope | Result for Philipp | Depends on |
 | --- | --- | --- | --- |
 | M1 | Managed runtime download and verify, `proc_runner` with env scrub and redaction, commands + checklist, Settings > Frameworks (status, remove) | Nothing visible except the helper in Settings | None |
 | M2 | **React (Vite, TS and JS) template**, scaffold, New Project gallery with one framework card, dev server on loopback, preview mode 2, Problems panel output | "New Project, React, Create" shows a running app | M1 |
-| M3 | Build step and static artifact manifest, "Publish" builds first, uses the existing static deploy path with the 3.5 dialog | One-click publish of a React app | M2, deploy concept |
-| M4 | Vue, Svelte, Solid, Preact, vanilla TS templates (data only), detect existing projects pill | Framework chips in the gallery | M2 |
-| M5 | Astro (static) with component islands, content site card | Blog and docs starter | M4 |
-| M6 | Extension SDK `templates` family, built-in gallery moved to it, restricted-mode rules | Extensions can add templates | M4, SDK work |
-| M7 | Next (static export, limits in plain words), SvelteKit static, Nuxt generate | More meta-frameworks, still static | M5 |
-| M8 | Node bundle artifact, service restart step, "Needs a Node host" templates enabled | SSR apps (separate approval) | M3, new risk review |
+| M3 | Build step and static artifact manifest, "Publish" builds first, uses the static deploy path with the 3.5 dialog | One-click publish of a React app | M2, deploy concept steps 1 to 4 |
+| M4 | **Node/SSR artifact and server-app templates**: Node bundle artifact, `engines` check, service restart and health check through the deploy concept step 7, SSR templates (Next standalone, Astro Node adapter, SvelteKit node) | SSR apps publish with one click, with a clear "needs Node on the server" notice | M3, deploy concept step 7 |
+| M5 | Vue, Svelte, Solid, Preact, vanilla TS templates (data only), detect existing projects pill | Framework chips in the gallery | M2 (parallel with M3 and M4) |
+| M6 | Astro (static and content site) with component islands | Blog and docs starter | M5 |
+| M7 | Next (static export and standalone), SvelteKit static, Nuxt generate and node-server | More meta-frameworks | M4, M6 |
+| M8 | Extension SDK `templates` family, built-in gallery moved to it, restricted-mode rules | Extensions can add templates | M5, SDK work |
 
 Gates per milestone: `tsc`, `vitest`, `cargo test`, `check:commands`, i18n parity, Playwright baselines for the existing Code and Live View studios unchanged.
 
-## 10. Open questions for Philipp
+## 10. Decisions (Philipp, 2026-10-13)
 
-1. **Live deployment:** see `live-deployment.md`. It covers building on this PC and uploading over SSH to your own server with automatic SSL. Do you also want hosts like Netlify or Vercel later?
-2. **Helper download:** OK that Somnia downloads a ~40 MB helper program once on first framework use, instead of making the installer bigger?
-3. **Gallery wording:** are "Simple page / Interactive app / Content site" clear to you, or do you prefer the framework names (React, Vue, ...) on the first screen?
-4. **Visual editing:** accept that framework projects get preview plus code (and click-to-code), while the drag-and-drop canvas stays for HTML?
-5. **Internet access of the previewed app:** blocked by default (as today) with a per-project switch. OK?
-6. **Order:** React, then Vue/Svelte/Solid, then Astro, then Next. Do you want Astro before Vue/Svelte/Solid?
-7. **Server apps (SSR):** only after static publish works well, and only if your host has Node. OK to wait?
+1. Live deployment follows `live-deployment.md` (build on this PC, upload over SSH to the user's own server, automatic SSL).
+2. Node and SSR apps are in the first release, not later.
+3. The managed Node helper download (about 40 MB, once, on first framework use) is accepted.
+4. Framework order follows the Vite order: React, then Vue, Svelte, Solid, then Astro, then Next.
+5. Defaults stand for the rest: Debian and Ubuntu servers, confirmation on every publish, 5 kept releases. Open for review during development: gallery wording, visual-editing scope, internet access of the previewed app (blocked by default).
 
 ## 11. Out of scope
 
