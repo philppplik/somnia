@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased - Slides Present
+
+- Slides now declares Present in the shared header hero slot, with current/from-start interactive commands and F5 / Shift+F5 shortcuts.
+- Added static-image full-window/fullscreen presentation, bounded keyboard and click navigation, numeric jumps, black screen, auto-hiding accessible controls and focus restoration.
+- Screen-size images obey the renderer budget and pre-render the next slide. Presentation labels are translated in all five locales.
+- Added unit and local browser interaction tests. Native fullscreen and production WASM output remain build-device checks.
+
 ## Unreleased - Header hero action slot
 
 - The header slot next to the Account pill can now show a studio's primary action as a split button (main action plus a chevron menu) instead of Publish. Studios opt in with one data field, `header.heroAction`; studios without it keep the Publish button.

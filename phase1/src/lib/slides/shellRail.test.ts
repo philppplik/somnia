@@ -12,7 +12,7 @@ import {editRailOverrides,railModel} from '../../store/railActions';
 import {hasRailIcon,registerRailIcons,resolveRailIcon,RAIL_FALLBACK_ICON} from '../shell/railIcons';
 import '../../components/shell/railIconSet';
 import {CATALOGUES,translate} from '../i18n';
-const deps={state:()=>({busy:false,working:true,canUndo:true,canRedo:true,slides:3,index:0}),history:()=>{},saveCopy:()=>{},showSlide:()=>{}};
+const deps={state:()=>({busy:false,working:true,canUndo:true,canRedo:true,slides:3,index:0,presenting:false}),present:()=>{},exitPresent:()=>{},history:()=>{},saveCopy:()=>{},showSlide:()=>{}};
 const panelDeps={state:()=>({source:'',index:0,busy:false,working:null,runs:[],summary:null}),thumbnails:async()=>{},edit:async()=>{},show:async()=>{},select:()=>{}};
 const known=new Set([...slidesCommandSpecs(deps),...slidesPanelCommandSpecs(panelDeps)].map(s=>s.id));
 const shell=slidesStudio.shellV2!;
@@ -78,4 +78,12 @@ test('labels: keyed items have catalogue entries in all five locales; shared ite
  }
  assert.equal(translate('de','slides.rail.overview'),'Folien');assert.equal(translate('en','slides.rail.saveCopy'),'Save a copy');
  assert.notEqual(translate('fr','slides.rail.undo'),translate('en','slides.rail.undo'));
+});
+
+
+test('Slides hero uses the shared header contract and only registered presentation commands',()=>{
+ const hero=slidesStudio.shell.header.heroAction!;assert.equal(hero.id,'slides.present');assert.equal(hero.icon,'Presentation');
+ for(const id of [hero.id,...hero.menu!.filter(id=>id!=='deploy.open')])assert.ok(known.has(id),id);
+ for(const locale of ['en','de','es','fr','pt-BR'])assert.ok(CATALOGUES[locale][hero.labelKey],locale);
+ assert.equal(hero.menu!.at(-1),'deploy.open');assert.ok(!hero.menu!.includes('slides.exportPdf'));
 });

@@ -202,5 +202,68 @@ export const SLIDES_PANEL_CATALOGUES:Record<string,Record<string,string>>={
     "cmd.slides.editText": "Aplicar texto"
   }
 };
+export const SLIDES_PRESENT_CATALOGUES:Record<string,Record<string,string>>={
+  "en": {
+    "cmd.slides.present": "Present",
+    "cmd.slides.present.fromStart": "Present from start",
+    "cmd.slides.present.exit": "Exit presentation",
+    "slides.present.static": "Shows slides as static images. F5: current slide; Shift+F5: from start.",
+    "slides.present.open": "Open a presentation",
+    "slides.present.counter": "Slide {number} of {count}",
+    "slides.present.controls": "Presentation controls",
+    "slides.present.black": "Black screen",
+    "slides.present.rendering": "Rendering slide...",
+    "slides.present.jump": "Jump to slide {number}: press Enter"
+  },
+  "de": {
+    "cmd.slides.present": "Präsentieren",
+    "cmd.slides.present.fromStart": "Von Anfang an präsentieren",
+    "cmd.slides.present.exit": "Präsentation beenden",
+    "slides.present.static": "Zeigt Folien als statische Bilder. F5: aktuelle Folie; Umschalt+F5: von Anfang an.",
+    "slides.present.open": "Präsentation öffnen",
+    "slides.present.counter": "Folie {number} von {count}",
+    "slides.present.controls": "Präsentationssteuerung",
+    "slides.present.black": "Schwarzer Bildschirm",
+    "slides.present.rendering": "Folie wird gerendert...",
+    "slides.present.jump": "Zu Folie {number} springen: Eingabetaste drücken"
+  },
+  "es": {
+    "cmd.slides.present": "Presentar",
+    "cmd.slides.present.fromStart": "Presentar desde el inicio",
+    "cmd.slides.present.exit": "Salir de la presentación",
+    "slides.present.static": "Muestra imágenes estáticas. F5: diapositiva actual; Mayús+F5: desde el inicio.",
+    "slides.present.open": "Abre una presentación",
+    "slides.present.counter": "Diapositiva {number} de {count}",
+    "slides.present.controls": "Controles de presentación",
+    "slides.present.black": "Pantalla negra",
+    "slides.present.rendering": "Renderizando diapositiva...",
+    "slides.present.jump": "Ir a la diapositiva {number}: pulsa Intro"
+  },
+  "fr": {
+    "cmd.slides.present": "Présenter",
+    "cmd.slides.present.fromStart": "Présenter depuis le début",
+    "cmd.slides.present.exit": "Quitter la présentation",
+    "slides.present.static": "Affiche des images fixes. F5 : diapositive actuelle ; Maj+F5 : depuis le début.",
+    "slides.present.open": "Ouvrir une présentation",
+    "slides.present.counter": "Diapositive {number} sur {count}",
+    "slides.present.controls": "Commandes de présentation",
+    "slides.present.black": "Écran noir",
+    "slides.present.rendering": "Rendu de la diapositive...",
+    "slides.present.jump": "Aller à la diapositive {number} : appuyez sur Entrée"
+  },
+  "pt-BR": {
+    "cmd.slides.present": "Apresentar",
+    "cmd.slides.present.fromStart": "Apresentar desde o início",
+    "cmd.slides.present.exit": "Sair da apresentação",
+    "slides.present.static": "Mostra imagens estáticas. F5: slide atual; Shift+F5: desde o início.",
+    "slides.present.open": "Abra uma apresentação",
+    "slides.present.counter": "Slide {number} de {count}",
+    "slides.present.controls": "Controles de apresentação",
+    "slides.present.black": "Tela preta",
+    "slides.present.rendering": "Renderizando slide...",
+    "slides.present.jump": "Ir para o slide {number}: pressione Enter"
+  }
+};
+for(const [locale,strings] of Object.entries(SLIDES_PRESENT_CATALOGUES))Object.assign(SLIDES_PANEL_CATALOGUES[locale],strings);
 for(const [locale,strings] of Object.entries(SLIDES_PANEL_CATALOGUES))Object.assign(CATALOGUES[locale],strings);
 export function useSlidesPanelText(){const locale=useSyncExternalStore(subscribeLocale,getLocale,getLocale);return (key:string,params?:Record<string,string|number>)=>translate(locale,key,params);}
