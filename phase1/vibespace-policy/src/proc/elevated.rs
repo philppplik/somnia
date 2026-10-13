@@ -88,6 +88,11 @@ impl ProcessLauncher for DirectLauncher {
 
     fn run(&self, spec: &ExecSpec, limits: &ProcessLimits) -> Result<super::ExecReceipt, ProcessError> {
         let mut cmd = std::process::Command::new(&spec.program);
+        #[cfg(windows)]
+        {
+            use std::os::windows::process::CommandExt;
+            cmd.creation_flags(0x0800_0000);
+        }
         cmd.args(&spec.args)
             .stdin(std::process::Stdio::null())
             .stdout(std::process::Stdio::piped())

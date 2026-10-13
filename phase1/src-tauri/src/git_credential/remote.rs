@@ -1,5 +1,6 @@
 //! Remote URL validation. Runs BEFORE any token is provided: the effective fetch/push URL (after
 //! `pushurl`, `insteadOf` and `pushInsteadOf`) must be one plain `https://github.com/owner/repo[.git]`.
+use crate::no_window::NoWindow;
 use super::{BridgeError, Policy};
 use std::path::Path;
 use std::process::{Command, Stdio};
@@ -74,6 +75,7 @@ pub fn parse_url(raw: &str, policy: &Policy) -> Result<RepoRef, BridgeError> {
 
 fn git_lines(cwd: &Path, args: &[&str]) -> Result<(Option<i32>, Vec<String>), BridgeError> {
     let mut cmd = Command::new("git");
+    cmd.no_window();
     cmd.env_clear();
     for k in ["PATH", "HOME", "USERPROFILE", "HOMEDRIVE", "HOMEPATH", "SystemRoot", "TEMP", "TMP", "TMPDIR", "XDG_CONFIG_HOME"] {
         if let Some(v) = std::env::var_os(k) {

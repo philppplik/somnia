@@ -1,4 +1,5 @@
 //! Runs one authenticated network git command under a lease.
+use crate::no_window::NoWindow;
 use super::{BridgeError, CredentialLease, Operation, ValidatedRemote};
 use std::ffi::OsString;
 use std::io::Read;
@@ -60,6 +61,7 @@ pub fn run_git_with_lease(
         return Err(BridgeError::InvalidArgs);
     }
     let mut cmd = Command::new("git");
+    cmd.no_window();
     cmd.env_clear();
     for k in ["PATH", "HOME", "USERPROFILE", "HOMEDRIVE", "HOMEPATH", "SystemRoot", "TEMP", "TMP", "TMPDIR", "LANG", "XDG_CONFIG_HOME"] {
         if let Some(v) = std::env::var_os(k) {
