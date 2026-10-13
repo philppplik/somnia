@@ -1,5 +1,7 @@
 import type {PanelDef,PanelHostProps} from '../../lib/shell/types';
 import {useStudioContext} from '../../lib/shell/studioContext';
+import {INSPECTOR_HOST} from '../../lib/shell/types';
+import {InspectorPanel} from '../shell/InspectorPanel';
 import {DesktopVibeSpacePanel} from '../vibespace/DesktopVibeSpacePanel';
 import {DesignCanvas} from '../design/DesignCanvas';
 import {DesignInspector} from '../design/DesignInspector';
@@ -38,6 +40,7 @@ function useHostStudio(id:string){const media=useMedia();const active=media.item
 /** Explicit host allowlist. A manifest never supplies an executable module path. */
 export type PanelComponent=React.ComponentType<PanelHostProps>;
 const panelHosts=new Map<string,PanelComponent>([
+ [INSPECTOR_HOST,InspectorPanel],
  ...['layers','files','search','components','css','versions'].map(id=>[`code.${id}`,LayersPanel] as [string,PanelComponent]),
  ...['design','prototype','code'].map(id=>[`code.${id}`,Inspector] as [string,PanelComponent])
 ]);

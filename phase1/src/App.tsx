@@ -58,6 +58,8 @@ import { CommandPalette } from './components/CommandPalette';
 import { ResizeHandle } from './components/ResizeHandle';
 import { executeCommand,formatShortcut } from './lib/commands';
 import { useAppStore } from './store/appStore';
+import './store/railCommands';
+import './components/documents/registerShell';
 import {AppDialogs} from './components/AppDialogs';
 import {DiagnosticsHost} from './components/diagnostics/DiagnosticsHost';
 import {ConfirmHost} from './components/ConfirmHost';

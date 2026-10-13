@@ -1,4 +1,4 @@
-import type {PanelDef,RailItemDef,StudioContext,StudioShellDef} from './types';
+import {INSPECTOR_HOST,type InspectorSectionDef,type PanelDef,type RailItemDef,type StudioShellDef} from './types';
 import {evalWhen,validateWhen} from './when';
 import {isNamespacedId} from './commandMeta';
 /**
@@ -21,6 +21,7 @@ export function stackPanels(panels:readonly PanelDef[],side:'left'|'right',opene
 export interface ShellValidationOpts{
  commandExists?:(id:string)=>boolean;
  hostExists?:(component:string)=>boolean;
+ sectionHostExists?:(component:string)=>boolean;
  iconExists?:(name:string)=>boolean;
 }
 /**
@@ -62,9 +63,22 @@ export function validateStudioShell(studio:string,def:StudioShellDef,o:ShellVali
   else cmd(where,it.command);
  }
  for(const t of def.tools??[]){cmd(`tool "${t.id}"`,t.command);if(t.opensPanel&&!panels.some(x=>x.id===t.opensPanel))p.push(`${studio}: tool "${t.id}" opens unknown panel "${t.opensPanel}"`);}
+ if(def.inspector){
+  const ins=def.inspector;dup('inspector section',ins.sections.map(x=>x.id));
+  if(!panels.some(x=>x.component===INSPECTOR_HOST))p.push(`${studio}: inspector sections need a panel with component "${INSPECTOR_HOST}"`);
+  for(const x of ins.sections){
+   const where=`inspector section "${x.id}"`;checkWhen(where,x.when);(x.commands??[]).forEach(c=>cmd(where,c));
+   if(!x.component)p.push(`${studio}: ${where} has no component`);else if(o.sectionHostExists&&!o.sectionHostExists(x.component))p.push(`${studio}: ${where} host "${x.component}" is not registered`);
+  }
+ }
  if(def.defaultLayout){
   for(const [side,ids] of [['left',def.defaultLayout.leftPanels],['right',def.defaultLayout.rightPanels]] as const)
    for(const id of ids)if(!panels.some(x=>x.id===id&&x.side===side))p.push(`${studio}: defaultLayout ${side} lists unknown panel "${id}"`);
  }
  return p;
+}
+
+/** Sections to render now: `when` holds, sorted by `order` (stable). Pure. */
+export function resolveInspectorSections(defs:readonly InspectorSectionDef[],ctx:unknown):InspectorSectionDef[]{
+ return defs.map((d,i)=>({d,i})).filter(({d})=>evalWhen(d.when,ctx)).sort((a,b)=>(a.d.order??0)-(b.d.order??0)||a.i-b.i).map(x=>x.d);
 }

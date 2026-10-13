@@ -281,7 +281,7 @@ No change to studio switching (pill), Smart Open routing, the agent panel, statu
 
 ## 9. Panel API for studio authors
 
-Status: the contract below is stable. Studios build their rails, panels and inspectors against it. Implementation of the rail customization UI, the generic inspector and the Documents reference migration follows on the same branch and does not change these types.
+Status: the contract below is stable. Studios build their rails, panels and inspectors against it. Documents is the reference migration (`lib/studios/documents.ts`, `components/documents/`).
 
 A studio declares everything in `StudioDef.shellV2` (`lib/shell/types.ts`). The shell never branches on a studio id.
 
@@ -291,7 +291,7 @@ A studio declares everything in `StudioDef.shellV2` (`lib/shell/types.ts`). The 
 interface PanelDef {
   id: string;                       // unique per studio
   title: string; titleKey?: string; // titleKey is an i18n key and wins over title
-  component: string;                // host id, registered with registerPanelHost (use definePanel)
+  component: string;                // host id, registered with registerPanelHost
   side: 'left' | 'right';
   icon?: string;                    // rail icon name
   placement?: 'rail' | 'docked';    // default 'rail'
@@ -302,7 +302,7 @@ interface PanelDef {
 }
 
 interface RailItemDef {
-  id: string; icon: string; label: string; order: number;
+  id: string; icon: string; label: string; labelKey?: string; order: number;  // labelKey (i18n) wins over label
   kind: 'panel' | 'tool' | 'command';   // 'action' is the old spelling of 'command'
   panel?: string; tool?: string; command?: string;
   when?: string; badge?: string; defaultPinned?: boolean; movable?: boolean;
@@ -324,21 +324,38 @@ interface PanelHostProps { panelId: string; context: StudioContext }
 
 ### 9.2 Writing a panel
 
-```tsx
-// lib/studios/documents.ts
-import {definePanel} from '../../components/studios/definePanel';
+A migrated studio has two halves. The manifest (`lib/studios/<id>.ts`) is pure data and must not import components. The hosts live in `components/` and are registered once.
 
-const stylesPanel = definePanel('documents', {
-  id: 'styles', title: 'Styles', titleKey: 'documents.panel.styles', icon: 'Type',
-  side: 'right', when: "selection.kind != 'none'",
-  commands: ['documents.style.apply'],
-  render: ({context}) => <StylesPanel selection={context.selection} />,
+```ts
+// lib/studios/documents.ts (data)
+export const documentsShell: StudioShellDef = {
+  panels: [
+    {id: 'pages', title: 'Pages', titleKey: 'documents.rail.pages', component: 'documents.pages', side: 'left'},
+    {id: 'inspector', title: 'Document', component: 'shell.inspector', side: 'right'},
+  ],
+  leftRail: [{id: 'pages', icon: 'Copy', label: 'Pages', labelKey: 'documents.rail.pages', kind: 'panel', panel: 'pages', order: 20}],
+  inspector: {sections: [{id: 'selection', title: 'Selected paragraph', component: 'documents.inspector.selection', when: "selection.kind == 'one'"}]},
+};
+
+// components/documents/registerShell.ts (hosts)
+registerStudioPanels(documentsStudio, {
+  panels: {'documents.pages': PagesPanel},                         // Component<{panelId, context}>
+  sections: {'documents.inspector.selection': SelectionSection},   // Component<{sectionId, context}>
 });
 ```
 
-- `definePanel(studio, spec)` registers the host as `<studio>.<id>` and returns the `PanelDef`. A manifest never names a module path, only a registered host id.
-- `render` gets the merged `StudioContext`. It re-renders when the canvas reports a change.
+- `registerStudioPanels` throws when the manifest names a host that is missing or a supplied host is not named, so the two halves cannot drift. Shared hosts (for example `code.files`) may be referenced without supplying them.
+- A panel host receives the merged `StudioContext`. It re-renders when the canvas reports a change.
 - Panel UI state that must survive reloads goes through `usePanelState(persistKey, initial)` (`store/panelStateStore.ts`). JSON values only.
+- Import the registration module once from `App.tsx` (the hosts file must not import it, that would be a cycle).
+
+### 9.2a Inspector
+
+The inspector is a panel with `component: 'shell.inspector'` (side right). Its content is `shellV2.inspector.sections`: each section has `id`, `title`/`titleKey`, `component` (a section host), optional `when`, `order`, `commands` and `defaultCollapsed`. The host owns the chrome: title, collapsible sections (state persisted per studio), an empty state (`emptyKey`) when no section applies. Sections whose `when` is false are not rendered, so a canvas that publishes no selection simply shows the sections that do not need one.
+
+### 9.2b Commands
+
+Actions are commands with payloads, registered by a `lib/<studio>/commands.ts` (`registerXCommands()`, called when the canvas mounts, same pattern as Sheets). Add the source to `scripts/dump-ui-commands.ts` and run `npm run inventory:ui-commands`. Documents is the reference (`documents.pages.goto {page}`, `documents.outline.goto {block}`, zoom, undo, redo).
 
 ### 9.3 Placement and `when`
 
@@ -346,13 +363,13 @@ const stylesPanel = definePanel('documents', {
 - `docked`: no rail item. The panel joins the end of the side stack while `when` holds and leaves when it does not. Use for selection properties.
 - `when` is the same expression language as menus, shortcuts and the palette. Missing paths are falsy, so a panel that depends on `selection` stays hidden in a canvas that never reports one.
 
-### 9.4 Rail items
+### 9.4 Rail items and customization
 
 - `kind: 'panel'` toggles the panel (`panel` must exist on the same side and be a `rail` panel).
 - `kind: 'tool'` activates a `ToolDef` and opens its `opensPanel`.
 - `kind: 'command'` runs a command. No panel.
 - `icon` is a name from the rail icon registry (`lib/shell/railIcons.ts`, `registerRailIcons`). An unknown name renders the fallback glyph and fails `validateStudioShell`. The same function keeps the same icon in every studio.
-- The user can reorder, pin, move to overflow and hide items per studio. The rail resolver (`railResolver.ts`) applies those overrides; `when` always wins over them.
+- The user can reorder (drag, or the move commands), pin, move to overflow, hide and reset per studio: right-click a rail icon, or use the overflow (...) button. The commands are `shell.rail.moveUp|moveDown|pin|unpin|hide|show|reset` (payload `{side,id}`, otherwise the last focused rail icon). Overrides persist in the shell layout store. The rail resolver (`railResolver.ts`) applies them; `when` always wins over them. Code keeps its legacy rail until it is migrated (it has no `shellV2.panels`).
 
 ### 9.5 Selection context
 
@@ -365,7 +382,7 @@ ctx.report({selection: {kind: 'one', type: 'paragraph', count: 1, ids: ['p3']}, 
 ctx.release();
 ```
 
-A stale canvas cannot overwrite the context of the current owner. `useStudioContext(activeStudio)` is what the shell and panel hosts read.
+A stale canvas cannot overwrite the context of the current owner. `useStudioContext(activeStudio)` is what the shell and panel hosts read. `services` (booleans such as `ready`) are the way to gate sections and panels on canvas state without leaking engine details.
 
 ### 9.6 Commands
 

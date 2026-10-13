@@ -315,6 +315,83 @@
       "hasEnabled": true
     },
     {
+      "id": "documents.outline.goto",
+      "title": "Go to document paragraph",
+      "category": "View",
+      "source": "documents",
+      "keywords": [
+        "document",
+        "docx"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "documents.pages.goto",
+      "title": "Go to document page",
+      "category": "View",
+      "source": "documents",
+      "keywords": [
+        "document",
+        "docx"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "documents.redo",
+      "title": "Redo document text edit",
+      "category": "View",
+      "source": "documents",
+      "keywords": [
+        "document",
+        "docx"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "documents.undo",
+      "title": "Undo document text edit",
+      "category": "View",
+      "source": "documents",
+      "keywords": [
+        "document",
+        "docx"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "documents.zoomIn",
+      "title": "Zoom in on the document",
+      "category": "View",
+      "source": "documents",
+      "keywords": [
+        "document",
+        "docx"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "documents.zoomOut",
+      "title": "Zoom out of the document",
+      "category": "View",
+      "source": "documents",
+      "keywords": [
+        "document",
+        "docx"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "documents.zoomReset",
+      "title": "Reset document zoom to 100%",
+      "category": "View",
+      "source": "documents",
+      "keywords": [
+        "document",
+        "docx"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "edit.decodeEntities",
       "title": "Decode special characters (HTML entities)",
       "category": "Edit",
@@ -1027,6 +1104,97 @@
       "title": "Undo workbook change",
       "category": "Edit",
       "source": "sheets",
+      "hasEnabled": true
+    },
+    {
+      "id": "shell.rail.hide",
+      "title": "Hide rail icon",
+      "category": "View",
+      "source": "core",
+      "keywords": [
+        "customize",
+        "icon",
+        "rail",
+        "sidebar"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "shell.rail.moveDown",
+      "title": "Move rail icon down",
+      "category": "View",
+      "source": "core",
+      "keywords": [
+        "customize",
+        "icon",
+        "rail",
+        "sidebar"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "shell.rail.moveUp",
+      "title": "Move rail icon up",
+      "category": "View",
+      "source": "core",
+      "keywords": [
+        "customize",
+        "icon",
+        "rail",
+        "sidebar"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "shell.rail.pin",
+      "title": "Pin rail icon",
+      "category": "View",
+      "source": "core",
+      "keywords": [
+        "customize",
+        "icon",
+        "rail",
+        "sidebar"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "shell.rail.reset",
+      "title": "Reset rails of this studio",
+      "category": "View",
+      "source": "core",
+      "keywords": [
+        "customize",
+        "icon",
+        "rail",
+        "sidebar"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "shell.rail.show",
+      "title": "Show hidden rail icon",
+      "category": "View",
+      "source": "core",
+      "keywords": [
+        "customize",
+        "icon",
+        "rail",
+        "sidebar"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "shell.rail.unpin",
+      "title": "Move rail icon to overflow",
+      "category": "View",
+      "source": "core",
+      "keywords": [
+        "customize",
+        "icon",
+        "rail",
+        "sidebar"
+      ],
       "hasEnabled": true
     },
     {

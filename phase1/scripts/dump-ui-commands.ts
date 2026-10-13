@@ -18,6 +18,7 @@ import { fileURLToPath } from 'node:url';
 
 import '../src/lib/commands';
 import '../src/lib/collab/commands';
+import '../src/store/railCommands';
 import {registerDeployCommands} from '../src/lib/deploy/register';
 import {createTauriDeployBackend} from '../src/lib/deploy/tauriBackend';
 import { listCommands } from '../src/lib/commands';
@@ -25,6 +26,7 @@ import { CATALOGUES, t } from '../src/lib/i18n';
 import { CommandDispatcher } from '../src/lib/commandDispatcher';
 import { vectorCommandsReady } from '../src/lib/studios/vector';
 import { registerSheetsCommands } from '../src/lib/sheets/commands';
+import { registerDocumentsCommands } from '../src/lib/documents/commands';
 import { registerSlidesCommands } from '../src/lib/slides/commands';
 import { registerDesignCommands } from '../src/lib/design/commands';
 import { pdfCommandSpecs } from '../src/lib/pdfedit/commands';
@@ -95,6 +97,7 @@ export function keyProblems(commands: Entry[]): string[] {
 export async function collect(): Promise<Entry[]> {
   await withSource('vector', () => vectorCommandsReady);
   await withSource('sheets', () => registerSheetsCommands());
+  await withSource('documents', () => registerDocumentsCommands());
   await withSource('slides', () => registerSlidesCommands());
   await withSource('design', () => registerDesignCommands());
   await withSource('pdfedit', () => { for (const spec of pdfCommandSpecs(pdfStub)) registerCommandSpec(spec); });

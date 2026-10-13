@@ -16,7 +16,7 @@ included; the `source` column names the owner. Dynamic sources that stay outside
 
 Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, fr, pt-BR); the gate enforces it.
 
-171 commands. Categories: Edit, Help, Insert, Project, Tools, View.
+185 commands. Categories: Edit, Help, Insert, Project, Tools, View.
 
 | id | title | category | source | shortcut |
 | --- | --- | --- | --- | --- |
@@ -52,6 +52,13 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `design.redo` | Design: Redo | Edit | design |  |
 | `design.setTool` | Design: Select tool | Tools | design |  |
 | `design.undo` | Design: Undo | Edit | design |  |
+| `documents.outline.goto` | Go to document paragraph | View | documents |  |
+| `documents.pages.goto` | Go to document page | View | documents |  |
+| `documents.redo` | Redo document text edit | View | documents |  |
+| `documents.undo` | Undo document text edit | View | documents |  |
+| `documents.zoomIn` | Zoom in on the document | View | documents |  |
+| `documents.zoomOut` | Zoom out of the document | View | documents |  |
+| `documents.zoomReset` | Reset document zoom to 100% | View | documents |  |
 | `edit.decodeEntities` | Decode special characters (HTML entities) | Edit | core |  |
 | `edit.delete` | Delete selected element | Edit | core | `Delete` |
 | `edit.duplicate` | Duplicate selected element | Edit | core | `Mod+D` |
@@ -119,6 +126,13 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `sheets.redo` | Redo workbook change | Edit | sheets |  |
 | `sheets.saveCopy` | Save workbook copy | Project | sheets |  |
 | `sheets.undo` | Undo workbook change | Edit | sheets |  |
+| `shell.rail.hide` | Hide rail icon | View | core |  |
+| `shell.rail.moveDown` | Move rail icon down | View | core |  |
+| `shell.rail.moveUp` | Move rail icon up | View | core |  |
+| `shell.rail.pin` | Pin rail icon | View | core |  |
+| `shell.rail.reset` | Reset rails of this studio | View | core |  |
+| `shell.rail.show` | Show hidden rail icon | View | core |  |
+| `shell.rail.unpin` | Move rail icon to overflow | View | core |  |
 | `sidebar.toggle` | Toggle sidebar | View | core | `Mod+B` |
 | `slides.redo` | Redo slide text | Edit | slides |  |
 | `slides.saveCopy` | Save presentation copy | Project | slides |  |

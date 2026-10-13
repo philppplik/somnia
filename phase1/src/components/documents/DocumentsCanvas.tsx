@@ -7,6 +7,8 @@ import {DocumentsEngine,inspectDocx,type OpenedDocument} from '../../lib/documen
 import {patchDocuments,resetDocuments,stepZoom,useDocuments} from '../../lib/documents/store';
 import {attachEngine,clearCaret,deleteAtCaret,dragTo,editParagraph,loadBlocks,moveCaret,pointerAt,redoEdit,selectAllInParagraph,selectedText,splitAtCaret,syncGeometry,typeText,undoEdit} from '../../lib/documents/session';
 import {saveCopy} from '../../lib/documents/saveCopy';
+import {registerDocumentsCommands} from '../../lib/documents/commands';
+import {studioContextStore} from '../../lib/shell/studioContext';
 import {useT} from '../../lib/useT';
 import {getState,patchState} from '../../store/appStore';
 const bar='media-bar flex items-center gap-2 border-b border-subtle px-3 py-1.5 text-[12px]';
@@ -67,6 +69,14 @@ export function DocumentsCanvas(){
  const [near,setNear]=useState<Set<number>>(new Set([0]));const [attempt,setAttempt]=useState(0);const [confirm,setConfirm]=useState(false);
  const bytesRef=useRef<Uint8Array|null>(null);
  useEffect(()=>{void syncGeometry();},[doc.caret,doc.rev,doc.zoom]);
+ useEffect(()=>registerDocumentsCommands(),[]);
+ /** Publish the studio context: the caret paragraph is the selection, `ready`/`risks` gate inspector sections. */
+ const claimRef=useRef<ReturnType<typeof studioContextStore.claim>|null>(null);
+ useEffect(()=>{if(!item)return;const c=studioContextStore.claim('documents',{id:item.name,kind:'docx',dirty:false,readOnly:false});claimRef.current=c;return()=>{c.release();claimRef.current=null;};},[item?.name]);
+ useEffect(()=>{
+  const sel=doc.caret?{kind:'one' as const,type:'paragraph',count:1,ids:['p'+doc.caret.block]}:{kind:'none' as const,count:0,ids:[] as string[]};
+  claimRef.current?.report({document:{id:item?.name??'',kind:'docx',dirty:doc.edited,readOnly:false},selection:sel,data:{block:doc.caret?.block??null},busy:doc.saving||doc.status==='loading',services:{ready:doc.status==='ready',risks:doc.status==='ready'&&doc.risks.length>0,canUndo:doc.canUndo,canRedo:doc.canRedo}});
+ },[item?.name,doc.edited,doc.caret?.block,doc.status,doc.risks.length,doc.saving,doc.canUndo,doc.canRedo]);
  /** The Layers tree belongs to the web page, not to a document: land on Files when this studio opens. */
  useEffect(()=>{if(!['files','search','versions'].includes(getState().leftTab))patchState({leftTab:'files'});},[]);
  useEffect(()=>{
@@ -121,7 +131,7 @@ export function DocumentsInspector(){
  </aside>;
 }
 
-function ParagraphEditor(){
+export function ParagraphEditor(){
  const {t}=useT();const doc=useDocuments();
  return <section aria-label={t('documents.edit.title')} className="grid gap-2" data-testid="documents-editor">
   <h3 className="text-[12px] font-medium text-ink">{t('documents.edit.title')}</h3>
@@ -134,7 +144,7 @@ function ParagraphEditor(){
    </li>)}
   </ul></section>;
 }
-function ParagraphField({index,text}:{index:number;text:string}){
+export function ParagraphField({index,text}:{index:number;text:string}){
  const {t}=useT();const [draft,setDraft]=useState(text);useEffect(()=>setDraft(text),[text]);
  return <textarea className="w-full resize-y rounded-sm border border-subtle bg-transparent p-1.5 text-[12px] text-ink" rows={Math.min(6,Math.max(1,Math.ceil(text.length/34)))} value={draft} aria-label={t('documents.edit.paragraph',{n:index+1})} data-testid={'documents-para-'+index}
   onChange={e=>setDraft(e.target.value.replace(/[\r\n]+/g,' '))} onBlur={()=>{if(draft!==text)void editParagraph(index,draft);}}/>;

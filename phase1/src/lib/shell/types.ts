@@ -16,6 +16,8 @@ export interface RailItemDef{
  id:string;
  /** Icon name resolved through the rail icon registry (lib/shell/railIcons.ts). Unknown names fall back, never throw. */
  icon:string;label:string;
+ /** i18n key for `label` (tooltip and aria-label). Wins over `label`, which stays the fallback text. */
+ labelKey?:string;
  /** `panel` opens/toggles `panel`; `tool` activates ToolDef `tool` and opens its `opensPanel`; `command` runs `command` (a rail button, no panel). `action` is the pre-v2 spelling of `command`. */
  kind:'panel'|'tool'|'command'|'action';
  command?:string;panel?:string;tool?:string;when?:string;badge?:string;
@@ -46,6 +48,20 @@ export interface PanelDef{
 }
 /** Props every panel host receives. `context` is the merged StudioContext of the active studio (selection, mode, services). */
 export interface PanelHostProps{panelId:string;context:StudioContext;}
+/** One section of a studio inspector. `component` names a section host registered with registerInspectorSection. */
+export interface InspectorSectionDef{
+ id:string;title:string;titleKey?:string;component:string;
+ /** Expression over StudioContext, e.g. "selection.kind == 'one'". Default: always. */
+ when?:string;
+ /** Lower first. Ties keep declaration order. */
+ order?:number;
+ commands?:readonly string[];
+ defaultCollapsed?:boolean;
+}
+export interface InspectorDef{titleKey?:string;/** i18n key shown when no section applies */emptyKey?:string;sections:readonly InspectorSectionDef[]}
+/** Section hosts receive the merged StudioContext. */
+export interface InspectorSectionProps{sectionId:string;context:StudioContext}
+export const INSPECTOR_HOST='shell.inspector';
 export interface ToolDef{id:string;command:string;icon:string;group?:string;opensPanel?:string;optionsBar?:string;cursor?:string;shortcut?:string;}
 export interface StatusSlotDef{id:string;align:'left'|'center'|'right';component:string;when?:string;command?:string;}
 export interface StudioLayout{leftOpen:boolean;rightOpen:boolean;leftWidth:number;rightWidth:number;leftPanels:string[];rightPanels:string[];activeLeft?:string;activeRight?:string;}
@@ -60,6 +76,8 @@ export interface StudioShellDef{
  leftRail?:readonly RailItemDef[];
  rightRail?:readonly RailItemDef[];
  panels?:readonly PanelDef[];
+ /** Studio-agnostic inspector: sections shown by the generic `shell.inspector` panel host while their `when` holds. */
+ inspector?:InspectorDef;
  tools?:readonly ToolDef[];
  statusSlots?:readonly StatusSlotDef[];
  problems?:string;
