@@ -101,6 +101,24 @@ heavy job. High profile: candidate expansion, one warm slot. Automatic
 profile selection uses `navigator.deviceMemory` as a hint and falls back to
 normal; these are soft tracked-resource allowances, not OS RSS caps.
 
+## Memory probing
+
+`lifecycle/probe.ts` samples a real memory signal alongside the tracked-byte
+estimate. On desktop it invokes the native command
+`lifecycle_memory_sample`, which returns `{ usedBytes, totalBytes }`
+(process/system memory from the OS; the Rust side lands with the native
+branch, until then the invoke fails once and is not retried for the
+session). On web it falls back to Chrome's `performance.memory`
+(`usedJSHeapSize` against `jsHeapSizeLimit`). Browsers without either
+source simply contribute no signal.
+
+The manager merges the external ratio into the same pressure thresholds
+(enter 80%, exit below 65% held for ten seconds, critical 95%) by taking
+the maximum of estimate and probe: either signal can raise pressure, and
+both must subside before pressure exits. Pressure events carry the
+external ratio in telemetry so an OS-driven suspension is distinguishable
+from an estimate-driven one.
+
 ## Settings
 
 Settings > Advanced > Performance:

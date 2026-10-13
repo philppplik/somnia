@@ -100,4 +100,6 @@ export interface LifecycleEvent {
   /** Duration of the transition in milliseconds, when measured. */
   ms?: number;
   bytes?: number;
+  /** External memory-probe ratio (0..1) that contributed to a pressure event. */
+  externalRatio?: number;
 }

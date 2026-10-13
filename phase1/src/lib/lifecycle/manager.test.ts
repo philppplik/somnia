@@ -329,6 +329,41 @@ test('critical pressure blocks optional admission', async () => {
   assert.equal(h.manager.admissionAllowed(), true);
 });
 
+test('an external probe ratio raises and holds pressure independently of the estimate', async () => {
+  const h = harness({ profile: { ...NORMAL_PROFILE, envelopeBytes: 1_000_000 } });
+  await h.manager.activate('a');
+  await h.manager.activate('b');
+  h.clock.advance(WARM_GRACE_MS);
+  await flush();
+  assert.equal(h.manager.stateOf('a'), 'suspended'); // settled: one warm slot, a suspended
+  await h.manager.activate('a');
+  await h.manager.activate('b'); // a warm again
+  h.manager.trackedBytes();
+  assert.equal(h.manager.evaluatePressure(0.85), 'pressure');
+  const enter = h.telemetry.events().find((e) => e.type === 'pressure-enter');
+  assert.equal(enter?.externalRatio, 0.85);
+  await flush();
+  assert.equal(h.manager.stateOf('a'), 'suspended'); // probe pressure bypasses grace too
+  // Estimate alone is far below the exit threshold; the probe holds pressure.
+  assert.equal(h.manager.evaluatePressure(0.7), 'pressure');
+  h.clock.advance(10_000);
+  assert.equal(h.manager.evaluatePressure(0.7), 'pressure'); // hold only counts below 65%
+  h.clock.advance(10_000);
+  assert.equal(h.manager.evaluatePressure(0.5), 'pressure'); // hold restarts now
+  h.clock.advance(10_000);
+  assert.equal(h.manager.evaluatePressure(0.5), 'normal');
+});
+
+test('external ratios are sanitized: NaN and negatives ignored, above-one clamped', async () => {
+  const h = harness({ profile: { ...NORMAL_PROFILE, envelopeBytes: 1_000_000 } });
+  await h.manager.activate('a');
+  h.manager.trackedBytes();
+  assert.equal(h.manager.evaluatePressure(Number.NaN), 'normal');
+  assert.equal(h.manager.evaluatePressure(-0.5), 'normal');
+  assert.equal(h.manager.evaluatePressure(0), 'normal');
+  assert.equal(h.manager.evaluatePressure(1.7), 'critical'); // clamped to 1, still >= 95%
+});
+
 test('churn detection extends the warm grace after repeated resume cycles', async () => {
   const h = harness();
   await h.manager.activate('a');
