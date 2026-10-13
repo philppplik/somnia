@@ -67,6 +67,7 @@ pub mod preview_links;
 
 /// Deployment foundations. No renderer IPC or remote connection is opened here.
 pub mod deploy;
+pub mod deploy_artifact;
 
 pub mod runtime;
 pub mod proc_runner;

@@ -1,5 +1,6 @@
 //! Local-first deployment foundations. UI approval and real SSH are separate layers.
 //! No operation here opens a socket or executes a shell command.
+pub mod artifact;
 pub mod host_keys;
 pub mod keys;
 pub mod manifest;

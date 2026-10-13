@@ -211,6 +211,7 @@
     "allow-project-status",
     "allow-project-logs",
     "allow-project-stop-all",
+    "allow-deploy-artifact-collect",
     "allow-preview-open",
     "allow-preview-close",
 

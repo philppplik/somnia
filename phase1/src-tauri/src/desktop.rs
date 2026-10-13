@@ -1723,6 +1723,13 @@ fn project_logs(window: WebviewWindow, runner: State<'_, crate::proc_runner::Pro
     gate(&window).map_err(|_| "frameworks.denied")?; runner.logs(&run_id, after_sequence)
 }
 #[tauri::command]
+async fn deploy_artifact_collect(window: WebviewWindow, runner: State<'_, crate::proc_runner::ProcessRunner>, run_id: String) -> std::result::Result<crate::deploy_artifact::ArtifactSummary, String> {
+    gate(&window).map_err(|_| "frameworks.denied")?;
+    let handle = runner.status(&run_id)?;
+    let root = runner.root(&run_id)?;
+    tauri::async_runtime::spawn_blocking(move || crate::deploy_artifact::summarize(&handle, &root)).await.map_err(|_| "frameworks.artifact.io".to_string())?
+}
+#[tauri::command]
 fn project_stop_all(window: WebviewWindow, runner: State<'_, crate::proc_runner::ProcessRunner>) -> std::result::Result<(), String> {
     gate(&window).map_err(|_| "frameworks.denied")?; runner.stop_all(); Ok(())
 }
@@ -2408,7 +2415,7 @@ pub fn run() {
         })
         .manage(crate::proc_runner::ProcessRunner::default())
         .invoke_handler(tauri::generate_handler![
-            runtime_status, runtime_install, runtime_remove, project_run, project_stop, project_status, project_logs, project_stop_all, preview_open, preview_close,
+            runtime_status, runtime_install, runtime_remove, project_run, project_stop, project_status, project_logs, project_stop_all, deploy_artifact_collect, preview_open, preview_close,
             crate::vibespace_schedule_commands::vibespace_schedule_preview,
             crate::vibespace_schedule_commands::vibespace_schedule_create,
             crate::vibespace_schedule_commands::vibespace_schedule_list,

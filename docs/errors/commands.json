@@ -301,6 +301,19 @@
       ]
     },
     {
+      "name": "deploy_artifact_collect",
+      "domain": "deploy",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "run_id"
+      ],
+      "args": [
+        "runId"
+      ]
+    },
+    {
       "name": "deploy_confirm_issue",
       "domain": "deploy",
       "status": "native",

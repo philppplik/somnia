@@ -26,3 +26,4 @@ async function ensureFrameworkRuntime(native:typeof import('./runner')){
  if(!setup)setup=(async()=>{const approved=await requestConfirm({title:t('frameworks.helper'),message:t('frameworks.downloadConsent'),confirmLabel:t('frameworks.download'),cancelLabel:t('dialogs.cancel')});if(!approved)throw Error('frameworks.helperCancelled');await native.installRuntime();})().finally(()=>{setup=null;});
  await setup;
 }
+export {runner as frameworkRunner};

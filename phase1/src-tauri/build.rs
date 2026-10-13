@@ -195,6 +195,7 @@ fn main() {
             "project_status",
             "project_logs",
             "project_stop_all",
+            "deploy_artifact_collect",
             "preview_open",
             "preview_close",
 

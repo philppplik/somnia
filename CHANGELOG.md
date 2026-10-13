@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased - static build for publishing
+
+- "Build for publishing" panel for static framework projects (Vite React, Vue, Svelte, Solid, Astro, Next export, SvelteKit static adapter, Nuxt generate): builds locally, finds the output folder from package.json and framework config without running project code, lists every file with its SHA-256 and a stable build ID.
+- The artifact is a `DeployArtifactManifest` of kind `static`. Links, `.env*`, keys, `.git` and `node_modules` in the output are refused. Nothing is uploaded.
+- Single-page apps show the nginx and Apache fallback rule; it is never written to a server without confirmation.
+
 ## Unreleased - framework runner
 
 - Explicit-consent framework helper download with pinned SHA-256 verification.
