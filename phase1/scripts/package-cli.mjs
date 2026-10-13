@@ -3,7 +3,7 @@
 //
 //   node scripts/package-cli.mjs build [--version V] [--out DIR] [--skip-build]
 //       Bundles the agent engine sidecar (`npm run build:cli-engine`, needs `npm ci`), builds cli/ in release
-//       mode and writes somnia-cli-<ver>-<os>-x86_64.(tar.gz|zip)
+//       mode and writes somnia-cli-<ver>-<os>-<x86_64|aarch64>.(tar.gz|zip)
 //       plus a matching .sha256 file into DIR (default: cli-dist).
 //   node scripts/package-cli.mjs sums DIR
 //       Writes DIR/SHA256SUMS for every somnia-cli-* archive in DIR (sha256sum -c compatible).

@@ -1,3 +1,8 @@
+## Unreleased - ARM64 release pipeline
+
+- Native Windows ARM64 NSIS/MSI and Linux ARM64 deb builds join full beta/stable CI from 12.2.0-beta.4; dev/alpha runs keep the small x64 matrix.
+- Native ARM64 CLI archives, architecture checks, same-SHA release asset assembly and checksums. Public-only standard runner guards prevent private-repo runner charges. Native packaging and real-device install checks remain CI/manual gates.
+
 # Unreleased: Vector hero export
 
 - Vector Export... opens/focuses the Export panel without writing; output format setup, capped PNG dimensions, separated import controls and five-language labels.
