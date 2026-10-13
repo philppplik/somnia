@@ -1960,6 +1960,38 @@
       "hasEnabled": true
     },
     {
+      "id": "terminal.close",
+      "title": "Close active terminal session",
+      "category": "Tools",
+      "source": "core",
+      "keywords": [
+        "console",
+        "pty",
+        "shell"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "terminal.new",
+      "title": "New terminal session",
+      "category": "Tools",
+      "source": "core",
+      "keywords": [
+        "console",
+        "pty",
+        "shell"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "terminal.toggle",
+      "title": "Toggle terminal",
+      "category": "View",
+      "source": "core",
+      "shortcut": "Mod+Shift+J",
+      "hasEnabled": true
+    },
+    {
       "id": "theme.dark",
       "title": "Use dark theme",
       "category": "View",
