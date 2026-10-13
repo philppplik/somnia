@@ -24,6 +24,10 @@
 
 - Sound now has customizable Audio clips, Selection and Effects rails and a generic audio inspector with source statistics, levels/fades and processing controls.
 - Audio edits, selection, listening, transport and WAV-copy export are typed UI commands with five-language titles. Export waits for queued processing instead of saving an older render.
+## Unreleased - inline terminal
+
+- The bottom panel has a Terminal tab next to Problems (`Mod+Shift+J`): interactive shells in the project folder with multiple sessions, resize, copy/paste and replay after the panel was closed.
+- Install and dev-server output (npm install, helper packages) shows as a read-only stream in the same tab; no console window pops up anywhere.
 
 ## Unreleased - server frameworks (Next.js, Astro, SvelteKit, Nuxt)
 

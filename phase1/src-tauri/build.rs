@@ -219,6 +219,12 @@ fn main() {
             "project_stop_all",
             "deploy_artifact_collect",
             "deploy_node_build_collect",
+            "terminal_spawn",
+            "terminal_list",
+            "terminal_attach",
+            "terminal_write",
+            "terminal_resize",
+            "terminal_kill",
             "preview_open",
             "preview_close",
 

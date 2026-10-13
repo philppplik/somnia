@@ -19,6 +19,7 @@ Start here:
 - [Video Studio](studios/video.md) ([plan](studios/VIDEO-PLAN.md)): open, trim, multi-clip edit, filmstrip, titles, crossfades and export, with the honest platform limits.
 - [Command line (`somnia`)](cli/usage.md): [protocols](cli/protocol.md), [troubleshooting](cli/troubleshooting.md), [security review](cli/security.md).
 - [CLI and TUI protocol](cli/TUI-PROTOCOL.md): NDJSON v1 between `somnia run --tui-stdio` and `somnia-tui`, including answering questions.
+- [Inline terminal](TERMINAL.md): bottom-panel shells and run streams, PTY host, security model.
 - [Logging and error handling](LOGGING.md), [Window background](WINDOW-BACKGROUND.md), [Folder drop](FOLDER-DROP.md).
 - [Roadmap](ROADMAP.md), [Performance budgets](PERFORMANCE-BUDGETS.md), [Large projects](PERF-LARGE-PROJECTS.md).
 - [LaTeX math (Stage 1)](features/latex-math.md): Markdown formulas, .tex math preview, errors, safety and settings.

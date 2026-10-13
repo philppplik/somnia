@@ -1,6 +1,8 @@
 #[cfg(feature = "desktop")]
 mod desktop;
 pub(crate) mod no_window;
+#[cfg(feature = "desktop")]
+pub mod terminal;
 #[cfg(any(feature = "desktop", test))]
 mod drop_grant;
 #[cfg(any(feature = "desktop", test))]

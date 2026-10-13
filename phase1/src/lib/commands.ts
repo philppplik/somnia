@@ -1,3 +1,4 @@
+import {isTauri} from '@tauri-apps/api/core';
 import {commandRegistry as registry} from './commandRegistry';
 export {registerCommand} from './commandRegistry';
 import {registerCoreCommandSpec,NO_CORE_PARAMS} from './coreCommandRegistration';
@@ -56,7 +57,10 @@ ui('sidebar.toggle','Toggle sidebar','Mod+B',()=>patchState({sidebarOpen:!getSta
 ui('agent.toggle','Toggle Somnia Agent','Mod+Alt+A',()=>patchState({agentOpen:!getState().agentOpen}));
 registerCoreCommandSpec({level:'ui',params:NO_CORE_PARAMS,id:'chat.toggle',title:'Toggle session chat',category:'View',shortcut:'Mod+Alt+C',allowInInput:true,enabled:()=>!!getChatSession(),run:()=> /* History: UI/file state only; no document undo entry. */ toggleSessionChat()});
 ui('inspector.toggle','Toggle inspector','Mod+Alt+I',()=>patchState({inspectorOpen:!getState().inspectorOpen}));
-ui('problems.toggle','Toggle problems','Mod+J',()=>patchState({problemsOpen:!getState().problemsOpen}));
+ui('problems.toggle','Toggle problems','Mod+J',()=>{const s=getState();if(s.problemsOpen&&s.bottomTab==='problems')patchState({problemsOpen:false});else patchState({problemsOpen:true,bottomTab:'problems'});});
+ui('terminal.toggle','Toggle terminal','Mod+Shift+J',()=>{const s=getState();if(s.problemsOpen&&s.bottomTab==='terminal')patchState({problemsOpen:false});else patchState({problemsOpen:true,bottomTab:'terminal'});});
+registerCoreCommandSpec({level:'ui',params:NO_CORE_PARAMS,id:'terminal.new',title:'New terminal session',category:'Tools',keywords:['shell','console','pty'],enabled:()=>isTauri(),run:async()=> /* History: UI state only; no document undo entry. */ {patchState({problemsOpen:true,bottomTab:'terminal'});const {terminalSessions}=await import('./terminal/terminalSessions');await terminalSessions.spawn();}});
+registerCoreCommandSpec({level:'ui',params:NO_CORE_PARAMS,id:'terminal.close',title:'Close active terminal session',category:'Tools',keywords:['shell','console','pty'],enabled:()=>isTauri()&&getState().problemsOpen&&getState().bottomTab==='terminal',run:async()=> /* History: UI state only; no document undo entry. */ {const {terminalSessions}=await import('./terminal/terminalSessions');const active=terminalSessions.getSnapshot().activeId;if(active)await terminalSessions.kill(active);}});
 const canUseCodeMode=(mode:string)=>studioModes(getStudio(getState().activeStudio)).some(m=>m.command==='view.'+mode)&&!['raster','vector','pdf'].includes(getUiContext().domain);
 for(const [mode,title,key] of [['code','Code',3],['design','Design',1],['split','Split',2]] as const)registerCoreCommandSpec({level:'ui',params:NO_CORE_PARAMS,id:'view.'+mode,title:title+' view',category:'View',shortcut:'Mod+Alt+'+key,enabled:()=>canUseCodeMode(mode),run:()=> /* History: UI/file state only; no document undo entry. */ patchState({viewMode:mode})});
 for(const [index,studio] of listStudios().entries())registerCoreCommandSpec({level:'ui',params:NO_CORE_PARAMS,id:'studio.'+studio.id,title:'Switch to '+studio.id+' Studio',category:'View',shortcut:index<9?'Mod+'+(index+1):undefined,allowInInput:true,run:()=> /* History: UI/file state only; no document undo entry. */ {requestStudio(studio.id);}});

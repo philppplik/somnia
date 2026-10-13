@@ -68,6 +68,13 @@ export type FrontendFatalEntry = import('./diagnostics/ids').SafeLogEvent & {fat
 type Contract<A, R> = { args: A; result: R };
 
 export interface CommandContracts {
+  // ---- Bottom-panel terminal (domain terminal; PTY sessions, main window only) ----
+  terminal_spawn: Contract<{ cwd: string | null; cols: number; rows: number }, import('./terminal/nativeTerminal').TerminalInfo>;
+  terminal_list: Contract<undefined, import('./terminal/nativeTerminal').TerminalInfo[]>;
+  terminal_attach: Contract<{ sessionId: string }, import('./terminal/nativeTerminal').TerminalSnapshot>;
+  terminal_write: Contract<{ sessionId: string; data: string }, null>;
+  terminal_resize: Contract<{ sessionId: string; cols: number; rows: number }, null>;
+  terminal_kill: Contract<{ sessionId: string }, null>;
   drain_open_requests: Contract<undefined, OpenRequestSummary[]>;
   claim_open_request: Contract<{ requestId: string }, ClaimReply>;
   read_by_grant: Contract<{ grant: string }, GrantRead>;

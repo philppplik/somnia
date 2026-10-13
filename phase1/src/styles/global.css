@@ -337,3 +337,6 @@ body{font-size:var(--ui-font-size,13px)}
 .textLayer :is(span,br){color:transparent;position:absolute;white-space:pre;cursor:text;transform-origin:0 0;user-select:text!important}
 .textLayer>span:not(.markedContent),.textLayer .markedContent span:not(.markedContent){z-index:1}
 .textLayer span.markedContent{top:0;height:0}.textLayer ::selection{background:#8060ff55;color:transparent}
+/* Bottom-panel terminal: the xterm canvas fills the host; padding stays inside the panel chrome. */
+.terminal-host{overflow:hidden;border-radius:6px;background:var(--bg-base)}
+.terminal-host .xterm{padding:6px 8px}
