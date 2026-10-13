@@ -25,7 +25,7 @@ reverse-applied; accepted hunks stay uncommitted (the commit gate remains manual
 
 ## Install
 
-Release archives (Linux and Windows, x86_64; no macOS build) are attached to GitHub Releases, including alphas:
+Release archives (Linux and Windows x86_64, macOS Apple Silicon) are attached to GitHub Releases, including alphas:
 `somnia-cli-<version>-linux-x86_64.tar.gz` and `somnia-cli-<version>-windows-x86_64.zip`, with `SHA256SUMS`.
 
 ```sh
