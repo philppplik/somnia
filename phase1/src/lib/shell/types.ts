@@ -98,6 +98,10 @@ export interface HeroActionDef{
  menu?:readonly string[];
  /** `when` expression over StudioContext. While it does not hold, the slot shows the default Publish button. */
  when?:string;
+ /** Optional toggle state: `when`-style expression over the slot context. While set, the main button renders `aria-pressed`. */
+ pressedWhen?:string;
+ /** i18n key for the tooltip while `pressedWhen` holds (e.g. "Close live preview"). The label itself stays stable. */
+ pressedTooltipKey?:string;
 }
 export interface StudioAgentDefV2{tools:readonly string[];contextProviders:readonly string[];quickActions:readonly string[];context?:string;}
 export type CommandRisk='none'|'content'|'destructive'|'outbound';

@@ -19,7 +19,8 @@ import {encodeEntities,decodeEntities} from './entities';
 import {newBlankFile,openFileDialog,openMediaDialog} from './projectActions';
 import {downloadProject,downloadMarkdown} from './exportProject';
 import {elements,insertElement} from './structureCommands';
-import { applyHistory, getState, patchState } from '../store/appStore';
+import { applyHistory, getState, patchState, type AppState } from '../store/appStore';
+import { detectFramework } from './frameworks/detect';
 import {getMedia,closeMedia} from './media';
 import {cycleScoped} from './tabScope';
 import { EditorProject } from '@somnia/editor-core';
@@ -79,7 +80,12 @@ registerCoreCommandSpec({level:'ui',params:NO_CORE_PARAMS,id:'help.shortcuts',ti
 export const isMac=()=>/Mac|iPhone|iPad/.test(navigator.platform);
 export const formatShortcut=(shortcut:string)=>shortcut.split('+').map(part=>({Mod:isMac()?'⌘':'Ctrl',Alt:isMac()?'⌥':'Alt',Shift:isMac()?'⇧':'Shift'}[part]??(part.length===1?part.toUpperCase():part))).join(isMac()?'':' + ');
 elements.forEach((element,i)=>registerCoreCommandSpec({level:'ui',params:NO_CORE_PARAMS,id:`insert.element.${i}`,title:element.label,category:'Insert',keywords:['insert','add','element',element.label.toLowerCase()],enabled:()=>getState().coreConnected,run:()=> /* History: EditorProject owns this document transaction (or undo/redo); no global stack. */ insertElement(i)}));
-registerCoreCommandSpec({level:'ui',params:NO_CORE_PARAMS,id:'view.livePreview',title:'Toggle live preview',category:'View',keywords:['preview','run','scripts','browser'],enabled:()=>getState().coreConnected,run:()=> /* History: UI/file state only; no document undo entry. */ {const st=getState();patchState({livePreview:!st.livePreview,...(st.viewMode==='code'?{viewMode:'split' as const}:{})});}});
+const HTML_ENTRY=/\.html?$/i;
+/** The page the live preview would open, resolved exactly like refreshProject (never a guessed entry file). */
+export const livePreviewEntry=(s:Pick<AppState,'activeFile'|'designFile'|'files'>):string=>HTML_ENTRY.test(s.activeFile)?s.activeFile:(HTML_ENTRY.test(s.designFile)&&s.designFile in s.files?s.designFile:(Object.keys(s.files).find(f=>HTML_ENTRY.test(f))??''));
+/** HTML is the supported preview path (hero-action-code.md): framework projects keep their separate startup review. */
+export const livePreviewCapable=(s:Pick<AppState,'activeFile'|'designFile'|'files'|'coreConnected'>):boolean=>s.coreConnected&&!detectFramework(s.files)&&!!livePreviewEntry(s);
+registerCoreCommandSpec({level:'ui',params:NO_CORE_PARAMS,id:'view.livePreview',title:'Toggle live preview',category:'View',keywords:['preview','run','scripts','browser'],enabled:()=>livePreviewCapable(getState()),disabledReason:()=>'hero.preview.none',run:()=> /* History: UI/file state only; no document undo entry. */ {const st=getState();patchState({livePreview:!st.livePreview,...(st.viewMode==='code'?{viewMode:'split' as const}:{})});}});
 registerCoreCommandSpec({level:'ui',params:NO_CORE_PARAMS,id:'view.toggleCodeDesign',title:'Toggle code / design view',category:'View',shortcut:'Mod+`',keywords:['dreamweaver','switch'],run:()=> /* History: UI/file state only; no document undo entry. */ patchState({viewMode:getState().viewMode==='code'?'design':'code'})});
 registerCoreCommandSpec({level:'ui',params:NO_CORE_PARAMS,id:'panels.hideAll',title:'Hide / show all panels',category:'View',shortcut:'F4',keywords:['dreamweaver','panels'],run:()=> /* History: UI/file state only; no document undo entry. */ {const s=getState();const anyOpen=s.sidebarOpen||s.inspectorOpen||s.problemsOpen;patchState({sidebarOpen:!anyOpen,inspectorOpen:!anyOpen,problemsOpen:false});}});
 const sel=()=>getState().coreConnected&&!!getState().selectedElementId;

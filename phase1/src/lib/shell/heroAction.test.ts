@@ -42,3 +42,19 @@ test('Publish entry stays present but disabled when Publish is not registered or
  const r=hero(resolveHeroAction(def,{},id=>id===PUBLISH_COMMAND_ID?undefined:cmds[id]));
  const last=r.menu[r.menu.length-1];assert.equal(last.id,PUBLISH_COMMAND_ID);assert.equal(last.enabled,false);
 });
+test('toggle hero: pressedWhen drives the pressed state, invalid expression means not pressed',()=>{
+ const t={...def,pressedWhen:'preview',pressedTooltipKey:'x.close'};
+ let r=hero(resolveHeroAction(t,{preview:true},lookup));
+ assert.deepEqual([r.toggle,r.pressed,r.pressedTooltipKey],[true,true,'x.close']);
+ r=hero(resolveHeroAction(t,{preview:false},lookup));
+ assert.deepEqual([r.toggle,r.pressed],[true,false]);
+ r=hero(resolveHeroAction({...t,pressedWhen:'((('},{preview:true},lookup));
+ assert.equal(r.pressed,false);
+ assert.equal(hero(resolveHeroAction(def,{},lookup)).toggle,false,'no pressedWhen, no toggle');
+});
+test('a disabled hero carries the command disabled reason for the tooltip',()=>{
+ const r=hero(resolveHeroAction(def,{},id=>id==='x.go'?{id:'x.go',title:'Go',enabled:false,disabledReason:'hero.preview.none'}:cmds[id]));
+ assert.deepEqual([r.enabled,r.disabledReason],[false,'hero.preview.none']);
+ const enabled=hero(resolveHeroAction(def,{},lookup));
+ assert.equal(enabled.disabledReason,undefined,'enabled heroes show label and shortcut instead');
+});

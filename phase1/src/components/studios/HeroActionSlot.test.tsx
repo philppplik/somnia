@@ -27,8 +27,25 @@ test('a studio without the field renders no hero slot (old Publish path)',()=>{
  patchState({activeStudio:'herotest-none'});assert.ok(!renderToStaticMarkup(<HeroActionSlot/>).includes('hero-action'));
  patchState({activeStudio:'herotest-missing'});assert.ok(!renderToStaticMarkup(<HeroActionSlot/>).includes('hero-action'),'unregistered hero command falls back');
 });
-test('every shipped studio is unchanged: none declares a hero yet',()=>{
- for(const id of ['code','design','vector','photos','sheets','slides','documents','sound','video'])assert.equal(getStudio(id).shell.header.heroAction,undefined,id);
+test('code, documents and sheets declare their hero actions; the other studios keep Publish',()=>{
+ assert.deepEqual(getStudio('code').shell.header.heroAction,{id:'view.livePreview',labelKey:'hero.preview',icon:'Play',pressedWhen:'preview',pressedTooltipKey:'hero.preview.close'});
+ assert.deepEqual(getStudio('documents').shell.header.heroAction,{id:'documents.export.open',labelKey:'hero.export',icon:'Download',menu:['documents.saveCopy']});
+ assert.deepEqual(getStudio('sheets').shell.header.heroAction,{id:'sheets.formulas.open',labelKey:'hero.smartFormula',icon:'CodeXml',menu:['sheets.saveCopy']});
+ for(const id of ['design','vector','photos','slides','sound','video'])assert.equal(getStudio(id).shell.header.heroAction,undefined,id);
+});
+test('the code hero renders Preview as a toggle whose pressed state follows livePreview',()=>{
+ const off=registerCommand({id:'view.livePreview',title:'Toggle live preview',category:'View',run:()=>{}});
+ patchState({activeStudio:'code',livePreview:false});
+ let html=renderToStaticMarkup(<HeroActionSlot/>);
+ assert.match(html,/data-testid="hero-action"[^>]*data-hero-id="view.livePreview"/);
+ assert.match(html,/aria-label="Preview"/);
+ assert.match(html,/aria-pressed="false"/);
+ patchState({livePreview:true});
+ html=renderToStaticMarkup(<HeroActionSlot/>);
+ assert.match(html,/aria-pressed="true"/);
+ assert.match(html,/bg-accent-soft/);
+ patchState({livePreview:false});
+ off();
 });
 test('the label is localized',()=>{
  patchState({activeStudio:'herotest-with'});setLocale('de');const de=renderToStaticMarkup(<HeroActionSlot/>);setLocale('en');

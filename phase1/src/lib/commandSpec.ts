@@ -57,6 +57,8 @@ export interface CommandSpec<P = unknown, R = unknown> {
   /** Optional JSON Schema the result is checked against. */
   readonly result?: CommandSchema;
   readonly enabled?: (ctx: CommandContext) => boolean;
+  /** i18n key explaining why the command is disabled (hero slot tooltip). Evaluated only while disabled. */
+  readonly disabledReason?: () => string;
   run(params: P, ctx: CommandContext): R | Promise<R>;
 }
 
