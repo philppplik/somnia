@@ -18,7 +18,7 @@ async function mockDeploy(page:import('@playwright/test').Page){
   const files=[{path:'index.html',size:4210,sha256:'a'.repeat(64),change:'changed'},{path:'css/site.css',size:9120,sha256:'b'.repeat(64),change:'changed'},{path:'img/hero.webp',size:182000,sha256:'c'.repeat(64),change:'added'},{path:'old/legacy.js',size:800,sha256:'d'.repeat(64),change:'removed'},{path:'about.html',size:2100,sha256:'e'.repeat(64),change:'unchanged'}];
   const plan=(id:string,action:string,rel?:string)=>({planHash:'9'.repeat(64),action,targetId:id,fingerprint:st.pins[id]??FP,buildId:'build-1',liveRelease:'20261012T143015Z-d4e5f6',releaseId:rel??null,files:action==='publish'?files:[]});
   w.__TAURI_INTERNALS__={metadata:{currentWindow:{label:'main'},currentWebview:{label:'main'}},transformCallback:(fn:any)=>{callbacks.set(++next,fn);return next;},invoke:async(cmd:string,args:any)=>{
-   w.ipcCalls.push({cmd,args});
+   w.ipcCalls.push({cmd,args:args===undefined?args:JSON.parse(JSON.stringify(args))});
    if(cmd==='plugin:event|listen'){handlers.set(args.event,args.handler);return next;}
    if(cmd==='plugin:event|unlisten')return null;
    if(!cmd.startsWith('deploy_')){if(cmd==='list_files'||cmd==='recovery_list')return [];return null;}
