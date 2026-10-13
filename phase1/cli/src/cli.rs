@@ -98,7 +98,14 @@ fn emit_error(json: bool, e: &CliError) -> i32 {
 }
 
 pub fn main_entry() -> i32 {
-    let cli = Cli::parse();
+    // Usage errors must not exit 2: clap's default collides with "needs input / review required".
+    let cli = match Cli::try_parse() {
+        Ok(c) => c,
+        Err(e) => {
+            let _ = e.print();
+            return if e.use_stderr() { EXIT_FAILED } else { 0 };
+        }
+    };
     match cli.cmd {
         Cmd::Run(a) => {
             let json = a.json;
@@ -234,6 +241,8 @@ fn detach(spec: &RunSpec, json: bool) -> Result<i32> {
     use std::os::unix::process::CommandExt;
     use std::process::{Command, Stdio};
     let root = &spec.root;
+    // Fail synchronously (typed) if the socket directory is not private, instead of timing out as "uncertain".
+    crate::transport::socket_path(&crate::runner::repo_id(root), &spec.task_id)?;
     std::fs::create_dir_all(server::run_dir(root))?;
     std::fs::write(server::spec_path(root, &spec.task_id), serde_json::to_vec(spec)?)?;
     let exe = std::env::current_exe()?;
