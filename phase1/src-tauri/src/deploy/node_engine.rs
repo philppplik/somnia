@@ -19,15 +19,16 @@ use std::collections::BTreeMap;
 use std::time::SystemTime;
 
 /// What the desktop layer provides to the node engine.
+#[allow(async_fn_in_trait)]
 pub trait NodeHost: Send + Sync {
     type Remote: NodeRemote;
     /// Build the Node bundle of the target's project (the project root is the host's business).
     fn collect(&self, target: &Target) -> Result<(NodePlan, CollectedNode), EngineError>;
     /// Open an authenticated connection that only succeeds for the pinned host key.
-    fn connect(&self, target: &Target) -> Result<Self::Remote, EngineError>;
+    /// Runs on the engine's runtime, which must also own the connection's tasks.
+    async fn connect(&self, target: &Target) -> Result<Self::Remote, EngineError>;
     /// Fingerprint the connection was verified against.
     fn fingerprint(&self, remote: &Self::Remote) -> String;
-    fn probe(&self, target: &Target) -> Result<HostKeyInfo, EngineError>;
 }
 
 pub struct NodeEngine<H: NodeHost> {
@@ -107,10 +108,10 @@ impl<H: NodeHost> DeployEngine for NodeEngine<H> {
     fn plan(&self, target: &Target, action: Action, release_id: Option<&str>) -> Result<EnginePlan, EngineError> {
         let site = site_of(target)?;
         domain_of(target)?;
-        let mut remote = self.host.connect(target)?;
-        let fingerprint = self.host.fingerprint(&remote);
         let layout = ReleaseLayout::new(&site).map_err(|_| EngineError::Other)?;
         self.rt.block_on(async {
+            let mut remote = self.host.connect(target).await?;
+            let fingerprint = self.host.fingerprint(&remote);
             let live = layout.current_release(&mut remote).await.map_err(|_| EngineError::Connect)?;
             let live_manifest = match &live {
                 Some(id) => Some(layout.read_manifest(&mut remote, id).await.map_err(|_| EngineError::Connect)?),
@@ -141,8 +142,9 @@ impl<H: NodeHost> DeployEngine for NodeEngine<H> {
         })
     }
 
-    fn probe_host_key(&self, target: &Target) -> Result<HostKeyInfo, EngineError> {
-        self.host.probe(target)
+    /// Host-key probing and pinning belong to the live engine; the node hook is never asked.
+    fn probe_host_key(&self, _: &Target) -> Result<HostKeyInfo, EngineError> {
+        Err(EngineError::Other)
     }
 
     fn publish(&self, target: &Target, plan: &EnginePlan, progress: &dyn Fn(&str)) -> Result<Outcome, EngineError> {
@@ -153,31 +155,35 @@ impl<H: NodeHost> DeployEngine for NodeEngine<H> {
             return Err(EngineError::Preflight);
         }
         let files = read_bytes(&c)?;
-        let mut remote = self.host.connect(target)?;
-        if self.host.fingerprint(&remote) != plan.fingerprint {
-            return Err(EngineError::HostKeyRejected);
-        }
         let req = PublishRequest { manifest: c.artifact.manifest.clone(), files, launch: launch_of(&node_plan), domain: domain.clone(), now: (self.clock)() };
-        let outcome = self.rt.block_on(async { self.deployer(&mut remote, target)?.publish(req, progress).await.map_err(|e| engine_error(e.code)) })?;
+        let outcome = self.rt.block_on(async {
+            let mut remote = self.host.connect(target).await?;
+            if self.host.fingerprint(&remote) != plan.fingerprint {
+                return Err(EngineError::HostKeyRejected);
+            }
+            self.deployer(&mut remote, target)?.publish(req, progress).await.map_err(|e| engine_error(e.code))
+        })?;
         Ok(Outcome { release_id: outcome.release_id, url: Some(format!("https://{domain}")), rolled_back: false })
     }
 
     fn rollback(&self, target: &Target, plan: &EnginePlan, progress: &dyn Fn(&str)) -> Result<Outcome, EngineError> {
         let domain = domain_of(target)?;
         let id = plan.release_id.as_deref().ok_or(EngineError::NoSuchRelease)?;
-        let mut remote = self.host.connect(target)?;
-        if self.host.fingerprint(&remote) != plan.fingerprint {
-            return Err(EngineError::HostKeyRejected);
-        }
-        let outcome = self.rt.block_on(async { self.deployer(&mut remote, target)?.rollback(id, &domain, progress).await.map_err(|e| engine_error(e.code)) })?;
+        let outcome = self.rt.block_on(async {
+            let mut remote = self.host.connect(target).await?;
+            if self.host.fingerprint(&remote) != plan.fingerprint {
+                return Err(EngineError::HostKeyRejected);
+            }
+            self.deployer(&mut remote, target)?.rollback(id, &domain, progress).await.map_err(|e| engine_error(e.code))
+        })?;
         Ok(Outcome { release_id: outcome.release_id, url: Some(format!("https://{domain}")), rolled_back: true })
     }
 
     fn releases(&self, target: &Target) -> Result<Vec<String>, EngineError> {
         let site = site_of(target)?;
         let layout = ReleaseLayout::new(&site).map_err(|_| EngineError::Other)?;
-        let mut remote = self.host.connect(target)?;
         self.rt.block_on(async {
+            let mut remote = self.host.connect(target).await?;
             let mut ids = remote.list(&layout.releases()).await.map_err(|_| EngineError::Connect)?;
             ids.retain(|i| !i.ends_with(".partial"));
             let mut ready = Vec::new();
@@ -250,14 +256,11 @@ mod tests {
             let c = collect_node(self.project.path(), &plan).map_err(|_| EngineError::Preflight)?;
             Ok((plan, c))
         }
-        fn connect(&self, _: &Target) -> Result<Shared, EngineError> {
+        async fn connect(&self, _: &Target) -> Result<Shared, EngineError> {
             Ok(self.server.clone())
         }
         fn fingerprint(&self, _: &Shared) -> String {
             self.fingerprint.lock().unwrap().clone()
-        }
-        fn probe(&self, _: &Target) -> Result<HostKeyInfo, EngineError> {
-            Ok(HostKeyInfo { algorithm: "ssh-ed25519".into(), fingerprint: self.fingerprint.lock().unwrap().clone() })
         }
     }
     fn write(root: &std::path::Path, rel: &str, body: &str) {
