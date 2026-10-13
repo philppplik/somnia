@@ -3271,5 +3271,13 @@
   "documents.export.format": "Formato",
   "documents.export.docx": "Documento de Word (.docx)",
   "documents.export.file": "Nombre de archivo",
-  "documents.export.note": "Guarda un archivo nuevo junto al original. El documento abierto no se modifica."
+  "documents.export.note": "Guarda un archivo nuevo junto al original. El documento abierto no se modifica.",
+  "shell.rail.panelsLeft": "Paneles de la barra lateral",
+  "shell.rail.panelsRight": "Paneles del inspector",
+  "shell.rail.toggleSidebar": "Alternar barra lateral",
+  "shell.rail.toggleInspector": "Alternar inspector",
+  "shell.rail.extensionPanel": "Panel {title} (extensión)",
+  "rest.fileTabs.closeFile": "Cerrar {file}",
+  "rest.fileTabs.unsavedImage": "Cambios de imagen sin guardar",
+  "ext.dialog.aria": "Extensiones"
 }
