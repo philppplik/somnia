@@ -1,46 +1,59 @@
 # Additional AI providers: Grok (xAI), Meta Model API, DeepSeek
 
-Status: 13 October 2026, unreleased. Each provider has its own API route, its own key slot in the OS credential store and its own model list. None of them goes through OpenRouter.
+Status: 13 October 2026, unreleased. The implementation has offline fixture coverage only, not live-service verification. Each provider uses its own OS credential slot, consent identity and authenticated model catalog. No provider is routed through OpenRouter.
 
-| Provider | Id | Chat endpoint | Model list | Auth |
-| --- | --- | --- | --- | --- |
-| Grok (xAI) | `xai` | `POST https://api.x.ai/v1/chat/completions` | `GET https://api.x.ai/v1/models` | `Authorization: Bearer <key>` |
-| Meta Model API (Muse) | `meta` | `POST https://api.meta.ai/v1/chat/completions` | `GET https://api.meta.ai/v1/models` | `Authorization: Bearer <key>` |
-| DeepSeek | `deepseek` | `POST https://api.deepseek.com/chat/completions` | `GET https://api.deepseek.com/models` | `Authorization: Bearer <key>` |
+| Provider | Id | Somnia Agent inference | Model catalog |
+| --- | --- | --- | --- |
+| Grok (xAI) | `xai` | `POST https://api.x.ai/v1/responses` | `GET https://api.x.ai/v1/models` |
+| Meta Model API | `meta` | `POST https://api.meta.ai/v1/responses` | `GET https://api.meta.ai/v1/models` |
+| DeepSeek | `deepseek` | `POST https://api.deepseek.com/chat/completions` | `GET https://api.deepseek.com/models` |
 
-All three speak the OpenAI Chat Completions format with SSE streaming and function tools, so they reuse the existing `OpenAIProvider` adapter with a `vendor` entry from `phase1/src/lib/agent/compatProviders.ts`. There is no second SSE parser. A vendor differs only by:
+## Protocol replay
 
-- its own provider id (consent, provenance and key slot use it),
-- fixed endpoints (no custom base URL, no redirects, no ambient proxy),
-- the output-limit field: `max_completion_tokens` for xAI and Meta, `max_tokens` for DeepSeek,
-- no OpenAI-only request fields (`store`), and the plain `system` role instead of `developer`,
-- a model list parser that does not require `created` or `owned_by` (DeepSeek returns neither `created`).
+Somnia Agent reuses the incremental SSE parser in `openAI.ts`. The vendor registry chooses the protocol; the code never guesses capabilities from a model ID.
 
-The model list is a metadata request, not inference. A listed model is not a promise of tool support, access or credits. Model IDs are never hardcoded; type one or refresh the list.
+- DeepSeek's `delta.reasoning_content` fragments are accumulated separately from visible text. A complete response records that content as private protocol state on its assistant message. Tool-enabled requests replay it unchanged for all matching prior assistant messages, including earlier user turns. Requests without tools omit it, as the documented API ignores it in that mode. Each completed assistant message replaces its own response state; reasoning from separate responses is never concatenated together.
+- xAI and Meta use Responses with `store: false`, `include: ["reasoning.encrypted_content"]` and a visible-output limit (`max_output_tokens`). The complete terminal `output` array is kept and replayed unchanged, including encrypted reasoning, tool references, message annotations and Meta commentary phases. It replaces reconstruction from the visible text and tool calls, so there are no duplicated messages or calls.
+- Meta reasoning-only output gets a minimal assistant separator before the next user message. Reasoning items must contain both encrypted content and a summary array; bare server IDs fail closed.
+- Replay is scoped to the exact provider and model. Switching either does not send the prior provider's private state. Replay is bounded by the session context limit and validated on restore. It is local conversation data, never a credential, instruction, tool authorization, log entry or UI event. Session snapshots do contain it and must be treated as private conversation data.
+- No `previous_response_id` is used. Meta disallows combining it with encrypted-content inclusion; stateless history also avoids opting users into server-managed conversation storage.
+- OpenAI ChatGPT account mode retains its separate restricted request contract. These vendor fields are not added to that route.
 
-## Security model
+DeepSeek thinking mode and reasoning effort are not forced. They are model-specific and may affect cost. The adapter preserves reasoning whenever the API returns it; it does not infer an effort value from a model-name prefix.
 
-- Keys live only in the OS credential store under the existing service, account name = provider id (`xai`, `meta`, `deepseek`). The editor only learns whether a key exists.
-- `provider_transport.rs` allow-lists exactly the two routes above per vendor (HTTPS, exact URL, no query string, POST for chat, GET for models). A key slot can never reach another vendor's host.
-- Candidate-key tests (before saving) may only call the model-list URL.
-- The Content Security Policy `connect-src` lists the three hosts.
-- Cloud consent applies as for every cloud provider, and the consent dialog links each vendor's policy.
-- Errors are classified and fixed-text. Provider bodies and keys are never logged or echoed.
+## Catalog maintenance
 
-## Vibe Space
+Model IDs come from the authenticated vendor catalog or the user's manual input. There is no seeded model list, dated default or inference probe during refresh. Empty catalogs stay empty; failed refreshes never invent replacements. Entries are validated, deduplicated and sorted. Listed IDs do not prove inference access, tool support or available credits. No reasoning-effort, context-window or pricing table is maintained by guessing from names.
 
-`provider_config` in `vibespace_commands.rs` maps the three ids to the same chat endpoints, and credentials are read from the same key slot. The configured provider/model appears in the Create-task model chooser like OpenRouter or OpenAI.
+Meta's catalog overview does not expose a complete JSON response schema in the fetched documentation. The parser accepts the documented OpenAI-compatible list convention (`data` entries with `id`) and rejects unknown shapes rather than silently using a static list. Native Vibe Space only shows explicitly configured models; it is not a full remote catalog.
 
-## Sources (official documentation, checked 13 October 2026)
+## Security and native boundary
 
-- xAI: https://docs.x.ai/docs/api-reference (POST /v1/chat/completions, Bearer auth, base URL `https://api.x.ai/v1`), https://docs.x.ai/docs/rest-api-reference/inference/models (GET /v1/models), https://docs.x.ai/docs/models
-- Meta Model API: https://dev.meta.ai/docs/protocols/chat-completions.md, https://llama.developer.meta.com/docs/api-reference/ (base URL `https://api.meta.ai/v1`, Bearer auth, `GET /v1/models`), https://llama.developer.meta.com/docs/authentication/. The API reference says `system` is accepted for compatibility (Meta prefers `developer`).
-- DeepSeek: https://api-docs.deepseek.com/ (base URL `https://api.deepseek.com`, OpenAI format), https://api-docs.deepseek.com/api/list-models (GET /models)
+- Keys stay in the OS credential store under the provider id. The renderer never learns a stored key.
+- Native transport allow-lists only each vendor's exact model-list GET, Chat Completions POST and (xAI/Meta only) Responses POST. Query-string variations, redirects and cross-vendor routes are rejected. Candidate-key tests only call the catalog.
+- The CSP lists the three official hosts. Existing cloud consent and revocation cover both streaming and catalog requests. Errors never echo provider bodies or keys.
+- User review still gates every proposed file change. Reasoning replay is not visible reasoning, and it cannot authorize tools.
 
-## Not verified
+**Vibe Space is a separate Rust engine.** Its provider mapping still uses Chat Completions, not this frontend Responses adapter. The v2 replay feature applies to Somnia Agent only. Reasoning continuity in native Vibe Space remains a follow-up and must not be claimed as shipped or tested. Chat Completions is a legacy route in current xAI docs and has no encrypted-reasoning replay field.
 
-- No real key and no real network call was used. Behavior against the live services is untested.
-- The Meta model list response body shape is not shown in the official page we could read; the parser accepts the OpenAI-style `{"data":[{"id":...}]}`.
-- Meta's docs disagree on current model IDs (`muse-spark-1.2` vs `muse-spark-1.3` in examples). Type or refresh; nothing is hardcoded.
-- Reasoning-specific fields (DeepSeek `thinking`, `reasoning_content`) are not sent or replayed. Reasoning models may need a non-reasoning model ID for tool loops.
-- Native build and Rust tests were not run in the authoring environment (no Rust toolchain). CI should run them.
+## Verification and remaining checks
+
+- Synthetic-only fixtures exercise the actual adapters and session tool loops, including fragmented UTF-8 SSE, errors, retries, cancellation, consent revocation, encrypted replay, provider/model isolation, session restoration and review-only writes.
+- No real keys, inference requests, servers or paid Actions runs were used. Live API behavior, model availability and pricing remain unverified.
+- Rust tests and desktop builds were not run here: no Rust toolchain is available. Native allow-list tests were added for CI, not reported as executed.
+- This repository's existing missing `slides-engine/pkg/somnia_slides.js` blocks a full clean TypeScript check. No new provider TypeScript diagnostics were observed.
+- xAI's output-token cap is for the visible answer; reasoning and function-call tokens are outside it. It is not a dollar spending cap. Existing session timeout remains unchanged and may be shorter than vendor recommendations for long reasoning requests.
+
+## Official sources checked 13 October 2026
+
+- DeepSeek thinking mode and mandatory tool-enabled replay: https://api-docs.deepseek.com/guides/thinking_mode/
+- DeepSeek catalog: https://api-docs.deepseek.com/api/list-models
+- xAI Responses and stateless complete-output replay: https://docs.x.ai/developers/model-capabilities/text/best-practices
+- xAI encrypted reasoning: https://docs.x.ai/developers/model-capabilities/text/reasoning
+- xAI Responses endpoint: https://docs.x.ai/developers/rest-api-reference/inference/responses
+- xAI catalog: https://docs.x.ai/developers/rest-api-reference/inference/models
+- Meta Responses, encrypted replay, ordering and commentary phases: https://llama.developer.meta.com/docs/features/responses
+- Meta tool-call pairing: https://llama.developer.meta.com/docs/features/tool-calling
+- Meta Responses overview: https://llama.developer.meta.com/docs/api-reference/responses
+- Meta catalog overview: https://llama.developer.meta.com/docs/api-reference/models
+- Meta official SDK compatibility and current endpoint: https://llama.developer.meta.com/docs/quickstart

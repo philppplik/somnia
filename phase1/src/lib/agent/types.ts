@@ -1,3 +1,4 @@
+import type { ProviderReplay } from './providerReplay';
 import type { AIProvenance } from './privacy';
 /** UI-free provider contract. Secrets and transports never enter session snapshots. */
 export interface AgentToolCall { id: string; name: string; arguments: string }
@@ -7,6 +8,8 @@ export interface AgentMessage {
   toolCalls?: AgentToolCall[];
   toolCallId?: string;
   provenance?: AIProvenance;
+  /** Private protocol replay, scoped to the exact provider and model. */
+  providerReplay?: ProviderReplay;
 }
 export interface AgentToolDefinition {
   name: string;
@@ -29,6 +32,7 @@ export interface AgentProviderRequest {
 export type AgentProviderEvent =
   | { type: 'text'; text: string }
   | { type: 'tool-call'; index: number; id?: string; name?: string; arguments?: string }
+  | { type: 'provider-replay'; replay: ProviderReplay }
   | { type: 'usage'; usage: AgentUsage }
   | { type: 'finish'; reason: string };
 export interface AgentProvider {

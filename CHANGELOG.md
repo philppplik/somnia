@@ -1,3 +1,9 @@
+# Unreleased: Provider reasoning replay
+
+- Somnia Agent uses stateless Responses for xAI and Meta, with encrypted reasoning and complete output-item replay across tool loops and later turns.
+- DeepSeek reasoning_content is kept separately from UI text and replayed unchanged in tool-enabled requests. Replay is private and scoped to the same provider and model.
+- Remote catalogs are validated, deduplicated and sorted without static model IDs. Native Vibe Space reasoning parity and live API tests remain outstanding.
+
 # Unreleased: Vector hero export
 
 - Vector Export... opens/focuses the Export panel without writing; output format setup, capped PNG dimensions, separated import controls and five-language labels.
