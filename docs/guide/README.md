@@ -27,6 +27,7 @@ A passing test, a merged branch or a mock-server run does not move a feature to 
 | Add commands, panels and themes | [Extensions](extensions.md) |
 | Where options live | [Settings](settings.md) |
 | Something broke | [Troubleshooting](troubleshooting.md) |
+| Quick answers | [FAQ](faq.md) |
 
 ## Rules for writing docs
 

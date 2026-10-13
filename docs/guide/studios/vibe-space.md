@@ -16,7 +16,7 @@ Vibe Spaces, Studio runs, Needs review, Memory, Skills, plus a Vibe Space inspec
 
 ## Header action
 
-The implemented hero is **New task** on the hero branch. The concept proposed "New Studio..." instead. Final label is undecided.
+New task. It opens the Studio creation form for the selected space. The label was decided on 2026-10-13; the concept first proposed "New Studio...".
 
 ## Export and save
 

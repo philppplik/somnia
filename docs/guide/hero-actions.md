@@ -24,7 +24,7 @@ The slot is a split button. The main part runs the studio's primary command. The
 | Design | Export | [hero-action-design](../concepts/hero-action-design.md) |
 | Vector | Export... | [hero-action-vector](../concepts/hero-action-vector.md) |
 | Photos | Export | [hero-action-photos](../concepts/hero-action-photos.md) |
-| Vibe Space | Branch: **New task**. Concept: New Studio... (open decision) | [hero-action-vibespace](../concepts/hero-action-vibespace.md) |
+| Vibe Space | New task (decided; opens the Studio creation form) | [hero-action-vibespace](../concepts/hero-action-vibespace.md) |
 
 Contract and rules: [hero-action-shell-contract](../concepts/hero-action-shell-contract.md). Developer reference: [header-hero-action](../studios/header-hero-action.md).
 

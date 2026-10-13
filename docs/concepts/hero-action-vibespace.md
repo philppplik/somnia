@@ -9,7 +9,11 @@ Research date: 2026-10-13. Code baseline: `int/shell`, `e2a188d3`.
 
 ## Recommendation and why
 
-Use **New Studio...** beside Account when a Vibe Space is selected. It opens the existing Studio creation form. Without a selected space, use **New space...**, opening the existing space form. This is a bounded setup action, never "Run all", "Approve all", "Apply" or "Publish".
+Decision (Philipp, 2026-10-13): the hero is labelled **New task**. The text below proposed "New Studio..."; where it says so, read "New task". The behaviour is unchanged: with a Vibe Space selected the button opens the existing Studio creation form.
+
+Implementation note: the feature branch ships one **New task** hero for all cases and keeps creation drafts. The "New space..." variant in the table below is not implemented.
+
+Original proposal: use **New Studio...** beside Account when a Vibe Space is selected. It opens the existing Studio creation form. Without a selected space, use **New space...**, opening the existing space form. This is a bounded setup action, never "Run all", "Approve all", "Apply" or "Publish".
 
 The existing Vibe Space canvas already has a primary New Studio control. Promote that action to the common header rather than inventing task terminology or a new execution path. "New task" would mislabel a form that creates a Studio. Remove the duplicate canvas-header New Studio control when the global hero is available; keep helpful empty-state CTAs and per-run actions.
 
@@ -27,7 +31,7 @@ These sources establish workflow patterns, not a best-in-class top-right agent b
 
 | Context | Hero | Effect |
 | --- | --- | --- |
-| Loaded native board, selected space, creation allowed | New Studio... | Existing form for that exact space |
+| Loaded native board, selected space, creation allowed | New task | Existing form for that exact space |
 | Loaded native board, no selected space, creation allowed | New space... | Existing folder/scope creation form |
 | Loading, pending action or unreconciled error | Same context label, disabled | Show why; no write or stale navigation |
 | Browser without native creation capability | Relevant label, disabled | Existing native-only explanation, never fixture execution |
