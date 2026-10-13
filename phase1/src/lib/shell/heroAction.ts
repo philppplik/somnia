@@ -13,7 +13,10 @@ export type HeroResolution=
  * `lookup` returns the live command (title, shortcut, enabled) or undefined when it is not registered.
  */
 export function resolveHeroAction(def:HeroActionDef|undefined,context:unknown,lookup:(id:string)=>HeroCommandInfo|undefined):HeroResolution{
- if(!def||def.id===PUBLISH_COMMAND_ID)return {kind:'default'};
+ if(!def)return {kind:'default'};
+ const variant=def.variants?.find(v=>evalWhen(v.when,context));
+ if(variant)def={...def,...variant,when:def.when};
+ if(def.id===PUBLISH_COMMAND_ID)return {kind:'default'};
  if(def.when!==undefined&&!evalWhen(def.when,context))return {kind:'default'};
  const hero=lookup(def.id);if(!hero)return {kind:'default'};
  const seen=new Set<string>([def.id,PUBLISH_COMMAND_ID]);const menu:HeroMenuEntry[]=[];

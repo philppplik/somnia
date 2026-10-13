@@ -9,6 +9,7 @@ import {getPublishStore,publishAvailable} from '../../lib/deploy/publishControll
 import {resolveHeroAction,type HeroCommandInfo} from '../../lib/shell/heroAction';
 import {resolveRailIcon} from '../../lib/shell/railIcons';
 import {getStudio} from '../../lib/studios';
+import {useStudioContext} from '../../lib/shell/studioContext';
 import {useUiContext} from '../../lib/uiContextStore';
 import {useT} from '../../lib/useT';
 import {useAppStore} from '../../store/appStore';
@@ -21,7 +22,8 @@ const joinTip=(label:string,shortcut?:string)=>shortcut?`${label} (${formatShort
  * or the old Publish button when it declares nothing. Nothing here branches on a studio id.
  */
 export function HeroActionSlot(){
- const s=useAppStore();const context=useUiContext();
+ const s=useAppStore();const ui=useUiContext();const studio=useStudioContext(s.activeStudio);
+ const context={...ui,...studio};
  const def=getStudio(s.activeStudio).shell.header.heroAction;
  const resolved=resolveHeroAction(def,context,lookup);
  if(resolved.kind==='default')return <PublishButton/>;

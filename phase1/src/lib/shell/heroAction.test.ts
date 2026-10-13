@@ -42,3 +42,10 @@ test('Publish entry stays present but disabled when Publish is not registered or
  const r=hero(resolveHeroAction(def,{},id=>id===PUBLISH_COMMAND_ID?undefined:cmds[id]));
  const last=r.menu[r.menu.length-1];assert.equal(last.id,PUBLISH_COMMAND_ID);assert.equal(last.enabled,false);
 });
+
+test('first matching generic variant wins, with base fallback and registry gates',()=>{
+ const variants=[{when:'services.space',id:'x.a',labelKey:'a',icon:'Plus'},{when:'services.ready',id:'x.b',labelKey:'b',icon:'Bot'}];
+ assert.equal(hero(resolveHeroAction({...def,variants},{services:{space:true,ready:true}},lookup)).id,'x.a');
+ assert.equal(hero(resolveHeroAction({...def,variants},{services:{ready:true}},lookup)).enabled,false);
+ assert.equal(hero(resolveHeroAction({...def,variants},{},lookup)).id,'x.go');
+});

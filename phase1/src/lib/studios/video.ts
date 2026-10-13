@@ -34,7 +34,7 @@ export const videoShell:StudioShellDef={
 export const videoStudio:StudioDef={
  id:'video',label:'studio.video',icon:'Film',order:5,
  formats:['mp4','m4v','mov','webm','mkv'].map(ext=>({ext,priority:10})),
- shell:{leftRail:[{id:'files',label:'Files',icon:'Files',global:true}],rightRail:[],header:{menus:['Project','Edit','View','Tools','Help'],views:[],heroAction:{id:'video.export.open',labelKey:'video.hero.export',icon:'Film'}},bottomBar:{slots:[],viewportPresets:[]},inspector:'video.inspector',tools:[]},
+ shell:{leftRail:[{id:'files',label:'Files',icon:'Files',global:true}],rightRail:[],header:{menus:['Project','Edit','View','Tools','Help'],views:[],heroAction:{id:'video.export.open',labelKey:'video.hero.export',icon:'Film',variants:[{when:'services.exporting',id:'video.export.open',labelKey:'video.hero.exporting',icon:'Film'}]}},bottomBar:{slots:[],viewportPresets:[]},inspector:'video.inspector',tools:[]},
  commands:[],shortcuts:{'studio.video':'Mod+6'},menus:{view:[]},canvas:'video.canvas',shellV2:videoShell,
  agent:{tools:[],contextProviders:['activeDocument'],quickActions:[]},deriveContext:context=>context
 };
