@@ -9,9 +9,11 @@
  * No upward imports, no cycles, editor-core has no React/DOM packages.
  * Existing violations live in .dependency-cruiser-known-violations.json
  * (see docs/LAYERS.md); `npm run check:layers` fails only on new ones.
- * Test files are not checked.
+ * Test files and bundled framework templates (src/lib/frameworks/templates) are not checked.
  */
 const TESTS = '\\.(test|spec)\\.[cm]?[jt]sx?$';
+// Bundled project templates are data for new user projects (Vue, Svelte, Solid, React), not app code.
+const TEMPLATES = '^src/lib/frameworks/templates/';
 const STUDIO_LIBS =
   '^src/lib/(agent|studios|collab|design|vectorstudio|vectorcore|vectorio|pdfedit|pdfforms|pdfannotate|pdftext|pdfview|craft|imageedit|imgedit|image-editor|photos|sheets|slides|sound|video|documents|vibespace|extensions|git|svgedit|visualDiff)/';
 
@@ -77,7 +79,7 @@ module.exports = {
   ],
   options: {
     doNotFollow: { path: 'node_modules' },
-    exclude: { path: TESTS },
+    exclude: { path: [TESTS, TEMPLATES] },
     tsPreCompilationDeps: true,
     parser: 'swc',
     tsConfig: { fileName: 'tsconfig.json' },
