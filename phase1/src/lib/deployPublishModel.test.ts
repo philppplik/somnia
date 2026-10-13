@@ -13,7 +13,7 @@ test('error codes in the Rust source and in the model agree', async () => {
   const rs = readFileSync(new URL('../../src-tauri/src/deploy_guard.rs', import.meta.url), 'utf8');
   const fn = rs.slice(rs.indexOf('pub fn code(&self)'), rs.indexOf('impl fmt::Display for DeployError'));
   const rust = [...fn.matchAll(/"([a-z-]+)"/g)].map(m => m[1]!).sort();
-  assert.deepEqual(rust, DEPLOY_ERROR_CODES.filter(c => !['server-not-prepared', 'dns-not-ready', 'cancelled'].includes(c)).sort());
+  assert.deepEqual(rust, DEPLOY_ERROR_CODES.filter(c => !['dns-not-ready'].includes(c)).sort());
   // D7 adds setup/cancellation failures to the concrete runtime adapter.
 });
 test('unknown or raw messages never reach the screen', () => {

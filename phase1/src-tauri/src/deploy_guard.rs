@@ -67,7 +67,7 @@ pub struct HostKeyInfo { pub algorithm: String, pub fingerprint: String }
 
 /// Engine failures are a closed enum: lower layers may not smuggle text through.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum EngineError { Cancelled, ServerNotPrepared, Connect, Auth, HostKeyRejected, Preflight, Upload, Switch, HealthFailedRolledBack, HealthFailedRollbackFailed, NoSuchRelease, Other }
+pub enum EngineError { Cancelled, ServerNotPrepared, Connect, Auth, HostKeyRejected, Preflight, Upload, Switch, HealthFailedRolledBack, HealthFailedRollbackFailed, NoSuchRelease, NodeMissing, NodeTooOld, InstallFailed, HealthFailed, Other }
 
 pub trait DeployEngine: Send + Sync {
     /// Connects with the pinned key (read-only), builds the artifact and diffs against the live release.
@@ -129,7 +129,9 @@ impl DeployError {
                 EngineError::Cancelled => "cancelled", EngineError::ServerNotPrepared => "server-not-prepared", EngineError::Connect => "connect-failed", EngineError::Auth => "auth-failed", EngineError::HostKeyRejected => "host-key-rejected",
                 EngineError::Preflight => "preflight-failed", EngineError::Upload => "upload-failed", EngineError::Switch => "switch-failed",
                 EngineError::HealthFailedRolledBack => "health-failed-rolled-back", EngineError::HealthFailedRollbackFailed => "health-failed-rollback-failed",
-                EngineError::NoSuchRelease => "no-such-release", EngineError::Other => "engine-failed",
+                EngineError::NoSuchRelease => "no-such-release",
+                EngineError::NodeMissing => "node-missing", EngineError::NodeTooOld => "node-too-old", EngineError::InstallFailed => "install-failed", EngineError::HealthFailed => "health-failed",
+                EngineError::Other => "engine-failed",
             },
         }
     }

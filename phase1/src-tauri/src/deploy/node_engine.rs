@@ -18,6 +18,17 @@ use crate::deploy_targets::{Target, TargetKind};
 use std::collections::BTreeMap;
 use std::time::SystemTime;
 
+/// Result of asking the public address after a publish.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PublicCheck {
+    /// HTTPS answered with 2xx or 3xx.
+    Healthy,
+    /// DNS, firewall or the certificate are not ready yet. Caddy keeps retrying on its own.
+    NotReachableYet,
+    /// The site answered, with an error status.
+    Unhealthy(u16),
+}
+
 /// What the desktop layer provides to the node engine.
 #[allow(async_fn_in_trait)]
 pub trait NodeHost: Send + Sync {
@@ -29,6 +40,8 @@ pub trait NodeHost: Send + Sync {
     async fn connect(&self, target: &Target) -> Result<Self::Remote, EngineError>;
     /// Fingerprint the connection was verified against.
     fn fingerprint(&self, remote: &Self::Remote) -> String;
+    /// Blocking request to `https://<domain>/`; called outside the engine's runtime.
+    fn public_check(&self, domain: &str) -> PublicCheck;
 }
 
 pub struct NodeEngine<H: NodeHost> {
@@ -41,14 +54,16 @@ pub struct NodeEngine<H: NodeHost> {
 pub fn engine_error(code: NodeErrorCode) -> EngineError {
     match code {
         NodeErrorCode::Transport => EngineError::Connect,
+        NodeErrorCode::NodeMissing => EngineError::NodeMissing,
+        NodeErrorCode::NodeTooOld => EngineError::NodeTooOld,
+        NodeErrorCode::InstallFailed => EngineError::InstallFailed,
+        NodeErrorCode::HealthFailed => EngineError::HealthFailed,
         NodeErrorCode::NotPrepared
-        | NodeErrorCode::NodeMissing
-        | NodeErrorCode::NodeTooOld
         | NodeErrorCode::PortUnavailable
         | NodeErrorCode::InvalidInput
         | NodeErrorCode::Env(_) => EngineError::Preflight,
-        NodeErrorCode::Integrity | NodeErrorCode::ReleaseExists | NodeErrorCode::InstallFailed => EngineError::Upload,
-        NodeErrorCode::UnitFailed | NodeErrorCode::CaddyInvalid | NodeErrorCode::HealthFailed => EngineError::Switch,
+        NodeErrorCode::Integrity | NodeErrorCode::ReleaseExists => EngineError::Upload,
+        NodeErrorCode::UnitFailed | NodeErrorCode::CaddyInvalid => EngineError::Switch,
         NodeErrorCode::HealthFailedRolledBack => EngineError::HealthFailedRolledBack,
         NodeErrorCode::HealthFailedRollbackFailed => EngineError::HealthFailedRollbackFailed,
         NodeErrorCode::NoSuchRelease | NodeErrorCode::ReleaseNotReady => EngineError::NoSuchRelease,
@@ -163,7 +178,22 @@ impl<H: NodeHost> DeployEngine for NodeEngine<H> {
             }
             self.deployer(&mut remote, target)?.publish(req, progress).await.map_err(|e| engine_error(e.code))
         })?;
-        Ok(Outcome { release_id: outcome.release_id, url: Some(format!("https://{domain}")), rolled_back: false })
+        let url = Some(format!("https://{domain}"));
+        match self.host.public_check(&domain) {
+            PublicCheck::Healthy => progress("public-ok"),
+            // The site runs on the server. HTTPS only needs DNS or the certificate to finish.
+            PublicCheck::NotReachableYet => progress("public-pending"),
+            PublicCheck::Unhealthy(_) => {
+                progress("public-failed");
+                let Some(previous) = plan.live_release.clone() else { return Err(EngineError::HealthFailed) };
+                let back = self.rt.block_on(async {
+                    let mut remote = self.host.connect(target).await?;
+                    self.deployer(&mut remote, target)?.rollback(&previous, &domain, progress).await.map_err(|e| engine_error(e.code))
+                });
+                return Err(if back.is_ok() { EngineError::HealthFailedRolledBack } else { EngineError::HealthFailedRollbackFailed });
+            }
+        }
+        Ok(Outcome { release_id: outcome.release_id, url, rolled_back: false })
     }
 
     fn rollback(&self, target: &Target, plan: &EnginePlan, progress: &dyn Fn(&str)) -> Result<Outcome, EngineError> {
@@ -248,6 +278,8 @@ mod tests {
         project: tempfile::TempDir,
         server: Shared,
         fingerprint: Mutex<String>,
+        public: Mutex<PublicCheck>,
+        steps: Mutex<Vec<String>>,
     }
     impl NodeHost for Host {
         type Remote = Shared;
@@ -261,6 +293,9 @@ mod tests {
         }
         fn fingerprint(&self, _: &Shared) -> String {
             self.fingerprint.lock().unwrap().clone()
+        }
+        fn public_check(&self, _: &str) -> PublicCheck {
+            *self.public.lock().unwrap()
         }
     }
     fn write(root: &std::path::Path, rel: &str, body: &str) {
@@ -281,7 +316,7 @@ mod tests {
         Target { id: "shop".into(), name: "Shop".into(), host: "example.org".into(), port: 22, user: "somnia".into(), domain: domain.map(Into::into), kind: TargetKind::Node, key_slot: key_slot_for("shop"), spa: false, app_port: None }
     }
     fn engine(version: &str) -> NodeEngine<Host> {
-        let host = Host { project: project(version), server: Shared(Arc::new(Mutex::new(Fake::new()))), fingerprint: Mutex::new("SHA256:AAAA".into()) };
+        let host = Host { project: project(version), server: Shared(Arc::new(Mutex::new(Fake::new()))), fingerprint: Mutex::new("SHA256:AAAA".into()), public: Mutex::new(PublicCheck::Healthy), steps: Mutex::default() };
         let tick = std::sync::atomic::AtomicU64::new(1_000);
         NodeEngine::new(host, NodeOptions { health_attempts: 2, health_interval: Duration::ZERO, ..Default::default() })
             .unwrap()
@@ -334,7 +369,7 @@ mod tests {
         let e = engine("BROKEN");
         let t = target(Some("example.com"));
         let plan = e.plan(&t, Action::Publish, None).unwrap();
-        assert_eq!(e.publish(&t, &plan, &noop).unwrap_err(), EngineError::Switch, "first publish failing has nothing to go back to");
+        assert_eq!(e.publish(&t, &plan, &noop).unwrap_err(), EngineError::HealthFailed, "first publish failing has nothing to go back to");
         let e = engine("v1");
         let plan = e.plan(&t, Action::Publish, None).unwrap();
         e.publish(&t, &plan, &noop).unwrap();
@@ -342,11 +377,35 @@ mod tests {
         let plan = e.plan(&t, Action::Publish, None).unwrap();
         assert_eq!(e.publish(&t, &plan, &noop).unwrap_err(), EngineError::HealthFailedRolledBack);
         e.host.server.0.lock().unwrap().node = None;
-        assert_eq!(e.plan(&t, Action::Publish, None).unwrap_err(), EngineError::Preflight);
+        assert_eq!(e.plan(&t, Action::Publish, None).unwrap_err(), EngineError::NodeMissing);
         assert_eq!(e.plan(&target(None), Action::Publish, None).unwrap_err(), EngineError::Preflight, "a Node app needs a domain");
         let mut stat = target(Some("example.com"));
         stat.kind = TargetKind::Static;
         assert_eq!(e.plan(&stat, Action::Publish, None).unwrap_err(), EngineError::Other);
         assert!(project_is_node(e.host.project.path()));
+    }
+
+    #[test]
+    fn public_check_pending_is_not_a_failure_but_a_bad_answer_goes_back() {
+        let e = engine("v1");
+        let t = target(Some("example.com"));
+        let steps = std::cell::RefCell::new(Vec::new());
+        let record = |s: &str| steps.borrow_mut().push(s.to_string());
+        *e.host.public.lock().unwrap() = PublicCheck::NotReachableYet;
+        let plan = e.plan(&t, Action::Publish, None).unwrap();
+        let one = e.publish(&t, &plan, &record).unwrap();
+        assert!(steps.borrow().contains(&"public-pending".to_string()));
+        assert_eq!(e.releases(&t).unwrap(), vec![one.release_id.clone()]);
+        write(e.host.project.path(), ".next/standalone/server.js", "// v2");
+        *e.host.public.lock().unwrap() = PublicCheck::Unhealthy(502);
+        let plan = e.plan(&t, Action::Publish, None).unwrap();
+        assert_eq!(e.publish(&t, &plan, &record).unwrap_err(), EngineError::HealthFailedRolledBack);
+        assert!(steps.borrow().contains(&"public-failed".to_string()));
+        assert_eq!(e.plan(&t, Action::Publish, None).unwrap().live_release, Some(one.release_id.clone()), "the previous version is live again");
+        // A first publish whose public answer is bad has nothing to go back to.
+        let first = engine("v1");
+        *first.host.public.lock().unwrap() = PublicCheck::Unhealthy(500);
+        let plan = first.plan(&t, Action::Publish, None).unwrap();
+        assert_eq!(first.publish(&t, &plan, &noop).unwrap_err(), EngineError::HealthFailed);
     }
 }

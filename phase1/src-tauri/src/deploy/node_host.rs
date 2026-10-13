@@ -4,7 +4,7 @@ use super::{
     host_keys::HostKeyStore,
     keys::KeyStore,
     node_collect::{detect_node, collect_node, CollectedNode, NodePlan},
-    node_engine::NodeHost,
+    node_engine::{NodeHost, PublicCheck},
     ssh::{ConnectOptions, Credential, FailureKind, RusshTransport, SshTarget},
     DeployError,
 };
@@ -22,6 +22,8 @@ pub struct DesktopNodeHost<B: SecretBackend> {
     /// Folder of the project a target publishes. The host never guesses it from the target.
     pub project_root: ProjectRoot,
     pub options: ConnectOptions,
+    /// Blocking HTTPS request to the public address. The desktop build passes [`https_probe`].
+    pub public_probe: Box<dyn Fn(&str) -> PublicCheck + Send + Sync>,
 }
 
 impl<B: SecretBackend + Send + Sync> NodeHost for DesktopNodeHost<B> {
@@ -53,6 +55,23 @@ impl<B: SecretBackend + Send + Sync> NodeHost for DesktopNodeHost<B> {
     }
     fn fingerprint(&self, remote: &RusshTransport) -> String {
         remote.pinned_host_key().fingerprint.clone()
+    }
+    fn public_check(&self, domain: &str) -> PublicCheck {
+        (self.public_probe)(domain)
+    }
+}
+
+/// `https://<domain>/` with a short timeout. Any transport error (DNS, refused, certificate not
+/// issued yet) is "not reachable yet", never a failure: Caddy retries issuance on its own.
+#[cfg(feature = "desktop")]
+pub fn https_probe(domain: &str) -> PublicCheck {
+    let Ok(client) = reqwest::blocking::Client::builder().timeout(std::time::Duration::from_secs(10)).redirect(reqwest::redirect::Policy::limited(3)).build() else {
+        return PublicCheck::NotReachableYet;
+    };
+    match client.get(format!("https://{domain}/")).send() {
+        Ok(r) if r.status().is_success() || r.status().is_redirection() => PublicCheck::Healthy,
+        Ok(r) => PublicCheck::Unhealthy(r.status().as_u16()),
+        Err(_) => PublicCheck::NotReachableYet,
     }
 }
 
@@ -122,7 +141,7 @@ mod tests {
         write(project.path(), ".next/standalone/server.js", "x");
         write(project.path(), ".next/static/a.js", "x");
         let root = project.path().to_path_buf();
-        let host = DesktopNodeHost { keys, pins: pins.clone(), project_root: Box::new(move |_| Some(root.clone())), options: ConnectOptions::default() };
+        let host = DesktopNodeHost { keys, pins: pins.clone(), project_root: Box::new(move |_| Some(root.clone())), options: ConnectOptions::default(), public_probe: Box::new(|_| PublicCheck::NotReachableYet) };
         let engine = NodeEngine::new(host, NodeOptions { health_attempts: 2, health_interval: Duration::ZERO, ..Default::default() }).unwrap();
         let target = Target { id: "shop".into(), name: "Shop".into(), host: "127.0.0.1".into(), port: server.addr.port(), user: "somnia".into(), domain: Some("example.com".into()), kind: TargetKind::Node, key_slot: key_slot_for("shop"), spa: false, app_port: None };
         let t2 = target.clone();
