@@ -83,8 +83,14 @@ built in `lib/slides/session.ts` with pure snapshot helpers in
   the checkpointed bytes and re-renders the current slide.
 - Presentation mode and in-flight operations pin the studio.
 
-Checkpoints live in the in-memory `CheckpointStore` (64 MiB default budget).
-Durable spill to IndexedDB/OPFS is a later phase; the store is the seam.
+Checkpoints live in the `CheckpointStore` (64 MiB memory budget, the
+concept's suspended bucket). When memory cannot fit a checkpoint, the least
+recently used entries spill to the durable backend (`spill.ts` seam,
+`idbSpill.ts` IndexedDB implementation: local, private, 7-day retention
+pruning, structured-clone payloads only). A checkpoint larger than the whole
+budget goes straight to the spill; refusal is the last resort, so unsaved
+state is never discarded. Resume hydrates spilled checkpoints before
+restore. Settings > Advanced > Performance has a Clear-checkpoints control.
 
 ## Budgets and profiles
 
@@ -126,6 +132,24 @@ the wiring's `onPressure(level)` callback, matching the job scheduler's
 `getStudioLifecycle()` exposes the installed manager for the lease-provider
 registration.
 
+## Extension lifecycle
+
+Extension runtimes (`lib/extensions/runtime.ts`) support protocol v2
+suspend/resume (concept section 8):
+
+- Extensions register optional `somnia.lifecycle.onSuspend` /
+  `somnia.lifecycle.onResume` handlers in the worker. `onSuspend` returns
+  serializable state; the host holds it and terminates the worker.
+- Suspension is refused while a command runs or the worker speaks an older
+  protocol: legacy extensions stay resident (pinned). A hung suspend kills
+  the worker with a diagnosis, like any other timeout.
+- Resume recreates the sandboxed worker from the same manifest code with the
+  same CSP and checked API - no new authority - re-activates it, then hands
+  the state back through `onResume`.
+- Running a command auto-resumes a suspended extension (activation by
+  command). Under memory pressure the shell suspends all idle extension
+  runtimes (`suspendIdleExtensions`, wired to the lifecycle pressure signal).
+
 ## Honest limits
 
 - Verified with `tsx --test` unit tests (43) and `tsc --noEmit`. The Slides
@@ -133,6 +157,6 @@ registration.
   E2E run in the web harness or the desktop build, not done here.
 - `Worker.terminate()` and WASM linear-memory release are best-effort:
   freeing engine objects does not promise immediate RSS reduction.
-- Native memory/pressure probing, durable checkpoint spill, extension
-  lifecycle and the per-studio adapters beyond Slides are later phases of
-  the concept.
+- Native memory/pressure probing and the per-studio adapters beyond Slides
+  are later phases of the concept. The IndexedDB spill path is typechecked
+  and covered with a fake backend; it has not run in a real browser here.
