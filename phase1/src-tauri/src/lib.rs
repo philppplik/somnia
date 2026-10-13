@@ -64,3 +64,6 @@ pub mod vibespace_acp_commands;
 pub mod vibespace_schedule_commands;
 
 pub mod preview_links;
+
+/// Deployment foundations. No renderer IPC or remote connection is opened here.
+pub mod deploy;

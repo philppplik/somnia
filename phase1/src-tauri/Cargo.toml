@@ -54,6 +54,11 @@ jsonwebtoken = { version = "=9.3.1", default-features = false }
 # No `transport-child-process`: MCP servers are only started through the broker (mcp_broker.rs), never spawned directly.
 rmcp = { version = "=3.5.1", default-features = false, features = ["client", "transport-async-rw"] }
 
+russh = { version = "=0.64.1", default-features = false, features = ["ring"] }
+rand = "0.10"
+regex = "1"
+zeroize = "1"
+
 [target.'cfg(any(target_os = "windows", target_os = "macos"))'.dependencies]
 window-vibrancy = { version = "=0.8.1", optional = true }
 
