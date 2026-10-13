@@ -6,7 +6,7 @@ export interface HeroCommandInfo{id:string;title:string;shortcut?:string;enabled
 export interface HeroMenuEntry extends HeroCommandInfo{/** True for the always-last Publish entry. */publish:boolean}
 export type HeroResolution=
  |{kind:'default'}
- |{kind:'hero';id:string;labelKey:string;icon:string;enabled:boolean;shortcut?:string;menu:readonly HeroMenuEntry[]};
+ |{kind:'hero';id:string;labelKey:string;disabledLabelKey?:string;icon:string;enabled:boolean;shortcut?:string;menu:readonly HeroMenuEntry[]};
 /**
  * No field, a failing `when`, a hero command that is not registered, or a hero that is Publish itself all give the old Publish button.
  * Menu entries that are not registered are dropped, duplicates and the hero id are removed, and Publish is always last.
@@ -20,5 +20,5 @@ export function resolveHeroAction(def:HeroActionDef|undefined,context:unknown,lo
  for(const id of def.menu??[]){if(seen.has(id))continue;seen.add(id);const c=lookup(id);if(c)menu.push({...c,publish:false});}
  const publish=lookup(PUBLISH_COMMAND_ID);
  menu.push({id:PUBLISH_COMMAND_ID,title:publish?.title??'Publish...',shortcut:publish?.shortcut,enabled:publish?.enabled??false,publish:true});
- return {kind:'hero',id:def.id,labelKey:def.labelKey,icon:def.icon,enabled:hero.enabled,shortcut:hero.shortcut,menu};
+ return {kind:'hero',id:def.id,labelKey:def.labelKey,disabledLabelKey:def.disabledLabelKey,icon:def.icon,enabled:hero.enabled,shortcut:hero.shortcut,menu};
 }

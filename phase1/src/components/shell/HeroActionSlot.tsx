@@ -1,3 +1,5 @@
+import {commandRevision,subscribeCommands} from '../../lib/commandRegistry';
+import {useStudioContext} from '../../lib/shell/studioContext';
 import {Menu} from '@base-ui/react/menu';
 import {Tooltip} from '@base-ui/react/tooltip';
 import {ChevronDown,Loader2} from 'lucide-react';
@@ -22,6 +24,8 @@ const joinTip=(label:string,shortcut?:string)=>shortcut?`${label} (${formatShort
  */
 export function HeroActionSlot(){
  const s=useAppStore();const context=useUiContext();
+ useSyncExternalStore(subscribeCommands,commandRevision,commandRevision);
+ useStudioContext(s.activeStudio);
  const def=getStudio(s.activeStudio).shell.header.heroAction;
  const resolved=resolveHeroAction(def,context,lookup);
  if(resolved.kind==='default')return <PublishButton/>;
@@ -44,7 +48,7 @@ function HeroSplitButton({resolved}:{resolved:Extract<ReturnType<typeof resolveH
  return <Tooltip.Provider delay={250}><div role="group" aria-label={label} data-testid="hero-action" data-hero-id={resolved.id} className="flex shrink-0 items-center">
   <Tooltip.Root><Tooltip.Trigger render={<Button variant="outline" title="" aria-label={label} disabled={!resolved.enabled} data-testid="hero-action-main" className={`!h-8 ${showMenu?'rounded-l-[var(--r-control)] rounded-r-none border-r-0':'rounded-[var(--r-control)]'}`} onClick={()=>void executeCommand(resolved.id)}/>}>
    <Icon size={14}/><span className="max-w-[120px] truncate max-[960px]:hidden">{label}</span>
-  </Tooltip.Trigger><Tooltip.Portal><Tooltip.Positioner className="z-50" side="bottom" sideOffset={8}><Tooltip.Popup role="tooltip" className="studio-pill-tooltip">{joinTip(label,resolved.shortcut)}</Tooltip.Popup></Tooltip.Positioner></Tooltip.Portal></Tooltip.Root>
+  </Tooltip.Trigger><Tooltip.Portal><Tooltip.Positioner className="z-50" side="bottom" sideOffset={8}><Tooltip.Popup role="tooltip" className="studio-pill-tooltip">{joinTip(!resolved.enabled&&resolved.disabledLabelKey?t(resolved.disabledLabelKey):label,resolved.shortcut)}</Tooltip.Popup></Tooltip.Positioner></Tooltip.Portal></Tooltip.Root>
   {showMenu&&<Menu.Root><Menu.Trigger render={<Button variant="outline" size="icon" title="" aria-label={running?`${more} (${t('deploy.button.running')})`:more} data-testid="hero-action-menu" data-publish-running={running?'true':undefined} className="!h-8 rounded-l-none rounded-r-[var(--r-control)]"/>}>
    {running?<Loader2 size={14} className="publish-spin"/>:<ChevronDown size={14}/>}
   </Menu.Trigger><Menu.Portal><Menu.Positioner sideOffset={4} align="end"><Menu.Popup className="menu-popup" data-testid="hero-action-popup">

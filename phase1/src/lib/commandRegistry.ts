@@ -8,10 +8,14 @@ const scopes=new Set<(id:string)=>Command|undefined>();
 export function registerCommandScope(resolve:(id:string)=>Command|undefined){scopes.add(resolve);return()=>{scopes.delete(resolve);};}
 export const scopedCommand=(id:string)=>[...scopes].reverse().map(resolve=>resolve(id)).find(Boolean);
 
+let revision=0;const listeners=new Set<()=>void>();
+export const commandRevision=()=>revision;
+export const subscribeCommands=(f:()=>void)=>{listeners.add(f);return()=>{listeners.delete(f);};};
+const changed=()=>{revision++;listeners.forEach(f=>f());};
 export const commandRegistry = new Map<string, Command>();
 export const registerCommand = (command: Command) => {
-  commandRegistry.set(command.id, command);
+  commandRegistry.set(command.id, command);changed();
   return () => {
-    if (commandRegistry.get(command.id) === command) commandRegistry.delete(command.id);
+    if (commandRegistry.get(command.id) === command){commandRegistry.delete(command.id);changed();}
   };
 };
