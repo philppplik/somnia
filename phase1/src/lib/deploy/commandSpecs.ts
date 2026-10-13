@@ -114,7 +114,8 @@ export function createDeployCommandSpecs(deps: DeployCommandDeps): CommandSpec<n
           properties: {
             id: idProp, name: { type: 'string', minLength: 1, maxLength: 80 }, host: { type: 'string', minLength: 1, maxLength: 253 },
             port: { type: 'integer', minimum: 1, maximum: 65535 }, user: { type: 'string', minLength: 1, maxLength: 32 },
-            domain: { type: 'string', maxLength: 253 }, kind: { type: 'string', enum: ['static', 'node', 'upload-only'] },
+            domain: { type: 'string', maxLength: 253 }, kind: { type: 'string', enum: ['static', 'node', 'upload-only', 'ftp'] },
+            ftp: { type: 'object', required: ['security', 'verify', 'allowPlain', 'remotePath'], ...NO_EXTRA, properties: { security: { type: 'string', enum: ['explicit-tls', 'plain'] }, verify: { type: 'string', enum: ['ca', 'pinned'] }, allowPlain: { type: 'boolean' }, remotePath: { type: 'string', minLength: 1, maxLength: 512 } } },
             keySlot: { type: 'string', maxLength: 60 }, spa: { type: 'boolean' }, appPort: { type: 'integer', minimum: 1024, maximum: 65535 },
           },
         } },
@@ -156,6 +157,15 @@ export function createDeployCommandSpecs(deps: DeployCommandDeps): CommandSpec<n
         consumeGesture(answer.gesture);
         await be().hostkeyReplace({ targetId: p.targetId, oldFingerprint: p.oldFingerprint, newFingerprint: info.fingerprint, acknowledged: true });
         return { status: 'replaced', fingerprint: info.fingerprint };
+      },
+    },
+    {
+      id: 'deploy.remote.list', title: 'List files on the publish server', ...common, level: 'ui',
+      params: { type: 'object', properties: { targetId: idProp, path: { type: 'string', minLength: 1, maxLength: 512 } }, required: ['targetId', 'path'], ...NO_EXTRA },
+      run: async (p: { targetId: string; path: string }, ctx: CommandContext) => {
+        requireHuman(ctx, 'deploy.remote.list');
+        if (!be().remoteList) throw new Error('deploy:engine-failed');
+        return { entries: await be().remoteList!(p.targetId, p.path) };
       },
     },
     {

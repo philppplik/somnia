@@ -124,6 +124,13 @@
       "hasEnabled": true
     },
     {
+      "id": "deploy.remote.list",
+      "title": "List files on the publish server",
+      "category": "Project",
+      "source": "deploy",
+      "hasEnabled": true
+    },
+    {
       "id": "deploy.rollback",
       "title": "Go back to a previous version",
       "category": "Project",

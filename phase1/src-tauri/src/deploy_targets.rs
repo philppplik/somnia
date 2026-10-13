@@ -202,6 +202,19 @@ mod tests {
         t = sample("a"); t.app_port = Some(3000); assert!(t.validate().is_err(), "static has no app port");
     }
     #[test]
+    fn validates_ftp_targets() {
+        let ftp = |security, verify, allow_plain: bool, path: &str| {
+            let mut t = sample("a"); t.kind = TargetKind::Ftp; t.port = 21; t.user = "web1@example.org".into();
+            t.ftp = Some(FtpSettings { security, verify, allow_plain, remote_path: path.into() }); t
+        };
+        assert!(ftp(FtpSecurity::ExplicitTls, FtpVerify::Ca, false, "/htdocs").validate().is_ok());
+        assert!(ftp(FtpSecurity::Plain, FtpVerify::Ca, false, "/").validate().is_err(), "plain needs the opt-in");
+        assert!(ftp(FtpSecurity::Plain, FtpVerify::Ca, true, "/").validate().is_ok());
+        for bad in ["htdocs", "/a/../b", "/a//b", "/a/", "/a:b"] { assert!(ftp(FtpSecurity::ExplicitTls, FtpVerify::Ca, false, bad).validate().is_err(), "{bad}"); }
+        let mut t = ftp(FtpSecurity::ExplicitTls, FtpVerify::Ca, false, "/"); t.ftp = None; assert!(t.validate().is_err(), "ftp kind needs settings");
+        let mut s = sample("a"); s.ftp = ftp(FtpSecurity::ExplicitTls, FtpVerify::Ca, false, "/").ftp; assert!(s.validate().is_err(), "settings only on ftp kind");
+    }
+    #[test]
     fn file_store_roundtrip_and_atomic() {
         let dir = tempfile::tempdir().unwrap();
         let s = FileTargets::new(dir.path().join("deploy-targets.json"));

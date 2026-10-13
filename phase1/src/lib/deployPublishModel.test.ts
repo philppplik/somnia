@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { buildTarget, DEPLOY_ERROR_CODES, describeDeployError, emptyTargetForm, formatBytes, formFromTarget, isDomain, liveUrl, nextStep, parseProgress, releaseDate, shortFingerprint, slugTargetId, sortReleases, validateTargetForm } from './deploy/publishModel';
+import { isRemotePath, buildTarget, DEPLOY_ERROR_CODES, describeDeployError, emptyTargetForm, formatBytes, formFromTarget, isDomain, liveUrl, nextStep, parseProgress, releaseDate, shortFingerprint, slugTargetId, sortReleases, validateTargetForm } from './deploy/publishModel';
 
 test('every Rust error code has a plain-language entry and at least one action', () => {
   for (const code of DEPLOY_ERROR_CODES) {
@@ -66,7 +66,7 @@ test('form validation mirrors Target::validate', () => {
 test('buildTarget produces the exact save shape and round-trips through the form', () => {
   const t = buildTarget({ ...emptyTargetForm(), name: ' My Site ', host: ' example.org ', domain: 'EXAMPLE.org', spa: true }, 'my-site');
   assert.deepEqual(t, { id: 'my-site', name: 'My Site', host: 'example.org', port: 22, user: 'somnia', kind: 'static', keySlot: 'deploy-key:my-site', domain: 'example.org', spa: true });
-  assert.deepEqual(formFromTarget(t), { name: 'My Site', host: 'example.org', port: '22', user: 'somnia', domain: 'example.org', kind: 'static', spa: true, appPort: '3000' });
+  assert.deepEqual(formFromTarget(t), { name: 'My Site', host: 'example.org', port: '22', user: 'somnia', domain: 'example.org', kind: 'static', spa: true, appPort: '3000', ftpSecurity: 'explicit-tls', ftpVerify: 'ca', ftpAllowPlain: false, ftpPath: '/' });
   const n = buildTarget({ ...emptyTargetForm(), name: 'App', host: 'h.org', kind: 'node', appPort: '4000', spa: true }, 'app');
   assert.equal(n.appPort, 4000); assert.equal(n.spa, undefined);
   const u = buildTarget({ ...emptyTargetForm(), name: 'U', host: 'h.org', kind: 'upload-only', appPort: '4000' }, 'u');
@@ -85,4 +85,20 @@ test('small helpers', () => {
   assert.equal(formatBytes(900), '900 B'); assert.equal(formatBytes(2048), '2.0 KB'); assert.equal(formatBytes(5 * 1024 * 1024), '5.0 MB');
   assert.equal(shortFingerprint('SHA256:Qm7x0123456789abcdefghijklmnopqrstuvwxyzZk4'), 'SHA256:Qm7x0123...xyzZk4');
   assert.equal(shortFingerprint('SHA256:short'), 'SHA256:short');
+});
+
+test('ftp targets: defaults, remote path rules and the plain-FTP opt-in', () => {
+  const base = { ...emptyTargetForm(), name: 'Shared', host: 'ftp.example.org', port: '21', user: 'web1@example.org', kind: 'ftp' as const };
+  assert.deepEqual(validateTargetForm(base), {});
+  assert.deepEqual(buildTarget(base, 'shared').ftp, { security: 'explicit-tls', verify: 'ca', allowPlain: false, remotePath: '/' });
+  assert.ok(validateTargetForm({ ...base, ftpPath: 'htdocs' }).ftpPath);
+  assert.ok(validateTargetForm({ ...base, ftpPath: '/a/../b' }).ftpPath);
+  assert.ok(validateTargetForm({ ...base, ftpPath: '/htdocs/' }).ftpPath);
+  assert.equal(isRemotePath('/htdocs/site'), true);
+  assert.ok(validateTargetForm({ ...base, ftpSecurity: 'plain' }).ftpAllowPlain);
+  assert.deepEqual(validateTargetForm({ ...base, ftpSecurity: 'plain', ftpAllowPlain: true }), {});
+  assert.equal(buildTarget({ ...base, kind: 'static' }, 's').ftp, undefined);
+  const t = buildTarget({ ...base, ftpVerify: 'pinned', ftpPath: '/htdocs' }, 'shared');
+  assert.equal(formFromTarget(t).ftpVerify, 'pinned');
+  assert.equal(describeDeployError(new Error('deploy:tls-required')).code, 'tls-required');
 });

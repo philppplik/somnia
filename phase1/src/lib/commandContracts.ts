@@ -96,6 +96,8 @@ export interface CommandContracts {
   deploy_hostkey_replace: Contract<{ targetId: string; oldFingerprint: string; newFingerprint: string; acknowledged: boolean }, null>;
   deploy_key_create: Contract<{ targetId: string }, string>;
   deploy_releases: Contract<{ targetId: string }, string[]>;
+  deploy_ftp_password_set: Contract<{ targetId: string; password: string }, null>;
+  deploy_remote_list: Contract<{ targetId: string; path: string }, import('./deploy/contract').DeployRemoteEntry[]>;
   deploy_key_public: Contract<{ targetId: string }, string>;
   deploy_live_release: Contract<{ targetId: string }, string | null>;
   deploy_cancel: Contract<{ targetId: string }, boolean>;

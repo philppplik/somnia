@@ -121,6 +121,8 @@ fn main() {
             "deploy_hostkey_replace",
             "deploy_key_create",
             "deploy_releases",
+            "deploy_ftp_password_set",
+            "deploy_remote_list",
             "deploy_open_site",
             "deploy_key_public",
             "deploy_live_release",

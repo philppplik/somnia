@@ -33,6 +33,7 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `deploy.open` | Publish... | Project | core | `Mod+Shift+U` |
 | `deploy.plan` | Plan publish | Project | deploy |  |
 | `deploy.publish` | Publish | Project | deploy |  |
+| `deploy.remote.list` | List files on the publish server | Project | deploy |  |
 | `deploy.rollback` | Go back to a previous version | Project | deploy |  |
 | `deploy.setup.open` | Prepare publish server | Project | deploy |  |
 | `deploy.target.delete` | Delete publish target | Project | deploy |  |

@@ -47,7 +47,7 @@ test('specs: strict ids, expected levels, human-only set excludes agent surfaces
   const { d } = setup();
   const levels = Object.fromEntries(d.list().map(s => [s.id, s.level]));
   assert.deepEqual(levels, {
-    'deploy.setup.open': 'ui', 'deploy.cancel': 'ui', 'deploy.key.public': 'ui', 'deploy.targets.list': 'read', 'deploy.plan': 'propose', 'deploy.publish': 'ui', 'deploy.rollback': 'ui', 'deploy.target.save': 'ui',
+    'deploy.setup.open': 'ui', 'deploy.cancel': 'ui', 'deploy.key.public': 'ui', 'deploy.targets.list': 'read', 'deploy.plan': 'propose', 'deploy.publish': 'ui', 'deploy.remote.list': 'ui', 'deploy.rollback': 'ui', 'deploy.target.save': 'ui',
     'deploy.target.delete': 'ui', 'deploy.hostkey.trust': 'ui', 'deploy.hostkey.replace': 'ui', 'deploy.key.create': 'ui',
   });
   for (const o of ['agent', 'mcp', 'extension', 'macro', 'cli', 'control'] as const) assert.ok(!HUMAN_ORIGINS.includes(o), o);

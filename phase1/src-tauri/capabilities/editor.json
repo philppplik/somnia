@@ -135,6 +135,8 @@
     "allow-deploy-hostkey-replace",
     "allow-deploy-key-create",
     "allow-deploy-releases",
+    "allow-deploy-ftp-password-set",
+    "allow-deploy-remote-list",
     "allow-deploy-open-site",
     "allow-deploy-key-public",
     "allow-deploy-live-release",

@@ -387,6 +387,21 @@
       ]
     },
     {
+      "name": "deploy_ftp_password_set",
+      "domain": "deploy",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "target_id",
+        "password"
+      ],
+      "args": [
+        "targetId",
+        "password"
+      ]
+    },
+    {
       "name": "deploy_hostkey_probe",
       "domain": "deploy",
       "status": "native",
@@ -625,6 +640,21 @@
       ],
       "args": [
         "targetId"
+      ]
+    },
+    {
+      "name": "deploy_remote_list",
+      "domain": "deploy",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "target_id",
+        "path"
+      ],
+      "args": [
+        "targetId",
+        "path"
       ]
     },
     {

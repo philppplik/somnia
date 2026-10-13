@@ -3,7 +3,13 @@
  * Mirrors the serde camelCase shapes of src-tauri/src/deploy_guard.rs and deploy_targets.rs.
  * Nothing here carries key material: targets are identified by id, keys by slot, hosts by fingerprint.
  */
-export type DeployTargetKind = 'static' | 'node' | 'upload-only';
+export type DeployTargetKind = 'static' | 'node' | 'upload-only' | 'ftp';
+export type FtpSecurity = 'explicit-tls' | 'plain';
+export type FtpVerify = 'ca' | 'pinned';
+/** FTP/FTPS targets only. Mirrors FtpSettings in deploy_targets.rs. The password lives in the keychain, never here. */
+export interface DeployFtpSettings { security: FtpSecurity; verify: FtpVerify; allowPlain: boolean; remotePath: string }
+/** One row of the read-only remote listing. */
+export interface DeployRemoteEntry { name: string; kind: 'file' | 'dir' | 'other'; size: number | null }
 
 export interface DeployTarget {
   id: string;
@@ -18,6 +24,8 @@ export interface DeployTarget {
   spa?: boolean;
   /** Node targets: loopback port of the app. */
   appPort?: number;
+  /** Kind `ftp` only. */
+  ftp?: DeployFtpSettings;
 }
 
 export type DeployTargetState = 'key-missing' | 'needs-trust' | 'ready';
@@ -46,6 +54,10 @@ export interface DeployHostKeyInfo { algorithm: string; fingerprint: string }
 export interface DeployBackend {
   /** Additive D7 adapters. Missing support is a real error, never a simulated result. */
   keyPublic?(targetId: string): Promise<string>;
+  /** FTP targets: stores the password in the keychain. It is never returned. */
+  ftpPasswordSet?(targetId: string, password: string): Promise<void>;
+  /** FTP targets: read-only listing of one remote directory. */
+  remoteList?(targetId: string, path: string): Promise<DeployRemoteEntry[]>;
   liveRelease?(targetId: string): Promise<string | null>;
   cancel?(targetId: string): Promise<boolean>;
   bootstrapScript?(targetId: string): Promise<string>;

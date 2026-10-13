@@ -111,6 +111,19 @@ pub async fn deploy_key_create(window: tauri::WebviewWindow, app: tauri::AppHand
     gate(&window)?;
     blocking(&app, move |s| s.key_create(&target_id)).await
 }
+/// Write-only: the password goes straight into the OS keychain and is never returned.
+#[tauri::command]
+pub async fn deploy_ftp_password_set(window: tauri::WebviewWindow, app: tauri::AppHandle, target_id: String, password: String) -> Result<(), String> {
+    let password = zeroize::Zeroizing::new(password);
+    gate(&window)?;
+    blocking(&app, move |s| s.ftp_password_set(&target_id, &password)).await
+}
+/// Read-only directory listing of an FTP target, relative to the target's remote folder, `/` being that folder (validated in Rust).
+#[tauri::command]
+pub async fn deploy_remote_list(window: tauri::WebviewWindow, app: tauri::AppHandle, target_id: String, path: String) -> Result<Vec<crate::deploy_guard::RemoteEntry>, String> {
+    gate(&window)?;
+    blocking(&app, move |s| s.remote_list(&target_id, &path)).await
+}
 #[tauri::command]
 pub async fn deploy_releases(window: tauri::WebviewWindow, app: tauri::AppHandle, target_id: String) -> Result<Vec<String>, String> {
     gate(&window)?;

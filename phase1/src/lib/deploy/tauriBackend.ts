@@ -31,6 +31,8 @@ export function createTauriDeployBackend(): DeployBackend {
     hostkeyProbe: targetId => call(() => invokeCmd('deploy_hostkey_probe', { targetId })),
     hostkeyTrust: async (targetId, fingerprint) => { await call(() => invokeCmd('deploy_hostkey_trust', { targetId, fingerprint })); },
     hostkeyReplace: async args => { await call(() => invokeCmd('deploy_hostkey_replace', args)); },
+    ftpPasswordSet: async (targetId, password) => { await call(() => invokeCmd('deploy_ftp_password_set', { targetId, password })); },
+    remoteList: (targetId, path) => call(() => invokeCmd('deploy_remote_list', { targetId, path })),
     keyCreate: targetId => call(() => invokeCmd('deploy_key_create', { targetId })),
     openSite: async targetId => { await call(() => invokeCmd('deploy_open_site', { targetId })); },
     releasesList: targetId => call(() => invokeCmd('deploy_releases', { targetId })),

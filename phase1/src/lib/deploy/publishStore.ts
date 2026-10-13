@@ -42,7 +42,7 @@ export interface PublishState {
 
 export interface PublishDeps {
   run: (id: string, params?: unknown) => Promise<unknown>;
-  backend: Pick<DeployBackend, 'targetsList' | 'releasesList' | 'openSite' | 'liveRelease'>;
+  backend: Pick<DeployBackend, 'targetsList' | 'releasesList' | 'openSite' | 'liveRelease' | 'ftpPasswordSet'>;
   /** Subscribes to deploy-progress. Returns the unsubscribe function (may resolve later). */
   onProgress: (fn: (e: DeployProgressEvent) => void) => () => void;
   /**
@@ -193,6 +193,11 @@ export function createPublishStore(deps: PublishDeps) {
       set({ publicKeys: { ...state.publicKeys, [id]: key.publicKey } });
       await refresh();
       return key.publicKey;
+    },
+    async setFtpPassword(id: string, password: string): Promise<boolean> {
+      const ok = await guarded('key', id, async () => { if (!deps.backend?.ftpPasswordSet) throw new Error('deploy:engine-failed'); await deps.backend.ftpPasswordSet(id, password); return true; });
+      await refresh();
+      return ok === true;
     },
     async trust(id: string) {
       await guarded('trust', id, async () => { await deps.run('deploy.hostkey.trust', { targetId: id }); });

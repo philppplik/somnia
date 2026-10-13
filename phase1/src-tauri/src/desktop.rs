@@ -2507,6 +2507,8 @@ pub fn run() {
             crate::deploy_commands::deploy_hostkey_replace,
             crate::deploy_commands::deploy_key_create,
             crate::deploy_commands::deploy_releases,
+            crate::deploy_commands::deploy_ftp_password_set,
+            crate::deploy_commands::deploy_remote_list,
             crate::deploy_commands::deploy_open_site,
             crate::deploy_commands::deploy_key_public,
             crate::deploy_commands::deploy_live_release,

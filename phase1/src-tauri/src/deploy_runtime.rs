@@ -20,7 +20,8 @@ fn target_from_slot(slot: &str) -> Result<&str, ()> {
     Ok(id)
 }
 impl<B: crate::oauth_store::SecretBackend> KeyMaker for RuntimeKeys<B> {
-    fn exists(&self, slot: &str) -> bool { target_from_slot(slot).ok().is_some_and(|id| self.0.status(id).is_ok()) }
+    fn exists(&self, slot: &str) -> bool { target_from_slot(slot).ok().is_some_and(|id| self.0.status(id).is_ok() || self.0.has_password(id)) }
+    fn set_password(&self, slot: &str, password: &str) -> Result<(), ()> { self.0.set_password(target_from_slot(slot)?, password).map_err(|_| ()) }
     fn create(&self, slot: &str) -> Result<String, ()> { self.0.create(target_from_slot(slot)?).map(|s| s.public_key).map_err(|_| ()) }
     fn public_key(&self, slot: &str) -> Result<String, ()> { self.0.status(target_from_slot(slot)?).map(|s| s.public_key).map_err(|_| ()) }
     fn delete(&self, slot: &str) { if let Ok(id) = target_from_slot(slot) { let _ = self.0.delete(id); } }
@@ -73,7 +74,10 @@ pub fn build_service(config_dir: &Path, source: crate::deploy::engine::ProjectSo
     // The same engine serves publishing (through the live engine) and the app-settings commands.
     let admin = crate::deploy::node_admin::NodeAdmin { engine: node.clone(), targets: Box::new(FileTargets::new(config_dir.join("deploy-targets.json"))) };
     let _ = NODE_ADMIN.set(std::sync::Arc::new(admin));
+    let ftp = crate::deploy::ftp_engine::FtpEngine::new(keys.clone(), store.clone(), observed.clone(), source.clone());
     let engine = crate::deploy::engine::LiveDeployEngine::new(keys.clone(), store.clone(), observed.clone(), source).with_node_engine(Box::new(node));
+    // FTP targets take the FTP engine; every other target kind goes to the SSH engine unchanged.
+    let engine = crate::deploy::ftp_engine::RoutingEngine { ssh: Box::new(engine), ftp: Box::new(ftp) };
     Ok(DeployService::new(
         Box::new(FileTargets::new(config_dir.join("deploy-targets.json"))),
         Box::new(RuntimePins { store, observed }),

@@ -14,6 +14,7 @@ import type {DeployTargetStatus} from '../lib/deploy/contract';
 import {PROGRESS_STEPS,emptyTargetForm,formFromTarget,formatBytes,liveUrl,releaseDate,shortFingerprint,validateTargetForm,type TargetForm,type DeployErrorAction,type FormField} from '../lib/deploy/publishModel';
 import {summarizePlan} from '../lib/deploy/confirmStore';
 import {NodeAppSettings} from './NodeAppSettings';
+import {FtpSetup,RemoteBrowser} from './FtpSetup';
 
 type T=(k:string,p?:Record<string,string|number>)=>string;
 const mono={fontFamily:'var(--mono,ui-monospace,monospace)',wordBreak:'break-all'} as const;
@@ -56,7 +57,8 @@ function PublishDialogInner(){
     <div className="dlg-head-text"><DialogTitle>{title}</DialogTitle><DialogDescription>{desc}</DialogDescription></div>
    </header>
    <div className="dlg-body publish-body">
-    {state.view==='setup'&&selected&&<DeploySetupWizard key={selected.target.id} target={selected} store={store} t={t}/>}
+    {state.view==='setup'&&selected&&selected.target.kind==='ftp'&&<FtpSetup key={selected.target.id} target={selected} store={store} t={t}/>}
+    {state.view==='setup'&&selected&&selected.target.kind!=='ftp'&&<DeploySetupWizard key={selected.target.id} target={selected} store={store} t={t}/>}
     {state.view==='home'&&<Home state={state} store={store} selected={selected} t={t}/>}
     {state.view==='form'&&<ServerForm state={state} store={store} t={t}/>}
     {state.view==='rollback'&&<RollbackList state={state} store={store} selected={selected} t={t} locale={locale}/>}
@@ -118,6 +120,7 @@ function Home({state,store,selected,t}:{state:PublishState;store:PublishStore;se
   <Button size="compact" variant="outline" className="publish-add" disabled={state.busy!==null} onClick={()=>store.showForm(null)}><Plus size={12}/>{t('deploy.targets.add')}</Button>
   {state.staged&&selected&&state.staged.targetId===selected.target.id&&<section className="publish-card" data-testid="publish-staged"><UploadCloud size={18} aria-hidden="true"/><div className="publish-card-main"><strong>{t('deploy.staged',{name:selected.target.name,count:state.staged.files.filter(f=>f.change!=='unchanged').length})}</strong><div className="publish-actions"><Button size="compact" variant="outline" onClick={()=>store.clearStaged()}>{t('deploy.action.dismiss')}</Button></div></div></section>}
   {selected&&<Detail state={state} store={store} s={selected} t={t} onDelete={()=>setConfirmDelete(selected.target.id)}/>}
+  {selected&&selected.target.kind==='ftp'&&selected.state==='ready'&&<RemoteBrowser key={selected.target.id} target={selected} t={t}/>}
   {selected&&selected.target.kind==='node'&&selected.state==='ready'&&<NodeAppSettings targetId={selected.target.id}/>}
   {confirmDelete&&selected&&confirmDelete===selected.target.id&&<section className="publish-card publish-delete" role="group" aria-label={t('deploy.delete.title')} data-testid="publish-delete-confirm"><Trash2 size={18} aria-hidden="true"/><div className="publish-card-main"><strong>{t('deploy.delete.confirm',{name:selected.target.name})}</strong><label className="publish-check"><input type="checkbox" checked={alsoKey} onChange={e=>setAlsoKey(e.target.checked)}/><span>{t('deploy.delete.key')}</span></label><p className="publish-note">{t('deploy.delete.note')}</p>
    <div className="publish-actions"><Button size="compact" variant="outline" autoFocus onClick={()=>setConfirmDelete(null)}>{t('deploy.cancel')}</Button><Button size="compact" className="publish-danger" onClick={()=>{void store.deleteTarget(selected.target.id,alsoKey);setConfirmDelete(null);}}>{t('deploy.delete.yes')}</Button></div></div></section>}
@@ -129,7 +132,7 @@ function Detail({state,store,s,t,onDelete}:{state:PublishState;store:PublishStor
  const id=s.target.id;const running=state.busy==='publish'||state.busy==='rollback';
  const result=state.result&&state.result.targetId===id?state.result:null;
  const url=liveUrl(s.target);const busy=state.busy!==null;
- const kindKey=s.target.kind==='static'?'deploy.kind.static':s.target.kind==='node'?'deploy.kind.node':'deploy.kind.upload';
+ const kindKey=s.target.kind==='static'?'deploy.kind.static':s.target.kind==='node'?'deploy.kind.node':s.target.kind==='ftp'?'deploy.kind.ftp':'deploy.kind.upload';
  return <section className="publish-detail" aria-label={s.target.name} data-testid="publish-detail" data-state={s.state}>
   <dl className="publish-facts">
    <dt>{t('deploy.field.server')}</dt><dd style={mono}>{s.target.user}@{s.target.host}:{s.target.port}</dd>
@@ -203,7 +206,7 @@ function ServerForm({state,store,t}:{state:PublishState;store:PublishStore;t:T})
  const set=<K extends keyof TargetForm>(k:K,v:TargetForm[K])=>setForm(f=>({...f,[k]:v}));
  const err=(k:FormField)=>shown[k]?t(shown[k]!):undefined;
  const submit=async()=>{setTried(true);if(Object.keys(errors).length)return;const id=await store.saveTarget(form);if(id&&!editing)store.showSetup(id);};
- const kinds=[['static','deploy.kind.static','deploy.kind.static.desc'],['node','deploy.kind.node','deploy.kind.node.desc'],['upload-only','deploy.kind.upload','deploy.kind.upload.desc']] as const;
+ const kinds=[['static','deploy.kind.static','deploy.kind.static.desc'],['node','deploy.kind.node','deploy.kind.node.desc'],['upload-only','deploy.kind.upload','deploy.kind.upload.desc'],['ftp','deploy.kind.ftp','deploy.kind.ftp.desc']] as const;
  const busy=state.busy==='save';
  return <form className="publish-form" noValidate onSubmit={e=>{e.preventDefault();void submit();}} data-testid="publish-form">
   <Field id="pf-name" label={t('deploy.form.name')} error={err('name')}><Input id="pf-name" autoFocus value={form.name} placeholder={t('deploy.form.name.ph')} aria-invalid={!!shown.name} onChange={e=>set('name',e.target.value)}/></Field>
@@ -216,8 +219,17 @@ function ServerForm({state,store,t}:{state:PublishState;store:PublishStore;t:T})
    <Field id="pf-domain" label={t('deploy.form.domain')} error={err('domain')}><Input id="pf-domain" value={form.domain} spellCheck={false} autoCapitalize="off" placeholder={t('deploy.form.domain.ph')} aria-invalid={!!shown.domain} onChange={e=>set('domain',e.target.value)}/></Field>
   </div>
   <fieldset className="publish-kinds"><legend>{t('deploy.form.kind')}</legend>
-   {kinds.map(([k,title,desc])=><label key={k} className="publish-kind" data-checked={form.kind===k}><input type="radio" name="pf-kind" checked={form.kind===k} onChange={()=>set('kind',k)}/><span><strong>{t(title)}</strong><small>{t(desc)}</small></span></label>)}
+   {kinds.map(([k,title,desc])=><label key={k} className="publish-kind" data-checked={form.kind===k}><input type="radio" name="pf-kind" checked={form.kind===k} onChange={()=>{set('kind',k);if(k==='ftp'&&form.port==='22')set('port','21');if(k!=='ftp'&&form.port==='21')set('port','22');if(k==='ftp'&&form.user==='somnia')set('user','');if(k!=='ftp'&&form.user==='')set('user','somnia');}}/><span><strong>{t(title)}</strong><small>{t(desc)}</small></span></label>)}
   </fieldset>
+  {form.kind==='ftp'&&<>
+   <Field id="pf-ftp-path" label={t('deploy.form.ftpPath')} error={err('ftpPath')}><Input id="pf-ftp-path" value={form.ftpPath} spellCheck={false} aria-invalid={!!shown.ftpPath} onChange={e=>set('ftpPath',e.target.value)}/></Field>
+   <div className="publish-row">
+    <Field id="pf-ftp-sec" label={t('deploy.form.ftpSecurity')}><select id="pf-ftp-sec" value={form.ftpSecurity} onChange={e=>set('ftpSecurity',e.target.value as TargetForm['ftpSecurity'])}><option value="explicit-tls">{t('deploy.form.ftpSecurity.tls')}</option><option value="plain">{t('deploy.form.ftpSecurity.plain')}</option></select></Field>
+    {form.ftpSecurity==='explicit-tls'&&<Field id="pf-ftp-verify" label={t('deploy.form.ftpVerify')}><select id="pf-ftp-verify" value={form.ftpVerify} onChange={e=>set('ftpVerify',e.target.value as TargetForm['ftpVerify'])}><option value="ca">{t('deploy.form.ftpVerify.ca')}</option><option value="pinned">{t('deploy.form.ftpVerify.pinned')}</option></select></Field>}
+   </div>
+   {form.ftpSecurity==='plain'&&<label className="publish-check" data-testid="ftp-plain-optin"><input type="checkbox" checked={form.ftpAllowPlain} onChange={e=>set('ftpAllowPlain',e.target.checked)}/><span>{t('deploy.form.ftpPlain')}</span></label>}
+   {shown.ftpAllowPlain&&<span className="publish-field-error" role="alert">{t(shown.ftpAllowPlain)}</span>}
+  </>}
   {form.kind==='static'&&<label className="publish-check"><input type="checkbox" checked={form.spa} onChange={e=>set('spa',e.target.checked)}/><span>{t('deploy.form.spa')}</span></label>}
   {form.kind==='node'&&<Field id="pf-app" label={t('deploy.form.appPort')} error={err('appPort')}><Input id="pf-app" inputMode="numeric" value={form.appPort} aria-invalid={!!shown.appPort} onChange={e=>set('appPort',e.target.value)}/></Field>}
   <Failure state={state} store={store} t={t}/>

@@ -92,3 +92,15 @@ test('node app-settings commands are main-window gated, typed, and never return 
  }
  assert.ok(contracts.includes('deploy_node_env_apply: Contract<{ targetId: string; set: Array<{ key: string; value: string }>; remove: string[] }, string[]>'));
 });
+
+test('ftp commands are main-window gated, typed, and the password never leaves the keychain path',()=>{
+ const rs=readFileSync('src-tauri/src/deploy_commands.rs','utf8');
+ const contracts=readFileSync('src/lib/commandContracts.ts','utf8');
+ for(const name of ['deploy_ftp_password_set','deploy_remote_list']) {
+  const at=rs.indexOf(`pub async fn ${name}(`);
+  assert.ok(at>0,name);
+  assert.ok(rs.slice(at,at+600).includes('gate(&window)?'),name);
+  assert.ok(contracts.includes(`${name}: Contract<`),name);
+ }
+ assert.ok(contracts.includes('deploy_ftp_password_set: Contract<{ targetId: string; password: string }, null>'));
+});

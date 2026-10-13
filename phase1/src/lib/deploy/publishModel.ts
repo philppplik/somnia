@@ -2,14 +2,14 @@
  * Pure helpers for the Publish panel: error codes to plain language, progress steps, release labels
  * and the server form. React-free and secret-free: nothing here ever sees key material.
  */
-import type { DeployTarget, DeployTargetKind, DeployTargetState, DeployTargetStatus } from './contract';
+import type { FtpSecurity, FtpVerify, DeployTarget, DeployTargetKind, DeployTargetState, DeployTargetStatus } from './contract';
 
 /** Every error code the Rust side can return (`deploy:<code>`), see DeployError::code. */
 export const DEPLOY_ERROR_CODES = [
   'invalid-input', 'target-not-found', 'storage', 'key-missing', 'key-exists', 'key-backend', 'host-key-unknown', 'host-key-changed',
   'host-key-already-pinned', 'host-key-mismatch', 'not-acknowledged', 'unknown-plan', 'confirmation-invalid', 'plan-changed', 'busy',
   'connect-failed', 'auth-failed', 'host-key-rejected', 'preflight-failed', 'upload-failed', 'switch-failed', 'health-failed-rolled-back',
-  'health-failed-rollback-failed', 'no-such-release', 'node-missing', 'node-too-old', 'install-failed', 'health-failed', 'engine-failed', 'server-not-prepared', 'dns-not-ready', 'cancelled',
+  'health-failed-rollback-failed', 'no-such-release', 'node-missing', 'node-too-old', 'install-failed', 'health-failed', 'engine-failed', 'server-not-prepared', 'dns-not-ready', 'cancelled', 'tls-required',
 ] as const;
 export type DeployErrorCode = typeof DEPLOY_ERROR_CODES[number];
 
@@ -45,6 +45,7 @@ const TABLE: Record<DeployErrorCode, { actions: DeployErrorAction[]; safe: boole
   'server-not-prepared': { actions: ['setup'], safe: true },
   'dns-not-ready': { actions: ['setup'], safe: true },
   'cancelled': { actions: ['dismiss'], safe: true },
+  'tls-required': { actions: ['edit'], safe: true },
   'node-missing': { actions: ['retry'], safe: true },
   'node-too-old': { actions: ['retry'], safe: true },
   'install-failed': { actions: ['retry'], safe: true },
@@ -115,13 +116,19 @@ export function liveUrl(target: Pick<DeployTarget, 'domain' | 'kind'>): string |
 
 // ---- server form ----
 
-export interface TargetForm { name: string; host: string; port: string; user: string; domain: string; kind: DeployTargetKind; spa: boolean; appPort: string }
-export const emptyTargetForm = (): TargetForm => ({ name: '', host: '', port: '22', user: 'somnia', domain: '', kind: 'static', spa: false, appPort: '3000' });
-export type FormField = 'name' | 'host' | 'port' | 'user' | 'domain' | 'appPort';
+export interface TargetForm { name: string; host: string; port: string; user: string; domain: string; kind: DeployTargetKind; spa: boolean; appPort: string; ftpSecurity?: FtpSecurity; ftpVerify?: FtpVerify; ftpAllowPlain?: boolean; ftpPath?: string }
+export const emptyTargetForm = (): TargetForm => ({ name: '', host: '', port: '22', user: 'somnia', domain: '', kind: 'static', spa: false, appPort: '3000', ftpSecurity: 'explicit-tls', ftpVerify: 'ca', ftpAllowPlain: false, ftpPath: '/' });
+export type FormField = 'name' | 'host' | 'port' | 'user' | 'domain' | 'appPort' | 'ftpPath' | 'ftpAllowPlain';
 export type FormErrors = Partial<Record<FormField, string>>;
 
 const HOST = /^[A-Za-z0-9][A-Za-z0-9.:-]{0,252}$/;
 const USER = /^[a-z_][a-z0-9_-]{0,31}$/;
+const FTP_USER = /^[A-Za-z0-9_.@+-]{1,128}$/;
+// eslint-disable-next-line no-control-regex
+const BAD_SEG = /[\u0000-\u001f\u007f\\/*?"<>|:]/;
+const remoteSeg = (g: string) => g !== '' && g.length <= 120 && g !== '.' && g !== '..' && !BAD_SEG.test(g);
+/** Mirrors is_remote_path in deploy_targets.rs: absolute, no trailing slash, no empty, `.` or `..` segments. */
+export function isRemotePath(p: string): boolean { return p.startsWith('/') && p.length <= 200 && (p === '/' || (!p.endsWith('/') && p.slice(1).split('/').every(remoteSeg))); }
 const LABEL = /^[A-Za-z0-9]([A-Za-z0-9-]{0,61}[A-Za-z0-9])?$/;
 export function isDomain(s: string): boolean {
   return s.length <= 253 && s.includes('.') && s.split('.').every(l => LABEL.test(l));
@@ -134,7 +141,11 @@ export function validateTargetForm(f: TargetForm): FormErrors {
   if (!HOST.test(f.host.trim())) e.host = 'deploy.form.err.host';
   const port = Number(f.port);
   if (!/^\d{1,5}$/.test(f.port.trim()) || port < 1 || port > 65535) e.port = 'deploy.form.err.port';
-  if (!USER.test(f.user.trim())) e.user = 'deploy.form.err.user';
+  if (!(f.kind === 'ftp' ? FTP_USER : USER).test(f.user.trim())) e.user = 'deploy.form.err.user';
+  if (f.kind === 'ftp') {
+    if (!isRemotePath((f.ftpPath ?? '/').trim())) e.ftpPath = 'deploy.form.err.ftpPath';
+    if (f.ftpSecurity === 'plain' && f.ftpAllowPlain !== true) e.ftpAllowPlain = 'deploy.form.err.ftpPlain';
+  }
   const domain = f.domain.trim();
   if (domain && !isDomain(domain)) e.domain = 'deploy.form.err.domain';
   if (f.kind === 'node') { const p = Number(f.appPort); if (!/^\d{1,5}$/.test(f.appPort.trim()) || p < 1024 || p > 65535) e.appPort = 'deploy.form.err.appPort'; }
@@ -152,10 +163,11 @@ export function buildTarget(f: TargetForm, id: string): DeployTarget {
   return {
     id, name: f.name.trim(), host: f.host.trim(), port: Number(f.port), user: f.user.trim(), kind: f.kind, keySlot: `deploy-key:${id}`,
     ...(domain ? { domain } : {}), ...(f.kind === 'static' && f.spa ? { spa: true } : {}), ...(f.kind === 'node' ? { appPort: Number(f.appPort) } : {}),
+    ...(f.kind === 'ftp' ? { ftp: { security: f.ftpSecurity ?? 'explicit-tls', verify: f.ftpSecurity === 'plain' ? 'ca' as const : f.ftpVerify ?? 'ca', allowPlain: f.ftpSecurity === 'plain' && f.ftpAllowPlain === true, remotePath: (f.ftpPath ?? '/').trim() } } : {}),
   };
 }
 export function formFromTarget(t: DeployTarget): TargetForm {
-  return { name: t.name, host: t.host, port: String(t.port), user: t.user, domain: t.domain ?? '', kind: t.kind, spa: t.spa === true, appPort: String(t.appPort ?? 3000) };
+  return { name: t.name, host: t.host, port: String(t.port), user: t.user, domain: t.domain ?? '', kind: t.kind, spa: t.spa === true, appPort: String(t.appPort ?? 3000), ftpSecurity: t.ftp?.security ?? 'explicit-tls', ftpVerify: t.ftp?.verify ?? 'ca', ftpAllowPlain: t.ftp?.allowPlain === true, ftpPath: t.ftp?.remotePath ?? '/' };
 }
 export function formatBytes(n: number): string {
   if (n < 1024) return `${n} B`;
