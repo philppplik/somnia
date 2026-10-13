@@ -12,7 +12,7 @@ Paste into the release notes of the version that ships the CLI.
 - Docs: usage, protocol, troubleshooting and the security review are in `docs/cli/`.
 
 ## Known issues
-- Windows named-pipe transport is not implemented: on Windows, only foreground runs work; `--detach`, `attach` and `cancel` are unavailable.
+- The release archive needs `git` and `node` (20 or newer) on `PATH`; keep `sidecar/engine.mjs` next to the binary.
 - Git runs your repository's own hooks and configured helpers on commit, status and diff, as it does for you. Open untrusted projects with the same care as untrusted code.
 - Engine text (summary, failure message) is stored as written; the CLI does not scrub it.
 - The terminal UI frames for tool calls, model and cost are not mapped yet.

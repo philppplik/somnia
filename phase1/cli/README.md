@@ -31,18 +31,20 @@ Release archives (Linux and Windows, x86_64; no macOS build) are attached to Git
 ```sh
 sha256sum -c SHA256SUMS --ignore-missing
 tar -xzf somnia-cli-<version>-linux-x86_64.tar.gz
-install -m 0755 somnia-cli-<version>-linux-x86_64/somnia ~/.local/bin/somnia
+mkdir -p ~/.local/share ~/.local/bin
+mv somnia-cli-<version>-linux-x86_64 ~/.local/share/somnia-cli
+ln -sf ~/.local/share/somnia-cli/somnia ~/.local/bin/somnia
 somnia --version        # release number; the long form (--version) also prints commit and target
 ```
 
 On Windows, extract the zip, put the folder on `PATH`, then run `somnia --version` (PowerShell: `Get-FileHash <zip> -Algorithm SHA256` and compare with `SHA256SUMS`).
-The binary is unsigned (SmartScreen may warn). It needs `git` on `PATH`, and `node` for the default agent sidecar.
+The binary is unsigned (SmartScreen may warn). It needs `git` and `node` (20 or newer) on `PATH`. The archive carries the agent engine as `sidecar/engine.mjs` next to the binary; keep it there (a symlink to the binary is fine).
 
 ## Building and packaging
 
 ```sh
 cd phase1/cli && cargo build --release --locked            # version = crate version unless SOMNIA_RELEASE is set
-cd phase1 && node scripts/package-cli.mjs build            # archive + .sha256 in phase1/cli-dist, version from somniaRelease
+cd phase1 && npm ci && node scripts/package-cli.mjs build # runs build:cli-engine, then packs binary + sidecar/engine.mjs; archive + .sha256 in phase1/cli-dist, version from somniaRelease
 node scripts/package-cli.mjs sums cli-dist                 # SHA256SUMS for all archives in the folder
 ```
 

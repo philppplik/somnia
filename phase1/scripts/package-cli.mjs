@@ -2,11 +2,13 @@
 // Packages the headless `somnia` CLI (phase1/cli) for GitHub Releases.
 //
 //   node scripts/package-cli.mjs build [--version V] [--out DIR] [--skip-build]
-//       Builds cli/ in release mode and writes somnia-cli-<ver>-<os>-x86_64.(tar.gz|zip)
+//       Bundles the agent engine sidecar (`npm run build:cli-engine`, needs `npm ci`), builds cli/ in release
+//       mode and writes somnia-cli-<ver>-<os>-x86_64.(tar.gz|zip)
 //       plus a matching .sha256 file into DIR (default: cli-dist).
 //   node scripts/package-cli.mjs sums DIR
 //       Writes DIR/SHA256SUMS for every somnia-cli-* archive in DIR (sha256sum -c compatible).
 //
+// Archive layout: <name>/somnia(.exe), <name>/sidecar/engine.mjs (the binary finds it next to itself), docs.
 // Linux and Windows x86_64 only. macOS is not shipped (alpha runs skip it by policy).
 import { createHash } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
@@ -64,14 +66,16 @@ export function installNotes(version, t) {
           '  2. Add that folder to your PATH, or run somnia.exe by full path.',
           '  3. Check: somnia --version',
           '',
-          'Windows limits in this release: detached runs, attach, status and cancel need the',
-          'local socket transport, which is Unix only for now. `somnia run` in the foreground',
-          'is the supported path. The Windows named-pipe transport is not built yet.',
+          'Keep the sidecar folder next to somnia.exe: it holds the agent engine.',
         ]
       : [
           `  1. tar -xzf ${archive}`,
-          `  2. install -m 0755 ${archive.replace(/\.tar\.gz$/, '')}/somnia ~/.local/bin/somnia`,
-          '  3. Check: somnia --version',
+          `  2. mkdir -p ~/.local/share ~/.local/bin && mv ${archive.replace(/\.tar\.gz$/, '')} ~/.local/share/somnia-cli`,
+          '  3. ln -sf ~/.local/share/somnia-cli/somnia ~/.local/bin/somnia',
+          '  4. Check: somnia --version',
+          '',
+          'Keep the sidecar folder next to the somnia binary: it holds the agent engine.',
+          'The symlink is fine, the binary resolves its real location.',
         ]),
     '',
     'Verify the download',
@@ -81,7 +85,7 @@ export function installNotes(version, t) {
       : ['  sha256sum -c SHA256SUMS --ignore-missing']),
     '',
     'The binary is not code-signed (SmartScreen may warn on Windows).',
-    'It needs git on PATH and node for the default agent sidecar. It never pushes.',
+    'It needs git and node (20 or newer) on PATH; node runs the bundled agent engine. It never pushes.',
     'Docs: https://github.com/philppplik/somnia/blob/main/phase1/cli/README.md',
     '',
   ];
@@ -113,7 +117,9 @@ export function build(argv) {
   const version = assertVersion(argValue(argv, '--version') ?? pkg.somniaRelease);
   const out = resolve(argValue(argv, '--out') ?? join(phase1, 'cli-dist'));
   const t = target();
+  const engine = join(cliDir, 'sidecar', 'engine.mjs');
   if (!argv.includes('--skip-build')) {
+    run(process.platform === 'win32' ? 'npm.cmd' : 'npm', ['run', 'build:cli-engine'], { cwd: phase1, shell: process.platform === 'win32' });
     run('cargo', ['build', '--release', '--locked'], {
       cwd: cliDir,
       env: { ...process.env, SOMNIA_RELEASE: version, SOMNIA_COMMIT: gitShort() },
@@ -127,7 +133,10 @@ export function build(argv) {
   const stage = join(stageRoot, stageName);
   rmSync(stageRoot, { recursive: true, force: true });
   mkdirSync(stage, { recursive: true });
+  if (!existsSync(engine)) throw new Error(`missing agent engine ${engine} (run npm run build:cli-engine)`);
   copyFileSync(bin, join(stage, t.bin));
+  mkdirSync(join(stage, 'sidecar'), { recursive: true });
+  copyFileSync(engine, join(stage, 'sidecar', 'engine.mjs'));
   copyFileSync(join(cliDir, 'README.md'), join(stage, 'README.md'));
   copyFileSync(join(phase1, '..', 'LICENSE'), join(stage, 'LICENSE'));
   writeFileSync(join(stage, 'INSTALL.txt'), installNotes(version, t));

@@ -316,9 +316,14 @@ jobs:
         with:
           node-version: '24'
       - uses: dtolnay/rust-toolchain@stable
+      - run: npm ci
       - name: Packaging script tests
         run: node --test --experimental-strip-types test/cli-release/package-cli.test.ts
-      - name: CLI tests (integration tests are Unix only)
+      - name: Build the agent engine sidecar and test it
+        run: |
+          npm run build:cli-engine
+          npm run test:cli-engine
+      - name: CLI tests (real-sidecar tests run now that the engine is built)
         run: cargo test --manifest-path cli/Cargo.toml --locked
       - name: Build and archive the CLI
         run: node scripts/package-cli.mjs build --out cli-dist
@@ -328,6 +333,7 @@ jobs:
           set -euo pipefail
           mkdir -p cli-smoke && cd cli-smoke
           if [ "$RUNNER_OS" = "Windows" ]; then tar -xf ../cli-dist/somnia-cli-*.zip; bin=$(ls -d somnia-cli-*)/somnia.exe; else tar -xzf ../cli-dist/somnia-cli-*.tar.gz; bin=$(ls -d somnia-cli-*)/somnia; fi
+          test -f "$(dirname "$bin")/sidecar/engine.mjs"
           "$bin" --version | tee version.txt
           grep -q "^somnia $(node -p "require('../package.json').somniaRelease")" version.txt
       - uses: actions/upload-artifact@v7

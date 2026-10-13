@@ -49,11 +49,12 @@ test('sums covers only cli archives, sorted, and writes SHA256SUMS', () => {
 test('install notes are honest about Windows limits and signing', () => {
   const w = pkg.installNotes('1.0.0', pkg.target('win32', 'x64'));
   assert.match(w, /not code-signed/);
-  assert.match(w, /named-pipe/);
+  assert.match(w, /sidecar folder next to somnia\.exe/);
   assert.match(w, /\r\n/);
   const l = pkg.installNotes('1.0.0', pkg.target('linux', 'x64'));
   assert.match(l, /sha256sum -c/);
-  assert.match(l, /somnia-cli-1\.0\.0-linux-x86_64\/somnia/);
+  assert.match(l, /somnia-cli-1\.0\.0-linux-x86_64 ~\/\.local\/share\/somnia-cli/);
+  assert.match(l, /sidecar/);
 });
 
 test('isCliArchive', () => {
