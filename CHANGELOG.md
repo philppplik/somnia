@@ -12,6 +12,10 @@
 
 # Changelog
 
+## Unreleased - CLI providers: Grok, Meta, DeepSeek
+
+- The CLI task engine accepts `SOMNIA_ENGINE_PROVIDER=xai|meta|deepseek`. Keys come only from `XAI_API_KEY`, `META_API_KEY`, `DEEPSEEK_API_KEY`; cloud consent (`SOMNIA_ENGINE_CLOUD_CONSENT=1`) is required, same as the other cloud providers.
+
 ## Unreleased - Slides Present
 
 - Slides now declares Present in the shared header hero slot, with current/from-start interactive commands and F5 / Shift+F5 shortcuts.
