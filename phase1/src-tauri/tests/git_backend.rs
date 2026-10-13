@@ -440,17 +440,13 @@ fn blocked_states_are_detected() {
 }
 
 #[test]
-fn linked_worktree_is_unsupported() {
-    let (_d, root) = repo_with_commit();
-    let other = TempDir::new().unwrap();
-    let wt = other.path().join("wt");
+fn linked_worktree_is_supported() {
+    let (_dir, root) = repo_with_commit();
+    let outside = TempDir::new().unwrap();
+    let wt = outside.path().join("linked");
     git(&root, &["worktree", "add", "-q", wt.to_str().unwrap(), "--detach"]);
-    match detect(wt.canonicalize().unwrap().as_path(), None) {
-        GitRepoState::Blocked { reason, .. } => {
-            assert!(matches!(reason, somnia_desktop::git::GitBlockReason::UnsupportedWorktree))
-        }
-        other => panic!("expected unsupported-worktree, got {other:?}"),
-    }
+    assert!(matches!(detect(&wt, None), GitRepoState::Ready { .. }));
+    assert!(status(&wt).unwrap().changes.is_empty());
 }
 
 #[test]

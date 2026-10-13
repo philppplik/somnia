@@ -3,6 +3,7 @@ import {CONSENT_CATALOGUES} from './extensions/consentLocales';
 import {STORE_CATALOGUES} from './extensions/storeLocales';
 import {SCHEDULE_CATALOGUES} from './vibespace/scheduleI18n';
 import {BOARD_CATALOGUES} from './vibespace/boardI18n';
+import {BOARD_CATALOGUES as AGENT_BOARD_CATALOGUES} from './agentBoard/i18n';
 import en from '../locales/en.json';
 import de from '../locales/de.json';
 import es from '../locales/es.json';
@@ -32,6 +33,7 @@ for (const [tag, extra] of Object.entries(DESIGN_CATALOGUES)) Object.assign(CATA
 for (const [tag, extra] of Object.entries(VIBESPACE_CATALOGUES)) Object.assign(CATALOGUES[tag], extra);
 for (const [tag, extra] of Object.entries(CONSENT_CATALOGUES)) Object.assign(CATALOGUES[tag], extra);
 for (const [tag, extra] of Object.entries(STORE_CATALOGUES)) Object.assign(CATALOGUES[tag], extra);
+for (const [tag, extra] of Object.entries(AGENT_BOARD_CATALOGUES)) Object.assign(CATALOGUES[tag], extra);
 for (const [tag, extra] of Object.entries(DIAGNOSTIC_LOCALES)) Object.assign(CATALOGUES[tag], extra);
 for (const [tag, extra] of Object.entries(SCHEDULE_CATALOGUES)) Object.assign(CATALOGUES[tag], extra);
 for (const [tag, extra] of Object.entries(VIBESPACE_CATALOGUES)) Object.assign(CATALOGUES[tag], extra);

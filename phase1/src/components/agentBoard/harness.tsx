@@ -1,0 +1,11 @@
+import '../../styles/agent-board.css';
+import {createRoot} from 'react-dom/client';
+import {AgentBoard} from './AgentBoard';
+import {createBoardFixture} from '../../lib/agentBoard/fixtures';
+import {initLocale} from '../../lib/i18n';
+import '../../styles/global.css';
+if(!import.meta.env.DEV)throw Error('Fixture harness is development-only');
+initLocale();document.documentElement.dataset.theme=new URLSearchParams(location.search).get('theme')==='dark'?'dark':'light';
+const fixture=createBoardFixture();
+(window as unknown as {boardFixture:typeof fixture}).boardFixture=fixture;
+createRoot(document.getElementById('root')!).render(<AgentBoard port={fixture.port} onCombine={fixture.combine}/>);

@@ -44,6 +44,10 @@ jobs:
         run: npm run check:layers
       - name: Dreamweaver parity checklist is current
         run: npm run check:dreamweaver-parity
+      - name: Headless CLI and TUI crate tests (native)
+        run: |
+          cargo +1.95.0 test --locked --manifest-path cli/Cargo.toml
+          cargo +1.95.0 test --locked --manifest-path crates/somnia-tui/Cargo.toml
       - run: npm run build && npm run test:core
       - name: Release bundle has no web-control hook
         run: npm run check:no-control

@@ -1,3 +1,4 @@
+import {askOpenStudio,answerOpenChoice} from './openChoice';
 import {reportError} from '../log';
 import {readyHandlersFor} from './openHandlers';
 import type {OpenKind} from './openHandlers';
@@ -52,6 +53,7 @@ export const TEXT_KINDS=new Set(['text','svg']);
 const textEncoder=new TextEncoder();
 async function bytesOf(f:IncomingFile):Promise<Uint8Array>{return f.blob?new Uint8Array(await f.blob.arrayBuffer()):textEncoder.encode(f.text);}
 export const appDeps:OpenDeps={
+ openChoice:{askOpenStudio,cancelPending:()=>answerOpenChoice(null)},
  async prepare(input,resolution):Promise<PreparedOpen>{
   const studioId=resolution.handler.studioId;
   if(TEXT_KINDS.has(resolution.kind)){
