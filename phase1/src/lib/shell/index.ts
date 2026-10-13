@@ -6,3 +6,6 @@ export * from './railResolver';
 export * from './commandMeta';
 export * from './statusSlots';
 export * from './problemsProvider';
+export * from './panels';
+export * from './railIcons';
+export * from './studioContext';

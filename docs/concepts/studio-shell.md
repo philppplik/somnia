@@ -1,6 +1,6 @@
 # Studio shell: cross-studio tabs, rails and Save All / Close All
 
-Status: proposed concept and design. Not implemented. Needs Philipp's OK on concept and design before any dev work.
+Status: proposed concept and design. Section 9 (panel API) is the stable contract for the shell foundation; the rest is not implemented. Needs Philipp's OK on concept and design before any dev work.
 Baseline: `int/alpha4` (`03d5fea`). Grounded in the code paths listed under "Current state".
 
 ## 1. Goal
@@ -278,3 +278,95 @@ Gates for each step: `tsc`, `vitest`, `check:commands`, i18n parity, Playwright 
 ## 8. Out of scope
 
 No change to studio switching (pill), Smart Open routing, the agent panel, status bar content, or the Live View pipeline. No new studio.
+
+## 9. Panel API for studio authors
+
+Status: the contract below is stable. Studios build their rails, panels and inspectors against it. Implementation of the rail customization UI, the generic inspector and the Documents reference migration follows on the same branch and does not change these types.
+
+A studio declares everything in `StudioDef.shellV2` (`lib/shell/types.ts`). The shell never branches on a studio id.
+
+### 9.1 Types
+
+```ts
+interface PanelDef {
+  id: string;                       // unique per studio
+  title: string; titleKey?: string; // titleKey is an i18n key and wins over title
+  component: string;                // host id, registered with registerPanelHost (use definePanel)
+  side: 'left' | 'right';
+  icon?: string;                    // rail icon name
+  placement?: 'rail' | 'docked';    // default 'rail'
+  when?: string;                    // expression over StudioContext, see when.ts
+  commands?: readonly string[];     // commands this panel owns or triggers
+  persistKey?: string;              // key for usePanelState, default '<studio>.<id>'
+  defaultOpen?: boolean; minHeight?: number; tool?: string;
+}
+
+interface RailItemDef {
+  id: string; icon: string; label: string; order: number;
+  kind: 'panel' | 'tool' | 'command';   // 'action' is the old spelling of 'command'
+  panel?: string; tool?: string; command?: string;
+  when?: string; badge?: string; defaultPinned?: boolean; movable?: boolean;
+}
+
+interface StudioContext {            // published by the active canvas
+  studio: string;
+  document?: { id: string; kind: string; dirty: boolean; readOnly: boolean };
+  mode?: string;
+  selection: { kind: 'none' | 'one' | 'many'; type?: string; count: number; ids?: readonly string[] };
+  data?: Record<string, unknown>;    // small, JSON only, studio specific (e.g. { styleId: 'Heading1' })
+  activeTool?: string; busy: boolean; services: Record<string, boolean>;
+}
+
+interface PanelHostProps { panelId: string; context: StudioContext }
+```
+
+`StudioShellDef` carries `panels`, `leftRail`, `rightRail`, `tools`, `defaultLayout`, `menus`, `statusSlots`, `problems`.
+
+### 9.2 Writing a panel
+
+```tsx
+// lib/studios/documents.ts
+import {definePanel} from '../../components/studios/definePanel';
+
+const stylesPanel = definePanel('documents', {
+  id: 'styles', title: 'Styles', titleKey: 'documents.panel.styles', icon: 'Type',
+  side: 'right', when: "selection.kind != 'none'",
+  commands: ['documents.style.apply'],
+  render: ({context}) => <StylesPanel selection={context.selection} />,
+});
+```
+
+- `definePanel(studio, spec)` registers the host as `<studio>.<id>` and returns the `PanelDef`. A manifest never names a module path, only a registered host id.
+- `render` gets the merged `StudioContext`. It re-renders when the canvas reports a change.
+- Panel UI state that must survive reloads goes through `usePanelState(persistKey, initial)` (`store/panelStateStore.ts`). JSON values only.
+
+### 9.3 Placement and `when`
+
+- `rail` (default): the user opens it from a rail item. Several rail panels of one side stack, can be collapsed, reordered and closed. `when` false: the panel is not rendered and its rail item is hidden.
+- `docked`: no rail item. The panel joins the end of the side stack while `when` holds and leaves when it does not. Use for selection properties.
+- `when` is the same expression language as menus, shortcuts and the palette. Missing paths are falsy, so a panel that depends on `selection` stays hidden in a canvas that never reports one.
+
+### 9.4 Rail items
+
+- `kind: 'panel'` toggles the panel (`panel` must exist on the same side and be a `rail` panel).
+- `kind: 'tool'` activates a `ToolDef` and opens its `opensPanel`.
+- `kind: 'command'` runs a command. No panel.
+- `icon` is a name from the rail icon registry (`lib/shell/railIcons.ts`, `registerRailIcons`). An unknown name renders the fallback glyph and fails `validateStudioShell`. The same function keeps the same icon in every studio.
+- The user can reorder, pin, move to overflow and hide items per studio. The rail resolver (`railResolver.ts`) applies those overrides; `when` always wins over them.
+
+### 9.5 Selection context
+
+The active canvas claims the context once and reports changes:
+
+```ts
+const ctx = studioContextStore.claim('documents', {id, kind: 'docx', dirty: false, readOnly: false});
+ctx.report({selection: {kind: 'one', type: 'paragraph', count: 1, ids: ['p3']}, data: {styleId: 'Heading1'}});
+// on unmount
+ctx.release();
+```
+
+A stale canvas cannot overwrite the context of the current owner. `useStudioContext(activeStudio)` is what the shell and panel hosts read.
+
+### 9.6 Commands
+
+Every action in a panel is a command with an id of the form `<studio>.<name>`, with titles in en, de, es, fr and pt-BR. Panels list the ids they use in `commands`, so the palette, menus, shortcuts and the AI see the same actions. `validateStudioShell(studio, def, {commandExists, hostExists, iconExists})` reports unknown commands, hosts, icons, bad `when` expressions, rail items pointing at missing or wrong-side panels, and duplicate ids. Run it in a unit test for every studio manifest.

@@ -13,14 +13,39 @@ export interface MenuItemDef{
  hideBase?:boolean;        // hide a global base item with the same command in this studio
 }
 export interface RailItemDef{
- id:string;icon:string;label:string;
- kind:'panel'|'action';
- command?:string;panel?:string;when?:string;badge?:string;
+ id:string;
+ /** Icon name resolved through the rail icon registry (lib/shell/railIcons.ts). Unknown names fall back, never throw. */
+ icon:string;label:string;
+ /** `panel` opens/toggles `panel`; `tool` activates ToolDef `tool` and opens its `opensPanel`; `command` runs `command` (a rail button, no panel). `action` is the pre-v2 spelling of `command`. */
+ kind:'panel'|'tool'|'command'|'action';
+ command?:string;panel?:string;tool?:string;when?:string;badge?:string;
  order:number;
  defaultPinned?:boolean;   // default true
  movable?:boolean;         // may move between left and right, default false
 }
-export interface PanelDef{id:string;title:string;component:string;side:'left'|'right';defaultOpen?:boolean;minHeight?:number;tool?:string;}
+/**
+ * A panel is data plus a host. `component` names a host registered with `registerPanelHost` (an explicit allowlist,
+ * a manifest never supplies a module path). `definePanel` (components/studios/definePanel.ts) registers the host and
+ * returns this record, which is the intended way for a studio author to write `render`.
+ * Placement: `rail` panels are opened/closed by the user from a rail item. `docked` panels need no rail item: they join
+ * the end of the side stack while `when` holds (e.g. selection properties) and leave when it stops holding.
+ */
+export type PanelPlacement='rail'|'docked';
+export interface PanelDef{
+ id:string;title:string;component:string;side:'left'|'right';
+ /** i18n key for `title`. When absent `title` is shown as is (existing Code panels). */
+ titleKey?:string;
+ icon?:string;placement?:PanelPlacement;
+ /** Availability expression over StudioContext (when.ts). Unavailable panels are not rendered and not reachable. Default: always. */
+ when?:string;
+ /** Command ids this panel owns or triggers. Validated against the command registry by check:ui-commands and the shell validator. */
+ commands?:readonly string[];
+ /** Key for panel-local persisted UI state (usePanelState). Default: `<studio>.<id>`. */
+ persistKey?:string;
+ defaultOpen?:boolean;minHeight?:number;tool?:string;
+}
+/** Props every panel host receives. `context` is the merged StudioContext of the active studio (selection, mode, services). */
+export interface PanelHostProps{panelId:string;context:StudioContext;}
 export interface ToolDef{id:string;command:string;icon:string;group?:string;opensPanel?:string;optionsBar?:string;cursor?:string;shortcut?:string;}
 export interface StatusSlotDef{id:string;align:'left'|'center'|'right';component:string;when?:string;command?:string;}
 export interface StudioLayout{leftOpen:boolean;rightOpen:boolean;leftWidth:number;rightWidth:number;leftPanels:string[];rightPanels:string[];activeLeft?:string;activeRight?:string;}
@@ -49,7 +74,9 @@ export interface StudioContext{
  studio:string;
  document?:{id:string;kind:string;dirty:boolean;readOnly:boolean};
  mode?:string;
- selection:{kind:'none'|'one'|'many';type?:string;count:number};
+ selection:{kind:'none'|'one'|'many';type?:string;count:number;/** stable ids of the selected items, studio-defined */ids?:readonly string[]};
+ /** Studio-specific, JSON-serialisable details a panel needs (e.g. `{paragraph:3,styleId:'Heading1'}`). Keep it small: it is diffed on every report. */
+ data?:Record<string,unknown>;
  activeTool?:string;
  busy:boolean;
  services:Record<string,boolean>;
