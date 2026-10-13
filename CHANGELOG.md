@@ -16,6 +16,10 @@
 
 - Photos now has real side panels: histogram with clipping stats, Light, Color, Effects and Detail sliders, Transform (crop with aspect presets, straighten, rotate, flip), built-in and saved looks, export, session history with undo, redo and jump, and file info.
 - Photos edits are available as commands (`photos.*`) for the command palette. Agents can read state and the histogram but cannot change the image.
+## Unreleased - Video studio shell
+
+- Video has a source library and sequence panel, customizable rails, and a selection-aware inspector for trimming, title styling, audio, crossfades and export copies.
+- New panel actions use typed interactive commands with five-language labels. Original media stays unchanged.
 
 ## Unreleased - server frameworks (Next.js, Astro, SvelteKit, Nuxt)
 

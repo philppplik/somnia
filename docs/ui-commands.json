@@ -2172,6 +2172,204 @@
       "hasEnabled": true
     },
     {
+      "id": "video.clip.crossfade",
+      "title": "Set selected clip crossfade",
+      "category": "Tools",
+      "source": "video",
+      "keywords": [
+        "timeline",
+        "video"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "video.clip.delete",
+      "title": "Delete selected video clip",
+      "category": "Edit",
+      "source": "video",
+      "keywords": [
+        "timeline",
+        "video"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "video.clip.deselect",
+      "title": "Clear video clip selection",
+      "category": "View",
+      "source": "video",
+      "keywords": [
+        "timeline",
+        "video"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "video.clip.gain",
+      "title": "Set selected clip audio gain",
+      "category": "Tools",
+      "source": "video",
+      "keywords": [
+        "timeline",
+        "video"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "video.clip.move",
+      "title": "Move selected video clip",
+      "category": "Edit",
+      "source": "video",
+      "keywords": [
+        "timeline",
+        "video"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "video.clip.mute",
+      "title": "Toggle selected clip audio mute",
+      "category": "Tools",
+      "source": "video",
+      "keywords": [
+        "timeline",
+        "video"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "video.clip.select",
+      "title": "Select a timeline clip",
+      "category": "View",
+      "source": "video",
+      "keywords": [
+        "timeline",
+        "video"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "video.clip.trim",
+      "title": "Trim selected video clip",
+      "category": "Edit",
+      "source": "video",
+      "keywords": [
+        "timeline",
+        "video"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "video.export.cancel",
+      "title": "Cancel video export",
+      "category": "Project",
+      "source": "video",
+      "keywords": [
+        "timeline",
+        "video"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "video.export.format",
+      "title": "Set video export format",
+      "category": "Tools",
+      "source": "video",
+      "keywords": [
+        "timeline",
+        "video"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "video.export.start",
+      "title": "Export video copy",
+      "category": "Project",
+      "source": "video",
+      "keywords": [
+        "timeline",
+        "video"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "video.source.add",
+      "title": "Add an open video to the timeline",
+      "category": "Tools",
+      "source": "video",
+      "keywords": [
+        "timeline",
+        "video"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "video.source.open",
+      "title": "Open and add video clips",
+      "category": "Tools",
+      "source": "video",
+      "keywords": [
+        "timeline",
+        "video"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "video.timeline.reset",
+      "title": "Reset video timeline",
+      "category": "Edit",
+      "source": "video",
+      "keywords": [
+        "timeline",
+        "video"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "video.timeline.split",
+      "title": "Split video timeline at time",
+      "category": "Edit",
+      "source": "video",
+      "keywords": [
+        "timeline",
+        "video"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "video.title.add",
+      "title": "Add a title card",
+      "category": "Insert",
+      "source": "video",
+      "keywords": [
+        "timeline",
+        "video"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "video.title.duration",
+      "title": "Set selected title card duration",
+      "category": "Edit",
+      "source": "video",
+      "keywords": [
+        "timeline",
+        "video"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "video.title.update",
+      "title": "Edit selected title card",
+      "category": "Edit",
+      "source": "video",
+      "keywords": [
+        "timeline",
+        "video"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "view.code",
       "title": "Code view",
       "category": "View",

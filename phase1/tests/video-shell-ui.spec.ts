@@ -1,0 +1,28 @@
+import {test,expect} from './fixtures';
+import path from 'node:path';
+test('video shell panels, selection, typed edits and light/dark views',async({page})=>{
+ await page.goto('/');
+ await page.getByRole('radio',{name:'Somnia Video',exact:true}).click();
+ const chooser=page.waitForEvent('filechooser');await page.getByTestId('video-open').click();await (await chooser).setFiles(path.join(import.meta.dirname,'assets','clip.webm'));
+ await expect(page.getByTestId('video-sources-panel')).toBeVisible();
+ await expect(page.getByTestId('video-facts')).toContainText('clip.webm');
+ await page.getByRole('button',{name:'Sequence',exact:true}).click();
+ await expect(page.getByTestId('video-sequence-panel')).toBeVisible();
+ await page.getByTestId('video-add-title').click();
+ await expect(page.getByTestId('video-title-panel')).toBeVisible();
+ await page.getByTestId('video-title-text').fill('Chapter One');
+ await page.getByTestId('video-title-duration').fill('4');
+ await expect(page.getByTestId('video-sequence-panel')).toContainText('Chapter One');
+ await expect(page.getByTestId('video-timeline-summary')).toContainText('2 clips');
+ await page.screenshot({path:'tests/artifacts/video-shell-light.png'});
+ await page.evaluate(async()=>{const {patchState}=await import('/src/store/appStore.ts');patchState({theme:'dark',themeChoice:'dark'});});
+ await page.screenshot({path:'tests/artifacts/video-shell-dark.png'});
+ await page.getByTestId('video-clip-left').click();
+ await expect(page.getByTestId('video-sequence-clip').first()).toContainText('Chapter One');
+ await page.getByTestId('video-sequence-clip').nth(1).click();
+ await expect(page.getByTestId('video-clip-in-input')).toBeVisible();
+ await page.getByTestId('video-clip-in-input').fill('0.25');
+ await expect(page.getByTestId('video-clip-in-input')).toHaveValue('0.25');
+ await page.getByTestId('video-clip-mute').check();
+ await expect(page.getByTestId('video-clip-mute')).toBeChecked();
+});

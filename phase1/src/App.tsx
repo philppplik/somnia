@@ -67,6 +67,7 @@ import './components/sheets/registerShell';
 import './components/vibespace/registerShell';
 import './components/vectorstudio/registerShell';
 import './store/vectorBootstrap';
+import './components/video/registerShell';
 import {AppDialogs} from './components/AppDialogs';
 import {DiagnosticsHost} from './components/diagnostics/DiagnosticsHost';
 import {ConfirmHost} from './components/ConfirmHost';
