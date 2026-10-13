@@ -14,6 +14,6 @@ npx tsx scripts/somnia-ext-v2.ts validate ../docs/extensions/v2/examples/hello-p
 npx tsx scripts/somnia-ext-v2.ts pack ../docs/extensions/v2/examples/hello-panel
 ```
 
-Backs the [Quickstart](../quickstart.md). Declarative panels need no scripts and
+Backs the [Quickstart](../../quickstart.md). Declarative panels need no scripts and
 no network; the view tree supports `text`, `button`, `input`, `select`, `list`
 and `group`, at most 8 levels deep.
