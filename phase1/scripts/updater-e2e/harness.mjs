@@ -25,6 +25,7 @@ const failures=[];const check=(ok,msg)=>{console.log((ok?'PASS ':'FAIL ')+msg);i
 const tmp=mkdtempSync(join(tmpdir(),'somnia-updater-'));
 const dirs={win:join(tmp,'nsis'),lin:join(tmp,'appimage'),mac:join(tmp,'macos')};
 for(const d of Object.values(dirs))mkdirSync(d);
+for(const [d,name] of [[dirs.win,'Somnia_x64-setup.exe'],[dirs.lin,'somnia_amd64.AppImage'],[dirs.mac,'Somnia.app.tar.gz']])writeFileSync(join(d,name),'fake installer');
 const fakeSig=s=>Buffer.from(`untrusted comment: fake signature ${s}\nRWQfake${s}==`).toString('base64');
 writeFileSync(join(dirs.win,'Somnia_x64-setup.exe.sig'),fakeSig('win'));
 writeFileSync(join(dirs.lin,'somnia_amd64.AppImage.sig'),fakeSig('lin'));
@@ -57,9 +58,9 @@ try{
   check(compareSemver(current,manifest.version)<0,'older manifest than installed -> no downgrade');
   const entry=pickPlatform(manifest,platform);
   check(!!entry,`platform ${platform} has an entry`);
-  if(entry)check(entry.url.endsWith(tag+'/'+entry.url.split('/').pop())&&entry.url.includes(`Somnia-${tag}-`),'download URL points at this tag and the Somnia-<tag>-... asset name');
+  if(entry)check(entry.url.endsWith(tag+'/'+entry.url.split('/').pop())&&entry.url.endsWith(platform.startsWith('windows')?'Somnia_x64-setup.exe':platform.startsWith('linux')?'somnia_amd64.AppImage':'Somnia.app.tar.gz'),'download URL points at this tag and the actual signed artifact name');
   const mac=pickPlatform(manifest,'darwin-aarch64');
-  check(!!mac&&mac.url.endsWith(`Somnia-${tag}-macos-aarch64.app.tar.gz`),'macOS entry points at the .app.tar.gz archive (not the .dmg)');
+  check(!!mac&&mac.url.endsWith('Somnia.app.tar.gz'),'macOS entry points at the .app.tar.gz archive (not the .dmg)');
 }finally{server.close();}
 console.log(failures.length?`\n${failures.length} check(s) failed`:'\nAll updater checks passed');
 process.exit(failures.length?1:0);

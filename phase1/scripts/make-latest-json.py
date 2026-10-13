@@ -5,6 +5,7 @@ Only platforms whose signature file exists are listed. Exit code 3 when none exi
 macOS (optional 6th argument): looks for <macos_dir>/*.app.tar.gz.sig (Tauri updater archive of the .app) and lists it as
 darwin-aarch64 (default, macos-latest runners are Apple Silicon). Set SOMNIA_MACOS_ARCH=x86_64 for an Intel build."""
 import glob, json, os, sys, datetime
+from urllib.parse import quote
 
 def platforms(tag, wdir, ldir, mdir=None, macos_arch=None):
     base = f"https://github.com/philppplik/somnia/releases/download/{tag}/"
@@ -12,15 +13,21 @@ def platforms(tag, wdir, ldir, mdir=None, macos_arch=None):
     if arch not in ("aarch64", "x86_64"):
         raise ValueError(f"unsupported macOS arch {arch}")
     table = [
-        ("windows-x86_64", wdir, "*.exe.sig", f"Somnia-{tag}-x64-setup.exe"),
-        ("linux-x86_64", ldir, "*.AppImage.sig", f"Somnia-{tag}-amd64.AppImage"),
+        ("windows-x86_64", wdir, "*.exe.sig"),
+        ("linux-x86_64", ldir, "*.AppImage.sig"),
     ]
     if mdir:
-        table.append((f"darwin-{arch}", mdir, "*.app.tar.gz.sig", f"Somnia-{tag}-macos-{arch}.app.tar.gz"))
+        table.append((f"darwin-{arch}", mdir, "*.app.tar.gz.sig"))
     plat = {}
-    for key, d, pattern, name in table:
+    for key, d, pattern in table:
         sigs = sorted(glob.glob(os.path.join(d, pattern)))
+        if len(sigs) > 1:
+            raise ValueError(f"ambiguous signed artifacts for {key}: {sigs}")
         if sigs:
+            artifact = sigs[0][:-4]
+            if not os.path.isfile(artifact):
+                raise ValueError(f"signature has no matching artifact: {sigs[0]}")
+            name = quote(os.path.basename(artifact))
             plat[key] = {"signature": open(sigs[0]).read().strip(), "url": base + name}
     return plat
 
