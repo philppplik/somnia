@@ -319,3 +319,149 @@ fn usage_errors_exit_1_never_2_and_help_exits_0() {
     assert_eq!(o.status.code(), Some(1));
     assert_eq!(r.run(&["--help"]).status.code(), Some(0));
 }
+
+// ---- real sidecar against a scripted loopback Ollama ----------------------------------------
+// Skipped with a message unless `npm run build:cli-engine` (in phase1) has produced sidecar/engine.mjs.
+
+fn real_engine() -> Option<PathBuf> {
+    let p = Path::new(env!("CARGO_MANIFEST_DIR")).join("sidecar/engine.mjs");
+    if p.is_file() { Some(p) } else { eprintln!("SKIP: sidecar/engine.mjs not built"); None }
+}
+
+struct Ollama { port: u16, requests: std::sync::Arc<std::sync::atomic::AtomicUsize>, stop: std::sync::Arc<std::sync::atomic::AtomicBool>, h: Option<std::thread::JoinHandle<()>> }
+impl Ollama {
+    fn start(bodies: Vec<String>) -> Self {
+        use std::io::{Read, Write};
+        use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
+        let l = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+        l.set_nonblocking(true).unwrap();
+        let port = l.local_addr().unwrap().port();
+        let stop = std::sync::Arc::new(AtomicBool::new(false));
+        let requests = std::sync::Arc::new(AtomicUsize::new(0));
+        let (s2, r2) = (stop.clone(), requests.clone());
+        let h = std::thread::spawn(move || {
+            let mut n = 0usize;
+            while !s2.load(Ordering::SeqCst) {
+                let Ok((mut c, _)) = l.accept() else { std::thread::sleep(std::time::Duration::from_millis(10)); continue };
+                c.set_nonblocking(false).unwrap();
+                c.set_read_timeout(Some(std::time::Duration::from_secs(5))).unwrap();
+                let mut buf = vec![0u8; 1 << 20];
+                let mut got = 0;
+                loop {
+                    let k = c.read(&mut buf[got..]).unwrap_or(0);
+                    if k == 0 { break; }
+                    got += k;
+                    let t = String::from_utf8_lossy(&buf[..got]).to_string();
+                    if let Some(i) = t.find("\r\n\r\n") {
+                        let cl = t[..i].lines().find_map(|l| l.to_ascii_lowercase().strip_prefix("content-length:").map(|v| v.trim().parse::<usize>().unwrap_or(0))).unwrap_or(0);
+                        if got >= i + 4 + cl { break; }
+                    }
+                }
+                r2.fetch_add(1, Ordering::SeqCst);
+                let body = bodies.get(n).or(bodies.last()).unwrap().clone();
+                n += 1;
+                let _ = write!(c, "HTTP/1.1 200 OK\r\ncontent-type: application/x-ndjson\r\ncontent-length: {}\r\nconnection: close\r\n\r\n{}", body.len(), body);
+            }
+        });
+        Ollama { port, requests, stop, h: Some(h) }
+    }
+    fn finish(mut self) -> usize {
+        self.stop.store(true, std::sync::atomic::Ordering::SeqCst);
+        self.h.take().unwrap().join().unwrap();
+        self.requests.load(std::sync::atomic::Ordering::SeqCst)
+    }
+}
+
+fn tool_call(name: &str, args: Value) -> String {
+    serde_json::json!({"message":{"content":"","tool_calls":[{"function":{"name":name,"arguments":args}}]},"done":true,"prompt_eval_count":10,"eval_count":5}).to_string() + "\n"
+}
+fn final_msg(text: &str) -> String {
+    serde_json::json!({"message":{"content":text},"done":true,"done_reason":"stop","prompt_eval_count":3,"eval_count":4}).to_string() + "\n"
+}
+fn sidecar(r: &Repo, engine: &Path, port: u16, args: &[&str], extra: &[(&str, &str)]) -> Output {
+    let mut c = r.cmd(args);
+    c.env("SOMNIA_ENGINE_CMD", serde_json::to_string(&["node", engine.to_str().unwrap()]).unwrap())
+        .env("SOMNIA_ENGINE_PROVIDER", "ollama").env("SOMNIA_ENGINE_MODEL", "test-model")
+        .env("SOMNIA_ENGINE_OLLAMA_URL", format!("http://127.0.0.1:{port}"));
+    for (k, v) in extra { c.env(k, v); }
+    c.output().unwrap()
+}
+fn parse(o: &Output) -> Value {
+    let s = String::from_utf8_lossy(&o.stdout);
+    serde_json::from_str(s.trim()).unwrap_or_else(|e| panic!("not json ({e}): {s} / {}", String::from_utf8_lossy(&o.stderr)))
+}
+
+#[test]
+fn real_engine_run_leaks_no_credentials_and_stays_off_the_network() {
+    let Some(engine) = real_engine() else { return };
+    let r = Repo::new();
+    let o = Ollama::start(vec![tool_call("write_file", serde_json::json!({"path":"site/index.html","content":"<h1>hi</h1>\n"})), final_msg("done")]);
+    let out = sidecar(&r, &engine, o.port, &["run", "build a page", "--json", "--yes", "--allow-root", "site"],
+        &[("OPENAI_API_KEY", SECRET), ("ANTHROPIC_API_KEY", SECRET), ("OPENROUTER_API_KEY", SECRET), ("GITHUB_TOKEN", SECRET)]);
+    o.finish();
+    let v = parse(&out);
+    assert_eq!(out.status.code(), Some(0), "{v}");
+    let mut hay = String::from_utf8_lossy(&out.stdout).to_string() + &String::from_utf8_lossy(&out.stderr);
+    for e in walk(&r.root().join(".somnia")) { hay += &std::fs::read_to_string(e).unwrap_or_default(); }
+    hay += &r.git(&["log", "-p", "--all", "--format=%B"]);
+    hay += &r.git_log();
+    assert!(!hay.contains(SECRET), "a credential value leaked");
+    r.assert_no_network_git();
+}
+
+#[test]
+fn real_engine_cloud_provider_without_consent_fails_before_anything_is_sent() {
+    let Some(engine) = real_engine() else { return };
+    let r = Repo::new();
+    let o = Ollama::start(vec![final_msg("never")]);
+    let out = sidecar(&r, &engine, o.port, &["run", "build a page", "--json", "--yes"],
+        &[("SOMNIA_ENGINE_PROVIDER", "openai"), ("OPENAI_API_KEY", SECRET), ("SOMNIA_ENGINE_CLOUD_CONSENT", "")]);
+    assert_eq!(o.finish(), 0);
+    let v = parse(&out);
+    assert_eq!(out.status.code(), Some(1), "{v}");
+    assert_eq!(v["error"]["kind"], "auth");
+    assert_eq!(v["error"]["details"]["engine_code"], "consent");
+    assert!(!String::from_utf8_lossy(&out.stdout).contains(SECRET));
+    assert_eq!(r.git(&["status", "--porcelain", "-uall"]), "");
+}
+
+#[test]
+fn real_engine_cannot_write_outside_roots_or_into_git_metadata() {
+    let Some(engine) = real_engine() else { return };
+    for (i, path) in ["../escape.txt", ".git/hooks/pre-commit", ".git/config", ".env", "/tmp/somnia-abs-escape.txt", "site/../../escape2.txt"].iter().enumerate() {
+        let r = Repo::new();
+        let cfg_before = std::fs::read_to_string(r.root().join(".git/config")).unwrap();
+        let o = Ollama::start(vec![tool_call("write_file", serde_json::json!({"path":path,"content":"pwned\n"})), final_msg("done")]);
+        let out = sidecar(&r, &engine, o.port, &["run", &format!("try {i}"), "--json", "--yes", "--allow-root", "site"], &[]);
+        o.finish();
+        let v = parse(&out);
+        assert_eq!(r.git(&["rev-list", "--count", "--all"]), "1", "{path}: nothing may be committed: {v}");
+        assert!(!r.root().join(".git/hooks/pre-commit").exists(), "{path}");
+        assert!(!r.root().parent().unwrap().join("escape.txt").exists(), "{path}");
+        assert!(!r.root().join("escape2.txt").exists() && !r.root().join(".env").exists(), "{path}");
+        assert!(!Path::new("/tmp/somnia-abs-escape.txt").exists(), "{path}");
+        assert_eq!(std::fs::read_to_string(r.root().join(".git/config")).unwrap(), cfg_before, "{path}");
+        // The agent is told the write failed (tool-result error), or the run stops with a typed scope failure.
+        let tid = v["task_id"].as_str().unwrap_or("");
+        let log = std::fs::read_to_string(r.root().join(format!(".somnia/sessions/{tid}.events.ndjson"))).unwrap_or_default();
+        assert!(log.contains("\"status\":\"error\"") || v["error"]["kind"] == "review-required" || v["status"] == "failed", "{path}: blocked write left no trace: {v} / {log}");
+    }
+}
+
+#[test]
+fn real_engine_does_not_copy_file_content_or_secrets_into_events() {
+    let Some(engine) = real_engine() else { return };
+    let r = Repo::new();
+    std::fs::write(r.root().join("notes.txt"), format!("private {SECRET}\n")).unwrap();
+    r.git(&["add", "-A"]);
+    r.git(&["commit", "-q", "-m", "notes"]);
+    let o = Ollama::start(vec![tool_call("read_file", serde_json::json!({"path":"notes.txt"})), final_msg("read it")]);
+    let out = sidecar(&r, &engine, o.port, &["run", "read the notes", "--json"], &[]);
+    o.finish();
+    let v = parse(&out);
+    assert_eq!(out.status.code(), Some(0), "{v}");
+    let tid = v["task_id"].as_str().unwrap();
+    let log = std::fs::read_to_string(r.root().join(format!(".somnia/sessions/{tid}.events.ndjson"))).unwrap();
+    assert!(log.contains("\"event\":\"tool-call\""), "{log}");
+    assert!(!log.contains(SECRET) && !log.contains("private"), "tool events must carry paths and sizes only");
+}

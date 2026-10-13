@@ -81,4 +81,4 @@ OpenAI account sign-in (OAuth tokens in the OS keyring) is desktop only. The hea
 - `npm run test:cli-engine` (from `phase1/`): the real bundled engine against a scripted loopback Ollama. Covers tool mapping, usage, bare, scope, blocked paths, malformed streams, config errors, budget, cancel and the workspace guard.
 - `cargo test` in `phase1/cli`: fake-engine tests for the mapping and error codes, plus real-sidecar tests (skipped with a message when `sidecar/engine.mjs` is not built).
 
-Not covered: a live run against a real cloud provider, and Windows (the CLI has no named-pipe transport yet).
+Not covered: a live run against a real cloud provider, and a manual Windows run (the Windows named-pipe transport is tested in CI only). Security review and e2e tests: [docs/cli/security.md](../cli/security.md).

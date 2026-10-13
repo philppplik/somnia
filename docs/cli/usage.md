@@ -25,9 +25,9 @@ somnia cancel <task-id>           ask a background run to stop
 | `--request-id ID` | Idempotency key. A repeat with the same id reports the existing run and starts nothing. |
 | `--allow-root DIR` | Limit the agent to a project-relative directory (repeatable). Default: the whole project. |
 | `--studio S` | Studio hint passed to the engine. |
-| `--bare` | Ask the engine to skip auto-discovery of hooks, MCP and instruction files. Forwarded to the engine only. |
+| `--bare` | Send only the task prompt. Without it the engine also sends `AGENTS.md` from the project root (clipped, never overriding tool rules) and the studio name. |
 | `--attribution` | Add `Co-authored-by` and `X-Somnia-Session` trailers. Opt-in. Needs `SOMNIA_ATTRIBUTION_EMAIL`. |
-| `--max-tokens N`, `--max-cost F` | Budgets forwarded to the engine. |
+| `--max-tokens N`, `--max-cost F` | Budgets. The engine aborts the run when streamed usage passes them (`budget`, nothing written). A cost budget needs a provider that reports prices. |
 | `--path DIR` | Project directory. Default: the current directory. |
 | `--tui-stdio` | Speak the TUI protocol on stdin/stdout. Excludes `--json`, `--detach`, `--print`. |
 
@@ -66,6 +66,10 @@ somnia attach "$id"
 | --- | --- |
 | `SOMNIA_ENGINE_CMD` | JSON array that starts the engine sidecar, for example `["node","/path/engine.mjs"]`. Default: `sidecar/engine.mjs` next to the binary. |
 | `SOMNIA_ATTRIBUTION_EMAIL`, `SOMNIA_ATTRIBUTION_NAME` | Identity for `--attribution` trailers. |
+| `SOMNIA_ENGINE_PROVIDER`, `SOMNIA_ENGINE_MODEL` | Provider (`openrouter`, `claude`, `openai`, `ollama`) and model for the agent engine. Both are required. |
+| `OPENROUTER_API_KEY`, `ANTHROPIC_API_KEY`, `OPENAI_API_KEY` | API key for the chosen cloud provider. Read by the engine only. |
+| `SOMNIA_ENGINE_CLOUD_CONSENT=1` | Required to send a task to a cloud provider or a non-loopback Ollama URL. Without it the run fails with `consent` before anything is sent. |
+| `SOMNIA_ENGINE_OLLAMA_URL`, `SOMNIA_ENGINE_TIMEOUT_MS` | Ollama base URL (default `http://127.0.0.1:11434`) and optional turn timeout. |
 | `XDG_RUNTIME_DIR` | Where the private socket directory is created. Fallback: `/tmp/somnia-<uid>`. |
 
-Provider keys are read by the engine sidecar from its own environment. The CLI never puts them in a protocol frame, record or commit.
+Provider keys are read by the engine sidecar from its own environment (details: [TASK-ENGINE-CONTRACT.md](../agent/TASK-ENGINE-CONTRACT.md)). The CLI never puts them in a protocol frame, record or commit.

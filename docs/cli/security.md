@@ -1,6 +1,6 @@
 # Somnia CLI: security review
 
-Scope: `phase1/cli` as of this change. Each claim below has a test, named in brackets, in `phase1/cli/tests/e2e_mock.rs` (E), `headless.rs` (H), `transport_windows.rs` (W) or the crate unit tests (U).
+Scope: `phase1/cli` as of this change. Each claim below has a test, named in brackets, in `phase1/cli/tests/e2e_mock.rs` (E; the `real_engine_*` tests need `npm run build:cli-engine` and skip with a message otherwise), `headless.rs` (H), `transport_windows.rs` (W) or the crate unit tests (U).
 
 ## Git is local-only
 
@@ -17,6 +17,10 @@ Residual risk, not removed by the allowlist: git runs repository-controlled code
 - Task ids accept letters, digits, `-` and `_` only (max 64), so `status ../../x` cannot read or write outside `.somnia/`. [E `path_traversal_in_task_id_is_rejected`]
 - `--allow-root` values that point outside the repository (`..`, `/etc`) do not result in a commit. [E `allow_root_cannot_escape_the_repo`]
 - Session records are written under `.somnia/`, excluded through `.git/info/exclude` (local, not a tracked file). [E `private_store_modes`]
+
+## Agent engine writes
+
+The real engine stages file writes and applies them only after a clean turn. Each path is checked again against `allowedRoots` and the project root, symlinks are refused, and each file must still match what the agent read. Verified end to end with a scripted model that tries `../escape.txt`, `.git/hooks/pre-commit`, `.git/config`, `.env`, an absolute path and `site/../../escape2.txt`: nothing is written, nothing is committed, `.git/config` is byte-identical, and the agent gets a tool error. [E `real_engine_cannot_write_outside_roots_or_into_git_metadata`]
 
 ## Local socket (Unix)
 
@@ -46,7 +50,10 @@ Not covered: the pipe syscalls need a real Windows host. They run in CI on `wind
 
 - Requests containing a credential-like key at any depth are rejected, and the rejection does not echo the value. [U `credential_fields_are_rejected_at_any_depth`, E `live_socket_is_0600...`]
 - With provider keys and `GITHUB_TOKEN` set in the environment, none of the values appear in stdout, stderr, session records, event logs, commit messages, diffs or git argv. [E `credentials_in_the_environment_never_reach...`, `engine_events_never_carry_the_environment`]
-- The engine sidecar is started with the CLI's environment (it needs its provider keys), and its stderr is discarded. Whatever text an engine puts in a `failed` message or `summary` is stored in the record and commit message. An engine must not print secrets there. The CLI does not filter that text.
+- The engine sidecar is started with the CLI's environment (it needs its provider keys), and its stderr is discarded. Keys are read inside the engine and are never fields in a protocol frame. [E `real_engine_run_leaks_no_credentials_and_stays_off_the_network`]
+- Cloud providers are gated: without `SOMNIA_ENGINE_CLOUD_CONSENT=1` the run fails with `consent` before any request leaves the machine (the scripted server saw zero requests). [E `real_engine_cloud_provider_without_consent_fails_before_anything_is_sent`]
+- Engine failure messages are redacted with the app log redactor and clipped to 500 characters. Tool events carry a path (and a size for writes), never arguments or file content; a file containing a secret read by the agent does not show up in the event log. [E `real_engine_does_not_copy_file_content_or_secrets_into_events`]
+- Not scrubbed: model-written text. `progress` text and the `done` summary (the last assistant message, clipped) go into the event log, the session record and the commit message as the model wrote them. If the model repeats a secret it read from a project file, that secret lands there. The engine does not read `.env`, key files or anything under `.git`, `.somnia` and `node_modules`, which removes the common cases, but not a secret inside an ordinary source file. Review the commit before pushing it, as with any `--yes` checkpoint.
 - The git identity is never written by the CLI.
 
 ## Findings fixed in this change
@@ -57,5 +64,5 @@ Not covered: the pipe syscalls need a real Windows host. They run in CI on `wind
 ## Open items
 
 - Windows pipe: no manual test on a real desktop session yet (CI only). The peer check compares process-token user SIDs, so a process running as the same user under another logon session is accepted, matching the Unix same-uid rule.
-- Engine output is stored verbatim (see Credentials).
+- Model-written text is stored verbatim (see Credentials).
 - `.somnia/gui-state.json` is trusted input written by the desktop app; a damaged file fails closed, but a file forged by another process of the same user is not detected. Same-user processes are outside the threat model.

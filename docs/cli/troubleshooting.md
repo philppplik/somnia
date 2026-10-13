@@ -10,8 +10,15 @@ With `--json`, the `error.kind` field tells you which row applies.
 | `another Somnia run owns this workspace` | `workspace-busy` | Wait for the other run, or cancel it with `somnia cancel <id>`. A crashed run releases the lock itself. |
 | `desktop state file is unreadable` or unsaved buffers listed | `review-required` (exit 2) | The desktop app has unsaved edits or AI holds under the allowed roots. Save or discard them in the app. A damaged `.somnia/gui-state.json` blocks the run on purpose. |
 | `engine changed files outside the allowed roots; nothing was committed` | `review-required` (exit 2) | Review the changes with `git status` on the task branch, then commit what you want yourself or widen `--allow-root`. |
-| `agent engine sidecar not found` | `engine-unavailable` | Set `SOMNIA_ENGINE_CMD` or install `sidecar/engine.mjs` next to the binary. |
-| `engine sidecar exited without a terminal event` | `engine-unavailable` | The engine crashed. Run it by hand with the same input to see its stderr (the CLI discards it). |
+| `agent engine sidecar not found` | `engine-unavailable` | In a source checkout run `npm run build:cli-engine` in `phase1`. Otherwise set `SOMNIA_ENGINE_CMD` or install `sidecar/engine.mjs` next to the binary. Node 20 or newer is required. |
+| `No provider configured` / `No model configured` / `... is not a valid http(s) URL` | `engine-unavailable` (`engine_code: config`) | Set `SOMNIA_ENGINE_PROVIDER` and `SOMNIA_ENGINE_MODEL` (see usage.md). |
+| `<NAME>_API_KEY is not set` | `auth` (`engine_code: auth`) | Export the key for the chosen provider in the environment of the `somnia` process. |
+| `Cloud AI consent is required` | `auth` (`engine_code: consent`) | Set `SOMNIA_ENGINE_CLOUD_CONSENT=1` if you accept sending the task to that provider. Nothing was sent. |
+| A file changed while the agent worked | `stale-plan` (`engine_code: conflict`) | The engine wrote nothing. Save or commit your edits and run again. |
+| Write outside the allowed roots | `review-required` (exit 2, `engine_code: scope`) | Nothing was written. Widen `--allow-root` if it was meant. |
+| Budget exceeded | `internal` (`engine_code: budget`) | Raise `--max-tokens` or `--max-cost`. A cost budget needs a provider that reports prices; otherwise use a token budget. |
+| `cost unknown` in the output | | The provider reported no price. Tokens are still counted. |
+| `engine sidecar exited without a terminal event` | `engine-unavailable` | The engine crashed; the message includes its exit code. Run it by hand with the same input to see its stderr (the CLI discards it). |
 | `invalid branch name` / `branch ... already exists` | `bad-request` | Pick another `--branch`. Use `--branch=name` if the name starts with a dash. |
 | `attribution requested but SOMNIA_ATTRIBUTION_EMAIL ... is not set` | `bad-request` | Set the variable, or drop `--attribution`. |
 | `runtime dir is not private to this user` | `internal` | `chmod 700` the `somnia` directory under `$XDG_RUNTIME_DIR` (or `/tmp/somnia-<uid>`), make sure you own it and that it is not a symlink. |
