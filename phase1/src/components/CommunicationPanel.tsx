@@ -14,7 +14,7 @@ export function CommunicationPanel(){
  const [boardOpen,setBoardOpen]=useState(false);
  useEffect(()=>{if(tab==='vibespace'){requestStudio('vibespace');selectCommunication('agent');}},[tab]);
  useEffect(()=>()=>{getChatSession()?.setOpen(false);},[]);
- return <div className="communication-panel"><div className="communication-tabs"><button type="button" onClick={()=>setBoardOpen(true)}>{t('board.title')}</button></div><div className="communication-content">
+ return <div className="communication-panel"><div className="communication-toolbar"><button type="button" onClick={()=>setBoardOpen(true)}>{t('board.title')}</button></div><div className="communication-content">
   <div className="communication-agent" hidden={tab!=='agent'}><AgentPanel/></div>
   {tab==='chat'&&<SessionChat/>}
  </div>
