@@ -36,11 +36,14 @@ export function VibeSpaceHome({transport}:{transport:VibeSpaceTransport}){
   nativeScheduleTransport.list().then(list=>{if(alive)setSchedules(list);}).catch(()=>{if(alive){setSchedules(null);setScheduleError(true);}});
   return()=>{alive=false;};
  },[transport]);
- const snapshot=state.snapshot;const space=snapshot?.spaces.find(s=>s.spaceId===spaceId)??snapshot?.spaces[0];
+ const snapshot=state.snapshot;const space=spaceId?snapshot?.spaces.find(s=>s.spaceId===spaceId):snapshot?.spaces[0];
  const studio=snapshot?.studios.find(s=>s.runId===studioId&&s.spaceId===space?.spaceId);
  const busy=state.pending||state.loading||!!state.error;
  const supports=(type:VibeIntent['type'])=>transport.capabilities.includes(type);
- const newStudio=(goal='')=>{setTemplate(goal);setForm('studio');};
+ const formRef=useRef(form);formRef.current=form;
+ const focusForm=()=>requestAnimationFrame(()=>document.querySelector<HTMLTextAreaElement|HTMLInputElement>('.vs-form textarea, .vs-form input')?.focus());
+ const newStudio=(goal='')=>{if(!formRef.current){setTemplate(goal);setForm('studio');}focusForm();};
+ const studioOpener=useRef(newStudio);studioOpener.current=newStudio;
  const bridge=useRef<ReturnType<typeof claimVibeShell>|null>(null);
  const shellContext=useRef<ReturnType<typeof studioContextStore.claim>|null>(null);
  useEffect(()=>{
@@ -50,7 +53,7 @@ export function VibeSpaceHome({transport}:{transport:VibeSpaceTransport}){
    selectSpace:id=>{setSpaceId(id);setStudioId(null);setForm(null);setSpacePanel(null);},
    openRun:id=>{const r=controller.getSnapshot().snapshot?.studios.find(r=>r.runId===id);if(r){setSpaceId(r.spaceId);setStudioId(id);setForm(null);}},
    home:()=>{setStudioId(null);setForm(null);setSpacePanel(null);},
-   newSpace:()=>setForm('space'),newStudio:()=>{setTemplate('');setForm('studio');},refresh:()=>controller.refresh(),
+   newSpace:()=>{if(!formRef.current)setForm('space');focusForm();},newStudio:()=>studioOpener.current(),refresh:()=>controller.refresh(),
   });
   return()=>{off();b.release();c.release();bridge.current=null;shellContext.current=null;};
  },[controller]);
@@ -59,7 +62,7 @@ export function VibeSpaceHome({transport}:{transport:VibeSpaceTransport}){
   shellContext.current?.report({busy:state.loading||state.pending,selection:studio?{kind:'one',type:'run',count:1,ids:[studio.runId]}:{kind:'none',count:0,ids:[]},data:{spaceId:space?.spaceId??null,runId:studio?.runId??null,mode:transport.mode},services:{ready:!!snapshot&&!busy,native:transport.mode==='native',space:!!space,usage:!!studio?.usage,checkpoints:!!studio?.checkpoints.length}});
  },[state,space?.spaceId,studio,transport]);
  return <section className="vs-root" aria-label="Vibe Space" aria-busy={state.loading||state.pending}>
-  <header className="vs-header"><div className="vs-brand"><BotIcon/><h1>Vibe Space</h1></div><div className="vs-actions"><button type="button" disabled={busy||!supports('create-space')} onClick={()=>setForm('space')}><Plus size={15}/>New space</button>{space&&<button type="button" className="vs-primary" disabled={busy||!supports('create-studio')} onClick={()=>newStudio()}><Plus size={15}/>New Studio</button>}</div></header>
+  <header className="vs-header"><div className="vs-brand"><BotIcon/><h1>Vibe Space</h1></div></header>
   {transport.mode==='fixture'&&<p className="vs-fixture" role="status">Fixture mode · Test data only. No native actions or project writes.</p>}
   {returnCard&&(returnCard.needsYou.length>0||returnCard.failed.length>0||returnCard.misfires.length>0)&&<div className="vs-card vs-error" role="status" data-testid="schedule-return-card"><strong>{t('vs.schedule.returnTitle')}</strong><p>{returnCard.needsYou.length} {t('vs.schedule.returnNeedsYou')} · {returnCard.failed.length} {t('vs.schedule.returnFailed')} · {returnCard.misfires.length} {t('vs.schedule.misfire')}</p><button type="button" onClick={()=>{storeScheduleCursor(returnCard.lastSeq);setReturnCard(null);}}>{t('vs.schedule.returnDismiss')}</button></div>}
   {state.error&&<div className="vs-error vs-card" role="alert"><strong>Vibe Space needs attention</strong><p data-copyable>{state.error}</p><p>Actions are disabled until the native state is loaded again. No fallback data is used.</p><button type="button" disabled={state.pending} onClick={()=>void controller.connect()}>Reload native state</button></div>}

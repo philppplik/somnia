@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased - Vibe Space task creation
+
+- One New task header action opens the existing creation form without starting work; repeated clicks preserve drafts, and duplicate canvas-header creation actions are removed.
+
+
 ## Unreleased - Video export review
 
 - Video header export opens whole-timeline review/progress with capability gates, deliberate silent output and honest download outcomes.

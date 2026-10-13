@@ -1,6 +1,10 @@
-# Vibe Space hero action: New Studio...
+# Vibe Space hero action: New task
 
-Status: proposal for Philipp's design review. No implementation approved or included.
+Owner update, 2026-10-13 19:36: one header label, New task / Neue Aufgabe, replaces the earlier New Studio/New space proposal. The existing creation form opens for the selected space, or the space form if none exists. It never starts a run. Do not place New Studio/New space side by side.
+
+# Previous reviewed concept
+
+Status: superseded label proposal; implementation uses New task.
 Research date: 2026-10-13. Code baseline: `int/shell`, `e2a188d3`.
 
 ## Recommendation and why

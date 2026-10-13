@@ -53,3 +53,15 @@ test('all shell and command keys have parity and translated values in five local
  const keys=Object.keys(entries[0][1]).filter(k=>k.startsWith('vibespace.shell.')||k.startsWith('cmd.vibespace.')).sort();
  for(const [locale,c] of entries){assert.deepEqual(Object.keys(c).filter(k=>k.startsWith('vibespace.shell.')||k.startsWith('cmd.vibespace.')).sort(),keys,locale);for(const key of keys)assert.ok(c[key].trim(),`${locale}:${key}`);}
 });
+
+test('New task opens the right existing form and rejects stale/missing capabilities',async()=>{
+ const owner=claimVibeShell(),calls:string[]=[];const off=registerVibeSpaceCommands({selectSpace:()=>{},openRun:()=>{},home:()=>{},refresh:()=>{},newSpace:()=>{calls.push('space');},newStudio:()=>{calls.push('studio');}});
+ const c=commandRegistry.get('vibespace.task.new')!;
+ try{
+  owner.report(loaded());assert.equal(c.enabled!(),true);await c.run();assert.deepEqual(calls,['studio']);assert.equal(c.agentCallable,false);
+  owner.report({...loaded(),spaceId:null});await c.run();assert.deepEqual(calls,['studio','space']);
+  owner.report({...loaded(),spaceId:'removed',canCreateSpace:false});assert.equal(c.enabled!(),false);
+  owner.report({...loaded(),canCreateStudio:false});assert.equal(c.enabled!(),false);
+  owner.report({...loaded(),view:{...loaded().view,loading:true}});assert.equal(c.enabled!(),false);
+ }finally{off();owner.release();}
+});
