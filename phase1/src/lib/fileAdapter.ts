@@ -164,7 +164,7 @@ export async function installFileAdapter(port:FilePort){
  const stopFrameworkCreate=newProjectFlow.install(async options=>{
   if(getState().isDirty)throw Error('frameworks.saveFirst');
   const startRevision=getState().revision,startFiles=getState().files;
-  const files=scaffoldProject(reactTemplate(options.language),options.name);
+  const files=scaffoldProject(await reactTemplate(options.language),options.name);
   const selected=await port.invoke<{projectId:string;name:string}|null>('choose_project',{createSubfolder:options.name});if(!selected)return false;
   const nextBaselines=new Map<string,Revision>();
   try{
