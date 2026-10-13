@@ -1,3 +1,10 @@
+# Unreleased: Windows extension panels
+
+- Fixed blank extension panels and worker relays on Windows by routing the custom-protocol URI that Wry passes to the Rust handler. CSP, opaque-origin sandbox and single-use document nonces remain unchanged.
+- Data Workbench example uses isolated host surface/text tokens instead of a white canvas and low-contrast dark browser controls. Previously installed copies need the updated example manifest.
+- Added Windows URI routing regression and light/dark Data Workbench response-render checks. Native Windows confirmation remains required.
+
+
 # Unreleased: Job scheduler and pressure bridge
 - Added application-owned job leases with priority lanes, bounded queues and byte reservations. Lifecycle pressure and live resource profiles control admission; running work keeps its reservation until completion or cooperative cancellation. Queued and running dependencies protect engines from suspension and eviction. Studio export/playback/AI callers are not migrated in this change.
 

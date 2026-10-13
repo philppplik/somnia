@@ -27,7 +27,7 @@ export function currentPanelTheme(root:{getAttribute(n:string):string|null}&Part
  const v=(n:string,f:string)=>cs?safe(cs.getPropertyValue(n),f):f;
  return{scheme:base.scheme,text:v('--text-primary',base.text),secondary:v('--text-secondary',base.secondary),accent:v('--accent',base.accent),border:v('--border-subtle',base.border)};
 }
-const baseStyle=(t:PanelTheme)=>`<meta name="color-scheme" content="${t.scheme}"><style>:root{color-scheme:${t.scheme};--text-primary:${t.text};--text-secondary:${t.secondary};--accent:${t.accent};--border-subtle:${t.border}}html,body{background:transparent}body{margin:0;padding:12px;font:13px system-ui,sans-serif;color:${t.text}}</style>`;
+const baseStyle=(t:PanelTheme)=>`<meta name="color-scheme" content="${t.scheme}"><style>:root{color-scheme:${t.scheme};--text-primary:${t.text};--text-secondary:${t.secondary};--accent:${t.accent};--border-subtle:${t.border};--success:${t.scheme==='dark'?'#6ee7a8':'#05603a'};--danger:${t.scheme==='dark'?'#fca5a5':'#b42318'};--bg-panel:${t.scheme==='dark'?'#1a1a20':'#ffffff'};--bg-surface:${t.scheme==='dark'?'#29292f':'#f1f2f7'};--bg-hover:${t.scheme==='dark'?'#34343c':'#eef0f6'}}html,body{background:transparent}body{margin:0;padding:12px;font:13px system-ui,sans-serif;color:${t.text}}</style>`;
 /** Full document for a panel. Native: the Rust scheme handler serves this (inlineToken null, token comes from the URL fragment) with PANEL_CSP as a header. Fallback: used as srcdoc with the token inlined and the CSP as a meta tag. */
 export function panelDocument(html:string,inlineToken:string|null=null,theme:PanelTheme=LIGHT_PANEL_THEME):string{
  const meta=inlineToken===null?'':`<meta http-equiv="Content-Security-Policy" content="${PANEL_CSP}">`;

@@ -25,3 +25,10 @@ test('panel document declares the app colour scheme so a dark app never gets an 
   assert.match(d,/<meta name="color-scheme" content="dark">/);assert.match(d,/color-scheme:dark/);assert.match(d,/background:transparent/);assert.match(d,/color:#fafafa/);
   assert.match(panelDocument('',null,LIGHT_PANEL_THEME),/color-scheme:light/);
 });
+
+test('panel surface tokens and controls stay readable in both schemes',()=>{
+ const dark=panelDocument('',null,DARK_PANEL_THEME);
+ assert.match(dark,/--bg-panel:#1a1a20/);assert.match(dark,/--bg-surface:#29292f/);
+ const light=panelDocument('',null,LIGHT_PANEL_THEME);
+ assert.match(light,/--bg-panel:#ffffff/);assert.match(light,/--bg-surface:#f1f2f7/);
+});
