@@ -427,6 +427,13 @@
       "hasEnabled": true
     },
     {
+      "id": "frameworks.buildNode",
+      "title": "Build server app for publishing",
+      "category": "Project",
+      "source": "core",
+      "hasEnabled": true
+    },
+    {
       "id": "frameworks.buildStatic",
       "title": "Build site for publishing",
       "category": "Project",

@@ -486,6 +486,19 @@
       ]
     },
     {
+      "name": "deploy_node_build_collect",
+      "domain": "deploy",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "run_id"
+      ],
+      "args": [
+        "runId"
+      ]
+    },
+    {
       "name": "deploy_node_env_apply",
       "domain": "deploy",
       "status": "native",

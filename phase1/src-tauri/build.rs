@@ -209,6 +209,7 @@ fn main() {
             "project_logs",
             "project_stop_all",
             "deploy_artifact_collect",
+            "deploy_node_build_collect",
             "preview_open",
             "preview_close",
 

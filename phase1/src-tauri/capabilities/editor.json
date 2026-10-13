@@ -225,6 +225,7 @@
     "allow-project-logs",
     "allow-project-stop-all",
     "allow-deploy-artifact-collect",
+    "allow-deploy-node-build-collect",
     "allow-preview-open",
     "allow-preview-close",
 

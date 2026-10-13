@@ -17,7 +17,7 @@ test('every desktop command is allow-listed in build.rs and the editor capabilit
 test('framework commands have manifest, main-window gate, and close cleanup',()=>{
  const rs=readFileSync('src-tauri/src/desktop.rs','utf8');
  const manifest=JSON.parse(readFileSync('../docs/errors/commands.json','utf8'));
- for(const name of ['runtime_status','runtime_install','runtime_remove','project_run','project_stop','project_status','project_logs','project_stop_all','deploy_artifact_collect','preview_open','preview_close']) {
+ for(const name of ['runtime_status','runtime_install','runtime_remove','project_run','project_stop','project_status','project_logs','project_stop_all','deploy_artifact_collect','deploy_node_build_collect','preview_open','preview_close']) {
   assert.ok(rs.includes(name), name);
   assert.ok(JSON.stringify(manifest).includes(name),`${name} missing generated manifest`);
  }
@@ -31,6 +31,15 @@ test('deploy_artifact_collect is gated, reads only a finished build run and retu
  const body=rs.slice(rs.indexOf('async fn deploy_artifact_collect'),rs.indexOf('async fn deploy_artifact_collect')+500);
  assert.ok(body.includes('gate(&window)'));assert.ok(body.includes('runner.root(&run_id)'));
  assert.ok(glue.includes('buildNotFinished')&&glue.includes('RunKind::Build'));
+ assert.ok(!/Vec<u8>/.test(glue));
+});
+
+test('deploy_node_build_collect is gated, reads only a finished build run and returns no file bytes',()=>{
+ const rs=readFileSync('src-tauri/src/desktop.rs','utf8');const glue=readFileSync('src-tauri/src/deploy_artifact.rs','utf8');
+ const at=rs.indexOf('async fn deploy_node_build_collect');const body=rs.slice(at,at+560);
+ assert.ok(body.includes('gate(&window)'));assert.ok(body.includes('runner.root(&run_id)'));assert.ok(body.includes('summarize_node'));
+ const node=glue.slice(glue.indexOf('pub fn summarize_node_parts'),glue.indexOf('pub fn summarize(handle'));
+ assert.ok(node.includes('buildNotFinished')&&node.includes('notBuild'));
  assert.ok(!/Vec<u8>/.test(glue));
 });
 

@@ -109,6 +109,10 @@ pub fn safe_environment(node: &Path) -> Vec<(String, String)> {
             .into_owned(),
     ));
     environment.push(("NO_COLOR".into(), "1".into()));
+    // Frameworks report usage by default. A project runner must never phone home.
+    for key in ["NEXT_TELEMETRY_DISABLED", "ASTRO_TELEMETRY_DISABLED", "NUXT_TELEMETRY_DISABLED", "DO_NOT_TRACK"] {
+        environment.push((key.into(), "1".into()));
+    }
     environment
 }
 fn inherited_secrets() -> Vec<String> {
@@ -123,6 +127,12 @@ fn inherited_secrets() -> Vec<String> {
         })
         .map(|(_, v)| v)
         .collect()
+}
+fn astro_bin(project: &Path) -> &'static str {
+    ["astro/bin/astro.mjs", "astro/astro.js"]
+        .into_iter()
+        .find(|c| project.join("node_modules").join(c).is_file())
+        .unwrap_or("astro/bin/astro.mjs")
 }
 #[derive(Deserialize)]
 struct Template {
@@ -165,7 +175,8 @@ fn fixed_args(
         "react" | "vue" | "svelte" | "solid" | "preact" | "vanilla" | "vanilla-ts" | "vite" => {
             "vite/bin/vite.js"
         }
-        "astro" => "astro/astro.js",
+        // Astro 5 and older ship astro/astro.js, Astro 6 and newer ship astro/bin/astro.mjs.
+        "astro" => astro_bin(project),
         "next" => "next/dist/bin/next",
         "sveltekit" => "vite/bin/vite.js",
         "nuxt" => "nuxt/bin/nuxt.mjs",
@@ -623,6 +634,24 @@ impl Drop for WindowsJob {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn astro_bin_follows_the_installed_layout() {
+        let d = tempfile::tempdir().unwrap();
+        let astro = d.path().join("node_modules/astro");
+        std::fs::create_dir_all(astro.join("bin")).unwrap();
+        assert_eq!(astro_bin(d.path()), "astro/bin/astro.mjs");
+        std::fs::write(astro.join("astro.js"), "x").unwrap();
+        assert_eq!(astro_bin(d.path()), "astro/astro.js");
+        std::fs::write(astro.join("bin/astro.mjs"), "x").unwrap();
+        assert_eq!(astro_bin(d.path()), "astro/bin/astro.mjs");
+    }
+    #[test]
+    fn telemetry_is_switched_off_for_every_framework() {
+        let env = safe_environment(Path::new("/usr/bin/node"));
+        for key in ["NEXT_TELEMETRY_DISABLED", "ASTRO_TELEMETRY_DISABLED", "NUXT_TELEMETRY_DISABLED", "DO_NOT_TRACK"] {
+            assert!(env.iter().any(|(k, v)| k == key && v == "1"), "{key}");
+        }
+    }
     #[test]
     fn secret_redaction() {
         let r = Redactor::new(vec!["canary-secret-1234".into()]);
