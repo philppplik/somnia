@@ -20,7 +20,8 @@ fn gate(window: &tauri::WebviewWindow) -> Result<(), String> {
 fn service(app: &tauri::AppHandle) -> Result<Arc<DeployService>, String> {
     if let Some(s) = SERVICE.get() { return Ok(s.clone()); }
     let dir = app.path().app_config_dir().map_err(|_| "deploy:storage".to_string())?;
-    Ok(SERVICE.get_or_init(|| Arc::new(build_service(&dir))).clone())
+    let built = Arc::new(build_service(&dir).map_err(code)?);
+    Ok(SERVICE.get_or_init(|| built).clone())
 }
 fn code(e: DeployError) -> String { e.to_string() }
 async fn blocking<T: Send + 'static>(app: &tauri::AppHandle, f: impl FnOnce(&DeployService) -> Result<T, DeployError> + Send + 'static) -> Result<T, String> {

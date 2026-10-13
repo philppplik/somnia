@@ -90,6 +90,8 @@ pub trait KeyMaker: Send + Sync {
     /// Generates an ed25519 key straight into the keychain slot. Returns the public key line.
     fn create(&self, slot: &str) -> Result<String, ()>;
     fn delete(&self, slot: &str);
+    /// Public OpenSSH key only. Never returns private key material.
+    fn public_key(&self, _slot: &str) -> Result<String, ()> { Err(()) }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -245,6 +247,11 @@ impl DeployService {
         self.keys.create(&t.key_slot).map_err(|_| DeployError::KeyBackend)
     }
 
+    pub fn key_public(&self, target_id: &str) -> Result<String, DeployError> {
+        let target = self.targets.get(target_id)?;
+        self.keys.public_key(&target.key_slot).map_err(|_| DeployError::KeyBackend)
+    }
+
     /// Read-only connect: returns the key the server presents so the dialog can show it.
     pub fn hostkey_probe(&self, target_id: &str) -> Result<HostKeyInfo, DeployError> {
         let t = self.targets.get(target_id)?;
@@ -258,6 +265,7 @@ impl DeployService {
         let seen = self.engine.probe_host_key(&t)?;
         if !constant_eq(seen.fingerprint.as_bytes(), expected_fingerprint.as_bytes()) { return Err(DeployError::HostKeyMismatch); }
         self.pins.pin(&t.host, t.port, &seen.fingerprint);
+        if self.pins.pinned(&t.host, t.port).as_deref() != Some(&seen.fingerprint) { return Err(DeployError::Storage); }
         Ok(())
     }
 
@@ -270,6 +278,7 @@ impl DeployService {
         let seen = self.engine.probe_host_key(&t)?;
         if !constant_eq(seen.fingerprint.as_bytes(), new_fingerprint.as_bytes()) { return Err(DeployError::HostKeyMismatch); }
         self.pins.replace(&t.host, t.port, &seen.fingerprint);
+        if self.pins.pinned(&t.host, t.port).as_deref() != Some(&seen.fingerprint) { return Err(DeployError::Storage); }
         Ok(())
     }
 

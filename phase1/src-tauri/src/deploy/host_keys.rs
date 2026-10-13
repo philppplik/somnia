@@ -101,6 +101,11 @@ impl HostKeyStore {
             pins: Mutex::new(pins),
         })
     }
+    /// Read the app-owned pin without opening a connection. No project controls this store.
+    pub fn pinned_key(&self, host: &str, port: u16) -> Result<Option<HostKey>> {
+        let endpoint = endpoint(host, port)?;
+        Ok(self.pins.lock().map_err(|_| DeployError::HostStore)?.get(&endpoint).cloned())
+    }
     pub fn check(&self, host: &str, port: u16, observed: &HostKey) -> Result<HostKeyStatus> {
         observed.validate()?;
         let key = endpoint(host, port)?;
