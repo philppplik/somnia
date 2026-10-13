@@ -85,3 +85,6 @@ pub mod deploy_commands;
 
 #[cfg(feature = "desktop")]
 pub mod deploy_setup;
+
+#[cfg(feature = "desktop")]
+pub mod studio_copy;

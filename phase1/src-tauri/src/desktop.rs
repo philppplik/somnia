@@ -2813,6 +2813,9 @@ pub fn run() {
         })
         .manage(crate::proc_runner::ProcessRunner::default())
         .invoke_handler(tauri::generate_handler![
+            crate::studio_copy::studio_copy_open,
+            crate::studio_copy::studio_copy_take,
+            crate::studio_copy::studio_copy_export,
             runtime_status, runtime_install, runtime_remove, project_run, project_stop, project_status, project_logs, project_stop_all, deploy_artifact_collect, deploy_node_build_collect, preview_open, preview_close,
             crate::vibespace_schedule_commands::vibespace_schedule_preview,
             crate::vibespace_schedule_commands::vibespace_schedule_create,

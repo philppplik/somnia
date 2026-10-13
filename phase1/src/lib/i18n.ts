@@ -1,4 +1,5 @@
 import {CODE_PANEL_CATALOGUES} from './codePanels/i18n';
+import {WORKSPACE_CATALOGUES} from './workspace/locales';
 import {DIAGNOSTIC_LOCALES} from './diagnostics/locales';
 import {CONSENT_CATALOGUES} from './extensions/consentLocales';
 import {STORE_CATALOGUES} from './extensions/storeLocales';
@@ -48,6 +49,7 @@ for (const [tag, extra] of Object.entries(SCHEDULE_CATALOGUES)) Object.assign(CA
 for (const [tag, extra] of Object.entries(SHEETS_RAIL_CATALOGUES)) Object.assign(CATALOGUES[tag], extra);
 for (const [tag, extra] of Object.entries(VIBESPACE_CATALOGUES)) Object.assign(CATALOGUES[tag], extra);
 for (const [tag, extra] of Object.entries(BOARD_CATALOGUES)) Object.assign(CATALOGUES[tag], extra);
+for(const [tag,extra] of Object.entries(WORKSPACE_CATALOGUES))Object.assign(CATALOGUES[tag],extra);
 /** Native names for the language picker. */
 export const LOCALE_NAMES: Record<string, string> = {en:'English', de:'Deutsch', es:'Español', fr:'Français', 'pt-BR':'Português (Brasil)'};
 export const LOCALE_KEY = 'somnia.locale.v1';

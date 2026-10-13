@@ -2046,6 +2046,41 @@
       ]
     },
     {
+      "name": "studio_copy_export",
+      "domain": "fs",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "snapshot"
+      ],
+      "args": [
+        "snapshot"
+      ]
+    },
+    {
+      "name": "studio_copy_open",
+      "domain": "fs",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "snapshot"
+      ],
+      "args": [
+        "snapshot"
+      ]
+    },
+    {
+      "name": "studio_copy_take",
+      "domain": "fs",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [],
+      "args": []
+    },
+    {
       "name": "studio_mcp_respond",
       "domain": "agent",
       "status": "native",

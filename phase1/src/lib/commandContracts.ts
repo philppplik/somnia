@@ -68,6 +68,9 @@ export type FrontendFatalEntry = import('./diagnostics/ids').SafeLogEvent & {fat
 type Contract<A, R> = { args: A; result: R };
 
 export interface CommandContracts {
+  studio_copy_open: Contract<{snapshot:import('./workspace/handoff').StudioSnapshot},string>;
+  studio_copy_take: Contract<Record<string,never>,import('./workspace/handoff').StudioSnapshot>;
+  studio_copy_export: Contract<{snapshot:import('./workspace/handoff').StudioSnapshot},boolean>;
   drain_open_requests: Contract<undefined, OpenRequestSummary[]>;
   claim_open_request: Contract<{ requestId: string }, ClaimReply>;
   read_by_grant: Contract<{ grant: string }, GrantRead>;

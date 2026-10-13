@@ -1,0 +1,17 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "studio-copy",
+  "description": "Local independent editing copies. No editor, project, credentials or deployment permissions.",
+  "local": true,
+  "windows": [
+    "studio-copy-*"
+  ],
+  "permissions": [
+    "core:event:allow-listen",
+    "core:event:allow-unlisten",
+    "core:window:allow-close",
+    "core:window:allow-destroy",
+    "allow-studio-copy-take",
+    "allow-studio-copy-export"
+  ]
+}
