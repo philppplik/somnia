@@ -45,3 +45,10 @@ test('contrast audit covers the built-in and themes/*.css palettes',()=>{
  assert.ok(combos.length>=15,String(combos.length));
  for(const [theme,palette] of combos)assert.ok(color(resolve(theme,palette),'--bg-panel'),`${theme}/${palette} resolves tokens`);
 });
+
+test('update pill uses a green with 4.5:1 against its white label',()=>{
+ const src=readFileSync(new URL('../components/UpdatePill.tsx',import.meta.url),'utf8');
+ assert.match(src,/bg-emerald-700/);
+ assert.ok(contrastRatio([255,255,255],parseColor('#047857')!)>=4.5);
+ assert.ok(contrastRatio([255,255,255],parseColor('#059669')!)<4.5,'old emerald-600 was below AA');
+});

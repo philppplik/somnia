@@ -71,6 +71,12 @@ try{
    const before=await tabs.count();await page.keyboard.press('Delete');await page.waitForTimeout(300);
    check(label('Delete closes the focused tab'),(await tabs.count())===before-1,`${before} -> ${await tabs.count()}`);
   }
+  // 6b. sidebar panel is a named region, not an unnamed tabpanel
+  const unnamed=await page.evaluate(()=>[...document.querySelectorAll('[role=tabpanel]:not([hidden])')].filter(p=>!(p.getAttribute('aria-label')||p.getAttribute('aria-labelledby'))).length);
+  check(label('no unnamed visible tabpanel in the shell'),unnamed===0,`unnamed=${unnamed}`);
+  // 6c. hero button has a name and any disabled reason is exposed
+  const hero=await page.evaluate(()=>{const g=document.querySelector('[data-testid=hero-action]');const b=g?.querySelector('[data-testid=hero-action-main]');if(!b)return null;const d=b.getAttribute('aria-describedby');return {name:b.getAttribute('aria-label'),disabled:b.disabled,desc:d?document.getElementById(d)?.textContent:null};});
+  check(label('hero action has an accessible name and, when disabled, a described reason'),hero&&hero.name&&(!hero.disabled||hero.desc),JSON.stringify(hero));
   // 7. Extensions popup
   await page.evaluate(()=>window.__somniaControl.runCommand('extensions.open'));await page.waitForTimeout(900);
   const dlg=page.getByRole('dialog');check(label('extensions popup is a named dialog'),(await dlg.count())>0&&!!(await dlg.first().getAttribute('aria-label')||await dlg.first().getAttribute('aria-labelledby')));
@@ -80,6 +86,15 @@ try{
   check(label('ArrowDown moves and selects the next extensions tab'),sel.sel&&sel.sel===sel.foc&&sel.sel!=='ext-tab-installed',JSON.stringify(sel));
   const trapped=await page.evaluate(()=>{const d=document.querySelector('[role=dialog]');return !!d&&d.contains(document.activeElement);});check(label('focus is inside the dialog'),trapped);
   await page.screenshot({path:`${out}/${theme}-extensions.png`});
+  // walk every popup view with Tab: every stop inside the dialog needs an accessible name. After the last control base-ui hands focus to
+  // the browser (headless Chrome wraps to the document start), so leaving the dialog at the end is not counted as a failure.
+  for(const view of ['installed','browse','updates','activity']){
+   await page.locator(`#ext-tab-${view}`).click();await page.waitForTimeout(500);await page.locator(`#ext-tab-${view}`).focus();
+   const bad=[];let escaped=false,visited=0,left=false;
+   for(let i=0;i<45;i++){await page.keyboard.press('Tab');const r=await page.evaluate(()=>{const e=document.activeElement;const d=document.querySelector('[role=dialog]');const name=(e.getAttribute('aria-label')||e.getAttribute('aria-labelledby')&&document.getElementById(e.getAttribute('aria-labelledby'))?.textContent||e.textContent||e.getAttribute('title')||(e.labels&&e.labels[0]?.textContent)||e.getAttribute('placeholder')||'').trim();return {guard:e.hasAttribute('data-base-ui-focus-guard'),inside:!!d&&d.contains(e),name,html:e.outerHTML.slice(0,90)};});if(r.guard||r.html.startsWith('<body')){left=true;continue;}if(!r.inside){left=true;continue;}if(!left)visited++;if(r.inside&&!r.name)bad.push(r.html);}
+   check(label(`extensions ${view}: Tab visits controls inside the dialog first`),visited>=3,`visited=${visited}`);
+   check(label(`extensions ${view}: every Tab stop has an accessible name`),bad.length===0,bad.slice(0,3).join(' | '));
+  }
   await page.keyboard.press('Escape');await page.waitForTimeout(400);check(label('Escape closes the extensions popup'),(await page.getByRole('dialog').count())===0);
   check(label('no page errors'),errors.length===0,errors.join(' | '));
   await page.close();

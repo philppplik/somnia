@@ -23,9 +23,16 @@ Helpers: `src/lib/rovingKeys.ts` (navigation maths, pure and unit tested) and `s
 
 `node scripts/a11y-shell-audit.mjs` (from `phase1/`, set `SOMNIA_CHROME` for a system browser) drives the web build in dark and light and checks Tab stops, rail arrows, menu open/close focus and the studio pill. PNGs go to `tests/artifacts/a11y-shell/`.
 
+## Other fixes in pass 3
+
+- Sidebar panels (`LayersPanel`) are named regions (`panels.layers.tab.*`) instead of unnamed `tabpanel`s without tabs.
+- Update pill: `emerald-600` with white 10px text was 3.77:1; now `emerald-700` (5.48:1). Download/install progress is announced through a polite live region.
+- Hero action: when the button is disabled, its reason is now exposed with `aria-describedby` (a disabled button gets no focus, so the tooltip alone never reached screen reader users).
+- RasterEditor toolbar labels use locale keys.
+
 ## Known gaps
 
-- Sidebar `tabpanel` has no accessible name and no matching tabs; a `region` or `complementary` label would be more accurate.
 - Rail drag-and-drop reorder has a keyboard path only through the context menu (Shift+F10) and the `shell.rail.*` commands.
-- `RasterEditor.tsx` still has English "Toggle sidebar" / "Toggle inspector" tool labels (not part of the shell).
-- Audit script: the Extensions popup check covers nav, labelling and Esc. Cards, detail and activity views were not walked by keyboard.
+- Extensions popup: Tab order and accessible names checked in all four views; behaviour of every control (install, consent dialogs) not walked. After the last control, base-ui hands focus to the browser, as designed for modal dialogs; in headless Chrome that wraps into the inert app, so this was not asserted.
+- Screen reader output was checked through Chrome ARIA snapshots and attribute reads, not with a real screen reader.
+- The hero disabled-reason path is covered by code review and typecheck only; no studio in the harness had a disabled hero.

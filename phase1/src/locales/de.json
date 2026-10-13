@@ -3279,5 +3279,12 @@
   "shell.rail.extensionPanel": "{title}-Panel (Erweiterung)",
   "rest.fileTabs.closeFile": "{file} schließen",
   "rest.fileTabs.unsavedImage": "Ungespeicherte Bildänderungen",
-  "ext.dialog.aria": "Erweiterungen"
+  "ext.dialog.aria": "Erweiterungen",
+  "panels.layers.tab.layers": "Ebenen",
+  "panels.layers.tab.files": "Dateien",
+  "panels.layers.tab.search": "Suche",
+  "panels.layers.tab.components": "Komponenten",
+  "panels.layers.tab.css": "CSS",
+  "panels.layers.tab.versions": "Versionen",
+  "imageeditor.rasterTools": "Rasterwerkzeuge"
 }

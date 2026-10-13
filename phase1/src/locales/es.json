@@ -3279,5 +3279,12 @@
   "shell.rail.extensionPanel": "Panel {title} (extensión)",
   "rest.fileTabs.closeFile": "Cerrar {file}",
   "rest.fileTabs.unsavedImage": "Cambios de imagen sin guardar",
-  "ext.dialog.aria": "Extensiones"
+  "ext.dialog.aria": "Extensiones",
+  "panels.layers.tab.layers": "Capas",
+  "panels.layers.tab.files": "Archivos",
+  "panels.layers.tab.search": "Búsqueda",
+  "panels.layers.tab.components": "Componentes",
+  "panels.layers.tab.css": "CSS",
+  "panels.layers.tab.versions": "Versiones",
+  "imageeditor.rasterTools": "Herramientas de trama"
 }
