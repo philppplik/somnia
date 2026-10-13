@@ -45,6 +45,42 @@ try{
   const ring=await page.evaluate(()=>{const e=document.activeElement;const c=getComputedStyle(e);return c.outlineStyle!=='none'&&parseFloat(c.outlineWidth)>0||c.boxShadow!=='none';});
   check(label('keyboard focus ring is visible on rail button'),ring);
   await page.screenshot({path:`${out}/${theme}-focus.png`});
+  // 6. file tabs with open files (back in Code studio)
+  await page.getByRole('radio',{name:/Somnia Code/}).click();await page.waitForTimeout(500);
+  // Markdown files show the tab strip in Code studio; seed two through the dev-server store module.
+  await page.evaluate(async()=>{const m=await import('/src/lib/projectActions.ts');m.addTextFiles([{name:'a11y-a.md',text:'# A'}]);m.addTextFiles([{name:'a11y-b.md',text:'# B'}]);});
+  await page.waitForTimeout(600);
+  const tabs=page.locator('[role=tablist][aria-label] [role=tab][data-tab-file]');const nTabs=await tabs.count();
+  check(label('file tabs render after opening files'),nTabs>=2,`tabs=${nTabs}`);
+  if(nTabs>=2){
+   const tabStops=await page.evaluate(()=>[...document.querySelectorAll('[role=tab][data-tab-file]')].filter(t=>t.tabIndex>=0).length);
+   check(label('file tablist has one Tab stop'),tabStops===1,`stops=${tabStops}`);
+   await page.screenshot({path:`${out}/${theme}-file-tabs.png`,clip:{x:0,y:40,width:1440,height:90}});
+   await tabs.first().focus();await page.keyboard.press('ArrowRight');
+   const movedTo=await page.evaluate(()=>document.activeElement?.getAttribute('data-tab-file'));
+   const first=await tabs.first().getAttribute('data-tab-file');
+   check(label('ArrowRight moves focus to the next tab'),movedTo&&movedTo!==first,`${first} -> ${movedTo}`);
+   await page.keyboard.press('Home');check(label('Home returns to the first tab'),await page.evaluate(f=>document.activeElement?.getAttribute('data-tab-file')===f,first));
+   await page.keyboard.press('Shift+F10');await page.waitForTimeout(250);
+   const menuFocus=await page.evaluate(()=>document.activeElement?.getAttribute('role')==='menuitem'&&!!document.activeElement.closest('[role=menu]'));
+   check(label('Shift+F10 opens tab menu with focus on first item'),menuFocus);
+   const nested=await page.evaluate(()=>!!document.querySelector('[role=tablist] [role=menu]'));check(label('tab menu is not nested in the tablist'),!nested);
+   await page.screenshot({path:`${out}/${theme}-tab-menu.png`,clip:{x:0,y:40,width:700,height:260}});
+   await page.keyboard.press('ArrowDown');await page.keyboard.press('Escape');await page.waitForTimeout(250);
+   check(label('Escape closes the tab menu and returns focus to the tab'),await page.evaluate(f=>document.activeElement?.getAttribute('data-tab-file')===f&&!document.querySelector('[role=menu]'),first));
+   const before=await tabs.count();await page.keyboard.press('Delete');await page.waitForTimeout(300);
+   check(label('Delete closes the focused tab'),(await tabs.count())===before-1,`${before} -> ${await tabs.count()}`);
+  }
+  // 7. Extensions popup
+  await page.evaluate(()=>window.__somniaControl.runCommand('extensions.open'));await page.waitForTimeout(900);
+  const dlg=page.getByRole('dialog');check(label('extensions popup is a named dialog'),(await dlg.count())>0&&!!(await dlg.first().getAttribute('aria-label')||await dlg.first().getAttribute('aria-labelledby')));
+  const navStops=await page.evaluate(()=>[...document.querySelectorAll('.ext-nav [role=tab]')].filter(t=>t.tabIndex>=0).length);check(label('extensions nav has one Tab stop'),navStops===1,`stops=${navStops}`);
+  await page.locator('.ext-nav [role=tab][aria-selected=true]').first().focus();await page.keyboard.press('ArrowDown');await page.waitForTimeout(400);
+  const sel=await page.evaluate(()=>({sel:document.querySelector('.ext-nav [role=tab][aria-selected=true]')?.id,foc:document.activeElement?.id}));
+  check(label('ArrowDown moves and selects the next extensions tab'),sel.sel&&sel.sel===sel.foc&&sel.sel!=='ext-tab-installed',JSON.stringify(sel));
+  const trapped=await page.evaluate(()=>{const d=document.querySelector('[role=dialog]');return !!d&&d.contains(document.activeElement);});check(label('focus is inside the dialog'),trapped);
+  await page.screenshot({path:`${out}/${theme}-extensions.png`});
+  await page.keyboard.press('Escape');await page.waitForTimeout(400);check(label('Escape closes the extensions popup'),(await page.getByRole('dialog').count())===0);
   check(label('no page errors'),errors.length===0,errors.join(' | '));
   await page.close();
  }
