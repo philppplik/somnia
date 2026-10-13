@@ -98,6 +98,7 @@ mod tests {
 
     /// Whole path with real SSH: keychain key authenticates, the pin is enforced, the plan binds
     /// the fingerprint, the publish lands through SFTP and a wrong pin is refused.
+    #[cfg(unix)]
     #[tokio::test(flavor = "multi_thread")]
     async fn keychain_key_pinned_host_plan_and_publish_over_real_ssh() {
         let server = TestServer::start().await;

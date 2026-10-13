@@ -900,6 +900,7 @@ mod tests {
         .await
         .unwrap()
     }
+    #[cfg(unix)]
     #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
     async fn real_ssh_publish_diff_progress_live_readout_and_rollback() {
         let f = fixture().await;
@@ -972,6 +973,7 @@ mod tests {
             .iter()
             .any(|s| s.contains("sudo") || s.contains("apt-get")));
     }
+    #[cfg(unix)]
     #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
     async fn health_failure_restores_previous_release_and_config() {
         let f = fixture().await;
@@ -1055,6 +1057,7 @@ mod tests {
         .unwrap();
         assert!(!f.server.path("/srv/somnia/site/current").exists());
     }
+    #[cfg(unix)]
     #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
     async fn cancellation_is_allowed_during_upload_not_after_switch() {
         let f = fixture().await;
@@ -1148,6 +1151,7 @@ mod tests {
             assert!(collect_plain(dir.path()).is_err());
         }
     }
+    #[cfg(unix)]
     #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
     async fn first_publish_health_failure_leaves_no_live_site() {
         let f = fixture().await;
@@ -1226,6 +1230,7 @@ mod tests {
             0
         );
     }
+    #[cfg(unix)]
     #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
     async fn rollback_failure_is_distinguished_from_successful_recovery() {
         let f = fixture().await;

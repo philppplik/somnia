@@ -1245,6 +1245,7 @@ pub(crate) mod tests {
 
     /// Same flow over a real SSH connection and real SFTP into a temporary directory: the
     /// confinement, hard links, atomic renames and file modes are the production ones.
+    #[cfg(unix)]
     #[tokio::test]
     async fn publish_and_fail_back_over_real_ssh_and_sftp() {
         use crate::deploy::{
