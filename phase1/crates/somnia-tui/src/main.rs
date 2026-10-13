@@ -55,13 +55,17 @@ fn main() {
         i += 1;
     }
     if let Some(dir) = capture { capture_screens(&dir, light); return; }
+    let interactive = !(plain || !(std::io::stdin().is_terminal() && stdout().is_terminal()));
     let mut core = if demo {
         Core::replay(demo_script(), Duration::from_millis(450))
     } else if let Some(p) = replay {
         let txt = std::fs::read_to_string(&p).unwrap_or_else(|e| { eprintln!("cannot read {p}: {e}"); std::process::exit(66) });
         Core::replay(txt.lines().map(String::from).collect(), Duration::from_millis(300))
     } else if !core_argv.is_empty() {
-        Core::spawn(&core_argv).unwrap_or_else(|e| { eprintln!("cannot start core: {e}"); std::process::exit(69) })
+        let mut c = Core::spawn(&core_argv).unwrap_or_else(|e| { eprintln!("cannot start core: {e}"); std::process::exit(69) });
+        // Only the interactive UI can take an answer; plain mode stays silent so the core ends needs_input itself.
+        if interactive { c.send(&Command::Hello { capabilities: vec!["answer".into()] }); }
+        c
     } else {
         eprint!("{USAGE}");
         std::process::exit(64);
@@ -103,17 +107,21 @@ fn run(app: &mut App, core: &mut Core, cm: ColorMode, th: &Theme, demo: bool) ->
                 if let CEvent::Key(k) = event::read()? {
                     if k.kind != KeyEventKind::Press { continue; }
                     let ctrl = k.modifiers.contains(KeyModifiers::CONTROL);
-                    let (mut ch, mut enter, mut esc, mut up, mut down) = (' ', false, false, false, false);
+                    if let (KeyCode::Char(c), false) = (k.code, ctrl) {
+                        if app.on_text(c) { continue; }
+                    }
+                    let (mut ch, mut enter, mut esc, mut up, mut down, mut bs) = (' ', false, false, false, false, false);
                     match k.code {
                         KeyCode::Char(c) => ch = c,
                         KeyCode::Enter => enter = true,
                         KeyCode::Esc => esc = true,
                         KeyCode::Up => up = true,
                         KeyCode::Down => down = true,
+                        KeyCode::Backspace => bs = true,
                         _ => {}
                     }
                     let was_review = app.review.is_some();
-                    match app.on_key(ch, ctrl, enter, esc, up, down) {
+                    match app.on_key_ex(ch, ctrl, enter, esc, up, down, bs) {
                         Action::Quit => return Ok(()),
                         Action::Send(c) => {
                             let cancel = c == Command::Cancel;

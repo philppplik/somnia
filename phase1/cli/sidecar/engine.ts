@@ -1,13 +1,27 @@
 // Task-engine sidecar entry ("somnia.task-engine/1"). Bundled to engine.mjs by build.mjs and started by `somnia run`.
 import readline from 'node:readline';
-import { ENGINE_CONTRACT, isTerminal } from './contract';
-import type { EngineOut, EngineTask } from './contract';
+import { ENGINE_CONTRACT, MAX_ANSWERS, MAX_ANSWER_CHARS, MAX_QUESTION_CHARS, isTerminal } from './contract';
+import type { EngineOut, EngineTask, TaskAnswer } from './contract';
 import { ConfigError, resolveEngine } from './config';
 import { runTask } from './engineCore';
 
 const write = (o: EngineOut) => process.stdout.write(JSON.stringify(o) + '\n');
 let terminal = false;
 const emit = (e: EngineOut) => { if (terminal) return; if (isTerminal(e)) terminal = true; write(e); };
+
+/** Keeps only well-formed {question, answer} string pairs, clipped; anything else is dropped (never trusted as structure). */
+export function parseAnswers(v: unknown): TaskAnswer[] {
+  if (!Array.isArray(v)) return [];
+  const out: TaskAnswer[] = [];
+  for (const a of v) {
+    if (out.length >= MAX_ANSWERS) break;
+    if (!a || typeof a !== 'object') continue;
+    const { question, answer } = a as Record<string, unknown>;
+    if (typeof question !== 'string' || typeof answer !== 'string' || !answer.trim()) continue;
+    out.push({ question: question.slice(0, MAX_QUESTION_CHARS), answer: answer.slice(0, MAX_ANSWER_CHARS) });
+  }
+  return out;
+}
 
 function parseStart(line: string): EngineTask | string {
   let m: { op?: string; contract?: string; task?: Partial<EngineTask> };
@@ -16,7 +30,7 @@ function parseStart(line: string): EngineTask | string {
   if (m.contract !== ENGINE_CONTRACT) return `unsupported contract ${String(m.contract).slice(0, 40)}; this engine speaks ${ENGINE_CONTRACT}`;
   const t = m.task;
   if (!t || typeof t.taskId !== 'string' || typeof t.prompt !== 'string' || !t.prompt.trim() || typeof t.cwd !== 'string' || !Array.isArray(t.allowedRoots)) return 'malformed task';
-  return { taskId: t.taskId, prompt: t.prompt, cwd: t.cwd, allowedRoots: t.allowedRoots.filter((r): r is string => typeof r === 'string'), bare: t.bare === true, studio: t.studio ?? null, maxTokens: t.maxTokens ?? null, maxCost: t.maxCost ?? null };
+  return { taskId: t.taskId, prompt: t.prompt, cwd: t.cwd, allowedRoots: t.allowedRoots.filter((r): r is string => typeof r === 'string'), bare: t.bare === true, studio: t.studio ?? null, maxTokens: t.maxTokens ?? null, maxCost: t.maxCost ?? null, answers: parseAnswers(t.answers) };
 }
 
 async function main(): Promise<void> {

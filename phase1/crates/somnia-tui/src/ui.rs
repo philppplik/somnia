@@ -105,6 +105,12 @@ fn stream(f: &mut Frame, area: Rect, app: &App, th: &Theme) {
     }
     if let Some(q) = &app.question {
         lines.push(Line::styled(format!(" ? Needs input: {q}"), Style::default().fg(th.warn).add_modifier(Modifier::BOLD)));
+        if app.answering() {
+            lines.push(Line::from(vec![
+                Span::styled(" > ", Style::default().fg(th.accent).add_modifier(Modifier::BOLD)),
+                Span::styled(format!("{}_", app.answer), Style::default().fg(th.fg)),
+            ]));
+        }
     }
     if let Some(e) = &app.protocol_error {
         lines.push(Line::styled(format!(" ! {e}"), Style::default().fg(th.err)));
@@ -167,7 +173,7 @@ fn footer(f: &mut Frame, area: Rect, app: &App, th: &Theme) {
         RunState::Failed => ("failed", th.err),
     };
     let dim = Style::default().fg(th.dim);
-    let hints = if app.review.is_some() { "j/k move  a/r decide  A/R all  ⏎ send" } else if app.finished() { "q quit" } else { "↑/↓ scroll  q cancel" };
+    let hints = if app.answering() { "type answer  ⏎ send  esc clear  ctrl-c cancel" } else if app.review.is_some() { "j/k move  a/r decide  A/R all  ⏎ send" } else if app.finished() { "q quit" } else { "↑/↓ scroll  q cancel" };
     let line = Line::from(vec![
         Span::styled(format!(" {label} "), Style::default().fg(col).add_modifier(Modifier::BOLD | Modifier::REVERSED)),
         Span::styled(format!("  {} ", if app.task_id.is_empty() { "-" } else { &app.task_id }), dim),

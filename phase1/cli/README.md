@@ -21,7 +21,7 @@ Core events map to the TUI schema (`status`, `text_delta`, `needs_input`, `guard
 Without `--yes` the agent's uncommitted work is proposed as one `diff_proposed` per file; `review_decision` is applied only if
 `content_hash` (S12: `sha256(file \0 (hunk.id \0 lines.join("\n") \0)*)`, module `review`) matches both the proposal and the
 current worktree and every hunk is named once. Otherwise `guard_blocked` and the review stays pending. Rejected hunks are
-reverse-applied; accepted hunks stay uncommitted (the commit gate remains manual). `tool-call`/`tool-result` map to `tool_call`/`tool_result`, `usage` to `status` (`cost_usd` is 0 while the provider reports no price), `model` re-announces `session_started` with the model.
+reverse-applied; accepted hunks stay uncommitted (the commit gate remains manual). Questions: with the `answer` capability the run waits for `answer` after `needs_input` (see [docs/cli/TUI-PROTOCOL.md](../../docs/cli/TUI-PROTOCOL.md)). `tool-call`/`tool-result` map to `tool_call`/`tool_result`, `usage` to `status` (`cost_usd` is 0 while the provider reports no price), `model` re-announces `session_started` with the model.
 
 ## Install
 

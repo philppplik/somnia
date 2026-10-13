@@ -10,6 +10,13 @@ rl.once("line", async (line) => {
   const { task } = JSON.parse(line);
   const p = task.prompt;
   if (p.includes("authfail")) return out({ event: "failed", message: "key rejected", code: "auth", retryable: false });
+  const answers = task.answers || [];
+  if (p.includes("askmulti") && answers.length < 2) return out({ event: "needs-input", reason: "question " + (answers.length + 1) });
+  if (p.includes("ask") && answers.length > 0) {
+    fs.mkdirSync(path.join(task.cwd, "site"), { recursive: true });
+    fs.writeFileSync(path.join(task.cwd, "site", "answer.txt"), answers.map((a) => a.question + "=" + a.answer).join("\n") + "\n");
+    return out({ event: "done", summary: "answered: " + answers.map((a) => a.answer).join(","), tokens: 1, cost: 0 });
+  }
   out({ event: "plan", text: "write notes" });
   if (p.includes("tooly")) {
     out({ event: "model", provider: "fake", model: "fake-1" });

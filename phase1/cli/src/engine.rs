@@ -11,6 +11,7 @@
 //!      | {"event":"failed","message":"..","code":"config|consent|auth|budget|scope|conflict|limit|provider|timeout|internal","retryable":bool}
 //! Unknown event names are ignored (forward compatible). Credentials are never sent over this channel; provider, model
 //! and keys come from the sidecar's own environment (SOMNIA_ENGINE_PROVIDER / _MODEL, provider key variables).
+//!   start.task.answers (optional, additive): [{"question","answer"}] when the run resumes after a `needs-input`.
 use crate::error::{CliError, ErrorKind, Result};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -34,6 +35,16 @@ pub struct EngineTask {
     pub studio: Option<String>,
     pub max_tokens: Option<u64>,
     pub max_cost: Option<f64>,
+    /// Answers the user gave to earlier `needs-input` questions of this task (oldest first). Additive: omitted when
+    /// empty, so engines that predate it see the exact same start message as before and may ignore it.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub answers: Vec<EngineAnswer>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct EngineAnswer {
+    pub question: String,
+    pub answer: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

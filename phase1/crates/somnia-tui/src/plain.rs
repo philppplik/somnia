@@ -13,7 +13,7 @@ use std::time::Duration;
 pub fn event_lines(ev: &Event) -> Vec<String> {
     let s = |x: &str| sanitize(x).replace('\n', " ");
     match ev {
-        Event::SessionStarted { task_id, prompt, branch, base_sha, model } => {
+        Event::SessionStarted { task_id, prompt, branch, base_sha, model, .. } => {
             let mut v = vec![format!("session {} started", s(task_id)), format!("task: {}", s(prompt))];
             if !branch.is_empty() { v.push(format!("branch: {}", s(branch))); }
             if !base_sha.is_empty() { v.push(format!("base: {}", s(base_sha).chars().take(8).collect::<String>())); }

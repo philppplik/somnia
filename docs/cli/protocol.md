@@ -51,6 +51,8 @@ CLI to engine, one JSON object per line:
 
 `cancel` is sent when the run is cancelled (`somnia cancel`, Ctrl-C in the TUI). The engine aborts its provider request and exits; the CLI waits about one second and then kills the process. A cancelled run ends as `cancelled` and nothing is committed.
 
+When the host resumes a run after a `needs-input` question, the task also carries `"answers":[{"question":"...","answer":"..."}]` (oldest first, at most 5; the field is omitted when there are none, so the first start message is unchanged). The answers are user text. The bundled sidecar adds them to the model prompt as quoted context (clipped to 500 / 4000 characters, also with `--bare`); they never change tool rules or scope. An engine may ignore the field. See [TUI-PROTOCOL.md](TUI-PROTOCOL.md) for how an answer reaches the host.
+
 Engine to CLI, one line per event:
 
 ```
@@ -86,6 +88,6 @@ Engine to CLI, one line per event:
 
 Protocol v1 for `somnia-tui`. stdout carries frames only, commands arrive on stdin, every frame has `"v":1`.
 
-Core events map to `status`, `text_delta`, `needs_input`, `guard_blocked` (review required) and `done`. `tool-call` and `tool-result` map to `tool_call` and `tool_result` (summaries only). `usage` maps to a `status` frame with `tokens` and `cost_usd`; an unknown cost is sent as 0 because the TUI schema has no "unknown", while `tokens` stays accurate. `model` is announced by sending `session_started` again with the model filled in. Without `--yes` the uncommitted work is offered as one `diff_proposed` per file. A `review_decision` is applied only if its `content_hash` matches both the proposal and the current worktree and every hunk is named exactly once; otherwise the answer is `guard_blocked` and the review stays pending. Rejected hunks are reverse-applied. Accepted hunks stay uncommitted.
+Core events map to `status`, `text_delta`, `needs_input` (the client may answer it, see [TUI-PROTOCOL.md](TUI-PROTOCOL.md)), `guard_blocked` (review required) and `done`. `tool-call` and `tool-result` map to `tool_call` and `tool_result` (summaries only). `usage` maps to a `status` frame with `tokens` and `cost_usd`; an unknown cost is sent as 0 because the TUI schema has no "unknown", while `tokens` stays accurate. `model` is announced by sending `session_started` again with the model filled in. Without `--yes` the uncommitted work is offered as one `diff_proposed` per file. A `review_decision` is applied only if its `content_hash` matches both the proposal and the current worktree and every hunk is named exactly once; otherwise the answer is `guard_blocked` and the review stays pending. Rejected hunks are reverse-applied. Accepted hunks stay uncommitted.
 
 Not available yet: answering `needs_input` from the TUI (the engine does not ask questions, and `task.answers` is not implemented).

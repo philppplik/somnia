@@ -271,3 +271,92 @@ fn tool_model_and_usage_events_map_to_tui_frames() {
     assert_eq!(costs, vec![(100, 0.0), (250, 0.01)]);
     let _ = s.finish();
 }
+
+fn hello_answer() -> TuiCmd { TuiCmd::Hello { capabilities: vec!["answer".into()] } }
+
+#[test]
+fn needs_input_answer_resumes_the_engine() {
+    let r = Repo::new();
+    let mut s = r.start("ask which page", &[]);
+    s.send(&hello_answer());
+    match s.next().unwrap() {
+        Event::SessionStarted { capabilities, .. } => assert!(capabilities.contains(&"answer".to_string())),
+        e => panic!("{e:?}"),
+    }
+    match s.until(|e| matches!(e, Event::NeedsInput { .. })) { Event::NeedsInput { question } => assert_eq!(question, "which page?"), _ => unreachable!() }
+    s.send(&TuiCmd::Answer { text: "the pricing page".into() });
+    // The engine ran again with the answer and wrote site/answer.txt, which now needs review.
+    let (rid, file, hash, hunks) = proposed(&mut s);
+    assert_eq!(file, "site/answer.txt");
+    assert!(hunks[0].lines.contains(&"+which page?=the pricing page".to_string()), "{hunks:?}");
+    s.send(&TuiCmd::ReviewDecision { review_id: rid, content_hash: hash, accepted_hunks: vec![hunks[0].id.clone()], rejected_hunks: vec![] });
+    match s.until(is_done) { Event::Done { status, .. } => assert_eq!(status, "done"), _ => unreachable!() }
+    let (_, code) = s.finish();
+    assert_eq!(code, 0);
+}
+
+#[test]
+fn two_questions_two_answers_in_order() {
+    let r = Repo::new();
+    let mut s = r.start("askmulti", &[]);
+    s.send(&hello_answer());
+    for (q, a) in [("question 1", "alpha"), ("question 2", "beta")] {
+        match s.until(|e| matches!(e, Event::NeedsInput { .. })) { Event::NeedsInput { question } => assert_eq!(question, q), _ => unreachable!() }
+        s.send(&TuiCmd::Answer { text: a.into() });
+    }
+    let (_, _, _, hunks) = proposed(&mut s);
+    let joined = hunks[0].lines.join("|");
+    assert!(joined.contains("question 1=alpha") && joined.contains("question 2=beta"), "{joined}");
+    s.send(&TuiCmd::Cancel);
+    s.until(is_done);
+    let _ = s.finish();
+}
+
+#[test]
+fn legacy_client_without_hello_still_ends_at_needs_input() {
+    let r = Repo::new();
+    let mut s = r.start("ask which page", &[]);
+    s.until(|e| matches!(e, Event::NeedsInput { .. }));
+    match s.until(is_done) { Event::Done { status, .. } => assert_eq!(status, "needs_input"), _ => unreachable!() }
+    let (_, code) = s.finish();
+    assert_eq!(code, 2, "a client that never said hello must not hang the run");
+}
+
+#[test]
+fn cancel_or_eof_while_waiting_ends_needs_input() {
+    let r = Repo::new();
+    let mut s = r.start("ask which page", &[]);
+    s.send(&hello_answer());
+    s.until(|e| matches!(e, Event::NeedsInput { .. }));
+    s.send(&TuiCmd::Cancel);
+    match s.until(is_done) { Event::Done { status, .. } => assert_eq!(status, "needs_input"), _ => unreachable!() }
+    assert_eq!(s.finish().1, 2);
+    let mut s = r.start("ask again", &[]);
+    s.send(&hello_answer());
+    s.until(|e| matches!(e, Event::NeedsInput { .. }));
+    s.stdin.take(); // EOF
+    s.until(is_done);
+    assert_eq!(s.finish().1, 2);
+}
+
+#[test]
+fn bad_answers_are_blocked_and_the_question_stays_open() {
+    let r = Repo::new();
+    let mut s = r.start("ask which page", &[]);
+    s.send(&hello_answer());
+    s.until(|e| matches!(e, Event::NeedsInput { .. }));
+    s.send_raw(r#"{"v":1,"type":"answer","text":"   "}"#);
+    assert!(guard_reason(s.until(|e| matches!(e, Event::GuardBlocked { .. }))).contains("malformed answer"));
+    s.send_raw(&format!(r#"{{"v":1,"type":"answer","text":"{}"}}"#, "x".repeat(9000)));
+    assert!(guard_reason(s.until(|e| matches!(e, Event::GuardBlocked { .. }))).contains("too long"));
+    s.send_raw(r#"{"v":1,"type":"answer","text":"ok","api_key":"abc"}"#);
+    assert!(guard_reason(s.until(|e| matches!(e, Event::GuardBlocked { .. }))).contains("credential"));
+    s.send(&TuiCmd::ReviewDecision { review_id: "x".into(), content_hash: "y".into(), accepted_hunks: vec![], rejected_hunks: vec![] });
+    assert!(guard_reason(s.until(|e| matches!(e, Event::GuardBlocked { .. }))).contains("no review is pending"));
+    s.send(&TuiCmd::Answer { text: "still works".into() });
+    let (_, _, _, hunks) = proposed(&mut s);
+    assert!(hunks[0].lines.join("|").contains("still works"));
+    s.send(&TuiCmd::Cancel);
+    s.until(is_done);
+    let _ = s.finish();
+}

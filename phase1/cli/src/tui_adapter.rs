@@ -5,7 +5,8 @@
 //!   status/plan/progress  -> status / text_delta
 //!   tool-call/tool-result -> tool_call / tool_result (summaries only)
 //!   usage                 -> status {cost_usd, tokens}; model -> session_started (re-announced with the model)
-//!   needs-input           -> needs_input
+//!   needs-input           -> needs_input; if the client said hello with capability "answer", the run waits for
+//!                            {"type":"answer","text":..} and resumes the engine with it (cancel/EOF ends it as before)
 //!   review-required       -> guard_blocked (+ done "needs_input")
 //!   uncommitted work (L0) -> diff_proposed per file; review_decision is verified before anything is applied
 //!   result                -> done
@@ -20,17 +21,24 @@ use crate::record::Status;
 use crate::review::{self, FileReview, Verdict};
 use crate::runner::{self, RunSpec};
 use serde_json::{json, Value};
+use std::cell::RefCell;
 use std::io::{BufRead, Write};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::{channel, Receiver};
 use std::sync::Arc;
 
 pub const TUI_PROTOCOL: u32 = 1;
+/// Upper bound for one answer (bytes).
+pub const MAX_ANSWER_BYTES: usize = 8 * 1024;
 
 #[derive(Debug)]
 pub enum Inbound {
     Decision { review_id: String, content_hash: String, accepted: Vec<String>, rejected: Vec<String> },
     Cancel,
+    /// `{"type":"hello","capabilities":[..]}`: client capability handshake (consumed by the stdin thread).
+    Hello { answer: bool },
+    /// The user's answer to a `needs_input` question.
+    Answer { text: String },
     Invalid(String),
     Eof,
 }
@@ -58,6 +66,12 @@ pub fn parse_command(line: &str) -> Option<Inbound> {
     let strs = |k: &str| -> Option<Vec<String>> { v.get(k)?.as_array()?.iter().map(|x| x.as_str().map(String::from)).collect() };
     match v.get("type").and_then(|t| t.as_str()) {
         Some("cancel") => Some(Inbound::Cancel),
+        Some("hello") => Some(Inbound::Hello { answer: strs("capabilities").map(|c| c.iter().any(|x| x == "answer")).unwrap_or(false) }),
+        Some("answer") => match v.get("text").and_then(|x| x.as_str()) {
+            Some(t) if !t.trim().is_empty() && t.len() <= MAX_ANSWER_BYTES => Some(Inbound::Answer { text: t.to_string() }),
+            Some(t) if t.len() > MAX_ANSWER_BYTES => Some(Inbound::Invalid("answer too long".into())),
+            _ => Some(Inbound::Invalid("malformed answer".into())),
+        },
         Some("review_decision") => {
             let (Some(id), Some(h), Some(a), Some(r)) = (v.get("review_id").and_then(|x| x.as_str()), v.get("content_hash").and_then(|x| x.as_str()), strs("accepted_hunks"), strs("rejected_hunks")) else {
                 return Some(Inbound::Invalid("malformed review_decision".into()));
@@ -93,7 +107,7 @@ fn map_frame<W: Write>(out: &mut Out<W>, f: &EventFrame, branch: &str, ctx: &(St
         RunEvent::Progress { text } => out.send(json!({"type":"text_delta","text":format!("{text}\n")})),
         RunEvent::NeedsInput { reason } => out.send(json!({"type":"needs_input","question":reason})),
         // The TUI has no model event: re-announce the session with the model once the engine reports it (same task, prompt and base).
-        RunEvent::Model { model, .. } => out.send(json!({"type":"session_started","task_id":f.task_id,"prompt":ctx.0,"branch":branch,"base_sha":ctx.1,"model":model})),
+        RunEvent::Model { model, .. } => out.send(json!({"type":"session_started","task_id":f.task_id,"prompt":ctx.0,"branch":branch,"base_sha":ctx.1,"model":model,"capabilities":["answer"]})),
         RunEvent::ToolCall { id, name, summary } => out.send(json!({"type":"tool_call","id":id,"name":name,"summary":summary})),
         RunEvent::ToolResult { id, status, summary } => out.send(json!({"type":"tool_result","id":id,"status":status,"summary":summary})),
         // Unknown cost (no provider price) is shown as 0 by the TUI schema; tokens stay accurate.
@@ -102,11 +116,15 @@ fn map_frame<W: Write>(out: &mut Out<W>, f: &EventFrame, branch: &str, ctx: &(St
     }
 }
 
-fn spawn_stdin<R: BufRead + Send + 'static>(input: R, cancel: Arc<AtomicBool>) -> Receiver<Inbound> {
+fn spawn_stdin<R: BufRead + Send + 'static>(input: R, cancel: Arc<AtomicBool>, answers_ok: Arc<AtomicBool>) -> Receiver<Inbound> {
     let (tx, rx) = channel();
     std::thread::spawn(move || {
         for l in input.lines().map_while(|l| l.ok()) {
             if let Some(m) = parse_command(&l) {
+                if let Inbound::Hello { answer } = m {
+                    answers_ok.store(answer, Ordering::SeqCst);
+                    continue;
+                }
                 if matches!(m, Inbound::Cancel) {
                     cancel.store(true, Ordering::SeqCst);
                 }
@@ -122,15 +140,33 @@ fn spawn_stdin<R: BufRead + Send + 'static>(input: R, cancel: Arc<AtomicBool>) -
 
 /// Returns the process exit code (0 done, 1 failed/cancelled, 2 needs-input/review-required).
 pub fn run<R: BufRead + Send + 'static, W: Write>(spec: &RunSpec, engine: &dyn TaskEngine, input: R, output: W) -> Result<i32> {
-    let mut out = Out(output);
+    let out = RefCell::new(Out(output));
     let branch = spec.branch.clone().unwrap_or_else(|| format!("somnia/task/{}", spec.task_id));
     let base = gitops::head_sha(&spec.root).unwrap_or_default();
     let cancel = runner::cancel_flag();
-    let rx = spawn_stdin(input, cancel.clone());
-    out.send(json!({"type":"session_started","task_id":spec.task_id,"prompt":spec.prompt,"branch":branch,"base_sha":base,"model":""}));
+    let answers_ok = Arc::new(AtomicBool::new(false));
+    let rx = spawn_stdin(input, cancel.clone(), answers_ok.clone());
+    out.borrow_mut().send(json!({"type":"session_started","task_id":spec.task_id,"prompt":spec.prompt,"branch":branch,"base_sha":base,"model":"","capabilities":["answer"]}));
 
     let ctx = (spec.prompt.clone(), base.clone());
-    let rec = match runner::execute(spec, engine, &cancel, &mut |f| map_frame(&mut out, f, &branch, &ctx)) {
+    // Answers are only awaited when the client announced the capability; a legacy client keeps the old behavior
+    // (needs_input ends the run) instead of hanging.
+    let mut ask = |_q: &str| -> Option<String> {
+        if !answers_ok.load(Ordering::SeqCst) {
+            return None;
+        }
+        loop {
+            match rx.recv() {
+                Ok(Inbound::Answer { text }) => return Some(text),
+                Ok(Inbound::Invalid(why)) => out.borrow_mut().guard(&why),
+                Ok(Inbound::Decision { .. }) => out.borrow_mut().guard("no review is pending; answer the question or cancel"),
+                Ok(Inbound::Cancel) | Ok(Inbound::Eof) | Ok(Inbound::Hello { .. }) | Err(_) => return None,
+            }
+        }
+    };
+    let result = runner::execute_with_answers(spec, engine, &cancel, &mut |f| map_frame(&mut out.borrow_mut(), f, &branch, &ctx), &mut ask);
+    let mut out = out.into_inner();
+    let rec = match result {
         Ok(r) => r,
         Err(e) => {
             // Nothing started (preflight blocker).
@@ -203,6 +239,7 @@ fn review_loop<W: Write>(spec: &RunSpec, task_id: &str, base: &str, branch: &str
                 }
             }
             Ok(Inbound::Invalid(why)) => out.guard(&why),
+            Ok(Inbound::Answer { .. }) | Ok(Inbound::Hello { .. }) => out.guard("no question is pending"),
             Ok(Inbound::Cancel) | Ok(Inbound::Eof) | Err(_) => {
                 let why = if cancel.load(Ordering::SeqCst) { "review cancelled" } else { "review input closed" };
                 out.done("needs_input", base, &format!("{why}; changes remain uncommitted on {branch}"));

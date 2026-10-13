@@ -65,6 +65,12 @@ pub struct App {
     pub quit: bool,
     pub protocol_error: Option<String>,
     pub spinner: usize,
+    /// The core can take an answer (it said so by sending needs_input without a final done yet).
+    pub awaiting_answer: bool,
+    /// Answer being typed.
+    pub answer: String,
+    /// Core advertised capability "answer" in session_started.
+    pub core_can_answer: bool,
 }
 
 impl App {
@@ -89,12 +95,16 @@ impl App {
             quit: false,
             protocol_error: None,
             spinner: 0,
+            awaiting_answer: false,
+            answer: String::new(),
+            core_can_answer: false,
         }
     }
 
     pub fn apply(&mut self, ev: Event) {
         match ev {
-            Event::SessionStarted { task_id, prompt, branch, base_sha, model } => {
+            Event::SessionStarted { task_id, prompt, branch, base_sha, model, capabilities } => {
+                self.core_can_answer |= capabilities.iter().any(|c| c == "answer");
                 self.task_id = sanitize(&task_id);
                 self.prompt = sanitize(&prompt);
                 self.branch = sanitize(&branch);
@@ -163,8 +173,11 @@ impl App {
             Event::NeedsInput { question } => {
                 self.question = Some(sanitize(&question));
                 self.state = RunState::NeedsInput;
+                self.awaiting_answer = true;
+                self.answer.clear();
             }
             Event::Done { status, result_sha, summary } => {
+                self.awaiting_answer = false;
                 self.result_sha = sanitize(&result_sha);
                 self.summary = sanitize(&summary);
                 self.state = match status.as_str() {
@@ -241,6 +254,44 @@ impl App {
     }
 
     pub fn on_key(&mut self, code: char, ctrl: bool, enter: bool, esc: bool, up: bool, down: bool) -> Action {
+        self.on_key_ex(code, ctrl, enter, esc, up, down, false)
+    }
+
+    /// True while the question prompt is live and typed characters belong to the answer.
+    pub fn answering(&self) -> bool {
+        self.awaiting_answer && self.core_can_answer && self.review.is_none() && !self.finished()
+    }
+
+    /// A typed printable character. Returns true when it went into the answer (the IO layer then skips `on_key`).
+    pub fn on_text(&mut self, c: char) -> bool {
+        if self.answering() && !c.is_control() && self.answer.chars().count() < 2000 {
+            self.answer.push(c);
+            return true;
+        }
+        self.answering()
+    }
+
+    pub fn on_key_ex(&mut self, code: char, ctrl: bool, enter: bool, esc: bool, up: bool, down: bool, backspace: bool) -> Action {
+        if self.answering() && !(ctrl && code == 'c') {
+            if enter {
+                let text = self.answer.trim().to_string();
+                if text.is_empty() {
+                    return Action::None;
+                }
+                self.entries.push(Entry::Notice(format!(" > {text}")));
+                self.answer.clear();
+                self.question = None;
+                self.awaiting_answer = false;
+                self.state = RunState::Running;
+                return Action::Send(Command::Answer { text });
+            }
+            if esc {
+                self.answer.clear();
+            } else if backspace {
+                self.answer.pop();
+            }
+            return Action::None;
+        }
         if ctrl && code == 'c' {
             return if self.finished() { Action::Quit } else { Action::Send(Command::Cancel) };
         }

@@ -151,3 +151,80 @@ fn binary_without_tty_prints_plain_text_only() {
     assert!(out.contains("review needed"));
     assert_eq!(o.status.code(), Some(2));
 }
+
+fn asking_app(can_answer: bool) -> App {
+    let mut app = App::new();
+    let caps: Vec<&str> = if can_answer { vec!["answer"] } else { vec![] };
+    feed(&mut app, &[
+        ev(serde_json::json!({"v":1,"type":"session_started","task_id":"t-1","prompt":"Fix the nav","branch":"somnia/task/t-1","base_sha":"8d552f36aa","model":"local","capabilities":caps})),
+        ev(serde_json::json!({"v":1,"type":"needs_input","question":"Which page should I change?"})),
+    ]);
+    app
+}
+
+#[test]
+fn answer_flow_types_edits_and_sends() {
+    let mut app = asking_app(true);
+    assert!(app.answering());
+    for c in "pricx".chars() { assert!(app.on_text(c)); }
+    assert_eq!(app.on_key_ex(' ', false, false, false, false, false, true), Action::None); // backspace
+    for c in "ing page".chars() { assert!(app.on_text(c)); }
+    check("answering", &screen(&app, 90, 18));
+    // Empty or whitespace-only answers are never sent.
+    let mut empty = asking_app(true);
+    empty.on_text(' ');
+    assert_eq!(empty.on_key_ex(' ', false, true, false, false, false, false), Action::None);
+    // Esc clears the draft, Enter sends the trimmed text and resumes the run.
+    let mut esc = asking_app(true);
+    esc.on_text('x');
+    esc.on_key_ex(' ', false, false, true, false, false, false);
+    assert_eq!(esc.answer, "");
+    match app.on_key_ex(' ', false, true, false, false, false, false) {
+        Action::Send(Command::Answer { text }) => assert_eq!(text, "pricing page"),
+        a => panic!("{a:?}"),
+    }
+    assert_eq!(app.state, RunState::Running);
+    assert!(!app.awaiting_answer && app.question.is_none());
+    assert!(matches!(app.entries.last(), Some(Entry::Notice(n)) if n.contains("pricing page")));
+}
+
+#[test]
+fn legacy_core_or_finished_run_never_enters_answer_mode() {
+    let legacy = asking_app(false);
+    assert!(!legacy.answering());
+    let mut l = legacy.clone();
+    assert!(!l.on_text('x'), "typing must not be swallowed without the capability");
+    // q still cancels like before.
+    assert_eq!(l.on_key('q', false, false, false, false, false), Action::Send(Command::Cancel));
+    let mut app = asking_app(true);
+    feed(&mut app, &[ev(serde_json::json!({"v":1,"type":"done","status":"needs_input","summary":"agent needs input"}))]);
+    assert!(!app.answering(), "done ends the question");
+    assert_eq!(app.exit_code(), 2);
+}
+
+#[test]
+fn ctrl_c_cancels_while_answering() {
+    let mut app = asking_app(true);
+    assert_eq!(app.on_key('c', true, false, false, false, false), Action::Send(Command::Cancel));
+}
+
+#[test]
+fn new_commands_encode_as_v1_ndjson() {
+    let h = encode_command(&Command::Hello { capabilities: vec!["answer".into()] });
+    assert_eq!(h, "{\"capabilities\":[\"answer\"],\"type\":\"hello\",\"v\":1}\n");
+    let a = encode_command(&Command::Answer { text: "a \"b\"\nc".into() });
+    let v: serde_json::Value = serde_json::from_str(a.trim()).unwrap();
+    assert_eq!((v["type"].as_str(), v["v"].as_u64(), v["text"].as_str()), (Some("answer"), Some(1), Some("a \"b\"\nc")));
+    assert_eq!(a.matches('\n').count(), 1, "one frame, one line");
+}
+
+#[test]
+fn reannounced_session_without_capabilities_keeps_answer_mode() {
+    let mut app = App::new();
+    feed(&mut app, &[
+        ev(serde_json::json!({"v":1,"type":"session_started","task_id":"t-1","prompt":"p","capabilities":["answer"]})),
+        ev(serde_json::json!({"v":1,"type":"session_started","task_id":"t-1","prompt":"p","model":"m"})),
+        ev(serde_json::json!({"v":1,"type":"needs_input","question":"q?"})),
+    ]);
+    assert!(app.answering());
+}

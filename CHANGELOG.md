@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- CLI/TUI: answer a `needs_input` question inside `somnia-tui` (protocol v1 additions `hello` and `answer`, `task.answers` in the engine start message; clients without the handshake behave as before). Real-pty end-to-end test.
 - somnia-tui: plain mode for pipes and CI (no raw mode, no ANSI, review left pending, exit 2), golden TestBackend screen snapshots, and a fix for a panic on very narrow terminals.
 - Headless `somnia` CLI ships as release archives for Linux and Windows x86_64 (`somnia-cli-<ver>-<os>-x86_64`) with `SHA256SUMS`. `somnia --version` reports the app release, commit and target. No macOS build.
 

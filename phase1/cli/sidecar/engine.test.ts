@@ -8,7 +8,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { WorkspaceAccess, ConflictError, ScopeError } from './workspace';
-import { composePrompt, summarizeCall } from './engineCore';
+import { composePrompt, summarizeCall, answersSection } from './engineCore';
 import type { EngineOut } from './contract';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -202,4 +202,29 @@ test('workspace: symlinks are never read, apply rejects scope escapes and stale 
 test('summaries never contain content', () => {
   assert.equal(summarizeCall({ id: '1', name: 'write_file', arguments: JSON.stringify({ path: 'a.html', content: 'SECRET'.repeat(10) }) }), 'a.html (60 chars)');
   assert.equal(composePrompt({ taskId: 't', prompt: 'p', cwd: '/nonexistent', allowedRoots: ['.'], bare: false }).prompt, 'Task:\np');
+});
+
+test('task.answers reach the model prompt (also with --bare); malformed entries are dropped and clipped', async () => {
+  const cwd = tmp();
+  reset([finalText('ok')]);
+  const r = await run(cwd, { answers: [{ question: 'Which page?', answer: 'the pricing page' }, { question: 7, answer: 'x' }, { question: 'q', answer: '   ' }, 'junk'] });
+  const msg = JSON.stringify(requests[0].messages);
+  assert.match(msg, /Which page\?/); assert.match(msg, /the pricing page/);
+  assert.ok(!msg.includes('junk'));
+  assert.equal((terminals(r)[0] as any).event, 'done');
+  reset([finalText('ok')]);
+  await run(cwd, { bare: true, answers: [{ question: 'Q', answer: 'A'.repeat(9000) }] });
+  const bare = JSON.stringify(requests[0].messages);
+  assert.match(bare, /Answer: A+/);
+  assert.ok(!bare.includes('A'.repeat(4001)), 'answer clipped to 4000 chars');
+  reset([finalText('ok')]);
+  await run(cwd, {});
+  assert.ok(!JSON.stringify(requests[0].messages).includes('asked the user'), 'no answers, no section');
+});
+
+test('composePrompt without answers is unchanged; answersSection formats quoted user text', () => {
+  assert.equal(composePrompt({ taskId: 't', prompt: 'p', cwd: '/nonexistent', allowedRoots: ['.'], bare: true, answers: [] }).prompt, 'p');
+  assert.equal(answersSection(undefined), '');
+  const s = answersSection([{ question: 'a\nb', answer: ' yes ' }]);
+  assert.match(s, /1\. Question: a b\n   Answer: yes/);
 });

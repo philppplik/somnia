@@ -1,5 +1,5 @@
 //! The run lifecycle: prepare -> run -> (optional local commit). Never pushes, never touches the network.
-use crate::engine::{EngineEvent, EngineTask, TaskEngine};
+use crate::engine::{EngineAnswer, EngineEvent, EngineTask, TaskEngine};
 use crate::error::{CliError, ErrorKind, Result};
 use crate::gitops;
 use crate::guard::{self, WorkspaceLock};
@@ -90,6 +90,16 @@ fn under(path: &str, roots: &[String]) -> bool {
 /// Runs the whole task. Errors before the record exists are returned as Err (nothing started);
 /// afterwards every outcome, including failure, is a persisted record.
 pub fn execute(spec: &RunSpec, engine: &dyn TaskEngine, cancel: &Arc<AtomicBool>, sink: &mut dyn FnMut(&EventFrame)) -> Result<SessionRecord> {
+    execute_with_answers(spec, engine, cancel, sink, &mut |_| None)
+}
+
+/// Max times one run may pause for the user's answer before it ends as `waiting-input`.
+pub const MAX_ANSWER_ROUNDS: usize = 5;
+
+/// Like `execute`, but when the engine asks a question `ask(question)` may supply the answer. The engine is then
+/// started again for the same task with the answers so far (`EngineTask::answers`). `None` ends the run as
+/// `waiting-input`, exactly like `execute`.
+pub fn execute_with_answers(spec: &RunSpec, engine: &dyn TaskEngine, cancel: &Arc<AtomicBool>, sink: &mut dyn FnMut(&EventFrame), ask: &mut dyn FnMut(&str) -> Option<String>) -> Result<SessionRecord> {
     preflight_inner(spec)?;
     let _lock = WorkspaceLock::acquire(&spec.root)?;
     let root = &spec.root;
@@ -133,43 +143,61 @@ pub fn execute(spec: &RunSpec, engine: &dyn TaskEngine, cancel: &Arc<AtomicBool>
         studio: spec.studio.clone(),
         max_tokens: spec.max_tokens,
         max_cost: spec.max_cost,
+        answers: vec![],
     };
     let mut plan: Option<String> = None;
     let mut usage = Usage::default();
     let mut producer_model: Option<(String, String)> = None;
-    let mut emit_err: Option<CliError> = None;
-    // Events are logged and forwarded live (attach/--print/TUI see them while the engine works).
-    let outcome = engine.run(&task, cancel, &mut |e| {
-        let ev = match e {
-            EngineEvent::Progress { text } => RunEvent::Progress { text: text.clone() },
-            EngineEvent::Plan { text } => {
-                plan = Some(text.clone());
-                RunEvent::Plan { text: text.clone() }
+    let mut task = task;
+    let mut rounds = 0usize;
+    let mut question_emitted = false;
+    let outcome = loop {
+        let mut emit_err: Option<CliError> = None;
+        // Events are logged and forwarded live (attach/--print/TUI see them while the engine works).
+        let outcome = engine.run(&task, cancel, &mut |e| {
+            let ev = match e {
+                EngineEvent::Progress { text } => RunEvent::Progress { text: text.clone() },
+                EngineEvent::Plan { text } => {
+                    plan = Some(text.clone());
+                    RunEvent::Plan { text: text.clone() }
+                }
+                EngineEvent::Model { provider, model } => {
+                    producer_model = Some((provider.clone(), model.clone()));
+                    RunEvent::Model { provider: provider.clone(), model: model.clone() }
+                }
+                EngineEvent::ToolCall { id, name, summary } => RunEvent::ToolCall { id: id.clone(), name: name.clone(), summary: summary.clone() },
+                EngineEvent::ToolResult { id, status, summary } => {
+                    let status = if status == "ok" { "ok" } else { "error" };
+                    RunEvent::ToolResult { id: id.clone(), status: status.into(), summary: summary.clone() }
+                }
+                EngineEvent::Usage { tokens, cost } => {
+                    usage = Usage { tokens: Some(*tokens), cost: *cost };
+                    RunEvent::Usage { tokens: *tokens, cost: *cost }
+                }
+                _ => return,
+            };
+            if emit_err.is_none() {
+                if let Err(e) = log.emit(ev, sink) {
+                    emit_err = Some(e);
+                }
             }
-            EngineEvent::Model { provider, model } => {
-                producer_model = Some((provider.clone(), model.clone()));
-                RunEvent::Model { provider: provider.clone(), model: model.clone() }
-            }
-            EngineEvent::ToolCall { id, name, summary } => RunEvent::ToolCall { id: id.clone(), name: name.clone(), summary: summary.clone() },
-            EngineEvent::ToolResult { id, status, summary } => {
-                let status = if status == "ok" { "ok" } else { "error" };
-                RunEvent::ToolResult { id: id.clone(), status: status.into(), summary: summary.clone() }
-            }
-            EngineEvent::Usage { tokens, cost } => {
-                usage = Usage { tokens: Some(*tokens), cost: *cost };
-                RunEvent::Usage { tokens: *tokens, cost: *cost }
-            }
-            _ => return,
-        };
-        if emit_err.is_none() {
-            if let Err(e) = log.emit(ev, sink) {
-                emit_err = Some(e);
+        });
+        if let Some(e) = emit_err {
+            return Err(e);
+        }
+        if let Ok(Some(EngineEvent::NeedsInput { reason })) = &outcome {
+            if rounds < MAX_ANSWER_ROUNDS {
+                log.emit(RunEvent::NeedsInput { reason: reason.clone() }, sink)?;
+                if let Some(answer) = ask(reason) {
+                    rounds += 1;
+                    task.answers.push(EngineAnswer { question: reason.clone(), answer });
+                    continue;
+                }
+                question_emitted = true;
             }
         }
-    });
-    if let Some(e) = emit_err {
-        return Err(e);
-    }
+        break outcome;
+    };
     if let Some((provider, model)) = producer_model {
         rec.producer.provider = Some(provider);
         rec.producer.model = Some(model);
@@ -189,7 +217,7 @@ pub fn execute(spec: &RunSpec, engine: &dyn TaskEngine, cancel: &Arc<AtomicBool>
             Ok(Some(EngineEvent::Failed { message, code, retryable })) => Err(engine_failure(message, code, retryable)),
             Ok(Some(EngineEvent::NeedsInput { reason })) => {
                 rec.status = Status::WaitingInput;
-                log.emit(RunEvent::NeedsInput { reason }, sink)
+                if question_emitted { Ok(()) } else { log.emit(RunEvent::NeedsInput { reason }, sink) }
             }
             Ok(Some(EngineEvent::Done { summary, tokens, cost, verification })) => {
                 // The final totals win; keep the streamed ones when the engine omits them.

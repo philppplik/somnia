@@ -29,6 +29,9 @@ pub enum Event {
         base_sha: String,
         #[serde(default)]
         model: String,
+        /// Optional core capabilities, e.g. "answer" (the core waits for `answer` after `needs_input`).
+        #[serde(default)]
+        capabilities: Vec<String>,
     },
     TextDelta { text: String },
     ToolCall {
@@ -85,6 +88,11 @@ pub enum Command {
         rejected_hunks: Vec<String>,
     },
     Cancel,
+    /// Capability handshake, sent once right after spawning the core. Additive: a core that does not know it ignores
+    /// it and keeps the old behavior (`needs_input` ends the run).
+    Hello { capabilities: Vec<String> },
+    /// The user's answer to the last `needs_input` question. Only sent after a hello with capability "answer".
+    Answer { text: String },
 }
 
 pub fn encode_command(c: &Command) -> String {
