@@ -48,7 +48,7 @@ initLocale();
 import {installDesktopAdapter} from './lib/desktopAdapter';
 import {installFileAdapter} from './lib/fileAdapter';
 import {createWebFsPort,webFsSupported} from './lib/webFsPort';
-import {registerCommand} from './lib/commands';
+import {attachKeyboardShortcuts,registerCommand} from './lib/commands';
 import {installBeforeUnload,requestClose} from './lib/closeFlow';
 import {readDraft,saveDraft,clearDraft} from './lib/draftSession';
 import {patchState,getState,subscribe} from './store/appStore';
@@ -90,6 +90,8 @@ applyUiPrefs(getState().uiPrefs);
 setNoticeSink(text=>patchState({notice:text}));
 logInfo('app','Somnia started',{desktop:isTauri()});
 startStudioRouting();
+// Shortcuts are bound at module start, not in an App effect: the effect only runs after the first commit, so a keypress right after page load (slow CPU, CI) was dropped.
+{const detachShortcuts=attachKeyboardShortcuts();if(import.meta.hot)import.meta.hot.dispose(detachShortcuts);}
 createRoot(document.getElementById('root')!).render(<StrictMode><ErrorBoundary label="Somnia" onFatal={disposeDiagnosticsSurface}><App/><McpApprovalDialog/></ErrorBoundary></StrictMode>);
 
 if(!isTauri())installBeforeUnload(()=>getState().isDirty&&getState().storage!=='disk');
