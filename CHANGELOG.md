@@ -43,6 +43,14 @@
 - Compare full release versions, including alpha/beta numbers, so beta.2 detects beta.3 and beta.3 detects beta.10 without offering equal versions or downgrades.
 - Changing the channel or automatic-check setting refreshes the pill immediately. Prerelease tags stay out of stable even if a release has the wrong GitHub flag.
 - Signed update manifests use the real artifact filenames, reject missing or ambiguous artifacts, and accept prerelease versions in the updater test harness.
+- Refresh configured models when opening a task form or saving the AI provider/model, without resetting the goal or substituting a removed selection.
+- Vibe Space now includes the saved Claude model and uses the existing Anthropic adapter; Ollama, OpenAI and OpenRouter use their matching native adapters. API keys stay in the OS credential store.
+## Unreleased - AI providers: Grok, Meta, DeepSeek
+
+- Somnia Agent can use Grok (xAI), the Meta Model API and DeepSeek as separate providers, each with its own API key and its own model list. Select them under Settings > AI and add keys under Account > Connections. They also appear in the Vibe Space Create-task model chooser.
+- They reuse the OpenAI-compatible adapter with fixed official endpoints. Keys stay in the OS credential store; the native transport only allows the exact official URLs.
+- Cloud consent covers the new providers and links their policies. Sources and limits: docs/agent/additional-providers.md.
+- New string `conn.compatNote` in all five languages.
 
 ## Unreleased - Header hero action slot
 

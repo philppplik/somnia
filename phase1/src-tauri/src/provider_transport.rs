@@ -7,6 +7,13 @@ pub fn endpoint(provider: &str, url: &str, method: &str) -> Result<(), String> {
         // Sign in with ChatGPT: fixed-host token endpoint only (code exchange and refresh). No revocation endpoint is allow-listed; logout deletes locally.
         ("openai-account", "POST") => url == "https://auth.openai.com/api/accounts/oauth/token",
         ("openai", "GET") => url == "https://api.openai.com/v1/models",
+        // xAI, Meta Model API and DeepSeek: OpenAI-compatible Chat Completions plus the model list. Fixed routes, no query strings.
+        ("xai", "POST") => url == "https://api.x.ai/v1/chat/completions",
+        ("xai", "GET") => url == "https://api.x.ai/v1/models",
+        ("meta", "POST") => url == "https://api.meta.ai/v1/chat/completions",
+        ("meta", "GET") => url == "https://api.meta.ai/v1/models",
+        ("deepseek", "POST") => url == "https://api.deepseek.com/chat/completions",
+        ("deepseek", "GET") => url == "https://api.deepseek.com/models",
         ("claude", "POST") => url == "https://api.anthropic.com/v1/messages",
         ("claude", "GET") => {
             if url == "https://api.anthropic.com/v1/models" { true }
@@ -29,6 +36,15 @@ pub fn endpoint(provider: &str, url: &str, method: &str) -> Result<(), String> {
   assert!(endpoint("claude","https://api.anthropic.com/v1/models?limit=100&after_id=model_123","GET").is_ok());
   for url in ["http://api.anthropic.com/v1/models","https://api.anthropic.com.evil/v1/models","https://user@api.anthropic.com/v1/models","https://api.anthropic.com/v1/models?other=x","https://api.anthropic.com/v1/models?limit=1&limit=2"] {assert!(endpoint("claude",url,"GET").is_err());}
   assert!(endpoint("openai","https://api.openai.com/v1/models","POST").is_err());
+  for (p,chat,models) in [("xai","https://api.x.ai/v1/chat/completions","https://api.x.ai/v1/models"),("meta","https://api.meta.ai/v1/chat/completions","https://api.meta.ai/v1/models"),("deepseek","https://api.deepseek.com/chat/completions","https://api.deepseek.com/models")] {
+   assert!(endpoint(p,chat,"POST").is_ok()); assert!(endpoint(p,models,"GET").is_ok());
+   assert!(endpoint(p,models,"POST").is_err()); assert!(endpoint(p,chat,"GET").is_err());
+   assert!(endpoint(p,&format!("{chat}?x=1"),"POST").is_err()); assert!(endpoint(p,&chat.replace("https://","http://"),"POST").is_err());
+   assert!(endpoint(p,&chat.replacen(".com",".com.evil",1).replacen(".ai",".ai.evil",1),"POST").is_err());
+  }
+  // A key slot never reaches another vendor's host.
+  assert!(endpoint("xai","https://api.deepseek.com/chat/completions","POST").is_err());
+  assert!(endpoint("deepseek","https://api.x.ai/v1/models","GET").is_err());
   assert!(endpoint("openai","https://api.openai.com/v1/responses","POST").is_ok());
   assert!(endpoint("openai","https://api.openai.com/v1/responses?x=1","POST").is_err());
   assert!(endpoint("openai-account","https://auth.openai.com/api/accounts/oauth/token","POST").is_ok());

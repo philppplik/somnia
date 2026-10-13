@@ -23,6 +23,7 @@ import {OpenAIProvider} from './openAI';
 import {accountAuth} from './accountAuth';
 import type {OpenAIAccountAuth} from './openAIAccount';
 import {ClaudeProvider} from './providers/claude';
+import {COMPAT_PROVIDERS,isCompatProvider} from './compatProviders';
 import {loadProviderKey,type AuthProvider} from './providerAuth';
 import type {CustomPrompt} from './settings';
 import {AgentSession} from './session';
@@ -90,6 +91,7 @@ export function createProvider(id:AuthProvider):AgentProvider {
   if(!isTauri())return new OpenAIProvider(options);
   return openAIByMethod(options);
  }
+ if(isCompatProvider(id))return new OpenAIProvider({...options,vendor:COMPAT_PROVIDERS[id]});
  if(id==='claude')return new ClaudeProvider(options);
  if(id==='openrouter')return new OpenRouterProvider(options);
  throw Error('Unsupported AI provider.');
