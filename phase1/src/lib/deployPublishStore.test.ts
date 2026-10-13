@@ -15,18 +15,20 @@ function world() {
   const targets = new Map<string, DeployTargetStatus>();
   const calls: string[] = []; const progress: Array<(e: DeployProgressEvent) => void> = [];
   const releases = ['20261010T100000Z-aaaaaa', '20261012T100000Z-bbbbbb'];
+  let live: string | null = null;
   let failNext: string | null = null; let hold: Promise<void> | null = null; let seenToken = '';
   const plan = (id: string, action: 'publish' | 'rollback', releaseId?: string): DeployPlan => ({ planHash: 'p'.repeat(64), action, targetId: id, fingerprint: targets.get(id)?.fingerprint ?? FP, buildId: 'b1', releaseId: releaseId ?? null, files: [{ path: 'index.html', size: 10, sha256: 'ab'.repeat(32), change: 'changed' }] });
   const boom = () => { if (failNext) { const c = failNext; failNext = null; throw Object.assign(new Error(c), { expected: true }); } };
   const be: DeployBackend = {
+    liveRelease: async () => live,
     targetsList: async () => [...targets.values()],
     targetSave: async t => { calls.push('save'); targets.set(t.id, { target: t, state: 'key-missing' }); },
     targetDelete: async (id, k) => { calls.push(`delete:${id}:${k}`); targets.delete(id); },
     plan: async id => { calls.push('plan'); boom(); return plan(id, 'publish'); },
     planRollback: async (id, r) => { calls.push('planRollback'); return plan(id, 'rollback', r); },
     confirmIssue: async () => 'tok',
-    publish: async a => { calls.push('publish'); seenToken = a.token; for (const f of progress) { f({ targetId: a.targetId, step: 'connect' }); f({ targetId: a.targetId, step: 'upload:2/4' }); } await hold; boom(); return { releaseId: '20261013T090000Z-cccccc', url: 'https://example.com', rolledBack: false }; },
-    rollback: async a => { calls.push(`rollback:${a.releaseId}`); return { releaseId: a.releaseId, rolledBack: false }; },
+    publish: async a => { calls.push('publish'); seenToken = a.token; for (const f of progress) { f({ targetId: a.targetId, step: 'connect' }); f({ targetId: a.targetId, step: 'upload:2/4' }); } await hold; boom(); live = '20261013T090000Z-cccccc'; return { releaseId: '20261013T090000Z-cccccc', url: 'https://example.com', rolledBack: false }; },
+    rollback: async a => { calls.push(`rollback:${a.releaseId}`); live = a.releaseId; return { releaseId: a.releaseId, rolledBack: false }; },
     hostkeyProbe: async () => ({ algorithm: 'ssh-ed25519', fingerprint: FP }),
     hostkeyTrust: async id => { calls.push('trust'); boom(); const s = targets.get(id)!; targets.set(id, { ...s, state: 'ready', fingerprint: FP }); },
     hostkeyReplace: async a => { calls.push(`replace:${a.oldFingerprint}`); },

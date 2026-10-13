@@ -1,4 +1,5 @@
 /** The one Publish store the app uses: wired to the command dispatcher, the Tauri backend and the progress event. */
+import { SETUP_OPEN_EVENT } from './setup';
 import { isTauri } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
 import { commandDispatcher } from '../commandDispatcher';
@@ -44,6 +45,7 @@ export function getPublishStore(): PublishStore {
     },
   });
   store.attach();
+  window.addEventListener(SETUP_OPEN_EVENT, ((e: CustomEvent<{ targetId: string }>) => { store?.showSetup(e.detail.targetId); }) as EventListener);
   subscribeStagedPlans(plan => store?.stagePlan(plan));
   return store;
 }

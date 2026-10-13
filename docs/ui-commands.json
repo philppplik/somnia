@@ -53,6 +53,41 @@
       "hasEnabled": true
     },
     {
+      "id": "deploy.cancel",
+      "title": "Cancel publish",
+      "category": "Project",
+      "source": "deploy",
+      "hasEnabled": true
+    },
+    {
+      "id": "deploy.hostkey.replace",
+      "title": "Replace server key",
+      "category": "Project",
+      "source": "deploy",
+      "hasEnabled": true
+    },
+    {
+      "id": "deploy.hostkey.trust",
+      "title": "Trust server key",
+      "category": "Project",
+      "source": "deploy",
+      "hasEnabled": true
+    },
+    {
+      "id": "deploy.key.create",
+      "title": "Create publish key",
+      "category": "Project",
+      "source": "deploy",
+      "hasEnabled": true
+    },
+    {
+      "id": "deploy.key.public",
+      "title": "Show publish public key",
+      "category": "Project",
+      "source": "deploy",
+      "hasEnabled": true
+    },
+    {
       "id": "deploy.open",
       "title": "Publish...",
       "category": "Project",
@@ -67,6 +102,60 @@
         "upload",
         "website"
       ],
+      "hasEnabled": true
+    },
+    {
+      "id": "deploy.plan",
+      "title": "Plan publish",
+      "category": "Project",
+      "source": "deploy",
+      "hasEnabled": true
+    },
+    {
+      "id": "deploy.publish",
+      "title": "Publish",
+      "category": "Project",
+      "source": "deploy",
+      "keywords": [
+        "deploy",
+        "go live",
+        "upload"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "deploy.rollback",
+      "title": "Go back to a previous version",
+      "category": "Project",
+      "source": "deploy",
+      "hasEnabled": true
+    },
+    {
+      "id": "deploy.setup.open",
+      "title": "Prepare publish server",
+      "category": "Project",
+      "source": "deploy",
+      "hasEnabled": true
+    },
+    {
+      "id": "deploy.target.delete",
+      "title": "Delete publish target",
+      "category": "Project",
+      "source": "deploy",
+      "hasEnabled": true
+    },
+    {
+      "id": "deploy.target.save",
+      "title": "Save publish target",
+      "category": "Project",
+      "source": "deploy",
+      "hasEnabled": true
+    },
+    {
+      "id": "deploy.targets.list",
+      "title": "List publish targets",
+      "category": "Project",
+      "source": "deploy",
       "hasEnabled": true
     },
     {

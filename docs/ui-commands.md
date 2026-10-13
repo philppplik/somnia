@@ -16,7 +16,7 @@ included; the `source` column names the owner. Dynamic sources that stay outside
 
 Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, fr, pt-BR); the gate enforces it.
 
-157 commands. Categories: Edit, Help, Insert, Project, Tools, View.
+169 commands. Categories: Edit, Help, Insert, Project, Tools, View.
 
 | id | title | category | source | shortcut |
 | --- | --- | --- | --- | --- |
@@ -25,7 +25,19 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `collab.join` | Join shared project... | Tools | core |  |
 | `collab.share` | Share project... | Tools | core |  |
 | `css.open` | CSS variables and classes | View | core |  |
+| `deploy.cancel` | Cancel publish | Project | deploy |  |
+| `deploy.hostkey.replace` | Replace server key | Project | deploy |  |
+| `deploy.hostkey.trust` | Trust server key | Project | deploy |  |
+| `deploy.key.create` | Create publish key | Project | deploy |  |
+| `deploy.key.public` | Show publish public key | Project | deploy |  |
 | `deploy.open` | Publish... | Project | core | `Mod+Shift+U` |
+| `deploy.plan` | Plan publish | Project | deploy |  |
+| `deploy.publish` | Publish | Project | deploy |  |
+| `deploy.rollback` | Go back to a previous version | Project | deploy |  |
+| `deploy.setup.open` | Prepare publish server | Project | deploy |  |
+| `deploy.target.delete` | Delete publish target | Project | deploy |  |
+| `deploy.target.save` | Save publish target | Project | deploy |  |
+| `deploy.targets.list` | List publish targets | Project | deploy |  |
 | `design.addRectangle` | Design: Add rectangle | Insert | design |  |
 | `design.addText` | Design: Add text layer | Insert | design |  |
 | `design.alignSelection` | Design: Align selected layers | Edit | design |  |

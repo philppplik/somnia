@@ -7,6 +7,12 @@
 - Publish reports connection, checks, verified file counts, switch and health progress. Cancellation stops before the switch, kept releases can be restored, and a failed health check restores the previous site and Caddy configuration.
 - Release history has a read-only current-release lookup. Static framework builds use the existing local output; the separate Node pipeline must be supplied before Node targets can publish.
 
+## Unreleased - first-time publish setup
+
+- Publish setup now walks through key creation, host fingerprint review, the full bootstrap script, and DNS records. A reviewed script can run over pinned SSH using a one-connection login and sudo password; passwords are not saved.
+- DNS checks compare system and DNS-over-HTTPS results, warn about stale IPv6 records and missing www, and explain pending HTTPS. Port 80/443 guidance is instructions only; Somnia does not probe or change provider firewalls.
+- Public keys can be shown again. Running publishes offer cancellation before the switch. Rollback Live badges use the remote current symlink, not session history.
+
 ## Unreleased - static build for publishing
 
 - "Build for publishing" panel for static framework projects (Vite React, Vue, Svelte, Solid, Astro, Next export, SvelteKit static adapter, Nuxt generate): builds locally, finds the output folder from package.json and framework config without running project code, lists every file with its SHA-256 and a stable build ID.

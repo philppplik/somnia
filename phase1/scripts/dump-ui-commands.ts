@@ -18,6 +18,8 @@ import { fileURLToPath } from 'node:url';
 
 import '../src/lib/commands';
 import '../src/lib/collab/commands';
+import {registerDeployCommands} from '../src/lib/deploy/register';
+import {createTauriDeployBackend} from '../src/lib/deploy/tauriBackend';
 import { listCommands } from '../src/lib/commands';
 import { CATALOGUES, t } from '../src/lib/i18n';
 import { CommandDispatcher } from '../src/lib/commandDispatcher';
@@ -96,6 +98,7 @@ export async function collect(): Promise<Entry[]> {
   await withSource('slides', () => registerSlidesCommands());
   await withSource('design', () => registerDesignCommands());
   await withSource('pdfedit', () => { for (const spec of pdfCommandSpecs(pdfStub)) registerCommandSpec(spec); });
+  await withSource('deploy', () => registerDeployCommands(createTauriDeployBackend()));
   const raster = new CommandDispatcher();
   registerRasterCommands(() => rasterStub, k => t(k), raster);
   const base = listCommands();

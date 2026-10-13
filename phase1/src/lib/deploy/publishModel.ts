@@ -9,12 +9,12 @@ export const DEPLOY_ERROR_CODES = [
   'invalid-input', 'target-not-found', 'storage', 'key-missing', 'key-exists', 'key-backend', 'host-key-unknown', 'host-key-changed',
   'host-key-already-pinned', 'host-key-mismatch', 'not-acknowledged', 'unknown-plan', 'confirmation-invalid', 'plan-changed', 'busy',
   'connect-failed', 'auth-failed', 'host-key-rejected', 'preflight-failed', 'upload-failed', 'switch-failed', 'health-failed-rolled-back',
-  'health-failed-rollback-failed', 'no-such-release', 'engine-failed',
+  'health-failed-rollback-failed', 'no-such-release', 'engine-failed', 'server-not-prepared', 'dns-not-ready', 'cancelled',
 ] as const;
 export type DeployErrorCode = typeof DEPLOY_ERROR_CODES[number];
 
 /** What the person can do next. The panel renders one button per action. */
-export type DeployErrorAction = 'retry' | 'edit' | 'showKey' | 'createKey' | 'trust' | 'replaceKey' | 'rollbackList' | 'dismiss';
+export type DeployErrorAction = 'retry' | 'edit' | 'showKey' | 'createKey' | 'trust' | 'replaceKey' | 'rollbackList' | 'dismiss' | 'setup';
 export interface DeployErrorInfo { code: DeployErrorCode | 'unknown' | 'build'; /** Offending relative path of a refused artifact (build failures only). */ path?: string; messageKey: string; actions: DeployErrorAction[]; /** Nothing went live and nothing changed on the server. */ safe: boolean }
 
 const TABLE: Record<DeployErrorCode, { actions: DeployErrorAction[]; safe: boolean }> = {
@@ -42,6 +42,9 @@ const TABLE: Record<DeployErrorCode, { actions: DeployErrorAction[]; safe: boole
   'health-failed-rolled-back': { actions: ['retry'], safe: true },
   'health-failed-rollback-failed': { actions: ['rollbackList', 'retry'], safe: false },
   'no-such-release': { actions: ['rollbackList'], safe: true },
+  'server-not-prepared': { actions: ['setup'], safe: true },
+  'dns-not-ready': { actions: ['setup'], safe: true },
+  'cancelled': { actions: ['dismiss'], safe: true },
   'engine-failed': { actions: ['retry'], safe: true },
 };
 

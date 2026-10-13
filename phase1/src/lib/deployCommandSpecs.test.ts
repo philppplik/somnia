@@ -47,7 +47,7 @@ test('specs: strict ids, expected levels, human-only set excludes agent surfaces
   const { d } = setup();
   const levels = Object.fromEntries(d.list().map(s => [s.id, s.level]));
   assert.deepEqual(levels, {
-    'deploy.targets.list': 'read', 'deploy.plan': 'propose', 'deploy.publish': 'ui', 'deploy.rollback': 'ui', 'deploy.target.save': 'ui',
+    'deploy.setup.open': 'ui', 'deploy.cancel': 'ui', 'deploy.key.public': 'ui', 'deploy.targets.list': 'read', 'deploy.plan': 'propose', 'deploy.publish': 'ui', 'deploy.rollback': 'ui', 'deploy.target.save': 'ui',
     'deploy.target.delete': 'ui', 'deploy.hostkey.trust': 'ui', 'deploy.hostkey.replace': 'ui', 'deploy.key.create': 'ui',
   });
   for (const o of ['agent', 'mcp', 'extension', 'macro', 'cli', 'control'] as const) assert.ok(!HUMAN_ORIGINS.includes(o), o);
@@ -60,6 +60,7 @@ test('agent and MCP origins: read and propose work, every state-changing command
     assert.equal(await code(d.runCommand('deploy.targets.list', {}, { origin })), 'ok');
     assert.equal(await code(d.runCommand('deploy.plan', { targetId: 's1' }, { origin })), 'ok');
     const forbidden: [string, unknown][] = [
+      ['deploy.setup.open', { targetId: 's1' }], ['deploy.cancel', { targetId: 's1' }], ['deploy.key.public', { targetId: 's1' }],
       ['deploy.publish', { targetId: 's1' }], ['deploy.rollback', { targetId: 's1', releaseId: '20261012T000000Z-aaaaaa' }],
       ['deploy.target.save', { target }], ['deploy.target.delete', { targetId: 's1' }], ['deploy.hostkey.trust', { targetId: 's1' }],
       ['deploy.hostkey.replace', { targetId: 's1', oldFingerprint: FP }], ['deploy.key.create', { targetId: 's1' }],

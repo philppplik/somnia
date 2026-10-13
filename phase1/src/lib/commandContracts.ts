@@ -99,5 +99,8 @@ export interface CommandContracts {
   deploy_key_public: Contract<{ targetId: string }, string>;
   deploy_live_release: Contract<{ targetId: string }, string | null>;
   deploy_cancel: Contract<{ targetId: string }, boolean>;
+  deploy_bootstrap_script: Contract<{ targetId: string }, string>;
+  deploy_bootstrap_run: Contract<import('./deploy/setup').DeployBootstrapInput, import('./deploy/setup').DeployBootstrapReport>;
+  deploy_dns_check: Contract<{ targetId: string }, import('./deploy/setup').DeployDnsCheck>;
   deploy_open_site: Contract<{ targetId: string }, null>;
 }

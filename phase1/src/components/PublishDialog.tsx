@@ -1,3 +1,5 @@
+import {DeploySetupWizard} from './DeploySetupWizard';
+import {mayCancel} from '../lib/deploy/setup';
 import {useEffect,useMemo,useState,useSyncExternalStore} from 'react';
 import {AlertTriangle,ArrowLeft,Check,Copy,ExternalLink,KeyRound,Loader2,Pencil,Plus,Server,ShieldCheck,Trash2,Undo2,UploadCloud,X} from 'lucide-react';
 import {Dialog,DialogContent,DialogDescription,DialogTitle} from './ui/dialog';
@@ -44,8 +46,8 @@ export function PublishDialog(){
 function PublishDialogInner(){
  const {t,locale}=useT();const {state,store}=usePublish();
  const selected=state.targets.find(s=>s.target.id===state.selectedId)??null;
- const title=state.view==='form'?t(state.editingId?'deploy.form.title.edit':'deploy.form.title.add'):state.view==='rollback'?t('deploy.rollbackView.title'):t('deploy.panel.title');
- const desc=state.view==='form'?t('deploy.form.desc'):state.view==='rollback'?t('deploy.rollbackView.desc'):t('deploy.panel.desc');
+ const title=state.view==='setup'?t('deploy.setup.title'):state.view==='form'?t(state.editingId?'deploy.form.title.edit':'deploy.form.title.add'):state.view==='rollback'?t('deploy.rollbackView.title'):t('deploy.panel.title');
+ const desc=state.view==='setup'?t('deploy.setup.desc'):state.view==='form'?t('deploy.form.desc'):state.view==='rollback'?t('deploy.rollbackView.desc'):t('deploy.panel.desc');
  return <Dialog open={state.open} onOpenChange={o=>{if(!o)store.close();}}>
   <DialogContent className="dlg-popup publish-popup" aria-label={t('deploy.panel.aria')} data-testid="publish-dialog">
    <header className="dlg-head">
@@ -53,6 +55,7 @@ function PublishDialogInner(){
     <div className="dlg-head-text"><DialogTitle>{title}</DialogTitle><DialogDescription>{desc}</DialogDescription></div>
    </header>
    <div className="dlg-body publish-body">
+    {state.view==='setup'&&selected&&<DeploySetupWizard key={selected.target.id} target={selected} store={store} t={t}/>}
     {state.view==='home'&&<Home state={state} store={store} selected={selected} t={t}/>}
     {state.view==='form'&&<ServerForm state={state} store={store} t={t}/>}
     {state.view==='rollback'&&<RollbackList state={state} store={store} selected={selected} t={t} locale={locale}/>}
@@ -66,23 +69,24 @@ function Failure({state,store,t}:{state:PublishState;store:PublishStore;t:T}){
  const f=state.failure;if(!f)return null;
  const id=f.targetId??state.selectedId;
  const act:Record<DeployErrorAction,()=>void>={
+  setup:()=>{if(id)store.showSetup(id);},
   retry:()=>{store.dismissFailure();if(id&&f.during==='publish')void store.publish(id);else if(id&&f.during==='trust')void store.trust(id);else if(f.during==='load'||f.during==='releases'){void store.refresh();if(id&&f.during==='releases')void store.showRollback(id);}},
   edit:()=>{store.showForm(id);},
-  showKey:()=>store.dismissFailure(),
+  showKey:()=>{if(id)void store.showPublicKey(id);},
   createKey:()=>{if(id)void store.createKey(id);},
   trust:()=>{if(id)void store.trust(id);},
   replaceKey:()=>{if(id)void store.replaceKey(id);},
   rollbackList:()=>{void store.showRollback(id??undefined);},
   dismiss:()=>store.dismissFailure(),
  };
- const labelKey:Record<DeployErrorAction,string>={retry:'deploy.action.retry',edit:'deploy.action.edit',showKey:'deploy.action.showKey',createKey:'deploy.action.createKey',trust:'deploy.action.trust',replaceKey:'deploy.action.replaceKey',rollbackList:'deploy.action.rollbackList',dismiss:'deploy.action.dismiss'};
+ const labelKey:Record<DeployErrorAction,string>={setup:'deploy.setup.open',retry:'deploy.action.retry',edit:'deploy.action.edit',showKey:'deploy.action.showKey',createKey:'deploy.action.createKey',trust:'deploy.action.trust',replaceKey:'deploy.action.replaceKey',rollbackList:'deploy.action.rollbackList',dismiss:'deploy.action.dismiss'};
  return <section className="publish-card publish-failure" role="alert" data-testid="publish-failure" data-code={f.code}>
   <AlertTriangle size={18} aria-hidden="true"/>
   <div className="publish-card-main"><strong>{t(f.messageKey)}</strong>
    {f.path&&<p className="publish-note" style={mono} data-testid="publish-failure-path">{f.path}</p>}
    <p>{t(f.safe?'deploy.err.safe':'deploy.err.unsafe')}</p>
    {f.actions.includes('showKey')&&id&&<KeyBlock state={state} id={id} t={t} user={state.targets.find(s=>s.target.id===id)?.target.user??'somnia'}/>}
-   <div className="publish-actions">{f.actions.filter(a=>a!=='showKey'||!id).map(a=><Button key={a} variant={a===f.actions[0]?'primary':'outline'} size="compact" onClick={act[a]}>{t(labelKey[a])}</Button>)}</div>
+   <div className="publish-actions">{f.actions.map(a=><Button key={a} variant={a===f.actions[0]?'primary':'outline'} size="compact" onClick={act[a]}>{t(labelKey[a])}</Button>)}</div>
   </div>
  </section>;
 }
@@ -131,8 +135,8 @@ function Detail({state,store,s,t,onDelete}:{state:PublishState;store:PublishStor
    <dt>{t('deploy.field.kind')}</dt><dd>{t(kindKey)}</dd>
    {s.fingerprint&&<><dt>{t('deploy.pinned')}</dt><dd style={mono} title={s.fingerprint} data-testid="publish-pinned">{shortFingerprint(s.fingerprint)}</dd></>}
   </dl>
-  <div className="publish-tools"><Button size="compact" variant="ghost" disabled={busy} onClick={()=>store.showForm(id)}><Pencil size={12}/>{t('deploy.edit')}</Button><Button size="compact" variant="ghost" disabled={busy} onClick={onDelete}><Trash2 size={12}/>{t('deploy.delete')}</Button></div>
-  {running&&state.selectedId===id?<Progress state={state} t={t} rollback={state.busy==='rollback'}/>:<>
+  <div className="publish-tools"><Button size="compact" variant="ghost" disabled={busy} onClick={()=>store.showForm(id)}><Pencil size={12}/>{t('deploy.edit')}</Button><Button size="compact" variant="ghost" disabled={busy} onClick={onDelete}><Trash2 size={12}/>{t('deploy.delete')}</Button><Button size="compact" variant="ghost" disabled={busy} onClick={()=>store.showSetup(id)}>{t('deploy.setup.open')}</Button></div>
+  {running&&state.selectedId===id?<><Progress state={state} t={t} rollback={state.busy==='rollback'}/>{state.busy==='publish'&&state.progress.seen.length>0&&mayCancel(state.progress.seen)&&<Button variant="outline" disabled={state.cancelRequested} onClick={()=>void store.cancelPublish(id)}>{t(state.cancelRequested?'deploy.setup.cancelling':'deploy.setup.cancelPublish')}</Button>}</>:<>
    {s.state==='key-missing'&&<Step icon={<KeyRound size={18}/>} title={t('deploy.step.key.title')} text={t('deploy.step.key.text')}><Button variant="primary" disabled={busy} onClick={()=>void store.createKey(id)}>{state.busy==='key'?<Loader2 size={14} className="publish-spin"/>:null}{t('deploy.step.key.button')}</Button></Step>}
    {s.state==='needs-trust'&&<Step icon={<ShieldCheck size={18}/>} title={t('deploy.step.trust.title')} text={t('deploy.step.trust.text')}>
      {state.publicKeys[id]&&<KeyBlock state={state} id={id} t={t} user={s.target.user}/>}
@@ -196,7 +200,7 @@ function ServerForm({state,store,t}:{state:PublishState;store:PublishStore;t:T})
  const errors=useMemo(()=>validateTargetForm(form),[form]);const shown=tried?errors:{};
  const set=<K extends keyof TargetForm>(k:K,v:TargetForm[K])=>setForm(f=>({...f,[k]:v}));
  const err=(k:FormField)=>shown[k]?t(shown[k]!):undefined;
- const submit=async()=>{setTried(true);if(Object.keys(errors).length)return;await store.saveTarget(form);};
+ const submit=async()=>{setTried(true);if(Object.keys(errors).length)return;const id=await store.saveTarget(form);if(id&&!editing)store.showSetup(id);};
  const kinds=[['static','deploy.kind.static','deploy.kind.static.desc'],['node','deploy.kind.node','deploy.kind.node.desc'],['upload-only','deploy.kind.upload','deploy.kind.upload.desc']] as const;
  const busy=state.busy==='save';
  return <form className="publish-form" noValidate onSubmit={e=>{e.preventDefault();void submit();}} data-testid="publish-form">

@@ -11,6 +11,7 @@
  * An agent that wants a publish calls `deploy.plan`; the plan shows up in the Publish panel through
  * subscribeStagedPlans and the human starts `deploy.publish` with a click.
  */
+import { openDeploySetup } from './setup';
 import { CommandDispatchError } from '../commandDispatcher';
 import type { CommandContext, CommandOrigin, CommandSpec } from '../commandSpec';
 import type { DeployBackend, DeployHostKeyInfo, DeployOutcome, DeployPlan, DeployTarget, DeployTargetStatus } from './contract';
@@ -48,6 +49,21 @@ export function createDeployCommandSpecs(deps: DeployCommandDeps): CommandSpec<n
   const common = { category: 'Project' as const };
 
   const specs: CommandSpec<any, any>[] = [
+    {
+      id: 'deploy.setup.open', title: 'Prepare publish server', ...common, level: 'ui',
+      params: { type: 'object', properties: { targetId: idProp }, required: ['targetId'], ...NO_EXTRA },
+      run: async (p: { targetId: string }, ctx: CommandContext) => { requireHuman(ctx, 'deploy.setup.open'); await target(p.targetId); openDeploySetup(p.targetId); return { status: 'opened' }; },
+    },
+    {
+      id: 'deploy.key.public', title: 'Show publish public key', ...common, level: 'ui',
+      params: { type: 'object', properties: { targetId: idProp }, required: ['targetId'], ...NO_EXTRA },
+      run: async (p: { targetId: string }, ctx: CommandContext) => { requireHuman(ctx, 'deploy.key.public'); if (!be().keyPublic) throw new Error('deploy:key-backend'); return { publicKey: await be().keyPublic!(p.targetId) }; },
+    },
+    {
+      id: 'deploy.cancel', title: 'Cancel publish', ...common, level: 'ui',
+      params: { type: 'object', properties: { targetId: idProp }, required: ['targetId'], ...NO_EXTRA },
+      run: async (p: { targetId: string }, ctx: CommandContext) => { requireHuman(ctx, 'deploy.cancel'); if (!be().cancel) throw new Error('deploy:engine-failed'); return { cancelled: await be().cancel!(p.targetId) }; },
+    },
     {
       id: 'deploy.targets.list', title: 'List publish targets', ...common, level: 'read', params: { type: 'object', properties: {}, ...NO_EXTRA },
       run: (): Promise<DeployTargetStatus[]> => be().targetsList(),

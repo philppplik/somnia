@@ -14,6 +14,12 @@ async function call<T>(fn: () => Promise<T>): Promise<T> {
 /** The only DeployBackend that talks to Rust. Parameters and results never carry key material. */
 export function createTauriDeployBackend(): DeployBackend {
   return {
+    keyPublic: targetId => call(() => invokeCmd('deploy_key_public', { targetId })),
+    liveRelease: targetId => call(() => invokeCmd('deploy_live_release', { targetId })),
+    cancel: targetId => call(() => invokeCmd('deploy_cancel', { targetId })),
+    bootstrapScript: targetId => call(() => invokeCmd('deploy_bootstrap_script', { targetId })),
+    bootstrapRun: input => call(() => invokeCmd('deploy_bootstrap_run', input)),
+    dnsCheck: targetId => call(() => invokeCmd('deploy_dns_check', { targetId })),
     targetsList: () => call(() => invokeCmd('deploy_targets_list')),
     targetSave: async target => { await call(() => invokeCmd('deploy_target_save', { target })); },
     targetDelete: async (targetId, deleteKey) => { await call(() => invokeCmd('deploy_target_delete', { targetId, deleteKey })); },

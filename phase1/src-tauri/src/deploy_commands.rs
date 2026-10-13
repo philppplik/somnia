@@ -146,3 +146,31 @@ pub async fn deploy_cancel(window: tauri::WebviewWindow, app: tauri::AppHandle, 
     gate(&window)?;
     blocking(&app, move |s| s.cancel(&target_id)).await
 }
+#[tauri::command]
+pub async fn deploy_bootstrap_script(window: tauri::WebviewWindow, app: tauri::AppHandle, target_id: String) -> Result<String, String> {
+    gate(&window)?;
+    let svc = service(&app)?;
+    let params = crate::deploy_setup::params(&svc, &target_id)?;
+    crate::deploy::bootstrap::render_script(&params).map_err(|_| "deploy:invalid-input".into())
+}
+/// Passwords go straight to Zeroizing on entry. This call never logs request parameters.
+#[tauri::command]
+pub async fn deploy_bootstrap_run(window: tauri::WebviewWindow, app: tauri::AppHandle, target_id: String, login_user: String, login_password: String, sudo_password: String, privilege: String) -> Result<crate::deploy_setup::BootstrapView, String> {
+    let login_password = zeroize::Zeroizing::new(login_password);
+    let sudo_password = zeroize::Zeroizing::new(sudo_password);
+    gate(&window)?;
+    let svc = service(&app)?;
+    // D2's progress callback is deliberately thread-local. Run the whole SSH setup on a
+    // dedicated runtime inside a blocking worker, not as a non-Send Tauri future.
+    tauri::async_runtime::spawn_blocking(move || {
+        let rt = tokio::runtime::Builder::new_current_thread().enable_all().build().map_err(|_| "deploy:bootstrap-failed".to_string())?;
+        rt.block_on(crate::deploy_setup::run(&svc, &target_id, login_user, login_password, sudo_password, &privilege))
+    }).await.map_err(|_| "deploy:bootstrap-failed".to_string())?
+}
+#[tauri::command]
+pub async fn deploy_dns_check(window: tauri::WebviewWindow, app: tauri::AppHandle, target_id: String) -> Result<crate::deploy_setup::DnsCheck, String> {
+    gate(&window)?;
+    let svc = service(&app)?;
+    let target = svc.targets.get(&target_id).map_err(|_| "deploy:target-not-found")?;
+    crate::deploy_setup::dns_check(&target).await
+}

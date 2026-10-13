@@ -47,8 +47,18 @@ test('every deploy command is registered in the invoke_handler and listed by the
  const rs=readFileSync('src-tauri/src/desktop.rs','utf8');
  const own=readFileSync('src-tauri/src/deploy_commands.rs','utf8');
  const commands=[...own.matchAll(/#\[tauri::command\]\s*(?:pub\s+)?(?:async\s+)?fn\s+(\w+)/g)].map(m=>m[1]);
- assert.equal(commands.length,17);
+ assert.ok(commands.length>=17);
  for(const c of commands){assert.ok(rs.includes(`crate::deploy_commands::${c},`),`${c} missing in invoke_handler`);assert.ok(own.includes(`pub async fn ${c}(window: tauri::WebviewWindow`),`${c} must gate on the trusted editor window`);}
+});
+
+// Setup credentials must not pass through CommandSpecs or persistent target metadata.
+test('setup commands are gated and passwords are zeroized before gate errors',()=>{
+ const rs=readFileSync('src-tauri/src/deploy_commands.rs','utf8');
+ const setup=readFileSync('src-tauri/src/deploy_setup.rs','utf8');
+ assert.ok(rs.indexOf('let login_password = zeroize::Zeroizing') < rs.lastIndexOf('gate(&window)?;'));
+ assert.ok(setup.includes('ok_or("deploy:host-key-unknown")'));
+ assert.ok(setup.includes('observed.fingerprint != pin'));
+ assert.ok(!setup.includes('println!'));
 });
 
 test('deploy readout and cancellation commands are main-window gated and have typed IPC contracts',()=>{

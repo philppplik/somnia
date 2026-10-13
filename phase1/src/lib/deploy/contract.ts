@@ -44,6 +44,13 @@ export interface DeployHostKeyInfo { algorithm: string; fingerprint: string }
 
 /** Everything the renderer may ask the Rust deploy service. No call takes or returns a secret. */
 export interface DeployBackend {
+  /** Additive D7 adapters. Missing support is a real error, never a simulated result. */
+  keyPublic?(targetId: string): Promise<string>;
+  liveRelease?(targetId: string): Promise<string | null>;
+  cancel?(targetId: string): Promise<boolean>;
+  bootstrapScript?(targetId: string): Promise<string>;
+  bootstrapRun?(input: import('./setup').DeployBootstrapInput): Promise<import('./setup').DeployBootstrapReport>;
+  dnsCheck?(targetId: string): Promise<import('./setup').DeployDnsCheck>;
   targetsList(): Promise<DeployTargetStatus[]>;
   targetSave(target: DeployTarget): Promise<void>;
   targetDelete(targetId: string, deleteKey: boolean): Promise<void>;

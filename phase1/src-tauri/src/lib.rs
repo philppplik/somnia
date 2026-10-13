@@ -80,3 +80,6 @@ pub mod deploy_guard;
 pub mod deploy_runtime;
 #[cfg(feature = "desktop")]
 pub mod deploy_commands;
+
+#[cfg(feature = "desktop")]
+pub mod deploy_setup;

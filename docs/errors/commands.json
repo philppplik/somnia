@@ -314,6 +314,40 @@
       ]
     },
     {
+      "name": "deploy_bootstrap_run",
+      "domain": "deploy",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "target_id",
+        "login_user",
+        "login_password",
+        "sudo_password",
+        "privilege"
+      ],
+      "args": [
+        "targetId",
+        "loginUser",
+        "loginPassword",
+        "sudoPassword",
+        "privilege"
+      ]
+    },
+    {
+      "name": "deploy_bootstrap_script",
+      "domain": "deploy",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "target_id"
+      ],
+      "args": [
+        "targetId"
+      ]
+    },
+    {
       "name": "deploy_cancel",
       "domain": "deploy",
       "status": "native",
@@ -337,6 +371,19 @@
       ],
       "args": [
         "planHash"
+      ]
+    },
+    {
+      "name": "deploy_dns_check",
+      "domain": "deploy",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "target_id"
+      ],
+      "args": [
+        "targetId"
       ]
     },
     {
