@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased - Studio tabs pill
+
+- Keep the global studio switcher visible when entering Vector or while the legacy raster editor is active.
+- Active studio tabs now use the same short names as their tooltips across all ten studios, including Sound, Slides and Vector.
+
 ## Unreleased - Slides shell panels
 
 - Slides overview and text outline now provide search, thumbnail loading, compact rows and navigation. The shared inspector adds source-bound text editing, undo/redo, copy export, presentation metrics and compatibility diagnostics.

@@ -19,7 +19,7 @@ export function StudioPill(){
   const active=s.activeStudio===studio.id;const label=t(studio.label);const shortName=studioShortName(studio.id,label);
   return <Tooltip.Root key={studio.id}>
    <Tooltip.Trigger render={<Button role="radio" aria-checked={active} aria-label={label} aria-describedby={`${tooltipPrefix}-${studio.id}`} title="" tabIndex={active?0:-1} size="compact" className="studio-pill-tab gap-1.5 rounded-[calc(var(--r-control)-4px)] px-3 focus-visible:ring-2 focus-visible:ring-accent" onClick={()=>requestStudio(studio.id)}/>}>
-    <StudioGlyph icon={studio.icon}/>{active&&<span className="text-[12px]">{label}</span>}
+    <StudioGlyph icon={studio.icon}/>{active&&<span className="text-[12px]">{shortName}</span>}
    </Tooltip.Trigger>
    <Tooltip.Portal><Tooltip.Positioner className="z-50" side="bottom" sideOffset={8}><Tooltip.Popup id={`${tooltipPrefix}-${studio.id}`} role="tooltip" className="studio-pill-tooltip">{shortName}</Tooltip.Popup></Tooltip.Positioner></Tooltip.Portal>
   </Tooltip.Root>;
