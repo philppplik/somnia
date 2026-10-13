@@ -16,7 +16,7 @@ included; the `source` column names the owner. Dynamic sources that stay outside
 
 Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, fr, pt-BR); the gate enforces it.
 
-201 commands. Categories: Edit, Help, Insert, Project, Tools, View.
+220 commands. Categories: Edit, Help, Insert, Project, Tools, View.
 
 | id | title | category | source | shortcut |
 | --- | --- | --- | --- | --- |
@@ -152,8 +152,11 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `project.saveAll` | Save all files | Project | core |  |
 | `search.project` | Search in project | View | core | `Mod+Shift+F` |
 | `settings.open` | Settings | Tools | core | `Mod+,` |
+| `sheets.analyzeRange` | Analyze spreadsheet range | Tools | sheets |  |
+| `sheets.navigate` | Go to spreadsheet cell | View | sheets |  |
 | `sheets.redo` | Redo workbook change | Edit | sheets |  |
 | `sheets.saveCopy` | Save workbook copy | Project | sheets |  |
+| `sheets.setCell` | Apply cell value or formula | Edit | sheets |  |
 | `sheets.undo` | Undo workbook change | Edit | sheets |  |
 | `shell.rail.hide` | Hide rail icon | View | core |  |
 | `shell.rail.moveDown` | Move rail icon down | View | core |  |
