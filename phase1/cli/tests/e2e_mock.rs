@@ -1,3 +1,4 @@
+#![cfg(unix)]
 //! End-to-end: `somnia run` against the mock engine in a throwaway git repo.
 //! Covers exit codes, the local-only `--yes` commit, the no-network guarantee (git spy on PATH),
 //! socket permissions and credential hygiene. See docs/cli/security.md for the review these back.
