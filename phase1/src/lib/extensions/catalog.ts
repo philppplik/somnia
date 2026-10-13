@@ -53,8 +53,8 @@ export function classifyFetchError(e:unknown):StoreUnavailableReason{
 /** Verified mark in Browse: only for entries the index explicitly marks as maintainer-reviewed. Says who reviewed, never that the code is safe. */
 export const isReviewed=(e:Pick<CatalogEntry,'reviewed'>)=>e.reviewed===true;
 export async function fetchCatalog(signal?:AbortSignal):Promise<CatalogEntry[]>{
- const {SIGNED_CATALOG_REQUIRED}=await import('./catalogTrust');
- if(SIGNED_CATALOG_REQUIRED){const {fetchVerifiedCatalog}=await import('./catalogSource');return fetchVerifiedCatalog(signal);}
+ const {CATALOG_KEYS}=await import('./catalogTrust');
+ if(CATALOG_KEYS.length>0){const {fetchVerifiedCatalog}=await import('./catalogSource');return fetchVerifiedCatalog(signal);}
  const bytes=await fetchBytes(CATALOG_URL,MAX_INDEX,signal);let json:unknown;try{json=JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(bytes));}catch{throw new Error('Extension index is not valid JSON.');}return validateCatalog(json);
 }
 export async function reviewCatalogPackage(entry:CatalogEntry,signal?:AbortSignal):Promise<ReviewedPackage>{

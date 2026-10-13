@@ -1,9 +1,10 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {webcrypto,createHash} from 'node:crypto';
+import {webcrypto,createHash,generateKeyPairSync,sign} from 'node:crypto';
 import {readFileSync} from 'node:fs';
 import {zipSync,strToU8} from 'fflate';
 import {classifyFetchError,validateCatalog,rawGithubURL,fetchCatalog,isReviewed,reviewCatalogPackage,installReviewedPackage,CATALOG_URL,type CatalogEntry} from './catalog';
+import {CATALOG_KEYS,SIGNED_INDEX_URL,SIGNED_SIG_URL} from './catalogTrust';
 import {loadExtensions,setExtensionEnabled,enabledIds} from './registry';
 import {parsePackageZip} from './packageInstall';
 const manifest={id:'acme.theme',name:'Theme',version:'1.0.0',apiVersion:1,permissions:[]};
@@ -22,10 +23,28 @@ test('index schema rejects duplicate ids, unknown permission, API mismatch, unsa
  assert.throws(()=>validateCatalog(wrap([e,e])));assert.throws(()=>validateCatalog({schemaVersion:2,extensions:[]}));
  for(const url of ['http://raw.githubusercontent.com/a/b/v/x','https://user@raw.githubusercontent.com/a/b/v/x','https://raw.githubusercontent.com.evil/a/b/v/x','https://raw.githubusercontent.com/a/b/v/x?q=1','https://raw.githubusercontent.com:8443/a/b/v/x'])assert.equal(rawGithubURL(url),false);
 });
-test('downloads are credential-free and opt-in; malformed index and HTTP errors fail',async()=>{
- const e=entry(zip(manifest));let calls=0;globalThis.fetch=async(url,init)=>{calls++;assert.equal(url,CATALOG_URL);assert.equal(init?.credentials,'omit');assert.equal(init?.redirect,'error');return new Response(JSON.stringify(wrap([e])));};
- assert.equal(calls,0);assert.equal((await fetchCatalog()).length,1);assert.equal(calls,1);
- serve(strToU8('broken'));await assert.rejects(fetchCatalog(),/valid JSON/);serve(new Uint8Array(),404);await assert.rejects(fetchCatalog(),/404/);globalThis.fetch=originalFetch;
+const {privateKey,publicKey}=generateKeyPairSync('ed25519');
+const der=publicKey.export({type:'spki',format:'der'});const testKey={keyId:'k1',publicKey:new Uint8Array(der.subarray(der.length-32))};
+const signedDoc=(entries:unknown[],o:Record<string,unknown>={})=>{const payload=JSON.stringify({schemaVersion:2,serial:1,issuedAt:new Date(Date.now()-3600_000).toISOString(),expiresAt:new Date(Date.now()+86400_000).toISOString(),keyId:'k1',extensions:entries,revoked:[],...o});return {payload,signature:sign(null,Buffer.from(payload),privateKey).toString('base64')};};
+/** Swap the pinned keys for the test key (and restore), so the signed path runs against real Ed25519 fixtures. */
+async function withKeys<T>(keys:readonly unknown[],fn:()=>Promise<T>):Promise<T>{const arr=CATALOG_KEYS as unknown as unknown[];const saved=arr.splice(0,arr.length,...keys);ls.clear();try{return await fn();}finally{arr.splice(0,arr.length,...saved);ls.clear();}}
+test('signed catalog: downloads are credential-free and opt-in; tampered, malformed and HTTP errors fail',async()=>{
+ const e=entry(zip(manifest));const doc=signedDoc([e]);let calls=0;const urls:string[]=[];
+ await withKeys([testKey],async()=>{
+  globalThis.fetch=async(url,init)=>{calls++;urls.push(String(url));assert.equal(init?.credentials,'omit');assert.equal(init?.redirect,'error');return new Response(String(url)===SIGNED_SIG_URL?doc.signature:doc.payload);};
+  assert.equal(calls,0);assert.equal((await fetchCatalog()).length,1);assert.equal(calls,2);assert.deepEqual(urls.sort(),[SIGNED_INDEX_URL,SIGNED_SIG_URL].sort());
+  ls.clear();globalThis.fetch=async url=>new Response(String(url)===SIGNED_SIG_URL?doc.signature:doc.payload.replace('Theme','Evil'));await assert.rejects(fetchCatalog(),/does not verify/);
+  ls.clear();serve(strToU8('broken'));await assert.rejects(fetchCatalog(),/does not verify/);
+  ls.clear();serve(new Uint8Array(),404);await assert.rejects(fetchCatalog(),/404/);
+ });globalThis.fetch=originalFetch;
+});
+test('legacy unsigned index is used only while no key is pinned: credential-free, opt-in, malformed and HTTP errors fail',async()=>{
+ const e=entry(zip(manifest));let calls=0;
+ await withKeys([],async()=>{
+  globalThis.fetch=async(url,init)=>{calls++;assert.equal(url,CATALOG_URL);assert.equal(init?.credentials,'omit');assert.equal(init?.redirect,'error');return new Response(JSON.stringify(wrap([e])));};
+  assert.equal(calls,0);assert.equal((await fetchCatalog()).length,1);assert.equal(calls,1);
+  serve(strToU8('broken'));await assert.rejects(fetchCatalog(),/valid JSON/);serve(new Uint8Array(),404);await assert.rejects(fetchCatalog(),/404/);
+ });globalThis.fetch=originalFetch;
 });
 test('review verifies hash and manifest identity/permissions without installing; confirmation installs off, including replacement',async()=>{
  ls.clear();const bytes=zip(manifest),e=entry(bytes);serve(bytes);const reviewed=await reviewCatalogPackage(e);assert.equal(loadExtensions().length,0);
