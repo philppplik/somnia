@@ -6,6 +6,8 @@ import {getSoundSession,updateSoundSettings,resetSoundSettings,setSoundSelection
 import type {SoundSettings} from './recipe';
 import type {SoundRegionMode} from './protocol';
 export interface SoundTransport {name:string;toggle():void;seek(seconds:number):void}
+let exportOpener:((name:string)=>void)|null=null;
+export function registerSoundExportOpener(open:(name:string)=>void){exportOpener=open;return()=>{if(exportOpener===open)exportOpener=null;};}
 let transport:SoundTransport|null=null;
 export function registerSoundTransport(next:SoundTransport){transport=next;return()=>{if(transport===next)transport=null;};}
 export const activeSoundName=()=>{const m=getMedia();return m.items.find(i=>i.name===m.active&&i.kind==='audio')?.name??null;};
@@ -32,6 +34,7 @@ export function soundCommandSpecs():CommandSpec<unknown,unknown>[] {
   add<{version:'original'|'processed'}>('sound.listen','Listen to original or edited audio','View',p=>setSoundListen(requireName(),p.version),object({version:{enum:['original','processed']}})),
   add('sound.transport.toggle','Play or pause audio','View',()=>transport!.toggle(),undefined,()=>ready()&&transport?.name===activeSoundName()),
   add<{seconds:number}>('sound.transport.seek','Seek in audio','View',p=>transport!.seek(Math.max(0,p.seconds)),object({seconds:num}),()=>ready()&&transport?.name===activeSoundName()),
+  add('sound.export.open','Review audio export','Project',()=>exportOpener!(requireName()),undefined,()=>!!exportOpener&&ready()),
   add('sound.export','Export audio WAV copy','Project',()=>saveSound(requireName()),undefined,()=>isSoundExportReady(activeSoundName())),
  ] as CommandSpec<unknown,unknown>[];
 }

@@ -2006,6 +2006,17 @@
       "hasEnabled": true
     },
     {
+      "id": "sound.export.open",
+      "title": "Export audio...",
+      "category": "Project",
+      "source": "sound",
+      "keywords": [
+        "audio",
+        "sound"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "sound.listen",
       "title": "Listen to original or edited audio",
       "category": "View",

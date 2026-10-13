@@ -111,6 +111,7 @@ export const isSoundExportReady=(name:string|null)=>!!name&&!timers.has(name)&&g
 export type SaveOutcome='saved'|'cancelled'|'downloaded'|'unavailable';
 /** Desktop: OS save dialog and an atomic write through a one-time grant. Browser: a download. Same bytes either way. */
 export async function saveSound(name:string):Promise<SaveOutcome>{
+ if(!isSoundExportReady(name))return 'unavailable';
  const out=exportSound(name);if(!out)return 'unavailable';
  const {isTauri,invoke}=await import('@tauri-apps/api/core');
  if(!isTauri())return downloadSound(name)?'downloaded':'unavailable';

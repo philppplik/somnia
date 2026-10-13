@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased - Sound export review
+
+- Sound header Export audio opens a processed-clip WAV review with pending-render gates, clip identity checks and save/download/cancel outcomes.
+
+
 ## Unreleased - Header hero action slot
 
 - The header slot next to the Account pill can now show a studio's primary action as a split button (main action plus a chevron menu) instead of Publish. Studios opt in with one data field, `header.heroAction`; studios without it keep the Publish button.
