@@ -6,7 +6,7 @@ import {DEFAULT_FORMAT,exportName,type VideoFormat} from './recipe';
 import {fullClip,isNeutralTimeline,moveClip,rippleDelete,sanitizeClips,setClipEdge,setCrossfade,splitAt,timelineDuration,type TimelineClip} from './timeline';
 import {needsSourceFile} from './titles';
 import {FilmstripController} from './filmstrip-controller';
-import {FilmstripEngine} from './filmstrip-engine';
+
 import {fileExtension,sniffVideo} from './format';
 import {openVideoDialog} from './open';
 import {getMedia,setActiveMedia,subscribeMedia,registerMediaCloseGuard} from '../media';
@@ -17,13 +17,18 @@ export interface VideoSession{name:string;status:VideoStatus;error:string;probe:
 const sessions=new Map<string,VideoSession>();
 const exports=new Map<string,AbortController>();
 let filmstrip:FilmstripController|null|undefined;
-/** One filmstrip controller per app run; null where workers are unavailable (unit tests, SSR). */
-export function getFilmstrip(){
- if(filmstrip===undefined){
-  try{filmstrip=typeof Worker==='undefined'?null:new FilmstripController(new FilmstripEngine(),{dpr:typeof window==='undefined'?1:window.devicePixelRatio});}
-  catch{filmstrip=null;}
- }
- return filmstrip;
+let filmstripLoading:Promise<FilmstripController|null>|undefined;
+/** Reading a controller never starts a worker. Activation explicitly requests it. */
+export function getFilmstrip(){return filmstrip??null;}
+export function ensureFilmstrip():Promise<FilmstripController|null>{
+ if(filmstrip!==undefined)return Promise.resolve(filmstrip);
+ filmstripLoading??=(async()=>{
+  try{if(typeof Worker==='undefined')return filmstrip=null;
+   const {FilmstripEngine}=await import('./filmstrip-engine');
+   filmstrip=new FilmstripController(new FilmstripEngine(),{dpr:typeof window==='undefined'?1:window.devicePixelRatio});
+   for(const [name,bytes]of sources)filmstrip.register(name,bytes.slice(0));emit();return filmstrip;
+  }catch{return filmstrip=null;}
+ })();return filmstripLoading;
 }
 const sources=new Map<string,ArrayBuffer>();
 const listeners=new Set<()=>void>();
@@ -69,7 +74,7 @@ async function openVideoFresh(item:{name:string;url:string}):Promise<void>{
   const sniffed=sniffVideo(new Uint8Array(bytes,0,Math.min(bytes.byteLength,512)));
   if(!sniffed)throw new Error('not a supported video file');
   sources.set(item.name,bytes);
-  getFilmstrip()?.register(item.name,bytes.slice(0));
+  const strip=await ensureFilmstrip();if(strip?.state(item.name)==='unknown')strip.register(item.name,bytes.slice(0));
   const {engine:e,caps}=await getEngine();
   const probe=await e.probe(bytes.slice(0));
   if(!sessions.has(item.name))return;
