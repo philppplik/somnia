@@ -1,6 +1,20 @@
 # Somnia documentation
 
-Start here:
+New to Somnia? Start with the [user guide](guide/README.md). It has the quickstart, one page per area, and honest status labels (Stable, Pre-release, In development).
+
+## Map
+
+| You are | Go to |
+| --- | --- |
+| A user | [User guide](guide/README.md): [Quickstart](guide/quickstart.md), [Studios](guide/studios.md), [Hero actions](guide/hero-actions.md), [Deploy](guide/deploy.md), [Frameworks](guide/frameworks.md), [Command line](guide/cli.md), [Extensions](guide/extensions.md), [Settings](guide/settings.md), [Troubleshooting](guide/troubleshooting.md) |
+| An extension author | [Extensions](extensions/README.md), [v2 index](extensions/v2/index.md) |
+| A contributor | [Architecture](ARCHITECTURE.md), [Build, CI and release](BUILD-AND-RELEASE.md), [Docs style](DOCS-STYLE.md), [Roadmap](ROADMAP.md) |
+| Looking for a design decision | [`concepts/`](concepts/), [`decisions/`](decisions/), [`phase1/notes/`](../phase1/notes/) |
+
+Change history: [Changelog](../CHANGELOG.md). Releases: <https://github.com/philppplik/somnia/releases>.
+
+## Technical reference
+
 
 - [AGENTS.md](../AGENTS.md): map for AI contributors: layout, commands, rules, release caveats. UI command layer reference: `phase1/src/lib/commandSpec.ts` (spec type) and `phase1/src/lib/commandDispatcher.ts` (dispatch), see the section "Two kinds of command" there.
 
