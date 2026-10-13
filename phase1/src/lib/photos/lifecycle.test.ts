@@ -102,6 +102,22 @@ test('pending recipes merge into the next snapshot when the file was not re-open
   assert.equal(payload.sessions[0].now.exposure, 2);
 });
 
+test('a re-open between snapshot and resume (shell preview race) still gets the recipe', async () => {
+  const item = await addPhoto('photo.png');
+  await openPhoto(item);
+  commitPhotoSettings('photo.png', (s) => ({ ...s, contrast: 10 }));
+  await wait(250);
+  const adapter = createPhotosLifecycleAdapter();
+  const snapshot = await adapter.snapshot!();
+  await adapter.suspend!();
+  await openPhoto(item); // early re-open, as the shell preview pane would do
+  const early = getPhotoSession('photo.png')!;
+  assert.equal(early.now.contrast, 10, 'recipe was already waiting for the early re-open');
+  assert.equal(early.past.length, 1);
+  await adapter.resume!(snapshot!);
+  assert.equal(getPhotoSession('photo.png')!.now.contrast, 10);
+});
+
 test('a resume with a tampered checkpoint is rejected', async () => {
   const adapter = createPhotosLifecycleAdapter();
   const snapshot = await adapter.snapshot!();

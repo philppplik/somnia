@@ -103,6 +103,22 @@ test('a different file under the same name does not inherit the recipe', async (
   assert.deepEqual(s.settings, DEFAULT_SETTINGS);
 });
 
+test('a re-open between snapshot and resume (shell preview race) still gets the recipe', async () => {
+  const item = await addSong('song.mp3');
+  await openSound(item);
+  updateSoundSettings('song.mp3', (s) => ({ ...s, reverse: true }));
+  await wait(300);
+  const adapter = createSoundLifecycleAdapter();
+  const snapshot = await adapter.snapshot!();
+  await adapter.suspend!();
+  await openSound(item); // early re-open, as the shell preview pane would do
+  const early = getSoundSession('song.mp3')!;
+  assert.equal(early.status, 'ready', early.error);
+  assert.equal(early.settings.reverse, true, 'recipe was already waiting for the early re-open');
+  await adapter.resume!(snapshot!);
+  assert.equal(getSoundSession('song.mp3')!.settings.reverse, true);
+});
+
 test('a resume with a tampered checkpoint is rejected', async () => {
   const adapter = createSoundLifecycleAdapter();
   const snapshot = await adapter.snapshot!();

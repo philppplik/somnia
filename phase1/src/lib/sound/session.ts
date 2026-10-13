@@ -180,6 +180,9 @@ export function createSoundLifecycleAdapter():StudioLifecycleAdapter{
    const open=new Set(captured.map(s=>s.name));
    for(const [name,recipe] of pendingSoundRecipes)if(!open.has(name))captured.push(recipe);
    const payload:SoundSnapshotPayload={sessions:captured};
+   // Stash immediately: a shell preview pane can re-open the file before
+   // resume() runs, and the recipe must already be waiting for that open.
+   for(const session of captured)pendingSoundRecipes.set(session.name,session);
    return{studioId:'sound',schemaVersion:SOUND_SNAPSHOT_SCHEMA,revision:++soundSnapshotRevision,capturedAt:Date.now(),bytesEstimate:soundSnapshotBytes(payload),checksum:soundSnapshotChecksum(payload),payload};
   },
   async suspend():Promise<void>{suspendSoundState();},

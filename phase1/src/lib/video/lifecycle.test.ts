@@ -84,6 +84,24 @@ test('a different file under the same name does not inherit the recipe', async (
   assert.ok(isNeutralTimeline(s.clips, 'a.webm', 2), 'stale recipe dropped');
 });
 
+test('a re-open between snapshot and resume (shell preview race) still gets the recipe', async () => {
+  const item = await addClip('a.webm');
+  await openVideo(item);
+  trimTimelineClip('a.webm', getVideoSession('a.webm')!.clips[0].id, 'in', 0.5);
+  setVideoFormat('a.webm', 'mp4');
+  const adapter = createVideoLifecycleAdapter();
+  const snapshot = await adapter.snapshot!();
+  await adapter.suspend!();
+  // The code studio's media preview re-opens the file before resume() runs.
+  await openVideo(item);
+  const early = getVideoSession('a.webm')!;
+  assert.equal(early.clips[0].in_s, 0.5, 'recipe was already waiting for the early re-open');
+  assert.equal(early.format, 'mp4');
+  await adapter.resume!(snapshot!); // late resume must not clobber the live session
+  const after = getVideoSession('a.webm')!;
+  assert.equal(after.clips[0].in_s, 0.5);
+});
+
 test('a resume with a tampered checkpoint is rejected', async () => {
   const adapter = createVideoLifecycleAdapter();
   const snapshot = await adapter.snapshot!();

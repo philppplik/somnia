@@ -217,6 +217,9 @@ export function createPhotosLifecycleAdapter():StudioLifecycleAdapter{
    const open=new Set(captured.map(s=>s.name));
    for(const [name,recipe] of pendingPhotoRecipes)if(!open.has(name))captured.push(recipe);
    const payload:PhotosSnapshotPayload={sessions:captured};
+   // Stash immediately: a shell preview pane can re-open the file before
+   // resume() runs, and the recipe must already be waiting for that open.
+   for(const session of captured)pendingPhotoRecipes.set(session.name,session);
    return{studioId:'photos',schemaVersion:PHOTOS_SNAPSHOT_SCHEMA,revision:++photosSnapshotRevision,capturedAt:Date.now(),bytesEstimate:photosSnapshotBytes(payload),checksum:photosSnapshotChecksum(payload),payload};
   },
   async suspend():Promise<void>{suspendPhotosState();},

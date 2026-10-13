@@ -246,6 +246,9 @@ export function createVideoLifecycleAdapter():StudioLifecycleAdapter{
    const open=new Set(captured.map(s=>s.name));
    for(const [name,recipe] of pendingVideoRecipes)if(!open.has(name))captured.push(recipe);
    const payload:VideoSnapshotPayload={sessions:captured};
+   // Stash immediately: a shell preview pane can re-open the file before
+   // resume() runs, and the recipe must already be waiting for that open.
+   for(const session of captured)pendingVideoRecipes.set(session.name,session);
    return{studioId:'video',schemaVersion:VIDEO_SNAPSHOT_SCHEMA,revision:++videoSnapshotRevision,capturedAt:Date.now(),bytesEstimate:videoSnapshotBytes(payload),checksum:videoSnapshotChecksum(payload),payload};
   },
   async suspend():Promise<void>{suspendVideoState();},
