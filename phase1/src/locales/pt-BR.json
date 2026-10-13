@@ -2712,5 +2712,6 @@
   "frameworks.detected": "App {framework} detectado",
   "frameworks.openPreview": "Abrir prévia",
   "frameworks.previewWindow": "Seu app roda em uma janela de prévia separada.",
-  "frameworks.desktopPreview": "Abra o projeto no app para computador para iniciar a prévia."
+  "frameworks.desktopPreview": "Abra o projeto no app para computador para iniciar a prévia.",
+  "frameworks.helperCancelled": "Download cancelado. Seu projeto está salvo e você pode continuar editando."
 }

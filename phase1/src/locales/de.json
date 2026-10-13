@@ -2712,5 +2712,6 @@
   "frameworks.detected": "{framework}-App erkannt",
   "frameworks.openPreview": "Vorschau öffnen",
   "frameworks.previewWindow": "Deine App läuft in einem eigenen Vorschaufenster.",
-  "frameworks.desktopPreview": "Öffne dieses Projekt in der Desktop-App, um die Vorschau zu starten."
+  "frameworks.desktopPreview": "Öffne dieses Projekt in der Desktop-App, um die Vorschau zu starten.",
+  "frameworks.helperCancelled": "Helper-Download abgebrochen. Dein Projekt ist gespeichert und bleibt bearbeitbar."
 }

@@ -2712,5 +2712,6 @@
   "frameworks.detected": "App {framework} detectada",
   "frameworks.openPreview": "Abrir vista previa",
   "frameworks.previewWindow": "Tu app se ejecuta en una ventana de vista previa separada.",
-  "frameworks.desktopPreview": "Abre el proyecto en la app de escritorio para iniciar la vista previa."
+  "frameworks.desktopPreview": "Abre el proyecto en la app de escritorio para iniciar la vista previa.",
+  "frameworks.helperCancelled": "Descarga cancelada. Tu proyecto está guardado y puedes seguir editando."
 }

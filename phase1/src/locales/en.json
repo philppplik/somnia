@@ -2712,5 +2712,6 @@
   "frameworks.detected": "{framework} app detected",
   "frameworks.openPreview": "Open preview",
   "frameworks.previewWindow": "Your app runs in a separate preview window.",
-  "frameworks.desktopPreview": "Open this project in the desktop app to run its preview."
+  "frameworks.desktopPreview": "Open this project in the desktop app to run its preview.",
+  "frameworks.helperCancelled": "Helper download cancelled. Your project is saved and you can keep editing."
 }
