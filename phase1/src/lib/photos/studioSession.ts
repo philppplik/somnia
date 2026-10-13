@@ -1,6 +1,7 @@
+import {jobScheduler} from '../jobs/scheduler';
 import {reportError} from '../log';
 import {useSyncExternalStore} from 'react';
-import {PhotosEngine,type PhotosResponse} from './engine';
+import type {PhotosResponse} from './engine';
 import {getMedia,registerMediaCloseCleanup,registerMediaCloseGuard,subscribeMedia} from '../media';
 import {defaultImageHost,editedName} from '../imageEditorHost';
 import {t} from '../i18n';
@@ -26,7 +27,8 @@ export interface PhotoEngineLike {
 }
 const HISTORY_LIMIT=50;
 const DEBOUNCE_MS=150;
-let factory:()=>PhotoEngineLike=()=>new PhotosEngine();
+let factory:()=>PhotoEngineLike|Promise<PhotoEngineLike>=async()=>new (await import('./engine')).PhotosEngine();
+let initializing:Promise<void>|undefined;
 let engine:PhotoEngineLike|undefined;
 const sessions=new Map<string,PhotoSession>();
 const sources=new Map<string,ArrayBuffer>();
@@ -45,7 +47,7 @@ export function usePhotoSession(name:string|null|undefined){return useSyncExtern
 export const dirtyPhoto=(s:PhotoSession)=>photoSignature(s.now)!==s.saved;
 /** Tests replace the engine; production uses the WASM worker. Drops all sessions. */
 export function setPhotoEngineFactory(f:()=>PhotoEngineLike){for(const n of [...sessions.keys()])closePhoto(n);engine?.dispose();engine=undefined;factory=f;}
-function getEngine(){if(!engine)engine=factory();return engine;}
+async function getEngine(){if(!engine){initializing??=(async()=>{engine=await factory();})().finally(()=>{initializing=undefined;});await initializing;}return engine!;}
 const resetEngine=(error:unknown)=>{if(/disposed|timed out|worker failed/i.test(String(error))){engine?.dispose();engine=undefined;}};
 const message=(e:unknown)=>(e instanceof Error?e.message:String(e)).replace(/^Error:\s*/,'');
 const frameOf=(r:PhotosResponse):PhotoFrame=>{if(!r.bytes||!r.width||!r.height)throw Error('The engine returned an empty render.');return{bytes:r.bytes,width:r.width,height:r.height};};
@@ -62,13 +64,14 @@ export async function openPhoto(item:{name:string;url:string;mime:string}):Promi
   const bytes=await fetch(item.url).then(r=>r.arrayBuffer());
   if(bytes.byteLength===0||bytes.byteLength>PHOTO_INPUT.maxBytes)throw Error(t('photos.error.size',{max:PHOTO_INPUT.maxBytes/1_000_000}));
   sources.set(item.name,bytes);
-  const e=getEngine();
-  const loaded=await e.load(bytes.slice(0));
-  if(!sessions.has(item.name))return;
-  const original=frameOf(await e.renderPhoto(neutralPhotoSettings));
-  const session=sessions.get(item.name);if(!session)return;
-  const current=frameOf(await e.renderPhoto(effective(session)));
-  if(!sessions.has(item.name))return;
+  const result=await jobScheduler.run({kind:'activation',priority:1,documentId:item.name,exclusive:['photos.engine']},async()=>{
+   const e=await getEngine();const loaded=await e.load(bytes.slice(0));
+   const original=frameOf(await e.renderPhoto(neutralPhotoSettings));
+   const session=sessions.get(item.name);if(!session)return null;
+   const current=frameOf(await e.renderPhoto(effective(session)));return {loaded,original,current};
+  });
+  if(!result||!sessions.has(item.name))return;
+  const {loaded,original,current}=result;
   patch(item.name,{status:'ready',error:'',sourceWidth:loaded.width??0,sourceHeight:loaded.height??0,original,frame:current});
  }catch(e){resetEngine(e);sources.delete(item.name);if(sessions.has(item.name))patch(item.name,{status:'error',error:message(e)},e);}
 }
@@ -77,8 +80,8 @@ async function render(name:string){
  const s=sessions.get(name);if(!s||!sources.has(name)||s.status==='error')return;
  const run=(runs.get(name)??0)+1;runs.set(name,run);patch(name,{status:'processing',error:''});
  try{
-  const e=getEngine();
-  const r=frameOf(await e.renderPhoto(effective(s)));
+  const source=sources.get(name);if(!source)return;const settings=structuredClone(effective(s));
+  const r=await jobScheduler.run({kind:'activation',priority:1,documentId:name,exclusive:['photos.engine']},async()=>{const e=await getEngine();await e.load(source.slice(0));return frameOf(await e.renderPhoto(settings));});
   if(runs.get(name)!==run||!sessions.has(name))return;
   patch(name,{status:'ready',error:'',frame:r});
  }catch(e){resetEngine(e);if(runs.get(name)===run&&sessions.has(name))patch(name,{status:'error',error:message(e)},e);}
@@ -139,8 +142,8 @@ export interface PhotoSaveHost {save(blob:Blob,suggestedName:string):Promise<boo
 /** Exports the developed copy at the engine's bounded source resolution. The original is never overwritten. */
 export async function exportPhotoCopy(name:string,format:'png'|'jpeg',injectedHost?:PhotoSaveHost):Promise<PhotoSaveOutcome>{
  const s=sessions.get(name);if(!s||s.status==='error'||!sources.has(name))throw Error(t('photos.error.notReady'));
- const snapshot=s.now;
- const r=await getEngine().exportPhoto(snapshot,format);
+ const snapshot=structuredClone(s.now),source=sources.get(name)!;
+ const r=await jobScheduler.run({kind:'export',priority:2,documentId:name,resources:['photos.engine'],exclusive:['photos.engine']},async()=>{const e=await getEngine();await e.load(source.slice(0));return e.exportPhoto(snapshot,format);});
  if(!r.bytes)throw Error('Export returned no bytes.');
  const host=injectedHost??await defaultImageHost();
  const ok=await host.save(new Blob([r.bytes],{type:format==='png'?'image/png':'image/jpeg'}),editedName(name,format==='png'?'png':'jpg'));

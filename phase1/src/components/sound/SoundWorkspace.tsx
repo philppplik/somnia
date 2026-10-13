@@ -1,10 +1,11 @@
+import {getSoundPlayback,subscribeSoundPlayback,toggleSoundPlayback,seekSound} from '../../lib/sound/transport';
 import type {ContextStore} from '../../lib/shell/contextStore';
 import {studioContextStore} from '../../lib/shell/studioContext';
 import {registerSoundCommands,registerSoundTransport} from '../../lib/sound/commands';
 import {executeCommand} from '../../lib/commands';
 import {commandDispatcher} from '../../lib/commandDispatcher';
 import {reportError} from '../../lib/log';
-import {useCallback,useEffect,useRef,useState} from 'react';
+import {useCallback,useEffect,useRef,useState,useSyncExternalStore} from 'react';
 import {Pause,Play,Download} from '../../lib/icons';
 import {Button} from '../ui/button';
 import {useT} from '../../lib/useT';
@@ -20,20 +21,13 @@ const fmt=(s:number)=>`${Math.floor(s/60)}:${String(Math.floor(s%60)).padStart(2
 /** Waveform, A/B listening, transport and export for one opened audio file. `withPanel` adds the settings when the Sound inspector is not on screen. */
 export function SoundWorkspace({item,withPanel=false}:{item:MediaItem;withPanel?:boolean}){
  const {t}=useT();const studio=useAppStore().activeStudio;const session=useSoundSession(item.name);
- const audio=useRef<HTMLAudioElement>(null);const [time,setTime]=useState(0),[playing,setPlaying]=useState(false);
+ const {time,playing}=useSyncExternalStore(subscribeSoundPlayback,()=>getSoundPlayback(item.name),()=>getSoundPlayback(item.name));
  useEffect(()=>{void openSound(item);},[item]);
  const shown=session?.listen==='original'?session.original:session?.processed??null;
- const url=shown?.url;
- // Switching version or re-rendering keeps position and play state.
- useEffect(()=>{
-  const el=audio.current;if(!el||!url)return;const at=el.currentTime,was=!el.paused;
-  el.src=url;el.load();const onMeta=()=>{el.currentTime=Math.min(at,el.duration||at);if(was)void el.play().catch(()=>{});};
-  el.addEventListener('loadedmetadata',onMeta,{once:true});return()=>el.removeEventListener('loadedmetadata',onMeta);
- },[url]);
  const [note,setNote]=useState('');
  const doSave=async()=>{setNote('');try{const r=await commandDispatcher.runCommand('sound.export');if(r==='saved')setNote(t('sound.saved'));else if(r==='downloaded')setNote(t('sound.downloaded'));}catch(e){reportError('sound.operation',e,{context:{studio:'sound'}});setNote(t('sound.saveFailed',{message:e instanceof Error?e.message:String(e)}));}};
- const toggle=useCallback(()=>{const el=audio.current;if(!el||!el.src)return;if(el.paused)void el.play().catch(()=>{});else el.pause();},[]);
- const seek=useCallback((s:number)=>{const el=audio.current;if(!el)return;el.currentTime=Math.min(s,el.duration||s);setTime(el.currentTime);},[]);
+ const toggle=useCallback(()=>{void toggleSoundPlayback(item.name).catch(e=>reportError('sound.playback',e));},[item.name]);
+ const seek=useCallback((seconds:number)=>seekSound(item.name,seconds),[item.name]);
  const duration=shown?.report.output.duration_s??0;
  useEffect(()=>registerSoundCommands(),[]);
  useEffect(()=>registerSoundTransport({name:item.name,toggle,seek}),[item.name,toggle,seek]);
@@ -41,7 +35,7 @@ export function SoundWorkspace({item,withPanel=false}:{item:MediaItem;withPanel?
  useEffect(()=>{if(studio!=='sound')return;const owner=studioContextStore.claim('sound',{id:item.name,kind:'audio',dirty:false,readOnly:false});contextOwner.current=owner;return()=>{owner.release();if(contextOwner.current===owner)contextOwner.current=null;};},[studio,item.name]);
  useEffect(()=>{const selection=session?.selection;contextOwner.current?.report({document:{id:item.name,kind:'audio',dirty:!!session&&!isNeutral(session.settings),readOnly:false},selection:selection?{kind:'one',type:'audio-region',count:1,ids:[item.name+':region']}:{kind:'none',count:0,ids:[]},busy:session?.status==='loading'||session?.status==='processing',services:{ready:!!session?.original},data:{name:item.name,start:selection?.start??null,end:selection?.end??null,status:session?.status??'loading'}});},[studio,item.name,session]);
  const onKey=(e:React.KeyboardEvent)=>{
-  const el=audio.current;if(!el)return;const step=e.shiftKey?5:1;
+  const el={currentTime:time};const step=e.shiftKey?5:1;
   if(e.key===' '){e.preventDefault();void executeCommand('sound.transport.toggle');}
   else if(e.key==='ArrowRight'){e.preventDefault();seek(el.currentTime+step);}
   else if(e.key==='ArrowLeft'){e.preventDefault();seek(Math.max(0,el.currentTime-step));}
@@ -80,6 +74,5 @@ export function SoundWorkspace({item,withPanel=false}:{item:MediaItem;withPanel?
    </div>
    {withPanel&&<aside className="w-[260px] shrink-0 overflow-auto border-l border-subtle" aria-label={t('sound.panel')}><SoundControls name={item.name}/></aside>}
   </div>
-  <audio ref={audio} preload="auto" className="hidden" onTimeUpdate={e=>setTime(e.currentTarget.currentTime)} onPlay={()=>setPlaying(true)} onPause={()=>setPlaying(false)} onEnded={()=>{setPlaying(false);setTime(0);}}/>
  </section>;
 }

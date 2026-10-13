@@ -1,6 +1,7 @@
+import {jobScheduler} from '../jobs/scheduler';
 import {reportError} from '../log';
 import {useSyncExternalStore} from 'react';
-import {VideoEngine,type VideoEngineLike} from './engine';
+import type {VideoEngineLike} from './engine';
 import {DEFAULT_FORMAT,exportName,type VideoFormat} from './recipe';
 import {fullClip,isNeutralTimeline,moveClip,rippleDelete,sanitizeClips,setClipEdge,setCrossfade,splitAt,timelineDuration,type TimelineClip} from './timeline';
 import {needsSourceFile} from './titles';
@@ -8,12 +9,13 @@ import {FilmstripController} from './filmstrip-controller';
 import {FilmstripEngine} from './filmstrip-engine';
 import {fileExtension,sniffVideo} from './format';
 import {openVideoDialog} from './open';
-import {getMedia,setActiveMedia,subscribeMedia} from '../media';
+import {getMedia,setActiveMedia,subscribeMedia,registerMediaCloseGuard} from '../media';
 import type {VideoCapabilities,VideoProbe,VideoProgress,VideoReport} from './protocol';
 export type VideoStatus='loading'|'ready'|'error'|'exporting';
 export interface VideoResult{blob:Blob;url:string;report:VideoReport}
 export interface VideoSession{name:string;status:VideoStatus;error:string;probe:VideoProbe|null;capabilities:VideoCapabilities|null;clips:TimelineClip[];selectedClipId:string|null;format:VideoFormat;progress:VideoProgress|null;result:VideoResult|null;ext:string}
 const sessions=new Map<string,VideoSession>();
+const exports=new Map<string,AbortController>();
 let filmstrip:FilmstripController|null|undefined;
 /** One filmstrip controller per app run; null where workers are unavailable (unit tests, SSR). */
 export function getFilmstrip(){
@@ -26,16 +28,17 @@ export function getFilmstrip(){
 const sources=new Map<string,ArrayBuffer>();
 const listeners=new Set<()=>void>();
 let stopMediaSync:(()=>void)|undefined;
-let factory:()=>VideoEngineLike=()=>new VideoEngine();
+let factory:()=>VideoEngineLike|Promise<VideoEngineLike>=async()=>new (await import('./engine')).VideoEngine();
+let initializing:Promise<void>|undefined;
 let engine:VideoEngineLike|undefined,capsPromise:Promise<VideoCapabilities>|undefined;
 const emit=()=>listeners.forEach(l=>l());
 const put=(s:VideoSession)=>{sessions.set(s.name,s);emit();};
 const patch=(name:string,p:Partial<VideoSession>,cause?:unknown)=>{if(p.error)reportError('video.engine',cause??p.error,{context:{studio:'video',file:name}});const s=sessions.get(name);if(s)put({...s,...p});};
 /** Tests replace the engine; production uses the mediabunny/WebCodecs worker. Drops all sessions. */
 export function setVideoEngineFactory(f:()=>VideoEngineLike){for(const n of [...sessions.keys()])closeVideo(n);engine?.dispose();engine=undefined;capsPromise=undefined;factory=f;}
-function getEngine(){
- if(!engine){const e=factory();engine=e;capsPromise=e.capabilities();capsPromise.catch(()=>{if(engine===e){e.dispose();engine=undefined;capsPromise=undefined;}});}
- return{engine,caps:capsPromise!};
+async function getEngine(){
+ if(!engine){initializing??=(async()=>{const e=await factory();engine=e;capsPromise=e.capabilities();capsPromise.catch(()=>{if(engine===e){e.dispose();engine=undefined;capsPromise=undefined;}});})().finally(()=>{initializing=undefined;});await initializing;}
+ return{engine:engine!,caps:capsPromise!};
 }
 const resetEngine=(error:unknown)=>{if(/disposed|timed out|worker failed|could not be decoded/i.test(String(error))){engine?.dispose();engine=undefined;capsPromise=undefined;}};
 const message=(e:unknown)=>(e instanceof Error?e.message:String(e)).replace(/^Error:\s*/,'');
@@ -67,7 +70,7 @@ async function openVideoFresh(item:{name:string;url:string}):Promise<void>{
   if(!sniffed)throw new Error('not a supported video file');
   sources.set(item.name,bytes);
   getFilmstrip()?.register(item.name,bytes.slice(0));
-  const {engine:e,caps}=getEngine();
+  const {engine:e,caps}=await getEngine();
   const probe=await e.probe(bytes.slice(0));
   if(!sessions.has(item.name))return;
   if(!probe.video)throw new Error('no video track');
@@ -126,25 +129,28 @@ export const setVideoFormat=(root:string,format:VideoFormat)=>patch(root,{format
 export async function runVideoExport(name:string):Promise<'exported'|'cancelled'|'unavailable'>{
  const s=sessions.get(name);
  if(!s||s.status!=='ready'||!s.clips.length)return'unavailable';
- const clipSources:Record<string,ArrayBuffer>={};
- for(const n of new Set(s.clips.filter(needsSourceFile).map(c=>c.source))){
-  const bytes=sources.get(n);
-  if(!bytes){patch(name,{status:'error',error:`Clip source "${n}" is no longer open. Re-open the file to export this timeline.`});return'unavailable';}
-  clipSources[n]=bytes.slice(0);
+ const clips=structuredClone(s.clips),format=s.format;
+ const input:Record<string,ArrayBuffer>={};
+ for(const n of new Set(clips.filter(needsSourceFile).map(c=>c.source))){
+  const bytes=sources.get(n);if(!bytes){patch(name,{status:'error',error:`Clip source is no longer open: ${n}`});return'unavailable';}input[n]=bytes;
  }
+ const controller=new AbortController();exports.set(name,controller);
  revoke(s.result);put({...s,status:'exporting',error:'',progress:null,result:null});
  try{
-  const{engine:e}=getEngine();
-  const r=await e.export(clipSources,s.clips,s.format,p=>{if(sessions.get(name)?.status==='exporting')patch(name,{progress:p});});
+  const r=await jobScheduler.run({kind:'export',priority:2,documentId:name,resources:['video.engine',...Object.keys(input).map(n=>'video.source:'+n)],exclusive:['video.export'],estimatedBytes:Object.values(input).reduce((sum,b)=>sum+b.byteLength,0),signal:controller.signal},async lease=>{
+   const {engine:e}=await getEngine();const cancel=()=>e.cancelExport();lease.signal.addEventListener('abort',cancel,{once:true});
+   try{lease.signal.throwIfAborted();return await e.export(Object.fromEntries(Object.entries(input).map(([n,b])=>[n,b.slice(0)])),clips,format,p=>{lease.progress(p.ratio);if(sessions.get(name)?.status==='exporting')patch(name,{progress:p});});}
+   finally{lease.signal.removeEventListener('abort',cancel);}
+  });
   const cur=sessions.get(name);if(!cur)return'unavailable';
   const blob=new Blob([r.bytes],{type:r.mime});
   put({...cur,status:'ready',progress:null,result:{blob,url:URL.createObjectURL(blob),report:r.report}});
   return'exported';
  }catch(e){
-  if(e instanceof Error&&e.name==='ExportCancelled'){patch(name,{status:'ready',progress:null});return'cancelled';}
+  if(controller.signal.aborted||e instanceof Error&&e.name==='ExportCancelled'){patch(name,{status:'ready',progress:null});return'cancelled';}
   resetEngine(e);if(sessions.has(name))patch(name,{status:'error',error:message(e),progress:null},e);
   return'unavailable';
- }
+ }finally{if(exports.get(name)===controller)exports.delete(name);}
 }
 /** The rendered file for download, or null while nothing has been exported. */
 export function exportVideo(name:string):{blob:Blob;fileName:string}|null{
@@ -162,7 +168,7 @@ export async function exportVideoFile(name:string):Promise<'downloaded'|'cancell
  if(r!=='exported')return r;
  return downloadVideo(name)?'downloaded':'unavailable';
 }
-export function cancelVideoExport(name:string){if(sessions.get(name)?.status==='exporting')engine?.cancelExport();}
+export function cancelVideoExport(name:string){if(sessions.get(name)?.status==='exporting')exports.get(name)?.abort();}
 export function closeVideo(name:string){
  sources.delete(name);
  getFilmstrip()?.unregister(name);
@@ -170,3 +176,6 @@ export function closeVideo(name:string){
 }
 export const videoIsEdited=(s:VideoSession|null)=>!!s&&!isNeutralTimeline(s.clips,s.name,s.probe?.duration??0);
 export const videoTimelineDuration=(s:VideoSession|null)=>s?timelineDuration(s.clips):0;
+
+// Closing a view is safe; closing an exporting document requires cancelling its job first.
+registerMediaCloseGuard(name=>!exports.has(name)&&!jobScheduler.needsResource('video.source:'+name));
