@@ -11,6 +11,7 @@ import {getStudio,hasStudio} from './lib/studios';
 import {installStudioLifecycle,getStudioLifecycle} from './lib/lifecycle/integration';
 import {jobScheduler} from './lib/jobs/scheduler';
 import {wireJobLeases} from './lib/jobs/lifecycleBridge';
+import {suspendIdleExtensions} from './lib/extensions/host';
 import './lib/studios/openIntake';
 import { connectEditorProject, applyOperations } from './store/appStore';
 import './styles/global.css';
@@ -97,7 +98,7 @@ logInfo('app','Somnia started',{desktop:isTauri()});
 startStudioRouting();
 // Studio lifecycle (docs/studio-lifecycle.md): drives active/warm/suspended transitions
 // from the store's activeStudio. Job-lease providers register on getStudioLifecycle().
-{const disposeLifecycle=installStudioLifecycle({subscribe,getActiveStudio:()=>getState().activeStudio,resolveAdapter:id=>{try{return hasStudio(id)?getStudio(id).lifecycle?.():undefined;}catch{return undefined;}},onProblem:message=>reportError('lifecycle',message),onPressure:level=>jobScheduler.setPressure(level)});const manager=getStudioLifecycle();const unlease=manager?wireJobLeases(manager):()=>{};if(import.meta.hot)import.meta.hot.dispose(()=>{unlease();disposeLifecycle();jobScheduler.setPressure('normal');});}
+{const disposeLifecycle=installStudioLifecycle({subscribe,getActiveStudio:()=>getState().activeStudio,resolveAdapter:id=>{try{return hasStudio(id)?getStudio(id).lifecycle?.():undefined;}catch{return undefined;}},onProblem:message=>reportError('lifecycle',message),onPressure:level=>{jobScheduler.setPressure(level);if(level!=='normal')void suspendIdleExtensions().then(n=>{if(n)logInfo('lifecycle',`Suspended ${n} idle extension(s) under memory pressure.`);}).catch(()=>{});}});const manager=getStudioLifecycle();const unlease=manager?wireJobLeases(manager):()=>{};if(import.meta.hot)import.meta.hot.dispose(()=>{unlease();disposeLifecycle();jobScheduler.setPressure('normal');});}
 // Shortcuts are bound at module start, not in an App effect: the effect only runs after the first commit, so a keypress right after page load (slow CPU, CI) was dropped.
 {const detachShortcuts=attachKeyboardShortcuts();if(import.meta.hot)import.meta.hot.dispose(detachShortcuts);}
 createRoot(document.getElementById('root')!).render(<StrictMode><ErrorBoundary label="Somnia" onFatal={disposeDiagnosticsSurface}><App/><McpApprovalDialog/></ErrorBoundary></StrictMode>);
