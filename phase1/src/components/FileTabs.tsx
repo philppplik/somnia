@@ -1,6 +1,7 @@
 import {slidesIsDirty,useSlidesSession} from '../lib/slides/session';
 import {pdfIsDirty,usePdfEpoch} from '../lib/pdfedit/session';
 import {useEffect,useRef,useState} from 'react';
+import {handleRovingKeyDown,isContextMenuKey} from '../lib/rovingKeys';
 import {X} from '../lib/icons';
 import {closeFileTab,openFileTab,useAppStore} from '../store/appStore';
 import {cn} from '../lib/cn';
@@ -12,23 +13,25 @@ import {studioForMedia} from '../lib/studios/studioRouting';
 /** Browser-style tabs for open source files. Middle click or the x closes, right click opens a small tab menu. */
 export function FileTabs(){useSlidesSession();usePdfEpoch();const {t}=useT();
  const s=useAppStore(),media=useMedia(),[menu,setMenu]=useState<{file:string;x:number;y:number}|null>(null),ref=useRef<HTMLDivElement>(null);
- useEffect(()=>{if(!menu)return;const down=(e:PointerEvent)=>{if(!ref.current?.contains(e.target as Node))setMenu(null);};const key=(e:KeyboardEvent)=>{if(e.key==='Escape')setMenu(null);};window.addEventListener('pointerdown',down);window.addEventListener('keydown',key);return()=>{window.removeEventListener('pointerdown',down);window.removeEventListener('keydown',key);};},[menu]);
+ useEffect(()=>{if(!menu)return;const opener=document.activeElement as HTMLElement|null;ref.current?.querySelector<HTMLElement>('[role=menuitem]:not(:disabled)')?.focus();const down=(e:PointerEvent)=>{if(!ref.current?.contains(e.target as Node))setMenu(null);};const key=(e:KeyboardEvent)=>{if(e.key==='Escape'||e.key==='Tab')setMenu(null);};window.addEventListener('pointerdown',down);window.addEventListener('keydown',key);return()=>{window.removeEventListener('pointerdown',down);window.removeEventListener('keydown',key);if(opener?.isConnected)opener.focus();};},[menu]);
  const files=scopedFiles(s.openFiles,s.activeStudio,s.studioByTab),mediaItems=media.items.filter(m=>mediaTabStudio(m.name,s.studioByTab,()=>studioForMedia(m.kind,s.activeStudio))===s.activeStudio);
  const others=(file:string)=>files.filter(f=>f!==file);
- return <div role="tablist" aria-label={t('rest.fileTabs.openFiles')} className="flex shrink-0 items-end gap-0.5 overflow-x-auto border-b border-subtle px-2 pt-1.5">
-  {files.map(file=><div key={file} role="tab" aria-selected={file===s.activeFile&&!media.active} tabIndex={file===s.activeFile&&!media.active?0:-1} title={file}
+ const anyActive=!!media.active||(!!s.activeFile&&files.includes(s.activeFile));
+ return <><div role="tablist" aria-label={t('rest.fileTabs.openFiles')} className="flex shrink-0 items-end gap-0.5 overflow-x-auto border-b border-subtle px-2 pt-1.5" onKeyDown={e=>{if(e.target!==document.activeElement||!(e.target as HTMLElement).matches('[role=tab]'))return;if(handleRovingKeyDown(e,e.currentTarget,'[role=tab]','horizontal',document.activeElement))return;}}>
+  {files.map(file=><div key={file} role="tab" aria-selected={file===s.activeFile&&!media.active} tabIndex={file===s.activeFile&&!media.active?0:!anyActive&&file===files[0]?0:-1} data-tab-file={file} title={file}
    className={cn('group flex h-8 max-w-[180px] cursor-pointer items-center gap-1 rounded-t-sm border border-b-0 border-transparent px-3 text-xs text-ink-2 hover:bg-hover',file===s.activeFile&&!media.active&&'border-subtle bg-base text-ink')}
    onClick={()=>openFileTab(file)} onAuxClick={e=>{if(e.button===1)closeFileTab(file);}}
    onContextMenu={e=>{e.preventDefault();setMenu({file,x:e.clientX,y:e.clientY});}}
-   onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();openFileTab(file);}}}>
+   onKeyDown={e=>{if(e.target!==e.currentTarget)return;if(e.key==='Enter'||e.key===' '){e.preventDefault();openFileTab(file);}else if(e.key==='Delete'){e.preventDefault();closeFileTab(file);}else if(isContextMenuKey(e)){e.preventDefault();const r=e.currentTarget.getBoundingClientRect();setMenu({file,x:r.left,y:r.bottom});}}}>
    <span className="truncate">{file}</span>
    <button aria-label={`Close ${file}`} className="grid size-4 place-items-center rounded-sm border-0 bg-transparent p-0 text-ink-3 opacity-60 hover:bg-hover hover:text-ink group-hover:opacity-100 focus-visible:opacity-100" onClick={e=>{e.stopPropagation();closeFileTab(file);}}><X size={12}/></button>
   </div>)}
   {mediaItems.map(m=><div key={'media:'+m.name} role="tab" data-testid="media-tab" aria-selected={m.name===media.active} tabIndex={m.name===media.active?0:-1} title={m.name} className={cn('group flex h-8 max-w-[180px] cursor-pointer items-center gap-1 rounded-t-sm border border-b-0 border-transparent px-3 text-xs text-ink-2 hover:bg-hover',m.name===media.active&&'border-subtle bg-base text-ink')} onClick={()=>setActiveMedia(m.name)} onAuxClick={e=>{if(e.button===1)closeMedia(m.name);}} onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();setActiveMedia(m.name);}}}><span className="truncate">{m.name}{s.rasterDoc[m.name]&&rasterDirty(s.rasterDoc[m.name])&&<span aria-label="Unsaved image changes"> *</span>}{pdfIsDirty(m.name)||slidesIsDirty(m.name)?' *':''}</span><button aria-label={`Close ${m.name}`} className="grid size-4 place-items-center rounded-sm border-0 bg-transparent p-0 text-ink-3 opacity-0 hover:bg-hover hover:text-ink group-hover:opacity-100 focus-visible:opacity-100" onClick={e=>{e.stopPropagation();closeMedia(m.name);}}><X size={12}/></button></div>)}
-  {menu&&<div ref={ref} role="menu" aria-label={t('rest.fileTabs.tabActions')} className="menu-popup" style={{position:'fixed',left:menu.x,top:menu.y,zIndex:60}}>
+  </div>
+  {menu&&<div ref={ref} role="menu" aria-label={t('rest.fileTabs.tabActions')} className="menu-popup" style={{position:'fixed',left:menu.x,top:menu.y,zIndex:60}} onKeyDown={e=>{handleRovingKeyDown(e,e.currentTarget,'[role=menuitem]','vertical',document.activeElement);}}>
    <button role="menuitem" className="menu-item" style={{width:'100%',background:'none',border:0,textAlign:'left'}} onClick={()=>{closeFileTab(menu.file);setMenu(null);}}>{t('rest.fileTabs.closeTab')}</button>
    <button role="menuitem" className="menu-item" style={{width:'100%',background:'none',border:0,textAlign:'left'}} disabled={others(menu.file).length===0} onClick={()=>{openFileTab(menu.file);others(menu.file).forEach(closeFileTab);setMenu(null);}}>{t('rest.fileTabs.closeOtherTabs')}</button>
    <button role="menuitem" className="menu-item" style={{width:'100%',background:'none',border:0,textAlign:'left'}} onClick={()=>{void navigator.clipboard?.writeText(menu.file).catch(()=>undefined);setMenu(null);}}>{t('rest.fileTabs.copyPath')}</button>
   </div>}
- </div>;
+ </>;
 }
