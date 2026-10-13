@@ -4,13 +4,19 @@ import {readLifecycleSettings,writeLifecycleSettings} from '../lib/lifecycle/set
 import type {ResourceProfileSetting} from '../lib/lifecycle/budgets';
 import {getStudioLifecycle} from '../lib/lifecycle/integration';
 import {IdbCheckpointSpill} from '../lib/lifecycle/idbSpill';
+import {clearRecoveryData,recoveryDataCount} from '../lib/sessionSafety/flush';
 
 /** Settings > Advanced > Performance: studio lifecycle opt-out and resource profile. */
 export function LifecycleSettings(){
  const {t}=useT();
  const [settings,setSettings]=useState(readLifecycleSettings);
  const [cleared,setCleared]=useState(false);
- const clearCheckpoints=()=>{
+ // One button: studio checkpoints (lifecycle) and recovery copies of unsaved Documents/Sheets edits (session safety). The latter can be the
+ // only copy of unsaved work, so deleting them needs an explicit confirmation that names how many documents are affected.
+ const clearCheckpoints=async()=>{
+  const n=await recoveryDataCount().catch(()=>0);
+  if(n>0&&!window.confirm(t('set.perf.clear.confirm',{n})))return;
+  if(n>0)await clearRecoveryData().catch(()=>0);
   getStudioLifecycle()?.clearCheckpoints();
   if(IdbCheckpointSpill.available())void new IdbCheckpointSpill().clear().catch(()=>{});
   setCleared(true);
@@ -34,6 +40,7 @@ export function LifecycleSettings(){
    </select>
   </label>
   <p>{t('set.perf.profile.hint')}</p>
-  <button type="button" onClick={clearCheckpoints} disabled={cleared}>{cleared?t('set.perf.clear.done'):t('set.perf.clear')}</button>
+  <button type="button" onClick={()=>void clearCheckpoints()} disabled={cleared}>{cleared?t('set.perf.clear.done'):t('set.perf.clear')}</button>
+  <p>{t('set.perf.clear.hint')}</p>
  </fieldset>;
 }

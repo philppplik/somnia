@@ -1,6 +1,6 @@
 # Recovery snapshots at rest: encryption proposal
 
-Status: proposal, not implemented. Decision owner: product. Related: [session-safety.md](session-safety.md), concept section 4 ("encryption is an open decision").
+Status: option 1 (retention, size cap, clear action) is implemented; options 2 to 4 are proposals. Decision owner: product. Related: [session-safety.md](session-safety.md), concept section 4 ("encryption is an open decision").
 
 ## What is stored
 

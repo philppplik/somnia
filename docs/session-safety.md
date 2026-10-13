@@ -74,3 +74,13 @@ snapshot checksum), not a second copy of the bytes:
 - `resume()` verifies the reference checksum and that every referenced snapshot still exists with the same checksum; otherwise it throws
   so the manager reports `resume-failed`. The real restore happens when the view mounts (`SessionCheckpointer.resume`).
 - `resourceIds()` returns `studio:<id>` and `<id>:session:<name>` for job-lease lookups.
+
+## Retention and clearing (encryption option 1)
+
+- `RecoveryStore` enforces a 7-day TTL (by snapshot creation time) and a 256 MiB total cap (`DEFAULT_RETENTION`). A TTL sweep runs once per app start
+  (`defaultRecoveryStore()`). Live sessions (open views) are never pruned or evicted.
+- Before each commit the store makes room: it evicts whole other sessions, oldest snapshot first. If the new snapshot still does not fit it
+  throws `StorageFullError`; the checkpointer pins the session with `storage-full` and the previous snapshot of that session stays.
+- Settings > Advanced > Performance has one button, "Clear saved studio checkpoints" (lifecycle). It also clears recovery copies, after a
+  confirmation naming how many documents are affected, because a recovery copy can be the only copy of unsaved edits. Live views are kept.
+- Still plain, local, unencrypted: see [session-safety-encryption.md](session-safety-encryption.md) for the next steps (option 2 and later).

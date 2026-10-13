@@ -13,6 +13,8 @@ export const LIFECYCLE_CATALOGUES: Record<string, Record<string, string>> = {
     'set.perf.profile.hint': 'Automatic picks from device hints. Low memory disables the warm slot and admits one heavy job.',
     'set.perf.clear': 'Clear saved studio checkpoints',
     'set.perf.clear.done': 'Cleared',
+    'set.perf.clear.confirm': 'Delete the recovery copies of {n} document(s) with unsaved edits? Those edits cannot be restored afterwards.',
+    'set.perf.clear.hint': 'Also removes automatic recovery copies of unsaved Documents and Sheets edits. Recovery copies are kept at most 7 days and 256 MiB.',
   },
   de: {
     'set.perf.title': 'Leistung',
@@ -27,6 +29,8 @@ export const LIFECYCLE_CATALOGUES: Record<string, Record<string, string>> = {
     'set.perf.profile.hint': 'Automatisch wählt anhand der Gerätemerkmale. Wenig Arbeitsspeicher deaktiviert den Warm-Slot und lässt einen schweren Job zu.',
     'set.perf.clear': 'Gespeicherte Studio-Wiederherstellungspunkte löschen',
     'set.perf.clear.done': 'Gelöscht',
+    'set.perf.clear.confirm': 'Wiederherstellungskopien von {n} Dokument(en) mit ungespeicherten Änderungen löschen? Diese Änderungen lassen sich danach nicht mehr wiederherstellen.',
+    'set.perf.clear.hint': 'Entfernt auch die automatischen Wiederherstellungskopien ungespeicherter Änderungen in Documents und Sheets. Sie werden höchstens 7 Tage und 256 MiB lang aufbewahrt.',
   },
   es: {
     'set.perf.title': 'Rendimiento',
@@ -41,6 +45,8 @@ export const LIFECYCLE_CATALOGUES: Record<string, Record<string, string>> = {
     'set.perf.profile.hint': 'Automático elige según el dispositivo. Poca memoria desactiva la ranura en caliente y admite un trabajo pesado.',
     'set.perf.clear': 'Borrar los puntos de restauración de estudios',
     'set.perf.clear.done': 'Borrados',
+    'set.perf.clear.confirm': '¿Borrar las copias de recuperación de {n} documento(s) con cambios sin guardar? Esos cambios no se podrán restaurar después.',
+    'set.perf.clear.hint': 'También elimina las copias de recuperación automáticas de cambios sin guardar en Documents y Sheets. Se conservan como máximo 7 días y 256 MiB.',
   },
   fr: {
     'set.perf.title': 'Performances',
@@ -55,6 +61,8 @@ export const LIFECYCLE_CATALOGUES: Record<string, Record<string, string>> = {
     'set.perf.profile.hint': 'Automatique choisit selon l’appareil. Mémoire faible désactive l’emplacement tiède et admet une seule tâche lourde.',
     'set.perf.clear': 'Effacer les points de restauration des studios',
     'set.perf.clear.done': 'Effacés',
+    'set.perf.clear.confirm': 'Supprimer les copies de récupération de {n} document(s) avec des modifications non enregistrées ? Ces modifications ne pourront plus être restaurées.',
+    'set.perf.clear.hint': 'Supprime aussi les copies de récupération automatiques des modifications non enregistrées dans Documents et Sheets. Elles sont conservées 7 jours et 256 Mio au maximum.',
   },
   'pt-BR': {
     'set.perf.title': 'Desempenho',
@@ -69,5 +77,7 @@ export const LIFECYCLE_CATALOGUES: Record<string, Record<string, string>> = {
     'set.perf.profile.hint': 'Automático escolhe conforme o dispositivo. Pouca memória desativa o slot morno e admite um trabalho pesado.',
     'set.perf.clear': 'Limpar pontos de restauração dos estúdios',
     'set.perf.clear.done': 'Limpos',
+    'set.perf.clear.confirm': 'Excluir as cópias de recuperação de {n} documento(s) com edições não salvas? Essas edições não poderão ser restauradas depois.',
+    'set.perf.clear.hint': 'Também remove as cópias de recuperação automáticas de edições não salvas em Documents e Sheets. Elas são mantidas por no máximo 7 dias e 256 MiB.',
   },
 };

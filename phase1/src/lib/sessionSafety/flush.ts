@@ -1,10 +1,11 @@
 import {createSnapshot,encodeSnapshot,type HistoryCheckpoint} from './snapshot';
-import {noteCommitted,noteReleased,trackLive,type LiveSession} from './recoveryIndex';
+import {noteCommitted,noteReleased,noteAllReleasedExceptLive,trackLive,type LiveSession} from './recoveryIndex';
 import {IndexedDbByteStore,MemoryByteStore,RecoveryStore} from './recoveryStore';
 let shared:RecoveryStore|null=null;
 /** App-wide recovery store: IndexedDB when available, otherwise memory (survives view lifetimes, not a crash). */
 export function defaultRecoveryStore():RecoveryStore{
- return shared??=new RecoveryStore(typeof indexedDB!=='undefined'?new IndexedDbByteStore():new MemoryByteStore());
+ if(!shared){shared=new RecoveryStore(typeof indexedDB!=='undefined'?new IndexedDbByteStore():new MemoryByteStore());void shared.prune().catch(()=>undefined);} // retention sweep once per app start
+ return shared;
 }
 export function setRecoveryStoreForTests(s:RecoveryStore|null){shared=s;}
 const discarded=new Set<string>();const active=new Map<string,{close():void;idle():Promise<unknown>}>();
@@ -41,3 +42,6 @@ export function flushOnTeardown(i:FlushInput):Promise<boolean>{
  }).finally(()=>{if(pending.get(i.sessionId)===run)pending.delete(i.sessionId);});
  pending.set(i.sessionId,run);return run;
 }
+/** Settings > Performance: how many documents have recovery copies, and a guarded delete of all of them (live views are kept). */
+export const recoveryDataCount=()=>defaultRecoveryStore().count();
+export async function clearRecoveryData():Promise<number>{const store=defaultRecoveryStore();const n=await store.clearAll();noteAllReleasedExceptLive();return n;}

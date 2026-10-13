@@ -13,3 +13,5 @@ export const recoverableFor=(studio:string)=>[...recoverable].filter(([,e])=>e.s
 export const trackLive=(id:string,s:LiveSession)=>{live.set(id,s);return()=>{if(live.get(id)===s)live.delete(id);};};
 export const liveFor=(studio:string)=>[...live].filter(([,s])=>s.studio===studio).map(([id,s])=>({id,...s}));
 export const resetRecoveryIndexForTests=()=>{recoverable.clear();live.clear();};
+export const liveIds=():ReadonlySet<string>=>new Set(live.keys());
+export const noteAllReleasedExceptLive=()=>{for(const id of [...recoverable.keys()])if(!live.has(id))recoverable.delete(id);};
