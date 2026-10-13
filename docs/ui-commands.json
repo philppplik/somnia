@@ -1050,6 +1050,196 @@
       "hasEnabled": true
     },
     {
+      "id": "photos.applyLook",
+      "title": "Photos: Apply a look",
+      "category": "Edit",
+      "source": "photos",
+      "keywords": [
+        "filter",
+        "look",
+        "photos",
+        "preset"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "photos.crop.apply",
+      "title": "Photos: Apply crop",
+      "category": "Edit",
+      "source": "photos",
+      "keywords": [
+        "crop",
+        "photos"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "photos.crop.cancel",
+      "title": "Photos: Cancel crop",
+      "category": "Edit",
+      "source": "photos",
+      "keywords": [
+        "crop",
+        "photos"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "photos.crop.reset",
+      "title": "Photos: Remove crop",
+      "category": "Edit",
+      "source": "photos",
+      "keywords": [
+        "crop",
+        "photos",
+        "reset"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "photos.crop.setAspect",
+      "title": "Photos: Set crop aspect ratio",
+      "category": "Edit",
+      "source": "photos",
+      "keywords": [
+        "aspect",
+        "crop",
+        "photos",
+        "ratio"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "photos.crop.start",
+      "title": "Photos: Start cropping",
+      "category": "Edit",
+      "source": "photos",
+      "keywords": [
+        "crop",
+        "photos"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "photos.export",
+      "title": "Photos: Export a developed copy",
+      "category": "Project",
+      "source": "photos",
+      "keywords": [
+        "export",
+        "jpeg",
+        "photos",
+        "png",
+        "save"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "photos.flip",
+      "title": "Photos: Flip",
+      "category": "Edit",
+      "source": "photos",
+      "keywords": [
+        "flip",
+        "mirror",
+        "photos"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "photos.getHistogram",
+      "title": "Photos: Read histogram summary",
+      "category": "Tools",
+      "source": "photos",
+      "keywords": [
+        "clipping",
+        "histogram",
+        "photos"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "photos.getState",
+      "title": "Photos: Read photo state",
+      "category": "Tools",
+      "source": "photos",
+      "keywords": [
+        "info",
+        "photos",
+        "state"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "photos.history.jump",
+      "title": "Photos: Jump to a history step",
+      "category": "Edit",
+      "source": "photos",
+      "keywords": [
+        "history",
+        "photos"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "photos.redo",
+      "title": "Photos: Redo develop step",
+      "category": "Edit",
+      "source": "photos",
+      "keywords": [
+        "photos",
+        "redo"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "photos.resetAdjustments",
+      "title": "Photos: Reset adjustments",
+      "category": "Edit",
+      "source": "photos",
+      "keywords": [
+        "neutral",
+        "photos",
+        "reset"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "photos.rotate",
+      "title": "Photos: Rotate a quarter turn",
+      "category": "Edit",
+      "source": "photos",
+      "keywords": [
+        "photos",
+        "rotate"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "photos.setAdjustment",
+      "title": "Photos: Set an adjustment",
+      "category": "Edit",
+      "source": "photos",
+      "keywords": [
+        "contrast",
+        "exposure",
+        "photos",
+        "slider"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "photos.undo",
+      "title": "Photos: Undo develop step",
+      "category": "Edit",
+      "source": "photos",
+      "keywords": [
+        "photos",
+        "undo"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "problems.toggle",
       "title": "Toggle problems",
       "category": "Tools",
