@@ -33,4 +33,13 @@ A `--detach` run keeps `.somnia/run/<id>.json` while alive. If the process was k
 
 ## Windows
 
-The named-pipe transport and the release job are not part of this build. `somnia run` in the foreground works wherever the cli crate compiles; `--detach`, `attach` and `cancel` need the Unix socket.
+`--detach`, `attach`, `status` and `cancel` work on Windows through a per-user named pipe.
+
+| Symptom | Kind | What to do |
+| --- | --- | --- |
+| `cannot create named pipe (the name may be squatted by another process; failing closed)` | `internal` | Another process already owns the pipe name. Somnia refuses to use it. Close that process, or run `somnia status <id>` to read the record instead. |
+| `run pipe is owned by a different user; refusing to connect` | `auth` | The pipe belongs to another Windows account. Run `somnia` as the account that started the run. |
+| `cannot connect to run socket` | `not-found` | The run ended (the pipe disappears with the process). Use `somnia status <id>`. |
+| Background run vanishes when you close the terminal | | It should not: it starts as a detached process without a console. If it does, check `somnia status <id>` and your antivirus log. |
+
+The Windows installer binary is unsigned, so SmartScreen may warn on first run.

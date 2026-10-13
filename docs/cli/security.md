@@ -1,6 +1,6 @@
 # Somnia CLI: security review
 
-Scope: `phase1/cli` as of this change. Each claim below has a test, named in brackets, in `phase1/cli/tests/e2e_mock.rs` (E) or `headless.rs` (H) or the crate unit tests (U).
+Scope: `phase1/cli` as of this change. Each claim below has a test, named in brackets, in `phase1/cli/tests/e2e_mock.rs` (E), `headless.rs` (H), `transport_windows.rs` (W) or the crate unit tests (U).
 
 ## Git is local-only
 
@@ -18,12 +18,29 @@ Residual risk, not removed by the allowlist: git runs repository-controlled code
 - `--allow-root` values that point outside the repository (`..`, `/etc`) do not result in a commit. [E `allow_root_cannot_escape_the_repo`]
 - Session records are written under `.somnia/`, excluded through `.git/info/exclude` (local, not a tracked file). [E `private_store_modes`]
 
-## Local socket
+## Local socket (Unix)
 
 - Directory 0700 owned by the user and not a symlink, socket 0600; a looser directory makes `--detach` fail immediately with a typed error. [E `live_socket_is_0600...`, `runtime_dir_with_loose_permissions_is_refused`, H `detached_run_can_be_cancelled_and_socket_is_private`]
 - The peer uid is checked on accept. A second user on the machine cannot talk to a run even if directory permissions were wrong. (Not testable in CI as a single user; reviewed in `transport.rs`.)
 - `read` capability cannot cancel; unknown fields, oversized frames (64 KiB), garbage and other protocol versions get typed errors, not crashes. [E `live_socket_is_0600...`, `oversized_and_garbage_frames...`, U `unknown_fields_and_capability_mismatch_rejected`]
 - No TCP or HTTP listener exists.
+
+## Local pipe (Windows)
+
+Same goals as the Unix socket, built from the Windows equivalents. Code: `transport.rs`, module `windows`. Tests: `tests/transport_windows.rs` and the Windows variant of the cancel test in `headless.rs`; they run on `windows-latest` in CI.
+
+- Name: `\\.\pipe\somnia-cli-<user-sid>-<repo-id>-<task-id>`. The SID scopes the name per user; task ids are sanitized to `[A-Za-z0-9_-]`. [W `pipe_names_are_user_scoped_sanitized_and_local`]
+- DACL: every pipe instance gets the protected descriptor `D:P(A;;GA;;;<current-user-sid>)`: generic-all for the current user, nothing inherited, nobody else. [W `sddl_grants_only_the_current_user`]
+- Squatting: the first instance is created with `FILE_FLAG_FIRST_PIPE_INSTANCE`. If the name already exists, bind fails with a typed error instead of serving on a stranger's pipe. [W `second_bind_on_the_same_name_fails_closed`]
+- Remote clients: `PIPE_REJECT_REMOTE_CLIENTS` is set, so SMB clients cannot reach the pipe.
+- Peer check on the server: the client process id is read from the pipe, its process token is opened and its user SID must equal ours. Anything else, including a failed lookup, is dropped silently (fail closed). This is the counterpart of the Unix `SO_PEERCRED` check.
+- Peer check on the client: the server's process id and token are checked the same way before any frame is sent, so a client never talks to an impostor. `ACCESS_DENIED` on open is reported as `auth` ("run pipe is owned by a different user") and is not retried.
+- No impersonation: the client opens the pipe with `SECURITY_SQOS_PRESENT | SECURITY_IDENTIFICATION`, so the server can identify the client but never act as it.
+- Reads have real timeouts (overlapped IO; a timed-out read is cancelled and retired before its buffer is released), so a silent peer cannot hang a run. [W `read_timeout_fires_and_the_pipe_stays_usable`]
+- Detached runs start with `DETACHED_PROCESS | CREATE_NO_WINDOW`, so they outlive the terminal and show no console window.
+- Frame rules (64 KiB cap, credential-key rejection, capability matching, version check) are the same code as on Unix and are covered by the cross-platform tests above.
+
+Not covered: the pipe syscalls need a real Windows host. They run in CI on `windows-latest` but have had no manual test on a desktop session. Processes of the same user are outside the threat model, as on Unix.
 
 ## Credentials
 
@@ -39,6 +56,6 @@ Residual risk, not removed by the allowlist: git runs repository-controlled code
 
 ## Open items
 
-- Windows named pipe: not built, so no ACL review is possible yet. It needs a per-user DACL and a peer-SID check equivalent to the uid check above.
+- Windows pipe: no manual test on a real desktop session yet (CI only). The peer check compares process-token user SIDs, so a process running as the same user under another logon session is accepted, matching the Unix same-uid rule.
 - Engine output is stored verbatim (see Credentials).
 - `.somnia/gui-state.json` is trusted input written by the desktop app; a damaged file fails closed, but a file forged by another process of the same user is not detected. Same-user processes are outside the threat model.

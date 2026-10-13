@@ -18,9 +18,10 @@ Error kinds (stable): `git-missing`, `identity-missing`, `auth`, `sso`, `protect
 
 A `--detach` run serves a Unix domain socket for `attach`, `status` and `cancel`.
 
-- Location: `$XDG_RUNTIME_DIR/somnia/<repo-id>-<task-id>.sock`. The directory must be mode 0700 and owned by you, the socket is 0600. Otherwise the CLI refuses to start.
+- Unix location: `$XDG_RUNTIME_DIR/somnia/<repo-id>-<task-id>.sock`. The directory must be mode 0700 and owned by you, the socket is 0600. Otherwise the CLI refuses to start.
 - The server checks the peer's uid (`SO_PEERCRED`) and drops other users silently.
-- No TCP or HTTP port. Windows named pipes are not implemented yet; on Windows these commands return `engine-unavailable`.
+- No TCP or HTTP port.
+- Windows: a named pipe `\\.\pipe\somnia-cli-<user-sid>-<repo-id>-<task-id>` replaces the socket. The user's SID is part of the name, the task id is reduced to letters, digits, `-` and `_`. The pipe is local only, protected by a DACL that grants the current user alone, and both ends check that the other end's process runs as the same user (see security.md). The frames are identical on both platforms.
 - A frame is at most 64 KiB.
 
 Request:

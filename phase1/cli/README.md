@@ -39,6 +39,7 @@ somnia --version        # release number; the long form (--version) also prints 
 
 On Windows, extract the zip, put the folder on `PATH`, then run `somnia --version` (PowerShell: `Get-FileHash <zip> -Algorithm SHA256` and compare with `SHA256SUMS`).
 The binary is unsigned (SmartScreen may warn). It needs `git` and `node` (20 or newer) on `PATH`. The archive carries the agent engine as `sidecar/engine.mjs` next to the binary; keep it there (a symlink to the binary is fine).
+Windows: foreground and detached runs, `attach`, `status` and `cancel` all work; background runs talk over a per-user named pipe (see `docs/cli/security.md`).
 
 ## Building and packaging
 
