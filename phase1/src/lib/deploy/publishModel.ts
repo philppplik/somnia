@@ -78,7 +78,8 @@ export function releaseDate(id: string): Date | null {
   const m = /^(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})Z(?:-[a-z0-9]{1,16})?$/.exec(id);
   if (!m) return null;
   const d = new Date(Date.UTC(+m[1]!, +m[2]! - 1, +m[3]!, +m[4]!, +m[5]!, +m[6]!));
-  return Number.isNaN(d.getTime()) ? null : d;
+  const ok = d.getUTCFullYear() === +m[1]! && d.getUTCMonth() === +m[2]! - 1 && d.getUTCDate() === +m[3]! && d.getUTCHours() === +m[4]! && d.getUTCMinutes() === +m[5]! && d.getUTCSeconds() === +m[6]!;
+  return ok ? d : null;
 }
 /** Newest first. Ids that are not timestamps sort last, in their given order. */
 export function sortReleases(ids: readonly string[]): string[] {
@@ -125,7 +126,7 @@ export function validateTargetForm(f: TargetForm): FormErrors {
   return e;
 }
 export function slugTargetId(name: string, taken: readonly string[]): string {
-  const base = name.toLowerCase().normalize('NFKD').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 32) || 'server';
+  const base = name.toLowerCase().normalize('NFKD').replace(/\p{M}/gu, '').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 32) || 'server';
   let id = base, n = 2;
   while (taken.includes(id)) { const suffix = `-${n++}`; id = base.slice(0, 40 - suffix.length) + suffix; }
   return id;
