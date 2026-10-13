@@ -33,7 +33,7 @@ export function normalizePrompts(value:unknown):CustomPrompt[]{
  });
 }
 export function nonSecretSettings(value:AgentConfiguration){
- if(!['ollama','openrouter','openai','claude'].includes(value.provider)||value.model.length>512||/[\r\n\0]/.test(value.model))throw Error('Invalid agent preferences.');
+ if(!['ollama','openrouter','openai','claude','xai','meta','deepseek'].includes(value.provider)||value.model.length>512||/[\r\n\0]/.test(value.model))throw Error('Invalid agent preferences.');
  const localRuntime=normalizeLocalRuntime(value.localRuntime);
  return {provider:value.provider,model:value.model,customPrompts:normalizePrompts(value.customPrompts),...(localRuntime?{localRuntime}:{})};
 }

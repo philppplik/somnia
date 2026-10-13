@@ -1,7 +1,8 @@
 import {nativeProviderFetch,NATIVE_KEY_MARKER,NativeProviderError} from './nativeProviderFetch';
 import {invoke,isTauri} from '@tauri-apps/api/core';
 import {agentPrivacy,AgentConsentRequiredError,type AgentPrivacyGate} from './privacy';
-export type AuthProvider='ollama'|'openrouter'|'openai'|'claude';
+import {COMPAT_PROVIDERS,type CompatProviderId} from './compatProviders';
+export type AuthProvider='ollama'|'openrouter'|'openai'|'claude'|CompatProviderId;
 export type AuthFailure='invalid-key'|'network'|'timeout'|'rate-limit'|'provider-unavailable'|'protocol'|'keystore-locked'|'cancelled'|'consent';
 const MESSAGES:Record<AuthFailure,string>={
  'invalid-key':'The provider rejected this API key. Check it or create a new key.',
@@ -21,7 +22,7 @@ export function validateProviderKey(key:string):string{
 }
 // This map is process memory only, never Storage, logs, URLs or exported preferences.
 const sessionKeys=new Map<AuthProvider,string>();
-function cloudProvider(provider:AuthProvider){if(!['openrouter','openai','claude'].includes(provider))throw new ProviderAuthError('invalid-key');return provider;}
+function cloudProvider(provider:AuthProvider){if(!['openrouter','openai','claude','xai','meta','deepseek'].includes(provider))throw new ProviderAuthError('invalid-key');return provider;}
 export async function loadProviderKey(provider:AuthProvider):Promise<string>{
  if(provider==='ollama')return '';
  cloudProvider(provider);
@@ -41,7 +42,7 @@ export async function deleteProviderKey(provider:AuthProvider):Promise<void>{
  cloudProvider(provider);
  try{if(isTauri())await invoke('agent_key_delete',{provider});sessionKeys.delete(provider);}catch{throw new ProviderAuthError('keystore-locked');}
 }
-export const AUTH_ENDPOINTS={ollama:'http://127.0.0.1:11434/api/tags',openrouter:'https://openrouter.ai/api/v1/key',openai:'https://api.openai.com/v1/models',claude:'https://api.anthropic.com/v1/models?limit=1'} as const;
+export const AUTH_ENDPOINTS={ollama:'http://127.0.0.1:11434/api/tags',openrouter:'https://openrouter.ai/api/v1/key',openai:'https://api.openai.com/v1/models',claude:'https://api.anthropic.com/v1/models?limit=1',xai:COMPAT_PROVIDERS.xai.models,meta:COMPAT_PROVIDERS.meta.models,deepseek:COMPAT_PROVIDERS.deepseek.models} as const;
 /** Auth/account metadata only. No generation, prompt, project content, billing operation or retries. */
 export async function testProviderAuthentication(provider:AuthProvider,key:string,options:{signal?:AbortSignal;fetch?:typeof fetch;gate?:AgentPrivacyGate;timeoutMs?:number}={}):Promise<void>{
  if(!Object.hasOwn(AUTH_ENDPOINTS,provider))throw new ProviderAuthError('invalid-key');

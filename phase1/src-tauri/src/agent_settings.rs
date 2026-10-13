@@ -30,7 +30,7 @@ pub fn configure_local_only(p:&Preferences){LOCAL_ONLY.store(p.local_runtime.as_
 
 impl Preferences {
     pub fn validate(&self) -> Result<(), String> {
-        if !matches!(self.provider.as_str(), "ollama" | "openrouter" | "openai" | "claude") || self.model.len() > 512 || self.model.contains(['\r', '\n', '\0']) {
+        if !matches!(self.provider.as_str(), "ollama" | "openrouter" | "openai" | "claude" | "xai" | "meta" | "deepseek") || self.model.len() > 512 || self.model.contains(['\r', '\n', '\0']) {
             return Err("Invalid agent preferences".into());
         }
         if let Some(p)=&self.local_runtime {

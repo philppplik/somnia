@@ -273,6 +273,9 @@ fn provider_kind(reference: &w::ModelReference) -> Result<engine::provider::Prov
         ("openai", w::ModelLocality::Cloud) => Ok(ProviderKind::OpenAi),
         ("openrouter", w::ModelLocality::Cloud) => Ok(ProviderKind::OpenRouter),
         ("claude", w::ModelLocality::Cloud) => Ok(ProviderKind::Anthropic),
+        ("xai", w::ModelLocality::Cloud) => Ok(ProviderKind::Xai),
+        ("meta", w::ModelLocality::Cloud) => Ok(ProviderKind::Meta),
+        ("deepseek", w::ModelLocality::Cloud) => Ok(ProviderKind::DeepSeek),
         _ => Err(error("vibespace_unsupported_provider", true)),
     }
 }
@@ -958,6 +961,9 @@ mod tests {
                 w::ModelLocality::Cloud,
                 "https://api.anthropic.com/v1/messages",
             ),
+            ("xai", w::ModelLocality::Cloud, "https://api.x.ai/v1/chat/completions"),
+            ("meta", w::ModelLocality::Cloud, "https://api.meta.ai/v1/chat/completions"),
+            ("deepseek", w::ModelLocality::Cloud, "https://api.deepseek.com/chat/completions"),
         ] {
             let reference = w::ModelReference {
                 provider: provider.into(),

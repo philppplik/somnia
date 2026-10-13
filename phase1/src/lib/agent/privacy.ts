@@ -1,4 +1,5 @@
 import { log, describeError } from '../log';
+import { COMPAT_PROVIDERS } from './compatProviders';
 /** Fail-closed network boundary. Call immediately before EVERY provider request/retry. */
 export const AGENT_CONSENT_VERSION = 1;
 export const AGENT_CONSENT_KEY = 'somnia.agent.cloud-consent.v1';
@@ -7,6 +8,7 @@ export const PROVIDER_PRIVACY_POLICIES = [
   {name: 'Anthropic', url: 'https://privacy.claude.com/en/'},
   {name: 'OpenRouter', url: 'https://openrouter.ai/privacy'},
   {name: 'OpenRouter model providers', url: 'https://openrouter.ai/docs/guides/privacy/data-collection'},
+  ...Object.values(COMPAT_PROVIDERS).map(p => p.privacy),
 ] as const;
 export type ProviderTarget = {provider: string; endpoint?: string; processing?: 'local' | 'cloud'};
 export type ConsentRecord = {version: number; grantedAt: string};
