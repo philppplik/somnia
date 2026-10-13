@@ -55,7 +55,15 @@ pub fn build_service(config_dir: &Path, source: crate::deploy::engine::ProjectSo
     let store = std::sync::Arc::new(crate::deploy::host_keys::HostKeyStore::open(config_dir.join("deploy-host-keys.json")).map_err(|_| crate::deploy_guard::DeployError::Storage)?);
     let keys = std::sync::Arc::new(crate::deploy::keys::KeyStore::new(crate::deploy::keys::OsKeychainBackend));
     let observed: crate::deploy::engine::ObservedKeys = Default::default();
-    let engine = crate::deploy::engine::LiveDeployEngine::new(keys.clone(), store.clone(), observed.clone(), source);
+    let host = crate::deploy::node_host::DesktopNodeHost {
+        keys: keys.clone(),
+        pins: store.clone(),
+        project_root: { let source = source.clone(); Box::new(move |_| source.lock().ok().and_then(|g| g.clone())) },
+        options: Default::default(),
+        public_probe: Box::new(crate::deploy::node_host::https_probe),
+    };
+    let node = crate::deploy::node_engine::NodeEngine::new(host, Default::default()).map_err(|_| crate::deploy_guard::DeployError::Storage)?;
+    let engine = crate::deploy::engine::LiveDeployEngine::new(keys.clone(), store.clone(), observed.clone(), source).with_node_engine(Box::new(node));
     Ok(DeployService::new(
         Box::new(FileTargets::new(config_dir.join("deploy-targets.json"))),
         Box::new(RuntimePins { store, observed }),

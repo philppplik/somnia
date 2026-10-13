@@ -157,6 +157,15 @@ impl<H: NodeHost> DeployEngine for NodeEngine<H> {
         })
     }
 
+    fn live_release(&self, target: &Target) -> Result<Option<String>, EngineError> {
+        let site = site_of(target)?;
+        let layout = ReleaseLayout::new(&site).map_err(|_| EngineError::Other)?;
+        self.rt.block_on(async {
+            let mut remote = self.host.connect(target).await?;
+            layout.current_release(&mut remote).await.map_err(|_| EngineError::Connect)
+        })
+    }
+
     /// Host-key probing and pinning belong to the live engine; the node hook is never asked.
     fn probe_host_key(&self, _: &Target) -> Result<HostKeyInfo, EngineError> {
         Err(EngineError::Other)
