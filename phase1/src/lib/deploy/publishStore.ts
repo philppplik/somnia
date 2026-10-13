@@ -11,7 +11,7 @@ import type { DeployBackend, DeployOutcome, DeployPlan, DeployProgressEvent, Dep
 import { buildTarget, describeBuildFailure, describeDeployError, parseProgress, slugTargetId, sortReleases, validateTargetForm, type BuildPhase, type BuildSummary, type DeployErrorInfo, type ProgressInfo, type TargetForm } from './publishModel';
 
 export type PublishView = 'home' | 'form' | 'rollback' | 'setup';
-export type PublishBusy = 'load' | 'save' | 'delete' | 'key' | 'trust' | 'replace' | 'publish' | 'rollback' | 'releases' | null;
+export type PublishBusy = 'load' | 'save' | 'delete' | 'key' | 'trust' | 'replace' | 'publish' | 'rollback' | 'releases' | 'plan' | null;
 export interface PublishFailure extends DeployErrorInfo { targetId: string | null; during: Exclude<PublishBusy, null> }
 export interface PublishResult { kind: 'publish' | 'rollback'; targetId: string; outcome: DeployOutcome }
 export interface PublishState {
@@ -104,6 +104,27 @@ export function createPublishStore(deps: PublishDeps) {
       if (state.releasesFor === targetId) set({ liveByTarget });
       if (state.releasesFor === targetId) set({ releases: ids });
     });
+  }
+
+  /**
+   * Build before publish or dry run. deploy.plan never runs project scripts: it only reads the finished, re-verified output.
+   * Returns false when the build failed (the failure is already in state).
+   */
+  async function buildFirst(id: string, during: 'publish' | 'plan' = 'publish'): Promise<boolean> {
+    const b = deps.build;
+    if (b?.needed()) {
+      const sync = () => { const snap = b.getSnapshot(); if (snap.phase === 'installing' || snap.phase === 'building' || snap.phase === 'collecting') set({ build: { phase: snap.phase, summary: null } }); };
+      const stop = b.subscribe(sync);
+      set({ build: { phase: 'building', summary: null } });
+      try { await b.run(); } catch { /* the snapshot carries the outcome */ } finally { stop(); }
+      const snap = b.getSnapshot();
+      if (snap.phase !== 'done' || !snap.summary) {
+        set({ busy: null, build: { phase: null, summary: null }, failure: { ...describeBuildFailure(snap.errorKey, snap.errorPath), targetId: id, during } });
+        return false;
+      }
+      set({ build: { phase: 'done', summary: { fileCount: snap.summary.fileCount, totalBytes: snap.summary.totalBytes } } });
+    }
+    return true;
   }
 
   const api = {
@@ -215,26 +236,37 @@ export function createPublishStore(deps: PublishDeps) {
       if (state.busy) return;
       set({ progress: { seen: [], latest: null }, build: { phase: null, summary: null }, result: null, selectedId: id, cancelRequested: false });
       const outcome = await guarded('publish', id, async () => {
-        // Build first. deploy.plan never runs project scripts: it only reads the finished, re-verified output.
-        const b = deps.build;
-        if (b?.needed()) {
-          const sync = () => { const snap = b.getSnapshot(); if (snap.phase === 'installing' || snap.phase === 'building' || snap.phase === 'collecting') set({ build: { phase: snap.phase, summary: null } }); };
-          const stop = b.subscribe(sync);
-          set({ build: { phase: 'building', summary: null } });
-          try { await b.run(); } catch { /* the snapshot carries the outcome */ } finally { stop(); }
-          const snap = b.getSnapshot();
-          if (snap.phase !== 'done' || !snap.summary) {
-            set({ busy: null, build: { phase: null, summary: null }, failure: { ...describeBuildFailure(snap.errorKey, snap.errorPath), targetId: id, during: 'publish' } });
-            return null;
-          }
-          set({ build: { phase: 'done', summary: { fileCount: snap.summary.fileCount, totalBytes: snap.summary.totalBytes } } });
-        }
+        if (!(await buildFirst(id))) return null;
         const r = (await deps.run('deploy.publish', { targetId: id })) as DeployOutcome | { status: 'cancelled' };
         return 'status' in r ? null : r;
       });
       if (outcome) set({ result: { kind: 'publish', targetId: id, outcome }, staged: state.staged?.targetId === id ? null : state.staged });
       set({ progress: { seen: [], latest: null }, build: { phase: null, summary: null } });
       await refresh();
+    },
+    /**
+     * Dry run: builds when the project needs it, then asks the Rust side for the plan. Nothing is uploaded and no confirmation
+     * is needed. The plan lands in `staged` (deploy.plan notifies the staged listener), so the panel can show the file diff.
+     */
+    async dryRun(id: string): Promise<DeployPlan | null> {
+      if (state.busy) return null;
+      set({ progress: { seen: [], latest: null }, build: { phase: null, summary: null }, result: null, selectedId: id, staged: null });
+      const plan = await guarded('plan', id, async () => {
+        if (!(await buildFirst(id, 'plan'))) return null;
+        return (await deps.run('deploy.plan', { targetId: id })) as DeployPlan;
+      });
+      set({ build: { phase: null, summary: null } });
+      if (plan) set({ staged: plan });
+      return plan ?? null;
+    },
+    /** Saves a changed copy of an existing target (domain, SPA flag, app port). The id, key slot and host stay as saved. */
+    async updateTarget(id: string, patch: Partial<Pick<DeployTarget, 'domain' | 'spa' | 'appPort' | 'name'>>): Promise<boolean> {
+      const current = statusOf(id)?.target; if (!current) return false;
+      const next: DeployTarget = { ...current, ...patch };
+      if (patch.domain !== undefined && patch.domain.trim() === '') delete next.domain;
+      const ok = await guarded('save', id, async () => { await deps.run('deploy.target.save', { target: next }); return true; });
+      await refresh();
+      return ok === true;
     },
     async rollback(id: string, releaseId: string) {
       if (state.busy) return;

@@ -81,6 +81,19 @@
       "hasEnabled": true
     },
     {
+      "id": "deploy.dryrun",
+      "title": "Preview publish changes",
+      "category": "Project",
+      "source": "core",
+      "keywords": [
+        "diff",
+        "dry run",
+        "preview",
+        "what changes"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "deploy.hostkey.replace",
       "title": "Replace server key",
       "category": "Project",
@@ -122,6 +135,18 @@
         "ssh",
         "upload",
         "website"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "deploy.panel.show",
+      "title": "Show publish panel",
+      "category": "Project",
+      "source": "core",
+      "keywords": [
+        "deploy",
+        "publish",
+        "server"
       ],
       "hasEnabled": true
     },
@@ -177,6 +202,20 @@
       "title": "Save publish target",
       "category": "Project",
       "source": "deploy",
+      "hasEnabled": true
+    },
+    {
+      "id": "deploy.target.select",
+      "title": "Select publish target",
+      "category": "Project",
+      "source": "core",
+      "hasEnabled": true
+    },
+    {
+      "id": "deploy.target.setDomain",
+      "title": "Set publish domain",
+      "category": "Project",
+      "source": "core",
       "hasEnabled": true
     },
     {

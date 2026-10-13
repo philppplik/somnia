@@ -29,7 +29,7 @@ test('code studio shell passes the validator',()=>{
 });
 
 test('left rail keeps the legacy order and appends the new panels',()=>{
- assert.deepEqual(CODE_LEFT_RAIL.map(i=>i.id),['layers','files','search','components','css','versions','responsive','outline']);
+ assert.deepEqual(CODE_LEFT_RAIL.map(i=>i.id),['layers','files','search','components','css','versions','responsive','outline','publish','publish-log']);
  assert.deepEqual(CODE_RIGHT_RAIL.map(i=>i.id),['inspector']);
  for(const i of [...CODE_LEFT_RAIL,...CODE_RIGHT_RAIL]){assert.equal(i.kind,'panel');assert.equal(i.panel,i.id);}
 });
@@ -62,15 +62,15 @@ test('default layout opens Layers left and the inspector right',()=>{
 
 test('inspector sections resolve in declaration order',()=>{
  const one=ctx({selection:{kind:'one',count:1}});
- assert.deepEqual(resolveInspectorSections(codeInspector.sections,ctx()).map(s=>s.id),['design','source']);
- assert.deepEqual(resolveInspectorSections(codeInspector.sections,one).map(s=>s.id),['design','interactions','source']);
- assert.deepEqual(resolveInspectorSections(codeInspector.sections,one).filter(s=>s.defaultCollapsed).map(s=>s.id),['source']);
+ assert.deepEqual(resolveInspectorSections(codeInspector.sections,ctx()).map(s=>s.id),['design','source','publish-target','publish-framework','publish-dryrun']);
+ assert.deepEqual(resolveInspectorSections(codeInspector.sections,one).map(s=>s.id),['design','interactions','source','publish-target','publish-framework','publish-dryrun']);
+ assert.deepEqual(resolveInspectorSections(codeInspector.sections,one).filter(s=>s.defaultCollapsed).map(s=>s.id),['source','publish-target','publish-framework','publish-dryrun']);
 });
 
 test('rail customization edits one side without touching the other',()=>{
  const c=ctx();
  const down=editRailOverrides(codeStudio,undefined,'moveDown',{side:'left',id:'layers'},c)!;
- assert.deepEqual(railModel(codeStudio,'left',down,c).visible.map(i=>i.id),['files','layers','search','components','css','versions','responsive','outline']);
+ assert.deepEqual(railModel(codeStudio,'left',down,c).visible.map(i=>i.id),['files','layers','search','components','css','versions','responsive','outline','publish','publish-log']);
  assert.deepEqual(railModel(codeStudio,'right',down,c).visible.map(i=>i.id),['inspector']);
  const hidden=editRailOverrides(codeStudio,down,'hide',{side:'left',id:'responsive'},c)!;
  const m=railModel(codeStudio,'left',hidden,c);

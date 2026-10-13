@@ -1,6 +1,8 @@
 import type {RailItemDef,StudioLayout} from '../shell/types';
 import {registerRailIcons} from '../shell/railIcons';
 import {CODE_RAIL_ICON_MAP} from './codeRailIcons';
+import {DEPLOY_RAIL_ITEMS} from '../deployPanels/shell';
+import '../deployPanels/icons';
 /**
  * Code studio rails and first-open layout for the studio shell (concept docs/concepts/studio-shell.md,
  * sections 3.4-3.6 and 9.4). Data only: items point at the panel ids declared by `codePanels`
@@ -28,6 +30,7 @@ export const CODE_LEFT_RAIL:readonly RailItemDef[]=[
  item('versions','VersionsIcon',60),
  item('responsive','MonitorSmartphone',70),
  item('outline','Hash',80),
+ ...DEPLOY_RAIL_ITEMS,
 ];
 export const CODE_RIGHT_RAIL:readonly RailItemDef[]=[
  item('inspector','SlidersHorizontal',10),

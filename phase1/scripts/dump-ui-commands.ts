@@ -1,5 +1,6 @@
 import {registerDocumentPanelCommands} from '../src/lib/documents/panelCommands';
 import {registerCodePanelCommands} from '../src/lib/codePanels/commands';
+import {registerDeployPanelCommands} from '../src/lib/deployPanels/commands';
 /**
  * UI command inventory (engine-hardening plan, steps 1.1 and 1.7) and the gate for
  * `npm run check:ui-commands`.
@@ -65,6 +66,7 @@ const rasterStub = new Proxy({}, { get: () => () => undefined }) as unknown as R
 /** Ids owned by a mount-time source, recorded by diffing the registry around each registration. */
 const sourceOf = new Map<string, string>();
 registerCodePanelCommands({ready:()=>true,reveal:()=>{},attribute:()=>{},width:()=>{}});
+registerDeployPanelCommands({available:()=>true,show:()=>{},select:()=>true,dryRun:async()=>null,setDomain:async()=>true});
 const known = () => new Set(listCommands().map(c => c.id));
 async function withSource(source: string, register: () => unknown): Promise<void> {
   const before = known();

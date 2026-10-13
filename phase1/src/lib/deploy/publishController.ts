@@ -3,7 +3,7 @@ import { SETUP_OPEN_EVENT } from './setup';
 import { isTauri } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
 import { commandDispatcher } from '../commandDispatcher';
-import { DEPLOY_PROGRESS_EVENT, type DeployProgressEvent } from './contract';
+import { DEPLOY_PROGRESS_EVENT, type DeployBackend, type DeployProgressEvent } from './contract';
 import { subscribeStagedPlans } from './commandSpecs';
 import { createTauriDeployBackend } from './tauriBackend';
 import { detectFramework } from '../frameworks/detect';
@@ -23,9 +23,13 @@ export function configurePublish(opts: { projectFiles: () => Readonly<Record<str
 /** Desktop only: the web build has no server engine, so the panel is not offered there. */
 export const publishAvailable = (): boolean => isTauri();
 
+let backendOverride: DeployBackend | null = null;
+/** Development fixtures and tests only: swaps the Tauri backend for a fake before the store is first created. */
+export function __setPublishBackendForTests(b: DeployBackend | null): void { backendOverride = b; store = null; }
+
 export function getPublishStore(): PublishStore {
   if (store) return store;
-  const backend = createTauriDeployBackend();
+  const backend = backendOverride ?? createTauriDeployBackend();
   store = createPublishStore({
     run: (id, params) => commandDispatcher.runCommand(id, params, { origin: 'ui' }),
     backend,
