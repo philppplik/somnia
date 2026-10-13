@@ -44,7 +44,7 @@ function HeroSplitButton({resolved}:{resolved:Extract<ReturnType<typeof resolveH
  const busy=usePublishBusy(available);const running=busy==='publish'||busy==='rollback';
  const label=t(resolved.labelKey);const Icon=resolveRailIcon(resolved.icon);
  const more=t('hero.more');
- const tip=resolved.pressed&&resolved.pressedTooltipKey?t(resolved.pressedTooltipKey):!resolved.enabled&&resolved.disabledReason?t(resolved.disabledReason):joinTip(label,resolved.shortcut);
+ const tip=resolved.pressed&&resolved.pressedTooltipKey?t(resolved.pressedTooltipKey):!resolved.enabled&&resolved.disabledReason?t(resolved.disabledReason):joinTip(!resolved.enabled&&resolved.disabledLabelKey?t(resolved.disabledLabelKey):label,resolved.shortcut);
  /** Web build: Publish cannot run, so a chevron that only holds a disabled Publish is noise. */
  const showMenu=resolved.menu.some(m=>!m.publish)||available;
  return <Tooltip.Provider delay={250}><div role="group" aria-label={label} data-testid="hero-action" data-hero-id={resolved.id} className="flex shrink-0 items-center">

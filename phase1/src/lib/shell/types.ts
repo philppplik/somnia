@@ -95,6 +95,8 @@ export interface HeroActionDef{
  id:string;
  /** i18n key of the label (all five locales). The label is also the accessible name. */
  labelKey:string;
+ /** Optional tooltip when the primary command is disabled. */
+ disabledLabelKey?:string;
  /** Rail icon name (shell/railIcons). Unknown names get the fallback glyph. */
  icon:string;
  /** Command ids for the split-button chevron, in order. `deploy.open` is always appended as the last entry. */

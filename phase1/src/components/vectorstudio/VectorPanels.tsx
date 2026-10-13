@@ -1,3 +1,5 @@
+import {pngDimensions} from '../../lib/vectorstudio/exportFiles';
+import {commandDispatcher} from '../../lib/commandDispatcher';
 import {useState} from 'react';
 import {Button} from '../ui/button';
 import {useT} from '../../lib/useT';
@@ -46,11 +48,16 @@ export function VectorNodeSection(){const {t}=useT(),s=useVectorSession(),path=s
  <div className="flex flex-wrap gap-1">{(['corner','smooth','symmetric'] as const).map(kind=><Button size="compact" key={kind} aria-pressed={node.kind===kind} onClick={()=>run('setNodeKind',{pathId:path.id,nodeId:node.id,kind})}>{t('vector.shell.'+kind)}</Button>)}
  <Button size="compact" onClick={()=>run('toggleClosed',{pathId:path.id})}>{t(path.closed?'vector.shell.openPath':'vector.shell.closePath')}</Button><Button size="compact" onClick={()=>run('deleteNode',{pathId:path.id,nodeId:node.id})}>{t('vector.shell.delete')}</Button></div>
  </div>;}
-export function VectorExportPanel(){const {t}=useT(),s=useVectorSession();const [scale,setScale]=useState(1),[busy,setBusy]=useState(false),[note,setNote]=useState('');
- return <div className="grid gap-2 p-2 text-[12px]" data-testid="vector-shell-export"><label className={row}>{t('vector.shell.pngScale')}<select className={field} value={scale} onChange={e=>setScale(Number(e.target.value))}>{[1,2,4].map(n=><option key={n} value={n}>{n}x</option>)}</select></label>
- <Button size="compact" disabled={!s.open||busy} onClick={()=>run('exportSvg')}>{t('vector.shell.exportSvg')}</Button>
- <Button size="compact" disabled={!s.open||busy} onClick={async()=>{setBusy(true);try{await executeCommand('vector.exportPng',{scale});}finally{setBusy(false);}}}>{t('vector.exportPng')}</Button>
- <p className="m-0 text-ink-3">{t('vector.shell.pngLimit')}</p>
+export function VectorExportPanel(){const {t}=useT(),s=useVectorSession();const [scale,setScale]=useState(1),[format,setFormat]=useState('svg'),[busy,setBusy]=useState(false),[note,setNote]=useState('');
+ const dimensions=pngDimensions(s.doc.width,s.doc.height,scale);
+ const submit=async()=>{setBusy(true);setNote('');try{await commandDispatcher.runCommand(format==='svg'?'vector.exportSvg':'vector.exportPng',format==='png'?{scale}:undefined,{origin:'ui'});}catch(e){setNote(e instanceof Error?e.message:String(e));}finally{setBusy(false);}};
+ return <div className="grid gap-2 p-2 text-[12px]" data-testid="vector-shell-export">
+ <p className="m-0 text-ink-3">{t('vector.hero.page')}</p>
+ <label className={row}>{t('vector.hero.format')}<select className={field} value={format} disabled={busy} onChange={e=>setFormat(e.target.value)}><option value="svg">SVG</option><option value="png">PNG</option></select></label>
+ {format==='png'&&<><label className={row}>{t('vector.shell.pngScale')}<select className={field} value={scale} disabled={busy} onChange={e=>setScale(Number(e.target.value))}>{[1,2,4].map(n=><option key={n} value={n}>{n}x</option>)}</select></label>
+ <p className="m-0 text-ink-3" data-testid="vector-export-dimensions">{dimensions.width} × {dimensions.height} px</p><p className="m-0 text-ink-3">{t('vector.shell.pngLimit')}</p></>}
+ <Button size="compact" disabled={!s.open||busy} onClick={()=>void submit()}>{format==='svg'?t('vector.shell.exportSvg'):t('vector.exportPng')}</Button>
+ <hr className="w-full border-line"/>
  <label className={row}>{t('vector.appendSvg')}<input type="file" accept=".svg,image/svg+xml" disabled={!s.open||busy} className="w-full text-[11px]" onChange={async e=>{const f=e.target.files?.[0];e.target.value='';if(!f)return;setBusy(true);setNote('');try{const before=getVectorSession().doc;const source=await f.text();if(getVectorSession().doc===before)await executeCommand('vector.importSvg',{source});else setNote(t('vector.shell.importChanged'));}catch{setNote(t('vector.shell.importFailed'));}finally{setBusy(false);}}}/></label>
  {note&&<p role="status" className="text-ink-3">{note}</p>}{s.error&&<p role="alert" className="text-danger">{s.error}</p>}{s.diagnostics.length>0&&<ul className="m-0 list-disc pl-4">{s.diagnostics.map((d,i)=><li key={i}>{d.message}</li>)}</ul>}
  {(s.error||s.diagnostics.length>0)&&<Button size="compact" onClick={()=>run('clearError')}>{t('vector.shell.clear')}</Button>}

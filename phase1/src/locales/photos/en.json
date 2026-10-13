@@ -62,5 +62,14 @@
  "photos.zoom.fit": "Fit to window",
  "photos.zoom.actual": "Actual size",
  "photos.note": "Settings stay in this session. A copy export is capped at 2048 px, 8-bit sRGB, with metadata removed. The original is never overwritten.",
- "photos.panel": "Develop settings"
+ "photos.panel": "Develop settings",
+ "photos.hero.export":"Export",
+ "photos.hero.format":"Format",
+ "photos.hero.original":"Your original is never overwritten.",
+ "photos.hero.unchanged":"No edits yet, this exports an unchanged copy.",
+ "photos.hero.copy":"Export copy",
+ "cmd.photos.export.open":"Photos: Export copy...",
+ "cmd.photos.export.png":"Photos: Export as PNG",
+ "cmd.photos.export.jpeg":"Photos: Export as JPEG",
+ "photos.hero.disabled":"Open a photo to export, finish cropping, or wait for processing."
 }

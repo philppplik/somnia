@@ -1,3 +1,4 @@
+import {VectorExportSetup} from './VectorExportSetup';
 import {useCallback,useEffect,useRef,useState,type PointerEvent as RPointerEvent} from 'react';
 import {PenNibIcon} from './icons';
 import {StudioEmptyState} from '../studios/StudioEmptyState';
@@ -118,7 +119,7 @@ export function VectorCanvas(){
    moveSelection(dx,dy);return;}
   if(!mod){const map:Record<string,VectorTool>={v:'select',a:'node',p:'pen',r:'rect',e:'ellipse',l:'line',g:'polygon',s:'star'};const tool=map[e.key.toLowerCase()];if(tool){setTool(tool);}}};
 
- if(!s.open)return <main className="center" aria-label={t('vector.title')}><div className="workspace"><section className="code-pane" aria-label={t('vector.title')}><FileTabs/>
+ if(!s.open)return <main className="center" aria-label={t('vector.title')}><VectorExportSetup/><div className="workspace"><section className="code-pane" aria-label={t('vector.title')}><FileTabs/>
   <StudioEmptyState studio="vector" icon={<PenNibIcon/>} onOpen={()=>void openSvgDialog()} onCreate={()=>{const p=PAGE_PRESETS.find(x=>x.id===presetId)??PAGE_PRESETS[0];createBlankVector(p.width,p.height);}}
    extraActions={<label className="flex items-center gap-2 text-[12px] text-ink-2">{t('vector.start.pageSize')}
     <select className="h-9 rounded-sm border border-line bg-elevated px-2 text-[12px] text-ink" value={presetId} onChange={e=>setPresetId(e.target.value)} data-testid="vector-start-preset">
@@ -129,7 +130,7 @@ export function VectorCanvas(){
  const draft=drag?.kind==='shape'?buildShape(drag.tool,drag.start,drag.cur):null;
  const nodePath=s.tool==='node'?paths.find(p=>p.id===s.nodePath):null;
  const penPath:VectorPath|null=pen.length?{id:'pen-draft',closed:false,nodes:hover&&drag?.kind!=='pen-handle'?[...pen,{id:'pen-ghost',x:hover.x,y:hover.y,kind:'corner'}]:pen,style:{fill:'none',stroke:'#2563eb',strokeWidth:1.5/s.zoom}}:null;
- return <main className="center" aria-label={t('vector.title')}><div className="workspace"><section className="code-pane" aria-label={t('vector.title')}>
+ return <main className="center" aria-label={t('vector.title')}><VectorExportSetup/><div className="workspace"><section className="code-pane" aria-label={t('vector.title')}>
   <FileTabs/><VectorToolbar onFit={fit}/>
   <div ref={wrap} tabIndex={0} onKeyDown={onKey} onKeyUp={e=>{shiftHeld.current=e.shiftKey;}} onWheel={onWheel} className="relative min-h-0 flex-1 overflow-hidden bg-[color:var(--surface-2,#eef0f4)] outline-none" data-testid="vector-canvas" data-tool={s.tool}>
    <svg ref={ref} className="absolute inset-0 size-full touch-none select-none" style={{cursor:cursorFor(s.tool)}} onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp} onPointerCancel={()=>setDrag(null)} onDoubleClick={onDouble} onContextMenu={e=>e.preventDefault()} aria-label={t('vector.canvas')} role="img">

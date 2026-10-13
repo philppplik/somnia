@@ -72,12 +72,12 @@ export const DESIGN_SHELL_COMMANDS=[
  'design.artboard.add','design.artboard.duplicate','design.artboard.delete','design.artboard.rename','design.artboard.select','design.artboard.next','design.artboard.previous','design.artboard.moveUp','design.artboard.moveDown','design.artboard.resize','design.artboard.preset','design.artboard.rotate',
  'design.color.apply','design.zoomIn','design.zoomOut','design.zoomReset','design.zoomFit','design.zoomSet','design.selectAll','design.deselect',
  'design.layer.front','design.layer.forward','design.layer.backward','design.layer.back','design.layer.toggleVisible','design.layer.toggleLocked','design.nudge','design.rename',
- 'design.duplicateSelection','design.deleteSelection','design.alignSelection','design.distributeSelection','design.exportProject','design.exportSvg','design.new','design.undo','design.redo','design.addRectangle','design.addText','design.setTool','design.getState',
+ 'design.export.open','design.exportAllSvg','design.duplicateSelection','design.deleteSelection','design.alignSelection','design.distributeSelection','design.exportProject','design.exportSvg','design.new','design.undo','design.redo','design.addRectangle','design.addText','design.setTool','design.getState',
 ] as const;
 /** Legacy header shape stays for the studio pill, formats and the unmigrated paths. */
 export const designStudio:StudioDef={
  id:'design',label:'Design',icon:'LayoutTemplate',order:6,formats:[{ext:'somdesign',priority:100}],
- shell:{leftRail:[{id:'files',label:'Files',icon:'Files',global:true}],rightRail:[{id:'design',label:'Artboard and layers',icon:'SlidersHorizontal'}],header:{menus:['Project','Edit','View','Insert','Tools','Help'],views:[]},bottomBar:{slots:[],viewportPresets:[]},inspector:'design.inspector',tools:[]},
+ shell:{leftRail:[{id:'files',label:'Files',icon:'Files',global:true}],rightRail:[{id:'design',label:'Artboard and layers',icon:'SlidersHorizontal'}],header:{heroAction:{id:'design.export.open',labelKey:'design.hero.export',disabledLabelKey:'design.hero.disabled',icon:'Download',menu:['design.exportSvg','design.exportProject']},menus:['Project','Edit','View','Insert','Tools','Help'],views:[]},bottomBar:{slots:[],viewportPresets:[]},inspector:'design.inspector',tools:[]},
  commands:[],shortcuts:{},menus:{view:[]},canvas:'design.canvas',shellV2:{...designShell,menus:designMenus},
  agent:{tools:[],contextProviders:[],quickActions:[]},deriveContext:context=>context
 };

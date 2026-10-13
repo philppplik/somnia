@@ -167,5 +167,14 @@
  "cmd.design.layer.toggleVisible": "Design: Ausgewählte Ebenen ein-/ausblenden",
  "cmd.design.layer.toggleLocked": "Design: Ausgewählte Ebenen sperren/entsperren",
  "cmd.design.nudge": "Design: Ausgewählte Ebenen verschieben",
- "cmd.design.rename": "Design: Projekt umbenennen"
+ "cmd.design.rename": "Design: Projekt umbenennen",
+ "design.hero.export":"Exportieren",
+ "design.hero.scope":"Umfang",
+ "design.hero.current":"Aktuelle Zeichenfläche",
+ "design.hero.all":"Alle Zeichenflächen (SVG-ZIP)",
+ "design.hero.source":"Projekt als .somdesign speichern",
+ "design.hero.download":"Download gestartet: {name}",
+ "cmd.design.export.open":"Design: Exportieren...",
+ "cmd.design.exportAllSvg":"Design: Alle Zeichenflächen als SVG-ZIP exportieren",
+ "design.hero.disabled":"Erstelle oder öffne ein Design."
 }

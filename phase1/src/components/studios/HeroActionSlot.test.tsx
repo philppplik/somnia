@@ -27,15 +27,13 @@ test('a studio without the field renders no hero slot (old Publish path)',()=>{
  patchState({activeStudio:'herotest-none'});assert.ok(!renderToStaticMarkup(<HeroActionSlot/>).includes('hero-action'));
  patchState({activeStudio:'herotest-missing'});assert.ok(!renderToStaticMarkup(<HeroActionSlot/>).includes('hero-action'),'unregistered hero command falls back');
 });
-test('Slides declares Present; unmigrated studios keep Publish',()=>{
- for(const id of ['design','vector','photos'])assert.equal(getStudio(id).shell.header.heroAction,undefined,id);
+test('Slides declares Present',()=>{
  assert.equal(getStudio('slides').shell.header.heroAction?.id,'slides.present');
  });
 test('code, documents and sheets declare their hero actions; the other studios keep Publish',()=>{
  assert.deepEqual(getStudio('code').shell.header.heroAction,{id:'view.livePreview',labelKey:'hero.preview',icon:'Play',pressedWhen:'preview',pressedTooltipKey:'hero.preview.close'});
  assert.deepEqual(getStudio('documents').shell.header.heroAction,{id:'documents.export.open',labelKey:'hero.export',icon:'Download',menu:['documents.saveCopy']});
  assert.deepEqual(getStudio('sheets').shell.header.heroAction,{id:'sheets.formulas.open',labelKey:'hero.smartFormula',icon:'CodeXml',menu:['sheets.saveCopy']});
- for(const id of ['design','vector','photos'])assert.equal(getStudio(id).shell.header.heroAction,undefined,id);
 });
 test('the code hero renders Preview as a toggle whose pressed state follows livePreview',()=>{
  const off=registerCommand({id:'view.livePreview',title:'Toggle live preview',category:'View',run:()=>{}});
@@ -51,8 +49,8 @@ test('the code hero renders Preview as a toggle whose pressed state follows live
  patchState({livePreview:false});
  off();
 });
-test('sound, video and vibespace declare hero actions',()=>{
- for(const id of ['sound','video','vibespace'])assert.ok(getStudio(id).shell.header.heroAction,id);
+test('sound, video, vibespace, design, vector and photos declare hero actions',()=>{
+ for(const id of ['sound','video','vibespace','design','vector','photos'])assert.ok(getStudio(id).shell.header.heroAction,id);
 });
 test('the label is localized',()=>{
  patchState({activeStudio:'herotest-with'});setLocale('de');const de=renderToStaticMarkup(<HeroActionSlot/>);setLocale('en');
@@ -66,3 +64,11 @@ test('shared JSX has no studio-ID branches and only talks to executeCommand',()=
  assert.ok(readFileSync(new URL('../shell/HeroActionSlot.tsx',import.meta.url),'utf8').includes('executeCommand(resolved.id)'));
 });
 test.after(()=>{patchState({activeStudio:'code'});offs.forEach(o=>o());});
+
+test('migrated export studio heroes are declared as data',()=>{
+ for(const id of ['photos','design','vector']){
+  const hero=getStudio(id).shell.header.heroAction;
+  assert.equal(hero?.id,`${id}.export.open`);
+  assert.ok(hero?.labelKey&&hero.icon);
+ }
+});

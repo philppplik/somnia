@@ -62,5 +62,14 @@
  "photos.zoom.fit": "Ajustar à janela",
  "photos.zoom.actual": "Tamanho real",
  "photos.note": "As configurações ficam nesta sessão. A exportação de uma cópia é limitada a 2048 px, sRGB de 8 bits, sem metadados. O original nunca é substituído.",
- "photos.panel": "Configurações de revelação"
+ "photos.panel": "Configurações de revelação",
+ "photos.hero.export":"Exportar",
+ "photos.hero.format":"Formato",
+ "photos.hero.original":"O original nunca é sobrescrito.",
+ "photos.hero.unchanged":"Sem edições: a cópia permanece inalterada.",
+ "photos.hero.copy":"Exportar cópia",
+ "cmd.photos.export.open":"Fotos: Exportar cópia...",
+ "cmd.photos.export.png":"Fotos: Exportar como PNG",
+ "cmd.photos.export.jpeg":"Fotos: Exportar como JPEG",
+ "photos.hero.disabled":"Abra uma foto, termine o recorte ou aguarde o processamento."
 }

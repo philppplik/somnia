@@ -10,6 +10,7 @@ One slot in the header, left of the Account pill, where the Publish button used 
 | --- | --- |
 | `id` | Command id from the command registry. The button only calls `executeCommand(id)`. |
 | `labelKey` | i18n key for the label. The label is the accessible name. |
+| `disabledLabelKey` | Optional studio-owned disabled tooltip key. |
 | `icon` | Rail icon name (`phase1/src/lib/shell/railIcons.ts`). Unknown names get the fallback glyph. |
 | `menu` | Optional command ids for the split-button chevron, in order. |
 | `when` | Optional `when` expression over the studio context (same language as rail items). |
@@ -28,7 +29,8 @@ shell:{ ..., header:{ menus:['View','Help'], views:[], heroAction:{ id:'slides.p
 
 ## Behaviour
 
-- No `heroAction`: the old Publish button, unchanged.
+- Mount-time command registration and studio context reports refresh resolution and enablement without studio-ID branches.
+- No `heroAction`: the old Publish button, unchanged. Studios that declare none keep it.
 - Shipped heroes: Code = Preview (`view.livePreview`), Documents = Export (`documents.export.open`), Sheets = Smart Formula (`sheets.formulas.open`). Details: [hero-actions.md](hero-actions.md).
 - Fallback to Publish also applies when `when` is false or invalid, when the hero command is not registered, or when the hero id is `deploy.open`.
 - Split button: the main part runs the hero command and is disabled when the command's `enabled()` is false. The chevron opens `menu`. Unregistered menu ids, duplicates and the hero id are dropped. `Publish...` (`deploy.open`) is always the last entry, below a separator. It is still in the Project menu and the palette.

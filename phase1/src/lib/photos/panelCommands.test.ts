@@ -116,3 +116,15 @@ test('registerPhotosCommands is reference counted',()=>{
  const a=registerPhotosCommands(),b=registerPhotosCommands();a();a();b();
  const c=registerPhotosCommands();c();
 });
+
+test('export setup is UI-only, writes no file, and follows ready/crop/busy enablement',async()=>{
+ const {getPhotoExportState,setPhotoExportState}=await import('./exportState');
+ const {setPhotoCropping}=await import('./studioSession');
+ const spec=photosCommandSpecs().find(s=>s.id==='photos.export.open')!;
+ assert.equal(spec.shortcut,'Mod+Shift+E');assert.equal(spec.enabled?.({origin:'ui'}),true);
+ await assert.rejects(dispatcher.runCommand(spec.id,undefined,{origin:'agent'}));
+ await run(spec.id);assert.equal(getPhotoExportState().open,true);assert.equal(engine.exports.length,0);
+ setPhotoCropping(NAME,true);assert.equal(spec.enabled?.({origin:'ui'}),false);
+ setPhotoCropping(NAME,false);setPhotoExportState({working:true});assert.equal(spec.enabled?.({origin:'ui'}),false);
+ setPhotoExportState({working:false,open:false});
+});

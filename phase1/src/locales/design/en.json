@@ -167,5 +167,14 @@
  "cmd.design.layer.toggleVisible": "Design: Show or hide selected layers",
  "cmd.design.layer.toggleLocked": "Design: Lock or unlock selected layers",
  "cmd.design.nudge": "Design: Nudge selected layers",
- "cmd.design.rename": "Design: Rename project"
+ "cmd.design.rename": "Design: Rename project",
+ "design.hero.export":"Export",
+ "design.hero.scope":"Scope",
+ "design.hero.current":"Current artboard",
+ "design.hero.all":"All artboards (SVG ZIP)",
+ "design.hero.source":"Save project as .somdesign",
+ "design.hero.download":"Download started: {name}",
+ "cmd.design.export.open":"Design: Export...",
+ "cmd.design.exportAllSvg":"Design: Export all artboards as SVG ZIP",
+ "design.hero.disabled":"Create or open a design."
 }

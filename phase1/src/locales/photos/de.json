@@ -62,5 +62,14 @@
  "photos.zoom.fit": "Einpassen",
  "photos.zoom.actual": "Originalgröße",
  "photos.note": "Einstellungen bleiben in dieser Sitzung. Ein Kopien-Export ist auf 2048 px, 8-Bit-sRGB begrenzt, Metadaten werden entfernt. Das Original wird nie überschrieben.",
- "photos.panel": "Entwicklungseinstellungen"
+ "photos.panel": "Entwicklungseinstellungen",
+ "photos.hero.export":"Exportieren",
+ "photos.hero.format":"Format",
+ "photos.hero.original":"Dein Original wird nie überschrieben.",
+ "photos.hero.unchanged":"Noch keine Bearbeitungen: Die Kopie bleibt unverändert.",
+ "photos.hero.copy":"Kopie exportieren",
+ "cmd.photos.export.open":"Fotos: Kopie exportieren...",
+ "cmd.photos.export.png":"Fotos: Als PNG exportieren",
+ "cmd.photos.export.jpeg":"Fotos: Als JPEG exportieren",
+ "photos.hero.disabled":"Öffne ein Foto zum Exportieren, beende den Zuschnitt oder warte auf die Verarbeitung."
 }

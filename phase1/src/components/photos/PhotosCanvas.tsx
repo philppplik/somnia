@@ -1,3 +1,7 @@
+import {studioContextStore} from '../../lib/shell/studioContext';
+import {dirtyPhoto,getPhotoSession,subscribePhotos} from '../../lib/photos/studioSession';
+import {getPhotoExportState,subscribePhotoExport} from '../../lib/photos/exportState';
+import {PhotoExportPopover} from './PhotoExportPopover';
 import {useEffect} from 'react';
 import {registerPhotosCommands} from '../../lib/photos/panelCommands';
 import {Aperture,Image as ImageIcon} from '../../lib/icons';
@@ -11,10 +15,11 @@ import {PhotosWorkspace} from './PhotosWorkspace';
 /** Canvas of the Photos Studio: the opened photo, an honest "cannot develop this" note, or a start screen. */
 export function PhotosCanvas(){
  const {t}=useT();const media=useMedia();useEffect(()=>registerPhotosCommands(),[]);const item=media.items.find(i=>i.name===media.active);
+ useEffect(()=>{const owner=studioContextStore.claim('photos');const report=()=>{const session=getPhotoSession(item?.name);owner.report({document:session?{id:session.name,kind:'photo',dirty:dirtyPhoto(session),readOnly:false}:undefined,busy:!!session&&session.status!=='ready'||getPhotoExportState().working,services:{ready:session?.status==='ready',cropping:!!session?.cropping},data:{status:session?.status??'empty'}});};report();const a=subscribePhotos(report),b=subscribePhotoExport(report);return()=>{a();b();owner.release();};},[item?.name]);
  const developable=item&&(item.kind==='image'&&(PHOTO_INPUT.mimes as readonly string[]).includes(item.mime));
  const refused=item&&(item.kind==='psd'||(item.kind==='image'&&!developable));
  return <main className="center" aria-label={t('photos.title')}><div className="workspace"><section className="code-pane" aria-label={t('photos.title')}>
-  <FileTabs/>
+  <FileTabs/><PhotoExportPopover/>
   {developable?<PhotosWorkspace key={item.name} item={item}/>:refused?
    <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-4 p-8 text-center" data-testid="photos-unsupported">
     <ImageIcon size={36} className="text-ink-3"/>

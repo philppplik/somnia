@@ -19,7 +19,7 @@ export const photosStudio:StudioDef={
  shell:{
   leftRail:[{id:'files',label:'Files',icon:'Files',global:true}],
   rightRail:[{id:'design',label:'Develop',icon:'SlidersHorizontal'}],
-  header:{menus:['Project','Edit','View','Tools','Help'],views:[]},
+  header:{heroAction:{id:'photos.export.open',labelKey:'photos.hero.export',disabledLabelKey:'photos.hero.disabled',icon:'Download',menu:['photos.export.png','photos.export.jpeg']},menus:['Project','Edit','View','Tools','Help'],views:[]},
   bottomBar:{slots:[],viewportPresets:[]},
   inspector:'photos.inspector',tools:[]
  },

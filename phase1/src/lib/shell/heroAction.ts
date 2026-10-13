@@ -6,7 +6,7 @@ export interface HeroCommandInfo{id:string;title:string;shortcut?:string;enabled
 export interface HeroMenuEntry extends HeroCommandInfo{/** True for the always-last Publish entry. */publish:boolean}
 export type HeroResolution=
  |{kind:'default'}
- |{kind:'hero';id:string;labelKey:string;icon:string;enabled:boolean;shortcut?:string;menu:readonly HeroMenuEntry[];
+ |{kind:'hero';id:string;labelKey:string;disabledLabelKey?:string;icon:string;enabled:boolean;shortcut?:string;menu:readonly HeroMenuEntry[];
   /** Toggle hero: `pressedWhen` was declared; the button renders `aria-pressed` with this state. */
   toggle:boolean;pressed:boolean;pressedTooltipKey?:string;disabledReason?:string};
 /**
@@ -25,6 +25,6 @@ export function resolveHeroAction(def:HeroActionDef|undefined,context:unknown,lo
  for(const id of def.menu??[]){if(seen.has(id))continue;seen.add(id);const c=lookup(id);if(c)menu.push({...c,publish:false});}
  const publish=lookup(PUBLISH_COMMAND_ID);
  menu.push({id:PUBLISH_COMMAND_ID,title:publish?.title??'Publish...',shortcut:publish?.shortcut,enabled:publish?.enabled??false,publish:true});
- return {kind:'hero',id:def.id,labelKey:def.labelKey,icon:def.icon,enabled:hero.enabled,shortcut:hero.shortcut,menu,
+ return {kind:'hero',id:def.id,labelKey:def.labelKey,disabledLabelKey:def.disabledLabelKey,icon:def.icon,enabled:hero.enabled,shortcut:hero.shortcut,menu,
   toggle:def.pressedWhen!==undefined,pressed:def.pressedWhen!==undefined&&evalWhen(def.pressedWhen,context),pressedTooltipKey:def.pressedTooltipKey,disabledReason:hero.disabledReason};
 }

@@ -1,21 +1,14 @@
-import {useState} from 'react';
+import {usePhotoExport} from './usePhotoExport';
 import {Download} from '../../../lib/icons';
 import {useT} from '../../../lib/useT';
-import {commandDispatcher} from '../../../lib/commandDispatcher';
 import {dirtyPhoto} from '../../../lib/photos/studioSession';
 import {Button} from '../../ui/button';
 import {PanelBody,isBusy} from './shared';
 /** Export a developed copy. The original file is never overwritten; copies are bounded by the engine. */
 export function ExportPanel(){
- const {t}=useT();const [note,setNote]=useState('');const [working,setWorking]=useState(false);
- const run=async(format:'png'|'jpeg')=>{
-  setWorking(true);setNote('');
-  try{const r=await commandDispatcher.runCommand<string>('photos.export',{format},{origin:'ui'});setNote(r==='saved'?t('photos.saved'):'');}
-  catch(e){setNote(t('photos.saveFailed',{message:(e instanceof Error?e.message:String(e)).replace(/^Error:\s*/,'')}));}
-  finally{setWorking(false);}
- };
+ const {t}=useT();const {note,working,run}=usePhotoExport();
  return <PanelBody testId="photos-export-panel">{({session})=>{
-  const off=isBusy(session)||working||session.status==='processing';
+  const off=isBusy(session)||working||session.status==='processing'||session.cropping;
   return <>
    <div className="grid gap-1">
     <Button size="compact" variant="outline" disabled={off} onClick={()=>void run('png')} data-testid="photos-p-export-png"><Download size={13}/>{t('photos.export.png')}</Button>
