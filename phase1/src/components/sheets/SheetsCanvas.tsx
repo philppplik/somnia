@@ -1,6 +1,6 @@
 import {registerSheetsPanelController,type SheetsPanelController} from '../../lib/sheets/panelController';
 import {parsePanelRange,rangeAddress} from '../../lib/sheets/panelModel';
-import {parseAddress} from '../../lib/sheets/format';
+import {parseAddress,MAX_ROWS,MAX_COLS} from '../../lib/sheets/format';
 import {studioContextStore} from '../../lib/shell/studioContext';
 import {reportError} from '../../lib/log';
 import {StudioEmptyState} from '../studios/StudioEmptyState';
@@ -48,7 +48,7 @@ function Workbook({item}:{item:MediaItem}){
  // Sheet info (used range, history flags) after open, sheet switch and every edit.
  useEffect(()=>{if(phase.kind!=='ready')return;let live=true;engine.current?.info(sheet).then(i=>{if(live)setInfo(i);}).catch(fail);return()=>{live=false;};},[phase,sheet,rev,fail]);
  useEffect(()=>{if(phase.kind!=='ready')return;let live=true;engine.current?.layout(sheet).then(l=>{if(live)setLayout(l);}).catch(fail);return()=>{live=false;};},[phase,sheet,fail]);
- const totalRows=Math.max(100,(info?.rows??0)+50),totalCols=Math.max(26,(info?.cols??0)+6);
+ const totalRows=Math.min(MAX_ROWS,Math.max(100,(info?.rows??0)+50,sel.row+50)),totalCols=Math.min(MAX_COLS,Math.max(26,(info?.cols??0)+6,sel.col+6));
  const geo=useMemo(()=>new Geometry(layout,totalRows,totalCols),[layout,totalRows,totalCols]);
  // Bounded viewport read (values, formats and styles) for the visible window only.
  const win=useMemo(()=>geo.window(view.top,view.left,view.w-HEAD_W,view.h-HEAD_H),[geo,view]);

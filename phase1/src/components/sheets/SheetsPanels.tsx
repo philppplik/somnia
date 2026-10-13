@@ -4,7 +4,7 @@ import {useT} from '../../lib/useT';
 import {usePanelState} from '../../store/panelStateStore';
 import {useSheetsSelection} from '../../lib/sheets/sheetsStore';
 import {sheetsPanelDefs} from '../../lib/sheets/panels';
-import type {PanelHostProps} from '../../lib/shell/types';
+import type {PanelHostProps,InspectorSectionProps} from '../../lib/shell/types';
 import {commandDispatcher} from '../../lib/commandDispatcher';
 import {aggregateFormula,FORMULA_FUNCTIONS,parsePanelRange,rangeAddress,summarizeCells} from '../../lib/sheets/panelModel';
 import {inRect,rectCells} from '../../lib/sheets/clipboard';
@@ -32,7 +32,7 @@ export function SheetsCellPanel({context}:PanelHostProps){
  const {t}=useT(),s=usePanelWorkbook(context);const action=useAction();const [input,setInput]=useState('');
  useEffect(()=>setInput(s?.formula?'='+s.formula.replace(/^=/,''):s?.text??''),[s?.file,s?.sheet,s?.address,s?.text,s?.formula]);
  if(!s)return <Region><p>{t('sheets.panel.none')}</p></Region>;
- return <Region><Facts values={[[t('sheets.inspector.sheet'),s.sheetName],[t('sheets.address'),s.address],[t('sheets.inspector.type'),s.kind],[t('sheets.inspector.value'),s.text],[t('sheets.panel.format'),s.style?.fmt],[t('sheets.panel.font'),s.style?`${s.style.font} ${s.style.size} pt`:null]]}/>
+ return <Region><Facts values={[[t('sheets.inspector.sheet'),s.sheetName],[t('sheets.address'),<span data-testid="sheets-inspector-address">{s.address}</span>],[t('sheets.inspector.type'),s.kind],[t('sheets.inspector.value'),s.text],[t('sheets.panel.format'),s.style?.fmt],[t('sheets.panel.font'),s.style?`${s.style.font} ${s.style.size} pt`:null]]}/>
  <form className="flex flex-col gap-2" onSubmit={e=>{e.preventDefault();void action.run('sheets.setCell',{input}).then(result=>{if(result!==null)action.setNotice(t('sheets.panel.applied'));});}}><label className="flex flex-col gap-1">{t('sheets.panel.input')}<textarea className={field+' min-h-24 resize-y'} value={input} onChange={e=>setInput(e.target.value)} spellCheck={false}/></label><button className={button} disabled={action.busy||context.document?.readOnly}>{t('sheets.panel.apply')}</button></form><p role="status">{action.notice}</p></Region>;
 }
 export function SheetsAnalysisPanel({context}:PanelHostProps){
@@ -51,3 +51,6 @@ export function SheetsFormulasPanel({context}:PanelHostProps){
  const range=parsePanelRange(source),target=parseAddress(s.address);const circular=!!range&&!!target&&inRect(range,target.row,target.col);let formula='';try{formula=aggregateFormula(fn,source);}catch{/* invalid source disables apply */}
  return <Region><label className="flex flex-col gap-1">{t('sheets.panel.function')}<select className={field} value={fn} onChange={e=>setFn(e.target.value)}>{FORMULA_FUNCTIONS.map(f=><option key={f}>{f}</option>)}</select></label><label className="flex flex-col gap-1">{t('sheets.panel.source')}<input className={field} value={source} onChange={e=>setSource(e.target.value)}/></label><button className={button} onClick={()=>setSource(s.range?rangeAddress(s.range):s.address)}>{t('sheets.panel.follow')}</button><code className="break-all rounded-lg bg-hover p-2">{formula||'...'}</code><p className="text-ink-3">{t('sheets.panel.targetWarning')}</p>{circular&&<p role="alert">{t('sheets.panel.circular')}</p>}<p>{t('sheets.address')}: {s.address}</p><button className={button} disabled={!formula||circular||action.busy||context.document?.readOnly} onClick={()=>void action.run('sheets.setCell',{input:formula}).then(result=>{if(result!==null)action.setNotice(t('sheets.panel.applied'));})}>{t('sheets.panel.apply')}</button><p role="status">{action.notice}</p></Region>;
 }
+
+export function SheetsCellSection({sectionId,context}:InspectorSectionProps){return <SheetsCellPanel panelId={sectionId} context={context}/>;}
+export function SheetsFormulasSection({sectionId,context}:InspectorSectionProps){return <SheetsFormulasPanel panelId={sectionId} context={context}/>;}

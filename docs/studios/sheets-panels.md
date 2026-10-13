@@ -1,6 +1,6 @@
 # Sheets shell panels
 
-The Sheets panel data lives in `phase1/src/lib/sheets/panels.ts`. Components live in `phase1/src/components/sheets/SheetsPanels.tsx`; the workbook owns the engine and publishes its selection through the Sheets store and `StudioContext`.
+The Sheets panel data lives in `phase1/src/lib/sheets/panels.ts`. Components live in `phase1/src/components/sheets/SheetsPanels.tsx`, registered through `registerStudioPanels` in the UI-owned `registerShell.ts`. The generic `shell.inspector` renders cell and formula sections; the workbook owns the engine and publishes its selection through the Sheets store and `StudioContext`.
 
 - **Workbook**: worksheet filter, visible-sheet switching, go-to-cell navigation with scrolling, used-range dimensions, frozen panes, merge count, import warnings, undo/redo and export-copy commands. Hidden worksheets are listed but cannot be activated.
 - **Range analysis**: bounded range reads (10,000 cells), normalized addresses, raw-number sum/average/min/max and counts for numeric, empty, non-empty, formula and error cells. Results identify their source range and become visibly stale when the workbook revision changes. A response from another worksheet cannot replace the current worksheet's results.
