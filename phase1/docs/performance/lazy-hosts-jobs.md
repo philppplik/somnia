@@ -23,3 +23,7 @@ The shell installs `wireJobLeases(manager)` and forwards lifecycle `onPressure` 
 ## AI panel ownership follow-up
 
 The old AgentPanel cleanup cancelled every running turn on unmount, which contradicted independent AI job ownership. `AgentChatRuntime` now owns the run, stream sink, chat/proposals and activity state; the panel is an external-store observer. Closing it detaches the observer only. Reopening shows received text and pending proposal/approval rows. Explicit Stop/New chat and provider revision changes still cancel; credential revisions are observed even when no panel is mounted. No permissions/disclosure grants are changed, no proposal auto-applies, and late events after explicit stop are rejected. Chat row retention is bounded with pending review/approval rows protected. Tests use a deterministic provider/Core fixture to prove observer detach, result retention, explicit stop and revision cancellation; no real provider request was made.
+
+## Final local regression run
+
+495 tests selected across shell/studios, lifecycle, jobs, Agent, Video, Sound and Photos: 493 passed, 2 existing WASM-dependent tests skipped, zero failed. New Video integration cases prove a queued export uses its captured timeline/format despite subsequent edits, and queued cancellation never calls the engine or leaks source ownership. Full `tsc --noEmit` still cannot resolve the absent generated Slides worker bridge. No full production build or native launch was run, and local source-parse timing must not be labeled native startup improvement.
