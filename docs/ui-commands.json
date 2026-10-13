@@ -338,6 +338,13 @@
       "hasEnabled": true
     },
     {
+      "id": "frameworks.buildStatic",
+      "title": "Build project for publishing",
+      "category": "Project",
+      "source": "core",
+      "hasEnabled": true
+    },
+    {
       "id": "frameworks.newProject",
       "title": "New project",
       "category": "Project",

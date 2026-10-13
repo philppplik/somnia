@@ -16,7 +16,7 @@ included; the `source` column names the owner. Dynamic sources that stay outside
 
 Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, fr, pt-BR); the gate enforces it.
 
-156 commands. Categories: Edit, Help, Insert, Project, Tools, View.
+157 commands. Categories: Edit, Help, Insert, Project, Tools, View.
 
 | id | title | category | source | shortcut |
 | --- | --- | --- | --- | --- |
@@ -50,6 +50,7 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `edit.wrap` | Wrap selected element in a div | Edit | core |  |
 | `experimental.fastParse` | Experimental: toggle fast parsing | Tools | core |  |
 | `extensions.open` | Extensions | View | core |  |
+| `frameworks.buildStatic` | Build project for publishing | Project | core |  |
 | `frameworks.newProject` | New project | Project | core |  |
 | `help.errorReport` | Copy error report (log excerpt and version) | Help | core |  |
 | `help.github` | Somnia on GitHub (source, releases, issues) | Help | core |  |
