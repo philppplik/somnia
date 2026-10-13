@@ -339,7 +339,7 @@
     },
     {
       "id": "frameworks.buildStatic",
-      "title": "Build project for publishing",
+      "title": "Build site for publishing",
       "category": "Project",
       "source": "core",
       "hasEnabled": true
