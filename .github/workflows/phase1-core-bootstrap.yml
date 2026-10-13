@@ -332,7 +332,7 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p cli-smoke && cd cli-smoke
-          if [ "$RUNNER_OS" = "Windows" ]; then tar -xf ../cli-dist/somnia-cli-*.zip; bin=$(ls -d somnia-cli-*)/somnia.exe; else tar -xzf ../cli-dist/somnia-cli-*.tar.gz; bin=$(ls -d somnia-cli-*)/somnia; fi
+          if [ "$RUNNER_OS" = "Windows" ]; then /c/Windows/System32/tar.exe -xf ../cli-dist/somnia-cli-*.zip; bin=$(ls -d somnia-cli-*)/somnia.exe; else tar -xzf ../cli-dist/somnia-cli-*.tar.gz; bin=$(ls -d somnia-cli-*)/somnia; fi
           test -f "$(dirname "$bin")/sidecar/engine.mjs"
           "$bin" --version | tee version.txt
           grep -q "^somnia $(node -p "require('../package.json').somniaRelease")" version.txt
