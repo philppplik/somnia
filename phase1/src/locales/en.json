@@ -1941,6 +1941,7 @@
   "conn.replacement": "Enter a replacement key",
   "conn.enterKey": "Enter your API key",
   "conn.keyNote": "The key is tested, then stored in your OS credential store and never shown again. Testing sends only the key to the provider, no prompts or project files.",
+  "conn.compatNote": "Own API key and model list for {name}. Once you allow cloud AI, prompts go straight to {name}, not through OpenRouter.",
   "conn.testSave": "Test and save key",
   "conn.testReplace": "Test and replace key",
   "conn.testSaved": "Test saved key",

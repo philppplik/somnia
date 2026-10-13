@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { OpenAIProvider } from '../openAI';
 import { ClaudeProvider } from './claude';
+import { COMPAT_PROVIDERS } from '../compatProviders';
 import { AgentError } from '../errors';
 import { AgentSession } from '../session';
 import type { AgentSessionEvent } from '../session';
@@ -64,6 +65,27 @@ const contracts: Contract[] = [
     errorFrame: { event: 'error', data: { type: 'error', error: { type: 'authentication_error', message: privateMarker } } },
     auth: headers => { assert.equal(headers.get('x-api-key'), fixtureKey); assert.equal(headers.get('anthropic-version'), '2023-06-01'); assert.equal(headers.has('authorization'), false); },
   },
+  {
+    id: 'xai', endpoint: COMPAT_PROVIDERS.xai.chat, modelsEndpoint: COMPAT_PROVIDERS.xai.models,
+    make: options => new OpenAIProvider({ ...options, vendor: COMPAT_PROVIDERS.xai }), frames: openAIFrames, partial: openAIFrames.slice(0, 1), toolIndex: 0,
+    models: { object: 'list', data: [{ id: 'synthetic-model', object: 'model', owned_by: 'fixture', created: 1 }] },
+    errorFrame: { data: { error: { code: 'invalid_api_key', message: privateMarker } } },
+    auth: headers => { assert.equal(headers.get('authorization'), `Bearer ${fixtureKey}`); assert.equal(headers.has('x-api-key'), false); },
+  },
+  {
+    id: 'meta', endpoint: COMPAT_PROVIDERS.meta.chat, modelsEndpoint: COMPAT_PROVIDERS.meta.models,
+    make: options => new OpenAIProvider({ ...options, vendor: COMPAT_PROVIDERS.meta }), frames: openAIFrames, partial: openAIFrames.slice(0, 1), toolIndex: 0,
+    models: { object: 'list', data: [{ id: 'synthetic-model', object: 'model', owned_by: 'fixture', created: 1 }] },
+    errorFrame: { data: { error: { code: 'invalid_api_key', message: privateMarker } } },
+    auth: headers => { assert.equal(headers.get('authorization'), `Bearer ${fixtureKey}`); assert.equal(headers.has('x-api-key'), false); },
+  },
+  {
+    id: 'deepseek', endpoint: COMPAT_PROVIDERS.deepseek.chat, modelsEndpoint: COMPAT_PROVIDERS.deepseek.models,
+    make: options => new OpenAIProvider({ ...options, vendor: COMPAT_PROVIDERS.deepseek }), frames: openAIFrames, partial: openAIFrames.slice(0, 1), toolIndex: 0,
+    models: { object: 'list', data: [{ id: 'synthetic-model', object: 'model', owned_by: 'fixture', created: 1 }] },
+    errorFrame: { data: { error: { code: 'invalid_api_key', message: privateMarker } } },
+    auth: headers => { assert.equal(headers.get('authorization'), `Bearer ${fixtureKey}`); assert.equal(headers.has('x-api-key'), false); },
+  },
 ];
 
 for (const contract of contracts) {
@@ -92,8 +114,8 @@ for (const contract of contracts) {
     assert.equal(call.url, contract.endpoint); assert.equal(call.method, 'POST'); contract.auth(call.headers);
     assert.equal(call.headers.get('content-type'), 'application/json');
     assert.equal(call.body.stream, true); assert.equal(call.body.model, 'synthetic-model');
-    assert.equal(call.body[contract.id === 'openai' ? 'max_completion_tokens' : 'max_tokens'], 128);
-    if (contract.id === 'openai') assert.equal(call.body.stream_options.include_usage, true);
+    assert.equal(call.body[contract.id === 'claude' || contract.id === 'deepseek' ? 'max_tokens' : 'max_completion_tokens'], 128);
+    if (contract.id !== 'claude') assert.equal(call.body.stream_options.include_usage, true);
     assert.equal(JSON.stringify(call.body).includes(fixtureKey), false);
   });
 
@@ -106,7 +128,7 @@ for (const contract of contracts) {
       if (fn?.arguments === '"index.html"}') fn.arguments = '"index.html","content":"after"}';
       if (data?.delta?.partial_json === '"index.html"}') data.delta.partial_json = '"index.html","content":"after"}';
     }
-    const finalTurn: SseFrame[] = contract.id === 'openai' ? [
+    const finalTurn: SseFrame[] = contract.id !== 'claude' ? [
       { data: { choices: [{ index: 0, delta: { content: 'Proposal ready.' }, finish_reason: 'stop' }] } },
       { data: '[DONE]' },
     ] : [
@@ -247,9 +269,9 @@ for (const contract of contracts) {
     const provider = contract.make(opts(transport.fetch, { getApiKey: async () => `synthetic-key-${++reads}` }));
     await collect(provider); await collect(provider);
     assert.equal(reads, 2);
-    const header = contract.id === 'openai' ? 'authorization' : 'x-api-key';
-    assert.equal(transport.calls[0].headers.get(header), contract.id === 'openai' ? 'Bearer synthetic-key-1' : 'synthetic-key-1');
-    assert.equal(transport.calls[1].headers.get(header), contract.id === 'openai' ? 'Bearer synthetic-key-2' : 'synthetic-key-2');
+    const header = contract.id !== 'claude' ? 'authorization' : 'x-api-key';
+    assert.equal(transport.calls[0].headers.get(header), contract.id !== 'claude' ? 'Bearer synthetic-key-1' : 'synthetic-key-1');
+    assert.equal(transport.calls[1].headers.get(header), contract.id !== 'claude' ? 'Bearer synthetic-key-2' : 'synthetic-key-2');
   });
 
   test(`${contract.id}: model discovery uses authenticated offline GET and normalizes IDs`, async () => {

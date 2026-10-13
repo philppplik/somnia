@@ -1941,6 +1941,7 @@
   "conn.replacement": "Saisissez une nouvelle clé",
   "conn.enterKey": "Saisissez votre clé API",
   "conn.keyNote": "La clé est testée, puis stockée dans le coffre d'identifiants de votre système et jamais réaffichée. Le test envoie uniquement la clé au fournisseur, sans prompt ni fichier de projet.",
+  "conn.compatNote": "Clé d'API et liste de modèles propres à {name}. Une fois l'IA cloud autorisée, les prompts vont directement à {name}, sans passer par OpenRouter.",
   "conn.testSave": "Tester et enregistrer la clé",
   "conn.testReplace": "Tester et remplacer la clé",
   "conn.testSaved": "Tester la clé enregistrée",
