@@ -20,20 +20,30 @@ import {registerSlidesPanelCommands} from './panelCommands';
 import {registerCommandSpec,specToCommand} from '../commandBridge';
 import type {Command} from '../commandRegistry';
 import type {CommandSpec} from '../commandSpec';
-import {getSlidesSessionState,saveSlidesCopy,showSlide,slidesHistory} from './session';
+import {getSlidesSessionState,saveSlidesCopy,showSlide,slidesHistory,presentSlides,exitSlidesPresentation} from './session';
 
 /** What the specs need from the studio. Injected so the specs stay testable without a worker. */
 export interface SlidesCommandDeps {
-  state(): {busy:boolean;working:boolean;canUndo:boolean;canRedo:boolean;slides:number;index:number};
+  state(): {busy:boolean;working:boolean;canUndo:boolean;canRedo:boolean;slides:number;index:number;presenting:boolean};
   history(direction:'undo'|'redo'):void|Promise<void>;
   saveCopy():void|Promise<void>;
   showSlide(index:number):void|Promise<void>;
+  present(fromStart:boolean):void|Promise<void>;
+  exitPresent():void|Promise<void>;
 }
 
 const expected=(message:string)=>{const e=new Error(message) as Error&{expected:boolean};e.expected=true;return e;};
 
 export function slidesCommandSpecs(deps:SlidesCommandDeps):CommandSpec[] {
   return [
+    {id:'slides.present',title:'Present',category:'View',level:'ui',shortcut:'F5',
+      params:{type:'object',properties:{fromStart:{type:'boolean'}},additionalProperties:false},
+      enabled:()=>{const s=deps.state();return s.slides>0&&!s.busy&&!s.presenting;},
+      run:params=>deps.present((params as {fromStart?:boolean}|undefined)?.fromStart??false)},
+    {id:'slides.present.fromStart',title:'Present from start',category:'View',level:'ui',shortcut:'Shift+F5',
+      enabled:()=>{const s=deps.state();return s.slides>0&&!s.busy&&!s.presenting;},run:()=>deps.present(true)},
+    {id:'slides.present.exit',title:'Exit presentation',category:'View',level:'ui',
+      enabled:()=>deps.state().presenting,run:()=>deps.exitPresent()},
     {
       id:'slides.undo',title:'Undo slide text',category:'Edit',level:'ui',
       enabled:()=>{const s=deps.state();return s.working&&!s.busy&&s.canUndo;},
@@ -68,7 +78,9 @@ export function slidesCommandSpecs(deps:SlidesCommandDeps):CommandSpec[] {
 
 /** Deps wired to the live slides session in session.ts (active deck; empty state when none). */
 const sessionDeps:SlidesCommandDeps={
-  state:()=>{const s=getSlidesSessionState();return {busy:s.busy,working:!!s.working,canUndo:s.undo.length>0,canRedo:s.redo.length>0,slides:s.summary?.slides??0,index:s.index};},
+  state:()=>{const s=getSlidesSessionState();return {busy:s.busy,working:!!s.working,canUndo:s.undo.length>0,canRedo:s.redo.length>0,slides:s.summary?.slides??0,index:s.index,presenting:s.presenting};},
+  present:fromStart=>presentSlides(fromStart),
+  exitPresent:()=>exitSlidesPresentation(),
   history:direction=>slidesHistory(direction),
   saveCopy:()=>saveSlidesCopy(),
   showSlide:index=>showSlide(index),

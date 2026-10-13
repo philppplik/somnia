@@ -27,8 +27,9 @@ test('a studio without the field renders no hero slot (old Publish path)',()=>{
  patchState({activeStudio:'herotest-none'});assert.ok(!renderToStaticMarkup(<HeroActionSlot/>).includes('hero-action'));
  patchState({activeStudio:'herotest-missing'});assert.ok(!renderToStaticMarkup(<HeroActionSlot/>).includes('hero-action'),'unregistered hero command falls back');
 });
-test('every shipped studio is unchanged: none declares a hero yet',()=>{
- for(const id of ['code','design','vector','photos','sheets','slides','documents','sound','video'])assert.equal(getStudio(id).shell.header.heroAction,undefined,id);
+test('unmigrated studios keep Publish; Slides declares Present',()=>{
+ for(const id of ['code','design','vector','photos','sheets','documents','sound','video'])assert.equal(getStudio(id).shell.header.heroAction,undefined,id);
+ assert.equal(getStudio('slides').shell.header.heroAction?.id,'slides.present');
 });
 test('the label is localized',()=>{
  patchState({activeStudio:'herotest-with'});setLocale('de');const de=renderToStaticMarkup(<HeroActionSlot/>);setLocale('en');

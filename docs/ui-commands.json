@@ -1943,6 +1943,29 @@
       "hasEnabled": true
     },
     {
+      "id": "slides.present",
+      "title": "Present",
+      "category": "View",
+      "source": "slides",
+      "shortcut": "F5",
+      "hasEnabled": true
+    },
+    {
+      "id": "slides.present.exit",
+      "title": "Exit presentation",
+      "category": "View",
+      "source": "slides",
+      "hasEnabled": true
+    },
+    {
+      "id": "slides.present.fromStart",
+      "title": "Present from start",
+      "category": "View",
+      "source": "slides",
+      "shortcut": "Shift+F5",
+      "hasEnabled": true
+    },
+    {
       "id": "slides.redo",
       "title": "Redo slide text",
       "category": "Edit",

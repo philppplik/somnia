@@ -9,7 +9,9 @@ type State=ReturnType<SlidesCommandDeps['state']>;
 function fakeDeps(over:Partial<State>={}){
   const calls:string[]=[];
   const deps:SlidesCommandDeps={
-    state:()=>({busy:false,working:true,canUndo:true,canRedo:false,slides:3,index:0,...over}),
+    state:()=>({busy:false,working:true,canUndo:true,canRedo:false,slides:3,index:0,presenting:false,...over}),
+    present:fromStart=>{calls.push(`present:${fromStart}`);},
+    exitPresent:()=>{calls.push('exit');},
     history:direction=>{calls.push(`history:${direction}`);},
     saveCopy:()=>{calls.push('saveCopy');},
     showSlide:index=>{calls.push(`show:${index}`);},
@@ -20,9 +22,9 @@ function fakeDeps(over:Partial<State>={}){
 test('slides specs carry stable dotted ids, ui level and categories',()=>{
   const {deps}=fakeDeps();
   const specs=slidesCommandSpecs(deps);
-  assert.deepEqual(specs.map(s=>s.id),['slides.undo','slides.redo','slides.saveCopy','slides.showSlide']);
+  assert.deepEqual(specs.map(s=>s.id),['slides.present','slides.present.fromStart','slides.present.exit','slides.undo','slides.redo','slides.saveCopy','slides.showSlide']);
   for(const spec of specs)assert.equal(spec.level,'ui',spec.id);
-  assert.deepEqual(specs.map(s=>s.category),['Edit','Edit','Project','View']);
+  assert.deepEqual(specs.map(s=>s.category),['View','View','View','Edit','Edit','Project','View']);
 });
 
 test('slides.showSlide declares a real params schema',()=>{
@@ -103,4 +105,19 @@ test('registerSlidesCommands mirrors the specs into the legacy registry and disp
   }finally{off();}
   assert.equal(listCommands().some(c=>c.id==='slides.undo'),false);
   assert.equal(commandDispatcher.has('slides.undo'),false);
+});
+
+test('presentation commands are typed, disabled without a deck and refuse remote origins',async()=>{
+ const {deps,calls}=fakeDeps();const offs=slidesCommandSpecs(deps).map(spec=>registerCommandSpec(spec));
+ try{
+  await commandDispatcher.runCommand('slides.present',undefined,{origin:'shortcut'});
+  await commandDispatcher.runCommand('slides.present',{fromStart:true},{origin:'ui'});
+  await commandDispatcher.runCommand('slides.present.fromStart',undefined,{origin:'shortcut'});
+  assert.deepEqual(calls,['present:false','present:true','present:true']);
+  await assert.rejects(commandDispatcher.runCommand('slides.present',{fromStart:'yes'},{origin:'ui'}),e=>isCommandDispatchError(e)&&e.code==='invalid-params');
+  await assert.rejects(commandDispatcher.runCommand('slides.present',{}, {origin:'agent'}),e=>isCommandDispatchError(e)&&e.code==='forbidden-origin');
+  await assert.rejects(commandDispatcher.runCommand('slides.present.exit',undefined,{origin:'ui'}),e=>isCommandDispatchError(e)&&e.code==='disabled');
+ }finally{offs.forEach(off=>off());}
+ const empty=slidesCommandSpecs(fakeDeps({slides:0}).deps);assert.equal(empty.find(s=>s.id==='slides.present')!.enabled!({origin:'ui'}),false);
+ const active=slidesCommandSpecs(fakeDeps({presenting:true,busy:true}).deps);assert.equal(active.find(s=>s.id==='slides.present.exit')!.enabled!({origin:'ui'}),true);
 });
