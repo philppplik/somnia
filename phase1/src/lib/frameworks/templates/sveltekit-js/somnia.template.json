@@ -1,0 +1,11 @@
+{
+  "id": "sveltekit-js",
+  "framework": "sveltekit",
+  "language": "js",
+  "output": "node",
+  "scripts": {
+    "dev": "dev",
+    "build": "build"
+  },
+  "artifactPath": "build"
+}

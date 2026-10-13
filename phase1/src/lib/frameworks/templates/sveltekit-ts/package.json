@@ -1,0 +1,19 @@
+{
+  "name": "somnia-sveltekit-app",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite dev",
+    "build": "vite build"
+  },
+  "devDependencies": {
+    "@sveltejs/adapter-node": "6.0.0",
+    "@sveltejs/kit": "3.0.1",
+    "@sveltejs/vite-plugin-svelte": "7.3.1",
+    "@babel/parser": "8.0.7",
+    "svelte": "5.57.2",
+    "typescript": "6.0.3",
+    "vite": "8.3.2"
+  }
+}

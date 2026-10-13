@@ -1,8 +1,9 @@
 import {parse} from '@babel/parser';
 const TOKEN=/^[a-f0-9]{32,128}$/;
-export function previewPolicy(port){
+/** `inlineScripts` is for server-rendered frameworks (Astro, SvelteKit, Nuxt): their pages carry inline start-up scripts. */
+export function previewPolicy(port,options={}){
  if(!Number.isInteger(port)||port<1024||port>65535)throw Error('Invalid preview port');
- return `default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; connect-src 'self' ws://127.0.0.1:${port}; img-src 'self' data: blob:; font-src 'self' data:; object-src 'none'; base-uri 'self'; form-action 'none'; frame-src 'none'; frame-ancestors 'none'`;
+ return `default-src 'self'; script-src 'self'${options.inlineScripts===true?" 'unsafe-inline'":''}; style-src 'self' 'unsafe-inline'; connect-src 'self' ws://127.0.0.1:${port}; img-src 'self' data: blob:; font-src 'self' data:; object-src 'none'; base-uri 'self'; form-action 'none'; frame-src 'none'; frame-ancestors 'none'`;
 }
 export function instrumentSource(code,id,root){
  const path=id.split('?')[0].replaceAll('\\','/');const base=root.replaceAll('\\','/').replace(/\/$/,'')+'/';
@@ -44,11 +45,11 @@ export function instrumentSvelte(code,id,root,parseSvelte){
 export function validSourceEvent(event){
  return !!event&&typeof event.file==='string'&&event.file.length<=1024&&!/[\\:\x00-\x1f]/.test(event.file)&&!event.file.startsWith('/')&&event.file.split('/').every(part=>part&&part!=='.'&&part!=='..'&&part!=='node_modules'&&part!=='.git')&&Number.isInteger(event.line)&&event.line>0&&event.line<1_000_000&&Number.isInteger(event.col)&&event.col>0&&event.col<1_000_000;
 }
-export default function somniaPreview(){
+export default function somniaPreview(options={}){
  const token=process.env.SOMNIA_PREVIEW_TOKEN;const port=Number(process.env.SOMNIA_PREVIEW_PORT);
  if(!token)return {name:'somnia-preview',apply:'serve'}; // ordinary external Vite use remains possible
  if(!TOKEN.test(token))throw Error('Invalid Somnia preview configuration');
- const policy=previewPolicy(port);let root='';let vueParser,svelteParser;
+ const policy=previewPolicy(port,options);let root='';let vueParser,svelteParser;
  const cookieName=`somnia_preview_${port}`;const inlineModules=new Map();const sourceEvents=[];
  const hasCookie=req=>String(req.headers.cookie??'').split(';').some(part=>part.trim()===`${cookieName}=${token}`);
  return {name:'somnia-preview',apply:'serve',enforce:'pre',
