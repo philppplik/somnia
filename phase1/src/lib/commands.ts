@@ -21,7 +21,7 @@ import {downloadProject,downloadMarkdown} from './exportProject';
 import {elements,insertElement} from './structureCommands';
 import { applyHistory, getState, patchState } from '../store/appStore';
 import {getMedia,closeMedia} from './media';
-import {cycleScoped} from './studios/tabScope';
+import {cycleScoped} from './tabScope';
 import { EditorProject } from '@somnia/editor-core';
 import {canSaveAll,canCloseAll,saveAllFiles,requestCloseAll} from './workDocsActions';
 import {getChatSession} from './collab/chatSession';

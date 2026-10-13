@@ -3,7 +3,7 @@ import {shellLayoutStore} from './shellLayoutStore';
 import {studioPanels,studioDefaultLayout} from '../lib/shell/codePanels';
 import {modeKey,rememberStudioMode,resolveStudioMode,type StudioModeMemory} from '../lib/studios/modes';
 import {getStudio,acceptsFormat,type StudioId} from '../lib/studios';
-import {fileTabStudio,neighbourAfterClose} from '../lib/studios/tabScope';
+import {fileTabStudio,neighbourAfterClose} from '../lib/tabScope';
 import {recordActivity} from '../lib/account';
 import {readBackupPrefs,saveBackupPrefs,type BackupPrefs} from '../lib/projectBackups';
 import {readDocumentPrefs,saveDocumentPrefs,type DocumentPrefs} from '../lib/documentPrefs';

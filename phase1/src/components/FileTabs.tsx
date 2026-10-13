@@ -7,7 +7,7 @@ import {cn} from '../lib/cn';
 import {closeMedia,setActiveMedia,useMedia} from '../lib/media';
 import {rasterDirty} from '../store/rasterState';
 import {useT} from '../lib/useT';
-import {mediaTabStudio,scopedFiles} from '../lib/studios/tabScope';
+import {mediaTabStudio,scopedFiles} from '../lib/tabScope';
 import {studioForMedia} from '../lib/studios/studioRouting';
 /** Browser-style tabs for open source files. Middle click or the x closes, right click opens a small tab menu. */
 export function FileTabs(){useSlidesSession();usePdfEpoch();const {t}=useT();
