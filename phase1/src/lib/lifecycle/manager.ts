@@ -407,17 +407,26 @@ export class StudioLifecycleManager {
   /**
    * Pressure handling (concept section 3): enter at 80% of the envelope,
    * exit below 65% held for ten seconds, critical at 95%. Pressure bypasses
-   * the warm grace and suspends warm studios.
+   * the warm grace and suspends warm studios. An external memory-probe ratio
+   * (see probe.ts) merges by maximum into the same thresholds.
    */
-  evaluatePressure(): PressureLevel {
+  evaluatePressure(externalRatio?: number | null): PressureLevel {
     if (!this.opts.isEnabled()) return 'normal';
     const envelope = this.opts.profile().envelopeBytes;
-    const ratio = envelope > 0 ? this.trackedBytes() / envelope : 0;
+    const estimated = envelope > 0 ? this.trackedBytes() / envelope : 0;
+    // External signal from the memory probe (native RSS/system on desktop, JS
+    // heap vs limit on web). Merged by maximum: either signal raises
+    // pressure, and both must subside before pressure exits.
+    const external =
+      typeof externalRatio === 'number' && Number.isFinite(externalRatio) && externalRatio > 0
+        ? Math.min(externalRatio, 1)
+        : null;
+    const ratio = Math.max(estimated, external ?? 0);
     const now = this.clock.now();
     if (!this.inPressure && ratio >= PRESSURE_ENTER_RATIO) {
       this.inPressure = true;
       this.pressureExitSince = null;
-      this.telemetry.event({ type: 'pressure-enter', bytes: this.trackedBytes() });
+      this.telemetry.event({ type: 'pressure-enter', bytes: this.trackedBytes(), externalRatio: external ?? undefined });
       for (const r of this.records.values()) {
         if (r.state === 'warm') {
           this.cancelWarmTimer(r);
@@ -430,7 +439,7 @@ export class StudioLifecycleManager {
         if (now - this.pressureExitSince >= PRESSURE_EXIT_HOLD_MS) {
           this.inPressure = false;
           this.pressureExitSince = null;
-          this.telemetry.event({ type: 'pressure-exit', bytes: this.trackedBytes() });
+          this.telemetry.event({ type: 'pressure-exit', bytes: this.trackedBytes(), externalRatio: external ?? undefined });
         }
       } else {
         this.pressureExitSince = null;

@@ -1,5 +1,6 @@
 import { NORMAL_PROFILE, resolveProfile } from './budgets';
 import { CheckpointStore } from './checkpoints';
+import { createMemoryProbe, type MemoryProbe } from './probe';
 import { IdbCheckpointSpill } from './idbSpill';
 import { StudioLifecycleManager, type PressureLevel } from './manager';
 import { readLifecycleSettings } from './settings';
@@ -26,6 +27,11 @@ export interface LifecycleWiring {
   onPressure?(level: PressureLevel): void;
   /** Pressure re-evaluation cadence; defaults to 5 seconds. */
   pressureIntervalMs?: number;
+  /**
+   * Memory probe (native RSS/system on desktop, JS heap on web). Defaults to
+   * createMemoryProbe(); injectable for tests and harness runs.
+   */
+  probe?: MemoryProbe;
 }
 
 let current: StudioLifecycleManager | null = null;
@@ -69,15 +75,19 @@ export function installStudioLifecycle(wiring: LifecycleWiring): () => void {
     }
   });
   let lastPressure: PressureLevel = 'normal';
-  const evaluate = (): void => {
-    const level = manager.evaluatePressure();
+  const probe = wiring.probe ?? createMemoryProbe();
+  const evaluate = async (): Promise<void> => {
+    let externalRatio: number | null = null;
+    const sample = await probe.sample().catch(() => null);
+    if (sample && sample.totalBytes > 0) externalRatio = sample.usedBytes / sample.totalBytes;
+    const level = manager.evaluatePressure(externalRatio);
     if (level !== lastPressure) {
       lastPressure = level;
       wiring.onPressure?.(level);
     }
   };
-  evaluate();
-  const pressureTimer = setInterval(evaluate, wiring.pressureIntervalMs ?? 5_000);
+  void evaluate();
+  const pressureTimer = setInterval(() => void evaluate(), wiring.pressureIntervalMs ?? 5_000);
 
   return () => {
     unsubscribe();
