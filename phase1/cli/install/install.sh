@@ -1,5 +1,5 @@
 #!/bin/sh
-# Somnia CLI installer for Linux (x86_64). Non-interactive, idempotent.
+# Somnia CLI installer for Linux (x86_64) and macOS (Apple Silicon). Non-interactive, idempotent.
 # Uses only GitHub Release assets of philppplik/somnia and verifies SHA256SUMS before installing.
 #   sh install.sh [--version vX.Y.Z[-pre]] [--prefix DIR] [--no-path]
 # Environment: SOMNIA_VERSION, SOMNIA_PREFIX (same as the flags).
@@ -26,11 +26,12 @@ need() { command -v "$1" >/dev/null 2>&1 || die "missing required tool: $1"; }
 
 OS="$(uname -s)"; ARCH="$(uname -m)"
 case "$OS" in
-  Linux) ;;
-  Darwin) die "there is no macOS build of the Somnia CLI yet (Linux and Windows x86_64 only)" ;;
+  Linux)
+    case "$ARCH" in x86_64|amd64) PLAT="linux-x86_64" ;; *) die "unsupported CPU: $ARCH (Linux x86_64 only)" ;; esac ;;
+  Darwin)
+    case "$ARCH" in arm64|aarch64) PLAT="macos-aarch64" ;; *) die "unsupported CPU: $ARCH (macOS Apple Silicon only, no Intel build)" ;; esac ;;
   *) die "unsupported system: $OS" ;;
 esac
-case "$ARCH" in x86_64|amd64) ;; *) die "unsupported CPU: $ARCH (x86_64 only)" ;; esac
 
 if command -v curl >/dev/null 2>&1; then
   fetch() { curl -fsSL --retry 3 -o "$2" "$1"; }
@@ -49,7 +50,7 @@ else die "need sha256sum or shasum"; fi
 # Newest release (pre-releases included) that carries a Linux CLI archive, unless a tag is given.
 if [ -z "$VERSION" ] && [ -z "${SOMNIA_INSTALL_BASE:-}" ]; then
   VERSION="$(fetch_out "https://api.github.com/repos/$REPO/releases?per_page=30" \
-    | grep -o '"browser_download_url": *"[^"]*/download/[^/"]*/somnia-cli-[^"]*-linux-x86_64\.tar\.gz"' \
+    | grep -o '"browser_download_url": *"[^"]*/download/[^/"]*/somnia-cli-[^"]*-'"$PLAT"'\.tar\.gz"' \
     | head -n 1 | sed 's|.*/download/\([^/"]*\)/.*|\1|')" || true
   [ -n "$VERSION" ] || die "no release with a Linux CLI archive found"
 fi
@@ -59,11 +60,11 @@ NUM="${VERSION#v}"
 TMP="$(mktemp -d)"; trap 'rm -rf "$TMP"' EXIT INT TERM
 if [ -n "${SOMNIA_INSTALL_BASE:-}" ]; then
   fetch "$BASE/SHA256SUMS" "$TMP/SHA256SUMS"
-  ARCHIVE="$(grep -o 'somnia-cli-[^ ]*-linux-x86_64\.tar\.gz' "$TMP/SHA256SUMS" | head -n 1)"
+  ARCHIVE="$(grep -o 'somnia-cli-[^ ]*-'"$PLAT"'\.tar\.gz' "$TMP/SHA256SUMS" | head -n 1)"
   [ -n "$ARCHIVE" ] || die "no Linux archive listed in SHA256SUMS"
-  NUM="$(echo "$ARCHIVE" | sed 's/^somnia-cli-//;s/-linux-x86_64\.tar\.gz$//')"
+  NUM="$(echo "$ARCHIVE" | sed -e 's/^somnia-cli-//' -e "s/-$PLAT\\.tar\\.gz\$//")"
 else
-  ARCHIVE="somnia-cli-$NUM-linux-x86_64.tar.gz"
+  ARCHIVE="somnia-cli-$NUM-$PLAT.tar.gz"
   fetch "$BASE/SHA256SUMS" "$TMP/SHA256SUMS"
 fi
 fetch "$BASE/$ARCHIVE" "$TMP/$ARCHIVE"
@@ -74,7 +75,9 @@ GOT="$(sha "$TMP/$ARCHIVE")"
 [ "$WANT" = "$GOT" ] || die "checksum mismatch for $ARCHIVE (expected $WANT, got $GOT); nothing was installed"
 
 tar -xzf "$TMP/$ARCHIVE" -C "$TMP"
-SRC="$TMP/somnia-cli-$NUM-linux-x86_64"
+# macOS: downloaded files carry the quarantine flag; the checksum was verified above.
+[ "$OS" = Darwin ] && { xattr -dr com.apple.quarantine "$TMP/somnia-cli-$NUM-$PLAT" 2>/dev/null || true; }
+SRC="$TMP/somnia-cli-$NUM-$PLAT"
 [ -x "$SRC/somnia" ] && [ -f "$SRC/sidecar/engine.mjs" ] || die "archive layout is not as expected"
 
 DEST="$PREFIX/share/somnia-cli"; BIN="$PREFIX/bin"

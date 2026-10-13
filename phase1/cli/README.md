@@ -58,7 +58,7 @@ The release assets include non-interactive installers. They download only from t
 `philppplik/somnia`, verify the archive against `SHA256SUMS` before touching anything, and are safe to run again
 (a rerun replaces the installed version).
 
-Linux (x86_64):
+Linux (x86_64) and macOS (Apple Silicon):
 
 ```sh
 curl -fsSL https://github.com/philppplik/somnia/releases/download/<tag>/install.sh | sh
@@ -77,5 +77,5 @@ rem or: powershell -NoProfile -ExecutionPolicy Bypass -File install.ps1 [-Versio
 - Windows installs to `%LOCALAPPDATA%\Programs\somnia-cli` and adds that folder to the user `PATH` (once). No admin rights needed.
   `install.bat` runs PowerShell hidden and prints the log at the end, so no extra console window appears.
 - Without a version the newest release (pre-releases included) that carries a CLI archive is used.
-- There is no macOS CLI build yet; `install.sh` stops with a clear message on macOS.
-- `git` and Node 20+ must be on `PATH`. The Linux binary is built on Ubuntu 24.04 and needs glibc 2.39 or newer.
+- macOS installs the same way as Linux (`~/.local/share/somnia-cli`), Apple Silicon only, no Intel build; the installer clears the quarantine flag after the checksum check.
+- `git` and Node 20+ must be on `PATH`. The Linux binary is built on Ubuntu 22.04 and needs glibc 2.35 or newer.

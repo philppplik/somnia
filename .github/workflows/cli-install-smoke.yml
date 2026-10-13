@@ -33,3 +33,12 @@ jobs:
           call phase1\cli\install\install.bat -Version ${{ inputs.tag || 'v12.2.0-beta.2' }}
           if errorlevel 1 exit /b 1
           "%LOCALAPPDATA%\Programs\somnia-cli\somnia.exe" --version
+  macos:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v7
+      - run: |
+          sh phase1/cli/install/install.sh --version "${{ inputs.tag }}"
+          sh phase1/cli/install/install.sh --version "${{ inputs.tag }}"
+          "$HOME/.local/bin/somnia" --version
