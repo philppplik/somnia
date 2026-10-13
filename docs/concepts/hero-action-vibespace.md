@@ -9,7 +9,7 @@ Research date: 2026-10-13. Code baseline: `int/shell`, `e2a188d3`.
 
 ## Recommendation and why
 
-Decision (Philipp, 2026-10-13): the hero is labelled **New task**. The text below proposed "New Studio..."; where it says so, read "New task". The behaviour is unchanged: with a Vibe Space selected the button opens the existing Studio creation form.
+Decision (Philipp, WhatsApp 2026-10-13 19:36: "wir belassen es bei Vibespace, aber nennen es neue Aufgabe also new task"): the hero is labelled **New task**. The text below proposed "New Studio..."; where it says so, read "New task". The behaviour is unchanged: with a Vibe Space selected the button opens the existing Studio creation form.
 
 Implementation note: the feature branch ships one **New task** hero for all cases and keeps creation drafts. The "New space..." variant in the table below is not implemented.
 

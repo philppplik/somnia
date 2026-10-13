@@ -7,7 +7,7 @@ Status:
 | Part | Status |
 | --- | --- |
 | The slot and the manifest field `heroAction`, with Publish as the fallback | **Pre-release** (on `int/shell`) |
-| Per-studio actions in the table below | **In development.** Built on feature branches, not yet merged into `int/shell`. Slides has no implementation yet. |
+| Per-studio actions in the table below | **In development.** Built on feature branches, not yet merged into `int/shell`. |
 
 The slot is a split button. The main part runs the studio's primary command. The chevron opens extra commands. `Publish...` is always the last entry, so deploy is never lost. Below 960 px width only the icon shows. Off desktop (web build) the Publish entry is disabled.
 
@@ -18,7 +18,7 @@ The slot is a split button. The main part runs the studio's primary command. The
 | Code | Preview (toggle) | [hero-action-code](../concepts/hero-action-code.md) |
 | Documents | Export (.docx copy first; PDF only once verified) | [hero-action-documents](../concepts/hero-action-documents.md) |
 | Sheets | Smart Formula (local helper, not cloud AI) | [hero-action-sheets](../concepts/hero-action-sheets.md) |
-| Slides | Present | [hero-action-slides](../concepts/hero-action-slides.md) |
+| Slides | Present (F5, full screen) | [hero-action-slides](../concepts/hero-action-slides.md) |
 | Sound | Export audio... | [hero-action-sound](../concepts/hero-action-sound.md) |
 | Video | Export video... | [hero-action-video](../concepts/hero-action-video.md) |
 | Design | Export | [hero-action-design](../concepts/hero-action-design.md) |
@@ -28,4 +28,4 @@ The slot is a split button. The main part runs the studio's primary command. The
 
 Contract and rules: [hero-action-shell-contract](../concepts/hero-action-shell-contract.md). Developer reference: [header-hero-action](../studios/header-hero-action.md).
 
-Branches: `feat/hero-code-docs-sheets`, `feat/hero-creative`, `feat/hero-sound`, `feat/hero-video`, `feat/hero-vibespace`. Check this table against the release notes before you rely on a row.
+Branches: `feat/hero-code-docs-sheets`, `feat/hero-creative`, `feat/hero-sound`, `feat/hero-video`, `feat/hero-vibespace`, plus the Slides branch. Status as reported on 2026-10-13: all ten built on branches, waiting for the integration snapshot run. Check this table against the release notes before you rely on a row.

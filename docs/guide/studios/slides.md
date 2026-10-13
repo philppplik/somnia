@@ -16,7 +16,7 @@ Files, Slides, Slide text.
 
 ## Header action
 
-Present is planned. No Slides hero action is implemented yet.
+Present (F5, full screen). Built on a feature branch, not yet in `int/shell`.
 
 ## Export and save
 

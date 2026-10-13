@@ -32,3 +32,7 @@ Save before you close. A new blank document starts in memory only until you save
 - Add an AI provider (your own key or a local model): [Settings](settings.md#ai)
 - Publish a site: [Deploy](deploy.md)
 - Use Somnia from a terminal: [Command line](cli.md)
+
+## Export
+
+The web editor supports ZIP, folder, single HTML and Markdown export. Media studios use their own copy/export flows. Check the output and its destination before discarding your source project.

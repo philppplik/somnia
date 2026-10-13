@@ -28,6 +28,9 @@ A passing test, a merged branch or a mock-server run does not move a feature to 
 | Where options live | [Settings](settings.md) |
 | Something broke | [Troubleshooting](troubleshooting.md) |
 | Quick answers | [FAQ](faq.md) |
+| What exists in the editor | [Features](features.md) |
+| AI and collaboration | [AI and collaboration](ai-and-collaboration.md) |
+| Versions and roadmap | [Releases](releases.md) |
 
 ## Rules for writing docs
 

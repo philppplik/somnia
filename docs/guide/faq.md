@@ -10,7 +10,7 @@ Not for local editing. AI providers, GitHub access and collaboration have separa
 
 ## Which version should I install?
 
-Use the stable release for the checked stable scope and an alpha only for testing newer work. On this wiki's 13 October 2026 baseline, those are v12.0.1 and v12.2.0-alpha.7. See [Quickstart](quickstart.md) and the actual release assets.
+Use the stable release for the checked stable scope and an alpha only for testing newer work. On the 13 October 2026 baseline, those are v12.0.1 and v12.2.0-alpha.7. See [Quickstart](quickstart.md) and the actual release assets.
 
 ## The app starts with a black window. What now?
 
@@ -50,7 +50,7 @@ The documented encrypted collaboration session does not enforce a read-only view
 
 ## Can I deploy through SSH, Node or FTP/FTPS today?
 
-This wiki marks those new integrated targets in development, not released in the checked stable/alpha baseline. Export and use your existing hosting tools until a release documents supported deployment.
+The guide marks those new integrated targets in development, not released in the checked stable/alpha baseline. Export and use your existing hosting tools until a release documents supported deployment.
 
 ## How do I report a problem?
 

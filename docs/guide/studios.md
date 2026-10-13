@@ -26,3 +26,30 @@ Status of each studio is **Stable** or **Pre-release** as shown in the release n
 - **Commands.** Every action is a command with an id. [UI commands](../ui-commands.md).
 - **Versions (git).** [Git contract](../git/CONTRACT.md).
 - **Collaboration.** [Live collaboration](../collaboration.md).
+
+## Boundaries
+
+What each studio is not. Taken from the release-checked wiki baseline of 2026-10-13.
+
+| Workspace | Main workflow | Important boundary |
+| --- | --- | --- |
+| Code | HTML/CSS and text/code files; Design, Split, Code | Visual editing is not a universal JSX/TSX renderer |
+| Documents | DOCX pages and supported text editing | Arbitrary Word layout/formatting fidelity is not guaranteed; save a copy |
+| Sheets | XLSX cell/formula workflow | Not a claim of complete Excel compatibility |
+| Slides | PPTX preview and supported text-run editing | Not a general slide-layout, notes or rich-text editor |
+| Sound | Audio waveform, selection, processing and WAV copy export | Not a multitrack recording/mixer session |
+| Video | Clip timeline, trim/split/reorder, supported titles/transitions and export | Codec support is platform-dependent; export is a rendered video, not a saved edit list |
+| Design | Artboard and layer workspace (`.somdesign`) | Separate from the SVG/Vector document model |
+| Vector | SVG shapes, paths, nodes and supported SVG/PNG export | Import/export is bounded, not arbitrary SVG feature preservation |
+| Photos | Raster editing and experimental JPEG/PNG development | RAW development and durable Lightroom-style sidecars are not established |
+| Vibespace (alpha) | Consent-gated local agent work | Computer use is preparation only, unavailable in the checked alpha |
+
+### Opening and blank documents
+
+File intake validates content as well as extensions. Manual studio selection can take precedence over automatic routing. Unsupported content should report a limitation rather than silently claim a conversion.
+
+Blank creation adds a uniquely named tab; it does not overwrite a file or replace the project. Code starts with an empty page, office studios with minimal documents, Sound with a silent buffer, and Video with an empty edit list. Export/save before closing. Native dialogs, codecs and worker/WASM behavior need target-desktop verification.
+
+### Modes
+
+Use the **View** menu for Code's Design/Split/Code surfaces. Markdown uses Preview/Split/Source. The documented mode memory is per document and studio for the session. It does not change file contents, undo history or AI approval.
