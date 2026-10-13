@@ -1,5 +1,7 @@
 import {registerStudio,type StudioDef} from './registry';
 import type {MenuId,MenuItemDef} from '../shell/types';
+import {codePanels,codeInspector} from '../codePanels/shell';
+import {CODE_LEFT_RAIL,CODE_RIGHT_RAIL,CODE_SHELL_LAYOUT} from './codeRail';
 /**
  * M2: today's Code studio menus expressed as MenuItemDef[] (studio shell v2, concept section 4.2/8).
  * Placement only: titles, shortcuts and enabled flags still come from the command registry at render
@@ -27,7 +29,14 @@ export const codeStudio:StudioDef={
   bottomBar:{slots:['viewport','cursor','breakpoint','zoom'],viewportPresets:[{width:1280,icon:'Monitor',label:'status.desktop'},{width:820,icon:'Tablet',label:'status.tablet'},{width:390,icon:'Smartphone',label:'status.mobile'}]},
   inspector:'code.inspector',tools:[]
  },commands:[{id:'view.design',label:'cmd.view.design'},{id:'view.split',label:'cmd.view.split'},{id:'view.code',label:'cmd.view.code'}],
- shortcuts:{'studio.code':'Mod+1','view.design':'Mod+Alt+1','view.split':'Mod+Alt+2','view.code':'Mod+Alt+3'},menus:{view:['view.design','view.split','view.code']},shellV2:{menus:codeMenuDefs},canvas:'code.canvas',
+ shortcuts:{'studio.code':'Mod+1','view.design':'Mod+Alt+1','view.split':'Mod+Alt+2','view.code':'Mod+Alt+3'},menus:{view:['view.design','view.split','view.code']},shellV2:{
+  menus:codeMenuDefs,
+  panels:codePanels,
+  inspector:codeInspector,
+  leftRail:CODE_LEFT_RAIL,
+  rightRail:CODE_RIGHT_RAIL,
+  defaultLayout:CODE_SHELL_LAYOUT,
+ },canvas:'code.canvas',
  agent:{tools:[],contextProviders:['activeDocument','selection'],quickActions:[]},deriveContext:context=>context
 };
 registerStudio(codeStudio);

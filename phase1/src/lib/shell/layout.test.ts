@@ -3,6 +3,8 @@ import assert from 'node:assert/strict';
 import {createShellLayoutStore,editPanelStack,sanitizeShellLayout} from '../../store/shellLayoutStore';
 import {CODE_LAYOUT,CODE_PANELS,studioPanels,studioRail} from './codePanels';
 import {codeStudio} from '../studios/code';
+import {codePanels} from '../codePanels/shell';
+import {CODE_LEFT_RAIL} from '../studios/codeRail';
 test('layout persists independently per studio, including stack order/collapse/rail overrides',()=>{
  const data=new Map<string,string>();const storage={getItem:(k:string)=>data.get(k)??null,setItem:(k:string,v:string)=>{data.set(k,v);}};
  const store=createShellLayoutStore(storage);
@@ -31,6 +33,8 @@ test('open, close, reorder and focus do not lose other panels',()=>{
  assert.equal(editPanelStack(closed,'left','layers','toggle').leftOpen,false);
 });
 test('Code panels and rails are declarative, without migrating another studio',()=>{
- assert.equal(studioPanels(codeStudio),CODE_PANELS);assert.deepEqual(studioRail(codeStudio,'left').map(i=>i.id),codeStudio.shell.leftRail.map(i=>i.id));
- assert.deepEqual(studioPanels({...codeStudio,id:'legacy'}),[]);
+ assert.equal(studioPanels(codeStudio),codePanels,'the migrated code studio serves its declared panels');
+ assert.deepEqual(studioRail(codeStudio,'left').map(i=>i.id),CODE_LEFT_RAIL.map(i=>i.id));
+ assert.deepEqual(studioRail({...codeStudio,id:'legacy',shellV2:undefined},'left').map(i=>i.id),codeStudio.shell.leftRail.map(i=>i.id),'a studio without shellV2 rails keeps the legacy fallback');
+ assert.deepEqual(studioPanels({...codeStudio,id:'legacy',shellV2:undefined}),[]);
 });

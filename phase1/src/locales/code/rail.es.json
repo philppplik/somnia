@@ -1,0 +1,16 @@
+{
+  "code.rail.layers": "Capas",
+  "code.rail.files": "Archivos",
+  "code.rail.search": "Buscar",
+  "code.rail.components": "Componentes",
+  "code.rail.css": "CSS",
+  "code.rail.versions": "Versiones",
+  "code.rail.responsive": "Adaptable",
+  "code.rail.outline": "Esquema",
+  "code.rail.inspector": "Diseño",
+  "code.inspector": "Diseño",
+  "code.inspector.empty": "No hay nada que inspeccionar aquí.",
+  "code.inspector.design": "Diseño",
+  "code.inspector.interactions": "Interacciones",
+  "code.inspector.source": "Fuente"
+}

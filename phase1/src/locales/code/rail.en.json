@@ -1,0 +1,16 @@
+{
+  "code.rail.layers": "Layers",
+  "code.rail.files": "Files",
+  "code.rail.search": "Search",
+  "code.rail.components": "Components",
+  "code.rail.css": "CSS",
+  "code.rail.versions": "Versions",
+  "code.rail.responsive": "Responsive",
+  "code.rail.outline": "Outline",
+  "code.rail.inspector": "Design",
+  "code.inspector": "Design",
+  "code.inspector.empty": "Nothing to inspect here.",
+  "code.inspector.design": "Design",
+  "code.inspector.interactions": "Interactions",
+  "code.inspector.source": "Source"
+}

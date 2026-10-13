@@ -1,0 +1,16 @@
+{
+  "code.rail.layers": "Ebenen",
+  "code.rail.files": "Dateien",
+  "code.rail.search": "Suche",
+  "code.rail.components": "Komponenten",
+  "code.rail.css": "CSS",
+  "code.rail.versions": "Versionen",
+  "code.rail.responsive": "Responsiv",
+  "code.rail.outline": "Gliederung",
+  "code.rail.inspector": "Design",
+  "code.inspector": "Design",
+  "code.inspector.empty": "Hier gibt es nichts zu untersuchen.",
+  "code.inspector.design": "Design",
+  "code.inspector.interactions": "Interaktionen",
+  "code.inspector.source": "Quelltext"
+}
