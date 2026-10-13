@@ -1,0 +1,28 @@
+▄▀▀  █▀▀█  █▀▄▀█  █▄ █  ▀█▀  ▄▀▀▄   task  Rewrite the hero copy and make the CTA primary
+▀▀▄  █  █  █ ▀ █  █ ▀█   █   █▀▀█   model claude-sonnet (BYOK)
+▄▄▀  ▀▀▀▀  ▀   ▀  ▀  ▀  ▀▀▀  ▀  ▀   base  7dc7b652
+
+────────────────────────────────────────────────────────────────────────────────────────────────────
+I'll read the landing page first, then tighten the hero copy.
+ ✓ read_file  index.html (212 lines)
+ ✓ search  3 matches
+Proposing two changes: the headline and the CTA.
+ ◐ propose_edit  index.html (2 hunks)
+
+
+
+┌ Review  index.html  (2 hunks) ───────────────────────────────────────────────────────────────────┐
+│[ ] h1 @@ -12,4 +12,6 @@ hero                                                                     │
+│     <section class="hero">                                                                       │
+│    -  <h1>Welcome</h1>                                                                           │
+│    +  <h1>Design in the open</h1>                                                                │
+│    +  <p class="lede">Local-first. Real code.</p>                                                │
+│     </section>                                                                                   │
+│[ ] h2 @@ -40,3 +42,3 @@ cta                                                                      │
+│                                                                                                  │
+│                                                                                                  │
+│                                                                                                  │
+│                                                                                                  │
+│Decide every hunk, then Enter to submit.                                                          │
+└──────────────────────────────────────────────────────────────────────────────────────────────────┘
+ review   t-20261010-0042 │ $0.0094 · 5870 tok │ branch …/task/t-20261010-0042 │ j/k move  a/r decid

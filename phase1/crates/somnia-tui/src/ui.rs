@@ -60,7 +60,7 @@ fn header(f: &mut Frame, area: Rect, app: &App, mode: ColorMode, th: &Theme) {
     f.render_widget(Paragraph::new(logo), cols[0]);
     let dim = Style::default().fg(th.dim);
     let info = vec![
-        Line::from(vec![Span::styled("task  ", dim), Span::styled(trunc(&app.prompt, cols[1].width as usize - 8), Style::default().fg(th.fg).add_modifier(Modifier::BOLD))]),
+        Line::from(vec![Span::styled("task  ", dim), Span::styled(trunc(&app.prompt, (cols[1].width as usize).saturating_sub(8)), Style::default().fg(th.fg).add_modifier(Modifier::BOLD))]),
         Line::from(vec![Span::styled("model ", dim), Span::styled(app.model.clone(), Style::default().fg(th.fg))]),
         Line::from(vec![Span::styled("base  ", dim), Span::styled(app.base_sha.chars().take(8).collect::<String>(), Style::default().fg(th.fg))]),
     ];

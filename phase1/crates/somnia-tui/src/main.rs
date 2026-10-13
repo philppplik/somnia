@@ -13,7 +13,7 @@ use somnia_tui::ui::*;
 use std::io::{stdout, IsTerminal};
 use std::time::Duration;
 
-const USAGE: &str = "somnia-tui: run + watch + approve\n\nUSAGE:\n  somnia-tui [--light] [--no-color] -- <headless core command...>\n  somnia-tui --demo\n  somnia-tui --replay FILE.ndjson\n  somnia-tui --capture DIR     write demo screenshots (ansi + txt) and exit\n  somnia-tui --version\n\nThe core command must speak NDJSON protocol v1 on stdio. Exit codes: 0 done, 1 failed, 2 needs input.\n";
+const USAGE: &str = "somnia-tui: run + watch + approve\n\nUSAGE:\n  somnia-tui [--light] [--no-color] [--plain] -- <headless core command...>\n  somnia-tui --demo\n  somnia-tui --replay FILE.ndjson\n  somnia-tui --capture DIR     write demo screenshots (ansi + txt) and exit\n  somnia-tui --version\n\nThe core command must speak NDJSON protocol v1 on stdio. Without a terminal (or with --plain) it prints plain text lines, never ANSI, and leaves reviews pending. Exit codes: 0 done, 1 failed, 2 needs input.\n";
 
 fn mode() -> ColorMode {
     detect_color_mode(
@@ -30,6 +30,7 @@ fn main() {
     let mut light = false;
     let mut core_argv: Vec<String> = vec![];
     let mut demo = false;
+    let mut plain = false;
     let mut replay: Option<String> = None;
     let mut capture: Option<String> = None;
     let mut i = 0;
@@ -45,6 +46,7 @@ fn main() {
             "--light" => light = true,
             "--no-color" => cm = ColorMode::Mono,
             "--demo" => demo = true,
+            "--plain" => plain = true,
             "--replay" => { i += 1; replay = args.get(i).cloned(); }
             "--capture" => { i += 1; capture = args.get(i).cloned(); }
             "--" => { core_argv = args[i + 1..].to_vec(); break; }
@@ -64,6 +66,10 @@ fn main() {
         eprint!("{USAGE}");
         std::process::exit(64);
     };
+    if plain || !(std::io::stdin().is_terminal() && stdout().is_terminal()) {
+        let code = somnia_tui::plain::run_plain(&mut core, &mut stdout());
+        std::process::exit(code);
+    }
     let th = if cm == ColorMode::Mono { Theme::mono() } else if light { Theme::light() } else { Theme::dark() };
     let mut app = App::new();
     let res = run(&mut app, &mut core, cm, &th, demo);

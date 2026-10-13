@@ -31,8 +31,15 @@ Full gradient splash (`--version` on a tty), compact 3-row header, exit snapshot
 `Resume: somnia resume <task_id>`. Truecolor gradient #002AFF -> #EE00FF -> #FF001E, 256-color
 approximation, monochrome when NO_COLOR, `--no-color`, TERM=dumb or not a tty. Machine mode emits no banner.
 
+## Without a terminal
+
+If stdin or stdout is not a TTY (pipes, CI, files) or `--plain` is given, the TUI does not enter raw mode and prints one
+plain text line per event, with no ANSI sequences. A proposed diff is listed and left pending: the run is cancelled
+and the exit code is 2. Nothing is approved without a human at a terminal.
+
 ## Tests
 
-    cargo test          # 14 tests: contract, guard, hash binding, rendering, spawned-core roundtrip
+    cargo test          # contract, guard, hash binding, rendering, spawned-core roundtrip, TestBackend goldens, plain mode
+    UPDATE_SNAPSHOTS=1 cargo test --test snapshots   # regenerate tests/snapshots/*.txt, then review the diff
     scripts/pty_drive.py target/release/somnia-tui out.raw    # real pty end-to-end (demo)
     somnia-tui --capture DIR [--light]; scripts/ansi2png.py DIR/x.ansi x.png [dark|light]
