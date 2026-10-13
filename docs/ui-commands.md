@@ -16,7 +16,7 @@ included; the `source` column names the owner. Dynamic sources that stay outside
 
 Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, fr, pt-BR); the gate enforces it.
 
-188 commands. Categories: Edit, Help, Insert, Project, Tools, View.
+198 commands. Categories: Edit, Help, Insert, Project, Tools, View.
 
 | id | title | category | source | shortcut |
 | --- | --- | --- | --- | --- |
@@ -52,9 +52,19 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `design.redo` | Design: Redo | Edit | design |  |
 | `design.setTool` | Design: Select tool | Tools | design |  |
 | `design.undo` | Design: Undo | Edit | design |  |
+| `documents.clearSelection` | Clear document selection | View | documents-panels |  |
+| `documents.commitParagraph` | Apply paragraph text | Edit | documents-panels |  |
+| `documents.focusParagraph` | Focus paragraph | View | documents-panels |  |
+| `documents.goToPage` | Go to document page | View | documents-panels |  |
 | `documents.outline.goto` | Go to document paragraph | View | documents |  |
 | `documents.pages.goto` | Go to document page | View | documents |  |
+| `documents.panelRedo` | Redo document edit | Edit | documents-panels |  |
+| `documents.panelUndo` | Undo document edit | Edit | documents-panels |  |
 | `documents.redo` | Redo document text edit | View | documents |  |
+| `documents.replaceMatch` | Replace search result | Edit | documents-panels |  |
+| `documents.selectMatch` | Select search result | View | documents-panels |  |
+| `documents.selectParagraph` | Select entire paragraph | View | documents-panels |  |
+| `documents.setZoom` | Set document zoom | View | documents-panels |  |
 | `documents.undo` | Undo document text edit | View | documents |  |
 | `documents.zoomIn` | Zoom in on the document | View | documents |  |
 | `documents.zoomOut` | Zoom out of the document | View | documents |  |
