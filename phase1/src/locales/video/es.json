@@ -99,5 +99,19 @@
   "cmd.video.title.duration": "Ajustar duración del título",
   "cmd.video.export.format": "Elegir formato de exportación",
   "cmd.video.export.start": "Exportar copia de vídeo",
-  "cmd.video.export.cancel": "Cancelar exportación"
+  "cmd.video.export.cancel": "Cancelar exportación",
+ "video.hero.export": "Exportar vídeo...",
+ "video.hero.exporting": "Exportando...",
+ "video.review.scope": "Exportar toda la línea de tiempo. La selección y el cabezal no limitan la salida.",
+ "video.review.changed": "La línea de tiempo cambió. Abre Exportar de nuevo.",
+ "video.review.close": "Cerrar",
+ "video.review.duration": "Línea de tiempo completa: {seconds} s",
+ "video.review.silent": "Este formato no puede codificar audio aquí. Quiero exportar sin sonido.",
+ "video.review.wait": "La línea de tiempo no está lista.",
+ "video.review.empty": "Añade clips antes de exportar.",
+ "video.review.downloaded": "Descarga iniciada.",
+ "video.review.cancelled": "Exportación cancelada.",
+ "video.review.unavailable": "Exportación no disponible. Revisa las fuentes y el codificador.",
+ "video.review.failed": "Error al exportar. Se conservan los ajustes.",
+ "cmd.video.export.open": "Exportar vídeo..."
 }

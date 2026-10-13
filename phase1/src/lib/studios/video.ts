@@ -27,14 +27,14 @@ export const videoShell:StudioShellDef={
   {menu:'Tools',command:'video.source.open',group:'video',order:10},
   {menu:'Edit',command:'video.clip.delete',group:'video',order:10},
   {menu:'Edit',command:'video.timeline.reset',group:'video',order:20},
-  {menu:'Project',command:'video.export.start',group:'video',order:80},
+  {menu:'Project',command:'video.export.open',group:'video',order:80},
   {menu:'Project',command:'video.export.cancel',group:'video',order:90},
  ],
 };
 export const videoStudio:StudioDef={
  id:'video',label:'studio.video',icon:'Film',order:5,
  formats:['mp4','m4v','mov','webm','mkv'].map(ext=>({ext,priority:10})),
- shell:{leftRail:[{id:'files',label:'Files',icon:'Files',global:true}],rightRail:[],header:{menus:['Project','Edit','View','Tools','Help'],views:[]},bottomBar:{slots:[],viewportPresets:[]},inspector:'video.inspector',tools:[]},
+ shell:{leftRail:[{id:'files',label:'Files',icon:'Files',global:true}],rightRail:[],header:{menus:['Project','Edit','View','Tools','Help'],views:[],heroAction:{id:'video.export.open',labelKey:'video.hero.export',icon:'Film'}},bottomBar:{slots:[],viewportPresets:[]},inspector:'video.inspector',tools:[]},
  commands:[],shortcuts:{'studio.video':'Mod+6'},menus:{view:[]},canvas:'video.canvas',shellV2:videoShell,
  agent:{tools:[],contextProviders:['activeDocument'],quickActions:[]},deriveContext:context=>context
 };

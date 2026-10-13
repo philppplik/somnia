@@ -99,5 +99,19 @@
   "cmd.video.title.duration": "Régler la durée du titre",
   "cmd.video.export.format": "Choisir le format vidéo",
   "cmd.video.export.start": "Exporter une copie vidéo",
-  "cmd.video.export.cancel": "Annuler l’export vidéo"
+  "cmd.video.export.cancel": "Annuler l’export vidéo",
+ "video.hero.export": "Exporter la vidéo...",
+ "video.hero.exporting": "Export en cours...",
+ "video.review.scope": "Exporter toute la timeline. La sélection et la tête de lecture ne limitent pas la sortie.",
+ "video.review.changed": "La timeline active a changé. Rouvrez Exporter.",
+ "video.review.close": "Fermer",
+ "video.review.duration": "Timeline complète : {seconds} s",
+ "video.review.silent": "Ce format ne peut pas encoder le son ici. Je souhaite un export muet.",
+ "video.review.wait": "La timeline n’est pas prête.",
+ "video.review.empty": "Ajoutez des clips avant l’export.",
+ "video.review.downloaded": "Téléchargement lancé.",
+ "video.review.cancelled": "Export annulé.",
+ "video.review.unavailable": "Export indisponible. Vérifiez les sources et les encodeurs.",
+ "video.review.failed": "Échec de l’export. Les réglages sont conservés.",
+ "cmd.video.export.open": "Exporter la vidéo..."
 }

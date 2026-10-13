@@ -99,5 +99,19 @@
   "cmd.video.title.duration": "Set selected title card duration",
   "cmd.video.export.format": "Set video export format",
   "cmd.video.export.start": "Export video copy",
-  "cmd.video.export.cancel": "Cancel video export"
+  "cmd.video.export.cancel": "Cancel video export",
+ "video.hero.export": "Export video...",
+ "video.hero.exporting": "Exporting...",
+ "video.review.scope": "Export the whole timeline. Clip selection and playhead do not limit output.",
+ "video.review.changed": "Active timeline changed. Reopen Export to review it.",
+ "video.review.close": "Close",
+ "video.review.duration": "Full timeline: {seconds} s",
+ "video.review.silent": "This format cannot encode audio here. I want a silent export.",
+ "video.review.wait": "Timeline is not ready for export.",
+ "video.review.empty": "Add clips before exporting.",
+ "video.review.downloaded": "Download started.",
+ "video.review.cancelled": "Export cancelled.",
+ "video.review.unavailable": "Export unavailable. Check source media and encoder support.",
+ "video.review.failed": "Export failed. Timeline and settings are kept.",
+ "cmd.video.export.open": "Export video..."
 }

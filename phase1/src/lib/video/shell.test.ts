@@ -6,7 +6,7 @@ import {hasRailIcon} from '../shell/railIcons';
 import '../../components/shell/railIconSet';
 import {railModel,editRailOverrides} from '../../store/railActions';
 import {VIDEO_CATALOGUES} from './i18n';
-import {VIDEO_COMMANDS,videoCommandSpecs} from './commands';
+import {VIDEO_COMMANDS,videoCommandSpecs,registerVideoExportOpener} from './commands';
 import {CommandDispatcher} from '../commandDispatcher';
 import {addBlankVideoProject,getMedia,closeMedia} from '../media';
 import {openVideo,getVideoSession,closeVideo} from './session';
@@ -45,6 +45,9 @@ test('typed video commands edit only the active timeline, refuse stale ids and u
  await openVideo(item);
  const d=new CommandDispatcher();videoCommandSpecs().forEach(s=>d.register(s));
  try{
+  let review='';const offReview=registerVideoExportOpener(n=>{review=n;});
+  await d.runCommand('video.export.open');assert.equal(review,name);offReview();assert.equal(d.isEnabled('video.export.open'),false);
+  await assert.rejects(d.runCommand('video.export.open',undefined,{origin:'agent'}));
   await d.runCommand('video.title.add',undefined,{origin:'test'});
   const first=getVideoSession(name)!.clips[0];assert.equal(first.kind,'title');
   await d.runCommand('video.title.update',{text:'First scene',background:'#123456'},{origin:'test'});

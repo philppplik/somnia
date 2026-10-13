@@ -1,3 +1,6 @@
+import {useState} from 'react';
+import {commandDispatcher} from '../../lib/commandDispatcher';
+import {getVideoSession} from '../../lib/video/session';
 import {getMedia,useMedia} from '../../lib/media';
 import {useVideoSession} from '../../lib/video/session';
 import {clipDuration,clipRanges,fadeOf,MAX_GAIN,timelineDuration} from '../../lib/video/timeline';
@@ -90,15 +93,28 @@ export function VideoAudioSection(_:InspectorSectionProps){
   {next?<label>{t('video.transition')}<input className={field} type="number" min={0} max={Math.min(clipDuration(selected),clipDuration(next))} step={0.1} value={fadeOf(selected)} onChange={e=>run('video.clip.crossfade',{seconds:Number(e.target.value)})} data-testid="video-clip-transition-duration"/></label>:<p className="m-0 text-ink-3">{t('video.shell.lastClip')}</p>}
  </fieldset>;
 }
-export function VideoExportSection(_:InspectorSectionProps){
- const {t}=useT();const {s,media,ready}=useActive();if(!s)return null;
+export function VideoExportSection({reviewName}:InspectorSectionProps&{reviewName?:string}){
+ const {t}=useT();const {s,media,ready}=useActive();const [ack,setAck]=useState(''),[outcome,setOutcome]=useState('');if(!s)return null;
+ const signature=JSON.stringify([s.name,s.clips,s.format]);
+ const audio=s.clips.some(c=>needsSourceFile(c)&&!c.muted&&c.gain>0&&!!getVideoSession(c.source)?.probe?.audio);
+ const silent=audio&&!(s.format==='mp4'?s.capabilities?.aac:s.capabilities?.opus);
+ const submit=async()=>{
+  if(media.active!==reviewName||getVideoSession(reviewName)?.clips!==s.clips||getVideoSession(reviewName)?.format!==s.format||silent&&ack!==signature)return;
+  setOutcome('');try{setOutcome(await commandDispatcher.runCommand<string>('video.export.start'));}catch{setOutcome('failed');}
+ };
  const missing=s.clips.some(c=>needsSourceFile(c)&&!media.items.some(i=>i.name===c.source));
  const supported=!!(s.format==='webm'?s.capabilities?.webmVideo:s.capabilities?.mp4Video);
  return <div className="grid gap-3 text-xs text-ink-2" data-testid="video-format">
   {(['webm','mp4'] as const).map(format=><label key={format} className="flex items-center gap-2"><input className="!size-4 !w-4 accent-[var(--accent)]" type="radio" name="video-shell-format" checked={s.format===format} disabled={!ready||!(format==='webm'?s.capabilities?.webmVideo:s.capabilities?.mp4Video)} onChange={()=>run('video.export.format',{format})} data-testid={'video-format-'+format}/>{t(format==='mp4'&&s.capabilities&&!s.capabilities.aac?'video.format.mp4NoAudio':'video.format.'+format)}</label>)}
+  {reviewName&&<p>{t('video.review.duration',{seconds:timelineDuration(s.clips).toFixed(2)})}</p>}
+  {reviewName&&silent&&<label className="flex gap-2"><input type="checkbox" checked={ack===signature} onChange={e=>setAck(e.target.checked?signature:'')}/>{t('video.review.silent')}</label>}
+  {s.error&&<p role="alert">{s.error}</p>}
+  {!ready&&s.status!=='exporting'&&<p role="status">{t('video.review.wait')}</p>}
+  {!s.clips.length&&<p>{t('video.review.empty')}</p>}
+  {outcome&&<p role="status">{t('video.review.'+outcome)}</p>}
   {!supported&&<p className="m-0 text-ink-3">{t('video.format.unavailable')}</p>}
   {missing&&<p role="alert">{t('video.shell.missing')}</p>}
-  {s.status==='exporting'?<><progress className="w-full accent-[var(--accent)]" max={1} value={s.progress?.ratio} aria-label={t('video.export')}/><Button size="compact" onClick={()=>run('video.export.cancel')}>{t('video.cancel')}</Button></>:<Button size="compact" disabled={!ready||!s.clips.length||missing||!supported} onClick={()=>run('video.export.start')} data-testid="video-shell-export">{t('video.export')}</Button>}
+  {s.status==='exporting'?<><progress className="w-full accent-[var(--accent)]" max={1} value={s.progress?.ratio} aria-label={t('video.export')}/><Button size="compact" onClick={()=>run('video.export.cancel')}>{t('video.cancel')}</Button></>:<Button variant="primary" size="compact" disabled={!ready||!s.clips.length||missing||!supported||!!reviewName&&silent&&ack!==signature} onClick={()=>reviewName?void submit():run('video.export.open')} data-testid="video-shell-export">{t('video.export')}</Button>}
   {s.result&&<p className="m-0 text-ink-3" data-testid="video-result-inspector">{t('video.result',{duration:s.result.report.duration_s.toFixed(2),bytes:(s.result.report.bytes/1024).toFixed(0)+' KB',video:s.result.report.videoCodec??'',audio:s.result.report.audioCodec??t('video.resultAudioMuted')})}</p>}
  </div>;
 }

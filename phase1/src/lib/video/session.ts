@@ -125,7 +125,7 @@ export const setVideoFormat=(root:string,format:VideoFormat)=>patch(root,{format
 /** Runs the export in the worker and keeps the result on the session. Cancel rejects quietly. */
 export async function runVideoExport(name:string):Promise<'exported'|'cancelled'|'unavailable'>{
  const s=sessions.get(name);
- if(!s||!s.clips.length)return'unavailable';
+ if(!s||s.status!=='ready'||!s.clips.length)return'unavailable';
  const clipSources:Record<string,ArrayBuffer>={};
  for(const n of new Set(s.clips.filter(needsSourceFile).map(c=>c.source))){
   const bytes=sources.get(n);

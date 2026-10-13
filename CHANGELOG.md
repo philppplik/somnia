@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased - Video export review
+
+- Video header export opens whole-timeline review/progress with capability gates, deliberate silent output and honest download outcomes.
+
+
 ## Unreleased - Sound export review
 
 - Sound header Export audio opens a processed-clip WAV review with pending-render gates, clip identity checks and save/download/cancel outcomes.
