@@ -7,7 +7,7 @@ export const vectorShell:StudioShellDef={
   {id:'files',title:'Files',component:'code.files',side:'left'},
   {id:'layers',title:'Layers',titleKey:'vector.layers',component:'vector.layers',side:'left',commands:['vector.select','vector.toggleHidden','vector.renamePath','vector.reorder']},
   {id:'tools',title:'Tools',titleKey:'vector.toolbar',component:'vector.tools',side:'left',commands:['vector.setTool']},
-  {id:'export',title:'Export',titleKey:'vector.file',component:'vector.export',side:'right',commands:['vector.exportSvg','vector.exportPng','vector.importSvg','vector.clearError']},
+  {id:'export',title:'Export',titleKey:'vector.hero.export',component:'vector.export',side:'right',commands:['vector.exportSvg','vector.exportPng','vector.importSvg','vector.clearError']},
   {id:'inspector',title:'Vector',titleKey:'vector.inspector',component:'shell.inspector',side:'right',defaultOpen:true},
  ],
  leftRail:[
@@ -37,7 +37,7 @@ export const vectorStudio:StudioDef={
  shell:{
   leftRail:[{id:'files',label:'Files',icon:'Files',global:true}],
   rightRail:[],
-  header:{menus:['Project','Edit','View','Tools','Help'],views:[]},
+  header:{heroAction:{id:'vector.export.open',labelKey:'vector.hero.export',disabledLabelKey:'vector.hero.disabled',icon:'VectorExport',menu:['vector.exportSvg','vector.exportPng']},menus:['Project','Edit','View','Tools','Help'],views:[]},
   bottomBar:{slots:['zoom'],viewportPresets:[]},
   inspector:'vector.inspector',tools:[]
  },

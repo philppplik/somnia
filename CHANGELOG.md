@@ -1,3 +1,7 @@
+# Unreleased: Vector hero export
+
+- Vector Export... opens/focuses the Export panel without writing; output format setup, capped PNG dimensions, separated import controls and five-language labels.
+
 # Unreleased: Design hero export
 
 - Design split Export opens current-artboard SVG or all-artboards ZIP setup and editable project download, with inline status and five-language labels.

@@ -123,5 +123,10 @@
  "cmd.vector.tool.polygon":"Polygon",
  "cmd.vector.tool.star":"Stern",
  "vector.shell.importChanged":"Das Dokument wurde beim Lesen geändert. Wähle die SVG-Datei erneut.",
- "vector.shell.importFailed":"Die SVG-Datei konnte nicht gelesen werden."
+ "vector.shell.importFailed":"Die SVG-Datei konnte nicht gelesen werden.",
+ "vector.hero.export":"Exportieren...",
+ "vector.hero.page":"Ganze Seite",
+ "vector.hero.format":"Format",
+ "cmd.vector.export.open":"Vektor: Exportieren...",
+ "vector.hero.disabled":"Erstelle oder öffne eine Vektorzeichnung."
 }
