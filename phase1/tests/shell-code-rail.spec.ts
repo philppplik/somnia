@@ -43,6 +43,8 @@ test('Code inspector: generic host shows the declared sections',async({page})=>{
  await expect(page.getByTestId('shell-inspector')).toBeVisible();
 
  await expect(page.getByTestId('inspector-section-design')).toBeVisible();
+ // Interactions require a real single-element selection.
+ await page.frameLocator('.design-iframe').locator('h1').click();
  await expect(page.getByTestId('inspector-section-interactions')).toBeVisible();
  await expect(page.getByTestId('inspector-section-source')).toBeVisible();
  await page.screenshot({path:shot('code-inspector-sections')});

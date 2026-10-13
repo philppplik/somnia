@@ -19,7 +19,7 @@ for(const theme of ['light','dark']){
   await expect(page.getByTestId('documents-thumb').first()).toBeVisible();
   // Outline panel lists paragraphs and filters
   await showPanel(page,'Outline');
-  await expect(page.getByTestId('documents-outline')).toBeVisible();
+  await expect(page.getByTestId('documents-outline-panel')).toBeVisible();
   await page.screenshot({path:shot(`${theme}-outline`)});
   // Inspector contents are tested after explicitly opening it, independent of studio-open defaults.
   await showPanel(page,'Document');

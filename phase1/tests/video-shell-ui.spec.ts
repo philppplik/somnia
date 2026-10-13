@@ -9,7 +9,7 @@ test('video shell panels, selection, typed edits and light/dark views',async({pa
  await showPanel(page,'Video');
  await expect(page.getByTestId('video-sources-panel')).toBeVisible();
  await expect(page.getByTestId('video-facts')).toContainText('clip.webm');
- await page.getByRole('button',{name:'Sequence',exact:true}).click();
+ await showPanel(page,'Sequence');
  await expect(page.getByTestId('video-sequence-panel')).toBeVisible();
  await page.getByTestId('video-add-title').click();
  await expect(page.getByTestId('video-title-panel')).toBeVisible();

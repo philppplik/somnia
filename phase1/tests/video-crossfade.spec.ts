@@ -19,7 +19,7 @@ async function probeDuration(page:any,bytes:Uint8Array){
 }
 test('Video Studio: a crossfade overlaps two clips, blends the preview and shortens the export',async({page})=>{
  await openVideo(page);
- const chooser=page.waitForEvent('filechooser');await page.getByTestId('video-add-open').click();await (await chooser).setFiles(asset('clip2.webm'));
+ const chooser=page.waitForEvent('filechooser');await page.getByTestId('video-source-open').click();await (await chooser).setFiles(asset('clip2.webm'));
  await expect(page.getByTestId('video-clip')).toHaveCount(2);
  await expect(page.getByTestId('video-timeline-summary')).toContainText('4.01');
  // select the first clip and give it a 0.5 s crossfade into the second
@@ -37,7 +37,7 @@ test('Video Studio: a crossfade overlaps two clips, blends the preview and short
  await expect(page.getByTestId('video-player-b')).toHaveAttribute('data-clip-id',/.+/);
  await page.screenshot({path:'test-results/video-crossfade-preview.png'});
  // export is the joined length minus the overlap, still real VP9/Opus WebM
- const download=page.waitForEvent('download');await page.getByTestId('video-export').click();const d=await download;
+ const download=page.waitForEvent('download');await page.getByTestId('video-export').click();await page.getByTestId('video-export-review').getByTestId('video-shell-export').click();await page.getByTestId('video-export-review').getByRole('button',{name:'Close',exact:true}).click();const d=await download;
  expect(d.suggestedFilename()).toBe('clip-edited.webm');
  const bytes=readFileSync(await d.path()!);
  expect([...bytes.subarray(0,4)]).toEqual([0x1a,0x45,0xdf,0xa3]);expect(bytes.length).toBeGreaterThan(10_000);
@@ -47,7 +47,7 @@ test('Video Studio: a crossfade overlaps two clips, blends the preview and short
 });
 test('Video Studio: crossfade clamps and edits survive split, delete and reset',async({page})=>{
  await openVideo(page);
- const chooser=page.waitForEvent('filechooser');await page.getByTestId('video-add-open').click();await (await chooser).setFiles(asset('clip2.webm'));
+ const chooser=page.waitForEvent('filechooser');await page.getByTestId('video-source-open').click();await (await chooser).setFiles(asset('clip2.webm'));
  await expect(page.getByTestId('video-clip')).toHaveCount(2);
  // set a partial fade on the first clip
  await page.getByTestId('video-clip').first().click({position:{x:4,y:4}});

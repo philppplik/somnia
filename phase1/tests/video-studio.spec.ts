@@ -47,7 +47,7 @@ test('Video Studio: open WebM, play, trim with I/O, export a real trimmed WebM',
  await expect(page.getByTestId('video-clip-out-input')).toHaveValue('1.5');
  await page.screenshot({path:'test-results/video-trimmed.png'});
  // export is a real VP9/Opus WebM of the trimmed range
- const download=page.waitForEvent('download');await page.getByTestId('video-export').click();const d=await download;
+ const download=page.waitForEvent('download');await page.getByTestId('video-export').click();await page.getByTestId('video-export-review').getByTestId('video-shell-export').click();await page.getByTestId('video-export-review').getByRole('button',{name:'Close',exact:true}).click();const d=await download;
  expect(d.suggestedFilename()).toBe('clip-edited.webm');
  const bytes=readFileSync(await d.path()!);
  expect([...bytes.subarray(0,4)]).toEqual([0x1a,0x45,0xdf,0xa3]);expect(bytes.length).toBeGreaterThan(10_000);
@@ -86,7 +86,7 @@ test('Video Studio: switching to Code keeps the video tab and shows the settings
 test('Video Studio: add a second source, split, ripple delete, reorder, mute, export the joined timeline',async({page})=>{
  await openVideo(page);
  // add clip2.webm straight from the file dialog; the project tab stays active
- const chooser=page.waitForEvent('filechooser');await page.getByTestId('video-add-open').click();await (await chooser).setFiles(asset('clip2.webm'));
+ const chooser=page.waitForEvent('filechooser');await page.getByTestId('video-source-open').click();await (await chooser).setFiles(asset('clip2.webm'));
  await expect(page.getByTestId('video-clip')).toHaveCount(2);
  await expect(page.getByTestId('video-clip-count')).toContainText('2');
  await expect(page.getByTestId('video-timeline-summary')).toContainText('4.01');
@@ -113,7 +113,7 @@ test('Video Studio: add a second source, split, ripple delete, reorder, mute, ex
  await page.getByTestId('video-clip-gain').fill('0.5');
  await page.screenshot({path:'test-results/video-clip-settings.png'});
  // export joins everything into one WebM of the timeline duration
- const download=page.waitForEvent('download');await page.getByTestId('video-export').click();const d=await download;
+ const download=page.waitForEvent('download');await page.getByTestId('video-export').click();await page.getByTestId('video-export-review').getByTestId('video-shell-export').click();await page.getByTestId('video-export-review').getByRole('button',{name:'Close',exact:true}).click();const d=await download;
  expect(d.suggestedFilename()).toBe('clip-edited.webm');
  const bytes=readFileSync(await d.path()!);
  expect([...bytes.subarray(0,4)]).toEqual([0x1a,0x45,0xdf,0xa3]);

@@ -23,7 +23,7 @@ async function upload(page:Page,hook:string,file:string|{name:string;mimeType:st
 }
 async function downloadExport(page:Page){
  const download=page.waitForEvent('download',{timeout:90_000});
- await page.getByTestId('video-export').click();const result=await download;
+ await page.getByTestId('video-export').click();await page.getByTestId('video-export-review').getByTestId('video-shell-export').click();await page.getByTestId('video-export-review').getByRole('button',{name:'Close',exact:true}).click();const result=await download;
  expect(result.suggestedFilename()).toMatch(/-edited\.webm$/);
  const file=await result.path();expect(file).not.toBeNull();
  const bytes=readFileSync(file!);
@@ -142,7 +142,7 @@ test('P3 filmstrip: decoded thumbnails render, then remain visible after trim an
  await page.getByTestId('video-clip').first().click();
  await page.getByTestId('video-clip-in-input').fill('0.5');
  await expect.poll(decoded).toBe(true);
- await upload(page,'video-add-open',asset('clip2.webm'));
+ await upload(page,'video-source-open',asset('clip2.webm'));
  await expect(page.getByTestId('video-filmstrip')).toHaveCount(2);
  await page.getByTestId('video-clip').nth(1).click();await page.getByTestId('video-clip-left').click();
  await expect(page.getByTestId('video-clip').first()).toContainText('clip2');
@@ -185,7 +185,7 @@ test('P3 crossfade: two sources overlap, blend pixels and mix equal-power audio 
  await openStudio(page);
  const red=await syntheticClip(page,'#ff0000',440),blue=await syntheticClip(page,'#0000ff',880);
  await upload(page,'video-open',{name:'p3-red.webm',mimeType:'video/webm',buffer:red});
- await upload(page,'video-add-open',{name:'p3-blue.webm',mimeType:'video/webm',buffer:blue});
+ await upload(page,'video-source-open',{name:'p3-blue.webm',mimeType:'video/webm',buffer:blue});
  await expect(page.getByTestId('video-clip')).toHaveCount(2);
  const before=await timelineDuration(page,'p3-red.webm');expect(before).toBeCloseTo(4,1);
  // Encode the hard-cut edit through the same app path as a codec-matched audio reference.

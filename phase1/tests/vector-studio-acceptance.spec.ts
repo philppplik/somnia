@@ -44,8 +44,8 @@ test('Vector pointer cancellation and Escape discard drawing previews without un
 });
 
 test('Vector PNG export keeps compound holes transparent and encodes real PNG pixels',async({page})=>{
- await studio(page);await open(page,'compound-hole.svg');await expect(page.getByTestId('vector-layer')).toHaveCount(2);
- const download=page.waitForEvent('download');await page.getByTestId('vector-export-png').click();const file=await download;
+ await studio(page);await open(page,'compound-hole.svg');await expect(page.getByTestId('vector-shell-layers').locator('li')).toHaveCount(2);
+ await showPanel(page,'File');const exportPanel=page.getByTestId('vector-shell-export');await exportPanel.getByRole('combobox',{name:'Format',exact:true}).selectOption('png');await exportPanel.getByRole('combobox',{name:'PNG scale',exact:true}).selectOption('2');const download=page.waitForEvent('download');await exportPanel.getByRole('button',{name:'Export PNG',exact:true}).click();const file=await download;
  expect(file.suggestedFilename()).toBe('compound-hole.png');const bytes=readFileSync((await file.path())!);
  expect([...bytes.subarray(0,8)]).toEqual([137,80,78,71,13,10,26,10]);
  const pixels=await page.evaluate(async raw=>{

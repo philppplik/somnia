@@ -18,16 +18,16 @@ test('Vector Studio: blank start, draw shapes, edit style, undo, export SVG',asy
  await page.getByTestId('vector-create-blank').click();
  await expect(page.getByTestId('vector-canvas')).toBeVisible();
  await page.getByTestId('vector-toolbar-rect').click();await drag(page,[200,150],[360,260]);
- await expect(page.getByTestId('vector-layer')).toHaveCount(1);
+ await expect(page.getByTestId('vector-shell-layers').locator('li')).toHaveCount(1);
  await page.getByTestId('vector-toolbar-ellipse').click();await drag(page,[420,180],[520,280]);
- await expect(page.getByTestId('vector-layer')).toHaveCount(2);
- await page.getByTestId('vector-fill').fill('#ff0000');
+ await expect(page.getByTestId('vector-shell-layers').locator('li')).toHaveCount(2);
+ const fill=page.getByTestId('vector-shell-style').getByRole('textbox',{name:'Fill',exact:true});await fill.fill('#ff0000');await fill.press('Enter');
  await expect(page.locator('[data-testid="vector-artboard"] path[fill="#ff0000"]')).toHaveCount(1);
  await page.getByTestId('vector-undo').click();await page.getByTestId('vector-undo').click();
- await expect(page.getByTestId('vector-layer')).toHaveCount(1);
- await page.getByTestId('vector-redo').click();await expect(page.getByTestId('vector-layer')).toHaveCount(2);
+ await expect(page.getByTestId('vector-shell-layers').locator('li')).toHaveCount(1);
+ await page.getByTestId('vector-redo').click();await expect(page.getByTestId('vector-shell-layers').locator('li')).toHaveCount(2);
  await page.screenshot({path:'test-results/vector-draw.png'});
- const dl=page.waitForEvent('download');await page.getByTestId('vector-export-svg').click();
+ await showPanel(page,'File');const dl=page.waitForEvent('download');await page.getByTestId('vector-shell-export').getByRole('button',{name:'Export SVG',exact:true}).click();
  const file=await dl;expect(file.suggestedFilename()).toBe('Untitled.svg');
  const text=readFileSync((await file.path())!,'utf8');expect(text).toContain('<svg xmlns="http://www.w3.org/2000/svg"');expect((text.match(/<path /g)??[]).length).toBe(2);
 });
@@ -35,7 +35,7 @@ test('Vector Studio: node tool edits an anchor; pen tool draws a closed path',as
  await openStudio(page);await page.getByTestId('vector-create-blank').click();
  await page.getByTestId('vector-toolbar-pen').click();
  await drag(page,[200,200],[200,200]);await drag(page,[320,200],[320,200]);await drag(page,[260,300],[260,300]);await drag(page,[200,200],[200,200]);
- await expect(page.getByTestId('vector-layer')).toHaveCount(1);
+ await expect(page.getByTestId('vector-shell-layers').locator('li')).toHaveCount(1);
  await page.getByTestId('vector-toolbar-node').click();await expect(page.getByTestId('vector-node-overlay')).toBeVisible();
  await page.screenshot({path:'test-results/vector-nodes.png'});
 });
@@ -43,13 +43,13 @@ test('Vector Studio: open an SVG file via the file chooser',async({page})=>{
  await openStudio(page);
  const chooser=page.waitForEvent('filechooser');await page.getByTestId('vector-open').click();
  await (await chooser).setFiles({name:'tri.svg',mimeType:'image/svg+xml',buffer:Buffer.from(SVG)});
- await expect(page.getByTestId('vector-layer')).toHaveCount(1);
+ await expect(page.getByTestId('vector-shell-layers').locator('li')).toHaveCount(1);
 });
 test('Vector Studio: transform fields resize the selection; Delete key removes it',async({page})=>{
  await openStudio(page);await page.getByTestId('vector-create-blank').click();
  await page.getByTestId('vector-toolbar-rect').click();await drag(page,[200,150],[300,230]);
- const w=page.getByTestId('vector-transform-width');await expect(w).toBeEnabled();
+ const w=page.getByTestId('vector-shell-transform').getByRole('spinbutton',{name:'Width',exact:true});await expect(w).toBeEnabled();
  await w.fill('200');await w.press('Enter');await expect(w).toHaveValue('200');
  await page.getByTestId('vector-canvas').focus();await page.keyboard.press('Delete');
- await expect(page.getByTestId('vector-layer')).toHaveCount(0);
+ await expect(page.getByTestId('vector-shell-layers').locator('li')).toHaveCount(0);
 });

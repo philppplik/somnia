@@ -15,3 +15,8 @@ export async function openMine(page:Page,advanced=true){
  */
 export async function showPanel(page:Page,name:string){const b=page.getByRole('button',{name:`${name} panel`,exact:true});if((await b.getAttribute('aria-pressed'))!=='true')await b.click();await expect(b).toHaveAttribute('aria-pressed','true');}
 
+/** Opens a generic inspector section without toggling an already expanded section closed. */
+export async function showInspectorSection(page:Page,id:string){const section=page.getByTestId(`inspector-section-${id}`);await expect(section).toBeVisible();const toggle=section.locator(':scope > button[aria-expanded]');if((await toggle.getAttribute('aria-expanded'))!=='true')await toggle.click();await expect(toggle).toHaveAttribute('aria-expanded','true');}
+
+/** Code has a Preview hero; Publish is the last action in its menu, not the main hero button. */
+export async function openPublish(page:Page){await page.getByTestId('hero-action-menu').click();await page.getByTestId('hero-action-popup').locator('[data-command="deploy.open"]').click();await expect(page.getByTestId('publish-dialog')).toBeVisible();}
