@@ -1,3 +1,4 @@
+import {JobsStatus} from './JobsStatus';
 import {Fragment,type ReactNode} from 'react';
 import {layoutStatusBar,statusSlotsFor,type StatusItem} from '../lib/shell/statusSlots';
 import type {StatusSlotDef} from '../lib/shell/types';
@@ -34,7 +35,7 @@ export function StatusBar(){
   revision:()=><span>{t('status.revision',{n:state.revision})}</span>,
  };
  const render=(i:StatusItem)=>i.kind==='global'?<Fragment key={'g:'+i.id}>{globals[i.id]?.()}</Fragment>:<Fragment key={'s:'+i.id}><StatusSlotView def={i.def}/></Fragment>;
- return <footer className="-mx-shell -mb-shell flex h-9 shrink-0 items-center gap-4 border-t border-subtle bg-transparent px-[18px] text-[10px] text-ink-2" data-testid="status-bar">{layout.before.map(render)}<div className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden" data-testid="status-context-slot">{layout.center.map(render)}</div>{layout.after.map(render)}</footer>;}
+ return <footer className="-mx-shell -mb-shell flex h-9 shrink-0 items-center gap-4 border-t border-subtle bg-transparent px-[18px] text-[10px] text-ink-2" data-testid="status-bar">{layout.before.map(render)}<div className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden" data-testid="status-context-slot">{layout.center.map(render)}</div>{layout.after.map(render)}<JobsStatus/></footer>;}
 
 /** Resolves a declared slot to its component. Unknown components render nothing. */
 function StatusSlotView({def}:{def:StatusSlotDef}){
