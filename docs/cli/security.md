@@ -53,7 +53,7 @@ Not covered: the pipe syscalls need a real Windows host. They run in CI on `wind
 - The engine sidecar is started with the CLI's environment (it needs its provider keys), and its stderr is discarded. Keys are read inside the engine and are never fields in a protocol frame. [E `real_engine_run_leaks_no_credentials_and_stays_off_the_network`]
 - Cloud providers are gated: without `SOMNIA_ENGINE_CLOUD_CONSENT=1` the run fails with `consent` before any request leaves the machine (the scripted server saw zero requests). [E `real_engine_cloud_provider_without_consent_fails_before_anything_is_sent`]
 - Engine failure messages are redacted with the app log redactor and clipped to 500 characters. Tool events carry a path (and a size for writes), never arguments or file content; a file containing a secret read by the agent does not show up in the event log. [E `real_engine_does_not_copy_file_content_or_secrets_into_events`]
-- Not scrubbed: model-written text. `progress` text and the `done` summary (the last assistant message, clipped) go into the event log, the session record and the commit message as the model wrote them. If the model repeats a secret it read from a project file, that secret lands there. The engine does not read `.env`, key files or anything under `.git`, `.somnia` and `node_modules`, which removes the common cases, but not a secret inside an ordinary source file. Review the commit before pushing it, as with any `--yes` checkpoint.
+- Model-written text is redacted too: `progress` text and the `done` summary (the last assistant message, clipped) pass through the app log redactor before they leave the engine, redacting first and clipping after. [sidecar test `model-written text is redacted`] The redactor matches known token shapes (`sk-`, `ghp_`, `github_pat_`, `xox*-`, `AIza`, `glpat-`), `Bearer` values and `key/token/secret/password=value` pairs. A secret in another shape, such as a bare random password in prose, is not recognised. Review the commit before pushing it, as with any `--yes` checkpoint.
 - The git identity is never written by the CLI.
 
 ## Findings fixed in this change
@@ -64,5 +64,5 @@ Not covered: the pipe syscalls need a real Windows host. They run in CI on `wind
 ## Open items
 
 - Windows pipe: no manual test on a real desktop session yet (CI only). The peer check compares process-token user SIDs, so a process running as the same user under another logon session is accepted, matching the Unix same-uid rule.
-- Model-written text is stored verbatim (see Credentials).
+- The redactor is pattern based (see Credentials); secrets in unknown shapes can pass through model text.
 - `.somnia/gui-state.json` is trusted input written by the desktop app; a damaged file fails closed, but a file forged by another process of the same user is not detected. Same-user processes are outside the threat model.

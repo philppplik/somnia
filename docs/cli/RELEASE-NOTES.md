@@ -16,7 +16,7 @@ Paste into the release notes of the version that ships the CLI.
 - The Windows named-pipe transport is covered by tests that run on a Windows CI host. It has not had a manual test on a real machine yet.
 - Git runs your repository's own hooks and configured helpers on commit, status and diff, as it does for you. Open untrusted projects with the same care as untrusted code.
 - `somnia run` drives the real agent engine (a Node 20+ sidecar): OpenRouter, Claude and OpenAI by API key, or Ollama. Cloud providers need `SOMNIA_ENGINE_CLOUD_CONSENT=1`. Tool calls, model, tokens and cost are logged live and shown in the TUI. See `docs/agent/TASK-ENGINE-CONTRACT.md`.
-- Model-written text (progress, run summary) is stored as written and ends up in the session record and the commit message. Failure messages and tool summaries are redacted. Check the commit before you push it.
+- Progress text, the run summary, failure messages and tool summaries are redacted for known secret shapes (API keys, tokens, `password=...`). A secret in an unusual shape can still reach the session record and the commit message. Check the commit before you push it.
 - The engine does not ask questions yet, and answering one from the TUI (`task.answers`) is not implemented. Unknown cost shows as 0 in the TUI; tokens are exact.
 - A live run against a real cloud provider has not been tested; the tests use a scripted local Ollama.
 - The CLI binary is unsigned on Windows and macOS, like the app installers.
