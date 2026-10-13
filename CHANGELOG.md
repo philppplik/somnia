@@ -268,7 +268,11 @@
 ## Unreleased - Studio tabs pill
 
 - Keep the global studio switcher visible when entering Vector or while the legacy raster editor is active.
-- Active studio tabs now use the same short names as their tooltips across all ten studios, including Sound, Slides and Vector.
+- Active studio tabs now use the same short names as their tooltips across all ten studios, including Sound, Slides and Vector.## Unreleased - Publish in the studio shell
+
+- The Code studio rail has two new panels: Publish (servers with their state, Publish, Preview changes) and Publish log (live progress, last result, earlier versions with Go back). The inspector gains Publish target (domain), Framework (what the project builds and whether the selected target fits) and Dry run (file diff) sections.
+- Preview changes builds when the project needs it and asks the engine for a plan. Nothing is uploaded and nothing needs confirming. Publish and Go back still open the confirmation dialog every time.
+- New UI commands: `deploy.panel.show`, `deploy.target.select`, `deploy.dryrun`, `deploy.target.setDomain`. Agent, MCP, extension, macro and CLI origins cannot run them.
 
 ## Unreleased - Slides shell panels
 

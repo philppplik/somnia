@@ -2,7 +2,7 @@ import {showPanel} from './helpers';
 import {test,expect} from './fixtures';
 import {mkdirSync} from 'node:fs';
 const shot=(n:string)=>{mkdirSync('test-results/shell',{recursive:true});return `test-results/shell/${n}.png`;};
-const LEFT_ORDER=['layers','files','search','components','css','versions','responsive','outline'];
+const LEFT_ORDER=['layers','files','search','components','css','versions','responsive','outline','publish','publish-log'];
 test.use({sample:true});
 test('Code studio rail: declared icons, order and customization (shell v2)',async({page})=>{
  await page.goto('/');await expect(page.locator('[data-storage]')).toBeVisible();

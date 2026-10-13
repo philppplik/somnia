@@ -16,7 +16,7 @@ included; the `source` column names the owner. Dynamic sources that stay outside
 
 Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, fr, pt-BR); the gate enforces it.
 
-1128 commands. Categories: Edit, Help, Insert, Project, Tools, View.
+1132 commands. Categories: Edit, Help, Insert, Project, Tools, View.
 
 | id | title | category | source | shortcut |
 | --- | --- | --- | --- | --- |
@@ -301,11 +301,13 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `collab.share` | Share project... | Tools | core |  |
 | `css.open` | CSS variables and classes | View | core |  |
 | `deploy.cancel` | Cancel publish | Project | deploy |  |
+| `deploy.dryrun` | Preview publish changes | Project | core |  |
 | `deploy.hostkey.replace` | Replace server key | Project | deploy |  |
 | `deploy.hostkey.trust` | Trust server key | Project | deploy |  |
 | `deploy.key.create` | Create publish key | Project | deploy |  |
 | `deploy.key.public` | Show publish public key | Project | deploy |  |
 | `deploy.open` | Publish... | Project | core | `Mod+Shift+U` |
+| `deploy.panel.show` | Show publish panel | Project | core |  |
 | `deploy.plan` | Plan publish | Project | deploy |  |
 | `deploy.publish` | Publish | Project | deploy |  |
 | `deploy.remote.list` | List files on the publish server | Project | deploy |  |
@@ -313,6 +315,8 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `deploy.setup.open` | Prepare publish server | Project | deploy |  |
 | `deploy.target.delete` | Delete publish target | Project | deploy |  |
 | `deploy.target.save` | Save publish target | Project | deploy |  |
+| `deploy.target.select` | Select publish target | Project | core |  |
+| `deploy.target.setDomain` | Set publish domain | Project | core |  |
 | `deploy.targets.list` | List publish targets | Project | deploy |  |
 | `design.addRectangle` | Design: Add rectangle | Insert | design |  |
 | `design.addText` | Design: Add text layer | Insert | design |  |

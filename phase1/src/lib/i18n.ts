@@ -16,6 +16,7 @@ import fr from '../locales/fr.json';
 import ptBR from '../locales/pt-BR.json';
 import {PHOTOS_CATALOGUES} from './photos/i18n';
 import {CODE_RAIL_CATALOGUES} from './codeRail/i18n';
+import {DEPLOY_PANEL_CATALOGUES} from './deployPanels/i18n';
 import {PHOTOS_PANEL_CATALOGUES} from './photosPanelI18n';
 import {SOUND_CATALOGUES} from './sound/i18n';
 import {VIDEO_CATALOGUES} from './video/i18n';
@@ -42,6 +43,7 @@ for (const [tag, extra] of Object.entries(CODE_PANEL_CATALOGUES)) Object.assign(
 // Studio-owned strings live next to their studio and merge here, so the shared catalogues stay free of merge hotspots.
 for (const [tag, extra] of Object.entries(PHOTOS_CATALOGUES)) Object.assign(CATALOGUES[tag], extra);
 for (const [tag, extra] of Object.entries(CODE_RAIL_CATALOGUES)) Object.assign(CATALOGUES[tag], extra);
+for (const [tag, extra] of Object.entries(DEPLOY_PANEL_CATALOGUES)) Object.assign(CATALOGUES[tag], extra);
 for (const [tag, extra] of Object.entries(PHOTOS_PANEL_CATALOGUES)) Object.assign(CATALOGUES[tag], extra);
 for (const [tag, extra] of Object.entries(SOUND_CATALOGUES)) Object.assign(CATALOGUES[tag], extra);
 for (const [tag, extra] of Object.entries(VIDEO_CATALOGUES)) Object.assign(CATALOGUES[tag], extra);
