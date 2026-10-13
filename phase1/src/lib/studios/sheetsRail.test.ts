@@ -55,7 +55,9 @@ test('every rail icon resolves through the registry (no fallback glyph)',()=>{
 
 test('inspector sections come from the panels task and default layout opens workbook + inspector',()=>{
  assert.deepEqual(sheetsInspectorDef.sections.map(s=>s.component),['sheets.inspector.cell','sheets.inspector.formulas']);
- assert.deepEqual(resolveInspectorSections(sheetsInspectorDef.sections,ctx(false)).map(s=>s.id),['cell','formulas']);
+ assert.deepEqual(resolveInspectorSections(sheetsInspectorDef.sections,ctx(false)).map(s=>s.id),[]);
+ assert.deepEqual(resolveInspectorSections(sheetsInspectorDef.sections,ctx(false,{workbook:true})).map(s=>s.id),['formulas']);
+ assert.deepEqual(resolveInspectorSections(sheetsInspectorDef.sections,{...ctx(false,{workbook:true}),selection:{kind:'one' as const,count:1}}).map(s=>s.id),['cell','formulas']);
  assert.deepEqual(stackPanels(panels,'left',SHEETS_LAYOUT.leftPanels,ctx(false)).map(p=>p.id),['workbook']);
  assert.deepEqual(stackPanels(panels,'right',SHEETS_LAYOUT.rightPanels,ctx(false)).map(p=>p.id),['inspector']);
 });

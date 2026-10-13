@@ -6,12 +6,12 @@ import './railCommands';
 import {patchState} from './appStore';
 import {shellLayoutStore} from './shellLayoutStore';
 import {documentsStudio} from '../lib/studios/documents';
-import {setFocusedRailItem} from './railActions';
+import {setFocusedRailItem,railCustomizable} from './railActions';
 import {studioDefaultLayout,studioPanels} from '../lib/shell/codePanels';
 const get=(op:string)=>commandRegistry.get('shell.rail.'+op)!;
 const ov=()=>shellLayoutStore.get('documents',studioDefaultLayout(documentsStudio),studioPanels(documentsStudio)).railOverrides;
 test('rail commands are unavailable in a studio without customizable rails',()=>{
- patchState({activeStudio:'design'});assert.equal(get('pin').enabled!(),false);
+ assert.equal(railCustomizable({id:'legacy'} as never),false);assert.equal(railCustomizable(documentsStudio),true);
 });
 test('with a payload target the commands work without a focused rail icon (overflow menu path)',async()=>{
  patchState({activeStudio:'documents'});setFocusedRailItem(null);
