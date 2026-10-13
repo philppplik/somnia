@@ -59,6 +59,7 @@ import { ResizeHandle } from './components/ResizeHandle';
 import { executeCommand,formatShortcut } from './lib/commands';
 import { useAppStore } from './store/appStore';
 import './store/railCommands';
+import './components/studios/code/registerShell';
 import './components/documents/registerShell';
 import './components/slides/registerShell';
 import {AppDialogs} from './components/AppDialogs';

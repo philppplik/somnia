@@ -14,6 +14,6 @@ export function interactionAttributes(node:EditorNode){return Object.entries(nod
 export function fileFacts(source:string){return {lines:source.split('\n').length,characters:source.length,bytes:new TextEncoder().encode(source).length};}
 export function safeAttribute(name:string,value:string){
  if(!/^[a-zA-Z_:][a-zA-Z0-9_.:-]*$/.test(name)||/^on/i.test(name)||name.toLowerCase()==='style'||/^data-editor-/i.test(name))return false;
- if(/^(href|src|action|poster)$/i.test(name)&&/^\s*(javascript|vbscript):/i.test(value))return false;
+ if(/^(href|src|action|poster)$/i.test(name)&&/^(javascript|vbscript|data):/i.test(value.replace(/[\u0000-\u0020]/g,'')))return false;
  return true;
 }

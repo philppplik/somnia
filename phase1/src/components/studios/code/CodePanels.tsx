@@ -12,7 +12,7 @@ import {Button} from '../../ui/button';
 const input='h-8 min-w-0 w-full rounded-sm border border-subtle bg-transparent px-2 text-xs';
 export function CodeOutlinePanel({context}:{context:StudioContext}){
  const s=useAppStore(),{t}=useT(),[query,setQuery]=usePanelState('code.outline.query','');
- const rows=useMemo(()=>filterOutline(codeOutline(s.nodes,s.files[s.designFile]??''),query),[s.nodes,s.files,s.designFile,query]);
+ const rows=useMemo(()=>filterOutline(codeOutline(s.activeFile===s.designFile?s.nodes:[],s.files[s.designFile]??''),query),[s.nodes,s.files,s.activeFile,s.designFile,query]);
  const selected=context.selection.ids??s.selectedElementIds;
  return <section className="flex h-full min-h-0 flex-col gap-2 p-3" aria-label={t('code.panel.outline')}><input className={input} aria-label={t('code.panel.filter')} placeholder={t('code.panel.filter')} value={query} onChange={e=>setQuery(e.target.value)}/><div className="min-h-0 flex-1 overflow-auto">{rows.map(n=><button key={n.id} title={`${s.designFile}:${n.line}:${n.col}`} aria-pressed={selected.includes(n.id)||s.selectedElementId===n.id} onClick={()=>void runCodePanelCommand('code.outline.reveal',{id:n.id})} className="flex w-full items-center gap-1 rounded-sm border-0 bg-transparent py-1.5 text-left font-mono text-[11px] text-ink hover:bg-hover aria-pressed:bg-accent-soft" style={{paddingLeft:Math.min(n.depth,8)*10+4}}><span className="min-w-0 flex-1 truncate">{n.label}</span>{n.locked&&<span title={t('code.panel.locked')}>▣</span>}<span className="text-ink-3">{n.line}</span></button>)}{!rows.length&&<p className="text-xs text-ink-3">{t('code.panel.noNodes')}</p>}</div></section>;
 }

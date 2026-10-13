@@ -3,6 +3,11 @@
 ## Unreleased - Slides shell panels
 
 - Slides overview and text outline now provide search, thumbnail loading, compact rows and navigation. The shared inspector adds source-bound text editing, undo/redo, copy export, presentation metrics and compatibility diagnostics.
+## Unreleased - Code studio panels
+
+- Code panels use separate registered hosts for files, layers, search, components, CSS and versions.
+- Added a filterable DOM outline, responsive preview controls and a section-based inspector with editable link/media/accessibility attributes and source statistics.
+- Interaction edits are undoable and refuse locked/read-only nodes, event handler writes and executable URL schemes.
 
 ## Unreleased - server frameworks (Next.js, Astro, SvelteKit, Nuxt)
 

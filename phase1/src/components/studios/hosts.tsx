@@ -41,7 +41,6 @@ function useHostStudio(id:string){const media=useMedia();const active=media.item
 export type PanelComponent=React.ComponentType<PanelHostProps>;
 const panelHosts=new Map<string,PanelComponent>([
  [INSPECTOR_HOST,InspectorPanel],
- ...['layers','files','search','components','css','versions'].map(id=>[`code.${id}`,LayersPanel] as [string,PanelComponent]),
  ...['design','prototype','code'].map(id=>[`code.${id}`,Inspector] as [string,PanelComponent])
 ]);
 export function registerPanelHost(id:string,Host:PanelComponent){if(panelHosts.has(id))throw new Error(`Duplicate panel host: ${id}`);panelHosts.set(id,Host);return()=>{if(panelHosts.get(id)===Host)panelHosts.delete(id);};}

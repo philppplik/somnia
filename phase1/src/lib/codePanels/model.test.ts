@@ -12,7 +12,7 @@ test('interaction inventory includes links, forms, a11y and inline events but no
  assert.deepEqual(interactionAttributes(node('x',0,{href:'/local',onclick:'alert(1)',class:'x',style:'color:red','aria-label':'Go',controls:''})).map(([key])=>key),['href','onclick','aria-label','controls']);
 });
 test('safe attribute writes reject executable URLs, event handlers and editor-owned markers',()=>{
- for(const [name,value] of [['href',' javascript:alert(1)'],['src','vbscript:test'],['onclick','x'],['style','x'],['data-editor-node','x'],['bad key','x']])assert.equal(safeAttribute(name,value),false);
+ for(const [name,value] of [['href',' javascript:alert(1)'],['href','java\nscript:alert(1)'],['href','data:text/html,hello'],['src','vbscript:test'],['onclick','x'],['style','x'],['data-editor-node','x'],['bad key','x']])assert.equal(safeAttribute(name,value),false);
  for(const [name,value] of [['href','#section'],['href','https://example.org'],['target','_blank'],['aria-label','Go'],['controls','']])assert.equal(safeAttribute(name,value),true);
 });
 test('file facts count unicode byte size separately from UTF-16 characters',()=>{assert.deepEqual(fileFacts('é\na'),{lines:2,characters:3,bytes:4});});

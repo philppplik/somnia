@@ -29,3 +29,15 @@ Unit suites cover outline positions/locks, filters, interaction inventory, unsaf
 attributes, UTF-8 counts, dispatcher validation, origin guards, read-only writes,
 undo, stale node IDs, viewport bounds and five-language parity. Native folder and
 Git backend behavior are unchanged and require desktop verification.
+
+## Integration and local checks
+
+The Code rail manifest spreads `codePanelShell` from `lib/codePanels/shell.ts`
+into `shellV2`. `App` registers Code hosts before Documents, which shares the file,
+search and version hosts. The Code rail package owns panel access and default layout.
+
+Run `node scripts/verify-code-panels.mjs` from `phase1` for the development-only
+fixture in `test/code-panels.html`. It checks attribute edits, inspector expansion,
+viewport presets, DOM filtering and source reveal, then saves a screenshot. The
+fixture uses editor-core without any native WASM studio. It is not a desktop test
+and does not prove native Git or filesystem behavior.
