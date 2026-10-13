@@ -12,6 +12,7 @@ import ptBR from '../locales/pt-BR.json';
 import {PHOTOS_CATALOGUES} from './photos/i18n';
 import {SOUND_CATALOGUES} from './sound/i18n';
 import {VIDEO_CATALOGUES} from './video/i18n';
+import {RAIL_CATALOGUES} from './railI18n';
 import {VECTOR_CATALOGUES} from './vectorstudio/i18n';
 import {DESIGN_CATALOGUES} from './design/i18n';
 import {VIBESPACE_CATALOGUES} from './vibespace/i18n';
@@ -28,6 +29,7 @@ export const CATALOGUES: Record<string, Catalogue> = {en, de, es, fr, 'pt-BR': p
 for (const [tag, extra] of Object.entries(PHOTOS_CATALOGUES)) Object.assign(CATALOGUES[tag], extra);
 for (const [tag, extra] of Object.entries(SOUND_CATALOGUES)) Object.assign(CATALOGUES[tag], extra);
 for (const [tag, extra] of Object.entries(VIDEO_CATALOGUES)) Object.assign(CATALOGUES[tag], extra);
+for (const [tag, extra] of Object.entries(RAIL_CATALOGUES)) Object.assign(CATALOGUES[tag], extra);
 for (const [tag, extra] of Object.entries(VECTOR_CATALOGUES)) Object.assign(CATALOGUES[tag], extra);
 for (const [tag, extra] of Object.entries(DESIGN_CATALOGUES)) Object.assign(CATALOGUES[tag], extra);
 for (const [tag, extra] of Object.entries(VIBESPACE_CATALOGUES)) Object.assign(CATALOGUES[tag], extra);
