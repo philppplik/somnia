@@ -7,10 +7,11 @@ import { invoke, isTauri } from '@tauri-apps/api/core';
  * external ratio with its estimate by taking the maximum, so either signal
  * can raise pressure and both must subside before pressure exits.
  *
- * Desktop (Tauri) is the primary source: the native side can read real
- * process RSS and system memory. The Rust command is a follow-up on the
- * native branch; until it exists the invoke fails and the probe degrades to
- * the JS heap signal without retry storms.
+ * Desktop (Tauri) is the primary source: the native command
+ * `lifecycle_memory_sample` (src-tauri/src/lifecycle_commands.rs) reads real
+ * process RSS and system memory per platform. Where the command is missing
+ * or fails (web dev, older shell, unusual platform) the invoke fails once
+ * and the probe degrades to the JS heap signal without retry storms.
  */
 export const NATIVE_MEMORY_SAMPLE_COMMAND = 'lifecycle_memory_sample';
 

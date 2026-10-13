@@ -59,6 +59,9 @@ pub mod panic_report;
 pub mod diagnostics_commands;
 
 #[cfg(feature = "desktop")]
+pub mod lifecycle_commands;
+
+#[cfg(feature = "desktop")]
 pub mod vibespace_commands;
 #[cfg(feature = "desktop")]
 pub mod vibespace_acp_commands;

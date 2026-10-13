@@ -2947,6 +2947,7 @@ pub fn run() {
             crate::diagnostics_commands::mark_crash_reports_reviewed,
             crate::diagnostics_commands::delete_crash_reports,
             crate::diagnostics_commands::record_frontend_fatal,
+            crate::lifecycle_commands::lifecycle_memory_sample,
             drain_open_requests,
             claim_open_request,
             read_by_grant,

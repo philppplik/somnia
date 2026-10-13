@@ -111,6 +111,22 @@ studio re-opens its documents empty and each document's edits reappear when
 that document is opened again - the preview, decode and probe work runs
 fresh.
 
+Two consequences of that design, both deliberate (product decision
+2026-10-13):
+
+- Adapters stash the recipe into their pending maps **at snapshot time**,
+  not at resume time. The code studio renders a `MediaViewer` for the
+  active media item, and its workspace effect re-opens the file as soon as
+  the studio suspends - before `resume()` would have stashed anything.
+  Stashing at snapshot keeps trim, effect and timeline edits intact across
+  that preview-driven re-open instead of resetting them to neutral.
+- That same preview pane means a suspended media studio does not stay
+  down while its media item is still active: the user is looking at the
+  document, so the session is rebuilt and the recipe reapplied. The memory
+  benefit of suspension applies to media studios whose items are not on
+  screen. This is kept on purpose; the alternative (a static poster in
+  place of the live preview) was rejected.
+
 Suspension is refused while work is in flight that no job lease covers:
 debounced renders and gestures (Photos, Sound) and probes or exports
 (Video). Engine leases (photos.engine, video.engine/video.export,
@@ -131,13 +147,19 @@ normal; these are soft tracked-resource allowances, not OS RSS caps.
 ## Memory probing
 
 `lifecycle/probe.ts` samples a real memory signal alongside the tracked-byte
-estimate. On desktop it invokes the native command
-`lifecycle_memory_sample`, which returns `{ usedBytes, totalBytes }`
-(process/system memory from the OS; the Rust side lands with the native
-branch, until then the invoke fails once and is not retried for the
-session). On web it falls back to Chrome's `performance.memory`
-(`usedJSHeapSize` against `jsHeapSizeLimit`). Browsers without either
-source simply contribute no signal.
+estimate. On desktop it invokes the native command `lifecycle_memory_sample`
+(`src-tauri/src/lifecycle_commands.rs`), which returns
+`{ usedBytes, totalBytes, availableBytes, processRssBytes,
+processPeakRssBytes }` read from the OS: Linux parses `/proc/self/status`
+and `/proc/meminfo`, macOS uses `proc_pid_rusage` plus `host_statistics64`
+and `sysctl`, Windows uses `GetProcessMemoryInfo` and
+`GlobalMemoryStatusEx` - libc and the already-pinned windows-sys only, no
+new dependency. The used/total pair is the system-level ratio; the process
+fields ride along for telemetry. Where the command is missing or fails the
+invoke fails once and is not retried for the session. On web the probe
+falls back to Chrome's `performance.memory` (`usedJSHeapSize` against
+`jsHeapSizeLimit`). Browsers without either source simply contribute no
+signal.
 
 The manager merges the external ratio into the same pressure thresholds
 (enter 80%, exit below 65% held for ten seconds, critical 95%) by taking

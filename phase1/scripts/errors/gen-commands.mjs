@@ -20,6 +20,7 @@ const WRAPPED = new Map([
   ['build_diagnostic_zip', 'B1'], ['write_diagnostic_zip', 'B1'], ['discard_diagnostic_snapshot', 'B1'],
   ['list_crash_reports', 'B1'], ['mark_crash_reports_reviewed', 'B1'], ['delete_crash_reports', 'B1'],
   ['record_frontend_fatal', 'B1'],
+  ['lifecycle_memory_sample', 'B1'],
 ]);
 
 // Parameters injected by Tauri (never part of the JS call).
@@ -41,6 +42,7 @@ const DOMAIN_RULES = [
   [/^(ext_|extension_activity_)/, 'ext'],
   [/^(provider_http_|collab_lan_)/, 'net'],
   [/^deploy_/, 'deploy'],
+  [/^lifecycle_/, 'lifecycle'],
   [/^(selftest_|log_|set_window_background|open_external|open_preview_external|is_store_package|open_startup_file)/, 'app'],
   [/.*/, 'fs'],
 ];
