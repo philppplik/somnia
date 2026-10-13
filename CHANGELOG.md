@@ -6,6 +6,8 @@
 - Headless `somnia` CLI ships as release archives for Linux and Windows x86_64 (`somnia-cli-<ver>-<os>-x86_64`) with `SHA256SUMS`. `somnia --version` reports the app release, commit and target. No macOS build.
 
 - CLI: `somnia run "<task>"` runs an agent task on a local task branch with exit codes 0 (done), 1 (failed) and 2 (needs input or review). `--yes` makes one local commit; the CLI has no fetch, pull or push path. Background runs (`--detach`, `attach`, `status`, `cancel`) use a private same-user Unix socket. Usage errors now exit 1 instead of 2, and `--detach` reports a non-private runtime directory immediately. Windows named pipes are not available yet. Docs: [docs/cli/](docs/cli/).
+- CLI: `somnia run` now drives the real agent engine. A Node sidecar runs the desktop agent session and file tools headless (OpenRouter, Claude, OpenAI API key, Ollama). Tool calls, model, token usage and cost are logged live and mapped to the TUI. `--bare` skips project notes. Typed failures (auth, consent, budget, scope, conflict) keep their code. See `docs/agent/TASK-ENGINE-CONTRACT.md`.
+
 - Smart Open keeps recognized files automatic. Ambiguous handlers now show a studio chooser; unknown-type files with verified text show an explicit "Open as text?" confirmation. Cancel leaves that file unopened. Unsupported or invalid files only notify. Choosing a studio still uses the normal prepare, unsaved-change approval, revision validation and commit flow. A newer open request closes an older unanswered chooser.
 
 ## 11.2.0-beta.1 - 2026-10-07

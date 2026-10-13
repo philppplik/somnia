@@ -135,17 +135,47 @@ pub fn execute(spec: &RunSpec, engine: &dyn TaskEngine, cancel: &Arc<AtomicBool>
         max_cost: spec.max_cost,
     };
     let mut plan: Option<String> = None;
-    let mut pending: Vec<RunEvent> = vec![];
-    let outcome = engine.run(&task, cancel, &mut |e| match e {
-        EngineEvent::Progress { text } => pending.push(RunEvent::Progress { text: text.clone() }),
-        EngineEvent::Plan { text } => {
-            plan = Some(text.clone());
-            pending.push(RunEvent::Plan { text: text.clone() })
+    let mut usage = Usage::default();
+    let mut producer_model: Option<(String, String)> = None;
+    let mut emit_err: Option<CliError> = None;
+    // Events are logged and forwarded live (attach/--print/TUI see them while the engine works).
+    let outcome = engine.run(&task, cancel, &mut |e| {
+        let ev = match e {
+            EngineEvent::Progress { text } => RunEvent::Progress { text: text.clone() },
+            EngineEvent::Plan { text } => {
+                plan = Some(text.clone());
+                RunEvent::Plan { text: text.clone() }
+            }
+            EngineEvent::Model { provider, model } => {
+                producer_model = Some((provider.clone(), model.clone()));
+                RunEvent::Model { provider: provider.clone(), model: model.clone() }
+            }
+            EngineEvent::ToolCall { id, name, summary } => RunEvent::ToolCall { id: id.clone(), name: name.clone(), summary: summary.clone() },
+            EngineEvent::ToolResult { id, status, summary } => {
+                let status = if status == "ok" { "ok" } else { "error" };
+                RunEvent::ToolResult { id: id.clone(), status: status.into(), summary: summary.clone() }
+            }
+            EngineEvent::Usage { tokens, cost } => {
+                usage = Usage { tokens: Some(*tokens), cost: *cost };
+                RunEvent::Usage { tokens: *tokens, cost: *cost }
+            }
+            _ => return,
+        };
+        if emit_err.is_none() {
+            if let Err(e) = log.emit(ev, sink) {
+                emit_err = Some(e);
+            }
         }
-        _ => {}
     });
-    for ev in pending {
-        log.emit(ev, sink)?;
+    if let Some(e) = emit_err {
+        return Err(e);
+    }
+    if let Some((provider, model)) = producer_model {
+        rec.producer.provider = Some(provider);
+        rec.producer.model = Some(model);
+    }
+    if usage.tokens.is_some() {
+        rec.usage = usage;
     }
     rec.plan = plan;
 
@@ -156,13 +186,14 @@ pub fn execute(spec: &RunSpec, engine: &dyn TaskEngine, cancel: &Arc<AtomicBool>
                 rec.status = Status::Cancelled;
                 Ok(())
             }
-            Ok(Some(EngineEvent::Failed { message })) => Err(CliError::new(ErrorKind::Internal, message)),
+            Ok(Some(EngineEvent::Failed { message, code, retryable })) => Err(engine_failure(message, code, retryable)),
             Ok(Some(EngineEvent::NeedsInput { reason })) => {
                 rec.status = Status::WaitingInput;
                 log.emit(RunEvent::NeedsInput { reason }, sink)
             }
             Ok(Some(EngineEvent::Done { summary, tokens, cost, verification })) => {
-                rec.usage = Usage { tokens, cost };
+                // The final totals win; keep the streamed ones when the engine omits them.
+                rec.usage = Usage { tokens: tokens.or(rec.usage.tokens), cost: cost.or(rec.usage.cost) };
                 rec.verification = verification;
                 finish_done(spec, &mut rec, &base, summary.as_deref())
             }
@@ -176,6 +207,18 @@ pub fn execute(spec: &RunSpec, engine: &dyn TaskEngine, cancel: &Arc<AtomicBool>
     record::save(root, &mut rec)?;
     log.emit(RunEvent::Result { summary: Box::new(rec.summary()) }, sink)?;
     Ok(rec)
+}
+
+/// Maps a typed engine failure onto the stable error kinds. The engine's own code and retry hint stay in `details`.
+pub fn engine_failure(message: String, code: Option<String>, retryable: Option<bool>) -> CliError {
+    let kind = match code.as_deref() {
+        Some("auth") | Some("consent") => ErrorKind::Auth,
+        Some("config") => ErrorKind::EngineUnavailable,
+        Some("conflict") => ErrorKind::StalePlan,
+        Some("scope") => ErrorKind::ReviewRequired,
+        _ => ErrorKind::Internal,
+    };
+    CliError::new(kind, message).with_details(serde_json::json!({"engine_code": code, "retryable": retryable.unwrap_or(false)}))
 }
 
 fn preflight_inner(spec: &RunSpec) -> Result<()> {

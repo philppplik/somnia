@@ -9,3 +9,4 @@ public/raster-codec/
 public/pdfjs/
 vibespace-*/target/
 dist-control/
+cli/sidecar/engine.mjs

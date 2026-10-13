@@ -1,11 +1,16 @@
 //! Task-engine adapter (D5: TS agent engine as a sidecar). The Rust side only knows the `TaskEngine` trait;
 //! S9's task-engine contract plugs in by implementing it (see `SidecarEngine` for the stdio NDJSON shape used here).
 //!
-//! Sidecar stdio protocol "somnia.task-engine/1" (ADAPTER ASSUMPTION, to be reconciled with S9):
+//! Sidecar stdio protocol "somnia.task-engine/1" (implemented by `sidecar/engine.ts`, see `sidecar/contract.ts`):
 //!   -> {"op":"start","contract":"somnia.task-engine/1","task":{taskId,prompt,cwd,allowedRoots,bare,studio,maxTokens,maxCost}}
+//!   -> {"op":"cancel"}   (sent on cancel; the child gets a short grace period, then is killed)
 //!   <- {"event":"progress","text":".."} | {"event":"plan","text":".."} | {"event":"needs-input","reason":".."}
-//!      | {"event":"done","summary":"..","tokens":N,"cost":F,"verification":{..}} | {"event":"failed","message":".."}
-//! Credentials are never sent over this channel; provider keys come from the sidecar's own environment.
+//!      | {"event":"model","provider":"..","model":".."} | {"event":"usage","tokens":N,"cost":F|null}   (cumulative)
+//!      | {"event":"tool-call","id":"..","name":"..","summary":".."} | {"event":"tool-result","id":"..","status":"ok|error","summary":".."}
+//!      | {"event":"done","summary":"..","tokens":N,"cost":F|null,"verification":{..}}
+//!      | {"event":"failed","message":"..","code":"config|consent|auth|budget|scope|conflict|limit|provider|timeout|internal","retryable":bool}
+//! Unknown event names are ignored (forward compatible). Credentials are never sent over this channel; provider, model
+//! and keys come from the sidecar's own environment (SOMNIA_ENGINE_PROVIDER / _MODEL, provider key variables).
 use crate::error::{CliError, ErrorKind, Result};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -37,8 +42,12 @@ pub enum EngineEvent {
     Progress { text: String },
     Plan { text: String },
     NeedsInput { reason: String },
+    Model { provider: String, model: String },
+    Usage { #[serde(default)] tokens: u64, #[serde(default)] cost: Option<f64> },
+    ToolCall { id: String, name: String, #[serde(default)] summary: String },
+    ToolResult { id: String, #[serde(default)] status: String, #[serde(default)] summary: String },
     Done { #[serde(default)] summary: Option<String>, #[serde(default)] tokens: Option<u64>, #[serde(default)] cost: Option<f64>, #[serde(default)] verification: Option<Value> },
-    Failed { message: String },
+    Failed { message: String, #[serde(default)] code: Option<String>, #[serde(default)] retryable: Option<bool> },
 }
 
 impl EngineEvent {
@@ -67,10 +76,11 @@ impl SidecarEngine {
             return Ok(Self { command: cmd });
         }
         let exe = std::env::current_exe()?;
-        let p = exe.parent().map(|d| d.join("sidecar").join("engine.mjs")).unwrap_or_default();
-        if !p.exists() {
-            return Err(CliError::new(ErrorKind::EngineUnavailable, "agent engine sidecar not found (set SOMNIA_ENGINE_CMD or install sidecar/engine.mjs next to the binary)"));
-        }
+        // Installed: <exe-dir>/sidecar/engine.mjs. Source checkout: <cli>/target/<profile>/somnia -> <cli>/sidecar/engine.mjs.
+        let candidates = exe.parent().map(|d| vec![d.join("sidecar").join("engine.mjs"), d.join("..").join("..").join("sidecar").join("engine.mjs")]).unwrap_or_default();
+        let Some(p) = candidates.into_iter().find(|p| p.is_file()) else {
+            return Err(CliError::new(ErrorKind::EngineUnavailable, "agent engine sidecar not found (run `npm run build:cli-engine` in phase1, set SOMNIA_ENGINE_CMD, or install sidecar/engine.mjs next to the binary)"));
+        };
         Ok(Self { command: vec!["node".into(), p.to_string_lossy().into_owned()] })
     }
 }
@@ -100,6 +110,15 @@ impl TaskEngine for SidecarEngine {
         });
         let result = loop {
             if cancel.load(Ordering::SeqCst) {
+                // Ask the engine to abort its provider request, give it a moment, then make sure it is gone.
+                let _ = writeln!(stdin, "{}", serde_json::json!({"op":"cancel"}));
+                let _ = stdin.flush();
+                for _ in 0..20 {
+                    if matches!(child.try_wait(), Ok(Some(_))) {
+                        break;
+                    }
+                    std::thread::sleep(Duration::from_millis(50));
+                }
                 let _ = child.kill();
                 let _ = child.wait();
                 return Ok(None);
@@ -120,11 +139,16 @@ impl TaskEngine for SidecarEngine {
             }
         };
         drop(stdin);
-        let _ = child.kill();
-        let _ = child.wait();
+        if result.is_some() {
+            let _ = child.kill();
+            let _ = child.wait();
+        }
         match result {
             Some(ev) => Ok(Some(ev)),
-            None => Err(CliError::new(ErrorKind::EngineUnavailable, "engine sidecar exited without a terminal event")),
+            None => {
+                let status = child.wait().ok().and_then(|s| s.code()).map(|c| format!(" (exit code {c})")).unwrap_or_default();
+                Err(CliError::new(ErrorKind::EngineUnavailable, format!("engine sidecar exited without a terminal event{status}")))
+            }
         }
     }
 }

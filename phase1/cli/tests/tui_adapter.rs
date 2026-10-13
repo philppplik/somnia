@@ -249,3 +249,25 @@ fn stdout_carries_only_protocol_frames_on_preflight_failure() {
     let (_, code) = s.finish();
     assert_eq!(code, 1);
 }
+
+#[test]
+fn tool_model_and_usage_events_map_to_tui_frames() {
+    let r = Repo::new();
+    let mut s = r.start("tooly page", &["--yes"]);
+    let mut seen: Vec<Event> = vec![];
+    loop {
+        let e = s.until(|_| true);
+        let done = is_done(&e);
+        seen.push(e);
+        if done { break; }
+    }
+    // Re-announced session carries the model reported by the engine.
+    assert!(seen.iter().any(|e| matches!(e, Event::SessionStarted { model, .. } if model == "fake-1")), "{seen:?}");
+    let calls: Vec<_> = seen.iter().filter_map(|e| if let Event::ToolCall { id, name, summary } = e { Some((id.clone(), name.clone(), summary.clone())) } else { None }).collect();
+    assert_eq!(calls, vec![("c1".into(), "read_file".into(), "README.md".into()), ("c2".into(), "write_file".into(), "site/index.html".into())]);
+    let results: Vec<_> = seen.iter().filter_map(|e| if let Event::ToolResult { id, status, .. } = e { Some((id.clone(), status.clone())) } else { None }).collect();
+    assert_eq!(results, vec![("c1".into(), "ok".into()), ("c2".into(), "error".into())]);
+    let costs: Vec<(u64, f64)> = seen.iter().filter_map(|e| if let Event::Status { tokens, cost_usd, .. } = e { if *tokens > 0 { Some((*tokens, *cost_usd)) } else { None } } else { None }).collect();
+    assert_eq!(costs, vec![(100, 0.0), (250, 0.01)]);
+    let _ = s.finish();
+}

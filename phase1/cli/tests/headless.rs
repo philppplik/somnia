@@ -325,3 +325,168 @@ fn no_ansi_no_banner_in_json_mode() {
     assert_eq!(s.trim().lines().count(), 1);
     assert!(o.stderr.is_empty());
 }
+
+#[test]
+fn engine_tool_model_and_usage_events_are_logged_live_and_recorded() {
+    let e = Env::new(true);
+    let (code, v) = e.json(&["run", "tooly page", "--json", "--yes"], &[]);
+    assert_eq!(code, 0, "{v}");
+    assert_eq!(v["producer"]["provider"], "fake");
+    assert_eq!(v["producer"]["model"], "fake-1");
+    // Final totals from `done` (1234 tokens, 0.02) win over the streamed ones.
+    assert_eq!(v["usage"]["tokens"], 1234);
+    let tid = v["task_id"].as_str().unwrap();
+    let log = std::fs::read_to_string(e.root().join(format!(".somnia/sessions/{tid}.events.ndjson"))).unwrap();
+    let evs: Vec<Value> = log.lines().map(|l| serde_json::from_str(l).unwrap()).collect();
+    let names: Vec<&str> = evs.iter().map(|x| x["event"].as_str().unwrap()).collect();
+    assert_eq!(names, ["status", "plan", "model", "tool-call", "tool-result", "usage", "tool-call", "tool-result", "usage", "progress", "result"], "{names:?}");
+    let tr: Vec<&Value> = evs.iter().filter(|x| x["event"] == "tool-result").collect();
+    assert_eq!(tr[0]["status"], "ok");
+    assert_eq!(tr[1]["status"], "error", "anything but ok is an error");
+    let usage: Vec<&Value> = evs.iter().filter(|x| x["event"] == "usage").collect();
+    assert!(usage[0]["cost"].is_null(), "unknown cost stays null, never zero");
+    assert_eq!(usage[1]["tokens"], 250);
+    // seq is gapless even though an unknown engine event was ignored.
+    let seqs: Vec<u64> = evs.iter().map(|x| x["seq"].as_u64().unwrap()).collect();
+    assert_eq!(seqs, (1..=seqs.len() as u64).collect::<Vec<_>>());
+}
+
+#[test]
+fn typed_engine_failure_keeps_its_code_and_maps_to_a_stable_kind() {
+    let e = Env::new(true);
+    let (code, v) = e.json(&["run", "authfail", "--json"], &[]);
+    assert_eq!(code, 1, "{v}");
+    assert_eq!(v["status"], "failed");
+    assert_eq!(v["error"]["kind"], "auth");
+    assert_eq!(v["error"]["details"]["engine_code"], "auth");
+    assert_eq!(v["error"]["details"]["retryable"], false);
+}
+
+#[test]
+fn cancel_reaches_the_engine_as_a_cancel_op_before_it_is_killed() {
+    let e = Env::new(true);
+    let marker = tempfile::tempdir().unwrap();
+    let envs = [("FAKE_ENGINE_MARKER", marker.path().to_str().unwrap())];
+    let (_, d) = e.json(&["run", "slow one", "--json", "--detach"], &envs);
+    let tid = d["task_id"].as_str().unwrap().to_string();
+    // Let the engine start (it emits a plan first), then cancel.
+    std::thread::sleep(std::time::Duration::from_millis(800));
+    for _ in 0..50 {
+        let (code, c) = e.json(&["cancel", &tid, "--json"], &envs);
+        if code == 0 && c["acknowledged"] == Value::Bool(true) { break; }
+        std::thread::sleep(std::time::Duration::from_millis(100));
+    }
+    wait_status(&e, &tid, "cancelled");
+    assert!(marker.path().join("cancel-seen").exists(), "engine never received the cancel op");
+}
+
+fn real_engine() -> Option<PathBuf> {
+    let p = Path::new(env!("CARGO_MANIFEST_DIR")).join("sidecar/engine.mjs");
+    if p.is_file() { Some(p) } else { eprintln!("SKIP: sidecar/engine.mjs not built (run `npm run build:cli-engine` in phase1)"); None }
+}
+
+/// Minimal scripted Ollama on loopback: one response body (NDJSON) per request, in order; the last repeats.
+fn fake_ollama(bodies: Vec<String>) -> (u16, std::thread::JoinHandle<()>, std::sync::Arc<std::sync::atomic::AtomicBool>) {
+    use std::io::{Read, Write};
+    use std::sync::atomic::{AtomicBool, Ordering};
+    let l = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+    let port = l.local_addr().unwrap().port();
+    l.set_nonblocking(true).unwrap();
+    let stop = std::sync::Arc::new(AtomicBool::new(false));
+    let s2 = stop.clone();
+    let h = std::thread::spawn(move || {
+        let mut n = 0usize;
+        while !s2.load(Ordering::SeqCst) {
+            let Ok((mut c, _)) = l.accept() else { std::thread::sleep(std::time::Duration::from_millis(10)); continue };
+            c.set_nonblocking(false).unwrap();
+            c.set_read_timeout(Some(std::time::Duration::from_secs(5))).unwrap();
+            let mut buf = vec![0u8; 1 << 20];
+            let mut got = 0;
+            // Read headers + body (Content-Length) so the client is not reset mid-write.
+            loop {
+                let k = c.read(&mut buf[got..]).unwrap_or(0);
+                if k == 0 { break; }
+                got += k;
+                let text = String::from_utf8_lossy(&buf[..got]).to_string();
+                if let Some(i) = text.find("\r\n\r\n") {
+                    let cl = text[..i].lines().find_map(|l| l.to_ascii_lowercase().strip_prefix("content-length:").map(|v| v.trim().parse::<usize>().unwrap_or(0))).unwrap_or(0);
+                    if got >= i + 4 + cl { break; }
+                }
+            }
+            let body = bodies.get(n).or(bodies.last()).unwrap().clone();
+            n += 1;
+            let _ = write!(c, "HTTP/1.1 200 OK\r\ncontent-type: application/x-ndjson\r\ncontent-length: {}\r\nconnection: close\r\n\r\n{}", body.len(), body);
+        }
+    });
+    (port, h, stop)
+}
+
+fn sidecar_env(engine: &Path, port: u16) -> Vec<(String, String)> {
+    vec![
+        ("SOMNIA_ENGINE_CMD".into(), serde_json::to_string(&["node", engine.to_str().unwrap()]).unwrap()),
+        ("SOMNIA_ENGINE_PROVIDER".into(), "ollama".into()),
+        ("SOMNIA_ENGINE_MODEL".into(), "test-model".into()),
+        ("SOMNIA_ENGINE_OLLAMA_URL".into(), format!("http://127.0.0.1:{port}")),
+    ]
+}
+
+#[test]
+fn real_sidecar_edits_files_through_tools_and_is_committed_with_yes() {
+    let Some(engine) = real_engine() else { return };
+    let e = Env::new(true);
+    let call = |name: &str, args: Value| serde_json::json!({"message":{"content":"","tool_calls":[{"function":{"name":name,"arguments":args}}]},"done":true,"prompt_eval_count":10,"eval_count":5}).to_string() + "\n";
+    let fin = serde_json::json!({"message":{"content":"Created the page."},"done":true,"done_reason":"stop","prompt_eval_count":3,"eval_count":4}).to_string() + "\n";
+    let (port, h, stop) = fake_ollama(vec![call("write_file", serde_json::json!({"path":"site/index.html","content":"<h1>hi</h1>\n"})), fin]);
+    let env = sidecar_env(&engine, port);
+    let envs: Vec<(&str, &str)> = env.iter().map(|(k, v)| (k.as_str(), v.as_str())).collect();
+    let (code, v) = e.json(&["run", "build a page", "--json", "--yes", "--allow-root", "site"], &envs);
+    stop.store(true, std::sync::atomic::Ordering::SeqCst);
+    h.join().unwrap();
+    assert_eq!(code, 0, "{v}");
+    assert_eq!(v["status"], "done");
+    assert_eq!(v["producer"]["provider"], "ollama");
+    assert_eq!(v["producer"]["model"], "test-model");
+    assert_eq!(v["usage"]["tokens"], 22);
+    assert_eq!(std::fs::read_to_string(e.root().join("site/index.html")).unwrap(), "<h1>hi</h1>\n");
+    assert_eq!(v["unreviewed_checkpoint"], true);
+    let tid = v["task_id"].as_str().unwrap();
+    let log = std::fs::read_to_string(e.root().join(format!(".somnia/sessions/{tid}.events.ndjson"))).unwrap();
+    assert!(log.contains("\"event\":\"tool-call\"") && log.contains("\"name\":\"write_file\"") && log.contains("\"event\":\"tool-result\""), "{log}");
+    assert!(!log.contains("<h1>hi</h1>"), "file content must not be copied into the event log");
+}
+
+#[test]
+fn real_sidecar_misconfiguration_is_a_typed_failure_without_changes() {
+    let Some(engine) = real_engine() else { return };
+    let e = Env::new(true);
+    let env = vec![("SOMNIA_ENGINE_CMD", serde_json::to_string(&["node", engine.to_str().unwrap()]).unwrap())];
+    let envs: Vec<(&str, &str)> = env.iter().map(|(k, v)| (*k, v.as_str())).collect();
+    let (code, v) = e.json(&["run", "build a page", "--json", "--yes"], &envs);
+    assert_eq!(code, 1, "{v}");
+    assert_eq!(v["error"]["kind"], "engine-unavailable");
+    assert_eq!(v["error"]["details"]["engine_code"], "config");
+    assert_eq!(e.git(&["status", "--porcelain"]), "");
+}
+
+#[test]
+fn bare_flag_reaches_the_real_engine() {
+    let Some(engine) = real_engine() else { return };
+    let e = Env::new(true);
+    std::fs::write(e.root().join("AGENTS.md"), "NOTES-MARKER").unwrap();
+    e.git(&["add", "-A"]);
+    e.git(&["-c", "user.name=Seed", "-c", "user.email=s@example.com", "commit", "-q", "-m", "notes"]);
+    let fin = serde_json::json!({"message":{"content":"ok"},"done":true,"done_reason":"stop"}).to_string() + "\n";
+    for (bare, want) in [(false, "project notes loaded"), (true, "bare run")] {
+        let (port, h, stop) = fake_ollama(vec![fin.clone()]);
+        let env = sidecar_env(&engine, port);
+        let envs: Vec<(&str, &str)> = env.iter().map(|(k, v)| (k.as_str(), v.as_str())).collect();
+        let mut args = vec!["run", "look around", "--json"];
+        if bare { args.push("--bare"); }
+        let (code, v) = e.json(&args, &envs);
+        stop.store(true, std::sync::atomic::Ordering::SeqCst);
+        h.join().unwrap();
+        assert_eq!(code, 0, "{v}");
+        assert!(v["plan"].as_str().unwrap().contains(want), "{v}");
+        e.git(&["switch", "-q", "main"]);
+    }
+}

@@ -6,12 +6,13 @@
 - Exit codes: 0 done, 1 failed, 2 needs-input / review-required.
 - `--yes` = local commit on the task branch only. The git layer has a subcommand allowlist with no fetch/pull/push/clone/remote.
 - IPC: NDJSON protocol v1 over a same-user local transport. Unix: socket in a 0700 runtime dir (socket 0600, peer-uid check). Windows: named pipe `\\.\pipe\somnia-cli-<user-sid>-<repo>-<task>` whose DACL grants the current user only, first-instance claim fails closed against squatting, remote clients are rejected at the pipe level, and both ends verify the peer process runs as the same user. No HTTP port on either; credential-like fields are rejected.
-- Engine: `TaskEngine` trait; `SidecarEngine` speaks `somnia.task-engine/1` over stdio (`SOMNIA_ENGINE_CMD` or `sidecar/engine.mjs`). S9's contract plugs in by implementing the trait.
+- Engine: `TaskEngine` trait; `SidecarEngine` speaks `somnia.task-engine/1` over stdio (`SOMNIA_ENGINE_CMD`, `<exe-dir>/sidecar/engine.mjs`, or `cli/sidecar/engine.mjs` in a checkout). The sidecar (`sidecar/engine.ts`) runs the desktop agent session and tools headless; build it with `npm run build:cli-engine` in `phase1/`. Contract, configuration and error codes: [docs/agent/TASK-ENGINE-CONTRACT.md](../../docs/agent/TASK-ENGINE-CONTRACT.md).
 - Desktop bridge (assumed, desktop must write it): `.somnia/gui-state.json`, see `src/guard.rs`.
 - Session records: `.somnia/sessions/<task>.json`, excluded locally via `.git/info/exclude` (private by default).
-- Not built: `--bare` effect (forwarded to the engine only), ratatui TUI.
+- `--bare`: the engine sends only the task prompt (no `AGENTS.md`, no studio hint).
+- Not built: ratatui TUI beyond the protocol adapter is tracked in docs/cli.
 
-Tests: `cargo test` (needs `node` and `git`). Runs on ubuntu and windows-latest in CI; `tests/transport_windows.rs` covers the named-pipe transport.
+Tests: `cargo test` (needs `node` and `git`; the real-sidecar tests skip unless `sidecar/engine.mjs` is built) and `npm run test:cli-engine` in `phase1/`. Runs on ubuntu and windows-latest in CI; `tests/transport_windows.rs` covers the named-pipe transport.
 
 ## `somnia run --tui-stdio`
 
@@ -20,7 +21,7 @@ Core events map to the TUI schema (`status`, `text_delta`, `needs_input`, `guard
 Without `--yes` the agent's uncommitted work is proposed as one `diff_proposed` per file; `review_decision` is applied only if
 `content_hash` (S12: `sha256(file \0 (hunk.id \0 lines.join("\n") \0)*)`, module `review`) matches both the proposal and the
 current worktree and every hunk is named once. Otherwise `guard_blocked` and the review stays pending. Rejected hunks are
-reverse-applied; accepted hunks stay uncommitted (the commit gate remains manual). Not yet mapped: `tool_call`/`tool_result`/`model`/cost (the engine contract carries none).
+reverse-applied; accepted hunks stay uncommitted (the commit gate remains manual). `tool-call`/`tool-result` map to `tool_call`/`tool_result`, `usage` to `status` (`cost_usd` is 0 while the provider reports no price), `model` re-announces `session_started` with the model.
 
 ## Install
 
@@ -36,7 +37,6 @@ somnia --version        # release number; the long form (--version) also prints 
 
 On Windows, extract the zip, put the folder on `PATH`, then run `somnia --version` (PowerShell: `Get-FileHash <zip> -Algorithm SHA256` and compare with `SHA256SUMS`).
 The binary is unsigned (SmartScreen may warn). It needs `git` on `PATH`, and `node` for the default agent sidecar.
-Windows limits: foreground `somnia run` only. Detached runs, `attach`, `status` and `cancel` need the Unix socket transport (named pipe not built).
 
 ## Building and packaging
 

@@ -145,6 +145,13 @@ fn print_frame(f: &EventFrame) {
         RunEvent::Plan { text } => println!("[plan] {text}"),
         RunEvent::Progress { text } => println!("[progress] {text}"),
         RunEvent::NeedsInput { reason } => println!("[needs-input] {reason}"),
+        RunEvent::Model { provider, model } => println!("[model] {provider}/{model}"),
+        RunEvent::ToolCall { name, summary, .. } => println!("[tool] {name} {summary}"),
+        RunEvent::ToolResult { status, summary, .. } => println!("[tool-result] {status} {summary}"),
+        RunEvent::Usage { tokens, cost } => match cost {
+            Some(c) => println!("[usage] {tokens} tokens, ${c:.4}"),
+            None => println!("[usage] {tokens} tokens, cost unknown"),
+        },
         RunEvent::Result { .. } => {}
     }
 }

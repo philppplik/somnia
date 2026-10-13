@@ -3,6 +3,8 @@
 //!
 //! Mapping:
 //!   status/plan/progress  -> status / text_delta
+//!   tool-call/tool-result -> tool_call / tool_result (summaries only)
+//!   usage                 -> status {cost_usd, tokens}; model -> session_started (re-announced with the model)
 //!   needs-input           -> needs_input
 //!   review-required       -> guard_blocked (+ done "needs_input")
 //!   uncommitted work (L0) -> diff_proposed per file; review_decision is verified before anything is applied
@@ -81,7 +83,7 @@ impl<W: Write> Out<W> {
     }
 }
 
-fn map_frame<W: Write>(out: &mut Out<W>, f: &EventFrame, branch: &str) {
+fn map_frame<W: Write>(out: &mut Out<W>, f: &EventFrame, branch: &str, ctx: &(String, String)) {
     match &f.event {
         RunEvent::Status { status } => {
             let s = serde_json::to_value(status).ok().and_then(|v| v.as_str().map(String::from)).unwrap_or_default();
@@ -90,6 +92,12 @@ fn map_frame<W: Write>(out: &mut Out<W>, f: &EventFrame, branch: &str) {
         RunEvent::Plan { text } => out.send(json!({"type":"text_delta","text":format!("Plan: {text}\n")})),
         RunEvent::Progress { text } => out.send(json!({"type":"text_delta","text":format!("{text}\n")})),
         RunEvent::NeedsInput { reason } => out.send(json!({"type":"needs_input","question":reason})),
+        // The TUI has no model event: re-announce the session with the model once the engine reports it (same task, prompt and base).
+        RunEvent::Model { model, .. } => out.send(json!({"type":"session_started","task_id":f.task_id,"prompt":ctx.0,"branch":branch,"base_sha":ctx.1,"model":model})),
+        RunEvent::ToolCall { id, name, summary } => out.send(json!({"type":"tool_call","id":id,"name":name,"summary":summary})),
+        RunEvent::ToolResult { id, status, summary } => out.send(json!({"type":"tool_result","id":id,"status":status,"summary":summary})),
+        // Unknown cost (no provider price) is shown as 0 by the TUI schema; tokens stay accurate.
+        RunEvent::Usage { tokens, cost } => out.send(json!({"type":"status","cost_usd":cost.unwrap_or(0.0),"tokens":tokens,"branch":branch})),
         RunEvent::Result { .. } => {} // reported as `done` after review handling
     }
 }
@@ -121,7 +129,8 @@ pub fn run<R: BufRead + Send + 'static, W: Write>(spec: &RunSpec, engine: &dyn T
     let rx = spawn_stdin(input, cancel.clone());
     out.send(json!({"type":"session_started","task_id":spec.task_id,"prompt":spec.prompt,"branch":branch,"base_sha":base,"model":""}));
 
-    let rec = match runner::execute(spec, engine, &cancel, &mut |f| map_frame(&mut out, f, &branch)) {
+    let ctx = (spec.prompt.clone(), base.clone());
+    let rec = match runner::execute(spec, engine, &cancel, &mut |f| map_frame(&mut out, f, &branch, &ctx)) {
         Ok(r) => r,
         Err(e) => {
             // Nothing started (preflight blocker).

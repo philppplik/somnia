@@ -49,6 +49,11 @@ pub enum RunEvent {
     Plan { text: String },
     Progress { text: String },
     NeedsInput { reason: String },
+    Model { provider: String, model: String },
+    ToolCall { id: String, name: String, summary: String },
+    ToolResult { id: String, status: String, summary: String },
+    /// Cumulative usage of the run so far. `cost` is None until a provider reports a price.
+    Usage { tokens: u64, cost: Option<f64> },
     Result { summary: Box<RunSummary> },
 }
 

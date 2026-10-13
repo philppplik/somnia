@@ -4,10 +4,23 @@ import path from "node:path";
 import readline from "node:readline";
 const rl = readline.createInterface({ input: process.stdin });
 const out = (o) => process.stdout.write(JSON.stringify(o) + "\n");
+// Graceful cancel: record that the host asked, then exit (tests assert the marker).
+rl.on("line", (l) => { try { if (JSON.parse(l).op === "cancel") { fs.writeFileSync(path.join(process.env.FAKE_ENGINE_MARKER || "/tmp", "cancel-seen"), "1"); process.exit(0); } } catch {} });
 rl.once("line", async (line) => {
   const { task } = JSON.parse(line);
   const p = task.prompt;
+  if (p.includes("authfail")) return out({ event: "failed", message: "key rejected", code: "auth", retryable: false });
   out({ event: "plan", text: "write notes" });
+  if (p.includes("tooly")) {
+    out({ event: "model", provider: "fake", model: "fake-1" });
+    out({ event: "tool-call", id: "c1", name: "read_file", summary: "README.md" });
+    out({ event: "tool-result", id: "c1", status: "ok", summary: "README.md 1 lines" });
+    out({ event: "usage", tokens: 100, cost: null });
+    out({ event: "tool-call", id: "c2", name: "write_file", summary: "site/index.html" });
+    out({ event: "tool-result", id: "c2", status: "weird", summary: "denied" });
+    out({ event: "future-event", whatever: 1 });
+    out({ event: "usage", tokens: 250, cost: 0.01 });
+  }
   out({ event: "progress", text: "working" });
   if (p.includes("slow")) { await new Promise((r) => setTimeout(r, 30000)); }
   if (p.includes("fail")) return out({ event: "failed", message: "engine exploded" });
