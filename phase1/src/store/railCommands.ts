@@ -13,7 +13,8 @@ const OPS:[RailOp,string][]=[['moveUp','Move rail icon up'],['moveDown','Move ra
 export function registerRailCommands(){
  const offs=OPS.map(([op,title])=>registerCommand({
   id:`shell.rail.${op}`,title,category:'View',keywords:['rail','icon','sidebar','customize'],
-  enabled:()=>railCustomizable(active())&&(op==='reset'||!!getFocusedRailItem()||op==='show'),
+  /* Availability cannot see the payload: a payload target (overflow menu, agents) must not need a focused icon. A missing target is reported by run. */
+  enabled:()=>railCustomizable(active()),
   run:payload=>{
    const studio=active();
    if(op==='reset'){applyRailOp(studio,'reset',{side:'left',id:''});return;}
