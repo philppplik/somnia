@@ -1,0 +1,13 @@
+{
+  "name": "a",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build"
+  },
+  "dependencies": {
+    "react": "19.0.0"
+  },
+  "devDependencies": {
+    "vite": "8.0.0"
+  }
+}

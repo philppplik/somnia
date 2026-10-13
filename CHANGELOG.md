@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased - Framework adapters
+
+- Existing projects are classified into a build and run plan: plain static, Vite (React, Vue, Svelte, Solid, Preact), Astro static or Node, Next export or standalone, SvelteKit static or Node, Nuxt generate or Node server, and plain Node servers such as Express.
+- Each plan states install, build, output folder, start command and environment. Unsupported setups (wrong adapter, no lockfile, shell style start scripts) are reported as blockers instead of failing during the build.
+- Environment handling: build gets only public prefixed variables, server secrets never enter a build, `.env` files, keys and `.git` never go into an upload.
+- See `docs/frameworks/adapters.md`.
 ## Unreleased - Slides shell panels
 
 - Slides overview and text outline now provide search, thumbnail loading, compact rows and navigation. The shared inspector adds source-bound text editing, undo/redo, copy export, presentation metrics and compatibility diagnostics.

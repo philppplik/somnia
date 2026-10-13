@@ -1,0 +1,10 @@
+{
+  "name": "a",
+  "scripts": {
+    "build": "astro build"
+  },
+  "dependencies": {
+    "astro": "5",
+    "@astrojs/vercel": "8"
+  }
+}

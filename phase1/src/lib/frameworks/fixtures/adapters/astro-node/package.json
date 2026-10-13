@@ -1,0 +1,13 @@
+{
+  "name": "a",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "build": "astro build"
+  },
+  "dependencies": {
+    "astro": "5",
+    "@astrojs/node": "9"
+  }
+}
