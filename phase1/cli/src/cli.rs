@@ -405,7 +405,17 @@ fn new_request(body: RequestBody) -> Request {
 
 fn attach_cmd(a: &TaskArgs) -> Result<i32> {
     let root = root_of(&a.path)?;
-    let rec = record::load(&root, &a.task_id)?;
+    // A freshly detached run may not have written its record yet: retry briefly.
+    let mut tries = 0;
+    let rec = loop {
+        match record::load(&root, &a.task_id) {
+            Err(e) if e.kind == ErrorKind::NotFound && tries < 30 => {
+                tries += 1;
+                std::thread::sleep(std::time::Duration::from_millis(100));
+            }
+            r => break r?,
+        }
+    };
     let last: std::cell::RefCell<Option<record::RunSummary>> = std::cell::RefCell::new(None);
     let json = a.json;
     let on_event = |f: &EventFrame| {
