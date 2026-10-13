@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 // Every #[tauri::command] must be listed in build.rs and allowed in capabilities/editor.json, otherwise the call fails at runtime in the desktop app (CI cannot see that).
 test('every desktop command is allow-listed in build.rs and the editor capability',()=>{
- const rs=readFileSync('src-tauri/src/desktop.rs','utf8');
+ const rs=readFileSync('src-tauri/src/desktop.rs','utf8')+readFileSync('src-tauri/src/deploy_commands.rs','utf8');
  const commands=[...rs.matchAll(/#\[tauri::command\]\s*(?:pub\s+)?(?:async\s+)?fn\s+(\w+)/g)].map(m=>m[1]);
  assert.ok(commands.length>5,'command scan found nothing');
  const build=readFileSync('src-tauri/build.rs','utf8');const cap=readFileSync('src-tauri/capabilities/editor.json','utf8');
@@ -32,4 +32,13 @@ test('native preview has no editor capability, popup or download path',()=>{
  const rs=readFileSync('src-tauri/src/framework_preview.rs','utf8');
  assert.ok(rs.includes('NewWindowResponse::Deny'));assert.ok(rs.includes('.on_download(|_, _| false)'));
  assert.ok(rs.includes('Some("127.0.0.1")'));assert.ok(rs.includes('Some(port)'));
+});
+
+// Deploy commands are registered through crate:: paths: the handler list in desktop.rs must carry every one of them.
+test('every deploy command is registered in the invoke_handler and listed by the manifest',()=>{
+ const rs=readFileSync('src-tauri/src/desktop.rs','utf8');
+ const own=readFileSync('src-tauri/src/deploy_commands.rs','utf8');
+ const commands=[...own.matchAll(/#\[tauri::command\]\s*(?:pub\s+)?(?:async\s+)?fn\s+(\w+)/g)].map(m=>m[1]);
+ assert.equal(commands.length,12);
+ for(const c of commands){assert.ok(rs.includes(`crate::deploy_commands::${c},`),`${c} missing in invoke_handler`);assert.ok(own.includes(`pub async fn ${c}(window: tauri::WebviewWindow`),`${c} must gate on the trusted editor window`);}
 });

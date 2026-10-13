@@ -301,6 +301,180 @@
       ]
     },
     {
+      "name": "deploy_confirm_issue",
+      "domain": "deploy",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "plan_hash"
+      ],
+      "args": [
+        "planHash"
+      ]
+    },
+    {
+      "name": "deploy_hostkey_probe",
+      "domain": "deploy",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "target_id"
+      ],
+      "args": [
+        "targetId"
+      ]
+    },
+    {
+      "name": "deploy_hostkey_replace",
+      "domain": "deploy",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "target_id",
+        "old_fingerprint",
+        "new_fingerprint",
+        "acknowledged"
+      ],
+      "args": [
+        "targetId",
+        "oldFingerprint",
+        "newFingerprint",
+        "acknowledged"
+      ]
+    },
+    {
+      "name": "deploy_hostkey_trust",
+      "domain": "deploy",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "target_id",
+        "fingerprint"
+      ],
+      "args": [
+        "targetId",
+        "fingerprint"
+      ]
+    },
+    {
+      "name": "deploy_key_create",
+      "domain": "deploy",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "target_id"
+      ],
+      "args": [
+        "targetId"
+      ]
+    },
+    {
+      "name": "deploy_plan",
+      "domain": "deploy",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "target_id"
+      ],
+      "args": [
+        "targetId"
+      ]
+    },
+    {
+      "name": "deploy_plan_rollback",
+      "domain": "deploy",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "target_id",
+        "release_id"
+      ],
+      "args": [
+        "targetId",
+        "releaseId"
+      ]
+    },
+    {
+      "name": "deploy_publish",
+      "domain": "deploy",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "target_id",
+        "plan_hash",
+        "token"
+      ],
+      "args": [
+        "targetId",
+        "planHash",
+        "token"
+      ]
+    },
+    {
+      "name": "deploy_rollback",
+      "domain": "deploy",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "target_id",
+        "release_id",
+        "plan_hash",
+        "token"
+      ],
+      "args": [
+        "targetId",
+        "releaseId",
+        "planHash",
+        "token"
+      ]
+    },
+    {
+      "name": "deploy_target_delete",
+      "domain": "deploy",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "target_id",
+        "delete_key"
+      ],
+      "args": [
+        "targetId",
+        "deleteKey"
+      ]
+    },
+    {
+      "name": "deploy_target_save",
+      "domain": "deploy",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "target"
+      ],
+      "args": [
+        "target"
+      ]
+    },
+    {
+      "name": "deploy_targets_list",
+      "domain": "deploy",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [],
+      "args": []
+    },
+    {
       "name": "discard_diagnostic_snapshot",
       "domain": "diagnostics",
       "status": "native",
@@ -1373,8 +1547,12 @@
       "status": "native",
       "wrapped": false,
       "boundary": "B1",
-      "params": [],
-      "args": []
+      "params": [
+        "consent"
+      ],
+      "args": [
+        "consent"
+      ]
     },
     {
       "name": "runtime_remove",

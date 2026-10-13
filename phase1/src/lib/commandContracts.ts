@@ -83,4 +83,16 @@ export interface CommandContracts {
   mark_crash_reports_reviewed: Contract<{ ids: string[] }, null>;
   delete_crash_reports: Contract<{ ids: string[] }, null>;
   record_frontend_fatal: Contract<{ entry: FrontendFatalEntry }, null>;
+  deploy_targets_list: Contract<undefined, import('./deploy/contract').DeployTargetStatus[]>;
+  deploy_target_save: Contract<{ target: import('./deploy/contract').DeployTarget }, null>;
+  deploy_target_delete: Contract<{ targetId: string; deleteKey: boolean }, null>;
+  deploy_plan: Contract<{ targetId: string }, import('./deploy/contract').DeployPlan>;
+  deploy_plan_rollback: Contract<{ targetId: string; releaseId: string }, import('./deploy/contract').DeployPlan>;
+  deploy_confirm_issue: Contract<{ planHash: string }, string>;
+  deploy_publish: Contract<{ targetId: string; planHash: string; token: string }, import('./deploy/contract').DeployOutcome>;
+  deploy_rollback: Contract<{ targetId: string; releaseId: string; planHash: string; token: string }, import('./deploy/contract').DeployOutcome>;
+  deploy_hostkey_probe: Contract<{ targetId: string }, import('./deploy/contract').DeployHostKeyInfo>;
+  deploy_hostkey_trust: Contract<{ targetId: string; fingerprint: string }, null>;
+  deploy_hostkey_replace: Contract<{ targetId: string; oldFingerprint: string; newFingerprint: string; acknowledged: boolean }, null>;
+  deploy_key_create: Contract<{ targetId: string }, string>;
 }
