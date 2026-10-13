@@ -20,6 +20,8 @@ import {newBlankFile,openFileDialog,openMediaDialog} from './projectActions';
 import {downloadProject,downloadMarkdown} from './exportProject';
 import {elements,insertElement} from './structureCommands';
 import { applyHistory, getState, patchState } from '../store/appStore';
+import {getMedia,closeMedia} from './media';
+import {cycleScoped} from './studios/tabScope';
 import { EditorProject } from '@somnia/editor-core';
 import {canSaveAll,canCloseAll,saveAllFiles,requestCloseAll} from './workDocsActions';
 import {getChatSession} from './collab/chatSession';
@@ -83,8 +85,8 @@ registerCoreCommandSpec({level:'ui',params:NO_CORE_PARAMS,id:'panels.hideAll',ti
 const sel=()=>getState().coreConnected&&!!getState().selectedElementId;
 registerCoreCommandSpec({level:'ui',params:NO_CORE_PARAMS,id:'edit.duplicate',title:'Duplicate selected element',category:'Edit',shortcut:'Mod+D',enabled:sel,run:async()=> /* History: EditorProject owns this document transaction (or undo/redo); no global stack. */ {(await import('./structureCommands')).duplicateLayer(getState().selectedElementId!);}});
 registerCoreCommandSpec({level:'ui',params:NO_CORE_PARAMS,id:'edit.delete',title:'Delete selected element',category:'Edit',shortcut:'Delete',enabled:sel,run:async()=> /* History: EditorProject owns this document transaction (or undo/redo); no global stack. */ {(await import('./structureCommands')).deleteLayer(getState().selectedElementId!);}});
-registerCoreCommandSpec({level:'ui',params:NO_CORE_PARAMS,id:'tab.close',title:'Close current tab',category:'View',shortcut:'Mod+W',enabled:()=>getState().openFiles.length>1,run:async()=> /* History: UI/file state only; no document undo entry. */ {(await import('../store/appStore')).closeFileTab(getState().activeFile);}});
-const cycleTab=async(step:number)=>{const {openFiles,activeFile}=getState();if(openFiles.length<2)return;(await import('../store/appStore')).openFileTab(openFiles[(openFiles.indexOf(activeFile)+step+openFiles.length)%openFiles.length]);};
+registerCoreCommandSpec({level:'ui',params:NO_CORE_PARAMS,id:'tab.close',title:'Close current tab',category:'View',shortcut:'Mod+W',enabled:()=>!!getState().activeFile||!!getMedia().active,run:async()=> /* History: UI/file state only; no document undo entry. */ {const m=getMedia().active;if(m){closeMedia(m);return;}(await import('../store/appStore')).closeFileTab(getState().activeFile);}});
+const cycleTab=async(step:number)=>{const {openFiles,activeFile,activeStudio,studioByTab}=getState();const to=cycleScoped(openFiles,activeFile,activeStudio,studioByTab,step);if(to)(await import('../store/appStore')).openFileTab(to);};
 registerCoreCommandSpec({level:'ui',params:NO_CORE_PARAMS,id:'tab.next',title:'Next tab',category:'View',shortcut:'Mod+Alt+ArrowRight',run:()=> /* History: UI/file state only; no document undo entry. */ cycleTab(1)});
 registerCoreCommandSpec({level:'ui',params:NO_CORE_PARAMS,id:'tab.prev',title:'Previous tab',category:'View',shortcut:'Mod+Alt+ArrowLeft',run:()=> /* History: UI/file state only; no document undo entry. */ cycleTab(-1)});
 export function matchesShortcut(event:KeyboardEvent,shortcut:string){

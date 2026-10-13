@@ -3,6 +3,7 @@ import {shellLayoutStore} from './shellLayoutStore';
 import {studioPanels,studioDefaultLayout} from '../lib/shell/codePanels';
 import {modeKey,rememberStudioMode,resolveStudioMode,type StudioModeMemory} from '../lib/studios/modes';
 import {getStudio,acceptsFormat,type StudioId} from '../lib/studios';
+import {fileTabStudio,neighbourAfterClose} from '../lib/studios/tabScope';
 import {recordActivity} from '../lib/account';
 import {readBackupPrefs,saveBackupPrefs,type BackupPrefs} from '../lib/projectBackups';
 import {readDocumentPrefs,saveDocumentPrefs,type DocumentPrefs} from '../lib/documentPrefs';
@@ -118,9 +119,10 @@ export function markFileSaved(file:string,content:string){recordActivity('save')
 
 /** Open a project file in a tab and make it the active source file. */
 export function openFileTab(path:string){if(!(path in state.files))return;setActiveMedia(null);patchState({openFiles:state.openFiles.includes(path)?state.openFiles:[...state.openFiles,path],activeFile:path,activeStudio:state.studioByTab[path]&&acceptsFormat(getStudio(state.studioByTab[path]),path)?state.studioByTab[path]:'code',selectedElementId:null});refreshProject();}
-/** Close a tab; the neighbouring tab becomes active. The last tab stays open. */
-export function closeFileTab(path:string){if(state.openFiles.length<=1)return;const i=state.openFiles.indexOf(path);const next=state.openFiles.filter(f=>f!==path);patchState({openFiles:next,...(state.activeFile===path?{activeFile:next[Math.max(0,i-1)],selectedElementId:null}:{})});refreshProject();}
-
+/** Close a tab (the last one too). The neighbouring tab of the SAME Studio becomes active; the Studio never changes. */
+export function closeFileTab(path:string){if(!state.openFiles.includes(path))return;const studio=fileTabStudio(path,state.studioByTab);const next=state.openFiles.filter(f=>f!==path);
+ if(state.activeFile!==path){patchState({openFiles:next});refreshProject();return;}
+ patchState({openFiles:next,activeFile:neighbourAfterClose(state.openFiles,path,studio,state.studioByTab)??'',activeStudio:state.activeStudio,selectedElementId:null,selectedElementIds:[]});refreshProject();}
 
 /** Project files whose text differs from the last save (or that were never saved). */
 export function dirtyFileNames():string[]{const files=core?.files??{};return Object.entries(files).filter(([f,text])=>savedFiles[f]!==text).map(([f])=>f).sort();}
