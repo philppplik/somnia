@@ -13,6 +13,7 @@ pub mod node_collect;
 pub mod node_env;
 pub mod node_app;
 pub mod node_engine;
+pub mod node_admin;
 pub mod node_host;
 #[cfg(test)]
 mod ssh_testkit;

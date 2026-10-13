@@ -2869,6 +2869,8 @@
   "deploy.err.health-failed-rollback-failed": "A nova versão não respondeu e o Somnia não conseguiu voltar automaticamente.",
   "deploy.err.no-such-release": "Essa versão não está mais no servidor.",
   "deploy.err.engine-failed": "Algo deu errado ao falar com o servidor. Nada foi alterado no seu site.",
+  "deploy.err.cancelled": "A publicação foi cancelada. Seu site no ar não mudou.",
+  "deploy.err.server-not-prepared": "Este servidor ainda não está preparado para o Somnia. Prepare-o primeiro e publique de novo.",
   "deploy.err.node-missing": "O Node.js não está instalado neste servidor. Instale com: sudo apt-get install -y nodejs npm",
   "deploy.err.node-too-old": "O Node.js deste servidor é mais antigo do que o app precisa. Atualize e publique de novo.",
   "deploy.err.install-failed": "Não foi possível instalar os pacotes do app no servidor. Nada foi alterado.",

@@ -71,3 +71,15 @@ test('deploy readout and cancellation commands are main-window gated and have ty
  }
  assert.ok(rs.includes('set_project_source(&app)?'));
 });
+
+test('node app-settings commands are main-window gated, typed, and never return env values',()=>{
+ const rs=readFileSync('src-tauri/src/deploy_commands.rs','utf8');
+ const contracts=readFileSync('src/lib/commandContracts.ts','utf8');
+ for(const name of ['deploy_node_env_keys','deploy_node_env_apply','deploy_node_logs','deploy_node_status','deploy_node_artifact_collect']) {
+  const at=rs.indexOf(`pub async fn ${name}(`);
+  assert.ok(at>0,name);
+  assert.ok(rs.slice(at,at+400).includes('gate(&window)?'),name);
+  assert.ok(contracts.includes(`${name}: Contract<`),name);
+ }
+ assert.ok(contracts.includes('deploy_node_env_apply: Contract<{ targetId: string; set: Array<{ key: string; value: string }>; remove: string[] }, string[]>'));
+});

@@ -473,6 +473,77 @@
       ]
     },
     {
+      "name": "deploy_node_artifact_collect",
+      "domain": "deploy",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "target_id"
+      ],
+      "args": [
+        "targetId"
+      ]
+    },
+    {
+      "name": "deploy_node_env_apply",
+      "domain": "deploy",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "target_id",
+        "set",
+        "remove"
+      ],
+      "args": [
+        "targetId",
+        "set",
+        "remove"
+      ]
+    },
+    {
+      "name": "deploy_node_env_keys",
+      "domain": "deploy",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "target_id"
+      ],
+      "args": [
+        "targetId"
+      ]
+    },
+    {
+      "name": "deploy_node_logs",
+      "domain": "deploy",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "target_id",
+        "lines"
+      ],
+      "args": [
+        "targetId",
+        "lines"
+      ]
+    },
+    {
+      "name": "deploy_node_status",
+      "domain": "deploy",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "target_id"
+      ],
+      "args": [
+        "targetId"
+      ]
+    },
+    {
       "name": "deploy_open_site",
       "domain": "deploy",
       "status": "native",

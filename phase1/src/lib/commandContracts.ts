@@ -103,4 +103,27 @@ export interface CommandContracts {
   deploy_bootstrap_run: Contract<import('./deploy/setup').DeployBootstrapInput, import('./deploy/setup').DeployBootstrapReport>;
   deploy_dns_check: Contract<{ targetId: string }, import('./deploy/setup').DeployDnsCheck>;
   deploy_open_site: Contract<{ targetId: string }, null>;
+  deploy_node_env_keys: Contract<{ targetId: string }, string[]>;
+  deploy_node_env_apply: Contract<{ targetId: string; set: Array<{ key: string; value: string }>; remove: string[] }, string[]>;
+  deploy_node_logs: Contract<{ targetId: string; lines: number }, string[]>;
+  deploy_node_status: Contract<{ targetId: string }, NodeStatusView>;
+  deploy_node_artifact_collect: Contract<{ targetId: string }, NodeArtifactView>;
+}
+
+export interface NodeStatusView {
+  active: string;
+  restarts: number;
+  port: number | null;
+  current: string | null;
+  nodeVersion: string | null;
+  lastHealth: { release: string; status: string; at: number } | null;
+}
+export interface NodeArtifactView {
+  framework: string;
+  entry: string;
+  install: boolean;
+  fileCount: number;
+  totalBytes: number;
+  nodeRange: string | null;
+  buildId: string;
 }

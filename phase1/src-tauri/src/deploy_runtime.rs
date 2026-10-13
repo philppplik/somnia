@@ -49,6 +49,13 @@ impl HostKeyPins for RuntimePins {
         }
     }
 }
+#[cfg(feature = "desktop")]
+pub type DesktopNodeAdmin = crate::deploy::node_admin::NodeAdmin<crate::deploy::node_host::DesktopNodeHost<crate::deploy::keys::OsKeychainBackend>>;
+#[cfg(feature = "desktop")]
+static NODE_ADMIN: std::sync::OnceLock<std::sync::Arc<DesktopNodeAdmin>> = std::sync::OnceLock::new();
+/// Available once [`build_service`] has run (every deploy command goes through it first).
+#[cfg(feature = "desktop")]
+pub fn node_admin() -> Option<std::sync::Arc<DesktopNodeAdmin>> { NODE_ADMIN.get().cloned() }
 /// No fallback to a disk credential or session-only pin when storage fails.
 #[cfg(feature = "desktop")]
 pub fn build_service(config_dir: &Path, source: crate::deploy::engine::ProjectSource) -> Result<DeployService, crate::deploy_guard::DeployError> {
@@ -62,7 +69,10 @@ pub fn build_service(config_dir: &Path, source: crate::deploy::engine::ProjectSo
         options: Default::default(),
         public_probe: Box::new(crate::deploy::node_host::https_probe),
     };
-    let node = crate::deploy::node_engine::NodeEngine::new(host, Default::default()).map_err(|_| crate::deploy_guard::DeployError::Storage)?;
+    let node = std::sync::Arc::new(crate::deploy::node_engine::NodeEngine::new(host, Default::default()).map_err(|_| crate::deploy_guard::DeployError::Storage)?);
+    // The same engine serves publishing (through the live engine) and the app-settings commands.
+    let admin = crate::deploy::node_admin::NodeAdmin { engine: node.clone(), targets: Box::new(FileTargets::new(config_dir.join("deploy-targets.json"))) };
+    let _ = NODE_ADMIN.set(std::sync::Arc::new(admin));
     let engine = crate::deploy::engine::LiveDeployEngine::new(keys.clone(), store.clone(), observed.clone(), source).with_node_engine(Box::new(node));
     Ok(DeployService::new(
         Box::new(FileTargets::new(config_dir.join("deploy-targets.json"))),

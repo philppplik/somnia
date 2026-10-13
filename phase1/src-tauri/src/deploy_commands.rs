@@ -174,3 +174,36 @@ pub async fn deploy_dns_check(window: tauri::WebviewWindow, app: tauri::AppHandl
     let target = svc.targets.get(&target_id).map_err(|_| "deploy:target-not-found")?;
     crate::deploy_setup::dns_check(&target).await
 }
+
+async fn node_blocking<T: Send + 'static>(app: &tauri::AppHandle, f: impl FnOnce(&crate::deploy_runtime::DesktopNodeAdmin) -> Result<T, DeployError> + Send + 'static) -> Result<T, String> {
+    service(app)?;
+    let admin = crate::deploy_runtime::node_admin().ok_or_else(|| "deploy:storage".to_string())?;
+    tauri::async_runtime::spawn_blocking(move || f(&admin).map_err(code)).await.map_err(|_| "deploy:engine-failed".to_string())?
+}
+#[tauri::command]
+pub async fn deploy_node_env_keys(window: tauri::WebviewWindow, app: tauri::AppHandle, target_id: String) -> Result<Vec<String>, String> {
+    gate(&window)?;
+    node_blocking(&app, move |a| a.env_keys(&target_id)).await
+}
+/// Values go in, never out: the result is the list of key names after the change.
+#[tauri::command]
+pub async fn deploy_node_env_apply(window: tauri::WebviewWindow, app: tauri::AppHandle, target_id: String, set: Vec<crate::deploy::node_admin::EnvSet>, remove: Vec<String>) -> Result<Vec<String>, String> {
+    gate(&window)?;
+    node_blocking(&app, move |a| a.env_apply(&target_id, set, remove)).await
+}
+#[tauri::command]
+pub async fn deploy_node_logs(window: tauri::WebviewWindow, app: tauri::AppHandle, target_id: String, lines: u32) -> Result<Vec<String>, String> {
+    gate(&window)?;
+    node_blocking(&app, move |a| a.logs(&target_id, lines as usize)).await
+}
+#[tauri::command]
+pub async fn deploy_node_status(window: tauri::WebviewWindow, app: tauri::AppHandle, target_id: String) -> Result<crate::deploy::node_admin::NodeStatusView, String> {
+    gate(&window)?;
+    node_blocking(&app, move |a| a.status(&target_id)).await
+}
+#[tauri::command]
+pub async fn deploy_node_artifact_collect(window: tauri::WebviewWindow, app: tauri::AppHandle, target_id: String) -> Result<crate::deploy::node_admin::ArtifactView, String> {
+    gate(&window)?;
+    set_project_source(&app)?;
+    node_blocking(&app, move |a| a.artifact(&target_id)).await
+}

@@ -16,6 +16,7 @@ use super::{
 use crate::deploy_guard::{Action, Change, DeployEngine, EngineError, EnginePlan, HostKeyInfo, Outcome, PlanFile};
 use crate::deploy_targets::{Target, TargetKind};
 use std::collections::BTreeMap;
+use std::sync::Arc;
 use std::time::SystemTime;
 
 /// Result of asking the public address after a publish.
@@ -108,6 +109,31 @@ impl<H: NodeHost> NodeEngine<H> {
     pub fn new(host: H, opts: NodeOptions) -> Result<Self, DeployError> {
         let rt = tokio::runtime::Builder::new_current_thread().enable_all().build().map_err(|_| DeployError::Transport)?;
         Ok(Self { host, rt, opts, clock: Box::new(SystemTime::now) })
+    }
+    fn admin_remote<'f, T>(&self, target: &Target, f: impl for<'a> FnOnce(NodeDeployer<'a, H::Remote>) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<T, EngineError>> + 'a>> + 'f) -> Result<T, EngineError> {
+        site_of(target)?;
+        self.rt.block_on(async {
+            let mut remote = self.host.connect(target).await?;
+            let d = self.deployer(&mut remote, target)?;
+            f(d).await
+        })
+    }
+    pub fn env_keys(&self, target: &Target) -> Result<Vec<String>, EngineError> {
+        self.admin_remote(target, |mut d| Box::pin(async move { d.env_keys().await.map_err(|e| engine_error(e.code)) }))
+    }
+    pub fn env_apply(&self, target: &Target, set: Vec<(String, zeroize::Zeroizing<String>)>, remove: Vec<String>) -> Result<Vec<String>, EngineError> {
+        self.admin_remote(target, move |mut d| Box::pin(async move { d.env_apply(set, &remove).await.map_err(|e| engine_error(e.code)) }))
+    }
+    pub fn log_tail(&self, target: &Target, lines: usize) -> Result<Vec<String>, EngineError> {
+        self.admin_remote(target, |mut d| Box::pin(async move { d.log_tail(lines).await.map_err(|e| engine_error(e.code)) }))
+    }
+    pub fn status(&self, target: &Target) -> Result<super::node_app::NodeStatus, EngineError> {
+        self.admin_remote(target, |mut d| Box::pin(async move { d.status().await.map_err(|e| engine_error(e.code)) }))
+    }
+    /// What the next publish would ship. Local only: no connection is made.
+    pub fn artifact_summary(&self, target: &Target) -> Result<super::node_collect::NodeArtifactSummary, EngineError> {
+        site_of(target)?;
+        Ok(self.host.collect(target)?.1.summary)
     }
     /// Replace the clock that stamps release ids (tests; releases are ordered by it).
     pub fn with_clock(mut self, clock: impl Fn() -> SystemTime + Send + Sync + 'static) -> Self {
@@ -244,7 +270,7 @@ pub fn project_is_node(project: &std::path::Path) -> bool {
 }
 
 #[cfg(test)]
-mod tests {
+pub(crate) mod tests {
     use super::*;
     use crate::deploy::{
         node_app::tests::Fake,
@@ -256,7 +282,7 @@ mod tests {
     use std::time::Duration;
 
     #[derive(Clone)]
-    struct Shared(Arc<Mutex<Fake>>);
+    pub(crate) struct Shared(pub(crate) Arc<Mutex<Fake>>);
     impl SshExec for Shared {
         async fn exec(&mut self, c: &str, i: Option<&[u8]>) -> super::super::Result<ExecOutput> {
             let mut f = self.0.lock().unwrap();
@@ -283,8 +309,8 @@ mod tests {
             remove_tree(path: &str) -> ();
         }
     }
-    struct Host {
-        project: tempfile::TempDir,
+    pub(crate) struct Host {
+        pub(crate) project: tempfile::TempDir,
         server: Shared,
         fingerprint: Mutex<String>,
         public: Mutex<PublicCheck>,
@@ -321,10 +347,10 @@ mod tests {
         write(d.path(), ".next/static/a.js", "static");
         d
     }
-    fn target(domain: Option<&str>) -> Target {
+    pub(crate) fn target(domain: Option<&str>) -> Target {
         Target { id: "shop".into(), name: "Shop".into(), host: "example.org".into(), port: 22, user: "somnia".into(), domain: domain.map(Into::into), kind: TargetKind::Node, key_slot: key_slot_for("shop"), spa: false, app_port: None }
     }
-    fn engine(version: &str) -> NodeEngine<Host> {
+    pub(crate) fn engine(version: &str) -> NodeEngine<Host> {
         let host = Host { project: project(version), server: Shared(Arc::new(Mutex::new(Fake::new()))), fingerprint: Mutex::new("SHA256:AAAA".into()), public: Mutex::new(PublicCheck::Healthy), steps: Mutex::default() };
         let tick = std::sync::atomic::AtomicU64::new(1_000);
         NodeEngine::new(host, NodeOptions { health_attempts: 2, health_interval: Duration::ZERO, ..Default::default() })
@@ -417,4 +443,15 @@ mod tests {
         let plan = first.plan(&t, Action::Publish, None).unwrap();
         assert_eq!(first.publish(&t, &plan, &noop).unwrap_err(), EngineError::HealthFailed);
     }
+}
+
+/// Lets the live engine and the app-settings commands share one node engine.
+impl<T: DeployEngine + ?Sized> DeployEngine for Arc<T> {
+    fn plan(&self, t: &Target, a: Action, r: Option<&str>) -> Result<EnginePlan, EngineError> { (**self).plan(t, a, r) }
+    fn probe_host_key(&self, t: &Target) -> Result<HostKeyInfo, EngineError> { (**self).probe_host_key(t) }
+    fn publish(&self, t: &Target, p: &EnginePlan, g: &dyn Fn(&str)) -> Result<Outcome, EngineError> { (**self).publish(t, p, g) }
+    fn rollback(&self, t: &Target, p: &EnginePlan, g: &dyn Fn(&str)) -> Result<Outcome, EngineError> { (**self).rollback(t, p, g) }
+    fn live_release(&self, t: &Target) -> Result<Option<String>, EngineError> { (**self).live_release(t) }
+    fn cancel(&self, t: &Target) -> bool { (**self).cancel(t) }
+    fn releases(&self, t: &Target) -> Result<Vec<String>, EngineError> { (**self).releases(t) }
 }
