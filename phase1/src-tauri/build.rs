@@ -221,6 +221,8 @@ fn main() {
             "deploy_node_build_collect",
             "preview_open",
             "preview_close",
+            "check_channel_update",
+            "install_channel_update",
 
         ]),
     ))
