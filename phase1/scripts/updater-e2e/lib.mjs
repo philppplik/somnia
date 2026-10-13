@@ -1,15 +1,11 @@
 // Pure helpers shared by the harness and its unit tests.
-export function compareSemver(a,b){
-  const p=s=>String(s).replace(/^v/,'').split('-')[0].split('.').map(n=>parseInt(n,10));
-  const x=p(a),y=p(b);
-  for(let i=0;i<3;i++){const d=(x[i]||0)-(y[i]||0);if(d)return d>0?1:-1;}
-  return 0;
-}
+import {compare,valid} from 'semver';
+export const compareSemver=(a,b)=>compare(String(a).replace(/^v/,''),String(b).replace(/^v/,''));
 const PLATFORM_KEY=/^(windows|linux|darwin)-(x86_64|aarch64|i686|armv7)$/;
 export function validateManifest(m,tag){
   const out=[];
   if(!m||typeof m!=='object')return ['manifest is not an object'];
-  if(typeof m.version!=='string'||!/^\d+\.\d+\.\d+$/.test(m.version))out.push('version must be x.y.z without a leading v');
+  if(typeof m.version!=='string'||(!valid(m.version)||m.version.startsWith('v')))out.push('version must be valid SemVer without a leading v');
   if(tag&&m.version!==String(tag).replace(/^v/,''))out.push('version does not match the release tag');
   if(typeof m.pub_date!=='string'||Number.isNaN(Date.parse(m.pub_date)))out.push('pub_date must be an RFC 3339 date');
   if(!m.platforms||typeof m.platforms!=='object'||!Object.keys(m.platforms).length)out.push('platforms is empty');
