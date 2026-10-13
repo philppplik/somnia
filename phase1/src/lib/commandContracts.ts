@@ -96,5 +96,8 @@ export interface CommandContracts {
   deploy_hostkey_replace: Contract<{ targetId: string; oldFingerprint: string; newFingerprint: string; acknowledged: boolean }, null>;
   deploy_key_create: Contract<{ targetId: string }, string>;
   deploy_releases: Contract<{ targetId: string }, string[]>;
+  deploy_key_public: Contract<{ targetId: string }, string>;
+  deploy_live_release: Contract<{ targetId: string }, string | null>;
+  deploy_cancel: Contract<{ targetId: string }, boolean>;
   deploy_open_site: Contract<{ targetId: string }, null>;
 }

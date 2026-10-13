@@ -73,8 +73,16 @@ export function parseProgress(step: string): ProgressInfo {
   return done !== undefined && total !== undefined && total > 0 && done <= total ? { step: id, done, total } : { step: id };
 }
 
-/** `20261012T143015Z-ab12cd` to a Date, or null for hand-named ids. */
+/** UTC timestamp ids and D1 Unix-second ids to a Date, or null for hand-named ids. */
 export function releaseDate(id: string): Date | null {
+  const unix = /^(\d{20})-[a-f0-9]{12}(?:-[a-f0-9]{8})?$/.exec(id);
+  if (unix) {
+    const seconds = Number(unix[1]);
+    const ms = seconds * 1000;
+    if (!Number.isSafeInteger(seconds) || !Number.isSafeInteger(ms)) return null;
+    const date = new Date(ms);
+    return Number.isNaN(date.getTime()) ? null : date;
+  }
   const m = /^(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})Z(?:-[a-z0-9]{1,16})?$/.exec(id);
   if (!m) return null;
   const d = new Date(Date.UTC(+m[1]!, +m[2]! - 1, +m[3]!, +m[4]!, +m[5]!, +m[6]!));

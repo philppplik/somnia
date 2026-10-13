@@ -38,6 +38,12 @@ test('parseProgress accepts the engine words and counters only', () => {
 });
 test('release ids: date parsing and newest-first order', () => {
   assert.equal(releaseDate('20261012T143015Z-ab12cd')?.toISOString(), '2026-10-12T14:30:15.000Z');
+  const prefix = String(Date.parse('2026-10-12T14:30:15Z') / 1000).padStart(20, '0');
+  assert.equal(releaseDate(`${prefix}-abcdef123456`)?.toISOString(), '2026-10-12T14:30:15.000Z');
+  assert.equal(releaseDate(`${prefix}-abcdef123456-123456ab`)?.toISOString(), '2026-10-12T14:30:15.000Z');
+  assert.equal(releaseDate('99999999999999999999-abcdef123456'), null);
+  assert.equal(releaseDate(`${prefix}-not-a-hash`), null);
+  assert.deepEqual(sortReleases(['20261010T000000Z-a', `${prefix}-abcdef123456`, 'hand']), [`${prefix}-abcdef123456`, '20261010T000000Z-a', 'hand']);
   assert.equal(releaseDate('manual-1'), null);
   assert.equal(releaseDate('20261340T143015Z-ab'), null);
   assert.deepEqual(sortReleases(['20261010T000000Z-a', 'hand', '20261012T000000Z-b', '20261011T000000Z-c']), ['20261012T000000Z-b', '20261011T000000Z-c', '20261010T000000Z-a', 'hand']);

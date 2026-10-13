@@ -11,6 +11,7 @@ use std::sync::{Arc, OnceLock};
 use tauri::{Emitter, Manager};
 
 static SERVICE: OnceLock<Arc<DeployService>> = OnceLock::new();
+static SOURCE: OnceLock<crate::deploy::engine::ProjectSource> = OnceLock::new();
 pub const PROGRESS_EVENT: &str = "deploy-progress";
 
 fn gate(window: &tauri::WebviewWindow) -> Result<(), String> {
@@ -20,8 +21,13 @@ fn gate(window: &tauri::WebviewWindow) -> Result<(), String> {
 fn service(app: &tauri::AppHandle) -> Result<Arc<DeployService>, String> {
     if let Some(s) = SERVICE.get() { return Ok(s.clone()); }
     let dir = app.path().app_config_dir().map_err(|_| "deploy:storage".to_string())?;
-    let built = Arc::new(build_service(&dir).map_err(code)?);
+    let built = Arc::new(build_service(&dir, SOURCE.get_or_init(Default::default).clone()).map_err(code)?);
     Ok(SERVICE.get_or_init(|| built).clone())
+}
+fn set_project_source(app: &tauri::AppHandle) -> Result<(), String> {
+    let root = crate::desktop::deploy_project_root(app)?;
+    *SOURCE.get_or_init(Default::default).lock().map_err(|_| "deploy:storage".to_string())? = Some(root);
+    Ok(())
 }
 fn code(e: DeployError) -> String { e.to_string() }
 async fn blocking<T: Send + 'static>(app: &tauri::AppHandle, f: impl FnOnce(&DeployService) -> Result<T, DeployError> + Send + 'static) -> Result<T, String> {
@@ -51,6 +57,7 @@ pub async fn deploy_target_delete(window: tauri::WebviewWindow, app: tauri::AppH
 #[tauri::command]
 pub async fn deploy_plan(window: tauri::WebviewWindow, app: tauri::AppHandle, target_id: String) -> Result<PlanView, String> {
     gate(&window)?;
+    set_project_source(&app)?;
     blocking(&app, move |s| s.plan(&target_id)).await
 }
 #[tauri::command]
@@ -66,6 +73,7 @@ pub async fn deploy_confirm_issue(window: tauri::WebviewWindow, app: tauri::AppH
 #[tauri::command]
 pub async fn deploy_publish(window: tauri::WebviewWindow, app: tauri::AppHandle, target_id: String, plan_hash: String, token: String) -> Result<Outcome, String> {
     gate(&window)?;
+    set_project_source(&app)?;
     let win = window.clone();
     let id = target_id.clone();
     blocking(&app, move |s| {
@@ -121,4 +129,20 @@ pub async fn deploy_open_site(window: tauri::WebviewWindow, app: tauri::AppHandl
     #[cfg(all(not(target_os = "windows"), not(target_os = "macos")))]
     let result = std::process::Command::new("xdg-open").arg(url.as_str()).spawn();
     result.map(|_| ()).map_err(|_| "deploy:engine-failed".to_string())
+}
+
+#[tauri::command]
+pub async fn deploy_key_public(window: tauri::WebviewWindow, app: tauri::AppHandle, target_id: String) -> Result<String, String> {
+    gate(&window)?;
+    blocking(&app, move |s| s.key_public(&target_id)).await
+}
+#[tauri::command]
+pub async fn deploy_live_release(window: tauri::WebviewWindow, app: tauri::AppHandle, target_id: String) -> Result<Option<String>, String> {
+    gate(&window)?;
+    blocking(&app, move |s| s.live_release(&target_id)).await
+}
+#[tauri::command]
+pub async fn deploy_cancel(window: tauri::WebviewWindow, app: tauri::AppHandle, target_id: String) -> Result<bool, String> {
+    gate(&window)?;
+    blocking(&app, move |s| s.cancel(&target_id)).await
 }

@@ -314,6 +314,19 @@
       ]
     },
     {
+      "name": "deploy_cancel",
+      "domain": "deploy",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "target_id"
+      ],
+      "args": [
+        "targetId"
+      ]
+    },
+    {
       "name": "deploy_confirm_issue",
       "domain": "deploy",
       "status": "native",
@@ -375,6 +388,32 @@
     },
     {
       "name": "deploy_key_create",
+      "domain": "deploy",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "target_id"
+      ],
+      "args": [
+        "targetId"
+      ]
+    },
+    {
+      "name": "deploy_key_public",
+      "domain": "deploy",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "target_id"
+      ],
+      "args": [
+        "targetId"
+      ]
+    },
+    {
+      "name": "deploy_live_release",
       "domain": "deploy",
       "status": "native",
       "wrapped": false,

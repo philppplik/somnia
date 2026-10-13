@@ -1861,6 +1861,13 @@ fn git_trust_path(window: &WebviewWindow) -> std::result::Result<PathBuf, String
         .map(|d| d.join("git-trusted-repos.json"))
         .map_err(|_| "App config directory is unavailable".to_string())
 }
+/// Deployment accepts an opened native folder only, never a renderer-provided filesystem path.
+pub(crate) fn deploy_project_root(app: &tauri::AppHandle) -> std::result::Result<PathBuf, String> {
+    let state = app.state::<Shared>();
+    let backend = state.lock().map_err(|_| "deploy:storage".to_string())?;
+    if backend.projects.len() != 1 { return Err("deploy:preflight-failed".into()); }
+    Ok(backend.projects.values().next().expect("one open project").root_path().to_path_buf())
+}
 fn git_project_root(backend: &Backend) -> std::result::Result<PathBuf, String> {
     match backend.projects.len() {
         1 => Ok(backend
@@ -2494,6 +2501,9 @@ pub fn run() {
             crate::deploy_commands::deploy_key_create,
             crate::deploy_commands::deploy_releases,
             crate::deploy_commands::deploy_open_site,
+            crate::deploy_commands::deploy_key_public,
+            crate::deploy_commands::deploy_live_release,
+            crate::deploy_commands::deploy_cancel,
             studio_mcp_start,
             studio_mcp_stop,
             studio_mcp_status,

@@ -47,6 +47,17 @@ test('every deploy command is registered in the invoke_handler and listed by the
  const rs=readFileSync('src-tauri/src/desktop.rs','utf8');
  const own=readFileSync('src-tauri/src/deploy_commands.rs','utf8');
  const commands=[...own.matchAll(/#\[tauri::command\]\s*(?:pub\s+)?(?:async\s+)?fn\s+(\w+)/g)].map(m=>m[1]);
- assert.equal(commands.length,14);
+ assert.equal(commands.length,17);
  for(const c of commands){assert.ok(rs.includes(`crate::deploy_commands::${c},`),`${c} missing in invoke_handler`);assert.ok(own.includes(`pub async fn ${c}(window: tauri::WebviewWindow`),`${c} must gate on the trusted editor window`);}
+});
+
+test('deploy readout and cancellation commands are main-window gated and have typed IPC contracts',()=>{
+ const rs=readFileSync('src-tauri/src/deploy_commands.rs','utf8');
+ const contracts=readFileSync('src/lib/commandContracts.ts','utf8');
+ for(const name of ['deploy_key_public','deploy_live_release','deploy_cancel']) {
+  const body=rs.slice(rs.indexOf(`pub async fn ${name}(`),rs.indexOf(`pub async fn ${name}(`)+350);
+  assert.ok(body.includes('gate(&window)?'));
+  assert.ok(contracts.includes(`${name}: Contract<{ targetId: string }`));
+ }
+ assert.ok(rs.includes('set_project_source(&app)?'));
 });

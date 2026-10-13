@@ -67,7 +67,7 @@ pub struct HostKeyInfo { pub algorithm: String, pub fingerprint: String }
 
 /// Engine failures are a closed enum: lower layers may not smuggle text through.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum EngineError { Connect, Auth, HostKeyRejected, Preflight, Upload, Switch, HealthFailedRolledBack, HealthFailedRollbackFailed, NoSuchRelease, Other }
+pub enum EngineError { Cancelled, ServerNotPrepared, Connect, Auth, HostKeyRejected, Preflight, Upload, Switch, HealthFailedRolledBack, HealthFailedRollbackFailed, NoSuchRelease, Other }
 
 pub trait DeployEngine: Send + Sync {
     /// Connects with the pinned key (read-only), builds the artifact and diffs against the live release.
@@ -75,6 +75,8 @@ pub trait DeployEngine: Send + Sync {
     fn probe_host_key(&self, target: &Target) -> Result<HostKeyInfo, EngineError>;
     fn publish(&self, target: &Target, plan: &EnginePlan, progress: &dyn Fn(&str)) -> Result<Outcome, EngineError>;
     fn rollback(&self, target: &Target, plan: &EnginePlan, progress: &dyn Fn(&str)) -> Result<Outcome, EngineError>;
+    fn live_release(&self, _target: &Target) -> Result<Option<String>, EngineError> { Err(EngineError::Other) }
+    fn cancel(&self, _target: &Target) -> bool { false }
     /// Kept releases, newest first (release id only).
     fn releases(&self, target: &Target) -> Result<Vec<String>, EngineError>;
 }
@@ -124,7 +126,7 @@ impl DeployError {
             Self::NotAcknowledged => "not-acknowledged", Self::UnknownPlan => "unknown-plan",
             Self::ConfirmationInvalid => "confirmation-invalid", Self::PlanChanged => "plan-changed", Self::Busy => "busy",
             Self::Engine(e) => match e {
-                EngineError::Connect => "connect-failed", EngineError::Auth => "auth-failed", EngineError::HostKeyRejected => "host-key-rejected",
+                EngineError::Cancelled => "cancelled", EngineError::ServerNotPrepared => "server-not-prepared", EngineError::Connect => "connect-failed", EngineError::Auth => "auth-failed", EngineError::HostKeyRejected => "host-key-rejected",
                 EngineError::Preflight => "preflight-failed", EngineError::Upload => "upload-failed", EngineError::Switch => "switch-failed",
                 EngineError::HealthFailedRolledBack => "health-failed-rolled-back", EngineError::HealthFailedRollbackFailed => "health-failed-rollback-failed",
                 EngineError::NoSuchRelease => "no-such-release", EngineError::Other => "engine-failed",
@@ -151,9 +153,17 @@ pub fn plan_hash(action: Action, target_id: &str, plan: &EnginePlan) -> String {
     line(target_id.into());
     line(plan.fingerprint.clone());
     line(plan.build_id.clone());
+    line(plan.live_release.clone().unwrap_or_default());
     line(plan.release_id.clone().unwrap_or_default());
     for f in files { line(format!("{}\t{}\t{}\t{:?}", f.path, f.size, f.sha256, f.change)); }
     hex(&h.finalize())
+}
+fn target_plan_hash(action: Action, target: &Target, plan: &EnginePlan) -> String {
+    // Editing the destination or server configuration after approval must invalidate the token.
+    let mut digest = Sha256::new();
+    digest.update(plan_hash(action, &target.id, plan));
+    digest.update(serde_json::to_vec(target).expect("validated target is serializable"));
+    hex(&digest.finalize())
 }
 fn hex(b: &[u8]) -> String { b.iter().map(|x| format!("{x:02x}")).collect() }
 
@@ -294,7 +304,7 @@ impl DeployService {
         if let Some(r) = release_id { if !valid_release_id(r) { return Err(DeployError::InvalidInput("releaseId")); } }
         let t = self.targets.get(target_id)?;
         let plan = self.checked_plan(&t, action, release_id)?;
-        let hash = plan_hash(action, &t.id, &plan);
+        let hash = target_plan_hash(action, &t, &plan);
         self.broker.remember_plan(&hash);
         Ok(PlanView { plan_hash: hash, action, target_id: t.id, fingerprint: plan.fingerprint, build_id: plan.build_id, live_release: plan.live_release, release_id: plan.release_id, files: plan.files })
     }
@@ -304,6 +314,12 @@ impl DeployService {
     pub fn site_url(&self, target_id: &str) -> Result<Option<String>, DeployError> {
         let t = self.targets.get(target_id)?;
         Ok(t.domain.map(|d| format!("https://{}", d.to_ascii_lowercase())))
+    }
+    pub fn live_release(&self, target_id: &str) -> Result<Option<String>, DeployError> {
+        Ok(self.engine.live_release(&self.targets.get(target_id)?)?)
+    }
+    pub fn cancel(&self, target_id: &str) -> Result<bool, DeployError> {
+        Ok(self.engine.cancel(&self.targets.get(target_id)?))
     }
     pub fn releases(&self, target_id: &str) -> Result<Vec<String>, DeployError> { let t = self.targets.get(target_id)?; Ok(self.engine.releases(&t)?) }
 
@@ -316,7 +332,7 @@ impl DeployService {
         let t = self.targets.get(target_id)?;
         // Re-plan against the live state: what is uploaded is exactly what was approved.
         let plan = self.checked_plan(&t, action, release_id)?;
-        if plan_hash(action, &t.id, &plan) != hash { return Err(DeployError::PlanChanged); }
+        if target_plan_hash(action, &t, &plan) != hash { return Err(DeployError::PlanChanged); }
         Ok(match action { Action::Publish => self.engine.publish(&t, &plan, progress)?, Action::Rollback => self.engine.rollback(&t, &plan, progress)? })
     }
     pub fn publish(&self, target_id: &str, hash: &str, token: &str, now_ms: u64, progress: &dyn Fn(&str)) -> Result<Outcome, DeployError> {

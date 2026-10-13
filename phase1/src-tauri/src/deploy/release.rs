@@ -82,7 +82,15 @@ impl ReleaseLayout {
         manifest: &DeployArtifactManifest,
         files: &BTreeMap<String, Vec<u8>>,
     ) -> Result<DeployArtifactDiff> {
+        self.stage_progress(t, id, manifest, files, &|_, _| Ok(())).await
+    }
+    /// Progress is reported only after each verified file; callback may cancel before switch.
+    pub async fn stage_progress<T: SshTransport>(
+        &self, t: &mut T, id: &str, manifest: &DeployArtifactManifest,
+        files: &BTreeMap<String, Vec<u8>>, progress: &dyn Fn(usize, usize) -> Result<()>,
+    ) -> Result<DeployArtifactDiff> {
         manifest.verify_bytes(files)?;
+        progress(0, manifest.files.len())?;
         let ready = self.release(id)?;
         let partial = self.partial(id)?;
         if t.exists(&ready).await? {
@@ -99,7 +107,7 @@ impl ReleaseLayout {
             t.remove_tree(&partial).await?;
         }
         t.mkdir(&partial).await?;
-        for file in &manifest.files {
+        for (index, file) in manifest.files.iter().enumerate() {
             let destination = format!("{partial}/{}", file.path);
             if let Some((parent, _)) = destination.rsplit_once('/') {
                 t.mkdir(parent).await?;
@@ -125,6 +133,7 @@ impl ReleaseLayout {
             if t.hash(&destination).await? != file.sha256 {
                 return Err(DeployError::Integrity);
             }
+            progress(index + 1, manifest.files.len())?;
         }
         t.write(
             &format!("{partial}/{MANIFEST_FILE}"),

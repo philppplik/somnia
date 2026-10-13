@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased - live static publishing
+
+- Publish now connects over embedded, pinned-key SSH, checks the prepared server, uploads verified immutable releases, and switches the current site atomically.
+- Persistent server pins and OS-keychain deployment keys replace session-only placeholders. Private keys never enter the renderer or project files.
+- Publish reports connection, checks, verified file counts, switch and health progress. Cancellation stops before the switch, kept releases can be restored, and a failed health check restores the previous site and Caddy configuration.
+- Release history has a read-only current-release lookup. Static framework builds use the existing local output; the separate Node pipeline must be supplied before Node targets can publish.
+
 ## Unreleased - static build for publishing
 
 - "Build for publishing" panel for static framework projects (Vite React, Vue, Svelte, Solid, Astro, Next export, SvelteKit static adapter, Nuxt generate): builds locally, finds the output folder from package.json and framework config without running project code, lists every file with its SHA-256 and a stable build ID.

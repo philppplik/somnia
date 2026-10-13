@@ -1,27 +1,16 @@
-//! Wiring seam between the guard ([`crate::deploy_guard`]) and the concrete deploy pieces.
+//! Runtime adapters and wiring seam between the guard ([`crate::deploy_guard`]) and the concrete deploy pieces.
 //!
-//! `build_service` is the only place that picks implementations. The SSH engine, the persistent
-//! host-key store and the keychain key maker come from the foundation modules (`deploy::transport`,
-//! `deploy::release`, `deploy::host_keys`, `deploy::keys`); until they are merged this seam uses
-//! honest stand-ins: the engine and key maker report failure codes (no fake success), and pins are
-//! session-only. Swapping them is a change inside this file only.
-use crate::deploy_guard::{Action, DeployEngine, DeployService, EngineError, EnginePlan, HostKeyInfo, HostKeyPins, KeyMaker, Outcome};
-use crate::deploy_targets::Target;
+//! `build_service` picks the embedded SSH engine, app-owned persistent pins and OS keychain.
+//! No fallback writes credentials or trusts a host implicitly when storage is unavailable.
+use crate::deploy_guard::{HostKeyPins, KeyMaker};
+#[cfg(feature = "desktop")]
+use crate::deploy_guard::DeployService;
 #[cfg(feature = "desktop")]
 use crate::deploy_targets::FileTargets;
 use std::collections::BTreeMap;
 #[cfg(feature = "desktop")]
 use std::path::Path;
 use std::sync::Mutex;
-
-pub struct UnwiredEngine;
-impl DeployEngine for UnwiredEngine {
-    fn plan(&self, _: &Target, _: Action, _: Option<&str>) -> Result<EnginePlan, EngineError> { Err(EngineError::Other) }
-    fn probe_host_key(&self, _: &Target) -> Result<HostKeyInfo, EngineError> { Err(EngineError::Other) }
-    fn publish(&self, _: &Target, _: &EnginePlan, _: &dyn Fn(&str)) -> Result<Outcome, EngineError> { Err(EngineError::Other) }
-    fn rollback(&self, _: &Target, _: &EnginePlan, _: &dyn Fn(&str)) -> Result<Outcome, EngineError> { Err(EngineError::Other) }
-    fn releases(&self, _: &Target) -> Result<Vec<String>, EngineError> { Err(EngineError::Other) }
-}
 
 /// Shared OS-keychain adapter. Only public keys and existence cross the guard boundary.
 pub struct RuntimeKeys<B: crate::oauth_store::SecretBackend>(pub std::sync::Arc<crate::deploy::keys::KeyStore<B>>);
@@ -62,14 +51,16 @@ impl HostKeyPins for RuntimePins {
 }
 /// No fallback to a disk credential or session-only pin when storage fails.
 #[cfg(feature = "desktop")]
-pub fn build_service(config_dir: &Path) -> Result<DeployService, crate::deploy_guard::DeployError> {
+pub fn build_service(config_dir: &Path, source: crate::deploy::engine::ProjectSource) -> Result<DeployService, crate::deploy_guard::DeployError> {
     let store = std::sync::Arc::new(crate::deploy::host_keys::HostKeyStore::open(config_dir.join("deploy-host-keys.json")).map_err(|_| crate::deploy_guard::DeployError::Storage)?);
     let keys = std::sync::Arc::new(crate::deploy::keys::KeyStore::new(crate::deploy::keys::OsKeychainBackend));
+    let observed: crate::deploy::engine::ObservedKeys = Default::default();
+    let engine = crate::deploy::engine::LiveDeployEngine::new(keys.clone(), store.clone(), observed.clone(), source);
     Ok(DeployService::new(
         Box::new(FileTargets::new(config_dir.join("deploy-targets.json"))),
-        Box::new(RuntimePins { store, observed: Default::default() }),
+        Box::new(RuntimePins { store, observed }),
         Box::new(RuntimeKeys(keys)),
-        Box::new(UnwiredEngine),
+        Box::new(engine),
     ))
 }
 
