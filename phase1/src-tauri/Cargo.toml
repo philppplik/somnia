@@ -55,7 +55,7 @@ windows-sys = { version = "=0.59.0", features = ["Win32_Storage_FileSystem", "Wi
 tauri-build = { version = "2", optional = true }
 
 [dev-dependencies]
-tokio-tungstenite = "0.26"
+tokio-tungstenite = "0.30"
 futures-util = "0.3"
 tempfile = "3"
 rmcp = { version = "=3.5.1", default-features = false, features = ["server", "client", "macros", "transport-async-rw"] }
