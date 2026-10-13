@@ -2923,5 +2923,6 @@
   "deploy.progress.build.collecting": "Vérification des fichiers",
   "deploy.progress.build.done": "Construit : {count} fichiers vérifiés",
   "deploy.progress.compare": "Comparaison avec le site en ligne",
-  "deploy.progress.compare.done": "Comparé avec le site en ligne"
+  "deploy.progress.compare.done": "Comparé avec le site en ligne",
+  "cmd.frameworks.buildStatic": "Construire le site pour la publication"
 }

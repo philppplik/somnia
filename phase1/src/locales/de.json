@@ -2923,5 +2923,6 @@
   "deploy.progress.build.collecting": "Dateien werden geprüft",
   "deploy.progress.build.done": "Gebaut: {count} Dateien geprüft",
   "deploy.progress.compare": "Vergleich mit der Live-Seite",
-  "deploy.progress.compare.done": "Mit der Live-Seite verglichen"
+  "deploy.progress.compare.done": "Mit der Live-Seite verglichen",
+  "cmd.frameworks.buildStatic": "Seite zum Veröffentlichen bauen"
 }
