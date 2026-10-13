@@ -1,6 +1,6 @@
 import {reportError} from '../log';
 import {useSyncExternalStore} from 'react';
-import {SoundEngine,type SoundEngineLike} from './engine';
+import type {SoundEngineLike} from './engine';
 import {DEFAULT_SETTINGS,exportName,isNeutral,normalizeSelection,sanitizeSettings,toRecipe,type SoundSettings} from './recipe';
 import type {SoundRegionMode} from './protocol';
 import {fileExtension,sniffAudio} from './format';
@@ -11,7 +11,8 @@ export interface SoundVersion{blob:Blob;url:string;peaks:Float32Array;report:Sou
 export type SoundStatus='loading'|'ready'|'processing'|'error';
 export interface SoundSession{name:string;status:SoundStatus;error:string;settings:SoundSettings;plugins:readonly SoundPlugin[];original:SoundVersion|null;processed:SoundVersion|null;listen:'original'|'processed';selection:{start:number;end:number}|null;progress:SoundProgress|null}
 const DEBOUNCE_MS=200;
-let factory:()=>SoundEngineLike=()=>new SoundEngine();
+let factory:()=>SoundEngineLike|Promise<SoundEngineLike>=async()=>new (await import('./engine')).SoundEngine();
+let initializing:Promise<void>|undefined;
 let engine:SoundEngineLike|undefined,engineReady:Promise<readonly SoundPlugin[]>|undefined;
 const sessions=new Map<string,SoundSession>();
 const sources=new Map<string,{bytes:ArrayBuffer;ext:string}>();
@@ -24,9 +25,9 @@ const put=(s:SoundSession)=>{sessions.set(s.name,s);emit();};
 const patch=(name:string,p:Partial<SoundSession>,cause?:unknown)=>{if(p.error)reportError('sound.engine',cause??p.error,{context:{studio:'sound',file:name}});const s=sessions.get(name);if(s)put({...s,...p});};
 /** Tests replace the engine; production uses the WASM worker. Drops all sessions. */
 export function setSoundEngineFactory(f:()=>SoundEngineLike){for(const n of [...sessions.keys()])closeSound(n);engine?.dispose();engine=undefined;engineReady=undefined;factory=f;}
-function getEngine(){
- if(!engine){const e=factory();engine=e;engineReady=e.init();engineReady.catch(()=>{if(engine===e){e.dispose();engine=undefined;engineReady=undefined;}});}
- return{engine,ready:engineReady!};
+async function getEngine(){
+ if(!engine){initializing??=(async()=>{const e=await factory();engine=e;engineReady=e.init();engineReady.catch(()=>{if(engine===e){e.dispose();engine=undefined;engineReady=undefined;}});})().finally(()=>{initializing=undefined;});await initializing;}
+ return{engine:engine!,ready:engineReady!};
 }
 const resetEngine=(error:unknown)=>{if(/disposed|timed out|worker failed|could not be decoded/i.test(String(error))){engine?.dispose();engine=undefined;engineReady=undefined;}};
 const message=(e:unknown)=>(e instanceof Error?e.message:String(e)).replace(/^Error:\s*/,'');
@@ -44,7 +45,7 @@ export async function openSound(item:{name:string;url:string}):Promise<void>{
   const bytes=await fetch(item.url).then(r=>r.arrayBuffer());
   const ext=sniffAudio(new Uint8Array(bytes,0,Math.min(bytes.byteLength,16)))?.ext??fileExtension(item.name);
   sources.set(item.name,{bytes,ext});
-  const {engine:e,ready}=getEngine();const plugins=await ready;
+  const {engine:e,ready}=await getEngine();const plugins=await ready;
   const first=await e.process(bytes.slice(0),ext,toRecipe(DEFAULT_SETTINGS));
   if(!sessions.has(item.name))return;
   const original=version(first);
@@ -60,7 +61,7 @@ async function render(name:string){
  if(isNeutral(s.settings)){revoke(s.processed,s.original);runs.set(name,(runs.get(name)??0)+1);patch(name,{status:'ready',error:'',processed:s.original});return;}
  const run=(runs.get(name)??0)+1;runs.set(name,run);patch(name,{status:'processing',error:'',progress:null});
  try{
-  const {engine:e,ready}=getEngine();await ready;
+  const {engine:e,ready}=await getEngine();await ready;
   const r=await e.process(src.bytes.slice(0),src.ext,toRecipe(s.settings),p=>{if(runs.get(name)===run)patch(name,{progress:p});});
   if(runs.get(name)!==run||!sessions.has(name))return;
   const next=version(r),cur=sessions.get(name)!;revoke(cur.processed,cur.original);patch(name,{status:'ready',error:'',processed:next,progress:null});
@@ -69,7 +70,7 @@ async function render(name:string){
 /** Renders settings to a throwaway WAV URL for listening (review of an AI proposal). Does not touch the session; the caller revokes the URL. */
 export async function renderSoundPreview(name:string,settings:SoundSettings):Promise<string>{
  const s=sessions.get(name),src=sources.get(name);if(!s||!src||!s.original)throw new Error('Audio is not ready.');
- const {engine:e,ready}=getEngine();await ready;
+ const {engine:e,ready}=await getEngine();await ready;
  const r=await e.process(src.bytes.slice(0),src.ext,toRecipe(sanitizeSettings(settings),8));
  return URL.createObjectURL(new Blob([r.wav],{type:'audio/wav'}));
 }
