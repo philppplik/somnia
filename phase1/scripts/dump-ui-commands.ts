@@ -26,7 +26,7 @@ import {createTauriDeployBackend} from '../src/lib/deploy/tauriBackend';
 import { listCommands } from '../src/lib/commands';
 import { CATALOGUES, t } from '../src/lib/i18n';
 import { CommandDispatcher } from '../src/lib/commandDispatcher';
-import { vectorCommandsReady } from '../src/lib/studios/vector';
+import { vectorCommandsReady } from '../src/store/vectorBootstrap';
 import { registerSheetsCommands } from '../src/lib/sheets/commands';
 import { registerDocumentsCommands } from '../src/lib/documents/commands';
 import { registerSlidesCommands } from '../src/lib/slides/commands';

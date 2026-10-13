@@ -1941,6 +1941,27 @@
       "hasEnabled": true
     },
     {
+      "id": "vector.exportPng",
+      "title": "Export vector PNG",
+      "category": "Project",
+      "source": "vector",
+      "hasEnabled": true
+    },
+    {
+      "id": "vector.exportSvg",
+      "title": "Export vector SVG",
+      "category": "Project",
+      "source": "vector",
+      "hasEnabled": true
+    },
+    {
+      "id": "vector.flipSelection",
+      "title": "Flip vector selection",
+      "category": "Edit",
+      "source": "vector",
+      "hasEnabled": true
+    },
+    {
       "id": "vector.importSvg",
       "title": "Add SVG to vector page",
       "category": "Insert",
@@ -2011,6 +2032,13 @@
       "hasEnabled": true
     },
     {
+      "id": "vector.rotateSelection",
+      "title": "Rotate vector selection",
+      "category": "Edit",
+      "source": "vector",
+      "hasEnabled": true
+    },
+    {
       "id": "vector.select",
       "title": "Select vector paths",
       "category": "View",
@@ -2070,6 +2098,62 @@
       "id": "vector.toggleHidden",
       "title": "Toggle vector path visibility",
       "category": "Edit",
+      "source": "vector",
+      "hasEnabled": true
+    },
+    {
+      "id": "vector.tool.ellipse",
+      "title": "Ellipse",
+      "category": "View",
+      "source": "vector",
+      "hasEnabled": true
+    },
+    {
+      "id": "vector.tool.line",
+      "title": "Line",
+      "category": "View",
+      "source": "vector",
+      "hasEnabled": true
+    },
+    {
+      "id": "vector.tool.node",
+      "title": "Node edit",
+      "category": "View",
+      "source": "vector",
+      "hasEnabled": true
+    },
+    {
+      "id": "vector.tool.pen",
+      "title": "Pen",
+      "category": "View",
+      "source": "vector",
+      "hasEnabled": true
+    },
+    {
+      "id": "vector.tool.polygon",
+      "title": "Polygon",
+      "category": "View",
+      "source": "vector",
+      "hasEnabled": true
+    },
+    {
+      "id": "vector.tool.rect",
+      "title": "Rectangle",
+      "category": "View",
+      "source": "vector",
+      "hasEnabled": true
+    },
+    {
+      "id": "vector.tool.select",
+      "title": "Select",
+      "category": "View",
+      "source": "vector",
+      "hasEnabled": true
+    },
+    {
+      "id": "vector.tool.star",
+      "title": "Star",
+      "category": "View",
       "source": "vector",
       "hasEnabled": true
     },

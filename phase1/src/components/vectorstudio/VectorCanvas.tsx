@@ -4,13 +4,14 @@ import {StudioEmptyState} from '../studios/StudioEmptyState';
 import {FileTabs} from '../FileTabs';
 import {useT} from '../../lib/useT';
 import {serializeContour,type Point,type VectorNode,type VectorPath} from '../../lib/vectorio';
-import {getState,patchState} from '../../store/appStore';
 import {selectNode,moveSelection,addNodeNear,addPath,commit,createBlankVector,deleteNode,deleteSelection,duplicateSelection,moveNode,openSvgSource,PAGE_PRESETS,redo,select,setTool,setView,undo,useVectorSession,type VectorTool} from '../../lib/vectorstudio/session';
 import {boxOf,fitPath,hitDocument,pathBox,translatePath,type Box} from '../../lib/vectorstudio/geometry';
 import {buildShape,newId,DEFAULT_SHAPE_STYLE,type ShapeKind} from '../../lib/vectorstudio/shapes';
 import {openSvgDialog} from '../../lib/vectorstudio/open';
 import {PathLayer} from './render';
 import {togglePathSelection} from './tools/operations';
+import {studioContextStore} from '../../lib/shell/studioContext';
+import {getVectorSession,subscribeVector} from '../../lib/vectorstudio/session';
 import {VectorToolbar} from './VectorToolbar';
 
 type Drag=
@@ -36,8 +37,13 @@ export function VectorCanvas(){
   setView(zoom,{x:(el.clientWidth-s.doc.width*zoom)/2,y:(el.clientHeight-s.doc.height*zoom)/2});},[s.doc.width,s.doc.height]);
  useEffect(()=>{if(s.open)fit();},[s.open,s.name,fit]);
  useEffect(()=>{setPen([]);},[s.tool,s.name]);
- // The Vector rail offers Files only, so do not leave the HTML Layers tree open beside the drawing.
- useEffect(()=>{if(!['files','search'].includes(getState().leftTab))patchState({leftTab:'files'});},[]);
+ useEffect(()=>{
+  const owner=studioContextStore.claim('vector');
+  const report=()=>{const v=getVectorSession();owner.report({document:v.open?{id:v.name,kind:'svg',dirty:v.dirty,readOnly:false}:undefined,
+   activeTool:v.tool,selection:{kind:v.selection.length===0?'none':v.selection.length===1?'one':'many',type:'path',count:v.selection.length,ids:v.selection},
+   services:{ready:v.open,node:!!(v.open&&v.tool==='node'&&v.nodePath&&v.selectedNode)},data:{width:v.doc.width,height:v.doc.height,nodePath:v.nodePath,selectedNode:v.selectedNode}});};
+  report();const off=subscribeVector(report);return()=>{off();owner.release();};
+ },[]);
  const finishPen=useCallback((close:boolean)=>{const nodes=penRef.current;if(nodes.length>=2){addPath({id:newId(),closed:close,name:close?'Shape':'Path',style:close?{...DEFAULT_SHAPE_STYLE}:{fill:'none',stroke:'#1f1b4d',strokeWidth:2,lineCap:'round',lineJoin:'round'},nodes});setTool('select');}setPen([]);},[]);
 
  const selected=s.doc.paths.filter(p=>s.selection.includes(p.id));

@@ -7,6 +7,7 @@ import { registerCommandSpec } from '../commandBridge';
 import type { CommandSchema, CommandSpec } from '../commandSpec';
 import type { Point, Style, VectorDocument, VectorPath } from '../vectorio';
 import * as S from './session';
+import {vectorShellCommandSpecs} from './shellCommands';
 
 const object = (properties: Record<string, unknown> = {}, required: string[] = []): CommandSchema =>
   ({ type: 'object', properties, required, additionalProperties: false });
@@ -135,7 +136,7 @@ let dispose: (() => void) | undefined;
 export function registerVectorCommands(active: () => boolean): () => void {
   if (dispose) return dispose;
   const off: (() => void)[] = [];
-  try { for (const spec of vectorCommandSpecs(active)) off.push(registerCommandSpec(spec)); }
+  try { for (const spec of [...vectorCommandSpecs(active),...vectorShellCommandSpecs(active)]) off.push(registerCommandSpec(spec)); }
   catch (error) { off.reverse().forEach(fn => fn()); throw error; }
   dispose = () => { off.reverse().forEach(fn => fn()); dispose = undefined; };
   return dispose;

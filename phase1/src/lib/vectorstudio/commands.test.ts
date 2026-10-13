@@ -4,7 +4,7 @@ import { CommandDispatcher, CommandDispatchError } from '../commandDispatcher';
 import { commandDispatcher } from '../commandDispatcher';
 import { executeCommand, listCommands } from '../commands';
 import { getState, patchState } from '../../store/appStore';
-import { vectorCommandsReady } from '../studios/vector';
+import { vectorCommandsReady } from '../../store/vectorBootstrap';
 import { vectorCommandSpecs, registerVectorCommands } from './commands';
 import { VECTOR_CATALOGUES } from './i18n';
 import { rectPath } from './shapes';

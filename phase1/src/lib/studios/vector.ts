@@ -1,4 +1,35 @@
 import {registerStudio,type StudioDef} from './registry';
+import type {StudioShellDef} from '../shell/types';
+export const VECTOR_TOOLS=['select','node','pen','rect','ellipse','line','polygon','star'] as const;
+const toolIcons=['MousePointer2','VectorNode','VectorPen','Square','VectorEllipse','VectorLine','VectorPolygon','VectorStar'];
+export const vectorShell:StudioShellDef={
+ panels:[
+  {id:'files',title:'Files',component:'code.files',side:'left'},
+  {id:'layers',title:'Layers',titleKey:'vector.layers',component:'vector.layers',side:'left',commands:['vector.select','vector.toggleHidden','vector.renamePath','vector.reorder']},
+  {id:'tools',title:'Tools',titleKey:'vector.toolbar',component:'vector.tools',side:'left',commands:['vector.setTool']},
+  {id:'export',title:'Export',titleKey:'vector.file',component:'vector.export',side:'right',commands:['vector.exportSvg','vector.exportPng','vector.importSvg','vector.clearError']},
+  {id:'inspector',title:'Vector',titleKey:'vector.inspector',component:'shell.inspector',side:'right',defaultOpen:true},
+ ],
+ leftRail:[
+  {id:'files',icon:'Files',label:'Files',kind:'panel',panel:'files',order:10},
+  {id:'layers',icon:'Layers',label:'Layers',labelKey:'vector.layers',kind:'panel',panel:'layers',order:20},
+  {id:'tools',icon:'Pencil',label:'Tools',labelKey:'vector.toolbar',kind:'panel',panel:'tools',order:30},
+  ...VECTOR_TOOLS.map((tool,i)=>({id:tool,icon:toolIcons[i],label:tool,labelKey:'vector.tool.'+tool,kind:'tool' as const,tool,order:40+i*10,when:'services.ready',defaultPinned:i<3})),
+ ],
+ rightRail:[
+  {id:'inspector',icon:'SlidersHorizontal',label:'Vector',labelKey:'vector.inspector',kind:'panel',panel:'inspector',order:10},
+  {id:'export',icon:'VectorExport',label:'Export',labelKey:'vector.file',kind:'panel',panel:'export',order:20},
+ ],
+ tools:VECTOR_TOOLS.map((tool,i)=>({id:tool,command:'vector.tool.'+tool,icon:toolIcons[i],opensPanel:'tools'})),
+ inspector:{emptyKey:'vector.shell.empty',sections:[
+  {id:'page',title:'Page',titleKey:'vector.page',component:'vector.section.page',order:10,when:'services.ready',commands:['vector.resizePage']},
+  {id:'transform',title:'Transform',titleKey:'vector.shell.transform',component:'vector.section.transform',order:20,when:"selection.kind != 'none'",commands:['vector.setSelectionBounds','vector.rotateSelection','vector.flipSelection','vector.reorder','vector.duplicateSelection','vector.deleteSelection']},
+  {id:'style',title:'Style',titleKey:'vector.style',component:'vector.section.style',order:30,when:"selection.kind != 'none'",commands:['vector.setStyle']},
+  {id:'nodes',title:'Nodes',titleKey:'vector.tool.node',component:'vector.section.nodes',order:40,when:'services.node',commands:['vector.moveNode','vector.setNodeKind','vector.deleteNode','vector.toggleClosed']},
+ ]},
+ defaultLayout:{leftOpen:true,rightOpen:true,leftWidth:260,rightWidth:300,leftPanels:['layers'],rightPanels:['inspector'],activeLeft:'layers',activeRight:'inspector'},
+};
+
 /** Vector Studio: path and shape engine on the vectorio document model, node editing, strict SVG import and clean SVG/PNG export. */
 export const vectorStudio:StudioDef={
  id:'vector',label:'studio.vector',icon:'Pencil',order:7,
@@ -10,14 +41,7 @@ export const vectorStudio:StudioDef={
   bottomBar:{slots:['zoom'],viewportPresets:[]},
   inspector:'vector.inspector',tools:[]
  },
- commands:[],shortcuts:{'studio.vector':'Mod+8'},menus:{view:[]},canvas:'vector.canvas',
+ shellV2:vectorShell,commands:[],shortcuts:{'studio.vector':'Mod+8'},menus:{view:[]},canvas:'vector.canvas',
  agent:{tools:[],contextProviders:['activeDocument'],quickActions:[]},deriveContext:context=>context
 };
 registerStudio(vectorStudio);
-import {registerBlankProjectFactory} from './blank';
-import {createBlankVector} from '../vectorstudio/session';
-import {requestStudio,getState} from '../../store/appStore';
-/** "Create blank project" anywhere in the app opens an empty 1024 x 1024 page in the Vector Studio. */
-registerBlankProjectFactory('vector',()=>{createBlankVector(1024,1024);requestStudio('vector','manual');});
-/** commands.ts imports studios; defer the bridge until its legacy registry is initialized. */
-export const vectorCommandsReady=import('../vectorstudio/commands').then(module=>module.registerVectorCommands(()=>getState().activeStudio==='vector'));
