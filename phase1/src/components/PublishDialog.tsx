@@ -13,6 +13,7 @@ import type {PublishState,PublishStore} from '../lib/deploy/publishStore';
 import type {DeployTargetStatus} from '../lib/deploy/contract';
 import {PROGRESS_STEPS,emptyTargetForm,formFromTarget,formatBytes,liveUrl,releaseDate,shortFingerprint,validateTargetForm,type TargetForm,type DeployErrorAction,type FormField} from '../lib/deploy/publishModel';
 import {summarizePlan} from '../lib/deploy/confirmStore';
+import {NodeAppSettings} from './NodeAppSettings';
 
 type T=(k:string,p?:Record<string,string|number>)=>string;
 const mono={fontFamily:'var(--mono,ui-monospace,monospace)',wordBreak:'break-all'} as const;
@@ -117,6 +118,7 @@ function Home({state,store,selected,t}:{state:PublishState;store:PublishStore;se
   <Button size="compact" variant="outline" className="publish-add" disabled={state.busy!==null} onClick={()=>store.showForm(null)}><Plus size={12}/>{t('deploy.targets.add')}</Button>
   {state.staged&&selected&&state.staged.targetId===selected.target.id&&<section className="publish-card" data-testid="publish-staged"><UploadCloud size={18} aria-hidden="true"/><div className="publish-card-main"><strong>{t('deploy.staged',{name:selected.target.name,count:state.staged.files.filter(f=>f.change!=='unchanged').length})}</strong><div className="publish-actions"><Button size="compact" variant="outline" onClick={()=>store.clearStaged()}>{t('deploy.action.dismiss')}</Button></div></div></section>}
   {selected&&<Detail state={state} store={store} s={selected} t={t} onDelete={()=>setConfirmDelete(selected.target.id)}/>}
+  {selected&&selected.target.kind==='node'&&selected.state==='ready'&&<NodeAppSettings targetId={selected.target.id}/>}
   {confirmDelete&&selected&&confirmDelete===selected.target.id&&<section className="publish-card publish-delete" role="group" aria-label={t('deploy.delete.title')} data-testid="publish-delete-confirm"><Trash2 size={18} aria-hidden="true"/><div className="publish-card-main"><strong>{t('deploy.delete.confirm',{name:selected.target.name})}</strong><label className="publish-check"><input type="checkbox" checked={alsoKey} onChange={e=>setAlsoKey(e.target.checked)}/><span>{t('deploy.delete.key')}</span></label><p className="publish-note">{t('deploy.delete.note')}</p>
    <div className="publish-actions"><Button size="compact" variant="outline" autoFocus onClick={()=>setConfirmDelete(null)}>{t('deploy.cancel')}</Button><Button size="compact" className="publish-danger" onClick={()=>{void store.deleteTarget(selected.target.id,alsoKey);setConfirmDelete(null);}}>{t('deploy.delete.yes')}</Button></div></div></section>}
   <Failure state={state} store={store} t={t}/>

@@ -95,3 +95,10 @@
 .deploy-setup-outcome{display:grid;gap:6px;font-size:12px;margin:12px 0}
 .deploy-setup .publish-card-main{min-width:0}
 .deploy-setup [data-ready=false]{color:var(--text)}
+.publish-node-head{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.publish-node-keys{list-style:none;margin:0;padding:0;display:grid;gap:6px}
+.publish-node-keys li{display:flex;align-items:center;gap:10px}
+.publish-node-keys li code{flex:1;min-width:0}
+.publish-node-add{display:grid;grid-template-columns:1fr 1fr auto;gap:8px;margin-top:6px}
+.publish-node-logs summary{cursor:pointer;margin-top:6px}
+.publish-node-logs pre{max-height:180px;overflow:auto;margin:6px 0 0;padding:8px;font-size:11px;background:var(--surface-2,rgba(127,127,127,.12));border-radius:6px;white-space:pre-wrap}
