@@ -2,6 +2,8 @@
 
 Status: design proposal, 2026-10-09. No code ships with this document. It proposes requirements for a future `apiVersion` 2 of the extension SDK, for the maintainer to accept, change or reject. Until the requirements marked **blocking** are implemented, the v1 rules stay in force: catalog packages with worker code are refused, and third-party executable extensions are not advertised as safe.
 
+Update 2026-10-13: SEC-C1, C2, C5 (index level) are implemented as stage A, see [16-signed-catalog.md](16-signed-catalog.md). TUF and installed-extension blocklist unification are open.
+
 Authorship: draft for maintainer review, not yet adopted. Based on an audit of branch `somnia-agent` at `1d014e1` and the catalog index on `phase1-foundation`.
 
 ## Contents
