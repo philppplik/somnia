@@ -11,7 +11,7 @@ import es from '../locales/es.json';
 import fr from '../locales/fr.json';
 import ptBR from '../locales/pt-BR.json';
 import {PHOTOS_CATALOGUES} from './photos/i18n';
-import {CODE_RAIL_CATALOGUES} from './studios/codeRailCatalogues';
+import {CODE_RAIL_CATALOGUES} from './codeRail/i18n';
 import {SOUND_CATALOGUES} from './sound/i18n';
 import {VIDEO_CATALOGUES} from './video/i18n';
 import {RAIL_CATALOGUES} from './railI18n';

@@ -46,10 +46,14 @@ for(const theme of ['light','dark']){
   await page.evaluate(async()=>{const m=await import('/src/lib/commands.ts');await m.executeCommand('shell.rail.reset');});
  });
 }
-test('Code studio keeps its legacy rail: no overflow button, no draggable icons',async({page})=>{
+test('Code studio migrated to the shell rail: draggable icons, customization available',async({page})=>{
  await page.goto('/');await expect(page.locator('[data-storage]')).toBeVisible();
  await page.keyboard.press('Control+1');
  const left=page.getByRole('toolbar',{name:'Sidebar panels'});
+ await expect(left.locator('[data-rail-item][draggable="true"]').first()).toBeVisible();
+ // nothing overflows by default, so no overflow button until the user unpins or hides an item
  await expect(left.getByTestId('rail-more')).toHaveCount(0);
- await expect(left.locator('[data-rail-item][draggable="true"]')).toHaveCount(0);
+ await left.locator('[data-rail-item="versions"]').click({button:'right'});
+ await expect(page.getByRole('menuitem',{name:'Hide rail icon'})).toBeVisible();
+ await page.keyboard.press('Escape');
 });

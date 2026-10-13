@@ -15,6 +15,7 @@ Start here:
 - [Provider account authentication](auth/README.md): current API-key user/developer guides, account-OAuth integration status and security/policy checks.
 - [Extensions](extensions/README.md): build, install and secure Somnia extensions.
 - [Live collaboration](collaboration.md): share a project, join by link, your name and picture, session chat, encryption and its limits.
+- [Code studio rail](studios/code-rail.md): shell v2 rails, icons, inspector sections and rail customization for the Code studio.
 - [Video Studio](studios/video.md) ([plan](studios/VIDEO-PLAN.md)): open, trim, multi-clip edit, filmstrip, titles, crossfades and export, with the honest platform limits.
 - [Command line (`somnia`)](cli/usage.md): [protocols](cli/protocol.md), [troubleshooting](cli/troubleshooting.md), [security review](cli/security.md).
 - [CLI and TUI protocol](cli/TUI-PROTOCOL.md): NDJSON v1 between `somnia run --tui-stdio` and `somnia-tui`, including answering questions.

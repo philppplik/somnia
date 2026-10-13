@@ -8,6 +8,10 @@
 - Code panels use separate registered hosts for files, layers, search, components, CSS and versions.
 - Added a filterable DOM outline, responsive preview controls and a section-based inspector with editable link/media/accessibility attributes and source statistics.
 - Interaction edits are undoable and refuse locked/read-only nodes, event handler writes and executable URL schemes.
+## Unreleased - Code studio shell
+
+- The Code studio runs on the studio shell: the left rail (Layers, Files, Search, Components, CSS, Versions, plus the new Responsive and Outline panels) and the right rail (one inspector with Design, Interactions and Source sections) are declared per studio, with rail icons from the shared registry and tooltips in all five languages.
+- Rails are customizable: drag icons to reorder them, right-click to move, pin, hide or reset; the layout survives restarts.
 
 ## Unreleased - server frameworks (Next.js, Astro, SvelteKit, Nuxt)
 
