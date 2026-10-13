@@ -3,11 +3,18 @@ import {useT} from '../lib/useT';
 import {readLifecycleSettings,writeLifecycleSettings} from '../lib/lifecycle/settings';
 import type {ResourceProfileSetting} from '../lib/lifecycle/budgets';
 import {getStudioLifecycle} from '../lib/lifecycle/integration';
+import {IdbCheckpointSpill} from '../lib/lifecycle/idbSpill';
 
 /** Settings > Advanced > Performance: studio lifecycle opt-out and resource profile. */
 export function LifecycleSettings(){
  const {t}=useT();
  const [settings,setSettings]=useState(readLifecycleSettings);
+ const [cleared,setCleared]=useState(false);
+ const clearCheckpoints=()=>{
+  getStudioLifecycle()?.clearCheckpoints();
+  if(IdbCheckpointSpill.available())void new IdbCheckpointSpill().clear().catch(()=>{});
+  setCleared(true);
+ };
  const apply=(patch:Parameters<typeof writeLifecycleSettings>[0])=>{
   const next=writeLifecycleSettings(patch);setSettings(next);
   if(patch.enabled===false)void getStudioLifecycle()?.disable();
@@ -27,5 +34,6 @@ export function LifecycleSettings(){
    </select>
   </label>
   <p>{t('set.perf.profile.hint')}</p>
+  <button type="button" onClick={clearCheckpoints} disabled={cleared}>{cleared?t('set.perf.clear.done'):t('set.perf.clear')}</button>
  </fieldset>;
 }
