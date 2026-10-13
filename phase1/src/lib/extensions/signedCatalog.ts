@@ -2,7 +2,7 @@
  * Ed25519 signature over the EXACT index bytes with a bundled public key before the index is parsed for
  * display or install. Rollback (serial), expiry and key rotation are enforced here.
  * A signature proves who published the index. It does not prove an extension is safe. */
-import {validateCatalog,type CatalogEntry} from './catalog';
+import {validateCatalog,type CatalogEntry} from './catalogValidation';
 
 export interface TrustedKey {keyId: string; publicKey: Uint8Array}
 export type TrustKeyList = readonly TrustedKey[];

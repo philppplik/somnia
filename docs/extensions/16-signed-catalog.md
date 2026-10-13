@@ -7,6 +7,11 @@ Implements SEC-C1, C2, C3 (partly), C5 and C8 from [14-security-model-v2.md](14-
 
 Failure modes are explicit and fail closed: `no-keys`, `bad-signature`, `unknown-key`, `invalid`, `expired`, `rollback`, `conflict`, `clock-rollback`, `future`. An expired index pauses installs and updates; installed extensions keep running.
 
+## Module boundary
+`catalogValidation.ts` owns `CatalogEntry`, `validateCatalog` and the GitHub raw URL check. It only depends on manifest validation and extension types, not on fetch, storage or installation. Both legacy catalog orchestration and signed verification use this shared schema module. `catalogSource.ts` imports its entry type there too, so the signed path never imports back into `catalog.ts`. The existing schema exports from `catalog.ts` remain available for callers.
+
+Run `npm run check:layers` from `phase1/` to check runtime, dynamic and type-only imports for new cycles. The known-violation baseline is unchanged.
+
 ## Index schema 2
 `{ schemaVersion: 2, serial, issuedAt, expiresAt, keyId, extensions: [schema-1 entries, incl. reviewed/reviewedBy], revoked: [{id, versions[], reason}] }`. Entry fields are covered by the signature, so `reviewed` cannot be flipped without the key. Revocations list exact versions, no ranges.
 

@@ -1,4 +1,4 @@
-import type {CatalogEntry} from './catalog';
+import type {CatalogEntry} from './catalogValidation';
 import {CATALOG_KEYS, SIGNED_INDEX_URL, SIGNED_SIG_URL} from './catalogTrust';
 import {fetchSignedPair, verifySignedCatalog, SignedCatalogError, type CatalogStateStore, type CatalogState, type TrustKeyList} from './signedCatalog';
 
