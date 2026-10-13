@@ -11,8 +11,9 @@ test('ARM release gate starts at beta.4, excludes alphas and older core versions
   for (const version of ['../x', 'v12.2.0', '', '12.2.0-nightly.1']) assert.throws(() => armRelease(version));
 });
 test('dev matrix stays two jobs, release matrix only uses standard free runners', () => {
-  assert.deepEqual(cliMatrix(false), { include: [{os: 'ubuntu-24.04', arch: 'x64'}, {os: 'windows-latest', arch: 'x64'}] });
-  assert.deepEqual(cliMatrix(true).include.slice(2), [{os: 'ubuntu-24.04-arm', arch: 'arm64'}, {os: 'windows-11-arm', arch: 'arm64'}]);
+  // Linux x64 builds on 22.04 (glibc 2.35) so the CLI runs on older distros.
+  assert.deepEqual(cliMatrix(false), { include: [{os: 'ubuntu-22.04', arch: 'x64'}, {os: 'windows-latest', arch: 'x64'}] });
+  assert.deepEqual(cliMatrix(true).include.slice(2), [{os: 'ubuntu-24.04-arm', arch: 'arm64'}, {os: 'windows-11-arm', arch: 'arm64'}, {os: 'macos-latest', arch: 'arm64'}]);
 });
 test('binary-header checks reject emulated x64 binaries and malformed files', () => {
   // Deliberate header fixtures test parsing only, not native app execution.

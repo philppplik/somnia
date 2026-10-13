@@ -41,7 +41,16 @@ export function assemble(version, root, out) {
     if (matches.length !== 1) throw new Error(`missing or duplicate CLI archive: ${name}`);
     copy(matches[0], name);
   }
-  if (cli.length !== expected.length) throw new Error('unexpected CLI archives in run');
+  // macOS Apple Silicon CLI is new and not yet release-blocking: included when present, never required.
+  const optional = ['macos-aarch64.tar.gz'];
+  let optionalCount = 0;
+  for (const suffix of optional) {
+    const name = `somnia-cli-${version}-${suffix}`;
+    const matches = cli.filter(f => basename(f) === name);
+    if (matches.length > 1) throw new Error(`duplicate CLI archive: ${name}`);
+    if (matches.length === 1) { copy(matches[0], name); optionalCount += 1; }
+  }
+  if (cli.length !== expected.length + optionalCount) throw new Error('unexpected CLI archives in run');
   const lines = copied.filter(name => name !== 'macos-verification.txt' && !name.endsWith('.sig')).sort().map(name => sumsLine(sha256Hex(readFileSync(join(out, name))), name));
   writeFileSync(join(out, 'SHA256SUMS.txt'), lines.join('\n') + '\n');
   return copied;

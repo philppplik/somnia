@@ -534,6 +534,8 @@ jobs:
       fail-fast: false
       matrix: ${{ fromJSON(needs.release-plan.outputs.cli-matrix) }}
     runs-on: ${{ matrix.os }}
+    # Linux x64 is built on 22.04 (glibc 2.35). The macOS CLI is new: it reports but does not block the gate yet.
+    continue-on-error: ${{ matrix.os == 'macos-latest' }}
     defaults:
       run:
         working-directory: phase1
@@ -556,7 +558,7 @@ jobs:
       - name: Build and archive the CLI
         run: node scripts/package-cli.mjs build --out cli-dist
       - name: Verify ARM64 CLI machine header
-        if: ${{ matrix.arch == 'arm64' }}
+        if: ${{ matrix.arch == 'arm64' && matrix.os != 'macos-latest' }}
         shell: bash
         run: |
           if [ "$RUNNER_OS" = "Windows" ]; then

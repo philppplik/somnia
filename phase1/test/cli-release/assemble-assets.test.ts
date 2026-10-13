@@ -7,7 +7,7 @@ import { tmpdir } from 'node:os';
 import { assemble, verifyRun } from '../../../docs/release-tools/assemble-assets.mjs';
 // @ts-expect-error plain ESM script without declarations
 import { sha256Hex } from '../../scripts/package-cli.mjs';
-function fixture(version = '12.2.0-beta.4', arm = true) {
+function fixture(version = '12.2.0-beta.4', arm = true, macosCli = false) {
   const root = mkdtempSync(join(tmpdir(), 'somnia-assets-'));
   const entries = {
     'windows-alpha': ['nsis/Somnia_12.2.0_x64-setup.exe', 'nsis/Somnia_12.2.0_x64-setup.exe.sig', 'msi/Somnia_12.2.0_x64_en-US.msi'],
@@ -15,7 +15,7 @@ function fixture(version = '12.2.0-beta.4', arm = true) {
     'macos-alpha': ['dmg/Somnia_12.2.0_aarch64.dmg', 'macos-verification.txt'],
     'windows-arm64-alpha': arm ? ['nsis/Somnia_12.2.0_arm64-setup.exe', 'msi/Somnia_12.2.0_arm64_en-US.msi'] : [],
     'linux-arm64-alpha': arm ? ['somnia_12.2.0_arm64.deb'] : [],
-    cli: ['linux-x86_64.tar.gz', 'windows-x86_64.zip', ...(arm ? ['linux-aarch64.tar.gz', 'windows-aarch64.zip'] : [])].map(s => `somnia-cli-${version}-${s}`),
+    cli: ['linux-x86_64.tar.gz', 'windows-x86_64.zip', ...(arm ? ['linux-aarch64.tar.gz', 'windows-aarch64.zip'] : []), ...(macosCli ? ['macos-aarch64.tar.gz'] : [])].map(s => `somnia-cli-${version}-${s}`),
   };
   for (const [kind, names] of Object.entries(entries)) {
     mkdirSync(join(root, kind), { recursive: true });
@@ -23,6 +23,16 @@ function fixture(version = '12.2.0-beta.4', arm = true) {
   }
   return root;
 }
+test('release assembly includes the optional macOS CLI archive when present', () => {
+  const root = fixture('12.2.0-beta.4', true, true);
+  try {
+    const out = join(root, 'out'); const names = assemble('12.2.0-beta.4', root, out);
+    assert.ok(names.includes('somnia-cli-12.2.0-beta.4-macos-aarch64.tar.gz'));
+    const lines = readFileSync(join(out, 'SHA256SUMS.txt'), 'utf8').trim().split('\n');
+    assert.ok(lines.some(l => l.endsWith('  somnia-cli-12.2.0-beta.4-macos-aarch64.tar.gz')));
+  } finally { rmSync(root, {recursive: true, force: true}); }
+});
+
 test('release assembly preserves x64, adds ARM files and checksums, retains signature pairing', () => {
   const root = fixture();
   try {

@@ -9,7 +9,7 @@
 //       Writes DIR/SHA256SUMS for every somnia-cli-* archive in DIR (sha256sum -c compatible).
 //
 // Archive layout: <name>/somnia(.exe), <name>/sidecar/engine.mjs (the binary finds it next to itself), docs.
-// Linux and Windows x86_64 and aarch64. macOS is not shipped (alpha runs skip it by policy).
+// Linux and Windows x86_64 and aarch64, macOS Apple Silicon (arm64).
 import { createHash } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
 import { copyFileSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
@@ -27,13 +27,17 @@ export function assertVersion(v) {
   return v;
 }
 
-/** Maps Node's platform/arch to the release label. Linux and Windows x86_64 and aarch64 ship. */
+/** Maps Node's platform/arch to the release label. Linux and Windows x86_64 and aarch64 ship, macOS Apple Silicon (arm64). */
 export function target(platform = process.platform, arch = process.arch) {
+  if (platform === 'darwin') {
+    if (arch !== 'arm64') throw new Error(`unsupported architecture ${arch}: macOS is packaged for Apple Silicon (arm64) only`);
+    return { os: 'macos', arch: 'aarch64', ext: 'tar.gz', bin: 'somnia' };
+  }
   if (!['x64', 'arm64'].includes(arch)) throw new Error(`unsupported architecture ${arch}: only x86_64 and aarch64 are packaged`);
   const label = arch === 'arm64' ? 'aarch64' : 'x86_64';
   if (platform === 'linux') return { os: 'linux', arch: label, ext: 'tar.gz', bin: 'somnia' };
   if (platform === 'win32') return { os: 'windows', arch: label, ext: 'zip', bin: 'somnia.exe' };
-  throw new Error(`unsupported platform ${platform}: only linux and win32 are packaged`);
+  throw new Error(`unsupported platform ${platform}: only linux, win32 and darwin are packaged`);
 }
 
 export function archiveName(version, t) {
@@ -52,7 +56,7 @@ export function sumsLine(hex, name) {
 }
 
 export function isCliArchive(name) {
-  return /^somnia-cli-\d+\.\d+\.\d+[0-9A-Za-z.-]*-(linux|windows)-(x86_64|aarch64)\.(tar\.gz|zip)$/.test(name);
+  return /^somnia-cli-\d+\.\d+\.\d+[0-9A-Za-z.-]*-(linux|windows|macos)-(x86_64|aarch64)\.(tar\.gz|zip)$/.test(name);
 }
 
 export function installNotes(version, t) {
@@ -83,9 +87,9 @@ export function installNotes(version, t) {
     '  Compare the archive with the matching line in SHA256SUMS from the same release.',
     ...(t.os === 'windows'
       ? ['  PowerShell: Get-FileHash .\\' + archive + ' -Algorithm SHA256']
-      : ['  sha256sum -c SHA256SUMS --ignore-missing']),
+      : [t.os === 'macos' ? '  shasum -a 256 -c SHA256SUMS --ignore-missing' : '  sha256sum -c SHA256SUMS --ignore-missing']),
     '',
-    'The binary is not code-signed (SmartScreen may warn on Windows).',
+    'The binary is not code-signed (SmartScreen may warn on Windows; on macOS the installer scripts clear the quarantine flag, by hand: xattr -d com.apple.quarantine somnia).',
     'It needs git and node (20 or newer) on PATH; node runs the bundled agent engine. It never pushes.',
     'Docs: https://github.com/philppplik/somnia/blob/main/phase1/cli/README.md',
     '',

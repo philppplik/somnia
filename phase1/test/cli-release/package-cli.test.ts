@@ -13,8 +13,8 @@ test('archive names follow somnia-cli-<ver>-<os>-x86_64', () => {
   assert.equal(pkg.archiveName('12.2.0', win), 'somnia-cli-12.2.0-windows-x86_64.zip');
 });
 
-test('macOS and unsupported architectures are refused', () => {
-  assert.throws(() => pkg.target('darwin', 'arm64'));
+test('macOS ships for Apple Silicon only, other architectures are refused', () => {
+  assert.equal(pkg.archiveName('1.0.0', pkg.target('darwin', 'arm64')), 'somnia-cli-1.0.0-macos-aarch64.tar.gz');
   assert.throws(() => pkg.target('linux', 'ia32'));
   assert.throws(() => pkg.target('darwin', 'x64'));
 });
@@ -59,7 +59,8 @@ test('install notes are honest about Windows limits and signing', () => {
 
 test('isCliArchive', () => {
   assert.equal(pkg.isCliArchive('somnia-cli-12.2.0-alpha.7-linux-x86_64.tar.gz'), true);
-  assert.equal(pkg.isCliArchive('somnia-cli-1.0.0-macos-x86_64.tar.gz'), false);
+  // The classifier accepts any well-formed macOS CLI name; the shipped set is gated by target()/cliMatrix (aarch64 only).
+  assert.equal(pkg.isCliArchive('somnia-cli-1.0.0-macos-aarch64.tar.gz'), true);
 });
 
 for (const os of ['linux', 'win32']) {

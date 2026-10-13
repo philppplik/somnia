@@ -14,11 +14,12 @@ export function armRelease(version) {
 }
 export function cliMatrix(arm) {
   return { include: [
-    { os: 'ubuntu-24.04', arch: 'x64' },
+    { os: 'ubuntu-22.04', arch: 'x64' },
     { os: 'windows-latest', arch: 'x64' },
     ...(arm ? [
       { os: 'ubuntu-24.04-arm', arch: 'arm64' },
       { os: 'windows-11-arm', arch: 'arm64' },
+      { os: 'macos-latest', arch: 'arm64' },
     ] : []),
   ] };
 }
