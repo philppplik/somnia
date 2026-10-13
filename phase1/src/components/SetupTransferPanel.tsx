@@ -1,12 +1,13 @@
-import {useRef,useState} from 'react';
+import {useEffect,useRef,useState,useSyncExternalStore} from 'react';
 import {useT} from '../lib/useT';
 import {downloadText} from '../lib/exportProject';
-import {listCommands,setShortcutOverride,shortcutOverrides} from '../lib/commands';
+import {defaultShortcut,listCommands,setShortcutOverride,shortcutOverrides} from '../lib/commands';
 import {SETTINGS_REGISTRY,displayValue,type StateLike} from '../lib/settingsRegistry';
 import {buildSetup,parseSetup,SETUP_FILE_SUFFIX,type ParseOutcome} from '../lib/settingsTransfer/format';
 import {coverageReport,DEFAULT_CATEGORIES,TRANSFER_CATEGORIES,type TransferCategory} from '../lib/settingsTransfer/classify';
 import {planImport,type ImportMode,type Plan,type PlanRow} from '../lib/settingsTransfer/plan';
 import {applyChange,buildChange,restoreChange,type Adapters,type Resolution,type Snapshot} from '../lib/settingsTransfer/apply';
+import {isSyncPaused,pauseSync,resumeSync,subscribeSyncGate} from '../lib/settingsTransfer/syncGate';
 import {latestSnapshot,removeSnapshot,saveSnapshot,settingsPatch} from '../lib/settingsTransfer/host';
 type Parsed=Extract<ParseOutcome,{ok:true}>;
 const kv=()=>localStorage;
@@ -22,8 +23,10 @@ export function SetupTransferPanel({state,onApply}:{state:StateLike;onApply(patc
  const [icats,setIcats]=useState<TransferCategory[]>([]);const [off,setOff]=useState<Set<string>>(new Set());
  const [res,setRes]=useState<Record<string,Resolution>>({});const [ack,setAck]=useState(false);
  const [note,setNote]=useState('');const [busy,setBusy]=useState(false);const [undoable,setUndoable]=useState<Snapshot|undefined>(()=>{try{return latestSnapshot(kv());}catch{return undefined;}});
- const target=()=>({state,shortcuts:shortcutOverrides()});
  const known=()=>listCommands().map(c=>c.id);
+ const target=()=>({state,shortcuts:shortcutOverrides(),defaults:Object.fromEntries(known().map(id=>[id,defaultShortcut(id)]).filter((x):x is [string,string]=>!!x[1]))});
+ const syncPaused=useSyncExternalStore(subscribeSyncGate,isSyncPaused,isSyncPaused);
+ useEffect(()=>()=>resumeSync(),[]);
  const plan:Plan|null=parsed?planImport(parsed.setup,target(),{mode,categories:icats}):null;
  const toggle=<T,>(list:T[],v:T)=>list.includes(v)?list.filter(x=>x!==v):[...list,v];
  const cov=coverageReport();const excluded=Object.values(cov.excluded).reduce((a,b)=>a+b,0);
@@ -34,8 +37,8 @@ export function SetupTransferPanel({state,onApply}:{state:StateLike;onApply(patc
   if(f.size>1024*1024){setNote(t('settings.transfer.err.too-large'));return;}
   const r=parseSetup(await f.text(),known());
   if(!r.ok){setNote(t('settings.transfer.err.'+r.code));return;}
-  setParsed(r);setMode('merge');setIcats([...r.setup.categories]);setOff(new Set());setRes({});setAck(false);};
- const cancel=()=>{setParsed(null);setNote('');};
+  pauseSync();setParsed(r);setMode('merge');setIcats([...r.setup.categories]);setOff(new Set());setRes({});setAck(false);};
+ const cancel=()=>{setParsed(null);setNote('');resumeSync();};
  const adapters=():Adapters=>({
   async saveSnapshot(s){saveSnapshot(kv(),s);},
   async writeSettings(values){onApply(settingsPatch(state,values));},
@@ -51,7 +54,7 @@ export function SetupTransferPanel({state,onApply}:{state:StateLike;onApply(patc
   else if(o.status==='rolled-back')setNote(t('settings.transfer.err.rolledBack'));
   else setNote(t('settings.transfer.err.rollbackFailed'));
  }finally{setBusy(false);}};
- const undo=async()=>{if(!undoable)return;setBusy(true);try{
+ const undo=async()=>{if(!undoable)return;setBusy(true);pauseSync();try{
   const r=restoreChange(undoable,target());
   if(!r.differing){removeSnapshot(kv(),undoable.createdAt);setUndoable(latestSnapshot(kv()));setNote(t('settings.transfer.undone'));return;}
   const o=await applyChange(r.change,target(),adapters(),Date.now());
@@ -66,8 +69,8 @@ export function SetupTransferPanel({state,onApply}:{state:StateLike;onApply(patc
   <h3>{t('settings.transfer.title')}</h3><p>{t('settings.transfer.hint')}</p>
   {!parsed&&<>
    <fieldset><legend>{t('settings.transfer.exportTitle')}</legend>
-    {TRANSFER_CATEGORIES.map(c=><label key={c} style={{display:'block'}}><input type="checkbox" data-testid={`export-cat-${c}`} checked={cats.includes(c)} onChange={()=>setCats(toggle(cats,c))}/> {t('settings.transfer.cat.'+c)}</label>)}
-    <label>{t('settings.transfer.label')} <input type="text" maxLength={80} value={label} onChange={e=>setLabel(e.target.value)} data-testid="export-label"/></label>
+    {TRANSFER_CATEGORIES.map(c=><label key={c}>{t('settings.transfer.cat.'+c)}<input type="checkbox" data-testid={`export-cat-${c}`} checked={cats.includes(c)} onChange={()=>setCats(toggle(cats,c))}/></label>)}
+    <label>{t('settings.transfer.label')}<input type="text" maxLength={80} value={label} onChange={e=>setLabel(e.target.value)} data-testid="export-label"/></label>
     <p className="settings-modified-note">{t('settings.transfer.coverage',{n:excluded})}</p>
    </fieldset>
    <div className="settings-modified-tools">
@@ -77,30 +80,29 @@ export function SetupTransferPanel({state,onApply}:{state:StateLike;onApply(patc
     <input ref={file} type="file" accept=".json,application/json" hidden aria-label={t('settings.transfer.import')} data-testid="setup-import-file" onChange={e=>{const f=e.currentTarget.files?.[0];e.currentTarget.value='';void open(f);}}/>
    </div>
   </>}
-  {parsed&&plan&&<div data-testid="setup-review">
+  {parsed&&plan&&<div className="settings-modified" data-testid="setup-review">
    <h4>{t('settings.transfer.review')}{parsed.setup.label?`: ${parsed.setup.label}`:''}</h4>
    {parsed.setup.legacy&&<p className="settings-modified-note">{t('settings.transfer.legacy')}</p>}
    {parsed.skipped.length>0&&<p className="settings-modified-note" data-testid="setup-skipped">{t('settings.transfer.skipped',{n:parsed.skipped.length})}</p>}
-   <fieldset><legend>{t('settings.transfer.mode')}</legend>
-    <label><input type="radio" name="setup-mode" checked={mode==='merge'} onChange={()=>{setMode('merge');setAck(false);}} data-testid="mode-merge"/> {t('settings.transfer.merge')}</label>
-    <label><input type="radio" name="setup-mode" checked={mode==='replace'} onChange={()=>{setMode('replace');setOff(new Set());}} data-testid="mode-replace"/> {t('settings.transfer.replace')}</label>
-   </fieldset>
+   <label>{t('settings.transfer.mode')}<select value={mode} data-testid="mode-select" onChange={e=>{const m=e.target.value as ImportMode;setMode(m);setAck(false);if(m==='replace')setOff(new Set());}}>
+    <option value="merge">{t('settings.transfer.merge')}</option><option value="replace">{t('settings.transfer.replace')}</option></select></label>
    <fieldset><legend>{t('settings.transfer.categories')}</legend>
-    {TRANSFER_CATEGORIES.map(c=><label key={c} style={{display:'block'}}><input type="checkbox" checked={icats.includes(c)} disabled={mode==='merge'&&!parsed.setup.categories.includes(c)} onChange={()=>{setIcats(toggle(icats,c));setAck(false);}} data-testid={`import-cat-${c}`}/> {t('settings.transfer.cat.'+c)}</label>)}
+    {TRANSFER_CATEGORIES.map(c=><label key={c}>{t('settings.transfer.cat.'+c)}<input type="checkbox" checked={icats.includes(c)} disabled={mode==='merge'&&!parsed.setup.categories.includes(c)} onChange={()=>{setIcats(toggle(icats,c));setAck(false);}} data-testid={`import-cat-${c}`}/></label>)}
    </fieldset>
    <ul data-testid="setup-rows">{plan.rows.map(r=><li key={r.key} data-testid={`row-${r.key}`} data-status={r.status}>
-    <label><input type="checkbox" checked={!off.has(r.key)} disabled={r.status==='same'} onChange={()=>setOff(new Set(toggle([...off],r.key)))}/> <strong>{name(r)}</strong></label>{' '}
-    <span>{show(r,r.current)} → {show(r,r.status==='reset'?r.proposed??undefined:r.incoming)}</span>{' '}
+    <label><strong>{name(r)}</strong><input type="checkbox" checked={!off.has(r.key)} disabled={r.status==='same'} onChange={()=>setOff(new Set(toggle([...off],r.key)))}/></label>
+    <span className="settings-modified-values">{show(r,r.current)} → {show(r,r.status==='reset'?r.proposed??undefined:r.incoming)}</span>
     <span className="settings-chip">{t('settings.transfer.status.'+r.status)}</span>
-    {r.status==='conflict'&&<label> <select value={res[r.key]??'skip'} onChange={e=>setRes({...res,[r.key]:e.target.value as Resolution})} aria-label={t('settings.transfer.conflict',{c:(r.conflictsWith??[]).join(', ')})}><option value="skip">{t('settings.transfer.resolveSkip')}</option><option value="replace">{t('settings.transfer.resolveReplace',{c:(r.conflictsWith??[]).join(', ')})}</option></select></label>}
+    {r.status==='conflict'&&<label className="settings-transfer-resolve"><select value={res[r.key]??'skip'} onChange={e=>setRes({...res,[r.key]:e.target.value as Resolution})} aria-label={t('settings.transfer.conflict',{c:(r.conflictsWith??[]).join(', ')})}><option value="skip">{t('settings.transfer.resolveSkip')}</option><option value="replace">{t('settings.transfer.resolveReplace',{c:(r.conflictsWith??[]).join(', ')})}</option></select></label>}
    </li>)}</ul>
    {!plan.rows.length&&<p>{t('settings.transfer.nothing')}</p>}
-   {mode==='replace'&&resets>0&&<label style={{display:'block'}}><input type="checkbox" checked={ack} onChange={e=>setAck(e.target.checked)} data-testid="setup-ack"/> {t('settings.transfer.ack',{n:resets})}</label>}
+   {mode==='replace'&&resets>0&&<label>{t('settings.transfer.ack',{n:resets})}<input type="checkbox" checked={ack} onChange={e=>setAck(e.target.checked)} data-testid="setup-ack"/></label>}
    <div className="settings-modified-tools">
     <button type="button" data-testid="setup-apply" disabled={busy||!selCount||(mode==='replace'&&resets>0&&!ack)} onClick={apply}>{t('settings.transfer.apply',{n:selCount})}</button>
     <button type="button" data-testid="setup-cancel" disabled={busy} onClick={cancel}>{t('settings.transfer.cancel')}</button>
    </div>
   </div>}
+  {syncPaused&&!parsed&&<div data-testid="setup-sync-note"><p className="settings-modified-note">{t('settings.transfer.syncPaused')}</p><button type="button" data-testid="setup-sync-resume" onClick={resumeSync}>{t('settings.transfer.syncResume')}</button></div>}
   {note&&<p role="status" data-testid="setup-note">{note}</p>}
  </section>;
 }
