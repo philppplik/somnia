@@ -156,6 +156,6 @@ export function requestStudio(id:StudioId,source:'manual'|'automatic'|'open'='ma
  if(source==='automatic'&&state.studioChoice==='manual')return 'manual-wins';
  if(pendingTool&&id!==state.activeStudio)return 'pending-tool';
  const changed=id!==state.activeStudio;
- patchState({activeStudio:id,studioChoice:source==='manual'?'manual':'automatic',studioByTab:tabKey?{...state.studioByTab,[tabKey]:id}:state.studioByTab});
+ patchState({activeStudio:id,studioChoice:source==='manual'?'manual':'automatic',studioByTab:tabKey&&(source!=='manual'||tabKey.startsWith('media:')||acceptsFormat(getStudio(id),tabKey))?{...state.studioByTab,[tabKey]:id}:state.studioByTab});
  return changed?'changed':'unchanged';
 }
