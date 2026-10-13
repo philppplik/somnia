@@ -77,6 +77,7 @@ function Failure({state,store,t}:{state:PublishState;store:PublishStore;t:T}){
  return <section className="publish-card publish-failure" role="alert" data-testid="publish-failure" data-code={f.code}>
   <AlertTriangle size={18} aria-hidden="true"/>
   <div className="publish-card-main"><strong>{t(f.messageKey)}</strong>
+   {f.path&&<p className="publish-note" style={mono} data-testid="publish-failure-path">{f.path}</p>}
    <p>{t(f.safe?'deploy.err.safe':'deploy.err.unsafe')}</p>
    {f.actions.includes('showKey')&&id&&<KeyBlock state={state} id={id} t={t} user={state.targets.find(s=>s.target.id===id)?.target.user??'somnia'}/>}
    <div className="publish-actions">{f.actions.filter(a=>a!=='showKey'||!id).map(a=><Button key={a} variant={a===f.actions[0]?'primary':'outline'} size="compact" onClick={act[a]}>{t(labelKey[a])}</Button>)}</div>
@@ -147,7 +148,7 @@ function Step({icon,title,text,children}:{icon:React.ReactNode;title:string;text
 }
 
 function Progress({state,t,rollback}:{state:PublishState;t:T;rollback:boolean}){
- const latest=state.progress.latest;const seen=state.progress.seen;
+ const latest=state.progress.latest;const seen=state.progress.seen;const b=state.build;
  const idx=latest?PROGRESS_STEPS.indexOf(latest.step as typeof PROGRESS_STEPS[number]):-1;
  const label=(s:typeof PROGRESS_STEPS[number])=>{const p=seen.find(x=>x.step===s);return s==='upload'&&p?.done!==undefined&&p.total!==undefined?t('deploy.progress.upload.count',{done:p.done,total:p.total}):t(`deploy.progress.${s}`);};
  const pct=latest?.step==='upload'&&latest.done!==undefined&&latest.total?Math.round(latest.done/latest.total*100):null;
@@ -155,11 +156,12 @@ function Progress({state,t,rollback}:{state:PublishState;t:T;rollback:boolean}){
   <Loader2 size={18} className="publish-spin" aria-hidden="true"/>
   <div className="publish-card-main"><strong>{t(rollback?'deploy.progress.rollback':'deploy.progress.title')}</strong>
    <ol className="publish-steps">
-    <li data-status={latest?'done':'active'}>{latest?<Check size={12} aria-hidden="true"/>:<Loader2 size={12} className="publish-spin" aria-hidden="true"/>}<span>{t(latest?'deploy.progress.prepare.done':'deploy.progress.prepare')}</span></li>
+    {!rollback&&b.phase&&<li data-status={b.phase==='done'?'done':'active'} data-testid="publish-build-step" data-phase={b.phase}>{b.phase==='done'?<Check size={12} aria-hidden="true"/>:<Loader2 size={12} className="publish-spin" aria-hidden="true"/>}<span>{b.phase==='done'&&b.summary?t('deploy.progress.build.done',{count:b.summary.fileCount}):t(`deploy.progress.build.${b.phase}`)}</span></li>}
+    <li data-status={latest?'done':b.phase&&b.phase!=='done'?'todo':'active'}>{latest?<Check size={12} aria-hidden="true"/>:b.phase&&b.phase!=='done'?<i className="publish-dot" aria-hidden="true"/>:<Loader2 size={12} className="publish-spin" aria-hidden="true"/>}<span>{b.phase?t(latest?'deploy.progress.compare.done':'deploy.progress.compare'):t(latest?'deploy.progress.prepare.done':'deploy.progress.prepare')}</span></li>
     {PROGRESS_STEPS.map((s,i)=>{const status=idx<0?'todo':i<idx?'done':i===idx?'active':'todo';return <li key={s} data-status={status}>{status==='done'?<Check size={12} aria-hidden="true"/>:status==='active'?<Loader2 size={12} className="publish-spin" aria-hidden="true"/>:<i className="publish-dot" aria-hidden="true"/>}<span>{label(s)}</span></li>;})}
    </ol>
    {pct!==null&&<div className="publish-bar" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={pct} aria-label={t('deploy.progress.upload')}><i style={{width:`${pct}%`}}/></div>}
-   {idx<0&&<p className="publish-note">{t('deploy.progress.waiting')}</p>}
+   {idx<0&&!(b.phase&&b.phase!=='done')&&<p className="publish-note">{t('deploy.progress.waiting')}</p>}
   </div>
  </div>;
 }

@@ -121,3 +121,60 @@ test('the dialog is reachable from the command palette',async({page})=>{
  await page.getByRole('option').filter({hasText:'Publish...'}).first().click();
  await expect(page.getByTestId('publish-dialog')).toBeVisible();
 });
+
+/** Build-first: a static React project is built through the F3 runner and the native collector before deploy_plan. */
+async function mockBuild(page:import('@playwright/test').Page,mode:'ok'|'build-fails'|'forbidden'){
+ await page.addInitScript(m=>{
+  const w=window as any;const orig=w.__TAURI_INTERNALS__.invoke;w.buildState={release:null as null|(()=>void),hold:null as null|Promise<void>,runs:{} as Record<string,any>};
+  w.__TAURI_INTERNALS__.invoke=async(cmd:string,args:any)=>{
+   if(cmd.startsWith('deploy_artifact_collect')){w.ipcCalls.push({cmd,args});if(m==='forbidden')throw 'frameworks.artifact.forbidden:assets/.env';return {framework:'react',dist:'dist',manifest:{buildId:'build-1',files:[]},fileCount:12,totalBytes:482304,spaRules:null};}
+   if(cmd==='runtime_status')return {installed:true,supported:true,version:'24.21.0',downloadBytes:0};
+   if(cmd==='project_run'){w.ipcCalls.push({cmd,args});const id=`run-${args.kind}`;w.buildState.runs[id]={id,projectId:args.projectId,kind:args.kind,state:args.kind==='build'?'running':'exited',exitCode:args.kind==='build'?null:0};return w.buildState.runs[id];}
+   if(cmd==='project_status'){const r=w.buildState.runs[args.runId];if(r.kind==='build'&&r.state==='running'&&!w.buildState.hold){r.state='exited';r.exitCode=m==='build-fails'?1:0;}return {...r};}
+   if(cmd==='project_logs')return {lines:[],nextSequence:0};
+   if(cmd==='project_stop')return null;
+   return orig(cmd,args);};
+ },mode);
+}
+async function readyProject(page:import('@playwright/test').Page){
+ await page.goto('/');
+ await page.evaluate(async()=>{
+  const w=window as any;const T={id:'portfolio',name:'Portfolio',host:'203.0.113.10',port:22,user:'somnia',domain:'example.com',kind:'static',keySlot:'deploy-key:portfolio'};
+  w.__deploy.targets.push(T);w.__deploy.keys.portfolio=true;w.__deploy.pins.portfolio='SHA256:Qm7xK2pLr9WvNcT4yHs8DfGa1BjEoZu5XiMq0RtVk4A';
+  const app=await import('/src/store/appStore.ts');const pr=await import('/src/lib/previewResourceSource.ts');
+  app.patchState({files:{...app.getState().files,'package.json':JSON.stringify({name:'site',dependencies:{react:'19.0.0'},devDependencies:{vite:'6.0.0'}})}});
+  pr.setPreviewResourceSource({invoke:(c:string,a:any)=>w.__TAURI_INTERNALS__.invoke(c,a),projectId:'portfolio-project'});
+ });
+}
+const calls=(page:import('@playwright/test').Page)=>page.evaluate(()=>(window as any).ipcCalls.map((c:any)=>c.cmd).filter((c:string)=>/^(project_run|deploy_artifact_collect|deploy_plan|deploy_publish)$/.test(c)));
+
+for(const theme of ['light','dark'] as const){
+ test(`publish builds the project first, then plans and publishes (${theme})`,async({page})=>{
+  await mockDeploy(page);await mockBuild(page,'ok');await readyProject(page);await setTheme(page,theme);
+  await page.evaluate(()=>{const b=(window as any).buildState;b.hold=new Promise<void>(r=>{b.release=()=>{b.hold=null;r();};});});
+  await page.getByTestId('publish-button').click();await page.getByTestId('publish-go').click();
+  await expect(page.getByTestId('publish-build-step')).toHaveAttribute('data-phase','building');
+  await expect(page.getByTestId('deploy-confirm')).toHaveCount(0);
+  expect(await calls(page)).not.toContain('deploy_plan');await shot(page,`build-${theme}-1-building`);
+  await page.evaluate(()=>(window as any).buildState.release());
+  await expect(page.getByTestId('deploy-confirm')).toBeVisible();
+  expect(await calls(page)).toEqual(['project_run','project_run','deploy_artifact_collect','deploy_plan']);
+  await shot(page,`build-${theme}-2-confirm`);
+  await page.getByRole('button',{name:'Publish',exact:true}).last().click();
+  await expect(page.getByTestId('publish-result')).toContainText('Live: example.com');
+ });
+}
+test('a failed build stops before any plan and says so in plain words',async({page})=>{
+ await mockDeploy(page);await mockBuild(page,'build-fails');await readyProject(page);
+ await page.getByTestId('publish-button').click();await page.getByTestId('publish-go').click();
+ await expect(page.getByTestId('publish-failure')).toHaveAttribute('data-code','build');
+ await expect(page.getByTestId('publish-failure')).toContainText('The build did not finish');
+ expect(await calls(page)).not.toContain('deploy_plan');expect(await calls(page)).not.toContain('deploy_publish');await shot(page,'build-failed');
+});
+test('an artifact with a secret file is refused and the file is named',async({page})=>{
+ await mockDeploy(page);await mockBuild(page,'forbidden');await readyProject(page);
+ await page.getByTestId('publish-button').click();await page.getByTestId('publish-go').click();
+ await expect(page.getByTestId('publish-failure')).toContainText('will not be published');
+ await expect(page.getByTestId('publish-failure-path')).toHaveText('assets/.env');
+ expect(await calls(page)).not.toContain('deploy_plan');await shot(page,'build-forbidden');
+});

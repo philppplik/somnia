@@ -5,6 +5,9 @@ import { commandDispatcher } from '../commandDispatcher';
 import { DEPLOY_PROGRESS_EVENT, type DeployProgressEvent } from './contract';
 import { subscribeStagedPlans } from './commandSpecs';
 import { createTauriDeployBackend } from './tauriBackend';
+import { getState as getAppState } from '../../store/appStore';
+import { detectFramework } from '../frameworks/detect';
+import { staticBuilder } from '../frameworks/staticBuildRuntime';
 import { createPublishStore, type PublishStore } from './publishStore';
 
 let store: PublishStore | null = null;
@@ -17,6 +20,13 @@ export function getPublishStore(): PublishStore {
   store = createPublishStore({
     run: (id, params) => commandDispatcher.runCommand(id, params, { origin: 'ui' }),
     backend,
+    build: {
+      // Static framework projects are built first through the F3 command (ProjectRunner + deploy_artifact_collect).
+      needed: () => { const f = detectFramework(getAppState().files); return !!f && f.output === 'static'; },
+      run: () => commandDispatcher.runCommand('frameworks.buildStatic', {}, { origin: 'ui' }).then(() => undefined),
+      getSnapshot: staticBuilder.getSnapshot,
+      subscribe: staticBuilder.subscribe,
+    },
     onProgress: fn => {
       let un: (() => void) | null = null, closed = false;
       void listen<DeployProgressEvent>(DEPLOY_PROGRESS_EVENT, e => fn(e.payload)).then(u => { if (closed) u(); else un = u; }).catch(() => { /* no event bridge: the progress list simply stays empty */ });

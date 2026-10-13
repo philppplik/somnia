@@ -2917,5 +2917,11 @@
   "deploy.rollbackView.loading": "Loading versions",
   "deploy.rollbackView.none": "No earlier versions found on this server.",
   "cmd.deploy.open": "Publish...",
-  "cmd.frameworks.newProject": "New project"
+  "cmd.frameworks.newProject": "New project",
+  "deploy.progress.build.installing": "Installing packages",
+  "deploy.progress.build.building": "Building your site",
+  "deploy.progress.build.collecting": "Checking the files",
+  "deploy.progress.build.done": "Built: {count} files checked",
+  "deploy.progress.compare": "Comparing with the live site",
+  "deploy.progress.compare.done": "Compared with the live site"
 }

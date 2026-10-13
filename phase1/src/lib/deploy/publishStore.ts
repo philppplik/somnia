@@ -7,7 +7,7 @@
  * the only key-shaped value it holds is the public key line returned by `deploy.key.create`.
  */
 import type { DeployBackend, DeployOutcome, DeployPlan, DeployProgressEvent, DeployTarget, DeployTargetStatus } from './contract';
-import { buildTarget, describeDeployError, parseProgress, slugTargetId, sortReleases, validateTargetForm, type DeployErrorInfo, type ProgressInfo, type TargetForm } from './publishModel';
+import { buildTarget, describeBuildFailure, describeDeployError, parseProgress, slugTargetId, sortReleases, validateTargetForm, type BuildPhase, type BuildSummary, type DeployErrorInfo, type ProgressInfo, type TargetForm } from './publishModel';
 
 export type PublishView = 'home' | 'form' | 'rollback';
 export type PublishBusy = 'load' | 'save' | 'delete' | 'key' | 'trust' | 'replace' | 'publish' | 'rollback' | 'releases' | null;
@@ -24,6 +24,8 @@ export interface PublishState {
   busy: PublishBusy;
   /** Steps seen during the running publish, in order, plus the latest one. */
   progress: { seen: ProgressInfo[]; latest: ProgressInfo | null };
+  /** Build before publish: null when the project needs none. A failed build never reaches deploy.plan. */
+  build: { phase: BuildPhase | null; summary: BuildSummary | null };
   result: PublishResult | null;
   failure: PublishFailure | null;
   /** Public key lines created in this session (public, not secret). */
@@ -41,10 +43,21 @@ export interface PublishDeps {
   backend: Pick<DeployBackend, 'targetsList' | 'releasesList' | 'openSite'>;
   /** Subscribes to deploy-progress. Returns the unsubscribe function (may resolve later). */
   onProgress: (fn: (e: DeployProgressEvent) => void) => () => void;
+  /**
+   * Static build of the project (F3 path: ProjectRunner build, then the native artifact collector).
+   * Absent or `needed() === false` means the project is published as it is.
+   */
+  build?: {
+    needed: () => boolean;
+    /** Runs the build; resolves when it finished or failed. The outcome is read from the snapshot. */
+    run: () => Promise<void>;
+    getSnapshot: () => { phase: string; errorKey?: string; errorPath?: string; summary?: { fileCount: number; totalBytes: number } };
+    subscribe: (fn: () => void) => () => void;
+  };
 }
 
 const initial = (): PublishState => ({
-  open: false, view: 'home', loaded: false, targets: [], selectedId: null, editingId: null, busy: null, progress: { seen: [], latest: null },
+  open: false, view: 'home', loaded: false, targets: [], selectedId: null, editingId: null, busy: null, progress: { seen: [], latest: null }, build: { phase: null, summary: null },
   result: null, failure: null, publicKeys: {}, releases: [], releasesFor: null, liveByTarget: {}, staged: null,
 });
 
@@ -165,13 +178,27 @@ export function createPublishStore(deps: PublishDeps) {
 
     async publish(id: string) {
       if (state.busy) return;
-      set({ progress: { seen: [], latest: null }, result: null, selectedId: id });
+      set({ progress: { seen: [], latest: null }, build: { phase: null, summary: null }, result: null, selectedId: id });
       const outcome = await guarded('publish', id, async () => {
+        // Build first. deploy.plan never runs project scripts: it only reads the finished, re-verified output.
+        const b = deps.build;
+        if (b?.needed()) {
+          const sync = () => { const snap = b.getSnapshot(); if (snap.phase === 'installing' || snap.phase === 'building' || snap.phase === 'collecting') set({ build: { phase: snap.phase, summary: null } }); };
+          const stop = b.subscribe(sync);
+          set({ build: { phase: 'building', summary: null } });
+          try { await b.run(); } catch { /* the snapshot carries the outcome */ } finally { stop(); }
+          const snap = b.getSnapshot();
+          if (snap.phase !== 'done' || !snap.summary) {
+            set({ busy: null, build: { phase: null, summary: null }, failure: { ...describeBuildFailure(snap.errorKey, snap.errorPath), targetId: id, during: 'publish' } });
+            return null;
+          }
+          set({ build: { phase: 'done', summary: { fileCount: snap.summary.fileCount, totalBytes: snap.summary.totalBytes } } });
+        }
         const r = (await deps.run('deploy.publish', { targetId: id })) as DeployOutcome | { status: 'cancelled' };
         return 'status' in r ? null : r;
       });
       if (outcome) set({ result: { kind: 'publish', targetId: id, outcome }, liveByTarget: { ...state.liveByTarget, [id]: outcome.releaseId }, staged: state.staged?.targetId === id ? null : state.staged });
-      set({ progress: { seen: [], latest: null } });
+      set({ progress: { seen: [], latest: null }, build: { phase: null, summary: null } });
       await refresh();
     },
     async rollback(id: string, releaseId: string) {

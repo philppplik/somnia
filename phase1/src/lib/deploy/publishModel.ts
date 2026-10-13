@@ -15,7 +15,7 @@ export type DeployErrorCode = typeof DEPLOY_ERROR_CODES[number];
 
 /** What the person can do next. The panel renders one button per action. */
 export type DeployErrorAction = 'retry' | 'edit' | 'showKey' | 'createKey' | 'trust' | 'replaceKey' | 'rollbackList' | 'dismiss';
-export interface DeployErrorInfo { code: DeployErrorCode | 'unknown'; messageKey: string; actions: DeployErrorAction[]; /** Nothing went live and nothing changed on the server. */ safe: boolean }
+export interface DeployErrorInfo { code: DeployErrorCode | 'unknown' | 'build'; /** Offending relative path of a refused artifact (build failures only). */ path?: string; messageKey: string; actions: DeployErrorAction[]; /** Nothing went live and nothing changed on the server. */ safe: boolean }
 
 const TABLE: Record<DeployErrorCode, { actions: DeployErrorAction[]; safe: boolean }> = {
   'invalid-input': { actions: ['edit'], safe: true },
@@ -148,3 +148,12 @@ export function formatBytes(n: number): string {
   return `${(n / 1024 / 1024).toFixed(1)} MB`;
 }
 export const statusSummary = (s: DeployTargetStatus): TargetNext => nextStep(s.state);
+
+/** The build step that comes before every publish of a framework project. Mirrors StaticBuildPhase. */
+export type BuildPhase = 'installing' | 'building' | 'collecting' | 'done';
+export interface BuildSummary { fileCount: number; totalBytes: number }
+/** A failed or refused build becomes a plain failure card. Only catalogue keys reach the screen; nothing is uploaded. */
+export function describeBuildFailure(errorKey: string | undefined, path?: string): DeployErrorInfo {
+  const key = errorKey && /^frameworks\.(artifact\.[A-Za-z]+|build\.(failed|timeout))$/.test(errorKey) ? errorKey : 'frameworks.build.failed';
+  return { code: 'build', messageKey: key, path, actions: ['retry', 'dismiss'], safe: true };
+}
