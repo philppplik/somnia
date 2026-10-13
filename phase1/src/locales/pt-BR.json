@@ -2636,5 +2636,9 @@
   "schemaForm.invalid": "Valor inválido: {name}",
   "schemaForm.failed": "Não foi possível enviar. Tente novamente.",
   "schemaForm.cancel": "Cancelar",
-  "schemaForm.submit": "Continuar"
+  "schemaForm.submit": "Continuar",
+  "settings.previewScripts": "Executar scripts da página na prévia ao vivo",
+  "settings.previewScripts.note": "Os scripts da página são executados em um quadro isolado, sem acesso ao Somnia",
+  "settings.livePreviewMode": "Mostrar prévia ao vivo",
+  "settings.livePreviewMode.note": "Alternar da tela de design para a prévia ao vivo. Os scripts seguem a opção acima ou a escolha salva do projeto."
 }

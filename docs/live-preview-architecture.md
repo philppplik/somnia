@@ -10,6 +10,10 @@ The live preview runs a project's HTML page in a sandboxed iframe, with the page
 4. `buildPreviewWithResources` (`livePreviewResources.ts`) ties 1 to 3 together. Without a project folder (in-memory project) it falls back to the plain asset build.
 5. `previewDeps.ts` computes the page's dependency graph and decides how to update a running preview: nothing, hot-swap linked CSS in place, or full rebuild. `previewAssetWatch.ts` re-checks binary assets on disk.
 
+## Script preference
+
+Live preview runs authored page scripts by default. Settings > Preview > Run page scripts in live preview is a persistent global opt-out. Missing preferences from older installs default to on. Explicit per-project `somnia.preview.scripts.<name>` values (`0`/`1`) take priority; the preview bar still lets users change that project decision. Neither default shows a consent dialog. Changing the global setting updates previews without a project override immediately. The sandbox and CSP below are unchanged.
+
 ## Sandbox
 
 `sandbox="allow-scripts"` only: opaque origin, no same-origin, popups, forms or top navigation. The CSP is `default-src 'none'`, inline scripts and `data:` scripts only (a nonce-only policy when scripts are off), `img-src`/`font-src`/`media-src` limited to `data:` (images also `blob:`), `connect-src 'none'`. There is no network access. Because an opaque origin cannot resolve relative URLs or load `blob:` scripts, every project file the page uses is inlined.

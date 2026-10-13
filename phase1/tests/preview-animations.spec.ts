@@ -30,20 +30,20 @@ const openLive=async(page:any)=>{await page.keyboard.press('Control+k');await pa
 test('live preview with scripts off shows content',async({page})=>{await page.goto('/');await showCode(page);
  await page.evaluate((h)=>(window as any).__somnia.setSource('index.html',h),PAGE);
  await openLive(page);const pane=page.getByLabel('Live preview',{exact:true});
- await pane.getByRole('button',{name:'Preview without scripts'}).click();
+ await pane.getByRole('button',{name:'Toggle preview scripts'}).click();
  const fr=page.frameLocator('iframe[title="Live preview frame"]');
  for(const id of ['hero','reveal','late','aos'])await expect.poll(()=>op(fr,'#'+id)).toBe('1');});
 test('live preview with scripts on reveals content when a CDN library is blocked and says so',async({page})=>{await page.goto('/');await showCode(page);
  await page.evaluate((h)=>(window as any).__somnia.setSource('index.html',h),PAGE);
  await openLive(page);const pane=page.getByLabel('Live preview',{exact:true});
- await pane.getByRole('button',{name:'Run scripts'}).click();
+
  const fr=page.frameLocator('iframe[title="Live preview frame"]');
  await expect.poll(()=>op(fr,'#aos')).toBe('1');await expect.poll(()=>op(fr,'#reveal')).toBe('1');
  await expect(pane.getByRole('status',{name:'Blocked external resources'})).toContainText('cdn.example.com/aos.js');
  await page.screenshot({path:'test-results/preview-animations-live.png'});});
 test('live preview with scripts on keeps animations running when nothing was blocked',async({page})=>{await page.goto('/');await showCode(page);
  await page.evaluate(()=>(window as any).__somnia.setSource('index.html','<!doctype html><html><head><style>.a{opacity:0;transition:opacity 5s}.a.on{opacity:1}</style></head><body><p class="a" id="a">x</p><script>requestAnimationFrame(()=>document.getElementById("a").classList.add("on"))</script></body></html>'));
- await openLive(page);const pane=page.getByLabel('Live preview',{exact:true});await pane.getByRole('button',{name:'Run scripts'}).click();
+ await openLive(page);const pane=page.getByLabel('Live preview',{exact:true});
  const fr=page.frameLocator('iframe[title="Live preview frame"]');
  await expect(fr.locator('#a')).toHaveClass(/on/);
  expect(Number(await op(fr,'#a'))).toBeLessThan(1);

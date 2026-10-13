@@ -2636,5 +2636,9 @@
   "schemaForm.invalid": "Valor no válido: {name}",
   "schemaForm.failed": "No se pudo enviar. Inténtalo de nuevo.",
   "schemaForm.cancel": "Cancelar",
-  "schemaForm.submit": "Continuar"
+  "schemaForm.submit": "Continuar",
+  "settings.previewScripts": "Ejecutar scripts de la página en la vista previa en vivo",
+  "settings.previewScripts.note": "Los scripts de la página se ejecutan en un marco aislado, sin acceso a Somnia",
+  "settings.livePreviewMode": "Mostrar vista previa en vivo",
+  "settings.livePreviewMode.note": "Cambiar del lienzo de diseño a la vista previa en vivo. Los scripts siguen la opción anterior o la elección guardada del proyecto."
 }

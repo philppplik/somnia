@@ -2636,5 +2636,9 @@
   "schemaForm.invalid": "Ungültiger Wert: {name}",
   "schemaForm.failed": "Senden fehlgeschlagen. Erneut versuchen.",
   "schemaForm.cancel": "Abbrechen",
-  "schemaForm.submit": "Weiter"
+  "schemaForm.submit": "Weiter",
+  "settings.previewScripts": "Seitenskripte in der Live-Vorschau ausführen",
+  "settings.previewScripts.note": "Seitenskripte laufen in einem isolierten Sandbox-Frame, ohne Zugriff auf Somnia",
+  "settings.livePreviewMode": "Live-Vorschau anzeigen",
+  "settings.livePreviewMode.note": "Von der Designfläche zur Live-Vorschau wechseln. Skripte folgen der Einstellung oben oder deiner gespeicherten Projektauswahl."
 }

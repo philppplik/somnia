@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Live preview runs page scripts by default in the existing isolated sandbox. A global Preview setting turns scripts off without a prompt; saved per-project choices still take priority.
+
 ## 11.2.0-beta.1 - 2026-10-07
 
 - Direct OpenAI/Claude BYOK providers, live catalogs and metadata-only auth.

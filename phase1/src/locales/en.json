@@ -2636,5 +2636,9 @@
   "schemaForm.invalid": "Invalid value: {name}",
   "schemaForm.failed": "Could not submit. Try again.",
   "schemaForm.cancel": "Cancel",
-  "schemaForm.submit": "Continue"
+  "schemaForm.submit": "Continue",
+  "settings.previewScripts": "Run page scripts in live preview",
+  "settings.previewScripts.note": "Page scripts run in an isolated sandbox frame, without access to Somnia",
+  "settings.livePreviewMode": "Show live preview",
+  "settings.livePreviewMode.note": "Switch from the design canvas to the live page preview. Script execution follows the setting above or your saved project choice."
 }
