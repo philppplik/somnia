@@ -1,7 +1,7 @@
-import {SlidesCanvas} from './slides/SlidesCanvas';
-import {PsdViewer} from './PsdViewer';
-import {SoundWorkspace} from './sound/SoundWorkspace';
-import {VideoWorkspace} from './video/VideoWorkspace';
+const SlidesCanvas=lazy(()=>import('./slides/SlidesCanvas').then(m=>({default:m.SlidesCanvas})));
+const PsdViewer=lazy(()=>import('./PsdViewer').then(m=>({default:m.PsdViewer})));
+const SoundWorkspace=lazy(()=>import('./sound/SoundWorkspace').then(m=>({default:m.SoundWorkspace})));
+const VideoWorkspace=lazy(()=>import('./video/VideoWorkspace').then(m=>({default:m.VideoWorkspace})));
 import {lazy,Suspense} from 'react';
 const PdfInlineEditor=lazy(()=>import('./pdfedit/PdfInlineEditor').then(m=>({default:m.PdfInlineEditor})));
 const DocxViewer=lazy(()=>import('./OfficeViewer').then(m=>({default:m.DocxViewer})));
@@ -24,7 +24,7 @@ function FitImage({src,alt,onSize}:{src:string;alt:string;onSize?:(w:number,h:nu
   <button className={tool} aria-pressed={fit} aria-label={t(fit?'finish2.media.actualAria':'finish2.media.fitAria')} onClick={()=>setFit(!fit)}>{fit?<Maximize2 size={13}/>:<Minimize2 size={13}/>}{t(fit?'finish2.media.actual':'finish2.media.fit')}</button></div>
   <div className="media-stage min-h-0 flex-1 overflow-auto p-4"><div className="grid min-h-full place-items-center"><img src={src} alt={alt} data-testid="media-image" draggable={false} onLoad={e=>{const i=e.currentTarget;setDim([i.naturalWidth,i.naturalHeight]);onSize?.(i.naturalWidth,i.naturalHeight);}} className="media-checker rounded-sm shadow-sm" style={fit?{maxWidth:'100%',maxHeight:'100%',objectFit:'contain'}:undefined}/></div></div></>;}
 /** Preview for an opened PNG, JPEG or PDF. */
-export function MediaViewer({item}:{item:MediaItem}){const {t}=useT();
+function MediaViewerContent({item}:{item:MediaItem}){const {t}=useT();
  if(item.kind==='audio')return <SoundWorkspace key={item.name} item={item} withPanel/>;
  if(item.kind==='video'||item.kind==='video-project')return <VideoWorkspace key={item.name} item={item} withPanel/>;
  if(item.kind==='psd')return <PsdViewer key={item.url} item={item}/>;
@@ -65,3 +65,5 @@ function useDebounced<T>(value:T,ms:number,on:boolean):T{
  const [v,setV]=useState(value);
  useEffect(()=>{if(!on){setV(value);return;}const id=window.setTimeout(()=>setV(value),ms);return()=>window.clearTimeout(id);},[value,ms,on]);
  return on?v:value;}
+
+export function MediaViewer(props:{item:MediaItem}){return <Suspense fallback={null}><MediaViewerContent {...props}/></Suspense>;}
