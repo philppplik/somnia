@@ -189,7 +189,7 @@ impl VibeSpaceState {
                 model: prefs.model,
                 locality,
             };
-            // Claude/account Responses settings are real but unsupported, not chooser options.
+            // Only refs supported by the native provider adapter become chooser options.
             if provider_config(&reference).is_ok() && !refs.contains(&reference) {
                 refs.push(reference);
             }
@@ -262,6 +262,17 @@ fn restrict_platform_event(event: &mut w::RunEvent) {
     }
 }
 
+fn provider_kind(reference: &w::ModelReference) -> Result<engine::provider::ProviderKind> {
+    use engine::provider::ProviderKind;
+    match (reference.provider.as_str(), &reference.locality) {
+        ("ollama", w::ModelLocality::Local) => Ok(ProviderKind::Ollama),
+        ("lmstudio", w::ModelLocality::Local) => Ok(ProviderKind::LmStudio),
+        ("openai", w::ModelLocality::Cloud) => Ok(ProviderKind::OpenAi),
+        ("openrouter", w::ModelLocality::Cloud) => Ok(ProviderKind::OpenRouter),
+        ("claude", w::ModelLocality::Cloud) => Ok(ProviderKind::Anthropic),
+        _ => Err(error("vibespace_unsupported_provider", true)),
+    }
+}
 fn provider_config(reference: &w::ModelReference) -> Result<engine::ModelConfig> {
     if reference.model.trim().is_empty()
         || reference.model.len() > 256
@@ -270,13 +281,7 @@ fn provider_config(reference: &w::ModelReference) -> Result<engine::ModelConfig>
     {
         return Err(error("vibespace_invalid_model", true));
     }
-    let endpoint = match (reference.provider.as_str(), &reference.locality) {
-        ("ollama", w::ModelLocality::Local) => "http://127.0.0.1:11434/v1/chat/completions",
-        ("lmstudio", w::ModelLocality::Local) => "http://127.0.0.1:1234/v1/chat/completions",
-        ("openai", w::ModelLocality::Cloud) => "https://api.openai.com/v1/chat/completions",
-        ("openrouter", w::ModelLocality::Cloud) => "https://openrouter.ai/api/v1/chat/completions",
-        _ => return Err(error("vibespace_unsupported_provider", true)),
-    };
+    let endpoint = provider_kind(reference)?.default_endpoint();
     Ok(match reference.locality {
         w::ModelLocality::Local => engine::ModelConfig::Local {
             endpoint: endpoint.into(),
@@ -304,8 +309,11 @@ pub(crate) fn resolve(
     } else {
         None
     };
-    // HttpModel uses no_proxy(), redirects disabled and no environment credentials.
-    let transport = engine::HttpModel::new(config.clone(), credential, true).map_err(failed)?;
+    // The provider adapter uses no_proxy(), no redirects and no environment credentials.
+    let kind = provider_kind(reference)?;
+    let transport = engine::provider::ProviderModel::new(
+        kind, Some(config.endpoint()), config.model(), credential, true,
+    ).map_err(failed)?;
     Ok((Arc::new(transport), config))
 }
 
@@ -933,6 +941,11 @@ mod tests {
                 w::ModelLocality::Cloud,
                 "https://openrouter.ai/api/v1/chat/completions",
             ),
+            (
+                "claude",
+                w::ModelLocality::Cloud,
+                "https://api.anthropic.com/v1/messages",
+            ),
         ] {
             let reference = w::ModelReference {
                 provider: provider.into(),
@@ -940,6 +953,11 @@ mod tests {
                 locality: locality.clone(),
             };
             let config = provider_config(&reference).unwrap();
+            assert_eq!(provider_kind(&reference).unwrap().default_endpoint(), endpoint);
+            assert_eq!(
+                provider_kind(&reference).unwrap().is_local(),
+                locality == w::ModelLocality::Local
+            );
             assert_eq!(config.endpoint(), endpoint);
             assert_eq!(config.model(), "explicit-model");
             assert_eq!(
@@ -948,7 +966,7 @@ mod tests {
             );
         }
         for provider in [
-            "claude",
+            "unsupported",
             "responses",
             "openai-responses",
             "https://attacker.invalid",
@@ -961,6 +979,12 @@ mod tests {
             })
             .is_err());
         }
+        assert!(provider_config(&w::ModelReference {
+            provider: "claude".into(),
+            model: "x".into(),
+            locality: w::ModelLocality::Local
+        })
+        .is_err());
         assert!(provider_config(&w::ModelReference {
             provider: "ollama".into(),
             model: "x".into(),
