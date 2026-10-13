@@ -1,5 +1,6 @@
 import {createSnapshot,encodeSnapshot,type HistoryCheckpoint,type Snapshot} from './snapshot';
 import type {RecoveryStore} from './recoveryStore';
+import {noteCommitted,noteReleased} from './recoveryIndex';
 export interface CaptureResult{revision:number;payload:Uint8Array;history:HistoryCheckpoint;view:Record<string,unknown>;format:string;engineVersion:string}
 export interface Clock{setTimeout(fn:()=>void,ms:number):unknown;clearTimeout(h:unknown):void;now():number}
 const realClock:Clock={setTimeout:(f,m)=>setTimeout(f,m),clearTimeout:h=>clearTimeout(h as ReturnType<typeof setTimeout>),now:()=>Date.now()};
@@ -72,6 +73,7 @@ export class SessionCheckpointer{
     const snap=await createSnapshot({sessionId:this.o.sessionId,studio:this.o.studio,format:cap.format,engineVersion:cap.engineVersion,sourceFingerprint:this.o.sourceFingerprint,revision:cap.revision,generation:this.gen,history:cap.history,view:cap.view},cap.payload);
     await this.o.store.commit(this.o.sessionId,slot,encodeSnapshot(snap),snap.meta.checksum);
     if(this.o.getRevision()!==cap.revision)continue; // verified, but already stale for suspend purposes; the slot stays as a valid older state
+    noteCommitted(this.o.sessionId,this.o.studio,cap.revision,snap.meta.checksum);
     this.verifiedRevision=cap.revision;this.lastSlot=slot;this.firstPendingAt=null;this.unpin();
     return{ok:true,revision:cap.revision,slot};
    }catch(e){return this.pin(e instanceof Error&&e.name==='StorageFullError'?'storage-full':'checkpoint-failed',`Checkpoint write failed: ${msg(e)}`);}
@@ -116,10 +118,10 @@ export class SessionCheckpointer{
  }
  /** After the source file was written and verified at `revision`. Snapshots are dropped only if nothing changed since. */
  async releaseAfterSave(revision:number):Promise<boolean>{
-  if(this.o.getRevision()!==revision)return false;await this.o.store.discard(this.o.sessionId);this.verifiedRevision=null;this.firstPendingAt=null;this.unpin();return true;
+  if(this.o.getRevision()!==revision)return false;await this.o.store.discard(this.o.sessionId);noteReleased(this.o.sessionId);this.verifiedRevision=null;this.firstPendingAt=null;this.unpin();return true;
  }
  /** User explicitly discarded the session. */
- async discard(){this.close();await this.o.store.discard(this.o.sessionId);}
+ async discard(){this.close();await this.o.store.discard(this.o.sessionId);noteReleased(this.o.sessionId);}
  /** Resolves when no checkpoint run is in flight (used before a teardown flush so slot writes never interleave). */
  idle():Promise<unknown>{return(this.running??Promise.resolve()).catch(()=>undefined);}
  close(){this.closed=true;if(this.timer!==null){this.clock.clearTimeout(this.timer);this.timer=null;}}

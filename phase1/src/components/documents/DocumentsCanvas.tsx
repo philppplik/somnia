@@ -103,7 +103,7 @@ export function DocumentsCanvas(){
     quiesce:async()=>{await whenIdle();return true;},
     capture:async()=>{const st=getDocumentsState();const journal=exportHistory();const digest=await blocksDigest(st.blocks);const bytes=await e.save();
      return{revision:st.rev,payload:bytes,history:asHistory(journal,digest),view:{zoom:st.zoom},format:'docx',engineVersion:'documents-1'};}});
-   offActive=registerActiveSession(sessionId,c);
+   offActive=registerActiveSession(sessionId,c,{studio:'documents',isDirty:()=>getDocumentsState().edited});
    await e.init();
    let d:OpenedDocument|null=null;let snap:Snapshot|null=null;
    const r=await c.resume(async s=>{d=await e.open(s.payload.slice().buffer);snap=s;},async()=>fp);
