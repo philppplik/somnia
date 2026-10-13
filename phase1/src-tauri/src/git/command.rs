@@ -1,4 +1,6 @@
 //! Trusted native system-Git argv runner. Never expose as a raw IPC endpoint.
+#[cfg(windows)]
+use crate::no_window::NoWindow;
 use super::jobs::{Cancellation, GitJobError, GitJobErrorCode};
 use std::ffi::{OsStr, OsString};
 use std::io::{Read, Write};
@@ -247,6 +249,7 @@ fn stop_tree(child: &mut std::process::Child) {
     #[cfg(windows)]
     {
         let _ = Command::new("taskkill")
+            .no_window()
             .args(["/PID", &child.id().to_string(), "/T", "/F"])
             .stdout(Stdio::null())
             .stderr(Stdio::null())

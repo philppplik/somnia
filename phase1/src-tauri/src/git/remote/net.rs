@@ -1,6 +1,7 @@
 //! Cancellable network runner for git, with isolated config, private credential-helper
 //! plumbing, progress parsing, tree kill and redacted diagnostics.
 
+use crate::no_window::NoWindow;
 use super::{
     iso_env, CredentialLease, Policy, RResult, RemoteError, RemoteErrorCode,
 };
@@ -194,7 +195,7 @@ fn kill_tree(pid: u32) {
     }
     #[cfg(windows)]
     {
-        let _ = Command::new("taskkill").args(["/PID", &pid.to_string(), "/T", "/F"]).stdout(Stdio::null()).stderr(Stdio::null()).status();
+        let _ = Command::new("taskkill").no_window().args(["/PID", &pid.to_string(), "/T", "/F"]).stdout(Stdio::null()).stderr(Stdio::null()).status();
     }
 }
 
@@ -298,6 +299,7 @@ pub(crate) fn run_net(
     }
     let cfg = config_args(policy, lease)?;
     let mut cmd = Command::new("git");
+    cmd.no_window();
     crate::git::whitelist_env(&mut cmd);
     for (k, v) in iso_env() {
         cmd.env(k, v);

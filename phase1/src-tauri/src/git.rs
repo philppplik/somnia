@@ -10,6 +10,7 @@
 //! Pure logic only: no Tauri imports, so `cargo test --no-default-features`
 //! exercises everything against real temporary repositories.
 
+use crate::no_window::NoWindow;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::collections::BTreeSet;
@@ -422,6 +423,7 @@ fn run_git(
     extra_env: &[(&str, &OsStr)],
 ) -> GResult<GitOutput> {
     let mut cmd = Command::new("git");
+    cmd.no_window();
     whitelist_env(&mut cmd);
     if mode == Mode::Read {
         cmd.env("GIT_OPTIONAL_LOCKS", "0");
