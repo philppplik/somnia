@@ -74,3 +74,24 @@ test('release smoke: newer stable pill appears and disabling checks removes it',
  await page.keyboard.press('Control+,');await page.getByRole('button',{name:'Updates',exact:true}).click();
  await page.getByRole('checkbox',{name:'Check for updates on start'}).uncheck();await expect(pill).toHaveCount(0);
 });
+
+test('release smoke: installed extension panel uses the real permission bridge',async({page})=>{
+ await page.addInitScript(()=>localStorage.setItem('somnia.extensions.security.v2',JSON.stringify({version:2,acknowledged:true,restricted:false,developerMode:false,extensions:{}})));
+ const {openAddExtension,enableExtension}=await import('./extension-popup-helpers');
+ await openAddExtension(page);
+ const manifest={id:'qa.panel',name:'QA Panel',version:'1.0.0',apiVersion:1,permissions:['project.read'],contributes:{panels:[{id:'files',title:'QA file count',side:'left',html:'<p id="out">waiting</p><p id="denied">waiting</p><script>somnia.project.listFiles().then(f=>document.getElementById("out").textContent="files:"+f.length);somnia.ui.notify("not permitted").catch(e=>document.getElementById("denied").textContent=e.message);</script>'}]}};
+ await page.getByLabel('somnia-extension.toml',{exact:true}).fill(JSON.stringify(manifest));
+ await page.getByRole('button',{name:'Inspect manifest',exact:true}).click();
+ await page.getByRole('checkbox',{name:'I reviewed these permissions',exact:true}).check();
+ await page.getByRole('button',{name:'Install',exact:true}).click();
+ await page.locator('.ext-consent').getByRole('button',{name:'Install and enable',exact:true}).click();
+ await enableExtension(page,'QA Panel');await page.keyboard.press('Escape');
+ await page.getByRole('button',{name:'QA file count panel (extension)',exact:true}).click();
+ const iframe=page.locator('iframe[title="QA file count (extension panel)"]');
+ await expect(iframe).toHaveAttribute('sandbox','allow-scripts');
+ const panel=page.frameLocator('iframe[title="QA file count (extension panel)"]');
+ await expect(panel.locator('#out')).toHaveText('files:0');
+ await expect(panel.locator('#denied')).toContainText('ui.notify');
+ await page.getByRole('button',{name:'Layers panel',exact:true}).click();
+ await expect(iframe).toHaveCount(0);
+});
