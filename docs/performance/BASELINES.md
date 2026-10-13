@@ -104,3 +104,18 @@ invariants pass, production bundle graph is recorded, native startup/process mem
 and actual suspended resume are measured on the Windows/macOS/Linux matrix, and
 candidate thresholds are calibrated. This patch provides reproducible tooling and
 source witnesses, not a measured product speedup or native certification.
+
+### Loaded DOCX/XLSX option
+
+```
+SOMNIA_PERF_LOADED=1 SOMNIA_PERF_SAMPLES=20 node scripts/performance/studios/run.mjs
+```
+
+Uses actual repository fixtures through each studio's file picker before measuring
+view return. This is labeled `loaded-first-view-return`, not cold engine activation:
+initial file loading is setup and excluded from timing. Visible page image/cell,
+then two frames, is required. No simulated workbooks. The two-studio scope does not
+certify all-studio resource ownership or native memory. Fixture inventory records
+SHA-256, archive bytes, expanded bytes and part counts for four tracked DOCX/XLSX
+fixtures; its test reads the actual archives. This loaded scenario has not run here
+because preflight still fails on missing real engines.

@@ -6,11 +6,12 @@ import {fileURLToPath} from 'node:url';
 import {platform,arch,cpus,totalmem,release} from 'node:os';
 import {summarize,sampleCount,validateScenarios,markdown} from './report.mjs';
 import {requireArtifacts} from './preflight.mjs';
+import {fixtureInventory} from './fixtures.mjs';
 const root=resolve(dirname(fileURLToPath(import.meta.url)),'../../..');
 const runs=sampleCount(process.env.SOMNIA_PERF_SAMPLES??20);
 const out=resolve(root,process.env.SOMNIA_PERF_OUT??'test-results/studio-performance');
 const url=process.env.SOMNIA_PERF_URL??'http://127.0.0.1:1442';
-const scenarios=validateScenarios(JSON.parse(readFileSync(new URL('./scenarios.json',import.meta.url),'utf8')));
+const scenarios=validateScenarios(JSON.parse(readFileSync(new URL(process.env.SOMNIA_PERF_LOADED==='1'?'./scenarios-loaded.json':'./scenarios.json',import.meta.url),'utf8')));
 const port=Number(new URL(url).port||80);
 const timings=[],memory=[],errors=[];
 let server,browser;
@@ -27,6 +28,13 @@ function processTreeRss(pid){
  }catch{return null;}
 }
 async function frame(page){await page.evaluate(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))));}
+async function prepare(page,scenario){
+ if(!scenario.fixture)return;
+ await page.getByRole('radio',{name:scenario.label,exact:true}).click();
+ const chooser=page.waitForEvent('filechooser');await page.getByTestId(`${scenario.id}-open`).click();
+ await (await chooser).setFiles({name:scenario.fixture.split('/').at(-1),mimeType:scenario.mimeType,buffer:readFileSync(resolve(root,scenario.fixture))});
+ await page.locator(scenario.readySelector).first().waitFor({state:'visible'});await frame(page);await code(page);
+}
 async function activate(page,scenario){
  // Clock starts in renderer at click dispatch, excludes Playwright actionability wait.
  await page.getByRole('radio',{name:scenario.label,exact:true}).evaluate(el=>{window.__perfStart=performance.now();el.click();});
@@ -34,6 +42,7 @@ async function activate(page,scenario){
  await frame(page);
  return page.evaluate(()=>performance.now()-window.__perfStart);
 }
+async function code(page){await page.getByRole('radio',{name:'Somnia Code',exact:true}).click();await page.locator('[data-testid=empty-state],main.center').first().waitFor({state:'visible'});await frame(page);}
 async function shell(page){await page.locator('[data-storage]').waitFor();await page.getByRole('radio',{name:'Somnia Code',exact:true}).waitFor();await frame(page);}
 try {
  if(!process.env.SOMNIA_PERF_URL){
@@ -64,13 +73,14 @@ try {
    const cold=[];
    for(let i=0;i<runs+1;i++){
     if(i){await page.goto(url);await shell(page);}
+    await code(page);await prepare(page,s);
     const ms=await activate(page,s);if(i)cold.push(ms);
    }
-   record(s.id,'first-activation',cold);
+   record(s.id,s.fixture?'loaded-first-view-return':'first-activation',cold);
    const cdp=await context.newCDPSession(page);await cdp.send('Performance.enable');
    const samples=[];
    for(let i=0;i<runs+1;i++){
-    await page.getByRole('radio',{name:'Somnia Code',exact:true}).click();await shell(page);
+    await code(page);
     const ms=await activate(page,s);if(i)samples.push(ms);
     await delay(250);
     const metrics=(await cdp.send('Performance.getMetrics')).metrics;
@@ -81,7 +91,7 @@ try {
    await context.close();
   }
   if(errors.length)throw Error(`Page errors: ${[...new Set(errors)].join('; ')}`);
-  const report={schemaVersion:1,sha:execFileSync('git',['rev-parse','HEAD'],{cwd:root,encoding:'utf8'}).trim(),createdAt:new Date().toISOString(),buildMode:process.env.SOMNIA_PERF_URL?'external URL; operator must record build/cache mode':'Vite production preview',fixture:'empty studios, no private files; not representative loaded engines',sampleRuns:runs,warmupRuns:1,environment:{node:process.version,platform:platform(),os:release(),arch:arch(),logicalCpus:cpus().length,totalMemoryBytes:totalmem(),browser:client.version(),viewport:{width:1440,height:900},powerState:'unverified'},timings,memory};
+  const report={schemaVersion:1,sha:execFileSync('git',['rev-parse','HEAD'],{cwd:root,encoding:'utf8'}).trim(),createdAt:new Date().toISOString(),buildMode:process.env.SOMNIA_PERF_URL?'external URL; operator must record build/cache mode':'Vite production preview',fixture:process.env.SOMNIA_PERF_LOADED==='1'?'repository DOCX/XLSX; preload excluded from activation timing':'empty studios, no private files; not representative loaded engines',fixtureInventory:fixtureInventory(root),sampleRuns:runs,warmupRuns:1,environment:{node:process.version,platform:platform(),os:release(),arch:arch(),logicalCpus:cpus().length,totalMemoryBytes:totalmem(),browser:client.version(),viewport:{width:1440,height:900},powerState:'unverified'},timings,memory};
   writeFileSync(resolve(out,'baseline.json'),JSON.stringify(report,null,2)+'\n');writeFileSync(resolve(out,'baseline.md'),markdown(report));
   console.log(`Baseline written to ${out}; diagnostic only, no native/suspended-resume certification.`);
  }finally{await client.close();}
