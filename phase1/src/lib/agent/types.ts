@@ -1,5 +1,11 @@
-import type { ProviderReplay } from './providerReplay';
 import type { AIProvenance } from './privacy';
+/** Provider-private protocol state, never UI text or tool authorization. */
+export interface ProviderReplay {
+  provider: 'deepseek' | 'xai' | 'meta';
+  model: string;
+  reasoningContent?: string;
+  output?: Record<string, unknown>[];
+}
 /** UI-free provider contract. Secrets and transports never enter session snapshots. */
 export interface AgentToolCall { id: string; name: string; arguments: string }
 export interface AgentMessage {

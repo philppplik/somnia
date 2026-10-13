@@ -1,13 +1,7 @@
 import { AgentError } from './errors';
-import type { AgentMessage } from './types';
+import type { AgentMessage, ProviderReplay } from './types';
 
-/** Provider-private protocol state, never UI text or tool authorization. */
-export interface ProviderReplay {
-  provider: 'deepseek' | 'xai' | 'meta';
-  model: string;
-  reasoningContent?: string;
-  output?: Record<string, unknown>[];
-}
+export type { ProviderReplay };
 const limit = 1024 * 1024;
 export function validateReplay(value: unknown): asserts value is ProviderReplay {
   const v = value as ProviderReplay;
