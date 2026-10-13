@@ -1,3 +1,4 @@
+import {registerSlidesPanelCommands} from './panelCommands';
 /**
  * Slides studio command specs (engine-hardening plan, step 1.5).
  *
@@ -81,7 +82,7 @@ const byId=new Map(wiredSpecs.map(spec=>[spec.id,spec]));
  * Returns one disposer that removes every registration. SlidesCanvas calls this on mount.
  */
 export function registerSlidesCommands():()=>void {
-  const offs=wiredSpecs.map(spec=>registerCommandSpec(spec));
+  const offs=[...wiredSpecs.map(spec=>registerCommandSpec(spec)),registerSlidesPanelCommands()];
   return()=>{for(const off of offs)off();};
 }
 

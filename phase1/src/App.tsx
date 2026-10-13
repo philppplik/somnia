@@ -60,6 +60,7 @@ import { executeCommand,formatShortcut } from './lib/commands';
 import { useAppStore } from './store/appStore';
 import './store/railCommands';
 import './components/documents/registerShell';
+import './components/slides/registerShell';
 import {AppDialogs} from './components/AppDialogs';
 import {DiagnosticsHost} from './components/diagnostics/DiagnosticsHost';
 import {ConfirmHost} from './components/ConfirmHost';

@@ -1206,6 +1206,21 @@
       "hasEnabled": true
     },
     {
+      "id": "slides.editText",
+      "title": "Apply slide text",
+      "category": "Edit",
+      "source": "slides",
+      "allowInInput": true,
+      "hasEnabled": true
+    },
+    {
+      "id": "slides.loadThumbnails",
+      "title": "Load slide thumbnails",
+      "category": "View",
+      "source": "slides",
+      "hasEnabled": true
+    },
+    {
       "id": "slides.redo",
       "title": "Redo slide text",
       "category": "Edit",
@@ -1216,6 +1231,13 @@
       "id": "slides.saveCopy",
       "title": "Save presentation copy",
       "category": "Project",
+      "source": "slides",
+      "hasEnabled": true
+    },
+    {
+      "id": "slides.selectText",
+      "title": "Select slide text",
+      "category": "View",
       "source": "slides",
       "hasEnabled": true
     },

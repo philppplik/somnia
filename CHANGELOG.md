@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased - Slides shell panels
+
+- Slides overview and text outline now provide search, thumbnail loading, compact rows and navigation. The shared inspector adds source-bound text editing, undo/redo, copy export, presentation metrics and compatibility diagnostics.
+
 ## Unreleased - server frameworks (Next.js, Astro, SvelteKit, Nuxt)
 
 - New project now offers Next.js, Astro, SvelteKit and Nuxt in TypeScript or JavaScript, with pinned lockfiles, a protected loopback preview and a note that the finished app needs Node on the server.
