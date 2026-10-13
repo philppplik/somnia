@@ -382,7 +382,7 @@ export function Settings() {
     <section data-settings-section={section} aria-label={sectionTitle(section)} key={section}>
       <h2>{sectionTitle(section)}</h2>
       {section === "Frameworks" && <FrameworkSettings/>}
-      {section === "Modified" && <ModifiedSettings state={state} onReset={resetSettings} onImport={(patch) => change(patch as Partial<AppState>)} onOpenSection={(name) => { setQuery(""); setSection(name); }} />}
+      {section === "Modified" && <ModifiedSettings state={state} onReset={resetSettings} onOpenSection={(name) => { setQuery(""); setSection(name); }} />}
       {section === "Modified" && <SetupTransferPanel state={state} onApply={(patch) => change(patch as Partial<AppState>)} />}
       {section === "Modified" && <SyncFolderPanel state={state} onApply={(patch) => change(patch as Partial<AppState>)} />}
       {section === "Collaboration" && <CollabPreferences/>}
