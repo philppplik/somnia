@@ -62,6 +62,7 @@ import './store/railCommands';
 import './components/studios/code/registerShell';
 import './components/documents/registerShell';
 import './components/slides/registerShell';
+import './components/photos/panels/registerShell';
 import {AppDialogs} from './components/AppDialogs';
 import {DiagnosticsHost} from './components/diagnostics/DiagnosticsHost';
 import {ConfirmHost} from './components/ConfirmHost';

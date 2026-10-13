@@ -12,6 +12,10 @@
 
 - The Code studio runs on the studio shell: the left rail (Layers, Files, Search, Components, CSS, Versions, plus the new Responsive and Outline panels) and the right rail (one inspector with Design, Interactions and Source sections) are declared per studio, with rail icons from the shared registry and tooltips in all five languages.
 - Rails are customizable: drag icons to reorder them, right-click to move, pin, hide or reset; the layout survives restarts.
+## Unreleased - Photos side panels
+
+- Photos now has real side panels: histogram with clipping stats, Light, Color, Effects and Detail sliders, Transform (crop with aspect presets, straighten, rotate, flip), built-in and saved looks, export, session history with undo, redo and jump, and file info.
+- Photos edits are available as commands (`photos.*`) for the command palette. Agents can read state and the histogram but cannot change the image.
 
 ## Unreleased - server frameworks (Next.js, Astro, SvelteKit, Nuxt)
 

@@ -1,3 +1,5 @@
+import {useEffect} from 'react';
+import {registerPhotosCommands} from '../../lib/photos/panelCommands';
 import {Aperture,Image as ImageIcon} from '../../lib/icons';
 import {Button} from '../ui/button';
 import {FileTabs} from '../FileTabs';
@@ -8,7 +10,7 @@ import {useMedia} from '../../lib/media';
 import {PhotosWorkspace} from './PhotosWorkspace';
 /** Canvas of the Photos Studio: the opened photo, an honest "cannot develop this" note, or a start screen. */
 export function PhotosCanvas(){
- const {t}=useT();const media=useMedia();const item=media.items.find(i=>i.name===media.active);
+ const {t}=useT();const media=useMedia();useEffect(()=>registerPhotosCommands(),[]);const item=media.items.find(i=>i.name===media.active);
  const developable=item&&(item.kind==='image'&&(PHOTO_INPUT.mimes as readonly string[]).includes(item.mime));
  const refused=item&&(item.kind==='psd'||(item.kind==='image'&&!developable));
  return <main className="center" aria-label={t('photos.title')}><div className="workspace"><section className="code-pane" aria-label={t('photos.title')}>

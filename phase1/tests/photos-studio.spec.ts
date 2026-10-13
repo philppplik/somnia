@@ -14,7 +14,7 @@ async function openPhoto(page:any){
 test('Photos Studio: open a JPEG, develop it, crop, rotate, export PNG',async({page})=>{
  await openPhoto(page);
  await expect(page.getByRole('radio',{name:'Somnia Photos'})).toHaveAttribute('aria-checked','true');
- await expect(page.getByTestId('photos-inspector')).toBeVisible();
+ await expect(page.getByTestId('photos-light-panel')).toBeVisible();
  await expect(page.getByTestId('photos-undo')).toBeDisabled();
  await page.screenshot({path:'test-results/photos-open.png'});
  // one slider gesture is one undo step
@@ -32,7 +32,8 @@ test('Photos Studio: open a JPEG, develop it, crop, rotate, export PNG',async({p
  await expect(page.getByTestId('photos-value-exposure')).toContainText('0');
  await page.getByTestId('photos-redo').click();await page.getByTestId('photos-redo').click();
  await expect(page.getByTestId('photos-value-contrast')).toContainText('25');
- // rotate and flip
+ // rotate and flip live in the Transform panel (rail item)
+ await page.locator('[data-rail-item="transform"]').click();
  await page.getByTestId('photos-rotate-right').click();
  await expect(page.getByTestId('photos-undo')).toBeEnabled();
  await page.getByTestId('photos-rotate-left').click();

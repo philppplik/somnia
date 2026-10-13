@@ -1,4 +1,13 @@
 import {registerStudio,type StudioDef} from './registry';
+import type {StudioShellDef} from '../shell/types';
+import {PHOTOS_LEFT_RAIL,PHOTOS_RIGHT_RAIL} from '../photos/shellRail';
+import {PHOTOS_EXTRA_RAIL,PHOTOS_PANELS,PHOTOS_PANEL_LAYOUT} from '../photos/panelManifest';
+/** Pure data. Hosts live in components/photos/panels (registerStudioPanels). Right rail order: Histogram, Light..Transform, Presets, Export. */
+export const photosShell:StudioShellDef={
+ panels:PHOTOS_PANELS,leftRail:PHOTOS_LEFT_RAIL,
+ rightRail:[...PHOTOS_RIGHT_RAIL,...PHOTOS_EXTRA_RAIL].sort((a,b)=>a.order-b.order),
+ defaultLayout:PHOTOS_PANEL_LAYOUT,
+};
 /**
  * Photos Studio: LightCraft develop (WASM worker) for JPEG/PNG originals. Session-only settings,
  * bounded copy export; originals are never overwritten. PSD is claimed so the studio can say
@@ -14,7 +23,7 @@ export const photosStudio:StudioDef={
   bottomBar:{slots:[],viewportPresets:[]},
   inspector:'photos.inspector',tools:[]
  },
- commands:[],shortcuts:{'studio.photos':'Mod+7'},menus:{view:[]},canvas:'photos.canvas',
+ commands:[],shortcuts:{'studio.photos':'Mod+7'},menus:{view:[]},canvas:'photos.canvas',shellV2:photosShell,
  agent:{tools:['photo_inspect','photo_propose_settings'],contextProviders:['photoDevelopMetadata','photoDevelopSettings'],quickActions:[]},deriveContext:context=>context
 };
 registerStudio(photosStudio);

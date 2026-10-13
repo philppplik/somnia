@@ -1,4 +1,5 @@
 import {reportError} from '../../lib/log';
+import {usePublishPhotosContext} from './panels/publishContext';
 import {useCallback,useEffect,useRef,useState} from 'react';
 import {Check,Download,Eye,Frame,RotateCcw,Undo2,Redo2,X,ZoomIn,ZoomOut,Maximize2,Minimize2} from '../../lib/icons';
 import {Button} from '../ui/button';
@@ -33,6 +34,7 @@ export function PhotosWorkspace({item}:{item:MediaItem}){
  const [note,setNote]=useState('');
  const drag=useRef<{pan?:{x:number;y:number;px:number;py:number};crop?:DragMode}|null>(null);
  useEffect(()=>{void openPhoto(item);},[item]);
+ usePublishPhotosContext(item.name);
  // Opening a photo takes you to the Photos Studio unless you picked a studio yourself.
  useEffect(()=>{if(studio!=='photos')requestStudio('photos','automatic');},[studio]);
  // The Photos rail offers Files only, so do not leave the HTML Layers tree open beside a photo.

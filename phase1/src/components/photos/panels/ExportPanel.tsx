@@ -1,0 +1,28 @@
+import {useState} from 'react';
+import {Download} from '../../../lib/icons';
+import {useT} from '../../../lib/useT';
+import {commandDispatcher} from '../../../lib/commandDispatcher';
+import {dirtyPhoto} from '../../../lib/photos/studioSession';
+import {Button} from '../../ui/button';
+import {PanelBody,isBusy} from './shared';
+/** Export a developed copy. The original file is never overwritten; copies are bounded by the engine. */
+export function ExportPanel(){
+ const {t}=useT();const [note,setNote]=useState('');const [working,setWorking]=useState(false);
+ const run=async(format:'png'|'jpeg')=>{
+  setWorking(true);setNote('');
+  try{const r=await commandDispatcher.runCommand<string>('photos.export',{format},{origin:'ui'});setNote(r==='saved'?t('photos.saved'):'');}
+  catch(e){setNote(t('photos.saveFailed',{message:(e instanceof Error?e.message:String(e)).replace(/^Error:\s*/,'')}));}
+  finally{setWorking(false);}
+ };
+ return <PanelBody testId="photos-export-panel">{({session})=>{
+  const off=isBusy(session)||working||session.status==='processing';
+  return <>
+   <div className="grid gap-1">
+    <Button size="compact" variant="outline" disabled={off} onClick={()=>void run('png')} data-testid="photos-p-export-png"><Download size={13}/>{t('photos.export.png')}</Button>
+    <Button size="compact" variant="outline" disabled={off} onClick={()=>void run('jpeg')} data-testid="photos-p-export-jpeg"><Download size={13}/>{t('photos.export.jpeg')}</Button>
+   </div>
+   <p className="m-0 text-[11px] text-ink-3">{t('photos.export.hint')}</p>
+   <p className="m-0 text-[11px] text-ink-2" role="status" aria-live="polite" data-testid="photos-p-export-status">{note||(dirtyPhoto(session)?t('photos.status.dirty'):t('photos.status.clean'))}</p>
+  </>;
+ }}</PanelBody>;
+}
