@@ -39,7 +39,7 @@ test('Code studio rail: declared icons, order and customization (shell v2)',asyn
 test('Code inspector: generic host shows the declared sections',async({page})=>{
  await page.goto('/');await expect(page.locator('[data-storage]')).toBeVisible();
  await page.keyboard.press('Control+1');
- await showPanel(page,'Inspector');
+ await showPanel(page,'Design');
  await expect(page.getByTestId('shell-inspector')).toBeVisible();
 
  await expect(page.getByTestId('inspector-section-design')).toBeVisible();

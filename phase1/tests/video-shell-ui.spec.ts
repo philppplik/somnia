@@ -4,9 +4,9 @@ import path from 'node:path';
 test('video shell panels, selection, typed edits and light/dark views',async({page})=>{
  await page.goto('/');
  await page.getByRole('radio',{name:'Somnia Video',exact:true}).click();
- const chooser=page.waitForEvent('filechooser');await page.getByTestId('video-open').click();await (await chooser).setFiles(path.join(import.meta.dirname,'assets','clip.webm'));
  await showPanel(page,'Sources');
  await showPanel(page,'Video');
+ const chooser=page.waitForEvent('filechooser');await page.getByTestId('video-open').click();await (await chooser).setFiles(path.join(import.meta.dirname,'assets','clip.webm'));
  await expect(page.getByTestId('video-sources-panel')).toBeVisible();
  await expect(page.getByTestId('video-facts')).toContainText('clip.webm');
  await showPanel(page,'Sequence');

@@ -69,8 +69,13 @@ test('source FileTab leaves Slides without assigning the deck Studio to the sour
  await page.getByRole('radio',{name:'Slides',exact:true}).click();await showPanel(page,'Slides');await showPanel(page,'Presentation');
  await page.getByLabel('Open PPTX',{exact:true}).setInputFiles(path.resolve('slides-engine/fixtures/independent.pptx'));
  await expect(page.getByAltText('Slide 1',{exact:true})).toBeVisible({timeout:30000});
+ // File tabs are scoped per Studio (7fa54d22): the source tab is not listed in Slides, it stays owned by Code.
+ await expect(page.getByRole('tab',{name:'index.html',exact:true})).toHaveCount(0);
+ await page.getByRole('radio',{name:'Somnia Code',exact:true}).click();
+ await expect(page.getByRole('tab',{name:'index.html',exact:true})).toBeVisible();
  await page.getByRole('tab',{name:'index.html',exact:true}).click();
  await expect(page.getByRole('radio',{name:'Somnia Code',exact:true})).toBeChecked();
+ await expect(page.getByRole('radio',{name:'Slides',exact:true})).not.toBeChecked();
 });
 test('closing evicted and current decks leaves remaining tabs usable',async({page})=>{
  await page.goto('/');await page.getByRole('radio',{name:'Slides',exact:true}).click();await showPanel(page,'Slides');await showPanel(page,'Presentation');
@@ -83,10 +88,10 @@ test('closing evicted and current decks leaves remaining tabs usable',async({pag
 test('edit text undo redo and save copy retains original',async({page})=>{
  await page.goto('/');await page.getByRole('radio',{name:'Slides',exact:true}).click();await showPanel(page,'Slides');await showPanel(page,'Presentation');await page.getByLabel('Open PPTX',{exact:true}).setInputFiles(path.resolve('slides-engine/fixtures/independent.pptx'));await expect(page.getByAltText('Slide 1',{exact:true})).toBeVisible({timeout:30000});
  await page.getByRole('textbox',{name:'Text run 1',exact:true}).fill('Somnia edited copy');await page.getByRole('button',{name:'Apply slide text',exact:true}).first().click();await expect(page.getByRole('textbox',{name:'Text run 1',exact:true})).toHaveValue('Somnia edited copy');await showInspectorSection(page,'deck');await expect(page.getByTestId('inspector-section-deck').getByText('Unsaved text changes',{exact:true})).toBeVisible();
- await page.getByTestId('inspector-section-text').getByRole('button',{name:'Undo text',exact:true}).click();await expect(page.getByRole('textbox',{name:'Text run 1',exact:true})).toHaveValue('Somnia Documents Studio');await page.getByTestId('inspector-section-text').getByRole('button',{name:'Redo text',exact:true}).click();await expect(page.getByRole('textbox',{name:'Text run 1',exact:true})).toHaveValue('Somnia edited copy');
+ await page.getByTestId('inspector-section-text').getByRole('button',{name:'Undo slide text',exact:true}).click();await expect(page.getByRole('textbox',{name:'Text run 1',exact:true})).toHaveValue('Somnia Documents Studio');await page.getByTestId('inspector-section-text').getByRole('button',{name:'Redo slide text',exact:true}).click();await expect(page.getByRole('textbox',{name:'Text run 1',exact:true})).toHaveValue('Somnia edited copy');
  await expect(page.getByRole('region',{name:'Slide preview'})).toHaveAttribute('aria-busy','false');
  await page.screenshot({path:'validation/slides/package3-text-edit.png',fullPage:true});
- const dl=page.waitForEvent('download');await page.getByTestId('inspector-section-text').getByRole('button',{name:'Save a copy',exact:true}).click();const download=await dl;expect(download.suggestedFilename()).toBe('independent-edited.pptx');await download.saveAs('validation/slides/package3-edited.pptx');
+ const dl=page.waitForEvent('download');await page.getByTestId('inspector-section-text').getByRole('button',{name:'Save presentation copy',exact:true}).click();const download=await dl;expect(download.suggestedFilename()).toBe('independent-edited.pptx');await download.saveAs('validation/slides/package3-edited.pptx');
  page.once('dialog',d=>d.accept());await page.getByRole('button',{name:'Close presentation',exact:true}).click();await page.getByLabel('Open PPTX',{exact:true}).setInputFiles(path.resolve('validation/slides/package3-edited.pptx'));await expect(page.getByRole('textbox',{name:'Text run 1',exact:true})).toHaveValue('Somnia edited copy',{timeout:30000});
 });
 

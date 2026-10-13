@@ -24,7 +24,7 @@ test('Vector real empty start creates a blank document without a file chooser',a
 });
 
 test('Vector failed strict panel import preserves artwork and its undo history',async({page})=>{
- await studio(page);await open(page,'primitives.svg');await expect(page.getByTestId('vector-layer')).toHaveCount(6);
+ await studio(page);await open(page,'primitives.svg');await expect(page.getByTestId('vector-shell-layers').locator('li')).toHaveCount(6);
  const before=await session(page);
  const chooser=page.waitForEvent('filechooser');await page.getByTestId('vector-import-svg').click();await (await chooser).setFiles(asset('reject-event.svg'));
  await expect(page.getByTestId('vector-io-status')).toContainText('event attribute');

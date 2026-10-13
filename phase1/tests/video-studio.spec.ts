@@ -30,7 +30,7 @@ test('Video Studio: open WebM, play, trim with I/O, export a real trimmed WebM',
  await expect(page.getByRole('radio',{name:'Somnia Video'})).toHaveAttribute('aria-checked','true');
  await expect(page.getByTestId('video-info')).toContainText('320×180',{timeout:30000});
  await expect(page.getByTestId('video-info')).toContainText('vp9');
- await expect(page.getByTestId('video-controls')).toBeVisible();
+ await expect(page.getByTestId('inspector-section-document')).toBeVisible();await expect(page.getByTestId('inspector-section-export')).toBeVisible();
  await expect(page.getByTestId('video-result')).toContainText('No edits yet');
  await page.screenshot({path:'test-results/video-open.png'});
  // playback really advances
@@ -81,7 +81,7 @@ test('Video Studio: switching to Code keeps the video tab and shows the settings
  await page.getByRole('radio',{name:'Somnia Code'}).click();
  await expect(page.getByRole('radio',{name:'Somnia Code'})).toHaveAttribute('aria-checked','true');
  await expect(page.getByTestId('video-workspace')).toBeVisible();
- await expect(page.getByTestId('video-controls')).toBeVisible();
+ await expect(page.getByTestId('inspector-section-document')).toBeVisible();await expect(page.getByTestId('inspector-section-export')).toBeVisible();
 });
 test('Video Studio: add a second source, split, ripple delete, reorder, mute, export the joined timeline',async({page})=>{
  await openVideo(page);
