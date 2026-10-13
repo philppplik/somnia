@@ -6,6 +6,12 @@
 - The artifact is a `DeployArtifactManifest` of kind `static`. Links, `.env*`, keys, `.git` and `node_modules` in the output are refused. Nothing is uploaded.
 - Single-page apps show the nginx and Apache fallback rule; it is never written to a server without confirmation.
 
+## Unreleased - Vue, Svelte and Solid projects
+
+- New project now offers Vue, Svelte and Solid next to React, each in TypeScript or JavaScript, with pinned lockfiles and the same protected loopback preview.
+- Alt-click in the preview opens the source of an element in Vue and Svelte components as well as JSX.
+- Framework projects show their real name in the detected banner (Vue, Svelte, Solid).
+
 ## Unreleased - framework runner
 
 - Explicit-consent framework helper download with pinned SHA-256 verification.

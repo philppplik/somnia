@@ -10,8 +10,10 @@ export function detectFramework(files:Readonly<Record<string,string>>):Framework
   const language=Object.keys(files).some(f=>/\.(ts|tsx)$/.test(f))?'ts':'js';let manifest:Record<string,unknown>={};
   try{manifest=JSON.parse(files['somnia.template.json']??'{}');}catch{/* unknown projects are inert */}
   const managed=manifest.framework===framework&&typeof manifest.id==='string';
-  const entry=Object.keys(files).find(f=>/^src\/App\.[jt]sx$/.test(f))??Object.keys(files).find(f=>/^src\/main\.[jt]sx?$/.test(f))??'package.json';
+  const entry=Object.keys(files).find(f=>/^src\/App\.([jt]sx|vue|svelte)$/.test(f))??Object.keys(files).find(f=>/^src\/(main|index)\.[jt]sx?$/.test(f))??'package.json';
   return {framework,language,managed,entry,output:manifest.output==='node'||['next','nuxt','sveltekit'].includes(framework)?'node':'static'};
  }catch{return null;}
 }
 export function isFrameworkSource(path:string){return /\.(html?|css|[cm]?js|jsx|ts|tsx|json|svg|txt|md|vue|svelte|astro)$/i.test(path)&&!path.split('/').some(p=>['node_modules','.git','dist','.next','.output'].includes(p));}
+/** Display name for banners and labels. Unknown ids fall back to the id itself. */
+export const frameworkLabel=(framework:string)=>({react:'React',vue:'Vue',svelte:'Svelte',solid:'Solid',astro:'Astro',next:'Next.js',sveltekit:'SvelteKit',nuxt:'Nuxt'} as Record<string,string>)[framework]??framework;

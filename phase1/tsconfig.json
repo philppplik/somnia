@@ -20,5 +20,8 @@
   "include": [
     "src",
     "vite.config.ts"
+  ],
+  "exclude": [
+    "src/lib/frameworks/templates"
   ]
 }

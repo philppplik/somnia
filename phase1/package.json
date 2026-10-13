@@ -117,7 +117,9 @@
     "tsx": "4.21.0",
     "typescript": "7.0.2",
     "vite": "8.3.2",
-    "@babel/parser": "8.0.7"
+    "@babel/parser": "8.0.7",
+    "svelte": "5.57.2",
+    "vue": "3.5.44"
   },
   "overrides": {
     "esbuild": "^0.28.1"

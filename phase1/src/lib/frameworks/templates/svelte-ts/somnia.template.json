@@ -1,0 +1,11 @@
+{
+  "id": "svelte-ts",
+  "framework": "svelte",
+  "language": "ts",
+  "output": "static",
+  "scripts": {
+    "dev": "dev",
+    "build": "build"
+  },
+  "artifactPath": "dist"
+}

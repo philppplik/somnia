@@ -1,6 +1,6 @@
 # React projects
 
-Project > New project creates an interactive React app. TypeScript is the default; JavaScript is also available. Choose a name, then a parent folder. Somnia writes the bundled template into a new folder and refuses to replace existing files. Save or close an existing dirty project first.
+Project > New project creates an interactive React app (Vue, Svelte and Solid: see [vue-svelte-solid-projects.md](vue-svelte-solid-projects.md)). TypeScript is the default; JavaScript is also available. Choose a name, then a parent folder. Somnia writes the bundled template into a new folder and refuses to replace existing files. Save or close an existing dirty project first.
 
 Templates are offline data. Each includes exact dependency versions, an npm lockfile, `somnia.template.json`, an accessible starter, and `somnia-preview.mjs`. Package installation and execution use the native managed runtime. They never run arbitrary `package.json` scripts. The native runner asks for helper installation when needed.
 

@@ -16,6 +16,31 @@ export function instrumentSource(code,id,root){
  }
  visit(ast);for(const [at,text] of inserts.sort((a,b)=>b[0]-a[0]))code=code.slice(0,at)+text+code.slice(at);return code;
 }
+function lineOf(code,offset){let line=1;for(let i=0;i<offset;i++)if(code.charCodeAt(i)===10)line++;return line;}
+function projectFile(id,root,extension){
+ const clean=id.split('?')[0].replaceAll('\\','/');const base=root.replaceAll('\\','/').replace(/\/$/,'')+'/';
+ if(id.includes('?')||!clean.startsWith(base)||clean.includes('/node_modules/')||!clean.endsWith(extension))return null;
+ const file=clean.slice(base.length);return file.includes('..')||file.includes(':')?null:file;
+}
+function applyInserts(code,inserts){for(const [at,text] of inserts.sort((a,b)=>b[0]-a[0]))code=code.slice(0,at)+text+code.slice(at);return code;}
+/** Vue single file components. Only plain HTML elements get a marker, components and slots do not. */
+export function instrumentVue(code,id,root,parseSfc){
+ const file=projectFile(id,root,'.vue');if(!file)return code;
+ const ast=parseSfc(code,{filename:file}).descriptor.template?.ast;if(!ast)return code;const inserts=[];
+ (function visit(node){if(!node||typeof node!=='object')return;
+  if(node.type===1&&node.tagType===0&&/^[a-z]/.test(node.tag)&&!node.props.some(p=>p.name==='data-somnia-src'))inserts.push([node.loc.start.offset+1+node.tag.length,` data-somnia-src=${JSON.stringify(`${file}:${node.loc.start.line}`)}`]);
+  for(const child of node.children??[])visit(child);})(ast);
+ return applyInserts(code,inserts);
+}
+/** Svelte 5 components. Walks the markup AST only, so script and style text is never touched. */
+export function instrumentSvelte(code,id,root,parseSvelte){
+ const file=projectFile(id,root,'.svelte');if(!file)return code;
+ const ast=parseSvelte(code,{modern:true});const inserts=[];const seen=new WeakSet();
+ (function visit(node){if(!node||typeof node!=='object'||seen.has(node))return;seen.add(node);
+  if(node.type==='RegularElement'&&typeof node.name==='string'&&Number.isInteger(node.start)&&!node.attributes.some(a=>a.name==='data-somnia-src'))inserts.push([node.start+1+node.name.length,` data-somnia-src=${JSON.stringify(`${file}:${lineOf(code,node.start)}`)}`]);
+  for(const value of Object.values(node))if(value&&typeof value==='object')visit(value);})(ast.fragment);
+ return applyInserts(code,inserts);
+}
 export function validSourceEvent(event){
  return !!event&&typeof event.file==='string'&&event.file.length<=1024&&!/[\\:\x00-\x1f]/.test(event.file)&&!event.file.startsWith('/')&&event.file.split('/').every(part=>part&&part!=='.'&&part!=='..'&&part!=='node_modules'&&part!=='.git')&&Number.isInteger(event.line)&&event.line>0&&event.line<1_000_000&&Number.isInteger(event.col)&&event.col>0&&event.col<1_000_000;
 }
@@ -23,7 +48,7 @@ export default function somniaPreview(){
  const token=process.env.SOMNIA_PREVIEW_TOKEN;const port=Number(process.env.SOMNIA_PREVIEW_PORT);
  if(!token)return {name:'somnia-preview',apply:'serve'}; // ordinary external Vite use remains possible
  if(!TOKEN.test(token))throw Error('Invalid Somnia preview configuration');
- const policy=previewPolicy(port);let root='';
+ const policy=previewPolicy(port);let root='';let vueParser,svelteParser;
  const cookieName=`somnia_preview_${port}`;const inlineModules=new Map();const sourceEvents=[];
  const hasCookie=req=>String(req.headers.cookie??'').split(';').some(part=>part.trim()===`${cookieName}=${token}`);
  return {name:'somnia-preview',apply:'serve',enforce:'pre',
@@ -49,7 +74,15 @@ export default function somniaPreview(){
    });
    server.httpServer?.prependListener('upgrade',(req,socket)=>{if(req.headers.host!==`127.0.0.1:${port}`||!hasCookie(req)||req.headers.origin!==`http://127.0.0.1:${port}`)socket.destroy();});
   },
-  transform(code,id){const transformed=instrumentSource(code,id,root);return transformed===code?null:{code:transformed,map:null};},
+  async transform(code,id){
+   let transformed=code;
+   try{
+    if(!id.includes('?')&&id.endsWith('.vue')){vueParser??=await import('vue/compiler-sfc').then(m=>m.parse,()=>null);if(vueParser)transformed=instrumentVue(code,id,root,vueParser);}
+    else if(!id.includes('?')&&id.endsWith('.svelte')){svelteParser??=await import('svelte/compiler').then(m=>m.parse,()=>null);if(svelteParser)transformed=instrumentSvelte(code,id,root,svelteParser);}
+    else transformed=instrumentSource(code,id,root);
+   }catch{return null;} // a syntax error must surface from the framework compiler, never from the preview plugin
+   return transformed===code?null:{code:transformed,map:null};
+  },
   transformIndexHtml:{order:'post',handler(html){let i=0;html=html.replace(/<script\b([^>]*type="module"[^>]*)>([\s\S]*?)<\/script>/g,(whole,attrs,body)=>{if(/\bsrc=/.test(attrs)||!body.trim())return whole;const path=`/__somnia_inline_${i++}.js`;inlineModules.set(path,body);return `<script type="module" src="${path}"></script>`;});return html.replace('</body>','<script type="module" src="/__somnia_click_source.js"></script></body>');}},
   resolveId(id){return id==='/__somnia_click_source.js'?'\0somnia-click-source':null;},
   load(id){if(id!=='\0somnia-click-source')return null;return `document.addEventListener('click',event=>{if(!event.altKey)return;const node=event.target.closest?.('[data-somnia-src]');if(!node)return;const match=/^(.+):(\\d+)$/.exec(node.dataset.somniaSrc);if(!match)return;event.preventDefault();event.stopPropagation();fetch('/__somnia/source-events',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({file:match[1],line:Number(match[2]),col:1})}).catch(()=>{});},true);`;}
