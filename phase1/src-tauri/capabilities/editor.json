@@ -134,6 +134,8 @@
     "allow-deploy-hostkey-trust",
     "allow-deploy-hostkey-replace",
     "allow-deploy-key-create",
+    "allow-deploy-releases",
+    "allow-deploy-open-site",
     "allow-github-account-status",
     "allow-read-project-settings",
     "allow-sync-status",

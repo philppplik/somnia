@@ -23,7 +23,7 @@ function fakeBackend() {
     publish: rec('publish', { releaseId: 'r1', url: 'https://example.com', rolledBack: false }),
     rollback: rec('rollback', { releaseId: 'r0', rolledBack: true }),
     hostkeyProbe: rec('hostkeyProbe', { algorithm: 'ssh-ed25519', fingerprint: FP }),
-    hostkeyTrust: rec('hostkeyTrust', undefined), hostkeyReplace: rec('hostkeyReplace', undefined), keyCreate: rec('keyCreate', 'ssh-ed25519 AAAA somnia'),
+    hostkeyTrust: rec('hostkeyTrust', undefined), hostkeyReplace: rec('hostkeyReplace', undefined), keyCreate: rec('keyCreate', 'ssh-ed25519 AAAA somnia'), releasesList: rec('releasesList', []), openSite: rec('openSite', undefined),
   };
   return { be, calls };
 }

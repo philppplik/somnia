@@ -120,6 +120,8 @@ fn main() {
             "deploy_hostkey_trust",
             "deploy_hostkey_replace",
             "deploy_key_create",
+            "deploy_releases",
+            "deploy_open_site",
             "github_account_status",
             "read_project_settings",
             "sync_status",

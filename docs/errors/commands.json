@@ -387,6 +387,19 @@
       ]
     },
     {
+      "name": "deploy_open_site",
+      "domain": "deploy",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "target_id"
+      ],
+      "args": [
+        "targetId"
+      ]
+    },
+    {
       "name": "deploy_plan",
       "domain": "deploy",
       "status": "native",
@@ -429,6 +442,19 @@
         "targetId",
         "planHash",
         "token"
+      ]
+    },
+    {
+      "name": "deploy_releases",
+      "domain": "deploy",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "target_id"
+      ],
+      "args": [
+        "targetId"
       ]
     },
     {

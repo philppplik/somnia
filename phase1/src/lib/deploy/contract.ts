@@ -58,6 +58,13 @@ export interface DeployBackend {
   hostkeyReplace(args: { targetId: string; oldFingerprint: string; newFingerprint: string; acknowledged: boolean }): Promise<void>;
   /** Returns the public key line. The private key goes straight into the OS keychain. */
   keyCreate(targetId: string): Promise<string>;
+  /** Release ids that exist on the server, for the rollback list. Read-only. */
+  releasesList(targetId: string): Promise<string[]>;
+  /** Opens https://<domain> of the target in the system browser. The URL is built in Rust. */
+  openSite(targetId: string): Promise<void>;
 }
 
 export const DEPLOY_PROGRESS_EVENT = 'deploy-progress';
+
+/** Payload of the `deploy-progress` event. `step` is a short engine word such as `upload` or `upload:7/12`. */
+export interface DeployProgressEvent { targetId: string; step: string }

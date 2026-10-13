@@ -2492,6 +2492,8 @@ pub fn run() {
             crate::deploy_commands::deploy_hostkey_trust,
             crate::deploy_commands::deploy_hostkey_replace,
             crate::deploy_commands::deploy_key_create,
+            crate::deploy_commands::deploy_releases,
+            crate::deploy_commands::deploy_open_site,
             studio_mcp_start,
             studio_mcp_stop,
             studio_mcp_status,

@@ -1,0 +1,191 @@
+/**
+ * State and actions of the Publish panel. React-free, so the whole flow is tested without a DOM.
+ *
+ * Everything that changes the server or the saved targets goes through the deploy CommandSpecs
+ * (origin `ui`): the confirmation dialogs, the one-time token and the human-origin checks stay in
+ * one place. This file never mints a token, never touches a gesture and never sees key material;
+ * the only key-shaped value it holds is the public key line returned by `deploy.key.create`.
+ */
+import type { DeployBackend, DeployOutcome, DeployPlan, DeployProgressEvent, DeployTarget, DeployTargetStatus } from './contract';
+import { buildTarget, describeDeployError, parseProgress, slugTargetId, sortReleases, validateTargetForm, type DeployErrorInfo, type ProgressInfo, type TargetForm } from './publishModel';
+
+export type PublishView = 'home' | 'form' | 'rollback';
+export type PublishBusy = 'load' | 'save' | 'delete' | 'key' | 'trust' | 'replace' | 'publish' | 'rollback' | 'releases' | null;
+export interface PublishFailure extends DeployErrorInfo { targetId: string | null; during: Exclude<PublishBusy, null> }
+export interface PublishResult { kind: 'publish' | 'rollback'; targetId: string; outcome: DeployOutcome }
+export interface PublishState {
+  open: boolean;
+  view: PublishView;
+  loaded: boolean;
+  targets: DeployTargetStatus[];
+  selectedId: string | null;
+  /** Set while editing an existing target; null when adding. */
+  editingId: string | null;
+  busy: PublishBusy;
+  /** Steps seen during the running publish, in order, plus the latest one. */
+  progress: { seen: ProgressInfo[]; latest: ProgressInfo | null };
+  result: PublishResult | null;
+  failure: PublishFailure | null;
+  /** Public key lines created in this session (public, not secret). */
+  publicKeys: Record<string, string>;
+  releases: string[];
+  releasesFor: string | null;
+  /** Release the last publish or rollback made live, per target. Session memory only. */
+  liveByTarget: Record<string, string>;
+  /** Plans staged by an agent via deploy.plan: the person still has to click Publish. */
+  staged: DeployPlan | null;
+}
+
+export interface PublishDeps {
+  run: (id: string, params?: unknown) => Promise<unknown>;
+  backend: Pick<DeployBackend, 'targetsList' | 'releasesList' | 'openSite'>;
+  /** Subscribes to deploy-progress. Returns the unsubscribe function (may resolve later). */
+  onProgress: (fn: (e: DeployProgressEvent) => void) => () => void;
+}
+
+const initial = (): PublishState => ({
+  open: false, view: 'home', loaded: false, targets: [], selectedId: null, editingId: null, busy: null, progress: { seen: [], latest: null },
+  result: null, failure: null, publicKeys: {}, releases: [], releasesFor: null, liveByTarget: {}, staged: null,
+});
+
+export function createPublishStore(deps: PublishDeps) {
+  let state = initial();
+  const listeners = new Set<() => void>();
+  const set = (patch: Partial<PublishState>) => { state = { ...state, ...patch }; for (const fn of [...listeners]) fn(); };
+  let off: (() => void) | null = null;
+
+  const fail = (e: unknown, targetId: string | null, during: Exclude<PublishBusy, null>) => set({ busy: null, failure: { ...describeDeployError(e), targetId, during } });
+  const statusOf = (id: string) => state.targets.find(s => s.target.id === id);
+
+  /** Runs one busy action. Guards against double clicks: a second call while busy is ignored. */
+  async function guarded<T>(busy: Exclude<PublishBusy, null>, targetId: string | null, fn: () => Promise<T>): Promise<T | undefined> {
+    if (state.busy) return undefined;
+    set({ busy, failure: null });
+    try { const r = await fn(); if (state.busy === busy) set({ busy: null }); return r; }
+    catch (e) { fail(e, targetId, busy); return undefined; }
+  }
+
+  async function refresh(): Promise<void> {
+    try {
+      const targets = await deps.backend.targetsList();
+      const selectedId = targets.some(s => s.target.id === state.selectedId) ? state.selectedId : targets[0]?.target.id ?? null;
+      set({ targets, selectedId, loaded: true });
+    } catch (e) { set({ loaded: true, failure: { ...describeDeployError(e), targetId: null, during: 'load' } }); }
+  }
+
+  async function loadReleases(targetId: string): Promise<void> {
+    set({ releases: [], releasesFor: targetId });
+    await guarded('releases', targetId, async () => {
+      const ids = sortReleases(await deps.backend.releasesList(targetId));
+      if (state.releasesFor === targetId) set({ releases: ids });
+    });
+  }
+
+  const api = {
+    getState: () => state,
+    subscribe(fn: () => void) { listeners.add(fn); return () => { listeners.delete(fn); }; },
+
+    /** Starts listening to deploy-progress. Safe to call more than once. */
+    attach() {
+      if (off) return;
+      off = deps.onProgress(e => {
+        if (!state.busy || (state.busy !== 'publish' && state.busy !== 'rollback')) return;
+        if (e.targetId !== state.selectedId) return;
+        const info = parseProgress(e.step);
+        if (info.step === 'other') return;
+        const seen = state.progress.seen.some(s => s.step === info.step) ? state.progress.seen.map(s => s.step === info.step ? info : s) : [...state.progress.seen, info];
+        set({ progress: { seen, latest: info } });
+      });
+    },
+    detach() { off?.(); off = null; },
+
+    async open(opts: { view?: PublishView; targetId?: string } = {}) {
+      set({ open: true, view: opts.view ?? 'home', failure: null, result: null, ...(opts.targetId ? { selectedId: opts.targetId } : {}) });
+      await refresh();
+      if (opts.view === 'rollback' && state.selectedId) await loadReleases(state.selectedId);
+      if (state.targets.length === 0 && opts.view === undefined) set({ view: 'form', editingId: null });
+    },
+    /** A running publish cannot be cancelled from here, so closing only hides the dialog. */
+    close() { set({ open: false, failure: state.busy ? state.failure : null }); },
+    refresh,
+
+    select(id: string) { if (!state.busy) set({ selectedId: id, failure: null, result: null, releases: [], releasesFor: null }); },
+    showHome() { if (!state.busy) set({ view: 'home', failure: null, editingId: null }); },
+    showForm(editId: string | null = null) { if (!state.busy) set({ view: 'form', editingId: editId, failure: null, result: null }); },
+    async showRollback(targetId?: string) {
+      const id = targetId ?? state.selectedId; if (!id || state.busy) return;
+      set({ view: 'rollback', selectedId: id, failure: null, result: null });
+      await loadReleases(id);
+    },
+    /** Opens https://<domain> of the target. The address is built in Rust from the saved domain. */
+    async openSite(id: string) { try { await deps.backend.openSite(id); } catch (e) { set({ failure: { ...describeDeployError(e), targetId: id, during: 'load' } }); } },
+    dismissFailure() { set({ failure: null }); },
+    dismissResult() { set({ result: null }); },
+    stagePlan(plan: DeployPlan) { set({ staged: plan, selectedId: state.targets.some(s => s.target.id === plan.targetId) ? plan.targetId : state.selectedId }); },
+    clearStaged() { set({ staged: null }); },
+
+    /** Validates, saves and (for a new server) goes straight on to the key step. Returns the saved id, or null on validation or save failure. */
+    async saveTarget(form: TargetForm): Promise<string | null> {
+      if (Object.keys(validateTargetForm(form)).length) return null;
+      const editing = state.editingId;
+      const id = editing ?? slugTargetId(form.name, state.targets.map(s => s.target.id));
+      const target: DeployTarget = buildTarget(form, id);
+      const ok = await guarded('save', id, async () => { await deps.run('deploy.target.save', { target }); return true; });
+      if (!ok) return null;
+      await refresh();
+      set({ selectedId: id, view: 'home', editingId: null });
+      return id;
+    },
+    async deleteTarget(id: string, deleteKey: boolean) {
+      await guarded('delete', id, async () => { await deps.run('deploy.target.delete', { targetId: id, deleteKey }); });
+      if (state.failure) return;
+      const { [id]: _k, ...keys } = state.publicKeys;
+      set({ publicKeys: keys, releases: [], releasesFor: null });
+      await refresh();
+    },
+
+    async createKey(id: string): Promise<string | null> {
+      const key = await guarded('key', id, async () => (await deps.run('deploy.key.create', { targetId: id })) as { publicKey: string });
+      if (!key) return null;
+      set({ publicKeys: { ...state.publicKeys, [id]: key.publicKey } });
+      await refresh();
+      return key.publicKey;
+    },
+    async trust(id: string) {
+      await guarded('trust', id, async () => { await deps.run('deploy.hostkey.trust', { targetId: id }); });
+      await refresh();
+    },
+    /** Changed-key flow. The old fingerprint is the one the app pinned; the command asks for the second confirmation. */
+    async replaceKey(id: string) {
+      const old = statusOf(id)?.fingerprint;
+      if (!old) { await api.trust(id); return; }
+      await guarded('replace', id, async () => { await deps.run('deploy.hostkey.replace', { targetId: id, oldFingerprint: old }); });
+      await refresh();
+    },
+
+    async publish(id: string) {
+      if (state.busy) return;
+      set({ progress: { seen: [], latest: null }, result: null, selectedId: id });
+      const outcome = await guarded('publish', id, async () => {
+        const r = (await deps.run('deploy.publish', { targetId: id })) as DeployOutcome | { status: 'cancelled' };
+        return 'status' in r ? null : r;
+      });
+      if (outcome) set({ result: { kind: 'publish', targetId: id, outcome }, liveByTarget: { ...state.liveByTarget, [id]: outcome.releaseId }, staged: state.staged?.targetId === id ? null : state.staged });
+      set({ progress: { seen: [], latest: null } });
+      await refresh();
+    },
+    async rollback(id: string, releaseId: string) {
+      if (state.busy) return;
+      set({ progress: { seen: [], latest: null }, result: null });
+      const outcome = await guarded('rollback', id, async () => {
+        const r = (await deps.run('deploy.rollback', { targetId: id, releaseId })) as DeployOutcome | { status: 'cancelled' };
+        return 'status' in r ? null : r;
+      });
+      if (outcome) set({ result: { kind: 'rollback', targetId: id, outcome }, liveByTarget: { ...state.liveByTarget, [id]: outcome.releaseId }, view: 'home' });
+      set({ progress: { seen: [], latest: null } });
+      await refresh();
+    },
+  };
+  return api;
+}
+export type PublishStore = ReturnType<typeof createPublishStore>;

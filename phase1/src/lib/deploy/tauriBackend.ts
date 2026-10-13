@@ -26,5 +26,7 @@ export function createTauriDeployBackend(): DeployBackend {
     hostkeyTrust: async (targetId, fingerprint) => { await call(() => invokeCmd('deploy_hostkey_trust', { targetId, fingerprint })); },
     hostkeyReplace: async args => { await call(() => invokeCmd('deploy_hostkey_replace', args)); },
     keyCreate: targetId => call(() => invokeCmd('deploy_key_create', { targetId })),
+    openSite: async targetId => { await call(() => invokeCmd('deploy_open_site', { targetId })); },
+    releasesList: targetId => call(() => invokeCmd('deploy_releases', { targetId })),
   };
 }

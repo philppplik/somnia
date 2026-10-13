@@ -47,6 +47,6 @@ test('every deploy command is registered in the invoke_handler and listed by the
  const rs=readFileSync('src-tauri/src/desktop.rs','utf8');
  const own=readFileSync('src-tauri/src/deploy_commands.rs','utf8');
  const commands=[...own.matchAll(/#\[tauri::command\]\s*(?:pub\s+)?(?:async\s+)?fn\s+(\w+)/g)].map(m=>m[1]);
- assert.equal(commands.length,12);
+ assert.equal(commands.length,14);
  for(const c of commands){assert.ok(rs.includes(`crate::deploy_commands::${c},`),`${c} missing in invoke_handler`);assert.ok(own.includes(`pub async fn ${c}(window: tauri::WebviewWindow`),`${c} must gate on the trusted editor window`);}
 });

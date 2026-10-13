@@ -102,3 +102,22 @@ pub async fn deploy_key_create(window: tauri::WebviewWindow, app: tauri::AppHand
     gate(&window)?;
     blocking(&app, move |s| s.key_create(&target_id)).await
 }
+#[tauri::command]
+pub async fn deploy_releases(window: tauri::WebviewWindow, app: tauri::AppHandle, target_id: String) -> Result<Vec<String>, String> {
+    gate(&window)?;
+    blocking(&app, move |s| s.releases(&target_id)).await
+}
+/// Opens the live site of a saved target in the system browser. The URL is built in Rust from the validated
+/// domain of the target; the renderer passes only the id, so it cannot make the app open anything else.
+#[tauri::command]
+pub async fn deploy_open_site(window: tauri::WebviewWindow, app: tauri::AppHandle, target_id: String) -> Result<(), String> {
+    gate(&window)?;
+    let url = blocking(&app, move |s| s.site_url(&target_id)).await?.ok_or_else(|| "deploy:invalid-input".to_string())?;
+    #[cfg(target_os = "windows")]
+    let result = std::process::Command::new("rundll32").args(["url.dll,FileProtocolHandler", url.as_str()]).spawn();
+    #[cfg(target_os = "macos")]
+    let result = std::process::Command::new("open").arg(url.as_str()).spawn();
+    #[cfg(all(not(target_os = "windows"), not(target_os = "macos")))]
+    let result = std::process::Command::new("xdg-open").arg(url.as_str()).spawn();
+    result.map(|_| ()).map_err(|_| "deploy:engine-failed".to_string())
+}

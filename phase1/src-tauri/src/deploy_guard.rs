@@ -291,6 +291,11 @@ impl DeployService {
     }
     pub fn plan(&self, target_id: &str) -> Result<PlanView, DeployError> { self.plan_inner(target_id, Action::Publish, None) }
     pub fn plan_rollback(&self, target_id: &str, release_id: &str) -> Result<PlanView, DeployError> { self.plan_inner(target_id, Action::Rollback, Some(release_id)) }
+    /// `https://<domain>` of a saved target, or `None` without a domain. Only validated domains are ever returned.
+    pub fn site_url(&self, target_id: &str) -> Result<Option<String>, DeployError> {
+        let t = self.targets.get(target_id)?;
+        Ok(t.domain.map(|d| format!("https://{}", d.to_ascii_lowercase())))
+    }
     pub fn releases(&self, target_id: &str) -> Result<Vec<String>, DeployError> { let t = self.targets.get(target_id)?; Ok(self.engine.releases(&t)?) }
 
     pub fn confirm_issue(&self, plan_hash: &str, now_ms: u64) -> Result<String, DeployError> { self.broker.issue(plan_hash, now_ms) }
@@ -391,6 +396,16 @@ mod tests {
         f.svc.hostkey_trust("s1", "SHA256:good").unwrap();
         let s = &f.svc.targets_list().unwrap()[0];
         assert_eq!((s.state, s.fingerprint.as_deref()), (TargetState::Ready, Some("SHA256:good")));
+    }
+    #[test]
+    fn site_url_is_built_from_the_saved_domain_and_releases_are_listed() {
+        let f = fx();
+        assert_eq!(f.svc.site_url("nope").unwrap_err(), DeployError::TargetNotFound);
+        let mut t = f.svc.targets.get("s1").unwrap();
+        t.domain = Some("Example.COM".into());
+        f.svc.target_save(t).unwrap();
+        assert_eq!(f.svc.site_url("s1").unwrap().as_deref(), Some("https://example.com"));
+        assert_eq!(f.svc.releases("s1").unwrap(), vec!["20261012T000000Z-aaaaaa".to_string()]);
     }
     #[test]
     fn publish_needs_a_valid_one_time_token_bound_to_the_plan() {
