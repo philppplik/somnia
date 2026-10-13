@@ -430,6 +430,21 @@
       "hasEnabled": true
     },
     {
+      "id": "design.export.open",
+      "title": "Design: Export...",
+      "category": "Project",
+      "source": "design",
+      "shortcut": "Mod+Shift+E",
+      "hasEnabled": true
+    },
+    {
+      "id": "design.exportAllSvg",
+      "title": "Design: Export all artboards as SVG ZIP",
+      "category": "Project",
+      "source": "design",
+      "hasEnabled": true
+    },
+    {
       "id": "design.exportProject",
       "title": "Design: Export project (.somdesign)",
       "category": "Project",
@@ -1542,6 +1557,28 @@
       "hasEnabled": true
     },
     {
+      "id": "photos.export.jpeg",
+      "title": "Photos: Export as JPEG",
+      "category": "Project",
+      "source": "photos",
+      "hasEnabled": true
+    },
+    {
+      "id": "photos.export.open",
+      "title": "Photos: Export copy...",
+      "category": "Project",
+      "source": "photos",
+      "shortcut": "Mod+Shift+E",
+      "hasEnabled": true
+    },
+    {
+      "id": "photos.export.png",
+      "title": "Photos: Export as PNG",
+      "category": "Project",
+      "source": "photos",
+      "hasEnabled": true
+    },
+    {
       "id": "photos.flip",
       "title": "Photos: Flip",
       "category": "Edit",
@@ -2476,6 +2513,13 @@
       "id": "vector.duplicateSelection",
       "title": "Duplicate selected vector paths",
       "category": "Edit",
+      "source": "vector",
+      "hasEnabled": true
+    },
+    {
+      "id": "vector.export.open",
+      "title": "Vector: Export...",
+      "category": "Project",
       "source": "vector",
       "hasEnabled": true
     },

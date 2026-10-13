@@ -1,6 +1,6 @@
 # Photos hero action: Export
 
-Status: concept, no code.
+Status: implemented locally; see [implementation](../studios/photos-hero-export.md) and [verification](../studios/hero-creative-verification.md).
 
 ## Hero action
 

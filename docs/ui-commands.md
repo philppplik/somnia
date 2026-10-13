@@ -16,7 +16,7 @@ included; the `source` column names the owner. Dynamic sources that stay outside
 
 Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, fr, pt-BR); the gate enforces it.
 
-277 commands. Categories: Edit, Help, Insert, Project, Tools, View.
+283 commands. Categories: Edit, Help, Insert, Project, Tools, View.
 
 | id | title | category | source | shortcut |
 | --- | --- | --- | --- | --- |
@@ -62,6 +62,8 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `design.deselect` | Design: Clear selection | Edit | design |  |
 | `design.distributeSelection` | Design: Distribute selected layers | Edit | design |  |
 | `design.duplicateSelection` | Design: Duplicate selected layers | Edit | design |  |
+| `design.export.open` | Design: Export... | Project | design | `Mod+Shift+E` |
+| `design.exportAllSvg` | Design: Export all artboards as SVG ZIP | Project | design |  |
 | `design.exportProject` | Design: Export project (.somdesign) | Project | design |  |
 | `design.exportSvg` | Design: Export artboard as SVG | Project | design |  |
 | `design.getState` | Design: Read session state | Tools | design |  |
@@ -164,6 +166,9 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `photos.crop.setAspect` | Photos: Set crop aspect ratio | Edit | photos |  |
 | `photos.crop.start` | Photos: Start cropping | Edit | photos |  |
 | `photos.export` | Photos: Export a developed copy | Project | photos |  |
+| `photos.export.jpeg` | Photos: Export as JPEG | Project | photos |  |
+| `photos.export.open` | Photos: Export copy... | Project | photos | `Mod+Shift+E` |
+| `photos.export.png` | Photos: Export as PNG | Project | photos |  |
 | `photos.flip` | Photos: Flip | Edit | photos |  |
 | `photos.getHistogram` | Photos: Read histogram summary | Tools | photos |  |
 | `photos.getState` | Photos: Read photo state | Tools | photos |  |
@@ -256,6 +261,7 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `vector.deleteNode` | Delete vector node | Edit | vector |  |
 | `vector.deleteSelection` | Delete selected vector paths | Edit | vector |  |
 | `vector.duplicateSelection` | Duplicate selected vector paths | Edit | vector |  |
+| `vector.export.open` | Vector: Export... | Project | vector |  |
 | `vector.exportPng` | Export vector PNG | Project | vector |  |
 | `vector.exportSvg` | Export vector SVG | Project | vector |  |
 | `vector.flipSelection` | Flip vector selection | Edit | vector |  |

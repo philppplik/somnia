@@ -1,6 +1,6 @@
 # Vector Studio hero action: Export...
 
-Status: proposal for Philipp's design review. No implementation approved or included.
+Status: implemented locally following the approved hero-action work; see [implementation](../studios/vector-hero-export.md) and [verification](../studios/hero-creative-verification.md).
 Research date: 2026-10-13. Code baseline: `int/shell`, `e2a188d3`.
 
 ## Recommendation and why

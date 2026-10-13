@@ -27,8 +27,8 @@ test('a studio without the field renders no hero slot (old Publish path)',()=>{
  patchState({activeStudio:'herotest-none'});assert.ok(!renderToStaticMarkup(<HeroActionSlot/>).includes('hero-action'));
  patchState({activeStudio:'herotest-missing'});assert.ok(!renderToStaticMarkup(<HeroActionSlot/>).includes('hero-action'),'unregistered hero command falls back');
 });
-test('every shipped studio is unchanged: none declares a hero yet',()=>{
- for(const id of ['code','design','vector','photos','sheets','slides','documents','sound','video'])assert.equal(getStudio(id).shell.header.heroAction,undefined,id);
+test('unmigrated studios retain the Publish fallback',()=>{
+ for(const id of ['code','sheets','slides','documents','sound','video'])assert.equal(getStudio(id).shell.header.heroAction,undefined,id);
 });
 test('the label is localized',()=>{
  patchState({activeStudio:'herotest-with'});setLocale('de');const de=renderToStaticMarkup(<HeroActionSlot/>);setLocale('en');
@@ -42,3 +42,11 @@ test('shared JSX has no studio-ID branches and only talks to executeCommand',()=
  assert.ok(readFileSync(new URL('../shell/HeroActionSlot.tsx',import.meta.url),'utf8').includes('executeCommand(resolved.id)'));
 });
 test.after(()=>{patchState({activeStudio:'code'});offs.forEach(o=>o());});
+
+test('migrated export studio heroes are declared as data',()=>{
+ for(const id of ['photos','design','vector']){
+  const hero=getStudio(id).shell.header.heroAction;
+  assert.equal(hero?.id,`${id}.export.open`);
+  assert.ok(hero?.labelKey&&hero.icon);
+ }
+});
