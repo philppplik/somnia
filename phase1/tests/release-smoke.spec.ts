@@ -42,12 +42,22 @@ test('release smoke: Settings apply, close and survive reload',async({page})=>{
  await page.reload();await expect(page.getByTestId('empty-state')).toBeVisible();
  await expect(page.locator('html')).toHaveAttribute('data-motion','reduce');
 });
-test('release smoke: real Code tabs close without exposing another studio tab',async({page})=>{
+test('release smoke: explicit studio choice routes only the active tab, and close removes it',async({page})=>{
  await page.goto('/');await page.getByTestId('empty-state').getByRole('button',{name:'New blank page'}).click();
  await page.getByRole('button',{name:'View',exact:true}).click();
  await page.getByRole('menuitemradio',{name:/Code view/}).click();
  const tab=page.getByRole('tab',{name:/^index\.html(?: Close index\.html)?$/});await expect(tab).toBeVisible();
- await page.getByRole('radio',{name:'Somnia Vector',exact:true}).click();await expect(tab).toHaveCount(0);
+ // Set up a real editor-core document, not an engine/UI double.
+ await page.evaluate(async()=>{
+  const {connectEditorProject,openFileTab}=await import('/src/store/appStore.ts');
+  const {EditorProject}=await import('/packages/editor-core/src/index.ts');
+  connectEditorProject(new EditorProject({'index.html':'<h1>Release smoke</h1>','other.html':'<p>Background tab</p>'}),{name:'QA',alreadySaved:true});
+  openFileTab('other.html');openFileTab('index.html');
+ });
+ await expect(page.getByRole('tab',{name:/^other\.html/})).toBeVisible();
+ await page.getByRole('radio',{name:'Somnia Vector',exact:true}).click();
+ await expect(tab).toBeVisible();await expect(page.getByRole('tab',{name:/^other\.html/})).toHaveCount(0);
+ expect(await page.evaluate(async()=>{const {getState}=await import('/src/store/appStore.ts');return getState().studioByTab['index.html'];})).toBe('vector');
  await page.getByRole('radio',{name:'Somnia Code',exact:true}).click();await expect(tab).toBeVisible();
  await page.getByRole('button',{name:'Close index.html',exact:true}).click();await expect(tab).toHaveCount(0);
 });
