@@ -100,7 +100,9 @@ export async function runTask(task: EngineTask, o: RunOptions): Promise<void> {
   const onHostAbort = () => budgetCtl.abort();
   o.signal.addEventListener('abort', onHostAbort, { once: true });
   let buffer = '';
-  const flush = () => { const t = buffer.trim(); buffer = ''; if (t) emit({ event: 'progress', text: t }); };
+  // Model-written text can repeat a secret it read from a file: redact before it leaves the engine (log, record, commit message).
+  const progress = (raw: string) => { const t = redactText(raw.trim()); if (t) emit({ event: 'progress', text: t }); };
+  const flush = () => { const t = buffer; buffer = ''; progress(t); };
   let notice: { message: string; code?: AgentError['code']; detail?: AgentError['detail']; retryable?: boolean } | null = null;
   let status = 'idle';
   const pendingCalls = new Map<string, AgentToolCall>();
@@ -112,7 +114,7 @@ export async function runTask(task: EngineTask, o: RunOptions): Promise<void> {
       if (ev.type === 'text') {
         buffer += ev.text;
         const i = buffer.lastIndexOf('\n');
-        if (i >= 0) { const head = buffer.slice(0, i); buffer = buffer.slice(i + 1); if (head.trim()) emit({ event: 'progress', text: head.trim() }); }
+        if (i >= 0) { const head = buffer.slice(0, i); buffer = buffer.slice(i + 1); progress(head); }
       } else if (ev.type === 'tool') {
         if (ev.status === 'running') {
           flush(); pendingCalls.set(ev.call.id, ev.call);
@@ -158,8 +160,8 @@ export async function runTask(task: EngineTask, o: RunOptions): Promise<void> {
     return fail('could not write the proposed files; nothing was written', 'internal');
   }
   const last = [...session.snapshot().messages].reverse().find(m => m.role === 'assistant' && m.content.trim());
-  const head = last ? clip(last.content.trim().replace(/\s+/g, ' '), 400) : '';
+  const head = last ? clip(redactText(last.content.trim().replace(/\s+/g, ' ')), 400) : ''; // redact first: a clip must never cut a secret in half
   const summary = written.length ? `${head || 'Agent finished.'} Changed: ${written.join(', ')}` : head || 'Agent finished without file changes.';
-  emit({ event: 'done', summary: clip(summary, 600), tokens, cost });
+  emit({ event: 'done', summary: clip(redactText(summary), 600), tokens, cost });
 }
 

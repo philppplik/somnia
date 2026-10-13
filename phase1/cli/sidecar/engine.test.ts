@@ -228,3 +228,19 @@ test('composePrompt without answers is unchanged; answersSection formats quoted 
   const s = answersSection([{ question: 'a\nb', answer: ' yes ' }]);
   assert.match(s, /1\. Question: a b\n   Answer: yes/);
 });
+
+test('model-written text is redacted: progress and the done summary never carry a secret the model repeats', async () => {
+  const cwd = tmp();
+  const secret = 'sk-live-ABCDEF0123456789';
+  fs.writeFileSync(path.join(cwd, 'notes.txt'), `api_key=${secret}\n`);
+  const text = `The key is ${secret}.\nAlso Authorization: Bearer ghp_abcdefghijklmnop1234 and password=hunter2hunter2\n${'x'.repeat(380)} ${secret}`;
+  reset([toolCall('read_file', { path: 'notes.txt' }), finalText(text)]);
+  const r = await run(cwd);
+  assert.equal(r.code, 0);
+  const dump = JSON.stringify(r.events);
+  for (const leak of [secret, 'ghp_abcdefghijklmnop1234', 'hunter2hunter2', 'ABCDEF0123456789']) assert.ok(!dump.includes(leak), `leaked: ${leak}`);
+  assert.ok(r.events.some(e => e.event === 'progress' && e.text.includes('[redacted]')), 'redaction marker present in progress');
+  const done = terminals(r)[0] as Extract<EngineOut, { event: 'done' }>;
+  assert.equal(done.event, 'done');
+  assert.ok(done.summary.includes('[redacted]') && !done.summary.includes('sk-live'));
+});
