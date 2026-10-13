@@ -191,7 +191,10 @@ fn html(csp: &'static str, body: String) -> Response {
 pub fn split_uri(host: Option<&str>, path: &str, query: Option<&str>) -> (String, String, String) {
     let q = query.unwrap_or("").to_owned();
     match host {
-        Some("somnia-ext.localhost") => {
+        // Wry reverses http://somnia-ext.localhost/... to
+        // somnia-ext://localhost/... before invoking the custom protocol handler.
+        // Accept both the browser-facing URI and the actual handler-facing URI.
+        Some("somnia-ext.localhost" | "localhost") => {
             let p = path.trim_start_matches('/');
             let (k, rest) = p.split_once('/').unwrap_or((p, ""));
             (k.to_owned(), format!("/{rest}"), q)
@@ -221,6 +224,28 @@ mod tests {
             split_uri(Some("somnia-ext.localhost"), "/panel/a/p", Some("n=1")),
             ("panel".into(), "/a/p".into(), "n=1".into())
         );
+    }
+
+    #[test]
+    fn windows_rewritten_uri_serves_panel_and_worker() {
+        let r = ExtRegistry::default();
+        let n = r.open_panel("acme", "p1", "<p>visible</p>").unwrap();
+        // Wry's revert_uri_work_around preserves /panel/... and changes the
+        // scheme/host from http://somnia-ext.localhost to somnia-ext://localhost.
+        let (kind, path, query) = split_uri(Some("localhost"), "/panel/acme/p1", Some(&format!("n={n}")));
+        let response = r.serve("GET", &kind, &path, &query);
+        assert_eq!(response.status, 200);
+        assert_eq!(response.body, b"<p>visible</p>");
+        assert!(response.csp.contains("sandbox allow-scripts"));
+        assert_eq!(r.serve("GET", &kind, &path, &query).status, 403);
+
+        let n = r.open_worker("acme").unwrap();
+        let (kind, path, query) = split_uri(Some("localhost"), "/worker/acme/host", Some(&format!("n={n}")));
+        assert_eq!(r.serve("GET", &kind, &path, &query).status, 200);
+        let (kind, path, query) = split_uri(Some("localhost"), "/worker/acme", None);
+        assert_eq!(r.serve("GET", &kind, &path, &query).status, 200);
+        let (kind, path, query) = split_uri(Some("localhost"), "/panel/acme/p1/extra", None);
+        assert_eq!(r.serve("GET", &kind, &path, &query).status, 404);
     }
 
     #[test]
