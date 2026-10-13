@@ -20,7 +20,8 @@ import './styles/publish.css';
 import './styles/extensions-popup.css';
 import './styles/extensions-store.css';
 import {isTauri} from '@tauri-apps/api/core';
-import {setStoreManaged} from './lib/updates';
+import {setStoreManaged,setSeedReady} from './lib/updates';
+import {seedFromInstaller} from './lib/installerHandoff';
 import {initLocale} from './lib/i18n';
 import {installGlobalErrorHandlers,setNoticeSink,reportError,logInfo,recentLog,reportAclDenied} from './lib/log';
 import {copyErrorReport} from './lib/diagnostics/hostStore';
@@ -102,6 +103,7 @@ startStudioRouting();
 {const disposeLifecycle=installStudioLifecycle({subscribe,getActiveStudio:()=>getState().activeStudio,resolveAdapter:id=>{try{return hasStudio(id)?getStudio(id).lifecycle?.():undefined;}catch{return undefined;}},onProblem:message=>reportError('lifecycle',message)});const disconnectSafety=connectSessionSafetyToLifecycle();if(import.meta.hot)import.meta.hot.dispose(()=>{disconnectSafety();disposeLifecycle();});}
 // Shortcuts are bound at module start, not in an App effect: the effect only runs after the first commit, so a keypress right after page load (slow CPU, CI) was dropped.
 {const detachShortcuts=attachKeyboardShortcuts();if(import.meta.hot)import.meta.hot.dispose(detachShortcuts);}
+if(isTauri())setSeedReady(seedFromInstaller(c=>tauriInvoke<import('./lib/installerHandoff').Handoff|null>(c)).catch(e=>reportError('startup.installer-handoff',e,{level:'warn'})));
 createRoot(document.getElementById('root')!).render(<StrictMode><ErrorBoundary label="Somnia" onFatal={disposeDiagnosticsSurface}><App/><McpApprovalDialog/></ErrorBoundary></StrictMode>);
 
 if(!isTauri())installBeforeUnload(()=>getState().isDirty&&getState().storage!=='disk');

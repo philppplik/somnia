@@ -100,4 +100,4 @@ pub mod deploy_commands;
 pub mod deploy_setup;
 
 #[cfg(feature = "desktop")]
-pub mod studio_copy;
+pub mod studio_copy;pub mod installer_handoff;

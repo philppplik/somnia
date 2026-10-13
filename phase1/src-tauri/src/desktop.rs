@@ -145,6 +145,12 @@ fn account_status_now() -> std::result::Result<crate::oauth_store::Status, Strin
     oauth_store().status(now_ms(), OAUTH_PENDING.load(std::sync::atomic::Ordering::SeqCst)).map_err(|e| e.to_string())
 }
 #[tauri::command]
+fn installer_handoff_take(window: WebviewWindow) -> Option<crate::installer_handoff::Handoff> {
+    gate(&window).ok()?;
+    crate::installer_handoff::read(&window.app_handle().path().app_config_dir().ok()?)
+}
+
+#[tauri::command]
 async fn agent_account_status(window: WebviewWindow, provider: String) -> std::result::Result<crate::oauth_store::Status, String> {
     gate(&window).map_err(|_| "Only the trusted editor may inspect credentials")?;
     if provider != "openai" { return Err("Unsupported account provider".into()); }
@@ -2916,7 +2922,7 @@ pub fn run() {
             crate::update_channel::check_channel_update,
             crate::update_channel::install_channel_update,            crate::studio_copy::studio_copy_open,
             crate::studio_copy::studio_copy_take,
-            crate::studio_copy::studio_copy_export,            terminal_context, terminal_run, terminal_status, terminal_stop,
+            crate::studio_copy::studio_copy_export,            terminal_context, terminal_run, terminal_status, terminal_stop,            installer_handoff_take,
             runtime_status, runtime_install, runtime_remove, project_run, project_stop, project_status, project_logs, project_stop_all, deploy_artifact_collect, deploy_node_build_collect, preview_open, preview_close,
             crate::vibespace_schedule_commands::vibespace_schedule_preview,
             crate::vibespace_schedule_commands::vibespace_schedule_create,

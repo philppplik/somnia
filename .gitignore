@@ -12,3 +12,7 @@ phase1/dist-voice/
 
 # Local AI guide text is bundled from docs at build/dev/test startup.
 phase1/src/lib/generated/localAIGuides.ts
+# Standalone installer build output
+phase1/installer/target
+
+phase1/out-installer
