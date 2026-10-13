@@ -11,6 +11,7 @@ const root=resolve(dirname(fileURLToPath(import.meta.url)),'../../..');
 const runs=sampleCount(process.env.SOMNIA_PERF_SAMPLES??20);
 const out=resolve(root,process.env.SOMNIA_PERF_OUT??'test-results/studio-performance');
 const url=process.env.SOMNIA_PERF_URL??'http://127.0.0.1:1442';
+const releaseTag=JSON.parse(readFileSync(resolve(root,'package.json'),'utf8')).somniaRelease;
 const scenarios=validateScenarios(JSON.parse(readFileSync(new URL(process.env.SOMNIA_PERF_LOADED==='1'?'./scenarios-loaded.json':'./scenarios.json',import.meta.url),'utf8')));
 const port=Number(new URL(url).port||80);
 const timings=[],memory=[],errors=[];
@@ -59,7 +60,7 @@ try {
   const startup=[];
   for(let i=0;i<runs+1;i++){
    const context=await client.newContext({locale:'en-US',viewport:{width:1440,height:900}});
-   await context.addInitScript(()=>{localStorage.setItem('somnia.locale.v1','en');localStorage.removeItem('somnia.fixture');});
+   await context.addInitScript(r=>{localStorage.setItem('somnia.locale.v1','en');localStorage.setItem('somnia.welcome.seen.v1',r);localStorage.removeItem('somnia.fixture');},releaseTag);
    const page=await context.newPage();page.on('pageerror',e=>errors.push(e.message));
    await page.goto(url);await shell(page);
    const ms=await page.evaluate(()=>performance.now());if(i)startup.push(ms);
@@ -68,7 +69,7 @@ try {
   record('empty-shell','navigation-startup',startup);
   for(const s of scenarios){
    const context=await client.newContext({locale:'en-US',viewport:{width:1440,height:900}});
-   await context.addInitScript(()=>{localStorage.setItem('somnia.locale.v1','en');localStorage.removeItem('somnia.fixture');});
+   await context.addInitScript(r=>{localStorage.setItem('somnia.locale.v1','en');localStorage.setItem('somnia.welcome.seen.v1',r);localStorage.removeItem('somnia.fixture');},releaseTag);
    const page=await context.newPage();page.on('pageerror',e=>errors.push(e.message));await page.goto(url);await shell(page);
    const cold=[];
    for(let i=0;i<runs+1;i++){

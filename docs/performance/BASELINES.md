@@ -68,9 +68,10 @@ launch/resume remain required additions after session safety and adapters are re
 npx playwright test --config test/performance/playwright.config.ts
 ```
 
-Real fixture hashes and licenses are already tracked in the repository fixture homes:
+Fixture paths are tracked in the repository; hashes are recorded by the inventory:
 `test/documents/sample.docx` and `sheets-craft/fixtures/fixture.xlsx` are project test
-fixtures. The tests use actual file intake and real engines, not worker mocks. They
+fixtures. Exact per-fixture licensing has not been independently verified; do not
+redistribute the fixtures outside the repository without that check. The tests use actual file intake and real engines, not worker mocks. They
 edit accepted UTF-8 paragraph/cell values, check dirty state while hidden, switch
 studio, switch a second file, return, undo/redo, save/export and reopen edited bytes.
 No `test.fail`, skipped retention assertions, fake engines or tolerances hide loss.
@@ -119,3 +120,24 @@ certify all-studio resource ownership or native memory. Fixture inventory record
 SHA-256, archive bytes, expanded bytes and part counts for four tracked DOCX/XLSX
 fixtures; its test reads the actual archives. This loaded scenario has not run here
 because preflight still fails on missing real engines.
+
+### Linux native process-tree sampling
+
+For an already running **native** Somnia PID, after manually activating and settling
+the chosen studio:
+
+```
+python3 scripts/performance/studios/native-process.py --pid REAL_PID --studio sheets --seconds 60 --output test-results/native-sheets.json
+python3 scripts/performance/studios/native-process.test.py
+```
+
+Reads `/proc` once per second, walks descendants by actual PID/PPID and records RSS,
+CPU ticks and ownership. CPU is percent of one logical core. Ownership changes make
+CPU intervals null, not zero. Root process disappearance fails rather than emitting
+a fictitious memory result. The studio label is an operator annotation, not measured
+exclusive attribution. Shared WebKit processes outside the root tree may be missing;
+shared pages within it may be counted twice. Native startup and ready-frame timing
+still require a real readiness signal, not log text or a window-title guess. Windows
+working-set/private memory and macOS WebKit process ownership require platform tools.
+Two sampler tests read the Python test process and reject absent PID; neither ran
+Somnia. No native application was launched for this patch.
