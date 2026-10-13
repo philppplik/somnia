@@ -221,6 +221,168 @@
       "hasEnabled": true
     },
     {
+      "id": "design.artboard.add",
+      "title": "Design: Add artboard",
+      "category": "Insert",
+      "source": "design",
+      "keywords": [
+        "artboard",
+        "design",
+        "frame",
+        "page"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "design.artboard.delete",
+      "title": "Design: Delete artboard",
+      "category": "Edit",
+      "source": "design",
+      "keywords": [
+        "artboard",
+        "design",
+        "remove"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "design.artboard.duplicate",
+      "title": "Design: Duplicate artboard",
+      "category": "Edit",
+      "source": "design",
+      "keywords": [
+        "artboard",
+        "copy",
+        "design"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "design.artboard.moveDown",
+      "title": "Design: Move artboard down",
+      "category": "Edit",
+      "source": "design",
+      "keywords": [
+        "artboard",
+        "design",
+        "order"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "design.artboard.moveUp",
+      "title": "Design: Move artboard up",
+      "category": "Edit",
+      "source": "design",
+      "keywords": [
+        "artboard",
+        "design",
+        "order"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "design.artboard.next",
+      "title": "Design: Next artboard",
+      "category": "View",
+      "source": "design",
+      "keywords": [
+        "artboard",
+        "design"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "design.artboard.preset",
+      "title": "Design: Apply artboard size preset",
+      "category": "Edit",
+      "source": "design",
+      "keywords": [
+        "artboard",
+        "design",
+        "preset",
+        "size"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "design.artboard.previous",
+      "title": "Design: Previous artboard",
+      "category": "View",
+      "source": "design",
+      "keywords": [
+        "artboard",
+        "design"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "design.artboard.rename",
+      "title": "Design: Rename artboard",
+      "category": "Edit",
+      "source": "design",
+      "keywords": [
+        "artboard",
+        "design",
+        "name"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "design.artboard.resize",
+      "title": "Design: Resize artboard",
+      "category": "Edit",
+      "source": "design",
+      "keywords": [
+        "artboard",
+        "design",
+        "size"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "design.artboard.rotate",
+      "title": "Design: Swap artboard width and height",
+      "category": "Edit",
+      "source": "design",
+      "keywords": [
+        "artboard",
+        "design",
+        "landscape",
+        "orientation",
+        "portrait"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "design.artboard.select",
+      "title": "Design: Go to artboard",
+      "category": "View",
+      "source": "design",
+      "keywords": [
+        "artboard",
+        "design",
+        "switch"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "design.color.apply",
+      "title": "Design: Apply colour",
+      "category": "Edit",
+      "source": "design",
+      "keywords": [
+        "background",
+        "color",
+        "colour",
+        "design",
+        "fill",
+        "palette",
+        "stroke"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "design.deleteSelection",
       "title": "Design: Delete selected layers",
       "category": "Edit",
@@ -229,6 +391,18 @@
         "delete",
         "design",
         "remove"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "design.deselect",
+      "title": "Design: Clear selection",
+      "category": "Edit",
+      "source": "design",
+      "keywords": [
+        "design",
+        "none",
+        "select"
       ],
       "hasEnabled": true
     },
@@ -291,6 +465,85 @@
       "hasEnabled": true
     },
     {
+      "id": "design.layer.back",
+      "title": "Design: Send to back",
+      "category": "Edit",
+      "source": "design",
+      "keywords": [
+        "design",
+        "layer",
+        "order",
+        "stack"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "design.layer.backward",
+      "title": "Design: Send backward",
+      "category": "Edit",
+      "source": "design",
+      "keywords": [
+        "design",
+        "layer",
+        "order",
+        "stack"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "design.layer.forward",
+      "title": "Design: Bring forward",
+      "category": "Edit",
+      "source": "design",
+      "keywords": [
+        "design",
+        "layer",
+        "order",
+        "stack"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "design.layer.front",
+      "title": "Design: Bring to front",
+      "category": "Edit",
+      "source": "design",
+      "keywords": [
+        "design",
+        "layer",
+        "order",
+        "stack"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "design.layer.toggleLocked",
+      "title": "Design: Lock or unlock selected layers",
+      "category": "Edit",
+      "source": "design",
+      "keywords": [
+        "design",
+        "layer",
+        "lock",
+        "unlock"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "design.layer.toggleVisible",
+      "title": "Design: Show or hide selected layers",
+      "category": "Edit",
+      "source": "design",
+      "keywords": [
+        "design",
+        "hide",
+        "layer",
+        "show",
+        "visibility"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "design.new",
       "title": "Design: New design",
       "category": "Project",
@@ -299,6 +552,19 @@
         "blank",
         "design",
         "new"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "design.nudge",
+      "title": "Design: Nudge selected layers",
+      "category": "Edit",
+      "source": "design",
+      "keywords": [
+        "arrow",
+        "design",
+        "move",
+        "nudge"
       ],
       "hasEnabled": true
     },
@@ -314,12 +580,96 @@
       "hasEnabled": true
     },
     {
+      "id": "design.rename",
+      "title": "Design: Rename project",
+      "category": "Project",
+      "source": "design",
+      "keywords": [
+        "design",
+        "name",
+        "project"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "design.selectAll",
+      "title": "Design: Select all layers",
+      "category": "Edit",
+      "source": "design",
+      "keywords": [
+        "all",
+        "design",
+        "select"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "design.setTool",
       "title": "Design: Select tool",
       "category": "Tools",
       "source": "design",
       "keywords": [
         "design",
+        "tool"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "design.tool.frame",
+      "title": "Design: Artboard tool",
+      "category": "Tools",
+      "source": "design",
+      "keywords": [
+        "design",
+        "frame",
+        "tool"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "design.tool.hand",
+      "title": "Design: Hand tool",
+      "category": "Tools",
+      "source": "design",
+      "keywords": [
+        "design",
+        "hand",
+        "tool"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "design.tool.rectangle",
+      "title": "Design: Rectangle tool",
+      "category": "Tools",
+      "source": "design",
+      "keywords": [
+        "design",
+        "rectangle",
+        "tool"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "design.tool.select",
+      "title": "Design: Select tool",
+      "category": "Tools",
+      "source": "design",
+      "keywords": [
+        "design",
+        "select",
+        "tool"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "design.tool.text",
+      "title": "Design: Text tool",
+      "category": "Tools",
+      "source": "design",
+      "keywords": [
+        "design",
+        "text",
         "tool"
       ],
       "hasEnabled": true
@@ -332,6 +682,63 @@
       "keywords": [
         "design",
         "undo"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "design.zoomFit",
+      "title": "Design: Fit artboard in window",
+      "category": "View",
+      "source": "design",
+      "keywords": [
+        "design",
+        "fit",
+        "zoom"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "design.zoomIn",
+      "title": "Design: Zoom in",
+      "category": "View",
+      "source": "design",
+      "keywords": [
+        "design",
+        "zoom"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "design.zoomOut",
+      "title": "Design: Zoom out",
+      "category": "View",
+      "source": "design",
+      "keywords": [
+        "design",
+        "zoom"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "design.zoomReset",
+      "title": "Design: Zoom to 100%",
+      "category": "View",
+      "source": "design",
+      "keywords": [
+        "actual size",
+        "design",
+        "zoom"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "design.zoomSet",
+      "title": "Design: Set zoom",
+      "category": "View",
+      "source": "design",
+      "keywords": [
+        "design",
+        "zoom"
       ],
       "hasEnabled": true
     },

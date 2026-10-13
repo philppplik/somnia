@@ -16,7 +16,7 @@ included; the `source` column names the owner. Dynamic sources that stay outside
 
 Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, fr, pt-BR); the gate enforces it.
 
-244 commands. Categories: Edit, Help, Insert, Project, Tools, View.
+277 commands. Categories: Edit, Help, Insert, Project, Tools, View.
 
 | id | title | category | source | shortcut |
 | --- | --- | --- | --- | --- |
@@ -45,16 +45,49 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `design.addRectangle` | Design: Add rectangle | Insert | design |  |
 | `design.addText` | Design: Add text layer | Insert | design |  |
 | `design.alignSelection` | Design: Align selected layers | Edit | design |  |
+| `design.artboard.add` | Design: Add artboard | Insert | design |  |
+| `design.artboard.delete` | Design: Delete artboard | Edit | design |  |
+| `design.artboard.duplicate` | Design: Duplicate artboard | Edit | design |  |
+| `design.artboard.moveDown` | Design: Move artboard down | Edit | design |  |
+| `design.artboard.moveUp` | Design: Move artboard up | Edit | design |  |
+| `design.artboard.next` | Design: Next artboard | View | design |  |
+| `design.artboard.preset` | Design: Apply artboard size preset | Edit | design |  |
+| `design.artboard.previous` | Design: Previous artboard | View | design |  |
+| `design.artboard.rename` | Design: Rename artboard | Edit | design |  |
+| `design.artboard.resize` | Design: Resize artboard | Edit | design |  |
+| `design.artboard.rotate` | Design: Swap artboard width and height | Edit | design |  |
+| `design.artboard.select` | Design: Go to artboard | View | design |  |
+| `design.color.apply` | Design: Apply colour | Edit | design |  |
 | `design.deleteSelection` | Design: Delete selected layers | Edit | design |  |
+| `design.deselect` | Design: Clear selection | Edit | design |  |
 | `design.distributeSelection` | Design: Distribute selected layers | Edit | design |  |
 | `design.duplicateSelection` | Design: Duplicate selected layers | Edit | design |  |
 | `design.exportProject` | Design: Export project (.somdesign) | Project | design |  |
 | `design.exportSvg` | Design: Export artboard as SVG | Project | design |  |
 | `design.getState` | Design: Read session state | Tools | design |  |
+| `design.layer.back` | Design: Send to back | Edit | design |  |
+| `design.layer.backward` | Design: Send backward | Edit | design |  |
+| `design.layer.forward` | Design: Bring forward | Edit | design |  |
+| `design.layer.front` | Design: Bring to front | Edit | design |  |
+| `design.layer.toggleLocked` | Design: Lock or unlock selected layers | Edit | design |  |
+| `design.layer.toggleVisible` | Design: Show or hide selected layers | Edit | design |  |
 | `design.new` | Design: New design | Project | design |  |
+| `design.nudge` | Design: Nudge selected layers | Edit | design |  |
 | `design.redo` | Design: Redo | Edit | design |  |
+| `design.rename` | Design: Rename project | Project | design |  |
+| `design.selectAll` | Design: Select all layers | Edit | design |  |
 | `design.setTool` | Design: Select tool | Tools | design |  |
+| `design.tool.frame` | Design: Artboard tool | Tools | design |  |
+| `design.tool.hand` | Design: Hand tool | Tools | design |  |
+| `design.tool.rectangle` | Design: Rectangle tool | Tools | design |  |
+| `design.tool.select` | Design: Select tool | Tools | design |  |
+| `design.tool.text` | Design: Text tool | Tools | design |  |
 | `design.undo` | Design: Undo | Edit | design |  |
+| `design.zoomFit` | Design: Fit artboard in window | View | design |  |
+| `design.zoomIn` | Design: Zoom in | View | design |  |
+| `design.zoomOut` | Design: Zoom out | View | design |  |
+| `design.zoomReset` | Design: Zoom to 100% | View | design |  |
+| `design.zoomSet` | Design: Set zoom | View | design |  |
 | `documents.clearSelection` | Clear document selection | View | documents-panels |  |
 | `documents.commitParagraph` | Apply paragraph text | Edit | documents-panels |  |
 | `documents.focusParagraph` | Focus paragraph | View | documents-panels |  |
