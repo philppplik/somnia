@@ -84,3 +84,5 @@ pub mod deploy_commands;
 
 #[cfg(feature = "desktop")]
 pub mod deploy_setup;
+
+pub mod installer_handoff;

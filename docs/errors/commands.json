@@ -1254,6 +1254,15 @@
       "raw": true
     },
     {
+      "name": "installer_handoff_take",
+      "domain": "fs",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [],
+      "args": []
+    },
+    {
       "name": "is_store_package",
       "domain": "app",
       "status": "native",

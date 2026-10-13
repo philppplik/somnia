@@ -21,6 +21,9 @@ export async function checkForUpdate(current:string,fetcher:typeof fetch=fetch):
 let storeManaged:Promise<boolean>=Promise.resolve(false);
 export const setStoreManaged=(answer:Promise<boolean>)=>{storeManaged=answer.catch(()=>false);};
 export const isStoreManaged=()=>storeManaged;
+/** First-start update checks wait for the installer preference. */
+let seedReady:Promise<unknown>=Promise.resolve();
+export const setSeedReady=(p:Promise<unknown>)=>{seedReady=p.catch(()=>undefined);};
 const PREF='somnia.updateCheck.v1';
 export const autoCheckEnabled=()=>{try{return localStorage.getItem(PREF)!=='off';}catch{return true;}};
 export const setAutoCheck=(on:boolean)=>{try{localStorage.setItem(PREF,on?'on':'off');}catch{/* storage unavailable */}};
@@ -32,5 +35,6 @@ export const rememberCheck=(c:LastCheck)=>{try{localStorage.setItem(LAST,JSON.st
 /** Checks once now, records the outcome for Settings > About and returns the release when a newer one exists. */
 export async function autoCheck(current:string):Promise<ReleaseInfo|null>{
  if(await storeManaged)return null;
+ await seedReady;if(!autoCheckEnabled())return null;
  try{const r=await checkForUpdate(current);if(r.status==='available'){rememberCheck({at:Date.now(),result:'available',detail:r.release.tag});return r.release;}rememberCheck({at:Date.now(),result:'up-to-date',detail:current});return null;}
  catch(e){rememberCheck({at:Date.now(),result:'error',detail:e instanceof Error?e.message:String(e)});return null;}}
