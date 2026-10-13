@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {renderToStaticMarkup} from 'react-dom/server';
 import {createElement} from 'react';
-import {PHOTOS_DEFAULT_LAYOUT,PHOTOS_LEFT_RAIL,PHOTOS_PANEL_IDS,PHOTOS_RAIL_LABEL_KEYS,PHOTOS_RIGHT_RAIL,photosRailLabel,registerPhotosRailIcons} from './shellRail';
+import {PHOTOS_DEFAULT_LAYOUT,PHOTOS_LEFT_RAIL,PHOTOS_PANEL_IDS,PHOTOS_RAIL_LABEL_KEYS,PHOTOS_RIGHT_RAIL,registerPhotosRailIcons} from './shellRail';
 import {PHOTOS_RAIL_ICON_MAP} from './railIcons';
 import {hasRailIcon,resolveRailIcon,RAIL_FALLBACK_ICON} from '../shell/railIcons';
 import {effectiveRail,railEdits,EMPTY_RAIL_OVERRIDES} from '../shell/railResolver';
@@ -53,12 +53,12 @@ test('default layout only lists panels that exist on that side and opens the can
  for(const id of PHOTOS_DEFAULT_LAYOUT.leftPanels)assert.ok((PHOTOS_PANEL_IDS.left as readonly string[]).includes(id));
  assert.equal(PHOTOS_DEFAULT_LAYOUT.leftOpen,false);assert.equal(PHOTOS_DEFAULT_LAYOUT.activeRight,'light');
 });
-test('labels: every item has a catalogue key in all five locales and the helper falls back to English',()=>{
- for(const locale of ['en','de','es','fr','pt-BR'])for(const key of Object.values(PHOTOS_RAIL_LABEL_KEYS))assert.ok(CATALOGUES[locale]?.[key],`${locale}: ${key}`);
- const t=(k:string)=>translate('de',k);
- assert.equal(photosRailLabel({id:'light',label:'Light'},t),'Licht');
- assert.equal(photosRailLabel({id:'light',label:'Light'},k=>k),'Light');
- assert.equal(photosRailLabel({id:'nope',label:'Nope'},t),'Nope');
+test('labels: every item carries a labelKey that exists in all five locales',()=>{
+ for(const it of [...PHOTOS_LEFT_RAIL,...PHOTOS_RIGHT_RAIL]){
+  assert.equal(it.labelKey,PHOTOS_RAIL_LABEL_KEYS[it.id as keyof typeof PHOTOS_RAIL_LABEL_KEYS]);
+  for(const locale of ['en','de','es','fr','pt-BR'])assert.ok(CATALOGUES[locale]?.[it.labelKey!],`${locale}: ${it.labelKey}`);
+ }
+ assert.equal(translate('de','photos.rail.light'),'Licht');
  assert.deepEqual(Object.keys(PHOTOS_RAIL_LABEL_KEYS).sort(),[...PHOTOS_PANEL_IDS.left,...PHOTOS_PANEL_IDS.right].sort());
 });
 test('photos studio manifest is untouched by this module (rails are not wired yet)',()=>{

@@ -1,6 +1,6 @@
 # Photos studio rails
 
-Status: data and icons are in place and tested. They are not wired into the Photos manifest yet (see "Wiring").
+Status: data and icons are in place and tested. They are not wired into the Photos manifest yet (see "Wiring"). Pure data, so it needs no host registration; the panel hosts themselves are registered with `registerStudioPanels` by the panels package.
 
 The Photos studio declares its left and right rail as plain data, using the panel API in [concepts/studio-shell.md](concepts/studio-shell.md) section 9. Code lives in `phase1/src/lib/photos/`:
 
@@ -41,7 +41,7 @@ There are no `command` or `tool` items yet. Photos has no registered UI commands
 
 ## Labels
 
-`RailItemDef.label` is a plain string (English fallback). Tooltips use `photosRailLabel(item, t)`, which reads `photos.rail.<id>` and falls back to the label. The renderer must call it, or an equivalent, for the other four languages to show.
+Each item has a plain English `label` and a `labelKey` (`photos.rail.<id>`). The rail renderer shows `labelKey` through `t()` and falls back to `label`.
 
 ## Wiring
 
