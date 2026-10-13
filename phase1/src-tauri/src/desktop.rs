@@ -1688,8 +1688,9 @@ fn runtime_status(window: WebviewWindow, app: tauri::AppHandle) -> std::result::
     Ok(crate::runtime::status(&base))
 }
 #[tauri::command]
-async fn runtime_install(window: WebviewWindow, app: tauri::AppHandle) -> std::result::Result<crate::runtime::RuntimeStatus, String> {
+async fn runtime_install(window: WebviewWindow, app: tauri::AppHandle, consent: bool) -> std::result::Result<crate::runtime::RuntimeStatus, String> {
     gate(&window).map_err(|_| "frameworks.denied")?;
+    if !consent { return Err("frameworks.consentRequired".into()); }
     let base = app.path().app_data_dir().map_err(|_| "frameworks.installFailed")?;
     tauri::async_runtime::spawn_blocking(move || crate::runtime::install(&base)).await.map_err(|_| "frameworks.installFailed")?
 }
@@ -2363,6 +2364,7 @@ pub fn run() {
             Ok(())
         })
         .on_window_event(|window, event| {
+            if window.label() != "main" { return; }
             if window.label() == "main" {
                 if let tauri::WindowEvent::DragDrop(tauri::DragDropEvent::Drop { paths, position, .. }) =
                     event
@@ -2385,7 +2387,6 @@ pub fn run() {
                     };
                 }
             }
-            if window.label() != "main" { return; }
             if let tauri::WindowEvent::Destroyed = event {
                 window.state::<crate::proc_runner::ProcessRunner>().stop_all();
             }

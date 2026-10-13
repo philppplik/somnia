@@ -2676,5 +2676,6 @@
   "frameworks.projectMissing": "Öffne dieses Projekt vor dem Start.",
   "frameworks.pluginMissing": "Dieses Projekt benötigt das geschützte Somnia-Vorschau-Plugin.",
   "frameworks.previewNotReady": "Die Vorschau startet noch. Versuche es gleich erneut.",
-  "frameworks.previewFailed": "Vorschau konnte nicht geöffnet werden. Versuche es erneut."
+  "frameworks.previewFailed": "Vorschau konnte nicht geöffnet werden. Versuche es erneut.",
+  "frameworks.consentRequired": "Stimme zuerst dem Download des Hilfsprogramms zu."
 }

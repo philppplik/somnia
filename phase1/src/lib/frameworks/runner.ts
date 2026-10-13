@@ -47,11 +47,11 @@ export class NativeProjectRunner implements ProjectRunner {
 }
 const empty = {type:'object', properties:{}, additionalProperties:false};
 registerCoreCommandSpec({id:'frameworks.run', title:'Run framework project', category:'Project', level:'ui', params:{type:'object', properties:{projectId:{type:'string',minLength:1},kind:{enum:['install','dev','build']}},required:['projectId','kind'],additionalProperties:false}, enabled:()=>isTauri(), run:(p: {projectId:string;kind:RunKind})=>invoke<RunnerHandle>('project_run',p)});
-registerCoreCommandSpec({id:'frameworks.installHelper',title:'Download framework helper',category:'Tools',level:'ui',params:empty,enabled:()=>isTauri(),run:()=>invoke<RuntimeStatus>('runtime_install')});
+registerCoreCommandSpec({id:'frameworks.installHelper',title:'Download framework helper',category:'Tools',level:'ui',params:{type:'object',properties:{consent:{const:true}},required:['consent'],additionalProperties:false},enabled:()=>isTauri(),run:()=>invoke<RuntimeStatus>('runtime_install',{consent:true})});
 registerCoreCommandSpec({id:'frameworks.removeHelper',title:'Remove framework helper',category:'Tools',level:'ui',params:empty,enabled:()=>isTauri(),run:()=>invoke<RuntimeStatus>('runtime_remove')});
 export const projectRunner: ProjectRunner = new NativeProjectRunner();
 export const runtimeStatus = () => isTauri() ? invoke<RuntimeStatus>('runtime_status') : Promise.resolve<RuntimeStatus>({installed:false,supported:false,version:'24.21.0',downloadBytes:41943040});
-export const installRuntime = () => commandDispatcher.runCommand<RuntimeStatus>('frameworks.installHelper',{}, {origin:'ui'});
+export const installRuntime = () => commandDispatcher.runCommand<RuntimeStatus>('frameworks.installHelper',{consent:true}, {origin:'ui'});
 export const removeRuntime = () => commandDispatcher.runCommand<RuntimeStatus>('frameworks.removeHelper',{}, {origin:'ui'});
 
 for (const [id, name, title] of [['frameworks.openPreview','preview_open','Open framework preview'],['frameworks.closePreview','preview_close','Close framework preview']] as const) {

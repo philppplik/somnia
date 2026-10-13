@@ -289,7 +289,7 @@ export const COMMAND_ARGS: Readonly<Record<CommandName, readonly string[]>> = {
   recovery_restore_safe: ['projectId', 'id', 'path', 'clientRevision', 'expectedRevision'],
   release_candidate: ['requestId'],
   retry_open_item: ['requestId', 'ordinal', 'retryToken'],
-  runtime_install: [],
+  runtime_install: ['consent'],
   runtime_remove: [],
   runtime_status: [],
   save_file: ['projectId', 'path', 'expectedRevision'],

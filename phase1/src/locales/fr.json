@@ -2676,5 +2676,6 @@
   "frameworks.projectMissing": "Ouvrez ce projet avant de le lancer.",
   "frameworks.pluginMissing": "Ce projet nécessite le plugin de prévisualisation protégé de Somnia.",
   "frameworks.previewNotReady": "La prévisualisation démarre. Réessayez bientôt.",
-  "frameworks.previewFailed": "Impossible d'ouvrir la prévisualisation. Réessayez."
+  "frameworks.previewFailed": "Impossible d'ouvrir la prévisualisation. Réessayez.",
+  "frameworks.consentRequired": "Acceptez le téléchargement avant de continuer."
 }

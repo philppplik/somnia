@@ -23,3 +23,7 @@ test('framework catalogue keys are present in all five languages',async()=>{
  const {CATALOGUES}=await import('../i18n');const keys=Object.keys(CATALOGUES.en).filter(k=>k.startsWith('frameworks.'));
  assert.ok(keys.length>30);for(const [locale,cat]of Object.entries(CATALOGUES))for(const key of keys)assert.ok(cat[key],`${locale}: ${key}`);
 });
+test('palette cannot download the runtime without explicit consent',async()=>{
+ await assert.rejects(commandDispatcher.runCommand('frameworks.installHelper',{}, {origin:'palette'}));
+ await assert.rejects(commandDispatcher.runCommand('frameworks.installHelper',{consent:false}, {origin:'palette'}));
+});

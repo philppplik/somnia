@@ -2676,5 +2676,6 @@
   "frameworks.projectMissing": "Abra este projeto antes de executá-lo.",
   "frameworks.pluginMissing": "Este projeto precisa do plugin de prévia protegida do Somnia.",
   "frameworks.previewNotReady": "A prévia está iniciando. Tente novamente em instantes.",
-  "frameworks.previewFailed": "Não foi possível abrir a prévia. Tente novamente."
+  "frameworks.previewFailed": "Não foi possível abrir a prévia. Tente novamente.",
+  "frameworks.consentRequired": "Concorde em baixar o programa antes de continuar."
 }
