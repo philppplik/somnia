@@ -3025,5 +3025,17 @@
   "cmd.deploy.cancel": "Annuler la publication",
   "deploy.err.server-not-prepared": "Ce serveur n’est pas encore configuré pour Somnia.",
   "deploy.err.dns-not-ready": "Le domaine ne pointe pas encore vers votre serveur.",
-  "deploy.err.cancelled": "Publication annulée avant la mise en ligne."
+  "deploy.err.cancelled": "Publication annulée avant la mise en ligne.",
+  "frameworks.hintNext": "React full-stack avec rendu serveur et routes dans le dossier app.",
+  "frameworks.hintAstro": "Pages centrées sur le contenu, peu de script, sortie serveur si besoin.",
+  "frameworks.hintSvelteKit": "Apps rapides avec routes en dossiers et rendu serveur.",
+  "frameworks.hintNuxt": "Vue full-stack avec rendu serveur et routage prêt à l'emploi.",
+  "frameworks.needsServer": "Nécessite Node sur le serveur. Un simple hébergement de fichiers ne suffit pas.",
+  "frameworks.build.nodeResult": "{count} fichiers, {size}, démarre avec {entry}.",
+  "frameworks.build.nodeNote": "Ceci est une app serveur. Le serveur a besoin de Node.js pour l'exécuter. Somnia n'emballe que le nécessaire, jamais vos fichiers secrets.",
+  "frameworks.artifact.lockMissing": "Cette app serveur a besoin d'un package-lock.json pour que le serveur installe les mêmes paquets.",
+  "frameworks.artifact.noEntry": "Le fichier de démarrage du serveur est introuvable dans la sortie.",
+  "frameworks.build.installNote": "Le serveur installe lui-même les paquets de l'app (npm ci) avant le premier démarrage. Les paquets ne sont pas envoyés.",
+  "frameworks.artifact.notNode": "Ce projet n'est pas une app serveur. Utilisez la construction du site.",
+  "cmd.frameworks.buildNode": "Construire l'app serveur pour la publication"
 }

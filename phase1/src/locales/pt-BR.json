@@ -3025,5 +3025,17 @@
   "cmd.deploy.cancel": "Cancelar publicação",
   "deploy.err.server-not-prepared": "Este servidor ainda não está configurado para o Somnia.",
   "deploy.err.dns-not-ready": "O domínio ainda não aponta para seu servidor.",
-  "deploy.err.cancelled": "Publicação cancelada antes de ir ao ar."
+  "deploy.err.cancelled": "Publicação cancelada antes de ir ao ar.",
+  "frameworks.hintNext": "React full-stack com renderização no servidor e rotas na pasta app.",
+  "frameworks.hintAstro": "Páginas focadas em conteúdo com pouco script e saída de servidor quando precisar.",
+  "frameworks.hintSvelteKit": "Apps rápidos com rotas em pastas e renderização no servidor.",
+  "frameworks.hintNuxt": "Vue full-stack com renderização no servidor e roteamento pronto.",
+  "frameworks.needsServer": "Precisa de Node no servidor. Hospedagem só de arquivos não basta para este app.",
+  "frameworks.build.nodeResult": "{count} arquivos, {size}, inicia com {entry}.",
+  "frameworks.build.nodeNote": "Este é um app de servidor. O servidor precisa do Node.js para executá-lo. O Somnia empacota só o necessário e nunca seus arquivos secretos.",
+  "frameworks.artifact.lockMissing": "Este app de servidor precisa de um package-lock.json para o servidor instalar os mesmos pacotes.",
+  "frameworks.artifact.noEntry": "O arquivo de início do servidor não foi encontrado na saída.",
+  "frameworks.build.installNote": "O servidor instala sozinho os pacotes do app (npm ci) antes do primeiro início. Os pacotes não são enviados.",
+  "frameworks.artifact.notNode": "Este projeto não é um app de servidor. Use a compilação do site.",
+  "cmd.frameworks.buildNode": "Compilar o app de servidor para publicação"
 }

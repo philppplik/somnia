@@ -1,11 +1,12 @@
 import type {ProjectRunner,RunnerHandle,RunnerLog} from './runnerContract';
 import type {DeployArtifactManifest} from '../deploy/types';
 /** Result of a finished build, as summarised by the native collector. Paths are relative, no bytes, no secrets. */
-export interface StaticArtifactSummary{framework:string;dist:string;manifest:DeployArtifactManifest;fileCount:number;totalBytes:number;spaRules:{nginx:string;apache:string}|null}
+export interface NodeBundleInfo{entry:string;/** True when the server runs `npm ci --omit=dev` before the first start. */install:boolean;nodeRange:string|null;skipped:string[]}
+export interface StaticArtifactSummary{framework:string;dist:string;manifest:DeployArtifactManifest;fileCount:number;totalBytes:number;spaRules:{nginx:string;apache:string}|null;/** Present for kind=node bundles. */node?:NodeBundleInfo|null}
 export type StaticBuildPhase='idle'|'installing'|'building'|'collecting'|'done'|'failed';
 export interface StaticBuildState{phase:StaticBuildPhase;projectId:string;errorKey?:string;/** Offending relative path for link/forbidden errors. */errorPath?:string;summary?:StaticArtifactSummary;logs:readonly RunnerLog[]}
 export type CollectArtifact=(runId:string)=>Promise<StaticArtifactSummary>;
-const ERROR_KEYS=new Set(['noPackage','notStatic','distMissing','noIndex','empty','tooLarge','tooMany','unsafePath','link','forbidden','io','notBuild','buildNotFinished']);
+const ERROR_KEYS=new Set(['noPackage','notStatic','distMissing','noIndex','empty','tooLarge','tooMany','unsafePath','link','forbidden','io','notBuild','buildNotFinished','notNode','lockMissing','noEntry']);
 /** Maps a native `frameworks.artifact.<code>[:path]` string to a catalogue key. Unknown text never reaches the UI. */
 export function artifactError(raw:unknown):{key:string;path?:string}{
  const text=raw instanceof Error?raw.message:typeof raw==='string'?raw:'';

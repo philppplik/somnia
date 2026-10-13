@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased - server frameworks (Next.js, Astro, SvelteKit, Nuxt)
+
+- New project now offers Next.js, Astro, SvelteKit and Nuxt in TypeScript or JavaScript, with pinned lockfiles, a protected loopback preview and a note that the finished app needs Node on the server.
+- "Build for publishing" also builds server apps. The result is a `DeployArtifactManifest` of kind `node` (Next standalone, Nuxt `.output`, Astro with `@astrojs/node`, SvelteKit with `adapter-node`). Astro and SvelteKit bundles carry package files and are installed on the server with `npm ci`.
+- Telemetry is switched off for every project run (Next, Astro, Nuxt, `DO_NOT_TRACK`). The runner finds Astro's current `bin/astro.mjs`.
+- Detection tells static from server output from the project setup: Astro needs `@astrojs/node`, SvelteKit's `adapter-static` means static, Next `output: 'export'` means static.
+
 ## Unreleased - live static publishing
 
 - Publish now connects over embedded, pinned-key SSH, checks the prepared server, uploads verified immutable releases, and switches the current site atomically.

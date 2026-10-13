@@ -3025,5 +3025,17 @@
   "cmd.deploy.cancel": "Cancel publish",
   "deploy.err.server-not-prepared": "This server is not set up for Somnia yet.",
   "deploy.err.dns-not-ready": "The domain does not point at your server yet.",
-  "deploy.err.cancelled": "Publish cancelled before going live."
+  "deploy.err.cancelled": "Publish cancelled before going live.",
+  "frameworks.hintNext": "Full-stack React with server rendering and routes in the app folder.",
+  "frameworks.hintAstro": "Content-first pages that ship little script, with server output when you need it.",
+  "frameworks.hintSvelteKit": "Fast apps with routes as folders and server rendering.",
+  "frameworks.hintNuxt": "Full-stack Vue with server rendering and ready-made routing.",
+  "frameworks.needsServer": "Needs Node on the server. Static hosting is not enough for this kind of app.",
+  "frameworks.build.nodeResult": "{count} files, {size}, starts with {entry}.",
+  "frameworks.build.nodeNote": "This is a server app. The server needs Node.js to run it. Somnia packs only what the app needs to run and never your secret files.",
+  "frameworks.artifact.lockMissing": "This server app needs a package-lock.json so the server can install the same packages.",
+  "frameworks.artifact.noEntry": "The server start file was not found in the build output.",
+  "frameworks.build.installNote": "The server installs the app's packages itself (npm ci) before the first start. Packages are not uploaded.",
+  "frameworks.artifact.notNode": "This project is not a server app. Use the site build instead.",
+  "cmd.frameworks.buildNode": "Build server app for publishing"
 }

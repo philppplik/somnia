@@ -1,5 +1,5 @@
 import {newProjectFlow} from './frameworks/newProjectFlow';
-import {frameworkTemplate,templateEntryFile} from './frameworks/templates';
+import {frameworkTemplate,serverFrameworkTemplate,templateEntryFile,serverTemplateEntryFile,isServerFramework} from './frameworks/templates';
 import {scaffoldProject} from './frameworks/scaffold';
 import {frameworkSession} from './frameworks/runtime';
 import {folderNameFor} from './folderName';
@@ -164,7 +164,9 @@ export async function installFileAdapter(port:FilePort){
  const stopFrameworkCreate=newProjectFlow.install(async options=>{
   if(getState().isDirty)throw Error('frameworks.saveFirst');
   const startRevision=getState().revision,startFiles=getState().files;
-  const files=scaffoldProject(await frameworkTemplate(options.framework??'react',options.language),options.name);
+  const chosen=options.framework??'react';
+  const files=scaffoldProject(isServerFramework(chosen)?await serverFrameworkTemplate(chosen,options.language):await frameworkTemplate(chosen,options.language),options.name);
+  const entryFile=isServerFramework(chosen)?serverTemplateEntryFile(chosen,options.language):templateEntryFile(chosen,options.language);
   const selected=await port.invoke<{projectId:string;name:string}|null>('choose_project',{createSubfolder:options.name});if(!selected)return false;
   const nextBaselines=new Map<string,Revision>();
   try{
@@ -180,7 +182,7 @@ export async function installFileAdapter(port:FilePort){
     if(event.state!=='saved')throw Error('frameworks.createFailed');nextBaselines.set(path,event.diskRevision);
    }
    if(projectId)await close(true);
-   await attach(selected,files,nextBaselines);patchState({activeFile:templateEntryFile(options.framework??'react',options.language),openFiles:[templateEntryFile(options.framework??'react',options.language)],viewMode:'split',livePreview:true,activeStudio:'code',problemsOpen:true});
+   await attach(selected,files,nextBaselines);patchState({activeFile:entryFile,openFiles:[entryFile],viewMode:'split',livePreview:true,activeStudio:'code',problemsOpen:true});
    // Creation is an explicit user action. The helper download consent is owned by F1.
    void frameworkSession.start(selected.projectId,true);return true;
   }catch(error){await port.invoke('close_project',{projectId:selected.projectId,keepRecovery:true}).catch(()=>{});throw error;}

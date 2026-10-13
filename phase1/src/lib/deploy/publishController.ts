@@ -8,11 +8,13 @@ import { subscribeStagedPlans } from './commandSpecs';
 import { createTauriDeployBackend } from './tauriBackend';
 import { detectFramework } from '../frameworks/detect';
 import { staticBuilder } from '../frameworks/staticBuildRuntime';
+import { nodeBuilder } from '../frameworks/nodeBuildRuntime';
 import { getPreviewResourceSource } from '../previewResourceSource';
 import { createInstallMemo } from './publishModel';
 import { createPublishStore, type PublishStore } from './publishStore';
 
 let store: PublishStore | null = null;
+let active: typeof staticBuilder = staticBuilder;
 const installMemo = createInstallMemo();
 const depsOf = () => { const f = projectFiles(); return `${f['package.json'] ?? ''}\u0000${f['package-lock.json'] ?? ''}${f['pnpm-lock.yaml'] ?? ''}${f['yarn.lock'] ?? ''}`; };
 let projectFiles: () => Readonly<Record<string, string>> = () => ({});
@@ -29,14 +31,17 @@ export function getPublishStore(): PublishStore {
     backend,
     build: {
       // Static framework projects are built first through the F3 command (ProjectRunner + deploy_artifact_collect).
-      needed: () => { const f = detectFramework(projectFiles()); return !!f && f.output === 'static'; },
+      // Server frameworks (Next, Nuxt, SvelteKit, Astro with the Node adapter) build a kind=node bundle through frameworks.buildNode.
+      needed: () => { const f = detectFramework(projectFiles()); return !!f && (f.output === 'static' || f.output === 'node'); },
       run: async () => {
         const pid = getPreviewResourceSource()?.projectId ?? '', fp = depsOf(), install = installMemo.needsInstall(pid, fp);
-        try { await commandDispatcher.runCommand('frameworks.buildStatic', { install }, { origin: 'ui' }); }
-        finally { installMemo.record(pid, fp, staticBuilder.getSnapshot().phase === 'done'); }
+        const node = detectFramework(projectFiles())?.output === 'node', builder = node ? nodeBuilder : staticBuilder;
+        active = builder;
+        try { await commandDispatcher.runCommand(node ? 'frameworks.buildNode' : 'frameworks.buildStatic', { install }, { origin: 'ui' }); }
+        finally { installMemo.record(pid, fp, builder.getSnapshot().phase === 'done'); }
       },
-      getSnapshot: staticBuilder.getSnapshot,
-      subscribe: staticBuilder.subscribe,
+      getSnapshot: () => active.getSnapshot(),
+      subscribe: fn => { const a = staticBuilder.subscribe(fn), b = nodeBuilder.subscribe(fn); return () => { a(); b(); }; },
     },
     onProgress: fn => {
       let un: (() => void) | null = null, closed = false;

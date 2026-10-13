@@ -11,8 +11,16 @@ export function detectFramework(files:Readonly<Record<string,string>>):Framework
   try{manifest=JSON.parse(files['somnia.template.json']??'{}');}catch{/* unknown projects are inert */}
   const managed=manifest.framework===framework&&typeof manifest.id==='string';
   const entry=Object.keys(files).find(f=>/^src\/App\.([jt]sx|vue|svelte)$/.test(f))??Object.keys(files).find(f=>/^src\/(main|index)\.[jt]sx?$/.test(f))??'package.json';
-  return {framework,language,managed,entry,output:manifest.output==='node'||['next','nuxt','sveltekit'].includes(framework)?'node':'static'};
+  return {framework,language,managed,entry,output:manifest.output==='node'?'node':manifest.output==='static'?'static':outputFor(framework,deps,files)};
  }catch{return null;}
+}
+/** Mirror of the native rules: Next and Nuxt build a server unless told otherwise, Astro and SvelteKit need their Node adapter. */
+function outputFor(framework:DetectedFramework,deps:Record<string,unknown>,files:Readonly<Record<string,string>>):'static'|'node'{
+ const has=(n:string)=>typeof deps[n]==='string';
+ if(framework==='astro')return has('@astrojs/node')?'node':'static';
+ if(framework==='sveltekit')return has('@sveltejs/adapter-static')&&!has('@sveltejs/adapter-node')?'static':'node';
+ if(framework==='next'){const cfg=Object.entries(files).find(([p])=>/^next\.config\.(m?js|ts)$/.test(p))?.[1]??'';return /output\s*:\s*['"]export['"]/.test(cfg)?'static':'node';}
+ return framework==='nuxt'?'node':'static';
 }
 export function isFrameworkSource(path:string){return /\.(html?|css|[cm]?js|jsx|ts|tsx|json|svg|txt|md|vue|svelte|astro)$/i.test(path)&&!path.split('/').some(p=>['node_modules','.git','dist','.next','.output'].includes(p));}
 /** Display name for banners and labels. Unknown ids fall back to the id itself. */

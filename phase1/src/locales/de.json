@@ -3025,5 +3025,17 @@
   "cmd.deploy.cancel": "Veröffentlichung abbrechen",
   "deploy.err.server-not-prepared": "Dieser Server ist noch nicht für Somnia eingerichtet.",
   "deploy.err.dns-not-ready": "Die Domain zeigt noch nicht auf deinen Server.",
-  "deploy.err.cancelled": "Veröffentlichung vor dem Live-Schalten abgebrochen."
+  "deploy.err.cancelled": "Veröffentlichung vor dem Live-Schalten abgebrochen.",
+  "frameworks.hintNext": "Full-Stack-React mit Server-Rendering und Routen im app-Ordner.",
+  "frameworks.hintAstro": "Inhaltsorientierte Seiten mit wenig Skript, bei Bedarf mit Server-Ausgabe.",
+  "frameworks.hintSvelteKit": "Schnelle Apps mit Ordnern als Routen und Server-Rendering.",
+  "frameworks.hintNuxt": "Full-Stack-Vue mit Server-Rendering und fertigem Routing.",
+  "frameworks.needsServer": "Braucht Node auf dem Server. Reines Datei-Hosting reicht für diese App nicht.",
+  "frameworks.build.nodeResult": "{count} Dateien, {size}, Start mit {entry}.",
+  "frameworks.build.nodeNote": "Das ist eine Server-App. Der Server braucht Node.js, um sie auszuführen. Somnia packt nur, was die App zum Laufen braucht, nie deine geheimen Dateien.",
+  "frameworks.artifact.lockMissing": "Diese Server-App braucht eine package-lock.json, damit der Server dieselben Pakete installiert.",
+  "frameworks.artifact.noEntry": "Die Startdatei des Servers wurde in der Build-Ausgabe nicht gefunden.",
+  "frameworks.build.installNote": "Der Server installiert die Pakete der App vor dem ersten Start selbst (npm ci). Pakete werden nicht hochgeladen.",
+  "frameworks.artifact.notNode": "Dieses Projekt ist keine Server-App. Nutze stattdessen den Seiten-Build.",
+  "cmd.frameworks.buildNode": "Server-App zum Veröffentlichen bauen"
 }

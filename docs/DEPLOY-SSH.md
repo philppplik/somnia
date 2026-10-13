@@ -24,3 +24,12 @@ All errors are the generic `DeployError`. `ConnectFailure` adds a coarse `Failur
 - The release flow (`ReleaseLayout`) runs end to end over SSH, including a sweep that fails each SFTP request in turn and checks that the live release keeps serving.
 
 The bootstrap script is syntax-checked with `sh -n` and its injection guards are tested. It has not been run against a real Debian or Ubuntu host in this change.
+
+## Server framework bundles (F4)
+
+Server templates live in `phase1/src/lib/frameworks/templates/{next,astro,sveltekit,nuxt}-{ts,js}` and declare `"output": "node"` in `somnia.template.json`. The UI command `frameworks.buildNode` runs the normal ProjectRunner `build`, then `deploy_node_build_collect` turns the finished run into a `DeployArtifactManifest` of kind `node` through `deploy/node_collect.rs`. Nothing is uploaded by the build.
+
+- Start file: `node <entry>` from the release root. The service sets host and port through the framework's variables (`HOST`/`PORT`, `HOSTNAME`/`PORT` for Next, `NITRO_HOST`/`NITRO_PORT` for Nuxt) plus `NODE_ENV=production`.
+- Next and Nuxt bundles are self-contained. Astro and SvelteKit bundles carry `package.json` and `package-lock.json` and need `npm ci --omit=dev` on the server (`install: true`).
+- Pinned template versions and Node requirements: Next 16.4.0, Astro 7.3.8 (Node >= 22.12), SvelteKit 3.0.1 (>= 22.17), Nuxt 4.6.1 (^22.22.3 or ^24.15).
+- `scripts/verify-node-templates.mjs` installs, builds and serves all eight templates in throwaway folders. It needs network access and runs project builds, so it is a manual check and not part of `test:core`.
