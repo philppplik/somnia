@@ -66,8 +66,8 @@ somnia attach "$id"
 | --- | --- |
 | `SOMNIA_ENGINE_CMD` | JSON array that starts the engine sidecar, for example `["node","/path/engine.mjs"]`. Default: `sidecar/engine.mjs` next to the binary. |
 | `SOMNIA_ATTRIBUTION_EMAIL`, `SOMNIA_ATTRIBUTION_NAME` | Identity for `--attribution` trailers. |
-| `SOMNIA_ENGINE_PROVIDER`, `SOMNIA_ENGINE_MODEL` | Provider (`openrouter`, `claude`, `openai`, `ollama`) and model for the agent engine. Both are required. |
-| `OPENROUTER_API_KEY`, `ANTHROPIC_API_KEY`, `OPENAI_API_KEY` | API key for the chosen cloud provider. Read by the engine only. |
+| `SOMNIA_ENGINE_PROVIDER`, `SOMNIA_ENGINE_MODEL` | Provider (`openrouter`, `claude`, `openai`, `xai`, `meta`, `deepseek`, `ollama`) and model for the agent engine. Both are required. |
+| `OPENROUTER_API_KEY`, `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `XAI_API_KEY`, `META_API_KEY`, `DEEPSEEK_API_KEY` | API key for the chosen cloud provider. Read by the engine only. |
 | `SOMNIA_ENGINE_CLOUD_CONSENT=1` | Required to send a task to a cloud provider or a non-loopback Ollama URL. Without it the run fails with `consent` before anything is sent. |
 | `SOMNIA_ENGINE_OLLAMA_URL`, `SOMNIA_ENGINE_TIMEOUT_MS` | Ollama base URL (default `http://127.0.0.1:11434`) and optional turn timeout. |
 | `XDG_RUNTIME_DIR` | Where the private socket directory is created. Fallback: `/tmp/somnia-<uid>`. |

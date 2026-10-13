@@ -58,9 +58,9 @@ Credentials never travel over the stdio channel and are never fields in any CLI 
 
 | Variable | Meaning |
 | --- | --- |
-| `SOMNIA_ENGINE_PROVIDER` | `openrouter`, `claude`, `openai` (API key) or `ollama`. |
+| `SOMNIA_ENGINE_PROVIDER` | `openrouter`, `claude`, `openai` (API key), `xai` (Grok), `meta`, `deepseek` or `ollama`. |
 | `SOMNIA_ENGINE_MODEL` | Model id. |
-| `OPENROUTER_API_KEY`, `ANTHROPIC_API_KEY`, `OPENAI_API_KEY` | Key for the chosen cloud provider. Checked before any request. |
+| `OPENROUTER_API_KEY`, `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `XAI_API_KEY`, `META_API_KEY`, `DEEPSEEK_API_KEY` | Key for the chosen cloud provider. Checked before any request. |
 | `SOMNIA_ENGINE_CLOUD_CONSENT=1` | Required for any cloud provider and for a non-loopback Ollama URL. Same consent gate as the panel; without it the run fails with `consent` before anything is sent. |
 | `SOMNIA_ENGINE_OLLAMA_URL` | Default `http://127.0.0.1:11434`. |
 | `SOMNIA_ENGINE_TIMEOUT_MS` | Optional turn timeout (default 180000). |

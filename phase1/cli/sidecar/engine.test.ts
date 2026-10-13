@@ -151,6 +151,13 @@ test('config errors: no provider, unsupported provider, missing key, missing con
   assert.equal((terminals(noConsent)[0] as any).code, 'consent');
   const noKey = await run(cwd, {}, { SOMNIA_ENGINE_PROVIDER: 'claude', SOMNIA_ENGINE_CLOUD_CONSENT: '1' });
   assert.equal((terminals(noKey)[0] as any).code, 'auth');
+  for (const [id, envName] of [['xai', 'XAI_API_KEY'], ['meta', 'META_API_KEY'], ['deepseek', 'DEEPSEEK_API_KEY']] as const) {
+    const noConsentC = await run(cwd, {}, { SOMNIA_ENGINE_PROVIDER: id, [envName]: 'k-not-real' });
+    assert.equal((terminals(noConsentC)[0] as any).code, 'consent', id);
+    const noKeyC = await run(cwd, {}, { SOMNIA_ENGINE_PROVIDER: id, SOMNIA_ENGINE_CLOUD_CONSENT: '1' });
+    assert.equal((terminals(noKeyC)[0] as any).code, 'auth', id);
+    assert.ok(!JSON.stringify([noConsentC, noKeyC]).includes('k-not-real'));
+  }
   assert.ok(!JSON.stringify([none, bad, noConsent, noKey]).includes('k-not-real'));
 });
 
