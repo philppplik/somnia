@@ -1,3 +1,7 @@
+# Unreleased: Photos hero export
+
+- Photos header Export opens PNG/JPEG copy setup; shared rail/popover export path, format memory, keyboard shortcut, crop/processing/in-flight gates and five-language labels.
+
 # Changelog
 
 ## Unreleased - Header hero action slot

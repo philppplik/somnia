@@ -1,3 +1,4 @@
+import {getPhotoExportState,setPhotoExportState} from './exportState';
 /**
  * Photos Studio panel commands. Every action of the side panels goes through these specs (palette, menus, AI).
  * `level: 'ui'` for edits (interactive origins only, agents and MCP are refused), `read` for state.
@@ -21,6 +22,7 @@ const SLIDER_KEYS=PHOTO_CONTROLS.map(c=>c.key);
 /** Name of the photo the Photos studio shows right now, or null. */
 export function activePhotoName():string|null{const m=getMedia();return m.active&&getPhotoSession(m.active)?m.active:null;}
 const ready=():boolean=>{const n=activePhotoName();const s=n?getPhotoSession(n):null;return !!s&&s.status!=='loading'&&s.status!=='error';};
+export const photoExportEnabled=()=>{const n=activePhotoName(),s=n?getPhotoSession(n):null;return !!s&&s.status==='ready'&&!s.cropping&&!getPhotoExportState().working;};
 const need=():string=>{const n=activePhotoName();if(!n||!ready())throw Error('Open a photo in the Photos studio first.');return n;};
 const session=():PhotoSession=>getPhotoSession(need())!;
 const lookSchema={type:'object',properties:Object.fromEntries(LOOK_KEYS.map(k=>{const c=PHOTO_CONTROLS.find(x=>x.key===k)!;return [k,{type:'number',minimum:c.min,maximum:c.max}];})),additionalProperties:false} as const;
@@ -94,12 +96,15 @@ export function photosCommandSpecs():CommandSpec<never,unknown>[]{
   {id:'photos.history.jump',title:'Photos: Jump to a history step',category:'Edit',level:'ui',keywords:['photos','history'],
    params:{type:'object',properties:{index:{type:'integer',minimum:0}},required:['index'],additionalProperties:false},enabled:ready,
    run:(p:{index:number})=>{const name=need();const steps=stepsTo(session(),p.index);if(steps===null)throw Error('No such history step.');for(let i=0;i<Math.abs(steps);i++)historyPhoto(name,steps>0);}},
+  {id:'photos.export.open',title:'Photos: Export copy...',category:'Project',level:'ui',shortcut:'Mod+Shift+E',params:none,enabled:photoExportEnabled,run:()=>setPhotoExportState({open:true})},
+  ...(['png','jpeg'] as const).map(format=>({id:'photos.export.'+format,title:'Photos: Export as '+format.toUpperCase(),category:'Project' as const,level:'ui' as const,params:none,enabled:photoExportEnabled,run:()=>runPhotoExport(format)})),
   {id:'photos.export',title:'Photos: Export a developed copy',category:'Project',level:'ui',keywords:['photos','export','save','png','jpeg'],
-   params:{type:'object',properties:{format:{type:'string',enum:['png','jpeg']}},required:['format'],additionalProperties:false},enabled:ready,
-   run:async(p:{format:'png'|'jpeg'})=>exportPhotoCopy(need(),p.format)},
+   params:{type:'object',properties:{format:{type:'string',enum:['png','jpeg']}},required:['format'],additionalProperties:false},enabled:photoExportEnabled,
+   run:async(p:{format:'png'|'jpeg'})=>runPhotoExport(p.format)},
  ];
  return specs;
 }
+async function runPhotoExport(format:'png'|'jpeg'){const name=need();if(!photoExportEnabled())throw Error('Photo export is busy.');setPhotoExportState({working:true,format});try{return await exportPhotoCopy(name,format);}finally{setPhotoExportState({working:false});}}
 let refs=0,disposeAll:(()=>void)|null=null;
 /**
  * Registers every Photos panel command. Reference counted: the canvas and any mounted panel may all call it,

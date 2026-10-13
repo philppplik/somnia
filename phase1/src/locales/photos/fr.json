@@ -62,5 +62,14 @@
  "photos.zoom.fit": "Ajuster à la fenêtre",
  "photos.zoom.actual": "Taille réelle",
  "photos.note": "Les réglages restent dans cette session. L'export d'une copie est limité à 2048 px, sRGB 8 bits, métadonnées supprimées. L'original n'est jamais écrasé.",
- "photos.panel": "Réglages de développement"
+ "photos.panel": "Réglages de développement",
+ "photos.hero.export":"Exporter",
+ "photos.hero.format":"Format",
+ "photos.hero.original":"Votre original n’est jamais écrasé.",
+ "photos.hero.unchanged":"Aucune modification : la copie reste inchangée.",
+ "photos.hero.copy":"Exporter une copie",
+ "cmd.photos.export.open":"Photos : Exporter une copie...",
+ "cmd.photos.export.png":"Photos : Exporter en PNG",
+ "cmd.photos.export.jpeg":"Photos : Exporter en JPEG",
+ "photos.hero.disabled":"Ouvrez une photo, terminez le recadrage ou attendez le traitement."
 }
