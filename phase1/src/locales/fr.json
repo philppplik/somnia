@@ -3258,5 +3258,18 @@
   "cmd.documents.undo": "Annuler la modification de texte du document",
   "cmd.documents.redo": "Rétablir la modification de texte du document",
   "cmd.documents.pages.goto": "Aller à une page du document",
-  "cmd.documents.outline.goto": "Aller à un paragraphe du document"
+  "cmd.documents.outline.goto": "Aller à un paragraphe du document",
+  "hero.preview": "Aperçu",
+  "hero.preview.close": "Fermer l’aperçu en direct",
+  "hero.preview.none": "Aucune page affichable en aperçu",
+  "hero.export": "Exporter",
+  "hero.export.none": "Aucun document ouvert",
+  "hero.smartFormula": "Formule intelligente",
+  "hero.smartFormula.none": "Aucun classeur ouvert",
+  "cmd.documents.export.open": "Exporter le document",
+  "documents.export.title": "Exporter le document",
+  "documents.export.format": "Format",
+  "documents.export.docx": "Document Word (.docx)",
+  "documents.export.file": "Nom du fichier",
+  "documents.export.note": "Enregistre un nouveau fichier à côté de l’original. Le document ouvert n’est jamais modifié."
 }

@@ -6,6 +6,12 @@
 - Added static-image full-window/fullscreen presentation, bounded keyboard and click navigation, numeric jumps, black screen, auto-hiding accessible controls and focus restoration.
 - Screen-size images obey the renderer budget and pre-render the next slide. Presentation labels are translated in all five locales.
 - Added unit and local browser interaction tests. Native fullscreen and production WASM output remain build-device checks.
+## Unreleased - Per-studio hero actions
+
+- Code Studio: the header hero is now Preview (the existing live-preview toggle) with a pressed state; it is disabled with the reason "No previewable page" when the open files have no previewable HTML page, and framework projects stay out until their startup review.
+- Documents Studio: the header hero is now Export. It opens a small export popup preselected to Word document (.docx) "save a copy"; the copy never overwrites the opened document, and the loss warning with its Save anyway confirmation gates every entry point. `documents.saveCopy` is a real command now (Project menu and palette).
+- Sheets Studio: the header hero is now Smart Formula. It opens and focuses the formula builder seeded from the current selection. The builder requires an explicit target cell outside the source range, asks before replacing a non-empty cell and applies the reviewed formula exactly once.
+- Hero slot: toggle heroes can render `aria-pressed` (`pressedWhen` / `pressedTooltipKey`), and a disabled hero can explain why via a command's `disabledReason` key.
 
 ## Unreleased - Header hero action slot
 

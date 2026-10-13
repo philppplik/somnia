@@ -21,11 +21,12 @@ import {MAX_READ_CELLS} from '../../lib/sheets/protocol';
 import {saveSheetsCopy,setSheetsDirty,sheetsIsDirty} from '../../lib/sheets/session';
 import {registerDocSaver} from '../../lib/workDocs';
 import {registerSheetsCommands,registerSheetsCommandController} from '../../lib/sheets/commands';
+import {openSheetsFormulasPanel} from './formulasHero';
 import {setSheetsSelection} from '../../lib/sheets/sheetsStore';
 const HEAD_W=48,HEAD_H=24;
 type Phase={kind:'loading'}|{kind:'error';message:string}|{kind:'ready'};
 export function SheetsCanvas(){
- const media=useMedia();const {t}=useT();useEffect(()=>registerSheetsCommands(),[]);const item=media.items.find(i=>i.name===media.active&&i.kind==='xlsx');
+ const media=useMedia();const {t}=useT();useEffect(()=>registerSheetsCommands({openFormulas:openSheetsFormulasPanel}),[]);const item=media.items.find(i=>i.name===media.active&&i.kind==='xlsx');
  if(!item)return <main className="center" aria-label={t('sheets.workspace')}><div className="workspace"><section className="code-pane" aria-label={t('sheets.workspace')}><FileTabs/><StudioEmptyState studio="sheets" icon={<Table2/>} onOpen={()=>new Promise<void>((resolve,reject)=>{const input=document.createElement('input');input.type='file';input.accept='.xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';input.oncancel=()=>resolve();input.onchange=async()=>{try{const file=input.files?.[0];if(file){const result=await addMediaFile(file,file.name);if('error' in result)throw Error(result.error);}resolve();}catch(e){reject(e);}};input.click();})} onCreate={()=>createBlankProject('sheets')} testId="sheets-empty"/></section></div></main>;
  return <main className="center" aria-label={t('sheets.workspace')}><div className="workspace"><section className="code-pane" aria-label={t('sheets.workspace')}><FileTabs/><Workbook key={item.url} item={item}/></section></div></main>;
 }

@@ -90,6 +90,7 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `design.zoomSet` | Design: Set zoom | View | design |  |
 | `documents.clearSelection` | Clear document selection | View | documents-panels |  |
 | `documents.commitParagraph` | Apply paragraph text | Edit | documents-panels |  |
+| `documents.export.open` | Export document | Project | documents |  |
 | `documents.focusParagraph` | Focus paragraph | View | documents-panels |  |
 | `documents.goToPage` | Go to document page | View | documents-panels |  |
 | `documents.outline.goto` | Go to document paragraph | View | documents |  |
@@ -98,6 +99,7 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `documents.panelUndo` | Undo document edit | Edit | documents-panels |  |
 | `documents.redo` | Redo document text edit | View | documents |  |
 | `documents.replaceMatch` | Replace search result | Edit | documents-panels |  |
+| `documents.saveCopy` | Save a copy of the document | Project | documents |  |
 | `documents.selectMatch` | Select search result | View | documents-panels |  |
 | `documents.selectParagraph` | Select entire paragraph | View | documents-panels |  |
 | `documents.setZoom` | Set document zoom | View | documents-panels |  |
@@ -186,6 +188,7 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `search.project` | Search in project | View | core | `Mod+Shift+F` |
 | `settings.open` | Settings | Tools | core | `Mod+,` |
 | `sheets.analyzeRange` | Analyze spreadsheet range | Tools | sheets |  |
+| `sheets.formulas.open` | Open Smart Formula builder | View | sheets |  |
 | `sheets.navigate` | Go to spreadsheet cell | View | sheets |  |
 | `sheets.redo` | Redo workbook change | Edit | sheets |  |
 | `sheets.saveCopy` | Save workbook copy | Project | sheets |  |

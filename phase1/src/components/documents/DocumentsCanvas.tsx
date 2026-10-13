@@ -7,6 +7,9 @@ import {DocumentsEngine,inspectDocx,type OpenedDocument} from '../../lib/documen
 import {patchDocuments,resetDocuments,stepZoom,useDocuments} from '../../lib/documents/store';
 import {attachEngine,clearCaret,deleteAtCaret,dragTo,editParagraph,loadBlocks,moveCaret,pointerAt,redoEdit,selectAllInParagraph,selectedText,splitAtCaret,syncGeometry,typeText,undoEdit} from '../../lib/documents/session';
 import {saveCopy} from '../../lib/documents/saveCopy';
+import {confirmDocumentsSaveCopy,patchDocumentsExportUi,registerDocumentsExport,useDocumentsExportUi} from '../../lib/documents/exportBridge';
+import {executeCommand} from '../../lib/commands';
+import {DocumentsExportDialog} from './DocumentsExportDialog';
 import {registerDocumentPanelCommands} from '../../lib/documents/panelCommands';
 import {registerDocumentsCommands} from '../../lib/documents/commands';
 import {studioContextStore} from '../../lib/shell/studioContext';
@@ -67,7 +70,8 @@ export function DocumentsCanvas(){
  const {t}=useT();const media=useMedia();const doc=useDocuments();
  const item=useMemo(()=>{const m=media.items.find(i=>i.name===media.active);return m?.kind==='docx'?m:null;},[media]);
  const engineRef=useRef<DocumentsEngine|null>(null);const [engine,setEngine]=useState<DocumentsEngine|null>(null);
- const [near,setNear]=useState<Set<number>>(new Set([0]));const [attempt,setAttempt]=useState(0);const [confirm,setConfirm]=useState(false);
+ const [near,setNear]=useState<Set<number>>(new Set([0]));const [attempt,setAttempt]=useState(0);
+ const exportUi=useDocumentsExportUi();
  const bytesRef=useRef<Uint8Array|null>(null);
  useEffect(()=>{void syncGeometry();},[doc.caret,doc.rev,doc.zoom]);
  useEffect(()=>registerDocumentsCommands(),[]);
@@ -96,7 +100,10 @@ export function DocumentsCanvas(){
  },[item?.url,attempt]);
  const onVisible=useCallback((i:number,v:boolean)=>setNear(prev=>{if(prev.has(i)===v)return prev;const n=new Set(prev);v?n.add(i):n.delete(i);return n;}),[]);
  const pick=async()=>{const input=document.createElement('input');input.type='file';input.accept=MEDIA_ACCEPT.split(',').filter(x=>/docx|wordprocessingml/.test(x)).join(',');input.onchange=async()=>{const f=input.files?.[0];if(f){const r=await addMediaFile(f,f.name);if('error' in r)patchDocuments({status:'error',error:r.error});}};input.click();};
- const doSave=async()=>{setConfirm(false);patchDocuments({saving:true});try{await saveCopy(engineRef.current!,doc.name);}catch(err){patchDocuments({status:'error',error:err instanceof Error?err.message:String(err)});}finally{patchDocuments({saving:false});}};
+ const doSave=async()=>{patchDocuments({saving:true});try{await saveCopy(engineRef.current!,doc.name);}catch(err){patchDocuments({status:'error',error:err instanceof Error?err.message:String(err)});}finally{patchDocuments({saving:false});}};
+ // One save implementation for every entry point (toolbar, hero popup, Project menu, palette).
+ const doSaveRef=useRef(doSave);doSaveRef.current=doSave;
+ useEffect(()=>registerDocumentsExport({save:()=>doSaveRef.current()}),[]);
  if(!item)return <section className="canvas-stage flex min-h-0 flex-1" aria-label={t('documents.title')}>
   <StudioEmptyState studio="documents" icon={<FileText/>} onOpen={pick} onCreate={()=>createBlankProject('documents')}/></section>;
  return <section className="canvas-stage flex min-h-0 flex-1 flex-col" aria-label={t('documents.title')}>
@@ -107,16 +114,17 @@ export function DocumentsCanvas(){
    <button className={tool} aria-label={t('documents.zoomOut')} title={t('documents.zoomOut')} disabled={doc.status!=='ready'} onClick={()=>stepZoom(-1)}><Minus size={13}/></button>
    <span className="w-10 text-center tabular-nums" data-testid="documents-zoom">{Math.round(doc.zoom*100)}%</span>
    <button className={tool} aria-label={t('documents.zoomIn')} title={t('documents.zoomIn')} disabled={doc.status!=='ready'} onClick={()=>stepZoom(1)}><Plus size={13}/></button>
-   <button className={tool} disabled={doc.status!=='ready'||doc.saving} onClick={()=>doc.risks.length?setConfirm(true):void doSave()} data-testid="documents-save-copy">{t('documents.saveCopy')}</button></div>
+   <button className={tool} disabled={doc.status!=='ready'||doc.saving} onClick={()=>void executeCommand('documents.saveCopy')} data-testid="documents-save-copy">{t('documents.saveCopy')}</button></div>
   {doc.status==='loading'&&<div role="status" className="grid flex-1 place-items-center text-[12px] text-ink-3">{t('documents.loading')}</div>}
   {doc.status==='error'&&<div role="alert" className="grid flex-1 place-items-center"><div className="grid max-w-md justify-items-center gap-2 text-center"><p className="text-[13px] text-ink" data-testid="documents-error">{doc.error}</p><button className={tool+' border border-subtle'} onClick={()=>setAttempt(a=>a+1)}>{t('documents.retry')}</button></div></div>}
   {doc.caretLocked&&<p role="status" className="border-b border-subtle px-3 py-1 text-[12px] text-ink-3" data-testid="documents-caret-locked">{t('documents.caret.locked')}</p>}
   {doc.status==='ready'&&engine&&<div className="min-h-0 flex-1 overflow-auto bg-hover/40 p-6" data-testid="documents-scroll"><div className="flex flex-col gap-4">
    {doc.pageSizes.map((p,i)=><Page key={i} engine={engine} index={i} width={p.width} height={p.height} zoom={doc.zoom} rev={doc.rev} visible={near.has(i)} onVisible={onVisible}/>)}</div></div>}
-  {confirm&&<div role="alertdialog" aria-modal="true" aria-labelledby="documents-confirm-title" className="absolute inset-0 z-20 grid place-items-center bg-black/30"><div className="grid max-w-md gap-3 rounded-[var(--r-popup,25px)] bg-surface p-5 shadow-xl">
+  {exportUi.confirmOpen&&<div role="alertdialog" aria-modal="true" aria-labelledby="documents-confirm-title" className="absolute inset-0 z-20 grid place-items-center bg-black/30"><div className="grid max-w-md gap-3 rounded-[var(--r-popup,25px)] bg-surface p-5 shadow-xl">
    <h2 id="documents-confirm-title" className="text-[14px] font-medium">{t('documents.lossTitle')}</h2><p className="text-[12px] text-ink-2">{t('documents.lossBody')}</p>
    <ul className="list-disc pl-5 text-[12px] text-ink-2" data-testid="documents-loss-list">{doc.risks.map(r=><li key={r}>{t('documents.risk.'+r)}</li>)}</ul>
-   <div className="flex justify-end gap-2"><button className={tool} autoFocus onClick={()=>setConfirm(false)}>{t('documents.cancel')}</button><button className={tool+' border border-subtle'} onClick={()=>void doSave()} data-testid="documents-save-anyway">{t('documents.saveAnyway')}</button></div></div></div>}
+   <div className="flex justify-end gap-2"><button className={tool} autoFocus onClick={()=>patchDocumentsExportUi({confirmOpen:false})}>{t('documents.cancel')}</button><button className={tool+' border border-subtle'} onClick={()=>void confirmDocumentsSaveCopy()} data-testid="documents-save-anyway">{t('documents.saveAnyway')}</button></div></div></div>}
+  <DocumentsExportDialog/>
  </section>;
 }
 export function DocumentsInspector(){

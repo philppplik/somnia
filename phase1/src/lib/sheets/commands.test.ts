@@ -33,9 +33,26 @@ test('controller registry keeps exactly the mounted workbook',()=>{
 
 test('sheets specs carry stable dotted ids, ui level and categories',()=>{
   const specs=sheetsCommandSpecs({controller:()=>null});
-  assert.deepEqual(specs.map(s=>s.id),['sheets.undo','sheets.redo','sheets.saveCopy']);
+  assert.deepEqual(specs.map(s=>s.id),['sheets.undo','sheets.redo','sheets.saveCopy','sheets.formulas.open']);
   for(const spec of specs)assert.equal(spec.level,'ui',spec.id);
-  assert.deepEqual(specs.map(s=>s.category),['Edit','Edit','Project']);
+  assert.deepEqual(specs.map(s=>s.category),['Edit','Edit','Project','View']);
+});
+
+test('the Smart Formula opener reveals the panel through the injected opener and never writes a cell',async()=>{
+  const {controller,calls}=fakeController();
+  let opened=0;
+  const specs=sheetsCommandSpecs({controller:()=>controller,openFormulas:()=>{opened++;}});
+  const spec=specs.find(s=>s.id==='sheets.formulas.open')!;
+  const ctx={origin:'ui' as const};
+  assert.equal(spec.enabled!(ctx),true);
+  await spec.run(undefined,ctx);
+  await spec.run(undefined,ctx);
+  assert.equal(opened,2,'repeated clicks re-focus, never toggle');
+  assert.deepEqual(calls,[],'opening the hero writes nothing');
+  const closed=sheetsCommandSpecs({controller:()=>null}).find(s=>s.id==='sheets.formulas.open')!;
+  assert.equal(closed.enabled!(ctx),false,'no workbook: disabled');
+  assert.equal(closed.disabledReason!(),'hero.smartFormula.none');
+  await assert.rejects(async()=>closed.run(undefined,ctx),/No workbook/);
 });
 
 test('enabled follows the registered controller',()=>{

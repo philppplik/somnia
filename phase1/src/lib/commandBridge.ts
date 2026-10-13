@@ -27,6 +27,7 @@ export function specToCommand(spec: CommandSpec<unknown, unknown>, dispatcher: C
     ...(spec.shortcut !== undefined ? { shortcut: spec.shortcut } : {}),
     ...(spec.keywords ? { keywords: [...spec.keywords] } : {}),
     ...(spec.allowInInput !== undefined ? { allowInInput: spec.allowInInput } : {}),
+    ...(spec.disabledReason !== undefined ? { disabledReason: spec.disabledReason } : {}),
     enabled: () => dispatcher.isEnabled(spec.id, { origin: 'ui' }),
     run: async (payload) => { await dispatcher.runCommand(spec.id, payload, { origin: 'ui' }); },
   };

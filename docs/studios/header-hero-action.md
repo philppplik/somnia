@@ -13,6 +13,12 @@ One slot in the header, left of the Account pill, where the Publish button used 
 | `icon` | Rail icon name (`phase1/src/lib/shell/railIcons.ts`). Unknown names get the fallback glyph. |
 | `menu` | Optional command ids for the split-button chevron, in order. |
 | `when` | Optional `when` expression over the studio context (same language as rail items). |
+| `pressedWhen` | Optional toggle state: a `when`-style expression over the slot context. While set, the main button renders `aria-pressed`. |
+| `pressedTooltipKey` | Optional i18n key for the tooltip while `pressedWhen` holds. The label itself stays stable. |
+
+The slot context merges the UI context (`domain`, `surface`, ...), the active canvas's StudioContext (`document`, `selection`, `services`, ...) and the app-level `preview` flag (live preview on/off), so toggle heroes can use `pressedWhen: 'preview'` without any studio branch.
+
+A command can also carry `disabledReason?: () => string` (an i18n key). While the hero command is disabled, the tooltip shows that reason instead of label plus shortcut, e.g. "No previewable page".
 
 Example (a studio manifest):
 
@@ -22,7 +28,8 @@ shell:{ ..., header:{ menus:['View','Help'], views:[], heroAction:{ id:'slides.p
 
 ## Behaviour
 
-- No `heroAction`: the old Publish button, unchanged. Every shipped studio is in this state until it gets its own hero.
+- No `heroAction`: the old Publish button, unchanged.
+- Shipped heroes: Code = Preview (`view.livePreview`), Documents = Export (`documents.export.open`), Sheets = Smart Formula (`sheets.formulas.open`). Details: [hero-actions.md](hero-actions.md).
 - Fallback to Publish also applies when `when` is false or invalid, when the hero command is not registered, or when the hero id is `deploy.open`.
 - Split button: the main part runs the hero command and is disabled when the command's `enabled()` is false. The chevron opens `menu`. Unregistered menu ids, duplicates and the hero id are dropped. `Publish...` (`deploy.open`) is always the last entry, below a separator. It is still in the Project menu and the palette.
 - Off desktop (web build) Publish cannot run. The Publish entry is then disabled, and the chevron is hidden when `menu` has no other entries.

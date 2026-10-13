@@ -3258,5 +3258,18 @@
   "cmd.documents.undo": "Undo document text edit",
   "cmd.documents.redo": "Redo document text edit",
   "cmd.documents.pages.goto": "Go to document page",
-  "cmd.documents.outline.goto": "Go to document paragraph"
+  "cmd.documents.outline.goto": "Go to document paragraph",
+  "hero.preview": "Preview",
+  "hero.preview.close": "Close live preview",
+  "hero.preview.none": "No previewable page",
+  "hero.export": "Export",
+  "hero.export.none": "No document open",
+  "hero.smartFormula": "Smart Formula",
+  "hero.smartFormula.none": "No workbook open",
+  "cmd.documents.export.open": "Export document",
+  "documents.export.title": "Export document",
+  "documents.export.format": "Format",
+  "documents.export.docx": "Word document (.docx)",
+  "documents.export.file": "File name",
+  "documents.export.note": "Saves a new file next to the original. The opened document is never changed."
 }
