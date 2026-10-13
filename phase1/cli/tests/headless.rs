@@ -1,3 +1,5 @@
+//! Unix only: these tests exercise the Unix-socket transport. The Windows named-pipe transport is not built yet.
+#![cfg(unix)]
 use serde_json::Value;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Output};

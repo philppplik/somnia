@@ -1,3 +1,4 @@
+#![cfg(unix)]
 //! Roundtrip: the real TUI protocol module (somnia_tui::protocol) against the real `somnia` binary in --tui-stdio mode.
 use somnia_tui::protocol::{encode_command, parse_line, review_hash, Command as TuiCmd, Event, Hunk};
 use std::io::{BufRead, BufReader, Write};

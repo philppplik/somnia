@@ -298,3 +298,60 @@ jobs:
             phase1/src-tauri/target/release/bundle/macos/*.app.tar.gz
             phase1/src-tauri/target/release/bundle/macos/*.app.tar.gz.sig
             phase1/src-tauri/target/release/bundle/macos-*.txt
+  # Headless `somnia` CLI (phase1/cli). Linux and Windows x86_64 only, also on alpha runs. No macOS build.
+  cli:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, windows-latest]
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        working-directory: phase1
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Packaging script tests
+        run: node --test --experimental-strip-types test/cli-release/package-cli.test.ts
+      - name: CLI tests (integration tests are Unix only)
+        run: cargo test --manifest-path cli/Cargo.toml --locked
+      - name: Build and archive the CLI
+        run: node scripts/package-cli.mjs build --out cli-dist
+      - name: Smoke test the packaged binary
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p cli-smoke && cd cli-smoke
+          if [ "$RUNNER_OS" = "Windows" ]; then tar -xf ../cli-dist/somnia-cli-*.zip; bin=$(ls -d somnia-cli-*)/somnia.exe; else tar -xzf ../cli-dist/somnia-cli-*.tar.gz; bin=$(ls -d somnia-cli-*)/somnia; fi
+          "$bin" --version | tee version.txt
+          grep -q "^somnia $(node -p "require('../package.json').somniaRelease")" version.txt
+      - uses: actions/upload-artifact@v7
+        with:
+          name: somnia-cli-${{ runner.os }}-${{ github.sha }}
+          retention-days: 14
+          if-no-files-found: error
+          path: |
+            phase1/cli-dist/somnia-cli-*.tar.gz
+            phase1/cli-dist/somnia-cli-*.zip
+            phase1/cli-dist/*.sha256
+  cli-checksums:
+    needs: cli
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/download-artifact@v7
+        with:
+          pattern: somnia-cli-*-${{ github.sha }}
+          merge-multiple: true
+          path: cli-dist
+      - run: node phase1/scripts/package-cli.mjs sums cli-dist
+      - run: cd cli-dist && sha256sum -c SHA256SUMS
+      - uses: actions/upload-artifact@v7
+        with:
+          name: somnia-cli-SHA256SUMS-${{ github.sha }}
+          retention-days: 14
+          if-no-files-found: error
+          path: cli-dist/SHA256SUMS

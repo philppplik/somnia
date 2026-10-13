@@ -21,3 +21,30 @@ Without `--yes` the agent's uncommitted work is proposed as one `diff_proposed` 
 `content_hash` (S12: `sha256(file \0 (hunk.id \0 lines.join("\n") \0)*)`, module `review`) matches both the proposal and the
 current worktree and every hunk is named once. Otherwise `guard_blocked` and the review stays pending. Rejected hunks are
 reverse-applied; accepted hunks stay uncommitted (the commit gate remains manual). Not yet mapped: `tool_call`/`tool_result`/`model`/cost (the engine contract carries none).
+
+## Install
+
+Release archives (Linux and Windows, x86_64; no macOS build) are attached to GitHub Releases, including alphas:
+`somnia-cli-<version>-linux-x86_64.tar.gz` and `somnia-cli-<version>-windows-x86_64.zip`, with `SHA256SUMS`.
+
+```sh
+sha256sum -c SHA256SUMS --ignore-missing
+tar -xzf somnia-cli-<version>-linux-x86_64.tar.gz
+install -m 0755 somnia-cli-<version>-linux-x86_64/somnia ~/.local/bin/somnia
+somnia --version        # release number; the long form (--version) also prints commit and target
+```
+
+On Windows, extract the zip, put the folder on `PATH`, then run `somnia --version` (PowerShell: `Get-FileHash <zip> -Algorithm SHA256` and compare with `SHA256SUMS`).
+The binary is unsigned (SmartScreen may warn). It needs `git` on `PATH`, and `node` for the default agent sidecar.
+Windows limits: foreground `somnia run` only. Detached runs, `attach`, `status` and `cancel` need the Unix socket transport (named pipe not built).
+
+## Building and packaging
+
+```sh
+cd phase1/cli && cargo build --release --locked            # version = crate version unless SOMNIA_RELEASE is set
+cd phase1 && node scripts/package-cli.mjs build            # archive + .sha256 in phase1/cli-dist, version from somniaRelease
+node scripts/package-cli.mjs sums cli-dist                 # SHA256SUMS for all archives in the folder
+```
+
+`SOMNIA_RELEASE` and `SOMNIA_COMMIT` are compile-time inputs the script sets. CI wiring: [BUILD-AND-RELEASE.md](../../docs/BUILD-AND-RELEASE.md).
+Integration tests under `cli/tests` are Unix only (`#![cfg(unix)]`).

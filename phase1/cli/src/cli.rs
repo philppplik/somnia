@@ -11,7 +11,7 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 #[derive(Parser)]
-#[command(name = "somnia", version, about = "Somnia headless CLI")]
+#[command(name = "somnia", version = crate::VERSION, long_version = crate::long_version(), about = "Somnia headless CLI")]
 struct Cli {
     #[command(subcommand)]
     cmd: Cmd,

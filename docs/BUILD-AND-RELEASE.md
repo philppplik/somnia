@@ -40,6 +40,8 @@ Runs on pushes to `phase1-foundation` that touch `phase1/**` or the workflow, on
 | `frontend` | ubuntu-24.04 | `npm ci`, `npm run build`, `npm run test:core`, performance report self-test, editor-core budgets (full and incremental parser), upload `validation/bench` reports (14 days), Playwright Chromium, `npm run test:e2e` |
 | `native` | ubuntu-24.04 | install WebKitGTK and Xvfb, `cargo test --no-default-features --locked`, `cargo check --locked`, `sync-version.mjs`, build `deb` and `appimage`, Xvfb keyboard smoke (`scripts/native-smoke.sh`), upload bundles and GUI evidence |
 | `windows` | windows-latest | `cargo test`, `sync-version.mjs`, build `nsis` and `msi`, experimental unsigned MSIX (`scripts/make-msix.ps1`, `continue-on-error`), upload |
+| `cli` | ubuntu-24.04, windows-latest | packaging script tests, `cargo test` in `phase1/cli`, `scripts/package-cli.mjs build`, smoke test of the packed binary (`somnia --version` must print `somniaRelease`), upload archive and `.sha256`. Runs on alpha tags too. No macOS build. |
+| `cli-checksums` | ubuntu-24.04 | downloads the `cli` archives, writes `SHA256SUMS`, verifies it with `sha256sum -c`, uploads it |
 | `macos` | macos-latest | `cargo test`, updater harness tests, `sync-version.mjs`, build `dmg` (and `app` archive with signing secrets), upload |
 
 `.github/workflows/relay.yml` validates `relay/` separately: `cargo fmt --check`, `clippy -D warnings`, `cargo test --locked`.
@@ -53,6 +55,7 @@ CI produces artifacts, not releases. A release is assembled from the artifacts o
 1. Branch work is merged by pull request; the four CI jobs must be green on the release commit.
 2. Set `somniaRelease` to the new version, commit, let CI build.
 3. Download the Windows, Linux and macOS artifacts and rename them to the contract the updater expects: `Somnia-<tag>-x64-setup.exe`, `Somnia-<tag>-amd64.AppImage`, `Somnia-<tag>-macos-<aarch64|x86_64>.app.tar.gz`, plus `.msi`, `.deb`, `.dmg` for manual installs.
+   The headless CLI comes from the `cli` jobs of the same run. Attach `somnia-cli-<tag>-linux-x86_64.tar.gz` and `somnia-cli-<tag>-windows-x86_64.zip` unchanged (the names already carry the version) and add the CLI lines to the release checksums; `SHA256SUMS` from the `cli-checksums` artifact lists exactly those two files. The updater ignores them. Install notes ship inside each archive (`INSTALL.txt`) and in [phase1/cli/README.md](../phase1/cli/README.md).
 4. Generate `latest.json`: `scripts/make-latest-json.py <tag> <notes_file> <windows_dir> <linux_dir> <out_json> [<macos_dir>]`. It lists only platforms that have a `.sig` file and exits with code 3 when none exist (release without updater).
 5. Compute SHA-256 checksums and create the GitHub Release with English notes in the fixed order Highlights, Fixes, Known issues, Install, Checksums. Attach installers, checksums and `latest.json`.
 6. Mark pre-releases (`vX.Y-alpha`) as pre-release. `releases/latest` ignores them, so the updater never installs them. A version counts as stable only after the maintainer has tested it on Windows.

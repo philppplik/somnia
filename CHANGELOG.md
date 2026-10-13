@@ -3,6 +3,8 @@
 ## Unreleased
 
 - somnia-tui: plain mode for pipes and CI (no raw mode, no ANSI, review left pending, exit 2), golden TestBackend screen snapshots, and a fix for a panic on very narrow terminals.
+- Headless `somnia` CLI ships as release archives for Linux and Windows x86_64 (`somnia-cli-<ver>-<os>-x86_64`) with `SHA256SUMS`. `somnia --version` reports the app release, commit and target. No macOS build.
+
 - Smart Open keeps recognized files automatic. Ambiguous handlers now show a studio chooser; unknown-type files with verified text show an explicit "Open as text?" confirmation. Cancel leaves that file unopened. Unsupported or invalid files only notify. Choosing a studio still uses the normal prepare, unsaved-change approval, revision validation and commit flow. A newer open request closes an older unanswered chooser.
 
 ## 11.2.0-beta.1 - 2026-10-07

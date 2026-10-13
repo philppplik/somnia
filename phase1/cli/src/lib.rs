@@ -1,4 +1,5 @@
 pub mod cli;
+
 pub mod engine;
 pub mod error;
 pub mod gitops;
@@ -11,8 +12,42 @@ pub mod server;
 pub mod transport;
 pub mod tui_adapter;
 
+/// Release the binary belongs to. CI sets `SOMNIA_RELEASE` (from `somniaRelease` in `phase1/package.json`);
+/// local builds fall back to the crate version.
+pub const VERSION: &str = match option_env!("SOMNIA_RELEASE") {
+    Some(v) if !v.is_empty() => v,
+    _ => env!("CARGO_PKG_VERSION"),
+};
+
+/// Optional short commit id baked in by CI (`SOMNIA_COMMIT`).
+pub const COMMIT: &str = match option_env!("SOMNIA_COMMIT") {
+    Some(v) if !v.is_empty() => v,
+    _ => "unknown",
+};
+
+/// Multi-line text for `somnia --version` (clap `long_version`): release, commit, target.
+pub fn long_version() -> &'static str {
+    static TEXT: std::sync::OnceLock<String> = std::sync::OnceLock::new();
+    TEXT.get_or_init(|| {
+        format!(
+        "{VERSION}\ncommit: {COMMIT}\ntarget: {}-{}",
+        std::env::consts::OS,
+        std::env::consts::ARCH
+    )
+    })
+}
+
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn version_is_never_empty_and_long_version_lists_target() {
+        assert!(!crate::VERSION.is_empty());
+        let l = crate::long_version();
+        assert!(l.starts_with(crate::VERSION));
+        assert!(l.contains("commit: ") && l.contains("target: "));
+        assert!(l.contains(std::env::consts::OS));
+    }
+
     use crate::error::*;
     use crate::protocol::*;
 
