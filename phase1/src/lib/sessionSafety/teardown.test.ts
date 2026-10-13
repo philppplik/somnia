@@ -18,7 +18,7 @@ test('history is reused only when restored paragraph text is identical',async()=
  const h=asHistory(j.exportJournal(),await blocksDigest(blocks));
  assert.ok(await validHistory(h,blocks));assert.equal(await validHistory(h,[{...blocks[0],text:'hellp'}]),null);assert.equal(await validHistory({kind:'none'},blocks),null);
 });
-test('sheets view state is validated',()=>{assert.deepEqual(readSheetsView({sheet:1,row:2,col:3}),{sheet:1,row:2,col:3});assert.equal(readSheetsView({sheet:-1,row:0,col:0}),null);assert.equal(readSheetsView({}),null);});
+test('sheets view state is validated',()=>{assert.deepEqual(readSheetsView({sheet:1,row:2,col:3}),{sheet:1,row:2,col:3,draft:null});assert.deepEqual(readSheetsView({sheet:1,row:2,col:3,draft:{row:2,col:3,text:'=A1'}})?.draft,{text:'=A1'});assert.equal(readSheetsView({sheet:1,row:2,col:3,draft:{row:0,col:3,text:'x'}})?.draft,null);assert.equal(readSheetsView({sheet:-1,row:0,col:0}),null);assert.equal(readSheetsView({}),null);});
 test('unmount while dirty then remount: edits come back (the original data-loss hazard)',async()=>{
  const store=new RecoveryStore(new MemoryByteStore());const id='sheets:t.xlsx';
  // view 1: user edits, view is torn down; worker bytes only exist inside the "engine"

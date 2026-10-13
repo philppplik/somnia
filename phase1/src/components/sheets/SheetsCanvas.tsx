@@ -55,7 +55,7 @@ function Workbook({item}:{item:MediaItem}){
    fp=await fingerprintBytes(bytes);await whenFlushed(sessionId);if(!live)return;
    const cp=new SessionCheckpointer({sessionId,studio:'sheets',store,sourceFingerprint:fp,getRevision:()=>revRef.current,isDirty:()=>dirtyRef.current,
     historyRestorable:()=>false,hasUndoHistory:()=>!!infoRef.current?.canUndo||!!infoRef.current?.canRedo,
-    capture:async()=>{const revision=revRef.current;const payload=await eng.save();return{revision,payload,history:{kind:'none'},view:{...viewRef.current},format:'xlsx',engineVersion:'sheets-1'};}});
+    capture:async()=>{const revision=revRef.current;const payload=await eng.save();return{revision,payload,history:{kind:'none'},view:{...viewRef.current,draft:draftRef.current===null?null:{row:viewRef.current.row,col:viewRef.current.col,text:draftRef.current}},format:'xlsx',engineVersion:'sheets-1'};}});
    cpRef.current=cp;offActive=registerActiveSession(sessionId,cp);
    let opened:WorkbookInfo|null=null;let restoredView:ReturnType<typeof readSheetsView>=null;
    const r=await cp.resume(async snap=>{opened=await eng.open(snap.payload);restoredView=readSheetsView(snap.meta.view);},async()=>fp);
@@ -64,14 +64,14 @@ function Workbook({item}:{item:MediaItem}){
    if(!opened)opened=await eng.open(bytes);
    if(!live)return;
    setBook(opened);
-   if(r.ok){const v=restoredView as ReturnType<typeof readSheetsView>;setDirty(true);setRev(x=>x+1);if(v){setSheet(v.sheet);setSel({row:v.row,col:v.col});}setNotice(t('session.recovered')+' '+t('session.historyReset'));}
+   if(r.ok){const v=restoredView as ReturnType<typeof readSheetsView>;setDirty(true);setRev(x=>x+1);if(v){setSheet(v.sheet);setSel({row:v.row,col:v.col});if(v.draft)startEdit(v.draft.text);}setNotice(t('session.recovered')+' '+t('session.historyReset'));}
    else if(r.reason==='source-changed')setNotice(t('session.conflict'));
    setPhase({kind:'ready'});}catch(e){if(live)reportError('sheets.open',e,{context:{studio:'sheets',file:item.name}});if(live)setPhase({kind:'error',message:e instanceof Error?e.message:String(e)});}})();
   return()=>{live=false;offActive();setSheetsSelection(null);
    const cp=cpRef.current;cpRef.current=null;
    // Dirty and unmounting (studio/tab switch): write a verified checkpoint from the still-running worker before stopping it.
    if(cp&&dirtyRef.current&&fp&&!eng.isDisposed){
-    cp.close();const revision=revRef.current;const view={...viewRef.current};
+    cp.close();const revision=revRef.current;const view={...viewRef.current,draft:draftRef.current===null?null:{row:sel.row,col:sel.col,text:draftRef.current}};
     void flushOnTeardown({sessionId,studio:'sheets',store,sourceFingerprint:fp,revision,format:'xlsx',engineVersion:'sheets-1',history:{kind:'none'},view,quiesce:()=>cp.idle(),payload:()=>eng.save()})
      .then(ok=>{if(!ok)reportError('sheets.recovery','Could not write a verified recovery checkpoint while closing the view.',{context:{studio:'sheets',file:item.name}});}).finally(()=>eng.dispose());
    }else{cp?.close();eng.dispose();}
