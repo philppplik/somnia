@@ -59,6 +59,7 @@ jsonwebtoken = { version = "=9.3.1", default-features = false }
 rmcp = { version = "=3.5.1", default-features = false, features = ["client", "transport-async-rw"] }
 
 russh = { version = "=0.64.1", default-features = false, features = ["ring"] }
+russh-sftp = { version = "=3.0.1", default-features = false }
 rand = "0.10"
 zeroize = "1"
 

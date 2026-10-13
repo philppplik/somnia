@@ -12,6 +12,10 @@
 - Alt-click in the preview opens the source of an element in Vue and Svelte components as well as JSX.
 - Framework projects show their real name in the detected banner (Vue, Svelte, Solid).
 
+## Unreleased - deploy SSH transport
+
+- Embedded SSH/SFTP transport for live deployment: pinned host keys checked before login, keychain key auth, confined atomic uploads, one-time sudo server setup script. No UI yet.
+
 ## Unreleased - framework runner
 
 - Explicit-consent framework helper download with pinned SHA-256 verification.

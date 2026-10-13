@@ -7,6 +7,10 @@ pub mod manifest;
 pub mod redactor;
 pub mod release;
 pub mod transport;
+pub mod ssh;
+pub mod bootstrap;
+#[cfg(test)]
+mod ssh_testkit;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, thiserror::Error)]
 pub enum DeployError {
