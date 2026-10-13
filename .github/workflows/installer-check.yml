@@ -1,5 +1,8 @@
 name: installer-check
 on:
+  push:
+    branches: [feat/custom-installer]
+    paths: [.github/workflows/installer-check.yml, phase1/installer/**]
   workflow_dispatch:
 jobs:
   windows:
