@@ -1,4 +1,4 @@
-import {useEffect,useMemo,useState,useSyncExternalStore} from 'react';
+import {useEffect,useMemo,useRef,useState,useSyncExternalStore} from 'react';
 import {StudioScheduleButton} from './StudioScheduleButton';
 import {Plus} from '../../lib/icons';
 import {VibeSpaceController} from '../../lib/vibespace/controller';
@@ -12,6 +12,9 @@ import {MemoryPanel} from './MemoryPanel';
 import {SkillsTab} from './SkillsTab';
 import {nativeMemoryTransport,nativeSkillsTransport} from '../../lib/vibespace/memorySkillsTransport';
 import {getLocale} from '../../lib/i18n';
+import {claimVibeShell} from '../../lib/vibespace/shellSession';
+import {registerVibeSpaceCommands} from '../../lib/vibespace/commands';
+import {studioContextStore} from '../../lib/shell/studioContext';
 /** Mount with a stable transport. There is no global fallback and no app-store mutation. */
 export function VibeSpaceHome({transport}:{transport:VibeSpaceTransport}){
  const controller=useMemo(()=>new VibeSpaceController(transport),[transport]);
@@ -38,6 +41,23 @@ export function VibeSpaceHome({transport}:{transport:VibeSpaceTransport}){
  const busy=state.pending||state.loading||!!state.error;
  const supports=(type:VibeIntent['type'])=>transport.capabilities.includes(type);
  const newStudio=(goal='')=>{setTemplate(goal);setForm('studio');};
+ const bridge=useRef<ReturnType<typeof claimVibeShell>|null>(null);
+ const shellContext=useRef<ReturnType<typeof studioContextStore.claim>|null>(null);
+ useEffect(()=>{
+  const b=claimVibeShell();bridge.current=b;
+  const c=studioContextStore.claim('vibespace');shellContext.current=c;
+  const off=registerVibeSpaceCommands({
+   selectSpace:id=>{setSpaceId(id);setStudioId(null);setForm(null);setSpacePanel(null);},
+   openRun:id=>{const r=controller.getSnapshot().snapshot?.studios.find(r=>r.runId===id);if(r){setSpaceId(r.spaceId);setStudioId(id);setForm(null);}},
+   home:()=>{setStudioId(null);setForm(null);setSpacePanel(null);},
+   newSpace:()=>setForm('space'),newStudio:()=>{setTemplate('');setForm('studio');},refresh:()=>controller.refresh(),
+  });
+  return()=>{off();b.release();c.release();bridge.current=null;shellContext.current=null;};
+ },[controller]);
+ useEffect(()=>{
+  bridge.current?.report({view:state,spaceId:space?.spaceId??null,runId:studio?.runId??null,native:transport.mode==='native',canCreateSpace:supports('create-space'),canCreateStudio:supports('create-studio')});
+  shellContext.current?.report({busy:state.loading||state.pending,selection:studio?{kind:'one',type:'run',count:1,ids:[studio.runId]}:{kind:'none',count:0,ids:[]},data:{spaceId:space?.spaceId??null,runId:studio?.runId??null,mode:transport.mode},services:{ready:!!snapshot&&!busy,native:transport.mode==='native',space:!!space,usage:!!studio?.usage,checkpoints:!!studio?.checkpoints.length}});
+ },[state,space?.spaceId,studio,transport]);
  return <section className="vs-root" aria-label="Vibe Space" aria-busy={state.loading||state.pending}>
   <header className="vs-header"><div className="vs-brand"><BotIcon/><h1>Vibe Space</h1></div><div className="vs-actions"><button type="button" disabled={busy||!supports('create-space')} onClick={()=>setForm('space')}><Plus size={15}/>New space</button>{space&&<button type="button" className="vs-primary" disabled={busy||!supports('create-studio')} onClick={()=>newStudio()}><Plus size={15}/>New Studio</button>}</div></header>
   {transport.mode==='fixture'&&<p className="vs-fixture" role="status">Fixture mode · Test data only. No native actions or project writes.</p>}

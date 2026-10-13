@@ -64,6 +64,7 @@ import './components/documents/registerShell';
 import './components/slides/registerShell';
 import './components/photos/panels/registerShell';
 import './components/sheets/registerShell';
+import './components/vibespace/registerShell';
 import {AppDialogs} from './components/AppDialogs';
 import {DiagnosticsHost} from './components/diagnostics/DiagnosticsHost';
 import {ConfirmHost} from './components/ConfirmHost';
@@ -91,8 +92,8 @@ function AppContent(){
 
 
  const vibeActive=state.activeStudio==='vibespace';
- const sidebarShown=state.sidebarOpen&&!vibeActive;
- const inspectorShown=!vibeActive&&state.inspectorOpen&&(raster.active||!mdActive||!!state.activePanel.right);
+ const sidebarShown=state.sidebarOpen;
+ const inspectorShown=state.inspectorOpen&&(vibeActive||raster.active||!mdActive||!!state.activePanel.right);
  return <div className="app-frame flex h-dvh min-h-[600px] min-w-[960px] flex-col gap-shell bg-shell p-shell"><header className="relative -mx-shell -mt-shell flex h-11 shrink-0 items-center gap-1 border-b border-subtle bg-transparent px-3 select-none" data-tauri-drag-region onDoubleClick={e=>{if(state.windowPrefs.doubleClick==='maximize'&&isTauri()&&(e.target as HTMLElement).hasAttribute('data-tauri-drag-region'))void getCurrentWindow().toggleMaximize();}}><div className="size-7 bg-ink" style={{maskImage:`url("${logoMark}")`,maskSize:"contain",maskRepeat:"no-repeat",maskPosition:"center",WebkitMaskImage:`url("${logoMark}")`,WebkitMaskSize:"contain",WebkitMaskRepeat:"no-repeat",WebkitMaskPosition:"center"}} data-tauri-drag-region aria-hidden="true"/><span className="w-2"/><MenuBar/><ContextChip/><Separator/>{!raster.active&&<><Button size="icon" aria-label={t('cmd.edit.undo')} disabled={!state.coreConnected||nativeDomain} onClick={()=>action('edit.undo')}><Undo2/></Button><Button size="icon" aria-label={t('cmd.edit.redo')} disabled={!state.coreConnected||nativeDomain} onClick={()=>action('edit.redo')}><Redo2/></Button></>}<span className="grow" data-tauri-drag-region/>{!raster.active&&<StudioPill/>}<span className="grow" data-tauri-drag-region/><Button variant="outline" className="!h-8 rounded-[var(--r-control)]" onClick={()=>action('palette.open')}><Search size={14}/><span>{t('finish2.toolbar.commands')}</span><kbd>{formatShortcut('Mod+K')}</kbd></Button><PublishButton/><Account/><WindowControls/></header><ShellFrame leftRail={<IconRail side="left"/>} rightRail={<IconRail side="right"/>} leftOpen={sidebarShown} rightOpen={inspectorShown} leftWidth={state.sidebarWidth} rightWidth={state.inspectorWidth} canvas={<StudioCanvas/>} communication={state.agentOpen&&<CommunicationPanel/>} left={raster.active?<RasterLeftPanel/>:pdfActive?<Suspense fallback={null}><PdfPagesPanel/></Suspense>:state.activePanel.left?<ExtensionPanel id={state.activePanel.left}/>:<SidebarPanelStack side="left" legacy={<StudioSidebar/>}/>} right={raster.active?<RasterRightPanel/>:pdfActive?<Suspense fallback={null}><PdfPropertiesPanel/></Suspense>:state.activePanel.right?<ExtensionPanel id={state.activePanel.right}/>:<SidebarPanelStack side="right" legacy={<StudioInspector/>}/>}/>{state.problemsOpen&&<ProblemsPanel/>}<StatusBar/><AppDialogs/><DiagnosticsMount/><ConfirmHost/><PublishDialog/><DeployConfirmHost/><OpenStudioDialog/><ExtensionConsentHost/><ExtensionsPopupMount/><ChatMentionToast/><ChatShortcut/><CommandPalette/><Settings/><DiskComparison/><ImageConversionDialog/></div>;
 }
 
