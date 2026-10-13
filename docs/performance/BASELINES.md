@@ -2,7 +2,7 @@
 
 Source concept: [performance and resource architecture](../concepts/performance-resource-architecture.md).
 These scripts are diagnostics and correctness gates, not proof of the concept's SLOs.
-They add no workflow and start no paid service or hosted runner.
+Run them in CI via the manual workflow `perf-retention.yml` (public runner, free).
 
 ## Actual results from this implementation workspace
 
