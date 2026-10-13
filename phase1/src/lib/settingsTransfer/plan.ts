@@ -22,7 +22,10 @@ export interface PlanRow {
 }
 export interface Target {
   readonly state: StateLike;
+  /** Stored shortcut overrides ('' = unbound). */
   readonly shortcuts: Readonly<Record<string, string>>;
+  /** Built-in default shortcut per command, so collisions with unchanged defaults are found. Optional. */
+  readonly defaults?: Readonly<Record<string, string>>;
 }
 export interface Plan {
   readonly mode: ImportMode;
@@ -44,6 +47,8 @@ export function targetRevision(t: Target): string {
 const same = (a: unknown, b: unknown): boolean => JSON.stringify(a) === JSON.stringify(b);
 const entryOf = (id: string): SettingEntry => SETTINGS_REGISTRY.find((e) => e.id === id)!;
 const normKey = (s: string): string => s.toLowerCase();
+/** Markdown commands live in their own shortcut scope, as in the Shortcuts settings. */
+const scopeOf = (cmd: string): string => (cmd.startsWith('md.') ? 'md' : 'main');
 
 export interface PlanOptions { readonly mode: ImportMode; readonly categories: readonly TransferCategory[] }
 export function planImport(setup: Setup, target: Target, opts: PlanOptions): Plan {
@@ -68,13 +73,21 @@ export function planImport(setup: Setup, target: Target, opts: PlanOptions): Pla
   }
   // Shortcuts.
   if (selected.has('keybindings')) {
+    const defaults = target.defaults ?? {};
+    // Effective bindings after import: built-in defaults, then this machine's overrides, then the file ('' = unbound).
+    const final: Record<string, string> = { ...defaults };
+    for (const [id, k] of Object.entries(target.shortcuts)) { if (k) final[id] = k; else delete final[id]; }
+    const before = { ...final };
+    for (const [id, k] of Object.entries(setup.shortcuts)) { if (k) final[id] = k; else delete final[id]; }
+    if (opts.mode === 'replace') for (const id of Object.keys(target.shortcuts)) if (!Object.prototype.hasOwnProperty.call(setup.shortcuts, id)) { if (defaults[id]) final[id] = defaults[id]; else delete final[id]; }
     const holders = new Map<string, string[]>();
-    for (const [cmd, k] of Object.entries(target.shortcuts)) if (k) { const n = normKey(k); holders.set(n, [...(holders.get(n) ?? []), cmd]); }
+    for (const [cmd, k] of Object.entries(final)) { const n = scopeOf(cmd) + '|' + normKey(k); holders.set(n, [...(holders.get(n) ?? []), cmd]); }
     for (const [id, incoming] of Object.entries(setup.shortcuts)) {
       const current = target.shortcuts[id];
-      if (current !== undefined && current === incoming) { rows.push({ key: `shortcut:${id}`, kind: 'shortcut', id, category: 'keybindings', status: 'same', current, incoming, proposed: incoming }); continue; }
-      const clash = incoming ? (holders.get(normKey(incoming)) ?? []).filter((c) => c !== id && !(c in setup.shortcuts && setup.shortcuts[c] !== target.shortcuts[c])) : [];
-      rows.push({ key: `shortcut:${id}`, kind: 'shortcut', id, category: 'keybindings', status: clash.length ? 'conflict' : (current === undefined ? 'add' : 'change'), current, incoming, proposed: incoming, ...(clash.length ? { conflictsWith: clash } : {}) });
+      const unchanged = current !== undefined ? current === incoming : (incoming === '' ? before[id] === undefined : false);
+      if (unchanged) { rows.push({ key: `shortcut:${id}`, kind: 'shortcut', id, category: 'keybindings', status: 'same', current, incoming, proposed: incoming }); continue; }
+      const clash = incoming ? (holders.get(scopeOf(id) + '|' + normKey(incoming)) ?? []).filter((c) => c !== id) : [];
+      rows.push({ key: `shortcut:${id}`, kind: 'shortcut', id, category: 'keybindings', status: clash.length ? 'conflict' : (current === undefined ? 'add' : 'change'), current, incoming, proposed: incoming, ...(clash.length ? { conflictsWith: clash.sort() } : {}) });
     }
     if (opts.mode === 'replace') {
       for (const [id, current] of Object.entries(target.shortcuts)) {
@@ -83,14 +96,7 @@ export function planImport(setup: Setup, target: Target, opts: PlanOptions): Pla
       }
     }
   }
-  // Two incoming shortcuts that bind the same key are a conflict among themselves.
-  const incomingByKey = new Map<string, string[]>();
-  for (const r of rows) if (r.kind === 'shortcut' && r.status !== 'reset' && r.incoming) incomingByKey.set(normKey(String(r.incoming)), [...(incomingByKey.get(normKey(String(r.incoming))) ?? []), r.id]);
-  const out = rows.map((r) => {
-    if (r.kind !== 'shortcut' || r.status === 'reset' || r.status === 'same' || !r.incoming) return r;
-    const peers = (incomingByKey.get(normKey(String(r.incoming))) ?? []).filter((c) => c !== r.id);
-    return peers.length ? { ...r, status: 'conflict' as const, conflictsWith: [...new Set([...(r.conflictsWith ?? []), ...peers])] } : r;
-  });
+  const out = rows;
   out.sort((a, b) => TRANSFER_CATEGORIES.indexOf(a.category) - TRANSFER_CATEGORIES.indexOf(b.category) || (a.key < b.key ? -1 : 1));
   const counts: Record<RowStatus, number> = { add: 0, change: 0, same: 0, reset: 0, conflict: 0 };
   for (const r of out) counts[r.status]++;

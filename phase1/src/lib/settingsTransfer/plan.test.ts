@@ -56,3 +56,20 @@ test('plan carries a revision that changes with target state', () => {
   assert.equal(targetRevision(t1), targetRevision({ state: st(), shortcuts: {} }));
   assert.notEqual(targetRevision(t1), targetRevision({ state: st(), shortcuts: { 'a.one': 'Mod+1' } }));
 });
+test('collisions are found against unchanged built-in defaults, within the same scope only', () => {
+  const target = { state: st(), shortcuts: {}, defaults: { 'c.three': 'Mod+K', 'md.bold': 'Mod+B' } };
+  const p = planImport(setupOf({}, { 'a.one': 'Mod+K', 'b.two': 'Mod+B' }), target, { mode: 'merge', categories: ['keybindings'] });
+  const a = p.rows.find((r) => r.id === 'a.one')!;
+  assert.equal(a.status, 'conflict'); assert.deepEqual(a.conflictsWith, ['c.three']);
+  assert.equal(p.rows.find((r) => r.id === 'b.two')!.status, 'add', 'md.* scope is separate');
+});
+test('a default key the user unbound or moved is free; reset in replace mode gives the default back', () => {
+  const free = planImport(setupOf({}, { 'a.one': 'Mod+K' }), { state: st(), shortcuts: { 'c.three': '' }, defaults: { 'c.three': 'Mod+K' } }, { mode: 'merge', categories: ['keybindings'] });
+  assert.equal(free.rows[0].status, 'add');
+  const back = planImport(setupOf({}, { 'a.one': 'Mod+K' }), { state: st(), shortcuts: { 'c.three': 'Mod+9' }, defaults: { 'c.three': 'Mod+K' } }, { mode: 'replace', categories: ['keybindings'] });
+  assert.equal(back.rows.find((r) => r.id === 'a.one')!.status, 'conflict', 'c.three gets Mod+K back when its override is reset');
+});
+test('unbinding a command that has no default and no override is unchanged', () => {
+  const p = planImport(setupOf({}, { 'a.one': '' }), { state: st(), shortcuts: {}, defaults: {} }, { mode: 'merge', categories: ['keybindings'] });
+  assert.equal(p.rows[0].status, 'same');
+});
