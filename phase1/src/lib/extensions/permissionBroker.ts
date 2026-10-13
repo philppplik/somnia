@@ -142,9 +142,10 @@ export class PermissionBroker {
     if(own(this.state.extensions,id)) delete this.state.extensions[id];
     this.persist();await this.invalidate(id,'removed');
   }
-  async setBlocked(id:string,reason:string|null):Promise<void> {
+  async setBlocked(id:string,reason:string|null,opts:{notify?:boolean}={}):Promise<void> {
     const e=this.entry(id); e.blocked=reason??undefined;if(reason)e.enabled=false;this.persist();
-    if(reason) {await this.invalidate(id,'blocklisted');await this.hooks.notify?.({extensionId:id,code:'E_BLOCKLISTED',message:reason});}
+    // The blocklist controller passes notify:false: it owns the deduplicated user notification itself.
+    if(reason) {await this.invalidate(id,'blocklisted');if(opts.notify!==false)await this.hooks.notify?.({extensionId:id,code:'E_BLOCKLISTED',message:reason});}
   }
   openSession(manifest:ManifestV2,workspace:{trusted:boolean; virtual:boolean}={trusted:false,virtual:false}):PermissionSession {
     const m=structuredClone(this.manifest(manifest)),e=this.entry(m.id);

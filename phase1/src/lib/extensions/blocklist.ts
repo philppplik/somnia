@@ -1,6 +1,8 @@
 /** Signed-index blocklist consumer. Only the owning host may construct the verifier/cache adapters.
  * Never expose acceptVerified or raw-feed IPC to an extension webview. */
-export interface BlockedVersion { id: string; versions: string; reason_url: string }
+export interface BlockedVersion { id: string; versions: string; reason_url: string;
+  /** Human-readable reason when the source carries text instead of only a link (signed-catalog revocations). */
+  reason?: string }
 export interface BlocklistFeed { revision: number; blocked: BlockedVersion[] }
 export interface SignedIndex { payload: string; signature: string; verifiedAtMs?: number }
 export interface BlocklistCache { read(): Promise<SignedIndex | null>; write(value: SignedIndex): Promise<void> }
@@ -71,7 +73,9 @@ export class BlocklistService {
   private state: FeedStatus['state'] = 'never-fetched';
   private notified = new Set<string>();
   private running: Promise<FeedStatus> | null = null;
-  constructor(private cache: BlocklistCache, private verify: (signed: SignedIndex) => Promise<boolean>, private host: BlocklistHost, private now: () => number = Date.now) {}
+  constructor(private cache: BlocklistCache, private verify: (signed: SignedIndex) => Promise<boolean>, private host: BlocklistHost, private now: () => number = Date.now,
+    /** Feed parser. Defaults to the standalone blocklist schema; the catalog wiring parses the signed catalog index. */
+    private parse: (payload: string) => BlocklistFeed = parseFeed) {}
   status(): FeedStatus { return { state: this.state, checkedAt: this.checkedAt === null ? null : new Date(this.checkedAt).toISOString(), lastVerifiedAt: this.lastVerifiedAt === null ? null : new Date(this.lastVerifiedAt).toISOString(), offlineDays: this.lastVerifiedAt === null ? null : Math.floor((this.now() - this.lastVerifiedAt) / 86400000), revision: this.feed?.revision ?? null }; }
   /** On every startup, verify stored bytes again. No network expiry disables healthy extensions. */
   async start(): Promise<FeedStatus> {
@@ -95,7 +99,7 @@ export class BlocklistService {
   }
   private async accept(signed: SignedIndex, persist: boolean): Promise<void> {
     if (!signed || typeof signed.payload !== 'string' || typeof signed.signature !== 'string' || signed.payload.length > 4 * 1024 * 1024 || signed.signature.length > 512 || !await this.verify(signed)) throw Error('Invalid index signature');
-    const next = parseFeed(signed.payload);
+    const next = this.parse(signed.payload);
     if (this.feed && next.revision < this.feed.revision) throw Error('Index rollback');
     // Same revision must not change policy. This also prevents ambiguous cache state.
     if (this.feed && next.revision === this.feed.revision && JSON.stringify(next) !== JSON.stringify(this.feed)) throw Error('Index revision conflict');

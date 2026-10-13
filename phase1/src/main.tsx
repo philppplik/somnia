@@ -27,6 +27,7 @@ import {initDiagnostics,disposeDiagnosticsSurface} from './lib/diagnostics/boots
 import {requestConfirm} from './lib/confirmService';
 import {installConfirmAction} from './lib/studios/openIntake';
 import {installNativeIntake} from './lib/intake/installNativeIntake';
+import {startCatalogBlocklistMonitor} from './lib/extensions/catalogBlocklist';
 import {setCommandReporter} from './lib/invokeCmd';
 import {restoreNativeDialogs} from './lib/nativeDialogs';
 import {ErrorBoundary} from './components/ErrorBoundary';
@@ -45,6 +46,9 @@ initDiagnostics();
 installConfirmAction(requestConfirm);
 // D2-E: native open-request intake (file associations, second instance). Web build installs nothing.
 installNativeIntake();
+// Signed-catalog blocklist: disables + notifies on revoked extensions at launch and every 24h.
+// Fail-safe offline; never uninstalls. No-op until a catalog signing key is pinned.
+{const disposeBlocklist=startCatalogBlocklistMonitor();if(import.meta.hot)import.meta.hot.dispose(disposeBlocklist);}
 initLocale();
 import {installDesktopAdapter} from './lib/desktopAdapter';
 import {installFileAdapter} from './lib/fileAdapter';
