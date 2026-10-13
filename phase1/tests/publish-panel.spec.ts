@@ -8,7 +8,8 @@ async function mockDeploy(page:import('@playwright/test').Page){
  await page.addInitScript(()=>{
   const w=window as any;w.isTauri=true;let next=0;const callbacks=new Map<number,any>();const handlers=new Map<string,number>();w.ipcCalls=[];
   const FP='SHA256:Qm7xK2pLr9WvNcT4yHs8DfGa1BjEoZu5XiMq0RtVk4A';
-  const st:any={targets:[],keys:{},pins:{},releases:['20261010T101500Z-a1b2c3','20261012T143015Z-d4e5f6'],fail:null as null|string,hold:null as null|Promise<void>,release:null as null|(()=>void)};
+  const PUBLIC_KEY='ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIPq8mXk2Lw7vC0n3RtYhJbU4sDfGa1BjEoZu5XiMq0Rt somnia@my-laptop';
+  const st:any={targets:[],keys:{},pins:{},live:{},prepared:{},releases:['20261010T101500Z-a1b2c3','20261012T143015Z-d4e5f6'],fail:null as null|string,hold:null as null|Promise<void>,release:null as null|(()=>void)};
   w.__deploy=st;
   const emit=(event:string,payload:any)=>{const id=handlers.get(event);if(id)callbacks.get(id)?.({event,id,payload});};
   w.__emit=emit;
@@ -26,7 +27,17 @@ async function mockDeploy(page:import('@playwright/test').Page){
     case 'deploy_targets_list':return st.targets.map(status);
     case 'deploy_target_save':{const i=st.targets.findIndex((t:any)=>t.id===args.target.id);if(i>=0)st.targets[i]=args.target;else st.targets.push(args.target);return null;}
     case 'deploy_target_delete':st.targets=st.targets.filter((t:any)=>t.id!==args.targetId);return null;
-    case 'deploy_key_create':if(st.keys[args.targetId])err('key-exists');st.keys[args.targetId]=true;return 'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIPq8mXk2Lw7vC0n3RtYhJbU4sDfGa1BjEoZu5XiMq0Rt somnia@my-laptop';
+    case 'deploy_key_create':if(st.keys[args.targetId])err('key-exists');st.keys[args.targetId]=true;return PUBLIC_KEY;
+    case 'deploy_key_public':if(!st.keys[args.targetId])err('key-missing');return PUBLIC_KEY;
+    case 'deploy_live_release':return st.live[args.targetId]??null;
+    case 'deploy_cancel':return false; // No active cancellation test: never claim cancellation occurred.
+    case 'deploy_bootstrap_script':if(!st.keys[args.targetId])err('key-missing');return `#!/bin/sh
+# In-process mock script, never executed on a host
+set -eu
+# Install Caddy and prepare somnia account
+`;
+    case 'deploy_bootstrap_run':if(!st.pins[args.targetId])err('host-key-unknown');st.prepared[args.targetId]=true;return {outcome:'done',steps:['ports','caddy','user','key','dirs','config','start'],hostFingerprint:FP,port:null};
+    case 'deploy_dns_check':return {ready:true,expected:['203.0.113.10'],records:[{name:'example.com',type:'A',values:['203.0.113.10'],source:'system',ready:true},{name:'www.example.com',type:'A',values:['203.0.113.10'],source:'doh',ready:true}],staleIpv6:false,wwwMissing:false,resolverFailed:false};
     case 'deploy_hostkey_probe':return {algorithm:'ssh-ed25519',fingerprint:FP};
     case 'deploy_hostkey_trust':st.pins[args.targetId]=args.fingerprint;return null;
     case 'deploy_hostkey_replace':st.pins[args.targetId]=args.newFingerprint;return null;
@@ -35,10 +46,10 @@ async function mockDeploy(page:import('@playwright/test').Page){
     case 'deploy_confirm_issue':return 'tok-'+args.planHash.slice(0,6);
     case 'deploy_releases':return st.releases;
     case 'deploy_open_site':return null;
-    case 'deploy_publish':{emit('deploy-progress',{targetId:args.targetId,step:'connect'});emit('deploy-progress',{targetId:args.targetId,step:'check'});emit('deploy-progress',{targetId:args.targetId,step:'upload:7/12'});if(st.hold)await st.hold;const rel='20261013T113000Z-f7a8b9';st.releases.push(rel);return {releaseId:rel,url:'https://example.com',rolledBack:false};}
-    case 'deploy_rollback':return {releaseId:args.releaseId,url:'https://example.com',rolledBack:true};
+    case 'deploy_publish':{emit('deploy-progress',{targetId:args.targetId,step:'connect'});emit('deploy-progress',{targetId:args.targetId,step:'check'});emit('deploy-progress',{targetId:args.targetId,step:'upload:7/12'});if(st.hold)await st.hold;const rel='20261013T113000Z-f7a8b9';st.releases.push(rel);st.live[args.targetId]=rel;return {releaseId:rel,url:'https://example.com',rolledBack:false};}
+    case 'deploy_rollback':st.live[args.targetId]=args.releaseId;return {releaseId:args.releaseId,url:'https://example.com',rolledBack:true};
    }
-   return null;}};
+   throw new Error(`Unmocked deployment IPC: ${cmd}`);}};
   w.__TAURI_EVENT_PLUGIN_INTERNALS__={unregisterListener:()=>{}};
  });
 }
@@ -59,19 +70,25 @@ for(const theme of ['light','dark'] as const){
   await mockDeploy(page);await page.goto('/');await setTheme(page,theme);
   await addServer(page);await shot(page,`${theme}-1-form`);
   await page.getByRole('button',{name:'Save and continue'}).click();
-  await expect(page.getByTestId('publish-detail')).toHaveAttribute('data-state','key-missing');await shot(page,`${theme}-2-needs-key`);
+  await expect(page.getByTestId('deploy-setup')).toHaveAttribute('data-step','key');await shot(page,`${theme}-2-needs-key`);
   await page.getByRole('button',{name:'Create key'}).click();
-  await expect(page.getByTestId('publish-detail')).toHaveAttribute('data-state','needs-trust');
-  await expect(page.getByTestId('publish-key')).toContainText('ssh-ed25519 AAAAC3');await shot(page,`${theme}-3-key-created`);
+  await expect(page.getByTestId('deploy-setup')).toHaveAttribute('data-step','trust');
+  await expect(page.locator('.deploy-setup-key')).toContainText('ssh-ed25519 AAAAC3');await shot(page,`${theme}-3-key-created`);
   await page.getByRole('button',{name:'Check server'}).click();
   await expect(page.getByTestId('deploy-hostkey')).toBeVisible();
   await expect(page.getByTestId('deploy-fingerprint')).toContainText('SHA256:Qm7xK2pLr9');await shot(page,`${theme}-4-hostkey`);
   await page.getByRole('button',{name:'Trust and continue'}).click();
-  await expect(page.getByTestId('publish-detail')).toHaveAttribute('data-state','ready');
-  await expect(page.getByTestId('publish-pinned')).toBeVisible();await shot(page,`${theme}-5-ready`);
+  await expect(page.getByTestId('deploy-setup')).toHaveAttribute('data-step','prepare');
+  await expect(page.getByLabel('Full bootstrap script')).toContainText('set -eu');
+  await page.getByRole('button',{name:'Show public key again'}).click();
+  await expect(page.locator('.deploy-setup-key')).toContainText('ssh-ed25519 AAAAC3');
+  await page.getByRole('button',{name:'I ran the script / server already prepared'}).click();
+  await expect(page.getByTestId('deploy-setup')).toHaveAttribute('data-step','domain');
+  await expect(page.getByTestId('deploy-dns-status')).toHaveAttribute('data-ready','true');await shot(page,`${theme}-5-dns-ready`);
+  expect(await page.evaluate(()=>(window as any).ipcCalls.filter((c:any)=>c.cmd==='deploy_publish').length)).toBe(0);
   // hold the upload so the progress view can be captured
   await page.evaluate(()=>{const s=(window as any).__deploy;s.hold=new Promise<void>(r=>{s.release=r;});});
-  await page.getByTestId('publish-go').click();
+  await page.getByRole('button',{name:'Review publish',exact:true}).click();
   await expect(page.getByTestId('deploy-confirm')).toBeVisible();
   await expect(page.getByTestId('deploy-fingerprint')).toContainText('SHA256:Qm7xK2pLr9');await shot(page,`${theme}-6-confirm-diff`);
   expect(await page.evaluate(()=>(window as any).ipcCalls.filter((c:any)=>c.cmd==='deploy_publish').length)).toBe(0);
@@ -84,7 +101,8 @@ for(const theme of ['light','dark'] as const){
   await expect(page.getByTestId('publish-result')).toContainText('Live: example.com');await shot(page,`${theme}-8-result`);
   await page.getByRole('button',{name:'Undo this publish'}).click();
   await expect(page.getByTestId('publish-rollback')).toBeVisible();
-  await expect(page.locator('.publish-release')).toHaveCount(3);await shot(page,`${theme}-9-rollback-list`);
+  await expect(page.locator('.publish-release')).toHaveCount(3);
+  await expect(page.locator('.publish-release[data-live="true"]')).toContainText('20261013T113000Z-f7a8b9');await shot(page,`${theme}-9-rollback-list`);
   await page.locator('.publish-release').nth(1).getByRole('button',{name:'Go back'}).click();
   await expect(page.getByTestId('deploy-confirm')).toBeVisible();await shot(page,`${theme}-10-rollback-confirm`);
   await page.getByRole('button',{name:'Go back',exact:true}).last().click();
@@ -96,6 +114,9 @@ test('errors are plain sentences with one clear action, never raw output',async(
  await mockDeploy(page);await page.goto('/');await setTheme(page,'light');
  await addServer(page);await page.getByRole('button',{name:'Save and continue'}).click();
  await page.getByRole('button',{name:'Create key'}).click();await page.getByRole('button',{name:'Check server'}).click();await page.getByRole('button',{name:'Trust and continue'}).click();
+ await expect(page.getByTestId('deploy-setup')).toHaveAttribute('data-step','prepare');
+ await page.getByRole('button',{name:'Finish later',exact:true}).click();
+ await expect(page.getByTestId('publish-detail')).toHaveAttribute('data-state','ready');
  await page.evaluate(()=>{(window as any).__deploy.fail='connect-failed';});
  await page.getByTestId('publish-go').click();await expect(page.getByTestId('deploy-confirm')).toHaveCount(0);
  const f=page.getByTestId('publish-failure');await expect(f).toBeVisible();
@@ -104,6 +125,34 @@ test('errors are plain sentences with one clear action, never raw output',async(
  await f.getByRole('button',{name:'Try again'}).click();
  await expect(page.getByTestId('deploy-confirm')).toBeVisible();
  await page.getByRole('button',{name:'Cancel'}).click();
+ expect(await page.evaluate(()=>(window as any).ipcCalls.filter((c:any)=>c.cmd==='deploy_publish').length)).toBe(0);
+});
+
+test('reviewed bootstrap uses temporary credentials and continues to verified DNS',async({page})=>{
+ await mockDeploy(page);await page.goto('/');await addServer(page);
+ await page.getByRole('button',{name:'Save and continue'}).click();
+ await expect(page.getByTestId('deploy-setup')).toHaveAttribute('data-step','key');
+ await page.getByRole('button',{name:'Create key'}).click();
+ await page.getByRole('button',{name:'Check server'}).click();
+ await page.getByRole('button',{name:'Trust and continue'}).click();
+ await expect(page.getByTestId('deploy-setup')).toHaveAttribute('data-step','prepare');
+ await page.getByText('Run from Somnia with sudo',{exact:true}).click();
+ await page.getByLabel('Setup SSH login',{exact:true}).fill('admin');
+ await page.getByTestId('setup-login-password').fill('mock-login-only');
+ await page.getByTestId('setup-sudo-password').fill('mock-sudo-only');
+ const run=page.getByRole('button',{name:'Run reviewed script',exact:true});
+ await expect(run).toBeDisabled();
+ await page.getByRole('checkbox',{name:'I reviewed the script and want to run it on 203.0.113.10.'}).check();
+ await run.click();
+ await expect(page.locator('.deploy-setup-outcome')).toHaveAttribute('data-outcome','done');
+ await expect(page.getByTestId('setup-login-password')).toHaveValue('');
+ await expect(page.getByTestId('setup-sudo-password')).toHaveValue('');
+ const setupCalls=await page.evaluate(()=>(window as any).ipcCalls.filter((c:any)=>c.cmd==='deploy_bootstrap_run'));
+ expect(setupCalls).toHaveLength(1);
+ expect(setupCalls[0].args).toEqual({targetId:'portfolio',loginUser:'admin',loginPassword:'mock-login-only',sudoPassword:'mock-sudo-only',privilege:'sudo-password'});
+ expect(await page.evaluate(()=>(window as any).__deploy.targets[0].user)).toBe('somnia');
+ await page.getByRole('button',{name:'Continue to domain',exact:true}).click();
+ await expect(page.getByTestId('deploy-dns-status')).toHaveAttribute('data-ready','true');
  expect(await page.evaluate(()=>(window as any).ipcCalls.filter((c:any)=>c.cmd==='deploy_publish').length)).toBe(0);
 });
 
@@ -140,7 +189,7 @@ async function readyProject(page:import('@playwright/test').Page){
  await page.goto('/');
  await page.evaluate(async()=>{
   const w=window as any;const T={id:'portfolio',name:'Portfolio',host:'203.0.113.10',port:22,user:'somnia',domain:'example.com',kind:'static',keySlot:'deploy-key:portfolio'};
-  w.__deploy.targets.push(T);w.__deploy.keys.portfolio=true;w.__deploy.pins.portfolio='SHA256:Qm7xK2pLr9WvNcT4yHs8DfGa1BjEoZu5XiMq0RtVk4A';
+  w.__deploy.targets.push(T);w.__deploy.keys.portfolio=true;w.__deploy.pins.portfolio='SHA256:Qm7xK2pLr9WvNcT4yHs8DfGa1BjEoZu5XiMq0RtVk4A';w.__deploy.live.portfolio='20261012T143015Z-d4e5f6';
   const app=await import('/src/store/appStore.ts');const pr=await import('/src/lib/previewResourceSource.ts');
   app.patchState({files:{...app.getState().files,'package.json':JSON.stringify({name:'site',dependencies:{react:'19.0.0'},devDependencies:{vite:'6.0.0'}})}});
   pr.setPreviewResourceSource({invoke:(c:string,a:any)=>w.__TAURI_INTERNALS__.invoke(c,a),projectId:'portfolio-project'});
