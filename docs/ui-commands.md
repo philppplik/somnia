@@ -16,7 +16,7 @@ included; the `source` column names the owner. Dynamic sources that stay outside
 
 Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, fr, pt-BR); the gate enforces it.
 
-220 commands. Categories: Edit, Help, Insert, Project, Tools, View.
+232 commands. Categories: Edit, Help, Insert, Project, Tools, View.
 
 | id | title | category | source | shortcut |
 | --- | --- | --- | --- | --- |
@@ -211,6 +211,9 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `vector.deleteNode` | Delete vector node | Edit | vector |  |
 | `vector.deleteSelection` | Delete selected vector paths | Edit | vector |  |
 | `vector.duplicateSelection` | Duplicate selected vector paths | Edit | vector |  |
+| `vector.exportPng` | Export vector PNG | Project | vector |  |
+| `vector.exportSvg` | Export vector SVG | Project | vector |  |
+| `vector.flipSelection` | Flip vector selection | Edit | vector |  |
 | `vector.importSvg` | Add SVG to vector page | Insert | vector |  |
 | `vector.inspect` | Inspect vector document | Tools | vector |  |
 | `vector.moveNode` | Move vector node | Edit | vector |  |
@@ -221,6 +224,7 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `vector.reorder` | Arrange vector paths | Edit | vector |  |
 | `vector.replaceDocument` | Replace vector document | Edit | vector |  |
 | `vector.resizePage` | Resize vector page | Edit | vector |  |
+| `vector.rotateSelection` | Rotate vector selection | Edit | vector |  |
 | `vector.select` | Select vector paths | View | vector |  |
 | `vector.selectNode` | Select vector node | View | vector |  |
 | `vector.setNodeKind` | Set vector node kind | Edit | vector |  |
@@ -230,6 +234,14 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `vector.setView` | Set vector view | View | vector |  |
 | `vector.toggleClosed` | Toggle closed vector path | Edit | vector |  |
 | `vector.toggleHidden` | Toggle vector path visibility | Edit | vector |  |
+| `vector.tool.ellipse` | Ellipse | View | vector |  |
+| `vector.tool.line` | Line | View | vector |  |
+| `vector.tool.node` | Node edit | View | vector |  |
+| `vector.tool.pen` | Pen | View | vector |  |
+| `vector.tool.polygon` | Polygon | View | vector |  |
+| `vector.tool.rect` | Rectangle | View | vector |  |
+| `vector.tool.select` | Select | View | vector |  |
+| `vector.tool.star` | Star | View | vector |  |
 | `vector.toSvg` | Read vector SVG | Tools | vector |  |
 | `vector.undo` | Undo vector edit | Edit | vector |  |
 | `view.code` | Code view | View | core | `Mod+Alt+3` |
