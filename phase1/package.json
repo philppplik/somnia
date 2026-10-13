@@ -23,7 +23,7 @@
     "test:render-goldens": "playwright test --config test/fixtures/render/playwright.config.ts",
     "test:render-determinism": "tsx test/fixtures/render/determinism.ts",
     "test:auth": "tsx --test src/lib/agent/oauth/*.test.ts",
-    "test:updater": "node --test scripts/updater-e2e/lib.test.mjs",
+    "test:updater": "node --test scripts/updater-e2e/lib.test.mjs scripts/updater-e2e/channels.test.mjs",
     "typecheck": "tsc --noEmit",
     "check:commands": "node scripts/errors/gen-commands.mjs --check",
     "inventory:ui-commands": "tsx scripts/dump-ui-commands.ts",
