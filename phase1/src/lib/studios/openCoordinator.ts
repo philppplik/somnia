@@ -30,6 +30,8 @@ export interface PreparedOpen{
 }
 export interface OpenPlan{generation:number;requestId?:string;items:{input:OpenInput;prepared:PreparedOpen}[];affected:AffectedDoc[];revisionTokens:RevisionToken[]}
 export interface OpenDeps{
+ /** Fallback only: ready inputs open automatically; binary/invalid inputs never ask. */
+ openChoice?:{askOpenStudio(input:OpenInput,resolution:Extract<OpenResolution,{status:'choose-handler'|'safe-text-offer'}>,suggested?:StudioId):Promise<StudioId|null>;cancelPending?():void};
  prepare(input:OpenInput,resolution:Extract<OpenResolution,{status:'ready'|'safe-text-offer'}>):Promise<PreparedOpen>;
  /** Async, fail-closed user approval of everything the plan would replace. Resolve 'approved' immediately when nothing dirty is affected. A throw is treated as 'cancelled'. */
  approve(plan:OpenPlan):Promise<'approved'|'cancelled'>;
@@ -66,6 +68,7 @@ export function createOpenCoordinator(deps:OpenDeps){
  const label=(id:StudioId)=>id.charAt(0).toUpperCase()+id.slice(1);
  async function openFiles(inputs:readonly OpenInput[],opts:BatchOptions={}):Promise<OpenReport>{
   let gen=++generation;const intent=opts.intent??'open';
+  deps.openChoice?.cancelPending?.();
   const requestId=inputs.find(i=>i.requestId!==undefined)?.requestId;
   /** Outcomes live in input-position slots: identity is the position, never the (possibly duplicate) basename. */
   const slots:(OpenOutcome|undefined)[]=new Array(inputs.length).fill(undefined);
@@ -78,16 +81,27 @@ export function createOpenCoordinator(deps:OpenDeps){
    inputs.forEach((_,i)=>setSlot(i,{name:inputs[i].name,status:r,reason:text}));
    return report({cancelled:true},text);};
   const existing:{index:number;studioId:StudioId;key:string}[]=[];
-  // 1. Resolve (pure). Non-ready inputs become outcomes immediately.
+  // 1. Resolve (pure), asking only for ambiguous handlers or a verified-text confirmation.
   const ready:{index:number;input:OpenInput;resolution:Ready}[]=[];
-  inputs.forEach((input,index)=>{
-   const resolution=resolveOpen(input.name,input.bytes,{...opts,preferred:opts.preferred??deps.preferred?.(input)});
-   if(resolution.status!=='ready'&&resolution.status!=='safe-text-offer'){setSlot(index,{name:input.name,status:resolution.status,reason:resolution.reason});return;}
-   if(resolution.status==='safe-text-offer'){setSlot(index,{name:input.name,status:'safe-text-offer',studioId:resolution.handler.studioId,reason:resolution.reason});return;}
+  for(const [index,input] of inputs.entries()){
+   const options={...opts,preferred:opts.preferred??deps.preferred?.(input)};
+   let resolution=resolveOpen(input.name,input.bytes,options);
+   if(resolution.status==='choose-handler'||resolution.status==='safe-text-offer'){
+    if(!deps.openChoice){setSlot(index,{name:input.name,status:resolution.status,reason:resolution.reason});continue;}
+    const suggested=resolution.status==='safe-text-offer'?resolution.handler.studioId:options.preferred;
+    let studio:StudioId|null;
+    try{studio=await deps.openChoice.askOpenStudio(input,resolution,suggested);}
+    catch{studio=null;} // A failed dialog must never turn into approval.
+    if(stale())return report({superseded:true},'');
+    if(studio===null){setSlot(index,{name:input.name,status:'cancelled',reason:'Cancelled.'});continue;}
+    // A choice confirms the text offer, not destructive replacement. The normal plan still needs approval.
+    resolution=resolveOpen(input.name,input.bytes,{...options,target:studio,acceptTextOffer:resolution.status==='safe-text-offer'||options.acceptTextOffer});
+   }
+   if(resolution.status!=='ready'){setSlot(index,{name:input.name,status:resolution.status,reason:resolution.reason});continue;}
    const open=input.identityToken!==undefined?deps.findOpenDocument?.(input.identityToken):undefined;
-   if(open){setSlot(index,{name:input.name,status:'activated-existing',studioId:open.studioId});existing.push({index,...open});return;}
+   if(open){setSlot(index,{name:input.name,status:'activated-existing',studioId:open.studioId});existing.push({index,...open});continue;}
    ready.push({index,input,resolution});
-  });
+  }
   let planned:Planned[]=[];let plan:OpenPlan|null=null;
   const disposeAll=()=>{for(const x of planned)x.p.dispose();planned=[];};
   /** 2-4. Prepare every ready item (no session mutation), apply the single-document rule, build the plan. */
@@ -162,7 +176,7 @@ export function createOpenCoordinator(deps:OpenDeps){
     :all[0]?.status==='activated-existing'?`${all[0].name} is already open.`:`Could not open ${all[0]?.name}: ${all[0]?.reason??'unknown error'}`;
   }else summary=`Opened ${opened.length} file${opened.length===1?'':'s'}.${activated?` ${activated} already open.`:''}${bad.length?` ${bad.length} could not be opened: ${bad.slice(0,3).map(o=>`${o.name} (${o.reason})`).join('; ')}${bad.length>3?` and ${bad.length-3} more`:''}`:''}`;
   deps.notify(summary);
-  return report({focused},summary);
+  return report({focused,cancelled:all.some(o=>o.status==='cancelled')},summary);
  }
  return{openFiles,generation:()=>generation,whenDestructiveApprovalIdle};
 }

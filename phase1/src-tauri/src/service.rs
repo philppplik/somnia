@@ -875,6 +875,10 @@ impl Project {
     pub fn has_dirty(&self) -> bool {
         self.documents.values().any(|d| d.pending.is_some())
     }
+    /// Root-relative paths of files with unsaved editor content (Git buffer guard).
+    pub fn dirty_paths(&self) -> Vec<String> {
+        self.documents.iter().filter(|(_, d)| d.pending.is_some()).map(|(p, _)| p.clone()).collect()
+    }
 }
 /// True for file names with a PNG, JPEG or PDF extension (case-insensitive).
 pub fn is_media_path(path: &str) -> bool {
@@ -968,13 +972,36 @@ fn acquire_lease(path: &Path, exclusive: bool) -> Result<fs::File> {
         .read(true)
         .write(true)
         .open(path)?;
-    if exclusive {
-        FileExt::try_lock_exclusive(&lock)
-    } else {
-        FileExt::try_lock_shared(&lock)
+    // A one-shot try_lock is the deliberate UX semantic (report "open elsewhere"
+    // immediately instead of hanging), but lease release after close()/process
+    // teardown is not guaranteed to be visible to a fresh try_lock in the same
+    // instant on every platform. Under heavy parallel load (the 288-test
+    // single-binary suite) an immediate reopen sporadically observed a
+    // just-released lease as still contended on the Linux and macOS CI
+    // runners. Absorb that propagation window with a short bounded grace;
+    // genuinely held leases outlive it by orders of magnitude (seconds in the
+    // tests, indefinitely in the app), so mutual-exclusion semantics and the
+    // immediate Locked answer for real contention are unchanged.
+    const RETRY_DELAY: Duration = Duration::from_millis(10);
+    const RELEASE_GRACE: Duration = Duration::from_millis(250);
+    let deadline = Instant::now() + RELEASE_GRACE;
+    loop {
+        let result = if exclusive {
+            FileExt::try_lock_exclusive(&lock)
+        } else {
+            FileExt::try_lock_shared(&lock)
+        };
+        match result {
+            Ok(()) => return Ok(lock),
+            Err(error)
+                if error.raw_os_error() == fs2::lock_contended_error().raw_os_error()
+                    && Instant::now() < deadline =>
+            {
+                std::thread::sleep(RETRY_DELAY);
+            }
+            Err(error) => return Err(project_lock_error(error)),
+        }
     }
-    .map_err(project_lock_error)?;
-    Ok(lock)
 }
 
 fn project_lock_error(error: std::io::Error) -> AppError {

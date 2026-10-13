@@ -48,7 +48,7 @@ export async function prepareMediaFile(file:Blob,rawName:string,key?:string):Pro
  if(/\.(gdoc|gsheet|gslides)$/i.test(name)){const g=await import('./office/googleLink');return{error:g.googleLinkMessage(name)};}
  if(file.size>MAX_MEDIA_BYTES)return{error:`${name} is larger than ${MAX_MEDIA_BYTES/1_000_000} MB.`};
  let sniffed=sniffMedia(new Uint8Array(await file.slice(0,256).arrayBuffer()));
- if(!sniffed&&/\.(docx|xlsx|pptx)$/i.test(name)){const {sniffOffice}=await import('./office/zipProbe');const k=sniffOffice(new Uint8Array(await file.arrayBuffer()));
+ if(!sniffed){const {sniffOffice}=await import('./office/zipProbe');const k=sniffOffice(new Uint8Array(await file.arrayBuffer()));
 
   if(k==='docx'||k==='xlsx'||k==='pptx')sniffed={kind:k,mime:OFFICE_MIME[k]};}
  if(!sniffed&&/\.tga$/i.test(name))sniffed={kind:'raster-preview',mime:'image/x-tga'};

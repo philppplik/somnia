@@ -1,5 +1,6 @@
 [package]
 name = "somnia-desktop"
+default-run = "somnia"
 version = "0.1.0"
 edition = "2021"
 rust-version = "1.90"
@@ -10,7 +11,7 @@ name = "somnia_desktop"
 crate-type = ["lib", "cdylib", "staticlib"]
 
 [[bin]]
-name = "somnia-desktop"
+name = "somnia"
 path = "src/main.rs"
 required-features = ["desktop"]
 

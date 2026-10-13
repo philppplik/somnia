@@ -10,6 +10,7 @@ Somnia Agent is the native AI panel for bounded project work and reviewed file c
 - [Providers](PROVIDERS.md): OpenRouter, Ollama and researched subscription-auth options. [Ollama adapter](ollama-provider.md): wire format and local verification. [OpenRouter adapter](openrouter-provider.md): request, streaming, routing, credentials. [Using OpenRouter and Ollama](using-openrouter-and-ollama.md): setup, use, errors.
 - [Privacy and AI transparency](PRIVACY.md): opt-in, recipient disclosures, safeguards and EU AI Act review gates. [Site privacy draft](PRIVACY-PAGE-DRAFT.md): unpublished text.
 - [MCP and ACP](MCP-ACP.md): plan only, nothing implemented.
+- [Task-engine contract](TASK-ENGINE-CONTRACT.md): the headless engine behind `somnia run` (stdio events, configuration, bare mode, error codes).
 
 Related notes: [AGENT-INTEGRATION.md](../../phase1/notes/AGENT-INTEGRATION.md) (merge record), [AGENT-PANEL.md](../../phase1/notes/AGENT-PANEL.md), [AGENT-DIFF.md](../../phase1/notes/AGENT-DIFF.md). App-wide architecture: [../ARCHITECTURE.md](../ARCHITECTURE.md).
 

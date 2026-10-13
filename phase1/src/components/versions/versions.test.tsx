@@ -27,22 +27,22 @@ test('nothing is committed without an explicit commit() call',async()=>{
  const {b,c}=mk();await c.refresh();assert.ok(!b.calls.includes('commit'));assert.equal(b.commits.length,0);});
 test('commit sends exactly the ticked paths, the edited subject and the reviewed stateToken',async()=>{
  const {b,c}=mk();await c.refresh();c.toggle('css/site.css');c.setSubject('Fix title');c.setBody(' notes ');
- const v=await c.commit();assert.ok(v);
+ const v=await (c.reviewCommit(),c.commit());assert.ok(v);
  assert.deepEqual(b.commits,[{paths:['index.html'],subject:'Fix title',body:'notes',stateToken:'t1'}]);
  const s=c.getState();assert.equal(s.saved?.subject,'Fix title');assert.equal(s.subjectTouched,false);assert.equal(s.subject,'');assert.equal(s.body,'');
  assert.ok(!s.selected.has('index.html'));assert.ok(!s.selected.has('css/site.css'),'unticked stays unticked');});
 test('cannot save with empty selection or empty/over-long name',async()=>{
- const {b,c}=mk();await c.refresh();c.selectAll(false);assert.equal(c.canSave(),false);assert.equal(await c.commit(),null);
+ const {b,c}=mk();await c.refresh();c.selectAll(false);assert.equal(c.canSave(),false);assert.equal(await (c.reviewCommit(),c.commit()),null);
  c.selectAll(true);c.setSubject('x'.repeat(201));assert.equal(c.canSave(),false);
  c.setSubject('ok');assert.equal(c.canSave(),true);assert.equal(b.commits.length,0);});
 test('state-changed reloads, keeps ticks and asks to review again; nothing saved',async()=>{
  const {b,c}=mk();await c.refresh();b.token=2;
- assert.equal(await c.commit(),null);const s=c.getState();
+ assert.equal(await (c.reviewCommit(),c.commit()),null);const s=c.getState();
  assert.equal(s.reviewAgain,true);assert.equal(s.status?.stateToken,'t2');assert.equal(b.commits.length,0);assert.ok(s.selected.has('index.html'));
- assert.ok(await c.commit(),'second save with the fresh token works');});
+ assert.ok(await (c.reviewCommit(),c.commit()),'second save with the fresh token works');});
 test('backend errors surface as codes without raw detail in the default view',async()=>{
  const {b,c}=mk();await c.refresh();b.failNextCommit={code:'hook-failed',message:'x',detail:'secret/path'};
- assert.equal(await c.commit(),null);assert.equal(c.getState().error?.code,'hook-failed');
+ assert.equal(await (c.reviewCommit(),c.commit()),null);assert.equal(c.getState().error?.code,'hook-failed');
  const html=renderToStaticMarkup(<ChangesView s={c.getState()} c={c} t={t} unsavedFiles={0} advanced={false} onSaveFiles={()=>{}}/>);
  assert.ok(html.includes(t('versions.error.hook-failed')));assert.ok(!html.includes('secret/path'));
  const adv=renderToStaticMarkup(<ChangesView s={c.getState()} c={c} t={t} unsavedFiles={0} advanced={true} onSaveFiles={()=>{}}/>);

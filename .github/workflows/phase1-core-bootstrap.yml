@@ -44,6 +44,10 @@ jobs:
         run: npm run check:layers
       - name: Dreamweaver parity checklist is current
         run: npm run check:dreamweaver-parity
+      - name: Headless CLI and TUI crate tests (native)
+        run: |
+          cargo +1.95.0 test --locked --manifest-path cli/Cargo.toml
+          cargo +1.95.0 test --locked --manifest-path crates/somnia-tui/Cargo.toml
       - run: npm run build && npm run test:core
       - name: Release bundle has no web-control hook
         run: npm run check:no-control
@@ -202,6 +206,8 @@ jobs:
       - name: Build headless WordCraft document engine (Documents Studio)
         run: npm run documents:build
       - run: cargo test --manifest-path src-tauri/Cargo.toml --no-default-features --locked
+      - name: CLI tests (named-pipe transport, locked)
+        run: cargo test --locked --manifest-path cli/Cargo.toml
       - name: Vibespace pure crate suites (locked)
         run: |
           cargo test --locked --manifest-path vibespace-core/Cargo.toml
@@ -294,3 +300,66 @@ jobs:
             phase1/src-tauri/target/release/bundle/macos/*.app.tar.gz
             phase1/src-tauri/target/release/bundle/macos/*.app.tar.gz.sig
             phase1/src-tauri/target/release/bundle/macos-*.txt
+  # Headless `somnia` CLI (phase1/cli). Linux and Windows x86_64 only, also on alpha runs. No macOS build.
+  cli:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, windows-latest]
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        working-directory: phase1
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - uses: dtolnay/rust-toolchain@stable
+      - run: npm ci
+      - name: Packaging script tests
+        run: node --test --experimental-strip-types test/cli-release/package-cli.test.ts
+      - name: Build the agent engine sidecar and test it
+        run: |
+          npm run build:cli-engine
+          npm run test:cli-engine
+      - name: CLI tests (real-sidecar tests run now that the engine is built)
+        run: cargo test --manifest-path cli/Cargo.toml --locked
+      - name: Build and archive the CLI
+        run: node scripts/package-cli.mjs build --out cli-dist
+      - name: Smoke test the packaged binary
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p cli-smoke && cd cli-smoke
+          if [ "$RUNNER_OS" = "Windows" ]; then /c/Windows/System32/tar.exe -xf ../cli-dist/somnia-cli-*.zip; bin=$(ls -d somnia-cli-*)/somnia.exe; else tar -xzf ../cli-dist/somnia-cli-*.tar.gz; bin=$(ls -d somnia-cli-*)/somnia; fi
+          test -f "$(dirname "$bin")/sidecar/engine.mjs"
+          "$bin" --version | tee version.txt
+          grep -q "^somnia $(node -p "require('../package.json').somniaRelease")" version.txt
+      - uses: actions/upload-artifact@v7
+        with:
+          name: somnia-cli-${{ runner.os }}-${{ github.sha }}
+          retention-days: 14
+          if-no-files-found: error
+          path: |
+            phase1/cli-dist/somnia-cli-*.tar.gz
+            phase1/cli-dist/somnia-cli-*.zip
+            phase1/cli-dist/*.sha256
+  cli-checksums:
+    needs: cli
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/download-artifact@v7
+        with:
+          pattern: somnia-cli-*-${{ github.sha }}
+          merge-multiple: true
+          path: cli-dist
+      - run: node phase1/scripts/package-cli.mjs sums cli-dist
+      - run: cd cli-dist && sha256sum -c SHA256SUMS
+      - uses: actions/upload-artifact@v7
+        with:
+          name: somnia-cli-SHA256SUMS-${{ github.sha }}
+          retention-days: 14
+          if-no-files-found: error
+          path: cli-dist/SHA256SUMS

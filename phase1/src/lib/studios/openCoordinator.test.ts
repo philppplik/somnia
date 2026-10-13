@@ -18,7 +18,7 @@ function harness(over:Partial<OpenDeps>&{failPrepare?:string[];failCommit?:strin
   approve:over.approve??(async()=>'approved'),revalidate:over.revalidate??(()=>true),
   switchStudio(id){log.push('studio:'+id);shell.studio=id;},
   notify(t){log.push('notify:'+t);},
-  pendingGesture:over.pendingGesture,singleDocument:over.singleDocument,findOpenDocument:over.findOpenDocument,approvalFailed:over.approvalFailed,
+  openChoice:over.openChoice,pendingGesture:over.pendingGesture,singleDocument:over.singleDocument,findOpenDocument:over.findOpenDocument,approvalFailed:over.approvalFailed,
  };
  return{log,shell,session,c:createOpenCoordinator(deps)};
 }
@@ -168,4 +168,38 @@ test('retry of one item runs the normal pipeline: approval is asked for that ite
 test('dirty-protection: user declines the replace dialog on retry, nothing changes',async()=>{
  const h=harness({affected:()=>[dirtyDoc()],approve:async p=>p.affected.some(a=>a.dirty)?'cancelled':'approved'});
  const r=await h.c.openFiles([docx()]);assert.equal(r.cancelled,true);assert.ok(!h.log.some(l=>/^commit/.test(l)));
+});
+
+test('choose-handler asks, then re-resolves chosen target through prepare/approve/commit',async()=>{
+ const calls:string[]=[];
+ const h=harness({openChoice:{async askOpenStudio(i,r){calls.push(`${i.name}:${r.status}`);return 'code';}},approve:async p=>{calls.push('approve:'+p.items.length);return'approved';}});
+ const r=await h.c.openFiles([{name:'picture.docx',bytes:enc('%PDF-1.7\n')}]);
+ assert.deepEqual(calls,['picture.docx:choose-handler','approve:1']);assert.equal(r.outcomes[0].status,'opened');assert.equal(r.outcomes[0].preview,true);assert.equal(h.shell.studio,'code');
+});
+test('choice cancellation is cancelled, never prepared or committed',async()=>{
+ let approvals=0;const h=harness({openChoice:{askOpenStudio:async()=>null},approve:async()=>{approvals++;return'approved';}});
+ const r=await h.c.openFiles([{name:'unknown.notes',bytes:enc('hello'),ordinal:4,requestId:'R'}]);
+ assert.equal(r.cancelled,true);assert.equal(r.outcomes[0].status,'cancelled');assert.equal(r.outcomes[0].ordinal,4);assert.equal(approvals,0);assert.ok(!h.log.some(l=>/^(commit|focus|studio)/.test(l)));
+});
+test('ready automatically opens without asking; unsupported/invalid are notify-only',async()=>{
+ let asks=0;const h=harness({openChoice:{async askOpenStudio(){asks++;return'code';}}});
+ const r=await h.c.openFiles([{name:'known.txt',bytes:enc('hello')},{name:'binary.bin',bytes:new Uint8Array([0,1,0])},{name:'broken.docx',bytes:enc('broken')}]);
+ assert.equal(asks,0);assert.deepEqual(r.outcomes.map(o=>o.status),['opened','unsupported','invalid']);
+});
+test('safe-text-offer must be confirmed and still receives destructive approval',async()=>{
+ let asked='';let approvals=0;
+ const h=harness({openChoice:{async askOpenStudio(_,r){asked=r.status;return'code';}},affected:()=>[dirtyDoc()],approve:async()=>{approvals++;return'cancelled';}});
+ const r=await h.c.openFiles([{name:'unknown.notes',bytes:enc('hello')}]);
+ assert.equal(asked,'safe-text-offer');assert.equal(approvals,1);assert.equal(r.cancelled,true);assert.ok(!h.log.some(l=>/^commit/.test(l)));
+});
+test('invalid selection and failed choice cannot bypass the resolver or approval',async()=>{
+ const h=harness({openChoice:{askOpenStudio:async()=> 'sound'}});const r=await h.c.openFiles([{name:'unknown.notes',bytes:enc('hello')}]);assert.equal(r.outcomes[0].status,'unsupported');assert.ok(!h.log.some(l=>/^commit/.test(l)));
+ const broken=harness({openChoice:{async askOpenStudio(){throw Error('broken');}}});assert.equal((await broken.c.openFiles([{name:'unknown.notes',bytes:enc('hello')}])).outcomes[0].status,'cancelled');
+});
+test('a newer ready intake cancels a pending chooser and prevents an old continuation',async()=>{
+ const {askOpenStudio,answerOpenChoice,getOpenChoice}=await import('./openChoice');
+ const h=harness({openChoice:{askOpenStudio,cancelPending:()=>answerOpenChoice(null)}});
+ const old=h.c.openFiles([{name:'unknown.notes',bytes:enc('hello')}]);assert.ok(getOpenChoice());
+ const newer=await h.c.openFiles([{name:'known.txt',bytes:enc('hello')}]);const superseded=await old;
+ assert.equal(getOpenChoice(),null);assert.equal(superseded.superseded,true);assert.equal(newer.outcomes[0].status,'opened');assert.ok(!h.log.includes('commit:unknown.notes'));
 });

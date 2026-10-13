@@ -1,0 +1,24 @@
+▄▀▀  █▀▀█  █▀▄▀█  █▄ █  ▀█▀  ▄▀▀▄   task  Rewrite the hero copy and make the CTA primary
+▀▀▄  █  █  █ ▀ █  █ ▀█   █   █▀▀█   model claude-sonnet (BYOK)
+▄▄▀  ▀▀▀▀  ▀   ▀  ▀  ▀  ▀▀▀  ▀  ▀   base  7dc7b652
+
+────────────────────────────────────────────────────────────────────────────────────────────────────
+I'll read the landing page first, then tighten the hero copy.
+ ✓ read_file  index.html (212 lines)
+ ✓ search  3 matches
+Proposing two changes: the headline and the CTA.
+ ✓ propose_edit  index.html (2 hunks applied)
+
+
+
+
+
+
+
+
+
+
+
+
+
+ done   t-20261010-0042 │ $0.0121 · 7032 tok │ branch …/task/t-20261010-0042 │ q quit
