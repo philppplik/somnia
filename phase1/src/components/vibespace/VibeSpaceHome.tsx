@@ -1,4 +1,5 @@
 import {useEffect,useMemo,useRef,useState,useSyncExternalStore} from 'react';
+import {subscribeVibeModelSettings} from '../../lib/vibespace/settingsRefresh';
 import {StudioScheduleButton} from './StudioScheduleButton';
 import {Plus} from '../../lib/icons';
 import {VibeSpaceController} from '../../lib/vibespace/controller';
@@ -22,6 +23,7 @@ export function VibeSpaceHome({transport}:{transport:VibeSpaceTransport}){
  const [spaceId,setSpaceId]=useState(''),[studioId,setStudioId]=useState<string|null>(null),[form,setForm]=useState<'space'|'studio'|null>(null),[template,setTemplate]=useState('');
  const [spacePanel,setSpacePanel]=useState<'memory'|'skills'|null>(null);
  useEffect(()=>{void controller.connect();return()=>controller.disconnect();},[controller]);
+ useEffect(()=>{if(transport.mode!=='native')return;return subscribeVibeModelSettings(()=>{void controller.refresh();});},[controller,transport]);
  const [returnCard,setReturnCard]=useState<ReturnCard|null>(null);
  useEffect(()=>{
   if(transport.mode!=='native'||!nativeScheduleTransport.returnCard)return;
@@ -40,7 +42,7 @@ export function VibeSpaceHome({transport}:{transport:VibeSpaceTransport}){
  const studio=snapshot?.studios.find(s=>s.runId===studioId&&s.spaceId===space?.spaceId);
  const busy=state.pending||state.loading||!!state.error;
  const supports=(type:VibeIntent['type'])=>transport.capabilities.includes(type);
- const newStudio=(goal='')=>{setTemplate(goal);setForm('studio');};
+ const newStudio=(goal='')=>{setTemplate(goal);setForm('studio');if(transport.mode==='native')void controller.refresh();};
  const bridge=useRef<ReturnType<typeof claimVibeShell>|null>(null);
  const shellContext=useRef<ReturnType<typeof studioContextStore.claim>|null>(null);
  useEffect(()=>{
@@ -50,7 +52,7 @@ export function VibeSpaceHome({transport}:{transport:VibeSpaceTransport}){
    selectSpace:id=>{setSpaceId(id);setStudioId(null);setForm(null);setSpacePanel(null);},
    openRun:id=>{const r=controller.getSnapshot().snapshot?.studios.find(r=>r.runId===id);if(r){setSpaceId(r.spaceId);setStudioId(id);setForm(null);}},
    home:()=>{setStudioId(null);setForm(null);setSpacePanel(null);},
-   newSpace:()=>setForm('space'),newStudio:()=>{setTemplate('');setForm('studio');},refresh:()=>controller.refresh(),
+   newSpace:()=>setForm('space'),newStudio:()=>{setTemplate('');setForm('studio');if(transport.mode==='native')void controller.refresh();},refresh:()=>controller.refresh(),
   });
   return()=>{off();b.release();c.release();bridge.current=null;shellContext.current=null;};
  },[controller]);

@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased - Vibe Space model picker
+
+- Refresh configured models when opening a task form or saving the AI provider/model, without resetting the goal or substituting a removed selection.
+- Vibe Space now includes the saved Claude model and uses the existing Anthropic adapter; Ollama, OpenAI and OpenRouter use their matching native adapters. API keys stay in the OS credential store.
+
 ## Unreleased - Header hero action slot
 
 - The header slot next to the Account pill can now show a studio's primary action as a split button (main action plus a chevron menu) instead of Publish. Studios opt in with one data field, `header.heroAction`; studios without it keep the Publish button.
