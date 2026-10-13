@@ -50,7 +50,9 @@ export const documentsStudio:StudioDef={
  shell:{
   leftRail:[{id:'files',label:'Files',icon:'Files',global:true},{id:'search',label:'Search',icon:'Search',global:true},{id:'versions',label:'Versions',icon:'VersionsIcon',global:true}],
   rightRail:[{id:'design',label:'Document',icon:'FileText'}],
-  header:{menus:['Project','Edit','View','Tools','Help'],views:[]},
+  header:{menus:['Project','Edit','View','Tools','Help'],views:[],
+   /** Export hero (docs/concepts/hero-action-documents.md): opens the export popup; the chevron keeps Save a copy and Publish. */
+   heroAction:{id:'documents.export.open',labelKey:'hero.export',icon:'Download',menu:['documents.saveCopy']}},
   bottomBar:{slots:['zoom'],viewportPresets:[]},
   inspector:'documents.inspector',tools:[]
  },commands:[{id:'documents.saveCopy',label:'cmd.documents.saveCopy'},{id:'documents.zoomIn',label:'cmd.documents.zoomIn'},{id:'documents.zoomOut',label:'cmd.documents.zoomOut'}],

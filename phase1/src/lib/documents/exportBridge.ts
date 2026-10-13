@@ -1,0 +1,46 @@
+import {useSyncExternalStore} from 'react';
+import {getDocumentsState} from './store';
+/**
+ * Bridge between the Documents Export hero / commands and the live canvas. The canvas owns the engine,
+ * so it registers the one save implementation here (the same flow its toolbar button always used,
+ * including the loss-warning gate). The hero, Project > Save a copy and the export popup all dispatch
+ * `documents.saveCopy`, so no second export path can drift or bypass the warning.
+ */
+export interface DocumentsExportBridge{
+ /** Produce and download the DOCX copy. Must reject (not swallow) engine failures. */
+ save():Promise<void>;
+}
+let bridge:DocumentsExportBridge|null=null;
+export function registerDocumentsExport(next:DocumentsExportBridge):()=>void{
+ bridge=next;return()=>{if(bridge===next)bridge=null;};
+}
+export const getDocumentsExport=()=>bridge;
+
+/** Export popup and loss-warning dialog visibility. Session-only. */
+export interface DocumentsExportUi{exportOpen:boolean;confirmOpen:boolean}
+let ui:DocumentsExportUi={exportOpen:false,confirmOpen:false};
+const listeners=new Set<()=>void>();
+export const getDocumentsExportUi=()=>ui;
+export function patchDocumentsExportUi(patch:Partial<DocumentsExportUi>){ui={...ui,...patch};listeners.forEach(fn=>fn());}
+export const subscribeDocumentsExportUi=(fn:()=>void)=>{listeners.add(fn);return()=>{listeners.delete(fn);};};
+export const useDocumentsExportUi=()=>useSyncExternalStore(subscribeDocumentsExportUi,getDocumentsExportUi,getDocumentsExportUi);
+
+/** Ready to export: a document is open, the engine is wired up and no save is running (no repeat submission). */
+export const documentsExportReady=()=>getDocumentsState().status==='ready'&&!getDocumentsState().saving&&!!bridge;
+
+/**
+ * The one save-a-copy path. The original document is never overwritten; its dirty state is untouched.
+ * Unsupported-content risks keep the existing warning and explicit Save anyway confirmation: every entry
+ * point (toolbar button, hero popup, Project menu, palette) funnels through this gate.
+ */
+export async function requestDocumentsSaveCopy():Promise<void>{
+ const s=getDocumentsState();
+ if(s.status!=='ready'||s.saving||!bridge)return;
+ if(s.risks.length){patchDocumentsExportUi({confirmOpen:true});return;}
+ await bridge.save();
+}
+/** The confirm dialog's Save anyway: closes the warning and runs the same save. */
+export async function confirmDocumentsSaveCopy():Promise<void>{
+ patchDocumentsExportUi({confirmOpen:false});
+ await bridge?.save();
+}
