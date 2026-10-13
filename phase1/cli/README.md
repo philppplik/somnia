@@ -51,3 +51,31 @@ node scripts/package-cli.mjs sums cli-dist                 # SHA256SUMS for all 
 
 `SOMNIA_RELEASE` and `SOMNIA_COMMIT` are compile-time inputs the script sets. CI wiring: [BUILD-AND-RELEASE.md](../../docs/BUILD-AND-RELEASE.md).
 Integration tests under `cli/tests` are Unix only (`#![cfg(unix)]`).
+
+## Install (scripts)
+
+The release assets include non-interactive installers. They download only from the GitHub Release of
+`philppplik/somnia`, verify the archive against `SHA256SUMS` before touching anything, and are safe to run again
+(a rerun replaces the installed version).
+
+Linux (x86_64):
+
+```sh
+curl -fsSL https://github.com/philppplik/somnia/releases/download/<tag>/install.sh | sh
+# or: sh install.sh [--version <tag>] [--prefix DIR] [--no-path]
+```
+
+Windows (x64):
+
+```bat
+install.bat
+rem or: powershell -NoProfile -ExecutionPolicy Bypass -File install.ps1 [-Version <tag>] [-Prefix DIR] [-NoPath]
+```
+
+- Linux installs to `~/.local/share/somnia-cli` and links `~/.local/bin/somnia`; if `~/.local/bin` is not on `PATH`,
+  one marked line is added to `~/.profile`, `~/.bashrc` and `~/.zshrc` (once). `--no-path` skips that.
+- Windows installs to `%LOCALAPPDATA%\Programs\somnia-cli` and adds that folder to the user `PATH` (once). No admin rights needed.
+  `install.bat` runs PowerShell hidden and prints the log at the end, so no extra console window appears.
+- Without a version the newest release (pre-releases included) that carries a CLI archive is used.
+- There is no macOS CLI build yet; `install.sh` stops with a clear message on macOS.
+- `git` and Node 20+ must be on `PATH`. The Linux binary is built on Ubuntu 24.04 and needs glibc 2.39 or newer.
