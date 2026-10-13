@@ -9,12 +9,15 @@ async function openAudio(page:any){
  const chooser=page.waitForEvent('filechooser');await page.getByTestId('sound-open').click();(await chooser).setFiles(asset('arpeggio.mp3'));
  await expect(page.getByTestId('sound-workspace')).toBeVisible();
  await expect(page.getByTestId('sound-info')).toContainText('44100 Hz');
+ await page.locator('[data-rail-item=selection]').click();
+ await page.locator('[data-rail-item=effects]').click();
 }
+
 test('Sound Studio: open MP3, edit in the WASM worker, A/B, play, export WAV',async({page})=>{
  await openAudio(page);
  await expect(page.getByRole('radio',{name:'Somnia Sound'})).toHaveAttribute('aria-checked','true');
  await expect(page.getByTestId('sound-info')).toContainText('3.5');await expect(page.getByTestId('sound-info')).toContainText('Stereo');
- await expect(page.getByTestId('sound-controls')).toBeVisible();
+ await expect(page.getByTestId('sound-controls').first()).toBeVisible();
  await expect(page.getByRole('radio',{name:'Edited'})).toBeDisabled();
  await page.screenshot({path:'test-results/sound-open.png'});
  await page.getByTestId('sound-trim').check();await page.getByTestId('sound-normalize').check();
@@ -48,7 +51,7 @@ test('Sound Studio: switching to Code keeps the audio tab and the Code studio is
  await page.getByRole('radio',{name:'Somnia Code'}).click();
  await expect(page.getByRole('radio',{name:'Somnia Code'})).toHaveAttribute('aria-checked','true');
  await expect(page.getByTestId('sound-workspace')).toBeVisible();
- await expect(page.getByTestId('sound-controls')).toBeVisible();
+ await expect(page.getByTestId('sound-controls').first()).toBeVisible();
 });
 for(const locale of ['de','es','fr','pt-BR'])test(`Sound Studio strings: ${locale}`,async({page})=>{
  await page.addInitScript(l=>localStorage.setItem('somnia.locale.v1',l),locale);await page.goto('/');
@@ -103,7 +106,7 @@ test('Sound Studio: plugin parameters change the render and the step line is loc
  await expect(page.getByTestId('sound-params-reset')).toBeEnabled();
  await expect.poll(dur,{timeout:20000}).toBeGreaterThan(d0);
  await page.screenshot({path:'test-results/sound-params.png'});
- await expect(page.getByTestId('sound-controls')).toContainText('Effect plate_reverb');
+ await expect(page.getByTestId('inspector-section-processing')).toContainText('Effect plate_reverb');
  await page.getByTestId('sound-params-reset').click();
  await expect(page.getByTestId('sound-param-decay-value')).toContainText('2.50');
  await page.getByTestId('sound-effect').selectOption('');
@@ -116,7 +119,7 @@ test('Sound Studio: step line follows the UI language',async({page})=>{
  const chooser=page.waitForEvent('filechooser');await page.getByTestId('sound-open').click();(await chooser).setFiles(asset('arpeggio.mp3'));
  await expect(page.getByTestId('sound-info')).toContainText('44100 Hz');
  await page.getByTestId('sound-reverse').check();
- await expect(page.getByTestId('sound-controls')).toContainText('Umgekehrt',{timeout:20000});
- await expect(page.getByTestId('sound-controls')).not.toContainText('sound.step');
+ await expect(page.getByTestId('inspector-section-processing')).toContainText('Umgekehrt',{timeout:20000});
+ await expect(page.getByTestId('inspector-section-processing')).not.toContainText('sound.step');
  await page.screenshot({path:'test-results/sound-de.png'});
 });

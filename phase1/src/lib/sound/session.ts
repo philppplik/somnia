@@ -74,7 +74,7 @@ export async function renderSoundPreview(name:string,settings:SoundSettings):Pro
  return URL.createObjectURL(new Blob([r.wav],{type:'audio/wav'}));
 }
 export function updateSoundSettings(name:string,change:(s:SoundSettings)=>SoundSettings){
- const s=sessions.get(name);if(!s)return;put({...s,settings:sanitizeSettings(change(s.settings))});schedule(name);
+ const s=sessions.get(name);if(!s)return;const settings=sanitizeSettings(change(s.settings));schedule(name);put({...s,settings});
 }
 export const resetSoundSettings=(name:string)=>updateSoundSettings(name,()=>DEFAULT_SETTINGS);
 export const setSoundListen=(name:string,listen:'original'|'processed')=>patch(name,{listen});
@@ -100,13 +100,14 @@ export function setSoundSelection(name:string,range:{start:number;end:number}|nu
 /** Turns the pending selection into an edit: crop, cut, or "apply the other steps to the selection only". */
 export function applySoundRegion(name:string,mode:SoundRegionMode){
  const s=sessions.get(name);if(!s?.selection)return;
- put({...s,selection:null,settings:sanitizeSettings({...s.settings,region:{mode,...s.selection}}),listen:'processed'});schedule(name,0);
+ schedule(name,0);put({...s,selection:null,settings:sanitizeSettings({...s.settings,region:{mode,...s.selection}}),listen:'processed'});
 }
 /** Drops the region edit and shows its range as the selection again, so it can be adjusted. */
 export function clearSoundRegion(name:string){
  const s=sessions.get(name);if(!s?.settings.region)return;
- const {start,end}=s.settings.region;put({...s,selection:{start,end},settings:{...s.settings,region:null}});schedule(name,0);
+ const {start,end}=s.settings.region;schedule(name,0);put({...s,selection:{start,end},settings:{...s.settings,region:null}});
 }
+export const isSoundExportReady=(name:string|null)=>!!name&&!timers.has(name)&&getSoundSession(name)?.status==='ready'&&!!getSoundSession(name)?.processed;
 export type SaveOutcome='saved'|'cancelled'|'downloaded'|'unavailable';
 /** Desktop: OS save dialog and an atomic write through a one-time grant. Browser: a download. Same bytes either way. */
 export async function saveSound(name:string):Promise<SaveOutcome>{

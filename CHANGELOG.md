@@ -20,6 +20,10 @@
 
 - Video has a source library and sequence panel, customizable rails, and a selection-aware inspector for trimming, title styling, audio, crossfades and export copies.
 - New panel actions use typed interactive commands with five-language labels. Original media stays unchanged.
+## Unreleased - Sound studio shell
+
+- Sound now has customizable Audio clips, Selection and Effects rails and a generic audio inspector with source statistics, levels/fades and processing controls.
+- Audio edits, selection, listening, transport and WAV-copy export are typed UI commands with five-language titles. Export waits for queued processing instead of saving an older render.
 
 ## Unreleased - server frameworks (Next.js, Astro, SvelteKit, Nuxt)
 

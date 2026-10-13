@@ -1577,6 +1577,138 @@
       "hasEnabled": true
     },
     {
+      "id": "sound.clip.activate",
+      "title": "Activate audio clip",
+      "category": "View",
+      "source": "sound",
+      "keywords": [
+        "audio",
+        "sound"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "sound.export",
+      "title": "Export audio WAV copy",
+      "category": "Project",
+      "source": "sound",
+      "keywords": [
+        "audio",
+        "sound"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "sound.listen",
+      "title": "Listen to original or edited audio",
+      "category": "View",
+      "source": "sound",
+      "keywords": [
+        "audio",
+        "sound"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "sound.region.apply",
+      "title": "Apply selection region",
+      "category": "Edit",
+      "source": "sound",
+      "keywords": [
+        "audio",
+        "sound"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "sound.region.clear",
+      "title": "Remove region edit",
+      "category": "Edit",
+      "source": "sound",
+      "keywords": [
+        "audio",
+        "sound"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "sound.selection.all",
+      "title": "Select entire audio clip",
+      "category": "Edit",
+      "source": "sound",
+      "keywords": [
+        "audio",
+        "sound"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "sound.selection.clear",
+      "title": "Clear audio selection",
+      "category": "Edit",
+      "source": "sound",
+      "keywords": [
+        "audio",
+        "sound"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "sound.selection.set",
+      "title": "Set audio selection",
+      "category": "Edit",
+      "source": "sound",
+      "keywords": [
+        "audio",
+        "sound"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "sound.settings.reset",
+      "title": "Reset audio processing",
+      "category": "Edit",
+      "source": "sound",
+      "keywords": [
+        "audio",
+        "sound"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "sound.settings.set",
+      "title": "Change audio processing settings",
+      "category": "Tools",
+      "source": "sound",
+      "keywords": [
+        "audio",
+        "sound"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "sound.transport.seek",
+      "title": "Seek in audio",
+      "category": "View",
+      "source": "sound",
+      "keywords": [
+        "audio",
+        "sound"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "sound.transport.toggle",
+      "title": "Play or pause audio",
+      "category": "View",
+      "source": "sound",
+      "keywords": [
+        "audio",
+        "sound"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "split.horizontal",
       "title": "Split: code above, design below",
       "category": "View",

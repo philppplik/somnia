@@ -1,3 +1,5 @@
+import {useEffect} from 'react';
+import {registerSoundCommands} from '../../lib/sound/commands';
 import {AudioWaveform} from '../../lib/icons';
 import {StudioEmptyState} from '../studios/StudioEmptyState';
 import {createBlankProject} from '../../lib/studios/blank';
@@ -8,6 +10,7 @@ import {useMedia} from '../../lib/media';
 import {SoundWorkspace} from './SoundWorkspace';
 /** Canvas of the Sound Studio: the opened audio file, or a start screen. */
 export function SoundCanvas(){
+ useEffect(()=>registerSoundCommands(),[]);
  const {t}=useT();const media=useMedia();const item=media.items.find(i=>i.name===media.active);
  return <main className="center" aria-label={t('sound.title')}><div className="workspace"><section className="code-pane" aria-label={t('sound.title')}>
   <FileTabs/>

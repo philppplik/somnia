@@ -1,12 +1,17 @@
+import type {ContextStore} from '../../lib/shell/contextStore';
+import {studioContextStore} from '../../lib/shell/studioContext';
+import {registerSoundCommands,registerSoundTransport} from '../../lib/sound/commands';
+import {executeCommand} from '../../lib/commands';
+import {commandDispatcher} from '../../lib/commandDispatcher';
 import {reportError} from '../../lib/log';
 import {useCallback,useEffect,useRef,useState} from 'react';
 import {Pause,Play,Download} from '../../lib/icons';
 import {Button} from '../ui/button';
 import {useT} from '../../lib/useT';
 import {stageKey} from '../../lib/sound/steps';
-import {openSound,saveSound,setSoundListen,setSoundSelection,useSoundSession} from '../../lib/sound/session';
+import {openSound,isSoundExportReady,useSoundSession} from '../../lib/sound/session';
 import {isNeutral} from '../../lib/sound/recipe';
-import {getState,patchState,requestStudio,useAppStore} from '../../store/appStore';
+import {useAppStore} from '../../store/appStore';
 import {Waveform} from './Waveform';
 import {SoundControls} from './SoundInspector';
 import type {MediaItem} from '../../lib/media';
@@ -17,8 +22,6 @@ export function SoundWorkspace({item,withPanel=false}:{item:MediaItem;withPanel?
  const {t}=useT();const studio=useAppStore().activeStudio;const session=useSoundSession(item.name);
  const audio=useRef<HTMLAudioElement>(null);const [time,setTime]=useState(0),[playing,setPlaying]=useState(false);
  useEffect(()=>{void openSound(item);},[item]);
- // The Sound rail offers Files only, so do not leave the HTML Layers tree open beside audio.
- useEffect(()=>{if(studio==='sound'&&!['files','search'].includes(getState().leftTab))patchState({leftTab:'files'});},[studio]);
  const shown=session?.listen==='original'?session.original:session?.processed??null;
  const url=shown?.url;
  // Switching version or re-rendering keeps position and play state.
@@ -28,17 +31,22 @@ export function SoundWorkspace({item,withPanel=false}:{item:MediaItem;withPanel?
   el.addEventListener('loadedmetadata',onMeta,{once:true});return()=>el.removeEventListener('loadedmetadata',onMeta);
  },[url]);
  const [note,setNote]=useState('');
- const doSave=async()=>{setNote('');try{const r=await saveSound(item.name);if(r==='saved')setNote(t('sound.saved'));else if(r==='downloaded')setNote(t('sound.downloaded'));}catch(e){reportError('sound.operation',e,{context:{studio:'sound'}});setNote(t('sound.saveFailed',{message:e instanceof Error?e.message:String(e)}));}};
+ const doSave=async()=>{setNote('');try{const r=await commandDispatcher.runCommand('sound.export');if(r==='saved')setNote(t('sound.saved'));else if(r==='downloaded')setNote(t('sound.downloaded'));}catch(e){reportError('sound.operation',e,{context:{studio:'sound'}});setNote(t('sound.saveFailed',{message:e instanceof Error?e.message:String(e)}));}};
  const toggle=useCallback(()=>{const el=audio.current;if(!el||!el.src)return;if(el.paused)void el.play().catch(()=>{});else el.pause();},[]);
  const seek=useCallback((s:number)=>{const el=audio.current;if(!el)return;el.currentTime=Math.min(s,el.duration||s);setTime(el.currentTime);},[]);
  const duration=shown?.report.output.duration_s??0;
+ useEffect(()=>registerSoundCommands(),[]);
+ useEffect(()=>registerSoundTransport({name:item.name,toggle,seek}),[item.name,toggle,seek]);
+ const contextOwner=useRef<ReturnType<ContextStore['claim']>|null>(null);
+ useEffect(()=>{if(studio!=='sound')return;const owner=studioContextStore.claim('sound',{id:item.name,kind:'audio',dirty:false,readOnly:false});contextOwner.current=owner;return()=>{owner.release();if(contextOwner.current===owner)contextOwner.current=null;};},[studio,item.name]);
+ useEffect(()=>{const selection=session?.selection;contextOwner.current?.report({document:{id:item.name,kind:'audio',dirty:!!session&&!isNeutral(session.settings),readOnly:false},selection:selection?{kind:'one',type:'audio-region',count:1,ids:[item.name+':region']}:{kind:'none',count:0,ids:[]},busy:session?.status==='loading'||session?.status==='processing',services:{ready:!!session?.original},data:{name:item.name,start:selection?.start??null,end:selection?.end??null,status:session?.status??'loading'}});},[studio,item.name,session]);
  const onKey=(e:React.KeyboardEvent)=>{
   const el=audio.current;if(!el)return;const step=e.shiftKey?5:1;
-  if(e.key===' '){e.preventDefault();toggle();}
+  if(e.key===' '){e.preventDefault();void executeCommand('sound.transport.toggle');}
   else if(e.key==='ArrowRight'){e.preventDefault();seek(el.currentTime+step);}
   else if(e.key==='ArrowLeft'){e.preventDefault();seek(Math.max(0,el.currentTime-step));}
-  else if(e.key==='i'||e.key==='o'){e.preventDefault();const sel=session?.selection,d=info?.duration_s??0;if(e.key==='i')setSoundSelection(item.name,{start:el.currentTime,end:Math.max(sel?.end??d,el.currentTime+0.01)});else setSoundSelection(item.name,{start:Math.min(sel?.start??0,el.currentTime-0.01),end:el.currentTime});}
-  else if(e.key==='Escape')setSoundSelection(item.name,null);
+  else if(e.key==='i'||e.key==='o'){e.preventDefault();const sel=session?.selection,d=info?.duration_s??0;if(e.key==='i')void executeCommand('sound.selection.set',{start:el.currentTime,end:Math.max(sel?.end??d,el.currentTime+0.01)});else void executeCommand('sound.selection.set',{start:Math.min(sel?.start??0,el.currentTime-0.01),end:el.currentTime});}
+  else if(e.key==='Escape')void executeCommand('sound.selection.clear');
   else if(e.key==='Home'){e.preventDefault();seek(0);}
   else if(e.key==='End'){e.preventDefault();seek(duration);}
  };
@@ -52,17 +60,17 @@ export function SoundWorkspace({item,withPanel=false}:{item:MediaItem;withPanel?
    <span className="text-ink-3" data-testid="sound-info">{info?t('sound.info',{duration:info.duration_s.toFixed(2),rate:info.sample_rate,channels}):''}</span>
    <span className="flex-1"/>
    <div role="radiogroup" aria-label={t('sound.listen')} className="flex gap-1 rounded-[var(--r-control)] bg-hover p-0.5">
-    {(['original','processed'] as const).map(k=><Button key={k} role="radio" size="compact" aria-checked={(session?.listen??'processed')===k} aria-label={t(k==='original'?'sound.original':'sound.edited')} disabled={!session?.original||(k==='processed'&&!edited)} onClick={()=>setSoundListen(item.name,k)}>{t(k==='original'?'sound.original':'sound.edited')}</Button>)}
+    {(['original','processed'] as const).map(k=><Button key={k} role="radio" size="compact" aria-checked={(session?.listen??'processed')===k} aria-label={t(k==='original'?'sound.original':'sound.edited')} disabled={!session?.original||(k==='processed'&&!edited)} onClick={()=>void executeCommand('sound.listen',{version:k})}>{t(k==='original'?'sound.original':'sound.edited')}</Button>)}
    </div>
-   <Button size="compact" aria-label={t('sound.export')} title={t('sound.exportHint')} disabled={!session?.processed} onClick={()=>void doSave()} data-testid="sound-export"><Download size={13}/>{t('sound.export')}</Button>
+   <Button size="compact" aria-label={t('sound.export')} title={t('sound.exportHint')} disabled={!isSoundExportReady(item.name)} onClick={()=>void doSave()} data-testid="sound-export"><Download size={13}/>{t('sound.export')}</Button>
   </div>
   <div className="flex min-h-0 w-full flex-1">
    <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-3 p-4">
     <div className="min-h-0 w-full flex-1">
-     <Waveform original={session?.original?.peaks??null} processed={edited?session?.processed?.peaks??null:session?.original?.peaks??null} originalSeconds={info?.duration_s??0} processedSeconds={out?.output.duration_s??info?.duration_s??0} position={time} duration={duration} selection={session?.selection??null} region={session?.settings.region&&session.settings.region.mode==='only'?session.settings.region:null} selectable={!!session?.original&&(!session.settings.region||session.settings.region.mode==='only')} onSelect={r=>setSoundSelection(item.name,r)} label={t('sound.waveform',{name:item.name})} onSeek={seek} onKey={onKey}/>
+     <Waveform original={session?.original?.peaks??null} processed={edited?session?.processed?.peaks??null:session?.original?.peaks??null} originalSeconds={info?.duration_s??0} processedSeconds={out?.output.duration_s??info?.duration_s??0} position={time} duration={duration} selection={session?.selection??null} region={session?.settings.region&&session.settings.region.mode==='only'?session.settings.region:null} selectable={!!session?.original&&(!session.settings.region||session.settings.region.mode==='only')} onSelect={r=>void executeCommand('sound.selection.set',r)} label={t('sound.waveform',{name:item.name})} onSeek={seconds=>void executeCommand('sound.transport.seek',{seconds})} onKey={onKey}/>
     </div>
     <div className="flex items-center gap-3 text-[12px] text-ink-2">
-     <Button size="icon" variant="outline" aria-label={t(playing?'sound.pause':'sound.play')} aria-pressed={playing} disabled={!shown} onClick={toggle} data-testid="sound-play">{playing?<Pause size={16}/>:<Play size={16}/>}</Button>
+     <Button size="icon" variant="outline" aria-label={t(playing?'sound.pause':'sound.play')} aria-pressed={playing} disabled={!shown} onClick={()=>void executeCommand('sound.transport.toggle')} data-testid="sound-play">{playing?<Pause size={16}/>:<Play size={16}/>}</Button>
      <span className="tabular-nums" data-testid="sound-time">{fmt(time)} / {fmt(duration)}</span>
      <span className="flex-1 truncate text-ink-3" data-testid="sound-result">{edited&&out&&session.status==='ready'?t('sound.result',{duration:out.output.duration_s.toFixed(2),peak:out.output.peak_db.toFixed(1),steps:out.steps.length}):''}</span>
      <span className="text-ink-3" role="status" aria-live="polite" data-testid="sound-note">{note}</span>

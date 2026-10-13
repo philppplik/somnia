@@ -28,6 +28,7 @@ import { CATALOGUES, t } from '../src/lib/i18n';
 import { CommandDispatcher } from '../src/lib/commandDispatcher';
 import { vectorCommandsReady } from '../src/store/vectorBootstrap';
 import { registerSheetsCommands } from '../src/lib/sheets/commands';
+import {registerSoundCommands} from '../src/lib/sound/commands';
 import { registerDocumentsCommands } from '../src/lib/documents/commands';
 import { registerSlidesCommands } from '../src/lib/slides/commands';
 import { registerDesignCommands } from '../src/lib/design/commands';
@@ -101,6 +102,7 @@ export function keyProblems(commands: Entry[]): string[] {
 export async function collect(): Promise<Entry[]> {
   await withSource('vector', () => vectorCommandsReady);
   await withSource('sheets', () => registerSheetsCommands());
+  await withSource('sound', () => registerSoundCommands());
   await withSource('documents', () => registerDocumentsCommands());
   await withSource('documents-panels', () => registerDocumentPanelCommands());
   await withSource('slides', () => registerSlidesCommands());
