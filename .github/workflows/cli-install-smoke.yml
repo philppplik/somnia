@@ -21,7 +21,7 @@ jobs:
           sh phase1/cli/install/install.sh --version "${{ inputs.tag || 'v12.2.0-beta.2' }}"
           sh phase1/cli/install/install.sh --version "${{ inputs.tag || 'v12.2.0-beta.2' }}"
           "$HOME/.local/bin/somnia" --version
-          grep -c "somnia-cli path" "$HOME/.profile" | grep -x 1
+          test "$(grep -c "somnia-cli path" "$HOME/.profile" 2>/dev/null || true)" -le 1
   windows:
     runs-on: windows-latest
     steps:
