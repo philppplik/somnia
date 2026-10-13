@@ -1,3 +1,2 @@
 # One "<file> <link>" per line. Known links whose target lives on an unmerged branch.
 # Remove the line when the target lands.
-docs/deploy-commands.md concepts/live-deployment.md
