@@ -9,6 +9,9 @@ pub mod release;
 pub mod transport;
 pub mod ssh;
 pub mod bootstrap;
+pub mod node_collect;
+pub mod node_env;
+pub mod node_app;
 #[cfg(test)]
 mod ssh_testkit;
 
