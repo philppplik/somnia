@@ -79,9 +79,11 @@ let core:EditorProjectPort|null=null;
 let unsubscribeCore:(()=>void)|null=null;
 let savedFiles:Record<string,string>={};
 function isDirty(){const files=core?.files??{};return Object.keys(files).length!==Object.keys(savedFiles).length||Object.entries(files).some(([file,text])=>savedFiles[file]!==text);}
+/** True after the user closed every tab on purpose: refreshProject must not reopen a default file behind their back. Reset by opening a file or (re)connecting a project. */
+let tabsClosedOnPurpose=false;
 export function refreshProject(){
  if(!core)return;
- const files={...core.files};const activeFile=state.activeFile in files?state.activeFile:(Object.keys(files).find(f=>f.endsWith('.html'))??Object.keys(files)[0]??'');
+ const files={...core.files};const activeFile=state.activeFile in files?state.activeFile:tabsClosedOnPurpose&&!state.activeFile&&!state.openFiles.length?'':(Object.keys(files).find(f=>f.endsWith('.html'))??Object.keys(files)[0]??'');
  let nodes:EditorNode[]=[];
  const isHtml=(f:string)=>/\.html?$/i.test(f);const designFile=isHtml(activeFile)?activeFile:(isHtml(state.designFile)&&state.designFile in files?state.designFile:(Object.keys(files).find(isHtml)??''));
  try{if(designFile)nodes=core.tree(designFile);}catch(error){patchState({notice:error instanceof Error?error.message:'Document structure unavailable.'});}
@@ -95,7 +97,7 @@ export function subscribeProjectTransactions(fn:(tx:{operations?:Operation[]})=>
 let projectGeneration=0;
 export function getProjectGeneration(){return projectGeneration;}
 export function connectEditorProject(project:EditorProjectPort,options:{name?:string;alreadySaved?:boolean}={}){
- projectGeneration++;unsubscribeCore?.();core=project;savedFiles=options.alreadySaved?{...project.files}:{};
+ projectGeneration++;tabsClosedOnPurpose=false;unsubscribeCore?.();core=project;savedFiles=options.alreadySaved?{...project.files}:{};
  patchState({zoom:state.canvasPrefs.defaultZoom,viewport:state.canvasPrefs.defaultViewport,responsiveScope:'auto',coreConnected:true,projectName:options.name??'Untitled project',selectedElementId:null,notice:'In-memory project. Native filesystem service is not connected.'});
  unsubscribeCore=project.subscribe('internal',(tx)=>{if(tx&&typeof tx==='object'&&'operations' in tx)for(const fn of projectTxListeners)fn(tx as {operations:Operation[]});if(tx&&typeof tx==='object'&&'origin' in tx&&(tx.origin==='canvas'||tx.origin==='code'))recordActivity('edit');refreshProject();});refreshProject();
  return()=>{if(core!==project)return;projectGeneration++;unsubscribeCore?.();unsubscribeCore=null;core=null;patchState({responsiveScope:'auto',coreConnected:false,files:{},nodes:[],selectedElementId:null,isDirty:false,lastSavedAt:null,notice:'Project closed.'});return true;};
@@ -118,16 +120,17 @@ export function getSavedFile(file:string):string{return savedFiles[file]??'';}
 export function markFileSaved(file:string,content:string){recordActivity('save');savedFiles[file]=content;patchState({isDirty:isDirty(),lastSavedAt:new Date().toISOString(),notice:'Saved to disk.'});}
 
 /** Open a project file in a tab and make it the active source file. */
-export function openFileTab(path:string){if(!(path in state.files))return;setActiveMedia(null);patchState({openFiles:state.openFiles.includes(path)?state.openFiles:[...state.openFiles,path],activeFile:path,activeStudio:state.studioByTab[path]&&acceptsFormat(getStudio(state.studioByTab[path]),path)?state.studioByTab[path]:'code',selectedElementId:null});refreshProject();}
+export function openFileTab(path:string){if(!(path in state.files))return;tabsClosedOnPurpose=false;setActiveMedia(null);patchState({openFiles:state.openFiles.includes(path)?state.openFiles:[...state.openFiles,path],activeFile:path,activeStudio:state.studioByTab[path]&&acceptsFormat(getStudio(state.studioByTab[path]),path)?state.studioByTab[path]:'code',selectedElementId:null});refreshProject();}
 /** Close a tab (the last one too). The neighbouring tab of the SAME Studio becomes active; the Studio never changes. */
 export function closeFileTab(path:string){if(!state.openFiles.includes(path))return;const studio=fileTabStudio(path,state.studioByTab);const next=state.openFiles.filter(f=>f!==path);
  if(state.activeFile!==path){patchState({openFiles:next});refreshProject();return;}
- patchState({openFiles:next,activeFile:neighbourAfterClose(state.openFiles,path,studio,state.studioByTab)??'',activeStudio:state.activeStudio,selectedElementId:null,selectedElementIds:[]});refreshProject();}
+ const neighbour=neighbourAfterClose(state.openFiles,path,studio,state.studioByTab)??'';tabsClosedOnPurpose=!next.length;
+ patchState({openFiles:next,activeFile:neighbour,activeStudio:state.activeStudio,selectedElementId:null,selectedElementIds:[]});refreshProject();}
 
 /** Project files whose text differs from the last save (or that were never saved). */
 export function dirtyFileNames():string[]{const files=core?.files??{};return Object.entries(files).filter(([f,text])=>savedFiles[f]!==text).map(([f])=>f).sort();}
 /** Close every file tab (unlike closeFileTab, this also closes the last one). Buffers stay in the project. */
-export function closeAllFileTabs(){if(!state.openFiles.length&&!state.activeFile)return;patchState({openFiles:[],activeFile:'',selectedElementId:null,selectedElementIds:[]});refreshProject();}
+export function closeAllFileTabs(){if(!state.openFiles.length&&!state.activeFile)return;tabsClosedOnPurpose=true;patchState({openFiles:[],activeFile:'',selectedElementId:null,selectedElementIds:[]});refreshProject();}
 /** Reverts changed files that have a saved baseline. Files never saved have no baseline and are left alone. Returns the paths it could not revert. */
 export function discardUnsavedFiles():string[]{const left:string[]=[];if(!core)return left;const ops:Operation[]=[];
  for(const f of dirtyFileNames()){if(f in savedFiles)ops.push({type:'replaceSource',file:f,text:savedFiles[f]} as Operation);else left.push(f);}
@@ -142,7 +145,7 @@ export const clampViewport=(n:number,max=3840)=>Math.min(max,Math.max(200,Math.r
 export function jumpToLine(file:string,line:number,col=1){openFileTab(file);const st=getState();patchState({jumpTo:{file,line,col,nonce:Date.now()+Math.random()},...(st.viewMode==='design'?{viewMode:'split' as const}:{})});}
 
 /** Leaves the project without opening another one: the app returns to its empty state. */
-export function closeCore(){if(!clearMedia())return false;projectGeneration++;unsubscribeCore?.();unsubscribeCore=null;core=null;savedFiles={};patchState({studioModeByDocument:{},responsiveScope:'auto',coreConnected:false,files:{},nodes:[],openFiles:[],activeFile:'',designFile:'',selectedElementId:null,selectedElementIds:[],isDirty:false,lastSavedAt:null,storage:'memory',nativeConnected:false,projectName:'',notice:'Project closed.'});return true;}
+export function closeCore(){if(!clearMedia())return false;tabsClosedOnPurpose=false;projectGeneration++;unsubscribeCore?.();unsubscribeCore=null;core=null;savedFiles={};patchState({studioModeByDocument:{},responsiveScope:'auto',coreConnected:false,files:{},nodes:[],openFiles:[],activeFile:'',designFile:'',selectedElementId:null,selectedElementIds:[],isDirty:false,lastSavedAt:null,storage:'memory',nativeConnected:false,projectName:'',notice:'Project closed.'});return true;}
 
 /** Switch shell only. No save, conversion, tool commit, history or agent side effects. */
 /** `source`: 'manual' = the user visited a Studio (pill/command). 'automatic' = navigation routing; a manual visit wins over it.
