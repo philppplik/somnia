@@ -27,7 +27,7 @@ fn pipe_names_are_user_scoped_sanitized_and_local() {
     assert!(!p.contains('/'), "no path separators in the pipe namespace: {p}");
     // Hostile characters in a task id cannot escape into the pipe namespace.
     let dirty = pipe_path(r#"t-..\evil/name"#).to_string_lossy().into_owned();
-    assert!(dirty.ends_with("-t-..__evil_name"), "{dirty}");
+    assert!(dirty.ends_with("-t-___evil_name"), "{dirty}");
 }
 
 #[test]
