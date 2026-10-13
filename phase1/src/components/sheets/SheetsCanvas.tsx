@@ -56,7 +56,7 @@ function Workbook({item}:{item:MediaItem}){
    const cp=new SessionCheckpointer({sessionId,studio:'sheets',store,sourceFingerprint:fp,getRevision:()=>revRef.current,isDirty:()=>dirtyRef.current,
     historyRestorable:()=>false,hasUndoHistory:()=>!!infoRef.current?.canUndo||!!infoRef.current?.canRedo,
     capture:async()=>{const revision=revRef.current;const payload=await eng.save();return{revision,payload,history:{kind:'none'},view:{...viewRef.current,draft:draftRef.current===null?null:{row:viewRef.current.row,col:viewRef.current.col,text:draftRef.current}},format:'xlsx',engineVersion:'sheets-1'};}});
-   cpRef.current=cp;offActive=registerActiveSession(sessionId,cp);
+   cpRef.current=cp;offActive=registerActiveSession(sessionId,cp,{studio:'sheets',isDirty:()=>dirtyRef.current});
    let opened:WorkbookInfo|null=null;let restoredView:ReturnType<typeof readSheetsView>=null;
    const r=await cp.resume(async snap=>{opened=await eng.open(snap.payload);restoredView=readSheetsView(snap.meta.view);},async()=>fp);
    if(!live)return;

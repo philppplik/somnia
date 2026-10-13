@@ -1,4 +1,5 @@
 import {createSnapshot,encodeSnapshot,type HistoryCheckpoint} from './snapshot';
+import {noteCommitted,noteReleased,trackLive,type LiveSession} from './recoveryIndex';
 import {IndexedDbByteStore,MemoryByteStore,RecoveryStore} from './recoveryStore';
 let shared:RecoveryStore|null=null;
 /** App-wide recovery store: IndexedDB when available, otherwise memory (survives view lifetimes, not a crash). */
@@ -8,10 +9,13 @@ export function defaultRecoveryStore():RecoveryStore{
 export function setRecoveryStoreForTests(s:RecoveryStore|null){shared=s;}
 const discarded=new Set<string>();const active=new Map<string,{close():void;idle():Promise<unknown>}>();
 /** Mark a live session so closing it (and its teardown flush) never leaves a recovery snapshot behind. */
-export function registerActiveSession(id:string,cp:{close():void;idle():Promise<unknown>}){discarded.delete(id);active.set(id,cp);return()=>{if(active.get(id)===cp)active.delete(id);};}
+export function registerActiveSession(id:string,cp:{close():void;idle():Promise<unknown>},meta?:Omit<LiveSession,'cp'>&{cp?:never}){
+ discarded.delete(id);active.set(id,cp);const off=meta?trackLive(id,{...meta,cp:cp as LiveSession['cp']}):()=>undefined;
+ return()=>{off();if(active.get(id)===cp)active.delete(id);};
+}
 /** The user closed/discarded the document: stop checkpointing, wait for in-flight writes, delete all snapshots. A later teardown flush is skipped. */
 export async function discardSession(id:string,store:RecoveryStore=defaultRecoveryStore()){
- discarded.add(id);const c=active.get(id);c?.close();await c?.idle();await whenFlushed(id);await store.discard(id);
+ discarded.add(id);const c=active.get(id);c?.close();await c?.idle();await whenFlushed(id);await store.discard(id);noteReleased(id);
 }
 const pending=new Map<string,Promise<boolean>>();
 /** Resolves once any teardown flush for this session finished, so a remount never reads the store before the last edits landed. */
@@ -32,7 +36,7 @@ export function flushOnTeardown(i:FlushInput):Promise<boolean>{
   try{
    if(discarded.has(i.sessionId))return true;await i.quiesce?.();const payload=await i.payload();if(discarded.has(i.sessionId))return true;
    const snap=await createSnapshot({sessionId:i.sessionId,studio:i.studio,format:i.format,engineVersion:i.engineVersion,sourceFingerprint:i.sourceFingerprint,revision:i.revision,generation:0,history:await i.history,view:i.view},payload);
-   await i.store.commit(i.sessionId,await i.store.nextSlot(i.sessionId),encodeSnapshot(snap),snap.meta.checksum);return true;
+   await i.store.commit(i.sessionId,await i.store.nextSlot(i.sessionId),encodeSnapshot(snap),snap.meta.checksum);noteCommitted(i.sessionId,i.studio,i.revision,snap.meta.checksum);return true;
   }catch{return false;}
  }).finally(()=>{if(pending.get(i.sessionId)===run)pending.delete(i.sessionId);});
  pending.set(i.sessionId,run);return run;

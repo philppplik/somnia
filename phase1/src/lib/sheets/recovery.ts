@@ -1,5 +1,7 @@
 import {registerMediaCloseCleanup} from '../media';
 import {discardSession} from '../sessionSafety/flush';
+import {registerLifecycleAdapter} from '../lifecycle/adapters';
+import {createRecoveryLifecycleAdapter} from '../sessionSafety/lifecycleAdapter';
 /** Sheets recovery glue. The workbook engine keeps undo history internally, so snapshots hold the saved workbook bytes and the view only. */
 export const sheetsSessionId=(name:string)=>`sheets:${name}`;
 export interface SheetsViewState{sheet:number;row:number;col:number;draft:{text:string}|null}
@@ -8,3 +10,4 @@ export const readSheetsView=(v:Record<string,unknown>):SheetsViewState|null=>{
  return n(v.sheet)&&n(v.row)&&n(v.col)?{sheet:v.sheet as number,row:v.row as number,col:v.col as number,draft}:null;
 };
 registerMediaCloseCleanup(name=>{void discardSession(sheetsSessionId(name));});
+registerLifecycleAdapter('sheets',()=>createRecoveryLifecycleAdapter('sheets'));

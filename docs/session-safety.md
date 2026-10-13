@@ -58,3 +58,19 @@ Status: implemented for Documents and Sheets (branch `perf/session-safety`). Imp
 - An uncommitted Sheets cell draft (typed but not Enter) is not part of the checkpoint.
 - Timeouts that kill a worker still lose the engine; the last debounced checkpoint is the recovery point.
 - Not run: Playwright e2e, native Tauri build.
+
+## Lifecycle manager integration (`createRecoveryLifecycleAdapter`)
+
+Documents and Sheets register a `StudioLifecycleAdapter` (`documents`, `sheets`) and expose it through the manifest `lifecycle` field.
+Their unsaved state already lives in the verified recovery store, so the lifecycle checkpoint is a **reference list** (session id, revision,
+snapshot checksum), not a second copy of the bytes:
+
+- `hasUnsavedChanges()` is true while a live view is dirty or the recovery store holds a snapshot for the studio (a synchronous index,
+  `recoveryIndex.ts`, mirrors commits, releases and discards). The manager therefore never evicts such a studio.
+- `snapshot()` waits for teardown flushes, runs a checkpoint for each live dirty session, and returns `null` (refuse) if one fails.
+- `pinReasons()` reports `checkpoint-pinned:<reason>` for sessions whose checkpointer is pinned.
+- `suspend()` waits for flushes. Engines belong to the views, which unmount when the studio becomes inactive; their teardown flush has
+  already written the verified checkpoint.
+- `resume()` verifies the reference checksum and that every referenced snapshot still exists with the same checksum; otherwise it throws
+  so the manager reports `resume-failed`. The real restore happens when the view mounts (`SessionCheckpointer.resume`).
+- `resourceIds()` returns `studio:<id>` and `<id>:session:<name>` for job-lease lookups.

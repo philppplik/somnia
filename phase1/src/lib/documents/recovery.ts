@@ -3,6 +3,8 @@ import {registerMediaCloseCleanup,registerMediaCloseGuard} from '../media';
 import {installBeforeUnload} from '../closeFlow';
 import {getDocumentsState} from './store';
 import {discardSession} from '../sessionSafety/flush';
+import {registerLifecycleAdapter} from '../lifecycle/adapters';
+import {createRecoveryLifecycleAdapter} from '../sessionSafety/lifecycleAdapter';
 import {sha256Hex,type HistoryCheckpoint} from '../sessionSafety/snapshot';
 /** Documents recovery glue: what a snapshot holds and how history is validated on restore. */
 export const documentsSessionId=(name:string)=>`documents:${name}`;
@@ -23,3 +25,4 @@ registerMediaCloseCleanup(name=>{void discardSession(documentsSessionId(name));}
 /** Unsaved Documents edits: ask before the close discards them (Sheets and Slides already do), and warn on window unload. */
 export const documentsIsDirty=(name?:string)=>{const s=getDocumentsState();return s.edited&&(name===undefined||s.name===name);};
 if(typeof window!=='undefined'){installBeforeUnload(()=>documentsIsDirty());registerMediaCloseGuard(name=>!documentsIsDirty(name)||window.confirm(`Discard unsaved document edits to ${name}?`));}
+registerLifecycleAdapter('documents',()=>createRecoveryLifecycleAdapter('documents'));
