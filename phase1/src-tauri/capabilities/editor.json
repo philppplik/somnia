@@ -264,6 +264,7 @@
 
     "core:window:allow-set-always-on-top",
     "core:window:allow-set-decorations",
-    "core:menu:default"
+    "core:menu:default",
+    "allow-studio-copy-open"
   ]
 }

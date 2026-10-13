@@ -3,7 +3,7 @@ import {agentCommandReadiness} from '../src/lib/agent/commandReadiness';
 import {registerInterfaceCommands} from '../src/lib/interface/commands';
 import {registerDocumentPanelCommands} from '../src/lib/documents/panelCommands';
 import {registerCodePanelCommands} from '../src/lib/codePanels/commands';
-import {registerDeployPanelCommands} from '../src/lib/deployPanels/commands';
+import {registerDeployPanelCommands} from '../src/lib/deployPanels/commands';import {registerWorkspaceCommands} from '../src/store/workspaceCommands';
 /**
  * UI command inventory (engine-hardening plan, steps 1.1 and 1.7) and the gate for
  * `npm run check:ui-commands`.
@@ -107,6 +107,7 @@ export function keyProblems(commands: Entry[]): string[] {
 }
 
 export async function collect(): Promise<Entry[]> {
+  await withSource('workspace',()=>registerWorkspaceCommands());
   await withSource('vector', () => vectorCommandsReady);
   await withSource('sheets', () => registerSheetsCommands());
   await withSource('sound', () => registerSoundCommands());

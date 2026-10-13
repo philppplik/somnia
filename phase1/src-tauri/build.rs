@@ -2,6 +2,9 @@ fn main() {
     #[cfg(feature = "desktop")]
     tauri_build::try_build(tauri_build::Attributes::new().app_manifest(
         tauri_build::AppManifest::new().commands(&[
+            "studio_copy_open",
+            "studio_copy_take",
+            "studio_copy_export",
             "vibespace_schedule_preview",
             "vibespace_schedule_create",
             "vibespace_schedule_list",

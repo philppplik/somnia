@@ -16,7 +16,7 @@ included; the `source` column names the owner. Dynamic sources that stay outside
 
 Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, fr, pt-BR); the gate enforces it.
 
-1132 commands. Categories: Edit, Help, Insert, Project, Tools, View.
+1137 commands. Categories: Edit, Help, Insert, Project, Tools, View.
 
 | id | title | category | source | shortcut |
 | --- | --- | --- | --- | --- |
@@ -1149,6 +1149,11 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `view.livePreview` | Toggle live preview | View | core |  |
 | `view.split` | Split view | View | core | `Mod+Alt+2` |
 | `view.toggleCodeDesign` | Toggle code / design view | View | core | `Mod+`` |
+| `workspace.docking` | Tabbed panel docking | View | workspace |  |
+| `workspace.movePanel` | Move dock panel | View | workspace |  |
+| `workspace.openIn` | Open in | View | workspace |  |
+| `workspace.popout` | Open Code in a new window | View | workspace |  |
+| `workspace.resetDock` | Reset panel docking | View | workspace |  |
 | `zoom.in` | Zoom in | View | core | `Mod+=` |
 | `zoom.out` | Zoom out | View | core | `Mod+-` |
 | `zoom.reset` | Actual size | View | core | `Mod+0` |

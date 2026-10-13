@@ -1,0 +1,21 @@
+import {invokeCmd} from '../../lib/invokeCmd';
+import {NativeButton} from '../ui/native-controls';
+import {lazy,Suspense,useEffect,useState} from 'react';
+import {getCurrentWindow} from '@tauri-apps/api/window';
+import {isTauri} from '@tauri-apps/api/core';
+import {useAppStore,getState,markSaved} from '../../store/appStore';
+import {useT} from '../../lib/useT';
+import {RenderedPreview} from '../MediaPreview';
+import {validateSnapshot,type StudioSnapshot} from '../../lib/workspace/handoff';
+import {downloadProject} from '../../lib/exportProject';
+const SourceEditor=lazy(()=>import('../SourceEditor').then(m=>({default:m.SourceEditor})));
+export function StudioCopy(){const state=useAppStore(),{t}=useT(),[closing,setClosing]=useState(false),[error,setError]=useState('');
+ useEffect(()=>{const dirty=()=>getState().isDirty;const before=(e:BeforeUnloadEvent)=>{if(dirty()){e.preventDefault();e.returnValue='';}};window.addEventListener('beforeunload',before);let off:(()=>void)|undefined,disposed=false;
+ if(isTauri())void getCurrentWindow().onCloseRequested(e=>{if(dirty()){e.preventDefault();setClosing(true);}}).then(f=>{if(disposed)f();else off=f;});
+ return()=>{disposed=true;off?.();window.removeEventListener('beforeunload',before);};},[]);
+ const exportCopy=async()=>{try{const s=getState();const snapshot=validateSnapshot({version:1,studio:'code',name:s.projectName,files:s.files,activeFile:s.activeFile,locale:document.documentElement.lang} satisfies StudioSnapshot);
+ if(isTauri()){const exported=await invokeCmd('studio_copy_export',{snapshot});if(exported)markSaved(snapshot.files);}else downloadProject(s.files,s.projectName,true);
+ }catch{setError(t('workspace.failed'));}};
+ const close=()=>{if(isTauri())void getCurrentWindow().close();else if(getState().isDirty)setClosing(true);else window.close();};
+ return <div className="studio-copy"><header><strong>Somnia Code · {state.projectName}</strong><NativeButton onClick={()=>void exportCopy()}>{t('workspace.export')}</NativeButton><NativeButton onClick={close}>{t('workspace.close')}</NativeButton></header><p className="studio-copy-notice">{t('workspace.copy')}</p>{error&&<p role="alert">{error}</p>}<nav className="workspace-dock-tabs" aria-label={t('studio.code')}>{state.openFiles.map(file=><NativeButton key={file} aria-pressed={state.activeFile===file} onClick={()=>import('../../store/appStore').then(m=>m.openFileTab(file))}>{file}</NativeButton>)}</nav><div className="studio-copy-editor"><section aria-label={t('rest.canvas.sourceEditor')}><Suspense fallback={null}><SourceEditor file={state.activeFile} source={state.files[state.activeFile]??''} disabled={!state.coreConnected}/></Suspense></section>{/\.(md|svg|tex)$/i.test(state.activeFile)&&<section className="rendered-copy"><RenderedPreview file={state.activeFile} text={state.files[state.activeFile]??''}/></section>}</div>{closing&&<div role="dialog" aria-modal="true" aria-label={t('workspace.close')} className="studio-copy-notice"><p>{t('close.title')}</p><NativeButton onClick={()=>setClosing(false)}>{t('dialogs.cancel')}</NativeButton><NativeButton onClick={()=>void exportCopy()}>{t('workspace.export')}</NativeButton><NativeButton onClick={()=>{if(isTauri())void getCurrentWindow().destroy();else window.close();}}>{t('closeProject.discard')}</NativeButton></div>}</div>;
+}

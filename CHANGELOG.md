@@ -298,6 +298,11 @@
 
 - Sound now has customizable Audio clips, Selection and Effects rails and a generic audio inspector with source statistics, levels/fades and processing controls.
 - Audio edits, selection, listening, transport and WAV-copy export are typed UI commands with five-language titles. Export waits for queued processing instead of saving an older render.
+## Unreleased - workspace docking and Code copies
+
+- Opt-in tabbed panel docks support cross-side dragging, move controls, per-studio saved layout and reset. Existing layout remains the default.
+- Code text projects can open as independent local window copies with bounded one-shot handoff, export-copy and unsaved-close protection. Media/engine state and live shared editing are not yet supported.
+- Already-open text has explicit compatible Studio links backed by Smart Open kind validation.
 
 ## Unreleased - server frameworks (Next.js, Astro, SvelteKit, Nuxt)
 
