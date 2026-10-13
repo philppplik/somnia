@@ -191,6 +191,17 @@
     "allow-git-combine-abort",
     "allow-extension-activity-query",
     "allow-extension-activity-export",
+    "allow-runtime-status",
+    "allow-runtime-install",
+    "allow-runtime-remove",
+    "allow-project-run",
+    "allow-project-stop",
+    "allow-project-status",
+    "allow-project-logs",
+    "allow-project-stop-all",
+    "allow-preview-open",
+    "allow-preview-close",
+
     "core:window:allow-set-always-on-top",
     "core:window:allow-set-decorations",
     "core:menu:default"

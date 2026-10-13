@@ -1673,17 +1673,75 @@ async fn recovery_discard(
     .await
 }
 #[tauri::command]
+fn preview_open(window: WebviewWindow, app: tauri::AppHandle, runner: State<'_, crate::proc_runner::ProcessRunner>, run_id: String) -> std::result::Result<(), String> {
+    gate(&window).map_err(|_| "frameworks.denied")?; crate::framework_preview::open(&app, &runner, &run_id)
+}
+#[tauri::command]
+fn preview_close(window: WebviewWindow, app: tauri::AppHandle, run_id: String) -> std::result::Result<(), String> {
+    gate(&window).map_err(|_| "frameworks.denied")?; crate::framework_preview::close(&app, &run_id)
+}
+// Framework commands resolve the root from an opened project, never renderer paths.
+#[tauri::command]
+fn runtime_status(window: WebviewWindow, app: tauri::AppHandle) -> std::result::Result<crate::runtime::RuntimeStatus, String> {
+    gate(&window).map_err(|_| "frameworks.denied")?;
+    let base = app.path().app_data_dir().map_err(|_| "frameworks.installFailed")?;
+    Ok(crate::runtime::status(&base))
+}
+#[tauri::command]
+async fn runtime_install(window: WebviewWindow, app: tauri::AppHandle) -> std::result::Result<crate::runtime::RuntimeStatus, String> {
+    gate(&window).map_err(|_| "frameworks.denied")?;
+    let base = app.path().app_data_dir().map_err(|_| "frameworks.installFailed")?;
+    tauri::async_runtime::spawn_blocking(move || crate::runtime::install(&base)).await.map_err(|_| "frameworks.installFailed")?
+}
+#[tauri::command]
+async fn runtime_remove(window: WebviewWindow, app: tauri::AppHandle, runner: State<'_, crate::proc_runner::ProcessRunner>) -> std::result::Result<crate::runtime::RuntimeStatus, String> {
+    gate(&window).map_err(|_| "frameworks.denied")?;
+    if runner.active() { return Err("frameworks.stopBeforeRemove".into()); }
+    let base = app.path().app_data_dir().map_err(|_| "frameworks.removeFailed")?;
+    tauri::async_runtime::spawn_blocking(move || crate::runtime::remove(&base)).await.map_err(|_| "frameworks.removeFailed")?
+}
+#[tauri::command]
+fn project_run(window: WebviewWindow, app: tauri::AppHandle, state: State<'_, Shared>, runner: State<'_, crate::proc_runner::ProcessRunner>, project_id: String, kind: crate::proc_runner::RunKind) -> std::result::Result<crate::proc_runner::RunnerHandle, String> {
+    gate(&window).map_err(|_| "frameworks.denied")?;
+    let base = app.path().app_data_dir().map_err(|_| "frameworks.startFailed")?;
+    let mut backend = state.lock().map_err(|_| "frameworks.busy")?;
+    let root = project(&mut backend, &project_id).map_err(|_| "frameworks.projectMissing")?.root_path().to_path_buf();
+    let origin = window.url().map_err(|_| "frameworks.startFailed")?.origin().ascii_serialization();
+    runner.start(&base, &root, project_id, kind, origin)
+}
+#[tauri::command]
+fn project_stop(window: WebviewWindow, runner: State<'_, crate::proc_runner::ProcessRunner>, run_id: String) -> std::result::Result<(), String> {
+    gate(&window).map_err(|_| "frameworks.denied")?; runner.stop(&run_id)
+}
+#[tauri::command]
+fn project_status(window: WebviewWindow, runner: State<'_, crate::proc_runner::ProcessRunner>, run_id: String) -> std::result::Result<crate::proc_runner::RunnerHandle, String> {
+    gate(&window).map_err(|_| "frameworks.denied")?; runner.status(&run_id)
+}
+#[tauri::command]
+fn project_logs(window: WebviewWindow, runner: State<'_, crate::proc_runner::ProcessRunner>, run_id: String, after_sequence: u64) -> std::result::Result<crate::proc_runner::LogReply, String> {
+    gate(&window).map_err(|_| "frameworks.denied")?; runner.logs(&run_id, after_sequence)
+}
+#[tauri::command]
+fn project_stop_all(window: WebviewWindow, runner: State<'_, crate::proc_runner::ProcessRunner>) -> std::result::Result<(), String> {
+    gate(&window).map_err(|_| "frameworks.denied")?; runner.stop_all(); Ok(())
+}
+
+#[tauri::command]
 async fn close_project(
     window: WebviewWindow,
     state: State<'_, Shared>,
     project_id: String,
     keep_recovery: bool,
+    runner: State<'_, crate::proc_runner::ProcessRunner>,
 ) -> Result<()> {
     gate(&window)?;
+    let close_runner = runner.inner().clone();
     work(state.inner().clone(), move |b| {
         if project(b, &project_id)?.has_dirty() && !keep_recovery {
             return Err(AppError::Dirty);
         }
+        let root = project(b, &project_id)?.root_path().to_path_buf();
+        close_runner.stop_root(&root);
         b.projects
             .remove(&project_id)
             .ok_or(AppError::UnknownProject)?;
@@ -2327,6 +2385,10 @@ pub fn run() {
                     };
                 }
             }
+            if window.label() != "main" { return; }
+            if let tauri::WindowEvent::Destroyed = event {
+                window.state::<crate::proc_runner::ProcessRunner>().stop_all();
+            }
             if let tauri::WindowEvent::CloseRequested { api, .. } = event {
                 let shared = window.state::<Shared>();
                 // Keep the app open while unsaved edits are in flight. UI must present
@@ -2338,10 +2400,14 @@ pub fn run() {
                 if blocked {
                     api.prevent_close();
                     let _ = window.emit("somnia://close-blocked", ());
+                } else {
+                    window.state::<crate::proc_runner::ProcessRunner>().stop_all();
                 }
             }
         })
+        .manage(crate::proc_runner::ProcessRunner::default())
         .invoke_handler(tauri::generate_handler![
+            runtime_status, runtime_install, runtime_remove, project_run, project_stop, project_status, project_logs, project_stop_all, preview_open, preview_close,
             crate::vibespace_schedule_commands::vibespace_schedule_preview,
             crate::vibespace_schedule_commands::vibespace_schedule_create,
             crate::vibespace_schedule_commands::vibespace_schedule_list,

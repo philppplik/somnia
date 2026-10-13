@@ -13,3 +13,23 @@ test('every desktop command is allow-listed in build.rs and the editor capabilit
   if(c.startsWith('selftest_')){assert.ok(selftestCap.includes(perm),`${c} missing in capabilities/ext-selftest.json`);assert.ok(!cap.includes(perm),`${c} must not be granted by capabilities/editor.json`);}
   else assert.ok(cap.includes(perm),`${c} missing in capabilities/editor.json`);}
 });
+
+test('framework commands have manifest, main-window gate, and close cleanup',()=>{
+ const rs=readFileSync('src-tauri/src/desktop.rs','utf8');
+ const manifest=JSON.parse(readFileSync('../docs/errors/commands.json','utf8'));
+ for(const name of ['runtime_status','runtime_install','runtime_remove','project_run','project_stop','project_status','project_logs','project_stop_all','preview_open','preview_close']) {
+  assert.ok(rs.includes(name), name);
+  assert.ok(JSON.stringify(manifest).includes(name),`${name} missing generated manifest`);
+ }
+ assert.ok(rs.includes('close_runner.stop_root(&root)'));
+ assert.ok(rs.includes('window.state::<crate::proc_runner::ProcessRunner>().stop_all()'));
+ assert.ok(rs.includes('project(&mut backend, &project_id)'));
+});
+
+test('native preview has no editor capability, popup or download path',()=>{
+ const cap=JSON.parse(readFileSync('src-tauri/capabilities/editor.json','utf8'));
+ assert.deepEqual(cap.windows,['main']);assert.equal(cap.local,true);assert.equal(cap.remote,undefined);
+ const rs=readFileSync('src-tauri/src/framework_preview.rs','utf8');
+ assert.ok(rs.includes('NewWindowResponse::Deny'));assert.ok(rs.includes('.on_download(|_, _| false)'));
+ assert.ok(rs.includes('Some("127.0.0.1")'));assert.ok(rs.includes('Some(port)'));
+});

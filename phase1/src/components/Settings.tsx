@@ -1,3 +1,4 @@
+import { FrameworkSettings } from "./FrameworkSettings";
 import {Button} from './ui/button';
 import {resetContextSections} from './ContextSections';
 import {CollabPreferences} from './CollabPreferences';
@@ -368,15 +369,17 @@ export function Settings() {
     { name: "Shortcuts", key: "shortcuts", group: "Workflow", icon: Keyboard },
     { name: "AI", key: "ai", group: "Power-Ups", icon: Zap },
     { name: "Extensions", key: "extensions", group: "Power-Ups", icon: Puzzle },
+    { name: "Frameworks", key: "frameworks", group: "Power-Ups", icon: Code2 },
     { name: "Updates", key: "updates", group: "System", icon: RefreshCw },
     { name: "Advanced", key: "advanced", group: "System", icon: Zap },
     { name: "About", key: "about", group: "", icon: Info },
   ];
-  const sectionTitle = (name: string) =>
+  const sectionTitle = (name: string) => name === "Frameworks" ? t("frameworks.title") :
     t("set.section." + (sections.find((x) => x.name === name)?.key ?? name));
   const renderSection = (section: string) => (
     <section data-settings-section={section} aria-label={sectionTitle(section)} key={section}>
       <h2>{sectionTitle(section)}</h2>
+      {section === "Frameworks" && <FrameworkSettings/>}
       {section === "Modified" && <ModifiedSettings state={state} onReset={resetSettings} onImport={(patch) => change(patch as Partial<AppState>)} onOpenSection={(name) => { setQuery(""); setSection(name); }} />}
       {section === "Modified" && <SyncFolderPanel state={state} onApply={(patch) => change(patch as Partial<AppState>)} />}
       {section === "Collaboration" && <CollabPreferences/>}

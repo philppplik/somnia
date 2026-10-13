@@ -175,6 +175,17 @@ fn main() {
             "git_combine_abort",
             "extension_activity_query",
             "extension_activity_export",
+            "runtime_status",
+            "runtime_install",
+            "runtime_remove",
+            "project_run",
+            "project_stop",
+            "project_status",
+            "project_logs",
+            "project_stop_all",
+            "preview_open",
+            "preview_close",
+
         ]),
     ))
     .expect("Tauri build configuration failed");

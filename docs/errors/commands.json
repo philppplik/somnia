@@ -1007,6 +1007,97 @@
       "raw": true
     },
     {
+      "name": "preview_close",
+      "domain": "frameworks",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "run_id"
+      ],
+      "args": [
+        "runId"
+      ]
+    },
+    {
+      "name": "preview_open",
+      "domain": "frameworks",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "run_id"
+      ],
+      "args": [
+        "runId"
+      ]
+    },
+    {
+      "name": "project_logs",
+      "domain": "frameworks",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "run_id",
+        "after_sequence"
+      ],
+      "args": [
+        "runId",
+        "afterSequence"
+      ]
+    },
+    {
+      "name": "project_run",
+      "domain": "frameworks",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "project_id",
+        "kind"
+      ],
+      "args": [
+        "projectId",
+        "kind"
+      ]
+    },
+    {
+      "name": "project_status",
+      "domain": "frameworks",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "run_id"
+      ],
+      "args": [
+        "runId"
+      ]
+    },
+    {
+      "name": "project_stop",
+      "domain": "frameworks",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "run_id"
+      ],
+      "args": [
+        "runId"
+      ]
+    },
+    {
+      "name": "project_stop_all",
+      "domain": "frameworks",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [],
+      "args": []
+    },
+    {
       "name": "provider_http_cancel",
       "domain": "net",
       "status": "native",
@@ -1275,6 +1366,33 @@
         "ordinal",
         "retryToken"
       ]
+    },
+    {
+      "name": "runtime_install",
+      "domain": "frameworks",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [],
+      "args": []
+    },
+    {
+      "name": "runtime_remove",
+      "domain": "frameworks",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [],
+      "args": []
+    },
+    {
+      "name": "runtime_status",
+      "domain": "frameworks",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [],
+      "args": []
     },
     {
       "name": "save_file",

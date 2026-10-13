@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased - framework runner
+
+- Explicit-consent framework helper download with pinned SHA-256 verification.
+- Local project install, build and protected preview runner with credential scrubbing, redacted bounded logs, timeouts and process-tree cleanup.
+- Framework helper status and removal in Settings; isolated native preview with no editor permissions.
+
 ## 11.2.0-beta.1 - 2026-10-07
 
 - Direct OpenAI/Claude BYOK providers, live catalogs and metadata-only auth.

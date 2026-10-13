@@ -32,6 +32,7 @@ export const PLANNED = [
 ];
 
 const DOMAIN_RULES = [
+  [/^(runtime_|project_run$|project_stop|project_status$|project_logs$|preview_open$|preview_close$)/, 'frameworks'],
   [/^(drain_open_requests|claim_open_request|read_by_grant|ack_open_request|release_candidate|retry_open_item|get_intake_policy|set_intake_policy)$/, 'intake'],
   [/^(build_diagnostic_zip|write_diagnostic_zip|discard_diagnostic_snapshot|list_crash_reports|mark_crash_reports_reviewed|delete_crash_reports|record_frontend_fatal)$/, 'diagnostics'],
   [/^git_/, 'git'],
