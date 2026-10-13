@@ -1,3 +1,7 @@
+# Unreleased: Design hero export
+
+- Design split Export opens current-artboard SVG or all-artboards ZIP setup and editable project download, with inline status and five-language labels.
+
 # Unreleased: Photos hero export
 
 - Photos header Export opens PNG/JPEG copy setup; shared rail/popover export path, format memory, keyboard shortcut, crop/processing/in-flight gates and five-language labels.

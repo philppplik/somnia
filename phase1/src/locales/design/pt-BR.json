@@ -167,5 +167,14 @@
  "cmd.design.layer.toggleVisible": "Design: Mostrar ou ocultar camadas selecionadas",
  "cmd.design.layer.toggleLocked": "Design: Bloquear ou desbloquear camadas selecionadas",
  "cmd.design.nudge": "Design: Mover camadas selecionadas",
- "cmd.design.rename": "Design: Renomear projeto"
+ "cmd.design.rename": "Design: Renomear projeto",
+ "design.hero.export":"Exportar",
+ "design.hero.scope":"Escopo",
+ "design.hero.current":"Prancheta atual",
+ "design.hero.all":"Todas as pranchetas (ZIP SVG)",
+ "design.hero.source":"Salvar projeto como .somdesign",
+ "design.hero.download":"Download iniciado: {name}",
+ "cmd.design.export.open":"Design: Exportar...",
+ "cmd.design.exportAllSvg":"Design: Exportar todas as pranchetas como ZIP SVG",
+ "design.hero.disabled":"Crie ou abra um design."
 }

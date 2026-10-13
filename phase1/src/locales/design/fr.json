@@ -167,5 +167,14 @@
  "cmd.design.layer.toggleVisible": "Design : Afficher ou masquer les calques sélectionnés",
  "cmd.design.layer.toggleLocked": "Design : Verrouiller ou déverrouiller les calques sélectionnés",
  "cmd.design.nudge": "Design : Décaler les calques sélectionnés",
- "cmd.design.rename": "Design : Renommer le projet"
+ "cmd.design.rename": "Design : Renommer le projet",
+ "design.hero.export":"Exporter",
+ "design.hero.scope":"Portée",
+ "design.hero.current":"Plan de travail actuel",
+ "design.hero.all":"Tous les plans (ZIP SVG)",
+ "design.hero.source":"Enregistrer le projet en .somdesign",
+ "design.hero.download":"Téléchargement lancé : {name}",
+ "cmd.design.export.open":"Design : Exporter...",
+ "cmd.design.exportAllSvg":"Design : Exporter tous les plans en ZIP SVG",
+ "design.hero.disabled":"Créez ou ouvrez un design."
 }

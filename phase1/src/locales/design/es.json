@@ -167,5 +167,14 @@
  "cmd.design.layer.toggleVisible": "Diseño: Mostrar u ocultar capas seleccionadas",
  "cmd.design.layer.toggleLocked": "Diseño: Bloquear o desbloquear capas seleccionadas",
  "cmd.design.nudge": "Diseño: Mover capas seleccionadas",
- "cmd.design.rename": "Diseño: Renombrar proyecto"
+ "cmd.design.rename": "Diseño: Renombrar proyecto",
+ "design.hero.export":"Exportar",
+ "design.hero.scope":"Alcance",
+ "design.hero.current":"Mesa de trabajo actual",
+ "design.hero.all":"Todas las mesas (ZIP SVG)",
+ "design.hero.source":"Guardar proyecto como .somdesign",
+ "design.hero.download":"Descarga iniciada: {name}",
+ "cmd.design.export.open":"Diseño: Exportar...",
+ "cmd.design.exportAllSvg":"Diseño: Exportar todas las mesas como ZIP SVG",
+ "design.hero.disabled":"Crea o abre un diseño."
 }
