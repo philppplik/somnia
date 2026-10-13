@@ -2,7 +2,8 @@ import {useCallback,useEffect,useRef,useState} from 'react';
 import {ChevronsLeft,ChevronsRight,Download,Pause,Play,Scissors,Volume2,VolumeX} from '../../lib/icons';
 import {Button} from '../ui/button';
 import {useT} from '../../lib/useT';
-import {addTimelineClipsFromDialog,cancelVideoExport,deleteTimelineClip,exportVideoFile,getFilmstrip,moveTimelineClip,openVideo,selectTimelineClip,splitTimelineAt,toggleTimelineClipMute,trimTimelineClip,useVideoSession,videoIsEdited} from '../../lib/video/session';
+import {executeCommand} from '../../lib/commands';
+import {addTimelineClipsFromDialog,cancelVideoExport,deleteTimelineClip,getFilmstrip,moveTimelineClip,openVideo,selectTimelineClip,splitTimelineAt,toggleTimelineClipMute,trimTimelineClip,useVideoSession,videoIsEdited} from '../../lib/video/session';
 import {clipDisplayName,isTitleClip,needsSourceFile} from '../../lib/video/titles';
 import {TitlePreview} from './TitlePreview';
 import {useTitlePlayback} from './useTitlePlayback';
@@ -116,8 +117,6 @@ export function VideoWorkspace({item,withPanel=false}:{item:MediaItem;withPanel?
  useTitlePlayback({running:playing&&!!titleMain,from:playhead,limit:titleMain?.range.end??0,onTime:setPlayhead,onEnd:()=>{if(titleMain)advance(titleMain.range.index);}});
  const filmstrip=getFilmstrip();
  const shortName=(n:string)=>n.replace(/^.*[\\/]/,'').replace(/\.[^.]+$/,'');
- const doExport=async()=>{setNote('');const r=await exportVideoFile(item.name);
-  if(r==='downloaded')setNote(t('video.downloaded'));else if(r==='cancelled')setNote(t('video.cancelled'));};
  const status=session?.status==='loading'?t('video.loading'):session?.status==='error'?t('video.error',{message:session.error}):'';
  const v=probe?.video;
  const edited=videoIsEdited(session);
@@ -129,7 +128,7 @@ export function VideoWorkspace({item,withPanel=false}:{item:MediaItem;withPanel?
    <span className="text-ink-3" data-testid="video-info">{v?t('video.info',{duration:(probe?.duration??0).toFixed(2),width:v.width,height:v.height,codec:v.codec??'?'})+(v.fps?` · ${t('video.infoFps',{fps:v.fps})}`:''):''}</span>
    {clips.length>1&&<span className="text-ink-3" data-testid="video-clip-count">{t('video.clipCount',{count:clips.length})}</span>}
    <span className="flex-1"/>
-   <Button size="compact" aria-label={t('video.export')} title={t('video.exportHint')} disabled={!session||session.status!=='ready'||!clips.length||missing.size>0} onClick={()=>void doExport()} data-testid="video-export"><Download size={13}/>{t('video.export')}</Button>
+   <Button size="compact" aria-label={t('video.export')} title={t('video.exportHint')} disabled={!session||session.status!=='ready'||!clips.length||missing.size>0} onClick={()=>void executeCommand('video.export.open')} data-testid="video-export"><Download size={13}/>{t('video.export')}</Button>
   </div>
   <div className="flex min-h-0 w-full flex-1">
    <div className="flex min-h-0 min-w-0 flex-1 flex-col">

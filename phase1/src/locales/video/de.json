@@ -99,5 +99,19 @@
   "cmd.video.title.duration": "Dauer der Titelkarte einstellen",
   "cmd.video.export.format": "Videoexportformat einstellen",
   "cmd.video.export.start": "Videokopie exportieren",
-  "cmd.video.export.cancel": "Videoexport abbrechen"
+  "cmd.video.export.cancel": "Videoexport abbrechen",
+ "video.hero.export": "Video exportieren...",
+ "video.hero.exporting": "Export läuft...",
+ "video.review.scope": "Die gesamte Timeline exportieren. Auswahl und Abspielposition begrenzen die Ausgabe nicht.",
+ "video.review.changed": "Aktive Timeline geändert. Export erneut öffnen.",
+ "video.review.close": "Schließen",
+ "video.review.duration": "Gesamte Timeline: {seconds} s",
+ "video.review.silent": "Dieses Format kann hier kein Audio kodieren. Ich möchte ohne Ton exportieren.",
+ "video.review.wait": "Timeline ist noch nicht exportbereit.",
+ "video.review.empty": "Vor dem Export Clips hinzufügen.",
+ "video.review.downloaded": "Download gestartet.",
+ "video.review.cancelled": "Export abgebrochen.",
+ "video.review.unavailable": "Export nicht verfügbar. Quellen und Encoder prüfen.",
+ "video.review.failed": "Export fehlgeschlagen. Timeline und Einstellungen bleiben erhalten.",
+ "cmd.video.export.open": "Video exportieren..."
 }

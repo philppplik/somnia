@@ -117,5 +117,22 @@
  "cmd.sound.listen":"Escuchar audio original o editado",
  "cmd.sound.transport.toggle":"Reproducir o pausar audio",
  "cmd.sound.transport.seek":"Cambiar posición en audio",
- "cmd.sound.export":"Exportar copia de audio WAV"
+ "cmd.sound.export":"Exportar copia de audio WAV",
+ "sound.hero.export": "Exportar audio...",
+ "sound.review.scope": "Exportar el clip procesado. La selección sola no cambia el rango de salida.",
+ "sound.review.wav": "Copia WAV. La fuente no cambia.",
+ "sound.review.channels": "canales",
+ "sound.review.region": "Edición de región aplicada:",
+ "sound.review.edited": "Se exporta el audio editado.",
+ "sound.review.listen": "Escuchar audio editado",
+ "sound.review.changed": "El clip activo cambió. Abre Exportar de nuevo.",
+ "sound.review.wait": "Esperando el procesamiento actual.",
+ "sound.review.saved": "Guardado.",
+ "sound.review.cancelled": "Cancelado.",
+ "sound.review.downloaded": "Descarga iniciada.",
+ "sound.review.unavailable": "El audio no está listo.",
+ "sound.review.failed": "Error al exportar. Se conservan los cambios.",
+ "sound.review.close": "Cerrar",
+ "sound.review.submit": "Exportar WAV",
+ "cmd.sound.export.open": "Exportar audio..."
 }

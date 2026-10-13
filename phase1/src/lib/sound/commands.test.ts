@@ -1,9 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {CommandDispatcher} from '../commandDispatcher';
-import {soundCommandSpecs,registerSoundTransport,registerSoundCommands} from './commands';
+import {soundCommandSpecs,registerSoundTransport,registerSoundCommands,registerSoundExportOpener} from './commands';
 import {addMediaFile,getMedia,clearMedia} from '../media';
-import {setSoundEngineFactory,openSound,getSoundSession,isSoundExportReady} from './session';
+import {setSoundEngineFactory,openSound,getSoundSession,isSoundExportReady,saveSound} from './session';
 import {commandRegistry} from '../commandRegistry';
 import {DEFAULT_SETTINGS} from './recipe';
 import {soundShell,SOUND_LAYOUT,soundStudio} from '../studios/sound';
@@ -37,9 +37,12 @@ test('typed commands change a real session via a mocked engine, enforce origins,
  try{
   await assert.rejects(d.runCommand('sound.settings.set',{settings:DEFAULT_SETTINGS},{origin:'agent'}),/interactive-only/);
   await assert.rejects(d.runCommand('sound.selection.set',{start:'bad',end:4}),/Invalid parameters/);
+  let opened='';const closeOpener=registerSoundExportOpener(n=>{opened=n;});
+  await d.runCommand('sound.export.open');assert.equal(opened,'shell.wav');closeOpener();assert.equal(d.isEnabled('sound.export.open'),false);
   await d.runCommand('sound.selection.set',{start:2,end:6});assert.deepEqual(getSoundSession('shell.wav')?.selection,{start:2,end:6});
   await d.runCommand('sound.region.apply',{mode:'crop'});assert.equal(getSoundSession('shell.wav')?.settings.region?.mode,'crop');
   assert.equal(isSoundExportReady('shell.wav'),false,'queued rendering cannot export stale audio');
+  assert.equal(await saveSound('shell.wav'),'unavailable');
   await d.runCommand('sound.region.clear');await d.runCommand('sound.selection.all');assert.deepEqual(getSoundSession('shell.wav')?.selection,{start:0,end:8});
   await d.runCommand('sound.settings.set',{settings:{...DEFAULT_SETTINGS,pitch:7,effect:{id:'',keepTail:true,params:{mix:0.5}}}});assert.equal(getSoundSession('shell.wav')?.settings.pitch,7);
   await assert.rejects(d.runCommand('sound.settings.set',{settings:{...DEFAULT_SETTINGS,effect:{id:'',keepTail:true,params:{mix:'bad'}}}}),/Invalid parameters/);

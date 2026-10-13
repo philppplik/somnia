@@ -87,7 +87,10 @@ export interface StudioShellDef{
  * Header hero action: the one primary verb a studio shows in the header slot where Publish sits.
  * Data only. The shell calls `executeCommand(id)` and never asks which studio is active. See docs/concepts/hero-action-shell-contract.md.
  */
+export interface HeroActionVariant {when:string;id:string;labelKey:string;icon:string}
 export interface HeroActionDef{
+ /** First matching variant replaces the base verb. */
+ variants?:readonly HeroActionVariant[];
  /** Command id; must exist in the command registry, otherwise the slot falls back to Publish. */
  id:string;
  /** i18n key of the label (all five locales). The label is also the accessible name. */

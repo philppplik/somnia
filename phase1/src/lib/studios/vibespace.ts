@@ -24,7 +24,7 @@ export const vibespaceShell:StudioShellDef={
 /** Agent workspace: no file claims, conversion, or document editor takeover. */
 export const vibespaceStudio:StudioDef={
  id:'vibespace',label:'studio.vibespace',icon:'Bot',order:10,formats:[],
- shell:{leftRail:[],rightRail:[],header:{menus:['Project','View','Tools','Help'],views:[]},bottomBar:{slots:[],viewportPresets:[]},inspector:'vibespace.inspector',tools:[]},
+ shell:{leftRail:[],rightRail:[],header:{menus:['Project','View','Tools','Help'],views:[],heroAction:{id:'vibespace.task.new',labelKey:'vibespace.hero.task',icon:'Plus'}},bottomBar:{slots:[],viewportPresets:[]},inspector:'vibespace.inspector',tools:[]},
  commands:[],shortcuts:{},menus:{view:[]},canvas:'vibespace.canvas',shellV2:vibespaceShell,
  agent:{tools:[],contextProviders:[],quickActions:[]},deriveContext:context=>context
 };

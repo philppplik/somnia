@@ -16,7 +16,7 @@ included; the `source` column names the owner. Dynamic sources that stay outside
 
 Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, fr, pt-BR); the gate enforces it.
 
-283 commands. Categories: Edit, Help, Insert, Project, Tools, View.
+284 commands. Categories: Edit, Help, Insert, Project, Tools, View.
 
 | id | title | category | source | shortcut |
 | --- | --- | --- | --- | --- |
@@ -214,6 +214,7 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `slides.undo` | Undo slide text | Edit | slides |  |
 | `sound.clip.activate` | Activate audio clip | View | sound |  |
 | `sound.export` | Export audio WAV copy | Project | sound |  |
+| `sound.export.open` | Export audio... | Project | sound |  |
 | `sound.listen` | Listen to original or edited audio | View | sound |  |
 | `sound.region.apply` | Apply selection region | Edit | sound |  |
 | `sound.region.clear` | Remove region edit | Edit | sound |  |

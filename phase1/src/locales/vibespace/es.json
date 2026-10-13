@@ -125,5 +125,7 @@
   "vibespace.shell.state.failed": "Fallido",
   "vibespace.shell.state.crashed": "Bloqueado",
   "vibespace.shell.memory": "Memoria",
-  "vibespace.shell.skills": "Habilidades"
+  "vibespace.shell.skills": "Habilidades",
+ "vibespace.hero.task": "Nueva tarea",
+ "cmd.vibespace.task.new": "Nueva tarea"
 }

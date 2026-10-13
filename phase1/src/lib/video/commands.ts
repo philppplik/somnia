@@ -6,6 +6,8 @@ import {addTimelineClip,addTimelineClipsFromDialog,cancelVideoExport,deleteTimel
 import {addTitleClip,setTitleLength,updateTitle} from './titleSession';
 import {isTitleClip,type TitleSpec} from './titles';
 import {timelineDuration} from './timeline';
+let exportOpener:((name:string)=>void)|null=null;
+export function registerVideoExportOpener(open:(name:string)=>void){exportOpener=open;return()=>{if(exportOpener===open)exportOpener=null;};}
 export const activeVideoSession=()=>getVideoSession(getMedia().active);
 const ready=()=>activeVideoSession()?.status==='ready';
 const selected=()=>{const s=activeVideoSession();return s?.clips.find(c=>c.id===s.selectedClipId);};
@@ -38,6 +40,7 @@ export function videoCommandSpecs():CommandSpec<unknown,unknown>[] {
   spec('video.title.add','Add a title card',()=>addTitleClip(root(),Number.MAX_SAFE_INTEGER,{text:''}),undefined,ready,'Insert'),
   spec('video.title.update','Edit selected title card',(p:Partial<TitleSpec>)=>updateTitle(root(),clip().id,p),object(titleProperties,[]),titleSelection,'Edit'),
   spec('video.title.duration','Set selected title card duration',(p:{seconds:number})=>setTitleLength(root(),clip().id,p.seconds),object({seconds:number(0.05,3600)}),titleSelection,'Edit'),
+  spec('video.export.open','Review video export',()=>exportOpener!(root()),undefined,()=>!!exportOpener&&!!activeVideoSession(),'Project'),
   spec('video.export.format','Set video export format',(p:{format:'webm'|'mp4'})=>{const caps=activeVideoSession()!.capabilities;if(!(p.format==='webm'?caps?.webmVideo:caps?.mp4Video))fail('This encoder is not available in this browser.');setVideoFormat(root(),p.format);},object({format:{enum:['webm','mp4']}})),
   spec('video.export.start','Export video copy',()=>exportVideoFile(root()),undefined,()=>ready()&&!!activeVideoSession()!.clips.length&&activeVideoSession()!.clips.filter(c=>!isTitleClip(c)).every(c=>getMedia().items.some(i=>i.name===c.source))&&!!(activeVideoSession()!.format==='webm'?activeVideoSession()!.capabilities?.webmVideo:activeVideoSession()!.capabilities?.mp4Video),'Project'),
   spec('video.export.cancel','Cancel video export',()=>cancelVideoExport(root()),undefined,()=>activeVideoSession()?.status==='exporting','Project'),

@@ -10,6 +10,7 @@ import {FileTabs} from '../FileTabs';
 import {useT} from '../../lib/useT';
 import {openVideoDialog} from '../../lib/video/open';
 import {useMedia} from '../../lib/media';
+import {VideoExportReview} from './VideoExportReview';
 import {VideoWorkspace} from './VideoWorkspace';
 /** Canvas of the Video Studio: the opened video file, or a start screen. */
 export function VideoCanvas(){
@@ -27,7 +28,7 @@ export function VideoCanvas(){
    services:{ready:session?.status==='ready',exporting:session?.status==='exporting'}});
  },[item,session]);
  return <main className="center" aria-label={t('video.title')}><div className="workspace"><section className="code-pane" aria-label={t('video.title')}>
-  <FileTabs/>
+  <FileTabs/><VideoExportReview/>
   {item&&(item.kind==='video'||item.kind==='video-project')?<VideoWorkspace key={item.name} item={item}/>:
    <StudioEmptyState studio="video" icon={<Film/>} onOpen={openVideoDialog} onCreate={()=>createBlankProject('video')}/>}
  </section></div></main>;

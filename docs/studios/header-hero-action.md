@@ -46,3 +46,5 @@ shell:{ ..., header:{ menus:['View','Help'], views:[], heroAction:{ id:'slides.p
 | String `hero.more` ("More actions", 5 locales) | `phase1/src/locales/*.json` |
 
 Studios add their own label strings in their own locale files. Shared JSX never branches on a studio id; a test enforces this.
+
+Optional `variants` is an ordered list of `{when, id, labelKey, icon}`. First matching StudioContext expression wins, with the base verb as fallback. Registry enablement still gates execution. Video uses this only to label ongoing export, never to change the button into Cancel.

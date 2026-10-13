@@ -117,5 +117,22 @@
  "cmd.sound.listen":"Listen to original or edited audio",
  "cmd.sound.transport.toggle":"Play or pause audio",
  "cmd.sound.transport.seek":"Seek in audio",
- "cmd.sound.export":"Export audio WAV copy"
+ "cmd.sound.export":"Export audio WAV copy",
+ "sound.hero.export": "Export audio...",
+ "sound.review.scope": "Export the current processed clip. Selection alone does not change the output range.",
+ "sound.review.wav": "WAV copy. The source stays unchanged.",
+ "sound.review.channels": "channels",
+ "sound.review.region": "Committed region edit:",
+ "sound.review.edited": "Export uses the edited audio.",
+ "sound.review.listen": "Listen to edited",
+ "sound.review.changed": "Active clip changed. Reopen Export to review it.",
+ "sound.review.wait": "Waiting for current audio processing.",
+ "sound.review.saved": "Saved.",
+ "sound.review.cancelled": "Cancelled.",
+ "sound.review.downloaded": "Download started.",
+ "sound.review.unavailable": "Audio is not ready.",
+ "sound.review.failed": "Export failed. Your edits are kept.",
+ "sound.review.close": "Close",
+ "sound.review.submit": "Export WAV",
+ "cmd.sound.export.open": "Export audio..."
 }
