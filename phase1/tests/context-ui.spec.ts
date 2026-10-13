@@ -1,5 +1,5 @@
 import {test,expect} from './fixtures';
-import {showInspectorSection} from './helpers';
+import {showInspectorSection,showPanel} from './helpers';
 import {mkdirSync} from 'node:fs';
 const source='<!doctype html><html><head></head><body style="padding:24px"><h1>Context title</h1><img width="120" height="80"><div style="padding:20px">Container</div><p>Paragraph</p></body></html>';
 import {tmpdir} from 'node:os';import {join} from 'node:path';
@@ -14,7 +14,7 @@ test('context matrix keeps shell geometry and web rail pixels unchanged',async({
  if(name==='image'){await expect(page.getByTestId('inspector-alt-warning')).toBeVisible();await expect(page.getByTestId('canvas-alt-badge')).toBeVisible();}
  await page.screenshot({path:`${out}/${name}.png`});}
  await f.locator('h1').click();await f.locator('p').click({modifiers:['Shift']});await expect(page.getByTestId('context-announcement')).toContainText('2 selected');expect(await geometry()).toEqual(initial);await page.screenshot({path:`${out}/multi.png`});
- expect(await page.evaluate(()=>(window as any).__shellShifts.reduce((a:number,b:number)=>a+b,0))).toBe(0);await page.getByRole('button',{name:'View',exact:true}).click();await page.getByRole('menuitemradio',{name:/Code view/}).click();await page.getByRole('button',{name:'Code panel',exact:true}).click();await expect(page.getByText('Outline',{exact:true})).toBeVisible();await page.screenshot({path:`${out}/code.png`});
+ expect(await page.evaluate(()=>(window as any).__shellShifts.reduce((a:number,b:number)=>a+b,0))).toBe(0);await page.getByRole('button',{name:'View',exact:true}).click();await page.getByRole('menuitemradio',{name:/Code view/}).click();await showPanel(page,'DOM outline');await expect(page.getByRole('region',{name:'DOM outline',exact:true})).toBeVisible();await page.screenshot({path:`${out}/code.png`});
 });
 test('floating formatting is functional and Escape does not steal focus',async({page})=>{await page.goto('/');const f=page.frameLocator('.design-iframe');await f.locator('h1').click();const format=page.getByRole('button',{name:'Format strong',exact:true});await expect(format).toBeVisible();await format.click();await expect(f.locator('h1 strong')).toHaveText('Make room for something new.');await page.keyboard.press('Escape');await expect(format).toBeHidden();});
 test('manual inspector tab survives selection changes',async({page})=>{await page.goto('/');const f=page.frameLocator('.design-iframe');await f.locator('h1').click();await showInspectorSection(page,'interactions');const toggle=page.getByTestId('inspector-section-interactions').locator(':scope > button[aria-expanded]');await f.locator('p').click();await expect(page.getByTestId('inspector-section-interactions')).toBeVisible();await expect(toggle).toHaveAttribute('aria-expanded','true');await f.locator('h1').click();await expect(toggle).toHaveAttribute('aria-expanded','true');});

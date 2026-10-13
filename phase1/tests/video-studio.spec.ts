@@ -81,7 +81,8 @@ test('Video Studio: switching to Code keeps the video tab and shows the settings
  await page.getByRole('radio',{name:'Somnia Code'}).click();
  await expect(page.getByRole('radio',{name:'Somnia Code'})).toHaveAttribute('aria-checked','true');
  await expect(page.getByTestId('video-workspace')).toBeVisible();
- await expect(page.getByTestId('inspector-section-document')).toBeVisible();await expect(page.getByTestId('inspector-section-export')).toBeVisible();
+ // Code has no Video inspector, so the workspace carries the settings inline (withPanel).
+ await expect(page.getByTestId('video-controls')).toBeVisible();
 });
 test('Video Studio: add a second source, split, ripple delete, reorder, mute, export the joined timeline',async({page})=>{
  await openVideo(page);
