@@ -152,6 +152,8 @@ pub struct ProviderModel {
     client: reqwest::Client,
     propose: bool,
     experimental_text_stream:bool,
+    request_guard:Option<std::sync::Arc<dyn Fn()->std::pin::Pin<Box<dyn std::future::Future<Output=bool>+Send>>+Send+Sync>>,
+    cloud_guard: Option<std::sync::Arc<dyn Fn()->bool+Send+Sync>>,
 }
 impl ProviderModel {
     pub fn new(kind: ProviderKind, endpoint: Option<&str>, model: &str, credential: Option<Secret>, propose: bool) -> Result<Self, Failure> {
@@ -193,11 +195,15 @@ impl ProviderModel {
             .default_headers(headers)
             .build()
             .map_err(|_| Failure::Model)?;
-        Ok(Self { kind, config, endpoint: url, client, propose,experimental_text_stream:EXPERIMENTAL_OLLAMA_STREAM_ENABLED })
+        Ok(Self { kind, config, endpoint: url, client, propose,experimental_text_stream:EXPERIMENTAL_OLLAMA_STREAM_ENABLED,request_guard:None,cloud_guard:None })
     }
     /// Disabled by default and not enabled by desktop production wiring.
     /// Text-only experimental path; tool-capable requests remain final-only.
     pub fn with_experimental_text_stream(mut self,enabled:bool)->Self {self.experimental_text_stream=enabled;self}
+    /// Fresh host evidence immediately before each model request, never a cached chooser label.
+    pub fn with_request_guard(mut self,guard:std::sync::Arc<dyn Fn()->std::pin::Pin<Box<dyn std::future::Future<Output=bool>+Send>>+Send+Sync>)->Self{self.request_guard=Some(guard);self}
+    /// Host-owned live policy, checked before each request and while awaiting response.
+    pub fn with_cloud_guard(mut self, guard:std::sync::Arc<dyn Fn()->bool+Send+Sync>)->Self{self.cloud_guard=Some(guard);self}
     pub fn kind(&self) -> ProviderKind {
         self.kind
     }
@@ -206,6 +212,8 @@ impl ProviderModel {
 impl ModelTransport for ProviderModel {
     async fn stream_text(&self,input:ModelInput,deltas:tokio::sync::mpsc::Sender<String>)->Result<ModelReply,Failure>{
         if !self.experimental_text_stream || self.kind!=ProviderKind::Ollama || self.propose{return self.complete(input).await;}
+        if let Some(guard)=&self.request_guard{if !guard().await{return Err(Failure::InvalidRequest);}}
+        if self.cloud_guard.as_ref().is_some_and(|guard|!guard()){return Err(Failure::InvalidRequest);}
         if input.config.model()!=self.config.model()||input.config.endpoint()!=self.config.endpoint()||!matches!(input.config,ModelConfig::Local{..}){return Err(Failure::InvalidRequest);}
         if self.config.model().to_ascii_lowercase().ends_with(":cloud")||self.config.model().to_ascii_lowercase().ends_with("-cloud"){return Err(Failure::Model);}
         // Loopback alone is not proof of local weights. Verify exact alias before text traffic.
@@ -226,6 +234,19 @@ impl ModelTransport for ProviderModel {
     }
 
     async fn complete(&self, input: ModelInput) -> Result<ModelReply, Failure> {
+        if let Some(guard)=&self.cloud_guard {
+                if !guard(){return Err(Failure::InvalidRequest);}
+                let response=self.complete_checked(input);tokio::pin!(response);
+                let mut interval=tokio::time::interval(Duration::from_millis(25));
+                loop{tokio::select!{result=&mut response=>{if !guard(){return Err(Failure::InvalidRequest);}return result;},_=interval.tick()=>{if !guard(){return Err(Failure::InvalidRequest);}}}}
+        }
+        self.complete_checked(input).await
+    }
+}
+impl ProviderModel {
+    async fn complete_checked(&self, input: ModelInput) -> Result<ModelReply, Failure> {
+        if let Some(guard)=&self.request_guard{if !guard().await{return Err(Failure::InvalidRequest);}}
+        if self.cloud_guard.as_ref().is_some_and(|guard|!guard()){return Err(Failure::InvalidRequest);}
         if input.config.model() != self.config.model() || input.config.endpoint() != self.config.endpoint() || std::mem::discriminant(&input.config) != std::mem::discriminant(&self.config) {
             return Err(Failure::InvalidRequest);
         }

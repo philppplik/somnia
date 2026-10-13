@@ -1,6 +1,7 @@
 import {StudioEmptyState} from '../studios/StudioEmptyState';
 import {StudioStatus} from '../studios/StudioStatus';
 import {useEffect,useMemo,useRef,useState,useSyncExternalStore} from 'react';
+import {subscribeVibeModelSettings} from '../../lib/vibespace/settingsRefresh';
 import {StudioScheduleButton} from './StudioScheduleButton';
 import {Plus} from '../../lib/icons';
 import {VibeSpaceController} from '../../lib/vibespace/controller';
@@ -25,6 +26,7 @@ export function VibeSpaceHome({transport}:{transport:VibeSpaceTransport}){
  const [spaceId,setSpaceId]=useState(''),[studioId,setStudioId]=useState<string|null>(null),[form,setForm]=useState<'space'|'studio'|null>(null),[template,setTemplate]=useState('');
  const [spacePanel,setSpacePanel]=useState<'memory'|'skills'|null>(null);
  useEffect(()=>{void controller.connect();return()=>controller.disconnect();},[controller]);
+ useEffect(()=>{if(transport.mode!=='native')return;return subscribeVibeModelSettings(()=>{void controller.refresh();});},[controller,transport]);
  const [returnCard,setReturnCard]=useState<ReturnCard|null>(null);
  useEffect(()=>{
   if(transport.mode!=='native'||!nativeScheduleTransport.returnCard)return;
@@ -45,7 +47,7 @@ export function VibeSpaceHome({transport}:{transport:VibeSpaceTransport}){
  const supports=(type:VibeIntent['type'])=>transport.capabilities.includes(type);
  const formRef=useRef(form);formRef.current=form;
  const focusForm=()=>requestAnimationFrame(()=>document.querySelector<HTMLTextAreaElement|HTMLInputElement>('.vs-form textarea, .vs-form input')?.focus());
- const newStudio=(goal='')=>{if(!formRef.current){setTemplate(goal);setForm('studio');}focusForm();};
+ const newStudio=(goal='')=>{if(!formRef.current){setTemplate(goal);setForm('studio');if(transport.mode==='native')void controller.refresh();}focusForm();};
  const studioOpener=useRef(newStudio);studioOpener.current=newStudio;
  const bridge=useRef<ReturnType<typeof claimVibeShell>|null>(null);
  const shellContext=useRef<ReturnType<typeof studioContextStore.claim>|null>(null);

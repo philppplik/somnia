@@ -244,7 +244,10 @@
 
 - Compare full release versions, including alpha/beta numbers, so beta.2 detects beta.3 and beta.3 detects beta.10 without offering equal versions or downgrades.
 - Changing the channel or automatic-check setting refreshes the pill immediately. Prerelease tags stay out of stable even if a release has the wrong GitHub flag.
-- Signed update manifests use the real artifact filenames, reject missing or ambiguous artifacts, and accept prerelease versions in the updater test harness.
+- Signed update manifests use the real artifact filenames, reject missing or ambiguous artifacts, and accept prerelease versions in the updater test harness.## Unreleased - Vibe Space model picker
+
+- Refresh configured models when opening a task form or saving the AI provider/model, without resetting the goal or substituting a removed selection.
+- Vibe Space now includes the saved Claude model and uses the existing Anthropic adapter; Ollama, OpenAI and OpenRouter use their matching native adapters. API keys stay in the OS credential store.
 
 ## Unreleased - Header hero action slot
 
