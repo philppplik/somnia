@@ -13,19 +13,14 @@ import {commandEnabled,listCommands} from '../commands';
 import {t} from '../i18n';
 import {getStudio} from '../studios';
 import {getUiContext} from '../uiContextStore';
+import {groupMenuEntries,flattenItems} from './menuGrouping';
+import type {MenuModel,MenuModelEntry,MenuModelItem,MenuModelSubmenu} from './menuModelTypes';
 import {resolveMenuBar} from './menuResolver';
 import {MENU_IDS,type MenuId,type MenuItemDef} from './types';
 
-export interface MenuModelItem{id:string;title:string;shortcut?:string;enabled:boolean}
-export type MenuModelEntry=MenuModelItem|{separator:true};
-export interface MenuModel{
- menu:MenuId;
- /** The in-app View menu renders the studio mode radios (StudioViewMenu) above the items. */
- viewModes:boolean;
- entries:MenuModelEntry[];
- /** Zero visible items: the trigger renders disabled, never hidden (D6). */
- disabled:boolean;
-}
+export type {MenuModel,MenuModelEntry,MenuModelItem,MenuModelSubmenu};
+
+const subTitle=(id:string)=>t('menu.sub.'+id);
 
 const claimAll=(defs:readonly MenuItemDef[],into:Set<string>)=>{for(const d of defs){into.add(d.command);if(d.submenu)claimAll(d.submenu,into);}};
 
@@ -55,6 +50,13 @@ export function buildMenuModel(studioId:string,commands:Command[]=listCommands()
    if('separator' in e){entries.push({separator:true});continue;}
    const c=byId.get(e.command)!;
    present.add(c.id);
+   if(e.submenu){
+    // Manifest-declared submenu (MenuItemDef.submenu): its children are real entries, the parent command is only the label.
+    const kids:MenuModelItem[]=[];
+    for(const k of e.submenu){const kc=byId.get(k.command);if(!kc)continue;present.add(kc.id);kids.push({id:kc.id,title:k.label?t(k.label):kc.title,shortcut:kc.shortcut,enabled:k.enabled});}
+    entries.push({id:c.id,submenu:true,title:e.label?t(e.label):c.title,entries:kids,enabled:kids.some(k=>k.enabled)});
+    continue;
+   }
    entries.push({id:c.id,title:e.label?t(e.label):c.title,shortcut:c.shortcut,enabled:e.enabled});
   }
   // Dynamic tail: registered commands of this menu the manifest does not claim (same exclusions as legacy).
@@ -62,7 +64,8 @@ export function buildMenuModel(studioId:string,commands:Command[]=listCommands()
    if(claimed.has(c.id)||present.has(c.id))continue;
    entries.push({id:c.id,title:c.title,shortcut:c.shortcut,enabled:commandEnabled(c)});
   }
-  return {menu:rm.menu,viewModes:rm.menu==='View',entries,disabled:!entries.some(e=>!('separator' in e))};
+  const grouped=groupMenuEntries(rm.menu,entries,subTitle);
+  return {menu:rm.menu,viewModes:rm.menu==='View',entries:grouped,disabled:!flattenItems(grouped).length};
  });
 }
 
@@ -72,7 +75,7 @@ export function buildLegacyMenuModel(studioId:string,commands:Command[]=listComm
  return MENU_IDS.filter(menu=>studio.shell.header.menus.includes(menu)).map(menu=>({
   menu,
   viewModes:menu==='View',
-  entries:legacyMenuCommands(studioId,menu,commands).map(c=>({id:c.id,title:c.title,shortcut:c.shortcut,enabled:commandEnabled(c)})),
+  entries:groupMenuEntries(menu,legacyMenuCommands(studioId,menu,commands).map(c=>({id:c.id,title:c.title,shortcut:c.shortcut,enabled:commandEnabled(c)})),subTitle),
   disabled:!legacyMenuCommands(studioId,menu,commands).length,
  }));
 }

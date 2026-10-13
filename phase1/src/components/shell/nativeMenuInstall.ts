@@ -31,9 +31,11 @@ function currentNativeTree():NativeMenuTree{
  const model=buildMenuModel(studioId,commands)??buildLegacyMenuModel(studioId,commands);
  return toNativeTree(model,{appName:'Somnia',domain:getUiContext().domain,viewModes:currentNativeViewModes()});
 }
-const nativeEntry=(e:NativeEntry)=>{
+type NativeItem=NonNullable<import('@tauri-apps/api/menu').MenuOptions['items']>[number];
+const nativeEntry=(e:NativeEntry):NativeItem=>{
  switch(e.kind){
   case 'separator':return {item:'Separator' as const};
+  case 'submenu':return {id:e.id,text:e.text,enabled:e.enabled,items:e.items.map(nativeEntry)};
   case 'predefined':return e.item==='About'?{item:{About:null}}:{item:e.item};
   case 'check':return {id:e.id,text:e.text,checked:e.checked,enabled:e.enabled,action:(id:string)=>{void executeNativeMenuCommand(id);}};
   default:return {id:e.id,text:e.text,enabled:e.enabled,action:(id:string)=>{void executeNativeMenuCommand(id);}};

@@ -9,13 +9,14 @@
  * can never fire twice (native item + webview handler). Clicks route through
  * executeNativeMenuCommand -> executeCommand, which re-checks availability.
  */
-import type {MenuModel} from './menuModel';
+import type {MenuModel,MenuModelEntry} from './menuModel';
 import type {MenuId} from './types';
 
 export type NativeEntry=
  |{kind:'item';id:string;text:string;enabled:boolean}
  |{kind:'check';id:string;text:string;checked:boolean;enabled:boolean}
  |{kind:'predefined';item:'About'|'Quit'|'Cut'|'Copy'|'Paste'|'SelectAll'}
+ |{kind:'submenu';id:string;text:string;enabled:boolean;items:NativeEntry[]}
  |{kind:'separator'};
 export interface NativeSubmenu{text:string;enabled:boolean;items:NativeEntry[]}
 export interface NativeMenuTree{app:NativeSubmenu;menus:NativeSubmenu[]}
@@ -23,6 +24,16 @@ export interface NativeViewMode{command:string;label:string;checked:boolean;enab
 
 /** Insert items are disabled outside the web domain, same rule as the in-app menu. */
 const entryEnabled=(menu:MenuId,domain:string,e:{enabled:boolean})=>e.enabled&&!(menu==='Insert'&&domain!=='web');
+
+/** Recursive: a submenu node becomes a native Submenu; its items keep their ids so clicks still route through executeNativeMenuCommand. */
+function nativeOf(menu:MenuId,domain:string,e:MenuModelEntry):NativeEntry{
+ if('separator' in e)return {kind:'separator'};
+ if('submenu' in e){
+  const items=e.entries.map(c=>nativeOf(menu,domain,c));
+  return {kind:'submenu',id:`somnia.sub.${menu}.${e.id}`,text:e.title,enabled:e.enabled&&items.some(i=>(i.kind==='item'||i.kind==='submenu')&&i.enabled),items};
+ }
+ return {kind:'item',id:e.id,text:e.title,enabled:entryEnabled(menu,domain,e)};
+}
 
 /** Pure: resolved model + view modes + domain -> native tree. The macOS app menu keeps Quit/About. */
 export function toNativeTree(model:MenuModel[],opts:{appName:string;domain:string;viewModes:readonly NativeViewMode[]}):NativeMenuTree{
@@ -33,7 +44,7 @@ export function toNativeTree(model:MenuModel[],opts:{appName:string;domain:strin
    for(const v of opts.viewModes)items.push({kind:'check',id:v.command,text:v.label,checked:v.checked,enabled:v.enabled});
    if(opts.viewModes.length)items.push({kind:'separator'});
   }
-  for(const e of m.entries)items.push('separator' in e?{kind:'separator'}:{kind:'item',id:e.id,text:e.title,enabled:entryEnabled(m.menu,opts.domain,e)});
+  for(const e of m.entries)items.push(nativeOf(m.menu,opts.domain,e));
   // The default macOS menu carried the clipboard roles the webview needs; replacing the menu must keep them.
   if(m.menu==='Edit')items.push({kind:'separator'},{kind:'predefined',item:'Cut'},{kind:'predefined',item:'Copy'},{kind:'predefined',item:'Paste'},{kind:'predefined',item:'SelectAll'});
   return {text:m.menu,enabled:!m.disabled,items};

@@ -387,3 +387,18 @@ A stale canvas cannot overwrite the context of the current owner. `useStudioCont
 ### 9.6 Commands
 
 Every action in a panel is a command with an id of the form `<studio>.<name>`, with titles in en, de, es, fr and pt-BR. Panels list the ids they use in `commands`, so the palette, menus, shortcuts and the AI see the same actions. `validateStudioShell(studio, def, {commandExists, hostExists, iconExists})` reports unknown commands, hosts, icons, bad `when` expressions, rail items pointing at missing or wrong-side panels, and duplicate ids. Run it in a unit test for every studio manifest.
+
+## Menu grouping (tree dropdowns)
+
+The six top-level menus (Project, Edit, View, Insert, Tools, Help) group long command lists into submenus. The grouping is one declarative table, `SUBMENU_RULES` in `phase1/src/lib/shell/menuGrouping.ts`, applied inside `menuModel.ts`. That makes it identical for the in-app menu bar (legacy and `shellV2` paths) and the macOS native mirror.
+
+- **Rules.** A rule claims commands by exact id or id prefix (`deploy.`, `vector.`, `md.`). The first matching rule of a menu wins. Rules may nest one level (Insert > Markdown > Headings). Depth is capped at two submenu levels.
+- **Layout.** Entries no rule claims stay at the top level in their original order, then one separator, then the submenus in table order. Everyday commands (Undo, Redo, Save, Open, Settings) stay flat. `insert.element.*` stays flat too.
+- **Nothing is lost.** An unmapped command is never dropped. A rule that matches fewer than two entries is dissolved and its entry keeps its place at the top level.
+- **Source of truth.** Titles, shortcuts and enabled flags still come from the command registry. A submenu is disabled when every entry inside it is disabled, and it is shown, not hidden (same rule as D6).
+- **Manifest submenus.** `MenuItemDef.submenu` is now honoured: its children render as a submenu under the parent's label.
+- **Titles.** `menu.sub.<id>` in all five locales (en, de, es, fr, pt-BR).
+- **Project menu today:** top level New project, Open file, Open folder, Save project, Save all files, Close all files, Close project; submenus New, Open other, Export, Publish (Publish..., Plan, Cancel, Go back), Publish targets, Publish server, Build.
+- **In-app rendering.** `MenuBar.tsx` uses base-ui `Menu.SubmenuRoot` / `Menu.SubmenuTrigger`: Right arrow opens, Left arrow or Esc closes, typeahead works, roles come from base-ui. The Insert rule (disabled outside the web domain) applies inside submenus.
+- **Native menu (macOS).** `toNativeTree` emits `submenu` nodes, `nativeMenuInstall.ts` maps them to Tauri submenus with the same ids. Items still carry no accelerators. Only the pure tree builder is unit-tested; the real macOS menu bar has not been verified here.
+- **Adding a family.** Add a rule to `SUBMENU_RULES` and `menu.sub.<id>` to all five locales. `menuGrouping.test.ts` fails when a catalogue key is missing.

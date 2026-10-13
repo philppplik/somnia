@@ -4,7 +4,9 @@ test('app starts empty and offers open folder, open file and a blank page',async
  const empty=page.getByTestId('empty-state');await expect(empty).toBeVisible();
  for(const n of ['Open folder','Open file','New blank page'])await expect(empty.getByRole('button',{name:n})).toBeVisible();
  await page.getByRole('button',{name:'Project',exact:true}).click();
- for(const n of [/Open folder/,/Open file/,/Save project/,/Export project/,/Close project/])await expect(page.getByRole('menuitem',{name:n})).toBeVisible();
+ for(const n of [/Open folder/,/Open file/,/Save project/,/Close project/])await expect(page.getByRole('menuitem',{name:n})).toBeVisible();
+ // Export now lives in a submenu; with no project open it is shown but disabled.
+ await expect(page.getByRole('menuitem',{name:'Export',exact:true})).toBeDisabled();
  await expect(page.getByRole('menuitem',{name:/Reset to starter/})).toHaveCount(0);await expect(page.getByRole('menuitem',{name:/Compare/})).toHaveCount(0);
  await page.keyboard.press('Escape');
  await empty.getByRole('button',{name:'New blank page'}).click();await expect(empty).toBeHidden();await expect(page.getByRole('tab',{name:/index.html/}).or(page.getByText('index.html').first())).toBeVisible();});

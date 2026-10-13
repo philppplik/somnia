@@ -69,3 +69,16 @@ test('empty menu mirrors the disabled flag',()=>{
  assert.equal(tree.menus[0].enabled,false);
  assert.deepEqual(tree.menus[0].items,[]);
 });
+
+test('submenus map to native submenus recursively, ids and enabled preserved, Insert rule applies inside',()=>{
+ const m:MenuModel[]=[
+  {menu:'Project',viewModes:false,disabled:false,entries:[{id:'project.save',title:'Save',enabled:true},{separator:true},{id:'publish',submenu:true,title:'Publish',enabled:true,entries:[{id:'deploy.plan',title:'Plan publish',enabled:true},{id:'deploy.cancel',title:'Cancel',enabled:false}]}]},
+  {menu:'Insert',viewModes:false,disabled:false,entries:[{id:'markdown',submenu:true,title:'Markdown',enabled:true,entries:[{id:'md.bold',title:'Bold',enabled:true}]}]},
+ ];
+ const tree=toNativeTree(m,{appName:'Somnia',domain:'web',viewModes:[]});
+ assert.deepEqual(tree.menus[0].items[2],{kind:'submenu',id:'somnia.sub.Project.publish',text:'Publish',enabled:true,items:[{kind:'item',id:'deploy.plan',text:'Plan publish',enabled:true},{kind:'item',id:'deploy.cancel',text:'Cancel',enabled:false}]});
+ const off=toNativeTree(m,{appName:'Somnia',domain:'raster',viewModes:[]});
+ const sub=off.menus[1].items[0];
+ assert.equal(sub.kind==='submenu'&&sub.enabled,false);
+ assert.ok(!JSON.stringify(tree).includes('accelerator'));
+});
