@@ -15,7 +15,7 @@ Failure modes are explicit and fail closed: `no-keys`, `bad-signature`, `unknown
 
 ## What is not done yet
 - TUF (stage B): `tools/extension-store/tuf.ts` is Node-only and not wired into the app. Needs a native adapter.
-- The signed `revoked[]` list is enforced for install and update lists. Disabling already-installed blocked extensions still runs through `BlocklistService` (`blocklist.ts`), which has no key configured in the shell build, so it is effectively off. Unifying both on this index is the next step.
+- The signed `revoked[]` list is enforced for install and update lists and, since [17-catalog-blocklist.md](17-catalog-blocklist.md), for already-installed extensions: the shell's `BlocklistService` now consumes this index with the pinned key k1 (disable + notify, launch + 24h checks, fail-safe offline).
 - Immutable references: the app reads the `published` branch head. Rollback is stopped by the serial, not by the URL.
 - Honest scope: a signature proves who published the index and that package bytes match the pins. It does not prove an extension is safe.
 
