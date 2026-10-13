@@ -4,8 +4,11 @@ import {useCallback,useEffect,useMemo,useRef,useState} from 'react';
 import {FileText,Minus,Plus,Undo2,Redo2} from '../../lib/icons';
 import {addMediaFile,findMedia,formatBytes,MEDIA_ACCEPT,useMedia} from '../../lib/media';
 import {DocumentsEngine,inspectDocx,type OpenedDocument} from '../../lib/documents';
-import {patchDocuments,resetDocuments,stepZoom,useDocuments} from '../../lib/documents/store';
-import {attachEngine,clearCaret,deleteAtCaret,dragTo,editParagraph,loadBlocks,moveCaret,pointerAt,redoEdit,selectAllInParagraph,selectedText,splitAtCaret,syncGeometry,typeText,undoEdit} from '../../lib/documents/session';
+import {getDocumentsState,patchDocuments,resetDocuments,stepZoom,subscribeDocuments,useDocuments} from '../../lib/documents/store';
+import {defaultRecoveryStore,registerActiveSession,fingerprintBytes,flushOnTeardown,SessionCheckpointer,whenFlushed,type Snapshot} from '../../lib/sessionSafety';
+import {asHistory,blocksDigest,documentsSessionId,validHistory} from '../../lib/documents/recovery';
+import {reportError} from '../../lib/log';
+import {attachEngine,exportHistory,importHistory,whenIdle,clearCaret,deleteAtCaret,dragTo,editParagraph,loadBlocks,moveCaret,pointerAt,redoEdit,selectAllInParagraph,selectedText,splitAtCaret,syncGeometry,typeText,undoEdit} from '../../lib/documents/session';
 import {saveCopy} from '../../lib/documents/saveCopy';
 import {confirmDocumentsSaveCopy,patchDocumentsExportUi,registerDocumentsExport,useDocumentsExportUi} from '../../lib/documents/exportBridge';
 import {executeCommand} from '../../lib/commands';
@@ -88,15 +91,46 @@ export function DocumentsCanvas(){
  useEffect(()=>{
   if(!item){attachEngine(null);resetDocuments();return;}
   let live=true;const e=new DocumentsEngine();engineRef.current=e;setEngine(null);setNear(new Set([0]));
-  patchDocuments({status:'loading',name:item.name,error:'',pages:0,risks:[],words:0,engineMs:null});
+  const sessionId=documentsSessionId(item.name);const store=defaultRecoveryStore();let cp:SessionCheckpointer|null=null;let fp='';let unsub=()=>{};let offActive=()=>{};
+  patchDocuments({status:'loading',name:item.name,error:'',pages:0,risks:[],words:0,engineMs:null,recovered:null});
   (async()=>{
    const raw=new Uint8Array(await (await fetch(item.url)).arrayBuffer());bytesRef.current=raw;
    const check=inspectDocx(raw);if(!check.ok)throw new Error(check.error);
-   await e.init();const d=await e.open(raw.slice().buffer);
-   if(!live)return;attachEngine(e);patchDocuments({risks:check.risks,engineMs:Math.round(d.openMs+d.layoutMs)});await loadBlocks(d);
-   if(!live)return;setEngine(e);patchDocuments({status:'ready'});
+   fp=await fingerprintBytes(raw);await whenFlushed(sessionId);if(!live)return;
+   const c=cp=new SessionCheckpointer({sessionId,studio:'documents',store,sourceFingerprint:fp,
+    getRevision:()=>getDocumentsState().rev,isDirty:()=>getDocumentsState().edited,
+    historyRestorable:()=>true,hasUndoHistory:()=>getDocumentsState().canUndo||getDocumentsState().canRedo,
+    quiesce:async()=>{await whenIdle();return true;},
+    capture:async()=>{const st=getDocumentsState();const journal=exportHistory();const digest=await blocksDigest(st.blocks);const bytes=await e.save();
+     return{revision:st.rev,payload:bytes,history:asHistory(journal,digest),view:{zoom:st.zoom},format:'docx',engineVersion:'documents-1'};}});
+   offActive=registerActiveSession(sessionId,c);
+   await e.init();
+   let d:OpenedDocument|null=null;let snap:Snapshot|null=null;
+   const r=await c.resume(async s=>{d=await e.open(s.payload.slice().buffer);snap=s;},async()=>fp);
+   if(!live)return;
+   if(!r.ok&&r.reason!=='missing')reportError('documents.recovery',r.detail,{level:'warn'});
+   if(!d){d=await e.open(raw.slice().buffer);}
+   attachEngine(e);patchDocuments({risks:check.risks,engineMs:Math.round(d.openMs+d.layoutMs),editError:!r.ok&&r.reason==='source-changed'?t('session.conflict'):''});await loadBlocks(d);
+   if(!live)return;
+   if(snap){
+    const sn=snap as Snapshot;const h=await validHistory(sn.meta.history,getDocumentsState().blocks);if(!live)return;
+    if(h)importHistory(h.journal);
+    patchDocuments({edited:true,recovered:{at:sn.meta.createdAt,historyKept:!!h&&!h.truncated}});
+   }
+   let last=getDocumentsState().rev;unsub=subscribeDocuments(()=>{const s=getDocumentsState();if(s.edited&&s.rev!==last){last=s.rev;c.noteEdit();}});
+   setEngine(e);patchDocuments({status:'ready'});
   })().catch(err=>{if(live)patchDocuments({status:'error',error:err instanceof Error?err.message:String(err)});});
-  return()=>{live=false;e.dispose();engineRef.current=null;};
+  return()=>{
+   live=false;unsub();offActive();const c=cp;
+   const st=getDocumentsState();
+   // Edited and unmounting (studio/tab switch): freeze state now, write a verified checkpoint, only then stop the worker.
+   if(c&&st.edited&&fp&&!e.isDisposed){
+    c.close();const journal=exportHistory();const blocks=st.blocks;
+    void flushOnTeardown({sessionId,studio:'documents',store,sourceFingerprint:fp,revision:st.rev,format:'docx',engineVersion:'documents-1',view:{zoom:st.zoom},
+     history:blocksDigest(blocks).then(dg=>asHistory(journal,dg)),quiesce:async()=>{await c.idle();await whenIdle();},payload:()=>e.save()})
+     .then(ok=>{if(!ok)reportError('documents.recovery','Could not write a verified recovery checkpoint while closing the view.');}).finally(()=>e.dispose());
+   }else{c?.close();e.dispose();}
+   engineRef.current=null;};
  },[item?.url,attempt]);
  const onVisible=useCallback((i:number,v:boolean)=>setNear(prev=>{if(prev.has(i)===v)return prev;const n=new Set(prev);v?n.add(i):n.delete(i);return n;}),[]);
  const pick=async()=>{const input=document.createElement('input');input.type='file';input.accept=MEDIA_ACCEPT.split(',').filter(x=>/docx|wordprocessingml/.test(x)).join(',');input.onchange=async()=>{const f=input.files?.[0];if(f){const r=await addMediaFile(f,f.name);if('error' in r)patchDocuments({status:'error',error:r.error});}};input.click();};
@@ -117,6 +151,7 @@ export function DocumentsCanvas(){
    <button className={tool} disabled={doc.status!=='ready'||doc.saving} onClick={()=>void executeCommand('documents.saveCopy')} data-testid="documents-save-copy">{t('documents.saveCopy')}</button></div>
   {doc.status==='loading'&&<div role="status" className="grid flex-1 place-items-center text-[12px] text-ink-3">{t('documents.loading')}</div>}
   {doc.status==='error'&&<div role="alert" className="grid flex-1 place-items-center"><div className="grid max-w-md justify-items-center gap-2 text-center"><p className="text-[13px] text-ink" data-testid="documents-error">{doc.error}</p><button className={tool+' border border-subtle'} onClick={()=>setAttempt(a=>a+1)}>{t('documents.retry')}</button></div></div>}
+  {doc.recovered&&<p role="status" className="border-b border-subtle px-3 py-1 text-[12px] text-ink-2" data-testid="documents-recovered">{t('session.recovered')}{!doc.recovered.historyKept&&' '+t('session.historyReset')}</p>}
   {doc.caretLocked&&<p role="status" className="border-b border-subtle px-3 py-1 text-[12px] text-ink-3" data-testid="documents-caret-locked">{t('documents.caret.locked')}</p>}
   {doc.status==='ready'&&engine&&<div className="min-h-0 flex-1 overflow-auto bg-hover/40 p-6" data-testid="documents-scroll"><div className="flex flex-col gap-4">
    {doc.pageSizes.map((p,i)=><Page key={i} engine={engine} index={i} width={p.width} height={p.height} zoom={doc.zoom} rev={doc.rev} visible={near.has(i)} onVisible={onVisible}/>)}</div></div>}

@@ -120,6 +120,8 @@ export class SessionCheckpointer{
  }
  /** User explicitly discarded the session. */
  async discard(){this.close();await this.o.store.discard(this.o.sessionId);}
+ /** Resolves when no checkpoint run is in flight (used before a teardown flush so slot writes never interleave). */
+ idle():Promise<unknown>{return(this.running??Promise.resolve()).catch(()=>undefined);}
  close(){this.closed=true;if(this.timer!==null){this.clock.clearTimeout(this.timer);this.timer=null;}}
 }
 const msg=(e:unknown)=>e instanceof Error?e.message:String(e);
