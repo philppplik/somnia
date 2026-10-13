@@ -3199,5 +3199,9 @@
   "versions.review.cancel": "Revenir à la modification",
   "versions.review.confirm": "Confirmer et enregistrer la version",
   "openRouter.textTitle": "Ouvrir comme texte ?",
-  "openRouter.textDescription": "Le type du fichier est inconnu, mais son contenu est du texte valide. Confirmez pour l’ouvrir dans Code."
+  "openRouter.textDescription": "Le type du fichier est inconnu, mais son contenu est du texte valide. Confirmez pour l’ouvrir dans Code.",
+  "settings.previewScripts": "Exécuter les scripts de la page dans l’aperçu en direct",
+  "settings.previewScripts.note": "Les scripts de la page s’exécutent dans un cadre isolé, sans accès à Somnia",
+  "settings.livePreviewMode": "Afficher l’aperçu en direct",
+  "settings.livePreviewMode.note": "Passer du canevas de conception à l’aperçu en direct. Les scripts suivent le réglage ci-dessus ou le choix enregistré du projet."
 }

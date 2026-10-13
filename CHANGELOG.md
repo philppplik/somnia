@@ -59,6 +59,10 @@
 
 - Smart Open keeps recognized files automatic. Ambiguous handlers now show a studio chooser; unknown-type files with verified text show an explicit "Open as text?" confirmation. Cancel leaves that file unopened. Unsupported or invalid files only notify. Choosing a studio still uses the normal prepare, unsaved-change approval, revision validation and commit flow. A newer open request closes an older unanswered chooser.
 
+## Unreleased
+
+- Live preview runs page scripts by default in the existing isolated sandbox. A global Preview setting turns scripts off without a prompt; saved per-project choices still take priority.
+
 ## 11.2.0-beta.1 - 2026-10-07
 
 - Direct OpenAI/Claude BYOK providers, live catalogs and metadata-only auth.

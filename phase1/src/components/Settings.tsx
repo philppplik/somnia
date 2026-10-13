@@ -1,4 +1,5 @@
 import { FrameworkSettings } from "./FrameworkSettings";
+import {DEFAULT_PREVIEW_SCRIPTS} from '../lib/previewScripts';
 import {Button} from './ui/button';
 import {resetContextSections} from './ContextSections';
 import {CollabPreferences} from './CollabPreferences';
@@ -249,7 +250,7 @@ export function Settings() {
         viewport: 1280,
         viewportHeight: 900,
       });
-    if (name === "Preview") change({ livePreview: false });
+    if (name === "Preview") change({ livePreview: false, previewScripts: DEFAULT_PREVIEW_SCRIPTS });
     if (name === "Updates") {
       change({ updatePrefs: { ...DEFAULT_UPDATE_PREFS } });
       const old = autoCheckEnabled();
@@ -1066,16 +1067,26 @@ export function Settings() {
       )}
       {section === "Preview" && (
         <>
-          <label title={t("redesign.liveHint")}>
-            {t("redesign.live")}
+          <label title={t("settings.previewScripts.note")}>
+            {t("settings.previewScripts")}
             <input
               type="checkbox"
-              aria-label={t("redesign.live")}
+              aria-label={t("settings.previewScripts")}
+              checked={state.previewScripts}
+              onChange={(e) => change({ previewScripts: e.target.checked })}
+            />
+          </label>
+          <p>{t("settings.previewScripts.note")}</p>
+          <label title={t("settings.livePreviewMode.note")}>
+            {t("settings.livePreviewMode")}
+            <input
+              type="checkbox"
+              aria-label={t("settings.livePreviewMode")}
               checked={state.livePreview}
               onChange={(e) => change({ livePreview: e.target.checked })}
             />
           </label>
-          <p>{t("redesign.liveHint")}</p>
+          <p>{t("settings.livePreviewMode.note")}</p>
         </>
       )}
       {section === "Shortcuts" ? (

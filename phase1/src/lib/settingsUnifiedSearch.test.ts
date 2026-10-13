@@ -8,7 +8,7 @@ import { DEFAULT_DOCUMENT_PREFS } from './documentPrefs';
 
 const en = JSON.parse(readFileSync(new URL('../locales/en.json', import.meta.url), 'utf8'));
 const label = (k: string) => en[k];
-const state = { workflowPrefs: { ...DEFAULT_WORKFLOW_PREFS, units: 'imperial' }, editorPrefs: { ...DEFAULT_EDITOR_PREFS }, documentPrefs: { ...DEFAULT_DOCUMENT_PREFS }, wrapLines: false };
+const state = { workflowPrefs: { ...DEFAULT_WORKFLOW_PREFS, units: 'imperial' }, editorPrefs: { ...DEFAULT_EDITOR_PREFS }, documentPrefs: { ...DEFAULT_DOCUMENT_PREFS }, previewScripts: true, wrapLines: false };
 const cmds = [{ id: 'project.export', title: 'Export project...', category: 'Project', shortcut: 'Mod+E', keywords: ['zip'] }, { id: 'help.about', title: 'About Somnia' }];
 
 test('parseQuery splits known @filters only', () => {

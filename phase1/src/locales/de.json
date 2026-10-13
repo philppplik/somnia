@@ -3199,5 +3199,9 @@
   "versions.review.cancel": "Zurück zum Bearbeiten",
   "versions.review.confirm": "Bestätigen und Version speichern",
   "openRouter.textTitle": "Als Text öffnen?",
-  "openRouter.textDescription": "Der Dateityp ist unbekannt, aber der Inhalt ist gültiger Text. Bestätige, um die Datei in Code zu öffnen."
+  "openRouter.textDescription": "Der Dateityp ist unbekannt, aber der Inhalt ist gültiger Text. Bestätige, um die Datei in Code zu öffnen.",
+  "settings.previewScripts": "Seitenskripte in der Live-Vorschau ausführen",
+  "settings.previewScripts.note": "Seitenskripte laufen in einem isolierten Sandbox-Frame, ohne Zugriff auf Somnia",
+  "settings.livePreviewMode": "Live-Vorschau anzeigen",
+  "settings.livePreviewMode.note": "Von der Designfläche zur Live-Vorschau wechseln. Skripte folgen der Einstellung oben oder deiner gespeicherten Projektauswahl."
 }

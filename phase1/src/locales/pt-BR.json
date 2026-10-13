@@ -3199,5 +3199,9 @@
   "versions.review.cancel": "Voltar à edição",
   "versions.review.confirm": "Confirmar e salvar versão",
   "openRouter.textTitle": "Abrir como texto?",
-  "openRouter.textDescription": "O tipo de arquivo é desconhecido, mas seu conteúdo é texto válido. Confirme para abri-lo no Code."
+  "openRouter.textDescription": "O tipo de arquivo é desconhecido, mas seu conteúdo é texto válido. Confirme para abri-lo no Code.",
+  "settings.previewScripts": "Executar scripts da página na prévia ao vivo",
+  "settings.previewScripts.note": "Os scripts da página são executados em um quadro isolado, sem acesso ao Somnia",
+  "settings.livePreviewMode": "Mostrar prévia ao vivo",
+  "settings.livePreviewMode.note": "Alternar da tela de design para a prévia ao vivo. Os scripts seguem a opção acima ou a escolha salva do projeto."
 }

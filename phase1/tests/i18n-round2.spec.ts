@@ -4,7 +4,7 @@ test.use({sample:false});
 const cats:Record<string,Record<string,string>>=Object.fromEntries(['en','de','es','fr','pt-BR'].map(l=>[l,JSON.parse(readFileSync(`src/locales/${l}.json`,'utf8'))]));
 const tr=(l:string,k:string,p:Record<string,string|number>={})=>(cats[l][k]??k).replace(/\{(\w+)\}/g,(_,n)=>String(p[n]));
 for(const locale of ['en','de','es','fr','pt-BR']){
- test(`${locale}: toolbar, consent, errors, conflict review and media empties retain source data`,async({page})=>{
+ test(`${locale}: toolbar, scripts default, errors, conflict review and media empties retain source data`,async({page})=>{
   const t=(k:string,p?:Record<string,string|number>)=>tr(locale,k,p);
   await page.addInitScript(l=>localStorage.setItem('somnia.locale.v1',l),locale);
   await page.goto('/');await expect(page.getByRole('radio',{name:t('studio.code'),exact:true})).toBeVisible();
@@ -13,9 +13,7 @@ for(const locale of ['en','de','es','fr','pt-BR']){
   const source='<!doctype html><html><body><h1>Untranslated source</h1><script>throw new Error("raw boom")</script></body></html>';
   await page.evaluate(async text=>{const m=await import('/src/store/appStore.ts' as string);(window as any).__somnia.setSource('index.html',text);m.patchState({livePreview:true});},source);
   const preview=page.getByLabel(t('rest.livePreview.livePreview'),{exact:true});
-  await expect(preview).toContainText(t('finish2.preview.consentHint'));
-  if(locale==='es'){mkdirSync('tests/artifacts',{recursive:true});await page.screenshot({path:'tests/artifacts/i18n-round2-es-consent.png'});}
-  await preview.getByRole('button',{name:t('rest.livePreview.runScripts'),exact:true}).click();
+  await expect(preview.getByText(t('finish2.preview.consentHint'))).toHaveCount(0);
   await expect(preview.getByRole('alert',{name:t('rest.livePreview.previewErrors')})).toContainText('raw boom');
   await expect(preview.getByRole('button',{name:new RegExp('raw boom')})).toHaveAttribute('aria-label',new RegExp('index.html'));
   await preview.getByRole('button',{name:t('rest.livePreview.togglePreviewScripts')}).click();

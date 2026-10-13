@@ -3199,5 +3199,9 @@
   "versions.review.cancel": "Back to editing",
   "versions.review.confirm": "Confirm and save version",
   "openRouter.textTitle": "Open as text?",
-  "openRouter.textDescription": "This file has an unknown type, but its contents are valid text. Confirm to open it in Code."
+  "openRouter.textDescription": "This file has an unknown type, but its contents are valid text. Confirm to open it in Code.",
+  "settings.previewScripts": "Run page scripts in live preview",
+  "settings.previewScripts.note": "Page scripts run in an isolated sandbox frame, without access to Somnia",
+  "settings.livePreviewMode": "Show live preview",
+  "settings.livePreviewMode.note": "Switch from the design canvas to the live page preview. Script execution follows the setting above or your saved project choice."
 }

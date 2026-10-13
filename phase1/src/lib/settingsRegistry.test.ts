@@ -7,7 +7,7 @@ import { DEFAULT_EDITOR_PREFS } from './editorPrefs';
 import { DEFAULT_DOCUMENT_PREFS } from './documentPrefs';
 
 const en = JSON.parse(readFileSync(new URL('../locales/en.json', import.meta.url), 'utf8'));
-const base = () => ({ workflowPrefs: { ...DEFAULT_WORKFLOW_PREFS }, editorPrefs: { ...DEFAULT_EDITOR_PREFS }, documentPrefs: { ...DEFAULT_DOCUMENT_PREFS }, wrapLines: false });
+const base = () => ({ workflowPrefs: { ...DEFAULT_WORKFLOW_PREFS }, editorPrefs: { ...DEFAULT_EDITOR_PREFS }, documentPrefs: { ...DEFAULT_DOCUMENT_PREFS }, previewScripts: true, wrapLines: false });
 
 test('ids are unique, label keys exist in en.json, fields exist in the real defaults', () => {
   const ids = new Set<string>();

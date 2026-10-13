@@ -4,8 +4,8 @@ const open=async(page:any)=>{await page.keyboard.press('Control+k');await page.g
 const page1='<!doctype html><html><head><link rel="stylesheet" href="site.css"></head><body><h1 id="x">one</h1><div style="height:3000px"></div><p id="end">end</p></body></html>';
 for(const scripts of [true,false])test(`live reload swaps css in place and keeps scroll (scripts ${scripts?'on':'off'})`,async({page})=>{await page.goto('/');await showCode(page);
  await page.evaluate(async([html])=>{const s=(window as any).__somnia;s.setSource('index.html',html);const {addTextFiles}=await import('/src/lib/projectActions.ts');addTextFiles([{name:'site.css',text:'@import "base.css";h1{color:rgb(255,0,0)}'},{name:'base.css',text:'p{margin:0}'}] as never);},[page1]);
- await open(page);const pane=page.getByLabel('Live preview',{exact:true});
- await pane.getByRole('button',{name:scripts?'Run scripts':'Preview without scripts'}).click();
+ await page.evaluate(async scripts=>{const {patchState}=await import('/src/store/appStore.ts');patchState({previewScripts:scripts});},scripts);
+ await open(page);
  const fr=page.frameLocator('iframe[title="Live preview frame"]');
  await expect(fr.locator('#x')).toHaveCSS('color','rgb(255, 0, 0)');
  const frame=page.frames().find(f=>f!==page.mainFrame())!;
