@@ -1,6 +1,6 @@
 # Settings import and export
 
-Status: concept only. Research checked 2026-10-13. No implementation or release.
+Status: concept. Stage 1 (settings and shortcuts, merge/replace review, restore point) is in development: see [SETTINGS-TRANSFER.md](../SETTINGS-TRANSFER.md). Research checked 2026-10-13. Nothing released.
 
 ## Recommendation
 

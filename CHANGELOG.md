@@ -1,3 +1,7 @@
+# Unreleased: Settings transfer
+
+- Settings > Modified > Import & export setup: versioned, classified setup file with category selection, Merge/Replace review, restore point with rollback and undo; secrets, servers, permissions and the preview-script switch are never exported. Docs: docs/SETTINGS-TRANSFER.md.
+
 # Unreleased: Vector hero export
 
 - Vector Export... opens/focuses the Export panel without writing; output format setup, capped PNG dimensions, separated import controls and five-language labels.
