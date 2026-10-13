@@ -1,3 +1,9 @@
+# Unreleased: Windows extension panels
+
+- Fixed blank extension panels and worker relays on Windows by routing the custom-protocol URI that Wry passes to the Rust handler. CSP, opaque-origin sandbox and single-use document nonces remain unchanged.
+- Data Workbench example uses isolated host surface/text tokens instead of a white canvas and low-contrast dark browser controls. Previously installed copies need the updated example manifest.
+- Added Windows URI routing regression and light/dark Data Workbench response-render checks. Native Windows confirmation remains required.
+
 # Unreleased: Vector hero export
 
 - Vector Export... opens/focuses the Export panel without writing; output format setup, capped PNG dimensions, separated import controls and five-language labels.
