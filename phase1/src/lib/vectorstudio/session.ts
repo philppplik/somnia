@@ -1,4 +1,7 @@
 import {reportError} from '../log';
+import {registerLifecycleAdapter} from '../lifecycle/adapters';
+import type {StudioLifecycleAdapter,StudioSnapshot} from '../lifecycle/types';
+import {VECTOR_SNAPSHOT_SCHEMA,vectorSnapshotBytes,vectorSnapshotChecksum,verifyVectorSnapshot,type VectorSnapshotPayload} from './lifecycleSnapshot';
 /** Vector Studio session: one open vector document, selection, tool, view and undo history. Framework-agnostic store plus a React hook. */
 import {useSyncExternalStore} from 'react';
 import {exportSvg,importSvg,normalizeDoc,SvgImportError,type Diagnostic,type Point,type Style,type VectorDocument,type VectorPath} from '../vectorio';
@@ -143,3 +146,37 @@ function confirmReplacement():boolean{
 if(typeof window!=='undefined')window.addEventListener('beforeunload',event=>{
  if(!state.open||!state.dirty)return;event.preventDefault();event.returnValue='';
 });
+
+
+// === Studio lifecycle adapter (docs/studio-lifecycle.md) ===
+/** Restores a checkpointed session; every document passes the same validation as commits. */
+export function restoreVectorSession(payload:VectorSnapshotPayload):void{
+ const doc=JSON.parse(payload.doc) as VectorDocument;validateDocument(doc);
+ past=payload.past.map(d=>{const p=JSON.parse(d) as VectorDocument;validateDocument(p);return p;});
+ future=payload.future.map(d=>{const f=JSON.parse(d) as VectorDocument;validateDocument(f);return f;});
+ state={...fresh(),name:payload.name,doc,selection:[...payload.selection],tool:payload.tool as VectorTool,zoom:payload.zoom,pan:{...payload.pan},dirty:payload.dirty,open:payload.open,nodePath:payload.nodePath,selectedNode:payload.selectedNode,canUndo:past.length>0,canRedo:future.length>0};
+ listeners.forEach(l=>l());
+}
+const toVectorPayload=():VectorSnapshotPayload=>({name:state.name,doc:JSON.stringify(state.doc),selection:state.selection,tool:state.tool,zoom:state.zoom,pan:state.pan,dirty:state.dirty,open:state.open,nodePath:state.nodePath,selectedNode:state.selectedNode,past:past.map(d=>JSON.stringify(d)),future:future.map(d=>JSON.stringify(d))});
+export function createVectorLifecycleAdapter():StudioLifecycleAdapter{
+ return {
+  estimateBytes(){return vectorSnapshotBytes(toVectorPayload());},
+  resourceIds(){return ['studio:vector'];},
+  pinReasons(){return [];},
+  hasUnsavedChanges(){return state.open&&state.dirty;},
+  async snapshot():Promise<StudioSnapshot>{
+   const payload=toVectorPayload();
+   return {studioId:'vector',schemaVersion:VECTOR_SNAPSHOT_SCHEMA,revision:past.length,capturedAt:Date.now(),bytesEstimate:vectorSnapshotBytes(payload),checksum:vectorSnapshotChecksum(payload),payload};
+  },
+  async suspend(){resetVectorSession();},
+  async resume(snapshot){
+   if(!verifyVectorSnapshot(snapshot))throw new Error('Vector checkpoint failed verification');
+   restoreVectorSession(snapshot.payload as VectorSnapshotPayload);
+  },
+  async dispose(){
+   if(state.open&&state.dirty)throw new Error('Refusing to evict unsaved vector edits');
+   resetVectorSession();
+  },
+ };
+}
+registerLifecycleAdapter('vector',()=>createVectorLifecycleAdapter());
