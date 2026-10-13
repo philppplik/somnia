@@ -61,8 +61,10 @@ test('default layout opens Layers left and the inspector right',()=>{
 });
 
 test('inspector sections resolve in declaration order',()=>{
- assert.deepEqual(resolveInspectorSections(codeInspector.sections,ctx()).map(s=>s.id),['design','interactions','source']);
- assert.deepEqual(resolveInspectorSections(codeInspector.sections,ctx()).filter(s=>s.defaultCollapsed).map(s=>s.id),['interactions','source']);
+ const one=ctx({selection:{kind:'one',count:1}});
+ assert.deepEqual(resolveInspectorSections(codeInspector.sections,ctx()).map(s=>s.id),['design','source']);
+ assert.deepEqual(resolveInspectorSections(codeInspector.sections,one).map(s=>s.id),['design','interactions','source']);
+ assert.deepEqual(resolveInspectorSections(codeInspector.sections,one).filter(s=>s.defaultCollapsed).map(s=>s.id),['interactions','source']);
 });
 
 test('rail customization edits one side without touching the other',()=>{

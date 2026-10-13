@@ -13,9 +13,10 @@ import '../../components/shell/railIconSet';
 import {CATALOGUES} from '../i18n';
 import {DOCUMENTS_PANEL_COMMANDS,DOCUMENTS_PANELS} from './panels';
 
-// Wave A hosts are still in flight: stand in for the agreed id first, then run the host registrations
+// Run the host registrations
 // (registerStudioPanels throws when the manifest names a host nobody supplies — that guard is intentional).
-if(!hasPanelHost('documents.find'))registerPanelHost('documents.find',()=>null);
+// Shared Code hosts (code.files, code.layers, ...) are registered by the Code studio, not by Documents: stand in for them too.
+for(const p of documentsShell.panels??[])if(p.component.startsWith('code.')&&!hasPanelHost(p.component))registerPanelHost(p.component,()=>null);
 await import('../../components/documents/registerShell');
 const knownCommands=new Set(DOCUMENTS_COMMANDS);
 const ids=(l:readonly {id:string}[])=>l.map(i=>i.id);

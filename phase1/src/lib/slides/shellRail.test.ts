@@ -5,6 +5,7 @@ import {createElement} from 'react';
 import {slidesStudio} from '../studios/slides';
 import {SLIDES_DEFAULT_LAYOUT,SLIDES_GLOBAL_PANEL_IDS,SLIDES_LEFT_RAIL,SLIDES_PANEL_IDS,SLIDES_RAIL_LABEL_KEYS,SLIDES_RIGHT_RAIL,registerSlidesRailIcons} from './shellRail';
 import {slidesCommandSpecs} from './commands';
+import {slidesPanelCommandSpecs} from './panelCommands';
 import {validateStudioShell,stackPanels} from '../shell/panels';
 import {effectiveRail} from '../shell/railResolver';
 import {editRailOverrides,railModel} from '../../store/railActions';
@@ -12,7 +13,8 @@ import {hasRailIcon,registerRailIcons,resolveRailIcon,RAIL_FALLBACK_ICON} from '
 import '../../components/shell/railIconSet';
 import {CATALOGUES,translate} from '../i18n';
 const deps={state:()=>({busy:false,working:true,canUndo:true,canRedo:true,slides:3,index:0}),history:()=>{},saveCopy:()=>{},showSlide:()=>{}};
-const known=new Set(slidesCommandSpecs(deps).map(s=>s.id));
+const panelDeps={state:()=>({source:'',index:0,busy:false,working:null,runs:[],summary:null}),thumbnails:async()=>{},edit:async()=>{},show:async()=>{},select:()=>{}};
+const known=new Set([...slidesCommandSpecs(deps),...slidesPanelCommandSpecs(panelDeps)].map(s=>s.id));
 const shell=slidesStudio.shellV2!;
 const ids=(l:readonly {id:string}[])=>l.map(i=>i.id);
 const ctx={studio:'slides',selection:{kind:'none',count:0},services:{}};

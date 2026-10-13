@@ -3,7 +3,7 @@ import type {DocBlock} from './edit';
 import {utf16ToUtf8Offset} from './text';
 
 export const DOCUMENTS_PANELS:readonly PanelDef[]=[
- {id:'outline',title:'Paragraphs',titleKey:'documents.panel.outline',component:'documents.outline',side:'left',icon:'ListTree',defaultOpen:true,commands:['documents.focusParagraph']},
+ {id:'outline',title:'Paragraphs',titleKey:'documents.panel.outline',component:'documents.outline',side:'left',icon:'List',defaultOpen:true,commands:['documents.focusParagraph']},
  {id:'find',title:'Find and replace',titleKey:'documents.panel.find',component:'documents.find',side:'left',icon:'Search',commands:['documents.selectMatch','documents.replaceMatch']},
 ];
 export const DOCUMENTS_INSPECTOR_SECTIONS:readonly InspectorSectionDef[]=[
