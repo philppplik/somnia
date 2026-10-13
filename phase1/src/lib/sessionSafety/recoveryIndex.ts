@@ -1,10 +1,11 @@
-import type {SessionCheckpointer} from './checkpointer';
+/** The slice of SessionCheckpointer the lifecycle side needs. Declared here so this module has no import back into checkpointer.ts. */
+export interface LiveCheckpointer{readonly pinned:{reason:string;detail:string}|null;checkpoint():Promise<{ok:boolean}>;isCurrent():boolean;close():void;idle():Promise<unknown>}
 /**
  * Synchronous index of what the recovery store holds and which sessions are live. The lifecycle manager asks hasUnsavedChanges()/pinReasons()
  * synchronously, but the store is async, so commits and releases keep this index current.
  */
 export interface RecoverableEntry{studio:string;revision:number;checksum:string}
-export interface LiveSession{studio:string;isDirty():boolean;cp:SessionCheckpointer}
+export interface LiveSession{studio:string;isDirty():boolean;cp:LiveCheckpointer}
 const recoverable=new Map<string,RecoverableEntry>();const live=new Map<string,LiveSession>();
 export const noteCommitted=(id:string,studio:string,revision:number,checksum:string)=>{recoverable.set(id,{studio,revision,checksum});};
 export const noteReleased=(id:string)=>{recoverable.delete(id);};
