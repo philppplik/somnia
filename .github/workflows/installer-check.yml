@@ -1,0 +1,24 @@
+name: installer-check
+on:
+  workflow_dispatch:
+jobs:
+  windows:
+    runs-on: windows-latest
+    timeout-minutes: 45
+    defaults:
+      run:
+        working-directory: phase1
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: dtolnay/rust-toolchain@stable
+      - name: UI logic tests
+        run: node --test installer/ui/logic.test.mjs
+      - name: Core tests
+        working-directory: phase1/installer
+        run: cargo test --locked -p somnia-installer-core
+      - name: Compile the Windows shell crate
+        working-directory: phase1/installer
+        run: cargo check --locked -p somnia-setup
