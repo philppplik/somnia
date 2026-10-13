@@ -3,7 +3,7 @@ test.use({sample:false});
 test('app starts empty and offers open folder, open file and a blank page',async({page})=>{await page.setViewportSize({width:1400,height:900});await page.goto('/');
  const empty=page.getByTestId('empty-state');await expect(empty).toBeVisible();
  for(const n of ['Open folder','Open file','New blank page'])await expect(empty.getByRole('button',{name:n})).toBeVisible();
- await page.getByRole('button',{name:'Project'}).click();
+ await page.getByRole('button',{name:'Project',exact:true}).click();
  for(const n of [/Open folder/,/Open file/,/Save project/,/Export project/,/Close project/])await expect(page.getByRole('menuitem',{name:n})).toBeVisible();
  await expect(page.getByRole('menuitem',{name:/Reset to starter/})).toHaveCount(0);await expect(page.getByRole('menuitem',{name:/Compare/})).toHaveCount(0);
  await page.keyboard.press('Escape');
