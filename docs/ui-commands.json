@@ -759,6 +759,17 @@
       "hasEnabled": true
     },
     {
+      "id": "documents.export.open",
+      "title": "Export document",
+      "category": "Project",
+      "source": "documents",
+      "keywords": [
+        "document",
+        "docx"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "documents.focusParagraph",
       "title": "Focus paragraph",
       "category": "View",
@@ -829,6 +840,17 @@
       "category": "Edit",
       "source": "documents-panels",
       "allowInInput": true,
+      "hasEnabled": true
+    },
+    {
+      "id": "documents.saveCopy",
+      "title": "Save a copy of the document",
+      "category": "Project",
+      "source": "documents",
+      "keywords": [
+        "document",
+        "docx"
+      ],
       "hasEnabled": true
     },
     {
@@ -1783,6 +1805,20 @@
       "category": "Tools",
       "source": "sheets",
       "allowInInput": true,
+      "hasEnabled": true
+    },
+    {
+      "id": "sheets.formulas.open",
+      "title": "Open Smart Formula builder",
+      "category": "View",
+      "source": "sheets",
+      "keywords": [
+        "builder",
+        "formula",
+        "function",
+        "smart",
+        "sum"
+      ],
       "hasEnabled": true
     },
     {

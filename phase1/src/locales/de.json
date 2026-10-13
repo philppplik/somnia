@@ -3258,5 +3258,18 @@
   "cmd.documents.undo": "Textänderung im Dokument rückgängig",
   "cmd.documents.redo": "Textänderung im Dokument wiederholen",
   "cmd.documents.pages.goto": "Zu Dokumentseite springen",
-  "cmd.documents.outline.goto": "Zu Dokumentabsatz springen"
+  "cmd.documents.outline.goto": "Zu Dokumentabsatz springen",
+  "hero.preview": "Vorschau",
+  "hero.preview.close": "Live-Vorschau schließen",
+  "hero.preview.none": "Keine vorschaufähige Seite",
+  "hero.export": "Exportieren",
+  "hero.export.none": "Kein Dokument geöffnet",
+  "hero.smartFormula": "Smart-Formel",
+  "hero.smartFormula.none": "Keine Arbeitsmappe geöffnet",
+  "cmd.documents.export.open": "Dokument exportieren",
+  "documents.export.title": "Dokument exportieren",
+  "documents.export.format": "Format",
+  "documents.export.docx": "Word-Dokument (.docx)",
+  "documents.export.file": "Dateiname",
+  "documents.export.note": "Speichert eine neue Datei neben dem Original. Das geöffnete Dokument bleibt unverändert."
 }

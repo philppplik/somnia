@@ -19,8 +19,12 @@ test('panels fail closed for empty or another studio/document context',()=>{
 test('workbook lists hidden sheets disabled, metadata and export/history controls',()=>{
  setSheetsSelection(selection);const markup=html(SheetsWorkbookPanel);assert.match(markup,/Secret/);assert.match(markup,/disabled=""[^>]*aria-pressed="false">Secret/);assert.match(markup,/Preserved chart/);assert.match(markup,/Export copy/);
 });
-test('formula builder blocks a target within its source and exposes real aggregate functions',()=>{
- setSheetsSelection(selection);const markup=html(SheetsFormulasPanel);assert.match(markup,/target is inside the source range/);assert.match(markup,/disabled="">Apply to selected cell/);assert.match(markup,/COUNTA/);
+test('formula builder requires an explicit target and exposes real aggregate functions',()=>{
+ setSheetsSelection(selection);const markup=html(SheetsFormulasPanel);
+ assert.match(markup,/Choose a target cell outside the source range/,'no guessed target: guidance until the user picks a cell');
+ assert.match(markup,/disabled="" data-testid="sheets-formula-apply">Apply formula/);
+ assert.match(markup,/COUNTA/);
+ assert.match(markup,/data-testid="sheets-formula-target"/);
 });
 test('cell edits are disabled in read-only document context',()=>{
  setSheetsSelection(selection);assert.match(html(SheetsCellPanel,{...context,document:{...context.document!,readOnly:true}}),/disabled="">Apply to selected cell/);

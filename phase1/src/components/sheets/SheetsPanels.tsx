@@ -1,14 +1,16 @@
 import '../../lib/sheets/panelI18n';
-import {useEffect,useRef,useState,type ReactNode} from 'react';
+import {useEffect,useRef,useState,useSyncExternalStore,type ReactNode} from 'react';
 import {useT} from '../../lib/useT';
 import {usePanelState} from '../../store/panelStateStore';
-import {useSheetsSelection} from '../../lib/sheets/sheetsStore';
+import {getSheetsSelection,subscribeSheets,useSheetsSelection} from '../../lib/sheets/sheetsStore';
+import {getFormulasFocusRequest,subscribeFormulasFocus} from '../../lib/sheets/formulasFocus';
+import {cellHasContent,formulaTargetProblem} from '../../lib/sheets/formulaTarget';
 import {sheetsPanelDefs} from '../../lib/sheets/panels';
 import type {PanelHostProps,InspectorSectionProps} from '../../lib/shell/types';
 import {commandDispatcher} from '../../lib/commandDispatcher';
 import {aggregateFormula,FORMULA_FUNCTIONS,parsePanelRange,rangeAddress,summarizeCells} from '../../lib/sheets/panelModel';
-import {inRect,rectCells} from '../../lib/sheets/clipboard';
-import {parseAddress} from '../../lib/sheets/format';
+import {rectCells} from '../../lib/sheets/clipboard';
+import {addressOf,parseAddress} from '../../lib/sheets/format';
 import type {RangeCell} from '../../lib/sheets/protocol';
 const field='w-full min-w-0 rounded-lg border border-subtle bg-transparent px-2 py-1.5 text-ink';
 const button='rounded-lg border border-subtle px-2 py-1.5 text-ink hover:bg-hover disabled:opacity-40 disabled:cursor-not-allowed';
@@ -45,11 +47,52 @@ export function SheetsAnalysisPanel({context}:PanelHostProps){
  return <Region><form className="flex flex-col gap-2" onSubmit={e=>{e.preventDefault();void analyze();}}><label className="flex flex-col gap-1">{t('sheets.panel.range')}<input className={field} value={range} onChange={e=>setRange(e.target.value)}/></label><div className="flex flex-wrap gap-1"><button className={button} disabled={!valid||action.busy}>{t('sheets.panel.analyze')}</button><button className={button} type="button" onClick={()=>setRange(s.range?rangeAddress(s.range):s.address)}>{t('sheets.panel.follow')}</button></div></form>
  {stats&&<><p className="break-all font-semibold">{result?.range}</p>{result?.revision!==(s.revision??0)&&<p role="status">{t('sheets.panel.stale')}</p>}<Facts values={Object.entries(stats).map(([key,value])=>[t('sheets.panel.'+(key==='formulas'?'formulaCount':key)),typeof value==='number'?new Intl.NumberFormat(locale,{maximumFractionDigits:8}).format(value):null])}/></>}<p role="status">{action.notice}</p></Region>;
 }
+/** Waits until the live selection actually lands on the reviewed target; false when it never does. */
+function waitForSelection(file:string,sheet:number,address:string):Promise<boolean>{
+ const hit=()=>{const l=getSheetsSelection();return !!l&&l.file===file&&l.sheet===sheet&&l.address===address;};
+ if(hit())return Promise.resolve(true);
+ return new Promise(resolve=>{
+  const timer=setTimeout(()=>{off();resolve(false);},2000);
+  const off=subscribeSheets(()=>{if(hit()){clearTimeout(timer);off();resolve(true);}});
+ });
+}
+/**
+ * Formula builder (Smart Formula hero, docs/concepts/hero-action-sheets.md). Review before write:
+ * an explicit target cell outside the source range is required, a non-empty target asks before it is
+ * replaced, and Apply navigates to the reviewed target (settling pending edits) and dispatches
+ * `sheets.setCell` exactly once. Undo is `sheets.undo`; nothing saves, exports or leaves the machine.
+ */
 export function SheetsFormulasPanel({context}:PanelHostProps){
- const {t}=useT(),s=usePanelWorkbook(context);const action=useAction();const [fn,setFn]=usePanelState('sheets.formulas.function','SUM');const [source,setSource]=usePanelState('sheets.formulas.source','A1:A10');
+ const {t}=useT(),s=usePanelWorkbook(context);const action=useAction();
+ const [fn,setFn]=usePanelState('sheets.formulas.function','SUM');
+ const [source,setSource]=usePanelState('sheets.formulas.source','A1:A10');
+ const [target,setTarget]=usePanelState('sheets.formulas.target','');
+ const [replaceTarget,setReplaceTarget]=useState<string|null>(null);
+ const fnField=useRef<HTMLSelectElement>(null);
+ const focusRequest=useSyncExternalStore(subscribeFormulasFocus,getFormulasFocusRequest,getFormulasFocusRequest);
+ useEffect(()=>{if(focusRequest>0)fnField.current?.focus();},[focusRequest]);
  if(!s)return <Region><p>{t('sheets.panel.none')}</p></Region>;
- const range=parsePanelRange(source),target=parseAddress(s.address);const circular=!!range&&!!target&&inRect(range,target.row,target.col);let formula='';try{formula=aggregateFormula(fn,source);}catch{/* invalid source disables apply */}
- return <Region><label className="flex flex-col gap-1">{t('sheets.panel.function')}<select className={field} value={fn} onChange={e=>setFn(e.target.value)}>{FORMULA_FUNCTIONS.map(f=><option key={f}>{f}</option>)}</select></label><label className="flex flex-col gap-1">{t('sheets.panel.source')}<input className={field} value={source} onChange={e=>setSource(e.target.value)}/></label><button className={button} onClick={()=>setSource(s.range?rangeAddress(s.range):s.address)}>{t('sheets.panel.follow')}</button><code className="break-all rounded-lg bg-hover p-2">{formula||'...'}</code><p className="text-ink-3">{t('sheets.panel.targetWarning')}</p>{circular&&<p role="alert">{t('sheets.panel.circular')}</p>}<p>{t('sheets.address')}: {s.address}</p><button className={button} disabled={!formula||circular||action.busy||context.document?.readOnly} onClick={()=>void action.run('sheets.setCell',{input:formula}).then(result=>{if(result!==null)action.setNotice(t('sheets.panel.applied'));})}>{t('sheets.panel.apply')}</button><p role="status">{action.notice}</p></Region>;
+ let formula='';try{formula=aggregateFormula(fn,source);}catch{/* invalid source disables apply */}
+ const problem=formulaTargetProblem(source,target);
+ const parsed=parseAddress(target);const canonical=parsed?addressOf(parsed.row,parsed.col):'';
+ const confirming=replaceTarget!==null&&replaceTarget===canonical;
+ const apply=async(replace:boolean)=>{
+  if(!formula||problem||!parsed)return;
+  const file=s.file,sheet=s.sheet;
+  setReplaceTarget(null);
+  if(!replace){
+   // Read the target back: warn before replacing content instead of overwriting silently.
+   const cells=await action.run('sheets.analyzeRange',{range:canonical});
+   if(!cells)return;
+   if(cellHasContent((cells as RangeCell[])[0])){setReplaceTarget(canonical);return;}
+  }
+  // Settle pending grid/formula-bar edits, then make the reviewed target the current cell.
+  if(!await action.run('sheets.navigate',{sheet,address:canonical}))return;
+  // Invalidate the proposal when the selection did not land on the reviewed target.
+  if(!await waitForSelection(file,sheet,canonical)){action.setNotice(t('sheets.panel.failed'));return;}
+  await action.run('sheets.setCell',{input:formula}).then(result=>{if(result!==null)action.setNotice(t('sheets.panel.applied'));});
+ };
+ return <Region><label className="flex flex-col gap-1">{t('sheets.panel.function')}<select ref={fnField} className={field} value={fn} onChange={e=>setFn(e.target.value)}>{FORMULA_FUNCTIONS.map(f=><option key={f}>{f}</option>)}</select></label><label className="flex flex-col gap-1">{t('sheets.panel.source')}<input className={field} value={source} onChange={e=>setSource(e.target.value)}/></label><button className={button} onClick={()=>setSource(s.range?rangeAddress(s.range):s.address)}>{t('sheets.panel.follow')}</button><code className="break-all rounded-lg bg-hover p-2">{formula||'...'}</code><label className="flex flex-col gap-1">{t('sheets.panel.target')}<input className={field} value={target} onChange={e=>{setTarget(e.target.value);setReplaceTarget(null);}} placeholder="B3" data-testid="sheets-formula-target" autoCapitalize="characters" spellCheck={false}/></label><button className={button} onClick={()=>{setTarget(s.address);setReplaceTarget(null);}}>{t('sheets.panel.useCell')}</button><p className="text-ink-3">{t('sheets.panel.targetWarning')}</p>{problem==='empty'&&<p className="text-ink-3">{t('sheets.panel.targetEmpty')}</p>}{problem==='invalid'&&<p role="alert">{t('sheets.panel.targetInvalid')}</p>}{problem==='circular'&&<p role="alert">{t('sheets.panel.circular')}</p>}{confirming&&<div role="alert" className="flex flex-col gap-2 rounded-lg border border-subtle p-2" data-testid="sheets-formula-replace"><p>{t('sheets.panel.replaceConfirm',{address:canonical})}</p><div className="flex gap-1"><button className={button} disabled={action.busy} onClick={()=>void apply(true)}>{t('sheets.panel.replace')}</button><button className={button} onClick={()=>setReplaceTarget(null)}>{t('sheets.panel.cancel')}</button></div></div>}<button className={button} disabled={!formula||problem!==null||action.busy||context.document?.readOnly} onClick={()=>void apply(false)} data-testid="sheets-formula-apply">{t('sheets.panel.applyFormula')}</button><p role="status">{action.notice}</p></Region>;
 }
 
 export function SheetsCellSection({sectionId,context}:InspectorSectionProps){return <SheetsCellPanel panelId={sectionId} context={context}/>;}

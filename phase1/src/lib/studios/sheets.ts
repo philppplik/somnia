@@ -7,7 +7,9 @@ export const sheetsStudio:StudioDef={
  shell:{
   leftRail:[{id:'files',label:'Files',icon:'Files',global:true},{id:'search',label:'Search',icon:'Search',global:true},{id:'versions',label:'Versions',icon:'VersionsIcon',global:true}],
   rightRail:[],
-  header:{menus:['Project','Edit','View','Tools','Help'],views:[]},
+  header:{menus:['Project','Edit','View','Tools','Help'],views:[],
+   /** Smart Formula hero (docs/concepts/hero-action-sheets.md): opens and focuses the formula builder, seeded from the selection. */
+   heroAction:{id:'sheets.formulas.open',labelKey:'hero.smartFormula',icon:'CodeXml',menu:['sheets.saveCopy']}},
   bottomBar:{slots:['cursor'],viewportPresets:[]},inspector:'sheets.inspector',tools:[]
  },commands:[],
  shortcuts:{},menus:{view:[]},canvas:'sheets.canvas',shellV2:sheetsShellV2,

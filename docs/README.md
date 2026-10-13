@@ -17,6 +17,7 @@ Start here:
 - [Live collaboration](collaboration.md): share a project, join by link, your name and picture, session chat, encryption and its limits.
 - [Code studio rail](studios/code-rail.md): shell v2 rails, icons, inspector sections and rail customization for the Code studio.
 - [Header hero action](studios/header-hero-action.md): the per-studio primary action slot in the header, its manifest field and the Publish fallback.
+- [Per-studio hero actions](studios/hero-actions.md): Code Preview, Documents Export (real DOCX copy) and Sheets Smart Formula with target safety.
 - [Video Studio](studios/video.md) ([plan](studios/VIDEO-PLAN.md)): open, trim, multi-clip edit, filmstrip, titles, crossfades and export, with the honest platform limits.
 - [Command line (`somnia`)](cli/usage.md): [protocols](cli/protocol.md), [troubleshooting](cli/troubleshooting.md), [security review](cli/security.md).
 - [CLI and TUI protocol](cli/TUI-PROTOCOL.md): NDJSON v1 between `somnia run --tui-stdio` and `somnia-tui`, including answering questions.

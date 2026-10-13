@@ -15,7 +15,15 @@ const rows:Record<string,readonly string[]>={
  'sheets.panel.input':['Value or formula','Wert oder Formel','Valor o fórmula','Valeur ou formule','Valor ou fórmula'],
  'sheets.panel.function':['Function','Funktion','Función','Fonction','Função'],
  'sheets.panel.source':['Source range','Quellbereich','Rango de origen','Plage source','Intervalo de origem'],
- 'sheets.panel.targetWarning':['The result replaces the selected cell. Keep the target outside the source range.','Das Ergebnis ersetzt die ausgewählte Zelle. Ziel außerhalb des Quellbereichs wählen.','El resultado sustituye la celda seleccionada. El destino debe quedar fuera del rango de origen.','Le résultat remplace la cellule sélectionnée. Choisissez une cible hors de la plage source.','O resultado substitui a célula selecionada. Escolha um destino fora do intervalo de origem.'],
+ 'sheets.panel.targetWarning':['The formula is written to the target cell only. Keep the target outside the source range.','Die Formel wird nur in die Zielzelle geschrieben. Das Ziel muss außerhalb des Quellbereichs liegen.','La fórmula solo se escribe en la celda de destino. El destino debe quedar fuera del rango de origen.','La formule est écrite uniquement dans la cellule cible. La cible doit rester hors de la plage source.','A fórmula é gravada apenas na célula de destino. O destino deve ficar fora do intervalo de origem.'],
+ 'sheets.panel.target':['Target cell','Zielzelle','Celda de destino','Cellule cible','Célula de destino'],
+ 'sheets.panel.useCell':['Use current cell','Aktuelle Zelle übernehmen','Usar celda actual','Utiliser la cellule active','Usar célula atual'],
+ 'sheets.panel.targetEmpty':['Choose a target cell outside the source range.','Wähle eine Zielzelle außerhalb des Quellbereichs.','Elige una celda de destino fuera del rango de origen.','Choisissez une cellule cible hors de la plage source.','Escolha uma célula de destino fora do intervalo de origem.'],
+ 'sheets.panel.targetInvalid':['Enter a valid cell address, for example B3.','Gib eine gültige Zelladresse ein, z. B. B3.','Introduce una dirección de celda válida, por ejemplo B3.','Saisissez une adresse de cellule valide, par exemple B3.','Insira um endereço de célula válido, por exemplo B3.'],
+ 'sheets.panel.replaceConfirm':['{address} is not empty. Replace its content?','{address} ist nicht leer. Inhalt ersetzen?','{address} no está vacía. ¿Sustituir su contenido?','{address} n’est pas vide. Remplacer son contenu ?','{address} não está vazia. Substituir o conteúdo?'],
+ 'sheets.panel.replace':['Replace content','Inhalt ersetzen','Sustituir contenido','Remplacer le contenu','Substituir conteúdo'],
+ 'sheets.panel.cancel':['Cancel','Abbrechen','Cancelar','Annuler','Cancelar'],
+ 'sheets.panel.applyFormula':['Apply formula','Formel anwenden','Aplicar fórmula','Appliquer la formule','Aplicar fórmula'],
  'sheets.panel.circular':['The target is inside the source range. Choose another cell.','Das Ziel liegt im Quellbereich. Wähle eine andere Zelle.','El destino está dentro del rango de origen. Elige otra celda.','La cible est dans la plage source. Choisissez une autre cellule.','O destino está no intervalo de origem. Escolha outra célula.'],
  'sheets.panel.total':['Cells','Zellen','Celdas','Cellules','Células'],
  'sheets.panel.filled':['Non-empty','Nicht leer','No vacías','Non vides','Não vazias'],
@@ -40,6 +48,7 @@ const rows:Record<string,readonly string[]>={
  'cmd.sheets.navigate':['Go to spreadsheet cell','Zur Tabellenzelle','Ir a celda de hoja','Aller à la cellule du tableur','Ir para célula da planilha'],
  'cmd.sheets.setCell':['Apply cell value or formula','Zellwert oder Formel anwenden','Aplicar valor o fórmula','Appliquer une valeur ou formule','Aplicar valor ou fórmula'],
  'cmd.sheets.analyzeRange':['Analyze spreadsheet range','Tabellenbereich analysieren','Analizar rango de hoja','Analyser une plage du tableur','Analisar intervalo da planilha'],
+ 'cmd.sheets.formulas.open':['Open Smart Formula builder','Smart-Formel-Generator öffnen','Abrir el generador de fórmulas inteligentes','Ouvrir l’éditeur de formules intelligentes','Abrir o editor de fórmulas inteligentes'],
 };
 const locales=['en','de','es','fr','pt-BR'];
 export const SHEETS_PANEL_CATALOGUES=Object.fromEntries(locales.map((locale,i)=>[locale,Object.fromEntries(Object.entries(rows).map(([key,values])=>[key,values[i]]))]));

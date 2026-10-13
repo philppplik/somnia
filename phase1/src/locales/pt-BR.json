@@ -3258,5 +3258,18 @@
   "cmd.documents.undo": "Desfazer edição de texto do documento",
   "cmd.documents.redo": "Refazer edição de texto do documento",
   "cmd.documents.pages.goto": "Ir para uma página do documento",
-  "cmd.documents.outline.goto": "Ir para um parágrafo do documento"
+  "cmd.documents.outline.goto": "Ir para um parágrafo do documento",
+  "hero.preview": "Pré-visualização",
+  "hero.preview.close": "Fechar pré-visualização ao vivo",
+  "hero.preview.none": "Nenhuma página para pré-visualizar",
+  "hero.export": "Exportar",
+  "hero.export.none": "Nenhum documento aberto",
+  "hero.smartFormula": "Fórmula inteligente",
+  "hero.smartFormula.none": "Nenhuma pasta de trabalho aberta",
+  "cmd.documents.export.open": "Exportar documento",
+  "documents.export.title": "Exportar documento",
+  "documents.export.format": "Formato",
+  "documents.export.docx": "Documento do Word (.docx)",
+  "documents.export.file": "Nome do arquivo",
+  "documents.export.note": "Salva um novo arquivo ao lado do original. O documento aberto nunca é alterado."
 }
