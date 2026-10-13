@@ -15,7 +15,10 @@ struct Repo { dir: TempDir, rt: TempDir }
 impl Repo {
     fn new() -> Self {
         let r = Repo { dir: tempfile::tempdir().unwrap(), rt: tempfile::tempdir().unwrap() };
+        #[cfg(unix)]
         std::fs::set_permissions(r.rt.path(), std::os::unix::fs::PermissionsExt::from_mode(0o700)).unwrap();
+        #[cfg(windows)]
+        std::fs::write(r.null_gitconfig(), "").unwrap();
         r.git(&["init", "-q", "-b", "main"]);
         r.git(&["config", "user.name", "T"]);
         r.git(&["config", "user.email", "t@example.com"]);
@@ -28,8 +31,14 @@ impl Repo {
         r
     }
     fn p(&self) -> &Path { self.dir.path() }
+    fn null_gitconfig(&self) -> String {
+        #[cfg(unix)]
+        return "/dev/null".to_string();
+        #[cfg(windows)]
+        return self.rt.path().join("gitconfig-null").to_string_lossy().into_owned();
+    }
     fn git(&self, a: &[&str]) -> String {
-        let o = Command::new("git").current_dir(self.p()).args(a).env("GIT_CONFIG_GLOBAL", "/dev/null").env("GIT_CONFIG_NOSYSTEM", "1").output().unwrap();
+        let o = Command::new("git").current_dir(self.p()).args(a).env("GIT_CONFIG_GLOBAL", self.null_gitconfig()).env("GIT_CONFIG_NOSYSTEM", "1").output().unwrap();
         assert!(o.status.success(), "git {a:?}: {}", String::from_utf8_lossy(&o.stderr));
         String::from_utf8_lossy(&o.stdout).trim().to_string()
     }
@@ -38,7 +47,7 @@ impl Repo {
         let mut c = Command::new(env!("CARGO_BIN_EXE_somnia"));
         c.current_dir(self.p()).args(["run", prompt, "--tui-stdio"]).args(extra)
             .env("SOMNIA_ENGINE_CMD", engine_cmd()).env("XDG_RUNTIME_DIR", self.rt.path())
-            .env("GIT_CONFIG_GLOBAL", "/dev/null").env("GIT_CONFIG_NOSYSTEM", "1")
+            .env("GIT_CONFIG_GLOBAL", self.null_gitconfig()).env("GIT_CONFIG_NOSYSTEM", "1")
             .stdin(Stdio::piped()).stdout(Stdio::piped()).stderr(Stdio::null());
         let mut child = c.spawn().unwrap();
         let stdin = child.stdin.take().unwrap();

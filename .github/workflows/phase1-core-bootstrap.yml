@@ -206,6 +206,8 @@ jobs:
       - name: Build headless WordCraft document engine (Documents Studio)
         run: npm run documents:build
       - run: cargo test --manifest-path src-tauri/Cargo.toml --no-default-features --locked
+      - name: CLI tests (named-pipe transport, locked)
+        run: cargo test --locked --manifest-path cli/Cargo.toml
       - name: Vibespace pure crate suites (locked)
         run: |
           cargo test --locked --manifest-path vibespace-core/Cargo.toml

@@ -64,7 +64,7 @@ pub fn stream_events(root: &Path, task_id: &str, pid: Option<u32>, send: &mut dy
     }
 }
 
-#[cfg(unix)]
+#[cfg(any(unix, windows))]
 pub mod sock {
     use super::*;
     use crate::transport::{Listener, Stream};

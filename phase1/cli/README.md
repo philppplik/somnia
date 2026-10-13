@@ -5,13 +5,13 @@
 
 - Exit codes: 0 done, 1 failed, 2 needs-input / review-required.
 - `--yes` = local commit on the task branch only. The git layer has a subcommand allowlist with no fetch/pull/push/clone/remote.
-- IPC: NDJSON protocol v1 over a Unix socket in a 0700 runtime dir (socket 0600, peer-uid check). No HTTP port; credential-like fields are rejected.
+- IPC: NDJSON protocol v1 over a same-user local transport. Unix: socket in a 0700 runtime dir (socket 0600, peer-uid check). Windows: named pipe `\\.\pipe\somnia-cli-<user-sid>-<repo>-<task>` whose DACL grants the current user only, first-instance claim fails closed against squatting, remote clients are rejected at the pipe level, and both ends verify the peer process runs as the same user. No HTTP port on either; credential-like fields are rejected.
 - Engine: `TaskEngine` trait; `SidecarEngine` speaks `somnia.task-engine/1` over stdio (`SOMNIA_ENGINE_CMD` or `sidecar/engine.mjs`). S9's contract plugs in by implementing the trait.
 - Desktop bridge (assumed, desktop must write it): `.somnia/gui-state.json`, see `src/guard.rs`.
 - Session records: `.somnia/sessions/<task>.json`, excluded locally via `.git/info/exclude` (private by default).
-- Not built: Windows named pipe (stub returns a typed error), `--bare` effect (forwarded to the engine only), ratatui TUI.
+- Not built: `--bare` effect (forwarded to the engine only), ratatui TUI.
 
-Tests: `cargo test` (needs `node` and `git`).
+Tests: `cargo test` (needs `node` and `git`). Runs on ubuntu and windows-latest in CI; `tests/transport_windows.rs` covers the named-pipe transport.
 
 ## `somnia run --tui-stdio`
 

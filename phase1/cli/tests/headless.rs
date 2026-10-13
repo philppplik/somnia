@@ -1,7 +1,9 @@
 //! Unix only: these tests exercise the Unix-socket transport. The Windows named-pipe transport is not built yet.
 #![cfg(unix)]
 use serde_json::Value;
-use std::path::{Path, PathBuf};
+use std::path::Path;
+#[cfg(unix)]
+use std::path::PathBuf;
 use std::process::{Command, Output};
 use tempfile::TempDir;
 
@@ -15,7 +17,11 @@ struct Env { dir: TempDir, rt: TempDir }
 impl Env {
     fn new(identity: bool) -> Self {
         let e = Env { dir: tempfile::tempdir().unwrap(), rt: tempfile::tempdir().unwrap() };
+        #[cfg(unix)]
         std::fs::set_permissions(e.rt.path(), std::os::unix::fs::PermissionsExt::from_mode(0o700)).unwrap();
+        // An empty global git config keeps the tests hermetic; /dev/null does not exist on Windows.
+        #[cfg(windows)]
+        std::fs::write(e.null_gitconfig(), "").unwrap();
         e.git(&["init", "-q", "-b", "main"]);
         if identity {
             e.git(&["config", "user.name", "Test User"]);
@@ -27,9 +33,15 @@ impl Env {
         e
     }
     fn root(&self) -> &Path { self.dir.path() }
+    fn null_gitconfig(&self) -> String {
+        #[cfg(unix)]
+        return "/dev/null".to_string();
+        #[cfg(windows)]
+        return self.rt.path().join("gitconfig-null").to_string_lossy().into_owned();
+    }
     fn git(&self, a: &[&str]) -> String {
         let o = Command::new("git").current_dir(self.root()).args(a)
-            .env("GIT_CONFIG_GLOBAL", "/dev/null").env("GIT_CONFIG_NOSYSTEM", "1").output().unwrap();
+            .env("GIT_CONFIG_GLOBAL", self.null_gitconfig()).env("GIT_CONFIG_NOSYSTEM", "1").output().unwrap();
         assert!(o.status.success(), "git {a:?}: {}", String::from_utf8_lossy(&o.stderr));
         String::from_utf8_lossy(&o.stdout).trim().to_string()
     }
@@ -38,7 +50,7 @@ impl Env {
         c.current_dir(self.root()).args(args)
             .env("SOMNIA_ENGINE_CMD", engine_cmd())
             .env("XDG_RUNTIME_DIR", self.rt.path())
-            .env("GIT_CONFIG_GLOBAL", "/dev/null").env("GIT_CONFIG_NOSYSTEM", "1")
+            .env("GIT_CONFIG_GLOBAL", self.null_gitconfig()).env("GIT_CONFIG_NOSYSTEM", "1")
             .env_remove("SOMNIA_ATTRIBUTION_EMAIL");
         for (k, v) in envs { c.env(k, v); }
         c.output().unwrap()
@@ -212,10 +224,9 @@ fn workspace_has_one_owner() {
     assert_eq!(v["error"]["kind"], "workspace-busy");
 }
 fn fs2_lock(f: &std::fs::File) {
-    use std::os::unix::io::AsRawFd;
-    assert_eq!(unsafe { libc_flock(f.as_raw_fd(), 2 | 4) }, 0);
+    use fs2::FileExt;
+    f.try_lock_exclusive().expect("test holds the workspace lock");
 }
-extern "C" { #[link_name = "flock"] fn libc_flock(fd: i32, op: i32) -> i32; }
 
 fn wait_status(e: &Env, tid: &str, want: &str) -> Value {
     for _ in 0..100 {
@@ -242,6 +253,7 @@ fn detach_attach_status_roundtrip_over_socket() {
     assert!(s.contains("[plan] write notes"), "{s}");
 }
 
+#[cfg(unix)]
 #[test]
 fn detached_run_can_be_cancelled_and_socket_is_private() {
     use std::os::unix::fs::PermissionsExt;
@@ -256,6 +268,25 @@ fn detached_run_can_be_cancelled_and_socket_is_private() {
     // The daemon registers its discovery file before the run loop is fully live; a cancel issued
     // immediately after detach can therefore still race the listener. Retry bounded instead of
     // depending on scheduling: the cancel must be acknowledged within 5 s.
+    let mut acked = false;
+    for _ in 0..50 {
+        let (code, c) = e.json(&["cancel", &tid, "--json"], &[]);
+        if code == 0 && c["acknowledged"] == Value::Bool(true) { acked = true; break; }
+        std::thread::sleep(std::time::Duration::from_millis(100));
+    }
+    assert!(acked, "cancel was never acknowledged");
+    wait_status(&e, &tid, "cancelled");
+}
+
+// Windows counterpart: cancel over the named pipe. Pipe privacy (current-user DACL, SID-scoped
+// name, peer-process check) is covered in tests/transport_windows.rs.
+#[cfg(windows)]
+#[test]
+fn detached_run_can_be_cancelled_over_named_pipe() {
+    let e = Env::new(true);
+    let (_, d) = e.json(&["run", "slow one", "--json", "--detach"], &[]);
+    let tid = d["task_id"].as_str().unwrap().to_string();
+    // Same bounded retry as the Unix test: discovery is written before the listener is live.
     let mut acked = false;
     for _ in 0..50 {
         let (code, c) = e.json(&["cancel", &tid, "--json"], &[]);

@@ -273,12 +273,50 @@ fn detach(spec: &RunSpec, json: bool) -> Result<i32> {
     }
     Ok(0)
 }
-#[cfg(not(unix))]
+#[cfg(windows)]
+fn detach(spec: &RunSpec, json: bool) -> Result<i32> {
+    use std::os::windows::process::CommandExt;
+    use std::process::{Command, Stdio};
+    // New console-less process group: the background run survives the terminal that started it.
+    const DETACHED_PROCESS: u32 = 0x0000_0008;
+    const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+    let root = &spec.root;
+    std::fs::create_dir_all(server::run_dir(root))?;
+    std::fs::write(server::spec_path(root, &spec.task_id), serde_json::to_vec(spec)?)?;
+    let exe = std::env::current_exe()?;
+    Command::new(exe)
+        .arg("__serve")
+        .arg(root)
+        .arg(&spec.task_id)
+        .stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .creation_flags(DETACHED_PROCESS | CREATE_NO_WINDOW)
+        .spawn()
+        .map_err(|e| CliError::new(ErrorKind::Internal, format!("cannot start background run: {e}")))?;
+    let disc = server::discovery_path(root, &spec.task_id);
+    for _ in 0..100 {
+        if disc.exists() {
+            break;
+        }
+        std::thread::sleep(std::time::Duration::from_millis(50));
+    }
+    if !disc.exists() {
+        return Err(CliError::new(ErrorKind::UncertainOutcome, "background run did not report ready; check `somnia status`").with_details(serde_json::json!({"task_id": spec.task_id})));
+    }
+    if json {
+        println!("{}", serde_json::json!({"schema": "somnia.detach/1", "task_id": spec.task_id, "branch": spec.branch.clone().unwrap_or_else(|| format!("somnia/task/{}", spec.task_id))}));
+    } else {
+        println!("task {} started in background; follow with `somnia attach {}`", spec.task_id, spec.task_id);
+    }
+    Ok(0)
+}
+#[cfg(not(any(unix, windows)))]
 fn detach(_: &RunSpec, _: bool) -> Result<i32> {
     Err(CliError::new(ErrorKind::EngineUnavailable, "--detach is not supported on this platform in this build"))
 }
 
-#[cfg(unix)]
+#[cfg(any(unix, windows))]
 fn serve_cmd(root: PathBuf, task_id: String) -> Result<()> {
     use crate::server::sock;
     use std::sync::atomic::{AtomicBool, Ordering};
@@ -305,10 +343,11 @@ fn serve_cmd(root: PathBuf, task_id: String) -> Result<()> {
     std::thread::sleep(std::time::Duration::from_secs(2)); // let attached clients drain
     stop.store(true, Ordering::SeqCst);
     let _ = std::fs::remove_file(server::discovery_path(&root, &task_id));
+    // Unix: unlink the socket. Windows: the pipe object dies with the listener, there is no file to remove.
     let _ = std::fs::remove_file(&sp);
     result
 }
-#[cfg(not(unix))]
+#[cfg(not(any(unix, windows)))]
 fn serve_cmd(_: PathBuf, _: String) -> Result<()> {
     Err(CliError::new(ErrorKind::EngineUnavailable, "unsupported platform"))
 }
@@ -369,7 +408,7 @@ fn attach_cmd(a: &TaskArgs) -> Result<i32> {
             print_frame(f);
         }
     };
-    #[cfg(unix)]
+    #[cfg(any(unix, windows))]
     if let Some(d) = live_discovery(&root, &a.task_id) {
         let req = new_request(RequestBody::Attach { task_id: a.task_id.clone() });
         let mut err: Option<CliError> = None;
@@ -410,7 +449,7 @@ fn status_cmd(a: &TaskArgs) -> Result<i32> {
 
 fn cancel_cmd(a: &TaskArgs) -> Result<i32> {
     let root = root_of(&a.path)?;
-    #[cfg(unix)]
+    #[cfg(any(unix, windows))]
     {
         let d = live_discovery(&root, &a.task_id).ok_or_else(|| CliError::new(ErrorKind::NotFound, "no live run for that task id"))?;
         let req = new_request(RequestBody::Cancel { task_id: a.task_id.clone() });
