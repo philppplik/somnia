@@ -9,7 +9,7 @@
 //       Writes DIR/SHA256SUMS for every somnia-cli-* archive in DIR (sha256sum -c compatible).
 //
 // Archive layout: <name>/somnia(.exe), <name>/sidecar/engine.mjs (the binary finds it next to itself), docs.
-// Linux and Windows x86_64 only. macOS is not shipped (alpha runs skip it by policy).
+// Linux and Windows x86_64 and aarch64. macOS is not shipped (alpha runs skip it by policy).
 import { createHash } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
 import { copyFileSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
@@ -27,16 +27,17 @@ export function assertVersion(v) {
   return v;
 }
 
-/** Maps Node's platform/arch to the release label. Only x86_64 Linux and Windows ship. */
+/** Maps Node's platform/arch to the release label. Linux and Windows x86_64 and aarch64 ship. */
 export function target(platform = process.platform, arch = process.arch) {
-  if (arch !== 'x64') throw new Error(`unsupported architecture ${arch}: only x86_64 is packaged`);
-  if (platform === 'linux') return { os: 'linux', ext: 'tar.gz', bin: 'somnia' };
-  if (platform === 'win32') return { os: 'windows', ext: 'zip', bin: 'somnia.exe' };
+  if (!['x64', 'arm64'].includes(arch)) throw new Error(`unsupported architecture ${arch}: only x86_64 and aarch64 are packaged`);
+  const label = arch === 'arm64' ? 'aarch64' : 'x86_64';
+  if (platform === 'linux') return { os: 'linux', arch: label, ext: 'tar.gz', bin: 'somnia' };
+  if (platform === 'win32') return { os: 'windows', arch: label, ext: 'zip', bin: 'somnia.exe' };
   throw new Error(`unsupported platform ${platform}: only linux and win32 are packaged`);
 }
 
 export function archiveName(version, t) {
-  return `somnia-cli-${assertVersion(version)}-${t.os}-x86_64.${t.ext}`;
+  return `somnia-cli-${assertVersion(version)}-${t.os}-${t.arch}.${t.ext}`;
 }
 
 export function sha256Hex(buf) {
@@ -51,13 +52,13 @@ export function sumsLine(hex, name) {
 }
 
 export function isCliArchive(name) {
-  return /^somnia-cli-\d+\.\d+\.\d+[0-9A-Za-z.-]*-(linux|windows)-x86_64\.(tar\.gz|zip)$/.test(name);
+  return /^somnia-cli-\d+\.\d+\.\d+[0-9A-Za-z.-]*-(linux|windows)-(x86_64|aarch64)\.(tar\.gz|zip)$/.test(name);
 }
 
 export function installNotes(version, t) {
   const archive = archiveName(version, t);
   const lines = [
-    `Somnia CLI ${version} (${t.os} x86_64)`,
+    `Somnia CLI ${version} (${t.os} ${t.arch})`,
     '',
     'Install',
     ...(t.os === 'windows'
