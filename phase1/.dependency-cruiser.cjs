@@ -79,7 +79,7 @@ module.exports = {
   ],
   options: {
     doNotFollow: { path: 'node_modules' },
-    exclude: { path: [TESTS, TEMPLATES] },
+    exclude: { path: [TESTS, TEMPLATES, 'src/lib/frameworks/fixtures'] },
     tsPreCompilationDeps: true,
     parser: 'swc',
     tsConfig: { fileName: 'tsconfig.json' },
