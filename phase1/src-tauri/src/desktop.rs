@@ -316,7 +316,7 @@ async fn provider_http_start(window: WebviewWindow, state: State<'_, ProviderNet
     if body.as_ref().is_some_and(|b|b.len()>2_000_000) { return Err("Provider request is too large".into()); }
     if method=="GET" && body.is_some() {return Err("GET request body is not allowed".into());}
     // Candidate keys only validate account metadata, never inference before save.
-    if candidate_key.is_some() && (method!="GET" || !matches!(url.as_str(),"https://api.openai.com/v1/models"|"https://api.anthropic.com/v1/models?limit=1"|"https://openrouter.ai/api/v1/key"|"https://api.x.ai/v1/models"|"https://api.meta.ai/v1/models"|"https://api.deepseek.com/models"))) { return Err("Candidate key is allowed for authentication only".into()); }
+    if candidate_key.is_some() && (method!="GET" || !matches!(url.as_str(),"https://api.openai.com/v1/models"|"https://api.anthropic.com/v1/models?limit=1"|"https://openrouter.ai/api/v1/key"|"https://api.x.ai/v1/models"|"https://api.meta.ai/v1/models"|"https://api.deepseek.com/models")) { return Err("Candidate key is allowed for authentication only".into()); }
     let key = if let Some(key)=candidate_key {
         if key.is_empty() || key.len()>8192 || key.chars().any(|c|c.is_control()||c.is_whitespace()) { return Err("Invalid API key".into()); } key
     } else {
