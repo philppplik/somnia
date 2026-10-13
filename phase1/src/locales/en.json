@@ -2946,6 +2946,7 @@
   "frameworks.artifact.buildNotFinished": "The build has not finished successfully.",
   "deploy.button": "Publish",
   "deploy.button.running": "Publishing...",
+  "hero.more": "More actions",
   "deploy.panel.aria": "Publish",
   "deploy.panel.title": "Publish",
   "deploy.panel.desc": "Put your site on your own server. Somnia asks you before every publish.",

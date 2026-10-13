@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased - Header hero action slot
+
+- The header slot next to the Account pill can now show a studio's primary action as a split button (main action plus a chevron menu) instead of Publish. Studios opt in with one data field, `header.heroAction`; studios without it keep the Publish button.
+- The chevron menu always ends with Publish, so deploy stays reachable. A running publish still shows a spinner on the chevron and in the menu.
+- New string `hero.more` in all five languages.
+
 ## Unreleased - Studio tabs pill
 
 - Keep the global studio switcher visible when entering Vector or while the legacy raster editor is active.

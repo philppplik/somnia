@@ -1,6 +1,6 @@
 # Studio hero action: shared contract
 
-Status: concept, no code. Review before development.
+Status: step 1 (shell slot and manifest field) is implemented, see [header-hero-action.md](../studios/header-hero-action.md). Per-studio heroes are still concept.
 
 Today the header shows the same `Publish` button next to the Account pill in every studio (`PublishButton` in `App.tsx`). Publish deploys a web project over SSH/FTP, so it only makes sense for Code. In Photos, Slides and Design it is a dead end.
 

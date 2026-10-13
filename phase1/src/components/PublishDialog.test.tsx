@@ -52,6 +52,6 @@ test('every interactive icon-only control has a label',()=>{
 
 test('header button and dialog are mounted once in App and only offered on desktop',()=>{
  const app=read('../App.tsx');
- assert.equal((app.match(/<PublishButton\/>/g)??[]).length,1);assert.equal((app.match(/<PublishDialog\/>/g)??[]).length,1);
+ assert.equal((app.match(/<HeroActionSlot\/>/g)??[]).length,1);assert.ok(!app.includes('<PublishButton/>'),'App mounts the hero slot, which falls back to PublishButton');assert.equal((read('./shell/HeroActionSlot.tsx').match(/<PublishButton\/>/g)??[]).length,1);assert.equal((app.match(/<PublishDialog\/>/g)??[]).length,1);
  assert.ok(src.includes('publishAvailable()'));
 });

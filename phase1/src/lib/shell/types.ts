@@ -83,6 +83,22 @@ export interface StudioShellDef{
  problems?:string;
  defaultLayout?:StudioLayout;
 }
+/**
+ * Header hero action: the one primary verb a studio shows in the header slot where Publish sits.
+ * Data only. The shell calls `executeCommand(id)` and never asks which studio is active. See docs/concepts/hero-action-shell-contract.md.
+ */
+export interface HeroActionDef{
+ /** Command id; must exist in the command registry, otherwise the slot falls back to Publish. */
+ id:string;
+ /** i18n key of the label (all five locales). The label is also the accessible name. */
+ labelKey:string;
+ /** Rail icon name (shell/railIcons). Unknown names get the fallback glyph. */
+ icon:string;
+ /** Command ids for the split-button chevron, in order. `deploy.open` is always appended as the last entry. */
+ menu?:readonly string[];
+ /** `when` expression over StudioContext. While it does not hold, the slot shows the default Publish button. */
+ when?:string;
+}
 export interface StudioAgentDefV2{tools:readonly string[];contextProviders:readonly string[];quickActions:readonly string[];context?:string;}
 export type CommandRisk='none'|'content'|'destructive'|'outbound';
 export type JsonSchema={[k:string]:unknown};

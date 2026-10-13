@@ -2946,6 +2946,7 @@
   "frameworks.artifact.buildNotFinished": "A compilação não terminou com sucesso.",
   "deploy.button": "Publicar",
   "deploy.button.running": "Publicando...",
+  "hero.more": "Mais ações",
   "deploy.panel.aria": "Publicar",
   "deploy.panel.title": "Publicar",
   "deploy.panel.desc": "Coloque seu site no seu próprio servidor. O Somnia pergunta antes de cada publicação.",
