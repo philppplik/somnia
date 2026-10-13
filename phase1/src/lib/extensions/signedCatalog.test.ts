@@ -40,3 +40,8 @@ test('trust config: keys pinned only from bundled constants; URL is the somnia-e
   assert.ok(SIGNED_INDEX_URL.startsWith('https://raw.githubusercontent.com/philppplik/somnia-extensions/'));
   for (const k of CATALOG_KEYS) assert.equal(k.publicKey.length, 32);
 });
+test('pinned key k1 is present, 32 bytes, and signed index is required', () => {
+  assert.equal(SIGNED_CATALOG_REQUIRED, true);
+  assert.deepEqual(CATALOG_KEYS.map(k => k.keyId), ['k1']);
+  assert.equal(CATALOG_KEYS[0].publicKey.length, 32);
+});
