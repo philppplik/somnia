@@ -1,4 +1,5 @@
 import {registerStudio,type StudioDef} from './registry';
+import {getRegisteredLifecycleAdapter} from '../lifecycle/adapters';
 import type {StudioShellDef} from '../shell/types';
 export const VECTOR_TOOLS=['select','node','pen','rect','ellipse','line','polygon','star'] as const;
 const toolIcons=['MousePointer2','VectorNode','VectorPen','Square','VectorEllipse','VectorLine','VectorPolygon','VectorStar'];
@@ -42,6 +43,6 @@ export const vectorStudio:StudioDef={
   inspector:'vector.inspector',tools:[]
  },
  shellV2:vectorShell,commands:[],shortcuts:{'studio.vector':'Mod+8'},menus:{view:[]},canvas:'vector.canvas',
- agent:{tools:[],contextProviders:['activeDocument'],quickActions:[]},deriveContext:context=>context
+ agent:{tools:[],contextProviders:['activeDocument'],quickActions:[]},deriveContext:context=>context,lifecycle:()=>getRegisteredLifecycleAdapter('vector')
 };
 registerStudio(vectorStudio);

@@ -1,6 +1,7 @@
 import {registerBlankProjectFactory} from './blank';
 import {startDesign} from '../design/session';
 import {registerStudio,type StudioDef} from './registry';
+import {getRegisteredLifecycleAdapter} from '../lifecycle/adapters';
 import type {InspectorDef,MenuItemDef,PanelDef,RailItemDef,StudioLayout,StudioShellDef,ToolDef} from '../shell/types';
 import '../design/shellRail';
 /**
@@ -79,7 +80,7 @@ export const designStudio:StudioDef={
  id:'design',label:'Design',icon:'LayoutTemplate',order:6,formats:[{ext:'somdesign',priority:100}],
  shell:{leftRail:[{id:'files',label:'Files',icon:'Files',global:true}],rightRail:[{id:'design',label:'Artboard and layers',icon:'SlidersHorizontal'}],header:{heroAction:{id:'design.export.open',labelKey:'design.hero.export',disabledLabelKey:'design.hero.disabled',icon:'Download',menu:['design.exportSvg','design.exportProject']},menus:['Project','Edit','View','Insert','Tools','Help'],views:[]},bottomBar:{slots:[],viewportPresets:[]},inspector:'design.inspector',tools:[]},
  commands:[],shortcuts:{},menus:{view:[]},canvas:'design.canvas',shellV2:{...designShell,menus:designMenus},
- agent:{tools:[],contextProviders:[],quickActions:[]},deriveContext:context=>context
+ agent:{tools:[],contextProviders:[],quickActions:[]},deriveContext:context=>context,lifecycle:()=>getRegisteredLifecycleAdapter('design')
 };
 registerStudio(designStudio);
 

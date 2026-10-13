@@ -7,6 +7,9 @@ import { createRoot } from 'react-dom/client';
 import { EditorProject } from '@somnia/editor-core';
 import { App } from './App';
 import {startStudioRouting} from './lib/studios/studioRouting';
+import {getStudio,hasStudio} from './lib/studios';
+import {installStudioLifecycle} from './lib/lifecycle/integration';
+import {suspendIdleExtensions} from './lib/extensions/host';
 import './lib/studios/openIntake';
 import { connectEditorProject, applyOperations } from './store/appStore';
 import './styles/global.css';
@@ -91,6 +94,9 @@ applyUiPrefs(getState().uiPrefs);
 setNoticeSink(text=>patchState({notice:text}));
 logInfo('app','Somnia started',{desktop:isTauri()});
 startStudioRouting();
+// Studio lifecycle (docs/studio-lifecycle.md): drives active/warm/suspended transitions
+// from the store's activeStudio. Job-lease providers register on getStudioLifecycle().
+{const disposeLifecycle=installStudioLifecycle({subscribe,getActiveStudio:()=>getState().activeStudio,resolveAdapter:id=>{try{return hasStudio(id)?getStudio(id).lifecycle?.():undefined;}catch{return undefined;}},onProblem:message=>reportError('lifecycle',message),onPressure:level=>{if(level!=='normal')void suspendIdleExtensions().then(n=>{if(n)logInfo('lifecycle',`Suspended ${n} idle extension(s) under memory pressure.`);}).catch(()=>{});}});if(import.meta.hot)import.meta.hot.dispose(disposeLifecycle);}
 // Shortcuts are bound at module start, not in an App effect: the effect only runs after the first commit, so a keypress right after page load (slow CPU, CI) was dropped.
 {const detachShortcuts=attachKeyboardShortcuts();if(import.meta.hot)import.meta.hot.dispose(detachShortcuts);}
 createRoot(document.getElementById('root')!).render(<StrictMode><ErrorBoundary label="Somnia" onFatal={disposeDiagnosticsSurface}><App/><McpApprovalDialog/></ErrorBoundary></StrictMode>);

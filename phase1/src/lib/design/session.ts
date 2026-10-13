@@ -1,4 +1,7 @@
 import type {DesignToolId} from './panelContract';
+import {registerLifecycleAdapter} from '../lifecycle/adapters';
+import type {StudioLifecycleAdapter,StudioSnapshot} from '../lifecycle/types';
+import {DESIGN_SNAPSHOT_SCHEMA,designSnapshotBytes,designSnapshotChecksum,verifyDesignSnapshot,type DesignSnapshotPayload} from './lifecycleSnapshot';
 import {useSyncExternalStore} from 'react';
 import {createDesignDocument,parseDesignDocument,type DesignDocument} from './model';
 export interface DesignState {document:DesignDocument|null;artboardId:string|null;selection:string|null;selectedIds:string[];tool:DesignToolId;dirty:boolean;past:DesignDocument[];future:DesignDocument[]}
@@ -25,3 +28,34 @@ if(typeof window!=='undefined')window.addEventListener('beforeunload',event=>{if
 export function markDesignSaved(){emit({...state,dirty:false});}
 /** Caller owns any save/discard confirmation before clearing. */
 export function clearDesign(){emit({document:null,artboardId:null,selection:null,selectedIds:[],tool:'select',dirty:false,past:[],future:[]});}
+
+
+// === Studio lifecycle adapter (docs/studio-lifecycle.md) ===
+/** Restores a checkpointed session. Each document is re-validated through the same parser as opens. */
+export function restoreDesignSession(payload:DesignSnapshotPayload):void{
+ const document=payload.document?parseDesignDocument(payload.document):null;
+ emit({document,artboardId:payload.artboardId,selection:payload.selection,selectedIds:[...payload.selectedIds],tool:payload.tool as DesignToolId,dirty:payload.dirty,past:payload.past.map(d=>parseDesignDocument(d)),future:payload.future.map(d=>parseDesignDocument(d))});
+}
+export function createDesignLifecycleAdapter():StudioLifecycleAdapter{
+ return {
+  estimateBytes(){const s=getDesignState();return designSnapshotBytes({document:s.document?JSON.stringify(s.document):null,artboardId:s.artboardId,selection:s.selection,selectedIds:s.selectedIds,tool:s.tool,dirty:s.dirty,past:s.past.map(d=>JSON.stringify(d)),future:s.future.map(d=>JSON.stringify(d))});},
+  resourceIds(){return ['studio:design'];},
+  pinReasons(){return [];},
+  hasUnsavedChanges(){const s=getDesignState();return !!(s.document&&s.dirty);},
+  async snapshot():Promise<StudioSnapshot>{
+   const s=getDesignState();
+   const payload:DesignSnapshotPayload={document:s.document?JSON.stringify(s.document):null,artboardId:s.artboardId,selection:s.selection,selectedIds:s.selectedIds,tool:s.tool,dirty:s.dirty,past:s.past.map(d=>JSON.stringify(d)),future:s.future.map(d=>JSON.stringify(d))};
+   return {studioId:'design',schemaVersion:DESIGN_SNAPSHOT_SCHEMA,revision:s.past.length,capturedAt:Date.now(),bytesEstimate:designSnapshotBytes(payload),checksum:designSnapshotChecksum(payload),payload};
+  },
+  async suspend(){clearDesign();},
+  async resume(snapshot){
+   if(!verifyDesignSnapshot(snapshot))throw new Error('Design checkpoint failed verification');
+   restoreDesignSession(snapshot.payload as DesignSnapshotPayload);
+  },
+  async dispose(){
+   const s=getDesignState();if(s.document&&s.dirty)throw new Error('Refusing to evict unsaved design edits');
+   clearDesign();
+  },
+ };
+}
+registerLifecycleAdapter('design',()=>createDesignLifecycleAdapter());

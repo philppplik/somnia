@@ -8,6 +8,9 @@ import {useEffect,useSyncExternalStore} from 'react';
 import {SlidesClient} from './client';
 import {assertPptx,type DeckSummary} from './protocol';
 import {addMediaFile,closeMedia,findMedia,getMedia,setActiveMedia,subscribeMedia,registerMediaCloseGuard} from '../media';
+import {registerLifecycleAdapter} from '../lifecycle/adapters';
+import type {StudioLifecycleAdapter,StudioSnapshot} from '../lifecycle/types';
+import {SLIDES_SNAPSHOT_SCHEMA,slidesSnapshotBytes,slidesSnapshotChecksum,verifySlidesSnapshot,type SlidesSnapshotPayload} from './lifecycleSnapshot';
 export interface SlidesSession {presenting:boolean;wasmBytes:number;diagnostics:SlidesDiagnostics|null;name:string;source:string;summary:DeckSummary|null;index:number;image:string;texts:string[];thumbnails:Record<number,string>;busy:boolean;error:string;original:Uint8Array|null;working:Uint8Array|null;runs:TextRun[];dirty:boolean;undo:Uint8Array[];redo:Uint8Array[]}
 interface Entry {revision:number;state:SlidesSession;client:SlidesClient;sequence:number;disposed:boolean;presentCache:Map<string,Promise<string>>;exiting?:boolean}
 const bounded=(history:Uint8Array[])=>{let total=0;return history.slice(-10).reverse().filter(b=>(total+=b.byteLength)<=64*1024*1024).reverse();};
@@ -82,3 +85,44 @@ export async function exitSlidesPresentation(){
  const e=sessions.get(getMedia().active??'');if(!e?.state.presenting||e.exiting)return;e.exiting=true;
  try{if(document.fullscreenElement)await document.exitFullscreen().catch(()=>{});patch(e,{presenting:false});await renderSlide(e,e.state.index);clearPresentCache(e);if(presentationReturnFocus instanceof HTMLElement&&presentationReturnFocus.isConnected)presentationReturnFocus.focus();}finally{e.exiting=false;}
 }
+
+
+// === Studio lifecycle pilot (docs/studio-lifecycle.md) ===
+// Authoritative state lives in session entries (edited package bytes + history),
+// so suspension is safe: release the WASM worker, rendered images and caches,
+// then rebuild them from the verified checkpoint on resume.
+const sessionByteSize=()=>{let total=0;for(const e of sessions.values()){total+=e.state.wasmBytes;total+=e.state.original?.byteLength??0;total+=e.state.working?.byteLength??0;for(const b of e.state.undo)total+=b.byteLength;for(const b of e.state.redo)total+=b.byteLength;}return total;};
+/** Lifecycle adapter for the Slides studio. Resolved by the studio manifest (lib/studios/slides.ts) through the runtime registry. */
+export function createSlidesLifecycleAdapter():StudioLifecycleAdapter{
+ return {
+  estimateBytes(){return sessionByteSize();},
+  resourceIds(){return ['studio:slides',...[...sessions.keys()].map(name=>`slides:session:${name}`)];},
+  pinReasons(){const reasons=new Set<string>();for(const e of sessions.values()){if(e.state.presenting)reasons.add('presentation');if(e.state.busy)reasons.add('operation-in-progress');}return [...reasons];},
+  hasUnsavedChanges(){return [...sessions.values()].some(e=>e.state.dirty);},
+  async snapshot():Promise<StudioSnapshot|null>{
+   const payload:SlidesSnapshotPayload={sessions:[...sessions.values()].filter(e=>!e.disposed).map(e=>({name:e.state.name,source:e.state.source,revision:e.revision,index:e.state.index,dirty:e.state.dirty,original:e.state.original,working:e.state.working,undo:[...e.state.undo],redo:[...e.state.redo],summary:e.state.summary,runs:[...e.state.runs]}))};
+   return {studioId:'slides',schemaVersion:SLIDES_SNAPSHOT_SCHEMA,revision:Math.max(0,...[...sessions.values()].map(e=>e.revision)),capturedAt:Date.now(),bytesEstimate:slidesSnapshotBytes(payload),checksum:slidesSnapshotChecksum(payload),payload};
+  },
+  async suspend(){
+   for(const [name,e] of [...sessions]){dispose(e);sessions.delete(name);}
+   emit();
+  },
+  async resume(snapshot){
+   if(!verifySlidesSnapshot(snapshot))throw new Error('Slides checkpoint failed verification');
+   // Synchronous re-registration first: the host mount path (ensureSlides) must
+   // see a live entry and never rebuild a dirty session from stale source bytes.
+   for(const s of (snapshot.payload as SlidesSnapshotPayload).sessions){
+    const m=findMedia(s.name);if(!m||m.url!==s.source)continue;
+    const e:Entry={revision:s.revision,state:{...empty,name:s.name,source:s.source,summary:s.summary,index:s.index,original:s.original,working:s.working,runs:[...s.runs],dirty:s.dirty,undo:[...s.undo],redo:[...s.redo],busy:true,thumbnails:{}},client:new SlidesClient(),sequence:0,disposed:false,presentCache:new Map()};
+    sessions.set(s.name,e);emit();
+    void (async()=>{try{if(s.working)await e.client.open(s.working);if(e.disposed)return;const last=Math.max(0,(s.summary?.slides??1)-1);await renderSlide(e,Math.min(s.index,last));}catch(error){patch(e,{busy:false,error:String(error)},error);}})();
+   }
+  },
+  async dispose(){
+   for(const [name,e] of [...sessions]){if(e.state.dirty)throw new Error('Refusing to evict unsaved deck edits');}
+   for(const [name,e] of [...sessions]){dispose(e);sessions.delete(name);}
+   emit();
+  },
+ };
+}
+registerLifecycleAdapter('slides',()=>createSlidesLifecycleAdapter());
