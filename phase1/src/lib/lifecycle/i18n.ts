@@ -1,0 +1,63 @@
+/** Studio-owned settings strings for the lifecycle feature (Settings > Advanced). */
+export const LIFECYCLE_CATALOGUES: Record<string, Record<string, string>> = {
+  en: {
+    'set.perf.title': 'Performance',
+    'set.perf.lifecycle': 'Suspend inactive studios to free memory',
+    'set.perf.lifecycle.hint':
+      'After 30 seconds in the background, a studio checkpoints its session and releases workers and caches. Switching back restores it. Turn off to keep every studio resident.',
+    'set.perf.profile': 'Resource profile',
+    'set.perf.profile.auto': 'Automatic',
+    'set.perf.profile.low': 'Low memory',
+    'set.perf.profile.normal': 'Standard',
+    'set.perf.profile.high': 'High memory',
+    'set.perf.profile.hint': 'Automatic picks from device hints. Low memory disables the warm slot and admits one heavy job.',
+  },
+  de: {
+    'set.perf.title': 'Leistung',
+    'set.perf.lifecycle': 'Inaktive Studios schlafen legen, um Speicher freizugeben',
+    'set.perf.lifecycle.hint':
+      'Nach 30 Sekunden im Hintergrund sichert ein Studio seine Sitzung und gibt Worker und Caches frei. Beim Zurückwechseln wird sie wiederhergestellt. Ausschalten, um alle Studios resident zu halten.',
+    'set.perf.profile': 'Ressourcenprofil',
+    'set.perf.profile.auto': 'Automatisch',
+    'set.perf.profile.low': 'Wenig Arbeitsspeicher',
+    'set.perf.profile.normal': 'Standard',
+    'set.perf.profile.high': 'Viel Arbeitsspeicher',
+    'set.perf.profile.hint': 'Automatisch wählt anhand der Gerätemerkmale. Wenig Arbeitsspeicher deaktiviert den Warm-Slot und lässt einen schweren Job zu.',
+  },
+  es: {
+    'set.perf.title': 'Rendimiento',
+    'set.perf.lifecycle': 'Suspender los estudios inactivos para liberar memoria',
+    'set.perf.lifecycle.hint':
+      'Tras 30 segundos en segundo plano, un estudio guarda un punto de restauración y libera workers y cachés. Al volver, se restaura. Desactívalo para mantener todos los estudios residentes.',
+    'set.perf.profile': 'Perfil de recursos',
+    'set.perf.profile.auto': 'Automático',
+    'set.perf.profile.low': 'Poca memoria',
+    'set.perf.profile.normal': 'Estándar',
+    'set.perf.profile.high': 'Mucha memoria',
+    'set.perf.profile.hint': 'Automático elige según el dispositivo. Poca memoria desactiva la ranura en caliente y admite un trabajo pesado.',
+  },
+  fr: {
+    'set.perf.title': 'Performances',
+    'set.perf.lifecycle': 'Suspendre les studios inactifs pour libérer de la mémoire',
+    'set.perf.lifecycle.hint':
+      'Après 30 secondes en arrière-plan, un studio enregistre un point de restauration et libère workers et caches. Le retour restaure la session. Désactivez pour garder tous les studios résidents.',
+    'set.perf.profile': 'Profil de ressources',
+    'set.perf.profile.auto': 'Automatique',
+    'set.perf.profile.low': 'Mémoire faible',
+    'set.perf.profile.normal': 'Standard',
+    'set.perf.profile.high': 'Mémoire élevée',
+    'set.perf.profile.hint': 'Automatique choisit selon l’appareil. Mémoire faible désactive l’emplacement tiède et admet une seule tâche lourde.',
+  },
+  'pt-BR': {
+    'set.perf.title': 'Desempenho',
+    'set.perf.lifecycle': 'Suspender estúdios inativos para liberar memória',
+    'set.perf.lifecycle.hint':
+      'Após 30 segundos em segundo plano, um estúdio salva um ponto de restauração e libera workers e caches. Ao voltar, a sessão é restaurada. Desative para manter todos os estúdios residentes.',
+    'set.perf.profile': 'Perfil de recursos',
+    'set.perf.profile.auto': 'Automático',
+    'set.perf.profile.low': 'Pouca memória',
+    'set.perf.profile.normal': 'Padrão',
+    'set.perf.profile.high': 'Muita memória',
+    'set.perf.profile.hint': 'Automático escolhe conforme o dispositivo. Pouca memória desativa o slot morno e admite um trabalho pesado.',
+  },
+};
