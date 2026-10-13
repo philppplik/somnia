@@ -1941,6 +1941,7 @@
   "conn.replacement": "Neuen Key eingeben",
   "conn.enterKey": "API-Key eingeben",
   "conn.keyNote": "Der Key wird getestet, dann im Anmeldedaten-Speicher deines Betriebssystems abgelegt und nie wieder angezeigt. Der Test sendet nur den Key an den Anbieter, keine Prompts oder Projektdateien.",
+  "conn.compatNote": "Eigener API-Key und eigene Modellliste für {name}. Sobald du Cloud-KI erlaubst, gehen Prompts direkt an {name}, nicht über OpenRouter.",
   "conn.testSave": "Key testen und speichern",
   "conn.testReplace": "Key testen und ersetzen",
   "conn.testSaved": "Gespeicherten Key testen",

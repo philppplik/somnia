@@ -1941,6 +1941,7 @@
   "conn.replacement": "Digite uma nova chave",
   "conn.enterKey": "Digite sua chave de API",
   "conn.keyNote": "A chave é testada e depois guardada no cofre de credenciais do sistema, sem ser exibida de novo. O teste envia só a chave ao provedor, sem prompts nem arquivos do projeto.",
+  "conn.compatNote": "Chave de API e lista de modelos próprias para {name}. Com a IA na nuvem permitida, os prompts vão direto para {name}, sem passar pelo OpenRouter.",
   "conn.testSave": "Testar e salvar chave",
   "conn.testReplace": "Testar e substituir chave",
   "conn.testSaved": "Testar chave salva",
