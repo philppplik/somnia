@@ -10,7 +10,7 @@ export function setRecoveryStoreForTests(s:RecoveryStore|null){shared=s;}
 const discarded=new Set<string>();const active=new Map<string,{close():void;idle():Promise<unknown>}>();
 /** Mark a live session so closing it (and its teardown flush) never leaves a recovery snapshot behind. */
 export function registerActiveSession(id:string,cp:{close():void;idle():Promise<unknown>},meta?:Omit<LiveSession,'cp'>&{cp?:never}){
- discarded.delete(id);active.set(id,cp);const off=meta?trackLive(id,{...meta,cp:cp as LiveSession['cp']}):()=>undefined;
+ discarded.delete(id);active.set(id,cp);const off=meta?trackLive(id,{...meta,cp:cp as unknown as LiveSession['cp']}):()=>undefined;
  return()=>{off();if(active.get(id)===cp)active.delete(id);};
 }
 /** The user closed/discarded the document: stop checkpointing, wait for in-flight writes, delete all snapshots. A later teardown flush is skipped. */
