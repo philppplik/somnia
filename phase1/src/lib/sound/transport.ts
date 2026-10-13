@@ -1,5 +1,5 @@
 import {jobScheduler,type JobLease} from '../jobs/scheduler';
-import {closeSound,getSoundSession,subscribeSound} from './session';
+import {closeSound,getSoundSession,registerSoundSuspendHook,subscribeSound} from './session';
 import {registerMediaCloseCleanup} from '../media';
 /** Audio elements belong to the application, not the visible waveform. */
 export interface SoundPlayback {time:number;playing:boolean;duration:number;}
@@ -45,3 +45,4 @@ export function toggleSoundPlayback(name:string){const e=entries.get(name);if(e&
 export function seekSound(name:string,seconds:number){const e=ensure(name);sync(name,e);e.audio.currentTime=Math.max(0,Math.min(seconds,Number.isFinite(e.audio.duration)?e.audio.duration:seconds));e.state={...e.state,time:e.audio.currentTime};emit();}
 export function closeSoundPlayback(name:string){const e=entries.get(name);if(!e)return;e.dispose();entries.delete(name);emit();}
 registerMediaCloseCleanup(name=>{closeSoundPlayback(name);closeSound(name);});
+registerSoundSuspendHook(()=>{for(const n of [...entries.keys()])closeSoundPlayback(n);});

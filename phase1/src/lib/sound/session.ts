@@ -6,6 +6,9 @@ import type {SoundRegionMode} from './protocol';
 import {fileExtension,sniffAudio} from './format';
 import {getMedia,subscribeMedia} from '../media';
 import type {SoundPlugin,SoundProgress,SoundReport} from './protocol';
+import {registerLifecycleAdapter} from '../lifecycle/adapters';
+import type {StudioLifecycleAdapter,StudioSnapshot} from '../lifecycle/types';
+import {SOUND_SNAPSHOT_SCHEMA,verifySoundSnapshot,soundSnapshotBytes,soundSnapshotChecksum,type SoundSessionSnapshot,type SoundSnapshotPayload} from './lifecycleSnapshot';
 /** One rendered result: a WAV blob (also what the player plays), its waveform columns and the engine report. */
 export interface SoundVersion{blob:Blob;url:string;peaks:Float32Array;report:SoundReport;ms:number}
 export type SoundStatus='loading'|'ready'|'processing'|'error';
@@ -36,11 +39,23 @@ const revoke=(v:SoundVersion|null,keep?:SoundVersion|null)=>{if(v&&v!==keep)URL.
 export const getSoundSession=(name:string|null|undefined)=>name?sessions.get(name)??null:null;
 export function subscribeSound(fn:()=>void){listeners.add(fn);return()=>{listeners.delete(fn);};}
 export function useSoundSession(name:string|null|undefined){return useSyncExternalStore(subscribeSound,()=>getSoundSession(name),()=>null);}
+/** Recipes stashed by the lifecycle resume, keyed by session name. Applied once when the same source re-opens. */
+const pendingSoundRecipes=new Map<string,SoundSessionSnapshot>();
+/** Claims a stashed recipe, but only when the source fingerprint matches: a re-used name with different bytes must not inherit the old edit. */
+function takeSoundRecipe(name:string,url:string):SoundSessionSnapshot|null{
+ const recipe=pendingSoundRecipes.get(name);if(!recipe)return null;
+ pendingSoundRecipes.delete(name);
+ return recipe.source===url?recipe:null;
+}
+/** Extra cleanup contributed by satellite modules (the playback transport) at suspend time. */
+const suspendHooks=new Set<()=>void>();
+export function registerSoundSuspendHook(fn:()=>void):()=>void{suspendHooks.add(fn);return()=>{suspendHooks.delete(fn);};}
 /** Starts decoding a media item (idempotent). The original bytes stay untouched; every edit renders a copy. */
 export async function openSound(item:{name:string;url:string}):Promise<void>{
  if(sessions.has(item.name))return;
  stopMediaSync??=subscribeMedia(()=>{const live=new Set(getMedia().items.map(i=>i.name));for(const n of [...sessions.keys()])if(!live.has(n))closeSound(n);});
- put({name:item.name,status:'loading',error:'',settings:DEFAULT_SETTINGS,plugins:[],original:null,processed:null,listen:'processed',selection:null,progress:null});
+ const recipe=takeSoundRecipe(item.name,item.url);
+ put({name:item.name,status:'loading',error:'',settings:recipe?sanitizeSettings(structuredClone(recipe.settings)):DEFAULT_SETTINGS,plugins:[],original:null,processed:null,listen:recipe?.listen??'processed',selection:recipe?.selection?{...recipe.selection}:null,progress:null});
  try{
   const bytes=await fetch(item.url).then(r=>r.arrayBuffer());
   const ext=sniffAudio(new Uint8Array(bytes,0,Math.min(bytes.byteLength,16)))?.ext??fileExtension(item.name);
@@ -121,3 +136,59 @@ export async function saveSound(name:string):Promise<SaveOutcome>{
  await invoke('audio_save_write',new Uint8Array(await out.blob.arrayBuffer()),{headers:{'x-somnia-token':grant.token}});
  return 'saved';
 }
+
+/** RAM retained by open sessions: source bytes plus decoded WAV blobs. */
+const estimateSoundBytes=():number=>{
+ let total=0;
+ for(const s of sources.values())total+=s.bytes.byteLength;
+ for(const s of sessions.values()){total+=s.original?.blob.size??0;total+=s.processed&&s.processed!==s.original?s.processed.blob.size:0;}
+ return total;
+};
+/** Closes every session and playback and disposes the DSP engine; recipes live in the checkpoint. */
+const suspendSoundState=():void=>{
+ for(const n of [...timers.keys()]){clearTimeout(timers.get(n));timers.delete(n);}
+ for(const hook of suspendHooks)hook();
+ for(const n of [...sessions.keys()])closeSound(n);
+ engine?.dispose();engine=undefined;engineReady=undefined;
+};
+let soundSnapshotRevision=0;
+
+/**
+ * Recipe-only lifecycle adapter (see lifecycleSnapshot.ts): snapshot captures
+ * effect settings, the pending selection and the listen toggle, never source
+ * bytes or decoded WAVs. Suspension is refused while a decode/render or a
+ * debounce is pending: sound rendering is deliberately NOT job-scheduler
+ * admitted, so no lease covers it. Active playback pins the studio through
+ * its sound.playback:<name> lease; the suspend hook closes playback entries
+ * before sessions are dropped.
+ */
+export function createSoundLifecycleAdapter():StudioLifecycleAdapter{
+ return{
+  estimateBytes:estimateSoundBytes,
+  async snapshot():Promise<StudioSnapshot|null>{
+   if(timers.size>0)return null;
+   if([...sessions.values()].some(s=>s.status==='loading'||s.status==='processing'))return null;
+   const media=getMedia();
+   const captured:SoundSessionSnapshot[]=[...sessions.values()].map(s=>({
+    name:s.name,
+    source:media.items.find(i=>i.name===s.name)?.url??'',
+    settings:s.settings,
+    selection:s.selection,
+    listen:s.listen,
+   }));
+   // Recipes stashed by a resume but not yet re-opened stay in the checkpoint.
+   const open=new Set(captured.map(s=>s.name));
+   for(const [name,recipe] of pendingSoundRecipes)if(!open.has(name))captured.push(recipe);
+   const payload:SoundSnapshotPayload={sessions:captured};
+   return{studioId:'sound',schemaVersion:SOUND_SNAPSHOT_SCHEMA,revision:++soundSnapshotRevision,capturedAt:Date.now(),bytesEstimate:soundSnapshotBytes(payload),checksum:soundSnapshotChecksum(payload),payload};
+  },
+  async suspend():Promise<void>{suspendSoundState();},
+  async resume(snapshot:StudioSnapshot):Promise<void>{
+   if(!verifySoundSnapshot(snapshot))throw new Error('Sound checkpoint failed verification.');
+   const payload=snapshot.payload as SoundSnapshotPayload;
+   for(const session of payload.sessions)pendingSoundRecipes.set(session.name,session);
+  },
+  async dispose():Promise<void>{pendingSoundRecipes.clear();suspendSoundState();},
+ };
+}
+registerLifecycleAdapter('sound',createSoundLifecycleAdapter);

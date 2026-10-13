@@ -11,6 +11,9 @@ import {fileExtension,sniffVideo} from './format';
 import {openVideoDialog} from './open';
 import {getMedia,setActiveMedia,subscribeMedia,registerMediaCloseGuard} from '../media';
 import type {VideoCapabilities,VideoProbe,VideoProgress,VideoReport} from './protocol';
+import {registerLifecycleAdapter} from '../lifecycle/adapters';
+import type {StudioLifecycleAdapter,StudioSnapshot} from '../lifecycle/types';
+import {VIDEO_SNAPSHOT_SCHEMA,verifyVideoSnapshot,videoSnapshotBytes,videoSnapshotChecksum,type VideoSessionSnapshot,type VideoSnapshotPayload} from './lifecycleSnapshot';
 export type VideoStatus='loading'|'ready'|'error'|'exporting';
 export interface VideoResult{blob:Blob;url:string;report:VideoReport}
 export interface VideoSession{name:string;status:VideoStatus;error:string;probe:VideoProbe|null;capabilities:VideoCapabilities|null;clips:TimelineClip[];selectedClipId:string|null;format:VideoFormat;progress:VideoProgress|null;result:VideoResult|null;ext:string}
@@ -68,7 +71,7 @@ export async function openVideo(item:{name:string;url:string}):Promise<void>{
 async function openVideoFresh(item:{name:string;url:string}):Promise<void>{
  stopMediaSync??=subscribeMedia(()=>{const live=new Set(getMedia().items.map(i=>i.name));for(const n of [...sessions.keys()])if(!live.has(n))closeVideo(n);});
  put({name:item.name,status:'loading',error:'',probe:null,capabilities:null,clips:[],selectedClipId:null,format:DEFAULT_FORMAT,progress:null,result:null,ext:fileExtension(item.name)});
- if(getMedia().items.find(i=>i.name===item.name)?.kind==='video-project'){patch(item.name,{status:'ready',ext:''});return;}
+ if(getMedia().items.find(i=>i.name===item.name)?.kind==='video-project'){patch(item.name,{status:'ready',ext:''});applyVideoRecipe(item.name,item.url);return;}
  try{
   const bytes=await fetch(item.url).then(r=>r.arrayBuffer());
   const sniffed=sniffVideo(new Uint8Array(bytes,0,Math.min(bytes.byteLength,512)));
@@ -80,7 +83,24 @@ async function openVideoFresh(item:{name:string;url:string}):Promise<void>{
   if(!sessions.has(item.name))return;
   if(!probe.video)throw new Error('no video track');
   patch(item.name,{status:'ready',error:'',probe,ext:sniffed.ext,capabilities:await caps.catch(()=>null),clips:[fullClip(item.name,probe.duration)]});
+  applyVideoRecipe(item.name,item.url);
  }catch(e){resetEngine(e);if(sessions.has(item.name))patch(item.name,{status:'error',error:message(e)},e);}
+}
+
+/** Recipes stashed by the lifecycle resume, keyed by session name. Applied once when the same source re-opens. */
+const pendingVideoRecipes=new Map<string,VideoSessionSnapshot>();
+/**
+ * Re-applies a stashed timeline after a fresh open, but only when the source
+ * fingerprint matches: a re-used name with different bytes must not inherit
+ * the old edit. Clips are re-sanitized against the freshly probed durations.
+ */
+function applyVideoRecipe(name:string,url:string){
+ const recipe=pendingVideoRecipes.get(name);if(!recipe)return;
+ pendingVideoRecipes.delete(name);
+ if(recipe.source!==url)return;
+ const s=sessions.get(name);if(!s||s.status!=='ready')return;
+ const clips=sanitizeClips([...recipe.clips],sourceDurations([...recipe.clips]));
+ patch(name,{clips,selectedClipId:clips.some(c=>c.id===recipe.selectedClipId)?recipe.selectedClipId:null,format:recipe.format});
 }
 /** Applies a timeline edit and keeps every clip inside its source bounds. */
 export function editTimeline(root:string,edit:(clips:TimelineClip[])=>TimelineClip[]|null){
@@ -184,3 +204,57 @@ export const videoTimelineDuration=(s:VideoSession|null)=>s?timelineDuration(s.c
 
 // Closing a view is safe; closing an exporting document requires cancelling its job first.
 registerMediaCloseGuard(name=>!exports.has(name)&&!jobScheduler.needsResource('video.source:'+name));
+
+/** RAM retained by open sessions: source bytes plus rendered export blobs. */
+const estimateVideoBytes=():number=>{
+ let total=0;
+ for(const b of sources.values())total+=b.byteLength;
+ for(const s of sessions.values())total+=s.result?.blob.size??0;
+ return total;
+};
+/** Closes every session and disposes the decode engine; recipes live in the checkpoint. */
+const suspendVideoState=():void=>{
+ for(const n of [...sessions.keys()])closeVideo(n);
+ engine?.dispose();engine=undefined;capsPromise=undefined;
+};
+let videoSnapshotRevision=0;
+
+/**
+ * Recipe-only lifecycle adapter (see lifecycleSnapshot.ts): snapshot captures
+ * timelines and the source fingerprint, never source bytes. Suspension is
+ * refused while a probe or export is in flight; exports additionally pin the
+ * studio through their job leases (video.engine/video.export/video.source:*).
+ * Playback is view-owned and stops when the lazy host unmounts, so only the
+ * active studio can play - and the active studio is never a suspend candidate.
+ */
+export function createVideoLifecycleAdapter():StudioLifecycleAdapter{
+ return{
+  estimateBytes:estimateVideoBytes,
+  async snapshot():Promise<StudioSnapshot|null>{
+   if(opening.size>0||exports.size>0)return null;
+   if([...sessions.values()].some(s=>s.status==='loading'||s.status==='exporting'))return null;
+   const media=getMedia();
+   const captured:VideoSessionSnapshot[]=[...sessions.values()].map(s=>({
+    name:s.name,
+    source:media.items.find(i=>i.name===s.name)?.url??'',
+    ext:s.ext,
+    clips:s.clips,
+    selectedClipId:s.selectedClipId,
+    format:s.format,
+   }));
+   // Recipes stashed by a resume but not yet re-opened stay in the checkpoint.
+   const open=new Set(captured.map(s=>s.name));
+   for(const [name,recipe] of pendingVideoRecipes)if(!open.has(name))captured.push(recipe);
+   const payload:VideoSnapshotPayload={sessions:captured};
+   return{studioId:'video',schemaVersion:VIDEO_SNAPSHOT_SCHEMA,revision:++videoSnapshotRevision,capturedAt:Date.now(),bytesEstimate:videoSnapshotBytes(payload),checksum:videoSnapshotChecksum(payload),payload};
+  },
+  async suspend():Promise<void>{suspendVideoState();},
+  async resume(snapshot:StudioSnapshot):Promise<void>{
+   if(!verifyVideoSnapshot(snapshot))throw new Error('Video checkpoint failed verification.');
+   const payload=snapshot.payload as VideoSnapshotPayload;
+   for(const session of payload.sessions)pendingVideoRecipes.set(session.name,session);
+  },
+  async dispose():Promise<void>{pendingVideoRecipes.clear();suspendVideoState();},
+ };
+}
+registerLifecycleAdapter('video',createVideoLifecycleAdapter);

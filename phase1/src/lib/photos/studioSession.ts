@@ -6,6 +6,9 @@ import {getMedia,registerMediaCloseCleanup,registerMediaCloseGuard,subscribeMedi
 import {defaultImageHost,editedName} from '../imageEditorHost';
 import {t} from '../i18n';
 import {isNeutralPhoto,neutralPhotoSettings,photoSignature,sanitizePhotoSettings,PHOTO_INPUT,type PhotoCrop,type PhotoSettings} from './studioSettings';
+import {registerLifecycleAdapter} from '../lifecycle/adapters';
+import type {StudioLifecycleAdapter,StudioSnapshot} from '../lifecycle/types';
+import {PHOTOS_SNAPSHOT_SCHEMA,verifyPhotosSnapshot,photosSnapshotBytes,photosSnapshotChecksum,type PhotoSessionSnapshot,type PhotosSnapshotPayload} from './lifecycleSnapshot';
 /** One decoded preview frame straight from the engine (RGBA bytes). */
 export interface PhotoFrame {bytes:ArrayBuffer;width:number;height:number}
 export type PhotoStatus='loading'|'ready'|'processing'|'error';
@@ -53,11 +56,20 @@ const message=(e:unknown)=>(e instanceof Error?e.message:String(e)).replace(/^Er
 const frameOf=(r:PhotosResponse):PhotoFrame=>{if(!r.bytes||!r.width||!r.height)throw Error('The engine returned an empty render.');return{bytes:r.bytes,width:r.width,height:r.height};};
 /** Settings as rendered: while cropping the frame shows the whole image so the crop rect can be placed. */
 const effective=(s:PhotoSession):PhotoSettings=>s.cropping?{...s.now,crop:null}:s.now;
+/** Recipes stashed by the lifecycle resume, keyed by session name. Applied once when the same source re-opens. */
+const pendingPhotoRecipes=new Map<string,PhotoSessionSnapshot>();
+/** Claims a stashed recipe, but only when the source fingerprint matches: a re-used name with different bytes must not inherit the old edit. */
+function takePhotoRecipe(name:string,url:string):PhotoSessionSnapshot|null{
+ const recipe=pendingPhotoRecipes.get(name);if(!recipe)return null;
+ pendingPhotoRecipes.delete(name);
+ return recipe.source===url?recipe:null;
+}
 /** Opens a media item in a Photos session (idempotent). The original bytes stay untouched; every edit renders a copy. */
 export async function openPhoto(item:{name:string;url:string;mime:string}):Promise<void>{
  if(sessions.has(item.name))return;
  stopMediaSync??=subscribeMedia(()=>{const live=new Set(getMedia().items.map(i=>i.name));for(const n of [...sessions.keys()])if(!live.has(n))closePhoto(n);});
- const blank:PhotoSession={name:item.name,status:'loading',error:'',now:{...neutralPhotoSettings},past:[],future:[],saved:photoSignature(neutralPhotoSettings),sourceWidth:0,sourceHeight:0,frame:null,original:null,cropping:false,cropDraft:null};
+ const recipe=takePhotoRecipe(item.name,item.url);
+ const blank:PhotoSession={name:item.name,status:'loading',error:'',now:recipe?structuredClone(recipe.now):{...neutralPhotoSettings},past:recipe?structuredClone([...recipe.past]):[],future:recipe?structuredClone([...recipe.future]):[],saved:recipe?.saved??photoSignature(neutralPhotoSettings),sourceWidth:0,sourceHeight:0,frame:null,original:null,cropping:recipe?.cropping??false,cropDraft:recipe?.cropDraft?structuredClone(recipe.cropDraft):null};
  put(blank);
  if((PHOTO_INPUT.mimes as readonly string[]).includes(item.mime)===false){patch(item.name,{status:'error',error:t('photos.error.unsupported',{mime:item.mime})});return;}
  try{
@@ -160,3 +172,60 @@ if(typeof window!=='undefined'){
  registerMediaCloseCleanup(name=>closePhoto(name));
  window.addEventListener('beforeunload',e=>{if(allPhotoSessions().some(dirtyPhoto)){e.preventDefault();e.returnValue='';}});
 }
+
+/** RAM retained by open sessions: source bytes plus decoded preview frames. */
+const estimatePhotosBytes=():number=>{
+ let total=0;
+ for(const b of sources.values())total+=b.byteLength;
+ for(const s of sessions.values()){total+=s.frame?.bytes.byteLength??0;total+=s.original?.bytes.byteLength??0;}
+ return total;
+};
+/** Closes every session and disposes the render engine; recipes live in the checkpoint. */
+const suspendPhotosState=():void=>{
+ for(const n of [...timers.keys()]){clearTimeout(timers.get(n));timers.delete(n);}
+ for(const n of [...sessions.keys()])closePhoto(n);
+ engine?.dispose();engine=undefined;
+};
+let photosSnapshotRevision=0;
+
+/**
+ * Recipe-only lifecycle adapter (see lifecycleSnapshot.ts): snapshot captures
+ * develop settings with undo history and the saved signature, never source
+ * bytes. Suspension is refused while a render or debounce is pending; engine
+ * work additionally pins the studio through its job leases (photos.engine).
+ * The dirty marker survives through the saved signature, so the close guard
+ * and beforeunload warning keep working after a resume.
+ */
+export function createPhotosLifecycleAdapter():StudioLifecycleAdapter{
+ return{
+  estimateBytes:estimatePhotosBytes,
+  async snapshot():Promise<StudioSnapshot|null>{
+   if(timers.size>0||gestures.size>0)return null;
+   if([...sessions.values()].some(s=>s.status==='loading'||s.status==='processing'))return null;
+   const media=getMedia();
+   const captured:PhotoSessionSnapshot[]=[...sessions.values()].map(s=>({
+    name:s.name,
+    source:media.items.find(i=>i.name===s.name)?.url??'',
+    now:s.now,
+    past:s.past,
+    future:s.future,
+    saved:s.saved,
+    cropping:s.cropping,
+    cropDraft:s.cropDraft,
+   }));
+   // Recipes stashed by a resume but not yet re-opened stay in the checkpoint.
+   const open=new Set(captured.map(s=>s.name));
+   for(const [name,recipe] of pendingPhotoRecipes)if(!open.has(name))captured.push(recipe);
+   const payload:PhotosSnapshotPayload={sessions:captured};
+   return{studioId:'photos',schemaVersion:PHOTOS_SNAPSHOT_SCHEMA,revision:++photosSnapshotRevision,capturedAt:Date.now(),bytesEstimate:photosSnapshotBytes(payload),checksum:photosSnapshotChecksum(payload),payload};
+  },
+  async suspend():Promise<void>{suspendPhotosState();},
+  async resume(snapshot:StudioSnapshot):Promise<void>{
+   if(!verifyPhotosSnapshot(snapshot))throw new Error('Photos checkpoint failed verification.');
+   const payload=snapshot.payload as PhotosSnapshotPayload;
+   for(const session of payload.sessions)pendingPhotoRecipes.set(session.name,session);
+  },
+  async dispose():Promise<void>{pendingPhotoRecipes.clear();suspendPhotosState();},
+ };
+}
+registerLifecycleAdapter('photos',createPhotosLifecycleAdapter);

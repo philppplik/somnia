@@ -92,6 +92,33 @@ budget goes straight to the spill; refusal is the last resort, so unsaved
 state is never discarded. Resume hydrates spilled checkpoints before
 restore. Settings > Advanced > Performance has a Clear-checkpoints control.
 
+## Media studios: recipe-only checkpoints
+
+Photos, Sound and Video snapshot **recipes, never source bytes** (perf review
+decision 2026-10-13): their sessions are module-global and survive view
+unmounts, but the authoritative state is small - develop settings with undo
+history (Photos), effect settings plus pending selection (Sound), the
+timeline with selection and output format (Video). Source bytes stay with
+the media item and are fetched again on re-open.
+
+Each captured session carries a source fingerprint (the media item URL at
+snapshot time). Resuming only stashes the recipe; it is applied when the
+same file re-opens and the fingerprint still matches. A different file
+re-using the name does not inherit the old edit. Recipes stashed but not
+yet re-opened merge into the next checkpoint, so nothing is lost across
+repeated suspends. What this means in the UI, honestly: a suspended media
+studio re-opens its documents empty and each document's edits reappear when
+that document is opened again - the preview, decode and probe work runs
+fresh.
+
+Suspension is refused while work is in flight that no job lease covers:
+debounced renders and gestures (Photos, Sound) and probes or exports
+(Video). Engine leases (photos.engine, video.engine/video.export,
+sound.playback) pin the studio through the job lease bridge independently.
+Sound playback entries are closed through a suspend hook registered by the
+transport, and suspending disposes the DSP/render/decode engines, which is
+where the memory actually is.
+
 ## Budgets and profiles
 
 `lifecycle/budgets.ts` carries the concept's bucket table. Normal profile:
