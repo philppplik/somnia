@@ -53,6 +53,23 @@
       "hasEnabled": true
     },
     {
+      "id": "deploy.open",
+      "title": "Publish...",
+      "category": "Project",
+      "source": "core",
+      "shortcut": "Mod+Shift+U",
+      "keywords": [
+        "deploy",
+        "go live",
+        "publish",
+        "server",
+        "ssh",
+        "upload",
+        "website"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "design.addRectangle",
       "title": "Design: Add rectangle",
       "category": "Insert",
@@ -318,6 +335,19 @@
       "title": "Extensions",
       "category": "View",
       "source": "core",
+      "hasEnabled": true
+    },
+    {
+      "id": "frameworks.newProject",
+      "title": "New project",
+      "category": "Project",
+      "source": "core",
+      "keywords": [
+        "app",
+        "framework",
+        "react",
+        "template"
+      ],
       "hasEnabled": true
     },
     {

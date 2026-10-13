@@ -2916,5 +2916,6 @@
   "deploy.rollbackView.goBack": "Zurückgehen",
   "deploy.rollbackView.loading": "Versionen werden geladen",
   "deploy.rollbackView.none": "Keine früheren Versionen auf diesem Server gefunden.",
-  "cmd.deploy.open": "Veröffentlichen ..."
+  "cmd.deploy.open": "Veröffentlichen ...",
+  "cmd.frameworks.newProject": "Neues Projekt"
 }

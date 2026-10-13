@@ -16,7 +16,7 @@ included; the `source` column names the owner. Dynamic sources that stay outside
 
 Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, fr, pt-BR); the gate enforces it.
 
-154 commands. Categories: Edit, Help, Insert, Project, Tools, View.
+156 commands. Categories: Edit, Help, Insert, Project, Tools, View.
 
 | id | title | category | source | shortcut |
 | --- | --- | --- | --- | --- |
@@ -25,6 +25,7 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `collab.join` | Join shared project... | Tools | core |  |
 | `collab.share` | Share project... | Tools | core |  |
 | `css.open` | CSS variables and classes | View | core |  |
+| `deploy.open` | Publish... | Project | core | `Mod+Shift+U` |
 | `design.addRectangle` | Design: Add rectangle | Insert | design |  |
 | `design.addText` | Design: Add text layer | Insert | design |  |
 | `design.alignSelection` | Design: Align selected layers | Edit | design |  |
@@ -49,6 +50,7 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `edit.wrap` | Wrap selected element in a div | Edit | core |  |
 | `experimental.fastParse` | Experimental: toggle fast parsing | Tools | core |  |
 | `extensions.open` | Extensions | View | core |  |
+| `frameworks.newProject` | New project | Project | core |  |
 | `help.errorReport` | Copy error report (log excerpt and version) | Help | core |  |
 | `help.github` | Somnia on GitHub (source, releases, issues) | Help | core |  |
 | `help.shortcuts` | Keyboard shortcuts | Help | core |  |
