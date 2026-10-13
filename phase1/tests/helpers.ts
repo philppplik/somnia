@@ -10,7 +10,8 @@ export async function openMine(page:Page,advanced=true){
 }
 
 /**
- * Makes a left-rail panel the ACTIVE one. Code panels stack, so a panel can be visible without being active;
+ * Makes a rail panel the ACTIVE one. Code panels stack, so a panel can be visible without being active;
  * a rail click on the active panel collapses the sidebar, so only click when it is not already active.
  */
 export async function showPanel(page:Page,name:string){const b=page.getByRole('button',{name:`${name} panel`,exact:true});if((await b.getAttribute('aria-pressed'))!=='true')await b.click();await expect(b).toHaveAttribute('aria-pressed','true');}
+

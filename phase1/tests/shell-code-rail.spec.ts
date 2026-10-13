@@ -1,3 +1,4 @@
+import {showPanel} from './helpers';
 import {test,expect} from './fixtures';
 import {mkdirSync} from 'node:fs';
 const shot=(n:string)=>{mkdirSync('test-results/shell',{recursive:true});return `test-results/shell/${n}.png`;};
@@ -38,7 +39,9 @@ test('Code studio rail: declared icons, order and customization (shell v2)',asyn
 test('Code inspector: generic host shows the declared sections',async({page})=>{
  await page.goto('/');await expect(page.locator('[data-storage]')).toBeVisible();
  await page.keyboard.press('Control+1');
+ await showPanel(page,'Inspector');
  await expect(page.getByTestId('shell-inspector')).toBeVisible();
+
  await expect(page.getByTestId('inspector-section-design')).toBeVisible();
  await expect(page.getByTestId('inspector-section-interactions')).toBeVisible();
  await expect(page.getByTestId('inspector-section-source')).toBeVisible();

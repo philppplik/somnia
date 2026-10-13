@@ -1,3 +1,4 @@
+import {showPanel} from './helpers';
 import {test,expect} from './fixtures';
 import path from 'node:path';
 import {readFileSync} from 'node:fs';
@@ -13,6 +14,7 @@ const asset=(n:string)=>path.join(import.meta.dirname,'assets',n);
 async function openVideo(page:any,file='clip.webm'){
  await page.goto('/');await expect(page.locator('[data-storage]')).toBeVisible();
  await page.getByRole('radio',{name:'Somnia Video'}).click();
+ await showPanel(page,'Sources');await showPanel(page,'Sequence');await showPanel(page,'Video');
  await expect(page.getByTestId('video-start')).toBeVisible();
  const chooser=page.waitForEvent('filechooser');await page.getByTestId('video-open').click();await (await chooser).setFiles(asset(file));
  await expect(page.getByTestId('video-workspace')).toBeVisible();
@@ -68,6 +70,7 @@ test('Video Studio: H.264 MP4 shows an honest no-preview note but still probes a
 test('Video Studio: a file that is not video is rejected with a notice, no tab opens',async({page})=>{
  await page.goto('/');await expect(page.locator('[data-storage]')).toBeVisible();
  await page.getByRole('radio',{name:'Somnia Video'}).click();
+ await showPanel(page,'Sources');await showPanel(page,'Sequence');await showPanel(page,'Video');
  const chooser=page.waitForEvent('filechooser');await page.getByTestId('video-open').click();await (await chooser).setFiles(asset('fake.webm'));
  await expect(page.locator('footer [role="status"]')).toContainText('fake.webm is not a valid');
  await expect(page.getByTestId('video-workspace')).toHaveCount(0);

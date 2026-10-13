@@ -1,10 +1,11 @@
+import {showPanel} from './helpers';
 import {test,expect} from '@playwright/test';
 import path from 'node:path';
 import {readFileSync} from 'node:fs';
 const requireBytes=()=>readFileSync('slides-engine/fixtures/independent.pptx');
 test('Slides Studio opens independent PPTX in real worker, navigates, rejects bad input and closes',async({page})=>{
  const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
- await page.goto('/');await page.getByRole('radio',{name:'Slides',exact:true}).click();
+ await page.goto('/');await page.getByRole('radio',{name:'Slides',exact:true}).click();await showPanel(page,'Slides');await showPanel(page,'Presentation');
  await expect(page.getByRole('main',{name:'Slides Studio'})).toBeVisible();
  await page.getByLabel('Open PPTX',{exact:true}).setInputFiles(path.resolve('slides-engine/fixtures/independent.pptx'));
  await expect(page.getByAltText('Slide 1',{exact:true})).toBeVisible({timeout:30000});
@@ -22,19 +23,19 @@ test('Slides Studio opens independent PPTX in real worker, navigates, rejects ba
  expect(errors).toEqual([]);
 });
 test('switching studios retains preview without changing the source document',async({page})=>{
- await page.goto('/');await page.getByRole('radio',{name:'Slides',exact:true}).click();
+ await page.goto('/');await page.getByRole('radio',{name:'Slides',exact:true}).click();await showPanel(page,'Slides');await showPanel(page,'Presentation');
  await page.getByLabel('Open PPTX',{exact:true}).setInputFiles(path.resolve('slides-engine/fixtures/independent.pptx'));
  await expect(page.getByAltText('Slide 1',{exact:true})).toBeVisible({timeout:30000});
  await page.keyboard.press('Control+Alt+3');
  await expect(page.getByAltText('Slide 1',{exact:true})).toBeVisible();
  await page.getByRole('radio',{name:'Somnia Code',exact:true}).click();
- await page.getByRole('radio',{name:'Slides',exact:true}).click();
+ await page.getByRole('radio',{name:'Slides',exact:true}).click();await showPanel(page,'Slides');await showPanel(page,'Presentation');
  await expect(page.getByAltText('Slide 1',{exact:true})).toBeVisible();
 });
 
 test('dark theme presentation stays readable',async({page})=>{
  await page.addInitScript(()=>{localStorage.setItem('somnia.theme','dark');localStorage.setItem('somnia.themeChoice','dark');});
- await page.goto('/');await page.getByRole('radio',{name:'Slides',exact:true}).click();
+ await page.goto('/');await page.getByRole('radio',{name:'Slides',exact:true}).click();await showPanel(page,'Slides');await showPanel(page,'Presentation');
  await page.getByLabel('Open PPTX',{exact:true}).setInputFiles(path.resolve('slides-engine/fixtures/independent.pptx'));
  await expect(page.getByAltText('Slide 1',{exact:true})).toBeVisible({timeout:30000});
  await page.getByRole('button',{name:'Slide 2',exact:true}).click();
@@ -43,7 +44,7 @@ test('dark theme presentation stays readable',async({page})=>{
 });
 
 test('shared FileTabs retain multiple decks and thumbnails',async({page})=>{
- await page.goto('/');await page.getByRole('radio',{name:'Slides',exact:true}).click();
+ await page.goto('/');await page.getByRole('radio',{name:'Slides',exact:true}).click();await showPanel(page,'Slides');await showPanel(page,'Presentation');
  await page.getByLabel('Open PPTX',{exact:true}).setInputFiles(path.resolve('slides-engine/fixtures/independent.pptx'));
  await expect(page.getByAltText('Slide 1',{exact:true})).toBeVisible({timeout:30000});
  await page.getByRole('button',{name:'Load slide thumbnails'}).click();
@@ -65,14 +66,14 @@ test('Project Open File routes PPTX automatically and source tabs return to Code
 test('source FileTab leaves Slides without assigning the deck Studio to the source',async({page})=>{
  await page.goto('/');await page.getByRole('button',{name:'Project',exact:true}).click();
  const chooser=page.waitForEvent('filechooser');await page.getByRole('menuitem',{name:/Open file/i}).click();await(await chooser).setFiles({name:'index.html',mimeType:'text/html',buffer:Buffer.from('<h1>Source stays intact</h1>')});
- await page.getByRole('radio',{name:'Slides',exact:true}).click();
+ await page.getByRole('radio',{name:'Slides',exact:true}).click();await showPanel(page,'Slides');await showPanel(page,'Presentation');
  await page.getByLabel('Open PPTX',{exact:true}).setInputFiles(path.resolve('slides-engine/fixtures/independent.pptx'));
  await expect(page.getByAltText('Slide 1',{exact:true})).toBeVisible({timeout:30000});
  await page.getByRole('tab',{name:'index.html',exact:true}).click();
  await expect(page.getByRole('radio',{name:'Somnia Code',exact:true})).toBeChecked();
 });
 test('closing evicted and current decks leaves remaining tabs usable',async({page})=>{
- await page.goto('/');await page.getByRole('radio',{name:'Slides',exact:true}).click();
+ await page.goto('/');await page.getByRole('radio',{name:'Slides',exact:true}).click();await showPanel(page,'Slides');await showPanel(page,'Presentation');
  for(let i=0;i<4;i++){await page.getByLabel('Open PPTX',{exact:true}).setInputFiles({name:`deck-${i}.pptx`,mimeType:'application/vnd.openxmlformats-officedocument.presentationml.presentation',buffer:requireBytes()});await expect(page.getByRole('tab',{name:`deck-${i}.pptx Close deck-${i}.pptx`,exact:true})).toHaveAttribute('aria-selected','true');await expect(page.getByAltText('Slide 1',{exact:true})).toBeVisible({timeout:30000});}
  await page.getByRole('tab',{name:'deck-0.pptx Close deck-0.pptx',exact:true}).click();await expect(page.getByAltText('Slide 1',{exact:true})).toBeVisible({timeout:30000});
  await page.getByRole('button',{name:'Close presentation',exact:true}).click();await expect(page.getByRole('tab',{name:'deck-0.pptx Close deck-0.pptx',exact:true})).toHaveCount(0);
@@ -80,7 +81,7 @@ test('closing evicted and current decks leaves remaining tabs usable',async({pag
 });
 
 test('edit text undo redo and save copy retains original',async({page})=>{
- await page.goto('/');await page.getByRole('radio',{name:'Slides',exact:true}).click();await page.getByLabel('Open PPTX',{exact:true}).setInputFiles(path.resolve('slides-engine/fixtures/independent.pptx'));await expect(page.getByAltText('Slide 1',{exact:true})).toBeVisible({timeout:30000});
+ await page.goto('/');await page.getByRole('radio',{name:'Slides',exact:true}).click();await showPanel(page,'Slides');await showPanel(page,'Presentation');await page.getByLabel('Open PPTX',{exact:true}).setInputFiles(path.resolve('slides-engine/fixtures/independent.pptx'));await expect(page.getByAltText('Slide 1',{exact:true})).toBeVisible({timeout:30000});
  await page.getByRole('textbox',{name:'Text run 1',exact:true}).fill('Somnia edited copy');await page.getByRole('button',{name:'Apply text',exact:true}).first().click();await expect(page.getByRole('textbox',{name:'Text run 1',exact:true})).toHaveValue('Somnia edited copy');await expect(page.getByText(/Unsaved text changes/)).toBeVisible();
  await page.getByRole('button',{name:'Undo text',exact:true}).click();await expect(page.getByRole('textbox',{name:'Text run 1',exact:true})).toHaveValue('Somnia Documents Studio');await page.getByRole('button',{name:'Redo text',exact:true}).click();await expect(page.getByRole('textbox',{name:'Text run 1',exact:true})).toHaveValue('Somnia edited copy');
  await expect(page.getByRole('region',{name:'Slide preview'})).toHaveAttribute('aria-busy','false');
@@ -90,7 +91,7 @@ test('edit text undo redo and save copy retains original',async({page})=>{
 });
 
 test('dirty deck close requires explicit discard and can be cancelled',async({page})=>{
- await page.goto('/');await page.getByRole('radio',{name:'Slides',exact:true}).click();await page.getByLabel('Open PPTX',{exact:true}).setInputFiles(path.resolve('slides-engine/fixtures/independent.pptx'));await expect(page.getByRole('region',{name:'Slide preview'})).toHaveAttribute('aria-busy','false');await page.getByRole('textbox',{name:'Text run 1',exact:true}).fill('Unsaved title');await page.getByRole('button',{name:'Apply text',exact:true}).first().click();await expect(page.getByRole('region',{name:'Slide preview'})).toHaveAttribute('aria-busy','false');
+ await page.goto('/');await page.getByRole('radio',{name:'Slides',exact:true}).click();await showPanel(page,'Slides');await showPanel(page,'Presentation');await page.getByLabel('Open PPTX',{exact:true}).setInputFiles(path.resolve('slides-engine/fixtures/independent.pptx'));await expect(page.getByRole('region',{name:'Slide preview'})).toHaveAttribute('aria-busy','false');await page.getByRole('textbox',{name:'Text run 1',exact:true}).fill('Unsaved title');await page.getByRole('button',{name:'Apply text',exact:true}).first().click();await expect(page.getByRole('region',{name:'Slide preview'})).toHaveAttribute('aria-busy','false');
  page.once('dialog',d=>d.dismiss());await page.getByRole('button',{name:'Close presentation',exact:true}).click();await expect(page.getByRole('textbox',{name:'Text run 1',exact:true})).toHaveValue('Unsaved title');
  page.once('dialog',d=>d.accept());await page.getByRole('button',{name:'Close presentation',exact:true}).click();await expect(page.getByTestId('slides-start')).toBeVisible();
 });

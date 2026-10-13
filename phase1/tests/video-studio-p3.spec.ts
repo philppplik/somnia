@@ -1,3 +1,4 @@
+import {showPanel} from './helpers';
 import {test,expect} from './fixtures';
 import type {Page} from '@playwright/test';
 import {readFileSync} from 'node:fs';
@@ -12,6 +13,7 @@ const asset=(name:string)=>path.join(import.meta.dirname,'assets',name);
 async function openStudio(page:Page){
  await page.goto('/');await expect(page.locator('[data-storage]')).toBeVisible();
  await page.getByRole('radio',{name:'Somnia Video'}).click();
+ await showPanel(page,'Sources');await showPanel(page,'Sequence');await showPanel(page,'Video');
  await expect(page.getByTestId('video-start')).toBeVisible();
 }
 async function upload(page:Page,hook:string,file:string|{name:string;mimeType:string;buffer:Buffer}){

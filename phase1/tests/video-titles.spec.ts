@@ -1,3 +1,4 @@
+import {showPanel} from './helpers';
 import {test,expect} from './fixtures';
 import path from 'node:path';
 import {readFileSync,writeFileSync,mkdirSync} from 'node:fs';
@@ -6,6 +7,7 @@ const shots='test-results/video-titles';
 async function openVideo(page:any,file='clip.webm'){
  await page.goto('/');await expect(page.locator('[data-storage]')).toBeVisible();
  await page.getByRole('radio',{name:'Somnia Video'}).click();
+ await showPanel(page,'Sources');await showPanel(page,'Sequence');await showPanel(page,'Video');
  const chooser=page.waitForEvent('filechooser');await page.getByTestId('video-open').click();await (await chooser).setFiles(asset(file));
  await expect(page.getByTestId('video-workspace')).toBeVisible();await expect(page.getByTestId('video-clip')).toHaveCount(1);
 }

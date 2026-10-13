@@ -1,3 +1,4 @@
+import {showPanel} from './helpers';
 import {test,expect} from './fixtures';
 import {readFileSync,mkdirSync} from 'node:fs';
 const DOCX='application/vnd.openxmlformats-officedocument.wordprocessingml.document';
@@ -14,13 +15,15 @@ for(const theme of ['light','dark']){
   // studio-owned rail icons exist
   for(const id of ['files','pages','outline','search','versions'])await expect(left.locator(`[data-rail-item="${id}"]`)).toBeVisible();
   // Pages panel shows a thumbnail, a click scrolls to that page
-  await left.locator('[data-rail-item="pages"]').click();
+  await showPanel(page,'Pages');
   await expect(page.getByTestId('documents-thumb').first()).toBeVisible();
   // Outline panel lists paragraphs and filters
-  await left.locator('[data-rail-item="outline"]').click();
+  await showPanel(page,'Outline');
   await expect(page.getByTestId('documents-outline')).toBeVisible();
   await page.screenshot({path:shot(`${theme}-outline`)});
-  // Inspector: Document section always, selection section only with a caret paragraph
+  // Inspector contents are tested after explicitly opening it, independent of studio-open defaults.
+  await showPanel(page,'Document');
+  // Document section always, selection section only with a caret paragraph
   await expect(page.getByTestId('shell-inspector')).toBeVisible();
   await expect(page.getByTestId('inspector-section-document')).toBeVisible();
   await expect(page.getByTestId('inspector-section-selection')).toHaveCount(0);

@@ -1,3 +1,4 @@
+import {showPanel} from './helpers';
 import {test,expect} from './fixtures';
 import {readFileSync} from 'node:fs';
 import path from 'node:path';
@@ -7,6 +8,7 @@ async function studio(page:any){
  await page.goto('/');await expect(page.locator('[data-storage]')).toBeVisible();
  await page.getByRole('radio',{name:'Somnia Vector'}).click();
  await expect(page.getByTestId('vector-start')).toBeVisible();
+ await showPanel(page,'Layers');await showPanel(page,'Vector inspector');
 }
 async function open(page:any,name:string){
  const chooser=page.waitForEvent('filechooser');await page.getByTestId('vector-open').click();
