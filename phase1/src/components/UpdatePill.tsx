@@ -19,7 +19,7 @@ export function UpdatePill(){
  const v=rel.tag.replace(/^v/,'');
  const label=busy?(busy.phase==='downloading'?(busy.percent!==null?t('update.downloadingPct',{percent:busy.percent}):t('update.downloading')):busy.phase==='checking'?t('update.checking'):busy.phase==='installing'?t('update.installing'):t('update.restarting')):t('update.available',{version:v});
  const go=async(e:React.MouseEvent)=>{e.preventDefault();if(busy)return;const page=rel.asset?.url??rel.url;
-  if(!canSelfUpdate()||rel.prerelease){void openExternal(page).catch(()=>{});return;}
-  try{const done=await installSignedUpdate(setBusy);if(!done){setBusy(null);patchState({notice:t('update.noSigned')});void openExternal(page).catch(()=>{});}}
+  if(!canSelfUpdate()){void openExternal(page).catch(()=>{});return;}
+  try{const done=await installSignedUpdate(setBusy,prefs.channel,__APP_RELEASE__);if(!done){setBusy(null);patchState({notice:t('update.noSigned')});void openExternal(page).catch(()=>{});}}
   catch(err){setBusy(null);patchState({notice:t('update.failed',{error:err instanceof Error?err.message:String(err)})});void openExternal(page).catch(()=>{});}};
  return <a href={rel.asset?.url??rel.url} onClick={e=>void go(e)} data-testid="update-pill" aria-busy={!!busy} aria-label={busy?label:t('update.availableAria',{version:v})} className="inline-flex shrink-0 whitespace-nowrap h-6 items-center gap-1.5 rounded-full bg-emerald-600 px-3 text-[10px] font-medium text-white no-underline hover:bg-emerald-700">{label}</a>;}
