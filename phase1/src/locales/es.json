@@ -896,6 +896,8 @@
   "menu.sub.build": "Compilar",
   "menu.sub.code": "Texto y código",
   "menu.sub.design": "Diseño",
+  "menu.sub.designLayers": "Capas",
+  "menu.sub.designArtboards": "Mesas de trabajo",
   "menu.sub.vector": "Vector",
   "menu.sub.sheets": "Hojas",
   "menu.sub.slides": "Diapositivas",

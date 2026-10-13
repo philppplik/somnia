@@ -44,7 +44,7 @@ export const SUBMENU_RULES:Readonly<Record<MenuId,readonly SubmenuRule[]>>={
  ],
  Edit:[
   ids('code',['edit.format','edit.wrap','edit.unwrap','edit.encodeEntities','edit.decodeEntities']),
-  pre('design',['design.']),
+  pre('design',['design.'],[pre('designLayers',['design.layer.','design.select','design.deselect','design.nudge','design.duplicate','design.delete','design.align','design.distribute']),pre('designArtboards',['design.artboard.'])]),
   pre('vector',['vector.']),
   pre('sheets',['sheets.']),
   pre('slides',['slides.']),
@@ -58,6 +58,7 @@ export const SUBMENU_RULES:Readonly<Record<MenuId,readonly SubmenuRule[]>>={
   pre('tabs',['tab.']),
   ids('panels',['agent.toggle','chat.toggle','inspector.toggle','sidebar.toggle','panels.hideAll','css.open','extensions.open','search.project']),
   pre('vector',['vector.']),
+  pre('design',['design.']),
  ],
  Insert:[
   // insert.element.* stays flat on purpose: it is the everyday web insert list.

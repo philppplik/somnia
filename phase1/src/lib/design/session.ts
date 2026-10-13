@@ -10,6 +10,7 @@ export function useDesignState(){return useSyncExternalStore(fn=>{listeners.add(
 export function startDesign(){const doc=createDesignDocument();loadDesign(doc,true);}
 export function loadDesign(doc:DesignDocument,dirty=false){const checked=parseDesignDocument(JSON.stringify(doc));emit({document:checked,artboardId:checked.artboards[0].id,selection:null,selectedIds:[],tool:'select',dirty,past:[],future:[]});}
 export function selectDesignNode(selection:string|null,additive=false){const selectedIds=selection===null?[]:additive?(state.selectedIds.includes(selection)?state.selectedIds.filter(id=>id!==selection):[...state.selectedIds,selection]):[selection];emit({...state,selection:selectedIds.at(-1)??null,selectedIds});}
+export function selectDesignNodes(ids:readonly string[]){const selectedIds=[...new Set(ids)];emit({...state,selection:selectedIds.at(-1)??null,selectedIds});}
 export function setDesignTool(tool:DesignToolId){emit({...state,tool});}
 export function selectArtboard(artboardId:string){if(state.document?.artboards.some(a=>a.id===artboardId))emit({...state,artboardId,selection:null,selectedIds:[]});}
 /** Each commit is one undo transaction. Preview drags remain outside the document. */

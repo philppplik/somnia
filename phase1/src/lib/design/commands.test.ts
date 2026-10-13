@@ -8,7 +8,7 @@ import {createNode} from './model';
 import {registerDesignCommands} from './commands';
 import {DESIGN_CATALOGUES} from './i18n';
 
-const IDS=['design.getState','design.new','design.undo','design.redo','design.setTool','design.addRectangle','design.addText','design.deleteSelection','design.duplicateSelection','design.alignSelection','design.distributeSelection','design.exportProject','design.exportSvg'];
+const IDS=['design.getState','design.new','design.undo','design.redo','design.setTool','design.addRectangle','design.addText','design.deleteSelection','design.duplicateSelection','design.alignSelection','design.distributeSelection','design.exportProject','design.exportSvg','design.tool.select','design.tool.hand','design.tool.rectangle','design.tool.text','design.tool.frame','design.artboard.add','design.artboard.duplicate','design.artboard.delete','design.artboard.rename','design.artboard.select','design.artboard.next','design.artboard.previous','design.artboard.moveUp','design.artboard.moveDown','design.artboard.resize','design.artboard.preset','design.artboard.rotate','design.color.apply','design.zoomIn','design.zoomOut','design.zoomReset','design.zoomFit','design.zoomSet','design.selectAll','design.deselect','design.layer.front','design.layer.forward','design.layer.backward','design.layer.back','design.layer.toggleVisible','design.layer.toggleLocked','design.nudge','design.rename'];
 
 test('registration mirrors every spec into palette registry and dispatcher, disposal removes both',()=>{
  clearDesign();

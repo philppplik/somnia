@@ -18,6 +18,10 @@ import {alignPatches,distributePatches} from './inspectorModel';
 import {downloadDesign,getDesignState,redoDesign,startDesign,undoDesign} from './session';
 import {addDesignNode,chooseDesignTool,deleteDesignNodes,designRows,duplicateDesignNodes,patchDesignNodes} from './panelAdapter';
 import type {AlignKind,DesignToolId,DistributeAxis} from './panelContract';
+import {addBoard,deleteBoard,duplicateBoard,moveBoard,nudgeSelection,renameBoard,resizeBoard,restackSelection,rotateBoard,selectAllLayers,setBoardBackground} from './artboardActions';
+import {ARTBOARD_PRESETS,fitZoom,presetById,type StackMove} from './artboards';
+import {editDesign,selectArtboard,selectDesignNode} from './session';
+import {getDesignView,setDesignZoom,stepDesignZoom} from './view';
 
 /** Same wording the canvas uses before discarding an unsaved design. */
 export const DESIGN_REPLACE_CONFIRM='Replace this design? Export the project first to keep your changes.';
@@ -138,6 +142,67 @@ export function registerDesignCommands():()=>void{
   enabled:()=>board()!==null,
   run:()=>{const b=board();if(b)downloadDesign(`${b.name}.svg`,exportArtboardSVG(b),'image/svg+xml');},
  });
+
+ // ---- Shell commands: rail tools, artboards, view, stacking, colour. Each writes at most one undo step. ----
+ const hasDoc=open;
+ const boardIndex=()=>{const s=getDesignState();return s.document?.artboards.findIndex(a=>a.id===s.artboardId)??-1;};
+ const expected=(m:string)=>Object.assign(new Error(m),{expected:true});
+ for(const tool of ['select','hand','frame','rectangle','text'] as const){
+  // history: 'frame' writes one transaction (new artboard); the others only switch the active tool.
+  add<never,void>({id:`design.tool.${tool}`,title:`Design: ${tool[0].toUpperCase()+tool.slice(1)} tool`,category:'Tools',level:'ui',keywords:['design','tool',tool],enabled:hasDoc,run:()=>chooseDesignTool(tool)});
+ }
+ // history: one transaction (new artboard, becomes active). A preset id fixes the size; width/height override it.
+ add<{preset?:string;name?:string;width?:number;height?:number},void>({
+  id:'design.artboard.add',title:'Design: Add artboard',category:'Insert',level:'ui',keywords:['design','artboard','page','frame'],
+  params:{type:'object',properties:{preset:{type:'string',enum:ARTBOARD_PRESETS.map(p=>p.id)},name:{type:'string',maxLength:200},width:{type:'number',minimum:1,maximum:16384},height:{type:'number',minimum:1,maximum:16384}},additionalProperties:false},
+  enabled:()=>hasDoc()&&(getDesignState().document?.artboards.length??0)<100,
+  run:p=>{const pr=p?.preset?presetById(p.preset):undefined;if(p?.preset&&!pr)throw expected('Unknown artboard preset.');if(!addBoard({name:p?.name,width:p?.width??pr?.width,height:p?.height??pr?.height}))throw expected('The artboard limit is reached.');},
+ });
+ // history: one transaction (copy with new layer ids, becomes active).
+ add<never,void>({id:'design.artboard.duplicate',title:'Design: Duplicate artboard',category:'Edit',level:'ui',keywords:['design','artboard','copy'],enabled:()=>board()!==null&&(getDesignState().document?.artboards.length??0)<100,run:()=>{duplicateBoard();}});
+ // history: one transaction. The last artboard cannot be deleted.
+ add<never,void>({id:'design.artboard.delete',title:'Design: Delete artboard',category:'Edit',level:'ui',keywords:['design','artboard','remove'],enabled:()=>(getDesignState().document?.artboards.length??0)>1,run:()=>{deleteBoard();}});
+ // history: one transaction.
+ add<{name:string},void>({id:'design.artboard.rename',title:'Design: Rename artboard',category:'Edit',level:'ui',keywords:['design','artboard','name'],params:{type:'object',properties:{name:{type:'string',minLength:1,maxLength:200}},required:['name'],additionalProperties:false},enabled:()=>board()!==null,run:p=>{const b=board();if(b)renameBoard(b.id,p.name);}});
+ // history: none (selection only).
+ add<{index?:number;id?:string},void>({id:'design.artboard.select',title:'Design: Go to artboard',category:'View',level:'ui',keywords:['design','artboard','switch'],params:{type:'object',properties:{index:{type:'integer',minimum:0,maximum:99},id:{type:'string'}},additionalProperties:false},enabled:hasDoc,run:p=>{const boards=getDesignState().document?.artboards??[];const t=p?.id?boards.find(a=>a.id===p.id):p?.index!==undefined?boards[p.index]:undefined;if(!t)throw expected('That artboard does not exist.');selectArtboard(t.id);}});
+ // history: none (selection only).
+ for(const [dir,name] of [[1,'next'],[-1,'previous']] as const){
+  add<never,void>({id:`design.artboard.${name}`,title:`Design: ${name==='next'?'Next':'Previous'} artboard`,category:'View',level:'ui',keywords:['design','artboard'],enabled:()=>{const i=boardIndex(),n=getDesignState().document?.artboards.length??0;return i>=0&&i+dir>=0&&i+dir<n;},run:()=>{const s=getDesignState();const t=s.document?.artboards[boardIndex()+dir];if(t)selectArtboard(t.id);}});
+ }
+ // history: one transaction (order of artboards).
+ for(const [dir,name] of [[-1,'moveUp'],[1,'moveDown']] as const){
+  add<never,void>({id:`design.artboard.${name}`,title:`Design: Move artboard ${dir<0?'up':'down'}`,category:'Edit',level:'ui',keywords:['design','artboard','order'],enabled:()=>{const i=boardIndex(),n=getDesignState().document?.artboards.length??0;return i>=0&&i+dir>=0&&i+dir<n;},run:()=>{const b=board();if(b)moveBoard(b.id,dir);}});
+ }
+ // history: one transaction. Layers keep their position.
+ add<{width:number;height:number},void>({id:'design.artboard.resize',title:'Design: Resize artboard',category:'Edit',level:'ui',keywords:['design','artboard','size'],params:{type:'object',properties:{width:{type:'number',minimum:1,maximum:16384},height:{type:'number',minimum:1,maximum:16384}},required:['width','height'],additionalProperties:false},enabled:()=>board()!==null,run:p=>{const b=board();if(b)resizeBoard(b.id,p.width,p.height);}});
+ add<{preset:string},void>({id:'design.artboard.preset',title:'Design: Apply artboard size preset',category:'Edit',level:'ui',keywords:['design','artboard','preset','size'],params:{type:'object',properties:{preset:{type:'string',enum:ARTBOARD_PRESETS.map(p=>p.id)}},required:['preset'],additionalProperties:false},enabled:()=>board()!==null,run:p=>{const b=board(),pr=presetById(p.preset);if(!pr)throw expected('Unknown artboard preset.');if(b)resizeBoard(b.id,pr.width,pr.height);}});
+ add<never,void>({id:'design.artboard.rotate',title:'Design: Swap artboard width and height',category:'Edit',level:'ui',keywords:['design','artboard','orientation','landscape','portrait'],enabled:()=>board()!==null,run:()=>{const b=board();if(b)rotateBoard(b.id);}});
+ // history: one transaction. target: fill/stroke apply to the selected layers, background to the artboard.
+ add<{target:'fill'|'stroke'|'background';color:string|null},void>({id:'design.color.apply',title:'Design: Apply colour',category:'Edit',level:'ui',keywords:['design','colour','color','fill','stroke','background','palette'],
+  params:{type:'object',properties:{target:{type:'string',enum:['fill','stroke','background']},color:{type:['string','null'],pattern:'^#[0-9a-fA-F]{6}$'}},required:['target','color'],additionalProperties:false},
+  enabled:()=>board()!==null,
+  run:p=>{const b=board();if(!b)return;if(p.target==='background'){if(p.color)setBoardBackground(b.id,p.color);return;}if(!selection().length)throw expected('Select a layer first.');patchDesignNodes(new Map(selection().map(id=>[id,{[p.target]:p.color?.toLowerCase()??null}])));}});
+ // history: none (view state).
+ add<never,void>({id:'design.zoomIn',title:'Design: Zoom in',category:'View',level:'ui',keywords:['design','zoom'],enabled:()=>hasDoc()&&getDesignView().zoom<4,run:()=>stepDesignZoom(1)});
+ add<never,void>({id:'design.zoomOut',title:'Design: Zoom out',category:'View',level:'ui',keywords:['design','zoom'],enabled:()=>hasDoc()&&getDesignView().zoom>0.1,run:()=>stepDesignZoom(-1)});
+ add<never,void>({id:'design.zoomReset',title:'Design: Zoom to 100%',category:'View',level:'ui',keywords:['design','zoom','actual size'],enabled:hasDoc,run:()=>setDesignZoom(1)});
+ add<never,void>({id:'design.zoomFit',title:'Design: Fit artboard in window',category:'View',level:'ui',keywords:['design','zoom','fit'],enabled:()=>board()!==null,run:()=>{const b=board(),v=getDesignView().viewport;if(!b)return;if(!v)throw expected('The canvas has no size yet.');setDesignZoom(fitZoom(b,v));}});
+ add<{zoom:number},void>({id:'design.zoomSet',title:'Design: Set zoom',category:'View',level:'ui',keywords:['design','zoom'],params:{type:'object',properties:{zoom:{type:'number',minimum:0.1,maximum:4}},required:['zoom'],additionalProperties:false},enabled:hasDoc,run:p=>setDesignZoom(p.zoom)});
+ // history: none (selection only).
+ add<never,void>({id:'design.selectAll',title:'Design: Select all layers',category:'Edit',level:'ui',keywords:['design','select','all'],enabled:()=>(board()?.nodes.length??0)>0,run:()=>selectAllLayers()});
+ add<never,void>({id:'design.deselect',title:'Design: Clear selection',category:'Edit',level:'ui',keywords:['design','select','none'],enabled:()=>selection().length>0,run:()=>selectDesignNode(null)});
+ // history: one transaction per call (stacking order of the selected unlocked layers).
+ for(const [move,label] of [['front','Bring to front'],['forward','Bring forward'],['backward','Send backward'],['back','Send to back']] as const){
+  add<never,void>({id:`design.layer.${move}`,title:`Design: ${label}`,category:'Edit',level:'ui',keywords:['design','layer','order','stack'],enabled:()=>selectedRows().some(r=>!r.locked),run:()=>restackSelection(move as StackMove)});
+ }
+ // history: one transaction. Flags apply to locked layers too, so a locked layer can be unlocked.
+ add<never,void>({id:'design.layer.toggleVisible',title:'Design: Show or hide selected layers',category:'Edit',level:'ui',keywords:['design','layer','visibility','hide','show'],enabled:()=>selection().length>0,run:()=>{const rows=selectedRows();const show=rows.some(r=>!r.visible);patchDesignNodes(new Map(rows.map(r=>[r.id,{visible:show}])),true);}});
+ add<never,void>({id:'design.layer.toggleLocked',title:'Design: Lock or unlock selected layers',category:'Edit',level:'ui',keywords:['design','layer','lock','unlock'],enabled:()=>selection().length>0,run:()=>{const rows=selectedRows();const lock=rows.some(r=>!r.locked);patchDesignNodes(new Map(rows.map(r=>[r.id,{locked:lock}])),true);}});
+ // history: one transaction. Locked layers stay.
+ add<{dx:number;dy:number},void>({id:'design.nudge',title:'Design: Nudge selected layers',category:'Edit',level:'ui',keywords:['design','move','nudge','arrow'],params:{type:'object',properties:{dx:{type:'number',minimum:-1000,maximum:1000},dy:{type:'number',minimum:-1000,maximum:1000}},required:['dx','dy'],additionalProperties:false},enabled:()=>selection().length>0,run:p=>nudgeSelection(p.dx,p.dy)});
+ // history: one transaction.
+ add<{name:string},void>({id:'design.rename',title:'Design: Rename project',category:'Project',level:'ui',keywords:['design','project','name'],params:{type:'object',properties:{name:{type:'string',minLength:1,maxLength:200}},required:['name'],additionalProperties:false},enabled:hasDoc,run:p=>{const name=p.name.trim();if(name)editDesign(d=>({...d,name}));}});
 
  return()=>{for(const off of offs)off();};
 }

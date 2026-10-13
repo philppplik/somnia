@@ -896,6 +896,8 @@
   "menu.sub.build": "Build",
   "menu.sub.code": "Text and code",
   "menu.sub.design": "Design",
+  "menu.sub.designLayers": "Layers",
+  "menu.sub.designArtboards": "Artboards",
   "menu.sub.vector": "Vector",
   "menu.sub.sheets": "Sheets",
   "menu.sub.slides": "Slides",

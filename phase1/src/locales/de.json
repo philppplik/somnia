@@ -896,6 +896,8 @@
   "menu.sub.build": "Erstellen",
   "menu.sub.code": "Text und Code",
   "menu.sub.design": "Design",
+  "menu.sub.designLayers": "Ebenen",
+  "menu.sub.designArtboards": "Zeichenflächen",
   "menu.sub.vector": "Vektor",
   "menu.sub.sheets": "Tabellen",
   "menu.sub.slides": "Folien",
