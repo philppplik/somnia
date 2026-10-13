@@ -1,3 +1,5 @@
+import './panelI18n';
+import {registerSheetsPanelCommands} from './panelController';
 /**
  * Sheets studio command specs (engine-hardening plan, step 1.5).
  *
@@ -76,6 +78,6 @@ const wiredSpecs=sheetsCommandSpecs({controller:getSheetsCommandController});
  * Returns one disposer that removes every registration. SheetsCanvas calls this on mount.
  */
 export function registerSheetsCommands():()=>void {
-  const offs=wiredSpecs.map(spec=>registerCommandSpec(spec));
+  const offs=[...wiredSpecs.map(spec=>registerCommandSpec(spec)),registerSheetsPanelCommands()];
   return()=>{for(const off of offs)off();};
 }

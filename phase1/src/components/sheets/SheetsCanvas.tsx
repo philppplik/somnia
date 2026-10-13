@@ -1,3 +1,7 @@
+import {registerSheetsPanelController,type SheetsPanelController} from '../../lib/sheets/panelController';
+import {parsePanelRange,rangeAddress} from '../../lib/sheets/panelModel';
+import {parseAddress} from '../../lib/sheets/format';
+import {studioContextStore} from '../../lib/shell/studioContext';
 import {reportError} from '../../lib/log';
 import {StudioEmptyState} from '../studios/StudioEmptyState';
 import {createBlankProject} from '../../lib/studios/blank';
@@ -55,7 +59,7 @@ function Workbook({item}:{item:MediaItem}){
  useEffect(()=>{const el=scroller.current;if(!el)return;const measure=()=>setView(v=>({...v,w:el.clientWidth,h:el.clientHeight}));measure();const ro=new ResizeObserver(measure);ro.observe(el);return()=>ro.disconnect();},[phase.kind]);
  useEffect(()=>{const up=()=>{dragging.current=false;};window.addEventListener('mouseup',up);return()=>window.removeEventListener('mouseup',up);},[]);
  const address=addressOf(sel.row,sel.col);const cur=cells.get(address);
- useEffect(()=>{if(phase.kind!=='ready')return;setSheetsSelection({file:item.name,sheet,sheetName:book?.sheets[sheet]?.name??'',address,kind:cur?.value.t??'Empty',text:displayValue(cur?.value),formula:cur?.formula??null,dirty,canUndo:!!info?.canUndo,canRedo:!!info?.canRedo});},[phase.kind,item.name,sheet,book,address,cur,dirty,info]);
+
  const commit=async(input:string)=>{
   setDraft(null);if(new TextEncoder().encode(input).length>MAX_CELL_BYTES){setNotice(t('sheets.tooLong'));return;}
   const before=editText(cur?.value,cur?.formula);if(input===before)return;
@@ -65,6 +69,14 @@ function Workbook({item}:{item:MediaItem}){
    const next={row,col};const el=scroller.current;if(el){const top=geo.rowTop(row),left=geo.colLeft(col),h=geo.rowHeight(row),w=geo.colWidth(col);if(top<el.scrollTop)el.scrollTop=top;else if(top+h>el.scrollTop+el.clientHeight-HEAD_H)el.scrollTop=top+h-el.clientHeight+HEAD_H;if(left<el.scrollLeft)el.scrollLeft=left;else if(left+w>el.scrollLeft+el.clientWidth-HEAD_W)el.scrollLeft=left+w-el.clientWidth+HEAD_W;}if(extend)setExt(next);else{setSel(next);setExt(null);}};
 
  const range=rectOf(sel,ext??sel);const multi=rectCells(range)>1;
+
+ const contextOwner=useRef<ReturnType<typeof studioContextStore.claim>|null>(null);
+ useEffect(()=>{const owner=studioContextStore.claim('sheets',{id:item.name,kind:'xlsx',dirty:false,readOnly:false});contextOwner.current=owner;return()=>{owner.release();contextOwner.current=null;};},[item.name,item.url]);
+ useEffect(()=>{if(phase.kind!=='ready')return;const count=rectCells(range);setSheetsSelection({file:item.name,sheet,sheetName:book?.sheets.find(s=>s.index===sheet)?.name??'',address,kind:cur?.value.t??'Empty',text:displayValue(cur?.value),formula:cur?.formula??null,dirty,canUndo:!!info?.canUndo,canRedo:!!info?.canRedo,range,workbook:book??undefined,info,layout,style:cur?.style,revision:rev});contextOwner.current?.report({document:{id:item.name,kind:'xlsx',dirty,readOnly:false},selection:{kind:count>1?'many':'one',type:'cell',count,ids:[rangeAddress(range)]},busy:false,services:{workbook:true},data:{sheet,address,range:rangeAddress(range)}});},[phase.kind,item.name,sheet,book,address,cur,dirty,info,layout,rev,range.r0,range.r1,range.c0,range.c1]);
+ const panelOperations=useRef<SheetsPanelController>(null!);
+ panelOperations.current={ready:()=>phase.kind==='ready'&&!!engine.current&&!engine.current.isDisposed,navigate:async(sheetIndex,targetAddress)=>{const target=parseAddress(targetAddress);if(!target||!book?.sheets.some(s=>s.index===sheetIndex&&s.visibility==='Visible'))throw Error('Invalid sheet or cell.');if(draftRef.current!==null)await commit(draftRef.current);setSheet(sheetIndex);setSel(target);setExt(null);setDraft(null);},setCell:async input=>{if(new TextEncoder().encode(input).length>MAX_CELL_BYTES)throw Error('Cell input is too long.');const eng=engine.current!;await eng.set(sheet,address,input);setDraft(null);setDirty(true);setNotice('');setRev(r=>r+1);},readRange:async(input)=>{const r=parsePanelRange(input);if(!r)throw Error('Invalid range.');return (await engine.current!.range(sheet,r.r0,r.c0,r.r1-r.r0+1,r.c1-r.c0+1)).cells;}};
+ useEffect(()=>registerSheetsPanelController({ready:()=>panelOperations.current.ready(),navigate:(...args)=>panelOperations.current.navigate(...args),setCell:input=>panelOperations.current.setCell(input),readRange:input=>panelOperations.current.readRange(input)}),[]);
+ useEffect(()=>{if(phase.kind!=='ready')return;const el=scroller.current;if(!el)return;const top=geo.rowTop(sel.row),left=geo.colLeft(sel.col);if(top<el.scrollTop||top+geo.rowHeight(sel.row)>el.scrollTop+el.clientHeight-HEAD_H)el.scrollTop=Math.max(0,top);if(left<el.scrollLeft||left+geo.colWidth(sel.col)>el.scrollLeft+el.clientWidth-HEAD_W)el.scrollLeft=Math.max(0,left);},[sel.row,sel.col,sheet,geo,phase.kind]);
  const readRange=async()=>{if(rectCells(range)>MAX_READ_CELLS){setNotice(t('sheets.rangeTooLarge'));return null;}
   const r=await engine.current!.range(sheet,range.r0,range.c0,range.r1-range.r0+1,range.c1-range.c0+1);const m=new Map(r.cells.map(c=>[c.address,c]));
   return Array.from({length:range.r1-range.r0+1},(_,i)=>Array.from({length:range.c1-range.c0+1},(_,j)=>displayValue(m.get(addressOf(range.r0+i,range.c0+j))?.value)));};

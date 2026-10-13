@@ -1371,6 +1371,22 @@
       "hasEnabled": true
     },
     {
+      "id": "sheets.analyzeRange",
+      "title": "Analyze spreadsheet range",
+      "category": "Tools",
+      "source": "sheets",
+      "allowInInput": true,
+      "hasEnabled": true
+    },
+    {
+      "id": "sheets.navigate",
+      "title": "Go to spreadsheet cell",
+      "category": "View",
+      "source": "sheets",
+      "allowInInput": true,
+      "hasEnabled": true
+    },
+    {
       "id": "sheets.redo",
       "title": "Redo workbook change",
       "category": "Edit",
@@ -1388,6 +1404,14 @@
         "save",
         "xlsx"
       ],
+      "hasEnabled": true
+    },
+    {
+      "id": "sheets.setCell",
+      "title": "Apply cell value or formula",
+      "category": "Edit",
+      "source": "sheets",
+      "allowInInput": true,
       "hasEnabled": true
     },
     {
