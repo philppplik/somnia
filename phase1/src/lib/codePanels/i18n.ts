@@ -1,0 +1,27 @@
+/** Studio-local catalogue, merged by the common i18n entry point. */
+const rows:Record<string,readonly string[]>={
+ 'code.panel.outline':['DOM outline','DOM-Gliederung','Esquema DOM','Plan DOM','Estrutura DOM'],
+ 'code.panel.responsive':['Responsive','Responsiv','Adaptable','Responsive','Responsivo'],
+ 'code.panel.interactions':['Interactions','Interaktionen','Interacciones','Interactions','Interações'],
+ 'code.panel.source':['Source details','Quelltextdetails','Detalles del código','Détails du code','Detalhes do código'],
+ 'code.panel.filter':['Filter elements','Elemente filtern','Filtrar elementos','Filtrer les éléments','Filtrar elementos'],
+ 'code.panel.noNodes':['No matching HTML elements in this document.','Keine passenden HTML-Elemente in diesem Dokument.','No hay elementos HTML coincidentes en este documento.','Aucun élément HTML correspondant dans ce document.','Nenhum elemento HTML correspondente neste documento.'],
+ 'code.panel.select':['Select one HTML element to inspect its interactions.','Wähle ein HTML-Element, um seine Interaktionen zu prüfen.','Selecciona un elemento HTML para ver sus interacciones.','Sélectionnez un élément HTML pour voir ses interactions.','Selecione um elemento HTML para ver suas interações.'],
+ 'code.panel.noInteractions':['No interaction attributes on this element.','Keine Interaktionsattribute an diesem Element.','Este elemento no tiene atributos de interacción.','Cet élément ne contient aucun attribut d’interaction.','Este elemento não tem atributos de interação.'],
+ 'code.panel.attribute':['Attribute','Attribut','Atributo','Attribut','Atributo'],
+ 'code.panel.value':['Value','Wert','Valor','Valeur','Valor'],
+ 'code.panel.apply':['Apply attribute','Attribut anwenden','Aplicar atributo','Appliquer l’attribut','Aplicar atributo'],
+ 'code.panel.remove':['Remove attribute','Attribut entfernen','Eliminar atributo','Supprimer l’attribut','Remover atributo'],
+ 'code.panel.scriptWarning':['Event handlers are shown as source only, never executed here.','Event-Handler werden nur als Quelltext angezeigt und hier nie ausgeführt.','Los eventos solo se muestran como código, nunca se ejecutan aquí.','Les événements sont affichés comme code et ne sont jamais exécutés ici.','Os eventos são exibidos como código e nunca executados aqui.'],
+ 'code.panel.file':['Active file','Aktive Datei','Archivo activo','Fichier actif','Arquivo ativo'],
+ 'code.panel.lines':['Lines','Zeilen','Líneas','Lignes','Linhas'],
+ 'code.panel.characters':['Characters','Zeichen','Caracteres','Caractères','Caracteres'],
+ 'code.panel.bytes':['UTF-8 bytes','UTF-8-Bytes','Bytes UTF-8','Octets UTF-8','Bytes UTF-8'],
+ 'code.panel.open':['Open a code document to inspect it.','Öffne ein Codedokument, um es zu prüfen.','Abre un documento de código para inspeccionarlo.','Ouvrez un document de code pour l’inspecter.','Abra um documento de código para inspecioná-lo.'],
+ 'code.panel.width':['Preview width','Vorschau-Breite','Ancho de vista previa','Largeur de l’aperçu','Largura da prévia'],
+ 'code.panel.locked':['Locked','Gesperrt','Bloqueado','Verrouillé','Bloqueado'],
+ 'cmd.code.outline.reveal':['Reveal element in source','Element im Quelltext zeigen','Mostrar elemento en el código','Afficher l’élément dans le code','Mostrar elemento no código'],
+ 'cmd.code.attribute.set':['Set element attribute','Elementattribut setzen','Definir atributo del elemento','Définir un attribut de l’élément','Definir atributo do elemento'],
+ 'cmd.code.preview.width':['Set preview width','Vorschau-Breite setzen','Definir ancho de vista previa','Définir la largeur de l’aperçu','Definir largura da prévia'],
+};
+export const CODE_PANEL_CATALOGUES=Object.fromEntries(['en','de','es','fr','pt-BR'].map((locale,i)=>[locale,Object.fromEntries(Object.entries(rows).map(([key,values])=>[key,values[i]]))]));

@@ -20,6 +20,27 @@
       "hasEnabled": true
     },
     {
+      "id": "code.attribute.set",
+      "title": "Set element attribute",
+      "category": "Edit",
+      "source": "core",
+      "hasEnabled": true
+    },
+    {
+      "id": "code.outline.reveal",
+      "title": "Reveal element in source",
+      "category": "View",
+      "source": "core",
+      "hasEnabled": true
+    },
+    {
+      "id": "code.preview.width",
+      "title": "Set preview width",
+      "category": "View",
+      "source": "core",
+      "hasEnabled": true
+    },
+    {
       "id": "collab.join",
       "title": "Join shared project...",
       "category": "Tools",

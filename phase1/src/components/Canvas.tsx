@@ -1,3 +1,6 @@
+import {useCodeStudioContext} from './studios/code/useCodeStudioContext';
+import {useEffect} from 'react';
+import {mountCodePanelCommands} from '../store/codePanelCommands';
 import {FrameworkDetectedBanner} from './FrameworkDetectedBanner';
 import {FrameworkBuildPanel} from './FrameworkBuildPanel';
 import {detectFramework} from '../lib/frameworks/detect';
@@ -31,7 +34,9 @@ function SplitDivider({box,md}:{box:React.RefObject<HTMLDivElement|null>;md?:boo
   onPointerDown={e=>{e.currentTarget.setPointerCapture(e.pointerId);}} onPointerMove={e=>{if(e.currentTarget.hasPointerCapture(e.pointerId))move(e);}} onDoubleClick={()=>patchState({splitRatio:reset})}
   onKeyDown={e=>{const step=e.shiftKey?0.1:0.02;const dir=horizontal?{ArrowUp:-1,ArrowDown:1}[e.key]:{ArrowLeft:-1,ArrowRight:1}[e.key];if(e.key==='Home'||e.key==='Enter'){e.preventDefault();patchState({splitRatio:reset});return;}if(!dir)return;e.preventDefault();patchState({splitRatio:clamp(state.splitRatio+dir*step*(state.splitSwap?-1:1))});}}/>;
 }
-export function Canvas(){const {t}=useT();const raster=useRasterEditor();
+export function Canvas(){
+ useCodeStudioContext();
+ useEffect(()=>mountCodePanelCommands(),[]);const {t}=useT();const raster=useRasterEditor();
  const box=useRef<HTMLDivElement>(null);
  const state=useAppStore();const media=useMedia();const mdView=useMdSource();const activeMedia=media.items.find(i=>i.name===media.active);
  const mdFile=isMarkdown(state.activeFile)&&!activeMedia;
