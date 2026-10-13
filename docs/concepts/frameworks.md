@@ -220,7 +220,7 @@ Gates per milestone: `tsc`, `vitest`, `cargo test`, `check:commands`, i18n parit
 
 ## 10. Open questions for Philipp
 
-1. **Live deployment:** the repo has no deploy doc yet. Is "build on this PC, upload the files over SFTP/SSH to my own server" the right picture, or do you also want hosts like Netlify or Vercel?
+1. **Live deployment:** see `live-deployment.md`. It covers building on this PC and uploading over SSH to your own server with automatic SSL. Do you also want hosts like Netlify or Vercel later?
 2. **Helper download:** OK that Somnia downloads a ~40 MB helper program once on first framework use, instead of making the installer bigger?
 3. **Gallery wording:** are "Simple page / Interactive app / Content site" clear to you, or do you prefer the framework names (React, Vue, ...) on the first screen?
 4. **Visual editing:** accept that framework projects get preview plus code (and click-to-code), while the drag-and-drop canvas stays for HTML?
