@@ -86,3 +86,15 @@ test('controller enforces consent scope and review conflict gates for any inject
  assert.equal(await c.execute({type:'consent',runId:'run-network',requestId:'request-1',choice:'allow_for_run'}),false);assert.equal(t.calls.length,0);
  await c.connect();assert.equal(await c.execute({type:'review',runId:'run-copy',reviewRevision:'review-1',decision:'apply',paths:['about.html']}),false);assert.equal(t.calls.length,0);c.disconnect();
 });
+
+test('plain-object native rejections keep their stable id and no paths',async()=>{
+ const transport=createFixtureVibeSpaceTransport('test');
+ transport.snapshot=async()=>{throw {id:'SOM-FS-006',code:'vibespace_ownership_or_recovery',message:'Vibe Space is owned by another GUI/CLI; close it before opening'};};
+ const c=new VibeSpaceController(transport);await c.connect();
+ assert.match(c.getSnapshot().error??'',/SOM-FS-006/);
+ assert.match(c.getSnapshot().error??'',/owned by another/);
+ transport.snapshot=async()=>{throw {id:'X-1',message:'C:\\Users\\me\\secret'};};
+ const d=new VibeSpaceController(transport);await d.connect();
+ assert.doesNotMatch(d.getSnapshot().error??'',/Users/);
+ c.disconnect();d.disconnect();
+});

@@ -1,6 +1,14 @@
 import {canRetry,reviewPathsAllowed,studioControls,initialVibeState,vibeReducer,type VibeViewState} from './state';
 import {parseEvent,parseSnapshot,validateCommand} from './validation';
 import type {VibeEvent,VibeIntent,VibeSpaceTransport} from './types';
+/** Native commands reject with plain objects or strings, not Error. Keep the stable code (never paths) so a user can report it. */
+function describeNativeFault(error:unknown){
+ const base='Vibe Space could not complete the request.';
+ const code=error&&typeof error==='object'&&typeof (error as {id?:unknown}).id==='string'?(error as {id:string}).id:'';
+ const kind=error&&typeof error==='object'&&typeof (error as {message?:unknown}).message==='string'?(error as {message:string}).message:'';
+ const safe=/^[A-Za-z0-9 ;:,.'\/_-]{1,160}$/.test(kind)&&!/\\|[A-Za-z]:|\/[^/ ]+\/[^/ ]/.test(kind)?kind:'';
+ return [base,code?`(${code})`:'',safe].filter(Boolean).join(' ');
+}
 /** Presentation lifecycle only. No timers or TS orchestration. */
 export class VibeSpaceController {
  private state:VibeViewState=initialVibeState;
@@ -17,7 +25,7 @@ export class VibeSpaceController {
  getSnapshot=()=>this.state;
  subscribe=(listener:()=>void)=>{this.listeners.add(listener);return()=>{this.listeners.delete(listener);};};
  private update(action:Parameters<typeof vibeReducer>[1]){this.state=vibeReducer(this.state,action);this.listeners.forEach(l=>l());}
- private error(error:unknown){this.faults++;this.update({type:'error',message:error instanceof Error?error.message:'Vibe Space could not complete the request.'});}
+ private error(error:unknown){this.faults++;this.update({type:'error',message:error instanceof Error?error.message:describeNativeFault(error)});}
  private receive(raw:VibeEvent){
   try{
    const event=parseEvent(raw);

@@ -82,7 +82,7 @@ impl CollectionVersion {
 /// Managed once per app. Configured refs are supplied by native setup, not IPC.
 /// Runtime::open performs artifact recovery. The cached result prevents repeat recovery.
 pub struct VibeSpaceState {
-    runtime: OnceLock<std::result::Result<Arc<Runtime>, AppCommandError>>,
+    runtime: Mutex<Option<Arc<Runtime>>>,
     version: Arc<Mutex<CollectionVersion>>,
     configured: Vec<w::ModelReference>,
 }
@@ -95,20 +95,32 @@ impl VibeSpaceState {
             provider_config(reference)?;
         }
         Ok(Self {
-            runtime: OnceLock::new(),
+            runtime: Mutex::new(None),
             version: Arc::new(Mutex::new(CollectionVersion::default())),
             configured,
         })
     }
     pub(crate) fn runtime(&self, app: &tauri::AppHandle) -> Result<Arc<Runtime>> {
-        self.runtime
-            .get_or_init(|| {
+        // A failed open is never cached: Reload (or a closed second instance) can succeed later.
+        let mut slot = self.runtime.lock().map_err(failed)?;
+        if let Some(runtime) = slot.as_ref() {
+            return Ok(runtime.clone());
+        }
+        let runtime = (|| -> Result<Arc<Runtime>> {
                 let bind_app = app.clone();
                 let data = app.path().app_data_dir().map_err(failed)?.join("vibespace");
                 // Platform gate is compiled natively, never enabled by renderer settings.
-                let runtime = Runtime::open_owned(&data, native_files_enabled(),
-                    somnia_vibespace_core::ownership::OwnerKind::Gui, false)
-                    .map_err(|e| AppCommandError::new("SOM-FS-006", "vibespace_ownership_or_recovery", e.0, true))?;
+                let open = |takeover: bool| {
+                    Runtime::open_owned(&data, native_files_enabled(),
+                        somnia_vibespace_core::ownership::OwnerKind::Gui, takeover)
+                };
+                // The OS lock proves no live owner. A leftover unclean owner record (crash,
+                // kill, installer update) must not lock the GUI out for good: recover once.
+                let runtime = match open(false) {
+                    Err(e) if e.0 == somnia_vibespace_core::runtime::STALE_OWNER_MESSAGE => open(true),
+                    other => other,
+                }
+                .map_err(|e| AppCommandError::new("SOM-FS-006", "vibespace_ownership_or_recovery", e.0, true))?;
                 // Subscribe before commands can start a run. Exactly one publisher per owning state.
                 let mut receiver = runtime.subscribe();
                 let app = app.clone();
@@ -151,10 +163,9 @@ impl VibeSpaceState {
                 // the runtime itself stays open.
                 let _ = crate::vibespace_schedule_commands::bind(&bind_app, runtime.clone());
                 Ok(runtime)
-            })
-            .as_ref()
-            .cloned()
-            .map_err(Clone::clone)
+        })()?;
+        *slot = Some(runtime.clone());
+        Ok(runtime)
     }
     fn changed(&self) -> Result<()> {
         self.version.lock().map_err(failed)?.changed()

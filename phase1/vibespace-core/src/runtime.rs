@@ -13,6 +13,7 @@ use tokio::sync::broadcast;
 use vibespace_engine as engine;
 use vibespace_policy as policy;
 
+pub const STALE_OWNER_MESSAGE: &str = "Vibe Space has a stale/unclean owner; explicit takeover required";
 pub type Result<T> = std::result::Result<T, CoreError>;
 #[derive(Debug)]
 pub struct CoreError(pub &'static str);
@@ -85,7 +86,7 @@ impl Runtime {
                     CoreError("Vibe Space is owned by another GUI/CLI; close it before opening")
                 }
                 crate::ownership::OwnershipError::RecoveryRequired(_) => {
-                    CoreError("Vibe Space has a stale/unclean owner; explicit takeover required")
+                    CoreError(STALE_OWNER_MESSAGE)
                 }
                 _ => CoreError("cannot acquire Vibe Space ownership lock"),
             },
