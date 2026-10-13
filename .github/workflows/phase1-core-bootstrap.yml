@@ -69,11 +69,14 @@ jobs:
       - run: npx playwright install --with-deps chromium
       - run: npm run test:e2e
       - name: Render corpus guards
+        if: ${{ !cancelled() }}
         run: npm run test:render-corpus
       - name: Render goldens (blocking, runner-baselined with approval receipt 2026-10-12)
+        if: ${{ !cancelled() }}
         id: render_goldens
         run: npm run test:render-goldens
       - name: Render determinism probe (two separate runs, identical hashes)
+        if: ${{ !cancelled() }}
         continue-on-error: true
         run: npm run test:render-determinism
       - name: Retain render golden diffs
