@@ -27,11 +27,11 @@ test('default layout shows Files left and the inspector right',()=>{
 test('rail customization edits one side without touching the other',()=>{
  const c=ctx('none');
  const down=editRailOverrides(documentsStudio,undefined,'moveDown',{side:'left',id:'files'},c)!;
- assert.deepEqual(railModel(documentsStudio,'left',down,c).visible.map(i=>i.id),['pages','files','outline','search','versions']);
+ assert.deepEqual(railModel(documentsStudio,'left',down,c).visible.map(i=>i.id),['pages','files','outline','find','search','versions']);
  assert.deepEqual(railModel(documentsStudio,'right',down,c).visible.map(i=>i.id),['inspector']);
  const hidden=editRailOverrides(documentsStudio,down,'hide',{side:'left',id:'pages'},c)!;
  const m=railModel(documentsStudio,'left',hidden,c);
- assert.deepEqual(m.visible.map(i=>i.id),['files','outline','search','versions']);assert.deepEqual(m.hidden.map(i=>i.id),['pages']);
+ assert.deepEqual(m.visible.map(i=>i.id),['files','outline','find','search','versions']);assert.deepEqual(m.hidden.map(i=>i.id),['pages']);
  const unpinned=editRailOverrides(documentsStudio,hidden,'unpin',{side:'left',id:'versions'},c)!;
  assert.deepEqual(railModel(documentsStudio,'left',unpinned,c).overflow.map(i=>i.id),['versions']);
  const moved=editRailOverrides(documentsStudio,undefined,'move',{side:'left',id:'versions',to:0},c)!;
@@ -39,7 +39,7 @@ test('rail customization edits one side without touching the other',()=>{
  assert.equal(editRailOverrides(documentsStudio,undefined,'moveUp',{side:'left',id:'files'},c),null);
  assert.equal(editRailOverrides(documentsStudio,undefined,'hide',{side:'right',id:'pages'},c),null);
  const reset=editRailOverrides(documentsStudio,hidden,'reset',{side:'left',id:''},c)!;
- assert.deepEqual(railModel(documentsStudio,'left',reset,c).visible.length,5);
+ assert.deepEqual(railModel(documentsStudio,'left',reset,c).visible.length,6);
 });
 test('moving a right item keeps the left order',()=>{
  const c=ctx('none');

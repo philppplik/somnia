@@ -1,30 +1,39 @@
 import {registerStudio,type StudioDef} from './registry';
 import type {PanelDef,RailItemDef,StudioShellDef,InspectorDef,StudioLayout} from '../shell/types';
+import {DOCUMENTS_PANEL_COMMANDS,DOCUMENTS_PANELS} from '../documents/panels';
+import {registerDocumentsRailIcons} from '../documents/railIcons';
 /**
- * Documents studio manifest (pure data). Hosts live in components/documents/registerShell.ts.
- * Left: Files, Pages (thumbnails), Outline (paragraph list), Search, Versions. Right: the generic inspector with
- * Document, Selected paragraph, Edit text and Risks sections. Canvas context: `selection` (caret paragraph) and
- * `services.ready` / `services.risks` are published by DocumentsCanvas.
+ * Documents studio manifest (pure data). Hosts live in components/documents/registerShell.ts (foundation:
+ * pages, inspector text/risks; wave A: outline, find, inspector document/selection).
+ * Left rail: Files, Pages (thumbnails), Outline (paragraph list), Find (in the open document), Search, Versions.
+ * Right rail: the generic inspector with the Document, Selected paragraph, Edit text and Risks sections.
+ * Canvas context: `selection` (caret paragraph) and `services.ready` / `services.risks`, published by DocumentsCanvas.
+ *
+ * Ownership (shell wave): this manifest — rails, layout, the inspector section list — is wave B.
+ * Panel definitions (outline/find) and panel commands come from wave A (lib/documents/panels.ts) and are
+ * composed here; the studio-agnostic panels (files/search/versions) reuse the Code hosts.
  */
-const left=(id:string,component:string,title:string,titleKey?:string):PanelDef=>({id,title,titleKey,component,side:'left',icon:undefined});
+const left=(id:string,component:string,title:string,titleKey?:string,icon?:string):PanelDef=>({id,title,titleKey,component,side:'left',icon});
 export const documentsPanels:readonly PanelDef[]=[
  left('files','code.files','Files'),
- left('pages','documents.pages','Pages','documents.rail.pages'),
- left('outline','documents.outline','Outline','documents.rail.outline'),
+ left('pages','documents.pages','Pages','documents.rail.pages','BookOpen'),
+ ...DOCUMENTS_PANELS,
  left('search','code.search','Search'),
  left('versions','code.versions','Versions'),
- {id:'inspector',title:'Document',titleKey:'documents.inspector',component:'shell.inspector',side:'right',defaultOpen:true},
+ {id:'inspector',title:'Document',titleKey:'documents.inspector',component:'shell.inspector',side:'right',icon:'FileText',defaultOpen:true},
 ];
 export const documentsLeftRail:readonly RailItemDef[]=[
  {id:'files',icon:'Files',label:'Files',kind:'panel',panel:'files',order:10},
- {id:'pages',icon:'Copy',label:'Pages',labelKey:'documents.rail.pages',kind:'panel',panel:'pages',order:20},
- {id:'outline',icon:'Hash',label:'Outline',labelKey:'documents.rail.outline',kind:'panel',panel:'outline',order:30},
- {id:'search',icon:'Search',label:'Search',kind:'panel',panel:'search',order:40},
- {id:'versions',icon:'VersionsIcon',label:'Versions',kind:'panel',panel:'versions',order:50},
+ {id:'pages',icon:'BookOpen',label:'Pages',labelKey:'documents.rail.pages',kind:'panel',panel:'pages',order:20},
+ {id:'outline',icon:'List',label:'Outline',labelKey:'documents.rail.outline',kind:'panel',panel:'outline',order:30},
+ {id:'find',icon:'FileSearchCorner',label:'Find',labelKey:'documents.rail.find',kind:'panel',panel:'find',order:40},
+ {id:'search',icon:'Search',label:'Search',kind:'panel',panel:'search',order:50},
+ {id:'versions',icon:'VersionsIcon',label:'Versions',kind:'panel',panel:'versions',order:60},
 ];
 export const documentsRightRail:readonly RailItemDef[]=[
  {id:'inspector',icon:'FileText',label:'Document',labelKey:'documents.inspector',kind:'panel',panel:'inspector',order:10},
 ];
+/** Section list (wave B). document/selection sections are wave A hosts; text/risks are foundation hosts. */
 export const documentsInspector:InspectorDef={titleKey:'documents.inspector',emptyKey:'documents.inspector.none',sections:[
  {id:'document',title:'Document',titleKey:'documents.inspector.section.document',component:'documents.inspector.document',order:10},
  {id:'selection',title:'Selected paragraph',titleKey:'documents.inspector.section.selection',component:'documents.inspector.selection',when:"selection.kind == 'one'",order:20},
@@ -33,8 +42,8 @@ export const documentsInspector:InspectorDef={titleKey:'documents.inspector',emp
 ]};
 export const DOCUMENTS_LAYOUT:StudioLayout={leftOpen:true,rightOpen:true,leftWidth:260,rightWidth:320,leftPanels:['files'],rightPanels:['inspector'],activeLeft:'files',activeRight:'inspector'};
 export const documentsShell:StudioShellDef={panels:documentsPanels,leftRail:documentsLeftRail,rightRail:documentsRightRail,inspector:documentsInspector,defaultLayout:DOCUMENTS_LAYOUT};
-/** Panel-owned commands, for the validator and the palette. */
-export const DOCUMENTS_COMMANDS=['documents.zoomIn','documents.zoomOut','documents.zoomReset','documents.undo','documents.redo','documents.pages.goto','documents.outline.goto'] as const;
+/** Panel-owned commands, for the validator and the palette. Foundation commands plus the wave A panel commands. */
+export const DOCUMENTS_COMMANDS=[...new Set(['documents.zoomIn','documents.zoomOut','documents.zoomReset','documents.undo','documents.redo','documents.pages.goto','documents.outline.goto',...DOCUMENTS_PANEL_COMMANDS])] as readonly string[];
 export const documentsStudio:StudioDef={
  id:'documents',label:'studio.documents',icon:'FileText',order:1,
  formats:[{ext:'docx',mime:'application/vnd.openxmlformats-officedocument.wordprocessingml.document',priority:10}],
@@ -49,3 +58,4 @@ export const documentsStudio:StudioDef={
  agent:{tools:[],contextProviders:['activeDocument'],quickActions:[]},deriveContext:context=>context
 };
 registerStudio(documentsStudio);
+registerDocumentsRailIcons();
