@@ -11,6 +11,8 @@ export const LIFECYCLE_CATALOGUES: Record<string, Record<string, string>> = {
     'set.perf.profile.normal': 'Standard',
     'set.perf.profile.high': 'High memory',
     'set.perf.profile.hint': 'Automatic picks from device hints. Low memory disables the warm slot and admits one heavy job.',
+    'set.perf.clear': 'Clear saved studio checkpoints',
+    'set.perf.clear.done': 'Cleared',
   },
   de: {
     'set.perf.title': 'Leistung',
@@ -23,6 +25,8 @@ export const LIFECYCLE_CATALOGUES: Record<string, Record<string, string>> = {
     'set.perf.profile.normal': 'Standard',
     'set.perf.profile.high': 'Viel Arbeitsspeicher',
     'set.perf.profile.hint': 'Automatisch wählt anhand der Gerätemerkmale. Wenig Arbeitsspeicher deaktiviert den Warm-Slot und lässt einen schweren Job zu.',
+    'set.perf.clear': 'Gespeicherte Studio-Wiederherstellungspunkte löschen',
+    'set.perf.clear.done': 'Gelöscht',
   },
   es: {
     'set.perf.title': 'Rendimiento',
@@ -35,6 +39,8 @@ export const LIFECYCLE_CATALOGUES: Record<string, Record<string, string>> = {
     'set.perf.profile.normal': 'Estándar',
     'set.perf.profile.high': 'Mucha memoria',
     'set.perf.profile.hint': 'Automático elige según el dispositivo. Poca memoria desactiva la ranura en caliente y admite un trabajo pesado.',
+    'set.perf.clear': 'Borrar los puntos de restauración de estudios',
+    'set.perf.clear.done': 'Borrados',
   },
   fr: {
     'set.perf.title': 'Performances',
@@ -47,6 +53,8 @@ export const LIFECYCLE_CATALOGUES: Record<string, Record<string, string>> = {
     'set.perf.profile.normal': 'Standard',
     'set.perf.profile.high': 'Mémoire élevée',
     'set.perf.profile.hint': 'Automatique choisit selon l’appareil. Mémoire faible désactive l’emplacement tiède et admet une seule tâche lourde.',
+    'set.perf.clear': 'Effacer les points de restauration des studios',
+    'set.perf.clear.done': 'Effacés',
   },
   'pt-BR': {
     'set.perf.title': 'Desempenho',
@@ -59,5 +67,7 @@ export const LIFECYCLE_CATALOGUES: Record<string, Record<string, string>> = {
     'set.perf.profile.normal': 'Padrão',
     'set.perf.profile.high': 'Muita memória',
     'set.perf.profile.hint': 'Automático escolhe conforme o dispositivo. Pouca memória desativa o slot morno e admite um trabalho pesado.',
+    'set.perf.clear': 'Limpar pontos de restauração dos estúdios',
+    'set.perf.clear.done': 'Limpos',
   },
 };

@@ -308,7 +308,7 @@ export class StudioLifecycleManager {
       return false;
     }
     if (r.generation !== generation || r.state !== 'warm') return false; // reactivated mid-snapshot
-    if (!this.checkpoints.put(snapshot)) {
+    if (!(await this.checkpoints.put(snapshot))) {
       this.telemetry.event({ type: 'checkpoint-refused', studioId, bytes: snapshot.bytesEstimate });
       r.pinReasons = ['checkpoint-budget'];
       return false;
@@ -333,6 +333,7 @@ export class StudioLifecycleManager {
 
   private async resumeInternal(r: StudioRecord): Promise<boolean> {
     const adapter = this.adapterOf(r);
+    if (!this.checkpoints.get(r.id)) await this.checkpoints.hydrate(r.id);
     const snapshot = this.checkpoints.get(r.id);
     if (!adapter?.resume || !snapshot) {
       this.checkpoints.delete(r.id);
@@ -449,6 +450,11 @@ export class StudioLifecycleManager {
     const allowed = envelope <= 0 || this.trackedBytes() / envelope < PRESSURE_CRITICAL_RATIO;
     if (!allowed) this.telemetry.event({ type: 'admission-blocked', bytes: this.trackedBytes() });
     return allowed;
+  }
+
+  /** Drop all checkpoints (memory and durable spill). User-initiated cleanup. */
+  clearCheckpoints(): void {
+    this.checkpoints.clear();
   }
 
   /**

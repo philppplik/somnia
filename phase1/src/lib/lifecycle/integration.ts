@@ -1,4 +1,6 @@
 import { NORMAL_PROFILE, resolveProfile } from './budgets';
+import { CheckpointStore } from './checkpoints';
+import { IdbCheckpointSpill } from './idbSpill';
 import { StudioLifecycleManager, type PressureLevel } from './manager';
 import { readLifecycleSettings } from './settings';
 import { getLifecycleTelemetry } from './telemetry';
@@ -32,8 +34,15 @@ let current: StudioLifecycleManager | null = null;
 export const getStudioLifecycle = (): StudioLifecycleManager | null => current;
 
 export function installStudioLifecycle(wiring: LifecycleWiring): () => void {
+  // Suspended checkpoints share the concept's 64 MiB bucket; overflow spills
+  // to IndexedDB (local, private, 7-day retention) instead of being refused.
+  const checkpoints = new CheckpointStore(NORMAL_PROFILE.buckets.suspended, {
+    spill: IdbCheckpointSpill.available() ? new IdbCheckpointSpill() : undefined,
+    onSpillError: () => wiring.onProblem?.('Recovery checkpoints could not be written to local storage; affected studios stay in memory.'),
+  });
   const manager = new StudioLifecycleManager({
     resolveAdapter: wiring.resolveAdapter,
+    checkpoints,
     isEnabled: () => readLifecycleSettings().enabled,
     profile: () => {
       const settings = readLifecycleSettings();
