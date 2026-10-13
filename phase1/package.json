@@ -25,7 +25,6 @@
     "test:auth": "tsx --test src/lib/agent/oauth/*.test.ts",
     "test:updater": "node --test scripts/updater-e2e/lib.test.mjs",
     "typecheck": "tsc --noEmit",
-    "check:commands": "node scripts/errors/gen-commands.mjs --check",
     "inventory:ui-commands": "tsx scripts/dump-ui-commands.ts",
     "check:no-control": "node scripts/check-no-control.mjs",
     "build:control": "VITE_SOMNIA_CONTROL=1 vite build --outDir dist-control",
@@ -43,9 +42,11 @@
     "predev": "node scripts/copy-pdfjs-assets.mjs",
     "prebuild": "node scripts/copy-pdfjs-assets.mjs",
     "test:vibespace": "tsx --import ./scripts/test-css-register.mjs --test src/lib/vibespace/*.test.ts src/components/vibespace/*.test.tsx",
-    "check:layers": "depcruise packages/editor-core/src src --config .dependency-cruiser.cjs --ignore-known --output-type err",
-    "layers:baseline": "depcruise packages/editor-core/src src --config .dependency-cruiser.cjs --output-type baseline --output-to .dependency-cruiser-known-violations.json && depcruise packages/editor-core/src src --config .dependency-cruiser.cjs --output-type err-long --output-to docs/layers-violations.txt || true",
-    "test:board": "tsx --test src/lib/agentBoard/*.test.ts src/components/agentBoard/*.test.tsx"
+    "check:layers": "node scripts/layers.mjs check",
+    "layers:baseline": "node scripts/layers.mjs baseline",
+    "test:board": "tsx --test src/lib/agentBoard/*.test.ts src/components/agentBoard/*.test.tsx",
+    "test:layers": "node --test scripts/layers.test.mjs",
+    "layers:install": "npm ci --prefix tools/layers --ignore-scripts"
   },
   "dependencies": {
     "@base-ui/react": "1.8.0",
@@ -116,7 +117,6 @@
     "@types/spdx-expression-parse": "3.0.5",
     "@types/turndown": "^5.0.6",
     "@vitejs/plugin-react": "6.1.1",
-    "dependency-cruiser": "18.6.0",
     "tailwindcss": "4.3.3",
     "tsx": "4.21.0",
     "typescript": "7.0.2",

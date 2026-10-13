@@ -40,8 +40,8 @@ jobs:
         run: npm run documents:build
       - name: Sound Studio core tests (native, real MP3 fixture)
         run: cargo +1.95.0 test --locked --manifest-path sound/Cargo.toml
-      - name: Layer rules (new violations only)
-        run: npm run check:layers
+      - name: Layer rules (isolated TypeScript 6 analysis)
+        run: npm run layers:install && npm run test:layers && npm run check:layers
       - name: Dreamweaver parity checklist is current
         run: npm run check:dreamweaver-parity
       - name: Headless CLI and TUI crate tests (native)
