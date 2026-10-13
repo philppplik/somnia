@@ -13,7 +13,7 @@ import fr from '../locales/fr.json';
 import ptBR from '../locales/pt-BR.json';
 import {PHOTOS_CATALOGUES} from './photos/i18n';
 import {CODE_RAIL_CATALOGUES} from './codeRail/i18n';
-import {PHOTOS_PANEL_CATALOGUES} from './photos/panelI18n';
+import {PHOTOS_PANEL_CATALOGUES} from './photosPanelI18n';
 import {SOUND_CATALOGUES} from './sound/i18n';
 import {VIDEO_CATALOGUES} from './video/i18n';
 import {RAIL_CATALOGUES} from './railI18n';

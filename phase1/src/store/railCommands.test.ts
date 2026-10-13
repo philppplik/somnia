@@ -11,7 +11,7 @@ import {studioDefaultLayout,studioPanels} from '../lib/shell/codePanels';
 const get=(op:string)=>commandRegistry.get('shell.rail.'+op)!;
 const ov=()=>shellLayoutStore.get('documents',studioDefaultLayout(documentsStudio),studioPanels(documentsStudio)).railOverrides;
 test('rail commands are unavailable in a studio without customizable rails',()=>{
- patchState({activeStudio:'code'});assert.equal(get('pin').enabled!(),false);
+ patchState({activeStudio:'design'});assert.equal(get('pin').enabled!(),false);
 });
 test('with a payload target the commands work without a focused rail icon (overflow menu path)',async()=>{
  patchState({activeStudio:'documents'});setFocusedRailItem(null);
