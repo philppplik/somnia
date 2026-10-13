@@ -21,7 +21,7 @@ test('card: switch is a sibling of the open button, not nested, and has a named 
  assert.match(html,/role="switch"[^>]*aria-label="Disable Tidy HTML"|aria-label="Disable Tidy HTML"[^>]*role="switch"/);
  const main=/<button[^>]*ext-card-main[^>]*>([\s\S]*?)<\/button>/.exec(html)![1];
  assert.equal(main.includes('role="switch"'),false);assert.equal(main.includes('<button'),false);
- assert.match(html,/Reads project|Edits project/);assert.match(html,/aria-label="Publisher identity confirmed by the signed index"/);
+ assert.match(html,/Reads project|Edits project/);assert.match(html,/aria-label="Reviewed by Somnia maintainers"/);
 });
 test('card for an extension without grants says "No sensitive access" and "No permission calls"',()=>{
  const html=renderToStaticMarkup(<ul><ExtensionCard ext={FIXTURE_EXTENSIONS[0]} host={host} onOpen={noop} onOverflow={noop} onChanged={noop}/></ul>);
@@ -35,7 +35,7 @@ test('installed empty and search-empty states',()=>{
 });
 test('detail: permissions, update needs OK, signed-match only with a digest, no second notice',()=>{
  const html=renderToStaticMarkup(<DetailView ext={FIXTURE_EXTENSIONS[1]} host={host} log={{events:FIXTURE_EVENTS.slice(0,3),state:{status:'ready',events:[],nextOffset:null,total:3}}} onBack={noop} onChanged={noop} onActivity={noop} onRemoved={noop}/>);
- assert.match(html,/Read project files/);assert.match(html,/Update needs your OK/);assert.match(html,/Matches signed index entry/);assert.match(html,/Copy full hash/);
+ assert.match(html,/Read project files/);assert.match(html,/Update needs your OK/);assert.match(html,/Matches index entry/);assert.match(html,/Copy full hash/);
  assert.match(html,/History stays after restart/);assert.equal(html.includes('role="note"'),false);
  assert.match(html,/a41d7e…90bc/);assert.match(html,/aria-label="Full SHA-256: a41d7e0c/);
 });

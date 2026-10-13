@@ -1,4 +1,4 @@
-import {classifyFetchError,fetchCatalog,reviewCatalogPackage,installReviewedPackage,type CatalogEntry,type ReviewedPackage} from './catalog';
+import {classifyFetchError,fetchCatalog,isReviewed,reviewCatalogPackage,installReviewedPackage,type CatalogEntry,type ReviewedPackage} from './catalog';
 import {installStateOf} from './catalogView';
 import type {Permission} from './types';
 import {installExtension,loadExtensions,removeExtension,setExtensionEnabled,enabledIds,revokedPermissions,setPermissionRevoked} from './registry';
@@ -138,7 +138,7 @@ export function createDefaultHost(options:DefaultHostOptions={}):ExtensionsPopup
   },
   browse:async signal=>{
    try{const entries=await fetchCatalog(signal);const inst=loadExtensions();
-    const list:BrowseEntry[]=entries.map(e=>{const s=installStateOf(e,inst).state;return{id:e.id,name:e.name,description:e.description,publisher:e.author,badge:null,permissionLabels:e.permissions.filter(p=>p==='project.read'||p==='project.write'),verified:false,state:s==='update-available'?'update-consent':s==='not-installed'?'available':'installed'};});
+    const list:BrowseEntry[]=entries.map(e=>{const s=installStateOf(e,inst).state;return{id:e.id,name:e.name,description:e.description,publisher:e.author,badge:isReviewed(e)?{criterion:`Reviewed by ${e.reviewedBy??'the Somnia maintainers'}`}:null,permissionLabels:e.permissions.filter(p=>p==='project.read'||p==='project.write'),verified:isReviewed(e),state:s==='update-available'?'update-consent':s==='not-installed'?'available':'installed'};});
     entries.forEach(e=>reviews.delete(e.id));return{status:'ready',entries:list,fetchedAt:new Date().toISOString(),offline:false};
    }catch(e){return{status:'unavailable',reason:classifyFetchError(e)};}
   },
