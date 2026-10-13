@@ -20,14 +20,15 @@ Rules are in [DOCS-STYLE.md](DOCS-STYLE.md).
 - Status labels on every guide page.
 - Link checker: `node scripts/docs-check.mjs` (fixed 3 broken extension example links).
 - Wiki generator: `node scripts/wiki-sync.mjs`.
+- Patch 2: one guide page per studio (`docs/guide/studios/`), hero-action status matched to the feature branches, root handover docs moved to `docs/handover/` and `docs/research/` with links fixed.
 
 ## Next
 
-1. One page per studio under `docs/guide/studios/`, each with: what it opens, rail and panels, hero action, export, limits, shortcuts. Source the facts from the studio manifests and shell docs. Start with Code, then the rest.
+1. Deepen the studio pages: shortcuts, panel-by-panel walkthroughs, screenshots. Pages exist; Photos, Design and Vibe Space need a check against the running app.
 2. Deploy tutorial with a worked, placeholder-only example once a real-server acceptance run exists. Until then the page stays a status boundary plus the verified mechanics.
 3. Frameworks: one table per supported framework (template, preview, build, known limits) once beta.2 notes are final. Add Next, Astro, Nuxt and SvelteKit only when shipped.
 4. Hero actions: replace the "planned" table with shipped behaviour per studio, with shortcut and menu entry.
-5. Move stray root-level technical docs (`*-HANDOVER.md`, `PEN-PATH-*`) into topic folders or `docs/handover/`, fixing links in the same change. Needs the link checker green.
+5. Continue moving loose root-level technical docs into topic folders (e.g. `VECTOR*.md`, `PHOTOS-*`, `PDF-FORMS.md`), fixing links in the same change.
 6. Add the docs checker to CI as a docs-only job (no Actions minutes beyond the existing budget; run it in the existing lint job).
 7. Per-release: update the status labels from the release notes and regenerate the wiki.
 8. Translations: only UI strings are translated today. Docs stay English.

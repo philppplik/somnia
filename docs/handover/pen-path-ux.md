@@ -6,7 +6,7 @@ Branch: docs/wave4-pen-path-ux.
 
 ## Delivered
 
-PEN-PATH-UX-RESEARCH.md: English source-backed comparison of Illustrator, Figma, Inkscape and Penpot; proposed Pen states, handle constraints, Layers, shortcuts, Shape Builder and edge-case tests. Honest open-decision list included.
+research/pen-path-ux.md: English source-backed comparison of Illustrator, Figma, Inkscape and Penpot; proposed Pen states, handle constraints, Layers, shortcuts, Shape Builder and edge-case tests. Honest open-decision list included.
 
 Penpot develop source pinned at cb1118f9045c83784008e2d8ae112abbb3f99320. MPL-2.0 and ClojureScript integration implications recorded. No code, translated source, assets or dependencies imported.
 

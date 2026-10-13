@@ -16,6 +16,9 @@ function* walk(p) {
   }
 }
 
+const ignoreFile = join(root, 'docs', '.docs-check-ignore');
+const ignored = new Set(existsSync(ignoreFile) ? readFileSync(ignoreFile, 'utf8').split('\n').map((l) => l.trim()).filter((l) => l && !l.startsWith('#')) : []);
+
 let bad = 0;
 for (const t of targets) {
   for (const f of walk(t)) {
@@ -25,6 +28,7 @@ for (const t of targets) {
       if (/^(https?:|mailto:|#)/.test(href)) continue;
       href = href.split('#')[0];
       if (!href) continue;
+      if (ignored.has(`${f.replace(root + '/', '')} ${m[1]}`)) continue;
       if (!existsSync(resolve(dirname(f), decodeURI(href)))) {
         console.log(`${f.replace(root + '/', '')}: broken link ${m[1]}`);
         bad++;

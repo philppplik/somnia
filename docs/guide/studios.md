@@ -6,16 +6,16 @@ Status of each studio is **Stable** or **Pre-release** as shown in the release n
 
 | Studio | Works on | Technical docs |
 | --- | --- | --- |
-| Code | HTML, CSS, JS, TS and other text files; design, split and code views; live preview | [Live preview](../live-preview-architecture.md), [Modes](../studios/MODES.md), [Components](../features/component-system.md) |
-| Documents | Word-style documents | [Documents rail](../DOCUMENTS-STUDIO-RAIL.md) |
-| Sheets | Spreadsheets | [Schema forms](../SCHEMA-FORMS.md), [Sheets shell](../concepts/sheets-shell-rail.md) |
-| Slides | Presentations | [Slides packages](../studios/SLIDES-PACKAGE-1.md), [Slides shell](../concepts/slides-shell-panels.md) |
-| Sound | Audio | [Sound](../studios/sound.md), [Sound shell](../studios/sound-shell.md) |
-| Video | Timeline, trim, titles, export | [Video](../studios/video.md), [Video shell](../studios/video-shell.md) |
-| Design | Artboards, SVG | [Design QA](../studios/design-qa.md), [Design shell](../studios/design-shell.md) |
-| Vector | Paths, shapes, layers, pen tool | [Vector studio](../studios/vector-studio.md), [Vector tools](../studios/vector-tools.md) |
-| Photos | Non-destructive raster editing | [Photos panels](../PHOTOS-STUDIO-PANELS.md), [Photos rail](../PHOTOS-STUDIO-RAIL.md) |
-| Vibe Space | Autonomous agents with review and a board | [Vibe Space concept](../concepts/vibespace.md), [Vibe Space UI](../vibespace/ui.md), [Policy](../vibespace/policy.md) |
+| [Code](studios/code.md) | HTML, CSS, JS, TS and other text files; design, split and code views; live preview | [Live preview](../live-preview-architecture.md), [Modes](../studios/MODES.md), [Components](../features/component-system.md) |
+| [Documents](studios/documents.md) | Word-style documents | [Documents rail](../DOCUMENTS-STUDIO-RAIL.md) |
+| [Sheets](studios/sheets.md) | Spreadsheets | [Schema forms](../SCHEMA-FORMS.md), [Sheets shell](../concepts/sheets-shell-rail.md) |
+| [Slides](studios/slides.md) | Presentations | [Slides packages](../studios/SLIDES-PACKAGE-1.md), [Slides shell](../concepts/slides-shell-panels.md) |
+| [Sound](studios/sound.md) | Audio | [Sound](../studios/sound.md), [Sound shell](../studios/sound-shell.md) |
+| [Video](studios/video.md) | Timeline, trim, titles, export | [Video](../studios/video.md), [Video shell](../studios/video-shell.md) |
+| [Design](studios/design.md) | Artboards, SVG | [Design QA](../studios/design-qa.md), [Design shell](../studios/design-shell.md) |
+| [Vector](studios/vector.md) | Paths, shapes, layers, pen tool | [Vector studio](../studios/vector-studio.md), [Vector tools](../studios/vector-tools.md) |
+| [Photos](studios/photos.md) | Non-destructive raster editing | [Photos panels](../PHOTOS-STUDIO-PANELS.md), [Photos rail](../PHOTOS-STUDIO-RAIL.md) |
+| [Vibe Space](studios/vibe-space.md) | Autonomous agents with review and a board | [Vibe Space concept](../concepts/vibespace.md), [Vibe Space UI](../vibespace/ui.md), [Policy](../vibespace/policy.md) |
 
 ## Concepts shared by all studios
 
