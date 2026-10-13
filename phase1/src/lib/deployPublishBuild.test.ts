@@ -80,3 +80,11 @@ test('every key of the build step exists in all five locales', () => {
     for (const k of keys) assert.ok(t[k], `${l} ${k}`);
   }
 });
+
+test('install memo: first publish installs, same dependencies skip, changed dependencies or a failed build install again', async () => {
+  const { createInstallMemo } = await import('./deploy/publishModel');
+  const m = createInstallMemo();
+  assert.equal(m.needsInstall('p', 'a'), true); m.record('p', 'a', true);
+  assert.equal(m.needsInstall('p', 'a'), false); assert.equal(m.needsInstall('p', 'b'), true); assert.equal(m.needsInstall('q', 'a'), true);
+  m.record('p', 'a', false); assert.equal(m.needsInstall('p', 'a'), true);
+});

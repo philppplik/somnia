@@ -8,9 +8,13 @@ import { createTauriDeployBackend } from './tauriBackend';
 import { getState as getAppState } from '../../store/appStore';
 import { detectFramework } from '../frameworks/detect';
 import { staticBuilder } from '../frameworks/staticBuildRuntime';
+import { getPreviewResourceSource } from '../previewResourceSource';
+import { createInstallMemo } from './publishModel';
 import { createPublishStore, type PublishStore } from './publishStore';
 
 let store: PublishStore | null = null;
+const installMemo = createInstallMemo();
+const depsOf = () => { const f = getAppState().files; return `${f['package.json'] ?? ''}\u0000${f['package-lock.json'] ?? ''}${f['pnpm-lock.yaml'] ?? ''}${f['yarn.lock'] ?? ''}`; };
 /** Desktop only: the web build has no server engine, so the panel is not offered there. */
 export const publishAvailable = (): boolean => isTauri();
 
@@ -23,7 +27,11 @@ export function getPublishStore(): PublishStore {
     build: {
       // Static framework projects are built first through the F3 command (ProjectRunner + deploy_artifact_collect).
       needed: () => { const f = detectFramework(getAppState().files); return !!f && f.output === 'static'; },
-      run: () => commandDispatcher.runCommand('frameworks.buildStatic', {}, { origin: 'ui' }).then(() => undefined),
+      run: async () => {
+        const pid = getPreviewResourceSource()?.projectId ?? '', fp = depsOf(), install = installMemo.needsInstall(pid, fp);
+        try { await commandDispatcher.runCommand('frameworks.buildStatic', { install }, { origin: 'ui' }); }
+        finally { installMemo.record(pid, fp, staticBuilder.getSnapshot().phase === 'done'); }
+      },
       getSnapshot: staticBuilder.getSnapshot,
       subscribe: staticBuilder.subscribe,
     },

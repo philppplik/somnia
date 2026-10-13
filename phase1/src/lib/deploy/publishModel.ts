@@ -157,3 +157,15 @@ export function describeBuildFailure(errorKey: string | undefined, path?: string
   const key = errorKey && /^frameworks\.(artifact\.[A-Za-z]+|build\.(failed|timeout))$/.test(errorKey) ? errorKey : 'frameworks.build.failed';
   return { code: 'build', messageKey: key, path, actions: ['retry', 'dismiss'], safe: true };
 }
+
+/**
+ * Install runs once per project and dependency list per session. A later publish of the same
+ * package.json/lockfile skips it; any failed build forgets the memo so the next try installs again.
+ */
+export function createInstallMemo() {
+  const done = new Map<string, string>();
+  return {
+    needsInstall: (projectId: string, depsFingerprint: string) => done.get(projectId) !== depsFingerprint,
+    record: (projectId: string, depsFingerprint: string, ok: boolean) => { if (ok) done.set(projectId, depsFingerprint); else done.delete(projectId); },
+  };
+}
