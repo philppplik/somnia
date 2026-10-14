@@ -8,6 +8,8 @@ export function verifiedLocalProvider(provider:OllamaProvider,numCtx?:number):Ag
  const checked=requireLocalCapabilities(provider,numCtx);
  return {id:provider.id,locality:provider.locality,async *stream(request:AgentProviderRequest){
   request.signal.throwIfAborted();
+  // Pin approved context/model before the first await; callers cannot retarget verification.
+  request={...structuredClone({model:request.model,messages:request.messages,tools:request.tools,maxOutputTokens:request.maxOutputTokens}),signal:request.signal};
   const check=await provider.verifyLocalModel(request.model,request.signal);
   request.signal.throwIfAborted();
   if(!check.local)throw new ProviderError(check.reason==='model-not-found'?'model-not-found':check.reason==='unreachable'?'unreachable':'not-local','Native studio mode requires verified local Ollama weights.');
