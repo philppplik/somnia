@@ -1,3 +1,5 @@
+import {LocalAssistantControls} from './LocalAssistantControls';
+import {defaultLocalContext,effectiveLocalChoice} from '../../lib/agent/localAssistant';
 import {LOCAL_TASKS,type LocalTask} from '../../lib/agent/taskRouting';
 import {Field} from '../ui/field';
 import {PromptVoiceInput} from './PromptVoiceInput';
@@ -40,9 +42,9 @@ export function AgentPanel(){
  const quickActions=adapted?resolveAgentQuickActions(definition,commandContext(app,ui,target.path),lookupCommand):[];
  const quickAction=(id:string)=>{const state=getState();if(state.activeStudio!==definition.id)return;void runAgentQuickAction(id,getStudio(state.activeStudio),commandContext(state,getUiContext(),target.path),lookupCommand,executeCommand);};
  const {t}=useT();const [chat,dispatch]=useReducer(chatReducer,initialChat);const [draft,setDraft]=useState('');
- const [task,setTask]=useState<LocalTask>('chat');
+ const [task,setTask]=useState<LocalTask>('chat');const [localChoices,setLocalChoices]=useState(defaultLocalContext);
  const settings=useSyncExternalStore(subscribeAgentSettings,agentSettingsSnapshot,agentSettingsSnapshot);
- const selectedTaskModel=settings.config.localRuntime?.taskModels?.[task];const effectiveProvider=selectedTaskModel?'ollama':settings.config.provider;const effectiveModel=selectedTaskModel??settings.config.model;
+ const selectedTaskModel=settings.config.localRuntime?.taskModels?.[task];const effectiveProvider=selectedTaskModel?'ollama':settings.config.provider;const effectiveModel=effectiveLocalChoice(settings.config,task,localChoices.studio?agentContext?.studioId:undefined).model;
  const {ready:settingsReady,saving,authBusy,error:settingsError}=settings;
  useEffect(()=>{void initializeAgentSettings();},[]);
  useEffect(()=>setDisclosure(null),[settings.config.provider,task,target.path,app.activeStudio,app.editorKind]);
@@ -62,8 +64,8 @@ export function AgentPanel(){
   const text=raw.trim();if(!text||chat.busy||!settingsReady||saving||authBusy)return;
   const pinnedContext=agentContext;const generation=++requestGeneration.current;dispatch({type:'send',text});setDraft('');setDisclosure(null);pinned.current=true;const s=getState();
   stream.current?.close();const sink=createStreamSink(event=>{if(generation===requestGeneration.current)dispatch({type:'event',event});});stream.current=sink;
-  void getAgentCore().then(core=>{if(generation!==requestGeneration.current)return;run.current=core.run({prompt:text,context:{task,activeFile:target.media?'':target.path,activeMedia:target.media?target.path:undefined,selectedElementId:s.selectedElementId,disclosureProvider:disclosure??undefined,studio:pinnedContext}},event=>{if(generation===requestGeneration.current)sink.receive(event);});}).catch(e=>{if(generation!==requestGeneration.current)return;reportError('agent.start',e,{message:'Agent could not start'});sink.receive({type:'error',message:'Agent could not start. Check your configuration and try again.',retryable:true});});
- },[chat.busy,settingsReady,saving,authBusy,disclosure,target.path,target.media,agentContext,task]);
+  void getAgentCore().then(core=>{if(generation!==requestGeneration.current)return;run.current=core.run({prompt:text,context:{task,...(effectiveProvider==='ollama'?{localContext:localChoices}:{}),activeFile:target.media?'':target.path,activeMedia:target.media?target.path:undefined,selectedElementId:s.selectedElementId,disclosureProvider:disclosure??undefined,studio:pinnedContext}},event=>{if(generation===requestGeneration.current)sink.receive(event);});}).catch(e=>{if(generation!==requestGeneration.current)return;reportError('agent.start',e,{message:'Agent could not start'});sink.receive({type:'error',message:'Agent could not start. Check your configuration and try again.',retryable:true});});
+ },[chat.busy,settingsReady,saving,authBusy,disclosure,target.path,target.media,agentContext,task,localChoices,effectiveProvider]);
  const stop=()=>{stream.current?.close(true);requestGeneration.current++;run.current?.cancel();run.current=null;dispatch({type:'stop'});input.current?.focus();};
  const reset=()=>{stop();void getAgentCore().then(c=>c.clear?.());dispatch({type:'reset'});setDraft('');};
  const resolve=async(p:AgentProposal,state:'accepted'|'rejected',decisions?:Decisions)=>{
@@ -89,7 +91,7 @@ export function AgentPanel(){
    {mcpProposals.map(p=><div key={p.id} className="ag-review" data-state="pending" data-testid="mcp-proposal"><AIGeneratedLabel provenance={p.changeSet?.provenance}/><NativeProposalReview proposal={p} onAccept={(pr,d)=>void resolve(pr,'accepted',d)} onReject={()=>void resolve(p,'rejected')}/></div>)}
   </div>
   <div className="ag-bar" aria-hidden="true"><div className="ag-pb"><i/><i/><i/><i/></div><div className="ag-grad"/></div>
-  <div className="ag-inp"><Field label={t('local.task.active')}>{control=><NativeSelect {...control} disabled={chat.busy} value={task} onChange={e=>setTask(e.target.value as LocalTask)}>{LOCAL_TASKS.filter(x=>x!=='vibe').map(x=><option key={x} value={x}>{t('local.task.'+x)}</option>)}</NativeSelect>}</Field><p>{t('local.task.current')}: {settings.config.localRuntime?.taskModels?.[task]??settings.config.model} · {settings.config.localRuntime?.taskModels?.[task]?'ollama / local':settings.config.provider}</p><form className="ag-field" onSubmit={e=>{e.preventDefault();if(chat.busy)stop();else send(draft);}}>
+  <div className="ag-inp"><Field label={t('local.task.active')}>{control=><NativeSelect {...control} disabled={chat.busy} value={task} onChange={e=>setTask(e.target.value as LocalTask)}>{LOCAL_TASKS.filter(x=>x!=='vibe').map(x=><option key={x} value={x}>{t('local.task.'+x)}</option>)}</NativeSelect>}</Field><p>{t('local.task.current')}: {effectiveModel} · {effectiveProvider}</p>{effectiveProvider==='ollama'&&<LocalAssistantControls task={task} draft={draft} onDraft={setDraft} config={settings.config} studioId={agentContext?.studioId} studioText={agentContext?JSON.stringify(agentContext):''} documentText={app.files[target.path]??''} choices={localChoices} onChoices={setLocalChoices} disabled={chat.busy||saving||authBusy}/>}<form className="ag-field" onSubmit={e=>{e.preventDefault();if(chat.busy)stop();else send(draft);}}>
    <NativeInput ref={input} value={draft} disabled={chat.busy||!settingsReady||saving||authBusy} onChange={e=>setDraft(e.target.value)} placeholder={chat.busy?t('agent.input.busy'):t('agent.input.placeholder')} aria-label={t('agent.input.label')} autoComplete="off"/>
    {chat.busy?<NativeButton type="submit" className="ag-send ag-stop" title={t('agent.stop')} aria-label={t('agent.stop')}><Square size={14} fill="currentColor"/></NativeButton>:<NativeButton type="submit" className="ag-send" title={t('agent.send')} aria-label={t('agent.send')} disabled={!draft.trim()||!settingsReady||saving||authBusy}><Send size={17}/></NativeButton>}
   </form><PromptVoiceInput draft={draft} onDraft={setDraft} disabled={chat.busy||!settingsReady||saving||authBusy}/></div>

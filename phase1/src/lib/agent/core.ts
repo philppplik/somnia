@@ -1,5 +1,5 @@
 import type {ChangeSet, Decisions} from '../agentDiff';
-export interface AgentContext {task?:import('./taskRouting').LocalTask;activeFile:string;selectedElementId:string|null;disclosureProvider?:string;activeMedia?:string;studio?:import('./studioContextAdapter').AgentStudioContext}
+export interface AgentContext {localContext?:import('./localAssistant').LocalContextChoices;task?:import('./taskRouting').LocalTask;activeFile:string;selectedElementId:string|null;disclosureProvider?:string;activeMedia?:string;studio?:import('./studioContextAdapter').AgentStudioContext}
 export interface AgentRequest {prompt:string;context:AgentContext}
 export type DiffLine={kind:'add'|'del'|'ctx';text:string};
 export interface AgentProposal {id:string;file:string;lines:DiffLine[];added:number;removed:number;changeSet?:ChangeSet;native?:import('./documentCore').NativeProposal;photo?:import('./photoStudio').PhotoPreview}
