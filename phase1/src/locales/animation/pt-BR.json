@@ -950,5 +950,8 @@
  "cmd.animation.workarea.toLayers": "Ajustar a área de trabalho às camadas selecionadas",
  "animation.export.columns": "Colunas da folha",
  "animation.export.columnsAuto": "Auto",
- "animation.export.problem.columns": "as colunas devem ser de 1 a 256"
+ "animation.export.problem.columns": "as colunas devem ser de 1 a 256",
+ "animation.export.frameCopy": "Copiar quadro para a área de transferência",
+ "animation.export.copied": "Quadro copiado para a área de transferência.",
+ "cmd.animation.export.frameCopy": "Copiar o quadro atual para a área de transferência"
 }

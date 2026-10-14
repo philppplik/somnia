@@ -459,3 +459,13 @@ test('P164 sheet columns setting: validated, used by the plan and the export',as
  assert.equal(a.columns,4);assert.equal(a.rows,2);
  assert.throws(()=>setExportSettings({columns:999}),/columns/);resetExportSettings();setAnimationSession(null);
 });
+
+test('P165 copy frame renders a PNG and refuses cleanly without a clipboard',async()=>{
+ const {copyCurrentFrame,exportState,resetExport}=await import('./exportJob');
+ const s=open();setAnimationSession(s);
+ let got:{b:Blob;n:string}|null=null;
+ await copyCurrentFrame({rasterize:async()=>new Uint8Array([137,80,78,71]),save:(b,n)=>{got={b,n};}});
+ assert.ok(got);assert.equal((got as unknown as {b:Blob}).b.type,'image/png');assert.equal(exportState().kind,'copy');assert.equal(exportState().status,'done');resetExport();
+ await assert.rejects(()=>copyCurrentFrame({rasterize:async()=>new Uint8Array([1])}),/cannot copy images|clipboard/);
+ assert.equal(exportState().status,'error');resetExport();setAnimationSession(null);
+});

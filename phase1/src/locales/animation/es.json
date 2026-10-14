@@ -950,5 +950,8 @@
  "cmd.animation.workarea.toLayers": "Ajustar el área de trabajo a las capas seleccionadas",
  "animation.export.columns": "Columnas de la hoja",
  "animation.export.columnsAuto": "Auto",
- "animation.export.problem.columns": "las columnas deben ser de 1 a 256"
+ "animation.export.problem.columns": "las columnas deben ser de 1 a 256",
+ "animation.export.frameCopy": "Copiar fotograma al portapapeles",
+ "animation.export.copied": "Fotograma copiado al portapapeles.",
+ "cmd.animation.export.frameCopy": "Copiar el fotograma actual al portapapeles"
 }

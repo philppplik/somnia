@@ -950,5 +950,8 @@
  "cmd.animation.workarea.toLayers": "Régler la zone de travail sur les calques sélectionnés",
  "animation.export.columns": "Colonnes de la planche",
  "animation.export.columnsAuto": "Auto",
- "animation.export.problem.columns": "les colonnes doivent aller de 1 à 256"
+ "animation.export.problem.columns": "les colonnes doivent aller de 1 à 256",
+ "animation.export.frameCopy": "Copier l'image dans le presse-papiers",
+ "animation.export.copied": "Image copiée dans le presse-papiers.",
+ "cmd.animation.export.frameCopy": "Copier l'image actuelle dans le presse-papiers"
 }

@@ -950,5 +950,8 @@
  "cmd.animation.workarea.toLayers": "Set the work area to the selected layers",
  "animation.export.columns": "Sheet columns",
  "animation.export.columnsAuto": "Auto",
- "animation.export.problem.columns": "sprite sheet columns must be 1 to 256"
+ "animation.export.problem.columns": "sprite sheet columns must be 1 to 256",
+ "animation.export.frameCopy": "Copy frame to clipboard",
+ "animation.export.copied": "Frame copied to the clipboard.",
+ "cmd.animation.export.frameCopy": "Copy current frame to the clipboard"
 }

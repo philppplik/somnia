@@ -11,7 +11,7 @@ import {exportFrameSvg} from './exportSvg';
 import {Zip,ZipPassThrough,strToU8} from 'fflate';
 import {sheetPlan,packSheet,encodePngRgba,sheetManifest,SheetError} from './spriteSheet';
 /** Observable state of the one export job the studio runs at a time. The UI shows real progress and real failures; nothing reports success before the file was handed to the browser. */
-export interface ExportState{status:'idle'|'running'|'done'|'error';kind:'frame'|'sequence'|'gif'|'apng'|'webm'|null;done:number;total:number;message:string;fileName:string;transparent:boolean;settings:ExportSettings}
+export interface ExportState{status:'idle'|'running'|'done'|'error';kind:'frame'|'copy'|'sequence'|'gif'|'apng'|'webm'|null;done:number;total:number;message:string;fileName:string;transparent:boolean;settings:ExportSettings}
 const idle:ExportState={status:'idle',kind:null,done:0,total:0,message:'',fileName:'',transparent:false,settings:defaultExportSettings()};
 let state=idle;let ctl:AbortController|null=null;const listeners=new Set<()=>void>();
 const set=(s:Partial<ExportState>)=>{state={...state,...s};listeners.forEach(l=>l());};
@@ -51,16 +51,28 @@ function target(format?:ExportFormat){
  if(plan.problems.length)throw new ExportError(problemMessage(plan.problems[0]),plan.problems[0]==='size'?'too-large':plan.problems[0]==='range'?'empty':'too-many');
  return {doc,comp,out:{width:plan.width,height:plan.height},ec:plan.comp};
 }
-async function guarded(kind:'frame'|'sequence'|'gif'|'apng'|'webm',fn:(signal:AbortSignal)=>Promise<{blob:Blob;fileName:string}>,save:(b:Blob,n:string)=>void){
+async function guarded(kind:'frame'|'copy'|'sequence'|'gif'|'apng'|'webm',fn:(signal:AbortSignal)=>Promise<{blob:Blob;fileName:string}>,save:(b:Blob,n:string)=>void|Promise<void>){
  if(state.status==='running')throw new ExportError('An export is already running.','cancelled');
- ctl=new AbortController();set({status:'running',kind,done:0,total:kind==='frame'?1:0,message:'',fileName:''});
- try{const r=await fn(ctl.signal);save(r.blob,r.fileName);set({status:'done',done:state.total,fileName:r.fileName});return r.fileName;}
+ ctl=new AbortController();set({status:'running',kind,done:0,total:kind==='frame'||kind==='copy'?1:0,message:'',fileName:''});
+ try{const r=await fn(ctl.signal);await save(r.blob,r.fileName);set({status:'done',done:state.total,fileName:r.fileName});return r.fileName;}
  catch(e){const msg=e instanceof Error?e.message:String(e);set({status:'error',message:msg});throw e;}
  finally{ctl=null;}
 }
 export function exportCurrentFrame(d:Deps={}){
  const {doc,comp,out}=target();const at=animationSession().getState().view.playhead;
  return guarded('frame',()=>exportFramePng(comp,at,doc.name,d.rasterize??canvasRasterize,state.transparent,doc.assets,out),d.save??downloadBlob);
+}
+/** Puts a PNG on the system clipboard. Refuses with a clear message where the browser has no image clipboard. */
+export async function copyPngToClipboard(blob:Blob){
+ const Item=(globalThis as {ClipboardItem?:typeof ClipboardItem}).ClipboardItem;
+ if(!Item||!navigator.clipboard?.write)throw new ExportError('This browser cannot copy images to the clipboard. Use Export frame as PNG.','unsupported');
+ try{await navigator.clipboard.write([new Item({'image/png':blob})]);}
+ catch(e){throw new ExportError(`The clipboard refused the image: ${(e as Error).message}`,'unsupported');}
+}
+/** The playhead frame copied to the clipboard as PNG (size and transparency settings apply). Nothing is saved. */
+export function copyCurrentFrame(d:Deps={}){
+ const {doc,comp,out}=target();const at=animationSession().getState().view.playhead;
+ return guarded('copy',()=>exportFramePng(comp,at,doc.name,d.rasterize??canvasRasterize,state.transparent,doc.assets,out),d.save?(b=>d.save!(b,'')):copyPngToClipboard);
 }
 /** The playhead frame as a vector SVG file (drawing size, the scale setting does not apply). */
 export function exportCurrentFrameSvg(d:Deps={}){

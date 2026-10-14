@@ -261,6 +261,7 @@ export function RenderSection(_:InspectorSectionProps){
   <label className="flex items-center gap-2 text-ink-2"><NativeInput type="checkbox" className="animation-checkbox" checked={job.transparent} disabled={busy} onChange={e=>setExportTransparent(e.target.checked)} data-testid="animation-export-alpha"/>{t('animation.export.transparent')}</label>
   <div className="grid gap-2">
    <Button size="compact" variant="outline" disabled={busy} onClick={()=>run('animation.export.frame')} data-testid="animation-export-frame">{t('animation.export.frame')}</Button>
+   <Button size="compact" variant="outline" disabled={busy} onClick={()=>run('animation.export.frameCopy')} data-testid="animation-export-frame-copy">{t('animation.export.frameCopy')}</Button>
    <Button size="compact" variant="outline" disabled={busy} title={t('animation.export.frameSvg.hint')} onClick={()=>run('animation.export.frameSvg')} data-testid="animation-export-frame-svg">{t('animation.export.frameSvg')}</Button>
    <Button size="compact" variant="outline" disabled={busy} onClick={()=>run('animation.export.sequence')} data-testid="animation-export-sequence">{t('animation.export.sequence')}</Button>
    <Button size="compact" variant="outline" disabled={busy} title={t('animation.export.spriteSheet.hint')} onClick={()=>run('animation.export.spriteSheet')} data-testid="animation-export-sprite-sheet">{t('animation.export.spriteSheet')}</Button>
@@ -270,7 +271,7 @@ export function RenderSection(_:InspectorSectionProps){
   </div>
   <p className="m-0 text-ink-3">{t('animation.export.videoNote')}</p>
   {busy&&<StudioProgress label={t('animation.export.progress',{done:job.done,total:job.total})} value={job.done} max={job.total} progressTestId="animation-export-progress" cancelLabel={t('animation.export.cancel')} onCancel={job.kind&&job.kind!=='frame'?cancelExport:undefined} cancelTestId="animation-export-cancel"/>}
-  {job.status==='done'&&<StudioStatus className="block m-0 text-ink" data-testid="animation-export-done">{t('animation.export.done',{file:job.fileName})}</StudioStatus>}
+  {job.status==='done'&&<StudioStatus className="block m-0 text-ink" data-testid="animation-export-done">{job.kind==='copy'?t('animation.export.copied'):t('animation.export.done',{file:job.fileName})}</StudioStatus>}
   {job.status==='error'&&<StudioStatus tone="error" live="assertive" className="block m-0 text-ink" data-testid="animation-export-error">{t('animation.export.error',{message:job.message})}</StudioStatus>}
   <p className="m-0 text-ink-3">{t('animation.render.note')}</p>
   <Button size="compact" variant="outline" disabled={busy} onClick={()=>run('animation.render.close')}>{t('animation.render.close')}</Button>

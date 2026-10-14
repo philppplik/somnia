@@ -950,5 +950,8 @@
  "cmd.animation.workarea.toLayers": "Arbeitsbereich auf die gewählten Ebenen setzen",
  "animation.export.columns": "Sheet-Spalten",
  "animation.export.columnsAuto": "Auto",
- "animation.export.problem.columns": "Sheet-Spalten müssen 1 bis 256 sein"
+ "animation.export.problem.columns": "Sheet-Spalten müssen 1 bis 256 sein",
+ "animation.export.frameCopy": "Frame in Zwischenablage kopieren",
+ "animation.export.copied": "Frame in die Zwischenablage kopiert.",
+ "cmd.animation.export.frameCopy": "Aktuellen Frame in die Zwischenablage kopieren"
 }

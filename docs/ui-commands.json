@@ -398,6 +398,23 @@
       "hasEnabled": true
     },
     {
+      "id": "animation.export.frameCopy",
+      "title": "Copy current frame to the clipboard",
+      "category": "Project",
+      "source": "animation",
+      "keywords": [
+        "animation",
+        "clipboard",
+        "copy",
+        "export",
+        "frame",
+        "image",
+        "paste",
+        "png"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "animation.export.frameSvg",
       "title": "Export current frame as SVG",
       "category": "Project",
