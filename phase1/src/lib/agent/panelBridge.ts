@@ -53,7 +53,7 @@ import type {AgentCore,AgentEvent,AgentApproval,AgentProposal,DiffLine} from './
 import type {AgentProvider,AgentProviderEvent,AgentProviderRequest} from './types';
 export interface AgentConfiguration {provider:AuthProvider;model:string;apiKey:string;allowActiveFile:boolean;customPrompts?:CustomPrompt[];localRuntime?:LocalRuntimePreferences}
 let config:AgentConfiguration={provider:'ollama',model:'',apiKey:'',allowActiveFile:false};
-export function configureAgent(value:AgentConfiguration){realCore.clear?.();config={...value};agentPrivacy.setLocalOnly(value.localRuntime?.routing?.localOnly??false);}
+export function configureAgent(value:AgentConfiguration){realCore.clear?.();config={...value};agentPrivacy.setLocalOnly(value.localRuntime?.offlineOnly===true||value.localRuntime?.routing?.localOnly===true);}
 export function setAgentActiveFileAccess(allowActiveFile:boolean){config={...config,allowActiveFile};}
 /** Custom instructions are sent every provider round, never as access permission. */
 export function withCustomPrompts(provider:AgentProvider,prompts:readonly CustomPrompt[]=[]):AgentProvider {
@@ -277,9 +277,9 @@ export const realCore:AgentCore={
   const deliver=(e:AgentEvent)=>{if(!stopped&&runId===runGeneration)onEvent(e);};send=deliver;
   const taskChoice=taskModelChoice(config.localRuntime?.taskModels,request.context.task??'chat');const requestProvider=taskChoice?.provider??config.provider;
   if(!taskChoice&&!config.model.trim()){queueMicrotask(()=>deliver({type:'error',message:'Choose a provider and model in Settings > AI first.'}));return {cancel(){stopped=true;}};}
-  const route=config.localRuntime?.routing;const canRoute=!trimmed&&!taskChoice&&!!route&&!request.context.activeFile&&!request.context.activeMedia&&!request.context.studio;
+  const savedRoute=config.localRuntime?.routing;const route=config.localRuntime?.offlineOnly&&savedRoute?{...savedRoute,localOnly:true}:savedRoute;const canRoute=!trimmed&&!taskChoice&&!!route&&!request.context.activeFile&&!request.context.activeMedia&&!request.context.studio;
   const requestModel=taskChoice?.model??(config.provider==='ollama'?(config.localRuntime?.studioModels?.[request.context.studio?.studioId??'']??config.model):config.model);
-  if(trimmed&&requestProvider!=='ollama'){queueMicrotask(()=>deliver({type:'error',message:t('local.assistant.cloudBlocked')}));return {cancel(){stopped=true;}};}
+  if((trimmed||config.localRuntime?.offlineOnly)&&requestProvider!=='ollama'){queueMicrotask(()=>deliver({type:'error',message:t('local.assistant.cloudBlocked')}));return {cancel(){stopped=true;}};}
   const runPrompts=trimmed&&!trimmed.customPrompts?[]:config.customPrompts;
   const contextKey=JSON.stringify({choices:trimmed,document:request.context.activeMedia??request.context.activeFile,studio:request.context.studio?.studioId});
   const generation=getProjectGeneration();

@@ -23,7 +23,7 @@ export function LocalModelActions({snapshot,onChanged,manager=localModelManager,
  const act=async(action:()=>Promise<unknown>)=>{setBusy(true);setError('');try{await action();await onChanged();}catch(e){setError(e instanceof Error?e.message:t('local.action.failed'));}finally{setBusy(false);}};
  const propose=(raw:string)=>{try{const model=registryModel(raw);setAck(false);setDisk(null);setConfirm({kind:'pull',model});setError('');}catch{setError(t('local.action.invalid'));}};
  return <div className="local-model-actions">
-  {error&&<StudioStatus tone="error" live="assertive">{error}</StudioStatus>}
+  {error&&<StudioStatus tone="error" live="assertive">{t('local.recovery.pullFailed')}</StudioStatus>}
   {snapshot?.state==='stopped'&&<Button disabled={locked} type="button" onClick={()=>void act(async()=>{const result=await manager.launch();setInstruction(result.instruction??'');})}>{t('local.action.start')}</Button>}
   {instruction&&<p>{t('local.action.manual')} <code>{instruction}</code></p>}
   {snapshot?.state==='running'&&<>
@@ -36,7 +36,7 @@ export function LocalModelActions({snapshot,onChanged,manager=localModelManager,
    {job.layer&&<p>{t('local.action.layer')} {job.layer.digest}: {job.layer.completed??'?'} / {job.layer.total??'?'} bytes</p>}
    {job.layer?.total!==undefined&&job.layer.total>0&&job.layer.completed!==undefined&&<progress aria-label={t('local.action.layer')} max={job.layer.total} value={Math.min(job.layer.completed,job.layer.total)}/> }<p>{t('local.action.noOverall')}</p>
    {job.cancelOutcome&&<p>{t('local.cancel.'+job.cancelOutcome)}</p>}
-   {job.error&&<p>{job.error}</p>}
+   {job.error&&<p>{t('local.recovery.pullFailed')}</p>}{!active&&['interrupted','failed','reconciling'].includes(job.phase)&&<><p>{t('local.recovery.resumeBoundary')}</p><Button type="button" disabled={locked} onClick={()=>propose(job.model)}>{t('local.recovery.resume')}</Button></>}
    {active&&<Button type="button" onClick={()=>void manager.cancel()}>{t('local.action.cancel')}</Button>}
   </div>}
   <Dialog open={!!confirm} onOpenChange={open=>{if(!open)setConfirm(null);}}><DialogContent className="local-model-confirm"><DialogTitle>{t(confirm?.kind==='delete'?'local.action.confirmDelete':'local.action.confirmPull')}</DialogTitle><DialogDescription>{confirm?.model}</DialogDescription>

@@ -1,3 +1,5 @@
+import {agentSettingsSnapshot,subscribeAgentSettings} from '../../lib/agent/settingsRuntime';
+import {LocalModelHealth} from './LocalModelHealth';
 import {LocalModelDiskUsage} from './LocalModelDiskUsage';
 import {lastLocalModelSuccess} from '../../lib/agent/localModelUsage';
 import {LocalFirstRunGuide} from './LocalFirstRunGuide';
@@ -5,7 +7,7 @@ import {LocalAIHealth} from './LocalAIHealth';
 import type {Hardware} from '../../lib/agent/localModelAdvice';
 import {LocalModelAdvice} from './LocalModelAdvice';
 import {LocalModelActions} from './LocalModelActions';
-import {useEffect,useMemo,useRef,useState} from 'react';
+import {useEffect,useMemo,useRef,useState,useSyncExternalStore} from 'react';
 import {useT} from '../../lib/useT';
 import {LocalModelsRuntime,type ModelEvidence,type RuntimeSnapshot} from '../../lib/agent/localModels';
 import {Button} from '../ui/button';
@@ -13,6 +15,7 @@ import {Badge} from '../ui/badge';
 import './localModels.css';
 
 export function LocalModelsSettings({active,runtime:provided,hardwareProbe}:{active:boolean;runtime?:LocalModelsRuntime;hardwareProbe?:()=>Promise<Hardware|null>}){
+ const settings=useSyncExternalStore(subscribeAgentSettings,agentSettingsSnapshot,agentSettingsSnapshot);const configured=[...(settings.config.provider==='ollama'&&settings.config.model?[settings.config.model]:[]),...Object.values(settings.config.localRuntime?.taskModels??{}),...Object.values(settings.config.localRuntime?.studioModels??{})];
  const {t,locale}=useT();const runtime=useMemo(()=>provided??new LocalModelsRuntime(),[provided]);
  const [snapshot,setSnapshot]=useState<RuntimeSnapshot|null>(null),[busy,setBusy]=useState(false),[refreshError,setRefreshError]=useState(false);
  const [evidence,setEvidence]=useState<Record<string,ModelEvidence|'error'>>({});
@@ -39,7 +42,7 @@ export function LocalModelsSettings({active,runtime:provided,hardwareProbe}:{act
   <div className="local-models-header"><h3>{t('local.title')}</h3><Button type="button" variant="outline" disabled={busy} onClick={()=>void refresh()}>{t(busy?'local.checking':'local.refresh')}</Button></div>
   <p>{t('local.boundary')}</p>
   <LocalAIHealth snapshot={snapshot} busy={busy} refreshError={refreshError} onRefresh={()=>void refresh()}/>
-  <LocalFirstRunGuide snapshot={snapshot} busy={busy} onRefresh={()=>void refresh()}/>
+  <LocalModelHealth configured={configured} snapshot={snapshot} runtime={runtime}/><LocalFirstRunGuide snapshot={snapshot} busy={busy} onRefresh={()=>void refresh()}/>
   <LocalModelAdvice hardwareProbe={hardwareProbe} active={active} runtime={runtime} snapshot={snapshot}/>
   {!provided&&<LocalModelActions snapshot={snapshot} onChanged={refresh}/>}
   {snapshot?.state==='running'&&<>

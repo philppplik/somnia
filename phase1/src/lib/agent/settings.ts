@@ -2,12 +2,13 @@ import {normalizeTaskModels,type TaskModels} from './taskRouting';
 import {normalizeRouting,type ProviderRouting} from './providerRouting';
 import {invoke,isTauri} from '@tauri-apps/api/core';
 import type {AgentConfiguration} from './panelBridge';
-export interface LocalRuntimePreferences {version:1;numCtx?:number;keepAliveSeconds?:number;studioModels?:Record<string,string>;modelContexts?:Record<string,number>;routing?:ProviderRouting;taskModels?:TaskModels}
+export interface LocalRuntimePreferences {version:1;offlineOnly?:boolean;numCtx?:number;keepAliveSeconds?:number;studioModels?:Record<string,string>;modelContexts?:Record<string,number>;routing?:ProviderRouting;taskModels?:TaskModels}
 export function normalizeLocalRuntime(value:unknown):LocalRuntimePreferences|undefined {
  if(value===undefined)return undefined;
  if(!value||typeof value!=='object'||Array.isArray(value))throw Error('Invalid local runtime preferences');
  const p=value as Record<string,unknown>;
- if(Object.keys(p).some(k=>!['version','numCtx','keepAliveSeconds','studioModels','modelContexts','routing','taskModels'].includes(k))||p.version!==1)throw Error('Invalid local runtime preferences');
+ if(Object.keys(p).some(k=>!['version','offlineOnly','numCtx','keepAliveSeconds','studioModels','modelContexts','routing','taskModels'].includes(k))||p.version!==1)throw Error('Invalid local runtime preferences');
+ if(p.offlineOnly!==undefined&&typeof p.offlineOnly!=='boolean')throw Error('Invalid offline mode');
  for(const [key,min,max] of [['numCtx',1,1048576],['keepAliveSeconds',0,86400]] as const){const n=p[key];if(n!==undefined&&(typeof n!=='number'||!Number.isInteger(n)||n<min||n>max))throw Error('Invalid local runtime option: '+key);}
  let studioModels:Record<string,string>|undefined;
  if(p.studioModels!==undefined){
@@ -17,7 +18,7 @@ export function normalizeLocalRuntime(value:unknown):LocalRuntimePreferences|und
  let modelContexts:Record<string,number>|undefined;
  if(p.modelContexts!==undefined){if(!p.modelContexts||typeof p.modelContexts!=='object'||Array.isArray(p.modelContexts)||Object.keys(p.modelContexts).length>100)throw Error('Invalid model contexts');modelContexts=Object.fromEntries(Object.entries(p.modelContexts).map(([model,n])=>{if(!model||model.length>512||/[\r\n\0]/.test(model)||typeof n!=='number'||!Number.isInteger(n)||n<1||n>1048576)throw Error('Invalid model context');return [model,n];}));}
  const taskModels=normalizeTaskModels(p.taskModels);const routing=normalizeRouting(p.routing);
- return {version:1,...(taskModels?{taskModels}:{}),...(routing?{routing}:{}),...(modelContexts?{modelContexts}:{}),...(studioModels?{studioModels}:{}),...(p.numCtx!==undefined?{numCtx:p.numCtx as number}:{}),...(p.keepAliveSeconds!==undefined?{keepAliveSeconds:p.keepAliveSeconds as number}:{})};
+ return {version:1,...(p.offlineOnly!==undefined?{offlineOnly:p.offlineOnly as boolean}:{}),...(taskModels?{taskModels}:{}),...(routing?{routing}:{}),...(modelContexts?{modelContexts}:{}),...(studioModels?{studioModels}:{}),...(p.numCtx!==undefined?{numCtx:p.numCtx as number}:{}),...(p.keepAliveSeconds!==undefined?{keepAliveSeconds:p.keepAliveSeconds as number}:{})};
 }
 export interface CustomPrompt {id:string;name:string;text:string;enabled:boolean}
 const PREFS='somnia.agent.preferences.v1';
