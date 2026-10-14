@@ -160,6 +160,37 @@ export function bounceClip(p:Property,ta:number,tb:number,fps:Composition['fps']
  for(let k=1;k<=bounces;k++){seq.push(vals[2*k]);kinds.push('f');if(k<bounces){seq.push(b.v);kinds.push('r');}}
  return {type:p.type as 'scalar'|'vec2',keys:frames.map((f,j)=>({dt:frameToTick(f,fps)-ta,v:seq[j],interp:'bezier' as const,...(kinds[j]==='f'?FALL:RISE)}))};
 }
+export const MAX_SWINGS=5;
+const clampV=(v:Property['value'],b:{min?:number;max?:number}):Property['value']=>{const c=(n:number)=>Math.min(b.max??Infinity,Math.max(b.min??-Infinity,n));return Array.isArray(v)?[c(v[0]),c(v[1])] as unknown as Property['value']:c(v as number);};
+const SMOOTH={out:[1/3,0] as const,in:[2/3,1] as const};
+/**
+ * Bakes an elastic settle between two neighbouring keys: the value travels to the second key's value, overshoots it by `decay` of the distance,
+ * swings back past it by `decay` squared, and so on `swings` times before landing on the second key. Ordinary editable keys, same shape as the bounce.
+ */
+export function elasticClip(p:Property,ta:number,tb:number,fps:Composition['fps'],swings:number,decay=0.4,bounds:{min?:number;max?:number}={}):KeysClip{
+ if(!Number.isInteger(swings)||swings<1||swings>MAX_SWINGS)throw Error(`Swings must be 1 to ${MAX_SWINGS}.`);
+ const i=p.keys.findIndex(k=>k.t===ta),a=p.keys[i],b=p.keys[i+1];
+ if(!a||!b||b.t!==tb)throw Error('Select two neighbouring keys of one property.');
+ if(JSON.stringify(a.v)===JSON.stringify(b.v))throw Error('The two keys have the same value, so nothing swings.');
+ const w:number[]=[1];for(let k=1;k<=swings;k++)w.push(0.8*Math.sqrt(decay**k));
+ const total=w.reduce((x,y)=>x+y,0),fa=tickToFrame(ta,fps),fb=tickToFrame(tb,fps);let acc=0;
+ const frames:number[]=[fa];for(const x of w.slice(0,-1)){acc+=x;const prev=frames[frames.length-1];frames.push(Math.max(prev+1,Math.round(fa+(fb-fa)*acc/total)));}
+ if(frames[frames.length-1]>=fb)throw Error('The segment is too short for this many swings.');
+ const seq:Property['value'][]=[a.v];for(let k=1;k<=swings;k++)seq.push(clampV(round2(lerpV(b.v,a.v,-((k%2?1:-1))*decay**k)),bounds));
+ return {type:p.type as 'scalar'|'vec2',keys:frames.map((f,j)=>({dt:frameToTick(f,fps)-ta,v:seq[j],interp:'bezier' as const,...SMOOTH}))};
+}
+/** Bakes an elastic settle between every pair of neighbouring selected keys of each target, as one edit list (one undo step). */
+export function elasticTargetKeys(doc:AnimationDocument,layerId:string,sel:readonly TargetKey[],swings:number):Edit[]{
+ const comp=findComp(doc),layer=comp&&findLayer(comp,layerId);if(!comp||!layer)throw Error('Select a layer.');
+ const items:PasteItem[]=[];
+ for(const id of new Set(sel.map(r=>targetId(r.target)))){
+  const rs=sel.filter(r=>targetId(r.target)===id).map(r=>r.t).sort((x,y)=>x-y),g=sel.find(r=>targetId(r.target)===id)!.target,p=propertyOf(layer,g);
+  if(!p)throw Error('Property no longer animated.');
+  for(let i=0;i+1<rs.length;i++){if(p.keys.findIndex(k=>k.t===rs[i])+1!==p.keys.findIndex(k=>k.t===rs[i+1]))continue;items.push({target:g,t:rs[i],clip:elasticClip(p,rs[i],rs[i+1],comp.fps,swings,0.4,g.kind==='transform'?PROP_META[g.prop]:{})});}
+ }
+ if(!items.length)throw Error('Select two neighbouring keys of one property.');
+ return pasteItems(layer,items);
+}
 /** Bakes a bounce between every pair of neighbouring selected keys of each target, as one edit list (one undo step). */
 export function bounceTargetKeys(doc:AnimationDocument,layerId:string,sel:readonly TargetKey[],bounces:number):Edit[]{
  const comp=findComp(doc),layer=comp&&findLayer(comp,layerId);if(!comp||!layer)throw Error('Select a layer.');

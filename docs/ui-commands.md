@@ -16,7 +16,7 @@ included; the `source` column names the owner. Dynamic sources that stay outside
 
 Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, fr, pt-BR); the gate enforces it.
 
-374 commands. Categories: Edit, Help, Insert, Project, Tools, View.
+379 commands. Categories: Edit, Help, Insert, Project, Tools, View.
 
 | id | title | category | source | shortcut |
 | --- | --- | --- | --- | --- |
@@ -29,6 +29,9 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `animation.comp.add` | Add composition | Insert | animation |  |
 | `animation.comp.select` | Switch composition | View | animation |  |
 | `animation.comp.update` | Change composition settings | Edit | animation |  |
+| `animation.ease.apply` | Apply a saved easing to the selected keys | Edit | animation |  |
+| `animation.ease.delete` | Delete a saved easing | Edit | animation |  |
+| `animation.ease.save` | Save a named easing in the document | Edit | animation |  |
 | `animation.edit.redo` | Redo animation edit | Edit | animation |  |
 | `animation.edit.undo` | Undo animation edit | Edit | animation |  |
 | `animation.effect.amount` | Set animated effect strength | Edit | animation |  |
@@ -50,10 +53,12 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `animation.key.spatial` | Set position tangents of a key | Edit | animation |  |
 | `animation.keys.bounce` | Bake a bounce between selected keys | Edit | animation |  |
 | `animation.keys.copy` | Copy selected keys | Edit | animation |  |
+| `animation.keys.cubic` | Set a custom cubic-bezier ease on the selected keys | Edit | animation |  |
 | `animation.keys.cut` | Cut selected keys | Edit | animation |  |
 | `animation.keys.delete` | Delete selected keys | Edit | animation |  |
 | `animation.keys.ease` | Set ease of selected keys | Edit | animation |  |
 | `animation.keys.easeAll` | Ease all selected keys | Edit | animation | `Mod+Alt+E` |
+| `animation.keys.elastic` | Bake an elastic settle between selected keys | Edit | animation |  |
 | `animation.keys.nudge` | Move selected keys | Edit | animation |  |
 | `animation.keys.paste` | Paste keys at playhead | Edit | animation |  |
 | `animation.keys.selectAll` | Select all keys of the layer | View | animation |  |

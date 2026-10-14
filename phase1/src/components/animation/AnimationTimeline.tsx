@@ -159,6 +159,7 @@ export function AnimationTimeline({comp,at,selected,canUndo,canRedo}:{comp:Compo
     <Button size="tiny" variant="outline" onClick={()=>run('animation.layers.stagger',{frames:stagger,layers:layerSetIds(selected),timing:staggerTiming})} data-testid="animation-stagger-apply">{t('animation.stagger.apply')}</Button></span>}
    <span className="ml-auto flex items-center gap-1" role="group" aria-label={t('animation.ease.group')}>
     {sel.length>0&&<Button size="tiny" variant="ghost" onClick={()=>run('animation.keys.bounce')} data-testid="animation-bounce">{t('animation.bounce.apply')}</Button>}
+    {sel.length>0&&<Button size="tiny" variant="ghost" onClick={()=>run('animation.keys.elastic')} data-testid="animation-elastic">{t('animation.elastic.apply')}</Button>}
     {sel.length>0&&EASES.map(p=><Button key={p} size="tiny" variant="ghost" onClick={()=>run('animation.keys.ease',{preset:p})} data-testid={`animation-ease-${p}`}>{t(EASE_LABEL[p])}</Button>)}
     <Button size="tiny" variant={view.graph?'outline':'ghost'} aria-pressed={view.graph} onClick={()=>run('animation.graph.toggle')} data-testid="animation-graph-toggle">{t('animation.graph')}</Button>
    </span>

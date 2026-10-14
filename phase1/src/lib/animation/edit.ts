@@ -1,4 +1,5 @@
 import {worldMatrix,invertMatrix,multiplyMatrix,decomposeMatrix} from './scene';
+import {validateEasingLib} from './easingModel';
 import {validateMotionLib} from './motionModel';
 import type {InterfaceAsset} from '../interface/schema';
 import {validateAnimationAssets} from './assetsValidation';
@@ -46,6 +47,7 @@ export type Edit=
  |{type:'markers.set';markers:readonly import('./model').Marker[]}
  |{type:'asset.import';asset:InterfaceAsset}
  /** Replace the document's saved motion presets (library edits compute the full list). */
+ |{type:'easings.set';items:readonly import('./easingModel').EasingSet[]}
  |{type:'motions.set';items:readonly import('./motionModel').MotionSet[]}
  /** Embed a prepared audio asset and add an audio layer whose clip starts at `t` (default 0). */
  |{type:'audio.import';asset:AudioAsset;t?:number;id?:string}
@@ -142,6 +144,7 @@ function reduce(doc:AnimationDocument,e:Edit):AnimationDocument{
    else if(e.type==='effect.animate'){const sampled=effect.animation?evaluate(effect.animation,t) as number:effect.amount;next=e.on?{...effect,animation:effect.animation?.keys.length?effect.animation:{type:'scalar',value:sampled,keys:[makeKey(t,sampled)]}}:{...effect,amount:sampled,animation:undefined};}
    else {const p=effect.animation??fail('missing','Effect is not animated.');const keys=p.keys.filter(k=>k.t!==t);next=keys.length?{...effect,animation:{...p,keys}}:{...effect,amount:evaluate(p,t) as number,animation:undefined};}
    return setLayer(doc,{...l,effects:l.effects!.map(x=>x.id===effect.id?next:x)});}
+  case 'easings.set':{const easings={version:1 as const,items:e.items};const p=validateEasingLib(easings);if(p.length)fail('invalid',p[0]);return {...doc,easings};}
   case 'motions.set':{const motions={version:1 as const,items:e.items};const p=validateMotionLib(motions);if(p.length)fail('invalid',p[0]);return {...doc,motions};}
   case 'asset.import':{const next={...doc,assets:doc.assets.some(a=>a.id===e.asset.id)?doc.assets:[...doc.assets,e.asset]};validateAnimationAssets(next);const c=compOf(doc);const l=createLayer('raster',c,{name:e.asset.sourceName,source:{assetId:e.asset.id,width:e.asset.width,height:e.asset.height}});return withLayers(next,ls=>[l,...ls]);}
   case 'audio.import':{

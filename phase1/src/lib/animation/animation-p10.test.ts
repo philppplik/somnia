@@ -7,6 +7,8 @@ import {copyTransformKeys,pasteTransformEdits} from './keysClipboard';
 import {animatedTargets,allTargetKeys,propertyOf,moveTargetKeys,easeTargetKeys,pruneTargetKeys,toggleTargetKey,editTargetKeys,copyTargetKeys,pasteTargetKeys,deleteTargetKeys,pasteClipOnTargets,staggerLayers,bounceClip,bounceTargetKeys} from './keyTargets';
 import {EASE_PRESETS,easePresetOf} from './graph';
 import {animationCommandSpecs} from './commands';
+import {deleteEasingEdit,findEasing,saveEasingEdit,userEasings,validateEasingLib,MAX_EASINGS} from './easingLibrary';
+import {elasticTargetKeys} from './keyTargets';
 import {BUILTIN_MOTIONS,MAX_USER_MOTIONS,LEGACY_KEY,deleteMotionEdit,exportMotionsJson,findMotion,legacyMotions,listMotions,mergeMotionsEdit,motionEdits,motionFromKeys,parseMotionsJson,saveMotionEdit,userMotions,validMotion} from './motionLibrary';
 import {serializeAnimationSnapshot,parseAnimationSnapshot} from './persistence';
 import {defaultView} from './recovery';
@@ -471,4 +473,31 @@ test('P23: presets live in the document, survive snapshots, undo as one step, an
  try{store.set(LEGACY_KEY,JSON.stringify([mine,{id:'bad',name:'',tracks:[]}]));const old=legacyMotions();assert.equal(old.length,1);assert.equal(old[0].name,'Bob');assert.ok(store.has(LEGACY_KEY));
   assert.equal(userMotions(applyEdit(other,mergeMotionsEdit(other,old))).length,1);store.set(LEGACY_KEY,'{broken');assert.deepEqual(legacyMotions(),[]);}
  finally{delete (globalThis as unknown as {localStorage?:unknown}).localStorage;}
+});
+
+test('P24: elastic bakes overshooting keys, custom cubic eases and named easings live in the document',()=>{
+ let d=keyed();d=applyEdits(d,[{type:'prop.animate',layer:'photo',prop:'opacity',on:true,t:0},{type:'prop.set',layer:'photo',prop:'opacity',value:0,t:0},{type:'prop.set',layer:'photo',prop:'opacity',value:100,t:sec*2}]);
+ const sel=allTargetKeys(layer(d,'photo')).filter(r=>r.target.kind==='transform'&&r.target.prop==='opacity');
+ const rev=d.revision;const el=applyEdits(d,elasticTargetKeys(d,'photo',sel,3));assert.equal(el.revision,rev+1,'one undo step');
+ const ks=layer(el,'photo').transform.opacity.keys;assert.equal(ks.length,2+3,'3 swings add 3 keys');
+ assert.ok(ks.every((k,i)=>i===0||k.t>ks[i-1].t));assert.equal(ks[ks.length-1].v,100);assert.equal(ks[ks.length-1].t,sec*2);
+ assert.deepEqual(ks.slice(0,4).map(k=>k.v),[0,100,84,100],'opacity overshoot is clamped to its 0-100 range');
+ const rot=applyEdits(keyed(),[{type:'prop.animate',layer:'photo',prop:'rotation',on:true,t:0},{type:'prop.set',layer:'photo',prop:'rotation',value:0,t:0},{type:'prop.set',layer:'photo',prop:'rotation',value:100,t:sec*2}]);
+ const rs=allTargetKeys(layer(rot,'photo')).filter(r=>r.target.kind==='transform'&&r.target.prop==='rotation');
+ assert.deepEqual(layer(applyEdits(rot,elasticTargetKeys(rot,'photo',rs,3)),'photo').transform.rotation.keys.slice(0,4).map(k=>k.v),[0,140,84,106.4],'overshoot, undershoot, smaller overshoot');assert.deepEqual(validateDocument(el),[]);
+ assert.throws(()=>elasticTargetKeys(d,'photo',sel,0),/Swings/);assert.throws(()=>elasticTargetKeys(d,'photo',sel,9),/Swings/);
+ assert.throws(()=>elasticTargetKeys(d,'photo',[sel[0]],2),/neighbouring/);
+ // custom cubic through keys.interp: x limited to 0..1, y free within the easing range
+ const cu=applyEdit(d,{type:'keys.interp',keys:sel.slice(0,1).map(r=>({layer:'photo',prop:'opacity' as const,t:r.t})),interp:'bezier',out:[0.2,1.4],in:[0.8,1]});assert.deepEqual(layer(cu,'photo').transform.opacity.keys[0].out,[0.2,1.4]);
+ assert.throws(()=>applyEdit(d,{type:'keys.interp',keys:[{layer:'photo',prop:'opacity',t:0}],interp:'bezier',out:[1.5,0],in:[0.8,1]}),EditError);
+ // named easings: bounded, unique, validated, in snapshots, one step each
+ const e1=applyEdit(d,saveEasingEdit(d,'  Snap  ',[0.9,0],[0.1,1]));assert.equal(e1.revision,d.revision+1);assert.equal(userEasings(e1)[0].name,'Snap');assert.equal(e1.easings!.version,1);
+ assert.deepEqual(parseAnimationSnapshot(serializeAnimationSnapshot(e1,defaultView())).doc.easings,e1.easings);
+ assert.throws(()=>saveEasingEdit(e1,'Snap',[0.5,0],[0.5,1]),/already exists/);assert.throws(()=>saveEasingEdit(d,'ease',[0.5,0],[0.5,1]),/already exists/,'built-in names are taken');
+ assert.throws(()=>saveEasingEdit(d,'x',[1.5,0],[0.5,1]),/Handles/);assert.throws(()=>saveEasingEdit(d,'x',[0.5,5],[0.5,1]),/Handles/);assert.throws(()=>saveEasingEdit(d,'  ',[0.5,0],[0.5,1]),/Name/);
+ assert.ok(validateEasingLib({version:2,items:[]}).length);assert.ok(validateEasingLib({version:1,items:[{id:'a',name:'A',out:[2,0],in:[0,0]}]}).length);
+ assert.ok(validateDocument({...e1,easings:{version:1,items:[...userEasings(e1),...userEasings(e1)]}}).length,'duplicates');
+ assert.throws(()=>applyEdit(d,{type:'easings.set',items:[{id:'a',name:'',out:[0,0],in:[1,1]}]}),EditError);
+ const gone=applyEdit(e1,deleteEasingEdit(e1,findEasing(e1,userEasings(e1)[0].id)!.id));assert.equal(userEasings(gone).length,0);assert.throws(()=>deleteEasingEdit(gone,'nope'),/no longer exists/);
+ let full=d;for(let i=0;i<MAX_EASINGS;i++)full=applyEdit(full,saveEasingEdit(full,`e${i}`,[0.5,0],[0.5,1]));assert.throws(()=>saveEasingEdit(full,'more',[0.5,0],[0.5,1]),/At most/);
 });

@@ -181,3 +181,9 @@ Depends on: v10 diff viewer, v11 updater for smooth extension and app updates.
 - Implemented: motion presets stored in the document (versioned, bounded, validated, survive snapshot save/open, one undo per save/delete/import), one-time migration from the P22 localStorage presets, JSON export and import with preview before adding, two commands, i18n in five locales.
 - Validation: 1 new Animation unit test (154 total), DS ratchet unchanged, ui-commands inventory (374), isolated Chrome check.
 - Not covered: migration runs on open and counts as an undo step; the legacy browser copy is not deleted; file picker flow is not unit tested (Playwright CI-only).
+
+### Animation P24 (2026-10-14, integration pending)
+
+- Implemented: numeric cubic-bezier editor for key pairs with curve preview, named easings saved in the document (versioned, bounded to 50), elastic bake (1 to 5 swings, clamped to the property range), commands animation.keys.cubic / elastic and animation.ease.save / apply / delete, five locales; "1 presets" plural wording fixed.
+- Validation: 1 new Animation unit test (155 total), DS ratchet unchanged, ui-commands inventory (379), isolated Chrome check (cubic edit +1 step, save +1 step).
+- Not covered: bounce and elastic are baked keys, not curve presets (one cubic cannot ring); no new draggable handles beyond the existing graph ones; the editor sits at the bottom of the graph sidebar, so the curve preview is partly scrolled in the short graph pane.

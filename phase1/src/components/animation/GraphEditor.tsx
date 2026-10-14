@@ -12,6 +12,7 @@ import {animatedTargets} from '../../lib/animation/keyTargets';
 import {MaskGraph,MaskTargetButtons,maskTargets} from './MaskGraph';
 import {setGraphMixed,setGraphTarget,setMaskClip,useMaskSelection} from '../../lib/animation/maskSelection';
 import {copyTransformKeys,pasteTransformEdits} from '../../lib/animation/keysClipboard';
+import {EaseEditor} from './EaseEditor';
 import {EASE_LABEL,EASES,fmt,PROP_LABEL} from './format';
 const PAD={l:46,r:12,t:10,b:16};
 function useSize(ref:React.RefObject<HTMLElement|null>){
@@ -130,6 +131,7 @@ export function GraphEditor({comp,layerId,sel,playhead}:{comp:Composition;layerI
    {sel.length>0&&<div className="mb-2 flex flex-wrap gap-1" role="group" aria-label={t('animation.ease.group')}>
     {EASES.map(p=><Button key={p} size="tiny" variant="ghost" disabled={layer.locked} onPointerEnter={()=>{const e=EASE_PRESETS[p];try{sess.previewEdits([{type:'keys.interp',keys:[...sel],interp:e.interp,...('out'in e?{out:e.out,in:e.in}:{})}]);}catch{/* stale */}}} onPointerLeave={()=>sess.cancelPreview()} onClick={()=>{const e=EASE_PRESETS[p];try{sess.dispatch({type:'keys.interp',keys:[...sel],interp:e.interp,...('out'in e?{out:e.out,in:e.in}:{})});}catch{/* locked layer */}}} data-testid={`animation-graph-ease-${p}`}>{t(EASE_LABEL[p])}</Button>)}
    </div>}
+   {sel.length>0&&<EaseEditor layer={layer} sel={sel}/>}
    {prop.type==='vec2'&&<p className="px-2 text-ink-3">{t(keys.some(k=>k.sIn||k.sOut)?'animation.graph.pathEase':'animation.graph.channelEase')}</p>}
    {speed&&<p className="px-2 text-ink-3">{t('animation.graph.unitsSecond')}</p>}
    {animated.map(k=><button key={k} type="button" aria-pressed={k===active} className={`block w-full truncate rounded-sm px-2 py-1 text-left ${k===active?'bg-hover text-ink':'text-ink-3'}`} onClick={()=>{setGraphTarget(null);setGraphMixed(false);sess.setView({openProps:[k]});}} data-testid={`animation-graph-prop-${k}`}>{t(PROP_LABEL[k])}</button>)}

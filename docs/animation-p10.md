@@ -88,3 +88,9 @@ User motion presets now live in `AnimationDocument.motions` (`{version:1,items}`
 Export writes `somnia-motions.json` (`{format:'somnia-motions',version:1,presets}`, max 300 KB). Import parses and validates first; the UI lists the file's presets with hover preview on the selected layer and only adds them on "Add". Imported presets get fresh ids and unique names (built-in names count as taken).
 
 Migration: presets saved in localStorage by P22 are copied once into any opened document that has no library yet (one undo step; the browser copy is left untouched and is never read again once the document has a library).
+
+## P24: easing editor
+
+The graph sidebar gets an Easing editor for the primary selected key: four numeric cubic-bezier handles (x 0..1, y -2..3) with a curve preview, one undo step per edit (`animation.keys.cubic`). Dragging the handles in the graph (P5) is unchanged. Named easings are saved in the document (`AnimationDocument.easings`, `{version:1,items}`, max 50, validated, in snapshots; `easings.set` edit) and applied to the selected keys with hover preview. Built-in names (ease, overshoot, ...) are reserved.
+
+Elastic (`animation.keys.elastic`, 1 to 5 swings) bakes ordinary keys that overshoot and settle on the second key, like the P21 bounce; overshoot is clamped to the property's own range (opacity stays within 0..100). A single cubic cannot ring, so bounce and elastic are baked keys, not curve presets.

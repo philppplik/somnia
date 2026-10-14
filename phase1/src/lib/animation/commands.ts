@@ -10,9 +10,10 @@ import type {CommandSchema,CommandSpec} from '../commandSpec';
 import {EditError,type Edit} from './edit';
 import {findComp,findLayer,TEXT_FONTS,TRANSFORM_KEYS,type KeyRef,type LayerKind,type LayerEffect,type PropValue,type TextFont,type TransformKey} from './model';
 import {animationSession} from './session';
-import {allTargetKeys,bounceTargetKeys,easeTargetKeys,staggerLayers} from './keyTargets';
+import {allTargetKeys,bounceTargetKeys,elasticTargetKeys,easeTargetKeys,staggerLayers} from './keyTargets';
 import {downloadBlob} from './exportFrames';
 import {layerSetIds} from './layerSet';
+import {deleteEasingEdit,findEasing,saveEasingEdit} from './easingLibrary';
 import {deleteMotionEdit,exportMotionsJson,findMotion,mergeMotionsEdit,motionEdits,motionFromKeys,parseMotionsJson,saveMotionEdit,userMotions} from './motionLibrary';
 import {secondsToTicks,snapToFrame} from './time';
 import {ClipError,copyKeys,getKeyClip,pastedRefs,setKeyClip} from './keyclip';
@@ -32,6 +33,7 @@ const object=(properties:Record<string,unknown>,required=Object.keys(properties)
 const num={type:'number'};const tick={type:'integer',minimum:0};
 const layerRef={type:'string',minLength:1,maxLength:200};
 const propKey={enum:[...TRANSFORM_KEYS]};
+const handleSchema={type:'array',items:{type:'number',minimum:-2,maximum:3},minItems:2,maxItems:2};
 const value={oneOf:[{type:'number'},{type:'array',items:{type:'number'},minItems:2,maxItems:2}]};
 const guard=<T,>(fn:()=>T):T=>{try{return fn();}catch(e){if(e instanceof EditError||e instanceof ClipError)throw Object.assign(e,{expected:true});throw e;}};
 const selKeys=():KeyRef[]=>{const k=pruneSelection(animationSession().document,animationSession().getState().view.selectedKeys);return k.length?k:fail('Select keys first.');};
@@ -103,6 +105,18 @@ export function animationCommandSpecs():CommandSpec<unknown,unknown>[]{
    const layerId=selected();const keys=selKeys().filter(k=>k.layer===layerId);
    return run(guard(()=>{try{return bounceTargetKeys(doc(),layerId,keys.map(k=>({target:{kind:'transform' as const,prop:k.prop},t:k.t})),p.bounces??3);}catch(e){if(e instanceof Error&&!(e instanceof EditError))throw Object.assign(e,{expected:true});throw e;}}));
   },object({bounces:{type:'integer',minimum:1,maximum:5}},[]),hasSel,'Edit'),
+  spec('animation.keys.elastic','Bake an elastic settle between the selected neighbouring keys',(p:{swings?:number}={})=>{
+   const layerId=selected();const keys=selKeys().filter(k=>k.layer===layerId);
+   return run(guard(()=>{try{return elasticTargetKeys(doc(),layerId,keys.map(k=>({target:{kind:'transform' as const,prop:k.prop},t:k.t})),p.swings??3);}catch(e){if(e instanceof Error&&!(e instanceof EditError))throw Object.assign(e,{expected:true});throw e;}}));
+  },object({swings:{type:'integer',minimum:1,maximum:5}},[]),hasSel,'Edit'),
+  spec('animation.keys.cubic','Set a custom cubic-bezier ease on the selected keys',(p:{out:[number,number];in:[number,number]})=>run({type:'keys.interp',keys:selKeys(),interp:'bezier',out:p.out,in:p.in}),
+   object({out:handleSchema,in:handleSchema},['out','in']),hasSel,'Edit'),
+  spec('animation.ease.save','Save a named easing in the document',(p:{name:string;out?:[number,number];in?:[number,number]})=>{
+   try{let out=p.out,inn=p.in;if(!out||!inn){const ref=selKeys()[selKeys().length-1];const k=findLayer(comp(),ref.layer)!.transform[ref.prop].keys.find(x=>x.t===ref.t);if(!k||k.interp!=='bezier')fail('Select a key with a bezier ease.');out=k!.out as [number,number];inn=k!.in as [number,number];}
+    return run(saveEasingEdit(doc(),p.name,out!,inn!));}catch(e){throw Object.assign(e as Error,{expected:true});}
+  },object({name:{type:'string',minLength:1,maxLength:40},out:handleSchema,in:handleSchema},['name']),open,'Edit'),
+  spec('animation.ease.apply','Apply a saved easing to the selected keys',(p:{ease:string})=>{const e=findEasing(doc(),p.ease)??fail('Unknown easing.');return run({type:'keys.interp',keys:selKeys(),interp:'bezier',out:e.out,in:e.in});},object({ease:{type:'string',minLength:1,maxLength:64}}),hasSel,'Edit'),
+  spec('animation.ease.delete','Delete a saved easing',(p:{ease:string})=>{try{run(deleteEasingEdit(doc(),p.ease));}catch(e){throw Object.assign(e as Error,{expected:true});}},object({ease:{type:'string',minLength:1,maxLength:64}}),open,'Edit'),
   spec('animation.layers.stagger','Stagger selected layers (Shift or Ctrl click adds layers)',(p:{frames?:number;layers?:string[];timing?:boolean}={})=>{
    const ids=p.layers??layerSetIds(animationSession().getState().view.selectedLayer);
    return run(guard(()=>staggerLayers(doc(),ids,p.frames??2,p.timing??true)));

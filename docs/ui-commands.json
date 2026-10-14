@@ -107,6 +107,42 @@
       "hasEnabled": true
     },
     {
+      "id": "animation.ease.apply",
+      "title": "Apply a saved easing to the selected keys",
+      "category": "Edit",
+      "source": "animation",
+      "keywords": [
+        "animation",
+        "keyframe",
+        "timeline"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "animation.ease.delete",
+      "title": "Delete a saved easing",
+      "category": "Edit",
+      "source": "animation",
+      "keywords": [
+        "animation",
+        "keyframe",
+        "timeline"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "animation.ease.save",
+      "title": "Save a named easing in the document",
+      "category": "Edit",
+      "source": "animation",
+      "keywords": [
+        "animation",
+        "keyframe",
+        "timeline"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "animation.edit.redo",
       "title": "Redo animation edit",
       "category": "Edit",
@@ -359,6 +395,18 @@
       "hasEnabled": true
     },
     {
+      "id": "animation.keys.cubic",
+      "title": "Set a custom cubic-bezier ease on the selected keys",
+      "category": "Edit",
+      "source": "animation",
+      "keywords": [
+        "animation",
+        "keyframe",
+        "timeline"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "animation.keys.cut",
       "title": "Cut selected keys",
       "category": "Edit",
@@ -400,6 +448,18 @@
       "category": "Edit",
       "source": "animation",
       "shortcut": "Mod+Alt+E",
+      "keywords": [
+        "animation",
+        "keyframe",
+        "timeline"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "animation.keys.elastic",
+      "title": "Bake an elastic settle between selected keys",
+      "category": "Edit",
+      "source": "animation",
       "keywords": [
         "animation",
         "keyframe",
