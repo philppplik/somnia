@@ -56,7 +56,7 @@ Honest limits:
   Late joiner needs a live peer (relay contract: no relay state/replay). Host stays the only disk writer.
 - The host always sees the content: it owns the key and writes the project to disk.
 - Invited guests hold the key while invited. Revocation stops re-entry (relay side); it cannot take back what they saw.
-- **Follow-up for the share-UI slice**: `maskLink()` masks only `?code=`. A `#key=` fragment must be masked too.
+- The share UI masks `#key=`, `?code=` and `/room/<id>` via `maskLink()` (first 4 characters stay so links can be told apart; the dialog has a show toggle). Done in the share-UI slice.
 
 ## Reconnect and offline queue
 
