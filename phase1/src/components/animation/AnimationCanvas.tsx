@@ -46,17 +46,17 @@ function Workspace({doc}:{doc:NonNullable<ReturnType<typeof animationSession>['d
 }
 function layerNode(l:Layer,assets:readonly InterfaceAsset[]){
  const src=l.source;
- if(l.kind==='raster'){const asset=assets.find(a=>a.id===src.assetId);return asset?<image href={asset.data} width={src.width} height={src.height}/>:<text fill="#ffffff">Missing image</text>;}
+ if(l.kind==='raster'){const asset=assets.find(a=>a.id===src.assetId);return asset?<image href={asset.data} width={src.width} height={src.height}/>:<text fill="var(--text-primary)">Missing image</text>;}
  if(l.kind==='solid')return <rect x={0} y={0} width={src.width} height={src.height} fill={src.color}/>;
  if(l.kind==='shape')return src.shape==='ellipse'?<ellipse cx={(src.width??0)/2} cy={(src.height??0)/2} rx={(src.width??0)/2} ry={(src.height??0)/2} fill={src.color}/>:<rect x={0} y={0} width={src.width} height={src.height} fill={src.color}/>;
- return <text x={0} y={src.size??48} fontSize={src.size} fill={src.color} fontFamily="system-ui, sans-serif" style={{userSelect:'none'}}>{src.text}</text>;
+ return <text x={0} y={src.size??48} fontSize={src.size} fill={src.color} fontFamily="system-ui, sans-serif" className="select-none">{src.text}</text>;
 }
 function Viewer({comp,at,selected,sel,assets}:{assets:readonly InterfaceAsset[];comp:Composition;at:number;selected:string|null;sel:readonly KeyRef[]}){
  const {t}=useT();const scene=useMemo(()=>sceneAt(comp,at),[comp,at]);
  const layer=comp.layers.find(l=>l.id===selected);const hasPos=!!layer&&layer.transform.position.keys.length>0;
  const posSel=sel.filter(k=>k.layer===selected&&k.prop==='position');
  return <div className="relative grid min-h-[160px] flex-1 place-items-center overflow-hidden bg-hover p-3" data-testid="animation-viewer">
-  <svg role="img" aria-label={t('animation.viewer')} viewBox={`0 0 ${comp.width} ${comp.height}`} className="max-h-full max-w-full" style={{aspectRatio:`${comp.width}/${comp.height}`,height:'100%',overflow:'visible'}}>
+  <svg role="img" aria-label={t('animation.viewer')} viewBox={`0 0 ${comp.width} ${comp.height}`} className="max-h-full max-w-full h-full overflow-visible">
    <defs>{comp.layers.map((l,i)=><filter key={l.id} id={`preview-effect-${i}`} filterUnits="userSpaceOnUse" {...effectBounds(l)} colorInterpolationFilters="sRGB" dangerouslySetInnerHTML={{__html:effectPrimitives(l)}}/>)}</defs>
    <rect width={comp.width} height={comp.height} fill={comp.background}/>
    {scene.map(({layer:l,matrix,opacity})=><g key={l.id} transform={`matrix(${matrix.join(' ')})`} opacity={opacity} data-layer={l.id} data-selected={l.id===selected||undefined}

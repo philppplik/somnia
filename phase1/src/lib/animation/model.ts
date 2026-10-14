@@ -124,3 +124,6 @@ export {frameToTick};
 
 export function validSource(s:LayerSource):boolean{return !!s&&typeof s==='object'&&(s.color===undefined||/^#[0-9a-fA-F]{6}$/.test(s.color))&&[s.width,s.height,s.size].every(n=>n===undefined||(isNum(n)&&n>=1&&n<=16384))&&(s.text===undefined||(typeof s.text==='string'&&s.text.length<=2000))&&(s.shape===undefined||['rect','ellipse'].includes(s.shape));}
 export function validEffects(e:readonly LayerEffect[]|undefined):boolean{return e===undefined||(Array.isArray(e)&&e.length<=8&&new Set(e.map(x=>x?.id)).size===e.length&&e.every(x=>!!x&&typeof x.id==='string'&&['blur','tint'].includes(x.kind)&&typeof x.enabled==='boolean'&&isNum(x.amount)&&x.amount>=0&&x.amount<=(x.kind==='blur'?64:1)&&/^#[0-9a-fA-F]{6}$/.test(x.color)));}
+
+/** Default authored document colour, not an application theme colour. */
+export const DEFAULT_LAYER_COLOR='#ffffff';

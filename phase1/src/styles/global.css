@@ -373,3 +373,6 @@ body{font-size:var(--ui-font-size,13px)}
 /* Bare control colors are intentionally unlayered until P6. Match that cascade
    for primary Button ink; a Tailwind utility alone cannot beat button{color:inherit}. */
 [data-slot=button].bg-accent-fill { color:var(--action-ink); }
+
+/* Animation native checkbox parity: no inherited full-width input geometry. */
+.animation-checkbox{width:14px;height:14px;padding:0;margin:0;flex:none}

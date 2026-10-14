@@ -143,11 +143,11 @@ export function GraphEditor({comp,layerId,sel,playhead}:{comp:Composition;layerI
      return handlesOf(keys,i,ch).map(hd=><g key={`${hd.kind}-${r.t}`}>
       <line x1={xOf(k.t)} y1={yOf(channelOf(k.v,ch))} x2={xOf(hd.t)} y2={yOf(hd.v)} stroke="var(--text-secondary)" strokeWidth={1}/>
       <circle cx={xOf(hd.t)} cy={yOf(hd.v)} r={5} fill="var(--bg-elevated)" stroke="var(--accent)" strokeWidth={2} tabIndex={layer.locked?-1:0} role="slider" aria-label={t(hd.kind==='out'?'animation.graph.handleOut':'animation.graph.handleIn',{time:timecode(k.t,comp.fps)})}
-       aria-valuetext={`${fmt(hd.x)}, ${fmt(hd.y)}`} aria-valuenow={hd.x} aria-valuemin={0} aria-valuemax={1} style={{cursor:layer.locked?'default':'grab',touchAction:'none'}}
+       aria-valuetext={`${fmt(hd.x)}, ${fmt(hd.y)}`} aria-valuenow={hd.x} aria-valuemin={0} aria-valuemax={1} className={layer.locked?'touch-none cursor-default':'touch-none cursor-grab'}
        onPointerDown={layer.locked?undefined:handleDown(i,hd)} onKeyDown={layer.locked?undefined:handleKey(i,hd)} data-testid={`animation-graph-handle-${hd.kind}`}/></g>);})}
     {!speed&&keys.map((k,i)=>{const ref:KeyRef={layer:layer.id,prop:active,t:k.t};const on=sel.some(x=>sameKey(x,ref));const cx=xOf(k.t),cy=yOf(channelOf(k.v,ch));
      return <g key={i} transform={`translate(${cx} ${cy})`} tabIndex={layer.locked?-1:0} role="button" aria-pressed={on} aria-label={t('animation.graph.key',{time:timecode(k.t,comp.fps),value:fmt(channelOf(k.v,ch))})}
-      style={{cursor:layer.locked?'default':'grab',touchAction:'none'}} onPointerDown={layer.locked?undefined:keyDown(k,ref)} onKeyDown={layer.locked?undefined:pointKey(ref,k)} data-testid="animation-graph-key" data-selected={on||undefined} data-key-index={i}>
+      className={layer.locked?'touch-none cursor-default':'touch-none cursor-grab'} onPointerDown={layer.locked?undefined:keyDown(k,ref)} onKeyDown={layer.locked?undefined:pointKey(ref,k)} data-testid="animation-graph-key" data-selected={on||undefined} data-key-index={i}>
       <rect x={-8} y={-8} width={16} height={16} fill="transparent"/>
       <rect x={-4.5} y={-4.5} width={9} height={9} transform="rotate(45)" fill={on?'var(--text-primary)':'var(--accent-fill)'} stroke={on?'var(--accent)':'var(--border-default)'} strokeWidth={on?2:1}/></g>;})}
    </svg>
