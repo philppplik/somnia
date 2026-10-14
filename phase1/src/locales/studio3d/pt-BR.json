@@ -642,5 +642,10 @@
  "studio3d.pin.text": "Rótulo do alfinete",
  "cmd.studio3d.insert.pin": "Inserir um alfinete de anotação no cursor 3D ou em um ponto",
  "cmd.studio3d.pin.set": "Definir o texto de um alfinete de anotação",
- "studio3d.focus": "Focar {name}"
+ "studio3d.focus": "Focar {name}",
+ "studio3d.views.rename": "Renomear",
+ "studio3d.views.update": "Atualizar",
+ "studio3d.views.saved": "Vista {name} salva",
+ "cmd.studio3d.view.update": "Substituir uma vista salva pela vista atual",
+ "cmd.studio3d.view.rename": "Renomear uma vista salva"
 }

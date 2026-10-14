@@ -642,5 +642,10 @@
  "studio3d.pin.text": "Libellé de l’épingle",
  "cmd.studio3d.insert.pin": "Insérer une épingle d’annotation au curseur 3D ou à un point",
  "cmd.studio3d.pin.set": "Définir le libellé d’une épingle d’annotation",
- "studio3d.focus": "Cadrer {name}"
+ "studio3d.focus": "Cadrer {name}",
+ "studio3d.views.rename": "Renommer",
+ "studio3d.views.update": "Mettre à jour",
+ "studio3d.views.saved": "Vue {name} enregistrée",
+ "cmd.studio3d.view.update": "Écraser une vue enregistrée avec la vue actuelle",
+ "cmd.studio3d.view.rename": "Renommer une vue enregistrée"
 }

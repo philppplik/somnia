@@ -37,6 +37,7 @@ import {Stage,beginGroupDrag,applyGroupDrag,collectNodeExtras,applyNodeExtras,ex
 import {parseDocument,buildDocument,sceneBytes,fromBase64,DocumentError} from '../../lib/studio3d/document';
 import {registerStudio3DController,registerStudio3DTextureDrop} from '../../lib/studio3d/commands';
 import {parseExtras,type ClipMeta} from '../../lib/studio3d/clipMeta';
+import {nextViewName,updateView,renameView,viewSlotIndex} from '../../lib/studio3d/views';
 import type {Ease} from '../../lib/studio3d/ease';
 import type {KeyPath} from '../../lib/studio3d/clips';
 import type {KeyRef,KeyData} from '../../lib/studio3d/keyEdit';
@@ -246,6 +247,10 @@ export default function Viewport3D(){
    const box=new THREE.Box3().setFromObject(obj);if(box.isEmpty())return frameAll();
    const c=box.getCenter(new THREE.Vector3()),r=box.getSize(new THREE.Vector3()).length()/2;
    place(camera.position.clone().sub(controls.target).normalize(),c,Math.max(r,1e-4));
+  };
+  const applyViewByName=(name:string)=>{
+   const v=getStudio3DState().views.find(x=>x.name===name);if(!v)throw Object.assign(new Error(`There is no saved view named ${name}.`),{expected:true});
+   camera.position.set(...v.position);camera.quaternion.set(...v.quaternion);controls.target.set(...v.target);camera.updateMatrixWorld(true);controls.update();invalidate();
   };
   const loadParsed=async(file:File,extras:File[])=>{
    const tmpUrls:string[]=[];let notice='';let unitHint:{id:number;factor:number}|null=null;
@@ -1081,12 +1086,15 @@ export default function Viewport3D(){
     const o=fromView?stage.addCamera({position:{x:camera.position.x,y:camera.position.y,z:camera.position.z},quaternion:camera.quaternion.toArray().slice(0,4) as [number,number,number,number]},perspCam.fov,kind):stage.addCamera(undefined,40,kind);
     select(o.id);return o.id;},
    viewSave:name=>{
-    const views=getStudio3DState().views;const n=(name??'').trim().slice(0,60)||`View ${views.length+1}`;
+    const views=getStudio3DState().views;const n=(name??'').trim().slice(0,60)||nextViewName(views);
     if(views.some(v=>v.name===n))throw Object.assign(new Error(`A view named ${n} already exists.`),{expected:true});
     patchStudio3D({views:[...views,{name:n,position:[camera.position.x,camera.position.y,camera.position.z],quaternion:camera.quaternion.toArray() as [number,number,number,number],target:[controls.target.x,controls.target.y,controls.target.z]}]});return n;},
-   viewApply:name=>{
-    const v=getStudio3DState().views.find(x=>x.name===name);if(!v)throw Object.assign(new Error(`There is no saved view named ${name}.`),{expected:true});
-    camera.position.set(...v.position);camera.quaternion.set(...v.quaternion);controls.target.set(...v.target);camera.updateMatrixWorld(true);controls.update();invalidate();},
+   viewApply:applyViewByName,
+   viewUpdate:name=>{
+    const views=getStudio3DState().views;
+    patchStudio3D({views:updateView(views,name,{position:[camera.position.x,camera.position.y,camera.position.z],quaternion:camera.quaternion.toArray() as [number,number,number,number],target:[controls.target.x,controls.target.y,controls.target.z]})});
+   },
+   viewRename:(name,to)=>{patchStudio3D({views:renameView(getStudio3DState().views,name,to)});},
    viewRemove:name=>{
     const views=getStudio3DState().views;if(!views.some(v=>v.name===name))throw Object.assign(new Error(`There is no saved view named ${name}.`),{expected:true});
     patchStudio3D({views:views.filter(v=>v.name!==name)});},
@@ -1347,6 +1355,17 @@ export default function Viewport3D(){
     if(e.key==='f'||e.key==='F'){frameSelection();e.preventDefault();return;}
     if(e.key==='s'||e.key==='S'){const sn=getStudio3DState().snap;patchStudio3D({snap:mergeSnap(sn,{on:!sn.on})});applySnap();e.preventDefault();return;}
     if(e.key==='m'||e.key==='M'){const on=!getStudio3DState().measure;patchStudio3D({measure:on?{a:null,b:null}:null});syncMeasure();invalidate();e.preventDefault();return;}
+   const slot=viewSlotIndex(e.code);
+   if(slot!==null){
+    const views=getStudio3DState().views;
+    if(e.shiftKey){
+     const name=views[slot]?.name??nextViewName(views);
+     const camShot={position:[camera.position.x,camera.position.y,camera.position.z] as [number,number,number],quaternion:camera.quaternion.toArray() as [number,number,number,number],target:[controls.target.x,controls.target.y,controls.target.z] as [number,number,number]};
+     patchStudio3D({views:views[slot]?updateView(views,name,camShot):[...views,{name,...camShot}],notice:t('studio3d.views.saved',{name})});
+     e.preventDefault();return;
+    }
+    if(views[slot]){applyViewByName(views[slot].name);e.preventDefault();return;}
+   }
     if(e.key==='Escape'&&getStudio3DState().measure){patchStudio3D({measure:null});syncMeasure();invalidate();e.preventDefault();return;}
     if((e.key==='Delete'||e.key==='Backspace')&&currentSet().length){deleteSelection();e.preventDefault();return;}
     const stepNow=getStudio3DState().snap.on?getStudio3DState().snap.move:0.1;const n=e.shiftKey&&sel!=null?nudgeFor(e.key,stepNow):null;

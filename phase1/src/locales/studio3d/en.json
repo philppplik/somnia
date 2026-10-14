@@ -642,5 +642,10 @@
  "studio3d.pin.text": "Pin label",
  "cmd.studio3d.insert.pin": "Insert an annotation pin at the 3D cursor or a given point",
  "cmd.studio3d.pin.set": "Set the label text of an annotation pin",
- "studio3d.focus": "Focus {name}"
+ "studio3d.focus": "Focus {name}",
+ "studio3d.views.rename": "Rename",
+ "studio3d.views.update": "Update",
+ "studio3d.views.saved": "Saved view {name}",
+ "cmd.studio3d.view.update": "Overwrite a saved view with the current viewport",
+ "cmd.studio3d.view.rename": "Rename a saved view"
 }

@@ -642,5 +642,10 @@
  "studio3d.pin.text": "Pin-Beschriftung",
  "cmd.studio3d.insert.pin": "Einen Notiz-Pin am 3D-Cursor oder einem Punkt einfügen",
  "cmd.studio3d.pin.set": "Die Beschriftung eines Notiz-Pins setzen",
- "studio3d.focus": "{name} fokussieren"
+ "studio3d.focus": "{name} fokussieren",
+ "studio3d.views.rename": "Umbenennen",
+ "studio3d.views.update": "Aktualisieren",
+ "studio3d.views.saved": "Ansicht {name} gespeichert",
+ "cmd.studio3d.view.update": "Gespeicherte Ansicht mit der aktuellen Ansicht überschreiben",
+ "cmd.studio3d.view.rename": "Gespeicherte Ansicht umbenennen"
 }

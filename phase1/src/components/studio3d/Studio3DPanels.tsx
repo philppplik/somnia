@@ -466,6 +466,7 @@ function PoseFields({id}:{id:number}){
 }
 export function ViewSection(_:InspectorSectionProps){
  const {t}=useT();const s=useStudio3D();const ready=s.status==='ready';
+ const [renamingView,setRenamingView]=useState<string|null>(null);
  return <div className="grid gap-2 p-3" data-testid="studio3d-view-section">
   <label className="flex items-center gap-2 text-xs text-ink-2"><input type="checkbox" checked={s.grid} onChange={e=>void executeCommand('studio3d.view.grid',{on:e.target.checked})}/>{t('studio3d.view.grid')}</label>
   <label className="flex items-center gap-2 text-xs text-ink-2"><input type="checkbox" checked={s.wireframe} disabled={!ready} onChange={e=>void executeCommand('studio3d.view.wireframe',{on:e.target.checked})}/>{t('studio3d.view.wireframe')}</label>
@@ -487,8 +488,15 @@ export function ViewSection(_:InspectorSectionProps){
   </div>
   <div className="flex flex-wrap gap-1" role="group" aria-label={t('studio3d.view.presets')} data-testid="studio3d-view-presets">{VIEW_PRESETS.map(p=><Button key={p} variant="outline" disabled={!ready} onClick={()=>void executeCommand('studio3d.view.preset',{preset:p})}>{t('studio3d.view.preset.'+p)}</Button>)}</div>
   <div className="grid gap-1" data-testid="studio3d-views"><Button variant="outline" disabled={!ready} onClick={()=>void executeCommand('studio3d.view.save',{})}>{t('studio3d.views.save')}</Button>
-   {s.views.length>0&&<ul className="m-0 grid list-none gap-1 p-0">{s.views.map(v=><li key={v.name} className="flex flex-wrap items-center gap-1 text-xs text-ink-2"><span className="min-w-0 flex-1 truncate">{v.name}</span>
+   {s.views.length>0&&<ul className="m-0 grid list-none gap-1 p-0">{s.views.map(v=><li key={v.name} className="flex flex-wrap items-center gap-1 text-xs text-ink-2">
+    {renamingView===v.name?
+     <Input autoFocus defaultValue={v.name} aria-label={t('studio3d.views.rename')} className="min-w-0 flex-1"
+      onBlur={e=>{const n=e.currentTarget.value.trim();setRenamingView(null);if(n&&n!==v.name)void executeCommand('studio3d.view.rename',{name:v.name,to:n});}}
+      onKeyDown={e=>{if(e.key==='Enter')e.currentTarget.blur();if(e.key==='Escape'){e.currentTarget.value=v.name;e.currentTarget.blur();}}}/>:
+     <span className="min-w-0 flex-1 truncate">{v.name}</span>}
     <Button variant="outline" disabled={!ready} onClick={()=>void executeCommand('studio3d.view.apply',{name:v.name})}>{t('studio3d.views.apply')}</Button>
+    <Button variant="outline" disabled={!ready} aria-label={`${t('studio3d.views.update')} ${v.name}`} onClick={()=>void executeCommand('studio3d.view.update',{name:v.name})}>{t('studio3d.views.update')}</Button>
+    <Button variant="outline" disabled={!ready} aria-label={`${t('studio3d.views.rename')} ${v.name}`} onClick={()=>setRenamingView(v.name)}>{t('studio3d.views.rename')}</Button>
     <Button variant="outline" disabled={!ready} aria-label={`${t('studio3d.views.remove')} ${v.name}`} onClick={()=>void executeCommand('studio3d.view.remove',{name:v.name})}>{t('studio3d.views.remove')}</Button></li>)}</ul>}</div>
   <RenderPng/>
   {s.backend&&<Row k={t('studio3d.view.backend')} v={s.backend}/>}

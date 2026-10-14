@@ -133,6 +133,8 @@ export interface Studio3DController{
  viewSave(name?:string):string;
  viewApply(name:string):void;
  viewRemove(name:string):void;
+ viewUpdate(name:string):void;
+ viewRename(name:string,to:string):void;
  /** Saves the material of a mesh (id or the selected one) as a named local preset. */
  materialPresetSave(name:string,id?:number):void;
  /** Applies a local or built-in material preset to a mesh; one undo step. */
@@ -244,6 +246,8 @@ export function studio3DCommandSpecs():CommandSpec<unknown,unknown>[]{
   add<{on?:boolean}>('studio3d.view.turntable','Start or stop the turntable preview of the 3D viewport (view only, never exported)','View',p=>{need().setTurntable(p?.on??!getStudio3DState().turntable);},object({on:{type:'boolean'}},[]),hasScene),
   add<{name?:string}>('studio3d.view.save','Save the current viewport as a named view','View',p=>{need().viewSave(p?.name);},object({name:{type:'string',maxLength:60}},[]),hasScene),
   add<{name:string}>('studio3d.view.apply','Look at the scene from a saved named view','View',p=>need().viewApply(p.name),object({name:{type:'string'}}),hasScene),
+  add<{name:string}>('studio3d.view.update','Overwrite a saved view with the current viewport','View',p=>{need().viewUpdate(p.name);},object({name:{type:'string'}}),hasScene),
+  add<{name:string;to:string}>('studio3d.view.rename','Rename a saved view','View',p=>{need().viewRename(p.name,p.to);},object({name:{type:'string'},to:{type:'string',maxLength:60}}),hasScene),
   add<{name:string}>('studio3d.view.remove','Delete a saved named view','View',p=>need().viewRemove(p.name),object({name:{type:'string'}}),hasScene),
   add<{name:string;id?:number}>('studio3d.material.preset.save','Save the material of a 3D mesh as a local material preset','Edit',p=>need().materialPresetSave(p.name,p?.id),object({name:{type:'string',minLength:1,maxLength:60},id:{type:'integer',minimum:0}},['name']),hasScene),
   add<{id:number;name:string}>('studio3d.material.preset.apply','Apply a local or built-in material preset to a 3D mesh','Edit',p=>need().materialPresetApply(p.id,p.name),object({id:{type:'integer',minimum:0},name:{type:'string',minLength:1,maxLength:60}}),hasScene),

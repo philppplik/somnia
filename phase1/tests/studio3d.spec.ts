@@ -1453,6 +1453,31 @@ test('3D studio pin labels: labeled pins show a viewport overlay label; empty or
  await expect(page.locator('[data-pin-label]')).toHaveCount(1);
 });
 
+test('3D studio views: rename, update and the digit shortcuts',async({page})=>{
+ await blank(page);
+ await insert(page,'cube',0);
+ expect(await run(page,'studio3d.view.save',{name:'front'})).toBe(true);
+ expect(await run(page,'studio3d.view.save',{name:'top'})).toBe(true);
+ // Rename works; duplicates and unknown names are refused.
+ expect(await run(page,'studio3d.view.rename',{name:'top',to:'hero'})).toBe(true);
+ expect((await session(page)).views.map(v=>v.name)).toEqual(['front','hero']);
+ expect(await run(page,'studio3d.view.rename',{name:'hero',to:'front'})).toBe(false);
+ expect(await run(page,'studio3d.view.rename',{name:'side',to:'x'})).toBe(false);
+ // Update keeps the name and the list size.
+ expect(await run(page,'studio3d.view.update',{name:'hero'})).toBe(true);
+ expect((await session(page)).views.map(v=>v.name)).toEqual(['front','hero']);
+ // Digit keys address view slots: a digit without a saved view does nothing, Shift+Digit saves into the slot.
+ await page.getByTestId('studio3d-viewport').locator('canvas').click();
+ await page.keyboard.press('Digit3');
+ expect((await session(page)).views.length).toBe(2);
+ await page.keyboard.press('Shift+Digit3');
+ await expect.poll(async()=>(await session(page)).views.length).toBe(3);
+ await expect.poll(async()=>(await session(page)).notice).toContain('View 1');
+ // Shift+Digit on an existing slot keeps the name and the count.
+ await page.keyboard.press('Shift+Digit1');
+ await expect.poll(async()=>(await session(page)).views.map(v=>v.name)).toEqual(['front','hero','View 1']);
+});
+
 test('3D studio outliner: the focus button selects the row and frames it',async({page})=>{
  await blank(page);
  await insert(page,'cube',0);

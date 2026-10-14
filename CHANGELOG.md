@@ -1,4 +1,5 @@
 # Unreleased: 3D Studio P0
+- Camera bookmarks polish: saved views can be renamed (command or inline in the view panel) and overwritten with the current camera, default names fill gaps left by removed views, and the viewport maps keys 1-9 to apply a saved view slot and Shift+1-9 to save the current camera into that slot.
 - Pin labels in the viewport: annotation pins with a label show a small overlay tag anchored to the pin that follows the camera, hides when the pin points away, and disappears with the pin; the outliner rows gained a focus button that selects the object and frames it in the viewport.
 - Annotation pins: small amber markers with an optional label, inserted at the 3D cursor or a point, movable and deletable like any object; the label lives in the node's extras, so pins survive save/load and glTF export, and the inspector edits it with undo.
 - Asset panels as drag sources: primitives, scene materials and material presets (built-in and saved) drag from the panels into the viewport - primitives land at the drop point on the ground plane, materials and presets apply to the mesh under the cursor, each as one undo step.
