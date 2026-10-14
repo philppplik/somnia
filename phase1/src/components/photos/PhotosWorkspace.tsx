@@ -31,7 +31,7 @@ import {NEUTRAL_BAND,rgbToHsl,type HslBandId} from '../../lib/photos/hslMixer';
 import {lumMaskWeight,lumMaskWindowNeutral,neutralLumMask} from '../../lib/photos/lumMask';
 import {straightenAngle} from '../../lib/photos/straightenDrag';
 import {lumaOf} from '../../lib/photos/histogram';
-import {usePanelState} from '../../store/panelStateStore';
+import {panelStateStore,usePanelState} from '../../store/panelStateStore';
 import {getState,patchState,requestStudio,useAppStore} from '../../store/appStore';
 import type {MediaItem} from '../../lib/media';
 const bar='media-bar flex flex-wrap items-center gap-2 border-b border-subtle px-3 py-1.5 text-[12px]'; // wraps to a second row instead of squeezing controls away
@@ -164,6 +164,8 @@ export function PhotosWorkspace({item}:{item:MediaItem}){
   e.preventDefault();const rect=stage.current!.getBoundingClientRect();
   zoomTo((zoom??fit)*(e.deltaY<0?1.2:1/1.2),e.clientX-rect.left-rect.width/2,e.clientY-rect.top-rect.height/2);
  },[zoom,fit,zoomTo]);
+ /** Rating/flag keys act on the filmstrip selection when more than one photo is selected, otherwise on the active photo. */
+ const cullTargets=(active:string):string[]=>{const sel=panelStateStore.get<string[]>('photos.filmstripSelection',[]);return sel.length>1?sel:[active];};
  useEffect(()=>{ // arrows walk the library like the prev/next buttons, digits 0-5 rate the active photo; editable targets and modifiers keep their keys
   const onKey=(e:KeyboardEvent)=>{
    if(e.metaKey||e.ctrlKey||e.altKey)return;
@@ -178,10 +180,10 @@ export function PhotosWorkspace({item}:{item:MediaItem}){
    }
    if(e.key==='ArrowLeft'&&nav.prev){e.preventDefault();setActiveMedia(nav.prev);}
    else if(e.key==='ArrowRight'&&nav.next){e.preventDefault();setActiveMedia(nav.next);}
-   else if(/^[0-5]$/.test(e.key))setRating(item.name,Number(e.key));
-   else if(e.key==='p'||e.key==='P')setFlag(item.name,'pick');
-   else if(e.key==='x'||e.key==='X')setFlag(item.name,'reject');
-   else if(e.key==='u'||e.key==='U')setFlag(item.name,null);
+   else if(/^[0-5]$/.test(e.key)){const t=cullTargets(item.name);for(const n of t)setRating(n,Number(e.key));}
+   else if(e.key==='p'||e.key==='P'){const t=cullTargets(item.name);for(const n of t)setFlag(n,'pick');}
+   else if(e.key==='x'||e.key==='X'){const t=cullTargets(item.name);for(const n of t)setFlag(n,'reject');}
+   else if(e.key==='u'||e.key==='U'){const t=cullTargets(item.name);for(const n of t)setFlag(n,null);}
    else if(e.key==='o'||e.key==='O')setGuideStyle(CROP_GUIDE_STYLES[(CROP_GUIDE_STYLES.indexOf(guideStyle)+1)%CROP_GUIDE_STYLES.length]);
    else if(e.key==='z'||e.key==='Z'){if(zoom===null){setZoom(1);setPan([0,0]);}else{setZoom(null);setPan([0,0]);}} // same states as the fit/actual buttons
    else if(e.key==='\\'&&!e.repeat)setCompare(true); // hold to peek at the original, like the compare button

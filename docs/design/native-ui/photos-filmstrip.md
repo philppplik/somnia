@@ -94,3 +94,16 @@ gains a light/dark leg that ctrl-selects two photos, applies a warm
 exposure from the active one, reads the target session's exposure back
 (1.2 applied, the unselected one still 0), then shift-selects the full
 range (button count 3) and collapses back with a plain click.
+
+## Batch culling on the selection (P82)
+
+The rating (0-5) and flag (P/X/U) keys now act on every selected photo
+when the filmstrip selection has more than one entry, and on the active
+photo otherwise — the culling workflow this side of Lightroom's survey
+mode. The targets come from the persisted `photos.filmstripSelection`
+panel state, so keys and clicks never disagree about what is selected.
+
+Coverage: `photos-filmstrip.spec.ts` gains a light/dark leg that
+ctrl-selects two photos, rates them 4 (badges on both, the unselected
+one unrated), rejects them with X (flag badges), then clears flags and
+ratings with U and 0.

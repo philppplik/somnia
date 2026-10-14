@@ -186,3 +186,25 @@ test('multi-select: ctrl/shift select, apply look to the selection (light and da
   await expect(apply).toHaveCount(0);
  }
 });
+test('batch culling: rating and flag keys hit every selected photo (light and dark)',async({page})=>{
+ for(const theme of['light','dark']){
+  await page.goto('/test/design-system/?view=photos-filmstrip');
+  await page.evaluate(t=>document.documentElement.setAttribute('data-theme',t),theme);
+  await expect(page.getByTestId('photos-workspace')).toBeVisible();
+  await expect(page.getByTestId('photos-filmstrip-item-strip-3.png')).toBeVisible();
+  await page.getByTestId('photos-filmstrip-item-strip-1.png').click();
+  await page.getByTestId('photos-filmstrip-item-strip-3.png').click({modifiers:['ControlOrMeta']}); // two selected
+  await page.keyboard.press('4');
+  await expect(page.getByTestId('photos-filmstrip-rating-badge-strip-1.png')).toHaveText('4');
+  await expect(page.getByTestId('photos-filmstrip-rating-badge-strip-3.png')).toHaveText('4');
+  await expect(page.getByTestId('photos-filmstrip-rating-badge-strip-2.png')).toHaveCount(0); // unselected stays unrated
+  await page.keyboard.press('x');
+  await expect(page.getByTestId('photos-filmstrip-flag-strip-1.png')).toHaveAttribute('data-flag','reject');
+  await expect(page.getByTestId('photos-filmstrip-flag-strip-3.png')).toHaveAttribute('data-flag','reject');
+  await page.screenshot({path:`test-results/ds-photos-batch-cull-${theme}.png`,fullPage:true});
+  await page.keyboard.press('u'); // clear the flags again
+  await expect(page.getByTestId('photos-filmstrip-flag-strip-1.png')).toHaveCount(0);
+  await page.keyboard.press('0'); // and the ratings
+  await expect(page.getByTestId('photos-filmstrip-rating-badge-strip-1.png')).toHaveCount(0);
+ }
+});
