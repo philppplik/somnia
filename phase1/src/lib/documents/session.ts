@@ -241,7 +241,7 @@ export const typeText=(text:string)=>run(async()=>{
  if(n.s.block===n.e.block)await applyAtCaret({start:n.s.off,end:n.e.off,text:t},n.s.off===n.e.off);
  else await replaceRange(n.s,n.e,t,n.h);
 });
-const FORMAT_PROPS=['bold','italic','underline','strike','smallCaps'] as const;
+const FORMAT_PROPS=['bold','italic','underline','strike','smallCaps','allCaps','doubleStrike'] as const;
 export type FormatProp=typeof FORMAT_PROPS[number];
 /**
  * Bold/italic/underline on the selection with Word semantics: when every character already has it, it is removed, otherwise it is applied to all.
@@ -283,6 +283,8 @@ export const toggleVertAlign=(v:'superscript'|'subscript')=>run(async()=>{
  await applyFormat({vertAlign:cur===v?'baseline':v});
 });
 /** Highlight colour of the selection, or of the next typed text at a caret. `none` removes it. */
+/** Character spacing in points (-5 to 30) on the selection, or held for the next typed text. One undo step. */
+export const setCharSpacing=(pt:number)=>run(()=>applyFormat({spacing:pt}));
 export const setHighlight=(h:import('./protocol').HighlightName)=>run(()=>applyFormat({highlight:h}));
 /** The selected text must exist: a link cannot be held for typing. */
 const needSelection=()=>{const c=getDocumentsState().caret;if(!c)return false;const n=norm(c);return cmp(n.s,n.e)!==0;};

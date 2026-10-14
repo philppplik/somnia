@@ -1,5 +1,5 @@
 import {useState} from 'react';
-import {insertPageBreak,clearFormatting,hasTextSelection,setHighlight,setLink,toggleFormat,toggleVertAlign} from '../../lib/documents/session';
+import {setCharSpacing,insertPageBreak,clearFormatting,hasTextSelection,setHighlight,setLink,toggleFormat,toggleVertAlign} from '../../lib/documents/session';
 import {HIGHLIGHTS,MAX_LINK_CHARS,linkProblem,type FormatPatch,type FormatState,type HighlightName} from '../../lib/documents/protocol';
 import {setShortcutsOpen} from '../../lib/documents/shortcuts';
 import {setInfoDialog} from '../../lib/documents/infoDialog';
@@ -24,15 +24,22 @@ export function LinkDialog({current,onClose}:{current:string;onClose:()=>void}){
   </div>
  </div>;
 }
+const SPACINGS=[-1,-0.5,0,0.5,1,2,3];
 /** Strikethrough, small caps, superscript, subscript, highlight, link and clear-formatting controls. */
 export function TextEffects({format,held,enabled}:{format:FormatState|null;held:FormatPatch|null;enabled:boolean}){
  const {t}=useT();const doc=useDocuments();const [linkOpen,setLinkOpen]=useState(false);
- const on=(p:'strike'|'smallCaps')=>held?.[p]??format?.[p]==='on';
+ const on=(p:'strike'|'smallCaps'|'allCaps'|'doubleStrike')=>held?.[p]??format?.[p]==='on';
+ const spacing=held?.spacing??format?.spacing;
  const vert=held?.vertAlign??format?.vertAlign??null;const hl=held?.highlight??format?.highlight??null;
  const picked=hasTextSelection();
  return <>
   <NativeButton className={tool+' w-6 border border-subtle'} aria-label={t('documents.format.strike')} title={t('documents.format.strike')+' (Ctrl+Shift+X)'} aria-pressed={on('strike')} disabled={!enabled} onClick={()=>void toggleFormat('strike')} data-testid="documents-format-strike"><span className="line-through">S</span></NativeButton>
   <NativeButton className={tool+' w-6 border border-subtle'} aria-label={t('documents.format.smallCaps')} title={t('documents.format.smallCaps')} aria-pressed={on('smallCaps')} disabled={!enabled} onClick={()=>void toggleFormat('smallCaps')} data-testid="documents-format-smallcaps"><span>{'Aa'}</span></NativeButton>
+  <NativeButton className={tool+' w-6 border border-subtle'} aria-label={t('documents.format.allCaps')} title={t('documents.format.allCaps')} aria-pressed={on('allCaps')} disabled={!enabled} onClick={()=>void toggleFormat('allCaps')} data-testid="documents-format-allcaps"><span>{'AA'}</span></NativeButton>
+  <NativeButton className={tool+' w-6 border border-subtle'} aria-label={t('documents.format.doubleStrike')} title={t('documents.format.doubleStrike')} aria-pressed={on('doubleStrike')} disabled={!enabled} onClick={()=>void toggleFormat('doubleStrike')} data-testid="documents-format-doublestrike"><span className="line-through">{'D'}</span></NativeButton>
+  <NativeSelect className={sel+' w-24'} aria-label={t('documents.format.spacing')} title={t('documents.format.spacing')} disabled={!enabled} value={spacing===null||spacing===undefined?'':String(spacing)} onChange={e=>{const n=Number(e.currentTarget.value);if(SPACINGS.includes(n))void setCharSpacing(n);}} data-testid="documents-format-spacing">
+   {(spacing===null||spacing===undefined||!SPACINGS.includes(spacing))&&<option value="" disabled>{t('documents.format.spacing')}</option>}
+   {SPACINGS.map(n=><option key={n} value={String(n)}>{n===0?t('documents.format.spacing.normal'):(n>0?'+':'')+n+' pt'}</option>)}</NativeSelect>
   <NativeButton className={tool+' w-6 border border-subtle'} aria-label={t('documents.format.superscript')} title={t('documents.format.superscript')+' (Ctrl+Shift+=)'} aria-pressed={vert==='superscript'} disabled={!enabled} onClick={()=>void toggleVertAlign('superscript')} data-testid="documents-format-superscript"><span>{'x\u00b2'}</span></NativeButton>
   <NativeButton className={tool+' w-6 border border-subtle'} aria-label={t('documents.format.subscript')} title={t('documents.format.subscript')+' (Ctrl+=)'} aria-pressed={vert==='subscript'} disabled={!enabled} onClick={()=>void toggleVertAlign('subscript')} data-testid="documents-format-subscript"><span>{'x\u2082'}</span></NativeButton>
   <NativeSelect className={sel+' w-28'} aria-label={t('documents.format.highlight')} title={t('documents.format.highlight')} disabled={!enabled} value={hl??''} onChange={e=>void setHighlight(e.currentTarget.value as HighlightName)} data-testid="documents-format-highlight">

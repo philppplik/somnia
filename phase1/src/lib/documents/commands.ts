@@ -1,7 +1,7 @@
 import {registerCommand} from '../commandRegistry';
 import {getDocumentsState,patchDocuments,stepZoom} from './store';
 import {typeText,redoEdit,setAlign,setParagraphStyle,toggleList,clearList,shiftListLevel,stepFontSize,stepIndent,toggleFormat,undoEdit,editTable,insertTable,setHeaderFooter,insertImage,resizeImageToPercent,setImageAlt,removeImage,setColumnWidth,styleTable,setPageSetup,setFindOpen,setFindQuery,findStep,replaceAll,replaceCurrent} from './session';
-import {stylePatchProblem,STYLE_ID_RE,type StylePatch,tocProblem,type TocOptions,listOptionsProblem,type ListOptionsPatch,pageSetupProblem,LIST_STYLES,type ListStyleId} from './protocol';
+import {MIN_SPACING_PT,MAX_SPACING_PT,stylePatchProblem,STYLE_ID_RE,type StylePatch,tocProblem,type TocOptions,listOptionsProblem,type ListOptionsPatch,pageSetupProblem,LIST_STYLES,type ListStyleId} from './protocol';
 import {deleteStyle,saveStyle,setCharStyle,insertToc,updateToc,removeToc,continueNumbering,restartNumbering,setListStyle,setListOptions} from './session';
 import {validFindQuery,validReplaceText} from './find';
 import {findMedia} from '../media';
@@ -20,7 +20,7 @@ import {insertPageBreak,setParagraphOptions,setProperties,setTabStops} from './s
 import {parsePdfPages,checkParaPatch,PARA_FLAG_KEYS,propertiesProblem,tabsProblem} from './protocol';
 import {addComment,commentSelection,deleteComment,goToComment,readComments,replyComment,resolveComment} from './session';
 import {commentProblem,HIGHLIGHTS,linkProblem,type HighlightName} from './protocol';
-import {clearFormatting,hasTextSelection,setHighlight,setLink,toggleVertAlign} from './session';
+import {setCharSpacing,clearFormatting,hasTextSelection,setHighlight,setLink,toggleVertAlign} from './session';
 import {documentsExportReady,patchDocumentsExportUi,requestDocumentsExportPdf,requestDocumentsSaveCopy} from './exportBridge';
 /**
  * Documents studio commands. Registered while the Documents canvas is mounted (registerDocumentsCommands),
@@ -86,6 +86,12 @@ export function registerDocumentsCommands(){
   add('documents.toggleSmallCaps','Toggle small caps',async()=>{await toggleFormat('smallCaps');},()=>ready()&&!!getDocumentsState().caret),
   add('documents.toggleSuperscript','Toggle superscript',async()=>{await toggleVertAlign('superscript');},()=>ready()&&!!getDocumentsState().caret),
   add('documents.toggleSubscript','Toggle subscript',async()=>{await toggleVertAlign('subscript');},()=>ready()&&!!getDocumentsState().caret),
+  add('documents.toggleAllCaps','Toggle all caps',async()=>{await toggleFormat('allCaps');},()=>ready()&&!!getDocumentsState().caret),
+  add('documents.toggleDoubleStrike','Toggle double strikethrough',async()=>{await toggleFormat('doubleStrike');},()=>ready()&&!!getDocumentsState().caret),
+  add('documents.charSpacing.set','Set character spacing',async p=>{
+   const v=(p as Record<string,unknown>|undefined)?.points;if(typeof v!=='number'||!Number.isFinite(v)||v<MIN_SPACING_PT||v>MAX_SPACING_PT)throw expected(`Missing or invalid "points" (${MIN_SPACING_PT} to ${MAX_SPACING_PT}).`);
+   await setCharSpacing(v);
+  },()=>ready()&&!!getDocumentsState().caret),
   add('documents.highlight.set','Set highlight colour',async p=>{
    const c=(p as Record<string,unknown>|undefined)?.color;if(!(HIGHLIGHTS as readonly unknown[]).includes(c))throw expected('Invalid "color" (none, yellow, green, cyan, pink or gray).');
    await setHighlight(c as HighlightName);

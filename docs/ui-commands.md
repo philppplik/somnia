@@ -16,7 +16,7 @@ included; the `source` column names the owner. Dynamic sources that stay outside
 
 Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, fr, pt-BR); the gate enforces it.
 
-738 commands. Categories: Edit, Help, Insert, Project, Tools, View.
+741 commands. Categories: Edit, Help, Insert, Project, Tools, View.
 
 | id | title | category | source | shortcut |
 | --- | --- | --- | --- | --- |
@@ -240,6 +240,7 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `documents.align.left` | Align left | View | documents |  |
 | `documents.align.right` | Align right | View | documents |  |
 | `documents.author.set` | Set the author name | View | documents |  |
+| `documents.charSpacing.set` | Set character spacing | View | documents |  |
 | `documents.clearFormatting` | Clear text formatting | View | documents |  |
 | `documents.clearSelection` | Clear document selection | View | documents-panels |  |
 | `documents.comments.add` | Comment on selection | View | documents |  |
@@ -332,7 +333,9 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `documents.toc.open` | Table of contents | View | documents |  |
 | `documents.toc.remove` | Remove table of contents | View | documents |  |
 | `documents.toc.update` | Update table of contents | View | documents |  |
+| `documents.toggleAllCaps` | Toggle all caps | View | documents |  |
 | `documents.toggleBold` | Toggle bold | View | documents |  |
+| `documents.toggleDoubleStrike` | Toggle double strikethrough | View | documents |  |
 | `documents.toggleItalic` | Toggle italic | View | documents |  |
 | `documents.toggleSmallCaps` | Toggle small caps | View | documents |  |
 | `documents.toggleStrike` | Toggle strikethrough | View | documents |  |

@@ -48,7 +48,7 @@ new file mode 100644
 index 0000000..5b80b79
 --- /dev/null
 +++ b/crates/somnia-worker/src/lib.rs
-@@ -0,0 +1,4247 @@
+@@ -0,0 +1,4292 @@
 +//! Experimental headless adapter. No DOM, egui, filesystem or UI thread access.
 +use wasm_bindgen::prelude::*;
 +use std::sync::Arc;
@@ -475,6 +475,9 @@ index 0000000..5b80b79
 +        let mut color: Option<wordcraft_doc::props::TextColor> = None;
 +        let mut strike: Option<bool> = None;
 +        let mut small_caps: Option<bool> = None;
++        let mut all_caps: Option<bool> = None;
++        let mut double_strike: Option<bool> = None;
++        let mut spacing: Option<f32> = None;
 +        let mut vert: Option<wordcraft_doc::props::VertAlign> = None;
 +        let mut highlight: Option<wordcraft_doc::props::Highlight> = None;
 +        let mut link: Option<Option<String>> = None;
@@ -528,6 +531,11 @@ index 0000000..5b80b79
 +                    size = Some(((n * 2.0).round() / 2.0) as f32);
 +                    continue;
 +                }
++                "spacing" => {
++                    let n = val.as_f64().filter(|n| n.is_finite() && (-5.0..=30.0).contains(n)).ok_or_else(|| "format field spacing must be a number from -5 to 30 points".to_string())?;
++                    spacing = Some(((n * 20.0).round() / 20.0) as f32);
++                    continue;
++                }
 +                "color" => {
 +                    let c = val.as_str().ok_or_else(|| "format field color must be text".to_string())?;
 +                    color = Some(if c == "auto" {
@@ -548,6 +556,8 @@ index 0000000..5b80b79
 +                "italic" => italic = Some(flag),
 +                "strike" => strike = Some(flag),
 +                "smallCaps" => small_caps = Some(flag),
++                "allCaps" => all_caps = Some(flag),
++                "doubleStrike" => double_strike = Some(flag),
 +                "clear" => {
 +                    if !flag {
 +                        return Err("format field clear must be true".into());
@@ -588,6 +598,18 @@ index 0000000..5b80b79
 +                }
 +                if let Some(v) = small_caps {
 +                    cp.small_caps = Some(v);
++                }
++                if let Some(v) = all_caps {
++                    cp.caps = Some(v);
++                }
++                if let Some(v) = double_strike {
++                    cp.double_strike = Some(v);
++                    if v {
++                        cp.strike = None;
++                    }
++                }
++                if let Some(v) = spacing {
++                    cp.spacing = Some(v);
 +                }
 +                if let Some(v) = vert {
 +                    cp.vert_align = Some(v);
@@ -638,6 +660,8 @@ index 0000000..5b80b79
 +        let mut look: Vec<(String, f32, wordcraft_doc::props::TextColor)> = Vec::new();
 +        // strike, small caps, vertical alignment, highlight name, link ("" for none).
 +        let mut extra: Vec<(bool, bool, wordcraft_doc::props::VertAlign, &'static str, String)> = Vec::new();
++        // all caps, double strike, character spacing.
++        let mut more: Vec<(bool, bool, f32)> = Vec::new();
 +        if sb == eb && so == eo {
 +            let p = self.fmt_para(sb)?;
 +            if so > p.text.len() || !p.text.is_char_boundary(so) {
@@ -647,6 +671,7 @@ index 0000000..5b80b79
 +            seen.push((rc.bold, rc.italic, rc.underline != wordcraft_doc::props::Underline::None));
 +            look.push((rc.font.clone(), rc.size, rc.color));
 +            extra.push(Self::extra_of(&rc, p.props_at(so)));
++            more.push((rc.caps, rc.double_strike, rc.spacing));
 +        } else {
 +            for (b, start, end) in self.span_ranges(sb, so, eb, eo)? {
 +                let p = self.fmt_para(b)?;
@@ -656,6 +681,7 @@ index 0000000..5b80b79
 +                        seen.push((rc.bold, rc.italic, rc.underline != wordcraft_doc::props::Underline::None));
 +                        look.push((rc.font.clone(), rc.size, rc.color));
 +                        extra.push(Self::extra_of(&rc, cp));
++                        more.push((rc.caps, rc.double_strike, rc.spacing));
 +                    }
 +                }
 +            }
@@ -688,7 +714,10 @@ index 0000000..5b80b79
 +        });
 +        let hl = e0.filter(|x| all_same(&|y| y.3 == x.3)).map(|x| x.3);
 +        let lk = e0.filter(|x| all_same(&|y| y.4 == x.4)).map(|x| x.4.clone());
-+        Ok(serde_json::json!({"bold": tri(&seen, |x| x.0), "italic": tri(&seen, |x| x.1), "underline": tri(&seen, |x| x.2), "font": font, "size": size, "color": color,
++        let tri_m = |f: &dyn Fn(&(bool, bool, f32)) -> bool| if !more.is_empty() && more.iter().all(|x| f(x)) { "on" } else if more.iter().any(|x| f(x)) { "mixed" } else { "off" };
++        let spacing = more.first().filter(|x| more.iter().all(|y| y.2.to_bits() == x.2.to_bits())).map(|x| x.2);
++        Ok(serde_json::json!({"allCaps": tri_m(&|x| x.0), "doubleStrike": tri_m(&|x| x.1), "spacing": spacing,
++            "bold": tri(&seen, |x| x.0), "italic": tri(&seen, |x| x.1), "underline": tri(&seen, |x| x.2), "font": font, "size": size, "color": color,
 +            "strike": tri_b(&|x| x.0), "smallCaps": tri_b(&|x| x.1), "vertAlign": vert, "highlight": hl, "link": lk}).to_string())
 +    }
 +    /// `"none"` clears; `RRGGBB` sets.
@@ -3544,6 +3573,22 @@ index 0000000..5b80b79
 +        }
 +        if s.toc_entries(9).unwrap().is_empty() {
 +            assert!(s.do_insert_toc(0, 3, "", true).is_err());
++        }
++    }
++    #[test]
++    fn character_all_caps_double_strike_and_spacing_set_report_and_validate() {
++        let mut s = DocSession::from_bytes(FIXTURE).unwrap();
++        let st = |s: &DocSession| -> serde_json::Value { serde_json::from_str(&s.do_format_state(0, 0, 0, 1).unwrap()).unwrap() };
++        assert_eq!((st(&s)["allCaps"].as_str(), st(&s)["doubleStrike"].as_str()), (Some("off"), Some("off")));
++        s.do_format(0, 0, 0, 1, r#"{"allCaps":true,"doubleStrike":true,"spacing":1.5}"#).unwrap();
++        assert_eq!((st(&s)["allCaps"].as_str(), st(&s)["doubleStrike"].as_str(), st(&s)["spacing"].as_f64()), (Some("on"), Some("on"), Some(1.5)));
++        s.do_format(0, 0, 0, 1, r#"{"strike":true}"#).unwrap();
++        assert_eq!((st(&s)["strike"].as_str(), st(&s)["doubleStrike"].as_str()), (Some("on"), Some("off")));
++        s.do_format(0, 0, 0, 1, r#"{"allCaps":false,"spacing":0}"#).unwrap();
++        assert_eq!((st(&s)["allCaps"].as_str(), st(&s)["spacing"].as_f64()), (Some("off"), Some(0.0)));
++        assert!(s.paginate() >= 1);
++        for bad in [r#"{"spacing":31}"#, r#"{"spacing":-5.5}"#, r#"{"spacing":"1"}"#, r#"{"allCaps":1}"#, r#"{"doubleStrike":"yes"}"#] {
++            assert!(s.do_format(0, 0, 0, 1, bad).is_err(), "{bad}");
 +        }
 +    }
 +    #[test]

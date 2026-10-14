@@ -88,3 +88,9 @@ test('list options are validated before the engine',()=>{
  go({level:0,start:5,format:'upperRoman',text:'(%1)'});go({level:1,text:'%1.%2'});go({level:0,format:'bullet',text:'*'});
  assert.deepEqual(calls,['0:{"level":0,"start":5,"format":"upperRoman","text":"(%1)"}','0:{"level":1,"text":"%1.%2"}','0:{"level":0,"format":"bullet","text":"*"}']);
 });
+test('all caps, double strike and character spacing are validated before the engine',()=>{
+ const {k,calls}=core();rp(k);const send=(patch:unknown)=>k.handle({id:2,kind:'format',start:{block:0,off:0},end:{block:0,off:1},patch} as never).res.ok;
+ for(const bad of [{allCaps:1},{doubleStrike:'yes'},{spacing:31},{spacing:-5.5},{spacing:'1'},{spacing:Number.NaN}])assert.equal(send(bad),false,JSON.stringify(bad));
+ assert.equal(calls.length,0);
+ send({allCaps:true,doubleStrike:false,spacing:-5});send({spacing:30});assert.equal(calls.length,2);
+});

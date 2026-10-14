@@ -8,7 +8,7 @@ test('links are limited to http, https and mailto without spaces',()=>{
 });
 test('format patches accept the new effects and refuse the rest',()=>{
  for(const ok of [{strike:true},{smallCaps:false},{vertAlign:'superscript'},{vertAlign:'baseline'},{highlight:'yellow'},{highlight:'none'},{link:'https://a.org'},{link:''},{clear:true},{strike:true,bold:true,link:'mailto:a@b.co'}])assert.doesNotThrow(()=>checkFormatPatch(ok),JSON.stringify(ok));
- for(const bad of [{strike:'yes'},{vertAlign:'up'},{highlight:'purple'},{highlight:'other'},{link:'javascript:x'},{link:7},{clear:false},{clear:'true'},{doubleStrike:true}])assert.throws(()=>checkFormatPatch(bad),JSON.stringify(bad));
+ for(const bad of [{strike:'yes'},{vertAlign:'up'},{highlight:'purple'},{highlight:'other'},{link:'javascript:x'},{link:7},{clear:false},{clear:'true'},{doubleStrike:1},{allCaps:'x'},{underlineColor:'000000'}])assert.throws(()=>checkFormatPatch(bad),JSON.stringify(bad));
 });
 test('only a valid patch reaches the engine',()=>{
  const calls:string[]=[];

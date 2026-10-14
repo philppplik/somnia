@@ -2591,6 +2591,17 @@
       "hasEnabled": true
     },
     {
+      "id": "documents.charSpacing.set",
+      "title": "Set character spacing",
+      "category": "View",
+      "source": "documents",
+      "keywords": [
+        "document",
+        "docx"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "documents.clearFormatting",
       "title": "Clear text formatting",
       "category": "View",
@@ -3573,8 +3584,30 @@
       "hasEnabled": true
     },
     {
+      "id": "documents.toggleAllCaps",
+      "title": "Toggle all caps",
+      "category": "View",
+      "source": "documents",
+      "keywords": [
+        "document",
+        "docx"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "documents.toggleBold",
       "title": "Toggle bold",
+      "category": "View",
+      "source": "documents",
+      "keywords": [
+        "document",
+        "docx"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "documents.toggleDoubleStrike",
+      "title": "Toggle double strikethrough",
       "category": "View",
       "source": "documents",
       "keywords": [
