@@ -1,5 +1,11 @@
 export const LOCAL_MODELS_CATALOGUES:Record<string,Record<string,string>> = {
  "en": {
+  "local.search.results.limit": "Snippet limit",
+  "local.search.results.group": "Group snippets by source",
+  "local.search.results.count": "{snippets} returned snippets from {sources} sources",
+  "local.search.results.source": "{source} · {count} snippets · best similarity {score}",
+  "local.search.results.boundary": "Global top snippets only. Grouping changes presentation, not ranking or source coverage. Changing limit clears results; run search again.",
+
   "local.search.review.title": "Review selected sources",
   "local.search.review.boundary": "Review source names and excerpts before approving. The full selected texts, not just these excerpts, will be embedded locally. No generated answer, cloud or persistence.",
   "local.search.review.partial": "Excerpt shows first512 characters only. Open the source to review the full text.",
@@ -601,6 +607,12 @@ export const LOCAL_MODELS_CATALOGUES:Record<string,Record<string,string>> = {
   "local.route.earlier": "Move earlier after local"
  },
  "de": {
+  "local.search.results.limit": "Ausschnitt-Limit",
+  "local.search.results.group": "Ausschnitte nach Quelle gruppieren",
+  "local.search.results.count": "{snippets} Ausschnitte aus {sources} Quellen",
+  "local.search.results.source": "{source} · {count} Ausschnitte · beste Ähnlichkeit {score}",
+  "local.search.results.boundary": "Nur globale Top-Ausschnitte. Gruppierung ändert Darstellung, nicht Ranking/Quellenabdeckung. Limitwechsel löscht Resultate; erneut suchen.",
+
   "local.search.review.title": "Gewählte Quellen prüfen",
   "local.search.review.boundary": "Quellennamen/Ausschnitte vor Zustimmung prüfen. Ganze gewählte Texte, nicht nur Ausschnitte, werden lokal eingebettet. Keine generierte Antwort/Cloud/Persistenz.",
   "local.search.review.partial": "Nur erste512 Zeichen. Quelle öffnen, um ganzen Text zu prüfen.",
@@ -1202,6 +1214,12 @@ export const LOCAL_MODELS_CATALOGUES:Record<string,Record<string,string>> = {
   "local.route.earlier": "Nach lokal früher einordnen"
  },
  "es": {
+  "local.search.results.limit": "Límite de fragmentos",
+  "local.search.results.group": "Agrupar fragmentos por fuente",
+  "local.search.results.count": "{snippets} fragmentos de {sources} fuentes",
+  "local.search.results.source": "{source} · {count} fragmentos · mejor similitud {score}",
+  "local.search.results.boundary": "Solo mejores fragmentos globales. Agrupar cambia vista, no ranking/cobertura. Cambiar límite borra resultados; busca de nuevo.",
+
   "local.search.review.title": "Revisar fuentes seleccionadas",
   "local.search.review.boundary": "Revisa nombres/extractos antes de aprobar. Textos completos, no solo extractos, se incrustan localmente. Sin respuesta generada/nube/persistencia.",
   "local.search.review.partial": "Solo primeros512 caracteres. Abre fuente para revisar texto completo.",
@@ -1803,6 +1821,12 @@ export const LOCAL_MODELS_CATALOGUES:Record<string,Record<string,string>> = {
   "local.route.earlier": "Mover antes tras local"
  },
  "fr": {
+  "local.search.results.limit": "Limite d’extraits",
+  "local.search.results.group": "Grouper extraits par source",
+  "local.search.results.count": "{snippets} extraits de {sources} sources",
+  "local.search.results.source": "{source} · {count} extraits · meilleure similarité {score}",
+  "local.search.results.boundary": "Extraits globaux seulement. Groupement change affichage, pas classement/couverture. Changer limite efface résultats; recherchez encore.",
+
   "local.search.review.title": "Vérifier sources choisies",
   "local.search.review.boundary": "Vérifiez noms/extraits avant accord. Textes complets, pas seulement extraits, sont indexés localement. Sans réponse générée/cloud/persistance.",
   "local.search.review.partial": "Premiers512 caractères seulement. Ouvrez source pour vérifier texte complet.",
@@ -2404,6 +2428,12 @@ export const LOCAL_MODELS_CATALOGUES:Record<string,Record<string,string>> = {
   "local.route.earlier": "Avancer après local"
  },
  "pt-BR": {
+  "local.search.results.limit": "Limite de trechos",
+  "local.search.results.group": "Agrupar trechos por fonte",
+  "local.search.results.count": "{snippets} trechos de {sources} fontes",
+  "local.search.results.source": "{source} · {count} trechos · melhor similaridade {score}",
+  "local.search.results.boundary": "Só melhores trechos globais. Agrupar muda vista, não ranking/cobertura. Mudar limite limpa resultados; busque novamente.",
+
   "local.search.review.title": "Revisar fontes selecionadas",
   "local.search.review.boundary": "Revise nomes/trechos antes de aprovar. Textos completos, não só trechos, serão indexados localmente. Sem resposta gerada/nuvem/persistência.",
   "local.search.review.partial": "Só primeiros512 caracteres. Abra fonte para revisar texto completo.",
