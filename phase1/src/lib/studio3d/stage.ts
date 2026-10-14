@@ -800,6 +800,29 @@ export class Stage{
  }
  editBevelEdge(width:number,segments=1){this.editOp({key:'studio3d.hist.bevelEdges'},m=>bevelEdges(m,[...this.editSel.edges.values()],width,segments));}
  editLoopSlide(factor:number){this.editOp({key:'studio3d.hist.loopSlide'},m=>slideEdges(m,[...this.editSel.edges.values()],factor));}
+ /** Selects the boundary edges or vertices of the edited mesh: position-keyed borders (1e6 rounding) used by exactly one triangle, so split UV seams do not read as holes. Replaces the current selection of that kind; selection changes are not undo steps. */
+ editSelectBoundary(kind:'vertex'|'edge'='edge'){
+  const m=this.editMesh();
+  const pos=m.geometry.getAttribute('position'),idx=m.geometry.getIndex();
+  const n=idx?idx.count:pos.count;const at=(i:number)=>idx?idx.getX(i):i;
+  const pk=(v:number)=>`${Math.round(pos.getX(v)*1e6)}_${Math.round(pos.getY(v)*1e6)}_${Math.round(pos.getZ(v)*1e6)}`;
+  const count=new Map<string,number>();
+  const owner=new Map<string,[number,number]>();
+  for(let t=0;t+2<n;t+=3){
+   for(let e=0;e<3;e++){
+    const a=at(t+e),b=at(t+(e+1)%3);
+    const ka=pk(a),kb=pk(b);
+    const k=ka<kb?`${ka}|${kb}`:`${kb}|${ka}`;
+    count.set(k,(count.get(k)??0)+1);
+    if(!owner.has(k))owner.set(k,[Math.min(a,b),Math.max(a,b)]);
+   }
+  }
+  const rim:[number,number][]=[];
+  const vpos=new Set<string>();
+  for(const [k,c]of count)if(c===1){const pair=owner.get(k)!;rim.push(pair);vpos.add(pk(pair[0]));vpos.add(pk(pair[1]));}
+  if(kind==='edge'){this.editSel.edges.clear();for(const [a,b]of rim)this.editSel.edges.set(`${a}_${b}`,[a,b]);}
+  else{this.editSel.verts.clear();for(let v=0;v<pos.count;v++)if(vpos.has(pk(v)))this.editSel.verts.add(v);}
+ }
  /** Deletes the selected edit-mode elements (faces, or triangles touching selected edges or vertices) with one undo step. The selection is cleared afterwards because triangle ordinals shift. */
  editDelete(kind:'vertex'|'edge'|'face'){
   this.editOp({key:'studio3d.hist.editDelete'},m=>deleteElements(m,kind,kind==='face'?{faces:[...this.editSel.faces]}:kind==='edge'?{edges:[...this.editSel.edges.values()]}:{verts:[...this.editSel.verts]}));

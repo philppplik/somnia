@@ -894,5 +894,7 @@
  "studio3d.hist.editPoke": "Poke faces",
  "cmd.studio3d.edit.duplicate": "Duplicate selected faces as a detached shell",
  "studio3d.edit.duplicate": "Duplicate",
- "studio3d.hist.editDuplicate": "Duplicate faces"
+ "studio3d.hist.editDuplicate": "Duplicate faces",
+ "cmd.studio3d.edit.selectBoundary": "Select boundary edges or vertices",
+ "studio3d.edit.selBoundary": "Boundary"
 }

@@ -6900,6 +6900,19 @@
       "hasEnabled": true
     },
     {
+      "id": "studio3d.edit.selectBoundary",
+      "title": "Select boundary edges or vertices",
+      "category": "Edit",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "studio3d.edit.selectGrow",
       "title": "Grow or shrink selection",
       "category": "Edit",

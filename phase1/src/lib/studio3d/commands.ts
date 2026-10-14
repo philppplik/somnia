@@ -119,6 +119,7 @@ export interface Studio3DController{
  editMode(mode:'vertex'|'edge'|'face'):void;
  editSelect(kind:'vertex'|'edge'|'face',ids:(number|[number,number])[],toggle?:boolean):void;
  editSelectAll(op:'all'|'none'|'invert',kind?:'vertex'|'edge'|'face'):void;
+ editSelectBoundary(kind?:'vertex'|'edge'):void;
  editSelectGrow(steps?:number,shrink?:boolean,kind?:'vertex'|'edge'|'face'):void;
  editDelete(kind?:'vertex'|'edge'|'face'):void;
  editWeld():void;
@@ -295,6 +296,7 @@ export function studio3DCommandSpecs():CommandSpec<unknown,unknown>[]{
   add<{mode:'vertex'|'edge'|'face'}>('studio3d.edit.mode','Switch the mesh edit selection mode','Edit',p=>need().editMode(p.mode),object({mode:{enum:['vertex','edge','face']}}),()=>getStudio3DState().edit!=null),
   add<{kind:'vertex'|'edge'|'face';ids?:number[];edges?:[number,number][];toggle?:boolean}>('studio3d.edit.select','Select vertices, edges or faces of the edited 3D mesh','Edit',p=>need().editSelect(p.kind,p.kind==='edge'?(p.edges??[]):(p.ids??[]),!!p.toggle),object({kind:{enum:['vertex','edge','face']},ids:{type:'array',items:{type:'integer',minimum:0},maxItems:10000},edges:{type:'array',items:{type:'array',items:{type:'integer',minimum:0},minItems:2,maxItems:2},maxItems:10000},toggle:{type:'boolean'}},['kind']),()=>getStudio3DState().edit!=null),
   add<{op:'all'|'none'|'invert';kind?:'vertex'|'edge'|'face'}>('studio3d.edit.selectAll','Select all, no or the inverse of the edited 3D mesh elements','Edit',p=>need().editSelectAll(p.op,p.kind),object({op:{enum:['all','none','invert']},kind:{enum:['vertex','edge','face']}},['op']),()=>getStudio3DState().edit!=null),
+  add<{kind?:'vertex'|'edge'}>('studio3d.edit.selectBoundary','Select the boundary edges or vertices of the edited 3D mesh','Edit',p=>need().editSelectBoundary(p.kind),object({kind:{enum:['vertex','edge']}},[]),()=>getStudio3DState().edit!=null),
   add<{steps?:number;shrink?:boolean;kind?:'vertex'|'edge'|'face'}>('studio3d.edit.selectGrow','Grow or shrink the edited 3D mesh selection to neighbouring elements','Edit',p=>need().editSelectGrow(p?.steps,p?.shrink,p?.kind),object({steps:{type:'integer',minimum:1,maximum:64},shrink:{type:'boolean'},kind:{enum:['vertex','edge','face']}},[]),()=>getStudio3DState().edit!=null),
   add<{kind?:'vertex'|'edge'|'face'}>('studio3d.edit.delete','Delete the selected elements of the edited 3D mesh','Edit',p=>need().editDelete(p?.kind),object({kind:{enum:['vertex','edge','face']}},[]),()=>getStudio3DState().edit!=null),
   add('studio3d.edit.weld','Merge the selected vertices of the edited 3D mesh at their centre','Edit',()=>need().editWeld(),undefined,()=>getStudio3DState().edit!=null),

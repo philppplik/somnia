@@ -894,5 +894,7 @@
  "studio3d.hist.editPoke": "Piquer les faces",
  "cmd.studio3d.edit.duplicate": "Dupliquer les faces sélectionnées en copie détachée",
  "studio3d.edit.duplicate": "Dupliquer",
- "studio3d.hist.editDuplicate": "Dupliquer les faces"
+ "studio3d.hist.editDuplicate": "Dupliquer les faces",
+ "cmd.studio3d.edit.selectBoundary": "Sélectionner les arêtes ou sommets du bord",
+ "studio3d.edit.selBoundary": "Bord"
 }

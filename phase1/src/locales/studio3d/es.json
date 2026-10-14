@@ -894,5 +894,7 @@
  "studio3d.hist.editPoke": "Pinchar caras",
  "cmd.studio3d.edit.duplicate": "Duplicar las caras seleccionadas como copia separada",
  "studio3d.edit.duplicate": "Duplicar",
- "studio3d.hist.editDuplicate": "Duplicar caras"
+ "studio3d.hist.editDuplicate": "Duplicar caras",
+ "cmd.studio3d.edit.selectBoundary": "Seleccionar aristas o vértices del borde",
+ "studio3d.edit.selBoundary": "Borde"
 }

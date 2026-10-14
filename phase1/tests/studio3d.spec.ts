@@ -849,6 +849,20 @@ test('mesh edit mode: duplicate copies selected faces as a detached shell, undo 
  await expect(page.getByRole('alert')).toContainText('Select faces to duplicate');
 });
 
+test('mesh edit mode: select boundary finds the rim after a delete',async({page})=>{
+ await blank(page);
+ const id=await insert(page,'cube',0);
+ expect(await run(page,'studio3d.edit.start',{id,mode:'edge'})).toBe(true);
+ expect(await run(page,'studio3d.edit.selectBoundary',{kind:'edge'})).toBe(true);
+ let s=await session(page);expect(s.edit).toMatchObject({edges:0});
+ expect(await run(page,'studio3d.edit.select',{kind:'face',ids:[4,5]})).toBe(true);
+ expect(await run(page,'studio3d.edit.delete',{})).toBe(true);
+ expect(await run(page,'studio3d.edit.selectBoundary',{kind:'edge'})).toBe(true);
+ s=await session(page);expect(s.edit).toMatchObject({edges:4});
+ expect(await run(page,'studio3d.edit.selectBoundary',{kind:'vertex'})).toBe(true);
+ s=await session(page);expect(s.edit).toMatchObject({verts:12});
+});
+
 test('mesh edit mode: weld merges selected vertices at their centre, undo restores them',async({page})=>{
  await blank(page);
  const id=await insert(page,'cube',0);

@@ -609,6 +609,7 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `studio3d.edit.poke` | Split selected triangles into three at their centroid | Edit | studio3d |  |
 | `studio3d.edit.select` | Select element | Edit | studio3d |  |
 | `studio3d.edit.selectAll` | Select all, none or inverse | Edit | studio3d |  |
+| `studio3d.edit.selectBoundary` | Select boundary edges or vertices | Edit | studio3d |  |
 | `studio3d.edit.selectGrow` | Grow or shrink selection | Edit | studio3d |  |
 | `studio3d.edit.start` | Edit mesh | Edit | studio3d |  |
 | `studio3d.edit.subdivide` | Split selected triangles into four by edge midpoints | Edit | studio3d |  |
