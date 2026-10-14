@@ -16,6 +16,7 @@
  */
 import {unzipSync,zipSync,strFromU8,strToU8,type Zippable} from 'fflate';
 import {listZip} from '../office/zipProbe';
+import {sniffImage} from './imageSniff';
 
 export type ShapeKind='text'|'picture'|'table'|'chart'|'group'|'connector'|'other';
 /** Stored geometry in EMU. `source` says where it came from; only `slide` bounds are the shape's own. */
@@ -447,7 +448,7 @@ export const MIN_BOX_EMU=127000,MAX_COORD_EMU=1e10;
 /** Why a shape cannot be moved or resized, or null when it can. Pure; used by UI and package code. */
 export function boundsEditIssue(s:ShapeRef):'notText'|'nested'|'noBounds'|'inherited'|'rotated'|'flipped'|null{
   if(s.parentId!==null)return 'nested';
-  if(s.kind!=='text')return 'notText';
+  if(s.kind!=='text'&&s.kind!=='picture')return 'notText';
   if(!s.bounds)return 'noBounds';
   if(s.bounds.source!=='slide')return 'inherited';
   if(s.bounds.rot!==0)return 'rotated';
@@ -455,15 +456,15 @@ export function boundsEditIssue(s:ShapeRef):'notText'|'nested'|'noBounds'|'inher
   return null;
 }
 const sameBox=(a:BoundsBox,b:BoundsBox)=>a.x===b.x&&a.y===b.y&&a.w===b.w&&a.h===b.h;
-function xfrmTags(xml:string,shapeId:number):{off:RegExpMatchArray;ext:RegExpMatchArray}{
+function xfrmTags(xml:string,shapeId:number,spTag='p:sp',nvTag='p:nvSpPr'):{off:RegExpMatchArray;ext:RegExpMatchArray}{
   const stack:{tag:string;sp?:boolean;id?:number}[]=[];let off:RegExpMatchArray|null=null,ext:RegExpMatchArray|null=null,found=0;
   for(const m of xml.matchAll(TAG)){
     if(m[2]===undefined)continue;
     const tag=m[2];
     if(m[1]==='/'){stack.pop();continue;}
     const parent=stack.at(-1),self=m[4]==='/';
-    if(tag==='p:sp'&&parent?.tag==='p:spTree'){stack.push({tag,sp:true});continue;}
-    if(tag==='p:cNvPr'&&parent?.tag==='p:nvSpPr'&&stack.at(-2)?.sp&&Number(attr(m[3],'id'))===shapeId){stack.at(-2)!.id=shapeId;found++;}
+    if(tag===spTag&&parent?.tag==='p:spTree'){stack.push({tag,sp:true});continue;}
+    if(tag==='p:cNvPr'&&parent?.tag===nvTag&&stack.at(-2)?.sp&&Number(attr(m[3],'id'))===shapeId){stack.at(-2)!.id=shapeId;found++;}
     const sp=stack.find(s=>s.sp&&s.id===shapeId);
     if(sp&&parent?.tag==='a:xfrm'&&stack.at(-2)?.tag==='p:spPr'&&stack.at(-3)===sp){
       if(tag==='a:off'){if(off)throw Error('Shape has more than one offset');off=m;}
@@ -492,7 +493,7 @@ export function setShapeBounds(bytes:Uint8Array,slideId:number,shapeId:number,ex
   if(next.x<-next.w||next.y<-next.h||next.x>size.cx||next.y>size.cy)throw Error('Position is outside the slide');
   if(sameBox(next,expected))return bytes;
   const zip=openPackage(bytes),xml=text(zip,slide.part);
-  const {off,ext}=xfrmTags(xml,shapeId);
+  const {off,ext}=shape.kind==='picture'?xfrmTags(xml,shapeId,'p:pic','p:nvPicPr'):xfrmTags(xml,shapeId);
   const put=(tag:string,a:string,av:number,b:string,bv:number)=>tag.replace(new RegExp(`(\\s${a}=")[^"]*(")`),`$1${av}$2`).replace(new RegExp(`(\\s${b}=")[^"]*(")`),`$1${bv}$2`);
   const o=off[0],e=ext[0],oi=off.index!,ei=ext.index!;
   const [first,second]=oi<ei?[{i:oi,old:o,neu:put(o,'x',next.x,'y',next.y)},{i:ei,old:e,neu:put(e,'cx',next.w,'cy',next.h)}]:[{i:ei,old:e,neu:put(e,'cx',next.w,'cy',next.h)},{i:oi,old:o,neu:put(o,'x',next.x,'y',next.y)}];
@@ -515,14 +516,14 @@ export function setShapeBounds(bytes:Uint8Array,slideId:number,shapeId:number,ex
 export interface RunFormat {bold?:boolean;italic?:boolean;sizePt?:number;color?:string}
 export const MIN_SIZE_PT=6,MAX_SIZE_PT=200,MAX_SHAPES_PER_SLIDE=500,MAX_BOX_TEXT=16384;
 /** Source range of one top-level p:sp, found by tokenizing (never by regex over nested markup). */
-function spRange(xml:string,shapeId:number):{start:number;end:number}{
+function spRange(xml:string,shapeId:number,spTag='p:sp',nvTag='p:nvSpPr'):{start:number;end:number}{
   const stack:{tag:string;start?:number;id?:number}[]=[];const hits:{start:number;end:number}[]=[];
   for(const m of xml.matchAll(TAG)){
     if(m[2]===undefined)continue;const tag=m[2];
-    if(m[1]==='/'){const top=stack.pop();if(top?.tag==='p:sp'&&top.start!==undefined&&top.id===shapeId)hits.push({start:top.start,end:m.index!+m[0].length});continue;}
+    if(m[1]==='/'){const top=stack.pop();if(top?.tag===spTag&&top.start!==undefined&&top.id===shapeId)hits.push({start:top.start,end:m.index!+m[0].length});continue;}
     const parent=stack.at(-1),self=m[4]==='/';
-    if(tag==='p:sp'&&parent?.tag==='p:spTree'){if(self)throw Error('Empty shape element');stack.push({tag,start:m.index!});continue;}
-    if(tag==='p:cNvPr'&&parent?.tag==='p:nvSpPr'&&stack.at(-2)?.start!==undefined)stack.at(-2)!.id=Number(attr(m[3],'id'));
+    if(tag===spTag&&parent?.tag==='p:spTree'){if(self)throw Error('Empty shape element');stack.push({tag,start:m.index!});continue;}
+    if(tag==='p:cNvPr'&&parent?.tag===nvTag&&stack.at(-2)?.start!==undefined)stack.at(-2)!.id=Number(attr(m[3],'id'));
     if(!self)stack.push({tag});
   }
   if(hits.length!==1)throw Error('Shape geometry is not in a supported form');
@@ -616,4 +617,112 @@ export function removeTextBox(bytes:Uint8Array,slideId:number,shapeId:number):Ui
   const re=unzipSync(out);
   for(const name of Object.keys(zip))if(name!==slide.part&&(!re[name]||re[name].length!==zip[name].length||re[name].some((v,i)=>v!==zip[name][i])))throw Error('Edited deck changed an unrelated part');
   return out;
+}
+
+/* ---------------------------------------------------------------------------------------
+ * P4: pictures. Insert adds a media part, an image relationship, a content-type default and
+ * a p:pic. Replace repoints one picture; remove drops one picture. Media that nothing else
+ * references is deleted with it. PNG and JPEG only, bounded by sniffImage.
+ * ------------------------------------------------------------------------------------- */
+const attrEsc=(t:string)=>t.replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+function ensureDefault(types:string,ext:string,mime:string):string{
+  const m=new RegExp(`<Default\\b[^>]*\\sExtension="${ext}"[^>]*/?>`,'i').exec(types);
+  if(m){if(!new RegExp(`ContentType="${mime}"`,'i').test(m[0]))throw Error(`The deck maps .${ext} to a different content type`);return types;}
+  if(!/<Types\b[^>]*>/.test(types))throw Error('Content types part is not in a supported form');
+  return types.replace(/(<Types\b[^>]*>)/,`$1<Default Extension="${ext}" ContentType="${mime}"/>`);
+}
+function freeMedia(zip:Record<string,Uint8Array>,ext:string){const used=lower(zip);for(let n=1;n<100000;n++){const p=`ppt/media/image${n}.${ext}`;if(!used.has(p))return p;}throw Error('No free media name');}
+function addRel(rels:string,rid:string,media:string,slidePart:string){
+  if(!rels.includes('</Relationships>'))throw Error('Slide relationships are not in a supported form');
+  return rels.replace('</Relationships>',`<Relationship Id="${rid}" Type="${RT}image" Target="${relative(slidePart,media)}"/></Relationships>`);
+}
+function treeInsert(xml:string,frag:string):string{
+  const tail=/(<p:extLst>(?:(?!<\/p:spTree>)[\s\S])*?<\/p:extLst>\s*)?<\/p:spTree>/.exec(xml);
+  if(!tail||xml.indexOf('</p:spTree>')!==tail.index+tail[0].length-'</p:spTree>'.length)throw Error('Slide shape tree is not in a supported form');
+  return xml.slice(0,tail.index)+frag+xml.slice(tail.index);
+}
+/** Contain-fit of an image (96 dpi native size) inside a box, centred. Both sides must stay at least 10 pt. */
+export function fitImage(img:{width:number;height:number},box:BoundsBox,cap:boolean):BoundsBox{
+  const nw=img.width*9525,nh=img.height*9525,s=Math.min(box.w/nw,box.h/nh,cap?1:Infinity);
+  let w=nw*s,h=nh*s;
+  const grow=Math.max(1,MIN_BOX_EMU/Math.min(w,h));w=Math.round(w*grow);h=Math.round(h*grow);
+  if(w<MIN_BOX_EMU||h<MIN_BOX_EMU||w>box.w+1||h>box.h+1)throw Error('Image proportions are too extreme for a slide');
+  return {x:Math.round(box.x+(box.w-w)/2),y:Math.round(box.y+(box.h-h)/2),w,h};
+}
+const picShape=(xml:string,rid:string)=>new RegExp(`r:(?:embed|link|id|pict)="${rid}"`).test(xml);
+/** Is `media` still the target of any relationship other than (relsPart,rid)? */
+function mediaInUse(zip:Record<string,Uint8Array>,media:string,exceptRels:string,exceptId:string):boolean{
+  for(const name of Object.keys(zip)){
+    if(!name.endsWith('.rels'))continue;
+    const owner=name==='_rels/.rels'?'x':name.replace(/_rels\/([^/]+)\.rels$/,'$1');
+    for(const m of text(zip,name).matchAll(/<Relationship\b([^>]*?)\/?>/g)){
+      const id=attr(m[1],'Id'),t=attr(m[1],'Target');
+      if(!t||(name===exceptRels&&id===exceptId)||/TargetMode="External"/.test(m[1]))continue;
+      try{if(resolve(owner,t)===media)return true;}catch{/* an unresolvable target cannot match */}
+    }
+  }
+  return false;
+}
+/** Inserts a PNG/JPEG as a new picture centred on the slide (at most 60% of it). */
+export function insertPicture(bytes:Uint8Array,slideId:number,image:Uint8Array,alt:string):Uint8Array{
+  const info=sniffImage(image);
+  if(typeof alt!=='string'||alt.length>200||/[\u0000-\u001f]/.test(alt))throw Error('Alt text is invalid');
+  const model=readDeckModel(bytes),size=model.slideSize,slide=model.slides.find(s=>s.id===slideId);
+  if(!size)throw Error('Slide size is not readable');if(!slide)throw Error('Slide no longer exists');
+  if(slide.problems.length)throw Error('This slide has unsupported structure');
+  if(slide.shapes.length>=MAX_SHAPES_PER_SLIDE)throw Error(`A slide can hold at most ${MAX_SHAPES_PER_SLIDE} shapes`);
+  const c=context(bytes),xml=text(c.zip,slide.part),relsPart=relsName(slide.part),rels=text(c.zip,relsPart);
+  if(!c.zip[relsPart])throw Error('Slide relationships are not in a supported form');
+  if(!/<p:sld\b[^>]*\sxmlns:r="/.test(xml))throw Error('Slide does not declare the relationship namespace');
+  const media=freeMedia(c.zip,info.ext),rid=relId(rels,xml),id=nextShapeId(slide);
+  const box=fitImage(info,{x:0,y:0,w:Math.round(size.cx*0.6),h:Math.round(size.cy*0.6)},true),at={x:Math.round((size.cx-box.w)/2),y:Math.round((size.cy-box.h)/2),w:box.w,h:box.h};
+  const pic=`<p:pic><p:nvPicPr><p:cNvPr id="${id}" name="Picture ${id-1}" descr="${attrEsc(alt)}"/><p:cNvPicPr><a:picLocks noChangeAspect="1"/></p:cNvPicPr><p:nvPr/></p:nvPicPr><p:blipFill><a:blip r:embed="${rid}"/><a:stretch><a:fillRect/></a:stretch></p:blipFill><p:spPr><a:xfrm><a:off x="${at.x}" y="${at.y}"/><a:ext cx="${at.w}" cy="${at.h}"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></p:spPr></p:pic>`;
+  return finish(c,{[slide.part]:treeInsert(xml,pic),[relsPart]:addRel(rels,rid,media,slide.part),'[Content_Types].xml':ensureDefault(c.types,info.ext,info.mime)},{[media]:image},[],after=>{
+    const as=after.slides.find(s=>s.id===slideId),p=as?.shapes.find(s=>s.id===id);
+    if(!as||as.problems.length||!p||p.kind!=='picture'||p.parentId!==null||as.shapes.length!==slide.shapes.length+1||!p.bounds||p.bounds.x!==at.x||p.bounds.w!==at.w)throw Error('Edited deck failed verification');
+    if(after.runs.length!==model.runs.length)throw Error('Edited deck failed verification');
+  });
+}
+function pictureParts(bytes:Uint8Array,slideId:number,shapeId:number){
+  const model=readDeckModel(bytes),slide=model.slides.find(s=>s.id===slideId);
+  if(!slide)throw Error('Slide no longer exists');if(slide.problems.length)throw Error('This slide has unsupported structure');
+  const shape=slide.shapes.find(s=>s.id===shapeId);if(!shape)throw Error('Shape no longer exists');
+  if(shape.parentId!==null||shape.kind!=='picture')throw Error('Only pictures can be changed this way');
+  const c=context(bytes),xml=text(c.zip,slide.part),range=spRange(xml,shapeId,'p:pic','p:nvPicPr'),pic=xml.slice(range.start,range.end);
+  const blips=[...pic.matchAll(/<a:blip\b([^>]*?)(\/?)>/g)];
+  if(blips.length!==1||blips[0][2]!=='/'||/<a:srcRect\b/.test(pic))throw Error('This picture has cropping, effects or alternate formats that cannot be replaced safely');
+  const rid=attr(' '+blips[0][1],'r:embed');if(!rid||/\sr:link=/.test(blips[0][1]))throw Error('This picture is linked, not embedded');
+  const relsPart=relsName(slide.part),rel=readRels(c.zip,slide.part).find(r=>r.id===rid);
+  if(!rel||rel.type!==RT+'image'||rel.external)throw Error('This picture is linked, not embedded');
+  return {model,slide,shape,c,xml,range,pic,rid,relsPart,rels:text(c.zip,relsPart),oldMedia:resolve(slide.part,rel.target),rel};
+}
+/** Drops the old relationship (and its media) when nothing else uses them. */
+function releaseOld(p:ReturnType<typeof pictureParts>,xmlAfter:string,rels:string):{rels:string;remove:string[]}{
+  if(picShape(xmlAfter,p.rid))return {rels,remove:[]};
+  const next=rels.replace(p.rel.raw,'');
+  return {rels:next,remove:mediaInUse(p.c.zip,p.oldMedia,p.relsPart,p.rid)?[]:[p.oldMedia]};
+}
+/** Swaps the image of one embedded picture, keeping its centre and fitting inside its current box. */
+export function replacePicture(bytes:Uint8Array,slideId:number,shapeId:number,image:Uint8Array):Uint8Array{
+  const info=sniffImage(image),p=pictureParts(bytes,slideId,shapeId),issue=boundsEditIssue(p.shape);
+  if(issue)throw Error(`Picture cannot be replaced (${issue})`);
+  const old=p.shape.bounds!,box=fitImage(info,{x:old.x,y:old.y,w:old.w,h:old.h},false);
+  const media=freeMedia(p.c.zip,info.ext),rid=relId(p.rels,p.xml);
+  const pic=p.pic.replace(`r:embed="${p.rid}"`,`r:embed="${rid}"`),xml=p.xml.slice(0,p.range.start)+pic+p.xml.slice(p.range.end);
+  const rel=releaseOld(p,xml,addRel(p.rels,rid,media,p.slide.part));
+  const out=finish(p.c,{[p.slide.part]:xml,[p.relsPart]:rel.rels,'[Content_Types].xml':ensureDefault(p.c.types,info.ext,info.mime)},{[media]:image},rel.remove,after=>{
+    const as=after.slides.find(s=>s.id===slideId);
+    if(!as||as.problems.length||as.shapes.length!==p.slide.shapes.length||after.runs.length!==p.model.runs.length)throw Error('Edited deck failed verification');
+  });
+  return setShapeBounds(out,slideId,shapeId,{x:old.x,y:old.y,w:old.w,h:old.h},box);
+}
+/** Removes one picture and any media only it used. */
+export function removePicture(bytes:Uint8Array,slideId:number,shapeId:number):Uint8Array{
+  const p=pictureParts(bytes,slideId,shapeId);
+  if(new RegExp(`\\b(?:spid|id)="${shapeId}"(?![\\d])`).test(p.xml.replace(/<p:cNvPr\b[^>]*>/g,'')))throw Error('This picture is referenced by an animation or connector');
+  const xml=p.xml.slice(0,p.range.start)+p.xml.slice(p.range.end),rel=releaseOld(p,xml,p.rels);
+  return finish(p.c,{[p.slide.part]:xml,[p.relsPart]:rel.rels},{},rel.remove,after=>{
+    const as=after.slides.find(s=>s.id===slideId),keep=p.slide.shapes.filter(s=>s.id!==shapeId);
+    if(!as||as.problems.length||as.shapes.length!==keep.length||as.shapes.some((s,i)=>s.id!==keep[i].id)||after.runs.length!==p.model.runs.length)throw Error('Edited deck failed verification');
+  });
 }

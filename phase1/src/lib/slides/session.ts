@@ -116,6 +116,9 @@ export const setShapeBoundsAt=(slideId:number,shapeId:number,expected:BoundsBox,
 export const formatShapeAt=(slideId:number,shapeId:number,format:RunFormat)=>structuralEdit(async(e,before)=>({bytes:await e.client.formatText(before,slideId,shapeId,format),index:idAt(e,slideId)}));
 export const addTextBoxAt=(slideId:number,label:string)=>structuralEdit(async(e,before)=>({bytes:await e.client.addBox(before,slideId,label),index:idAt(e,slideId)}));
 export const removeTextBoxAt=(slideId:number,shapeId:number)=>structuralEdit(async(e,before)=>({bytes:await e.client.removeBox(before,slideId,shapeId),index:idAt(e,slideId)}));
+export const insertPictureAt=(slideId:number,image:Uint8Array,alt:string)=>structuralEdit(async(e,before)=>({bytes:await e.client.insertPicture(before,slideId,image,alt),index:idAt(e,slideId)}));
+export const replacePictureAt=(slideId:number,shapeId:number,image:Uint8Array)=>structuralEdit(async(e,before)=>({bytes:await e.client.replacePicture(before,slideId,shapeId,image),index:idAt(e,slideId)}));
+export const removePictureAt=(slideId:number,shapeId:number)=>structuralEdit(async(e,before)=>({bytes:await e.client.removePicture(before,slideId,shapeId),index:idAt(e,slideId)}));
 export const addSlideFromLayout=(layoutPart:string,afterSlideId:number|null)=>structuralEdit(async(e,before)=>{const i=afterSlideId===null?e.state.slideIds.length-1:idAt(e,afterSlideId);return {bytes:await e.client.newSlide(before,layoutPart,afterSlideId),index:i+1};});
 /** Metadata lease for selected-run summary. No deck serialization or worker call. */
 export function getSlideSummaryOwner(){const e=sessions.get(getMedia().active??'');if(!e||e.disposed||e.state.busy||!e.state.working||!e.state.summary||!e.state.diagnostics?.editable)throw Error('Slide selection unavailable');return {source:e.state.source,generation:e.generation,revision:e.revision,index:e.state.index,runs:e.state.runs};}

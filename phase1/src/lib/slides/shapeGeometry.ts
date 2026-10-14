@@ -68,3 +68,13 @@ export function resizeBox(b:Box,handle:Handle,dx:number,dy:number,size:SlideSize
   return {x:Math.round(l),y:Math.round(t),w:Math.round(r-l),h:Math.round(btm-t)};
 }
 export const boxOf=(b:{x:number;y:number;w:number;h:number}):Box=>({x:b.x,y:b.y,w:b.w,h:b.h});
+
+/** Corner resize that keeps the aspect ratio (pictures). The opposite corner stays fixed. */
+export function resizeBoxAspect(b:Box,handle:Handle,dx:number,dy:number,size:SlideSize):Box{
+  if(handle.length!==2)return resizeBox(b,handle,dx,dy,size);
+  const r=resizeBox(b,handle,dx,dy,size),sx=r.w/b.w,sy=r.h/b.h;
+  let s=Math.abs(sx-1)>=Math.abs(sy-1)?sx:sy;
+  s=Math.max(s,MIN/Math.min(b.w,b.h));s=Math.min(s,Math.max(size.cx,b.w)/b.w,Math.max(size.cy,b.h)/b.h);
+  const w=Math.round(b.w*s),h=Math.round(b.h*s);
+  return {x:handle.includes('w')?b.x+b.w-w:b.x,y:handle.includes('n')?b.y+b.h-h:b.y,w,h};
+}

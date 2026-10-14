@@ -3,7 +3,7 @@ import {useSlidesSession} from '../../lib/slides/session';
 import {useShapeSelection,type ShapeSelection} from '../../lib/slides/shapeSelection';
 import {useSlidesPanelText} from '../../lib/slides/panelI18n';
 import {commandDispatcher} from '../../lib/commandDispatcher';
-import {hitTest,limitsOf,overlayRect,moveBox,resizeBox,boxOf,HANDLES,EMU_PER_PT,type Box,type Handle} from '../../lib/slides/shapeGeometry';
+import {hitTest,limitsOf,overlayRect,moveBox,resizeBox,resizeBoxAspect,boxOf,HANDLES,EMU_PER_PT,type Box,type Handle} from '../../lib/slides/shapeGeometry';
 import {boundsEditIssue,type ShapeRef} from '../../lib/slides/deckPackage';
 import type {PointerEvent as ReactPointerEvent} from 'react';
 
@@ -32,7 +32,7 @@ export function SlidesShapeOverlay({image}:{image:RefObject<HTMLImageElement|nul
   const s=useSlidesSession(),t=useSlidesPanelText(),valid=useValidShape();
   const layer=useRef<HTMLDivElement>(null),selBox=useRef<HTMLDivElement>(null),hoverBox=useRef<HTMLDivElement>(null);
   const [,tick]=useState(0);
-  const drag=useRef<{mode:'move'|Handle;sx:number;sy:number;from:Box;cur:Box;moved:boolean}|null>(null);
+  const drag=useRef<{aspect:boolean;mode:'move'|Handle;sx:number;sy:number;from:Box;cur:Box;moved:boolean}|null>(null);
   const editable=!!valid&&boundsEditIssue(valid.shape)===null;
   const slide=s.model?.slides.find(x=>x.id===s.slideIds[s.index]);
   const size=s.model?.slideSize;
@@ -51,13 +51,13 @@ export function SlidesShapeOverlay({image}:{image:RefObject<HTMLImageElement|nul
   const restore=()=>{drag.current=null;place(selBox.current,valid?.shape.bounds?overlayRect(valid.shape.bounds,size):null);};
   const begin=(e:ReactPointerEvent<HTMLElement>,mode:'move'|Handle)=>{
     if(e.button!==0||!valid?.shape.bounds||!editable)return;e.stopPropagation();e.preventDefault();layer.current?.focus();
-    e.currentTarget.setPointerCapture(e.pointerId);const from=boxOf(valid.shape.bounds);drag.current={mode,sx:e.clientX,sy:e.clientY,from,cur:from,moved:false};
+    e.currentTarget.setPointerCapture(e.pointerId);const from=boxOf(valid.shape.bounds);drag.current={aspect:valid.shape.kind==='picture',mode,sx:e.clientX,sy:e.clientY,from,cur:from,moved:false};
   };
   const track=(e:ReactPointerEvent<HTMLElement>)=>{
     const d=drag.current;if(!d||!layer.current)return;
     if(!d.moved&&Math.hypot(e.clientX-d.sx,e.clientY-d.sy)<DRAG_PX)return;d.moved=true;
     const r=layer.current.getBoundingClientRect(),dx=(e.clientX-d.sx)/r.width*size.cx,dy=(e.clientY-d.sy)/r.height*size.cy;
-    d.cur=d.mode==='move'?moveBox(d.from,dx,dy,size):resizeBox(d.from,d.mode,dx,dy,size);
+    d.cur=d.mode==='move'?moveBox(d.from,dx,dy,size):(d.aspect?resizeBoxAspect:resizeBox)(d.from,d.mode,dx,dy,size);
     place(selBox.current,overlayRect({...d.cur,rot:0,flipH:false,flipV:false,source:'slide'},size));
   };
   const finish=(e:ReactPointerEvent<HTMLElement>)=>{
@@ -82,7 +82,7 @@ export function SlidesShapeOverlay({image}:{image:RefObject<HTMLImageElement|nul
     <div ref={hoverBox} hidden className="pointer-events-none absolute border border-dashed border-accent"/>
     <div ref={selBox} hidden data-slot="slides-shape-selection" title={editable?t('slides.shapeDragHint'):undefined} onClick={e=>e.stopPropagation()} onPointerDown={e=>begin(e,'move')} onPointerMove={track} onPointerUp={finish} onPointerCancel={restore}
       className={`absolute border-2 border-accent bg-accent-soft ${editable?'cursor-move touch-none':'pointer-events-none'}`}>
-      {editable&&HANDLES.map(h=><span key={h} role="presentation" data-handle={h} aria-label={t('slides.resizeHandle')} onPointerDown={e=>begin(e,h)} className={`absolute size-2.5 -translate-x-1/2 -translate-y-1/2 border border-accent bg-panel ${HANDLE_POS[h]}`}/>)}
+      {editable&&HANDLES.filter(h=>valid?.shape.kind!=='picture'||h.length===2).map(h=><span key={h} role="presentation" data-handle={h} aria-label={t('slides.resizeHandle')} onPointerDown={e=>begin(e,h)} className={`absolute size-2.5 -translate-x-1/2 -translate-y-1/2 border border-accent bg-panel ${HANDLE_POS[h]}`}/>)}
     </div>
   </div>;
 }

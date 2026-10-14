@@ -3,8 +3,9 @@ import assert from 'node:assert/strict';
 import {readFileSync,readdirSync} from 'node:fs';
 import {fileURLToPath} from 'node:url';
 import {unzipSync,zipSync,strFromU8,strToU8} from 'fflate';
-import {formatShapeText,addTextBox,removeTextBox,nextShapeId,setShapeBounds,boundsEditIssue,readDeckModel,moveSlide,reorderSlides,duplicateSlide,deleteSlide,newSlideFromLayout,readLayouts} from './deckPackage';
+import {insertPicture,replacePicture,removePicture,fitImage,formatShapeText,addTextBox,removeTextBox,nextShapeId,setShapeBounds,boundsEditIssue,readDeckModel,moveSlide,reorderSlides,duplicateSlide,deleteSlide,newSlideFromLayout,readLayouts} from './deckPackage';
 import {readRuns,makeEditedCopy} from './editCopy';
+import {png,jpeg} from './imageFixtures';
 
 const base=new Uint8Array(readFileSync(fileURLToPath(new URL('../../../slides-engine/fixtures/independent.pptx',import.meta.url))));
 const slideXml=(title:string)=>strFromU8(unzipSync(base)['ppt/slides/slide1.xml']).replace('Somnia Documents Studio',title)
@@ -273,7 +274,7 @@ test('setShapeBounds refuses rotated, flipped, picture, group, inherited and geo
   assert.throws(()=>setShapeBounds(rot,256,2,{...B2},{...B2,x:5}),/\(rotated\)/);
   const flip=patchPart(deck(2),'ppt/slides/slide1.xml',x=>x.replace('<a:xfrm>','<a:xfrm flipH="1">'));
   assert.throws(()=>setShapeBounds(flip,256,2,{...B2},{...B2,x:5}),/\(flipped\)/);
-  const pic=deck(2,{picture:true});assert.equal(boundsEditIssue(readDeckModel(pic).slides[0].shapes[2]),'notText');
+  const pic=deck(2,{picture:true});assert.equal(boundsEditIssue(readDeckModel(pic).slides[0].shapes[2]),'noBounds');
   assert.throws(()=>setShapeBounds(pic,256,9,B2,B2),/cannot be moved or resized/);
   assert.equal(boundsEditIssue({id:1,name:'',kind:'group',runCount:0,parentId:null,bounds:null,ph:null}),'notText');
   assert.equal(boundsEditIssue({id:1,name:'',kind:'text',runCount:0,parentId:5,bounds:null,ph:null}),'nested');
@@ -361,6 +362,73 @@ test('removeTextBox removes one text box, refuses referenced, missing and non-te
   assert.throws(()=>removeTextBox(anim,256,3),/referenced/);assert.equal(readDeckModel(removeTextBox(anim,256,2)).slides[0].shapes.length,1);
   assert.throws(()=>removeTextBox(src,256,99),/no longer exists/);assert.throws(()=>removeTextBox(src,999,2),/no longer exists/);
   assert.throws(()=>removeTextBox(deck(2,{picture:true}),256,9),/Only text boxes/);
+});
+const mediaNames=(b:Uint8Array)=>Object.keys(unzipSync(b)).filter(n=>n.startsWith('ppt/media/')).sort();
+const relText=(b:Uint8Array,n='ppt/slides/_rels/slide1.xml.rels')=>strFromU8(unzipSync(b)[n]);
+const lastShape=(b:Uint8Array,slide=256)=>readDeckModel(b).slides.find(s=>s.id===slide)!.shapes.at(-1)!;
+test('insertPicture adds media, relationship, content type default and a centred picture',()=>{
+  const src=deck(2),img=png(800,600),out=insertPicture(src,256,img,'Team <photo> "one"');
+  const pic=lastShape(out);assert.equal(pic.kind,'picture');assert.equal(pic.id,4);assert.equal(pic.name,'Picture 3');assert.equal(pic.bounds?.source,'slide');
+  const sz=readDeckModel(out).slideSize!;assert.ok(pic.bounds!.w<=sz.cx*0.6+1&&pic.bounds!.h<=sz.cy*0.6+1);
+  assert.ok(Math.abs(pic.bounds!.x*2+pic.bounds!.w-sz.cx)<=1);assert.ok(Math.abs(pic.bounds!.w/pic.bounds!.h-800/600)<0.01);
+  assert.deepEqual(unzipSync(out)['ppt/media/image1.png'],img);
+  assert.match(relText(out),/Id="rId2" Type="[^"]*\/image" Target="..\/media\/image1.png"/);
+  assert.match(strFromU8(unzipSync(out)['[Content_Types].xml']),/<Default Extension="png" ContentType="image\/png"\/>/);
+  assert.match(strFromU8(unzipSync(out)['ppt/slides/slide1.xml']),/descr="Team &lt;photo&gt; &quot;one&quot;"/);
+  assert.deepEqual(readDeckModel(out).slides[1],readDeckModel(src).slides[1]);assert.deepEqual(readDeckModel(out).runs,readDeckModel(src).runs);
+  const a=unzipSync(src),z=unzipSync(out);for(const n of Object.keys(a))if(!['ppt/slides/slide1.xml','ppt/slides/_rels/slide1.xml.rels','[Content_Types].xml'].includes(n))assert.deepEqual(z[n],a[n],n);
+  const j=insertPicture(out,256,jpeg(300,300),'');assert.deepEqual(mediaNames(j),['ppt/media/image1.jpeg','ppt/media/image1.png']);assert.match(strFromU8(unzipSync(j)['[Content_Types].xml']),/Extension="jpeg"/);
+  const again=insertPicture(j,256,png(10,10),'x');assert.deepEqual(mediaNames(again).length,3);assert.equal((strFromU8(unzipSync(again)['[Content_Types].xml']).match(/Extension="png"/g)??[]).length,1);
+});
+test('insertPicture refuses bad images, alt text, missing slides, extreme ratios and conflicting content types',()=>{
+  const src=deck(2),go=(img:Uint8Array,alt='a',slide=256)=>()=>insertPicture(src,slide,img,alt);
+  assert.throws(go(new Uint8Array(30)),/Only PNG and JPEG/);assert.throws(go(png(0,5)),/size could not/);assert.throws(go(png(20000,5)),/larger than/);
+  assert.throws(go(png(10,10),'a'.repeat(201)),/Alt text/);assert.throws(go(png(10,10),'a\nb'),/Alt text/);
+  assert.throws(go(png(10,10),'a',999),/no longer exists/);assert.throws(go(png(16000,10)),/too extreme/);
+  const clash=patchPart(src,'[Content_Types].xml',x=>x.replace('<Types ','<Types ').replace(/(<Types\b[^>]*>)/,'$1<Default Extension="PNG" ContentType="image/x-other"/>'));
+  assert.throws(()=>insertPicture(clash,256,png(10,10),'a'),/different content type/);
+  const noNs=patchPart(src,'ppt/slides/slide1.xml',x=>x.replace(/ xmlns:r="[^"]*"/,''));assert.throws(()=>insertPicture(noNs,256,png(10,10),'a'));
+  const broken=patchPart(src,'ppt/slides/slide1.xml',x=>x.replace('</p:spTree>',''));assert.throws(()=>insertPicture(broken,256,png(10,10),'a'));
+});
+test('a picture can be moved and resized like a text box',()=>{
+  const out=insertPicture(deck(2),256,png(400,300),'a'),pic=lastShape(out),b=pic.bounds!;
+  const moved=setShapeBounds(out,256,pic.id,{x:b.x,y:b.y,w:b.w,h:b.h},{x:b.x+1000,y:b.y,w:b.w,h:b.h});assert.equal(lastShape(moved).bounds?.x,b.x+1000);
+  assert.deepEqual(unzipSync(moved)['ppt/media/image1.png'],unzipSync(out)['ppt/media/image1.png']);
+});
+test('replacePicture swaps media, fits the old box, and frees media nothing else uses',()=>{
+  const ins=insertPicture(deck(2),256,png(800,600),'a'),pic=lastShape(ins),old=pic.bounds!;
+  const out=replacePicture(ins,256,pic.id,jpeg(600,600)),n=lastShape(out).bounds!;
+  assert.deepEqual(mediaNames(out),['ppt/media/image1.jpeg']);assert.equal(n.w,n.h);assert.ok(n.h<=old.h&&n.w<=old.w);
+  assert.ok(Math.abs((n.x*2+n.w)-(old.x*2+old.w))<=2&&Math.abs((n.y*2+n.h)-(old.y*2+old.h))<=2);
+  assert.doesNotMatch(relText(out),/image1\.png/);assert.match(relText(out),/image1\.jpeg/);
+  assert.equal(readDeckModel(out).slides[0].shapes.length,readDeckModel(ins).slides[0].shapes.length);
+});
+test('replacePicture and removePicture keep media another slide still uses',()=>{
+  const ins=insertPicture(deck(2),256,png(100,100),'a'),dup=duplicateSlide(ins,256);
+  const dupPic=readDeckModel(dup).slides[1].shapes.at(-1)!;assert.equal(dupPic.kind,'picture');
+  const rep=replacePicture(dup,256,lastShape(dup).id,png(50,50));assert.ok(mediaNames(rep).includes('ppt/media/image1.png'));assert.equal(mediaNames(rep).length,2);
+  const rem=removePicture(dup,256,lastShape(dup).id);assert.deepEqual(mediaNames(rem),['ppt/media/image1.png']);
+  const dupId=readDeckModel(dup).slides[1].id;const rem2=removePicture(rem,dupId,dupPic.id);assert.deepEqual(mediaNames(rem2),[]);assert.deepEqual(readDeckModel(rem2).slides.map(s=>s.shapes.length),[2,2,2]);
+});
+test('removePicture undoes insertPicture on the model and refuses referenced, missing and non-picture shapes',()=>{
+  const src=deck(2),ins=insertPicture(src,256,png(10,10),'a'),id=lastShape(ins).id,back=removePicture(ins,256,id);
+  assert.deepEqual(readDeckModel(back).slides,readDeckModel(src).slides);assert.deepEqual(mediaNames(back),[]);
+  assert.throws(()=>removePicture(ins,256,2),/Only pictures/);assert.throws(()=>removePicture(ins,256,77),/no longer exists/);assert.throws(()=>removePicture(ins,999,id),/no longer exists/);
+  const anim=patchPart(ins,'ppt/slides/slide1.xml',x=>x.replace('</p:cSld>',`</p:cSld><p:timing><p:tnLst><p:par><p:cTn id="1"><p:childTnLst><p:set><p:cBhvr><p:tgtEl><p:spTgt spid="${id}"/></p:tgtEl></p:cBhvr></p:set></p:childTnLst></p:cTn></p:par></p:tnLst></p:timing>`));
+  assert.throws(()=>removePicture(anim,256,id),/referenced/);
+});
+test('replacePicture refuses cropped, linked, rotated and effect-bearing pictures',()=>{
+  const ins=insertPicture(deck(2),256,png(100,100),'a'),id=lastShape(ins).id;
+  const crop=patchPart(ins,'ppt/slides/slide1.xml',x=>x.replace('<a:stretch>','<a:srcRect l="1000"/><a:stretch>'));assert.throws(()=>replacePicture(crop,256,id,png(10,10)),/cropping/);
+  const ext=patchPart(ins,'ppt/slides/slide1.xml',x=>x.replace(/<a:blip ([^>]*)\/>/,'<a:blip $1><a:extLst/></a:blip>'));assert.throws(()=>replacePicture(ext,256,id,png(10,10)),/cropping, effects/);
+  const rot=patchPart(ins,'ppt/slides/slide1.xml',x=>x.replace(/(<p:pic>[\s\S]*?)<a:xfrm>/,'$1<a:xfrm rot="900000">'));assert.throws(()=>replacePicture(rot,256,id,png(10,10)),/\(rotated\)/);
+  const link=patchPart(ins,'ppt/slides/_rels/slide1.xml.rels',x=>x.replace(/Target="..\/media\/image1.png"/,'Target="http://example.com/a.png" TargetMode="External"'));assert.throws(()=>replacePicture(link,256,id,png(10,10)),/linked/);
+  assert.throws(()=>replacePicture(ins,256,2,png(10,10)),/Only pictures/);assert.throws(()=>replacePicture(ins,256,id,new Uint8Array(40)),/Only PNG/);
+});
+test('fitImage contains, centres, caps at native size and rejects extreme ratios',()=>{
+  assert.deepEqual(fitImage({width:100,height:100},{x:0,y:0,w:9525000,h:9525000},true),{x:4286250,y:4286250,w:952500,h:952500});
+  assert.deepEqual(fitImage({width:100,height:50},{x:1000,y:1000,w:2000000,h:2000000},false),{x:1000,y:1000+Math.round((2000000-1000000)/2),w:2000000,h:1000000});
+  assert.throws(()=>fitImage({width:16000,height:10},{x:0,y:0,w:9000000,h:5000000},true),/too extreme/);
 });
 test('committed Rust importer fixtures match the generator (regenerate if the model changes)',()=>{
   const d=new URL('../../../slides-engine/fixtures/',import.meta.url),f=(n:string)=>new Uint8Array(readFileSync(fileURLToPath(new URL(n,d))));

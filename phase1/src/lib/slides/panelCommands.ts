@@ -1,17 +1,18 @@
 import type {CommandSpec} from '../commandSpec';
 import {registerCommandSpec} from '../commandBridge';
 import {selectSlideText} from './panelSelection';
-import {getSlidesSessionState,loadThumbnails,editSlideText,showSlide,moveSlideTo,duplicateSlideAt,deleteSlideAt,addSlideFromLayout,setShapeBoundsAt,formatShapeAt,addTextBoxAt,removeTextBoxAt} from './session';
+import {getSlidesSessionState,loadThumbnails,editSlideText,showSlide,moveSlideTo,duplicateSlideAt,deleteSlideAt,addSlideFromLayout,setShapeBoundsAt,formatShapeAt,addTextBoxAt,removeTextBoxAt,insertPictureAt,replacePictureAt,removePictureAt} from './session';
 import {textIssue} from './panelModel';
 import type {TextRun} from './editCopy';
 import './panelI18n';
 import {selectShape,getShapeSelection,type ShapeSelection} from './shapeSelection';
-import {stepShape,moveBox,resizeBox,boxOf} from './shapeGeometry';
+import {stepShape,moveBox,resizeBox,resizeBoxAspect,boxOf} from './shapeGeometry';
+import {sniffImage,altFromName,decodeBase64,MAX_IMAGE_BASE64} from './imageSniff';
 import {boundsEditIssue,nextShapeId,MIN_SIZE_PT,MAX_SIZE_PT,MAX_SHAPES_PER_SLIDE,MAX_BOX_TEXT,type RunFormat,type ShapeRef,type BoundsBox} from './deckPackage';
 export interface PanelCommandDeps {
  state():{source:string;index:number;busy:boolean;working:Uint8Array|null;runs:TextRun[];slideIds:number[];layouts:{part:string;supported:boolean}[];model:{slides:{id:number;shapes:ShapeRef[]}[];slideSize:{cx:number;cy:number}|null}|null;summary:{slides:number}|null};
  thumbnails():Promise<void>;edit(run:TextRun,text:string):Promise<void>;show(index:number):Promise<void>;
- select(value:{source:string;slide:number;run:number}):void;move(slideId:number,toIndex:number):Promise<void>;duplicate(slideId:number):Promise<void>;remove(slideId:number):Promise<void>;add(layoutPart:string,afterSlideId:number|null):Promise<void>;setBounds(slideId:number,shapeId:number,expected:BoundsBox,next:BoundsBox):Promise<void>;format(slideId:number,shapeId:number,f:RunFormat):Promise<void>;addBox(slideId:number,label:string):Promise<void>;removeBox(slideId:number,shapeId:number):Promise<void>;pick(value:ShapeSelection|null):void;picked():ShapeSelection|null;
+ select(value:{source:string;slide:number;run:number}):void;move(slideId:number,toIndex:number):Promise<void>;duplicate(slideId:number):Promise<void>;remove(slideId:number):Promise<void>;add(layoutPart:string,afterSlideId:number|null):Promise<void>;setBounds(slideId:number,shapeId:number,expected:BoundsBox,next:BoundsBox):Promise<void>;format(slideId:number,shapeId:number,f:RunFormat):Promise<void>;addBox(slideId:number,label:string):Promise<void>;removeBox(slideId:number,shapeId:number):Promise<void>;insertImage(slideId:number,image:Uint8Array,alt:string):Promise<void>;replaceImage(slideId:number,shapeId:number,image:Uint8Array):Promise<void>;removeImage(slideId:number,shapeId:number):Promise<void>;pick(value:ShapeSelection|null):void;picked():ShapeSelection|null;
 }
 const identity={source:{type:'string',minLength:1},slide:{type:'integer',minimum:0},run:{type:'integer',minimum:0},old:{type:'string'}};
 export function slidesPanelCommandSpecs(d:PanelCommandDeps):CommandSpec[]{
@@ -22,6 +23,7 @@ export function slidesPanelCommandSpecs(d:PanelCommandDeps):CommandSpec[]{
  const shapesOf=()=>{const s=d.state(),id=s.slideIds[s.index];return s.model?.slides.find(x=>x.id===id)?.shapes??[];};
  const cycle=(delta:1|-1)=>{const s=d.state(),id=s.slideIds[s.index],cur=d.picked();const next=stepShape(shapesOf(),cur&&cur.source===s.source&&cur.slideId===id?cur.shapeId:null,delta);if(next)d.pick({source:s.source,slideId:id,shapeId:next.id});};
  const expected=(m:string)=>Object.assign(new Error(m),{expected:true});
+ const imageBytes=(v:unknown)=>{try{const b=decodeBase64(v as string);sniffImage(b);return b;}catch(e){throw expected(String((e as Error).message));}};
  const step=async(delta:number)=>{const s=d.state(),to=s.index+delta;if(to<0||to>=s.slideIds.length)throw expected('The slide is already at the edge of the deck.');await d.move(s.slideIds[s.index],to);};
  return [
   {id:'slides.loadThumbnails',title:'Load slide thumbnails',category:'View',level:'ui',enabled:available,run:()=>d.thumbnails()},
@@ -71,7 +73,7 @@ export function slidesPanelCommandSpecs(d:PanelCommandDeps):CommandSpec[]{
    if(!shape||!size)throw expected('Shape no longer exists.');
    const issue=boundsEditIssue(shape);if(issue)throw expected(`This shape cannot be moved or resized (${issue}).`);
    const from=boxOf(shape.bounds!),dx=v.dxPt*12700,dy=v.dyPt*12700;
-   const next=v.mode==='move'?moveBox(from,dx,dy,size):resizeBox(from,'se',dx,dy,size);
+   const next=v.mode==='move'?moveBox(from,dx,dy,size):(shape.kind==='picture'?resizeBoxAspect:resizeBox)(from,'se',dx,dy,size);
    if(next.x===from.x&&next.y===from.y&&next.w===from.w&&next.h===from.h)return;
    await d.setBounds(pick.slideId,pick.shapeId,from,next);}},
   {id:'slides.formatText',title:'Format text box text',category:'Edit',level:'ui',keywords:['bold','italic','size','color','font','format','text'],enabled:available,params:{type:'object',properties:{source:identity.source,slideId:slideId,shapeId:{type:'integer',minimum:0,maximum:2147483647},bold:{type:'boolean'},italic:{type:'boolean'},sizePt:{type:'integer',minimum:MIN_SIZE_PT,maximum:MAX_SIZE_PT},color:{type:'string',pattern:'^[0-9A-Fa-f]{6}$'}},required:['source','slideId','shapeId'],additionalProperties:false},run:async p=>{
@@ -96,6 +98,27 @@ export function slidesPanelCommandSpecs(d:PanelCommandDeps):CommandSpec[]{
    if(!shape||shape.parentId!==null)throw expected('Shape no longer exists.');
    if(shape.kind!=='text')throw expected('Only text boxes can be removed.');
    await d.removeBox(v.slideId,v.shapeId);d.pick(null);}},
+  {id:'slides.insertImage',title:'Insert image',category:'Edit',level:'ui',keywords:['image','picture','photo','insert','png','jpeg'],enabled:()=>available()&&!!d.state().model?.slideSize,params:{type:'object',properties:{source:identity.source,slideId:slideId,name:{type:'string',maxLength:512},data:{type:'string',minLength:4,maxLength:MAX_IMAGE_BASE64}},required:['source','slideId','name','data'],additionalProperties:false},run:async p=>{
+   const v=p as {source:string;slideId:number;name:string;data:string};const s=d.state();
+   if(s.source!==v.source||s.slideIds[s.index]!==v.slideId)throw expected('Slide changed since selection.');
+   const slide=s.model?.slides.find(x=>x.id===v.slideId);if(!slide)throw expected('Slide no longer exists.');
+   if(slide.shapes.length>=MAX_SHAPES_PER_SLIDE)throw expected(`A slide can hold at most ${MAX_SHAPES_PER_SLIDE} shapes.`);
+   const image=imageBytes(v.data);await d.insertImage(v.slideId,image,altFromName(v.name));
+   d.pick({source:v.source,slideId:v.slideId,shapeId:nextShapeId(slide)});}},
+  {id:'slides.replaceImage',title:'Replace image',category:'Edit',level:'ui',keywords:['image','picture','photo','replace','swap'],enabled:available,params:{type:'object',properties:{source:identity.source,slideId:slideId,shapeId:{type:'integer',minimum:0,maximum:2147483647},data:{type:'string',minLength:4,maxLength:MAX_IMAGE_BASE64}},required:['source','slideId','shapeId','data'],additionalProperties:false},run:async p=>{
+   const v=p as {source:string;slideId:number;shapeId:number;data:string};const s=d.state();
+   if(s.source!==v.source||s.slideIds[s.index]!==v.slideId)throw expected('Slide changed since selection.');
+   const shape=s.model?.slides.find(x=>x.id===v.slideId)?.shapes.find(x=>x.id===v.shapeId);
+   if(!shape||shape.parentId!==null)throw expected('Shape no longer exists.');
+   if(shape.kind!=='picture')throw expected('Select a picture to replace.');
+   await d.replaceImage(v.slideId,v.shapeId,imageBytes(v.data));}},
+  {id:'slides.removePicture',title:'Remove picture',category:'Edit',level:'ui',keywords:['image','picture','remove','delete'],enabled:available,params:{type:'object',properties:{source:identity.source,slideId:slideId,shapeId:{type:'integer',minimum:0,maximum:2147483647}},required:['source','slideId','shapeId'],additionalProperties:false},run:async p=>{
+   const v=p as {source:string;slideId:number;shapeId:number};const s=d.state();
+   if(s.source!==v.source||s.slideIds[s.index]!==v.slideId)throw expected('Slide changed since selection.');
+   const shape=s.model?.slides.find(x=>x.id===v.slideId)?.shapes.find(x=>x.id===v.shapeId);
+   if(!shape||shape.parentId!==null)throw expected('Shape no longer exists.');
+   if(shape.kind!=='picture')throw expected('Only pictures can be removed here.');
+   await d.removeImage(v.slideId,v.shapeId);d.pick(null);}},
   {id:'slides.selectNextShape',title:'Select next shape',category:'View',level:'ui',keywords:['shape','object','tab','next'],enabled:()=>available()&&shapesOf().length>0,run:()=>cycle(1)},
   {id:'slides.selectPreviousShape',title:'Select previous shape',category:'View',level:'ui',keywords:['shape','object','previous'],enabled:()=>available()&&shapesOf().length>0,run:()=>cycle(-1)},
   {id:'slides.editText',title:'Apply slide text',category:'Edit',level:'ui',enabled:available,allowInInput:true,params:{type:'object',properties:{...identity,text:{type:'string',maxLength:16384}},required:['source','slide','run','old','text'],additionalProperties:false},run:async p=>{
@@ -106,5 +129,5 @@ export function slidesPanelCommandSpecs(d:PanelCommandDeps):CommandSpec[]{
   }},
  ];
 }
-const deps:PanelCommandDeps={state:getSlidesSessionState,thumbnails:loadThumbnails,edit:editSlideText,show:showSlide,select:selectSlideText,move:moveSlideTo,duplicate:duplicateSlideAt,remove:deleteSlideAt,add:addSlideFromLayout,setBounds:setShapeBoundsAt,format:formatShapeAt,addBox:addTextBoxAt,removeBox:removeTextBoxAt,pick:selectShape,picked:getShapeSelection};
+const deps:PanelCommandDeps={state:getSlidesSessionState,thumbnails:loadThumbnails,edit:editSlideText,show:showSlide,select:selectSlideText,move:moveSlideTo,duplicate:duplicateSlideAt,remove:deleteSlideAt,add:addSlideFromLayout,setBounds:setShapeBoundsAt,format:formatShapeAt,addBox:addTextBoxAt,removeBox:removeTextBoxAt,insertImage:insertPictureAt,replaceImage:replacePictureAt,removeImage:removePictureAt,pick:selectShape,picked:getShapeSelection};
 export function registerSlidesPanelCommands(){const offs=slidesPanelCommandSpecs(deps).map(s=>registerCommandSpec(s));return()=>offs.forEach(off=>off());}

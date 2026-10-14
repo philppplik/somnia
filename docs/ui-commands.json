@@ -3550,6 +3550,21 @@
       "hasEnabled": true
     },
     {
+      "id": "slides.insertImage",
+      "title": "Insert image",
+      "category": "Edit",
+      "source": "slides",
+      "keywords": [
+        "image",
+        "insert",
+        "jpeg",
+        "photo",
+        "picture",
+        "png"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "slides.loadThumbnails",
       "title": "Load slide thumbnails",
       "category": "View",
@@ -3652,6 +3667,19 @@
       "hasEnabled": true
     },
     {
+      "id": "slides.removePicture",
+      "title": "Remove picture",
+      "category": "Edit",
+      "source": "slides",
+      "keywords": [
+        "delete",
+        "image",
+        "picture",
+        "remove"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "slides.removeTextBox",
       "title": "Remove text box",
       "category": "Edit",
@@ -3660,6 +3688,20 @@
         "delete",
         "remove",
         "text box"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "slides.replaceImage",
+      "title": "Replace image",
+      "category": "Edit",
+      "source": "slides",
+      "keywords": [
+        "image",
+        "photo",
+        "picture",
+        "replace",
+        "swap"
       ],
       "hasEnabled": true
     },

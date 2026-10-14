@@ -24,6 +24,9 @@ export class SlidesClient {
  async formatText(bytes:Uint8Array,slideId:number,shapeId:number,format:RunFormat){return await this.request({op:'formatText',bytes,slideId,shapeId,format}) as Uint8Array;}
  async addBox(bytes:Uint8Array,slideId:number,label:string){return await this.request({op:'boxEdit',kind:'add',bytes,slideId,label}) as Uint8Array;}
  async removeBox(bytes:Uint8Array,slideId:number,shapeId:number){return await this.request({op:'boxEdit',kind:'remove',bytes,slideId,shapeId}) as Uint8Array;}
+ async insertPicture(bytes:Uint8Array,slideId:number,image:Uint8Array,alt:string){return await this.request({op:'pictureEdit',kind:'insert',bytes,slideId,image,alt}) as Uint8Array;}
+ async replacePicture(bytes:Uint8Array,slideId:number,shapeId:number,image:Uint8Array){return await this.request({op:'pictureEdit',kind:'replace',bytes,slideId,shapeId,image}) as Uint8Array;}
+ async removePicture(bytes:Uint8Array,slideId:number,shapeId:number){return await this.request({op:'pictureEdit',kind:'remove',bytes,slideId,shapeId}) as Uint8Array;}
  async layouts(bytes:Uint8Array){return await this.request({op:'layouts',bytes}) as LayoutInfo[];}
  dispose(error=new Error('Slides operation cancelled')){if(this.closed)return;this.closed=true;this.worker.terminate();for(const p of this.pending.values()){clearTimeout(p.timer);p.reject(error);}this.pending.clear();}
 }

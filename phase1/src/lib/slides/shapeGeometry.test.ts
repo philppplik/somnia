@@ -4,7 +4,7 @@ import {readFileSync,readdirSync} from 'node:fs';
 import {fileURLToPath} from 'node:url';
 import {unzipSync,zipSync,strFromU8,strToU8} from 'fflate';
 import {readDeckModel,readSlidePart,newSlideFromLayout,readLayouts,type ShapeRef} from './deckPackage';
-import {moveBox,resizeBox,hitTest,containsPoint,overlayRect,limitsOf,stepShape,selectableShapes,rotationDeg} from './shapeGeometry';
+import {moveBox,resizeBox,resizeBoxAspect,hitTest,containsPoint,overlayRect,limitsOf,stepShape,selectableShapes,rotationDeg} from './shapeGeometry';
 
 const fx=(n:string)=>new Uint8Array(readFileSync(fileURLToPath(new URL('../../../slides-engine/fixtures/'+n,import.meta.url))));
 const base=fx('independent.pptx');
@@ -102,4 +102,14 @@ test('resizeBox moves only the dragged edges, stops at 10 pt and at the slide ed
   assert.equal(resizeBox(b,'n',0,-1e9,size).y,0);
   assert.deepEqual(resizeBox(b,'s',0,0,size),b);
   const off={x:-500000,y:0,w:2000000,h:1000000};assert.equal(resizeBox(off,'w',-100000,0,size).x,-500000);
+});
+
+test('resizeBoxAspect keeps the ratio, anchors the opposite corner and stops at limits',()=>{
+  const size={cx:9144000,cy:6858000},b={x:2000000,y:2000000,w:2000000,h:1000000};
+  assert.deepEqual(resizeBoxAspect(b,'se',1000000,0,size),{x:2000000,y:2000000,w:3000000,h:1500000});
+  assert.deepEqual(resizeBoxAspect(b,'nw',-1000000,0,size),{x:1000000,y:1500000,w:3000000,h:1500000});
+  assert.deepEqual(resizeBoxAspect(b,'ne',0,-1000000,size),{x:2000000,y:1000000,w:4000000,h:2000000});
+  const tiny=resizeBoxAspect(b,'se',-1e9,-1e9,size);assert.equal(Math.min(tiny.w,tiny.h),127000);assert.ok(Math.abs(tiny.w/tiny.h-2)<0.001);
+  const huge=resizeBoxAspect(b,'se',1e9,1e9,size);assert.ok(huge.w<=size.cx&&huge.h<=size.cy);assert.ok(Math.abs(huge.w/huge.h-2)<0.001);
+  assert.deepEqual(resizeBoxAspect(b,'e',100,0,size),resizeBox(b,'e',100,0,size));
 });

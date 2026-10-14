@@ -1,4 +1,6 @@
 import test from 'node:test';
+import {png} from './imageFixtures';
+import {encodeBase64} from './imageSniff';
 import assert from 'node:assert/strict';
 import {CommandDispatcher} from '../commandDispatcher';
 import {slidesPanelCommandSpecs,type PanelCommandDeps} from './panelCommands';
@@ -8,8 +10,8 @@ import {deckMetrics,selectedRun,slideOutline,textIssue} from './panelModel';
 const runs=[{slide:0,run:0,text:'Hello world',part:'ppt/slides/slide1.xml'},{slide:1,run:0,text:'Second slide',part:'ppt/slides/slide2.xml'}];
 let picked:import('./shapeSelection').ShapeSelection|null=null;
 function fixture(){picked=null;
- const state={source:'blob:deck1',index:0,busy:false,working:new Uint8Array(40),runs:runs.map(r=>({...r})),slideIds:[256,257],layouts:[{part:'ppt/slideLayouts/slideLayout1.xml',supported:true},{part:'ppt/slideLayouts/slideLayout2.xml',supported:false}],model:{slides:[{id:256,shapes:[{id:2,name:'A',kind:'text' as const,runCount:1,parentId:null,bounds:{x:1000000,y:1000000,w:2000000,h:1000000,rot:0,flipH:false,flipV:false,source:'slide' as const},ph:null},{id:3,name:'B',kind:'text' as const,runCount:1,parentId:null,bounds:null,ph:null}]},{id:257,shapes:[]}],slideSize:{cx:9144000,cy:6858000}},summary:{slides:2}};
- const calls:unknown[]=[];const deps:PanelCommandDeps={state:()=>state,thumbnails:async()=>{calls.push('thumbnails');},show:async index=>{state.index=index;calls.push(['show',index]);},edit:async(run,text)=>{state.runs=state.runs.map(r=>r.slide===run.slide&&r.run===run.run?{...r,text}:r);calls.push(['edit',text]);},select:v=>calls.push(v),move:async(id,to)=>{const a=state.slideIds.slice();a.splice(to,0,a.splice(a.indexOf(id),1)[0]);state.slideIds=a;calls.push(['move',id,to]);},duplicate:async id=>{calls.push(['dup',id]);},remove:async id=>{calls.push(['del',id]);},add:async(l,a)=>{calls.push(['add',l,a]);},setBounds:async(id,sid,e,n)=>{calls.push(['bounds',id,sid,e,n]);},format:async(sid,id,f)=>{calls.push(['format',sid,id,f]);},addBox:async(sid,l)=>{calls.push(['addBox',sid,l]);},removeBox:async(sid,id)=>{calls.push(['removeBox',sid,id]);},pick:v=>{picked=v;calls.push(['pick',v]);},picked:()=>picked};
+ const state={source:'blob:deck1',index:0,busy:false,working:new Uint8Array(40),runs:runs.map(r=>({...r})),slideIds:[256,257],layouts:[{part:'ppt/slideLayouts/slideLayout1.xml',supported:true},{part:'ppt/slideLayouts/slideLayout2.xml',supported:false}],model:{slides:[{id:256,shapes:[{id:2,name:'A',kind:'text' as const,runCount:1,parentId:null,bounds:{x:1000000,y:1000000,w:2000000,h:1000000,rot:0,flipH:false,flipV:false,source:'slide' as const},ph:null},{id:3,name:'B',kind:'text' as const,runCount:1,parentId:null,bounds:null,ph:null}]},{id:257,shapes:[]},{id:258,shapes:[{id:5,name:'P',kind:'picture' as const,runCount:0,parentId:null,bounds:{x:1000000,y:1000000,w:2000000,h:1000000,rot:0,flipH:false,flipV:false,source:'slide' as const},ph:null}]}],slideSize:{cx:9144000,cy:6858000}},summary:{slides:2}};
+ const calls:unknown[]=[];const deps:PanelCommandDeps={state:()=>state,thumbnails:async()=>{calls.push('thumbnails');},show:async index=>{state.index=index;calls.push(['show',index]);},edit:async(run,text)=>{state.runs=state.runs.map(r=>r.slide===run.slide&&r.run===run.run?{...r,text}:r);calls.push(['edit',text]);},select:v=>calls.push(v),move:async(id,to)=>{const a=state.slideIds.slice();a.splice(to,0,a.splice(a.indexOf(id),1)[0]);state.slideIds=a;calls.push(['move',id,to]);},duplicate:async id=>{calls.push(['dup',id]);},remove:async id=>{calls.push(['del',id]);},add:async(l,a)=>{calls.push(['add',l,a]);},setBounds:async(id,sid,e,n)=>{calls.push(['bounds',id,sid,e,n]);},format:async(sid,id,f)=>{calls.push(['format',sid,id,f]);},addBox:async(sid,l)=>{calls.push(['addBox',sid,l]);},removeBox:async(sid,id)=>{calls.push(['removeBox',sid,id]);},insertImage:async(sid,img,alt)=>{calls.push(['insertImage',sid,img.length,alt]);},replaceImage:async(sid,id,img)=>{calls.push(['replaceImage',sid,id,img.length]);},removeImage:async(sid,id)=>{calls.push(['removeImage',sid,id]);},pick:v=>{picked=v;calls.push(['pick',v]);},picked:()=>picked};
  const dispatcher=new CommandDispatcher();slidesPanelCommandSpecs(deps).forEach(s=>dispatcher.register(s));return {state,calls,dispatcher};
 }
 test('outline searches text and slide number and preserves empty slides',()=>{
@@ -145,5 +147,24 @@ test('formatText, addTextBox and removeTextBox validate identity and schema befo
  picked={source:'blob:deck1',slideId:256,shapeId:2};
  await run('slides.removeTextBox',{...base,shapeId:2});assert.deepEqual(f.calls.at(-2),['removeBox',256,2]);assert.equal(picked,null);
  await assert.rejects(()=>run('slides.removeTextBox',{...base,shapeId:99}),/no longer exists/);
+ assert.ok(f.calls.length>n);
+});
+
+test('image commands validate identity, bytes and shape kind before mutation',async()=>{
+ const f=fixture(),run=(id:string,p:unknown)=>f.dispatcher.runCommand(id,p,{origin:'ui'}),base={source:'blob:deck1',slideId:256},img=png(40,30),data=encodeBase64(img);
+ await run('slides.insertImage',{...base,name:'C:\\x\\My pic.png',data});assert.deepEqual(f.calls.at(-2),['insertImage',256,img.length,'My pic']);assert.deepEqual(picked,{source:'blob:deck1',slideId:256,shapeId:4});
+ const n=f.calls.length;
+ await assert.rejects(()=>run('slides.insertImage',{...base,name:'a',data:encodeBase64(new Uint8Array(40))}),/Only PNG and JPEG/);
+ await assert.rejects(()=>run('slides.insertImage',{...base,name:'a',data:'te!t'}),/not valid base64/);
+ await assert.rejects(()=>run('slides.insertImage',{...base,name:'a',data:encodeBase64(png(0,5))}),/size could not/);
+ await assert.rejects(()=>run('slides.insertImage',{...base,source:'x',name:'a',data}),/Slide changed/);
+ await assert.rejects(()=>run('slides.insertImage',{...base,name:'a'}));
+ await assert.rejects(()=>run('slides.replaceImage',{...base,shapeId:2,data}),/Select a picture/);
+ await assert.rejects(()=>run('slides.removePicture',{...base,shapeId:2}),/Only pictures/);
+ f.state.slideIds=[256,257,258];f.state.index=2;const b2={source:'blob:deck1',slideId:258};
+ await run('slides.replaceImage',{...b2,shapeId:5,data});assert.deepEqual(f.calls.at(-1),['replaceImage',258,5,img.length]);
+ await assert.rejects(()=>run('slides.replaceImage',{...b2,shapeId:99,data}),/no longer exists/);
+ await assert.rejects(()=>run('slides.replaceImage',{...b2,shapeId:5,data:encodeBase64(new Uint8Array(3))}),/PNG or JPEG/);
+ picked={source:'blob:deck1',slideId:258,shapeId:5};await run('slides.removePicture',{...b2,shapeId:5});assert.deepEqual(f.calls.at(-2),['removeImage',258,5]);assert.equal(picked,null);
  assert.ok(f.calls.length>n);
 });
