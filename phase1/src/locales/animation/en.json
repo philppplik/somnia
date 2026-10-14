@@ -740,5 +740,12 @@
  "animation.template.import": "Import templates",
  "animation.template.fileTooLarge": "This template file is too large (300 KB at most).",
  "cmd.animation.template.export": "Export saved templates",
- "cmd.animation.template.import": "Import templates from a file"
+ "cmd.animation.template.import": "Import templates from a file",
+ "animation.onion.title": "Onion skin",
+ "animation.onion.on": "Show ghost frames",
+ "animation.onion.before": "Before",
+ "animation.onion.after": "After",
+ "animation.onion.step": "Step (frames)",
+ "animation.onion.hint": "Earlier frames show cool, later frames warm. View only, never exported.",
+ "cmd.animation.onion.set": "Set onion skin"
 }

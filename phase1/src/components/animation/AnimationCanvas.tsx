@@ -13,6 +13,7 @@ import {registerAnimationCommands} from '../../lib/animation/commands';
 import {animationSession,useAnimationState} from '../../lib/animation/session';
 import {findComp,type Composition,type KeyRef,type Layer} from '../../lib/animation/model';
 import {ViewerGuides,ViewerSnapLines} from './ViewerGuides';
+import {ViewerOnion} from './ViewerOnion';
 import {TransformHandles} from './TransformHandles';
 import {startLayerDrag} from './layerDrag';
 import type {Line} from '../../lib/animation/guides';
@@ -103,6 +104,7 @@ function Viewer({comp,at,selected,sel,assets,comps}:{assets:readonly InterfaceAs
    <defs>{comp.layers.map((l,i)=><filter key={l.id} id={`preview-effect-${i}`} filterUnits="userSpaceOnUse" {...effectBounds(l,at)} colorInterpolationFilters="sRGB" dangerouslySetInnerHTML={{__html:effectPrimitives(l,at)}}/>)}</defs>
    <defs>{comp.layers.map((l,i)=>l.source.gradient&&<GradientDef key={l.id} id={`preview-gradient-${i}`} g={gradientAt(l.source.gradient,at)}/>)}{comp.layers.map((l,i)=>l.stroke?.gradient&&<GradientDef key={`s-${l.id}`} id={`preview-stroke-gradient-${i}`} g={gradientAt(l.stroke.gradient,at)}/>)}</defs>
    <rect width={comp.width} height={comp.height} fill={comp.background}/>
+   <ViewerOnion comp={comp} at={at} assets={assets} comps={comps}/>
    <defs dangerouslySetInnerHTML={{__html:maskDefsHtml}}/>
    {scene.map(({layer:l,matrix,opacity})=>{const i=comp.layers.indexOf(l);
     const contentOnce=(tk:number)=><g mask={hasMasks(l)?`url(#${maskId('preview-',i)})`:undefined}><g filter={effectPrimitives(l,at)?`url(#preview-effect-${i})`:undefined}>{layerNode(l,assets,tk,l.source.gradient?`url(#preview-gradient-${i})`:undefined,l.stroke?.gradient?`url(#preview-stroke-gradient-${i})`:undefined)}</g></g>;

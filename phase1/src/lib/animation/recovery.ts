@@ -1,11 +1,12 @@
+import {normalizeOnion,defaultOnion} from './onion';
 import {defaultOverlays,normalizeOverlays} from './guides';
 import {validateDocument,type AnimationDocument,type KeyRef} from './model';
 import type {StyleKeyRef} from './keyLanes';
 /** Private recovery journal. Stores authoritative data (never rendered frames) plus a little view state. */
 export interface KeyValueStore{getItem(k:string):string|null;setItem(k:string,v:string):void;removeItem(k:string):void}
-export interface ViewState{playhead:number;selectedLayer:string|null;selectedKey:{prop:string;t:number}|null;selectedKeys:KeyRef[];styleKeys:StyleKeyRef[];loop:boolean;graphChannel:0|1;graphMode:'value'|'speed';zoom:number;scroll:number;openProps:string[];graph:boolean;/** Viewer overlays (safe areas, centre, thirds, grid). Not part of the project. */overlays?:import('./guides').Overlays}
+export interface ViewState{playhead:number;selectedLayer:string|null;selectedKey:{prop:string;t:number}|null;selectedKeys:KeyRef[];styleKeys:StyleKeyRef[];loop:boolean;graphChannel:0|1;graphMode:'value'|'speed';zoom:number;scroll:number;openProps:string[];graph:boolean;/** Viewer overlays (safe areas, centre, thirds, grid). Not part of the project. */overlays?:import('./guides').Overlays;/** Onion skin settings. Not part of the project. */onion?:import('./onion').Onion}
 export const RECOVERY_KEY='somnia.animation.recovery.v1';
-export const defaultView=():ViewState=>({playhead:0,selectedLayer:null,selectedKey:null,selectedKeys:[],styleKeys:[],loop:true,graphChannel:0,graphMode:'value',zoom:1,scroll:0,openProps:[],graph:false,overlays:defaultOverlays()});
+export const defaultView=():ViewState=>({playhead:0,selectedLayer:null,selectedKey:null,selectedKeys:[],styleKeys:[],loop:true,graphChannel:0,graphMode:'value',zoom:1,scroll:0,openProps:[],graph:false,overlays:defaultOverlays(),onion:defaultOnion()});
 export interface Journal{v:1;savedAt:number;savedRevision:number;doc:AnimationDocument;view:ViewState}
 const mem=():KeyValueStore|null=>{try{return typeof localStorage!=='undefined'?localStorage:null;}catch{return null;}};
 export function writeJournal(j:Omit<Journal,'v'|'savedAt'>,store:KeyValueStore|null=mem(),now=Date.now()):boolean{
@@ -22,7 +23,7 @@ export function readJournal(store:KeyValueStore|null=mem()):Journal|null{
   const v={...defaultView(),...(j.view??{})};
   if(!Number.isFinite(v.playhead))v.playhead=0;
   if(!Array.isArray(v.selectedKeys))v.selectedKeys=[];
-  v.styleKeys=[];v.overlays=normalizeOverlays(v.overlays);
+  v.styleKeys=[];v.overlays=normalizeOverlays(v.overlays);v.onion=normalizeOnion(v.onion);
   v.graphMode=v.graphMode==='speed'?'speed':'value';
   v.loop=v.loop!==false;v.graphChannel=v.graphChannel===1?1:0;
   return {...j,view:v};

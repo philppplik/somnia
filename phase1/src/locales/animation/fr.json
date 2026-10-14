@@ -740,5 +740,12 @@
  "animation.template.import": "Importer des modèles",
  "animation.template.fileTooLarge": "Ce fichier de modèles est trop volumineux (300 Ko maximum).",
  "cmd.animation.template.export": "Exporter les modèles enregistrés",
- "cmd.animation.template.import": "Importer des modèles depuis un fichier"
+ "cmd.animation.template.import": "Importer des modèles depuis un fichier",
+ "animation.onion.title": "Pelure d'oignon",
+ "animation.onion.on": "Afficher les images fantômes",
+ "animation.onion.before": "Avant",
+ "animation.onion.after": "Après",
+ "animation.onion.step": "Pas (images)",
+ "animation.onion.hint": "Les images précédentes sont froides, les suivantes chaudes. Affichage seul, jamais exporté.",
+ "cmd.animation.onion.set": "Régler la pelure d'oignon"
 }

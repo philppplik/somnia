@@ -740,5 +740,12 @@
  "animation.template.import": "Importar modelos",
  "animation.template.fileTooLarge": "Este arquivo de modelos é grande demais (máximo 300 KB).",
  "cmd.animation.template.export": "Exportar modelos salvos",
- "cmd.animation.template.import": "Importar modelos de um arquivo"
+ "cmd.animation.template.import": "Importar modelos de um arquivo",
+ "animation.onion.title": "Onion skin",
+ "animation.onion.on": "Mostrar quadros fantasma",
+ "animation.onion.before": "Antes",
+ "animation.onion.after": "Depois",
+ "animation.onion.step": "Passo (quadros)",
+ "animation.onion.hint": "Quadros anteriores em tom frio, posteriores em tom quente. Só visualização, nunca exportado.",
+ "cmd.animation.onion.set": "Ajustar onion skin"
 }

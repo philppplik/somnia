@@ -1133,6 +1133,19 @@
       "hasEnabled": true
     },
     {
+      "id": "animation.onion.set",
+      "title": "Set onion skin",
+      "category": "View",
+      "source": "animation",
+      "keywords": [
+        "animation",
+        "frames",
+        "ghost",
+        "onion"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "animation.path.mode",
       "title": "Set position path timing",
       "category": "Edit",

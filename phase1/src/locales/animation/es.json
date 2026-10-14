@@ -740,5 +740,12 @@
  "animation.template.import": "Importar plantillas",
  "animation.template.fileTooLarge": "El archivo de plantillas es demasiado grande (300 KB como máximo).",
  "cmd.animation.template.export": "Exportar plantillas guardadas",
- "cmd.animation.template.import": "Importar plantillas desde un archivo"
+ "cmd.animation.template.import": "Importar plantillas desde un archivo",
+ "animation.onion.title": "Piel de cebolla",
+ "animation.onion.on": "Mostrar fotogramas fantasma",
+ "animation.onion.before": "Antes",
+ "animation.onion.after": "Después",
+ "animation.onion.step": "Paso (fotogramas)",
+ "animation.onion.hint": "Los anteriores se ven fríos y los posteriores cálidos. Solo vista, nunca se exporta.",
+ "cmd.animation.onion.set": "Ajustar piel de cebolla"
 }

@@ -740,5 +740,12 @@
  "animation.template.import": "Vorlagen importieren",
  "animation.template.fileTooLarge": "Diese Vorlagendatei ist zu groß (höchstens 300 KB).",
  "cmd.animation.template.export": "Gespeicherte Vorlagen exportieren",
- "cmd.animation.template.import": "Vorlagen aus Datei importieren"
+ "cmd.animation.template.import": "Vorlagen aus Datei importieren",
+ "animation.onion.title": "Onion Skin",
+ "animation.onion.on": "Geisterbilder anzeigen",
+ "animation.onion.before": "Davor",
+ "animation.onion.after": "Danach",
+ "animation.onion.step": "Schritt (Frames)",
+ "animation.onion.hint": "Frühere Frames kühl, spätere warm. Nur Ansicht, nie im Export.",
+ "cmd.animation.onion.set": "Onion Skin einstellen"
 }
