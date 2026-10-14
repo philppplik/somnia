@@ -1,3 +1,4 @@
+import {clampSpot,spotSignature,validSpot,type HealSpot} from './healSpots';
 /**
  * Photos Studio develop settings: the full control set the LightCraft engine (photos-engine, WASM)
  * really applies, mapped 1:1 onto its DevelopSettings JSON. Nothing here is decorative: every value
@@ -28,8 +29,9 @@ export interface PhotoSettings {
  flipH:boolean;
  flipV:boolean;
  crop:PhotoCrop|null;  // normalized rect of the oriented frame; null = full frame
+ spots:HealSpot[];      // clone-stamp strokes stamped into the source before the engine loads it
 }
-export const neutralPhotoSettings:PhotoSettings={exposure:0,contrast:0,highlights:0,shadows:0,whites:0,blacks:0,temp:6500,tint:0,vibrance:0,saturation:0,texture:0,clarity:0,dehaze:0,sharpen:0,noiseLuminance:0,noiseColor:0,straighten:0,orientation:0,flipH:false,flipV:false,crop:null};
+export const neutralPhotoSettings:PhotoSettings={exposure:0,contrast:0,highlights:0,shadows:0,whites:0,blacks:0,temp:6500,tint:0,vibrance:0,saturation:0,texture:0,clarity:0,dehaze:0,sharpen:0,noiseLuminance:0,noiseColor:0,straighten:0,orientation:0,flipH:false,flipV:false,crop:null,spots:[]};
 /** One slider row of the inspector. `key` is the PhotoSettings field; ranges are the engine's. */
 export interface PhotoControl {key:keyof PhotoSettings&string;label:string;min:number;max:number;step:number;section:'light'|'color'|'effects'|'detail'|'transform';format?:(v:number)=>string}
 const signed=(v:number)=>`${v>0?'+':''}${Math.round(v*100)/100}`;
@@ -58,13 +60,16 @@ const clamp=(v:number,[min,max]:[number,number])=>Math.min(max,Math.max(min,v));
 const validCrop=(c:unknown):c is PhotoCrop=>!!c&&typeof c==='object'&&['x0','y0','x1','y1'].every(k=>Number.isFinite((c as never)[k]))&&(c as PhotoCrop).x0>=0&&(c as PhotoCrop).y0>=0&&(c as PhotoCrop).x1<=1&&(c as PhotoCrop).y1<=1&&(c as PhotoCrop).x1>(c as PhotoCrop).x0&&(c as PhotoCrop).y1>(c as PhotoCrop).y0;
 /** Strict shape check, then clamps each numeric control into the engine range. Unknown keys throw. */
 export function sanitizePhotoSettings(input:PhotoSettings):PhotoSettings {
- const allowed=new Set([...NUMERIC_KEYS,'orientation','flipH','flipV','crop']);
+ const allowed=new Set([...NUMERIC_KEYS,'orientation','flipH','flipV','crop','spots']);
  for(const k of Object.keys(input))if(!allowed.has(k))throw Error(`Unexpected Photos setting: ${k}`);
  const out={...input};
  for(const k of NUMERIC_KEYS){const v=out[k];if(!Number.isFinite(v))throw Error(`Invalid ${k}.`);out[k]=clamp(v,RANGES[k]);}
  if(![0,1,2,3].includes(out.orientation))throw Error('Invalid orientation.');
  if(typeof out.flipH!=='boolean'||typeof out.flipV!=='boolean')throw Error('Invalid flip.');
  if(out.crop!==null&&!validCrop(out.crop))throw Error('Invalid crop.');
+ const spots=(input.spots??[]) as unknown[];
+ if(!Array.isArray(spots)||spots.length>200)throw Error('Invalid spots.');
+ out.spots=spots.map(sp=>{if(!validSpot(sp))throw Error('Invalid spot.');return clampSpot(sp);});
  return out;
 }
 const ORIENTATIONS=['Normal','Rotate90','Rotate180','Rotate270'] as const;
@@ -82,7 +87,7 @@ export function photoSettingsToEngine(s:PhotoSettings){
 }
 /** Stable string for dirty checks and history dedupe; key order is fixed by construction. */
 export function photoSignature(s:PhotoSettings){
- const c=s.crop;return JSON.stringify([s.exposure,s.contrast,s.highlights,s.shadows,s.whites,s.blacks,s.temp,s.tint,s.vibrance,s.saturation,s.texture,s.clarity,s.dehaze,s.sharpen,s.noiseLuminance,s.noiseColor,s.straighten,s.orientation,s.flipH,s.flipV,c?[c.x0,c.y0,c.x1,c.y1]:null]);
+ const c=s.crop;return JSON.stringify([s.exposure,s.contrast,s.highlights,s.shadows,s.whites,s.blacks,s.temp,s.tint,s.vibrance,s.saturation,s.texture,s.clarity,s.dehaze,s.sharpen,s.noiseLuminance,s.noiseColor,s.straighten,s.orientation,s.flipH,s.flipV,c?[c.x0,c.y0,c.x1,c.y1]:null,spotSignature(s.spots??[])]);
 }
 export const isNeutralPhoto=(s:PhotoSettings)=>photoSignature(s)===photoSignature(neutralPhotoSettings);
 /** The engine's input contract (photos-engine/src/lib.rs): JPEG/PNG only, no alpha, bounded size. */

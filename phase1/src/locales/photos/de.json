@@ -24,6 +24,8 @@
  "photos.redo": "Wiederholen",
  "photos.reset": "Alles zurücksetzen",
  "photos.crop": "Zuschneiden",
+  "photos.heal.toggle": "Klonstempel",
+  "photos.heal.radius": "Pinselradius",
  "photos.crop.apply": "Zuschnitt anwenden",
  "photos.crop.cancel": "Zuschnitt abbrechen",
  "photos.crop.guides": "Drittelraster",

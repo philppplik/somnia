@@ -24,6 +24,8 @@
  "photos.redo": "Redo",
  "photos.reset": "Reset all",
  "photos.crop": "Crop",
+  "photos.heal.toggle": "Clone stamp",
+  "photos.heal.radius": "Brush radius",
  "photos.crop.apply": "Apply crop",
  "photos.crop.cancel": "Cancel crop",
  "photos.crop.guides": "Rule of thirds",

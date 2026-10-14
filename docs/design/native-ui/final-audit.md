@@ -183,6 +183,13 @@ through native control primitives, see below.
   another photo was loaded in between — previously a re-edit or export
   of an earlier photo could render the wrong source; covered by a
   dedicated engineReload test file, no visual change).
+- P44: photos heal / clone stamp feature (drag target-to-source strokes
+  stamped into a re-encoded source before engine load, so preview and
+  export carry the heal with no engine-contract change; spots are a
+  sanitized photo setting with signature coverage, one undo step per
+  stroke; bandage toggle, persisted radius slider, SVG brush cursor; no
+  raw controls, ratchets unchanged), unit tests and gallery proof added
+  (?view=photos-heal; canvas bitmaps pixel-identical to the P43 base).
 
 
 

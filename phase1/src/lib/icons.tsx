@@ -13,6 +13,7 @@ export const Grid3x3=make("grid-3x3","<path d=\"M3 9h18M3 15h18M9 3v18M15 3v18\"
 export const ClipboardPaste=make("clipboard-paste","<path d=\"M15 2H9a2 2 0 0 0-2 2v2a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2Z\"/><path d=\"M8 4H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2\"/><path d=\"M12 11v6\"/><path d=\"m9 14 3 3 3-3\"/>");
 export const ArrowLeft=make("arrow-left","<path d=\"m12 19-7-7 7-7\"/><path d=\"M19 12H5\"/>");
 export const ArrowRight=make("arrow-right","<path d=\"M5 12h14\"/><path d=\"m12 5 7 7-7 7\"/>");
+export const Bandage=make("bandage","<rect x=\"3.5\" y=\"8.5\" width=\"17\" height=\"7\" rx=\"3.5\" transform=\"rotate(-45 12 12)\"/><path d=\"M9.5 9.5v.01M12 12v.01M14.5 14.5v.01\"/>");
 export const Frame=make("frame","<path d=\"M22 6H2m20 12H2M6 2v20M18 2v20\"/>");
 export const AlertTriangle=make("triangle-alert","<path d=\"M12 7.5v5.893M12 17v1m-6.682-7.39l-.37.73c-2.425 4.778-3.637 7.167-2.541 8.913C3.502 22 6.214 22 11.637 22h.726c5.424 0 8.135 0 9.23-1.747c1.096-1.745-.115-4.133-2.537-8.905l-.368-.726C15.77 4.874 14.31 2 12 2s-3.766 2.87-6.682 8.61\"/>");
 export const Blocks=make("blocks","<path d=\"M14 4.4A2.4 2.4 0 0 1 16.4 2h3.2A2.4 2.4 0 0 1 22 4.4v3.2a2.4 2.4 0 0 1-2.4 2.4h-3.2A2.4 2.4 0 0 1 14 7.6zM10 14V8a2 2 0 0 0-2-2H4.4A2.4 2.4 0 0 0 2 8.4V14m8 0H2m8 0h6a2 2 0 0 1 2 2v3.6a2.4 2.4 0 0 1-2.4 2.4H10m0-8v8m-8-8v5.6A2.4 2.4 0 0 0 4.4 22H10\"/>");

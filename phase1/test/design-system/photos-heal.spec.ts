@@ -1,0 +1,55 @@
+import {test,expect} from '@playwright/test';
+import {writeFileSync} from 'node:fs';
+test.use({viewport:{width:1200,height:900}});
+async function canvasBitmap(page:import('@playwright/test').Page){
+ return page.evaluate(()=>(document.querySelector('[data-testid="photos-canvas"]') as HTMLCanvasElement).toDataURL('image/png'));
+}
+async function pixel(page:import('@playwright/test').Page,x:number,y:number){
+ return page.evaluate(([px,py])=>{
+  const c=document.querySelector('[data-testid="photos-canvas"]') as HTMLCanvasElement;
+  return[...c.getContext('2d')!.getImageData(px,py,1,1).data];
+ },[x,y]);
+}
+test('clone stamp: drag copies the clean area onto the defect, undo restores the source',async({page})=>{
+ await page.goto('/test/design-system/?view=photos-heal');
+ await expect(page.getByTestId('photos-workspace')).toBeVisible();
+ const toggle=page.getByTestId('photos-heal');
+ await expect(toggle).toBeEnabled();
+ const before=await canvasBitmap(page);
+ expect(await pixel(page,70,60)).toEqual([210,40,40,255]); // the red defect is there
+ await toggle.click();
+ await expect(toggle).toHaveAttribute('aria-pressed','true');
+ const box=await page.getByTestId('photos-canvas').boundingBox();
+ const at=(nx:number,ny:number):[number,number]=>[box!.x+nx*box!.width,box!.y+ny*box!.height];
+ await page.mouse.move(...at(0.2917,0.375)); // drag starts on the defect (target)
+ await page.mouse.down();
+ await expect(page.getByTestId('photos-heal-cursor')).toBeVisible();
+ await page.mouse.move(...at(0.75,0.375),{steps:8}); // drag ends on clean green (source)
+ await page.mouse.up();
+ await page.waitForTimeout(700); // debounce + source re-encode + engine reload
+ const healed=await canvasBitmap(page);
+ expect(healed).not.toEqual(before);
+ expect(await pixel(page,70,60)).toEqual([40,140,80,255]); // defect now carries the source green
+ await page.screenshot({path:'test-results/ds-photos-heal-result.png',fullPage:true});
+ await page.getByTestId('photos-undo').click();
+ await page.waitForTimeout(700);
+ expect(await canvasBitmap(page)).toEqual(before); // undo restores the untouched source
+});
+test('clone stamp mode renders in light and dark',async({page})=>{
+ for(const theme of['light','dark']){
+  await page.goto('/test/design-system/?view=photos-heal');
+  await page.evaluate(t=>document.documentElement.setAttribute('data-theme',t),theme);
+  await expect(page.getByTestId('photos-workspace')).toBeVisible();
+  const toggle=page.getByTestId('photos-heal');
+  if(await toggle.count()){
+   await toggle.click();
+   await expect(toggle).toHaveAttribute('aria-pressed','true');
+   const box=await page.getByTestId('photos-canvas').boundingBox();
+   await page.mouse.move(box!.x+0.5*box!.width,box!.y+0.5*box!.height);
+   await expect(page.getByTestId('photos-heal-cursor')).toBeVisible();
+  }
+  await page.waitForTimeout(500);
+  await page.screenshot({path:`test-results/ds-photos-heal-${theme}.png`,fullPage:true});
+  writeFileSync(`test-results/ds-photos-heal-canvas-${theme}.png`,Buffer.from((await canvasBitmap(page)).split(',')[1],'base64'));
+ }
+});

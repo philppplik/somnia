@@ -24,6 +24,8 @@
  "photos.redo": "Rétablir",
  "photos.reset": "Tout réinitialiser",
  "photos.crop": "Recadrer",
+  "photos.heal.toggle": "Tampon de clonage",
+  "photos.heal.radius": "Rayon du pinceau",
  "photos.crop.apply": "Appliquer le recadrage",
  "photos.crop.cancel": "Annuler le recadrage",
  "photos.crop.guides": "Règle des tiers",

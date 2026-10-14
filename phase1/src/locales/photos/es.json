@@ -24,6 +24,8 @@
  "photos.redo": "Rehacer",
  "photos.reset": "Restablecer todo",
  "photos.crop": "Recortar",
+  "photos.heal.toggle": "Tampón de clonar",
+  "photos.heal.radius": "Radio del pincel",
  "photos.crop.apply": "Aplicar recorte",
  "photos.crop.cancel": "Cancelar recorte",
  "photos.crop.guides": "Regla de los tercios",

@@ -24,6 +24,8 @@
  "photos.redo": "Refazer",
  "photos.reset": "Redefinir tudo",
  "photos.crop": "Recortar",
+  "photos.heal.toggle": "Carimbo de clonagem",
+  "photos.heal.radius": "Raio do pincel",
  "photos.crop.apply": "Aplicar recorte",
  "photos.crop.cancel": "Cancelar recorte",
  "photos.crop.guides": "Regra dos terços",

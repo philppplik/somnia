@@ -5,6 +5,7 @@ import {getMedia,registerMediaCloseCleanup,registerMediaCloseGuard,subscribeMedi
 import {defaultImageHost,editedName} from '../imageEditorHost';
 import {t} from '../i18n';
 import {isNeutralPhoto,neutralPhotoSettings,photoSignature,sanitizePhotoSettings,PHOTO_INPUT,type PhotoCrop,type PhotoSettings} from './studioSettings';
+import {applySpots,spotSignature,type HealSpot} from './healSpots';
 /** One decoded preview frame straight from the engine (RGBA bytes). */
 export interface PhotoFrame {bytes:ArrayBuffer;width:number;height:number}
 export type PhotoStatus='loading'|'ready'|'processing'|'error';
@@ -37,6 +38,19 @@ const listeners=new Set<()=>void>();
 let stopMediaSync:(()=>void)|undefined;
 /** Identity of the source the singleton engine currently holds (sessions share one engine; last load wins). */
 let loadedKey:string|null=null;
+const sourceKey=(name:string,spots:readonly HealSpot[])=>`${name}|${spotSignature(spots)}`;
+/** Decodes the untouched source, stamps every spot and re-encodes PNG, so the engine previews and exports the healed image. */
+async function healSource(bytes:ArrayBuffer,spots:readonly HealSpot[]):Promise<ArrayBuffer>{
+ const bmp=await createImageBitmap(new Blob([bytes]));
+ const c=document.createElement('canvas');c.width=bmp.width;c.height=bmp.height;
+ const ctx=c.getContext('2d');if(!ctx)throw Error('No 2D context.');
+ ctx.drawImage(bmp,0,0);bmp.close();
+ const img=ctx.getImageData(0,0,c.width,c.height);
+ const healed=applySpots({bytes:img.data.buffer as ArrayBuffer,width:c.width,height:c.height},spots);
+ img.data.set(new Uint8ClampedArray(healed.bytes));ctx.putImageData(img,0,0);
+ const blob=await new Promise<Blob>((res,rej)=>c.toBlob(b=>b?res(b):rej(Error('Could not re-encode the healed source.')),'image/png'));
+ return blob.arrayBuffer();
+}
 const emit=()=>listeners.forEach(l=>l());
 const put=(s:PhotoSession)=>{sessions.set(s.name,s);emit();};
 const patch=(name:string,p:Partial<PhotoSession>,cause?:unknown)=>{if(p.error)reportError('photos.engine',cause??p.error,{context:{studio:'photos',file:name}});const s=sessions.get(name);if(s)put({...s,...p});};
@@ -65,7 +79,7 @@ export async function openPhoto(item:{name:string;url:string;mime:string}):Promi
   if(bytes.byteLength===0||bytes.byteLength>PHOTO_INPUT.maxBytes)throw Error(t('photos.error.size',{max:PHOTO_INPUT.maxBytes/1_000_000}));
   sources.set(item.name,bytes);
   const e=getEngine();
-  const loaded=await e.load(bytes.slice(0));loadedKey=item.name;
+  const loaded=await e.load(bytes.slice(0));loadedKey=sourceKey(item.name,[]);
   if(!sessions.has(item.name))return;
   const original=frameOf(await e.renderPhoto(neutralPhotoSettings));
   const session=sessions.get(item.name);if(!session)return;
@@ -76,9 +90,12 @@ export async function openPhoto(item:{name:string;url:string;mime:string}):Promi
 }
 /** The engine is a singleton holding one loaded source: reload when this session's source is not the loaded one. */
 async function ensureEngineSource(name:string):Promise<void>{
- if(loadedKey===name)return;
- const bytes=sources.get(name);if(!bytes)return;
- const e=getEngine();await e.load(bytes.slice(0));loadedKey=name;
+ const spots=sessions.get(name)?.now.spots??[];
+ const key=sourceKey(name,spots);
+ if(loadedKey===key)return;
+ let bytes=sources.get(name);if(!bytes)return;
+ if(spots.length)bytes=await healSource(bytes,spots);
+ const e=getEngine();await e.load(bytes.slice(0));loadedKey=key;
 }
 function schedule(name:string,delay=DEBOUNCE_MS){clearTimeout(timers.get(name));timers.set(name,setTimeout(()=>{timers.delete(name);void render(name);},delay));}
 async function render(name:string){
