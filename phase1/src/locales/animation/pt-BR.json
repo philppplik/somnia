@@ -564,5 +564,13 @@
  "animation.audio.beats.find": "Encontrar batidas",
  "animation.audio.beats.clear": "Limpar batidas",
  "animation.audio.beats.added": "{count} marcadores de batida adicionados",
- "cmd.animation.audio.beats": "Encontrar batidas no clipe de áudio e marcá-las"
+ "cmd.animation.audio.beats": "Encontrar batidas no clipe de áudio e marcá-las",
+ "animation.audio.bpm.estimate": "Andamento estimado: {bpm} BPM",
+ "animation.audio.bpm.none": "Nenhum andamento estável encontrado",
+ "animation.audio.bpm.manual": "Andamento manual (BPM, 0 = auto)",
+ "animation.audio.bpm.grid": "Ajustar marcadores à grade de batidas",
+ "animation.keys.quantize": "Chaves aos marcadores",
+ "animation.keys.quantize.hint": "Mover as chaves selecionadas para o marcador mais próximo (um passo de desfazer)",
+ "cmd.animation.audio.grid": "Colocar marcadores de batida em uma grade de BPM estável",
+ "cmd.animation.keys.quantize": "Ajustar as chaves selecionadas ao marcador mais próximo"
 }

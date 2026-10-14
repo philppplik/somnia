@@ -23,6 +23,18 @@
       "hasEnabled": true
     },
     {
+      "id": "animation.audio.grid",
+      "title": "Place beat markers on a steady BPM grid",
+      "category": "Edit",
+      "source": "animation",
+      "keywords": [
+        "animation",
+        "keyframe",
+        "timeline"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "animation.audio.import",
       "title": "Import audio (WAV or MP3)",
       "category": "Insert",
@@ -530,6 +542,18 @@
     {
       "id": "animation.keys.paste",
       "title": "Paste keys at playhead",
+      "category": "Edit",
+      "source": "animation",
+      "keywords": [
+        "animation",
+        "keyframe",
+        "timeline"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "animation.keys.quantize",
+      "title": "Snap selected keys to the nearest marker",
       "category": "Edit",
       "source": "animation",
       "keywords": [

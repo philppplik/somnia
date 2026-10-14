@@ -238,3 +238,10 @@ Added:
 
 - `animation.audio.beats {layer?, sensitivity?:1-10, clear?}`: reads the clip's stored peak envelope (no decoding), finds rises above the recent level that stand out from the clip's variation (threshold from mean and spread, local maxima, min 0.2 s apart, at most 200), maps them through trim and offset to composition ticks on whole frames and adds markers "Beat n" in one `markers.set`. Existing marker ticks are skipped; the composition's 200-marker limit holds. `clear:true` removes only markers matching `Beat n`.
 - Limits: time resolution is clip length / 1024 bins. Coarse for long clips; the envelope is peak amplitude, not frequency bands, so dense mixes give fewer clean beats.
+
+## P43 - Beat grid and key quantize
+
+- `estimateBpm(beats)`: votes with each gap between detected beats plus its double and half inside 60-180 BPM; null with fewer than 3 beats or no clear winner.
+- `animation.audio.grid {layer?, bpm?, sensitivity?}`: anchors a steady grid on the first detected beat in the clip (tempo from the estimate or `bpm`, 30-300), maps through trim and offset, snaps to frames, replaces the "Beat n" markers in one `markers.set`. Other markers stay.
+- `animation.keys.quantize {maxSeconds?}`: each selected transform key moves to the nearest marker. The new `keys.retime` edit gives each key its own target in one step; two keys landing on one tick, or on a key that is not moving, are skipped (counted, nothing half-applied). Keys already on a marker stay. Selection follows the keys.
+- Limits: markers are the only targets; one tempo per clip.

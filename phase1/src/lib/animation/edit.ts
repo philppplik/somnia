@@ -29,6 +29,8 @@ export type Edit=
  |{type:'key.interp';layer:string;prop:TransformKey;t:number;interp:Interp;channel?:0|1;out?:readonly [number,number];in?:readonly [number,number]}
  /** Move many keys by the same number of ticks (snapped to whole frames) as one step. */
  |{type:'keys.move';keys:readonly KeyRef[];delta:number;replace?:boolean}
+ /** Gives keys exact new ticks in one step (each key its own target). */
+ |{type:'keys.retime';moves:readonly {layer:string;prop:TransformKey;from:number;to:number}[]}
  |{type:'keys.remove';keys:readonly KeyRef[]}
  |{type:'keys.paste';layer:string;items:readonly ClipItem[];t:number}
  |{type:'keys.interp';keys:readonly KeyRef[];interp?:Interp;out?:readonly [number,number];in?:readonly [number,number]}
@@ -246,6 +248,18 @@ function reduce(doc:AnimationDocument,e:Edit):AnimationDocument{
     const times2=new Set(moved.map(k=>k.t));const rest=p.keys.filter(k=>!times.has(k.t));
     if(!e.replace&&rest.some(k=>times2.has(k.t)))return fail('collision','A key already exists at that time. Replace it explicitly.');
     return {...p,keys:[...rest.filter(k=>!times2.has(k.t)),...moved].sort((a,b)=>a.t-b.t)};}));}
+  case 'keys.retime':{const c=compOf(doc);if(!e.moves?.length||e.moves.length>2000)return fail('invalid','Nothing to move.');
+   const groups=new Map<string,{layer:string;prop:TransformKey;m:Map<number,number>}>();
+   for(const mv of e.moves){if(!TRANSFORM_KEYS.includes(mv.prop))return fail('invalid','Unknown property.');layerOf(doc,mv.layer);
+    const from=tickOf(c,mv.from),to=tickOf(c,mv.to);if(to<c.start||to>c.start+c.duration)return fail('invalid','Keys cannot move outside the composition.');
+    const id=`${mv.layer}\0${mv.prop}`;const g=groups.get(id)??{layer:mv.layer,prop:mv.prop,m:new Map<number,number>()};g.m.set(from,to);groups.set(id,g);}
+   let next=doc;
+   for(const g of groups.values())next=setProp(next,g.layer,g.prop,p=>{
+    for(const f of g.m.keys())if(!p.keys.some(k=>k.t===f))return fail('missing','A selected key no longer exists.');
+    const moved=p.keys.filter(k=>g.m.has(k.t)).map(k=>({...k,t:g.m.get(k.t)!}));const rest=p.keys.filter(k=>!g.m.has(k.t));
+    const ts=new Set(moved.map(k=>k.t));if(ts.size!==moved.length||rest.some(k=>ts.has(k.t)))return fail('collision','Moved keys would overlap.');
+    return {...p,keys:[...rest,...moved].sort((a,b)=>a.t-b.t)};});
+   return next;}
   case 'keys.remove':return foldGroups(doc,e.keys,(d,layer,prop,times)=>setProp(d,layer,prop,p=>{
    const keys=p.keys.filter(k=>!times.has(k.t));return keys.length?{...p,keys}:{...p,value:p.keys[0].v,keys:[]};}));
   case 'keys.paste':{const c=compOf(doc);layerOf(doc,e.layer);

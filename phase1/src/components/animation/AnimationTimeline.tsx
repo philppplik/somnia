@@ -257,6 +257,7 @@ export function AnimationTimeline({comp,at,selected,canUndo,canRedo}:{comp:Compo
   </div>
   <div className="flex max-h-16 shrink-0 flex-wrap items-center gap-1 overflow-auto border-b border-subtle px-2 py-1" role="group" aria-label={t('animation.markers.title')}>
    <Button size="tiny" variant="ghost" onClick={()=>run('animation.marker.add',{label:timecode(at,comp.fps)})}>{t('animation.markers.add')}</Button>
+   <Button size="tiny" variant="ghost" disabled={sel.length===0||!(comp.markers??[]).length} title={t('animation.keys.quantize.hint')} onClick={()=>run('animation.keys.quantize')} data-testid="animation-keys-quantize">{t('animation.keys.quantize')}</Button>
    <Button size="tiny" variant="ghost" disabled={!(comp.markers??[]).some(m=>m.t<at)} onClick={()=>animationSession().setView({playhead:Math.max(...(comp.markers??[]).filter(m=>m.t<at).map(m=>m.t))})}>{t('animation.markers.previous')}</Button>
    <Button size="tiny" variant="ghost" disabled={!(comp.markers??[]).some(m=>m.t>at)} onClick={()=>animationSession().setView({playhead:Math.min(...(comp.markers??[]).filter(m=>m.t>at).map(m=>m.t))})}>{t('animation.markers.next')}</Button>
    <span className="text-ink-3">{t('animation.markers.frame',{frame:Math.floor(at*comp.fps.num/(240000*comp.fps.den))})}</span>

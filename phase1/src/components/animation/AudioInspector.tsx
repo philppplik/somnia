@@ -1,4 +1,5 @@
-import {useState} from 'react';
+import {useMemo,useState} from 'react';
+import {detectBeats,estimateBpm} from '../../lib/animation/audioBeats';
 import {useT} from '../../lib/useT';
 import {executeCommand} from '../../lib/commands';
 import {animationSession} from '../../lib/animation/session';
@@ -15,7 +16,8 @@ const sec=(n:number)=>String(Math.round(n*1000)/1000);
 function N(p:{label:string;value:number;min?:number;max?:number;step?:number;resetKey:string;disabled:boolean;onCommit:(n:number)=>void}){return <InspectorNumberField {...p} className={field} format={sec}/>;}
 /** Inspector for an audio layer: file info, waveform, trim, offset and volume keyframes. Every change is a validated command. */
 export function AudioInspector({layer,comp,at}:{layer:Layer;comp:Composition;at:number}){
- const {t}=useT();const [sens,setSens]=useState(5);const [note,setNote]=useState('');const doc=animationSession().document;const a=layer.audio!;const asset=doc?.audioAssets?.find(x=>x.id===a.assetId);
+ const {t}=useT();const [sens,setSens]=useState(5);const [note,setNote]=useState('');const [bpmIn,setBpmIn]=useState(0);const doc=animationSession().document;const a=layer.audio!;const asset=doc?.audioAssets?.find(x=>x.id===a.assetId);
+ const tempo=useMemo(()=>asset?estimateBpm(detectBeats(asset.peaks,asset.durationTicks,{sensitivity:sens})):null,[asset,sens]);
  const vol=a.volume,animated=vol.keys.length>0,onKey=vol.keys.some(k=>k.t===at),value=evaluate(vol,at) as number;
  return <div className="grid gap-3 p-3 text-xs" data-testid="animation-properties">
   <label className="grid gap-1 text-ink-3">{t('animation.layer.name')}<NativeInput className={field} defaultValue={layer.name} key={layer.id+layer.name} onBlur={e=>{const v=e.currentTarget.value.trim();if(v&&v!==layer.name)run('animation.layer.update',{layer:layer.id,name:v});}}/></label>
@@ -37,6 +39,9 @@ export function AudioInspector({layer,comp,at}:{layer:Layer;comp:Composition;at:
     <div className="flex gap-1">
      <Button size="tiny" variant="outline" disabled={layer.locked} onClick={async()=>{setNote('');try{const count=()=>comp.markers?.length??0;const before=count();await executeCommand('animation.audio.beats',{layer:layer.id,sensitivity:sens});const after=animationSession().document?.compositions.find(c=>c.id===comp.id)?.markers?.length??before;setNote(t('animation.audio.beats.added',{count:after-before}));}catch(e){setNote((e as Error).message);}}} data-testid="animation-audio-beats-find">{t('animation.audio.beats.find')}</Button>
      <Button size="tiny" variant="ghost" onClick={async()=>{setNote('');try{await executeCommand('animation.audio.beats',{layer:layer.id,clear:true});}catch(e){setNote((e as Error).message);}}} data-testid="animation-audio-beats-clear">{t('animation.audio.beats.clear')}</Button></div>
+    <p className="m-0 text-ink-3" data-testid="animation-audio-bpm">{tempo?t('animation.audio.bpm.estimate',{bpm:tempo}):t('animation.audio.bpm.none')}</p>
+    <N disabled={layer.locked} label={t('animation.audio.bpm.manual')} value={bpmIn} min={0} max={300} step={0.1} resetKey={`bpm:${bpmIn}`} onCommit={n=>setBpmIn(n>=30?Math.min(300,n):0)}/>
+    <Button size="tiny" variant="outline" disabled={layer.locked||(!tempo&&!bpmIn)} onClick={async()=>{setNote('');try{await executeCommand('animation.audio.grid',{layer:layer.id,sensitivity:sens,...(bpmIn?{bpm:bpmIn}:{})});}catch(e){setNote((e as Error).message);}}} data-testid="animation-audio-grid">{t('animation.audio.bpm.grid')}</Button>
     {note&&<p role="status" className="m-0 text-ink-3">{note}</p>}
    </div>
   </fieldset>}

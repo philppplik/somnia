@@ -292,3 +292,10 @@ Depends on: v10 diff viewer, v11 updater for smooth extension and app updates.
 - Done: beat finder for imported audio (`animation.audio.beats`): marks onsets as "Beat n" markers in one undo step, respecting trim and offset; sensitivity 1-10; "Clear beats" removes only markers named Beat n. Snapping then lands on the beats.
 - Open: resolution is limited to the stored peak envelope (1024 bins, so about 8 ms on a 8 s clip, 0.6 s on a 10 min clip); no tempo/BPM grid; no onset detection by frequency band.
 
+
+### Animation P43 (2026-10-14, integration pending)
+
+- Picked the BPM grid (text animator presets already shipped in P35, P40 and P41).
+- Done: tempo estimate from detected beats (shown in the audio inspector; votes with each gap and its double/half in 60-180 BPM, so a missed beat does not change it), optional tempo override, "Snap markers to beat grid" (`animation.audio.grid`: steady grid through the first detected beat, replaces only "Beat n" markers, one undo step); "Keys to markers" (`animation.keys.quantize`): selected keys move to the nearest marker in one undo step through the new `keys.retime` edit; keys that would collide are skipped.
+- Open: grid only for the first audio clip's tempo (no tempo changes), quantize only to markers (not to a free BPM grid), no "strength" or partial quantize, transform keys only.
+

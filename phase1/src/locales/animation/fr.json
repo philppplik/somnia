@@ -564,5 +564,13 @@
  "animation.audio.beats.find": "Trouver les temps",
  "animation.audio.beats.clear": "Effacer les temps",
  "animation.audio.beats.added": "{count} repères de temps ajoutés",
- "cmd.animation.audio.beats": "Trouver les temps du clip audio et les marquer"
+ "cmd.animation.audio.beats": "Trouver les temps du clip audio et les marquer",
+ "animation.audio.bpm.estimate": "Tempo estimé : {bpm} BPM",
+ "animation.audio.bpm.none": "Aucun tempo stable trouvé",
+ "animation.audio.bpm.manual": "Tempo imposé (BPM, 0 = auto)",
+ "animation.audio.bpm.grid": "Aligner les repères sur la grille de temps",
+ "animation.keys.quantize": "Clés vers repères",
+ "animation.keys.quantize.hint": "Déplacer les clés sélectionnées vers le repère le plus proche (une étape d’annulation)",
+ "cmd.animation.audio.grid": "Placer les repères de temps sur une grille BPM régulière",
+ "cmd.animation.keys.quantize": "Aimanter les clés sélectionnées au repère le plus proche"
 }

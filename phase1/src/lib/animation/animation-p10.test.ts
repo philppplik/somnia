@@ -1204,3 +1204,30 @@ test('P42 detectBeats finds evenly spaced hits, respects sensitivity and gap, an
  assert.deepEqual(m.map(x=>x.t),[2.5*sec,3.5*sec]);assert.deepEqual(m.map(x=>x.label),['Beat 2','Beat 3']);
  const d=applyEdit(base(),{type:'markers.set',markers:m});assert.deepEqual(validateDocument(d),[]);
 });
+
+test('P43 estimateBpm and gridTicks',async()=>{
+ const {estimateBpm,gridTicks}=await import('./audioBeats');const S=240000;
+ assert.equal(estimateBpm([0,0.5*S,1*S,1.5*S,2*S]),120);
+ assert.equal(estimateBpm([0,0.5*S,1.5*S,2*S,2.5*S,3*S]),120);
+ assert.equal(estimateBpm([0,0.25*S,0.5*S,0.75*S,1*S]),120);
+ assert.equal(estimateBpm([0,S]),null);assert.equal(estimateBpm([0,0.5*S,2.1*S,2.2*S]),null);
+ assert.deepEqual(gridTicks(0.5*S,120,0,2*S),[0,0.5*S,S,1.5*S]);assert.deepEqual(gridTicks(0,5,0,S),[]);
+ assert.ok(gridTicks(0,300,0,1e9).length<=200);
+});
+test('P43 keys.retime and quantizeMoves snap keys to markers in one undo step',async()=>{
+ const {quantizeMoves}=await import('./keyQuantize');
+ const d0=keyDoc();const c=findComp(d0)!;const S=240000;
+ const keys=rotKeys(d0).map(k=>({layer:'stencil',prop:'rotation' as const,t:k.t}));
+ const markers=[{id:'a',t:10000,label:'x'},{id:'b',t:250000,label:'y'},{id:'c',t:470000,label:'z'}];
+ const r=quantizeMoves(c,keys,markers.map(m=>m.t));
+ assert.equal(r.moves.length,3);assert.equal(r.skipped,0);assert.equal(r.unchanged,0);
+ const d1=applyEdit(d0,{type:'keys.retime',moves:r.moves});
+ assert.deepEqual(rotKeys(d1).map(k=>k.t),r.moves.map(m=>m.to));assert.ok(r.moves.every(m=>Math.abs(m.to-m.from)<20000));
+ assert.deepEqual(validateDocument(d1),[]);
+ assert.throws(()=>applyEdit(d0,{type:'keys.retime',moves:[{layer:'stencil',prop:'rotation',from:0,to:240000}]}),EditError);
+ assert.throws(()=>applyEdit(d0,{type:'keys.retime',moves:[{layer:'stencil',prop:'rotation',from:100000,to:110000}]}),EditError);
+ assert.throws(()=>applyEdit(d0,{type:'keys.retime',moves:[]}),EditError);
+ assert.equal(quantizeMoves(c,keys,[],0).moves.length,0);
+ assert.equal(quantizeMoves(c,keys,[10000],100).moves.length,0);
+ void S;
+});

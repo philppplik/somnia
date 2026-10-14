@@ -564,5 +564,13 @@
  "animation.audio.beats.find": "Beats finden",
  "animation.audio.beats.clear": "Beats löschen",
  "animation.audio.beats.added": "{count} Beat-Marker hinzugefügt",
- "cmd.animation.audio.beats": "Beats im Audioclip finden und markieren"
+ "cmd.animation.audio.beats": "Beats im Audioclip finden und markieren",
+ "animation.audio.bpm.estimate": "Geschätztes Tempo: {bpm} BPM",
+ "animation.audio.bpm.none": "Kein gleichmäßiges Tempo gefunden",
+ "animation.audio.bpm.manual": "Tempo vorgeben (BPM, 0 = automatisch)",
+ "animation.audio.bpm.grid": "Marker auf Beat-Raster legen",
+ "animation.keys.quantize": "Keys an Marker",
+ "animation.keys.quantize.hint": "Gewählte Keys zum nächsten Marker verschieben (ein Undo-Schritt)",
+ "cmd.animation.audio.grid": "Beat-Marker auf ein gleichmäßiges BPM-Raster legen",
+ "cmd.animation.keys.quantize": "Gewählte Keys am nächsten Marker einrasten"
 }

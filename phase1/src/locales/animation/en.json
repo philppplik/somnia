@@ -564,5 +564,13 @@
  "animation.audio.beats.find": "Find beats",
  "animation.audio.beats.clear": "Clear beats",
  "animation.audio.beats.added": "{count} beat markers added",
- "cmd.animation.audio.beats": "Find beats in the audio clip and mark them"
+ "cmd.animation.audio.beats": "Find beats in the audio clip and mark them",
+ "animation.audio.bpm.estimate": "Estimated tempo: {bpm} BPM",
+ "animation.audio.bpm.none": "No steady tempo found",
+ "animation.audio.bpm.manual": "Tempo override (BPM, 0 = auto)",
+ "animation.audio.bpm.grid": "Snap markers to beat grid",
+ "animation.keys.quantize": "Keys to markers",
+ "animation.keys.quantize.hint": "Move selected keys to the nearest marker (one undo step)",
+ "cmd.animation.audio.grid": "Place beat markers on a steady BPM grid",
+ "cmd.animation.keys.quantize": "Snap selected keys to the nearest marker"
 }

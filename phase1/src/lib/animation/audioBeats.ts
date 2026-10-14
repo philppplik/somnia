@@ -29,3 +29,21 @@ export function beatMarkers(beats:readonly number[],clip:{trimIn:number;length:n
   if(t<compStart||t>=compEnd||taken.has(t)||existing.length+out.length>=200)continue;taken.add(t);out.push({id:id(),t,label:`Beat ${++k}`});}
  return out;
 }
+/**
+ * Tempo in BPM from beat positions (ticks), or null when there are fewer than 3 beats or no steady pulse.
+ * Votes with every gap and its double and half inside 60-180 BPM, so a missed or extra beat does not change the answer.
+ */
+export function estimateBpm(beats:readonly number[]):number|null{
+ if(beats.length<3)return null;const votes=new Float64Array(241);const gaps:number[]=[];
+ for(let i=1;i<beats.length;i++){const g=(beats[i]-beats[i-1])/240000;if(g<=0)continue;gaps.push(g);
+  for(const f of [0.5,1,2]){const bpm=60/(g*f);if(bpm>=60&&bpm<=180){const b=Math.round(bpm);votes[b]+=f===1?1:0.6;votes[b-1]+=0.5;votes[b+1]+=0.5;}}}
+ let best=0;for(let b=60;b<=180;b++)if(votes[b]>votes[best])best=b;if(!best||votes[best]<1.5)return null;
+ const near=gaps.flatMap(g=>[g*0.5,g,g*2]).map(g=>60/g).filter(b=>Math.abs(b-best)<=2.5);
+ return Math.round(near.reduce((a,b)=>a+b,0)/Math.max(1,near.length)*10)/10;
+}
+/** File positions (ticks) of a steady grid at `bpm` that passes through `anchor`, covering [from, to). */
+export function gridTicks(anchor:number,bpm:number,from:number,to:number):number[]{
+ if(!(bpm>=30&&bpm<=300))return [];const iv=240000*60/bpm;const out:number[]=[];
+ for(let k=Math.ceil((from-anchor)/iv);anchor+k*iv<to&&out.length<MAX_BEATS;k++)out.push(Math.round(anchor+k*iv));
+ return out;
+}

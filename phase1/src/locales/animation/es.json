@@ -564,5 +564,13 @@
  "animation.audio.beats.find": "Buscar beats",
  "animation.audio.beats.clear": "Borrar beats",
  "animation.audio.beats.added": "{count} marcadores de beat añadidos",
- "cmd.animation.audio.beats": "Buscar beats en el clip de audio y marcarlos"
+ "cmd.animation.audio.beats": "Buscar beats en el clip de audio y marcarlos",
+ "animation.audio.bpm.estimate": "Tempo estimado: {bpm} BPM",
+ "animation.audio.bpm.none": "No se encontró un tempo estable",
+ "animation.audio.bpm.manual": "Tempo manual (BPM, 0 = auto)",
+ "animation.audio.bpm.grid": "Ajustar marcadores a la cuadrícula de beats",
+ "animation.keys.quantize": "Claves a marcadores",
+ "animation.keys.quantize.hint": "Mover las claves seleccionadas al marcador más cercano (un paso de deshacer)",
+ "cmd.animation.audio.grid": "Colocar marcadores de beat en una cuadrícula de BPM estable",
+ "cmd.animation.keys.quantize": "Ajustar las claves seleccionadas al marcador más cercano"
 }

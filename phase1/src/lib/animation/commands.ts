@@ -22,7 +22,8 @@ import {ClipError,copyKeys,getKeyClip,pastedRefs,setKeyClip} from './keyclip';
 import {allKeysOf,pruneSelection,shiftSelection} from './selection';
 import {EASE_PRESETS,type EasePreset} from './graph';
 import {copyCurve,pasteCurveEdit} from './graphTools';
-import {detectBeats,beatMarkers,BEAT_LABEL} from './audioBeats';
+import {detectBeats,beatMarkers,BEAT_LABEL,estimateBpm,gridTicks} from './audioBeats';
+import {quantizeMoves} from './keyQuantize';
 import {nextTrackHeight,setAllTracks,setTrackHeight,trackHeightOf,setShyHidden,shyHidden,fitAll,fitRange,setTimelineSnap,timelineSnap as timelineSnapNow,timeWindow,zoomAround} from './timelineView';
 import {applyExportPreset,resetExportSettings,setExportSettings,exportApng,exportCurrentFrame,exportGif,exportWebM,exportWorkAreaSequence} from './exportJob';
 import {ExportError} from './exportFrames';
@@ -83,6 +84,26 @@ export function animationCommandSpecs():CommandSpec<unknown,unknown>[]{
    if(!made.length)throw Object.assign(Error('No new beats found in this clip. Try a higher sensitivity.'),{expected:true});
    run({type:'markers.set',markers:[...marks,...made]});return made.length;
   },object({layer:layerRef,sensitivity:{type:'integer',minimum:1,maximum:10},clear:{type:'boolean'}},[]),()=>open()&&findLayer(comp(),selected())?.kind==='audio','Edit'),
+  spec('animation.audio.grid','Place beat markers on a steady BPM grid',(p:{layer?:string;bpm?:number;sensitivity?:number})=>{
+   const c=comp();const l=findLayer(c,layerIdOf(p));if(!l||l.kind!=='audio'||!l.audio)throw Object.assign(Error('Select an audio layer.'),{expected:true});
+   const asset=doc().audioAssets?.find(a=>a.id===l.audio!.assetId);if(!asset)throw Object.assign(Error('The audio file is missing.'),{expected:true});
+   const beats=detectBeats(asset.peaks,asset.durationTicks,{sensitivity:p.sensitivity}).filter(b=>b>=l.audio!.trimIn&&b<l.audio!.trimIn+(l.outT-l.inT));
+   if(!beats.length)throw Object.assign(Error('No beats found in this clip. Try a higher sensitivity.'),{expected:true});
+   const bpm=p.bpm??estimateBpm(beats);if(!bpm)throw Object.assign(Error('No steady tempo found. Enter a tempo.'),{expected:true});
+   const keep=(c.markers??[]).filter(m=>!BEAT_LABEL.test(m.label));
+   const grid=gridTicks(beats[0],bpm,l.audio.trimIn,l.audio.trimIn+(l.outT-l.inT));
+   const made=beatMarkers(grid,{trimIn:l.audio.trimIn,length:l.outT-l.inT,start:l.inT+l.offset},keep,c.start,c.start+c.duration,t=>snapToFrame(t,c.fps),()=>newId('marker'));
+   if(!made.length)throw Object.assign(Error('The grid does not fit the composition.'),{expected:true});
+   run({type:'markers.set',markers:[...keep,...made]});return bpm;
+  },object({layer:layerRef,bpm:{type:'number',minimum:30,maximum:300},sensitivity:{type:'integer',minimum:1,maximum:10}},[]),()=>open()&&findLayer(comp(),selected())?.kind==='audio','Edit'),
+  spec('animation.keys.quantize','Snap selected keys to the nearest marker',(p:{maxSeconds?:number}={})=>{
+   const c=comp();const keys=selKeys();const marks=(c.markers??[]).map(m=>m.t);if(!marks.length)throw Object.assign(Error('Add markers first, for example with Find beats.'),{expected:true});
+   const r=quantizeMoves(c,keys,marks,p.maxSeconds!==undefined?secondsToTicks(p.maxSeconds):Infinity);
+   if(!r.moves.length)throw Object.assign(Error(r.skipped?'Keys would collide at the markers.':'The keys are already on markers.'),{expected:true});
+   run({type:'keys.retime',moves:r.moves});
+   const to=new Map(r.moves.map(m=>[`${m.layer}\0${m.prop}\0${m.from}`,m.to]));
+   animationSession().selectKeys(keys.map(k=>({...k,t:to.get(`${k.layer}\0${k.prop}\0${k.t}`)??k.t})));return r.moves.length;
+  },object({maxSeconds:{type:'number',minimum:0,maximum:60}},[]),hasSel,'Edit'),
   spec('animation.audio.volume.set','Set audio volume (percent)',(p:{layer?:string;value:number;t?:number})=>run({type:'audio.volume.set',layer:layerIdOf(p),value:p.value,t:p.t??playhead()}),object({layer:layerRef,value:{type:'number',minimum:0,maximum:200},t:tick},['value'])),
   spec('animation.audio.volume.animate','Toggle audio volume keyframes',(p:{layer?:string;on:boolean})=>run({type:'audio.volume.animate',layer:layerIdOf(p),on:p.on,t:playhead()}),object({layer:layerRef,on:{type:'boolean'}},['on'])),
   spec('animation.audio.volume.keyRemove','Remove audio volume keyframe',(p:{layer?:string;t?:number})=>run({type:'audio.volume.key.remove',layer:layerIdOf(p),t:p.t??playhead()}),object({layer:layerRef,t:tick},[])),
