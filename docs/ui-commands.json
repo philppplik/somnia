@@ -516,6 +516,23 @@
       "hasEnabled": true
     },
     {
+      "id": "animation.export.spriteSheet",
+      "title": "Export work area as sprite sheet",
+      "category": "Project",
+      "source": "animation",
+      "keywords": [
+        "animation",
+        "atlas",
+        "export",
+        "frames",
+        "game",
+        "grid",
+        "sheet",
+        "sprite"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "animation.export.webm",
       "title": "Export work area as WebM video (real time)",
       "category": "Project",

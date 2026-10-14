@@ -8,6 +8,8 @@ import {findComp} from './model';
 import {defaultExportSettings,exportPlan,problemMessage,settingsProblems,EXPORT_PRESETS,EXPORT_LIMITS,type ExportFormat,type ExportSettings} from './exportSettings';
 import {animationSession} from './session';
 import {exportFrameSvg} from './exportSvg';
+import {Zip,ZipPassThrough,strToU8} from 'fflate';
+import {sheetPlan,packSheet,encodePngRgba,sheetManifest,SheetError} from './spriteSheet';
 /** Observable state of the one export job the studio runs at a time. The UI shows real progress and real failures; nothing reports success before the file was handed to the browser. */
 export interface ExportState{status:'idle'|'running'|'done'|'error';kind:'frame'|'sequence'|'gif'|'apng'|'webm'|null;done:number;total:number;message:string;fileName:string;transparent:boolean;settings:ExportSettings}
 const idle:ExportState={status:'idle',kind:null,done:0,total:0,message:'',fileName:'',transparent:false,settings:defaultExportSettings()};
@@ -112,4 +114,25 @@ export function exportWebM(d:Deps={}){
   audio:browserAudioContext,
   signal,onProgress:(done,total)=>set({done,total}),
  }),d.save??downloadBlob);
+}
+/** Work-area frames packed into one PNG grid plus atlas.json, delivered as a ZIP. Honours the scale and transparency settings. */
+export function exportSpriteSheet(columns?:number,d:Deps={}){
+ const {doc,out,ec:comp}=target('sequence');
+ return guarded('sequence',async signal=>{
+  const plan=sequencePlan(comp);let grid;
+  try{grid=sheetPlan(plan.length,out.width,out.height,columns);}catch(e){if(e instanceof SheetError)throw new ExportError(e.message,e.code==='too-many'?'too-many':e.code==='empty'?'empty':'too-large');throw e;}
+  const pixels=d.pixels??canvasPixels;const frames:Uint8ClampedArray[]=[];
+  for(let i=0;i<plan.length;i++){
+   if(signal.aborted)throw new ExportError('Export cancelled.','cancelled');
+   frames.push(await pixels(frameSvg(comp,plan[i].tick,state.transparent,doc.assets),out.width,out.height));
+   set({done:i+1,total:plan.length});
+  }
+  const slug=exportSlug(doc.name),sheetFile=`${slug}_sheet.png`;
+  const png=encodePngRgba(grid.width,grid.height,packSheet(grid,frames));
+  const parts:Uint8Array[]=[];const zip=new Zip((err,chunk)=>{if(!err)parts.push(chunk);});
+  const a=new ZipPassThrough(sheetFile);zip.add(a);a.push(png,true);
+  const b=new ZipPassThrough('atlas.json');zip.add(b);b.push(strToU8(JSON.stringify(sheetManifest(grid,plan,doc.name,sheetFile,comp.fps),null,1)),true);
+  zip.end();
+  return {blob:new Blob(parts as BlobPart[],{type:'application/zip'}),fileName:`${slug}_spritesheet.zip`};
+ },d.save??downloadBlob);
 }

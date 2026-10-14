@@ -15,7 +15,7 @@ export const animationShell:StudioShellDef={
  inspector:{titleKey:'animation.shell.inspector',emptyKey:'animation.shell.empty',emptyWhen:'!services.ready',sections:[
   {id:'properties',title:'Properties',titleKey:'animation.shell.properties',component:'animation.inspector.properties',when:"selection.kind == 'one'",order:10,commands:['animation.layer.update','animation.prop.set','animation.prop.animate','animation.key.add','animation.key.remove','animation.key.interp']},
   {id:'composition',title:'Composition',titleKey:'animation.shell.composition',component:'animation.inspector.composition',when:'services.ready',order:20,commands:['animation.comp.update']},
-  {id:'render',title:'Render',titleKey:'animation.shell.render',component:'animation.inspector.render',when:'services.renderSetup',order:30,commands:['animation.render.close','animation.export.frame','animation.export.sequence']},
+  {id:'render',title:'Render',titleKey:'animation.shell.render',component:'animation.inspector.render',when:'services.renderSetup',order:30,commands:['animation.render.close','animation.export.frame','animation.export.sequence','animation.export.spriteSheet']},
  ]},
  defaultLayout:{leftOpen:true,rightOpen:true,leftWidth:260,rightWidth:320,leftPanels:['compositions'],rightPanels:['inspector'],activeLeft:'compositions',activeRight:'inspector'},
  menus:[

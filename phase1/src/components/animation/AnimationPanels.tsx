@@ -263,6 +263,7 @@ export function RenderSection(_:InspectorSectionProps){
    <Button size="compact" variant="outline" disabled={busy} onClick={()=>run('animation.export.frame')} data-testid="animation-export-frame">{t('animation.export.frame')}</Button>
    <Button size="compact" variant="outline" disabled={busy} title={t('animation.export.frameSvg.hint')} onClick={()=>run('animation.export.frameSvg')} data-testid="animation-export-frame-svg">{t('animation.export.frameSvg')}</Button>
    <Button size="compact" variant="outline" disabled={busy} onClick={()=>run('animation.export.sequence')} data-testid="animation-export-sequence">{t('animation.export.sequence')}</Button>
+   <Button size="compact" variant="outline" disabled={busy} title={t('animation.export.spriteSheet.hint')} onClick={()=>run('animation.export.spriteSheet')} data-testid="animation-export-sprite-sheet">{t('animation.export.spriteSheet')}</Button>
    <Button size="compact" variant="outline" disabled={busy} onClick={()=>run('animation.export.gif')} data-testid="animation-export-gif">{t('animation.export.gif')}</Button>
    <Button size="compact" variant="outline" disabled={busy} onClick={()=>run('animation.export.apng')} data-testid="animation-export-apng">{t('animation.export.apng')}</Button>
    <Button size="compact" variant="outline" disabled={busy} onClick={()=>run('animation.export.webm')} data-testid="animation-export-webm">{t('animation.export.webm')}</Button>

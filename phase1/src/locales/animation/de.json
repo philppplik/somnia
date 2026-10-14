@@ -940,5 +940,8 @@
  "animation.modifiers.delay": "Verzögerung (Frames)",
  "animation.rig.follow": "Dem Anführer folgen",
  "cmd.animation.rig.follow": "Dem Anführer folgen (verzögerte Verknüpfung)",
- "animation.rig.followFrames": "Verzögerung (Frames)"
+ "animation.rig.followFrames": "Verzögerung (Frames)",
+ "animation.export.spriteSheet": "Sprite-Sheet (ZIP)",
+ "animation.export.spriteSheet.hint": "Alle Frames des Arbeitsbereichs als PNG-Raster plus atlas.json",
+ "cmd.animation.export.spriteSheet": "Arbeitsbereich als Sprite-Sheet exportieren"
 }

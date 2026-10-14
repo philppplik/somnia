@@ -388,3 +388,26 @@ test('P158 follow the leader links each layer to the previous one with a delay, 
  assert.throws(()=>run({layers:ids.slice(0,2)}),/already has a link/);
  s.undo();assert.equal(s.document,before);setAnimationSession(null);
 });
+
+test('P160 sprite sheet planner, packer and PNG writer',async()=>{
+ const {sheetPlan,packSheet,encodePngRgba,SheetError}=await import('./spriteSheet');const {unzlibSync}=await import('fflate');
+ const p=sheetPlan(5,2,1);assert.deepEqual([p.columns,p.rows,p.width,p.height],[3,2,6,2]);assert.deepEqual(p.cells[4],{index:4,x:2,y:1});
+ assert.equal(sheetPlan(4,2,2,4).rows,1);
+ assert.throws(()=>sheetPlan(0,2,2),SheetError);assert.throws(()=>sheetPlan(257,1,1),/limited to 256/);assert.throws(()=>sheetPlan(16,2000,2000),/above the limit/);
+ const fr=[0,1,2,3,4].map(n=>new Uint8ClampedArray([n,n,n,255,n,n,n,255]));
+ const px=packSheet(p,fr);assert.equal(px.length,6*2*4);assert.equal(px[0],0);assert.equal(px[4],0);assert.equal(px[8],1);assert.equal(px[(1*6+2)*4],4);
+ assert.throws(()=>packSheet(p,fr.slice(1)),/does not match/);
+ const png=encodePngRgba(p.width,p.height,px);assert.deepEqual([...png.slice(0,8)],[137,80,78,71,13,10,26,10]);
+ const idatLen=new DataView(png.buffer,png.byteOffset).getUint32(33);const raw=unzlibSync(png.slice(41,41+idatLen));
+ assert.equal(raw.length,2*(6*4+1));assert.equal(raw[0],0);assert.equal(raw[1+8],1);
+});
+test('P160 sprite sheet export zips the sheet and atlas, refuses oversize',async()=>{
+ const {exportSpriteSheet}=await import('./exportJob');const {unzipSync,strFromU8}=await import('fflate');
+ const s=open();setAnimationSession(s);s.dispatch({type:'workarea.set',in:0,out:f(4)} as never);
+ let saved:{b:Blob;n:string}|null=null;
+ await exportSpriteSheet(2,{pixels:async(_s,w,h)=>new Uint8ClampedArray(w*h*4).fill(200),save:(b,n)=>{saved={b,n};}});
+ assert.ok(saved);const z=unzipSync(new Uint8Array(await (saved as unknown as {b:Blob}).b.arrayBuffer()));
+ assert.deepEqual(Object.keys(z).sort(),['atlas.json',Object.keys(z).find(k=>k.endsWith('.png'))!].sort());
+ const atlas=JSON.parse(strFromU8(z['atlas.json']));assert.equal(atlas.columns,2);assert.equal(atlas.frames.length,atlas.columns*atlas.rows>=4?atlas.frames.length:-1);assert.ok(atlas.frames.length>=4);
+ setAnimationSession(null);
+});

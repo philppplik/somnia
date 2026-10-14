@@ -940,5 +940,8 @@
  "animation.modifiers.delay": "Atraso (quadros)",
  "animation.rig.follow": "Seguir o líder",
  "cmd.animation.rig.follow": "Seguir o líder (atraso vinculado)",
- "animation.rig.followFrames": "Atraso (quadros)"
+ "animation.rig.followFrames": "Atraso (quadros)",
+ "animation.export.spriteSheet": "Folha de sprites (ZIP)",
+ "animation.export.spriteSheet.hint": "Todos os quadros da área de trabalho em uma grade PNG mais atlas.json",
+ "cmd.animation.export.spriteSheet": "Exportar a área de trabalho como folha de sprites"
 }

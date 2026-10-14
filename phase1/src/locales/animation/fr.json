@@ -940,5 +940,8 @@
  "animation.modifiers.delay": "Retard (images)",
  "animation.rig.follow": "Suivre le meneur",
  "cmd.animation.rig.follow": "Suivre le meneur (retard lié)",
- "animation.rig.followFrames": "Retard (images)"
+ "animation.rig.followFrames": "Retard (images)",
+ "animation.export.spriteSheet": "Planche de sprites (ZIP)",
+ "animation.export.spriteSheet.hint": "Toutes les images de la zone de travail dans une grille PNG avec atlas.json",
+ "cmd.animation.export.spriteSheet": "Exporter la zone de travail en planche de sprites"
 }

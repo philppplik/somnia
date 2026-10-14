@@ -940,5 +940,8 @@
  "animation.modifiers.delay": "Delay (frames)",
  "animation.rig.follow": "Follow the leader",
  "cmd.animation.rig.follow": "Follow the leader (linked lag)",
- "animation.rig.followFrames": "Follow delay (frames)"
+ "animation.rig.followFrames": "Follow delay (frames)",
+ "animation.export.spriteSheet": "Sprite sheet (ZIP)",
+ "animation.export.spriteSheet.hint": "All work-area frames in one PNG grid plus atlas.json",
+ "cmd.animation.export.spriteSheet": "Export work area as sprite sheet"
 }
