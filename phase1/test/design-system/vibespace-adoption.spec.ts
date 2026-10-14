@@ -23,6 +23,11 @@ test('migrated vibespace controls keep behavior: run open, stop, steer toggle an
  await expect(open).toHaveCSS('padding','0px');
  await expect(open).toHaveCSS('border-top-width','0px');
  await expect(open).toHaveCSS('background-color','rgba(0, 0, 0, 0)');
+ // Back link keeps text-styling: the P11 base button rule must not paint it as a pill.
+ const back=proof.getByRole('button',{name:'Back to Vibe Space'});
+ await expect(back).toHaveCSS('background-color','rgba(0, 0, 0, 0)');
+ await expect(back).toHaveCSS('border-top-width','0px');
+ await expect(back).toHaveCSS('text-decoration-line','underline');
  // Pending locks stop and steer again.
  await page.getByRole('button',{name:'Pending'}).click();
  await expect(proof.getByRole('button',{name:'Stop'}).first()).toBeDisabled();

@@ -2,7 +2,8 @@ import {useState} from 'react';
 import {BoardView} from '../../src/components/vibespace/BoardView';
 import {CreateStudioForm} from '../../src/components/vibespace/CreateForms';
 import {ModelSetup} from '../../src/components/vibespace/ModelSetup';
-import {fixtureSnapshot,fixtureSpace} from '../../src/lib/vibespace/fixture';
+import {StudioDetail} from '../../src/components/vibespace/StudioDetail';
+import {fixtureRun,fixtureSnapshot,fixtureSpace} from '../../src/lib/vibespace/fixture';
 import '../../src/components/vibespace/vibespace.css';
 
 const ALL:readonly any[]=['create-space','create-studio','start','stop','steer','consent','review','restore','retry','apply-hunks','request-changes'];
@@ -17,6 +18,7 @@ export function VibespaceProof(){
   <div className="controls"><button onClick={()=>setPending(p=>!p)} aria-pressed={pending}>Pending</button></div>
   <div className="vs-root"><BoardView space={fixtureSpace} snapshot={fixtureSnapshot()} schedules={null} schedulesError={false} pending={pending} capabilities={ALL} mode="fixture" onAction={async a=>{log(`action:${a.type}`);return true;}} onOpenRun={id=>log(`open:${id}`)} nowMs={NOW}/>
   <CreateStudioForm space={fixtureSpace} models={fixtureSnapshot().models} busy={false} onCreate={async()=>{log('create-studio');return true;}} onClose={()=>log('close')}/>
-  <ModelSetup probe={async()=>({state:'server-down',hintKey:'vs.model.hint.ollamaDown'})}/></div>
+  <ModelSetup probe={async()=>({state:'server-down',hintKey:'vs.model.hint.ollamaDown'})}/>
+  <StudioDetail studio={fixtureRun()} space={fixtureSpace} pending={pending} capabilities={ALL} onAction={async a=>{log(`detail:${a.type}`);return true;}} onBack={()=>log('back')}/></div>
   <pre data-testid="vibespace-proof-events" aria-label="Fixture events">{events.join('\n')}</pre></main>;
 }
