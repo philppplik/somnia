@@ -882,5 +882,8 @@
  "studio3d.edit.selShrink": "Reduzir",
  "cmd.studio3d.edit.delete": "Excluir os elementos selecionados",
  "studio3d.edit.delete": "Excluir",
- "studio3d.hist.editDelete": "Excluir elementos"
+ "studio3d.hist.editDelete": "Excluir elementos",
+ "cmd.studio3d.edit.weld": "Mesclar os vértices selecionados no centro",
+ "studio3d.edit.weld": "Mesclar",
+ "studio3d.hist.editWeld": "Mesclar vértices"
 }

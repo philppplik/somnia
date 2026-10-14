@@ -807,6 +807,20 @@ test('mesh edit mode: delete selected faces removes triangles, undo restores the
  await expect(page.getByRole('alert')).toContainText('Select faces to delete');
 });
 
+test('mesh edit mode: weld merges selected vertices at their centre, undo restores them',async({page})=>{
+ await blank(page);
+ const id=await insert(page,'cube',0);
+ expect(await run(page,'studio3d.edit.start',{id,mode:'vertex'})).toBe(true);
+ expect(await run(page,'studio3d.edit.select',{kind:'vertex',ids:[0,1,2,3]})).toBe(true);
+ expect(await run(page,'studio3d.edit.weld',{})).toBe(true);
+ await expect.poll(async()=>(await session(page)).stats.triangles).toBe(10);
+ let s=await session(page);expect(s.edit).toMatchObject({verts:0,edges:0,faces:0});
+ await run(page,'studio3d.undo');
+ await expect.poll(async()=>(await session(page)).stats.triangles).toBe(12);
+ expect(await run(page,'studio3d.edit.weld',{})).toBe(false);
+ await expect(page.getByRole('alert')).toContainText('Select at least two vertices');
+});
+
 test('mesh edit: extrude without a selection is refused readably',async({page})=>{
  await blank(page);
  const id=await insert(page,'cube',0);

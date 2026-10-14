@@ -1204,6 +1204,7 @@ export default function Viewport3D(){
    editSelectAll:(op,kind)=>{stage.editSelectAll(op,kind??getStudio3DState().edit?.mode??'face');patchEdit();invalidate();},
    editSelectGrow:(steps,shrink,kind)=>{stage.editSelectGrow(steps??1,shrink??false,kind??getStudio3DState().edit?.mode??'face');patchEdit();invalidate();},
    editDelete:(kind)=>{stage.editDelete(kind??getStudio3DState().edit?.mode??'face');patchEdit();invalidate();},
+   editWeld:()=>{stage.editWeld();patchEdit();invalidate();},
    editExtrude:o=>{stage.editExtrude(o);afterEditOp();},
    editInset:a=>{stage.editInset(a);afterEditOp();},
    editBevel:w=>{stage.editBevel(w);afterEditOp();},

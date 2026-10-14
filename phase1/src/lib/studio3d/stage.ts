@@ -10,7 +10,7 @@ import type {NodeExtra} from './document';
 import {EASES,isEase,bakeTrack,type Ease} from './ease';
 import {buildExtras,type ClipMeta,type MetaTrack} from './clipMeta';
 import {groupRefs,keyIndices,copyTrackKeys,shiftTrackKeys,pasteTrackKeys,type KeyRef,type KeyData,type TrackData} from './keyEdit';
-import {extrudeFaces,insetFaces,bevelVertices,deleteElements,loopCut,bevelEdges,slideEdges,mirrorCombine,symmetrizeMesh,subdivideLoop,cleanupMesh,flipMesh,outsideMesh,smoothMesh,separateMesh,solidifyMesh,fillHolesMesh,relaxMesh,fattenMesh,bisectMesh,twistMesh,taperMesh,spinMesh,bridgeMesh,remeshMesh,EditError,MAX_EDIT_VERTICES,MAX_EDIT_TRIANGLES,type MeshData,type CleanupResult,type NormalsOp} from './editMesh';
+import {extrudeFaces,insetFaces,bevelVertices,deleteElements,weldSelected,loopCut,bevelEdges,slideEdges,mirrorCombine,symmetrizeMesh,subdivideLoop,cleanupMesh,flipMesh,outsideMesh,smoothMesh,separateMesh,solidifyMesh,fillHolesMesh,relaxMesh,fattenMesh,bisectMesh,twistMesh,taperMesh,spinMesh,bridgeMesh,remeshMesh,EditError,MAX_EDIT_VERTICES,MAX_EDIT_TRIANGLES,type MeshData,type CleanupResult,type NormalsOp} from './editMesh';
 import {sculptDab,paintMask,SculptError,type SculptOpts} from './sculpt';
 import {KEY_PATHS,KEY_STRIDE,ClipError,MAX_CLIPS,MAX_KEYS_PER_TRACK,DEFAULT_CLIP_SECONDS,insertKey,removeKey as removeKeyData,findKey,isPlainTrack,trackName,parseTrackName,checkKeyTime,checkDuration,checkClipName,lastKeyTime,type KeyPath} from './clips';
 import {mergeTransform,DEFAULT_TRANSFORM,UvError,type TextureTransform} from './uv';
@@ -803,6 +803,11 @@ export class Stage{
  /** Deletes the selected edit-mode elements (faces, or triangles touching selected edges or vertices) with one undo step. The selection is cleared afterwards because triangle ordinals shift. */
  editDelete(kind:'vertex'|'edge'|'face'){
   this.editOp({key:'studio3d.hist.editDelete'},m=>deleteElements(m,kind,kind==='face'?{faces:[...this.editSel.faces]}:kind==='edge'?{edges:[...this.editSel.edges.values()]}:{verts:[...this.editSel.verts]}));
+  this.editSel={verts:new Set(),edges:new Map(),faces:new Set()};
+ }
+ /** Merges the selected edit-mode vertices into one at their centroid with one undo step. The selection is cleared afterwards. */
+ editWeld(){
+  this.editOp({key:'studio3d.hist.editWeld'},m=>weldSelected(m,[...this.editSel.verts]));
   this.editSel={verts:new Set(),edges:new Map(),faces:new Set()};
  }
  /** Seam edges marked on a mesh (vertex-index pairs). */

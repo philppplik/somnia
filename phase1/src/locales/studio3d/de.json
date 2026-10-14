@@ -882,5 +882,8 @@
  "studio3d.edit.selShrink": "Kleiner",
  "cmd.studio3d.edit.delete": "Ausgewählte Elemente löschen",
  "studio3d.edit.delete": "Löschen",
- "studio3d.hist.editDelete": "Elemente löschen"
+ "studio3d.hist.editDelete": "Elemente löschen",
+ "cmd.studio3d.edit.weld": "Ausgewählte Vertices im Zentrum verschmelzen",
+ "studio3d.edit.weld": "Verschmelzen",
+ "studio3d.hist.editWeld": "Vertices verschmelzen"
 }

@@ -882,5 +882,8 @@
  "studio3d.edit.selShrink": "Shrink",
  "cmd.studio3d.edit.delete": "Delete selected elements",
  "studio3d.edit.delete": "Delete",
- "studio3d.hist.editDelete": "Delete elements"
+ "studio3d.hist.editDelete": "Delete elements",
+ "cmd.studio3d.edit.weld": "Merge selected vertices at centre",
+ "studio3d.edit.weld": "Merge",
+ "studio3d.hist.editWeld": "Merge vertices"
 }

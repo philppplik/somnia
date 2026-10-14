@@ -354,6 +354,29 @@ export function symmetrizeMesh(m:MeshData,axis:MirrorAxis,side:'positive'|'negat
  return flip(mirrorCombine(flip(m),axis,merge,true));
 }
 
+/** Merges the selected vertices into one at their centroid: every index entry pointing at a selected vertex is remapped to the lowest selected index, that vertex moves to the centroid and triangles that go degenerate are dropped. Positions stay otherwise untouched (orphans allowed), UVs travel with the surviving vertex; masks and explicit normals are dropped. Needs at least two vertices and refuses a merge that would leave no triangle. */
+export function weldSelected(m:MeshData,verts:number[]):MeshData{
+ if(!verts.length||verts.length<2)throw new EditError('Select at least two vertices to merge.');
+ const total=m.positions.length/3;
+ const sel=new Set<number>();
+ for(const v of verts){if(!Number.isInteger(v)||v<0||v>=total)throw new EditError(`Vertex ${v} does not exist.`);sel.add(v);}
+ if(sel.size<2)throw new EditError('Select at least two vertices to merge.');
+ const keep=Math.min(...sel);
+ const c=[0,0,0];
+ for(const v of sel){c[0]+=m.positions[v*3];c[1]+=m.positions[v*3+1];c[2]+=m.positions[v*3+2];}
+ const positions=[...m.positions];
+ positions[keep*3]=c[0]/sel.size;positions[keep*3+1]=c[1]/sel.size;positions[keep*3+2]=c[2]/sel.size;
+ const index:number[]=[];
+ for(let f=0;f<m.index.length;f+=3){
+  const t=[m.index[f],m.index[f+1],m.index[f+2]].map(i=>sel.has(i)?keep:i);
+  if(t[0]===t[1]||t[1]===t[2]||t[2]===t[0])continue;
+  index.push(t[0],t[1],t[2]);
+ }
+ if(!index.length)throw new EditError('Merging the selection would leave an empty mesh.');
+ const out:MeshData={positions,index};
+ if(m.uvs)out.uvs=m.uvs;
+ return out;
+}
 /** Deletes selected elements: faces drop their own triangles, edges and vertices drop every triangle that touches them. Positions stay put (orphan vertices are allowed), so undo restores the exact geometry. Refuses an empty selection and a delete that would leave no triangle. */
 export function deleteElements(m:MeshData,kind:'vertex'|'edge'|'face',sel:{verts?:number[];edges?:[number,number][];faces?:number[]}):MeshData{
  const tris=m.index.length/3,total=m.positions.length/3;
