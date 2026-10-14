@@ -644,5 +644,7 @@
  "animation.repeater.rotation": "Rotación por copia",
  "animation.repeater.scale": "Escala por copia %",
  "animation.repeater.opacity": "Opacidad por copia %",
- "animation.repeater.hue": "Cambio de tono por copia"
+ "animation.repeater.hue": "Cambio de tono por copia",
+ "animation.repeater.animate": "Animar {name}",
+ "animation.repeater.animateShort": "Fotogramas clave"
 }

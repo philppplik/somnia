@@ -1699,3 +1699,24 @@ test('P72 repeater hue shift: per-copy hue-rotate, zero or absent unchanged, val
  assert.deepEqual(validateDocument(mk(30)),[]);
  assert.throws(()=>mk(361),Error);
 });
+
+test('P73 repeater keyframes: sampling, lanes, move, delete, undo, validation',()=>{
+ const d0=strokeDoc([{x:0.2,y:0.2},{x:0.8,y:0.2},{x:0.8,y:0.8}],true,8);
+ let d=applyEdit(d0,{type:'layer.repeater',layer:'pa',repeater:{copies:3,x:0,y:0,rotation:0,scale:100,opacity:100}});
+ const plain=frameSvg(comp(d),0);
+ d=applyEdit(d,{type:'repeater.prop',layer:'pa',prop:'x',op:'animate',on:true,t:0});
+ assert.equal(frameSvg(comp(d),0),plain,'one key at the static value changes nothing');
+ d=applyEdit(d,{type:'repeater.prop',layer:'pa',prop:'x',op:'set',value:100,t:8000*30});
+ assert.ok(frameSvg(comp(d),0).includes('translate(0 0)'));
+ assert.ok(frameSvg(comp(d),8000*30).includes('translate(200 0)'),frameSvg(comp(d),8000*30));
+ assert.deepEqual(validateDocument(d),[]);
+ const lay=comp(d).layers.find(l=>l.id==='pa')!;
+ assert.deepEqual(styleKeyLanes(lay).filter(l=>l.id==='repX').map(l=>l.ticks),[[0,8000*30]]);
+ const moved=applyEdit(d,{type:'style.key.move',layer:'pa',lane:'repX',from:8000*30,to:8000*60});
+ assert.deepEqual(styleKeyLanes(comp(moved).layers.find(l=>l.id==='pa')!).find(l=>l.id==='repX')!.ticks,[0,8000*60]);
+ const gone=applyEdits(d,styleKeyDeleteEdits('pa',[{lane:'repX',t:0},{lane:'repX',t:8000*30}]));
+ const r=comp(gone).layers.find(l=>l.id==='pa')!.repeater!;
+ assert.equal(r.anim,undefined);assert.equal(r.x,100);
+ assert.throws(()=>applyEdit(d,{type:'repeater.prop',layer:'pa',prop:'scale',op:'set',value:0,t:0}),Error);
+ assert.throws(()=>applyEdit(d0,{type:'repeater.prop',layer:'pa',prop:'x',op:'set',value:1,t:0}),Error);
+});

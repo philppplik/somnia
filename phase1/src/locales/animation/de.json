@@ -644,5 +644,7 @@
  "animation.repeater.rotation": "Drehung pro Kopie",
  "animation.repeater.scale": "Skalierung pro Kopie %",
  "animation.repeater.opacity": "Deckkraft pro Kopie %",
- "animation.repeater.hue": "Farbtonverschiebung pro Kopie"
+ "animation.repeater.hue": "Farbtonverschiebung pro Kopie",
+ "animation.repeater.animate": "{name} animieren",
+ "animation.repeater.animateShort": "Keyframes"
 }

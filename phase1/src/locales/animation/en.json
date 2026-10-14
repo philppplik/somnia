@@ -644,5 +644,7 @@
  "animation.repeater.rotation": "Rotation per copy",
  "animation.repeater.scale": "Scale per copy %",
  "animation.repeater.opacity": "Opacity per copy %",
- "animation.repeater.hue": "Hue shift per copy"
+ "animation.repeater.hue": "Hue shift per copy",
+ "animation.repeater.animate": "Animate {name}",
+ "animation.repeater.animateShort": "Keyframes"
 }

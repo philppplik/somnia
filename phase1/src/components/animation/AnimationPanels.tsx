@@ -1,7 +1,8 @@
 import {StudioStatus} from '../studios/StudioStatus';
 import {PathLayerMorph} from './PathLayerMorph';
 import {effectColor,effectBypassed,defaultEffect,styleDefaults,EFFECT_KINDS,strokeWidthAt,strokeOpacityAt,colorAt} from '../../lib/animation/effects';
-import {DEFAULT_REPEATER} from '../../lib/animation/repeater';
+import {REPEATER_RANGE} from '../../lib/animation/model';
+import {DEFAULT_REPEATER,repeaterAt} from '../../lib/animation/repeater';
 import {NativeInput,NativeSelect} from '../ui/native-controls';
 import {STYLE_KINDS,OFFSET_KINDS,DEFAULT_LAYER_COLOR,COLOR_EASES,type ColorEase,TEXT_FONTS,STROKE_JOINS,STROKE_CAPS,type StrokeJoin,type StrokeCap} from '../../lib/animation/model';
 import {StudioProgress} from '../studios/StudioProgress';
@@ -163,7 +164,9 @@ export function PropertiesSection(_:InspectorSectionProps){
   {layer.stroke.dashLen!==undefined&&<NumberField label={t('animation.stroke.dashGap')} value={layer.stroke.dashGap??4} min={1} max={100} onCommit={dashGap=>edit({type:'layer.stroke',layer:layer.id,stroke:{...layer.stroke!,dashGap:Math.max(1,dashGap)}})}/>}{(['trim','dash'] as const).map(kind=>layer.stroke?.[kind]&&<div key={kind} className="flex flex-wrap gap-1 text-ink-3"><span>{t(`animation.presets.${kind}`)}</span>{layer.stroke[kind]!.keys.map(k=><Button key={k.t} size="tiny" variant="ghost" onClick={()=>animationSession().setView({playhead:k.t})}>{timecode(k.t,comp.fps)} · {k.v as number}</Button>)}</div>)}</fieldset>}
   <fieldset className="grid gap-1 border border-subtle p-2" disabled={layer.locked} data-testid="animation-repeater"><legend>{t('animation.repeater.title')}</legend>
    <label className="flex items-center gap-1 text-ink-3"><NativeInput type="checkbox" className="animation-checkbox" checked={!!layer.repeater} onChange={e=>edit({type:'layer.repeater',layer:layer.id,repeater:e.target.checked?{...DEFAULT_REPEATER}:null})}/>{t('animation.repeater.enable')}</label>
-   {layer.repeater&&<div className="grid grid-cols-2 gap-2">{([['copies','animation.repeater.copies',2,20],['x','animation.repeater.x',-4096,4096],['y','animation.repeater.y',-4096,4096],['rotation','animation.repeater.rotation',-3600,3600],['scale','animation.repeater.scale',1,400],['opacity','animation.repeater.opacity',0,100],['hue','animation.repeater.hue',-360,360]] as const).map(([k,label,min,max])=><NumberField key={k} label={t(label)} value={layer.repeater![k]??0} min={min} max={max} resetKey={`rp:${layer.id}:${k}:${layer.repeater![k]}`} onCommit={n=>edit({type:'layer.repeater',layer:layer.id,repeater:{...layer.repeater!,[k]:k==='copies'?Math.round(n):n}})}/>)}</div>}
+   {layer.repeater&&<div className="grid grid-cols-2 gap-2">{(['copies','x','y','rotation','scale','opacity','hue'] as const).map(k=>{const lo=k==='copies'?2:REPEATER_RANGE[k][0],hi=k==='copies'?20:REPEATER_RANGE[k][1],cur=repeaterAt(layer.repeater!,at)[k]??(k==='scale'||k==='opacity'?100:0),keyed=k!=='copies'&&!!layer.repeater!.anim?.[k]?.keys.length;
+   return <div key={k} className="grid gap-1"><NumberField label={t(`animation.repeater.${k}`)} value={cur} min={lo} max={hi} resetKey={`rp:${layer.id}:${k}:${at}:${cur}`} onCommit={n=>k==='copies'?edit({type:'layer.repeater',layer:layer.id,repeater:{...layer.repeater!,copies:Math.round(n)}}):edit({type:'repeater.prop',layer:layer.id,prop:k,op:'set',value:n,t:at})}/>
+   {k!=='copies'&&<label className="flex items-center gap-1 text-ink-3"><NativeInput type="checkbox" className="animation-checkbox" checked={keyed} aria-label={t('animation.repeater.animate',{name:t(`animation.repeater.${k}`)})} onChange={e=>edit({type:'repeater.prop',layer:layer.id,prop:k,op:'animate',on:e.target.checked,t:at})}/>{t('animation.repeater.animateShort')}</label>}</div>;})}</div>}
   </fieldset>
   {TRANSFORM_KEYS.map(prop=>{
    const p=layer.transform[prop];const v=evaluate(p,at);const animated=p.keys.length>0;const label=t(PROP_LABEL[prop]);const onKey=p.keys.some(k=>k.t===at);const key=p.keys.find(k=>k.t===at);

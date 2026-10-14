@@ -366,3 +366,7 @@ Layer `repeater` {copies,x,y,rotation,scale,opacity}; edit `layer.repeater` (nul
 ## P72
 
 Repeater `hue` (deg per copy, -360..360): copy i gets `filter=hue-rotate(hue*i deg)`. Absent or 0 adds nothing.
+
+## P73
+
+`repeater.anim` holds optional scalar Properties per key (x,y,rotation,scale,opacity,hue). `repeaterAt(r,tick)` samples them; the static value is the fallback. Lanes repX..repHue reuse style.key.move and styleKeyDeleteEdits.

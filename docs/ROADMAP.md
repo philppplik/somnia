@@ -463,6 +463,12 @@ Depends on: v10 diff viewer, v11 updater for smooth extension and app updates.
 - Done: repeater hue shift per copy (hue-rotate, -360..360 deg; 0 or absent is unchanged). Inspector field, 5 locales, test.
 - Open: not keyable; viewer and exports use the SVG hue-rotate filter, so raster exporters that ignore it show uncoloured copies (not verified per exporter).
 
+
+### Animation P73 (2026-10-14, integration pending)
+
+- Done: repeater values keyframable (x, y, rotation, scale, opacity, hue). Edit repeater.prop (set/animate/remove, one undo step), per-field Keyframes checkbox in the inspector, six timeline key lanes (select, drag-move, delete via the shared style-key paths), validation, 5 locales, test.
+- Open: copies count is not keyable; no key-add button (set a value at a new playhead time to add a key); the timeline lanes were covered by tests, not by a screenshot; no per-key ease editor for these lanes beyond the default.
+
 ### Animation P69 (2026-10-14, integration pending)
 - Done: stroke alignment for closed shapes (centre, inside, outside). Inside clips a double-width stroke to the shape, outside masks the shape out of it, so the visible band keeps the set width. Select in the stroke section. Viewer and every export share the behaviour; open paths stay centred. Absent field means centred and byte-identical output.
 - Open: "Expand stroke" outlines ignore the alignment (centre only), gradient strokes use the same bounding box, no alignment keys.
