@@ -64,12 +64,13 @@ test('old project cleanup and events cannot disconnect or overwrite its replacem
   assert.equal(getState().coreConnected, true);
 });
 
-test('closing the active tab selects its neighbour and keeps the last tab open', () => {
+test('closing the active tab selects its neighbour and the last tab can be closed too', () => {
   connectEditorProject(create()); openFileTab('second.html'); openFileTab('site.css');
   closeFileTab('site.css'); assert.equal(getState().activeFile, 'second.html');
   assert.deepEqual(getState().openFiles, ['index.html', 'second.html']);
   closeFileTab('second.html'); closeFileTab('index.html');
-  assert.equal(getState().activeFile, 'index.html'); assert.deepEqual(getState().openFiles, ['index.html']);
+  assert.equal(getState().activeFile, ''); assert.deepEqual(getState().openFiles, []);
+  openFileTab('index.html'); assert.equal(getState().activeFile, 'index.html'); assert.deepEqual(getState().openFiles, ['index.html']);
 });
 
 test('close clears project, selection, tabs and saved state and rejects disconnected edits', () => {

@@ -6,7 +6,7 @@ export const codePanels:readonly PanelDef[]=[
  {id:'responsive',title:'Responsive',titleKey:'code.panel.responsive',component:'code.responsive',side:'left',persistKey:'code.responsive',commands:['code.preview.width'],minHeight:180},
  {id:'inspector',title:'Inspector',titleKey:'shell.inspector.title',component:'shell.inspector',side:'right',defaultOpen:true,minHeight:180},
 ];
-export const codeInspector:InspectorDef={titleKey:'shell.inspector.title',emptyKey:'code.panel.open',sections:[
+export const codeInspector:InspectorDef={titleKey:'shell.inspector.title',emptyKey:'code.panel.open',emptyWhen:'!document',sections:[
  {id:'design',title:'Design',titleKey:'ctx.section.style',component:'code.inspector.design',order:10},
  {id:'interactions',title:'Interactions',titleKey:'code.panel.interactions',component:'code.inspector.interactions',when:"selection.kind == 'one'",order:20,commands:['code.attribute.set']},
  {id:'source',title:'Source details',titleKey:'code.panel.source',component:'code.inspector.source',order:30,commands:['code.outline.reveal'],defaultCollapsed:true},
