@@ -1,0 +1,3 @@
+import {parseInterfaceDocument,serializeInterfaceDocument,type InterfaceDocument} from './model';
+/** Experimental JSON snapshot, not the native Somnia project container. Explicit imports only. */
+export function createInterfaceLibrarySnapshot(source:InterfaceDocument){const snapshot=parseInterfaceDocument(serializeInterfaceDocument(source));if(!snapshot.components?.length)throw Error('Create a component before publishing a library snapshot.');snapshot.experimentalLibrary={kind:'somnia-interface-local-library',version:1,sourceDocumentId:source.id,sourceRevision:source.revision};return {filename:'interface-library.experimental.somnia',body:serializeInterfaceDocument(snapshot),documentId:source.id,revision:source.revision,componentCount:snapshot.components.length};}

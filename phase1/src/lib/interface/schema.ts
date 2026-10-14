@@ -16,7 +16,7 @@ export interface InterfaceAsset {id:string;hash:string;mime:'image/png';width:nu
 export interface PathPoint {x:number;y:number;}
 export interface InterfacePath {points:PathPoint[];closed:boolean;}
 export type NodeKind='frame'|'group'|'rectangle'|'text'|'ellipse'|'line'|'path'|'image';
-export interface PrototypeLink {trigger:'click'|'hover';targetFrameId:string;}
+export interface PrototypeLink {action?:'navigate'|'overlay';trigger:'click'|'hover';targetFrameId:string;}
 export interface InterfaceNode {
  id:string;pageId:string;parentId:string|null;children:string[];kind:NodeKind;name:string;
  x:number;y:number;width:number;height:number;fill:string;text?:string;hidden:boolean;locked:boolean;

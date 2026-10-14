@@ -14,3 +14,5 @@
 These are executable specifications, not a claim that CI has passed. Model/unit tests separately cover component propagation/semantic slots, layout, malicious imports, export escaping/limits and transactional save behavior. Native host save/reopen and full shell production gates are separate. Pixel inspection of the isolated fixture is not application E2E.
 
 P7 adds named variant selection and frame mode/detach preservation. Pure tests cover slot overrides across property switches, mode inheritance/aliases/styles/SVG, invalid modes/combinations and smart sibling snapping. Rulers are scene-coordinate chrome, not a source document field.
+
+P8 adds library snapshot download, local overlay open/close/Escape and unchanged recovery. Pure tests cover wrapped flow-to-absolute rebase and pin/scale resize preview-versus-commit.

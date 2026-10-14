@@ -1,5 +1,6 @@
+import {InterfaceLibrary} from './InterfaceLibrary';
 import {InterfaceInteractions} from './InterfacePrototype';
-import {setInterfaceConstraint} from '../../lib/interface/constraints';
+import {setInterfaceConstraint,setInterfaceAbsolute} from '../../lib/interface/constraints';
 import {InterfaceVariantProperties} from './InterfaceVariantProperties';
 import {Field} from './InterfaceField';
 export {Field};
@@ -35,6 +36,7 @@ export function InterfaceLayers(){
   <Button size="compact" variant="outline" onClick={()=>run(()=>{const id=uid();interfaceSession.transact(d=>d.pages.push({id,name:`${t('interface.page')} ${d.pages.length+1}`,children:[]}));interfaceSession.page(id);})}>{t('interface.addPage')}</Button>
   <div className="flex flex-wrap gap-1">{(['frame','rectangle','text','group','ellipse','line','path'] as const).map(kind=><Button size="compact" key={kind} onClick={()=>run(()=>{const selected=doc.nodes.find(n=>n.id===s.selection);let id='';interfaceSession.transact(d=>{id=addNode(d,page.id,kind,selected&&['frame','group'].includes(selected.kind)&&!selected.locked?selected.id:null);});interfaceSession.select(id);})}>{t(`interface.${kind}`)}</Button>)}</div>
   {(doc.components??[]).length>0&&<details open className="border-t border-subtle pt-2"><summary className="mb-2 text-xs">{t('interface.component')}</summary><div className="flex flex-col gap-1">{doc.components!.flatMap(c=>c.variants.map(v=><Button key={v.id} size="compact" variant="outline" onClick={()=>run(()=>{let id='';interfaceSession.transact(d=>{id=instantiateComponent(d,c.id,v.id,page.id);});interfaceSession.select(id);})}>{c.name} / {v.name}</Button>))}</div></details>}
+  <InterfaceLibrary run={run}/>
   <InterfaceResources run={run}/>
   <ul aria-label={t('interface.layers')} className="m-0 list-none p-0">{page.children.map(id=>row(id,0))}</ul>
  </div>}</Guard>;
@@ -84,7 +86,7 @@ function InterfaceLayoutControls({node,run,patch}:{node:InterfaceNode;run:(f:()=
   </>}
   <div className="grid grid-cols-2 gap-2">{(['width','height'] as const).map(axis=><Choice key={axis} label={`${t(`interface.${axis}`)} / ${t('interface.sizing')}`} value={sizing[axis]} options={option(['fixed','hug','fill'])} disabled={disabled} onChange={v=>setSizing({[axis]:v})}/>)}</div>
   <div className="grid grid-cols-2 gap-2">{(['minWidth','maxWidth','minHeight','maxHeight'] as const).map(key=><Field key={key} name={t(`interface.${key}`)} value={sizing[key]} type="number" disabled={disabled} onCommit={v=>run(()=>patch({sizing:{...sizing,[key]:number(v)}}))}/>)}</div>
-  {parent&&<><label className="flex items-center gap-2 text-xs"><input style={{width:14}} type="checkbox" checked={sizing.absolute} disabled={disabled} onChange={e=>setSizing({absolute:e.target.checked})}/>{t('interface.absolute')}</label>{(!parent.layout||parent.layout.direction==='free'||sizing.absolute)&&<div className="grid grid-cols-2 gap-2">{(['horizontal','vertical'] as const).map(axis=><Choice key={axis} label={t(`interface.${axis}`)} value={node.constraints?.[axis]??'start'} options={option(['start','end','center','stretch','scale'])} disabled={disabled} onChange={v=>run(()=>interfaceSession.transact(d=>setInterfaceConstraint(d,node.id,axis,v as ConstraintMode)))}/>)}</div>}</>}
+  {parent&&<><label className="flex items-center gap-2 text-xs"><input style={{width:14}} type="checkbox" checked={sizing.absolute} disabled={disabled} onChange={e=>run(()=>interfaceSession.transact(d=>setInterfaceAbsolute(d,node.id,e.target.checked)))}/>{t('interface.absolute')}</label>{(!parent.layout||parent.layout.direction==='free'||sizing.absolute)&&<div className="grid grid-cols-2 gap-2">{(['horizontal','vertical'] as const).map(axis=><Choice key={axis} label={t(`interface.${axis}`)} value={node.constraints?.[axis]??'start'} options={option(['start','end','center','stretch','scale'])} disabled={disabled} onChange={v=>run(()=>interfaceSession.transact(d=>setInterfaceConstraint(d,node.id,axis,v as ConstraintMode)))}/>)}</div>}</>}
  </div></InspectorGroup>;
 }
 function InterfaceComponentControls({node,run}:{node:InterfaceNode;run:(f:()=>void)=>void}){

@@ -39,3 +39,7 @@ Current JSON limits remain 5 MB scene/recovery, 3 MB embedded data and 50 assets
 5. Shell integration: Interface identity persists on reopen; Design/Vector/SVG routing unchanged; one authoritative document, command and inspector ownership; no duplicate save control.
 
 Until these gates pass, keep explicit JSON snapshots and project-format adoption out of release claims. This proposal introduces no SDK, AI/provider, network, collaboration or spending permission.
+
+## P8 experimental local library snapshot
+
+The Interface library browser can now download `interface-library.experimental.somnia`, a plain validated version-1 Interface JSON scene carrying a `somnia-interface-local-library` experimental marker and source revision. It includes the entire current document, not a minimal reusable component package. This is explicitly not the native `.somnia` project/container above, adds no global file association and opens only through Interface's explicit snapshot picker. Downloads leave source dirty/history/recovery unchanged. Keep experimental naming and warning until format-owner review chooses a container/library interchange design.
