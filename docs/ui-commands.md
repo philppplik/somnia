@@ -16,7 +16,7 @@ included; the `source` column names the owner. Dynamic sources that stay outside
 
 Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, fr, pt-BR); the gate enforces it.
 
-771 commands. Categories: Edit, Help, Insert, Project, Tools, View.
+772 commands. Categories: Edit, Help, Insert, Project, Tools, View.
 
 | id | title | category | source | shortcut |
 | --- | --- | --- | --- | --- |
@@ -443,6 +443,7 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `photos.resetAdjustments` | Photos: Reset adjustments | Edit | photos |  |
 | `photos.rotate` | Photos: Rotate a quarter turn | Edit | photos |  |
 | `photos.setAdjustment` | Photos: Set an adjustment | Edit | photos |  |
+| `photos.straighten.auto` | Photos: Auto straighten from the estimated horizon | Edit | photos |  |
 | `photos.undo` | Photos: Undo develop step | Edit | photos |  |
 | `problems.toggle` | Toggle problems | Tools | core | `Mod+J` |
 | `project.closeAll` | Close all files | Project | core |  |

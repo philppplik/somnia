@@ -4833,6 +4833,19 @@
       "hasEnabled": true
     },
     {
+      "id": "photos.straighten.auto",
+      "title": "Photos: Auto straighten from the estimated horizon",
+      "category": "Edit",
+      "source": "photos",
+      "keywords": [
+        "auto",
+        "horizon",
+        "photos",
+        "straighten"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "photos.undo",
       "title": "Photos: Undo develop step",
       "category": "Edit",
