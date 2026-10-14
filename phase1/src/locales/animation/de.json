@@ -781,5 +781,6 @@
  "cmd.animation.timing.apply": "In- und Out-Punkte mehrerer Ebenen setzen",
  "animation.timing.mode.slide": "Ebenen um Frames verschieben",
  "animation.timing.mode.slip": "Keys um Frames gleiten lassen (Slip)",
- "animation.timing.mode.slideTo": "Ebenen zum Abspielkopf verschieben"
+ "animation.timing.mode.slideTo": "Ebenen zum Abspielkopf verschieben",
+ "animation.bar.hint": "Ziehen verschiebt die Ebene samt Keys, Umschalt lässt die Keys gleiten, Enden ziehen kürzt"
 }

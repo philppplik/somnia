@@ -781,5 +781,6 @@
  "cmd.animation.timing.apply": "Definir entrada e saída em várias camadas",
  "animation.timing.mode.slide": "Deslocar camadas por quadros",
  "animation.timing.mode.slip": "Deslizar chaves (slip) por quadros",
- "animation.timing.mode.slideTo": "Deslocar camadas até a posição atual"
+ "animation.timing.mode.slideTo": "Deslocar camadas até a posição atual",
+ "animation.bar.hint": "Arraste para deslocar a camada com as chaves, Shift para deslizar só as chaves, arraste uma ponta para aparar"
 }

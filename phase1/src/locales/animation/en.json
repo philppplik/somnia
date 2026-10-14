@@ -781,5 +781,6 @@
  "cmd.animation.timing.apply": "Set layer in and out points on several layers",
  "animation.timing.mode.slide": "Slide layers by frames",
  "animation.timing.mode.slip": "Slip keys by frames",
- "animation.timing.mode.slideTo": "Slide layers to playhead"
+ "animation.timing.mode.slideTo": "Slide layers to playhead",
+ "animation.bar.hint": "Drag to slide the layer with its keys, Shift to slip the keys, drag an end to trim"
 }

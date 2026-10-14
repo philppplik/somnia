@@ -781,5 +781,6 @@
  "cmd.animation.timing.apply": "Fijar entrada y salida en varias capas",
  "animation.timing.mode.slide": "Deslizar capas por fotogramas",
  "animation.timing.mode.slip": "Deslizar claves (slip) por fotogramas",
- "animation.timing.mode.slideTo": "Deslizar capas al cabezal"
+ "animation.timing.mode.slideTo": "Deslizar capas al cabezal",
+ "animation.bar.hint": "Arrastra para deslizar la capa con sus claves, Mayús para deslizar solo las claves, arrastra un extremo para recortar"
 }
