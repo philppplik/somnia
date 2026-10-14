@@ -904,5 +904,8 @@
  "animation.keys.selAfter.hint": "Selecciona todas las keys después del cabezal",
  "cmd.animation.keys.selectAroundPlayhead": "Seleccionar las keys antes, después o en el cabezal",
  "animation.keys.selAt": "Keys en el cabezal",
- "animation.keys.selAt.hint": "Selecciona todas las keys exactamente en el cabezal"
+ "animation.keys.selAt.hint": "Selecciona todas las keys exactamente en el cabezal",
+ "animation.keys.ends": "Primera y última key",
+ "animation.keys.ends.hint": "Selecciona la primera y la última key de cada propiedad",
+ "cmd.animation.keys.selectEnds": "Seleccionar la primera y la última key de cada propiedad"
 }

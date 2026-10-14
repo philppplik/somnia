@@ -232,3 +232,9 @@ test('keys at playhead: exact tick only',()=>{
  assert.deepEqual(keysAroundPlayhead(c,['a'],f(10),'at').map(x=>x.t),[f(10)]);
  assert.equal(keysAroundPlayhead(c,['a'],f(5),'at').length,0);
 });
+import {endKeys} from './keyEnds';
+test('end keys: first and last per property, listed layers only',()=>{
+ const c=findComp(base())!;
+ assert.deepEqual(endKeys(c,['a']).map(x=>x.t),[f(0),f(10)]);
+ assert.equal(endKeys(c,['zz']).length,0);
+});

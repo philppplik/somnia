@@ -1040,6 +1040,24 @@
       "hasEnabled": true
     },
     {
+      "id": "animation.keys.selectEnds",
+      "title": "Select the first and last key of each property",
+      "category": "View",
+      "source": "animation",
+      "keywords": [
+        "animation",
+        "bookends",
+        "end",
+        "ends",
+        "first",
+        "keys",
+        "last",
+        "select",
+        "start"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "animation.keys.selectInWorkArea",
       "title": "Select the keys in the work area",
       "category": "View",
