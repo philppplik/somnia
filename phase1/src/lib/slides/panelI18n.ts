@@ -2,6 +2,15 @@ import {CATALOGUES,getLocale,subscribeLocale,translate} from '../i18n';
 import {useSyncExternalStore} from 'react';
 export const SLIDES_PANEL_CATALOGUES:Record<string,Record<string,string>>={
   "en": {
+  "slides.pacing.title": "Practice target pacing",
+  "slides.pacing.target": "Target minutes (optional)",
+  "slides.pacing.hint": "Whole minutes1 to180. Change while paused; measured timing stays. Empty disables guide.",
+  "slides.pacing.invalid": "Enter whole minutes1 to180.",
+  "slides.pacing.share": "Equal-share guide per slide: {time}",
+  "slides.pacing.remaining": "Target time remaining: {time}",
+  "slides.pacing.overtime": "Over target by: {time}",
+  "slides.pacing.progress": "Elapsed share of practice target",
+  "slides.pacing.boundary": "Equal-share guide only, not a slide deadline or prediction. No auto-advance, recording or save.",
   "slides.rehearsal.title": "Rehearsal timing",
   "slides.rehearsal.boundary": "Private in-memory practice timer, not recorded or saved. No automatic slide advance. Pauses on rendering or hidden tab; resume explicitly. Closing/changing deck clears timing.",
   "slides.rehearsal.current": "Slide {slide} of {total}",
@@ -94,6 +103,15 @@ export const SLIDES_PANEL_CATALOGUES:Record<string,Record<string,string>>={
     "cmd.slides.editText": "Apply slide text"
   },
   "de": {
+  "slides.pacing.title": "Übungsziel und Tempo",
+  "slides.pacing.target": "Zielminuten (optional)",
+  "slides.pacing.hint": "Ganze Minuten1 bis180. Im Pausenzustand ändern; gemessene Zeit bleibt. Leer deaktiviert den Richtwert.",
+  "slides.pacing.invalid": "Ganze Minuten1 bis180 eingeben.",
+  "slides.pacing.share": "Gleichverteilungs-Richtwert pro Folie: {time}",
+  "slides.pacing.remaining": "Verbleibende Zielzeit: {time}",
+  "slides.pacing.overtime": "Über Zielzeit: {time}",
+  "slides.pacing.progress": "Verbrauchter Anteil der Übungszielzeit",
+  "slides.pacing.boundary": "Nur Gleichverteilungs-Richtwert, keine Folienfrist oder Vorhersage. Kein automatischer Wechsel, Aufzeichnen oder Speichern.",
   "slides.rehearsal.title": "Proben-Timing",
   "slides.rehearsal.boundary": "Privater In-Memory-Proben-Timer, kein Recording/Save. Kein automatischer Folienwechsel. Rendering/versteckter Tab pausiert; explizit fortsetzen. Deck schließen/wechseln löscht Zeiten.",
   "slides.rehearsal.current": "Folie {slide} von {total}",
@@ -186,6 +204,15 @@ export const SLIDES_PANEL_CATALOGUES:Record<string,Record<string,string>>={
     "cmd.slides.editText": "Folientext anwenden"
   },
   "es": {
+  "slides.pacing.title": "Ritmo objetivo de práctica",
+  "slides.pacing.target": "Minutos objetivo (opcional)",
+  "slides.pacing.hint": "Minutos enteros1 a180. Cambiar en pausa; el tiempo medido permanece. Vacío desactiva la guía.",
+  "slides.pacing.invalid": "Introduce minutos enteros1 a180.",
+  "slides.pacing.share": "Guía de reparto por diapositiva: {time}",
+  "slides.pacing.remaining": "Tiempo objetivo restante: {time}",
+  "slides.pacing.overtime": "Sobre el objetivo por: {time}",
+  "slides.pacing.progress": "Parte transcurrida del objetivo",
+  "slides.pacing.boundary": "Solo guía de reparto, no plazo ni predicción. Sin avance automático, grabación ni guardado.",
   "slides.rehearsal.title": "Tiempo de ensayo",
   "slides.rehearsal.boundary": "Temporizador privado en memoria, sin grabar/guardar. Sin avance automático. Pausa al renderizar/ocultar pestaña; reanuda explícitamente. Cerrar/cambiar presentación borra tiempos.",
   "slides.rehearsal.current": "Diapositiva {slide} de {total}",
@@ -278,6 +305,15 @@ export const SLIDES_PANEL_CATALOGUES:Record<string,Record<string,string>>={
     "cmd.slides.editText": "Aplicar texto"
   },
   "fr": {
+  "slides.pacing.title": "Rythme cible de répétition",
+  "slides.pacing.target": "Minutes cibles (facultatif)",
+  "slides.pacing.hint": "Minutes entières1 à180. Modifier en pause; le temps mesuré reste. Vide désactive le guide.",
+  "slides.pacing.invalid": "Saisir des minutes entières1 à180.",
+  "slides.pacing.share": "Guide égal par diapositive: {time}",
+  "slides.pacing.remaining": "Temps cible restant: {time}",
+  "slides.pacing.overtime": "Dépassement de cible: {time}",
+  "slides.pacing.progress": "Part écoulée de la cible",
+  "slides.pacing.boundary": "Guide égal uniquement, ni échéance ni prédiction. Aucun défilement automatique, enregistrement ou sauvegarde.",
   "slides.rehearsal.title": "Chronométrage de répétition",
   "slides.rehearsal.boundary": "Minuteur privé en mémoire, sans enregistrer/sauvegarder. Sans avance automatique. Pause au rendu/onglet caché; reprise explicite. Fermer/changer présentation efface temps.",
   "slides.rehearsal.current": "Diapositive {slide} sur {total}",
@@ -370,6 +406,15 @@ export const SLIDES_PANEL_CATALOGUES:Record<string,Record<string,string>>={
     "cmd.slides.editText": "Appliquer le texte"
   },
   "pt-BR": {
+  "slides.pacing.title": "Ritmo alvo de ensaio",
+  "slides.pacing.target": "Minutos alvo (opcional)",
+  "slides.pacing.hint": "Minutos inteiros1 a180. Mude em pausa; tempo medido permanece. Vazio desativa o guia.",
+  "slides.pacing.invalid": "Digite minutos inteiros1 a180.",
+  "slides.pacing.share": "Guia igual por slide: {time}",
+  "slides.pacing.remaining": "Tempo alvo restante: {time}",
+  "slides.pacing.overtime": "Acima do alvo por: {time}",
+  "slides.pacing.progress": "Parte decorrida do alvo",
+  "slides.pacing.boundary": "Só guia igual, não prazo nem previsão. Sem avanço automático, gravação ou salvamento.",
   "slides.rehearsal.title": "Tempo de ensaio",
   "slides.rehearsal.boundary": "Timer privado em memória, sem gravar/salvar. Sem avanço automático. Pausa ao renderizar/ocultar aba; retome explicitamente. Fechar/mudar apresentação apaga tempos.",
   "slides.rehearsal.current": "Slide {slide} de {total}",
