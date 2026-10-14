@@ -819,7 +819,8 @@
  "animation.keys.values.mode": "Mode de valeur",
  "animation.keys.values.offset": "Ajouter",
  "animation.keys.values.scale": "Échelle %",
- "animation.keys.values.hint": "Ajoute la valeur aux clés choisies, met à l’échelle leur écart avec la première clé de ce pourcentage ou les arrondit à un pas de cette taille",
+ "animation.keys.values.hint": "Ajoute la valeur aux clés choisies, met à l’échelle leur écart avec la première clé (pourcentage), les arrondit à un pas ou les fait trembler au hasard jusqu’à cette valeur (nouvelle variante à chaque clic)",
  "cmd.animation.keys.values": "Décaler ou mettre à l’échelle les valeurs des clés choisies",
- "animation.keys.values.snap": "Arrondir au pas"
+ "animation.keys.values.snap": "Arrondir au pas",
+ "animation.keys.values.wiggle": "Trembler ±"
 }

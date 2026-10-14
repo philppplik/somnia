@@ -30,3 +30,11 @@ test('snap rounds scalars and both vec2 components to a step; bad steps are refu
   assert.deepEqual(L(applyEdits(d,valueEdits(c,r('position',[0,10]),'snap',10))).position.keys.map(k=>k.v),[[100,100],[200,50]]);
   assert.throws(()=>valueEdits(c,r('opacity',[0,10]),'snap',0));assert.throws(()=>valueEdits(c,r('opacity',[0,10]),'snap',-5));assert.throws(()=>valueEdits(c,r('opacity',[0]),'snap',5));
 });
+test('wiggle is bounded, reproducible per seed and different across seeds',()=>{
+  const d=base(),c=findComp(d)!,sel=r('opacity',[0,10,20]);
+  const a=valueEdits(c,sel,'wiggle',5,7),b=valueEdits(c,sel,'wiggle',5,7),o=valueEdits(c,sel,'wiggle',5,8);
+  assert.deepEqual(a,b);assert.notDeepEqual(a,o);
+  const n=applyEdits(d,a);L(n).opacity.keys.forEach((k,i)=>assert.ok(Math.abs((k.v as number)-(L(d).opacity.keys[i].v as number))<=5));
+  const v=applyEdits(d,valueEdits(c,r('position',[0,10]),'wiggle',3,2));L(v).position.keys.forEach((k,i)=>(k.v as readonly number[]).forEach((x,j)=>assert.ok(Math.abs(x-(L(d).position.keys[i].v as readonly number[])[j])<=3)));
+  assert.throws(()=>valueEdits(c,sel,'wiggle',0,1));assert.throws(()=>valueEdits(c,sel,'wiggle',-2,1));
+});

@@ -819,7 +819,8 @@
  "animation.keys.values.mode": "Value mode",
  "animation.keys.values.offset": "Add",
  "animation.keys.values.scale": "Scale %",
- "animation.keys.values.hint": "Add the amount to the selected key values, scale their distance to the first selected key by that percent, or round them to a step of that size",
+ "animation.keys.values.hint": "Add the amount to the selected key values, scale their distance to the first selected key by that percent, round them to a step, or wiggle them randomly by up to that amount (new variation each click)",
  "cmd.animation.keys.values": "Offset or scale the values of the selected keys",
- "animation.keys.values.snap": "Snap to step"
+ "animation.keys.values.snap": "Snap to step",
+ "animation.keys.values.wiggle": "Wiggle ±"
 }

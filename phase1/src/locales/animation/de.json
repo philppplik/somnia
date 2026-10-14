@@ -819,7 +819,8 @@
  "animation.keys.values.mode": "Wertemodus",
  "animation.keys.values.offset": "Addieren",
  "animation.keys.values.scale": "Skalieren %",
- "animation.keys.values.hint": "Betrag auf die gewählten Key-Werte addieren, deren Abstand zum ersten gewählten Key um diesen Prozentsatz skalieren oder sie auf Schritte dieser Größe runden",
+ "animation.keys.values.hint": "Betrag auf die gewählten Key-Werte addieren, deren Abstand zum ersten gewählten Key skalieren (Prozent), auf Schritte runden oder um bis zu diesen Betrag zufällig wackeln lassen (bei jedem Klick neue Variante)",
  "cmd.animation.keys.values": "Werte der gewählten Keys verschieben oder skalieren",
- "animation.keys.values.snap": "Auf Raster runden"
+ "animation.keys.values.snap": "Auf Raster runden",
+ "animation.keys.values.wiggle": "Wackeln ±"
 }

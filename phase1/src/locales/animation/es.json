@@ -819,7 +819,8 @@
  "animation.keys.values.mode": "Modo de valor",
  "animation.keys.values.offset": "Sumar",
  "animation.keys.values.scale": "Escalar %",
- "animation.keys.values.hint": "Suma la cantidad a los valores de las claves elegidas, escala su distancia a la primera clave por ese porcentaje o los redondea a pasos de ese tamaño",
+ "animation.keys.values.hint": "Suma la cantidad a las claves elegidas, escala su distancia a la primera clave (porcentaje), las redondea a un paso o las hace vibrar al azar hasta esa cantidad (variación nueva en cada clic)",
  "cmd.animation.keys.values": "Desplazar o escalar los valores de las claves elegidas",
- "animation.keys.values.snap": "Ajustar a paso"
+ "animation.keys.values.snap": "Ajustar a paso",
+ "animation.keys.values.wiggle": "Vibrar ±"
 }
