@@ -53,7 +53,16 @@ jobs:
           echo "$KS_B64" | base64 -d > "$RUNNER_TEMP/upload.jks"
           python3 scripts/android/wire-signing.py src-tauri/gen/android/app/build.gradle.kts "$RUNNER_TEMP/upload.jks" "$KS_PASS" "$KEY_ALIAS" "$KEY_PASS"
       - name: Build the AAB
-        run: npx tauri android build --aab --ci --target "$ANDROID_TARGET" -- --no-default-features --features mobile
+        run: |
+          set +e
+          npx tauri android build --aab --ci --target "$ANDROID_TARGET" -- --no-default-features --features mobile 2>&1 | tee /tmp/aab-build.log
+          rc=${PIPESTATUS[0]}
+          if [ "$rc" != 0 ]; then
+            # Surface the cause as annotations (job logs need a login to read).
+            grep -nE '^(error|Error|FAILURE|\* What went wrong)|error\[E|could not compile|panicked|Caused by' /tmp/aab-build.log | head -n 8 | cut -c1-300 | while IFS= read -r l; do echo "::error::$l"; done
+            tail -n 6 /tmp/aab-build.log | cut -c1-300 | while IFS= read -r l; do echo "::error::tail: $l"; done
+          fi
+          exit "$rc"
       - name: Verify the bundle
         run: |
           f=$(find src-tauri/gen/android -name '*.aab' | head -n1)
