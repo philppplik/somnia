@@ -104,3 +104,9 @@ Path morph: `morphTo` mask op (`animation.layer.mask` with `op:'morphTo', mask, 
 ## P26: morph point matching
 
 `morphTo` takes `match:'resample'` (the source path is resampled by arc length to the target's point count, at most 32 points, 16 samples per segment; smooth handles are rebuilt only when the source had handles), `reverse` (flips point order and swaps in/out handles) and `shift` (rotates the start point, closed shapes only). Default is still index matching, which refuses unequal counts. Refusals are `MorphError`s with a locale key (`animation.morph.err.*`) and numbers, shown localized in the UI; the English text stays as the error message for commands and logs. Corners are not preserved by resampling a polygon: new points sit evenly on the outline, so sharp corners can round off.
+
+## P27: path shape layers
+
+A shape layer with `shape:'path'` is now a full bezier path layer. Its points stay normalized (0..1 of the layer box) and may carry in/out handles (offset ±2). `source.pathKeys` holds morph keys (same point count and closed flag as `path`, at most 32 points, at most 64 keys, ascending ticks). `lib/animation/pathLayer.ts` owns rendering (`layerPathD`, used by the canvas and every export; plain polygons keep the old output) and edits (`pathLayerEdit`: points, animate, point, morphTo; `maskToLayerEdit`). Morph reuses the mask code (resample, reverse, start point, localized `animation.morph.err.*`) and refuses when points would leave the layer box. Commands: `animation.layer.path`, `animation.mask.toLayer`. Each is one `layer.update` or `layer.add`, so one undo step. Rect, ellipse, star and polygon are untouched.
+
+Not done: drawing a path layer with the pen on the canvas, point handle dragging for layers, and morph ignores transform differences between layers.

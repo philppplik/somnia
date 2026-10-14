@@ -47,6 +47,7 @@ export function MasksMattes({layer,comp,at}:{layer:Layer;comp:Composition;at:num
       <Button size="tiny" variant="outline" disabled={sel.point===null||current?.id!==m.id} onClick={()=>{mask({layer:layer.id,op:'pointRemove',mask:m.id,index:sel.point!});selectPoint(null);}} data-testid={`animation-point-remove-${i}`}>{t('animation.masks.pointRemove')}</Button></div>
      <label className="flex items-center gap-1"><NativeInput type="checkbox" className="animation-checkbox" checked={!!m.shapeKeys?.length} onChange={e=>mask({layer:layer.id,op:'pathAnimate',mask:m.id,on:e.target.checked})} data-testid={`animation-mask-pathanim-${i}`}/>{t('animation.masks.animate',{prop:t('animation.masks.prop.path')})}</label>
      <MaskMorph layer={layer} m={m} index={i}/>
+     <Button size="tiny" variant="outline" disabled={layer.locked} onClick={()=>{executeCommand('animation.mask.toLayer',{layer:layer.id,mask:m.id}).catch(()=>undefined);}} data-testid={`animation-mask-tolayer-${i}`}>{t('animation.masks.toLayer')}</Button>
     </div>}
     <div className="grid gap-1">{(['position','size','feather','opacity'] as const).filter(p=>!(m.shape==='path'&&p==='size')).map(p=>animToggle(m,p))}</div>
     <label className="flex items-center gap-1 text-ink-3"><NativeInput type="checkbox" className="animation-checkbox" checked={m.invert} onChange={e=>mask({layer:layer.id,op:'update',mask:m.id,patch:{invert:e.target.checked}})}/>{t('animation.masks.invert')}</label>

@@ -1,5 +1,5 @@
 import {radialPath,gradientVector} from './shapes';
-import {pathData} from '../interface/vectorCore';
+import {layerPathD} from './pathLayer';
 import {validateAnimationAssets} from './assetsValidation';
 import {textFontStack,validEffects,validSource} from './model';
 import {effectPrimitives,effectBounds,revealedText,strokeAttributes} from './effects';
@@ -32,7 +32,7 @@ function layerSvg(l:Layer,assets:readonly InterfaceAsset[],tick:number,fillOverr
  if(l.kind==='solid')return `<rect x="0" y="0" width="${num(s.width??0)}" height="${num(s.height??0)}" fill="${fill}"/>`;
  const stroke=strokeAttributes(l,tick);const strokeSvg=stroke?` stroke="${stroke.stroke}" stroke-width="${stroke.strokeWidth}" pathLength="100" stroke-dasharray="${stroke.strokeDasharray}" stroke-dashoffset="${stroke.strokeDashoffset}"`:'';
  if(l.kind==='shape'&&['star','polygon'].includes(s.shape??''))return `<path d="${radialPath(s)}"${strokeSvg} fill="${fill}"/>`;
- if(l.kind==='shape'&&s.shape==='path'&&s.path)return `<path d="${pathData(s.path as import('../interface/schema').InterfacePath,s.width??1,s.height??1)}"${strokeSvg} fill="${fill}"/>`;
+ if(l.kind==='shape'&&s.shape==='path'&&s.path)return `<path d="${layerPathD(l,tick)}"${strokeSvg} fill="${fill}"/>`;
  if(l.kind==='shape')return s.shape==='ellipse'
   ?`<ellipse cx="${num((s.width??0)/2)}" cy="${num((s.height??0)/2)}" rx="${num((s.width??0)/2)}"${strokeSvg} ry="${num((s.height??0)/2)}" fill="${fill}"/>`
   :`<rect x="0" y="0" width="${num(s.width??0)}" height="${num(s.height??0)}" rx="${s.shape==='roundedRect'?Math.min(s.radius??24,(s.width??0)/2,(s.height??0)/2):0}"${strokeSvg} fill="${fill}"/>`;

@@ -402,5 +402,13 @@
  "animation.morph.err.limit": "No máximo {max} chaves de caminho.",
  "animation.morph.match": "Igualar pontos",
  "animation.morph.reverse": "Inverter",
- "animation.morph.start": "Ponto inicial"
+ "animation.morph.start": "Ponto inicial",
+ "animation.morph.err.sameLayer": "Escolha outra camada como destino.",
+ "animation.morph.err.notPathLayer": "Escolha outra camada de forma com caminho.",
+ "animation.morph.err.outside": "O morph moveria pontos para fora da caixa da camada.",
+ "animation.pathLayer.animate": "Animar caminho",
+ "animation.pathLayer.target": "Transformar em camada",
+ "animation.masks.toLayer": "Criar camada de caminho",
+ "cmd.animation.layer.path": "Editar camada de forma com caminho",
+ "cmd.animation.mask.toLayer": "Converter máscara de caminho em camada de forma"
 }

@@ -402,5 +402,13 @@
  "animation.morph.err.limit": "{max} clés de tracé au maximum.",
  "animation.morph.match": "Faire correspondre les points",
  "animation.morph.reverse": "Inverser",
- "animation.morph.start": "Point de départ"
+ "animation.morph.start": "Point de départ",
+ "animation.morph.err.sameLayer": "Choisissez un autre calque cible.",
+ "animation.morph.err.notPathLayer": "Choisissez un autre calque de forme tracée.",
+ "animation.morph.err.outside": "Le morphing déplacerait des points hors du cadre du calque.",
+ "animation.pathLayer.animate": "Animer le tracé",
+ "animation.pathLayer.target": "Morphing vers le calque",
+ "animation.masks.toLayer": "Créer un calque de tracé",
+ "cmd.animation.layer.path": "Modifier un calque de forme tracée",
+ "cmd.animation.mask.toLayer": "Convertir un masque tracé en calque de forme"
 }

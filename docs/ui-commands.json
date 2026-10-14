@@ -588,6 +588,18 @@
       "hasEnabled": true
     },
     {
+      "id": "animation.layer.path",
+      "title": "Edit a path shape layer",
+      "category": "Edit",
+      "source": "animation",
+      "keywords": [
+        "animation",
+        "keyframe",
+        "timeline"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "animation.layer.remove",
       "title": "Delete layer",
       "category": "Edit",
@@ -662,6 +674,18 @@
     {
       "id": "animation.marker.remove",
       "title": "Remove timing marker",
+      "category": "Edit",
+      "source": "animation",
+      "keywords": [
+        "animation",
+        "keyframe",
+        "timeline"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "animation.mask.toLayer",
+      "title": "Turn a path mask into a shape layer",
       "category": "Edit",
       "source": "animation",
       "keywords": [

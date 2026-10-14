@@ -402,5 +402,13 @@
  "animation.morph.err.limit": "Höchstens {max} Pfad-Keys.",
  "animation.morph.match": "Punkte angleichen",
  "animation.morph.reverse": "Umkehren",
- "animation.morph.start": "Startpunkt"
+ "animation.morph.start": "Startpunkt",
+ "animation.morph.err.sameLayer": "Wähle eine andere Ebene als Ziel.",
+ "animation.morph.err.notPathLayer": "Wähle eine andere Pfad-Formebene.",
+ "animation.morph.err.outside": "Der Morph würde Punkte aus dem Ebenenrahmen schieben.",
+ "animation.pathLayer.animate": "Pfad animieren",
+ "animation.pathLayer.target": "Morph in Ebene",
+ "animation.masks.toLayer": "Pfad-Ebene erstellen",
+ "cmd.animation.layer.path": "Pfad-Formebene bearbeiten",
+ "cmd.animation.mask.toLayer": "Pfadmaske in Formebene umwandeln"
 }

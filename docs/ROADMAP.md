@@ -199,3 +199,9 @@ Depends on: v10 diff viewer, v11 updater for smooth extension and app updates.
 - Implemented: arc-length point resampling for morph between paths with different point counts (bounded to 32 points, one undo, hover preview), reverse and start-point rotation, morph refusals localized in five locales via locale keys.
 - Validation: 1 new Animation unit test (157 total), DS ratchet unchanged, ui-commands inventory, check:layers, isolated Chrome check in German.
 - Not covered: resampling can round off sharp corners; start point rotation only on closed shapes; no automatic best-start search; shape layers still have no path source.
+
+### Animation P27 (2026-10-14, integration pending)
+
+- Implemented: path shape layers with optional bezier handles and morph keys (`pathKeys`), shared renderer for canvas and exports (plain polygons render as before), morph into another path layer (match points, reverse, start point, localized refusals, hover preview, one undo), "Animate path" in the layer inspector, "Make path layer" on path masks, commands `animation.layer.path` and `animation.mask.toLayer`.
+- Validation: 4 new Animation unit tests (161 total), DS ratchet unchanged, ui-commands inventory (381), check:layers, isolated Chrome check.
+- Not covered: no pen drawing of layer paths on the canvas, no handle dragging for layers, shapes limited to the layer box (0..1), morph ignores layer transform differences. Playwright E2E is CI-only.

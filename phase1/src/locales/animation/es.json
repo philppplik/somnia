@@ -402,5 +402,13 @@
  "animation.morph.err.limit": "Como máximo {max} claves de trazado.",
  "animation.morph.match": "Igualar puntos",
  "animation.morph.reverse": "Invertir",
- "animation.morph.start": "Punto inicial"
+ "animation.morph.start": "Punto inicial",
+ "animation.morph.err.sameLayer": "Elige otra capa como destino.",
+ "animation.morph.err.notPathLayer": "Elige otra capa de forma con trazado.",
+ "animation.morph.err.outside": "El morph movería puntos fuera del cuadro de la capa.",
+ "animation.pathLayer.animate": "Animar trazado",
+ "animation.pathLayer.target": "Transformar en capa",
+ "animation.masks.toLayer": "Crear capa de trazado",
+ "cmd.animation.layer.path": "Editar capa de forma con trazado",
+ "cmd.animation.mask.toLayer": "Convertir una máscara de trazado en capa de forma"
 }

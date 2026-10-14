@@ -558,3 +558,46 @@ test('P26: morph can resample by arc length, reverse and rotate the start point;
  const keys=['same','notPath','count','closed','shiftRange','shiftOpen','flat','first','limit'].map(x=>`animation.morph.err.${x}`).concat(['animation.morph.match','animation.morph.reverse','animation.morph.start']);
  for(const l of ['en','de','es','fr','pt-BR']){const j=JSON.parse(readFileSync(new URL(`../../locales/animation/${l}.json`,import.meta.url),'utf8')) as Record<string,string>;for(const k2 of keys)assert.ok(j[k2],`${l} ${k2}`);}
 });
+
+import {layerPathD,pathLayerEdit,maskToLayerEdit} from './pathLayer';
+import {pathData} from '../interface/vectorCore';
+const pathDoc=()=>{let d=base();const sq=(p:{x:number;y:number}[])=>({shape:'path' as const,color:'#ff0000',width:200,height:100,path:{closed:true,points:p}});
+ d=applyEdit(d,{type:'layer.add',kind:'shape',id:'pa',over:{source:sq([{x:0,y:0},{x:1,y:0},{x:0.5,y:1}])}});
+ d=applyEdit(d,{type:'layer.add',kind:'shape',id:'pb',over:{source:sq([{x:0.1,y:0.1},{x:0.9,y:0.2},{x:0.5,y:0.8}])}});return d;};
+test('P27: plain path layers render exactly as before, handles switch to bezier',()=>{
+ let d=pathDoc();const l=layer(d,'pa');assert.equal(layerPathD(l,0),pathData(l.source.path as never,200,100));
+ d=applyEdit(d,{type:'layer.update',layer:'pa',source:{path:{closed:true,points:[{x:0,y:0,outX:0.1,outY:0},{x:1,y:0},{x:0.5,y:1}]}}});assert.match(layerPathD(layer(d,'pa'),0),/C/);
+ assert.throws(()=>applyEdit(d,{type:'layer.update',layer:'pa',source:{path:{closed:true,points:[{x:0,y:0,outX:5},{x:1,y:0}]}}}),EditError);
+ assert.throws(()=>applyEdit(d,{type:'layer.update',layer:'pa',source:{pathKeys:[{t:0,path:{closed:false,points:[{x:0,y:0},{x:1,y:0},{x:1,y:1}]}}]}}),EditError,'closed flag must match');
+ assert.throws(()=>applyEdit(d,{type:'layer.update',layer:'photo',source:{pathKeys:[{t:0,path:{closed:true,points:[{x:0,y:0},{x:1,y:1}]}}]}}),EditError,'only for path shapes');
+});
+test('P27: path layers morph into other path layers with one undo, refusals carry locale keys',()=>{
+ let d=pathDoc();const at=Math.round(sec*2),rev=d.revision;
+ d=applyEdit(d,pathLayerEdit(d,'pa',{op:'animate',on:true}));assert.equal(layer(d,'pa').source.pathKeys!.length,1);
+ const r2=d.revision;d=applyEdit(d,pathLayerEdit(d,'pa',{op:'morphTo',other:'pb',t:at}));assert.equal(d.revision,r2+1,'one undo step');
+ const k=layer(d,'pa').source.pathKeys!;assert.equal(k.length,2);assert.deepEqual(k[1].path.points.map(p=>[p.x,p.y]),[[0.1,0.1],[0.9,0.2],[0.5,0.8]]);
+ const mid=layerPathD(layer(d,'pa'),Math.round((comp(d).start+at)/2));assert.notEqual(mid,layerPathD(layer(d,'pa'),0));assert.ok(validateDocument(d));
+ const bad=(e:()=>unknown,key:string)=>assert.throws(e,(x:unknown)=>x instanceof MorphError&&x.problem.key===key);
+ bad(()=>pathLayerEdit(d,'pa',{op:'morphTo',other:'pa',t:at}),'animation.morph.err.sameLayer');
+ bad(()=>pathLayerEdit(d,'pa',{op:'morphTo',other:'photo',t:at}),'animation.morph.err.notPathLayer');
+ let q=pathDoc();q=applyEdit(q,{type:'layer.update',layer:'pb',source:{path:{closed:true,points:[{x:0,y:0},{x:1,y:0},{x:1,y:1},{x:0,y:1}]}}});
+ bad(()=>pathLayerEdit(q,'pa',{op:'morphTo',other:'pb',t:at}),'animation.morph.err.count');
+ const ok=applyEdit(q,pathLayerEdit(q,'pa',{op:'morphTo',other:'pb',t:at,opts:{match:'resample',reverse:true}}));assert.equal(layer(ok,'pa').source.pathKeys![1].path.points.length,3);
+ d=applyEdit(d,pathLayerEdit(d,'pa',{op:'point',index:0,x:0.3,y:0.3,t:at}));assert.equal(layer(d,'pa').source.pathKeys![1].path.points[0].x,0.3);
+ assert.throws(()=>pathLayerEdit(d,'pa',{op:'points',path:{closed:true,points:[{x:0,y:0},{x:1,y:1}]}}),/Turn off/);
+ d=applyEdit(d,pathLayerEdit(d,'pa',{op:'animate',on:false,t:at}));assert.equal(layer(d,'pa').source.pathKeys,undefined);assert.equal(layer(d,'pa').source.path!.points[0].x,0.3);
+ assert.ok(rev<d.revision);
+});
+test('P27: a path mask becomes a shape layer in one undo step at the same place',()=>{
+ let d=base();d=applyEdit(d,maskEdit(d,'photo',{op:'add',id:'a'}));
+ d=applyEdit(d,maskEdit(d,'photo',{op:'path',mask:'a',points:[{x:20,y:10},{x:120,y:10},{x:70,y:90}],closed:true,smooth:false}));
+ const rev=d.revision,n=comp(d).layers.length;d=applyEdit(d,maskToLayerEdit(d,'photo','a','fromMask'));assert.equal(d.revision,rev+1);assert.equal(comp(d).layers.length,n+1);
+ const l=layer(d,'fromMask'),m=layer(d,'photo').masks![0];assert.equal(l.source.shape,'path');assert.equal(l.source.width,100);assert.equal(l.source.height,80);
+ assert.deepEqual(l.source.path!.points.map(p=>[p.x,p.y]),[[0,0],[1,0],[0.5,1]]);
+ const a0=layer(d,'photo').transform.anchor.value as unknown as number[],a1=l.transform.anchor.value as unknown as number[];assert.deepEqual([a0[0]-a1[0],a0[1]-a1[1]],[m.x+20,m.y+10]);
+ assert.throws(()=>maskToLayerEdit(d,'photo','nope'),/no longer/);
+});
+test('P27: path layer locale keys exist in all five locales',()=>{
+ for(const l of ['en','de','es','fr','pt-BR']){const j=JSON.parse(readFileSync(new URL(`../../locales/animation/${l}.json`,import.meta.url),'utf8'));
+  for(const k of ['animation.morph.err.sameLayer','animation.morph.err.notPathLayer','animation.morph.err.outside','animation.pathLayer.animate','animation.pathLayer.target','animation.masks.toLayer','cmd.animation.layer.path','cmd.animation.mask.toLayer'])assert.ok(j[k],`${l} ${k}`);}
+});

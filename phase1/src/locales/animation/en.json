@@ -402,5 +402,13 @@
  "animation.morph.err.limit": "At most {max} path keys.",
  "animation.morph.match": "Match points",
  "animation.morph.reverse": "Reverse",
- "animation.morph.start": "Start point"
+ "animation.morph.start": "Start point",
+ "animation.morph.err.sameLayer": "Pick another layer to morph into.",
+ "animation.morph.err.notPathLayer": "Pick another path shape layer.",
+ "animation.morph.err.outside": "The morph would move points outside the layer box.",
+ "animation.pathLayer.animate": "Animate path",
+ "animation.pathLayer.target": "Morph into layer",
+ "animation.masks.toLayer": "Make path layer",
+ "cmd.animation.layer.path": "Edit a path shape layer",
+ "cmd.animation.mask.toLayer": "Turn a path mask into a shape layer"
 }
