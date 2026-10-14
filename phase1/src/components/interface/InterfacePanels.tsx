@@ -4,6 +4,9 @@ import {InterfaceLibrary} from './InterfaceLibrary';
 import {StudioStatus} from '../studios/StudioStatus';
 import {InterfaceInteractions} from './InterfacePrototype';
 import {setInterfaceConstraint,setInterfaceAbsolute} from '../../lib/interface/constraints';
+import {resizeInterfaceFrame} from '../../lib/interface/responsive';
+import {INTERFACE_FRAME_PRESETS} from '../../lib/interface/pages';
+import {getInterfacePresetPreview,setInterfacePresetPreview,useInterfacePresetPreview} from './presetPreview';
 import {InterfaceVariantProperties} from './InterfaceVariantProperties';
 import {Field} from './InterfaceField';
 export {Field};
@@ -62,6 +65,7 @@ export function InterfaceProperties(){
    {(['hidden','locked'] as const).map(key=><label key={key} className="flex items-center gap-2 text-xs"><input style={{width:14,flexShrink:0}} type="checkbox" checked={node[key]} disabled={key==='hidden'&&node.locked} onChange={e=>run(()=>patch({[key]:e.target.checked}))}/>{t(`interface.${key}`)}</label>)}
    {node.kind==='frame'&&<Choice label={t('interface.variableMode')} value={node.variableMode??''} options={[["",t('interface.inheritMode')],["light",t('interface.mode.light')],["dark",t('interface.mode.dark')]]} disabled={node.locked} onChange={mode=>run(()=>patch({variableMode:mode?mode as 'light'|'dark':undefined}))}/>}
    <InterfaceLayoutControls node={node} run={run} patch={patch}/>
+   <InterfaceResponsiveControls node={node} run={run}/>
    <InterfaceComponentControls node={node} run={run}/>
    <InterfaceVariantProperties node={node} run={run}/>
    <InterfaceBindings nodeId={node.id} run={run}/>
@@ -91,6 +95,15 @@ function InterfaceLayoutControls({node,run,patch}:{node:InterfaceNode;run:(f:()=
   <div className="grid grid-cols-2 gap-2">{(['width','height'] as const).map(axis=><Choice key={axis} label={`${t(`interface.${axis}`)} / ${t('interface.sizing')}`} value={sizing[axis]} options={option(['fixed','hug','fill'])} disabled={disabled} onChange={v=>setSizing({[axis]:v})}/>)}</div>
   <div className="grid grid-cols-2 gap-2">{(['minWidth','maxWidth','minHeight','maxHeight'] as const).map(key=><Field key={key} name={t(`interface.${key}`)} value={sizing[key]} type="number" disabled={disabled} onCommit={v=>run(()=>patch({sizing:{...sizing,[key]:number(v)}}))}/>)}</div>
   {parent&&<><label className="flex items-center gap-2 text-xs"><input style={{width:14}} type="checkbox" checked={sizing.absolute} disabled={disabled} onChange={e=>run(()=>interfaceSession.transact(d=>setInterfaceAbsolute(d,node.id,e.target.checked)))}/>{t('interface.absolute')}</label>{(!parent.layout||parent.layout.direction==='free'||sizing.absolute)&&<div className="grid grid-cols-2 gap-2">{(['horizontal','vertical'] as const).map(axis=><Choice key={axis} label={t(`interface.${axis}`)} value={node.constraints?.[axis]??'start'} options={option(['start','end','center','stretch','scale'])} disabled={disabled} onChange={v=>run(()=>interfaceSession.transact(d=>setInterfaceConstraint(d,node.id,axis,v as ConstraintMode)))}/>)}</div>}</>}
+ </div></InspectorGroup>;
+}
+function InterfaceResponsiveControls({node,run}:{node:InterfaceNode;run:(f:()=>void)=>void}){
+ const {t}=useT();const active=useInterfacePresetPreview();const [preset,setPreset]=useState<keyof typeof INTERFACE_FRAME_PRESETS>('phone');
+ if(node.kind!=='frame')return null;const isActive=active?.frameId===node.id,size=INTERFACE_FRAME_PRESETS[preset];
+ return <InspectorGroup title={t('interface.responsive')}><div className="flex flex-col gap-3">
+  <Choice label={t('interface.responsivePreset')} value={preset} options={(Object.keys(INTERFACE_FRAME_PRESETS) as (keyof typeof INTERFACE_FRAME_PRESETS)[]).map(key=>[key,`${t(`interface.preset.${key}`)} · ${INTERFACE_FRAME_PRESETS[key].width} × ${INTERFACE_FRAME_PRESETS[key].height}`])} disabled={node.locked} onChange={v=>setPreset(v as keyof typeof INTERFACE_FRAME_PRESETS)}/>
+  {isActive&&<p className="text-xs text-ink-2" role="status">{t('interface.previewingSize',{width:active.width,height:active.height})}</p>}
+  <div className="flex flex-wrap gap-1"><Button size="compact" variant="outline" disabled={node.locked} onClick={()=>setInterfacePresetPreview({frameId:node.id,width:size.width,height:size.height})}>{t('interface.presetPreview')}</Button><Button size="compact" disabled={!isActive||node.locked} onClick={()=>run(()=>{const pending=getInterfacePresetPreview();if(pending?.frameId!==node.id)return;interfaceSession.transact(d=>resizeInterfaceFrame(d,node.id,{width:pending.width,height:pending.height}));setInterfacePresetPreview(null);})}>{t('interface.applySize')}</Button><Button size="compact" variant="outline" disabled={!isActive} onClick={()=>setInterfacePresetPreview(null)}>{t('interface.revertPreview')}</Button></div>
  </div></InspectorGroup>;
 }
 function InterfaceComponentControls({node,run}:{node:InterfaceNode;run:(f:()=>void)=>void}){
