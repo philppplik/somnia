@@ -1,5 +1,14 @@
 export const LOCAL_MODELS_CATALOGUES:Record<string,Record<string,string>> = {
  "en": {
+  "local.search.context.title": "Citation context reader",
+  "local.search.context.boundary": "Literal normalized source text, not an answer or permission. Shows cited chunk and at most one neighbor each side from the same selected open source. No model call, new source read, cloud or save.",
+  "local.search.context.extent": "{source} · cited chunk {chunk} of {total}",
+  "local.search.context.cited": "Cited chunk {chunk}",
+  "local.search.context.before": "Previous chunk {chunk}",
+  "local.search.context.after": "Next chunk {chunk}",
+  "local.search.context.close": "Close context",
+  "local.search.context.review": "[{rank}] Review citation context",
+
   "local.search.results.limit": "Snippet limit",
   "local.search.results.group": "Group snippets by source",
   "local.search.results.count": "{snippets} returned snippets from {sources} sources",
@@ -607,6 +616,15 @@ export const LOCAL_MODELS_CATALOGUES:Record<string,Record<string,string>> = {
   "local.route.earlier": "Move earlier after local"
  },
  "de": {
+  "local.search.context.title": "Citation-Kontext-Leser",
+  "local.search.context.boundary": "Literaler normalisierter Quellentext, keine Antwort/Zustimmung. Cited Chunk und maximal ein Nachbar je Seite derselben gewählten offenen Quelle. Kein Modellcall/neuer Read/Cloud/Save.",
+  "local.search.context.extent": "{source} · cited Chunk {chunk} von {total}",
+  "local.search.context.cited": "Cited Chunk {chunk}",
+  "local.search.context.before": "Vorheriger Chunk {chunk}",
+  "local.search.context.after": "Nächster Chunk {chunk}",
+  "local.search.context.close": "Kontext schließen",
+  "local.search.context.review": "[{rank}] Citation-Kontext prüfen",
+
   "local.search.results.limit": "Ausschnitt-Limit",
   "local.search.results.group": "Ausschnitte nach Quelle gruppieren",
   "local.search.results.count": "{snippets} Ausschnitte aus {sources} Quellen",
@@ -1214,6 +1232,15 @@ export const LOCAL_MODELS_CATALOGUES:Record<string,Record<string,string>> = {
   "local.route.earlier": "Nach lokal früher einordnen"
  },
  "es": {
+  "local.search.context.title": "Lector de contexto de cita",
+  "local.search.context.boundary": "Texto normalizado literal, no respuesta/permiso. Fragmento citado y máximo un vecino por lado de misma fuente abierta. Sin modelo/nueva lectura/nube/guardar.",
+  "local.search.context.extent": "{source} · fragmento citado {chunk} de {total}",
+  "local.search.context.cited": "Fragmento citado {chunk}",
+  "local.search.context.before": "Fragmento anterior {chunk}",
+  "local.search.context.after": "Fragmento siguiente {chunk}",
+  "local.search.context.close": "Cerrar contexto",
+  "local.search.context.review": "[{rank}] Revisar contexto de cita",
+
   "local.search.results.limit": "Límite de fragmentos",
   "local.search.results.group": "Agrupar fragmentos por fuente",
   "local.search.results.count": "{snippets} fragmentos de {sources} fuentes",
@@ -1821,6 +1848,15 @@ export const LOCAL_MODELS_CATALOGUES:Record<string,Record<string,string>> = {
   "local.route.earlier": "Mover antes tras local"
  },
  "fr": {
+  "local.search.context.title": "Lecteur du contexte de citation",
+  "local.search.context.boundary": "Texte normalisé littéral, pas réponse/accord. Extrait cité et au plus un voisin par côté de même source ouverte. Sans modèle/nouvelle lecture/cloud/sauvegarde.",
+  "local.search.context.extent": "{source} · extrait cité {chunk} sur {total}",
+  "local.search.context.cited": "Extrait cité {chunk}",
+  "local.search.context.before": "Extrait précédent {chunk}",
+  "local.search.context.after": "Extrait suivant {chunk}",
+  "local.search.context.close": "Fermer contexte",
+  "local.search.context.review": "[{rank}] Vérifier contexte de citation",
+
   "local.search.results.limit": "Limite d’extraits",
   "local.search.results.group": "Grouper extraits par source",
   "local.search.results.count": "{snippets} extraits de {sources} sources",
@@ -2428,6 +2464,15 @@ export const LOCAL_MODELS_CATALOGUES:Record<string,Record<string,string>> = {
   "local.route.earlier": "Avancer après local"
  },
  "pt-BR": {
+  "local.search.context.title": "Leitor de contexto da citação",
+  "local.search.context.boundary": "Texto normalizado literal, não resposta/permissão. Trecho citado e no máximo um vizinho por lado da mesma fonte aberta. Sem modelo/nova leitura/nuvem/salvar.",
+  "local.search.context.extent": "{source} · trecho citado {chunk} de {total}",
+  "local.search.context.cited": "Trecho citado {chunk}",
+  "local.search.context.before": "Trecho anterior {chunk}",
+  "local.search.context.after": "Trecho seguinte {chunk}",
+  "local.search.context.close": "Fechar contexto",
+  "local.search.context.review": "[{rank}] Revisar contexto da citação",
+
   "local.search.results.limit": "Limite de trechos",
   "local.search.results.group": "Agrupar trechos por fonte",
   "local.search.results.count": "{snippets} trechos de {sources} fontes",

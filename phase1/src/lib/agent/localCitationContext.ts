@@ -1,0 +1,3 @@
+import {chunkLocalSources,type SearchChunk} from './localSearch';import {normalizeLocalIndexText} from './localIndexChunks';
+/** Existing selected source only; exact ordinal reconstruction, no substring guesses/IO. */
+export function localCitationContext(raw:string,chunk:SearchChunk){const chunks=chunkLocalSources([{id:chunk.sourceId,text:normalizeLocalIndexText(raw)}]);const exact=chunks[chunk.index];if(!exact||exact.text!==chunk.text)throw Error('Citation source changed');return Object.freeze({sourceId:chunk.sourceId,total:chunks.length,selected:chunk.index,parts:Object.freeze(chunks.slice(Math.max(0,chunk.index-1),chunk.index+2).map(c=>Object.freeze({...c,role:c.index===chunk.index?'cited' as const:c.index<chunk.index?'before' as const:'after' as const})))});}
