@@ -83,3 +83,27 @@ test('white balance picker renders in light and dark',async({page})=>{
   await page.screenshot({path:`test-results/ds-photos-wb-picker-${theme}.png`,fullPage:true});
  }
 });
+test('white-balance presets set temp+tint as one undo step (light and dark)',async({page})=>{
+ for(const theme of['light','dark']){
+  await page.goto('/test/design-system/?view=photos-auto');
+  await page.evaluate(t=>document.documentElement.setAttribute('data-theme',t),theme);
+  await expect(page.getByTestId('photos-workspace')).toBeVisible();
+  await expect(page.getByTestId('photos-color-panel')).toBeVisible();
+  const picker=page.getByTestId('photos-wb-preset');
+  await expect(picker).toBeVisible();
+  await expect(picker).toHaveValue(''); // 6500/0 sits on no preset
+  await picker.selectOption('tungsten');
+  await expect(page.getByTestId('photos-value-temp')).toHaveText('2850 K');
+  await expect(page.getByTestId('photos-value-tint')).toHaveText('0');
+  await expect(picker).toHaveValue('tungsten'); // the pair matches the preset
+  await page.screenshot({path:`test-results/ds-photos-wb-preset-${theme}.png`,fullPage:true});
+  await picker.selectOption('shade');
+  await expect(page.getByTestId('photos-value-temp')).toHaveText('7500 K');
+  await page.getByRole('button',{name:'Undo',exact:true}).click();
+  await page.waitForTimeout(400);
+  await expect(page.getByTestId('photos-value-temp')).toHaveText('2850 K'); // one undo step for the pair
+  await page.getByRole('button',{name:'Undo',exact:true}).click();
+  await page.waitForTimeout(400);
+  await expect(page.getByTestId('photos-value-temp')).toHaveText('6500 K');
+ }
+});

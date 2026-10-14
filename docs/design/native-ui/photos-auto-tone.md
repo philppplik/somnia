@@ -62,3 +62,22 @@ The pick is one atomic commit (one undo step), the picker disarms
 after use and Escape disarms it like the other target tools. The
 click samples the rendered preview frame, so the pick sees exactly
 what the user saw.
+
+## White-balance presets (P88)
+
+The Color panel gains a WB preset select next to the auto/picker
+buttons: Tungsten, Fluorescent, Daylight, Cloudy, Shade and Flash as
+named Kelvin/tint pairs (engine range 2000-50000 K / +-150). Choosing
+one runs the new `photos.wb.preset` command, which commits temp+tint as
+ONE history entry (one undo restores both). The select reflects the
+current pair — it shows the preset only when temp and tint match
+exactly, empty otherwise. Command titles (`cmd.photos.wb.preset`) and
+preset labels in all five photos-panels locales.
+
+- `src/lib/photos/wbPresets.ts`: `WB_PRESETS`, `findWbPreset`,
+  `isWbPresetActive`.
+
+Coverage: `wbPresets.test.ts` (range + lookup/active tests);
+`photos-auto.spec.ts` gains a light/dark leg that picks Tungsten (2850
+K, tint 0, select value tracks), then Shade (7500 K), and undoes twice
+back through 2850 to neutral 6500 — one step per preset.

@@ -453,6 +453,7 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `photos.setAdjustment` | Photos: Set an adjustment | Edit | photos |  |
 | `photos.straighten.auto` | Photos: Auto straighten from the estimated horizon | Edit | photos |  |
 | `photos.undo` | Photos: Undo develop step | Edit | photos |  |
+| `photos.wb.preset` | Photos: Apply a white-balance preset | Edit | photos |  |
 | `problems.toggle` | Toggle problems | Tools | core | `Mod+J` |
 | `project.closeAll` | Close all files | Project | core |  |
 | `project.export` | Export project... | Project | core |  |

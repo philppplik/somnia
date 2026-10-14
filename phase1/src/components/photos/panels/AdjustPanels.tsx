@@ -4,6 +4,8 @@ import {PHOTO_CONTROLS,neutralPhotoSettings} from '../../../lib/photos/studioSet
 import {commitPhotoSettings} from '../../../lib/photos/studioSession';
 import {deriveAutoTone,deriveAutoWhiteBalance} from '../../../lib/photos/autoTone';
 import {Button} from '../../ui/button';
+import {NativeSelect} from '../../ui/native-controls';
+import {isWbPresetActive,WB_PRESETS} from '../../../lib/photos/wbPresets';
 import {usePanelState} from '../../../store/panelStateStore';
 import {PanelBody,SectionHead,SettingSlider,isBusy,runPhotos} from './shared';
 export type AdjustSection='light'|'color'|'effects'|'detail';
@@ -23,6 +25,10 @@ export function AdjustSectionBody({section,auto}:{section:AdjustSection;auto?:'t
   return <fieldset disabled={isBusy(session)} className="m-0 grid min-w-0 gap-3 border-0 p-0">
    <SectionHead>
     {auto&&<Button size="tiny" variant="outline" disabled={!frame} onClick={runAuto} data-testid={`photos-${section}-auto`} aria-label={t(`photos.p.auto.${auto}`)}><WandSparkles size={11}/>{t(`photos.p.auto.${auto}`)}</Button>}
+    {auto==='wb'&&<NativeSelect value={WB_PRESETS.find(p=>isWbPresetActive(session.now,p))?.id??''} disabled={isBusy(session)} aria-label={t('photos.p.wbPreset')} title={t('photos.p.wbPreset')} onChange={e=>{if(e.currentTarget.value)void runPhotos('photos.wb.preset',{preset:e.currentTarget.value});}} className="h-6" data-testid="photos-wb-preset">
+     <option value="">{t('photos.p.wbPreset')}</option>
+     {WB_PRESETS.map(p=><option key={p.id} value={p.id}>{t(p.labelKey)}</option>)}
+    </NativeSelect>}
     {auto==='wb'&&<Button size="tiny" variant="outline" disabled={!frame} aria-pressed={wbPicker} onClick={()=>setWbPicker(!wbPicker)} data-testid="photos-color-wb-picker" aria-label={t('photos.p.auto.wbPicker')} title={t('photos.p.auto.wbPicker')}><Pipette size={11}/>{t('photos.p.auto.wbPicker')}</Button>}
     {session.status==='processing'&&<span className="text-ink-3" role="status">{t('photos.processing')}</span>}
     <Button size="tiny" variant="outline" disabled={!changed} onClick={()=>void runPhotos('photos.resetAdjustments',{section})} data-testid={`photos-${section}-reset`} aria-label={t('photos.p.resetSection',{section:t(`photos.section.${section}`)})}><RotateCcw size={11}/>{t('photos.p.reset')}</Button>

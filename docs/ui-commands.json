@@ -4993,6 +4993,20 @@
       "hasEnabled": true
     },
     {
+      "id": "photos.wb.preset",
+      "title": "Photos: Apply a white-balance preset",
+      "category": "Edit",
+      "source": "photos",
+      "keywords": [
+        "kelvin",
+        "photos",
+        "tint",
+        "wb",
+        "white balance"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "problems.toggle",
       "title": "Toggle problems",
       "category": "Tools",

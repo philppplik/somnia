@@ -13,6 +13,7 @@ import {exportPhotoCopyAdvanced} from './studioSession';
 import {PHOTO_EXPORT_DEFAULTS,photoOptionsToValues,valuesToPhotoOptions,type PhotoAdvancedOptions} from './photosExportSchema';
 import {isNeutralPhoto,neutralPhotoSettings,PHOTO_CONTROLS,type PhotoSettings} from './studioSettings';
 import {applyLook,BUILT_IN_PRESETS,LOOK_KEYS,type Look} from './presets';
+import {findWbPreset,WB_PRESETS} from './wbPresets';
 import {decodeSettingsPayload} from './settingsClipboard';
 import {aspectRatio,CROP_ASPECTS,fitAspect,isCropAspect,orientedSize,outputSize,swapAspect,type CropAspect} from './cropAspect';
 import {estimateHorizon} from './autoStraighten';
@@ -74,6 +75,10 @@ export function photosCommandSpecs():CommandSpec<never,unknown>[]{
     if(p.preset){const b=BUILT_IN_PRESETS.find(x=>x.id===p.preset);if(!b)throw Error(`Unknown preset: ${p.preset}`);look=b.look;}
     if(!look)throw Error('Give a preset id or a look.');
     const l=look;commitPhotoSettings(name,s=>applyLook(s,l));}},
+  {id:'photos.wb.preset',title:'Photos: Apply a white-balance preset',category:'Edit',level:'ui',keywords:['photos','white balance','wb','kelvin','tint'],
+   params:{type:'object',properties:{preset:{type:'string',enum:WB_PRESETS.map(p=>p.id)}},required:['preset'],additionalProperties:false},enabled:ready,
+   run:(p:{preset:string})=>{const b=findWbPreset(p.preset);if(!b)throw Error(`Unknown preset: ${p.preset}`);
+    commitPhotoSettings(need(),s=>({...s,temp:b.temp,tint:b.tint}));}}, // one commit: temp+tint land as a single history entry
   {id:'photos.applyVersion',title:'Photos: Apply a saved version',category:'Edit',level:'ui',keywords:['photos','version','snapshot','history'],
    params:{type:'object',properties:{payload:{type:'object'}},required:['payload'],additionalProperties:false},enabled:ready,
    run:(p:{payload:unknown})=>{const s=decodeSettingsPayload(p.payload);if(!s)throw Error('Malformed version payload.');commitPhotoSettings(need(),()=>s);}},
