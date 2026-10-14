@@ -2,13 +2,14 @@ import type {InterfaceAsset} from '../interface/schema';
 import {validateAnimationAssets} from './assetsValidation';
 import type {AudioAsset} from './audioCore';
 import {frameToTick,validRate,type Rational,TICKS_PER_SECOND} from './time';
+import {TRANSFORM_KEYS} from './keyTypes';
+import type {Vec2,PropValue,Interp,TransformKey} from './keyTypes';
+export {TRANSFORM_KEYS} from './keyTypes';
+export type {Vec2,PropValue,Interp,TransformKey} from './keyTypes';
 /** Authoritative, serialisable, versioned composition document (concept section 4). View state lives elsewhere. */
 export const SCHEMA_VERSION=1;
 export const ENGINE_VERSION='p5-shapes';
-export type Vec2=readonly [number,number];
-export type PropValue=number|Vec2;
 export type PropType='scalar'|'vec2';
-export type Interp='hold'|'linear'|'bezier';
 /** Temporal ease handles in CSS cubic-bezier form: `out` belongs to this key, `in` to the next key of the segment. */
 /** `sIn`/`sOut` are spatial tangents (offsets from the key value, vec2 properties only). Absent or [0,0] means a straight spatial segment. */
 export interface Keyframe{t:number;v:PropValue;interp:Interp;out:readonly [number,number];in:readonly [number,number];sIn?:Vec2;sOut?:Vec2;channelOut?:readonly [Vec2,Vec2];channelIn?:readonly [Vec2,Vec2]}
@@ -32,8 +33,6 @@ export const textFontStack=(font:TextFont|undefined):string=>TEXT_FONTS[font&&fo
 /** Audio layer parameters. The clip plays file time `trimIn + (t - (inT + offset))` for comp time t inside [inT+offset, outT+offset). `volume` is a percent (0..200) keyed in composition time. */
 export interface AudioParams{assetId:string;trimIn:number;volume:Property}
 export interface Transform{anchor:Property;position:Property;scale:Property;rotation:Property;opacity:Property}
-export const TRANSFORM_KEYS=['anchor','position','scale','rotation','opacity'] as const;
-export type TransformKey=typeof TRANSFORM_KEYS[number];
 export interface LayerSource{color?:string;width?:number;height?:number;text?:string;size?:number;font?:TextFont;shape?:'rect'|'ellipse'|'path'|'roundedRect'|'star'|'polygon';radius?:number;sides?:number;innerRatio?:number;gradient?:{start:string;end:string;angle:number};path?:{points:readonly {x:number;y:number}[];closed:boolean};assetId?:string}
 export interface LayerEffect{id:string;kind:'blur'|'tint';enabled:boolean;amount:number;color:string;animation?:Property;colorKeys?:readonly {t:number;color:string}[];bypassKeys?:readonly {t:number;bypass:boolean}[]}
 export interface Layer{id:string;name:string;kind:LayerKind;source:LayerSource;inT:number;outT:number;offset:number;parent:string|null;transform:Transform;visible:boolean;solo:boolean;locked:boolean;effects?:readonly LayerEffect[];audio?:AudioParams;textReveal?:Property;animators?:readonly TextAnimator[];masks?:readonly LayerMask[];matte?:LayerMatte;stroke?:{color:string;width:number;trim?:Property;dash?:Property}}

@@ -1,4 +1,4 @@
-import type {Interp,PropValue,TransformKey} from './model';
+import type {Interp,PropValue,TransformKey} from './keyTypes';
 /** Motion preset model and validation: a leaf module so document validation (model.ts) does not pull in the library. */
 /** One animated property of a motion preset: keys with times relative to the preset start. `rel` values are offsets from the layer's value at the start; absolute ones replace it. */
 export interface MotionTrack{prop:TransformKey;rel:boolean;keys:readonly {dt:number;v:PropValue;interp:Interp;out:readonly [number,number];in:readonly [number,number]}[]}
