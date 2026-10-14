@@ -726,3 +726,28 @@ export function removePicture(bytes:Uint8Array,slideId:number,shapeId:number):Ui
     if(!as||as.problems.length||as.shapes.length!==keep.length||as.shapes.some((s,i)=>s.id!==keep[i].id)||after.runs.length!==p.model.runs.length)throw Error('Edited deck failed verification');
   });
 }
+
+/* ---------------------------------------------------------------------------------------
+ * Speaker notes (read only). Only the body placeholder of the notes page is read; the slide
+ * image, slide number and header placeholders are not notes.
+ * ------------------------------------------------------------------------------------- */
+export const MAX_NOTES_CHARS=20000,MAX_NOTES_PARAGRAPHS=200;
+export function readSlideNotes(bytes:Uint8Array,slideId:number):string[]{
+  const zip=openPackage(bytes),slide=readDeckModel(bytes).slides.find(s=>s.id===slideId);
+  if(!slide)throw Error('Slide not found');
+  const rel=readRels(zip,slide.part).find(r=>!r.external&&r.type===RT+'notesSlide');
+  if(!rel)return [];
+  let part:string;try{part=resolve(slide.part,rel.target);}catch{return [];}
+  if(!/^ppt\/notesSlides\/notesSlide\d+\.xml$/.test(part)||!zip[part])return [];
+  const xml=text(zip,part),out:string[]=[];let chars=0;
+  for(const sp of xml.match(/<p:sp\b[\s\S]*?<\/p:sp>/g)??[]){
+    if(!/<p:ph\b[^>]*\stype="body"/.test(sp))continue;
+    for(const p of sp.match(/<a:p\b[\s\S]*?<\/a:p>/g)??[]){
+      const line=[...p.matchAll(/<a:t(?:\s[^>]*)?>([\s\S]*?)<\/a:t>|<a:br\s*\/>/g)].map(m=>m[1]===undefined?'\n':dec(m[1])).join('');
+      chars+=line.length;if(chars>MAX_NOTES_CHARS||out.length>=MAX_NOTES_PARAGRAPHS)return out;
+      out.push(line);
+    }
+  }
+  while(out.length&&!out[out.length-1].trim())out.pop();
+  return out;
+}

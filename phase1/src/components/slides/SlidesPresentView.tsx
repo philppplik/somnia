@@ -4,11 +4,13 @@ import {commandDispatcher} from '../../lib/commandDispatcher';
 import {useSlidesSession,exitSlidesPresentation,getPresentationReturnFocus} from '../../lib/slides/session';
 import {presentationKey} from '../../lib/slides/presentKeyboard';
 import {useSlidesPanelText} from '../../lib/slides/panelI18n';
+import {Button} from '../ui/button';
+import {SlidesSpeakerPanel,useSpeakerTimer} from './SlidesSpeakerPanel';
 
 /** No animations or transitions: reduced-motion users get the exact same static presentation. */
 export function SlidesPresentView(){
  const s=useSlidesSession(),t=useSlidesPanelText();const root=useRef<HTMLDivElement>(null);
- const [visible,setVisible]=useState(true),[black,setBlack]=useState(false),[digits,setDigits]=useState('');
+ const [visible,setVisible]=useState(true),[black,setBlack]=useState(false),[digits,setDigits]=useState(''),[speaker,setSpeaker]=useState(false);const clock=useSpeakerTimer(s.index);
  const timer=useRef<ReturnType<typeof setTimeout>|undefined>(undefined);
  const move=()=>{setVisible(true);clearTimeout(timer.current);timer.current=setTimeout(()=>{if(!root.current?.querySelector('button:focus'))setVisible(false);},2200);};
  const go=(index:number)=>{setBlack(false);setDigits('');if(!s.busy&&index!==s.index)void commandDispatcher.runCommand('slides.showSlide',{index},{origin:'ui'}).catch(()=>{});};
@@ -36,6 +38,7 @@ export function SlidesPresentView(){
    if(event.key==='Escape'){exit();return;}
    // Space/Enter on a focused control should activate that control, never advance twice.
    if(document.activeElement instanceof HTMLButtonElement&&[' ','Enter'].includes(event.key)){document.activeElement.click();return;}
+   if(event.key.toLowerCase()==='n'){setSpeaker(v=>!v);return;}
    const next=presentationKey(event.key,{index:s.index,count:s.summary?.slides??0,black,digits});
    if(next){setBlack(next.black);setDigits(next.digits);if(next.index!==s.index)go(next.index);}
   };
@@ -48,10 +51,12 @@ export function SlidesPresentView(){
   {s.busy&&<p role="status" style={{position:'absolute',top:16}}>{t('slides.present.rendering')}</p>}
   {s.error&&<p role="alert" style={{position:'absolute',top:16,padding:12,background:'#222'}}>{s.error}</p>}
   {digits&&<p role="status" style={{position:'absolute',top:16}}>{t('slides.present.jump',{number:digits})}</p>}
+  {speaker&&<SlidesSpeakerPanel bytes={s.working} slideId={s.slideIds[s.index]} next={s.thumbnails[s.index+1]} timer={clock}/>}
   <nav aria-label={t('slides.present.controls')} onFocus={()=>setVisible(true)} onClick={e=>e.stopPropagation()} style={{position:'absolute',bottom:24,display:'flex',gap:12,alignItems:'center',padding:'10px 16px',borderRadius:25,background:'#202024',opacity:visible?1:0,pointerEvents:visible?'auto':'none'}}>
    <button aria-label={t('slides.previous')} disabled={s.busy||s.index===0} onClick={()=>go(s.index-1)} className="rounded-lg px-3 py-2 hover:bg-white/15 disabled:opacity-40">←</button>
    <span>{counter}</span>
    <button aria-label={t('slides.next')} disabled={s.busy||s.index>=count-1} onClick={()=>go(s.index+1)} className="rounded-lg px-3 py-2 hover:bg-white/15 disabled:opacity-40">→</button>
+   <Button size="compact" variant={speaker?'primary':'ghost'} aria-pressed={speaker} onClick={()=>setSpeaker(v=>!v)}>{t('slides.speaker.toggle')}</Button>
    <button onClick={exit} className="rounded-lg px-3 py-2 hover:bg-white/15">{t('cmd.slides.present.exit')}</button>
   </nav>
  </div>,document.body);

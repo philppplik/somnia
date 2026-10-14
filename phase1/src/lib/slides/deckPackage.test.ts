@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {readFileSync,readdirSync} from 'node:fs';
 import {fileURLToPath} from 'node:url';
 import {unzipSync,zipSync,strFromU8,strToU8} from 'fflate';
-import {insertPicture,replacePicture,removePicture,fitImage,formatShapeText,addTextBox,removeTextBox,nextShapeId,setShapeBounds,boundsEditIssue,readDeckModel,moveSlide,reorderSlides,duplicateSlide,deleteSlide,newSlideFromLayout,readLayouts} from './deckPackage';
+import {readSlideNotes,insertPicture,replacePicture,removePicture,fitImage,formatShapeText,addTextBox,removeTextBox,nextShapeId,setShapeBounds,boundsEditIssue,readDeckModel,moveSlide,reorderSlides,duplicateSlide,deleteSlide,newSlideFromLayout,readLayouts} from './deckPackage';
 import {readRuns,makeEditedCopy} from './editCopy';
 import {png,jpeg} from './imageFixtures';
 
@@ -438,4 +438,18 @@ test('committed Rust importer fixtures match the generator (regenerate if the mo
   assert.deepEqual(f('duplicated.pptx'),duplicateSlide(orig,m[0]));
   assert.deepEqual(f('deleted.pptx'),deleteSlide(orig,m[0]));
   assert.deepEqual(f('newslide.pptx'),newSlideFromLayout(orig,layout.part,m[0]));
+});
+
+test('readSlideNotes reads only the body placeholder, decodes entities and bounds output',()=>{
+  const sp=(type:string,body:string)=>`<p:sp><p:nvSpPr><p:cNvPr id="2" name="x"/><p:cNvSpPr/><p:nvPr><p:ph type="${type}"/></p:nvPr></p:nvSpPr><p:txBody>${body}</p:txBody></p:sp>`;
+  const notes=(body:string)=>richDeck(z=>{z['ppt/notesSlides/notesSlide1.xml']=strToU8(`<p:notes xmlns:a="a" xmlns:p="p">${sp('sldImg','<a:p><a:r><a:t>IMAGE</a:t></a:r></a:p>')}${body}${sp('sldNum','<a:p><a:r><a:t>7</a:t></a:r></a:p>')}</p:notes>`);});
+  const b=notes(sp('body','<a:p><a:r><a:t>Say &amp; show</a:t></a:r><a:br/><a:r><a:t>twice</a:t></a:r></a:p><a:p><a:r><a:t>Second</a:t></a:r></a:p><a:p></a:p>'));
+  assert.deepEqual(readSlideNotes(b,256),['Say & show\ntwice','Second']);
+  assert.deepEqual(readSlideNotes(b,257),[]);
+  assert.throws(()=>readSlideNotes(b,999),/Slide not found/);
+  const long=notes(sp('body',`<a:p><a:r><a:t>${'x'.repeat(30000)}</a:t></a:r></a:p>`));assert.deepEqual(readSlideNotes(long,256),[]);
+  const many=notes(sp('body','<a:p><a:r><a:t>l</a:t></a:r></a:p>'.repeat(500)));assert.equal(readSlideNotes(many,256).length,200);
+  const evil=richDeck(z=>{z['ppt/slides/_rels/slide1.xml.rels']=strToU8(strFromU8(z['ppt/slides/_rels/slide1.xml.rels']).replace('../notesSlides/notesSlide1.xml','../../../etc/passwd'));});
+  assert.deepEqual(readSlideNotes(evil,256),[]);
+  assert.deepEqual(readSlideNotes(richDeck(),256),[]);
 });
