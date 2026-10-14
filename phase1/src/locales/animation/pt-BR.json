@@ -923,5 +923,7 @@
  "animation.keys.grid.hint": "Move as keys selecionadas para o múltiplo mais próximo deste número de quadros",
  "cmd.animation.keys.snapToGrid": "Ajustar as keys selecionadas a cada N quadros",
  "animation.keys.tools.time": "Tempo",
- "cmd.animation.keys.selectByValue": "Selecionar as keys com um valor em um intervalo"
+ "cmd.animation.keys.selectByValue": "Selecionar as keys com um valor em um intervalo",
+ "animation.graph.fit": "Ajustar tempo",
+ "animation.graph.fit.hint": "Enquadra o gráfico nas keys desta camada"
 }

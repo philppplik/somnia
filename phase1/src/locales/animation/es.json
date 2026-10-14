@@ -923,5 +923,7 @@
  "animation.keys.grid.hint": "Mueve las keys seleccionadas al múltiplo más cercano de estos fotogramas",
  "cmd.animation.keys.snapToGrid": "Ajustar las keys seleccionadas a cada N fotogramas",
  "animation.keys.tools.time": "Tiempo",
- "cmd.animation.keys.selectByValue": "Seleccionar las keys con un valor en un rango"
+ "cmd.animation.keys.selectByValue": "Seleccionar las keys con un valor en un rango",
+ "animation.graph.fit": "Ajustar tiempo",
+ "animation.graph.fit.hint": "Encuadra el gráfico en las keys de esta capa"
 }

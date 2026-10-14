@@ -923,5 +923,7 @@
  "animation.keys.grid.hint": "Move the selected keys to the nearest multiple of this many frames",
  "cmd.animation.keys.snapToGrid": "Snap the selected keys to every Nth frame",
  "animation.keys.tools.time": "Time",
- "cmd.animation.keys.selectByValue": "Select the keys with a value in a range"
+ "cmd.animation.keys.selectByValue": "Select the keys with a value in a range",
+ "animation.graph.fit": "Fit time",
+ "animation.graph.fit.hint": "Frame the graph on the keys of this layer"
 }

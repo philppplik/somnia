@@ -2,6 +2,7 @@ import {useEffect,useId,useLayoutEffect,useRef,useState,type KeyboardEvent as Re
 import {animationSession} from '../../lib/animation/session';
 import type {Edit} from '../../lib/animation/edit';
 import {PROP_META,TRANSFORM_KEYS,type Composition,type KeyRef,type TransformKey} from '../../lib/animation/model';
+import {graphWindow} from '../../lib/animation/graphWindow';
 import {channelOf,curveSamples,handleToEase,handlesOf,niceStep,valueRange,speedSamples,speedRange,EASE_PRESETS,type Handle} from '../../lib/animation/graph';
 import {clickSelect,sameKey,shiftSelection} from '../../lib/animation/selection';
 import {frameToTick,timecode} from '../../lib/animation/time';
@@ -13,7 +14,7 @@ import {MaskGraph,MaskTargetButtons,maskTargets} from './MaskGraph';
 import {setGraphMixed,setGraphTarget,setMaskClip,useMaskSelection} from '../../lib/animation/maskSelection';
 import {copyTransformKeys,pasteTransformEdits} from '../../lib/animation/keysClipboard';
 import {EaseEditor} from './EaseEditor';
-import {mirrorEase,setGraphMirror,setGraphSnap,snapEase,useGraphTools} from '../../lib/animation/graphTools';
+import {mirrorEase,setGraphFit,setGraphMirror,setGraphSnap,snapEase,useGraphTools} from '../../lib/animation/graphTools';
 import {EASE_LABEL,EASES,fmt,PROP_LABEL} from './format';
 const PAD={l:46,r:12,t:10,b:16};
 function useSize(ref:React.RefObject<HTMLElement|null>){
@@ -47,7 +48,7 @@ export function GraphEditor({comp,layerId,sel,playhead}:{comp:Composition;layerI
  if(!layer||!active)return <div className="grid min-h-0 flex-1 place-items-center p-3 text-ink-3" data-testid="animation-graph-empty">{t(layer?'animation.graph.empty':'animation.graph.noLayer')}</div>;
  const prop=layer.transform[active];const keys=prop.keys;
  const ch:0|1=prop.type==='vec2'&&view.graphChannel===1?1:0;
- const w=size.w,h=size.h;const t0=comp.start,t1=comp.start+comp.duration;
+ const w=size.w,h=size.h;const {t0,t1}=graphWindow(comp.start,comp.duration,comp.fps,keys,gtools.fit);
  const speed=view.graphMode==='speed';
  const range=frozen.current??(speed?speedRange(prop,ch,t0,t1):valueRange(keys,ch));
  const pw=Math.max(10,w-PAD.l-PAD.r),ph=Math.max(10,h-PAD.t-PAD.b);
@@ -136,7 +137,8 @@ export function GraphEditor({comp,layerId,sel,playhead}:{comp:Composition;layerI
   <div className="min-h-0 overflow-auto border-r border-subtle p-1" role="group" aria-label={t('animation.graph.props')}>
    <div className="mb-1 flex gap-1" role="group" aria-label={t('animation.graph.handleTools')}>
     <Button size="tiny" variant={gtools.snap?'outline':'ghost'} aria-pressed={gtools.snap} onClick={()=>setGraphSnap(!gtools.snap)} data-testid="animation-graph-snap">{t('animation.graph.snap')}</Button>
-    <Button size="tiny" variant={gtools.mirror?'outline':'ghost'} aria-pressed={gtools.mirror} onClick={()=>setGraphMirror(!gtools.mirror)} data-testid="animation-graph-mirror">{t('animation.graph.mirror')}</Button></div>
+    <Button size="tiny" variant={gtools.mirror?'outline':'ghost'} aria-pressed={gtools.mirror} onClick={()=>setGraphMirror(!gtools.mirror)} data-testid="animation-graph-mirror">{t('animation.graph.mirror')}</Button>
+    <Button size="tiny" variant={gtools.fit?'outline':'ghost'} aria-pressed={gtools.fit} onClick={()=>setGraphFit(!gtools.fit)} title={t('animation.graph.fit.hint')} data-testid="animation-graph-fit">{t('animation.graph.fit')}</Button></div>
    <div className="mb-2 flex gap-1">{(['value','speed'] as const).map(mode=><Button key={mode} size="tiny" variant={view.graphMode===mode?'outline':'ghost'} onClick={()=>sess.setView({graphMode:mode})} data-testid={`animation-graph-mode-${mode}`}>{t(`animation.graph.${mode}`)}</Button>)}</div>
    {sel.length>0&&<div className="mb-2 flex flex-wrap gap-1" role="group" aria-label={t('animation.ease.group')}>
     {EASES.map(p=><Button key={p} size="tiny" variant="ghost" disabled={layer.locked} onPointerEnter={()=>{const e=EASE_PRESETS[p];try{sess.previewEdits([{type:'keys.interp',keys:[...sel],interp:e.interp,...('out'in e?{out:e.out,in:e.in}:{})}]);}catch{/* stale */}}} onPointerLeave={()=>sess.cancelPreview()} onClick={()=>{const e=EASE_PRESETS[p];try{sess.dispatch({type:'keys.interp',keys:[...sel],interp:e.interp,...('out'in e?{out:e.out,in:e.in}:{})});}catch{/* locked layer */}}} data-testid={`animation-graph-ease-${p}`}>{t(EASE_LABEL[p])}</Button>)}

@@ -923,5 +923,7 @@
  "animation.keys.grid.hint": "Gewählte Keys auf das nächste Vielfache dieser Bildzahl setzen",
  "cmd.animation.keys.snapToGrid": "Gewählte Keys auf jedes N-te Bild ausrichten",
  "animation.keys.tools.time": "Zeit",
- "cmd.animation.keys.selectByValue": "Keys mit einem Wert im Bereich auswählen"
+ "cmd.animation.keys.selectByValue": "Keys mit einem Wert im Bereich auswählen",
+ "animation.graph.fit": "Zeit anpassen",
+ "animation.graph.fit.hint": "Graph auf die Keys dieser Ebene einpassen"
 }

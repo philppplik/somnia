@@ -270,3 +270,11 @@ test('keys by value: scalar keys in the inclusive range, vectors skipped, bad ra
  assert.equal(keysByValue(c,['zz'],0,100).length,0);
  assert.throws(()=>keysByValue(c,['a'],5,1));assert.throws(()=>keysByValue(c,['a'],NaN,1));
 });
+import {graphWindow} from './graphWindow';
+test('graph window: whole comp unless fit, padded and clamped keys span',()=>{
+ const c=findComp(base())!,ks=c.layers.find(l=>l.id==='a')!.transform.position.keys;
+ assert.deepEqual(graphWindow(c.start,c.duration,c.fps,ks,false),{t0:c.start,t1:c.start+c.duration});
+ const w=graphWindow(c.start,c.duration,c.fps,ks,true);
+ assert.ok(w.t0>=c.start&&w.t1<=c.start+c.duration&&w.t1>w.t0&&w.t0<=ks[0].t&&w.t1>=ks[ks.length-1].t);
+ assert.deepEqual(graphWindow(c.start,c.duration,c.fps,ks.slice(0,1),true),{t0:c.start,t1:c.start+c.duration});
+});
