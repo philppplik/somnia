@@ -1887,3 +1887,59 @@ export function setSlideHidden(bytes:Uint8Array,slideId:number,hidden:boolean):U
   const rz=unzipSync(out);for(const key of Object.keys(zip))if(key!==slide.part&&(!rz[key]||rz[key].length!==zip[key].length||rz[key].some((v,i)=>v!==zip[key][i])))throw Error('Edited deck changed an unrelated part');
   return out;
 }
+
+/** Sections (p14:sectionLst): rename, start a new one at a slide, or merge one into its neighbour. Slide order never changes. */
+export const MAX_SECTION_NAME=80;
+export const sectionNameIssue=(n:string)=>!n.trim()||n!==n.trim()?'Section name cannot be empty or padded':n.length>MAX_SECTION_NAME?`Section name is limited to ${MAX_SECTION_NAME} characters`:/[\u0000-\u001f\u007f\ud800-\udfff\ufffe\uffff]/.test(n)?'Section name contains unsupported characters':'';
+export type SectionEdit={kind:'rename';index:number;name:string}|{kind:'add';slideId:number;name:string}|{kind:'remove';index:number};
+const SECTION_EXT='{521415D9-36F7-43E2-AB2F-B90AF26B5E84}',P14_NS='http://schemas.microsoft.com/office/powerpoint/2010/main';
+export function editSections(bytes:Uint8Array,edit:SectionEdit):Uint8Array{
+  if(edit.kind!=='remove'&&sectionNameIssue(edit.name))throw Error(sectionNameIssue(edit.name));
+  const model=readDeckModel(bytes),order=model.slides.map(s=>s.id),zip=openPackage(bytes),pres=text(zip,'ppt/presentation.xml'),sec=sections(pres);
+  let out:string;
+  const idRaw=new Map<number,string>();
+  const list=(ids:number[])=>'<p14:sldIdLst>'+ids.map(i=>idRaw.get(i)??`<p14:sldId id="${i}"/>`).join('')+'</p14:sldIdLst>';
+  if(!sec){
+    if(/sectionLst/.test(pres))throw Error('The section list is in a form that cannot be edited here');
+    if(edit.kind!=='add')throw Error('The deck has no sections');
+    const at=order.indexOf(edit.slideId);if(at<0)throw Error('Slide no longer exists');
+    const mk=(name:string,ids:number[])=>`<p14:section name="${attrEsc(name)}" id="{${crypto.randomUUID().toUpperCase()}}">${list(ids)}</p14:section>`;
+    const body=at===0?mk(edit.name,order):mk('Default Section',order.slice(0,at))+mk(edit.name,order.slice(at));
+    const ext=`<p:ext uri="${SECTION_EXT}"><p14:sectionLst xmlns:p14="${P14_NS}">${body}</p14:sectionLst></p:ext>`;
+    const lists=(pres.match(/<p:extLst\b/g)??[]).length;
+    if(lists>1)throw Error('Presentation has more than one extension list');
+    out=lists===1?pres.replace(/<p:extLst>/,()=>'<p:extLst>'+ext):pres.replace('</p:presentation>',()=>`<p:extLst>${ext}</p:extLst></p:presentation>`);
+  }else{
+    for(const s of sec.items)for(const m of s.list.matchAll(/<p14:sldId\b[^>]*\sid="(\d+)"[^>]*\/>/g))idRaw.set(Number(m[1]),m[0]);
+    if(sec.items.flatMap(s=>s.ids).join()!==order.join())throw Error('Sections do not cover the slides in order');
+    const items=sec.items.map(s=>s.raw),withIds=(i:number,ids:number[])=>sec.items[i].list?sec.items[i].raw.replace(sec.items[i].list,()=>list(ids)):(()=>{throw Error('Empty section cannot be edited here');})();
+    let next:string[];
+    if(edit.kind==='rename'){
+      if(!Number.isInteger(edit.index)||edit.index<0||edit.index>=items.length)throw Error('Section no longer exists');
+      if(sec.items[edit.index].name===edit.name)return bytes;
+      next=items.map((r,i)=>i===edit.index?r.replace(/^<p14:section\b[^>]*>/,tag=>tag.replace(/(\sname=")[^"]*(")/,(_m,a,b)=>a+attrEsc(edit.name)+b)):r);
+    }else if(edit.kind==='add'){
+      const gi=sec.items.findIndex(s=>s.ids.includes(edit.slideId));if(gi<0)throw Error('Slide no longer exists');
+      const g=sec.items[gi],p=g.ids.indexOf(edit.slideId);if(p===0)throw Error('This slide already starts a section');
+      const fresh=`<p14:section name="${attrEsc(edit.name)}" id="{${crypto.randomUUID().toUpperCase()}}">${list(g.ids.slice(p))}</p14:section>`;
+      next=[...items.slice(0,gi),withIds(gi,g.ids.slice(0,p)),fresh,...items.slice(gi+1)];
+    }else{
+      if(!Number.isInteger(edit.index)||edit.index<0||edit.index>=items.length)throw Error('Section no longer exists');
+      if(items.length<2)throw Error('The last section cannot be removed here');
+      const gone=sec.items[edit.index];if(gone.inner.replace(gone.list,'').trim()!=='')throw Error('This section has content that cannot be merged here');
+      if(edit.index>0){const pi=edit.index-1;next=[...items.slice(0,pi),withIds(pi,[...sec.items[pi].ids,...gone.ids]),...items.slice(edit.index+1)];}
+      else next=[withIds(1,[...gone.ids,...sec.items[1].ids]),...items.slice(2)];
+    }
+    const open=/^<p14:sectionLst\b[^>]*>/.exec(sec.block)![0];
+    out=pres.slice(0,sec.index)+open+next.join('')+'</p14:sectionLst>'+pres.slice(sec.index+sec.block.length);
+  }
+  const res=repack(zip,{'ppt/presentation.xml':out}),after=readDeckModel(res);
+  if(JSON.stringify(after.slides.map(s=>[s.id,s.part,s.shapes]))!==JSON.stringify(model.slides.map(s=>[s.id,s.part,s.shapes]))||after.runs.length!==model.runs.length)throw Error('Edited deck failed verification');
+  const got=after.sections;if(!got||got.flatMap(s=>s.ids).join()!==order.join()||got.some(s=>!s.ids.length))throw Error('Edited deck failed verification');
+  const was=model.sections,expect=edit.kind==='rename'?was!.map((s,i)=>i===edit.index?edit.name:s.name):[];
+  if(edit.kind==='rename'&&got.map(s=>s.name).join('\u0001')!==expect!.join('\u0001'))throw Error('Edited deck failed verification');
+  if(edit.kind==='add'&&!got.some(s=>s.name===edit.name&&s.ids[0]===edit.slideId))throw Error('Edited deck failed verification');
+  if(edit.kind==='remove'&&got.length!==was!.length-1)throw Error('Edited deck failed verification');
+  const rz=unzipSync(res);for(const key of Object.keys(zip))if(key!=='ppt/presentation.xml'&&(!rz[key]||rz[key].length!==zip[key].length||rz[key].some((v,i)=>v!==zip[key][i])))throw Error('Edited deck changed an unrelated part');
+  return res;
+}

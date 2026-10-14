@@ -16,7 +16,7 @@ included; the `source` column names the owner. Dynamic sources that stay outside
 
 Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, fr, pt-BR); the gate enforces it.
 
-801 commands. Categories: Edit, Help, Insert, Project, Tools, View.
+804 commands. Categories: Edit, Help, Insert, Project, Tools, View.
 
 | id | title | category | source | shortcut |
 | --- | --- | --- | --- | --- |
@@ -498,6 +498,7 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `shell.rail.show` | Show hidden rail icon | View | core |  |
 | `shell.rail.unpin` | Move rail icon to overflow | View | core |  |
 | `sidebar.toggle` | Toggle sidebar | View | core | `Mod+B` |
+| `slides.addSection` | Start section at slide | Edit | slides |  |
 | `slides.addTextBox` | Add text box | Edit | slides |  |
 | `slides.alignSelection` | Align selected shapes | Edit | slides |  |
 | `slides.alignShape` | Align shape to slide | Edit | slides |  |
@@ -527,7 +528,9 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `slides.present.fromStart` | Present from start | View | slides | `Shift+F5` |
 | `slides.redo` | Redo slide text | Edit | slides |  |
 | `slides.removePicture` | Remove picture | Edit | slides |  |
+| `slides.removeSection` | Remove section | Edit | slides |  |
 | `slides.removeTextBox` | Remove text box | Edit | slides |  |
+| `slides.renameSection` | Rename section | Edit | slides |  |
 | `slides.replaceImage` | Replace image | Edit | slides |  |
 | `slides.saveCopy` | Save presentation copy | Project | slides |  |
 | `slides.selectAllShapes` | Select all shapes | View | slides |  |

@@ -5537,6 +5537,20 @@
       "hasEnabled": true
     },
     {
+      "id": "slides.addSection",
+      "title": "Start section at slide",
+      "category": "Edit",
+      "source": "slides",
+      "keywords": [
+        "add section",
+        "chapter",
+        "group slides",
+        "new section",
+        "section"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "slides.addTextBox",
       "title": "Add text box",
       "category": "Edit",
@@ -5919,6 +5933,20 @@
       "hasEnabled": true
     },
     {
+      "id": "slides.removeSection",
+      "title": "Remove section",
+      "category": "Edit",
+      "source": "slides",
+      "keywords": [
+        "delete section",
+        "merge",
+        "remove",
+        "section",
+        "ungroup slides"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "slides.removeTextBox",
       "title": "Remove text box",
       "category": "Edit",
@@ -5927,6 +5955,19 @@
         "delete",
         "remove",
         "text box"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "slides.renameSection",
+      "title": "Rename section",
+      "category": "Edit",
+      "source": "slides",
+      "keywords": [
+        "chapter",
+        "group slides",
+        "rename",
+        "section"
       ],
       "hasEnabled": true
     },

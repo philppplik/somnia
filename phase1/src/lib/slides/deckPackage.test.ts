@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {readFileSync,readdirSync} from 'node:fs';
 import {fileURLToPath} from 'node:url';
 import {unzipSync,zipSync,strFromU8,strToU8} from 'fflate';
-import {setSlideHidden,readHiddenSlides,setFirstSlideNum,readFirstSlideNum,setSlideFooter,setAllSlideFooters,readSlideFooter,setSlideSize,readSlideSize,setAllSlideBackgrounds,backgroundSummary,setSlideBackground,readSlideBackground,editLayoutBox,readLayoutBoxes,editMasterBox,readMaster,editTheme,readTheme,insertTable,editTable,readTable,setShapeStyle,readShapeStyle,setSlideNotes,groupShapes,ungroupShape,readSlideTransition,setSlideTransition,arrangeShapes,arrangedOrder,setShapesBounds,readSlideNotes,insertPicture,replacePicture,removePicture,fitImage,formatShapeText,addTextBox,removeTextBox,nextShapeId,setShapeBounds,boundsEditIssue,readDeckModel,moveSlide,reorderSlides,duplicateSlide,deleteSlide,newSlideFromLayout,readLayouts} from './deckPackage';
+import {editSections,setSlideHidden,readHiddenSlides,setFirstSlideNum,readFirstSlideNum,setSlideFooter,setAllSlideFooters,readSlideFooter,setSlideSize,readSlideSize,setAllSlideBackgrounds,backgroundSummary,setSlideBackground,readSlideBackground,editLayoutBox,readLayoutBoxes,editMasterBox,readMaster,editTheme,readTheme,insertTable,editTable,readTable,setShapeStyle,readShapeStyle,setSlideNotes,groupShapes,ungroupShape,readSlideTransition,setSlideTransition,arrangeShapes,arrangedOrder,setShapesBounds,readSlideNotes,insertPicture,replacePicture,removePicture,fitImage,formatShapeText,addTextBox,removeTextBox,nextShapeId,setShapeBounds,boundsEditIssue,readDeckModel,moveSlide,reorderSlides,duplicateSlide,deleteSlide,newSlideFromLayout,readLayouts} from './deckPackage';
 import {readRuns,makeEditedCopy} from './editCopy';
 import {png,jpeg} from './imageFixtures';
 
@@ -919,4 +919,22 @@ test('hide slide: set, restore, no-op, other slides and parts untouched, malform
   assert.throws(()=>setSlideHidden(b,99999,true),/no longer exists/);assert.throws(()=>setSlideHidden(b,sid[0],'x' as unknown as boolean));
   const z=unzipSync(c),part=Object.keys(z).find(k=>/slides\/slide\d+\.xml$/.test(k)&&/\sshow="0"/.test(strFromU8(z[k])))!;
   z[part]=strToU8(strFromU8(z[part]).replace('show="0"','show="maybe"'));const odd=zipSync(z);assert.throws(()=>readHiddenSlides(odd),/not readable/);assert.throws(()=>setSlideHidden(odd,sid[0],true),/not readable/);
+});
+
+test('sections: create from none, split, rename, merge up/down; order and other parts untouched; bad input refused',()=>{
+  const b=deck(4),sid=ids(b),names=(x:Uint8Array)=>readDeckModel(x).sections?.map(s=>s.name),grp=(x:Uint8Array)=>readDeckModel(x).sections?.map(s=>s.ids.length);
+  assert.equal(readDeckModel(b).sections,null);
+  assert.throws(()=>editSections(b,{kind:'rename',index:0,name:'A'}),/no sections/);assert.throws(()=>editSections(b,{kind:'remove',index:0}),/no sections/);
+  const one=editSections(b,{kind:'add',slideId:sid[0],name:'All & <in>'});assert.deepEqual(names(one),['All & <in>']);assert.deepEqual(grp(one),[4]);
+  const two=editSections(b,{kind:'add',slideId:sid[2],name:'Part 2'});assert.deepEqual(names(two),['Default Section','Part 2']);assert.deepEqual(grp(two),[2,2]);assert.deepEqual(ids(two),sid);
+  const three=editSections(two,{kind:'add',slideId:sid[1],name:'Mid'});assert.deepEqual(names(three),['Default Section','Mid','Part 2']);assert.deepEqual(grp(three),[1,1,2]);
+  assert.throws(()=>editSections(three,{kind:'add',slideId:sid[1],name:'Again'}),/already starts/);assert.throws(()=>editSections(three,{kind:'add',slideId:99999,name:'X'}),/no longer exists/);
+  const ren=editSections(three,{kind:'rename',index:1,name:'Middle "q"'});assert.deepEqual(names(ren),['Default Section','Middle "q"','Part 2']);assert.equal(editSections(ren,{kind:'rename',index:1,name:'Middle "q"'}),ren);
+  const m1=editSections(ren,{kind:'remove',index:1});assert.deepEqual(names(m1),['Default Section','Part 2']);assert.deepEqual(grp(m1),[2,2]);
+  const m0=editSections(ren,{kind:'remove',index:0});assert.deepEqual(names(m0),['Middle "q"','Part 2']);assert.deepEqual(grp(m0),[2,2]);
+  assert.throws(()=>editSections(one,{kind:'remove',index:0}),/last section/);assert.throws(()=>editSections(ren,{kind:'remove',index:9}),/no longer exists/);assert.throws(()=>editSections(ren,{kind:'rename',index:9,name:'x'}),/no longer exists/);
+  for(const bad of ['',' pad ','x'.repeat(81),'a\nb'])assert.throws(()=>editSections(b,{kind:'add',slideId:sid[0],name:bad}));
+  assert.deepEqual(titles(ren),titles(b));
+  const withSec=deck(3,{sections:[[1],[2,3]]});assert.deepEqual(names(editSections(withSec,{kind:'add',slideId:ids(withSec)[2],name:'Tail'})),['Sec 1','Sec 2','Tail']);
+  const gap=deck(3,{sections:[[1],[3]]});assert.throws(()=>editSections(gap,{kind:'rename',index:0,name:'Z'}),/cover the slides/);
 });

@@ -3,7 +3,7 @@ import {reportError} from '../log';
 import {readDeckDocument,serializeDeck,parseDeck,editedDeckBytes,singleRunEditBytes} from './deckDocument';
 import type {SlidesDiagnostics} from './diagnostics';
 import type {TextRun} from './editCopy';
-import type {LayoutInfo,DeckModel,BoundsBox,RunFormat,ShapeBoundsEdit,ArrangeMode,SlideTransition,ShapeStylePatch,TableEdit,ThemeEdit,SlideBackground,FooterEdit} from './deckPackage';
+import type {LayoutInfo,DeckModel,BoundsBox,RunFormat,ShapeBoundsEdit,ArrangeMode,SlideTransition,ShapeStylePatch,TableEdit,ThemeEdit,SlideBackground,FooterEdit,SectionEdit} from './deckPackage';
 import {installBeforeUnload} from '../closeFlow';
 import {useEffect,useSyncExternalStore} from 'react';
 import {SlidesClient} from './client';
@@ -172,6 +172,7 @@ export const setFirstNumAt=(value:number)=>structuralEdit(async(e,before)=>({byt
 export const setFooterAt=(slideId:number|null,want:FooterEdit)=>structuralEdit(async(e,before)=>({bytes:await e.client.setFooter(before,slideId,want),index:slideId===null?e.state.index:idAt(e,slideId)}));
 export const setSlideSizeAt=(cx:number,cy:number)=>structuralEdit(async(e,before)=>({bytes:await e.client.setSlideSize(before,cx,cy),index:e.state.index}));
 export const setAllBackgroundsAt=(background:{kind:'inherit'}|{kind:'solid';color:string})=>structuralEdit(async(e,before)=>({bytes:await e.client.setAllBackgrounds(before,background),index:e.state.index}));
+export const editSectionAt=(edit:SectionEdit)=>structuralEdit(async(e,before)=>({bytes:await e.client.editSection(before,edit),index:e.state.index}));
 export const setHiddenAt=(slideId:number,hidden:boolean)=>structuralEdit(async(e,before)=>({bytes:await e.client.setHidden(before,slideId,hidden),index:e.state.index}));
 export const setBackgroundAt=(slideId:number,background:SlideBackground)=>structuralEdit(async(e,before)=>({bytes:await e.client.setBackground(before,slideId,background),index:idAt(e,slideId)}));
 export const editLayoutBoxAt=(layoutPart:string,shapeId:number,expected:BoundsBox,next:BoundsBox)=>structuralEdit(async(e,before)=>({bytes:await e.client.editLayoutBox(before,layoutPart,shapeId,expected,next),index:e.state.index}));
