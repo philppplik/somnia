@@ -60,6 +60,7 @@ export function PhotosWorkspace({item}:{item:MediaItem}){
  const healStart=useRef<{x:number;y:number}|null>(null);
  const [dodging,setDodging]=useState(false);
  const [dabR,setDabR]=usePanelState<number>('photos.dodgeRadius',0.05);
+ const dabChain=useRef<{x:number;y:number;r:number}[]|null>(null); // dabs of the in-flight dodge stroke
  const drag=useRef<{pan?:{x:number;y:number;px:number;py:number};crop?:DragMode}|null>(null);
  useEffect(()=>{void openPhoto(item);},[item]);
  usePublishPhotosContext(item.name);
@@ -101,11 +102,18 @@ export function PhotosWorkspace({item}:{item:MediaItem}){
   if(session?.cropping)return; // in crop mode only the overlay handles drag
   (e.target as HTMLElement).setPointerCapture(e.pointerId);
   if(healing){healStart.current=pointerPos(e);return;} // heal mode never pans
-  if(dodging){healStart.current=pointerPos(e);return;} // dodge/burn paints on release
+  if(dodging){const p=pointerPos(e);healStart.current=p;dabChain.current=[{x:p.x,y:p.y,r:dabR}];return;} // dodge/burn paints on release
   drag.current={pan:{x:pan[0],y:pan[1],px:e.clientX,py:e.clientY}};
  };
  const onStageMove=(e:React.PointerEvent)=>{
-  if(healing||dodging){setHealCursor(pointerPos(e));return;}
+  if(healing||dodging){
+   const p=pointerPos(e);setHealCursor(p);
+   if(dodging&&dabChain.current&&shown){ // extend the stroke every half radius (distance in short-side units)
+    const last=dabChain.current[dabChain.current.length-1];
+    if(Math.hypot((p.x-last.x)*fw,(p.y-last.y)*fh)/Math.min(fw,fh)>=dabR/2)dabChain.current.push({x:p.x,y:p.y,r:dabR});
+   }
+   return;
+  }
   const d=drag.current;if(!d?.pan)return;
   setPan(clampPan(d.pan.x+(e.clientX-d.pan.px),d.pan.y+(e.clientY-d.pan.py),scale));
  };
@@ -113,7 +121,11 @@ export function PhotosWorkspace({item}:{item:MediaItem}){
   if(healStart.current){ // heal: drag = manual source, click = auto source; dodge: a dab at the press point
    const start=healStart.current;healStart.current=null;
    const end=pointerPos(e);
-   if(dodging){commitPhotoSettings(item.name,now=>({...now,dabs:[...now.dabs,clampDab({x:start.x,y:start.y,r:dabR})]}));return;}
+   if(dodging){ // one stroke = one commit = one undo step, capped to the dab budget
+    const chain=dabChain.current??[{x:start.x,y:start.y,r:dabR}];dabChain.current=null;
+    commitPhotoSettings(item.name,now=>{const room=Math.max(0,200-now.dabs.length);return room?{...now,dabs:[...now.dabs,...chain.slice(0,room).map(clampDab)]}:now;});
+    return;
+   }
    if(Math.hypot(end.x-start.x,end.y-start.y)>0.01)
     commitPhotoSettings(item.name,now=>({...now,spots:[...now.spots,clampSpot({x:start.x,y:start.y,r:brushR,dx:end.x-start.x,dy:end.y-start.y})]}));
    else if(shown){ // a plain click auto-picks the flattest nearby source disc

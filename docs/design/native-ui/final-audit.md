@@ -203,6 +203,13 @@ through native control primitives, see below.
   no raw controls, ratchets unchanged), unit tests and gallery proof
   added (?view=photos-dodge; canvas bitmaps pixel-identical to the P45
   base).
+- P47a: photos workspace toolbar wraps to a second row instead of
+  squeezing controls (flex-wrap; scoped range-input width rule because
+  the global unlayered input{width:100%} beats tailwind utilities).
+- P47: dodge/burn brush-stroke mode (a drag chains dabs every half
+  radius along the path as ONE settings commit/undo step, capped to the
+  dab budget; click behaviour unchanged), gallery spec extended; canvas
+  bitmaps pixel-identical to the P47a base (0d1037cb).
 
 
 

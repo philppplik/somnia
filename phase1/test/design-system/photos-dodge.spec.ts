@@ -46,6 +46,23 @@ test('dodge/burn: -100 saturation greys the masked disc',async({page})=>{
  await page.waitForTimeout(800);
  expect(await canvasBitmap(page)).toEqual(before);
 });
+test('dodge/burn: a drag paints a dab chain as one undo step',async({page})=>{
+ const{before}=await dabAtCenter(page);
+ await page.getByTestId('photos-dodge-amount').fill('0.7');
+ const box=await page.getByTestId('photos-canvas').boundingBox();
+ const at=(nx:number,ny:number):[number,number]=>[box!.x+nx*box!.width,box!.y+ny*box!.height];
+ await page.mouse.move(...at(0.25,0.5));
+ await page.mouse.down();
+ await page.mouse.move(...at(0.75,0.5),{steps:10});
+ await page.mouse.up();
+ await page.waitForTimeout(800);
+ const[r1]=await pixel(page,84,80); // 0.35 along the stroke
+ const[r2]=await pixel(page,156,80); // 0.65 along the stroke
+ expect(r1).toBeGreaterThan(150);expect(r2).toBeGreaterThan(150);
+ await page.getByTestId('photos-undo').click(); // ONE undo clears the whole stroke
+ await page.waitForTimeout(800);
+ expect(await canvasBitmap(page)).toEqual(before);
+});
 test('dodge/burn mode renders in light and dark',async({page})=>{
  for(const theme of['light','dark']){
   await page.goto('/test/design-system/?view=photos-dodge');
