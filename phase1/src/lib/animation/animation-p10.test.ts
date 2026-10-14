@@ -159,8 +159,8 @@ test('P12: box and point drags are single edits; handle maths is bounded',()=>{
 });
 test('P12: mask selection falls back to the first mask of the layer',()=>{
  const d=keyed();const l=layer(d,'photo');
- selectMask(null,null);assert.equal(activeMask(l,{layer:null,mask:null,point:null,pen:false,clip:null,graph:null})!.id,'m');
- assert.equal(activeMask(l,{layer:'other',mask:'zzz',point:null,pen:false,clip:null,graph:null})!.id,'m');assert.equal(activeMask(undefined,{layer:null,mask:null,point:null,pen:false,clip:null,graph:null}),undefined);
+ selectMask(null,null);assert.equal(activeMask(l,{layer:null,mask:null,point:null,pen:false,clip:null,graph:null,mixed:false})!.id,'m');
+ assert.equal(activeMask(l,{layer:'other',mask:'zzz',point:null,pen:false,clip:null,graph:null,mixed:false})!.id,'m');assert.equal(activeMask(undefined,{layer:null,mask:null,point:null,pen:false,clip:null,graph:null,mixed:false}),undefined);
 });
 
 const penned=()=>{let d=base();d=applyEdit(d,maskEdit(d,'photo',{op:'add',id:'p'}));
