@@ -7,6 +7,8 @@ const clamp=(v:number,min:number,max:number)=>Math.min(max,Math.max(min,v));
 function constrained(pos:number,size:number,current:number,base:number,mode:ConstraintMode):[number,number]{const delta=current-base;return mode==='end'?[pos+delta,size]:mode==='center'?[pos+delta/2,size]:mode==='stretch'?[pos,Math.max(1,size+delta)]:mode==='scale'?[pos*current/base,Math.max(1,size*current/base)]:[pos,size];}
 const packInterfaceGrid=(children:InterfaceNode[],columns:number)=>{const rows:{child:InterfaceNode;col:number;span:number}[][]=[];for(const child of children){const span=Math.min(columns,Math.max(1,Math.round(child.span??1)));let row=rows.at(-1);let col=row?row.reduce((sum,c)=>sum+c.span,0):0;if(!row||col+span>columns){row=[];rows.push(row);col=0;}row.push({child,col,span});}return rows;};
 /** One deterministic, bounded layout interpretation. Bounds are caches, never source content. */
+/** Approximate distance from a child's top edge to its baseline: text uses 0.8 of its line box (rendered text-before-edge); other layers align their bottom edge, matching design-tool baseline behaviour. */
+const baselineOffset=(doc:InterfaceDocument,n:InterfaceNode,crossSize:number):number=>{if(n.kind!=='text')return crossSize;const style=resolvedTextStyle(doc,n);return style.fontSize*style.lineHeight*0.8;};
 export function computeInterfaceLayout(doc:InterfaceDocument):LayoutResult{
  const resolved=resolveInterfaceValues(doc);doc=resolved.document;
  const nodes=new Map(doc.nodes.map(n=>[n.id,n])),bounds=new Map<string,LayoutBounds>(),diagnostics:string[]=[...resolved.diagnostics];
@@ -63,7 +65,8 @@ export function computeInterfaceLayout(doc:InterfaceDocument):LayoutResult{
     if(cz[crossMode]==='fill'&&z[crossMode]==='hug')diagnostics.push(`Frame ${n.name}: parent Hug / child Fill uses the child's intrinsic size.`);
     if((cz[crossMode]==='fill'&&z[crossMode]!=='hug')||l.align==='stretch')crossSize=clamp(lineCross,cz[horizontal?'minHeight':'minWidth'],cz[horizontal?'maxHeight':'maxWidth']);
     if(child.aspectRatio)crossSize=clamp(main/child.aspectRatio,horizontal?cz.minHeight:cz.minWidth,horizontal?cz.maxHeight:cz.maxWidth);
-    const align=l.align==='center'?(lineCross-crossSize)/2:l.align==='end'?lineCross-crossSize:0;
+    let align=l.align==='center'?(lineCross-crossSize)/2:l.align==='end'?lineCross-crossSize:0;
+    if(l.align==='baseline'&&horizontal){const baselines=line.map(c=>baselineOffset(doc,c,measure(c)[1]));align=Math.max(...baselines)-baselineOffset(doc,child,crossSize);}
     place(child,{x:horizontal?offset:crossOffset+align,y:horizontal?crossOffset+align:offset,width:horizontal?main:crossSize,height:horizontal?crossSize:main},depth+1);offset+=main+l.gap+extra;
    });crossOffset+=lineCross+cg;
   }
