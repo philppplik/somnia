@@ -510,5 +510,21 @@
  "studio3d.mirror.off": "Remove mirror",
  "studio3d.mirror.active": "Mirrored across {axis}. Applied on export.",
  "studio3d.edit.segments": "Bevel segments",
- "studio3d.mirror.bisect": "Bisect: cut away the far side"
+ "studio3d.mirror.bisect": "Bisect: cut away the far side",
+ "cmd.studio3d.uv.seam": "Mark UV seam",
+ "cmd.studio3d.uv.unwrap": "Unwrap UVs",
+ "cmd.studio3d.uv.planar": "Planar UV projection",
+ "cmd.studio3d.uv.preview": "UV checker preview",
+ "studio3d.uvtools.title": "UV",
+ "studio3d.uvtools.counts": "{islands} islands, {seams} seams",
+ "studio3d.uvtools.mark": "Mark seams",
+ "studio3d.uvtools.unmark": "Clear seams",
+ "studio3d.uvtools.edgeHint": "Switch to edge mode to mark seams.",
+ "studio3d.uvtools.unwrap": "Unwrap",
+ "studio3d.uvtools.axis": "Projection axis",
+ "studio3d.uvtools.planar": "Planar project",
+ "studio3d.uvtools.preview": "Checker preview",
+ "studio3d.uvtools.islands": "UV islands",
+ "studio3d.uvtools.tooLarge": "The UV view is skipped for meshes with more than 4000 triangles.",
+ "studio3d.uvtools.noUv": "No UVs yet: unwrap or project to create them."
 }

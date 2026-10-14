@@ -588,3 +588,95 @@ test('multi-segment bevel runs through edit mode with one undo',()=>{
  assert.ok(tri(stage)>=t0+8,`4-segment bevel adds a strip: ${t0} -> ${tri(stage)}`);
  stage.undo();assert.equal(tri(stage),t0);
 });
+
+test('uv seams: mark finds coincident copies, clear and undo restore them',()=>{
+ const stage=new Stage();const o=stage.addPrimitive('cube') as THREE.Mesh;
+ stage.editStart(o.id);
+ assert.throws(()=>stage.uvSeamMark(true),/Select edges/);
+ stage.editSelect('edge',[[0,2]]); // the shared +x/+z vertical edge of the box
+ stage.uvSeamMark(true);
+ assert.equal(stage.seamsOf(o).length,2,'unwelded box: both coincident copies are marked');
+ assert.throws(()=>stage.uvSeamMark(true),/already seams/);
+ assert.equal(stage.info(o.id)!.uv!.seams,2);
+ stage.undo();assert.equal(stage.seamsOf(o).length,0);
+ stage.redo();assert.equal(stage.seamsOf(o).length,2);
+ stage.uvSeamMark(false);assert.equal(stage.seamsOf(o).length,0);
+ stage.undo();assert.equal(stage.seamsOf(o).length,2);
+ stage.editEnd();
+});
+
+test('uv unwrap splits vertices along seams, keeps attributes, one undo restores everything',()=>{
+ const stage=new Stage();const o=stage.addPrimitive('cube') as THREE.Mesh;
+ const g0=o.geometry;
+ // a sculpt mask attribute must survive the vertex split
+ const mask=new Float32Array(g0.getAttribute('position').count).fill(0.5);
+ g0.setAttribute('somniaMask',new THREE.BufferAttribute(mask,1));
+ stage.editStart(o.id);
+ const pos=g0.getAttribute('position'),idx=g0.getIndex()!;
+ const edges:[number,number][]=[];
+ for(let f=0;f<idx.count;f+=3)for(let e=0;e<3;e++){
+  const a=idx.getX(f+e),b=idx.getX(f+(e+1)%3);
+  const ya=pos.getY(a),yb=pos.getY(b);
+  if(ya!==0.5||yb!==0.5)continue;
+  const mx=(pos.getX(a)+pos.getX(b))/2,mz=(pos.getZ(a)+pos.getZ(b))/2;
+  if(Math.abs(mx)===0.5||Math.abs(mz)===0.5)edges.push([Math.min(a,b),Math.max(a,b)]);
+ }
+ assert.equal(edges.length,8,'four border edges, two copies each on the unwelded box');
+ stage.editSelect('edge',edges);
+ stage.uvSeamMark(true);
+ assert.equal(stage.seamsOf(o).length,8);
+ assert.throws(()=>stage.uvUnwrap(o.id),/edit mode/);
+ stage.editEnd();
+ stage.uvUnwrap(o.id);
+ const g1=o.geometry;
+ assert.notEqual(g1,g0);
+ assert.ok(g1.getAttribute('uv'),'uv attribute written');
+ assert.ok(g1.getAttribute('position').count>=24,'vertices split along seams');
+ assert.equal(g1.getAttribute('somniaMask')!.count,g1.getAttribute('position').count,'mask follows the split');
+ assert.equal(stage.info(o.id)!.uv!.islands,2,'top face is its own island');
+ assert.equal(stage.seamsOf(o).length,8,'seams re-found on the split copies (one per island side)');
+ stage.undo();
+ assert.equal(o.geometry,g0,'undo restores the original geometry object');
+ assert.equal(stage.seamsOf(o).length,8);
+ stage.redo();
+ assert.equal(o.geometry,g1);
+});
+
+test('uv planar projects to 0..1 without splitting welded vertices',()=>{
+ const stage=new Stage();const o=stage.addPrimitive('cube') as THREE.Mesh;
+ stage.uvPlanar(o.id,'z');
+ const uv=o.geometry.getAttribute('uv')!;
+ assert.equal(uv.count,o.geometry.getAttribute('position').count,'no splits: one uv per vertex');
+ for(let i=0;i<uv.count;i++){assert.ok(uv.getX(i)>=0&&uv.getX(i)<=1&&uv.getY(i)>=0&&uv.getY(i)<=1);}
+ assert.equal(stage.info(o.id)!.uv!.hasUv,true);
+ stage.undo();stage.redo();
+ assert.throws(()=>stage.uvUnwrap(99999),StageError);
+});
+
+test('uv layout is read-only and null without uvs',()=>{
+ const stage=new Stage();const o=stage.addPrimitive('cube') as THREE.Mesh;
+ const layout=stage.uvLayout(o.id);
+ assert.ok(layout,'a fresh cube already has uvs');
+ assert.equal(layout!.uv.length,o.geometry.getIndex()!.count,'one uv pair per face corner');
+ assert.equal(layout!.islands.length,12);
+ const uv0=JSON.stringify(layout!.uv);
+ assert.equal(JSON.stringify(stage.uvLayout(o.id)!.uv),uv0,'repeated reads do not mutate');
+ o.geometry.deleteAttribute('uv');
+ assert.equal(stage.uvLayout(o.id),null);
+ assert.equal(stage.info(o.id)!.uv!.hasUv,false);
+ assert.equal(stage.info(o.id)!.uv!.islands,0);
+});
+
+test('uv seams survive an edit op that keeps their edges',()=>{
+ const stage=new Stage();const o=stage.addPrimitive('cube') as THREE.Mesh;
+ stage.editStart(o.id);
+ stage.editSelect('edge',[[12,14]]); // a bottom (-y) border edge of the box
+ stage.uvSeamMark(true);
+ assert.equal(stage.seamsOf(o).length,2);
+ stage.editSelect('face',[4,5]);stage.editSelect('edge',[[12,14]],true);
+ stage.editExtrude(0.5); // rebuilds geometry; the bottom edge stays put
+ assert.equal(stage.seamsOf(o).length,2,'seam re-found geometrically after the rebuild');
+ stage.undo();
+ assert.equal(stage.seamsOf(o).length,2,'undo keeps the seam too');
+ stage.editEnd();
+});

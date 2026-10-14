@@ -510,5 +510,21 @@
  "studio3d.mirror.off": "Quitar espejo",
  "studio3d.mirror.active": "Espejado en {axis}. Se aplica al exportar.",
  "studio3d.edit.segments": "Segmentos de bisel",
- "studio3d.mirror.bisect": "Bisect: cortar el lado lejano"
+ "studio3d.mirror.bisect": "Bisect: cortar el lado lejano",
+ "cmd.studio3d.uv.seam": "Marcar costura UV",
+ "cmd.studio3d.uv.unwrap": "Desplegar UV",
+ "cmd.studio3d.uv.planar": "Proyección UV planar",
+ "cmd.studio3d.uv.preview": "Vista de damero UV",
+ "studio3d.uvtools.title": "UV",
+ "studio3d.uvtools.counts": "{islands} islas, {seams} costuras",
+ "studio3d.uvtools.mark": "Marcar costuras",
+ "studio3d.uvtools.unmark": "Quitar costuras",
+ "studio3d.uvtools.edgeHint": "Cambia al modo de aristas para marcar costuras.",
+ "studio3d.uvtools.unwrap": "Desplegar",
+ "studio3d.uvtools.axis": "Eje de proyección",
+ "studio3d.uvtools.planar": "Proyectar en plano",
+ "studio3d.uvtools.preview": "Vista de damero",
+ "studio3d.uvtools.islands": "Islas UV",
+ "studio3d.uvtools.tooLarge": "La vista UV se omite en mallas con más de 4000 triángulos.",
+ "studio3d.uvtools.noUv": "Aún no hay UV: despliega o proyecta para crearlas."
 }

@@ -96,6 +96,10 @@ export interface Studio3DController{
  editLoopSlide(factor:number):void;
  mirrorMod(id:number,axis:'x'|'y'|'z',merge:number,on:boolean,bisect?:boolean):void;
  sculptMaskClear(id:number):void;
+ uvSeamMark(mark:boolean):void;
+ uvUnwrap(id:number):void;
+ uvPlanar(id:number,axis:'x'|'y'|'z'):void;
+ setUvChecker(on:boolean):void;
  sculptBrush(patch:Partial<{on:boolean;brush:'grab'|'smooth'|'inflate'|'crease'|'pinch'|'flatten'|'mask';radius:number;strength:number;falloff:'smooth'|'linear'|'constant';symmetry:'none'|'x'|'y'|'z'}>):void;
  sculptBegin(id:number):void;
  sculptDab(id:number,center:[number,number,number],delta?:[number,number,number],erase?:boolean):void;
@@ -209,6 +213,10 @@ export function studio3DCommandSpecs():CommandSpec<unknown,unknown>[]{
   add<{id:number}>('studio3d.sculpt.begin','Start a sculpt stroke on a 3D mesh','Edit',p=>need().sculptBegin(p.id),object({id:{type:'integer',minimum:0}}),hasScene),
   add<{id:number;x:number;y:number;z:number;dx?:number;dy?:number;dz?:number;erase?:boolean}>('studio3d.sculpt.dab','Apply one sculpt dab with the configured brush (erase removes mask paint)','Edit',p=>need().sculptDab(p.id,[p.x,p.y,p.z],p.dx!==undefined?[p.dx,p.dy??0,p.dz??0]:undefined,!!p.erase),object({id:{type:'integer',minimum:0},x:{type:'number'},y:{type:'number'},z:{type:'number'},dx:{type:'number',minimum:-1000,maximum:1000},dy:{type:'number',minimum:-1000,maximum:1000},dz:{type:'number',minimum:-1000,maximum:1000},erase:{type:'boolean'}}),hasScene),
   add<{id:number}>('studio3d.sculpt.maskClear','Clear the sculpt mask of a 3D mesh','Edit',p=>need().sculptMaskClear(p.id),object({id:{type:'integer',minimum:0}}),hasScene),
+  add<{mark?:boolean}>('studio3d.uv.seam','Mark or clear the selected edges of the edited 3D mesh as UV seams','Edit',p=>need().uvSeamMark(p?.mark??true),object({mark:{type:'boolean'}},[]),()=>getStudio3DState().edit!=null),
+  add<{id:number}>('studio3d.uv.unwrap','Seam-aware box unwrap of a 3D mesh: every island projected along its dominant axis into the 0..1 square','Edit',p=>need().uvUnwrap(p.id),object({id:{type:'integer',minimum:0}}),hasScene),
+  add<{id:number;axis:'x'|'y'|'z'}>('studio3d.uv.planar','Planar UV projection of a 3D mesh along one axis','Edit',p=>need().uvPlanar(p.id,p.axis),object({id:{type:'integer',minimum:0},axis:{enum:['x','y','z']}}),hasScene),
+  add<{on?:boolean}>('studio3d.uv.preview','Show or hide the UV checker texture on the selected 3D mesh','View',p=>need().setUvChecker(p?.on??!getStudio3DState().uvChecker),object({on:{type:'boolean'}},[]),hasScene),
   add<{id:number;axis:'x'|'y'|'z';merge?:number;on:boolean;bisect?:boolean}>('studio3d.mesh.mirrorMod','Toggle the non-destructive mirror modifier of a 3D mesh (applied on export; bisect cuts away the negative side)','Edit',p=>need().mirrorMod(p.id,p.axis,p.merge??0,p.on,!!p.bisect),object({id:{type:'integer',minimum:0},axis:{enum:['x','y','z']},merge:{type:'number',minimum:0,maximum:1000},on:{type:'boolean'},bisect:{type:'boolean'}}),hasScene),
   add('studio3d.sculpt.end','Finish the current sculpt stroke (one undo step)','Edit',()=>need().sculptEnd(),undefined,hasScene),
   add<{id:number;at:PivotAt}>('studio3d.object.pivot','Move the pivot of a 3D mesh','Edit',p=>need().setPivot(p.id,p.at),object({id:{type:'integer',minimum:0},at:{enum:['center','base']}}),hasScene),

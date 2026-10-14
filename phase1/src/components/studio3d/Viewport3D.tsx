@@ -145,9 +145,9 @@ export default function Viewport3D(){
    if(an.clip>=infos.length&&an.clip>0){stopAnim();patchStudio3D({anim:{clip:0,playing:false,time:0,loop:true,speed:1,range:null}});}
    const head=sel==null?null:stage.ikChainHead(sel);const ik=head?{...stage.ikState(head.id)!,root:head.id}:null;
    const fhead=sel==null?null:stage.fabrikChainHead(sel);const fabrik=fhead?{...stage.fabrikState(fhead.id)!,root:fhead.id}:null;
-   patchStudio3D({clips:infos,clipKeys:keys,stats:m.stats,outline:m.outline,bones:stage.bones(),bounds:m.bounds,selected:info?sel:null,selectedInfo:info,poses:sel==null?[]:stage.poseList(sel),ik,fabrik,rigs:stage.bones().filter(b=>b.depth===0).map(b=>({id:b.id,name:b.name})),boneLimits:sel==null?null:stage.boneLimitsOf(sel),dirty:stage.dirty,canUndo:stage.canUndo,canRedo:stage.canRedo,undoLabel:stage.undoLabel});
+   patchStudio3D({clips:infos,clipKeys:keys,stats:m.stats,outline:m.outline,bones:stage.bones(),bounds:m.bounds,selected:info?sel:null,selectedInfo:info,poses:sel==null?[]:stage.poseList(sel),ik,fabrik,rigs:stage.bones().filter(b=>b.depth===0).map(b=>({id:b.id,name:b.name})),boneLimits:sel==null?null:stage.boneLimitsOf(sel),uvView:sel==null?null:stage.uvLayout(sel),dirty:stage.dirty,canUndo:stage.canUndo,canRedo:stage.canRedo,undoLabel:stage.undoLabel});
    syncIk();syncFabrik();syncOnion();syncMotionPath();
-   drawSelection();applyWire(getStudio3DState().wireframe);syncSkeleton();syncWeightPreview();syncMaskOverlay();for(const h of syncHooks)h();invalidate();
+   drawSelection();applyWire(getStudio3DState().wireframe);syncSkeleton();syncWeightPreview();syncMaskOverlay();syncUvChecker();for(const h of syncHooks)h();invalidate();
   };
   const offStage=stage.onChange(()=>{if(!disposed)sync();});
   const frameSelection=()=>{
@@ -409,6 +409,27 @@ export default function Viewport3D(){
     scene.add(maskOverlay);
    }
    if(maskOverlay&&mesh){maskOverlay.position.copy(mesh.position);maskOverlay.quaternion.copy(mesh.quaternion);maskOverlay.scale.copy(mesh.scale);}
+  };
+  // UV checker preview: swaps the selected mesh's material map for a checker texture (view state, restored on off).
+  let checkerTex:THREE.CanvasTexture|null=null;
+  const checkerDone=new Set<THREE.MeshStandardMaterial>();
+  const makeChecker=()=>{
+   const c=document.createElement('canvas');c.width=c.height=128;
+   const ctx=c.getContext('2d')!;const n=8,sq=c.width/n;
+   for(let y=0;y<n;y++)for(let x=0;x<n;x++){ctx.fillStyle=(x+y)%2?'rgb(122,122,122)':'rgb(200,200,200)';ctx.fillRect(x*sq,y*sq,sq,sq);}
+   const t=new THREE.CanvasTexture(c);t.wrapS=t.wrapT=THREE.RepeatWrapping;t.magFilter=THREE.NearestFilter;return t;
+  };
+  const syncUvChecker=()=>{
+   const st=getStudio3DState();
+   const mesh=st.selected==null?null:stage.find(st.selected) as THREE.Mesh|null;
+   const target=st.uvChecker&&mesh&&mesh.isMesh&&!Array.isArray(mesh.material)&&(mesh.material as THREE.MeshStandardMaterial).isMeshStandardMaterial?mesh.material as THREE.MeshStandardMaterial:null;
+   for(const m of[...checkerDone])if(m!==target){
+    m.map=(m.userData.somniaUvPrevMap as THREE.Texture|null|undefined)??null;delete m.userData.somniaUvPrevMap;m.needsUpdate=true;checkerDone.delete(m);
+   }
+   if(target&&!checkerDone.has(target)){
+    if(!checkerTex)checkerTex=makeChecker();
+    target.userData.somniaUvPrevMap=target.map;target.map=checkerTex;target.needsUpdate=true;checkerDone.add(target);
+   }
   };
   const helpers=new Map<number,THREE.CameraHelper>();
   const syncCameraHelpers=()=>{
@@ -849,6 +870,10 @@ export default function Viewport3D(){
    remove:id=>{stage.remove(id);},duplicate:id=>{const o=stage.duplicate(id);select(o.id);return o.id;},undo:()=>stage.undo(),redo:()=>stage.redo(),
    setGrid:on=>{grid.visible=on;patchStudio3D({grid:on});invalidate();},
    setWireframe:on=>{applyWire(on);patchStudio3D({wireframe:on});invalidate();},
+   setUvChecker:on=>{patchStudio3D({uvChecker:on});syncUvChecker();invalidate();},
+   uvSeamMark:mark=>{stage.uvSeamMark(mark);afterEditOp();},
+   uvUnwrap:id=>{stage.uvUnwrap(id);const sel=getStudio3DState().selected;if(sel!=null)patchStudio3D({selectedInfo:stage.info(sel)});sync();invalidate();},
+   uvPlanar:(id,axis)=>{stage.uvPlanar(id,axis);const sel=getStudio3DState().selected;if(sel!=null)patchStudio3D({selectedInfo:stage.info(sel)});sync();invalidate();},
   });
   // Pick by click (no drag) and keyboard orbit/zoom.
   let down:{x:number;y:number}|null=null;const ray=new THREE.Raycaster();

@@ -510,5 +510,21 @@
  "studio3d.mirror.off": "Retirer le miroir",
  "studio3d.mirror.active": "Mis en miroir sur {axis}. Appliqué à l’export.",
  "studio3d.edit.segments": "Segments de biseau",
- "studio3d.mirror.bisect": "Bissect : couper le côté éloigné"
+ "studio3d.mirror.bisect": "Bissect : couper le côté éloigné",
+ "cmd.studio3d.uv.seam": "Marquer une couture UV",
+ "cmd.studio3d.uv.unwrap": "Déplier les UV",
+ "cmd.studio3d.uv.planar": "Projection UV plane",
+ "cmd.studio3d.uv.preview": "Aperçu damier UV",
+ "studio3d.uvtools.title": "UV",
+ "studio3d.uvtools.counts": "{islands} îlots, {seams} coutures",
+ "studio3d.uvtools.mark": "Marquer les coutures",
+ "studio3d.uvtools.unmark": "Effacer les coutures",
+ "studio3d.uvtools.edgeHint": "Passez en mode arête pour marquer les coutures.",
+ "studio3d.uvtools.unwrap": "Déplier",
+ "studio3d.uvtools.axis": "Axe de projection",
+ "studio3d.uvtools.planar": "Projeter à plat",
+ "studio3d.uvtools.preview": "Aperçu damier",
+ "studio3d.uvtools.islands": "Îlots UV",
+ "studio3d.uvtools.tooLarge": "La vue UV est ignorée pour les maillages de plus de 4000 triangles.",
+ "studio3d.uvtools.noUv": "Pas encore d'UV : dépliez ou projetez pour les créer."
 }

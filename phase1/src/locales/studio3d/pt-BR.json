@@ -510,5 +510,21 @@
  "studio3d.mirror.off": "Remover espelho",
  "studio3d.mirror.active": "Espelhado em {axis}. Aplicado na exportação.",
  "studio3d.edit.segments": "Segmentos de chanfro",
- "studio3d.mirror.bisect": "Bissect: cortar o lado distante"
+ "studio3d.mirror.bisect": "Bissect: cortar o lado distante",
+ "cmd.studio3d.uv.seam": "Marcar costura UV",
+ "cmd.studio3d.uv.unwrap": "Desdobrar UVs",
+ "cmd.studio3d.uv.planar": "Projeção UV planar",
+ "cmd.studio3d.uv.preview": "Prévia xadrez de UV",
+ "studio3d.uvtools.title": "UV",
+ "studio3d.uvtools.counts": "{islands} ilhas, {seams} costuras",
+ "studio3d.uvtools.mark": "Marcar costuras",
+ "studio3d.uvtools.unmark": "Limpar costuras",
+ "studio3d.uvtools.edgeHint": "Mude para o modo de arestas para marcar costuras.",
+ "studio3d.uvtools.unwrap": "Desdobrar",
+ "studio3d.uvtools.axis": "Eixo de projeção",
+ "studio3d.uvtools.planar": "Projetar em plano",
+ "studio3d.uvtools.preview": "Prévia xadrez",
+ "studio3d.uvtools.islands": "Ilhas de UV",
+ "studio3d.uvtools.tooLarge": "A vista de UV é omitida em malhas com mais de 4000 triângulos.",
+ "studio3d.uvtools.noUv": "Ainda sem UVs: desdobre ou projete para criá-los."
 }

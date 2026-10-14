@@ -510,5 +510,21 @@
  "studio3d.mirror.off": "Spiegelung entfernen",
  "studio3d.mirror.active": "Gespiegelt über {axis}. Wird beim Export angewendet.",
  "studio3d.edit.segments": "Bevel-Segmente",
- "studio3d.mirror.bisect": "Bisect: ferne Seite abschneiden"
+ "studio3d.mirror.bisect": "Bisect: ferne Seite abschneiden",
+ "cmd.studio3d.uv.seam": "UV-Naht markieren",
+ "cmd.studio3d.uv.unwrap": "UVs abwickeln",
+ "cmd.studio3d.uv.planar": "Plane UV-Projektion",
+ "cmd.studio3d.uv.preview": "UV-Karovorschau",
+ "studio3d.uvtools.title": "UV",
+ "studio3d.uvtools.counts": "{islands} Inseln, {seams} Nähte",
+ "studio3d.uvtools.mark": "Nähte markieren",
+ "studio3d.uvtools.unmark": "Nähte entfernen",
+ "studio3d.uvtools.edgeHint": "Zum Markieren von Nähten in den Kantenmodus wechseln.",
+ "studio3d.uvtools.unwrap": "Abwickeln",
+ "studio3d.uvtools.axis": "Projektionsachse",
+ "studio3d.uvtools.planar": "Planar projizieren",
+ "studio3d.uvtools.preview": "Karovorschau",
+ "studio3d.uvtools.islands": "UV-Inseln",
+ "studio3d.uvtools.tooLarge": "Die UV-Ansicht wird bei Netzen mit mehr als 4000 Dreiecken übersprungen.",
+ "studio3d.uvtools.noUv": "Noch keine UVs: zum Erstellen abwickeln oder projizieren."
 }

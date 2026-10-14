@@ -10,6 +10,7 @@ import {extrudeFaces,insetFaces,bevelVertices,loopCut,bevelEdges,slideEdges,mirr
 import {sculptDab,paintMask,SculptError,type SculptOpts} from './sculpt';
 import {KEY_PATHS,KEY_STRIDE,ClipError,MAX_CLIPS,MAX_KEYS_PER_TRACK,DEFAULT_CLIP_SECONDS,insertKey,removeKey as removeKeyData,findKey,isPlainTrack,trackName,parseTrackName,checkKeyTime,checkDuration,checkClipName,lastKeyTime,type KeyPath} from './clips';
 import {mergeTransform,DEFAULT_TRANSFORM,UvError,type TextureTransform} from './uv';
+import {uvIslands,unwrapBox,planarProject,seamsAround,remapSeams,type UvResult} from './uvUnwrap';
 import {textureBytes} from './validate';
 import {smoothWeights,rigidWeights,paintWeights,SkinError,type BoneSegment,type SkinWeights,type BrushSettings} from './skinning';
 import {checkPoseName,mirrorPose,blendPoses,PoseError,MAX_POSES} from './poses';import type {Pose,PoseBone} from './poses';
@@ -37,6 +38,7 @@ export interface ObjectInfo{
  id:number;name:string;kind:OutlineEntry['kind'];position:Vec3;rotation:Vec3;scale:Vec3;
  /** True for a skinned mesh (bound to a skeleton). */skinned:boolean;
  /** Non-destructive mirror modifier state, if on. */mirror:{axis:'x'|'y'|'z';merge:number;bisect?:boolean}|null;
+ /** UV state of a mesh: whether a uv attribute exists, the island count (0 when unreadable) and the marked seam count; null for non-meshes. */uv:{hasUv:boolean;islands:number;seams:number}|null;
  material:{color:string;metalness:number;roughness:number;emissive?:string;emissiveIntensity?:number;opacity?:number;alphaMode?:AlphaMode;alphaCutoff?:number;doubleSided?:boolean;/** Name of the image in each slot, or null */textures?:Record<TextureSlot,string|null>;/** UV transform per slot, null where the slot is empty */transforms?:Record<TextureSlot,TextureTransform|null>}|null;light:LightInfo|null;
 }
 export interface LightInfo{intensity:number;color:string;/** shadow casting; absent for area lights, which cannot cast shadows */shadow?:boolean;/** spot cone, degrees */angle?:number;penumbra?:number;width?:number;height?:number}
@@ -484,24 +486,31 @@ export class Stage{
   if(verts>MAX_EDIT_VERTICES||m.geometry.getIndex()&&m.geometry.getIndex()!.count/3>MAX_EDIT_TRIANGLES)throw new StageError(`${o.name} is too large to edit (${verts.toLocaleString('en-US')} vertices).`);
   return m;
  }
- private meshDataOf(m:THREE.Mesh):MeshData{
-  const pos=m.geometry.getAttribute('position');
-  if(!pos||!pos.count)throw new StageError(`${m.name} has no vertices.`);
+ private meshDataFromGeometry(g:THREE.BufferGeometry,what='The mesh'):MeshData{
+  const pos=g.getAttribute('position');
+  if(!pos||!pos.count)throw new StageError(`${what} has no vertices.`);
   const positions=Array.from((pos.array as ArrayLike<number>)).slice(0,pos.count*3) as number[];
-  const idx=m.geometry.getIndex();
+  const idx=g.getIndex();
   const index=idx?Array.from(idx.array as ArrayLike<number>) as number[]:Array.from({length:pos.count},(_,i)=>i);
+  return{positions,index};
+ }
+ private meshDataOf(m:THREE.Mesh):MeshData{
+  const data=this.meshDataFromGeometry(m.geometry,m.name);
   const ma=m.geometry.getAttribute('somniaMask');
-  const mask=ma?Array.from(ma.array as ArrayLike<number>).slice(0,pos.count) as number[]:undefined;
-  return{positions,index,...(mask?{mask}:{})};
+  const mask=ma?Array.from(ma.array as ArrayLike<number>).slice(0,data.positions.length/3) as number[]:undefined;
+  return{...data,...(mask?{mask}:{})};
  }
  private applyMeshData(m:THREE.Mesh,data:MeshData,label:string){
   const before=m.geometry,beforeData=m.userData.somniaPrimitive;
   const make=(d:MeshData)=>{const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(d.positions,3));g.setIndex(d.index);g.computeVertexNormals();return g;};
   const after=make(data);
+  // Vertex indices change with the rebuild: re-find seams geometrically so surviving edges keep their mark.
+  const seams0=this.seamsOf(m);let seams1:[number,number][]=[];
+  if(seams0.length){try{seams1=remapSeams(this.meshDataOf(m),seams0,data);}catch{seams1=[];}}
   let owned=true;
-  const set=(g:THREE.BufferGeometry,param:unknown)=>{m.geometry=g;if(param===undefined)delete m.userData.somniaPrimitive;else m.userData.somniaPrimitive=param;};
-  set(after,undefined);
-  this.push({label,undo:()=>{set(before,beforeData);owned=false;},redo:()=>{set(after,undefined);owned=true;},release:()=>{(owned?before:after).dispose();}});
+  const set=(g:THREE.BufferGeometry,param:unknown,seams:[number,number][])=>{m.geometry=g;if(param===undefined)delete m.userData.somniaPrimitive;else m.userData.somniaPrimitive=param;this.setSeams(m,seams);};
+  set(after,undefined,seams1);
+  this.push({label,undo:()=>{set(before,beforeData,seams0);owned=false;},redo:()=>{set(after,undefined,seams1);owned=true;},release:()=>{(owned?before:after).dispose();}});
  }
  /** Enters mesh edit mode on a mesh. Returns the vertex and triangle counts. */
  editStart(id:number):{vertices:number;triangles:number}{
@@ -543,6 +552,96 @@ export class Stage{
  }
  editBevelEdge(width:number,segments=1){this.editOp('Bevel edges',m=>bevelEdges(m,[...this.editSel.edges.values()],width,segments));}
  editLoopSlide(factor:number){this.editOp('Loop slide',m=>slideEdges(m,[...this.editSel.edges.values()],factor));}
+ /** Seam edges marked on a mesh (vertex-index pairs). */
+ seamsOf(o:THREE.Object3D):[number,number][]{
+  return (o.userData.somniaSeams as [number,number][]|undefined)??[];
+ }
+ private setSeams(o:THREE.Object3D,seams:[number,number][]){
+  if(seams.length)o.userData.somniaSeams=seams;else delete o.userData.somniaSeams;
+ }
+ /** Marks or clears the selected edit-mode edges as UV seams; coincident copies on unwelded meshes come along. One undo step. */
+ uvSeamMark(mark:boolean){
+  const m=this.editMesh();
+  const sel=[...this.editSel.edges.values()];
+  if(!sel.length)throw new StageError(mark?'Select edges to mark as seams.':'Select seams to clear.');
+  const data=this.meshDataOf(m);
+  let hit:[number,number][];
+  try{hit=seamsAround(data,sel);}catch(e){throw e instanceof UvError?new StageError(e.message):e;}
+  if(!hit.length)throw new StageError('The selected edges are not part of this mesh.');
+  const before=this.seamsOf(m);
+  const key=([a,b]:[number,number])=>a<b?`${a}_${b}`:`${b}_${a}`;
+  let after:[number,number][];
+  if(mark){
+   const have=new Set(before.map(key));after=[...before];
+   for(const e of hit){const k=key(e);if(!have.has(k)){have.add(k);after.push(e);}}
+   if(after.length===before.length)throw new StageError('The selected edges are already seams.');
+  }else{
+   const drop=new Set(hit.map(key));after=before.filter(e=>!drop.has(key(e)));
+   if(after.length===before.length)throw new StageError('None of the selected edges are seams.');
+  }
+  this.setSeams(m,after);
+  this.push({label:mark?'Mark UV seams':'Clear UV seams',undo:()=>this.setSeams(m,before),redo:()=>this.setSeams(m,after)});
+ }
+ private uvTarget(id:number):THREE.Mesh{
+  const o=this.need(id);const m=o as THREE.Mesh;
+  if(!m.isMesh)throw new StageError(`${o.name} is not a mesh.`);
+  if(this.editId!=null)throw new StageError('Leave edit mode before changing UVs.');
+  return m;
+ }
+ /** Applies a UV layout: vertices split along seams (one copy per UV slot) and every attribute follows. One undo step. */
+ private applyUv(m:THREE.Mesh,r:UvResult,label:string){
+  const data=this.meshDataOf(m);
+  if(r.uvIndex.length!==data.index.length||r.uvIndex.some(i=>i<0||i>=r.uv.length))throw new StageError('The UV layout is damaged.');
+  const slotVert=new Array<number>(r.uv.length).fill(-1);
+  for(let k=0;k<r.uvIndex.length;k++)slotVert[r.uvIndex[k]]=data.index[k];
+  if(slotVert.some(v=>v<0))throw new StageError('The UV layout is damaged.');
+  const g=new THREE.BufferGeometry();
+  for(const name of Object.keys(m.geometry.attributes)){
+   if(name==='uv')continue;
+   const a=m.geometry.getAttribute(name) as THREE.BufferAttribute;
+   const src=a.array as Float32Array;
+   const out=new (src.constructor as new(len:number)=>Float32Array)(slotVert.length*a.itemSize);
+   for(let i=0;i<slotVert.length;i++)for(let c=0;c<a.itemSize;c++)out[i*a.itemSize+c]=src[slotVert[i]*a.itemSize+c];
+   g.setAttribute(name,new THREE.BufferAttribute(out,a.itemSize,a.normalized));
+  }
+  g.setAttribute('uv',new THREE.Float32BufferAttribute(r.uv.flat(),2));
+  g.setIndex(r.uvIndex.slice());
+  const before=m.geometry,beforeData=m.userData.somniaPrimitive,beforeSeams=this.seamsOf(m);
+  const np:number[]=[];for(const v of slotVert)np.push(data.positions[v*3],data.positions[v*3+1],data.positions[v*3+2]);
+  let afterSeams:[number,number][]=[];
+  if(beforeSeams.length){try{afterSeams=remapSeams(data,beforeSeams,{positions:np,index:r.uvIndex});}catch{afterSeams=[];}}
+  let owned=true;
+  const set=(geo:THREE.BufferGeometry,prim:unknown,seams:[number,number][])=>{m.geometry=geo;if(prim===undefined)delete m.userData.somniaPrimitive;else m.userData.somniaPrimitive=prim;this.setSeams(m,seams);};
+  set(g,undefined,afterSeams);
+  this.push({label,undo:()=>{set(before,beforeData,beforeSeams);owned=false;},redo:()=>{set(g,undefined,afterSeams);owned=true;},release:()=>{(owned?before:g).dispose();}});
+ }
+ /** Seam-aware box unwrap: every island is projected along its dominant axis into its own 0..1 cell. One undo step. */
+ uvUnwrap(id:number){
+  const m=this.uvTarget(id);
+  let r:UvResult;try{r=unwrapBox(this.meshDataOf(m),this.seamsOf(m));}catch(e){throw e instanceof UvError?new StageError(e.message):e;}
+  this.applyUv(m,r,'Unwrap UVs');
+ }
+ /** Planar UV projection of the whole mesh along one axis, normalized to 0..1. One undo step. */
+ uvPlanar(id:number,axis:'x'|'y'|'z'){
+  const m=this.uvTarget(id);
+  let r:UvResult;try{r=planarProject(this.meshDataOf(m),axis);}catch(e){throw e instanceof UvError?new StageError(e.message):e;}
+  this.applyUv(m,r,'Planar UV projection');
+ }
+ /** Read-only UV layout for the island view: one uv pair per face corner (index order) and the island id per face; null when the mesh has no uvs or too many faces. */
+ uvLayout(id:number):{uv:[number,number][];islands:number[]}|null{
+  const o=this.find(id);if(!o)return null;
+  const m=o as THREE.Mesh;
+  if(!m.isMesh)return null;
+  const attr=m.geometry.getAttribute('uv') as THREE.BufferAttribute|undefined;
+  if(!attr)return null;
+  let data:MeshData;try{data=this.meshDataOf(m);}catch{return null;}
+  if(data.index.length/3>4000)return null;
+  const uv:[number,number][]=[];
+  for(let k=0;k<data.index.length;k++)uv.push([attr.getX(data.index[k]),attr.getY(data.index[k])]);
+  let islands:number[];
+  try{islands=uvIslands(data,this.seamsOf(m));}catch{return null;}
+  return{uv,islands};
+ }
  /** Toggles the non-destructive mirror modifier: while on, the mesh shows base + mirrored half (exports include both); the base geometry stays in userData and editing is refused. One undo step per toggle. */
  mirrorMod(id:number,axis:MirrorAxis,merge:number,on:boolean,bisect=false){
   const o=this.need(id);const m=o as THREE.Mesh;
@@ -553,19 +652,24 @@ export class Stage{
   if(!on&&!cur)throw new StageError(`${o.name} has no mirror modifier.`);
   if(on){
    const base=m.geometry;
-   let data:MeshData;try{data=mirrorCombine(this.meshDataOf(m),axis,merge,bisect);}catch(e){throw e instanceof EditError?new StageError(e.message):e;}
+   const baseData=this.meshDataOf(m);
+   let data:MeshData;try{data=mirrorCombine(baseData,axis,merge,bisect);}catch(e){throw e instanceof EditError?new StageError(e.message):e;}
    const combined=new THREE.BufferGeometry();
    combined.setAttribute('position',new THREE.Float32BufferAttribute(data.positions,3));
    combined.setIndex(data.index);combined.computeVertexNormals();
+   const seams0=this.seamsOf(m);let seams1:[number,number][]=[];
+   if(seams0.length){try{seams1=remapSeams(baseData,seams0,data);}catch{seams1=[];}}
    let owned=true;
-   const apply=(g:THREE.BufferGeometry,mark:boolean)=>{m.geometry=g;if(mark){o.userData.somniaMirror={axis,merge,bisect};o.userData.somniaMirrorBase=base;}else{delete o.userData.somniaMirror;delete o.userData.somniaMirrorBase;}};
+   const apply=(g:THREE.BufferGeometry,mark:boolean)=>{m.geometry=g;this.setSeams(m,mark?seams1:seams0);if(mark){o.userData.somniaMirror={axis,merge,bisect};o.userData.somniaMirrorBase=base;}else{delete o.userData.somniaMirror;delete o.userData.somniaMirrorBase;}};
    apply(combined,true);
    this.push({label:`Mirror ${o.name}`,undo:()=>{apply(base,false);owned=false;},redo:()=>{apply(combined,true);owned=true;},release:()=>{(owned?base:combined).dispose();}});
   }else{
    const combined=m.geometry;const base=o.userData.somniaMirrorBase as THREE.BufferGeometry;
    if(!base)throw new StageError(`${o.name} has no stored base mesh.`);
+   const seamsC=this.seamsOf(m);let seamsB:[number,number][]=[];
+   if(seamsC.length){try{seamsB=remapSeams(this.meshDataFromGeometry(combined),seamsC,this.meshDataFromGeometry(base));}catch{seamsB=[];}}
    let owned=false;
-   const apply=(g:THREE.BufferGeometry,mark:boolean)=>{m.geometry=g;if(mark){o.userData.somniaMirror={axis:cur!.axis,merge:cur!.merge,bisect:cur!.bisect};o.userData.somniaMirrorBase=base;}else{delete o.userData.somniaMirror;delete o.userData.somniaMirrorBase;}};
+   const apply=(g:THREE.BufferGeometry,mark:boolean)=>{m.geometry=g;this.setSeams(m,mark?seamsC:seamsB);if(mark){o.userData.somniaMirror={axis:cur!.axis,merge:cur!.merge,bisect:cur!.bisect};o.userData.somniaMirrorBase=base;}else{delete o.userData.somniaMirror;delete o.userData.somniaMirrorBase;}};
    apply(base,false);
    this.push({label:`Mirror off ${o.name}`,undo:()=>{apply(combined,true);owned=true;},redo:()=>{apply(base,false);owned=false;},release:()=>{(owned?base:combined).dispose();}});
   }
@@ -1548,6 +1652,11 @@ export class Stage{
   this.push({label,undo:()=>{apply(beforeI,beforeW);owned=false;},redo:()=>{apply(afterI,afterW);owned=true;},release:()=>{(owned?beforeI:afterI).dispose?.();(owned?beforeW:afterW).dispose?.();}});
   this.emit();
  }
+ private uvInfo(m:THREE.Mesh):{hasUv:boolean;islands:number;seams:number}{
+  const seams=this.seamsOf(m).length;
+  if(!m.geometry.getAttribute('uv'))return{hasUv:false,islands:0,seams};
+  try{const islands=uvIslands(this.meshDataOf(m),this.seamsOf(m));return{hasUv:true,islands:Math.max(...islands)+1,seams};}catch{return{hasUv:true,islands:0,seams};}
+ }
  info(id:number):ObjectInfo|null{
   const o=this.find(id);if(!o)return null;const m=o as THREE.Mesh;const l=o as THREE.Light;
   const mat=m.isMesh&&!Array.isArray(m.material)&&(m.material as THREE.MeshStandardMaterial).isMeshStandardMaterial?m.material as THREE.MeshStandardMaterial:null;
@@ -1555,6 +1664,7 @@ export class Stage{
    position:{x:o.position.x,y:o.position.y,z:o.position.z},rotation:{x:o.rotation.x/DEG,y:o.rotation.y/DEG,z:o.rotation.z/DEG},scale:{x:o.scale.x,y:o.scale.y,z:o.scale.z},
    skinned:(m as THREE.SkinnedMesh).isSkinnedMesh===true,
    mirror:(o.userData.somniaMirror as {axis:'x'|'y'|'z';merge:number;bisect?:boolean}|undefined)??null,
+   uv:m.isMesh?this.uvInfo(m):null,
    camera:(o as THREE.PerspectiveCamera).isPerspectiveCamera?{kind:'perspective' as const,fov:(o as THREE.PerspectiveCamera).fov}:(o as THREE.OrthographicCamera).isOrthographicCamera?{kind:'orthographic' as const,zoom:(o as THREE.OrthographicCamera).zoom}:null,
    primitive:this.primitiveOf(o),material:mat?{color:'#'+mat.color.getHexString(),metalness:mat.metalness,roughness:mat.roughness,emissive:'#'+mat.emissive.getHexString(),emissiveIntensity:mat.emissiveIntensity,opacity:mat.transparent||mat.alphaTest>0?mat.opacity:1,alphaMode:alphaModeOf(mat.transparent,mat.alphaTest),alphaCutoff:mat.alphaTest>0?mat.alphaTest:0.5,doubleSided:mat.side===THREE.DoubleSide,textures:Object.fromEntries((Object.keys(SLOT_CONFIG) as TextureSlot[]).map(k=>{const t=mat[SLOT_CONFIG[k].prop] as THREE.Texture|null;return[k,t?(t.name||'image'):null];})) as Record<TextureSlot,string|null>,transforms:Object.fromEntries((Object.keys(SLOT_CONFIG) as TextureSlot[]).map(k=>{const t=mat[SLOT_CONFIG[k].prop] as THREE.Texture|null;return[k,t?readTransform(t):null];})) as Record<TextureSlot,TextureTransform|null>}:null,light:l.isLight?lightInfo(l):null};
  }

@@ -106,7 +106,7 @@ test('3D studio refuses a file that is not glTF with a readable error',async({pa
 /** Helpers for the scene tests below. They drive the real app through its command layer (dev build) and read the studio session. */
 type P=import('@playwright/test').Page;
 const run=(page:P,id:string,params:unknown={})=>page.evaluate(async([i,p])=>{const m=await import('/src/lib/commands.ts');return (await m.executeCommand(i as string,p)) as unknown;},[id,params] as const);
-const session=(page:P)=>page.evaluate(async()=>{const m=await import('/src/lib/studio3d/session.ts');const s=m.getStudio3DState();return {anim:s.anim,clips:s.clips,clipKeys:s.clipKeys,outline:s.outline,marked:s.marked,selected:s.selected,info:s.selectedInfo,dirty:s.dirty,notice:s.notice,status:s.status,name:s.name,bones:s.bones,weightPreview:s.weightPreview,stats:s.stats,exportClips:s.exportClips,poses:s.poses,ik:s.ik,boneLimits:s.boneLimits,views:s.views,edit:s.edit,sculpt:s.sculpt};});
+const session=(page:P)=>page.evaluate(async()=>{const m=await import('/src/lib/studio3d/session.ts');const s=m.getStudio3DState();return {anim:s.anim,clips:s.clips,clipKeys:s.clipKeys,outline:s.outline,marked:s.marked,selected:s.selected,info:s.selectedInfo,dirty:s.dirty,notice:s.notice,status:s.status,name:s.name,bones:s.bones,weightPreview:s.weightPreview,stats:s.stats,exportClips:s.exportClips,poses:s.poses,ik:s.ik,boneLimits:s.boneLimits,views:s.views,edit:s.edit,sculpt:s.sculpt,uvChecker:s.uvChecker};});
 const open3d=async(page:P)=>{await page.goto('/');await page.getByRole('button',{name:/3D/}).first().click();};
 const blank=async(page:P)=>{await open3d(page);await page.getByTestId('3d-create-blank').click();await expect(page.getByTestId('studio3d-viewport')).toBeVisible();};
 const insert=async(page:P,kind:string,x:number)=>{await run(page,'studio3d.insert.primitive',{kind});const s=await session(page);const id=s.selected as number;await run(page,'studio3d.object.transform',{id,position:{x,y:0,z:0}});return id;};
@@ -902,4 +902,33 @@ test('sculpt mask overlay paints are visible in the session while sculpt mode is
  await run(page,'studio3d.sculpt.end');
  // overlay itself is WebGL viewport state (CI verifies pixels); here the mask attribute drives it
  expect(await run(page,'studio3d.sculpt.maskClear',{id})).toBe(true);
+});
+
+test('uv seams, unwrap, planar and checker preview work through commands',async({page})=>{
+ await blank(page);
+ const id=await insert(page,'cube',0);
+ await run(page,'studio3d.edit.start',{id,mode:'edge'});
+ expect(await run(page,'studio3d.edit.select',{kind:'edge',ids:[[0,2]]})).toBe(true);
+ expect(await run(page,'studio3d.uv.seam',{mark:true})).toBe(true);
+ await expect.poll(async()=>(await session(page)).info!.uv!.seams).toBe(2);
+ expect(await run(page,'studio3d.uv.seam',{mark:true})).toBe(false);
+ await expect(page.getByRole('alert')).toContainText('already seams');
+ expect(await run(page,'studio3d.uv.unwrap',{id})).toBe(false);
+ await expect(page.getByRole('alert')).toContainText('edit mode');
+ await run(page,'studio3d.edit.end');
+ const before=(await session(page)).stats.vertices;
+ expect(await run(page,'studio3d.uv.unwrap',{id})).toBe(true);
+ await expect.poll(async()=>(await session(page)).stats.vertices).toBeGreaterThan(before);
+ const s=await session(page);
+ expect(s.info!.uv).toMatchObject({hasUv:true,seams:2});
+ expect(s.info!.uv!.islands).toBe(1);
+ expect(await run(page,'studio3d.uv.planar',{id,axis:'y'})).toBe(true);
+ expect(await run(page,'studio3d.uv.preview',{on:true})).toBe(true);
+ await expect.poll(async()=>(await session(page)).uvChecker).toBe(true);
+ expect(await run(page,'studio3d.uv.preview',{on:false})).toBe(true);
+ await expect.poll(async()=>(await session(page)).uvChecker).toBe(false);
+ expect(await run(page,'studio3d.undo')).toBe(true); // planar
+ expect(await run(page,'studio3d.undo')).toBe(true); // unwrap
+ await expect.poll(async()=>(await session(page)).stats.vertices).toBe(before);
+ expect((await session(page)).info!.uv!.seams).toBe(2);
 });

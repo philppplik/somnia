@@ -1,7 +1,7 @@
 import {StudioStatus} from '../studios/StudioStatus';
 import {StudioRecentList} from '../studios/StudioRecentList';
 import {StudioProgress} from '../studios/StudioProgress';
-import {useRef,useState} from 'react';
+import {useMemo,useRef,useState} from 'react';
 import {patchStudio3D} from '../../lib/studio3d/session';
 import type {ObjectInfo} from '../../lib/studio3d/stage';
 import {executeCommand} from '../../lib/commands';
@@ -129,6 +129,7 @@ export function ObjectSection(_:InspectorSectionProps){
   </fieldset>}
   {s.bones.length>0&&o.kind==='mesh'&&<SkinningFields id={o.id} skinned={o.skinned}/>}
   {o.kind==='mesh'&&!o.skinned&&<EditSculptFields id={o.id}/>}
+  {o.kind==='mesh'&&<UvFields id={o.id}/>}
   {s.bones.length>0&&(o.kind==='bone'||o.skinned)&&<PoseFields id={o.id}/>}
   {o.kind==='bone'&&<IkFields id={o.id}/>}
   {o.kind==='bone'&&<FabrikFields/>}
@@ -137,6 +138,45 @@ export function ObjectSection(_:InspectorSectionProps){
    <Button variant="outline" onClick={()=>void executeCommand('studio3d.object.delete',{id:o.id})}>{t('studio3d.object.delete')}</Button></div>
  </div>;
 }
+/** UV tools: seam marking in edit mode, box unwrap and planar projection, checker preview and a read-only island view. */
+function UvFields({id}:{id:number}){
+ const {t}=useT();const s=useStudio3D();const o=s.selectedInfo;
+ const [axis,setAxis]=useState<'x'|'y'|'z'>('z');
+ const layout=s.uvView;
+ const sig=`${id}:${layout?layout.islands.length:0}:${o?.uv?.seams??0}:${layout?layout.uv[0]:''}:${layout?layout.uv[layout.uv.length-1]:''}`;
+ const polys=useMemo(()=>{
+  if(!layout)return null;
+  const isl=layout.islands;const uv=layout.uv;
+  const out:{points:string;island:number}[]=[];
+  for(let f=0;f<isl.length;f++)out.push({points:`${uv[f*3][0]},${-uv[f*3][1]} ${uv[f*3+1][0]},${-uv[f*3+1][1]} ${uv[f*3+2][0]},${-uv[f*3+2][1]}`,island:isl[f]});
+  return out;
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- sig captures what the polygons depend on
+ },[sig]);
+ if(!o||o.kind!=='mesh'||!o.uv)return null;
+ const ed=s.edit;const on=ed!=null&&ed.id===id;
+ return <fieldset className="m-0 grid gap-2 border-0 p-0" data-testid="studio3d-uvtools"><legend className="text-xs text-ink-3">{t('studio3d.uvtools.title')}</legend>
+  <p className="m-0 text-xs text-ink-3">{t('studio3d.uvtools.counts',{islands:o.uv.islands,seams:o.uv.seams})}</p>
+  {on&&ed.mode==='edge'&&<div className="flex flex-wrap gap-1">
+   <Button variant="outline" onClick={()=>void executeCommand('studio3d.uv.seam',{mark:true})}>{t('studio3d.uvtools.mark')}</Button>
+   <Button variant="outline" onClick={()=>void executeCommand('studio3d.uv.seam',{mark:false})}>{t('studio3d.uvtools.unmark')}</Button>
+  </div>}
+  {on&&ed.mode!=='edge'&&<p className="m-0 text-xs text-ink-3">{t('studio3d.uvtools.edgeHint')}</p>}
+  {!on&&<>
+   <Button variant="outline" onClick={()=>void executeCommand('studio3d.uv.unwrap',{id})}>{t('studio3d.uvtools.unwrap')}</Button>
+   <div className="flex gap-1">
+    <NativeSelect className="rounded-sm border border-subtle bg-surface p-1 text-xs text-ink" value={axis} aria-label={t('studio3d.uvtools.axis')} onChange={e=>setAxis(e.currentTarget.value as 'x'|'y'|'z')}>
+     {(['x','y','z'] as const).map(a=><option key={a} value={a}>{t('studio3d.sculpt.symmetry.'+a)}</option>)}</NativeSelect>
+    <Button variant="outline" onClick={()=>void executeCommand('studio3d.uv.planar',{id,axis})}>{t('studio3d.uvtools.planar')}</Button>
+   </div></>}
+  <label className="flex items-center gap-2 text-xs text-ink-2"><NativeInput type="checkbox" checked={s.uvChecker} onChange={e=>void executeCommand('studio3d.uv.preview',{on:e.currentTarget.checked})}/>{t('studio3d.uvtools.preview')}</label>
+  {o.uv.hasUv&&polys&&<svg viewBox="0 -1 1 1" className="h-32 w-full rounded-sm border border-subtle bg-surface" role="img" aria-label={t('studio3d.uvtools.islands')} data-testid="studio3d-uv-islands">
+   {polys.map((p,f)=><polygon key={f} points={p.points} fill="none" stroke={`hsl(${(p.island*67)%360} 70% 55%)`} strokeWidth={1} vectorEffect="non-scaling-stroke"/>)}
+  </svg>}
+  {o.uv.hasUv&&!polys&&<p className="m-0 text-xs text-ink-3">{t('studio3d.uvtools.tooLarge')}</p>}
+  {!o.uv.hasUv&&<p className="m-0 text-xs text-ink-3">{t('studio3d.uvtools.noUv')}</p>}
+ </fieldset>;
+}
+
 /** Bind a plain mesh to a bone chain, recompute weights of a skinned one, and preview a bone's influence. */
 function EditSculptFields({id}:{id:number}){
  const {t}=useT();const s=useStudio3D();const o=s.selectedInfo;
