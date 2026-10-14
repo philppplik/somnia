@@ -1,4 +1,5 @@
-import {effectPrimitives,effectBounds,revealedText} from '../../lib/animation/effects';
+import {pathData} from '../../lib/interface/vectorCore';
+import {effectPrimitives,effectBounds,revealedText,strokeAttributes} from '../../lib/animation/effects';
 import type {InterfaceAsset} from '../../lib/interface/schema';
 import {StudioStatus} from '../studios/StudioStatus';
 import {useEffect,useMemo,useRef} from 'react';
@@ -48,7 +49,8 @@ function layerNode(l:Layer,assets:readonly InterfaceAsset[],at:number){
  const src=l.source;
  if(l.kind==='raster'){const asset=assets.find(a=>a.id===src.assetId);return asset?<image href={asset.data} width={src.width} height={src.height}/>:<text fill="var(--text-primary)">Missing image</text>;}
  if(l.kind==='solid')return <rect x={0} y={0} width={src.width} height={src.height} fill={src.color}/>;
- if(l.kind==='shape')return src.shape==='ellipse'?<ellipse cx={(src.width??0)/2} cy={(src.height??0)/2} rx={(src.width??0)/2} ry={(src.height??0)/2} fill={src.color}/>:<rect x={0} y={0} width={src.width} height={src.height} fill={src.color}/>;
+ if(l.kind==='shape'&&src.shape==='path'&&src.path)return <path {...strokeAttributes(l,at)} d={pathData(src.path as import('../../lib/interface/schema').InterfacePath,src.width??1,src.height??1)} fill={src.color}/>;
+ if(l.kind==='shape')return src.shape==='ellipse'?<ellipse {...strokeAttributes(l,at)} cx={(src.width??0)/2} cy={(src.height??0)/2} rx={(src.width??0)/2} ry={(src.height??0)/2} fill={src.color}/>:<rect {...strokeAttributes(l,at)} x={0} y={0} width={src.width} height={src.height} fill={src.color}/>;
  return <text x={0} y={src.size??48} fontSize={src.size} fill={src.color} fontFamily="system-ui, sans-serif" className="select-none">{revealedText(l,at)}</text>;
 }
 function Viewer({comp,at,selected,sel,assets}:{assets:readonly InterfaceAsset[];comp:Composition;at:number;selected:string|null;sel:readonly KeyRef[]}){

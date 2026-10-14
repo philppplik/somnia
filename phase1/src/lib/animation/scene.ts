@@ -30,3 +30,11 @@ export function sceneAt(comp:Composition,t:number):DrawLayer[]{
  return [...comp.layers].reverse().filter(l=>l.visible&&(!solo||l.solo)&&t>=l.inT+l.offset&&t<l.outT+l.offset&&l.kind!=='null')
   .map(l=>({layer:l,matrix:worldMatrix(comp,l,t),opacity:Math.min(1,Math.max(0,(evaluate(l.transform.opacity,t) as number)/100))}));
 }
+/** Matrix multiplication exported for explicit keep-world reparenting. */
+export const multiplyMatrix=mul;
+/** Decompose a representable translate/rotate/positive-scale matrix. Reject shear/reflection rather than changing the image. */
+export function decomposeMatrix(m:Matrix,anchor:Vec2):{position:Vec2;scale:Vec2;rotation:number}|null{
+ const sx=Math.hypot(m[0],m[1]);if(sx<1e-8)return null;const det=m[0]*m[3]-m[1]*m[2],sy=det/sx;
+ if(sy<1e-8||Math.abs(m[0]*m[2]+m[1]*m[3])>1e-6*Math.max(1,sx*sy))return null;
+ return {position:[m[4]+m[0]*anchor[0]+m[2]*anchor[1],m[5]+m[1]*anchor[0]+m[3]*anchor[1]],scale:[sx*100,sy*100],rotation:Math.atan2(m[1],m[0])*180/Math.PI};
+}

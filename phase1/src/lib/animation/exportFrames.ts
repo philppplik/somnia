@@ -1,6 +1,7 @@
+import {pathData} from '../interface/vectorCore';
 import {validateAnimationAssets} from './assetsValidation';
 import {validEffects,validSource} from './model';
-import {effectPrimitives,effectBounds,revealedText} from './effects';
+import {effectPrimitives,effectBounds,revealedText,strokeAttributes} from './effects';
 import type {InterfaceAsset} from '../interface/schema';
 import {Zip,ZipPassThrough,strToU8} from 'fflate';
 import {sceneAt} from './scene';
@@ -8,9 +9,9 @@ import {workAreaFrames} from './playback';
 import {frameToTick,tickToFrame} from './time';
 import type {Composition,Layer} from './model';
 /** PNG frame export and work-area PNG-sequence ZIP. Pure builders plus an injected rasteriser so the logic is testable without a canvas. */
-export const MAX_FRAMES=3600;
+export const MAX_FRAMES=1800;
 /** Cap on all PNG bytes held for one ZIP. The ZIP is assembled from chunks into one Blob, never one giant buffer. */
-export const MAX_ZIP_BYTES=768*1024*1024;
+export const MAX_ZIP_BYTES=64*1024*1024;
 export const MAX_PIXELS=8192*8192;
 export class ExportError extends Error{constructor(message:string,readonly code:'too-large'|'too-many'|'raster'|'cancelled'|'empty'){super(message);this.name='ExportError';}}
 const esc=(s:string)=>s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
@@ -20,9 +21,11 @@ function layerSvg(l:Layer,assets:readonly InterfaceAsset[],tick:number):string{
  if(l.kind==='raster'){const asset=assets.find(a=>a.id===s.assetId);if(!asset)throw new ExportError('Missing image asset.','raster');return `<image href="${asset.data}" width="${num(s.width??asset.width)}" height="${num(s.height??asset.height)}"/>`;}
 
  if(l.kind==='solid')return `<rect x="0" y="0" width="${num(s.width??0)}" height="${num(s.height??0)}" fill="${esc(s.color??'#000')}"/>`;
+ const stroke=strokeAttributes(l,tick);const strokeSvg=stroke?` stroke="${stroke.stroke}" stroke-width="${stroke.strokeWidth}" pathLength="100" stroke-dasharray="${stroke.strokeDasharray}" stroke-dashoffset="${stroke.strokeDashoffset}"`:'';
+ if(l.kind==='shape'&&s.shape==='path'&&s.path)return `<path d="${pathData(s.path as import('../interface/schema').InterfacePath,s.width??1,s.height??1)}"${strokeSvg} fill="${esc(s.color??'#000')}"/>`;
  if(l.kind==='shape')return s.shape==='ellipse'
-  ?`<ellipse cx="${num((s.width??0)/2)}" cy="${num((s.height??0)/2)}" rx="${num((s.width??0)/2)}" ry="${num((s.height??0)/2)}" fill="${esc(s.color??'#000')}"/>`
-  :`<rect x="0" y="0" width="${num(s.width??0)}" height="${num(s.height??0)}" fill="${esc(s.color??'#000')}"/>`;
+  ?`<ellipse cx="${num((s.width??0)/2)}" cy="${num((s.height??0)/2)}" rx="${num((s.width??0)/2)}"${strokeSvg} ry="${num((s.height??0)/2)}" fill="${esc(s.color??'#000')}"/>`
+  :`<rect x="0" y="0" width="${num(s.width??0)}" height="${num(s.height??0)}"${strokeSvg} fill="${esc(s.color??'#000')}"/>`;
  return `<text x="0" y="${num(s.size??48)}" font-size="${num(s.size??48)}" fill="${esc(s.color??'#fff')}" font-family="system-ui, sans-serif">${esc(revealedText(l,tick))}</text>`;
 }
 /** Standalone SVG of the composition at `tick`. `transparent` omits the background rectangle so PNG output keeps real alpha. */
@@ -38,7 +41,7 @@ export const frameFileName=(name:string,frameNumber:number)=>`${exportSlug(name)
 /** Ticks of every frame in the work area, in order. Frame numbers in file names count from the composition start (frame 0). */
 export function sequencePlan(comp:Composition){
  const {first,count}=workAreaFrames(comp.workArea,comp.fps);const startFrame=tickToFrame(comp.start,comp.fps);
- return Array.from({length:count},(_,i)=>({frame:first+i-startFrame,tick:frameToTick(first+i,comp.fps)}));
+ checkExportable(comp,count);return Array.from({length:count},(_,i)=>({frame:first+i-startFrame,tick:frameToTick(first+i,comp.fps)}));
 }
 export function checkExportable(comp:Composition,frames:number){
  if(comp.width*comp.height>MAX_PIXELS)throw new ExportError(`Frame size ${comp.width}x${comp.height} is above the supported limit.`,'too-large');
@@ -66,7 +69,7 @@ export async function exportSequenceZip(comp:Composition,name:string,o:SequenceO
   let png:Uint8Array;
   try{png=await o.rasterize(frameSvg(comp,plan[i].tick,!!o.transparent,o.assets),comp.width,comp.height);}
   catch(e){if(e instanceof ExportError)throw e;throw new ExportError(`Frame ${plan[i].frame} could not be rendered: ${(e as Error).message}`,'raster');}
-  bytes+=png.byteLength;
+  stop();bytes+=png.byteLength;
   if(bytes>limit)throw new ExportError(`The sequence is larger than ${Math.round(limit/1048576)} MB. Shorten the work area or reduce the size.`,'too-large');
   const f=new ZipPassThrough(frameFileName(name,plan[i].frame));zip.add(f);f.push(png,true);
   o.onProgress?.(i+1,plan.length);

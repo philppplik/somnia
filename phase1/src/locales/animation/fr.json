@@ -191,5 +191,17 @@
  "cmd.animation.effect.amount": "Set animated effect strength",
  "cmd.animation.effect.animate": "Toggle effect animation",
  "animation.markers.previous": "Previous marker",
- "animation.markers.next": "Next marker"
+ "animation.markers.next": "Next marker",
+ "animation.parent.keepWorld": "Keep world transform (static only)",
+ "animation.effects.colorKey": "Add tint colour key",
+ "animation.effects.bypassKey": "Bypass at playhead (hold key)",
+ "animation.presets.trim": "Trace outline",
+ "animation.presets.dash": "Dash motion",
+ "animation.stroke.title": "Outline animation",
+ "animation.stroke.width": "Stroke width",
+ "animation.stroke.color": "Stroke colour",
+ "cmd.animation.effect.colorKey": "Set tint colour key",
+ "cmd.animation.effect.bypassKey": "Set effect bypass key",
+ "animation.shape.path": "Path",
+ "animation.shape.points": "Path points (x,y in 0–1)"
 }

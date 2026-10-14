@@ -191,5 +191,17 @@
  "cmd.animation.effect.amount": "Set animated effect strength",
  "cmd.animation.effect.animate": "Toggle effect animation",
  "animation.markers.previous": "Vorige Marke",
- "animation.markers.next": "Nächste Marke"
+ "animation.markers.next": "Nächste Marke",
+ "animation.parent.keepWorld": "Welttransformation behalten (nur statisch)",
+ "animation.effects.colorKey": "Farb-Key hinzufügen",
+ "animation.effects.bypassKey": "Am Abspielkopf umgehen (Halte-Key)",
+ "animation.presets.trim": "Kontur zeichnen",
+ "animation.presets.dash": "Striche bewegen",
+ "animation.stroke.title": "Kontur-Animation",
+ "animation.stroke.width": "Konturbreite",
+ "animation.stroke.color": "Konturfarbe",
+ "cmd.animation.effect.colorKey": "Set tint colour key",
+ "cmd.animation.effect.bypassKey": "Set effect bypass key",
+ "animation.shape.path": "Pfad",
+ "animation.shape.points": "Pfadpunkte (x,y in 0–1)"
 }

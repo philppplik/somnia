@@ -1,3 +1,4 @@
+import {worldMatrix,invertMatrix,multiplyMatrix,decomposeMatrix} from './scene';
 import type {InterfaceAsset} from '../interface/schema';
 import {validateAnimationAssets} from './assetsValidation';
 import {createComposition,type ClipItem,type KeyRef,type Vec2,createLayer,findComp,findLayer,PROP_META,wouldCycle,EASE_IN,EASE_OUT,TRANSFORM_KEYS,validateDocument,type AnimationDocument,type CompSettings,type Composition,type Interp,type Keyframe,type Layer,type LayerKind,type LayerSource,type LayerEffect,validSource,validEffects,type Property,type PropValue,type TransformKey} from './model';
@@ -13,7 +14,7 @@ export type Edit=
  |{type:'layer.remove';layer:string}
  |{type:'layer.update';layer:string;name?:string;visible?:boolean;solo?:boolean;locked?:boolean;source?:Partial<LayerSource>}
  |{type:'layer.timing';layer:string;inT:number;outT:number}
- |{type:'layer.parent';layer:string;parent:string|null}
+ |{type:'layer.parent';layer:string;parent:string|null;keepWorld?:boolean;t?:number}
  |{type:'layer.reorder';layer:string;index:number}
  |{type:'prop.set';layer:string;prop:TransformKey;value:PropValue;t:number}
  |{type:'prop.animate';layer:string;prop:TransformKey;on:boolean;t:number}
@@ -29,6 +30,9 @@ export type Edit=
  /** Spatial tangents of a position key, as offsets from the key value. */
  |{type:'key.spatial';layer:string;prop:TransformKey;t:number;sIn?:Vec2;sOut?:Vec2}
  |{type:'keys.spatial';keys:readonly KeyRef[];mode:'smooth'|'straight'}
+ |{type:'effect.colorKey';layer:string;effect:string;color:string;t:number}
+ |{type:'effect.bypassKey';layer:string;effect:string;bypass:boolean;t:number}
+ |{type:'layer.stroke';layer:string;stroke:NonNullable<Layer['stroke']>}
  |{type:'effect.amount';layer:string;effect:string;value:number;t:number}
  |{type:'effect.animate';layer:string;effect:string;on:boolean;t:number}
  |{type:'effect.key.remove';layer:string;effect:string;t:number}
@@ -98,6 +102,11 @@ function reduce(doc:AnimationDocument,e:Edit):AnimationDocument{
    return withComp(doc,{...c,...e.settings,duration,fps:e.settings.fps??c.fps,markers:c.markers?.filter(m=>m.t<duration+c.start),layers:clipped,workArea:{in:Math.min(c.workArea.in,duration-1),out:Math.min(c.workArea.out,duration)}});}
   case 'comp.select':if(!findComp(doc,e.comp))return fail('missing','Composition does not exist.');return e.comp===doc.activeComp?doc:{...doc,activeComp:e.comp};
   case 'comp.remove':{if(doc.compositions.length<2)return fail('invalid','A document needs at least one composition.');if(!findComp(doc,e.comp))return fail('missing','Composition does not exist.');const rest=doc.compositions.filter(c=>c.id!==e.comp);return {...doc,compositions:rest,activeComp:doc.activeComp===e.comp?rest[0].id:doc.activeComp};}
+  case 'layer.stroke':{const l=layerOf(doc,e.layer);return setLayer(doc,{...l,stroke:e.stroke});}
+  case 'effect.colorKey':case 'effect.bypassKey':{const l=layerOf(doc,e.layer),t=tickOf(compOf(doc),e.t),effect=l.effects?.find(x=>x.id===e.effect)??fail('missing','Effect no longer exists.');
+   if(e.type==='effect.colorKey'&&(effect.kind!=='tint'||!/^#[0-9a-fA-F]{6}$/.test(e.color)))fail('invalid','Only tint accepts colour keys.');
+   const next=e.type==='effect.colorKey'?{...effect,colorKeys:[...(effect.colorKeys??[]).filter(k=>k.t!==t),{t,color:e.color}].sort((a,b)=>a.t-b.t)}:{...effect,bypassKeys:[...(effect.bypassKeys??[]).filter(k=>k.t!==t),{t,bypass:e.bypass}].sort((a,b)=>a.t-b.t)};
+   return setLayer(doc,{...l,effects:l.effects!.map(x=>x.id===effect.id?next:x)});}
   case 'markers.set':{const c=compOf(doc);return withComp(doc,{...c,markers:[...e.markers].sort((a,b)=>a.t-b.t)});}
   case 'layer.reveal':{const l=layerOf(doc,e.layer);if(l.kind!=='text')fail('invalid','Typewriter requires a text layer.');return setLayer(doc,{...l,textReveal:e.property});}
   case 'effect.amount':case 'effect.animate':case 'effect.key.remove':{const l=layerOf(doc,e.layer),c=compOf(doc),t=tickOf(c,e.t),effect=l.effects?.find(x=>x.id===e.effect)??fail('missing','Effect no longer exists.');let next=effect;
@@ -123,7 +132,15 @@ function reduce(doc:AnimationDocument,e:Edit):AnimationDocument{
    if(!Number.isInteger(e.inT)||!Number.isInteger(e.outT)||e.outT<=e.inT||e.inT<0||e.outT>c.duration)fail('invalid','Layer timing must be inside the composition with out after in.');return setLayer(doc,{...l,inT:e.inT,outT:e.outT});}
   case 'layer.parent':{const c=compOf(doc);const l=layerOf(doc,e.layer);
    if(e.parent!==null&&!findLayer(c,e.parent))fail('missing','Parent layer does not exist.');
-   if(e.parent!==null&&wouldCycle(c,l.id,e.parent))fail('cycle','That parent would create a cycle.');return setLayer(doc,{...l,parent:e.parent});}
+   if(e.parent!==null&&wouldCycle(c,l.id,e.parent))fail('cycle','That parent would create a cycle.');
+   if(!e.keepWorld)return setLayer(doc,{...l,parent:e.parent});
+   const t=tickOf(c,e.t??0);const transformKeys=['anchor','position','scale','rotation'] as const;
+   const animated=(id:string|null):boolean=>{if(!id)return false;const current=findLayer(c,id)!;return transformKeys.some(k=>current.transform[k].keys.length>0)||animated(current.parent);};
+   if(animated(l.id)||animated(e.parent))fail('invalid','Keep-world currently requires static layer and parent transforms. Use local-space parenting for animated hierarchies.');
+   const parent=e.parent?findLayer(c,e.parent)!:null,inv=parent?invertMatrix(worldMatrix(c,parent,t)):[1,0,0,1,0,0] as const;if(!inv)fail('invalid','Parent transform is singular.');
+   const values=decomposeMatrix(multiplyMatrix(inv!,worldMatrix(c,l,t)),evaluate(l.transform.anchor,t) as Vec2);if(!values)fail('invalid','Keep-world needs shear or reflection, which this transform model cannot represent.');
+   if(values!.scale.some(v=>v<0||v>10000))fail('invalid','Keep-world scale exceeds the supported range.');
+   return setLayer(doc,{...l,parent:e.parent,transform:{...l.transform,position:{...l.transform.position,value:values!.position},scale:{...l.transform.scale,value:values!.scale},rotation:{...l.transform.rotation,value:values!.rotation}}});}
   case 'layer.reorder':{const l=layerOf(doc,e.layer);if(!Number.isInteger(e.index)||e.index<0)fail('invalid','Bad index.');
    return withLayers(doc,ls=>{const r=ls.filter(x=>x.id!==l.id);r.splice(Math.min(e.index,r.length),0,l);return r;});}
   case 'prop.set':{const c=compOf(doc);const v=checkValue(e.prop,e.value);
