@@ -1,3 +1,5 @@
+import {DEFAULT_SNAP,validateSnap,type SnapSettings} from './snapCore';
+export {DEFAULT_SNAP,validateSnap,type SnapSettings} from './snapCore';
 import {insideInstance,deleteNode,uid,type InterfaceDocument,type InterfaceNode} from './model';
 import {computeInterfaceLayout,type LayoutBounds} from './layout';
 import {patchInterfaceNode} from './components';
@@ -23,12 +25,9 @@ export function pasteSelection(doc:InterfaceDocument,clipboard:InterfaceClipboar
  const sourceNodes=new Map(clipboard.nodes.map(n=>[n.id,n]));const instanceSlots=new Set<string>();const preserve=(id:string)=>{instanceSlots.add(id);sourceNodes.get(id)!.children.forEach(preserve);};clipboard.nodes.filter(n=>n.instance).forEach(n=>preserve(n.id));for(const source of clipboard.nodes)if(!instanceSlots.has(source.id))delete copies.find(n=>n.id===map.get(source.id))!.componentSlot;
  for(const copy of copies)if(copy.prototypeLinks)copy.prototypeLinks=copy.prototypeLinks.map(l=>({...l,targetFrameId:parentId===null&&map.has(l.targetFrameId)?map.get(l.targetFrameId)!:l.targetFrameId}));doc.nodes.push(...copies);const ids=clipboard.roots.map(id=>map.get(id)!);(parent?.children??page.children).push(...ids);return ids;
 }
-export interface SnapSettings {smart?:boolean;rulers?:boolean;enabled:boolean;grid:number;guidesX:number[];guidesY:number[];}
-export const DEFAULT_SNAP:SnapSettings={smart:true,rulers:true,enabled:false,grid:8,guidesX:[],guidesY:[]};
 export function snapPosition(x:number,y:number,bounds:LayoutBounds,settings:SnapSettings,tolerance=6):{x:number;y:number;guideX?:number;guideY?:number}{
  if(!settings.enabled)return {x,y};const solve=(value:number,size:number,guides:number[])=>{let result=Math.round(value/settings.grid)*settings.grid,guide:number|undefined;let distance=tolerance;for(const line of guides)for(const edge of [0,size/2,size]){const candidate=line-edge,d=Math.abs(candidate-value);if(d<distance){distance=d;result=candidate;guide=line;}}return {value:result,guide};};const sx=solve(x,bounds.width,settings.guidesX),sy=solve(y,bounds.height,settings.guidesY);return {x:sx.value,y:sy.value,guideX:sx.guide,guideY:sy.guide};
 }
-export function validateSnap(s:SnapSettings){if(s.smart!==undefined&&typeof s.smart!=='boolean'||s.rulers!==undefined&&typeof s.rulers!=='boolean')throw Error('Invalid snap settings.');if(!Number.isFinite(s.grid)||s.grid<1||s.grid>1024||s.guidesX.length>50||s.guidesY.length>50||![...s.guidesX,...s.guidesY].every(n=>Number.isFinite(n)&&Math.abs(n)<=32768))throw Error('Invalid grid/guides.');}
 /** Only visible siblings in the same parent space; selected roots never snap to themselves. */
 export function smartGuideSettings(doc:InterfaceDocument,id:string,selected:readonly string[],settings:SnapSettings):SnapSettings{if(!settings.enabled||settings.smart===false)return settings;const n=doc.nodes.find(n=>n.id===id);if(!n)return settings;const layout=computeInterfaceLayout(doc),exclude=new Set(selectionRoots(doc,selected).map(n=>n.id)),xs=[...settings.guidesX],ys=[...settings.guidesY];for(const sibling of doc.nodes){if(sibling.parentId!==n.parentId||sibling.pageId!==n.pageId||sibling.hidden||exclude.has(sibling.id))continue;const b=layout.bounds.get(sibling.id)!;xs.push(b.x,b.x+b.width/2,b.x+b.width);ys.push(b.y,b.y+b.height/2,b.y+b.height);}return {...settings,guidesX:xs,guidesY:ys};}
 export function rulerTicks(length:number,zoom:number){const step=zoom<.5?200:zoom<1?100:50;return Array.from({length:Math.min(200,Math.ceil(length/step)+1)},(_,i)=>i*step);}

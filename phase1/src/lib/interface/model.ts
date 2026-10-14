@@ -1,3 +1,4 @@
+import {validateSnap} from './snapCore';
 import type {InterfaceLayout,InterfaceSizing,InterfaceConstraints,InterfaceInstance,InterfaceComponent,InterfaceVariable,InterfaceTextStyle,InterfaceAsset,InterfacePath} from './schema';
 import {validateInterfaceFeatures} from './validation';
 /** Somnia-owned P0 scene. No external engine, file association or SDK surface. */
@@ -16,7 +17,7 @@ export function parseInterfaceDocument(text:string):InterfaceDocument{
  const d:unknown=JSON.parse(text);
  if(!object(d)||d.kind!=='somnia-interface'||d.version!==1||!validId(d.id)||!label(d.name)||!Number.isSafeInteger(d.revision)||Number(d.revision)<0||!Array.isArray(d.pages)||!d.pages.length||d.pages.length>100||!Array.isArray(d.nodes)||d.nodes.length>MAX_NODES)throw Error('Invalid or unsupported Interface snapshot.');
  const ids=new Set<string>([d.id]);const pages=new Map<string,InterfacePage>();const nodes=new Map<string,InterfaceNode>();
- for(const p of d.pages){if(!object(p)||!validId(p.id)||ids.has(p.id)||!label(p.name)||!refs(p.children))throw Error('Invalid page.');ids.add(p.id);pages.set(p.id,p as unknown as InterfacePage);}
+ for(const p of d.pages){if(!object(p)||!validId(p.id)||ids.has(p.id)||!label(p.name)||!refs(p.children))throw Error('Invalid page.');if(p.snap!==undefined)validateSnap(p.snap as import('./snapCore').SnapSettings);ids.add(p.id);pages.set(p.id,p as unknown as InterfacePage);}
  for(const n of d.nodes){
   if(!object(n)||!validId(n.id)||ids.has(n.id)||!pages.has(String(n.pageId))||!(n.parentId===null||validId(n.parentId))||!refs(n.children)||!['frame','group','rectangle','text','ellipse','line','path','image'].includes(String(n.kind))||!label(n.name)||typeof n.hidden!=='boolean'||typeof n.locked!=='boolean'||typeof n.fill!=='string'||!/^#[0-9a-fA-F]{6}$/.test(n.fill))throw Error('Invalid layer.');
   for(const key of ['x','y','width','height'])if(typeof n[key]!=='number'||!Number.isFinite(n[key])||Math.abs(Number(n[key]))>32768||(['width','height'].includes(key)&&Number(n[key])<1))throw Error('Invalid geometry.');

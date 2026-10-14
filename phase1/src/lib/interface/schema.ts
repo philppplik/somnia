@@ -1,3 +1,4 @@
+import type {SnapSettings} from './snapCore';
 export type AxisSizing='fixed'|'hug'|'fill';
 export interface InterfaceLayout {direction:'free'|'row'|'column'|'grid';wrap:boolean;gap:number;padding:[number,number,number,number];align:'start'|'center'|'end'|'stretch';columns?:number;}
 export interface InterfaceSizing {width:AxisSizing;height:AxisSizing;minWidth:number;minHeight:number;maxWidth:number;maxHeight:number;absolute:boolean;}
@@ -24,5 +25,5 @@ export interface InterfaceNode {
  altText?:string;variableMode?:VariableMode;bindings?:{fill?:string;gap?:string};textStyleId?:string;annotation?:string;ready?:boolean;layout?:InterfaceLayout;sizing?:InterfaceSizing;constraints?:InterfaceConstraints;componentSlot?:string;instance?:InterfaceInstance;
  [key:string]:unknown;
 }
-export interface InterfacePage {id:string;name:string;children:string[];[key:string]:unknown;}
+export interface InterfacePage {snap?:SnapSettings;id:string;name:string;children:string[];[key:string]:unknown;}
 export interface InterfaceDocument {kind:'somnia-interface';version:1;id:string;name:string;revision:number;pages:InterfacePage[];nodes:InterfaceNode[];components?:InterfaceComponent[];variables?:InterfaceVariable[];textStyles?:InterfaceTextStyle[];assets?:InterfaceAsset[];prototypeStartFrameId?:string;[key:string]:unknown;}

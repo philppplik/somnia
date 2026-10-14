@@ -1,0 +1,13 @@
+import {addNode,uid,type InterfaceDocument} from './model';
+import {copySelection,pasteSelection} from './editing';
+import {computeInterfaceLayout} from './layout';
+import {DEFAULT_SIZING} from './schema';
+import {DEFAULT_SNAP,validateSnap,type SnapSettings} from './snapCore';
+/** Generic CSS-pixel design sizes, not current hardware specifications or safe-area emulation. */
+export const INTERFACE_FRAME_PRESETS={phone:{width:390,height:844},tablet:{width:768,height:1024},desktop:{width:1440,height:900}} as const;
+export function addPresetFrame(doc:InterfaceDocument,pageId:string,preset:keyof typeof INTERFACE_FRAME_PRESETS,name:string){if(!Object.hasOwn(INTERFACE_FRAME_PRESETS,preset))throw Error('Unknown frame preset.');const page=doc.pages.find(p=>p.id===pageId);if(!page)throw Error('Page unavailable.');const layout=computeInterfaceLayout(doc),right=Math.max(0,...page.children.map(id=>{const b=layout.bounds.get(id)!;return b.x+b.width;})),{width,height}=INTERFACE_FRAME_PRESETS[preset];if(right+48+width>32768)throw Error('No room for another preset frame.');const id=addNode(doc,pageId,'frame'),n=doc.nodes.find(n=>n.id===id)!;Object.assign(n,{name,x:right+48,y:24,width,height,sizing:{...DEFAULT_SIZING}});return id;}
+export function reorderInterfacePage(doc:InterfaceDocument,pageId:string,delta:-1|1){if(delta!==-1&&delta!==1)throw Error('Invalid page move.');const index=doc.pages.findIndex(p=>p.id===pageId);if(index<0)throw Error('Page unavailable.');const target=index+delta;if(target<0||target>=doc.pages.length)return false;const [page]=doc.pages.splice(index,1);doc.pages.splice(target,0,page);return true;}
+/** Masters copy as ordinary artwork; instances retain existing document-local definitions. */
+export function duplicateInterfacePage(doc:InterfaceDocument,pageId:string,name:string){const page=doc.pages.find(p=>p.id===pageId);if(!page)throw Error('Page unavailable.');if(doc.pages.length>=100)throw Error('Page limit reached.');if(!name.trim()||name.length>256)throw Error('Invalid page name.');const clipboard=page.children.length?copySelection(doc,page.children):null,id=uid(),copy={...structuredClone(page),id,name,children:[] as string[]};doc.pages.splice(doc.pages.indexOf(page)+1,0,copy);if(clipboard)pasteSelection(doc,clipboard,id,null,0);return id;}
+export function interfacePageSnap(doc:InterfaceDocument|null,pageId:string|null):SnapSettings{return doc?.pages.find(p=>p.id===pageId)?.snap??DEFAULT_SNAP;}
+export function setInterfacePageSnap(doc:InterfaceDocument,pageId:string,next:SnapSettings){validateSnap(next);const page=doc.pages.find(p=>p.id===pageId);if(!page)throw Error('Page unavailable.');page.snap=structuredClone(next);}

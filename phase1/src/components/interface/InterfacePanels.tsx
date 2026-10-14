@@ -1,3 +1,4 @@
+import {InterfacePages} from './InterfacePages';
 import {interfaceTreeOrder,interfaceTreeTarget} from '../../lib/interface/accessibility';
 import {InterfaceLibrary} from './InterfaceLibrary';
 import {StudioStatus} from '../studios/StudioStatus';
@@ -33,8 +34,8 @@ export function InterfaceLayers(){
   {n.children.length>0&&<ul role="group" className="m-0 list-none p-0">{n.children.map(child=>row(child,depth+1))}</ul>}
  </li>;};
  return <Guard>{run=><div className="flex flex-col gap-3 p-3">
-  <label className="text-xs">{t('interface.page')}<select className="mt-1 w-full rounded border border-subtle bg-panel p-2" value={s.pageId??''} onChange={e=>interfaceSession.page(e.target.value)}>{doc.pages.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}</select></label>
-  <Field name={t('interface.pageName')} value={page.name} onCommit={name=>run(()=>interfaceSession.transact(d=>{d.pages.find(p=>p.id===page.id)!.name=name;}))}/>
+  <label className="text-xs">{t('interface.page')}<select aria-label={t('interface.page')} className="mt-1 w-full rounded border border-subtle bg-panel p-2" value={s.pageId??''} onChange={e=>interfaceSession.page(e.target.value)}>{doc.pages.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}</select></label>
+  <InterfacePages run={run}/><Field name={t('interface.pageName')} value={page.name} onCommit={name=>run(()=>interfaceSession.transact(d=>{d.pages.find(p=>p.id===page.id)!.name=name;}))}/>
   <label className="text-xs">{t('interface.navigateFrame')}<select className="mt-1 w-full bg-panel p-2" value={doc.nodes.find(n=>n.id===s.selection&&n.kind==='frame')?.id??''} onChange={e=>{interfaceSession.select(e.target.value||null);window.dispatchEvent(new CustomEvent('interface-reveal',{detail:e.target.value}));}}><option value="">{t('interface.none')}</option>{doc.nodes.filter(n=>n.pageId===page.id&&n.kind==='frame').map(n=><option key={n.id} value={n.id}>{n.name}</option>)}</select></label>
   <Button size="compact" variant="outline" onClick={()=>run(()=>{const id=uid();interfaceSession.transact(d=>d.pages.push({id,name:`${t('interface.page')} ${d.pages.length+1}`,children:[]}));interfaceSession.page(id);})}>{t('interface.addPage')}</Button>
   <div className="flex flex-wrap gap-1">{(['frame','rectangle','text','group','ellipse','line','path'] as const).map(kind=><Button size="compact" key={kind} onClick={()=>run(()=>{const selected=doc.nodes.find(n=>n.id===s.selection);let id='';interfaceSession.transact(d=>{id=addNode(d,page.id,kind,selected&&['frame','group'].includes(selected.kind)&&!selected.locked?selected.id:null);});interfaceSession.select(id);})}>{t(`interface.${kind}`)}</Button>)}</div>
