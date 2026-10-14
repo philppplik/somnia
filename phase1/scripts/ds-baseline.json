@@ -334,10 +334,10 @@
       "inlineStyle": 18
     },
     "src/components/versions": {
-      "rawButton": 4,
-      "rawInput": 9,
-      "rawSelect": 4,
-      "rawTextarea": 2,
+      "rawButton": 0,
+      "rawInput": 0,
+      "rawSelect": 0,
+      "rawTextarea": 0,
       "hexTsx": 0,
       "hexCss": 0,
       "pixelText": 41,

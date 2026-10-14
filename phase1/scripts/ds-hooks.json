@@ -255,6 +255,7 @@
         "src/lib/agent/oauth/testSupport/mockOAuthServer.ts",
         "src/lib/agent/oauth/testSupport/referenceMigration.ts",
         "src/lib/agent/oauth/testSupport/referenceSubject.ts",
+        "src/lib/agent/officeReviewContract.ts",
         "src/lib/agent/openAI.ts",
         "src/lib/agent/openAIAccount.ts",
         "src/lib/agent/openRouter.ts",
@@ -1851,6 +1852,7 @@
         "src/lib/interface/p22I18n.ts",
         "src/lib/interface/p30I18n.ts",
         "src/lib/interface/p34I18n.ts",
+        "src/lib/interface/p35I18n.ts",
         "src/lib/interface/p9I18n.ts",
         "src/lib/interface/prototype.ts",
         "src/lib/interface/prototypeI18n.ts",
@@ -3582,6 +3584,7 @@
         "src/lib/localModelsI18n.ts",
         "src/lib/mdFormat.ts",
         "src/lib/pdf/export/browserSmoke.ts",
+        "src/lib/slides/deckPackage.ts",
         "src/lib/studios/blankFiles.ts",
         "src/lib/visualDiff/staticPreview.ts",
         "src/main.tsx"
@@ -4149,6 +4152,7 @@
         "src/lib/agent/oauth/testSupport/fakeCredentialStore.ts",
         "src/lib/agent/oauth/testSupport/mockOAuthServer.ts",
         "src/lib/agent/officeLocalPrompt.ts",
+        "src/lib/agent/officeReviewContract.ts",
         "src/lib/agent/openAI.ts",
         "src/lib/agent/openRouter.ts",
         "src/lib/agent/panelBridge.ts",
@@ -4886,6 +4890,7 @@
         "src/lib/shell/commandMeta.ts",
         "src/lib/shell/nativeMenu.ts",
         "src/lib/shell/when.ts",
+        "src/lib/slides/deckPackage.ts",
         "src/lib/sound/session.ts",
         "src/lib/starterKit.ts",
         "src/lib/studio3d/stage.ts",
@@ -5237,6 +5242,7 @@
         "src/lib/shell/nativeMenu.ts",
         "src/lib/shell/types.ts",
         "src/lib/slides/commands.ts",
+        "src/lib/slides/deckPackage.ts",
         "src/lib/slides/panelCommands.ts",
         "src/lib/slides/panelDefinitions.ts",
         "src/lib/slides/panelModel.ts",
@@ -5678,6 +5684,7 @@
         "src/lib/agent/oauth/testSupport/referenceMigration.ts",
         "src/lib/agent/oauth/testSupport/referenceSubject.ts",
         "src/lib/agent/officeLocalPrompt.ts",
+        "src/lib/agent/officeReviewContract.ts",
         "src/lib/agent/openAI.ts",
         "src/lib/agent/openRouter.ts",
         "src/lib/agent/panelBridge.ts",
@@ -6657,6 +6664,7 @@
         "src/lib/agent/localVisionApplication.ts",
         "src/lib/agent/nativeVoice.ts",
         "src/lib/agent/oauth/testSupport/fakeCredentialStore.ts",
+        "src/lib/agent/officeReviewContract.ts",
         "src/lib/agent/openAI.ts",
         "src/lib/agent/openAIAccount.ts",
         "src/lib/agent/openRouter.ts",
@@ -8501,6 +8509,7 @@
         "src/components/imageedit/FilterPanel.tsx",
         "src/components/interface/interface-chrome.css",
         "src/components/interface/InterfacePanels.tsx",
+        "src/components/interface/InterfacePrototype.tsx",
         "src/components/interface/InterfaceResources.tsx",
         "src/components/pdf/pdf-edit.css",
         "src/components/photos/panels/shared.tsx",
@@ -9774,6 +9783,7 @@
         "src/components/sheets/SheetsInspector.tsx",
         "src/components/sheets/SheetsPanels.tsx",
         "src/components/SourceDiff.tsx",
+        "src/lib/agent/officeReviewContract.ts",
         "src/lib/agent/studioContext.ts",
         "src/lib/agent/studioReadOnly.ts",
         "src/lib/agent/studioWorkspace.ts",
@@ -10197,6 +10207,7 @@
         "src/components/ShareDialog.tsx",
         "src/components/sheets/SheetsPanels.tsx",
         "src/components/shell/HeroActionSlot.tsx",
+        "src/components/slides/shellPanels.tsx",
         "src/components/sound/PluginParams.tsx",
         "src/components/sound/SoundInspector.tsx",
         "src/components/sound/SoundPanels.tsx",
@@ -10473,6 +10484,7 @@
         "src/lib/previewNavigationBridge.ts",
         "src/lib/previewResources.ts",
         "src/lib/renderPreview.ts",
+        "src/lib/slides/deckPackage.ts",
         "src/lib/syncFolder.ts",
         "src/lib/visualDiff/staticPreview.ts",
         "src/lib/visualDiff/validation/fixture.tsx",
@@ -10540,6 +10552,7 @@
         "src/lib/animation/pathLayer.ts",
         "src/lib/animation/selection.ts",
         "src/lib/animation/textAnimators.ts",
+        "src/lib/animation/timelineView.ts",
         "src/lib/codePanels/model.ts",
         "src/lib/collab/appMedia.ts",
         "src/lib/collab/blobSync.ts",
@@ -10755,6 +10768,7 @@
         "src/lib/pdf/verification/demo.tsx",
         "src/lib/pdfview/pdfjsBackend.ts",
         "src/lib/shell/types.ts",
+        "src/lib/slides/deckPackage.ts",
         "src/lib/studios/blankFiles.ts",
         "src/lib/studios/code.ts",
         "src/lib/studios/sheetsRail.ts",
@@ -10790,6 +10804,7 @@
         "src/components/shell/MenuBar.tsx",
         "src/components/shell/nativeMenuInstall.ts",
         "src/components/shell/RailMenu.tsx",
+        "src/components/slides/shellPanels.tsx",
         "src/components/SourceEditor.tsx",
         "src/components/studios/StudioViewMenu.tsx",
         "src/components/ui/menu.tsx",
@@ -15646,7 +15661,9 @@
         "src/lib/sheets/worker.ts",
         "src/lib/shell/menuModel.ts",
         "src/lib/slides/client.ts",
+        "src/lib/slides/deckPackage.ts",
         "src/lib/slides/protocol.ts",
+        "src/lib/slides/session.ts",
         "src/lib/slides/worker.ts",
         "src/lib/sound/engine.ts",
         "src/lib/sound/protocol.ts",
@@ -16365,6 +16382,16 @@
     },
     {
       "kind": "testId",
+      "value": "studio3d-material-list",
+      "readers": [
+        "tests/studio3d.spec.ts"
+      ],
+      "owners": [
+        "src/components/studio3d/Studio3DPanels.tsx"
+      ]
+    },
+    {
+      "kind": "testId",
       "value": "studio3d-material-presets",
       "readers": [
         "tests/studio3d.spec.ts"
@@ -16564,6 +16591,14 @@
     {
       "kind": "testId",
       "value": "studio3d-texture-metal",
+      "readers": [
+        "tests/studio3d.spec.ts"
+      ],
+      "owners": []
+    },
+    {
+      "kind": "testId",
+      "value": "studio3d-texture-thumb-color",
       "readers": [
         "tests/studio3d.spec.ts"
       ],

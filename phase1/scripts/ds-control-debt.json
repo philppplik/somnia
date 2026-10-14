@@ -933,50 +933,50 @@
       "rawTextarea": 0
     },
     "src/components/versions/ChangesTab.tsx": {
-      "rawButton": 2,
-      "rawInput": 3,
+      "rawButton": 0,
+      "rawInput": 0,
       "rawSelect": 0,
-      "rawTextarea": 1
+      "rawTextarea": 0
     },
     "src/components/versions/CompareTab.tsx": {
-      "rawButton": 1,
+      "rawButton": 0,
       "rawInput": 0,
-      "rawSelect": 1,
+      "rawSelect": 0,
       "rawTextarea": 0
     },
     "src/components/versions/ConflictResolver.tsx": {
-      "rawButton": 1,
-      "rawInput": 1,
+      "rawButton": 0,
+      "rawInput": 0,
       "rawSelect": 0,
-      "rawTextarea": 1
+      "rawTextarea": 0
     },
     "src/components/versions/PublicationReview.tsx": {
       "rawButton": 0,
-      "rawInput": 2,
-      "rawSelect": 1,
+      "rawInput": 0,
+      "rawSelect": 0,
       "rawTextarea": 0
     },
     "src/components/versions/RefCompare.tsx": {
       "rawButton": 0,
       "rawInput": 0,
-      "rawSelect": 1,
+      "rawSelect": 0,
       "rawTextarea": 0
     },
     "src/components/versions/VariantsTab.tsx": {
       "rawButton": 0,
-      "rawInput": 2,
+      "rawInput": 0,
       "rawSelect": 0,
       "rawTextarea": 0
     },
     "src/components/versions/VersionPicker.tsx": {
       "rawButton": 0,
       "rawInput": 0,
-      "rawSelect": 1,
+      "rawSelect": 0,
       "rawTextarea": 0
     },
     "src/components/versions/VersionsPanel.tsx": {
       "rawButton": 0,
-      "rawInput": 1,
+      "rawInput": 0,
       "rawSelect": 0,
       "rawTextarea": 0
     },

@@ -5,6 +5,7 @@ import type {PublicationBackend, PublicationTarget} from '../../lib/git/publicat
 import {Button} from '../ui/button';
 import {Dialog, DialogContent, DialogDescription, DialogTitle} from '../ui/dialog';
 
+import {NativeInput,NativeSelect} from '../ui/native-controls';
 /** The transport picker may supply a target; manually typed targets still require native validation. */
 export function PublicationReview({backend, unsavedFiles, advanced, target: supplied}: {backend: PublicationBackend; unsavedFiles: number; advanced: boolean; target?: PublicationTarget}) {
  const {t} = useT();
@@ -16,7 +17,7 @@ export function PublicationReview({backend, unsavedFiles, advanced, target: supp
  const suppliedKey = JSON.stringify(supplied); const previousTarget = useRef(suppliedKey);
  useEffect(() => {if(supplied && previousTarget.current !== suppliedKey) {setTarget(supplied); controller.invalidate();} previousTarget.current = suppliedKey;}, [suppliedKey, supplied, controller]);
  const plan = s.plan;
- const field = (key: 'remote' | 'sourceBranch' | 'targetBranch' | 'accountId', label: string) => <label className="flex flex-col gap-1 text-ink-2">{t(label)}<input className="h-8 min-w-0 rounded-sm border border-subtle bg-transparent px-2 text-ink" value={target[key]} disabled={s.busy} onChange={e => {setTarget({...target, [key]: e.target.value}); controller.invalidate();}} data-testid={`publication-${key}`}/></label>;
+ const field = (key: 'remote' | 'sourceBranch' | 'targetBranch' | 'accountId', label: string) => <label className="flex flex-col gap-1 text-ink-2">{t(label)}<NativeInput className="h-8 min-w-0 rounded-sm border border-subtle bg-transparent px-2 text-ink" value={target[key]} disabled={s.busy} onChange={e => {setTarget({...target, [key]: e.target.value}); controller.invalidate();}} data-testid={`publication-${key}`}/></label>;
  const review = async (refetch: boolean) => {await controller.review(target, refetch); setOpen(true);};
  const refetchRequired = s.outcome?.kind === 'stale-plan' || s.outcome?.kind === 'uncertain-reconcile';
  const canReview = !!target.remote && !!target.accountId && !!target.sourceBranch && !!target.targetBranch && !s.busy;
@@ -24,7 +25,7 @@ export function PublicationReview({backend, unsavedFiles, advanced, target: supp
   <h3 className="text-xs font-semibold text-ink">{t('publication.title')}</h3>
   <p className="text-ink-2">{t('publication.hint')}</p>
   {field('accountId', 'publication.account')}
-  <label className="flex flex-col gap-1 text-ink-2">{t('publication.authRoute')}<select className="h-8 rounded-sm border border-subtle bg-panel px-2 text-ink" value={target.authRoute} disabled={s.busy} onChange={e => {setTarget({...target, authRoute: e.target.value as PublicationTarget['authRoute']}); controller.invalidate();}}><option value="github-https">GitHub HTTPS</option><option value="ssh">SSH</option><option value="gcm">Git Credential Manager</option></select></label>
+  <label className="flex flex-col gap-1 text-ink-2">{t('publication.authRoute')}<NativeSelect className="h-8 rounded-sm border border-subtle bg-panel px-2 text-ink" value={target.authRoute} disabled={s.busy} onChange={e => {setTarget({...target, authRoute: e.target.value as PublicationTarget['authRoute']}); controller.invalidate();}}><option value="github-https">GitHub HTTPS</option><option value="ssh">SSH</option><option value="gcm">Git Credential Manager</option></NativeSelect></label>
   {field('remote', 'publication.remote')}{field('sourceBranch', 'publication.source')}{field('targetBranch', 'publication.target')}
   {s.outcome && <p role="status" className="rounded-sm border border-subtle p-2 text-ink" data-testid="publication-outcome">{t(`publication.outcome.${s.outcome.kind}`)}</p>}
   {s.error && <p role="alert" className="text-ink">{t('publication.error')}</p>}
@@ -46,7 +47,7 @@ export function PublicationReview({backend, unsavedFiles, advanced, target: supp
      {plan.initiatedBy === 'agent' && <p role="note">{plan.grant ? t('publication.grant', {grant: plan.grant.label}) : t('publication.noGrant')}</p>}
      {advanced && <details data-testid="publication-metadata"><summary className="cursor-pointer text-ink-2">{t('versions.advanced')}</summary><dl className="mt-2 space-y-1 break-all font-mono text-[10px]"><dt>HEAD</dt><dd>{plan.head}</dd><dt>tree/content hash</dt><dd>{plan.contentHash}</dd><dt>remote tip</dt><dd>{plan.remoteTip ?? t('publication.none')}</dd><dt>plan ID</dt><dd>{plan.planId}</dd></dl></details>}
      <p className="text-ink-3">{t('publication.recovery')}</p>
-     <label className="flex items-start gap-2 rounded-sm border border-subtle p-3"><input type="checkbox" style={{width:16,height:16,flex:'0 0 16px'}} className="mt-0.5" checked={s.confirmed} disabled={s.busy} onChange={e => controller.confirm(e.target.checked)} data-testid="publication-confirm"/><span className="min-w-0 flex-1">{t('publication.confirm')}</span></label>
+     <label className="flex items-start gap-2 rounded-sm border border-subtle p-3"><NativeInput type="checkbox" style={{width:16,height:16,flex:'0 0 16px'}} className="mt-0.5" checked={s.confirmed} disabled={s.busy} onChange={e => controller.confirm(e.target.checked)} data-testid="publication-confirm"/><span className="min-w-0 flex-1">{t('publication.confirm')}</span></label>
      <div className="flex justify-end gap-2"><Button disabled={s.busy} onClick={() => {setOpen(false); controller.confirm(false);}}>{t('dialogs.cancel')}</Button><Button variant="primary" disabled={!controller.canApply() || plan.initiatedBy === 'agent' && unsavedFiles > 0} onClick={() => void controller.publish()} data-testid="publication-publish">{t(s.busy ? 'publication.loading' : 'publication.publish')}</Button></div>
     </div>}
    </DialogContent>

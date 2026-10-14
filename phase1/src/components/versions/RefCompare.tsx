@@ -6,6 +6,7 @@ import {VisualDiff} from '../../lib/visualDiff';
 import {Button} from '../ui/button';
 import {useT} from '../../lib/useT';
 import {VersionPicker} from './VersionPicker';
+import {NativeSelect} from '../ui/native-controls';
 /** Compare two versions as full project snapshots, bound to content hashes (R2-C3). */
 export function RefCompare({backend, refs}: {backend: GitBackend; refs: GitRefsBackend}) {
  const {t} = useT();
@@ -34,7 +35,7 @@ export function RefCompare({backend, refs}: {backend: GitBackend; refs: GitRefsB
    {bundle.skipped.length > 0 && <p className="m-0 text-[11px] text-ink-3">{t('versions.compareRefs.skipped', {count: bundle.skipped.length})}</p>}
    {bundle.comparisons.length === 0 ? <p className="m-0 text-ink-3">{t('versions.compareRefs.noFiles')}</p> : <>
     <label className="flex flex-col gap-1 text-[11px] text-ink-2">{t('versions.compareRefs.file')}
-     <select className="h-8 rounded-sm border border-subtle bg-elevated px-2 text-xs text-ink" value={path} onChange={e => setPath(e.target.value)}>{bundle.comparisons.map(c => <option key={c.path} value={c.path}>{c.path}</option>)}</select></label>
+     <NativeSelect className="h-8 rounded-sm border border-subtle bg-elevated px-2 text-xs text-ink" value={path} onChange={e => setPath(e.target.value)}>{bundle.comparisons.map(c => <option key={c.path} value={c.path}>{c.path}</option>)}</NativeSelect></label>
     {cmp && <VisualDiff comparison={cmp}/>}</>}
   </section>}
  </div>;

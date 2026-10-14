@@ -10,6 +10,7 @@ import {
 } from '../../lib/git/variantsFlow';
 import { ConflictResolver } from './ConflictResolver';
 
+import {NativeInput} from '../ui/native-controls';
 /** What the panel says when an action cannot start. Pure so it renders in tests. */
 export function Notice({ n, onSaveVersion }: { n: GuardBlock | Dirty | FlowError | { kind: 'text'; key: string }; onSaveVersion?: () => void }) {
   const { t } = useT();
@@ -176,7 +177,7 @@ export function VariantsTab({ deps, onDiskChanged, onSaveVersion, onRepoChanged,
       <form className="vt-new" onSubmit={e => { e.preventDefault(); void create(true); }}>
         <label htmlFor="vt-new-name">{t('variants.new.label')}</label>
         <div className="vt-new-row">
-          <input id="vt-new-name" type="text" value={newName} maxLength={100} placeholder={t('variants.new.placeholder')} onChange={e => setNewName(e.target.value)} />
+          <NativeInput id="vt-new-name" type="text" value={newName} maxLength={100} placeholder={t('variants.new.placeholder')} onChange={e => setNewName(e.target.value)} />
           <Button type="submit" variant="primary" disabled={busy || !newName.trim()}><Plus size={14} aria-hidden="true" />{t('variants.new.start')}</Button>
         </div>
         <p className="vt-hint">{t('variants.new.hint')}</p>
@@ -188,7 +189,7 @@ export function VariantsTab({ deps, onDiskChanged, onSaveVersion, onRepoChanged,
         <DialogContent className="dlg-popup" aria-label={t('variants.rename.title')}>
           <div className="dlg-body">
             <DialogTitle>{t('variants.rename.title')}</DialogTitle>
-            <input type="text" aria-label={t('variants.rename.title')} value={rename?.value ?? ''} maxLength={100} onChange={e => rename && setRename({ ...rename, value: e.target.value })} />
+            <NativeInput type="text" aria-label={t('variants.rename.title')} value={rename?.value ?? ''} maxLength={100} onChange={e => rename && setRename({ ...rename, value: e.target.value })} />
           </div>
           <footer className="dlg-foot"><Button className="dlg-cancel" onClick={() => setRename(null)}>{t('dialogs.cancel')}</Button><span className="dlg-spacer" /><Button variant="primary" disabled={busy || !rename?.value.trim()} onClick={() => void doRename()}>{t('variants.rename.confirm')}</Button></footer>
         </DialogContent>

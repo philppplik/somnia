@@ -4,6 +4,7 @@ import {
   canEditResult, editResult, hasConflictMarkers, isDecided, pickSide, undecidedCount, useBoth, type ConflictDraft,
 } from '../../lib/git/variantsFlow';
 
+import {NativeButton,NativeInput,Textarea} from '../ui/native-controls';
 export interface ConflictResolverProps {
   /** Name of the variant being combined in ("Theirs"). */
   theirsName: string;
@@ -36,10 +37,10 @@ export function ConflictResolver(p: ConflictResolverProps) {
         <ul>
           {p.drafts.map((x, i) => (
             <li key={x.conflict.path}>
-              <button type="button" className="vr-file" aria-current={i === p.selected ? 'true' : undefined} onClick={() => p.onSelect(i)}>
+              <NativeButton type="button" className="vr-file" aria-current={i === p.selected ? 'true' : undefined} onClick={() => p.onSelect(i)}>
                 <span className="vr-file-name" title={x.conflict.path}>{x.conflict.path}</span>
                 <span className="vr-file-state" data-decided={isDecided(x)}>{isDecided(x) ? t('variants.conflict.decided') : t('variants.conflict.needs')}</span>
-              </button>
+              </NativeButton>
             </li>
           ))}
         </ul>
@@ -59,7 +60,7 @@ export function ConflictResolver(p: ConflictResolverProps) {
             </Column>
             <Column title={t('variants.conflict.result')} id="vr-r">
               {c.binary ? <p className="vr-note">{t('variants.conflict.binary')}</p> : (
-                <textarea className="vr-result" aria-labelledby="vr-r" spellCheck={false} value={d.result} readOnly={!canEditResult(c)} onChange={e => p.onChange(p.selected, editResult(d, e.target.value))} />
+                <Textarea className="vr-result" aria-labelledby="vr-r" spellCheck={false} value={d.result} readOnly={!canEditResult(c)} onChange={e => p.onChange(p.selected, editResult(d, e.target.value))} />
               )}
               {canEditResult(c) && <Button onClick={() => p.onChange(p.selected, useBoth(d))}>{t('variants.conflict.useBoth')}</Button>}
               {markers && <p className="vr-warn" role="status">{t('variants.conflict.markers')}</p>}
@@ -70,7 +71,7 @@ export function ConflictResolver(p: ConflictResolverProps) {
       <footer className="vr-foot">
         <label className="vr-msg">
           <span>{t('variants.conflict.message')}</span>
-          <input type="text" maxLength={200} value={p.message} onChange={e => p.onMessage(e.target.value)} />
+          <NativeInput type="text" maxLength={200} value={p.message} onChange={e => p.onMessage(e.target.value)} />
         </label>
         <span className="vr-count" role="status">{open ? t('variants.conflict.open', { count: open }) : t('variants.conflict.allDecided')}</span>
         <Button className="dlg-cancel" disabled={p.busy} onClick={p.onAbort}>{t('variants.conflict.abort')}</Button>
