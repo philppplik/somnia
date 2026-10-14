@@ -1,9 +1,18 @@
-import test from 'node:test';
+import test,{beforeEach,afterEach} from 'node:test';
 import assert from 'node:assert/strict';
 import {renderToStaticMarkup} from 'react-dom/server';
 import {AgentSettings,nextTabIndex} from './agent/AgentSettings';
 import {AgentPanel} from './agent/AgentPanel';
 import {readFileSync} from 'node:fs';
+// This file renders browser components under Node, without sharing browser state.
+let previousStorage:PropertyDescriptor|undefined;
+beforeEach(()=>{
+ previousStorage=Object.getOwnPropertyDescriptor(globalThis,'localStorage');
+ const values=new Map<string,string>();
+ const storage:Storage={get length(){return values.size;},clear:()=>values.clear(),getItem:key=>values.get(key)??null,key:index=>[...values.keys()][index]??null,removeItem:key=>{values.delete(key);},setItem:(key,value)=>{values.set(key,String(value));}};
+ Object.defineProperty(globalThis,'localStorage',{configurable:true,value:storage});
+});
+afterEach(()=>{if(previousStorage)Object.defineProperty(globalThis,'localStorage',previousStorage);else Reflect.deleteProperty(globalThis,'localStorage');});
 test('AI Settings owns provider, prompts, active-file approval and explicit cloud consent',()=>{
  const html=renderToStaticMarkup(<AgentSettings/>);
  for(const text of ['Agent configuration','Provider','Model','Custom prompts','Allow cloud AI','Save AI settings'])assert.ok(html.includes(text),text);
@@ -11,13 +20,18 @@ test('AI Settings owns provider, prompts, active-file approval and explicit clou
  assert.ok(!html.includes('type="checkbox" checked'));
  assert.ok(!html.includes('linear-gradient'));
 });
-test('agent panel only links to configuration and consent, never embeds editing controls',()=>{
+test('agent panel keeps provider configuration separate while exposing explicit local run context and templates',()=>{
  const html=renderToStaticMarkup(<AgentPanel/>);
  assert.ok(html.includes('Agent configuration'));
  assert.ok(html.includes('Cloud data consent'));
  assert.ok(!html.includes('Custom prompts'));
- const selects=html.match(/<select/g)??[];assert.equal(selects.length,1,'only the run-task switcher may be embedded, editing stays in configuration');
- assert.ok(html.includes('Current task'),'the single embedded select is the active-task run control');
+ const selects=html.match(/<select/g)??[];assert.equal(selects.length,3,'active task, document byte limit and template task are the only embedded selects');
+ for(const label of ['Current task','Maximum document bytes','Template task']){
+  const binding=[...html.matchAll(/<label[^>]*for="([^"]+)"[^>]*>([^<]+)<\/label>/g)].find(match=>match[2]===label);
+  assert.ok(binding,label+' must have a field label');
+  assert.ok([...html.matchAll(/<select[^>]*id="([^"]+)"/g)].some(match=>match[1]===binding[1]),label+' must label its select');
+ }
+ assert.ok(!html.includes('Save AI settings'),'provider configuration still belongs in settings');
  assert.ok(!html.includes('ag-consent-backdrop'));
 });
 test('Appearance removes the decorative glass gradient without removing glass controls',()=>{
