@@ -1,3 +1,4 @@
+import {readPin,pinText} from './pins';
 import {PRIMITIVE_KINDS,PrimitiveError,defaultParams,patchParams,readPrimitive,resolveMaterial,MATERIAL_PRESETS,type PrimitiveKind,type PrimitiveData,type PrimitiveParams,type MaterialRequest} from './primitives';
 import * as THREE from 'three';
 import {mergeGeometries} from 'three/examples/jsm/utils/BufferGeometryUtils.js';
@@ -39,6 +40,7 @@ export type CameraKind='perspective'|'orthographic';
 export interface MaterialUsage{/** Stable per material instance. */key:string;name:string;/** '#rrggbb' display colour. */color:string;count:number;ids:number[]}
 export interface ObjectInfo{
  camera:{kind:'perspective';fov:number}|{kind:'orthographic';zoom:number}|null;
+ /** Label text when the object is an annotation pin, else null. */pin?:string|null;
  /** Kind and parameters when the mesh is an editable primitive. */primitive?:PrimitiveData|null;
  id:number;name:string;kind:OutlineEntry['kind'];position:Vec3;rotation:Vec3;scale:Vec3;
  /** True for a skinned mesh (bound to a skeleton). */skinned:boolean;
@@ -264,6 +266,24 @@ export class Stage{
   if(kind!=='plane')mesh.position.y=kind==='cube'||kind==='cylinder'||kind==='cone'?0.5:kind==='sphere'?0.5:0.68;
   if(at&&Number.isFinite(at.x)&&Number.isFinite(at.z)){mesh.position.x=at.x;mesh.position.z=at.z;}
   this.attach(mesh,this.root,this.root.children.length,`Add ${mesh.name}`);return mesh;
+ }
+ /** Adds an annotation pin marker. The label lives in the node's userData and travels with the scene. One undo step. */
+ addPin(at?:Vec3):THREE.Mesh{
+  const b=this.measure().bounds;const r=b&&boundsValid(b)?boundsRadius(b):1;
+  const size=Math.min(0.5,Math.max(0.03,r*0.05));
+  const mesh=new THREE.Mesh(new THREE.OctahedronGeometry(size,0),new THREE.MeshStandardMaterial({color:0xe8a33d,emissive:0x3a2708,roughness:0.4,metalness:0}));
+  mesh.name=this.uniqueName('Pin');mesh.userData.somniaPin={text:''};
+  if(at&&[at.x,at.y,at.z].every(Number.isFinite))mesh.position.set(at.x,at.y,at.z);
+  else{const c=b&&boundsValid(b)?boundsCenter(b):[0,1,0] as [number,number,number];mesh.position.set(c[0],c[1]+r*0.5,c[2]);}
+  this.attach(mesh,this.root,this.root.children.length,`Add ${mesh.name}`);return mesh;
+ }
+ /** Sets the label of an annotation pin. One undo step. */
+ setPinText(id:number,text:string){
+  const o=this.need(id);
+  const before=readPin(o.userData);if(before===null)throw new StageError('That object is not a pin.');
+  const next=pinText(text);if(next===before)return;
+  const apply=(v:string)=>{o.userData.somniaPin={text:v};};
+  apply(next);this.push({label:`Edit ${o.name||'pin'}`,undo:()=>apply(before),redo:()=>apply(next)});
  }
  /** Assigns a material already used in the scene to a single-material mesh. One undo step. */
  assignMaterial(id:number,key:string){
@@ -1891,7 +1911,8 @@ export class Stage{
  info(id:number):ObjectInfo|null{
   const o=this.find(id);if(!o)return null;const m=o as THREE.Mesh;const l=o as THREE.Light;
   const mat=m.isMesh&&!Array.isArray(m.material)&&(m.material as THREE.MeshStandardMaterial).isMeshStandardMaterial?m.material as THREE.MeshStandardMaterial:null;
-  return{id:o.id,name:o.name,kind:(o as THREE.Bone).isBone?'bone':m.isMesh?'mesh':l.isLight?'light':(o as THREE.Camera).isCamera?'camera':'group',
+  return{id:o.id,name:o.name,kind:(o as THREE.Bone).isBone?'bone':m.isMesh?readPin(o.userData)!==null?'pin':'mesh':l.isLight?'light':(o as THREE.Camera).isCamera?'camera':'group',
+   pin:readPin(o.userData),
    position:{x:o.position.x,y:o.position.y,z:o.position.z},rotation:{x:o.rotation.x/DEG,y:o.rotation.y/DEG,z:o.rotation.z/DEG},scale:{x:o.scale.x,y:o.scale.y,z:o.scale.z},
    skinned:(m as THREE.SkinnedMesh).isSkinnedMesh===true,
    mirror:(o.userData.somniaMirror as {axis:'x'|'y'|'z';merge:number;bisect?:boolean}|undefined)??null,
@@ -1915,7 +1936,7 @@ export class Stage{
   const stats=emptyStats();stats.animations=animations;const outline:OutlineEntry[]=[];const mats=new Set<THREE.Material>(),texs=new Set<THREE.Texture>();
   const instanced=new Map<THREE.BufferGeometry,Set<THREE.Material>>();
   const walk=(o:THREE.Object3D,depth:number)=>{
-   const mesh=o as THREE.Mesh;const kind:OutlineEntry['kind']=(o as THREE.Bone).isBone?'bone':mesh.isMesh?'mesh':(o as THREE.Light).isLight?'light':(o as THREE.Camera).isCamera?'camera':'group';
+   const mesh=o as THREE.Mesh;const kind:OutlineEntry['kind']=(o as THREE.Bone).isBone?'bone':mesh.isMesh?readPin(o.userData)!==null?'pin':'mesh':(o as THREE.Light).isLight?'light':(o as THREE.Camera).isCamera?'camera':'group';
    if(kind==='bone')stats.bones++;
    if(depth>0){stats.nodes++;if(kind!=='bone')outline.push({id:o.id,name:o.name||`${kind} ${o.id}`,depth:depth-1,kind,hidden:!o.visible,locked:o.userData.somniaLocked===true});}
    if(kind==='camera')stats.cameras++;

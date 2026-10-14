@@ -637,5 +637,9 @@
  "studio3d.warn.instancingHint": "{count} malhas compartilham geometria e material. Instanciá-las reduziria os draw calls.",
  "studio3d.warn.lodHint": "Cena estática grande ({count} triângulos). Níveis de detalhe ou dizimação ajudariam.",
  "studio3d.turntable.outWebm": "Vídeo WebM",
- "studio3d.turntable.fps": "Quadros por segundo"
+ "studio3d.turntable.fps": "Quadros por segundo",
+ "studio3d.insert.pin": "Alfinete",
+ "studio3d.pin.text": "Rótulo do alfinete",
+ "cmd.studio3d.insert.pin": "Inserir um alfinete de anotação no cursor 3D ou em um ponto",
+ "cmd.studio3d.pin.set": "Definir o texto de um alfinete de anotação"
 }

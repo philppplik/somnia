@@ -637,5 +637,9 @@
  "studio3d.warn.instancingHint": "{count} meshes share the same geometry and material. Instancing them would cut draw calls.",
  "studio3d.warn.lodHint": "A large static scene ({count} triangles). Level of detail or decimation would help.",
  "studio3d.turntable.outWebm": "WebM video",
- "studio3d.turntable.fps": "Frames per second"
+ "studio3d.turntable.fps": "Frames per second",
+ "studio3d.insert.pin": "Pin",
+ "studio3d.pin.text": "Pin label",
+ "cmd.studio3d.insert.pin": "Insert an annotation pin at the 3D cursor or a given point",
+ "cmd.studio3d.pin.set": "Set the label text of an annotation pin"
 }

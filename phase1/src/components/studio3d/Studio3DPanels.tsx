@@ -48,6 +48,7 @@ export function ScenePanel(_:PanelHostProps){
    {LIGHTS.map(k=><Button key={k} variant="outline" onClick={()=>void executeCommand('studio3d.insert.light',{kind:k})}>{t('studio3d.insert.'+k)}</Button>)}
    {(['three-point','studio','sunset','outdoor'] as const).map(preset=><Button key={preset} variant="outline" onClick={()=>void executeCommand('studio3d.light.rig',{preset})}>{t('studio3d.light.rig.'+preset)}</Button>)}
    <Button variant="outline" onClick={()=>void executeCommand('studio3d.insert.camera',{})}>{t('studio3d.insert.camera')}</Button>
+   <Button variant="outline" onClick={()=>void executeCommand('studio3d.insert.pin',{})}>{t('studio3d.insert.pin')}</Button>
    <Button variant="outline" onClick={()=>void executeCommand('studio3d.insert.camera',{fromView:true})}>{t('studio3d.insert.camera.view')}</Button>
    <Button variant="outline" onClick={()=>void executeCommand('studio3d.insert.camera',{kind:'orthographic'})}>{t('studio3d.insert.camera.ortho')}</Button>
   </div>
@@ -240,6 +241,9 @@ export function ObjectSection(_:InspectorSectionProps){
   {o.kind==='mesh'&&<UvFields id={o.id}/>}
   {s.bones.length>0&&(o.kind==='bone'||o.skinned)&&<PoseFields id={o.id}/>}
   {o.kind==='bone'&&<IkFields id={o.id}/>}
+  {o.kind==='pin'&&<div className="grid gap-1" data-testid="studio3d-pin-fields">
+   <label className="grid gap-1 text-xs text-ink-2">{t('studio3d.pin.text')}
+    <Input key={o.id+':pin'} defaultValue={o.pin??''} aria-label={t('studio3d.pin.text')} onBlur={e=>{const v=e.currentTarget.value;if(v!==(o.pin??''))void executeCommand('studio3d.pin.set',{id:o.id,text:v});}} onKeyDown={e=>{if(e.key==='Enter')e.currentTarget.blur();}}/></label></div>}
   {o.kind==='bone'&&<FabrikFields/>}
   {o.kind==='bone'&&<LimitFields id={o.id}/>}
   <div className="flex gap-2"><Button variant="outline" onClick={()=>void executeCommand('studio3d.object.duplicate',{id:o.id})}>{t('studio3d.object.duplicate')}</Button>

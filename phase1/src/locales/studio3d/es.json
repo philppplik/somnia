@@ -637,5 +637,9 @@
  "studio3d.warn.instancingHint": "{count} mallas comparten geometría y material. Instanciarlas reduciría las llamadas de dibujo.",
  "studio3d.warn.lodHint": "Escena estática grande ({count} triángulos). Niveles de detalle o diezmado ayudarían.",
  "studio3d.turntable.outWebm": "Vídeo WebM",
- "studio3d.turntable.fps": "Fotogramas por segundo"
+ "studio3d.turntable.fps": "Fotogramas por segundo",
+ "studio3d.insert.pin": "Chincheta",
+ "studio3d.pin.text": "Etiqueta de la chincheta",
+ "cmd.studio3d.insert.pin": "Insertar una chincheta de anotación en el cursor 3D o en un punto",
+ "cmd.studio3d.pin.set": "Definir el texto de una chincheta de anotación"
 }

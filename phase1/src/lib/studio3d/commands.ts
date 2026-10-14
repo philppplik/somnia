@@ -25,6 +25,10 @@ export interface Studio3DController{
  addLightRig(preset?:LightRigPreset):number[];
  setTransform(id:number,patch:TransformPatch):void;
  setMaterial(id:number,patch:MaterialPatch):void;
+ /** Insert an annotation pin at the 3D cursor or a given point; returns its id. */
+ addPin(at?:{x:number;y:number;z:number}):number;
+ /** Set the label text of an annotation pin. */
+ setPinText(id:number,text:string):void;
  setPrimitive(id:number,patch:Record<string,number>):void;
  exportGltf(opts?:{textures?:'embed'|'external';clips?:string[]|null}):Promise<void>;
  setExportOptions(p:{textures?:'embed'|'external';clips?:string[]|null}):void;
@@ -210,6 +214,8 @@ export function studio3DCommandSpecs():CommandSpec<unknown,unknown>[]{
   add<{on?:boolean}>('studio3d.view.wireframe','Show or hide wireframe','View',p=>need().setWireframe(p?.on??!getStudio3DState().wireframe),object({on:{type:'boolean'}},[])),
   add<{id:number|null}>('studio3d.select','Select a 3D object','Edit',p=>need().select(p.id),object({id:{anyOf:[{type:'null'},{type:'integer',minimum:0}]}})),
   add<{kind:PrimitiveKind}>('studio3d.insert.primitive','Insert a 3D primitive','Insert',p=>need().addPrimitive(p.kind),object({kind:{enum:['cube','sphere','plane','cylinder','cone','torus']}}),()=>!!controller),
+  add<{x?:number;y?:number;z?:number}>('studio3d.insert.pin','Insert an annotation pin at the 3D cursor or a given point','Insert',p=>{need().addPin([p?.x,p?.y,p?.z].every(v=>typeof v==='number')?{x:p!.x!,y:p!.y!,z:p!.z!}:undefined);},object({x:{type:'number'},y:{type:'number'},z:{type:'number'}},[]),()=>!!controller),
+  add<{id:number;text?:string}>('studio3d.pin.set','Set the label text of an annotation pin','Edit',p=>need().setPinText(p.id,p.text??''),object({id:{type:'integer',minimum:0},text:{type:'string',maxLength:400}},['id']),hasScene),
   add<{kind:LightKind}>('studio3d.insert.light','Insert a 3D light','Insert',p=>need().addLight(p.kind),object({kind:{enum:['directional','point','spot','area','ambient']}}),()=>!!controller),
   add<{preset?:LightRigPreset}>('studio3d.light.rig','Insert a light rig aimed at the scene','Insert',p=>need().addLightRig(p?.preset),object({preset:{enum:['three-point','studio','sunset','outdoor']}},[]),()=>!!controller),
   add<{id:number;position?:object;rotation?:object;scale?:object}>('studio3d.object.transform','Move, rotate or scale a 3D object','Edit',p=>need().setTransform(p.id,p as TransformPatch),object({id:{type:'integer',minimum:0},position:VEC,rotation:VEC,scale:VEC},['id']),hasScene),

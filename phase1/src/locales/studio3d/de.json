@@ -637,5 +637,9 @@
  "studio3d.warn.instancingHint": "{count} Meshes teilen Geometrie und Material. Instancing würde Draw Calls sparen.",
  "studio3d.warn.lodHint": "Grosse statische Szene ({count} Dreiecke). Detailstufen oder Dezimierung würden helfen.",
  "studio3d.turntable.outWebm": "WebM-Video",
- "studio3d.turntable.fps": "Bilder pro Sekunde"
+ "studio3d.turntable.fps": "Bilder pro Sekunde",
+ "studio3d.insert.pin": "Pin",
+ "studio3d.pin.text": "Pin-Beschriftung",
+ "cmd.studio3d.insert.pin": "Einen Notiz-Pin am 3D-Cursor oder einem Punkt einfügen",
+ "cmd.studio3d.pin.set": "Die Beschriftung eines Notiz-Pins setzen"
 }

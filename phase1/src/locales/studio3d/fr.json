@@ -637,5 +637,9 @@
  "studio3d.warn.instancingHint": "{count} maillages partagent géométrie et matériau. L’instanciation réduirait les draw calls.",
  "studio3d.warn.lodHint": "Grande scène statique ({count} triangles). Des niveaux de détail ou une décimation aideraient.",
  "studio3d.turntable.outWebm": "Vidéo WebM",
- "studio3d.turntable.fps": "Images par seconde"
+ "studio3d.turntable.fps": "Images par seconde",
+ "studio3d.insert.pin": "Épingle",
+ "studio3d.pin.text": "Libellé de l’épingle",
+ "cmd.studio3d.insert.pin": "Insérer une épingle d’annotation au curseur 3D ou à un point",
+ "cmd.studio3d.pin.set": "Définir le libellé d’une épingle d’annotation"
 }

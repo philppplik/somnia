@@ -1415,3 +1415,17 @@ test('3D studio asset drags: primitive lands at the drop point, material assigns
   el.dispatchEvent(new DragEvent('drop',{dataTransfer:dt,bubbles:true,cancelable:true,clientX:10,clientY:10}));});
  await expect(page.getByRole('alert')).toBeVisible();
 });
+
+test('3D studio pins: insert at the cursor, label in the inspector, one undo',async({page})=>{
+ await blank(page);
+ await insert(page,'cube',0);
+ expect(await run(page,'studio3d.insert.pin',{})).toBe(true);
+ await expect.poll(async()=>(await session(page)).outline.filter(o=>o.kind==='pin').length).toBe(1);
+ expect(await run(page,'studio3d.pin.set',{id:(await session(page)).selected,text:'check this weld'})).toBe(true);
+ await expect.poll(async()=>(await session(page)).info?.pin).toBe('check this weld');
+ await expect(page.getByTestId('studio3d-pin-fields')).toBeVisible();
+ await run(page,'studio3d.undo');
+ await expect.poll(async()=>(await session(page)).info?.pin).toBe('');
+ await run(page,'studio3d.undo');
+ await expect.poll(async()=>(await session(page)).outline.filter(o=>o.kind==='pin').length).toBe(0);
+});

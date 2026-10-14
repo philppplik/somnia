@@ -147,7 +147,7 @@ export function outlineVisible(outline:readonly OutlineEntry[],collapsed:readonl
 /** One-line live performance readout for the viewport overlay (technical units stay untranslated, like MB). */
 export const formatPerf=(fps:number,calls:number,tris:number)=>`${Math.round(fps)} fps \u00b7 ${formatCount(calls)} draws \u00b7 ${formatCount(tris)} tris`;
 export const formatCount=(n:number)=>n>=1e6?(n/1e6).toFixed(n>=1e7?0:1)+' M':n>=1e4?(n/1e3).toFixed(n>=1e5?0:1)+' k':String(n);
-export interface OutlineEntry{id:number;name:string;depth:number;kind:'group'|'mesh'|'light'|'camera'|'bone';/** Own visibility flag (a hidden parent hides children too). */hidden:boolean;/** Locked nodes are skipped by viewport picking and marquee selection. */locked:boolean}
+export interface OutlineEntry{id:number;name:string;depth:number;kind:'group'|'mesh'|'light'|'camera'|'bone'|'pin';/** Own visibility flag (a hidden parent hides children too). */hidden:boolean;/** Locked nodes are skipped by viewport picking and marquee selection. */locked:boolean}
 
 export const SHADOW_QUALITIES=['off','low','medium','high'] as const;
 export type ShadowQuality=typeof SHADOW_QUALITIES[number];
