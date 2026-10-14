@@ -89,3 +89,8 @@ Depends on: v10 diff viewer, v11 updater for smooth extension and app updates.
 
 - Implemented: explicit static keep-world parenting, tint colour and discrete bypass keys, editable bounded shape paths, outline trim/dash presets, stroke-safe reference render bounds. Bounded PNG sequence export uses StudioProgress and real cancellation; GIF/WebM not claimed.
 - Validation: 85 Animation + Interface media tests, DS ratchet, isolated German light/dark pixel review, real PNG sequence download/cancel and extracted-frame pixels. Native/full-app/WASM gates remain CI-only. Details: `docs/animation-p4.md`.
+
+### Animation P5 shape slice (2026-10-14, integration pending)
+
+- Implemented: rounded rectangle/star/polygon primitives, bounded parameters, fill/stroke and two-stop linear gradient; shared preview/reference export geometry, local snapshot validation. 88 Animation + Interface media tests; inspected UI and rendered PNG.
+- Remaining P5: bounded WAV/MP3 import/audio layers, waveform, trim/offset, volume keys and synced preview. No audio mux/export claim. Details: `docs/animation-p5-shapes.md`.

@@ -203,5 +203,16 @@
  "cmd.animation.effect.colorKey": "Set tint colour key",
  "cmd.animation.effect.bypassKey": "Set effect bypass key",
  "animation.shape.path": "Path",
- "animation.shape.points": "Path points (x,y in 0–1)"
+ "animation.shape.points": "Path points (x,y in 0–1)",
+ "animation.shape.roundedRect": "Rounded rectangle",
+ "animation.shape.star": "Star",
+ "animation.shape.polygon": "Polygon",
+ "animation.shape.radius": "Corner radius",
+ "animation.shape.sides": "Sides / points",
+ "animation.shape.inner": "Inner radius ratio",
+ "animation.shape.gradient": "Linear gradient",
+ "animation.shape.gradientStart": "Gradient start",
+ "animation.shape.gradientEnd": "Gradient end",
+ "animation.shape.gradientAngle": "Gradient angle",
+ "animation.shape.addStroke": "Add stroke"
 }

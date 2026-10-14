@@ -3,7 +3,7 @@ import {validateAnimationAssets} from './assetsValidation';
 import {frameToTick,validRate,type Rational,TICKS_PER_SECOND} from './time';
 /** Authoritative, serialisable, versioned composition document (concept section 4). View state lives elsewhere. */
 export const SCHEMA_VERSION=1;
-export const ENGINE_VERSION='p4';
+export const ENGINE_VERSION='p5-shapes';
 export type Vec2=readonly [number,number];
 export type PropValue=number|Vec2;
 export type PropType='scalar'|'vec2';
@@ -17,7 +17,7 @@ export type LayerKind='solid'|'text'|'shape'|'null'|'raster';
 export interface Transform{anchor:Property;position:Property;scale:Property;rotation:Property;opacity:Property}
 export const TRANSFORM_KEYS=['anchor','position','scale','rotation','opacity'] as const;
 export type TransformKey=typeof TRANSFORM_KEYS[number];
-export interface LayerSource{color?:string;width?:number;height?:number;text?:string;size?:number;shape?:'rect'|'ellipse'|'path';path?:{points:readonly {x:number;y:number}[];closed:boolean};assetId?:string}
+export interface LayerSource{color?:string;width?:number;height?:number;text?:string;size?:number;shape?:'rect'|'ellipse'|'path'|'roundedRect'|'star'|'polygon';radius?:number;sides?:number;innerRatio?:number;gradient?:{start:string;end:string;angle:number};path?:{points:readonly {x:number;y:number}[];closed:boolean};assetId?:string}
 export interface LayerEffect{id:string;kind:'blur'|'tint';enabled:boolean;amount:number;color:string;animation?:Property;colorKeys?:readonly {t:number;color:string}[];bypassKeys?:readonly {t:number;bypass:boolean}[]}
 export interface Layer{id:string;name:string;kind:LayerKind;source:LayerSource;inT:number;outT:number;offset:number;parent:string|null;transform:Transform;visible:boolean;solo:boolean;locked:boolean;effects?:readonly LayerEffect[];textReveal?:Property;stroke?:{color:string;width:number;trim?:Property;dash?:Property}}
 export interface Marker{id:string;t:number;label:string}
@@ -126,7 +126,7 @@ export function validateDocument(raw:unknown):string[]{
 }
 export {frameToTick};
 
-export function validSource(s:LayerSource):boolean{return !!s&&typeof s==='object'&&(s.color===undefined||/^#[0-9a-fA-F]{6}$/.test(s.color))&&[s.width,s.height,s.size].every(n=>n===undefined||(isNum(n)&&n>=1&&n<=16384))&&(s.text===undefined||(typeof s.text==='string'&&s.text.length<=2000))&&(s.shape===undefined||['rect','ellipse','path'].includes(s.shape))&&(s.shape!=='path'||!!s.path)&&(s.path===undefined||(Array.isArray(s.path.points)&&s.path.points.length>=2&&s.path.points.length<=256&&typeof s.path.closed==='boolean'&&s.path.points.every(p=>p&&Number.isFinite(p.x)&&Number.isFinite(p.y)&&p.x>=0&&p.x<=1&&p.y>=0&&p.y<=1)));}
+export function validSource(s:LayerSource):boolean{return !!s&&typeof s==='object'&&(s.color===undefined||/^#[0-9a-fA-F]{6}$/.test(s.color))&&[s.width,s.height,s.size].every(n=>n===undefined||(isNum(n)&&n>=1&&n<=16384))&&(s.text===undefined||(typeof s.text==='string'&&s.text.length<=2000))&&(s.shape===undefined||['rect','ellipse','path','roundedRect','star','polygon'].includes(s.shape))&&(s.radius===undefined||(isNum(s.radius)&&s.radius>=0&&s.radius<=8192))&&(s.sides===undefined||(Number.isInteger(s.sides)&&s.sides>=3&&s.sides<=64))&&(s.innerRatio===undefined||(isNum(s.innerRatio)&&s.innerRatio>=0.05&&s.innerRatio<=0.95))&&(s.gradient===undefined||(!!s.gradient&&/^#[0-9a-fA-F]{6}$/.test(s.gradient.start)&&/^#[0-9a-fA-F]{6}$/.test(s.gradient.end)&&isNum(s.gradient.angle)&&s.gradient.angle>=0&&s.gradient.angle<=360))&&(s.shape!=='path'||!!s.path)&&(s.path===undefined||(Array.isArray(s.path.points)&&s.path.points.length>=2&&s.path.points.length<=256&&typeof s.path.closed==='boolean'&&s.path.points.every(p=>p&&Number.isFinite(p.x)&&Number.isFinite(p.y)&&p.x>=0&&p.x<=1&&p.y>=0&&p.y<=1)));}
 export function validEffects(e:readonly LayerEffect[]|undefined):boolean{return e===undefined||(Array.isArray(e)&&e.length<=8&&new Set(e.map(x=>x?.id)).size===e.length&&e.every(x=>!!x&&typeof x.id==='string'&&['blur','tint'].includes(x.kind)&&typeof x.enabled==='boolean'&&isNum(x.amount)&&x.amount>=0&&x.amount<=(x.kind==='blur'?64:1)&&/^#[0-9a-fA-F]{6}$/.test(x.color)&&(x.animation===undefined||validScalarProperty(x.animation,0,x.kind==='blur'?64:1))&&(x.colorKeys===undefined||(x.kind==='tint'&&Array.isArray(x.colorKeys)&&x.colorKeys.length<=2000&&x.colorKeys.every((k:{t:number;color:string},i:number)=>k&&Number.isInteger(k.t)&&k.t>=0&&(i===0||k.t>x.colorKeys![i-1].t)&&/^#[0-9a-fA-F]{6}$/.test(k.color))))&&(x.bypassKeys===undefined||(Array.isArray(x.bypassKeys)&&x.bypassKeys.length<=2000&&x.bypassKeys.every((k:{t:number;bypass:boolean},i:number)=>k&&Number.isInteger(k.t)&&k.t>=0&&(i===0||k.t>x.bypassKeys![i-1].t)&&typeof k.bypass==='boolean')))));}
 
 export function validScalarProperty(p:Property,min:number,max:number):boolean{

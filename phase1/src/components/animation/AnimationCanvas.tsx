@@ -1,3 +1,4 @@
+import {radialPath,gradientVector} from '../../lib/animation/shapes';
 import {pathData} from '../../lib/interface/vectorCore';
 import {effectPrimitives,effectBounds,revealedText,strokeAttributes} from '../../lib/animation/effects';
 import type {InterfaceAsset} from '../../lib/interface/schema';
@@ -45,13 +46,14 @@ function Workspace({doc}:{doc:NonNullable<ReturnType<typeof animationSession>['d
   <AnimationTimeline comp={comp} at={at} selected={s.view.selectedLayer} canUndo={s.canUndo} canRedo={s.canRedo}/>
  </div>;
 }
-function layerNode(l:Layer,assets:readonly InterfaceAsset[],at:number){
- const src=l.source;
+function layerNode(l:Layer,assets:readonly InterfaceAsset[],at:number,fillOverride?:string){
+ const src=l.source;const fill=fillOverride??src.color;
  if(l.kind==='raster'){const asset=assets.find(a=>a.id===src.assetId);return asset?<image href={asset.data} width={src.width} height={src.height}/>:<text fill="var(--text-primary)">Missing image</text>;}
- if(l.kind==='solid')return <rect x={0} y={0} width={src.width} height={src.height} fill={src.color}/>;
- if(l.kind==='shape'&&src.shape==='path'&&src.path)return <path {...strokeAttributes(l,at)} d={pathData(src.path as import('../../lib/interface/schema').InterfacePath,src.width??1,src.height??1)} fill={src.color}/>;
- if(l.kind==='shape')return src.shape==='ellipse'?<ellipse {...strokeAttributes(l,at)} cx={(src.width??0)/2} cy={(src.height??0)/2} rx={(src.width??0)/2} ry={(src.height??0)/2} fill={src.color}/>:<rect {...strokeAttributes(l,at)} x={0} y={0} width={src.width} height={src.height} fill={src.color}/>;
- return <text x={0} y={src.size??48} fontSize={src.size} fill={src.color} fontFamily="system-ui, sans-serif" className="select-none">{revealedText(l,at)}</text>;
+ if(l.kind==='solid')return <rect x={0} y={0} width={src.width} height={src.height} fill={fill}/>;
+ if(l.kind==='shape'&&['star','polygon'].includes(src.shape??''))return <path {...strokeAttributes(l,at)} d={radialPath(src)} fill={fill}/>;
+ if(l.kind==='shape'&&src.shape==='path'&&src.path)return <path {...strokeAttributes(l,at)} d={pathData(src.path as import('../../lib/interface/schema').InterfacePath,src.width??1,src.height??1)} fill={fill}/>;
+ if(l.kind==='shape')return src.shape==='ellipse'?<ellipse {...strokeAttributes(l,at)} cx={(src.width??0)/2} cy={(src.height??0)/2} rx={(src.width??0)/2} ry={(src.height??0)/2} fill={fill}/>:<rect {...strokeAttributes(l,at)} rx={src.shape==='roundedRect'?Math.min(src.radius??24,(src.width??0)/2,(src.height??0)/2):0} x={0} y={0} width={src.width} height={src.height} fill={fill}/>;
+ return <text x={0} y={src.size??48} fontSize={src.size} fill={fill} fontFamily="system-ui, sans-serif" className="select-none">{revealedText(l,at)}</text>;
 }
 function Viewer({comp,at,selected,sel,assets}:{assets:readonly InterfaceAsset[];comp:Composition;at:number;selected:string|null;sel:readonly KeyRef[]}){
  const {t}=useT();const scene=useMemo(()=>sceneAt(comp,at),[comp,at]);
@@ -60,9 +62,10 @@ function Viewer({comp,at,selected,sel,assets}:{assets:readonly InterfaceAsset[];
  return <div className="relative grid min-h-[160px] flex-1 place-items-center overflow-hidden bg-hover p-3" data-testid="animation-viewer">
   <svg role="img" aria-label={t('animation.viewer')} viewBox={`0 0 ${comp.width} ${comp.height}`} className="max-h-full max-w-full h-full overflow-visible">
    <defs>{comp.layers.map((l,i)=><filter key={l.id} id={`preview-effect-${i}`} filterUnits="userSpaceOnUse" {...effectBounds(l,at)} colorInterpolationFilters="sRGB" dangerouslySetInnerHTML={{__html:effectPrimitives(l,at)}}/>)}</defs>
+   <defs>{comp.layers.map((l,i)=>l.source.gradient&&<linearGradient key={l.id} id={`preview-gradient-${i}`} {...gradientVector(l.source.gradient.angle)}><stop offset="0" stopColor={l.source.gradient.start}/><stop offset="1" stopColor={l.source.gradient.end}/></linearGradient>)}</defs>
    <rect width={comp.width} height={comp.height} fill={comp.background}/>
    {scene.map(({layer:l,matrix,opacity})=><g key={l.id} transform={`matrix(${matrix.join(' ')})`} opacity={opacity} data-layer={l.id} data-selected={l.id===selected||undefined}
-    onPointerDown={()=>animationSession().setView({selectedLayer:l.id})}><g filter={effectPrimitives(l,at)?`url(#preview-effect-${comp.layers.indexOf(l)})`:undefined}>{layerNode(l,assets,at)}</g></g>)}
+    onPointerDown={()=>animationSession().setView({selectedLayer:l.id})}><g filter={effectPrimitives(l,at)?`url(#preview-effect-${comp.layers.indexOf(l)})`:undefined}>{layerNode(l,assets,at,l.source.gradient?`url(#preview-gradient-${comp.layers.indexOf(l)})`:undefined)}</g></g>)}
    {layer&&hasPos&&<PathOverlay comp={comp} layer={layer} at={at} sel={sel}/>}
   </svg>
   {hasPos&&<div className="absolute right-2 top-2 flex gap-1" role="group" aria-label={t('animation.path.label')}>
