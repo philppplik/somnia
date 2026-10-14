@@ -782,5 +782,6 @@
  "animation.timing.mode.slide": "Décaler les calques d'images",
  "animation.timing.mode.slip": "Faire glisser les clés (slip) d'images",
  "animation.timing.mode.slideTo": "Décaler les calques vers la tête de lecture",
- "animation.bar.hint": "Glisser pour décaler le calque avec ses clés, Maj pour faire glisser les clés, tirer une extrémité pour couper"
+ "animation.bar.hint": "Glisser pour décaler le calque avec ses clés (tous les calques choisis), Maj fait glisser les clés, tirer une extrémité pour couper, Alt sur l'extrémité décale les calques suivants",
+ "animation.bar.aria": "Timing de {name} : les flèches la déplacent, Maj pour dix images, Alt fait glisser les clés"
 }

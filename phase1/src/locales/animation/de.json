@@ -782,5 +782,6 @@
  "animation.timing.mode.slide": "Ebenen um Frames verschieben",
  "animation.timing.mode.slip": "Keys um Frames gleiten lassen (Slip)",
  "animation.timing.mode.slideTo": "Ebenen zum Abspielkopf verschieben",
- "animation.bar.hint": "Ziehen verschiebt die Ebene samt Keys, Umschalt lässt die Keys gleiten, Enden ziehen kürzt"
+ "animation.bar.hint": "Ziehen verschiebt die Ebene samt Keys (alle gewählten Ebenen), Umschalt lässt die Keys gleiten, Enden kürzen, Alt am Ende schiebt spätere Ebenen mit",
+ "animation.bar.aria": "Timing von {name}: Pfeiltasten verschieben, Umschalt für zehn Frames, Alt lässt die Keys gleiten"
 }

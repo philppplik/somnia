@@ -782,5 +782,6 @@
  "animation.timing.mode.slide": "Slide layers by frames",
  "animation.timing.mode.slip": "Slip keys by frames",
  "animation.timing.mode.slideTo": "Slide layers to playhead",
- "animation.bar.hint": "Drag to slide the layer with its keys, Shift to slip the keys, drag an end to trim"
+ "animation.bar.hint": "Drag to slide the layer with its keys (all picked layers), Shift to slip the keys, drag an end to trim, Alt on the end to ripple later layers",
+ "animation.bar.aria": "Timing of {name}: arrow keys move it, Shift for ten frames, Alt to slip the keys"
 }

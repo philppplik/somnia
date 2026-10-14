@@ -782,5 +782,6 @@
  "animation.timing.mode.slide": "Deslocar camadas por quadros",
  "animation.timing.mode.slip": "Deslizar chaves (slip) por quadros",
  "animation.timing.mode.slideTo": "Deslocar camadas até a posição atual",
- "animation.bar.hint": "Arraste para deslocar a camada com as chaves, Shift para deslizar só as chaves, arraste uma ponta para aparar"
+ "animation.bar.hint": "Arraste para deslocar a camada com as chaves (todas as escolhidas), Shift desliza só as chaves, arraste uma ponta para aparar, Alt na ponta empurra as camadas seguintes",
+ "animation.bar.aria": "Tempo de {name}: as setas movem, Shift para dez quadros, Alt desliza as chaves"
 }

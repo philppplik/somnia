@@ -782,5 +782,6 @@
  "animation.timing.mode.slide": "Deslizar capas por fotogramas",
  "animation.timing.mode.slip": "Deslizar claves (slip) por fotogramas",
  "animation.timing.mode.slideTo": "Deslizar capas al cabezal",
- "animation.bar.hint": "Arrastra para deslizar la capa con sus claves, Mayús para deslizar solo las claves, arrastra un extremo para recortar"
+ "animation.bar.hint": "Arrastra para deslizar la capa con sus claves (todas las elegidas), Mayús desliza solo las claves, arrastra un extremo para recortar, Alt en el extremo arrastra las capas posteriores",
+ "animation.bar.aria": "Tiempo de {name}: las flechas la mueven, Mayús para diez fotogramas, Alt desliza las claves"
 }

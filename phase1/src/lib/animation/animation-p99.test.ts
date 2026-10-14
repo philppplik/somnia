@@ -24,3 +24,23 @@ test('refused positions throw so the drag keeps the last valid preview',()=>{
   assert.throws(()=>applyEdits(doc(),[barDragEdit(l,'move',-f(20))!]));
   assert.throws(()=>applyEdits(doc(),[barDragEdit(l,'trimOut',-f(60))!]));
 });
+import {barDragEdits} from './barDrag';
+const two=()=>applyEdits(doc(),[{type:'layer.add',kind:'shape',id:'b'},{type:'layer.timing',layer:'b',inT:f(70),outT:f(100)},{type:'layer.add',kind:'shape',id:'c'},{type:'layer.timing',layer:'c',inT:f(20),outT:f(40)}] as never);
+test('barDragEdits: the whole layer set moves together, a dragged layer outside the set moves alone',()=>{
+  const c=findComp(two())!;
+  assert.equal(barDragEdits(c,'a',['a','b'],'move',f(5)).length,2);
+  assert.equal(barDragEdits(c,'a',['b','c'],'move',f(5)).length,1);
+  assert.equal(barDragEdits(c,'a',[],'move',f(5)).length,1);
+  assert.deepEqual(barDragEdits(c,'zzz',['a'],'move',f(5)),[]);assert.deepEqual(barDragEdits(c,'a',['a'],'move',0),[]);
+  const n=applyEdits(two(),barDragEdits(c,'a',['a','b'],'move',f(5)));assert.equal(findLayer(findComp(n)!,'b')!.inT,f(75));
+});
+test('ripple on trimOut slides later layers by the same delta; not for other modes or earlier layers',()=>{
+  const d=two(),c=findComp(d)!;
+  const e=barDragEdits(c,'a',['a'],'trimOut',-f(4),true);assert.equal(e.length,2);
+  const n=findComp(applyEdits(d,e))!;assert.equal(findLayer(n,'a')!.outT,f(56));assert.equal(findLayer(n,'b')!.inT,f(66));assert.equal(findLayer(n,'c')!.inT,f(20));
+  assert.equal(barDragEdits(c,'a',['a'],'trimOut',-f(4),false).length,1);assert.equal(barDragEdits(c,'a',['a'],'trimIn',f(4),true).length,1);
+});
+test('ripple is refused as a whole when a later layer cannot move',()=>{
+  const d=applyEdits(two(),[{type:'layer.update',layer:'b',locked:true}]),c=findComp(d)!;
+  assert.equal(barDragEdits(c,'a',['a'],'trimOut',-f(4),true).length,1);
+});
