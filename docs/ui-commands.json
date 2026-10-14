@@ -3870,6 +3870,23 @@
       "hasEnabled": true
     },
     {
+      "id": "slides.setTransition",
+      "title": "Set slide transition",
+      "category": "Edit",
+      "source": "slides",
+      "keywords": [
+        "animation",
+        "cover",
+        "fade",
+        "present",
+        "push",
+        "slide show",
+        "transition",
+        "wipe"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "slides.showSlide",
       "title": "Show slide",
       "category": "View",

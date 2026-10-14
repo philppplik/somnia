@@ -1,4 +1,4 @@
-import {useRef,useState} from 'react';
+import {useMemo,useRef,useState} from 'react';
 import {NativeInput} from '../ui/native-controls';
 import {MAX_IMAGE_BYTES,encodeBase64} from '../../lib/slides/imageSniff';
 import {useSlidesSession} from '../../lib/slides/session';
@@ -8,7 +8,7 @@ import {Button} from '../ui/button';
 import {NumberField} from '../ui/number-field';
 import {Menu,MenuTrigger,MenuContent,MenuItem} from '../ui/menu';
 import {TEXT_COLORS,colorKey} from '../../lib/slides/textFormat';
-import {MIN_SIZE_PT,MAX_SIZE_PT,ARRANGE_MODES,boundsEditIssue} from '../../lib/slides/deckPackage';
+import {MIN_SIZE_PT,MAX_SIZE_PT,ARRANGE_MODES,TRANSITION_KINDS,TRANSITION_DIRS,TRANSITION_SPEEDS,readSlideTransition,boundsEditIssue} from '../../lib/slides/deckPackage';
 import {ALIGN_MODES} from '../../lib/slides/shapeGeometry';
 import {useValidShape} from './SlidesShapeOverlay';
 
@@ -20,6 +20,8 @@ export function SlidesTextToolbar(){
   const run=(id:string,params:unknown)=>void commandDispatcher.tryRunCommand(id,params,{origin:'ui'});
   const fmt=(patch:Record<string,unknown>)=>run('slides.formatText',{source:s.source,slideId,shapeId:shape!.id,...patch});
   const pic=!multi&&!!shape&&shape.kind==='picture',file=useRef<HTMLInputElement>(null),mode=useRef<'insert'|'replace'>('insert');
+  const tr=useMemo(()=>{if(!s.working||slideId===undefined)return null;try{return readSlideTransition(s.working,slideId);}catch{return null;}},[s.working,slideId]);
+  const setTr=(patch:Record<string,unknown>)=>run('slides.setTransition',{source:s.source,slideId,...patch});
   const [bad,setBad]=useState(false);
   const pick=(m:'insert'|'replace')=>{mode.current=m;setBad(false);file.current?.click();};
   const onFile=async(e:React.ChangeEvent<HTMLInputElement>)=>{
@@ -44,6 +46,12 @@ export function SlidesTextToolbar(){
         {ALIGN_MODES.map(m=><MenuItem key={m} onClick={()=>run('slides.alignSelection',{mode:m,to:'slide'})}>{t(`slides.align.${m}`)}</MenuItem>)}
         {multi&&ALIGN_MODES.map(m=><MenuItem key={`sel-${m}`} onClick={()=>run('slides.alignSelection',{mode:m,to:'selection'})}>{t(`slides.alignSel.${m}`)}</MenuItem>)}
       </MenuContent></Menu>
+    <Menu><MenuTrigger render={<Button size="compact" variant="outline" disabled={!ready||!tr}>{t('slides.transition')}{tr?`: ${t(tr.other&&!tr.editable?'slides.transition.other':`slides.transition.${tr.transition.kind}`)}`:''}</Button>}/>
+      <MenuContent>{tr&&!tr.editable?<MenuItem disabled>{t('slides.transition.other')}</MenuItem>:tr&&<>
+        {TRANSITION_KINDS.map(k=><MenuItem key={k} onClick={()=>setTr({kind:k,dir:tr.transition.dir,speed:tr.transition.speed})}>{tr.transition.kind===k?'• ':''}{t(`slides.transition.${k}`)}</MenuItem>)}
+        {['push','wipe','cover'].includes(tr.transition.kind)&&TRANSITION_DIRS.map(d=><MenuItem key={`d-${d}`} onClick={()=>setTr({kind:tr.transition.kind,dir:d,speed:tr.transition.speed})}>{tr.transition.dir===d?'• ':''}{t(`slides.transition.dir.${d}`)}</MenuItem>)}
+        {tr.transition.kind!=='none'&&TRANSITION_SPEEDS.map(v=><MenuItem key={`s-${v}`} onClick={()=>setTr({kind:tr.transition.kind,dir:tr.transition.dir,speed:v})}>{tr.transition.speed===v?'• ':''}{t(`slides.transition.speed.${v}`)}</MenuItem>)}
+      </>}</MenuContent></Menu>
     <Menu><MenuTrigger render={<Button size="compact" variant="outline" disabled={!ready||!shape}>{t('slides.arrange')}</Button>}/>
       <MenuContent>{ARRANGE_MODES.map(m=><MenuItem key={m} onClick={()=>run('slides.arrangeShapes',{mode:m})}>{t(`slides.arrange.${m}`)}</MenuItem>)}</MenuContent></Menu>
     <Menu><MenuTrigger render={<Button size="compact" variant="outline" disabled={!ready||(valid?.more.length??0)<2||[shape!,...(valid?.more??[])].some(x=>!!boundsEditIssue(x))}>{t('slides.distribute')}</Button>}/>

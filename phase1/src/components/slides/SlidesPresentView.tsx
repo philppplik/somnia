@@ -6,12 +6,21 @@ import {presentationKey} from '../../lib/slides/presentKeyboard';
 import {useSlidesPanelText} from '../../lib/slides/panelI18n';
 import {Button} from '../ui/button';
 import {SlidesSpeakerPanel,useSpeakerTimer} from './SlidesSpeakerPanel';
+import {readSlideTransition} from '../../lib/slides/deckPackage';
+import {transitionFrames,TRANSITION_MS} from '../../lib/slides/transitionPlay';
 
-/** No animations or transitions: reduced-motion users get the exact same static presentation. */
+/** Plays a slide's own fade/push/wipe/cover transition when it is set. No other animation; reduced-motion users get the exact same static presentation. */
 export function SlidesPresentView(){
  const s=useSlidesSession(),t=useSlidesPanelText();const root=useRef<HTMLDivElement>(null);
  const [visible,setVisible]=useState(true),[black,setBlack]=useState(false),[digits,setDigits]=useState(''),[speaker,setSpeaker]=useState(false);const clock=useSpeakerTimer(s.index);
- const timer=useRef<ReturnType<typeof setTimeout>|undefined>(undefined);
+ const timer=useRef<ReturnType<typeof setTimeout>|undefined>(undefined),img=useRef<HTMLImageElement>(null),shown=useRef<string|null>(null);
+ useEffect(()=>{
+  const prev=shown.current;shown.current=s.image??null;const el=img.current;
+  if(!prev||!el||!s.image||prev===s.image||s.busy||window.matchMedia?.('(prefers-reduced-motion: reduce)').matches)return;
+  let info;try{info=s.working&&s.slideIds[s.index]!==undefined?readSlideTransition(s.working,s.slideIds[s.index]):null;}catch{info=null;}
+  const frames=info&&transitionFrames(info.transition);if(!frames||typeof el.animate!=='function')return;
+  const a=el.animate(frames,{duration:TRANSITION_MS[info!.transition.speed],easing:'ease-out'});return()=>a.cancel();
+ },[s.image]);
  const move=()=>{setVisible(true);clearTimeout(timer.current);timer.current=setTimeout(()=>{if(!root.current?.querySelector('button:focus'))setVisible(false);},2200);};
  const go=(index:number)=>{setBlack(false);setDigits('');if(!s.busy&&index!==s.index)void commandDispatcher.runCommand('slides.showSlide',{index},{origin:'ui'}).catch(()=>{});};
  const exit=()=>void commandDispatcher.runCommand('slides.present.exit',undefined,{origin:'ui'}).catch(()=>{});
@@ -46,7 +55,7 @@ export function SlidesPresentView(){
  },[s.index,s.busy,s.summary,black,digits]);
  const count=s.summary?.slides??0,counter=t('slides.present.counter',{number:s.index+1,count});
  return createPortal(<div ref={root} role="dialog" aria-modal="true" aria-label={t('cmd.slides.present')} tabIndex={-1} data-testid="slides-present" onPointerMove={move} onClick={event=>{if(!(event.target as HTMLElement).closest('button'))go(Math.max(0,Math.min(count-1,s.index+(event.clientX<80?-1:1))));}} style={{position:'fixed',inset:0,zIndex:10000,background:'#000',color:'#fff',display:'flex',alignItems:'center',justifyContent:'center',outline:'none'}}>
-  {!black&&s.image&&<img src={s.image} alt={t('slides.slide',{number:s.index+1})} draggable={false} style={{width:'100%',height:'100%',objectFit:'contain',pointerEvents:'none'}}/>}
+  {!black&&s.image&&<img ref={img} src={s.image} alt={t('slides.slide',{number:s.index+1})} draggable={false} style={{width:'100%',height:'100%',objectFit:'contain',pointerEvents:'none'}}/>}
   <span className="sr-only" aria-live="polite" aria-atomic="true">{counter}{black?` · ${t('slides.present.black')}`:''}</span>
   {s.busy&&<p role="status" style={{position:'absolute',top:16}}>{t('slides.present.rendering')}</p>}
   {s.error&&<p role="alert" style={{position:'absolute',top:16,padding:12,background:'#222'}}>{s.error}</p>}

@@ -3,7 +3,7 @@ import {reportError} from '../log';
 import {readDeckDocument,serializeDeck,parseDeck,editedDeckBytes} from './deckDocument';
 import type {SlidesDiagnostics} from './diagnostics';
 import type {TextRun} from './editCopy';
-import type {LayoutInfo,DeckModel,BoundsBox,RunFormat,ShapeBoundsEdit,ArrangeMode} from './deckPackage';
+import type {LayoutInfo,DeckModel,BoundsBox,RunFormat,ShapeBoundsEdit,ArrangeMode,SlideTransition} from './deckPackage';
 import {installBeforeUnload} from '../closeFlow';
 import {useEffect,useSyncExternalStore} from 'react';
 import {SlidesClient} from './client';
@@ -115,6 +115,7 @@ export const deleteSlideAt=(slideId:number)=>structuralEdit(async(e,before)=>{co
 export const setShapeBoundsAt=(slideId:number,shapeId:number,expected:BoundsBox,next:BoundsBox)=>structuralEdit(async(e,before)=>{const i=idAt(e,slideId);return {bytes:await e.client.shapeBounds(before,slideId,shapeId,expected,next),index:i};});
 export const setShapesBoundsAt=(slideId:number,edits:ShapeBoundsEdit[])=>structuralEdit(async(e,before)=>({bytes:await e.client.shapesBounds(before,slideId,edits),index:idAt(e,slideId)}));
 export const arrangeShapesAt=(slideId:number,shapeIds:number[],mode:ArrangeMode)=>structuralEdit(async(e,before)=>({bytes:await e.client.arrange(before,slideId,shapeIds,mode),index:idAt(e,slideId)}));
+export const setTransitionAt=(slideId:number,transition:SlideTransition)=>structuralEdit(async(e,before)=>({bytes:await e.client.setTransition(before,slideId,transition),index:idAt(e,slideId)}));
 export const formatShapeAt=(slideId:number,shapeId:number,format:RunFormat)=>structuralEdit(async(e,before)=>({bytes:await e.client.formatText(before,slideId,shapeId,format),index:idAt(e,slideId)}));
 export const addTextBoxAt=(slideId:number,label:string)=>structuralEdit(async(e,before)=>({bytes:await e.client.addBox(before,slideId,label),index:idAt(e,slideId)}));
 export const removeTextBoxAt=(slideId:number,shapeId:number)=>structuralEdit(async(e,before)=>({bytes:await e.client.removeBox(before,slideId,shapeId),index:idAt(e,slideId)}));

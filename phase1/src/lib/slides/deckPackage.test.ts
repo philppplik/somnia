@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {readFileSync,readdirSync} from 'node:fs';
 import {fileURLToPath} from 'node:url';
 import {unzipSync,zipSync,strFromU8,strToU8} from 'fflate';
-import {arrangeShapes,arrangedOrder,setShapesBounds,readSlideNotes,insertPicture,replacePicture,removePicture,fitImage,formatShapeText,addTextBox,removeTextBox,nextShapeId,setShapeBounds,boundsEditIssue,readDeckModel,moveSlide,reorderSlides,duplicateSlide,deleteSlide,newSlideFromLayout,readLayouts} from './deckPackage';
+import {readSlideTransition,setSlideTransition,arrangeShapes,arrangedOrder,setShapesBounds,readSlideNotes,insertPicture,replacePicture,removePicture,fitImage,formatShapeText,addTextBox,removeTextBox,nextShapeId,setShapeBounds,boundsEditIssue,readDeckModel,moveSlide,reorderSlides,duplicateSlide,deleteSlide,newSlideFromLayout,readLayouts} from './deckPackage';
 import {readRuns,makeEditedCopy} from './editCopy';
 import {png,jpeg} from './imageFixtures';
 
@@ -492,4 +492,30 @@ test('arrangeShapes reorders whole elements, keeps everything else byte-identica
   assert.throws(()=>arrangeShapes(b,sid,[99999],'front'),/no longer exists/);
   assert.throws(()=>arrangeShapes(b,999,[first],'front'),/Slide no longer exists/);
   assert.throws(()=>arrangeShapes(b,sid,[first],'sideways' as never),/Unknown arrange mode/);
+});
+
+test('slide transitions: set, change, clear, keep attributes, fail closed',()=>{
+  const b=deck(2),sid=readDeckModel(b).slides[0].id;
+  assert.deepEqual(readSlideTransition(b,sid),{transition:{kind:'none',dir:'l',speed:'med'},editable:true,other:false});
+  assert.equal(setSlideTransition(b,sid,{kind:'none',dir:'l',speed:'med'}),b,'clearing nothing: same bytes');
+  const p=setSlideTransition(b,sid,{kind:'push',dir:'r',speed:'fast'});
+  assert.deepEqual(readSlideTransition(p,sid).transition,{kind:'push',dir:'r',speed:'fast'});
+  assert.deepEqual(readSlideTransition(p,readDeckModel(b).slides[1].id).transition.kind,'none','other slides untouched');
+  assert.deepEqual(readDeckModel(p).runs.map(r=>r.text),readDeckModel(b).runs.map(r=>r.text));
+  const x=strFromU8(unzipSync(p)['ppt/slides/slide1.xml']);
+  assert.ok(x.indexOf('<p:transition')>x.indexOf('</p:cSld>'));assert.equal((x.match(/<p:transition\b/g)??[]).length,1);
+  const f=setSlideTransition(p,sid,{kind:'fade',dir:'l',speed:'slow'});assert.deepEqual(readSlideTransition(f,sid).transition.kind,'fade');
+  assert.equal(setSlideTransition(f,sid,{kind:'fade',dir:'u',speed:'slow'}),f,'dir is irrelevant for fade');
+  const c=setSlideTransition(f,sid,{kind:'none',dir:'l',speed:'med'});assert.ok(!/<p:transition/.test(strFromU8(unzipSync(c)['ppt/slides/slide1.xml'])));
+  const adv=patchPart(b,'ppt/slides/slide1.xml',s=>s.replace('</p:cSld>','</p:cSld><p:transition spd="slow" advClick="0" advTm="3000"><p:wipe dir="u"/></p:transition>'));
+  assert.deepEqual(readSlideTransition(adv,sid).transition,{kind:'wipe',dir:'u',speed:'slow'});
+  const adv2=setSlideTransition(adv,sid,{kind:'cover',dir:'d',speed:'med'});
+  assert.match(strFromU8(unzipSync(adv2)['ppt/slides/slide1.xml']),/<p:transition spd="med" advClick="0" advTm="3000"><p:cover dir="d"\/>/);
+  const rich=patchPart(b,'ppt/slides/slide1.xml',s=>s.replace('</p:cSld>','</p:cSld><mc:AlternateContent xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"><mc:Choice Requires="p14"><p:transition spd="med"><p14:vortex xmlns:p14="http://schemas.microsoft.com/office/powerpoint/2010/main"/></p:transition></mc:Choice><mc:Fallback><p:transition spd="med"><p:fade/></p:transition></mc:Fallback></mc:AlternateContent>'));
+  const info=readSlideTransition(rich,sid);assert.equal(info.editable,false);assert.equal(info.transition.kind,'fade');
+  assert.throws(()=>setSlideTransition(rich,sid,{kind:'push',dir:'l',speed:'med'}),/cannot be edited/);
+  const snd=patchPart(b,'ppt/slides/slide1.xml',s=>s.replace('</p:cSld>','</p:cSld><p:transition><p:fade/><p:sndAc/></p:transition>'));
+  assert.equal(readSlideTransition(snd,sid).editable,false);assert.throws(()=>setSlideTransition(snd,sid,{kind:'none',dir:'l',speed:'med'}),/cannot be edited/);
+  assert.throws(()=>setSlideTransition(b,sid,{kind:'spin' as never,dir:'l',speed:'med'}),/Unknown transition/);
+  assert.throws(()=>setSlideTransition(b,999,{kind:'fade',dir:'l',speed:'med'}),/no longer exists/);
 });

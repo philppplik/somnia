@@ -818,3 +818,68 @@ export function arrangeShapes(bytes:Uint8Array,slideId:number,shapeIds:readonly 
   for(const name of Object.keys(zip))if(name!==slide.part&&(!re[name]||re[name].length!==zip[name].length||re[name].some((v,i)=>v!==zip[name][i])))throw Error('Edited deck changed an unrelated part');
   return out;
 }
+
+/* ---------------------------------------------------------------------------------------
+ * Slide transitions. Only a plain, single p:transition is read or written. Transitions inside
+ * mc:AlternateContent (PowerPoint 2010+ effects), sounds, or any unknown child are reported as
+ * "other" and never rewritten.
+ * ------------------------------------------------------------------------------------- */
+export const TRANSITION_KINDS=['none','fade','push','wipe','cover'] as const,TRANSITION_DIRS=['l','r','u','d'] as const,TRANSITION_SPEEDS=['slow','med','fast'] as const;
+export interface SlideTransition {kind:typeof TRANSITION_KINDS[number];dir:typeof TRANSITION_DIRS[number];speed:typeof TRANSITION_SPEEDS[number]}
+export interface SlideTransitionInfo {transition:SlideTransition;editable:boolean;other:boolean}
+const T_ELEMENT=/<p:transition\b((?:[^>"']|"[^"]*"|'[^']*')*?)(?:\/>|>([\s\S]*?)<\/p:transition>)/g;
+const T_DEFAULT:SlideTransition={kind:'none',dir:'l',speed:'med'};
+function transitionOf(xml:string):{info:SlideTransitionInfo;start:number;end:number;open:string}|null{
+  const all=[...xml.matchAll(T_ELEMENT)];
+  if(!all.length)return null;
+  const m=all[0],start=m.index!,end=start+m[0].length,attrs=m[1]??'',body=(m[2]??'').trim();
+  const wrapped=all.length>1||/<mc:AlternateContent\b/.test(xml);
+  const child=/^<p:(fade|push|wipe|cover)\b((?:[^>"']|"[^"]*"|'[^']*')*?)\/>$/.exec(body);
+  const attrNames=[...attrs.matchAll(/\s([\w:]+)=/g)].map(a=>a[1]);
+  const plainAttrs=attrNames.every(n=>['spd','advClick','advTm'].includes(n));
+  const speedRaw=/\sspd="(slow|med|fast)"/.exec(attrs)?.[1] as SlideTransition['speed']|undefined;
+  const childDir=child?/\sdir="([lrud])"/.exec(child[2])?.[1] as SlideTransition['dir']|undefined:undefined;
+  const supported=!!child&&plainAttrs&&(child[1]==='fade'?!child[2].trim():child[2].trim()===''||/^\s+dir="[lrud]"$/.test(child[2]));
+  const kind=child?child[1] as SlideTransition['kind']:'none';
+  const dir=childDir??'l',speed=speedRaw??'med';
+  if(wrapped){
+    // Report what a non-PowerPoint-2010 reader would see (the fallback), but never edit it.
+    const fb=[...xml.matchAll(T_ELEMENT)].map(x=>/^<p:(fade|push|wipe|cover)\b[^>]*\/>$/.exec((x[2]??'').trim())).find(Boolean);
+    return {info:{transition:fb?{kind:fb[1] as SlideTransition['kind'],dir:(/\sdir="([lrud])"/.exec(fb[0])?.[1] as SlideTransition['dir'])??'l',speed:'med'}:T_DEFAULT,editable:false,other:true},start,end,open:attrs};
+  }
+  return {info:{transition:supported?{kind,dir,speed}:T_DEFAULT,editable:supported,other:!supported},start,end,open:attrs};
+}
+/** Reads the transition into a slide. Never throws for a missing transition. */
+export function readSlideTransition(bytes:Uint8Array,slideId:number):SlideTransitionInfo{
+  const slide=readDeckModel(bytes).slides.find(s=>s.id===slideId);
+  if(!slide)throw Error('Slide not found');
+  return transitionOf(text(openPackage(bytes),slide.part))?.info??{transition:T_DEFAULT,editable:true,other:false};
+}
+/** Sets or clears the transition of one slide. Returns the same bytes when nothing changes. */
+export function setSlideTransition(bytes:Uint8Array,slideId:number,next:SlideTransition):Uint8Array{
+  if(!TRANSITION_KINDS.includes(next.kind)||!TRANSITION_DIRS.includes(next.dir)||!TRANSITION_SPEEDS.includes(next.speed))throw Error('Unknown transition');
+  const model=readDeckModel(bytes),slide=model.slides.find(s=>s.id===slideId);
+  if(!slide)throw Error('Slide no longer exists');if(slide.problems.length)throw Error('This slide has unsupported structure');
+  const zip=openPackage(bytes),xml=text(zip,slide.part),cur=transitionOf(xml);
+  if(cur&&!cur.info.editable)throw Error('This slide has a transition that cannot be edited here');
+  const was=cur?.info.transition??T_DEFAULT;
+  if(was.kind===next.kind&&(next.kind==='none'||(was.speed===next.speed&&(next.kind==='fade'||was.dir===next.dir))))return bytes;
+  const keep=cur?cur.open.replace(/\sspd="[^"]*"/,''):'';
+  const body=next.kind==='none'?'':next.kind==='fade'?'<p:fade/>':`<p:${next.kind} dir="${next.dir}"/>`;
+  const el=next.kind==='none'?'':`<p:transition spd="${next.speed}"${keep}>${body}</p:transition>`;
+  let out:string;
+  if(cur)out=xml.slice(0,cur.start)+el+xml.slice(cur.end);
+  else{
+    if(next.kind==='none')return bytes;
+    const anchor=/<p:clrMapOvr\b[\s\S]*?(?:<\/p:clrMapOvr>|\/>)(?=\s*(?:<p:|<\/p:sld>|$))/.exec(xml)??/<\/p:cSld>/.exec(xml);
+    if(!anchor)throw Error('This slide has structure that cannot take a transition');
+    const at=anchor.index+anchor[0].length;out=xml.slice(0,at)+el+xml.slice(at);
+  }
+  const res=repack(zip,{[slide.part]:out}),after=readDeckModel(res),as=after.slides.find(s=>s.id===slideId);
+  if(!as||as.problems.length||JSON.stringify(as.shapes)!==JSON.stringify(slide.shapes)||after.runs.length!==model.runs.length)throw Error('Edited deck failed verification');
+  const got=readSlideTransition(res,slideId);
+  if(got.transition.kind!==next.kind||(next.kind!=='none'&&got.transition.speed!==next.speed))throw Error('Edited deck failed verification');
+  const re=unzipSync(res);
+  for(const name of Object.keys(zip))if(name!==slide.part&&(!re[name]||re[name].length!==zip[name].length||re[name].some((v,i)=>v!==zip[name][i])))throw Error('Edited deck changed an unrelated part');
+  return res;
+}
