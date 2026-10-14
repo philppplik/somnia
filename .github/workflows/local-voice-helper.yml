@@ -2,6 +2,10 @@ name: Optional local voice helper (manual review only)
 on:
   workflow_dispatch:
     inputs:
+      generate_inventory:
+        description: 'Build source-only unreviewed license/linkage evidence, never run/package helper'
+        type: boolean
+        default: false
       build_review_assets:
         description: 'Build audited optional helper and run isolated egress fixtures (downloads model). No release.'
         type: boolean
@@ -48,6 +52,41 @@ jobs:
       - name: Linux desktop commands compile
         if: runner.os == 'Linux'
         run: cargo check --locked --manifest-path phase1/src-tauri/Cargo.toml --features desktop
+  source-inventory:
+    if: github.event.repository.private == false && inputs.generate_inventory
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-24.04
+            target: linux-x86_64
+          - os: windows-2022
+            target: windows-x86_64
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Use installed Visual Studio dependency analyzer
+        if: runner.os == 'Windows'
+        shell: powershell
+        run: |
+          $vs = & "${env:ProgramFiles(x86)}/Microsoft Visual Studio/Installer/vswhere.exe" -latest -property installationPath
+          Import-Module "$vs/Common7/Tools/Microsoft.VisualStudio.DevShell.dll"
+          Enter-VsDevShell -VsInstallPath $vs -SkipAutomaticLocation -DevCmdArguments '-arch=x64 -host_arch=x64'
+          node phase1/scripts/voice/inventory-source.mjs
+      - name: Generate source license and linkage evidence (unreviewed)
+        if: runner.os == 'Linux'
+        run: node phase1/scripts/voice/inventory-source.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: whisper-inventory-UNREVIEWED-${{ matrix.target }}
+          path: phase1/dist-voice/inventory/
+          if-no-files-found: error
+          retention-days: 7
   helper:
     if: github.event.repository.private == false && inputs.build_review_assets
     timeout-minutes: 30

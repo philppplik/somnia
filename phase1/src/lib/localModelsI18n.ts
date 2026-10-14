@@ -1,5 +1,15 @@
 export const LOCAL_MODELS_CATALOGUES:Record<string,Record<string,string>> = {
  "en": {
+  "local.transfer.unverified": "Imported unverified history. Results are not authenticated or rerun.",
+  "local.transfer.title": "Local JSON export and import",
+  "local.transfer.boundary": "Files include prompts and model outputs. Keep them private. Imported results are unverified historical data, not a benchmark; no inference or setting changes. Up to 10 saved comparisons, 2 MB. Import adds new IDs without overwriting.",
+  "local.transfer.export": "Export saved comparisons as JSON",
+  "local.transfer.file": "Choose comparison JSON",
+  "local.transfer.review": "Review {count} imported comparisons",
+  "local.transfer.ack": "I reviewed this file as unverified history and want to add it locally",
+  "local.transfer.import": "Import reviewed history",
+  "local.transfer.failed": "Invalid or oversized JSON, full local history, or local storage failed. No import was committed.",
+
   "local.diskUsage.title": "Reported model disk sizes",
   "local.diskUsage.total": "{bytes} bytes reported across {known} models; {unknown} models have unknown size.",
   "local.diskUsage.boundary": "Logical sizes from installed model inventory, not physical disk usage or free space. Shared layers may be counted more than once. Unknown sizes are not zero. Refresh reloads this view.",
@@ -346,6 +356,16 @@ export const LOCAL_MODELS_CATALOGUES:Record<string,Record<string,string>> = {
   "local.route.earlier": "Move earlier after local"
  },
  "de": {
+  "local.transfer.unverified": "Importierte ungeprüfte Historie. Ergebnisse nicht bestätigt oder erneut ausgeführt.",
+  "local.transfer.title": "Lokaler JSON-Export und -Import",
+  "local.transfer.boundary": "Dateien enthalten Prompts und Modellausgaben. Privat halten. Importierte Ergebnisse sind ungeprüfte Historie, kein Benchmark; keine Inferenz oder Einstellungsänderung. Bis 10 Vergleiche, 2 MB. Import nutzt neue IDs ohne Überschreiben.",
+  "local.transfer.export": "Gespeicherte Vergleiche als JSON exportieren",
+  "local.transfer.file": "Vergleichs-JSON wählen",
+  "local.transfer.review": "{count} importierte Vergleiche prüfen",
+  "local.transfer.ack": "Ich habe diese Datei als ungeprüfte Historie geprüft und möchte sie lokal hinzufügen",
+  "local.transfer.import": "Geprüfte Historie importieren",
+  "local.transfer.failed": "JSON ungültig/zu groß, Historie voll oder lokaler Speicher fehlgeschlagen. Kein Import übernommen.",
+
   "local.diskUsage.title": "Gemeldete Modellgrößen auf Datenträger",
   "local.diskUsage.total": "{bytes} Bytes für {known} Modelle gemeldet; Größe bei {unknown} Modellen unbekannt.",
   "local.diskUsage.boundary": "Logische Größen aus dem Modellinventar, keine physische Belegung oder freier Speicher. Geteilte Layer können mehrfach gezählt sein. Unbekannte Größen sind nicht null. Aktualisieren lädt diese Ansicht neu.",
@@ -692,6 +712,16 @@ export const LOCAL_MODELS_CATALOGUES:Record<string,Record<string,string>> = {
   "local.route.earlier": "Nach lokal früher einordnen"
  },
  "es": {
+  "local.transfer.unverified": "Historial importado no verificado. Resultados sin autenticar ni volver a ejecutar.",
+  "local.transfer.title": "Exportar e importar JSON local",
+  "local.transfer.boundary": "Incluye prompts y respuestas. Mantén privado. Datos importados no verificados, no benchmark. Sin inferencia ni ajustes. Hasta 10 comparaciones, 2 MB. Nuevos ID sin sobrescribir.",
+  "local.transfer.export": "Exportar comparaciones JSON",
+  "local.transfer.file": "Elegir JSON",
+  "local.transfer.review": "Revisar {count} comparaciones",
+  "local.transfer.ack": "Revisé el archivo como historial no verificado y quiero añadirlo localmente",
+  "local.transfer.import": "Importar historial revisado",
+  "local.transfer.failed": "JSON inválido/grande, historial lleno o fallo local. Nada importado.",
+
   "local.diskUsage.title": "Tamaños de modelos informados",
   "local.diskUsage.total": "{bytes} bytes en {known} modelos; tamaño desconocido en {unknown}.",
   "local.diskUsage.boundary": "Tamaños lógicos del inventario, no uso físico ni espacio libre. Capas compartidas pueden contarse varias veces. Desconocido no es cero. Actualizar recarga esta vista.",
@@ -1038,6 +1068,16 @@ export const LOCAL_MODELS_CATALOGUES:Record<string,Record<string,string>> = {
   "local.route.earlier": "Mover antes tras local"
  },
  "fr": {
+  "local.transfer.unverified": "Historique importé non vérifié. Résultats non authentifiés ni exécutés à nouveau.",
+  "local.transfer.title": "Export et import JSON local",
+  "local.transfer.boundary": "Contient prompts et réponses. Garder privé. Historique importé non vérifié, pas un benchmark. Aucune inférence ni réglage modifié. 10 comparaisons, 2 Mo. Nouveaux ID sans écraser.",
+  "local.transfer.export": "Exporter les comparaisons JSON",
+  "local.transfer.file": "Choisir le JSON",
+  "local.transfer.review": "Vérifier {count} comparaisons",
+  "local.transfer.ack": "Fichier vérifié comme historique non validé, à ajouter localement",
+  "local.transfer.import": "Importer l’historique vérifié",
+  "local.transfer.failed": "JSON invalide/volumineux, historique plein ou échec local. Aucun import.",
+
   "local.diskUsage.title": "Tailles des modèles déclarées",
   "local.diskUsage.total": "{bytes} octets pour {known} modèles; taille inconnue pour {unknown}.",
   "local.diskUsage.boundary": "Tailles logiques de l’inventaire, pas occupation physique ni espace libre. Les couches partagées peuvent être comptées plusieurs fois. Inconnu ne signifie pas zéro. Actualiser recharge cette vue.",
@@ -1384,6 +1424,16 @@ export const LOCAL_MODELS_CATALOGUES:Record<string,Record<string,string>> = {
   "local.route.earlier": "Avancer après local"
  },
  "pt-BR": {
+  "local.transfer.unverified": "Histórico importado não verificado. Resultados não autenticados nem executados novamente.",
+  "local.transfer.title": "Exportar e importar JSON local",
+  "local.transfer.boundary": "Inclui prompts e respostas. Mantenha privado. Histórico importado não verificado, não benchmark. Sem inferência ou ajustes. Até 10 comparações, 2 MB. Novos IDs sem substituir.",
+  "local.transfer.export": "Exportar comparações JSON",
+  "local.transfer.file": "Escolher JSON",
+  "local.transfer.review": "Revisar {count} comparações",
+  "local.transfer.ack": "Revisei o arquivo como histórico não verificado e quero adicioná-lo localmente",
+  "local.transfer.import": "Importar histórico revisado",
+  "local.transfer.failed": "JSON inválido/grande, histórico cheio ou falha local. Nada importado.",
+
   "local.diskUsage.title": "Tamanhos de modelos informados",
   "local.diskUsage.total": "{bytes} bytes em {known} modelos; tamanho desconhecido em {unknown}.",
   "local.diskUsage.boundary": "Tamanhos lógicos do inventário, não uso físico nem espaço livre. Camadas compartilhadas podem ser contadas mais de uma vez. Desconhecido não é zero. Atualizar recarrega esta vista.",
