@@ -19,5 +19,8 @@ export {vectorStudio} from './vector';
 import './design';
 export {designStudio} from './design';
 
+import './3d';
+export {studio3D} from './3d';
+
 import './vibespace';
 export {vibespaceStudio} from './vibespace';

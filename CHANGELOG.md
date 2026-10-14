@@ -1,3 +1,9 @@
+# Unreleased: 3D Studio P0
+
+- New 3D Studio (id `3d`, after Photos, before Vibe Space). Opens glTF 2.0 files (.glb, or .gltf with its .bin and textures selected together, meshopt supported), orbit/zoom/pan camera, keyboard orbit, image-based lighting, grid and wireframe toggles, click or list selection, scene outline and model statistics. Hero action "Render still" saves a PNG of the view; Project > Export scene as GLB.
+- three.js 0.186.1 (MIT) is loaded only when the studio is shown (own lazy chunk). Dev dependency @types/three 0.186.0.
+- Not in P0: Smart Open routing of .glb/.gltf, OBJ/STL/PLY, Draco, editing, path tracing, Babylon comparison and the 100k-triangle frame-rate gate (needs a real GPU run on Windows).
+
 # Unreleased: Studio shell regression fixes
 
 - Code Studio restores the inline SVG inspector inside the shared Design section, including paint, fill/stroke gradients, guides, grid and clip/mask controls.
