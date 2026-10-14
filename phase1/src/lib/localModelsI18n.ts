@@ -1,5 +1,8 @@
 export const LOCAL_MODELS_CATALOGUES:Record<string,Record<string,string>> = {
  "en": {
+  "local.search.sourceBudget": "Selected text: {bytes} / 262144 UTF-8 bytes; valid chunks: {chunks} / 256",
+  "local.search.sourceInvalid": "Selection cannot be indexed as a whole. Review 32-source/byte/chunk limits, empty or unsupported text. No build started.",
+
   "local.search.queryBytes": "Query: {bytes} / 4096 UTF-8 bytes",
   "local.search.queryOversized": "Shorten the query to at most 4096 UTF-8 bytes before searching.",
   "local.search.queryInvalid": "Query contains unsupported control characters or invalid Unicode. Remove them before searching.",
@@ -577,6 +580,9 @@ export const LOCAL_MODELS_CATALOGUES:Record<string,Record<string,string>> = {
   "local.route.earlier": "Move earlier after local"
  },
  "de": {
+  "local.search.sourceBudget": "Gewählter Text: {bytes} / 262144 UTF-8 Bytes; gültige Chunks: {chunks} / 256",
+  "local.search.sourceInvalid": "Auswahl kann nicht vollständig indexiert werden. 32-Quellen/Byte/Chunk-Limits, leeren oder nicht unterstützten Text prüfen. Kein Aufbau gestartet.",
+
   "local.search.queryBytes": "Anfrage: {bytes} / 4096 UTF-8 Bytes",
   "local.search.queryOversized": "Anfrage vor der Suche auf höchstens 4096 UTF-8 Bytes kürzen.",
   "local.search.queryInvalid": "Anfrage enthält nicht unterstützte Steuerzeichen oder ungültiges Unicode. Vor der Suche entfernen.",
@@ -1154,6 +1160,9 @@ export const LOCAL_MODELS_CATALOGUES:Record<string,Record<string,string>> = {
   "local.route.earlier": "Nach lokal früher einordnen"
  },
  "es": {
+  "local.search.sourceBudget": "Texto elegido: {bytes} / 262144 bytes UTF-8; fragmentos válidos: {chunks} / 256",
+  "local.search.sourceInvalid": "No se puede indexar toda la selección. Revisa límites de 32 fuentes/bytes/fragmentos y texto vacío o no admitido. No se inició.",
+
   "local.search.queryBytes": "Consulta: {bytes} / 4096 bytes UTF-8",
   "local.search.queryOversized": "Reduce la consulta a un máximo de 4096 bytes UTF-8 antes de buscar.",
   "local.search.queryInvalid": "Consulta con controles no admitidos o Unicode inválido. Elimínalos antes de buscar.",
@@ -1731,6 +1740,9 @@ export const LOCAL_MODELS_CATALOGUES:Record<string,Record<string,string>> = {
   "local.route.earlier": "Mover antes tras local"
  },
  "fr": {
+  "local.search.sourceBudget": "Texte choisi: {bytes} / 262144 octets UTF-8; fragments valides: {chunks} / 256",
+  "local.search.sourceInvalid": "Sélection entière non indexable. Vérifiez limites de 32 sources/octets/fragments et texte vide ou non pris en charge. Aucun début.",
+
   "local.search.queryBytes": "Requête: {bytes} / 4096 octets UTF-8",
   "local.search.queryOversized": "Réduisez la requête à 4096 octets UTF-8 au plus avant recherche.",
   "local.search.queryInvalid": "Requête avec caractères de contrôle non pris en charge ou Unicode invalide. Retirez-les avant recherche.",
@@ -2308,6 +2320,9 @@ export const LOCAL_MODELS_CATALOGUES:Record<string,Record<string,string>> = {
   "local.route.earlier": "Avancer après local"
  },
  "pt-BR": {
+  "local.search.sourceBudget": "Texto escolhido: {bytes} / 262144 bytes UTF-8; trechos válidos: {chunks} / 256",
+  "local.search.sourceInvalid": "Não é possível indexar toda a seleção. Revise limites de 32 fontes/bytes/trechos e texto vazio ou incompatível. Nada iniciado.",
+
   "local.search.queryBytes": "Consulta: {bytes} / 4096 bytes UTF-8",
   "local.search.queryOversized": "Reduza a consulta a no máximo 4096 bytes UTF-8 antes de buscar.",
   "local.search.queryInvalid": "Consulta com controles incompatíveis ou Unicode inválido. Remova antes de buscar.",
