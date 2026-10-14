@@ -1021,5 +1021,6 @@
  "animation.rig.trim": "Recortar al área de trabajo",
  "cmd.animation.layers.trimToWorkArea": "Recortar las capas seleccionadas al área de trabajo",
  "animation.export.colors": "Colores del GIF",
- "animation.export.problem.colors": "Los colores del GIF deben ser 16, 32, 64, 128 o 256."
+ "animation.export.problem.colors": "Los colores del GIF deben ser 16, 32, 64, 128 o 256.",
+ "animation.export.more": "Opciones de formato"
 }
