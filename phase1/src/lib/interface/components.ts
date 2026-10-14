@@ -39,6 +39,15 @@ export function patchInterfaceNode(doc:InterfaceDocument,id:string,patch:Partial
 export function switchInstanceVariant(doc:InterfaceDocument,id:string,variantId:string):void{
  const root=doc.nodes.find(n=>n.id===id),c=doc.components?.find(c=>c.id===root?.instance?.componentId);if(!root?.instance||root.locked||!c?.variants.some(v=>v.id===variantId))throw Error('Variant unavailable.');root.instance.variantId=variantId;
 }
+/** Swap keeps root position and matching slot overrides; absent slots stay preserved as visible orphan warnings, never applied to another layer. Variant choice prefers matching property values. */
+export function swapInstanceComponent(doc:InterfaceDocument,id:string,componentId:string):void{
+ const root=doc.nodes.find(n=>n.id===id),target=doc.components?.find(c=>c.id===componentId);
+ if(!root?.instance||root.locked||!target||target.id===root.instance.componentId)throw Error('Component swap unavailable.');
+ const current=doc.components?.find(c=>c.id===root.instance!.componentId),currentProps=current?.variants.find(v=>v.id===root.instance!.variantId)?.props;
+ let variant=target.variants[0];
+ if(currentProps&&target.properties?.length){const match=target.variants.find(v=>target.properties!.every(p=>currentProps[p.name]===undefined||v.props?.[p.name]===currentProps[p.name]));if(match)variant=match;}
+ root.instance={componentId:target.id,variantId:variant.id,overrides:root.instance.overrides};
+}
 export function resetInstanceOverrides(doc:InterfaceDocument,id:string):void{const root=doc.nodes.find(n=>n.id===id);if(!root?.instance||root.locked)throw Error('Instance unavailable.');root.instance.overrides=[];}
 export function detachInstance(doc:InterfaceDocument,id:string):void{const root=doc.nodes.find(n=>n.id===id);if(!root?.instance||root.locked)throw Error('Instance unavailable.');delete root.instance;for(const n of subtree(doc,id))if(!owningInstance(doc,n.id))delete n.componentSlot;}
 /** Called once per content transaction. Derived instance changes and master edit share its undo entry. */
