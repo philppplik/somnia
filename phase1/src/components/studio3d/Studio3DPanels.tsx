@@ -1,4 +1,5 @@
 import {StudioRecentList} from '../studios/StudioRecentList';
+import {StudioProgress} from '../studios/StudioProgress';
 import {useState} from 'react';
 import {patchStudio3D} from '../../lib/studio3d/session';
 import type {ObjectInfo} from '../../lib/studio3d/stage';
@@ -166,8 +167,7 @@ export function ToolsSection(_:InspectorSectionProps){
   </fieldset>
   <fieldset className="m-0 grid gap-2 border-0 p-0" data-testid="studio3d-turntable"><legend className="text-xs text-ink-3">{t('studio3d.turntable.title')}</legend>
    <NumField label={t('studio3d.turntable.frames')} value={frames} min={2} max={360} step={1} onCommit={setFrames}/>
-   {s.render?<><p role="status" className="m-0 text-xs text-ink-2">{t('studio3d.turntable.progress',{done:s.render.done,total:s.render.total})}</p>
-    <Button variant="outline" onClick={()=>void executeCommand('studio3d.render.cancel')}>{t('studio3d.turntable.cancel')}</Button></>:
+   {s.render?<StudioProgress label={t('studio3d.turntable.progress',{done:s.render.done,total:s.render.total})} value={s.render.done} max={s.render.total} cancelLabel={t('studio3d.turntable.cancel')} onCancel={()=>void executeCommand('studio3d.render.cancel')}/>:
     <Button variant="outline" disabled={s.status!=='ready'} onClick={()=>void executeCommand('studio3d.render.turntable',{frames})}>{t('studio3d.turntable.start')}</Button>}
   </fieldset>
   <fieldset className="m-0 grid gap-1 border-0 p-0" data-testid="studio3d-align"><legend className="text-xs text-ink-3">{t('studio3d.align.title',{count:n.length})}</legend>

@@ -1,3 +1,4 @@
+import {StudioProgress} from '../studios/StudioProgress';
 import {useEffect} from 'react';
 import {Popover} from '@base-ui/react/popover';
 import {useT} from '../../lib/useT';
@@ -20,7 +21,8 @@ export function PhotoExportPopover(){
      <label className="grid gap-1">{t('photos.hero.format')}<select autoFocus value={e.format} disabled={e.working} onChange={ev=>e.setFormat(ev.target.value as 'png'|'jpeg')} className="rounded-lg border border-line bg-panel p-2" data-testid="photos-export-format"><option value="png">PNG</option><option value="jpeg">JPEG</option></select></label>
      <p className="m-0 text-ink-3">{t('photos.hero.original')}</p>
      {session&&isNeutralPhoto(session.now)&&<p className="m-0 text-ink-3">{t('photos.hero.unchanged')}</p>}
-     <Button type="submit" variant="primary" className="!text-white" disabled={!photoExportEnabled()}>{t('photos.hero.copy')}</Button>
+     <Button type="submit" variant="primary" disabled={!photoExportEnabled()}>{t('photos.hero.copy')}</Button>
+     {e.working&&<StudioProgress label={t('photos.processing')}/>}
      <p role="status" aria-live="polite" className="m-0 text-ink-2">{e.note}</p>
     </form>
    </Popover.Popup>

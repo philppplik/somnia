@@ -1,3 +1,4 @@
+import {StudioProgress} from '../studios/StudioProgress';
 import {patchInterfaceNode} from '../../lib/interface/components';
 import {useEffect,useState} from 'react';
 import {Button} from '../ui/button';
@@ -17,6 +18,7 @@ export function InterfaceOutput(){
  <div className="flex flex-wrap gap-1"><Button size="compact" variant="outline" disabled={!frameIds.length} onClick={()=>run(()=>setReview(freezeInterfaceExport(s.document!,frameIds,INTERFACE_EXPORT_PRESETS[preset])))}>{t('interface.reviewExport')}</Button><Button size="compact" variant="outline" disabled={node?.kind!=='frame'} onClick={()=>run(()=>setHandoff(buildInterfaceHandoff(s.document!,node!.id)))}>{t('interface.freezeHandoff')}</Button></div>
  {review&&<div className="rounded border border-subtle p-2 text-xs"><p>{t('interface.frozenRevision')} {review.revision} · {review.frames.length} · {review.preset.format.toUpperCase()} @{review.preset.scale}x</p><ul className="my-2 pl-4">{review.warnings.map(w=><li key={w}>{w}</li>)}</ul><div className="flex flex-col gap-1">{review.frames.map((f,i)=><Button key={f.frameId} disabled={busy} size="compact" variant="outline" onClick={()=>void save(i)}>{review.preset.format.toUpperCase()} @{review.preset.scale}x · {Math.ceil(f.width*review.preset.scale)} × {Math.ceil(f.height*review.preset.scale)} · {f.name}</Button>)}</div><details className="mt-2"><summary>{t('interface.cssValues')}</summary><pre className="max-h-64 overflow-auto whitespace-pre-wrap break-all text-[10px]" data-testid="interface-frozen-css">{JSON.stringify(review.css,null,2)}</pre></details></div>}
  {handoff&&<div className="rounded border border-subtle p-2 text-xs"><p>{t('interface.frozenRevision')} {handoff.revision}</p><ul className="my-2 pl-4">{handoff.warnings.map(w=><li key={w}>{w}</li>)}</ul><pre className="max-h-52 overflow-auto whitespace-pre-wrap break-all text-[10px]" data-copyable>{JSON.stringify(handoff,null,2)}</pre><Button size="compact" variant="outline" onClick={()=>downloadInterfaceBlob(new Blob([JSON.stringify(handoff,null,2)],{type:'application/json'}),'interface-handoff.json')}>{t('interface.downloadHandoff')}</Button></div>}
+ {busy&&<StudioProgress label={t('interface.exporting')}/>}
  {error&&<p role="alert" className="text-xs">{error}</p>}
  </div></details>;
 }

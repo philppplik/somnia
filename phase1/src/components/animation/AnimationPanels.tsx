@@ -1,5 +1,6 @@
 import {NativeInput,NativeSelect} from '../ui/native-controls';
 import {DEFAULT_LAYER_COLOR} from '../../lib/animation/model';
+import {StudioProgress} from '../studios/StudioProgress';
 import type {Edit} from '../../lib/animation/edit';
 import {prepareAnimationAsset} from '../../lib/animation/assets';
 import {animationSession} from '../../lib/animation/session';
@@ -110,9 +111,7 @@ export function RenderSection(_:InspectorSectionProps){
    <Button size="compact" variant="outline" disabled={busy} onClick={()=>run('animation.export.frame')} data-testid="animation-export-frame">{t('animation.export.frame')}</Button>
    <Button size="compact" variant="outline" disabled={busy} onClick={()=>run('animation.export.sequence')} data-testid="animation-export-sequence">{t('animation.export.sequence')}</Button>
   </div>
-  {busy&&<div className="grid gap-1" role="status"><progress className="h-2 w-full" max={Math.max(1,job.total)} value={job.done} data-testid="animation-export-progress"/>
-   <span className="text-ink-3">{t('animation.export.progress',{done:job.done,total:job.total})}</span>
-   {job.kind==='sequence'&&<Button size="compact" variant="outline" onClick={cancelExport} data-testid="animation-export-cancel">{t('animation.export.cancel')}</Button>}</div>}
+  {busy&&<StudioProgress label={t('animation.export.progress',{done:job.done,total:job.total})} value={job.done} max={job.total} progressTestId="animation-export-progress" cancelLabel={t('animation.export.cancel')} onCancel={job.kind==='sequence'?cancelExport:undefined} cancelTestId="animation-export-cancel"/>}
   {job.status==='done'&&<p role="status" className="m-0 text-ink" data-testid="animation-export-done">{t('animation.export.done',{file:job.fileName})}</p>}
   {job.status==='error'&&<p role="alert" className="m-0 text-ink" data-testid="animation-export-error">{t('animation.export.error',{message:job.message})}</p>}
   <p className="m-0 text-ink-3">{t('animation.render.note')}</p>
