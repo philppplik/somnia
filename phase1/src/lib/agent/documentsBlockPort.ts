@@ -1,4 +1,4 @@
-import {applyReviewedEdit,undoReviewedEdit,getEngine,type EditReceipt} from '../documents/session';import {getDocumentsState} from '../documents/store';import {diffEdit} from '../documents/edit';
+import {applyReviewedEdit,undoReviewedEdit,getEngine,settleDocument,type EditReceipt} from '../documents/session';import {getDocumentsState} from '../documents/store';import {diffEdit} from '../documents/edit';
 import {AgentToolRegistry} from './toolRegistry';import type {DocumentRef} from './documentCore';
 export interface DocumentsBlockTarget{document:DocumentRef;block:number;nativeRevision:number;}
 export interface DocumentsBlockSnapshot{target:DocumentsBlockTarget;text:string;editable:boolean;kind:'para'|'table'|'cell';}
@@ -20,10 +20,10 @@ export function createDocumentsBlockPort(host:DocumentsBlockHost){
   const r=reviews.get(proposal);if(!host.execution||!r||reviewId!==r.reviewId||reviewedAfter!==r.after||proposal.before!==r.before||proposal.after!==r.after||JSON.stringify(proposal.target)!==JSON.stringify(r.target)||!origin.startsWith('ai:')||origin.length>80)throw Error('Exact host review and execution grant required.');
   signal.throwIfAborted();host.execution.permission('apply',structuredClone(proposal));signal.throwIfAborted();assertTarget(r.target,host.current());if(!r.engine||r.engine!==getEngine()||r.engine.isDisposed)throw Error('Document owner changed.');if(/[\r\n\uFFFC]/.test(r.after))throw Error('Only one editable paragraph is supported.');
   const edit=diffEdit(r.target.block,r.before,r.after);if(!edit)throw Error('Proposal makes no change.');reviews.delete(proposal);
-  const receipt=await applyReviewedEdit({block:r.target.block,expectedRev:r.target.nativeRevision,expectedText:r.before,hunks:edit.hunks,origin});const st=getDocumentsState();if(getEngine()!==r.engine||st.rev!==receipt.afterRev||st.blocks.find(b=>b.index===r.target.block)?.text!==r.after||receipt.afterText!==r.after)return Object.freeze({...receipt,applied:null});receipts.set(receipt,structuredClone(proposal));return receipt;
+  const receipt=await applyReviewedEdit({block:r.target.block,expectedRev:r.target.nativeRevision,expectedText:r.before,hunks:edit.hunks,origin});await settleDocument();const st=getDocumentsState();if(getEngine()!==r.engine||st.rev!==receipt.afterRev||st.blocks.find(b=>b.index===r.target.block)?.text!==r.after||receipt.afterText!==r.after)return Object.freeze({...receipt,applied:null});receipts.set(receipt,structuredClone(proposal));return receipt;
  },
  async undoReviewed(receipt:EditReceipt,signal:AbortSignal):Promise<EditReceipt>{
-  const proposal=receipts.get(receipt);if(!host.execution||!proposal)throw Error('Unknown reviewed Documents receipt.');signal.throwIfAborted();host.execution.permission('undo',structuredClone(proposal));signal.throwIfAborted();const owner=getEngine(),result=await undoReviewedEdit(receipt,receipt.origin);receipts.delete(receipt);const st=getDocumentsState();if(getEngine()!==owner||st.rev!==result.afterRev||st.blocks.find(b=>b.index===result.block)?.text!==result.afterText)return Object.freeze({...result,applied:null});return result;
+  const proposal=receipts.get(receipt);if(!host.execution||!proposal)throw Error('Unknown reviewed Documents receipt.');signal.throwIfAborted();host.execution.permission('undo',structuredClone(proposal));signal.throwIfAborted();const owner=getEngine(),result=await undoReviewedEdit(receipt,receipt.origin);receipts.delete(receipt);await settleDocument();const st=getDocumentsState();if(getEngine()!==owner||st.rev!==result.afterRev||st.blocks.find(b=>b.index===result.block)?.text!==result.afterText)return Object.freeze({...result,applied:null});return result;
  }
  });
 }
