@@ -255,6 +255,7 @@
         "src/lib/agentTask/redact.ts",
         "src/lib/agentTask/schema.ts",
         "src/lib/alignDistribute.ts",
+        "src/lib/animation/apngEncode.ts",
         "src/lib/animation/assets.ts",
         "src/lib/animation/audioCore.ts",
         "src/lib/animation/audioImport.ts",
@@ -265,10 +266,13 @@
         "src/lib/animation/effects.ts",
         "src/lib/animation/exportFrames.ts",
         "src/lib/animation/exportJob.ts",
+        "src/lib/animation/exportVideo.ts",
+        "src/lib/animation/gifEncode.ts",
         "src/lib/animation/graph.ts",
         "src/lib/animation/interpolate.ts",
         "src/lib/animation/keyclip.ts",
         "src/lib/animation/model.ts",
+        "src/lib/animation/modifiers.ts",
         "src/lib/animation/persistence.ts",
         "src/lib/animation/playback.ts",
         "src/lib/animation/presets.ts",
@@ -1364,10 +1368,12 @@
         "src/lib/agentTask/engine.ts",
         "src/lib/agentTask/errors.ts",
         "src/lib/agentTask/store.ts",
+        "src/lib/animation/apngEncode.ts",
         "src/lib/animation/audioImport.ts",
         "src/lib/animation/audioPreview.ts",
         "src/lib/animation/edit.ts",
         "src/lib/animation/exportFrames.ts",
+        "src/lib/animation/gifEncode.ts",
         "src/lib/animation/keyclip.ts",
         "src/lib/animation/session.ts",
         "src/lib/breadcrumbs.ts",
@@ -1599,13 +1605,17 @@
         "src/lib/agentTask/gates.ts",
         "src/lib/alignApply.ts",
         "src/lib/alignDistribute.ts",
+        "src/lib/animation/apngEncode.ts",
         "src/lib/animation/audioImport.ts",
         "src/lib/animation/audioPreview.ts",
         "src/lib/animation/edit.ts",
         "src/lib/animation/exportFrames.ts",
         "src/lib/animation/exportJob.ts",
+        "src/lib/animation/exportVideo.ts",
+        "src/lib/animation/gifEncode.ts",
         "src/lib/animation/interpolate.ts",
         "src/lib/animation/model.ts",
+        "src/lib/animation/modifiers.ts",
         "src/lib/builtinBlocks.ts",
         "src/lib/canvasPrefs.ts",
         "src/lib/codePanels/i18n.ts",
@@ -3163,6 +3173,7 @@
         "src/lib/animation/audioPreview.ts",
         "src/lib/animation/effects.ts",
         "src/lib/animation/exportFrames.ts",
+        "src/lib/animation/gifEncode.ts",
         "src/lib/builtinBlocks.ts",
         "src/lib/convert/docConvert.ts",
         "src/lib/design/artboards.ts",
@@ -3358,6 +3369,7 @@
       ],
       "owners": [
         "src/lib/animation/exportFrames.ts",
+        "src/lib/animation/exportVideo.ts",
         "src/lib/convert/raster.ts",
         "src/lib/extensions/nativeScheme.ts",
         "src/lib/extensions/selftest.ts",
@@ -3868,6 +3880,7 @@
         "src/lib/agentTask/hash.ts",
         "src/lib/agentTask/schema.ts",
         "src/lib/agentTask/store.ts",
+        "src/lib/animation/apngEncode.ts",
         "src/lib/animation/assetsValidation.ts",
         "src/lib/animation/audioCore.ts",
         "src/lib/animation/audioPreview.ts",
@@ -3875,9 +3888,11 @@
         "src/lib/animation/commands.ts",
         "src/lib/animation/edit.ts",
         "src/lib/animation/exportFrames.ts",
+        "src/lib/animation/gifEncode.ts",
         "src/lib/animation/graph.ts",
         "src/lib/animation/keyclip.ts",
         "src/lib/animation/model.ts",
+        "src/lib/animation/modifierModel.ts",
         "src/lib/animation/presets.ts",
         "src/lib/animation/scene.ts",
         "src/lib/animation/selection.ts",
@@ -4450,6 +4465,7 @@
         "src/lib/agentBoard/fixtures.ts",
         "src/lib/animation/audioPreview.ts",
         "src/lib/animation/exportFrames.ts",
+        "src/lib/animation/exportVideo.ts",
         "src/lib/builtinBlocks.ts",
         "src/lib/codePanels/model.ts",
         "src/lib/collab/identity.ts",
@@ -5262,6 +5278,7 @@
         "src/lib/agentTask/store.ts",
         "src/lib/alignApply.ts",
         "src/lib/alignDistribute.ts",
+        "src/lib/animation/apngEncode.ts",
         "src/lib/animation/assets.ts",
         "src/lib/animation/assetsValidation.ts",
         "src/lib/animation/audioCore.ts",
@@ -5273,10 +5290,13 @@
         "src/lib/animation/effects.ts",
         "src/lib/animation/exportFrames.ts",
         "src/lib/animation/exportJob.ts",
+        "src/lib/animation/exportVideo.ts",
         "src/lib/animation/graph.ts",
         "src/lib/animation/interpolate.ts",
         "src/lib/animation/keyclip.ts",
         "src/lib/animation/model.ts",
+        "src/lib/animation/modifierModel.ts",
+        "src/lib/animation/modifiers.ts",
         "src/lib/animation/persistence.ts",
         "src/lib/animation/playback.ts",
         "src/lib/animation/presets.ts",
@@ -6135,6 +6155,7 @@
         "src/lib/animation/graph.ts",
         "src/lib/animation/interpolate.ts",
         "src/lib/animation/model.ts",
+        "src/lib/animation/modifiers.ts",
         "src/lib/animation/persistence.ts",
         "src/lib/animation/presets.ts",
         "src/lib/animation/recovery.ts",
@@ -8890,16 +8911,12 @@
         "src/components/NodeAppSettings.tsx",
         "src/components/OfficeViewer.tsx",
         "src/components/pdf/pdf-edit.css",
-        "src/components/pdf/PdfEditInspector.tsx",
-        "src/components/pdfedit/PdfAnnotationCreator.tsx",
         "src/components/pdfedit/PdfAnnotationOverlay.tsx",
         "src/components/pdfedit/PdfCommentsPanel.tsx",
         "src/components/pdfedit/PdfFieldOverlay.tsx",
         "src/components/pdfedit/PdfFormDesigner.tsx",
-        "src/components/pdfedit/PdfInlineEditor.tsx",
         "src/components/pdfedit/PdfMarkupOverlay.tsx",
         "src/components/pdfedit/PdfMarkupProperties.tsx",
-        "src/components/pdfedit/PdfPanels.tsx",
         "src/components/pdfedit/PdfViewer.tsx",
         "src/components/photos/DevelopPanel.tsx",
         "src/components/photos/panels/AdjustPanels.tsx",
@@ -9600,6 +9617,7 @@
         "src/lib/a11y.ts",
         "src/lib/agent/localVisionApplication.ts",
         "src/lib/animation/exportFrames.ts",
+        "src/lib/animation/exportVideo.ts",
         "src/lib/builtinBlocks.ts",
         "src/lib/collab/identity.ts",
         "src/lib/componentProps.ts",
@@ -9752,6 +9770,7 @@
         "src/lib/agent/studioMcpHost.ts",
         "src/lib/agent/studioMcpServer.ts",
         "src/lib/animation/model.ts",
+        "src/lib/animation/modifiers.ts",
         "src/lib/animation/selection.ts",
         "src/lib/codePanels/model.ts",
         "src/lib/collab/appMedia.ts",
@@ -11331,6 +11350,7 @@
         "tests/animation-p4.spec.ts",
         "tests/animation-p5b.spec.ts",
         "tests/animation-p6.spec.ts",
+        "tests/animation-p7.spec.ts",
         "tests/new-studios-ds-a11y.spec.ts",
         "tests/new-studios-keyboard.spec.ts"
       ],
@@ -11338,9 +11358,20 @@
     },
     {
       "kind": "testId",
+      "value": "animation-export-cancel",
+      "readers": [
+        "tests/animation-p7.spec.ts"
+      ],
+      "owners": [
+        "src/components/animation/AnimationPanels.tsx"
+      ]
+    },
+    {
+      "kind": "testId",
       "value": "animation-export-done",
       "readers": [
-        "tests/animation-p4.spec.ts"
+        "tests/animation-p4.spec.ts",
+        "tests/animation-p7.spec.ts"
       ],
       "owners": [
         "src/components/animation/AnimationPanels.tsx"
@@ -11359,9 +11390,29 @@
     },
     {
       "kind": "testId",
+      "value": "animation-export-gif",
+      "readers": [
+        "tests/animation-p7.spec.ts"
+      ],
+      "owners": [
+        "src/components/animation/AnimationPanels.tsx"
+      ]
+    },
+    {
+      "kind": "testId",
       "value": "animation-export-sequence",
       "readers": [
         "tests/animation-p4.spec.ts"
+      ],
+      "owners": [
+        "src/components/animation/AnimationPanels.tsx"
+      ]
+    },
+    {
+      "kind": "testId",
+      "value": "animation-export-webm",
+      "readers": [
+        "tests/animation-p7.spec.ts"
       ],
       "owners": [
         "src/components/animation/AnimationPanels.tsx"
@@ -14425,6 +14476,8 @@
         "src/lib/agentTask/attribution.ts",
         "src/lib/agentTask/engine.ts",
         "src/lib/agentTask/schema.ts",
+        "src/lib/animation/apngEncode.ts",
+        "src/lib/animation/exportJob.ts",
         "src/lib/builtinBlocks.ts",
         "src/lib/commandContracts.ts",
         "src/lib/commandDispatcher.ts",

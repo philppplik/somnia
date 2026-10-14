@@ -214,20 +214,20 @@
       "inlineStyle": 3
     },
     "src/components/pdf": {
-      "rawButton": 12,
-      "rawInput": 7,
-      "rawSelect": 2,
-      "rawTextarea": 2,
+      "rawButton": 0,
+      "rawInput": 0,
+      "rawSelect": 0,
+      "rawTextarea": 0,
       "hexTsx": 1,
       "hexCss": 15,
       "pixelText": 0,
       "inlineStyle": 0
     },
     "src/components/pdfedit": {
-      "rawButton": 50,
-      "rawInput": 24,
-      "rawSelect": 4,
-      "rawTextarea": 6,
+      "rawButton": 0,
+      "rawInput": 0,
+      "rawSelect": 0,
+      "rawTextarea": 0,
       "hexTsx": 5,
       "hexCss": 0,
       "pixelText": 6,

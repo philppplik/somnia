@@ -15,6 +15,7 @@ import {
 } from "../../lib/pdfedit/session";
 import type { PdfFieldValue } from "../../lib/pdfforms";
 import { pdfButton } from "./PdfInlineEditor";
+import {NativeButton,NativeInput,NativeSelect,Textarea} from '../ui/native-controls';
 function Thumbnail({ bytes, page }: { bytes: Uint8Array; page: number }) {
   const ref = useRef<HTMLCanvasElement>(null);
   useEffect(() => {
@@ -103,27 +104,27 @@ export function PdfPagesPanel() {
         role="tablist"
         aria-label="PDF navigation"
       >
-        <button
+        <NativeButton
           role="tab"
           aria-selected={tab === "pages"}
           className={pdfButton}
           onClick={() => setTab("pages")}
         >
           Pages
-        </button>
-        <button
+        </NativeButton>
+        <NativeButton
           role="tab"
           aria-selected={tab === "search"}
           className={pdfButton}
           onClick={() => setTab("search")}
         >
           Search
-        </button>
+        </NativeButton>
       </div>
       {tab === "pages" ? (
         <>
           <div className="flex flex-wrap items-center gap-1 border-b border-subtle p-2">
-            <button
+            <NativeButton
               className={pdfButton}
               disabled={disabled}
               title="Rotate current page clockwise"
@@ -132,8 +133,8 @@ export function PdfPagesPanel() {
               }
             >
               Rotate
-            </button>
-            <button
+            </NativeButton>
+            <NativeButton
               className={pdfButton}
               disabled={disabled || count <= 1}
               onClick={() => {
@@ -146,7 +147,7 @@ export function PdfPagesPanel() {
               }}
             >
               Delete
-            </button>
+            </NativeButton>
             <label
               className={
                 pdfButton +
@@ -155,7 +156,7 @@ export function PdfPagesPanel() {
               }
             >
               Insert PDF
-              <input
+              <NativeInput
                 className="hidden"
                 type="file"
                 accept="application/pdf,.pdf"
@@ -212,7 +213,7 @@ export function PdfPagesPanel() {
                     setDrag(null);
                   }}
                 >
-                  <button
+                  <NativeButton
                     className="w-full cursor-pointer border-0 bg-transparent p-0"
                     aria-label={`Go to page ${i + 1}`}
                     aria-current={s.page === i + 1 ? "page" : undefined}
@@ -225,9 +226,9 @@ export function PdfPagesPanel() {
                       {i + 1} · {Math.round(p.width)} × {Math.round(p.height)}{" "}
                       pt
                     </span>
-                  </button>
+                  </NativeButton>
                   <div className="flex justify-center">
-                    <button
+                    <NativeButton
                       className={pdfButton}
                       aria-label={`Move page ${i + 1} up`}
                       disabled={disabled || i === 0}
@@ -240,8 +241,8 @@ export function PdfPagesPanel() {
                       }
                     >
                       ↑
-                    </button>
-                    <button
+                    </NativeButton>
+                    <NativeButton
                       className={pdfButton}
                       aria-label={`Move page ${i + 1} down`}
                       disabled={disabled || i === count - 1}
@@ -254,7 +255,7 @@ export function PdfPagesPanel() {
                       }
                     >
                       ↓
-                    </button>
+                    </NativeButton>
                   </div>
                 </div>
               ))
@@ -269,18 +270,18 @@ export function PdfPagesPanel() {
               void searchPdf(s.name, query);
             }}
           >
-            <input
+            <NativeInput
               className="w-full rounded-sm border border-subtle bg-transparent px-2 py-1.5 text-xs"
               aria-label="Search PDF text"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
             />
-            <button
+            <NativeButton
               className={pdfButton}
               disabled={!query.trim() || s.searching}
             >
               Find
-            </button>
+            </NativeButton>
           </form>
           <p role="status" className="py-2 text-xs text-ink-3">
             {s.searching
@@ -290,14 +291,14 @@ export function PdfPagesPanel() {
                 : ""}
           </p>
           {s.hits.map((h) => (
-            <button
+            <NativeButton
               key={h.page}
               className="mb-2 w-full rounded-sm border border-subtle bg-transparent p-2 text-left text-xs text-ink-2 hover:bg-hover"
               onClick={() => selectPdfPage(s.name, h.page)}
             >
               Page {h.page}
               <span className="mt-1 block text-ink-3">{h.text}</span>
-            </button>
+            </NativeButton>
           ))}
         </div>
       )}
@@ -325,7 +326,7 @@ export function PdfPropertiesPanel() {
         role="tablist"
         aria-label="PDF tools"
       >
-        <button
+        <NativeButton
           className={pdfButton}
           role="tab"
           aria-selected={tab === "add"}
@@ -335,8 +336,8 @@ export function PdfPropertiesPanel() {
           }}
         >
           Add
-        </button>
-        <button
+        </NativeButton>
+        <NativeButton
           className={pdfButton}
           role="tab"
           aria-selected={tab === "fields"}
@@ -347,8 +348,8 @@ export function PdfPropertiesPanel() {
           }}
         >
           Fields
-        </button>
-        <button
+        </NativeButton>
+        <NativeButton
           className={pdfButton}
           role="tab"
           aria-selected={tab === "comments"}
@@ -358,7 +359,7 @@ export function PdfPropertiesPanel() {
           }}
         >
           Comments
-        </button>
+        </NativeButton>
       </div>
       <div className="min-h-0 flex-1 overflow-auto p-3 text-xs text-ink-2">
         {tab === "comments" ? (
@@ -373,7 +374,7 @@ export function PdfPropertiesPanel() {
             <fieldset disabled={disabled} className="grid gap-2">
               <label>
                 Page text
-                <textarea
+                <Textarea
                   aria-label="PDF text or comment"
                   className="mt-1 min-h-20 w-full rounded-sm border border-subtle bg-transparent p-2 text-xs select-text"
                   value={text}
@@ -389,7 +390,7 @@ export function PdfPropertiesPanel() {
                 ).map(([label, v, set]) => (
                   <label key={label}>
                     {label} (pt)
-                    <input
+                    <NativeInput
                       aria-label={`PDF ${label} position`}
                       type="number"
                       className="mt-1 w-full rounded-sm border border-subtle bg-transparent px-2 py-1"
@@ -401,7 +402,7 @@ export function PdfPropertiesPanel() {
               </div>
               <label>
                 Font size
-                <input
+                <NativeInput
                   aria-label="PDF font size"
                   type="number"
                   min="1"
@@ -411,7 +412,7 @@ export function PdfPropertiesPanel() {
                   onChange={(e) => setSize(Number(e.target.value))}
                 />
               </label>
-              <button
+              <NativeButton
                 className={pdfButton + " bg-hover"}
                 disabled={!text.trim()}
                 onClick={() =>
@@ -426,7 +427,7 @@ export function PdfPropertiesPanel() {
                 }
               >
                 Add text
-              </button>
+              </NativeButton>
             </fieldset>
             <PdfAnnotationCreator />
           </>
@@ -450,7 +451,7 @@ export function PdfPropertiesPanel() {
                   {f.required ? " *" : ""}
                   <span className="ml-1 text-ink-3">{f.kind}</span>
                   {f.kind === "checkbox" ? (
-                    <input
+                    <NativeInput
                       aria-label={f.name}
                       type="checkbox"
                       className="ml-2"
@@ -461,7 +462,7 @@ export function PdfPropertiesPanel() {
                       }
                     />
                   ) : f.kind === "text" ? (
-                    <input
+                    <NativeInput
                       aria-label={f.name}
                       className="mt-1 w-full rounded-sm border border-subtle bg-transparent p-1 select-text"
                       disabled={disabled || f.readOnly}
@@ -472,7 +473,7 @@ export function PdfPropertiesPanel() {
                       }
                     />
                   ) : ["radio", "dropdown", "optionlist"].includes(f.kind) ? (
-                    <select
+                    <NativeSelect
                       aria-label={f.name}
                       className="mt-1 w-full rounded-sm border border-subtle bg-panel p-1"
                       multiple={f.kind === "optionlist" && f.multiSelect}
@@ -496,18 +497,18 @@ export function PdfPropertiesPanel() {
                       {f.options?.map((o) => (
                         <option key={o}>{o}</option>
                       ))}
-                    </select>
+                    </NativeSelect>
                   ) : (
                     <p className="mt-1 text-ink-3">View only</p>
                   )}
                 </label>
               ))}
-              <button
+              <NativeButton
                 className={pdfButton + " bg-hover"}
                 disabled={disabled || !Object.keys(values).length}
               >
                 Apply field values
-              </button>
+              </NativeButton>
             </form>
             <PdfFormDesigner />
           </>

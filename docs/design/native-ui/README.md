@@ -39,6 +39,7 @@ All file links are repository-relative, so they remain useful on a feature branc
 9. [Design-system audit report](final-audit.md)
 10. [Extensions area DS adoption](extensions-adoption.md)
 11. [Vibespace area DS adoption](vibespace-adoption.md)
+12. [Pdf/pdfedit areas DS adoption](pdf-adoption.md)
 
 ## The system in one view
 

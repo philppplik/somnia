@@ -9,6 +9,7 @@ import {
 } from "../../lib/pdfedit/session";
 import type { PdfComment } from "../../lib/pdfedit/comments";
 import { pdfButton } from "./PdfInlineEditor";
+import {NativeButton,NativeInput,Textarea} from '../ui/native-controls';
 function CommentCard({
   comment,
   name,
@@ -30,13 +31,13 @@ function CommentCard({
       data-testid="pdf-comment"
     >
       <div className="flex flex-wrap items-center justify-between gap-1">
-        <button
+        <NativeButton
           className={pdfButton + " !px-0 text-accent"}
           onClick={() => selectPdfPage(name, page)}
           aria-label={`Show comment page ${page}`}
         >
           Page {page}
-        </button>
+        </NativeButton>
         <span className="text-ink-3">
           {comment.subtype}
           {comment.reply ? " · Reply" : ""}
@@ -57,7 +58,7 @@ function CommentCard({
             });
           }}
         >
-          <textarea
+          <Textarea
             className="min-h-24 w-full resize-y rounded-sm border border-subtle bg-transparent p-2 select-text"
             aria-label="Edit comment text"
             maxLength={20_000}
@@ -66,13 +67,13 @@ function CommentCard({
             onChange={(e) => setDraft(e.target.value)}
           />
           <div className="flex gap-1">
-            <button
+            <NativeButton
               className={pdfButton + " bg-hover"}
               disabled={disabled || draft === comment.contents}
             >
               Save comment
-            </button>
-            <button
+            </NativeButton>
+            <NativeButton
               type="button"
               className={pdfButton}
               disabled={disabled}
@@ -82,7 +83,7 @@ function CommentCard({
               }}
             >
               Cancel
-            </button>
+            </NativeButton>
           </div>
         </form>
       ) : (
@@ -109,7 +110,7 @@ function CommentCard({
         >
           <label>
             Reply
-            <textarea
+            <Textarea
               aria-label="Write PDF reply"
               maxLength={20000}
               disabled={disabled}
@@ -119,20 +120,20 @@ function CommentCard({
             />
           </label>
           <div className="flex gap-1">
-            <button
+            <NativeButton
               className={pdfButton + " bg-hover"}
               disabled={disabled || !replyText.trim()}
             >
               Add reply
-            </button>
-            <button
+            </NativeButton>
+            <NativeButton
               type="button"
               className={pdfButton}
               disabled={disabled}
               onClick={() => setReplying(false)}
             >
               Cancel reply
-            </button>
+            </NativeButton>
           </div>
         </form>
       )}
@@ -150,23 +151,23 @@ function CommentCard({
       )}
       {!editing && (
         <div className="mt-2 flex gap-1">
-          <button
+          <NativeButton
             className={pdfButton}
             disabled={disabled || !comment.editable}
             onClick={() => setEditing(true)}
           >
             Edit comment
-          </button>
+          </NativeButton>
           {comment.canReply && (
-            <button
+            <NativeButton
               className={pdfButton}
               disabled={disabled || replying}
               onClick={() => setReplying(true)}
             >
               Reply to comment
-            </button>
+            </NativeButton>
           )}
-          <button
+          <NativeButton
             className={pdfButton}
             disabled={disabled || !comment.editable || comment.hasReplies}
             onClick={() => {
@@ -182,7 +183,7 @@ function CommentCard({
             }}
           >
             Delete comment
-          </button>
+          </NativeButton>
         </div>
       )}
     </article>
@@ -221,7 +222,7 @@ export function PdfCommentsPanel() {
       </p>
       <label>
         Filter comments
-        <input
+        <NativeInput
           className="mt-1 w-full rounded-sm border border-subtle bg-transparent p-2"
           aria-label="Filter PDF comments"
           value={query}
@@ -229,7 +230,7 @@ export function PdfCommentsPanel() {
         />
       </label>
       <label className="flex items-center gap-2">
-        <input
+        <NativeInput
           type="checkbox"
           style={{ width: "auto" }}
           checked={currentOnly}

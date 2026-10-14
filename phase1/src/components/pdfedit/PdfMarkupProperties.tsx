@@ -8,6 +8,7 @@ import {
 import type { PdfComment } from "../../lib/pdfedit/comments";
 import type { MarkupProperties } from "../../lib/pdfedit/markupProperties";
 import { pdfButton } from "./PdfInlineEditor";
+import {NativeButton,NativeInput} from '../ui/native-controls';
 const input =
   "mt-1 w-full rounded-sm border border-subtle bg-transparent p-1.5";
 export function PdfMarkupProperties({
@@ -54,7 +55,7 @@ export function PdfMarkupProperties({
           {(["x", "y", "width", "height"] as const).map((k) => (
             <label key={k}>
               {k} (pt)
-              <input
+              <NativeInput
                 type="number"
                 step=".01"
                 className={input}
@@ -75,7 +76,7 @@ export function PdfMarkupProperties({
           ))}
           <label>
             Color
-            <input
+            <NativeInput
               type="color"
               aria-label="Markup color"
               className={input}
@@ -92,7 +93,7 @@ export function PdfMarkupProperties({
           </label>
           <label>
             Opacity (%)
-            <input
+            <NativeInput
               type="number"
               min={5}
               max={100}
@@ -105,10 +106,10 @@ export function PdfMarkupProperties({
             />
           </label>
         </fieldset>
-        <button className={pdfButton + " bg-hover"} disabled={disabled}>
+        <NativeButton className={pdfButton + " bg-hover"} disabled={disabled}>
           Save markup properties
-        </button>
-        <button
+        </NativeButton>
+        <NativeButton
           type="button"
           className={pdfButton}
           disabled={disabled}
@@ -125,7 +126,7 @@ export function PdfMarkupProperties({
           {s?.markupSelected === comment.target.object
             ? "Exit markup layout"
             : "Move / resize on page"}
-        </button>
+        </NativeButton>
       </form>
     </details>
   );

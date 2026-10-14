@@ -561,62 +561,62 @@
       "rawTextarea": 0
     },
     "src/components/pdf/PdfEditInspector.tsx": {
-      "rawButton": 12,
-      "rawInput": 7,
-      "rawSelect": 2,
-      "rawTextarea": 2
+      "rawButton": 0,
+      "rawInput": 0,
+      "rawSelect": 0,
+      "rawTextarea": 0
     },
     "src/components/pdfedit/PdfAnnotationCreator.tsx": {
-      "rawButton": 3,
-      "rawInput": 3,
-      "rawSelect": 1,
-      "rawTextarea": 1
+      "rawButton": 0,
+      "rawInput": 0,
+      "rawSelect": 0,
+      "rawTextarea": 0
     },
     "src/components/pdfedit/PdfCommentsPanel.tsx": {
-      "rawButton": 8,
-      "rawInput": 2,
+      "rawButton": 0,
+      "rawInput": 0,
       "rawSelect": 0,
-      "rawTextarea": 2
+      "rawTextarea": 0
     },
     "src/components/pdfedit/PdfFieldOverlay.tsx": {
-      "rawButton": 2,
+      "rawButton": 0,
       "rawInput": 0,
       "rawSelect": 0,
       "rawTextarea": 0
     },
     "src/components/pdfedit/PdfFormDesigner.tsx": {
-      "rawButton": 6,
-      "rawInput": 8,
-      "rawSelect": 2,
-      "rawTextarea": 2
+      "rawButton": 0,
+      "rawInput": 0,
+      "rawSelect": 0,
+      "rawTextarea": 0
     },
     "src/components/pdfedit/PdfInlineEditor.tsx": {
-      "rawButton": 5,
+      "rawButton": 0,
       "rawInput": 0,
       "rawSelect": 0,
       "rawTextarea": 0
     },
     "src/components/pdfedit/PdfMarkupOverlay.tsx": {
-      "rawButton": 2,
+      "rawButton": 0,
       "rawInput": 0,
       "rawSelect": 0,
       "rawTextarea": 0
     },
     "src/components/pdfedit/PdfMarkupProperties.tsx": {
-      "rawButton": 2,
-      "rawInput": 3,
+      "rawButton": 0,
+      "rawInput": 0,
       "rawSelect": 0,
       "rawTextarea": 0
     },
     "src/components/pdfedit/PdfPanels.tsx": {
-      "rawButton": 14,
-      "rawInput": 6,
-      "rawSelect": 1,
-      "rawTextarea": 1
+      "rawButton": 0,
+      "rawInput": 0,
+      "rawSelect": 0,
+      "rawTextarea": 0
     },
     "src/components/pdfedit/PdfViewer.tsx": {
-      "rawButton": 8,
-      "rawInput": 2,
+      "rawButton": 0,
+      "rawInput": 0,
       "rawSelect": 0,
       "rawTextarea": 0
     },

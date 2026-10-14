@@ -6,6 +6,7 @@ import {
  type FitMode,type PageCache,type PdfBackend,type PdfDocumentHandle,type PdfPageHandle,type PdfViewState,type Size,
 } from '../../lib/pdfview/index.ts';
 import {pdfjsBackend} from '../../lib/pdfview/pdfjsBrowser.ts';
+import {NativeButton,NativeInput} from '../ui/native-controls';
 export interface PdfViewerProps{
  /** Raw PDF bytes. A new array instance reloads the document. */
  data:Uint8Array;name:string;
@@ -120,24 +121,24 @@ export function PdfViewer({data,name,backend=pdfjsBackend,textLayer=false,onErro
  };
  const fit=(m:FitMode)=>apply(v=>({...v,fit:m}));
  if(needPassword)return <form className="grid flex-1 place-content-center gap-2 p-6 text-[13px]" onSubmit={e=>{e.preventDefault();setPassword(new FormData(e.currentTarget).get('pw') as string);}}>
-  <label>{name} is password protected.<input name="pw" type="password" autoFocus className="mt-1 block w-64 rounded-sm border border-subtle px-2 py-1" aria-label="PDF password"/></label><button className={btn} type="submit">Open</button></form>;
+  <label>{name} is password protected.<NativeInput name="pw" type="password" autoFocus className="mt-1 block w-64 rounded-sm border border-subtle px-2 py-1" aria-label="PDF password"/></label><NativeButton className={btn} type="submit">Open</NativeButton></form>;
  if(error)return <div role="alert" className="grid flex-1 place-items-center p-6 text-[13px] text-ink-2" data-testid="pdf-error">{error.message}</div>;
  if(!doc)return <div role="status" className="grid flex-1 place-items-center text-[12px] text-ink-3">Loading {name}…</div>;
  return <section className="canvas-stage flex min-h-0 min-w-0 flex-1 flex-col outline-none" style={{width:"100%"}} aria-label={`PDF viewer: ${name}`} tabIndex={0} onKeyDown={onKey}>
   <div className="media-bar flex flex-wrap items-center gap-1 border-b border-subtle px-3 py-1.5 text-[12px]">
    <span className="truncate" data-testid="media-name">{name}</span><span className="flex-1"/>
-   <button className={btn} aria-label="Previous page" disabled={view.page<=1} onClick={()=>apply(prevPage)}>‹</button>
-   <input aria-label="Page number" inputMode="numeric" className="h-7 rounded-sm border border-subtle text-center" style={{width:44,flex:"none"}} value={pageInput} onChange={e=>setPageInput(e.target.value)}
+   <NativeButton className={btn} aria-label="Previous page" disabled={view.page<=1} onClick={()=>apply(prevPage)}>‹</NativeButton>
+   <NativeInput aria-label="Page number" inputMode="numeric" className="h-7 rounded-sm border border-subtle text-center" style={{width:44,flex:"none"}} value={pageInput} onChange={e=>setPageInput(e.target.value)}
     onKeyDown={e=>{if(e.key==='Enter'){const n=parsePageInput(pageInput,view.pageCount);if(n)apply(v=>goToPage(v,n));else setPageInput(String(view.page));}}} onBlur={()=>setPageInput(String(view.page))}/>
    <span className="whitespace-nowrap text-ink-3" data-testid="pdf-page-count">/ {view.pageCount}</span>
-   <button className={btn} aria-label="Next page" disabled={view.page>=view.pageCount} onClick={()=>apply(nextPage)}>›</button>
+   <NativeButton className={btn} aria-label="Next page" disabled={view.page>=view.pageCount} onClick={()=>apply(nextPage)}>›</NativeButton>
    <span className="mx-1 h-4 w-px bg-[var(--border-subtle,#0001)]"/>
-   <button className={btn} aria-label="Zoom out" onClick={()=>zoomTo(stepZoom(view.zoom,-1))}>−</button>
+   <NativeButton className={btn} aria-label="Zoom out" onClick={()=>zoomTo(stepZoom(view.zoom,-1))}>−</NativeButton>
    <span className="w-12 text-center tabular-nums" data-testid="pdf-zoom">{Math.round(view.zoom*100)}%</span>
-   <button className={btn} aria-label="Zoom in" onClick={()=>zoomTo(stepZoom(view.zoom,1))}>+</button>
-   <button className={btn} aria-pressed={view.fit==='width'} onClick={()=>fit('width')}>Fit width</button>
-   <button className={btn} aria-pressed={view.fit==='page'} onClick={()=>fit('page')}>Fit page</button>
-   <button className={btn} aria-label="Rotate clockwise" onClick={()=>apply(v=>rotate(v,1))}>⟳</button>
+   <NativeButton className={btn} aria-label="Zoom in" onClick={()=>zoomTo(stepZoom(view.zoom,1))}>+</NativeButton>
+   <NativeButton className={btn} aria-pressed={view.fit==='width'} onClick={()=>fit('width')}>Fit width</NativeButton>
+   <NativeButton className={btn} aria-pressed={view.fit==='page'} onClick={()=>fit('page')}>Fit page</NativeButton>
+   <NativeButton className={btn} aria-label="Rotate clockwise" onClick={()=>apply(v=>rotate(v,1))}>⟳</NativeButton>
   </div>
   <div ref={stageRef} className="relative min-h-0 flex-1 touch-none select-none overflow-hidden bg-[var(--surface-2,#eef0f3)]" data-testid="pdf-stage"
    style={{width:"100%",cursor:drag.current?'grabbing':textLayer?'text':'grab'}}

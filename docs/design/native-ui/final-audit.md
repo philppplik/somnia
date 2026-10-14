@@ -28,7 +28,7 @@ native-platform acceptance claim.
 | src/components (flat files) | 158 | 118 | 42 | 8 | 326 |
 | components/vibespace | 0 | 0 | 0 | 0 | 0 |
 | components/extensions | 69 | 13 | 0 | 2 | 84 |
-| components/pdfedit | 50 | 24 | 4 | 6 | 84 |
+| components/pdfedit | 0 | 0 | 0 | 0 | 0 |
 | components/agent | 30 | 13 | 2 | 3 | 48 |
 | components/vectorstudio | 12 | 20 | 4 | 0 | 36 |
 | components/svgedit | 15 | 17 | 1 | 1 | 34 |
@@ -36,7 +36,7 @@ native-platform acceptance claim.
 | components/video | 1 | 24 | 4 | 1 | 30 |
 | components/design | 4 | 16 | 6 | 1 | 27 |
 | components/slides | 18 | 4 | 1 | 2 | 25 |
-| components/pdf | 12 | 7 | 2 | 2 | 23 |
+| components/pdf | 0 | 0 | 0 | 0 | 0 |
 | components/diagnostics | 21 | 1 | 0 | 0 | 22 |
 | components/interface | 2 | 8 | 11 | 1 | 22 |
 | components/sheets | 14 | 6 | 1 | 1 | 22 |
@@ -83,9 +83,13 @@ selects). Its migration is deliberately gated, see below.
 - P15: Extensions area migrated (84 controls to native primitives),
   ratchet budgets shrunk to zero for all 10 files, adoption tests and gallery
   proof added.
-- P16 (this slice): Vibespace area migrated (108 controls to native primitives),
+- P16: Vibespace area migrated (108 controls to native primitives),
   ratchet budgets shrunk to zero for all 13 files, adoption tests and gallery
-  proof added. This branch carries P14 and P15 stacked beneath P16.
+  proof added.
+- P17 (this slice): pdf/pdfedit areas migrated (107 controls to native
+  primitives), ratchet budgets shrunk to zero for all 10 files, adoption tests
+  and gallery proof added. This branch carries P14, P15 and P16 stacked beneath
+  P17.
 
 ## Remaining bespoke areas
 
@@ -104,8 +108,9 @@ selects). Its migration is deliberately gated, see below.
   primitives with their bespoke geometry and behavior intact; file allowances are
   at zero, so reintroduction fails the ratchet. Consent flows already used shared
   Button/Dialog and are unchanged.
-- **pdfedit/pdf (107 combined)**: dense bespoke dialogs and editors. Untouched by
-  the migration series so far.
+- **pdfedit/pdf**: migrated in P17. All 107 controls render through native
+  control primitives with their bespoke geometry and behavior intact; file
+  allowances are at zero, so reintroduction fails the ratchet.
 - **Compound tab strips and context menus**: FileTabs-style hosts keep their div
   structure by design (middle-click, fixed menus, drag behavior); inner controls
   migrate, hosts stay bespoke until a reviewed Tabs/Menu redesign.

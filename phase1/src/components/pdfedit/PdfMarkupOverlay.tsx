@@ -12,6 +12,7 @@ import {
   type Rect,
   type Point,
 } from "../../lib/pdfedit/fieldGeometry";
+import {NativeButton} from '../ui/native-controls';
 interface Geometry {
   page: number;
   transform: number[];
@@ -151,7 +152,7 @@ export function PdfMarkupOverlay({
           });
       }}
     >
-      <button
+      <NativeButton
         aria-label="Move selected markup"
         onPointerDown={(e) => start(e)}
         disabled={s.busy}
@@ -166,7 +167,7 @@ export function PdfMarkupOverlay({
         }}
       />
       {c.subtype !== "Text" && (
-        <button
+        <NativeButton
           aria-label="Resize selected markup"
           onPointerDown={(e) => start(e, true)}
           disabled={s.busy}

@@ -18,6 +18,7 @@ import { registerCommandSpec } from "../../lib/commandBridge";
 import { pdfCommandSpecs } from "../../lib/pdfedit/commands";
 import { installBeforeUnload } from "../../lib/closeFlow";
 import { hasDirtyPdfs } from "../../lib/pdfedit/session";
+import {NativeButton} from '../ui/native-controls';
 export const pdfButton =
   "cursor-pointer rounded-sm border-0 bg-transparent px-2 py-1.5 text-xs text-ink-2 hover:bg-hover disabled:opacity-40 disabled:cursor-default";
 export function PdfInlineEditor({ item }: { item: MediaItem }) {
@@ -71,14 +72,14 @@ export function PdfInlineEditor({ item }: { item: MediaItem }) {
       aria-label="Inline PDF editor"
     >
       <div className="flex shrink-0 flex-wrap items-center gap-1 border-b border-subtle px-3 py-1">
-        <button
+        <NativeButton
           className={pdfButton}
           aria-pressed={s.editing}
           disabled={viewOnly || s.editing || s.busy}
           onClick={() => setPdfEditing(item.name)}
         >
           Edit PDF
-        </button>
+        </NativeButton>
         <span className="text-xs text-ink-3">
           {s.info?.xfa
             ? "XFA · view only"
@@ -93,23 +94,23 @@ export function PdfInlineEditor({ item }: { item: MediaItem }) {
                     : "Read only"}
         </span>
         <span className="flex-1" />
-        <button
+        <NativeButton
           className={pdfButton}
           aria-label="Undo PDF edit"
           disabled={!s.undo.length || s.busy}
           onClick={() => void historyPdf(item.name, "undo")}
         >
           Undo
-        </button>
-        <button
+        </NativeButton>
+        <NativeButton
           className={pdfButton}
           aria-label="Redo PDF edit"
           disabled={!s.redo.length || s.busy}
           onClick={() => void historyPdf(item.name, "redo")}
         >
           Redo
-        </button>
-        <button
+        </NativeButton>
+        <NativeButton
           className={pdfButton}
           disabled={s.busy}
           onClick={() =>
@@ -119,7 +120,7 @@ export function PdfInlineEditor({ item }: { item: MediaItem }) {
           }
         >
           Save copy{s.dirty ? " *" : ""}
-        </button>
+        </NativeButton>
       </div>
       {s.error && (
         <div
@@ -127,12 +128,12 @@ export function PdfInlineEditor({ item }: { item: MediaItem }) {
           className="flex items-center justify-between gap-2 border-b border-subtle p-2 text-xs text-red-600"
         >
           {s.error}
-          <button
+          <NativeButton
             className={pdfButton}
             onClick={() => pdfError(item.name, null)}
           >
             Dismiss
-          </button>
+          </NativeButton>
         </div>
       )}
       <PdfViewer

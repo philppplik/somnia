@@ -9,6 +9,7 @@ import type {
   MarkupAnnotation,
 } from "../../lib/pdfannotate/types";
 import { pdfButton } from "./PdfInlineEditor";
+import {NativeButton,NativeInput,NativeSelect,Textarea} from '../ui/native-controls';
 const input =
   "mt-1 w-full rounded-sm border border-subtle bg-transparent p-1.5";
 export function PdfAnnotationCreator() {
@@ -53,7 +54,7 @@ export function PdfAnnotationCreator() {
       <fieldset disabled={disabled} className="grid gap-3">
         <label>
           Type
-          <select
+          <NativeSelect
             aria-label="PDF annotation type"
             className={input}
             value={kind}
@@ -67,11 +68,11 @@ export function PdfAnnotationCreator() {
             <option value="underline">Underline</option>
             <option value="strikeout">StrikeOut</option>
             <option value="note">Text note</option>
-          </select>
+          </NativeSelect>
         </label>
         <label>
           Comment
-          <textarea
+          <Textarea
             aria-label="New annotation comment"
             className={input + " min-h-20 select-text"}
             value={contents}
@@ -82,7 +83,7 @@ export function PdfAnnotationCreator() {
         <div className="grid grid-cols-2 gap-2">
           <label>
             Color
-            <input
+            <NativeInput
               aria-label="Annotation color"
               type="color"
               className={input}
@@ -92,7 +93,7 @@ export function PdfAnnotationCreator() {
           </label>
           <label>
             Opacity (%)
-            <input
+            <NativeInput
               aria-label="Annotation opacity"
               type="number"
               min={5}
@@ -103,13 +104,13 @@ export function PdfAnnotationCreator() {
             />
           </label>
         </div>
-        <button
+        <NativeButton
           className={pdfButton + " bg-hover"}
           disabled={kind === "note" && !contents.trim()}
           onClick={() => placePdfAnnotation(s.name, annotation())}
         >
           {kind === "note" ? "Place text note on page" : "Draw markup on page"}
-        </button>
+        </NativeButton>
         <details>
           <summary className="cursor-pointer text-ink-3">
             Coordinate placement
@@ -129,7 +130,7 @@ export function PdfAnnotationCreator() {
             ).map(([label, v, set]) => (
               <label key={label}>
                 {label} (pt)
-                <input
+                <NativeInput
                   aria-label={`Annotation ${label}`}
                   className={input}
                   type="number"
@@ -143,7 +144,7 @@ export function PdfAnnotationCreator() {
             PDF points from bottom-left. A note uses its top-left anchor, with a
             20 x 20 pt icon.
           </p>
-          <button
+          <NativeButton
             className={pdfButton}
             disabled={kind === "note" && !contents.trim()}
             onClick={() =>
@@ -154,7 +155,7 @@ export function PdfAnnotationCreator() {
             }
           >
             Add annotation at coordinates
-          </button>
+          </NativeButton>
         </details>
       </fieldset>
       {s.annotationPlacement && (
@@ -165,12 +166,12 @@ export function PdfAnnotationCreator() {
               : "Drag a rectangle on the page."}{" "}
             Escape cancels.
           </p>
-          <button
+          <NativeButton
             className={pdfButton}
             onClick={() => placePdfAnnotation(s.name, null)}
           >
             Cancel annotation placement
-          </button>
+          </NativeButton>
         </>
       )}
     </section>
