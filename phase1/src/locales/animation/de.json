@@ -930,5 +930,7 @@
  "animation.export.frameSvg.hint": "Vektordatei in Zeichengröße. Schriften werden nur per Name referenziert, nicht eingebettet.",
  "cmd.animation.export.frameSvg": "Aktuelles Bild als SVG exportieren",
  "animation.rig.duplicate": "Ebenen duplizieren",
- "cmd.animation.layers.duplicate": "Gewählte Ebenen duplizieren"
+ "cmd.animation.layers.duplicate": "Gewählte Ebenen duplizieren",
+ "animation.comp.duplicate": "Duplizieren",
+ "cmd.animation.comp.duplicate": "Komposition duplizieren"
 }

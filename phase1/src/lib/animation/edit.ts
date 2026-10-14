@@ -23,6 +23,7 @@ export type Edit=
  |{type:'comp.update';comp?:string;settings:CompSettings}
  |{type:'comp.select';comp:string}
  |{type:'comp.remove';comp:string}
+ |{type:'comp.duplicate';comp:string;id:string}
  |{type:'layer.add';kind:LayerKind;over?:Partial<Layer>;id?:string}
  |{type:'layer.remove';layer:string}
  |{type:'layer.update';layer:string;name?:string;visible?:boolean;solo?:boolean;locked?:boolean;shy?:boolean;source?:Partial<LayerSource>}
@@ -189,6 +190,7 @@ function applyLane(doc:AnimationDocument,layer:string,lane:StyleLaneId,shift:Lan
 }
 
 /** The keys of one style lane, for copying. Empty when the layer has no such lane. */
+export const MAX_COMPS=50;
 export function styleLaneKeys(doc:AnimationDocument,layer:string,lane:StyleLaneId):readonly object[]{
  let out:readonly object[]=[];
  try{applyLane(doc,layer,lane,keys=>{out=keys??[];return [...(keys??[])];},true);}catch(e){if(!(e instanceof EditError))throw e;}
@@ -205,6 +207,7 @@ function reduce(doc:AnimationDocument,e:Edit):AnimationDocument{
    const clipped=c.layers.map(l=>l.outT>duration?{...l,outT:Math.max(l.inT+1,duration)}:l);
    return withComp(doc,{...c,...e.settings,duration,fps:e.settings.fps??c.fps,markers:c.markers?.filter(m=>m.t<duration+c.start),layers:clipped,workArea:{in:Math.min(c.workArea.in,duration-1),out:Math.min(c.workArea.out,duration)}});}
   case 'comp.select':if(!findComp(doc,e.comp))return fail('missing','Composition does not exist.');return e.comp===doc.activeComp?doc:{...doc,activeComp:e.comp};
+  case 'comp.duplicate':{const c=findComp(doc,e.comp)??fail('missing','Composition does not exist.');if(doc.compositions.length>=MAX_COMPS)return fail('invalid',`At most ${MAX_COMPS} compositions.`);if(doc.compositions.some(x=>x.id===e.id))return fail('invalid','Duplicate composition id.');const copy={...structuredClone(c),id:e.id,name:`${c.name} copy`.slice(0,200)};return {...doc,compositions:[...doc.compositions,copy],activeComp:copy.id};}
   case 'comp.remove':{if(doc.compositions.length<2)return fail('invalid','A document needs at least one composition.');if(!findComp(doc,e.comp))return fail('missing','Composition does not exist.');const rest=doc.compositions.filter(c=>c.id!==e.comp);return {...doc,compositions:rest,activeComp:doc.activeComp===e.comp?rest[0].id:doc.activeComp};}
   case 'gradient.stop':{
    const l=layerOf(doc,e.layer),fill=e.target==='fill',g=fill?l.source.gradient:l.stroke?.gradient;if(!g)fail('invalid','The layer has no gradient there.');

@@ -65,7 +65,7 @@ export function CompositionsPanel(_:PanelHostProps){
   <h3 className="m-0 text-[11px] font-semibold uppercase tracking-wide text-ink-3">{t('animation.comp.list')}</h3>
   <ul className="m-0 grid list-none gap-1 p-0" aria-label={t('animation.comp.list')}>{doc.compositions.map(c=><li key={c.id}>
    <button type="button" aria-current={c.id===doc.activeComp} className={`w-full truncate rounded-sm border px-2 py-1.5 text-left text-ink ${c.id===doc.activeComp?'border-line bg-hover':'border-subtle'}`} onClick={()=>run('animation.comp.select',{comp:c.id})}>{c.name}</button></li>)}</ul>
-  <Button size="compact" variant="outline" onClick={()=>run('animation.comp.add')}>{t('animation.comp.new')}</Button>
+  <div className="flex gap-1"><Button size="compact" variant="outline" onClick={()=>run('animation.comp.add')}>{t('animation.comp.new')}</Button><Button size="compact" variant="outline" onClick={()=>run('animation.comp.duplicate')} data-testid="animation-comp-duplicate">{t('animation.comp.duplicate')}</Button></div>
   {findComp(doc)&&<GuidesPanel comp={findComp(doc)!}/>}{findComp(doc)&&<OnionPanel/>}{findComp(doc)&&<RigPanel comp={findComp(doc)!}/>}
   <h3 className="m-0 mt-2 text-[11px] font-semibold uppercase tracking-wide text-ink-3">{t('animation.layer.addHeading')}</h3>
   {doc.compositions.length>1&&<div className="flex gap-1" data-testid="animation-precomp">

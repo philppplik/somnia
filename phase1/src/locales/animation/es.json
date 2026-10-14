@@ -930,5 +930,7 @@
  "animation.export.frameSvg.hint": "Archivo vectorial al tamaño del dibujo. Las fuentes se referencian por nombre, no se incrustan.",
  "cmd.animation.export.frameSvg": "Exportar el fotograma actual como SVG",
  "animation.rig.duplicate": "Duplicar capas",
- "cmd.animation.layers.duplicate": "Duplicar las capas seleccionadas"
+ "cmd.animation.layers.duplicate": "Duplicar las capas seleccionadas",
+ "animation.comp.duplicate": "Duplicar",
+ "cmd.animation.comp.duplicate": "Duplicar composición"
 }

@@ -179,6 +179,20 @@
       "hasEnabled": true
     },
     {
+      "id": "animation.comp.duplicate",
+      "title": "Duplicate composition",
+      "category": "Edit",
+      "source": "animation",
+      "keywords": [
+        "animation",
+        "clone",
+        "composition",
+        "copy",
+        "duplicate"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "animation.comp.select",
       "title": "Switch composition",
       "category": "View",

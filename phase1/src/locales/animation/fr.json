@@ -930,5 +930,7 @@
  "animation.export.frameSvg.hint": "Fichier vectoriel à la taille du dessin. Les polices sont référencées par nom, pas intégrées.",
  "cmd.animation.export.frameSvg": "Exporter l’image actuelle en SVG",
  "animation.rig.duplicate": "Dupliquer les calques",
- "cmd.animation.layers.duplicate": "Dupliquer les calques sélectionnés"
+ "cmd.animation.layers.duplicate": "Dupliquer les calques sélectionnés",
+ "animation.comp.duplicate": "Dupliquer",
+ "cmd.animation.comp.duplicate": "Dupliquer la composition"
 }

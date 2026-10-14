@@ -334,3 +334,12 @@ test('key and layer commands with optional-only params tolerate a call with no p
  }
  setAnimationSession(null);
 });
+
+test('P153 composition duplicate is one undo step and a deep copy',async()=>{
+ const {animationCommandSpecs}=await import('./commands');
+ const s=open();setAnimationSession(s);const d0=s.document!,n=d0.compositions.length,src=findComp(d0)!;
+ const r=animationCommandSpecs().find(c=>c.id==='animation.comp.duplicate')!.run(undefined) as {comp:string};
+ const d1=s.document!;assert.equal(d1.compositions.length,n+1);assert.equal(d1.activeComp,r.comp);
+ const c=findComp(d1,r.comp)!;assert.equal(c.name,`${src.name} copy`);assert.equal(c.layers.length,src.layers.length);assert.notEqual(c.layers,src.layers);
+ s.undo();assert.equal(s.document!.compositions.length,n);
+});
