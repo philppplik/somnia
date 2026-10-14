@@ -432,6 +432,8 @@ async function applyPara(patch:ParaPatch){
  setSel(n.a,n.h);
 }
 export const setAlign=(align:import('./protocol').ParaAlign)=>run(()=>applyPara({align}));
+/** Tab stops (replacing the paragraph's own list) for every paragraph the selection touches. One undo step. */
+export const setTabStops=(tabs:import('./protocol').TabStopSpec[])=>run(()=>applyPara({tabs}));
 /** Right indent and the flow options (page break before, keep with next, keep lines together, widow control) of every paragraph the selection touches. One undo step. */
 export const setParagraphOptions=(patch:ParaPatch)=>run(()=>applyPara(patch));
 /** Starts a new page at the caret: splits the paragraph there and makes the new one begin a page. One undo step. */

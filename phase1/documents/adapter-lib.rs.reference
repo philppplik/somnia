@@ -623,6 +623,44 @@ impl DocSession {
         Ok(serde_json::json!({"bold": tri(&seen, |x| x.0), "italic": tri(&seen, |x| x.1), "underline": tri(&seen, |x| x.2), "font": font, "size": size, "color": color,
             "strike": tri_b(&|x| x.0), "smallCaps": tri_b(&|x| x.1), "vertAlign": vert, "highlight": hl, "link": lk}).to_string())
     }
+    /// Tab stops from a patch: at most 20, each `{pos 0..1440, align, leader}`, positions at least 0.5 pt apart.
+    fn parse_tabs(val: &serde_json::Value) -> Result<Vec<wordcraft_doc::props::TabStop>, String> {
+        use wordcraft_doc::props::{TabAlign, TabLeader, TabStop};
+        let arr = val.as_array().ok_or("paragraph field tabs must be a list")?;
+        if arr.len() > 20 {
+            return Err("a paragraph has at most 20 tab stops".into());
+        }
+        let mut out: Vec<TabStop> = Vec::with_capacity(arr.len());
+        for t in arr {
+            let o = t.as_object().ok_or("a tab stop must be an object")?;
+            let pos = o.get("pos").and_then(|v| v.as_f64()).filter(|p| p.is_finite() && (0.0..=1440.0).contains(p)).ok_or("a tab stop position must be between 0 and 1440 pt")? as f32;
+            let align = match o.get("align").and_then(|v| v.as_str()).unwrap_or("left") {
+                "left" => TabAlign::Left,
+                "center" => TabAlign::Center,
+                "right" => TabAlign::Right,
+                "decimal" => TabAlign::Decimal,
+                "bar" => TabAlign::Bar,
+                _ => return Err("a tab stop alignment must be left, center, right, decimal or bar".into()),
+            };
+            let leader = match o.get("leader").and_then(|v| v.as_str()).unwrap_or("none") {
+                "none" => TabLeader::None,
+                "dot" => TabLeader::Dot,
+                "hyphen" => TabLeader::Hyphen,
+                "underscore" => TabLeader::Underscore,
+                "middleDot" => TabLeader::MiddleDot,
+                _ => return Err("a tab stop leader must be none, dot, hyphen, underscore or middleDot".into()),
+            };
+            if o.keys().any(|k| !["pos", "align", "leader"].contains(&k.as_str())) {
+                return Err("a tab stop has only pos, align and leader".into());
+            }
+            out.push(TabStop { pos, align, leader });
+        }
+        out.sort_by(|a, b| a.pos.total_cmp(&b.pos));
+        if out.windows(2).any(|w| w[1].pos - w[0].pos < 0.5) {
+            return Err("tab stops must be at least 0.5 pt apart".into());
+        }
+        Ok(out)
+    }
     /// Paragraph formatting for the whole paragraphs `first..=last` (selection coordinates are not needed:
     /// alignment, indents and spacing belong to a paragraph). Any non-paragraph block in the span, or an
     /// invalid value, refuses the whole call. Changes are made on clones and committed together.
@@ -641,6 +679,7 @@ impl DocSession {
             Ok(((n * 20.0).round() / 20.0) as f32)
         };
         let mut flags: Vec<(&str, bool)> = Vec::new();
+        let mut tabs: Option<Vec<wordcraft_doc::props::TabStop>> = None;
         let mut ir: Option<f32> = None;
         let mut align: Option<Align> = None;
         let (mut il, mut ifirst, mut sb, mut sa, mut ls): (Option<f32>, Option<f32>, Option<f32>, Option<f32>, Option<f32>) = (None, None, None, None, None);
@@ -656,6 +695,7 @@ impl DocSession {
                     })
                 }
                 "indentLeft" => il = Some(num(k, val, 0.0, 1440.0)?),
+                "tabs" => tabs = Some(Self::parse_tabs(val)?),
                 "indentRight" => ir = Some(num(k, val, 0.0, 1440.0)?),
                 "pageBreakBefore" | "keepNext" | "keepLines" | "widowControl" => {
                     flags.push((k.as_str(), val.as_bool().ok_or_else(|| format!("paragraph field {k} must be true or false"))?));
@@ -687,6 +727,9 @@ impl DocSession {
             }
             if let Some(x) = ir {
                 p.props.indent_right = Some(x);
+            }
+            if let Some(t) = &tabs {
+                p.props.tabs = Some(t.clone());
             }
             for (k, v) in &flags {
                 match *k {
@@ -752,6 +795,7 @@ impl DocSession {
             "indentLeft": same(&rows, |r| r.indent_left.to_bits()).map(f32::from_bits),
             "indentFirst": same(&rows, |r| r.indent_first.to_bits()).map(f32::from_bits),
             "indentRight": same(&rows, |r| r.indent_right.to_bits()).map(f32::from_bits),
+            "tabs": if rows.windows(2).all(|w| w[0].tabs == w[1].tabs) { rows.first().map(|r| serde_json::to_value(&r.tabs).unwrap_or(serde_json::Value::Null)) } else { None },
             "pageBreakBefore": same(&rows, |r| r.page_break_before),
             "keepNext": same(&rows, |r| r.keep_next),
             "keepLines": same(&rows, |r| r.keep_lines),
@@ -2364,6 +2408,38 @@ mod tests {
         assert_eq!(s.doc.body.len(), len);
         s.do_remove_image(1).unwrap();
         assert_eq!(s.doc.body.len(), len - 1);
+    }
+    #[test]
+    fn tab_stops_set_report_roundtrip_and_refuse() {
+        let mut s = DocSession::from_bytes(FIXTURE).unwrap();
+        s.do_para_format(0, 0, r#"{"tabs":[{"pos":200,"align":"right","leader":"dot"},{"pos":72,"align":"left"}]}"#).unwrap();
+        let v: serde_json::Value = serde_json::from_str(&s.do_para_state(0, 0).unwrap()).unwrap();
+        let t = v["tabs"].as_array().unwrap();
+        assert_eq!(t.len(), 2);
+        assert_eq!(t[0]["pos"], 72.0);
+        assert_eq!(t[1]["align"], "right");
+        assert_eq!(t[1]["leader"], "dot");
+        let re = DocSession::from_bytes(&wordcraft_docx::write(&s.doc).unwrap()).unwrap();
+        let r: serde_json::Value = serde_json::from_str(&re.do_para_state(0, 0).unwrap()).unwrap();
+        assert_eq!(r["tabs"].as_array().unwrap().len(), 2);
+        let before = s.do_para_state(0, 0).unwrap();
+        let many: Vec<String> = (0..21).map(|i| format!(r#"{{"pos":{}}}"#, 10 + i * 10)).collect();
+        for bad in [
+            r#"{"tabs":"x"}"#.to_string(),
+            r#"{"tabs":[{"pos":-1}]}"#.to_string(),
+            r#"{"tabs":[{"pos":1441}]}"#.to_string(),
+            r#"{"tabs":[{"pos":10,"align":"clear"}]}"#.to_string(),
+            r#"{"tabs":[{"pos":10,"leader":"wavy"}]}"#.to_string(),
+            r#"{"tabs":[{"pos":10},{"pos":10.2}]}"#.to_string(),
+            r#"{"tabs":[{"pos":10,"extra":1}]}"#.to_string(),
+            format!(r#"{{"tabs":[{}]}}"#, many.join(",")),
+        ] {
+            assert!(s.do_para_format(0, 0, &bad).is_err(), "{bad}");
+        }
+        assert_eq!(s.do_para_state(0, 0).unwrap(), before);
+        s.do_para_format(0, 0, r#"{"tabs":[]}"#).unwrap();
+        let e: serde_json::Value = serde_json::from_str(&s.do_para_state(0, 0).unwrap()).unwrap();
+        assert_eq!(e["tabs"].as_array().unwrap().len(), 0);
     }
     #[test]
     fn paragraph_flow_options() {

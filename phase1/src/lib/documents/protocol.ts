@@ -40,16 +40,38 @@ export function checkFormatPatch(patch:unknown){
 }
 export type ParaAlign='left'|'center'|'right'|'justify';
 /** Whole-paragraph formatting in points; line spacing is a multiple of single. */
-export interface ParaPatch{align?:ParaAlign;indentLeft?:number;indentFirst?:number;spaceBefore?:number;spaceAfter?:number;lineSpacing?:number;indentRight?:number;pageBreakBefore?:boolean;keepNext?:boolean;keepLines?:boolean;widowControl?:boolean}
+export const TAB_ALIGNS=['left','center','right','decimal','bar'] as const;
+export const TAB_LEADERS=['none','dot','hyphen','underscore','middleDot'] as const;
+export const MAX_TAB_STOPS=20;
+export interface TabStopSpec{pos:number;align:typeof TAB_ALIGNS[number];leader:typeof TAB_LEADERS[number]}
+/** The first problem with a tab stop list, or null when the engine will accept it. */
+export function tabsProblem(v:unknown):string|null{
+ if(!Array.isArray(v))return 'Tab stops must be a list.';
+ if(v.length>MAX_TAB_STOPS)return `A paragraph has at most ${MAX_TAB_STOPS} tab stops.`;
+ const pos:number[]=[];
+ for(const t of v){
+  if(!t||typeof t!=='object'||Array.isArray(t))return 'A tab stop is not valid.';
+  const o=t as Record<string,unknown>;if(Object.keys(o).some(k=>k!=='pos'&&k!=='align'&&k!=='leader'))return 'A tab stop is not valid.';
+  if(typeof o.pos!=='number'||!Number.isFinite(o.pos)||o.pos<0||o.pos>1440)return 'A tab stop position is 0 to 1440 points.';
+  if(!(TAB_ALIGNS as readonly unknown[]).includes(o.align))return 'A tab stop alignment is not valid.';
+  if(!(TAB_LEADERS as readonly unknown[]).includes(o.leader))return 'A tab stop leader is not valid.';
+  pos.push(o.pos);
+ }
+ pos.sort((a,b)=>a-b);
+ for(let i=1;i<pos.length;i++)if(pos[i]-pos[i-1]<0.5)return 'Tab stops must be at least 0.5 points apart.';
+ return null;
+}
+export interface ParaPatch{tabs?:TabStopSpec[];align?:ParaAlign;indentLeft?:number;indentFirst?:number;spaceBefore?:number;spaceAfter?:number;lineSpacing?:number;indentRight?:number;pageBreakBefore?:boolean;keepNext?:boolean;keepLines?:boolean;widowControl?:boolean}
 export const PARA_FLAG_KEYS=['pageBreakBefore','keepNext','keepLines','widowControl'] as const;
 /** Shared effective value over the paragraphs, or null when they differ (line spacing: also null for exact/at-least heights). */
-export interface ParaState{align:ParaAlign|null;indentLeft:number|null;indentFirst:number|null;spaceBefore:number|null;spaceAfter:number|null;lineSpacing:number|null;indentRight?:number|null;/** Shared flags, or null when the paragraphs differ. */pageBreakBefore?:boolean|null;keepNext?:boolean|null;keepLines?:boolean|null;widowControl?:boolean|null;/** Paragraph style id (`Normal`, `Heading2`, ...) when shared. */style?:string|null;list?:'none'|'bullet'|'numbered'|null;listLevel?:number|null}
+export interface ParaState{align:ParaAlign|null;indentLeft:number|null;indentFirst:number|null;spaceBefore:number|null;spaceAfter:number|null;lineSpacing:number|null;indentRight?:number|null;/** Resolved tab stops when shared, else null. */tabs?:TabStopSpec[]|null;/** Shared flags, or null when the paragraphs differ. */pageBreakBefore?:boolean|null;keepNext?:boolean|null;keepLines?:boolean|null;widowControl?:boolean|null;/** Paragraph style id (`Normal`, `Heading2`, ...) when shared. */style?:string|null;list?:'none'|'bullet'|'numbered'|null;listLevel?:number|null}
 const PARA_RANGES:Record<string,[number,number]>={indentLeft:[0,1440],indentRight:[0,1440],indentFirst:[-1440,1440],spaceBefore:[0,1584],spaceAfter:[0,1584],lineSpacing:[0.5,10]};
 export function checkParaPatch(patch:unknown){
  if(!patch||typeof patch!=='object'||Array.isArray(patch))throw new Error('Paragraph change is not valid.');
  const o=patch as Record<string,unknown>;const keys=Object.keys(o);if(!keys.length)throw new Error('Paragraph change is not valid.');
  for(const k of keys){const v=o[k];
   if(k==='align'){if(v!=='left'&&v!=='center'&&v!=='right'&&v!=='justify')throw new Error('Alignment is not valid.');}
+  else if(k==='tabs'){const bad=tabsProblem(v);if(bad)throw new Error(bad);}
   else if((PARA_FLAG_KEYS as readonly string[]).includes(k)){if(typeof v!=='boolean')throw new Error('Paragraph change is not valid.');}
   else if(PARA_RANGES[k]){const [lo,hi]=PARA_RANGES[k];if(typeof v!=='number'||!Number.isFinite(v)||v<lo||v>hi)throw new Error(`${k} must be between ${lo} and ${hi}.`);}
   else throw new Error('Paragraph change is not valid.');

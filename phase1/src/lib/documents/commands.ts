@@ -12,8 +12,8 @@ import {commentsOpen,setCommentsOpen} from './comments';
 import {setShortcutsOpen} from './shortcuts';
 import {setParagraphOptionsOpen} from './paragraphOptions';
 import {setInfoDialog} from './infoDialog';
-import {insertPageBreak,setParagraphOptions,setProperties} from './session';
-import {checkParaPatch,PARA_FLAG_KEYS,propertiesProblem} from './protocol';
+import {insertPageBreak,setParagraphOptions,setProperties,setTabStops} from './session';
+import {checkParaPatch,PARA_FLAG_KEYS,propertiesProblem,tabsProblem} from './protocol';
 import {addComment,commentSelection,deleteComment,goToComment,readComments,replyComment,resolveComment} from './session';
 import {commentProblem,HIGHLIGHTS,linkProblem,type HighlightName} from './protocol';
 import {clearFormatting,hasTextSelection,setHighlight,setLink,toggleVertAlign} from './session';
@@ -98,6 +98,11 @@ export function registerDocumentsCommands(){
    const o=(p as Record<string,unknown>|undefined)??{};const bad=propertiesProblem(o);if(bad)throw expected(bad);
    await setProperties(o as import('./protocol').PropertiesPatch);
   },()=>ready()),
+  add('documents.tabs.show','Tab stops',()=>{setInfoDialog('tabs');},()=>ready()&&!!getDocumentsState().caret),
+  add('documents.tabs.set','Set tab stops',async p=>{
+   const tabs=(p as Record<string,unknown>|undefined)?.tabs;const bad=tabsProblem(tabs);if(bad)throw expected(bad);
+   await setTabStops(tabs as import('./protocol').TabStopSpec[]);
+  },()=>ready()&&!!getDocumentsState().caret),
   add('documents.wordCount.show','Word count',()=>{setInfoDialog('wordCount');},()=>ready()),
   add('documents.shortcuts.show','Keyboard shortcuts',()=>{setShortcutsOpen(true);}),
   add('documents.fontSize.increase','Increase font size',async()=>{await stepFontSize(1);},()=>ready()&&!!getDocumentsState().caret),

@@ -41,6 +41,7 @@ export function TextEffects({format,held,enabled}:{format:FormatState|null;held:
   <NativeButton className={tool+' border border-subtle'} title={t('documents.format.clear')+' (Ctrl+Space)'} disabled={!enabled||!picked} onClick={()=>void clearFormatting()} data-testid="documents-format-clear">{t('documents.format.clear')}</NativeButton>
   <NativeButton className={tool+' border border-subtle'} disabled={!enabled} onClick={()=>setParagraphOptionsOpen(true)} data-testid="documents-paraopt-open">{t('documents.para.opt.open')}</NativeButton>
   <NativeButton className={tool+' border border-subtle'} disabled={!enabled} onClick={()=>void insertPageBreak()} data-testid="documents-page-break">{t('documents.para.opt.insertBreak')}</NativeButton>
+  <NativeButton className={tool+' border border-subtle'} disabled={!enabled} onClick={()=>setInfoDialog('tabs')} data-testid="documents-tabs-open">{t('documents.tabs.open')}</NativeButton>
   <NativeButton className={tool+' border border-subtle'} onClick={()=>setInfoDialog('properties')} data-testid="documents-props-open">{t('documents.props.open')}</NativeButton>
   <NativeButton className={tool+' border border-subtle'} onClick={()=>setInfoDialog('wordCount')} data-testid="documents-wc-open">{t('documents.wc.open')}</NativeButton>
   <NativeButton className={tool+' border border-subtle'} onClick={()=>setShortcutsOpen(true)} title={t('documents.shortcuts.title')+' (Ctrl+/)'} data-testid="documents-shortcuts-open">{t('documents.shortcuts.open')}</NativeButton>

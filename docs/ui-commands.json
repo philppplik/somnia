@@ -3258,6 +3258,28 @@
       "hasEnabled": true
     },
     {
+      "id": "documents.tabs.set",
+      "title": "Set tab stops",
+      "category": "View",
+      "source": "documents",
+      "keywords": [
+        "document",
+        "docx"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "documents.tabs.show",
+      "title": "Tab stops",
+      "category": "View",
+      "source": "documents",
+      "keywords": [
+        "document",
+        "docx"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "documents.toggleBold",
       "title": "Toggle bold",
       "category": "View",
