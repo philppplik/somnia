@@ -21,11 +21,12 @@ export function captureLocalVectors(descriptor:LocalIndexDescriptor,entries:read
 }
 /** Revalidates detached input even if caller forged a snapshot. Fresh host capture is
  * required; this isn't a lease or proof that vectors derive from those source hashes. */
-export function retrieveLocalTopK(lifecycle:LocalIndexLifecycle,current:LocalIndexDescriptor,snapshot:FrozenLocalVectors,query:readonly number[],limit=10){
+export function retrieveLocalTopK(lifecycle:LocalIndexLifecycle,current:LocalIndexDescriptor,snapshot:FrozenLocalVectors,query:readonly number[],limit=10,sourceId?:string){
  assertLocalIndexReady(lifecycle,current);
  const captured=captureLocalVectors(snapshot.descriptor,snapshot.entries);
  if(JSON.stringify(captured.descriptor)!==JSON.stringify(captureLocalIndexDescriptor(current)))throw Error('Retrieval descriptor drift');
  if(!Array.isArray(query)||query.length!==captured.descriptor.dimensions)throw Error('Query dimension mismatch');
- const results=rankLocalChunks(query,captured.entries,limit).map(result=>Object.freeze({chunk:Object.freeze(result.chunk),score:result.score,trust:'untrusted' as const,confidence:'not-measured' as const,permission:false as const}));
+ if(sourceId!==undefined&&!captured.descriptor.sources.some(s=>s.id===sourceId))throw Error('Source focus outside indexed scope');
+ const candidates=sourceId===undefined?captured.entries:captured.entries.filter(e=>e.chunk.sourceId===sourceId);const results=rankLocalChunks(query,candidates,limit).map(result=>Object.freeze({chunk:Object.freeze(result.chunk),score:result.score,trust:'untrusted' as const,confidence:'not-measured' as const,permission:false as const}));
  return Object.freeze(results);
 }

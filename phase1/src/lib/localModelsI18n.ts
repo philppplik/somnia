@@ -1,5 +1,10 @@
 export const LOCAL_MODELS_CATALOGUES:Record<string,Record<string,string>> = {
  "en": {
+  "local.search.focus.label": "Search within indexed source",
+  "local.search.focus.all": "All indexed sources",
+  "local.search.focus.boundary": "Focus limits candidates before ranking to this already indexed source. No new source read or rebuild. Change clears results; run search explicitly.",
+  "local.search.focus.current": "Result scope: {source}",
+
   "local.search.progress.title": "Index build progress",
   "local.search.progress.preparing": "Preparing selected text locally…",
   "local.search.progress.embedding": "Embedding verified local batches…",
@@ -623,6 +628,11 @@ export const LOCAL_MODELS_CATALOGUES:Record<string,Record<string,string>> = {
   "local.route.earlier": "Move earlier after local"
  },
  "de": {
+  "local.search.focus.label": "In indexierter Quelle suchen",
+  "local.search.focus.all": "Alle indexierten Quellen",
+  "local.search.focus.boundary": "Fokus begrenzt Kandidaten vor Ranking auf schon indexierte Quelle. Kein neuer Read/Rebuild. Wechsel löscht Resultate; explizit suchen.",
+  "local.search.focus.current": "Resultat-Scope: {source}",
+
   "local.search.progress.title": "Indexaufbau-Fortschritt",
   "local.search.progress.preparing": "Gewählten Text lokal vorbereiten…",
   "local.search.progress.embedding": "Verifizierte lokale Batches einbetten…",
@@ -1246,6 +1256,11 @@ export const LOCAL_MODELS_CATALOGUES:Record<string,Record<string,string>> = {
   "local.route.earlier": "Nach lokal früher einordnen"
  },
  "es": {
+  "local.search.focus.label": "Buscar en fuente indexada",
+  "local.search.focus.all": "Todas las fuentes indexadas",
+  "local.search.focus.boundary": "Foco limita candidatos antes del ranking a fuente ya indexada. Sin nueva lectura/reconstrucción. Cambio borra resultados; busca explícitamente.",
+  "local.search.focus.current": "Ámbito del resultado: {source}",
+
   "local.search.progress.title": "Progreso del índice",
   "local.search.progress.preparing": "Preparando texto elegido localmente…",
   "local.search.progress.embedding": "Incrustando lotes locales verificados…",
@@ -1869,6 +1884,11 @@ export const LOCAL_MODELS_CATALOGUES:Record<string,Record<string,string>> = {
   "local.route.earlier": "Mover antes tras local"
  },
  "fr": {
+  "local.search.focus.label": "Chercher dans source indexée",
+  "local.search.focus.all": "Toutes sources indexées",
+  "local.search.focus.boundary": "Focus limite candidats avant classement à source déjà indexée. Sans nouvelle lecture/reconstruction. Changer efface résultats; recherche explicite.",
+  "local.search.focus.current": "Portée du résultat: {source}",
+
   "local.search.progress.title": "Progression de l’index",
   "local.search.progress.preparing": "Préparation locale du texte choisi…",
   "local.search.progress.embedding": "Indexation des lots locaux vérifiés…",
@@ -2492,6 +2512,11 @@ export const LOCAL_MODELS_CATALOGUES:Record<string,Record<string,string>> = {
   "local.route.earlier": "Avancer après local"
  },
  "pt-BR": {
+  "local.search.focus.label": "Buscar em fonte indexada",
+  "local.search.focus.all": "Todas fontes indexadas",
+  "local.search.focus.boundary": "Foco limita candidatos antes do ranking à fonte já indexada. Sem nova leitura/reconstrução. Mudar limpa resultados; busca explícita.",
+  "local.search.focus.current": "Escopo do resultado: {source}",
+
   "local.search.progress.title": "Progresso do índice",
   "local.search.progress.preparing": "Preparando texto escolhido localmente…",
   "local.search.progress.embedding": "Indexando lotes locais verificados…",

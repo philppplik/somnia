@@ -31,14 +31,14 @@ export class LocalSearchSession {
   }catch(error){if(this.buildAbort===controller)this.discard();throw error;}
   finally{signal.removeEventListener('abort',abort);if(this.buildAbort===controller)this.buildAbort=null;controller.abort();}
  }
- async query(text:string,signal:AbortSignal,limit=10){
+ async query(text:string,signal:AbortSignal,limit=10,sourceId?:string){
   this.available();signal.throwIfAborted();this.queryAbort?.abort();const token=++this.queryGeneration;
   if(!localSearchQueryReview(text).valid||!Number.isSafeInteger(limit)||limit<1||limit>50)throw Error('Invalid explicit search query');
-  const source=this.source,vectors=this.vectors;if(!source||!vectors||this.lifecycle.phase!=='ready')throw Error('Search index not ready');this.assertSame(source);
+  const source=this.source,vectors=this.vectors;if(!source||!vectors||this.lifecycle.phase!=='ready')throw Error('Search index not ready');this.assertSame(source);if(sourceId!==undefined&&!source.sources.some(s=>s.id===sourceId))throw Error('Source focus outside indexed scope');
   const controller=new AbortController();this.queryAbort=controller;const abort=()=>controller.abort();signal.addEventListener('abort',abort,{once:true});if(signal.aborted)abort();
   try{
    const result=await this.adapter.embed([text],source.digest,source.dimensions,controller.signal);controller.signal.throwIfAborted();if(token!==this.queryGeneration||this.queryAbort!==controller)throw Error('Query replaced');this.assertSame(source);
-   if(result.length!==1)throw Error('Invalid query vector count');return retrieveLocalTopK(this.lifecycle,vectors.descriptor,vectors,result[0],limit);
+   if(result.length!==1)throw Error('Invalid query vector count');return retrieveLocalTopK(this.lifecycle,vectors.descriptor,vectors,result[0],limit,sourceId);
   }finally{signal.removeEventListener('abort',abort);if(this.queryAbort===controller)this.queryAbort=null;controller.abort();}
  }
 }
