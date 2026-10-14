@@ -1,3 +1,4 @@
+import {EmbeddingModelReview} from './EmbeddingModelReview';
 import {LocalPullProgress} from './LocalPullProgress';
 import {localPullFailure} from '../../lib/agent/localResilience';
 import {chooseModelDisk,modelDiskAdvice,type ModelDisk} from '../../lib/agent/localModelDisk';
@@ -29,7 +30,7 @@ export function LocalModelActions({snapshot,onChanged,manager=localModelManager,
   {snapshot?.state==='stopped'&&<Button disabled={locked} type="button" onClick={()=>void act(async()=>{const result=await manager.launch();setInstruction(result.instruction??'');})}>{t('local.action.start')}</Button>}
   {instruction&&<p>{t('local.action.manual')} <code>{instruction}</code></p>}
   {snapshot?.state==='running'&&<>
-   <LocalRecommendedPicker disabled={locked} onDownload={propose}/>
+   <EmbeddingModelReview disabled={locked} onReview={()=>propose('embeddinggemma:300m')}/><LocalRecommendedPicker disabled={locked} onDownload={propose}/>
    <label>{t('local.action.name')}<Input value={name} disabled={locked} onChange={e=>setName(e.target.value)} placeholder="qwen3:4b"/></label>
    <Button type="button" variant="outline" disabled={locked||!name.trim()} onClick={()=>propose(name)}>{t('local.action.pull')}</Button>
    <ul className="local-models-list">{snapshot.models.map(model=><li key={model.id}><span>{model.id}</span><div className="local-models-badges"><Button type="button" size="compact" disabled={locked} onClick={()=>propose(model.id)} aria-label={t('local.action.updateModel',{model:model.id})}>{t('local.action.update')}</Button><Button type="button" size="compact" disabled={locked||!model.digest} onClick={()=>{setAck(false);setConfirm({kind:'delete',model:model.id,entry:model});}} aria-label={t('local.action.deleteModel',{model:model.id})}>{t('local.action.delete')}</Button></div></li>)}</ul>
@@ -41,7 +42,7 @@ export function LocalModelActions({snapshot,onChanged,manager=localModelManager,
    {active&&<Button type="button" disabled={job.phase==='cancel-requested'} onClick={()=>void manager.cancel()}>{t('local.action.cancel')}</Button>}
   </div>}
   <Dialog open={!!confirm} onOpenChange={open=>{if(!open)setConfirm(null);}}><DialogContent className="local-model-confirm"><DialogTitle>{t(confirm?.kind==='delete'?'local.action.confirmDelete':'local.action.confirmPull')}</DialogTitle><DialogDescription>{confirm?.model}</DialogDescription>
-   {confirm?.kind==='pull'?<><p>{t('local.action.source')} ollama.com/library/{confirm.model.split(':')[0]}</p><p>{t('local.action.downloadNotice')}</p><p>{t('local.disk.notice')}</p><Button disabled={diskBusy||locked} onClick={()=>void inspectDisk()}>{t('local.disk.choose')}</Button><StudioStatus>{t('local.disk.'+diskAdvice.state)}{disk&&` · ${disk.freeBytes} bytes`}{diskAdvice.requiredBytes&&` / ${diskAdvice.requiredBytes} bytes`}</StudioStatus></>:<p>{t('local.action.deleteNotice')}</p>}
+   {confirm?.kind==='pull'?<>{confirm.model==='embeddinggemma:300m'&&<EmbeddingModelReview/>}<p>{t('local.action.source')} ollama.com/library/{confirm.model.split(':')[0]}</p><p>{t('local.action.downloadNotice')}</p><p>{t('local.disk.notice')}</p><Button disabled={diskBusy||locked} onClick={()=>void inspectDisk()}>{t('local.disk.choose')}</Button><StudioStatus>{t('local.disk.'+diskAdvice.state)}{disk&&` · ${disk.freeBytes} bytes`}{diskAdvice.requiredBytes&&` / ${diskAdvice.requiredBytes} bytes`}</StudioStatus></>:<p>{t('local.action.deleteNotice')}</p>}
    <Checkbox label={t('local.action.ack')} checked={ack} onChange={e=>setAck(e.target.checked)}/>
    <div className="local-models-badges"><Button type="button" onClick={()=>setConfirm(null)}>{t('local.action.cancel')}</Button><Button type="button" disabled={!ack||locked||diskBusy||confirm?.kind==='pull'&&(!disk||diskAdvice.state==='insufficient'||diskAdvice.state==='stale')} onClick={()=>{const action=confirm!;setConfirm(null);void act(()=>action.kind==='pull'?manager.pull(action.model,disk??undefined):manager.remove(action.model,action.entry!.digest!));}}>{t('local.action.confirm')}</Button></div>
   </DialogContent></Dialog>

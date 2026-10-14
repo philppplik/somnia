@@ -1,5 +1,13 @@
 export const LOCAL_MODELS_CATALOGUES:Record<string,Record<string,string>> = {
  "en": {
+  "local.embedReview.title": "Optional local search embedding model",
+  "local.embedReview.facts": "Approx. 622 MB weights (rounded estimate), 768 dimensions. Ollama 0.11.10 or later required. Gemma Terms of Use apply.",
+  "local.embedReview.boundary": "Embedding-only search model, not a chat answer model. No quality/fit guarantee. Review terms and use restrictions before choosing to download/use.",
+  "local.embedReview.terms": "Gemma Terms of Use",
+  "local.embedReview.policy": "Prohibited Use Policy",
+  "local.embedReview.network": "Explicit download contacts the model registry and consumes disk space. Nothing downloads automatically. Next review requires fresh model-volume selection and acknowledgement.",
+  "local.embedReview.review": "Review exact embedding model download",
+
   "local.search.title": "Local source search",
   "local.search.boundary": "Search-only ranked snippets. Pick open text sources explicitly. Index stays in memory and is discarded on source change or panel/project close. No answers, cloud fallback or auto-indexing.",
   "local.search.model": "Exact installed model required. Optional download must be reviewed for license, size, network and disk first.",
@@ -557,6 +565,14 @@ export const LOCAL_MODELS_CATALOGUES:Record<string,Record<string,string>> = {
   "local.route.earlier": "Move earlier after local"
  },
  "de": {
+  "local.embedReview.title": "Optionales Embedding-Modell für lokale Suche",
+  "local.embedReview.facts": "Ca. 622 MB Gewichte (gerundete Schätzung), 768 Dimensionen. Ollama ab 0.11.10 erforderlich. Gemma-Nutzungsbedingungen gelten.",
+  "local.embedReview.boundary": "Nur Embedding-Suche, kein Chat-Antwortmodell. Keine Qualitäts-/Fit-Garantie. Bedingungen und Nutzungsbeschränkungen vor Download/Nutzung prüfen.",
+  "local.embedReview.terms": "Gemma-Nutzungsbedingungen",
+  "local.embedReview.policy": "Richtlinie zu verbotener Nutzung",
+  "local.embedReview.network": "Expliziter Download kontaktiert die Modell-Registry und belegt Speicher. Kein automatischer Download. Nächste Prüfung erfordert frische Modellspeicher-Auswahl und Bestätigung.",
+  "local.embedReview.review": "Download des exakten Embedding-Modells prüfen",
+
   "local.search.title": "Lokale Quellensuche",
   "local.search.boundary": "Nur gerankte Textausschnitte. Offene Textquellen explizit wählen. Index nur im Speicher, bei Quellenänderung oder Panel-/Projektschluss verworfen. Keine Antworten, Cloud-Fallbacks oder Auto-Indexierung.",
   "local.search.model": "Exaktes installiertes Modell erforderlich. Optionalen Download zuerst auf Lizenz, Größe, Netzwerk und Speicher prüfen.",
@@ -1114,6 +1130,14 @@ export const LOCAL_MODELS_CATALOGUES:Record<string,Record<string,string>> = {
   "local.route.earlier": "Nach lokal früher einordnen"
  },
  "es": {
+  "local.embedReview.title": "Modelo de embeddings opcional para búsqueda local",
+  "local.embedReview.facts": "Aprox. 622 MB de pesos (estimación redondeada), 768 dimensiones. Requiere Ollama 0.11.10 o posterior. Se aplican los términos de Gemma.",
+  "local.embedReview.boundary": "Solo búsqueda con embeddings, no modelo de respuestas. Sin garantía de calidad/capacidad. Revisa términos y restricciones antes de descargar/usar.",
+  "local.embedReview.terms": "Términos de uso de Gemma",
+  "local.embedReview.policy": "Política de uso prohibido",
+  "local.embedReview.network": "La descarga explícita contacta al registro y usa disco. Nada se descarga automáticamente. La siguiente revisión exige elegir el volumen y confirmar.",
+  "local.embedReview.review": "Revisar descarga del modelo exacto",
+
   "local.search.title": "Búsqueda local de fuentes",
   "local.search.boundary": "Solo fragmentos ordenados. Elige fuentes de texto abiertas explícitamente. Índice en memoria, descartado al cambiar fuentes o cerrar panel/proyecto. Sin respuestas, nube ni indexación automática.",
   "local.search.model": "Se requiere el modelo exacto instalado. Revisa licencia, tamaño, red y disco antes de la descarga opcional.",
@@ -1671,6 +1695,14 @@ export const LOCAL_MODELS_CATALOGUES:Record<string,Record<string,string>> = {
   "local.route.earlier": "Mover antes tras local"
  },
  "fr": {
+  "local.embedReview.title": "Modèle embedding facultatif pour recherche locale",
+  "local.embedReview.facts": "Environ 622 Mo de poids (estimation arrondie), 768 dimensions. Ollama 0.11.10 ou ultérieur requis. Conditions Gemma applicables.",
+  "local.embedReview.boundary": "Recherche embedding uniquement, pas de réponses chat. Aucune garantie de qualité/capacité. Vérifiez conditions et restrictions avant téléchargement/utilisation.",
+  "local.embedReview.terms": "Conditions Gemma",
+  "local.embedReview.policy": "Politique des usages interdits",
+  "local.embedReview.network": "Le téléchargement explicite contacte le registre et utilise le disque. Aucun téléchargement automatique. Choix du volume et confirmation requis ensuite.",
+  "local.embedReview.review": "Vérifier le téléchargement du modèle exact",
+
   "local.search.title": "Recherche locale de sources",
   "local.search.boundary": "Fragments classés uniquement. Choisissez explicitement les textes ouverts. Index en mémoire, supprimé au changement des sources ou à la fermeture du panneau/projet. Aucune réponse, aucun cloud ni indexation automatique.",
   "local.search.model": "Modèle exact installé requis. Vérifiez licence, taille, réseau et disque avant le téléchargement facultatif.",
@@ -2228,6 +2260,14 @@ export const LOCAL_MODELS_CATALOGUES:Record<string,Record<string,string>> = {
   "local.route.earlier": "Avancer après local"
  },
  "pt-BR": {
+  "local.embedReview.title": "Modelo de embeddings opcional para busca local",
+  "local.embedReview.facts": "Aprox. 622 MB de pesos (estimativa arredondada), 768 dimensões. Requer Ollama 0.11.10 ou posterior. Termos Gemma aplicáveis.",
+  "local.embedReview.boundary": "Apenas busca por embeddings, sem respostas de chat. Sem garantia de qualidade/capacidade. Revise termos e restrições antes de baixar/usar.",
+  "local.embedReview.terms": "Termos de uso Gemma",
+  "local.embedReview.policy": "Política de uso proibido",
+  "local.embedReview.network": "Download explícito contata o registro e usa disco. Nada é baixado automaticamente. A próxima revisão exige escolher o volume e confirmar.",
+  "local.embedReview.review": "Revisar download do modelo exato",
+
   "local.search.title": "Busca local de fontes",
   "local.search.boundary": "Apenas trechos ordenados. Escolha explicitamente textos abertos. Índice em memória, descartado ao mudar fontes ou fechar painel/projeto. Sem respostas, nuvem ou indexação automática.",
   "local.search.model": "Modelo exato instalado necessário. Revise licença, tamanho, rede e disco antes do download opcional.",
