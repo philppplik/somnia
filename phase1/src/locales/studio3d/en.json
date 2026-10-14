@@ -931,5 +931,8 @@
  "studio3d.hist.editMove": "Move selection",
  "studio3d.edit.moveX": "Offset X",
  "studio3d.edit.moveY": "Offset Y",
- "studio3d.edit.moveZ": "Offset Z"
+ "studio3d.edit.moveZ": "Offset Z",
+ "cmd.studio3d.edit.rip": "Rip the selected faces off the rest of the mesh",
+ "studio3d.edit.rip": "Rip",
+ "studio3d.hist.editRip": "Rip selection"
 }

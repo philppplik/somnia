@@ -931,5 +931,8 @@
  "studio3d.hist.editMove": "Mover seleção",
  "studio3d.edit.moveX": "Deslocamento X",
  "studio3d.edit.moveY": "Deslocamento Y",
- "studio3d.edit.moveZ": "Deslocamento Z"
+ "studio3d.edit.moveZ": "Deslocamento Z",
+ "cmd.studio3d.edit.rip": "Rasgar as faces selecionadas do resto da malha",
+ "studio3d.edit.rip": "Rasgar",
+ "studio3d.hist.editRip": "Rasgar seleção"
 }

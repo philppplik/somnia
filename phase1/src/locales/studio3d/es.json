@@ -931,5 +931,8 @@
  "studio3d.hist.editMove": "Mover selección",
  "studio3d.edit.moveX": "Desplazamiento X",
  "studio3d.edit.moveY": "Desplazamiento Y",
- "studio3d.edit.moveZ": "Desplazamiento Z"
+ "studio3d.edit.moveZ": "Desplazamiento Z",
+ "cmd.studio3d.edit.rip": "Separar las caras seleccionadas del resto de la malla",
+ "studio3d.edit.rip": "Rasgar",
+ "studio3d.hist.editRip": "Rasgar selección"
 }

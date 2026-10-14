@@ -1015,6 +1015,22 @@ test('mesh edit mode: move translates the selection by a typed offset',async({pa
  await expect(page.getByRole('alert')).toContainText('Select vertices to move');
 });
 
+test('mesh edit mode: rip splits a welded corner back apart',async({page})=>{
+ await blank(page);
+ const id=await insert(page,'cube',0);
+ expect(await run(page,'studio3d.edit.start',{id,mode:'face'})).toBe(true);
+ expect(await run(page,'studio3d.edit.select',{kind:'vertex',ids:[0,8]})).toBe(true);
+ expect(await run(page,'studio3d.edit.weld',{})).toBe(true);
+ expect(await run(page,'studio3d.edit.selectAll',{op:'none'})).toBe(true);
+ expect(await run(page,'studio3d.edit.select',{kind:'face',ids:[0]})).toBe(true);
+ expect(await run(page,'studio3d.edit.rip',{})).toBe(true);
+ let s=await session(page);expect(s.stats.triangles).toBe(12);
+ expect(await run(page,'studio3d.undo',{})).toBe(true);
+ expect(await run(page,'studio3d.edit.select',{kind:'face',ids:[4,5]})).toBe(true);
+ expect(await run(page,'studio3d.edit.rip',{})).toBe(false);
+ await expect(page.getByRole('alert')).toContainText('does not share vertices');
+});
+
 test('mesh edit mode: weld merges selected vertices at their centre, undo restores them',async({page})=>{
  await blank(page);
  const id=await insert(page,'cube',0);

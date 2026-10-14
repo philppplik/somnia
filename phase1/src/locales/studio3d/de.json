@@ -931,5 +931,8 @@
  "studio3d.hist.editMove": "Auswahl verschieben",
  "studio3d.edit.moveX": "Versatz X",
  "studio3d.edit.moveY": "Versatz Y",
- "studio3d.edit.moveZ": "Versatz Z"
+ "studio3d.edit.moveZ": "Versatz Z",
+ "cmd.studio3d.edit.rip": "Ausgewählte Faces vom Rest der Meshes abtrennen",
+ "studio3d.edit.rip": "Abtrennen",
+ "studio3d.hist.editRip": "Auswahl abtrennen"
 }

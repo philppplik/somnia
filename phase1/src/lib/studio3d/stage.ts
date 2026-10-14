@@ -10,7 +10,7 @@ import type {NodeExtra} from './document';
 import {EASES,isEase,bakeTrack,type Ease} from './ease';
 import {buildExtras,type ClipMeta,type MetaTrack} from './clipMeta';
 import {groupRefs,keyIndices,copyTrackKeys,shiftTrackKeys,pasteTrackKeys,type KeyRef,type KeyData,type TrackData} from './keyEdit';
-import {extrudeFaces,insetFaces,bevelVertices,deleteElements,weldSelected,subdivideFaces,pokeFaces,duplicateFaces,fattenSelected,relaxSelected,flipFaces,dissolveFaces,fillSelected,collapseSelected,toSphereSelected,randomizeSelected,moveSelected,loopCut,bevelEdges,slideEdges,mirrorCombine,symmetrizeMesh,subdivideLoop,cleanupMesh,flipMesh,outsideMesh,smoothMesh,separateMesh,solidifyMesh,fillHolesMesh,relaxMesh,fattenMesh,bisectMesh,twistMesh,taperMesh,spinMesh,bridgeMesh,remeshMesh,EditError,MAX_EDIT_VERTICES,MAX_EDIT_TRIANGLES,type MeshData,type CleanupResult,type NormalsOp} from './editMesh';
+import {extrudeFaces,insetFaces,bevelVertices,deleteElements,weldSelected,subdivideFaces,pokeFaces,duplicateFaces,fattenSelected,relaxSelected,flipFaces,dissolveFaces,fillSelected,collapseSelected,toSphereSelected,randomizeSelected,moveSelected,ripSelected,loopCut,bevelEdges,slideEdges,mirrorCombine,symmetrizeMesh,subdivideLoop,cleanupMesh,flipMesh,outsideMesh,smoothMesh,separateMesh,solidifyMesh,fillHolesMesh,relaxMesh,fattenMesh,bisectMesh,twistMesh,taperMesh,spinMesh,bridgeMesh,remeshMesh,EditError,MAX_EDIT_VERTICES,MAX_EDIT_TRIANGLES,type MeshData,type CleanupResult,type NormalsOp} from './editMesh';
 import {sculptDab,paintMask,SculptError,type SculptOpts} from './sculpt';
 import {KEY_PATHS,KEY_STRIDE,ClipError,MAX_CLIPS,MAX_KEYS_PER_TRACK,DEFAULT_CLIP_SECONDS,insertKey,removeKey as removeKeyData,findKey,isPlainTrack,trackName,parseTrackName,checkKeyTime,checkDuration,checkClipName,lastKeyTime,type KeyPath} from './clips';
 import {mergeTransform,DEFAULT_TRANSFORM,UvError,type TextureTransform} from './uv';
@@ -891,6 +891,8 @@ export class Stage{
  editRandomize(amount:number,seed:number){this.editOp({key:'studio3d.hist.editRandomize'},m=>randomizeSelected(m,[...this.editSel.verts],amount,seed));}
  /** Translates the selected edit-mode vertices by an offset, one undo step. The selection stays. */
  editMove(offset:[number,number,number]){this.editOp({key:'studio3d.hist.editMove'},m=>moveSelected(m,[...this.editSel.verts],offset));}
+ /** Rips the selected edit-mode faces off the rest of the mesh by duplicating the shared vertices, one undo step. The selection stays. */
+ editRip(){this.editOp({key:'studio3d.hist.editRip'},m=>ripSelected(m,[...this.editSel.faces]));}
  /** Collapses each connected island of the selection into one vertex at its centroid, one undo step. The selection is cleared afterwards because face ordinals shift. */
  editCollapse(){
   this.editOp({key:'studio3d.hist.editCollapse'},m=>collapseSelected(m,{verts:[...this.editSel.verts],edges:[...this.editSel.edges.values()],faces:[...this.editSel.faces]}));

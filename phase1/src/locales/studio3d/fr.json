@@ -931,5 +931,8 @@
  "studio3d.hist.editMove": "Déplacer la sélection",
  "studio3d.edit.moveX": "Décalage X",
  "studio3d.edit.moveY": "Décalage Y",
- "studio3d.edit.moveZ": "Décalage Z"
+ "studio3d.edit.moveZ": "Décalage Z",
+ "cmd.studio3d.edit.rip": "Détacher les faces sélectionnées du reste du maillage",
+ "studio3d.edit.rip": "Déchirer",
+ "studio3d.hist.editRip": "Déchirer la sélection"
 }

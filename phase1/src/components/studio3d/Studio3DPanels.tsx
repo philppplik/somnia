@@ -367,6 +367,7 @@ function EditSculptFields({id}:{id:number}){
      <Button variant="outline" onClick={()=>void executeCommand('studio3d.edit.toSphere',{factor:sphereF})}>{t('studio3d.edit.toSphere')}</Button>
      <Button variant="outline" onClick={()=>void executeCommand('studio3d.edit.randomize',{amount:randAmt,seed:randSeed})}>{t('studio3d.edit.randomize')}</Button>
      <Button variant="outline" onClick={()=>void executeCommand('studio3d.edit.move',{x:moveX,y:moveY,z:moveZ})}>{t('studio3d.edit.move')}</Button>
+     <Button variant="outline" onClick={()=>void executeCommand('studio3d.edit.rip',{})}>{t('studio3d.edit.rip')}</Button>
      <Button variant="outline" onClick={()=>void executeCommand('studio3d.edit.end')}>{t('studio3d.edit.end')}</Button>
     </div></>}
   </fieldset>

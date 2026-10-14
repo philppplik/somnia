@@ -377,6 +377,41 @@ export function weldSelected(m:MeshData,verts:number[]):MeshData{
  if(m.uvs)out.uvs=m.uvs;
  return out;
 }
+/** Rips the selected faces off the rest of the mesh in place: every vertex shared between selected and unselected faces is duplicated, the selected faces keep the originals and the unselected faces get the copies. Nothing moves - the mesh just stops being connected there. UVs travel with the copies; masks and explicit normals are dropped. */
+export function ripSelected(m:MeshData,faces:number[]):MeshData{
+ check(m);
+ if(!faces.length)throw new EditError('Select faces to rip.');
+ const tris=m.index.length/3;
+ const sel=new Set<number>();
+ for(const f of faces){if(!Number.isInteger(f)||f<0||f>=tris)throw new EditError(`Face ${f} does not exist.`);sel.add(f);}
+ const inSel=new Set<number>(),inRest=new Set<number>();
+ for(let f=0;f<tris;f++)for(let e=0;e<3;e++){
+  if(sel.has(f))inSel.add(m.index[f*3+e]);else inRest.add(m.index[f*3+e]);
+ }
+ const shared=[...inSel].filter(v=>inRest.has(v));
+ if(!shared.length)throw new EditError('The selection does not share vertices with the rest of the mesh.');
+ const positions=[...m.positions];
+ const uvs=m.uvs?[...m.uvs]:undefined;
+ const copy=new Map<number,number>();
+ for(const v of shared){
+  const i=positions.length/3;
+  positions.push(m.positions[v*3],m.positions[v*3+1],m.positions[v*3+2]);
+  if(uvs)uvs.push(m.uvs![v*2],m.uvs![v*2+1]);
+  copy.set(v,i);
+ }
+ const index=[...m.index];
+ for(let f=0;f<tris;f++){
+  if(sel.has(f))continue;
+  for(let e=0;e<3;e++){
+   const v=index[f*3+e];
+   const c=copy.get(v);
+   if(c!==undefined)index[f*3+e]=c;
+  }
+ }
+ const out:MeshData={positions,index};
+ if(uvs)out.uvs=uvs;
+ check(out);return out;
+}
 /** Translates the selected vertices by an offset: position-equal twins move together so split sides never rip, and the strongest mask at a position protects the whole seam. Masks are carried; UVs are carried. */
 export function moveSelected(m:MeshData,verts:number[],offset:[number,number,number]):MeshData{
  check(m);

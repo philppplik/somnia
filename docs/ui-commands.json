@@ -7297,6 +7297,19 @@
       "hasEnabled": true
     },
     {
+      "id": "studio3d.edit.rip",
+      "title": "Rip the selected faces off the rest of the mesh",
+      "category": "Edit",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "studio3d.edit.select",
       "title": "Select element",
       "category": "Edit",
