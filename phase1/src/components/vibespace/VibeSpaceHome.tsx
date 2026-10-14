@@ -1,3 +1,5 @@
+import {StudioEmptyState} from '../studios/StudioEmptyState';
+import {StudioStatus} from '../studios/StudioStatus';
 import {useEffect,useMemo,useRef,useState,useSyncExternalStore} from 'react';
 import {StudioScheduleButton} from './StudioScheduleButton';
 import {Plus} from '../../lib/icons';
@@ -63,16 +65,16 @@ export function VibeSpaceHome({transport}:{transport:VibeSpaceTransport}){
  },[state,space?.spaceId,studio,transport]);
  return <section className="vs-root" aria-label="Vibe Space" aria-busy={state.loading||state.pending}>
   <header className="vs-header"><div className="vs-brand"><BotIcon/><h1>Vibe Space</h1></div></header>
-  {transport.mode==='fixture'&&<p className="vs-fixture" role="status">Fixture mode · Test data only. No native actions or project writes.</p>}
+  {transport.mode==='fixture'&&<StudioStatus className="block vs-fixture">Fixture mode · Test data only. No native actions or project writes.</StudioStatus>}
   {returnCard&&(returnCard.needsYou.length>0||returnCard.failed.length>0||returnCard.misfires.length>0)&&<div className="vs-card vs-error" role="status" data-testid="schedule-return-card"><strong>{t('vs.schedule.returnTitle')}</strong><p>{returnCard.needsYou.length} {t('vs.schedule.returnNeedsYou')} · {returnCard.failed.length} {t('vs.schedule.returnFailed')} · {returnCard.misfires.length} {t('vs.schedule.misfire')}</p><button type="button" onClick={()=>{storeScheduleCursor(returnCard.lastSeq);setReturnCard(null);}}>{t('vs.schedule.returnDismiss')}</button></div>}
-  {state.error&&<div className="vs-error vs-card" role="alert"><strong>Vibe Space needs attention</strong><p data-copyable>{state.error}</p><p>Actions are disabled until the native state is loaded again. No fallback data is used.</p><button type="button" disabled={state.pending} onClick={()=>void controller.connect()}>Reload native state</button></div>}
-  {state.loading&&<p className="vs-muted" role="status">Loading Vibe Space...</p>}
+  {state.error&&<div className="vs-error vs-card"><strong>Vibe Space needs attention</strong><StudioStatus tone="error" live="assertive" className="block" data-copyable>{state.error}</StudioStatus><p>Actions are disabled until the native state is loaded again. No fallback data is used.</p><button type="button" disabled={state.pending} onClick={()=>void controller.connect()}>Reload native state</button></div>}
+  {state.loading&&<StudioStatus className="block vs-muted">Loading Vibe Space...</StudioStatus>}
   {snapshot&&<div className="vs-body">
    {space&&<nav className="vs-spaces" aria-label="Vibe Spaces">{snapshot.spaces.map(s=><button type="button" key={s.spaceId} aria-current={s.spaceId===space.spaceId?'page':undefined} onClick={()=>{setSpaceId(s.spaceId);setStudioId(null);setForm(null);}}>{s.name}</button>)}</nav>}
    {form==='space'?<CreateSpaceForm busy={busy} onCreate={intent=>controller.execute(intent)} onChoose={()=>controller.chooseFolder()} onClose={()=>setForm(null)}/>:
     form==='studio'&&space?<CreateStudioForm key={`${space.spaceId}:${template}`} space={space} models={snapshot.models} busy={busy} template={template} onCreate={intent=>controller.execute(intent)} onClose={()=>setForm(null)}/>:
     studio?<StudioDetail transport={transport} key={studio.runId} studio={studio} space={space!} pending={busy} capabilities={transport.capabilities} onAction={intent=>controller.execute(intent)} onBack={()=>setStudioId(null)}/>:
-    !space?<div className="vs-empty"><BotIcon/><h2>A place for focused AI work</h2><p>Create a Vibe Space, choose a folder, then give a Studio a goal. Work stays isolated. You decide what lands.</p><button type="button" className="vs-primary" disabled={busy||!supports('create-space')} onClick={()=>setForm('space')}>Create Vibe Space</button></div>:
+    !space?<StudioEmptyState studio="vibespace" icon={<BotIcon/>} disabled={busy||!supports('create-space')} onOpen={()=>setForm('space')} testId="vibespace-start"/>:
     <><div className="vs-space-head"><h2>{space.name}</h2><p className="vs-muted"><code data-copyable>{space.scopeLabel}</code> · Ask for writes</p>{transport.mode==='native'&&<div className="vs-row"><button type="button" aria-pressed={spacePanel==='memory'} onClick={()=>setSpacePanel(spacePanel==='memory'?null:'memory')}>Memory</button><button type="button" aria-pressed={spacePanel==='skills'} onClick={()=>setSpacePanel(spacePanel==='skills'?null:'skills')}>Skills</button></div>}</div>
      {transport.mode==='native'&&spacePanel==='memory'&&<MemoryPanel transport={nativeMemoryTransport} spaceId={space.spaceId} locale={getLocale()}/>}
      {transport.mode==='native'&&spacePanel==='skills'&&<SkillsTab transport={nativeSkillsTransport} spaceId={space.spaceId} locale={getLocale()}/>}
@@ -81,7 +83,7 @@ export function VibeSpaceHome({transport}:{transport:VibeSpaceTransport}){
     </>}
   </div>}
   {studio&&transport.mode==='native'&&<StudioScheduleButton studioId={studio.studioId} disabled={busy}/>}
-  {state.pending&&<p className="vs-pending" role="status">Waiting for native confirmation...</p>}
+  {state.pending&&<StudioStatus className="block vs-pending">Waiting for native confirmation...</StudioStatus>}
  </section>;
 }
 /** Existing Vadivam icon convention, exact bot identity required by the product brief. */

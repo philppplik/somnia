@@ -1,0 +1,16 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+import {renderToStaticMarkup} from 'react-dom/server';
+import {StudioEmptyState} from './StudioEmptyState';
+import {StudioStatus} from './StudioStatus';
+import {InterfaceLayers,InterfaceProperties} from '../interface/InterfacePanels';
+import {interfaceSession} from '../../lib/interface/session';
+import {SpacesPanel} from '../vibespace/VibeSpacePanels';
+import {claimVibeShell} from '../../lib/vibespace/shellSession';
+const context={studio:'vibespace',selection:{kind:'none' as const,count:0},busy:false,services:{}};
+test('Vibe starter preserves create capability gate, no fake file or blank action',()=>{const html=renderToStaticMarkup(<StudioEmptyState studio="vibespace" icon={<svg/>} disabled onOpen={()=>{}}/>);assert.match(html,/Create Vibe Space/);assert.match(html,/disabled=""/);assert.doesNotMatch(html,/Create blank project|Open file/);assert.match(html,/aria-describedby=/);});
+test('Interface panel empties are silent shared hints, not duplicate starters',()=>{interfaceSession.clear();for(const Panel of [InterfaceLayers,InterfaceProperties]){const html=renderToStaticMarkup(<Panel/>);assert.match(html,/data-slot="studio-status"/);assert.match(html,/aria-live="off"/);assert.doesNotMatch(html,/role="alert"|<button/);}});
+test('Vibe projection errors announce, escape text, and leave writes disabled',()=>{const claim=claimVibeShell();claim.report({view:{snapshot:null,loading:false,pending:false,error:'<script>failure</script>'},spaceId:null,runId:null,native:false,canCreateSpace:false,canCreateStudio:false});try{const html=renderToStaticMarkup(<SpacesPanel panelId="spaces" context={context}/>);assert.match(html,/data-slot="studio-status"/);assert.match(html,/role="alert"/);assert.match(html,/aria-atomic="true"/);assert.match(html,/&lt;script&gt;failure/);assert.match(html,/disabled=""/);assert.doesNotMatch(html,/<script>/);}finally{claim.release();}});
+test('loading status is atomic polite; errors retain assertive urgency',()=>{for(const [props,role] of [[{},'status'],[{tone:'error',live:'assertive'},'alert']] as const){const html=renderToStaticMarkup(<StudioStatus {...props}>Status</StudioStatus>);assert.match(html,new RegExp(`role="${role}"`));assert.match(html,/aria-atomic="true"/);}});
+test('migrated panel export hooks and existing canvas starter boundaries stay present',()=>{const read=(name:string)=>readFileSync(new URL(`../${name}`,import.meta.url),'utf8');const animation=read('animation/AnimationPanels.tsx');for(const hook of ['animation-export-done','animation-export-error'])assert.match(animation,new RegExp(`data-testid="${hook}"`));assert.doesNotMatch(animation,/<p[^>]*role="(?:alert|status)"/);for(const name of ['interface/InterfaceCanvas.tsx','animation/AnimationCanvas.tsx','studio3d/Studio3DCanvas.tsx','vibespace/VibeSpaceHome.tsx'])assert.match(read(name),/<StudioEmptyState/);});

@@ -106,3 +106,5 @@ This guide supplies the cross-cutting system. The [verification guide](verificat
 
 - [Keyboard and focus checklist](a11y-checklist.md)
 - [Component gallery index and studio recipes](gallery-index.md)
+
+- [New-studio state adoption audit](new-studios-state-audit.md)

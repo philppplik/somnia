@@ -1,3 +1,4 @@
+import {StudioStatus} from '../studios/StudioStatus';
 import {effectColor,effectBypassed} from '../../lib/animation/effects';
 import {NativeInput,NativeSelect} from '../ui/native-controls';
 import {DEFAULT_LAYER_COLOR} from '../../lib/animation/model';
@@ -30,11 +31,11 @@ export function CompositionsPanel(_:PanelHostProps){
  const openSnapshot=<><Button size="compact" variant="outline" className="h-auto min-w-0 whitespace-normal text-left" onClick={()=>{if(s.dirty&&!window.confirm(t('animation.file.replace')))return;snapshotInput.current?.click();}}>{t('animation.file.open')}</Button><NativeInput type="file" ref={snapshotInput} accept=".somnia" className="hidden" aria-label={t('animation.file.open')} onChange={async e=>{const file=e.target.files?.[0];e.target.value='';if(!file)return;const current=animationSession().document;try{if(file.size>SNAPSHOT_LIMIT)throw Error('Snapshot exceeds 8 MB.');const snapshot=parseAnimationSnapshot(new Uint8Array(await file.arrayBuffer()));if(animationSession().document!==current)throw Error(t('animation.asset.changed'));animationSession().open(snapshot.doc,snapshot.view);setFileNotice(t('animation.file.opened'));setImportError('');}catch(err){setImportError((err as Error).message);}}}/></>;
  if(!doc)return <aside className="grid min-w-0 content-start gap-3 p-3 text-xs" data-testid="animation-compositions-panel">
   <Button size="compact" variant="outline" onClick={()=>run('animation.project.new')} data-testid="animation-new">{t('cmd.animation.project.new')}</Button>
-  <Button size="compact" variant="outline" onClick={()=>run('animation.project.recover')}>{t('cmd.animation.project.recover')}</Button>{openSnapshot}{importError&&<p role="alert">{importError}</p>}</aside>;
+  <Button size="compact" variant="outline" onClick={()=>run('animation.project.recover')}>{t('cmd.animation.project.recover')}</Button>{openSnapshot}{importError&&<StudioStatus tone="error" live="assertive" className="block">{importError}</StudioStatus>}</aside>;
  return <aside className="grid min-h-0 min-w-0 content-start gap-3 p-3 text-xs" data-testid="animation-compositions-panel">
   <div className="grid gap-1"><Button size="compact" variant="outline" className="h-auto min-w-0 whitespace-normal text-left" onClick={async()=>{try{const saved=await saveAnimationSnapshot();setFileNotice(t(saved?'animation.file.saved':'animation.file.copy'));}catch(e){setImportError((e as Error).message);}}}>{t('animation.file.save')}</Button>
   {openSnapshot}
-  {fileNotice&&<p role="status" className="text-ink-3">{fileNotice}</p>}</div>
+  {fileNotice&&<StudioStatus className="block text-ink-3">{fileNotice}</StudioStatus>}</div>
   <h3 className="m-0 text-[11px] font-semibold uppercase tracking-wide text-ink-3">{t('animation.comp.list')}</h3>
   <ul className="m-0 grid list-none gap-1 p-0" aria-label={t('animation.comp.list')}>{doc.compositions.map(c=><li key={c.id}>
    <button type="button" aria-current={c.id===doc.activeComp} className={`w-full truncate rounded-sm border px-2 py-1.5 text-left text-ink ${c.id===doc.activeComp?'border-line bg-hover':'border-subtle'}`} onClick={()=>run('animation.comp.select',{comp:c.id})}>{c.name}</button></li>)}</ul>
@@ -44,7 +45,7 @@ export function CompositionsPanel(_:PanelHostProps){
   <NativeInput ref={input} type="file" accept=".png,.jpg,.jpeg,.svg" className="hidden" aria-label={t('animation.asset.import')} onChange={async e=>{const file=e.target.files?.[0];e.target.value='';if(!file)return;const session=animationSession(),document=session.document;setImportError('');setImporting(true);try{const asset=await prepareAnimationAsset(file);if(session.document?.id!==document?.id||session.document?.activeComp!==document?.activeComp)throw Error(t('animation.asset.changed'));session.dispatch({type:'asset.import',asset});session.setView({selectedLayer:findComp(session.document!)!.layers[0].id});}catch(err){setImportError((err as Error).message);}finally{setImporting(false);}}}/>
   <Button size="compact" variant="outline" disabled={importing} onClick={()=>input.current?.click()} data-testid="animation-import-asset">{t('animation.asset.import')}</Button>
   <p className="m-0 text-ink-3">{t('animation.asset.limits')}</p>
-  {importError&&<p role="alert" className="m-0 text-ink">{importError}</p>}
+  {importError&&<StudioStatus tone="error" live="assertive" className="block m-0 text-ink">{importError}</StudioStatus>}
  </aside>;
 }
 function NumberField(props:Parameters<typeof InspectorNumberField>[0]){return <InspectorNumberField {...props} className={field} format={fmt}/>;}
@@ -54,7 +55,7 @@ export function PropertiesSection(_:InspectorSectionProps){
  if(!comp||!layer)return null;const at=s.view.playhead;
  const setNum=(prop:TransformKey,v:PropValue)=>run('animation.prop.set',{layer:layer.id,prop,value:v});
  return <div className="grid gap-3 p-3 text-xs" data-testid="animation-properties">
-  {editError&&<p role="alert" className="m-0 text-ink">{editError}</p>}
+  {editError&&<StudioStatus tone="error" live="assertive" className="block m-0 text-ink">{editError}</StudioStatus>}
   <label className="grid gap-1 text-ink-3">{t('animation.layer.name')}<NativeInput className={field} defaultValue={layer.name} key={layer.id+layer.name} onBlur={e=>{const v=e.currentTarget.value.trim();if(v&&v!==layer.name)run('animation.layer.update',{layer:layer.id,name:v});}}/></label>
   <div className="flex gap-3 text-ink-2">{(['visible','solo','locked'] as const).map(f=><label key={f} className="flex items-center gap-1"><NativeInput type="checkbox" className="animation-checkbox" checked={layer[f]} onChange={e=>run('animation.layer.update',{layer:layer.id,[f]:e.target.checked})}/>{t(`animation.layer.${f}`)}</label>)}</div>
   {layer.kind==='text'&&<label className="grid gap-1 text-ink-3">{t('animation.layer.text.content')}<NativeInput className={field} disabled={layer.locked} defaultValue={layer.source.text} key={layer.id+(layer.source.text??'')} onBlur={e=>{if(e.currentTarget.value!==layer.source.text)run('animation.layer.update',{layer:layer.id,text:e.currentTarget.value});}}/></label>}
@@ -139,8 +140,8 @@ export function RenderSection(_:InspectorSectionProps){
    <Button size="compact" variant="outline" disabled={busy} onClick={()=>run('animation.export.sequence')} data-testid="animation-export-sequence">{t('animation.export.sequence')}</Button>
   </div>
   {busy&&<StudioProgress label={t('animation.export.progress',{done:job.done,total:job.total})} value={job.done} max={job.total} progressTestId="animation-export-progress" cancelLabel={t('animation.export.cancel')} onCancel={job.kind==='sequence'?cancelExport:undefined} cancelTestId="animation-export-cancel"/>}
-  {job.status==='done'&&<p role="status" className="m-0 text-ink" data-testid="animation-export-done">{t('animation.export.done',{file:job.fileName})}</p>}
-  {job.status==='error'&&<p role="alert" className="m-0 text-ink" data-testid="animation-export-error">{t('animation.export.error',{message:job.message})}</p>}
+  {job.status==='done'&&<StudioStatus className="block m-0 text-ink" data-testid="animation-export-done">{t('animation.export.done',{file:job.fileName})}</StudioStatus>}
+  {job.status==='error'&&<StudioStatus tone="error" live="assertive" className="block m-0 text-ink" data-testid="animation-export-error">{t('animation.export.error',{message:job.message})}</StudioStatus>}
   <p className="m-0 text-ink-3">{t('animation.render.note')}</p>
   <Button size="compact" variant="outline" disabled={busy} onClick={()=>run('animation.render.close')}>{t('animation.render.close')}</Button>
  </div>;

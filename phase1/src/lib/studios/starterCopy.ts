@@ -1,5 +1,6 @@
 /** English product copy shared by every studio starter, including additional registered hosts. */
 export const studioStarterCopy={
+ vibespace:{headline:'A place for focused AI work',description:'Create a Vibe Space, choose a folder, then give a Studio a goal. Work stays isolated. You decide what lands.',openLabel:'Create Vibe Space',footnote:''},
  code:{headline:'Build something great inside Code Studio',description:'Design websites with a live visual canvas and real code. Open an existing file or start a blank page, then shape it your way.',openLabel:'Open file'},
  documents:{headline:'Bring your words to life inside Documents Studio',description:'Write and edit documents on the page. Open a Word document or start fresh, then save a copy without changing your original.',openLabel:'Open DOCX'},
  sheets:{headline:'Make sense of your data inside Sheets Studio',description:'Explore workbooks, edit cells and work with formulas. Open an Excel file or start a blank sheet to organise your next idea.',openLabel:'Open XLSX'},

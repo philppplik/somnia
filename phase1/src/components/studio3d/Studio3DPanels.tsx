@@ -1,3 +1,4 @@
+import {StudioStatus} from '../studios/StudioStatus';
 import {StudioRecentList} from '../studios/StudioRecentList';
 import {StudioProgress} from '../studios/StudioProgress';
 import {useState} from 'react';
@@ -39,7 +40,7 @@ export function ScenePanel(_:PanelHostProps){
   </div>
   <p className="m-0 text-xs text-ink-3">{t('studio3d.nudge.hint')}</p>
   <Input value={filter} onChange={e=>setFilter(e.target.value)} placeholder={t('studio3d.scene.filter')} aria-label={t('studio3d.scene.filter')}/>
-  {!s.outline.length&&<p className="text-xs text-ink-3">{t('studio3d.scene.empty')}</p>}
+  {!s.outline.length&&<StudioStatus live="off" className="block text-xs text-ink-3">{t('studio3d.scene.empty')}</StudioStatus>}
   <ul className="m-0 grid list-none gap-0.5 p-0" role="listbox" aria-label={t('studio3d.shell.scene')}>{rows.map(o=>
    <li key={o.id} role="option" aria-selected={s.selected===o.id} className="flex items-center gap-1"><input type="checkbox" checked={s.marked.includes(o.id)} aria-label={t('studio3d.mark.object',{name:o.name})} onChange={e=>patchStudio3D({marked:e.currentTarget.checked?[...s.marked,o.id]:s.marked.filter(x=>x!==o.id)})}/><button type="button" style={{paddingLeft:8+o.depth*12}} className={'min-w-0 flex-1 truncate rounded-sm py-1 pr-2 text-left text-xs hover:bg-hover '+(s.selected===o.id?'bg-accent-soft text-accent':'text-ink-2')}
     onClick={()=>void executeCommand('studio3d.select',{id:s.selected===o.id?null:o.id})}>{o.name}<span className="ml-1 text-ink-3">{o.kind==='group'?'':o.kind}</span></button></li>)}</ul>
@@ -58,7 +59,7 @@ export function ModelSection(_:InspectorSectionProps){
  </dl>
   {!s.blank&&<SceneChecks/>}
   {<AnimationControls/>}
-  {s.notice&&<p role="status" className="m-0 px-3 text-xs text-ink-2" data-testid="studio3d-notice">{s.notice}</p>}
+  {s.notice&&<StudioStatus className="block m-0 px-3 text-xs text-ink-2" data-testid="studio3d-notice">{s.notice}</StudioStatus>}
   {s.unitHint&&<div role="status" className="grid gap-1 px-3 pb-3 text-xs text-ink-2" data-testid="studio3d-unit-hint">{t('studio3d.unit.hint')}
    <Button variant="outline" onClick={()=>{const h=s.unitHint!;patchStudio3D({unitHint:null});void executeCommand('studio3d.object.transform',{id:h.id,scale:{x:h.factor,y:h.factor,z:h.factor}});}}>{t('studio3d.unit.convert')}</Button>
    <Button variant="outline" onClick={()=>patchStudio3D({unitHint:null})}>{t('studio3d.unit.keep')}</Button></div>}
@@ -258,7 +259,7 @@ function SceneChecks(){
  const {t}=useT();const s=useStudio3D();const warnings=validateScene(s.stats);
  return <section className="grid gap-1 px-3" data-testid="studio3d-checks" aria-label={t('studio3d.checks.title')}>
   <h3 className="m-0 text-xs font-medium text-ink-3">{t('studio3d.checks.title')}</h3>
-  {warnings.length===0?<p className="m-0 text-xs text-ink-2" role="status">{t('studio3d.checks.ok')}</p>
+  {warnings.length===0?<StudioStatus className="block m-0 text-xs text-ink-2">{t('studio3d.checks.ok')}</StudioStatus>
    :<ul className="m-0 grid list-none gap-1 p-0 text-xs text-ink-2">{warnings.map(w=><li key={w.code} data-testid={'studio3d-warn-'+w.code} data-level={w.level}>{w.level==='warn'?t('studio3d.checks.warn'):t('studio3d.checks.info')}: {t('studio3d.warn.'+w.code,w.values)}</li>)}</ul>}
  </section>;
 }
