@@ -860,5 +860,12 @@
  "studio3d.texture.kind.checker": "Schachbrett",
  "studio3d.texture.kind.grid": "Raster",
  "studio3d.texture.kind.stripes": "Streifen",
- "studio3d.texture.kind.noise": "Rauschen"
+ "studio3d.texture.kind.noise": "Rauschen",
+ "cmd.studio3d.mesh.boolean": "Zwei 3D-Meshes per Boolean kombinieren: Vereinigung, Subtraktion oder Schnitt",
+ "studio3d.mesh.boolean": "Boolean (2 wählen)",
+ "studio3d.mesh.booleanOp": "Boolean-Operation",
+ "studio3d.mesh.boolean.union": "Vereinigung",
+ "studio3d.mesh.boolean.subtract": "Subtraktion",
+ "studio3d.mesh.boolean.intersect": "Schnitt",
+ "studio3d.hist.boolean": "Boolean auf {name} und {other}"
 }

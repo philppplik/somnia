@@ -860,5 +860,12 @@
  "studio3d.texture.kind.checker": "Xadrez",
  "studio3d.texture.kind.grid": "Grade",
  "studio3d.texture.kind.stripes": "Listras",
- "studio3d.texture.kind.noise": "Ruído"
+ "studio3d.texture.kind.noise": "Ruído",
+ "cmd.studio3d.mesh.boolean": "Combinar duas malhas 3D com booleana: união, subtração ou interseção",
+ "studio3d.mesh.boolean": "Booleana (selecione 2)",
+ "studio3d.mesh.booleanOp": "Operação booleana",
+ "studio3d.mesh.boolean.union": "União",
+ "studio3d.mesh.boolean.subtract": "Subtração",
+ "studio3d.mesh.boolean.intersect": "Interseção",
+ "studio3d.hist.boolean": "Booleana em {name} e {other}"
 }

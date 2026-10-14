@@ -1,4 +1,5 @@
 # Unreleased: 3D Studio P0
+- 3D Studio: combine two meshes with 3D booleans (union, subtract, intersect; world transforms baked, watertight result), with undo, from the mesh tools or `studio3d.mesh.boolean`.
 - 3D Studio: generate procedural textures (checker, grid, stripes, seeded noise) straight into any material texture slot, with undo, from the texture tools or `studio3d.texture.generate`.
 - 3D Studio: bridge connects two meshes through their largest open border loops with a sewn tunnel (auto start/direction, manual twist, watertight merge), with undo, from the mesh tools or `studio3d.mesh.bridge`.
 - 3D Studio: spin revolves meshes around an axis (border edges sweep the walls, partial turns get caps, full turns weld the seam), with undo, from the mesh tools or `studio3d.mesh.spin`.

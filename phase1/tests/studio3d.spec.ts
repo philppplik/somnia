@@ -1660,6 +1660,17 @@ test('3D studio texture generate: a checker appears in the color slot and undo r
  await expect.poll(preview).toBeNull();
 });
 
+test('3D studio mesh boolean: two cubes become one and undo restores both',async({page})=>{
+ await blank(page);
+ await insert(page,'cube',0);
+ await insert(page,'cube',0.6);
+ const ids=(await session(page)).outline.map(o=>o.id);
+ expect(await run(page,'studio3d.mesh.boolean',{op:'union',ids:[ids[0],ids[1]]})).toBe(true);
+ await expect.poll(async()=>(await session(page)).outline.length).toBe(1);
+ expect(await run(page,'studio3d.undo',{})).toBe(true);
+ await expect.poll(async()=>(await session(page)).outline.length).toBe(2);
+});
+
 test('3D studio mesh simplify: triangle count drops and undo restores it',async({page})=>{
  await blank(page);
  await insert(page,'sphere',0);

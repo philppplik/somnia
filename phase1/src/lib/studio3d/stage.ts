@@ -1,6 +1,7 @@
 import {readPin,pinText} from './pins';
 import {PRIMITIVE_KINDS,PrimitiveError,defaultParams,patchParams,readPrimitive,resolveMaterial,MATERIAL_PRESETS,type PrimitiveKind,type PrimitiveData,type PrimitiveParams,type MaterialRequest} from './primitives';
 import * as THREE from 'three';
+import {Brush,Evaluator,ADDITION,SUBTRACTION,INTERSECTION} from 'three-bvh-csg';
 import {mergeGeometries} from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import {SimplifyModifier} from 'three/examples/jsm/modifiers/SimplifyModifier.js';
 import {clone as skeletonClone} from 'three/examples/jsm/utils/SkeletonUtils.js';
@@ -2113,6 +2114,57 @@ export class Stage{
   this.attach0(result,this.root,this.root.children.length);
   let owned=true;
   this.push({label:{key:'studio3d.hist.bridge',params:{name:meshes[0].name,other:meshes[1].name}},undo:()=>{this.root.remove(result);for(const i of items)this.attach0(i.o,i.parent,i.at);owned=false;},redo:()=>{for(const i of [...items].reverse())i.parent.remove(i.o);this.attach0(result,this.root,this.root.children.length);owned=true;},
+   release:()=>{if(owned)for(const i of items)disposeObject(i.o);else disposeObject(result);}});
+  return 1;
+ }
+ /** Combines exactly two meshes with a 3D boolean (union, subtract or intersect) in world space. The originals are removed; one undo step restores both. */
+ booleanOp(op:'union'|'subtract'|'intersect',ids:number[]):number{
+  if(this.editId!=null)throw new StageError('Leave edit mode before a boolean.');
+  const objs=this.topLevel(this.needMany(ids,2));
+  if(objs.length!==2)throw new StageError('Boolean works on exactly two meshes.');
+  for(const o of objs)if(!(o as THREE.Mesh).isMesh)throw new StageError(`${o.name} is not a mesh. Booleans work on meshes.`);
+  const meshes=objs as THREE.Mesh[];
+  this.root.updateWorldMatrix(true,true);
+  const inv=this.root.matrixWorld.clone().invert();
+  const brushes=meshes.map(m=>{
+   const d=this.meshDataOf(m);
+   const w=inv.clone().multiply(m.matrixWorld);
+   const e=w.elements;
+   const positions=new Array<number>(d.positions.length);
+   for(let i=0;i<d.positions.length;i+=3){
+    const x=d.positions[i],y=d.positions[i+1],z=d.positions[i+2];
+    positions[i]=e[0]*x+e[4]*y+e[8]*z+e[12];
+    positions[i+1]=e[1]*x+e[5]*y+e[9]*z+e[13];
+    positions[i+2]=e[2]*x+e[6]*y+e[10]*z+e[14];
+   }
+   const index=w.determinant()<0?(()=>{const idx=[];for(let f=0;f<d.index.length;f+=3)idx.push(d.index[f],d.index[f+2],d.index[f+1]);return idx;})():[...d.index];
+   const g=new THREE.BufferGeometry();
+   g.setAttribute('position',new THREE.BufferAttribute(new Float32Array(positions),3));
+   g.setAttribute('uv',new THREE.BufferAttribute(new Float32Array(d.uvs??new Array<number>((positions.length/3)*2).fill(0)),2));
+   g.setIndex(index);
+   g.computeVertexNormals();
+   return new Brush(g);
+  });
+  const OPS={union:ADDITION,subtract:SUBTRACTION,intersect:INTERSECTION} as const;
+  let res:Brush;
+  try{const ev=new Evaluator();ev.useGroups=false;res=ev.evaluate(brushes[0],brushes[1],OPS[op]);}
+  catch(e){throw new StageError(`Boolean failed: ${e instanceof Error?e.message:String(e)}`);}
+  const rg=res.geometry;
+  const posA=rg.getAttribute('position') as THREE.BufferAttribute;
+  const uvA=rg.getAttribute('uv') as THREE.BufferAttribute|undefined;
+  const idxA=rg.index;
+  if(!idxA||idxA.count===0){for(const b of brushes)b.geometry.dispose();rg.dispose();throw new StageError('The boolean result is empty.');}
+  const out:MeshData={positions:[...posA.array] as number[],index:[...idxA.array] as number[],...(uvA?{uvs:[...uvA.array] as number[]}:{})};
+  for(const b of brushes)b.geometry.dispose();
+  const g=this.buildGeometry(out);
+  rg.dispose();
+  const items=meshes.map(o=>({o,parent:o.parent!,at:o.parent!.children.indexOf(o)})).sort((a,b)=>a.parent.id-b.parent.id||a.at-b.at);
+  for(const i of [...items].reverse())i.parent.remove(i.o);
+  const result=new THREE.Mesh(g,(meshes[0].material as THREE.Material).clone());
+  result.name=this.uniqueName(meshes[0].name);
+  this.attach0(result,this.root,this.root.children.length);
+  let owned=true;
+  this.push({label:{key:'studio3d.hist.boolean',params:{name:meshes[0].name,other:meshes[1].name}},undo:()=>{this.root.remove(result);for(const i of items)this.attach0(i.o,i.parent,i.at);owned=false;},redo:()=>{for(const i of [...items].reverse())i.parent.remove(i.o);this.attach0(result,this.root,this.root.children.length);owned=true;},
    release:()=>{if(owned)for(const i of items)disposeObject(i.o);else disposeObject(result);}});
   return 1;
  }

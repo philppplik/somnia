@@ -860,5 +860,12 @@
  "studio3d.texture.kind.checker": "Tablero",
  "studio3d.texture.kind.grid": "Rejilla",
  "studio3d.texture.kind.stripes": "Rayas",
- "studio3d.texture.kind.noise": "Ruido"
+ "studio3d.texture.kind.noise": "Ruido",
+ "cmd.studio3d.mesh.boolean": "Combinar dos mallas 3D con una booleana: unión, sustracción o intersección",
+ "studio3d.mesh.boolean": "Booleana (elige 2)",
+ "studio3d.mesh.booleanOp": "Operación booleana",
+ "studio3d.mesh.boolean.union": "Unión",
+ "studio3d.mesh.boolean.subtract": "Sustracción",
+ "studio3d.mesh.boolean.intersect": "Intersección",
+ "studio3d.hist.boolean": "Booleana en {name} y {other}"
 }

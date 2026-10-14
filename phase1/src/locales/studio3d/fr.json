@@ -860,5 +860,12 @@
  "studio3d.texture.kind.checker": "Damier",
  "studio3d.texture.kind.grid": "Grille",
  "studio3d.texture.kind.stripes": "Rayures",
- "studio3d.texture.kind.noise": "Bruit"
+ "studio3d.texture.kind.noise": "Bruit",
+ "cmd.studio3d.mesh.boolean": "Combiner deux maillages 3D avec un booléen : union, soustraction ou intersection",
+ "studio3d.mesh.boolean": "Booléen (sélection 2)",
+ "studio3d.mesh.booleanOp": "Opération booléenne",
+ "studio3d.mesh.boolean.union": "Union",
+ "studio3d.mesh.boolean.subtract": "Soustraction",
+ "studio3d.mesh.boolean.intersect": "Intersection",
+ "studio3d.hist.boolean": "Booléen sur {name} et {other}"
 }
