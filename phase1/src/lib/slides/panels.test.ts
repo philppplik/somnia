@@ -194,7 +194,8 @@ test('multi-selection: toggle, select all, align to selection, distribute, and s
  await run('slides.toggleShapeSelection',{...base,shapeId:2});assert.deepEqual(picked,{source:'blob:deck1',slideId:256,shapeId:6,more:[7]});
  await assert.rejects(()=>run('slides.toggleShapeSelection',{...base,shapeId:99}),/no longer exists/);
  await assert.rejects(()=>run('slides.toggleShapeSelection',{...base,slideId:257,shapeId:2}),/Slide changed/);
- await assert.rejects(()=>run('slides.nudgeShape',{mode:'move',dxPt:1,dyPt:0}),/single shape/);
+ f.calls.length=0;await run('slides.nudgeShape',{mode:'move',dxPt:10,dyPt:0});
+ {const m=f.calls[0] as [string,number,{shapeId:number;next:{x:number}}[]];assert.equal(m[0],'many');assert.deepEqual(m[2].map(e=>[e.shapeId,e.next.x]),[[6,5127000],[7,2127000]]);}
  await assert.rejects(()=>run('slides.distributeSelection',{axis:'horizontal'}),/at least three/);
  await run('slides.selectAllShapes');assert.deepEqual(picked,{source:'blob:deck1',slideId:256,shapeId:2,more:[3,6,7]});
  await assert.rejects(()=>run('slides.alignSelection',{mode:'left',to:'selection'}),/cannot be moved \(noBounds\)/);
@@ -224,4 +225,20 @@ test('selectShapes (marquee) and arrangeShapes validate identity, ids, mode and 
  await assert.rejects(()=>run('slides.arrangeShapes',{mode:'sideways'}));
  picked={...base,shapeId:99};await assert.rejects(()=>run('slides.arrangeShapes',{mode:'back'}),/no longer exists/);
  assert.equal(f.calls.length,1);
+});
+
+test('transformSelection moves or scales the whole selection from its union box, with stale and range checks',async()=>{
+ const f=fixture(),run=(p:unknown)=>f.dispatcher.runCommand('slides.transformSelection',p,{origin:'ui'}),base={source:'blob:deck1',slideId:256};
+ const b=(x:number,w:number)=>({x,y:1000000,w,h:1000000,rot:0,flipH:false,flipV:false,source:'slide' as const});
+ (f.state.model!.slides[0].shapes as unknown[]).push({id:6,name:'C',kind:'text',runCount:1,parentId:null,bounds:b(5000000,1000000),ph:null});
+ picked={...base,shapeId:2,more:[6]};
+ const U={x:1000000,y:1000000,w:5000000,h:1000000};
+ await assert.rejects(()=>run({expected:{...U,x:1},next:U}),/Selection changed/);
+ await assert.rejects(()=>run({expected:U,next:{...U,w:10}}),/out of range/);
+ await assert.rejects(()=>run({expected:U,next:{...U,x:99999999}}),/outside the slide/);
+ f.calls.length=0;await run({expected:U,next:U});assert.equal(f.calls.length,0,'unchanged: no edit');
+ await run({expected:U,next:{x:2000000,y:1500000,w:5000000,h:1000000}});
+ assert.deepEqual((f.calls.at(-1) as unknown[])[2],[{shapeId:2,expected:{x:1000000,y:1000000,w:2000000,h:1000000},next:{x:2000000,y:1500000,w:2000000,h:1000000}},{shapeId:6,expected:{x:5000000,y:1000000,w:1000000,h:1000000},next:{x:6000000,y:1500000,w:1000000,h:1000000}}]);
+ await run({expected:U,next:{x:1000000,y:1000000,w:2500000,h:500000}});
+ assert.deepEqual(((f.calls.at(-1) as unknown[])[2] as {next:unknown}[]).map(e=>e.next),[{x:1000000,y:1000000,w:1000000,h:500000},{x:3000000,y:1000000,w:500000,h:500000}]);
 });

@@ -124,3 +124,15 @@ export function shapesInRect(shapes:readonly ShapeRef[],size:SlideSize,r:{x0:num
   const l=Math.min(r.x0,r.x1)*size.cx,t=Math.min(r.y0,r.y1)*size.cy,rt=Math.max(r.x0,r.x1)*size.cx,b=Math.max(r.y0,r.y1)*size.cy;
   return selectableShapes(shapes).filter(s=>!!s.bounds&&s.bounds.x>=l&&s.bounds.y>=t&&s.bounds.x+s.bounds.w<=rt&&s.bounds.y+s.bounds.h<=b);
 }
+
+export function unionBox(boxes:readonly Box[]):Box{
+  if(!boxes.length)throw Error('No boxes');
+  const x0=Math.min(...boxes.map(b=>b.x)),y0=Math.min(...boxes.map(b=>b.y)),x1=Math.max(...boxes.map(b=>b.x+b.w)),y1=Math.max(...boxes.map(b=>b.y+b.h));
+  return {x:x0,y:y0,w:x1-x0,h:y1-y0};
+}
+/** Maps every box with the transform that takes the group box `from` onto `to` (translate and scale). */
+export function transformGroup(boxes:readonly Box[],from:Box,to:Box):Box[]{
+  if(!(from.w>0)||!(from.h>0))throw Error('Group has no size');
+  const sx=to.w/from.w,sy=to.h/from.h;
+  return boxes.map(b=>({x:Math.round(to.x+(b.x-from.x)*sx),y:Math.round(to.y+(b.y-from.y)*sy),w:Math.round(b.w*sx),h:Math.round(b.h*sy)}));
+}

@@ -6,9 +6,10 @@ import {textIssue} from './panelModel';
 import type {TextRun} from './editCopy';
 import './panelI18n';
 import {selectShape,getShapeSelection,type ShapeSelection} from './shapeSelection';
-import {stepShape,moveBox,resizeBox,resizeBoxAspect,boxOf,alignBox,alignBoxes,distributeBoxes,ALIGN_MODES,type AlignMode} from './shapeGeometry';
+import {stepShape,moveBox,resizeBox,resizeBoxAspect,boxOf,alignBox,alignBoxes,unionBox,transformGroup,distributeBoxes,ALIGN_MODES,type AlignMode} from './shapeGeometry';
 import {sniffImage,altFromName,decodeBase64,MAX_IMAGE_BASE64} from './imageSniff';
 import {boundsEditIssue,nextShapeId,MIN_SIZE_PT,MAX_SIZE_PT,MAX_SHAPES_PER_SLIDE,MAX_BOX_TEXT,MAX_MULTI_EDIT,ARRANGE_MODES,type ArrangeMode,type ShapeBoundsEdit,type RunFormat,type ShapeRef,type BoundsBox} from './deckPackage';
+const MIN_GROUP_EMU=127000;
 export interface PanelCommandDeps {
  state():{source:string;index:number;busy:boolean;working:Uint8Array|null;runs:TextRun[];slideIds:number[];layouts:{part:string;supported:boolean}[];model:{slides:{id:number;shapes:ShapeRef[]}[];slideSize:{cx:number;cy:number}|null}|null;summary:{slides:number}|null};
  thumbnails():Promise<void>;edit(run:TextRun,text:string):Promise<void>;show(index:number):Promise<void>;
@@ -35,7 +36,7 @@ export function slidesPanelCommandSpecs(d:PanelCommandDeps):CommandSpec[]{
  };
  const applyBoxes=async(slideId:number,shapes:ShapeRef[],next:{x:number;y:number;w:number;h:number}[])=>{
   const edits:ShapeBoundsEdit[]=[];
-  shapes.forEach((sh,i)=>{const from=boxOf(sh.bounds!),n=next[i];if(n.x!==from.x||n.y!==from.y)edits.push({shapeId:sh.id,expected:from,next:n});});
+  shapes.forEach((sh,i)=>{const from=boxOf(sh.bounds!),n=next[i];if(n.x!==from.x||n.y!==from.y||n.w!==from.w||n.h!==from.h)edits.push({shapeId:sh.id,expected:from,next:n});});
   if(edits.length)await d.setMany(slideId,edits);
  };
  const cycle=(delta:1|-1)=>{const s=d.state(),id=s.slideIds[s.index],cur=d.picked();const next=stepShape(shapesOf(),cur&&cur.source===s.source&&cur.slideId===id?cur.shapeId:null,delta);if(next)d.pick({source:s.source,slideId:id,shapeId:next.id});};
@@ -96,6 +97,13 @@ export function slidesPanelCommandSpecs(d:PanelCommandDeps):CommandSpec[]{
    const s=d.state(),id=s.slideIds[s.index],ids=shapesOf().filter(x=>x.parentId===null).map(x=>x.id);
    if(!ids.length)throw expected('This slide has no shapes.');if(ids.length>MAX_MULTI_EDIT)throw expected(`Select at most ${MAX_MULTI_EDIT} shapes.`);
    d.pick({source:s.source,slideId:id,shapeId:ids[0],...(ids.length>1?{more:ids.slice(1)}:{})});}},
+  {id:'slides.transformSelection',title:'Move or resize selected shapes together',category:'Edit',level:'ui',keywords:['move','resize','scale','group','selection','shapes','together'],enabled:available,params:{type:'object',properties:{expected:box,next:box},required:['expected','next'],additionalProperties:false},run:async p=>{
+   const v=p as {expected:BoundsBox;next:BoundsBox},{slideId:sid,shapes,size}=selectedShapes(),boxes=shapes.map(x=>boxOf(x.bounds!)),from=unionBox(boxes);
+   if(from.x!==v.expected.x||from.y!==v.expected.y||from.w!==v.expected.w||from.h!==v.expected.h)throw expected('Selection changed since it was drawn.');
+   const n=v.next;if(n.w<MIN_GROUP_EMU||n.h<MIN_GROUP_EMU||n.w>size.cx*2||n.h>size.cy*2)throw expected('Size is out of range.');
+   if(n.x<-n.w||n.y<-n.h||n.x>size.cx||n.y>size.cy)throw expected('Position is outside the slide.');
+   if(shapes.some(x=>x.kind==='picture')&&Math.abs(n.w*from.h-n.h*from.w)>Math.max(from.w,from.h)*2)throw expected('Pictures keep their aspect ratio.');
+   await applyBoxes(sid,shapes,transformGroup(boxes,from,n));}},
   {id:'slides.alignSelection',title:'Align selected shapes',category:'Edit',level:'ui',keywords:['align','left','right','center','top','middle','bottom','selection','shapes'],enabled:available,params:{type:'object',properties:{mode:{enum:[...ALIGN_MODES]},to:{enum:['slide','selection']}},required:['mode','to'],additionalProperties:false},run:async p=>{
    const v=p as {mode:AlignMode;to:'slide'|'selection'},{slideId:sid,shapes,size}=selectedShapes(),boxes=shapes.map(x=>boxOf(x.bounds!));
    if(v.to==='selection'&&shapes.length<2)throw expected('Select at least two shapes to align them to each other.');
@@ -132,7 +140,10 @@ export function slidesPanelCommandSpecs(d:PanelCommandDeps):CommandSpec[]{
   {id:'slides.nudgeShape',title:'Nudge selected text box',category:'Edit',level:'ui',keywords:['shape','text box','nudge','move','resize','arrow'],enabled:available,params:{type:'object',properties:{mode:{enum:['move','resize']},dxPt:{type:'integer',minimum:-100,maximum:100},dyPt:{type:'integer',minimum:-100,maximum:100}},required:['mode','dxPt','dyPt'],additionalProperties:false},run:async p=>{
    const v=p as {mode:'move'|'resize';dxPt:number;dyPt:number};const s=d.state(),pick=d.picked();
    if(!pick||pick.source!==s.source||s.slideIds[s.index]!==pick.slideId)throw expected('Select a text box first.');
-   if(pick.more?.length)throw expected('Select a single shape to nudge it.');
+   if(pick.more?.length){
+    const {slideId:sid,shapes,size:sz}=selectedShapes(),boxes=shapes.map(x=>boxOf(x.bounds!)),from=unionBox(boxes),dxe=v.dxPt*12700,dye=v.dyPt*12700;
+    const to=v.mode==='move'?moveBox(from,dxe,dye,sz):(shapes.some(x=>x.kind==='picture')?resizeBoxAspect:resizeBox)(from,'se',dxe,dye,sz);
+    await applyBoxes(sid,shapes,transformGroup(boxes,from,to));return;}
    const slide=s.model?.slides.find(x=>x.id===pick.slideId),shape=slide?.shapes.find(x=>x.id===pick.shapeId),size=s.model?.slideSize;
    if(!shape||!size)throw expected('Shape no longer exists.');
    const issue=boundsEditIssue(shape);if(issue)throw expected(`This shape cannot be moved or resized (${issue}).`);

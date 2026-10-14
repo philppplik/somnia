@@ -4,7 +4,7 @@ import {readFileSync,readdirSync} from 'node:fs';
 import {fileURLToPath} from 'node:url';
 import {unzipSync,zipSync,strFromU8,strToU8} from 'fflate';
 import {readDeckModel,readSlidePart,newSlideFromLayout,readLayouts,type ShapeRef} from './deckPackage';
-import {shapesInRect,alignBoxes,distributeBoxes,moveBox,resizeBox,alignBox,resizeBoxAspect,hitTest,containsPoint,overlayRect,limitsOf,stepShape,selectableShapes,rotationDeg} from './shapeGeometry';
+import {unionBox,transformGroup,shapesInRect,alignBoxes,distributeBoxes,moveBox,resizeBox,alignBox,resizeBoxAspect,hitTest,containsPoint,overlayRect,limitsOf,stepShape,selectableShapes,rotationDeg} from './shapeGeometry';
 
 const fx=(n:string)=>new Uint8Array(readFileSync(fileURLToPath(new URL('../../../slides-engine/fixtures/'+n,import.meta.url))));
 const base=fx('independent.pptx');
@@ -154,4 +154,13 @@ test('shapesInRect selects fully enclosed top-level shapes in z-order, in any dr
   assert.deepEqual(shapesInRect(list,size,{x0:0.6,y0:0.6,x1:0,y1:0}).map(s=>s.id),[1,2]);
   assert.deepEqual(shapesInRect(list,size,{x0:0,y0:0,x1:0.15,y1:0.15}).map(s=>s.id),[]);
   assert.deepEqual(shapesInRect(list,size,{x0:NaN,y0:0,x1:1,y1:1}),[]);
+});
+
+test('unionBox and transformGroup translate and scale a group exactly',()=>{
+  const a={x:100,y:100,w:200,h:100},b={x:500,y:300,w:100,h:100};
+  const u=unionBox([a,b]);assert.deepEqual(u,{x:100,y:100,w:500,h:300});
+  assert.deepEqual(transformGroup([a,b],u,{...u,x:150,y:80}),[{...a,x:150,y:80},{...b,x:550,y:280}]);
+  assert.deepEqual(transformGroup([a,b],u,{x:100,y:100,w:1000,h:150}),[{x:100,y:100,w:400,h:50},{x:900,y:200,w:200,h:50}]);
+  assert.deepEqual(transformGroup([a,b],u,u),[a,b]);
+  assert.throws(()=>transformGroup([a],{x:0,y:0,w:0,h:5},u),/no size/);assert.throws(()=>unionBox([]),/No boxes/);
 });

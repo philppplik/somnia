@@ -3,8 +3,8 @@ import {useSlidesSession} from '../../lib/slides/session';
 import {useShapeSelection,type ShapeSelection} from '../../lib/slides/shapeSelection';
 import {useSlidesPanelText} from '../../lib/slides/panelI18n';
 import {commandDispatcher} from '../../lib/commandDispatcher';
-import {shapesInRect,hitTest,limitsOf,overlayRect,moveBox,resizeBox,resizeBoxAspect,boxOf,HANDLES,EMU_PER_PT,type Box,type Handle} from '../../lib/slides/shapeGeometry';
-import {boundsEditIssue,type ShapeRef} from '../../lib/slides/deckPackage';
+import {unionBox,shapesInRect,hitTest,limitsOf,overlayRect,moveBox,resizeBox,resizeBoxAspect,boxOf,HANDLES,EMU_PER_PT,type Box,type Handle} from '../../lib/slides/shapeGeometry';
+import {boundsEditIssue,type ShapeRef,type ShapeBounds} from '../../lib/slides/deckPackage';
 import type {PointerEvent as ReactPointerEvent} from 'react';
 
 /** The selection that is still valid for the current deck and slide, else null. */
@@ -35,7 +35,9 @@ export function SlidesShapeOverlay({image}:{image:RefObject<HTMLImageElement|nul
   const layer=useRef<HTMLDivElement>(null),selBox=useRef<HTMLDivElement>(null),hoverBox=useRef<HTMLDivElement>(null);
   const [,tick]=useState(0);
   const drag=useRef<{aspect:boolean;mode:'move'|Handle;sx:number;sy:number;from:Box;cur:Box;moved:boolean}|null>(null);
-  const multi=!!valid&&valid.more.length>0,editable=!!valid&&!multi&&boundsEditIssue(valid.shape)===null;
+  const group=valid?[valid.shape,...valid.more]:[],multi=group.length>1;
+  const selBounds:ShapeBounds|null=valid?.shape.bounds?(multi&&group.every(x=>x.bounds)?{...unionBox(group.map(x=>boxOf(x.bounds!))),rot:0,flipH:false,flipV:false,source:'slide'}:valid.shape.bounds):null;
+  const editable=!!valid&&group.every(x=>boundsEditIssue(x)===null),aspect=group.some(x=>x.kind==='picture');
   const extras=useRef<HTMLDivElement>(null),marq=useRef<HTMLDivElement>(null);
   const band=useRef<{sx:number;sy:number;x:number;y:number;active:boolean}|null>(null),skipClick=useRef(false);
   const slide=s.model?.slides.find(x=>x.id===s.slideIds[s.index]);
@@ -49,18 +51,18 @@ export function SlidesShapeOverlay({image}:{image:RefObject<HTMLImageElement|nul
   },[image,s.image]);
   // The status line below the slide re-centres the image without resizing it, so re-fit after every render.
   useEffect(()=>{const img=image.current,el=layer.current;if(!img||!el)return;el.style.left=`${img.offsetLeft}px`;el.style.top=`${img.offsetTop}px`;});
-  useEffect(()=>{place(selBox.current,valid?.shape.bounds&&size?overlayRect(valid.shape.bounds,size):null);},[valid?.shape,size,s.image]);
+  useEffect(()=>{place(selBox.current,selBounds&&size?overlayRect(selBounds,size):null);},[valid?.shape,valid?.more,size,s.image]);
   useEffect(()=>{
     const host=extras.current;if(!host)return;host.replaceChildren();
     if(!size)return;
-    for(const sh of valid?.more??[]){if(!sh.bounds)continue;const d=document.createElement('div');d.className='pointer-events-none absolute border-2 border-accent bg-accent-soft';d.dataset.slot='slides-shape-selection-extra';place(d,overlayRect(sh.bounds,size));host.append(d);}
-  },[valid?.more,size,s.image]);
+    for(const sh of multi?group:[]){if(!sh.bounds)continue;const d=document.createElement('div');d.className='pointer-events-none absolute border-2 border-accent bg-accent-soft';d.dataset.slot='slides-shape-selection-extra';place(d,overlayRect(sh.bounds,size));host.append(d);}
+  },[valid?.shape,valid?.more,size,s.image]);
   if(!slide||!size||!s.image||s.presenting||s.busy)return null;
   const run=(id:string,params?:unknown)=>void commandDispatcher.tryRunCommand(id,params,{origin:'ui'});
-  const restore=()=>{drag.current=null;place(selBox.current,valid?.shape.bounds?overlayRect(valid.shape.bounds,size):null);};
+  const restore=()=>{drag.current=null;place(selBox.current,selBounds?overlayRect(selBounds,size):null);};
   const begin=(e:ReactPointerEvent<HTMLElement>,mode:'move'|Handle)=>{
-    if(e.button!==0||!valid?.shape.bounds||!editable)return;e.stopPropagation();e.preventDefault();layer.current?.focus();
-    e.currentTarget.setPointerCapture(e.pointerId);const from=boxOf(valid.shape.bounds);drag.current={aspect:valid.shape.kind==='picture',mode,sx:e.clientX,sy:e.clientY,from,cur:from,moved:false};
+    if(e.button!==0||!selBounds||!editable)return;e.stopPropagation();e.preventDefault();layer.current?.focus();
+    e.currentTarget.setPointerCapture(e.pointerId);const from=boxOf(selBounds);drag.current={aspect,mode,sx:e.clientX,sy:e.clientY,from,cur:from,moved:false};
   };
   const track=(e:ReactPointerEvent<HTMLElement>)=>{
     const d=drag.current;if(!d||!layer.current)return;
@@ -73,7 +75,7 @@ export function SlidesShapeOverlay({image}:{image:RefObject<HTMLImageElement|nul
     const d=drag.current;if(!d||!valid)return;drag.current=null;e.currentTarget.releasePointerCapture?.(e.pointerId);
     const same=d.cur.x===d.from.x&&d.cur.y===d.from.y&&d.cur.w===d.from.w&&d.cur.h===d.from.h;
     if(!d.moved||same){restore();return;}
-    void commandDispatcher.tryRunCommand('slides.setShapeBounds',{source:s.source,slideId:valid.selection.slideId,shapeId:valid.shape.id,expected:d.from,next:d.cur},{origin:'ui'}).then(r=>{if(!r.ok)restore();});
+    void commandDispatcher.tryRunCommand(multi?'slides.transformSelection':'slides.setShapeBounds',multi?{expected:d.from,next:d.cur}:{source:s.source,slideId:valid.selection.slideId,shapeId:valid.shape.id,expected:d.from,next:d.cur},{origin:'ui'}).then(r=>{if(!r.ok)restore();});
   };
   const frac=(e:{clientX:number;clientY:number})=>{const r=layer.current!.getBoundingClientRect();return {x:Math.min(1,Math.max(0,(e.clientX-r.left)/r.width)),y:Math.min(1,Math.max(0,(e.clientY-r.top)/r.height))};};
   const bandDown=(e:ReactPointerEvent<HTMLElement>)=>{if(e.button!==0||drag.current)return;const f=frac(e);band.current={sx:f.x,sy:f.y,x:e.clientX,y:e.clientY,active:false};};
@@ -107,7 +109,7 @@ export function SlidesShapeOverlay({image}:{image:RefObject<HTMLImageElement|nul
     <div ref={extras} className="pointer-events-none absolute inset-0"/>
     <div ref={selBox} hidden data-slot="slides-shape-selection" title={editable?t('slides.shapeDragHint'):undefined} onClick={e=>{e.stopPropagation();if(e.shiftKey&&valid)run('slides.toggleShapeSelection',{source:s.source,slideId:valid.selection.slideId,shapeId:valid.shape.id});}} onPointerDown={e=>begin(e,'move')} onPointerMove={track} onPointerUp={finish} onPointerCancel={restore}
       className={`absolute border-2 border-accent bg-accent-soft ${editable?'cursor-move touch-none':'pointer-events-none'}`}>
-      {editable&&HANDLES.filter(h=>valid?.shape.kind!=='picture'||h.length===2).map(h=><span key={h} role="presentation" data-handle={h} aria-label={t('slides.resizeHandle')} onPointerDown={e=>begin(e,h)} className={`absolute size-2.5 -translate-x-1/2 -translate-y-1/2 border border-accent bg-panel ${HANDLE_POS[h]}`}/>)}
+      {editable&&HANDLES.filter(h=>!aspect||h.length===2).map(h=><span key={h} role="presentation" data-handle={h} aria-label={t('slides.resizeHandle')} onPointerDown={e=>begin(e,h)} className={`absolute size-2.5 -translate-x-1/2 -translate-y-1/2 border border-accent bg-panel ${HANDLE_POS[h]}`}/>)}
     </div>
   </div>;
 }

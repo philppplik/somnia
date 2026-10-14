@@ -16,7 +16,7 @@ included; the `source` column names the owner. Dynamic sources that stay outside
 
 Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, fr, pt-BR); the gate enforces it.
 
-437 commands. Categories: Edit, Help, Insert, Project, Tools, View.
+445 commands. Categories: Edit, Help, Insert, Project, Tools, View.
 
 | id | title | category | source | shortcut |
 | --- | --- | --- | --- | --- |
@@ -335,7 +335,11 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `shell.rail.unpin` | Move rail icon to overflow | View | core |  |
 | `sidebar.toggle` | Toggle sidebar | View | core | `Mod+B` |
 | `slides.addTextBox` | Add text box | Edit | slides |  |
+| `slides.alignSelection` | Align selected shapes | Edit | slides |  |
+| `slides.alignShape` | Align shape to slide | Edit | slides |  |
+| `slides.arrangeShapes` | Arrange selected shapes | Edit | slides |  |
 | `slides.deleteSlide` | Delete slide | Edit | slides |  |
+| `slides.distributeSelection` | Distribute selected shapes evenly | Edit | slides |  |
 | `slides.duplicateSlide` | Duplicate slide | Edit | slides |  |
 | `slides.editText` | Apply slide text | Edit | slides |  |
 | `slides.formatText` | Format text box text | Edit | slides |  |
@@ -354,12 +358,16 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `slides.removeTextBox` | Remove text box | Edit | slides |  |
 | `slides.replaceImage` | Replace image | Edit | slides |  |
 | `slides.saveCopy` | Save presentation copy | Project | slides |  |
+| `slides.selectAllShapes` | Select all shapes | View | slides |  |
 | `slides.selectNextShape` | Select next shape | View | slides |  |
 | `slides.selectPreviousShape` | Select previous shape | View | slides |  |
 | `slides.selectShape` | Select shape | View | slides |  |
+| `slides.selectShapes` | Select shapes | View | slides |  |
 | `slides.selectText` | Select slide text | View | slides |  |
 | `slides.setShapeBounds` | Move or resize text box | Edit | slides |  |
 | `slides.showSlide` | Show slide | View | slides |  |
+| `slides.toggleShapeSelection` | Add or remove shape from selection | View | slides |  |
+| `slides.transformSelection` | Move or resize selected shapes together | Edit | slides |  |
 | `slides.undo` | Undo slide text | Edit | slides |  |
 | `sound.clip.activate` | Activate audio clip | View | sound |  |
 | `sound.export` | Export audio WAV copy | Project | sound |  |

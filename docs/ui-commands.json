@@ -3503,6 +3503,61 @@
       "hasEnabled": true
     },
     {
+      "id": "slides.alignSelection",
+      "title": "Align selected shapes",
+      "category": "Edit",
+      "source": "slides",
+      "keywords": [
+        "align",
+        "bottom",
+        "center",
+        "left",
+        "middle",
+        "right",
+        "selection",
+        "shapes",
+        "top"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "slides.alignShape",
+      "title": "Align shape to slide",
+      "category": "Edit",
+      "source": "slides",
+      "keywords": [
+        "align",
+        "bottom",
+        "center",
+        "left",
+        "middle",
+        "picture",
+        "position",
+        "right",
+        "shape",
+        "top"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "slides.arrangeShapes",
+      "title": "Arrange selected shapes",
+      "category": "Edit",
+      "source": "slides",
+      "keywords": [
+        "arrange",
+        "back",
+        "backward",
+        "forward",
+        "front",
+        "layer",
+        "order",
+        "stack",
+        "z-order"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "slides.deleteSlide",
       "title": "Delete slide",
       "category": "Edit",
@@ -3510,6 +3565,22 @@
       "keywords": [
         "remove",
         "slide"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "slides.distributeSelection",
+      "title": "Distribute selected shapes evenly",
+      "category": "Edit",
+      "source": "slides",
+      "keywords": [
+        "distribute",
+        "evenly",
+        "horizontal",
+        "selection",
+        "shapes",
+        "space",
+        "vertical"
       ],
       "hasEnabled": true
     },
@@ -3713,6 +3784,19 @@
       "hasEnabled": true
     },
     {
+      "id": "slides.selectAllShapes",
+      "title": "Select all shapes",
+      "category": "View",
+      "source": "slides",
+      "keywords": [
+        "all",
+        "object",
+        "select",
+        "shape"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "slides.selectNextShape",
       "title": "Select next shape",
       "category": "View",
@@ -3743,6 +3827,20 @@
       "category": "View",
       "source": "slides",
       "keywords": [
+        "object",
+        "select",
+        "shape"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "slides.selectShapes",
+      "title": "Select shapes",
+      "category": "View",
+      "source": "slides",
+      "keywords": [
+        "marquee",
+        "multiple",
         "object",
         "select",
         "shape"
@@ -3781,6 +3879,36 @@
         "navigate",
         "page",
         "slide"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "slides.toggleShapeSelection",
+      "title": "Add or remove shape from selection",
+      "category": "View",
+      "source": "slides",
+      "keywords": [
+        "multiple",
+        "object",
+        "select",
+        "shape",
+        "shift"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "slides.transformSelection",
+      "title": "Move or resize selected shapes together",
+      "category": "Edit",
+      "source": "slides",
+      "keywords": [
+        "group",
+        "move",
+        "resize",
+        "scale",
+        "selection",
+        "shapes",
+        "together"
       ],
       "hasEnabled": true
     },
