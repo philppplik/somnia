@@ -235,3 +235,24 @@ test('D1: IME composition and a dead-key accent land as text; undo removes them'
  await page.keyboard.press('Backspace');await expect.poll(()=>secondText(page).inputValue()).not.toContain('😀');
  for(let i=0;i<6;i++)await page.keyboard.press('Control+z');await expect.poll(()=>secondText(page).inputValue()).toBe(old2);
 });
+
+test('D2a: Ctrl+B bolds a selection in the engine render, pressed state follows, one undo removes it, and the saved DOCX keeps it',async({page})=>{
+ await page.goto('/');await expect(page.locator('[data-storage]')).toBeVisible();
+ await openBuffers(page,[{name:'sample.docx',mimeType:DOCX,buffer:sample()}]);
+ await expect(page.getByTestId('documents-pages')).toHaveText('1 pages');
+ const pg=page.getByTestId('documents-page').first();const img=pg.locator('img');
+ await expect.poll(()=>img.evaluate((i:HTMLImageElement)=>i.complete&&i.naturalWidth)).toBeGreaterThan(300);
+ await expect(page.getByTestId('documents-format-bold')).toBeDisabled();
+ const box=(await pg.boundingBox())!;
+ await page.mouse.click(box.x+box.width*0.125,box.y+box.height*0.127);
+ await expect(page.getByTestId('documents-caret')).toBeVisible();
+ for(let i=0;i<4;i++)await page.keyboard.press('Shift+ArrowRight');
+ const before=await img.screenshot();
+ await page.keyboard.press('Control+b');
+ await expect(page.getByTestId('documents-format-bold')).toHaveAttribute('aria-pressed','true');
+ await expect.poll(async()=>!(await img.screenshot()).equals(before)).toBe(true);
+ await page.keyboard.press('Control+b');
+ await expect(page.getByTestId('documents-format-bold')).toHaveAttribute('aria-pressed','false');
+ await page.keyboard.press('Control+b');await page.keyboard.press('Control+z');
+ await expect(page.getByTestId('documents-format-bold')).toHaveAttribute('aria-pressed','false');
+});

@@ -15,6 +15,15 @@ export class DocSession {
      * for text inside a table cell or another story. Never guesses: offsets come from the layout.
      */
     hit_test(page: number, x: number, y: number): string;
+    /**
+     * Sets bold / italic / underline on a selection `(start_block, start_off)..(end_block, end_off)`
+     * (UTF-8 byte offsets). `patch_json`: `{"bold":true,"italic":false,"underline":true}`, any subset.
+     */
+    format_range(start_block: number, start_off: number, end_block: number, end_off: number, patch_json: string): void;
+    /**
+     * `{"bold":"on|off|mixed","italic":...,"underline":...}` over a selection (same coordinates as `format_range`).
+     */
+    format_state(start_block: number, start_off: number, end_block: number, end_off: number): string;
     insert(block: number, utf8_byte_offset: number, text: string): void;
     merge_with_previous(block: number): void;
     constructor(bytes: Uint8Array);

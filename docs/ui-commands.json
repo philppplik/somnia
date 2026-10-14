@@ -2565,6 +2565,39 @@
       "hasEnabled": true
     },
     {
+      "id": "documents.toggleBold",
+      "title": "Toggle bold",
+      "category": "View",
+      "source": "documents",
+      "keywords": [
+        "document",
+        "docx"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "documents.toggleItalic",
+      "title": "Toggle italic",
+      "category": "View",
+      "source": "documents",
+      "keywords": [
+        "document",
+        "docx"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "documents.toggleUnderline",
+      "title": "Toggle underline",
+      "category": "View",
+      "source": "documents",
+      "keywords": [
+        "document",
+        "docx"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "documents.undo",
       "title": "Undo document text edit",
       "category": "View",

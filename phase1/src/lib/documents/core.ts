@@ -1,7 +1,14 @@
 import type {DocumentsRequest,DocumentsResponse,OpenedDocument} from './protocol';
-import {MAX_DOCX_BYTES,MAX_SCALE,MIN_SCALE} from './protocol';
+import {MAX_DOCX_BYTES,MAX_FORMAT_BLOCKS,MAX_SCALE,MIN_SCALE} from './protocol';
+const FORMAT_KEYS=['bold','italic','underline'];
+const posOk=(p:{block:number;off:number})=>Number.isInteger(p.block)&&p.block>=0&&Number.isInteger(p.off)&&p.off>=0;
+function checkSpan(start:{block:number;off:number},end:{block:number;off:number}){
+ if(!posOk(start)||!posOk(end))throw new Error('Selection is not valid.');
+ if(end.block<start.block||(end.block===start.block&&end.off<start.off))throw new Error('Selection end is before its start.');
+ if(end.block-start.block>=MAX_FORMAT_BLOCKS)throw new Error('Selection spans too many paragraphs.');
+}
 /** The slice of the wasm DocSession the host uses. Lets tests run the real engine without a Worker. */
-export interface DocSessionLike{free():void;blocks():string;replace_ranges(block:number,hunksJson:string):void;insert(block:number,utf8Offset:number,text:string):void;page_info():string;paginate():number;render_png(page:number,scale:number):Uint8Array;save():Uint8Array;text():string;split_block(block:number,off:number):void;merge_with_previous(block:number):void;snapshot():number;restore(snap:number):void;hit_test(page:number,x:number,y:number):string;caret_at(block:number,off:number):string;selection_rects(block:number,a:number,b:number):string}
+export interface DocSessionLike{free():void;blocks():string;replace_ranges(block:number,hunksJson:string):void;format_range(sb:number,so:number,eb:number,eo:number,patchJson:string):void;format_state(sb:number,so:number,eb:number,eo:number):string;insert(block:number,utf8Offset:number,text:string):void;page_info():string;paginate():number;render_png(page:number,scale:number):Uint8Array;save():Uint8Array;text():string;split_block(block:number,off:number):void;merge_with_previous(block:number):void;snapshot():number;restore(snap:number):void;hit_test(page:number,x:number,y:number):string;caret_at(block:number,off:number):string;selection_rects(block:number,a:number,b:number):string}
 export interface DocSessionCtor{new(bytes:Uint8Array):DocSessionLike}
 const ab=(u:Uint8Array):ArrayBuffer=>u.byteOffset===0&&u.byteLength===u.buffer.byteLength?u.buffer as ArrayBuffer:u.slice().buffer as ArrayBuffer;
 /** Owns one open session. Every failure leaves the previous state usable and never keeps a freed pointer. */
@@ -43,6 +50,13 @@ export class DocumentsCore{
     const s=this.need();const [,editMs]=this.timed(()=>req.kind==='split'?s.split_block(req.block,req.off):req.kind==='merge'?s.merge_with_previous(req.block):s.restore(req.snap));const [pages,layoutMs]=this.timed(()=>s.paginate());
     return{res:{id:req.id,ok:true,kind:'edited',document:this.describe(editMs,layoutMs,pages)},transfer:[]};
    }
+   if(req.kind==='format'){
+    checkSpan(req.start,req.end);
+    const keys=Object.keys(req.patch);if(!keys.length||keys.some(k=>!FORMAT_KEYS.includes(k)||typeof (req.patch as Record<string,unknown>)[k]!=='boolean'))throw new Error('Format change is not valid.');
+    const s=this.need();const [,editMs]=this.timed(()=>s.format_range(req.start.block,req.start.off,req.end.block,req.end.off,JSON.stringify(req.patch)));const [pages,layoutMs]=this.timed(()=>s.paginate());
+    return{res:{id:req.id,ok:true,kind:'edited',document:this.describe(editMs,layoutMs,pages)},transfer:[]};
+   }
+   if(req.kind==='formatState'){checkSpan(req.start,req.end);return{res:{id:req.id,ok:true,kind:'formatState',state:JSON.parse(this.need().format_state(req.start.block,req.start.off,req.end.block,req.end.off))},transfer:[]};}
    if(req.kind==='snapshot')return{res:{id:req.id,ok:true,kind:'snapshot',snap:this.need().snapshot()},transfer:[]};
    if(req.kind==='hit')return{res:{id:req.id,ok:true,kind:'hit',hit:JSON.parse(this.need().hit_test(req.page,req.x,req.y))},transfer:[]};
    if(req.kind==='caret')return{res:{id:req.id,ok:true,kind:'caret',caret:JSON.parse(this.need().caret_at(req.block,req.off))},transfer:[]};

@@ -40,6 +40,8 @@ export class DocumentsEngine{
  async replace(e:import('./edit').TextEdit):Promise<OpenedDocument>{return(await this.call('edited',id=>({id,kind:'replace',block:e.block,hunks:e.hunks}))).document;}
  async split(block:number,off:number):Promise<OpenedDocument>{return(await this.call('edited',id=>({id,kind:'split',block,off}))).document;}
  async merge(block:number):Promise<OpenedDocument>{return(await this.call('edited',id=>({id,kind:'merge',block}))).document;}
+ async format(start:import('./protocol').DocPos,end:import('./protocol').DocPos,patch:import('./protocol').FormatPatch):Promise<OpenedDocument>{return(await this.call('edited',id=>({id,kind:'format',start,end,patch}))).document;}
+ async formatState(start:import('./protocol').DocPos,end:import('./protocol').DocPos):Promise<import('./protocol').FormatState>{return(await this.call('formatState',id=>({id,kind:'formatState',start,end}))).state;}
  async snapshot():Promise<number>{return(await this.call('snapshot',id=>({id,kind:'snapshot'}))).snap;}
  async restore(snap:number):Promise<OpenedDocument>{return(await this.call('edited',id=>({id,kind:'restore',snap}))).document;}
  async hit(page:number,x:number,y:number){return(await this.call('hit',id=>({id,kind:'hit',page,x,y}))).hit;}

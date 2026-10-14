@@ -4,10 +4,10 @@ import {readFileSync} from 'node:fs';
 import {applyEdit,type TextEdit} from './edit';
 import type {DocumentsEngine} from './engine';
 import {getDocumentsState,patchDocuments} from './store';
-import {deleteAtCaret,moveCaret,MAX_INSERT_LINES,pasteText,redoEdit,resetSessionsForTest,selectAllText,selectedText,setSessionDeps,splitAtCaret,switchDocument,typeText,undoEdit,syncGeometry} from './session';
+import {toggleFormat,deleteAtCaret,moveCaret,MAX_INSERT_LINES,pasteText,redoEdit,resetSessionsForTest,selectAllText,selectedText,setSessionDeps,splitAtCaret,switchDocument,typeText,undoEdit,syncGeometry} from './session';
 import {stepBoundary,wordBoundary} from './text';
 const docx=new Uint8Array(readFileSync(new URL('../../../test/documents/sample.docx',import.meta.url)));
-type Row={text:string;locked?:boolean};
+type Row={text:string;locked?:boolean;f?:Set<string>[]};
 /** Paragraph model of the engine: replace/split/merge/snapshot/restore with the same UTF-8 offset rules. */
 class Doc{
  rows:Row[];snaps=new Map<number,Row[]>();n=0;failAt=-1;calls=0;hits:(page:number,x:number,y:number)=>{block:number|null;off?:number;editable:boolean}|null=()=>null;
@@ -17,11 +17,21 @@ class Doc{
  private tick(){if(++this.calls===this.failAt)throw new Error('engine failure');}
  async init(){return {} as never;}async open(){return this.doc();}
  async blocks(){return this.rows.map((r,i)=>r.locked?{index:i,kind:'table' as const,editable:false}:{index:i,kind:'para' as const,editable:true,text:r.text});}
- async replace(e:TextEdit){this.tick();this.rows[e.block]={...this.rows[e.block],text:applyEdit(this.rows[e.block].text,e)};return this.doc();}
+ async replace(e:TextEdit){this.tick();const old=this.flags(e.block).slice();const h=e.hunks[0];this.rows[e.block]={...this.rows[e.block],text:applyEdit(this.rows[e.block].text,e)};this.rows[e.block].f=[...old.slice(0,h.start),...[...h.text].map(()=>new Set<string>()),...old.slice(h.end)];return this.doc();}
  async split(b:number,off:number){this.tick();const t=this.rows[b].text;const enc=new TextEncoder(),dec=new TextDecoder();const u=enc.encode(t);this.rows.splice(b,1,{text:dec.decode(u.slice(0,off))},{text:dec.decode(u.slice(off))});return this.doc();}
  async merge(b:number){this.tick();this.rows.splice(b-1,2,{text:this.rows[b-1].text+this.rows[b].text});return this.doc();}
- async snapshot(){const id=++this.n;this.snaps.set(id,this.rows.map(r=>({...r})));return id;}
- async restore(id:number){this.rows=this.snaps.get(id)!.map(r=>({...r}));return this.doc();}
+ /** ASCII-only character flags (b/i/u per char) so format tests can inspect results. */
+ flags(i:number){const r=this.rows[i];while((r.f??=[]).length<r.text.length)r.f.push(new Set());r.f.length=r.text.length;return r.f;}
+ async format(s:{block:number;off:number},e:{block:number;off:number},patch:Record<string,boolean>){
+  this.tick();const keys=Object.keys(patch);if(!keys.length)throw new Error('bad');
+  for(let b=s.block;b<=e.block;b++){if(this.rows[b].locked)throw new Error('table in span');}
+  for(let b=s.block;b<=e.block;b++){const f=this.flags(b);const lo=b===s.block?s.off:0,hi=b===e.block?e.off:f.length;for(let k=lo;k<hi;k++)for(const p of keys)patch[p]?f[k].add(p):f[k].delete(p);}
+  return this.doc();}
+ async formatState(s:{block:number;off:number},e:{block:number;off:number}){
+  const out:Record<string,string>={};for(const p of ['bold','italic','underline']){let on=0,off=0;for(let b=s.block;b<=e.block;b++){const f=this.flags(b);const lo=b===s.block?s.off:0,hi=b===e.block?e.off:f.length;for(let k=lo;k<hi;k++)f[k].has(p)?on++:off++;}out[p]=on&&off?'mixed':on?'on':'off';}
+  return out as never;}
+ async snapshot(){const id=++this.n;this.snaps.set(id,this.rows.map(r=>({...r,f:r.f?.map(x=>new Set(x))})));return id;}
+ async restore(id:number){this.rows=this.snaps.get(id)!.map(r=>({...r,f:r.f?.map(x=>new Set(x))}));return this.doc();}
  async hit(p:number,x:number,y:number){return this.hits(p,x,y);}async caret(){return null;}async rects(b:number,a:number,z:number){return[[0,b,a,z,1]] as never;}
  async save(){return docx;}dispose(){}
  texts(){return this.rows.map(r=>r.text);}
@@ -127,4 +137,36 @@ test('Ctrl+Home/End jump to the first and last editable paragraph; Shift extends
 test('selection geometry is requested per paragraph for a multi-paragraph selection',async()=>{
  await open(['abc','def','ghi']);at(2,2,{block:0,off:1});await syncGeometry();const r=getDocumentsState().selRects;
  assert.deepEqual(r.map(x=>[x[1],x[2],x[3]]),[[0,1,3],[1,0,3],[2,0,2]]);
+});
+
+const has=(b:number,k:number,p:string)=>d.flags(b)[k].has(p);
+test('Ctrl+B on a mixed selection bolds everything; on an all-bold selection it removes it; each is one undo step',async()=>{
+ await open(['hello world']);d.flags(0)[0].add('bold');at(0,5,{block:0,off:0});await syncGeometry();
+ assert.equal(getDocumentsState().format?.bold,'mixed');
+ await toggleFormat('bold');assert.ok([0,1,2,3,4].every(k=>has(0,k,'bold')));assert.equal(has(0,5,'bold'),false);
+ assert.deepEqual(getDocumentsState().caret,{block:0,anchor:0,head:5});await syncGeometry();assert.equal(getDocumentsState().format?.bold,'on');
+ await toggleFormat('bold');assert.ok([0,1,2,3,4].every(k=>!has(0,k,'bold')));
+ await undoEdit();assert.ok([0,1,2,3,4].every(k=>has(0,k,'bold')));await undoEdit();assert.equal(has(0,1,'bold'),false);assert.equal(has(0,0,'bold'),true);
+});
+test('formatting across paragraphs is atomic, and italic/underline are independent',async()=>{
+ await open(['abc','def','ghi']);at(2,2,{block:0,off:1});await toggleFormat('italic');await toggleFormat('underline');
+ assert.ok(has(0,1,'italic')&&has(1,1,'italic')&&has(2,1,'italic')&&!has(0,0,'italic')&&!has(2,2,'italic')&&has(1,0,'underline'));
+ assert.equal(has(1,0,'bold'),false);
+});
+test('a table inside the span is refused and nothing is formatted',async()=>{
+ await open(['ab',{text:'',locked:true},'cd']);patchDocuments({caret:{block:2,head:1,anchor:0,anchorBlock:0}});
+ await toggleFormat('bold');assert.ok(getDocumentsState().editError);assert.equal(has(0,0,'bold'),false);assert.equal(getDocumentsState().canUndo,false);
+});
+test('an engine failure while formatting restores the paragraphs and records no undo step',async()=>{
+ await open(['abc','def']);at(1,2,{block:0,off:0});d.failAt=d.calls+1;await toggleFormat('bold');
+ assert.equal(getDocumentsState().canUndo,false);assert.ok(getDocumentsState().editError);assert.equal(has(0,0,'bold'),false);
+});
+test('a collapsed caret holds the choice for the next typed text only, in one undo step',async()=>{
+ await open(['ab']);at(0,1);await toggleFormat('bold');assert.equal(getDocumentsState().pendingFormat?.patch.bold,true);assert.equal(d.texts()[0],'ab');
+ await typeText('XY');assert.equal(d.texts()[0],'aXYb');assert.ok(has(0,1,'bold')&&has(0,2,'bold')&&!has(0,0,'bold')&&!has(0,3,'bold'));
+ await undoEdit();assert.equal(d.texts()[0],'ab');
+});
+test('moving the caret drops the held format',async()=>{
+ await open(['abcd']);at(0,1);await toggleFormat('italic');at(0,3);await syncGeometry();assert.equal(getDocumentsState().pendingFormat,null);
+ await typeText('Z');assert.equal(has(0,3,'italic'),false);
 });

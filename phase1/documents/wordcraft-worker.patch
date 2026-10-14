@@ -46,7 +46,7 @@ new file mode 100644
 index 0000000..5b80b79
 --- /dev/null
 +++ b/crates/somnia-worker/src/lib.rs
-@@ -0,0 +1,531 @@
+@@ -0,0 +1,700 @@
 +//! Experimental headless adapter. No DOM, egui, filesystem or UI thread access.
 +use wasm_bindgen::prelude::*;
 +use std::sync::Arc;
@@ -193,6 +193,123 @@ index 0000000..5b80b79
 +        self.pages = DocLayout::default();
 +        Ok(())
 +    }
++    /// A paragraph whose text can be formatted by byte range: not a table, no inline objects.
++    fn fmt_para(&self, block: usize) -> Result<&wordcraft_doc::Paragraph, String> {
++        match self.doc.body.get(block).map(|b| &**b) {
++            None => Err(format!("no block {block}")),
++            Some(Block::Table(_)) => Err(format!("block {block} is a table, not a paragraph")),
++            Some(Block::Para(p)) if p.text.contains(OBJ) || !p.objects.is_empty() => {
++                Err(format!("paragraph {block} contains inline objects and cannot be formatted as text"))
++            }
++            Some(Block::Para(p)) => Ok(p),
++        }
++    }
++    /// Non-empty per-paragraph byte ranges `(block, start, end)` covered by a selection that starts at
++    /// `(sb, so)` and ends at `(eb, eo)`. Every paragraph in the span must be formattable and every offset
++    /// a character boundary, otherwise nothing is returned (callers then change nothing).
++    fn span_ranges(&self, sb: usize, so: usize, eb: usize, eo: usize) -> Result<Vec<(usize, usize, usize)>, String> {
++        if eb < sb || (eb == sb && eo < so) {
++            return Err("selection end is before its start".into());
++        }
++        if eb - sb >= 2000 {
++            return Err("selection spans too many paragraphs".into());
++        }
++        let mut out = Vec::new();
++        for b in sb..=eb {
++            let p = self.fmt_para(b)?;
++            let start = if b == sb { so } else { 0 };
++            let end = if b == eb { eo } else { p.text.len() };
++            for off in [start, end] {
++                if off > p.text.len() || !p.text.is_char_boundary(off) {
++                    return Err(format!("offset {off} is not a character boundary inside paragraph {b}"));
++                }
++            }
++            if start < end {
++                out.push((b, start, end));
++            }
++        }
++        Ok(out)
++    }
++    /// Sets bold / italic / underline (each `true` or `false`) on a selection. The patch is a JSON object
++    /// such as `{"bold":true}`; unknown or non-boolean fields are refused. All paragraphs are changed on
++    /// clones and committed together, so a failure leaves the document unchanged.
++    fn do_format(&mut self, sb: usize, so: usize, eb: usize, eo: usize, patch_json: &str) -> Result<(), String> {
++        let v: serde_json::Value = serde_json::from_str(patch_json).map_err(|e| format!("bad format patch: {e}"))?;
++        let obj = v.as_object().ok_or_else(|| "format patch must be an object".to_string())?;
++        let mut bold: Option<bool> = None;
++        let mut italic: Option<bool> = None;
++        let mut underline: Option<wordcraft_doc::props::Underline> = None;
++        for (k, val) in obj {
++            let flag = val.as_bool().ok_or_else(|| format!("format field {k} must be true or false"))?;
++            match k.as_str() {
++                "bold" => bold = Some(flag),
++                "italic" => italic = Some(flag),
++                "underline" => {
++                    underline = Some(if flag { wordcraft_doc::props::Underline::Single } else { wordcraft_doc::props::Underline::None })
++                }
++                _ => return Err(format!("unknown format field {k}")),
++            }
++        }
++        if obj.is_empty() {
++            return Ok(());
++        }
++        let ranges = self.span_ranges(sb, so, eb, eo)?;
++        let mut done: Vec<(usize, wordcraft_doc::Paragraph)> = Vec::with_capacity(ranges.len());
++        for (b, start, end) in ranges {
++            let mut p = self.fmt_para(b)?.clone();
++            p.format(start, end, &|cp: &mut CharProps| {
++                if let Some(v) = bold {
++                    cp.bold = Some(v);
++                }
++                if let Some(v) = italic {
++                    cp.italic = Some(v);
++                }
++                if let Some(v) = underline {
++                    cp.underline = Some(v);
++                }
++            })
++            .map_err(|e| e.to_string())?;
++            done.push((b, p));
++        }
++        for (b, p) in done {
++            self.doc.body[b] = Arc::new(Block::Para(p));
++        }
++        self.pages = DocLayout::default();
++        Ok(())
++    }
++    /// Effective (style + direct) bold / italic / underline over a selection, each `"on"`, `"off"` or
++    /// `"mixed"`. A collapsed selection reports what typing at that point would get.
++    fn do_format_state(&self, sb: usize, so: usize, eb: usize, eo: usize) -> Result<String, String> {
++        let mut seen: Vec<(bool, bool, bool)> = Vec::new();
++        if sb == eb && so == eo {
++            let p = self.fmt_para(sb)?;
++            if so > p.text.len() || !p.text.is_char_boundary(so) {
++                return Err(format!("offset {so} is not a character boundary inside paragraph {sb}"));
++            }
++            let rc = self.doc.styles.resolve_char(p.props.style.as_deref(), p.props_at(so));
++            seen.push((rc.bold, rc.italic, rc.underline != wordcraft_doc::props::Underline::None));
++        } else {
++            for (b, start, end) in self.span_ranges(sb, so, eb, eo)? {
++                let p = self.fmt_para(b)?;
++                for (r, cp) in p.run_ranges() {
++                    if r.start < end && r.end > start {
++                        let rc = self.doc.styles.resolve_char(p.props.style.as_deref(), cp);
++                        seen.push((rc.bold, rc.italic, rc.underline != wordcraft_doc::props::Underline::None));
++                    }
++                }
++            }
++        }
++        fn tri(seen: &[(bool, bool, bool)], f: impl Fn(&(bool, bool, bool)) -> bool) -> &'static str {
++            if !seen.is_empty() && seen.iter().all(|x| f(x)) {
++                "on"
++            } else if seen.iter().any(|x| f(x)) {
++                "mixed"
++            } else {
++                "off"
++            }
++        }
++        Ok(serde_json::json!({"bold": tri(&seen, |x| x.0), "italic": tri(&seen, |x| x.1), "underline": tri(&seen, |x| x.2)}).to_string())
++    }
 +    fn do_replace(&mut self, block: usize, start: usize, end: usize, text: &str) -> Result<(), String> {
 +        self.do_replace_many(block, &[(start, end, text.to_string())])
 +    }
@@ -241,6 +358,15 @@ index 0000000..5b80b79
 +            .map(|(pg, r)| serde_json::json!([pg, r.x, r.y, r.w, r.h]))
 +            .collect();
 +        serde_json::Value::Array(r).to_string()
++    }
++    /// Sets bold / italic / underline on a selection `(start_block, start_off)..(end_block, end_off)`
++    /// (UTF-8 byte offsets). `patch_json`: `{"bold":true,"italic":false,"underline":true}`, any subset.
++    pub fn format_range(&mut self, start_block: usize, start_off: usize, end_block: usize, end_off: usize, patch_json: &str) -> Result<(), JsValue> {
++        self.do_format(start_block, start_off, end_block, end_off, patch_json).map_err(|e| JsValue::from_str(&e))
++    }
++    /// `{"bold":"on|off|mixed","italic":...,"underline":...}` over a selection (same coordinates as `format_range`).
++    pub fn format_state(&self, start_block: usize, start_off: usize, end_block: usize, end_off: usize) -> Result<String, JsValue> {
++        self.do_format_state(start_block, start_off, end_block, end_off).map_err(|e| JsValue::from_str(&e))
 +    }
 +    pub fn split_block(&mut self, block: usize, utf8_off: usize) -> Result<(), JsValue> {
 +        self.do_split(block, utf8_off).map_err(|e| JsValue::from_str(&e))
@@ -351,6 +477,49 @@ index 0000000..5b80b79
 +    fn run_props(s: &DocSession, block: usize) -> Vec<(usize, bool)> {
 +        let Block::Para(p) = &*s.doc.body[block] else { panic!() };
 +        p.runs.iter().map(|r| (r.len, r.props.bold.unwrap_or(false))).collect()
++    }
++    fn state(s: &DocSession, sb: usize, so: usize, eb: usize, eo: usize) -> serde_json::Value {
++        serde_json::from_str(&s.do_format_state(sb, so, eb, eo).unwrap()).unwrap()
++    }
++    #[test]
++    fn format_range_sets_state_roundtrips_and_is_atomic() {
++        let mut s = DocSession::from_bytes(FIXTURE).unwrap();
++        let n = match &*s.doc.body[0] { Block::Para(p) => p.text.len(), _ => panic!() };
++        assert!(n > 2);
++        s.do_format(0, 0, 0, n, r#"{"italic":false}"#).unwrap();
++        assert_eq!(state(&s, 0, 0, 0, n)["italic"], "off");
++        s.do_format(0, 0, 0, 2, r#"{"italic":true,"underline":true}"#).unwrap();
++        assert_eq!(state(&s, 0, 0, 0, 2)["italic"], "on");
++        assert_eq!(state(&s, 0, 0, 0, 2)["underline"], "on");
++        assert_eq!(state(&s, 0, 0, 0, n)["italic"], "mixed");
++        assert_eq!(state(&s, 0, 2, 0, n)["italic"], "off");
++        let text = s.text();
++        let saved = wordcraft_docx::write(&s.doc).unwrap();
++        let again = DocSession::from_bytes(&saved).unwrap();
++        assert_eq!(again.text(), text);
++        assert_eq!(state(&again, 0, 0, 0, 2)["italic"], "on");
++        assert_eq!(state(&again, 0, 0, 0, n)["italic"], "mixed");
++        // Invalid requests change nothing.
++        let before = wordcraft_docx::write(&s.doc).unwrap();
++        assert!(s.do_format(0, 0, 0, n + 1, r#"{"bold":true}"#).is_err());
++        assert!(s.do_format(999, 0, 999, 1, r#"{"bold":true}"#).is_err());
++        assert!(s.do_format(0, 3, 0, 1, r#"{"bold":true}"#).is_err());
++        assert!(s.do_format(0, 0, 0, 2, r#"{"bold":"yes"}"#).is_err());
++        assert!(s.do_format(0, 0, 0, 2, r#"{"colour":true}"#).is_err());
++        assert!(s.do_format(0, 0, 0, 2, "not json").is_err());
++        assert!(s.do_format_state(999, 0, 999, 0).is_err());
++        assert_eq!(wordcraft_docx::write(&s.doc).unwrap(), before);
++    }
++    #[test]
++    fn format_range_refuses_a_span_with_a_table_without_partial_change() {
++        let mut s = DocSession::from_bytes(FIXTURE).unwrap();
++        let v: serde_json::Value = serde_json::from_str(&s.block_list()).unwrap();
++        let t = v.as_array().unwrap().iter().position(|b| b["kind"] == "table").unwrap();
++        assert!(t > 0);
++        let before = wordcraft_docx::write(&s.doc).unwrap();
++        assert!(s.do_format(0, 0, t, 0, r#"{"bold":true}"#).is_err());
++        assert!(s.do_format_state(0, 0, t, 0).is_err());
++        assert_eq!(wordcraft_docx::write(&s.doc).unwrap(), before);
 +    }
 +    #[test]
 +    fn multi_hunk_edit_is_atomic_and_keeps_untouched_runs() {

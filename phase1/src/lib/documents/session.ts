@@ -204,8 +204,34 @@ const clean=(text:string)=>text.replace(/\r\n?/g,'\n').replace(/\uFFFC/g,'');
 /** Types text at the caret or over the selection. Line breaks become spaces (typed input); use pasteText for multi-line text. */
 export const typeText=(text:string)=>run(async()=>{
  const c=getDocumentsState().caret;if(!c)return;const t=clean(text).replace(/\n+/g,' ');if(!t)return;if(t.length>MAX_INSERT_CHARS)throw new Error('The text is too large to insert at once.');const n=norm(c);goalX=null;
+ const pf=getDocumentsState().pendingFormat;
+ if(pf&&cmp(n.s,n.e)===0&&pf.block===n.s.block&&pf.off===n.s.off){
+  const at=n.s.off,end=at+u8(t);
+  await structural(async eng=>{await eng.replace({block:n.s.block,hunks:[{start:at,end:at,text:t}]});return eng.format({block:n.s.block,off:at},{block:n.s.block,off:end},pf.patch);},n.s,{block:n.s.block,off:end});
+  patchDocuments({pendingFormat:{block:n.s.block,off:end,patch:pf.patch}});return;
+ }
  if(n.s.block===n.e.block)await applyAtCaret({start:n.s.off,end:n.e.off,text:t},n.s.off===n.e.off);
  else await replaceRange(n.s,n.e,t,n.h);
+});
+const FORMAT_PROPS=['bold','italic','underline'] as const;
+export type FormatProp=typeof FORMAT_PROPS[number];
+/**
+ * Bold/italic/underline on the selection with Word semantics: when every character already has it, it is removed, otherwise it is applied to all.
+ * With a collapsed caret the choice is held and applies to the next typed text. One engine snapshot pair = one undo step.
+ */
+export const toggleFormat=(prop:FormatProp)=>run(async()=>{
+ if(!FORMAT_PROPS.includes(prop))throw new Error('Unknown format.');
+ const st=getDocumentsState(),c=st.caret;if(!c)return;const n=norm(c);goalX=null;
+ const cur=st.format?.[prop]==='on';
+ if(cmp(n.s,n.e)===0){
+  if(blockText(n.s.block)===null)return;
+  const pf=st.pendingFormat&&st.pendingFormat.block===n.s.block&&st.pendingFormat.off===n.s.off?st.pendingFormat.patch:{};
+  const now=pf[prop]??cur;patchDocuments({pendingFormat:{block:n.s.block,off:n.s.off,patch:{...pf,[prop]:!now}}});return;
+ }
+ const ts=spanTexts(n.s.block,n.e.block);if(!ts)throw new Error(n.e.block-n.s.block+1>MAX_SPAN_BLOCKS?`Selection is too large for one edit (limit ${MAX_SPAN_BLOCKS} paragraphs).`:'This selection includes a part that cannot be edited as text.');
+ const on=st.format?.[prop]==='on';
+ await structural(eng=>eng.format(n.s,n.e,{[prop]:!on}),n.h,n.h);
+ setSel(n.a,n.h);
 });
 /** Pastes plain text; every newline starts a new paragraph (copying the paragraph properties). The selection is replaced in the same undo step. */
 export const pasteText=(text:string)=>run(async()=>{
@@ -283,7 +309,12 @@ export async function syncGeometry(){
     }
    }
   }
-  if(engine===e&&gen===g&&getDocumentsState().caret===c)patchDocuments({caretBox:box,selRects:rects});
+  let format:import('./protocol').FormatState|null=null;
+  try{format=await e.formatState(n.s,n.e);}catch{format=null;}
+  if(engine===e&&gen===g&&getDocumentsState().caret===c){
+   const pf=getDocumentsState().pendingFormat;
+   patchDocuments({caretBox:box,selRects:rects,format,...(pf&&(cmp(n.s,n.e)!==0||pf.block!==n.s.block||pf.off!==n.s.off)?{pendingFormat:null}:{})});
+  }
  }catch{if(engine===e&&gen===g&&getDocumentsState().caret===c)patchDocuments({caret:null,caretBox:null,selRects:[]});}
 }
 /** Enter: replaces the selection (if any) and splits there. The new paragraph copies the paragraph properties. */

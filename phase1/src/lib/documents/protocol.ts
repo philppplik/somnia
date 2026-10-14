@@ -3,6 +3,13 @@ export interface PageSize{width:number;height:number}
 export interface OpenedDocument{pages:number;pageSizes:PageSize[];text:string;cacheHits:number;cacheMisses:number;openMs:number;layoutMs:number}
 export interface HitResult{block:number|null;off?:number;editable:boolean}
 export interface CaretBox{page:number;x:number;top:number;height:number}
+export type Tri='on'|'off'|'mixed';
+/** Effective bold/italic/underline over a selection (style and direct formatting). */
+export interface FormatState{bold:Tri;italic:Tri;underline:Tri}
+export interface FormatPatch{bold?:boolean;italic?:boolean;underline?:boolean}
+/** Selection endpoints: top-level paragraph index and UTF-8 byte offset. */
+export interface DocPos{block:number;off:number}
+export const MAX_FORMAT_BLOCKS=2000;
 export type Rect5=[number,number,number,number,number];
 export type DocumentsRequest=
  |{id:number;kind:'init';wasmUrl:string}
@@ -18,6 +25,8 @@ export type DocumentsRequest=
  |{id:number;kind:'merge';block:number}
  |{id:number;kind:'snapshot'}
  |{id:number;kind:'restore';snap:number}
+ |{id:number;kind:'format';start:DocPos;end:DocPos;patch:FormatPatch}
+ |{id:number;kind:'formatState';start:DocPos;end:DocPos}
  |{id:number;kind:'save'}
  |{id:number;kind:'close'};
 export type DocumentsResponse=
@@ -30,6 +39,7 @@ export type DocumentsResponse=
  |{id:number;ok:true;kind:'caret';caret:CaretBox|null}
  |{id:number;ok:true;kind:'rects';rects:Rect5[]}
  |{id:number;ok:true;kind:'snapshot';snap:number}
+ |{id:number;ok:true;kind:'formatState';state:FormatState}
  |{id:number;ok:true;kind:'saved';bytes:ArrayBuffer;saveMs:number}
  |{id:number;ok:true;kind:'closed'}
  |{id:number;ok:false;error:string};
