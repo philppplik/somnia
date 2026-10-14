@@ -17,7 +17,7 @@ export const DEFAULT_LAYOUT:InterfaceLayout={direction:'free',wrap:false,gap:12,
 export const DEFAULT_SIZING:InterfaceSizing={width:'fixed',height:'fixed',minWidth:1,minHeight:1,maxWidth:32768,maxHeight:32768,absolute:false};
 export interface InterfaceExportSetting {format:'png'|'svg'|'webp';scale:1|2;region?:{x:number;y:number;width:number;height:number};}
 export interface InterfaceVariable {id:string;name:string;type:'color'|'number';value:string|number;alias?:string;collection?:string;modeValues?:Partial<Record<VariableMode,string|number>>;}
-export interface InterfaceTextStyle {id:string;name:string;fontFamily:'sans-serif'|'serif'|'monospace';fontSize:number;lineHeight:number;fontWeight:400|500|600|700;fontStretch?:'condensed'|'expanded';paragraphSpacing?:number;modeValues?:Partial<Record<VariableMode,{fontSize:number;lineHeight:number;fontWeight:400|500|600|700}>>;}
+export interface InterfaceTextStyle {id:string;name:string;fontFamily:'sans-serif'|'serif'|'monospace';fontSize:number;lineHeight:number;fontWeight:400|500|600|700;fontStretch?:'condensed'|'expanded';paragraphSpacing?:number;letterSpacing?:number;modeValues?:Partial<Record<VariableMode,{fontSize:number;lineHeight:number;fontWeight:400|500|600|700}>>;}
 export interface InterfaceAsset {id:string;hash:string;mime:'image/png';width:number;height:number;data:string;sourceName:string;sourceType:'png'|'jpeg';license:'user-provided-unverified';}
 export interface PathPoint {x:number;y:number;}
 export interface InterfacePath {points:PathPoint[];closed:boolean;}
