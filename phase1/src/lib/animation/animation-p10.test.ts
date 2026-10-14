@@ -3,7 +3,7 @@ import {createDocument,findComp,findLayer,validateDocument,MAX_LAYER_MASKS,type 
 import {applyEdit,applyEdits,EditError} from './edit';
 import {readFileSync} from 'node:fs';
 import {morphPath,morphProblem,resamplePath,MorphError,maskEdit,matteEdit,maskPath,copyMaskKey,insertPoint,handleMaskKey,copyMaskKeys} from './masks';
-import {animatedChars,animatorEdit,defaultAnimator,mixHex} from './textAnimators';
+import {animatedChars,animatorEdit,defaultAnimator,mixHex,charWeight,textPathEdit,textPathD} from './textAnimators';
 import {copyTransformKeys,pasteTransformEdits} from './keysClipboard';
 import {animatedTargets,allTargetKeys,propertyOf,moveTargetKeys,easeTargetKeys,pruneTargetKeys,toggleTargetKey,editTargetKeys,copyTargetKeys,pasteTargetKeys,deleteTargetKeys,pasteClipOnTargets,staggerLayers,bounceClip,bounceTargetKeys} from './keyTargets';
 import {EASE_PRESETS,easePresetOf} from './graph';
@@ -872,4 +872,52 @@ test('P34: expand stroke follows join and cap with known areas',()=>{
 });
 test('P34: stroke style locale keys exist',()=>{
  for(const l of ['en','de','es','fr','pt-BR']){const j=JSON.parse(readFileSync(new URL(`../../locales/animation/${l}.json`,import.meta.url),'utf8'));for(const k of ['animation.stroke.join','animation.stroke.join.miter','animation.stroke.join.round','animation.stroke.join.bevel','animation.stroke.cap','animation.stroke.cap.butt','animation.stroke.cap.round','animation.stroke.cap.square'])assert.ok(j[k],`${l} ${k}`);}
+});
+
+const withAnim=(patch:Record<string,unknown>)=>{let d=base();d=applyEdit(d,animatorEdit(d,'title',{op:'add',id:'a'}));return applyEdit(d,animatorEdit(d,'title',{op:'update',animator:'a',patch:{start:0,end:100,softness:0,position:[0,0],scale:100,opacity:100,...patch} as never}));};
+test('P35: tracking adds spacing after each selected character, bounded, one undo',()=>{
+ const d=withAnim({tracking:10});const sp=animatedChars(layer(d,'title'),'ABC',0)!;
+ assert.deepEqual(sp.map(c=>c.dx),[0,10,10],'relative shifts: 0, 10, 10');
+ const half=withAnim({tracking:10,end:50});const hs=animatedChars(layer(half,'title'),'ABCD',0)!;assert.deepEqual(hs.map(c=>c.dx),[0,10,10,0],'only the selected first half adds spacing, later chars keep the shift');
+ const neg=animatedChars(layer(withAnim({tracking:-4}),'title'),'AB',0)!;assert.equal(neg[1].dx,-4);
+ const r=d.revision;const e=applyEdit(d,animatorEdit(d,'title',{op:'update',animator:'a',patch:{tracking:-20}}));assert.equal(e.revision,r+1);
+ assert.throws(()=>applyEdit(d,animatorEdit(d,'title',{op:'update',animator:'a',patch:{tracking:300}})),EditError);
+ assert.throws(()=>applyEdit(d,animatorEdit(d,'title',{op:'update',animator:'a',patch:{ease:'zigzag' as never}})),EditError);
+});
+test('P35: selector ease shapes the softness ramp',()=>{
+ const a=(ease?:'linear'|'smooth'|'in'|'out')=>({id:'x',enabled:true,start:40,end:60,softness:30,offset:{type:'scalar' as const,value:0,keys:[]},position:[0,0] as [number,number],scale:100,opacity:0,...(ease?{ease}:{})});
+ const w=(e?:'linear'|'smooth'|'in'|'out')=>charWeight(a(e) as never,2,10,0);
+ assert.ok(Math.abs(w()-0.5)<1e-9);assert.ok(Math.abs(w('linear')-0.5)<1e-9);assert.ok(Math.abs(w('smooth')-0.5)<1e-9);assert.ok(Math.abs(w('in')-0.25)<1e-9);assert.ok(Math.abs(w('out')-0.75)<1e-9);
+ assert.equal(charWeight(a('in') as never,5,10,0),1,'inside the range is always 1');assert.equal(charWeight(a('out') as never,0,10,0),0,'outside the ramp is 0');
+ const d=withAnim({softness:30,start:40,end:60,ease:'in',opacity:0});const op=animatedChars(layer(d,'title'),'ABCDEFGHIJ',0)!.map(c=>c.opacity);assert.ok(op[2]>0.7&&op[2]<0.8,'ease in applied to opacity '+op[2]);
+});
+const textPathDoc=()=>{let d=pathDoc();return d;};
+test('P35: text on a path copies the path into the text layer, one undo, keeps place',()=>{
+ let d=pathDoc();d=applyEdit(d,{type:'layer.add',kind:'text',id:'tx',over:{source:{text:'Hello path',size:24,color:'#ffffff'}}});
+ const r=d.revision;const edit=textPathEdit(d,'tx',{op:'set',from:'pa'});const e=applyEdit(d,edit);assert.equal(e.revision,r+1);validateDocument(e);
+ const tp=layer(e,'tx').source.textPath!;assert.equal(tp.points.length,3);
+ const ta=layer(e,'tx').transform.position.value as unknown as number[],pa=layer(e,'pa').transform.position.value as unknown as number[],tan=layer(e,'tx').transform.anchor.value as unknown as number[],pan=layer(e,'pa').transform.anchor.value as unknown as number[];
+ const dx=(ta[0]-tan[0])-(pa[0]-pan[0]);assert.ok(Math.abs(tp.points[1].x-(200+(pa[0]-pan[0])-(ta[0]-tan[0])))<1e-3,'placed by world position '+dx);
+ assert.equal(layer(e,'tx').source.textPathStart,0);assert.ok(textPathD(layer(e,'tx'))!.startsWith('M'));assert.equal(textPathD(layer(d,'tx')),undefined);
+ const s=applyEdit(e,textPathEdit(e,'tx',{op:'start',value:30}));assert.equal(layer(s,'tx').source.textPathStart,30);
+ const c=applyEdit(s,textPathEdit(s,'tx',{op:'clear'}));assert.equal(layer(c,'tx').source.textPath,undefined);assert.equal(layer(c,'tx').source.textPathStart,undefined);validateDocument(c);
+ const svg=frameSvg(comp(s),0);assert.ok(svg.includes('<textPath href="#tp-tx"')&&svg.includes('startOffset="30%"')&&svg.includes('id="tp-tx"'));
+ assert.ok(!frameSvg(comp(c),0).includes('textPath'),'no path, no textPath element');
+});
+test('P35: text on a path refusals and bounds',()=>{
+ let d=pathDoc();d=applyEdit(d,{type:'layer.add',kind:'text',id:'tx',over:{source:{text:'Hello',size:24,color:'#ffffff'}}});
+ assert.throws(()=>textPathEdit(d,'tx',{op:'set',from:'tx'}),/path shape/);assert.throws(()=>textPathEdit(d,'pa',{op:'set',from:'pb'}),/text layer/);
+ assert.throws(()=>textPathEdit(d,'tx',{op:'start',value:10}),/path first/);assert.throws(()=>textPathEdit(d,'tx',{op:'clear'}),/no path/);
+ const e=applyEdit(d,textPathEdit(d,'tx',{op:'set',from:'pa'}));assert.throws(()=>textPathEdit(e,'tx',{op:'start',value:101}),/0 to 100/);
+ let an=applyEdit(d,pathLayerEdit(d,'pb',{op:'animate',on:true}));assert.throws(()=>textPathEdit(an,'tx',{op:'set',from:'pb'}),/animation/);
+ let cp=applyEdit(d,{type:'layer.update',layer:'pb',source:{subpaths:[{closed:true,points:[{x:0.2,y:0.2},{x:0.4,y:0.2},{x:0.3,y:0.4}]}]}});assert.throws(()=>textPathEdit(cp,'tx',{op:'set',from:'pb'}),/Compound/);
+ let lk=applyEdit(d,{type:'layer.update',layer:'tx',locked:true});assert.throws(()=>textPathEdit(lk,'tx',{op:'set',from:'pa'}),/locked/);
+ const many=Array.from({length:80},(_,i)=>({x:i/80,y:(i%2)*0.5}));let mp=applyEdit(d,{type:'layer.update',layer:'pb',source:{path:{closed:false,points:many}}});assert.throws(()=>textPathEdit(mp,'tx',{op:'set',from:'pb'}),/2 to 64/);
+ assert.throws(()=>applyEdit(d,{type:'layer.update',layer:'pa',source:{textPath:{closed:false,points:[{x:0,y:0},{x:5,y:5}]}}}),EditError);validateDocument(d);
+ assert.ok(validateDocument({...e,compositions:e.compositions.map(c=>({...c,layers:c.layers.map(l=>l.id==='tx'?{...l,source:{...l.source,textPathStart:300}}:l)}))}).length>0,'start above 100 is invalid');
+ assert.ok(validateDocument({...d,compositions:d.compositions.map(c=>({...c,layers:c.layers.map(l=>l.id==='pa'?{...l,source:{...l.source,textPath:{closed:false,points:[{x:0,y:0},{x:5,y:5}]}}}:l)}))}).length>0,'text path on a non-text layer is invalid');
+});
+test('P35: text path and animator locale keys and command exist',()=>{
+ assert.ok(animationCommandSpecs().some(s=>s.id==='animation.text.path'));
+ for(const l of ['en','de','es','fr','pt-BR']){const j=JSON.parse(readFileSync(new URL(`../../locales/animation/${l}.json`,import.meta.url),'utf8'));for(const k of ['animation.animators.tracking','animation.animators.ease','animation.animators.ease.linear','animation.animators.ease.smooth','animation.animators.ease.in','animation.animators.ease.out','animation.textPath.title','animation.textPath.source','animation.textPath.use','animation.textPath.start','animation.textPath.clear','cmd.animation.text.path'])assert.ok(j[k],`${l} ${k}`);}
 });

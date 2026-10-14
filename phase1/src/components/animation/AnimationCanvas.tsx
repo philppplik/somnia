@@ -9,7 +9,7 @@ import {studioContextStore} from '../../lib/shell/studioContext';
 import {registerAnimationCommands} from '../../lib/animation/commands';
 import {animationSession,useAnimationState} from '../../lib/animation/session';
 import {findComp,type Composition,type KeyRef,type Layer} from '../../lib/animation/model';
-import {animatedChars} from '../../lib/animation/textAnimators';
+import {animatedChars,textPathD,textPathId} from '../../lib/animation/textAnimators';
 import {maskDefs,maskId,matteId,hasMasks} from '../../lib/animation/masks';
 import {layerBody} from '../../lib/animation/exportFrames';
 import {sceneAt} from '../../lib/animation/scene';
@@ -65,6 +65,8 @@ function layerNode(l:Layer,assets:readonly InterfaceAsset[],at:number,fillOverri
  if(l.kind==='shape'&&['star','polygon'].includes(src.shape??''))return <path {...strokeAttributes(l,at)} d={radialPath(src)} fill={fill}/>;
  if(l.kind==='shape'&&src.shape==='path'&&src.path)return <path {...strokeAttributes(l,at)} d={layerPathD(l,at)} fillRule={layerFillRule(l)} fill={fill}/>;
  if(l.kind==='shape')return src.shape==='ellipse'?<ellipse {...strokeAttributes(l,at)} cx={(src.width??0)/2} cy={(src.height??0)/2} rx={(src.width??0)/2} ry={(src.height??0)/2} fill={fill}/>:<rect {...strokeAttributes(l,at)} rx={src.shape==='roundedRect'?Math.min(src.radius??24,(src.width??0)/2,(src.height??0)/2):0} x={0} y={0} width={src.width} height={src.height} fill={fill}/>;
+ const tp=textPathD(l);
+ if(tp)return <><defs><path id={textPathId(l)} d={tp}/></defs><text fontSize={src.size} fill={fill} fontFamily="system-ui, sans-serif" className="select-none"><textPath href={`#${textPathId(l)}`} startOffset={`${src.textPathStart??0}%`}>{animatedText(l,at)}</textPath></text></>;
  return <text x={0} y={src.size??48} fontSize={src.size} fill={fill} fontFamily="system-ui, sans-serif" className="select-none">{animatedText(l,at)}</text>;
 }
 function Viewer({comp,at,selected,sel,assets}:{assets:readonly InterfaceAsset[];comp:Composition;at:number;selected:string|null;sel:readonly KeyRef[]}){

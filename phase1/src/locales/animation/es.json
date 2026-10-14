@@ -444,5 +444,17 @@
  "animation.stroke.cap": "Extremo de línea",
  "animation.stroke.cap.butt": "Plano",
  "animation.stroke.cap.round": "Redondo",
- "animation.stroke.cap.square": "Cuadrado"
+ "animation.stroke.cap.square": "Cuadrado",
+ "animation.animators.tracking": "Interletraje",
+ "animation.animators.ease": "Suavizado del selector",
+ "animation.animators.ease.linear": "Lineal",
+ "animation.animators.ease.smooth": "Suave",
+ "animation.animators.ease.in": "Entrada suave",
+ "animation.animators.ease.out": "Salida suave",
+ "animation.textPath.title": "Texto en un trazado",
+ "animation.textPath.source": "Capa de trazado",
+ "animation.textPath.use": "Usar trazado",
+ "animation.textPath.start": "Inicio (%)",
+ "animation.textPath.clear": "Quitar trazado",
+ "cmd.animation.text.path": "Poner texto en un trazado, mover su inicio o quitarlo"
 }

@@ -984,6 +984,18 @@
       "hasEnabled": true
     },
     {
+      "id": "animation.text.path",
+      "title": "Put text on a path, move its start or take it off",
+      "category": "Insert",
+      "source": "animation",
+      "keywords": [
+        "animation",
+        "keyframe",
+        "timeline"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "animation.workarea.in",
       "title": "Set work area start at playhead",
       "category": "View",

@@ -444,5 +444,17 @@
  "animation.stroke.cap": "Line cap",
  "animation.stroke.cap.butt": "Butt",
  "animation.stroke.cap.round": "Round",
- "animation.stroke.cap.square": "Square"
+ "animation.stroke.cap.square": "Square",
+ "animation.animators.tracking": "Tracking",
+ "animation.animators.ease": "Selector ease",
+ "animation.animators.ease.linear": "Linear",
+ "animation.animators.ease.smooth": "Smooth",
+ "animation.animators.ease.in": "Ease in",
+ "animation.animators.ease.out": "Ease out",
+ "animation.textPath.title": "Text on a path",
+ "animation.textPath.source": "Path layer",
+ "animation.textPath.use": "Use path",
+ "animation.textPath.start": "Start (%)",
+ "animation.textPath.clear": "Remove path",
+ "cmd.animation.text.path": "Put text on a path, move its start or take it off"
 }

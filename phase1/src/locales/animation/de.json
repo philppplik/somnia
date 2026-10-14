@@ -444,5 +444,17 @@
  "animation.stroke.cap": "Linienende",
  "animation.stroke.cap.butt": "Flach",
  "animation.stroke.cap.round": "Rund",
- "animation.stroke.cap.square": "Quadratisch"
+ "animation.stroke.cap.square": "Quadratisch",
+ "animation.animators.tracking": "Laufweite",
+ "animation.animators.ease": "Selektor-Verlauf",
+ "animation.animators.ease.linear": "Linear",
+ "animation.animators.ease.smooth": "Weich",
+ "animation.animators.ease.in": "Langsamer Start",
+ "animation.animators.ease.out": "Langsames Ende",
+ "animation.textPath.title": "Text auf Pfad",
+ "animation.textPath.source": "Pfadebene",
+ "animation.textPath.use": "Pfad verwenden",
+ "animation.textPath.start": "Start (%)",
+ "animation.textPath.clear": "Pfad entfernen",
+ "cmd.animation.text.path": "Text auf einen Pfad legen, den Start verschieben oder vom Pfad nehmen"
 }

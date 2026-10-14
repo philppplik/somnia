@@ -444,5 +444,17 @@
  "animation.stroke.cap": "Terminaison",
  "animation.stroke.cap.butt": "Plate",
  "animation.stroke.cap.round": "Arrondie",
- "animation.stroke.cap.square": "Carrée"
+ "animation.stroke.cap.square": "Carrée",
+ "animation.animators.tracking": "Approche",
+ "animation.animators.ease": "Adoucissement du sélecteur",
+ "animation.animators.ease.linear": "Linéaire",
+ "animation.animators.ease.smooth": "Lisse",
+ "animation.animators.ease.in": "Entrée douce",
+ "animation.animators.ease.out": "Sortie douce",
+ "animation.textPath.title": "Texte sur un tracé",
+ "animation.textPath.source": "Calque de tracé",
+ "animation.textPath.use": "Utiliser le tracé",
+ "animation.textPath.start": "Début (%)",
+ "animation.textPath.clear": "Retirer le tracé",
+ "cmd.animation.text.path": "Placer le texte sur un tracé, déplacer son début ou le retirer"
 }

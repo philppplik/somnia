@@ -3,7 +3,7 @@ import {useT} from '../../lib/useT';
 import {Button} from '../ui/button';
 import {NativeInput,NativeSelect} from '../ui/native-controls';
 import {InspectorNumberField} from '../studios/InspectorNumberField';
-import {MAX_TEXT_ANIMATORS,type Layer,type TextAnimator} from '../../lib/animation/model';
+import {MAX_TEXT_ANIMATORS,TEXT_EASES,type Layer,type TextAnimator} from '../../lib/animation/model';
 import {animationSession,useAnimationState} from '../../lib/animation/session';
 import {animatorEdit,DEFAULT_ANIMATOR_COLOR} from '../../lib/animation/textAnimators';
 import {evaluate} from '../../lib/animation/interpolate';
@@ -33,6 +33,8 @@ export function TextAnimators({layer,at}:{layer:Layer;at:number}){
     {num(a,t('animation.animators.scale'),a.scale,0,1000,scale=>({scale}))}
     {num(a,t('animation.animators.opacity'),a.opacity,0,100,opacity=>({opacity}))}
     {num(a,t('animation.animators.rotation'),a.rotation??0,-3600,3600,rotation=>({rotation}))}
+    {num(a,t('animation.animators.tracking'),a.tracking??0,-200,200,tracking=>({tracking}))}
+    <label className="grid gap-1 text-ink-3">{t('animation.animators.ease')}<NativeSelect className={field} value={a.ease??'linear'} onChange={e=>run({layer:layer.id,op:'update',animator:a.id,patch:{ease:e.target.value}})} data-testid="animation-animator-ease">{TEXT_EASES.map(k=><option key={k} value={k}>{t(`animation.animators.ease.${k}`)}</option>)}</NativeSelect></label>
     <div className="grid gap-1 text-ink-3"><label className="flex items-center gap-1"><NativeInput type="checkbox" className="animation-checkbox" checked={!!a.color} onChange={e=>run({layer:layer.id,op:'update',animator:a.id,patch:{color:e.target.checked?DEFAULT_ANIMATOR_COLOR:null}})}/>{t('animation.animators.color')}</label>
      {a.color&&<NativeInput type="color" aria-label={t('animation.animators.color')} className="h-8 w-16 rounded-sm border border-subtle bg-transparent" value={a.color} onChange={e=>run({layer:layer.id,op:'update',animator:a.id,patch:{color:e.target.value}})}/>}</div>
    </div>

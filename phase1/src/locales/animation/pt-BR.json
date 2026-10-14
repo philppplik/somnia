@@ -444,5 +444,17 @@
  "animation.stroke.cap": "Extremidade da linha",
  "animation.stroke.cap.butt": "Reta",
  "animation.stroke.cap.round": "Arredondada",
- "animation.stroke.cap.square": "Quadrada"
+ "animation.stroke.cap.square": "Quadrada",
+ "animation.animators.tracking": "Espaçamento",
+ "animation.animators.ease": "Suavização do seletor",
+ "animation.animators.ease.linear": "Linear",
+ "animation.animators.ease.smooth": "Suave",
+ "animation.animators.ease.in": "Entrada suave",
+ "animation.animators.ease.out": "Saída suave",
+ "animation.textPath.title": "Texto em um caminho",
+ "animation.textPath.source": "Camada de caminho",
+ "animation.textPath.use": "Usar caminho",
+ "animation.textPath.start": "Início (%)",
+ "animation.textPath.clear": "Remover caminho",
+ "cmd.animation.text.path": "Colocar texto em um caminho, mover o início ou remover"
 }

@@ -159,3 +159,14 @@ Checked first: the renderer (canvas and export share `strokeAttributes`) had onl
 - Expand stroke honours both: miter joins keep the limit 4 with a bevel fallback, round joins and caps are arcs within 0.1 px, caps only apply to open subpaths. Curves are still flattened (about 0.25 px).
 - Limit, stated plainly: dashes are NOT expanded. The renderer dashes with `pathLength=100` and a `8 4` pattern, which gives about 8 dashes per subpath, and an outline needs one ring per dash while a path layer holds at most 8 subpaths (512 points). Expand stroke therefore still refuses trimmed or dashed strokes with an explanatory error.
 - Not covered: the effect bounds still pad strokes by their width, which is enough for round and square caps but not for very sharp miter joins (that was already so).
+
+## P35: text animator tracking and ease, text on a path
+
+Checked first. Text animators already had a range selector (start, end, softness, keyable offset, stagger wave and reveal), units character and word, and position, scale, opacity, rotation and colour. Text layers had no tracking, no selector ease and no text on a path. Only gaps were built.
+
+- `TextAnimator.tracking` (-200..200 px, absent = 0): spacing added after each character at its selector weight. It is carried by the same relative `dx` the renderers already write, so canvas and every export agree. Characters after a tracked one keep the shift (selector weights decide how much each adds).
+- `TextAnimator.ease` (`linear` default, `smooth`, `in`, `out`): shapes the softness ramp only. Characters inside the range stay at weight 1, outside the ramp at 0. Absent keeps the old output exactly.
+- Inspector: tracking field and ease select per animator; both are `animation.text.animator` patch fields, one undo step each.
+- Text on a path: `source.textPath` (corner and bezier points in the text layer's pixels, 2 to 64 points, validated, text layers only) and `source.textPathStart` (0..100 percent along the path). Command `animation.text.path` (`textPathEdit`): `set` copies a static path layer through both world matrices at the composition start, so it keeps its place; `start` moves the start; `clear` goes back to the straight baseline. One `layer.update` each, one undo step. Rendered as SVG `textPath` in canvas and in every export (the path is an inline `<defs>` element with id `tp-<layer id>`). Without `textPath` the output is unchanged.
+- Limits, stated plainly: the path is a copy (later edits of the path layer do not follow). Animated and compound path layers are refused. Text that does not fit the path is clipped by the renderer, as SVG does. Animator x shifts run along the path and y shifts across it. Per-glyph rotation follows the path automatically.
+- Not built: a `line` selector unit. Text layers are one line (no wrapping or line breaks in the renderer), so lines do not exist yet; characters and words are the units.

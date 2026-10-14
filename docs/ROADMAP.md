@@ -247,3 +247,9 @@ Depends on: v10 diff viewer, v11 updater for smooth extension and app updates.
 - Implemented: stroke join (miter, round, bevel) and cap (butt, round, square) in the model, canvas, every export and the inspector, defaults byte-identical to before; expand stroke honours join and cap; 5 locales.
 - Validation: 3 new Animation unit tests (187 total) with known areas (square cap 1700, round cap, bevel 3150, round join), DS ratchet, check:ui-commands, check:layers, isolated Chrome check (round join and cap visible, undo count).
 - Open: dashes in expand stroke (needs one ring per dash, 8 subpath limit), miter-aware effect bounds, per-segment join styles, miter limit setting.
+
+### Animation P35 (2026-10-14, integration pending)
+
+- Implemented: text animator tracking and selector ease, text on a path (copy of a path layer, start percent, canvas and exports via SVG textPath), command `animation.text.path`, inspector controls, 5 locales. Existing char/word range selector, offset and stagger were already there.
+- Validation: 5 new Animation unit tests (192 total), DS ratchet, ui-commands inventory, check:layers, isolated Chrome check (hover preview, text follows the curve, undo count).
+- Open: line unit (needs multi-line text), live link to the path layer, animated start offset, path-aware animator preview in the timeline.
