@@ -176,6 +176,7 @@ export function PhotosWorkspace({item}:{item:MediaItem}){
    else if(e.key==='x'||e.key==='X')setFlag(item.name,'reject');
    else if(e.key==='u'||e.key==='U')setFlag(item.name,null);
    else if(e.key==='o'||e.key==='O')setGuideStyle(CROP_GUIDE_STYLES[(CROP_GUIDE_STYLES.indexOf(guideStyle)+1)%CROP_GUIDE_STYLES.length]);
+   else if(e.key==='z'||e.key==='Z'){if(zoom===null){setZoom(1);setPan([0,0]);}else{setZoom(null);setPan([0,0]);}} // same states as the fit/actual buttons
    else if(e.key==='\\'&&!e.repeat)setCompare(true); // hold to peek at the original, like the compare button
    else if(e.key==='l'||e.key==='L')setLightsOut(!lightsOut);
    else if(e.key==='[')rotatePhoto(item.name,-1);
@@ -186,7 +187,7 @@ export function PhotosWorkspace({item}:{item:MediaItem}){
   const onKeyUp=(e:KeyboardEvent)=>{if(e.key==='\\')setCompare(false);};
   window.addEventListener('keydown',onKey);window.addEventListener('keyup',onKeyUp);
   return()=>{window.removeEventListener('keydown',onKey);window.removeEventListener('keyup',onKeyUp);};
- },[nav.prev,nav.next,item.name,guideStyle,setGuideStyle,lightsOut,setLightsOut,scale,zoomTo]);
+ },[nav.prev,nav.next,item.name,guideStyle,setGuideStyle,lightsOut,setLightsOut,zoom,scale,zoomTo]);
 
  const pointerPos=(e:React.PointerEvent)=>{const r=imgBox.current!.getBoundingClientRect();return{x:(e.clientX-r.left)/r.width,y:(e.clientY-r.top)/r.height};};
  const onStageDown=(e:React.PointerEvent)=>{

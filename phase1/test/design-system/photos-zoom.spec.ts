@@ -84,3 +84,18 @@ test('lights-out: L dims the workspace chrome, L again restores it (light and da
   await expect.poll(barOpacity).toBe('1');
  }
 });
+test('zoom toggle key: Z switches between fit and 100% (light and dark)',async({page})=>{
+ for(const theme of['light','dark']){
+  await page.goto('/test/design-system/?view=photos-zoom');
+  await page.evaluate(t=>document.documentElement.setAttribute('data-theme',t),theme);
+  await expect(page.getByTestId('photos-workspace')).toBeVisible();
+  await page.getByTestId('photos-zoom-fit').click(); // normalize: persisted zoom from earlier legs
+  await expect(page.getByTestId('photos-zoom-fit')).toHaveAttribute('aria-pressed','true');
+  await page.keyboard.press('z');
+  await expect(page.getByTestId('photos-zoom-level')).toHaveText('100%');
+  await expect(page.getByTestId('photos-zoom-preset-100')).toHaveAttribute('aria-pressed','true'); // real 1.0 zoom
+  await page.screenshot({path:`test-results/ds-photos-zoom-toggle-${theme}.png`,fullPage:true});
+  await page.keyboard.press('z');
+  await expect(page.getByTestId('photos-zoom-fit')).toHaveAttribute('aria-pressed','true'); // back to fit
+ }
+});

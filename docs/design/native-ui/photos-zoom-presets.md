@@ -55,3 +55,13 @@ the dependency list is TDZ-safe.
 Coverage: `photos-zoom.spec.ts` gains a light/dark leg that presses
 `+`, asserts the level readout rises and fit disengages, steps back out
 with `-` and screenshots the zoomed stage.
+
+## Zoom toggle key (P77)
+
+The `Z` key flips between fit-to-window and 100% — the exact states of
+the fit/actual buttons, pan reset included. Same key-handler guards as
+the other workspace keys.
+
+Coverage: `photos-zoom.spec.ts` gains a light/dark leg that presses
+`Z`, asserts the 100% level readout and the active preset marker,
+screenshots, and presses `Z` again back to fit.
