@@ -1,5 +1,7 @@
 export const LOCAL_MODELS_CATALOGUES:Record<string,Record<string,string>> = {
  "en": {
+  "local.inspectPending": "Checking model metadata…",
+
   "local.filter.label": "Filter installed exact model names",
   "local.filter.count": "Installed matches: {count} / {total}",
   "local.filter.clear": "Clear filter",
@@ -585,6 +587,8 @@ export const LOCAL_MODELS_CATALOGUES:Record<string,Record<string,string>> = {
   "local.route.earlier": "Move earlier after local"
  },
  "de": {
+  "local.inspectPending": "Modellmetadaten prüfen…",
+
   "local.filter.label": "Installierte exakte Modellnamen filtern",
   "local.filter.count": "Installierte Treffer: {count} / {total}",
   "local.filter.clear": "Filter leeren",
@@ -1170,6 +1174,8 @@ export const LOCAL_MODELS_CATALOGUES:Record<string,Record<string,string>> = {
   "local.route.earlier": "Nach lokal früher einordnen"
  },
  "es": {
+  "local.inspectPending": "Revisando metadatos del modelo…",
+
   "local.filter.label": "Filtrar nombres exactos instalados",
   "local.filter.count": "Coincidencias instaladas: {count} / {total}",
   "local.filter.clear": "Borrar filtro",
@@ -1755,6 +1761,8 @@ export const LOCAL_MODELS_CATALOGUES:Record<string,Record<string,string>> = {
   "local.route.earlier": "Mover antes tras local"
  },
  "fr": {
+  "local.inspectPending": "Vérification des métadonnées du modèle…",
+
   "local.filter.label": "Filtrer noms exacts installés",
   "local.filter.count": "Correspondances installées: {count} / {total}",
   "local.filter.clear": "Effacer filtre",
@@ -2340,6 +2348,8 @@ export const LOCAL_MODELS_CATALOGUES:Record<string,Record<string,string>> = {
   "local.route.earlier": "Avancer après local"
  },
  "pt-BR": {
+  "local.inspectPending": "Verificando metadados do modelo…",
+
   "local.filter.label": "Filtrar nomes exatos instalados",
   "local.filter.count": "Resultados instalados: {count} / {total}",
   "local.filter.clear": "Limpar filtro",

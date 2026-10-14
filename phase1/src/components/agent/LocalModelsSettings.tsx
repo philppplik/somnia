@@ -20,9 +20,9 @@ export function LocalModelsSettings({active,runtime:provided,hardwareProbe}:{act
  const {t,locale}=useT();const runtime=useMemo(()=>provided??new LocalModelsRuntime(),[provided]);
  const [snapshot,setSnapshot]=useState<RuntimeSnapshot|null>(null),[busy,setBusy]=useState(false),[refreshError,setRefreshError]=useState(false);
  const [evidence,setEvidence]=useState<Record<string,ModelEvidence|'error'>>({});
- const generation=useRef(0);
+ const pendingInspect=useRef(new Set<string>());const [inspecting,setInspecting]=useState<ReadonlySet<string>>(new Set());const generation=useRef(0);
  const refresh=async(explicit=false)=>{
-  const request=++generation.current;setBusy(true);setEvidence({});setRefreshError(false);
+  const request=++generation.current;pendingInspect.current=new Set();setInspecting(new Set());setBusy(true);setEvidence({});setRefreshError(false);
   try{
    const next=await runtime.snapshot();if(request!==generation.current)return;setSnapshot(next);if(explicit)recordReadiness(next,runtime.baseUrl);
    // Only the first visible page is inspected. Two workers bound /api/show concurrency.
@@ -37,7 +37,7 @@ export function LocalModelsSettings({active,runtime:provided,hardwareProbe}:{act
  useEffect(()=>{if(active)void refresh();return()=>{generation.current++;setBusy(false);};},[active,runtime]);
  const [filter,setFilter]=useState(''),[page,setPage]=useState(0);const matches=(snapshot?.models??[]).filter(model=>model.id.toLocaleLowerCase().includes(filter.trim().toLocaleLowerCase()));
  useEffect(()=>setPage(0),[snapshot]);
- const inspect=async(id:string)=>{const request=generation.current;try{const value=await runtime.evidence(id);if(request===generation.current)setEvidence(old=>({...old,[id]:value}));}catch{if(request===generation.current)setEvidence(old=>({...old,[id]:'error'}));}};
+ const inspect=async(id:string)=>{if(pendingInspect.current.has(id))return;const request=generation.current,owned=pendingInspect.current;owned.add(id);setInspecting(new Set(owned));try{const value=await runtime.evidence(id);if(request===generation.current)setEvidence(old=>({...old,[id]:value}));}catch{if(request===generation.current)setEvidence(old=>({...old,[id]:'error'}));}finally{owned.delete(id);if(request===generation.current)setInspecting(new Set(owned));}};
  const size=(bytes:number|undefined)=>bytes===undefined?t('local.unknown'):new Intl.NumberFormat(locale,{style:'unit',unit:'gigabyte',maximumFractionDigits:2}).format(bytes/1e9);
  return <section className="local-models" aria-label={t('local.title')}>
   <div className="local-models-header"><h3>{t('local.title')}</h3><Button type="button" variant="outline" disabled={busy} onClick={()=>void refresh(true)}>{t(busy?'local.checking':'local.refresh')}</Button></div>
@@ -54,7 +54,7 @@ export function LocalModelsSettings({active,runtime:provided,hardwareProbe}:{act
      const info=evidence[model.id],lastUsed=lastLocalModelSuccess(runtime.baseUrl,model.id);return <li key={model.id}><strong>{model.id}</strong><div>{size(model.sizeBytes)} · {model.parameterSize??t('local.unknown')} · {model.quantization??t('local.unknown')}</div>
       <p>{t('local.manager.lastUsed')}: {lastUsed===null?t('local.unknown'):new Intl.DateTimeFormat(locale,{dateStyle:'medium',timeStyle:'short'}).format(lastUsed)}</p><div className="local-models-badges"><Badge>{t('local.present')}</Badge><Badge>{t('local.locality.'+(!info||info==='error'?'unverified':info.locality))}</Badge>{info&&info!=='error'&&info.capabilities?.map(cap=><Badge key={cap}>{t('local.cap.'+cap)}</Badge>)}</div>
       <p>{t(info==='error'?'local.metadataError':!info||info.capabilities===null?'local.capUnknown':'local.advertised')}</p>
-      {(!info||info==='error')&&!busy&&<Button type="button" size="compact" onClick={()=>void inspect(model.id)} aria-label={t('local.inspectModel',{model:model.id})}>{t('local.inspect')}</Button>}
+      {(!info||info==='error')&&!busy&&<Button type="button" size="compact" disabled={inspecting.has(model.id)} onClick={()=>void inspect(model.id)} aria-label={t('local.inspectModel',{model:model.id})}>{t(inspecting.has(model.id)?'local.inspectPending':'local.inspect')}</Button>}
      </li>;
     })}</ul>
     {matches.length>20&&<div className="local-models-header"><Button type="button" disabled={page===0} onClick={()=>setPage(p=>p-1)}>{t('local.previous')}</Button><span>{page+1} / {Math.ceil(matches.length/20)}</span><Button type="button" disabled={(page+1)*20>=matches.length} onClick={()=>setPage(p=>p+1)}>{t('local.next')}</Button></div>}
