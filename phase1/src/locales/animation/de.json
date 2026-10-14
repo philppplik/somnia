@@ -849,5 +849,8 @@
  "animation.keys.thin": "Keys ausdünnen",
  "animation.keys.thin.tolerance": "Toleranz",
  "animation.keys.thin.hint": "Gewählte Keys entfernen, deren Wert innerhalb der Toleranz der Geraden zwischen den Nachbarn liegt",
- "cmd.animation.keys.thin": "Gewählte Keys entfernen, die nah an der Geraden zwischen ihren Nachbarn liegen"
+ "cmd.animation.keys.thin": "Gewählte Keys entfernen, die nah an der Geraden zwischen ihren Nachbarn liegen",
+ "animation.keys.match": "Wie vorher",
+ "animation.keys.match.hint": "Jedem gewählten Key den Wert des vorigen Keys geben",
+ "cmd.animation.keys.matchPrevious": "Gewählten Keys den Wert des vorigen Keys geben"
 }

@@ -849,5 +849,8 @@
  "animation.keys.thin": "Thin keys",
  "animation.keys.thin.tolerance": "Tolerance",
  "animation.keys.thin.hint": "Remove selected keys whose value is within the tolerance of the straight line between their neighbours",
- "cmd.animation.keys.thin": "Remove selected keys that are close to a straight line between their neighbours"
+ "cmd.animation.keys.thin": "Remove selected keys that are close to a straight line between their neighbours",
+ "animation.keys.match": "Match previous",
+ "animation.keys.match.hint": "Give each selected key the value of the key before it",
+ "cmd.animation.keys.matchPrevious": "Give the selected keys the value of the key before them"
 }

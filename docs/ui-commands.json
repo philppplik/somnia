@@ -776,6 +776,23 @@
       "hasEnabled": true
     },
     {
+      "id": "animation.keys.matchPrevious",
+      "title": "Give the selected keys the value of the key before them",
+      "category": "Edit",
+      "source": "animation",
+      "keywords": [
+        "animation",
+        "copy",
+        "hold",
+        "keys",
+        "match",
+        "plateau",
+        "previous",
+        "value"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "animation.keys.nudge",
       "title": "Move selected keys",
       "category": "Edit",

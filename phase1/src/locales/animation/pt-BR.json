@@ -849,5 +849,8 @@
  "animation.keys.thin": "Reduzir keys",
  "animation.keys.thin.tolerance": "Tolerância",
  "animation.keys.thin.hint": "Remove as keys selecionadas cujo valor está dentro da tolerância da reta entre suas vizinhas",
- "cmd.animation.keys.thin": "Remover keys selecionadas próximas da reta entre suas vizinhas"
+ "cmd.animation.keys.thin": "Remover keys selecionadas próximas da reta entre suas vizinhas",
+ "animation.keys.match": "Igualar anterior",
+ "animation.keys.match.hint": "Dá a cada key selecionada o valor da key anterior",
+ "cmd.animation.keys.matchPrevious": "Dar às keys selecionadas o valor da key anterior"
 }
