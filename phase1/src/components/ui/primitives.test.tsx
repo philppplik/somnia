@@ -1,6 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {renderToStaticMarkup} from 'react-dom/server';
+import {Checkbox} from './checkbox';
+import {Switch} from './switch';
+import {RadioGroup} from './radio-group';
 import {Field} from './field';
 import {NativeInput,NativeSelect,Textarea} from './native-controls';
 import {NumberField} from './number-field';
@@ -35,4 +38,10 @@ test('Notice is silent by default; only callers opt in to urgency',()=>{
  assert.ok(!render(<Notice tone="danger">Error</Notice>).includes('role='));
  assert.match(render(<Notice live="polite">Saved</Notice>),/role="status"/);
  assert.match(render(<Notice live="assertive">Error</Notice>),/role="alert"/);
+});
+
+test('checkbox mixed, switch role and radio labels retain native form controls',()=>{
+ const mixed=render(<Checkbox label="Include" indeterminate checked={false} onChange={()=>{}}/>);assert.match(mixed,/aria-checked="mixed"/);assert.match(mixed,/type="checkbox"/);
+ const toggle=render(<Switch label="Enable" checked onChange={()=>{}}/>);assert.match(toggle,/role="switch"/);assert.match(toggle,/checked=""/);
+ const radio=render(<RadioGroup id="formats" label="Format" name="format" value="a" options={[{value:'a',label:'Alpha'},{value:'b',label:'Beta',disabled:true}]} onValueChange={()=>{}}/>);assert.match(radio,/<legend>Format<\/legend>/);assert.match(radio,/name="format"/);assert.match(radio,/for="formats-0"/);assert.match(radio,/disabled=""/);
 });

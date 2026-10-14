@@ -3,6 +3,9 @@ import {createRoot} from 'react-dom/client';
 import {Menu as RawMenu} from '@base-ui/react/menu';
 import {Tooltip as RawTooltip} from '@base-ui/react/tooltip';
 import {Popover as RawPopover} from '@base-ui/react/popover';
+import {Checkbox} from '../../src/components/ui/checkbox';
+import {Switch} from '../../src/components/ui/switch';
+import {RadioGroup} from '../../src/components/ui/radio-group';
 import {Field} from '../../src/components/ui/field';
 import {NativeInput,NativeSelect,Textarea} from '../../src/components/ui/native-controls';
 import {NumberField} from '../../src/components/ui/number-field';
@@ -10,19 +13,20 @@ import {RangeField} from '../../src/components/ui/range-field';
 import {PanelBody,PanelHeader,PanelSection,PropertyList} from '../../src/components/ui/panel';
 import {Notice} from '../../src/components/ui/notice';
 import {Menu,MenuTrigger,MenuContent,MenuItem} from '../../src/components/ui/menu';
-import {TooltipProvider,Tooltip,TooltipTrigger,TooltipContent} from '../../src/components/ui/tooltip';
+import {StudioTooltip,TooltipProvider,Tooltip,TooltipTrigger,TooltipContent} from '../../src/components/ui/tooltip';
 import {Popover,PopoverTrigger,PopoverContent,PopoverTitle,PopoverClose} from '../../src/components/ui/popover';
 import '../../src/styles/global.css';
 import '../../src/styles/bento.css';
 import '../../src/components/studios/studio-pill.css';
 import './gallery.css';
 function Gallery(){
+ const [checked,setChecked]=useState(false),[radio,setRadio]=useState('a');
  const [number,setNumber]=useState<number|null>(10),[mixed,setMixed]=useState(false),[readonly,setReadonly]=useState(false),[disabled,setDisabled]=useState(false),[range,setRange]=useState(30),[open,setOpen]=useState(true),[events,setEvents]=useState<string[]>([]);
  const log=(event:string)=>setEvents(old=>[...old,event]);
  return <main lang="en"><h1>P1 primitive contracts</h1><p>Developer fixture. Real primitives and production styles; no app engines or user data.</p>
  <div className="controls"><button onClick={()=>setMixed(!mixed)} aria-pressed={mixed}>Mixed</button><button onClick={()=>setReadonly(!readonly)} aria-pressed={readonly}>Read only</button><button onClick={()=>setDisabled(!disabled)} aria-pressed={disabled}>Disabled</button><button onClick={()=>{setEvents([]);setNumber(10);setRange(30);}}>Reset fixture</button></div>
  <div className="gallery-grid">
- <section><h2>Native parity</h2><div className="pair"><input data-testid="raw-input" defaultValue="Text" disabled={disabled} readOnly={readonly}/><NativeInput data-testid="ui-input" defaultValue="Text" disabled={disabled} readOnly={readonly}/></div>
+ <section><h2>Native parity</h2><div className="pair"><input data-testid="raw-checkbox" type="checkbox" checked={checked} onChange={e=>setChecked(e.target.checked)} disabled={disabled}/><Checkbox data-testid="ui-checkbox" label="Checkbox choice" checked={checked} onChange={e=>setChecked(e.target.checked)} disabled={disabled} indeterminate={mixed}/></div><div className="pair"><input data-testid="raw-switch" type="checkbox" checked={checked} onChange={e=>setChecked(e.target.checked)} disabled={disabled}/><Switch data-testid="ui-switch" label="Switch choice" checked={checked} onChange={e=>setChecked(e.target.checked)} disabled={disabled}/></div><RadioGroup label="Format" name="format" value={radio} disabled={disabled} readOnly={readonly} options={[{value:"a",label:"Alpha"},{value:"b",label:"Beta",disabled:true},{value:"c",label:"Gamma"}]} onValueChange={setRadio}/><div className="pair"><input data-testid="raw-input" defaultValue="Text" disabled={disabled} readOnly={readonly}/><NativeInput data-testid="ui-input" defaultValue="Text" disabled={disabled} readOnly={readonly}/></div>
  <div className="pair"><select data-testid="raw-select" disabled={disabled}><option>A</option></select><NativeSelect data-testid="ui-select" disabled={disabled}><option>A</option></NativeSelect></div>
  <div className="pair"><textarea data-testid="raw-textarea" defaultValue="Text" disabled={disabled} readOnly={readonly}/><Textarea data-testid="ui-textarea" defaultValue="Text" disabled={disabled} readOnly={readonly}/></div>
  <Field label="Translated field label: Breite des ausgewählten Objekts" hint="A caller-supplied hint" error="A caller-supplied error">{props=><NativeInput {...props}/>}</Field></section>
@@ -40,6 +44,7 @@ function Gallery(){
  <Popover><PopoverTrigger>Open popover</PopoverTrigger><PopoverContent><PopoverTitle>Popover content</PopoverTitle><NativeInput aria-label="Popover value"/><PopoverClose>Close popover</PopoverClose></PopoverContent></Popover>
  <RawPopover.Root><RawPopover.Trigger>Raw popover</RawPopover.Trigger><RawPopover.Portal><RawPopover.Positioner sideOffset={4}><RawPopover.Popup data-testid="raw-popover" className="menu-popup"><RawPopover.Title>Raw content</RawPopover.Title></RawPopover.Popup></RawPopover.Positioner></RawPopover.Portal></RawPopover.Root>
  <TooltipProvider delay={0}><Tooltip><TooltipTrigger>Tooltip trigger</TooltipTrigger><TooltipContent>Shared tooltip</TooltipContent></Tooltip></TooltipProvider>
+ <StudioTooltip.Provider delay={0}><StudioTooltip.Root><StudioTooltip.Trigger>Studio facade tooltip</StudioTooltip.Trigger><StudioTooltip.Portal><StudioTooltip.Positioner className="z-50" side="bottom" sideOffset={8}><StudioTooltip.Popup data-testid="studio-tooltip" className="studio-pill-tooltip">Studio facade</StudioTooltip.Popup></StudioTooltip.Positioner></StudioTooltip.Portal></StudioTooltip.Root></StudioTooltip.Provider>
  <RawTooltip.Provider delay={0}><RawTooltip.Root><RawTooltip.Trigger>Raw tooltip</RawTooltip.Trigger><RawTooltip.Portal><RawTooltip.Positioner side="bottom" sideOffset={8}><RawTooltip.Popup data-testid="raw-tooltip" className="studio-pill-tooltip">Raw tooltip</RawTooltip.Popup></RawTooltip.Positioner></RawTooltip.Portal></RawTooltip.Root></RawTooltip.Provider>
  </section></div><pre data-testid="events" aria-label="Fixture events">{events.join('\n')}</pre></main>;
 }

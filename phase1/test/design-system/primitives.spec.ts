@@ -5,7 +5,7 @@ const styles=(locator:Locator)=>locator.evaluate((element,keys)=>{const cs=getCo
 for(const theme of ['light','dark'])for(const contrast of ['standard','high'])test(`${theme}/${contrast}: computed-style parity and gallery`,async({page})=>{
  const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));await page.goto('./');
  await page.evaluate(({theme,contrast})=>{document.documentElement.dataset.theme=theme;document.documentElement.dataset.contrast=contrast;},{theme,contrast});
- for(const name of ['input','select','textarea','panel','range'])expect(await styles(page.getByTestId(`ui-${name}`))).toEqual(await styles(page.getByTestId(`raw-${name}`)));
+ for(const name of ['input','select','textarea','panel','range','checkbox','switch'])expect(await styles(page.getByTestId(`ui-${name}`))).toEqual(await styles(page.getByTestId(`raw-${name}`)));
  expect(await styles(page.getByTestId('parity-number'))).toEqual(await styles(page.getByTestId('raw-number')));
  for(const status of ['Disabled','Read only']){
   await page.getByRole('button',{name:status,exact:true}).click();
@@ -20,6 +20,7 @@ for(const theme of ['light','dark'])for(const contrast of ['standard','high'])te
  await page.getByRole('button',{name:'Open popover',exact:true}).click();expect(await styles(page.locator('[data-slot=popover]'))).toEqual(rawPopover);await page.keyboard.press('Escape');
  await page.getByRole('button',{name:'Raw tooltip',exact:true}).hover();await expect(page.getByTestId('raw-tooltip')).toBeVisible();const rawTip=await styles(page.getByTestId('raw-tooltip'));
  await page.getByRole('button',{name:'Tooltip trigger',exact:true}).hover();await expect(page.locator('[data-slot=tooltip]')).toBeVisible();expect(await styles(page.locator('[data-slot=tooltip]'))).toEqual(rawTip);
+ await page.getByRole('button',{name:'Studio facade tooltip',exact:true}).hover();await expect(page.getByTestId('studio-tooltip')).toBeVisible();expect(await styles(page.getByTestId('studio-tooltip'))).toEqual(rawTip);
  await page.mouse.move(0,0);await page.screenshot({path:`test-results/ds-p1-${theme}-${contrast}.png`,fullPage:true});expect(errors).toEqual([]);
 });
 test('Field ids, errors and caller hooks remain associated',async({page})=>{
@@ -67,4 +68,14 @@ test('RangeField real pointer gesture previews then commits exactly once',async(
  await page.goto('./');const range=page.getByTestId('range'),box=await range.boundingBox();expect(box).not.toBeNull();
  await page.mouse.move(box!.x+box!.width*0.3,box!.y+box!.height/2);await page.mouse.down();await page.mouse.move(box!.x+box!.width*0.7,box!.y+box!.height/2,{steps:5});await page.mouse.up();await range.blur();
  const events=(await page.getByTestId('events').textContent())!;expect(events.split('\n').filter(e=>e.startsWith('range:commit:'))).toHaveLength(1);expect(events).toContain('range:preview:');expect(events).not.toContain('range:cancel:');
+});
+
+test('checkbox, switch and native radio keyboard behavior, mixed and disabled states',async({page})=>{
+ await page.goto('./');const checkbox=page.getByRole('checkbox',{name:'Checkbox choice'}),toggle=page.getByRole('switch',{name:'Switch choice'});
+ await checkbox.focus();await checkbox.press('Space');await expect(checkbox).toBeChecked();await expect(toggle).toBeChecked();
+ await toggle.press('Space');await expect(toggle).not.toBeChecked();await expect(checkbox).not.toBeChecked();
+ await page.getByRole('button',{name:'Mixed',exact:true}).click();await expect(checkbox).toHaveAttribute('aria-checked','mixed');expect(await checkbox.evaluate((el:HTMLInputElement)=>el.indeterminate)).toBe(true);
+ const alpha=page.getByRole('radio',{name:'Alpha'}),gamma=page.getByRole('radio',{name:'Gamma'});await alpha.focus();await alpha.press('ArrowRight');await expect(gamma).toBeChecked();await expect(gamma).toBeFocused();
+ await page.getByRole('button',{name:'Read only',exact:true}).click();await gamma.press('ArrowLeft');await expect(gamma).toBeChecked();
+ await page.getByRole('button',{name:'Disabled',exact:true}).click();await expect(checkbox).toBeDisabled();await expect(toggle).toBeDisabled();await expect(alpha).toBeDisabled();
 });

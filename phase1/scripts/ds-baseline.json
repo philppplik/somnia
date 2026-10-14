@@ -42,6 +42,36 @@
       "reason": "Native backing elements of P1 primitives. Consumer areas remain fully ratcheted; hex, typography and inline debt are still counted."
     },
     {
+      "path": "src/components/ui/checkbox.tsx",
+      "metrics": [
+        "rawButton",
+        "rawInput",
+        "rawSelect",
+        "rawTextarea"
+      ],
+      "reason": "Native backing elements of P1 primitives. Consumer areas remain fully ratcheted; hex, typography and inline debt are still counted."
+    },
+    {
+      "path": "src/components/ui/switch.tsx",
+      "metrics": [
+        "rawButton",
+        "rawInput",
+        "rawSelect",
+        "rawTextarea"
+      ],
+      "reason": "Native backing elements of P1 primitives. Consumer areas remain fully ratcheted; hex, typography and inline debt are still counted."
+    },
+    {
+      "path": "src/components/ui/radio-group.tsx",
+      "metrics": [
+        "rawButton",
+        "rawInput",
+        "rawSelect",
+        "rawTextarea"
+      ],
+      "reason": "Native backing elements of P1 primitives. Consumer areas remain fully ratcheted; hex, typography and inline debt are still counted."
+    },
+    {
       "path": "src/lib/frameworks/templates/",
       "metrics": "all",
       "reason": "Generated user projects are authored content, not application chrome."

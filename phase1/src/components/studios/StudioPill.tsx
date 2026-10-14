@@ -1,5 +1,5 @@
 import {useId} from 'react';
-import {Tooltip} from '@base-ui/react/tooltip';
+import {StudioTooltip as Tooltip} from '../ui/tooltip';
 import {StudioGlyph} from './StudioGlyph';
 import {studioShortName} from './studioShortName';
 import {Button} from '../ui/button';
