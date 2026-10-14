@@ -1,3 +1,4 @@
+import {INTERFACE_OUTPUT_CATALOGUES} from './outputI18n';
 import {INTERFACE_LAYOUT_CATALOGUES} from './layoutI18n';
 const en={
  'cmd.studio.interface':'Switch to Interface Studio','studio.interface':'Interface','interface.layers':'Pages and layers','interface.properties':'Properties',
@@ -46,3 +47,5 @@ const pt:Record<Keys,string>={
 export const INTERFACE_CATALOGUES={en,de,es,fr,'pt-BR':pt};
 
 for(const [locale,extra] of Object.entries(INTERFACE_LAYOUT_CATALOGUES))Object.assign(INTERFACE_CATALOGUES[locale as keyof typeof INTERFACE_CATALOGUES],extra);
+
+for(const [locale,extra] of Object.entries(INTERFACE_OUTPUT_CATALOGUES))Object.assign(INTERFACE_CATALOGUES[locale as keyof typeof INTERFACE_CATALOGUES],extra);

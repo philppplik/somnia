@@ -1,7 +1,5 @@
-/* Structural view of the document: importing model.ts here would create a cycle (model validates through this file). */
-import type {InterfaceComponent,InterfaceLayout,InterfaceSizing,InterfaceConstraints,InterfaceInstance} from './schema';
-type ValNode={id:string;kind:string;children:string[];componentSlot?:string;layout?:InterfaceLayout;sizing?:InterfaceSizing;constraints?:InterfaceConstraints;instance?:InterfaceInstance;[key:string]:any};
-type InterfaceDocument={id:string;name:string;nodes:ValNode[];pages:Array<any>;components?:InterfaceComponent[];[key:string]:unknown};
+import type {InterfaceDocument} from './schema';
+import {validateInterfaceTokens} from './tokens';
 const obj=(v:unknown):v is Record<string,unknown>=>!!v&&typeof v==='object'&&!Array.isArray(v);
 const num=(v:unknown,min=0,max=32768)=>typeof v==='number'&&Number.isFinite(v)&&v>=min&&v<=max;
 const id=(v:unknown)=>typeof v==='string'&&/^[a-zA-Z0-9_-]{1,100}$/.test(v);
@@ -13,6 +11,7 @@ export function validOverride(key:string,value:unknown):boolean{
 }
 /** P1 recognized fields fail closed; no evaluator, URL or arbitrary patch keys. */
 export function validateInterfaceFeatures(d:InterfaceDocument):void{
+ validateInterfaceTokens(d);
  const nodes=new Map(d.nodes.map(n=>[n.id,n]));const components=d.components??[];
  if(!Array.isArray(components)||components.length>100)throw Error('Invalid component catalogue.');
  const componentIds=new Set<string>(),variantIds=new Set<string>(),masterIds=new Set<string>();
@@ -25,7 +24,7 @@ export function validateInterfaceFeatures(d:InterfaceDocument):void{
  }
  if(components.some(c=>variantIds.has(c.id)))throw Error('Duplicate component identity.');
  for(const n of d.nodes){
-  if(n.layout!==undefined){const l=n.layout;if(!obj(l)||!['frame','group'].includes(n.kind)||!['free','row','column'].includes(l.direction)||typeof l.wrap!=='boolean'||!num(l.gap)||!Array.isArray(l.padding)||l.padding.length!==4||!l.padding.every(v=>num(v))||!['start','center','end','stretch'].includes(l.align))throw Error('Invalid auto layout.');}
+  if(n.layout!==undefined){const l=n.layout;if(!obj(l)||!['frame','group'].includes(n.kind)||!['free','row','column','grid'].includes(l.direction)||typeof l.wrap!=='boolean'||!num(l.gap)||!Array.isArray(l.padding)||l.padding.length!==4||!l.padding.every(v=>num(v))||!['start','center','end','stretch'].includes(l.align))throw Error('Invalid auto layout.');if(l.columns!==undefined&&(!Number.isInteger(l.columns)||l.columns<1||l.columns>24))throw Error('Invalid grid column count.');}
   if(n.sizing!==undefined){const z=n.sizing;if(!obj(z)||!['fixed','hug','fill'].includes(z.width)||!['fixed','hug','fill'].includes(z.height)||!num(z.minWidth,1)||!num(z.minHeight,1)||!num(z.maxWidth,1)||!num(z.maxHeight,1)||z.minWidth>z.maxWidth||z.minHeight>z.maxHeight||typeof z.absolute!=='boolean')throw Error('Invalid sizing.');}
   if(n.constraints!==undefined){const c=n.constraints;if(!obj(c)||!axes.includes(c.horizontal)||!axes.includes(c.vertical)||!num(c.parentWidth,1)||!num(c.parentHeight,1)||!n.parentId)throw Error('Invalid constraints.');}
   if(n.componentSlot!==undefined&&!id(n.componentSlot))throw Error('Invalid component slot.');

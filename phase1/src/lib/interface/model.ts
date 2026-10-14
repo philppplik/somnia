@@ -1,15 +1,8 @@
-import type {InterfaceLayout,InterfaceSizing,InterfaceConstraints,InterfaceInstance,InterfaceComponent} from './schema';
+import type {InterfaceLayout,InterfaceSizing,InterfaceConstraints,InterfaceInstance,InterfaceComponent,InterfaceVariable,InterfaceTextStyle} from './schema';
 import {validateInterfaceFeatures} from './validation';
 /** Somnia-owned P0 scene. No external engine, file association or SDK surface. */
-export type NodeKind='frame'|'group'|'rectangle'|'text';
-export interface InterfaceNode {
- id:string;pageId:string;parentId:string|null;children:string[];kind:NodeKind;name:string;
- x:number;y:number;width:number;height:number;fill:string;text?:string;hidden:boolean;locked:boolean;
- layout?:InterfaceLayout;sizing?:InterfaceSizing;constraints?:InterfaceConstraints;componentSlot?:string;instance?:InterfaceInstance;
- [key:string]:unknown;
-}
-export interface InterfacePage {id:string;name:string;children:string[];[key:string]:unknown;}
-export interface InterfaceDocument {kind:'somnia-interface';version:1;id:string;name:string;revision:number;pages:InterfacePage[];nodes:InterfaceNode[];components?:InterfaceComponent[];[key:string]:unknown;}
+export type {NodeKind,InterfaceNode,InterfacePage,InterfaceDocument} from './schema';
+import type {NodeKind,InterfaceNode,InterfacePage,InterfaceDocument} from './schema';
 export const MAX_NODES=2000,MAX_DEPTH=64,MAX_BYTES=5_000_000;
 export const uid=()=>globalThis.crypto.randomUUID();
 export function createInterfaceDocument():InterfaceDocument{return {kind:'somnia-interface',version:1,id:uid(),name:'Untitled interface',revision:0,pages:[{id:uid(),name:'Page 1',children:[]}],nodes:[]};}
