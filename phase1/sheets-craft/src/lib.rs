@@ -156,6 +156,88 @@ impl HeadlessWorkbook {
         .to_string())
     }
 
+    /// The owner's exact state identity: native revision, history depths and the workbook snapshot identity.
+    /// Two equal tokens mean the very same workbook state, including after undo then redo. Reviews pin it.
+    fn state_token(&self) -> Result<String, String> {
+        let doc = self.session.doc().map_err(|e| e.to_string())?;
+        Ok(format!("{}:{}:{}:{:x}", doc.revision, doc.undo.len(), doc.redo.len(), std::sync::Arc::as_ptr(&doc.wb) as usize))
+    }
+
+    /// `{"revision":n,"token":".."}` for the review step. The token changes on every edit, undo, redo and reopen.
+    pub fn native_state(&self) -> Result<String, String> {
+        let rev = self.session.doc().map_err(|e| e.to_string())?.revision;
+        Ok(json!({"revision": rev, "token": self.state_token()?}).to_string())
+    }
+
+    fn cell_readback(&self, sheet: usize, row: u32, col: u32) -> Result<serde_json::Value, String> {
+        let doc = self.session.doc().map_err(|e| e.to_string())?;
+        let sh = doc.wb.sheet(sheet).ok_or("unknown sheet")?;
+        let at = CellRef::new(row, col);
+        let formula = sh.cell(at).and_then(|v| v.formula.as_ref()).map(|f| f.text.clone());
+        Ok(json!({"address": at.a1(), "value": sh.value(at), "formula": formula}))
+    }
+
+    /// Writes one reviewed cell ATOMICALLY: the owner state token and the exact old cell (`expected_old_json` is
+    /// `{"value":..,"formula":..}` as `range` returns it) are checked right here, in the same call that commits,
+    /// so a queued or manual edit between review and apply fails with a `stale` error and no mutation. Returns a
+    /// receipt: before/after native revision, `applied` (1 changed, 0 true no-op, taken from the engine's own
+    /// revision counter and not from history length), the new state token and the cell read back from the
+    /// workbook. Errors are proven pre-commit failures (the workbook is untouched). Protected sheets refused.
+    pub fn set_cell_reviewed(&mut self, sheet: usize, address: &str, expected_token: &str, expected_old_json: &str, input: &str) -> Result<String, String> {
+        let at = CellRef::parse(address).ok_or("invalid cell address")?;
+        if input.len() > 32_767 {
+            return Err("input exceeds 32,767 UTF-8 bytes".into());
+        }
+        self.check_block(sheet, at.row, at.col, 1, 1, true)?;
+        if self.state_token()? != expected_token {
+            return Err("stale: the workbook changed since this edit was reviewed".into());
+        }
+        let expected_old: serde_json::Value = serde_json::from_str(expected_old_json).map_err(|_| "expected cell must be a JSON object".to_string())?;
+        let old_now = self.cell_readback(sheet, at.row, at.col)?;
+        if !expected_old.is_object() || old_now != expected_old {
+            return Err("stale: the cell changed since this edit was reviewed".into());
+        }
+        let (before, redo_before) = {
+            let doc = self.session.doc().map_err(|e| e.to_string())?;
+            (doc.revision, doc.redo.clone())
+        };
+        self.session.run("cell.set", json!({"sheet": sheet, "cell": address, "input": input}))?;
+        let readback = self.cell_readback(sheet, at.row, at.col)?;
+        let mut applied = 1u32;
+        if readback == old_now {
+            // The engine records every cell.set; a write that leaves the cell as it was is a true no-op, so
+            // take its history entry back and restore the redo stack: state, revision and token are unchanged.
+            let doc = self.session.doc_mut().map_err(|e| e.to_string())?;
+            if let Some(entry) = doc.undo.pop() {
+                doc.wb = entry.wb;
+                doc.selection = entry.selection;
+                doc.revision = before;
+                doc.redo = redo_before;
+                applied = 0;
+            }
+        }
+        let after = self.session.doc().map_err(|e| e.to_string())?.revision;
+        Ok(json!({"sheet": sheet, "address": at.a1(), "beforeRevision": before, "afterRevision": after, "applied": applied,
+            "undoable": applied == 1, "token": self.state_token()?, "readback": readback}).to_string())
+    }
+
+    /// Undoes exactly the reviewed edit: refuses unless the owner state is still the state the edit receipt
+    /// returned (no manual edit, newer history, redo, reopen or other mutation since), then runs one undo and
+    /// returns a receipt with the cell read back and `applied` 1 only when the workbook snapshot really changed.
+    pub fn undo_reviewed(&mut self, sheet: usize, address: &str, expected_token: &str) -> Result<String, String> {
+        let at = CellRef::parse(address).ok_or("invalid cell address")?;
+        if self.state_token()? != expected_token {
+            return Err("stale: newer changes exist, so this edit can no longer be undone on its own".into());
+        }
+        let ptr = |b: &Self| -> Result<usize, String> { Ok(std::sync::Arc::as_ptr(&b.session.doc().map_err(|e| e.to_string())?.wb) as usize) };
+        let (before_ptr, before_rev) = (ptr(self)?, self.session.doc().map_err(|e| e.to_string())?.revision);
+        self.session.run("edit.undo", json!({}))?;
+        let applied = u32::from(ptr(self)? != before_ptr);
+        let readback = self.cell_readback(sheet, at.row, at.col)?;
+        Ok(json!({"sheet": sheet, "address": at.a1(), "beforeRevision": before_rev, "afterRevision": self.session.doc().map_err(|e| e.to_string())?.revision,
+            "applied": applied, "undoable": false, "token": self.state_token()?, "readback": readback}).to_string())
+    }
+
     /// Bounded viewport reads. Coordinates are zero-based; returns typed value + formula.
     pub fn range(&self, sheet: usize, row: u32, col: u32, rows: u32, cols: u32) -> Result<String, String> {
         if rows == 0
@@ -1328,6 +1410,58 @@ mod tests {
         assert!(book.filter_range(0, 0, 0, 3, 2, "nope").is_err());
         book.session.run("review.protectSheet", json!({})).unwrap();
         assert!(book.filter_range(0, 0, 0, 3, 2, ok).unwrap_err().contains("protected"));
+    }
+    #[test]
+    fn reviewed_cell_write_is_atomic_with_receipt_readback_and_exact_undo() {
+        let mut book = HeadlessWorkbook::new(FIXTURE).unwrap();
+        let state: serde_json::Value = serde_json::from_str(&book.native_state().unwrap()).unwrap();
+        let token = state["token"].as_str().unwrap().to_string();
+        let old: serde_json::Value = serde_json::from_str(&book.range(0, 29, 0, 1, 1).unwrap()).unwrap();
+        let old_cell = old["cells"][0].to_string();
+        let r: serde_json::Value = serde_json::from_str(&book.set_cell_reviewed(0, "A30", &token, &old_cell, "42").unwrap()).unwrap();
+        assert_eq!(r["applied"], 1);
+        assert_eq!(r["afterRevision"].as_u64().unwrap(), r["beforeRevision"].as_u64().unwrap() + 1);
+        assert_eq!(text(&book, "A30"), "42");
+        // The same review cannot be applied twice, and a manual edit makes it stale without mutation.
+        assert!(book.set_cell_reviewed(0, "A30", &token, &old_cell, "7").unwrap_err().starts_with("stale"));
+        assert_eq!(text(&book, "A30"), "42");
+        let after_token = r["token"].as_str().unwrap().to_string();
+        let u: serde_json::Value = serde_json::from_str(&book.undo_reviewed(0, "A30", &after_token).unwrap()).unwrap();
+        assert_eq!(u["applied"], 1);
+        assert_eq!(text(&book, "A30"), "");
+        assert!(book.undo_reviewed(0, "A30", &after_token).unwrap_err().starts_with("stale"));
+    }
+    #[test]
+    fn reviewed_undo_refuses_after_a_newer_edit_and_no_op_applies_zero() {
+        let mut book = HeadlessWorkbook::new(FIXTURE).unwrap();
+        let token = |b: &HeadlessWorkbook| -> String { serde_json::from_str::<serde_json::Value>(&b.native_state().unwrap()).unwrap()["token"].as_str().unwrap().to_string() };
+        let cell = |b: &HeadlessWorkbook, row: u32| -> String { serde_json::from_str::<serde_json::Value>(&b.range(0, row, 0, 1, 1).unwrap()).unwrap()["cells"][0].to_string() };
+        let t0 = token(&book);
+        let r: serde_json::Value = serde_json::from_str(&book.set_cell_reviewed(0, "A30", &t0, &cell(&book, 29), "42").unwrap()).unwrap();
+        let t1 = r["token"].as_str().unwrap().to_string();
+        book.set_cell(0, "A31", "x").unwrap();
+        assert!(book.undo_reviewed(0, "A30", &t1).unwrap_err().starts_with("stale"));
+        assert_eq!(text(&book, "A30"), "42");
+        let t2 = token(&book);
+        let n: serde_json::Value = serde_json::from_str(&book.set_cell_reviewed(0, "A30", &t2, &cell(&book, 29), "42").unwrap()).unwrap();
+        assert_eq!(n["applied"], 0, "writing the same value is a true no-op");
+        assert_eq!(n["undoable"], false);
+    }
+    #[test]
+    fn reviewed_write_rejects_bad_input_and_protected_sheets_without_mutation() {
+        let mut book = HeadlessWorkbook::new(FIXTURE).unwrap();
+        let state: serde_json::Value = serde_json::from_str(&book.native_state().unwrap()).unwrap();
+        let token = state["token"].as_str().unwrap().to_string();
+        let old = serde_json::from_str::<serde_json::Value>(&book.range(0, 29, 0, 1, 1).unwrap()).unwrap()["cells"][0].to_string();
+        assert!(book.set_cell_reviewed(0, "nope", &token, &old, "1").is_err());
+        assert!(book.set_cell_reviewed(0, "A30", &token, "not json", "1").is_err());
+        assert!(book.set_cell_reviewed(0, "A30", &token, &old, &"x".repeat(32_768)).is_err());
+        assert!(book.set_cell_reviewed(0, "A30", &token, "{\"address\":\"A30\",\"value\":\"other\",\"formula\":null}", "1").unwrap_err().starts_with("stale"));
+        assert!(book.set_cell_reviewed(9, "A30", &token, &old, "1").is_err());
+        assert_eq!(text(&book, "A30"), "");
+        book.session.run("review.protectSheet", json!({})).unwrap();
+        let token = serde_json::from_str::<serde_json::Value>(&book.native_state().unwrap()).unwrap()["token"].as_str().unwrap().to_string();
+        assert!(book.set_cell_reviewed(0, "A30", &token, &old, "1").unwrap_err().contains("protected"));
     }
     #[test]
     fn the_last_visible_sheet_cannot_be_deleted() {

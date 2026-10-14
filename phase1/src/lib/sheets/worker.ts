@@ -28,6 +28,9 @@ scope.onmessage=({data}:MessageEvent<SheetsRequest>)=>{queue=queue.then(async()=
    case 'resize':result=JSON.parse(need().resize_lines(data.sheet,data.axis,data.first,data.count,JSON.stringify(data.line)));break;
    case 'editLines':result=JSON.parse(need().edit_lines(data.sheet,data.axis,data.first,data.count,JSON.stringify(data.line)));break;
    case 'freeze':result=JSON.parse(need().freeze_panes(data.sheet,data.rows,data.cols));break;
+   case 'nativeState':result=JSON.parse(need().native_state());break;
+   case 'setReviewed':result=JSON.parse(need().set_cell_reviewed(data.sheet,data.address,data.token,data.old,data.input));break;
+   case 'undoReviewed':result=JSON.parse(need().undo_reviewed(data.sheet,data.address,data.token));break;
    case 'sheets':result=JSON.parse(need().sheets());break;
    case 'filter':result=JSON.parse(need().filter_range(data.sheet,data.row,data.col,data.rows,data.cols,JSON.stringify(data.filter)));break;
    case 'sort':result=JSON.parse(need().sort_range(data.sheet,data.row,data.col,data.rows,data.cols,JSON.stringify(data.sort)));break;

@@ -24,6 +24,9 @@ export class HeadlessWorkbook {
      */
     edit_sheet(sheet: number, op_json: string): string;
     filter_range(sheet: number, row: number, col: number, rows: number, cols: number, op_json: string): string;
+    native_state(): string;
+    set_cell_reviewed(sheet: number, address: string, expected_token: string, expected_old_json: string, input: string): string;
+    undo_reviewed(sheet: number, address: string, expected_token: string): string;
     sort_range(sheet: number, row: number, col: number, rows: number, cols: number, op_json: string): string;
     resize_lines(sheet: number, axis: string, first: number, count: number, op_json: string): string;
     edit_lines(sheet: number, axis: string, first: number, count: number, op_json: string): string;

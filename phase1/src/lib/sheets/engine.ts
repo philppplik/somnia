@@ -1,5 +1,6 @@
-import type {FilterOp,SortOp,SheetOp,FormatOp,LineAxis,LineOp,RangeResult,SheetInfo,SheetLayout,SheetsRequest,SheetsResponse,ViewResult,WorkbookInfo} from './protocol';
+import type {SheetsEditReceipt,SheetsNativeState,FilterOp,SortOp,SheetOp,FormatOp,LineAxis,LineOp,RangeResult,SheetInfo,SheetLayout,SheetsRequest,SheetsResponse,ViewResult,WorkbookInfo} from './protocol';
 import {MAX_INPUT_BYTES} from './protocol';
+import {parseEditReceipt,parseNativeState} from './receipt';
 type Req=SheetsRequest extends infer R?R extends {id:number}?Omit<R,'id'>:never:never;
 /** One module Worker per open workbook. A timeout or crash discards the session: callers must keep the original bytes. */
 export class SheetsEngine{
@@ -57,6 +58,12 @@ export class SheetsEngine{
  sheets(){return this.result<WorkbookInfo>({op:'sheets'});}
  /** Filter rows by one column, or clear or remove the filter (one undo step). */
  filter(sheet:number,row:number,col:number,rows:number,cols:number,filter:FilterOp){return this.result<unknown>({op:'filter',sheet,row,col,rows,cols,filter});}
+ /** Owner revision and identity token; pin it at review time. */
+ nativeState(){return this.result<SheetsNativeState>({op:'nativeState'}).then(parseNativeState);}
+ /** Atomic reviewed cell write: token and exact old cell are checked inside the worker's commit; resolves to the owner receipt. A rejected promise whose message starts with 'stale' changed nothing. */
+ setReviewed(sheet:number,address:string,token:string,old:{value:unknown;formula:string|null;address:string},input:string){return this.result<SheetsEditReceipt>({op:'setReviewed',sheet,address,token,old:JSON.stringify(old),input}).then(parseEditReceipt);}
+ /** Exact undo of the reviewed edit; refused (stale) once anything newer happened. */
+ undoReviewed(sheet:number,address:string,token:string){return this.result<SheetsEditReceipt>({op:'undoReviewed',sheet,address,token}).then(parseEditReceipt);}
  /** Sort the rows of exactly this block (never widened), one undo step. */
  sort(sheet:number,row:number,col:number,rows:number,cols:number,sort:SortOp){return this.result<unknown>({op:'sort',sheet,row,col,rows,cols,sort});}
  /** Add, rename, duplicate, move or delete a sheet (one undo step). Resolves to the sheet to show afterwards. */

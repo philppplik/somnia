@@ -35,6 +35,10 @@ export type SortOp={header:boolean;keys:{column:number;order:'asc'|'desc'}[];mat
 /** Row filter on one absolute sheet column; the block only creates the filter. */
 export type FilterCondition='='|'<>'|'>'|'<'|'>='|'<='|'beginsWith'|'endsWith'|'contains'|'notContains';
 export type FilterOp={kind:'custom';column:number;op:FilterCondition;value:string}|{kind:'clear';column:number}|{kind:'clearAll'}|{kind:'off'};
+/** Native owner state: revision plus an identity token that changes on every edit, undo, redo and reopen. */
+export interface SheetsNativeState{revision:number;token:string}
+/** Immutable owner receipt for one reviewed cell edit or its exact undo. `applied` is the logical delta: 1 changed, 0 true no-op. */
+export interface SheetsEditReceipt{sheet:number;address:string;beforeRevision:number;afterRevision:number;applied:0|1;undoable:boolean;token:string;readback:{address:string;value:unknown;formula:string|null}}
 export type SheetOp={kind:'add';name?:string}|{kind:'rename';name:string}|{kind:'duplicate'}|{kind:'delete'}|{kind:'move';to:number};
 export type SheetsRequest=
  |{id:number;op:'init';wasmUrl:string}
@@ -50,6 +54,9 @@ export type SheetsRequest=
  |{id:number;op:'resize';sheet:number;axis:LineAxis;first:number;count:number;line:LineOp}
  |{id:number;op:'editLines';sheet:number;axis:LineAxis;first:number;count:number;line:{kind:'insert'|'delete'}}
  |{id:number;op:'freeze';sheet:number;rows:number;cols:number}
+ |{id:number;op:'nativeState'}
+ |{id:number;op:'setReviewed';sheet:number;address:string;token:string;old:string;input:string}
+ |{id:number;op:'undoReviewed';sheet:number;address:string;token:string}
  |{id:number;op:'sheets'}
  |{id:number;op:'filter';sheet:number;row:number;col:number;rows:number;cols:number;filter:FilterOp}
  |{id:number;op:'sort';sheet:number;row:number;col:number;rows:number;cols:number;sort:SortOp}
