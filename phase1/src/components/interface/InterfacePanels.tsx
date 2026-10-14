@@ -55,9 +55,10 @@ export function InterfaceProperties(){
    <InterfaceBindings nodeId={node.id} run={run}/>
    <InterfaceMediaControls/>
    <InterfaceVectorControls nodeId={node.id} run={run}/>
-   <InterfaceOutput/>
+
    <div className="flex flex-wrap gap-1"><Button size="compact" variant="outline" disabled={node.locked} onClick={()=>run(()=>move(-1))}>{t('interface.up')}</Button><Button size="compact" variant="outline" disabled={node.locked} onClick={()=>run(()=>move(1))}>{t('interface.down')}</Button><Button size="compact" variant="outline" disabled={node.locked} onClick={()=>run(()=>interfaceSession.transact(d=>deleteNode(d,node.id)))}>{t('interface.delete')}</Button></div>
   </>}
+  <InterfaceOutput/>
  </div>}</Guard>;
 }
 
