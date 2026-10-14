@@ -1,6 +1,7 @@
 import type {Layer} from './model';
 /** Timeline lanes for keyed style properties that have no transform row: comp layer volume, stroke width and opacity, fill and stroke colour. */
 export interface StyleKeyLane{id:'gain'|'strokeWidth'|'strokeOpacity'|'fill'|'stroke';labelKey:string;ticks:readonly number[]}
+export type StyleLaneId=StyleKeyLane['id'];
 export function styleKeyLanes(l:Layer):StyleKeyLane[]{
  const out:StyleKeyLane[]=[];
  const add=(id:StyleKeyLane['id'],labelKey:string,ticks:readonly number[]|undefined)=>{if(ticks?.length)out.push({id,labelKey,ticks});};

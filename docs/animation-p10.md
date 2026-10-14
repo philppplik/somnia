@@ -324,3 +324,7 @@ Added:
 ## P59 - Style key lanes
 
 - `styleKeyLanes(layer)` (leaf `keyLanes.ts`, types only) lists lanes for `gain`, `stroke.widthAnim`, `stroke.opacityAnim`, `colorKeys.fill` and `colorKeys.stroke`. `AnimationTimeline` renders them for the selected layer next to the transform key rows; keys seek the playhead and carry an aria-label with name and time.
+
+## P60 - Moving style keys
+
+- `style.key.move {layer,lane,from,to}` moves one key of the lane (`gain`, `strokeWidth`, `strokeOpacity`, `fill`, `stroke`) to the frame-snapped tick `to`; a missing key or a key already at `to` is refused. The timeline drags with `previewEdits` and `commitPreview` like the mask lanes (rects keyed by index so pointer capture survives the re-render).

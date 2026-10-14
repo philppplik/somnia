@@ -1483,3 +1483,26 @@ test('P59 style key lanes list the keyed style properties of a layer',()=>{
  d=applyEdit(d,{type:'layer.gain.animate',layer:'pc',on:true,t:0});
  assert.deepEqual(styleKeyLanes(d.compositions.find(c=>c.id==='par')!.layers.find(l=>l.id==='pc')!).map(x=>x.id),['gain']);
 });
+
+test('P60 style keys move in time: all lanes, collisions, frame snapping, one edit',()=>{
+ let d=applyEdit(base(),{type:'layer.stroke',layer:'stencil',stroke:{color:'#000000',width:6}});
+ const L=()=>d.compositions[0].layers.find(l=>l.id==='stencil')!;
+ d=applyEdit(d,{type:'stroke.prop',layer:'stencil',prop:'width',op:'animate',on:true,t:0});d=applyEdit(d,{type:'stroke.prop',layer:'stencil',prop:'width',op:'set',value:20,t:240000});
+ d=applyEdit(d,{type:'stroke.prop',layer:'stencil',prop:'opacity',op:'animate',on:true,t:0});
+ d=applyEdit(d,{type:'color.prop',layer:'stencil',prop:'fill',op:'animate',on:true,t:0});d=applyEdit(d,{type:'color.prop',layer:'stencil',prop:'fill',op:'set',color:'#ff0000',t:120000});
+ d=applyEdit(d,{type:'color.prop',layer:'stencil',prop:'stroke',op:'animate',on:true,t:0});
+ d=applyEdit(d,{type:'style.key.move',layer:'stencil',lane:'strokeWidth',from:240000,to:360000});
+ assert.deepEqual(L().stroke!.widthAnim!.keys.map(k=>[k.t,k.v]),[[0,6],[360000,20]]);
+ d=applyEdit(d,{type:'style.key.move',layer:'stencil',lane:'strokeOpacity',from:0,to:16000});assert.equal(L().stroke!.opacityAnim!.keys[0].t,16000);
+ d=applyEdit(d,{type:'style.key.move',layer:'stencil',lane:'fill',from:120000,to:48000});assert.deepEqual(L().colorKeys!.fill!.map(k=>[k.t,k.color==='#ff0000']),[[0,false],[48000,true]]);
+ d=applyEdit(d,{type:'style.key.move',layer:'stencil',lane:'stroke',from:0,to:240000});assert.equal(L().colorKeys!.stroke![0].t,240000);
+ // snapped to a frame, collisions and missing keys refused, document stays valid
+ d=applyEdit(d,{type:'style.key.move',layer:'stencil',lane:'strokeWidth',from:360000,to:361234});assert.equal(L().stroke!.widthAnim!.keys[1].t%8000,0);
+ assert.throws(()=>applyEdit(d,{type:'style.key.move',layer:'stencil',lane:'fill',from:48000,to:0}));
+ assert.throws(()=>applyEdit(d,{type:'style.key.move',layer:'stencil',lane:'fill',from:777000,to:0}));
+ assert.throws(()=>applyEdit(d,{type:'style.key.move',layer:'photo',lane:'gain',from:0,to:8000}));
+ assert.deepEqual(validateDocument(d),[]);
+ // comp layer volume lane
+ const b0=base();let g=applyEdit(b0,{type:'comp.add',id:'par'});g=applyEdit(g,{type:'precomp.add',comp:b0.activeComp,id:'pc'});g=applyEdit(g,{type:'layer.gain.animate',layer:'pc',on:true,t:0});
+ g=applyEdit(g,{type:'style.key.move',layer:'pc',lane:'gain',from:0,to:240000});assert.deepEqual(g.compositions.find(c=>c.id==='par')!.layers.find(l=>l.id==='pc')!.gain!.keys.map(k=>k.t),[240000]);
+});

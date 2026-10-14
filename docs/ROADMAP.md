@@ -409,3 +409,10 @@ Depends on: v10 diff viewer, v11 updater for smooth extension and app updates.
 - Done: the selected layer shows one lane per keyed style property under its track: comp layer volume, stroke width, stroke opacity, fill colour and stroke colour (P56, P57, P58). Each key is a diamond at its time; the one at the playhead is filled; a click moves the playhead there. Lanes appear only when keys exist and the track height is not compact. Pure helper `styleKeyLanes` (leaf `keyLanes.ts`). Labels reuse the inspector strings, one new string for the key aria-label in 5 locales. No document change.
 - Open: the lanes are read-only (no drag, no selection with the marquee, no copy); per-key easing for colour keys; effect colour keys have no lane.
 
+
+### Animation P60 (2026-10-14, integration pending)
+
+- Picked: editable style lanes (drag keys in time). Per-key easing not done.
+- Done: the keys in the style lanes (comp layer volume, stroke width, stroke opacity, fill and stroke colour) can be dragged along the time axis. The drag previews live, snaps to frames (Alt = free, then snapped to the nearest frame by the edit), is one undo step on release, and Escape cancels. A key cannot be dropped on another key of the same lane (the last valid position stays). Pressing a key still moves the playhead to it. New edit `style.key.move`; no new strings or commands.
+- Open: no multi-select, copy/paste or delete from the lane (use the inspector buttons); no keyboard nudging; per-key easing for colour keys; effect colour keys have no lane.
+

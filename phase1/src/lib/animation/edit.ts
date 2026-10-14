@@ -67,6 +67,7 @@ export type Edit=
  |{type:'audio.volume.set';layer:string;value:number;t:number}
  |{type:'audio.volume.animate';layer:string;on:boolean;t:number}
  |{type:'audio.volume.key.remove';layer:string;t:number}
+ |{type:'style.key.move';layer:string;lane:'gain'|'strokeWidth'|'strokeOpacity'|'fill'|'stroke';from:number;to:number}
  |{type:'color.prop';layer:string;prop:'fill'|'stroke';op:'set'|'animate'|'remove';color?:string;on?:boolean;t:number}
  |{type:'stroke.prop';layer:string;prop:'width'|'opacity';op:'set'|'animate'|'remove';value?:number;on?:boolean;t:number}
  |{type:'layer.gain.set';layer:string;value:number;t:number}
@@ -200,6 +201,15 @@ function reduce(doc:AnimationDocument,e:Edit):AnimationDocument{
    else if(e.type==='audio.volume.animate'){const sampled=evaluate(vol,t) as number;next=e.on?(vol.keys.length?vol:{...vol,keys:[makeKey(t,sampled)]}):{...vol,value:sampled,keys:[]};}
    else{if(!vol.keys.some(k=>k.t===t))fail('missing','No volume key at that time.');const keys=vol.keys.filter(k=>k.t!==t);next=keys.length?{...vol,keys}:{...vol,value:evaluate(vol,t) as number,keys:[]};}
    return setLayer(doc,{...l,audio:{...l.audio!,volume:next}});}
+  case 'style.key.move':{
+   const l=layerOf(doc,e.layer),to=tickOf(compOf(doc),e.to);
+   const shift=<K extends {t:number}>(keys:readonly K[]|undefined):K[]=>{
+    if(!keys?.some(k=>k.t===e.from))fail('missing','No key at that time.');
+    if(to!==e.from&&keys!.some(k=>k.t===to))fail('invalid','There is already a key at that time.');
+    return keys!.map(k=>k.t===e.from?{...k,t:to}:k).sort((a,b)=>a.t-b.t);};
+   if(e.lane==='gain'){if(l.kind!=='comp'||!l.gain)fail('missing','No volume keys.');return setLayer(doc,{...l,gain:{...l.gain!,keys:shift(l.gain!.keys)}});}
+   if(e.lane==='strokeWidth'||e.lane==='strokeOpacity'){const f=e.lane==='strokeWidth'?'widthAnim':'opacityAnim',a=l.stroke?.[f];if(!l.stroke||!a)fail('missing','No stroke keys.');return setLayer(doc,{...l,stroke:{...l.stroke!,[f]:{...a!,keys:shift(a!.keys)}}});}
+   const ck=l.colorKeys?.[e.lane];if(!ck)fail('missing','No colour keys.');return setLayer(doc,{...l,colorKeys:{...l.colorKeys,[e.lane]:shift(ck)}});}
   case 'color.prop':{
    const l=layerOf(doc,e.layer),fillOk=['solid','shape','text'].includes(l.kind);
    if(e.prop==='fill'?!fillOk:(l.kind!=='shape'||!l.stroke))fail('invalid',e.prop==='fill'?'This layer has no fill colour.':'The layer has no stroke.');
