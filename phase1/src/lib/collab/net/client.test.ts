@@ -252,3 +252,33 @@ test('heartbeat disabled with heartbeatMs 0 stays connected without any traffic'
  assert.equal(a.snapshot().state,'connected');
  a.leave();
 });
+
+test('a document update over the 2 MiB relay cap arrives chunked; the relay never sees a big frame',async()=>{
+ const {server,factory}=memoryServer();const ends:MemoryServerEnd[]=[];const sizes:number[]=[];
+ server.onConnection(e=>{ends.push(e);
+  e.transport.connect({onOpen(){},onMessage:b=>{sizes.push(b.length);if(b.length>=2*1024*1024){e.drop(1009,'too big');return;}for(const o of ends)if(o!==e)o.transport.send(b);},onClose(){ends.splice(ends.indexOf(e),1);}});});
+ const invite=`ws://memory/room/abcdefgh12345678#key=${(await newLinkKey()).param}`;
+ const big='x'.repeat(3*1024*1024)+'tail';
+ const a=mkClient(invite,mkSession({'big.txt':big}),{transport:factory,syncTimeoutMs:30});
+ const b=mkClient(invite,mkSession(),{transport:factory,syncTimeoutMs:30});
+ await Promise.all([a.connect(),b.connect()]);
+ // both the initial sync (big seed) and a later big edit must cross intact; wait for content, not the sync flag (it flips on the 30 ms timeout too)
+ const btext=()=>(b as unknown as {sess:{doc:Y.Doc}}).sess.doc.getMap('files').get('big.txt')?.toString();
+ await until(()=>btext()===big,8000);
+ assert.equal(btext(),big);
+ assert.ok(Math.max(...sizes)<2*1024*1024,'no frame touches the relay cap');
+ (a as unknown as {sess:{doc:Y.Doc}}).sess.doc.getMap('files').get('big.txt')!.insert(0,'HEAD-');
+ await until(()=>btext()?.startsWith('HEAD-')??false,8000);
+ a.leave();b.leave();
+});
+
+test('sync chunk frames are validated: bad shape, oversize part, junk after payload',async()=>{
+ const {encodeSyncChunk,decodeSyncChunk}=await import('./protocol');
+ const good=encodeSyncChunk('ab-c',1,3,new Uint8Array(100));
+ assert.deepEqual(decodeSyncChunk(good),{batch:'ab-c',index:1,count:3,payload:new Uint8Array(100)});
+ assert.equal(decodeSyncChunk(encodeSyncChunk('ab-c',3,3,new Uint8Array(1))),null,'index >= count');
+ assert.equal(decodeSyncChunk(encodeSyncChunk('ab-c',0,99,new Uint8Array(1))),null,'count over cap');
+ assert.equal(decodeSyncChunk(encodeSyncChunk('bad batch!',0,1,new Uint8Array(1))),null,'batch id shape');
+ assert.equal(decodeSyncChunk(encodeSyncChunk('ab-c',0,1,new Uint8Array(1024*1024+100))),null,'part over cap');
+ assert.equal(decodeSyncChunk(new Uint8Array([8,0,0])),null,'truncated');
+});
