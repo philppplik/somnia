@@ -1,5 +1,6 @@
 import test from 'node:test';import assert from 'node:assert/strict';
 import {checkSkins,bonePickRadius,pickBone,MAX_SKINS,MAX_BONES,MAX_BONES_PER_SKIN} from './skeleton';
+import {ModelError} from './model';
 test('a file without skins passes with zero counts',()=>{
  assert.deepEqual(checkSkins('a.glb',{}),{skins:0,bones:0});
  assert.deepEqual(checkSkins('a.glb',{skins:[]}),{skins:0,bones:0});
@@ -39,4 +40,19 @@ test('pickBone prefers the joint under the cursor, then the closer one on a tie'
  assert.equal(pickBone([0,0,0],[0,0,-1],[{id:1,at:[0,0,-8] as const},{id:2,at:[0,0.05,-2] as const}],0.2),1);
  // Equal distance to the ray: the closer joint along the ray wins.
  assert.equal(pickBone([0,0,0],[0,0,-1],[{id:1,at:[0,0.05,-8] as const},{id:2,at:[0,0.05,-2] as const}],0.2),2);
+});
+
+test('checkSkins accepts a healthy skin and reads its stats',()=>{
+ const s=checkSkins('rig.glb',{skins:[{joints:[1,2,3]}]});
+ assert.deepEqual(s,{skins:1,bones:3});
+ assert.deepEqual(checkSkins('plain.glb',{}),{skins:0,bones:0},'no skins block is fine');
+});
+test('checkSkins rejects damaged or oversized skins with a readable reason',()=>{
+ const bad=(json:Record<string,unknown>,re:RegExp)=>assert.throws(()=>checkSkins('m.glb',json),(e:unknown)=>e instanceof ModelError&&re.test((e as Error).message));
+ bad({skins:'nope'},/damaged skins block/);
+ bad({skins:[{}]},/skin without joints/);
+ bad({skins:[{joints:[0,1,-2]}]},/damaged joints/);
+ bad({skins:[{joints:Array.from({length:MAX_BONES_PER_SKIN+1},(_,i)=>i)}]},/at most 256 per skin/);
+ bad({skins:[{joints:Array.from({length:MAX_BONES_PER_SKIN},(_,i)=>i)},{joints:Array.from({length:MAX_BONES_PER_SKIN},(_,i)=>i)},{joints:[0]}]},/at most 512/);
+ bad({skins:Array.from({length:MAX_SKINS+1},()=>({joints:[0]}))},/at most 64/);
 });

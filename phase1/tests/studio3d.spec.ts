@@ -707,3 +707,52 @@ test('3D studio groups, ungroups, builds a linear array and picks snap modes',as
  await run(page,'studio3d.snap.set',{on:true,mode:'vertex'});
  await expect.poll(async()=>(await session(page)).notice).toBe('');
 });
+
+/** A two-bone skinned box with a one-second rotation clip, built by hand - no external assets. */
+function skinnedGltf():Buffer{
+ const f=(...n:number[])=>Buffer.concat(n.map(v=>{const b=Buffer.alloc(4);b.writeFloatLE(v);return b;}));
+ const u=(...n:number[])=>Buffer.concat(n.map(v=>{const b=Buffer.alloc(4);b.writeUint32LE(v);return b;}));
+ const pos:number[]=[];
+ for(const y of [0,2])for(const z of [-0.5,0.5])for(const x of [-0.5,0.5])pos.push(x,y,z);
+ const joints=Buffer.concat([0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 1,0,0,0, 1,0,0,0, 1,0,0,0, 1,0,0,0].map(v=>Buffer.from([v])));
+ const weights:number[]=[];for(let i=0;i<8;i++)weights.push(...(i<4?[1,0,0,0]:[1,0,0,0]));
+ const ident=[1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1];
+ const ibm2=[1,0,0,0, 0,1,0,0, 0,0,1,0, 0,-1,0,1];
+ const q=(a:number)=>[0,Math.sin(a/2),0,Math.cos(a/2)];
+ const bin=Buffer.concat([f(...pos),joints,f(...weights),f(...ident,...ibm2),f(0,1),f(...q(0),...q(Math.PI/2))]);
+ const off=[0,96,128,256,384,392];
+ const gltf={asset:{version:'2.0'},scene:0,scenes:[{nodes:[0,1]}],
+  nodes:[{mesh:0,skin:0,name:'Body'},{name:'Hip',children:[2]},{name:'Knee',translation:[0,1,0]}],
+  meshes:[{primitives:[{attributes:{POSITION:0,JOINTS_0:1,WEIGHTS_0:2}}]}],
+  skins:[{joints:[1,2],inverseBindMatrices:3,skeleton:1}],
+  buffers:[{uri:'data:application/octet-stream;base64,'+bin.toString('base64'),byteLength:bin.length}],
+  bufferViews:off.map((o,i)=>{const ends=[96,128,256,384,392,424];return {buffer:0,byteOffset:o,byteLength:ends[i]-o};}),
+  accessors:[
+   {bufferView:0,componentType:5126,count:8,type:'VEC3',min:[-0.5,0,-0.5],max:[0.5,2,0.5]},
+   {bufferView:1,componentType:5121,count:8,type:'VEC4'},
+   {bufferView:2,componentType:5126,count:8,type:'VEC4'},
+   {bufferView:3,componentType:5126,count:2,type:'MAT4'},
+   {bufferView:4,componentType:5126,count:2,type:'SCALAR',min:[0],max:[1]},
+   {bufferView:5,componentType:5126,count:2,type:'VEC4'}],
+  animations:[{name:'Wave',samplers:[{input:4,output:5}],channels:[{sampler:0,target:{node:2,path:'rotation'}}]}]};
+ return Buffer.from(JSON.stringify(gltf));
+}
+
+test('3D studio round-trips a skinned glTF with its clip: import, export as GLB, import again',async({page})=>{
+ await open3d(page);
+ await page.getByTestId('studio3d-file-input').setInputFiles({name:'skinned.gltf',mimeType:'model/gltf+json',buffer:skinnedGltf()});
+ await expect(page.getByTestId('studio3d-viewport')).toBeVisible({timeout:20_000});
+ await expect.poll(async()=>(await session(page)).bones.length).toBe(2);
+ await expect.poll(async()=>((await session(page)).clips??[]).map(c=>c.name)).toEqual(['Wave']);
+ const [download]=await Promise.all([page.waitForEvent('download'),run(page,'studio3d.export.glb',{})]);
+ const stream=await download.createReadStream();
+ const chunks:Buffer[]=[];for await(const c of stream)chunks.push(c as Buffer);
+ const glb=Buffer.concat(chunks);
+ expect(glb.length).toBeGreaterThan(500);
+ expect(glb.readUInt32LE(0)).toBe(0x46546c67,'a real binary GLB comes back');
+ await run(page,'studio3d.scene.new',{});
+ await page.getByTestId('studio3d-file-input').setInputFiles({name:'again.glb',mimeType:'model/gltf-binary',buffer:glb});
+ await expect.poll(async()=>(await session(page)).bones.length,{timeout:20_000}).toBe(2);
+ await expect.poll(async()=>((await session(page)).clips??[]).map(c=>c.name)).toEqual(['Wave']);
+ await expect.poll(async()=>((await session(page)).clips??[])[0]?.duration).toBeCloseTo(1,1);
+});
