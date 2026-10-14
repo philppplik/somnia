@@ -1,10 +1,11 @@
 import {useLayoutEffect,useRef,useState,type PointerEvent} from 'react';
 import {animationSession} from '../../lib/animation/session';
 import {copyMaskKeys,maskEdit} from '../../lib/animation/masks';
-import {setGraphTarget,setMaskClip,useMaskSelection,type GraphTarget} from '../../lib/animation/maskSelection';
+import {setGraphMixed,setGraphTarget,setMaskClip,useMaskSelection,type GraphTarget} from '../../lib/animation/maskSelection';
 import {channelOf,curveSamples,speedRange,speedSamples,handleToEase,handlesOf,niceStep,valueRange,EASE_PRESETS,type EasePreset} from '../../lib/animation/graph';
 import {frameToTick,timecode} from '../../lib/animation/time';
 import type {Composition,Layer,MaskProp,PropValue,Property} from '../../lib/animation/model';
+import {animatedTargets} from '../../lib/animation/keyTargets';
 import {useT} from '../../lib/useT';
 import {Button} from '../ui/button';
 import {NativeSelect} from '../ui/native-controls';
@@ -19,7 +20,8 @@ export function maskTargets(layer:Layer):(GraphTarget&{n:number})[]{
 /** Left-hand list entry buttons for mask curves; shared by the transform graph and the mask graph. */
 export function MaskTargetButtons({layer,active}:{layer:Layer;active:GraphTarget|null}){
  const {t}=useT();
- return <>{maskTargets(layer).map(g=><Button key={`${g.mask}-${g.prop}`} size="tiny" aria-pressed={active?.mask===g.mask&&active.prop===g.prop} className={`w-full justify-start truncate ${active?.mask===g.mask&&active.prop===g.prop?'text-ink':'text-ink-3'}`} onClick={()=>setGraphTarget({mask:g.mask,prop:g.prop})} data-testid={`animation-graph-mask-${g.n-1}-${g.prop}`}>{t('animation.masks.lane',{n:g.n,prop:t(`animation.masks.prop.${g.prop}`)})}</Button>)}</>;
+ return <>{maskTargets(layer).map(g=><Button key={`${g.mask}-${g.prop}`} size="tiny" aria-pressed={active?.mask===g.mask&&active.prop===g.prop} className={`w-full justify-start truncate ${active?.mask===g.mask&&active.prop===g.prop?'text-ink':'text-ink-3'}`} onClick={()=>{setGraphMixed(false);setGraphTarget({mask:g.mask,prop:g.prop});}} data-testid={`animation-graph-mask-${g.n-1}-${g.prop}`}>{t('animation.masks.lane',{n:g.n,prop:t(`animation.masks.prop.${g.prop}`)})}</Button>)}
+  {animatedTargets(layer).length>1&&<Button size="tiny" className="w-full justify-start truncate text-ink-3" onClick={()=>setGraphMixed(true)} data-testid="animation-graph-mixed-open">{t('animation.graph.mixed')}</Button>}</>;
 }
 /** Value graph of one animated mask property: draggable keys (time and value) and ease handles. Path morphs list their keys with an ease each. */
 export function MaskGraph({comp,layer,target,playhead}:{comp:Composition;layer:Layer;target:GraphTarget;playhead:number}){

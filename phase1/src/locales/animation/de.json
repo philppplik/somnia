@@ -325,5 +325,8 @@
  "animation.masks.pointInsert": "Punkt einfügen",
  "animation.masks.pointRemove": "Punkt löschen",
  "animation.graph.transform": "Transformation",
- "animation.graph.pickMask": "Wähle eine Maskenkurve zum Bearbeiten."
+ "animation.graph.pickMask": "Wähle eine Maskenkurve zum Bearbeiten.",
+ "animation.graph.mixed": "Gemischt",
+ "animation.graph.mixedLabel": "Keys aller animierten Eigenschaften, jede Kurve auf ihrer eigenen Skala von 0 bis 100 Prozent",
+ "animation.graph.mixedKey": "{name}-Key bei {time}"
 }

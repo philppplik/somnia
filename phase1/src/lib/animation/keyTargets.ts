@@ -61,7 +61,7 @@ export function easeTargetKeys(doc:AnimationDocument,layerId:string,sel:readonly
 }
 /** Position of a key on a 0..1 scale of its own property (first channel), so properties with different units share one graph. */
 export function normalizedValue(v:Property['value'],bounds:{min:number;max:number}):number{
- const n=Array.isArray(v)?v[0]:(v as number);return bounds.max===bounds.min?0.5:(n-bounds.min)/(bounds.max-bounds.min);
+ const n=typeof v==='number'?v:Array.isArray(v)&&typeof v[0]==='number'?v[0]:0;return bounds.max===bounds.min?0.5:(n-bounds.min)/(bounds.max-bounds.min);
 }
 /** The value range of a property's keys (first channel), widened a little so flat curves still have height. */
 export function keyBounds(p:Property):{min:number;max:number}{

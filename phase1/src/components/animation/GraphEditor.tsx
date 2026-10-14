@@ -7,8 +7,10 @@ import {clickSelect,sameKey,shiftSelection} from '../../lib/animation/selection'
 import {frameToTick,timecode} from '../../lib/animation/time';
 import {useT} from '../../lib/useT';
 import {Button} from '../ui/button';
+import {MixedGraph} from './MixedGraph';
+import {animatedTargets} from '../../lib/animation/keyTargets';
 import {MaskGraph,MaskTargetButtons,maskTargets} from './MaskGraph';
-import {setGraphTarget,setMaskClip,useMaskSelection} from '../../lib/animation/maskSelection';
+import {setGraphMixed,setGraphTarget,setMaskClip,useMaskSelection} from '../../lib/animation/maskSelection';
 import {copyTransformKeys,pasteTransformEdits} from '../../lib/animation/keysClipboard';
 import {EASE_LABEL,EASES,fmt,PROP_LABEL} from './format';
 const PAD={l:46,r:12,t:10,b:16};
@@ -37,6 +39,7 @@ export function GraphEditor({comp,layerId,sel,playhead}:{comp:Composition;layerI
  const wrap=useRef<HTMLDivElement>(null);const svgRef=useRef<SVGSVGElement>(null);const size=useSize(wrap);
  const frozen=useRef<{min:number;max:number}|null>(null);
  useEffect(()=>{frozen.current=null;},[active,layerId]);
+ if(layer&&msel.mixed&&animatedTargets(layer).length)return <MixedGraph comp={comp} layer={layer} playhead={playhead}/>;
  if(layer&&gt)return <MaskGraph comp={comp} layer={layer} target={gt} playhead={playhead}/>;
  if(layer&&!active&&maskTargets(layer).length)return <div className="grid min-h-0 flex-1 grid-cols-[180px_1fr]"><div className="p-1"><MaskTargetButtons layer={layer} active={null}/></div><div className="grid place-items-center p-3 text-ink-3">{t('animation.graph.pickMask')}</div></div>;
  if(!layer||!active)return <div className="grid min-h-0 flex-1 place-items-center p-3 text-ink-3" data-testid="animation-graph-empty">{t(layer?'animation.graph.empty':'animation.graph.noLayer')}</div>;
@@ -129,7 +132,7 @@ export function GraphEditor({comp,layerId,sel,playhead}:{comp:Composition;layerI
    </div>}
    {prop.type==='vec2'&&<p className="px-2 text-ink-3">{t(keys.some(k=>k.sIn||k.sOut)?'animation.graph.pathEase':'animation.graph.channelEase')}</p>}
    {speed&&<p className="px-2 text-ink-3">{t('animation.graph.unitsSecond')}</p>}
-   {animated.map(k=><button key={k} type="button" aria-pressed={k===active} className={`block w-full truncate rounded-sm px-2 py-1 text-left ${k===active?'bg-hover text-ink':'text-ink-3'}`} onClick={()=>{setGraphTarget(null);sess.setView({openProps:[k]});}} data-testid={`animation-graph-prop-${k}`}>{t(PROP_LABEL[k])}</button>)}
+   {animated.map(k=><button key={k} type="button" aria-pressed={k===active} className={`block w-full truncate rounded-sm px-2 py-1 text-left ${k===active?'bg-hover text-ink':'text-ink-3'}`} onClick={()=>{setGraphTarget(null);setGraphMixed(false);sess.setView({openProps:[k]});}} data-testid={`animation-graph-prop-${k}`}>{t(PROP_LABEL[k])}</button>)}
    <MaskTargetButtons layer={layer} active={null}/>
    <div className="mt-1 flex gap-1 px-1"><Button size="tiny" disabled={!selHere.length} onClick={()=>{try{setMaskClip({kind:'keys',keys:copyTransformKeys(layer,active,selHere.map(r=>r.t))});}catch{/* stale */}}} data-testid="animation-graph-keys-copy">{t('animation.masks.copy')}</Button>
     <Button size="tiny" disabled={msel.clip?.kind!=='keys'||layer.locked} onClick={()=>{if(msel.clip?.kind==='keys'){try{sess.dispatch(pasteTransformEdits(layer,active,playhead,msel.clip.keys));}catch{/* other type or range */}}}} data-testid="animation-graph-keys-paste">{t('animation.masks.paste')}</Button></div>

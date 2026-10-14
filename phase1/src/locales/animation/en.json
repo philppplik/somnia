@@ -325,5 +325,8 @@
  "animation.masks.pointInsert": "Insert point",
  "animation.masks.pointRemove": "Delete point",
  "animation.graph.transform": "Transform",
- "animation.graph.pickMask": "Pick a mask curve to edit."
+ "animation.graph.pickMask": "Pick a mask curve to edit.",
+ "animation.graph.mixed": "Mixed",
+ "animation.graph.mixedLabel": "Keys of all animated properties, each curve on its own 0 to 100 percent scale",
+ "animation.graph.mixedKey": "{name} key at {time}"
 }
