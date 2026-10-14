@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {transformExpr,measureInfo,mergeSnap,defaultSnap,SnapError} from './model';
+import {transformExpr,measureInfo,formatMeasure,mergeSnap,defaultSnap,SnapError} from './model';
 import {Stage} from './stage';
 import {resetStudio3D,getStudio3DState} from './session';
 
@@ -30,6 +30,20 @@ test('measureInfo reports distance and elevation angle',()=>{
  assert.ok(Math.abs(up.angle-90)<1e-9);
  const mixed=measureInfo({x:0,y:0,z:0},{x:1,y:1,z:0});
  assert.ok(Math.abs(mixed.angle-45)<1e-9);
+});
+test('measureInfo reports the signed per-axis delta',()=>{
+ const d=measureInfo({x:1,y:2,z:3},{x:4,y:1,z:3});
+ assert.deepEqual(d.delta,{x:3,y:-1,z:0});
+});
+test('formatMeasure scales to the scene unit and lists the deltas',()=>{
+ const mi=measureInfo({x:0,y:0,z:0},{x:3,y:0,z:4});
+ assert.equal(formatMeasure(mi,'m'),'5.000 m · 0.0° · Δ 3.000 / 0.000 / 4.000 m');
+ assert.equal(formatMeasure(mi,'cm'),'500.000 cm · 0.0° · Δ 300.000 / 0.000 / 400.000 cm');
+ assert.equal(formatMeasure(mi,'mm'),'5000.000 mm · 0.0° · Δ 3000.000 / 0.000 / 4000.000 mm');
+ const up=measureInfo({x:0,y:0,z:0},{x:0,y:0.5,z:0});
+ assert.equal(formatMeasure(up,'m'),'0.500 m · 90.0° · Δ 0.000 / 0.500 / 0.000 m');
+ const neg=measureInfo({x:1,y:0,z:0},{x:0,y:0,z:0});
+ assert.equal(formatMeasure(neg,'m'),'1.000 m · 0.0° · Δ -1.000 / 0.000 / 0.000 m');
 });
 test('mergeSnap accepts the midpoint mode and rejects unknown modes',()=>{
  assert.equal(mergeSnap(defaultSnap(),{mode:'midpoint'}).mode,'midpoint');

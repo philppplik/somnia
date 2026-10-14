@@ -1,4 +1,5 @@
 # Unreleased: 3D Studio P0
+- Measure tool polish: after the first pick a live rubber-band line and dot follow the cursor over meshes and the ground plane, and the readout now shows the signed per-axis deltas and scales to the chosen scene unit (m, cm, mm, in) instead of always metres.
 - Smooth camera flights: applying a saved view or a view preset glides the camera to its new pose over a third of a second (ease-in-out), interrupted cleanly by grabbing the viewport or by another move; reduced-motion users and the orthographic projection keep instant jumps.
 - Camera bookmarks polish: saved views can be renamed (command or inline in the view panel) and overwritten with the current camera, default names fill gaps left by removed views, and the viewport maps keys 1-9 to apply a saved view slot and Shift+1-9 to save the current camera into that slot.
 - Pin labels in the viewport: annotation pins with a label show a small overlay tag anchored to the pin that follows the camera, hides when the pin points away, and disappears with the pin; the outliner rows gained a focus button that selects the object and frames it in the viewport.

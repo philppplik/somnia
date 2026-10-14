@@ -233,11 +233,16 @@ export function transformExpr(draft:string,current:number):number|null{
 }
 
 /** Distance and elevation angle (degrees above the horizontal plane) of a measured segment. */
-export function measureInfo(a:Vec3Like,b:Vec3Like):{distance:number;angle:number}{
+export function measureInfo(a:Vec3Like,b:Vec3Like):{distance:number;angle:number;delta:Vec3Like}{
  const dx=b.x-a.x,dy=b.y-a.y,dz=b.z-a.z;
  const distance=Math.hypot(dx,dy,dz);
  const flat=Math.hypot(dx,dz);
- return {distance,angle:distance>0?Math.atan2(dy,flat)*180/Math.PI:0};
+ return {distance,angle:distance>0?Math.atan2(dy,flat)*180/Math.PI:0,delta:{x:dx,y:dy,z:dz}};
+}
+/** One-line measure readout in a scene unit: distance and elevation angle plus the signed per-axis deltas. */
+export function formatMeasure(info:{distance:number;angle:number;delta:Vec3Like},unit:ExportUnit):string{
+ const k=unitScale(unit);const f=(v:number)=>{const x=v*k;return (Object.is(x,-0)?0:x).toFixed(3);};
+ return `${f(info.distance)} ${unit} · ${info.angle.toFixed(1)}° · Δ ${f(info.delta.x)} / ${f(info.delta.y)} / ${f(info.delta.z)} ${unit}`;
 }
 export interface Vec3Like{x:number;y:number;z:number}
 /** STL files carry no unit. Slicers and CAD use millimetres, scenes here use metres: a part larger than 10 units is most likely millimetres. */

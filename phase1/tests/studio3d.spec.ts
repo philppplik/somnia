@@ -1158,6 +1158,12 @@ test('3D studio precision tools: snap modes and hotkey, measure picks, transform
  await vp.click({position:{x:200,y:220}});
  await vp.click({position:{x:420,y:160}});
  await expect(page.getByTestId('studio3d-measure')).toContainText(/[0-9]+\.[0-9]{3} m · /);
+ // The readout lists the signed per-axis deltas and follows the scene unit.
+ await expect(page.getByTestId('studio3d-measure')).toContainText('Δ');
+ expect(await run(page,'studio3d.unit.set',{unit:'mm'})).toBe(true);
+ await expect(page.getByTestId('studio3d-measure')).toContainText('mm · ');
+ await expect(page.getByTestId('studio3d-measure')).toContainText(' mm');
+ expect(await run(page,'studio3d.unit.set',{unit:'m'})).toBe(true);
  expect((await session(page)).measure?.a).toBeTruthy();
  expect((await session(page)).measure?.b).toBeTruthy();
  await page.keyboard.press('m');

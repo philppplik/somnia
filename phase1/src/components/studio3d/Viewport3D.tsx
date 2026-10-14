@@ -29,7 +29,7 @@ import {readProjectUnit,writeProjectUnit} from '../../lib/studio3d/projectPrefs'
 import {checkPreset,presetPatch,readPresets,removePreset,savePreset,MaterialPresetError,type MaterialPreset} from '../../lib/studio3d/materialPresets';
 import type {MaterialSnapshot} from '../../lib/studio3d/stage';
 import {ASSET_MIME,parseAssetDrag} from '../../lib/studio3d/assetDrag';
-import {toggleSelection,marqueeRect,inRect,turntablePlan,frameName,exportFileName,unitScale,isUnit,isMeshFormat,mergeSnap,snapTo,measureInfo,stlUnitHint,mtlReferences,mtlTextures,externalGltfNeeds,clampRenderSize,shadowMapSize,formatPerf,webmMime,MAX_MTL_BYTES,MAX_TEXTURE_BYTES,MAX_TEXTURE_FILES,SnapError,mergeEnv,envFormatFor,isShadowQuality,isShadowType,nudgeFor,EnvError,modelFormatFor,readModelHeader,ModelError,boundsValid,boundsCenter,boundsRadius,frameDistance,clipPlanes,pickClips,extractGltfTextures,GLTF_TEXTURE_MODES} from '../../lib/studio3d/model';
+import {toggleSelection,marqueeRect,inRect,turntablePlan,frameName,exportFileName,unitScale,isUnit,isMeshFormat,mergeSnap,snapTo,measureInfo,formatMeasure,stlUnitHint,mtlReferences,mtlTextures,externalGltfNeeds,clampRenderSize,shadowMapSize,formatPerf,webmMime,MAX_MTL_BYTES,MAX_TEXTURE_BYTES,MAX_TEXTURE_FILES,SnapError,mergeEnv,envFormatFor,isShadowQuality,isShadowType,nudgeFor,EnvError,modelFormatFor,readModelHeader,ModelError,boundsValid,boundsCenter,boundsRadius,frameDistance,clipPlanes,pickClips,extractGltfTextures,GLTF_TEXTURE_MODES} from '../../lib/studio3d/model';
 import type {Bounds} from '../../lib/studio3d/model';
 import {checkSkins,bonePickRadius,pickBone} from '../../lib/studio3d/skeleton';
 import {weightColor} from '../../lib/studio3d/skinning';
@@ -1326,6 +1326,15 @@ export default function Viewport3D(){
     }
     return;
    }
+   const ms=getStudio3DState().measure;
+   if(ms?.a&&!ms.b){
+    const rect=renderer.domElement.getBoundingClientRect();
+    ray.setFromCamera(new THREE.Vector2(((e.clientX-rect.left)/rect.width)*2-1,-(((e.clientY-rect.top)/rect.height)*2-1)),camera);
+    const hit=ray.intersectObject(holder,true).find(h=>(h.object as THREE.Mesh).isMesh);
+    let p=hit?hit.point.clone():null;
+    if(!p){const tmp=new THREE.Vector3();if(ray.ray.intersectPlane(new THREE.Plane(new THREE.Vector3(0,1,0),0),tmp))p=tmp;}
+    if(p){mLineGeo.setFromPoints([new THREE.Vector3(ms.a.x,ms.a.y,ms.a.z),p]);mLine.visible=true;mDotB.position.copy(p);mDotB.visible=true;invalidate();}
+   }
    if(!shiftDrag||!down||Math.hypot(e.clientX-down.x,e.clientY-down.y)<=4)return;
    if(!marquee){marquee=document.createElement('div');marquee.style.cssText='position:fixed;pointer-events:none;border:1px dashed var(--focus-ring);background:var(--accent-soft);z-index:50';marquee.setAttribute('aria-hidden','true');document.body.appendChild(marquee);}
    const r=marqueeRect(down,{x:e.clientX,y:e.clientY});marquee.style.left=r.x0+'px';marquee.style.top=r.y0+'px';marquee.style.width=(r.x1-r.x0)+'px';marquee.style.height=(r.y1-r.y0)+'px';
@@ -1426,7 +1435,7 @@ export default function Viewport3D(){
   <div ref={host} className="relative min-h-0 flex-1 overflow-hidden rounded-[25px]"/>
   {s.status==='loading'&&<StudioStatus className="pointer-events-none absolute left-4 top-3 m-0 rounded-md bg-surface px-2 py-1 text-xs" data-testid="studio3d-loading">{t('studio3d.status.loading',{name:s.name})}{s.loadPhase?` · ${t('studio3d.load.phase.'+s.loadPhase)}`:''}</StudioStatus>}
   {s.status==='error'&&<StudioStatus tone="error" live="assertive" className="absolute left-4 top-3 m-0 max-w-[80%] rounded-md bg-surface px-2 py-1 text-xs">{t('studio3d.status.error')}: {s.error}</StudioStatus>}
-  {s.measure&&<StudioStatus className="pointer-events-none absolute right-4 top-3 m-0 rounded-md bg-surface px-2 py-1 text-xs" data-testid="studio3d-measure">{s.measure.a&&s.measure.b?(()=>{const mi=measureInfo(s.measure!.a!,s.measure!.b!);return `${mi.distance.toFixed(3)} m · ${mi.angle.toFixed(1)}°`;})():t('studio3d.measure.pick')}</StudioStatus>}
+  {s.measure&&<StudioStatus className="pointer-events-none absolute right-4 top-3 m-0 rounded-md bg-surface px-2 py-1 text-xs" data-testid="studio3d-measure">{s.measure.a&&s.measure.b?formatMeasure(measureInfo(s.measure.a,s.measure.b),s.unit):t('studio3d.measure.pick')}</StudioStatus>}
   {s.perf&&<StudioStatus className="pointer-events-none absolute right-4 top-12 m-0 rounded-md bg-surface px-2 py-1 text-xs" data-testid="studio3d-perf">{formatPerf(s.perf.fps,s.perf.calls,s.perf.tris)}</StudioStatus>}
   <p className="sr-only">{t('studio3d.keys.hint')}</p>
  </div>;
