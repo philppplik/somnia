@@ -462,6 +462,36 @@
       "hexCss": 0,
       "pixelText": 0,
       "inlineStyle": 0
+    },
+    "src/components/animation": {
+      "rawButton": 7,
+      "rawInput": 9,
+      "rawSelect": 1,
+      "rawTextarea": 0,
+      "hexTsx": 2,
+      "hexCss": 0,
+      "pixelText": 3,
+      "inlineStyle": 17
+    },
+    "src/components/interface": {
+      "rawButton": 2,
+      "rawInput": 9,
+      "rawSelect": 13,
+      "rawTextarea": 1,
+      "hexTsx": 1,
+      "hexCss": 0,
+      "pixelText": 2,
+      "inlineStyle": 18
+    },
+    "src/components/studio3d": {
+      "rawButton": 4,
+      "rawInput": 13,
+      "rawSelect": 2,
+      "rawTextarea": 0,
+      "hexTsx": 1,
+      "hexCss": 0,
+      "pixelText": 0,
+      "inlineStyle": 1
     }
   }
 }
