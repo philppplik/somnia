@@ -1,19 +1,19 @@
 import type {CommandSpec} from '../commandSpec';
 import {registerCommandSpec} from '../commandBridge';
 import {selectSlideText} from './panelSelection';
-import {getSlidesSessionState,loadThumbnails,editSlideText,showSlide,moveSlideTo,duplicateSlideAt,deleteSlideAt,addSlideFromLayout,setShapeBoundsAt,setShapesBoundsAt,arrangeShapesAt,setTransitionAt,insertTableAt,editTableAt,editThemeAt,editMasterBoxAt,styleShapesAt,setNotesAt,groupShapesAt,ungroupShapeAt,formatShapeAt,addTextBoxAt,removeTextBoxAt,insertPictureAt,replacePictureAt,removePictureAt} from './session';
+import {getSlidesSessionState,loadThumbnails,editSlideText,showSlide,moveSlideTo,duplicateSlideAt,deleteSlideAt,addSlideFromLayout,setShapeBoundsAt,setShapesBoundsAt,arrangeShapesAt,setTransitionAt,insertTableAt,editTableAt,editThemeAt,editMasterBoxAt,editLayoutBoxAt,styleShapesAt,setNotesAt,groupShapesAt,ungroupShapeAt,formatShapeAt,addTextBoxAt,removeTextBoxAt,insertPictureAt,replacePictureAt,removePictureAt} from './session';
 import {textIssue} from './panelModel';
 import type {TextRun} from './editCopy';
 import './panelI18n';
 import {selectShape,getShapeSelection,type ShapeSelection} from './shapeSelection';
 import {stepShape,moveBox,resizeBox,resizeBoxAspect,boxOf,alignBox,alignBoxes,unionBox,transformGroup,distributeBoxes,ALIGN_MODES,type AlignMode} from './shapeGeometry';
 import {sniffImage,altFromName,decodeBase64,MAX_IMAGE_BASE64} from './imageSniff';
-import {readMaster,readTheme,themeFontIssue,THEME_SLOTS,MAX_FONT_NAME,type ThemeEdit,type ThemeSlot,boundsEditIssue,nextShapeId,MIN_SIZE_PT,MAX_SIZE_PT,MAX_SHAPES_PER_SLIDE,MAX_BOX_TEXT,MAX_MULTI_EDIT,MAX_NOTES_CHARS,MAX_NOTES_PARAGRAPHS,ARRANGE_MODES,TRANSITION_KINDS,TRANSITION_DIRS,TRANSITION_SPEEDS,type SlideTransition,type ShapeStylePatch,type TableEdit,MAX_ROW_PT,MAX_COL_PT,MIN_ROW_PT,MIN_COL_PT,MAX_TABLE_ROWS,MAX_TABLE_COLS,MAX_CELL_TEXT,LINE_DASHES,type ArrangeMode,type ShapeBoundsEdit,type RunFormat,type ShapeRef,type BoundsBox} from './deckPackage';
+import {readLayoutBoxes,readMaster,readTheme,themeFontIssue,THEME_SLOTS,MAX_FONT_NAME,type ThemeEdit,type ThemeSlot,boundsEditIssue,nextShapeId,MIN_SIZE_PT,MAX_SIZE_PT,MAX_SHAPES_PER_SLIDE,MAX_BOX_TEXT,MAX_MULTI_EDIT,MAX_NOTES_CHARS,MAX_NOTES_PARAGRAPHS,ARRANGE_MODES,TRANSITION_KINDS,TRANSITION_DIRS,TRANSITION_SPEEDS,type SlideTransition,type ShapeStylePatch,type TableEdit,MAX_ROW_PT,MAX_COL_PT,MIN_ROW_PT,MIN_COL_PT,MAX_TABLE_ROWS,MAX_TABLE_COLS,MAX_CELL_TEXT,LINE_DASHES,type ArrangeMode,type ShapeBoundsEdit,type RunFormat,type ShapeRef,type BoundsBox} from './deckPackage';
 const MIN_GROUP_EMU=127000;
 export interface PanelCommandDeps {
  setTransition(slideId:number,transition:SlideTransition):Promise<void>;
  style(slideId:number,shapeIds:number[],patch:ShapeStylePatch):Promise<void>;
- table(slideId:number,shapeId:number,edit:TableEdit):Promise<void>;theme(edit:ThemeEdit):Promise<void>;masterBox(shapeId:number,expected:BoundsBox,next:BoundsBox):Promise<void>;
+ table(slideId:number,shapeId:number,edit:TableEdit):Promise<void>;theme(edit:ThemeEdit):Promise<void>;masterBox(shapeId:number,expected:BoundsBox,next:BoundsBox):Promise<void>;layoutBox(layoutPart:string,shapeId:number,expected:BoundsBox,next:BoundsBox):Promise<void>;
  insertTable(slideId:number,rows:number,cols:number):Promise<void>;
  setNotes(slideId:number,lines:string[]):Promise<void>;
  group(slideId:number,shapeIds:number[]):Promise<void>;
@@ -161,6 +161,14 @@ export function slidesPanelCommandSpecs(d:PanelCommandDeps):CommandSpec[]{
     const ph=m.placeholders.find(x=>x.id===v.shapeId);if(!ph)throw expected('Master placeholder no longer exists.');
     if(ph.box.x!==v.expected.x||ph.box.y!==v.expected.y||ph.box.w!==v.expected.w||ph.box.h!==v.expected.h)throw expected('Placeholder changed since selection.');
     await d.masterBox(v.shapeId,v.expected,v.next);}},
+  {id:'slides.editLayoutPlaceholder',title:'Move or resize layout placeholder',category:'Edit',level:'ui',keywords:['layout','placeholder','position','size','title','body','footer'],enabled:available,params:{type:'object',properties:{source:identity.source,layoutPart:{type:'string',pattern:'^ppt/slideLayouts/slideLayout[0-9]+\\.xml$',maxLength:64},shapeId:{type:'integer',minimum:0,maximum:2147483647},expected:{type:'object',properties:{x:{type:'integer'},y:{type:'integer'},w:{type:'integer',minimum:0},h:{type:'integer',minimum:0}},required:['x','y','w','h'],additionalProperties:false},next:{type:'object',properties:{x:{type:'integer'},y:{type:'integer'},w:{type:'integer',minimum:0},h:{type:'integer',minimum:0}},required:['x','y','w','h'],additionalProperties:false}},required:['source','layoutPart','shapeId','expected','next'],additionalProperties:false},
+   run:async p=>{const v=p as {source:string;layoutPart:string;shapeId:number;expected:{x:number;y:number;w:number;h:number};next:{x:number;y:number;w:number;h:number}},s=d.state();
+    if(s.source!==v.source)throw expected('Deck changed since the layout was shown.');
+    const info=readLayoutBoxes(s.working!);if(!info.editable)throw expected(info.problem||'Layouts cannot be edited here.');
+    const l=info.layouts.find(x=>x.part===v.layoutPart);if(!l)throw expected('Layout no longer exists.');
+    const ph=l.placeholders.find(x=>x.id===v.shapeId);if(!ph)throw expected('Layout placeholder no longer exists.');
+    if(ph.box.x!==v.expected.x||ph.box.y!==v.expected.y||ph.box.w!==v.expected.w||ph.box.h!==v.expected.h)throw expected('Placeholder changed since selection.');
+    await d.layoutBox(v.layoutPart,v.shapeId,v.expected,v.next);}},
   {id:'slides.editTable',title:'Edit table',category:'Edit',level:'ui',keywords:['table','cell','row','column','header','insert','delete','fill'],enabled:available,params:{type:'object',properties:{source:identity.source,slideId:slideId,shapeId:{type:'integer',minimum:0,maximum:2147483647},
     edit:{type:'object',properties:{kind:{enum:['cell','insertRow','removeRow','insertCol','removeCol','header','fill','merge','split','rowHeight','colWidth']},rowSpan:{type:'integer',minimum:1,maximum:MAX_TABLE_ROWS},colSpan:{type:'integer',minimum:1,maximum:MAX_TABLE_COLS},heightPt:{type:'number',minimum:MIN_ROW_PT,maximum:MAX_ROW_PT},widthPt:{type:'number',minimum:MIN_COL_PT,maximum:MAX_COL_PT},row:{type:'integer',minimum:0,maximum:MAX_TABLE_ROWS},col:{type:'integer',minimum:0,maximum:MAX_TABLE_COLS},at:{type:'integer',minimum:0,maximum:MAX_TABLE_ROWS},text:{type:'string',maxLength:MAX_CELL_TEXT},on:{type:'boolean'},scope:{enum:['cell','row','column','table']},color:{type:'string',pattern:'^[0-9A-F]{6}$'},none:{type:'boolean'}},required:['kind'],additionalProperties:false}},required:['source','slideId','shapeId','edit'],additionalProperties:false},run:async p=>{
    const v=p as {source:string;slideId:number;shapeId:number;edit:{kind:string;row?:number;col?:number;at?:number;text?:string;on?:boolean;scope?:'cell'|'row'|'column'|'table';color?:string;none?:boolean;rowSpan?:number;colSpan?:number;heightPt?:number;widthPt?:number}},s=d.state(),e=v.edit;
@@ -305,5 +313,5 @@ export function slidesPanelCommandSpecs(d:PanelCommandDeps):CommandSpec[]{
   }},
  ];
 }
-const deps:PanelCommandDeps={theme:editThemeAt,masterBox:editMasterBoxAt,state:getSlidesSessionState,thumbnails:loadThumbnails,edit:editSlideText,show:showSlide,select:selectSlideText,move:moveSlideTo,duplicate:duplicateSlideAt,remove:deleteSlideAt,add:addSlideFromLayout,setBounds:setShapeBoundsAt,setMany:setShapesBoundsAt,arrange:arrangeShapesAt,setTransition:setTransitionAt,table:editTableAt,insertTable:insertTableAt,style:styleShapesAt,setNotes:setNotesAt,group:groupShapesAt,ungroup:ungroupShapeAt,format:formatShapeAt,addBox:addTextBoxAt,removeBox:removeTextBoxAt,insertImage:insertPictureAt,replaceImage:replacePictureAt,removeImage:removePictureAt,pick:selectShape,picked:getShapeSelection};
+const deps:PanelCommandDeps={theme:editThemeAt,masterBox:editMasterBoxAt,layoutBox:editLayoutBoxAt,state:getSlidesSessionState,thumbnails:loadThumbnails,edit:editSlideText,show:showSlide,select:selectSlideText,move:moveSlideTo,duplicate:duplicateSlideAt,remove:deleteSlideAt,add:addSlideFromLayout,setBounds:setShapeBoundsAt,setMany:setShapesBoundsAt,arrange:arrangeShapesAt,setTransition:setTransitionAt,table:editTableAt,insertTable:insertTableAt,style:styleShapesAt,setNotes:setNotesAt,group:groupShapesAt,ungroup:ungroupShapeAt,format:formatShapeAt,addBox:addTextBoxAt,removeBox:removeTextBoxAt,insertImage:insertPictureAt,replaceImage:replacePictureAt,removeImage:removePictureAt,pick:selectShape,picked:getShapeSelection};
 export function registerSlidesPanelCommands(){const offs=slidesPanelCommandSpecs(deps).map(s=>registerCommandSpec(s));return()=>offs.forEach(off=>off());}

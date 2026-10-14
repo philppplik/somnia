@@ -1613,3 +1613,39 @@ export function editMasterBox(bytes:Uint8Array,shapeId:number,expected:BoundsBox
   if(!after.editable||after.placeholders.length!==was.placeholders.length||after.placeholders.some((p,i)=>{const b=was.placeholders[i];return p.id!==b.id||p.type!==b.type||(p.id===shapeId?!sameBox(p.box,next):!sameBox(p.box,b.box));}))throw Error('Edited deck failed verification');
   return res;
 }
+
+/** Placeholders with an explicit box on each layout of the single master. Inherited boxes are not listed. */
+export interface LayoutBoxes {part:string;name:string;placeholders:MasterPlaceholder[]}
+export interface LayoutBoxesInfo {editable:boolean;problem:string;layouts:LayoutBoxes[]}
+function layoutParts(zip:Record<string,Uint8Array>):string[]{
+  const mp=masterPart(zip),seen=new Set<string>(),out:string[]=[];
+  for(const l of readRels(zip,mp).filter(r=>r.type===RT+'slideLayout'&&!r.external)){
+    const part=resolve(mp,l.target);if(seen.has(part)||!zip[part]||!/^ppt\/slideLayouts\/slideLayout\d+\.xml$/.test(part))continue;seen.add(part);out.push(part);
+  }
+  return out;
+}
+function layoutBoxes(zip:Record<string,Uint8Array>):LayoutBoxes[]{
+  return layoutParts(zip).map(part=>{const xml=text(zip,part);return {part,name:xmlAttr(/<p:cSld\b[^>]*\sname="([^"]*)"/.exec(xml)?.[1]??part.split('/').pop()!),placeholders:masterBoxes(xml).map(({start:_s,end:_e,...p})=>p)};});
+}
+export function readLayoutBoxes(bytes:Uint8Array):LayoutBoxesInfo{
+  try{return {editable:true,problem:'',layouts:layoutBoxes(openPackage(bytes))};}
+  catch(e){return {editable:false,problem:(e as Error).message,layouts:[]};}
+}
+/** Moves or resizes one layout placeholder that already has an explicit box. Same guards as the master edit; only that layout part changes. */
+export function editLayoutBox(bytes:Uint8Array,layoutPart:string,shapeId:number,expected:BoundsBox,next:BoundsBox):Uint8Array{
+  for(const v of [...Object.values(next),...Object.values(expected)])if(!Number.isInteger(v))throw Error('Bounds must be whole EMU values');
+  const c=context(bytes),size=readDeckModel(bytes).slideSize;if(!size)throw Error('Slide size is not readable');
+  if(!layoutParts(c.zip).includes(layoutPart))throw Error('Layout no longer exists');
+  const xml=text(c.zip,layoutPart),sh=masterBoxes(xml).find(s=>s.id===shapeId);
+  if(!sh)throw Error('Layout placeholder no longer exists or cannot be edited');
+  if(!sameBox(sh.box,expected))throw Error('Placeholder changed since selection');
+  if(next.w<MIN_BOX_EMU||next.h<MIN_BOX_EMU||next.w>size.cx*2||next.h>size.cy*2)throw Error('Size is out of range');
+  if(next.x<-next.w||next.y<-next.h||next.x>size.cx||next.y>size.cy)throw Error('Position is outside the slide');
+  if(sameBox(next,expected))return bytes;
+  const raw=xml.slice(sh.start,sh.end);
+  const neu=raw.replace(/(<a:off x=")-?\d+(" y=")-?\d+(")/,`$1${next.x}$2${next.y}$3`).replace(/(<a:ext cx=")\d+(" cy=")\d+(")/,`$1${next.w}$2${next.h}$3`);
+  const res=finish(c,{[layoutPart]:xml.slice(0,sh.start)+neu+xml.slice(sh.end)},{},[],()=>{});
+  const after=layoutBoxes(unzipSync(res)),was=layoutBoxes(c.zip);
+  if(after.length!==was.length||after.some((l,i)=>{const b=was[i];return l.part!==b.part||l.placeholders.length!==b.placeholders.length||l.placeholders.some((p,j)=>{const q=b.placeholders[j];return p.id!==q.id||p.type!==q.type||(l.part===layoutPart&&p.id===shapeId?!sameBox(p.box,next):!sameBox(p.box,q.box));});}))throw Error('Edited deck failed verification');
+  return res;
+}

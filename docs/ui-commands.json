@@ -5151,6 +5151,22 @@
       "hasEnabled": true
     },
     {
+      "id": "slides.editLayoutPlaceholder",
+      "title": "Move or resize layout placeholder",
+      "category": "Edit",
+      "source": "slides",
+      "keywords": [
+        "body",
+        "footer",
+        "layout",
+        "placeholder",
+        "position",
+        "size",
+        "title"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "slides.editMasterPlaceholder",
       "title": "Move or resize master placeholder",
       "category": "Edit",

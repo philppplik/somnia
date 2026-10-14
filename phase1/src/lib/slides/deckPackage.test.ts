@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {readFileSync,readdirSync} from 'node:fs';
 import {fileURLToPath} from 'node:url';
 import {unzipSync,zipSync,strFromU8,strToU8} from 'fflate';
-import {editMasterBox,readMaster,editTheme,readTheme,insertTable,editTable,readTable,setShapeStyle,readShapeStyle,setSlideNotes,groupShapes,ungroupShape,readSlideTransition,setSlideTransition,arrangeShapes,arrangedOrder,setShapesBounds,readSlideNotes,insertPicture,replacePicture,removePicture,fitImage,formatShapeText,addTextBox,removeTextBox,nextShapeId,setShapeBounds,boundsEditIssue,readDeckModel,moveSlide,reorderSlides,duplicateSlide,deleteSlide,newSlideFromLayout,readLayouts} from './deckPackage';
+import {editLayoutBox,readLayoutBoxes,editMasterBox,readMaster,editTheme,readTheme,insertTable,editTable,readTable,setShapeStyle,readShapeStyle,setSlideNotes,groupShapes,ungroupShape,readSlideTransition,setSlideTransition,arrangeShapes,arrangedOrder,setShapesBounds,readSlideNotes,insertPicture,replacePicture,removePicture,fitImage,formatShapeText,addTextBox,removeTextBox,nextShapeId,setShapeBounds,boundsEditIssue,readDeckModel,moveSlide,reorderSlides,duplicateSlide,deleteSlide,newSlideFromLayout,readLayouts} from './deckPackage';
 import {readRuns,makeEditedCopy} from './editCopy';
 import {png,jpeg} from './imageFixtures';
 
@@ -789,4 +789,24 @@ test('master: stale, bounds and fail-closed structure',()=>{
   assert.throws(()=>editMasterBox(b,title.id,title.box,{...title.box,x:1.5}),/whole EMU/);
   const z=unzipSync(b);z['ppt/slideMasters/slideMaster1.xml']=strToU8(strFromU8(z['ppt/slideMasters/slideMaster1.xml']).replace('<a:xfrm><a:off x="457200" y="274638"/>','<a:xfrm rot="90"><a:off x="457200" y="274638"/>'));
   const odd=zipSync(z);assert.equal(readMaster(odd).placeholders.some(p=>p.id===title.id),false);assert.throws(()=>editMasterBox(odd,title.id,title.box,title.box),/no longer exists/);
+});
+
+test('layout: read explicit placeholder boxes and move one, that layout part only',()=>{
+  const b=deck(2),info=readLayoutBoxes(b);assert.equal(info.editable,true);
+  const l=info.layouts.find(x=>x.name==='Title Slide')!,ph=l.placeholders[0];assert.ok(ph);
+  const next={...ph.box,y:ph.box.y+100000},c=editLayoutBox(b,l.part,ph.id,ph.box,next);
+  const after=readLayoutBoxes(c),al=after.layouts.find(x=>x.part===l.part)!;assert.deepEqual(al.placeholders.find(p=>p.id===ph.id)!.box,next);
+  for(const o of info.layouts)if(o.part!==l.part)assert.deepEqual(after.layouts.find(x=>x.part===o.part)!.placeholders,o.placeholders);
+  assert.deepEqual(readMaster(c),readMaster(b));assert.deepEqual(titles(c),titles(b));
+  const za=unzipSync(b),zc=unzipSync(c);for(const k of Object.keys(za))if(k!==l.part)assert.equal(za[k].length,zc[k].length,k);
+  assert.equal(editLayoutBox(c,l.part,ph.id,next,next),c);
+});
+test('layout: stale, unknown part, bounds',()=>{
+  const b=deck(1),l=readLayoutBoxes(b).layouts[0],ph=l.placeholders[0];
+  assert.throws(()=>editLayoutBox(b,l.part,ph.id,{...ph.box,x:ph.box.x+1},ph.box),/changed since/);
+  assert.throws(()=>editLayoutBox(b,'ppt/slideLayouts/slideLayout99.xml',ph.id,ph.box,ph.box),/no longer exists/);
+  assert.throws(()=>editLayoutBox(b,'ppt/slides/slide1.xml',ph.id,ph.box,ph.box),/no longer exists/);
+  assert.throws(()=>editLayoutBox(b,l.part,9999,ph.box,ph.box),/no longer exists/);
+  assert.throws(()=>editLayoutBox(b,l.part,ph.id,ph.box,{...ph.box,h:5}),/out of range/);
+  assert.throws(()=>editLayoutBox(b,l.part,ph.id,ph.box,{...ph.box,y:-5e9}),/outside/);
 });
