@@ -118,7 +118,7 @@ function Viewer({comp,at,selected,sel,assets,comps}:{assets:readonly InterfaceAs
    <PathLayerOverlay comp={comp} layer={layer} at={at}/>
    <ViewerGuides comp={comp}/>
    <ViewerSnapLines lines={snap}/>
-   <TransformHandles comp={comp} layer={layer} at={at}/>
+   <TransformHandles comp={comp} layer={layer} at={at} assets={assets}/>
   </svg>
   <div className="absolute left-2 top-2 flex gap-1" role="group" aria-label={t('animation.pathLayer.tools')}>
    <Button size="tiny" variant="outline" aria-pressed={penOn} disabled={!!layer?.locked} onClick={()=>void executeCommand('animation.layer.pen')} title={t('animation.pathLayer.penHint')} data-testid="animation-layerpen-toggle">{t('animation.pathLayer.pen')}</Button>

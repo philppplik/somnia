@@ -2002,3 +2002,23 @@ test('P87: transform handles: geometry, scale about anchor, rotate with wrap and
  const rot=applyEdit(d,{type:'prop.set',layer:'a',prop:'rotation',t:0,value:90});const h2=handleSet(findComp(rot)!,findLayer(findComp(rot)!,'a')!,0)!;
  assert.ok(Math.abs(h2.corners[0][0]-425)<1e-6&&Math.abs(h2.corners[0][1]-175)<1e-6&&h2.rotate[0]>450);
 });
+import {contentSize,boxCorners,pinnedPosition,TEXT_WIDTH_PER_EM} from './handles';
+test('P88: handles for text and image layers, opposite-corner pinning',()=>{
+ let d=applyEdits(createDocument(),[{type:'layer.add',kind:'text',id:'t',over:{source:{text:'Hello\nWorld!!',size:100}}}]);
+ const c0=findComp(d)!;const t0=findLayer(c0,'t')!;const ras=(id:string,a:string)=>({...t0,id,kind:'raster' as const,source:{assetId:a}});
+ const c={...c0,layers:[...c0.layers,ras('i','as1'),ras('j','gone'),{...t0,id:'tp',source:{text:'x',textPath:'M0 0L10 0'} as never}]};const assets=[{id:'as1',width:640,height:360}];
+ const [tw,th]=contentSize(findLayer(c,'t')!,assets)!;assert.ok(Math.abs(tw-7*100*TEXT_WIDTH_PER_EM)<1e-9);assert.ok(Math.abs(th-240)<1e-9);
+ assert.deepEqual(contentSize(c.layers.find(x=>x.id==='i')!,assets),[640,360]);assert.equal(contentSize(c.layers.find(x=>x.id==='j')!,assets),null);assert.equal(contentSize(c.layers.find(x=>x.id==='tp')!,assets),null);
+ assert.ok(handleSet(c,c.layers.find(x=>x.id==='i')!,0,assets));assert.equal(handleSet(c,c.layers.find(x=>x.id==='i')!,0,[]),null);
+ assert.deepEqual(boxCorners(10,4)[2],[10,4]);
+ // pin the top-left corner of a 100x50 layer with anchor at its centre: scale 200 % moves position so TL stays put
+ assert.deepEqual(pinnedPosition([400,225],0,[100,100],[200,200],[50,25],[0,0]),[450,250]);
+ assert.deepEqual(pinnedPosition([400,225],0,[100,100],[200,200],[50,25],[50,25]),[400,225]);
+ // world check with the real matrix: the pinned corner does not move
+ let e=applyEdits(createDocument(),[{type:'layer.add',kind:'solid',id:'a',over:{source:{color:'#ffffff',width:100,height:50}}},{type:'prop.set',layer:'a',prop:'anchor',t:0,value:[50,25]},{type:'prop.set',layer:'a',prop:'position',t:0,value:[400,225]},{type:'prop.set',layer:'a',prop:'rotation',t:0,value:30}]);
+ const before=handleSet(findComp(e)!,findLayer(findComp(e)!,'a')!,0)!.corners[0];
+ const np=pinnedPosition([400,225],30,[100,100],[250,250],[50,25],[0,0]);
+ e=applyEdits(e,[{type:'prop.set',layer:'a',prop:'scale',t:0,value:[250,250]},{type:'prop.set',layer:'a',prop:'position',t:0,value:np}]);
+ const after=handleSet(findComp(e)!,findLayer(findComp(e)!,'a')!,0)!.corners[0];
+ assert.ok(Math.abs(before[0]-after[0])<0.02&&Math.abs(before[1]-after[1])<0.02,JSON.stringify([before,after]));
+});
