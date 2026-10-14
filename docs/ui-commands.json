@@ -6684,6 +6684,19 @@
       "hasEnabled": true
     },
     {
+      "id": "studio3d.edit.poke",
+      "title": "Split selected triangles into three at their centroid",
+      "category": "Edit",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "studio3d.edit.select",
       "title": "Select element",
       "category": "Edit",

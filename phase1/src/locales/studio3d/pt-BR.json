@@ -888,5 +888,8 @@
  "studio3d.hist.editWeld": "Mesclar vértices",
  "cmd.studio3d.edit.subdivide": "Dividir os triângulos selecionados em quatro pelos pontos médios das arestas",
  "studio3d.edit.subdivide": "Subdividir",
- "studio3d.hist.editSubdivide": "Subdividir faces"
+ "studio3d.hist.editSubdivide": "Subdividir faces",
+ "cmd.studio3d.edit.poke": "Dividir os triângulos selecionados em três pelo seu centroide",
+ "studio3d.edit.poke": "Cutucar",
+ "studio3d.hist.editPoke": "Cutucar faces"
 }

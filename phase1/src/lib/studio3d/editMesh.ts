@@ -405,6 +405,27 @@ export function subdivideFaces(m:MeshData,faces:number[]):MeshData{
  if(uvs)out.uvs=uvs;
  return out;
 }
+/** Pokes each selected triangle: inserts its centroid and splits it into three triangles fanning from the centroid. Every face gets its own centroid vertex. UVs interpolate with the positions; masks and explicit normals are dropped. */
+export function pokeFaces(m:MeshData,faces:number[]):MeshData{
+ if(!faces.length)throw new EditError('Select faces to poke.');
+ const tris=m.index.length/3;
+ const sel=new Set<number>();
+ for(const f of faces){if(!Number.isInteger(f)||f<0||f>=tris)throw new EditError(`Face ${f} does not exist.`);sel.add(f);}
+ const positions=[...m.positions];
+ const uvs=m.uvs?[...m.uvs]:undefined;
+ const index:number[]=[];
+ for(let f=0;f<tris;f++){
+  const a=m.index[f*3],b=m.index[f*3+1],c=m.index[f*3+2];
+  if(!sel.has(f)){index.push(a,b,c);continue;}
+  const i=positions.length/3;
+  positions.push((m.positions[a*3]+m.positions[b*3]+m.positions[c*3])/3,(m.positions[a*3+1]+m.positions[b*3+1]+m.positions[c*3+1])/3,(m.positions[a*3+2]+m.positions[b*3+2]+m.positions[c*3+2])/3);
+  if(uvs)uvs.push((m.uvs![a*2]+m.uvs![b*2]+m.uvs![c*2])/3,(m.uvs![a*2+1]+m.uvs![b*2+1]+m.uvs![c*2+1])/3);
+  index.push(a,b,i, b,c,i, c,a,i);
+ }
+ const out:MeshData={positions,index};
+ if(uvs)out.uvs=uvs;
+ return out;
+}
 /** Deletes selected elements: faces drop their own triangles, edges and vertices drop every triangle that touches them. Positions stay put (orphan vertices are allowed), so undo restores the exact geometry. Refuses an empty selection and a delete that would leave no triangle. */
 export function deleteElements(m:MeshData,kind:'vertex'|'edge'|'face',sel:{verts?:number[];edges?:[number,number][];faces?:number[]}):MeshData{
  const tris=m.index.length/3,total=m.positions.length/3;

@@ -888,5 +888,8 @@
  "studio3d.hist.editWeld": "Vertices verschmelzen",
  "cmd.studio3d.edit.subdivide": "Ausgewählte Dreiecke an Kantenmitten in vier Teile teilen",
  "studio3d.edit.subdivide": "Unterteilen",
- "studio3d.hist.editSubdivide": "Faces unterteilen"
+ "studio3d.hist.editSubdivide": "Faces unterteilen",
+ "cmd.studio3d.edit.poke": "Ausgewählte Dreiecke am Schwerpunkt in drei Teile teilen",
+ "studio3d.edit.poke": "Spicken",
+ "studio3d.hist.editPoke": "Faces spicken"
 }

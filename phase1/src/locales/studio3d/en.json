@@ -888,5 +888,8 @@
  "studio3d.hist.editWeld": "Merge vertices",
  "cmd.studio3d.edit.subdivide": "Split selected triangles into four by edge midpoints",
  "studio3d.edit.subdivide": "Subdivide",
- "studio3d.hist.editSubdivide": "Subdivide faces"
+ "studio3d.hist.editSubdivide": "Subdivide faces",
+ "cmd.studio3d.edit.poke": "Split selected triangles into three at their centroid",
+ "studio3d.edit.poke": "Poke",
+ "studio3d.hist.editPoke": "Poke faces"
 }

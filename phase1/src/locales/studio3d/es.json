@@ -888,5 +888,8 @@
  "studio3d.hist.editWeld": "Fusionar vértices",
  "cmd.studio3d.edit.subdivide": "Dividir los triángulos seleccionados en cuatro por los puntos medios de las aristas",
  "studio3d.edit.subdivide": "Subdividir",
- "studio3d.hist.editSubdivide": "Subdividir caras"
+ "studio3d.hist.editSubdivide": "Subdividir caras",
+ "cmd.studio3d.edit.poke": "Dividir los triángulos seleccionados en tres por su centroide",
+ "studio3d.edit.poke": "Pinchar",
+ "studio3d.hist.editPoke": "Pinchar caras"
 }

@@ -1,4 +1,5 @@
 # Unreleased: 3D Studio P0
+- 3D Studio: edit mode pokes the selected faces, splitting each triangle into three around its centroid, with one undo (`studio3d.edit.poke`, empty selection refused readably).
 - 3D Studio: edit mode subdivides the selected faces into four triangles each at the edge midpoints, planar and without smoothing, with one undo (`studio3d.edit.subdivide`, empty selection refused readably).
 - 3D Studio: edit mode merges the selected vertices into one at their centroid, dropping the collapsed triangles, with one undo (`studio3d.edit.weld`, thin selections and a full collapse refused readably).
 - 3D Studio: edit mode deletes selected faces, or every triangle touching the selected edges or vertices, with one undo (`studio3d.edit.delete`, full-wipe refused readably).

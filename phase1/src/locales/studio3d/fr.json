@@ -888,5 +888,8 @@
  "studio3d.hist.editWeld": "Fusionner les sommets",
  "cmd.studio3d.edit.subdivide": "Diviser les triangles sélectionnés en quatre aux milieux des arêtes",
  "studio3d.edit.subdivide": "Subdiviser",
- "studio3d.hist.editSubdivide": "Subdiviser les faces"
+ "studio3d.hist.editSubdivide": "Subdiviser les faces",
+ "cmd.studio3d.edit.poke": "Diviser les triangles sélectionnés en trois par leur centre",
+ "studio3d.edit.poke": "Piquer",
+ "studio3d.hist.editPoke": "Piquer les faces"
 }
