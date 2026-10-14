@@ -1,0 +1,7 @@
+# CM: explicit source-chunk direct navigation
+
+Selected-source context reader offers human1-based chunk input, explicit Go, First and Last actions. Only strict ASCII positive integer within ready-source1..total (max256) accepted; no clamping, decimals/exponents/coercion. Typing never navigates. Invalid input has associated error and disabled Go. Navigation resets input to actual viewed position, preserves original citation/browse origin and phrase evidence, inherits whole selected capture staleness check. Edge actions disabled; Escape within reader controls closes context. No new reads/model calls/answers/save/download/cloud/deps.
+
+Validation:5 jump/inventory/context unit tests pass; new light/dark browser + CL regression pass. Browser checks invalid target does not move, explicit Go/First/Last, input reset, unchanged browse origin, no added I/O and Escape. 390px reader pixels inspected both themes: input/hint/actions wrap, viewed/origin labels distinct, chunk text literal. DS/Layers/Commands/UI-Commands pass; inherited Layers missing-transpiler/87 ignored/4 stale. tsc only inherited missing generated slides module. $0, no deps/budget changes, synthetic provider/data only. Native/Rust/WASM/full desktop E2E CI-only; real runtime/download/CSP/quality/cancel/citation gates unchanged.
+
+Roadmap-Delta: sequential reader -> explicit direct navigation over same ready selected source, no fake citation/rank/discovery. Parent-directed own-chain base retained.
