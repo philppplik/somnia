@@ -1,6 +1,9 @@
 import {THEME_CHOICES,resolveTheme} from '../../src/lib/theme';
 import {applyLook,DEFAULT_LOOK} from '../../src/lib/look';
 import {applyUiPrefs,DEFAULT_UI_PREFS} from '../../src/lib/uiPrefs';
+import {ThemeImportPanel} from '../../src/components/ThemeImportPanel';
+import {installImportedTheme} from '../../src/lib/importedTheme';
+import {initLocale} from '../../src/lib/i18n';
 import {ExchangeProof} from './exchange-proof';
 import {useState} from 'react';
 import {createRoot} from 'react-dom/client';
@@ -24,6 +27,7 @@ import '../../src/styles/bento.css';
 import '../../src/components/studios/studio-pill.css';
 import './gallery.css';
 Object.assign(window,{dsAppearance:{THEME_CHOICES,resolveTheme,applyLook,DEFAULT_LOOK,applyUiPrefs,DEFAULT_UI_PREFS}});
+initLocale();installImportedTheme();
 function Gallery(){
  const [checked,setChecked]=useState(false),[radio,setRadio]=useState('a');
  const [number,setNumber]=useState<number|null>(10),[mixed,setMixed]=useState(false),[readonly,setReadonly]=useState(false),[disabled,setDisabled]=useState(false),[range,setRange]=useState(30),[open,setOpen]=useState(true),[events,setEvents]=useState<string[]>([]);
@@ -51,6 +55,6 @@ function Gallery(){
  <TooltipProvider delay={0}><Tooltip><TooltipTrigger>Tooltip trigger</TooltipTrigger><TooltipContent>Shared tooltip</TooltipContent></Tooltip></TooltipProvider>
  <StudioTooltip.Provider delay={0}><StudioTooltip.Root><StudioTooltip.Trigger>Studio facade tooltip</StudioTooltip.Trigger><StudioTooltip.Portal><StudioTooltip.Positioner className="z-50" side="bottom" sideOffset={8}><StudioTooltip.Popup data-testid="studio-tooltip" className="studio-pill-tooltip">Studio facade</StudioTooltip.Popup></StudioTooltip.Positioner></StudioTooltip.Portal></StudioTooltip.Root></StudioTooltip.Provider>
  <RawTooltip.Provider delay={0}><RawTooltip.Root><RawTooltip.Trigger>Raw tooltip</RawTooltip.Trigger><RawTooltip.Portal><RawTooltip.Positioner side="bottom" sideOffset={8}><RawTooltip.Popup data-testid="raw-tooltip" className="studio-pill-tooltip">Raw tooltip</RawTooltip.Popup></RawTooltip.Positioner></RawTooltip.Portal></RawTooltip.Root></RawTooltip.Provider>
- </section><ExchangeProof/></div><pre data-testid="events" aria-label="Fixture events">{events.join('\n')}</pre></main>;
+ </section><ExchangeProof/><ThemeImportPanel/></div><pre data-testid="events" aria-label="Fixture events">{events.join('\n')}</pre></main>;
 }
 createRoot(document.getElementById('root')!).render(<Gallery/>);

@@ -1,0 +1,25 @@
+import {test,expect} from '@playwright/test';
+const source=JSON.stringify({name:'Imported',type:'registry:style',dependencies:['never-run'],cssVars:{theme:{radius:'20px','font-sans':'Example'},light:{background:'#eeeeee',foreground:'#101014',primary:'#123456','primary-foreground':'#ffffff',accent:'#aaaaaa'},dark:{background:'#08080d',foreground:'#ffffff',primary:'#abcdef','primary-foreground':'#101014',accent:'#222222'}}});
+test('local importer previews both schemes, ignored fields, Apply/Undo/Reset/reload and protected accent/radii',async({page})=>{
+ await page.goto('./');await page.evaluate(()=>{const root=document.documentElement;root.dataset.theme='light';root.style.setProperty('--accent','#ffff00');});
+ const panel=page.getByTestId('theme-import-panel');await panel.getByLabel('Theme data').fill(source);
+ await expect(panel.getByTestId('theme-preview-light')).toBeVisible();await expect(panel.getByTestId('theme-preview-dark')).toBeVisible();await expect(panel.getByTestId('theme-import-ignored')).toContainText('dependencies');await expect(panel.getByTestId('theme-import-ignored')).toContainText('radius');await panel.screenshot({path:'test-results/ds-importer-json-preview.png'});
+ const radius=await page.evaluate(()=>getComputedStyle(document.documentElement).getPropertyValue('--r-panel'));
+ await panel.getByRole('button',{name:'Apply theme',exact:true}).click();await expect(panel.getByRole('status')).toContainText('Imported');
+ expect(await page.evaluate(()=>getComputedStyle(document.documentElement).getPropertyValue('--bg-base').trim())).toBe('#eeeeee');
+ expect(await page.evaluate(()=>getComputedStyle(document.documentElement).getPropertyValue('--accent').trim())).toBe('#ffff00');
+ expect(await page.evaluate(()=>getComputedStyle(document.documentElement).getPropertyValue('--r-panel'))).toBe(radius);
+ await page.evaluate(()=>document.documentElement.dataset.contrast='high');expect(await page.evaluate(()=>getComputedStyle(document.documentElement).getPropertyValue('--bg-base').trim())).toBe('#fff');
+ await page.evaluate(()=>document.documentElement.dataset.contrast='standard');await page.reload();await expect(page.getByTestId('theme-import-panel').getByRole('status')).toContainText('Imported');
+ await panel.getByRole('button',{name:'Reset imported theme',exact:true}).click();await expect(panel.getByRole('status')).toContainText('Default');await panel.getByRole('button',{name:'Undo theme',exact:true}).click();await expect(panel.getByRole('status')).toContainText('Imported');
+ await panel.getByLabel('Theme data').fill('invalid');await expect(panel.getByRole('button',{name:'Apply theme',exact:true})).toBeDisabled();
+ await page.screenshot({path:'test-results/ds-importer-invalid.png',fullPage:true});
+});
+test('local CSS file loading is declarations-only, registry content cannot execute',async({page})=>{
+ await page.goto('./');const panel=page.getByTestId('theme-import-panel');await panel.getByLabel('Load JSON or CSS').setInputFiles({name:'theme.css',mimeType:'text/css',buffer:Buffer.from(':root{--primary:#123456}.dark{--primary:#abcdef}')});await expect(panel.getByLabel('Format')).toHaveValue('css');await expect(panel.getByRole('button',{name:'Apply theme',exact:true})).toBeEnabled();
+ await panel.screenshot({path:'test-results/ds-importer-preview.png'});
+ await panel.getByLabel('Theme data').fill('@import "https://evil.invalid";:root{--primary:#fff}.dark{--primary:#000}');await expect(panel.getByRole('button',{name:'Apply theme',exact:true})).toBeDisabled();
+});
+test('storage denial shows session-only status while Apply and Undo still work',async({page})=>{
+ await page.addInitScript(()=>Object.defineProperty(Storage.prototype,'setItem',{value(){throw Error('denied');}}));await page.goto('./');const panel=page.getByTestId('theme-import-panel');await panel.getByLabel('Theme data').fill(source);await panel.getByRole('button',{name:'Apply theme',exact:true}).click();await expect(panel).toContainText('Applied for this session only');await panel.getByRole('button',{name:'Undo theme',exact:true}).click();await expect(panel.getByRole('status')).toContainText('Default');
+});

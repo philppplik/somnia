@@ -1,0 +1,8 @@
+.theme-import-panel{display:grid;gap:var(--space-12);margin-top:var(--space-20);padding:var(--space-12);border:1px solid var(--border-subtle);border-radius:var(--r-lg);min-width:0}
+.theme-import-panel textarea{width:100%;min-height:120px;padding:var(--space-8);resize:vertical;font-family:var(--mono);font-size:var(--font-size-xs)}
+.theme-import-previews{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--space-12)}
+.theme-import-preview{padding:var(--space-12);border:1px solid var(--sc-border,var(--border-default));border-radius:var(--r-sm);background:var(--sc-background,var(--bg-base));color:var(--sc-foreground,var(--text-primary));min-width:0;overflow-wrap:anywhere}
+.theme-import-preview-card{margin:var(--space-8) 0;padding:var(--space-8);background:var(--sc-card,var(--bg-panel));color:var(--sc-card-foreground,var(--text-primary))}
+.theme-import-preview-action{display:inline-block;padding:var(--space-4) var(--space-8);background:var(--sc-primary,var(--accent-fill));color:var(--sc-primary-foreground,var(--action-ink))}
+.theme-import-actions{display:flex;flex-wrap:wrap;gap:var(--space-8)}
+.theme-import-panel ul{max-height:160px;overflow:auto;margin:0;padding-left:var(--space-20);overflow-wrap:anywhere}

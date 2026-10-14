@@ -3271,5 +3271,22 @@
   "documents.export.format": "Format",
   "documents.export.docx": "Word document (.docx)",
   "documents.export.file": "File name",
-  "documents.export.note": "Saves a new file next to the original. The opened document is never changed."
+  "documents.export.note": "Saves a new file next to the original. The opened document is never changed.",
+  "themeImport.title": "Import theme",
+  "themeImport.note": "Paste or load color-only shadcn/tweakcn data. Preview before applying. Radius, fonts and the saved accent stay unchanged.",
+  "themeImport.format": "Format",
+  "themeImport.source": "Theme data",
+  "themeImport.load": "Load JSON or CSS",
+  "themeImport.fileError": "File could not be read or exceeds 64 KiB.",
+  "themeImport.invalid": "Invalid or unsupported theme data. Use both light and dark color maps, or :root/.dark declarations only.",
+  "themeImport.light": "Light preview",
+  "themeImport.dark": "Dark preview",
+  "themeImport.unsupported": "Unsupported fields are not applied:",
+  "themeImport.none": "None",
+  "themeImport.apply": "Apply theme",
+  "themeImport.undo": "Undo theme",
+  "themeImport.reset": "Reset imported theme",
+  "themeImport.active": "Active imported theme: {name}",
+  "themeImport.default": "Default theme roles are active.",
+  "themeImport.sessionOnly": "Applied for this session only. Storage is unavailable."
 }

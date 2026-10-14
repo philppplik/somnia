@@ -1,3 +1,4 @@
+import {installImportedTheme} from './lib/importedTheme';
 import {problemsStore,reportCommandProblem,installProblemsFetch} from './lib/problemsRuntime';
 import {heldAgentPaths} from './lib/agent/autosaveHold';
 import {newBlankFile} from './lib/projectActions';
@@ -30,6 +31,8 @@ import {installNativeIntake} from './lib/intake/installNativeIntake';
 import {setCommandReporter} from './lib/invokeCmd';
 import {restoreNativeDialogs} from './lib/nativeDialogs';
 import {ErrorBoundary} from './components/ErrorBoundary';
+const stopImportedTheme=installImportedTheme();
+if(import.meta.hot)import.meta.hot.dispose(stopImportedTheme);
 problemsStore.start();
 const stopProblemsFetch=installProblemsFetch();
 if(import.meta.hot)import.meta.hot.dispose(()=>{problemsStore.stop();stopProblemsFetch();});
