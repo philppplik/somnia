@@ -1,0 +1,7 @@
+# Sound settings port
+
+Base f7de7aaef. The prior Sound workspace had an AI before/after stack, not a native settings history owner. This slice moves reviewed settings commit/undo history into Sound session. The real owner emits logical applied1/no-op0 receipts, bounds history to50, validates settings/revision before assignment, preserves original audio identity and rejects undo over later manual/ABA edits. Renderer scheduling remains separate: settings readback is not rendered audio, decoding, quality or save proof.
+
+`acceptSoundAction` follows the Photos pilot: exact host DocumentRef, review ID, adapter and session text, parser/plugin/duration validation, synchronous guarded settings commit and identity/content/revision readback. The matching panel path feeds applied1 only on a verified owner receipt. Reentrant mutation is unknown/null; throwing views cannot turn committed settings into failure0. No automatic retry after uncertainty. Broad ui commands remain refused, no extra tool definitions or model grants.
+
+Tests use a synthetic engine to open a clip but the real settings/history owner for typed staging, reviewed acceptance, no-op, invalid/wrong-review/stale guards, manual ABA, observer throws, reentrant unknown and undo. Light/Dark fixture pixels show receipt1 and restoration. Real engine/native/WASM/full desktop and model tests remain CI/manual. No deps, cloud, spending, save or export.

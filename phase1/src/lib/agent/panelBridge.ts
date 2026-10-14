@@ -22,8 +22,8 @@ import {studioWorkspace} from './studioWorkspace';
 import {createStudioReadOnlyRegistry} from './studioReadOnly';
 import {photoDevelopAdapter,createPhotoDevelopRegistry} from './photoStudio';
 import {getPhotoDevelop,acceptPhotoDevelopAction,undoPhotoDevelop} from './photoDevelopWorkspace';
-import {soundAdapter,createSoundStudioRegistry,parseSound} from './soundStudio';
-import {getSound,applySound,undoSound} from './soundWorkspace';
+import {soundAdapter,createSoundStudioRegistry} from './soundStudio';
+import {getSound,acceptSoundAction,undoSound} from './soundWorkspace';
 import {deckAdapter,createDeckStudioRegistry} from './deckStudio';
 import {applyDeck,undoDeck} from './deckWorkspace';
 import {photoAdapter,createPhotoStudioRegistry,type PhotoPreview} from './photoStudio';
@@ -132,7 +132,7 @@ const transactions=new TransactionManager(documents,policy,{
    const receipt=acceptPhotoDevelopAction({id:reviewed.id,target:reviewed.base,effect:'edit',reviewId:reviewed.id,history:'one-native-entry'},reviewed.id,text,origin,()=>documents.snapshot(path));
    actionReceipts.set(origin,receipt);if(receipt.outcome!=='applied')throw Error('Photo action not verified applied. Inspect before retrying.');
   }
-  else if(adapter===soundAdapter.id){const e=getSound(path);if(!e?.session.original)throw Error('Audio is no longer open.');parseSound(text,e.session.plugins,e.session.original.report.input.duration_s);applySound(path,text,origin);}
+  else if(adapter===soundAdapter.id){const reviewed=[...nativeIds.values()].map(id=>transactions.get(id)).find(p=>p.origin===origin);if(!reviewed)throw Error('No reviewed Sound action.');const receipt=acceptSoundAction({id:reviewed.id,target:reviewed.base,effect:'edit',reviewId:reviewed.id,history:'one-native-entry'},reviewed.id,text,origin,()=>documents.snapshot(path));actionReceipts.set(origin,receipt);if(receipt.outcome!=='applied')throw Error('Sound action not verified applied. Inspect before retrying.');}
   else if(adapter===deckAdapter.id)await applyDeck(path,text,origin);
   else if(adapter===codeAdapter.id)applyOperations([{type:'replaceSource',file:path,text}],'ai',origin);
   else throw Error('This studio supports inspection only.');

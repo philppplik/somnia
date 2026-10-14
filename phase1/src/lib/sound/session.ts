@@ -19,8 +19,11 @@ const timers=new Map<string,ReturnType<typeof setTimeout>>();
 const runs=new Map<string,number>();
 const listeners=new Set<()=>void>();
 let stopMediaSync:(()=>void)|undefined;
-const emit=()=>listeners.forEach(l=>l());
-const put=(s:SoundSession)=>{sessions.set(s.name,s);emit();};
+const emit=()=>listeners.forEach(l=>{try{l();}catch{/* View errors cannot change a committed settings outcome. */}});
+const settingRevisions=new Map<string,number>();
+const nativeHistory=new Map<string,{origin:string;before:SoundSettings;after:SoundSettings;revision:number;beforeRevision:number;original:SoundVersion}[]>();
+export const soundSettingsRevision=(name:string)=>settingRevisions.get(name)??0;
+const put=(s:SoundSession)=>{const old=sessions.get(s.name);if(old&&old.settings!==s.settings)settingRevisions.set(s.name,soundSettingsRevision(s.name)+1);sessions.set(s.name,s);emit();};
 const patch=(name:string,p:Partial<SoundSession>,cause?:unknown)=>{if(p.error)reportError('sound.engine',cause??p.error,{context:{studio:'sound',file:name}});const s=sessions.get(name);if(s)put({...s,...p});};
 /** Tests replace the engine; production uses the WASM worker. Drops all sessions. */
 export function setSoundEngineFactory(f:()=>SoundEngineLike){for(const n of [...sessions.keys()])closeSound(n);engine?.dispose();engine=undefined;engineReady=undefined;factory=f;}
@@ -76,11 +79,34 @@ export async function renderSoundPreview(name:string,settings:SoundSettings):Pro
 export function updateSoundSettings(name:string,change:(s:SoundSettings)=>SoundSettings){
  const s=sessions.get(name);if(!s)return;const settings=sanitizeSettings(change(s.settings));schedule(name);put({...s,settings});
 }
+/** Reviewed settings history is owned here, not by the agent or audio renderer. */
+export function commitSoundSettings(name:string,expected:{settings:SoundSettings;revision:number},next:SoundSettings,origin:string):{outcome:'applied'|'noop';undoEntries:0|1;revision:number}{
+ const s=sessions.get(name);if(!s?.original||s.status==='loading'||s.status==='processing')throw Error('Sound is not ready for settings acceptance.');
+ if(!origin.startsWith('ai:'))throw Error('AI origin required.');
+ if(s.settings!==expected.settings||soundSettingsRevision(name)!==expected.revision)throw Error('Sound settings changed. Refresh the preview.');
+ const settings=sanitizeSettings(next);
+ if(JSON.stringify(settings)===JSON.stringify(s.settings))return {outcome:'noop',undoEntries:0,revision:expected.revision};
+ const revision=expected.revision+1,entry={origin,before:structuredClone(s.settings),after:structuredClone(settings),revision,beforeRevision:expected.revision,original:s.original};
+ const history=[...(nativeHistory.get(name)??[]).slice(-49),entry];
+ // Schedule before assignment; no await or observer between complete state/history writes.
+ schedule(name);nativeHistory.set(name,history);settingRevisions.set(name,revision);sessions.set(name,{...s,settings});
+ const receipt={outcome:'applied' as const,undoEntries:1 as const,revision};emit();return receipt;
+}
+export function undoSoundSettings(name:string,origin:string):void{
+ const s=sessions.get(name),history=nativeHistory.get(name),head=history?.at(-1);
+ if(!s?.original||s.status==='loading'||s.status==='processing')throw Error('Sound is not ready for undo.');
+ if(!head||head.origin!==origin)throw Error('A later change exists. Undo it first.');
+ if(s.original!==head.original||soundSettingsRevision(name)!==head.revision||JSON.stringify(s.settings)!==JSON.stringify(head.after))throw Error('Sound settings changed after AI edit. Not restoring over your edits.');
+ const settings=structuredClone(head.before),revision=soundSettingsRevision(name)+1;
+ schedule(name);history!.pop();const previous=history!.at(-1);if(previous&&previous.revision===head.beforeRevision)previous.revision=revision;
+ settingRevisions.set(name,revision);sessions.set(name,{...s,settings});emit();
+}
+export function forgetSoundSettingsHistory(name:string){nativeHistory.delete(name);}
 export const resetSoundSettings=(name:string)=>updateSoundSettings(name,()=>DEFAULT_SETTINGS);
 export const setSoundListen=(name:string,listen:'original'|'processed')=>patch(name,{listen});
 export function closeSound(name:string){
  clearTimeout(timers.get(name));timers.delete(name);runs.delete(name);sources.delete(name);
- const s=sessions.get(name);if(!s)return;revoke(s.processed,s.original);revoke(s.original);sessions.delete(name);emit();
+ const s=sessions.get(name);if(!s)return;nativeHistory.delete(name);settingRevisions.delete(name);revoke(s.processed,s.original);revoke(s.original);sessions.delete(name);emit();
 }
 /** The rendered WAV for download, or null while nothing has been decoded. Playback and export use the same bytes. */
 export function exportSound(name:string):{blob:Blob;fileName:string}|null{

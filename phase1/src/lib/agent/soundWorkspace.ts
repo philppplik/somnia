@@ -1,10 +1,10 @@
+import {assertNativeAction,assertNativeReceipt,type NativeActionContract,type NativeActionReceipt} from './nativeRun';
+import type {DocumentSnapshot} from './documentCore';
 /** Bridge between the native AI layer and the Sound Studio session store: settings as text, reviewed apply, guarded undo. */
-import {getSoundSession,subscribeSound,updateSoundSettings} from '../sound/session';
+import {getSoundSession,subscribeSound,commitSoundSettings,undoSoundSettings,soundSettingsRevision,forgetSoundSettingsHistory} from '../sound/session';
 import {findMedia,getMedia} from '../media';
 import {parseSound,serializeSound} from './soundStudio';
-const applied=new Map<string,{origin:string;before:string;after:string;identity:string;revision:number;beforeRevision:number}[]>();
-const revisions=new Map<string,{settings:unknown;identity:string;revision:number}>();
-export function soundRevisionFor(path:string):number {const s=assertSound(path),identity=findMedia(path)!.url,old=revisions.get(path);const revision=old&&old.identity===identity?old.revision+(old.settings!==s.session.settings?1:0):0;revisions.set(path,{settings:s.session.settings,identity,revision});return revision;}
+export function soundRevisionFor(path:string):number {assertSound(path);return soundSettingsRevision(path);}
 const active=(path:string)=>{const s=getSoundSession(path);return s&&s.original&&s.status!=='loading'&&findMedia(path)?s:null;};
 export const subscribeSounds=subscribeSound;
 let revision=0;subscribeSound(()=>{revision++;});
@@ -17,20 +17,23 @@ export function soundFiles(){
  return out;
 }
 export function assertSound(path:string){const e=getSound(path);if(!e)throw Error('Audio is no longer open or still loading.');return e;}
+const acceptedIdentities=new Map<string,{path:string;identity:string}>();
 export function applySound(path:string,text:string,origin:string):void{
- const e=assertSound(path);const next=parseSound(text,e.session.plugins,e.session.original!.report.input.duration_s);
- const after=serializeSound(next);
- const identity=findMedia(path)!.url,beforeRevision=soundRevisionFor(path);
- updateSoundSettings(path,()=>next);
- const stack=applied.get(path)??[];stack.push({origin,before:e.text,after,identity,revision:soundRevisionFor(path),beforeRevision});applied.set(path,stack);
+ const e=assertSound(path),next=parseSound(text,e.session.plugins,e.session.original!.report.input.duration_s);
+ const receipt=commitSoundSettings(path,{settings:e.session.settings,revision:soundSettingsRevision(path)},next,origin);
+ if(receipt.outcome==='noop')throw Error('Proposal makes no change.');acceptedIdentities.set(origin,{path,identity:findMedia(path)!.url});
 }
-/** Undo only when this transaction is the newest AI change and nothing was edited since. Never restores over later edits. */
-export function undoSound(path:string,origin:string):void{
- const e=assertSound(path),stack=applied.get(path)??[],head=stack.at(-1);
- if(!head||head.origin!==origin)throw Error('A later change exists. Undo it first.');
- if(e.text!==head.after||findMedia(path)?.url!==head.identity||soundRevisionFor(path)!==head.revision)throw Error('The settings changed after this AI edit. Not restoring over your edits.');
- updateSoundSettings(path,()=>parseSound(head.before));stack.pop();const previous=stack.at(-1);if(previous&&previous.identity===head.identity&&previous.revision===head.beforeRevision)previous.revision=soundRevisionFor(path);
+/** Host-owned pinned snapshot and exact reviewed ID, never a model-supplied target. */
+export function acceptSoundAction(action:NativeActionContract,reviewId:string,after:string,origin:string,snapshot:()=>DocumentSnapshot):NativeActionReceipt{
+ const before=snapshot();assertNativeAction(action,before.ref,reviewId);
+ if(action.effect!=='edit'||before.ref.adapter!=='sound-settings-v1'||before.ref.studioKind!=='sound')throw Error('Sound settings edit adapter required.');
+ const e=assertSound(action.target.path),identity=findMedia(action.target.path)!.url;
+ if(e.text!==before.text)throw Error('Sound snapshot no longer matches settings owner.');
+ const next=parseSound(after,e.session.plugins,e.session.original!.report.input.duration_s),canonical=serializeSound(next);
+ const result=commitSoundSettings(action.target.path,{settings:e.session.settings,revision:soundSettingsRevision(action.target.path)},next,origin);
+ if(result.outcome==='applied')acceptedIdentities.set(origin,{path:action.target.path,identity});
+ const current=assertSound(action.target.path),readback=current.text===canonical&&findMedia(action.target.path)?.url===identity&&soundSettingsRevision(action.target.path)===result.revision?'verified' as const:'unverified' as const;
+ const receipt:NativeActionReceipt={actionId:action.id,target:{...action.target},outcome:readback==='verified'?result.outcome:'unknown',undoEntries:readback==='verified'?result.undoEntries:null,readback};assertNativeReceipt(action,receipt);return receipt;
 }
-export const forgetSound=(path:string)=>{applied.delete(path);};
-
-subscribeSound(()=>{for(const m of getMedia().items)if(m.kind==='audio'&&getSound(m.name))soundRevisionFor(m.name);});
+export function undoSound(path:string,origin:string):void{assertSound(path);if(!acceptedIdentities.has(origin))throw Error('A later change exists. Undo it first.');if(acceptedIdentities.get(origin)?.identity!==findMedia(path)?.url)throw Error('Sound source replaced. Not restoring.');undoSoundSettings(path,origin);acceptedIdentities.delete(origin);}
+export const forgetSound=(path:string)=>{forgetSoundSettingsHistory(path);for(const [origin,value] of acceptedIdentities)if(value.path===path)acceptedIdentities.delete(origin);};
