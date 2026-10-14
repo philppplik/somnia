@@ -875,5 +875,8 @@
  "animation.keys.influence": "Einfluss",
  "animation.keys.influence.percent": "Einfluss %",
  "animation.keys.influence.hint": "Die Ease-Griff-Länge der gewählten Keys mit Ease auf diesen Prozentwert setzen",
- "cmd.animation.keys.influence": "Ease-Einfluss der gewählten Keys setzen"
+ "cmd.animation.keys.influence": "Ease-Einfluss der gewählten Keys setzen",
+ "animation.keys.tame": "Ease zähmen",
+ "animation.keys.tame.hint": "Überschwingen und Ausholen aus dem Ease der gewählten Keys entfernen",
+ "cmd.animation.keys.tame": "Überschwingen und Ausholen aus dem Ease der gewählten Keys entfernen"
 }

@@ -176,3 +176,10 @@ test('influence: bezier keys get x handles from percent, y kept, others skipped'
  assert.equal(e.length,1);assert.deepEqual([...e[0].out],[0.25,2]);assert.deepEqual([...e[0].in],[0.75,1]);
  assert.throws(()=>influenceEdits(c,[k(0)],0));assert.throws(()=>influenceEdits(c,[k(0)],100));
 });
+import {tameEdits} from './keyTame';
+test('tame: clamps handle y into 0..1, skips keys that do not overshoot',()=>{
+ const d=applyEdits(base(),[{type:'keys.interp',keys:[{layer:'a',prop:'position',t:f(0)}],interp:'bezier',out:[0.3,2],in:[0.5,-0.5]}] as never),c=findComp(d)!;
+ const k=(n:number)=>({layer:'a',prop:'position' as const,t:f(n)});
+ const e=tameEdits(c,[k(0),k(10)]) as {out:number[];in:number[]}[];
+ assert.equal(e.length,1);assert.deepEqual([...e[0].out],[0.3,1]);assert.deepEqual([...e[0].in],[0.5,0]);
+});

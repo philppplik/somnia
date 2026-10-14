@@ -47,5 +47,6 @@ export function KeyRepeat({count:selected,layers}:{count:number;layers:readonly 
   <Button size="tiny" variant="ghost" disabled={!layers.length} title={t('animation.keys.invertSel.hint')} onClick={()=>void executeCommand('animation.keys.invertSelection',{layers:[...layers]})} data-testid="animation-keys-invert-selection">{t('animation.keys.invertSel')}</Button>
   <NativeInput className={`${field} w-14`} type="number" min={MIN_INFLUENCE} max={MAX_INFLUENCE} step={1} value={inf} aria-label={t('animation.keys.influence.percent')} onChange={e=>setInf(e.target.value)} data-testid="animation-keys-influence-percent"/>
   <Button size="tiny" variant="ghost" disabled={selected<1||!infOk} title={t('animation.keys.influence.hint')} onClick={()=>void executeCommand('animation.keys.influence',{percent:infN})} data-testid="animation-keys-influence">{t('animation.keys.influence')}</Button>
+  <Button size="tiny" variant="ghost" disabled={selected<1} title={t('animation.keys.tame.hint')} onClick={()=>void executeCommand('animation.keys.tame',{})} data-testid="animation-keys-tame">{t('animation.keys.tame')}</Button>
  </span>;
 }

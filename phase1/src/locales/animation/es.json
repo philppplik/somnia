@@ -875,5 +875,8 @@
  "animation.keys.influence": "Influencia",
  "animation.keys.influence.percent": "Influencia %",
  "animation.keys.influence.hint": "Fija la longitud del tirador de ease de las keys seleccionadas con ease a este porcentaje",
- "cmd.animation.keys.influence": "Fijar la influencia del ease de las keys seleccionadas"
+ "cmd.animation.keys.influence": "Fijar la influencia del ease de las keys seleccionadas",
+ "animation.keys.tame": "Domar ease",
+ "animation.keys.tame.hint": "Quita el rebase y la anticipación del ease de las keys seleccionadas",
+ "cmd.animation.keys.tame": "Quitar rebase y anticipación del ease de las keys seleccionadas"
 }

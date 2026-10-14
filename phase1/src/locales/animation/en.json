@@ -875,5 +875,8 @@
  "animation.keys.influence": "Influence",
  "animation.keys.influence.percent": "Influence %",
  "animation.keys.influence.hint": "Set the ease handle length of the selected eased keys to this percent",
- "cmd.animation.keys.influence": "Set the ease influence of the selected keys"
+ "cmd.animation.keys.influence": "Set the ease influence of the selected keys",
+ "animation.keys.tame": "Tame ease",
+ "animation.keys.tame.hint": "Remove overshoot and anticipation from the ease of the selected keys",
+ "cmd.animation.keys.tame": "Remove overshoot and anticipation from the ease of the selected keys"
 }

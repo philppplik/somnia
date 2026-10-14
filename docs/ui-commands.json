@@ -1105,6 +1105,24 @@
       "hasEnabled": true
     },
     {
+      "id": "animation.keys.tame",
+      "title": "Remove overshoot and anticipation from the ease of the selected keys",
+      "category": "Edit",
+      "source": "animation",
+      "keywords": [
+        "animation",
+        "anticipation",
+        "back",
+        "bounce",
+        "clamp",
+        "ease",
+        "keys",
+        "overshoot",
+        "tame"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "animation.keys.thin",
       "title": "Remove selected keys that are close to a straight line between their neighbours",
       "category": "Edit",
