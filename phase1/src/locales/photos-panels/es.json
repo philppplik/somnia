@@ -88,6 +88,7 @@
  "cmd.photos.crop.cancel": "Fotos: Cancelar recorte",
  "cmd.photos.crop.reset": "Fotos: Quitar recorte",
  "cmd.photos.crop.setAspect": "Fotos: Proporción del recorte",
+    "cmd.photos.crop.swapAspect": "Fotos: Invertir orientación del recorte",
  "cmd.photos.undo": "Fotos: Deshacer paso de revelado",
  "cmd.photos.redo": "Fotos: Rehacer paso de revelado",
  "cmd.photos.history.jump": "Fotos: Ir a un paso del historial",

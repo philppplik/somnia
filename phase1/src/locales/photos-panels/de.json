@@ -88,6 +88,7 @@
  "cmd.photos.crop.cancel": "Fotos: Zuschnitt abbrechen",
  "cmd.photos.crop.reset": "Fotos: Zuschnitt entfernen",
  "cmd.photos.crop.setAspect": "Fotos: Seitenverhältnis des Zuschnitts",
+    "cmd.photos.crop.swapAspect": "Fotos: Ausrichtung des Zuschnitts tauschen",
  "cmd.photos.undo": "Fotos: Entwicklungsschritt rückgängig",
  "cmd.photos.redo": "Fotos: Entwicklungsschritt wiederholen",
  "cmd.photos.history.jump": "Fotos: Zu einem Verlaufsschritt springen",
