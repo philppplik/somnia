@@ -27,7 +27,7 @@ new file mode 100644
 index 0000000..6cee126
 --- /dev/null
 +++ b/crates/somnia-worker/Cargo.toml
-@@ -0,0 +1,14 @@
+@@ -0,0 +1,15 @@
 +[package]
 +name = "wordcraft-somnia-worker"
 +version.workspace = true
