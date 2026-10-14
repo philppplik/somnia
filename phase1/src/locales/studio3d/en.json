@@ -951,5 +951,7 @@
  "studio3d.edit.scaleX": "Scale X",
  "studio3d.edit.scaleY": "Scale Y",
  "studio3d.edit.scaleZ": "Scale Z",
- "studio3d.edit.scale": "Scale"
+ "studio3d.edit.scale": "Scale",
+ "cmd.studio3d.edit.selectSimilar": "Select faces whose normal is within the given angle of the current selection",
+ "studio3d.edit.selSimilar": "Similar normals"
 }

@@ -141,6 +141,7 @@ export interface Studio3DController{
  editSelectSharp(degrees?:number):void;
  editRotate(axis:'x'|'y'|'z',degrees:number):void;
  editScale(factors:[number,number,number]):void;
+ editSelectSimilar(degrees?:number):void;
  editExtrude(offset:number):void;
  editInset(amount:number):void;
  editBevel(width:number):void;
@@ -330,6 +331,7 @@ export function studio3DCommandSpecs():CommandSpec<unknown,unknown>[]{
   add<{x?:number;y?:number;z?:number}>('studio3d.edit.move','Move the selected vertices of the edited 3D mesh by an offset','Edit',p=>need().editMove([p?.x??0,p?.y??0,p?.z??0]),object({x:{type:'number',minimum:-1000000,maximum:1000000},y:{type:'number',minimum:-1000000,maximum:1000000},z:{type:'number',minimum:-1000000,maximum:1000000}},[]),()=>getStudio3DState().edit!=null),
   add('studio3d.edit.rip','Rip the selected faces of the edited 3D mesh off the rest by duplicating the shared vertices','Edit',()=>need().editRip(),undefined,()=>getStudio3DState().edit!=null),
   add('studio3d.edit.separate','Split the selected faces of the edited 3D mesh out into a new object','Edit',()=>need().editSeparate(),undefined,()=>getStudio3DState().edit!=null),
+  add<{degrees?:number}>('studio3d.edit.selectSimilar','Select faces of the edited 3D mesh whose normal is within the given angle of the current selection','Edit',p=>need().editSelectSimilar(p?.degrees??15),object({degrees:{type:'number',minimum:0,maximum:180}},[]),()=>getStudio3DState().edit!=null),
   add<{x?:number;y?:number;z?:number}>('studio3d.edit.scale','Scale the selected vertices of the edited 3D mesh toward or away from their centroid','Edit',p=>need().editScale([p?.x??1,p?.y??1,p?.z??1]),object({x:{type:'number',minimum:-1000000,maximum:1000000},y:{type:'number',minimum:-1000000,maximum:1000000},z:{type:'number',minimum:-1000000,maximum:1000000}},[]),()=>getStudio3DState().edit!=null),
   add<{axis?:'x'|'y'|'z';degrees?:number}>('studio3d.edit.rotate','Rotate the selected vertices of the edited 3D mesh around their centroid on a world axis','Edit',p=>need().editRotate(p?.axis??'z',p?.degrees??90),object({axis:{enum:['x','y','z']},degrees:{type:'number',minimum:-36000,maximum:36000}},[]),()=>getStudio3DState().edit!=null),
   add<{degrees?:number}>('studio3d.edit.selectSharp','Select edges of the edited 3D mesh whose faces meet at an angle of at least the given degrees','Edit',p=>need().editSelectSharp(p?.degrees??30),object({degrees:{type:'number',minimum:0,maximum:180}},[]),()=>getStudio3DState().edit!=null),

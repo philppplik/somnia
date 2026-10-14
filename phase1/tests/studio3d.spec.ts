@@ -1094,6 +1094,22 @@ test('mesh edit mode: scale pulls the selected vertices toward their centroid',a
  await expect(page.getByRole('alert')).toContainText('differ from 1');
 });
 
+test('mesh edit mode: select faces with a similar normal',async({page})=>{
+ await blank(page);
+ const id=await insert(page,'cube',0);
+ expect(await run(page,'studio3d.edit.start',{id,mode:'face'})).toBe(true);
+ expect(await run(page,'studio3d.edit.selectSimilar',{degrees:15})).toBe(false);
+ await expect(page.getByRole('alert')).toContainText('Select faces first');
+ expect(await run(page,'studio3d.edit.select',{kind:'face',ids:[4]})).toBe(true);
+ expect(await run(page,'studio3d.edit.selectSimilar',{degrees:15})).toBe(true);
+ let s=await session(page);expect(s.edit.faces).toBe(2);
+ expect(await run(page,'studio3d.edit.select',{kind:'face',ids:[4],toggle:false})).toBe(true);
+ expect(await run(page,'studio3d.edit.selectAll',{op:'none'})).toBe(true);
+ expect(await run(page,'studio3d.edit.select',{kind:'face',ids:[4]})).toBe(true);
+ expect(await run(page,'studio3d.edit.selectSimilar',{degrees:95})).toBe(true);
+ s=await session(page);expect(s.edit.faces).toBe(10);
+});
+
 test('mesh edit mode: weld merges selected vertices at their centre, undo restores them',async({page})=>{
  await blank(page);
  const id=await insert(page,'cube',0);

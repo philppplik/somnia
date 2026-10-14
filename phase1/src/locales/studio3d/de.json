@@ -951,5 +951,7 @@
  "studio3d.edit.scaleX": "X skalieren",
  "studio3d.edit.scaleY": "Y skalieren",
  "studio3d.edit.scaleZ": "Z skalieren",
- "studio3d.edit.scale": "Skalieren"
+ "studio3d.edit.scale": "Skalieren",
+ "cmd.studio3d.edit.selectSimilar": "Faces auswählen, deren Normale innerhalb des angegebenen Winkels zur Auswahl liegt",
+ "studio3d.edit.selSimilar": "Ähnliche Normalen"
 }

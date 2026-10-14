@@ -7462,6 +7462,19 @@
       "hasEnabled": true
     },
     {
+      "id": "studio3d.edit.selectSimilar",
+      "title": "Select faces whose normal is within the given angle of the current selection",
+      "category": "Edit",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "studio3d.edit.separate",
       "title": "Split the selected faces out into a new object",
       "category": "Edit",

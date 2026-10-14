@@ -377,6 +377,33 @@ export function weldSelected(m:MeshData,verts:number[]):MeshData{
  if(m.uvs)out.uvs=m.uvs;
  return out;
 }
+/** Faces whose geometric normal (from positions, so duplicated shells count alike) lies within `degrees` of the average normal of the seed faces. Returns face ordinals, seeds included. */
+export function similarFaces(m:MeshData,seeds:number[],degrees:number):number[]{
+ if(!seeds.length)throw new EditError('Select faces first.');
+ if(!Number.isFinite(degrees)||degrees<0||degrees>180)throw new EditError('Angle must be between 0 and 180 degrees.');
+ const pos=m.positions,idx=m.index;
+ const tris=idx.length/3;
+ for(const f of seeds){if(!Number.isInteger(f)||f<0||f>=tris)throw new EditError(`Face ${f} does not exist.`);}
+ const nrm=new Float64Array(tris*3);
+ for(let f=0;f<tris;f++){
+  const a=idx[f*3],b=idx[f*3+1],c=idx[f*3+2];
+  const ux=pos[b*3]-pos[a*3],uy=pos[b*3+1]-pos[a*3+1],uz=pos[b*3+2]-pos[a*3+2];
+  const vx=pos[c*3]-pos[a*3],vy=pos[c*3+1]-pos[a*3+1],vz=pos[c*3+2]-pos[a*3+2];
+  let nx=uy*vz-uz*vy,ny=uz*vx-ux*vz,nz=ux*vy-uy*vx;
+  const l=Math.hypot(nx,ny,nz);
+  if(l>0){nx/=l;ny/=l;nz/=l;}
+  nrm[f*3]=nx;nrm[f*3+1]=ny;nrm[f*3+2]=nz;
+ }
+ let ax=0,ay=0,az=0;
+ for(const f of seeds){ax+=nrm[f*3];ay+=nrm[f*3+1];az+=nrm[f*3+2];}
+ const al=Math.hypot(ax,ay,az);
+ if(al===0)throw new EditError('The selected faces have no average direction.');
+ ax/=al;ay/=al;az/=al;
+ const cosT=Math.cos(degrees*Math.PI/180);
+ const out:number[]=[];
+ for(let f=0;f<tris;f++)if(nrm[f*3]*ax+nrm[f*3+1]*ay+nrm[f*3+2]*az>=cosT)out.push(f);
+ return out;
+}
 /** Unique edges whose adjacent triangles (matched by vertex positions, so duplicated shells read as one surface) meet at a dihedral angle of at least `degrees`, as index pairs (low index first). Boundary edges with a single adjacent triangle are never sharp. */
 export function sharpEdges(m:MeshData,degrees:number):[number,number][]{
  if(!Number.isFinite(degrees)||degrees<0||degrees>180)throw new EditError('Angle must be between 0 and 180 degrees.');

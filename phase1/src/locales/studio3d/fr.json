@@ -951,5 +951,7 @@
  "studio3d.edit.scaleX": "Échelle X",
  "studio3d.edit.scaleY": "Échelle Y",
  "studio3d.edit.scaleZ": "Échelle Z",
- "studio3d.edit.scale": "Mettre à l’échelle"
+ "studio3d.edit.scale": "Mettre à l’échelle",
+ "cmd.studio3d.edit.selectSimilar": "Sélectionner les faces dont la normale est dans l’angle indiqué par rapport à la sélection",
+ "studio3d.edit.selSimilar": "Normales similaires"
 }

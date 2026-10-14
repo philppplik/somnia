@@ -1,4 +1,5 @@
 # Unreleased: 3D Studio P0
+- 3D Studio: edit mode selects faces with a similar normal to the current selection (`studio3d.edit.selectSimilar`).
 - 3D Studio: edit mode scales the selected vertices toward or away from their centroid per axis (`studio3d.edit.scale`).
 - 3D Studio: edit mode rotates the selected vertices around their centroid on a world axis (`studio3d.edit.rotate`).
 - 3D Studio: edit mode selects sharp edges by dihedral angle, seeing duplicated shells as one surface (`studio3d.edit.selectSharp`).

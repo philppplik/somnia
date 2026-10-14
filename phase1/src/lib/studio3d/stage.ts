@@ -10,7 +10,7 @@ import type {NodeExtra} from './document';
 import {EASES,isEase,bakeTrack,type Ease} from './ease';
 import {buildExtras,type ClipMeta,type MetaTrack} from './clipMeta';
 import {groupRefs,keyIndices,copyTrackKeys,shiftTrackKeys,pasteTrackKeys,type KeyRef,type KeyData,type TrackData} from './keyEdit';
-import {extrudeFaces,insetFaces,bevelVertices,deleteElements,weldSelected,subdivideFaces,pokeFaces,duplicateFaces,fattenSelected,relaxSelected,flipFaces,dissolveFaces,fillSelected,collapseSelected,toSphereSelected,randomizeSelected,moveSelected,ripSelected,extractFaces,sharpEdges,rotateSelected,scaleSelected,loopCut,bevelEdges,slideEdges,mirrorCombine,symmetrizeMesh,subdivideLoop,cleanupMesh,flipMesh,outsideMesh,smoothMesh,separateMesh,solidifyMesh,fillHolesMesh,relaxMesh,fattenMesh,bisectMesh,twistMesh,taperMesh,spinMesh,bridgeMesh,remeshMesh,EditError,MAX_EDIT_VERTICES,MAX_EDIT_TRIANGLES,type MeshData,type CleanupResult,type NormalsOp} from './editMesh';
+import {extrudeFaces,insetFaces,bevelVertices,deleteElements,weldSelected,subdivideFaces,pokeFaces,duplicateFaces,fattenSelected,relaxSelected,flipFaces,dissolveFaces,fillSelected,collapseSelected,toSphereSelected,randomizeSelected,moveSelected,ripSelected,extractFaces,sharpEdges,similarFaces,rotateSelected,scaleSelected,loopCut,bevelEdges,slideEdges,mirrorCombine,symmetrizeMesh,subdivideLoop,cleanupMesh,flipMesh,outsideMesh,smoothMesh,separateMesh,solidifyMesh,fillHolesMesh,relaxMesh,fattenMesh,bisectMesh,twistMesh,taperMesh,spinMesh,bridgeMesh,remeshMesh,EditError,MAX_EDIT_VERTICES,MAX_EDIT_TRIANGLES,type MeshData,type CleanupResult,type NormalsOp} from './editMesh';
 import {sculptDab,paintMask,SculptError,type SculptOpts} from './sculpt';
 import {KEY_PATHS,KEY_STRIDE,ClipError,MAX_CLIPS,MAX_KEYS_PER_TRACK,DEFAULT_CLIP_SECONDS,insertKey,removeKey as removeKeyData,findKey,isPlainTrack,trackName,parseTrackName,checkKeyTime,checkDuration,checkClipName,lastKeyTime,type KeyPath} from './clips';
 import {mergeTransform,DEFAULT_TRANSFORM,UvError,type TextureTransform} from './uv';
@@ -800,6 +800,13 @@ export class Stage{
  }
  editBevelEdge(width:number,segments=1){this.editOp({key:'studio3d.hist.bevelEdges'},m=>bevelEdges(m,[...this.editSel.edges.values()],width,segments));}
  editLoopSlide(factor:number){this.editOp({key:'studio3d.hist.loopSlide'},m=>slideEdges(m,[...this.editSel.edges.values()],factor));}
+ /** Extends the face selection to every face whose normal lies within `degrees` of the current selection's average normal. Replaces the face selection; selection changes are not undo steps. */
+ editSelectSimilar(degrees=15){
+  const m=this.editMesh();
+  let faces:number[];
+  try{faces=similarFaces(this.meshDataOf(m),[...this.editSel.faces],degrees);}catch(e){throw e instanceof EditError?new StageError(e.message):e;}
+  this.editSel.faces=new Set(faces);
+ }
  /** Selects edges whose adjacent faces meet at a dihedral angle of at least `degrees` (position-keyed, so duplicated shells read as one surface). Replaces the edge selection; selection changes are not undo steps. */
  editSelectSharp(degrees=30){
   const m=this.editMesh();
