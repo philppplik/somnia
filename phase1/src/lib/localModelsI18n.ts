@@ -1,5 +1,14 @@
 export const LOCAL_MODELS_CATALOGUES:Record<string,Record<string,string>> = {
  "en": {
+  "local.cache.age": "Metadata checked {minutes} min ago",
+  "local.cache.boundary": "Daemon/inventory snapshot only, not locality, tool capability or inference proof. RAM fit still has its own hardware timestamp.",
+  "local.cache.present": "Exact model in checked inventory",
+  "local.cache.missing": "Exact model missing from checked inventory",
+  "local.cache.unreachable": "Checked daemon not reachable",
+  "local.cache.unknown": "Checked inventory unknown",
+  "local.cache.expired": "Metadata check expired; refresh explicitly",
+  "local.cache.notChecked": "Metadata not checked",
+
   "local.chip.ask": "Ask local model",
   "local.chip.open": "Open local AI settings for {model}",
   "local.chip.none": "No model",
@@ -494,6 +503,15 @@ export const LOCAL_MODELS_CATALOGUES:Record<string,Record<string,string>> = {
   "local.route.earlier": "Move earlier after local"
  },
  "de": {
+  "local.cache.age": "Metadaten vor {minutes} Min. geprüft",
+  "local.cache.boundary": "Nur Dienst-/Bestandssnapshot, kein Lokalitäts-, Tool- oder Inferenznachweis. RAM-Schätzung hat eigenen Hardware-Zeitstempel.",
+  "local.cache.present": "Genaues Modell im geprüften Bestand",
+  "local.cache.missing": "Genaues Modell fehlt im geprüften Bestand",
+  "local.cache.unreachable": "Geprüfter Dienst nicht erreichbar",
+  "local.cache.unknown": "Geprüfter Bestand unbekannt",
+  "local.cache.expired": "Metadatenprüfung abgelaufen; bewusst aktualisieren",
+  "local.cache.notChecked": "Metadaten ungeprüft",
+
   "local.chip.ask": "Lokales Modell fragen",
   "local.chip.open": "Lokale KI-Einstellungen für {model} öffnen",
   "local.chip.none": "Kein Modell",
@@ -988,6 +1006,15 @@ export const LOCAL_MODELS_CATALOGUES:Record<string,Record<string,string>> = {
   "local.route.earlier": "Nach lokal früher einordnen"
  },
  "es": {
+  "local.cache.age": "Metadatos revisados hace {minutes} min",
+  "local.cache.boundary": "Solo servicio/inventario, no prueba localidad, tools o inferencia. RAM tiene su propio tiempo de hardware.",
+  "local.cache.present": "Modelo exacto en inventario revisado",
+  "local.cache.missing": "Modelo exacto falta del inventario revisado",
+  "local.cache.unreachable": "Servicio revisado inaccesible",
+  "local.cache.unknown": "Inventario revisado desconocido",
+  "local.cache.expired": "Revisión caducada; actualizar explícitamente",
+  "local.cache.notChecked": "Metadatos sin revisar",
+
   "local.chip.ask": "Preguntar al modelo local",
   "local.chip.open": "Abrir ajustes de IA local para {model}",
   "local.chip.none": "Sin modelo",
@@ -1482,6 +1509,15 @@ export const LOCAL_MODELS_CATALOGUES:Record<string,Record<string,string>> = {
   "local.route.earlier": "Mover antes tras local"
  },
  "fr": {
+  "local.cache.age": "Métadonnées vérifiées il y a {minutes} min",
+  "local.cache.boundary": "Service/inventaire uniquement, pas preuve de localité, tools ou inférence. RAM garde son horodatage matériel.",
+  "local.cache.present": "Modèle exact dans inventaire vérifié",
+  "local.cache.missing": "Modèle exact absent de inventaire vérifié",
+  "local.cache.unreachable": "Service vérifié injoignable",
+  "local.cache.unknown": "Inventaire vérifié inconnu",
+  "local.cache.expired": "Vérification expirée; actualiser explicitement",
+  "local.cache.notChecked": "Métadonnées non vérifiées",
+
   "local.chip.ask": "Interroger le modèle local",
   "local.chip.open": "Ouvrir les réglages IA locale pour {model}",
   "local.chip.none": "Aucun modèle",
@@ -1976,6 +2012,15 @@ export const LOCAL_MODELS_CATALOGUES:Record<string,Record<string,string>> = {
   "local.route.earlier": "Avancer après local"
  },
  "pt-BR": {
+  "local.cache.age": "Metadados verificados há {minutes} min",
+  "local.cache.boundary": "Só serviço/inventário, não prova localidade, tools ou inferência. RAM mantém seu tempo de hardware.",
+  "local.cache.present": "Modelo exato no inventário verificado",
+  "local.cache.missing": "Modelo exato ausente do inventário verificado",
+  "local.cache.unreachable": "Serviço verificado inacessível",
+  "local.cache.unknown": "Inventário verificado desconhecido",
+  "local.cache.expired": "Verificação expirada; atualize explicitamente",
+  "local.cache.notChecked": "Metadados não verificados",
+
   "local.chip.ask": "Perguntar ao modelo local",
   "local.chip.open": "Abrir ajustes de IA local para {model}",
   "local.chip.none": "Sem modelo",

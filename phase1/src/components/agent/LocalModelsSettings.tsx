@@ -1,3 +1,4 @@
+import {recordReadiness,clearReadiness} from '../../lib/agent/localReadinessCache';
 import {agentSettingsSnapshot,subscribeAgentSettings} from '../../lib/agent/settingsRuntime';
 import {LocalModelHealth} from './LocalModelHealth';
 import {LocalModelDiskUsage} from './LocalModelDiskUsage';
@@ -20,10 +21,10 @@ export function LocalModelsSettings({active,runtime:provided,hardwareProbe}:{act
  const [snapshot,setSnapshot]=useState<RuntimeSnapshot|null>(null),[busy,setBusy]=useState(false),[refreshError,setRefreshError]=useState(false);
  const [evidence,setEvidence]=useState<Record<string,ModelEvidence|'error'>>({});
  const generation=useRef(0);
- const refresh=async()=>{
+ const refresh=async(explicit=false)=>{
   const request=++generation.current;setBusy(true);setEvidence({});setRefreshError(false);
   try{
-   const next=await runtime.snapshot();if(request!==generation.current)return;setSnapshot(next);
+   const next=await runtime.snapshot();if(request!==generation.current)return;setSnapshot(next);if(explicit)recordReadiness(next,runtime.baseUrl);
    // Only the first visible page is inspected. Two workers bound /api/show concurrency.
    let cursor=0;const page=next.models.slice(0,20);
    await Promise.all([0,1].map(async()=>{while(cursor<page.length&&request===generation.current){
@@ -31,7 +32,7 @@ export function LocalModelsSettings({active,runtime:provided,hardwareProbe}:{act
     try{value=await runtime.evidence(model.id);}catch{value='error';}
     if(request===generation.current)setEvidence(old=>({...old,[model.id]:value}));
    }}));
-  }catch{if(request===generation.current){setSnapshot(null);setRefreshError(true);}}finally{if(request===generation.current)setBusy(false);}
+  }catch{if(request===generation.current){setSnapshot(null);setRefreshError(true);if(explicit)clearReadiness();}}finally{if(request===generation.current)setBusy(false);}
  };
  useEffect(()=>{if(active)void refresh();return()=>{generation.current++;setBusy(false);};},[active,runtime]);
  const [page,setPage]=useState(0);
@@ -39,10 +40,10 @@ export function LocalModelsSettings({active,runtime:provided,hardwareProbe}:{act
  const inspect=async(id:string)=>{const request=generation.current;try{const value=await runtime.evidence(id);if(request===generation.current)setEvidence(old=>({...old,[id]:value}));}catch{if(request===generation.current)setEvidence(old=>({...old,[id]:'error'}));}};
  const size=(bytes:number|undefined)=>bytes===undefined?t('local.unknown'):new Intl.NumberFormat(locale,{style:'unit',unit:'gigabyte',maximumFractionDigits:2}).format(bytes/1e9);
  return <section className="local-models" aria-label={t('local.title')}>
-  <div className="local-models-header"><h3>{t('local.title')}</h3><Button type="button" variant="outline" disabled={busy} onClick={()=>void refresh()}>{t(busy?'local.checking':'local.refresh')}</Button></div>
+  <div className="local-models-header"><h3>{t('local.title')}</h3><Button type="button" variant="outline" disabled={busy} onClick={()=>void refresh(true)}>{t(busy?'local.checking':'local.refresh')}</Button></div>
   <p>{t('local.boundary')}</p>
-  <LocalAIHealth snapshot={snapshot} busy={busy} refreshError={refreshError} onRefresh={()=>void refresh()}/>
-  <LocalModelHealth configured={configured} snapshot={snapshot} runtime={runtime}/><LocalFirstRunGuide snapshot={snapshot} busy={busy} onRefresh={()=>void refresh()}/>
+  <LocalAIHealth snapshot={snapshot} busy={busy} refreshError={refreshError} onRefresh={()=>void refresh(true)}/>
+  <LocalModelHealth configured={configured} snapshot={snapshot} runtime={runtime}/><LocalFirstRunGuide snapshot={snapshot} busy={busy} onRefresh={()=>void refresh(true)}/>
   <LocalModelAdvice hardwareProbe={hardwareProbe} active={active} runtime={runtime} snapshot={snapshot}/>
   {!provided&&<LocalModelActions snapshot={snapshot} onChanged={refresh}/>}
   {snapshot?.state==='running'&&<>
