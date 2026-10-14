@@ -11,7 +11,8 @@ const expected=(m:string):never=>{throw Object.assign(new Error(m),{expected:tru
 export const layerFlagSpecs=():CommandSpec<unknown,unknown>[]=>[{
  id:'animation.layers.flag',title:'Switch a layer flag for the selected layers',category:'Edit',level:'ui',keywords:['animation','layer','visible','hide','show','solo','lock','unlock','shy','toggle','eye'],
  params:{type:'object',properties:{flag:{type:'string',enum:[...LAYER_FLAGS]},value:{type:'boolean'},layers:{type:'array',items:{type:'string',minLength:1,maxLength:200},minItems:1,maxItems:MAX_DUPLICATE_LAYERS}},required:['flag'],additionalProperties:false},
- enabled:()=>{const s=animationSession(),d=s.document,c=d?findComp(d):undefined;return !!c&&layerSetIds(s.getState().view.selectedLayer).some(id=>!!findLayer(c,id));},
+ // The Rig menu passes its own ticked layers, so this must not depend on the timeline selection; run() reports an empty set.
+ enabled:()=>{const d=animationSession().document,c=d?findComp(d):undefined;return !!c&&c.layers.length>0;},
  run:((p:{flag:LayerFlag;value?:boolean;layers?:string[]})=>{
   const s=animationSession(),d=s.document,c=d?findComp(d):undefined;if(!c)return expected('No composition is open.');
   if(!LAYER_FLAGS.includes(p?.flag))return expected('Unknown layer flag.');

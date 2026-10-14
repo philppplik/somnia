@@ -623,3 +623,14 @@ test('P184 align works in composition space through a scaled parent',async()=>{
  const bx=wx('b'),cx=wx('c');run({mode:'left',layers:['b','c']});
  assert.ok(Math.abs(wx('b')-Math.min(bx,cx))<0.05&&Math.abs(wx('c')-Math.min(bx,cx))<0.05,`${wx('b')} ${wx('c')} want ${Math.min(bx,cx)}`);
 });
+
+test('P185 Rig-menu commands are enabled and run on ticked layers even with nothing selected in the timeline',async()=>{
+ const mods=await Promise.all([import('./layerSplitCommands'),import('./layerWorkAreaCommands'),import('./modifierReseedCommands'),import('./layerNumberCommands'),import('./layerArrangeCommands'),import('./layerFlagCommands'),import('./markerFromLayersCommands')]);
+ const specs=mods.flatMap(m=>Object.values(m).filter(v=>typeof v==='function'&&(v as Function).name.endsWith('Specs')).flatMap(f=>(f as ()=>any[])()));
+ const dup=await import('./layerDuplicateCommands');specs.push(...Object.values(dup).filter(v=>typeof v==='function'&&(v as Function).name.endsWith('Specs')).flatMap(f=>(f as ()=>any[])()));
+ assert.ok(specs.length>=8,`found ${specs.length}`);assert.ok(['animation.layers.duplicate','animation.layers.split','animation.workarea.toLayers','animation.modifiers.reseed','animation.layers.number','animation.layers.arrange','animation.layers.flag','animation.marker.fromLayers'].every(id=>specs.some(x=>x.id===id)));
+ const s=open();setAnimationSession(s);s.setView({selectedLayer:null as never});
+ for(const sp of specs)assert.equal(sp.enabled(),true,sp.id);
+ s.dispatch({type:'layer.add',kind:'shape',id:'b'});
+ const r=specs.find(x=>x.id==='animation.layers.flag')!.run({flag:'shy',layers:['a','b']}) as {changed:number};assert.equal(r.changed,2);
+});

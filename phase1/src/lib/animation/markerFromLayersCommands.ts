@@ -1,6 +1,6 @@
 import type {CommandSpec} from '../commandSpec';
 import {animationSession} from './session';
-import {findComp,findLayer,newId,type Marker} from './model';
+import {findComp,newId,type Marker} from './model';
 import {EditError} from './edit';
 import {layerSetIds} from './layerSet';
 import {MAX_DUPLICATE_LAYERS} from './layerDuplicate';
@@ -11,7 +11,8 @@ export const MAX_MARKERS=200;
 export const markerFromLayersSpecs=():CommandSpec<unknown,unknown>[]=>[{
  id:'animation.marker.fromLayers',title:'Add markers at the in points of the selected layers',category:'Edit',level:'ui',keywords:['animation','marker','layer','in point','cue','sync','timing'],
  params:{type:'object',properties:{layers:{type:'array',items:{type:'string',minLength:1,maxLength:200},minItems:1,maxItems:MAX_DUPLICATE_LAYERS}},additionalProperties:false},
- enabled:()=>{const s=animationSession(),d=s.document,c=d?findComp(d):undefined;return !!c&&layerSetIds(s.getState().view.selectedLayer).some(id=>!!findLayer(c,id));},
+ // The Rig menu passes its own ticked layers, so this must not depend on the timeline selection; run() reports an empty set.
+ enabled:()=>{const d=animationSession().document,c=d?findComp(d):undefined;return !!c&&c.layers.length>0;},
  run:((p:{layers?:string[]}={})=>{
   const s=animationSession(),d=s.document,c=d?findComp(d):undefined;if(!c)return expected('No composition is open.');
   const want=new Set(p.layers??layerSetIds(s.getState().view.selectedLayer)),ls=c.layers.filter(l=>want.has(l.id));

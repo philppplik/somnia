@@ -1,6 +1,6 @@
 import type {CommandSpec} from '../commandSpec';
 import {animationSession} from './session';
-import {findComp,findLayer} from './model';
+import {findComp} from './model';
 import {EditError,type Edit} from './edit';
 import {layerSetIds} from './layerSet';
 import {MAX_DUPLICATE_LAYERS} from './layerDuplicate';
@@ -11,7 +11,8 @@ export const numberBase=(name:string):string=>{const b=name.replace(/(\s+(copy|\
 export const layerNumberSpecs=():CommandSpec<unknown,unknown>[]=>[{
  id:'animation.layers.number',title:'Number the selected layers',category:'Edit',level:'ui',keywords:['animation','layer','rename','number','numbering','copies','duplicate','sequence'],
  params:{type:'object',properties:{layers:{type:'array',items:{type:'string',minLength:1,maxLength:200},minItems:1,maxItems:MAX_DUPLICATE_LAYERS},name:{type:'string',minLength:1,maxLength:80},start:{type:'integer',minimum:0,maximum:9999}},additionalProperties:false},
- enabled:()=>{const s=animationSession(),d=s.document,c=d?findComp(d):undefined;return !!c&&layerSetIds(s.getState().view.selectedLayer).some(id=>!!findLayer(c,id));},
+ // The Rig menu passes its own ticked layers, so this must not depend on the timeline selection; run() reports an empty set.
+ enabled:()=>{const d=animationSession().document,c=d?findComp(d):undefined;return !!c&&c.layers.length>0;},
  run:((p:{layers?:string[];name?:string;start?:number}={})=>{
   const s=animationSession(),d=s.document,c=d?findComp(d):undefined;if(!c)return expected('No composition is open.');
   const want=new Set(p.layers??layerSetIds(s.getState().view.selectedLayer));

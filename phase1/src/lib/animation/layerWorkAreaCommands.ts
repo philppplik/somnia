@@ -9,7 +9,8 @@ const expected=(m:string):never=>{throw Object.assign(new Error(m),{expected:tru
 export const layerWorkAreaSpecs=():CommandSpec<unknown,unknown>[]=>[{
  id:'animation.workarea.toLayers',title:'Set the work area to the selected layers',category:'Edit',level:'ui',keywords:['animation','work area','layers','range','span','in','out','bounds','export'],
  params:{type:'object',properties:{layers:{type:'array',items:{type:'string',minLength:1,maxLength:200},minItems:1,maxItems:MAX_DUPLICATE_LAYERS}},additionalProperties:false},
- enabled:()=>{const s=animationSession(),d=s.document,c=d?findComp(d):undefined;return !!c&&layerSetIds(s.getState().view.selectedLayer).some(id=>!!findLayer(c,id));},
+ // The Rig menu passes its own ticked layers, so this must not depend on the timeline selection; run() reports an empty set.
+ enabled:()=>{const d=animationSession().document,c=d?findComp(d):undefined;return !!c&&c.layers.length>0;},
  run:((p:{layers?:string[]}={})=>{
   const s=animationSession(),d=s.document,c=d?findComp(d):undefined;if(!c)return expected('No composition is open.');
   const ls=(p.layers??layerSetIds(s.getState().view.selectedLayer)).map(id=>findLayer(c,id)).filter(l=>!!l);
