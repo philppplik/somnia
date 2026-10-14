@@ -662,6 +662,12 @@ export default function Viewport3D(){
   const ikToggle=(on:boolean,id?:number)=>{stage.ikToggle(id??poseTarget(),on);};
   const ikSetTarget=(p:readonly[number,number,number],id?:number)=>{stage.ikSetTarget(id??poseTarget(),p);};
   const ikSetPole=(p:readonly[number,number,number],id?:number)=>{stage.ikSetPole(id??poseTarget(),p);};
+  const recordPose=(all?:boolean,id?:number,clip?:number,time?:number)=>{
+   const st=getStudio3DState();const i=clip??st.anim.clip;const t=time??st.anim.time;
+   const ids=all?stage.bones().map(b=>b.id):id!=null?[id]:[...new Set([...st.marked,st.selected].filter((x):x is number=>x!=null&&stage.find(x)))];
+   if(!ids.length)throw Object.assign(new Error(all?'This scene has no bones.':'Select at least one bone to record.'),{expected:true});
+   return stage.recordPose(i,t,ids);
+  };
   const fabrikToggle=(on:boolean,id?:number)=>{stage.fabrikToggle(id??poseTarget(),on);};
   const fabrikSetTarget=(p:readonly[number,number,number],id?:number)=>{stage.fabrikSetTarget(id??poseTarget(),p);};
   const fabrikLookToggle=(on:boolean,id?:number)=>{stage.fabrikLookToggle(id??poseTarget(),on);};
@@ -694,7 +700,7 @@ export default function Viewport3D(){
   /** Auto-key records transform changes into the current clip at the playhead. Turning it on without a clip makes one. */
   const autoKey=(on:boolean)=>{if(on&&!stage.clips.length)clipAdd();patchStudio3D({autoKey:!!on});};
   stage.autoKeySource=()=>getStudio3DState().autoKey&&stage.clips.length?{clip:anim().clip,time:anim().time}:null;
-  const off=registerStudio3DController({keyMove,keyEase,keyCopy,keyShift,clipDuplicate,animRange,selectBone,setSkeleton,skinBind,skinRebind,setWeightPreview,setWeightBrush,paintDab,poseSave,poseApply,poseRemove,poseMirror,poseBlend,ikToggle,ikSetTarget,ikSetPole,fabrikToggle,fabrikSetTarget,fabrikLookToggle,fabrikSetLook,setBoneLimits,keyPaste,autoKey,clipAdd,clipRemove,clipRename,clipDuration,keySet,keyRemove,animPlay,animPause,animSeek,animLoop,animSpeed,setTextureTransform:(id,slot,p)=>stage.setTextureTransform(id,slot,p),exportGltf,setTextureFile,mirrorSelection,applyScale:applyScaleSel,mergeSelection:mergeSel,viewPreset,setPrimitive:(id,p)=>stage.setPrimitive(id,p),
+  const off=registerStudio3DController({keyMove,keyEase,keyCopy,keyShift,clipDuplicate,animRange,selectBone,setSkeleton,skinBind,skinRebind,setWeightPreview,setWeightBrush,paintDab,poseSave,poseApply,poseRemove,poseMirror,poseBlend,ikToggle,ikSetTarget,ikSetPole,recordPose,fabrikToggle,fabrikSetTarget,fabrikLookToggle,fabrikSetLook,setBoneLimits,keyPaste,autoKey,clipAdd,clipRemove,clipRename,clipDuration,keySet,keyRemove,animPlay,animPause,animSeek,animLoop,animSpeed,setTextureTransform:(id,slot,p)=>stage.setTextureTransform(id,slot,p),exportGltf,setTextureFile,mirrorSelection,applyScale:applyScaleSel,mergeSelection:mergeSel,viewPreset,setPrimitive:(id,p)=>stage.setPrimitive(id,p),
    save:saveDocument,deleteSelection,duplicateSelection,exportMesh,setExportOptions,renderTurntable,cancelRender:()=>{cancelFlag=true;},setUnit,openFiles,newScene,resetView:frameAll,frameSelection,select,renderStill,exportGlb,
    addPrimitive:k=>{const o=stage.addPrimitive(k);select(o.id);return o.id;},addLight:k=>{const o=stage.addLight(k);select(o.id);return o.id;},
    setTransform:(id,p)=>stage.setTransform(id,p),setMaterial:(id,p)=>stage.setMaterial(id,p),rename:(id,n)=>stage.rename(id,n),

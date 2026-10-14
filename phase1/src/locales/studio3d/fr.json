@@ -402,5 +402,8 @@
  "studio3d.fabrik.title": "FABRIK",
  "studio3d.fabrik.on": "FABRIK pilote cette chaîne",
  "studio3d.fabrik.lookat": "Viser l'os final vers la cible de visée",
- "studio3d.fabrik.hint": "Faites glisser les marqueurs de cible (vert) et de visée (rose) dans la vue."
+ "studio3d.fabrik.hint": "Faites glisser les marqueurs de cible (vert) et de visée (rose) dans la vue.",
+ "cmd.studio3d.clip.record": "Enregistrer la pose actuelle en clés au curseur",
+ "studio3d.clip.record": "Enregistrer la pose",
+ "studio3d.clip.recordAll": "Enregistrer tous les os"
 }

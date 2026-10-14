@@ -157,3 +157,40 @@ test('copyKeys and pasteKeys move keys with easing across times, one undo step',
  assert.equal(st.undo(),true);assert.deepEqual(st.keysOf(c,m.id)[0].times,[0,1]);
  assert.throws(()=>st.pasteKeys(c,m.id,[],0),/Copy keys first/);
 });
+
+const boneRig=()=>{
+ const st=new Stage();
+ const root=new THREE.Bone();root.name='Root';
+ const mid=new THREE.Bone();mid.name='Mid';mid.position.y=1;root.add(mid);
+ const end=new THREE.Bone();end.name='End';end.position.y=1;mid.add(end);
+ st.loadMany([root]);st.root.updateMatrixWorld(true);
+ return{st,root,mid,end};
+};
+test('recording a pose keys every given bone at the playhead as one undo step',()=>{
+ const{st,root,mid}=boneRig();const c=st.addClip('Wave',2);
+ mid.rotation.z=0.4;st.root.updateMatrixWorld(true);
+ const n=st.recordPose(c,0.5,[root.id,mid.id]);
+ assert.equal(n,2);
+ const tracks=st.clips[c].tracks;assert.equal(tracks.length,2);
+ for(const id of[root.id,mid.id]){const k=st.keysOf(c,id);assert.equal(k.length,1);assert.deepEqual(k[0].times,[0.5]);assert.equal(k[0].path,'rotation');}
+ const midTrack=tracks.find(t=>t.name.endsWith('.quaternion')&&t.name===`${mid.uuid}.quaternion`)!;
+ const q=new THREE.Quaternion().setFromEuler(new THREE.Euler(0,0,0.4));
+ for(let i=0;i<4;i++)assert.ok(Math.abs(midTrack.values[i]-q.toArray()[i])<1e-6,'the posed rotation is captured');
+ st.undo();assert.equal(st.clips[c].tracks.length,0,'the whole record is one undo step');
+ st.redo();assert.equal(st.clips[c].tracks.length,2);
+});
+test('recording past the end extends the clip; recording a second pose adds sorted keys',()=>{
+ const{st,root}=boneRig();const c=st.addClip('Wave',1);
+ st.recordPose(c,3,[root.id]);assert.equal(st.clips[c].duration,3,'a key past the end extends the clip');
+ root.rotation.x=0.2;st.recordPose(c,1.5,[root.id]);
+ assert.deepEqual(st.keysOf(c,root.id)[0].times,[1.5,3],'keys sort by time');
+});
+test('recording validates bones and input and changes nothing on failure',()=>{
+ const{st,root}=boneRig();const c=st.addClip('Wave',2);
+ const m=st.addPrimitive('cube');
+ assert.throws(()=>st.recordPose(c,0.5,[]),ClipError,'no bones');
+ assert.throws(()=>st.recordPose(c,0.5,[m.id]),ClipError,'a mesh is not a bone');
+ assert.throws(()=>st.recordPose(9,0.5,[root.id]),ClipError,'no such clip');
+ assert.throws(()=>st.recordPose(c,-1,[root.id]),ClipError,'negative time');
+ assert.equal(st.clips[c].tracks.length,0,'failures record nothing');
+});

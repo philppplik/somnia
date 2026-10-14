@@ -402,5 +402,8 @@
  "studio3d.fabrik.title": "FABRIK",
  "studio3d.fabrik.on": "FABRIK drives this chain",
  "studio3d.fabrik.lookat": "Aim the end bone at the look target",
- "studio3d.fabrik.hint": "Drag the target (green) and look (pink) markers in the viewport."
+ "studio3d.fabrik.hint": "Drag the target (green) and look (pink) markers in the viewport.",
+ "cmd.studio3d.clip.record": "Record the current pose as keys at the playhead",
+ "studio3d.clip.record": "Record pose",
+ "studio3d.clip.recordAll": "Record all bones"
 }

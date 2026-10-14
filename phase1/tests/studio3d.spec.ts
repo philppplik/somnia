@@ -559,3 +559,31 @@ test('3D studio drives an N-bone chain with FABRIK, look-at and limits',async({p
  await run(page,'studio3d.fabrik.target',{x:0,y:1,z:0});
  await expect(page.getByRole('alert')).toBeVisible();
 });
+
+test('3D studio records keyframe poses at the playhead for selected or all bones',async({page})=>{
+ const glb=await skinnedGlb3();
+ await open3d(page);
+ await page.getByTestId('studio3d-file-input').setInputFiles({name:'rig3.glb',mimeType:'model/gltf-binary',buffer:glb});
+ await expect(page.getByTestId('studio3d-viewport')).toBeVisible({timeout:20_000});
+ await expect(page.getByTestId('studio3d-record')).toBeVisible();
+ await run(page,'studio3d.clip.add',{name:'Wave',duration:2});
+ // Pose the middle bone and record the selected chain root at the playhead.
+ await page.getByLabel('Bone').selectOption({index:2});
+ await expect.poll(async()=>(await session(page)).info?.kind).toBe('bone');
+ const bone=(await session(page)).selected as number;
+ await run(page,'studio3d.object.transform',{id:bone,rotation:{z:20}});
+ await run(page,'studio3d.anim.seek',{time:0.5});
+ await page.getByRole('button',{name:'Record pose'}).click();
+ await expect.poll(async()=>(await session(page)).clipKeys?.some(k=>k.path==='rotation'&&k.times.includes(0.5))).toBe(true);
+ // The record is one undo step.
+ await run(page,'studio3d.undo');
+ await expect.poll(async()=>(await session(page)).clipKeys?.length??0).toBe(0);
+ // Record all bones: another bone of the rig carries a key at the same time afterwards.
+ await page.getByRole('button',{name:'Record all bones'}).click();
+ await page.getByLabel('Bone').selectOption({index:1});
+ await expect.poll(async()=>(await session(page)).clipKeys?.some(k=>k.path==='rotation'&&k.times.includes(0.5))).toBe(true);
+ // Without a clip the record refuses with a notice instead of throwing.
+ await run(page,'studio3d.clip.remove',{});
+ await run(page,'studio3d.clip.record',{all:true});
+ await expect(page.getByRole('alert')).toBeVisible();
+});

@@ -59,6 +59,7 @@ export interface Studio3DController{
  ikToggle(on:boolean,id?:number):void;
  ikSetTarget(p:readonly[number,number,number],id?:number):void;
  ikSetPole(p:readonly[number,number,number],id?:number):void;
+ recordPose(all?:boolean,id?:number,clip?:number,time?:number):number;
  fabrikToggle(on:boolean,id?:number):void;
  fabrikSetTarget(p:readonly[number,number,number],id?:number):void;
  fabrikLookToggle(on:boolean,id?:number):void;
@@ -178,6 +179,7 @@ export function studio3DCommandSpecs():CommandSpec<unknown,unknown>[]{
   add<{clip?:number}>('studio3d.clip.remove','Delete a 3D animation clip','View',p=>need().clipRemove(p?.clip),object({clip:{type:'integer',minimum:0}},[]),hasClips),
   add<{name:string;clip?:number}>('studio3d.clip.rename','Rename a 3D animation clip','View',p=>need().clipRename(p.name,p.clip),object({name:{type:'string',minLength:1,maxLength:80},clip:{type:'integer',minimum:0}},['name']),hasClips),
   add<{duration:number;clip?:number}>('studio3d.clip.duration','Set the length of a 3D animation clip in seconds','View',p=>need().clipDuration(p.duration,p.clip),object({duration:{type:'number',minimum:0.001,maximum:3600},clip:{type:'integer',minimum:0}},['duration']),hasClips),
+  add<{all?:boolean;id?:number;clip?:number;time?:number}>('studio3d.clip.record','Record the current pose of the selected bones (or every bone with all) as rotation keys at the playhead time in a clip','View',p=>need().recordPose(p.all,p.id,p.clip,p.time),object({all:{type:'boolean'},id:{type:'integer',minimum:0},clip:{type:'integer',minimum:0},time:{type:'number',minimum:0}},[]),()=>hasClips()&&getStudio3DState().bones.length>0),
   add<{path:KeyPath;time?:number;id?:number;x?:number;y?:number;z?:number}>('studio3d.key.set','Add or replace a position, rotation or scale key of a 3D object in the current clip','View',p=>{const{path,time,id,...v}=p;need().keySet(path,time,id,Object.keys(v).length?v:undefined);},object({path:{enum:[...KEY_PATHS]},time:{type:'number',minimum:0,maximum:3600},id:{type:'integer',minimum:0},x:{type:'number'},y:{type:'number'},z:{type:'number'}},['path']),()=>hasScene()&&(getStudio3DState().selected!=null||getStudio3DState().clips.length>0)),
   add<{path:KeyPath;time?:number;id?:number}>('studio3d.key.remove','Remove a position, rotation or scale key of a 3D object in the current clip','View',p=>need().keyRemove(p.path,p.time,p.id),object({path:{enum:[...KEY_PATHS]},time:{type:'number',minimum:0,maximum:3600},id:{type:'integer',minimum:0}},['path']),hasClips),
   add<{path:KeyPath;time:number;to:number;id?:number}>('studio3d.key.move','Move a key of a 3D object to another time in the current clip','View',p=>need().keyMove(p.path,p.time,p.to,p.id),object({path:{enum:[...KEY_PATHS]},time:{type:'number',minimum:0,maximum:3600},to:{type:'number',minimum:0,maximum:3600},id:{type:'integer',minimum:0}},['path','time','to']),hasClips),

@@ -800,6 +800,18 @@ export class Stage{
   const r=this.withKey(clip,node,path,t,this.valueOf(node,path,value));
   this.editClip(i,`${r.replaced?'Change':'Add'} ${path} key on ${node.name}`,()=>r.state);
  }
+ /** Records the current pose of bones as rotation keys at a time in a clip - a keyframe pose on the timeline. One undo step for the whole record, however many bones. Returns the number of keys written. A key after the end extends the clip. */
+ recordPose(i:number,time:number,ids:number[]):number{
+  const clip=this.needClip(i);const t=checkKeyTime(time);
+  const bones=[...new Set(ids)].map(id=>{const o=this.need(id) as THREE.Bone;if(!o.isBone)throw new ClipError('A pose records on bones only.');return o;});
+  if(!bones.length)throw new ClipError('Select at least one bone to record.');
+  const was=this.snapClip(clip);let cur=was;
+  try{for(const b of bones){this.restoreClip(clip,cur);cur=this.withKey(clip,b,'rotation',t,b.quaternion.toArray()).state;}}
+  catch(e){this.restoreClip(clip,was);throw e;}
+  this.restoreClip(clip,cur);
+  this.push({label:`Record pose at ${Math.round(t*1000)/1000}s`,undo:()=>this.restoreClip(clip,was),redo:()=>this.restoreClip(clip,cur)});
+  this.emit();return bones.length;
+ }
  removeKey(i:number,id:number,path:KeyPath,time:number){
   const clip=this.needClip(i);const node=this.keyNode(id);this.keyPathFor(node,path);const t=checkKeyTime(time);const old=this.trackOf(clip,node,path);
   if(!old||!isPlainTrack(old.times,old.values,path))throw new ClipError(`${node.name} has no ${path} keys in this clip.`);

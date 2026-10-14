@@ -402,5 +402,8 @@
  "studio3d.fabrik.title": "FABRIK",
  "studio3d.fabrik.on": "FABRIK controla esta cadena",
  "studio3d.fabrik.lookat": "Apuntar el hueso final al objetivo de mirada",
- "studio3d.fabrik.hint": "Arrastra los marcadores de objetivo (verde) y mirada (rosa) en la vista."
+ "studio3d.fabrik.hint": "Arrastra los marcadores de objetivo (verde) y mirada (rosa) en la vista.",
+ "cmd.studio3d.clip.record": "Grabar la pose actual como claves en el cursor",
+ "studio3d.clip.record": "Grabar pose",
+ "studio3d.clip.recordAll": "Grabar todos los huesos"
 }

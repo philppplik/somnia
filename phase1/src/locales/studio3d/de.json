@@ -402,5 +402,8 @@
  "studio3d.fabrik.title": "FABRIK",
  "studio3d.fabrik.on": "FABRIK steuert diese Kette",
  "studio3d.fabrik.lookat": "Endknochen auf das Blickziel ausrichten",
- "studio3d.fabrik.hint": "Ziel- (grün) und Blick-Marker (pink) im Ansichtsfeld ziehen."
+ "studio3d.fabrik.hint": "Ziel- (grün) und Blick-Marker (pink) im Ansichtsfeld ziehen.",
+ "cmd.studio3d.clip.record": "Aktuelle Pose als Schlüssel am Abspielkopf aufnehmen",
+ "studio3d.clip.record": "Pose aufnehmen",
+ "studio3d.clip.recordAll": "Alle Knochen aufnehmen"
 }
