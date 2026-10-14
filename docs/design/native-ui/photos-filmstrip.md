@@ -249,3 +249,17 @@ activates that photo and closes the grid.
 Coverage: `photos-filmstrip.spec.ts` gains a light/dark leg that
 opens the grid with no selection (all three photos present, label dot
 on the labeled cell) and picks a photo from the grid.
+
+## Live grid filters (P95)
+
+The filter/sort logic moved into a shared `useVisiblePhotos` hook
+(filmstrip and grid read the same panel state). The library grid's
+header now carries the same filter and sort dropdowns; in grid mode
+the cells follow both live, and because the state is shared the
+filmstrip shows the same filter when the grid closes. A survey opened
+on a selection stays a fixed set.
+
+Coverage: `photos-filmstrip.spec.ts` gains a light/dark leg that
+opens the grid, filters to red-labeled photos (the other cells
+disappear), picks one and finds the filmstrip filter set to the same
+value.

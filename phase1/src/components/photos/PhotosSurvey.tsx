@@ -5,21 +5,29 @@ import type {MediaItem} from '../../lib/media';
 import {ensurePhotoReady} from '../../lib/photos/batchExport';
 import {getPhotoSession} from '../../lib/photos/studioSession';
 import {setFlag,useFlags} from '../../lib/photos/flags';
-import {useLabels} from '../../lib/photos/labels';
+import {PHOTO_LABELS,useLabels} from '../../lib/photos/labels';
+import {FILMSTRIP_SORTS,type FilmstripSort} from '../../lib/photos/filmstripSort';
+import {usePanelState} from '../../store/panelStateStore';
+import {useVisiblePhotos} from './useVisiblePhotos';
+import {NativeSelect} from '../ui/native-controls';
 import {RatingStars} from './RatingStars';
 import {Flag} from '../../lib/icons';
 import {Button} from '../ui/button';
 
 /** Survey overlay: the developed frames of the selected photos side by side. Sessions open on demand; clicking a cell activates that photo and closes. */
-export function PhotosSurvey({names,items,onPick,onClose}:{names:string[];items:readonly MediaItem[];onPick:(name:string)=>void;onClose:()=>void}){
+export function PhotosSurvey({names,items,live=false,onPick,onClose}:{names:string[];items:readonly MediaItem[];live?:boolean;onPick:(name:string)=>void;onClose:()=>void}){
  const {t}=useT();
  const canvases=useRef(new Map<string,HTMLCanvasElement>());
  const flags=useFlags();
  const labels=useLabels();
+ const vis=useVisiblePhotos();
+ const [,setFilter]=usePanelState<number|string>('photos.ratingFilter',0);
+ const [,setSort]=usePanelState<FilmstripSort>('photos.filmstripSort','library');
+ const shown=live?vis.photos.map(p=>p.name):names; // live: the grid follows the filter and sort
  useEffect(()=>{
   let live=true;
   void(async()=>{
-   for(const n of names){
+   for(const n of shown){
     const item=items.find(i=>i.name===n);if(!item)continue;
     try{await ensurePhotoReady(item);}catch{continue;} // a photo that fails to open just stays blank
     if(!live)return;
@@ -32,14 +40,27 @@ export function PhotosSurvey({names,items,onPick,onClose}:{names:string[];items:
    }
   })();
   return()=>{live=false;};
- },[names,items]);
+ },[shown,items]);
  return <div className="absolute inset-0 z-20 flex flex-col gap-2 overflow-auto bg-elevated p-4" data-testid="photos-survey">
   <div className="flex items-center justify-between">
-   <span className="font-medium text-ink" data-testid="photos-survey-count">{t('photos.survey.title',{count:names.length})}</span>
+   <span className="font-medium text-ink" data-testid="photos-survey-count">{t('photos.survey.title',{count:shown.length})}</span>
+   {live&&<span className="flex items-center gap-1.5">
+    <NativeSelect value={vis.filter} aria-label={t('photos.rating.filter')} title={t('photos.rating.filter')} onChange={e=>setFilter(e.currentTarget.value)} className="h-7" data-testid="photos-survey-filter">
+     <option value="0">{t('photos.rating.filter.all')}</option>
+     {[1,2,3,4,5].map(n=><option key={n} value={String(n)}>{`≥ ${n}`}</option>)}
+     <option value="unrated">{t('photos.rating.filter.unrated')}</option>
+     <option value="pick">{t('photos.flag.filter.pick')}</option>
+     <option value="reject">{t('photos.flag.filter.reject')}</option>
+     {PHOTO_LABELS.map(l=><option key={l} value={`label:${l}`}>{t(`photos.label.${l}`)}</option>)}
+    </NativeSelect>
+    <NativeSelect value={vis.sort} aria-label={t('photos.filmstrip.sort')} title={t('photos.filmstrip.sort')} onChange={e=>setSort(e.currentTarget.value as FilmstripSort)} className="h-7" data-testid="photos-survey-sort">
+     {FILMSTRIP_SORTS.map(m=><option key={m} value={m}>{t(`photos.filmstrip.sort.${m}`)}</option>)}
+    </NativeSelect>
+   </span>}
    <Button size="icon" variant="outline" aria-label={t('photos.survey.close')} onClick={onClose} data-testid="photos-survey-close"><X size={14}/></Button>
   </div>
   <div className="grid flex-1 auto-rows-min grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-3">
-   {names.map(n=><div key={n} className="flex flex-col gap-1 rounded-[4px] border border-subtle p-1.5" data-testid={`photos-survey-item-${n}`}>
+   {shown.map(n=><div key={n} className="flex flex-col gap-1 rounded-[4px] border border-subtle p-1.5" data-testid={`photos-survey-item-${n}`}>
     <Button variant="ghost" size="compact" className="h-auto w-full p-0" aria-label={n} onClick={()=>onPick(n)} data-testid={`photos-survey-pick-${n}`}>
      <canvas ref={c=>{if(c)canvases.current.set(n,c);else canvases.current.delete(n);}} width={320} height={200} className="h-auto w-full rounded-[2px] bg-[var(--bg-base)]" data-testid={`photos-survey-canvas-${n}`}/>
     </Button>

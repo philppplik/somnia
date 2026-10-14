@@ -528,6 +528,6 @@ export function PhotosWorkspace({item}:{item:MediaItem}){
    <StudioStatus tone={session?.status==='error'?'error':'info'} live={session?.status==='error'?'assertive':'polite'} data-testid="photos-status">{status||(dirty?t('photos.status.dirty'):ready?t('photos.status.clean'):'')}</StudioStatus>
   </div>
   <PhotosFilmstrip active={item.name} onSurvey={names=>{setSurveyNames(names);setSurvey(true);}}/>
-  {survey&&<PhotosSurvey names={surveyNames} items={media.items} onPick={n=>{setSurvey(false);setActiveMedia(n);}} onClose={()=>setSurvey(false)}/>}
+  {survey&&<PhotosSurvey names={surveyNames} live={surveyNames.length===0} items={media.items} onPick={n=>{setSurvey(false);setActiveMedia(n);}} onClose={()=>setSurvey(false)}/>}
  </section>;
 }

@@ -9,7 +9,7 @@ import {syncLookToPhotos} from '../../lib/photos/batchExport';
 import {findWbPreset,WB_PRESETS} from '../../lib/photos/wbPresets';
 import {applyLook,BUILT_IN_PRESETS,extractLook,isNeutralLook,parseUserPresets,type Look,type UserPreset} from '../../lib/photos/presets';
 import {commitPhotoSettings,getPhotoSession} from '../../lib/photos/studioSession';
-import {FILMSTRIP_SORTS,sortFilmstrip,type FilmstripSort} from '../../lib/photos/filmstripSort';
+import {FILMSTRIP_SORTS,type FilmstripSort} from '../../lib/photos/filmstripSort';
 import {MAX_RATING,useRatings} from '../../lib/photos/ratings';
 import {useFlags} from '../../lib/photos/flags';
 import {PHOTO_LABELS,setLabel,useLabels,type PhotoLabel} from '../../lib/photos/labels';
@@ -17,16 +17,15 @@ import {usePanelState} from '../../store/panelStateStore';
 import {Button} from '../ui/button';
 import {NativeSelect} from '../ui/native-controls';
 import {RatingStars} from './RatingStars';
+import {useVisiblePhotos} from './useVisiblePhotos';
 
 /** Library filmstrip under the workspace: a thumbnail per developable photo in library order; clicking switches the active photo. */
 export function PhotosFilmstrip({active,onSurvey}:{active:string;onSurvey?:(names:string[])=>void}){
  const {t}=useT();
  const media=useMedia();
- const ratings=useRatings();
- const flags=useFlags();
- const labels=useLabels();
- const [minRating,setMinRating]=usePanelState<number|string>('photos.ratingFilter',0);
- const [sort,setSort]=usePanelState<FilmstripSort>('photos.filmstripSort','library');
+ const {ratings,flags,labels,filter,all,photos,sort}=useVisiblePhotos();
+ const [,setMinRating]=usePanelState<number|string>('photos.ratingFilter',0);
+ const [,setSort]=usePanelState<FilmstripSort>('photos.filmstripSort','library');
  const [sel,setSel]=usePanelState<string[]>('photos.filmstripSelection',[]);
  const [autoAdvance,setAutoAdvance]=usePanelState<boolean>('photos.autoAdvance',false);
  const [anchor,setAnchor]=usePanelState<string|null>('photos.filmstripAnchor',null);
@@ -35,9 +34,6 @@ export function PhotosFilmstrip({active,onSurvey}:{active:string;onSurvey?:(name
  const [rawPresets]=usePanelState<unknown>('photos.presets.user',[]);
  const [applying,setApplying]=useState(false);
  const [copied,setCopied]=usePanelState<Look|null>('photos.copiedLook',null);
- const filter=String(minRating); // legacy stored numbers and 'pick'/'reject' share one select
- const all=developablePhotos(media.items);
- const photos=sortFilmstrip(all.filter(p=>filter==='pick'?flags[p.name]==='pick':filter==='reject'?flags[p.name]==='reject':filter==='unrated'?!(ratings[p.name]>=1):filter.startsWith('label:')?labels[p.name]===filter.slice(6):(ratings[p.name]??0)>=Number(filter)),sort,ratings,flags); // the filter never hides the strip itself; sorting is display-only, prev/next keeps library order
  const strip=useRef<HTMLDivElement|null>(null);
  useEffect(()=>{strip.current?.querySelector('[aria-pressed="true"]')?.scrollIntoView({block:'nearest',inline:'nearest'});},[active]);
  const selected=photos.filter(p=>sel.includes(p.name));
@@ -115,7 +111,7 @@ export function PhotosFilmstrip({active,onSurvey}:{active:string;onSurvey?:(name
    {WB_PRESETS.map(p=><option key={p.id} value={`wb:${p.id}`}>{t(p.labelKey)}</option>)}
    {userPresets.map(p=><option key={p.id} value={`user:${p.id}`}>{p.name}</option>)}
   </NativeSelect>}
-  {onSurvey&&<Button variant="outline" size="icon" aria-label={t('photos.filmstrip.survey')} title={t('photos.filmstrip.survey')} onClick={()=>onSurvey(selected.length>1?selected.map(p=>p.name):photos.map(p=>p.name))} className="h-7 w-7 shrink-0" data-testid="photos-filmstrip-survey"><LayoutGrid size={12}/></Button>} // with a selection it surveys the selection, else the whole filtered view
+  {onSurvey&&<Button variant="outline" size="icon" aria-label={t('photos.filmstrip.survey')} title={t('photos.filmstrip.survey')} onClick={()=>onSurvey(selected.length>1?selected.map(p=>p.name):[])} className="h-7 w-7 shrink-0" data-testid="photos-filmstrip-survey"><LayoutGrid size={12}/></Button>} // with a selection it surveys the selection, else the whole filtered view
   {rejected.length>0&&<Button variant={armRemove?'primary':'outline'} size="compact" onClick={removeRejected} className="shrink-0" data-testid="photos-filmstrip-remove-rejects"><Trash2 size={12}/>{armRemove?t('photos.filmstrip.removeRejectsConfirm',{count:rejected.length}):t('photos.filmstrip.removeRejects',{count:rejected.length})}</Button>}
   <Button variant="outline" size="icon" aria-pressed={autoAdvance} aria-label={t('photos.filmstrip.autoAdvance')} title={t('photos.filmstrip.autoAdvance')} onClick={()=>setAutoAdvance(!autoAdvance)} className="h-7 w-7 shrink-0" data-testid="photos-filmstrip-autoadvance"><SkipForward size={12}/></Button>
   {applyNote&&<span className="shrink-0 text-ink-3" data-testid="photos-filmstrip-apply-note">{applyNote}</span>}
