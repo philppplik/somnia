@@ -1,3 +1,4 @@
+import {LocalReadinessCard} from './LocalReadinessCard';
 import {ModelHealthPanel} from './ModelHealthPanel';
 import {useState} from 'react';
 import type {FolderGrant,ModelRef,Space,VibeIntent} from '../../lib/vibespace/types';
@@ -23,7 +24,7 @@ export function CreateStudioForm({space,models,busy,template='',onCreate,onClose
  const [goal,setGoal]=useState(template),[modelKey,setModelKey]=useState('');
  const model=models.find(m=>modelId(m)===modelKey);const valid=!!model&&!!goal.trim();
  return <form className="vs-form vs-card" aria-label="Create Studio" onSubmit={e=>{e.preventDefault();if(!valid||busy)return;void onCreate({type:'create-studio',spaceId:space.spaceId,goal:goal.trim(),model}).then(ok=>{if(ok)onClose();});}}>
-  <h3>New Studio</h3><label>Goal<Textarea required rows={4} maxLength={8192} value={goal} disabled={busy} onChange={e=>setGoal(e.target.value)}/></label>
+  <h3>New Studio</h3><LocalReadinessCard/><label>Goal<Textarea required rows={4} maxLength={8192} value={goal} disabled={busy} onChange={e=>setGoal(e.target.value)}/></label>
   <label>Model<NativeSelect required value={model?modelKey:''} disabled={busy||!models.length} onChange={e=>setModelKey(e.target.value)}><option value="">Choose a configured model</option>{models.map(m=><option key={modelId(m)} value={modelId(m)}>{m.provider} / {m.model} ({m.locality})</option>)}</NativeSelect></label>
   {!models.length&&<p role="status">No configured model. Add a model in AI settings first.</p>}
   {model?.locality==='local'&&<ModelHealthPanel model={model}/>}
