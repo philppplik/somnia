@@ -1,9 +1,12 @@
 import type { AIProvenance } from './privacy';
 /** UI-free provider contract. Secrets and transports never enter session snapshots. */
 export interface AgentToolCall { id: string; name: string; arguments: string }
+export interface AgentImagePart {mime:'image/jpeg'|'image/png';base64:string;width:number;height:number;label:string}
 export interface AgentMessage {
   role: 'system' | 'user' | 'assistant' | 'tool';
   content: string;
+  /** Ephemeral prepared image input, user role only. Never serialize into session snapshots. */
+  images?:readonly AgentImagePart[];
   toolCalls?: AgentToolCall[];
   toolCallId?: string;
   provenance?: AIProvenance;
@@ -33,6 +36,7 @@ export type AgentProviderEvent =
   | { type: 'finish'; reason: string };
 export interface AgentProvider {
   readonly id: string;
+  readonly supportsImages?:boolean;
   readonly locality: 'cloud' | 'local';
   stream(request: AgentProviderRequest): AsyncIterable<AgentProviderEvent>;
 }

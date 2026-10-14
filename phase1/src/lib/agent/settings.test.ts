@@ -23,3 +23,8 @@ test('advanced local preferences are versioned, bounded, non-secret and survive 
  assert.deepEqual(nonSecretSettings({...base,localRuntime:{version:1,numCtx:16384,keepAliveSeconds:0}}),{provider:'openrouter',model:'cloud/model',customPrompts:[],localRuntime:{version:1,numCtx:16384,keepAliveSeconds:0}});
  for(const localRuntime of [{version:2},{version:1,numCtx:0},{version:1,numCtx:1.2},{version:1,numCtx:1048577},{version:1,keepAliveSeconds:-1},{version:1,keepAliveSeconds:86401},{version:1,apiKey:'secret'}])assert.throws(()=>nonSecretSettings({...base,localRuntime:localRuntime as never}));
 });
+test('studio model overrides are explicit local preferences with bounded identifiers',()=>{
+ const base={provider:'ollama' as const,model:'base',apiKey:'',allowActiveFile:false};
+ assert.deepEqual(nonSecretSettings({...base,localRuntime:{version:1,studioModels:{photos:'gemma:4b',code:'qwen:4b'}}}).localRuntime?.studioModels,{photos:'gemma:4b',code:'qwen:4b'});
+ for(const studioModels of ([{'bad/id':'model'},{code:''},{code:'model\n'}] as Record<string,string>[]))assert.throws(()=>nonSecretSettings({...base,localRuntime:{version:1,studioModels}}));
+});

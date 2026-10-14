@@ -16,3 +16,5 @@
 
 .local-runtime-discovery[open] { display: grid; gap: 10px; }
 .local-runtime-discovery label { display: grid; gap: 6px; }
+
+.local-runtime-discovery input[type=checkbox] { width: auto; justify-self: start; }

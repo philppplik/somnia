@@ -1,3 +1,4 @@
+import {LocalModelsRuntime} from './localModels';
 import {configureAgent,setAgentActiveFileAccess,type AgentConfiguration} from './panelBridge';
 import {loadAgentSettings,saveAgentSettings} from './settings';
 import {getAgentCore} from './core';
@@ -21,7 +22,14 @@ export function setActiveFileAccess(allowActiveFile:boolean){setAgentActiveFileA
 export async function applyAgentSettings(config:AgentConfiguration):Promise<boolean>{
  if(!state.ready||state.authBusy||state.saving||state.running||state.pendingReview)return false;
  update({saving:true,error:''});
- try{await saveAgentSettings(config);configureAgent(config);update({config:{...config,apiKey:''},revision:state.revision+1});return true;}
+ try{
+  const choices=config.localRuntime?.studioModels;
+  if(choices&&Object.keys(choices).length){
+   const runtime=new LocalModelsRuntime();
+   for(const model of new Set(Object.values(choices))){const evidence=await runtime.evidence(model);if(evidence.locality!=='reported-local'||!evidence.capabilities?.includes('tools')||!await runtime.verify(model))throw Error('Studio model no longer eligible');}
+   if(state.running||state.pendingReview||state.authBusy)throw Error('AI state changed during validation');
+  }
+  await saveAgentSettings(config);configureAgent(config);update({config:{...config,apiKey:''},revision:state.revision+1});return true;}
  catch{update({error:'Could not save settings. Check your OS credential store and prompt limits. API keys are never saved in plaintext.'});return false;}
  finally{update({saving:false});}
 }

@@ -54,7 +54,7 @@ export class AgentSession {
   }
   get status(): AgentSessionStatus { return this._status; }
   get projectId(): string | null { return this.options.tools?.projectId ?? null; }
-  snapshot(): AgentSessionSnapshot { return { version: 1, projectId: this.projectId, messages: clone(this.messages) }; }
+  snapshot(): AgentSessionSnapshot { return { version: 1, projectId: this.projectId, messages: clone(this.messages.map(({images:_images,...message})=>message)) }; }
   /** Host passes its own locally stored complete snapshot, never model/tool data. */
   restore(snapshot: AgentSessionSnapshot): void {
     if (this.controller || this.options.tools?.proposals().length) throw Error('Cannot restore during work or review.');
@@ -62,6 +62,7 @@ export class AgentSession {
     const awaiting = new Set<string>();
     let expected: 'user' | 'assistant' = 'user';
     for (const m of snapshot.messages) {
+      if(m?.images!==undefined)throw Error('Image-bearing snapshots cannot be restored');
       if (!m || !['user', 'assistant', 'tool'].includes(m.role) || typeof m.content !== 'string') throw Error('Invalid session message.');
       if (m.toolCallId !== undefined && typeof m.toolCallId !== 'string') throw Error('Invalid tool result.');
       if (m.toolCalls && (!Array.isArray(m.toolCalls) || m.toolCalls.some(t => !t || !t.id || typeof t.id !== 'string' || typeof t.name !== 'string' || typeof t.arguments !== 'string'))) throw Error('Invalid session tool calls.');
