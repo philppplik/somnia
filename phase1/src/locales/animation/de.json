@@ -842,5 +842,8 @@
  "animation.keys.jitter": "Zeit streuen",
  "animation.keys.jitter.frames": "Frames",
  "animation.keys.jitter.hint": "Jeden gewählten Key um zufällige Frames bis zu diesem Wert verschieben (bei jedem Klick neue Variante)",
- "cmd.animation.keys.jitterTime": "Gewählte Keys um zufällige Frames verschieben"
+ "cmd.animation.keys.jitterTime": "Gewählte Keys um zufällige Frames verschieben",
+ "animation.keys.property": "Ganze Eigenschaft",
+ "animation.keys.property.hint": "Alle Keys der Eigenschaften mit gewähltem Key auswählen",
+ "cmd.animation.keys.selectProperty": "Alle Keys der Eigenschaften der gewählten Keys auswählen"
 }

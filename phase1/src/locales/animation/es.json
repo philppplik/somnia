@@ -842,5 +842,8 @@
  "animation.keys.jitter": "Variar tiempo",
  "animation.keys.jitter.frames": "Fotogramas",
  "animation.keys.jitter.hint": "Desplaza cada key seleccionada un número aleatorio de fotogramas hasta este valor (nueva variación en cada clic)",
- "cmd.animation.keys.jitterTime": "Desplazar las keys seleccionadas por fotogramas aleatorios"
+ "cmd.animation.keys.jitterTime": "Desplazar las keys seleccionadas por fotogramas aleatorios",
+ "animation.keys.property": "Propiedad entera",
+ "animation.keys.property.hint": "Selecciona todas las keys de las propiedades con una key seleccionada",
+ "cmd.animation.keys.selectProperty": "Seleccionar todas las keys de las propiedades de las keys seleccionadas"
 }

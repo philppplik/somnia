@@ -902,6 +902,23 @@
       "hasEnabled": true
     },
     {
+      "id": "animation.keys.selectProperty",
+      "title": "Select every key of the selected keys’ properties",
+      "category": "View",
+      "source": "animation",
+      "keywords": [
+        "all",
+        "animation",
+        "keys",
+        "lane",
+        "property",
+        "row",
+        "select",
+        "whole"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "animation.keys.selectRange",
       "title": "Select the keys before or after the playhead",
       "category": "View",

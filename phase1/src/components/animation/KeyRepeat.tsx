@@ -32,5 +32,6 @@ export function KeyRepeat({count:selected,layers}:{count:number;layers:readonly 
   <Button size="tiny" variant="ghost" disabled={!layers.length} title={t('animation.keys.range.at.hint')} onClick={()=>void executeCommand('animation.keys.selectRange',{side:'at',layers:[...layers]})} data-testid="animation-keys-at">{t('animation.keys.range.at')}</Button>
   <NativeInput className={`${field} w-12`} type="number" min={1} max={MAX_JITTER_FRAMES} step={1} value={jf} aria-label={t('animation.keys.jitter.frames')} onChange={e=>setJf(e.target.value)} data-testid="animation-keys-jitter-frames"/>
   <Button size="tiny" variant="ghost" disabled={selected<1||!jfOk} title={t('animation.keys.jitter.hint')} onClick={()=>{void executeCommand('animation.keys.jitterTime',{frames:jfN,seed});setSeed(x=>x+1);}} data-testid="animation-keys-jitter">{t('animation.keys.jitter')}</Button>
+  <Button size="tiny" variant="ghost" disabled={selected<1} title={t('animation.keys.property.hint')} onClick={()=>void executeCommand('animation.keys.selectProperty',{})} data-testid="animation-keys-property">{t('animation.keys.property')}</Button>
  </span>;
 }

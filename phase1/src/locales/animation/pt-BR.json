@@ -842,5 +842,8 @@
  "animation.keys.jitter": "Variar tempo",
  "animation.keys.jitter.frames": "Quadros",
  "animation.keys.jitter.hint": "Desloca cada key selecionada por um número aleatório de quadros até este valor (nova variação a cada clique)",
- "cmd.animation.keys.jitterTime": "Deslocar as keys selecionadas por quadros aleatórios"
+ "cmd.animation.keys.jitterTime": "Deslocar as keys selecionadas por quadros aleatórios",
+ "animation.keys.property": "Propriedade inteira",
+ "animation.keys.property.hint": "Seleciona todas as keys das propriedades com uma key selecionada",
+ "cmd.animation.keys.selectProperty": "Selecionar todas as keys das propriedades das keys selecionadas"
 }

@@ -842,5 +842,8 @@
  "animation.keys.jitter": "Varier le temps",
  "animation.keys.jitter.frames": "Images",
  "animation.keys.jitter.hint": "Décale chaque key sélectionnée d’un nombre d’images aléatoire jusqu’à cette valeur (nouvelle variation à chaque clic)",
- "cmd.animation.keys.jitterTime": "Décaler les keys sélectionnées d’images aléatoires"
+ "cmd.animation.keys.jitterTime": "Décaler les keys sélectionnées d’images aléatoires",
+ "animation.keys.property": "Propriété entière",
+ "animation.keys.property.hint": "Sélectionne toutes les keys des propriétés ayant une key sélectionnée",
+ "cmd.animation.keys.selectProperty": "Sélectionner toutes les keys des propriétés des keys sélectionnées"
 }

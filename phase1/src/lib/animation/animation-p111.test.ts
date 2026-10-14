@@ -99,3 +99,10 @@ test('jitter time: deterministic per seed, within bounds, whole frames, validate
  for(const m of a.moves){const df=Math.abs(m.to-m.from)/f(1);assert.ok(df>=1&&df<=4&&Number.isInteger(Math.round(df)));}
  assert.throws(()=>jitterTimeMoves(c,refs,0));assert.throws(()=>jitterTimeMoves(c,refs,61));
 });
+import {wholeProperties} from './keyProperty';
+test('whole property: all keys of each selected property only',()=>{
+ const c=findComp(base())!;
+ const r=wholeProperties(c,[{layer:'a',prop:'position',t:f(10)}]);
+ assert.deepEqual(r.map(k=>k.t),[f(0),f(10)]);assert.ok(r.every(k=>k.prop==='position'));
+ assert.equal(wholeProperties(c,[]).length,0);
+});
