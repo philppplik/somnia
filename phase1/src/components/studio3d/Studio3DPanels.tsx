@@ -692,7 +692,7 @@ function RenderPng(){
 
 /** Mirror, apply scale and merge act on the ticked objects, or on the selected one. Origin to centre is the Pivot group above. */
 function MeshTools(){
- const {t}=useT();const s=useStudio3D();const [copy,setCopy]=useState(true);const [keepPct,setKeepPct]=useState(50);const [symAxis,setSymAxis]=useState<'x'|'y'|'z'>('x');const [symSide,setSymSide]=useState<'positive'|'negative'>('positive');
+ const {t}=useT();const s=useStudio3D();const [copy,setCopy]=useState(true);const [keepPct,setKeepPct]=useState(50);const [symAxis,setSymAxis]=useState<'x'|'y'|'z'>('x');const [symSide,setSymSide]=useState<'positive'|'negative'>('positive');const [subTimes,setSubTimes]=useState(2);
  const set=s.marked.length?s.marked:s.selected!=null?[s.selected]:[];const ready=s.status==='ready'&&set.length>0;
  return <fieldset className="m-0 grid gap-2 border-0 p-0" data-testid="studio3d-meshtools"><legend className="text-xs text-ink-3">{t('studio3d.mesh.title')}</legend>
   <div className="flex flex-wrap items-center gap-1">{(['x','y','z'] as const).map(a=><Button key={a} variant="outline" disabled={!ready} onClick={()=>void executeCommand('studio3d.mesh.mirror',{axis:a,copy})}>{t('studio3d.mesh.mirror',{axis:a.toUpperCase()})}</Button>)}</div>
@@ -706,6 +706,9 @@ function MeshTools(){
    <NativeSelect className="rounded-sm border border-subtle bg-surface p-1 text-xs text-ink" value={symSide} aria-label={t('studio3d.mesh.symmetrizeSide')} onChange={e=>setSymSide(e.currentTarget.value as 'positive'|'negative')}>
     {(['positive','negative'] as const).map(v=><option key={v} value={v}>{t(`studio3d.mesh.symmetrizeSide.${v}`)}</option>)}</NativeSelect>
    <Button variant="outline" disabled={!ready} onClick={()=>void executeCommand('studio3d.mesh.symmetrize',{axis:symAxis,side:symSide})}>{t('studio3d.mesh.symmetrize')}</Button></div>
+  <div className="flex flex-wrap items-center gap-1"><NativeSelect className="rounded-sm border border-subtle bg-surface p-1 text-xs text-ink" value={subTimes} aria-label={t('studio3d.mesh.subdivideTimes')} onChange={e=>setSubTimes(Number(e.currentTarget.value))}>
+    {[1,2,3].map(n=><option key={n} value={n}>{n}</option>)}</NativeSelect>
+   <Button variant="outline" disabled={!ready} onClick={()=>void executeCommand('studio3d.mesh.subdivide',{iterations:subTimes})}>{t('studio3d.mesh.subdivide')}</Button></div>
  </fieldset>;
 }
 

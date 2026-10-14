@@ -775,5 +775,10 @@
  "studio3d.mesh.symmetrize": "Simetrizar",
  "studio3d.mesh.symmetrizeSide": "Lado a manter",
  "studio3d.mesh.symmetrizeSide.positive": "Manter lado +",
- "studio3d.mesh.symmetrizeSide.negative": "Manter lado -"
+ "studio3d.mesh.symmetrizeSide.negative": "Manter lado -",
+ "cmd.studio3d.mesh.subdivide": "Subdividir malhas 3D suavemente: dividir cada triângulo em quatro e suavizar a superfície (esquema de Loop)",
+ "studio3d.hist.subdivide_one": "Subdividir {name}",
+ "studio3d.hist.subdivide_other": "Subdividir {count} objetos",
+ "studio3d.mesh.subdivide": "Subdividir",
+ "studio3d.mesh.subdivideTimes": "Iterações de subdivisão"
 }

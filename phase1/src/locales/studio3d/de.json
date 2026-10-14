@@ -775,5 +775,10 @@
  "studio3d.mesh.symmetrize": "Symmetrisieren",
  "studio3d.mesh.symmetrizeSide": "Zu behaltende Seite",
  "studio3d.mesh.symmetrizeSide.positive": "Positive Seite behalten",
- "studio3d.mesh.symmetrizeSide.negative": "Negative Seite behalten"
+ "studio3d.mesh.symmetrizeSide.negative": "Negative Seite behalten",
+ "cmd.studio3d.mesh.subdivide": "3D-Meshes glatt unterteilen: jedes Dreieck in vier teilen und die Oberfläche glätten (Loop-Schema)",
+ "studio3d.hist.subdivide_one": "{name} unterteilen",
+ "studio3d.hist.subdivide_other": "{count} Objekte unterteilen",
+ "studio3d.mesh.subdivide": "Unterteilen",
+ "studio3d.mesh.subdivideTimes": "Unterteilungsstufen"
 }

@@ -775,5 +775,10 @@
  "studio3d.mesh.symmetrize": "Symétriser",
  "studio3d.mesh.symmetrizeSide": "Côté à garder",
  "studio3d.mesh.symmetrizeSide.positive": "Garder le côté +",
- "studio3d.mesh.symmetrizeSide.negative": "Garder le côté -"
+ "studio3d.mesh.symmetrizeSide.negative": "Garder le côté -",
+ "cmd.studio3d.mesh.subdivide": "Subdiviser les maillages 3D en douceur : diviser chaque triangle en quatre et lisser la surface (schéma de Loop)",
+ "studio3d.hist.subdivide_one": "Subdiviser {name}",
+ "studio3d.hist.subdivide_other": "Subdiviser {count} objets",
+ "studio3d.mesh.subdivide": "Subdiviser",
+ "studio3d.mesh.subdivideTimes": "Itérations de subdivision"
 }

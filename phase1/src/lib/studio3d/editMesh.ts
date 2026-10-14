@@ -350,6 +350,66 @@ export function symmetrizeMesh(m:MeshData,axis:MirrorAxis,side:'positive'|'negat
  };
  return flip(mirrorCombine(flip(m),axis,merge,true));
 }
+
+/** One round of the Loop subdivision scheme: every triangle splits into four; new edge points weigh the edge ends 3/8 and the two opposite vertices 1/8 (boundary edges only average their ends), original vertices are pulled towards their neighbours (boundary vertices only along the boundary). */
+const loopOnce=(m:MeshData):MeshData=>{
+ const nv=m.positions.length/3,nt=m.index.length/3;
+ const key=(a:number,b:number)=>a<b?`${a}_${b}`:`${b}_${a}`;
+ const edges=new Map<string,{a:number;b:number;opp:number[]}>();
+ const nbr:number[][]=Array.from({length:nv},()=>[]);
+ const link=(a:number,b:number,o:number)=>{
+  const k=key(a,b);let e=edges.get(k);
+  if(!e){e={a:Math.min(a,b),b:Math.max(a,b),opp:[]};edges.set(k,e);}
+  e.opp.push(o);
+  if(!nbr[a].includes(b))nbr[a].push(b);
+  if(!nbr[b].includes(a))nbr[b].push(a);
+ };
+ for(let f=0;f<nt;f++){const a=m.index[f*3],b=m.index[f*3+1],c=m.index[f*3+2];link(a,b,c);link(b,c,a);link(c,a,b);}
+ const bnd:number[][]=Array.from({length:nv},()=>[]);
+ for(const e of edges.values())if(e.opp.length===1){bnd[e.a].push(e.b);bnd[e.b].push(e.a);}
+ const positions=[...m.positions];
+ for(let i=0;i<nv;i++){
+  const p=v3(m,i);let q:[number,number,number];
+  if(bnd[i].length===2){
+   const b0=v3(m,bnd[i][0]),b1=v3(m,bnd[i][1]);
+   q=[p[0]*0.75+(b0[0]+b1[0])*0.125,p[1]*0.75+(b0[1]+b1[1])*0.125,p[2]*0.75+(b0[2]+b1[2])*0.125];
+  }else if(bnd[i].length===0&&nbr[i].length>=3){
+   const k=nbr[i].length,beta=(1/k)*(5/8-Math.pow(3/8+Math.cos(2*Math.PI/k)/4,2));
+   let sx=0,sy=0,sz=0;for(const j of nbr[i]){sx+=m.positions[j*3];sy+=m.positions[j*3+1];sz+=m.positions[j*3+2];}
+   const w=1-k*beta;
+   q=[p[0]*w+sx*beta,p[1]*w+sy*beta,p[2]*w+sz*beta];
+  }else q=p; // non-manifold or nearly isolated vertex: leave it in place
+  positions[i*3]=q[0];positions[i*3+1]=q[1];positions[i*3+2]=q[2];
+ }
+ const mid=new Map<string,number>();
+ for(const [k,e] of edges){
+  const a=v3(m,e.a),b=v3(m,e.b);let p:[number,number,number];
+  if(e.opp.length>=2){
+   const c=v3(m,e.opp[0]),d=v3(m,e.opp[1]);
+   p=[(a[0]+b[0])*0.375+(c[0]+d[0])*0.125,(a[1]+b[1])*0.375+(c[1]+d[1])*0.125,(a[2]+b[2])*0.375+(c[2]+d[2])*0.125];
+  }else p=[(a[0]+b[0])/2,(a[1]+b[1])/2,(a[2]+b[2])/2];
+  mid.set(k,positions.length/3);positions.push(p[0],p[1],p[2]);
+ }
+ const index:number[]=[];
+ for(let f=0;f<nt;f++){
+  const a=m.index[f*3],b=m.index[f*3+1],c=m.index[f*3+2];
+  const ab=mid.get(key(a,b))!,bc=mid.get(key(b,c))!,ca=mid.get(key(c,a))!;
+  index.push(a,ab,ca, ab,b,bc, ca,bc,c, ab,bc,ca);
+ }
+ return{positions,index};
+};
+/** Subdivides the mesh smoothly with the Loop scheme, 1-3 iterations (each multiplies triangles by four, capped by the edit size limits). Drops the sculpt mask like every topology-changing op. */
+export function subdivideLoop(m:MeshData,iterations:number):MeshData{
+ check(m);
+ if(!Number.isInteger(iterations)||iterations<1||iterations>3)throw new EditError('Iterations must be a whole number between 1 and 3.');
+ let cur:MeshData={positions:[...m.positions],index:[...m.index]};
+ for(let k=0;k<iterations;k++){
+  if(cur.index.length/3*4>MAX_EDIT_TRIANGLES)throw new EditError(`Subdividing would exceed ${MAX_EDIT_TRIANGLES.toLocaleString('en-US')} triangles.`);
+  cur=loopOnce(cur);
+ }
+ return cur;
+}
+
 export function mirrorCombine(m:MeshData,axis:MirrorAxis,merge:number,bisect=false):MeshData{
  check(m);
  if(!Number.isFinite(merge)||merge<0||merge>1e6)throw new EditError('The mirror merge distance must be zero or a positive number.');

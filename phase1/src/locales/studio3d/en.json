@@ -775,5 +775,10 @@
  "studio3d.mesh.symmetrize": "Symmetrize",
  "studio3d.mesh.symmetrizeSide": "Side to keep",
  "studio3d.mesh.symmetrizeSide.positive": "Keep + side",
- "studio3d.mesh.symmetrizeSide.negative": "Keep - side"
+ "studio3d.mesh.symmetrizeSide.negative": "Keep - side",
+ "cmd.studio3d.mesh.subdivide": "Subdivide 3D meshes smoothly: split every triangle into four and smooth the surface (Loop scheme)",
+ "studio3d.hist.subdivide_one": "Subdivide {name}",
+ "studio3d.hist.subdivide_other": "Subdivide {count} objects",
+ "studio3d.mesh.subdivide": "Subdivide",
+ "studio3d.mesh.subdivideTimes": "Subdivision iterations"
 }

@@ -1500,6 +1500,17 @@ test('3D studio symmetrize: bakes a mirror half and undo restores the mesh',asyn
  await expect.poll(tris).toBe(before);
 });
 
+test('3D studio mesh subdivide: triangles quadruple per iteration and undo restores the mesh',async({page})=>{
+ await blank(page);
+ await insert(page,'sphere',0);
+ const tris=async()=>(await session(page)).stats.triangles;
+ const before=await tris();
+ expect(await run(page,'studio3d.mesh.subdivide',{iterations:1})).toBe(true);
+ await expect.poll(tris).toBe(before*4);
+ expect(await run(page,'studio3d.undo',{})).toBe(true);
+ await expect.poll(tris).toBe(before);
+});
+
 test('3D studio mesh simplify: triangle count drops and undo restores it',async({page})=>{
  await blank(page);
  await insert(page,'sphere',0);
