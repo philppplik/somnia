@@ -1891,3 +1891,21 @@ test('P80 path effects: round corners, twist, keyable size, lanes, bake, validat
  assert.throws(()=>applyEdit(k,{type:'pathfx.size',layer:'pa',op:'set',value:300,t:0}),Error);
  assert.throws(()=>applyEdit(d,{type:'pathfx.size',layer:'pa',op:'set',value:1,t:0}),Error);
 });
+
+test('P81: text on a path start is keyable, lanes, move, delete bakes, validation, export',()=>{
+ let d=pathDoc();d=applyEdit(d,{type:'layer.add',kind:'text',id:'tx',over:{source:{text:'Hello path',size:24,color:'#ffffff'}}});
+ d=applyEdit(d,textPathEdit(d,'tx',{op:'set',from:'pa'}));
+ assert.throws(()=>applyEdit(d,{type:'textpath.start',layer:'tx',op:'set',value:-5,t:0}));
+ d=applyEdit(d,{type:'textpath.start',layer:'tx',op:'set',value:10,t:0});assert.equal(layer(d,'tx').source.textPathStart,10);
+ d=applyEdit(d,{type:'textpath.start',layer:'tx',op:'animate',on:true,t:0});const r=d.revision;
+ d=applyEdit(d,{type:'textpath.start',layer:'tx',op:'set',value:-50,t:8000*30});assert.equal(d.revision,r+1);validateDocument(d);
+ assert.equal(layer(d,'tx').source.textPathStart,undefined);
+ assert.deepEqual(styleKeyLanes(layer(d,'tx')).find(x=>x.id==='textPathStart')!.ticks,[0,8000*30]);
+ assert.ok(frameSvg(comp(d),0).includes('startOffset="10%"'));assert.ok(frameSvg(comp(d),8000*30).includes('startOffset="-50%"'));
+ assert.ok(frameSvg(comp(d),8000*15).includes('startOffset="-20%"'));
+ const m=applyEdit(d,{type:'style.key.move',layer:'tx',lane:'textPathStart',from:8000*30,to:8000*35});assert.deepEqual(layer(m,'tx').source.textPathStartAnim!.keys.map(k=>k.t),[0,8000*35]);
+ let x=d;for(const e of styleKeyDeleteEdits('tx',[{lane:'textPathStart',t:8000*30},{lane:'textPathStart',t:0}]))x=applyEdit(x,e);
+ assert.equal(layer(x,'tx').source.textPathStartAnim,undefined);assert.equal(layer(x,'tx').source.textPathStart,10);validateDocument(x);
+ const c=applyEdit(d,textPathEdit(d,'tx',{op:'clear'}));assert.equal(layer(c,'tx').source.textPathStartAnim,undefined);validateDocument(c);
+ const bad=structuredClone(d);(bad.compositions[0].layers.find(l=>l.id==='tx')!.source as unknown as {textPathStartAnim:{keys:{v:number}[]}}).textPathStartAnim.keys[0].v=201;assert.ok(validateDocument(bad).length>0);
+});

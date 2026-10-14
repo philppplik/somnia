@@ -398,3 +398,7 @@ Repeater `hue` (deg per copy, -360..360): copy i gets `filter=hue-rotate(hue*i d
 ## P80
 
 Path effects: `round` (size = corner radius px, only handle-less corners, KAPPA 0.5523 arcs) and `twist` (size = degrees at the farthest point, segments sampled into 2*ridges parts). `pathFx.sizeAnim` is a scalar Property (-200..200) sampled by `pathFxAt`; lane `pathFxSize`; edit `pathfx.size` (set/animate/remove, last key bakes). Bounds, Expand stroke, masks and the edit overlay still use the original path.
+
+## P81
+
+`source.textPathStartAnim` is a scalar Property (-100..200 percent, needs a text path). `textPathStartAt(layer,tick)` samples it and replaces `textPathStart` in the viewer and every export. Edit `textpath.start` (set/animate/remove, last key bakes into `textPathStart` clamped to 0..100); lane `textPathStart`. Removing the path clears the keys.

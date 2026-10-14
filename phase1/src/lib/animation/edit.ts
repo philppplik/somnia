@@ -54,6 +54,7 @@ export type Edit=
  |{type:'gradient.prop';layer:string;target:'fill'|'stroke';prop:GradientKey;op:'set'|'animate'|'remove';value?:number;on?:boolean;t:number}
  |{type:'gradient.angle';layer:string;target:'fill'|'stroke';op:'set'|'animate'|'remove';value?:number;on?:boolean;t:number}
  |{type:'repeater.prop';layer:string;prop:RepeaterKey;op:'set'|'animate'|'remove';value?:number;on?:boolean;t:number}
+ |{type:'textpath.start';layer:string;op:'set'|'animate'|'remove';value?:number;on?:boolean;t:number}
  |{type:'pathfx.size';layer:string;op:'set'|'animate'|'remove';value?:number;on?:boolean;t:number}
  |{type:'layer.pathFx';layer:string;pathFx:NonNullable<Layer['pathFx']>|null}
  |{type:'layer.repeater';layer:string;repeater:NonNullable<Layer['repeater']>|null}
@@ -274,6 +275,23 @@ function reduce(doc:AnimationDocument,e:Edit):AnimationDocument{
    const keys=anim!.keys.filter(x=>x.t!==t);
    if(keys.length)return put({},{...anim!,keys});
    return put({[k]:round(evaluate(anim!,t) as number)},undefined);}
+  case 'textpath.start':{
+   const l=layerOf(doc,e.layer);if(l.kind!=='text'||!l.source.textPath)fail('invalid','The text is not on a path.');
+   const t=tickOf(compOf(doc),e.t),anim=l.source.textPathStartAnim,round=(n:number)=>Math.round(n*100)/100;
+   const put=(start:number|undefined,a:Property|undefined)=>{const {textPathStartAnim:_a,textPathStart:_s,...rest}=l.source;return setLayer(doc,{...l,source:{...rest,...(start!==undefined?{textPathStart:start}:{}),...(a?{textPathStartAnim:a}:{})}});};
+   if(e.op==='set'){
+    if(typeof e.value!=='number'||!Number.isFinite(e.value)||e.value<-100||e.value>200)fail('invalid','Text path start must be -100 to 200 percent.');
+    if(anim?.keys.length)return put(undefined,{...anim,keys:upsertKey(anim.keys,makeKey(t,round(e.value as number)))});
+    if((e.value as number)<0)fail('invalid','Key the start to go below 0 percent.');
+    return put(round(e.value as number),undefined);}
+   const cur=l.source.textPathStart??0;
+   if(e.op==='animate'){
+    if(e.on)return anim?.keys.length?doc:put(undefined,{...prop('scalar',cur),keys:[makeKey(t,cur)]});
+    if(!anim?.keys.length)return doc;const v=round(evaluate(anim,t) as number);return put(v>=0&&v<=100?v:Math.min(100,Math.max(0,v)),undefined);}
+   if(!anim||!anim.keys.some(x=>x.t===t))fail('missing','No text path key at that time.');
+   const keys=anim!.keys.filter(x=>x.t!==t);
+   if(keys.length)return put(undefined,{...anim!,keys});
+   const v=round(evaluate(anim!,t) as number);return put(Math.min(100,Math.max(0,v)),undefined);}
   case 'pathfx.size':{
    const l=layerOf(doc,e.layer),fx=l.pathFx;if(!fx)fail('invalid','The layer has no path effect.');
    const t=tickOf(compOf(doc),e.t),anim=fx!.sizeAnim,round=(n:number)=>Math.round(n*100)/100;
@@ -354,6 +372,7 @@ function reduce(doc:AnimationDocument,e:Edit):AnimationDocument{
     return keys!.map(k=>k.t===e.from?{...k,t:to}:k).sort((a,b)=>a.t-b.t);};
    if(e.lane==='gain'){if(l.kind!=='comp'||!l.gain)fail('missing','No volume keys.');return setLayer(doc,{...l,gain:{...l.gain!,keys:shift(l.gain!.keys)}});}
    if(e.lane==='strokeWidth'||e.lane==='strokeOpacity'){const f=e.lane==='strokeWidth'?'widthAnim':'opacityAnim',a=l.stroke?.[f];if(!l.stroke||!a)fail('missing','No stroke keys.');return setLayer(doc,{...l,stroke:{...l.stroke!,[f]:{...a!,keys:shift(a!.keys)}}});}
+   if(e.lane==='textPathStart'){const a=l.source.textPathStartAnim;if(!a)fail('missing','No text path keys.');return setLayer(doc,{...l,source:{...l.source,textPathStartAnim:{...a!,keys:shift(a!.keys)}}});}
    if(e.lane==='pathFxSize'){const a=l.pathFx?.sizeAnim;if(!l.pathFx||!a)fail('missing','No path effect keys.');return setLayer(doc,{...l,pathFx:{...l.pathFx!,sizeAnim:{...a!,keys:shift(a!.keys)}}});}
    const gs=parseGradientStopLane(e.lane);
    if(gs){const fill=gs.target==='fill',g=fill?l.source.gradient:l.stroke?.gradient,st=g?.stops?.[gs.index];if(!g||!st||(gs.prop==='offset'?!st.offsetAnim:!st.colorKeys))fail('missing','No gradient stop keys.');
@@ -588,6 +607,7 @@ export {TRANSFORM_KEYS};
 export function styleKeyDeleteEdits(layer:string,picks:readonly {lane:StyleLaneId;t:number}[]):Edit[]{
  return picks.map((p):Edit=>p.lane==='gain'?{type:'layer.gain.key.remove',layer,t:p.t}
   :p.lane==='strokeWidth'||p.lane==='strokeOpacity'?{type:'stroke.prop',layer,prop:p.lane==='strokeWidth'?'width':'opacity',op:'remove',t:p.t}
+  :p.lane==='textPathStart'?{type:'textpath.start',layer,op:'remove',t:p.t}
   :p.lane==='pathFxSize'?{type:'pathfx.size',layer,op:'remove',t:p.t}
   :parseGradientStopLane(p.lane)?{type:'gradient.stop',layer,target:parseGradientStopLane(p.lane)!.target,index:parseGradientStopLane(p.lane)!.index,prop:parseGradientStopLane(p.lane)!.prop,op:'remove',t:p.t}
   :parseGradientColorLane(p.lane)?{type:'gradient.color',layer,target:parseGradientColorLane(p.lane)!.target,which:parseGradientColorLane(p.lane)!.key,op:'remove',t:p.t}

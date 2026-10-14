@@ -667,5 +667,6 @@
  "animation.pathfx.size.round": "Radio (px)",
  "animation.pathfx.size.zigzag": "Tamaño del zigzag (px)",
  "animation.pathfx.size.wave": "Tamaño de la onda (px)",
- "animation.pathfx.size.twist": "Ángulo de torsión (°)"
+ "animation.pathfx.size.twist": "Ángulo de torsión (°)",
+ "animation.textPath.startLane": "Inicio en el trazado"
 }

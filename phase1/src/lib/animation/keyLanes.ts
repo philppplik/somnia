@@ -16,6 +16,7 @@ export function styleKeyLanes(l:Layer):StyleKeyLane[]{
  for(const k of GRADIENT_KEYS){add(gradientLaneId('fill',k),`animation.gradient.${k}`,l.source.gradient?.anim?.[k]?.keys.map(x=>x.t));add(gradientLaneId('stroke',k),`animation.gradient.${k}`,l.stroke?.gradient?.anim?.[k]?.keys.map(x=>x.t));}
  for(const k of ['start','end'] as const){add(gradientColorLaneId('fill',k),`animation.gradient.${k}ColorLane`,l.source.gradient?.colorKeys?.[k]?.map(x=>x.t));add(gradientColorLaneId('stroke',k),`animation.gradient.${k}ColorLane`,l.stroke?.gradient?.colorKeys?.[k]?.map(x=>x.t));}
  for(const [target,g] of [['fill',l.source.gradient],['stroke',l.stroke?.gradient]] as const)(g?.stops??[]).forEach((st,i)=>{add(gradientStopLaneId(target,i,'offset'),'animation.gradient.stopOffsetLane',st.offsetAnim?.keys.map(x=>x.t),{n:i+1});add(gradientStopLaneId(target,i,'color'),'animation.gradient.stopColorLane',st.colorKeys?.map(x=>x.t),{n:i+1});});
+ add('textPathStart','animation.textPath.startLane',l.source.textPathStartAnim?.keys.map(x=>x.t));
  add('pathFxSize','animation.pathfx.size',l.pathFx?.sizeAnim?.keys.map(x=>x.t));
  for(const k of REPEATER_KEYS)add(`rep${k[0].toUpperCase()}${k.slice(1)}` as StyleLaneId,`animation.repeater.${k}`,l.repeater?.anim?.[k]?.keys.map(x=>x.t));
  return out;

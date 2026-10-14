@@ -12,7 +12,7 @@ import {studioContextStore} from '../../lib/shell/studioContext';
 import {registerAnimationCommands} from '../../lib/animation/commands';
 import {animationSession,useAnimationState} from '../../lib/animation/session';
 import {findComp,type Composition,type KeyRef,type Layer} from '../../lib/animation/model';
-import {animatedChars,textPathD,textPathId} from '../../lib/animation/textAnimators';
+import {animatedChars,textPathD,textPathId,textPathStartAt} from '../../lib/animation/textAnimators';
 import {maskDefs,maskId,matteId,hasMasks} from '../../lib/animation/masks';
 import {layerBody,precompImage,setRenderComps} from '../../lib/animation/exportFrames';
 import {sceneAt,motionBlurTicks,contentSampled} from '../../lib/animation/scene';
@@ -85,7 +85,7 @@ function layerNode(layer:Layer,assets:readonly InterfaceAsset[],at:number,fillOv
   return el(sa,fill??'none');
  }
  const tp=textPathD(l);
- if(tp)return <><defs><path id={textPathId(l)} d={tp}/></defs><text fontSize={src.size} fill={fill} fontFamily="system-ui, sans-serif" className="select-none"><textPath href={`#${textPathId(l)}`} startOffset={`${src.textPathStart??0}%`}>{animatedText(l,at)}</textPath></text></>;
+ if(tp)return <><defs><path id={textPathId(l)} d={tp}/></defs><text fontSize={src.size} fill={fill} fontFamily="system-ui, sans-serif" className="select-none"><textPath href={`#${textPathId(l)}`} startOffset={`${textPathStartAt(l,at)}%`}>{animatedText(l,at)}</textPath></text></>;
  return <text x={0} y={src.size??48} fontSize={src.size} fill={fill} fontFamily="system-ui, sans-serif" className="select-none">{animatedText(l,at)}</text>;
 }
 function Viewer({comp,at,selected,sel,assets,comps}:{assets:readonly InterfaceAsset[];comps:readonly Composition[];comp:Composition;at:number;selected:string|null;sel:readonly KeyRef[]}){

@@ -667,5 +667,6 @@
  "animation.pathfx.size.round": "Radius (px)",
  "animation.pathfx.size.zigzag": "Zickzack-Größe (px)",
  "animation.pathfx.size.wave": "Wellen-Größe (px)",
- "animation.pathfx.size.twist": "Drehwinkel (°)"
+ "animation.pathfx.size.twist": "Drehwinkel (°)",
+ "animation.textPath.startLane": "Textpfad-Start"
 }

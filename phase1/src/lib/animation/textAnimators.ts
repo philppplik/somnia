@@ -127,13 +127,15 @@ export function animatorEdit(doc:AnimationDocument,layerId:string,o:AnimatorOp):
 export const textPathId=(l:Layer)=>`tp-${l.id.replace(/[^A-Za-z0-9_-]/g,'_')}`;
 /** SVG path data of a text layer's baseline path, or undefined for the straight baseline. */
 export const textPathD=(l:Layer):string|undefined=>l.kind==='text'&&l.source.textPath?bezierPath(l.source.textPath as MaskPath,0,0):undefined;
+/** Start offset in percent along the path at `tick`: the keyed value when keys exist, else the static start. */
+export const textPathStartAt=(l:Layer,tick:number):number=>{const a=l.source.textPathStartAnim;return a?.keys.length?evaluate(a,tick) as number:l.source.textPathStart??0;};
 export type TextPathOp={op:'set';from:string}|{op:'clear'}|{op:'start';value:number};
 const r4=(n:number)=>Math.round(n*1e4)/1e4;
 /** One edit: the baseline of a text layer follows (a copy of) a static path layer, or goes back to straight, or starts further along. The path is copied in layer pixels through both layers' world matrices at the composition start, so it keeps its place on screen; later changes of the path layer do not follow. Open and closed paths of at most 64 points; animated and compound paths are refused. Text animators still apply: x shifts run along the path, y shifts across it. */
 export function textPathEdit(doc:AnimationDocument,layerId:string,o:TextPathOp):Edit{
  const c=findComp(doc),l=c&&findLayer(c,layerId);if(!c||!l)throw Error('Select a layer.');if(l.kind!=='text')throw Error('Text on a path needs a text layer.');
  if(l.locked)throw Error('Layer is locked.');
- if(o.op==='clear'){if(!l.source.textPath)throw Error('The text has no path.');return {type:'layer.update',layer:l.id,source:{textPath:undefined,textPathStart:undefined}};}
+ if(o.op==='clear'){if(!l.source.textPath)throw Error('The text has no path.');return {type:'layer.update',layer:l.id,source:{textPath:undefined,textPathStart:undefined,textPathStartAnim:undefined}};}
  if(o.op==='start'){if(!l.source.textPath)throw Error('Set a path first.');if(!Number.isFinite(o.value)||o.value<0||o.value>100)throw Error('Start must be 0 to 100 percent.');return {type:'layer.update',layer:l.id,source:{textPathStart:r4(o.value)}};}
  const p=findLayer(c,o.from);if(!p||p.kind!=='shape'||p.source.shape!=='path'||!p.source.path)throw Error('Pick a path shape layer.');
  if(p.id===l.id)throw Error('Pick another layer.');

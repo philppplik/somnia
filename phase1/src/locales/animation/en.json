@@ -667,5 +667,6 @@
  "animation.pathfx.size.round": "Radius (px)",
  "animation.pathfx.size.zigzag": "Zig zag size (px)",
  "animation.pathfx.size.wave": "Wave size (px)",
- "animation.pathfx.size.twist": "Twist angle (°)"
+ "animation.pathfx.size.twist": "Twist angle (°)",
+ "animation.textPath.startLane": "Text path start"
 }

@@ -9,7 +9,7 @@ import {effectPrimitives,effectBounds,revealedText,strokeAttributes,layerColorsA
 import type {InterfaceAsset} from '../interface/schema';
 import {Zip,ZipPassThrough,strToU8} from 'fflate';
 import {maskDefs,maskId,matteId,hasMasks} from './masks';
-import {animatedChars,textPathD,textPathId} from './textAnimators';
+import {animatedChars,textPathD,textPathId,textPathStartAt} from './textAnimators';
 import {sceneAt,motionBlurTicks,contentSampled} from './scene';
 import {workAreaFrames} from './playback';
 import {frameToTick,tickToFrame} from './time';
@@ -74,7 +74,7 @@ function layerSvg(layer:Layer,assets:readonly InterfaceAsset[],tick:number,fillO
   return el(strokeSvg,fl);
  }
  const tp=textPathD(l);
- if(tp)return `<defs><path id="${textPathId(l)}" d="${tp}"/></defs><text font-size="${num(s.size??48)}" fill="${esc(s.color??'#fff')}" font-family="${esc(textFontStack(s.font))}"><textPath href="#${textPathId(l)}" startOffset="${num(s.textPathStart??0)}%">${textBody(l,tick,num(s.size??48))}</textPath></text>`;
+ if(tp)return `<defs><path id="${textPathId(l)}" d="${tp}"/></defs><text font-size="${num(s.size??48)}" fill="${esc(s.color??'#fff')}" font-family="${esc(textFontStack(s.font))}"><textPath href="#${textPathId(l)}" startOffset="${num(textPathStartAt(l,tick))}%">${textBody(l,tick,num(s.size??48))}</textPath></text>`;
  return `<text x="0" y="${num(s.size??48)}" font-size="${num(s.size??48)}" fill="${esc(s.color??'#fff')}" font-family="${esc(textFontStack(s.font))}">${textBody(l,tick,num(s.size??48))}</text>`;
 }
 /** Standalone SVG of the composition at `tick`. `transparent` omits the background rectangle so PNG output keeps real alpha. */

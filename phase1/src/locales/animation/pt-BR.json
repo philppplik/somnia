@@ -667,5 +667,6 @@
  "animation.pathfx.size.round": "Raio (px)",
  "animation.pathfx.size.zigzag": "Tamanho do zigue-zague (px)",
  "animation.pathfx.size.wave": "Tamanho da onda (px)",
- "animation.pathfx.size.twist": "Ângulo de torção (°)"
+ "animation.pathfx.size.twist": "Ângulo de torção (°)",
+ "animation.textPath.startLane": "Início no caminho"
 }
