@@ -28,3 +28,9 @@ test('studio model overrides are explicit local preferences with bounded identif
  assert.deepEqual(nonSecretSettings({...base,localRuntime:{version:1,studioModels:{photos:'gemma:4b',code:'qwen:4b'}}}).localRuntime?.studioModels,{photos:'gemma:4b',code:'qwen:4b'});
  for(const studioModels of ([{'bad/id':'model'},{code:''},{code:'model\n'}] as Record<string,string>[]))assert.throws(()=>nonSecretSettings({...base,localRuntime:{version:1,studioModels}}));
 });
+test('per-model context defaults round-trip and reject invalid values without changing global preference',()=>{
+ const config={provider:'ollama' as const,model:'qwen3:4b',apiKey:'',allowActiveFile:false,localRuntime:{version:1 as const,numCtx:8192,modelContexts:{'qwen3:4b':16384}}};assert.deepEqual(nonSecretSettings(config).localRuntime,config.localRuntime);for(const n of [0,-1,1.5,NaN,1048577])assert.throws(()=>nonSecretSettings({...config,localRuntime:{...config.localRuntime,modelContexts:{m:n}}}));
+});
+test('per-model context uses exact tag and inherits global without altering it',async()=>{
+ const {localContextFor}=await import('./settings');const p={version:1 as const,numCtx:8192,modelContexts:{'qwen3:4b':16384}};assert.equal(localContextFor(p,'qwen3:4b'),16384);assert.equal(localContextFor(p,'qwen3:8b'),8192);assert.equal(localContextFor(undefined,'qwen3:4b'),undefined);assert.equal(p.numCtx,8192);
+});

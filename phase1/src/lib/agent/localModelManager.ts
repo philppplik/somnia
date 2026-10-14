@@ -1,10 +1,11 @@
+import {refreshModelDisk,modelDiskAdvice,type ModelDisk} from './localModelDisk';
 import {invoke} from '@tauri-apps/api/core';
 import {LocalModelsRuntime} from './localModels';
 import {agentSettingsSnapshot} from './settingsRuntime';
 export type JobPhase='preparing'|'downloading'|'verifying'|'installing'|'reconciling'|'complete'|'failed'|'cancel-requested'|'interrupted';
 export type CancelOutcome='cancelled'|'still-active'|'unknown';
 export interface PullJob {model:string;phase:JobPhase;status?:string;layer?:{digest:string;completed?:number;total?:number};cancelOutcome?:CancelOutcome;error?:string}
-interface PullTransport {start(model:string):Promise<string>;next(id:string):Promise<number[]|null>;cancel(id:string):Promise<CancelOutcome>;remove(model:string,digest:string):Promise<void>;launch():Promise<{launched:boolean;instruction?:string|null}>}
+interface PullTransport {start(model:string,diskToken?:string):Promise<string>;next(id:string):Promise<number[]|null>;cancel(id:string):Promise<CancelOutcome>;remove(model:string,digest:string):Promise<void>;launch():Promise<{launched:boolean;instruction?:string|null}>}
 export interface Progress {status?:string;digest?:string;completed?:number;total?:number;error?:string}
 export function registryModel(name:string):string {
  const model=name.trim();if(!model||model.length>200||!/^[a-zA-Z0-9_.:/-]+$/.test(model)||model.includes('..')||model.includes('://')||model.split('/').length>2||model.startsWith('/')||model.endsWith('/')||(model.match(/:/g)||[]).length>1||model.includes('/')&&/[.:]/.test(model.split('/')[0])||/(^|[:\-_/])cloud$/i.test(model))throw Error('Use an exact ollama.com library model name');return model.includes(':')?model:model+':latest';
@@ -27,13 +28,13 @@ export class LocalModelManager {
  isBusy=()=>this.busy;
  private job:PullJob|null=null;private listeners=new Set<()=>void>();private id:string|null=null;private stopped=false;private busy=false;
  constructor(readonly runtime=new LocalModelsRuntime(),private transport:PullTransport={
-  start:model=>invoke('local_models_pull',{baseUrl:runtime.baseUrl,model}),next:id=>invoke('local_models_pull_next',{id}),cancel:id=>invoke('local_models_pull_cancel',{id}),remove:(model,digest)=>invoke('local_models_delete',{baseUrl:runtime.baseUrl,model,expectedDigest:digest}),launch:()=>invoke('local_models_start')
- },private allowed=mutationAllowed){}
+  start:(model,diskToken)=>invoke('local_models_pull',{baseUrl:runtime.baseUrl,model,diskToken}),next:id=>invoke('local_models_pull_next',{id}),cancel:id=>invoke('local_models_pull_cancel',{id}),remove:(model,digest)=>invoke('local_models_delete',{baseUrl:runtime.baseUrl,model,expectedDigest:digest}),launch:()=>invoke('local_models_start')
+ },private allowed=mutationAllowed,private diskCheck=refreshModelDisk){}
  snapshot=()=>this.job;
  subscribe=(listener:()=>void)=>{this.listeners.add(listener);return()=>{this.listeners.delete(listener);};};
  private update(patch:Partial<PullJob>){this.job={...this.job!,...patch};this.listeners.forEach(listener=>listener());}
  async launch(){if(!this.allowed())throw Error('Stop active AI work before starting Ollama');return this.transport.launch();}
- async pull(raw:string){
+ async pull(raw:string,disk?:ModelDisk){
   const model=registryModel(raw);if(this.busy||!this.allowed())throw Error('Another operation or AI request is active');
   // Refresh before retry: never infer the result of a previous interrupted stream.
   this.busy=true;this.stopped=false;this.job={model,phase:'preparing'};this.update({});
@@ -42,7 +43,9 @@ export class LocalModelManager {
    const before=await this.runtime.snapshot();if(before.state!=='running'||before.inventoryError)throw Error('Refresh local runtime before retrying');
    if(this.stopped){this.update({phase:'interrupted',cancelOutcome:'unknown'});return;}
    if(!this.allowed())throw Error('AI request became active');
-   this.id=await this.transport.start(model);
+   if(disk){const currentDisk=await this.diskCheck(disk.token);if(modelDiskAdvice(model,currentDisk).state==='insufficient')throw Error('Not enough disk space for estimated model and headroom');if(this.stopped)return;}
+   if(!this.allowed())throw Error('AI request became active');
+   this.id=await this.transport.start(model,disk?.token);
    if(this.stopped){const cancelOutcome=await this.transport.cancel(this.id).catch(()=> 'unknown' as const);this.update({phase:'interrupted',cancelOutcome});return;}
    this.update({phase:'downloading'});const parser=new PullParser();
    const handle=(event:Progress)=>{

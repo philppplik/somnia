@@ -76,6 +76,8 @@
     "allow-local-voice-transcribe",
     "allow-local-voice-poll",
     "allow-local-voice-cancel",
+    "allow-local-models-disk-choose",
+    "allow-local-models-disk-check",
     "allow-local-models-discover",
     "allow-local-models-hardware",
     "allow-local-models-start",

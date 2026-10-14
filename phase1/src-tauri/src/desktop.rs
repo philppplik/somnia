@@ -311,6 +311,10 @@ async fn local_voice_poll(window:WebviewWindow,id:String)->std::result::Result<c
 #[tauri::command]
 async fn local_voice_cancel(window:WebviewWindow,id:String)->std::result::Result<(),String>{gate(&window).map_err(|_|"Trusted editor required")?;crate::local_voice::cancel(&id)}
 #[tauri::command]
+async fn local_models_disk_choose(window:WebviewWindow,app:tauri::AppHandle)->std::result::Result<Option<crate::local_model_disk::Disk>,String>{gate(&window).map_err(|_|"Trusted editor required")?;tauri::async_runtime::spawn_blocking(move||{let Some(selected)=app.dialog().file().blocking_pick_folder()else{return Ok(None)};let path=selected.into_path().map_err(|_|"Model folder unavailable")?;crate::local_model_disk::select(path).map(Some)}).await.map_err(|_|"Disk check failed")?}
+#[tauri::command]
+async fn local_models_disk_check(window:WebviewWindow,token:String)->std::result::Result<crate::local_model_disk::Disk,String>{gate(&window).map_err(|_|"Trusted editor required")?;tauri::async_runtime::spawn_blocking(move||crate::local_model_disk::check(&token)).await.map_err(|_|"Disk check failed")?}
+#[tauri::command]
 async fn local_models_detect(window: WebviewWindow) -> std::result::Result<crate::local_models::Detection, String> {
     gate(&window).map_err(|_| "Only trusted editor may inspect local runtime")?;
     tauri::async_runtime::spawn_blocking(crate::local_models::detect).await.map_err(|_| "Local runtime detection failed".into())
@@ -336,8 +340,8 @@ async fn local_models_start(window: WebviewWindow) -> std::result::Result<crate:
  tauri::async_runtime::spawn_blocking(crate::local_model_actions::start).await.map_err(|_| "Ollama launch failed")?
 }
 #[tauri::command]
-async fn local_models_pull(window: WebviewWindow,base_url:String,model:String)->std::result::Result<String,String>{
- gate(&window).map_err(|_| "Only trusted editor may pull models")?;crate::local_model_actions::pull(&base_url,&model).await
+async fn local_models_pull(window: WebviewWindow,base_url:String,model:String,disk_token:String)->std::result::Result<String,String>{
+ gate(&window).map_err(|_| "Only trusted editor may pull models")?;let disk=crate::local_model_disk::check(&disk_token)?;crate::local_model_disk::require_capacity(&model,disk.free_bytes)?;crate::local_model_actions::pull(&base_url,&model).await
 }
 #[tauri::command]
 async fn local_models_pull_next(window:WebviewWindow,id:String)->std::result::Result<Option<Vec<u8>>,String>{
@@ -2928,6 +2932,8 @@ pub fn run() {
             local_voice_transcribe,
             local_voice_poll,
             local_voice_cancel,
+            local_models_disk_choose,
+            local_models_disk_check,
             local_models_discover,
             local_models_hardware,
             local_models_start,

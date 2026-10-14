@@ -62,6 +62,8 @@ fn main() {
             "local_voice_transcribe",
             "local_voice_poll",
             "local_voice_cancel",
+            "local_models_disk_choose",
+            "local_models_disk_check",
             "local_models_discover",
             "local_models_hardware",
             "local_models_start",

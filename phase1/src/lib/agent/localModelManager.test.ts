@@ -56,3 +56,8 @@ test('failed delete never claims success and prevents implicit retry',async()=>{
  await assert.rejects(failed.remove('qwen3:4b','d'),/404/);
 });
 test('untagged names resolve to an explicit reviewed latest variant',()=>{assert.equal(registryModel('qwen3'),'qwen3:latest');});
+test('fresh selected volume blocks insufficient catalog pull before transport start',async()=>{
+ let starts=0;const runtime=new LocalModelsRuntime(undefined,async op=>op==='version'?{version:'1'}:{models:[]},async()=>({installed:true}),()=>true);
+ const manager=new LocalModelManager(runtime,{start:async()=>{starts++;return 'id';},next:async()=>null,cancel:async()=> 'unknown',remove:async()=>{},launch:async()=>({launched:true})},()=>true,async token=>({token,freeBytes:1,checkedAt:Date.now(),source:'user-selected-volume'}));
+ await manager.pull('qwen3:4b',{token:'reviewed',freeBytes:20*1024**3,checkedAt:Date.now(),source:'user-selected-volume'});assert.equal(starts,0);assert.match(manager.snapshot()?.error??'',/disk space/);
+});

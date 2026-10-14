@@ -1326,6 +1326,28 @@
       ]
     },
     {
+      "name": "local_models_disk_check",
+      "domain": "fs",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "token"
+      ],
+      "args": [
+        "token"
+      ]
+    },
+    {
+      "name": "local_models_disk_choose",
+      "domain": "fs",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [],
+      "args": []
+    },
+    {
       "name": "local_models_hardware",
       "domain": "fs",
       "status": "native",
@@ -1342,11 +1364,13 @@
       "boundary": "B1",
       "params": [
         "base_url",
-        "model"
+        "model",
+        "disk_token"
       ],
       "args": [
         "baseUrl",
-        "model"
+        "model",
+        "diskToken"
       ]
     },
     {

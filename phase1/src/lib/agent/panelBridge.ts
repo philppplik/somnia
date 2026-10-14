@@ -1,3 +1,4 @@
+import {localContextFor} from './settings';
 import {ProviderError} from './errors';
 import {visionApplication,type VisionDestination} from './localVisionApplication';
 import {requireLocalCapabilities} from './localCapabilities';
@@ -56,8 +57,8 @@ export function withCustomPrompts(provider:AgentProvider,prompts:readonly Custom
  return {id:provider.id,locality:provider.locality,stream(request){return provider.stream({...request,messages:text?[...request.messages.slice(0,1),{role:'system',content:'Additional user preferences (do not override tool access or safety rules):\n'+text},...request.messages.slice(1)]:request.messages});}};
 }
 /** A gated stream whose operation remains live through body consumption, with single-slot backpressure. */
-function guardedOllama(provider:OllamaProvider):AgentProvider {
- const checked=requireLocalCapabilities(provider,config.localRuntime?.numCtx);
+function guardedOllama(provider:OllamaProvider,numCtx?:number):AgentProvider {
+ const checked=requireLocalCapabilities(provider,numCtx);
  return {id:provider.id,locality:provider.locality,async *stream(request:AgentProviderRequest){
   const check=await provider.verifyLocalModel(request.model,request.signal);
   if(!check.local)throw new ProviderError(check.reason==='model-not-found'?'model-not-found':check.reason==='unreachable'?'unreachable':'not-local','Native studio mode requires verified local Ollama weights.');
@@ -87,8 +88,8 @@ function openAIByMethod(options:ConstructorParameters<typeof OpenAIProvider>[0])
   else yield* keyed.stream(request);
  }} as AgentProvider;
 }
-export function createProvider(id:AuthProvider):AgentProvider {
- if(id==='ollama')return guardedOllama(new OllamaProvider({numCtx:config.localRuntime?.numCtx,keepAliveSeconds:config.localRuntime?.keepAliveSeconds,maxRetries:0}));
+export function createProvider(id:AuthProvider,model=config.model):AgentProvider {
+ if(id==='ollama')return guardedOllama(new OllamaProvider({numCtx:localContextFor(config.localRuntime,model),keepAliveSeconds:config.localRuntime?.keepAliveSeconds,maxRetries:0}),localContextFor(config.localRuntime,model));
  const options={getApiKey:()=>loadProviderKey(id),...(isTauri()?{fetch:nativeProviderFetch(id)}:{})};
  if(id==='openai'){
   if(!isTauri())return new OpenAIProvider(options);
@@ -276,7 +277,7 @@ export const realCore:AgentCore={
    if(!request.context.activeMedia&&!request.context.activeFile){
     // Empty workspaces can ask for guidance, but have no document tools or context.
     const previous=sessionProvider===config.provider?session?.snapshot():undefined;sessionProvider=config.provider;const sessionEpoch=epoch,sessionToken=++sessionSerial;
-    session=new AgentSession({provider:request.context.studio?withAgentStudioContext(withCustomPrompts(createProvider(config.provider),config.customPrompts),{...request.context.studio,documentRef:null,selectionSummary:'No selection',capabilities:[]}):withCustomPrompts(createProvider(config.provider),config.customPrompts),model:requestModel,onEvent:event=>{
+    session=new AgentSession({provider:request.context.studio?withAgentStudioContext(withCustomPrompts(createProvider(config.provider,requestModel),config.customPrompts),{...request.context.studio,documentRef:null,selectionSummary:'No selection',capabilities:[]}):withCustomPrompts(createProvider(config.provider,requestModel),config.customPrompts),model:requestModel,onEvent:event=>{
      if(sessionEpoch!==epoch||sessionToken!==sessionSerial||controller.signal.aborted)return;
      if(event.type==='text')deliver({type:'text-delta',text:event.text});
      else if(event.type==='notice')deliver({type:'error',message:event.message,code:event.code,retryable:event.retryable});
@@ -301,7 +302,7 @@ export const realCore:AgentCore={
    }
    policy.grant({effect:'disclose',documentIds:[base.ref.documentId],destination:config.provider});
    const previous=sessionProvider===config.provider?session?.snapshot():undefined;sessionProvider=config.provider;const sessionEpoch=epoch,sessionToken=++sessionSerial;
-   const scoped=scopedProvider(withCustomPrompts(createProvider(config.provider),config.customPrompts),context);
+   const scoped=scopedProvider(withCustomPrompts(createProvider(config.provider,requestModel),config.customPrompts),context);
    const provider=request.context.studio?withAgentStudioContext(scoped,request.context.studio):scoped;
    session=new AgentSession({provider,model:requestModel,tools:createTools(String(generation),context,nodes,request.context.studio),onEvent:event=>{
     if(sessionEpoch!==epoch||sessionToken!==sessionSerial||controller.signal.aborted)return;

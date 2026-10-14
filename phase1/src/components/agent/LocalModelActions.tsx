@@ -1,3 +1,5 @@
+import {chooseModelDisk,modelDiskAdvice,type ModelDisk} from '../../lib/agent/localModelDisk';
+import {StudioStatus} from '../studios/StudioStatus';
 import {LocalRecommendedPicker} from './LocalRecommendedPicker';
 import {Checkbox} from '../ui/checkbox';
 import {useState,useSyncExternalStore} from 'react';
@@ -8,18 +10,20 @@ import type {InstalledModel,RuntimeSnapshot} from '../../lib/agent/localModels';
 import {Button} from '../ui/button';
 import {Input} from '../ui/input';
 import {Dialog,DialogContent,DialogTitle,DialogDescription} from '../ui/dialog';
-export function LocalModelActions({snapshot,onChanged,manager=localModelManager}:{snapshot:RuntimeSnapshot|null;onChanged:()=>Promise<void>;manager?:LocalModelManager}){
+export function LocalModelActions({snapshot,onChanged,manager=localModelManager,chooseDisk=chooseModelDisk}:{snapshot:RuntimeSnapshot|null;onChanged:()=>Promise<void>;manager?:LocalModelManager;chooseDisk?:()=>Promise<ModelDisk|null>}){
  const {t}=useT();const job=useSyncExternalStore(manager.subscribe,manager.snapshot,manager.snapshot);
  useSyncExternalStore(subscribeAgentSettings,agentSettingsSnapshot,agentSettingsSnapshot);
  const [name,setName]=useState(''),[error,setError]=useState(''),[instruction,setInstruction]=useState(''),[busy,setBusy]=useState(false);
  const [confirm,setConfirm]=useState<{kind:'pull'|'delete';model:string;entry?:InstalledModel}|null>(null);
- const [ack,setAck]=useState(false);
+ const [ack,setAck]=useState(false);const [disk,setDisk]=useState<ModelDisk|null>(null);const [diskBusy,setDiskBusy]=useState(false);
+ const diskAdvice=modelDiskAdvice(confirm?.model??'',disk);
+ const inspectDisk=async()=>{setDiskBusy(true);setError('');try{setDisk(await chooseDisk());}catch{setError(t('local.disk.failed'));}finally{setDiskBusy(false);}};
  const active=!!job&&['preparing','downloading','verifying','installing','reconciling','cancel-requested'].includes(job.phase)&&!job.error;
  const locked=busy||manager.isBusy()||active||!manager.canMutate();
  const act=async(action:()=>Promise<unknown>)=>{setBusy(true);setError('');try{await action();await onChanged();}catch(e){setError(e instanceof Error?e.message:t('local.action.failed'));}finally{setBusy(false);}};
  const propose=(raw:string)=>{try{const model=registryModel(raw);setAck(false);setConfirm({kind:'pull',model});setError('');}catch{setError(t('local.action.invalid'));}};
  return <div className="local-model-actions">
-  {error&&<p role="alert">{error}</p>}
+  {error&&<StudioStatus tone="error" live="assertive">{error}</StudioStatus>}
   {snapshot?.state==='stopped'&&<Button disabled={locked} type="button" onClick={()=>void act(async()=>{const result=await manager.launch();setInstruction(result.instruction??'');})}>{t('local.action.start')}</Button>}
   {instruction&&<p>{t('local.action.manual')} <code>{instruction}</code></p>}
   {snapshot?.state==='running'&&<>
@@ -30,15 +34,15 @@ export function LocalModelActions({snapshot,onChanged,manager=localModelManager}
   </>}
   {job&&<div role="status" className="local-models-runtime"><strong>{job.model}</strong><p>{t('local.job.'+job.phase)}</p>
    {job.layer&&<p>{t('local.action.layer')} {job.layer.digest}: {job.layer.completed??'?'} / {job.layer.total??'?'} bytes</p>}
-   <p>{t('local.action.noOverall')}</p>
+   {job.layer?.total!==undefined&&job.layer.total>0&&job.layer.completed!==undefined&&<progress aria-label={t('local.action.layer')} max={job.layer.total} value={Math.min(job.layer.completed,job.layer.total)}/> }<p>{t('local.action.noOverall')}</p>
    {job.cancelOutcome&&<p>{t('local.cancel.'+job.cancelOutcome)}</p>}
    {job.error&&<p>{job.error}</p>}
    {active&&<Button type="button" onClick={()=>void manager.cancel()}>{t('local.action.cancel')}</Button>}
   </div>}
   <Dialog open={!!confirm} onOpenChange={open=>{if(!open)setConfirm(null);}}><DialogContent className="local-model-confirm"><DialogTitle>{t(confirm?.kind==='delete'?'local.action.confirmDelete':'local.action.confirmPull')}</DialogTitle><DialogDescription>{confirm?.model}</DialogDescription>
-   {confirm?.kind==='pull'?<><p>{t('local.action.source')} ollama.com/library/{confirm.model.split(':')[0]}</p><p>{t('local.action.downloadNotice')}</p></>:<p>{t('local.action.deleteNotice')}</p>}
+   {confirm?.kind==='pull'?<><p>{t('local.action.source')} ollama.com/library/{confirm.model.split(':')[0]}</p><p>{t('local.action.downloadNotice')}</p><p>{t('local.disk.notice')}</p><Button disabled={diskBusy||locked} onClick={()=>void inspectDisk()}>{t('local.disk.choose')}</Button><StudioStatus>{t('local.disk.'+diskAdvice.state)}{disk&&` · ${disk.freeBytes} bytes`}{diskAdvice.requiredBytes&&` / ${diskAdvice.requiredBytes} bytes`}</StudioStatus></>:<p>{t('local.action.deleteNotice')}</p>}
    <Checkbox label={t('local.action.ack')} checked={ack} onChange={e=>setAck(e.target.checked)}/>
-   <div className="local-models-badges"><Button type="button" onClick={()=>setConfirm(null)}>{t('local.action.cancel')}</Button><Button type="button" disabled={!ack||locked} onClick={()=>{const action=confirm!;setConfirm(null);void act(()=>action.kind==='pull'?manager.pull(action.model):manager.remove(action.model,action.entry!.digest!));}}>{t('local.action.confirm')}</Button></div>
+   <div className="local-models-badges"><Button type="button" onClick={()=>setConfirm(null)}>{t('local.action.cancel')}</Button><Button type="button" disabled={!ack||locked||diskBusy||confirm?.kind==='pull'&&(!disk||diskAdvice.state==='insufficient'||diskAdvice.state==='stale')} onClick={()=>{const action=confirm!;setConfirm(null);void act(()=>action.kind==='pull'?manager.pull(action.model,disk??undefined):manager.remove(action.model,action.entry!.digest!));}}>{t('local.action.confirm')}</Button></div>
   </DialogContent></Dialog>
  </div>;
 }

@@ -242,7 +242,17 @@ export const LOCAL_MODELS_CATALOGUES:Record<string,Record<string,string>> = {
   "local.stream.boundary": "Local Ollama streams incremental text. Stop keeps partial output as incomplete; no automatic pull or cloud fallback. A requested context uses a conservative UTF-8 byte safety budget with output capped at one quarter of requested context, not a measured tokenizer limit. Model downloads and context settings are reviewed in Local Models.",
   "local.stream.models": "Review local model and context settings",
   "local.vibe.stream.provisional": "Provisional local text, not a completed reply or tool approval.",
-  "local.vibe.stream.incomplete": "Interrupted local text, incomplete. No automatic replay."
+  "local.vibe.stream.incomplete": "Interrupted local text, incomplete. No automatic replay.",
+  "local.disk.notice": "Select the actual Ollama model folder. Capacity is that selected volume, not daemon-verified storage. Known catalog sizes add 25% and 1 GiB headroom; arbitrary variants stay unknown. Confirmation acknowledges unknown exact size/storage identity, never guarantees fit. Checked again before pull.",
+  "local.disk.choose": "Select actual Ollama model folder",
+  "local.disk.unknown": "Exact model size or volume not verified",
+  "local.disk.stale": "Capacity check expired, select folder again",
+  "local.disk.insufficient": "Insufficient estimated capacity",
+  "local.disk.estimated-fit": "Estimated capacity fits, not guaranteed",
+  "local.disk.failed": "Model volume check failed",
+  "local.modelContext.label": "Requested context for {model}",
+  "local.modelContext.inherit": "Inherit global/daemon default",
+  "local.modelContext.notice": "Per-model requested context overrides the global value on the next saved run. Not model maximum or measured token capacity. Save Settings to apply; blank inherits."
  },
  "de": {
   "local.tab": "Lokal",
@@ -487,7 +497,17 @@ export const LOCAL_MODELS_CATALOGUES:Record<string,Record<string,string>> = {
   "local.stream.boundary": "Lokales Ollama streamt Text schrittweise. Stoppen behält Teilausgabe als unvollständig; kein automatischer Download oder Cloud-Fallback. Angeforderter Kontext nutzt ein vorsichtiges UTF-8-Bytebudget mit Ausgabegrenze bei einem Viertel des angeforderten Kontexts, keine gemessene Tokenizergrenze. Modell und Kontext in Lokale Modelle prüfen.",
   "local.stream.models": "Lokales Modell und Kontext prüfen",
   "local.vibe.stream.provisional": "Vorläufiger lokaler Text, keine fertige Antwort oder Werkzeugfreigabe.",
-  "local.vibe.stream.incomplete": "Unterbrochener lokaler Text, unvollständig. Keine automatische Wiederholung."
+  "local.vibe.stream.incomplete": "Unterbrochener lokaler Text, unvollständig. Keine automatische Wiederholung.",
+  "local.disk.notice": "Tatsächlichen Ollama-Modellordner wählen. Gemessen wird dieses Volume, nicht vom Daemon bestätigter Speicher. Kataloggrößen erhalten 25% und 1 GiB Reserve; andere Varianten bleiben unbekannt. Bestätigung akzeptiert unbekannte genaue Größe/Speicheridentität, garantiert keine Passung. Vor Pull erneut geprüft.",
+  "local.disk.choose": "Tatsächlichen Ollama-Modellordner wählen",
+  "local.disk.unknown": "Genaue Modellgröße oder Volume nicht geprüft",
+  "local.disk.stale": "Kapazitätsprüfung abgelaufen, Ordner erneut wählen",
+  "local.disk.insufficient": "Geschätzte Kapazität unzureichend",
+  "local.disk.estimated-fit": "Geschätzte Kapazität reicht, keine Garantie",
+  "local.disk.failed": "Modellvolume-Prüfung fehlgeschlagen",
+  "local.modelContext.label": "Angeforderter Kontext für {model}",
+  "local.modelContext.inherit": "Global-/Daemonstandard erben",
+  "local.modelContext.notice": "Modellspezifischer Kontext überschreibt den globalen Wert im nächsten gespeicherten Lauf. Keine Modellhöchstgrenze oder gemessene Tokenkapazität. Einstellungen speichern; leer erbt."
  },
  "es": {
   "local.tab": "Local",
@@ -732,7 +752,17 @@ export const LOCAL_MODELS_CATALOGUES:Record<string,Record<string,string>> = {
   "local.stream.boundary": "Ollama local transmite texto incremental. Detener conserva salida parcial incompleta; sin descarga ni nube automática. El contexto solicitado usa presupuesto conservador de bytes UTF-8 con salida limitada a un cuarto del contexto solicitado, no límite medido del tokenizador. Revisar modelo y contexto en Modelos locales.",
   "local.stream.models": "Revisar modelo y contexto locales",
   "local.vibe.stream.provisional": "Texto local provisional, no respuesta final ni permiso.",
-  "local.vibe.stream.incomplete": "Texto local interrumpido, incompleto. Sin repetición automática."
+  "local.vibe.stream.incomplete": "Texto local interrumpido, incompleto. Sin repetición automática.",
+  "local.disk.notice": "Selecciona carpeta real de modelos Ollama. Capacidad del volumen elegido, no verificada por daemon. Estimaciones añaden 25% y 1 GiB; otras variantes desconocidas. Confirmar acepta incertidumbre, no garantiza ajuste. Se revisa antes de descargar.",
+  "local.disk.choose": "Seleccionar carpeta real Ollama",
+  "local.disk.unknown": "Tamaño exacto o volumen no verificado",
+  "local.disk.stale": "Revisar carpeta otra vez",
+  "local.disk.insufficient": "Capacidad estimada insuficiente",
+  "local.disk.estimated-fit": "Capacidad estimada suficiente, sin garantía",
+  "local.disk.failed": "Falló revisión de volumen",
+  "local.modelContext.label": "Contexto solicitado para {model}",
+  "local.modelContext.inherit": "Heredar global/daemon",
+  "local.modelContext.notice": "Contexto por modelo sustituye global tras guardar. No máximo medido. Vacío hereda."
  },
  "fr": {
   "local.tab": "Local",
@@ -977,7 +1007,17 @@ export const LOCAL_MODELS_CATALOGUES:Record<string,Record<string,string>> = {
   "local.stream.boundary": "Ollama local diffuse le texte progressivement. Arrêter conserve le texte partiel incomplet ; aucun téléchargement ou cloud automatique. Le contexte demandé utilise un budget prudent en octets UTF-8 avec sortie limitée à un quart du contexte demandé, pas une limite mesurée du tokenizer. Vérifier modèle et contexte dans Modèles locaux.",
   "local.stream.models": "Vérifier modèle et contexte locaux",
   "local.vibe.stream.provisional": "Texte local provisoire, pas une réponse finale ou permission.",
-  "local.vibe.stream.incomplete": "Texte local interrompu, incomplet. Sans relance automatique."
+  "local.vibe.stream.incomplete": "Texte local interrompu, incomplet. Sans relance automatique.",
+  "local.disk.notice": "Choisir le vrai dossier Ollama. Capacité du volume choisi, pas vérifiée par daemon. Estimations +25% et 1 GiB ; autres variantes inconnues. Confirmation accepte cette incertitude, sans garantie. Nouvelle vérification avant transfert.",
+  "local.disk.choose": "Choisir le vrai dossier Ollama",
+  "local.disk.unknown": "Taille exacte ou volume non vérifié",
+  "local.disk.stale": "Vérifier le dossier à nouveau",
+  "local.disk.insufficient": "Capacité estimée insuffisante",
+  "local.disk.estimated-fit": "Capacité estimée suffisante, sans garantie",
+  "local.disk.failed": "Échec de vérification du volume",
+  "local.modelContext.label": "Contexte demandé pour {model}",
+  "local.modelContext.inherit": "Hériter global/daemon",
+  "local.modelContext.notice": "Contexte par modèle remplace global après sauvegarde. Pas maximum mesuré. Vide hérite."
  },
  "pt-BR": {
   "local.tab": "Local",
@@ -1222,6 +1262,16 @@ export const LOCAL_MODELS_CATALOGUES:Record<string,Record<string,string>> = {
   "local.stream.boundary": "Ollama local transmite texto incremental. Parar mantém saída parcial incompleta; sem download ou nuvem automática. Contexto solicitado usa orçamento conservador de bytes UTF-8 com saída limitada a um quarto do contexto solicitado, não limite medido do tokenizador. Revise modelo e contexto em Modelos locais.",
   "local.stream.models": "Revisar modelo e contexto locais",
   "local.vibe.stream.provisional": "Texto local provisório, não resposta final ou permissão.",
-  "local.vibe.stream.incomplete": "Texto local interrompido, incompleto. Sem repetição automática."
+  "local.vibe.stream.incomplete": "Texto local interrompido, incompleto. Sem repetição automática.",
+  "local.disk.notice": "Selecione pasta real Ollama. Capacidade do volume escolhido, não verificada pelo daemon. Estimativas +25% e 1 GiB; outras variantes desconhecidas. Confirmar aceita incerteza, sem garantia. Verificado antes do download.",
+  "local.disk.choose": "Selecionar pasta real Ollama",
+  "local.disk.unknown": "Tamanho exato ou volume não verificado",
+  "local.disk.stale": "Verifique a pasta novamente",
+  "local.disk.insufficient": "Capacidade estimada insuficiente",
+  "local.disk.estimated-fit": "Capacidade estimada suficiente, sem garantia",
+  "local.disk.failed": "Falha de verificação de volume",
+  "local.modelContext.label": "Contexto solicitado para {model}",
+  "local.modelContext.inherit": "Herdar global/daemon",
+  "local.modelContext.notice": "Contexto por modelo substitui global após salvar. Não máximo medido. Vazio herda."
  }
 };

@@ -39,6 +39,7 @@ pub mod provider_transport;
 pub mod local_models;
 pub mod local_voice;
 pub mod local_hardware;
+pub mod local_model_disk;
 #[cfg(feature = "desktop")]
 pub mod local_model_actions;
 pub mod git;

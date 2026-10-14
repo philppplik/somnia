@@ -1,18 +1,20 @@
 import {invoke,isTauri} from '@tauri-apps/api/core';
 import type {AgentConfiguration} from './panelBridge';
-export interface LocalRuntimePreferences {version:1;numCtx?:number;keepAliveSeconds?:number;studioModels?:Record<string,string>}
+export interface LocalRuntimePreferences {version:1;numCtx?:number;keepAliveSeconds?:number;studioModels?:Record<string,string>;modelContexts?:Record<string,number>}
 export function normalizeLocalRuntime(value:unknown):LocalRuntimePreferences|undefined {
  if(value===undefined)return undefined;
  if(!value||typeof value!=='object'||Array.isArray(value))throw Error('Invalid local runtime preferences');
  const p=value as Record<string,unknown>;
- if(Object.keys(p).some(k=>!['version','numCtx','keepAliveSeconds','studioModels'].includes(k))||p.version!==1)throw Error('Invalid local runtime preferences');
+ if(Object.keys(p).some(k=>!['version','numCtx','keepAliveSeconds','studioModels','modelContexts'].includes(k))||p.version!==1)throw Error('Invalid local runtime preferences');
  for(const [key,min,max] of [['numCtx',1,1048576],['keepAliveSeconds',0,86400]] as const){const n=p[key];if(n!==undefined&&(typeof n!=='number'||!Number.isInteger(n)||n<min||n>max))throw Error('Invalid local runtime option: '+key);}
  let studioModels:Record<string,string>|undefined;
  if(p.studioModels!==undefined){
   if(!p.studioModels||typeof p.studioModels!=='object'||Array.isArray(p.studioModels)||Object.keys(p.studioModels).length>100)throw Error('Invalid studio model choices');
   studioModels=Object.fromEntries(Object.entries(p.studioModels).map(([id,model])=>{if(!/^[a-zA-Z0-9._-]{1,80}$/.test(id)||typeof model!=='string'||!model.trim()||model.length>512||/[\r\n\0]/.test(model))throw Error('Invalid studio model choice');return [id,model];}));
  }
- return {version:1,...(studioModels?{studioModels}:{}),...(p.numCtx!==undefined?{numCtx:p.numCtx as number}:{}),...(p.keepAliveSeconds!==undefined?{keepAliveSeconds:p.keepAliveSeconds as number}:{})};
+ let modelContexts:Record<string,number>|undefined;
+ if(p.modelContexts!==undefined){if(!p.modelContexts||typeof p.modelContexts!=='object'||Array.isArray(p.modelContexts)||Object.keys(p.modelContexts).length>100)throw Error('Invalid model contexts');modelContexts=Object.fromEntries(Object.entries(p.modelContexts).map(([model,n])=>{if(!model||model.length>512||/[\r\n\0]/.test(model)||typeof n!=='number'||!Number.isInteger(n)||n<1||n>1048576)throw Error('Invalid model context');return [model,n];}));}
+ return {version:1,...(modelContexts?{modelContexts}:{}),...(studioModels?{studioModels}:{}),...(p.numCtx!==undefined?{numCtx:p.numCtx as number}:{}),...(p.keepAliveSeconds!==undefined?{keepAliveSeconds:p.keepAliveSeconds as number}:{})};
 }
 export interface CustomPrompt {id:string;name:string;text:string;enabled:boolean}
 const PREFS='somnia.agent.preferences.v1';
@@ -40,3 +42,5 @@ export async function saveAgentSettings(value:AgentConfiguration):Promise<void>{
  if(isTauri())await invoke('agent_settings_save',{settings:{...p,apiKey:''}});
  else localStorage.setItem(PREFS,JSON.stringify(p)); // Browser preview never persists API keys.
 }
+
+export function localContextFor(p:LocalRuntimePreferences|undefined,model:string){return p?.modelContexts?.[model]??p?.numCtx;}
