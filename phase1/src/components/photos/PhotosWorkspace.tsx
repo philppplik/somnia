@@ -24,6 +24,7 @@ import {developablePhotos,photoNav} from '../../lib/photos/photoNav';
 import {ZOOM_PRESETS,isZoomPresetActive,zoomPresetLabel} from '../../lib/photos/zoomPresets';
 import {setActiveMedia,useMedia} from '../../lib/media';
 import {PhotosFilmstrip} from './PhotosFilmstrip';
+import {PhotosSurvey} from './PhotosSurvey';
 import {beginPhotoGesture,endPhotoGesture,previewPhotoSettings,commitPhotoSettings} from '../../lib/photos/studioSession';
 import {bandForHue,nearestCurvePoint,targetCurveDelta,targetSliderDelta} from '../../lib/photos/targeting';
 import {sanitizeCurvePoints,type CurveChannel} from '../../lib/photos/curves';
@@ -65,6 +66,7 @@ export function PhotosWorkspace({item}:{item:MediaItem}){
  const [zoom,setZoom]=useState<number|null>(null); // null = fit
  const [pan,setPan]=useState<[number,number]>([0,0]);
  const [compare,setCompare]=useState(false);
+ const [survey,setSurvey]=useState(false);
  const [note,setNote]=useState('');
  const [showGuides,setShowGuides]=usePanelState<boolean>('photos.cropGuides',true);
  const [guideStyle,setGuideStyle]=usePanelState<CropGuideStyle>('photos.cropGuideStyle','thirds');
@@ -107,10 +109,10 @@ export function PhotosWorkspace({item}:{item:MediaItem}){
  const targetBandRef=useRef<HslBandId|null>(null);
  const radDraft=useRef<{x0:number;y0:number;x1:number;y1:number}|null>(null); // in-flight radial filter drag (bounding box)
  useEffect(()=>{ // Escape disarms the target tool, the split view and the horizon drag from anywhere
-  if(!curvesTarget&&!hslTarget&&!wbPicker&&!showSplit&&!brushing&&!straightening&&!session?.cropping)return;
-  const onKey=(e:KeyboardEvent)=>{if(e.key==='Escape'){setCurvesTarget(false);setHslTarget(false);setWbPicker(false);setShowSplit(false);setBrushing(false);setStraightening(false);straightDraft.current=null;if(session?.cropping)cancelPhotoCrop(item.name);}};
+  if(!curvesTarget&&!hslTarget&&!wbPicker&&!showSplit&&!brushing&&!straightening&&!session?.cropping&&!survey)return;
+  const onKey=(e:KeyboardEvent)=>{if(e.key==='Escape'){setCurvesTarget(false);setHslTarget(false);setWbPicker(false);setShowSplit(false);setBrushing(false);setStraightening(false);straightDraft.current=null;if(session?.cropping)cancelPhotoCrop(item.name);setSurvey(false);}};
   window.addEventListener('keydown',onKey);return()=>window.removeEventListener('keydown',onKey);
- },[curvesTarget,hslTarget,wbPicker,showSplit,brushing,straightening,session?.cropping,item.name,setCurvesTarget,setHslTarget,setWbPicker,setShowSplit]);
+ },[curvesTarget,hslTarget,wbPicker,showSplit,brushing,straightening,session?.cropping,item.name,setCurvesTarget,setHslTarget,setWbPicker,setShowSplit,survey]);
 
  const [dabR,setDabR]=usePanelState<number>('photos.dodgeRadius',0.05);
  const dabChain=useRef<{x:number;y:number;r:number}[]|null>(null); // dabs of the in-flight dodge stroke
@@ -363,7 +365,7 @@ export function PhotosWorkspace({item}:{item:MediaItem}){
  const dirty=session?dirtyPhoto(session):false;
  const crop=session?.cropDraft;
  const guideLines=crop?cropGuideLines(crop,guideStyle):null;
- return <section className={`canvas-stage flex min-h-0 w-full flex-1 flex-col${lightsOut?' photos-lights-out':''}`} aria-label={t('photos.title')} data-testid="photos-workspace">
+ return <section className={`canvas-stage relative flex min-h-0 w-full flex-1 flex-col${lightsOut?' photos-lights-out':''}`} aria-label={t('photos.title')} data-testid="photos-workspace">
   <div className={bar}>
    <span className="truncate font-medium text-ink" data-testid="photos-name">{item.name}</span>
    <span className="text-ink-3" data-testid="photos-info">{session?.sourceWidth?t('photos.info',{width:session.sourceWidth,height:session.sourceHeight}):''}</span>
@@ -521,6 +523,7 @@ export function PhotosWorkspace({item}:{item:MediaItem}){
    <StudioStatus data-testid="photos-note">{note||(ready&&!session?.cropping?t('photos.note'):'')}</StudioStatus>
    <StudioStatus tone={session?.status==='error'?'error':'info'} live={session?.status==='error'?'assertive':'polite'} data-testid="photos-status">{status||(dirty?t('photos.status.dirty'):ready?t('photos.status.clean'):'')}</StudioStatus>
   </div>
-  <PhotosFilmstrip active={item.name}/>
+  <PhotosFilmstrip active={item.name} onSurvey={()=>setSurvey(true)}/>
+  {survey&&<PhotosSurvey names={panelStateStore.get<string[]>('photos.filmstripSelection',[])} items={media.items} onPick={n=>{setSurvey(false);setActiveMedia(n);}} onClose={()=>setSurvey(false)}/>}
  </section>;
 }

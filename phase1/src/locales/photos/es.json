@@ -130,5 +130,8 @@
  "photos.filmstrip.apply": "Aplicar a {count} fotos",
  "photos.filmstrip.applyDone": "{applied} aplicadas, {failed} fallaron",
  "photos.filmstrip.applyPreset": "Aplicar preset a la selección",
- "photos.filmstrip.autoAdvance": "Avance automático tras valorar"
+ "photos.filmstrip.autoAdvance": "Avance automático tras valorar",
+ "photos.filmstrip.survey": "Comparar selección",
+ "photos.survey.title": "{count} fotos en comparación",
+ "photos.survey.close": "Cerrar comparación"
 }

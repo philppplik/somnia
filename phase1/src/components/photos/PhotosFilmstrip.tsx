@@ -1,6 +1,6 @@
 import {useEffect,useRef,useState} from 'react';
 import {Star} from 'lucide-react';
-import {Flag,SkipForward} from '../../lib/icons';
+import {Flag,LayoutGrid,SkipForward} from '../../lib/icons';
 import {useT} from '../../lib/useT';
 import {setActiveMedia,useMedia} from '../../lib/media';
 import {developablePhotos} from '../../lib/photos/photoNav';
@@ -17,7 +17,7 @@ import {NativeSelect} from '../ui/native-controls';
 import {RatingStars} from './RatingStars';
 
 /** Library filmstrip under the workspace: a thumbnail per developable photo in library order; clicking switches the active photo. */
-export function PhotosFilmstrip({active}:{active:string}){
+export function PhotosFilmstrip({active,onSurvey}:{active:string;onSurvey?:()=>void}){
  const {t}=useT();
  const media=useMedia();
  const ratings=useRatings();
@@ -71,6 +71,7 @@ export function PhotosFilmstrip({active}:{active:string}){
    {BUILT_IN_PRESETS.map(p=><option key={p.id} value={p.id}>{t(p.labelKey)}</option>)}
    {userPresets.map(p=><option key={p.id} value={`user:${p.id}`}>{p.name}</option>)}
   </NativeSelect>}
+  {selected.length>1&&onSurvey&&<Button variant="outline" size="icon" aria-label={t('photos.filmstrip.survey')} title={t('photos.filmstrip.survey')} onClick={onSurvey} className="h-7 w-7 shrink-0" data-testid="photos-filmstrip-survey"><LayoutGrid size={12}/></Button>}
   <Button variant="outline" size="icon" aria-pressed={autoAdvance} aria-label={t('photos.filmstrip.autoAdvance')} title={t('photos.filmstrip.autoAdvance')} onClick={()=>setAutoAdvance(!autoAdvance)} className="h-7 w-7 shrink-0" data-testid="photos-filmstrip-autoadvance"><SkipForward size={12}/></Button>
   {applyNote&&<span className="shrink-0 text-ink-3" data-testid="photos-filmstrip-apply-note">{applyNote}</span>}
   <RatingStars name={active} prefix="photos-filmstrip"/>

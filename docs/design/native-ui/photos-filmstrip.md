@@ -135,3 +135,21 @@ Coverage: `photos-filmstrip.spec.ts` gains a light/dark leg that
 enables the toggle, rates (badge on the first photo, active moves to
 the second), flags (moves to the third), hits the end without moving,
 proves multi-select batches don't advance, and disables the toggle.
+
+## Survey mode (P85)
+
+With two or more photos selected, a grid button (LayoutGrid) opens a
+survey overlay over the workspace: one cell per selected photo with its
+developed frame painted on a canvas (sessions open on demand via
+`ensurePhotoReady`, a photo that fails to open stays blank), its name
+underneath. Clicking a cell activates that photo and closes the survey;
+Escape and the close button close it without switching.
+
+- `src/components/photos/PhotosSurvey.tsx`: the overlay; frames paint
+  through a scratch canvas scaled into the 320x200 cell canvas. Cells
+  are DS `Button`s, so the raw-control ratchet stays flat.
+
+Coverage: `photos-filmstrip.spec.ts` gains a light/dark leg that opens
+the survey on a two-photo selection, asserts the count and that the
+unselected photo is absent, pixel-proofs both cell canvases, picks one
+(active switches, overlay closes), reopens and closes with Escape.

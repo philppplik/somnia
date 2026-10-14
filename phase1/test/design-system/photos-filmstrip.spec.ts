@@ -264,3 +264,30 @@ test('auto-advance: rating keys move to the next photo when enabled (light and d
   await page.keyboard.press('0');
  }
 });
+test('survey: selected photos render side by side, clicking picks one (light and dark)',async({page})=>{
+ for(const theme of['light','dark']){
+  await page.goto('/test/design-system/?view=photos-filmstrip');
+  await page.evaluate(t=>document.documentElement.setAttribute('data-theme',t),theme);
+  await expect(page.getByTestId('photos-workspace')).toBeVisible();
+  await expect(page.getByTestId('photos-filmstrip-item-strip-3.png')).toBeVisible();
+  await page.getByTestId('photos-filmstrip-item-strip-1.png').click();
+  await page.getByTestId('photos-filmstrip-item-strip-3.png').click({modifiers:['ControlOrMeta']});
+  await page.getByTestId('photos-filmstrip-survey').click();
+  await expect(page.getByTestId('photos-survey')).toBeVisible();
+  await expect(page.getByTestId('photos-survey-count')).toHaveText(/2/);
+  await expect(page.getByTestId('photos-survey-item-strip-1.png')).toBeVisible();
+  await expect(page.getByTestId('photos-survey-item-strip-3.png')).toBeVisible();
+  await expect(page.getByTestId('photos-survey-item-strip-2.png')).toHaveCount(0); // unselected not surveyed
+  const painted=async(n:string)=>page.evaluate(name=>{const c=document.querySelector(`[data-testid="photos-survey-canvas-${name}"]`) as HTMLCanvasElement;const d=c.getContext('2d')!.getImageData(0,0,c.width,c.height).data;for(let i=0;i<d.length;i+=97)if(d[i]!==0)return true;return false;},n);
+  await expect.poll(()=>painted('strip-1.png')).toBe(true); // the developed frame actually painted
+  await expect.poll(()=>painted('strip-3.png')).toBe(true);
+  await page.screenshot({path:`test-results/ds-photos-survey-${theme}.png`,fullPage:true});
+  await page.getByTestId('photos-survey-item-strip-3.png').click();
+  await expect(page.getByTestId('photos-survey')).toHaveCount(0); // pick closes the survey
+  await expect(page.getByTestId('photos-name')).toHaveText('strip-3.png');
+  await page.getByTestId('photos-filmstrip-survey').click();
+  await expect(page.getByTestId('photos-survey')).toBeVisible();
+  await page.keyboard.press('Escape'); // Escape closes too
+  await expect(page.getByTestId('photos-survey')).toHaveCount(0);
+ }
+});
