@@ -6,6 +6,7 @@ import { ASPECT_PRESETS, aspectRatio, resolveResizeSize, type AspectPreset, type
 import { cropOp, flipOp, initialCropRect, resizeOp, rotateOp } from '../../lib/imgedit/handlers';
 import type { ImageOperation } from '../../lib/image-editor/types';
 
+import {NativeInput,NativeSelect} from '../ui/native-controls';
 export interface TransformPanelProps {
   /** Size of the image as it is at the current point in the operations stack. */
   width: number; height: number;
@@ -24,7 +25,7 @@ const FILTERS: ResizeFilter[] = ['lanczos3', 'lanczos2', 'bilinear', 'nearest'];
 
 function Num({ label, value, onChange, min = 1, max = 16384, step = 1, disabled }: { label: string; value: number; onChange(v: number): void; min?: number; max?: number; step?: number; disabled?: boolean }) {
   return <label className="flex min-w-0 flex-1 flex-col gap-1 text-[10px] text-ink-2">{label}
-    <input className={field} type="number" inputMode="decimal" min={min} max={max} step={step} value={Number.isFinite(value) ? value : ''} disabled={disabled}
+    <NativeInput className={field} type="number" inputMode="decimal" min={min} max={max} step={step} value={Number.isFinite(value) ? value : ''} disabled={disabled}
       onChange={(e) => { const v = e.currentTarget.valueAsNumber; if (Number.isFinite(v)) onChange(v); }} /></label>;
 }
 
@@ -54,9 +55,9 @@ export function TransformPanel(p: TransformPanelProps) {
     <fieldset className="flex flex-col gap-2" disabled={disabled}>
       <legend className="mb-1 text-[11px] font-medium text-ink">{t('imgedit.crop')}</legend>
       <label className="flex flex-col gap-1 text-[10px] text-ink-2">{t('imgedit.crop.aspect')}
-        <select className={field} value={aspect} data-testid="imgedit-aspect" onChange={(e) => { const a = e.currentTarget.value as AspectPreset; p.onAspectChange(a, initialCropRect(width, height, a)); }}>
+        <NativeSelect className={field} value={aspect} data-testid="imgedit-aspect" onChange={(e) => { const a = e.currentTarget.value as AspectPreset; p.onAspectChange(a, initialCropRect(width, height, a)); }}>
           {ASPECT_PRESETS.map((a) => <option key={a} value={a}>{a === 'free' ? t('imgedit.crop.free') : a === 'original' ? t('imgedit.crop.original') : a}</option>)}
-        </select></label>
+        </NativeSelect></label>
       <div className="flex gap-2"><Num label="X" value={rect.x} min={0} max={width - 1} onChange={(v) => setCrop({ x: v })} /><Num label="Y" value={rect.y} min={0} max={height - 1} onChange={(v) => setCrop({ y: v })} /></div>
       <div className="flex gap-2"><Num label={t('imgedit.width')} value={rect.width} max={width} onChange={(v) => setCrop({ width: v })} /><Num label={t('imgedit.height')} value={rect.height} max={height} onChange={(v) => setCrop({ height: v })} /></div>
       <Button size="compact" variant="primary" disabled={!cropChanged} data-testid="imgedit-crop-apply" onClick={() => p.onCommit(cropOp(rect))}><Crop size={13} />{t('imgedit.crop.apply')}</Button>
@@ -70,9 +71,9 @@ export function TransformPanel(p: TransformPanelProps) {
         <Num label={t('imgedit.height')} value={rh} onChange={(v) => setSize('h', v)} />
       </div>
       <label className="flex flex-col gap-1 text-[10px] text-ink-2">{t('imgedit.resize.quality')}
-        <select className={field} value={filter} data-testid="imgedit-filter" onChange={(e) => setFilter(e.currentTarget.value as ResizeFilter)}>
+        <NativeSelect className={field} value={filter} data-testid="imgedit-filter" onChange={(e) => setFilter(e.currentTarget.value as ResizeFilter)}>
           {FILTERS.map((f) => <option key={f} value={f}>{t(`imgedit.resize.filter.${f}`)}</option>)}
-        </select></label>
+        </NativeSelect></label>
       <Button size="compact" variant="primary" disabled={!sizeChanged} data-testid="imgedit-resize-apply" onClick={() => p.onCommit(resizeOp(rw, rh, filter))}>{t('imgedit.resize.apply')}</Button>
     </fieldset>
 
@@ -88,7 +89,7 @@ export function TransformPanel(p: TransformPanelProps) {
         <Num label={t('imgedit.rotate.angle')} value={angle} min={-360} max={360} step={0.1} onChange={setAngle} />
         <Button size="compact" disabled={angle % 360 === 0} data-testid="imgedit-rotate-apply" onClick={() => p.onCommit(rotateOp(angle, expand))}>{t('imgedit.rotate.apply')}</Button>
       </div>
-      <label className="flex items-center gap-2 text-[10px] text-ink-2"><input type="checkbox" checked={expand} onChange={(e) => setExpand(e.currentTarget.checked)} />{t('imgedit.rotate.expand')}</label>
+      <label className="flex items-center gap-2 text-[10px] text-ink-2"><NativeInput type="checkbox" checked={expand} onChange={(e) => setExpand(e.currentTarget.checked)} />{t('imgedit.rotate.expand')}</label>
     </fieldset>
   </section>;
 }

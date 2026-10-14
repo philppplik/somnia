@@ -435,15 +435,15 @@
       "rawTextarea": 0
     },
     "src/components/imgedit/SelectionEditor.tsx": {
-      "rawButton": 4,
-      "rawInput": 3,
-      "rawSelect": 2,
+      "rawButton": 0,
+      "rawInput": 0,
+      "rawSelect": 0,
       "rawTextarea": 0
     },
     "src/components/imgedit/TransformPanel.tsx": {
       "rawButton": 0,
-      "rawInput": 2,
-      "rawSelect": 2,
+      "rawInput": 0,
+      "rawSelect": 0,
       "rawTextarea": 0
     },
     "src/components/interface/InterfaceCanvas.tsx": {
