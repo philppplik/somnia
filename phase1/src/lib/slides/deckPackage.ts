@@ -1649,3 +1649,36 @@ export function editLayoutBox(bytes:Uint8Array,layoutPart:string,shapeId:number,
   if(after.length!==was.length||after.some((l,i)=>{const b=was[i];return l.part!==b.part||l.placeholders.length!==b.placeholders.length||l.placeholders.some((p,j)=>{const q=b.placeholders[j];return p.id!==q.id||p.type!==q.type||(l.part===layoutPart&&p.id===shapeId?!sameBox(p.box,next):!sameBox(p.box,q.box));});}))throw Error('Edited deck failed verification');
   return res;
 }
+
+/** Slide background: inherited from layout/master, one solid color, or something else (gradient, picture, theme reference) that is read-only here. */
+export type SlideBackground={kind:'inherit'}|{kind:'solid';color:string}|{kind:'other'};
+const BG_RE=/<p:bg>[\s\S]*?<\/p:bg>|<p:bg\s*\/>/;
+function bgOf(xml:string):{bg:SlideBackground;start:number;end:number}|null{
+  const cs=/<p:cSld\b[^>]*>/.exec(xml);if(!cs)throw Error('This slide has structure that cannot take a background');
+  const m=BG_RE.exec(xml);if(!m)return null;if(m.index<cs.index+cs[0].length||/^\s*$/.test(xml.slice(cs.index+cs[0].length,m.index))===false)return {bg:{kind:'other'},start:m.index,end:m.index+m[0].length};
+  const solid=/^<p:bg><p:bgPr><a:solidFill><a:srgbClr val="([0-9A-Fa-f]{6})"\s*\/><\/a:solidFill>(?:<a:effectLst\s*\/>)?<\/p:bgPr><\/p:bg>$/.exec(m[0]);
+  return {bg:solid?{kind:'solid',color:solid[1].toUpperCase()}:{kind:'other'},start:m.index,end:m.index+m[0].length};
+}
+export function readSlideBackground(bytes:Uint8Array,slideId:number):SlideBackground{
+  const slide=readDeckModel(bytes).slides.find(s=>s.id===slideId);if(!slide)throw Error('Slide no longer exists');
+  return bgOf(text(openPackage(bytes),slide.part))?.bg??{kind:'inherit'};
+}
+export function setSlideBackground(bytes:Uint8Array,slideId:number,next:SlideBackground):Uint8Array{
+  if(next.kind==='other')throw Error('Choose a solid color or the master background');
+  if(next.kind==='solid'&&!/^[0-9A-F]{6}$/.test(next.color))throw Error('Color must be six uppercase hex digits');
+  const model=readDeckModel(bytes),slide=model.slides.find(s=>s.id===slideId);
+  if(!slide)throw Error('Slide no longer exists');if(slide.problems.length)throw Error('This slide has unsupported structure');
+  const zip=openPackage(bytes),xml=text(zip,slide.part),cur=bgOf(xml),was=cur?.bg??{kind:'inherit'} as SlideBackground;
+  if(was.kind==='other')throw Error('This slide has a background that cannot be edited here');
+  if(was.kind===next.kind&&(next.kind==='inherit'||(was.kind==='solid'&&was.color===next.color)))return bytes;
+  const el=next.kind==='solid'?`<p:bg><p:bgPr><a:solidFill><a:srgbClr val="${next.color}"/></a:solidFill><a:effectLst/></p:bgPr></p:bg>`:'';
+  let out:string;
+  if(cur)out=xml.slice(0,cur.start)+el+xml.slice(cur.end);
+  else{const cs=/<p:cSld\b[^>]*>/.exec(xml)!;const at=cs.index+cs[0].length;out=xml.slice(0,at)+el+xml.slice(at);}
+  const res=repack(zip,{[slide.part]:out}),after=readDeckModel(res),as=after.slides.find(s=>s.id===slideId);
+  if(!as||as.problems.length||JSON.stringify(as.shapes)!==JSON.stringify(slide.shapes)||after.runs.length!==model.runs.length||after.runs.some((r,i)=>r.text!==model.runs[i].text))throw Error('Edited deck failed verification');
+  const got=readSlideBackground(res,slideId);
+  if(got.kind!==next.kind||(next.kind==='solid'&&got.kind==='solid'&&got.color!==next.color))throw Error('Edited deck failed verification');
+  const re=unzipSync(res);for(const k of Object.keys(zip))if(k!==slide.part&&(!re[k]||re[k].length!==zip[k].length||re[k].some((v,i)=>v!==zip[k][i])))throw Error('Edited deck changed an unrelated part');
+  return res;
+}

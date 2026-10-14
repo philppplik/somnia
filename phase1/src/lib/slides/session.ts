@@ -3,7 +3,7 @@ import {reportError} from '../log';
 import {readDeckDocument,serializeDeck,parseDeck,editedDeckBytes} from './deckDocument';
 import type {SlidesDiagnostics} from './diagnostics';
 import type {TextRun} from './editCopy';
-import type {LayoutInfo,DeckModel,BoundsBox,RunFormat,ShapeBoundsEdit,ArrangeMode,SlideTransition,ShapeStylePatch,TableEdit,ThemeEdit} from './deckPackage';
+import type {LayoutInfo,DeckModel,BoundsBox,RunFormat,ShapeBoundsEdit,ArrangeMode,SlideTransition,ShapeStylePatch,TableEdit,ThemeEdit,SlideBackground} from './deckPackage';
 import {installBeforeUnload} from '../closeFlow';
 import {useEffect,useSyncExternalStore} from 'react';
 import {SlidesClient} from './client';
@@ -119,6 +119,7 @@ export const arrangeShapesAt=(slideId:number,shapeIds:number[],mode:ArrangeMode)
 export const setTransitionAt=(slideId:number,transition:SlideTransition)=>structuralEdit(async(e,before)=>({bytes:await e.client.setTransition(before,slideId,transition),index:idAt(e,slideId)}));
 export const styleShapesAt=(slideId:number,shapeIds:number[],patch:ShapeStylePatch)=>structuralEdit(async(e,before)=>({bytes:await e.client.styleShapes(before,slideId,shapeIds,patch),index:idAt(e,slideId)}));
 export const insertTableAt=(slideId:number,rows:number,cols:number)=>structuralEdit(async(e,before)=>({bytes:await e.client.insertTable(before,slideId,rows,cols),index:idAt(e,slideId)}));
+export const setBackgroundAt=(slideId:number,background:SlideBackground)=>structuralEdit(async(e,before)=>({bytes:await e.client.setBackground(before,slideId,background),index:idAt(e,slideId)}));
 export const editLayoutBoxAt=(layoutPart:string,shapeId:number,expected:BoundsBox,next:BoundsBox)=>structuralEdit(async(e,before)=>({bytes:await e.client.editLayoutBox(before,layoutPart,shapeId,expected,next),index:e.state.index}));
 export const editMasterBoxAt=(shapeId:number,expected:BoundsBox,next:BoundsBox)=>structuralEdit(async(e,before)=>({bytes:await e.client.editMasterBox(before,shapeId,expected,next),index:e.state.index}));
 export const editThemeAt=(edit:ThemeEdit)=>structuralEdit(async(e,before)=>({bytes:await e.client.editTheme(before,edit),index:e.state.index}));

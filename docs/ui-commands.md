@@ -16,7 +16,7 @@ included; the `source` column names the owner. Dynamic sources that stay outside
 
 Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, fr, pt-BR); the gate enforces it.
 
-758 commands. Categories: Edit, Help, Insert, Project, Tools, View.
+759 commands. Categories: Edit, Help, Insert, Project, Tools, View.
 
 | id | title | category | source | shortcut |
 | --- | --- | --- | --- | --- |
@@ -509,6 +509,7 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `slides.selectText` | Select slide text | View | slides |  |
 | `slides.setNotes` | Set speaker notes | Edit | slides |  |
 | `slides.setShapeBounds` | Move or resize text box | Edit | slides |  |
+| `slides.setSlideBackground` | Set slide background | Edit | slides |  |
 | `slides.setTransition` | Set slide transition | Edit | slides |  |
 | `slides.showSlide` | Show slide | View | slides |  |
 | `slides.styleShapes` | Style selected shapes | Edit | slides |  |
