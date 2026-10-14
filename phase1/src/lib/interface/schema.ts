@@ -33,10 +33,15 @@ export type InterfaceTextAlign='left'|'center'|'right';
 export type InterfaceTextDecoration='underline'|'line-through';
 export interface InterfaceShadow {x:number;y:number;blur:number;color:string;}
 export const DEFAULT_INTERFACE_SHADOW:InterfaceShadow={x:0,y:2,blur:4,color:'#000000'};
+export interface InterfaceGradientStop {offset:number;color:string;}
+export interface InterfaceGradient {angle:number;stops:InterfaceGradientStop[];}
+export const DEFAULT_INTERFACE_GRADIENT:InterfaceGradient={angle:90,stops:[{offset:0,color:'#7756e8'},{offset:1,color:'#38bdf8'}]};
+export const interfaceGradientCSS=(g:InterfaceGradient)=>`linear-gradient(${g.angle}deg, ${g.stops.map(s=>`${s.color} ${Math.round(s.offset*100)}%`).join(', ')})`;
+export const interfaceGradientVector=(angle:number)=>{const r=angle*Math.PI/180,dx=Math.sin(r),dy=-Math.cos(r);return {x1:0.5-dx/2,y1:0.5-dy/2,x2:0.5+dx/2,y2:0.5+dy/2};};
 export interface InterfaceNode {
  id:string;pageId:string;parentId:string|null;children:string[];kind:NodeKind;name:string;
  x:number;y:number;width:number;height:number;fill:string;text?:string;hidden:boolean;locked:boolean;
- prototypeLinks?:PrototypeLink[];path?:InterfacePath;stroke?:string;strokeWidth?:number;radius?:number;opacity?:number;rotation?:number;blendMode?:BlendMode;textAlign?:InterfaceTextAlign;textDecoration?:InterfaceTextDecoration;flipH?:boolean;flipV?:boolean;shadow?:InterfaceShadow;blur?:number;imageFill?:{assetId:string;fit:'cover'|'contain'};
+ prototypeLinks?:PrototypeLink[];path?:InterfacePath;stroke?:string;strokeWidth?:number;radius?:number;opacity?:number;rotation?:number;blendMode?:BlendMode;textAlign?:InterfaceTextAlign;textDecoration?:InterfaceTextDecoration;flipH?:boolean;flipV?:boolean;shadow?:InterfaceShadow;blur?:number;gradient?:InterfaceGradient;imageFill?:{assetId:string;fit:'cover'|'contain'};
  altText?:string;variableMode?:VariableMode;bindings?:{fill?:string;gap?:string;padding?:string};exportSettings?:InterfaceExportSetting[];textStyleId?:string;annotation?:string;ready?:boolean;layout?:InterfaceLayout;sizing?:InterfaceSizing;constraints?:InterfaceConstraints;componentSlot?:string;instance?:InterfaceInstance;breakpoints?:InterfaceBreakpoint[];span?:number;aspectRatio?:number;scroll?:boolean;sticky?:boolean;list?:'bullet'|'number';maxLines?:number;focusIndex?:number;
  [key:string]:unknown;
 }
