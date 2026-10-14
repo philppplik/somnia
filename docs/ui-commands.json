@@ -5710,6 +5710,2125 @@
       "hasEnabled": true
     },
     {
+      "id": "studio3d.anim.autokey",
+      "title": "Turn auto-key on or off: transform changes are recorded as keys at the playhead",
+      "category": "View",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "studio3d.anim.loop",
+      "title": "Loop the 3D animation or play it once",
+      "category": "View",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "studio3d.anim.pause",
+      "title": "Pause the 3D animation",
+      "category": "View",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "studio3d.anim.play",
+      "title": "Play an animation clip of the 3D model",
+      "category": "View",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "studio3d.anim.range",
+      "title": "Preview a part of the 3D animation clip as a loop",
+      "category": "View",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "studio3d.anim.seek",
+      "title": "Jump to a time in the 3D animation",
+      "category": "View",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "studio3d.anim.speed",
+      "title": "Set the 3D animation speed",
+      "category": "View",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "studio3d.bone.limits",
+      "title": "Set joint limits of a bone",
+      "category": "Edit",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "studio3d.camera.set",
+      "title": "Change the field of view of a 3D camera",
+      "category": "Edit",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "studio3d.clip.add",
+      "title": "Add an empty 3D animation clip",
+      "category": "View",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "studio3d.clip.duplicate",
+      "title": "Duplicate a 3D animation clip with all its keys",
+      "category": "View",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "studio3d.clip.duration",
+      "title": "Set the length of a 3D animation clip in seconds",
+      "category": "View",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "studio3d.clip.record",
+      "title": "Record the current pose as keys at the playhead",
+      "category": "View",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "studio3d.clip.remove",
+      "title": "Delete a 3D animation clip",
+      "category": "View",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "studio3d.clip.rename",
+      "title": "Rename a 3D animation clip",
+      "category": "View",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "studio3d.cursor.set",
+      "title": "Move the 3D cursor",
+      "category": "Tools",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "studio3d.edit.bevel",
+      "title": "Bevel vertices",
+      "category": "Edit",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "studio3d.edit.bevelEdge",
+      "title": "Bevel edges",
+      "category": "Edit",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "studio3d.edit.end",
+      "title": "Finish editing",
+      "category": "Edit",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "studio3d.edit.extrude",
+      "title": "Extrude selection",
+      "category": "Edit",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "studio3d.edit.inset",
+      "title": "Inset faces",
+      "category": "Edit",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "studio3d.edit.loopCut",
+      "title": "Loop cut",
+      "category": "Edit",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "studio3d.edit.loopSlide",
+      "title": "Loop slide",
+      "category": "Edit",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "studio3d.edit.mode",
+      "title": "Edit select mode",
+      "category": "Edit",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "studio3d.edit.select",
+      "title": "Select element",
+      "category": "Edit",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "studio3d.edit.start",
+      "title": "Edit mesh",
+      "category": "Edit",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "studio3d.env.open",
+      "title": "Open an HDR environment map",
+      "category": "View",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "studio3d.env.set",
+      "title": "Change the 3D environment lighting",
+      "category": "View",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "studio3d.export.glb",
+      "title": "Export the scene as GLB",
+      "category": "Project",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "studio3d.export.gltf",
+      "title": "Export the scene as glTF",
+      "category": "Project",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "studio3d.export.mesh",
+      "title": "Export the scene as STL or OBJ",
+      "category": "Project",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "studio3d.export.options",
+      "title": "Set glTF export options",
+      "category": "Project",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "studio3d.fabrik.lookat",
+      "title": "Toggle the FABRIK look-at constraint",
+      "category": "Edit",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "studio3d.fabrik.looktarget",
+      "title": "Move the FABRIK look-at target",
+      "category": "Edit",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "studio3d.fabrik.target",
+      "title": "Move the FABRIK target",
+      "category": "Edit",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "studio3d.fabrik.toggle",
+      "title": "Switch a chain between FK and FABRIK",
+      "category": "Edit",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "studio3d.gizmo.mode",
+      "title": "Set the 3D transform tool",
+      "category": "Tools",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "studio3d.group",
+      "title": "Group 3D objects under a new parent",
+      "category": "Edit",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "studio3d.ik.pole",
+      "title": "Move the IK pole target",
+      "category": "Edit",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "studio3d.ik.target",
+      "title": "Move the IK target",
+      "category": "Edit",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "studio3d.ik.toggle",
+      "title": "Switch a chain between FK and IK",
+      "category": "Edit",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "studio3d.import.options",
+      "title": "Set mesh import options",
+      "category": "Project",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "studio3d.insert.camera",
+      "title": "Insert a 3D camera",
+      "category": "Insert",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "studio3d.insert.light",
+      "title": "Insert a 3D light",
+      "category": "Insert",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "studio3d.insert.pin",
+      "title": "Insert an annotation pin at the 3D cursor or a given point",
+      "category": "Insert",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "studio3d.insert.primitive",
+      "title": "Insert a 3D primitive",
+      "category": "Insert",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "studio3d.key.copy",
+      "title": "Copy position, rotation or scale keys of the selected 3D object in the current clip",
+      "category": "View",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "studio3d.key.ease",
+      "title": "Set the easing between a key and the next key in the current clip",
+      "category": "View",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "studio3d.key.move",
+      "title": "Move a key of a 3D object to a new time in the current clip",
+      "category": "View",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "studio3d.key.paste",
+      "title": "Paste the copied keys at the playhead in the current clip",
+      "category": "View",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "studio3d.key.remove",
+      "title": "Remove a position, rotation or scale key of a 3D object in the current clip",
+      "category": "View",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "studio3d.key.set",
+      "title": "Add or replace a position, rotation or scale key of a 3D object in the current clip",
+      "category": "View",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "studio3d.key.shift",
+      "title": "Move several keys of a 3D object in time by the same amount",
+      "category": "View",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "studio3d.light.helpers",
+      "title": "Show or hide the viewport helper of the selected light",
+      "category": "View",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "studio3d.light.rig",
+      "title": "Insert a three-point light rig",
+      "category": "Insert",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "studio3d.light.set",
+      "title": "Change a 3D light",
+      "category": "Edit",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "studio3d.material.copy",
+      "title": "Copy material",
+      "category": "Edit",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "studio3d.material.paste",
+      "title": "Paste material",
+      "category": "Edit",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "studio3d.material.preset.apply",
+      "title": "Apply material preset",
+      "category": "Edit",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "studio3d.material.preset.remove",
+      "title": "Delete material preset",
+      "category": "Edit",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "studio3d.material.preset.save",
+      "title": "Save material preset",
+      "category": "Edit",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "studio3d.measure.set",
+      "title": "Toggle the 3D measure tool",
+      "category": "Tools",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "studio3d.mesh.applyScale",
+      "title": "Apply the scale of 3D meshes to their geometry",
+      "category": "Edit",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "studio3d.mesh.bisect",
+      "title": "Cut a 3D mesh with a plane and keep both halves",
+      "category": "Edit",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "studio3d.mesh.boolean",
+      "title": "Combine two 3D meshes with a boolean: union, subtract or intersect",
+      "category": "Edit",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "studio3d.mesh.bridge",
+      "title": "Bridge two 3D meshes with a tunnel between their open borders",
+      "category": "Edit",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "studio3d.mesh.cleanup",
+      "title": "Clean up 3D meshes: weld duplicate vertices, drop collapsed and duplicate faces and unify winding (closed parts point outward)",
+      "category": "Edit",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "studio3d.mesh.fatten",
+      "title": "Shrink or fatten a 3D mesh along its normals (negative amounts shrink)",
+      "category": "Edit",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "studio3d.mesh.fillHoles",
+      "title": "Cap the open borders of 3D meshes",
+      "category": "Edit",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "studio3d.mesh.merge",
+      "title": "Merge 3D meshes into one",
+      "category": "Edit",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "studio3d.mesh.mirror",
+      "title": "Mirror 3D objects across a world axis",
+      "category": "Edit",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "studio3d.mesh.mirrorMod",
+      "title": "Mirror modifier",
+      "category": "Edit",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "studio3d.mesh.normals",
+      "title": "Rebuild the normals of 3D meshes: flip them, recalculate outward, or re-shade smooth, flat or split by angle",
+      "category": "Edit",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "studio3d.mesh.relax",
+      "title": "Smooth a 3D mesh: vertices drift toward their neighbourhood average, borders stay put",
+      "category": "Edit",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "studio3d.mesh.separate",
+      "title": "Split 3D meshes into one object per connected part",
+      "category": "Edit",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "studio3d.mesh.simplify",
+      "title": "Simplify a 3D mesh: remove vertices while keeping its shape, UVs and normals",
+      "category": "Edit",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "studio3d.mesh.solidify",
+      "title": "Give a thin 3D mesh real thickness: offset shell with stitched side walls",
+      "category": "Edit",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "studio3d.mesh.spin",
+      "title": "Revolve a 3D mesh around an axis (lathe)",
+      "category": "Edit",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "studio3d.mesh.subdivide",
+      "title": "Subdivide 3D meshes smoothly: split every triangle into four and smooth the surface (Loop scheme)",
+      "category": "Edit",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "studio3d.mesh.symmetrize",
+      "title": "Bake a symmetry into 3D meshes: keep one side of the local mirror plane, mirror it onto the other and weld the seam",
+      "category": "Edit",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "studio3d.mesh.taper",
+      "title": "Taper a 3D mesh along an axis",
+      "category": "Edit",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "studio3d.mesh.twist",
+      "title": "Twist a 3D mesh around an axis",
+      "category": "Edit",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "studio3d.model.open",
+      "title": "Open 3D model",
+      "category": "Project",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "studio3d.motionpath",
+      "title": "Show the motion path of the selected bone",
+      "category": "View",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "studio3d.object.align",
+      "title": "Align 3D objects",
+      "category": "Edit",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "studio3d.object.array",
+      "title": "Duplicate 3D objects as a linear or radial array",
+      "category": "Edit",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "studio3d.object.delete",
+      "title": "Delete a 3D object",
+      "category": "Edit",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "studio3d.object.distribute",
+      "title": "Distribute 3D objects evenly",
+      "category": "Edit",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "studio3d.object.duplicate",
+      "title": "Duplicate a 3D object",
+      "category": "Edit",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "studio3d.object.locked",
+      "title": "Lock or unlock object",
+      "category": "Edit",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "studio3d.object.material",
+      "title": "Change the material of a 3D object",
+      "category": "Edit",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "studio3d.object.nudge",
+      "title": "Nudge a 3D object",
+      "category": "Edit",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "studio3d.object.pivot",
+      "title": "Move the pivot of a 3D mesh",
+      "category": "Edit",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "studio3d.object.primitive",
+      "title": "Change the size or segments of a 3D primitive",
+      "category": "Edit",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "studio3d.object.rename",
+      "title": "Rename a 3D object",
+      "category": "Edit",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "studio3d.object.reorder",
+      "title": "Move 3D objects next to a sibling in the outline",
+      "category": "Edit",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "studio3d.object.reparent",
+      "title": "Move under a new parent",
+      "category": "Edit",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "studio3d.object.transform",
+      "title": "Move, rotate or scale a 3D object",
+      "category": "Edit",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "studio3d.object.visible",
+      "title": "Show or hide object",
+      "category": "Edit",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "studio3d.onion.skin",
+      "title": "Show ghost poses around the playhead (onion skin)",
+      "category": "View",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "studio3d.pin.set",
+      "title": "Set the label text of an annotation pin",
+      "category": "Edit",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "studio3d.pivot.set",
+      "title": "Set the 3D transform pivot",
+      "category": "Tools",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "studio3d.pose.apply",
+      "title": "Apply a saved pose",
+      "category": "Edit",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "studio3d.pose.blend",
+      "title": "Blend two poses and apply the mix",
+      "category": "Edit",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "studio3d.pose.mirror",
+      "title": "Apply the mirrored pose",
+      "category": "Edit",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "studio3d.pose.remove",
+      "title": "Remove a saved pose",
+      "category": "Edit",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "studio3d.pose.save",
+      "title": "Save the current pose",
+      "category": "Edit",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "studio3d.recent.clear",
+      "title": "Clear recent 3D scenes and autosave",
+      "category": "Project",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "studio3d.recent.open",
+      "title": "Open a recent 3D scene",
+      "category": "Project",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "studio3d.redo",
+      "title": "Redo 3D change",
+      "category": "Edit",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "studio3d.render.cancel",
+      "title": "Cancel the running 3D render",
+      "category": "Project",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "studio3d.render.still",
+      "title": "Render a PNG still of the 3D view",
+      "category": "Project",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "studio3d.render.turntable",
+      "title": "Render a turntable as a ZIP of PNG frames",
+      "category": "Project",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "studio3d.retarget.apply",
+      "title": "Bake a retargeted clip onto this rig",
+      "category": "Edit",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "studio3d.retarget.preview",
+      "title": "Preview a clip retargeted from another rig",
+      "category": "Edit",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "studio3d.save",
+      "title": "Save the 3D scene",
+      "category": "Project",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "studio3d.scene.new",
+      "title": "Create blank 3D scene",
+      "category": "Project",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "studio3d.sculpt.begin",
+      "title": "Begin sculpt stroke",
+      "category": "Edit",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "studio3d.sculpt.brush",
+      "title": "Sculpt brush settings",
+      "category": "Edit",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "studio3d.sculpt.dab",
+      "title": "Sculpt dab",
+      "category": "Edit",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "studio3d.sculpt.end",
+      "title": "End sculpt stroke",
+      "category": "Edit",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "studio3d.sculpt.maskClear",
+      "title": "Clear sculpt mask",
+      "category": "Edit",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "studio3d.select",
+      "title": "Select a 3D object",
+      "category": "Edit",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "studio3d.selection.delete",
+      "title": "Delete the selected 3D objects",
+      "category": "Edit",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "studio3d.selection.duplicate",
+      "title": "Duplicate the selected 3D objects",
+      "category": "Edit",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "studio3d.shadow.set",
+      "title": "Set the shadow map quality and algorithm",
+      "category": "Edit",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "studio3d.skeleton.select",
+      "title": "Select a bone of a skinned 3D model",
+      "category": "Edit",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "studio3d.skeleton.show",
+      "title": "Show or hide the skeleton overlay of a skinned 3D model",
+      "category": "View",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "studio3d.skin.bind",
+      "title": "Bind a 3D mesh to a bone chain with auto-weights",
+      "category": "Edit",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "studio3d.skin.brush",
+      "title": "Configure the weight paint brush",
+      "category": "View",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "studio3d.skin.paint",
+      "title": "Paint bone weights with the brush",
+      "category": "Edit",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "studio3d.skin.preview",
+      "title": "Preview a bone's influence as vertex colours on the selected skinned 3D mesh",
+      "category": "View",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "studio3d.skin.reweight",
+      "title": "Recompute the weights of a skinned 3D mesh (smooth falloff or rigid bind)",
+      "category": "Edit",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "studio3d.snap.set",
+      "title": "Change 3D transform snapping",
+      "category": "Tools",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "studio3d.texture.clear",
+      "title": "Remove the image from a texture slot",
+      "category": "Edit",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "studio3d.texture.generate",
+      "title": "Generate a procedural texture (checker, grid, stripes or noise) for a texture slot of the selected 3D object",
+      "category": "Edit",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "studio3d.texture.open",
+      "title": "Choose an image for a texture slot of the selected 3D object",
+      "category": "Edit",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "studio3d.texture.preview",
+      "title": "Show a small preview image of a texture slot",
+      "category": "Edit",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "studio3d.texture.transform",
+      "title": "Move, scale or rotate the image of a texture slot (UV mapping)",
+      "category": "Edit",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "studio3d.undo",
+      "title": "Undo 3D change",
+      "category": "Edit",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "studio3d.ungroup",
+      "title": "Dissolve a 3D group, keeping its children",
+      "category": "Edit",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "studio3d.unit.set",
+      "title": "Set the unit used for STL and OBJ export",
+      "category": "Project",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "studio3d.uv.planar",
+      "title": "Planar UV projection",
+      "category": "Edit",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "studio3d.uv.preview",
+      "title": "UV checker preview",
+      "category": "View",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "studio3d.uv.seam",
+      "title": "Mark UV seam",
+      "category": "Edit",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "studio3d.uv.unwrap",
+      "title": "Unwrap UVs",
+      "category": "Edit",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "studio3d.view.ao",
+      "title": "Switch the ambient occlusion preview on or off (viewport only)",
+      "category": "View",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "studio3d.view.apply",
+      "title": "Look at the scene from a saved named view",
+      "category": "View",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "studio3d.view.fov",
+      "title": "Set the viewport field of view or focal length",
+      "category": "View",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "studio3d.view.frame",
+      "title": "Frame selection in 3D view",
+      "category": "View",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "studio3d.view.fromCamera",
+      "title": "Look through a 3D camera",
+      "category": "View",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "studio3d.view.grid",
+      "title": "Show or hide the 3D grid",
+      "category": "View",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "studio3d.view.keys",
+      "title": "Show or hide the 3D keyboard shortcut help",
+      "category": "View",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "studio3d.view.perf",
+      "title": "Show or hide the live FPS, draw-call and triangle overlay",
+      "category": "View",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "studio3d.view.preset",
+      "title": "Look at the 3D scene from the front, back, left, right, top, bottom or an isometric angle",
+      "category": "View",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "studio3d.view.projection",
+      "title": "Switch the 3D viewport between perspective and orthographic",
+      "category": "View",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "studio3d.view.remove",
+      "title": "Delete a saved named view",
+      "category": "View",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "studio3d.view.rename",
+      "title": "Rename a saved view",
+      "category": "View",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "studio3d.view.reset",
+      "title": "Reset 3D view",
+      "category": "View",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "studio3d.view.save",
+      "title": "Save the current viewport as a named view",
+      "category": "View",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "studio3d.view.turntable",
+      "title": "Start or stop the turntable preview (view only)",
+      "category": "View",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "studio3d.view.update",
+      "title": "Overwrite a saved view with the current viewport",
+      "category": "View",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "studio3d.view.wireframe",
+      "title": "Show or hide wireframe",
+      "category": "View",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "tab.close",
       "title": "Close",
       "category": "View",

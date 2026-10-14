@@ -3726,5 +3726,6 @@
   "themeImport.contrastLow": "{ratio}:1, por debajo de 4,5:1 para texto normal.",
   "themeImport.contrastUnknown": "Sin verificar: falta un par, alfa o color no compatible.",
   "cmd.help.localAI": "Ayuda y FAQ de IA local",
-  "cmd.search.localSources": "Búsqueda local de fuentes (texto abierto revisado)"
+  "cmd.search.localSources": "Búsqueda local de fuentes (texto abierto revisado)",
+  "cmd.photos.applyVersion": "Fotos: Aplicar una versión guardada"
 }

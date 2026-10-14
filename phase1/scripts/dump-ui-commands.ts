@@ -1,3 +1,5 @@
+import {registerStudio3DCommands} from '../src/lib/studio3d/commands';
+import {agentCommandReadiness} from '../src/lib/agent/commandReadiness';
 import {registerInterfaceCommands} from '../src/lib/interface/commands';
 import {registerDocumentPanelCommands} from '../src/lib/documents/panelCommands';
 import {registerCodePanelCommands} from '../src/lib/codePanels/commands';
@@ -26,7 +28,7 @@ import {registerDeployCommands} from '../src/lib/deploy/register';
 import {createTauriDeployBackend} from '../src/lib/deploy/tauriBackend';
 import { listCommands } from '../src/lib/commands';
 import { CATALOGUES, t } from '../src/lib/i18n';
-import { CommandDispatcher } from '../src/lib/commandDispatcher';
+import { commandDispatcher, CommandDispatcher } from '../src/lib/commandDispatcher';
 import { vectorCommandsReady } from '../src/store/vectorBootstrap';
 import { registerSheetsCommands } from '../src/lib/sheets/commands';
 import {registerSoundCommands} from '../src/lib/sound/commands';
@@ -112,6 +114,7 @@ export async function collect(): Promise<Entry[]> {
   await withSource('interface', () => registerInterfaceCommands());
   await withSource('photos', () => registerPhotosCommands());
   await withSource('pdfedit', () => { for (const spec of pdfCommandSpecs(pdfStub)) registerCommandSpec(spec); });
+  await withSource('studio3d',()=>registerStudio3DCommands());
   await withSource('animation', () => registerAnimationCommands());
   await withSource('deploy', () => registerDeployCommands(createTauriDeployBackend()));
   const raster = new CommandDispatcher();
@@ -170,6 +173,8 @@ ${rows.join('\n')}
 
 const commands = await collect();
 const next = render(commands);
+if(process.argv.includes('--agent-matrix')){const rows=[...commandDispatcher.list().map(spec=>agentCommandReadiness(spec,'shared')), ...(()=>{const host=new CommandDispatcher();registerRasterCommands(()=>rasterStub,k=>t(k),host);return host.list().map(spec=>agentCommandReadiness(spec,'raster-host'));})()].sort((a,b)=>(a.host+':'+a.id).localeCompare(b.host+':'+b.id));const path=join(root,'..','docs','agent','command-readiness.json');const text=JSON.stringify({version:1,evidence:'schema/level inventory only; engine transaction ports unverified, not permission',rows},null,2)+'\n';if(process.argv.includes('--check')){if(!existsSync(path)||readFileSync(path,'utf8')!==text)throw Error('Agent readiness inventory drift');}else writeFileSync(path,text);}
+
 const check = process.argv.includes('--check');
 if (check) {
   let failed = false;

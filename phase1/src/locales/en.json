@@ -3726,5 +3726,6 @@
   "themeImport.contrastLow": "{ratio}:1, below the 4.5:1 normal-text check.",
   "themeImport.contrastUnknown": "Not verified: missing pair, alpha or unsupported browser color.",
   "cmd.help.localAI": "Local AI help and FAQ",
-  "cmd.search.localSources": "Local source search (reviewed open text)"
+  "cmd.search.localSources": "Local source search (reviewed open text)",
+  "cmd.photos.applyVersion": "Photos: Apply a saved version"
 }

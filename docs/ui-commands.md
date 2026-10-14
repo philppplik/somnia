@@ -16,7 +16,7 @@ included; the `source` column names the owner. Dynamic sources that stay outside
 
 Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, fr, pt-BR); the gate enforces it.
 
-575 commands. Categories: Edit, Help, Insert, Project, Tools, View.
+738 commands. Categories: Edit, Help, Insert, Project, Tools, View.
 
 | id | title | category | source | shortcut |
 | --- | --- | --- | --- | --- |
@@ -528,6 +528,169 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `studio.vector` | Switch to Vector Studio | View | core | `Mod+8` |
 | `studio.vibespace` | Switch to Vibe Space Studio | View | core |  |
 | `studio.video` | Switch to Video Studio | View | core | `Mod+6` |
+| `studio3d.anim.autokey` | Turn auto-key on or off: transform changes are recorded as keys at the playhead | View | studio3d |  |
+| `studio3d.anim.loop` | Loop the 3D animation or play it once | View | studio3d |  |
+| `studio3d.anim.pause` | Pause the 3D animation | View | studio3d |  |
+| `studio3d.anim.play` | Play an animation clip of the 3D model | View | studio3d |  |
+| `studio3d.anim.range` | Preview a part of the 3D animation clip as a loop | View | studio3d |  |
+| `studio3d.anim.seek` | Jump to a time in the 3D animation | View | studio3d |  |
+| `studio3d.anim.speed` | Set the 3D animation speed | View | studio3d |  |
+| `studio3d.bone.limits` | Set joint limits of a bone | Edit | studio3d |  |
+| `studio3d.camera.set` | Change the field of view of a 3D camera | Edit | studio3d |  |
+| `studio3d.clip.add` | Add an empty 3D animation clip | View | studio3d |  |
+| `studio3d.clip.duplicate` | Duplicate a 3D animation clip with all its keys | View | studio3d |  |
+| `studio3d.clip.duration` | Set the length of a 3D animation clip in seconds | View | studio3d |  |
+| `studio3d.clip.record` | Record the current pose as keys at the playhead | View | studio3d |  |
+| `studio3d.clip.remove` | Delete a 3D animation clip | View | studio3d |  |
+| `studio3d.clip.rename` | Rename a 3D animation clip | View | studio3d |  |
+| `studio3d.cursor.set` | Move the 3D cursor | Tools | studio3d |  |
+| `studio3d.edit.bevel` | Bevel vertices | Edit | studio3d |  |
+| `studio3d.edit.bevelEdge` | Bevel edges | Edit | studio3d |  |
+| `studio3d.edit.end` | Finish editing | Edit | studio3d |  |
+| `studio3d.edit.extrude` | Extrude selection | Edit | studio3d |  |
+| `studio3d.edit.inset` | Inset faces | Edit | studio3d |  |
+| `studio3d.edit.loopCut` | Loop cut | Edit | studio3d |  |
+| `studio3d.edit.loopSlide` | Loop slide | Edit | studio3d |  |
+| `studio3d.edit.mode` | Edit select mode | Edit | studio3d |  |
+| `studio3d.edit.select` | Select element | Edit | studio3d |  |
+| `studio3d.edit.start` | Edit mesh | Edit | studio3d |  |
+| `studio3d.env.open` | Open an HDR environment map | View | studio3d |  |
+| `studio3d.env.set` | Change the 3D environment lighting | View | studio3d |  |
+| `studio3d.export.glb` | Export the scene as GLB | Project | studio3d |  |
+| `studio3d.export.gltf` | Export the scene as glTF | Project | studio3d |  |
+| `studio3d.export.mesh` | Export the scene as STL or OBJ | Project | studio3d |  |
+| `studio3d.export.options` | Set glTF export options | Project | studio3d |  |
+| `studio3d.fabrik.lookat` | Toggle the FABRIK look-at constraint | Edit | studio3d |  |
+| `studio3d.fabrik.looktarget` | Move the FABRIK look-at target | Edit | studio3d |  |
+| `studio3d.fabrik.target` | Move the FABRIK target | Edit | studio3d |  |
+| `studio3d.fabrik.toggle` | Switch a chain between FK and FABRIK | Edit | studio3d |  |
+| `studio3d.gizmo.mode` | Set the 3D transform tool | Tools | studio3d |  |
+| `studio3d.group` | Group 3D objects under a new parent | Edit | studio3d |  |
+| `studio3d.ik.pole` | Move the IK pole target | Edit | studio3d |  |
+| `studio3d.ik.target` | Move the IK target | Edit | studio3d |  |
+| `studio3d.ik.toggle` | Switch a chain between FK and IK | Edit | studio3d |  |
+| `studio3d.import.options` | Set mesh import options | Project | studio3d |  |
+| `studio3d.insert.camera` | Insert a 3D camera | Insert | studio3d |  |
+| `studio3d.insert.light` | Insert a 3D light | Insert | studio3d |  |
+| `studio3d.insert.pin` | Insert an annotation pin at the 3D cursor or a given point | Insert | studio3d |  |
+| `studio3d.insert.primitive` | Insert a 3D primitive | Insert | studio3d |  |
+| `studio3d.key.copy` | Copy position, rotation or scale keys of the selected 3D object in the current clip | View | studio3d |  |
+| `studio3d.key.ease` | Set the easing between a key and the next key in the current clip | View | studio3d |  |
+| `studio3d.key.move` | Move a key of a 3D object to a new time in the current clip | View | studio3d |  |
+| `studio3d.key.paste` | Paste the copied keys at the playhead in the current clip | View | studio3d |  |
+| `studio3d.key.remove` | Remove a position, rotation or scale key of a 3D object in the current clip | View | studio3d |  |
+| `studio3d.key.set` | Add or replace a position, rotation or scale key of a 3D object in the current clip | View | studio3d |  |
+| `studio3d.key.shift` | Move several keys of a 3D object in time by the same amount | View | studio3d |  |
+| `studio3d.light.helpers` | Show or hide the viewport helper of the selected light | View | studio3d |  |
+| `studio3d.light.rig` | Insert a three-point light rig | Insert | studio3d |  |
+| `studio3d.light.set` | Change a 3D light | Edit | studio3d |  |
+| `studio3d.material.copy` | Copy material | Edit | studio3d |  |
+| `studio3d.material.paste` | Paste material | Edit | studio3d |  |
+| `studio3d.material.preset.apply` | Apply material preset | Edit | studio3d |  |
+| `studio3d.material.preset.remove` | Delete material preset | Edit | studio3d |  |
+| `studio3d.material.preset.save` | Save material preset | Edit | studio3d |  |
+| `studio3d.measure.set` | Toggle the 3D measure tool | Tools | studio3d |  |
+| `studio3d.mesh.applyScale` | Apply the scale of 3D meshes to their geometry | Edit | studio3d |  |
+| `studio3d.mesh.bisect` | Cut a 3D mesh with a plane and keep both halves | Edit | studio3d |  |
+| `studio3d.mesh.boolean` | Combine two 3D meshes with a boolean: union, subtract or intersect | Edit | studio3d |  |
+| `studio3d.mesh.bridge` | Bridge two 3D meshes with a tunnel between their open borders | Edit | studio3d |  |
+| `studio3d.mesh.cleanup` | Clean up 3D meshes: weld duplicate vertices, drop collapsed and duplicate faces and unify winding (closed parts point outward) | Edit | studio3d |  |
+| `studio3d.mesh.fatten` | Shrink or fatten a 3D mesh along its normals (negative amounts shrink) | Edit | studio3d |  |
+| `studio3d.mesh.fillHoles` | Cap the open borders of 3D meshes | Edit | studio3d |  |
+| `studio3d.mesh.merge` | Merge 3D meshes into one | Edit | studio3d |  |
+| `studio3d.mesh.mirror` | Mirror 3D objects across a world axis | Edit | studio3d |  |
+| `studio3d.mesh.mirrorMod` | Mirror modifier | Edit | studio3d |  |
+| `studio3d.mesh.normals` | Rebuild the normals of 3D meshes: flip them, recalculate outward, or re-shade smooth, flat or split by angle | Edit | studio3d |  |
+| `studio3d.mesh.relax` | Smooth a 3D mesh: vertices drift toward their neighbourhood average, borders stay put | Edit | studio3d |  |
+| `studio3d.mesh.separate` | Split 3D meshes into one object per connected part | Edit | studio3d |  |
+| `studio3d.mesh.simplify` | Simplify a 3D mesh: remove vertices while keeping its shape, UVs and normals | Edit | studio3d |  |
+| `studio3d.mesh.solidify` | Give a thin 3D mesh real thickness: offset shell with stitched side walls | Edit | studio3d |  |
+| `studio3d.mesh.spin` | Revolve a 3D mesh around an axis (lathe) | Edit | studio3d |  |
+| `studio3d.mesh.subdivide` | Subdivide 3D meshes smoothly: split every triangle into four and smooth the surface (Loop scheme) | Edit | studio3d |  |
+| `studio3d.mesh.symmetrize` | Bake a symmetry into 3D meshes: keep one side of the local mirror plane, mirror it onto the other and weld the seam | Edit | studio3d |  |
+| `studio3d.mesh.taper` | Taper a 3D mesh along an axis | Edit | studio3d |  |
+| `studio3d.mesh.twist` | Twist a 3D mesh around an axis | Edit | studio3d |  |
+| `studio3d.model.open` | Open 3D model | Project | studio3d |  |
+| `studio3d.motionpath` | Show the motion path of the selected bone | View | studio3d |  |
+| `studio3d.object.align` | Align 3D objects | Edit | studio3d |  |
+| `studio3d.object.array` | Duplicate 3D objects as a linear or radial array | Edit | studio3d |  |
+| `studio3d.object.delete` | Delete a 3D object | Edit | studio3d |  |
+| `studio3d.object.distribute` | Distribute 3D objects evenly | Edit | studio3d |  |
+| `studio3d.object.duplicate` | Duplicate a 3D object | Edit | studio3d |  |
+| `studio3d.object.locked` | Lock or unlock object | Edit | studio3d |  |
+| `studio3d.object.material` | Change the material of a 3D object | Edit | studio3d |  |
+| `studio3d.object.nudge` | Nudge a 3D object | Edit | studio3d |  |
+| `studio3d.object.pivot` | Move the pivot of a 3D mesh | Edit | studio3d |  |
+| `studio3d.object.primitive` | Change the size or segments of a 3D primitive | Edit | studio3d |  |
+| `studio3d.object.rename` | Rename a 3D object | Edit | studio3d |  |
+| `studio3d.object.reorder` | Move 3D objects next to a sibling in the outline | Edit | studio3d |  |
+| `studio3d.object.reparent` | Move under a new parent | Edit | studio3d |  |
+| `studio3d.object.transform` | Move, rotate or scale a 3D object | Edit | studio3d |  |
+| `studio3d.object.visible` | Show or hide object | Edit | studio3d |  |
+| `studio3d.onion.skin` | Show ghost poses around the playhead (onion skin) | View | studio3d |  |
+| `studio3d.pin.set` | Set the label text of an annotation pin | Edit | studio3d |  |
+| `studio3d.pivot.set` | Set the 3D transform pivot | Tools | studio3d |  |
+| `studio3d.pose.apply` | Apply a saved pose | Edit | studio3d |  |
+| `studio3d.pose.blend` | Blend two poses and apply the mix | Edit | studio3d |  |
+| `studio3d.pose.mirror` | Apply the mirrored pose | Edit | studio3d |  |
+| `studio3d.pose.remove` | Remove a saved pose | Edit | studio3d |  |
+| `studio3d.pose.save` | Save the current pose | Edit | studio3d |  |
+| `studio3d.recent.clear` | Clear recent 3D scenes and autosave | Project | studio3d |  |
+| `studio3d.recent.open` | Open a recent 3D scene | Project | studio3d |  |
+| `studio3d.redo` | Redo 3D change | Edit | studio3d |  |
+| `studio3d.render.cancel` | Cancel the running 3D render | Project | studio3d |  |
+| `studio3d.render.still` | Render a PNG still of the 3D view | Project | studio3d |  |
+| `studio3d.render.turntable` | Render a turntable as a ZIP of PNG frames | Project | studio3d |  |
+| `studio3d.retarget.apply` | Bake a retargeted clip onto this rig | Edit | studio3d |  |
+| `studio3d.retarget.preview` | Preview a clip retargeted from another rig | Edit | studio3d |  |
+| `studio3d.save` | Save the 3D scene | Project | studio3d |  |
+| `studio3d.scene.new` | Create blank 3D scene | Project | studio3d |  |
+| `studio3d.sculpt.begin` | Begin sculpt stroke | Edit | studio3d |  |
+| `studio3d.sculpt.brush` | Sculpt brush settings | Edit | studio3d |  |
+| `studio3d.sculpt.dab` | Sculpt dab | Edit | studio3d |  |
+| `studio3d.sculpt.end` | End sculpt stroke | Edit | studio3d |  |
+| `studio3d.sculpt.maskClear` | Clear sculpt mask | Edit | studio3d |  |
+| `studio3d.select` | Select a 3D object | Edit | studio3d |  |
+| `studio3d.selection.delete` | Delete the selected 3D objects | Edit | studio3d |  |
+| `studio3d.selection.duplicate` | Duplicate the selected 3D objects | Edit | studio3d |  |
+| `studio3d.shadow.set` | Set the shadow map quality and algorithm | Edit | studio3d |  |
+| `studio3d.skeleton.select` | Select a bone of a skinned 3D model | Edit | studio3d |  |
+| `studio3d.skeleton.show` | Show or hide the skeleton overlay of a skinned 3D model | View | studio3d |  |
+| `studio3d.skin.bind` | Bind a 3D mesh to a bone chain with auto-weights | Edit | studio3d |  |
+| `studio3d.skin.brush` | Configure the weight paint brush | View | studio3d |  |
+| `studio3d.skin.paint` | Paint bone weights with the brush | Edit | studio3d |  |
+| `studio3d.skin.preview` | Preview a bone's influence as vertex colours on the selected skinned 3D mesh | View | studio3d |  |
+| `studio3d.skin.reweight` | Recompute the weights of a skinned 3D mesh (smooth falloff or rigid bind) | Edit | studio3d |  |
+| `studio3d.snap.set` | Change 3D transform snapping | Tools | studio3d |  |
+| `studio3d.texture.clear` | Remove the image from a texture slot | Edit | studio3d |  |
+| `studio3d.texture.generate` | Generate a procedural texture (checker, grid, stripes or noise) for a texture slot of the selected 3D object | Edit | studio3d |  |
+| `studio3d.texture.open` | Choose an image for a texture slot of the selected 3D object | Edit | studio3d |  |
+| `studio3d.texture.preview` | Show a small preview image of a texture slot | Edit | studio3d |  |
+| `studio3d.texture.transform` | Move, scale or rotate the image of a texture slot (UV mapping) | Edit | studio3d |  |
+| `studio3d.undo` | Undo 3D change | Edit | studio3d |  |
+| `studio3d.ungroup` | Dissolve a 3D group, keeping its children | Edit | studio3d |  |
+| `studio3d.unit.set` | Set the unit used for STL and OBJ export | Project | studio3d |  |
+| `studio3d.uv.planar` | Planar UV projection | Edit | studio3d |  |
+| `studio3d.uv.preview` | UV checker preview | View | studio3d |  |
+| `studio3d.uv.seam` | Mark UV seam | Edit | studio3d |  |
+| `studio3d.uv.unwrap` | Unwrap UVs | Edit | studio3d |  |
+| `studio3d.view.ao` | Switch the ambient occlusion preview on or off (viewport only) | View | studio3d |  |
+| `studio3d.view.apply` | Look at the scene from a saved named view | View | studio3d |  |
+| `studio3d.view.fov` | Set the viewport field of view or focal length | View | studio3d |  |
+| `studio3d.view.frame` | Frame selection in 3D view | View | studio3d |  |
+| `studio3d.view.fromCamera` | Look through a 3D camera | View | studio3d |  |
+| `studio3d.view.grid` | Show or hide the 3D grid | View | studio3d |  |
+| `studio3d.view.keys` | Show or hide the 3D keyboard shortcut help | View | studio3d |  |
+| `studio3d.view.perf` | Show or hide the live FPS, draw-call and triangle overlay | View | studio3d |  |
+| `studio3d.view.preset` | Look at the 3D scene from the front, back, left, right, top, bottom or an isometric angle | View | studio3d |  |
+| `studio3d.view.projection` | Switch the 3D viewport between perspective and orthographic | View | studio3d |  |
+| `studio3d.view.remove` | Delete a saved named view | View | studio3d |  |
+| `studio3d.view.rename` | Rename a saved view | View | studio3d |  |
+| `studio3d.view.reset` | Reset 3D view | View | studio3d |  |
+| `studio3d.view.save` | Save the current viewport as a named view | View | studio3d |  |
+| `studio3d.view.turntable` | Start or stop the turntable preview (view only) | View | studio3d |  |
+| `studio3d.view.update` | Overwrite a saved view with the current viewport | View | studio3d |  |
+| `studio3d.view.wireframe` | Show or hide wireframe | View | studio3d |  |
 | `tab.close` | Close | View | core | `Mod+W` |
 | `tab.next` | Next tab | View | core | `Mod+Alt+ArrowRight` |
 | `tab.prev` | Previous tab | View | core | `Mod+Alt+ArrowLeft` |

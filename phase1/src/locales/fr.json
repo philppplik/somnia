@@ -3726,5 +3726,6 @@
   "themeImport.contrastLow": "{ratio}:1, sous le seuil de 4,5:1 pour le texte normal.",
   "themeImport.contrastUnknown": "Non vérifié : paire manquante, alpha ou couleur non prise en charge.",
   "cmd.help.localAI": "Aide et FAQ IA locale",
-  "cmd.search.localSources": "Recherche locale de sources (texte ouvert vérifié)"
+  "cmd.search.localSources": "Recherche locale de sources (texte ouvert vérifié)",
+  "cmd.photos.applyVersion": "Photos : appliquer une version enregistrée"
 }
