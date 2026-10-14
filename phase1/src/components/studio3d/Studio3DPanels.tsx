@@ -693,6 +693,8 @@ function RenderPng(){
 /** Mirror, apply scale and merge act on the ticked objects, or on the selected one. Origin to centre is the Pivot group above. */
 function MeshTools(){
  const {t}=useT();const s=useStudio3D();const [copy,setCopy]=useState(true);const [keepPct,setKeepPct]=useState(50);const [symAxis,setSymAxis]=useState<'x'|'y'|'z'>('x');const [symSide,setSymSide]=useState<'positive'|'negative'>('positive');const [subTimes,setSubTimes]=useState(2);const [weldDist,setWeldDist]=useState(0.0001);const [nOp,setNOp]=useState<'flip'|'outside'|'smooth'|'flat'|'angle'>('smooth');const [nAngle,setNAngle]=useState(30);
+ const [soThick,setSoThick]=useState(0.1);
+ const [soOff,setSoOff]=useState(0);
  const set=s.marked.length?s.marked:s.selected!=null?[s.selected]:[];const ready=s.status==='ready'&&set.length>0;
  return <fieldset className="m-0 grid gap-2 border-0 p-0" data-testid="studio3d-meshtools"><legend className="text-xs text-ink-3">{t('studio3d.mesh.title')}</legend>
   <div className="flex flex-wrap items-center gap-1">{(['x','y','z'] as const).map(a=><Button key={a} variant="outline" disabled={!ready} onClick={()=>void executeCommand('studio3d.mesh.mirror',{axis:a,copy})}>{t('studio3d.mesh.mirror',{axis:a.toUpperCase()})}</Button>)}</div>
@@ -716,6 +718,9 @@ function MeshTools(){
    <NativeInput type="number" min={0} max={180} step={5} value={nAngle} disabled={nOp!=='angle'} aria-label={t('studio3d.mesh.normalsAngle')} className="w-20" onChange={e=>setNAngle(Math.min(180,Math.max(0,Number(e.currentTarget.value)||0)))}/>
    <Button variant="outline" disabled={!ready} onClick={()=>void executeCommand('studio3d.mesh.normals',{op:nOp,angle:nAngle})}>{t('studio3d.mesh.normals')}</Button></div>
   <div className="flex flex-wrap gap-1"><Button variant="outline" disabled={!ready} onClick={()=>void executeCommand('studio3d.mesh.separate',{})}>{t('studio3d.mesh.separate')}</Button></div>
+  <div className="flex flex-wrap items-center gap-1"><NativeInput type="number" min={0.001} step={0.05} value={soThick} aria-label={t('studio3d.mesh.solidifyThickness')} className="w-20" onChange={e=>setSoThick(Math.min(1000,Math.max(0.001,Number(e.currentTarget.value)||0.1)))}/>
+   <NativeInput type="number" min={-1} max={1} step={0.5} value={soOff} aria-label={t('studio3d.mesh.solidifyOffset')} className="w-20" onChange={e=>setSoOff(Math.min(1,Math.max(-1,Number(e.currentTarget.value)||0)))}/>
+   <Button variant="outline" disabled={!ready} onClick={()=>void executeCommand('studio3d.mesh.solidify',{thickness:soThick,offset:soOff})}>{t('studio3d.mesh.solidify')}</Button></div>
  </fieldset>;
 }
 

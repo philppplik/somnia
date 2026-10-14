@@ -799,5 +799,11 @@
  "cmd.studio3d.mesh.separate": "Split 3D meshes into one object per connected part",
  "studio3d.hist.separate_one": "Separate {name} into parts",
  "studio3d.hist.separate_other": "Separate {count} objects into parts",
- "studio3d.mesh.separate": "Separate"
+ "studio3d.mesh.separate": "Separate",
+ "cmd.studio3d.mesh.solidify": "Give a thin 3D mesh real thickness: offset shell with stitched side walls",
+ "studio3d.hist.solidify_one": "Solidify {name}",
+ "studio3d.hist.solidify_other": "Solidify {count} objects",
+ "studio3d.mesh.solidify": "Solidify",
+ "studio3d.mesh.solidifyThickness": "Wall thickness",
+ "studio3d.mesh.solidifyOffset": "Offset (-1 inside, 1 outside)"
 }

@@ -799,5 +799,11 @@
  "cmd.studio3d.mesh.separate": "Divise les maillages 3D en un objet par partie connexe",
  "studio3d.hist.separate_one": "Séparer {name} en parties",
  "studio3d.hist.separate_other": "Séparer {count} objets en parties",
- "studio3d.mesh.separate": "Séparer"
+ "studio3d.mesh.separate": "Séparer",
+ "cmd.studio3d.mesh.solidify": "Donne une vraie épaisseur à un maillage 3D fin : coque décalée avec parois latérales cousues",
+ "studio3d.hist.solidify_one": "Solidifier {name}",
+ "studio3d.hist.solidify_other": "Solidifier {count} objets",
+ "studio3d.mesh.solidify": "Solidifier",
+ "studio3d.mesh.solidifyThickness": "Épaisseur de paroi",
+ "studio3d.mesh.solidifyOffset": "Décalage (-1 dedans, 1 dehors)"
 }

@@ -681,3 +681,94 @@ export function separateMesh(m:MeshData):MeshData[]{
   check(out);return out;
  });
 }
+
+/** Gives a surface real thickness: the original shifts outward, a flipped copy shifts inward and open borders get stitched side walls (offset -1 = fully inward, 0 = centered, 1 = fully outward). Face winding is kept consistent with the original surface, so inner walls of closed meshes point into the cavity. UVs travel with both skins; walls reuse the border UVs. Sculpt masks and explicit normals are dropped (rebuilt smooth). */
+export function solidifyMesh(m:MeshData,thickness:number,offset:number):MeshData{
+ check(m);
+ if(!Number.isFinite(thickness)||thickness<=0||thickness>1e6)throw new EditError('The solidify thickness must be a positive number.');
+ if(!Number.isFinite(offset)||offset<-1||offset>1)throw new EditError('The solidify offset must be between -1 and 1.');
+ const nv=m.positions.length/3,nt=m.index.length/3;
+ // Smooth per-vertex normals of the original surface, angle-weighted like smoothMesh.
+ const nrm:number[]=new Array(nv*3).fill(0);
+ for(let f=0;f<nt;f++){
+  const n=faceNormal(m,f);
+  for(let e=0;e<3;e++){
+   const vi=m.index[f*3+e];
+   const a=vi*3,b=m.index[f*3+(e+1)%3]*3,c=m.index[f*3+(e+2)%3]*3;
+   const ux=m.positions[b]-m.positions[a],uy=m.positions[b+1]-m.positions[a+1],uz=m.positions[b+2]-m.positions[a+2];
+   const vx=m.positions[c]-m.positions[a],vy=m.positions[c+1]-m.positions[a+1],vz=m.positions[c+2]-m.positions[a+2];
+   const lu=Math.hypot(ux,uy,uz)||1,lv=Math.hypot(vx,vy,vz)||1;
+   const w=Math.acos(Math.min(1,Math.max(-1,(ux*vx+uy*vy+uz*vz)/(lu*lv))));
+   nrm[a]+=n[0]*w;nrm[a+1]+=n[1]*w;nrm[a+2]+=n[2]*w;
+  }
+ }
+ // Twins (UV seams) must shift together or the inner skin rips open: average normals by position.
+ const pkN=new Map<string,number[]>();
+ for(let v=0;v<nv;v++){
+  const k=`${Math.round(m.positions[v*3]*1e6)},${Math.round(m.positions[v*3+1]*1e6)},${Math.round(m.positions[v*3+2]*1e6)}`;
+  const l=pkN.get(k);if(l)l.push(v);else pkN.set(k,[v]);
+ }
+ for(const l of pkN.values()){
+  if(l.length<2)continue;
+  let x=0,y=0,z=0;for(const v of l){x+=nrm[v*3];y+=nrm[v*3+1];z+=nrm[v*3+2];}
+  for(const v of l){nrm[v*3]=x;nrm[v*3+1]=y;nrm[v*3+2]=z;}
+ }
+ for(let v=0;v<nv;v++){const l=Math.hypot(nrm[v*3],nrm[v*3+1],nrm[v*3+2])||1;nrm[v*3]/=l;nrm[v*3+1]/=l;nrm[v*3+2]/=l;}
+ const outT=thickness*(offset+1)/2,inT=thickness*(1-offset)/2;
+ const positions:number[]=new Array(nv*6);
+ for(let v=0;v<nv;v++){
+  const p=v*3;
+  positions[p]=m.positions[p]+nrm[p]*outT;positions[p+1]=m.positions[p+1]+nrm[p+1]*outT;positions[p+2]=m.positions[p+2]+nrm[p+2]*outT;
+  positions[nv*3+p]=m.positions[p]-nrm[p]*inT;positions[nv*3+p+1]=m.positions[p+1]-nrm[p+1]*inT;positions[nv*3+p+2]=m.positions[p+2]-nrm[p+2]*inT;
+ }
+ const uvs:number[]|undefined=m.uvs?new Array(nv*4):undefined;
+ if(uvs)for(let v=0;v<nv*2;v++){uvs[v]=m.uvs![v];uvs[nv*2+v]=m.uvs![v];}
+ const index:number[]=[];
+ // All outer triangles first: the orientation pass below seeds on the first nt triangles.
+ for(let f=0;f<nt;f++)index.push(m.index[f*3],m.index[f*3+1],m.index[f*3+2]); // outer skin keeps the original winding
+ for(let f=0;f<nt;f++)index.push(m.index[f*3]+nv,m.index[f*3+2]+nv,m.index[f*3+1]+nv); // inner skin flipped
+ // True borders: position-keyed edges used by exactly one original face (UV-seam twins are interior).
+ const pk:string[]=[];
+ for(let v=0;v<nv;v++)pk.push(`${Math.round(m.positions[v*3]*1e6)},${Math.round(m.positions[v*3+1]*1e6)},${Math.round(m.positions[v*3+2]*1e6)}`);
+ const edgeUse=new Map<string,{a:number;b:number;n:number}>();
+ for(let f=0;f<nt;f++)for(let e=0;e<3;e++){
+  const a=m.index[f*3+e],b=m.index[f*3+(e+1)%3];
+  const ka=pk[a],kb=pk[b];const k=ka<kb?`${ka}|${kb}`:`${kb}|${ka}`;
+  const u=edgeUse.get(k);if(u)u.n++;else edgeUse.set(k,{a,b,n:1});
+ }
+ for(const u of edgeUse.values()){
+  if(u.n!==1)continue;
+  const a=u.a,b=u.b;
+  index.push(a,b,b+nv, a,b+nv,a+nv); // side wall; the orientation pass below fixes any mismatch
+ }
+ // Orient every triangle consistently with the original outer skin: BFS over position-keyed
+ // edges, a shared edge must be traversed in opposite directions by its two triangles.
+ const qt=index.length/3;
+ // Adjacency keys come from the NEW positions: outer and inner skins sit at different offsets.
+ const pko=(v:number)=>`${Math.round(positions[v*3]*1e6)},${Math.round(positions[v*3+1]*1e6)},${Math.round(positions[v*3+2]*1e6)}`;
+ const tEdges=new Map<string,{t:number;a:number;b:number}[]>();
+ for(let t=0;t<qt;t++)for(let e=0;e<3;e++){
+  const a=index[t*3+e],b=index[t*3+(e+1)%3];
+  const ka=pko(a),kb=pko(b);const k=ka<kb?`${ka}|${kb}`:`${kb}|${ka}`;
+  const rec={t,a,b};const l=tEdges.get(k);if(l)l.push(rec);else tEdges.set(k,[rec]);
+ }
+ const flip=(t:number)=>{for(let f=0;f<1;f++){const tmp=index[t*3+1];index[t*3+1]=index[t*3+2];index[t*3+2]=tmp;}};
+ const seen=new Array<boolean>(qt).fill(false);
+ const queue:number[]=[];
+ for(let t=0;t<nt;t++){seen[t]=true;queue.push(t);} // original outer skin is the reference
+ for(let qi=0;qi<queue.length;qi++){
+  const t=queue[qi];
+  for(let e=0;e<3;e++){
+   const a=index[t*3+e],b=index[t*3+(e+1)%3];
+   const ka=pko(a),kb=pko(b);const k=ka<kb?`${ka}|${kb}`:`${kb}|${ka}`;
+   const l=tEdges.get(k)!;if(l.length!==2)continue;
+   const other=l[0].t===t?l[1]:l[0];
+   if(seen[other.t])continue;
+   // The neighbour must traverse this edge as (b,a). It currently stores (other.a,other.b).
+   if(other.a===a&&other.b===b)flip(other.t);
+   seen[other.t]=true;queue.push(other.t);
+  }
+ }
+ const out:MeshData=uvs?{positions,index,uvs}:{positions,index};
+ check(out);return out;
+}

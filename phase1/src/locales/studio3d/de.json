@@ -799,5 +799,11 @@
  "cmd.studio3d.mesh.separate": "3D-Meshes in ein Objekt pro zusammenhängendem Teil aufteilen",
  "studio3d.hist.separate_one": "{name} in Teile auftrennen",
  "studio3d.hist.separate_other": "{count} Objekte in Teile auftrennen",
- "studio3d.mesh.separate": "Auftrennen"
+ "studio3d.mesh.separate": "Auftrennen",
+ "cmd.studio3d.mesh.solidify": "Dünnem 3D-Mesh echte Dicke geben: versetzte Hülle mit vernähten Seitenwänden",
+ "studio3d.hist.solidify_one": "{name} verdicken",
+ "studio3d.hist.solidify_other": "{count} Objekte verdicken",
+ "studio3d.mesh.solidify": "Verdicken",
+ "studio3d.mesh.solidifyThickness": "Wanddicke",
+ "studio3d.mesh.solidifyOffset": "Versatz (-1 innen, 1 außen)"
 }

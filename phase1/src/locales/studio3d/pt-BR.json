@@ -799,5 +799,11 @@
  "cmd.studio3d.mesh.separate": "Divide as malhas 3D em um objeto por parte conectada",
  "studio3d.hist.separate_one": "Separar {name} em partes",
  "studio3d.hist.separate_other": "Separar {count} objetos em partes",
- "studio3d.mesh.separate": "Separar"
+ "studio3d.mesh.separate": "Separar",
+ "cmd.studio3d.mesh.solidify": "Dê espessura real a uma malha 3D fina: casca deslocada com paredes laterais costuradas",
+ "studio3d.hist.solidify_one": "Solidificar {name}",
+ "studio3d.hist.solidify_other": "Solidificar {count} objetos",
+ "studio3d.mesh.solidify": "Solidificar",
+ "studio3d.mesh.solidifyThickness": "Espessura da parede",
+ "studio3d.mesh.solidifyOffset": "Deslocamento (-1 dentro, 1 fora)"
 }

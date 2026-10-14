@@ -799,5 +799,11 @@
  "cmd.studio3d.mesh.separate": "Divide las mallas 3D en un objeto por cada parte conectada",
  "studio3d.hist.separate_one": "Separar {name} en partes",
  "studio3d.hist.separate_other": "Separar {count} objetos en partes",
- "studio3d.mesh.separate": "Separar"
+ "studio3d.mesh.separate": "Separar",
+ "cmd.studio3d.mesh.solidify": "Da grosor real a una malla 3D fina: capa desplazada con paredes laterales cosidas",
+ "studio3d.hist.solidify_one": "Solidificar {name}",
+ "studio3d.hist.solidify_other": "Solidificar {count} objetos",
+ "studio3d.mesh.solidify": "Solidificar",
+ "studio3d.mesh.solidifyThickness": "Grosor de pared",
+ "studio3d.mesh.solidifyOffset": "Desplazamiento (-1 dentro, 1 fuera)"
 }
