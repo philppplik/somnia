@@ -827,5 +827,11 @@
  "studio3d.mesh.bisect": "Bisectar",
  "studio3d.mesh.bisectAxis": "Eje de corte",
  "studio3d.mesh.bisectOffset": "Desplazamiento de corte",
- "studio3d.mesh.bisectFill": "Rellenar corte"
+ "studio3d.mesh.bisectFill": "Rellenar corte",
+ "studio3d.hist.twist_one": "Retorcer {name}",
+ "studio3d.hist.twist_other": "Retorcer {count} objetos",
+ "cmd.studio3d.mesh.twist": "Retorcer una malla 3D alrededor de un eje",
+ "studio3d.mesh.twist": "Retorcer",
+ "studio3d.mesh.twistAxis": "Eje de torsión",
+ "studio3d.mesh.twistAngle": "Ángulo de torsión en grados"
 }

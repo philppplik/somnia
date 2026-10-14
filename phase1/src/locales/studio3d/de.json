@@ -827,5 +827,11 @@
  "studio3d.mesh.bisect": "Zerteilen",
  "studio3d.mesh.bisectAxis": "Schnittachse",
  "studio3d.mesh.bisectOffset": "Schnittversatz",
- "studio3d.mesh.bisectFill": "Schnitt füllen"
+ "studio3d.mesh.bisectFill": "Schnitt füllen",
+ "studio3d.hist.twist_one": "{name} verdrehen",
+ "studio3d.hist.twist_other": "{count} Objekte verdrehen",
+ "cmd.studio3d.mesh.twist": "3D-Mesh um eine Achse verdrehen",
+ "studio3d.mesh.twist": "Verdrehen",
+ "studio3d.mesh.twistAxis": "Drehachse",
+ "studio3d.mesh.twistAngle": "Drehwinkel in Grad"
 }

@@ -1026,3 +1026,34 @@ export function bisectMesh(m:MeshData,axis:MirrorAxis,offset:number,fill:boolean
  };
  return{neg:clip(-1),pos:clip(1)};
 }
+
+/** Twists the mesh around an axis: every vertex rotates by a share of the total angle proportional to its position along that axis (0 at the low end, the full angle at the high end), around the bounding-box centre line. Sculpt masks scale the rotation down to zero. UVs and masks are carried, explicit normals are dropped (rebuilt smooth on the stage). */
+export function twistMesh(m:MeshData,axis:MirrorAxis,degrees:number):MeshData{
+ check(m);
+ if(!Number.isFinite(degrees)||degrees===0||Math.abs(degrees)>720)throw new EditError('The twist angle must be a non-zero number of degrees between -720 and 720.');
+ const ai=axis==='x'?0:axis==='y'?1:2;
+ const u=(ai+1)%3,w=(ai+2)%3;
+ const nv=m.positions.length/3;
+ let mn=Infinity,mx=-Infinity,cu0=Infinity,cu1=-Infinity,cw0=Infinity,cw1=-Infinity;
+ for(let v=0;v<nv;v++){
+  const a=m.positions[v*3+ai],p=m.positions[v*3+u],q=m.positions[v*3+w];
+  if(a<mn)mn=a;if(a>mx)mx=a;
+  if(p<cu0)cu0=p;if(p>cu1)cu1=p;
+  if(q<cw0)cw0=q;if(q>cw1)cw1=q;
+ }
+ const span=mx-mn;
+ if(span<1e-12)throw new EditError('The mesh is flat along the twist axis.');
+ const pu=(cu0+cu1)/2,pw=(cw0+cw1)/2;
+ const positions=[...m.positions];
+ for(let v=0;v<nv;v++){
+  const f=(1-(m.mask?m.mask[v]:0));if(f===0)continue;
+  const t=(m.positions[v*3+ai]-mn)/span;
+  const ang=degrees*Math.PI/180*t*f;
+  const du=m.positions[v*3+u]-pu,dw=m.positions[v*3+w]-pw;
+  const c=Math.cos(ang),s=Math.sin(ang);
+  positions[v*3+u]=pu+du*c-dw*s;
+  positions[v*3+w]=pw+du*s+dw*c;
+ }
+ const out:MeshData={positions,index:[...m.index],...(m.uvs?{uvs:[...m.uvs]}:{}),...(m.mask?{mask:[...m.mask]}:{})};
+ check(out);return out;
+}

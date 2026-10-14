@@ -827,5 +827,11 @@
  "studio3d.mesh.bisect": "Bisect",
  "studio3d.mesh.bisectAxis": "Cut axis",
  "studio3d.mesh.bisectOffset": "Cut offset",
- "studio3d.mesh.bisectFill": "Fill cut"
+ "studio3d.mesh.bisectFill": "Fill cut",
+ "studio3d.hist.twist_one": "Twist {name}",
+ "studio3d.hist.twist_other": "Twist {count} objects",
+ "cmd.studio3d.mesh.twist": "Twist a 3D mesh around an axis",
+ "studio3d.mesh.twist": "Twist",
+ "studio3d.mesh.twistAxis": "Twist axis",
+ "studio3d.mesh.twistAngle": "Twist angle in degrees"
 }

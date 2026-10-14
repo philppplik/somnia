@@ -1603,6 +1603,18 @@ test('3D studio mesh bisect: one cube becomes two halves and undo restores it',a
  await expect.poll(async()=>(await session(page)).outline.length).toBe(1);
 });
 
+test('3D studio mesh twist: the top of a cube swings outward and undo restores it',async({page})=>{
+ await blank(page);
+ await insert(page,'cube',0);
+ const maxX=async()=>{const b=(await session(page)).bounds!;return b.max[0];};
+ const before=await maxX();
+ expect(before).toBeCloseTo(0.5,5);
+ expect(await run(page,'studio3d.mesh.twist',{axis:'y',degrees:45})).toBe(true);
+ await expect.poll(maxX).toBeCloseTo(Math.SQRT1_2,3,'the rotated top corner reaches sqrt(1/2)');
+ expect(await run(page,'studio3d.undo',{})).toBe(true);
+ await expect.poll(maxX).toBe(before);
+});
+
 test('3D studio mesh simplify: triangle count drops and undo restores it',async({page})=>{
  await blank(page);
  await insert(page,'sphere',0);

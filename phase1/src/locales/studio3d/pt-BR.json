@@ -827,5 +827,11 @@
  "studio3d.mesh.bisect": "Bisseccionar",
  "studio3d.mesh.bisectAxis": "Eixo de corte",
  "studio3d.mesh.bisectOffset": "Deslocamento de corte",
- "studio3d.mesh.bisectFill": "Preencher corte"
+ "studio3d.mesh.bisectFill": "Preencher corte",
+ "studio3d.hist.twist_one": "Torcer {name}",
+ "studio3d.hist.twist_other": "Torcer {count} objetos",
+ "cmd.studio3d.mesh.twist": "Torcer uma malha 3D em torno de um eixo",
+ "studio3d.mesh.twist": "Torcer",
+ "studio3d.mesh.twistAxis": "Eixo de torção",
+ "studio3d.mesh.twistAngle": "Ângulo de torção em graus"
 }

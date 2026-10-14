@@ -1,4 +1,5 @@
 # Unreleased: 3D Studio P0
+- 3D Studio: twist rotates meshes around an axis, angle spread across the mesh extent (mask respected), with undo, from the mesh tools or `studio3d.mesh.twist`.
 - 3D Studio: bisect cuts meshes with an axis plane and keeps both halves (optional cap fill, UVs carried), with undo, from the mesh tools or `studio3d.mesh.bisect`.
 - 3D Studio: shrink/fatten pushes meshes along their smooth normals (negative shrinks, mask respected), with undo, from the mesh tools or `studio3d.mesh.fatten`.
 - 3D Studio: relax smooths whole meshes (Laplacian, borders pinned, sculpt mask respected), with undo, from the mesh tools or `studio3d.mesh.relax`.

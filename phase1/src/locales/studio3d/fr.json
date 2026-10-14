@@ -827,5 +827,11 @@
  "studio3d.mesh.bisect": "Bissecter",
  "studio3d.mesh.bisectAxis": "Axe de coupe",
  "studio3d.mesh.bisectOffset": "Décalage de coupe",
- "studio3d.mesh.bisectFill": "Remplir la coupe"
+ "studio3d.mesh.bisectFill": "Remplir la coupe",
+ "studio3d.hist.twist_one": "Tordre {name}",
+ "studio3d.hist.twist_other": "Tordre {count} objets",
+ "cmd.studio3d.mesh.twist": "Tordre un maillage 3D autour d'un axe",
+ "studio3d.mesh.twist": "Tordre",
+ "studio3d.mesh.twistAxis": "Axe de torsion",
+ "studio3d.mesh.twistAngle": "Angle de torsion en degrés"
 }
