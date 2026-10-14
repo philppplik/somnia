@@ -26,3 +26,7 @@ export function lintToolForLocal(tool:AgentToolDefinition):LocalToolLint{
 export function selectLocalTools(tools:readonly AgentToolDefinition[],maximum=8){
  const eligible=tools.filter(tool=>lintToolForLocal(tool).tier!=='complex');return eligible.slice(0,maximum);
 }
+export function localToolDiagnostics(tools:readonly AgentToolDefinition[]){
+ const offered=new Set(selectLocalTools(tools));
+ return tools.map(tool=>{const lint=lintToolForLocal(tool);return {...lint,name:tool.name,offered:offered.has(tool),reasons:lint.reasons.length?lint.reasons:offered.has(tool)?[]:['tool-limit-eight']};});
+}
