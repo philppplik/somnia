@@ -475,13 +475,13 @@
     },
     "src/components/interface": {
       "rawButton": 2,
-      "rawInput": 8,
+      "rawInput": 6,
       "rawSelect": 11,
       "rawTextarea": 1,
       "hexTsx": 1,
       "hexCss": 0,
       "pixelText": 2,
-      "inlineStyle": 16
+      "inlineStyle": 14
     },
     "src/components/studio3d": {
       "rawButton": 1,
