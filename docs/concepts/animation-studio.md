@@ -1,6 +1,6 @@
 # Animation Studio: motion graphics and compositing
 
-Status: concept for review only. No implementation, dependency adoption, push or release is authorized here.
+Status: merged on int/beta5 (pre-release line). The Animation Studio described here is implemented and ships in the beta builds.
 Date: 2026-10-14. Somnia baseline: `int/shell`, `44b782c0558fe1f00785f5a1dc6f2074e42bce79` (rechecked after branch update).
 Scope: a new After-Effects-like studio, working title **Animation**, stable proposed id `animation`. Existing Design remains page layout; Video remains sequence editing. Neither is renamed or replaced.
 

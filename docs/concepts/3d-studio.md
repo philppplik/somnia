@@ -1,6 +1,6 @@
 # 3D Studio: concept
 
-Status: proposal only. No implementation, push or release is authorized by this document. Development starts only after Philipp reviews the concept.
+Status: merged on int/beta5 (pre-release line). The 3D Studio described here is implemented and ships in the beta builds.
 Baseline: `int/shell` at `315d1f23a061d07215bdc60d25d3d57d756cbaab` (fetched 2026-10-14). Facts about outside projects were read from their public pages and license files on 2026-10-14; sources are in section 13.
 Sibling concepts (interface design, animation) are written separately. Shared parts (timeline, scene graph interchange) are flagged in section 9.
 

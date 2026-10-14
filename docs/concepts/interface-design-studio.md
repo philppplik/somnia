@@ -1,6 +1,6 @@
 # Interface Studio: UI systems, screens and prototypes
 
-Status: concept for review, 2026-10-14. No development, dependency adoption, push or release is authorized by this document.
+Status: merged on int/beta5 (pre-release line). The Interface Studio described here is implemented and ships in the beta builds.
 
 Baseline: `int/shell` at `315d1f23a061d07215bdc60d25d3d57d756cbaab`, cloned and head rechecked live. Upstream FigCraft: `bcedfeba1079829fd96c3b38077cfcc76e03bb09`, workspace version 0.5.1. Recheck before implementation. Paths below are relative to Somnia unless marked upstream.
 

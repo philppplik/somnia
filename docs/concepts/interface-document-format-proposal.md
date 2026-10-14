@@ -1,6 +1,6 @@
 # Interface document persistence proposal
 
-Status: proposal for format-owner review. P0-P5 currently save validated version-1 JSON snapshots with `.json`. This document adds no file associations, reader, native writer or extension promises.
+Status: partially merged on int/beta5 (pre-release line): validated version-1 JSON snapshots with `.json` ship in the Interface Studio. The format proposal itself remains under review. P0-P5 currently save validated version-1 JSON snapshots with `.json`. This document adds no file associations, reader, native writer or extension promises.
 
 ## Choice for review
 

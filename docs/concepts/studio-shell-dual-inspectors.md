@@ -1,6 +1,6 @@
 # Studio shell: two useful sides for dense studios
 
-Status: proposal only. No implementation or release is authorized by this document. Development starts only after Philipp reviews the concept.
+Status: merged (pre-release line). The dual-inspector shell described here is implemented in the current studio shell.
 Baseline: `int/shell` at `09498bbb16cdc1d4dd901b9cbfc198d688ebbf20` (inspected 2026-10-14). Paths below are relative to the repository root unless stated otherwise.
 Scope: shared shell design with a Photos-first pilot. [Studio tool roadmaps](studio-tool-roadmaps.md) gives separate concepts and Adobe references for all ten studios, plus the separate raster editor. Code keeps its existing layout.
 

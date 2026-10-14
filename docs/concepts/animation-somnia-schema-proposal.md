@@ -1,6 +1,6 @@
 # Animation document inside `.somnia` (proposal)
 
-Status: proposal only. Philipp decides. Nothing here is implemented, and the studio claims no file extension today.
+Status: merged on int/beta5 (pre-release line). The schema and studio described here are implemented in the Animation Studio; the studio still claims no file extension.
 
 ## Goal
 
