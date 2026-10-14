@@ -1,0 +1,24 @@
+import test from 'node:test';import assert from 'node:assert/strict';
+import {createInterfaceSession} from './session';import {addNode,parseInterfaceDocument,serializeInterfaceDocument} from './model';
+import {computeInterfaceLayout} from './layout';
+import {diffInterfaceReflow,setInterfaceSizingLimit,MAX_REFLOW_CHANGES} from './responsive';
+import {setInterfaceConstraint} from './constraints';
+function scene(){const s=createInterfaceSession();s.start();let f='';s.transact(d=>{f=addNode(d,d.pages[0].id,'frame');const n=d.nodes.find(x=>x.id===f)!;n.width=400;n.height=200;});return {s,f};}
+test('reflow diff lists only direct children whose rendered bounds change',()=>{const {s,f}=scene();let pinned='',trailing='',stretched='';s.transact(d=>{pinned=addNode(d,d.pages[0].id,'rectangle',f);trailing=addNode(d,d.pages[0].id,'rectangle',f);stretched=addNode(d,d.pages[0].id,'rectangle',f);const nodes=d.nodes;nodes.find(n=>n.id===trailing)!.x=300;setInterfaceConstraint(d,pinned,'horizontal','start');setInterfaceConstraint(d,trailing,'horizontal','end');setInterfaceConstraint(d,stretched,'horizontal','stretch');});
+ const before=computeInterfaceLayout(s.get().document!).bounds;
+ const changes=diffInterfaceReflow(s.get().document!,f,{width:300,height:200});
+ const byId=new Map(changes.map(c=>[c.id,c]));
+ assert.equal(byId.has(pinned),false);assert.equal(byId.has(trailing),true);assert.equal(byId.has(stretched),true);
+ const t=byId.get(trailing)!;assert.equal(t.from.x,Math.round(before.get(trailing)!.x));assert.equal(t.to.x,200);
+ const st=byId.get(stretched)!;assert.ok(st.to.width<st.from.width);
+ assert.equal(diffInterfaceReflow(s.get().document!,f,{width:400,height:200}).length,0);
+ assert.throws(()=>diffInterfaceReflow(s.get().document!,f,{width:0,height:200}));});
+test('reflow diff is capped and skips hidden children',()=>{const {s,f}=scene();s.transact(d=>{for(let i=0;i<12;i++){const c=addNode(d,d.pages[0].id,'rectangle',f);d.nodes.find(n=>n.id===c)!.x=i*30;setInterfaceConstraint(d,c,'horizontal','end');}const hidden=addNode(d,d.pages[0].id,'rectangle',f);d.nodes.find(n=>n.id===hidden)!.hidden=true;setInterfaceConstraint(d,hidden,'horizontal','end');});
+ const changes=diffInterfaceReflow(s.get().document!,f,{width:200,height:200});assert.equal(changes.length,MAX_REFLOW_CHANGES);assert.ok(changes.every(c=>c.name!=='Rectangle 13'&&true));assert.equal(changes.some(c=>{const n=s.get().document!.nodes.find(x=>x.id===c.id)!;return n.hidden;}),false);});
+test('sizing limits validate against their sibling and undo one edit at a time',()=>{const {s,f}=scene();let child='';s.transact(d=>{child=addNode(d,d.pages[0].id,'rectangle',f);});
+ s.transact(d=>setInterfaceSizingLimit(d,child,'minWidth',80));assert.equal(s.get().document!.nodes.find(n=>n.id===child)!.sizing!.minWidth,80);
+ s.transact(d=>setInterfaceSizingLimit(d,child,'maxWidth',200));assert.equal(s.get().document!.nodes.find(n=>n.id===child)!.sizing!.maxWidth,200);
+ assert.throws(()=>s.transact(d=>setInterfaceSizingLimit(d,child,'minWidth',300)));assert.throws(()=>s.transact(d=>setInterfaceSizingLimit(d,child,'maxHeight',0.5*-2)));assert.throws(()=>setInterfaceSizingLimit(s.get().document!,child,'minWidth',Number.NaN));
+ const round=parseInterfaceDocument(serializeInterfaceDocument(s.get().document!));assert.equal(round.nodes.find(n=>n.id===child)!.sizing!.minWidth,80);
+ s.undo();assert.equal(s.get().document!.nodes.find(n=>n.id===child)!.sizing!.maxWidth,32768);
+ s.undo();assert.equal(s.get().document!.nodes.find(n=>n.id===child)!.sizing,undefined);});
