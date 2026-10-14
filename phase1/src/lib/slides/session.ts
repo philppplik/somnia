@@ -8,10 +8,10 @@ import {useEffect,useSyncExternalStore} from 'react';
 import {SlidesClient} from './client';
 import {assertPptx,type DeckSummary} from './protocol';
 import {addMediaFile,closeMedia,findMedia,getMedia,setActiveMedia,subscribeMedia,registerMediaCloseGuard} from '../media';
-export interface SlidesSession {presenting:boolean;wasmBytes:number;diagnostics:SlidesDiagnostics|null;name:string;source:string;summary:DeckSummary|null;index:number;image:string;texts:string[];thumbnails:Record<number,string>;busy:boolean;error:string;original:Uint8Array|null;working:Uint8Array|null;runs:TextRun[];dirty:boolean;undo:Uint8Array[];redo:Uint8Array[]}
+export interface SlidesSession {presenting:boolean;wasmBytes:number;diagnostics:SlidesDiagnostics|null;name:string;source:string;summary:DeckSummary|null;index:number;image:string;texts:string[];thumbnails:Record<number,string>;busy:boolean;error:string;original:Uint8Array|null;working:Uint8Array|null;runs:TextRun[];slideIds:number[];dirty:boolean;undo:Uint8Array[];redo:Uint8Array[]}
 interface Entry {revision:number;state:SlidesSession;client:SlidesClient;sequence:number;disposed:boolean;presentCache:Map<string,Promise<string>>;exiting?:boolean}
 const bounded=(history:Uint8Array[])=>{let total=0;return history.slice(-10).reverse().filter(b=>(total+=b.byteLength)<=64*1024*1024).reverse();};
-const empty:SlidesSession={presenting:false,wasmBytes:0,diagnostics:null,name:'',source:'',summary:null,index:0,image:'',texts:[],thumbnails:{},busy:false,error:'',original:null,working:null,runs:[],dirty:false,undo:[],redo:[]};
+const empty:SlidesSession={presenting:false,wasmBytes:0,diagnostics:null,name:'',source:'',summary:null,index:0,image:'',texts:[],thumbnails:{},busy:false,error:'',original:null,working:null,runs:[],slideIds:[],dirty:false,undo:[],redo:[]};
 const sessions=new Map<string,Entry>();const listeners=new Set<()=>void>();let version=0;
 function emit(){version++;listeners.forEach(f=>f());}
 function patch(e:Entry,p:Partial<SlidesSession>,cause?:unknown){if(e.disposed)return;if(p.error)reportError('slides.engine',cause??p.error,{context:{studio:'slides',file:e.state.name}});e.state={...e.state,...p};emit();}
@@ -24,7 +24,7 @@ subscribeMedia(()=>{const media=getMedia();for(const [name,e]of sessions){if(med
 export async function ensureSlides(name:string){const m=findMedia(name);if(!m||m.kind!=='pptx')return;if(sessions.get(name)?.state.source===m.url)return;
  if(sessions.size>=3){const victim=[...sessions].find(([n,e])=>n!==getMedia().active&&!e.state.dirty);if(victim){dispose(victim[1]);sessions.delete(victim[0]);}else return;}
  const e:Entry={revision:0,state:{...empty,name,source:m.url,busy:true,thumbnails:{}},client:new SlidesClient(),sequence:0,disposed:false,presentCache:new Map()};sessions.set(name,e);emit();
- try{const bytes=new Uint8Array(await(await fetch(m.url)).arrayBuffer());if(e.disposed)return;const summary=await e.client.open(bytes);if(e.disposed)return;let runs:TextRun[]=[];try{runs=await e.client.runs(bytes);}catch{/* Noncanonical text remains preview-only. */}if(e.disposed)return;const diagnostics=await e.client.diagnostics(bytes);patch(e,{summary,original:bytes,working:bytes,runs,diagnostics});await renderSlide(e,0);}
+ try{const bytes=new Uint8Array(await(await fetch(m.url)).arrayBuffer());if(e.disposed)return;const summary=await e.client.open(bytes);if(e.disposed)return;let runs:TextRun[]=[];let slideIds:number[]=[];try{runs=await e.client.runs(bytes);slideIds=await modelIds(e,bytes,summary.slides);}catch{/* Noncanonical text remains preview-only. */}if(e.disposed)return;const diagnostics=await e.client.diagnostics(bytes);patch(e,{summary,original:bytes,working:bytes,runs,slideIds,diagnostics});await renderSlide(e,0);}
  catch(error){patch(e,{busy:false,error:String(error)},error);e.client.dispose();}
 }
 export async function openSlides(file:File){try{assertPptx(file);}catch(error){return String(error);}if(sessions.size>=3&&[...sessions.values()].every(e=>e.state.dirty))return 'Save or close an edited deck before opening another';const r=await addMediaFile(file,file.name);if('error'in r)return r.error;await ensureSlides(r.name);return '';}
@@ -43,7 +43,20 @@ export const dirtySlideNames=()=>[...sessions].filter(([,e])=>e.state.dirty).map
 export const slidesIsDirty=(name:string)=>sessions.get(name)?.state.dirty??false;
 if(typeof window!=='undefined')installBeforeUnload(()=>[...sessions.values()].some(e=>e.state.dirty));
 registerMediaCloseGuard(name=>!slidesIsDirty(name)||window.confirm(`Discard unsaved presentation edits to ${name}?`));
-async function setWorking(e:Entry,bytes:Uint8Array){const summary=await e.client.open(bytes);const runs=await e.client.runs(bytes);e.revision++;clearPresentCache(e);Object.values(e.state.thumbnails).forEach(URL.revokeObjectURL);patch(e,{working:bytes,summary,runs,dirty:true,thumbnails:{}});await renderSlide(e,e.state.index);}
+/** Stable slide ids in deck order; empty when the deck is not canonical (reordering stays off). */
+async function modelIds(e:Entry,bytes:Uint8Array,slides:number){try{const ids=(await e.client.model(bytes)).slides.map(s=>s.id);return ids.length===slides?ids:[];}catch{return [];}}
+async function setWorking(e:Entry,bytes:Uint8Array,index=e.state.index){const summary=await e.client.open(bytes);
+const runs=await e.client.runs(bytes);const slideIds=await modelIds(e,bytes,summary.slides);e.revision++;clearPresentCache(e);Object.values(e.state.thumbnails).forEach(URL.revokeObjectURL);patch(e,{working:bytes,summary,runs,slideIds,dirty:true,thumbnails:{}});await renderSlide(e,Math.min(Math.max(index,0),summary.slides-1));}
+/** One user action, one undo entry: the whole before-deck is pushed once. The viewed slide follows its id. */
+export async function moveSlideTo(slideId:number,toIndex:number){const e=sessions.get(getMedia().active??'');if(!e?.state.working||e.state.busy)return;
+const before=e.state.working,ids=e.state.slideIds,from=ids.indexOf(slideId);
+if(from<0||!Number.isInteger(toIndex)||toIndex<0||toIndex>=ids.length)throw Error('Slide order changed. Reselect the slide.');
+if(from===toIndex)return;
+const viewedId=ids[e.state.index];patch(e,{busy:true,error:''});
+try{const bytes=await e.client.reorder(before,slideId,toIndex);if(e.disposed||e.state.working!==before)throw Error('Deck changed during reorder.');
+const next=ids.slice();next.splice(toIndex,0,next.splice(from,1)[0]);
+await setWorking(e,bytes,Math.max(0,next.indexOf(viewedId)));patch(e,{undo:bounded([...e.state.undo,before]),redo:[]});}
+catch(error){patch(e,{busy:false,error:String(error)},error);throw error;}}
 export async function editSlideText(run:TextRun,text:string){const e=sessions.get(getMedia().active??'');if(!e?.state.working||e.state.busy)return;const before=e.state.working;patch(e,{busy:true,error:''});try{const bytes=await e.client.copy(before,[{...run,old:run.text,text}]);await setWorking(e,bytes);patch(e,{undo:bounded([...e.state.undo,before]),redo:[]});}catch(error){patch(e,{busy:false,error:String(error)},error);}}
 export async function slidesHistory(direction:'undo'|'redo'){const e=sessions.get(getMedia().active??'');if(!e?.state.working||e.state.busy)return;const stack=e.state[direction],bytes=stack.at(-1);if(!bytes)return;const before=e.state.working;patch(e,{busy:true,error:''});try{await setWorking(e,bytes);patch(e,{[direction]:stack.slice(0,-1),[direction==='undo'?'redo':'undo']:bounded([...e.state[direction==='undo'?'redo':'undo'],before])});}catch(error){patch(e,{busy:false,error:String(error)},error);}}
 export async function saveSlidesCopy(){const e=sessions.get(getMedia().active??'');const bytes=e?.state.working;if(!e||!bytes||e.state.busy)return;patch(e,{busy:true,error:''});try{const {isTauri,invoke}=await import('@tauri-apps/api/core');const suggestedName=e.state.name.replace(/^.*[\\/]/,'').replace(/\.pptx$/i,'')+'-edited.pptx';if(isTauri()){const grant=await invoke<{token:string}|null>('slides_save_pick',{suggestedName});if(!grant){patch(e,{busy:false});return;}await invoke('slides_save_write',new Uint8Array(bytes),{headers:{'x-somnia-token':grant.token}});}else{const url=URL.createObjectURL(new Blob([new Uint8Array(bytes)],{type:'application/vnd.openxmlformats-officedocument.presentationml.presentation'}));const a=document.createElement('a');a.href=url;a.download=suggestedName;a.click();setTimeout(()=>URL.revokeObjectURL(url),30000);}patch(e,{dirty:isTauri()?false:e.state.dirty,busy:false});}catch(error){patch(e,{busy:false,error:String(error)},error);}}

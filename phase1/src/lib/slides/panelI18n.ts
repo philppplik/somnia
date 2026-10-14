@@ -265,5 +265,58 @@ export const SLIDES_PRESENT_CATALOGUES:Record<string,Record<string,string>>={
   }
 };
 for(const [locale,strings] of Object.entries(SLIDES_PRESENT_CATALOGUES))Object.assign(SLIDES_PANEL_CATALOGUES[locale],strings);
+export const SLIDES_REORDER_CATALOGUES:Record<string,Record<string,string>>={
+  "en": {
+    "slides.moveEarlier": "Move slide earlier",
+    "slides.moveLater": "Move slide later",
+    "slides.moved": "Slide {number} moved to position {position}",
+    "cmd.slides.moveSlide": "Move slide",
+    "cmd.slides.moveSlideEarlier": "Move slide earlier",
+    "cmd.slides.moveSlideLater": "Move slide later",
+    "slides.reorderFiltered": "Reorder is off while the list is filtered.",
+    "slides.reorderUnavailable": "Reordering is not available for this presentation."
+  },
+  "de": {
+    "slides.moveEarlier": "Folie nach vorn verschieben",
+    "slides.moveLater": "Folie nach hinten verschieben",
+    "slides.moved": "Folie {number} an Position {position} verschoben",
+    "cmd.slides.moveSlide": "Folie verschieben",
+    "cmd.slides.moveSlideEarlier": "Folie nach vorn verschieben",
+    "cmd.slides.moveSlideLater": "Folie nach hinten verschieben",
+    "slides.reorderFiltered": "Neu anordnen ist bei gefilterter Liste aus.",
+    "slides.reorderUnavailable": "Neu anordnen ist für diese Präsentation nicht verfügbar."
+  },
+  "es": {
+    "slides.moveEarlier": "Mover diapositiva antes",
+    "slides.moveLater": "Mover diapositiva después",
+    "slides.moved": "Diapositiva {number} movida a la posición {position}",
+    "cmd.slides.moveSlide": "Mover diapositiva",
+    "cmd.slides.moveSlideEarlier": "Mover diapositiva antes",
+    "cmd.slides.moveSlideLater": "Mover diapositiva después",
+    "slides.reorderFiltered": "Reordenar está desactivado con la lista filtrada.",
+    "slides.reorderUnavailable": "Reordenar no está disponible para esta presentación."
+  },
+  "fr": {
+    "slides.moveEarlier": "Déplacer la diapositive vers le début",
+    "slides.moveLater": "Déplacer la diapositive vers la fin",
+    "slides.moved": "Diapositive {number} déplacée à la position {position}",
+    "cmd.slides.moveSlide": "Déplacer la diapositive",
+    "cmd.slides.moveSlideEarlier": "Déplacer la diapositive vers le début",
+    "cmd.slides.moveSlideLater": "Déplacer la diapositive vers la fin",
+    "slides.reorderFiltered": "Le réordonnancement est désactivé quand la liste est filtrée.",
+    "slides.reorderUnavailable": "Le réordonnancement n'est pas disponible pour cette présentation."
+  },
+  "pt-BR": {
+    "slides.moveEarlier": "Mover slide para antes",
+    "slides.moveLater": "Mover slide para depois",
+    "slides.moved": "Slide {number} movido para a posição {position}",
+    "cmd.slides.moveSlide": "Mover slide",
+    "cmd.slides.moveSlideEarlier": "Mover slide para antes",
+    "cmd.slides.moveSlideLater": "Mover slide para depois",
+    "slides.reorderFiltered": "Reordenar fica desativado com a lista filtrada.",
+    "slides.reorderUnavailable": "Reordenar não está disponível para esta apresentação."
+  }
+};
+for(const [locale,strings] of Object.entries(SLIDES_REORDER_CATALOGUES))Object.assign(SLIDES_PANEL_CATALOGUES[locale],strings);
 for(const [locale,strings] of Object.entries(SLIDES_PANEL_CATALOGUES))Object.assign(CATALOGUES[locale],strings);
 export function useSlidesPanelText(){const locale=useSyncExternalStore(subscribeLocale,getLocale,getLocale);return (key:string,params?:Record<string,string|number>)=>translate(locale,key,params);}

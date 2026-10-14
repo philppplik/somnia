@@ -2,6 +2,7 @@ import {diagnosePptx} from './diagnostics';
 import {readRuns,makeEditedCopy} from './editCopy';
 /// <reference lib="webworker" />
 import init,{SlidesEngine} from '../../../slides-engine/pkg/somnia_slides.js';
+import {readDeckModel,moveSlide} from './deckPackage';
 import type {SlidesRequest,SlidesReply} from './protocol';
 let engine:SlidesEngine|undefined;let wasmMemory:WebAssembly.Memory|undefined;
 // Serialize even asynchronous initialization. No user-defined method invocation.
@@ -16,6 +17,8 @@ self.onmessage=({data}:{data:SlidesRequest})=>{queue=queue.then(async()=>{
    case 'diagnostics':result=diagnosePptx(data.bytes);break;
    case 'runs':result=readRuns(data.bytes);break;
    case 'copy':result=makeEditedCopy(data.bytes,data.edits);break;
+   case 'model':result=readDeckModel(data.bytes);break;
+   case 'reorder':result=moveSlide(data.bytes,data.slideId,data.toIndex);break;
    case 'read':if(!engine)throw new Error('Worker not initialized');result=JSON.parse(engine.read_slide(data.index));break;
    case 'render':if(!engine)throw new Error('Worker not initialized');result=engine.render_png(data.index,data.scale);break;
    default:throw new Error('Unknown Slides operation');

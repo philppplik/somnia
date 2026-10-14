@@ -13,6 +13,6 @@ test('all panel hosts render an honest empty state without a deck',()=>{
  }
 });
 test('panel manifest validates every declared command and host',()=>{
- const commands=new Set([...slidesCommandSpecs({state:()=>({busy:false,working:false,canUndo:false,canRedo:false,slides:0,index:0,presenting:false}),present:()=>{},exitPresent:()=>{},history:()=>{},saveCopy:()=>{},showSlide:()=>{}}),...slidesPanelCommandSpecs({state:()=>({source:'',index:0,busy:false,working:null,runs:[],summary:null}),thumbnails:async()=>{},edit:async()=>{},show:async()=>{},select:()=>{}})].map(s=>s.id));
+ const commands=new Set([...slidesCommandSpecs({state:()=>({busy:false,working:false,canUndo:false,canRedo:false,slides:0,index:0,presenting:false}),present:()=>{},exitPresent:()=>{},history:()=>{},saveCopy:()=>{},showSlide:()=>{}}),...slidesPanelCommandSpecs({state:()=>({source:'',index:0,busy:false,working:null,runs:[],slideIds:[],summary:null}),thumbnails:async()=>{},edit:async()=>{},show:async()=>{},select:()=>{},move:async()=>{}})].map(s=>s.id));
  assert.deepEqual(validateStudioShell('slides',{panels:slidesPanels,inspector:slidesInspector},{commandExists:id=>commands.has(id),hostExists:id=>slidesPanels.some(p=>p.component===id)||slidesInspector.sections.some(s=>s.component===id)}),[]);
 });

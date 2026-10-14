@@ -3170,6 +3170,43 @@
       "hasEnabled": true
     },
     {
+      "id": "slides.moveSlide",
+      "title": "Move slide",
+      "category": "Edit",
+      "source": "slides",
+      "keywords": [
+        "drag",
+        "position",
+        "reorder",
+        "slide"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "slides.moveSlideEarlier",
+      "title": "Move slide earlier",
+      "category": "Edit",
+      "source": "slides",
+      "keywords": [
+        "before",
+        "reorder",
+        "up"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "slides.moveSlideLater",
+      "title": "Move slide later",
+      "category": "Edit",
+      "source": "slides",
+      "keywords": [
+        "after",
+        "down",
+        "reorder"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "slides.present",
       "title": "Present",
       "category": "View",

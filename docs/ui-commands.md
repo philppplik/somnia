@@ -308,6 +308,9 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `sidebar.toggle` | Toggle sidebar | View | core | `Mod+B` |
 | `slides.editText` | Apply slide text | Edit | slides |  |
 | `slides.loadThumbnails` | Load slide thumbnails | View | slides |  |
+| `slides.moveSlide` | Move slide | Edit | slides |  |
+| `slides.moveSlideEarlier` | Move slide earlier | Edit | slides |  |
+| `slides.moveSlideLater` | Move slide later | Edit | slides |  |
 | `slides.present` | Present | View | slides | `F5` |
 | `slides.present.exit` | Exit presentation | View | slides |  |
 | `slides.present.fromStart` | Present from start | View | slides | `Shift+F5` |

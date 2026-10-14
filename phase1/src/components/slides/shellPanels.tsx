@@ -1,4 +1,6 @@
 import {useState} from 'react';
+import {ArrowDown,ArrowUp} from 'lucide-react';
+import {IconButton} from '../ui/icon-button';
 import type {InspectorSectionProps} from '../../lib/shell/types';
 import {useSlidesSession} from '../../lib/slides/session';
 import {useSlidesPanelText} from '../../lib/slides/panelI18n';
@@ -10,24 +12,31 @@ import type {TextRun} from '../../lib/slides/editCopy';
 
 const button='rounded-lg border border-subtle bg-hover px-2 py-1.5 text-xs text-ink disabled:opacity-40 focus-visible:outline-accent';
 const input='w-full min-w-0 rounded-lg border border-subtle bg-panel p-2 text-sm text-ink focus-visible:outline-accent';
-function useAction(){const [error,setError]=useState('');return {error,run:async(id:string,params?:unknown)=>{setError('');const result=await commandDispatcher.tryRunCommand(id,params,{origin:'ui'});if(!result.ok)setError(result.error.message);}};}
+function useAction(){const [error,setError]=useState('');return {error,setError,run:async(id:string,params?:unknown)=>{setError('');const result=await commandDispatcher.tryRunCommand(id,params,{origin:'ui'});if(!result.ok)setError(result.error.message);}};}
 function Notice({error}:{error:string}){return error?<p role="alert" className="break-words rounded-lg bg-hover p-2 text-xs text-red-600">{error}</p>:null;}
 function Empty(){const t=useSlidesPanelText();return <p className="p-3 text-xs text-ink-3">{t('slides.empty')}</p>;}
 function Region({children}:{children:React.ReactNode}){return <section className="flex min-w-0 flex-col gap-3 p-3 text-ink">{children}</section>;}
 
 export function SlidesOverviewPanel(){
  const s=useSlidesSession(),t=useSlidesPanelText(),action=useAction();
- const [query,setQuery]=usePanelState('slides.overview.filter','');const [compact,setCompact]=usePanelState('slides.overview.compact',false);
+ const [status,setStatus]=useState('');const [query,setQuery]=usePanelState('slides.overview.filter','');const [compact,setCompact]=usePanelState('slides.overview.compact',false);
  if(!s.summary)return <Empty/>;
  const rows=slideOutline(s.runs,s.summary.slides,query);
+ const canMove=!query.trim()&&s.slideIds.length>1&&s.slideIds.length===s.summary.slides;
+ const move=async(from:number,to:number)=>{setStatus('');const id=s.slideIds[from];const result=await commandDispatcher.tryRunCommand('slides.moveSlide',{source:s.source,slideId:id,toIndex:to},{origin:'ui'});if(!result.ok)action.setError(result.error.message);else setStatus(t('slides.moved',{number:from+1,position:to+1}));};
  return <Region><p className="truncate text-xs text-ink-2" title={s.name}>{s.name}</p>
   <div className="flex flex-wrap gap-1"><button className={button} disabled={s.busy||s.index===0} onClick={()=>void action.run('slides.showSlide',{index:s.index-1})}>{t('slides.previous')}</button><button className={button} disabled={s.busy||s.index>=s.summary.slides-1} onClick={()=>void action.run('slides.showSlide',{index:s.index+1})}>{t('slides.next')}</button></div>
   <input className={input} aria-label={t('slides.search')} placeholder={t('slides.search')} value={query} onChange={e=>setQuery(e.target.value)}/>
   <label className="flex items-center gap-2 text-xs"><input className="!w-4 shrink-0" type="checkbox" checked={compact} onChange={e=>setCompact(e.target.checked)}/>{t('slides.compact')}</label>
   <button className={button} disabled={s.busy} onClick={()=>void action.run('slides.loadThumbnails')}>{t('cmd.slides.loadThumbnails')}</button>
-  <nav aria-label={t('slides.panel.overview')} className="flex flex-col gap-2">{rows.map(row=><button key={row.index} className={`${button} w-full text-left ${row.index===s.index?'border-accent bg-accent-soft':''}`} aria-current={row.index===s.index?'page':undefined} disabled={s.busy} onClick={()=>void action.run('slides.showSlide',{index:row.index})}>
-   {!compact&&s.thumbnails[row.index]&&<img src={s.thumbnails[row.index]} alt="" loading="lazy" className="mb-2 aspect-video w-full object-contain"/>}<span className="block text-xs font-medium">{t('slides.slide',{number:row.index+1})}</span><span className="block truncate text-xs text-ink-2">{row.title}</span>
-  </button>)}</nav>{!rows.length&&<p className="text-xs text-ink-3">{t('slides.noMatches')}</p>}<Notice error={action.error}/></Region>;
+  <nav aria-label={t('slides.panel.overview')} className="flex flex-col gap-2">{rows.map(row=>{
+   const id=s.slideIds[row.index],last=s.summary!.slides-1;
+   return <div key={id??`i${row.index}`} className="flex items-stretch gap-1" draggable={canMove} onDragStart={e=>{if(canMove){e.dataTransfer.setData('text/plain',String(row.index));e.dataTransfer.effectAllowed='move';}}} onDragOver={e=>{if(canMove)e.preventDefault();}} onDrop={e=>{if(!canMove)return;e.preventDefault();const from=Number(e.dataTransfer.getData('text/plain'));if(Number.isInteger(from)&&s.slideIds[from]!==undefined&&from!==row.index)void move(from,row.index);}}>
+   <button className={`${button} min-w-0 flex-1 text-left ${row.index===s.index?'border-accent bg-accent-soft':''}`} aria-current={row.index===s.index?'page':undefined} disabled={s.busy} onClick={()=>void action.run('slides.showSlide',{index:row.index})} onKeyDown={e=>{if(canMove&&e.altKey&&(e.key==='ArrowUp'||e.key==='ArrowDown')){e.preventDefault();const to=row.index+(e.key==='ArrowUp'?-1:1);if(to>=0&&to<=last)void move(row.index,to);}}}>
+    {!compact&&s.thumbnails[row.index]&&<img src={s.thumbnails[row.index]} alt="" loading="lazy" className="mb-2 aspect-video w-full object-contain"/>}<span className="block text-xs font-medium">{t('slides.slide',{number:row.index+1})}</span><span className="block truncate text-xs text-ink-2">{row.title}</span>
+   </button>
+   {canMove&&<div className="flex shrink-0 flex-col justify-center gap-1"><IconButton size="row" variant="outline" aria-label={`${t('slides.moveEarlier')} (${t('slides.slide',{number:row.index+1})})`} disabled={s.busy||row.index===0} onClick={()=>void move(row.index,row.index-1)}><ArrowUp aria-hidden/></IconButton><IconButton size="row" variant="outline" aria-label={`${t('slides.moveLater')} (${t('slides.slide',{number:row.index+1})})`} disabled={s.busy||row.index===last} onClick={()=>void move(row.index,row.index+1)}><ArrowDown aria-hidden/></IconButton></div>}
+   </div>;})}</nav>{!rows.length&&<p className="text-xs text-ink-3">{t('slides.noMatches')}</p>}<p role="status" aria-live="polite" className="text-xs text-ink-2">{status}</p>{!canMove&&query.trim()&&s.slideIds.length>1&&<p className="text-xs text-ink-3">{t('slides.reorderFiltered')}</p>}{!s.slideIds.length&&<p className="text-xs text-ink-3">{t('slides.reorderUnavailable')}</p>}<Notice error={action.error}/></Region>;
 }
 export function SlidesOutlinePanel(){
  const s=useSlidesSession(),t=useSlidesPanelText(),action=useAction();const [query,setQuery]=usePanelState('slides.outline.filter','');

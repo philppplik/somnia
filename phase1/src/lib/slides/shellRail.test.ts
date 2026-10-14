@@ -13,7 +13,7 @@ import {hasRailIcon,registerRailIcons,resolveRailIcon,RAIL_FALLBACK_ICON} from '
 import '../../components/shell/railIconSet';
 import {CATALOGUES,translate} from '../i18n';
 const deps={state:()=>({busy:false,working:true,canUndo:true,canRedo:true,slides:3,index:0,presenting:false}),present:()=>{},exitPresent:()=>{},history:()=>{},saveCopy:()=>{},showSlide:()=>{}};
-const panelDeps={state:()=>({source:'',index:0,busy:false,working:null,runs:[],summary:null}),thumbnails:async()=>{},edit:async()=>{},show:async()=>{},select:()=>{}};
+const panelDeps={state:()=>({source:'',index:0,busy:false,working:null,runs:[],slideIds:[],summary:null}),thumbnails:async()=>{},edit:async()=>{},show:async()=>{},select:()=>{},move:async()=>{}};
 const known=new Set([...slidesCommandSpecs(deps),...slidesPanelCommandSpecs(panelDeps)].map(s=>s.id));
 const shell=slidesStudio.shellV2!;
 const ids=(l:readonly {id:string}[])=>l.map(i=>i.id);

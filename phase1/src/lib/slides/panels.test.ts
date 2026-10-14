@@ -7,8 +7,8 @@ import {SLIDES_PANEL_CATALOGUES} from './panelI18n';
 import {deckMetrics,selectedRun,slideOutline,textIssue} from './panelModel';
 const runs=[{slide:0,run:0,text:'Hello world',part:'ppt/slides/slide1.xml'},{slide:1,run:0,text:'Second slide',part:'ppt/slides/slide2.xml'}];
 function fixture(){
- const state={source:'blob:deck1',index:0,busy:false,working:new Uint8Array(40),runs:runs.map(r=>({...r})),summary:{slides:2}};
- const calls:unknown[]=[];const deps:PanelCommandDeps={state:()=>state,thumbnails:async()=>{calls.push('thumbnails');},show:async index=>{state.index=index;calls.push(['show',index]);},edit:async(run,text)=>{state.runs=state.runs.map(r=>r.slide===run.slide&&r.run===run.run?{...r,text}:r);calls.push(['edit',text]);},select:v=>calls.push(v)};
+ const state={source:'blob:deck1',index:0,busy:false,working:new Uint8Array(40),runs:runs.map(r=>({...r})),slideIds:[256,257],summary:{slides:2}};
+ const calls:unknown[]=[];const deps:PanelCommandDeps={state:()=>state,thumbnails:async()=>{calls.push('thumbnails');},show:async index=>{state.index=index;calls.push(['show',index]);},edit:async(run,text)=>{state.runs=state.runs.map(r=>r.slide===run.slide&&r.run===run.run?{...r,text}:r);calls.push(['edit',text]);},select:v=>calls.push(v),move:async(id,to)=>{const a=state.slideIds.slice();a.splice(to,0,a.splice(a.indexOf(id),1)[0]);state.slideIds=a;calls.push(['move',id,to]);}};
  const dispatcher=new CommandDispatcher();slidesPanelCommandSpecs(deps).forEach(s=>dispatcher.register(s));return {state,calls,dispatcher};
 }
 test('outline searches text and slide number and preserves empty slides',()=>{
@@ -39,10 +39,29 @@ test('thumbnail command uses session operation',async()=>{const f=fixture();awai
 test('every panel command and UI key exists in all five locales',()=>{
  const keys=Object.keys(SLIDES_PANEL_CATALOGUES.en).sort();for(const locale of ['en','de','es','fr','pt-BR'])assert.deepEqual(Object.keys(SLIDES_PANEL_CATALOGUES[locale]).sort(),keys);
  for(const p of slidesPanels){assert.equal(p.component,p.id==='inspector'?'shell.inspector':`slides.${p.id}`);assert.ok(SLIDES_PANEL_CATALOGUES.en[p.titleKey!]);}
- for(const id of ['loadThumbnails','selectText','editText'])for(const locale of Object.keys(SLIDES_PANEL_CATALOGUES))assert.ok(SLIDES_PANEL_CATALOGUES[locale][`cmd.slides.${id}`]);
+ for(const id of ['loadThumbnails','selectText','editText','moveSlide','moveSlideEarlier','moveSlideLater'])for(const locale of Object.keys(SLIDES_PANEL_CATALOGUES))assert.ok(SLIDES_PANEL_CATALOGUES[locale][`cmd.slides.${id}`]);
 });
 
 test('inspector section titles and commands are declared',()=>{
  for(const section of slidesInspector.sections){assert.equal(section.component,`slides.inspector.${section.id}`);assert.ok(SLIDES_PANEL_CATALOGUES.en[section.titleKey!]);}
  assert.deepEqual(slidesInspector.sections.map(s=>s.id),['text','deck','diagnostics']);
+});
+
+test('moveSlide validates identity, ranges and origins before mutating',async()=>{
+ const f=fixture();const ok={source:'blob:deck1',slideId:257,toIndex:0};
+ for(const p of [{...ok,source:'x'},{...ok,slideId:999},{...ok,toIndex:2},{...ok,toIndex:-1},{...ok,toIndex:0.5},{...ok,slideId:'257'},{...ok,extra:1},{source:'blob:deck1'}])await assert.rejects(f.dispatcher.runCommand('slides.moveSlide',p,{origin:'ui'}));
+ for(const origin of ['agent','mcp'] as const)await assert.rejects(f.dispatcher.runCommand('slides.moveSlide',ok,{origin}));
+ assert.equal(f.calls.length,0);
+ await f.dispatcher.runCommand('slides.moveSlide',ok,{origin:'ui'});assert.deepEqual(f.calls,[['move',257,0]]);assert.deepEqual(f.state.slideIds,[257,256]);
+});
+test('earlier/later follow the viewed slide and stop at the edges',async()=>{
+ const f=fixture();assert.equal(f.dispatcher.isEnabled('slides.moveSlideEarlier'),false);assert.equal(f.dispatcher.isEnabled('slides.moveSlideLater'),true);
+ await f.dispatcher.runCommand('slides.moveSlideLater',undefined,{origin:'ui'});assert.deepEqual(f.calls,[['move',256,1]]);
+ await assert.rejects(f.dispatcher.runCommand('slides.moveSlideEarlier',undefined,{origin:'ui'}));
+ f.state.index=1;assert.equal(f.dispatcher.isEnabled('slides.moveSlideLater'),false);assert.equal(f.dispatcher.isEnabled('slides.moveSlideEarlier'),true);
+});
+test('reorder is disabled for non-canonical decks, single slides and busy sessions',()=>{
+ const f=fixture();f.state.slideIds=[];assert.equal(f.dispatcher.isEnabled('slides.moveSlide'),false);
+ f.state.slideIds=[256];f.state.summary={slides:1};assert.equal(f.dispatcher.isEnabled('slides.moveSlide'),false);
+ f.state.slideIds=[256,257];f.state.summary={slides:2};f.state.busy=true;assert.equal(f.dispatcher.isEnabled('slides.moveSlide'),false);
 });
