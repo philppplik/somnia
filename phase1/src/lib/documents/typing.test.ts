@@ -1,7 +1,7 @@
 import {test,beforeEach} from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {applyEdit,type TextEdit} from './edit';
+import {applyEdit,CELL_BASE,type TextEdit} from './edit';
 import type {DocumentsEngine} from './engine';
 import {getDocumentsState,patchDocuments} from './store';
 import {setParagraphStyle,shiftListLevel,toggleList,setAlign,setLineSpacing,setSpaceAfter,stepIndent,setFont,setFontColor,setFontSize,stepFontSize,toggleFormat,deleteAtCaret,moveCaret,MAX_INSERT_LINES,pasteText,redoEdit,resetSessionsForTest,selectAllText,selectedText,setSessionDeps,splitAtCaret,switchDocument,typeText,undoEdit,syncGeometry} from './session';
@@ -244,4 +244,27 @@ test('a table in the span refuses style and list changes',async()=>{
  await open(['ab',{text:'',locked:true},'cd']);patchDocuments({caret:{block:2,head:1,anchor:0,anchorBlock:0}});
  await setParagraphStyle('Title');assert.ok(getDocumentsState().editError);patchDocuments({editError:''});await toggleList('numbered');assert.ok(getDocumentsState().editError);
  assert.equal(getDocumentsState().canUndo,false);assert.equal(d.rows[0].p,undefined);
+});
+/** Engine whose blocks are two top paragraphs and a 2x1 table of cell paragraphs addressed from CELL_BASE. */
+class CellDoc extends Doc{
+ cells=['alpha','beta'];edits:{block:number;text:string}[]=[];
+ override async blocks():Promise<never>{return [{index:0,kind:'para' as const,editable:true,text:'top'},{index:1,kind:'table' as const,editable:false},...this.cells.map((t,i)=>({index:CELL_BASE+i,kind:'cell' as const,editable:true,text:t}))] as never;}
+ override async replace(e:TextEdit){const i=e.block-CELL_BASE;if(i<0||i>=this.cells.length)throw new Error('no cell paragraph');this.edits.push({block:e.block,text:applyEdit(this.cells[i],e)});this.cells[i]=applyEdit(this.cells[i],e);return this.doc();}
+ override async merge(_b:number):Promise<never>{throw new Error('paragraphs inside table cells cannot be split or joined yet');}
+ override async split(_b:number,_o:number):Promise<never>{throw new Error('paragraphs inside table cells cannot be split or joined yet');}
+}
+async function openCells(){resetSessionsForTest();const cd=new CellDoc(['top']);setSessionDeps({createEngine:()=>cd as unknown as DocumentsEngine,loadBytes:async()=>docx});await switchDocument({key:'c.docx',url:'blob:c'});return cd;}
+test('typing and deleting inside a table cell paragraph edits that cell only',async()=>{
+ const cd=await openCells();at(CELL_BASE,5);await typeText('!');assert.equal(cd.cells[0],'alpha!');assert.equal(cd.cells[1],'beta');
+ await deleteAtCaret(-1);assert.equal(cd.cells[0],'alpha');assert.equal(getDocumentsState().editError,'');
+});
+test('Backspace/Delete at a cell paragraph edge is a silent no-op; Enter shows the engine refusal',async()=>{
+ const cd=await openCells();at(CELL_BASE+1,0);await deleteAtCaret(-1);assert.deepEqual(cd.cells,['alpha','beta']);assert.equal(getDocumentsState().editError,'');assert.equal(getDocumentsState().caretLocked,false);
+ at(CELL_BASE,5);await deleteAtCaret(1);assert.equal(getDocumentsState().editError,'');
+ await splitAtCaret();assert.match(getDocumentsState().editError,/cannot be split/);assert.deepEqual(cd.cells,['alpha','beta']);
+});
+test('a selection across two cells is refused without changing either; Ctrl+A stays inside the cell',async()=>{
+ const cd=await openCells();at(CELL_BASE+1,2,{block:CELL_BASE,off:1});await typeText('x');
+ assert.match(getDocumentsState().editError,/cannot be edited as text/);assert.deepEqual(cd.cells,['alpha','beta']);
+ at(CELL_BASE,2);selectAllText();assert.equal(selectedText(),'alpha');
 });

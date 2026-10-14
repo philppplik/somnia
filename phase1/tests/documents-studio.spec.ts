@@ -100,7 +100,7 @@ test('two far-apart changes in one paragraph apply as one undoable edit; heading
  await page.getByTestId('documents-undo').click();await expect.poll(()=>first.inputValue()).toBe(old);
  await expect(page.getByTestId('documents-undo')).toBeDisabled();
 });
-test('on-page caret: click, type, select, delete, undo as one step; tables are locked',async({page})=>{
+test('on-page caret: click, type, select, delete, undo as one step; table cells take the caret',async({page})=>{
  await page.goto('/');await expect(page.locator('[data-storage]')).toBeVisible();
  await openBuffers(page,[{name:'sample.docx',mimeType:DOCX,buffer:sample()}]);
  await expect(page.getByTestId('documents-pages')).toHaveText('1 pages');
@@ -127,9 +127,13 @@ test('on-page caret: click, type, select, delete, undo as one step; tables are l
  await expect.poll(()=>second.inputValue()).toBe('>HeyX'+old2.slice(2));
  for(let i=0;i<6;i++){if(await page.getByTestId('documents-undo').isDisabled())break;await page.getByTestId('documents-undo').click();await page.waitForTimeout(150);}
  await expect.poll(()=>second.inputValue()).toBe(old2);expect(await first.inputValue()).toBe(old);
- // table row is locked
+ // a table cell takes a caret and edits in place; one undo step restores it
  const b2=(await pg.boundingBox())!;await page.mouse.click(b2.x+b2.width*0.15,b2.y+b2.height*0.19);
- await expect(page.getByTestId('documents-caret-locked')).toBeVisible();await expect(page.getByTestId('documents-caret')).toHaveCount(0);
+ await expect(page.getByTestId('documents-caret')).toHaveCount(1);await expect(page.getByTestId('documents-caret-locked')).toHaveCount(0);
+ await page.keyboard.type('Q');await page.waitForTimeout(200);
+ await expect(page.getByTestId('documents-edit-error')).toHaveCount(0);
+ await page.getByTestId('documents-undo').click();await page.waitForTimeout(200);
+ await expect(page.getByTestId('documents-edit-error')).toHaveCount(0);
 });
 test('Enter splits a paragraph, Backspace at its start joins it again, undo/redo walk both steps',async({page})=>{
  await page.goto('/');await expect(page.locator('[data-storage]')).toBeVisible();

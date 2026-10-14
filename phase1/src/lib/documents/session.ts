@@ -1,6 +1,6 @@
 import {checkFormatPatch,checkParaPatch,DOC_STYLES,type DocStyleId,type ListKindId,type ParaPatch} from './protocol';
 import {captureDocumentSelection} from './selectionCapture';
-import {caretAfterEdit,diffEdit,inverseOf,UndoStack,type TextEdit,type UndoEntry} from './edit';
+import {CELL_BASE,caretAfterEdit,diffEdit,inverseOf,UndoStack,type TextEdit,type UndoEntry} from './edit';
 import {stepBoundary,utf16ToUtf8Offset,utf8ToUtf16Offset,wordBoundary} from './text';
 import {getDocumentsState,patchDocuments,resetDocuments,INITIAL_VIEW,type Caret,type DocumentsState} from './store';
 import {DocumentsEngine} from './engine';
@@ -154,7 +154,10 @@ const setSel=(a:Pos,h:Pos)=>patchDocuments({caret:a.block===h.block?{block:h.blo
 export const MAX_SPAN_BLOCKS=2000,MAX_INSERT_CHARS=1_000_000,MAX_INSERT_LINES=5000;
 /** Texts of the editable paragraphs `from..to`, or null when one is a table/object, missing, or the span is above the cap. */
 function spanTexts(from:number,to:number):string[]|null{
- if(to<from||to-from+1>MAX_SPAN_BLOCKS)return null;const out:string[]=[];
+ if(to<from||to-from+1>MAX_SPAN_BLOCKS)return null;
+ // Table cells are edited one paragraph at a time: a range across cells is refused.
+ if(to>from&&to>=CELL_BASE)return null;
+ const out:string[]=[];
  for(let i=from;i<=to;i++){const t=blockText(i);if(t===null)return null;out.push(t);}return out;
 }
 const reachable=(a:number,b:number)=>spanTexts(Math.min(a,b),Math.max(a,b))!==null;
@@ -275,7 +278,9 @@ export const deleteAtCaret=(dir:-1|1,word=false)=>run(async()=>{
 export const selectAllInParagraph=()=>{const c=getDocumentsState().caret;if(!c)return;const t=blockText(c.block);if(t!==null)patchDocuments({caret:{block:c.block,anchor:0,head:u8(t)}});};
 /** Ctrl+A: every consecutive editable paragraph around the caret (a table or object paragraph ends the run). */
 export const selectAllText=()=>{
- const c=getDocumentsState().caret;if(!c||blockText(c.block)===null)return;let lo=c.block,hi=c.block;
+ const c=getDocumentsState().caret;if(!c||blockText(c.block)===null)return;
+ if(c.block>=CELL_BASE){selectAllInParagraph();return;}
+ let lo=c.block,hi=c.block;
  while(lo>0&&hi-lo<MAX_SPAN_BLOCKS&&blockText(lo-1)!==null)lo--;while(hi-lo<MAX_SPAN_BLOCKS&&blockText(hi+1)!==null)hi++;
  setSel({block:lo,off:0},{block:hi,off:u8(blockText(hi)!)});
 };
@@ -300,7 +305,7 @@ export const moveCaret=(kind:CaretMove,extend:boolean)=>run(async()=>{
   const nb=nearbyBlock(h.block,dir);if(nb)go(nb.index,dir<0?u8(nb.text!):0);return;
  }
  if(kind==='docStart'||kind==='docEnd'){
-  goalX=null;const bs=getDocumentsState().blocks.filter(b=>b.editable&&b.text!==undefined);const b=kind==='docStart'?bs[0]:bs[bs.length-1];if(b)go(b.index,kind==='docStart'?0:u8(b.text!));return;
+  goalX=null;const bs=getDocumentsState().blocks.filter(b=>b.editable&&b.text!==undefined&&b.index<CELL_BASE);const b=kind==='docStart'?bs[0]:bs[bs.length-1];if(b)go(b.index,kind==='docStart'?0:u8(b.text!));return;
  }
  const box=getDocumentsState().caretBox;if(!box)return;const lh=Math.max(box.height,1);const mid=box.top+box.height/2;
  if(kind==='home'||kind==='end'){goalX=null;const r=await e.hit(box.page,kind==='home'?-1e4:1e5,mid);if(r&&r.block===h.block&&r.off!==undefined)go(h.block,r.off);return;}
@@ -350,6 +355,7 @@ export const splitAtCaret=()=>run(async()=>{
  const check=ownerGuard();await replaceRange(n.s,n.e,'\n',n.h);check();
 });
 async function joinAtEdge(block:number,t:string,dir:-1|1){
+ if(block>=CELL_BASE)return;// cells cannot be split or joined yet
  const nb=nearbyBlock(block,dir);if(!nb){if(getDocumentsState().blocks.some(x=>x.index===block+dir))patchDocuments({caretLocked:true});return;}
  if(dir<0)await structural(e=>e.merge(block),{block,off:0},{block:block-1,off:u8(nb.text!)});
  else await structural(e=>e.merge(block+1),{block,off:u8(t)},{block,off:u8(t)});
@@ -370,7 +376,7 @@ async function applyPara(patch:ParaPatch){
  const c=getDocumentsState().caret;if(!c)return;const n=norm(c);goalX=null;
  if(n.e.block-n.s.block+1>MAX_SPAN_BLOCKS)throw new Error(`Selection is too large for one edit (limit ${MAX_SPAN_BLOCKS} paragraphs).`);
  const blocks=getDocumentsState().blocks;
- for(let i=n.s.block;i<=n.e.block;i++){if(blocks.find(b=>b.index===i)?.kind!=='para')throw new Error('This selection includes a part that cannot be formatted as a paragraph.');}
+ for(let i=n.s.block;i<=n.e.block;i++){if(blocks.find(b=>b.index===i)?.kind!=='para'&&blocks.find(b=>b.index===i)?.kind!=='cell')throw new Error('This selection includes a part that cannot be formatted as a paragraph.');}
  await structural(eng=>eng.formatParagraphs(n.s.block,n.e.block,patch),n.h,n.h);
  setSel(n.a,n.h);
 }
@@ -383,7 +389,7 @@ async function paraSpan(){
  const c=getDocumentsState().caret;if(!c)return null;const n=norm(c);goalX=null;
  if(n.e.block-n.s.block+1>MAX_SPAN_BLOCKS)throw new Error(`Selection is too large for one edit (limit ${MAX_SPAN_BLOCKS} paragraphs).`);
  const blocks=getDocumentsState().blocks;
- for(let i=n.s.block;i<=n.e.block;i++){if(blocks.find(b=>b.index===i)?.kind!=='para')throw new Error('This selection includes a part that cannot be formatted as a paragraph.');}
+ for(let i=n.s.block;i<=n.e.block;i++){if(blocks.find(b=>b.index===i)?.kind!=='para'&&blocks.find(b=>b.index===i)?.kind!=='cell')throw new Error('This selection includes a part that cannot be formatted as a paragraph.');}
  return n;
 }
 export const setParagraphStyle=(style:DocStyleId)=>run(async()=>{

@@ -18,7 +18,7 @@ export function DocumentsOutlinePanel({context}:PanelHostProps){
   <label className="doc-panel-check"><NativeInput type="checkbox" checked={editableOnly} onChange={e=>setEditableOnly(e.target.checked)}/>{t('documents.panels.editableOnly')}</label>
   <label className="doc-panel-check"><NativeInput type="checkbox" checked={headingsOnly} onChange={e=>setHeadingsOnly(e.target.checked)} data-testid="documents-outline-headings-only"/>{t('documents.panels.headingsOnly')}</label>
   <p className="doc-panel-note">{t('documents.panels.outlineHint')}</p>
-  <ol className="doc-panel-list">{d.blocks.filter(b=>(!editableOnly||b.editable)&&(!headingsOnly||(b.outline!=null))&&(!filter||(b.text??'').toLocaleLowerCase().includes(filter.toLocaleLowerCase()))).map(b=><li key={b.index}><NativeButton disabled={!b.editable} aria-current={d.caret?.block===b.index?'true':undefined} onClick={()=>a.run('documents.focusParagraph',{block:b.index})}>
+  <ol className="doc-panel-list">{d.blocks.filter(b=>b.kind!=='cell'&&(!editableOnly||b.editable)&&(!headingsOnly||(b.outline!=null))&&(!filter||(b.text??'').toLocaleLowerCase().includes(filter.toLocaleLowerCase()))).map(b=><li key={b.index}><NativeButton disabled={!b.editable} aria-current={d.caret?.block===b.index?'true':undefined} onClick={()=>a.run('documents.focusParagraph',{block:b.index})}>
    <span className="doc-panel-meta">{b.outline!=null?t('documents.panels.headingLevel',{n:b.outline+1})+' · ':''}{t(b.kind==='table'?'documents.edit.table':'documents.edit.paragraph',{n:b.index+1})}{!b.editable&&' · '+t('documents.panels.locked')}</span>
    <span className="doc-panel-excerpt">{b.text||(b.kind==='para'&&b.editable?t('documents.panels.emptyParagraph'):'')}</span></NativeButton></li>)}</ol>
  </>}</section>;

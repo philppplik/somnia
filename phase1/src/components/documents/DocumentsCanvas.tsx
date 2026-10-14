@@ -156,7 +156,7 @@ export function ParagraphEditor(){
   <h3 className="text-[12px] font-medium text-ink">{t('documents.edit.title')}</h3>
   {doc.editError&&<p role="alert" className="text-[12px] text-ink" data-testid="documents-edit-error">{doc.editError}</p>}
   <ul className="grid max-h-[50vh] gap-2 overflow-auto pr-1">
-   {doc.blocks.map(b=><li key={b.index}>
+   {doc.blocks.filter(b=>b.kind!=='cell').map(b=><li key={b.index}>
     {b.kind==='table'?<p className="text-ink-3" data-testid="documents-block-locked">{t('documents.edit.table',{n:b.index+1})}</p>
      :b.editable?<ParagraphField index={b.index} text={b.text??''}/>
      :<p className="text-ink-3" data-testid="documents-block-locked">{t('documents.edit.objects',{n:b.index+1})}</p>}

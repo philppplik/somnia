@@ -46,13 +46,20 @@ new file mode 100644
 index 0000000..5b80b79
 --- /dev/null
 +++ b/crates/somnia-worker/src/lib.rs
-@@ -0,0 +1,1125 @@
+@@ -0,0 +1,1237 @@
 +//! Experimental headless adapter. No DOM, egui, filesystem or UI thread access.
 +use wasm_bindgen::prelude::*;
 +use std::sync::Arc;
 +use wordcraft_doc::para::OBJ;
 +use wordcraft_doc::{Block, CharProps, Document, Pos, StoryRef};
 +use wordcraft_layout::{DocLayout, LayoutCache, LayoutOptions};
++
++/// Block ids at or above this value address a paragraph inside a top-level table cell: `CELL_BASE + n` is the
++/// n-th cell paragraph in document order (see `cell_paras`). Ids are recomputed from the document on every use,
++/// so they are only stable until a table's structure changes; the host refreshes `blocks()` after every edit.
++const CELL_BASE: usize = 1 << 20;
++/// The block list names at most this many cell paragraphs (the rest stay read-only for the host).
++const CELL_LIST_MAX: usize = 20_000;
 +
 +#[wasm_bindgen]
 +pub struct DocSession {
@@ -75,7 +82,7 @@ index 0000000..5b80b79
 +        if text.len() > 1024 * 1024 {
 +            return Err("adapter edit limit: 1 MiB".into());
 +        }
-+        self.doc.insert_text(&Pos::body(block, offset), text, &CharProps::default()).map_err(|e| e.to_string())?;
++        self.doc.insert_text(&self.pos_of(block, offset), text, &CharProps::default()).map_err(|e| e.to_string())?;
 +        // Invalidate placed pages; paragraph cache is revision-aware upstream.
 +        self.pages = DocLayout::default();
 +        Ok(())
@@ -99,7 +106,84 @@ index 0000000..5b80b79
 +                Block::Table(_) => serde_json::json!({"index": i, "kind": "table", "editable": false}),
 +            })
 +            .collect();
++        let mut items = items;
++        // Paragraphs inside table cells follow as `cell` entries addressed by `CELL_BASE + n`.
++        for (slot, path) in self.cell_paras().enumerate().take(CELL_LIST_MAX) {
++            let [b, r, c, k] = path;
++            if let Some(p) = self.para_by_path(path) {
++                let editable = !p.text.contains(OBJ) && p.objects.is_empty();
++                items.push(serde_json::json!({"index": CELL_BASE + slot, "kind": "cell", "text": if editable { p.text.clone() } else { p.plain_text() }, "editable": editable, "table": b, "row": r, "cell": c, "para": k, "outline": null}));
++            }
++        }
 +        serde_json::Value::Array(items).to_string()
++    }
++    /// `[block, row, cell, paragraph]` of every paragraph directly inside a cell of a top-level table, in document order.
++    fn cell_paras(&self) -> impl Iterator<Item = [usize; 4]> + '_ {
++        self.doc
++            .body
++            .iter()
++            .enumerate()
++            .filter_map(|(b, blk)| match &**blk {
++                Block::Table(t) => Some((b, t)),
++                _ => None,
++            })
++            .flat_map(|(b, t)| {
++                t.rows.iter().enumerate().flat_map(move |(r, row)| {
++                    row.cells
++                        .iter()
++                        .enumerate()
++                        .flat_map(move |(c, cell)| cell.blocks.iter().enumerate().filter_map(move |(k, x)| matches!(&**x, Block::Para(_)).then_some([b, r, c, k])))
++                })
++            })
++    }
++    /// The paragraph a block id addresses: a top-level paragraph, or a cell paragraph for ids from `CELL_BASE`.
++    fn para_at(&self, id: usize) -> Option<&wordcraft_doc::Paragraph> {
++        if id < CELL_BASE {
++            return match self.doc.body.get(id).map(|b| &**b) {
++                Some(Block::Para(p)) => Some(p),
++                _ => None,
++            };
++        }
++        let path = self.cell_paras().nth(id - CELL_BASE)?;
++        self.para_by_path(path)
++    }
++    /// The paragraph at `[block, row, cell, paragraph]`.
++    fn para_by_path(&self, [b, r, c, k]: [usize; 4]) -> Option<&wordcraft_doc::Paragraph> {
++        match self.doc.body.get(b).map(|x| &**x) {
++            Some(Block::Table(t)) => match t.rows.get(r)?.cells.get(c)?.blocks.get(k).map(|x| &**x) {
++                Some(Block::Para(p)) => Some(p),
++                _ => None,
++            },
++            _ => None,
++        }
++    }
++    /// Replaces the paragraph a block id addresses. A cell paragraph is replaced by cloning its table.
++    fn put_para(&mut self, id: usize, p: wordcraft_doc::Paragraph) -> Result<(), String> {
++        if id < CELL_BASE {
++            let slot = self.doc.body.get_mut(id).ok_or_else(|| format!("no block {id}"))?;
++            *slot = Arc::new(Block::Para(p));
++            return Ok(());
++        }
++        let [b, r, c, k] = self.cell_paras().nth(id - CELL_BASE).ok_or_else(|| format!("no cell paragraph {id}"))?;
++        let Some(Block::Table(t)) = self.doc.body.get(b).map(|x| &**x) else { return Err(format!("block {b} is not a table")) };
++        let mut t2 = t.clone();
++        let slot = t2.rows.get_mut(r).and_then(|row| row.cells.get_mut(c)).and_then(|cell| cell.blocks.get_mut(k)).ok_or_else(|| format!("no cell paragraph {id}"))?;
++        *slot = Arc::new(Block::Para(p));
++        self.doc.body[b] = Arc::new(Block::Table(t2));
++        Ok(())
++    }
++    /// A document position for a block id (top-level paragraph or cell paragraph).
++    fn pos_of(&self, id: usize, off: usize) -> Pos {
++        if id >= CELL_BASE {
++            if let Some([b, r, c, k]) = self.cell_paras().nth(id - CELL_BASE) {
++                return Pos::new(StoryRef::Body, wordcraft_doc::Path(vec![b as u32, r as u32, c as u32, k as u32]), off);
++            }
++        }
++        Pos::body(id, off)
++    }
++    /// A paragraph range is valid when it stays in one id space (top level or cells) and is short.
++    fn id_span_ok(first: usize, last: usize) -> bool {
++        last >= first && last - first < 2000 && ((first < CELL_BASE) == (last < CELL_BASE))
 +    }
 +    /// Applies several non-overlapping replacements (UTF-8 byte ranges in the ORIGINAL paragraph text,
 +    /// sorted ascending) to one top-level paragraph. Everything is done on a clone and committed only
@@ -123,8 +207,7 @@ index 0000000..5b80b79
 +        if total > 1024 * 1024 {
 +            return Err("adapter edit limit: 1 MiB".into());
 +        }
-+        let Some(b) = self.doc.body.get(block) else { return Err(format!("no block {block}")) };
-+        let Block::Para(orig) = &**b else { return Err(format!("block {block} is a table, not a paragraph")) };
++        let Some(orig) = self.para_at(block) else { return Err(format!("block {block} is not a paragraph")) };
 +        if orig.text.contains(OBJ) || !orig.objects.is_empty() {
 +            return Err(format!("paragraph {block} contains inline objects and cannot be edited as text"));
 +        }
@@ -158,11 +241,14 @@ index 0000000..5b80b79
 +                p.insert_text(start, text, &props).map_err(|e| e.to_string())?;
 +            }
 +        }
-+        self.doc.body[block] = Arc::new(Block::Para(p));
++        self.put_para(block, p)?;
 +        self.pages = DocLayout::default();
 +        Ok(())
 +    }
 +    fn plain_para(&self, block: usize) -> Result<&wordcraft_doc::Paragraph, String> {
++        if block >= CELL_BASE {
++            return Err("paragraphs inside table cells cannot be split or joined yet".into());
++        }
 +        match self.doc.body.get(block).map(|b| &**b) {
 +            None => Err(format!("no block {block}")),
 +            Some(Block::Table(_)) => Err(format!("block {block} is a table, not a paragraph")),
@@ -198,13 +284,10 @@ index 0000000..5b80b79
 +    }
 +    /// A paragraph whose text can be formatted by byte range: not a table, no inline objects.
 +    fn fmt_para(&self, block: usize) -> Result<&wordcraft_doc::Paragraph, String> {
-+        match self.doc.body.get(block).map(|b| &**b) {
-+            None => Err(format!("no block {block}")),
-+            Some(Block::Table(_)) => Err(format!("block {block} is a table, not a paragraph")),
-+            Some(Block::Para(p)) if p.text.contains(OBJ) || !p.objects.is_empty() => {
-+                Err(format!("paragraph {block} contains inline objects and cannot be formatted as text"))
-+            }
-+            Some(Block::Para(p)) => Ok(p),
++        match self.para_at(block) {
++            None => Err(format!("block {block} is not a paragraph")),
++            Some(p) if p.text.contains(OBJ) || !p.objects.is_empty() => Err(format!("paragraph {block} contains inline objects and cannot be formatted as text")),
++            Some(p) => Ok(p),
 +        }
 +    }
 +    /// Non-empty per-paragraph byte ranges `(block, start, end)` covered by a selection that starts at
@@ -214,8 +297,8 @@ index 0000000..5b80b79
 +        if eb < sb || (eb == sb && eo < so) {
 +            return Err("selection end is before its start".into());
 +        }
-+        if eb - sb >= 2000 {
-+            return Err("selection spans too many paragraphs".into());
++        if !Self::id_span_ok(sb, eb) {
++            return Err("selection spans too many paragraphs or leaves the table".into());
 +        }
 +        let mut out = Vec::new();
 +        for b in sb..=eb {
@@ -318,7 +401,7 @@ index 0000000..5b80b79
 +            done.push((b, p));
 +        }
 +        for (b, p) in done {
-+            self.doc.body[b] = Arc::new(Block::Para(p));
++            self.put_para(b, p)?;
 +        }
 +        self.pages = DocLayout::default();
 +        Ok(())
@@ -406,14 +489,14 @@ index 0000000..5b80b79
 +                _ => return Err(format!("unknown paragraph field {k}")),
 +            }
 +        }
-+        if last < first || last >= self.doc.body.len() {
++        if !Self::id_span_ok(first, last) {
 +            return Err("paragraph range is out of bounds".into());
 +        }
 +        let mut done: Vec<(usize, wordcraft_doc::Paragraph)> = Vec::with_capacity(last - first + 1);
 +        for b in first..=last {
-+            let mut p = match self.doc.body.get(b).map(|x| &**x) {
-+                Some(Block::Para(p)) => p.clone(),
-+                _ => return Err(format!("block {b} is not a paragraph")),
++            let mut p = match self.para_at(b) {
++                Some(p) => p.clone(),
++                None => return Err(format!("block {b} is not a paragraph")),
 +            };
 +            if let Some(a) = align {
 +                p.props.align = Some(a);
@@ -436,7 +519,7 @@ index 0000000..5b80b79
 +            done.push((b, p));
 +        }
 +        for (b, p) in done {
-+            self.doc.body[b] = Arc::new(Block::Para(p));
++            self.put_para(b, p)?;
 +        }
 +        self.pages = DocLayout::default();
 +        Ok(())
@@ -445,14 +528,14 @@ index 0000000..5b80b79
 +    /// `lineSpacing` is the multiple, or null when mixed or set as an exact / at-least height.
 +    fn do_para_state(&self, first: usize, last: usize) -> Result<String, String> {
 +        use wordcraft_doc::props::{Align, LineSpacing};
-+        if last < first || last >= self.doc.body.len() {
++        if !Self::id_span_ok(first, last) {
 +            return Err("paragraph range is out of bounds".into());
 +        }
 +        let mut rows = Vec::new();
 +        for b in first..=last {
-+            match self.doc.body.get(b).map(|x| &**x) {
-+                Some(Block::Para(p)) => rows.push(self.doc.styles.resolve_para(&p.props)),
-+                _ => return Err(format!("block {b} is not a paragraph")),
++            match self.para_at(b) {
++                Some(p) => rows.push(self.doc.styles.resolve_para(&p.props)),
++                None => return Err(format!("block {b} is not a paragraph")),
 +            }
 +        }
 +        fn same_str(v: &[&str]) -> Option<String> {
@@ -515,13 +598,13 @@ index 0000000..5b80b79
 +        Ok(())
 +    }
 +    fn para_span(&self, first: usize, last: usize) -> Result<Vec<wordcraft_doc::Paragraph>, String> {
-+        if last < first || last >= self.doc.body.len() || last - first >= 2000 {
++        if !Self::id_span_ok(first, last) {
 +            return Err("paragraph range is out of bounds".into());
 +        }
 +        (first..=last)
-+            .map(|b| match self.doc.body.get(b).map(|x| &**x) {
-+                Some(Block::Para(p)) => Ok(p.clone()),
-+                _ => Err(format!("block {b} is not a paragraph")),
++            .map(|b| match self.para_at(b) {
++                Some(p) => Ok(p.clone()),
++                None => Err(format!("block {b} is not a paragraph")),
 +            })
 +            .collect()
 +    }
@@ -539,7 +622,7 @@ index 0000000..5b80b79
 +        }
 +        self.doc.styles = styles;
 +        for (i, p) in paras.into_iter().enumerate() {
-+            self.doc.body[first + i] = Arc::new(Block::Para(p));
++            self.put_para(first + i, p)?;
 +        }
 +        self.pages = DocLayout::default();
 +        Ok(())
@@ -558,11 +641,8 @@ index 0000000..5b80b79
 +                found.unwrap_or_else(|| numbering.add_list(ListKind::Bullet))
 +            }
 +            "numbered" => {
-+                let above = if first > 0 {
-+                    match self.doc.body.get(first - 1).map(|x| &**x) {
-+                        Some(Block::Para(p)) => self.doc.styles.resolve_para(&p.props).numbering,
-+                        _ => None,
-+                    }
++                let above = if first > 0 && first < CELL_BASE {
++                    self.para_at(first - 1).and_then(|p| self.doc.styles.resolve_para(&p.props).numbering)
 +                } else {
 +                    None
 +                };
@@ -596,7 +676,7 @@ index 0000000..5b80b79
 +        self.doc.numbering = numbering;
 +        self.doc.styles = styles;
 +        for (i, p) in paras.into_iter().enumerate() {
-+            self.doc.body[first + i] = Arc::new(Block::Para(p));
++            self.put_para(first + i, p)?;
 +        }
 +        self.pages = DocLayout::default();
 +        Ok(())
@@ -620,7 +700,7 @@ index 0000000..5b80b79
 +            return Err("the selection is not in a list".into());
 +        }
 +        for (i, p) in paras.into_iter().enumerate() {
-+            self.doc.body[first + i] = Arc::new(Block::Para(p));
++            self.put_para(first + i, p)?;
 +        }
 +        self.pages = DocLayout::default();
 +        Ok(())
@@ -654,12 +734,24 @@ index 0000000..5b80b79
 +                let editable = matches!(self.doc.body.get(b).map(|b| &**b), Some(Block::Para(p)) if !p.text.contains(OBJ) && p.objects.is_empty());
 +                serde_json::json!({"block": b, "off": pos.off, "editable": editable}).to_string()
 +            }
++            // A paragraph directly inside a cell of a top-level table.
++            Some(pos) if pos.story == StoryRef::Body && pos.path.0.len() == 4 => {
++                let want = [pos.path.0[0] as usize, pos.path.0[1] as usize, pos.path.0[2] as usize, pos.path.0[3] as usize];
++                match self.cell_paras().position(|c| c == want) {
++                    Some(slot) => {
++                        let id = CELL_BASE + slot;
++                        let editable = self.para_at(id).is_some_and(|p| !p.text.contains(OBJ) && p.objects.is_empty());
++                        serde_json::json!({"block": id, "off": pos.off, "editable": editable}).to_string()
++                    }
++                    None => serde_json::json!({"block": null, "editable": false}).to_string(),
++                }
++            }
 +            Some(_) => serde_json::json!({"block": null, "editable": false}).to_string(),
 +        }
 +    }
 +    /// Caret rectangle for a top-level paragraph offset: `{"page","x","top","height"}` or `null`.
 +    pub fn caret_at(&self, block: usize, utf8_off: usize) -> String {
-+        match self.pages.caret(&Pos::body(block, utf8_off)) {
++        match self.pages.caret(&self.pos_of(block, utf8_off)) {
 +            Some(c) => serde_json::json!({"page": c.page, "x": c.x, "top": c.top, "height": c.height}).to_string(),
 +            None => "null".into(),
 +        }
@@ -668,7 +760,7 @@ index 0000000..5b80b79
 +    pub fn selection_rects(&self, block: usize, a: usize, b: usize) -> String {
 +        let r: Vec<_> = self
 +            .pages
-+            .selection_rects(&self.doc, &Pos::body(block, a), &Pos::body(block, b), 0)
++            .selection_rects(&self.doc, &self.pos_of(block, a), &self.pos_of(block, b), 0)
 +            .into_iter()
 +            .map(|(pg, r)| serde_json::json!([pg, r.x, r.y, r.w, r.h]))
 +            .collect();
@@ -790,9 +882,29 @@ index 0000000..5b80b79
 +        let a = v.as_array().unwrap();
 +        assert!(a.iter().any(|b| b["kind"] == "table" && b["editable"] == false));
 +        assert!(a[0]["kind"] == "para" && a[0]["text"].as_str().unwrap().contains("Somnia Documents"));
-+        for (i, b) in a.iter().enumerate() {
++        for (i, b) in a.iter().filter(|b| b["kind"] != "cell").enumerate() {
 +            assert_eq!(b["index"], i);
 +        }
++    }
++    #[test]
++    fn table_cell_paragraphs_are_addressable_and_atomic() {
++        let mut s = DocSession::from_bytes(FIXTURE).unwrap();
++        let v: serde_json::Value = serde_json::from_str(&s.block_list()).unwrap();
++        let cells: Vec<_> = v.as_array().unwrap().iter().filter(|b| b["kind"] == "cell").collect();
++        assert!(!cells.is_empty());
++        let id = cells[0]["index"].as_u64().unwrap() as usize;
++        assert!(id >= CELL_BASE);
++        let before = cells[0]["text"].as_str().unwrap().to_string();
++        s.do_insert(id, 0, "X").unwrap();
++        assert_eq!(s.para_at(id).unwrap().text, format!("X{before}"));
++        let saved = wordcraft_docx::write(&s.doc).unwrap();
++        assert_eq!(DocSession::from_bytes(&saved).unwrap().text(), s.text());
++        let now = s.text();
++        assert!(s.do_insert(CELL_BASE + 999_999, 0, "x").is_err());
++        assert!(s.do_replace(id, 0, 99999, "x").is_err());
++        assert!(s.do_split(id, 0).is_err());
++        assert!(s.do_merge(id).is_err());
++        assert_eq!(now, s.text());
 +    }
 +    #[test]
 +    fn replace_range_roundtrips_and_is_atomic() {

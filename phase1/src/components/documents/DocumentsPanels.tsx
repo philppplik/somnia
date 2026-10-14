@@ -35,7 +35,7 @@ export function PagesPanel(_:PanelHostProps){
 export function OutlinePanel({panelId,context}:PanelHostProps){
  const {t}=useT();const doc=useDocuments();const [filter,setFilter]=usePanelState<string>(`${context.studio}.${panelId}.filter`,'');
  const q=filter.trim().toLowerCase();
- const rows=doc.blocks.map(b=>({b,label:b.kind==='table'?t('documents.outline.table',{n:b.index+1}):(b.text??'').trim()||t('documents.outline.emptyPara')})).filter(r=>!q||r.label.toLowerCase().includes(q));
+ const rows=doc.blocks.filter(b=>b.kind!=='cell').map(b=>({b,label:b.kind==='table'?t('documents.outline.table',{n:b.index+1}):(b.text??'').trim()||t('documents.outline.emptyPara')})).filter(r=>!q||r.label.toLowerCase().includes(q));
  return <aside className="panel sidebar grid min-h-0 grid-rows-[auto_1fr] gap-2 p-2" aria-label={t('documents.rail.outline')} data-testid="documents-outline">
   <Input value={filter} onChange={e=>setFilter(e.target.value)} placeholder={t('documents.outline.filter')} aria-label={t('documents.outline.filter')}/>
   {doc.status!=='ready'?<p className="text-[12px] text-ink-3">{t('documents.inspector.none')}</p>
