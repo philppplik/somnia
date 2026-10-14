@@ -1,5 +1,5 @@
 import {radialPath,gradientVector} from '../../lib/animation/shapes';
-import {layerPathD} from '../../lib/animation/pathLayer';
+import {layerPathD,layerFillRule} from '../../lib/animation/pathLayer';
 import {effectPrimitives,effectBounds,revealedText,strokeAttributes} from '../../lib/animation/effects';
 import type {InterfaceAsset} from '../../lib/interface/schema';
 import {StudioStatus} from '../studios/StudioStatus';
@@ -63,7 +63,7 @@ function layerNode(l:Layer,assets:readonly InterfaceAsset[],at:number,fillOverri
  if(l.kind==='raster'){const asset=assets.find(a=>a.id===src.assetId);return asset?<image href={asset.data} width={src.width} height={src.height}/>:<text fill="var(--text-primary)">Missing image</text>;}
  if(l.kind==='solid')return <rect x={0} y={0} width={src.width} height={src.height} fill={fill}/>;
  if(l.kind==='shape'&&['star','polygon'].includes(src.shape??''))return <path {...strokeAttributes(l,at)} d={radialPath(src)} fill={fill}/>;
- if(l.kind==='shape'&&src.shape==='path'&&src.path)return <path {...strokeAttributes(l,at)} d={layerPathD(l,at)} fill={fill}/>;
+ if(l.kind==='shape'&&src.shape==='path'&&src.path)return <path {...strokeAttributes(l,at)} d={layerPathD(l,at)} fillRule={layerFillRule(l)} fill={fill}/>;
  if(l.kind==='shape')return src.shape==='ellipse'?<ellipse {...strokeAttributes(l,at)} cx={(src.width??0)/2} cy={(src.height??0)/2} rx={(src.width??0)/2} ry={(src.height??0)/2} fill={fill}/>:<rect {...strokeAttributes(l,at)} rx={src.shape==='roundedRect'?Math.min(src.radius??24,(src.width??0)/2,(src.height??0)/2):0} x={0} y={0} width={src.width} height={src.height} fill={fill}/>;
  return <text x={0} y={src.size??48} fontSize={src.size} fill={fill} fontFamily="system-ui, sans-serif" className="select-none">{animatedText(l,at)}</text>;
 }

@@ -11,9 +11,14 @@ const scale=(p:MaskPath,w:number,h:number):MaskPath=>({closed:p.closed,points:p.
 const norm=(p:MaskPath,w:number,h:number):MaskPath=>({closed:p.closed,points:p.points.map(q=>({x:r4(q.x/w),y:r4(q.y/h),...(q.inX!==undefined?{inX:r4(q.inX/w),inY:r4((q.inY??0)/h)}:{}),...(q.outX!==undefined?{outX:r4(q.outX/w),outY:r4((q.outY??0)/h)}:{})}))});
 const box=(l:Layer)=>({w:Math.max(1,l.source.width??1),h:Math.max(1,l.source.height??1)});
 const hasHandles=(p:MaskPath)=>p.points.some(q=>q.inX!==undefined||q.outX!==undefined||q.inY!==undefined||q.outY!==undefined);
+/** Every subpath of a path layer, main path first. Documents from before compound paths have no `subpaths` and read as exactly one. */
+export const pathSubpaths=(s:Layer['source']):readonly MaskPath[]=>s.path?[s.path as MaskPath,...((s.subpaths??[]) as readonly MaskPath[])]:[];
+/** `evenodd` for compound paths so inner subpaths cut holes; absent for single paths (the old default fill rule stays). */
+export const layerFillRule=(l:Layer):'evenodd'|undefined=>l.kind==='shape'&&l.source.shape==='path'&&l.source.subpaths?.length?'evenodd':undefined;
 /** SVG path data of a path shape layer at a composition tick. Plain polygons keep the legacy output byte for byte. */
 export function layerPathD(l:Layer,tick:number):string{
  const s=l.source,p=s.path as MaskPath,{w,h}=box(l);
+ if(s.subpaths?.length)return pathSubpaths(s).map(q=>bezierPath(scale(q,w,h),0,0)).join(' ');
  if(!s.pathKeys?.length&&!hasHandles(p))return pathData(s.path as unknown as InterfacePath,s.width??1,s.height??1);
  const cur=s.pathKeys?.length?lerpPath(s.pathKeys,tick):p;return bezierPath(scale(cur,w,h),0,0);
 }
@@ -70,6 +75,8 @@ export type PathLayerOp=
  |{op:'point';index:number;x:number;y:number;t?:number}
  |{op:'pen';x:number;y:number;outX?:number;outY?:number}
  |{op:'close'}
+ |{op:'addSubpath';path:MaskPath}
+ |{op:'removeSubpath';index:number}
  |{op:'insert';index:number;u?:number}
  |{op:'remove';index:number}
  |{op:'corner';index:number;smooth:boolean}
@@ -98,7 +105,7 @@ export function pathLayerEdit(doc:AnimationDocument,layerId:string,o:PathLayerOp
    if(keys?.length)throw Error('Turn off path animation before replacing the points.');
    if(o.path.points.length>256)throw Error('At most 256 points.');return upd({path:o.path});}
   case 'animate':{
-   if(o.on){if(keys?.length)return upd({});if(s.path!.points.length<2)throw Error('Add at least two points first.');if(s.path!.points.length>MAX_MASK_POINTS)throw Error(`Animated paths have at most ${MAX_MASK_POINTS} points.`);
+   if(o.on){if(keys?.length)return upd({});if(s.subpaths?.length)throw Error('Compound paths cannot be animated yet.');if(s.path!.points.length<2)throw Error('Add at least two points first.');if(s.path!.points.length>MAX_MASK_POINTS)throw Error(`Animated paths have at most ${MAX_MASK_POINTS} points.`);
     return upd({pathKeys:[{t:c.start,path:s.path as MaskPath}]});}
    if(!keys?.length)return upd({});const cur=lerpPath(keys,o.t??c.start);return {type:'layer.update',layer:l.id,source:{path:cur,pathKeys:undefined}};}
   case 'point':{
@@ -134,6 +141,12 @@ export function pathLayerEdit(doc:AnimationDocument,layerId:string,o:PathLayerOp
    const f=o.op==='removePoints'?(p:MaskPath)=>{const left=p.points.length-ix.length;if(left<(keys?.length?2:p.closed?3:1))throw Error(keys?.length?'An animated path needs two points.':p.closed?'A closed path needs three points.':'A path needs a point.');return {...p,points:p.points.filter((_,k)=>!ix.includes(k))};}
     :(p:MaskPath)=>ix.reduce((acc,k)=>cornerAt(acc,k,o.smooth),p);
    return upd({path:f(cur),...(keys?.length?{pathKeys:keys.map(k=>({...k,path:f(k.path)}))}:{})});}
+  case 'addSubpath':{
+   if(keys?.length)throw Error('Turn off path animation before adding subpaths.');
+   return upd({subpaths:[...(s.subpaths??[]),o.path] as typeof s.subpaths});}
+  case 'removeSubpath':{
+   const sub=s.subpaths??[];if(!Number.isInteger(o.index)||o.index<1||o.index>sub.length)throw Error('Subpath no longer exists.');
+   const left=sub.filter((_,k)=>k!==o.index-1);return upd({subpaths:left.length?left:undefined});}
   case 'handle':{
    const t=keys?.length?frame(o.t):undefined,cur=keys?.length?lerpPath(keys,t!):s.path as MaskPath;
    if(!Number.isInteger(o.index)||!cur.points[o.index])throw Error('Point no longer exists.');
@@ -143,10 +156,12 @@ export function pathLayerEdit(doc:AnimationDocument,layerId:string,o:PathLayerOp
    const nk:MaskShapeKey[]=[...keys.filter(k=>k.t!==t),{t:t!,path:next}].sort((a,b)=>a.t-b.t);
    if(nk.length>MAX_SHAPE_KEYS)throw Error(`At most ${MAX_SHAPE_KEYS} path keys.`);return upd({pathKeys:nk});}
   case 'morphTo':{
+   if(s.subpaths?.length)throw Error('Compound paths cannot be morphed yet.');
    if(o.other===l.id)throw P('sameLayer','Pick another layer to morph into.');
    const ol=findLayer(c,o.other);if(!ol||ol.kind!=='shape'||ol.source.shape!=='path'||!ol.source.path)throw P('notPathLayer','Pick another path shape layer.');
    if(s.path!.points.length>MAX_MASK_POINTS)throw new MorphError({key:'animation.morph.err.limit',en:`Animated paths have at most ${MAX_MASK_POINTS} points.`,params:{max:MAX_MASK_POINTS}});
    if(!Number.isInteger(o.t))throw Error('A time is needed.');
+   if(ol.source.subpaths?.length)throw Error('Compound paths cannot be morphed yet.');
    const from=pm(l,w,h),to=pm(ol,w,h,o.t),why=morphProblem(from,to,o.opts);if(why)throw new MorphError(why);
    const res=morphPath(from,to,o.t,c,o.opts),nk=(res.shapeKeys??[]).map(k=>({...k,path:norm(k.path,w,h)}));
    const bad=nk.some(k=>k.path.points.some(q=>!(q.x>=-1e-6&&q.x<=1+1e-6&&q.y>=-1e-6&&q.y<=1+1e-6)));
@@ -178,4 +193,27 @@ export function penNewLayerEdit(doc:AnimationDocument,x:number,y:number,id:strin
  const tr=makeTransform(c.width,c.height);
  const pt=penPoint({x:x/c.width,y:y/c.height,...(outX!==undefined&&outY!==undefined?{outX:outX/c.width,outY:outY/c.height}:{})});
  return {type:'layer.add',kind:'shape',id,over:{name:'Path',source:{shape:'path',color:'#ff7a59',width:c.width,height:c.height,path:{closed:false,points:[pt]}},transform:{...tr,position:{...tr.position,value:[0,0] as unknown as Vec2}}}};
+}
+
+/** Merges path layer `otherId` into `layerId` as extra subpaths and removes it: one undo step (two edits, one dispatch). Points are mapped through both layers' world matrices at the composition start, so the shapes keep their place on screen. Refused when the result would leave the target box or exceed the subpath and point limits. */
+export function combinePathsEdits(doc:AnimationDocument,layerId:string,otherId:string):Edit[]{
+ const {c,l}=target(doc,layerId);if(l.locked)throw Error('Layer is locked.');
+ if(otherId===layerId)throw Error('Pick another path layer.');
+ const o=findLayer(c,otherId);if(!o||o.kind!=='shape'||o.source.shape!=='path'||!o.source.path)throw Error('Pick another path shape layer.');
+ if(o.locked)throw Error('Layer is locked.');
+ if(l.source.pathKeys?.length||o.source.pathKeys?.length)throw Error('Turn off path animation before combining.');
+ const t=c.start,M=worldMatrix(c,l,t),N=worldMatrix(c,o,t),det=M[0]*M[3]-M[1]*M[2];if(Math.abs(det)<1e-9)throw Error('The layer has no area.');
+ const {w,h}=box(l),{w:w2,h:h2}=box(o);
+ const toLocal=(x:number,y:number)=>{const wx=N[0]*x+N[2]*y+N[4],wy=N[1]*x+N[3]*y+N[5],dx=wx-M[4],dy=wy-M[5];return [(M[3]*dx-M[2]*dy)/det,(-M[1]*dx+M[0]*dy)/det] as const;};
+ const lin=(x:number,y:number)=>{const wx=N[0]*x+N[2]*y,wy=N[1]*x+N[3]*y;return [(M[3]*wx-M[2]*wy)/det,(-M[1]*wx+M[0]*wy)/det] as const;};
+ const mapped=pathSubpaths(o.source).map(sp=>({closed:sp.closed,points:sp.points.map(q=>{
+  const [x,y]=toLocal(q.x*w2,q.y*h2),pt:MaskPoint={x:r4(x/w),y:r4(y/h)};
+  if(q.inX!==undefined||q.inY!==undefined){const [hx,hy]=lin((q.inX??0)*w2,(q.inY??0)*h2);pt.inX=r4(hx/w);pt.inY=r4(hy/h);}
+  if(q.outX!==undefined||q.outY!==undefined){const [hx,hy]=lin((q.outX??0)*w2,(q.outY??0)*h2);pt.outX=r4(hx/w);pt.outY=r4(hy/h);}
+  return pt;})}));
+ const eps=1e-3;if(mapped.some(sp=>sp.points.some(q=>q.x<-eps||q.x>1+eps||q.y<-eps||q.y>1+eps)))throw Error('The other path would leave this layer box.');
+ const clamped=mapped.map(sp=>({...sp,points:sp.points.map(q=>({...q,x:Math.min(1,Math.max(0,q.x)),y:Math.min(1,Math.max(0,q.y))}))}));
+ const subpaths=[...(l.source.subpaths??[]),...clamped];
+ if(!validSource({...l.source,subpaths:subpaths as never}))throw Error('Too many subpaths or points in one path layer.');
+ return [{type:'layer.update',layer:l.id,source:{subpaths:subpaths as never}},{type:'layer.remove',layer:o.id}];
 }

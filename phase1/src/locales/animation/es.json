@@ -419,5 +419,10 @@
  "cmd.animation.layer.pen": "Alternar la pluma para capas de trazado",
  "animation.pathLayer.smoothPoint": "Punto suave",
  "animation.pathLayer.cornerPoint": "Punto de esquina",
- "animation.pathLayer.deletePoint": "Eliminar punto"
+ "animation.pathLayer.deletePoint": "Eliminar punto",
+ "animation.pathLayer.combine": "Combinar",
+ "animation.pathLayer.combineTarget": "Combinar con capa de trazado…",
+ "animation.pathLayer.subpaths": "Subtrazados: {n}",
+ "animation.pathLayer.removeSubpath": "Quitar el último subtrazado",
+ "cmd.animation.layer.pathCombine": "Combinar dos capas de trazado en un trazado compuesto"
 }

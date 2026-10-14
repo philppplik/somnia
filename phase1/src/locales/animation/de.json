@@ -419,5 +419,10 @@
  "cmd.animation.layer.pen": "Stiftwerkzeug für Pfad-Ebenen umschalten",
  "animation.pathLayer.smoothPoint": "Punkt glätten",
  "animation.pathLayer.cornerPoint": "Eckpunkt",
- "animation.pathLayer.deletePoint": "Punkt löschen"
+ "animation.pathLayer.deletePoint": "Punkt löschen",
+ "animation.pathLayer.combine": "Kombinieren",
+ "animation.pathLayer.combineTarget": "Mit Pfad-Ebene kombinieren…",
+ "animation.pathLayer.subpaths": "Teilpfade: {n}",
+ "animation.pathLayer.removeSubpath": "Letzten Teilpfad entfernen",
+ "cmd.animation.layer.pathCombine": "Zwei Pfad-Ebenen zu einem zusammengesetzten Pfad kombinieren"
 }

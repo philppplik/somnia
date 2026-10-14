@@ -702,3 +702,46 @@ test('P30: segment drag reshapes the curve so the grabbed point follows the poin
  assert.throws(()=>pathLayerEdit(d,'pa',{op:'segment',index:9,u:0.5,dx:0,dy:0}),/no longer/);
  let open=pathDoc();open=applyEdit(open,{type:'layer.update',layer:'pa',source:{path:{closed:false,points:[{x:0.1,y:0.5},{x:0.9,y:0.5}]}}});assert.throws(()=>pathLayerEdit(open,'pa',{op:'segment',index:1,u:0.5,dx:0,dy:0}),/no longer/,'open path has no closing segment');
 });
+
+import {pathSubpaths,layerFillRule,combinePathsEdits} from './pathLayer';
+import {MAX_SUBPATHS,MAX_COMPOUND_POINTS} from './model';
+test('P31: legacy path layers read as one subpath and render and round-trip unchanged',()=>{
+ const d=pathDoc(),l=layer(d,'pa');assert.equal(l.source.subpaths,undefined);assert.equal(pathSubpaths(l.source).length,1);assert.equal(layerFillRule(l),undefined);
+ assert.equal(layerPathD(l,0),pathData(l.source.path as never,200,100),'legacy output byte for byte');
+ const back=parseAnimationSnapshot(serializeAnimationSnapshot(d,defaultView())).doc;assert.equal(layer(back,'pa').source.subpaths,undefined);
+ assert.doesNotMatch(frameSvg(comp(d),0),/fill-rule/);
+});
+test('P31: compound paths validate, render with even-odd and round-trip; bounds hold',()=>{
+ let d=pathDoc();const hole={closed:true,points:[{x:0.4,y:0.4},{x:0.6,y:0.4},{x:0.5,y:0.6}]};
+ const r=d.revision;d=applyEdit(d,pathLayerEdit(d,'pa',{op:'addSubpath',path:hole}));assert.equal(d.revision,r+1);
+ const l=layer(d,'pa');assert.equal(pathSubpaths(l.source).length,2);assert.equal(layerFillRule(l),'evenodd');assert.equal((layerPathD(l,0).match(/M/g)??[]).length,2);
+ assert.match(frameSvg(comp(d),0),/fill-rule="evenodd"/);assert.ok(validateDocument(d));
+ const back=parseAnimationSnapshot(serializeAnimationSnapshot(d,defaultView())).doc;assert.equal(layer(back,'pa').source.subpaths!.length,1);
+ assert.throws(()=>applyEdit(d,{type:'layer.update',layer:'pa',source:{subpaths:[{closed:true,points:[{x:2,y:0},{x:0,y:0}]}]}}),EditError,'points stay in the box');
+ assert.throws(()=>applyEdit(d,{type:'layer.update',layer:'photo',source:{subpaths:[hole]}}),EditError,'path shapes only');
+ assert.throws(()=>applyEdit(d,{type:'layer.update',layer:'pa',source:{subpaths:[]}}),EditError,'empty list is not a compound');
+ assert.throws(()=>pathLayerEdit(d,'pa',{op:'animate',on:true}),/Compound/);assert.throws(()=>pathLayerEdit(d,'pa',{op:'morphTo',other:'pb',t:Math.round(sec*2)}),/Compound/);
+ let m=d;for(let i=0;i<MAX_SUBPATHS-2;i++)m=applyEdit(m,pathLayerEdit(m,'pa',{op:'addSubpath',path:hole}));assert.equal(pathSubpaths(layer(m,'pa').source).length,MAX_SUBPATHS);
+ assert.throws(()=>applyEdit(m,pathLayerEdit(m,'pa',{op:'addSubpath',path:hole})),EditError,'subpath count bounded');
+ assert.ok(MAX_COMPOUND_POINTS===512);
+ let big=pathDoc();const many={closed:false,points:Array.from({length:200},(_,i)=>({x:i/200,y:0.5}))};
+ big=applyEdit(big,pathLayerEdit(big,'pa',{op:'addSubpath',path:many}));big=applyEdit(big,pathLayerEdit(big,'pa',{op:'addSubpath',path:many}));
+ assert.throws(()=>applyEdit(big,pathLayerEdit(big,'pa',{op:'addSubpath',path:many})),EditError,'total points bounded');
+ const x=applyEdit(d,pathLayerEdit(d,'pa',{op:'removeSubpath',index:1}));assert.equal(layer(x,'pa').source.subpaths,undefined);assert.throws(()=>pathLayerEdit(x,'pa',{op:'removeSubpath',index:1}),/no longer/);
+ const dd=applyEdit(d,pathLayerEdit(d,'pa',{op:'animate',on:false})); void dd;
+});
+test('P31: combining path layers keeps shapes in place, is one undo, and refuses unsafe cases',()=>{
+ let d=pathDoc();const base0=layer(d,'pa').transform.position.value as unknown as number[];d=applyEdit(d,{type:'prop.set',layer:'pb',prop:'position',value:[base0[0]+10,base0[1]],t:0});
+ const before=(layer(d,'pb').transform.position.value as unknown as number[]),r=d.revision;
+ const edits=combinePathsEdits(d,'pa','pb');d=applyEdits(d,edits);assert.equal(d.revision,r+1,'one undo step');assert.equal(findLayer(comp(d),'pb'),undefined,'other layer removed');
+ const sp=layer(d,'pa').source.subpaths!;assert.equal(sp.length,1);
+ const pa=layer(d,'pa').transform.position.value as unknown as number[];const x0=(before[0]-pa[0]+0.1*200)/200;assert.ok(Math.abs(sp[0].points[0].x-x0)<1e-3,'placed by world position');
+ assert.throws(()=>combinePathsEdits(d,'pa','pa'),/another/);assert.throws(()=>combinePathsEdits(d,'pa','photo'),/path shape layer/);
+ let far=pathDoc();far=applyEdit(far,{type:'prop.set',layer:'pb',prop:'position',value:[5000,0],t:0});assert.throws(()=>combinePathsEdits(far,'pa','pb'),/leave this layer box/);
+ let an=pathDoc();an=applyEdit(an,pathLayerEdit(an,'pb',{op:'animate',on:true}));assert.throws(()=>combinePathsEdits(an,'pa','pb'),/animation/);
+ let lk=pathDoc();lk=applyEdit(lk,{type:'layer.update',layer:'pa',locked:true});assert.throws(()=>combinePathsEdits(lk,'pa','pb'),/locked/);
+});
+test('P31: compound path locale keys and command exist',()=>{
+ assert.ok(animationCommandSpecs().some(s=>s.id==='animation.layer.pathCombine'));
+ for(const l of ['en','de','es','fr','pt-BR']){const j=JSON.parse(readFileSync(new URL(`../../locales/animation/${l}.json`,import.meta.url),'utf8'));for(const k of ['animation.pathLayer.combine','animation.pathLayer.combineTarget','animation.pathLayer.subpaths','animation.pathLayer.removeSubpath','cmd.animation.layer.pathCombine'])assert.ok(j[k],`${l} ${k}`);}
+});

@@ -419,5 +419,10 @@
  "cmd.animation.layer.pen": "Activer ou désactiver la plume pour les calques de tracé",
  "animation.pathLayer.smoothPoint": "Point lisse",
  "animation.pathLayer.cornerPoint": "Point d'angle",
- "animation.pathLayer.deletePoint": "Supprimer le point"
+ "animation.pathLayer.deletePoint": "Supprimer le point",
+ "animation.pathLayer.combine": "Combiner",
+ "animation.pathLayer.combineTarget": "Combiner avec un calque de tracé…",
+ "animation.pathLayer.subpaths": "Sous-tracés : {n}",
+ "animation.pathLayer.removeSubpath": "Supprimer le dernier sous-tracé",
+ "cmd.animation.layer.pathCombine": "Combiner deux calques de tracé en un tracé composé"
 }

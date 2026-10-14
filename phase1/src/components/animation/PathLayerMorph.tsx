@@ -12,7 +12,7 @@ const field='h-8 w-full min-w-0 rounded-sm border border-subtle bg-transparent p
 type Shown={key:string;params?:Record<string,number>}|string;
 /** Animate path and morph into another path shape layer at the playhead. Hover previews the result without a history step; refusals are shown in the user's language. */
 export function PathLayerMorph({layer,others}:{layer:Layer;others:readonly Layer[]}){
- const {t}=useT();const [pick,setPick]=useState('');const [err,setErr]=useState<Shown|null>(null);
+ const {t}=useT();const [pick,setPick]=useState('');const [comb,setComb]=useState('');const [err,setErr]=useState<Shown|null>(null);
  const [match,setMatch]=useState(false);const [reverse,setReverse]=useState(false);const [shift,setShift]=useState(0);
  const opts:MorphOpts={match:match?'resample':'index',reverse,shift};const animated=!!layer.source.pathKeys?.length;
  const build=()=>{const s=animationSession();return pathLayerEdit(s.document!,layer.id,{op:'morphTo',other:pick,t:s.getState().view.playhead,opts});};
@@ -30,6 +30,10 @@ export function PathLayerMorph({layer,others}:{layer:Layer;others:readonly Layer
     <label className="flex items-center gap-1"><NativeInput type="checkbox" className="animation-checkbox" checked={match} onChange={e=>setMatch(e.target.checked)}/>{t('animation.morph.match')}</label>
     <label className="flex items-center gap-1"><NativeInput type="checkbox" className="animation-checkbox" checked={reverse} onChange={e=>setReverse(e.target.checked)}/>{t('animation.morph.reverse')}</label>
     <InspectorNumberField label={t('animation.morph.start')} className={field} value={shift} min={0} max={Math.max(0,layer.source.path!.points.length-1)} step={1} disabled={!layer.source.path!.closed} onCommit={v=>setShift(Math.max(0,Math.round(v)))}/></div></>}
-  {err&&<div role="alert" className="text-danger" data-testid="animation-pathlayer-error">{show(err)}</div>}
+  {others.length>0&&!animated&&<div className="flex gap-1"><NativeSelect className={field} value={comb} aria-label={t('animation.pathLayer.combineTarget')} onChange={e=>{setComb(e.target.value);setErr(null);}} data-testid="animation-pathlayer-combine-select"><option value="">{t('animation.pathLayer.combineTarget')}</option>{others.map(o=><option key={o.id} value={o.id}>{o.name}</option>)}</NativeSelect>
+   <Button size="tiny" variant="outline" disabled={!comb||layer.locked} data-testid="animation-pathlayer-combine" onClick={async()=>{setErr(null);try{await executeCommand('animation.layer.pathCombine',{layer:layer.id,other:comb});setComb('');}catch(e){setErr((e as Error).message);}}}>{t('animation.pathLayer.combine')}</Button></div>}
+ {!!layer.source.subpaths?.length&&<div className="flex items-center gap-2 text-ink-3" data-testid="animation-pathlayer-subpaths">{t('animation.pathLayer.subpaths',{n:1+layer.source.subpaths.length})}
+   <Button size="tiny" variant="outline" disabled={layer.locked} onClick={()=>void executeCommand('animation.layer.path',{layer:layer.id,op:'removeSubpath',index:layer.source.subpaths!.length}).catch(e=>setErr((e as Error).message))}>{t('animation.pathLayer.removeSubpath')}</Button></div>}
+ {err&&<div role="alert" className="text-danger" data-testid="animation-pathlayer-error">{show(err)}</div>}
  </div>;
 }

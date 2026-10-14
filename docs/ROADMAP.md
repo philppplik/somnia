@@ -223,3 +223,9 @@ Depends on: v10 diff viewer, v11 updater for smooth extension and app updates.
 - Implemented: multi-point selection for path layers (Shift-click, Shift-marquee), group move, delete and smooth/corner, Alt-drag segment reshape, animated paths supported (group move and segment key at the playhead, delete and smooth hit every key), one undo per action. Commands: animation.layer.path ops movePoints, removePoints, cornerPoints, segment.
 - Validation: 3 new Animation unit tests (171 total), DS ratchet, ui-commands inventory (382, no new command), check:layers, isolated Chrome check with real pointer events.
 - Not covered: path booleans (skipped: existing code is SVG-source-editor only and a path layer has one subpath), no select-all shortcut, no segment drag without Alt (plain drag moves the layer), no new locale keys needed. Playwright E2E is CI-only.
+
+### Animation P31 (2026-10-14, integration pending)
+
+- Implemented: Ctrl/Cmd+A selects all points of a path layer and Esc deselects; compound path model (`source.subpaths`, validation, render with even-odd in canvas and exports, legacy documents unchanged and round-trip tested), ops addSubpath/removeSubpath, "Combine with path layer" (one undo, position-preserving) and "Remove last subpath" in the inspector, command animation.layer.pathCombine, five locales.
+- Validation: 4 new Animation unit tests (175 total), DS ratchet, ui-commands inventory (384), check:layers, isolated Chrome check (select-all, Esc, even-odd hole, undo count).
+- Not covered: no booleans (as requested); compound paths cannot be animated or morphed; on-canvas editing only for the main subpath; no split-to-layers. Playwright E2E is CI-only.

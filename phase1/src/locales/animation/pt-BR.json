@@ -419,5 +419,10 @@
  "cmd.animation.layer.pen": "Alternar a caneta para camadas de caminho",
  "animation.pathLayer.smoothPoint": "Ponto suave",
  "animation.pathLayer.cornerPoint": "Ponto de canto",
- "animation.pathLayer.deletePoint": "Excluir ponto"
+ "animation.pathLayer.deletePoint": "Excluir ponto",
+ "animation.pathLayer.combine": "Combinar",
+ "animation.pathLayer.combineTarget": "Combinar com camada de caminho…",
+ "animation.pathLayer.subpaths": "Subcaminhos: {n}",
+ "animation.pathLayer.removeSubpath": "Remover o último subcaminho",
+ "cmd.animation.layer.pathCombine": "Combinar duas camadas de caminho em um caminho composto"
 }

@@ -600,6 +600,18 @@
       "hasEnabled": true
     },
     {
+      "id": "animation.layer.pathCombine",
+      "title": "Combine two path layers into one compound path",
+      "category": "Edit",
+      "source": "animation",
+      "keywords": [
+        "animation",
+        "keyframe",
+        "timeline"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "animation.layer.pen",
       "title": "Toggle the pen tool for path layers",
       "category": "Insert",

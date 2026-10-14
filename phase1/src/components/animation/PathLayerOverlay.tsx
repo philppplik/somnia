@@ -15,6 +15,7 @@ function nearest(p:MaskPath,w:number,h:number,at:Vec2):{i:number;u:number}|null{
   for(let k=0;k<=24;k++){const u=k/24,v=1-u,wt=[v*v*v,3*v*v*u,3*v*u*u,u*u*u],x=c.reduce((r,q,j)=>r+q[0]*wt[j],0),y=c.reduce((r,q,j)=>r+q[1]*wt[j],0),d=Math.hypot(x-at[0],y-at[1]);if(d<bd){bd=d;best={i,u};}}}
  return best;
 }
+const scalePath=(p:MaskPath,w:number,h:number):MaskPath=>({closed:p.closed,points:p.points.map(q=>({x:q.x*w,y:q.y*h,...(q.inX!==undefined?{inX:q.inX*w,inY:(q.inY??0)*h}:{}),...(q.outX!==undefined?{outX:q.outX*w,outY:(q.outY??0)*h}:{})}))});
 const isPath=(l?:Layer):l is Layer=>!!l&&l.kind==='shape'&&l.source.shape==='path'&&!!l.source.path;
 /** Pen drawing and handle dragging for path shape layers. A click adds a point, a drag pulls symmetric handles, a click on the first point closes the path, Esc or Enter finishes. Every click or drag is one undo step (hover state lives in the session preview). */
 export function PathLayerOverlay({comp,layer,at}:{comp:Composition;layer?:Layer;at:number}){
@@ -27,6 +28,9 @@ export function PathLayerOverlay({comp,layer,at}:{comp:Composition;layer?:Layer;
  useEffect(()=>{if(!pen)return;const k=(e:globalThis.KeyboardEvent)=>{if(e.key==='Escape'||e.key==='Enter'){setLayerPen(false);}};window.addEventListener('keydown',k);return()=>window.removeEventListener('keydown',k);},[pen]);
  const target=isPath(layer)?layer:undefined;
  useEffect(()=>{if(pen||!set.length||!target||target.locked)return;const k=(e:globalThis.KeyboardEvent)=>{if(e.key!=='Delete'&&e.key!=='Backspace')return;const el=e.target as HTMLElement|null;if(el&&(['INPUT','TEXTAREA','SELECT'].includes(el.tagName)||el.isContentEditable))return;e.preventDefault();try{sess.dispatch(pathLayerEdit(sess.document!,target.id,set.length>1?{op:'removePoints',indices:set}:{op:'remove',index:set[0]}));setPoint(null);}catch{/* too few points */}};window.addEventListener('keydown',k);return()=>window.removeEventListener('keydown',k);});
+ useEffect(()=>{if(pen||!target||!path)return;const n=path.points.length,k=(e:globalThis.KeyboardEvent)=>{const el=e.target as HTMLElement|null;if(el&&(['INPUT','TEXTAREA','SELECT'].includes(el.tagName)||el.isContentEditable))return;
+  if((e.key==='a'||e.key==='A')&&(e.ctrlKey||e.metaKey)&&!e.altKey){e.preventDefault();choose(Array.from({length:n},(_,i)=>i));}
+  else if(e.key==='Escape'&&set.length){choose([]);}};window.addEventListener('keydown',k);return()=>window.removeEventListener('keydown',k);});
  if(!target&&!pen)return null;
  const locked=!!target?.locked;if(pen&&locked)return null;
  const w=Math.max(1,target?.source.width??comp.width),h=Math.max(1,target?.source.height??comp.height);
@@ -58,7 +62,7 @@ export function PathLayerOverlay({comp,layer,at}:{comp:Composition;layer?:Layer;
   e.preventDefault();e.stopPropagation();const s=e.shiftKey?10:1;try{apply(dx*s,dy*s);}catch{/* stale */}
  };
  const k=scale(),r=5*k,locked2=locked||pen,common={fill:'var(--bg-elevated)',stroke:'var(--accent)',strokeWidth:2*k,tabIndex:locked2?-1:0,role:'slider' as const,className:`touch-none ${locked2?'cursor-default':'cursor-grab'}`};
- const outline=path?bezierPath({closed:path.closed,points:path.points.map(q=>({x:q.x*w,y:q.y*h,...(q.inX!==undefined?{inX:q.inX*w,inY:(q.inY??0)*h}:{}),...(q.outX!==undefined?{outX:q.outX*w,outY:(q.outY??0)*h}:{})}))},0,0):'';
+ const sub=target?.source.subpaths??[],subD=sub.map(q=>bezierPath(scalePath(q as MaskPath,w,h),0,0)).join(' '),outline0=path?bezierPath({closed:path.closed,points:path.points.map(q=>({x:q.x*w,y:q.y*h,...(q.inX!==undefined?{inX:q.inX*w,inY:(q.inY??0)*h}:{}),...(q.outX!==undefined?{outX:q.outX*w,outY:(q.outY??0)*h}:{})}))},0,0):'';const outline=subD?`${outline0} ${subD}`:outline0;
  const matrix=target?worldMatrix(comp,target,at).join(' '):'1 0 0 1 0 0';
  const first=path&&!path.closed&&path.points.length>=3?path.points[0]:null;
  const penDown=(e:PointerEvent<SVGElement>)=>{

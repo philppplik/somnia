@@ -419,5 +419,10 @@
  "cmd.animation.layer.pen": "Toggle the pen tool for path layers",
  "animation.pathLayer.smoothPoint": "Smooth point",
  "animation.pathLayer.cornerPoint": "Corner point",
- "animation.pathLayer.deletePoint": "Delete point"
+ "animation.pathLayer.deletePoint": "Delete point",
+ "animation.pathLayer.combine": "Combine",
+ "animation.pathLayer.combineTarget": "Combine with path layer…",
+ "animation.pathLayer.subpaths": "Subpaths: {n}",
+ "animation.pathLayer.removeSubpath": "Remove last subpath",
+ "cmd.animation.layer.pathCombine": "Combine two path layers into one compound path"
 }
