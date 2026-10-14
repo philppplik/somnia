@@ -9,7 +9,8 @@ import {executeCommand} from '../../lib/commands';
 import type {Composition} from '../../lib/animation/model';
 /** The commands take at most 50 layers, so "all" stops there. */
 const MAX_PICK=50;
-const groups:{key:string;items:{testid:string;label:string;cmd:string;min:number;args?:object}[]}[]=[
+type RigItem={testid:string;label:string;cmd:string;min:number;args?:object};
+const groups:{key:string;items:RigItem[]}[]=[
  {key:'hierarchy',items:[
   {testid:'animation-rig-chain',label:'animation.rig.chain',cmd:'animation.rig.chain',min:2},
   {testid:'animation-rig-group',label:'animation.rig.group',cmd:'animation.rig.group',min:1},
@@ -29,11 +30,16 @@ const groups:{key:string;items:{testid:string;label:string;cmd:string;min:number
  {key:'fit',items:(['contain','cover','width','height'] as const).map(m=>({testid:`animation-rig-fit-${m}`,label:`animation.rig.fit.${m}`,cmd:'animation.layers.fit',min:1,args:{mode:m}}))},
  {key:'fade',items:(['in','out','both'] as const).map(m=>({testid:`animation-rig-fade-${m}`,label:`animation.rig.fade.${m}`,cmd:'animation.layers.fade',min:1,args:{mode:m}}))},
  {key:'state',items:(['visible','solo','locked','shy'] as const).map(f=>({testid:`animation-rig-flag-${f}`,label:`animation.rig.flag.${f}`,cmd:'animation.layers.flag',min:1,args:{flag:f}}))}];
+/** Menu layout: the small groups are nested so the top level stays at five entries. */
+const byKey=(k:string)=>groups.find(g=>g.key===k)!;
+const tree:{key:string;items?:RigItem[];children?:{key:string;items:RigItem[]}[]}[]=[byKey('hierarchy'),byKey('layers'),{key:'arrange',children:['order','align','fit'].map(byKey)},{key:'appearance',children:['reset','fade'].map(byKey)},byKey('state')];
 /** Left-panel section: tick layers, then chain them, group them under a control null, or release their parents. Tick order is the chain order. */
 export function RigPanel({comp}:{comp:Composition}){
  const {t}=useT();const [ticked,setTicked]=useState<string[]>([]);
  const ids=ticked.filter(id=>comp.layers.some(l=>l.id===id));
  const toggle=(id:string)=>setTicked(ids.includes(id)?ids.filter(x=>x!==id):[...ids,id]);
+ const subGroup=(g:{key:string;items:RigItem[]})=><MenuSubmenu key={g.key}><MenuSubmenuTrigger className="menu-item" data-testid={`animation-rig-group-${g.key}`}>{t(`animation.rig.group.${g.key}`)}<span aria-hidden="true">›</span></MenuSubmenuTrigger>
+     <MenuContent>{g.items.map(it=><MenuItem key={it.testid} disabled={ids.length<it.min} onClick={()=>run(it.cmd,it.args)} data-testid={it.testid}>{t(it.label)}</MenuItem>)}</MenuContent></MenuSubmenu>;
  const run=(cmd:string,args?:object)=>void executeCommand(cmd,{layers:ids,...args});
  const playhead=useAnimationState().view.playhead;const [mode,setMode]=useState<TimingMode>('stagger');const [frames,setFrames]=useState('4');const [follow,setFollow]=useState('3');const followOk=follow.trim()!==''&&Number.isInteger(Number(follow))&&Number(follow)>=0&&Number(follow)<=60;
  const fn=Number(frames),usesFrames=FRAME_MODES.includes(mode),framesOk=!usesFrames||(frames.trim()!==''&&Number.isInteger(fn)&&fn>=(SIGNED_MODES.includes(mode)?-MAX_STAGGER_FRAMES:0)&&fn<=MAX_STAGGER_FRAMES);
@@ -45,8 +51,8 @@ export function RigPanel({comp}:{comp:Composition}){
   <ul className="m-0 grid max-h-40 list-none gap-1 overflow-auto p-0">{real.map(l=>{const n=ids.indexOf(l.id);return <li key={l.id}><label className="flex min-w-0 items-center gap-1 text-ink-2"><NativeInput type="checkbox" className="animation-checkbox" checked={n>=0} onChange={()=>toggle(l.id)} data-testid={`animation-rig-pick-${l.id}`}/><span className="min-w-0 truncate">{l.name}</span>{n>=0&&<span className="text-ink-3">{n+1}</span>}</label></li>;})}</ul>
   <div className="grid min-w-0 gap-1">
    <Menu><MenuTrigger render={<Button size="compact" variant="outline" className="h-auto min-w-0 whitespace-normal" disabled={ids.length<1} data-testid="animation-rig-menu">{t('animation.rig.menu')}</Button>}/>
-    <MenuContent>{groups.map(g=><MenuSubmenu key={g.key}><MenuSubmenuTrigger className="menu-item" data-testid={`animation-rig-group-${g.key}`}>{t(`animation.rig.group.${g.key}`)}<span aria-hidden="true">›</span></MenuSubmenuTrigger>
-     <MenuContent>{g.items.map(it=><MenuItem key={it.testid} disabled={ids.length<it.min} onClick={()=>run(it.cmd,it.args)} data-testid={it.testid}>{t(it.label)}</MenuItem>)}</MenuContent></MenuSubmenu>)}</MenuContent></Menu>
+    <MenuContent>{tree.map(g=>g.children?<MenuSubmenu key={g.key}><MenuSubmenuTrigger className="menu-item" data-testid={`animation-rig-group-${g.key}`}>{t(`animation.rig.group.${g.key}`)}<span aria-hidden="true">›</span></MenuSubmenuTrigger>
+     <MenuContent>{g.children.map(c=>subGroup(c))}</MenuContent></MenuSubmenu>:subGroup(g as {key:string;items:RigItem[]}))}</MenuContent></Menu>
    <div className="grid min-w-0 grid-cols-[1fr_4rem] gap-1"><Button size="compact" variant="outline" className="h-auto min-w-0 whitespace-normal text-left" disabled={ids.length<2||!followOk} onClick={()=>void executeCommand('animation.rig.follow',{layers:ids,frames:Number(follow)})} data-testid="animation-rig-follow">{t('animation.rig.follow')}</Button>
     <NativeInput className="h-8 w-full min-w-0 rounded-sm border border-subtle bg-transparent px-2 text-xs text-ink select-text" type="number" min={0} max={60} step={1} value={follow} aria-label={t('animation.rig.followFrames')} onChange={e=>setFollow(e.target.value)} data-testid="animation-rig-follow-frames"/></div>
   </div>

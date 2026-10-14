@@ -1035,5 +1035,7 @@
  "animation.rig.fit.cover": "Remplir",
  "animation.rig.fit.width": "Ajuster la largeur",
  "animation.rig.fit.height": "Ajuster la hauteur",
- "cmd.animation.layers.fit": "Ajuster les calques sélectionnés à la composition"
+ "cmd.animation.layers.fit": "Ajuster les calques sélectionnés à la composition",
+ "animation.rig.group.arrange": "Organiser",
+ "animation.rig.group.appearance": "Apparence"
 }

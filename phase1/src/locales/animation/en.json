@@ -1035,5 +1035,7 @@
  "animation.rig.fit.cover": "Fill",
  "animation.rig.fit.width": "Fit width",
  "animation.rig.fit.height": "Fit height",
- "cmd.animation.layers.fit": "Fit the selected layers to the composition"
+ "cmd.animation.layers.fit": "Fit the selected layers to the composition",
+ "animation.rig.group.arrange": "Arrange",
+ "animation.rig.group.appearance": "Appearance"
 }

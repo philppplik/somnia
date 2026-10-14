@@ -1035,5 +1035,7 @@
  "animation.rig.fit.cover": "Füllen",
  "animation.rig.fit.width": "Breite anpassen",
  "animation.rig.fit.height": "Höhe anpassen",
- "cmd.animation.layers.fit": "Gewählte Ebenen an die Komposition anpassen"
+ "cmd.animation.layers.fit": "Gewählte Ebenen an die Komposition anpassen",
+ "animation.rig.group.arrange": "Anordnen",
+ "animation.rig.group.appearance": "Darstellung"
 }

@@ -1035,5 +1035,7 @@
  "animation.rig.fit.cover": "Preencher",
  "animation.rig.fit.width": "Ajustar largura",
  "animation.rig.fit.height": "Ajustar altura",
- "cmd.animation.layers.fit": "Ajustar as camadas selecionadas à composição"
+ "cmd.animation.layers.fit": "Ajustar as camadas selecionadas à composição",
+ "animation.rig.group.arrange": "Organizar",
+ "animation.rig.group.appearance": "Aparência"
 }
