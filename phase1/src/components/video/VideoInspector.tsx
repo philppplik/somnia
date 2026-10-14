@@ -7,6 +7,7 @@ import {clipDuration,clipRanges,fadeOf,MAX_GAIN,timelineDuration} from '../../li
 import {isTitleClip} from '../../lib/video/titles';
 import {addTitleClip,setTitleLength,updateTitle} from '../../lib/video/titleSession';
 import {TitleAddRow,TitleInspector} from './TitleInspector';
+import {NativeInput,NativeSelect} from '../ui/native-controls';
 const row='grid gap-1.5 border-b border-subtle px-3 py-3 text-xs text-ink-2';
 const check='!size-4 !w-4 shrink-0 accent-[var(--accent)]';
 const field='h-7 w-full rounded-sm border border-subtle bg-transparent px-2 text-xs text-ink select-text';
@@ -36,10 +37,10 @@ export function VideoControls({name}:{name:string}){
    <span className="text-ink">{t('video.timelinePanel')}</span>
    <span className="text-ink-3" data-testid="video-timeline-summary">{t('video.timelineSummary',{count:s.clips.length,duration:timelineDuration(s.clips).toFixed(2)})}</span>
    <div className="flex items-center gap-2">
-    <select className={field} value={addPick} onChange={e=>setAddPick(e.target.value)} aria-label={t('video.addClipPick')} data-testid="video-add-pick">
+    <NativeSelect className={field} value={addPick} onChange={e=>setAddPick(e.target.value)} aria-label={t('video.addClipPick')} data-testid="video-add-pick">
      <option value="">{t('video.addClipPick')}</option>
      {candidates.map(i=><option key={i.name} value={i.name}>{i.name}</option>)}
-    </select>
+    </NativeSelect>
     <Button size="compact" disabled={!addPick} onClick={()=>{const item=candidates.find(i=>i.name===addPick);if(item)void addTimelineClip(name,item);setAddPick('');}} data-testid="video-add-clip">{t('video.addClip')}</Button>
     <Button size="compact" variant="outline" onClick={()=>void addTimelineClipsFromDialog(name)} data-testid="video-add-open">{t('video.addOpen')}</Button>
    </div>
@@ -55,7 +56,7 @@ export function VideoControls({name}:{name:string}){
      <Button size="compact" variant="ghost" disabled={s.clips.length<=1} onClick={()=>{deleteTimelineClip(name,selected.id);selectTimelineClip(name,null);}} data-testid="video-clip-delete">{t('video.deleteClip')}</Button>
     </div>
     {selectedIndex>=0&&selectedIndex<s.clips.length-1&&<label>{t('video.transition')}
-     <input type="number" className={`${field} mt-1`} min={0} max={clipDuration(selected)} step={0.1} value={fadeOf(selected)} onChange={e=>setTimelineClipCrossfade(name,selected.id,Number(e.target.value))} data-testid="video-clip-transition-duration"/>
+     <NativeInput type="number" className={`${field} mt-1`} min={0} max={clipDuration(selected)} step={0.1} value={fadeOf(selected)} onChange={e=>setTimelineClipCrossfade(name,selected.id,Number(e.target.value))} data-testid="video-clip-transition-duration"/>
     </label>}
    </div>
   </>}
@@ -63,15 +64,15 @@ export function VideoControls({name}:{name:string}){
    <span className="text-ink">{t('video.clipTitle',{index:selectedIndex+1})}</span>
    <span className="truncate text-ink-3" data-testid="video-clip-source">{selected.source}</span>
    <div className="grid grid-cols-2 gap-2">
-    <label>{t('video.trimStart')}<input type="number" className={`${field} mt-1`} min={0} step={0.01} value={selected.in_s} onChange={e=>trimTimelineClip(name,selected.id,'in',Number(e.target.value))} data-testid="video-clip-in-input"/></label>
-    <label>{t('video.trimEnd')}<input type="number" className={`${field} mt-1`} min={0} step={0.01} value={selected.out_s} onChange={e=>trimTimelineClip(name,selected.id,'out',Number(e.target.value))} data-testid="video-clip-out-input"/></label>
+    <label>{t('video.trimStart')}<NativeInput type="number" className={`${field} mt-1`} min={0} step={0.01} value={selected.in_s} onChange={e=>trimTimelineClip(name,selected.id,'in',Number(e.target.value))} data-testid="video-clip-in-input"/></label>
+    <label>{t('video.trimEnd')}<NativeInput type="number" className={`${field} mt-1`} min={0} step={0.01} value={selected.out_s} onChange={e=>trimTimelineClip(name,selected.id,'out',Number(e.target.value))} data-testid="video-clip-out-input"/></label>
    </div>
    <label className="grid gap-1">{t('video.gain',{percent:Math.round(selected.gain*100)})}
-    <input type="range" className="accent-[var(--accent)]" min={0} max={MAX_GAIN} step={0.05} value={selected.gain} onChange={e=>setTimelineClipGain(name,selected.id,Number(e.target.value))} data-testid="video-clip-gain"/>
+    <NativeInput type="range" className="accent-[var(--accent)]" min={0} max={MAX_GAIN} step={0.05} value={selected.gain} onChange={e=>setTimelineClipGain(name,selected.id,Number(e.target.value))} data-testid="video-clip-gain"/>
    </label>
-   <label className="flex items-center gap-2"><input type="checkbox" className={check} checked={selected.muted} onChange={()=>toggleTimelineClipMute(name,selected.id)} data-testid="video-clip-mute"/>{t('video.clipMute')}</label>
+   <label className="flex items-center gap-2"><NativeInput type="checkbox" className={check} checked={selected.muted} onChange={()=>toggleTimelineClipMute(name,selected.id)} data-testid="video-clip-mute"/>{t('video.clipMute')}</label>
    {selectedIndex>=0&&selectedIndex<s.clips.length-1&&<label>{t('video.transition')}
-    <input type="number" className={`${field} mt-1`} min={0} max={Math.min(clipDuration(selected),clipDuration(s.clips[selectedIndex+1]))} step={0.1} value={fadeOf(selected)} onChange={e=>setTimelineClipCrossfade(name,selected.id,Number(e.target.value))} data-testid="video-clip-transition-duration"/>
+    <NativeInput type="number" className={`${field} mt-1`} min={0} max={Math.min(clipDuration(selected),clipDuration(s.clips[selectedIndex+1]))} step={0.1} value={fadeOf(selected)} onChange={e=>setTimelineClipCrossfade(name,selected.id,Number(e.target.value))} data-testid="video-clip-transition-duration"/>
    </label>}
    <div className="flex flex-wrap gap-2">
     <Button size="compact" variant="outline" disabled={selectedIndex<=0} onClick={()=>moveTimelineClip(name,selected.id,-1)} data-testid="video-clip-left">{t('video.moveLeft')}</Button>
@@ -82,8 +83,8 @@ export function VideoControls({name}:{name:string}){
   </div>}
   <div className={row} data-testid="video-format">
    <span className="text-ink">{t('video.format')}</span>
-   <label className="flex items-center gap-2"><input type="radio" name="video-format" className={check} checked={s.format==='webm'} disabled={webmDisabled} onChange={()=>setVideoFormat(name,'webm')} data-testid="video-format-webm"/>{t('video.format.webm')}</label>
-   <label className="flex items-center gap-2"><input type="radio" name="video-format" className={check} checked={s.format==='mp4'} disabled={mp4Disabled} onChange={()=>setVideoFormat(name,'mp4')} data-testid="video-format-mp4"/>{mp4Silent?t('video.format.mp4NoAudio'):t('video.format.mp4')}</label>
+   <label className="flex items-center gap-2"><NativeInput type="radio" name="video-format" className={check} checked={s.format==='webm'} disabled={webmDisabled} onChange={()=>setVideoFormat(name,'webm')} data-testid="video-format-webm"/>{t('video.format.webm')}</label>
+   <label className="flex items-center gap-2"><NativeInput type="radio" name="video-format" className={check} checked={s.format==='mp4'} disabled={mp4Disabled} onChange={()=>setVideoFormat(name,'mp4')} data-testid="video-format-mp4"/>{mp4Silent?t('video.format.mp4NoAudio'):t('video.format.mp4')}</label>
    {webmDisabled&&mp4Disabled&&<p className="m-0 text-ink-3">{t('video.format.unavailable')}</p>}
    {s.status==='exporting'?<div className="flex items-center gap-2"><progress className="h-1.5 w-full accent-[var(--accent)]" max={1} value={s.progress?.ratio}/><Button size="compact" variant="ghost" onClick={()=>cancelVideoExport(name)}>{t('video.cancel')}</Button></div>:null}
    {s.result&&<p className="m-0 text-ink-3" data-testid="video-result-inspector">{t('video.result',{duration:s.result.report.duration_s.toFixed(2),bytes:String((s.result.report.bytes/1024).toFixed(0))+' KB',video:s.result.report.videoCodec??'',audio:s.result.report.audioCodec?` + ${s.result.report.audioCodec}`:t('video.resultAudioMuted')})}</p>}

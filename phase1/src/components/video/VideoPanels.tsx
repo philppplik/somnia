@@ -12,6 +12,7 @@ import {usePanelState} from '../../store/panelStateStore';
 import type {PanelHostProps,InspectorSectionProps} from '../../lib/shell/types';
 import {Button} from '../ui/button';
 import {TitleInspector} from './TitleInspector';
+import {NativeButton,NativeInput} from '../ui/native-controls';
 const field='h-8 w-full min-w-0 rounded-sm border border-subtle bg-transparent px-2 text-xs text-ink select-text';
 const run=(id:string,params?:unknown)=>void executeCommand(id,params);
 function useActive(){const media=useMedia();const s=useVideoSession(media.active);return {media,s,selected:s?.clips.find(c=>c.id===s.selectedClipId),ready:s?.status==='ready'};}
@@ -21,7 +22,7 @@ export function SourcesPanel({context,panelId}:PanelHostProps){
  const items=media.items.filter(i=>i.kind==='video'&&i.name.toLowerCase().includes(filter.toLowerCase()));
  return <aside className="grid min-h-0 content-start gap-3 p-3 text-xs" data-testid="video-sources-panel">
   <Button size="compact" variant="outline" disabled={!ready} onClick={()=>run('video.source.open')} data-testid="video-source-open">{t('video.addOpen')}</Button>
-  <input className={field} value={filter} placeholder={t('video.shell.filter')} aria-label={t('video.shell.filter')} onChange={e=>setFilter(e.target.value)}/>
+  <NativeInput className={field} value={filter} placeholder={t('video.shell.filter')} aria-label={t('video.shell.filter')} onChange={e=>setFilter(e.target.value)}/>
   {!items.length&&<p className="text-ink-3">{t('video.shell.noSources')}</p>}
   <ul className="m-0 grid list-none gap-2 p-0">{items.map(item=><li key={item.name} className="grid gap-2 rounded-sm border border-subtle p-2">
    <span className="truncate text-ink" title={item.name}>{item.name}</span>
@@ -39,10 +40,10 @@ export function SequencePanel(_:PanelHostProps){
   <Button size="compact" variant="outline" disabled={!ready} onClick={()=>run('video.title.add')} data-testid="video-add-title">{t('video.card.add')}</Button>
   {!ranges.length&&<p className="text-ink-3">{t('video.shell.empty')}</p>}
   <ol className="m-0 grid list-none gap-1 p-0">{ranges.map(({clip,start,end},index)=><li key={clip.id}>
-   <button type="button" className={'grid w-full gap-1 rounded-sm border px-2 py-2 text-left hover:bg-hover '+(s?.selectedClipId===clip.id?'border-accent bg-accent-soft text-accent':'border-transparent text-ink-2')} aria-pressed={s?.selectedClipId===clip.id} disabled={!ready} onClick={()=>run('video.clip.select',{id:clip.id})} data-testid="video-sequence-clip">
+   <NativeButton type="button" className={'grid w-full gap-1 rounded-sm border px-2 py-2 text-left hover:bg-hover '+(s?.selectedClipId===clip.id?'border-accent bg-accent-soft text-accent':'border-transparent text-ink-2')} aria-pressed={s?.selectedClipId===clip.id} disabled={!ready} onClick={()=>run('video.clip.select',{id:clip.id})} data-testid="video-sequence-clip">
     <span className="truncate">{index+1}. {clipDisplayName(clip,clip.source.replace(/^.*[\\/]/,''))}</span>
     <span className="text-[11px] tabular-nums text-ink-3">{formatTime(start)} - {formatTime(end)}</span>
-   </button>
+   </NativeButton>
   </li>)}</ol>
   <Button size="compact" variant="outline" disabled={!ready||!selected||clipDuration(selected.clip)<0.1} onClick={()=>run('video.timeline.split',{seconds:selected!.start+clipDuration(selected!.clip)/2})}>{t('video.shell.splitHalf')}</Button>
   <Button size="compact" variant="ghost" disabled={!ready||!ranges.length} onClick={()=>run('video.timeline.reset')} data-testid="video-reset">{t('video.reset')}</Button>
@@ -70,7 +71,7 @@ export function VideoSelectionSection(_:InspectorSectionProps){
   {isTitleClip(selected)?<TitleInspector clip={selected} onChange={p=>run('video.title.update',p)} onDuration={seconds=>run('video.title.duration',{seconds})}/>:<>
    <span className="break-all" data-testid="video-clip-source">{selected.source}</span>
    <div className="grid grid-cols-2 gap-2">{(['in','out'] as const).map(edge=><label key={edge}>{t(edge==='in'?'video.trimStart':'video.trimEnd')}
-    <input className={field} type="number" min={0} step={0.01} value={edge==='in'?selected.in_s:selected.out_s} onChange={e=>run('video.clip.trim',{edge,seconds:Number(e.target.value)})} data-testid={'video-clip-'+edge+'-input'}/>
+    <NativeInput className={field} type="number" min={0} step={0.01} value={edge==='in'?selected.in_s:selected.out_s} onChange={e=>run('video.clip.trim',{edge,seconds:Number(e.target.value)})} data-testid={'video-clip-'+edge+'-input'}/>
    </label>)}</div>
   </>}
   <div className="flex flex-wrap gap-2">
@@ -87,10 +88,10 @@ export function VideoAudioSection(_:InspectorSectionProps){
  const next=s.clips[s.clips.findIndex(c=>c.id===selected.id)+1];
  return <fieldset disabled={!ready} className="m-0 grid min-w-0 gap-3 border-0 p-0 text-xs text-ink-2">
   {!isTitleClip(selected)&&<>
-   <label className="grid gap-2">{t('video.gain',{percent:Math.round(selected.gain*100)})}<input type="range" className="w-full accent-[var(--accent)]" min={0} max={MAX_GAIN} step={0.05} value={selected.gain} onChange={e=>run('video.clip.gain',{gain:Number(e.target.value)})} data-testid="video-clip-gain"/></label>
-   <label className="flex items-center gap-2"><input type="checkbox" className="!size-4 !w-4 accent-[var(--accent)]" checked={selected.muted} onChange={()=>run('video.clip.mute')} data-testid="video-clip-mute"/>{t('video.clipMute')}</label>
+   <label className="grid gap-2">{t('video.gain',{percent:Math.round(selected.gain*100)})}<NativeInput type="range" className="w-full accent-[var(--accent)]" min={0} max={MAX_GAIN} step={0.05} value={selected.gain} onChange={e=>run('video.clip.gain',{gain:Number(e.target.value)})} data-testid="video-clip-gain"/></label>
+   <label className="flex items-center gap-2"><NativeInput type="checkbox" className="!size-4 !w-4 accent-[var(--accent)]" checked={selected.muted} onChange={()=>run('video.clip.mute')} data-testid="video-clip-mute"/>{t('video.clipMute')}</label>
   </>}
-  {next?<label>{t('video.transition')}<input className={field} type="number" min={0} max={Math.min(clipDuration(selected),clipDuration(next))} step={0.1} value={fadeOf(selected)} onChange={e=>run('video.clip.crossfade',{seconds:Number(e.target.value)})} data-testid="video-clip-transition-duration"/></label>:<p className="m-0 text-ink-3">{t('video.shell.lastClip')}</p>}
+  {next?<label>{t('video.transition')}<NativeInput className={field} type="number" min={0} max={Math.min(clipDuration(selected),clipDuration(next))} step={0.1} value={fadeOf(selected)} onChange={e=>run('video.clip.crossfade',{seconds:Number(e.target.value)})} data-testid="video-clip-transition-duration"/></label>:<p className="m-0 text-ink-3">{t('video.shell.lastClip')}</p>}
  </fieldset>;
 }
 export function VideoExportSection({reviewName}:InspectorSectionProps&{reviewName?:string}){
@@ -105,9 +106,9 @@ export function VideoExportSection({reviewName}:InspectorSectionProps&{reviewNam
  const missing=s.clips.some(c=>needsSourceFile(c)&&!media.items.some(i=>i.name===c.source));
  const supported=!!(s.format==='webm'?s.capabilities?.webmVideo:s.capabilities?.mp4Video);
  return <div className="grid gap-3 text-xs text-ink-2" data-testid="video-format">
-  {(['webm','mp4'] as const).map(format=><label key={format} className="flex items-center gap-2"><input className="!size-4 !w-4 accent-[var(--accent)]" type="radio" name="video-shell-format" checked={s.format===format} disabled={!ready||!(format==='webm'?s.capabilities?.webmVideo:s.capabilities?.mp4Video)} onChange={()=>run('video.export.format',{format})} data-testid={'video-format-'+format}/>{t(format==='mp4'&&s.capabilities&&!s.capabilities.aac?'video.format.mp4NoAudio':'video.format.'+format)}</label>)}
+  {(['webm','mp4'] as const).map(format=><label key={format} className="flex items-center gap-2"><NativeInput className="!size-4 !w-4 accent-[var(--accent)]" type="radio" name="video-shell-format" checked={s.format===format} disabled={!ready||!(format==='webm'?s.capabilities?.webmVideo:s.capabilities?.mp4Video)} onChange={()=>run('video.export.format',{format})} data-testid={'video-format-'+format}/>{t(format==='mp4'&&s.capabilities&&!s.capabilities.aac?'video.format.mp4NoAudio':'video.format.'+format)}</label>)}
   {reviewName&&<p>{t('video.review.duration',{seconds:timelineDuration(s.clips).toFixed(2)})}</p>}
-  {reviewName&&silent&&<label className="flex gap-2"><input type="checkbox" checked={ack===signature} onChange={e=>setAck(e.target.checked?signature:'')}/>{t('video.review.silent')}</label>}
+  {reviewName&&silent&&<label className="flex gap-2"><NativeInput type="checkbox" checked={ack===signature} onChange={e=>setAck(e.target.checked?signature:'')}/>{t('video.review.silent')}</label>}
   {s.error&&<p role="alert">{s.error}</p>}
   {!ready&&s.status!=='exporting'&&<p role="status">{t('video.review.wait')}</p>}
   {!s.clips.length&&<p>{t('video.review.empty')}</p>}

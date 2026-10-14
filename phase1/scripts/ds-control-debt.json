@@ -1060,25 +1060,25 @@
     },
     "src/components/video/TitleInspector.tsx": {
       "rawButton": 0,
-      "rawInput": 8,
-      "rawSelect": 3,
-      "rawTextarea": 1
+      "rawInput": 0,
+      "rawSelect": 0,
+      "rawTextarea": 0
     },
     "src/components/video/VideoInspector.tsx": {
       "rawButton": 0,
-      "rawInput": 8,
-      "rawSelect": 1,
+      "rawInput": 0,
+      "rawSelect": 0,
       "rawTextarea": 0
     },
     "src/components/video/VideoPanels.tsx": {
-      "rawButton": 1,
-      "rawInput": 7,
+      "rawButton": 0,
+      "rawInput": 0,
       "rawSelect": 0,
       "rawTextarea": 0
     },
     "src/components/video/VideoWorkspace.tsx": {
       "rawButton": 0,
-      "rawInput": 1,
+      "rawInput": 0,
       "rawSelect": 0,
       "rawTextarea": 0
     },

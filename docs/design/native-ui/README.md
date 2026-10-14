@@ -45,6 +45,7 @@ All file links are repository-relative, so they remain useful on a feature branc
 15. [Settings area DS adoption](settings-adoption.md)
 16. [Svgedit area DS adoption](svgedit-adoption.md)
 17. [Documents area DS adoption](documents-adoption.md)
+18. [Video area DS adoption](video-adoption.md)
 
 ## The system in one view
 

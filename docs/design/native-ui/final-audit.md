@@ -33,7 +33,7 @@ native-platform acceptance claim.
 | components/vectorstudio | 0 | 0 | 0 | 0 | 0 |
 | components/svgedit | 0 | 0 | 0 | 0 | 0 |
 | components/documents | 0 | 0 | 0 | 0 | 0 |
-| components/video | 1 | 24 | 4 | 1 | 30 |
+| components/video | 0 | 0 | 0 | 0 | 0 |
 | components/design | 4 | 16 | 6 | 1 | 27 |
 | components/slides | 18 | 4 | 1 | 2 | 25 |
 | components/pdf | 0 | 0 | 0 | 0 | 0 |
@@ -41,7 +41,7 @@ native-platform acceptance claim.
 | components/interface | 2 | 8 | 11 | 1 | 22 |
 | components/sheets | 14 | 6 | 1 | 1 | 22 |
 | 14 further areas | 48 | 82 | 14 | 2 | 146 |
-| **Total** | **490** | **286** | **74** | **35** | **885** |
+| **Total** | **489** | **262** | **70** | **34** | **855** |
 
 The flat `src/components` bucket's largest single debtor was migrated in P23:
 `Settings.tsx` and the five sibling Settings files (98 controls) now render
@@ -107,12 +107,15 @@ through native control primitives, see below.
   identical, rest is the dynamic update-check timestamp).
 - P24: vectorstudio panel control style moved to real tokens
   (--bg-surface/--border-default/--text-primary); dark theme legible again.
-- P25 (this slice): svgedit area migrated (34 controls to native primitives
+- P25: svgedit area migrated (34 controls to native primitives
   across 6 files), ratchet budgets zero, adoption test and gallery proof
   added (?view=svgedit).
-- P26 (this slice): documents area migrated (33 controls to native primitives
+- P26: documents area migrated (33 controls to native primitives
   across 4 files), ratchet budgets zero, adoption test and gallery proof
   added (?view=documents).
+- P27: video area migrated (30 controls to native primitives
+  across 4 files), ratchet budgets zero, adoption test and gallery proof
+  added (?view=video).
 
 
 ## Remaining bespoke areas

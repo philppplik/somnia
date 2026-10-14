@@ -13,6 +13,7 @@ import {formatTime} from '../../lib/video/recipe';
 import {formatBytes,getState,patchState,requestStudio,useAppStore,useMedia,type MediaItem} from './workspace-deps';
 import {VideoTimeline} from './VideoTimeline';
 import {VideoControls} from './VideoInspector';
+import {NativeInput} from '../ui/native-controls';
 const bar='media-bar flex items-center gap-2 border-b border-subtle px-3 py-1.5 text-[12px]';
 /** Player, transport and the multi-clip timeline of one video project. `withPanel` adds the settings when the Video inspector is not on screen. */
 export function VideoWorkspace({item,withPanel=false}:{item:MediaItem;withPanel?:boolean}){
@@ -153,7 +154,7 @@ export function VideoWorkspace({item,withPanel=false}:{item:MediaItem;withPanel?
      {selectedClip&&<span className="rounded-full bg-[var(--accent)]/15 px-2 py-0.5 text-[11px] text-ink" data-testid="video-selected-chip">{t('video.selectedClip',{name:clipDisplayName(selectedClip,selectedClip.source.replace(/^.*[\\/]/,'')),length:(selectedClip.out_s-selectedClip.in_s).toFixed(2)})}</span>}
      <span className="flex-1"/>
      <Button size="icon" variant="ghost" aria-label={t(muted?'video.unmute':'video.mute')} aria-pressed={muted} onClick={()=>setMuted(m=>!m)} data-testid="video-mute">{muted?<VolumeX size={16}/>:<Volume2 size={16}/>}</Button>
-     <input type="range" className="w-20 accent-[var(--accent)]" min={0} max={1} step={0.05} value={volume} aria-label={t('video.volume')} onChange={e=>{const n=Number(e.target.value);setVolume(n);}} data-testid="video-volume"/>
+     <NativeInput type="range" className="w-20 accent-[var(--accent)]" min={0} max={1} step={0.05} value={volume} aria-label={t('video.volume')} onChange={e=>{const n=Number(e.target.value);setVolume(n);}} data-testid="video-volume"/>
     </div>
     <div className="px-4 pb-2 pt-1">
      <VideoTimeline clips={clips} selectedId={session?.selectedClipId??null} position={playhead} missing={missing}
