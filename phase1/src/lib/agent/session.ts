@@ -1,6 +1,6 @@
 import { log, logWarn } from '../log';
 import { createAIProvenance } from './privacy';
-import { AgentError, describeAgentError, toAgentError } from './errors';
+import { AgentError, ToolUnreconciledError, describeAgentError, toAgentError } from './errors';
 import type { AgentErrorCode, AgentErrorDetail } from './errors';
 import type { AgentMessage, AgentProvider, AgentToolCall, AgentUsage } from './types';
 import { AgentProjectTools } from './projectTools';
@@ -183,6 +183,7 @@ export class AgentSession {
             controller.signal.throwIfAborted();
             this.emit({ type: 'tool', call, status: 'completed', result, turnId });
           } catch (toolError) {
+            if(toolError instanceof ToolUnreconciledError)throw toolError;
             controller.signal.throwIfAborted();
             logWarn('agent.tool','Agent tool failed; no raw model/tool content logged.');
             // Host permission/map callbacks can throw private errors; do not forward them.
