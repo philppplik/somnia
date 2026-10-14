@@ -567,5 +567,16 @@
  "studio3d.outline.rename": "Renommer {name}",
  "cmd.studio3d.object.visible": "Afficher ou masquer l'objet",
  "cmd.studio3d.object.locked": "Verrouiller ou déverrouiller l'objet",
- "cmd.studio3d.object.reparent": "Déplacer sous un nouveau parent"
+ "cmd.studio3d.object.reparent": "Déplacer sous un nouveau parent",
+ "studio3d.import.title": "Import",
+ "studio3d.import.unit": "Unités du fichier",
+ "studio3d.import.axis": "Axe vertical",
+ "studio3d.import.axis.y": "Y en haut",
+ "studio3d.import.axis.z": "Z en haut",
+ "studio3d.import.note": "S’applique aux fichiers OBJ, STL et PLY ; glTF emporte ses propres unités.",
+ "studio3d.export.selection": "Sélection uniquement",
+ "studio3d.load.phase.read": "Lecture du fichier",
+ "studio3d.load.phase.parse": "Analyse de la géométrie",
+ "studio3d.load.phase.build": "Construction de la scène",
+ "cmd.studio3d.import.options": "Définir les options d’import de maillages"
 }

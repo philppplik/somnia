@@ -505,6 +505,15 @@ export function ToolsSection(_:InspectorSectionProps){
    <p className="m-0 text-xs text-ink-3">{t('studio3d.save.note')}</p>
    <RecentList compact/>
   </fieldset>
+  <fieldset className="m-0 grid gap-2 border-0 p-0" data-testid="studio3d-import"><legend className="text-xs text-ink-3">{t('studio3d.import.title')}</legend>
+   <label className="grid gap-1 text-xs text-ink-2">{t('studio3d.import.unit')}
+    <NativeSelect className="rounded-sm border border-subtle bg-surface p-1 text-xs text-ink" value={s.importUnit} aria-label={t('studio3d.import.unit')} onChange={e=>void executeCommand('studio3d.import.options',{unit:e.currentTarget.value})}>
+     {UNIT_IDS.map(u=><option key={u} value={u}>{t('studio3d.unit.'+u)}</option>)}</NativeSelect></label>
+   <label className="grid gap-1 text-xs text-ink-2">{t('studio3d.import.axis')}
+    <NativeSelect className="rounded-sm border border-subtle bg-surface p-1 text-xs text-ink" value={s.importUpAxis} aria-label={t('studio3d.import.axis')} onChange={e=>void executeCommand('studio3d.import.options',{upAxis:e.currentTarget.value})}>
+     {(['y','z'] as const).map(a=><option key={a} value={a}>{t('studio3d.import.axis.'+a)}</option>)}</NativeSelect></label>
+   <p className="m-0 text-xs text-ink-3">{t('studio3d.import.note')}</p>
+  </fieldset>
   <fieldset className="m-0 grid gap-2 border-0 p-0" data-testid="studio3d-export"><legend className="text-xs text-ink-3">{t('studio3d.export.title')}</legend>
    <label className="grid gap-1 text-xs text-ink-2">{t('studio3d.export.unit')}
     <select className="rounded-sm border border-subtle bg-surface p-1 text-xs text-ink" value={s.unit} aria-label={t('studio3d.export.unit')} onChange={e=>void executeCommand('studio3d.unit.set',{unit:e.currentTarget.value})}>
@@ -519,6 +528,7 @@ export function ToolsSection(_:InspectorSectionProps){
      void executeCommand('studio3d.export.options',{clips:next.length===s.clips.length?null:next});
     };
     return <label key={c.name} className="flex items-center gap-2 text-xs text-ink-2"><NativeInput type="checkbox" checked={on} aria-label={c.name} onChange={e=>toggle(e.currentTarget.checked)}/>{c.name}</label>;})}</div>}
+   <label className="flex items-center gap-2 text-xs text-ink-2"><NativeInput type="checkbox" checked={s.exportSelection} aria-label={t('studio3d.export.selection')} onChange={e=>void executeCommand('studio3d.export.options',{selection:e.currentTarget.checked})}/>{t('studio3d.export.selection')}</label>
    <div className="flex flex-wrap gap-1">
     <Button variant="outline" disabled={s.status!=='ready'} onClick={()=>void executeCommand('studio3d.export.glb')}>GLB</Button>
     <Button variant="outline" disabled={s.status!=='ready'} onClick={()=>void executeCommand('studio3d.export.gltf')}>glTF</Button>

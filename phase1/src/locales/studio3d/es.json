@@ -567,5 +567,16 @@
  "studio3d.outline.rename": "Renombrar {name}",
  "cmd.studio3d.object.visible": "Mostrar u ocultar objeto",
  "cmd.studio3d.object.locked": "Bloquear o desbloquear objeto",
- "cmd.studio3d.object.reparent": "Mover bajo un nuevo padre"
+ "cmd.studio3d.object.reparent": "Mover bajo un nuevo padre",
+ "studio3d.import.title": "Importación",
+ "studio3d.import.unit": "Unidades del archivo",
+ "studio3d.import.axis": "Eje vertical",
+ "studio3d.import.axis.y": "Y arriba",
+ "studio3d.import.axis.z": "Z arriba",
+ "studio3d.import.note": "Se aplica a archivos OBJ, STL y PLY; glTF ya incluye sus unidades.",
+ "studio3d.export.selection": "Solo la selección",
+ "studio3d.load.phase.read": "Leyendo el archivo",
+ "studio3d.load.phase.parse": "Analizando la geometría",
+ "studio3d.load.phase.build": "Construyendo la escena",
+ "cmd.studio3d.import.options": "Definir opciones de importación de mallas"
 }

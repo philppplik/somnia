@@ -1094,3 +1094,34 @@ test('3D studio outliner: hide/lock, ctrl/shift multi-select, inline rename, rep
  expect(after.outline.find(o=>o.name==='Hero')?.locked).toBe(true);
  expect(after.outline.find(o=>o.name==='Sphere')?.hidden).toBe(true);
 });
+
+test('3D studio import/export polish: selection-only export, import units and axis, one-undo open',async({page})=>{
+ await blank(page);
+ const cube=await insert(page,'cube',0);await insert(page,'sphere',2);
+ // Selection-only export writes just the chosen object.
+ await page.getByRole('checkbox',{name:'Selection only'}).check();
+ await run(page,'studio3d.select',{id:cube});
+ const [dl]=await Promise.all([page.waitForEvent('download'),page.getByTestId('studio3d-export').getByRole('button',{name:'GLB'}).click()]);
+ const glb=readFileSync(await dl.path()!);
+ await open3d(page);
+ await page.getByTestId('studio3d-file-input').setInputFiles({name:'sel.glb',mimeType:'model/gltf-binary',buffer:glb});
+ await expect.poll(async()=>(await session(page)).status).toBe('ready');
+ await expect.poll(async()=>(await session(page)).outline.filter(o=>o.kind==='mesh').map(o=>o.name)).toEqual(['Cube']);
+ // Opening the file replaced the empty scene in one undo step.
+ expect(await run(page,'studio3d.undo')).toBe(true);
+ await expect.poll(async()=>(await session(page)).outline.length).toBe(0);
+ await run(page,'studio3d.redo');
+ await expect.poll(async()=>(await session(page)).outline.some(o=>o.name==='Cube')).toBe(true);
+ // Import units and up axis: a 1000 x 1000 x 10 mm slab from a Z-up OBJ reads as 1 x 0.01 x 1 metres.
+ const obj=['v 0 0 0','v 1000 0 0','v 1000 1000 0','v 0 1000 0','v 0 0 10','v 1000 0 10','v 1000 1000 10','v 0 1000 10','f 1 2 3','f 1 3 4','f 5 7 6','f 5 8 7','f 1 5 6','f 1 6 2','f 2 6 7','f 2 7 3','f 3 7 8','f 3 8 4','f 4 8 5','f 4 5 1'].join('\n');
+ await run(page,'studio3d.import.options',{unit:'mm',upAxis:'z'});
+ await page.getByTestId('studio3d-file-input').setInputFiles({name:'slab.obj',mimeType:'model/obj',buffer:Buffer.from(obj)});
+ await expect.poll(async()=>(await session(page)).status).toBe('ready');
+ await expect(page.getByTestId('studio3d-model-section')).toContainText('1 x 0.01 x 1');
+ // The import options are visible in the panel and drove that open.
+ await expect(page.getByTestId('studio3d-import').getByLabel('File units')).toHaveValue('mm');
+ await expect(page.getByTestId('studio3d-import').getByLabel('Up axis')).toHaveValue('z');
+ // Undoing the import restores the previously open file.
+ expect(await run(page,'studio3d.undo')).toBe(true);
+ await expect.poll(async()=>(await session(page)).outline.filter(o=>o.kind==='mesh').map(o=>o.name)).toEqual(['Cube']);
+});

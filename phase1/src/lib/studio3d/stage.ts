@@ -1,6 +1,7 @@
 import {PRIMITIVE_KINDS,PrimitiveError,defaultParams,patchParams,readPrimitive,resolveMaterial,MATERIAL_PRESETS,type PrimitiveKind,type PrimitiveData,type PrimitiveParams,type MaterialRequest} from './primitives';
 import * as THREE from 'three';
 import {mergeGeometries} from 'three/examples/jsm/utils/BufferGeometryUtils.js';
+import {clone as skeletonClone} from 'three/examples/jsm/utils/SkeletonUtils.js';
 import {checkPbr,alphaState,alphaModeOf,MaterialError,SLOT_CONFIG,TEXTURE_SLOTS,type PbrExtras,type AlphaMode,type TextureSlot} from './materials';
 import type {NodeExtra} from './document';
 import {EASES,isEase,bakeTrack,type Ease} from './ease';
@@ -16,7 +17,7 @@ import {smoothWeights,rigidWeights,paintWeights,SkinError,type BoneSegment,type 
 import {checkPoseName,mirrorPose,blendPoses,PoseError,MAX_POSES} from './poses';import type {Pose,PoseBone} from './poses';
 import {solveTwoBone,clampEuler,checkLimits,hasLimits,IkError,MAX_IK_CHAINS,fabrikSolve,aimBasis,MIN_FABRIK_SEGMENTS,MAX_FABRIK_SEGMENTS} from './ik';import type {AxisLimits} from './ik';
 import {RetargetError,mapBoneNames,retargetClipName,MAX_RETARGET_SAMPLES} from './retarget';
-import {emptyStats,boundsValid,boundsCenter,boundsRadius,type ModelStats,type OutlineEntry,type Bounds} from './model';
+import {emptyStats,boundsValid,boundsCenter,boundsRadius,unitScale,type ModelStats,type OutlineEntry,type Bounds,type ExportUnit} from './model';
 /**
  * Scene operations for the 3D studio (P1 staging). Pure three.js core, no renderer and no DOM, so the logic runs under tsx --test.
  * Every user-visible change is one undo entry. Objects are addressed by Object3D.id.
@@ -125,6 +126,24 @@ export function woodTexture(size=256):THREE.DataTexture{
 /** Everything copy/paste carries between meshes: the PBR fields, the texture in each slot and its mapping. */
 export interface MaterialSnapshot{color:string;metalness:number;roughness:number;emissive:string;emissiveIntensity:number;opacity:number;alphaMode:AlphaMode;alphaCutoff:number;doubleSided:boolean;textures:Record<TextureSlot,THREE.Texture|null>;transforms:Record<TextureSlot,TextureTransform|null>}
 const disposeGenerated=(t:THREE.Texture|null)=>{if(t?.userData.somniaGenerated)t.dispose();};
+/** Builds a throwaway subtree with clones of the chosen objects (including their sub-hierarchies), placed at the scene root with their world transforms. Selection-only export uses this; geometry and materials stay shared with the scene, so nothing here is disposed. */
+export function exportClone(root:THREE.Object3D,ids:number[]):THREE.Group{
+ const picked:THREE.Object3D[]=[];
+ for(const id of ids){const o=root.getObjectById(id);if(o&&o!==root)picked.push(o);}
+ const inSet=new Set(picked);
+ const top=picked.filter(o=>{for(let p=o.parent;p;p=p.parent)if(inSet.has(p))return false;return true;});
+ if(!top.length)throw new StageError('Select an object to export first.');
+ const g=new THREE.Group();g.name='Selection';
+ root.updateMatrixWorld(true);const inv=root.matrixWorld.clone().invert();
+ for(const o of top){const c=skeletonClone(o);inv.clone().multiply(o.matrixWorld).decompose(c.position,c.quaternion,c.scale);g.add(c);}
+ return g;
+}
+/** Scales and reorients a freshly imported mesh scene (OBJ, STL, PLY) for the chosen file units and up axis. UNITS is the metres-to-file factor used on export, so import multiplies by its inverse. glTF always carries metres and Y-up and is never passed here. */
+export function applyImportOptions(scene:THREE.Object3D,opts:{unit:ExportUnit;upAxis:'y'|'z'}){
+ const f=1/unitScale(opts.unit);if(f!==1)scene.scale.multiplyScalar(f);
+ if(opts.upAxis==='z')scene.rotation.x=-Math.PI/2;
+ scene.updateMatrixWorld(true);
+}
 export class StageError extends Error{constructor(message:string){super(message);this.name='StageError';}}
 const clamp01=(n:number)=>Math.min(1,Math.max(0,n));
 const finite=(n:unknown,what:string):number=>{if(typeof n!=='number'||!Number.isFinite(n))throw new StageError(`${what} must be a finite number.`);return n;};
@@ -189,17 +208,39 @@ export class Stage{
  }
  undo(){if(!this.canUndo)return false;this.entries[--this.cursor].undo();this.emit();return true;}
  redo(){if(!this.canRedo)return false;this.entries[this.cursor++].redo();this.emit();return true;}
- /** Replaces the content with a freshly loaded model. History starts empty and the scene is clean. */
- load(model:THREE.Object3D|null){
-  this.clear();if(model)this.root.add(model);this.emit();
+ /** Scene content a file open replaces: children, clips and the rig helper maps. */
+ private sceneState(){return {children:[...this.root.children],clips:this.clipList,poses:this.poseLibs,ik:this.ikChains,fabrik:this.fabrikChains,limits:this.boneLimits,baked:this.bakedCache};}
+ private swapState(s:ReturnType<Stage['sceneState']>){
+  for(const c of [...this.root.children])this.root.remove(c);
+  this.clipList=s.clips;this.poseLibs=s.poses;this.ikChains=s.ik;this.fabrikChains=s.fabrik;this.boneLimits=s.limits;this.bakedCache=s.baked;
+  for(const c of s.children)this.root.add(c);
+  this.clipRevision++;
  }
+ /** Replaces the content with a freshly loaded model as ONE undo step: undo brings the previous scene back exactly, and the content nobody shows any more is disposed when the entry falls off the history. The scene is clean right after the load. The optional hook (clip import) runs while the new scene is active and joins the same step. */
+ loadUndoable(nodes:THREE.Object3D[],label:string,after?:()=>void|Promise<void>):void|Promise<void>{
+  const before=this.sceneState();
+  for(const c of [...this.root.children])this.root.remove(c);
+  this.bakedCache=new Map();this.clipList=[];this.poseLibs=new Map();this.ikChains=new Map();this.fabrikChains=new Map();this.boneLimits=new Map();this.clipRevision++;
+  for(const n of nodes)this.root.add(n);
+  const done=()=>{
+   const next=this.sceneState();let live:'before'|'next'='next';
+   this.push({label,undo:()=>{this.swapState(before);live='before';},redo:()=>{this.swapState(next);live='next';},
+    release:()=>{for(const c of (live==='next'?before:next).children)disposeObject(c);}});
+   this.saved=this.cursor;this.emit();
+  };
+  const r=after?.();
+  if(r instanceof Promise)return r.then(done);
+  done();
+ }
+ /** Replaces the content with a freshly loaded model as one undo step. The scene is clean right after the load. */
+ load(model:THREE.Object3D|null,after?:()=>void|Promise<void>):void|Promise<void>{return this.loadUndoable(model?[model]:[],`Open ${model?.name||'model'}`,after);}
  clear(){
   this.bakedCache.clear();this.clipList=[];this.clipRevision++;this.poseLibs.clear();this.ikChains.clear();this.fabrikChains.clear();this.boneLimits.clear();
   for(const c of [...this.root.children]){this.root.remove(c);disposeObject(c);}
   for(const e of this.entries)e.release?.();this.entries=[];this.cursor=0;this.saved=0;this.emit();
  }
- /** Replaces the content with several loaded top-level nodes (no wrapper group). History starts empty and the scene is clean. */
- loadMany(nodes:THREE.Object3D[]){this.clear();for(const n of nodes)this.root.add(n);this.emit();}
+ /** Replaces the content with several loaded top-level nodes (no wrapper group) as one undo step. The scene is clean right after the load. */
+ loadMany(nodes:THREE.Object3D[],after?:()=>void|Promise<void>):void|Promise<void>{return this.loadUndoable(nodes,'Open scene',after);}
  find(id:number):THREE.Object3D|undefined{return this.root.getObjectById(id);}
  private need(id:number):THREE.Object3D{const o=this.find(id);if(!o)throw new StageError(`No object with id ${id}.`);return o;}
  private uniqueName(base:string){

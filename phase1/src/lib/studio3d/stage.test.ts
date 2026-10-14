@@ -82,9 +82,11 @@ test('objects are disposed only when no history entry can bring them back',()=>{
  assert.deepEqual([cubeD,sphereD],[0,1]);
  stage.clear();assert.equal(cubeD,1,'clear frees what only the history still held');
 });
-test('load replaces the scene and starts a clean history; clear disposes',()=>{
+test('load replaces the scene as one undo step and stays clean; clear disposes',()=>{
  const stage=new Stage();stage.addPrimitive('cube');const g=new THREE.Group();g.add(new THREE.Mesh(new THREE.BoxGeometry(),new THREE.MeshStandardMaterial()));
- stage.load(g);assert.equal(stage.root.children[0],g);assert.equal(stage.canUndo,false);assert.equal(stage.dirty,false);assert.equal(stage.measure().stats.meshes,1);
+ stage.load(g);assert.equal(stage.root.children[0],g);assert.equal(stage.canUndo,true);assert.equal(stage.dirty,false);assert.equal(stage.measure().stats.meshes,1);
+ stage.undo();assert.equal(stage.measure().stats.meshes,1);assert.notEqual(stage.root.children[0],g);
+ stage.redo();assert.equal(stage.root.children[0],g);assert.equal(stage.dirty,false);
  stage.clear();assert.equal(stage.root.children.length,0);
 });
 test('listeners fire on every change and can be removed',()=>{
@@ -256,8 +258,9 @@ test('node extras round-trip shadows and area lights and survive stale indices',
  const short=new THREE.Group();short.add(new THREE.Object3D());assert.equal(applyNodeExtras(short,extras).skipped,2);
  const wrong=new THREE.Group();wrong.add(new THREE.Mesh());wrong.add(new THREE.Mesh());wrong.add(new THREE.Mesh());assert.equal(applyNodeExtras(wrong,extras).skipped,2,'nothing is applied to nodes of the wrong kind');
 });
-test('loadMany puts nodes at the root without a wrapper and starts clean',()=>{
- const stage=new Stage();stage.addPrimitive('cube');stage.loadMany([new THREE.Group(),new THREE.Group()]);assert.equal(stage.root.children.length,2);assert.equal(stage.dirty,false);assert.equal(stage.canUndo,false);
+test('loadMany puts nodes at the root without a wrapper, clean and undoable in one step',()=>{
+ const stage=new Stage();stage.addPrimitive('cube');stage.loadMany([new THREE.Group(),new THREE.Group()]);assert.equal(stage.root.children.length,2);assert.equal(stage.dirty,false);assert.equal(stage.canUndo,true);
+ stage.undo();assert.equal(stage.root.children.length,1);stage.redo();assert.equal(stage.root.children.length,2);assert.equal(stage.dirty,false);
 });
 test('a primitive can be edited by parameters, with one undo step each and no change to its material or place',()=>{
  const stage=new Stage();const m=stage.addPrimitive('sphere');const id=m.id;stage.setMaterial(id,{color:'#112233'});m.position.x=3;

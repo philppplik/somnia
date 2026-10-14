@@ -567,5 +567,16 @@
  "studio3d.outline.rename": "{name} umbenennen",
  "cmd.studio3d.object.visible": "Objekt ein- oder ausblenden",
  "cmd.studio3d.object.locked": "Objekt sperren oder entsperren",
- "cmd.studio3d.object.reparent": "Unter ein neues Elternobjekt verschieben"
+ "cmd.studio3d.object.reparent": "Unter ein neues Elternobjekt verschieben",
+ "studio3d.import.title": "Import",
+ "studio3d.import.unit": "Datei-Einheiten",
+ "studio3d.import.axis": "Hoch-Achse",
+ "studio3d.import.axis.y": "Y oben",
+ "studio3d.import.axis.z": "Z oben",
+ "studio3d.import.note": "Gilt für OBJ-, STL- und PLY-Dateien; glTF bringt eigene Einheiten mit.",
+ "studio3d.export.selection": "Nur Auswahl",
+ "studio3d.load.phase.read": "Datei wird gelesen",
+ "studio3d.load.phase.parse": "Geometrie wird gelesen",
+ "studio3d.load.phase.build": "Szene wird aufgebaut",
+ "cmd.studio3d.import.options": "Mesh-Importoptionen festlegen"
 }

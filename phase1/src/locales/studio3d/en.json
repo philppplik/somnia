@@ -567,5 +567,16 @@
  "studio3d.outline.rename": "Rename {name}",
  "cmd.studio3d.object.visible": "Show or hide object",
  "cmd.studio3d.object.locked": "Lock or unlock object",
- "cmd.studio3d.object.reparent": "Move under a new parent"
+ "cmd.studio3d.object.reparent": "Move under a new parent",
+ "studio3d.import.title": "Import",
+ "studio3d.import.unit": "File units",
+ "studio3d.import.axis": "Up axis",
+ "studio3d.import.axis.y": "Y up",
+ "studio3d.import.axis.z": "Z up",
+ "studio3d.import.note": "Applies to OBJ, STL and PLY files; glTF carries its own units.",
+ "studio3d.export.selection": "Selection only",
+ "studio3d.load.phase.read": "Reading file",
+ "studio3d.load.phase.parse": "Parsing geometry",
+ "studio3d.load.phase.build": "Building scene",
+ "cmd.studio3d.import.options": "Set mesh import options"
 }

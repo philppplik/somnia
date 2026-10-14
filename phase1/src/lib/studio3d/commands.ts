@@ -3,7 +3,7 @@ import {registerCommandSpec} from '../commandBridge';
 import type {CommandSpec} from '../commandSpec';
 import {clearRecentScenes} from './recentSession';
 import {getStudio3DState,patchStudio3D} from './session';
-import type {EnvSettings,GizmoMode,SnapSettings,ExportUnit,ExportFormat} from './model';
+import {isUnit,type EnvSettings,type GizmoMode,type SnapSettings,type ExportUnit,type ExportFormat} from './model';
 import {PARAM_SPECS,MATERIAL_PRESET_IDS} from './primitives';
 import {ALPHA_MODES,TEXTURE_SLOTS,MAX_EMISSIVE_INTENSITY,type TextureSlot} from './materials';
 import {EASES,type Ease} from './ease';
@@ -305,7 +305,8 @@ export function studio3DCommandSpecs():CommandSpec<unknown,unknown>[]{
   add<{on?:boolean}>('studio3d.anim.autokey','Turn auto-key on or off: transform changes are recorded as keys at the current time','View',p=>need().autoKey(p?.on??!getStudio3DState().autoKey),object({on:{type:'boolean'}},[]),hasScene),
   add<{clips?:string[]|null}>('studio3d.export.glb','Export the scene as GLB','Project',p=>need().exportGlb(p??{}),object({clips:{anyOf:[{type:'null'},{type:'array',items:{type:'string',minLength:1,maxLength:200},minItems:0,maxItems:64}]}},[])),
   add<{textures?:'embed'|'external';clips?:string[]|null}>('studio3d.export.gltf','Export the scene as glTF (embedded, or a ZIP with separate textures)','Project',p=>need().exportGltf(p??{}),object({textures:{enum:['embed','external']},clips:{anyOf:[{type:'null'},{type:'array',items:{type:'string',minLength:1,maxLength:200},minItems:0,maxItems:64}]}},[])),
-  add<{textures?:'embed'|'external';clips?:string[]|null}>('studio3d.export.options','Set the glTF export options: texture mode and which clips to export','Project',p=>need().setExportOptions(p??{}),object({textures:{enum:['embed','external']},clips:{anyOf:[{type:'null'},{type:'array',items:{type:'string',minLength:1,maxLength:200},minItems:0,maxItems:64}]}},[])),
+  add<{textures?:'embed'|'external';clips?:string[]|null;selection?:boolean}>('studio3d.export.options','Set the glTF export options: texture mode, which clips to export and whether to write only the selection','Project',p=>need().setExportOptions(p??{}),object({textures:{enum:['embed','external']},clips:{anyOf:[{type:'null'},{type:'array',items:{type:'string',minLength:1,maxLength:200},minItems:0,maxItems:64}]},selection:{type:'boolean'}},[])),
+  add<{unit?:ExportUnit;upAxis?:'y'|'z'}>('studio3d.import.options','Set the mesh import options for OBJ, STL and PLY files: the units the file is written in and its up axis','Project',p=>{const u=p?.unit;if(u!==undefined&&!isUnit(u))throw new Error('Unit must be m, cm, mm or in.');const a=p?.upAxis;patchStudio3D({...(u!==undefined?{importUnit:u}:{}),...(a!==undefined?{importUpAxis:a}:{})});},object({unit:{enum:['m','cm','mm','in']},upAxis:{enum:['y','z']}},[]),()=>!!controller),
   add<{sidecar?:boolean;embedEnv?:boolean}>('studio3d.save','Save the 3D scene','Project',p=>need().save(!!p?.sidecar,!!p?.embedEnv),object({sidecar:{type:'boolean'},embedEnv:{type:'boolean'}},[]),hasScene),
   add<{ids?:number[]}>('studio3d.selection.delete','Delete the selected 3D objects','Edit',p=>need().deleteSelection(p?.ids),object({ids:{type:'array',items:{type:'integer',minimum:0},minItems:1,maxItems:500}},[]),hasScene),
   add<{ids?:number[]}>('studio3d.selection.duplicate','Duplicate the selected 3D objects','Edit',p=>need().duplicateSelection(p?.ids),object({ids:{type:'array',items:{type:'integer',minimum:0},minItems:1,maxItems:500}},[]),hasScene),
