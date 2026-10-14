@@ -317,3 +317,8 @@ This entry collects the beta.6 wave and the features already present in
 - Collaboration profile names and avatars are session presentation, not verified
   identity. Chat has bounded history/attachment limits and no persistent archive.
   Native Windows/WebView2 and two-PC LAN/firewall acceptance remain release gates.
+
+### Sound session foundation (integration slice)
+
+- Add bounded multitrack session documents, atomic history, strict JSON validation, deterministic stereo mixing and float WAV encoding without new dependencies. This is a headless foundation; Arrange/Mix UI follows separately.
+- Correct the outdated Sound AI bridge documentation.

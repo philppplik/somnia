@@ -37,12 +37,12 @@ Drag on the waveform (or keys `I` / `O` at the playhead, `Esc` clears) to select
 The engine reports each stage (decode, region, trim, reverse, pitch, plugin, fade, normalize, encode) right before it starts (`run_with`, `process_with_progress`); the worker forwards it and the status line and a progress bar show "stage (n/m)". Granularity is per stage: a single slow stage (pitch shift on a long file) shows no inner percentage. The worker timeout is now 10 minutes.
 Plugins are listed with their parameter metadata (`list_plugins`: id, range, default, unit, taper, choices). The inspector renders one control per parameter (log taper aware, choice and toggle types); only values that differ from the default enter the recipe. Parameter names come from the DSP crate and are English. The step summary under the controls is localized from the engine's step lines (`lib/sound/steps.ts`).
 
-## Agent tools (Paket 4, module only, not yet live)
+## Agent tools (current bridge connected)
 
 `lib/agent/soundStudio.ts`: the native-AI "document" of a clip is its edit settings as JSON (never audio bytes). Tools: `sound_inspect` (read: clip facts, settings, last render stats, effects with parameter ranges) and `sound_propose_settings` (propose: partial settings merged into the current ones, strictly validated, staged for review, never applied). `parseSound` rejects unknown keys, out-of-range values, unknown effects/parameters and bad regions instead of clamping silently. `lib/agent/soundWorkspace.ts`: settings text of open clips, `applySound` through the session store, `undoSound` only when it is the newest AI change and nothing was edited since.
 Shared-file touch (additive): `documentCore.ts` gets `'sound'` in `StudioKind` and audio extensions in `studioFor`.
 Review view (prepared, not mounted): `lib/agent/soundReview.ts` (`diffSound`: settings diff) and `components/sound/SoundProposalReview.tsx` (change list plus an audible render of the proposed settings via `renderSoundPreview`, which never touches the session). The panel host mounts it with the clip name, the before text and the proposed text.
-Not wired yet: `panelBridge.ts` still handles Code and Photo only. Needed there: `soundAdapter` in the `DocumentRegistry`, `soundFiles()` in `syncDocuments`, a sound branch in the transaction port (`hold`, `apply`, `undo`), `createSoundStudioRegistry` in `createTools`, `nativePath` for sound, and 'sound' in the studio-kind allow-list of the run start. Left out on purpose because that file is shared and security-sensitive and other studios are changing it.
+`panelBridge.ts` registers `soundAdapter` in the document registry and creates the Sound tool registry. `studioWorkspace.ts` publishes Sound settings and revisions to the shared document catalog; the transaction port validates and applies reviewed settings and supports guarded undo. This is connected code, not a pending integration. The standalone audible `SoundProposalReview` component exists, but no production mount was found in the audited baseline; do not confuse bridge registration with that custom review UI being mounted.
 
 ## Licensing
 
@@ -54,10 +54,14 @@ wasm 1.5 MB raw in this build; 3.5 s stereo MP3 decode + trim + normalize 20-40 
 
 ## Not in this package (rest plan)
 
-1. Wire the agent tools and `components/sound/SoundProposalReview.tsx` into `panelBridge.ts` and the panel (integrator owns this; see above).
+1. Mount the custom audible `components/sound/SoundProposalReview.tsx` in the panel. The underlying Sound tool bridge is already connected (see above).
 2. Copy/paste of regions and several regions per clip (Paket 2 has one region: crop, cut, or effects only on the selection).
 3. Writing back into the project folder. Media is not part of the project text-file store, so Save As (native dialog on desktop, download on web) is all that exists.
 4. True streaming and an inner progress percentage for long single stages (progress is per stage today; 25 MB media limit, full offline render).
 5. Encoders beyond WAV (FLAC/OGG) after a licensing decision for each.
 6. Recording, multitrack and session/mixer from SoundCraft (not part of the spike scope).
 7. A Windows desktop pass: media-src CSP, blob fetch under connect-src, audio output device.
+
+## Multitrack expansion
+
+The bounded session foundation and its delivery status are described in [Sound sessions](sound-sessions.md). A foundation module is not a claim that the timeline UI or session export has shipped.
