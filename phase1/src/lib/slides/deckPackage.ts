@@ -2033,14 +2033,27 @@ export function missingAltText(bytes:Uint8Array):{items:MissingAlt[];total:numbe
 
 /** Slides whose title placeholder is missing or has no text. Slides with unsupported structure are skipped, not guessed. */
 export interface UntitledSlide {slideId:number;slideIndex:number;reason:'missing'|'empty'}
-export function untitledSlides(bytes:Uint8Array):{items:UntitledSlide[];total:number}{
-  const model=readDeckModel(bytes),zip=openPackage(bytes),items:UntitledSlide[]=[];let total=0;
+function slideTitles(bytes:Uint8Array):{slideId:number;slideIndex:number;ph:boolean;title:string}[]{
+  const model=readDeckModel(bytes),zip=openPackage(bytes),out:{slideId:number;slideIndex:number;ph:boolean;title:string}[]=[];
   const textOf=new Map<string,string>();for(const r of model.runs)textOf.set(`${r.slideId}:${r.shapeId}`,(textOf.get(`${r.slideId}:${r.shapeId}`)??'')+r.text);
   model.slides.forEach((slide,slideIndex)=>{
     if(slide.problems.length)return;
     const xml=text(zip,slide.part),titles=topLevelShapes(xml).filter(sh=>/<p:ph\b[^>]*\stype="(?:title|ctrTitle)"/.test(xml.slice(sh.start,sh.end)));
-    const reason=!titles.length?'missing':titles.every(t=>(textOf.get(`${slide.id}:${t.id}`)??'').trim()==='')?'empty':null;
-    if(reason){total++;if(items.length<MAX_ALT_REPORT)items.push({slideId:slide.id,slideIndex,reason});}
+    out.push({slideId:slide.id,slideIndex,ph:titles.length>0,title:titles.map(x=>textOf.get(`${slide.id}:${x.id}`)??'').join(' ').replace(/\s+/g,' ').trim()});
   });
+  return out;
+}
+export function untitledSlides(bytes:Uint8Array):{items:UntitledSlide[];total:number}{
+  const items:UntitledSlide[]=[];let total=0;
+  for(const s of slideTitles(bytes)){const reason=!s.ph?'missing':s.title===''?'empty':null;if(reason){total++;if(items.length<MAX_ALT_REPORT)items.push({slideId:s.slideId,slideIndex:s.slideIndex,reason});}}
   return {items,total};
+}
+
+/** Titles used by more than one slide (trimmed, whitespace-collapsed, case-insensitive). Empty titles are not duplicates. */
+export interface DuplicateTitle {title:string;slides:{slideId:number;slideIndex:number}[]}
+export function duplicateTitles(bytes:Uint8Array):{items:DuplicateTitle[];total:number}{
+  const groups=new Map<string,DuplicateTitle>();
+  for(const s of slideTitles(bytes)){if(!s.title)continue;const k=s.title.toLowerCase(),g=groups.get(k);if(g)g.slides.push({slideId:s.slideId,slideIndex:s.slideIndex});else groups.set(k,{title:s.title.slice(0,80),slides:[{slideId:s.slideId,slideIndex:s.slideIndex}]});}
+  const dup=[...groups.values()].filter(g=>g.slides.length>1);
+  return {items:dup.slice(0,MAX_ALT_REPORT).map(g=>({...g,slides:g.slides.slice(0,MAX_ALT_REPORT)})),total:dup.length};
 }

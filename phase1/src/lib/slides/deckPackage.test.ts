@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {readFileSync,readdirSync} from 'node:fs';
 import {fileURLToPath} from 'node:url';
 import {unzipSync,zipSync,strFromU8,strToU8} from 'fflate';
-import {setPictureDecorative,readPictureDecorative,untitledSlides,missingAltText,MAX_ALT_REPORT,setPictureAlt,readPictureAlt,editSections,setSlideHidden,readHiddenSlides,setFirstSlideNum,readFirstSlideNum,setSlideFooter,setAllSlideFooters,readSlideFooter,setSlideSize,readSlideSize,setAllSlideBackgrounds,backgroundSummary,setSlideBackground,readSlideBackground,editLayoutBox,readLayoutBoxes,editMasterBox,readMaster,editTheme,readTheme,insertTable,editTable,readTable,setShapeStyle,readShapeStyle,setSlideNotes,groupShapes,ungroupShape,readSlideTransition,setSlideTransition,arrangeShapes,arrangedOrder,setShapesBounds,readSlideNotes,insertPicture,replacePicture,removePicture,fitImage,formatShapeText,addTextBox,removeTextBox,nextShapeId,setShapeBounds,boundsEditIssue,readDeckModel,moveSlide,reorderSlides,duplicateSlide,deleteSlide,newSlideFromLayout,readLayouts} from './deckPackage';
+import {duplicateTitles,setPictureDecorative,readPictureDecorative,untitledSlides,missingAltText,MAX_ALT_REPORT,setPictureAlt,readPictureAlt,editSections,setSlideHidden,readHiddenSlides,setFirstSlideNum,readFirstSlideNum,setSlideFooter,setAllSlideFooters,readSlideFooter,setSlideSize,readSlideSize,setAllSlideBackgrounds,backgroundSummary,setSlideBackground,readSlideBackground,editLayoutBox,readLayoutBoxes,editMasterBox,readMaster,editTheme,readTheme,insertTable,editTable,readTable,setShapeStyle,readShapeStyle,setSlideNotes,groupShapes,ungroupShape,readSlideTransition,setSlideTransition,arrangeShapes,arrangedOrder,setShapesBounds,readSlideNotes,insertPicture,replacePicture,removePicture,fitImage,formatShapeText,addTextBox,removeTextBox,nextShapeId,setShapeBounds,boundsEditIssue,readDeckModel,moveSlide,reorderSlides,duplicateSlide,deleteSlide,newSlideFromLayout,readLayouts} from './deckPackage';
 import {readRuns,makeEditedCopy} from './editCopy';
 import {png,jpeg} from './imageFixtures';
 
@@ -994,4 +994,16 @@ test('decorative picture: mark clears alt, excluded from missing report, toggles
   assert.equal(setPictureAlt(d,sid,pic,'Again') instanceof Uint8Array,true);
   const text=readDeckModel(b).slides[0].shapes.find(s=>s.kind==='text')!.id;
   assert.throws(()=>setPictureDecorative(b,sid,text,true),/Only pictures/);assert.throws(()=>setPictureDecorative(b,99999,pic,true),/no longer exists/);assert.throws(()=>setPictureDecorative(b,sid,99999,true),/no longer exists/);
+});
+
+test('duplicate titles: groups equal titles case/space-insensitively, ignores empty and untitled, bounded',()=>{
+  const b=deck(3),m=readDeckModel(b),z=unzipSync(b);
+  for(const sl of m.slides){const xml=strFromU8(z[sl.part]);z[sl.part]=strToU8(xml.replace('<p:cNvSpPr txBox="1"/><p:nvPr/>','<p:cNvSpPr txBox="1"/><p:nvPr><p:ph type="title"/></p:nvPr>'));}
+  const c=zipSync(z),r=duplicateTitles(c);assert.equal(r.total,0);
+  const z2=unzipSync(c);
+  z2[m.slides[1].part]=strToU8(strFromU8(z2[m.slides[1].part]).replace(/<a:t>[^<]*<\/a:t>/,'<a:t>  SLIDE   1 </a:t>'));
+  const d=duplicateTitles(zipSync(z2));assert.equal(d.total,1);assert.deepEqual(d.items[0].slides.map(s=>s.slideIndex),[0,1]);assert.equal(d.items[0].title,'SLIDE 1'.length?d.items[0].title:'');
+  const z3=unzipSync(zipSync(z2));for(const i of [0,1])z3[m.slides[i].part]=strToU8(strFromU8(z3[m.slides[i].part]).replace(/<a:t>[^<]*<\/a:t>/,'<a:t> </a:t>'));
+  assert.equal(duplicateTitles(zipSync(z3)).total,0);
+  assert.equal(duplicateTitles(b).total,0);
 });
