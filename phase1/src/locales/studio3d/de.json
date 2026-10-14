@@ -912,5 +912,8 @@
  "studio3d.edit.selLinked": "Verbunden",
  "cmd.studio3d.edit.dissolve": "Ausgewählte Faces zu einem Face verschmelzen",
  "studio3d.edit.dissolve": "Auflösen",
- "studio3d.hist.editDissolve": "Faces auflösen"
+ "studio3d.hist.editDissolve": "Faces auflösen",
+ "cmd.studio3d.edit.fill": "Selektierte geschlossene Kantenschleife mit einem Face-Fan füllen",
+ "studio3d.edit.fill": "Füllen",
+ "studio3d.hist.editFill": "Kantenschleife füllen"
 }

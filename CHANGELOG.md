@@ -1,4 +1,5 @@
 # Unreleased: 3D Studio P0
+- 3D Studio: edit mode fills a selected closed edge loop with a centroid triangle fan, plugging holes after a delete (`studio3d.edit.fill`).
 - 3D Studio: edit mode dissolves selected faces into a single face, dropping interior edges and vertices - the cleanup counterpart to poke and subdivide (`studio3d.edit.dissolve`).
 - 3D Studio: edit mode selects everything topologically linked to the current selection, keeping duplicated shells at the same positions separate (`studio3d.edit.selectLinked`, vertex, edge or face).
 - 3D Studio: edit mode flips the normals of just the selected faces, fixing inside-out regions after imports or booleans, with one undo (`studio3d.edit.flip`).

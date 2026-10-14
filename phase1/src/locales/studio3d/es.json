@@ -912,5 +912,8 @@
  "studio3d.edit.selLinked": "Enlazado",
  "cmd.studio3d.edit.dissolve": "Fusionar las caras seleccionadas en una sola cara",
  "studio3d.edit.dissolve": "Disolver",
- "studio3d.hist.editDissolve": "Disolver caras"
+ "studio3d.hist.editDissolve": "Disolver caras",
+ "cmd.studio3d.edit.fill": "Rellenar el bucle cerrado de aristas seleccionado con un abanico de caras",
+ "studio3d.edit.fill": "Rellenar",
+ "studio3d.hist.editFill": "Rellenar bucle de aristas"
 }

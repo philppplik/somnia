@@ -912,5 +912,8 @@
  "studio3d.edit.selLinked": "Lié",
  "cmd.studio3d.edit.dissolve": "Fusionner les faces sélectionnées en une seule face",
  "studio3d.edit.dissolve": "Dissoudre",
- "studio3d.hist.editDissolve": "Dissoudre les faces"
+ "studio3d.hist.editDissolve": "Dissoudre les faces",
+ "cmd.studio3d.edit.fill": "Remplir la boucle fermée d'arêtes sélectionnée avec un éventail de faces",
+ "studio3d.edit.fill": "Remplir",
+ "studio3d.hist.editFill": "Remplir la boucle d'arêtes"
 }

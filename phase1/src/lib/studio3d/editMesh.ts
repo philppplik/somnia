@@ -512,6 +512,57 @@ export function dissolveFaces(m:MeshData,faces:number[]):MeshData{
  if(uvs)out.uvs=uvs;
  return out;
 }
+/** Fills one selected closed edge loop with a triangle fan around a new centroid vertex, the edit-mode counterpart to fillHoles. The fan winds against the faces that still touch the loop; UVs interpolate with the positions; masks and explicit normals are dropped. */
+export function fillSelected(m:MeshData,edges:[number,number][]):MeshData{
+ if(!edges.length)throw new EditError('Select an edge loop to fill.');
+ const nv=m.positions.length/3;
+ const adj=new Map<number,number[]>();
+ const addAdj=(a:number,b:number)=>{const l=adj.get(a);if(l)l.push(b);else adj.set(a,[b]);};
+ for(const [a,b] of edges){
+  if(!Number.isInteger(a)||!Number.isInteger(b)||a<0||b<0||a>=nv||b>=nv)throw new EditError(`Edge ${a}-${b} does not exist.`);
+  addAdj(a,b);addAdj(b,a);
+ }
+ for(const l of adj.values())if(l.length!==2)throw new EditError('Select one closed edge loop to fill.');
+ const start=adj.keys().next().value!;
+ const loop=[start];
+ let prev=-1,cur=start;
+ while(true){
+  const nexts=adj.get(cur)!.filter(v=>v!==prev);
+  if(!nexts.length)throw new EditError('Select one closed edge loop to fill.');
+  const nxt=nexts[0];
+  if(nxt===start)break;
+  if(loop.includes(nxt))throw new EditError('Select one closed edge loop to fill.');
+  loop.push(nxt);prev=cur;cur=nxt;
+ }
+ if(loop.length!==adj.size||loop.length<3)throw new EditError('Select one closed edge loop to fill.');
+ // Winding vote: an existing face traversing the loop edge in one direction wants the cap to traverse it the other way. Edges are matched by POSITION so split sides (UV seams, duplicated shells) still vote.
+ const pk=(v:number)=>`${Math.round(m.positions[v*3]*1e6)},${Math.round(m.positions[v*3+1]*1e6)},${Math.round(m.positions[v*3+2]*1e6)}`;
+ let vote=0;
+ const surf=new Map<string,number>();
+ const nt=m.index.length/3;
+ for(let f=0;f<nt;f++)for(let e=0;e<3;e++){
+  const a=m.index[f*3+e],b=m.index[f*3+(e+1)%3];
+  const ka=pk(a),kb=pk(b);
+  surf.set(`${ka}|${kb}`,(surf.get(`${ka}|${kb}`)??0)+1);
+ }
+ for(let i=0;i<loop.length;i++){
+  const ka=pk(loop[i]),kb=pk(loop[(i+1)%loop.length]);
+  vote+=(surf.get(`${ka}|${kb}`)??0)-(surf.get(`${kb}|${ka}`)??0);
+ }
+ const ring=vote>=0?[...loop].reverse():[...loop];
+ const positions=[...m.positions];
+ const uvs=m.uvs?[...m.uvs]:undefined;
+ let cx=0,cy=0,cz=0,cu=0,cv=0;
+ for(const v of ring){cx+=m.positions[v*3];cy+=m.positions[v*3+1];cz+=m.positions[v*3+2];if(uvs){cu+=m.uvs![v*2];cv+=m.uvs![v*2+1];}}
+ const n=ring.length,c=positions.length/3;
+ positions.push(cx/n,cy/n,cz/n);
+ if(uvs)uvs.push(cu/n,cv/n);
+ const index=[...m.index];
+ for(let i=0;i<n;i++)index.push(ring[i],ring[(i+1)%n],c);
+ const out:MeshData={positions,index};
+ if(uvs)out.uvs=uvs;
+ return out;
+}
 /** Deletes selected elements: faces drop their own triangles, edges and vertices drop every triangle that touches them. Positions stay put (orphan vertices are allowed), so undo restores the exact geometry. Refuses an empty selection and a delete that would leave no triangle. */
 export function deleteElements(m:MeshData,kind:'vertex'|'edge'|'face',sel:{verts?:number[];edges?:[number,number][];faces?:number[]}):MeshData{
  const tris=m.index.length/3,total=m.positions.length/3;

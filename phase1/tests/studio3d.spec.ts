@@ -941,6 +941,23 @@ test('mesh edit mode: dissolve merges poked triangles back into one face',async(
  await expect(page.getByRole('alert')).toContainText('Dissolve needs a single simple face region');
 });
 
+test('mesh edit mode: fill closes a deleted side with a centroid fan',async({page})=>{
+ await blank(page);
+ const id=await insert(page,'cube',0);
+ expect(await run(page,'studio3d.edit.start',{id,mode:'face'})).toBe(true);
+ expect(await run(page,'studio3d.edit.select',{kind:'face',ids:[4,5]})).toBe(true);
+ expect(await run(page,'studio3d.edit.delete',{kind:'face'})).toBe(true);
+ let s=await session(page);expect(s.stats.triangles).toBe(10);
+ expect(await run(page,'studio3d.edit.select',{kind:'edge',edges:[[8,10],[8,9],[10,11],[9,11]]})).toBe(true);
+ expect(await run(page,'studio3d.edit.fill',{})).toBe(true);
+ s=await session(page);expect(s.stats.triangles).toBe(14);
+ await run(page,'studio3d.undo');
+ await expect.poll(async()=>(await session(page)).stats.triangles).toBe(10);
+ expect(await run(page,'studio3d.edit.selectAll',{op:'none'})).toBe(true);
+ expect(await run(page,'studio3d.edit.fill',{})).toBe(false);
+ await expect(page.getByRole('alert')).toContainText('Select an edge loop to fill');
+});
+
 test('mesh edit mode: weld merges selected vertices at their centre, undo restores them',async({page})=>{
  await blank(page);
  const id=await insert(page,'cube',0);

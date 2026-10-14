@@ -912,5 +912,8 @@
  "studio3d.edit.selLinked": "Linked",
  "cmd.studio3d.edit.dissolve": "Merge selected faces into one face",
  "studio3d.edit.dissolve": "Dissolve",
- "studio3d.hist.editDissolve": "Dissolve faces"
+ "studio3d.hist.editDissolve": "Dissolve faces",
+ "cmd.studio3d.edit.fill": "Fill the selected closed edge loop with a centroid triangle fan",
+ "studio3d.edit.fill": "Fill",
+ "studio3d.hist.editFill": "Fill edge loop"
 }
