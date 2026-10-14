@@ -957,5 +957,8 @@
  "animation.modifiers.axis": "Axis",
  "animation.modifiers.axis.both": "Both axes",
  "animation.rig.reseed": "Reseed wiggles",
- "cmd.animation.modifiers.reseed": "Reseed the wiggles of the selected layers"
+ "cmd.animation.modifiers.reseed": "Reseed the wiggles of the selected layers",
+ "animation.rig.menu": "Rig actions",
+ "animation.rig.group.hierarchy": "Hierarchy",
+ "animation.rig.group.layers": "Layers"
 }

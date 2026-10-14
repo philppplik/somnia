@@ -957,5 +957,8 @@
  "animation.modifiers.axis": "Achse",
  "animation.modifiers.axis.both": "Beide Achsen",
  "animation.rig.reseed": "Wiggle neu würfeln",
- "cmd.animation.modifiers.reseed": "Wiggles der gewählten Ebenen neu würfeln"
+ "cmd.animation.modifiers.reseed": "Wiggles der gewählten Ebenen neu würfeln",
+ "animation.rig.menu": "Rig-Aktionen",
+ "animation.rig.group.hierarchy": "Hierarchie",
+ "animation.rig.group.layers": "Ebenen"
 }

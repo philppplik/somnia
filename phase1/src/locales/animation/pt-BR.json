@@ -957,5 +957,8 @@
  "animation.modifiers.axis": "Eixo",
  "animation.modifiers.axis.both": "Ambos os eixos",
  "animation.rig.reseed": "Nova semente do wiggle",
- "cmd.animation.modifiers.reseed": "Nova semente para os wiggles das camadas selecionadas"
+ "cmd.animation.modifiers.reseed": "Nova semente para os wiggles das camadas selecionadas",
+ "animation.rig.menu": "Ações de rig",
+ "animation.rig.group.hierarchy": "Hierarquia",
+ "animation.rig.group.layers": "Camadas"
 }

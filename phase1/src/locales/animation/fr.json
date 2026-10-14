@@ -957,5 +957,8 @@
  "animation.modifiers.axis": "Axe",
  "animation.modifiers.axis.both": "Les deux axes",
  "animation.rig.reseed": "Nouvelle graine de wiggle",
- "cmd.animation.modifiers.reseed": "Nouvelle graine pour les wiggles des calques sélectionnés"
+ "cmd.animation.modifiers.reseed": "Nouvelle graine pour les wiggles des calques sélectionnés",
+ "animation.rig.menu": "Actions de rig",
+ "animation.rig.group.hierarchy": "Hiérarchie",
+ "animation.rig.group.layers": "Calques"
 }

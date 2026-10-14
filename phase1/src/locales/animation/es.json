@@ -957,5 +957,8 @@
  "animation.modifiers.axis": "Eje",
  "animation.modifiers.axis.both": "Ambos ejes",
  "animation.rig.reseed": "Nueva semilla de wiggle",
- "cmd.animation.modifiers.reseed": "Nueva semilla para los wiggles de las capas seleccionadas"
+ "cmd.animation.modifiers.reseed": "Nueva semilla para los wiggles de las capas seleccionadas",
+ "animation.rig.menu": "Acciones de rig",
+ "animation.rig.group.hierarchy": "Jerarquía",
+ "animation.rig.group.layers": "Capas"
 }
