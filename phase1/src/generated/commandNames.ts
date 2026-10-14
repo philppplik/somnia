@@ -353,7 +353,7 @@ export const COMMAND_ARGS: Readonly<Record<CommandName, readonly string[]>> = {
   local_voice_download: ['acknowledged'],
   local_voice_poll: ['id'],
   local_voice_status: [],
-  local_voice_transcribe: ['pcm'],
+  local_voice_transcribe: ['pcm', 'language'],
   log_dir: [],
   log_tail: ['lines'],
   log_write: ['level', 'source', 'message', 'context'],

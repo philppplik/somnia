@@ -1,3 +1,4 @@
+import {PromptVoiceInput} from './PromptVoiceInput';
 import {Button} from '../ui/button';
 import {StudioStatus} from '../studios/StudioStatus';
 import {LocalStudioAssistant} from './LocalStudioAssistant';
@@ -87,7 +88,7 @@ export function AgentPanel(){
   <div className="ag-inp"><form className="ag-field" onSubmit={e=>{e.preventDefault();if(chat.busy)stop();else send(draft);}}>
    <NativeInput ref={input} value={draft} disabled={chat.busy||!settingsReady||saving||authBusy} onChange={e=>setDraft(e.target.value)} placeholder={chat.busy?t('agent.input.busy'):t('agent.input.placeholder')} aria-label={t('agent.input.label')} autoComplete="off"/>
    {chat.busy?<NativeButton type="submit" className="ag-send ag-stop" title={t('agent.stop')} aria-label={t('agent.stop')}><Square size={14} fill="currentColor"/></NativeButton>:<NativeButton type="submit" className="ag-send" title={t('agent.send')} aria-label={t('agent.send')} disabled={!draft.trim()||!settingsReady||saving||authBusy}><Send size={17}/></NativeButton>}
-  </form></div>
+  </form><PromptVoiceInput draft={draft} onDraft={setDraft} disabled={chat.busy||!settingsReady||saving||authBusy}/></div>
   <span className="sr-only" role="status" aria-live="polite">{announce}</span>
  </aside>;
 }

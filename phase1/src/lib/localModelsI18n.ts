@@ -1,5 +1,16 @@
 export const LOCAL_MODELS_CATALOGUES:Record<string,Record<string,string>> = {
  "en": {
+  "local.voice.prompt.title": "Prompt voice preview",
+  "local.voice.prompt.boundary": "Optional local whisper.cpp dictation. Hold to record, release to transcribe. Browser/OS microphone permission is required. Audio is never uploaded; the sidecar uses private temporary files. Edit the transcript, then add it to this prompt. Nothing is sent automatically.",
+  "local.voice.prompt.ready": "Ready: verified helper and multilingual base model",
+  "local.voice.prompt.unavailable": "No verified local helper/model. Open AI > Local to inspect optional setup.",
+  "local.voice.prompt.language": "Spoken language (one multilingual base model for German and English)",
+  "local.voice.prompt.insert": "Add edited transcript to prompt",
+  "local.voice.prompt.changed": "The prompt changed while recording. Cancel and record again to avoid replacing newer text.",
+  "local.voice.prompt.limit": "Transcript is empty or exceeds this prompt limit. Shorten it before adding.",
+  "local.voice.prompt.failed": "Voice input failed or permission was denied. Nothing was inserted or sent.",
+  "local.voice.prompt.binaryUnavailable": "Binary download unavailable: no reviewed per-platform release manifest and dependency-license inventory in this build. No arbitrary executable URL or GPL bundle.",
+
   "local.manager.lastUsed": "Last successful Agent use on this device",
   "local.manager.lastUsedNotice": "Somnia Agent completions only, stored on this device. Ollama modified_at is not last used. Other apps and native Vibe runs are not included; missing history stays unknown.",
   "local.manager.recommended": "Device suggestion: {model}. Fits the current RAM/VRAM estimate; not a quality or speed test. Text advice only, never downloaded or selected automatically.",
@@ -269,6 +280,17 @@ export const LOCAL_MODELS_CATALOGUES:Record<string,Record<string,string>> = {
   "local.route.earlier": "Move earlier after local"
  },
  "de": {
+  "local.voice.prompt.title": "Spracheingabe-Vorschau im Prompt",
+  "local.voice.prompt.boundary": "Optionales lokales whisper.cpp-Diktat. Zum Aufnehmen halten, zum Transkribieren loslassen. Browser-/Betriebssystemfreigabe fürs Mikrofon ist nötig. Kein Audio-Upload; der Helper nutzt private temporäre Dateien. Transkript bearbeiten und dann zum Prompt hinzufügen. Nichts wird automatisch gesendet.",
+  "local.voice.prompt.ready": "Bereit: geprüfter Helper und mehrsprachiges Basismodell",
+  "local.voice.prompt.unavailable": "Kein geprüftes lokales Helper/Modell. Unter AI > Lokal optionale Einrichtung prüfen.",
+  "local.voice.prompt.language": "Gesprochene Sprache (ein mehrsprachiges Basismodell für Deutsch und Englisch)",
+  "local.voice.prompt.insert": "Bearbeitetes Transkript zum Prompt hinzufügen",
+  "local.voice.prompt.changed": "Der Prompt wurde während der Aufnahme geändert. Abbrechen und neu aufnehmen, damit neuer Text erhalten bleibt.",
+  "local.voice.prompt.limit": "Transkript leer oder zu lang für diesen Prompt. Vor dem Einfügen kürzen.",
+  "local.voice.prompt.failed": "Spracheingabe fehlgeschlagen oder Mikrofonfreigabe verweigert. Nichts eingefügt oder gesendet.",
+  "local.voice.prompt.binaryUnavailable": "Binärdownload nicht verfügbar: In diesem Build fehlen geprüfte Release-Manifeste und Abhängigkeitslizenzen je Plattform. Keine beliebige Programm-URL und kein GPL-Bundle.",
+
   "local.manager.lastUsed": "Letzte erfolgreiche Agent-Nutzung auf diesem Gerät",
   "local.manager.lastUsedNotice": "Nur Somnia-Agent-Abschlüsse, lokal gespeichert. Ollama modified_at ist keine letzte Nutzung. Andere Apps und native Vibe-Läufe sind nicht enthalten; fehlende Historie bleibt unbekannt.",
   "local.manager.recommended": "Gerätevorschlag: {model}. Passt zur aktuellen RAM/VRAM-Schätzung; kein Qualitäts- oder Geschwindigkeitstest. Nur Text, kein automatischer Download oder Wechsel.",
@@ -538,6 +560,17 @@ export const LOCAL_MODELS_CATALOGUES:Record<string,Record<string,string>> = {
   "local.route.earlier": "Nach lokal früher einordnen"
  },
  "es": {
+  "local.voice.prompt.title": "Vista previa de voz para el prompt",
+  "local.voice.prompt.boundary": "Dictado local opcional con whisper.cpp. Mantén pulsado para grabar y suelta para transcribir. Se requiere permiso del micrófono. Sin subida de audio; archivos temporales privados. Edita y añade al prompt. Nada se envía automáticamente.",
+  "local.voice.prompt.ready": "Listo: programa verificado y modelo base multilingüe",
+  "local.voice.prompt.unavailable": "No hay programa/modelo local verificado. Revisa la configuración opcional en AI > Local.",
+  "local.voice.prompt.language": "Idioma hablado (un modelo base multilingüe para alemán e inglés)",
+  "local.voice.prompt.insert": "Añadir transcripción editada al prompt",
+  "local.voice.prompt.changed": "El prompt cambió durante la grabación. Cancela y graba de nuevo para conservar el texto nuevo.",
+  "local.voice.prompt.limit": "Transcripción vacía o demasiado larga. Acórtala antes de añadirla.",
+  "local.voice.prompt.failed": "Falló la voz o se denegó el permiso. No se añadió ni envió nada.",
+  "local.voice.prompt.binaryUnavailable": "Descarga binaria no disponible: faltan manifiestos revisados y licencias de dependencias por plataforma. Sin URL ejecutable arbitraria ni paquete GPL.",
+
   "local.manager.lastUsed": "Último uso correcto del Agent en este dispositivo",
   "local.manager.lastUsedNotice": "Solo finalizaciones de Somnia Agent, guardadas localmente. modified_at de Ollama no es el último uso. No incluye otras apps ni ejecuciones Vibe nativas; lo desconocido sigue desconocido.",
   "local.manager.recommended": "Sugerencia para este dispositivo: {model}. Cabe según la estimación de RAM/VRAM actual; no es una prueba de calidad o velocidad. Solo texto, sin descarga ni selección automática.",
@@ -807,6 +840,17 @@ export const LOCAL_MODELS_CATALOGUES:Record<string,Record<string,string>> = {
   "local.route.earlier": "Mover antes tras local"
  },
  "fr": {
+  "local.voice.prompt.title": "Aperçu de saisie vocale du prompt",
+  "local.voice.prompt.boundary": "Dictée locale facultative avec whisper.cpp. Maintenir pour enregistrer, relâcher pour transcrire. Autorisation micro requise. Aucun envoi audio; fichiers temporaires privés. Modifier puis ajouter au prompt. Aucun envoi automatique.",
+  "local.voice.prompt.ready": "Prêt : programme vérifié et modèle multilingue de base",
+  "local.voice.prompt.unavailable": "Aucun programme/modèle local vérifié. Consulter AI > Local.",
+  "local.voice.prompt.language": "Langue parlée (un modèle multilingue pour allemand et anglais)",
+  "local.voice.prompt.insert": "Ajouter la transcription modifiée au prompt",
+  "local.voice.prompt.changed": "Le prompt a changé pendant l’enregistrement. Annuler et recommencer pour préserver le nouveau texte.",
+  "local.voice.prompt.limit": "Transcription vide ou trop longue. La raccourcir avant ajout.",
+  "local.voice.prompt.failed": "Échec vocal ou permission refusée. Rien ajouté ni envoyé.",
+  "local.voice.prompt.binaryUnavailable": "Téléchargement binaire indisponible : manifestes et licences des dépendances par plateforme non vérifiés. Aucune URL de programme arbitraire ni paquet GPL.",
+
   "local.manager.lastUsed": "Dernière utilisation réussie de l’Agent sur cet appareil",
   "local.manager.lastUsedNotice": "Uniquement les réponses terminées de Somnia Agent, enregistrées localement. modified_at d’Ollama n’est pas la dernière utilisation. Autres apps et exécutions Vibe natives exclues; l’inconnu reste inconnu.",
   "local.manager.recommended": "Suggestion pour cet appareil : {model}. Compatible avec l’estimation RAM/VRAM actuelle; aucun test de qualité ou de vitesse. Texte uniquement, sans téléchargement ni sélection automatique.",
@@ -1076,6 +1120,17 @@ export const LOCAL_MODELS_CATALOGUES:Record<string,Record<string,string>> = {
   "local.route.earlier": "Avancer après local"
  },
  "pt-BR": {
+  "local.voice.prompt.title": "Prévia de voz no prompt",
+  "local.voice.prompt.boundary": "Ditado local opcional com whisper.cpp. Segure para gravar e solte para transcrever. Permissão do microfone necessária. Sem envio de áudio; arquivos temporários privados. Edite e adicione ao prompt. Nada é enviado automaticamente.",
+  "local.voice.prompt.ready": "Pronto: programa verificado e modelo base multilíngue",
+  "local.voice.prompt.unavailable": "Nenhum programa/modelo local verificado. Confira AI > Local.",
+  "local.voice.prompt.language": "Idioma falado (um modelo multilíngue para alemão e inglês)",
+  "local.voice.prompt.insert": "Adicionar transcrição editada ao prompt",
+  "local.voice.prompt.changed": "O prompt mudou durante a gravação. Cancele e grave novamente para preservar o texto novo.",
+  "local.voice.prompt.limit": "Transcrição vazia ou longa demais. Reduza antes de adicionar.",
+  "local.voice.prompt.failed": "Falha de voz ou permissão negada. Nada foi adicionado ou enviado.",
+  "local.voice.prompt.binaryUnavailable": "Download binário indisponível: faltam manifestos revisados e licenças de dependências por plataforma. Sem URL executável arbitrária nem pacote GPL.",
+
   "local.manager.lastUsed": "Último uso concluído do Agent neste dispositivo",
   "local.manager.lastUsedNotice": "Somente respostas concluídas do Somnia Agent, salvas localmente. modified_at do Ollama não é o último uso. Outros apps e execuções Vibe nativas não são incluídos; o desconhecido continua desconhecido.",
   "local.manager.recommended": "Sugestão para este dispositivo: {model}. Cabe na estimativa atual de RAM/VRAM; não é teste de qualidade ou velocidade. Apenas texto, sem download ou seleção automática.",
