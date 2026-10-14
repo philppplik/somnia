@@ -3291,5 +3291,6 @@
   "themeImport.sessionOnly": "Aplicado somente nesta sessão. Armazenamento indisponível.",
   "themeImport.contrastNote": "Contraste orientativo. As cores não mudam. Confira os studios antes de usar o tema.",
   "themeImport.contrastLow": "{ratio}:1, abaixo de 4,5:1 para texto normal.",
-  "themeImport.contrastUnknown": "Não verificado: par ausente, alfa ou cor não suportada."
+  "themeImport.contrastUnknown": "Não verificado: par ausente, alfa ou cor não suportada.",
+  "cmd.help.localAI": "Ajuda e FAQ de IA local"
 }

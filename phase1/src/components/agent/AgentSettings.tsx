@@ -1,3 +1,4 @@
+import {LocalAIHelp} from './LocalAIHelp';
 import {LocalPrivacySettings} from './LocalPrivacySettings';
 import {LocalEvaluationHarness} from './LocalEvaluationHarness';
 import {OfflineModeSettings} from './OfflineModeSettings';
@@ -51,6 +52,7 @@ export function AgentSettings({searchQuery='',legacyPrivacy=false}:{searchQuery?
  useEffect(()=>{if(!searchQuery)return;const areas={local:'Local models Ollama installed vision tools embedding '+t('local.search')+' '+labels.local,providers:'Provider Model API key authentication connection Ollama OpenRouter OpenAI Claude '+labels.providers,instructions:'Custom prompts instructions '+labels.instructions+' '+(cfg.customPrompts??[]).map(p=>p.name+' '+p.text).join(' '),privacy:'Consent Privacy Cloud Local data '+labels.privacy,tools:'MCP tools servers external Model Context Protocol '+labels.tools};const match=tabs.find(id=>settingsMatch(areas[id],searchQuery));if(match)patchState({settingsAITab:match});},[searchQuery]);
  const visible=(id:typeof tab)=>tab===id;
  return <div className="agent-settings" data-settings-search-text={'Provider Model API key authentication connection Ollama OpenRouter OpenAI Claude Local models vision tools embedding Custom prompts instructions Consent Privacy Cloud Local data '+(cfg.customPrompts??[]).map(p=>p.name+' '+p.text).join(' ')}>
+  <LocalAIHelp open={app.localAIHelpOpen} onOpenChange={localAIHelpOpen=>patchState({localAIHelpOpen})}/>
   <p>Choose a provider and model for Somnia Agent. Changes apply when you save the configuration.</p>
   {settings.error&&<p role="alert">{settings.error}</p>}
   <Tabs value={tab} onValueChange={value=>{if(tabs.includes(value as typeof tab))patchState({settingsAITab:value as typeof tab});}}>

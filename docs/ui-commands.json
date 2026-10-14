@@ -2087,6 +2087,23 @@
       "hasEnabled": true
     },
     {
+      "id": "help.localAI",
+      "title": "Local AI help and FAQ",
+      "category": "Help",
+      "source": "core",
+      "keywords": [
+        "AI",
+        "FAQ",
+        "Ollama",
+        "help",
+        "local",
+        "offline",
+        "privacy",
+        "voice"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "help.shortcuts",
       "title": "Keyboard shortcuts",
       "category": "Help",

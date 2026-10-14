@@ -206,6 +206,7 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `frameworks.newProject` | New project | Project | core |  |
 | `help.errorReport` | Copy error report (log excerpt and version) | Help | core |  |
 | `help.github` | Somnia on GitHub (source, releases, issues) | Help | core |  |
+| `help.localAI` | Local AI help and FAQ | Help | core |  |
 | `help.shortcuts` | Keyboard shortcuts | Help | core |  |
 | `insert.element.0` | Section | Insert | core |  |
 | `insert.element.1` | Heading | Insert | core |  |

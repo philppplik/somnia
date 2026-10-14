@@ -3291,5 +3291,6 @@
   "themeImport.sessionOnly": "Appliqué pour cette session seulement. Stockage indisponible.",
   "themeImport.contrastNote": "Contraste indicatif. Les couleurs restent inchangées. Vérifiez les studios avant utilisation.",
   "themeImport.contrastLow": "{ratio}:1, sous le seuil de 4,5:1 pour le texte normal.",
-  "themeImport.contrastUnknown": "Non vérifié : paire manquante, alpha ou couleur non prise en charge."
+  "themeImport.contrastUnknown": "Non vérifié : paire manquante, alpha ou couleur non prise en charge.",
+  "cmd.help.localAI": "Aide et FAQ IA locale"
 }
