@@ -2441,6 +2441,7 @@
   "documents.hf.align.left": "Links",
   "documents.hf.align.center": "Zentriert",
   "documents.hf.align.right": "Rechts",
+  "documents.hf.pageTotal": "Gesamtseitenzahl anzeigen (1 / 5)",
   "documents.list.demote": "Listeneintrag tieferstufen",
   "documents.find.label": "Suchen und Ersetzen",
   "documents.find.query": "Suchen",

@@ -54,6 +54,7 @@ export class DocSession {
     /** JSON `{header:{text,editable},footer:{text,pageNumber,editable}}` for the default header and footer. */
     header_footer(): string;
     /** Sets default header/footer text and page number of every section; `undefined` keeps a part. */
+    set_footer_page_total(total: boolean): void;
     set_header_footer_align(header?: string | null, footer?: string | null): void;
     set_header_footer(header?: string | null, footer?: string | null, page_number?: boolean | null): void;
     /** Inserts a PNG or JPEG (5 MB, 8000 px a side, 25 MP, 200 images) as its own paragraph after `block`. */

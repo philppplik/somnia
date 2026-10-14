@@ -622,10 +622,10 @@ export async function readHeaderFooter():Promise<HeaderFooterState|null>{
  const e=engine;if(!e||getDocumentsState().status!=='ready')return null;const check=ownerGuard();const st=await e.headerFooterState();check();return st;
 }
 /** Set the default header text, footer text and footer page number for every section. A part left undefined stays as it is. One undo step; the caret does not move. */
-export const setHeaderFooter=(patch:{header?:string;footer?:string;pageNumber?:boolean;headerAlign?:import('./protocol').HfAlign;footerAlign?:import('./protocol').HfAlign})=>run(async()=>{
+export const setHeaderFooter=(patch:{header?:string;footer?:string;pageNumber?:boolean;headerAlign?:import('./protocol').HfAlign;footerAlign?:import('./protocol').HfAlign;pageTotal?:boolean})=>run(async()=>{
  for(const v of [patch.headerAlign,patch.footerAlign])if(v!==undefined&&!(HF_ALIGNS as readonly unknown[]).includes(v))throw new Error('The alignment is not valid.');
  if((patch.header!==undefined&&!validHfText(patch.header))||(patch.footer!==undefined&&!validHfText(patch.footer))||(patch.pageNumber!==undefined&&typeof patch.pageNumber!=='boolean'))throw new Error(`Header and footer text is limited to ${MAX_HF_CHARS} characters, without line breaks.`);
- if(patch.header===undefined&&patch.footer===undefined&&patch.pageNumber===undefined&&patch.headerAlign===undefined&&patch.footerAlign===undefined)return;
+ if(patch.header===undefined&&patch.footer===undefined&&patch.pageNumber===undefined&&patch.headerAlign===undefined&&patch.footerAlign===undefined&&patch.pageTotal===undefined)return;
  const c=getDocumentsState().caret;if(!c)throw new Error('Place the caret in the document first.');
  const spot={block:c.block,off:c.head};
  await structural(eng=>eng.setHeaderFooter(patch),spot,spot);

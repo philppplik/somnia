@@ -73,7 +73,7 @@ export class DocumentsEngine{
  async pageSetupState():Promise<import('./protocol').PageSetupState>{return(await this.call('pageSetup',id=>({id,kind:'pageSetupState'}))).state;}
  async setPageSetup(setup:import('./protocol').PageSetupPatch):Promise<OpenedDocument>{return(await this.call('edited',id=>({id,kind:'setPageSetup',setup}))).document;}
  async headerFooterState():Promise<import('./protocol').HeaderFooterState>{return(await this.call('headerFooter',id=>({id,kind:'headerFooterState'}))).state;}
- async setHeaderFooter(p:{header?:string;footer?:string;pageNumber?:boolean;headerAlign?:import('./protocol').HfAlign;footerAlign?:import('./protocol').HfAlign}):Promise<OpenedDocument>{return(await this.call('edited',id=>({id,kind:'setHeaderFooter',...p}))).document;}
+ async setHeaderFooter(p:{header?:string;footer?:string;pageNumber?:boolean;headerAlign?:import('./protocol').HfAlign;footerAlign?:import('./protocol').HfAlign;pageTotal?:boolean}):Promise<OpenedDocument>{return(await this.call('edited',id=>({id,kind:'setHeaderFooter',...p}))).document;}
  async insertTable(block:number,rows:number,cols:number):Promise<OpenedDocument>{return(await this.call('edited',id=>({id,kind:'insertTable',block,rows,cols}))).document;}
  async editTable(block:number,op:import('./protocol').TableOp):Promise<OpenedDocument>{return(await this.call('edited',id=>({id,kind:'tableEdit',block,op}))).document;}
  async snapshot():Promise<number>{return(await this.call('snapshot',id=>({id,kind:'snapshot'}))).snap;}

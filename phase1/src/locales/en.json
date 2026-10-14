@@ -2441,6 +2441,7 @@
   "documents.hf.align.left": "Left",
   "documents.hf.align.center": "Centre",
   "documents.hf.align.right": "Right",
+  "documents.hf.pageTotal": "Show total pages (1 / 5)",
   "documents.list.demote": "Demote list item",
   "documents.find.label": "Find and replace",
   "documents.find.query": "Find",

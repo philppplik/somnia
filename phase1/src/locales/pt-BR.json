@@ -2441,6 +2441,7 @@
   "documents.hf.align.left": "Esquerda",
   "documents.hf.align.center": "Centralizado",
   "documents.hf.align.right": "Direita",
+  "documents.hf.pageTotal": "Mostrar total de páginas (1 / 5)",
   "documents.list.demote": "Descer nível do item da lista",
   "documents.find.label": "Localizar e substituir",
   "documents.find.query": "Localizar",

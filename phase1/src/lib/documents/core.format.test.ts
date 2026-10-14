@@ -105,3 +105,13 @@ test('header and footer alignment is validated and sent after the text change in
  assert.equal(go({header:'H',footerAlign:'right'}),true);assert.deepEqual(calls,['text H|null|null','align null|right']);
  calls.length=0;assert.equal(go({headerAlign:'center'}),true);assert.deepEqual(calls,['align center|null']);
 });
+test('footer page total is validated and applied after the text change',()=>{
+ const calls:string[]=[];
+ const S=class{constructor(_b?:Uint8Array){}free(){}blocks(){return '[]';}paginate(){return 1;}page_info(){return '{"pages":[],"cacheHits":0,"cacheMisses":0}';}text(){return '';}
+  set_header_footer(h:string|null,f:string|null,p:boolean|null){calls.push(`text ${h}|${f}|${p}`);}set_footer_page_total(t:boolean){calls.push(`total ${t}`);}};
+ const k=new DocumentsCore(S as unknown as new(b:Uint8Array)=>DocSessionLike);k.handle({id:1,kind:'open',bytes:new Uint8Array(4)} as never);
+ const go=(r:object)=>{try{return (k.handle({id:2,kind:'setHeaderFooter',...r} as never).res as {ok:boolean}).ok;}catch{return false;}};
+ for(const bad of [{pageTotal:1},{pageTotal:'yes'},{pageTotal:null}])assert.equal(go(bad),false,JSON.stringify(bad));
+ assert.equal(calls.length,0);
+ assert.equal(go({pageNumber:true,pageTotal:true}),true);assert.deepEqual(calls,['text null|null|true','total true']);
+});

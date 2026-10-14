@@ -9,15 +9,17 @@ const field='w-72 rounded-lg border border-subtle bg-transparent px-2 py-1.5 tex
 export function HeaderFooterDialog({onClose}:{onClose:()=>void}){
  const {t}=useT();const [st,setSt]=useState<HeaderFooterState|null>(null);const [failed,setFailed]=useState(false);
  const [header,setHeader]=useState(''),[footer,setFooter]=useState(''),[page,setPage]=useState(false);
+ const [total,setTotal]=useState(false);
  const [hAlign,setHAlign]=useState<HfAlign>('left'),[fAlign,setFAlign]=useState<HfAlign>('center');
- useEffect(()=>{let live=true;void readHeaderFooter().then(s=>{if(!live)return;if(!s){setFailed(true);return;}setSt(s);setHeader(s.header.text);setFooter(s.footer.text);setPage(s.footer.pageNumber);setHAlign(s.header.align??'left');setFAlign(s.footer.align??'center');}).catch(()=>{if(live)setFailed(true);});return()=>{live=false;};},[]);
+ useEffect(()=>{let live=true;void readHeaderFooter().then(s=>{if(!live)return;if(!s){setFailed(true);return;}setSt(s);setHeader(s.header.text);setFooter(s.footer.text);setPage(s.footer.pageNumber);setHAlign(s.header.align??'left');setTotal(!!s.footer.pageTotal);setFAlign(s.footer.align??'center');}).catch(()=>{if(live)setFailed(true);});return()=>{live=false;};},[]);
  const hOk=!st||!st.header.editable||validHfText(header),fOk=!st||!st.footer.editable||validHfText(footer);
  const apply=()=>{
   if(!st||!hOk||!fOk)return;
-  const patch:{header?:string;footer?:string;pageNumber?:boolean;headerAlign?:HfAlign;footerAlign?:HfAlign}={};
+  const patch:{header?:string;footer?:string;pageNumber?:boolean;headerAlign?:HfAlign;footerAlign?:HfAlign;pageTotal?:boolean}={};
   if(st.header.editable&&header!==st.header.text)patch.header=header;
   if(st.footer.editable&&footer!==st.footer.text)patch.footer=footer;
   if(st.footer.editable&&page!==st.footer.pageNumber)patch.pageNumber=page;
+  if(st.footer.editable&&page&&total!==!!st.footer.pageTotal)patch.pageTotal=total;
   if(st.header.editable&&hAlign!==(st.header.align??'left')&&(header!==''||st.header.text!==''))patch.headerAlign=hAlign;
   if(st.footer.editable&&fAlign!==(st.footer.align??'center')&&(footer!==''||page||st.footer.text!==''))patch.footerAlign=fAlign;
   onClose();if(Object.keys(patch).length>0)void setHeaderFooter(patch);
@@ -31,6 +33,7 @@ export function HeaderFooterDialog({onClose}:{onClose:()=>void}){
     <div className="flex items-end gap-2"><label className="grid gap-1 text-xs text-ink-2">{t('documents.hf.footer')}
      <NativeInput className={field} maxLength={MAX_HF_CHARS} value={footer} disabled={!st.footer.editable} aria-invalid={!fOk} onChange={e=>setFooter(e.currentTarget.value)} data-testid="documents-hf-footer"/></label><NativeSelect className="rounded-lg border border-subtle bg-transparent px-2 py-1.5 text-ink" aria-label={t('documents.hf.align')} value={fAlign} disabled={!st.footer.editable} onChange={e=>{const x=e.currentTarget.value;if((HF_ALIGNS as readonly string[]).includes(x))setFAlign(x as HfAlign);}} data-testid="documents-hf-footer-align">{HF_ALIGNS.map(a=><option key={a} value={a}>{t('documents.hf.align.'+a)}</option>)}</NativeSelect></div>
     <label className="flex items-center gap-2 text-xs text-ink-2"><NativeInput type="checkbox" checked={page} disabled={!st.footer.editable} onChange={e=>setPage(e.currentTarget.checked)} data-testid="documents-hf-page"/>{t('documents.hf.pageNumber')}</label>
+    <label className="flex items-center gap-2 text-xs text-ink-2"><NativeInput type="checkbox" checked={total} disabled={!st.footer.editable||!page} onChange={e=>setTotal(e.currentTarget.checked)} data-testid="documents-hf-total"/>{t('documents.hf.pageTotal')}</label>
     {(!st.header.editable||!st.footer.editable)&&<p className="text-xs text-ink-3" data-testid="documents-hf-locked">{t('documents.hf.locked')}</p>}
    </>}
    <div className="flex justify-end gap-2">
