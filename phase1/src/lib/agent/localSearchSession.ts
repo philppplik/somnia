@@ -1,4 +1,4 @@
-import {prepareLocalIndexChunks} from './localIndexChunks';import {LOCAL_EMBED_MODEL,type LocalEmbeddingAdapter} from './localEmbedding';import {captureLocalIndexDescriptor,emptyLocalIndex,beginLocalIndex,finishLocalIndex,invalidateLocalIndex,type LocalIndexDescriptor,type LocalIndexLifecycle} from './localIndexLifecycle';import {retrieveLocalTopK,type FrozenLocalVectors} from './localRetrieval';import {chunkLocalSources,type SearchSource} from './localSearch';
+import {localSearchQueryReview} from './localSearchQuery';import {prepareLocalIndexChunks} from './localIndexChunks';import {LOCAL_EMBED_MODEL,type LocalEmbeddingAdapter} from './localEmbedding';import {captureLocalIndexDescriptor,emptyLocalIndex,beginLocalIndex,finishLocalIndex,invalidateLocalIndex,type LocalIndexDescriptor,type LocalIndexLifecycle} from './localIndexLifecycle';import {retrieveLocalTopK,type FrozenLocalVectors} from './localRetrieval';import {chunkLocalSources,type SearchSource} from './localSearch';
 export interface LocalSearchCapture {endpoint:string;model:typeof LOCAL_EMBED_MODEL;digest:string;dimensions:number;sources:readonly SearchSource[]}
 export interface LocalSearchAdapter {endpoint:string;embed:LocalEmbeddingAdapter['embed'];embedPrepared:LocalEmbeddingAdapter['embedPrepared']}
 function capture(input:LocalSearchCapture):LocalSearchCapture{
@@ -33,7 +33,7 @@ export class LocalSearchSession {
  }
  async query(text:string,signal:AbortSignal,limit=10){
   this.available();signal.throwIfAborted();this.queryAbort?.abort();const token=++this.queryGeneration;
-  if(typeof text!=='string'||!text.trim()||new TextEncoder().encode(text).length>4096||/[\uD800-\uDFFF\x00-\x08\x0b\x0c\x0e-\x1f\x7f]/u.test(text)||!Number.isSafeInteger(limit)||limit<1||limit>50)throw Error('Invalid explicit search query');
+  if(!localSearchQueryReview(text).valid||!Number.isSafeInteger(limit)||limit<1||limit>50)throw Error('Invalid explicit search query');
   const source=this.source,vectors=this.vectors;if(!source||!vectors||this.lifecycle.phase!=='ready')throw Error('Search index not ready');this.assertSame(source);
   const controller=new AbortController();this.queryAbort=controller;const abort=()=>controller.abort();signal.addEventListener('abort',abort,{once:true});if(signal.aborted)abort();
   try{

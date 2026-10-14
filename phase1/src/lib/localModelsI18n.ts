@@ -1,5 +1,9 @@
 export const LOCAL_MODELS_CATALOGUES:Record<string,Record<string,string>> = {
  "en": {
+  "local.search.queryBytes": "Query: {bytes} / 4096 UTF-8 bytes",
+  "local.search.queryOversized": "Shorten the query to at most 4096 UTF-8 bytes before searching.",
+  "local.search.queryInvalid": "Query contains unsupported control characters or invalid Unicode. Remove them before searching.",
+
   "local.search.error.model": "Exact embedding model or local runtime unavailable. Review model setup, then build again. No source text sent by this setup check.",
   "local.search.error.build": "Index build failed or selected sources changed. No ready index accepted. Review sources/limits and rebuild.",
   "local.search.error.query": "Query failed or was cancelled. No results accepted; the unchanged memory index may still be used.",
@@ -573,6 +577,10 @@ export const LOCAL_MODELS_CATALOGUES:Record<string,Record<string,string>> = {
   "local.route.earlier": "Move earlier after local"
  },
  "de": {
+  "local.search.queryBytes": "Anfrage: {bytes} / 4096 UTF-8 Bytes",
+  "local.search.queryOversized": "Anfrage vor der Suche auf höchstens 4096 UTF-8 Bytes kürzen.",
+  "local.search.queryInvalid": "Anfrage enthält nicht unterstützte Steuerzeichen oder ungültiges Unicode. Vor der Suche entfernen.",
+
   "local.search.error.model": "Exaktes Embedding-Modell oder lokale Runtime nicht verfügbar. Modell-Setup prüfen, dann neu indexieren. Setup-Prüfung sendet keinen Quellentext.",
   "local.search.error.build": "Indexaufbau fehlgeschlagen oder gewählte Quellen geändert. Kein Ready-Index akzeptiert. Quellen/Limits prüfen und neu indexieren.",
   "local.search.error.query": "Anfrage fehlgeschlagen oder abgebrochen. Keine Ergebnisse akzeptiert; unveränderter Speicherindex kann weiter genutzt werden.",
@@ -1146,6 +1154,10 @@ export const LOCAL_MODELS_CATALOGUES:Record<string,Record<string,string>> = {
   "local.route.earlier": "Nach lokal früher einordnen"
  },
  "es": {
+  "local.search.queryBytes": "Consulta: {bytes} / 4096 bytes UTF-8",
+  "local.search.queryOversized": "Reduce la consulta a un máximo de 4096 bytes UTF-8 antes de buscar.",
+  "local.search.queryInvalid": "Consulta con controles no admitidos o Unicode inválido. Elimínalos antes de buscar.",
+
   "local.search.error.model": "Modelo exacto o runtime local no disponible. Revisa el modelo y reconstruye. Esta comprobación no envía texto de fuentes.",
   "local.search.error.build": "Falló el índice o cambiaron fuentes. No se aceptó índice listo. Revisa fuentes/límites y reconstruye.",
   "local.search.error.query": "Consulta fallida o cancelada. No se aceptaron resultados; el índice sin cambios puede seguir usándose.",
@@ -1719,6 +1731,10 @@ export const LOCAL_MODELS_CATALOGUES:Record<string,Record<string,string>> = {
   "local.route.earlier": "Mover antes tras local"
  },
  "fr": {
+  "local.search.queryBytes": "Requête: {bytes} / 4096 octets UTF-8",
+  "local.search.queryOversized": "Réduisez la requête à 4096 octets UTF-8 au plus avant recherche.",
+  "local.search.queryInvalid": "Requête avec caractères de contrôle non pris en charge ou Unicode invalide. Retirez-les avant recherche.",
+
   "local.search.error.model": "Modèle exact ou runtime local indisponible. Vérifiez le modèle puis réindexez. Cette vérification ne transmet aucun texte source.",
   "local.search.error.build": "Indexation échouée ou sources modifiées. Aucun index prêt accepté. Vérifiez sources/limites puis réindexez.",
   "local.search.error.query": "Requête échouée ou annulée. Aucun résultat accepté; index inchangé encore utilisable.",
@@ -2292,6 +2308,10 @@ export const LOCAL_MODELS_CATALOGUES:Record<string,Record<string,string>> = {
   "local.route.earlier": "Avancer après local"
  },
  "pt-BR": {
+  "local.search.queryBytes": "Consulta: {bytes} / 4096 bytes UTF-8",
+  "local.search.queryOversized": "Reduza a consulta a no máximo 4096 bytes UTF-8 antes de buscar.",
+  "local.search.queryInvalid": "Consulta com controles incompatíveis ou Unicode inválido. Remova antes de buscar.",
+
   "local.search.error.model": "Modelo exato ou runtime local indisponível. Revise o modelo e reconstrua. Esta verificação não envia texto das fontes.",
   "local.search.error.build": "Falha no índice ou fontes alteradas. Nenhum índice pronto aceito. Revise fontes/limites e reconstrua.",
   "local.search.error.query": "Consulta falhou ou foi cancelada. Nenhum resultado aceito; índice sem mudanças ainda pode ser usado.",
