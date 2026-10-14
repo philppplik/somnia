@@ -1,0 +1,9 @@
+# CB: private Slides rehearsal timing workspace
+
+Slides canvas has a collapsible rehearsal workspace with explicit start/resume, pause and reset. Tracks monotonic elapsed time for current slide, accumulated total and a per-slide breakdown across visits. Navigation is manual: no slide advancement or deck changes from the timer. No audio/video recording, AI, network, file writes, copy/export or persistence. Closing/changing/unmounting deck clears timing. Collapsing workspace does not pause; use Pause explicitly.
+
+Rendering/busy and hidden tab auto-pause with visible explanation; returning to visible/ready does not auto-resume. Timing counts only explicitly resumed intervals. Workspace does not overlay fullscreen presentation; use in canvas practice mode. Per-slide timing capped at 24h, maximum 10000 slides; timer unavailable above that count. UI clock floors to seconds, paints every500ms; actual monotonic intervals independent of repaint cadence. Sleep/OS throttling and production worker/presentation behavior not task-tested.
+
+Validation: 12 clock/panel unit tests and 2 synthetic-clock browser tests passed. Start/pause/resume, revisit accumulation, reset, bounds/backward clock, busy, hidden-tab no-auto-resume and source change clear checked. 390px light/dark pixels inspected: controls, current/total and per-slide breakdown readable. DS/Layers/Commands/UI-Commands pass, inherited Layers missing-transpiler/87 ignored/4 stale. tsc only inherited missing generated slides WASM module. Native/Rust/WASM/full desktop E2E CI-only; synthetic fixture data only, no deps/budgets, $0.
+
+Roadmap-Delta: Slides preview -> private rehearsal timing workspace at fixture level. Real canvas/worker/manual practice integration remains CI/manual. Summary unchanged; Sheets inference gated pending live-read integration. Semantic Search remains paused because no integration/CI-done signal was received.

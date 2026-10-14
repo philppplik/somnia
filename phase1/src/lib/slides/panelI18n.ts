@@ -2,6 +2,20 @@ import {CATALOGUES,getLocale,subscribeLocale,translate} from '../i18n';
 import {useSyncExternalStore} from 'react';
 export const SLIDES_PANEL_CATALOGUES:Record<string,Record<string,string>>={
   "en": {
+  "slides.rehearsal.title": "Rehearsal timing",
+  "slides.rehearsal.boundary": "Private in-memory practice timer, not recorded or saved. No automatic slide advance. Pauses on rendering or hidden tab; resume explicitly. Closing/changing deck clears timing.",
+  "slides.rehearsal.current": "Slide {slide} of {total}",
+  "slides.rehearsal.slideTime": "This slide",
+  "slides.rehearsal.totalTime": "Total practice time",
+  "slides.rehearsal.running": "Timer running",
+  "slides.rehearsal.paused": "Timer paused",
+  "slides.rehearsal.start": "Start / resume",
+  "slides.rehearsal.pause": "Pause",
+  "slides.rehearsal.reset": "Reset all timing",
+  "slides.rehearsal.autoPause": "Automatically paused. Resume when ready.",
+  "slides.rehearsal.breakdown": "Time by slide",
+  "slides.rehearsal.empty": "No timing recorded yet.",
+
   "slides.jump.title": "Jump to slide",
   "slides.jump.position": "Slide {current} of {total}",
   "slides.jump.target": "Slide number",
@@ -80,6 +94,20 @@ export const SLIDES_PANEL_CATALOGUES:Record<string,Record<string,string>>={
     "cmd.slides.editText": "Apply slide text"
   },
   "de": {
+  "slides.rehearsal.title": "Proben-Timing",
+  "slides.rehearsal.boundary": "Privater In-Memory-Proben-Timer, kein Recording/Save. Kein automatischer Folienwechsel. Rendering/versteckter Tab pausiert; explizit fortsetzen. Deck schließen/wechseln löscht Zeiten.",
+  "slides.rehearsal.current": "Folie {slide} von {total}",
+  "slides.rehearsal.slideTime": "Diese Folie",
+  "slides.rehearsal.totalTime": "Gesamte Probenzeit",
+  "slides.rehearsal.running": "Timer läuft",
+  "slides.rehearsal.paused": "Timer pausiert",
+  "slides.rehearsal.start": "Start / Fortsetzen",
+  "slides.rehearsal.pause": "Pause",
+  "slides.rehearsal.reset": "Alle Zeiten zurücksetzen",
+  "slides.rehearsal.autoPause": "Automatisch pausiert. Bei Bereitschaft fortsetzen.",
+  "slides.rehearsal.breakdown": "Zeit pro Folie",
+  "slides.rehearsal.empty": "Noch keine Zeiten erfasst.",
+
   "slides.jump.title": "Zur Folie springen",
   "slides.jump.position": "Folie {current} von {total}",
   "slides.jump.target": "Foliennummer",
@@ -158,6 +186,20 @@ export const SLIDES_PANEL_CATALOGUES:Record<string,Record<string,string>>={
     "cmd.slides.editText": "Folientext anwenden"
   },
   "es": {
+  "slides.rehearsal.title": "Tiempo de ensayo",
+  "slides.rehearsal.boundary": "Temporizador privado en memoria, sin grabar/guardar. Sin avance automático. Pausa al renderizar/ocultar pestaña; reanuda explícitamente. Cerrar/cambiar presentación borra tiempos.",
+  "slides.rehearsal.current": "Diapositiva {slide} de {total}",
+  "slides.rehearsal.slideTime": "Esta diapositiva",
+  "slides.rehearsal.totalTime": "Tiempo total de ensayo",
+  "slides.rehearsal.running": "Temporizador activo",
+  "slides.rehearsal.paused": "Temporizador pausado",
+  "slides.rehearsal.start": "Iniciar / reanudar",
+  "slides.rehearsal.pause": "Pausa",
+  "slides.rehearsal.reset": "Reiniciar tiempos",
+  "slides.rehearsal.autoPause": "Pausa automática. Reanuda cuando estés listo.",
+  "slides.rehearsal.breakdown": "Tiempo por diapositiva",
+  "slides.rehearsal.empty": "Sin tiempos todavía.",
+
   "slides.jump.title": "Ir a diapositiva",
   "slides.jump.position": "Diapositiva {current} de {total}",
   "slides.jump.target": "Número de diapositiva",
@@ -236,6 +278,20 @@ export const SLIDES_PANEL_CATALOGUES:Record<string,Record<string,string>>={
     "cmd.slides.editText": "Aplicar texto"
   },
   "fr": {
+  "slides.rehearsal.title": "Chronométrage de répétition",
+  "slides.rehearsal.boundary": "Minuteur privé en mémoire, sans enregistrer/sauvegarder. Sans avance automatique. Pause au rendu/onglet caché; reprise explicite. Fermer/changer présentation efface temps.",
+  "slides.rehearsal.current": "Diapositive {slide} sur {total}",
+  "slides.rehearsal.slideTime": "Cette diapositive",
+  "slides.rehearsal.totalTime": "Temps total de répétition",
+  "slides.rehearsal.running": "Minuteur actif",
+  "slides.rehearsal.paused": "Minuteur en pause",
+  "slides.rehearsal.start": "Démarrer / reprendre",
+  "slides.rehearsal.pause": "Pause",
+  "slides.rehearsal.reset": "Réinitialiser temps",
+  "slides.rehearsal.autoPause": "Pause automatique. Reprenez quand prêt.",
+  "slides.rehearsal.breakdown": "Temps par diapositive",
+  "slides.rehearsal.empty": "Aucun temps encore.",
+
   "slides.jump.title": "Aller à diapositive",
   "slides.jump.position": "Diapositive {current} sur {total}",
   "slides.jump.target": "Numéro de diapositive",
@@ -314,6 +370,20 @@ export const SLIDES_PANEL_CATALOGUES:Record<string,Record<string,string>>={
     "cmd.slides.editText": "Appliquer le texte"
   },
   "pt-BR": {
+  "slides.rehearsal.title": "Tempo de ensaio",
+  "slides.rehearsal.boundary": "Timer privado em memória, sem gravar/salvar. Sem avanço automático. Pausa ao renderizar/ocultar aba; retome explicitamente. Fechar/mudar apresentação apaga tempos.",
+  "slides.rehearsal.current": "Slide {slide} de {total}",
+  "slides.rehearsal.slideTime": "Este slide",
+  "slides.rehearsal.totalTime": "Tempo total de ensaio",
+  "slides.rehearsal.running": "Timer ativo",
+  "slides.rehearsal.paused": "Timer pausado",
+  "slides.rehearsal.start": "Iniciar / retomar",
+  "slides.rehearsal.pause": "Pausa",
+  "slides.rehearsal.reset": "Reiniciar tempos",
+  "slides.rehearsal.autoPause": "Pausa automática. Retome quando pronto.",
+  "slides.rehearsal.breakdown": "Tempo por slide",
+  "slides.rehearsal.empty": "Sem tempos ainda.",
+
   "slides.jump.title": "Ir ao slide",
   "slides.jump.position": "Slide {current} de {total}",
   "slides.jump.target": "Número do slide",
