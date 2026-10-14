@@ -795,5 +795,9 @@
  "studio3d.mesh.normalsOp.outside": "Recalculer vers l'extérieur",
  "studio3d.mesh.normalsOp.smooth": "Lisse",
  "studio3d.mesh.normalsOp.flat": "Plat",
- "studio3d.mesh.normalsOp.angle": "Diviser par angle"
+ "studio3d.mesh.normalsOp.angle": "Diviser par angle",
+ "cmd.studio3d.mesh.separate": "Divise les maillages 3D en un objet par partie connexe",
+ "studio3d.hist.separate_one": "Séparer {name} en parties",
+ "studio3d.hist.separate_other": "Séparer {count} objets en parties",
+ "studio3d.mesh.separate": "Séparer"
 }

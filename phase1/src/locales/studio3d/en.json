@@ -795,5 +795,9 @@
  "studio3d.mesh.normalsOp.outside": "Recalculate outside",
  "studio3d.mesh.normalsOp.smooth": "Smooth",
  "studio3d.mesh.normalsOp.flat": "Flat",
- "studio3d.mesh.normalsOp.angle": "Split by angle"
+ "studio3d.mesh.normalsOp.angle": "Split by angle",
+ "cmd.studio3d.mesh.separate": "Split 3D meshes into one object per connected part",
+ "studio3d.hist.separate_one": "Separate {name} into parts",
+ "studio3d.hist.separate_other": "Separate {count} objects into parts",
+ "studio3d.mesh.separate": "Separate"
 }

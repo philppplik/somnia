@@ -9,7 +9,7 @@ import type {NodeExtra} from './document';
 import {EASES,isEase,bakeTrack,type Ease} from './ease';
 import {buildExtras,type ClipMeta,type MetaTrack} from './clipMeta';
 import {groupRefs,keyIndices,copyTrackKeys,shiftTrackKeys,pasteTrackKeys,type KeyRef,type KeyData,type TrackData} from './keyEdit';
-import {extrudeFaces,insetFaces,bevelVertices,loopCut,bevelEdges,slideEdges,mirrorCombine,symmetrizeMesh,subdivideLoop,cleanupMesh,flipMesh,outsideMesh,smoothMesh,EditError,MAX_EDIT_VERTICES,MAX_EDIT_TRIANGLES,type MeshData,type CleanupResult,type NormalsOp} from './editMesh';
+import {extrudeFaces,insetFaces,bevelVertices,loopCut,bevelEdges,slideEdges,mirrorCombine,symmetrizeMesh,subdivideLoop,cleanupMesh,flipMesh,outsideMesh,smoothMesh,separateMesh,EditError,MAX_EDIT_VERTICES,MAX_EDIT_TRIANGLES,type MeshData,type CleanupResult,type NormalsOp} from './editMesh';
 import {sculptDab,paintMask,SculptError,type SculptOpts} from './sculpt';
 import {KEY_PATHS,KEY_STRIDE,ClipError,MAX_CLIPS,MAX_KEYS_PER_TRACK,DEFAULT_CLIP_SECONDS,insertKey,removeKey as removeKeyData,findKey,isPlainTrack,trackName,parseTrackName,checkKeyTime,checkDuration,checkClipName,lastKeyTime,type KeyPath} from './clips';
 import {mergeTransform,DEFAULT_TRANSFORM,UvError,type TextureTransform} from './uv';
@@ -1849,6 +1849,52 @@ export class Stage{
   set('after');
   this.push({label:{key:'studio3d.hist.normals',params:{count:list.length,name:list[0].mesh.name}},undo:()=>{set('before');owned=false;},redo:()=>{set('after');owned=true;},release:()=>{for(const l of list)(owned?l.before.g:l.after).dispose();}});
   return list.length;
+ }
+ /** Splits meshes into one object per connected part (loose geometry, matched by position so UV seams stay together). The largest part keeps the original object, the rest become siblings with cloned materials and the same transform. One undo step for the whole set. Returns the number of resulting objects. */
+ separate(ids:number[]):number{
+  if(this.editId!=null)throw new StageError('Leave edit mode before separating.');
+  const objs=this.topLevel(this.needMany(ids,1));
+  for(const o of objs)if(!(o as THREE.Mesh).isMesh)throw new StageError(`${o.name} is not a mesh. Separate works on meshes.`);
+  type Part={g:THREE.BufferGeometry;seams:[number,number][];o?:THREE.Mesh;at:number};
+  type Work={mesh:THREE.Mesh;parent:THREE.Object3D;before:{g:THREE.BufferGeometry;d:unknown;s:[number,number][]};parts:Part[]};
+  const work:Work[]=[];
+  for(const o of objs as THREE.Mesh[]){
+   const data=this.meshDataOf(o);
+   let parts:MeshData[];
+   try{parts=separateMesh(data);}catch(e){throw e instanceof EditError?new StageError(e.message):e;}
+   if(parts.length<2)continue;
+   const parent=o.parent!;const at=parent.children.indexOf(o);
+   const seams0=this.seamsOf(o);
+   const ws:Part[]=parts.map((p,i)=>{
+    let seams:[number,number][]=[];
+    if(seams0.length){try{seams=remapSeams(data,seams0,p);}catch{seams=[];}}
+    return{g:this.buildGeometry(p),seams,at:at+1+i};
+   });
+   for(let i=1;i<ws.length;i++){
+    const m2=new THREE.Mesh(ws[i].g,(o.material as THREE.Material).clone());
+    m2.name=this.uniqueName(`${o.name}.${i+1}`);
+    m2.position.copy(o.position);m2.quaternion.copy(o.quaternion);m2.scale.copy(o.scale);m2.visible=o.visible;
+    ws[i].o=m2;
+   }
+   work.push({mesh:o,parent,before:{g:o.geometry,d:o.userData.somniaPrimitive,s:seams0},parts:ws});
+  }
+  if(!work.length)throw new StageError('Every selected mesh is already one connected part.');
+  let owned=true;
+  const set=(k:'before'|'after')=>{
+   for(const w of work){
+    if(k==='after'){
+     w.mesh.geometry=w.parts[0].g;delete w.mesh.userData.somniaPrimitive;this.setSeams(w.mesh,w.parts[0].seams);
+     for(let i=1;i<w.parts.length;i++)this.attach0(w.parts[i].o!,w.parent,w.parts[i].at);
+    }else{
+     for(let i=1;i<w.parts.length;i++)w.parent.remove(w.parts[i].o!);
+     w.mesh.geometry=w.before.g;if(w.before.d!==undefined)w.mesh.userData.somniaPrimitive=w.before.d;this.setSeams(w.mesh,w.before.s);
+    }
+   }
+  };
+  set('after');
+  this.push({label:{key:'studio3d.hist.separate',params:{count:work.length,name:work[0].mesh.name}},undo:()=>{set('before');owned=false;},redo:()=>{set('after');owned=true;},
+   release:()=>{for(const w of work){if(owned)w.before.g.dispose();else{w.parts[0].g.dispose();for(let i=1;i<w.parts.length;i++)disposeObject(w.parts[i].o!);}}}});
+  return work.reduce((n,w)=>n+w.parts.length,0);
  }
  /** Shows or hides an object. A hidden parent hides its whole subtree. One undo step. */
  setHidden(id:number,hidden:boolean){

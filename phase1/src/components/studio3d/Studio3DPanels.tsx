@@ -715,6 +715,7 @@ function MeshTools(){
     {(['flip','outside','smooth','flat','angle'] as const).map(v=><option key={v} value={v}>{t(`studio3d.mesh.normalsOp.${v}`)}</option>)}</NativeSelect>
    <NativeInput type="number" min={0} max={180} step={5} value={nAngle} disabled={nOp!=='angle'} aria-label={t('studio3d.mesh.normalsAngle')} className="w-20" onChange={e=>setNAngle(Math.min(180,Math.max(0,Number(e.currentTarget.value)||0)))}/>
    <Button variant="outline" disabled={!ready} onClick={()=>void executeCommand('studio3d.mesh.normals',{op:nOp,angle:nAngle})}>{t('studio3d.mesh.normals')}</Button></div>
+  <div className="flex flex-wrap gap-1"><Button variant="outline" disabled={!ready} onClick={()=>void executeCommand('studio3d.mesh.separate',{})}>{t('studio3d.mesh.separate')}</Button></div>
  </fieldset>;
 }
 

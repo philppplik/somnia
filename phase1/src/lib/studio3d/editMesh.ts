@@ -637,3 +637,47 @@ export function smoothMesh(m:MeshData,angleDeg:number):MeshData{
  const out:MeshData=uvs?{positions,index,uvs,normals}:{positions,index,normals};
  check(out);return out;
 }
+
+/** Splits a mesh into its connected parts, largest first. Connectivity matches edges by position, not vertex index: UV-seam twins and exactly touching surfaces count as one piece, only truly loose geometry separates. UVs, explicit normals and sculpt masks travel with their part. */
+export function separateMesh(m:MeshData):MeshData[]{
+ check(m);
+ const nv=m.positions.length/3,nt=m.index.length/3;
+ const parent:number[]=Array.from({length:nv},(_,i)=>i);
+ const find=(x:number)=>{while(parent[x]!==x){parent[x]=parent[parent[x]];x=parent[x];}return x;};
+ const union=(a:number,b:number)=>{a=find(a);b=find(b);if(a!==b)parent[a]=b;};
+ for(let f=0;f<nt;f++){union(m.index[f*3],m.index[f*3+1]);union(m.index[f*3+1],m.index[f*3+2]);}
+ const pk:string[]=[];
+ for(let v=0;v<nv;v++)pk.push(`${Math.round(m.positions[v*3]*1e6)},${Math.round(m.positions[v*3+1]*1e6)},${Math.round(m.positions[v*3+2]*1e6)}`);
+ const edges=new Map<string,number[]>();
+ for(let f=0;f<nt;f++)for(let e=0;e<3;e++){
+  const a=m.index[f*3+e],b=m.index[f*3+(e+1)%3];
+  const ka=pk[a],kb=pk[b];const k=ka<kb?`${ka}|${kb}`:`${kb}|${ka}`;
+  const l=edges.get(k);if(l){if(l[0]!==a||l[1]!==b)l.push(a,b);}else edges.set(k,[a,b]);
+ }
+ for(const l of edges.values())for(let i=2;i<l.length;i+=2){union(l[0],l[i]);union(l[1],l[i+1]);}
+ const islands=new Map<number,number[]>();
+ for(let f=0;f<nt;f++){
+  const r=find(m.index[f*3]);const l=islands.get(r);if(l)l.push(f);else islands.set(r,[f]);
+ }
+ const groups=[...islands.values()].sort((a,b)=>b.length-a.length);
+ return groups.map(faces=>{
+  const map=new Map<number,number>();
+  const positions:number[]=[];const index:number[]=[];
+  const uvs:number[]|undefined=m.uvs?[]:undefined;
+  const normals:number[]|undefined=m.normals?[]:undefined;
+  const mask:number[]|undefined=m.mask?[]:undefined;
+  for(const f of faces)for(let e=0;e<3;e++){
+   const v=m.index[f*3+e];let id=map.get(v);
+   if(id===undefined){
+    id=positions.length/3;map.set(v,id);
+    positions.push(m.positions[v*3],m.positions[v*3+1],m.positions[v*3+2]);
+    if(uvs)uvs.push(m.uvs![v*2],m.uvs![v*2+1]);
+    if(normals)normals.push(m.normals![v*3],m.normals![v*3+1],m.normals![v*3+2]);
+    if(mask)mask.push(m.mask![v]);
+   }
+   index.push(id);
+  }
+  const out:MeshData={positions,index,...(uvs?{uvs}:{}),...(normals?{normals}:{}),...(mask?{mask}:{})};
+  check(out);return out;
+ });
+}

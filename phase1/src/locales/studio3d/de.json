@@ -795,5 +795,9 @@
  "studio3d.mesh.normalsOp.outside": "Nach außen neu berechnen",
  "studio3d.mesh.normalsOp.smooth": "Glatt",
  "studio3d.mesh.normalsOp.flat": "Facettiert",
- "studio3d.mesh.normalsOp.angle": "Per Winkel trennen"
+ "studio3d.mesh.normalsOp.angle": "Per Winkel trennen",
+ "cmd.studio3d.mesh.separate": "3D-Meshes in ein Objekt pro zusammenhängendem Teil aufteilen",
+ "studio3d.hist.separate_one": "{name} in Teile auftrennen",
+ "studio3d.hist.separate_other": "{count} Objekte in Teile auftrennen",
+ "studio3d.mesh.separate": "Auftrennen"
 }

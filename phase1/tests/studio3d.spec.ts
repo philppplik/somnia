@@ -1536,6 +1536,19 @@ test('3D studio mesh cleanup: a merged duplicate loses its doubled faces and und
  await expect.poll(tris).toBe(24);
 });
 
+test('3D studio mesh separate: a merged pair splits back into two objects and undo rejoins it',async({page})=>{
+ await blank(page);
+ await insert(page,'cube',0);
+ await insert(page,'cube',3);
+ const objects=async()=>(await session(page)).outline.length;
+ expect(await run(page,'studio3d.mesh.merge',{})).toBe(true);
+ await expect.poll(objects).toBe(1);
+ expect(await run(page,'studio3d.mesh.separate',{})).toBe(true);
+ await expect.poll(objects).toBe(2);
+ expect(await run(page,'studio3d.undo',{})).toBe(true);
+ await expect.poll(objects).toBe(1);
+});
+
 test('3D studio mesh simplify: triangle count drops and undo restores it',async({page})=>{
  await blank(page);
  await insert(page,'sphere',0);
