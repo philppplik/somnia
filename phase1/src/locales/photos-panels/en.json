@@ -89,6 +89,7 @@
  "cmd.photos.crop.reset": "Photos: Remove crop",
  "cmd.photos.crop.setAspect": "Photos: Set crop aspect ratio",
     "cmd.photos.crop.swapAspect": "Photos: Swap crop aspect orientation",
+  "cmd.photos.straighten.auto": "Photos: Auto straighten from the estimated horizon",
  "cmd.photos.undo": "Photos: Undo develop step",
  "cmd.photos.redo": "Photos: Redo develop step",
  "cmd.photos.history.jump": "Photos: Jump to a history step",

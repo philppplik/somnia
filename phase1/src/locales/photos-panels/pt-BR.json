@@ -89,6 +89,7 @@
  "cmd.photos.crop.reset": "Fotos: Remover corte",
  "cmd.photos.crop.setAspect": "Fotos: Proporção do corte",
     "cmd.photos.crop.swapAspect": "Fotos: Inverter orientação do corte",
+  "cmd.photos.straighten.auto": "Fotos: Alinhar automaticamente pelo horizonte estimado",
  "cmd.photos.undo": "Fotos: Desfazer etapa de desenvolvimento",
  "cmd.photos.redo": "Fotos: Refazer etapa de desenvolvimento",
  "cmd.photos.history.jump": "Fotos: Ir para uma etapa do histórico",
