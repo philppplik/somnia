@@ -9,3 +9,6 @@ phase1/cli-dist
 
 # Optional voice helper review build outputs
 phase1/dist-voice/
+
+# Local AI guide text is bundled from docs at build/dev/test startup.
+phase1/src/lib/generated/localAIGuides.ts

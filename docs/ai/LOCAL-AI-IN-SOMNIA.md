@@ -1,5 +1,7 @@
 # Local AI in Somnia
 
+[Deutscher Leitfaden](LOCAL-AI-IN-SOMNIA.de.md)
+
 Use Ollama for local Agent requests and supported local Vibe runs. Somnia does not install a daemon or download a model without an explicit action. A model listed by a daemon is not a guarantee of quality, available memory, or physical execution on this device.
 
 This guide describes the A-V development stack. Packaged desktop behavior and real-device tests still need acceptance evidence. See [the acceptance checklist](LOCAL-AI-ACCEPTANCE.md). Some controls are experimental or unavailable in builds whose flags are off.
