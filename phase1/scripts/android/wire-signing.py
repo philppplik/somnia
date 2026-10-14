@@ -16,7 +16,7 @@ if 'getByName("release") {' not in s:
 (p.parent / "keystore.properties").write_text(
     f"storeFile={ks}\npassword={store_pass}\nkeyAlias={alias}\nkeyPassword={key_pass}\n")
 props = '''
-val keystoreProperties = java.util.Properties().apply {
+val keystoreProperties = Properties().apply {
     val f = rootProject.file("app/keystore.properties")
     if (f.exists()) f.inputStream().use { load(it) }
 }
@@ -31,6 +31,7 @@ signing = '''
         }
     }
 '''
+s = "import java.util.Properties\n" + s
 s = s.replace("android {", props + "android {" + signing, 1)
 s = s.replace('getByName("release") {', 'getByName("release") {\n            signingConfig = signingConfigs.getByName("release")', 1)
 p.write_text(s)
