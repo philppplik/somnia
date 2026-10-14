@@ -6,7 +6,7 @@ import {addMediaFile,findMedia,formatBytes,MEDIA_ACCEPT,useMedia} from '../../li
 import type {DocumentsEngine} from '../../lib/documents';
 import {patchDocuments,resetDocuments,stepZoom,useDocuments} from '../../lib/documents/store';
 import '../../lib/documents/guards';
-import {clearCaret,deleteAtCaret,dragTo,editParagraph,getEngine,moveCaret,settleDocument,switchDocument,pointerAt,redoEdit,selectAllInParagraph,selectedText,splitAtCaret,syncGeometry,typeText,undoEdit} from '../../lib/documents/session';
+import {clearCaret,deleteAtCaret,dragTo,editParagraph,getEngine,moveCaret,pasteText,settleDocument,switchDocument,pointerAt,redoEdit,selectAllText,selectedText,splitAtCaret,syncGeometry,typeText,undoEdit} from '../../lib/documents/session';
 import {saveCopy} from '../../lib/documents/saveCopy';
 import {confirmDocumentsSaveCopy,patchDocumentsExportUi,registerDocumentsExport,useDocumentsExportUi} from '../../lib/documents/exportBridge';
 import {executeCommand} from '../../lib/commands';
@@ -46,6 +46,7 @@ function Page({engine,index,width,height,zoom,rev,visible,onVisible}:{engine:Doc
 /** Invisible textarea that owns keyboard focus, IME and clipboard for the on-page caret. It never holds document text. */
 function CaretInput({left,top}:{left:number;top:number}){
  const {t}=useT();const ref=useRef<HTMLTextAreaElement>(null);const composing=useRef(false);
+ useEffect(()=>{const el=ref.current;if(el)el.scrollIntoView({block:'nearest',inline:'nearest'});},[left,top]);
  useEffect(()=>{const el=ref.current;if(!el)return;el.focus({preventScroll:true});
   /* React's onBeforeInput is a keypress shim without inputType, so this listens natively. */
   const h=(n:InputEvent)=>{if(composing.current||n.isComposing||n.inputType==='insertCompositionText')return;n.preventDefault();if((n.inputType==='insertText'||n.inputType==='insertReplacementText')&&n.data)void typeText(n.data);};
@@ -54,17 +55,22 @@ function CaretInput({left,top}:{left:number;top:number}){
  return <Textarea ref={ref} data-testid="documents-input" aria-label={t('documents.caret.input')} className="absolute m-0 h-4 w-px resize-none overflow-hidden border-0 bg-transparent p-0 opacity-0" style={{left,top}} autoCapitalize="off" autoCorrect="off" spellCheck={false}
   onKeyDown={e=>{
    if(composing.current||e.nativeEvent.isComposing)return;const mod=e.ctrlKey||e.metaKey;
+   /* Ctrl (Windows/Linux) or Alt (macOS) moves and deletes by word. */
+   const word=mod||e.altKey;
+   if((e.key==='ArrowLeft'||e.key==='ArrowRight')&&word){e.preventDefault();void moveCaret(e.key==='ArrowLeft'?'wordLeft':'wordRight',e.shiftKey);return;}
+   if((e.key==='Home'||e.key==='End')&&mod){e.preventDefault();void moveCaret(e.key==='Home'?'docStart':'docEnd',e.shiftKey);return;}
+   if((e.key==='PageUp'||e.key==='PageDown')&&!mod&&!e.altKey){e.preventDefault();void moveCaret(e.key==='PageUp'?'pageUp':'pageDown',e.shiftKey);return;}
    if(keys[e.key]&&!mod&&!e.altKey){e.preventDefault();void moveCaret(keys[e.key],e.shiftKey);return;}
-   if(e.key==='Backspace'||e.key==='Delete'){e.preventDefault();void deleteAtCaret(e.key==='Backspace'?-1:1);return;}
+   if(e.key==='Backspace'||e.key==='Delete'){e.preventDefault();void deleteAtCaret(e.key==='Backspace'?-1:1,word);return;}
    if(e.key==='Escape'){e.preventDefault();clearCaret();return;}
    if(e.key==='Enter'){e.preventDefault();void splitAtCaret();return;}
-   if(mod&&e.key.toLowerCase()==='a'){e.preventDefault();selectAllInParagraph();return;}
+   if(mod&&e.key.toLowerCase()==='a'){e.preventDefault();selectAllText();return;}
    if(mod&&e.key.toLowerCase()==='z'){e.preventDefault();void(e.shiftKey?redoEdit():undoEdit());return;}
    if(mod&&e.key.toLowerCase()==='y'){e.preventDefault();void redoEdit();}
   }}
   onCompositionStart={()=>{composing.current=true;}}
   onCompositionEnd={e=>{composing.current=false;const d=e.data;if(ref.current)ref.current.value='';if(d)void typeText(d);}}
-  onPaste={e=>{e.preventDefault();const d=e.clipboardData.getData('text/plain');if(d)void typeText(d);}}
+  onPaste={e=>{e.preventDefault();const d=e.clipboardData.getData('text/plain');if(d)void pasteText(d);}}
   onCopy={e=>{const x=selectedText();if(x){e.preventDefault();e.clipboardData.setData('text/plain',x);}}}
   onCut={e=>{const x=selectedText();if(x){e.preventDefault();e.clipboardData.setData('text/plain',x);void deleteAtCaret(-1);}}}/>;
 }

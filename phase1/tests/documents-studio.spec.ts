@@ -202,3 +202,36 @@ test('D0: closing a file with unsaved edits asks first; declining keeps the edit
  expect(closed).toBe(false);expect(prompts.length).toBe(1);expect(prompts[0]).toContain('sample.docx');
  await expect.poll(()=>secondText(page).inputValue()).toBe('Guard '+old2);
 });
+/* ---- D1 typing feel. Real-engine specs: written for CI, not run in the authoring sandbox (no WASM build there). ---- */
+const paras=(page:any)=>page.getByTestId('documents-editor').getByRole('textbox');
+test('D1: Ctrl+arrows move by word, Shift+arrow selects across paragraphs, one Delete and one undo',async({page})=>{
+ await page.goto('/');await expect(page.locator('[data-storage]')).toBeVisible();
+ await openBuffers(page,[{name:'sample.docx',mimeType:DOCX,buffer:sample()}]);await expect(page.getByTestId('documents-pages')).toHaveText('1 pages');
+ await clickSecondParagraph(page);await page.keyboard.press('Home');
+ const before=await paras(page).count();const first=await secondText(page).inputValue();
+ await page.keyboard.press('Control+ArrowRight');await page.keyboard.press('Control+Shift+ArrowRight');
+ await expect(page.getByTestId('documents-selection').first()).toBeVisible();
+ await page.keyboard.press('End');await page.keyboard.down('Shift');await page.keyboard.press('ArrowRight');await page.keyboard.press('ArrowRight');await page.keyboard.up('Shift');
+ await page.keyboard.press('Delete');
+ await expect.poll(()=>paras(page).count()).toBe(before-1);
+ await page.keyboard.press('Control+z');await expect.poll(()=>paras(page).count()).toBe(before);await expect.poll(()=>secondText(page).inputValue()).toBe(first);
+});
+test('D1: multi-line paste creates paragraphs and undoes in one step',async({page})=>{
+ await page.goto('/');await expect(page.locator('[data-storage]')).toBeVisible();
+ await openBuffers(page,[{name:'sample.docx',mimeType:DOCX,buffer:sample()}]);await expect(page.getByTestId('documents-pages')).toHaveText('1 pages');
+ await clickSecondParagraph(page);const before=await paras(page).count();
+ await page.getByTestId('documents-input').evaluate((el:HTMLTextAreaElement)=>{const dt=new DataTransfer();dt.setData('text/plain','Line A\nLine B\nLine C');el.dispatchEvent(new ClipboardEvent('paste',{clipboardData:dt,bubbles:true,cancelable:true}));});
+ await expect.poll(()=>paras(page).count()).toBe(before+2);
+ await page.keyboard.press('Control+z');await expect.poll(()=>paras(page).count()).toBe(before);
+});
+test('D1: IME composition and a dead-key accent land as text; undo removes them',async({page})=>{
+ await page.goto('/');await expect(page.locator('[data-storage]')).toBeVisible();
+ await openBuffers(page,[{name:'sample.docx',mimeType:DOCX,buffer:sample()}]);await expect(page.getByTestId('documents-pages')).toHaveText('1 pages');
+ const old2=await secondText(page).inputValue();await clickSecondParagraph(page);
+ const cdp=await page.context().newCDPSession(page);
+ await cdp.send('Input.imeSetComposition',{text:'にほん',selectionStart:3,selectionEnd:3});await cdp.send('Input.insertText',{text:'日本'});
+ await expect.poll(()=>secondText(page).inputValue()).toContain('日本');
+ await page.keyboard.insertText('é😀');await expect.poll(()=>secondText(page).inputValue()).toContain('é😀');
+ await page.keyboard.press('Backspace');await expect.poll(()=>secondText(page).inputValue()).not.toContain('😀');
+ for(let i=0;i<6;i++)await page.keyboard.press('Control+z');await expect.poll(()=>secondText(page).inputValue()).toBe(old2);
+});
