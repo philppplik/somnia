@@ -367,3 +367,10 @@ Depends on: v10 diff viewer, v11 updater for smooth extension and app updates.
 - Done: shape strokes get an opacity (0..100 %) and a dash length and gap (1..100 % of the path length). A dash length gives a static dashed stroke; before, dashes only existed together with an animated dash offset and always as 8/4. Canvas, viewer and every export use the same attributes; strokes without the new fields produce byte-identical output. Undoable, validated, 5 locales.
 - Open: no gradient strokes, no stroke alignment (inside/outside), no miter limit, opacity and dash lengths are constants; text-animator sampling in motion blur.
 
+
+### Animation P54 (2026-10-14, integration pending)
+
+- Picked: text-animator sampling in motion blur.
+- Done: with motion blur on, text layers that have enabled animators or a keyed reveal now draw each shutter sample with the text as it looks at that sample's time (before, only the layer transform was sampled and the characters stayed at the frame time). Viewer and every export use the same samples. Layers without such text, and frames without a shutter, produce byte-identical output. No new fields, so no new commands or strings.
+- Open: effects (blur, glow, shadow) and masks are still evaluated at the frame time for each sample; a text path repeats the same path id per sample; stroke gradients and alignment; samples are capped at 16 as before.
+

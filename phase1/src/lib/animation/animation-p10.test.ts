@@ -1388,3 +1388,23 @@ test('P53 stroke opacity and dash pattern: static dashes, legacy output unchange
  for(const bad of [{opacity:101},{opacity:-1},{dashLen:0},{dashGap:101}])assert.throws(()=>applyEdit(d,{type:'layer.stroke',layer:'stencil',stroke:{color:'#00ff00',width:6,...bad}}));
  d=applyEdit(d,{type:'layer.stroke',layer:'stencil',stroke:{color:'#00ff00',width:6,opacity:100}});assert.equal(at().strokeDasharray,'100 0');assert.equal(at().strokeOpacity,undefined);
 });
+
+test('P54 text animators are sampled per blur sample; other layers and legacy output unchanged',()=>{
+ const key=(t:number,v:number)=>({t,v,interp:'bezier' as const,out:[0.33,0] as const,in:[0.67,1] as const});
+ let d=base();
+ d=applyEdit(d,{type:'text.animators',layer:'title',animators:[{...defaultAnimator('a'),start:0,end:50,softness:0,position:[60,0],scale:100,opacity:100,offset:{type:'scalar',value:0,keys:[key(100000,-100),key(140000,100)]}}]});
+ d=applyEdit(d,{type:'layer.motionBlur',layers:['title','photo'],enabled:true});
+ const at=120000,svgOf=()=>frameSvg(findComp(d)!,at,false,d.assets,d.compositions),noShutter=svgOf();
+ d=applyEdit(d,{type:'comp.shutter',shutter:{angle:360,samples:4}});
+ const blurred=svgOf();
+ const spans=(blurred.match(/<tspan [^>]*dx="[^"]*"/g)??[]).map(x=>x.match(/dx="([^"]*)"/)![1]);
+ const perSample=spans.length/4;
+ assert.ok(perSample>=1&&Number.isInteger(perSample),'one run of characters per sample');
+ const first=spans.slice(0,perSample).join(),last=spans.slice(-perSample).join();
+ assert.notEqual(first,last,'the characters differ between samples (animator time is sampled)');
+ // no shutter: unchanged single draw
+ d=applyEdit(d,{type:'comp.shutter',shutter:null});assert.equal(svgOf(),noShutter);
+ // a text layer without animators repeats the same body for each sample
+ const plain=applyEdit(applyEdit(base(),{type:'layer.motionBlur',layers:['title'],enabled:true}),{type:'comp.shutter',shutter:{angle:360,samples:4}});
+ assert.ok(!frameSvg(findComp(plain)!,at,false,plain.assets,plain.compositions).includes('<tspan'));
+});

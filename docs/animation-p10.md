@@ -297,3 +297,7 @@ Added:
 ## P53 - Stroke opacity and dash pattern
 
 - `stroke.opacity` (0..100, absent = 100) becomes `stroke-opacity` only below 100. `stroke.dashLen` and `stroke.dashGap` (1..100, in percent of the path length because paths use `pathLength=100`) give `stroke-dasharray="len gap"`; an animated `dash` offset alone keeps the old 8/4. A trim below 100 still wins over dashes.
+
+## P54 - Text animators in motion blur
+
+- `motionBlurTicks` returns `{tick,matrix}` per shutter sample (`motionBlurSamples` maps it). `contentSampled(layer)` is true for text with an enabled animator or a keyed `textReveal`; only then the viewer and `frameSvgBody` build the layer body once per sample at that sample's tick. All other layers reuse the body built at the frame tick.

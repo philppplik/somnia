@@ -50,9 +50,14 @@ export function decomposeMatrix(m:Matrix,anchor:Vec2):{position:Vec2;scale:Vec2;
 }
 
 /** Motion blur samples of one layer: its matrix at evenly spread times inside the shutter window (centered on `t`). Empty when blur is off or fewer than two samples fall inside the layer's time. */
-export function motionBlurSamples(comp:Composition,layer:Layer,t:number):readonly Matrix[]{
+export interface BlurSample{tick:number;matrix:Matrix}
+/** Shutter samples with the tick each one stands for (the matrix is the layer's world matrix at that tick). */
+export function motionBlurTicks(comp:Composition,layer:Layer,t:number):readonly BlurSample[]{
  const s=comp.shutter;if(!s||!layer.motionBlur)return [];
- const frame=TICKS_PER_SECOND*comp.fps.den/comp.fps.num,w=frame*s.angle/360;const out:Matrix[]=[];
- for(let j=0;j<s.samples;j++){const tj=Math.round(t-w/2+w*(j+0.5)/s.samples);if(tj>=layer.inT+layer.offset&&tj<layer.outT+layer.offset)out.push(worldMatrix(comp,layer,tj));}
+ const frame=TICKS_PER_SECOND*comp.fps.den/comp.fps.num,w=frame*s.angle/360;const out:BlurSample[]=[];
+ for(let j=0;j<s.samples;j++){const tj=Math.round(t-w/2+w*(j+0.5)/s.samples);if(tj>=layer.inT+layer.offset&&tj<layer.outT+layer.offset)out.push({tick:tj,matrix:worldMatrix(comp,layer,tj)});}
  return out.length>=2?out:[];
 }
+export function motionBlurSamples(comp:Composition,layer:Layer,t:number):readonly Matrix[]{return motionBlurTicks(comp,layer,t).map(x=>x.matrix);}
+/** Text whose own content (animators, reveal) changes over time, so each blur sample draws it at its own tick. */
+export const contentSampled=(l:Layer)=>l.kind==='text'&&(!!l.animators?.some(a=>a.enabled)||!!l.textReveal?.keys.length);
