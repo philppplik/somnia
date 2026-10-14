@@ -907,5 +907,7 @@
  "studio3d.hist.editRelax": "Suavizar vértices",
  "cmd.studio3d.edit.flip": "Invertir las normales de las caras seleccionadas",
  "studio3d.edit.flip": "Invertir normales",
- "studio3d.hist.editFlip": "Invertir normales de caras"
+ "studio3d.hist.editFlip": "Invertir normales de caras",
+ "cmd.studio3d.edit.selectLinked": "Seleccionar todo lo enlazado a la selección",
+ "studio3d.edit.selLinked": "Enlazado"
 }

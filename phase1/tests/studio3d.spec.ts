@@ -903,6 +903,24 @@ test('mesh edit mode: flip reverses only the selected faces, undo restores them'
  await expect(page.getByRole('alert')).toContainText('Select faces to flip');
 });
 
+test('mesh edit mode: select linked keeps a duplicated shell separate',async({page})=>{
+ await blank(page);
+ const id=await insert(page,'cube',0);
+ expect(await run(page,'studio3d.edit.start',{id,mode:'vertex'})).toBe(true);
+ expect(await run(page,'studio3d.edit.select',{kind:'vertex',ids:[0]})).toBe(true);
+ expect(await run(page,'studio3d.edit.selectLinked',{kind:'vertex'})).toBe(true);
+ let s=await session(page);expect(s.edit).toMatchObject({verts:4});
+ expect(await run(page,'studio3d.edit.selectAll',{op:'none'})).toBe(true);
+ expect(await run(page,'studio3d.edit.select',{kind:'face',ids:[4,5]})).toBe(true);
+ expect(await run(page,'studio3d.edit.duplicate',{})).toBe(true);
+ expect(await run(page,'studio3d.edit.select',{kind:'vertex',ids:[24]})).toBe(true);
+ expect(await run(page,'studio3d.edit.selectLinked',{kind:'vertex'})).toBe(true);
+ s=await session(page);expect(s.edit).toMatchObject({verts:4});
+ expect(await run(page,'studio3d.edit.selectAll',{op:'none'})).toBe(true);
+ expect(await run(page,'studio3d.edit.selectLinked',{kind:'vertex'})).toBe(false);
+ await expect(page.getByRole('alert')).toContainText('Select something first');
+});
+
 test('mesh edit mode: weld merges selected vertices at their centre, undo restores them',async({page})=>{
  await blank(page);
  const id=await insert(page,'cube',0);

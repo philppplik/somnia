@@ -907,5 +907,7 @@
  "studio3d.hist.editRelax": "Lisser les sommets",
  "cmd.studio3d.edit.flip": "Inverser les normales des faces sélectionnées",
  "studio3d.edit.flip": "Inverser les normales",
- "studio3d.hist.editFlip": "Inverser les normales des faces"
+ "studio3d.hist.editFlip": "Inverser les normales des faces",
+ "cmd.studio3d.edit.selectLinked": "Sélectionner tout ce qui est lié à la sélection",
+ "studio3d.edit.selLinked": "Lié"
 }

@@ -907,5 +907,7 @@
  "studio3d.hist.editRelax": "Relax vertices",
  "cmd.studio3d.edit.flip": "Flip the normals of selected faces",
  "studio3d.edit.flip": "Flip normals",
- "studio3d.hist.editFlip": "Flip face normals"
+ "studio3d.hist.editFlip": "Flip face normals",
+ "cmd.studio3d.edit.selectLinked": "Select everything linked to the selection",
+ "studio3d.edit.selLinked": "Linked"
 }

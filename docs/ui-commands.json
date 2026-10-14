@@ -7110,6 +7110,19 @@
       "hasEnabled": true
     },
     {
+      "id": "studio3d.edit.selectLinked",
+      "title": "Select everything linked to the selection",
+      "category": "Edit",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "studio3d.edit.start",
       "title": "Edit mesh",
       "category": "Edit",

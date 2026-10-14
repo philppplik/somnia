@@ -1203,6 +1203,7 @@ export default function Viewport3D(){
    editSelect:(kind,ids,toggle)=>{stage.editSelect(kind,ids,toggle);patchEdit();invalidate();},
    editSelectAll:(op,kind)=>{stage.editSelectAll(op,kind??getStudio3DState().edit?.mode??'face');patchEdit();invalidate();},
    editSelectBoundary:(kind)=>{stage.editSelectBoundary(kind??'edge');patchEdit();invalidate();},
+   editSelectLinked:(kind)=>{stage.editSelectLinked(kind??getStudio3DState().edit?.mode??'face');patchEdit();invalidate();},
    editSelectGrow:(steps,shrink,kind)=>{stage.editSelectGrow(steps??1,shrink??false,kind??getStudio3DState().edit?.mode??'face');patchEdit();invalidate();},
    editDelete:(kind)=>{stage.editDelete(kind??getStudio3DState().edit?.mode??'face');patchEdit();invalidate();},
    editWeld:()=>{stage.editWeld();patchEdit();invalidate();},

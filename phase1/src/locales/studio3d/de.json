@@ -907,5 +907,7 @@
  "studio3d.hist.editRelax": "Vertices glätten",
  "cmd.studio3d.edit.flip": "Normalen ausgewählter Faces umkehren",
  "studio3d.edit.flip": "Normalen umkehren",
- "studio3d.hist.editFlip": "Face-Normalen umkehren"
+ "studio3d.hist.editFlip": "Face-Normalen umkehren",
+ "cmd.studio3d.edit.selectLinked": "Alles mit der Auswahl Verbundene auswählen",
+ "studio3d.edit.selLinked": "Verbunden"
 }

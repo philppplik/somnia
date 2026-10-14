@@ -1,4 +1,5 @@
 # Unreleased: 3D Studio P0
+- 3D Studio: edit mode selects everything topologically linked to the current selection, keeping duplicated shells at the same positions separate (`studio3d.edit.selectLinked`, vertex, edge or face).
 - 3D Studio: edit mode flips the normals of just the selected faces, fixing inside-out regions after imports or booleans, with one undo (`studio3d.edit.flip`).
 - 3D Studio: edit mode relaxes the selected vertices towards their neighbourhood average (position-equal twins together, borders pinned, masks damp), with one undo (`studio3d.edit.relax`, iterations and factor adjustable).
 - 3D Studio: edit mode shrinks or fattens the selected vertices along their corner-angle-weighted normals (position-equal twins move together, masks damp), with one undo (`studio3d.edit.fatten`, negative amounts shrink).

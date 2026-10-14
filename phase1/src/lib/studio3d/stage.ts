@@ -800,6 +800,30 @@ export class Stage{
  }
  editBevelEdge(width:number,segments=1){this.editOp({key:'studio3d.hist.bevelEdges'},m=>bevelEdges(m,[...this.editSel.edges.values()],width,segments));}
  editLoopSlide(factor:number){this.editOp({key:'studio3d.hist.loopSlide'},m=>slideEdges(m,[...this.editSel.edges.values()],factor));}
+ /** Extends the selection to everything topologically linked to it (index-based connectivity, so duplicated shells at the same positions stay separate). Seeds come from any currently selected element; the linked set replaces the selection of the given kind. Selection changes are not undo steps. */
+ editSelectLinked(kind:'vertex'|'edge'|'face'){
+  const m=this.editMesh();
+  const pos=m.geometry.getAttribute('position'),idx=m.geometry.getIndex();
+  const nv=pos.count;const n=idx?idx.count:nv;const at=(i:number)=>idx?idx.getX(i):i;
+  const ntris=n/3;
+  const seed=new Set<number>();
+  for(const v of this.editSel.verts)seed.add(v);
+  for(const [a,b]of this.editSel.edges.values()){seed.add(a);seed.add(b);}
+  for(const f of this.editSel.faces)for(let e=0;e<3;e++)seed.add(at(f*3+e));
+  if(!seed.size)throw new StageError('Select something first.');
+  const nbr:number[][]=Array.from({length:nv},()=>[]);
+  for(let t=0;t+2<n;t+=3)for(let e=0;e<3;e++){
+   const a=at(t+e),b=at(t+(e+1)%3);
+   if(!nbr[a].includes(b))nbr[a].push(b);
+   if(!nbr[b].includes(a))nbr[b].push(a);
+  }
+  const linked=new Set<number>(seed);
+  const queue=[...seed];
+  while(queue.length){const v=queue.pop()!;for(const w of nbr[v])if(!linked.has(w)){linked.add(w);queue.push(w);}}
+  if(kind==='vertex'){this.editSel.verts.clear();for(const v of linked)this.editSel.verts.add(v);}
+  else if(kind==='face'){this.editSel.faces.clear();for(let f=0;f<ntris;f++)if(linked.has(at(f*3))&&linked.has(at(f*3+1))&&linked.has(at(f*3+2)))this.editSel.faces.add(f);}
+  else{this.editSel.edges.clear();for(let t=0;t+2<n;t+=3)for(let e=0;e<3;e++){const a=at(t+e),b=at(t+(e+1)%3);if(!linked.has(a)||!linked.has(b))continue;const lo=Math.min(a,b),hi=Math.max(a,b);this.editSel.edges.set(`${lo}_${hi}`,[lo,hi]);}}
+ }
  /** Selects the boundary edges or vertices of the edited mesh: position-keyed borders (1e6 rounding) used by exactly one triangle, so split UV seams do not read as holes. Replaces the current selection of that kind; selection changes are not undo steps. */
  editSelectBoundary(kind:'vertex'|'edge'='edge'){
   const m=this.editMesh();
