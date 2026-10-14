@@ -12,6 +12,7 @@ import {commitPhotoSettings,getPhotoSession} from '../../lib/photos/studioSessio
 import {FILMSTRIP_SORTS,sortFilmstrip,type FilmstripSort} from '../../lib/photos/filmstripSort';
 import {MAX_RATING,useRatings} from '../../lib/photos/ratings';
 import {useFlags} from '../../lib/photos/flags';
+import {PHOTO_LABELS,setLabel,useLabels,type PhotoLabel} from '../../lib/photos/labels';
 import {usePanelState} from '../../store/panelStateStore';
 import {Button} from '../ui/button';
 import {NativeSelect} from '../ui/native-controls';
@@ -23,6 +24,7 @@ export function PhotosFilmstrip({active,onSurvey}:{active:string;onSurvey?:()=>v
  const media=useMedia();
  const ratings=useRatings();
  const flags=useFlags();
+ const labels=useLabels();
  const [minRating,setMinRating]=usePanelState<number|string>('photos.ratingFilter',0);
  const [sort,setSort]=usePanelState<FilmstripSort>('photos.filmstripSort','library');
  const [sel,setSel]=usePanelState<string[]>('photos.filmstripSelection',[]);
@@ -35,7 +37,7 @@ export function PhotosFilmstrip({active,onSurvey}:{active:string;onSurvey?:()=>v
  const [copied,setCopied]=usePanelState<Look|null>('photos.copiedLook',null);
  const filter=String(minRating); // legacy stored numbers and 'pick'/'reject' share one select
  const all=developablePhotos(media.items);
- const photos=sortFilmstrip(all.filter(p=>filter==='pick'?flags[p.name]==='pick':filter==='reject'?flags[p.name]==='reject':filter==='unrated'?!(ratings[p.name]>=1):(ratings[p.name]??0)>=Number(filter)),sort,ratings,flags); // the filter never hides the strip itself; sorting is display-only, prev/next keeps library order
+ const photos=sortFilmstrip(all.filter(p=>filter==='pick'?flags[p.name]==='pick':filter==='reject'?flags[p.name]==='reject':filter==='unrated'?!(ratings[p.name]>=1):filter.startsWith('label:')?labels[p.name]===filter.slice(6):(ratings[p.name]??0)>=Number(filter)),sort,ratings,flags); // the filter never hides the strip itself; sorting is display-only, prev/next keeps library order
  const strip=useRef<HTMLDivElement|null>(null);
  useEffect(()=>{strip.current?.querySelector('[aria-pressed="true"]')?.scrollIntoView({block:'nearest',inline:'nearest'});},[active]);
  const selected=photos.filter(p=>sel.includes(p.name));
@@ -71,6 +73,7 @@ export function PhotosFilmstrip({active,onSurvey}:{active:string;onSurvey?:()=>v
    <option value="unrated">{t('photos.rating.filter.unrated')}</option>
    <option value="pick">{t('photos.flag.filter.pick')}</option>
    <option value="reject">{t('photos.flag.filter.reject')}</option>
+   {PHOTO_LABELS.map(l=><option key={l} value={`label:${l}`}>{t(`photos.label.${l}`)}</option>)}
   </NativeSelect>
   <NativeSelect value={sort} aria-label={t('photos.filmstrip.sort')} title={t('photos.filmstrip.sort')} onChange={e=>setSort(e.currentTarget.value as FilmstripSort)} className="h-7 shrink-0" data-testid="photos-filmstrip-sort">
    {FILMSTRIP_SORTS.map(m=><option key={m} value={m}>{t(`photos.filmstrip.sort.${m}`)}</option>)}
@@ -85,6 +88,14 @@ export function PhotosFilmstrip({active,onSurvey}:{active:string;onSurvey?:()=>v
    <option value="all">{t('photos.filmstrip.selectAll')}</option>
    <option value="unrated">{t('photos.filmstrip.selectUnrated')}</option>
    <option value="none">{t('photos.filmstrip.selectNone')}</option>
+  </NativeSelect>
+  <NativeSelect value="" aria-label={t('photos.label.set')} title={t('photos.label.set')} onChange={e=>{
+   const v=e.currentTarget.value;e.currentTarget.value='';
+   for(const n of selected.length>1?selected.map(p=>p.name):[active])setLabel(n,v==='none'?null:v as PhotoLabel); // selection first, else the active photo
+  }} className="h-7 shrink-0" data-testid="photos-filmstrip-label">
+   <option value="" disabled>{t('photos.label.set')}</option>
+   {PHOTO_LABELS.map(l=><option key={l} value={l}>{t(`photos.label.${l}`)}</option>)}
+   <option value="none">{t('photos.label.none')}</option>
   </NativeSelect>
   <Button variant="outline" size="compact" disabled={neutral} onClick={()=>activeSession&&setCopied(extractLook(activeSession.now))} data-testid="photos-filmstrip-copy">{t('photos.filmstrip.copy')}</Button>
   <Button variant="outline" size="compact" disabled={!copied||applying||(!active&&selected.length<2)} onClick={()=>{
@@ -115,6 +126,7 @@ export function PhotosFilmstrip({active,onSurvey}:{active:string;onSurvey?:()=>v
    else{setSel([p.name]);setAnchor(p.name);setApplyNote(null);setActiveMedia(p.name);}
   }} className={`relative h-14 shrink-0 overflow-hidden px-0.5${sel.includes(p.name)&&sel.length>1?' ring-2 ring-[var(--accent)]':''}`} data-selected={sel.includes(p.name)&&sel.length>1||undefined} data-testid={`photos-filmstrip-item-${p.name}`}>
    <img src={p.url} alt="" className="h-full w-auto max-w-24 rounded-[2px] object-cover"/>
+   {labels[p.name]&&<span className={`photos-label-dot photos-label-${labels[p.name]} absolute top-0.5 right-0.5`} data-testid={`photos-filmstrip-label-${p.name}`} data-label={labels[p.name]}/>}
    {(ratings[p.name]??0)>0&&<span className="absolute bottom-0.5 right-0.5 flex items-center gap-0.5 rounded-[2px] bg-elevated px-1 text-ink" data-testid={`photos-filmstrip-rating-badge-${p.name}`}><Star size={10} fill="currentColor" className="text-[var(--accent)]"/>{ratings[p.name]}</span>}
    {flags[p.name]&&<span className="absolute bottom-0.5 left-0.5 flex items-center rounded-[2px] bg-elevated px-1 text-ink" data-testid={`photos-filmstrip-flag-${p.name}`} data-flag={flags[p.name]}><Flag size={10} fill="currentColor" className={flags[p.name]==='pick'?'text-[var(--accent)]':'text-[var(--danger)]'}/></span>}
   </Button>)}

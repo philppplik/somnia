@@ -148,5 +148,11 @@
  "photos.filmstrip.selectAll": "Select all",
  "photos.filmstrip.selectUnrated": "Select unrated",
  "photos.filmstrip.selectNone": "Clear selection",
- "photos.filmstrip.select": "Selection"
+ "photos.filmstrip.select": "Selection",
+ "photos.label.set": "Label",
+ "photos.label.red": "Red",
+ "photos.label.yellow": "Yellow",
+ "photos.label.green": "Green",
+ "photos.label.blue": "Blue",
+ "photos.label.none": "No label"
 }

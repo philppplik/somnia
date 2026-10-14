@@ -381,3 +381,23 @@ test('selection helpers: all, unrated, clear (light and dark)',async({page})=>{
   await expect(page.getByTestId('photos-filmstrip-apply')).toHaveCount(0);
  }
 });
+test('color labels: batch set, badge, filter, clear (light and dark)',async({page})=>{
+ for(const theme of['light','dark']){
+  await page.goto('/test/design-system/?view=photos-filmstrip');
+  await page.evaluate(t=>document.documentElement.setAttribute('data-theme',t),theme);
+  await expect(page.getByTestId('photos-workspace')).toBeVisible();
+  await expect(page.getByTestId('photos-filmstrip-item-strip-3.png')).toBeVisible(); // media added progressively
+  await page.evaluate(async()=>{const m=await import('/src/lib/photos/labels.ts');for(const n of['strip-1.png','strip-2.png','strip-3.png'])m.setLabel(n,null);}); // labels persist via localStorage
+  await page.getByTestId('photos-filmstrip-item-strip-1.png').click();
+  await page.getByTestId('photos-filmstrip-item-strip-2.png').click({modifiers:['ControlOrMeta']}); // two selected
+  await page.getByTestId('photos-filmstrip-label').selectOption('red'); // labels the whole selection
+  await expect(page.getByTestId('photos-filmstrip-label-strip-1.png')).toHaveAttribute('data-label','red');
+  await expect(page.getByTestId('photos-filmstrip-label-strip-2.png')).toHaveAttribute('data-label','red');
+  await page.getByTestId('photos-filmstrip-rating-filter').selectOption('label:red');
+  await expect(page.getByTestId('photos-filmstrip-item-strip-3.png')).toHaveCount(0); // unlabeled photo leaves the view
+  await page.screenshot({path:`test-results/ds-photos-labels-${theme}.png`,fullPage:true});
+  await page.getByTestId('photos-filmstrip-rating-filter').selectOption('0');
+  await page.getByTestId('photos-filmstrip-label').selectOption('none');
+  await expect(page.getByTestId('photos-filmstrip-label-strip-1.png')).toHaveCount(0);
+ }
+});

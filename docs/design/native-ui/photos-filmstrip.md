@@ -223,3 +223,17 @@ survey without modifier clicks.
 Coverage: `photos-filmstrip.spec.ts` gains a light/dark leg that
 rates one photo, selects unrated (two photos), selects all (three),
 and clears the selection.
+
+## Color labels (P93)
+
+A third culling axis next to stars and flags: red/yellow/green/blue
+color labels per photo in a persisted `labels` store. A Label dropdown
+in the filmstrip labels the whole selection (or the active photo) and
+clears labels again; each labeled thumbnail gets a colored dot in the
+corner (colors live in `bento.css` as rgb values, keeping the hex
+ratchet flat), and the filter dropdown lists the four labels.
+
+Coverage: `labels.test.ts` covers set/cycle/clear and invalid input;
+`photos-filmstrip.spec.ts` gains a light/dark leg that labels a
+two-photo selection, filters to red (the unlabeled photo leaves the
+view) and clears the labels again.

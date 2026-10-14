@@ -125,3 +125,8 @@ input,select,textarea{border-radius:var(--r-sm)}
 /* Photos lights-out (P75): the L key dims the workspace chrome around the canvas. */
 .photos-lights-out .media-bar,.photos-lights-out .photos-filmstrip{opacity:.18;transition:opacity .15s ease}
 .photos-lights-out .media-bar:hover,.photos-lights-out .photos-filmstrip:hover{opacity:1}
+.photos-label-dot{display:inline-block;width:8px;height:8px;border-radius:9999px}
+.photos-label-red{background:rgb(229 72 77)}
+.photos-label-yellow{background:rgb(230 195 92)}
+.photos-label-green{background:rgb(48 164 108)}
+.photos-label-blue{background:rgb(62 99 221)}

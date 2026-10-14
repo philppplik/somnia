@@ -148,5 +148,11 @@
  "photos.filmstrip.selectAll": "Seleccionar todo",
  "photos.filmstrip.selectUnrated": "Seleccionar sin valorar",
  "photos.filmstrip.selectNone": "Quitar seleccion",
- "photos.filmstrip.select": "Seleccion"
+ "photos.filmstrip.select": "Seleccion",
+ "photos.label.set": "Etiqueta",
+ "photos.label.red": "Rojo",
+ "photos.label.yellow": "Amarillo",
+ "photos.label.green": "Verde",
+ "photos.label.blue": "Azul",
+ "photos.label.none": "Sin etiqueta"
 }

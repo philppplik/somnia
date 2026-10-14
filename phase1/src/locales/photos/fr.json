@@ -148,5 +148,11 @@
  "photos.filmstrip.selectAll": "Tout selectionner",
  "photos.filmstrip.selectUnrated": "Selectionner non notes",
  "photos.filmstrip.selectNone": "Effacer la selection",
- "photos.filmstrip.select": "Selection"
+ "photos.filmstrip.select": "Selection",
+ "photos.label.set": "Libelle",
+ "photos.label.red": "Rouge",
+ "photos.label.yellow": "Jaune",
+ "photos.label.green": "Vert",
+ "photos.label.blue": "Bleu",
+ "photos.label.none": "Aucun libelle"
 }
