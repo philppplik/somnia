@@ -969,5 +969,11 @@
  "animation.rig.order.up": "Eine Ebene nach vorne",
  "animation.rig.order.down": "Eine Ebene nach hinten",
  "animation.rig.order.reverse": "Reihenfolge umkehren",
- "cmd.animation.layers.arrange": "Stapelreihenfolge der gewählten Ebenen ändern"
+ "cmd.animation.layers.arrange": "Stapelreihenfolge der gewählten Ebenen ändern",
+ "animation.rig.group.state": "Zustand",
+ "animation.rig.flag.visible": "Ein- / ausblenden",
+ "animation.rig.flag.solo": "Solo an / aus",
+ "animation.rig.flag.locked": "Sperren / entsperren",
+ "animation.rig.flag.shy": "Shy an / aus",
+ "cmd.animation.layers.flag": "Ebenen-Schalter für die gewählten Ebenen umstellen"
 }

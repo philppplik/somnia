@@ -969,5 +969,11 @@
  "animation.rig.order.up": "Forward one step",
  "animation.rig.order.down": "Back one step",
  "animation.rig.order.reverse": "Reverse order",
- "cmd.animation.layers.arrange": "Arrange the stacking order of the selected layers"
+ "cmd.animation.layers.arrange": "Arrange the stacking order of the selected layers",
+ "animation.rig.group.state": "State",
+ "animation.rig.flag.visible": "Show / hide",
+ "animation.rig.flag.solo": "Solo on / off",
+ "animation.rig.flag.locked": "Lock / unlock",
+ "animation.rig.flag.shy": "Shy on / off",
+ "cmd.animation.layers.flag": "Switch a layer flag for the selected layers"
 }

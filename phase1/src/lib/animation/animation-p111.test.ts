@@ -516,3 +516,14 @@ test('P172 arrange: front/back/up/down/reverse keep the rest, one undo step, no-
  run({mode:'back',layers:[start[0]]});assert.deepEqual(ids(),[...start.slice(1),start[0]]);s.undo();assert.equal(s.document,before);
  assert.throws(()=>run({mode:'front',layers:[start[0]]}),(e:any)=>e.expected===true);
 });
+
+test('P173 layer flags toggle for many layers, one undo step, locked layers only unlock',async()=>{
+ const {layerFlagSpecs}=await import('./layerFlagCommands');const run=layerFlagSpecs()[0].run as (p?:unknown)=>unknown;
+ const s=open();setAnimationSession(s);s.dispatch({type:'layer.add',kind:'shape',id:'b'});s.dispatch({type:'layer.add',kind:'shape',id:'c'});
+ const get=(k:'visible'|'solo'|'locked')=>findComp(s.document!)!.layers.map(l=>l[k]);const ids=findComp(s.document!)!.layers.map(l=>l.id);
+ const before=s.document!;run({flag:'solo',layers:ids});assert.deepEqual(get('solo'),[true,true,true]);s.undo();assert.equal(s.document,before);
+ run({flag:'visible',layers:ids});assert.deepEqual(get('visible'),[false,false,false]);run({flag:'visible',layers:ids});assert.deepEqual(get('visible'),[true,true,true]);
+ run({flag:'locked',layers:[ids[0]]});const r=run({flag:'visible',layers:ids}) as {skippedLocked:number};assert.equal(r.skippedLocked,1);assert.equal(get('visible')[0],true);
+ assert.throws(()=>run({flag:'visible',layers:[ids[0]]}),(e:any)=>e.expected===true);
+ run({flag:'locked',layers:[ids[0]]});assert.equal(get('locked')[0],false);
+});

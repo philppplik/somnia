@@ -1679,6 +1679,26 @@
       "hasEnabled": true
     },
     {
+      "id": "animation.layers.flag",
+      "title": "Switch a layer flag for the selected layers",
+      "category": "Edit",
+      "source": "animation",
+      "keywords": [
+        "animation",
+        "eye",
+        "hide",
+        "layer",
+        "lock",
+        "show",
+        "shy",
+        "solo",
+        "toggle",
+        "unlock",
+        "visible"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "animation.layers.number",
       "title": "Number the selected layers",
       "category": "Edit",

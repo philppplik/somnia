@@ -969,5 +969,11 @@
  "animation.rig.order.up": "Avançar um passo",
  "animation.rig.order.down": "Recuar um passo",
  "animation.rig.order.reverse": "Inverter ordem",
- "cmd.animation.layers.arrange": "Organizar a ordem de empilhamento das camadas selecionadas"
+ "cmd.animation.layers.arrange": "Organizar a ordem de empilhamento das camadas selecionadas",
+ "animation.rig.group.state": "Estado",
+ "animation.rig.flag.visible": "Mostrar / ocultar",
+ "animation.rig.flag.solo": "Solo sim / não",
+ "animation.rig.flag.locked": "Bloquear / desbloquear",
+ "animation.rig.flag.shy": "Shy sim / não",
+ "cmd.animation.layers.flag": "Alternar um indicador de camada nas camadas selecionadas"
 }

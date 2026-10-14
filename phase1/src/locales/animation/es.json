@@ -969,5 +969,11 @@
  "animation.rig.order.up": "Adelante un paso",
  "animation.rig.order.down": "Atrás un paso",
  "animation.rig.order.reverse": "Invertir orden",
- "cmd.animation.layers.arrange": "Ordenar el apilado de las capas seleccionadas"
+ "cmd.animation.layers.arrange": "Ordenar el apilado de las capas seleccionadas",
+ "animation.rig.group.state": "Estado",
+ "animation.rig.flag.visible": "Mostrar / ocultar",
+ "animation.rig.flag.solo": "Solo sí / no",
+ "animation.rig.flag.locked": "Bloquear / desbloquear",
+ "animation.rig.flag.shy": "Shy sí / no",
+ "cmd.animation.layers.flag": "Cambiar un indicador de capa para las capas seleccionadas"
 }
