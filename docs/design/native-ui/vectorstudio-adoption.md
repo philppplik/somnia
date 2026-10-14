@@ -19,7 +19,10 @@ a restyle.
   gallery route): dimension edit commits on blur, tool switch, plus light/dark
   production-style screenshots. Before/after pixel comparison against the
   pre-migration tree is identical in both themes.
-- Known pre-existing issue: the panels' inline `vectorControlStyle` does not
-  resolve to legible colors under the dark theme (raw and migrated controls
-  render identically; not caused by this slice).
+- Follow-up fix (P24): the panels' inline `vectorControlStyle` referenced
+  non-existent tokens (`--surface`, `--border`), so the light fallbacks
+  applied everywhere and dark-theme controls were unreadable. It now uses
+  `--bg-surface`, `--border-default` and `--text-primary` with the same
+  fallbacks; dark theme is legible, light theme shifts the control
+  background slightly (intended diff, before/after screenshots delivered).
 - Actual app vectorstudio E2E remains CI-only.

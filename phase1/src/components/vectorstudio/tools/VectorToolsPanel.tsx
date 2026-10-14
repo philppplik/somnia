@@ -5,7 +5,7 @@ import { SvgImportError } from '../../../lib/vectorio';
 import { deleteSelection, resizeSelection, rotateSelection, scaleSelection, selectionBounds, translateSelection, type VectorTool, type VectorToolCommit } from './operations';
 import { downloadSvg, readSvgFile } from './svgIO';
 import {NativeButton,NativeInput} from '../../ui/native-controls';
-export const vectorControlStyle: CSSProperties = { border: '1px solid var(--border, #d9dce3)', borderRadius: 8, padding: '6px 8px', color: 'inherit', background: 'var(--surface, #f8f9fb)', font: 'inherit', minWidth: 0 };
+export const vectorControlStyle: CSSProperties = { border: '1px solid var(--border-default, #d9dce3)', borderRadius: 8, padding: '6px 8px', color: 'var(--text-primary, inherit)', background: 'var(--bg-surface, #f8f9fb)', font: 'inherit', minWidth: 0 };
 export interface VectorToolsPanelProps {
   value: VectorDocument;
   selection: readonly string[];
