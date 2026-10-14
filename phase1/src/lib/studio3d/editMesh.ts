@@ -336,6 +336,20 @@ export function bisectClip(m:MeshData,axis:MirrorAxis):MeshData{
  if(!positions.length)throw new EditError('Nothing remains on the positive side of the mirror plane.');
  check(out);return out;
 }
+/** Bakes a symmetry: keeps the chosen side of the mirror plane, mirrors it onto the other side and welds vertices within merge distance of the plane. Shares the clip/mirror math of the mirror modifier. */
+export function symmetrizeMesh(m:MeshData,axis:MirrorAxis,side:'positive'|'negative',merge:number):MeshData{
+ check(m);
+ if(side==='positive')return mirrorCombine(m,axis,merge,true);
+ const ai=axis==='x'?0:axis==='y'?1:2;
+ const flip=(d:MeshData):MeshData=>{
+  const positions=[...d.positions];
+  for(let i=ai;i<positions.length;i+=3)positions[i]=-positions[i];
+  const index:number[]=[];
+  for(let f=0;f<d.index.length;f+=3)index.push(d.index[f],d.index[f+2],d.index[f+1]); // keep normals outward after mirroring
+  return{positions,index};
+ };
+ return flip(mirrorCombine(flip(m),axis,merge,true));
+}
 export function mirrorCombine(m:MeshData,axis:MirrorAxis,merge:number,bisect=false):MeshData{
  check(m);
  if(!Number.isFinite(merge)||merge<0||merge>1e6)throw new EditError('The mirror merge distance must be zero or a positive number.');

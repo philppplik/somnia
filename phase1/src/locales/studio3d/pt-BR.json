@@ -768,5 +768,12 @@
  "cmd.studio3d.mesh.simplify": "Simplificar uma malha 3D: remover vértices mantendo sua forma, UVs e normais",
  "studio3d.hist.simplify": "Simplificar {name}",
  "studio3d.mesh.simplify": "Simplificar malha",
- "studio3d.mesh.simplifyKeep": "Vértices a manter (%)"
+ "studio3d.mesh.simplifyKeep": "Vértices a manter (%)",
+ "cmd.studio3d.mesh.symmetrize": "Gravar uma simetria nas malhas 3D: manter um lado do plano espelho local, espelhá-lo no outro e soldar a costura",
+ "studio3d.hist.symmetrize_one": "Simetrizar {name}",
+ "studio3d.hist.symmetrize_other": "Simetrizar {count} objetos",
+ "studio3d.mesh.symmetrize": "Simetrizar",
+ "studio3d.mesh.symmetrizeSide": "Lado a manter",
+ "studio3d.mesh.symmetrizeSide.positive": "Manter lado +",
+ "studio3d.mesh.symmetrizeSide.negative": "Manter lado -"
 }

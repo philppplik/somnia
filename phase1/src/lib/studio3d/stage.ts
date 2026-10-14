@@ -9,7 +9,7 @@ import type {NodeExtra} from './document';
 import {EASES,isEase,bakeTrack,type Ease} from './ease';
 import {buildExtras,type ClipMeta,type MetaTrack} from './clipMeta';
 import {groupRefs,keyIndices,copyTrackKeys,shiftTrackKeys,pasteTrackKeys,type KeyRef,type KeyData,type TrackData} from './keyEdit';
-import {extrudeFaces,insetFaces,bevelVertices,loopCut,bevelEdges,slideEdges,mirrorCombine,EditError,MAX_EDIT_VERTICES,MAX_EDIT_TRIANGLES,type MeshData} from './editMesh';
+import {extrudeFaces,insetFaces,bevelVertices,loopCut,bevelEdges,slideEdges,mirrorCombine,symmetrizeMesh,EditError,MAX_EDIT_VERTICES,MAX_EDIT_TRIANGLES,type MeshData} from './editMesh';
 import {sculptDab,paintMask,SculptError,type SculptOpts} from './sculpt';
 import {KEY_PATHS,KEY_STRIDE,ClipError,MAX_CLIPS,MAX_KEYS_PER_TRACK,DEFAULT_CLIP_SECONDS,insertKey,removeKey as removeKeyData,findKey,isPlainTrack,trackName,parseTrackName,checkKeyTime,checkDuration,checkClipName,lastKeyTime,type KeyPath} from './clips';
 import {mergeTransform,DEFAULT_TRANSFORM,UvError,type TextureTransform} from './uv';
@@ -1752,6 +1752,25 @@ export class Stage{
   set(after,undefined,[]);
   this.push({label:{key:'studio3d.hist.simplify',params:{name:o.name}},undo:()=>{set(before,beforeData,seams0);owned=false;},redo:()=>{set(after,undefined,[]);owned=true;},release:()=>{(owned?before:after).dispose();}});
   return {before:verts,after:after.getAttribute('position').count,tris};
+ }
+ /** Bakes a symmetry into meshes: keeps one side of each mesh's local mirror plane, mirrors it onto the other side and welds the seam. One undo step for the whole set. */
+ symmetrize(axis:MirrorAxis,side:'positive'|'negative',merge:number,ids:number[]):number{
+  if(this.editId!=null)throw new StageError('Leave edit mode before symmetrizing.');
+  const m=finite(merge,'merge');if(m<0||m>1e6)throw new StageError('The merge distance must be zero or a positive number.');
+  const objs=this.topLevel(this.needMany(ids,1));
+  for(const o of objs)if(!(o as THREE.Mesh).isMesh)throw new StageError(`${o.name} is not a mesh. Symmetrize works on meshes.`);
+  const list=(objs as THREE.Mesh[]).map(mesh=>{
+   const data=this.meshDataOf(mesh);const out=symmetrizeMesh(data,axis,side,m);
+   const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(out.positions,3));g.setIndex(out.index);g.computeVertexNormals();
+   const seams0=this.seamsOf(mesh);let seams1:[number,number][]=[];
+   if(seams0.length){try{seams1=remapSeams(data,seams0,out);}catch{seams1=[];}}
+   return{mesh,before:{g:mesh.geometry,d:mesh.userData.somniaPrimitive,s:seams0},after:g,seams1};
+  });
+  const set=(k:'before'|'after')=>{for(const l of list){if(k==='after'){l.mesh.geometry=l.after;delete l.mesh.userData.somniaPrimitive;this.setSeams(l.mesh,l.seams1);}else{l.mesh.geometry=l.before.g;if(l.before.d!==undefined)l.mesh.userData.somniaPrimitive=l.before.d;this.setSeams(l.mesh,l.before.s);}}};
+  let owned=true;
+  set('after');
+  this.push({label:{key:'studio3d.hist.symmetrize',params:{count:list.length,name:list[0].mesh.name}},undo:()=>{set('before');owned=false;},redo:()=>{set('after');owned=true;},release:()=>{for(const l of list)(owned?l.before.g:l.after).dispose();}});
+  return list.length;
  }
  /** Shows or hides an object. A hidden parent hides its whole subtree. One undo step. */
  setHidden(id:number,hidden:boolean){

@@ -768,5 +768,12 @@
  "cmd.studio3d.mesh.simplify": "Simplify a 3D mesh: remove vertices while keeping its shape, UVs and normals",
  "studio3d.hist.simplify": "Simplify {name}",
  "studio3d.mesh.simplify": "Simplify mesh",
- "studio3d.mesh.simplifyKeep": "Vertices to keep (%)"
+ "studio3d.mesh.simplifyKeep": "Vertices to keep (%)",
+ "cmd.studio3d.mesh.symmetrize": "Bake a symmetry into 3D meshes: keep one side of the local mirror plane, mirror it onto the other and weld the seam",
+ "studio3d.hist.symmetrize_one": "Symmetrize {name}",
+ "studio3d.hist.symmetrize_other": "Symmetrize {count} objects",
+ "studio3d.mesh.symmetrize": "Symmetrize",
+ "studio3d.mesh.symmetrizeSide": "Side to keep",
+ "studio3d.mesh.symmetrizeSide.positive": "Keep + side",
+ "studio3d.mesh.symmetrizeSide.negative": "Keep - side"
 }

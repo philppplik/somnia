@@ -1488,6 +1488,18 @@ test('3D studio history: labels list and multi-step undo/redo',async({page})=>{
  await expect.poll(async()=>(await session(page)).outline.filter(o=>o.kind==='mesh').length).toBe(0);
 });
 
+test('3D studio symmetrize: bakes a mirror half and undo restores the mesh',async({page})=>{
+ await blank(page);
+ await insert(page,'sphere',0);
+ const tris=async()=>(await session(page)).stats.triangles;
+ const before=await tris();
+ expect(await run(page,'studio3d.mesh.symmetrize',{axis:'x',side:'positive'})).toBe(true);
+ // A centered sphere is already symmetric: clipping and re-mirroring lands near the same count.
+ await expect.poll(async()=>Math.abs((await tris())-before)).toBeLessThan(before*0.2);
+ expect(await run(page,'studio3d.undo',{})).toBe(true);
+ await expect.poll(tris).toBe(before);
+});
+
 test('3D studio mesh simplify: triangle count drops and undo restores it',async({page})=>{
  await blank(page);
  await insert(page,'sphere',0);

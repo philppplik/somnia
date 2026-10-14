@@ -768,5 +768,12 @@
  "cmd.studio3d.mesh.simplify": "Simplifier un maillage 3D : retirer des sommets en gardant sa forme, ses UV et ses normales",
  "studio3d.hist.simplify": "Simplifier {name}",
  "studio3d.mesh.simplify": "Simplifier le maillage",
- "studio3d.mesh.simplifyKeep": "Sommets à conserver (%)"
+ "studio3d.mesh.simplifyKeep": "Sommets à conserver (%)",
+ "cmd.studio3d.mesh.symmetrize": "Graver une symétrie dans les maillages 3D : garder un côté du plan miroir local, le dupliquer sur l'autre et souder la jointure",
+ "studio3d.hist.symmetrize_one": "Symétriser {name}",
+ "studio3d.hist.symmetrize_other": "Symétriser {count} objets",
+ "studio3d.mesh.symmetrize": "Symétriser",
+ "studio3d.mesh.symmetrizeSide": "Côté à garder",
+ "studio3d.mesh.symmetrizeSide.positive": "Garder le côté +",
+ "studio3d.mesh.symmetrizeSide.negative": "Garder le côté -"
 }

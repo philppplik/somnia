@@ -692,7 +692,7 @@ function RenderPng(){
 
 /** Mirror, apply scale and merge act on the ticked objects, or on the selected one. Origin to centre is the Pivot group above. */
 function MeshTools(){
- const {t}=useT();const s=useStudio3D();const [copy,setCopy]=useState(true);const [keepPct,setKeepPct]=useState(50);
+ const {t}=useT();const s=useStudio3D();const [copy,setCopy]=useState(true);const [keepPct,setKeepPct]=useState(50);const [symAxis,setSymAxis]=useState<'x'|'y'|'z'>('x');const [symSide,setSymSide]=useState<'positive'|'negative'>('positive');
  const set=s.marked.length?s.marked:s.selected!=null?[s.selected]:[];const ready=s.status==='ready'&&set.length>0;
  return <fieldset className="m-0 grid gap-2 border-0 p-0" data-testid="studio3d-meshtools"><legend className="text-xs text-ink-3">{t('studio3d.mesh.title')}</legend>
   <div className="flex flex-wrap items-center gap-1">{(['x','y','z'] as const).map(a=><Button key={a} variant="outline" disabled={!ready} onClick={()=>void executeCommand('studio3d.mesh.mirror',{axis:a,copy})}>{t('studio3d.mesh.mirror',{axis:a.toUpperCase()})}</Button>)}</div>
@@ -701,6 +701,11 @@ function MeshTools(){
    <Button variant="outline" disabled={s.status!=='ready'||set.length<2} onClick={()=>void executeCommand('studio3d.mesh.merge',{})}>{t('studio3d.mesh.merge')}</Button></div>
   <div className="flex flex-wrap items-center gap-1"><NativeInput type="number" min={5} max={95} step={5} value={keepPct} aria-label={t('studio3d.mesh.simplifyKeep')} className="w-20" onChange={e=>setKeepPct(Math.min(95,Math.max(5,Number(e.currentTarget.value)||50)))}/>
    <Button variant="outline" disabled={!ready} onClick={()=>void executeCommand('studio3d.mesh.simplify',{keep:keepPct/100})}>{t('studio3d.mesh.simplify')}</Button></div>
+  <div className="flex flex-wrap items-center gap-1"><NativeSelect className="rounded-sm border border-subtle bg-surface p-1 text-xs text-ink" value={symAxis} aria-label={t('studio3d.mirror.axis')} onChange={e=>setSymAxis(e.currentTarget.value as 'x'|'y'|'z')}>
+    {(['x','y','z'] as const).map(a=><option key={a} value={a}>{t('studio3d.sculpt.symmetry.'+a)}</option>)}</NativeSelect>
+   <NativeSelect className="rounded-sm border border-subtle bg-surface p-1 text-xs text-ink" value={symSide} aria-label={t('studio3d.mesh.symmetrizeSide')} onChange={e=>setSymSide(e.currentTarget.value as 'positive'|'negative')}>
+    {(['positive','negative'] as const).map(v=><option key={v} value={v}>{t(`studio3d.mesh.symmetrizeSide.${v}`)}</option>)}</NativeSelect>
+   <Button variant="outline" disabled={!ready} onClick={()=>void executeCommand('studio3d.mesh.symmetrize',{axis:symAxis,side:symSide})}>{t('studio3d.mesh.symmetrize')}</Button></div>
  </fieldset>;
 }
 

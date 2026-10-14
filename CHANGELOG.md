@@ -1,4 +1,5 @@
 # Unreleased: 3D Studio P0
+- 3D Studio: symmetrize - bake a mirror symmetry into meshes (keep either side of the local X/Y/Z plane, weld the seam), batch over the marked set as one undo step; shares the clip/mirror math with the mirror modifier.
 - 3D Studio: mesh simplify (decimate) - one command and a tools-panel row reduce a mesh to a chosen vertex percentage with the bundled meshopt simplifier, keeping shape, UVs and normals; one undo step restores the exact original geometry.
 - 3D Studio: history labels are localized - undo/redo steps are stored as i18n keys with params and translated at display time in all five locales, with plural forms for object counts.
 - Keyboard shortcut help: pressing ? in the viewport (or the View menu command) opens a localized overlay listing the 3D shortcuts - gizmo keys, frame, snap, measure, view slots 1-9 and Shift+1-9, orbit/zoom keys, Home and Escape - and Escape or the close button dismisses it.

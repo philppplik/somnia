@@ -768,5 +768,12 @@
  "cmd.studio3d.mesh.simplify": "Ein 3D-Mesh vereinfachen: Vertizes entfernen und dabei Form, UVs und Normalen bewahren",
  "studio3d.hist.simplify": "{name} vereinfachen",
  "studio3d.mesh.simplify": "Mesh vereinfachen",
- "studio3d.mesh.simplifyKeep": "Zu behaltende Vertizes (%)"
+ "studio3d.mesh.simplifyKeep": "Zu behaltende Vertizes (%)",
+ "cmd.studio3d.mesh.symmetrize": "Eine Symmetrie in 3D-Meshes einbrennen: eine Seite der lokalen Spiegelebene behalten, auf die andere spiegeln und die Naht verschweißen",
+ "studio3d.hist.symmetrize_one": "{name} symmetrisieren",
+ "studio3d.hist.symmetrize_other": "{count} Objekte symmetrisieren",
+ "studio3d.mesh.symmetrize": "Symmetrisieren",
+ "studio3d.mesh.symmetrizeSide": "Zu behaltende Seite",
+ "studio3d.mesh.symmetrizeSide.positive": "Positive Seite behalten",
+ "studio3d.mesh.symmetrizeSide.negative": "Negative Seite behalten"
 }
