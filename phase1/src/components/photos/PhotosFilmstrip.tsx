@@ -1,8 +1,8 @@
 import {useEffect,useRef,useState} from 'react';
 import {Star} from 'lucide-react';
-import {Flag,LayoutGrid,SkipForward} from '../../lib/icons';
+import {Flag,LayoutGrid,SkipForward,Trash2} from '../../lib/icons';
 import {useT} from '../../lib/useT';
-import {setActiveMedia,useMedia} from '../../lib/media';
+import {closeMedia,getMedia,setActiveMedia,useMedia} from '../../lib/media';
 import {developablePhotos} from '../../lib/photos/photoNav';
 import {rangeSelect,toggleSelect} from '../../lib/photos/selection';
 import {syncLookToPhotos} from '../../lib/photos/batchExport';
@@ -28,6 +28,7 @@ export function PhotosFilmstrip({active,onSurvey}:{active:string;onSurvey?:()=>v
  const [autoAdvance,setAutoAdvance]=usePanelState<boolean>('photos.autoAdvance',false);
  const [anchor,setAnchor]=usePanelState<string|null>('photos.filmstripAnchor',null);
  const [applyNote,setApplyNote]=useState<string|null>(null);
+ const [armRemove,setArmRemove]=useState(false);
  const [rawPresets]=usePanelState<unknown>('photos.presets.user',[]);
  const [applying,setApplying]=useState(false);
  const filter=String(minRating); // legacy stored numbers and 'pick'/'reject' share one select
@@ -49,6 +50,16 @@ export function PhotosFilmstrip({active,onSurvey}:{active:string;onSurvey?:()=>v
  const applyToSelection=async()=>{
   if(applying||selected.length<2||!activeSession||neutral)return;
   await applyLookToSelection(extractLook(activeSession.now));
+ };
+ const rejected=all.filter(p=>flags[p.name]==='reject');
+ const removeRejected=()=>{
+  if(!armRemove){setArmRemove(true);return;}
+  setArmRemove(false);
+  const names=new Set(rejected.map(p=>p.name));
+  for(const n of names)closeMedia(n); // sessions close through the media cleanup hook
+  setSel(sel.filter(n=>!names.has(n)));
+  const next=developablePhotos(getMedia().items)[0]; // the library is already updated
+  setActiveMedia(next?next.name:null);
  };
  if(all.length<2)return null;
  return <div ref={strip} className="photos-filmstrip flex items-center gap-1.5 overflow-x-auto border-t border-subtle px-3 py-1.5" role="navigation" aria-label={t('photos.filmstrip.aria')} data-testid="photos-filmstrip">
@@ -72,6 +83,7 @@ export function PhotosFilmstrip({active,onSurvey}:{active:string;onSurvey?:()=>v
    {userPresets.map(p=><option key={p.id} value={`user:${p.id}`}>{p.name}</option>)}
   </NativeSelect>}
   {selected.length>1&&onSurvey&&<Button variant="outline" size="icon" aria-label={t('photos.filmstrip.survey')} title={t('photos.filmstrip.survey')} onClick={onSurvey} className="h-7 w-7 shrink-0" data-testid="photos-filmstrip-survey"><LayoutGrid size={12}/></Button>}
+  {rejected.length>0&&<Button variant={armRemove?'primary':'outline'} size="compact" onClick={removeRejected} className="shrink-0" data-testid="photos-filmstrip-remove-rejects"><Trash2 size={12}/>{armRemove?t('photos.filmstrip.removeRejectsConfirm',{count:rejected.length}):t('photos.filmstrip.removeRejects',{count:rejected.length})}</Button>}
   <Button variant="outline" size="icon" aria-pressed={autoAdvance} aria-label={t('photos.filmstrip.autoAdvance')} title={t('photos.filmstrip.autoAdvance')} onClick={()=>setAutoAdvance(!autoAdvance)} className="h-7 w-7 shrink-0" data-testid="photos-filmstrip-autoadvance"><SkipForward size={12}/></Button>
   {applyNote&&<span className="shrink-0 text-ink-3" data-testid="photos-filmstrip-apply-note">{applyNote}</span>}
   <RatingStars name={active} prefix="photos-filmstrip"/>

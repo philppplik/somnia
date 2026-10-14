@@ -153,3 +153,18 @@ Coverage: `photos-filmstrip.spec.ts` gains a light/dark leg that opens
 the survey on a two-photo selection, asserts the count and that the
 unselected photo is absent, pixel-proofs both cell canvases, picks one
 (active switches, overlay closes), reopens and closes with Escape.
+
+## Remove rejected (P87)
+
+The culling loop closes: once any photo carries a reject flag, a trash
+button in the filmstrip offers to remove all rejected photos from the
+library. The first click only arms it (the label switches to a confirm
+question); the second click runs `closeMedia` per photo, which revokes
+the object URLs and closes the photo sessions through the media cleanup
+hook, drops them from the selection, and activates the first remaining
+developable photo (or none).
+
+Coverage: `photos-filmstrip.spec.ts` gains a light/dark leg that
+rejects the middle photo, arms the button (photo still there,
+confirm-state screenshot), executes (thumbnail gone, position readout
+"/ 2", button disappears with no rejects left).

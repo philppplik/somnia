@@ -133,5 +133,7 @@
  "photos.filmstrip.autoAdvance": "Auto-Weiterschalten nach Bewertung",
  "photos.filmstrip.survey": "Auswahl vergleichen",
  "photos.survey.title": "{count} Fotos im Vergleich",
- "photos.survey.close": "Vergleich schließen"
+ "photos.survey.close": "Vergleich schließen",
+ "photos.filmstrip.removeRejects": "{count} Rejects entfernen",
+ "photos.filmstrip.removeRejectsConfirm": "Wirklich {count} entfernen?"
 }

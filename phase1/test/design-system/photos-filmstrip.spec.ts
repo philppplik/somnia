@@ -291,3 +291,24 @@ test('survey: selected photos render side by side, clicking picks one (light and
   await expect(page.getByTestId('photos-survey')).toHaveCount(0);
  }
 });
+test('remove rejected: two-click confirm drops rejects from the library (light and dark)',async({page})=>{
+ for(const theme of['light','dark']){
+  await page.goto('/test/design-system/?view=photos-filmstrip');
+  await page.evaluate(t=>document.documentElement.setAttribute('data-theme',t),theme);
+  await expect(page.getByTestId('photos-workspace')).toBeVisible();
+  await expect(page.getByTestId('photos-filmstrip-item-strip-3.png')).toBeVisible();
+  await page.getByTestId('photos-filmstrip-item-strip-2.png').click();
+  await page.keyboard.press('x'); // reject the middle photo
+  const remove=page.getByTestId('photos-filmstrip-remove-rejects');
+  await expect(remove).toBeVisible();
+  await expect(remove).toHaveText(/1/);
+  await remove.click(); // first click only arms
+  await expect(page.getByTestId('photos-filmstrip-item-strip-2.png')).toBeVisible();
+  await page.screenshot({path:`test-results/ds-photos-remove-rejects-${theme}.png`,fullPage:true});
+  await remove.click(); // second click executes
+  await expect(page.getByTestId('photos-filmstrip-item-strip-2.png')).toHaveCount(0);
+  await expect(page.getByTestId('photos-filmstrip-item-strip-1.png')).toBeVisible(); // the rest stays
+  await expect(page.getByTestId('photos-position')).toHaveText(/\/ 2/); // library shrank
+  await expect(remove).toHaveCount(0); // no rejects left: button gone
+ }
+});
