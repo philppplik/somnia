@@ -1,3 +1,4 @@
+import {interfaceTreeOrder,interfaceTreeTarget} from '../../lib/interface/accessibility';
 import {InterfaceLibrary} from './InterfaceLibrary';
 import {StudioStatus} from '../studios/StudioStatus';
 import {InterfaceInteractions} from './InterfacePrototype';
@@ -24,11 +25,12 @@ function Guard({children}:{children:(run:(f:()=>void)=>void)=>ReactNode}){
  const [error,setError]=useState('');return <>{children(f=>{try{f();setError('');}catch(e){setError(e instanceof Error?e.message:'Invalid edit.');}})}{error&&<StudioStatus tone="error" live="assertive" className="block text-xs text-ink">{error}</StudioStatus>}</>;
 }
 export function InterfaceLayers(){
- const s=useInterfaceState();const {t}=useT();const doc=s.document;const page=doc?.pages.find(p=>p.id===s.pageId);
+ const [treeFocus,setTreeFocus]=useState<string|null>(null);const s=useInterfaceState();const {t}=useT();const doc=s.document;const page=doc?.pages.find(p=>p.id===s.pageId);
  if(!doc||!page)return <StudioStatus live="off" className="block p-3 text-xs text-ink-2">{t('interface.empty')}</StudioStatus>;
- const row=(id:string,depth:number):ReactNode=>{const n=doc.nodes.find(n=>n.id===id)!;return <li key={id}>
-  <button className="w-full rounded px-2 py-1.5 text-left text-xs focus-visible:outline-accent" style={{paddingLeft:8+depth*14,background:s.selectedIds.includes(id)?'var(--bg-hover)':undefined,opacity:n.hidden?0.55:1}} aria-pressed={s.selectedIds.includes(id)} onClick={e=>interfaceSession.select(id,e.shiftKey||e.ctrlKey||e.metaKey)}>{n.name}{n.locked?' 🔒':''}</button>
-  {n.children.length>0&&<ul className="m-0 list-none p-0">{n.children.map(child=>row(child,depth+1))}</ul>}
+ const order=interfaceTreeOrder(doc,page.id),active=treeFocus&&order.includes(treeFocus)?treeFocus:s.selection&&order.includes(s.selection)?s.selection:order[0];
+ const row=(id:string,depth:number):ReactNode=>{const n=doc.nodes.find(n=>n.id===id)!;return <li key={id} role="none">
+  <button role="treeitem" data-layer-id={id} tabIndex={id===active?0:-1} aria-level={depth+1} aria-expanded={n.children.length?true:undefined} aria-selected={s.selectedIds.includes(id)} aria-label={`${n.name} · ${t(`interface.${n.kind}`)}${n.locked?` · ${t('interface.locked')}`:''}${n.hidden?` · ${t('interface.hidden')}`:''}`} onFocus={()=>setTreeFocus(id)} onKeyDown={e=>{const target=interfaceTreeTarget(doc,page.id,id,e.key);if(target){e.preventDefault();setTreeFocus(target);Array.from(e.currentTarget.closest('[role=tree]')?.querySelectorAll<HTMLElement>('[data-layer-id]')??[]).find(el=>el.dataset.layerId===target)?.focus();}else if(e.key==='Enter'||e.key===' '){e.preventDefault();interfaceSession.select(id,e.shiftKey||e.ctrlKey||e.metaKey);}}} className="w-full rounded px-2 py-1.5 text-left text-xs focus-visible:outline-accent" style={{paddingLeft:8+depth*14,background:s.selectedIds.includes(id)?'var(--bg-hover)':undefined,opacity:n.hidden?0.55:1}} onClick={e=>interfaceSession.select(id,e.shiftKey||e.ctrlKey||e.metaKey)}>{n.name}{n.locked?' 🔒':''}</button>
+  {n.children.length>0&&<ul role="group" className="m-0 list-none p-0">{n.children.map(child=>row(child,depth+1))}</ul>}
  </li>;};
  return <Guard>{run=><div className="flex flex-col gap-3 p-3">
   <label className="text-xs">{t('interface.page')}<select className="mt-1 w-full rounded border border-subtle bg-panel p-2" value={s.pageId??''} onChange={e=>interfaceSession.page(e.target.value)}>{doc.pages.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}</select></label>
@@ -39,7 +41,7 @@ export function InterfaceLayers(){
   {(doc.components??[]).length>0&&<details open className="border-t border-subtle pt-2"><summary className="mb-2 text-xs">{t('interface.component')}</summary><div className="flex flex-col gap-1">{doc.components!.flatMap(c=>c.variants.map(v=><Button key={v.id} size="compact" variant="outline" onClick={()=>run(()=>{let id='';interfaceSession.transact(d=>{id=instantiateComponent(d,c.id,v.id,page.id);});interfaceSession.select(id);})}>{c.name} / {v.name}</Button>))}</div></details>}
   <InterfaceLibrary run={run}/>
   <InterfaceResources run={run}/>
-  <ul aria-label={t('interface.layers')} className="m-0 list-none p-0">{page.children.map(id=>row(id,0))}</ul>
+  <ul role="tree" aria-multiselectable="true" aria-label={t('interface.layers')} className="m-0 list-none p-0">{page.children.map(id=>row(id,0))}</ul>
  </div>}</Guard>;
 }
 export function InterfaceProperties(){

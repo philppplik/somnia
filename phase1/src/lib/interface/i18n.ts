@@ -1,3 +1,4 @@
+import {INTERFACE_P9_CATALOGUES} from './p9I18n';
 import {INTERFACE_LIBRARY_CATALOGUES} from './libraryI18n';
 import {INTERFACE_PROTOTYPE_CATALOGUES} from './prototypeI18n';
 import {INTERFACE_DEPTH_CATALOGUES} from './depthI18n';
@@ -66,3 +67,4 @@ for(const [locale,extra] of Object.entries(INTERFACE_PROTOTYPE_CATALOGUES))Objec
 for(const [locale,extra] of Object.entries(INTERFACE_DEPTH_CATALOGUES))Object.assign(INTERFACE_CATALOGUES[locale as keyof typeof INTERFACE_CATALOGUES],extra);
 
 for(const [locale,extra] of Object.entries(INTERFACE_LIBRARY_CATALOGUES))Object.assign(INTERFACE_CATALOGUES[locale as keyof typeof INTERFACE_CATALOGUES],extra);
+for(const [locale,extra] of Object.entries(INTERFACE_P9_CATALOGUES))Object.assign(INTERFACE_CATALOGUES[locale as keyof typeof INTERFACE_CATALOGUES],extra);

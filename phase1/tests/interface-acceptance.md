@@ -16,3 +16,5 @@ These are executable specifications, not a claim that CI has passed. Model/unit 
 P7 adds named variant selection and frame mode/detach preservation. Pure tests cover slot overrides across property switches, mode inheritance/aliases/styles/SVG, invalid modes/combinations and smart sibling snapping. Rulers are scene-coordinate chrome, not a source document field.
 
 P8 adds library snapshot download, local overlay open/close/Escape and unchanged recovery. Pure tests cover wrapped flow-to-absolute rebase and pin/scale resize preview-versus-commit.
+
+P9 adds `Interface P9 tree keyboard resize undo and frozen 3x PNG/snippets` (CI-only application acceptance). Prior nine cases retain assertions, with locators migrated from list/buttons to actual tree/treeitems and named canvas groups. Owned pure tests cover 3x budgets, pre-abort/no allocation, inert escaping and layout snippets, roving parent/child/Home/End order and shared keyboard resize/undo. Isolated real-component Chromium verifies 3x encoded PNG, delayed encoder cancellation without download, source recovery unchanged, keyboard resize/undo and tree focus; not app E2E. No screenreader certification claimed.
