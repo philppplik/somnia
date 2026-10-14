@@ -43,3 +43,26 @@ export function templateLayers(t:LayerTemplate,ids:readonly string[],at:number,e
 }
 /** Single-layer form kept for callers that insert one layer. */
 export const templateLayer=(t:LayerTemplate,id:string,at:number,end:number):Layer=>templateLayers({...t,extra:undefined},[id],at,end)[0];
+/** Template files: `{format,version,items:[{name,layer,extra?}]}`. Ids are not exported; importing gives every template a fresh id. */
+export const TEMPLATE_FILE_FORMAT='somnia-layer-templates';
+export const TEMPLATE_FILE_LIMIT=300000;
+export const exportTemplatesJson=(items:readonly LayerTemplate[]):string=>JSON.stringify({format:TEMPLATE_FILE_FORMAT,version:1,items:items.map(t=>({name:t.name,layer:t.layer,...(t.extra?.length?{extra:t.extra}:{})}))},null,1);
+/** Reads a template file. Shape checks only; the layers themselves are validated like any layer when they are merged into a document. */
+export function parseTemplatesJson(text:string):{name:string;layer:Layer;extra?:Layer[]}[]{
+ if(text.length>TEMPLATE_FILE_LIMIT)throw Error('This template file is too large.');
+ let v:unknown;try{v=JSON.parse(text);}catch{throw Error('This is not a template file (invalid JSON).');}
+ if(!isObj(v)||v.format!==TEMPLATE_FILE_FORMAT||v.version!==1||!Array.isArray(v.items))throw Error('This is not a Somnia template file.');
+ if(!v.items.length||v.items.length>MAX_LAYER_TEMPLATES)throw Error(`A template file holds 1 to ${MAX_LAYER_TEMPLATES} templates.`);
+ return v.items.map((x:unknown)=>{
+  if(!isObj(x)||typeof x.name!=='string'||!x.name.trim()||!isObj(x.layer)||(x.extra!==undefined&&!Array.isArray(x.extra)))throw Error('A template in the file is malformed.');
+  if(Array.isArray(x.extra)&&(x.extra.length+1>MAX_TEMPLATE_LAYERS||x.extra.some(e=>!isObj(e))))throw Error('A template in the file is malformed.');
+  return {name:x.name.trim().slice(0,40),layer:x.layer as unknown as Layer,...(Array.isArray(x.extra)&&x.extra.length?{extra:x.extra as unknown as Layer[]}:{})};
+ });
+}
+/** The edit that adds imported templates: fresh ids, names made unique with " 2", " 3"... The whole import is refused (nothing added) when it would exceed the cap or any template is invalid. */
+export function mergeTemplatesEdit(doc:AnimationDocument,incoming:readonly {name:string;layer:Layer;extra?:readonly Layer[]}[],newId:()=>string):{type:'layerTemplates.set';items:LayerTemplate[]}{
+ const have=layerTemplates(doc);if(have.length+incoming.length>MAX_LAYER_TEMPLATES)throw Error(`That would pass the limit of ${MAX_LAYER_TEMPLATES} saved templates (${have.length} saved, ${incoming.length} in the file).`);
+ const items=[...have];
+ for(const x of incoming){let nm=x.name.slice(0,40),n=2;while(items.some(y=>y.name===nm))nm=`${x.name.slice(0,36)} ${n++}`;items.push({id:newId(),name:nm,layer:x.layer,...(x.extra?.length?{extra:x.extra}:{})});}
+ return {type:'layerTemplates.set',items};
+}

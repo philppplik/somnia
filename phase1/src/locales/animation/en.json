@@ -734,5 +734,11 @@
  "cmd.animation.export.queue.clear": "Clear finished render queue jobs",
  "animation.template.rename": "Rename",
  "animation.template.renameLabel": "New template name",
- "cmd.animation.template.rename": "Rename saved template"
+ "cmd.animation.template.rename": "Rename saved template",
+ "animation.template.exportOne": "Export template",
+ "animation.template.exportAll": "Export all templates",
+ "animation.template.import": "Import templates",
+ "animation.template.fileTooLarge": "This template file is too large (300 KB at most).",
+ "cmd.animation.template.export": "Export saved templates",
+ "cmd.animation.template.import": "Import templates from a file"
 }

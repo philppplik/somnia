@@ -2067,3 +2067,23 @@ test('P90: multi-layer templates keep parent links and timing; rename; old templ
  ren.run({id:'tp9',name:'  Duo '},{origin:'ui'} as never);assert.equal(animationSession().document!.layerTemplates!.items[0].name,'Duo');assert.equal(animationSession().document!.revision,rev+1);
  assert.throws(()=>ren.run({id:'nope',name:'x'},{origin:'ui'} as never),/no longer exists/);
 });
+import {exportTemplatesJson,parseTemplatesJson,mergeTemplatesEdit,TEMPLATE_FILE_FORMAT} from './layerTemplates';
+test('P91: template files: round trip, fresh ids, unique names, cap, atomic refusal',()=>{
+ let d=applyEdits(createDocument(),[{type:'layer.add',kind:'shape',id:'c',over:{inT:1000,outT:9000,source:{shape:'rect',width:100,height:50,color:'#ff0000'}}},{type:'layer.add',kind:'solid',id:'b',over:{source:{color:'#00ff00',width:200,height:100}}}]);
+ d=applyEdit(d,{type:'layer.parent',layer:'c',parent:'b'});
+ const multi=buildTemplate(d,['c','b'],'Pair','t1'),single=buildTemplate(d,'b','Solo','t2');
+ const json=exportTemplatesJson([multi,single]);const file=JSON.parse(json);assert.equal(file.format,TEMPLATE_FILE_FORMAT);assert.equal(file.items.length,2);assert.equal(file.items[0].id,undefined);assert.equal(file.items[1].extra,undefined);
+ const inc=parseTemplatesJson(json);let n=0;
+ const other=createDocument();const e=applyEdit(other,mergeTemplatesEdit(other,inc,()=>'tpl'+(++n)) as never);
+ assert.deepEqual(validateDocument(e),[]);assert.deepEqual(e.layerTemplates!.items.map(x=>x.id),['tpl1','tpl2']);assert.equal(e.layerTemplates!.items[0].extra!.length,1);
+ const again=applyEdit(e,mergeTemplatesEdit(e,inc,()=>'tpl'+(++n)) as never);assert.deepEqual(again.layerTemplates!.items.map(x=>x.name),['Pair','Solo','Pair 2','Solo 2']);assert.deepEqual(validateDocument(again),[]);
+ assert.throws(()=>parseTemplatesJson('nope'),/invalid JSON/);assert.throws(()=>parseTemplatesJson('{"format":"x","version":1,"items":[]}'),/not a Somnia/);
+ assert.throws(()=>parseTemplatesJson(JSON.stringify({format:TEMPLATE_FILE_FORMAT,version:1,items:[]})),/1 to 20/);assert.throws(()=>parseTemplatesJson(JSON.stringify({format:TEMPLATE_FILE_FORMAT,version:1,items:[{name:'',layer:{}}]})),/malformed/);
+ assert.throws(()=>parseTemplatesJson('x'.repeat(300001)),/too large/);
+ const many=Array.from({length:20},(_,i)=>({name:'n'+i,layer:inc[1].layer}));assert.throws(()=>mergeTemplatesEdit(e,many,()=>'z'),/limit of 20/);
+ const evil=[{name:'Bad',layer:{...inc[1].layer,kind:'audio'} as never}];assert.throws(()=>applyEdit(other,mergeTemplatesEdit(other,evil,()=>'q') as never),/only self-contained/);
+ const parent=[{name:'Bad2',layer:{...inc[1].layer,parent:'ghost'} as never}];assert.throws(()=>applyEdit(other,mergeTemplatesEdit(other,parent,()=>'q') as never),/self-contained/);
+ animationSession().open(other);const rev=animationSession().document!.revision;const imp=animationCommandSpecs().find(x=>x.id==='animation.template.import')!;
+ assert.equal(imp.run({json},{origin:'ui'} as never),2);assert.equal(animationSession().document!.revision,rev+1);assert.throws(()=>imp.run({json:'{"a":1}'},{origin:'ui'} as never),/not a Somnia/);assert.equal(animationSession().document!.revision,rev+1,'refused import leaves the document alone');
+ assert.ok(animationCommandSpecs().some(x=>x.id==='animation.template.export'));
+});

@@ -1397,6 +1397,30 @@
       "hasEnabled": true
     },
     {
+      "id": "animation.template.export",
+      "title": "Export saved templates",
+      "category": "Insert",
+      "source": "animation",
+      "keywords": [
+        "animation",
+        "export",
+        "template"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "animation.template.import",
+      "title": "Import templates from a file",
+      "category": "Insert",
+      "source": "animation",
+      "keywords": [
+        "animation",
+        "import",
+        "template"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "animation.template.rename",
       "title": "Rename saved template",
       "category": "Insert",

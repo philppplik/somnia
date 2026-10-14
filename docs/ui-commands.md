@@ -16,7 +16,7 @@ included; the `source` column names the owner. Dynamic sources that stay outside
 
 Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, fr, pt-BR); the gate enforces it.
 
-464 commands. Categories: Edit, Help, Insert, Project, Tools, View.
+466 commands. Categories: Edit, Help, Insert, Project, Tools, View.
 
 | id | title | category | source | shortcut |
 | --- | --- | --- | --- | --- |
@@ -136,6 +136,8 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `animation.styleKeys.nudge` | Move the selected style-lane keyframes by frames | Edit | animation |  |
 | `animation.template.add` | Add a starter template | Insert | animation |  |
 | `animation.template.delete` | Delete a saved template | Insert | animation |  |
+| `animation.template.export` | Export saved templates | Insert | animation |  |
+| `animation.template.import` | Import templates from a file | Insert | animation |  |
 | `animation.template.rename` | Rename saved template | Insert | animation |  |
 | `animation.template.save` | Save the selected layer as a template | Insert | animation |  |
 | `animation.text.animator` | Edit text animator | Edit | animation |  |

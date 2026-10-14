@@ -734,5 +734,11 @@
  "cmd.animation.export.queue.clear": "Quitar trabajos terminados",
  "animation.template.rename": "Renombrar",
  "animation.template.renameLabel": "Nuevo nombre de la plantilla",
- "cmd.animation.template.rename": "Renombrar plantilla guardada"
+ "cmd.animation.template.rename": "Renombrar plantilla guardada",
+ "animation.template.exportOne": "Exportar plantilla",
+ "animation.template.exportAll": "Exportar todas las plantillas",
+ "animation.template.import": "Importar plantillas",
+ "animation.template.fileTooLarge": "El archivo de plantillas es demasiado grande (300 KB como máximo).",
+ "cmd.animation.template.export": "Exportar plantillas guardadas",
+ "cmd.animation.template.import": "Importar plantillas desde un archivo"
 }

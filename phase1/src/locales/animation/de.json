@@ -734,5 +734,11 @@
  "cmd.animation.export.queue.clear": "Fertige Aufträge entfernen",
  "animation.template.rename": "Umbenennen",
  "animation.template.renameLabel": "Neuer Vorlagenname",
- "cmd.animation.template.rename": "Gespeicherte Vorlage umbenennen"
+ "cmd.animation.template.rename": "Gespeicherte Vorlage umbenennen",
+ "animation.template.exportOne": "Vorlage exportieren",
+ "animation.template.exportAll": "Alle Vorlagen exportieren",
+ "animation.template.import": "Vorlagen importieren",
+ "animation.template.fileTooLarge": "Diese Vorlagendatei ist zu groß (höchstens 300 KB).",
+ "cmd.animation.template.export": "Gespeicherte Vorlagen exportieren",
+ "cmd.animation.template.import": "Vorlagen aus Datei importieren"
 }

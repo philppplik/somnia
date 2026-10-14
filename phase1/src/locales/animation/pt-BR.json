@@ -734,5 +734,11 @@
  "cmd.animation.export.queue.clear": "Limpar tarefas concluídas",
  "animation.template.rename": "Renomear",
  "animation.template.renameLabel": "Novo nome do modelo",
- "cmd.animation.template.rename": "Renomear modelo salvo"
+ "cmd.animation.template.rename": "Renomear modelo salvo",
+ "animation.template.exportOne": "Exportar modelo",
+ "animation.template.exportAll": "Exportar todos os modelos",
+ "animation.template.import": "Importar modelos",
+ "animation.template.fileTooLarge": "Este arquivo de modelos é grande demais (máximo 300 KB).",
+ "cmd.animation.template.export": "Exportar modelos salvos",
+ "cmd.animation.template.import": "Importar modelos de um arquivo"
 }

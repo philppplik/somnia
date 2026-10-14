@@ -734,5 +734,11 @@
  "cmd.animation.export.queue.clear": "Retirer les tâches terminées",
  "animation.template.rename": "Renommer",
  "animation.template.renameLabel": "Nouveau nom du modèle",
- "cmd.animation.template.rename": "Renommer le modèle enregistré"
+ "cmd.animation.template.rename": "Renommer le modèle enregistré",
+ "animation.template.exportOne": "Exporter le modèle",
+ "animation.template.exportAll": "Exporter tous les modèles",
+ "animation.template.import": "Importer des modèles",
+ "animation.template.fileTooLarge": "Ce fichier de modèles est trop volumineux (300 Ko maximum).",
+ "cmd.animation.template.export": "Exporter les modèles enregistrés",
+ "cmd.animation.template.import": "Importer des modèles depuis un fichier"
 }
