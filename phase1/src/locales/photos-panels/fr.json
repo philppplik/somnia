@@ -95,5 +95,20 @@
  "photos.panel.curves": "Courbes",
  "photos.p.curves.reset": "Réinitialiser la courbe",
  "photos.p.curves.hint": "Cliquez sur la courbe pour ajouter un point, faites-le glisser pour la modeler, tirez un point sous la zone pour le supprimer.",
- "photos.p.curves.aria": "Courbe de tonalité, {count} points."
+ "photos.p.curves.aria": "Courbe de tonalité, {count} points.",
+ "photos.panel.hsl": "Mélangeur de couleurs",
+ "photos.p.hsl.hue": "Teinte",
+ "photos.p.hsl.sat": "Saturation",
+ "photos.p.hsl.lum": "Luminance",
+ "photos.p.hsl.bands": "Bandes de teinte",
+ "photos.p.hsl.resetBand": "Réinitialiser la bande {band}",
+ "photos.p.hsl.hint": "Les ajustements se fondent en douceur dans les bandes voisines.",
+ "photos.p.hsl.band.red": "Rouge",
+ "photos.p.hsl.band.orange": "Orange",
+ "photos.p.hsl.band.yellow": "Jaune",
+ "photos.p.hsl.band.green": "Vert",
+ "photos.p.hsl.band.aqua": "Cyan",
+ "photos.p.hsl.band.blue": "Bleu",
+ "photos.p.hsl.band.purple": "Violet",
+ "photos.p.hsl.band.magenta": "Magenta"
 }

@@ -95,5 +95,20 @@
  "photos.panel.curves": "Kurven",
  "photos.p.curves.reset": "Kurve zurücksetzen",
  "photos.p.curves.hint": "Klicken fügt einen Punkt hinzu, Ziehen formt die Kurve, ein Punkt unter die Box gezogen wird gelöscht.",
- "photos.p.curves.aria": "Tonwertkurve, {count} Punkte."
+ "photos.p.curves.aria": "Tonwertkurve, {count} Punkte.",
+ "photos.panel.hsl": "Farbmischer",
+ "photos.p.hsl.hue": "Farbton",
+ "photos.p.hsl.sat": "Sättigung",
+ "photos.p.hsl.lum": "Luminanz",
+ "photos.p.hsl.bands": "Farbbänder",
+ "photos.p.hsl.resetBand": "Band {band} zurücksetzen",
+ "photos.p.hsl.hint": "Anpassungen laufen weich in die Nachbarbänder aus.",
+ "photos.p.hsl.band.red": "Rot",
+ "photos.p.hsl.band.orange": "Orange",
+ "photos.p.hsl.band.yellow": "Gelb",
+ "photos.p.hsl.band.green": "Grün",
+ "photos.p.hsl.band.aqua": "Aqua",
+ "photos.p.hsl.band.blue": "Blau",
+ "photos.p.hsl.band.purple": "Lila",
+ "photos.p.hsl.band.magenta": "Magenta"
 }

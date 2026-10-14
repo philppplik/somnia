@@ -95,5 +95,20 @@
  "photos.panel.curves": "Curves",
  "photos.p.curves.reset": "Reset curve",
  "photos.p.curves.hint": "Click the curve to add a point, drag to shape it, pull a point below the box to delete it.",
- "photos.p.curves.aria": "Tone curve, {count} points."
+ "photos.p.curves.aria": "Tone curve, {count} points.",
+ "photos.panel.hsl": "Color mixer",
+ "photos.p.hsl.hue": "Hue",
+ "photos.p.hsl.sat": "Saturation",
+ "photos.p.hsl.lum": "Luminance",
+ "photos.p.hsl.bands": "Hue bands",
+ "photos.p.hsl.resetBand": "Reset the {band} band",
+ "photos.p.hsl.hint": "Adjustments blend softly into the neighboring bands.",
+ "photos.p.hsl.band.red": "Red",
+ "photos.p.hsl.band.orange": "Orange",
+ "photos.p.hsl.band.yellow": "Yellow",
+ "photos.p.hsl.band.green": "Green",
+ "photos.p.hsl.band.aqua": "Aqua",
+ "photos.p.hsl.band.blue": "Blue",
+ "photos.p.hsl.band.purple": "Purple",
+ "photos.p.hsl.band.magenta": "Magenta"
 }

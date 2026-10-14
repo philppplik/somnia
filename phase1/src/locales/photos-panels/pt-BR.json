@@ -95,5 +95,20 @@
  "photos.panel.curves": "Curvas",
  "photos.p.curves.reset": "Redefinir curva",
  "photos.p.curves.hint": "Clique na curva para adicionar um ponto, arraste para moldá-la e puxe um ponto para baixo da caixa para excluí-lo.",
- "photos.p.curves.aria": "Curva de tons, {count} pontos."
+ "photos.p.curves.aria": "Curva de tons, {count} pontos.",
+ "photos.panel.hsl": "Misturador de cores",
+ "photos.p.hsl.hue": "Matiz",
+ "photos.p.hsl.sat": "Saturação",
+ "photos.p.hsl.lum": "Luminância",
+ "photos.p.hsl.bands": "Faixas de matiz",
+ "photos.p.hsl.resetBand": "Redefinir a faixa {band}",
+ "photos.p.hsl.hint": "Os ajustes se misturam suavemente nas faixas vizinhas.",
+ "photos.p.hsl.band.red": "Vermelho",
+ "photos.p.hsl.band.orange": "Laranja",
+ "photos.p.hsl.band.yellow": "Amarelo",
+ "photos.p.hsl.band.green": "Verde",
+ "photos.p.hsl.band.aqua": "Ciano",
+ "photos.p.hsl.band.blue": "Azul",
+ "photos.p.hsl.band.purple": "Roxo",
+ "photos.p.hsl.band.magenta": "Magenta"
 }

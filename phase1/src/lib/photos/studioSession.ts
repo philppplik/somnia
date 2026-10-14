@@ -8,6 +8,7 @@ import {isNeutralPhoto,neutralPhotoSettings,photoSignature,sanitizePhotoSettings
 import {applySpots,spotSignature,type HealSpot} from './healSpots';
 import {applyLocalAdjust,dabSignature,applyGradFilters,gradSignature,applyRadialFilters,radSignature} from './localAdjust';
 import {applyCurves,curvesNeutral,curvesSignature,emptyCurves} from './curves';
+import {applyHsl,hslNeutral,hslSignature,neutralHsl} from './hslMixer';
 /** One decoded preview frame straight from the engine (RGBA bytes). */
 export interface PhotoFrame {bytes:ArrayBuffer;width:number;height:number}
 export type PhotoStatus='loading'|'ready'|'processing'|'error';
@@ -40,15 +41,15 @@ const listeners=new Set<()=>void>();
 let stopMediaSync:(()=>void)|undefined;
 /** Identity of the source the singleton engine currently holds (sessions share one engine; last load wins). */
 let loadedKey:string|null=null;
-const sourceKey=(name:string,s:Pick<PhotoSettings,'spots'|'dabs'|'localEV'|'localSat'|'grads'|'gradEV'|'gradSat'|'rads'|'curves'>)=>`${name}|${spotSignature(s.spots)}|${dabSignature(s.dabs)}|${s.localEV}|${s.localSat}|${gradSignature(s.grads)}|${s.gradEV}|${s.gradSat}|${radSignature(s.rads)}|${curvesSignature(s.curves)}`;
+const sourceKey=(name:string,s:Pick<PhotoSettings,'spots'|'dabs'|'localEV'|'localSat'|'grads'|'gradEV'|'gradSat'|'rads'|'curves'|'hsl'>)=>`${name}|${spotSignature(s.spots)}|${dabSignature(s.dabs)}|${s.localEV}|${s.localSat}|${gradSignature(s.grads)}|${s.gradEV}|${s.gradSat}|${radSignature(s.rads)}|${curvesSignature(s.curves)}|${hslSignature(s.hsl)}`;
 /** Decodes the untouched source, stamps every spot and re-encodes PNG, so the engine previews and exports the healed image. */
-async function healSource(bytes:ArrayBuffer,s:Pick<PhotoSettings,'spots'|'dabs'|'localEV'|'localSat'|'grads'|'gradEV'|'gradSat'|'rads'|'curves'>):Promise<ArrayBuffer>{
+async function healSource(bytes:ArrayBuffer,s:Pick<PhotoSettings,'spots'|'dabs'|'localEV'|'localSat'|'grads'|'gradEV'|'gradSat'|'rads'|'curves'|'hsl'>):Promise<ArrayBuffer>{
  const bmp=await createImageBitmap(new Blob([bytes]));
  const c=document.createElement('canvas');c.width=bmp.width;c.height=bmp.height;
  const ctx=c.getContext('2d');if(!ctx)throw Error('No 2D context.');
  ctx.drawImage(bmp,0,0);bmp.close();
  const img=ctx.getImageData(0,0,c.width,c.height);
- const healed=applyCurves(applyRadialFilters(applyGradFilters(applyLocalAdjust(applySpots({bytes:img.data.buffer as ArrayBuffer,width:c.width,height:c.height},s.spots),s.dabs,s.localEV,s.localSat),s.grads,s.gradEV,s.gradSat),s.rads,s.gradEV,s.gradSat),s.curves);
+ const healed=applyHsl(applyCurves(applyRadialFilters(applyGradFilters(applyLocalAdjust(applySpots({bytes:img.data.buffer as ArrayBuffer,width:c.width,height:c.height},s.spots),s.dabs,s.localEV,s.localSat),s.grads,s.gradEV,s.gradSat),s.rads,s.gradEV,s.gradSat),s.curves),s.hsl);
  img.data.set(new Uint8ClampedArray(healed.bytes));ctx.putImageData(img,0,0);
  const blob=await new Promise<Blob>((res,rej)=>c.toBlob(b=>b?res(b):rej(Error('Could not re-encode the healed source.')),'image/png'));
  return blob.arrayBuffer();
@@ -81,7 +82,7 @@ export async function openPhoto(item:{name:string;url:string;mime:string}):Promi
   if(bytes.byteLength===0||bytes.byteLength>PHOTO_INPUT.maxBytes)throw Error(t('photos.error.size',{max:PHOTO_INPUT.maxBytes/1_000_000}));
   sources.set(item.name,bytes);
   const e=getEngine();
-  const loaded=await e.load(bytes.slice(0));loadedKey=sourceKey(item.name,{spots:[],dabs:[],localEV:0,localSat:0,grads:[],gradEV:0,gradSat:0,rads:[],curves:emptyCurves()});
+  const loaded=await e.load(bytes.slice(0));loadedKey=sourceKey(item.name,{spots:[],dabs:[],localEV:0,localSat:0,grads:[],gradEV:0,gradSat:0,rads:[],curves:emptyCurves(),hsl:neutralHsl()});
   if(!sessions.has(item.name))return;
   const original=frameOf(await e.renderPhoto(neutralPhotoSettings));
   const session=sessions.get(item.name);if(!session)return;
@@ -93,11 +94,11 @@ export async function openPhoto(item:{name:string;url:string;mime:string}):Promi
 /** The engine is a singleton holding one loaded source: reload when this session's source is not the loaded one. */
 async function ensureEngineSource(name:string):Promise<void>{
  const now=sessions.get(name)?.now;
- const prep={spots:now?.spots??[],dabs:now?.dabs??[],localEV:now?.localEV??0,localSat:now?.localSat??0,grads:now?.grads??[],gradEV:now?.gradEV??0,gradSat:now?.gradSat??0,rads:now?.rads??[],curves:now?.curves??emptyCurves()};
+ const prep={spots:now?.spots??[],dabs:now?.dabs??[],localEV:now?.localEV??0,localSat:now?.localSat??0,grads:now?.grads??[],gradEV:now?.gradEV??0,gradSat:now?.gradSat??0,rads:now?.rads??[],curves:now?.curves??emptyCurves(),hsl:now?.hsl??neutralHsl()};
  const key=sourceKey(name,prep);
  if(loadedKey===key)return;
  let bytes=sources.get(name);if(!bytes)return;
- if(prep.spots.length||prep.dabs.length||prep.grads.length||prep.rads.length||!curvesNeutral(prep.curves))bytes=await healSource(bytes,prep);
+ if(prep.spots.length||prep.dabs.length||prep.grads.length||prep.rads.length||!curvesNeutral(prep.curves)||!hslNeutral(prep.hsl))bytes=await healSource(bytes,prep);
  const e=getEngine();await e.load(bytes.slice(0));loadedKey=key;
 }
 function schedule(name:string,delay=DEBOUNCE_MS){clearTimeout(timers.get(name));timers.set(name,setTimeout(()=>{timers.delete(name);void render(name);},delay));}

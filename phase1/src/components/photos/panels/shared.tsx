@@ -7,10 +7,10 @@ import {beginPhotoGesture,endPhotoGesture,previewPhotoSettings,usePhotoSession,t
 import {neutralPhotoSettings,type PhotoControl} from '../../../lib/photos/studioSettings';
 import {registerPhotosCommands} from '../../../lib/photos/panelCommands';
 import {registerRailIcons} from '../../../lib/shell/railIcons';
-import {AudioWaveform,Layers,Download,Spline} from '../../../lib/icons';
+import {AudioWaveform,Layers,Download,Spline,Palette} from '../../../lib/icons';
 import {NativeInput} from '../../ui/native-controls';
 /** Rail icons for the panels shellRail.ts does not cover (first registration wins, History/Info/Develop* come from shellRail). */
-registerRailIcons({Histogram:AudioWaveform,Presets:Layers,Download,Curves:Spline});
+registerRailIcons({Histogram:AudioWaveform,Presets:Layers,Download,Curves:Spline,Palette});
 
 /** The photo the Photos studio shows, plus its develop session (null while nothing is open or developable). */
 export function useActivePhoto(){
