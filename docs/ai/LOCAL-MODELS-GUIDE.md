@@ -55,3 +55,19 @@ save a photo caption or image metadata, and does not edit a DOCX or slide.
 Local tool schema compatibility can inspect the active source catalog without inference or
 tool execution. Each omitted tool names the schema reason, or the eight-tool budget limit.
 The catalog is advice, not permission: studio scope and grants may further narrow a request.
+
+## Local AI status
+
+The Local tab status panel shares the inventory check and owned download events. It does
+not add background polling or inference. Refresh checks daemon reachability/version and
+installed models. An unreadable inventory is unknown, never zero. Browser internet offline
+is separate: a local daemon may remain reachable while downloads need internet.
+Download status shows the current layer's bytes, not a made-up overall percentage.
+Hiding an error only hides that evidence; Refresh rechecks and can show it again.
+
+Image-application controls, schema reasons and the status panel have German and English
+copy. Other languages use explicit English fallback for this slice. Existing shared native
+review controls retain their own translations. Integrated apply/undo tests for Markdown and
+HTML alt text are in `tests/local-vision-application.spec.ts`, discovered by the regular E2E
+CI run. They use synthetic images and mocked Ollama transport, require generated WASM
+bridges, and have not been run as full-app E2E in this workspace.

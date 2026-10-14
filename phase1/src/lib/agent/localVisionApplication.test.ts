@@ -27,3 +27,6 @@ test('review uses real native proposal acceptance, stale guard and editor undo',
  await assert.rejects(realCore.applyProposal(stale.id),/changed/);assert.equal(getState().files['notes.md'],'Manual edit');await realCore.rejectProposal(stale.id);
  realCore.clear?.();
 });
+test('application errors use stable translated target reasons, unknown errors stay generic',async()=>{
+ const {visionApplicationErrorKey}=await import('./localVisionApplication');assert.equal(visionApplicationErrorKey('Text insertion supports Markdown source only.'),'local.apply.error.markdown');assert.equal(visionApplicationErrorKey('secret filesystem detail'),'local.apply.error.failed');
+});

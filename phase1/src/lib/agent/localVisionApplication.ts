@@ -24,3 +24,23 @@ export function visionApplication(base:DocumentSnapshot,text:string,destination:
  project.transact({origin:'ai',operations:[{type:'setAttribute',file:base.ref.path,nodeId:actual.id,name:'alt',value:text}]});
  const after=project.files[base.ref.path];validateHTML(after);return after;
 }
+/** Stable error identifiers for translated application controls; unknown failures keep private detail out of UI. */
+export function visionApplicationErrorKey(message:string):string {
+ const map:Record<string,string>={
+  'Choose an open Code Markdown document, or a selected HTML image.':'target',
+  'Description must contain 1-12000 characters and no binary data.':'invalid',
+  'Text insertion supports Markdown source only.':'markdown',
+  'Alt text requires an HTML source document.':'html',
+  'Select an unlocked HTML img element for alt text.':'selection',
+  'Selected image source changed.':'changed',
+  'Stop generation and finish pending review before staging an image description.':'busy',
+  'Open the target in Code or Design studio first.':'studio',
+  'Active source changed.':'changed',
+  'Description changed.':'description',
+  'Document changed. Refresh the proposal and preview.':'changed',
+  'Document is no longer open.':'changed',
+  'Only the collaboration host may accept AI changes.':'host',
+  'Only the collaboration host may undo AI changes.':'host',
+ };
+ return 'local.apply.error.'+(map[message]??'failed');
+}

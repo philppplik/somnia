@@ -95,3 +95,18 @@ test('local vision description previews, accepts and undoes a studio source edit
  await page.getByRole('button',{name:'Undo image description',exact:true}).click();await expect(page.getByRole('status')).toContainText('Image description undone.');
  await page.getByText('Local tool schema compatibility',{exact:true}).click();await expect(page.getByText('Schema references are not supported',{exact:true})).toBeVisible();await page.screenshot({path:'/tmp/local-tool-schema-reasons.png',fullPage:true});
 });
+test('local health separates daemon reachability from internet offline and rechecks hidden errors',async({page})=>{
+ await page.goto('/test/local-models.html?state=health');const health=page.getByRole('region',{name:'Local AI status'});
+ await expect(health).toContainText('Installed models: unknown');await expect(health.getByRole('alert')).toContainText('Daemon unreachable; installation unknown');
+ await health.getByRole('button',{name:'Hide these errors',exact:true}).click();await expect(health.getByRole('alert')).toHaveCount(0);await expect(health).toContainText('Status errors hidden.');
+ await page.evaluate(()=>{Object.defineProperty(navigator,'onLine',{value:false,configurable:true});window.dispatchEvent(new Event('offline'));});await expect(health).toContainText('Local inference may still work');
+ await health.getByRole('button',{name:'Refresh',exact:true}).click();await expect(health).toContainText('Reachable on this computer');await expect(health).toContainText('Installed models: 0');await page.screenshot({path:'/tmp/local-ai-health.png',fullPage:true});
+});
+test('new application and schema reasons controls translate into German',async({page})=>{
+ await page.goto('/test/local-models.html?state=apply&locale=de');await expect(page.getByRole('button',{name:'Vorschau als Text',exact:true})).toBeVisible();await page.getByText('Lokale Werkzeug-Schemakompatibilität',{exact:true}).click();await expect(page.getByText('Schemareferenzen werden nicht unterstützt',{exact:true})).toBeVisible();await page.screenshot({path:'/tmp/local-ai-controls-de.png',fullPage:true});
+});
+test('health panel follows owned pull progress with current-layer bytes only',async({page})=>{
+ await page.goto('/test/local-models.html?state=health-pull');const health=page.getByRole('region',{name:'Local AI status'});
+ await expect(health.getByRole('status')).toContainText('Download: qwen3:4b');await expect(health.getByRole('status')).toContainText('500 / 1000 bytes in current layer; no overall percentage.');await page.screenshot({path:'/tmp/local-ai-pull-status.png',fullPage:true});
+ await expect(health.getByRole('status')).toContainText('Complete: inventory and local verification confirmed');
+});

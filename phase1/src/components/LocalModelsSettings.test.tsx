@@ -22,3 +22,7 @@ test('unknown saved AI navigation falls back to Providers',()=>{
  const html=renderToStaticMarkup(<AgentSettings/>);assert.match(html,/aria-selected="true"[^>]*id="ai-tab-providers"|id="ai-tab-providers"[^>]*aria-selected="true"/);
  patchState({settingsAITab:'providers'});
 });
+test('local health snapshot renders separately from browser network and hides no errors by default',async()=>{
+ const {LocalAIHealth}=await import('./agent/LocalAIHealth');const html=renderToStaticMarkup(<LocalAIHealth snapshot={{state:'running',installed:true,version:'test',models:[],checkedAt:1,inventoryError:true}} busy={false} onRefresh={()=>{}}/>);
+ assert.ok(html.includes('Local AI status'));assert.ok(html.includes('Installed models: unknown'));assert.ok(html.includes('role="alert"'));assert.ok(html.includes('No background polling'));
+});

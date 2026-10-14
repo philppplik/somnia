@@ -1,3 +1,4 @@
+import {LocalAIHealth} from './LocalAIHealth';
 import type {Hardware} from '../../lib/agent/localModelAdvice';
 import {LocalModelAdvice} from './LocalModelAdvice';
 import {LocalModelActions} from './LocalModelActions';
@@ -10,11 +11,11 @@ import './localModels.css';
 
 export function LocalModelsSettings({active,runtime:provided,hardwareProbe}:{active:boolean;runtime?:LocalModelsRuntime;hardwareProbe?:()=>Promise<Hardware|null>}){
  const {t,locale}=useT();const runtime=useMemo(()=>provided??new LocalModelsRuntime(),[provided]);
- const [snapshot,setSnapshot]=useState<RuntimeSnapshot|null>(null),[busy,setBusy]=useState(false);
+ const [snapshot,setSnapshot]=useState<RuntimeSnapshot|null>(null),[busy,setBusy]=useState(false),[refreshError,setRefreshError]=useState(false);
  const [evidence,setEvidence]=useState<Record<string,ModelEvidence|'error'>>({});
  const generation=useRef(0);
  const refresh=async()=>{
-  const request=++generation.current;setBusy(true);setEvidence({});
+  const request=++generation.current;setBusy(true);setEvidence({});setRefreshError(false);
   try{
    const next=await runtime.snapshot();if(request!==generation.current)return;setSnapshot(next);
    // Only the first visible page is inspected. Two workers bound /api/show concurrency.
@@ -24,7 +25,7 @@ export function LocalModelsSettings({active,runtime:provided,hardwareProbe}:{act
     try{value=await runtime.evidence(model.id);}catch{value='error';}
     if(request===generation.current)setEvidence(old=>({...old,[model.id]:value}));
    }}));
-  }finally{if(request===generation.current)setBusy(false);}
+  }catch{if(request===generation.current){setSnapshot(null);setRefreshError(true);}}finally{if(request===generation.current)setBusy(false);}
  };
  useEffect(()=>{if(active)void refresh();return()=>{generation.current++;setBusy(false);};},[active,runtime]);
  const [page,setPage]=useState(0);
@@ -34,13 +35,13 @@ export function LocalModelsSettings({active,runtime:provided,hardwareProbe}:{act
  return <section className="local-models" aria-label={t('local.title')}>
   <div className="local-models-header"><h3>{t('local.title')}</h3><Button type="button" variant="outline" disabled={busy} onClick={()=>void refresh()}>{t(busy?'local.checking':'local.refresh')}</Button></div>
   <p>{t('local.boundary')}</p>
-  <div role="status" className="local-models-runtime"><strong>Ollama</strong> · {runtime.baseUrl}<br/>{t(snapshot?'local.state.'+snapshot.state:'local.notChecked')}{snapshot?.version&&` · ${snapshot.version}`}<br/>{snapshot&&t('local.checked',{time:new Date(snapshot.checkedAt).toLocaleTimeString(locale)})}{busy&&<p>{t('local.checking')}</p>}</div>
+  <LocalAIHealth snapshot={snapshot} busy={busy} refreshError={refreshError} onRefresh={()=>void refresh()}/>
   {snapshot?.state==='not-found'&&<a href="https://ollama.com/download" target="_blank" rel="noreferrer">{t('local.install')}</a>}
   <LocalModelAdvice hardwareProbe={hardwareProbe} active={active} runtime={runtime} snapshot={snapshot}/>
   {!provided&&<LocalModelActions snapshot={snapshot} onChanged={refresh}/>}
   {snapshot?.state==='running'&&<>
    <h4>{t('local.installed')}</h4>
-   {snapshot.inventoryError?<p role="alert">{t('local.inventoryError')}</p>:!snapshot.models.length?<p>{t('local.empty')}</p>:<>
+   {snapshot.inventoryError?<p>{t('local.inventoryError')}</p>:!snapshot.models.length?<p>{t('local.empty')}</p>:<>
     <ul className="local-models-list">{snapshot.models.slice(page*20,page*20+20).map(model=>{
      const info=evidence[model.id];return <li key={model.id}><strong>{model.id}</strong><div>{size(model.sizeBytes)} · {model.parameterSize??t('local.unknown')} · {model.quantization??t('local.unknown')}</div>
       <div className="local-models-badges"><Badge>{t('local.present')}</Badge><Badge>{t('local.locality.'+(!info||info==='error'?'unverified':info.locality))}</Badge>{info&&info!=='error'&&info.capabilities?.map(cap=><Badge key={cap}>{t('local.cap.'+cap)}</Badge>)}</div>

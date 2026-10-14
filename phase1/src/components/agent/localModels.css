@@ -22,3 +22,7 @@
 .local-vision-destination { margin-right: 8px; margin-bottom: 8px; }
 .local-tool-reasons { padding-left: 18px; list-style: disc; }
 .local-tool-reasons-nested { list-style: circle; }
+.local-ai-health { display: grid; gap: 10px; min-width: 0; }
+.local-ai-health dl { display: grid; grid-template-columns: minmax(80px,auto) minmax(0,1fr); gap: 6px 12px; margin: 0; }
+.local-ai-health dd { margin: 0; overflow-wrap: anywhere; }
+.local-ai-health ul { list-style: disc; padding-left: 20px; }
