@@ -499,3 +499,10 @@ impl engine::ModelTransport for PartialFailure{
  for _ in 0..100{let s=rt.snapshot(&id).unwrap();if s.snapshot.execution_state==ExecutionState::Failed{break;}tokio::time::sleep(std::time::Duration::from_millis(10)).await;}
  let snapshot=rt.snapshot(&id).unwrap().snapshot;assert_eq!(snapshot.execution_state,ExecutionState::Failed);assert!(snapshot.messages.iter().any(|m|m.role=="assistant_incomplete"&&m.text=="Unfinished output"));assert!(snapshot.review.is_none());assert!(!snapshot.capabilities.apply);assert!(rt.apply(&id,"none",vec!["hello.txt".into()]).is_err());assert_eq!(std::fs::read_to_string(project.path().join("hello.txt")).unwrap(),"before");
 }
+
+#[tokio::test]async fn feedback_successor_is_fresh_idempotent_and_preserves_model_scope_without_partial_replay(){
+ let (_data,project,rt,studio)=setup();let started=rt.start(StartRun{studio_id:studio.studio_id.clone(),request_id:uuid::Uuid::new_v4().to_string(),retry_of_run_id:None},Arc::new(PartialWaiting),engine::ModelConfig::Local{endpoint:"http://127.0.0.1:11434/v1/chat/completions".into(),model:"qwen3.5:9b".into()}).await.unwrap();let id=started.snapshot.run_id;
+ for _ in 0..100{if !rt.snapshot(&id).unwrap().snapshot.messages.is_empty(){break;}tokio::time::sleep(std::time::Duration::from_millis(10)).await;}
+ let request=RetryFeedback{run_id:id.clone(),request_id:uuid::Uuid::new_v4().to_string(),message:"Use smaller steps".into()};assert!(rt.prepare_retry_feedback(&request).is_err());rt.stop(&id).await.unwrap();
+ let successor=rt.prepare_retry_feedback(&request).unwrap();let again=rt.prepare_retry_feedback(&request).unwrap();assert_eq!(successor.studio_id,again.studio_id);assert_ne!(successor.studio_id,studio.studio_id);assert_eq!(successor.space_id,studio.space_id);assert_eq!(successor.model,studio.model);assert!(successor.goal.contains("Use smaller steps"));assert!(!successor.goal.contains("Provisional only"));assert!(rt.prepare_retry_feedback(&RetryFeedback{message:"different".into(),..request}).is_err());assert_eq!(std::fs::read_to_string(project.path().join("hello.txt")).unwrap(),"before");
+}

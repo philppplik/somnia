@@ -21,6 +21,7 @@ export type VibeCommand=CommandBase & (
  |{type:'review';runId:string;reviewRevision:string;decision:'apply'|'discard';paths:string[]}
  |{type:'restore';runId:string;checkpointId:string}
  |{type:'retry';runId:string}
+ |{type:'retry-feedback';runId:string;message:string}
 );
 export type VibeIntent=VibeCommand extends infer C ? C extends CommandBase ? Omit<C,keyof CommandBase> : never : never;
 export interface VibeSpaceTransport {

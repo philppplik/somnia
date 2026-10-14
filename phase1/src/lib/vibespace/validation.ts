@@ -67,7 +67,7 @@ export function parseReadProjection(value:unknown):VibeSnapshot{
 export function parseFolderGrant(value:unknown):FolderGrant{const g=record(value,'folderGrant',['folderGrantId','folder']);text(g.folderGrantId,'folderGrantId',256);text(g.folder,'folder',4096);return value as FolderGrant;}
 export function validateCommand(command:VibeCommand):void{
  const extra:Record<string,string[]>={
- 'create-space':['name','folderGrantId'],'create-studio':['spaceId','goal','model'],start:['studioId'],stop:['runId'],steer:['runId','message'],consent:['runId','requestId','choice'],review:['runId','reviewRevision','decision','paths'],restore:['runId','checkpointId'],retry:['runId'],'request-changes':['runId','reviewRevision','message'],'apply-hunks':['runId','reviewRevision','paths','hunks']};
+ 'create-space':['name','folderGrantId'],'create-studio':['spaceId','goal','model'],start:['studioId'],stop:['runId'],steer:['runId','message'],consent:['runId','requestId','choice'],review:['runId','reviewRevision','decision','paths'],restore:['runId','checkpointId'],retry:['runId'],'retry-feedback':['runId','message'],'request-changes':['runId','reviewRevision','message'],'apply-hunks':['runId','reviewRevision','paths','hunks']};
  record(command,'command',['type','commandId','expectedRevision',...(extra[command.type]??[])]);
  text(command.commandId,'commandId',256);integer(command.expectedRevision,'expectedRevision');if('runId'in command)text(command.runId,'runId',256);
  switch(command.type){
@@ -75,6 +75,7 @@ export function validateCommand(command:VibeCommand):void{
  case 'create-studio':text(command.spaceId,'spaceId',256);text(command.goal,'goal');model(command.model,'model');break;
  case 'steer':text(command.message,'message');break;
  case 'consent':text(command.requestId,'requestId',256);if(!['allow_once','allow_for_run','deny'].includes(command.choice))fail('choice');break;
+ case 'retry-feedback':text(command.message,'message',2048);break;
  case 'request-changes':text(command.reviewRevision,'reviewRevision',256);text(command.message,'message',2048);break;
  case 'apply-hunks':text(command.reviewRevision,'reviewRevision',256);array(command.paths,'paths').forEach(v=>text(v,'path',4096));array(command.hunks,'hunks').forEach(v=>{const h=record(v,'hunkSelection',['path','hunkIds']);text(h.path,'hunk.path',4096);const ids=array(h.hunkIds,'hunkIds');if(!ids.length||new Set(ids).size!==ids.length)fail('hunkIds');ids.forEach(id=>text(id,'hunk.id',256));});if(!command.paths.length&&!command.hunks.length)fail('empty apply');if(new Set([...command.paths,...command.hunks.map(h=>h.path)]).size!==command.paths.length+command.hunks.length)fail('overlapping selection');break;
  case 'review':text(command.reviewRevision,'reviewRevision',256);if(!['apply','discard'].includes(command.decision))fail('decision');array(command.paths,'paths').forEach(v=>text(v,'path',4096));if(new Set(command.paths).size!==command.paths.length)fail('duplicate path');if(command.decision==='apply'&&!command.paths.length)fail('empty apply');break;

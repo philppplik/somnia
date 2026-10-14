@@ -2722,6 +2722,19 @@
       ]
     },
     {
+      "name": "vibespace_retry_feedback",
+      "domain": "fs",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "request"
+      ],
+      "args": [
+        "request"
+      ]
+    },
+    {
       "name": "vibespace_review_hunks",
       "domain": "fs",
       "status": "native",

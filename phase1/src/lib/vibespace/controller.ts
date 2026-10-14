@@ -1,4 +1,4 @@
-import {canRetry,reviewPathsAllowed,studioControls,initialVibeState,vibeReducer,type VibeViewState} from './state';
+import {canRetry,canRetryFeedback,reviewPathsAllowed,studioControls,initialVibeState,vibeReducer,type VibeViewState} from './state';
 import {parseEvent,parseSnapshot,validateCommand} from './validation';
 import type {VibeEvent,VibeIntent,VibeSpaceTransport} from './types';
 /** Native commands reject with plain objects or strings, not Error. Keep the stable code (never paths) so a user can report it. */
@@ -84,7 +84,7 @@ export class VibeSpaceController {
    const studio=this.state.snapshot.studios.find(s=>s.runId===intent.runId);
    if(!studio){this.error(new Error('Target run is not loaded.'));return false;}
    const controls=studioControls(studio,false);
-   const denied=intent.type==='stop'&&!controls.stop||intent.type==='steer'&&!controls.steer||intent.type==='restore'&&!controls.restore||intent.type==='retry'&&!canRetry(this.state.snapshot,studio);
+   const denied=intent.type==='stop'&&!controls.stop||intent.type==='steer'&&!controls.steer||intent.type==='restore'&&!controls.restore||intent.type==='retry'&&!canRetry(this.state.snapshot,studio)||intent.type==='retry-feedback'&&!canRetryFeedback(studio);
    if(denied){this.error(new Error('Action is unavailable for this run.'));return false;}
    if(intent.type==='consent'){
     const consent=studio.pendingConsents.find(c=>c.requestId===intent.requestId);

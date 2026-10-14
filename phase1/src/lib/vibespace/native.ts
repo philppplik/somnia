@@ -1,7 +1,7 @@
 import {invoke} from '@tauri-apps/api/core';
 import {listen} from '@tauri-apps/api/event';
 import type {VibeCommand, VibeSpaceTransport, VibeSnapshot,SpaceSummary,StudioSummary,ModelRef} from './types';
-import {canRetry,reviewPathsAllowed,studioControls,reviewedHunksAllowed} from './state';
+import {canRetry,canRetryFeedback,reviewPathsAllowed,studioControls,reviewedHunksAllowed} from './state';
 import {parseReviewDetails,parseEvent,parseFolderGrant,parseReadProjection,parseStudioSummaries,parseSpaceSummaries,validateCommand} from './validation';
 
 export const nativeCommands = {
@@ -65,7 +65,7 @@ export function createNativeVibeSpaceTransport(bindings: NativeVibeBindings): Vi
     const studio=current?.studios.find(s=>s.runId===command.runId);
     if(!studio)throw new Error('Load the target run before acting.');
     const controls=studioControls(studio,false);
-    if(command.type==='stop'&&!controls.stop||command.type==='steer'&&!controls.steer||command.type==='restore'&&!controls.restore||command.type==='retry'&&!(current&&canRetry(current,studio)))throw new Error('This run does not support the requested action.');
+    if(command.type==='stop'&&!controls.stop||command.type==='steer'&&!controls.steer||command.type==='restore'&&!controls.restore||command.type==='retry'&&!(current&&canRetry(current,studio))||command.type==='retry-feedback'&&!canRetryFeedback(studio))throw new Error('This run does not support the requested action.');
     if(command.type==='consent'){
      const consent=studio.pendingConsents.find(c=>c.requestId===command.requestId);
      if(!controls.consent||!consent||command.choice==='allow_for_run'&&!consent.allowForRun)throw new Error('Consent request changed. Reload and review it again.');
@@ -79,6 +79,7 @@ export function createNativeVibeSpaceTransport(bindings: NativeVibeBindings): Vi
     case 'create-space':await io.invoke(nativeCommands[command.type],{request:{name:command.name,folderGrantId:command.folderGrantId}});break;
     case 'create-studio':parseStudioSummaries([await bindings.createStudio({spaceId:command.spaceId,goal:command.goal,model:command.model})]);break;
     case 'consent':await io.invoke(nativeCommands[command.type],{request:{runId:command.runId,requestId:command.requestId,choice:command.choice}});break;
+    case 'retry-feedback':await io.invoke('vibespace_retry_feedback',{request:{runId:command.runId,requestId:command.commandId,message:command.message}});break;
     case 'request-changes':await io.invoke('vibespace_request_changes',{request:{runId:command.runId,reviewRevision:command.reviewRevision,requestId:command.commandId,message:command.message}});break;
     case 'apply-hunks':{
      const studio=current!.studios.find(s=>s.runId===command.runId)!;

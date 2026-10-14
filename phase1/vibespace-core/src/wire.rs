@@ -407,6 +407,9 @@ pub struct RequestChanges {
     pub request_id: String,
     pub message: String,
 }
+#[derive(Clone,Debug,PartialEq,Eq,Serialize,Deserialize)]
+#[serde(rename_all="camelCase",deny_unknown_fields)]
+pub struct RetryFeedback{pub run_id:String,pub request_id:String,pub message:String}
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct ReviewHunks {

@@ -1352,6 +1352,22 @@ impl Runtime {
         self.publish(&request.run_id)?;
         self.studio_summary(&studio)
     }
+    /// Fresh successor from current project baseline. Old partial output is never replayed or applied.
+    pub fn prepare_retry_feedback(&self,request:&w::RetryFeedback)->Result<w::StudioSummary>{
+        let _guard=lock(&self.command)?;
+        if request.message.trim().is_empty()||request.message.encode_utf16().count()>2048||uuid::Uuid::parse_str(&request.request_id).is_err(){return Err(CoreError("invalid retry feedback"));}
+        for event in self.all_events(&request.run_id)?{if event.kind=="run.feedback_requested"&&event.payload["requestId"]==request.request_id{
+            if event.payload["message"]!=request.message{return Err(CoreError("feedback request identity conflict"));}
+            return self.studio_summary(&self.store.get_studio(event.payload["studioId"].as_str().ok_or(CoreError("feedback successor incomplete"))?)?);
+        }}
+        let run=self.store.get_run(&request.run_id)?;
+        if !matches!(run.execution,db::ExecutionState::Failed|db::ExecutionState::Crashed|db::ExecutionState::Stopped)||run.review!=db::ReviewState::None{return Err(CoreError("run not eligible for feedback retry"));}
+        let old=self.store.get_studio(&run.studio_id)?;
+        let goal=format!("{}\nUser feedback for a fresh run: {}\nThe prior run did not complete. Start from the current project baseline. Do not replay prior partial output or treat it as a tool result.",old.goal,request.message);
+        if goal.encode_utf16().count()>8192{return Err(CoreError("feedback exceeds goal context limit"));}
+        let studio=self.store.create_feedback_successor(&request.run_id,run.last_sequence,&request.request_id,&request.message,db::NewStudio{schema_version:1,space_id:old.space_id,goal,model:old.model})?;
+        self.publish(&request.run_id)?;self.studio_summary(&studio)
+    }
     pub fn discard(&self, id: &str, revision: &str) -> Result<()> {
         let _guard = lock(&self.command)?;
         self.reconcile_applies()?;

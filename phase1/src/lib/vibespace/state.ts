@@ -67,3 +67,5 @@ export function reviewedHunksAllowed(studio:Studio,details:import('./types').Rev
  if(new Set([...paths,...hunks.map(h=>h.path)]).size!==paths.length+hunks.length)return false;
  return paths.every(p=>studio.review!.files.some(f=>f.path===p&&!f.conflict))&&hunks.every(s=>{const f=details.files.find(f=>f.path===s.path);return studio.review!.files.some(f=>f.path===s.path&&!f.conflict)&&!!f&&s.hunkIds.length>0&&new Set(s.hunkIds).size===s.hunkIds.length&&s.hunkIds.every(id=>f.hunks.some(h=>h.id===id));});
 }
+
+export function canRetryFeedback(studio:Studio):boolean{return ['failed','crashed','stopped'].includes(studio.executionState)&&studio.reviewState==='none'&&!studio.review;}

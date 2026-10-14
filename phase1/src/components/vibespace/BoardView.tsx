@@ -1,3 +1,5 @@
+import {RunHistoryFilters} from './RunQuality';
+import {emptyRunFilter,filterRunHistory} from '../../lib/vibespace/runQuality';
 import {useState} from 'react';
 import {Send,Square} from '../../lib/icons';
 import {getLocale,t} from '../../lib/i18n';
@@ -28,13 +30,16 @@ export function BoardView({space,snapshot,schedules,schedulesError=false,pending
  onOpenRun:(runId:string)=>void;
  nowMs?:number;
 }){
- const projection=boardProjection(snapshot,space.spaceId);
+ const [filter,setFilter]=useState({...emptyRunFilter});
+ const filtered=filterRunHistory(snapshot.studios,filter);const filtering=!!(filter.status||filter.model||filter.from||filter.to);
+ const projection=boardProjection({...snapshot,studios:filtered,sessions:filtering?[]:snapshot.sessions},space.spaceId);const totals=boardProjection(snapshot,space.spaceId);
  const runs=snapshot.studios.filter(s=>s.spaceId===space.spaceId);
  const usage=aggregateUsage(runs);
  const conflicts=scheduleConflicts(schedules??[],runs,nowMs);
  const goalOf=(studioId:string)=>snapshot.sessions.find(s=>s.studioId===studioId)?.goal.split('\n')[0].slice(0,80)??studioId;
  return <div className="vs-boardview" aria-label={t('vs.board.aria')}>
-  <BoardSummary total={projection.concurrency.total} active={projection.concurrency.active} needsYou={projection.concurrency.needsYou} usage={usage}/>
+  <BoardSummary total={totals.concurrency.total} active={totals.concurrency.active} needsYou={totals.concurrency.needsYou} usage={usage}/>
+  <RunHistoryFilters runs={runs} value={filter} onChange={setFilter}/>{filtering&&!filtered.some(r=>r.spaceId===space.spaceId)&&<p role="status">{t('vs.quality.empty')}</p>}
   {schedulesError&&<p className="vs-muted" role="status">{t('vs.board.schedule.unavailable')}</p>}
   {schedules&&schedules.length>0&&<ScheduleStrip schedules={schedules} conflicts={conflicts} goalOf={goalOf}/>}
   <div className="vs-board-cols">

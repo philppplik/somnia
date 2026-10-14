@@ -1,3 +1,4 @@
+import {RunSummary,RetryWithFeedback} from './RunQuality';
 import {StreamProgress} from './StreamProgress';
 import {StudioStatus} from '../studios/StudioStatus';
 import {ComputerUseReview} from './ComputerUseReview';
@@ -56,6 +57,7 @@ export function StudioDetail({studio,space,pending,capabilities,transport,onActi
   <section className="vs-card"><h3>Last step</h3><p role="status">{studio.lastStep||'No step recorded yet.'}</p></section>
   {studio.failure&&<section className="vs-card vs-error" role="alert"><h3>{stateLabels[studioState(studio)]}</h3><p>{studio.failure.message}</p><details><summary>Error details</summary><code data-copyable>{studio.failure.code}</code></details><NativeButton type="button" disabled={!controls.retry||!supports('retry')} onClick={()=>void onAction({type:'retry',runId:studio.runId})}>Retry in a new run</NativeButton></section>}
   <StreamProgress studio={studio} canStop={controls.stop&&supports('stop')} onStop={()=>void onAction({type:'stop',runId:studio.runId})}/>
+  <RunSummary studio={studio}/><RetryWithFeedback studio={studio} disabled={pending||!supports('retry-feedback')} onAction={onAction}/>
   <ConsentCard studio={studio} disabled={!controls.consent||!supports('consent')} runAllowed={true} onAction={onAction}/>
   {studio.review&&<ReviewChanges key={`${studio.runId}:${studio.review.revision}`} studio={studio} disabled={!controls.review||!supports('review')} onAction={onAction}/>}
   {transport&&<ReviewExtensions studio={studio} transport={transport} disabled={pending} onAction={onAction}/>}

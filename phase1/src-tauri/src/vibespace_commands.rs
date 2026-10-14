@@ -740,7 +740,7 @@ pub fn vibespace_capabilities(
             actions.extend(["restore", "apply-hunks"]);
         }
         if transport {
-            actions.extend(["start", "retry", "request-changes"]);
+            actions.extend(["start", "retry", "request-changes", "retry-feedback"]);
         }
         Ok(NativeCapabilities {
             transport,
@@ -1137,6 +1137,51 @@ use std::sync::atomic::{AtomicBool, Ordering};
 /// True only when this build links the ONNX backend (`vibespace-fastembed` feature).
 const EMBEDDER_COMPILED: bool = cfg!(feature = "vibespace-fastembed");
 
+#[tauri::command]
+pub async fn vibespace_retry_feedback(
+    window: WebviewWindow,
+    webview: Webview,
+    state: State<'_, VibeSpaceState>,
+    request: w::RetryFeedback,
+) -> Result<w::SnapshotReply> {
+    let label = window.label().to_string();
+    crate::cmd::cmd_async("vibespace_retry_feedback", Some(&label), async {
+        gate(&window, &webview)?;
+        let runtime = state.runtime(window.app_handle())?;
+        // Validate provider readiness BEFORE creating the durable successor.
+        let old = runtime.snapshot(&request.run_id).map_err(failed)?.snapshot;
+        if !state.models(window.app_handle())?.contains(&old.model) {
+            return Err(error("vibespace_model_not_configured", true));
+        }
+        let reference = old.model;
+        let (transport, config) = tauri::async_runtime::spawn_blocking(move || resolve(&reference))
+            .await
+            .map_err(failed)??;
+        gate(&window, &webview)?;
+        let studio = runtime.prepare_retry_feedback(&request).map_err(failed)?;
+        let mut reply = runtime
+            .start(
+                w::StartRun {
+                    studio_id: studio.studio_id,
+                    request_id: request.request_id,
+                    retry_of_run_id: None,
+                },
+                transport,
+                config,
+            )
+            .await
+            .map_err(failed)?;
+        restrict_platform_snapshot(&mut reply.snapshot);
+        state.changed()?;
+        Ok(reply)
+    })
+    .await
+}
+// ---------------------------------------------------------------------------------------------
+// Package A6: memory (opt-in vector search) and skills (data only). Appended block.
+// Nothing here downloads by itself: the model download needs the exact size acknowledged, and the
+// vector index exists only after an explicit per-space opt-in. Skills are stored, never executed.
+// ---------------------------------------------------------------------------------------------
 #[derive(Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct MemorySearchRequest {
