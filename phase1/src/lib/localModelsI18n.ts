@@ -1,5 +1,9 @@
 export const LOCAL_MODELS_CATALOGUES:Record<string,Record<string,string>> = {
  "en": {
+  "local.diskUsage.title": "Reported model disk sizes",
+  "local.diskUsage.total": "{bytes} bytes reported across {known} models; {unknown} models have unknown size.",
+  "local.diskUsage.boundary": "Logical sizes from installed model inventory, not physical disk usage or free space. Shared layers may be counted more than once. Unknown sizes are not zero. Refresh reloads this view.",
+
   "local.helper.title": "Optional local speech helper",
   "local.helper.boundary": "Explicit download only. Exact size, source, checksum and license must be reviewed. Audio transcription stays local; no cloud fallback. Default-off pending release gates.",
   "local.helper.install": "Install optional helper",
@@ -342,6 +346,10 @@ export const LOCAL_MODELS_CATALOGUES:Record<string,Record<string,string>> = {
   "local.route.earlier": "Move earlier after local"
  },
  "de": {
+  "local.diskUsage.title": "Gemeldete Modellgrößen auf Datenträger",
+  "local.diskUsage.total": "{bytes} Bytes für {known} Modelle gemeldet; Größe bei {unknown} Modellen unbekannt.",
+  "local.diskUsage.boundary": "Logische Größen aus dem Modellinventar, keine physische Belegung oder freier Speicher. Geteilte Layer können mehrfach gezählt sein. Unbekannte Größen sind nicht null. Aktualisieren lädt diese Ansicht neu.",
+
   "local.helper.title": "Optionaler lokaler Sprach-Helper",
   "local.helper.boundary": "Nur ausdrücklicher Download. Genaue Größe, Quelle, Prüfsumme und Lizenz prüfen. Audiotranskription bleibt lokal; kein Cloud-Fallback. Bis zu Release-Prüfungen ausgeschaltet.",
   "local.helper.install": "Optionalen Helper installieren",
@@ -684,6 +692,10 @@ export const LOCAL_MODELS_CATALOGUES:Record<string,Record<string,string>> = {
   "local.route.earlier": "Nach lokal früher einordnen"
  },
  "es": {
+  "local.diskUsage.title": "Tamaños de modelos informados",
+  "local.diskUsage.total": "{bytes} bytes en {known} modelos; tamaño desconocido en {unknown}.",
+  "local.diskUsage.boundary": "Tamaños lógicos del inventario, no uso físico ni espacio libre. Capas compartidas pueden contarse varias veces. Desconocido no es cero. Actualizar recarga esta vista.",
+
   "local.helper.title": "Programa de voz local opcional",
   "local.helper.boundary": "Solo descarga explícita. Revisa tamaño, origen, hash y licencia. Transcripción local sin nube. Desactivado hasta validar la versión.",
   "local.helper.install": "Instalar programa opcional",
@@ -1026,6 +1038,10 @@ export const LOCAL_MODELS_CATALOGUES:Record<string,Record<string,string>> = {
   "local.route.earlier": "Mover antes tras local"
  },
  "fr": {
+  "local.diskUsage.title": "Tailles des modèles déclarées",
+  "local.diskUsage.total": "{bytes} octets pour {known} modèles; taille inconnue pour {unknown}.",
+  "local.diskUsage.boundary": "Tailles logiques de l’inventaire, pas occupation physique ni espace libre. Les couches partagées peuvent être comptées plusieurs fois. Inconnu ne signifie pas zéro. Actualiser recharge cette vue.",
+
   "local.helper.title": "Programme vocal local facultatif",
   "local.helper.boundary": "Téléchargement explicite uniquement. Vérifier taille, source, somme et licence. Transcription locale sans cloud. Désactivé en attente des contrôles.",
   "local.helper.install": "Installer le programme facultatif",
@@ -1368,6 +1384,10 @@ export const LOCAL_MODELS_CATALOGUES:Record<string,Record<string,string>> = {
   "local.route.earlier": "Avancer après local"
  },
  "pt-BR": {
+  "local.diskUsage.title": "Tamanhos de modelos informados",
+  "local.diskUsage.total": "{bytes} bytes em {known} modelos; tamanho desconhecido em {unknown}.",
+  "local.diskUsage.boundary": "Tamanhos lógicos do inventário, não uso físico nem espaço livre. Camadas compartilhadas podem ser contadas mais de uma vez. Desconhecido não é zero. Atualizar recarrega esta vista.",
+
   "local.helper.title": "Programa de voz local opcional",
   "local.helper.boundary": "Só download explícito. Confira tamanho, origem, hash e licença. Transcrição local sem nuvem. Desativado até validar a versão.",
   "local.helper.install": "Instalar programa opcional",

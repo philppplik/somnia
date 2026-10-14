@@ -1,3 +1,4 @@
+import {LocalModelDiskUsage} from './LocalModelDiskUsage';
 import {lastLocalModelSuccess} from '../../lib/agent/localModelUsage';
 import {LocalFirstRunGuide} from './LocalFirstRunGuide';
 import {LocalAIHealth} from './LocalAIHealth';
@@ -42,6 +43,7 @@ export function LocalModelsSettings({active,runtime:provided,hardwareProbe}:{act
   <LocalModelAdvice hardwareProbe={hardwareProbe} active={active} runtime={runtime} snapshot={snapshot}/>
   {!provided&&<LocalModelActions snapshot={snapshot} onChanged={refresh}/>}
   {snapshot?.state==='running'&&<>
+   {!snapshot.inventoryError&&<LocalModelDiskUsage models={snapshot.models}/>}
    <h4>{t('local.installed')}</h4><p>{t('local.manager.lastUsedNotice')}</p>
    {snapshot.inventoryError?<p>{t('local.inventoryError')}</p>:!snapshot.models.length?<p>{t('local.empty')}</p>:<>
     <ul className="local-models-list">{snapshot.models.slice(page*20,page*20+20).map(model=>{
