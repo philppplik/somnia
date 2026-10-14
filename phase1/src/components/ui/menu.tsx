@@ -15,3 +15,5 @@ export const MenuCheckboxIndicator=Primitive.CheckboxItemIndicator;
 export const MenuRadioGroup=Primitive.RadioGroup;
 export const MenuRadioItem=Primitive.RadioItem;
 export const MenuRadioIndicator=Primitive.RadioItemIndicator;
+/** Legacy compound surface: preserves existing portals/positioners/classes during chrome adoption. */
+export const ChromeMenu=Primitive;

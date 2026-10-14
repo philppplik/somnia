@@ -1,4 +1,4 @@
-import {Menu} from '@base-ui/react/menu';
+import {ChromeMenu as Menu} from '../ui/menu';
 import {useEffect} from 'react';
 import {executeCommand,formatShortcut} from '../../lib/commands';
 import {buildLegacyMenuModel,buildMenuModel,type MenuModelEntry} from '../../lib/shell/menuModel';

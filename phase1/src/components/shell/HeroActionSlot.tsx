@@ -1,4 +1,4 @@
-import {Menu} from '@base-ui/react/menu';
+import {ChromeMenu as Menu} from '../ui/menu';
 import {Tooltip} from '@base-ui/react/tooltip';
 import {ChevronDown,Loader2} from 'lucide-react';
 import {Button} from '../ui/button';
