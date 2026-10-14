@@ -96,7 +96,7 @@ export type MaskOp=
  |{op:'handle';mask:string;index:number;which:'in'|'out';x:number;y:number;mirror:boolean;t?:number}
  |{op:'pathAnimate';mask:string;on:boolean;t:number}
  /** Adds a path key at `t` that copies another path mask's shape (same point count and closed flag only). */
- |{op:'morphTo';mask:string;other:string;t:number}
+ |({op:'morphTo';mask:string;other:string;t:number}&MorphOpts)
  |{op:'add';id?:string}
  |{op:'remove';mask:string}
  |{op:'update';mask:string;patch:MaskPatch};
@@ -141,7 +141,7 @@ export function maskEdit(doc:AnimationDocument,layerId:string,o:MaskOp):Edit{
    return {...m,path:f(m.path),...(m.shapeKeys?{shapeKeys:m.shapeKeys.map(k=>({...k,path:f(k.path)}))}:{})};}));}
   case 'adopt':{if(list.length>=MAX_LAYER_MASKS)throw Error(`At most ${MAX_LAYER_MASKS} masks per layer.`);
    const {id:_i,...rest}=o.source;return set([...list,{...rest,id:newId('mask')}]);}
-  case 'morphTo':{need(o.mask);need(o.other);const t=frameT(o.t,c),src=list.find(m=>m.id===o.other)!;return set(list.map(m=>m.id===o.mask?morphPath(m,src,t,c):m));}
+  case 'morphTo':{need(o.mask);need(o.other);const t=frameT(o.t,c),src=list.find(m=>m.id===o.other)!;return set(list.map(m=>m.id===o.mask?morphPath(m,src,t,c,{match:o.match,reverse:o.reverse,shift:o.shift}):m));}
   case 'keyPaste':{need(o.mask);const t=frameT(o.t,c);return set(list.map(m=>m.id===o.mask?pasteMaskKey(m,o.prop,t,o.clip):m));}
   case 'pathAnimate':{need(o.mask);const t=frameT(o.t,c);return set(list.map(m=>{if(m.id!==o.mask)return m;if(m.shape!=='path'||!m.path)throw Error('Only path masks can morph.');
    if(o.on){if(m.shapeKeys?.length)return m;return {...m,shapeKeys:[{t,path:m.path}]};}
@@ -165,23 +165,52 @@ function editPath(m:LayerMask,t:number|undefined,fn:(p:MaskPath)=>MaskPath):Laye
  const cur=lerpPath(m.shapeKeys,t),next=fn(cur),keys=[...m.shapeKeys.filter(k=>k.t!==t),{t,path:next}].sort((a,b)=>a.t-b.t);
  if(keys.length>MAX_SHAPE_KEYS)throw Error(`At most ${MAX_SHAPE_KEYS} path keys.`);return {...m,shapeKeys:keys};
 }
-/** Why `from` cannot morph into `to`, or null when it can. Point order is matched by index. */
-export function morphRefusal(from:LayerMask,to:LayerMask):string|null{
- if(from.id===to.id)return 'Pick another mask to morph into.';
- if(from.shape!=='path'||!from.path||to.shape!=='path'||!to.path)return 'Both masks must be path masks.';
- if(from.path.points.length!==to.path.points.length)return `The shapes have different numbers of points (${from.path.points.length} and ${to.path.points.length}). Give both the same number of points to morph.`;
- if(from.path.closed!==to.path.closed)return 'One shape is closed and the other is open. Make both the same.';
+/** Options for a morph key. `match:'resample'` resamples the source by arc length to the target's point count; `reverse` flips the point order; `shift` rotates the start point (closed shapes). */
+export interface MorphOpts{match?:'index'|'resample';reverse?:boolean;shift?:number}
+/** A morph refusal: `key` is the locale key (animation.morph.err.*), `en` the English fallback. */
+export interface MorphProblem{key:string;params?:Record<string,number>;en:string}
+export class MorphError extends Error{constructor(readonly problem:MorphProblem){super(problem.en);this.name='MorphError';}}
+const P=(key:string,en:string,params?:Record<string,number>):MorphProblem=>({key:`animation.morph.err.${key}`,en,...(params?{params}:{})});
+/** Why `from` cannot morph into `to` with these options, or null when it can. Time and key limits are checked by `morphPath`. */
+export function morphProblem(from:LayerMask,to:LayerMask,o:MorphOpts={}):MorphProblem|null{
+ if(from.id===to.id)return P('same','Pick another mask to morph into.');
+ if(from.shape!=='path'||!from.path||to.shape!=='path'||!to.path)return P('notPath','Both masks must be path masks.');
+ const a=from.path.points.length,b=to.path.points.length;
+ if(a!==b&&o.match!=='resample')return P('count',`The shapes have different numbers of points (${a} and ${b}). Turn on point matching, or give both the same number of points.`,{a,b});
+ if(from.path.closed!==to.path.closed)return P('closed','One shape is closed and the other is open. Make both the same.');
+ if(o.shift!==undefined&&(!Number.isInteger(o.shift)||o.shift<0||o.shift>=a))return P('shiftRange','The start point must be one of the target points.',{max:a-1});
+ if(o.shift&&!from.path.closed)return P('shiftOpen','The start point can only move on closed shapes.');
  return null;
 }
+const SEG=16;
+/** Resamples a bezier path to `n` points evenly spaced by arc length. Smooth handles are rebuilt only when the source had handles. */
+export function resamplePath(p:MaskPath,n:number):MaskPath{
+ const pts=p.points,m=pts.length,segs=p.closed?m:m-1,poly:{x:number;y:number;s:number}[]=[];let len=0;
+ for(let i=0;i<segs;i++){const a=pts[i],b=pts[(i+1)%m];
+  const c=[[a.x,a.y],[a.x+(a.outX??0),a.y+(a.outY??0)],[b.x+(b.inX??0),b.y+(b.inY??0)],[b.x,b.y]];
+  for(let k=0;k<SEG;k++){const u=k/SEG,v=1-u,w=[v*v*v,3*v*v*u,3*v*u*u,u*u*u];
+   const x=c.reduce((r,q,j)=>r+q[0]*w[j],0),y=c.reduce((r,q,j)=>r+q[1]*w[j],0);
+   if(poly.length)len+=Math.hypot(x-poly[poly.length-1].x,y-poly[poly.length-1].y);poly.push({x,y,s:len});}}
+ const last=pts[p.closed?0:m-1];len+=poly.length?Math.hypot(last.x-poly[poly.length-1].x,last.y-poly[poly.length-1].y):0;poly.push({x:last.x,y:last.y,s:len});
+ if(!(len>0))throw new MorphError(P('flat','This shape has no length to resample.'));
+ const out:{x:number;y:number}[]=[];let j=0;
+ for(let k=0;k<n;k++){const s=p.closed?k*len/n:k*len/(n-1);while(j<poly.length-2&&poly[j+1].s<s)j++;
+  const a=poly[j],b=poly[j+1],u=b.s>a.s?Math.min(1,Math.max(0,(s-a.s)/(b.s-a.s))):0;out.push({x:round(a.x+(b.x-a.x)*u),y:round(a.y+(b.y-a.y)*u)});}
+ return smoothPath(out,p.closed,pts.some(q=>q.inX!==undefined||q.outX!==undefined));
+}
+const reversed=(p:MaskPath):MaskPath=>({closed:p.closed,points:[...p.points].reverse().map(q=>{const {inX,inY,outX,outY,...r}=q;return {...r,...(outX!==undefined?{inX:outX,inY:outY}:{}),...(inX!==undefined?{outX:inX,outY:inY}:{})};})});
 /** Keys the path of `m` at `t` to the shape of `src` (placed in m's mask space). An unanimated path first gets a key at the composition start that holds its current shape. */
-export function morphPath(m:LayerMask,src:LayerMask,t:number,c:Composition):LayerMask{
- const why=morphRefusal(m,src);if(why)throw new Error(why);
+export function morphPath(m:LayerMask,src:LayerMask,t:number,c:Composition,o:MorphOpts={}):LayerMask{
+ const why=morphProblem(m,src,o);if(why)throw new MorphError(why);
  let keys=m.shapeKeys?.length?[...m.shapeKeys]:[];
- if(!keys.length){if(t<=c.start)throw new Error('Move the playhead past the first frame, or animate the path first.');keys=[{t:c.start,path:m.path!}];}
+ if(!keys.length){if(t<=c.start)throw new MorphError(P('first','Move the playhead past the first frame, or animate the path first.'));keys=[{t:c.start,path:m.path!}];}
  const a=resolveMask(m,t),b=resolveMask(src,t),dx=b.x-a.x,dy=b.y-a.y;
- const path:MaskPath={closed:b.path!.closed,points:b.path!.points.map(q=>({...q,x:round(q.x+dx),y:round(q.y+dy)}))};
+ let sp=b.path!;if(sp.points.length!==m.path!.points.length)sp=resamplePath(sp,m.path!.points.length);
+ if(o.reverse)sp=reversed(sp);
+ if(o.shift){const k=o.shift,n=sp.points.length;sp={closed:sp.closed,points:sp.points.map((_,i)=>sp.points[(i+k)%n])};}
+ const path:MaskPath={closed:sp.closed,points:sp.points.map(q=>({...q,x:round(q.x+dx),y:round(q.y+dy)}))};
  keys=[...keys.filter(k=>k.t!==t),{t,path}].sort((x,y)=>x.t-y.t);
- if(keys.length>MAX_SHAPE_KEYS)throw new Error(`At most ${MAX_SHAPE_KEYS} path keys.`);
+ if(keys.length>MAX_SHAPE_KEYS)throw new MorphError(P('limit',`At most ${MAX_SHAPE_KEYS} path keys.`,{max:MAX_SHAPE_KEYS}));
  return {...m,shapeKeys:keys};
 }
 /** Moves one path key to a free frame. */

@@ -390,5 +390,17 @@
  "animation.morph.choose": "Transformer en…",
  "animation.morph.option": "Masque {n} ({count} points)",
  "animation.morph.apply": "Transformer ici",
- "animation.morph.target": "Transformer en masque"
+ "animation.morph.target": "Transformer en masque",
+ "animation.morph.err.same": "Choisissez un autre masque pour la transformation.",
+ "animation.morph.err.notPath": "Les deux masques doivent être des masques de tracé.",
+ "animation.morph.err.count": "Les formes ont un nombre de points différent ({a} et {b}). Activez la mise en correspondance des points ou donnez-leur le même nombre.",
+ "animation.morph.err.closed": "Une forme est fermée et l’autre ouverte. Rendez-les identiques.",
+ "animation.morph.err.shiftRange": "Le point de départ doit être l’un des points cibles (0 à {max}).",
+ "animation.morph.err.shiftOpen": "Le point de départ ne peut changer que sur les formes fermées.",
+ "animation.morph.err.flat": "Cette forme n’a pas de longueur à rééchantillonner.",
+ "animation.morph.err.first": "Déplacez la tête de lecture après la première image ou animez d’abord le tracé.",
+ "animation.morph.err.limit": "{max} clés de tracé au maximum.",
+ "animation.morph.match": "Faire correspondre les points",
+ "animation.morph.reverse": "Inverser",
+ "animation.morph.start": "Point de départ"
 }

@@ -390,5 +390,17 @@
  "animation.morph.choose": "Morphen in…",
  "animation.morph.option": "Maske {n} ({count} Punkte)",
  "animation.morph.apply": "Hier morphen",
- "animation.morph.target": "In Maske morphen"
+ "animation.morph.target": "In Maske morphen",
+ "animation.morph.err.same": "Wähle eine andere Maske zum Morphen.",
+ "animation.morph.err.notPath": "Beide Masken müssen Pfad-Masken sein.",
+ "animation.morph.err.count": "Die Formen haben unterschiedlich viele Punkte ({a} und {b}). Punkte angleichen aktivieren oder beiden dieselbe Punktzahl geben.",
+ "animation.morph.err.closed": "Eine Form ist geschlossen, die andere offen. Beide gleich machen.",
+ "animation.morph.err.shiftRange": "Der Startpunkt muss einer der Zielpunkte sein (0 bis {max}).",
+ "animation.morph.err.shiftOpen": "Der Startpunkt lässt sich nur bei geschlossenen Formen verschieben.",
+ "animation.morph.err.flat": "Diese Form hat keine Länge zum Neuberechnen der Punkte.",
+ "animation.morph.err.first": "Playhead hinter das erste Bild setzen oder zuerst den Pfad animieren.",
+ "animation.morph.err.limit": "Höchstens {max} Pfad-Keys.",
+ "animation.morph.match": "Punkte angleichen",
+ "animation.morph.reverse": "Umkehren",
+ "animation.morph.start": "Startpunkt"
 }

@@ -193,3 +193,9 @@ Depends on: v10 diff viewer, v11 updater for smooth extension and app updates.
 - Implemented: collapsible Easing editor whose curve stays visible in the graph sidebar; path-to-path morph key (`morphTo`) for path masks with the same point count and closed flag, hover preview, inline refusal otherwise, one undo, five locales.
 - Validation: 1 new Animation unit test (156 total), DS ratchet unchanged, ui-commands inventory (379), check:layers, isolated Chrome check (morph +keys, refusal text visible).
 - Not covered: morph works between path masks only (shape layers are rect/ellipse sources, no path source yet); no point resampling, matching or reversing; point order is by index.
+
+### Animation P26 (2026-10-14, integration pending)
+
+- Implemented: arc-length point resampling for morph between paths with different point counts (bounded to 32 points, one undo, hover preview), reverse and start-point rotation, morph refusals localized in five locales via locale keys.
+- Validation: 1 new Animation unit test (157 total), DS ratchet unchanged, ui-commands inventory, check:layers, isolated Chrome check in German.
+- Not covered: resampling can round off sharp corners; start point rotation only on closed shapes; no automatic best-start search; shape layers still have no path source.

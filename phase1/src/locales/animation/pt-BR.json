@@ -390,5 +390,17 @@
  "animation.morph.choose": "Transformar em…",
  "animation.morph.option": "Máscara {n} ({count} pontos)",
  "animation.morph.apply": "Transformar aqui",
- "animation.morph.target": "Transformar na máscara"
+ "animation.morph.target": "Transformar na máscara",
+ "animation.morph.err.same": "Escolha outra máscara para transformar.",
+ "animation.morph.err.notPath": "Ambas as máscaras devem ser máscaras de caminho.",
+ "animation.morph.err.count": "As formas têm números de pontos diferentes ({a} e {b}). Ative a correspondência de pontos ou use o mesmo número nas duas.",
+ "animation.morph.err.closed": "Uma forma está fechada e a outra aberta. Deixe as duas iguais.",
+ "animation.morph.err.shiftRange": "O ponto inicial deve ser um dos pontos de destino (0 a {max}).",
+ "animation.morph.err.shiftOpen": "O ponto inicial só pode mudar em formas fechadas.",
+ "animation.morph.err.flat": "Esta forma não tem comprimento para reamostrar.",
+ "animation.morph.err.first": "Mova o cursor além do primeiro quadro ou anime o caminho primeiro.",
+ "animation.morph.err.limit": "No máximo {max} chaves de caminho.",
+ "animation.morph.match": "Igualar pontos",
+ "animation.morph.reverse": "Inverter",
+ "animation.morph.start": "Ponto inicial"
 }

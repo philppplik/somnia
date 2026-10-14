@@ -390,5 +390,17 @@
  "animation.morph.choose": "Transformar en…",
  "animation.morph.option": "Máscara {n} ({count} puntos)",
  "animation.morph.apply": "Transformar aquí",
- "animation.morph.target": "Transformar en máscara"
+ "animation.morph.target": "Transformar en máscara",
+ "animation.morph.err.same": "Elige otra máscara para transformar.",
+ "animation.morph.err.notPath": "Ambas máscaras deben ser máscaras de trazado.",
+ "animation.morph.err.count": "Las formas tienen distinto número de puntos ({a} y {b}). Activa la coincidencia de puntos o usa el mismo número en ambas.",
+ "animation.morph.err.closed": "Una forma está cerrada y la otra abierta. Haz que ambas sean iguales.",
+ "animation.morph.err.shiftRange": "El punto inicial debe ser uno de los puntos de destino (0 a {max}).",
+ "animation.morph.err.shiftOpen": "El punto inicial solo se puede mover en formas cerradas.",
+ "animation.morph.err.flat": "Esta forma no tiene longitud para remuestrear.",
+ "animation.morph.err.first": "Mueve el cabezal más allá del primer fotograma o anima primero el trazado.",
+ "animation.morph.err.limit": "Como máximo {max} claves de trazado.",
+ "animation.morph.match": "Igualar puntos",
+ "animation.morph.reverse": "Invertir",
+ "animation.morph.start": "Punto inicial"
 }

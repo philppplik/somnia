@@ -390,5 +390,17 @@
  "animation.morph.choose": "Morph into…",
  "animation.morph.option": "Mask {n} ({count} points)",
  "animation.morph.apply": "Morph here",
- "animation.morph.target": "Morph into mask"
+ "animation.morph.target": "Morph into mask",
+ "animation.morph.err.same": "Pick another mask to morph into.",
+ "animation.morph.err.notPath": "Both masks must be path masks.",
+ "animation.morph.err.count": "The shapes have different numbers of points ({a} and {b}). Turn on point matching, or give both the same number of points.",
+ "animation.morph.err.closed": "One shape is closed and the other is open. Make both the same.",
+ "animation.morph.err.shiftRange": "The start point must be one of the target points (0 to {max}).",
+ "animation.morph.err.shiftOpen": "The start point can only move on closed shapes.",
+ "animation.morph.err.flat": "This shape has no length to resample.",
+ "animation.morph.err.first": "Move the playhead past the first frame, or animate the path first.",
+ "animation.morph.err.limit": "At most {max} path keys.",
+ "animation.morph.match": "Match points",
+ "animation.morph.reverse": "Reverse",
+ "animation.morph.start": "Start point"
 }

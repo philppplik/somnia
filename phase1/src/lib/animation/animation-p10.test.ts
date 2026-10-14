@@ -1,7 +1,8 @@
 import test from 'node:test';import assert from 'node:assert/strict';
 import {createDocument,findComp,findLayer,validateDocument,MAX_LAYER_MASKS,type AnimationDocument} from './model';
 import {applyEdit,applyEdits,EditError} from './edit';
-import {morphPath,morphRefusal,maskEdit,matteEdit,maskPath,copyMaskKey,insertPoint,handleMaskKey,copyMaskKeys} from './masks';
+import {readFileSync} from 'node:fs';
+import {morphPath,morphProblem,resamplePath,MorphError,maskEdit,matteEdit,maskPath,copyMaskKey,insertPoint,handleMaskKey,copyMaskKeys} from './masks';
 import {animatedChars,animatorEdit,defaultAnimator,mixHex} from './textAnimators';
 import {copyTransformKeys,pasteTransformEdits} from './keysClipboard';
 import {animatedTargets,allTargetKeys,propertyOf,moveTargetKeys,easeTargetKeys,pruneTargetKeys,toggleTargetKey,editTargetKeys,copyTargetKeys,pasteTargetKeys,deleteTargetKeys,pasteClipOnTargets,staggerLayers,bounceClip,bounceTargetKeys} from './keyTargets';
@@ -509,7 +510,7 @@ test('P25: path-to-path morph keys a mask to another path with the same point co
  d=applyEdit(d,maskEdit(d,'photo',{op:'path',mask:'b',points:[{x:10,y:10},{x:200,y:20},{x:80,y:150}],closed:true,smooth:false}));
  d=applyEdit(d,maskEdit(d,'photo',{op:'path',mask:'c',points:[{x:0,y:0},{x:50,y:0},{x:50,y:50},{x:0,y:50}],closed:true,smooth:false}));
  const masks=()=>layer(d,'photo').masks!;const at=Math.round(sec*2);
- assert.equal(morphRefusal(masks()[0],masks()[1]),null);assert.match(morphRefusal(masks()[0],masks()[2])!,/different numbers of points \(3 and 4\)/);assert.match(morphRefusal(masks()[0],masks()[0])!,/another mask/);
+ assert.equal(morphProblem(masks()[0],masks()[1]),null);assert.match(morphProblem(masks()[0],masks()[2])!.en,/different numbers of points \(3 and 4\)/);assert.match(morphProblem(masks()[0],masks()[0])!.en,/another mask/);
  const rev=d.revision;const m=applyEdit(d,maskEdit(d,'photo',{op:'morphTo',mask:'a',other:'b',t:at}));assert.equal(m.revision,rev+1,'one undo step');
  const a=layer(m,'photo').masks![0];assert.equal(a.shapeKeys!.length,2);assert.equal(a.shapeKeys![0].t,comp(m).start);assert.deepEqual(a.shapeKeys![0].path.points,tri,'start key holds the old shape');
  const bm=layer(m,'photo').masks![1];assert.deepEqual(a.shapeKeys![1].path.points.map(p=>[p.x,p.y]),bm.path!.points.map(p=>[p.x+bm.x-a.x,p.y+bm.y-a.y]),'placed in the target mask space');
@@ -526,4 +527,34 @@ test('P25: path-to-path morph keys a mask to another path with the same point co
  const closedB=applyEdit(d,maskEdit(d,'photo',{op:'path',mask:'b',points:[{x:10,y:10},{x:200,y:20},{x:80,y:150}],closed:false,smooth:false}));
  assert.throws(()=>maskEdit(closedB,'photo',{op:'morphTo',mask:'a',other:'b',t:at}),/closed/);
  assert.throws(()=>morphPath(masks()[0],{...masks()[1],shape:'rect',path:undefined},at,comp(d)),/path masks/);
+});
+
+test('P26: morph can resample by arc length, reverse and rotate the start point; refusals carry locale keys',()=>{
+ let d=base();const sq=[{x:0,y:0},{x:100,y:0},{x:100,y:100},{x:0,y:100}];const tri=[{x:0,y:0},{x:90,y:0},{x:45,y:80}];
+ d=applyEdit(d,maskEdit(d,'photo',{op:'add',id:'a'}));d=applyEdit(d,maskEdit(d,'photo',{op:'add',id:'b'}));
+ d=applyEdit(d,maskEdit(d,'photo',{op:'path',mask:'a',points:tri,closed:true,smooth:false}));d=applyEdit(d,maskEdit(d,'photo',{op:'path',mask:'b',points:sq,closed:true,smooth:false}));
+ const ms=()=>layer(d,'photo').masks!;const at=Math.round(sec*2);const key=(x:AnimationDocument,i=0)=>layer(x,'photo').masks![i].shapeKeys!.at(-1)!.path.points;
+ // without matching the old refusal stays, with a locale key and the numbers
+ const p=morphProblem(ms()[0],ms()[1])!;assert.equal(p.key,'animation.morph.err.count');assert.deepEqual(p.params,{a:3,b:4});
+ try{maskEdit(d,'photo',{op:'morphTo',mask:'a',other:'b',t:at});assert.fail('should refuse');}catch(e){assert.ok(e instanceof MorphError);assert.equal((e as MorphError).problem.key,'animation.morph.err.count');}
+ // resample 4 -> 3 points: even spacing along a square (perimeter 400, 3 points = 133.33 apart)
+ const rev=d.revision;const m=applyEdit(d,maskEdit(d,'photo',{op:'morphTo',mask:'a',other:'b',t:at,match:'resample'}));assert.equal(m.revision,rev+1,'one undo step');
+ const k=key(m);assert.equal(k.length,3);const bm=ms()[1],am=ms()[0];assert.deepEqual([k[0].x,k[0].y],[bm.x-am.x,bm.y-am.y],'starts at the source start point');
+ const dist=(i:number,j:number)=>Math.hypot(k[i].x-k[j].x,k[i].y-k[j].y);assert.ok(dist(0,1)>100&&dist(0,1)<140);assert.deepEqual(validateDocument(m),[]);
+ // direct path math: open path keeps its endpoints, count is exact, bounded by the target count
+ const line=resamplePath({closed:false,points:[{x:0,y:0},{x:100,y:0}]},5);assert.deepEqual(line.points.map(q=>q.x),[0,25,50,75,100]);
+ assert.equal(resamplePath({closed:true,points:sq},32).points.length,32);assert.throws(()=>resamplePath({closed:true,points:[{x:5,y:5},{x:5,y:5},{x:5,y:5}]},4),MorphError);
+ // reverse flips the order, shift rotates the start
+ let e=applyEdit(d,maskEdit(d,'photo',{op:'path',mask:'b',points:[{x:0,y:0},{x:90,y:0},{x:45,y:80}],closed:true,smooth:false}));
+ const plain=key(applyEdit(e,maskEdit(e,'photo',{op:'morphTo',mask:'a',other:'b',t:at})));
+ const r=key(applyEdit(e,maskEdit(e,'photo',{op:'morphTo',mask:'a',other:'b',t:at,reverse:true})));assert.deepEqual(r.map(q=>[q.x,q.y]),[...plain].reverse().map(q=>[q.x,q.y]));
+ const sh=key(applyEdit(e,maskEdit(e,'photo',{op:'morphTo',mask:'a',other:'b',t:at,shift:1})));assert.deepEqual(sh.map(q=>[q.x,q.y]),[plain[1],plain[2],plain[0]].map(q=>[q.x,q.y]));
+ assert.throws(()=>maskEdit(e,'photo',{op:'morphTo',mask:'a',other:'b',t:at,shift:3}),MorphError);
+ const open=applyEdit(e,maskEdit(e,'photo',{op:'path',mask:'a',points:tri,closed:false,smooth:false}));const open2=applyEdit(open,maskEdit(open,'photo',{op:'path',mask:'b',points:tri,closed:false,smooth:false}));
+ assert.equal(morphProblem(layer(open2,'photo').masks![0],layer(open2,'photo').masks![1],{shift:1})!.key,'animation.morph.err.shiftOpen');
+ // smooth sources stay smooth after resampling
+ const sm=resamplePath(smoothPath(sq,true,true),6);assert.ok(sm.points.every(q=>q.inX!==undefined&&q.outX!==undefined));
+ // every refusal key exists in all five locales
+ const keys=['same','notPath','count','closed','shiftRange','shiftOpen','flat','first','limit'].map(x=>`animation.morph.err.${x}`).concat(['animation.morph.match','animation.morph.reverse','animation.morph.start']);
+ for(const l of ['en','de','es','fr','pt-BR']){const j=JSON.parse(readFileSync(new URL(`../../locales/animation/${l}.json`,import.meta.url),'utf8')) as Record<string,string>;for(const k2 of keys)assert.ok(j[k2],`${l} ${k2}`);}
 });
