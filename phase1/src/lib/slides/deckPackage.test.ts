@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {readFileSync,readdirSync} from 'node:fs';
 import {fileURLToPath} from 'node:url';
 import {unzipSync,zipSync,strFromU8,strToU8} from 'fflate';
-import {setSlideFooter,setAllSlideFooters,readSlideFooter,setSlideSize,readSlideSize,setAllSlideBackgrounds,backgroundSummary,setSlideBackground,readSlideBackground,editLayoutBox,readLayoutBoxes,editMasterBox,readMaster,editTheme,readTheme,insertTable,editTable,readTable,setShapeStyle,readShapeStyle,setSlideNotes,groupShapes,ungroupShape,readSlideTransition,setSlideTransition,arrangeShapes,arrangedOrder,setShapesBounds,readSlideNotes,insertPicture,replacePicture,removePicture,fitImage,formatShapeText,addTextBox,removeTextBox,nextShapeId,setShapeBounds,boundsEditIssue,readDeckModel,moveSlide,reorderSlides,duplicateSlide,deleteSlide,newSlideFromLayout,readLayouts} from './deckPackage';
+import {setFirstSlideNum,readFirstSlideNum,setSlideFooter,setAllSlideFooters,readSlideFooter,setSlideSize,readSlideSize,setAllSlideBackgrounds,backgroundSummary,setSlideBackground,readSlideBackground,editLayoutBox,readLayoutBoxes,editMasterBox,readMaster,editTheme,readTheme,insertTable,editTable,readTable,setShapeStyle,readShapeStyle,setSlideNotes,groupShapes,ungroupShape,readSlideTransition,setSlideTransition,arrangeShapes,arrangedOrder,setShapesBounds,readSlideNotes,insertPicture,replacePicture,removePicture,fitImage,formatShapeText,addTextBox,removeTextBox,nextShapeId,setShapeBounds,boundsEditIssue,readDeckModel,moveSlide,reorderSlides,duplicateSlide,deleteSlide,newSlideFromLayout,readLayouts} from './deckPackage';
 import {readRuns,makeEditedCopy} from './editCopy';
 import {png,jpeg} from './imageFixtures';
 
@@ -884,4 +884,14 @@ test('footer: all slides in one pass; bounds and unsupported content refused',()
   const z2=unzipSync(b);const lay=Object.keys(z2).filter(k=>/slideLayouts\/slideLayout\d+\.xml$/.test(k));for(const k of lay)z2[k]=strToU8(strFromU8(z2[k]).replace(/<p:ph\b[^>]*type="(?:sldNum|ftr)"[^>]*\/>/g,'<p:ph type="body" idx="99"/>'));
   const none=zipSync(z2);assert.equal(readSlideFooter(none,sid[0]).canNumber,false);assert.throws(()=>setSlideFooter(none,sid[0],{number:true,footer:null}),/no slide number placeholder/);
   assert.throws(()=>setSlideFooter(none,sid[0],{number:false,footer:'x'}),/no footer placeholder/);assert.equal(setSlideFooter(none,sid[0],{number:false,footer:null}),none);
+});
+
+test('firstSlideNum: read default, set, change, restore and refuse bad input without touching other parts',()=>{
+  const b=deck(2),m0=readDeckModel(b);assert.equal(readFirstSlideNum(b),1);
+  const c=setFirstSlideNum(b,7);assert.equal(readFirstSlideNum(c),7);assert.deepEqual(readDeckModel(c).slides.map(s=>s.id),m0.slides.map(s=>s.id));
+  const d=setFirstSlideNum(c,0);assert.equal(readFirstSlideNum(d),0);assert.equal(setFirstSlideNum(d,0),d);
+  assert.equal(readFirstSlideNum(setFirstSlideNum(d,9999)),9999);
+  for(const bad of [-1,10000,1.5,NaN])assert.throws(()=>setFirstSlideNum(b,bad),/whole number/);
+  const z=unzipSync(c);z['ppt/presentation.xml']=strToU8(strFromU8(z['ppt/presentation.xml']).replace(/firstSlideNum="7"/,'firstSlideNum="abc"'));
+  const odd=zipSync(z);assert.throws(()=>readFirstSlideNum(odd),/not readable/);assert.throws(()=>setFirstSlideNum(odd,3),/not readable/);
 });

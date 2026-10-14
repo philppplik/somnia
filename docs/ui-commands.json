@@ -5748,6 +5748,20 @@
       "hasEnabled": true
     },
     {
+      "id": "slides.setFirstSlideNumber",
+      "title": "Set first slide number",
+      "category": "Edit",
+      "source": "slides",
+      "keywords": [
+        "first slide number",
+        "numbering",
+        "page number",
+        "slide number",
+        "start number"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "slides.setNotes",
       "title": "Set speaker notes",
       "category": "Edit",

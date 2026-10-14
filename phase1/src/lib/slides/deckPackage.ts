@@ -1826,3 +1826,22 @@ function footerApply(bytes:Uint8Array,slideIds:'all'|number,want:FooterEdit):Uin
 export const setSlideFooter=(bytes:Uint8Array,slideId:number,want:FooterEdit)=>footerApply(bytes,slideId,want);
 /** Same edit on every slide; one slide that cannot take it (no layout placeholder, unsupported content) refuses the whole action. */
 export const setAllSlideFooters=(bytes:Uint8Array,want:FooterEdit)=>footerApply(bytes,'all',want);
+
+export const MAX_FIRST_SLIDE_NUM=9999;
+const presTag=(xml:string)=>{const m=/<p:presentation\b[^>]*>/.exec(xml);return m&&(xml.match(/<p:presentation\b/g)??[]).length===1?m:null;};
+/** Number shown on the first slide (presentation firstSlideNum, default 1). */
+export function readFirstSlideNum(bytes:Uint8Array):number{
+  const tag=presTag(text(openPackage(bytes),'ppt/presentation.xml'));if(!tag)throw Error('Presentation has no single root element');
+  const a=/\sfirstSlideNum="([^"]*)"/.exec(tag[0]);if(!a)return 1;
+  if(!/^\d{1,4}$/.test(a[1]))throw Error('Start number is not readable');return Number(a[1]);
+}
+export function setFirstSlideNum(bytes:Uint8Array,value:number):Uint8Array{
+  if(!Number.isInteger(value)||value<0||value>MAX_FIRST_SLIDE_NUM)throw Error('Start number must be a whole number from 0 to 9999');
+  if(readFirstSlideNum(bytes)===value)return bytes;
+  const zip=openPackage(bytes),pres=text(zip,'ppt/presentation.xml'),tag=presTag(pres)!;
+  const next=/\sfirstSlideNum="/.test(tag[0])?tag[0].replace(/(\sfirstSlideNum=")[^"]*(")/,`$1${value}$2`):tag[0].replace(/\s*(\/?)>$/,` firstSlideNum="${value}"$1>`);
+  const model=readDeckModel(bytes),out=repack(zip,{'ppt/presentation.xml':pres.replace(tag[0],next)}),after=readDeckModel(out);
+  if(readFirstSlideNum(out)!==value||after.slides.length!==model.slides.length||after.runs.length!==model.runs.length||after.runs.some((r,i)=>r.text!==model.runs[i].text))throw Error('Edited deck failed verification');
+  const rz=unzipSync(out);for(const key of Object.keys(zip))if(key!=='ppt/presentation.xml'&&(!rz[key]||rz[key].length!==zip[key].length||rz[key].some((v,i)=>v!==zip[key][i])))throw Error('Edited deck changed an unrelated part');
+  return out;
+}
