@@ -1,3 +1,4 @@
+import {NativeInput} from './ui/native-controls';
 import { cn } from "../lib/cn";
 import { useEffect, useRef, useState } from "react";
 import { Search, Terminal } from "../lib/icons";
@@ -86,7 +87,7 @@ export function CommandPalette() {
         {!pending && (
           <div className="flex h-14 items-center gap-3 border-b border-subtle px-4 text-ink-2 [&_input]:h-12 [&_input]:flex-1 [&_input]:border-0! [&_input]:bg-transparent! [&_input]:text-[16px]!">
             <Search size={18} />
-            <input
+            <NativeInput
               ref={input}
               role="combobox"
               aria-label={t("rest.commandPalette.searchCommands")}

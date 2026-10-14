@@ -109,3 +109,5 @@ This guide supplies the cross-cutting system. The [verification guide](verificat
 
 - [New-studio state adoption audit](new-studios-state-audit.md)
 - [Shared motion and opt-in density](motion-density.md)
+
+- [Shell chrome adoption audit](shell-chrome-adoption.md)
