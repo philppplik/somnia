@@ -24,6 +24,9 @@ export function exportInterfaceFrame(source:InterfaceDocument,frameId:string):Fr
  if(new TextEncoder().encode(svg).length>8_000_000)throw Error('SVG exceeds the 8 MB export limit.');
  return {documentId:doc.id,revision:doc.revision,frameId,name:frame.name,width:bounds.width,height:bounds.height,svg,warnings:[...new Set(warnings)]};
 }
+/** Clips a rendered layer SVG to a slice region in layer-local coordinates by rewriting the outer viewport. */
+export function sliceInterfaceExportSVG(rendered:{width:number;height:number;svg:string},region:{x:number;y:number;width:number;height:number}):{width:number;height:number;svg:string}{
+ if(region.x+region.width>rendered.width||region.y+region.height>rendered.height)throw Error('Slice region exceeds the layer.');const open=rendered.svg.indexOf('>');if(!rendered.svg.startsWith('<svg')||open<0)throw Error('Slice region needs a rendered layer.');return {width:region.width,height:region.height,svg:`<svg xmlns="http://www.w3.org/2000/svg" width="${region.width}" height="${region.height}" viewBox="${region.x} ${region.y} ${region.width} ${region.height}">`+rendered.svg.slice(open+1)};}
 /** Preview-only helper for the prototype player: renders one layer subtree as SVG at its own bounds. Not part of the export pipeline. */
 export function exportInterfaceLayerSVG(source:InterfaceDocument,nodeId:string):{width:number;height:number;svg:string}{
  const original=parseInterfaceDocument(serializeInterfaceDocument(source)),resolved=resolveInterfaceValues(original),doc=resolved.document,layout=computeInterfaceLayout(doc),nodes=new Map(doc.nodes.map(n=>[n.id,n])),node=nodes.get(nodeId),bounds=layout.bounds.get(nodeId);

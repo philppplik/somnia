@@ -1,0 +1,30 @@
+import test from 'node:test';import assert from 'node:assert/strict';
+import {createInterfaceSession} from './session';
+import {addNode} from './model';
+import {addExportSetting,updateExportSetting,removeExportSetting,interfaceExportList,exportInterfaceAsset} from './exportSettings';
+import {sliceInterfaceExportSVG,exportInterfaceLayerSVG} from './export';
+const region={x:10,y:20,width:50,height:40};
+function scene(){const s=createInterfaceSession();s.start();let rect='';s.transact(d=>{const f=addNode(d,d.pages[0].id,'frame');rect=addNode(d,d.pages[0].id,'rectangle',f);d.nodes.find(n=>n.id===rect)!.name='Chip';});return {s,rect};}
+test('slice regions add, update, dedupe and delete with one undo each',()=>{const {s,rect}=scene();s.transact(d=>addExportSetting(d,rect,{format:'png',scale:2,region}));
+ assert.equal(s.get().document!.nodes.find(n=>n.id===rect)!.exportSettings!.length,1);
+ s.transact(d=>addExportSetting(d,rect,{format:'png',scale:2,region:{...region,x:0}}));
+ assert.equal(s.get().document!.nodes.find(n=>n.id===rect)!.exportSettings!.length,2);
+ const before=s.get();assert.throws(()=>s.transact(d=>addExportSetting(d,rect,{format:'png',scale:2,region})));assert.equal(s.get(),before);
+ s.transact(d=>updateExportSetting(d,rect,0,{format:'webp',scale:1,region}));assert.equal(s.get().document!.nodes.find(n=>n.id===rect)!.exportSettings![0].format,'webp');
+ s.undo();assert.equal(s.get().document!.nodes.find(n=>n.id===rect)!.exportSettings![0].format,'png');
+ s.transact(d=>updateExportSetting(d,rect,0,{format:'png',scale:2}));assert.equal(s.get().document!.nodes.find(n=>n.id===rect)!.exportSettings![0].region,undefined);
+ s.transact(d=>removeExportSetting(d,rect,1));s.transact(d=>removeExportSetting(d,rect,0));assert.equal(s.get().document!.nodes.find(n=>n.id===rect)!.exportSettings,undefined);});
+test('slice region validation rejects bad shapes and fails closed on corrupt data',()=>{const {s,rect}=scene();
+ for(const bad of [{x:-1,y:0,width:10,height:10},{x:0,y:0,width:0,height:10},{x:0.5,y:0,width:10,height:10},{x:0,y:0,width:9000,height:10},{x:0,y:0,width:10}]){const before=s.get();assert.throws(()=>s.transact(d=>addExportSetting(d,rect,{format:'png',scale:1,region:bad as never})),/slice region/i);assert.equal(s.get(),before);}
+ assert.throws(()=>s.transact(d=>{addExportSetting(d,rect,{format:'png',scale:1,region});d.nodes.find(n=>n.id===rect)!.exportSettings!.push({format:'png',scale:1,region:{...region}});}));
+ assert.equal(s.get().document!.nodes.find(n=>n.id===rect)!.exportSettings,undefined);});
+test('sliceInterfaceExportSVG rewrites the viewport and rejects regions outside the layer',()=>{const {s,rect}=scene();const doc=s.get().document!;const rendered=exportInterfaceLayerSVG(doc,rect);
+ const sliced=sliceInterfaceExportSVG(rendered,region);assert.equal(sliced.width,50);assert.equal(sliced.height,40);assert.ok(sliced.svg.includes('viewBox="10 20 50 40"'));assert.ok(sliced.svg.startsWith('<svg xmlns="http://www.w3.org/2000/svg" width="50" height="40"'));
+ assert.throws(()=>sliceInterfaceExportSVG(rendered,{x:rendered.width-5,y:0,width:10,height:10}),/exceeds/);assert.throws(()=>sliceInterfaceExportSVG(rendered,{x:0,y:0,width:rendered.width+1,height:1}),/exceeds/);
+ assert.equal(sliceInterfaceExportSVG(rendered,{x:0,y:0,width:rendered.width,height:rendered.height}).width,rendered.width);});
+test('exportInterfaceAsset applies the slice to svg exports and names the file',async()=>{const {s,rect}=scene();const doc=s.get().document!;
+ const out=await exportInterfaceAsset(doc,rect,{format:'svg',scale:1,region});assert.equal(out.filename,'chip-slice-50x40.svg');assert.ok(out.blob.type==='image/svg+xml');assert.ok((await out.blob.text()).includes('viewBox="10 20 50 40"'));
+ const full=await exportInterfaceAsset(doc,rect,{format:'svg',scale:1});assert.equal(full.filename,'chip.svg');
+ await assert.rejects(()=>exportInterfaceAsset(doc,rect,{format:'svg',scale:1,region:{x:0,y:0,width:9999,height:1}}),/exceeds/);});
+test('export list carries the slice region through to the handoff row',()=>{const {s,rect}=scene();s.transact(d=>{addExportSetting(d,rect,{format:'png',scale:1,region});addExportSetting(d,rect,{format:'webp',scale:2});});
+ const list=interfaceExportList(s.get().document!);assert.equal(list.length,2);assert.deepEqual(list[0].region,region);assert.equal(list[1].region,undefined);});

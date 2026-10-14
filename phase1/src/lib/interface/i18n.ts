@@ -4,6 +4,7 @@ import {INTERFACE_P36_CATALOGUES} from './p36I18n';
 import {INTERFACE_P37_CATALOGUES} from './p37I18n';
 import {INTERFACE_P38_CATALOGUES} from './p38I18n';
 import {INTERFACE_P39_CATALOGUES} from './p39I18n';
+import {INTERFACE_P40_CATALOGUES} from './p40I18n';
 import {INTERFACE_P33_CATALOGUES} from './p33I18n';
 import {INTERFACE_P32_CATALOGUES} from './p32I18n';
 import {INTERFACE_P31_CATALOGUES} from './p31I18n';
@@ -126,6 +127,7 @@ for(const [locale,extra] of Object.entries(INTERFACE_P36_CATALOGUES))Object.assi
 for(const [locale,extra] of Object.entries(INTERFACE_P37_CATALOGUES))Object.assign(INTERFACE_CATALOGUES[locale as keyof typeof INTERFACE_CATALOGUES],extra);
 for(const [locale,extra] of Object.entries(INTERFACE_P38_CATALOGUES))Object.assign(INTERFACE_CATALOGUES[locale as keyof typeof INTERFACE_CATALOGUES],extra);
 for(const [locale,extra] of Object.entries(INTERFACE_P39_CATALOGUES))Object.assign(INTERFACE_CATALOGUES[locale as keyof typeof INTERFACE_CATALOGUES],extra);
+for(const [locale,extra] of Object.entries(INTERFACE_P40_CATALOGUES))Object.assign(INTERFACE_CATALOGUES[locale as keyof typeof INTERFACE_CATALOGUES],extra);
 for(const [locale,extra] of Object.entries(INTERFACE_P20_CATALOGUES))Object.assign(INTERFACE_CATALOGUES[locale as keyof typeof INTERFACE_CATALOGUES],extra);
 for(const [locale,extra] of Object.entries(INTERFACE_P19_CATALOGUES))Object.assign(INTERFACE_CATALOGUES[locale as keyof typeof INTERFACE_CATALOGUES],extra);
 for(const [locale,extra] of Object.entries(INTERFACE_P18_CATALOGUES))Object.assign(INTERFACE_CATALOGUES[locale as keyof typeof INTERFACE_CATALOGUES],extra);
