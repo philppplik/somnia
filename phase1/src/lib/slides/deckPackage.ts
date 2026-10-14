@@ -1979,3 +1979,20 @@ export function setPictureAlt(bytes:Uint8Array,slideId:number,shapeId:number,alt
   const rz=unzipSync(out);for(const key of Object.keys(p.zip))if(key!==p.slide.part&&(!rz[key]||rz[key].length!==p.zip[key].length||rz[key].some((v,i)=>v!==p.zip[key][i])))throw Error('Edited deck changed an unrelated part');
   return out;
 }
+
+/** Top-level pictures without alt text across the deck, in slide order. Bounded so a hostile deck cannot flood the panel. */
+export const MAX_ALT_REPORT=200;
+export interface MissingAlt {slideId:number;slideIndex:number;shapeId:number;name:string}
+export function missingAltText(bytes:Uint8Array):{items:MissingAlt[];total:number}{
+  const model=readDeckModel(bytes),zip=openPackage(bytes),items:MissingAlt[]=[];let total=0;
+  model.slides.forEach((slide,slideIndex)=>{
+    if(slide.problems.length)return;const pics=slide.shapes.filter(s=>s.parentId===null&&s.kind==='picture');if(!pics.length)return;
+    const xml=text(zip,slide.part);
+    for(const pic of pics){
+      let alt:string|null=null;
+      try{const r=spRange(xml,pic.id,'p:pic','p:nvPicPr'),t=/<p:cNvPr\b[^>]*>/.exec(xml.slice(r.start,r.end));alt=t?(/\sdescr="([^"]*)"/.exec(t[0])?.[1]??''):'';}catch{continue;}
+      if(dec(alt).trim()==='' ){total++;if(items.length<MAX_ALT_REPORT)items.push({slideId:slide.id,slideIndex,shapeId:pic.id,name:pic.name});}
+    }
+  });
+  return {items,total};
+}

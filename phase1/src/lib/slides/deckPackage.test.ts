@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {readFileSync,readdirSync} from 'node:fs';
 import {fileURLToPath} from 'node:url';
 import {unzipSync,zipSync,strFromU8,strToU8} from 'fflate';
-import {setPictureAlt,readPictureAlt,editSections,setSlideHidden,readHiddenSlides,setFirstSlideNum,readFirstSlideNum,setSlideFooter,setAllSlideFooters,readSlideFooter,setSlideSize,readSlideSize,setAllSlideBackgrounds,backgroundSummary,setSlideBackground,readSlideBackground,editLayoutBox,readLayoutBoxes,editMasterBox,readMaster,editTheme,readTheme,insertTable,editTable,readTable,setShapeStyle,readShapeStyle,setSlideNotes,groupShapes,ungroupShape,readSlideTransition,setSlideTransition,arrangeShapes,arrangedOrder,setShapesBounds,readSlideNotes,insertPicture,replacePicture,removePicture,fitImage,formatShapeText,addTextBox,removeTextBox,nextShapeId,setShapeBounds,boundsEditIssue,readDeckModel,moveSlide,reorderSlides,duplicateSlide,deleteSlide,newSlideFromLayout,readLayouts} from './deckPackage';
+import {missingAltText,MAX_ALT_REPORT,setPictureAlt,readPictureAlt,editSections,setSlideHidden,readHiddenSlides,setFirstSlideNum,readFirstSlideNum,setSlideFooter,setAllSlideFooters,readSlideFooter,setSlideSize,readSlideSize,setAllSlideBackgrounds,backgroundSummary,setSlideBackground,readSlideBackground,editLayoutBox,readLayoutBoxes,editMasterBox,readMaster,editTheme,readTheme,insertTable,editTable,readTable,setShapeStyle,readShapeStyle,setSlideNotes,groupShapes,ungroupShape,readSlideTransition,setSlideTransition,arrangeShapes,arrangedOrder,setShapesBounds,readSlideNotes,insertPicture,replacePicture,removePicture,fitImage,formatShapeText,addTextBox,removeTextBox,nextShapeId,setShapeBounds,boundsEditIssue,readDeckModel,moveSlide,reorderSlides,duplicateSlide,deleteSlide,newSlideFromLayout,readLayouts} from './deckPackage';
 import {readRuns,makeEditedCopy} from './editCopy';
 import {png,jpeg} from './imageFixtures';
 
@@ -962,4 +962,13 @@ test('picture alt text: add, change, clear, no-op, escaping; only pictures; othe
   assert.throws(()=>setPictureAlt(b,sid,text,'x'),/Only pictures/);assert.throws(()=>setPictureAlt(b,sid,9999,'x'),/no longer exists/);assert.throws(()=>setPictureAlt(b,99999,pic,'x'),/no longer exists/);
   for(const bad of ['',' pad ','x'.repeat(501),'a\nb'])assert.throws(()=>setPictureAlt(b,sid,pic,bad));
   assert.deepEqual(titles(c),titles(b));
+});
+
+test('missing alt report: lists pictures without alt in slide order, updates after setting, ignores non-pictures, bounded',()=>{
+  const none=deck(2);assert.deepEqual(missingAltText(none),{items:[],total:0});
+  const b=deck(3,{picture:true}),m=readDeckModel(b),sid=m.slides[0].id,pic=m.slides[0].shapes.find(s=>s.kind==='picture')!;
+  const r=missingAltText(b);assert.equal(r.total,1);assert.deepEqual(r.items[0],{slideId:sid,slideIndex:0,shapeId:pic.id,name:pic.name});
+  const c=setPictureAlt(b,sid,pic.id,'Chart');assert.deepEqual(missingAltText(c),{items:[],total:0});
+  assert.equal(missingAltText(setPictureAlt(c,sid,pic.id,null)).total,1);
+  assert.ok(MAX_ALT_REPORT>=1&&MAX_ALT_REPORT<=1000);
 });
