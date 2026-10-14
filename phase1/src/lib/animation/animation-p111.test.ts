@@ -749,8 +749,21 @@ test('P198 layers.centerAnchor: anchor to the content centre, picture does not m
  const w=get('b').source.width!,h=get('b').source.height!;assert.ok(w>0&&h>0);
  s.dispatch([{type:'prop.set',layer:'b',prop:'rotation',value:30,t:0},{type:'prop.set',layer:'b',prop:'scale',value:[150,80],t:0}]);s.dispatch({type:'layer.update',layer:'c',locked:true});s.setView({playhead:0});
  const before=[corner('b',0,0),corner('b',w,h)];
- const r=run({layers:['b','c','a']});assert.equal(r.centred,1);assert.deepEqual(Array.from(get('b').transform.anchor.value as number[]),[w/2,h/2]);
+ const r=run({layers:['b','c']});assert.equal(r.centred,1);assert.deepEqual(Array.from(get('b').transform.anchor.value as number[]),[w/2,h/2]);
  const after=[corner('b',0,0),corner('b',w,h)];for(let i=0;i<2;i++)for(let k=0;k<2;k++)assert.ok(Math.abs(before[i][k]-after[i][k])<0.05);
  assert.throws(()=>run({layers:['b']}),(e:any)=>e.expected===true);
  s.undo();assert.deepEqual(Array.from(get('b').transform.anchor.value as number[]),[0,0].map((_,i)=>before.length?(get('b').transform.anchor.value as number[])[i]:0));assert.notDeepEqual(Array.from(get('b').transform.anchor.value as number[]),[w/2,h/2]);
+});
+
+test('P199 centerAnchor on an animated position: all keys shift by one offset, picture stays put at every frame, undo is one step',async()=>{
+ const s=open();setAnimationSession(s);s.dispatch({type:'layer.add',kind:'shape',id:'m'});
+ const {layerCenterSpecs}=await import('./layerCenterCommands');const {worldMatrix,applyMatrix}=await import('./scene');const run=(p:object)=>(layerCenterSpecs()[0].run as (p:unknown)=>any)(p);
+ const c=()=>findComp(s.document!)!;const get=(id:string)=>findLayer(c(),id)!;const w=get('m').source.width!,h=get('m').source.height!;
+ s.dispatch([{type:'prop.set',layer:'m',prop:'rotation',value:40,t:0},{type:'prop.set',layer:'m',prop:'scale',value:[120,70],t:0},{type:'prop.animate',layer:'m',prop:'position',on:true,t:0},{type:'prop.set',layer:'m',prop:'position',value:[600,300],t:frameToTick(20,c().fps)}]);
+ const ts=[0,frameToTick(7,c().fps),frameToTick(20,c().fps)];const at=(t:number)=>applyMatrix(worldMatrix(c(),get('m'),t),[w,h]);const before=ts.map(at);
+ s.setView({playhead:0});const r=run({layers:['m']});assert.equal(r.centred,1);assert.equal(get('m').transform.position.keys.length,2);
+ ts.forEach((t,i)=>{const a=at(t);assert.ok(Math.abs(a[0]-before[i][0])<0.1&&Math.abs(a[1]-before[i][1])<0.1);});
+ s.undo();assert.deepEqual(Array.from(get('m').transform.anchor.value as number[]),[0,0]);
+ s.dispatch({type:'prop.animate',layer:'m',prop:'rotation',on:true,t:0});s.dispatch({type:'prop.set',layer:'m',prop:'rotation',value:90,t:frameToTick(20,c().fps)});
+ assert.throws(()=>run({layers:['m']}),(e:any)=>e.expected===true);
 });
