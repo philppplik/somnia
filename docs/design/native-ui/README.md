@@ -58,6 +58,7 @@ All file links are repository-relative, so they remain useful on a feature branc
 28. [Photos settings sync (copy/paste)](photos-settings-sync.md)
 29. [Photos prev/next navigation](photos-nav.md)
 30. [Photos zoom presets](photos-zoom-presets.md)
+31. [Photos filmstrip](photos-filmstrip.md)
 
 ## The system in one view
 

@@ -14,6 +14,7 @@ import {decodeSettingsPayload,encodeSettingsPayload,settingsPayloadToText,type S
 import {photoNav} from '../../lib/photos/photoNav';
 import {ZOOM_PRESETS,isZoomPresetActive,zoomPresetLabel} from '../../lib/photos/zoomPresets';
 import {setActiveMedia,useMedia} from '../../lib/media';
+import {PhotosFilmstrip} from './PhotosFilmstrip';
 import {commitPhotoSettings} from '../../lib/photos/studioSession';
 import {usePanelState} from '../../store/panelStateStore';
 import {getState,patchState,requestStudio,useAppStore} from '../../store/appStore';
@@ -194,5 +195,6 @@ export function PhotosWorkspace({item}:{item:MediaItem}){
    <StudioStatus data-testid="photos-note">{note||(ready&&!session?.cropping?t('photos.note'):'')}</StudioStatus>
    <StudioStatus tone={session?.status==='error'?'error':'info'} live={session?.status==='error'?'assertive':'polite'} data-testid="photos-status">{status||(dirty?t('photos.status.dirty'):ready?t('photos.status.clean'):'')}</StudioStatus>
   </div>
+  <PhotosFilmstrip active={item.name}/>
  </section>;
 }

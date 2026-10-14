@@ -19,6 +19,7 @@
  "photos.split": "Before/after",
  "photos.nav.prev": "Previous photo",
  "photos.nav.next": "Next photo","photos.compare": "Hold to compare with the original",
+ "photos.filmstrip.aria": "Photo filmstrip",
  "photos.undo": "Undo",
  "photos.redo": "Redo",
  "photos.reset": "Reset all",

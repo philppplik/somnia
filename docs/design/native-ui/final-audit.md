@@ -162,6 +162,12 @@ through native control primitives, see below.
   existing clamped zoomTo helper; fit and actual-size untouched; no raw
   controls, ratchets unchanged), unit tests and gallery proof added
   (?view=photos-zoom).
+- P40: photos filmstrip feature (Lightroom-style thumbnail strip under
+  the workspace bar fed by MediaItem.url, developable-only via the now
+  exported developablePhotos filter, aria-pressed active tracking with
+  scroll-into-view, setActiveMedia switching; bento.css strip override
+  mirroring media-bar; no raw controls, ratchets unchanged), unit tests
+  and gallery proof added (?view=photos-filmstrip).
 
 
 

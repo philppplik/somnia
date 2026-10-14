@@ -1,0 +1,48 @@
+# Photos filmstrip (P40)
+
+Seventh functional photo-studio feature phase. A Lightroom-style
+filmstrip below the workspace bar: one thumbnail per developable photo
+in library order, single-click switching — the visual triage companion
+to the P38 prev/next navigation.
+
+## What changed
+
+- `src/lib/photos/photoNav.ts`: the developable-only library filter is
+  now exported as `developablePhotos(items)` (generic over the item
+  shape, so media items keep their `url`); `photoNav` reuses it. No
+  behaviour change; existing nav tests untouched and passing.
+- `PhotosFilmstrip` (new component): rendered at the bottom of the
+  workspace when at least two developable photos exist. Each photo is a
+  DS `Button` (compact, outline) wrapping an `img` fed directly from
+  `MediaItem.url` — no decode work, no copies. The active photo's
+  button is `aria-pressed` (DS pressed styling) and is scrolled into
+  view on change; clicking calls `setActiveMedia`, the same mechanism
+  the studio shell and the P38 nav use. Hidden for zero or one photo.
+- `bento.css`: `.canvas-stage>.photos-filmstrip{margin-inline:0;width:100%}`
+  — the global `.canvas-stage>div{margin-inline:auto}` rule otherwise
+  shrink-centres the strip; this mirrors the existing `.media-bar`
+  override next to it.
+- i18n: `photos.filmstrip.aria` in all five photo locales
+  (en, de, es, fr, pt-BR).
+
+## Coverage
+
+- Unit: `src/lib/photos/filmstrip.test.ts` (3 tests: library order with
+  psd/webp/non-image skipped, empty list, generic item shape preserved).
+  All existing photos tests unmodified and passing (105 tests including
+  P34-P39 additions).
+- Browser: `test/design-system/photos-filmstrip.spec.ts` drives a real
+  workspace fed by the media store like `PhotosCanvas` via the
+  `?view=photos-filmstrip` gallery route. The proof adds three real PNG
+  photos (canvas-encoded gradients) and a hue-deterministic fake engine
+  keyed by source bytes, so stage and thumbnails always agree: strip
+  lists all three, first is pressed, clicking switches name/position
+  (2 / 3, 3 / 3); light/dark production-style screenshots on the second
+  photo (`test-results/ds-photos-filmstrip-{light,dark}.png`).
+- Pixel parity: the canvas bitmap is captured via `toDataURL` (exact
+  pixels, no screenshot rounding) at "Actual size" zoom in both trees;
+  base-tree run (tip `316cd01b` + proof/route/spec only) and feature
+  tree produce byte-identical 240x150 PNGs in both themes — the feature
+  adds only the strip below the bar.
+- No new raw controls (thumbnails are the DS `Button`); ratchets
+  unchanged. Actual app photos E2E remains CI-only.
