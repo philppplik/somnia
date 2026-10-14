@@ -344,3 +344,10 @@ test('measure reports texture memory, largest texture, zero scale and textures w
  m.scale.x=0;assert.equal(stage.measure().stats.zeroScale,1);
  m.geometry.deleteAttribute('uv');assert.equal(stage.measure().stats.textureNoUv,1);
 });
+
+test('measure estimates geometry memory from the buffers',()=>{
+ const stage=new Stage();stage.addPrimitive('cube');
+ const m=stage.measure();assert.ok(m.stats.geometryBytes>0);
+ const pos=stage.root.children[0] as THREE.Mesh;const want=(pos.geometry.getAttribute('position') as THREE.BufferAttribute).array.byteLength;
+ assert.ok(m.stats.geometryBytes>=want);
+});

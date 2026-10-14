@@ -55,7 +55,7 @@ export function ModelSection(_:InspectorSectionProps){
   {!s.blank&&<><Row k={t('studio3d.model.format')} v={s.format||'-'}/><Row k={t('studio3d.model.size')} v={formatBytes(s.bytes)}/>
   <Row k={t('studio3d.model.triangles')} v={formatCount(s.stats.triangles)}/><Row k={t('studio3d.model.vertices')} v={formatCount(s.stats.vertices)}/>
   <Row k={t('studio3d.model.meshes')} v={s.stats.meshes}/><Row k={t('studio3d.model.materials')} v={s.stats.materials}/><Row k={t('studio3d.model.textures')} v={s.stats.textures}/><Row k={t('studio3d.model.textureMemory')} v={s.stats.textures?`${toMB(s.stats.textureBytes)} MB`:'-'}/><Row k={t('studio3d.model.draws')} v={formatCount(s.stats.draws)}/>
-  <Row k={t('studio3d.model.animations')} v={s.stats.animations}/><Row k={t('studio3d.model.cameras')} v={s.stats.cameras}/><Row k={t('studio3d.model.dimensions')} v={size}/></>}
+  {s.stats.bones>0&&<Row k={t('studio3d.model.bones')} v={formatCount(s.stats.bones)}/>}<Row k={t('studio3d.model.memory')} v={`${toMB(s.stats.geometryBytes+s.stats.textureBytes)} MB`}/><Row k={t('studio3d.model.animations')} v={s.stats.animations}/><Row k={t('studio3d.model.cameras')} v={s.stats.cameras}/><Row k={t('studio3d.model.dimensions')} v={size}/></>}
  </dl>
   {!s.blank&&<SceneChecks/>}
   {<AnimationControls/>}
@@ -227,6 +227,16 @@ export function ToolsSection(_:InspectorSectionProps){
    <label className="grid gap-1 text-xs text-ink-2">{t('studio3d.export.unit')}
     <select className="rounded-sm border border-subtle bg-surface p-1 text-xs text-ink" value={s.unit} aria-label={t('studio3d.export.unit')} onChange={e=>void executeCommand('studio3d.unit.set',{unit:e.currentTarget.value})}>
      {UNIT_IDS.map(u=><option key={u} value={u}>{t('studio3d.unit.'+u)}</option>)}</select></label>
+   <NativeSelect className="rounded-sm border border-subtle bg-surface p-1 text-xs text-ink" value={s.exportTextures} aria-label={t('studio3d.export.textures')} onChange={e=>void executeCommand('studio3d.export.options',{textures:e.currentTarget.value})}>
+    {(['embed','external'] as const).map(m=><option key={m} value={m}>{t('studio3d.export.textures.'+m)}</option>)}</NativeSelect>
+   {s.clips.length>0&&<div className="grid gap-1" role="group" aria-label={t('studio3d.export.clips')}>{s.clips.map(c=>{
+    const on=s.exportClips===null||s.exportClips.includes(c.name);
+    const toggle=(checked:boolean)=>{
+     const cur=s.exportClips??s.clips.map(x=>x.name);
+     const next=checked?[...cur,c.name]:cur.filter(x=>x!==c.name);
+     void executeCommand('studio3d.export.options',{clips:next.length===s.clips.length?null:next});
+    };
+    return <label key={c.name} className="flex items-center gap-2 text-xs text-ink-2"><NativeInput type="checkbox" checked={on} aria-label={c.name} onChange={e=>toggle(e.currentTarget.checked)}/>{c.name}</label>;})}</div>}
    <div className="flex flex-wrap gap-1">
     <Button variant="outline" disabled={s.status!=='ready'} onClick={()=>void executeCommand('studio3d.export.glb')}>GLB</Button>
     <Button variant="outline" disabled={s.status!=='ready'} onClick={()=>void executeCommand('studio3d.export.gltf')}>glTF</Button>

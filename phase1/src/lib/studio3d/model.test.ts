@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {readModelHeader,modelFormatFor,externalResources,frameDistance,clipPlanes,boundsCenter,boundsSize,boundsRadius,boundsValid,emptyBounds,formatCount,ModelError,MAX_MODEL_BYTES,mergeEnv,defaultEnv,EnvError,nudgeFor,envFormatFor,isMeshFormat,defaultSnap,mergeSnap,SnapError,snapTo,stlUnitHint,mtlReferences,mtlTextures,clampRenderSize} from './model';
+import {readModelHeader,modelFormatFor,externalResources,frameDistance,clipPlanes,boundsCenter,boundsSize,boundsRadius,boundsValid,emptyBounds,formatCount,ModelError,MAX_MODEL_BYTES,mergeEnv,defaultEnv,EnvError,nudgeFor,envFormatFor,isMeshFormat,defaultSnap,mergeSnap,SnapError,snapTo,stlUnitHint,mtlReferences,mtlTextures,clampRenderSize,extractGltfTextures,pickClips,gltfTextureName,dataUriBytes} from './model';
 const pad=(b:Uint8Array,fill:number)=>{const n=(b.length+3)&~3;const o=new Uint8Array(n).fill(fill);o.set(b);return o;};
 function glb(json:unknown,bin?:Uint8Array,version=2):Uint8Array{
  const j=pad(new TextEncoder().encode(JSON.stringify(json)),0x20);const b=bin?pad(bin,0):null;
@@ -148,4 +148,30 @@ test('som3d files are recognised by their format marker',()=>{
 test('a glTF that names a remote file is listed as an external resource, so opening refuses it instead of fetching',()=>{
  const json={asset:{version:'2.0'},buffers:[{uri:'https://example.test/a.bin',byteLength:1}],images:[{uri:'//cdn.example.test/t.png'},{uri:'data:image/png;base64,AAAA'},{uri:'tex/local.png'}]};
  assert.deepEqual(externalResources(json).sort(),['//cdn.example.test/t.png','https://example.test/a.bin','tex/local.png']);
+});
+
+test('glTF textures extract to stable file names and rewrite the JSON',()=>{
+ const png='data:image/png;base64,'+Buffer.from([1,2,3]).toString('base64');
+ const json={images:[{uri:png,mimeType:'image/png'},{uri:'textures/keep.jpg',mimeType:'image/jpeg'},{uri:'data:image/jpeg;base64,'+Buffer.from([4,5]).toString('base64'),mimeType:'image/jpeg'}]};
+ const {files,count}=extractGltfTextures(json);
+ assert.equal(count,2);
+ assert.deepEqual([...files.keys()],['textures/texture_0.png','textures/texture_2.jpg']);
+ assert.deepEqual([...files.get('textures/texture_0.png')!],[1,2,3]);
+ assert.equal(json.images[0].uri,'textures/texture_0.png');
+ assert.equal(json.images[1].uri,'textures/keep.jpg');
+ assert.equal(json.images[2].uri,'textures/texture_2.jpg');
+ assert.equal(gltfTextureName(9,'image/webp'),'textures/texture_9.webp');
+ assert.equal(gltfTextureName(9,'image/x-unknown'),'textures/texture_9.png');
+ assert.throws(()=>dataUriBytes('data:image/png;utf8,nope'),ModelError);
+});
+test('extract with no images is a no-op',()=>{
+ const {files,count}=extractGltfTextures({});assert.equal(count,0);assert.equal(files.size,0);
+});
+test('clip selection: null is all, a subset passes, an unknown name fails with the list',()=>{
+ assert.deepEqual(pickClips(['a','b'],null),['a','b']);
+ assert.deepEqual(pickClips(['a','b'],undefined),['a','b']);
+ assert.deepEqual(pickClips(['a','b'],['b']),['b']);
+ assert.deepEqual(pickClips(['a','b'],[]),[]);
+ assert.throws(()=>pickClips(['a','b'],['c']),/no animation clip named "c".*a, b/);
+ assert.throws(()=>pickClips([],['x']),/none/);
 });

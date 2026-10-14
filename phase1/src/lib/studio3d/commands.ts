@@ -24,7 +24,8 @@ export interface Studio3DController{
  setTransform(id:number,patch:TransformPatch):void;
  setMaterial(id:number,patch:MaterialPatch):void;
  setPrimitive(id:number,patch:Record<string,number>):void;
- exportGltf():Promise<void>;
+ exportGltf(opts?:{textures?:'embed'|'external';clips?:string[]|null}):Promise<void>;
+ setExportOptions(p:{textures?:'embed'|'external';clips?:string[]|null}):void;
  setTextureFile(id:number,slot:TextureSlot,file:File|null):Promise<void>;
  mirrorSelection(axis:MirrorAxis,copy:boolean,ids?:number[]):number[];
  applyScale(ids?:number[]):void;
@@ -80,7 +81,7 @@ export interface Studio3DController{
  distribute(ids:number[],axis:AlignAxis):void;
  setSnap(patch:Partial<SnapSettings>):void;
  renderStill(opts?:RenderOptions):Promise<void>;
- exportGlb():Promise<void>;
+ exportGlb(opts?:{clips?:string[]|null}):Promise<void>;
  save(sidecar?:boolean,embedEnv?:boolean):Promise<void>;
  deleteSelection(ids?:number[]):void;
  duplicateSelection(ids?:number[]):number[];
@@ -184,8 +185,9 @@ export function studio3DCommandSpecs():CommandSpec<unknown,unknown>[]{
   add<{x:number;y:number;z:number;bone?:number;mode?:'add'|'subtract'|'smooth';radius?:number;strength?:number;falloff?:'smooth'|'linear'|'constant'}>('studio3d.skin.paint','Paint one brush dab of bone weight onto the selected skinned 3D mesh','Edit',p=>need().paintDab(p.x,p.y,p.z,p),object({x:{type:'number'},y:{type:'number'},z:{type:'number'},bone:{type:'integer',minimum:0},mode:{enum:['add','subtract','smooth']},radius:{type:'number',minimum:0.001,maximum:1000},strength:{type:'number',minimum:0.01,maximum:1},falloff:{enum:['smooth','linear','constant']}},['x','y','z']),hasSkinnedMesh),
   add<{bone:number|null}>('studio3d.skin.preview','Preview a bone\'s influence as vertex colours on the selected skinned 3D mesh','View',p=>need().setWeightPreview(p.bone),object({bone:{anyOf:[{type:'null'},{type:'integer',minimum:0}]}},['bone']),hasSkinnedMesh),
   add<{on?:boolean}>('studio3d.anim.autokey','Turn auto-key on or off: transform changes are recorded as keys at the current time','View',p=>need().autoKey(p?.on??!getStudio3DState().autoKey),object({on:{type:'boolean'}},[]),hasScene),
-  add('studio3d.export.glb','Export the scene as GLB','Project',()=>need().exportGlb()),
-  add('studio3d.export.gltf','Export the scene as glTF (JSON with embedded data)','Project',()=>need().exportGltf()),
+  add<{clips?:string[]|null}>('studio3d.export.glb','Export the scene as GLB','Project',p=>need().exportGlb(p??{}),object({clips:{anyOf:[{type:'null'},{type:'array',items:{type:'string',minLength:1,maxLength:200},minItems:0,maxItems:64}]}},[])),
+  add<{textures?:'embed'|'external';clips?:string[]|null}>('studio3d.export.gltf','Export the scene as glTF (embedded, or a ZIP with separate textures)','Project',p=>need().exportGltf(p??{}),object({textures:{enum:['embed','external']},clips:{anyOf:[{type:'null'},{type:'array',items:{type:'string',minLength:1,maxLength:200},minItems:0,maxItems:64}]}},[])),
+  add<{textures?:'embed'|'external';clips?:string[]|null}>('studio3d.export.options','Set the glTF export options: texture mode and which clips to export','Project',p=>need().setExportOptions(p??{}),object({textures:{enum:['embed','external']},clips:{anyOf:[{type:'null'},{type:'array',items:{type:'string',minLength:1,maxLength:200},minItems:0,maxItems:64}]}},[])),
   add<{sidecar?:boolean;embedEnv?:boolean}>('studio3d.save','Save the 3D scene','Project',p=>need().save(!!p?.sidecar,!!p?.embedEnv),object({sidecar:{type:'boolean'},embedEnv:{type:'boolean'}},[]),hasScene),
   add<{ids?:number[]}>('studio3d.selection.delete','Delete the selected 3D objects','Edit',p=>need().deleteSelection(p?.ids),object({ids:{type:'array',items:{type:'integer',minimum:0},minItems:1,maxItems:500}},[]),hasScene),
   add<{ids?:number[]}>('studio3d.selection.duplicate','Duplicate the selected 3D objects','Edit',p=>need().duplicateSelection(p?.ids),object({ids:{type:'array',items:{type:'integer',minimum:0},minItems:1,maxItems:500}},[]),hasScene),

@@ -357,5 +357,14 @@
  "studio3d.skinning.falloff": "Caída",
  "studio3d.skinning.falloff.smooth": "Suave",
  "studio3d.skinning.falloff.linear": "Lineal",
- "studio3d.skinning.falloff.constant": "Constante"
+ "studio3d.skinning.falloff.constant": "Constante",
+ "cmd.studio3d.export.options": "Configurar la exportación glTF",
+ "studio3d.export.textures": "Texturas glTF",
+ "studio3d.export.textures.embed": "Incrustadas",
+ "studio3d.export.textures.external": "Archivos separados (ZIP)",
+ "studio3d.export.clips": "Clips para exportar",
+ "studio3d.model.bones": "Huesos",
+ "studio3d.model.memory": "Memoria (aprox.)",
+ "studio3d.warn.highGeometryMemory": "La geometría usa unos {mb} MB, más de {limit} MB.",
+ "studio3d.warn.manyBones": "{count} huesos, más de {limit}. El skinning y la reproducción pueden ir lentos."
 }

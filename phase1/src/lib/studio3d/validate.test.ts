@@ -21,3 +21,11 @@ test('exportBlocker refuses only above the export limit',()=>{
  assert.equal(exportBlocker({...base(),textureBytes:LIMITS.exportTextureBytes}),null);
  assert.match(exportBlocker({...base(),textureBytes:LIMITS.exportTextureBytes+1})!,/export limit/);
 });
+
+test('geometry memory and bone budgets warn above their limits',()=>{
+ const codes=validateScene({...base(),geometryBytes:LIMITS.geometryBytes+1,bones:LIMITS.bones+1}).map(w=>w.code);
+ assert.deepEqual(codes,['highGeometryMemory','manyBones']);
+ const w=validateScene({...base(),geometryBytes:LIMITS.geometryBytes+1})[0];
+ assert.equal(w.values.mb,toMB(LIMITS.geometryBytes+1));
+ assert.deepEqual(validateScene({...base(),geometryBytes:LIMITS.geometryBytes,bones:LIMITS.bones}),[]);
+});

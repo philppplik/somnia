@@ -861,6 +861,7 @@ export class Stage{
    if(mesh.isMesh&&mesh.geometry){
     stats.meshes++;const pos=mesh.geometry.getAttribute('position');const count=pos?pos.count:0;const index=mesh.geometry.getIndex();
     stats.vertices+=count;stats.triangles+=Math.floor((index?index.count:count)/3);
+    for(const a of Object.values(mesh.geometry.attributes))stats.geometryBytes+=(a as THREE.BufferAttribute).array.byteLength;if(index)stats.geometryBytes+=index.array.byteLength;
     let noUv=false;const list=Array.isArray(mesh.material)?mesh.material:[mesh.material];stats.draws+=Math.max(1,list.length);
     for(const mat of list){if(!mat)continue;mats.add(mat);for(const v of Object.values(mat as unknown as Record<string,unknown>))if(v instanceof THREE.Texture){texs.add(v);if(!mesh.geometry.getAttribute('uv'))noUv=true;}}
     if(noUv)stats.textureNoUv++;

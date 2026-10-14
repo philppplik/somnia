@@ -20,7 +20,7 @@ import {MeshoptDecoder} from 'three/addons/libs/meshopt_decoder.module.js';
 import {useT} from '../../lib/useT';
 import {getState as getAppState} from '../../store/appStore';
 import {readProjectUnit,writeProjectUnit} from '../../lib/studio3d/projectPrefs';
-import {toggleSelection,marqueeRect,inRect,turntablePlan,frameName,exportFileName,unitScale,isUnit,isMeshFormat,mergeSnap,snapTo,stlUnitHint,mtlReferences,mtlTextures,clampRenderSize,MAX_MTL_BYTES,MAX_TEXTURE_BYTES,MAX_TEXTURE_FILES,SnapError,mergeEnv,envFormatFor,nudgeFor,EnvError,modelFormatFor,readModelHeader,externalResources,ModelError,boundsValid,boundsCenter,boundsRadius,frameDistance,clipPlanes} from '../../lib/studio3d/model';
+import {toggleSelection,marqueeRect,inRect,turntablePlan,frameName,exportFileName,unitScale,isUnit,isMeshFormat,mergeSnap,snapTo,stlUnitHint,mtlReferences,mtlTextures,clampRenderSize,MAX_MTL_BYTES,MAX_TEXTURE_BYTES,MAX_TEXTURE_FILES,SnapError,mergeEnv,envFormatFor,nudgeFor,EnvError,modelFormatFor,readModelHeader,externalResources,ModelError,boundsValid,boundsCenter,boundsRadius,frameDistance,clipPlanes,pickClips,extractGltfTextures,GLTF_TEXTURE_MODES} from '../../lib/studio3d/model';
 import type {Bounds} from '../../lib/studio3d/model';
 import {checkSkins,bonePickRadius,pickBone} from '../../lib/studio3d/skeleton';
 import {weightColor} from '../../lib/studio3d/skinning';
@@ -440,7 +440,12 @@ export default function Viewport3D(){
   const exportOpts=(binary:boolean)=>{const why=exportBlocker(stage.measure().stats);if(why)throw Object.assign(new Error(why),{expected:true});return{binary,maxTextureSize:LIMITS.exportMaxTextureSize};};
   /** With clips the exporter gets a scene that lists the top-level nodes, so tracks find their nodes; without clips the input is unchanged. */
   const newExporter=()=>{const e=new GLTFExporter();e.register(stage.exporterPlugin() as never);return e;};
-  const exportInput=(whole:boolean)=>{const animations=stage.exportClips();return animations.length?{input:stage.exportScene() as THREE.Object3D|THREE.Object3D[],animations}:{input:(whole?[...holder.children]:holder.children.length===1?holder.children[0]:holder) as THREE.Object3D|THREE.Object3D[],animations:undefined};};
+  /** Clip names for export: an explicit pick wins over the session setting; null exports everything. */
+  const clipsFor=(pick?:string[]|null):THREE.AnimationClip[]=>{
+   const all=stage.exportClips();const want=pickClips(all.map(c=>c.name),pick===undefined?getStudio3DState().exportClips:pick);
+   return all.filter(c=>want.includes(c.name));
+  };
+  const exportInput=(whole:boolean,clips?:string[]|null)=>{const animations=clipsFor(clips);return animations.length?{input:stage.exportScene() as THREE.Object3D|THREE.Object3D[],animations}:{input:(whole?[...holder.children]:holder.children.length===1?holder.children[0]:holder) as THREE.Object3D|THREE.Object3D[],animations:undefined};};
   const sceneGlb=async()=>{const x=exportInput(true);return new Uint8Array(await newExporter().parseAsync(x.input,{...exportOpts(true),onlyVisible:false,...(x.animations?{animations:x.animations}:{})}) as ArrayBuffer);};
   /** Saves the scene as a .som3d document: settings as JSON, geometry as an embedded or separate GLB. */
   const saveDocument=async(sidecar=false,embedEnv=false)=>{
@@ -473,17 +478,29 @@ export default function Viewport3D(){
   const loadUnit=()=>{try{patchStudio3D({unit:readProjectUnit(localStorage,projectName())});}catch{/* keep current */}};
   loadUnit();
   const setUnit=(u:unknown)=>{if(!isUnit(u))throw Object.assign(new Error('Unit must be m, cm, mm or in.'),{expected:true});patchStudio3D({unit:u});try{writeProjectUnit(localStorage,projectName(),u);}catch{/* session only */}};
-  const exportGlb=async()=>{
+  const exportGlb=async(opts?:{clips?:string[]|null})=>{
    if(!holder.children.length)throw Object.assign(new Error('There is nothing to export. Open a model first.'),{expected:true});
-   const x=exportInput(false);const result=await newExporter().parseAsync(x.input,{...exportOpts(true),...(x.animations?{animations:x.animations}:{})});
+   const x=exportInput(false,opts?.clips);const result=await newExporter().parseAsync(x.input,{...exportOpts(true),...(x.animations?{animations:x.animations}:{})});
    download(new Blob([result as ArrayBuffer],{type:'model/gltf-binary'}),`${stem(getStudio3DState().name||'scene')}.glb`);
    stage.markSaved();
   };
-  /** glTF 2.0 as one self-contained .gltf file (buffers and images embedded as data URIs). */
-  const exportGltf=async()=>{
+  /** glTF 2.0 as one self-contained .gltf file, or as a ZIP with the .gltf and its textures as separate files. */
+  const exportGltf=async(opts?:{textures?:'embed'|'external';clips?:string[]|null})=>{
    if(!holder.children.length)throw Object.assign(new Error('There is nothing to export. Open a model first.'),{expected:true});
-   const x=exportInput(false);const result=await newExporter().parseAsync(x.input,{...exportOpts(false),...(x.animations?{animations:x.animations}:{})});
-   download(new Blob([JSON.stringify(result)],{type:'model/gltf+json'}),`${stem(getStudio3DState().name||'scene')}.gltf`);
+   const x=exportInput(false,opts?.clips);const result=await newExporter().parseAsync(x.input,{...exportOpts(false),...(x.animations?{animations:x.animations}:{})}) as {images?:{uri?:string;mimeType?:string}[]};
+   const mode=opts?.textures??getStudio3DState().exportTextures;const name=stem(getStudio3DState().name||'scene');
+   if(mode==='external'){
+    const {files}=extractGltfTextures(result);const {zipSync,strToU8}=await import('fflate');
+    const zip=zipSync({[`${name}.gltf`]:strToU8(JSON.stringify(result)),...Object.fromEntries([...files].map(([n,b])=>[n,b]))});
+    download(new Blob([zip.buffer as ArrayBuffer],{type:'application/zip'}),`${name}.gltf.zip`);
+   }else download(new Blob([JSON.stringify(result)],{type:'model/gltf+json'}),`${name}.gltf`);
+   stage.markSaved();
+  };
+  /** Export options live in the session so the buttons and the commands agree. */
+  const setExportOptions=(p:{textures?:'embed'|'external';clips?:string[]|null})=>{
+   if(p.textures&&!(GLTF_TEXTURE_MODES as readonly string[]).includes(p.textures))throw Object.assign(new Error(`Textures must be one of ${GLTF_TEXTURE_MODES.join(', ')}.`),{expected:true});
+   if(p.clips)pickClips(stage.clips.map(c=>c.name),p.clips);
+   patchStudio3D({...(p.textures?{exportTextures:p.textures}:{}),...(p.clips!==undefined?{exportClips:p.clips&&p.clips.length===stage.clips.length?null:p.clips}:{})});
   };
   /** Reads an image the user chose for a texture slot. Type, size and pixel count are checked from the file header before anything decodes it. Nothing is fetched. */
   const setTextureFile=async(id:number,slot:TextureSlot,file:File|null)=>{
@@ -609,7 +626,7 @@ export default function Viewport3D(){
   const autoKey=(on:boolean)=>{if(on&&!stage.clips.length)clipAdd();patchStudio3D({autoKey:!!on});};
   stage.autoKeySource=()=>getStudio3DState().autoKey&&stage.clips.length?{clip:anim().clip,time:anim().time}:null;
   const off=registerStudio3DController({keyMove,keyEase,keyCopy,keyShift,clipDuplicate,animRange,selectBone,setSkeleton,skinBind,skinRebind,setWeightPreview,setWeightBrush,paintDab,keyPaste,autoKey,clipAdd,clipRemove,clipRename,clipDuration,keySet,keyRemove,animPlay,animPause,animSeek,animLoop,animSpeed,setTextureTransform:(id,slot,p)=>stage.setTextureTransform(id,slot,p),exportGltf,setTextureFile,mirrorSelection,applyScale:applyScaleSel,mergeSelection:mergeSel,viewPreset,setPrimitive:(id,p)=>stage.setPrimitive(id,p),
-   save:saveDocument,deleteSelection,duplicateSelection,exportMesh,renderTurntable,cancelRender:()=>{cancelFlag=true;},setUnit,openFiles,newScene,resetView:frameAll,frameSelection,select,renderStill,exportGlb,
+   save:saveDocument,deleteSelection,duplicateSelection,exportMesh,setExportOptions,renderTurntable,cancelRender:()=>{cancelFlag=true;},setUnit,openFiles,newScene,resetView:frameAll,frameSelection,select,renderStill,exportGlb,
    addPrimitive:k=>{const o=stage.addPrimitive(k);select(o.id);return o.id;},addLight:k=>{const o=stage.addLight(k);select(o.id);return o.id;},
    setTransform:(id,p)=>stage.setTransform(id,p),setMaterial:(id,p)=>stage.setMaterial(id,p),rename:(id,n)=>stage.rename(id,n),
    addCamera:fromView=>{

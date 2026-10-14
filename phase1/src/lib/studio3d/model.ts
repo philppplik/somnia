@@ -119,8 +119,8 @@ export function clipPlanes(distance:number,radius:number):{near:number;far:numbe
  const r=Math.max(radius,1e-6);
  return{near:Math.max(distance/1000,r/1000),far:Math.max(distance+r*20,distance*4)};
 }
-export interface ModelStats{meshes:number;nodes:number;/** Bones (joints) of skinned meshes. */bones:number;triangles:number;vertices:number;materials:number;textures:number;animations:number;cameras:number;draws:number;/** Estimated decoded size of all textures. */textureBytes:number;maxTexture:number;/** Nodes with a zero scale on some axis. */zeroScale:number;/** Meshes that use a texture but have no UV set. */textureNoUv:number}
-export const emptyStats=():ModelStats=>({meshes:0,nodes:0,bones:0,triangles:0,vertices:0,materials:0,textures:0,animations:0,cameras:0,draws:0,textureBytes:0,maxTexture:0,zeroScale:0,textureNoUv:0});
+export interface ModelStats{meshes:number;nodes:number;/** Bones (joints) of skinned meshes. */bones:number;triangles:number;vertices:number;materials:number;textures:number;animations:number;cameras:number;draws:number;/** Estimated decoded size of all textures. */textureBytes:number;/** Estimated size of all geometry buffers (attributes and index). */geometryBytes:number;maxTexture:number;/** Nodes with a zero scale on some axis. */zeroScale:number;/** Meshes that use a texture but have no UV set. */textureNoUv:number}
+export const emptyStats=():ModelStats=>({meshes:0,nodes:0,bones:0,triangles:0,vertices:0,materials:0,textures:0,animations:0,cameras:0,draws:0,textureBytes:0,geometryBytes:0,maxTexture:0,zeroScale:0,textureNoUv:0});
 export const formatCount=(n:number)=>n>=1e6?(n/1e6).toFixed(n>=1e7?0:1)+' M':n>=1e4?(n/1e3).toFixed(n>=1e5?0:1)+' k':String(n);
 export interface OutlineEntry{id:number;name:string;depth:number;kind:'group'|'mesh'|'light'|'camera'|'bone'}
 
@@ -227,3 +227,33 @@ export function turntablePlan(frames:number,width:number,height:number):{frames:
  return{frames,step:(Math.PI*2)/frames};
 }
 export const frameName=(i:number,total:number)=>`frame-${String(i+1).padStart(Math.max(4,String(total).length),'0')}.png`;
+
+/** glTF texture export: embedded as data URIs or written as separate files next to the .gltf. */
+export const GLTF_TEXTURE_MODES=['embed','external'] as const;
+export type GltfTextureMode=typeof GLTF_TEXTURE_MODES[number];
+const IMAGE_EXT:Record<string,string>={'image/png':'png','image/jpeg':'jpg','image/webp':'webp'};
+/** File name for one extracted texture, stable by image index. */
+export const gltfTextureName=(i:number,mime:string):string=>`textures/texture_${i}.${IMAGE_EXT[mime]??'png'}`;
+/** Decodes a data: URI payload (base64 only, as written by GLTFExporter). Env-agnostic: atob exists in browsers and Node 16+. */
+export function dataUriBytes(uri:string):Uint8Array{
+ const m=/^data:([^;,]+);base64,(.*)$/s.exec(uri);if(!m)throw new ModelError('A texture is not a base64 data URI.');
+ const bin=atob(m[2]);const out=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)out[i]=bin.charCodeAt(i);
+ return out;
+}
+/** Pulls embedded data-URI textures out of an exported glTF JSON and returns them as named files; the JSON is rewritten to reference the files. Non-data URIs are left untouched. */
+export function extractGltfTextures(json:{images?:{uri?:string;mimeType?:string}[]}):{files:Map<string,Uint8Array>;count:number}{
+ const files=new Map<string,Uint8Array>();
+ for(let i=0;i<(json.images?.length??0);i++){
+  const img=json.images![i];if(!img.uri||!img.uri.startsWith('data:'))continue;
+  const name=gltfTextureName(i,img.mimeType??'image/png');
+  files.set(name,dataUriBytes(img.uri));img.uri=name;
+ }
+ return{files,count:files.size};
+}
+/** Validates a clip-name selection against the clips in the scene. null or undefined means all clips. */
+export function pickClips(all:readonly string[],want?:readonly string[]|null):string[]{
+ if(want==null)return [...all];
+ const have=new Set(all);
+ for(const w of want)if(!have.has(w))throw new ModelError(`There is no animation clip named "${w}". The scene has: ${all.join(', ')||'none'}.`);
+ return [...want];
+}

@@ -49,7 +49,7 @@ test('3D studio refuses a file that is not glTF with a readable error',async({pa
 /** Helpers for the scene tests below. They drive the real app through its command layer (dev build) and read the studio session. */
 type P=import('@playwright/test').Page;
 const run=(page:P,id:string,params:unknown={})=>page.evaluate(async([i,p])=>{const m=await import('/src/lib/commands.ts');return (await m.executeCommand(i as string,p)) as unknown;},[id,params] as const);
-const session=(page:P)=>page.evaluate(async()=>{const m=await import('/src/lib/studio3d/session.ts');const s=m.getStudio3DState();return {anim:s.anim,clips:s.clips,clipKeys:s.clipKeys,outline:s.outline,marked:s.marked,selected:s.selected,info:s.selectedInfo,dirty:s.dirty,notice:s.notice,status:s.status,name:s.name,bones:s.bones,weightPreview:s.weightPreview};});
+const session=(page:P)=>page.evaluate(async()=>{const m=await import('/src/lib/studio3d/session.ts');const s=m.getStudio3DState();return {anim:s.anim,clips:s.clips,clipKeys:s.clipKeys,outline:s.outline,marked:s.marked,selected:s.selected,info:s.selectedInfo,dirty:s.dirty,notice:s.notice,status:s.status,name:s.name,bones:s.bones,weightPreview:s.weightPreview,stats:s.stats,exportClips:s.exportClips};});
 const open3d=async(page:P)=>{await page.goto('/');await page.getByRole('button',{name:/3D/}).first().click();};
 const blank=async(page:P)=>{await open3d(page);await page.getByTestId('3d-create-blank').click();await expect(page.getByTestId('studio3d-viewport')).toBeVisible();};
 const insert=async(page:P,kind:string,x:number)=>{await run(page,'studio3d.insert.primitive',{kind});const s=await session(page);const id=s.selected as number;await run(page,'studio3d.object.transform',{id,position:{x,y:0,z:0}});return id;};
@@ -394,4 +394,43 @@ test('3D studio paints bone weights with the brush and undoes the stroke',async(
  await run(page,'studio3d.undo');
  await run(page,'studio3d.undo');
  await expect.poll(async()=>{await run(page,'studio3d.select',{id:cube});return (await session(page)).info?.skinned;}).toBe(false);
+});
+
+test('3D studio opens an OBJ, picks export clips and exports glTF textures as a ZIP',async({page})=>{
+ // OBJ import: bounded and local, the mesh lands in the scene list.
+ await open3d(page);
+ const obj=Buffer.from('v 0 0 0\nv 1 0 0\nv 0 1 0\nv 0 0 1\nf 1 2 3\nf 1 3 4\n');
+ await page.getByTestId('studio3d-file-input').setInputFiles({name:'tetra.obj',mimeType:'model/obj',buffer:obj});
+ await expect(page.getByTestId('studio3d-viewport')).toBeVisible({timeout:20_000});
+ await expect.poll(async()=>(await session(page)).stats.meshes).toBe(1);
+ // Two clips with one key each (empty clips never export); the export options select which leave the app.
+ const meshId=(await session(page)).outline[0].id as number;
+ await run(page,'studio3d.select',{id:meshId});
+ await run(page,'studio3d.clip.add',{name:'First'});
+ await run(page,'studio3d.key.set',{path:'position',time:0});
+ await run(page,'studio3d.clip.add',{name:'Second'});
+ await run(page,'studio3d.key.set',{path:'position',time:0});
+ await expect.poll(async()=>(await session(page)).clips.length).toBe(2);
+ const exportBox=page.getByTestId('studio3d-export');
+ await exportBox.getByLabel('Second').uncheck();
+ await expect.poll(async()=>(await session(page)).exportClips).toEqual(['First']);
+ // External textures download one ZIP with the .gltf inside; the animation list follows the pick.
+ await exportBox.getByLabel('glTF textures').selectOption('external');
+ const [zipDown]=await Promise.all([page.waitForEvent('download'),exportBox.getByRole('button',{name:'glTF'}).click()]);
+ expect(zipDown.suggestedFilename()).toMatch(/\.gltf\.zip$/);
+ const {unzipSync,strFromU8}=await import('fflate');
+ const zip=unzipSync(new Uint8Array(readFileSync(await zipDown.path()!)));
+ const gltfName=Object.keys(zip).find(n=>n.endsWith('.gltf'))!;
+ const json=JSON.parse(strFromU8(zip[gltfName]));
+ expect(json.animations.map((a:{name:string})=>a.name)).toEqual(['First']);
+ // Back to embedded: one self-contained .gltf file again.
+ await exportBox.getByLabel('glTF textures').selectOption('embed');
+ await run(page,'studio3d.export.options',{clips:null});
+ const [gltfDown]=await Promise.all([page.waitForEvent('download'),exportBox.getByRole('button',{name:'glTF'}).click()]);
+ expect(gltfDown.suggestedFilename()).toMatch(/\.gltf$/);
+ const embedded=JSON.parse(readFileSync(await gltfDown.path()!,'utf8'));
+ expect(embedded.animations.length).toBe(2);
+ // An unknown clip name refuses with a notice instead of throwing.
+ await run(page,'studio3d.export.gltf',{clips:['Nope']});
+ await expect(page.getByRole('alert')).toBeVisible();
 });
