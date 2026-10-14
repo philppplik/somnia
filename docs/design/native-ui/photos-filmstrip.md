@@ -237,3 +237,15 @@ Coverage: `labels.test.ts` covers set/cycle/clear and invalid input;
 `photos-filmstrip.spec.ts` gains a light/dark leg that labels a
 two-photo selection, filters to red (the unlabeled photo leaves the
 view) and clears the labels again.
+
+## Library grid (P94)
+
+The survey button is always visible now: with two or more photos
+selected it surveys the selection as before, otherwise it opens the
+whole filtered view as a browse grid - every cell keeps its culling
+controls and shows the photo's color label dot. Picking a cell
+activates that photo and closes the grid.
+
+Coverage: `photos-filmstrip.spec.ts` gains a light/dark leg that
+opens the grid with no selection (all three photos present, label dot
+on the labeled cell) and picks a photo from the grid.

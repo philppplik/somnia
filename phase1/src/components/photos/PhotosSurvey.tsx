@@ -5,6 +5,7 @@ import type {MediaItem} from '../../lib/media';
 import {ensurePhotoReady} from '../../lib/photos/batchExport';
 import {getPhotoSession} from '../../lib/photos/studioSession';
 import {setFlag,useFlags} from '../../lib/photos/flags';
+import {useLabels} from '../../lib/photos/labels';
 import {RatingStars} from './RatingStars';
 import {Flag} from '../../lib/icons';
 import {Button} from '../ui/button';
@@ -14,6 +15,7 @@ export function PhotosSurvey({names,items,onPick,onClose}:{names:string[];items:
  const {t}=useT();
  const canvases=useRef(new Map<string,HTMLCanvasElement>());
  const flags=useFlags();
+ const labels=useLabels();
  useEffect(()=>{
   let live=true;
   void(async()=>{
@@ -42,7 +44,7 @@ export function PhotosSurvey({names,items,onPick,onClose}:{names:string[];items:
      <canvas ref={c=>{if(c)canvases.current.set(n,c);else canvases.current.delete(n);}} width={320} height={200} className="h-auto w-full rounded-[2px] bg-[var(--bg-base)]" data-testid={`photos-survey-canvas-${n}`}/>
     </Button>
     <div className="flex items-center justify-between gap-1">
-     <span className="truncate text-ink-3">{n}</span>
+     <span className="flex min-w-0 items-center gap-1 truncate text-ink-3">{labels[n]&&<span className={`photos-label-dot photos-label-${labels[n]} shrink-0`} data-testid={`photos-survey-label-${n}`} data-label={labels[n]}/>}{n}</span>
      <RatingStars name={n} prefix={`photos-survey-${n}`}/>
      <span className="flex items-center gap-0.5">
       <Button variant="ghost" size="compact" aria-pressed={flags[n]==='pick'} aria-label={t('photos.flag.filter.pick')} title={t('photos.flag.filter.pick')} onClick={()=>setFlag(n,flags[n]==='pick'?null:'pick')} className="px-1" data-testid={`photos-survey-pick-flag-${n}`}><Flag size={12} fill={flags[n]==='pick'?'currentColor':'none'} className={flags[n]==='pick'?'text-[var(--accent)]':'text-ink-3'}/></Button>

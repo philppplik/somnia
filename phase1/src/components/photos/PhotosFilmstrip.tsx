@@ -19,7 +19,7 @@ import {NativeSelect} from '../ui/native-controls';
 import {RatingStars} from './RatingStars';
 
 /** Library filmstrip under the workspace: a thumbnail per developable photo in library order; clicking switches the active photo. */
-export function PhotosFilmstrip({active,onSurvey}:{active:string;onSurvey?:()=>void}){
+export function PhotosFilmstrip({active,onSurvey}:{active:string;onSurvey?:(names:string[])=>void}){
  const {t}=useT();
  const media=useMedia();
  const ratings=useRatings();
@@ -115,7 +115,7 @@ export function PhotosFilmstrip({active,onSurvey}:{active:string;onSurvey?:()=>v
    {WB_PRESETS.map(p=><option key={p.id} value={`wb:${p.id}`}>{t(p.labelKey)}</option>)}
    {userPresets.map(p=><option key={p.id} value={`user:${p.id}`}>{p.name}</option>)}
   </NativeSelect>}
-  {selected.length>1&&onSurvey&&<Button variant="outline" size="icon" aria-label={t('photos.filmstrip.survey')} title={t('photos.filmstrip.survey')} onClick={onSurvey} className="h-7 w-7 shrink-0" data-testid="photos-filmstrip-survey"><LayoutGrid size={12}/></Button>}
+  {onSurvey&&<Button variant="outline" size="icon" aria-label={t('photos.filmstrip.survey')} title={t('photos.filmstrip.survey')} onClick={()=>onSurvey(selected.length>1?selected.map(p=>p.name):photos.map(p=>p.name))} className="h-7 w-7 shrink-0" data-testid="photos-filmstrip-survey"><LayoutGrid size={12}/></Button>} // with a selection it surveys the selection, else the whole filtered view
   {rejected.length>0&&<Button variant={armRemove?'primary':'outline'} size="compact" onClick={removeRejected} className="shrink-0" data-testid="photos-filmstrip-remove-rejects"><Trash2 size={12}/>{armRemove?t('photos.filmstrip.removeRejectsConfirm',{count:rejected.length}):t('photos.filmstrip.removeRejects',{count:rejected.length})}</Button>}
   <Button variant="outline" size="icon" aria-pressed={autoAdvance} aria-label={t('photos.filmstrip.autoAdvance')} title={t('photos.filmstrip.autoAdvance')} onClick={()=>setAutoAdvance(!autoAdvance)} className="h-7 w-7 shrink-0" data-testid="photos-filmstrip-autoadvance"><SkipForward size={12}/></Button>
   {applyNote&&<span className="shrink-0 text-ink-3" data-testid="photos-filmstrip-apply-note">{applyNote}</span>}

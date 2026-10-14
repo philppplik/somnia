@@ -401,3 +401,23 @@ test('color labels: batch set, badge, filter, clear (light and dark)',async({pag
   await expect(page.getByTestId('photos-filmstrip-label-strip-1.png')).toHaveCount(0);
  }
 });
+test('library grid: the survey opens the whole filtered view without a selection (light and dark)',async({page})=>{
+ for(const theme of['light','dark']){
+  await page.goto('/test/design-system/?view=photos-filmstrip');
+  await page.evaluate(t=>document.documentElement.setAttribute('data-theme',t),theme);
+  await expect(page.getByTestId('photos-workspace')).toBeVisible();
+  await expect(page.getByTestId('photos-filmstrip-item-strip-3.png')).toBeVisible(); // media added progressively
+  await page.evaluate(async()=>{const m=await import('/src/lib/photos/labels.ts');for(const n of['strip-1.png','strip-2.png','strip-3.png'])m.setLabel(n,null);m.setLabel('strip-1.png','blue');});
+  await page.getByTestId('photos-filmstrip-select').selectOption('none'); // no selection: the grid shows the library
+  await page.getByTestId('photos-filmstrip-survey').click();
+  await expect(page.getByTestId('photos-survey-item-strip-1.png')).toBeVisible();
+  await expect(page.getByTestId('photos-survey-item-strip-2.png')).toBeVisible();
+  await expect(page.getByTestId('photos-survey-item-strip-3.png')).toBeVisible();
+  await expect(page.getByTestId('photos-survey-label-strip-1.png')).toHaveAttribute('data-label','blue'); // label dots in the grid
+  await page.screenshot({path:`test-results/ds-photos-library-grid-${theme}.png`,fullPage:true});
+  await page.getByTestId('photos-survey-pick-strip-3.png').click();
+  await expect(page.getByTestId('photos-survey')).toHaveCount(0);
+  await expect(page.getByTestId('photos-name')).toHaveText('strip-3.png');
+  await page.evaluate(async()=>{const m=await import('/src/lib/photos/labels.ts');m.setLabel('strip-1.png',null);});
+ }
+});

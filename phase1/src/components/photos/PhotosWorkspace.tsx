@@ -67,6 +67,7 @@ export function PhotosWorkspace({item}:{item:MediaItem}){
  const [pan,setPan]=useState<[number,number]>([0,0]);
  const [compare,setCompare]=useState(false);
  const [survey,setSurvey]=useState(false);
+ const [surveyNames,setSurveyNames]=useState<string[]>([]);
  const [note,setNote]=useState('');
  const [showGuides,setShowGuides]=usePanelState<boolean>('photos.cropGuides',true);
  const [guideStyle,setGuideStyle]=usePanelState<CropGuideStyle>('photos.cropGuideStyle','thirds');
@@ -526,7 +527,7 @@ export function PhotosWorkspace({item}:{item:MediaItem}){
    <StudioStatus data-testid="photos-note">{note||(ready&&!session?.cropping?t('photos.note'):'')}</StudioStatus>
    <StudioStatus tone={session?.status==='error'?'error':'info'} live={session?.status==='error'?'assertive':'polite'} data-testid="photos-status">{status||(dirty?t('photos.status.dirty'):ready?t('photos.status.clean'):'')}</StudioStatus>
   </div>
-  <PhotosFilmstrip active={item.name} onSurvey={()=>setSurvey(true)}/>
-  {survey&&<PhotosSurvey names={panelStateStore.get<string[]>('photos.filmstripSelection',[])} items={media.items} onPick={n=>{setSurvey(false);setActiveMedia(n);}} onClose={()=>setSurvey(false)}/>}
+  <PhotosFilmstrip active={item.name} onSurvey={names=>{setSurveyNames(names);setSurvey(true);}}/>
+  {survey&&<PhotosSurvey names={surveyNames} items={media.items} onPick={n=>{setSurvey(false);setActiveMedia(n);}} onClose={()=>setSurvey(false)}/>}
  </section>;
 }
