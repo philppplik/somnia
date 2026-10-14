@@ -1,8 +1,18 @@
 import {CATALOGUES} from '../i18n';
 export const DOCUMENTS_PANEL_CATALOGUES:Record<string,Record<string,string>>={
   "en": {
+  "documents.summary.title": "Local selected-text summary",
+  "documents.summary.boundary": "Optional AI draft from this reviewed selection only. No document edit/save, tools or cloud fallback. Local inference trusts the daemon.",
+  "documents.summary.consent": "Send this reviewed selection to {model} locally for this summary.",
+  "documents.summary.run": "Generate local summary",
+  "documents.summary.setup": "Configure a local summarize task model or Ollama model in AI settings first.",
+  "documents.summary.cancel": "Cancel summary",
+  "documents.summary.failed": "Summary failed or selection/model changed. Review again; no draft accepted.",
+  "documents.summary.draft": "AI draft · Ollama · {model}. Not applied or saved.",
+  "documents.summary.discard": "Discard summary",
+
   "documents.selectionReview.title": "Selected text review",
-  "documents.selectionReview.boundary": "Private source preview only. No AI request, summary, edit or save. Text may contain private information.",
+  "documents.selectionReview.boundary": "Review alone sends no AI request and makes no edit/save. Optional summary below needs separate approval. Text may be private.",
   "documents.selectionReview.capture": "Review selected text",
   "documents.selectionReview.unavailable": "Select nonempty text in one editable paragraph (up to 4096 UTF-8 bytes).",
   "documents.selectionReview.failed": "Selection changed or unavailable. Select again and review.",
@@ -65,8 +75,18 @@ export const DOCUMENTS_PANEL_CATALOGUES:Record<string,Record<string,string>>={
     "documents.panels.error.matchChanged": "Search result changed. Search again."
   },
   "de": {
+  "documents.summary.title": "Lokale Auswahl-Zusammenfassung",
+  "documents.summary.boundary": "Optionaler KI-Draft nur aus geprüfter Auswahl. Kein Edit/Save, Tools oder Cloud-Fallback. Lokale Inference vertraut dem Daemon.",
+  "documents.summary.consent": "Diese geprüfte Auswahl lokal an {model} für diese Zusammenfassung senden.",
+  "documents.summary.run": "Lokale Zusammenfassung erzeugen",
+  "documents.summary.setup": "Lokales Summarize-Task-Modell oder Ollama-Modell zuerst in KI-Settings wählen.",
+  "documents.summary.cancel": "Zusammenfassung abbrechen",
+  "documents.summary.failed": "Fehler oder Auswahl/Modell geändert. Neu prüfen; kein Draft akzeptiert.",
+  "documents.summary.draft": "KI-Draft · Ollama · {model}. Nicht angewendet/gespeichert.",
+  "documents.summary.discard": "Summary verwerfen",
+
   "documents.selectionReview.title": "Gewählten Text prüfen",
-  "documents.selectionReview.boundary": "Nur private Quellenvorschau. Keine KI-Anfrage, Zusammenfassung, Änderung oder Speicherung. Text kann private Daten enthalten.",
+  "documents.selectionReview.boundary": "Prüfung allein sendet keine KI-Anfrage und ändert/speichert nichts. Optionale Summary unten braucht eigene Zustimmung. Text kann privat sein.",
   "documents.selectionReview.capture": "Gewählten Text ansehen",
   "documents.selectionReview.unavailable": "Nichtleeren Text in einem editierbaren Absatz wählen (bis4096 UTF-8 Bytes).",
   "documents.selectionReview.failed": "Auswahl geändert oder nicht verfügbar. Neu wählen und prüfen.",
@@ -129,8 +149,18 @@ export const DOCUMENTS_PANEL_CATALOGUES:Record<string,Record<string,string>>={
     "documents.panels.error.matchChanged": "Suchtreffer geändert. Erneut suchen."
   },
   "es": {
+  "documents.summary.title": "Resumen local de selección",
+  "documents.summary.boundary": "Borrador IA solo de selección revisada. Sin edición/guardado, herramientas ni nube. Inference local confía en daemon.",
+  "documents.summary.consent": "Enviar selección revisada a {model} localmente para este resumen.",
+  "documents.summary.run": "Generar resumen local",
+  "documents.summary.setup": "Configura modelo local summarize u Ollama en ajustes IA.",
+  "documents.summary.cancel": "Cancelar resumen",
+  "documents.summary.failed": "Falló o selección/modelo cambió. Revisa de nuevo; sin borrador aceptado.",
+  "documents.summary.draft": "Borrador IA · Ollama · {model}. Sin aplicar/guardar.",
+  "documents.summary.discard": "Descartar resumen",
+
   "documents.selectionReview.title": "Revisar texto elegido",
-  "documents.selectionReview.boundary": "Vista privada de fuente. Sin IA, resumen, edición ni guardado. Puede contener datos privados.",
+  "documents.selectionReview.boundary": "Revisar no envía IA ni edita/guarda. Resumen opcional abajo necesita aprobación aparte. Texto puede ser privado.",
   "documents.selectionReview.capture": "Ver texto elegido",
   "documents.selectionReview.unavailable": "Elige texto no vacío en un párrafo editable (hasta4096 bytes UTF-8).",
   "documents.selectionReview.failed": "Selección modificada o no disponible. Elige y revisa de nuevo.",
@@ -193,8 +223,18 @@ export const DOCUMENTS_PANEL_CATALOGUES:Record<string,Record<string,string>>={
     "documents.panels.error.matchChanged": "El resultado cambió. Busca de nuevo."
   },
   "fr": {
+  "documents.summary.title": "Résumé local de sélection",
+  "documents.summary.boundary": "Brouillon IA de sélection vérifiée seulement. Sans édition/sauvegarde, outils ou cloud. Inference locale fait confiance au daemon.",
+  "documents.summary.consent": "Envoyer sélection vérifiée à {model} localement pour ce résumé.",
+  "documents.summary.run": "Générer résumé local",
+  "documents.summary.setup": "Configurez modèle local summarize ou Ollama dans réglages IA.",
+  "documents.summary.cancel": "Annuler résumé",
+  "documents.summary.failed": "Échec ou sélection/modèle modifiés. Vérifiez à nouveau; aucun brouillon accepté.",
+  "documents.summary.draft": "Brouillon IA · Ollama · {model}. Non appliqué/sauvegardé.",
+  "documents.summary.discard": "Supprimer résumé",
+
   "documents.selectionReview.title": "Vérifier texte choisi",
-  "documents.selectionReview.boundary": "Aperçu privé de source. Pas de requête IA, résumé, modification ou sauvegarde. Peut contenir des données privées.",
+  "documents.selectionReview.boundary": "Vérifier seul ne demande pas IA et ne modifie/sauvegarde rien. Résumé facultatif en bas demande accord séparé. Texte privé possible.",
   "documents.selectionReview.capture": "Voir texte choisi",
   "documents.selectionReview.unavailable": "Choisissez du texte non vide dans un paragraphe modifiable (jusqu’à4096 octets UTF-8).",
   "documents.selectionReview.failed": "Sélection modifiée ou indisponible. Choisissez et vérifiez à nouveau.",
@@ -257,8 +297,18 @@ export const DOCUMENTS_PANEL_CATALOGUES:Record<string,Record<string,string>>={
     "documents.panels.error.matchChanged": "Le résultat a changé. Relancez la recherche."
   },
   "pt-BR": {
+  "documents.summary.title": "Resumo local da seleção",
+  "documents.summary.boundary": "Rascunho IA só da seleção revisada. Sem edição/salvamento, ferramentas ou nuvem. Inference local confia no daemon.",
+  "documents.summary.consent": "Enviar seleção revisada a {model} localmente para este resumo.",
+  "documents.summary.run": "Gerar resumo local",
+  "documents.summary.setup": "Configure modelo local summarize ou Ollama nos ajustes IA.",
+  "documents.summary.cancel": "Cancelar resumo",
+  "documents.summary.failed": "Falhou ou seleção/modelo alterado. Revise novamente; sem rascunho aceito.",
+  "documents.summary.draft": "Rascunho IA · Ollama · {model}. Sem aplicar/salvar.",
+  "documents.summary.discard": "Descartar resumo",
+
   "documents.selectionReview.title": "Revisar texto escolhido",
-  "documents.selectionReview.boundary": "Prévia privada da fonte. Sem IA, resumo, edição ou salvamento. Pode conter dados privados.",
+  "documents.selectionReview.boundary": "Revisar não envia IA nem edita/salva. Resumo opcional abaixo precisa aprovação separada. Texto pode ser privado.",
   "documents.selectionReview.capture": "Ver texto escolhido",
   "documents.selectionReview.unavailable": "Escolha texto não vazio em um parágrafo editável (até4096 bytes UTF-8).",
   "documents.selectionReview.failed": "Seleção alterada ou indisponível. Escolha e revise novamente.",

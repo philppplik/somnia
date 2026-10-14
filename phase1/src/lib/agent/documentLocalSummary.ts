@@ -1,0 +1,8 @@
+import {buildOfficeLocalPrompt} from './officeLocalPrompt';import {assertDocumentSelectionCurrent,type DocumentSelectionCapture} from '../documents/selectionCapture';import type {AgentProvider} from './types';
+/** Caller owns reviewed scope, exact local guarded provider and abort. No writes. */
+export async function documentLocalSummary(snapshot:DocumentSelectionCapture,recapture:()=>DocumentSelectionCapture,provider:AgentProvider,model:string,signal:AbortSignal){
+ signal.throwIfAborted();assertDocumentSelectionCurrent(snapshot,recapture());if(provider.id!=='ollama'||provider.locality!=='local'||!model.trim())throw Error('Local summary model required');
+ const {prompt,outputLimit}=buildOfficeLocalPrompt({kind:'documents',task:'summarize-selection',texts:[snapshot.text]});let text='',complete=false;
+ for await(const event of provider.stream({model,messages:[{role:'user',content:prompt}],tools:[],maxOutputTokens:outputLimit,signal})){signal.throwIfAborted();assertDocumentSelectionCurrent(snapshot,recapture());if(event.type==='tool-call')throw Error('Summary tool call refused');if(event.type==='text'){text+=event.text;if(new TextEncoder().encode(text).length>4096||/[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]/u.test(text))throw Error('Invalid summary output');}if(event.type==='finish'){if(event.reason!=='stop')throw Error('Incomplete summary');complete=true;}}
+ signal.throwIfAborted();assertDocumentSelectionCurrent(snapshot,recapture());if(/[\uD800-\uDFFF]/u.test(text)||!complete||!text.trim())throw Error('Incomplete summary');return Object.freeze({text,model,provider:'ollama' as const,applied:false as const});
+}
