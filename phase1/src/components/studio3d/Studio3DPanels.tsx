@@ -311,7 +311,7 @@ function UvFields({id}:{id:number}){
 /** Bind a plain mesh to a bone chain, recompute weights of a skinned one, and preview a bone's influence. */
 function EditSculptFields({id}:{id:number}){
  const {t}=useT();const s=useStudio3D();const o=s.selectedInfo;
- const [extrude,setExtrude]=useState(0.5);const [inset,setInset]=useState(0.2);const [bevel,setBevel]=useState(0.1);const [slide,setSlide]=useState(0.5);const [merge,setMerge]=useState(0.01);const [mirrorAxis,setMirrorAxis]=useState<'x'|'y'|'z'>('x');const [segments,setSegments]=useState(1);const [bisect,setBisect]=useState(false);const [fattenAmt,setFattenAmt]=useState(0.1);const [relaxIt,setRelaxIt]=useState(1);const [relaxF,setRelaxF]=useState(0.5);const [sphereF,setSphereF]=useState(1);const [randAmt,setRandAmt]=useState(0.1);const [randSeed,setRandSeed]=useState(1);const [moveX,setMoveX]=useState(0);const [moveY,setMoveY]=useState(0.25);const [moveZ,setMoveZ]=useState(0);const [rotDeg,setRotDeg]=useState(90);
+ const [extrude,setExtrude]=useState(0.5);const [inset,setInset]=useState(0.2);const [bevel,setBevel]=useState(0.1);const [slide,setSlide]=useState(0.5);const [merge,setMerge]=useState(0.01);const [mirrorAxis,setMirrorAxis]=useState<'x'|'y'|'z'>('x');const [segments,setSegments]=useState(1);const [bisect,setBisect]=useState(false);const [fattenAmt,setFattenAmt]=useState(0.1);const [relaxIt,setRelaxIt]=useState(1);const [relaxF,setRelaxF]=useState(0.5);const [sphereF,setSphereF]=useState(1);const [randAmt,setRandAmt]=useState(0.1);const [randSeed,setRandSeed]=useState(1);const [moveX,setMoveX]=useState(0);const [moveY,setMoveY]=useState(0.25);const [moveZ,setMoveZ]=useState(0);const [rotDeg,setRotDeg]=useState(90);const [scaleX,setScaleX]=useState(1);const [scaleY,setScaleY]=useState(1);const [scaleZ,setScaleZ]=useState(1);
  const ed=s.edit;const on=ed!=null&&ed.id===id;const sc=s.sculpt;
  if(!o||o.kind!=='mesh')return null;
  const modeBtn=(m:'vertex'|'edge'|'face')=><Button key={m} variant={ed?.mode===m?'primary':'outline'} aria-pressed={ed?.mode===m} onClick={()=>void executeCommand('studio3d.edit.mode',{mode:m})}>{t('studio3d.edit.mode.'+m)}</Button>;
@@ -347,6 +347,9 @@ function EditSculptFields({id}:{id:number}){
      <NumField label={t('studio3d.edit.moveY')} value={moveY} min={-100} max={100} step={0.05} onCommit={setMoveY}/>
      <NumField label={t('studio3d.edit.moveZ')} value={moveZ} min={-100} max={100} step={0.05} onCommit={setMoveZ}/>
      <NumField label={t('studio3d.edit.rotateDeg')} value={rotDeg} min={-3600} max={3600} step={5} onCommit={setRotDeg}/>
+     <NumField label={t('studio3d.edit.scaleX')} value={scaleX} min={-100} max={100} step={0.05} onCommit={setScaleX}/>
+     <NumField label={t('studio3d.edit.scaleY')} value={scaleY} min={-100} max={100} step={0.05} onCommit={setScaleY}/>
+     <NumField label={t('studio3d.edit.scaleZ')} value={scaleZ} min={-100} max={100} step={0.05} onCommit={setScaleZ}/>
     </div>
     <div className="flex flex-wrap gap-1">
      <Button variant="outline" onClick={()=>void executeCommand('studio3d.edit.extrude',{offset:extrude})}>{t('studio3d.edit.extrude')}</Button>
@@ -372,6 +375,7 @@ function EditSculptFields({id}:{id:number}){
      <Button variant="outline" onClick={()=>void executeCommand('studio3d.edit.rotate',{axis:'x',degrees:rotDeg})}>{t('studio3d.edit.rotateX')}</Button>
      <Button variant="outline" onClick={()=>void executeCommand('studio3d.edit.rotate',{axis:'y',degrees:rotDeg})}>{t('studio3d.edit.rotateY')}</Button>
      <Button variant="outline" onClick={()=>void executeCommand('studio3d.edit.rotate',{axis:'z',degrees:rotDeg})}>{t('studio3d.edit.rotateZ')}</Button>
+     <Button variant="outline" onClick={()=>void executeCommand('studio3d.edit.scale',{x:scaleX,y:scaleY,z:scaleZ})}>{t('studio3d.edit.scale')}</Button>
      <Button variant="outline" onClick={()=>void executeCommand('studio3d.edit.rip',{})}>{t('studio3d.edit.rip')}</Button>
      <Button variant="outline" onClick={()=>void executeCommand('studio3d.edit.separate',{})}>{t('studio3d.edit.separate')}</Button>
      <Button variant="outline" onClick={()=>void executeCommand('studio3d.edit.end')}>{t('studio3d.edit.end')}</Button>

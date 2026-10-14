@@ -16,7 +16,7 @@ included; the `source` column names the owner. Dynamic sources that stay outside
 
 Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, fr, pt-BR); the gate enforces it.
 
-835 commands. Categories: Edit, Help, Insert, Project, Tools, View.
+836 commands. Categories: Edit, Help, Insert, Project, Tools, View.
 
 | id | title | category | source | shortcut |
 | --- | --- | --- | --- | --- |
@@ -640,6 +640,7 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `studio3d.edit.relax` | Smooth selected vertices towards their neighbours | Edit | studio3d |  |
 | `studio3d.edit.rip` | Rip the selected faces off the rest of the mesh | Edit | studio3d |  |
 | `studio3d.edit.rotate` | Rotate the selected vertices around their centroid on a world axis | Edit | studio3d |  |
+| `studio3d.edit.scale` | Scale the selected vertices toward or away from their centroid | Edit | studio3d |  |
 | `studio3d.edit.select` | Select element | Edit | studio3d |  |
 | `studio3d.edit.selectAll` | Select all, none or inverse | Edit | studio3d |  |
 | `studio3d.edit.selectBoundary` | Select boundary edges or vertices | Edit | studio3d |  |

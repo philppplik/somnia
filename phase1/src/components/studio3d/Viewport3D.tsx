@@ -1223,6 +1223,7 @@ export default function Viewport3D(){
    editSeparate:()=>{stage.editSeparate();patchEdit();invalidate();},
    editSelectSharp:degrees=>{stage.editSelectSharp(degrees);patchEdit();invalidate();},
    editRotate:(axis,degrees)=>{stage.editRotate(axis,degrees);patchEdit();invalidate();},
+   editScale:factors=>{stage.editScale(factors);patchEdit();invalidate();},
    editExtrude:o=>{stage.editExtrude(o);afterEditOp();},
    editInset:a=>{stage.editInset(a);afterEditOp();},
    editBevel:w=>{stage.editBevel(w);afterEditOp();},

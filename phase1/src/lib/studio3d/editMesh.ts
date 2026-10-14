@@ -502,6 +502,35 @@ export function moveSelected(m:MeshData,verts:number[],offset:[number,number,num
  const out:MeshData={positions,index:[...m.index],...(m.uvs?{uvs:[...m.uvs]}:{}),...(m.mask?{mask:[...m.mask]}:{})};
  check(out);return out;
 }
+/** Scales the selected vertices toward or away from the centroid of their distinct positions with per-axis factors: position-equal twins scale together, the strongest mask at a position dams the whole seam (as a partial scale). Masks are carried; UVs are carried. */
+export function scaleSelected(m:MeshData,verts:number[],factors:[number,number,number]):MeshData{
+ check(m);
+ if(!verts.length)throw new EditError('Select vertices to scale.');
+ if(!factors.every(x=>Number.isFinite(x))||factors.some(x=>Math.abs(x)>1e6))throw new EditError('The scale factors must be finite numbers.');
+ if(factors[0]===1&&factors[1]===1&&factors[2]===1)throw new EditError('At least one scale factor must differ from 1.');
+ const nv=m.positions.length/3;
+ for(const v of verts){if(!Number.isInteger(v)||v<0||v>=nv)throw new EditError(`Vertex ${v} does not exist.`);}
+ const pk=(v:number)=>`${Math.round(m.positions[v*3]*1e6)},${Math.round(m.positions[v*3+1]*1e6)},${Math.round(m.positions[v*3+2]*1e6)}`;
+ const want=new Set(verts.map(pk));
+ let cx=0,cy=0,cz=0,n=0;const counted=new Set<string>();
+ const damp=new Map<string,number>();
+ for(let v=0;v<nv;v++){
+  const k=pk(v);if(!want.has(k))continue;
+  const mk=m.mask?m.mask[v]:0;
+  damp.set(k,Math.min(damp.get(k)??mk,mk));
+  if(!counted.has(k)){counted.add(k);cx+=m.positions[v*3];cy+=m.positions[v*3+1];cz+=m.positions[v*3+2];n++;}
+ }
+ cx/=n;cy/=n;cz/=n;
+ const positions=[...m.positions];
+ for(let v=0;v<nv;v++){
+  const k=pk(v);if(!want.has(k))continue;
+  const f=1-damp.get(k)!;if(f===0)continue;
+  const x=m.positions[v*3]-cx,y=m.positions[v*3+1]-cy,z=m.positions[v*3+2]-cz;
+  positions[v*3]+=(x*factors[0]-x)*f;positions[v*3+1]+=(y*factors[1]-y)*f;positions[v*3+2]+=(z*factors[2]-z)*f;
+ }
+ const out:MeshData={positions,index:[...m.index],...(m.uvs?{uvs:[...m.uvs]}:{}),...(m.mask?{mask:[...m.mask]}:{})};
+ check(out);return out;
+}
 /** Rotates the selected vertices around the centroid of their distinct positions on a world axis: position-equal twins rotate together, the strongest mask at a position dams the whole seam (as a partial rotation toward the full angle). Masks are carried; UVs are carried. */
 export function rotateSelected(m:MeshData,verts:number[],axis:'x'|'y'|'z',degrees:number):MeshData{
  check(m);

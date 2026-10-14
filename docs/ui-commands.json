@@ -7371,6 +7371,19 @@
       "hasEnabled": true
     },
     {
+      "id": "studio3d.edit.scale",
+      "title": "Scale the selected vertices toward or away from their centroid",
+      "category": "Edit",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "studio3d.edit.select",
       "title": "Select element",
       "category": "Edit",

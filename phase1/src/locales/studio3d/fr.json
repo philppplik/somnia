@@ -945,5 +945,11 @@
  "studio3d.edit.rotateDeg": "Angle de rotation",
  "studio3d.edit.rotateX": "Pivoter X",
  "studio3d.edit.rotateY": "Pivoter Y",
- "studio3d.edit.rotateZ": "Pivoter Z"
+ "studio3d.edit.rotateZ": "Pivoter Z",
+ "cmd.studio3d.edit.scale": "Mettre à l’échelle les sommets sélectionnés vers ou depuis leur centroïde",
+ "studio3d.hist.editScale": "Mise à l’échelle de la sélection",
+ "studio3d.edit.scaleX": "Échelle X",
+ "studio3d.edit.scaleY": "Échelle Y",
+ "studio3d.edit.scaleZ": "Échelle Z",
+ "studio3d.edit.scale": "Mettre à l’échelle"
 }

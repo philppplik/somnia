@@ -945,5 +945,11 @@
  "studio3d.edit.rotateDeg": "Ângulo de rotação",
  "studio3d.edit.rotateX": "Rotacionar X",
  "studio3d.edit.rotateY": "Rotacionar Y",
- "studio3d.edit.rotateZ": "Rotacionar Z"
+ "studio3d.edit.rotateZ": "Rotacionar Z",
+ "cmd.studio3d.edit.scale": "Escalar os vértices selecionados em direção ao seu centroide ou para longe dele",
+ "studio3d.hist.editScale": "Escalar seleção",
+ "studio3d.edit.scaleX": "Escala X",
+ "studio3d.edit.scaleY": "Escala Y",
+ "studio3d.edit.scaleZ": "Escala Z",
+ "studio3d.edit.scale": "Escalar"
 }

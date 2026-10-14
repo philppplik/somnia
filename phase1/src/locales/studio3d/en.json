@@ -945,5 +945,11 @@
  "studio3d.edit.rotateDeg": "Rotation angle",
  "studio3d.edit.rotateX": "Rotate X",
  "studio3d.edit.rotateY": "Rotate Y",
- "studio3d.edit.rotateZ": "Rotate Z"
+ "studio3d.edit.rotateZ": "Rotate Z",
+ "cmd.studio3d.edit.scale": "Scale the selected vertices toward or away from their centroid",
+ "studio3d.hist.editScale": "Scale selection",
+ "studio3d.edit.scaleX": "Scale X",
+ "studio3d.edit.scaleY": "Scale Y",
+ "studio3d.edit.scaleZ": "Scale Z",
+ "studio3d.edit.scale": "Scale"
 }
