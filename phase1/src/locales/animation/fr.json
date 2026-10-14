@@ -1037,5 +1037,9 @@
  "animation.rig.fit.height": "Ajuster la hauteur",
  "cmd.animation.layers.fit": "Ajuster les calques sélectionnés à la composition",
  "animation.rig.group.arrange": "Organiser",
- "animation.rig.group.appearance": "Apparence"
+ "animation.rig.group.appearance": "Apparence",
+ "animation.export.frameFormat": "Format de l’image",
+ "animation.export.frameQuality": "Qualité de l’image (%)",
+ "animation.export.problem.frameFormat": "Le format de l’image doit être PNG, JPEG ou WebP.",
+ "animation.export.problem.frameQuality": "La qualité de l’image doit être un entier de 1 à 100."
 }

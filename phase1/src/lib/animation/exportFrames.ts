@@ -189,3 +189,17 @@ function textBody(l:Layer,tick:number,size:string):string{
  const count=Array.from(shown).length;
  return spans.slice(0,count).map(c=>`<tspan dx="${num(c.dx)}" dy="${num(c.dy)}" font-size="${num(Number(size)*c.scale)}" fill-opacity="${num(c.opacity)}"${c.rotate?` rotate="${num(c.rotate)}"`:''}${c.fill?` fill="${c.fill}"`:''}>${esc(c.ch)}</tspan>`).join('');
 }
+
+export type FrameEncode=(png:Uint8Array,format:'jpeg'|'webp',quality:number)=>Promise<Uint8Array>;
+/** Browser re-encoder: PNG bytes into a canvas, then JPEG or WebP at `quality` (1 to 100). Needs DOM; covered by the CI app test, not by unit tests. */
+export const canvasEncode:FrameEncode=async(png,format,quality)=>{
+ const bmp=await createImageBitmap(new Blob([png as BlobPart],{type:'image/png'}));
+ try{
+  const canvas=document.createElement('canvas');canvas.width=bmp.width;canvas.height=bmp.height;
+  const ctx=canvas.getContext('2d');if(!ctx)throw new ExportError('2D canvas is unavailable.','raster');
+  ctx.drawImage(bmp,0,0);const mime=`image/${format}`;
+  const blob=await new Promise<Blob|null>(ok=>canvas.toBlob(ok,mime,quality/100));
+  if(!blob||blob.type!==mime)throw new ExportError(`This browser cannot encode ${format.toUpperCase()}.`,'unsupported');
+  return new Uint8Array(await blob.arrayBuffer());
+ }finally{bmp.close();}
+};

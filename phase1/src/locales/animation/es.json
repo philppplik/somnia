@@ -1037,5 +1037,9 @@
  "animation.rig.fit.height": "Ajustar alto",
  "cmd.animation.layers.fit": "Ajustar las capas seleccionadas a la composición",
  "animation.rig.group.arrange": "Organizar",
- "animation.rig.group.appearance": "Apariencia"
+ "animation.rig.group.appearance": "Apariencia",
+ "animation.export.frameFormat": "Formato de fotograma",
+ "animation.export.frameQuality": "Calidad del fotograma (%)",
+ "animation.export.problem.frameFormat": "El formato del fotograma debe ser PNG, JPEG o WebP.",
+ "animation.export.problem.frameQuality": "La calidad del fotograma debe ser un entero de 1 a 100."
 }

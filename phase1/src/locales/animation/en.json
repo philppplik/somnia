@@ -1037,5 +1037,9 @@
  "animation.rig.fit.height": "Fit height",
  "cmd.animation.layers.fit": "Fit the selected layers to the composition",
  "animation.rig.group.arrange": "Arrange",
- "animation.rig.group.appearance": "Appearance"
+ "animation.rig.group.appearance": "Appearance",
+ "animation.export.frameFormat": "Frame format",
+ "animation.export.frameQuality": "Frame quality (%)",
+ "animation.export.problem.frameFormat": "The frame format must be PNG, JPEG or WebP.",
+ "animation.export.problem.frameQuality": "The frame quality must be a whole number from 1 to 100."
 }

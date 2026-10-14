@@ -5,14 +5,14 @@ import {Button} from '../ui/button';
 import {InspectorNumberField} from '../studios/InspectorNumberField';
 import {executeCommand} from '../../lib/commands';
 import {useExportState} from '../../lib/animation/exportJob';
-import {EXPORT_FORMATS,EXPORT_PRESETS,GIF_COLORS,WEBM_QUALITIES,exportPlan,type ExportFormat} from '../../lib/animation/exportSettings';
+import {EXPORT_FORMATS,EXPORT_PRESETS,FRAME_FORMATS,GIF_COLORS,WEBM_QUALITIES,exportPlan,type ExportFormat} from '../../lib/animation/exportSettings';
 import type {Composition} from '../../lib/animation/model';
 const field='h-8 w-full min-w-0 rounded-sm border border-subtle bg-transparent px-2 text-xs text-ink select-text';
 const SCALES=[25,50,75,100,150,200];const FPS=[12,15,24,30,60];
 const size=(n:number)=>n>=1048576?`${(n/1048576).toFixed(1)} MB`:`${Math.max(1,Math.round(n/1024))} KB`;
 /** Export size, frame rate, frame range and presets, with a readout (frames, duration, pixels, rough size) per format before anything is rendered. Session state: no undo step. */
 export function ExportSettingsPanel({comp,busy}:{comp:Composition;busy:boolean}){
- const {t}=useT();const job=useExportState();const s=job.settings;const [err,setErr]=useState('');const [openMore,setMore]=useState(false);const more=openMore||s.columns!=null||s.firstNumber!=null||s.quality!==undefined&&s.quality!=='medium'||s.colors!==undefined&&s.colors!==256||s.loop===false||s.dither===true;
+ const {t}=useT();const job=useExportState();const s=job.settings;const [err,setErr]=useState('');const [openMore,setMore]=useState(false);const more=openMore||s.columns!=null||s.firstNumber!=null||s.quality!==undefined&&s.quality!=='medium'||s.colors!==undefined&&s.colors!==256||s.loop===false||s.dither===true||s.frameFormat!==undefined&&s.frameFormat!=='png';
  const set=async(id:string,params:unknown)=>{setErr('');try{await executeCommand(id,params);}catch(e){setErr((e as Error).message);}};
  const base=exportPlan(comp,'sequence',s);
  const scaleOpts=SCALES.includes(s.scale)?SCALES:[...SCALES,s.scale].sort((a,b)=>a-b);
@@ -35,6 +35,8 @@ export function ExportSettingsPanel({comp,busy}:{comp:Composition;busy:boolean})
    <label className="grid gap-1 text-ink-3">{t('animation.export.columns')}<NativeInput className={field} type="number" min={1} max={256} step={1} value={s.columns??''} placeholder={t('animation.export.columnsAuto')} onChange={e=>void set('animation.export.settings',{columns:e.target.value===''?null:Number(e.target.value)})} data-testid="animation-export-columns"/></label>
    </div>
   <label className="grid gap-1 text-ink-3">{t('animation.export.quality')}<NativeSelect className={field} value={s.quality??'medium'} onChange={e=>void set('animation.export.settings',{quality:e.target.value})} data-testid="animation-export-quality">{WEBM_QUALITIES.map(q=><option key={q} value={q}>{t(`animation.export.quality.${q}`)}</option>)}</NativeSelect></label>
+  <div className="grid grid-cols-2 gap-2"><label className="grid gap-1 text-ink-3">{t('animation.export.frameFormat')}<NativeSelect className={field} value={s.frameFormat??'png'} onChange={e=>void set('animation.export.settings',{frameFormat:e.target.value})} data-testid="animation-export-frameformat">{FRAME_FORMATS.map(f=><option key={f} value={f}>{f==='jpeg'?'JPEG':f==='webp'?'WebP':'PNG'}</option>)}</NativeSelect></label>
+   <label className="grid gap-1 text-ink-3">{t('animation.export.frameQuality')}<NativeInput className={field} type="number" min={1} max={100} step={1} disabled={(s.frameFormat??'png')==='png'} value={s.frameQuality??90} onChange={e=>void set('animation.export.settings',{frameQuality:Number(e.target.value)})} data-testid="animation-export-framequality"/></label></div>
   <label className="grid gap-1 text-ink-3">{t('animation.export.colors')}<NativeSelect className={field} value={s.colors??256} onChange={e=>void set('animation.export.settings',{colors:Number(e.target.value)})} data-testid="animation-export-colors">{GIF_COLORS.map(n=><option key={n} value={n}>{n}</option>)}</NativeSelect></label>
   <label className="flex items-center gap-1 text-ink-3" title={t('animation.export.loop.hint')}><NativeInput type="checkbox" className="animation-checkbox" checked={s.loop!==false} onChange={e=>void set('animation.export.settings',{loop:e.target.checked})} data-testid="animation-export-loop"/>{t('animation.export.loop')}</label>
   <label className="flex items-center gap-1 text-ink-3" title={t('animation.export.dither.hint')}><NativeInput type="checkbox" className="animation-checkbox" checked={s.dither===true} onChange={e=>void set('animation.export.settings',{dither:e.target.checked})} data-testid="animation-export-dither"/>{t('animation.export.dither')}</label>

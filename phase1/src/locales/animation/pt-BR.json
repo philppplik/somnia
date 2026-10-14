@@ -1037,5 +1037,9 @@
  "animation.rig.fit.height": "Ajustar altura",
  "cmd.animation.layers.fit": "Ajustar as camadas selecionadas à composição",
  "animation.rig.group.arrange": "Organizar",
- "animation.rig.group.appearance": "Aparência"
+ "animation.rig.group.appearance": "Aparência",
+ "animation.export.frameFormat": "Formato do quadro",
+ "animation.export.frameQuality": "Qualidade do quadro (%)",
+ "animation.export.problem.frameFormat": "O formato do quadro deve ser PNG, JPEG ou WebP.",
+ "animation.export.problem.frameQuality": "A qualidade do quadro deve ser um inteiro de 1 a 100."
 }

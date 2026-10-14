@@ -1037,5 +1037,9 @@
  "animation.rig.fit.height": "Höhe anpassen",
  "cmd.animation.layers.fit": "Gewählte Ebenen an die Komposition anpassen",
  "animation.rig.group.arrange": "Anordnen",
- "animation.rig.group.appearance": "Darstellung"
+ "animation.rig.group.appearance": "Darstellung",
+ "animation.export.frameFormat": "Bildformat",
+ "animation.export.frameQuality": "Bildqualität (%)",
+ "animation.export.problem.frameFormat": "Das Bildformat muss PNG, JPEG oder WebP sein.",
+ "animation.export.problem.frameQuality": "Die Bildqualität muss eine ganze Zahl von 1 bis 100 sein."
 }

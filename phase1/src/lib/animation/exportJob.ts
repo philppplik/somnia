@@ -1,11 +1,11 @@
 import {useSyncExternalStore} from 'react';
-import {setRenderComps,canvasPixels,canvasRasterize,downloadBlob,exportFramePng,exportSequenceZip,exportSlug,ExportError,frameSvg,sequencePlan,type Rasterize,type RasterizePixels} from './exportFrames';
+import {setRenderComps,canvasPixels,canvasRasterize,downloadBlob,exportFramePng,exportSequenceZip,exportSlug,ExportError,frameSvg,sequencePlan,type Rasterize,type RasterizePixels,canvasEncode,type FrameEncode} from './exportFrames';
 import {encodeGif,GIF_MAX_FRAMES,type GifFrame} from './gifEncode';
 import {encodeApng} from './apngEncode';
 import {recordWebm} from './exportVideo';
 import {browserAudioContext} from './audioPreview';
 import {findComp} from './model';
-import {defaultExportSettings,exportPlan,problemMessage,settingsProblems,EXPORT_PRESETS,EXPORT_LIMITS,webmBitrate,type ExportFormat,type ExportSettings} from './exportSettings';
+import {defaultExportSettings,exportPlan,problemMessage,settingsProblems,EXPORT_PRESETS,EXPORT_LIMITS,DEFAULT_FRAME_QUALITY,webmBitrate,type ExportFormat,type ExportSettings} from './exportSettings';
 import {animationSession} from './session';
 import {exportFrameSvg} from './exportSvg';
 import {Zip,ZipPassThrough,strToU8} from 'fflate';
@@ -34,7 +34,7 @@ export function applyExportPreset(id:string):ExportFormat{
 }
 export function cancelExport(){ctl?.abort();}
 export function resetExport(){if(state.status!=='running'){state={...idle,transparent:state.transparent,settings:state.settings};listeners.forEach(l=>l());}}
-interface Deps{rasterize?:Rasterize;pixels?:RasterizePixels;save?:(b:Blob,name:string)=>void}
+interface Deps{encode?:FrameEncode;rasterize?:Rasterize;pixels?:RasterizePixels;save?:(b:Blob,name:string)=>void}
 let forced:string|undefined;
 /** Runs `fn` with exports aimed at composition `compId` instead of the active one (render queue). No document edit. */
 export async function withExportComp<T>(compId:string,fn:()=>Promise<T>):Promise<T>{forced=compId;try{return await fn();}finally{forced=undefined;}}
@@ -64,7 +64,15 @@ async function guarded(kind:'frame'|'copy'|'sequence'|'gif'|'apng'|'webm',fn:(si
 }
 export function exportCurrentFrame(d:Deps={}){
  const {doc,comp,out}=target();const at=animationSession().getState().view.playhead;
- return guarded('frame',()=>exportFramePng(comp,at,doc.name,d.rasterize??canvasRasterize,state.transparent,doc.assets,out),d.save??downloadBlob);
+ const fmt=state.settings.frameFormat;const lossy=fmt==='jpeg'||fmt==='webp'?fmt:null;
+ return guarded('frame',async()=>{
+  // JPEG has no alpha: it is always opaque. WebP keeps the transparency choice.
+  const r=await exportFramePng(comp,at,doc.name,d.rasterize??canvasRasterize,lossy==='jpeg'?false:state.transparent,doc.assets,out);
+  if(!lossy)return r;
+  const png=new Uint8Array(await r.blob.arrayBuffer());
+  const bytes=await (d.encode??canvasEncode)(png,lossy,state.settings.frameQuality??DEFAULT_FRAME_QUALITY);
+  return {blob:new Blob([bytes as BlobPart],{type:`image/${lossy}`}),fileName:r.fileName.replace(/\.png$/,lossy==='jpeg'?'.jpg':'.webp')};
+ },d.save??downloadBlob);
 }
 /** Puts a PNG on the system clipboard. Refuses with a clear message where the browser has no image clipboard. */
 export async function copyPngToClipboard(blob:Blob){

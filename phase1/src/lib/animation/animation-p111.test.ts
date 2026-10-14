@@ -798,3 +798,18 @@ test('P202 layers.fit: uniform scale and centring for contain/cover/width/height
  assert.throws(()=>run({mode:'nope',layers:['b']}),(e:any)=>e.expected===true);
  s.undo();
 });
+
+test('P204 frame format: JPEG/WebP single-frame export re-encodes at the quality, renames, JPEG is opaque, validates',async()=>{
+ const {exportCurrentFrame,setExportSettings,resetExportSettings,resetExport,setExportTransparent}=await import('./exportJob');
+ const s=open();setAnimationSession(s);resetExport();resetExportSettings();s.setView({playhead:frameToTick(3,findComp(s.document!)!.fps)});
+ const saved:{n:string;type:string;bytes:number[]}[]=[];const save=async(b:Blob,n:string)=>{saved.push({n,type:b.type,bytes:Array.from(new Uint8Array(await b.arrayBuffer()))});};
+ const svgs:string[]=[];const rasterize=async(svg:string)=>{svgs.push(svg);return new Uint8Array([137,80]);};const calls:any[]=[];
+ const encode=async(png:Uint8Array,f:'jpeg'|'webp',q:number)=>{calls.push([Array.from(png),f,q]);return new Uint8Array([9,9,q]);};
+ await exportCurrentFrame({rasterize,save,encode});assert.match(saved[0].n,/\.png$/);assert.equal(saved[0].type,'image/png');assert.equal(calls.length,0);
+ setExportTransparent(true);setExportSettings({frameFormat:'jpeg',frameQuality:70});await exportCurrentFrame({rasterize,save,encode});
+ assert.match(saved[1].n,/_00003\.jpg$/);assert.equal(saved[1].type,'image/jpeg');assert.deepEqual(saved[1].bytes,[9,9,70]);assert.deepEqual(calls[0],[[137,80],'jpeg',70]);
+ const bgJpeg=svgs[1];setExportSettings({frameFormat:'webp'});await exportCurrentFrame({rasterize,save,encode});
+ assert.match(saved[2].n,/\.webp$/);assert.equal(calls[1][2],70);assert.notEqual(bgJpeg,svgs[2]);
+ resetExportSettings();setExportTransparent(false);
+ assert.throws(()=>setExportSettings({frameFormat:'gif' as never}),(e:any)=>e.code==='unsupported');assert.throws(()=>setExportSettings({frameQuality:0}),(e:any)=>e.code==='unsupported');assert.throws(()=>setExportSettings({frameQuality:101}),(e:any)=>e.code==='unsupported');
+});
