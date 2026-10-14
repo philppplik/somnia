@@ -772,3 +772,53 @@ export function solidifyMesh(m:MeshData,thickness:number,offset:number):MeshData
  const out:MeshData=uvs?{positions,index,uvs}:{positions,index};
  check(out);return out;
 }
+
+/** Caps open borders: every border loop (position-keyed edges used by exactly one face) gets a centroid fan wound consistently with the surface that owns the border. Returns the filled mesh and how many holes were capped. UVs travel with the border, the cap centre averages them; sculpt masks and explicit normals are dropped (rebuilt smooth). */
+export function fillHolesMesh(m:MeshData):{mesh:MeshData;holes:number}{
+ check(m);
+ const nv=m.positions.length/3,nt=m.index.length/3;
+ const pk:string[]=[];
+ for(let v=0;v<nv;v++)pk.push(`${Math.round(m.positions[v*3]*1e6)},${Math.round(m.positions[v*3+1]*1e6)},${Math.round(m.positions[v*3+2]*1e6)}`);
+ const use=new Map<string,{a:number;b:number;n:number}>();
+ for(let f=0;f<nt;f++)for(let e=0;e<3;e++){
+  const a=m.index[f*3+e],b=m.index[f*3+(e+1)%3];
+  const ka=pk[a],kb=pk[b];const k=ka<kb?`${ka}|${kb}`:`${kb}|${ka}`;
+  const u=use.get(k);if(u)u.n++;else use.set(k,{a,b,n:1});
+ }
+ const borders=[...use.values()].filter(u=>u.n===1);
+ if(!borders.length)throw new EditError('The mesh has no open borders to fill.');
+ const byStart=new Map<string,number[]>();
+ borders.forEach((u,i)=>{const l=byStart.get(pk[u.a]);if(l)l.push(i);else byStart.set(pk[u.a],[i]);});
+ const used=new Array<boolean>(borders.length).fill(false);
+ const loops:{a:number;b:number}[][]=[];
+ for(let i=0;i<borders.length;i++){
+  if(used[i])continue;
+  const loop:{a:number;b:number}[]=[];
+  let cur=i;
+  while(true){
+   used[cur]=true;loop.push(borders[cur]);
+   const end=pk[borders[cur].b];
+   if(end===pk[borders[i].a])break;
+   const next=(byStart.get(end)||[]).find(x=>!used[x]);
+   if(next===undefined)throw new EditError('An open border is too tangled to fill (a border vertex is not manifold).');
+   cur=next;
+  }
+  if(loop.length>=3)loops.push(loop);
+ }
+ if(!loops.length)throw new EditError('An open border is too tangled to fill (a border vertex is not manifold).');
+ const positions=[...m.positions];
+ const uvs=m.uvs?[...m.uvs]:undefined;
+ const index=[...m.index];
+ for(const loop of loops){
+  let cx=0,cy=0,cz=0,cu=0,cv=0;
+  for(const e of loop){cx+=m.positions[e.a*3];cy+=m.positions[e.a*3+1];cz+=m.positions[e.a*3+2];if(uvs){cu+=m.uvs![e.a*2];cv+=m.uvs![e.a*2+1];}}
+  const n=loop.length;
+  const c=positions.length/3;
+  positions.push(cx/n,cy/n,cz/n);
+  if(uvs)uvs.push(cu/n,cv/n);
+  // The surface traverses each border edge a->b, so the cap traverses it b->a.
+  for(const e of loop)index.push(e.b,e.a,c);
+ }
+ const out:MeshData=uvs?{positions,index,uvs}:{positions,index};
+ check(out);return{mesh:out,holes:loops.length};
+}

@@ -805,5 +805,9 @@
  "studio3d.hist.solidify_other": "Solidificar {count} objetos",
  "studio3d.mesh.solidify": "Solidificar",
  "studio3d.mesh.solidifyThickness": "Grosor de pared",
- "studio3d.mesh.solidifyOffset": "Desplazamiento (-1 dentro, 1 fuera)"
+ "studio3d.mesh.solidifyOffset": "Desplazamiento (-1 dentro, 1 fuera)",
+ "cmd.studio3d.mesh.fillHoles": "Tapa los bordes abiertos de las mallas 3D",
+ "studio3d.hist.fillHoles_one": "Rellenar {count} hueco en {name}",
+ "studio3d.hist.fillHoles_other": "Rellenar {count} huecos",
+ "studio3d.mesh.fillHoles": "Rellenar huecos"
 }

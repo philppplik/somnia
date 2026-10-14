@@ -805,5 +805,9 @@
  "studio3d.hist.solidify_other": "Solidifier {count} objets",
  "studio3d.mesh.solidify": "Solidifier",
  "studio3d.mesh.solidifyThickness": "Épaisseur de paroi",
- "studio3d.mesh.solidifyOffset": "Décalage (-1 dedans, 1 dehors)"
+ "studio3d.mesh.solidifyOffset": "Décalage (-1 dedans, 1 dehors)",
+ "cmd.studio3d.mesh.fillHoles": "Bouche les bords ouverts des maillages 3D",
+ "studio3d.hist.fillHoles_one": "Boucher {count} trou de {name}",
+ "studio3d.hist.fillHoles_other": "Boucher {count} trous",
+ "studio3d.mesh.fillHoles": "Boucher les trous"
 }

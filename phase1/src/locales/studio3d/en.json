@@ -805,5 +805,9 @@
  "studio3d.hist.solidify_other": "Solidify {count} objects",
  "studio3d.mesh.solidify": "Solidify",
  "studio3d.mesh.solidifyThickness": "Wall thickness",
- "studio3d.mesh.solidifyOffset": "Offset (-1 inside, 1 outside)"
+ "studio3d.mesh.solidifyOffset": "Offset (-1 inside, 1 outside)",
+ "cmd.studio3d.mesh.fillHoles": "Cap the open borders of 3D meshes",
+ "studio3d.hist.fillHoles_one": "Fill {count} hole in {name}",
+ "studio3d.hist.fillHoles_other": "Fill {count} holes",
+ "studio3d.mesh.fillHoles": "Fill holes"
 }

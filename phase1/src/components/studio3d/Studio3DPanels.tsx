@@ -721,6 +721,7 @@ function MeshTools(){
   <div className="flex flex-wrap items-center gap-1"><NativeInput type="number" min={0.001} step={0.05} value={soThick} aria-label={t('studio3d.mesh.solidifyThickness')} className="w-20" onChange={e=>setSoThick(Math.min(1000,Math.max(0.001,Number(e.currentTarget.value)||0.1)))}/>
    <NativeInput type="number" min={-1} max={1} step={0.5} value={soOff} aria-label={t('studio3d.mesh.solidifyOffset')} className="w-20" onChange={e=>setSoOff(Math.min(1,Math.max(-1,Number(e.currentTarget.value)||0)))}/>
    <Button variant="outline" disabled={!ready} onClick={()=>void executeCommand('studio3d.mesh.solidify',{thickness:soThick,offset:soOff})}>{t('studio3d.mesh.solidify')}</Button></div>
+  <div className="flex flex-wrap gap-1"><Button variant="outline" disabled={!ready} onClick={()=>void executeCommand('studio3d.mesh.fillHoles',{})}>{t('studio3d.mesh.fillHoles')}</Button></div>
  </fieldset>;
 }
 

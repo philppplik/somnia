@@ -1,4 +1,5 @@
 # Unreleased: 3D Studio P0
+- 3D Studio: fill holes caps open mesh borders with consistent centroid fans, making meshes watertight, with undo, from the mesh tools or `studio3d.mesh.fillHoles`.
 - 3D Studio: solidify thin meshes into real shells (outer skin, inner skin, stitched side walls, inward/outward offset), with undo, from the mesh tools or `studio3d.mesh.solidify`.
 - 3D Studio: separate meshes into one object per connected part (UV seams stay together), with undo, from the mesh tools or `studio3d.mesh.separate`.
 - 3D Studio: normals toolbox - one command flips winding, recalculates orientation outward or rebuilds shading smooth, flat or split by angle (a welded cube gets its hard edges back); batch over the marked set as one undo step, UV seams survive.

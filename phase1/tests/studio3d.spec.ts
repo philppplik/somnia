@@ -1560,6 +1560,17 @@ test('3D studio mesh solidify: a flat plane gains a closed shell and undo restor
  await expect.poll(tris).toBe(before);
 });
 
+test('3D studio mesh fill holes: an open plane is capped and undo restores it',async({page})=>{
+ await blank(page);
+ await insert(page,'plane',0);
+ const tris=async()=>(await session(page)).stats.triangles;
+ expect(await tris()).toBe(2);
+ expect(await run(page,'studio3d.mesh.fillHoles',{})).toBe(true);
+ await expect.poll(tris).toBe(6,'four cap triangles added');
+ expect(await run(page,'studio3d.undo',{})).toBe(true);
+ await expect.poll(tris).toBe(2);
+});
+
 test('3D studio mesh simplify: triangle count drops and undo restores it',async({page})=>{
  await blank(page);
  await insert(page,'sphere',0);

@@ -805,5 +805,9 @@
  "studio3d.hist.solidify_other": "{count} Objekte verdicken",
  "studio3d.mesh.solidify": "Verdicken",
  "studio3d.mesh.solidifyThickness": "Wanddicke",
- "studio3d.mesh.solidifyOffset": "Versatz (-1 innen, 1 außen)"
+ "studio3d.mesh.solidifyOffset": "Versatz (-1 innen, 1 außen)",
+ "cmd.studio3d.mesh.fillHoles": "Offene Ränder von 3D-Meshes verschließen",
+ "studio3d.hist.fillHoles_one": "{count} Loch in {name} füllen",
+ "studio3d.hist.fillHoles_other": "{count} Löcher füllen",
+ "studio3d.mesh.fillHoles": "Löcher füllen"
 }

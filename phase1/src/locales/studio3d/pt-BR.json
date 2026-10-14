@@ -805,5 +805,9 @@
  "studio3d.hist.solidify_other": "Solidificar {count} objetos",
  "studio3d.mesh.solidify": "Solidificar",
  "studio3d.mesh.solidifyThickness": "Espessura da parede",
- "studio3d.mesh.solidifyOffset": "Deslocamento (-1 dentro, 1 fora)"
+ "studio3d.mesh.solidifyOffset": "Deslocamento (-1 dentro, 1 fora)",
+ "cmd.studio3d.mesh.fillHoles": "Fecha as bordas abertas das malhas 3D",
+ "studio3d.hist.fillHoles_one": "Preencher {count} buraco em {name}",
+ "studio3d.hist.fillHoles_other": "Preencher {count} buracos",
+ "studio3d.mesh.fillHoles": "Preencher buracos"
 }
