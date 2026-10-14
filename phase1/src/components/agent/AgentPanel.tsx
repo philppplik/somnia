@@ -1,3 +1,4 @@
+import {LocalModelChip} from '../studios/LocalModelChip';
 import {LocalAssistantControls} from './LocalAssistantControls';
 import {defaultLocalContext,effectiveLocalChoice} from '../../lib/agent/localAssistant';
 import {LOCAL_TASKS,type LocalTask} from '../../lib/agent/taskRouting';
@@ -80,7 +81,7 @@ export function AgentPanel(){
    <div className="ag-hd-right"><NativeButton type="button" className="ag-ib" title="Agent configuration" aria-label="Agent configuration" disabled={chat.busy||!settingsReady||saving||authBusy} onClick={openSettings}><Settings size={17}/></NativeButton><NativeButton type="button" className="ag-ib" title={t('agent.collapse')} aria-label={t('agent.collapse')} onClick={()=>patchState({agentOpen:false})}><PanelRightClose size={17}/></NativeButton></div>
   </header>
   <div className="ag-chat" ref={scroller} onScroll={e=>{const el=e.currentTarget;pinned.current=el.scrollHeight-el.scrollTop-el.clientHeight<48;}} role="log" aria-live="off" aria-label={t('agent.title')}>
-   <AgentAccountStatus provider={effectiveProvider}/>
+   <AgentAccountStatus provider={effectiveProvider}/><LocalModelChip studioId={app.activeStudio} task={task}/>
    <div className="ag-safety"><AgentErrorNotice/><p role="status">{effectiveProvider} · {effectiveModel||'No model selected'}</p><NativeButton type="button" onClick={()=>patchState({settingsOpen:true,settingsSection:'AI',settingsAITab:'privacy',settingsNavigationId:getState().settingsNavigationId+1})}>Cloud data consent</NativeButton></div>
    <label className="ag-context-permission"><NativeInput type="checkbox" checked={settings.config.allowActiveFile} disabled={chat.busy||saving||authBusy} onChange={e=>setActiveFileAccess(e.target.checked)}/>Allow inspecting the active studio document and selection. Every edit requires preview acceptance.</label>
    <p className="ag-context-chip" role="status">{studio.label}: {target.path||'No document'} · {target.path?studio.scope:'General guidance, no document context'}</p>

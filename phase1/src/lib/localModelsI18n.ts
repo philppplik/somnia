@@ -1,5 +1,15 @@
 export const LOCAL_MODELS_CATALOGUES:Record<string,Record<string,string>> = {
  "en": {
+  "local.chip.ask": "Ask local model",
+  "local.chip.open": "Open local AI settings for {model}",
+  "local.chip.none": "No model",
+  "local.chip.loading": "Settings loading",
+  "local.chip.busy": "AI busy or review pending",
+  "local.chip.not-local": "Active choice is not local",
+  "local.chip.missing": "Choose a model",
+  "local.chip.unverified": "Configured, readiness not checked",
+  "local.chip.boundary": "Opens local AI settings only. No request or model switch. Configuration does not prove installed/local/ready; each run still checks.",
+
   "local.resilience.test": "Test connection",
   "local.resilience.connection": "Connection test",
   "local.resilience.boundary": "Explicit metadata-only check. No inference, download or settings save. Reachable does not mean a model is installed or ready.",
@@ -484,6 +494,16 @@ export const LOCAL_MODELS_CATALOGUES:Record<string,Record<string,string>> = {
   "local.route.earlier": "Move earlier after local"
  },
  "de": {
+  "local.chip.ask": "Lokales Modell fragen",
+  "local.chip.open": "Lokale KI-Einstellungen für {model} öffnen",
+  "local.chip.none": "Kein Modell",
+  "local.chip.loading": "Einstellungen laden",
+  "local.chip.busy": "KI aktiv oder Prüfung offen",
+  "local.chip.not-local": "Aktuelle Wahl ist nicht lokal",
+  "local.chip.missing": "Modell wählen",
+  "local.chip.unverified": "Konfiguriert, Bereitschaft ungeprüft",
+  "local.chip.boundary": "Öffnet nur lokale KI-Einstellungen. Keine Anfrage oder Modelländerung. Konfiguration beweist nicht installiert/lokal/bereit; jeder Lauf prüft erneut.",
+
   "local.resilience.test": "Verbindung testen",
   "local.resilience.connection": "Verbindungstest",
   "local.resilience.boundary": "Bewusste Metadatenprüfung. Keine Inferenz, kein Download oder Speichern. Erreichbar heißt nicht, dass ein Modell installiert oder bereit ist.",
@@ -968,6 +988,16 @@ export const LOCAL_MODELS_CATALOGUES:Record<string,Record<string,string>> = {
   "local.route.earlier": "Nach lokal früher einordnen"
  },
  "es": {
+  "local.chip.ask": "Preguntar al modelo local",
+  "local.chip.open": "Abrir ajustes de IA local para {model}",
+  "local.chip.none": "Sin modelo",
+  "local.chip.loading": "Cargando ajustes",
+  "local.chip.busy": "IA ocupada o revisión pendiente",
+  "local.chip.not-local": "Selección activa no local",
+  "local.chip.missing": "Elegir modelo",
+  "local.chip.unverified": "Configurado, disponibilidad sin verificar",
+  "local.chip.boundary": "Solo abre ajustes de IA local. Sin solicitud ni cambio de modelo. Configuración no prueba instalación/localidad/disponibilidad; cada ejecución verifica.",
+
   "local.resilience.test": "Probar conexión",
   "local.resilience.connection": "Prueba de conexión",
   "local.resilience.boundary": "Prueba explícita de metadatos. Sin inferencia, descarga ni guardar ajustes. Accesible no significa modelo instalado o listo.",
@@ -1452,6 +1482,16 @@ export const LOCAL_MODELS_CATALOGUES:Record<string,Record<string,string>> = {
   "local.route.earlier": "Mover antes tras local"
  },
  "fr": {
+  "local.chip.ask": "Interroger le modèle local",
+  "local.chip.open": "Ouvrir les réglages IA locale pour {model}",
+  "local.chip.none": "Aucun modèle",
+  "local.chip.loading": "Chargement des réglages",
+  "local.chip.busy": "IA occupée ou examen en attente",
+  "local.chip.not-local": "Choix actif non local",
+  "local.chip.missing": "Choisir un modèle",
+  "local.chip.unverified": "Configuré, disponibilité non vérifiée",
+  "local.chip.boundary": "Ouvre uniquement les réglages IA locale. Aucune requête ni changement. Configuration ne prouve pas installation/localité/disponibilité; chaque exécution vérifie.",
+
   "local.resilience.test": "Tester la connexion",
   "local.resilience.connection": "Test de connexion",
   "local.resilience.boundary": "Contrôle explicite des métadonnées. Aucune inférence, téléchargement ou sauvegarde. Joignable ne signifie pas modèle installé ou prêt.",
@@ -1936,6 +1976,16 @@ export const LOCAL_MODELS_CATALOGUES:Record<string,Record<string,string>> = {
   "local.route.earlier": "Avancer après local"
  },
  "pt-BR": {
+  "local.chip.ask": "Perguntar ao modelo local",
+  "local.chip.open": "Abrir ajustes de IA local para {model}",
+  "local.chip.none": "Sem modelo",
+  "local.chip.loading": "Carregando ajustes",
+  "local.chip.busy": "IA ocupada ou revisão pendente",
+  "local.chip.not-local": "Escolha ativa não local",
+  "local.chip.missing": "Escolher modelo",
+  "local.chip.unverified": "Configurado, disponibilidade não verificada",
+  "local.chip.boundary": "Só abre ajustes de IA local. Sem solicitação ou mudança. Configuração não prova instalação/localidade/disponibilidade; cada execução verifica.",
+
   "local.resilience.test": "Testar conexão",
   "local.resilience.connection": "Teste de conexão",
   "local.resilience.boundary": "Verificação explícita de metadados. Sem inferência, download ou salvar ajustes. Acessível não significa modelo instalado ou pronto.",
