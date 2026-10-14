@@ -871,5 +871,9 @@
  "cmd.animation.keys.selectPeaks": "Keys auswählen, die Spitzen oder Täler sind",
  "animation.keys.invertSel": "Auswahl umkehren",
  "animation.keys.invertSel.hint": "Die Keys der gewählten Ebenen auswählen, die jetzt nicht gewählt sind",
- "cmd.animation.keys.invertSelection": "Key-Auswahl umkehren"
+ "cmd.animation.keys.invertSelection": "Key-Auswahl umkehren",
+ "animation.keys.influence": "Einfluss",
+ "animation.keys.influence.percent": "Einfluss %",
+ "animation.keys.influence.hint": "Die Ease-Griff-Länge der gewählten Keys mit Ease auf diesen Prozentwert setzen",
+ "cmd.animation.keys.influence": "Ease-Einfluss der gewählten Keys setzen"
 }

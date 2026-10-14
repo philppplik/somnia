@@ -168,3 +168,11 @@ test('invert selection: the other keys of the picked layers',()=>{
  assert.deepEqual(invertSelection(c,['a'],[k(0)]).map(x=>x.t),[f(10)]);
  assert.equal(invertSelection(c,['a'],[k(0),k(10)]).length,0);assert.equal(invertSelection(c,['zz'],[]).length,0);
 });
+import {influenceEdits} from './keyInfluence';
+test('influence: bezier keys get x handles from percent, y kept, others skipped',()=>{
+ const d=applyEdits(base(),[{type:'keys.interp',keys:[{layer:'a',prop:'position',t:f(0)}],interp:'bezier',out:[0.3,2],in:[0.5,1]},{type:'keys.interp',keys:[{layer:'a',prop:'position',t:f(10)}],interp:'linear'}] as never),c=findComp(d)!;
+ const k=(n:number)=>({layer:'a',prop:'position' as const,t:f(n)});
+ const e=influenceEdits(c,[k(0),k(10)],25) as {out:number[];in:number[]}[];
+ assert.equal(e.length,1);assert.deepEqual([...e[0].out],[0.25,2]);assert.deepEqual([...e[0].in],[0.75,1]);
+ assert.throws(()=>influenceEdits(c,[k(0)],0));assert.throws(()=>influenceEdits(c,[k(0)],100));
+});

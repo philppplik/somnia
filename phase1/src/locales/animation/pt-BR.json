@@ -871,5 +871,9 @@
  "cmd.animation.keys.selectPeaks": "Selecionar as keys que são picos ou vales",
  "animation.keys.invertSel": "Inverter seleção",
  "animation.keys.invertSel.hint": "Seleciona as keys das camadas escolhidas que não estão selecionadas agora",
- "cmd.animation.keys.invertSelection": "Inverter a seleção de keys"
+ "cmd.animation.keys.invertSelection": "Inverter a seleção de keys",
+ "animation.keys.influence": "Influência",
+ "animation.keys.influence.percent": "Influência %",
+ "animation.keys.influence.hint": "Define o comprimento da alça de ease das keys selecionadas com ease para esta porcentagem",
+ "cmd.animation.keys.influence": "Definir a influência do ease das keys selecionadas"
 }

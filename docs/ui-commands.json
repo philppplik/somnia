@@ -778,6 +778,23 @@
       "hasEnabled": true
     },
     {
+      "id": "animation.keys.influence",
+      "title": "Set the ease influence of the selected keys",
+      "category": "Edit",
+      "source": "animation",
+      "keywords": [
+        "animation",
+        "bezier",
+        "ease",
+        "handle",
+        "influence",
+        "keys",
+        "length",
+        "speed"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "animation.keys.invert",
       "title": "Invert the values of the selected keys",
       "category": "Edit",

@@ -871,5 +871,9 @@
  "cmd.animation.keys.selectPeaks": "Sélectionner les keys qui sont des pics ou des creux",
  "animation.keys.invertSel": "Inverser la sélection",
  "animation.keys.invertSel.hint": "Sélectionne les keys des calques choisis qui ne sont pas sélectionnées",
- "cmd.animation.keys.invertSelection": "Inverser la sélection des keys"
+ "cmd.animation.keys.invertSelection": "Inverser la sélection des keys",
+ "animation.keys.influence": "Influence",
+ "animation.keys.influence.percent": "Influence %",
+ "animation.keys.influence.hint": "Règle la longueur de poignée d’ease des keys sélectionnées avec ease sur ce pourcentage",
+ "cmd.animation.keys.influence": "Régler l’influence d’ease des keys sélectionnées"
 }
