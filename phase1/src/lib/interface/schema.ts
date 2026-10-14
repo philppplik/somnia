@@ -5,9 +5,12 @@ export interface InterfaceSizing {width:AxisSizing;height:AxisSizing;minWidth:nu
 export type ConstraintMode='start'|'end'|'center'|'stretch'|'scale';
 export interface InterfaceConstraints {horizontal:ConstraintMode;vertical:ConstraintMode;parentWidth:number;parentHeight:number;}
 export interface InstanceOverride {slot:string;values:Record<string,string|number|boolean>;}
-export interface InterfaceInstance {componentId:string;variantId:string;overrides:InstanceOverride[];}
+/** Instance-local values for typed (non-variant) component properties: text/boolean strings or flags, swap target component ids. */
+export interface InterfaceInstance {componentId:string;variantId:string;overrides:InstanceOverride[];propertyValues?:Record<string,string|boolean>;}
 export type VariableMode='light'|'dark';
-export interface VariantProperty {name:string;values:string[];}
+export type VariantPropertyType='variant'|'text'|'boolean'|'swap';
+/** Missing type means a variant axis. Typed properties reference a component slot instead of enumerating values. */
+export interface VariantProperty {name:string;type?:VariantPropertyType;values?:string[];slot?:string;}
 export interface InterfaceComponent {id:string;name:string;properties?:VariantProperty[];variants:{id:string;name:string;rootId:string;props?:Record<string,string>}[];}
 export const DEFAULT_LAYOUT:InterfaceLayout={direction:'free',wrap:false,gap:12,padding:[16,16,16,16],align:'start'};
 export const DEFAULT_SIZING:InterfaceSizing={width:'fixed',height:'fixed',minWidth:1,minHeight:1,maxWidth:32768,maxHeight:32768,absolute:false};
@@ -17,7 +20,9 @@ export interface InterfaceAsset {id:string;hash:string;mime:'image/png';width:nu
 export interface PathPoint {x:number;y:number;}
 export interface InterfacePath {points:PathPoint[];closed:boolean;}
 export type NodeKind='frame'|'group'|'rectangle'|'text'|'ellipse'|'line'|'path'|'image';
-export interface PrototypeLink {action?:'navigate'|'overlay';trigger:'click'|'hover';targetFrameId:string;}
+export type PrototypeTransitionKind='instant'|'dissolve'|'smart-animate';
+export interface PrototypeTransition {kind:PrototypeTransitionKind;durationMs:number;}
+export interface PrototypeLink {action?:'navigate'|'overlay';trigger:'click'|'hover'|'afterDelay';targetFrameId:string;delayMs?:number;transition?:PrototypeTransition;}
 export interface InterfaceNode {
  id:string;pageId:string;parentId:string|null;children:string[];kind:NodeKind;name:string;
  x:number;y:number;width:number;height:number;fill:string;text?:string;hidden:boolean;locked:boolean;

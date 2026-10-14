@@ -1,6 +1,6 @@
 import {validateInterfacePrototype} from './prototypeCore';
 import {validateVariantProperties} from './variantProperties';
-import type {InterfaceDocument} from './schema';
+import type {InterfaceDocument,InterfaceNode} from './schema';
 import {validateInterfaceAssets} from './assetsCore';
 import {validateInterfaceVectors} from './vectorCore';
 import {validateInterfaceTokens} from './tokens';
@@ -23,7 +23,8 @@ export function validateInterfaceFeatures(d:InterfaceDocument):void{
   if(!obj(c)||!id(c.id)||componentIds.has(c.id)||nodes.has(c.id)||d.pages.some(p=>p.id===c.id)||c.id===d.id||!name(c.name)||!Array.isArray(c.variants)||!c.variants.length||c.variants.length>50)throw Error('Invalid component.');componentIds.add(c.id);
   validateVariantProperties(c);const names=new Set<string>();
   for(const v of c.variants){const root=nodes.get(v.rootId);if(!obj(v)||!id(v.id)||variantIds.has(v.id)||componentIds.has(v.id)||nodes.has(v.id)||d.pages.some(p=>p.id===v.id)||d.id===v.id||!name(v.name)||names.has(v.name)||!root||root.kind!=='frame'||root.instance||masterIds.has(root.id))throw Error('Invalid component variant.');variantIds.add(v.id);names.add(v.name);masterIds.add(root.id);
-   const slots=new Set<string>();const walk=(nid:string)=>{const n=nodes.get(nid)!;if(!id(n.componentSlot)||slots.has(n.componentSlot!))throw Error('Missing or duplicate component slot.');slots.add(n.componentSlot!);n.children.forEach(walk);};walk(root.id);
+   const slots=new Map<string,InterfaceNode>();const walk=(nid:string)=>{const n=nodes.get(nid)!;if(!id(n.componentSlot)||slots.has(n.componentSlot!))throw Error('Missing or duplicate component slot.');slots.set(n.componentSlot!,n);n.children.forEach(walk);};walk(root.id);
+   for(const p of c.properties??[]){if(!p.type||p.type==='variant')continue;const target=slots.get(p.slot!);if(!target||(p.type==='text'&&target.kind!=='text')||(p.type==='swap'&&!target.instance))throw Error('Typed property target is missing or incompatible in a variant.');}
   }
  }
  if(components.some(c=>variantIds.has(c.id)))throw Error('Duplicate component identity.');
@@ -34,7 +35,8 @@ export function validateInterfaceFeatures(d:InterfaceDocument):void{
   if(n.sizing!==undefined){const z=n.sizing;if(!obj(z)||!['fixed','hug','fill'].includes(z.width)||!['fixed','hug','fill'].includes(z.height)||!num(z.minWidth,1)||!num(z.minHeight,1)||!num(z.maxWidth,1)||!num(z.maxHeight,1)||z.minWidth>z.maxWidth||z.minHeight>z.maxHeight||typeof z.absolute!=='boolean')throw Error('Invalid sizing.');}
   if(n.constraints!==undefined){const c=n.constraints;if(!obj(c)||!axes.includes(c.horizontal)||!axes.includes(c.vertical)||!num(c.parentWidth,1)||!num(c.parentHeight,1)||!n.parentId)throw Error('Invalid constraints.');}
   if(n.componentSlot!==undefined&&!id(n.componentSlot))throw Error('Invalid component slot.');
-  if(n.instance!==undefined){const i=n.instance,c=components.find(c=>c.id===i.componentId);if(!obj(i)||n.kind!=='frame'||!c||!c.variants.some(v=>v.id===i.variantId)||!Array.isArray(i.overrides)||i.overrides.length>2000)throw Error('Invalid instance reference.');const seen=new Set<string>();for(const o of i.overrides){if(!obj(o)||!id(o.slot)||seen.has(o.slot)||!obj(o.values)||!Object.entries(o.values).every(([k,v])=>validOverride(k,v)))throw Error('Invalid component override.');seen.add(o.slot);}}
+  if(n.instance!==undefined){const i=n.instance,c=components.find(c=>c.id===i.componentId);if(!obj(i)||n.kind!=='frame'||!c||!c.variants.some(v=>v.id===i.variantId)||!Array.isArray(i.overrides)||i.overrides.length>2000)throw Error('Invalid instance reference.');const seen=new Set<string>();for(const o of i.overrides){if(!obj(o)||!id(o.slot)||seen.has(o.slot)||!obj(o.values)||!Object.entries(o.values).every(([k,v])=>validOverride(k,v)))throw Error('Invalid component override.');seen.add(o.slot);}
+  if(i.propertyValues!==undefined){if(!obj(i.propertyValues))throw Error('Invalid component property value.');for(const [key,value] of Object.entries(i.propertyValues)){const p=c.properties?.find(p=>p.name===key&&p.type&&p.type!=='variant');if(!p||(p.type==='boolean'&&typeof value!=='boolean')||(p.type==='text'&&(typeof value!=='string'||value.length>100_000))||(p.type==='swap'&&(typeof value!=='string'||!components.some(x=>x.id===value))))throw Error('Invalid component property value.');}}}
  }
  // Masters cannot contain masters or instances referring back to their component (including indirect cycles).
  const deps=new Map<string,Set<string>>();

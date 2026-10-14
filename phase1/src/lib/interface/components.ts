@@ -15,7 +15,7 @@ export function addComponentVariant(doc:InterfaceDocument,componentId:string,sou
  const copies=source.map(n=>({...structuredClone(n),id:map.get(n.id)!,parentId:n.id===root.id?root.parentId:map.get(n.parentId!)!,children:n.children.map(id=>map.get(id)!)}));
  copies[0].name=name;copies[0].x+=root.width+40;doc.nodes.push(...copies);
  const siblings=root.parentId?doc.nodes.find(n=>n.id===root.parentId)!.children:doc.pages.find(p=>p.id===root.pageId)!.children;siblings.push(copies[0].id);
- const id=uid();const props={...v.props};if(c.properties?.length){const first=c.properties[0];let i=c.variants.length+1,value=`Value ${i}`;while(first.values.includes(value)){value=`Value ${++i}`;}first.values.push(value);props[first.name]=value;}c.variants.push({id,name,rootId:copies[0].id,...(c.properties?{props}:{})});return id;
+ const id=uid();const props={...v.props};const first=c.properties?.find(p=>!p.type||p.type==='variant');if(first){let i=c.variants.length+1,value=`Value ${i}`;while(first.values!.includes(value)){value=`Value ${++i}`;}first.values!.push(value);props[first.name]=value;}c.variants.push({id,name,rootId:copies[0].id,...(c.properties?{props}:{})});return id;
 }
 export function instantiateComponent(doc:InterfaceDocument,componentId:string,variantId:string,pageId:string,parentId:string|null=null):string{
  const c=doc.components?.find(c=>c.id===componentId),v=c?.variants.find(v=>v.id===variantId),master=v&&doc.nodes.find(n=>n.id===v.rootId);const page=doc.pages.find(p=>p.id===pageId),parent=parentId?doc.nodes.find(n=>n.id===parentId):undefined;
@@ -48,7 +48,7 @@ export function swapInstanceComponent(doc:InterfaceDocument,id:string,componentI
  if(currentProps&&target.properties?.length){const match=target.variants.find(v=>target.properties!.every(p=>currentProps[p.name]===undefined||v.props?.[p.name]===currentProps[p.name]));if(match)variant=match;}
  root.instance={componentId:target.id,variantId:variant.id,overrides:root.instance.overrides};
 }
-export function resetInstanceOverrides(doc:InterfaceDocument,id:string):void{const root=doc.nodes.find(n=>n.id===id);if(!root?.instance||root.locked)throw Error('Instance unavailable.');root.instance.overrides=[];}
+export function resetInstanceOverrides(doc:InterfaceDocument,id:string):void{const root=doc.nodes.find(n=>n.id===id);if(!root?.instance||root.locked)throw Error('Instance unavailable.');root.instance.overrides=[];delete root.instance.propertyValues;}
 export function detachInstance(doc:InterfaceDocument,id:string):void{const root=doc.nodes.find(n=>n.id===id);if(!root?.instance||root.locked)throw Error('Instance unavailable.');delete root.instance;for(const n of subtree(doc,id))if(!owningInstance(doc,n.id))delete n.componentSlot;}
 /** Called once per content transaction. Derived instance changes and master edit share its undo entry. */
 export function synchronizeInstances(doc:InterfaceDocument):ComponentDiagnostic[]{
@@ -66,6 +66,12 @@ export function synchronizeInstances(doc:InterfaceDocument):ComponentDiagnostic[
    for(const [key,value] of Object.entries(overrides.get(n.componentSlot!)??{})){if(!OVERRIDE_KEYS.includes(key as typeof OVERRIDE_KEYS[number]))throw Error('Unknown override.');copy[key]=value;if(key==='fill'&&copy.bindings){copy.bindings={...copy.bindings};delete copy.bindings.fill;}}
    return copy;
   });
+  const pv=instance.propertyValues;
+  if(pv)for(const p of c?.properties??[]){if(!p.type||p.type==='variant')continue;const value=pv[p.name];if(value===undefined)continue;const target=generated.find(n=>n.componentSlot===p.slot);if(!target){diagnostics.push({instanceId:root.id,slot:p.slot!,message:'Property target is absent from this variant; value is preserved.'});continue;}
+   if(p.type==='text'&&target.kind==='text'&&typeof value==='string'){target.text=value;}
+   else if(p.type==='boolean'&&typeof value==='boolean')target.hidden=value;
+   else if(p.type==='swap'&&typeof value==='string'&&target.instance){const tc=doc.components?.find(x=>x.id===value);if(tc)target.instance={componentId:tc.id,variantId:tc.variants[0].id,overrides:target.instance.overrides};}
+  }
   const removing=new Set(old.map(n=>n.id));doc.nodes=doc.nodes.filter(n=>!removing.has(n.id));doc.nodes.push(...generated);if(doc.nodes.length>MAX_NODES)throw Error('Component node limit exceeded.');processed.add(root.id);
   const nextActive=new Set(active);nextActive.add(instance.componentId);for(const child of generated.slice(1))if(child.instance)sync(child,depth+1,nextActive);
  };
