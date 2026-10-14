@@ -13,7 +13,7 @@ import type {InstalledModel,RuntimeSnapshot} from '../../lib/agent/localModels';
 import {Button} from '../ui/button';
 import {Input} from '../ui/input';
 import {Dialog,DialogContent,DialogTitle,DialogDescription} from '../ui/dialog';
-export function LocalModelActions({snapshot,onChanged,manager=localModelManager,chooseDisk=chooseModelDisk}:{snapshot:RuntimeSnapshot|null;onChanged:()=>Promise<void>;manager?:LocalModelManager;chooseDisk?:()=>Promise<ModelDisk|null>}){
+export function LocalModelActions({snapshot,onChanged,manager=localModelManager,chooseDisk=chooseModelDisk,embeddingOnly=false}:{snapshot:RuntimeSnapshot|null;onChanged:()=>Promise<void>;manager?:LocalModelManager;chooseDisk?:()=>Promise<ModelDisk|null>;embeddingOnly?:boolean}){
  const {t}=useT();const job=useSyncExternalStore(manager.subscribe,manager.snapshot,manager.snapshot);
  useSyncExternalStore(subscribeAgentSettings,agentSettingsSnapshot,agentSettingsSnapshot);
  const [name,setName]=useState(''),[error,setError]=useState(''),[instruction,setInstruction]=useState(''),[busy,setBusy]=useState(false);
@@ -24,18 +24,18 @@ export function LocalModelActions({snapshot,onChanged,manager=localModelManager,
  const active=!!job&&['preparing','downloading','verifying','installing','reconciling','cancel-requested'].includes(job.phase)&&!job.error;
  const locked=busy||manager.isBusy()||active||!manager.canMutate();
  const act=async(action:()=>Promise<unknown>)=>{setBusy(true);setError('');try{await action();await onChanged();}catch{setError(t('local.action.failed'));}finally{setBusy(false);}};
- const propose=(raw:string)=>{try{const model=registryModel(raw);setAck(false);setDisk(null);setConfirm({kind:'pull',model});setError('');}catch{setError(t('local.action.invalid'));}};
+ const propose=(raw:string)=>{try{const model=registryModel(raw);if(embeddingOnly&&model!=='embeddinggemma:300m')throw Error('Exact search model only');setAck(false);setDisk(null);setConfirm({kind:'pull',model});setError('');}catch{setError(t('local.action.invalid'));}};
  return <div className="local-model-actions">
   {error&&<StudioStatus tone="error" live="assertive">{t('local.recovery.pullFailed')}</StudioStatus>}
   {snapshot?.state==='stopped'&&<Button disabled={locked} type="button" onClick={()=>void act(async()=>{const result=await manager.launch();setInstruction(result.instruction??'');})}>{t('local.action.start')}</Button>}
   {instruction&&<p>{t('local.action.manual')} <code>{instruction}</code></p>}
   {snapshot?.state==='running'&&<>
-   <EmbeddingModelReview disabled={locked} onReview={()=>propose('embeddinggemma:300m')}/><LocalRecommendedPicker disabled={locked} onDownload={propose}/>
+   <EmbeddingModelReview disabled={locked} onReview={()=>propose('embeddinggemma:300m')}/>{!embeddingOnly&&<><LocalRecommendedPicker disabled={locked} onDownload={propose}/>
    <label>{t('local.action.name')}<Input value={name} disabled={locked} onChange={e=>setName(e.target.value)} placeholder="qwen3:4b"/></label>
    <Button type="button" variant="outline" disabled={locked||!name.trim()} onClick={()=>propose(name)}>{t('local.action.pull')}</Button>
-   <ul className="local-models-list">{snapshot.models.map(model=><li key={model.id}><span>{model.id}</span><div className="local-models-badges"><Button type="button" size="compact" disabled={locked} onClick={()=>propose(model.id)} aria-label={t('local.action.updateModel',{model:model.id})}>{t('local.action.update')}</Button><Button type="button" size="compact" disabled={locked||!model.digest} onClick={()=>{setAck(false);setConfirm({kind:'delete',model:model.id,entry:model});}} aria-label={t('local.action.deleteModel',{model:model.id})}>{t('local.action.delete')}</Button></div></li>)}</ul>
+   <ul className="local-models-list">{snapshot.models.map(model=><li key={model.id}><span>{model.id}</span><div className="local-models-badges"><Button type="button" size="compact" disabled={locked} onClick={()=>propose(model.id)} aria-label={t('local.action.updateModel',{model:model.id})}>{t('local.action.update')}</Button><Button type="button" size="compact" disabled={locked||!model.digest} onClick={()=>{setAck(false);setConfirm({kind:'delete',model:model.id,entry:model});}} aria-label={t('local.action.deleteModel',{model:model.id})}>{t('local.action.delete')}</Button></div></li>)}</ul></>}
   </>}
-  {job&&<div role="status" className="local-models-runtime"><strong>{job.model}</strong><p>{t('local.job.'+job.phase)}</p>
+  {job&&(!embeddingOnly||job.model==='embeddinggemma:300m')&&<div role="status" className="local-models-runtime"><strong>{job.model}</strong><p>{t('local.job.'+job.phase)}</p>
    <LocalPullProgress job={job}/>
    {job.cancelOutcome&&<p>{t('local.cancel.'+job.cancelOutcome)}</p>}
    {job.error&&<p>{t('local.resilience.error.'+localPullFailure(job.error))}</p>}{!active&&['interrupted','failed','reconciling'].includes(job.phase)&&<><p>{t('local.recovery.resumeBoundary')}</p><Button type="button" disabled={locked} onClick={()=>propose(job.model)}>{t('local.recovery.resume')}</Button></>}
