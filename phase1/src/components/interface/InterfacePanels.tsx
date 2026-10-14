@@ -1,5 +1,7 @@
 import {Field} from './InterfaceField';
 export {Field};
+import {InterfaceMediaControls} from './InterfaceMedia';
+import {InterfaceVectorControls} from './InterfaceVectorControls';
 import {InterfaceResources,InterfaceBindings} from './InterfaceResources';
 import {InterfaceOutput} from './InterfaceOutput';
 import {patchInterfaceNode,owningInstance,createComponent,instantiateComponent,addComponentVariant,switchInstanceVariant,resetInstanceOverrides,detachInstance} from '../../lib/interface/components';
@@ -24,7 +26,7 @@ export function InterfaceLayers(){
  return <Guard>{run=><div className="flex flex-col gap-3 p-3">
   <label className="text-xs">{t('interface.page')}<select className="mt-1 w-full rounded border border-subtle bg-panel p-2" value={s.pageId??''} onChange={e=>interfaceSession.page(e.target.value)}>{doc.pages.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}</select></label>
   <Button size="compact" variant="outline" onClick={()=>run(()=>{const id=uid();interfaceSession.transact(d=>d.pages.push({id,name:`${t('interface.page')} ${d.pages.length+1}`,children:[]}));interfaceSession.page(id);})}>{t('interface.addPage')}</Button>
-  <div className="flex flex-wrap gap-1">{(['frame','rectangle','text','group'] as const).map(kind=><Button size="compact" key={kind} onClick={()=>run(()=>{const selected=doc.nodes.find(n=>n.id===s.selection);let id='';interfaceSession.transact(d=>{id=addNode(d,page.id,kind,selected&&['frame','group'].includes(selected.kind)&&!selected.locked?selected.id:null);});interfaceSession.select(id);})}>{t(`interface.${kind}`)}</Button>)}</div>
+  <div className="flex flex-wrap gap-1">{(['frame','rectangle','text','group','ellipse','line','path'] as const).map(kind=><Button size="compact" key={kind} onClick={()=>run(()=>{const selected=doc.nodes.find(n=>n.id===s.selection);let id='';interfaceSession.transact(d=>{id=addNode(d,page.id,kind,selected&&['frame','group'].includes(selected.kind)&&!selected.locked?selected.id:null);});interfaceSession.select(id);})}>{t(`interface.${kind}`)}</Button>)}</div>
   {(doc.components??[]).length>0&&<details open className="border-t border-subtle pt-2"><summary className="mb-2 text-xs">{t('interface.component')}</summary><div className="flex flex-col gap-1">{doc.components!.flatMap(c=>c.variants.map(v=><Button key={v.id} size="compact" variant="outline" onClick={()=>run(()=>{let id='';interfaceSession.transact(d=>{id=instantiateComponent(d,c.id,v.id,page.id);});interfaceSession.select(id);})}>{c.name} / {v.name}</Button>))}</div></details>}
   <InterfaceResources run={run}/>
   <ul aria-label={t('interface.layers')} className="m-0 list-none p-0">{page.children.map(id=>row(id,0))}</ul>
@@ -47,6 +49,8 @@ export function InterfaceProperties(){
    <InterfaceLayoutControls node={node} run={run} patch={patch}/>
    <InterfaceComponentControls node={node} run={run}/>
    <InterfaceBindings nodeId={node.id} run={run}/>
+   <InterfaceMediaControls/>
+   <InterfaceVectorControls nodeId={node.id} run={run}/>
    <InterfaceOutput/>
    <div className="flex flex-wrap gap-1"><Button size="compact" variant="outline" disabled={node.locked} onClick={()=>run(()=>move(-1))}>{t('interface.up')}</Button><Button size="compact" variant="outline" disabled={node.locked} onClick={()=>run(()=>move(1))}>{t('interface.down')}</Button><Button size="compact" variant="outline" disabled={node.locked} onClick={()=>run(()=>interfaceSession.transact(d=>deleteNode(d,node.id)))}>{t('interface.delete')}</Button></div>
   </>}
