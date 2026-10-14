@@ -1017,5 +1017,7 @@
  "cmd.animation.layers.reset": "Redefinir rotação, escala ou opacidade das camadas selecionadas",
  "animation.export.firstNumber": "Número do primeiro quadro",
  "animation.export.firstNumberAuto": "Composição",
- "animation.export.problem.number": "O número do primeiro quadro deve ser um inteiro de 0 a 99999."
+ "animation.export.problem.number": "O número do primeiro quadro deve ser um inteiro de 0 a 99999.",
+ "animation.rig.trim": "Cortar na área de trabalho",
+ "cmd.animation.layers.trimToWorkArea": "Cortar as camadas selecionadas na área de trabalho"
 }

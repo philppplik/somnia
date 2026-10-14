@@ -1782,6 +1782,24 @@
       "hasEnabled": true
     },
     {
+      "id": "animation.layers.trimToWorkArea",
+      "title": "Trim the selected layers to the work area",
+      "category": "Edit",
+      "source": "animation",
+      "keywords": [
+        "animation",
+        "crop",
+        "cut",
+        "in",
+        "layer",
+        "out",
+        "range",
+        "trim",
+        "work area"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "animation.marker.add",
       "title": "Add timing marker",
       "category": "Edit",

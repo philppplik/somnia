@@ -704,3 +704,17 @@ test('P192 first frame number: renumbers sequence files and manifest, validates,
  assert.throws(()=>setExportSettings({firstNumber:100000}),(e:any)=>e.code==='unsupported');assert.throws(()=>setExportSettings({firstNumber:1.5}),(e:any)=>e.code==='unsupported');
  resetExportSettings();
 });
+
+test('P193 layers.trimToWorkArea: cuts in/out to the work area, never extends, skips locked and outside, one undo step',async()=>{
+ const s=open();setAnimationSession(s);const c0=findComp(s.document!);const d=c0.duration;
+ for(const id of ['b','c','e','f'])s.dispatch({type:'layer.add',kind:'shape',id});
+ const T=(id:string,inT:number,outT:number)=>s.dispatch({type:'layer.timing',layer:id,inT,outT});
+ const q=Math.round(d/10);T('b',0,d);T('c',q*4,q*6);T('e',0,q);T('f',0,d);s.dispatch({type:'layer.update',layer:'f',locked:true});
+ s.dispatch({type:'workarea.set',in:q*2,out:q*8});
+ const {layerTrimSpecs}=await import('./layerTrimCommands');const run=(p:object)=>(layerTrimSpecs()[0].run as (p:unknown)=>any)(p);
+ const get=(id:string)=>findLayer(findComp(s.document!)!,id)!;
+ const r=run({layers:['b','c','e','f']});assert.equal(r.trimmed,1);assert.equal(r.skipped,2);
+ assert.deepEqual([get('b').inT,get('b').outT],[q*2,q*8]);assert.deepEqual([get('c').inT,get('c').outT],[q*4,q*6]);assert.deepEqual([get('e').inT,get('e').outT],[0,q]);assert.deepEqual([get('f').inT,get('f').outT],[0,d]);
+ assert.throws(()=>run({layers:['b','c']}),(e:any)=>e.expected===true);
+ s.undo();assert.deepEqual([get('b').inT,get('b').outT],[0,d]);
+});

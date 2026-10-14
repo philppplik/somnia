@@ -1017,5 +1017,7 @@
  "cmd.animation.layers.reset": "Drehung, Skalierung oder Deckkraft der gewählten Ebenen zurücksetzen",
  "animation.export.firstNumber": "Nummer des ersten Frames",
  "animation.export.firstNumberAuto": "Komposition",
- "animation.export.problem.number": "Die Nummer des ersten Frames muss eine ganze Zahl von 0 bis 99999 sein."
+ "animation.export.problem.number": "Die Nummer des ersten Frames muss eine ganze Zahl von 0 bis 99999 sein.",
+ "animation.rig.trim": "Auf Arbeitsbereich kürzen",
+ "cmd.animation.layers.trimToWorkArea": "Gewählte Ebenen auf den Arbeitsbereich kürzen"
 }

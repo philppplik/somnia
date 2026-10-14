@@ -1017,5 +1017,7 @@
  "cmd.animation.layers.reset": "Reset rotation, scale or opacity of the selected layers",
  "animation.export.firstNumber": "First frame number",
  "animation.export.firstNumberAuto": "Composition",
- "animation.export.problem.number": "The first frame number must be a whole number from 0 to 99999."
+ "animation.export.problem.number": "The first frame number must be a whole number from 0 to 99999.",
+ "animation.rig.trim": "Trim to work area",
+ "cmd.animation.layers.trimToWorkArea": "Trim the selected layers to the work area"
 }

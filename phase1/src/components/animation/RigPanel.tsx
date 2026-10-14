@@ -18,6 +18,7 @@ const groups:{key:string;items:{testid:string;label:string;cmd:string;min:number
   {testid:'animation-rig-duplicate',label:'animation.rig.duplicate',cmd:'animation.layers.duplicate',min:1},
   {testid:'animation-rig-split',label:'animation.rig.split',cmd:'animation.layers.split',min:1},
   {testid:'animation-rig-workarea',label:'animation.rig.workarea',cmd:'animation.workarea.toLayers',min:1},
+  {testid:'animation-rig-trim',label:'animation.rig.trim',cmd:'animation.layers.trimToWorkArea',min:1},
   {testid:'animation-rig-reseed',label:'animation.rig.reseed',cmd:'animation.modifiers.reseed',min:1},
   {testid:'animation-rig-number',label:'animation.rig.number',cmd:'animation.layers.number',min:1},
   {testid:'animation-rig-markers',label:'animation.rig.markers',cmd:'animation.marker.fromLayers',min:1}]},
