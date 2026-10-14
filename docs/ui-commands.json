@@ -1734,6 +1734,27 @@
       "hasEnabled": true
     },
     {
+      "id": "animation.layers.fit",
+      "title": "Fit the selected layers to the composition",
+      "category": "Edit",
+      "source": "animation",
+      "keywords": [
+        "animation",
+        "center",
+        "composition",
+        "contain",
+        "cover",
+        "fill",
+        "fit",
+        "height",
+        "layer",
+        "scale",
+        "size",
+        "width"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "animation.layers.flag",
       "title": "Switch a layer flag for the selected layers",
       "category": "Edit",

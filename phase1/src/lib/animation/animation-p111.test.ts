@@ -782,3 +782,19 @@ test('P201 layers.fade: opacity keys at in/out, one undo step, skips animated/lo
  assert.throws(()=>run({mode:'x',layers:['b']}),(e:any)=>e.expected===true);assert.throws(()=>run({mode:'in',frames:0,layers:['b']}),(e:any)=>e.expected===true);
  s.dispatch({type:'layer.timing',layer:'b',inT:fr(10),outT:fr(15)});assert.throws(()=>run({mode:'both',layers:['b']}),(e:any)=>e.expected===true);
 });
+
+test('P202 layers.fit: uniform scale and centring for contain/cover/width/height, rotation respected, skips parented/animated/locked',async()=>{
+ const s=open();setAnimationSession(s);for(const id of ['b','c','e'])s.dispatch({type:'layer.add',kind:'shape',id});
+ const {layerFitSpecs}=await import('./layerFitCommands');const {worldMatrix,applyMatrix}=await import('./scene');const run=(p:object)=>(layerFitSpecs()[0].run as (p:unknown)=>any)(p);
+ const c=()=>findComp(s.document!)!;const get=(id:string)=>findLayer(c(),id)!;const w=get('b').source.width!,h=get('b').source.height!;
+ const box=(id:string)=>{const pts=[[0,0],[w,0],[0,h],[w,h]].map(([x,y])=>applyMatrix(worldMatrix(c(),get(id),0),[x,y]));const xs=pts.map(p=>p[0]),ys=pts.map(p=>p[1]);return {x0:Math.min(...xs),x1:Math.max(...xs),y0:Math.min(...ys),y1:Math.max(...ys)};};
+ s.setView({playhead:0});s.dispatch({type:'prop.set',layer:'b',prop:'rotation',value:25,t:0});s.dispatch({type:'prop.set',layer:'b',prop:'anchor',value:[10,20],t:0});
+ const W=c().width,H=c().height,near=(a:number,b:number)=>Math.abs(a-b)<0.1;
+ run({mode:'contain',layers:['b']});let r=box('b');assert.ok(near((r.x0+r.x1)/2,W/2)&&near((r.y0+r.y1)/2,H/2));assert.ok(near(r.x1-r.x0,W)||near(r.y1-r.y0,H));assert.ok(r.x1-r.x0<=W+0.1&&r.y1-r.y0<=H+0.1);
+ run({mode:'cover',layers:['b']});r=box('b');assert.ok(r.x1-r.x0>=W-0.1&&r.y1-r.y0>=H-0.1);assert.ok(near((r.x0+r.x1)/2,W/2));
+ run({mode:'width',layers:['b']});r=box('b');assert.ok(near(r.x1-r.x0,W));run({mode:'height',layers:['b']});r=box('b');assert.ok(near(r.y1-r.y0,H));
+ s.dispatch({type:'layer.update',layer:'e',locked:true});s.dispatch({type:'layer.update',layer:'c',parent:'b'} as never);
+ const out=run({mode:'contain',layers:['c','e','a']});assert.ok(out.skipped>=2);
+ assert.throws(()=>run({mode:'nope',layers:['b']}),(e:any)=>e.expected===true);
+ s.undo();
+});

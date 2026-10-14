@@ -1029,5 +1029,11 @@
  "animation.rig.fade.in": "Einblenden",
  "animation.rig.fade.out": "Ausblenden",
  "animation.rig.fade.both": "Ein- und ausblenden",
- "cmd.animation.layers.fade": "Gewählte Ebenen ein- oder ausblenden"
+ "cmd.animation.layers.fade": "Gewählte Ebenen ein- oder ausblenden",
+ "animation.rig.group.fit": "An Komposition anpassen",
+ "animation.rig.fit.contain": "Einpassen",
+ "animation.rig.fit.cover": "Füllen",
+ "animation.rig.fit.width": "Breite anpassen",
+ "animation.rig.fit.height": "Höhe anpassen",
+ "cmd.animation.layers.fit": "Gewählte Ebenen an die Komposition anpassen"
 }

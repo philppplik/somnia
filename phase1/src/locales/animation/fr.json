@@ -1029,5 +1029,11 @@
  "animation.rig.fade.in": "Fondu en entrée",
  "animation.rig.fade.out": "Fondu en sortie",
  "animation.rig.fade.both": "Fondu en entrée et en sortie",
- "cmd.animation.layers.fade": "Faire apparaître ou disparaître les calques sélectionnés en fondu"
+ "cmd.animation.layers.fade": "Faire apparaître ou disparaître les calques sélectionnés en fondu",
+ "animation.rig.group.fit": "Ajuster à la composition",
+ "animation.rig.fit.contain": "Ajuster à l’intérieur",
+ "animation.rig.fit.cover": "Remplir",
+ "animation.rig.fit.width": "Ajuster la largeur",
+ "animation.rig.fit.height": "Ajuster la hauteur",
+ "cmd.animation.layers.fit": "Ajuster les calques sélectionnés à la composition"
 }

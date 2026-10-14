@@ -1029,5 +1029,11 @@
  "animation.rig.fade.in": "Aparecer",
  "animation.rig.fade.out": "Desvanecer",
  "animation.rig.fade.both": "Aparecer y desvanecer",
- "cmd.animation.layers.fade": "Aparecer o desvanecer las capas seleccionadas"
+ "cmd.animation.layers.fade": "Aparecer o desvanecer las capas seleccionadas",
+ "animation.rig.group.fit": "Ajustar a la composición",
+ "animation.rig.fit.contain": "Ajustar dentro",
+ "animation.rig.fit.cover": "Rellenar",
+ "animation.rig.fit.width": "Ajustar ancho",
+ "animation.rig.fit.height": "Ajustar alto",
+ "cmd.animation.layers.fit": "Ajustar las capas seleccionadas a la composición"
 }

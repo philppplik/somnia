@@ -1029,5 +1029,11 @@
  "animation.rig.fade.in": "Fade in",
  "animation.rig.fade.out": "Fade out",
  "animation.rig.fade.both": "Fade in e out",
- "cmd.animation.layers.fade": "Aplicar fade in ou out nas camadas selecionadas"
+ "cmd.animation.layers.fade": "Aplicar fade in ou out nas camadas selecionadas",
+ "animation.rig.group.fit": "Ajustar à composição",
+ "animation.rig.fit.contain": "Ajustar dentro",
+ "animation.rig.fit.cover": "Preencher",
+ "animation.rig.fit.width": "Ajustar largura",
+ "animation.rig.fit.height": "Ajustar altura",
+ "cmd.animation.layers.fit": "Ajustar as camadas selecionadas à composição"
 }

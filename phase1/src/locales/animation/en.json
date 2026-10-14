@@ -1029,5 +1029,11 @@
  "animation.rig.fade.in": "Fade in",
  "animation.rig.fade.out": "Fade out",
  "animation.rig.fade.both": "Fade in and out",
- "cmd.animation.layers.fade": "Fade the selected layers in or out"
+ "cmd.animation.layers.fade": "Fade the selected layers in or out",
+ "animation.rig.group.fit": "Fit to comp",
+ "animation.rig.fit.contain": "Fit inside",
+ "animation.rig.fit.cover": "Fill",
+ "animation.rig.fit.width": "Fit width",
+ "animation.rig.fit.height": "Fit height",
+ "cmd.animation.layers.fit": "Fit the selected layers to the composition"
 }
