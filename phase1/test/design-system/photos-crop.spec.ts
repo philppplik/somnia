@@ -70,3 +70,27 @@ test('horizon tool renders in light and dark',async({page})=>{
   await page.mouse.up();
  }
 });
+test('aspect swap: a 16:9 draft turns portrait, applies and undoes as one step (light and dark)',async({page})=>{
+ for(const theme of['light','dark']){
+  await page.goto('/test/design-system/?view=photos-crop');
+  await page.evaluate(t=>document.documentElement.setAttribute('data-theme',t),theme);
+  await expect(page.getByTestId('photos-workspace')).toBeVisible();
+  await expect(page.getByTestId('photos-transform-panel')).toBeVisible();
+  await page.getByTestId('photos-aspect-16x9').click(); // starts cropping with a fitted landscape draft
+  const size=page.getByTestId('photos-crop-size');
+  const land=(await size.textContent())!.match(/(\d+)\s*×\s*(\d+)/)!;
+  expect(Number(land[1])).toBeGreaterThan(Number(land[2]));
+  await page.getByTestId('photos-aspect-swap').click();
+  const port=(await size.textContent())!.match(/(\d+)\s*×\s*(\d+)/)!;
+  expect(Number(port[2])).toBeGreaterThan(Number(port[1])); // portrait after the swap
+  await page.screenshot({path:`test-results/ds-photos-aspect-swap-${theme}.png`,fullPage:true});
+  await page.getByTestId('photos-p-crop-apply').click();
+  await page.waitForTimeout(500);
+  const applied=(await size.textContent())!.match(/(\d+)\s*×\s*(\d+)/)!;
+  expect(Number(applied[2])).toBeGreaterThan(Number(applied[1])); // committed crop stays portrait
+  await page.getByRole('button',{name:'Undo',exact:true}).click();
+  await page.waitForTimeout(400);
+  const back=(await size.textContent())!.match(/(\d+)\s*×\s*(\d+)/)!;
+  expect(Number(back[1])).toBeGreaterThanOrEqual(Number(back[2])); // undo restores the landscape frame
+ }
+});

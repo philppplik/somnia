@@ -113,5 +113,6 @@
  "photos.rating.label": "Note",
  "photos.rating.filter": "Filtre par note",
  "photos.rating.filter.all": "Toutes",
- "photos.p.auto.wbPicker": "Pipette"
+ "photos.p.auto.wbPicker": "Pipette",
+ "photos.p.crop.swap": "Inverser l'orientation"
 }

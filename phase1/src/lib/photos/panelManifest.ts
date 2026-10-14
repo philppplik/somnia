@@ -18,7 +18,7 @@ export const PHOTOS_PANELS:readonly PanelDef[]=[
  panel('color','right','DevelopColor',['photos.setAdjustment','photos.resetAdjustments'],{defaultOpen:true,minHeight:230}),
  panel('effects','right','DevelopEffects',['photos.setAdjustment','photos.resetAdjustments'],{minHeight:200}),
  panel('detail','right','DevelopDetail',['photos.setAdjustment','photos.resetAdjustments'],{minHeight:200}),
- panel('transform','right','DevelopTransform',['photos.rotate','photos.flip','photos.crop.start','photos.crop.apply','photos.crop.cancel','photos.crop.setAspect','photos.crop.reset','photos.setAdjustment'],{minHeight:320}),
+ panel('transform','right','DevelopTransform',['photos.rotate','photos.flip','photos.crop.start','photos.crop.apply','photos.crop.cancel','photos.crop.setAspect','photos.crop.swapAspect','photos.crop.reset','photos.setAdjustment'],{minHeight:320}),
  panel('presets','right','Presets',['photos.applyLook','photos.resetAdjustments'],{minHeight:300}),
  panel('export','right','Download',['photos.export'],{minHeight:150}),
  panel('history','left','History',['photos.undo','photos.redo','photos.history.jump'],{minHeight:200}),

@@ -113,5 +113,6 @@
  "photos.rating.label": "Classificação",
  "photos.rating.filter": "Filtro de classificação",
  "photos.rating.filter.all": "Todas",
- "photos.p.auto.wbPicker": "Conta-gotas"
+ "photos.p.auto.wbPicker": "Conta-gotas",
+ "photos.p.crop.swap": "Inverter orientação"
 }

@@ -1,4 +1,4 @@
-import {ArrowLeftRight,ArrowUpDown,RotateCcw,RotateCw,Check,X,Frame} from '../../../lib/icons';
+import {ArrowLeftRight,ArrowUpDown,Proportions,RotateCcw,RotateCw,Check,X,Frame} from '../../../lib/icons';
 import {useT} from '../../../lib/useT';
 import {CROP_ASPECTS,aspectRatio,orientedSize,outputSize,ratioLabel,type CropAspect} from '../../../lib/photos/cropAspect';
 import {PHOTO_CONTROLS} from '../../../lib/photos/studioSettings';
@@ -33,6 +33,7 @@ export function TransformPanel(){
      {CROP_ASPECTS.map((a:CropAspect)=><Button key={a} size="tiny" variant="outline" title={a==='original'?ratioLabel(frame.width,frame.height):undefined}
       aria-label={a==='free'||a==='original'?t(`photos.p.crop.${a}`):a} disabled={a!=='free'&&aspectRatio(a,frame.width,frame.height)===null}
       onClick={()=>void runPhotos('photos.crop.setAspect',{aspect:a})} data-testid={`photos-aspect-${a.replace(':','x')}`}>{a==='free'||a==='original'?t(`photos.p.crop.${a}`):a}</Button>)}
+     <Button size="tiny" variant="outline" disabled={!session.cropping&&!s.crop} onClick={()=>void runPhotos('photos.crop.swapAspect')} data-testid="photos-aspect-swap" aria-label={t('photos.p.crop.swap')} title={t('photos.p.crop.swap')}><Proportions size={11}/>{t('photos.p.crop.swap')}</Button>
     </div>
     <p className="m-0 text-[11px] text-ink-3" data-testid="photos-crop-size">{draftPx?t('photos.p.crop.draft',{width:draftPx.w,height:draftPx.h}):t('photos.p.crop.output',{width:out.width,height:out.height,ratio:ratioLabel(out.width,out.height)})}{!draftPx&&out.estimated?` ${t('photos.p.crop.estimated')}`:''}</p>
     {session.cropping&&<p className="m-0 text-[11px] text-ink-3">{t('photos.crop.hint')}</p>}

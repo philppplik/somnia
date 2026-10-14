@@ -14,7 +14,7 @@ import {PHOTO_EXPORT_DEFAULTS,photoOptionsToValues,valuesToPhotoOptions,type Pho
 import {isNeutralPhoto,neutralPhotoSettings,PHOTO_CONTROLS,type PhotoSettings} from './studioSettings';
 import {applyLook,BUILT_IN_PRESETS,LOOK_KEYS,type Look} from './presets';
 import {decodeSettingsPayload} from './settingsClipboard';
-import {aspectRatio,CROP_ASPECTS,fitAspect,isCropAspect,orientedSize,outputSize,type CropAspect} from './cropAspect';
+import {aspectRatio,CROP_ASPECTS,fitAspect,isCropAspect,orientedSize,outputSize,swapAspect,type CropAspect} from './cropAspect';
 import {describeChange,stepsTo} from './historyLog';
 import {computeHistogram,toneZones} from './histogram';
 
@@ -97,6 +97,16 @@ export function photosCommandSpecs():CommandSpec<never,unknown>[]{
     if(ratio===null)return;
     const base=getPhotoSession(name)!.cropDraft??s.now.crop??{x0:0,y0:0,x1:1,y1:1};
     setPhotoCropDraft(name,fitAspect(base,ratio,f.width,f.height));}},
+  {id:'photos.crop.swapAspect',title:'Photos: Swap crop aspect orientation',category:'Edit',level:'ui',keywords:['photos','crop','aspect','swap','portrait','landscape'],params:none,
+   enabled:()=>ready()&&!!(getPhotoSession(activePhotoName())?.cropping||getPhotoSession(activePhotoName())?.now.crop),
+   run:()=>{
+    const name=need();const s=session();
+    const f=orientedSize(s.sourceWidth,s.sourceHeight,s.now.orientation);
+    if(s.cropping){ // the in-flight draft turns a quarter
+     setPhotoCropDraft(name,swapAspect(s.cropDraft??s.now.crop??{x0:0,y0:0,x1:1,y1:1},f.width,f.height));
+    }else if(s.now.crop){ // a committed crop swaps as one undo step
+     commitPhotoSettings(name,now=>({...now,crop:swapAspect(now.crop!,f.width,f.height)}));
+    }}},
   {id:'photos.undo',title:'Photos: Undo develop step',category:'Edit',level:'ui',keywords:['photos','undo'],params:none,enabled:()=>ready()&&getPhotoSession(activePhotoName())!.past.length>0,run:()=>historyPhoto(need(),false)},
   {id:'photos.redo',title:'Photos: Redo develop step',category:'Edit',level:'ui',keywords:['photos','redo'],params:none,enabled:()=>ready()&&getPhotoSession(activePhotoName())!.future.length>0,run:()=>historyPhoto(need(),true)},
   {id:'photos.history.jump',title:'Photos: Jump to a history step',category:'Edit',level:'ui',keywords:['photos','history'],

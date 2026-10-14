@@ -39,3 +39,13 @@ inside the crop frame, with a persisted toggle in the crop bar.
   the bar toggle.
 - No new raw controls (the toggle is the DS `Button`); ratchets
   unchanged. Actual app photos E2E remains CI-only.
+
+## Crop aspect swap (P65)
+
+The `swapAspect` helper gets its UI: a "Swap orientation" button in the
+Transform panel's aspect group and the `photos.crop.swapAspect`
+command turn the crop a quarter - a landscape 16:9 draft becomes
+portrait 9:16 with the same area, kept inside the frame. While
+cropping the swap turns the in-flight draft; with a committed crop it
+commits as one undo step. The button is disabled when there is no crop
+and no draft.
