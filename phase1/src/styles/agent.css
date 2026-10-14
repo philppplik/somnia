@@ -141,3 +141,8 @@
 .ag-chip:disabled{opacity:.45;cursor:not-allowed}
 
 .local-voice-artifact { overflow-wrap: anywhere; }
+.local-context-budget-bar { width: 100%; accent-color: var(--accent); }
+.local-context-budget-bar { appearance: none; height: 6px; border: 0; border-radius: var(--radius-sm); overflow: hidden; background: var(--bg-hover); color: var(--accent); }
+.local-context-budget-bar::-webkit-progress-bar { background: var(--bg-hover); }
+.local-context-budget-bar::-webkit-progress-value { background: var(--accent); }
+.local-context-budget-bar::-moz-progress-bar { background: var(--accent); }

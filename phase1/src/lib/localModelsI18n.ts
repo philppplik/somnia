@@ -1,5 +1,19 @@
 export const LOCAL_MODELS_CATALOGUES:Record<string,Record<string,string>> = {
  "en": {
+  "local.budget.title": "Local context byte budget",
+  "local.budget.last": "Last prepared local request, not the current draft.",
+  "local.budget.unknown": "No explicit request budget checked.",
+  "local.budget.invalid": "Invalid context/output limit.",
+  "local.budget.fits": "Text fits the conservative byte guard.",
+  "local.budget.exceeded": "Text exceeds the byte guard. Shorten sources or review context settings.",
+  "local.budget.bar": "Conservative text byte budget",
+  "local.budget.used": "Used text bytes",
+  "local.budget.remaining": "Remaining text bytes",
+  "local.budget.overflow": "Overflow bytes",
+  "local.budget.reserve": "Output + framing reserve",
+  "local.budget.caveat": "Bytes are not model tokens. Includes prepared system/history/tool text; images are separate. Daemon capacity/clamping is unverified. No automatic truncation.",
+  "local.budget.images": "Image budget unknown: text fit does not prove multimodal fit.",
+
   "local.onboard.testAction": "Test first-run connection",
   "local.onboard.title": "Local AI first run",
   "local.onboard.boundary": "Steps reflect reported snapshots only, not a guarantee. Nothing installs, starts or downloads automatically. Unknown is not absent.",
@@ -518,6 +532,20 @@ export const LOCAL_MODELS_CATALOGUES:Record<string,Record<string,string>> = {
   "local.route.earlier": "Move earlier after local"
  },
  "de": {
+  "local.budget.title": "Lokales Kontext-Bytebudget",
+  "local.budget.last": "Letzte vorbereitete lokale Anfrage, nicht der aktuelle Entwurf.",
+  "local.budget.unknown": "Kein explizites Anfragebudget geprüft.",
+  "local.budget.invalid": "Ungültiges Kontext-/Output-Limit.",
+  "local.budget.fits": "Text passt in die konservative Byteprüfung.",
+  "local.budget.exceeded": "Text überschreitet die Byteprüfung. Quellen kürzen oder Kontexteinstellungen prüfen.",
+  "local.budget.bar": "Konservatives Text-Bytebudget",
+  "local.budget.used": "Genutzte Textbytes",
+  "local.budget.remaining": "Verbleibende Textbytes",
+  "local.budget.overflow": "Überschüssige Bytes",
+  "local.budget.reserve": "Output- und Framing-Reserve",
+  "local.budget.caveat": "Bytes sind keine Modell-Tokens. Vorbereiteter System-/Verlauf-/Tool-Text ist enthalten; Bilder sind separat. Daemon-Kapazität/Kürzung ungeprüft. Keine automatische Trunkierung.",
+  "local.budget.images": "Bildbudget unbekannt: Text-Fit beweist keinen multimodalen Fit.",
+
   "local.onboard.testAction": "Einrichtungsverbindung testen",
   "local.onboard.title": "Erste lokale KI-Einrichtung",
   "local.onboard.boundary": "Schritte spiegeln gemeldete Snapshots, keine Garantie. Kein automatisches Installieren, Starten oder Herunterladen. Unbekannt ist nicht abwesend.",
@@ -1036,6 +1064,20 @@ export const LOCAL_MODELS_CATALOGUES:Record<string,Record<string,string>> = {
   "local.route.earlier": "Nach lokal früher einordnen"
  },
  "es": {
+  "local.budget.title": "Presupuesto local de bytes de contexto",
+  "local.budget.last": "Última solicitud local preparada, no el borrador actual.",
+  "local.budget.unknown": "No se ha comprobado un presupuesto explícito.",
+  "local.budget.invalid": "Límite de contexto/salida no válido.",
+  "local.budget.fits": "El texto cabe en la comprobación conservadora de bytes.",
+  "local.budget.exceeded": "El texto supera la comprobación de bytes. Acorta las fuentes o revisa los ajustes de contexto.",
+  "local.budget.bar": "Presupuesto conservador de bytes de texto",
+  "local.budget.used": "Bytes de texto usados",
+  "local.budget.remaining": "Bytes de texto restantes",
+  "local.budget.overflow": "Bytes excedentes",
+  "local.budget.reserve": "Reserva de salida y formato",
+  "local.budget.caveat": "Los bytes no son tokens del modelo. Incluye texto preparado del sistema/historial/herramientas; las imágenes son aparte. Capacidad/recorte del daemon sin verificar. Sin truncamiento automático.",
+  "local.budget.images": "Presupuesto de imágenes desconocido: que el texto quepa no prueba que quepa la entrada multimodal.",
+
   "local.onboard.testAction": "Probar conexión inicial",
   "local.onboard.title": "Primera IA local",
   "local.onboard.boundary": "Pasos de snapshots declarados, no garantía. Nada instala, inicia o descarga automáticamente. Desconocido no significa ausente.",
@@ -1554,6 +1596,20 @@ export const LOCAL_MODELS_CATALOGUES:Record<string,Record<string,string>> = {
   "local.route.earlier": "Mover antes tras local"
  },
  "fr": {
+  "local.budget.title": "Budget local en octets de contexte",
+  "local.budget.last": "Dernière requête locale préparée, pas le brouillon actuel.",
+  "local.budget.unknown": "Aucun budget explicite de requête vérifié.",
+  "local.budget.invalid": "Limite de contexte/sortie non valide.",
+  "local.budget.fits": "Le texte respecte le contrôle conservateur en octets.",
+  "local.budget.exceeded": "Le texte dépasse le contrôle en octets. Réduisez les sources ou vérifiez les réglages de contexte.",
+  "local.budget.bar": "Budget conservateur en octets de texte",
+  "local.budget.used": "Octets de texte utilisés",
+  "local.budget.remaining": "Octets de texte restants",
+  "local.budget.overflow": "Octets en excès",
+  "local.budget.reserve": "Réserve de sortie et de format",
+  "local.budget.caveat": "Les octets ne sont pas des tokens du modèle. Inclut le texte préparé du système/historique/outils; les images sont séparées. Capacité/réduction du daemon non vérifiée. Aucune troncature automatique.",
+  "local.budget.images": "Budget image inconnu: le texte conforme ne prouve pas la capacité multimodale.",
+
   "local.onboard.testAction": "Tester connexion initiale",
   "local.onboard.title": "Première IA locale",
   "local.onboard.boundary": "Étapes de snapshots déclarés, sans garantie. Aucune installation, démarrage ou téléchargement automatique. Inconnu ne signifie pas absent.",
@@ -2072,6 +2128,20 @@ export const LOCAL_MODELS_CATALOGUES:Record<string,Record<string,string>> = {
   "local.route.earlier": "Avancer après local"
  },
  "pt-BR": {
+  "local.budget.title": "Orçamento local de bytes de contexto",
+  "local.budget.last": "Última solicitação local preparada, não o rascunho atual.",
+  "local.budget.unknown": "Nenhum orçamento explícito de solicitação verificado.",
+  "local.budget.invalid": "Limite de contexto/saída inválido.",
+  "local.budget.fits": "O texto cabe na verificação conservadora de bytes.",
+  "local.budget.exceeded": "O texto excede a verificação de bytes. Reduza as fontes ou revise as configurações de contexto.",
+  "local.budget.bar": "Orçamento conservador de bytes de texto",
+  "local.budget.used": "Bytes de texto usados",
+  "local.budget.remaining": "Bytes de texto restantes",
+  "local.budget.overflow": "Bytes excedentes",
+  "local.budget.reserve": "Reserva de saída e formato",
+  "local.budget.caveat": "Bytes não são tokens do modelo. Inclui texto preparado de sistema/histórico/ferramentas; imagens são separadas. Capacidade/corte do daemon não verificados. Sem truncamento automático.",
+  "local.budget.images": "Orçamento de imagens desconhecido: o texto caber não comprova capacidade multimodal.",
+
   "local.onboard.testAction": "Testar conexão inicial",
   "local.onboard.title": "Primeira IA local",
   "local.onboard.boundary": "Passos de snapshots declarados, não garantia. Nada instala, inicia ou baixa automaticamente. Desconhecido não significa ausente.",

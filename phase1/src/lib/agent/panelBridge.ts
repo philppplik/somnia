@@ -1,3 +1,4 @@
+import {publishLocalContextBudget} from './localContextBudgetStore';
 import {normalizeLocalContext,trimLocalContext} from './localAssistant';
 import {t} from '../i18n';
 import {LocalModelsRuntime} from './localModels';
@@ -97,7 +98,7 @@ export function createProvider(id:AuthProvider,model=config.model):AgentProvider
  const limit=config.localRuntime?.routing?.limits[id];const provider=timedProvider(createRawProvider(id,model,config.localRuntime?.routing?(limit?.retries??0):undefined),limit?.timeoutMs);let actual=model;return {id:provider.id,locality:provider.locality,supportsImages:provider.supportsImages,identity:()=>({provider:id,model:actual}),stream(request){actual=request.model;return provider.stream(request);}};
 }
 function createRawProvider(id:AuthProvider,model:string,retries?:number):AgentProvider {
- if(id==='ollama')return guardedOllama(new OllamaProvider({numCtx:localContextFor(config.localRuntime,model),keepAliveSeconds:config.localRuntime?.keepAliveSeconds,maxRetries:retries??0}),localContextFor(config.localRuntime,model));
+ if(id==='ollama')return guardedOllama(new OllamaProvider({onContextBudget:(report,signal)=>{if(!signal.aborted)publishLocalContextBudget(report);},numCtx:localContextFor(config.localRuntime,model),keepAliveSeconds:config.localRuntime?.keepAliveSeconds,maxRetries:retries??0}),localContextFor(config.localRuntime,model));
  const options={maxRetries:retries,getApiKey:()=>loadProviderKey(id),...(isTauri()?{fetch:nativeProviderFetch(id)}:{})};
  if(id==='openai'){
   if(!isTauri())return new OpenAIProvider(options);

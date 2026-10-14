@@ -1,4 +1,5 @@
 import {recordLocalModelSuccess} from '../localModelUsage';
+import {localContextBudgetReport,type LocalContextBudgetReport} from '../localContextReport';
 import {checkLocalContext} from '../localContext';
 import { AgentError, ProviderError } from '../errors';
 import { fetchProviderResponse, type RetryOptions } from '../retry';
@@ -13,6 +14,8 @@ export const OLLAMA_DEFAULT_URL = 'http://127.0.0.1:11434';
 
 type FetchLike = (url: string, init?: RequestInit) => Promise<Response>;
 export interface OllamaOptions extends RetryOptions {
+  /** Aggregate final prepared request report; observer cannot alter enforcement. */
+  onContextBudget?:(report:LocalContextBudgetReport,signal:AbortSignal)=>void;
   /** Daemon base URL. Default http://127.0.0.1:11434. */
   baseUrl?: string;
   /** Injectable for tests. */
@@ -74,9 +77,10 @@ export class OllamaProvider implements AgentProvider {
   private f: FetchLike;
   private timeout: number;
   private retries: RetryOptions;
+  private onContextBudget?:OllamaOptions['onContextBudget'];
 
   constructor(opts: OllamaOptions = {}) {
-    this.retries = opts;
+    this.retries = opts;this.onContextBudget=opts.onContextBudget;
     this.baseUrl = normalizeBaseUrl(opts.baseUrl);
     this.locality = isLoopbackHttp(this.baseUrl) ? 'local' : 'cloud';
     if (opts.numCtx !== undefined && (!Number.isInteger(opts.numCtx) || opts.numCtx < 1)) throw new ProviderError('protocol', 'numCtx must be a positive integer');
@@ -178,6 +182,7 @@ export class OllamaProvider implements AgentProvider {
     const { signal } = req;
     if (signal.aborted) { yield { type: 'finish', reason: 'aborted' }; return; }
     const maxOutputTokens=this.numCtx===undefined?req.maxOutputTokens:Math.min(req.maxOutputTokens,Math.max(1,Math.floor(this.numCtx/4)));
+    try{this.onContextBudget?.(localContextBudgetReport({...req,maxOutputTokens},this.numCtx),req.signal);}catch{/* Observer never grants/bypasses request. */}
     checkLocalContext({...req,maxOutputTokens},this.numCtx);
     const body = {
       model: req.model,
