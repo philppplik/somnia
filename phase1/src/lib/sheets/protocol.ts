@@ -18,6 +18,8 @@ export type SheetsRequest=
  |{id:number;op:'view';sheet:number;row:number;col:number;rows:number;cols:number}
  |{id:number;op:'layout';sheet:number}
  |{id:number;op:'set';sheet:number;address:string;input:string}
+ |{id:number;op:'setValues';sheet:number;row:number;col:number;values:string[][]}
+ |{id:number;op:'clear';sheet:number;row:number;col:number;rows:number;cols:number}
  |{id:number;op:'undo'}|{id:number;op:'redo'}|{id:number;op:'save'}|{id:number;op:'close'};
 export type SheetsResponse=
  |{id:number;ok:true;op:'result';result:unknown;ms:number}

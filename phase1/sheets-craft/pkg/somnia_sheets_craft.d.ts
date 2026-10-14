@@ -20,6 +20,14 @@ export class HeadlessWorkbook {
     range(sheet: number, row: number, col: number, rows: number, cols: number): string;
     redo(): string;
     /**
+     * Writes a rectangular block of inputs as one undo step; all-or-nothing.
+     */
+    set_values(sheet: number, row: number, col: number, values_json: string): string;
+    /**
+     * Clears the contents of a block as one undo step; formats stay.
+     */
+    clear_contents(sheet: number, row: number, col: number, rows: number, cols: number): string;
+    /**
      * Sets the host clock (local date-time serial) for NOW/TODAY, then recalculates. Not an undo step.
      */
     set_clock(serial: number): string;
@@ -50,6 +58,8 @@ export interface InitOutput {
     readonly headlessworkbook_new: (a: number, b: number) => [number, number, number];
     readonly headlessworkbook_range: (a: number, b: number, c: number, d: number, e: number, f: number) => [number, number, number, number];
     readonly headlessworkbook_redo: (a: number) => [number, number, number, number];
+    readonly headlessworkbook_set_values: (a: number, b: number, c: number, d: number, e: number, f: number) => [number, number, number, number];
+    readonly headlessworkbook_clear_contents: (a: number, b: number, c: number, d: number, e: number, f: number) => [number, number, number, number];
     readonly headlessworkbook_set_clock: (a: number, b: number) => [number, number, number, number];
     readonly headlessworkbook_set_cell: (a: number, b: number, c: number, d: number, e: number, f: number) => [number, number, number, number];
     readonly headlessworkbook_sheet_info: (a: number, b: number) => [number, number, number, number];

@@ -27,3 +27,13 @@ export function pasteRect(origin:{row:number;col:number},data:string[][]):Rect|n
  if(data.length===0)return null;const w=Math.max(...data.map(r=>r.length));if(w===0)return null;
  const r1=Math.min(origin.row+data.length-1,MAX_ROWS-1),c1=Math.min(origin.col+w-1,MAX_COLS-1);
  const rect={r0:origin.row,c0:origin.col,r1,c1};return rectCells(rect)>MAX_READ_CELLS?null:rect;}
+
+export type PastePlan={ok:true;rect:Rect;values:string[][]}|{ok:false;reason:'empty'|'tooLarge'|'tooLong'};
+/** Validates a whole paste before anything is written: clipped to the sheet and read/write cap, every field within the cell byte limit, short rows are padded with empty cells so the paste is one rectangular block. Nothing is partially applied. */
+export function planPaste(origin:{row:number;col:number},data:string[][],maxBytes:number):PastePlan{
+ if(data.length===0||Math.max(...data.map(r=>r.length))===0)return {ok:false,reason:'empty'};
+ const rect=pasteRect(origin,data);if(!rect)return {ok:false,reason:'tooLarge'};
+ const enc=new TextEncoder();const rows=rect.r1-rect.r0+1,cols=rect.c1-rect.c0+1;
+ const values=Array.from({length:rows},(_,i)=>Array.from({length:cols},(_,j)=>data[i]?.[j]??''));
+ for(const row of values)for(const v of row)if(enc.encode(v).length>maxBytes)return {ok:false,reason:'tooLong'};
+ return {ok:true,rect,values};}

@@ -34,6 +34,10 @@ export class SheetsEngine{
  view(sheet:number,row:number,col:number,rows:number,cols:number){return this.result<ViewResult>({op:'view',sheet,row,col,rows,cols});}
  layout(sheet:number){return this.result<SheetLayout>({op:'layout',sheet});}
  set(sheet:number,address:string,input:string){return this.result<unknown>({op:'set',sheet,address,input});}
+ /** One atomic write of a rectangular block (one undo step). All-or-nothing: any invalid cell rejects the whole block. */
+ setValues(sheet:number,row:number,col:number,values:string[][]){return this.result<unknown>({op:'setValues',sheet,row,col,values});}
+ /** One atomic clear of a block's contents (formats stay), one undo step. */
+ clear(sheet:number,row:number,col:number,rows:number,cols:number){return this.result<unknown>({op:'clear',sheet,row,col,rows,cols});}
  undo(){return this.result<unknown>({op:'undo'});}
  redo(){return this.result<unknown>({op:'redo'});}
  async save():Promise<Uint8Array>{const r=await this.request({op:'save'});if(r.ok&&r.op==='bytes')return new Uint8Array(r.bytes);throw new Error('Unexpected engine response');}

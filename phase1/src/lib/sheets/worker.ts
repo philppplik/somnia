@@ -22,6 +22,8 @@ scope.onmessage=({data}:MessageEvent<SheetsRequest>)=>{queue=queue.then(async()=
    case 'view':result=JSON.parse(need().view_range(data.sheet,data.row,data.col,data.rows,data.cols));break;
    case 'layout':result=JSON.parse(need().layout(data.sheet));break;
    case 'set':syncClock(need());result=JSON.parse(need().set_cell(data.sheet,data.address,data.input));break;
+   case 'setValues':syncClock(need());result=JSON.parse(need().set_values(data.sheet,data.row,data.col,JSON.stringify(data.values)));break;
+   case 'clear':syncClock(need());result=JSON.parse(need().clear_contents(data.sheet,data.row,data.col,data.rows,data.cols));break;
    case 'undo':syncClock(need());result=JSON.parse(need().undo());break;
    case 'redo':syncClock(need());result=JSON.parse(need().redo());break;
    case 'save':{const bytes=need().export_xlsx();const buffer=bytes.buffer as ArrayBuffer;send({id:data.id,ok:true,op:'bytes',bytes:buffer,ms:performance.now()-t},[buffer]);return;}

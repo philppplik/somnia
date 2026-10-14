@@ -16,7 +16,7 @@ import type {SheetInfo,SheetLayout,ViewCell,WorkbookInfo} from '../../lib/sheets
 import {Geometry} from '../../lib/sheets/geometry';
 import {MAX_CELL_BYTES} from '../../lib/sheets/protocol';
 import {addressOf,cellText,colName,displayValue,editText,isErrorValue,cellAlign} from '../../lib/sheets/format';
-import {inRect,parseTsv,pasteRect,rectCells,rectOf,toTsv} from '../../lib/sheets/clipboard';
+import {inRect,parseTsv,planPaste,rectCells,rectOf,toTsv} from '../../lib/sheets/clipboard';
 import {MAX_READ_CELLS} from '../../lib/sheets/protocol';
 import {acquireSheetsSession,getSheetsSession,releaseSheetsSession,saveSheetsCopy,setSheetsDirty,sheetsIsDirty} from '../../lib/sheets/session';
 import {registerDocSaver} from '../../lib/workDocs';
@@ -84,7 +84,7 @@ function Workbook({item}:{item:MediaItem}){
   return Array.from({length:range.r1-range.r0+1},(_,i)=>Array.from({length:range.c1-range.c0+1},(_,j)=>displayValue(m.get(addressOf(range.r0+i,range.c0+j))?.value)));};
  const clearRange=async()=>{if(!multi){await commit('');return;}
   if(rectCells(range)>MAX_READ_CELLS){setNotice(t('sheets.rangeTooLarge'));return;}
-  try{for(let r=range.r0;r<=range.r1;r++)for(let c=range.c0;c<=range.c1;c++)await engine.current!.set(sheet,addressOf(r,c),'');setDirty(true);setNotice('');setRev(x=>x+1);}catch(e){fail(e);}};
+  try{await engine.current!.clear(sheet,range.r0,range.c0,range.r1-range.r0+1,range.c1-range.c0+1);setDirty(true);setNotice('');setRev(x=>x+1);}catch(e){fail(e);}};
  const onCopy=(e:ClipboardEvent<HTMLDivElement>,cut:boolean)=>{if(draft!==null||phase.kind!=='ready')return;e.preventDefault();
   if(rectCells(range)>MAX_READ_CELLS){setNotice(t('sheets.rangeTooLarge'));return;}
   const after=(rows:string[][])=>{const text=toTsv(rows);return text;};
@@ -92,10 +92,12 @@ function Workbook({item}:{item:MediaItem}){
   const inWin=range.r0>=win.row&&range.r1<win.row+win.rows&&range.c0>=win.col&&range.c1<win.col+win.cols;
   if(inWin){const rows=Array.from({length:range.r1-range.r0+1},(_,i)=>Array.from({length:range.c1-range.c0+1},(_,j)=>displayValue(cells.get(addressOf(range.r0+i,range.c0+j))?.value)));e.clipboardData.setData('text/plain',after(rows));if(cut)void clearRange();return;}
   void readRange().then(async rows=>{if(!rows)return;try{await navigator.clipboard.writeText(after(rows));}catch{setNotice(t('sheets.copyFailed'));return;}if(cut)await clearRange();}).catch(fail);};
- const onPaste=(e:ClipboardEvent<HTMLDivElement>)=>{if(draft!==null||phase.kind!=='ready')return;e.preventDefault();const text=e.clipboardData.getData('text/plain');const data=parseTsv(text);
-  const origin={row:range.r0,col:range.c0};const rect=pasteRect(origin,data);if(!rect){setNotice(t('sheets.rangeTooLarge'));return;}
-  void (async()=>{try{for(let i=0;i<data.length;i++)for(let j=0;j<data[i].length;j++){const input=data[i][j];if(new TextEncoder().encode(input).length>MAX_CELL_BYTES){setNotice(t('sheets.tooLong'));continue;}if(origin.row+i>rect.r1||origin.col+j>rect.c1)continue;await engine.current!.set(sheet,addressOf(origin.row+i,origin.col+j),input);}
-   setSel({row:rect.r0,col:rect.c0});setExt(rectCells(rect)>1?{row:rect.r1,col:rect.c1}:null);setDirty(true);setRev(x=>x+1);}catch(err){fail(err);}})();};
+ const onPaste=(e:ClipboardEvent<HTMLDivElement>)=>{if(draft!==null||phase.kind!=='ready')return;e.preventDefault();const data=parseTsv(e.clipboardData.getData('text/plain'));
+  const plan=planPaste({row:range.r0,col:range.c0},data,MAX_CELL_BYTES);if(!plan.ok){if(plan.reason!=='empty')setNotice(t(plan.reason==='tooLong'?'sheets.tooLong':'sheets.rangeTooLarge'));return;}
+  const {rect,values}=plan;
+  // One engine call = one undo step; a rejected block (bad formula, limits) changes nothing.
+  void (async()=>{try{await engine.current!.setValues(sheet,rect.r0,rect.c0,values);
+   setSel({row:rect.r0,col:rect.c0});setExt(rectCells(rect)>1?{row:rect.r1,col:rect.c1}:null);setDirty(true);setNotice('');setRev(x=>x+1);}catch(err){fail(err);}})();};
  const onGridKey=(e:KeyboardEvent)=>{
   if(draft!==null)return;
   const k=e.key;

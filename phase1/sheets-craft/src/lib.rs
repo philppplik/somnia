@@ -139,6 +139,51 @@ impl HeadlessWorkbook {
         self.session.run("edit.undo", json!({})).map(|v| v.to_string())
     }
 
+    /// Writes a rectangular block of cell inputs (text, numbers or =formulas, exactly as typed) as ONE
+    /// history entry. Everything is validated first (sheet, bounds, shape, per-cell size, 10,000-cell
+    /// cap); the engine applies the block to a copy and commits only if every cell parsed, so a
+    /// rejected block changes nothing and leaves no undo step.
+    pub fn set_values(&mut self, sheet: usize, row: u32, col: u32, values_json: &str) -> Result<String, String> {
+        let rows: Vec<Vec<String>> = serde_json::from_str(values_json).map_err(|_| "values must be an array of rows of strings".to_string())?;
+        let width = rows.first().map_or(0, Vec::len);
+        let cells = (rows.len() as u64) * (width as u64);
+        if rows.is_empty() || width == 0 || cells > 10_000 || rows.iter().any(|r| r.len() != width) {
+            return Err("invalid block (rectangular, 1 to 10,000 cells)".into());
+        }
+        self.check_block(sheet, row, col, rows.len() as u32, width as u32)?;
+        if rows.iter().flatten().any(|v| v.len() > 32_767) {
+            return Err("input exceeds 32,767 UTF-8 bytes".into());
+        }
+        let at = CellRef::new(row, col).a1();
+        self.session.run("range.setValues", json!({"sheet":sheet,"range":at,"values":rows})).map(|v| v.to_string())
+    }
+
+    /// Clears the contents (formats stay) of a block as ONE history entry, validated like `set_values`.
+    pub fn clear_contents(&mut self, sheet: usize, row: u32, col: u32, rows: u32, cols: u32) -> Result<String, String> {
+        if rows == 0 || cols == 0 || u64::from(rows) * u64::from(cols) > 10_000 {
+            return Err("invalid block (1 to 10,000 cells)".into());
+        }
+        self.check_block(sheet, row, col, rows, cols)?;
+        let a = CellRef::new(row, col).a1();
+        let b = CellRef::new(row + rows - 1, col + cols - 1).a1();
+        self.session.run("edit.clearContents", json!({"sheet":sheet,"range":format!("{a}:{b}")})).map(|v| v.to_string())
+    }
+
+    fn check_block(&self, sheet: usize, row: u32, col: u32, rows: u32, cols: u32) -> Result<(), String> {
+        let doc = self.session.doc().map_err(|e| e.to_string())?;
+        let sh = doc.wb.sheet(sheet).ok_or("unknown sheet")?;
+        // range.setValues / edit.clearContents do not look at protection (cell.set does), so refuse here.
+        if sh.is_protected() {
+            return Err("The sheet is protected. Unprotect it to change cells.".into());
+        }
+        if row.checked_add(rows).is_none_or(|v| v > gridcraft_engine::core::MAX_ROWS)
+            || col.checked_add(cols).is_none_or(|v| v > gridcraft_engine::core::MAX_COLS)
+        {
+            return Err("block exceeds the sheet limits".into());
+        }
+        Ok(())
+    }
+
     /// Sets the host clock (local date-time as a 1900-system serial) used by NOW/TODAY and every other
     /// volatile function, then recalculates. Without it wasm32 falls back to a fixed serial (46302.5 =
     /// 2026-10-07 12:00), so the host must call this after open and whenever the minute changes.
@@ -323,6 +368,79 @@ mod tests {
             assert!(book.set_clock(bad).is_err(), "{bad}");
         }
         assert!(book.range(0, 0, 7, 1, 1).unwrap().contains("46310.5"));
+    }
+    fn info_json(b: &HeadlessWorkbook) -> serde_json::Value {
+        serde_json::from_str(&b.sheet_info(0).unwrap()).unwrap()
+    }
+    fn text(b: &HeadlessWorkbook, a: &str) -> String {
+        let col = (a.as_bytes()[0] - b'A') as u32;
+        let row = a[1..].parse::<u32>().unwrap() - 1;
+        let v: serde_json::Value = serde_json::from_str(&b.view_range(0, row, col, 1, 1).unwrap()).unwrap();
+        v["cells"][0]["text"].as_str().unwrap().to_string()
+    }
+    #[test]
+    fn set_values_is_one_undo_step_and_undo_restores_everything() {
+        let mut book = HeadlessWorkbook::new(FIXTURE).unwrap();
+        book.set_values(0, 9, 0, r#"[["1","2","=A10+B10"],["x","","=A10*2"]]"#).unwrap();
+        assert_eq!(text(&book, "C10"), "3");
+        assert_eq!(text(&book, "C11"), "2");
+        book.undo().unwrap();
+        assert_eq!(text(&book, "A10"), "");
+        assert_eq!(text(&book, "C10"), "");
+        assert_eq!(info_json(&book)["canUndo"], false, "exactly one history entry for the whole block");
+        book.redo().unwrap();
+        assert_eq!(text(&book, "C10"), "3");
+    }
+    #[test]
+    fn set_values_is_all_or_nothing() {
+        let mut book = HeadlessWorkbook::new(FIXTURE).unwrap();
+        let before = text(&book, "B2");
+        let big = "x".repeat(32_768);
+        let cases = [
+            r#"[["9","=1+*2"]]"#.to_string(),
+            format!(r#"[["9","{big}"]]"#),
+            r#"[["9"],["1","2"]]"#.to_string(),
+            "[]".to_string(),
+            r#"[[]]"#.to_string(),
+            "not json".to_string(),
+            r#"[[1,2]]"#.to_string(),
+        ];
+        for c in &cases {
+            assert!(book.set_values(0, 1, 1, c).is_err(), "{}", &c[..c.len().min(30)]);
+        }
+        assert!(book.set_values(9, 0, 0, r#"[["1"]]"#).is_err(), "unknown sheet");
+        assert!(book.set_values(0, gridcraft_engine::core::MAX_ROWS - 1, 0, r#"[["1"],["2"]]"#).is_err(), "past the last row");
+        assert!(book.set_values(0, 0, gridcraft_engine::core::MAX_COLS - 1, r#"[["1","2"]]"#).is_err(), "past the last column");
+        assert_eq!(text(&book, "B2"), before, "a rejected block changes nothing");
+        assert_eq!(info_json(&book)["canUndo"], false, "and leaves no undo step");
+    }
+    #[test]
+    fn batch_writes_refuse_a_protected_sheet() {
+        let mut book = HeadlessWorkbook::new(FIXTURE).unwrap();
+        book.session.run("review.protectSheet", json!({})).unwrap();
+        assert!(book.set_values(0, 1, 1, r#"[["9"]]"#).unwrap_err().contains("protected"));
+        assert!(book.clear_contents(0, 1, 1, 1, 1).unwrap_err().contains("protected"));
+        assert!(book.range(0, 1, 1, 1, 1).unwrap().contains("2.0"));
+    }
+    #[test]
+    fn clear_contents_is_one_undo_step_and_keeps_formats() {
+        let mut book = HeadlessWorkbook::new(FIXTURE).unwrap();
+        let a1_bold = {
+            let v: serde_json::Value = serde_json::from_str(&book.view_range(0, 0, 0, 1, 1).unwrap()).unwrap();
+            v["cells"][0]["style"]["bold"].clone()
+        };
+        book.clear_contents(0, 0, 0, 3, 3).unwrap();
+        assert_eq!(text(&book, "A1"), "");
+        let v: serde_json::Value = serde_json::from_str(&book.view_range(0, 0, 0, 1, 1).unwrap()).unwrap();
+        assert_eq!(v["cells"][0]["style"]["bold"], a1_bold, "formats stay");
+        book.undo().unwrap();
+        assert_eq!(text(&book, "A1"), "Product");
+        assert_eq!(info_json(&book)["canUndo"], false, "one history entry for the whole clear");
+        assert!(book.clear_contents(0, 0, 0, 0, 3).is_err());
+        assert!(book.clear_contents(0, 0, 0, 101, 100).is_err(), "over 10,000 cells");
+        assert!(book.clear_contents(9, 0, 0, 1, 1).is_err());
+        assert!(book.clear_contents(0, gridcraft_engine::core::MAX_ROWS - 1, 0, 2, 1).is_err());
+        assert_eq!(info_json(&book)["canUndo"], false);
     }
     #[test]
     fn rejects_bad_input_and_out_of_bounds_without_losing_document() {

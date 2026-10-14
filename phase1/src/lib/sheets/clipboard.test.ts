@@ -8,3 +8,14 @@ test('pasteRect clips to the sheet and refuses oversized blocks',()=>{
  assert.equal(pasteRect({row:0,col:0},[]),null);
  assert.equal(pasteRect({row:0,col:0},Array.from({length:200},()=>Array(100).fill('x'))),null);
  assert.equal(pasteRect({row:1_048_575,col:0},[['a'],['b']])?.r1,1_048_575);});
+import {planPaste} from './clipboard';
+test('planPaste validates the whole block before anything is written',()=>{
+ const ok=planPaste({row:2,col:1},[['a','b'],['c']],100);
+ assert.ok(ok.ok);if(ok.ok){assert.deepEqual(ok.rect,{r0:2,c0:1,r1:3,c1:2});assert.deepEqual(ok.values,[['a','b'],['c','']]);}
+ assert.deepEqual(planPaste({row:0,col:0},[['a','x'.repeat(101)]],100),{ok:false,reason:'tooLong'});
+ assert.deepEqual(planPaste({row:0,col:0},[['é'.repeat(51)]],100),{ok:false,reason:'tooLong'},'bytes, not characters');
+ assert.deepEqual(planPaste({row:0,col:0},[],100),{ok:false,reason:'empty'});
+ assert.deepEqual(planPaste({row:0,col:0},[[]],100),{ok:false,reason:'empty'});
+ assert.deepEqual(planPaste({row:0,col:0},Array.from({length:101},()=>Array.from({length:100},()=>'1')),100),{ok:false,reason:'tooLarge'});});
+test('planPaste clips at the sheet edge instead of failing',()=>{
+ const p=planPaste({row:1_048_575,col:0},[['a'],['b']],100);assert.ok(p.ok);if(p.ok){assert.equal(p.rect.r1,1_048_575);assert.deepEqual(p.values,[['a']]);}});
