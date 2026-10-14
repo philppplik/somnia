@@ -833,5 +833,11 @@
  "cmd.studio3d.mesh.twist": "Twist a 3D mesh around an axis",
  "studio3d.mesh.twist": "Twist",
  "studio3d.mesh.twistAxis": "Twist axis",
- "studio3d.mesh.twistAngle": "Twist angle in degrees"
+ "studio3d.mesh.twistAngle": "Twist angle in degrees",
+ "studio3d.hist.taper_one": "Taper {name}",
+ "studio3d.hist.taper_other": "Taper {count} objects",
+ "cmd.studio3d.mesh.taper": "Taper a 3D mesh along an axis",
+ "studio3d.mesh.taper": "Taper",
+ "studio3d.mesh.taperAxis": "Taper axis",
+ "studio3d.mesh.taperFactor": "Taper factor at the far end"
 }

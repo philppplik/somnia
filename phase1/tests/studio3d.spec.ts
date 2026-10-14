@@ -1615,6 +1615,18 @@ test('3D studio mesh twist: the top of a cube swings outward and undo restores i
  await expect.poll(maxX).toBe(before);
 });
 
+test('3D studio mesh taper: the top of a cube doubles in width and undo restores it',async({page})=>{
+ await blank(page);
+ await insert(page,'cube',0);
+ const maxX=async()=>{const b=(await session(page)).bounds!;return b.max[0];};
+ const before=await maxX();
+ expect(before).toBeCloseTo(0.5,5);
+ expect(await run(page,'studio3d.mesh.taper',{axis:'y',factor:2})).toBe(true);
+ await expect.poll(maxX).toBeCloseTo(1,5,'the top ring doubles in width');
+ expect(await run(page,'studio3d.undo',{})).toBe(true);
+ await expect.poll(maxX).toBe(before);
+});
+
 test('3D studio mesh simplify: triangle count drops and undo restores it',async({page})=>{
  await blank(page);
  await insert(page,'sphere',0);

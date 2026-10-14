@@ -833,5 +833,11 @@
  "cmd.studio3d.mesh.twist": "3D-Mesh um eine Achse verdrehen",
  "studio3d.mesh.twist": "Verdrehen",
  "studio3d.mesh.twistAxis": "Drehachse",
- "studio3d.mesh.twistAngle": "Drehwinkel in Grad"
+ "studio3d.mesh.twistAngle": "Drehwinkel in Grad",
+ "studio3d.hist.taper_one": "{name} verjüngen",
+ "studio3d.hist.taper_other": "{count} Objekte verjüngen",
+ "cmd.studio3d.mesh.taper": "3D-Mesh entlang einer Achse verjüngen",
+ "studio3d.mesh.taper": "Verjüngen",
+ "studio3d.mesh.taperAxis": "Verjüngungsachse",
+ "studio3d.mesh.taperFactor": "Verjüngungsfaktor am Ende"
 }

@@ -701,6 +701,8 @@ function MeshTools(){
  const [biFill,setBiFill]=useState(true);
  const [twAxis,setTwAxis]=useState<'x'|'y'|'z'>('z');
  const [twDeg,setTwDeg]=useState(90);
+ const [tpAxis,setTpAxis]=useState<'x'|'y'|'z'>('z');
+ const [tpFactor,setTpFactor]=useState(2);
  const [rxFactor,setRxFactor]=useState(0.5);
  const [soOff,setSoOff]=useState(0);
  const set=s.marked.length?s.marked:s.selected!=null?[s.selected]:[];const ready=s.status==='ready'&&set.length>0;
@@ -745,6 +747,10 @@ function MeshTools(){
     {(['x','y','z'] as const).map(a=><option key={a} value={a}>{a.toUpperCase()}</option>)}</NativeSelect>
    <NativeInput type="number" step={15} value={twDeg} aria-label={t('studio3d.mesh.twistAngle')} className="w-20" onChange={e=>setTwDeg(Math.min(720,Math.max(-720,Number(e.currentTarget.value)||0)))}/>
    <Button variant="outline" disabled={!ready} onClick={()=>void executeCommand('studio3d.mesh.twist',{axis:twAxis,degrees:twDeg})}>{t('studio3d.mesh.twist')}</Button></div>
+  <div className="flex flex-wrap items-center gap-1"><NativeSelect className="rounded-sm border border-subtle bg-surface p-1 text-xs text-ink" value={tpAxis} aria-label={t('studio3d.mesh.taperAxis')} onChange={e=>setTpAxis(e.currentTarget.value as 'x'|'y'|'z')}>
+    {(['x','y','z'] as const).map(a=><option key={a} value={a}>{a.toUpperCase()}</option>)}</NativeSelect>
+   <NativeInput type="number" step={0.1} value={tpFactor} aria-label={t('studio3d.mesh.taperFactor')} className="w-20" onChange={e=>setTpFactor(Math.min(10,Math.max(-10,Number(e.currentTarget.value)||0)))}/>
+   <Button variant="outline" disabled={!ready} onClick={()=>void executeCommand('studio3d.mesh.taper',{axis:tpAxis,factor:tpFactor})}>{t('studio3d.mesh.taper')}</Button></div>
  </fieldset>;
 }
 

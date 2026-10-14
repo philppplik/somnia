@@ -833,5 +833,11 @@
  "cmd.studio3d.mesh.twist": "Torcer uma malha 3D em torno de um eixo",
  "studio3d.mesh.twist": "Torcer",
  "studio3d.mesh.twistAxis": "Eixo de torção",
- "studio3d.mesh.twistAngle": "Ângulo de torção em graus"
+ "studio3d.mesh.twistAngle": "Ângulo de torção em graus",
+ "studio3d.hist.taper_one": "Afilar {name}",
+ "studio3d.hist.taper_other": "Afilar {count} objetos",
+ "cmd.studio3d.mesh.taper": "Afilar uma malha 3D ao longo de um eixo",
+ "studio3d.mesh.taper": "Afilar",
+ "studio3d.mesh.taperAxis": "Eixo de afilamento",
+ "studio3d.mesh.taperFactor": "Fator de afilamento na extremidade"
 }

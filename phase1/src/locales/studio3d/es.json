@@ -833,5 +833,11 @@
  "cmd.studio3d.mesh.twist": "Retorcer una malla 3D alrededor de un eje",
  "studio3d.mesh.twist": "Retorcer",
  "studio3d.mesh.twistAxis": "Eje de torsión",
- "studio3d.mesh.twistAngle": "Ángulo de torsión en grados"
+ "studio3d.mesh.twistAngle": "Ángulo de torsión en grados",
+ "studio3d.hist.taper_one": "Afinar {name}",
+ "studio3d.hist.taper_other": "Afinar {count} objetos",
+ "cmd.studio3d.mesh.taper": "Afinar una malla 3D a lo largo de un eje",
+ "studio3d.mesh.taper": "Afinar",
+ "studio3d.mesh.taperAxis": "Eje de afilado",
+ "studio3d.mesh.taperFactor": "Factor de afilado en el extremo"
 }

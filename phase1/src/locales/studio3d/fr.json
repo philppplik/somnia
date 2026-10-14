@@ -833,5 +833,11 @@
  "cmd.studio3d.mesh.twist": "Tordre un maillage 3D autour d'un axe",
  "studio3d.mesh.twist": "Tordre",
  "studio3d.mesh.twistAxis": "Axe de torsion",
- "studio3d.mesh.twistAngle": "Angle de torsion en degrés"
+ "studio3d.mesh.twistAngle": "Angle de torsion en degrés",
+ "studio3d.hist.taper_one": "Effiler {name}",
+ "studio3d.hist.taper_other": "Effiler {count} objets",
+ "cmd.studio3d.mesh.taper": "Effiler un maillage 3D le long d'un axe",
+ "studio3d.mesh.taper": "Effiler",
+ "studio3d.mesh.taperAxis": "Axe d'effilage",
+ "studio3d.mesh.taperFactor": "Facteur d'effilage à l'extrémité"
 }
