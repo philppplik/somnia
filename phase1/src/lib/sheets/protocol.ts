@@ -32,6 +32,9 @@ export type LineOp={kind:'size';px:number}|{kind:'autofit'|'hide'|'unhide'};
 export type NumFmtPreset='general'|'number'|'comma'|'percent'|'currency'|'date'|'time'|'scientific'|'text';
 /** Sort rows of an explicit block; `column` is a 0-based offset inside the block. */
 export type SortOp={header:boolean;keys:{column:number;order:'asc'|'desc'}[];matchCase?:boolean};
+/** Row filter on one absolute sheet column; the block only creates the filter. */
+export type FilterCondition='='|'<>'|'>'|'<'|'>='|'<='|'beginsWith'|'endsWith'|'contains'|'notContains';
+export type FilterOp={kind:'custom';column:number;op:FilterCondition;value:string}|{kind:'clear';column:number}|{kind:'clearAll'}|{kind:'off'};
 export type SheetOp={kind:'add';name?:string}|{kind:'rename';name:string}|{kind:'duplicate'}|{kind:'delete'}|{kind:'move';to:number};
 export type SheetsRequest=
  |{id:number;op:'init';wasmUrl:string}
@@ -48,6 +51,7 @@ export type SheetsRequest=
  |{id:number;op:'editLines';sheet:number;axis:LineAxis;first:number;count:number;line:{kind:'insert'|'delete'}}
  |{id:number;op:'freeze';sheet:number;rows:number;cols:number}
  |{id:number;op:'sheets'}
+ |{id:number;op:'filter';sheet:number;row:number;col:number;rows:number;cols:number;filter:FilterOp}
  |{id:number;op:'sort';sheet:number;row:number;col:number;rows:number;cols:number;sort:SortOp}
  |{id:number;op:'editSheet';sheet:number;line:SheetOp}
  |{id:number;op:'undo'}|{id:number;op:'redo'}|{id:number;op:'save'}|{id:number;op:'close'};

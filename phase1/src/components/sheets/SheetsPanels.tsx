@@ -12,8 +12,9 @@ import {aggregateFormula,FORMULA_FUNCTIONS,parsePanelRange,rangeAddress,summariz
 import {rectCells} from '../../lib/sheets/clipboard';
 import {addressOf,colName,parseAddress} from '../../lib/sheets/format';
 import {sortBlockProblem} from '../../lib/sheets/sortOps';
+import {FILTER_CONDITIONS,MAX_FILTER_VALUE,filterValueProblem} from '../../lib/sheets/filterOps';
 import {MAX_SHEETS,sheetNameProblem} from '../../lib/sheets/sheetOps';
-import type {BorderLineStyle,RangeCell} from '../../lib/sheets/protocol';
+import type {BorderLineStyle,FilterCondition,RangeCell} from '../../lib/sheets/protocol';
 import {colWidthPx,rowHeightPx,MAX_COL_PX,MAX_ROW_PX,MAX_FREEZE} from '../../lib/sheets/lineOps';
 import {BORDER_PRESETS,BORDER_STYLES,DEFAULT_BORDER_COLOR,H_ALIGNS,V_ALIGNS,CURRENCY_SYMBOLS,DECIMAL_PRESETS,MAX_DECIMALS,NUM_PRESETS,detectNumFmt,DEFAULT_FILL_COLOR,DEFAULT_TEXT_COLOR,FONT_NAMES,FONT_SIZES,MAX_FONT_SIZE,MIN_FONT_SIZE,isHexColor,toggleOp,type ToggleKind} from '../../lib/sheets/formatOps';
 import {Button} from '../ui/button';
@@ -197,6 +198,7 @@ export function SheetsLayoutPanel({context}:PanelHostProps){
    <div className="flex flex-wrap gap-1">{btn('sheets.layout.freezeTop',()=>freeze(1,0),'sheets-layout-freeze-top')}{btn('sheets.layout.freezeFirstCol',()=>freeze(0,1),'sheets-layout-freeze-col')}{btn('sheets.layout.freezeAtCell',()=>freeze(row,col),'sheets-layout-freeze-cell',row===0&&col===0||row>MAX_FREEZE||col>MAX_FREEZE)}{btn('sheets.layout.unfreeze',()=>freeze(0,0),'sheets-layout-unfreeze',!frozen)}</div>
   </div>
   <SortGroup/>
+  <FilterGroup/>
   <p role="status">{action.notice}</p></Region>;
 }
 /** Sorts the rows of exactly the selected block by one column. The block is never widened and the header row is an explicit choice. One undo step. */
@@ -212,6 +214,27 @@ function SortGroup(){
   <label className="flex flex-col gap-1">{t('sheets.sort.header')}<NativeSelect className={field} value={header?'yes':'no'} disabled={action.busy} onChange={e=>setHeader(e.currentTarget.value==='yes')} data-testid="sheets-sort-header"><option value="no">{t('sheets.sort.headerNo')}</option><option value="yes">{t('sheets.sort.headerYes')}</option></NativeSelect></label>
   <Button variant="outline" size="compact" disabled={action.busy||!!problem} onClick={()=>void action.run('sheets.sort',{column:col,order,header})} data-testid="sheets-sort-apply">{t('sheets.sort.apply')}</Button>
   <p className="text-ink-3">{t(problem?'sheets.sort.need':'sheets.sort.scope',{range:rangeAddress(r)})}</p>
+ </div>;
+}
+const FILTER_LABELS:Record<FilterCondition,string>={'=':'=','<>':'\u2260','>':'>','<':'<','>=':'\u2265','<=':'\u2264',beginsWith:'',endsWith:'',contains:'',notContains:''};
+/** Filters rows by one column. The selection only creates the filter (first row is the header); an existing filter keeps its own range. Hidden rows follow the file and undo. */
+function FilterGroup(){
+ const {t}=useT(),s=useSheetsSelection(),action=useAction();const [column,setColumn]=useState(0);const [cond,setCond]=useState<FilterCondition>('contains');const [value,setValue]=useState('');
+ const r=s?.range;if(!s||!r)return null;
+ const rows=r.r1-r.r0+1,cols=r.c1-r.c0+1,col=Math.min(column,cols-1),problem=filterValueProblem(value),block=sortBlockProblem(rows,cols,true),options=Array.from({length:Math.min(cols,MAX_SORT_OPTIONS)},(_,i)=>i);
+ const label=(c:FilterCondition)=>FILTER_LABELS[c]||t('sheets.filter.op.'+c);
+ return <div className="flex flex-col gap-2 border-t border-subtle pt-3" role="group" aria-label={t('sheets.filter.title')}>
+  <span>{t('sheets.filter.title')}</span>
+  <label className="flex flex-col gap-1">{t('sheets.filter.column')}<NativeSelect className={field} value={col} disabled={action.busy} onChange={e=>setColumn(Number(e.currentTarget.value))} data-testid="sheets-filter-column">{options.map(i=><option key={i} value={i}>{colName(r.c0+i)}</option>)}</NativeSelect></label>
+  <label className="flex flex-col gap-1">{t('sheets.filter.condition')}<NativeSelect className={field} value={cond} disabled={action.busy} onChange={e=>setCond(e.currentTarget.value as FilterCondition)} data-testid="sheets-filter-condition">{FILTER_CONDITIONS.map(c=><option key={c} value={c}>{label(c)}</option>)}</NativeSelect></label>
+  <label className="flex flex-col gap-1">{t('sheets.filter.value')}<NativeInput className={field} value={value} maxLength={MAX_FILTER_VALUE} aria-invalid={!!value&&!!problem} onChange={e=>setValue(e.currentTarget.value)} data-testid="sheets-filter-value"/></label>
+  <Button variant="outline" size="compact" disabled={action.busy||!!problem||!!block} onClick={()=>void action.run('sheets.filter',{kind:'custom',column:r.c0+col,op:cond,value})} data-testid="sheets-filter-apply">{t('sheets.filter.apply')}</Button>
+  <div className="flex flex-wrap gap-1">
+   <Button variant="outline" size="compact" disabled={action.busy} onClick={()=>void action.run('sheets.filter',{kind:'clear',column:r.c0+col})} data-testid="sheets-filter-clear">{t('sheets.filter.clear')}</Button>
+   <Button variant="outline" size="compact" disabled={action.busy} onClick={()=>void action.run('sheets.filter',{kind:'clearAll'})} data-testid="sheets-filter-clear-all">{t('sheets.filter.clearAll')}</Button>
+   <Button variant="outline" size="compact" disabled={action.busy} onClick={()=>void action.run('sheets.filter',{kind:'off'})} data-testid="sheets-filter-off">{t('sheets.filter.off')}</Button>
+  </div>
+  <p className="text-ink-3">{t(block?'sheets.sort.need':'sheets.filter.scope',{range:rangeAddress(r)})}</p>
  </div>;
 }
 export function SheetsLayoutSection({sectionId,context}:InspectorSectionProps){return <SheetsLayoutPanel panelId={sectionId} context={context}/>;}

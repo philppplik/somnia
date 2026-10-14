@@ -4840,6 +4840,14 @@
       "hasEnabled": true
     },
     {
+      "id": "sheets.filter",
+      "title": "Filter rows by a column",
+      "category": "Edit",
+      "source": "sheets",
+      "allowInInput": true,
+      "hasEnabled": true
+    },
+    {
       "id": "sheets.format",
       "title": "Format selected cells",
       "category": "Edit",

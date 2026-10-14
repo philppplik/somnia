@@ -29,6 +29,7 @@ scope.onmessage=({data}:MessageEvent<SheetsRequest>)=>{queue=queue.then(async()=
    case 'editLines':result=JSON.parse(need().edit_lines(data.sheet,data.axis,data.first,data.count,JSON.stringify(data.line)));break;
    case 'freeze':result=JSON.parse(need().freeze_panes(data.sheet,data.rows,data.cols));break;
    case 'sheets':result=JSON.parse(need().sheets());break;
+   case 'filter':result=JSON.parse(need().filter_range(data.sheet,data.row,data.col,data.rows,data.cols,JSON.stringify(data.filter)));break;
    case 'sort':result=JSON.parse(need().sort_range(data.sheet,data.row,data.col,data.rows,data.cols,JSON.stringify(data.sort)));break;
    case 'editSheet':result=JSON.parse(need().edit_sheet(data.sheet,JSON.stringify(data.line)));break;
    case 'undo':syncClock(need());result=JSON.parse(need().undo());break;

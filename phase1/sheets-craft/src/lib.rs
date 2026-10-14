@@ -12,6 +12,8 @@ const MAX_FREEZE: u32 = 20;
 const MAX_SHEETS: usize = 255;
 const MAX_SORT_CELLS: u64 = 1_000_000;
 const MAX_SORT_KEYS: usize = 3;
+const FILTER_OPS: [&str; 10] = ["=", "<>", ">", "<", ">=", "<=", "beginsWith", "endsWith", "contains", "notContains"];
+const MAX_FILTER_VALUE: usize = 255;
 const MAX_FORMAT_CELLS: u64 = 1_000_000;
 
 fn is_hex_color(v: &serde_json::Value) -> Option<&str> {
@@ -487,6 +489,91 @@ impl HeadlessWorkbook {
         let range = format!("{}:{}", CellRef::new(row, col).a1(), CellRef::new(row + rows - 1, col + cols - 1).a1());
         self.session.run("sheet.activate", json!({"sheet": sheet}))?;
         self.session.run("data.sort", json!({"range": range, "header": header, "keys": keys, "matchCase": match_case})).map(|v| v.to_string())
+    }
+
+    /// Filters rows by one column as ONE history entry. `op_json` is `{"kind":"custom","column":abs,"op":..,"value":..}`
+    /// (op one of FILTER_OPS), `{"kind":"clear","column":abs}`, `{"kind":"clearAll"}` or `{"kind":"off"}`; `column` is the
+    /// absolute 0-based sheet column. The block only creates the filter (its first row is the header); an existing
+    /// filter keeps its own range. Protected sheets, filters inside tables, empty or oversized values are refused.
+    /// Hidden rows come from the engine, so they follow the file and undo.
+    pub fn filter_range(&mut self, sheet: usize, row: u32, col: u32, rows: u32, cols: u32, op_json: &str) -> Result<String, String> {
+        self.check_block(sheet, row, col, rows.max(1), cols.max(1), true)?;
+        let op: serde_json::Value = serde_json::from_str(op_json).map_err(|_| "operation must be a JSON object".to_string())?;
+        let kind = op.get("kind").and_then(|v| v.as_str()).ok_or("missing operation kind")?;
+        let (existing, in_table) = {
+            let doc = self.session.doc().map_err(|e| e.to_string())?;
+            let sh = doc.wb.sheet(sheet).ok_or("unknown sheet")?;
+            (sh.autofilter.as_ref().map(|a| (a.range.start.col, a.range.end.col)), sh.table_at(doc.selection.active).is_some())
+        };
+        if in_table {
+            return Err("Filters inside tables are not supported here.".into());
+        }
+        let abs_col = |op: &serde_json::Value| -> Result<u32, String> {
+            let c = op.get("column").and_then(|v| v.as_u64()).filter(|c| *c < u64::from(gridcraft_engine::core::MAX_COLS)).ok_or("filter column is outside the sheet")?;
+            Ok(c as u32)
+        };
+        self.session.run("sheet.activate", json!({"sheet": sheet}))?;
+        match kind {
+            "off" => {
+                if existing.is_none() {
+                    return Err("There is no filter on this sheet.".into());
+                }
+                self.session.run("data.filter", json!({})).map(|v| v.to_string())
+            }
+            "clearAll" => {
+                if existing.is_none() {
+                    return Err("There is no filter on this sheet.".into());
+                }
+                self.session.run("data.clearFilter", json!({})).map(|v| v.to_string())
+            }
+            "clear" => {
+                let (first, last) = existing.ok_or("There is no filter on this sheet.")?;
+                let c = abs_col(&op)?;
+                if c < first || c > last {
+                    return Err("The column is outside the filter range.".into());
+                }
+                self.session.run("data.filterBy", json!({"column": c - first, "clear": true})).map(|v| v.to_string())
+            }
+            "custom" => {
+                let c = abs_col(&op)?;
+                let cmp = op.get("op").and_then(|v| v.as_str()).filter(|o| FILTER_OPS.contains(o)).ok_or("unsupported filter condition")?;
+                let value = op.get("value").and_then(|v| v.as_str()).ok_or("filter value must be text")?;
+                if value.is_empty() || value.chars().count() > MAX_FILTER_VALUE || value.chars().any(char::is_control) {
+                    return Err(format!("A filter value must be 1 to {MAX_FILTER_VALUE} characters."));
+                }
+                let criterion = json!({"op": cmp, "value": value});
+                match existing {
+                    Some((first, last)) => {
+                        if c < first || c > last {
+                            return Err("The column is outside the filter range.".into());
+                        }
+                        self.session.run("data.filterBy", json!({"column": c - first, "custom": criterion})).map(|v| v.to_string())
+                    }
+                    None => {
+                        if rows < 2 || cols == 0 || u64::from(rows) * u64::from(cols) > MAX_SORT_CELLS || c < col || c >= col + cols {
+                            return Err("Select a header row, at least one data row and the column to filter.".into());
+                        }
+                        let before = self.session.doc().map_err(|e| e.to_string())?.undo.len();
+                        let range = format!("{}:{}", CellRef::new(row, col).a1(), CellRef::new(row + rows - 1, col + cols - 1).a1());
+                        self.session.run("data.filter", json!({"range": range}))?;
+                        let out = match self.session.run("data.filterBy", json!({"column": c - col, "custom": criterion})) {
+                            Ok(v) => v.to_string(),
+                            Err(e) => {
+                                let _ = self.undo();
+                                return Err(e.to_string());
+                            }
+                        };
+                        // Creating the filter and applying it is one user action: keep only the first snapshot.
+                        let doc = self.session.doc_mut().map_err(|e| e.to_string())?;
+                        if doc.undo.len() == before + 2 {
+                            doc.undo.pop();
+                        }
+                        Ok(out)
+                    }
+                }
+            }
+            _ => Err("unsupported filter operation".into()),
+        }
     }
 
     /// Freezes the first `rows` rows and `cols` columns (0 and 0 unfreezes), as one history entry.
@@ -1211,6 +1298,36 @@ mod tests {
         assert!(book.sort_range(0, 0, 0, 2_000_000, 2, ok).is_err());
         book.session.run("review.protectSheet", json!({})).unwrap();
         assert!(book.sort_range(0, 0, 0, 3, 2, ok).unwrap_err().contains("protected"));
+    }
+    #[test]
+    fn filter_range_hides_rows_in_one_undo_step_and_clears() {
+        let mut book = HeadlessWorkbook::new(FIXTURE).unwrap();
+        book.set_values(0, 20, 0, r#"[["name","n"],["b","2"],["a","3"],["c","1"]]"#).unwrap();
+        let before = book.layout(0).unwrap();
+        book.filter_range(0, 20, 0, 4, 2, r#"{"kind":"custom","column":1,"op":">","value":"1"}"#).unwrap();
+        let lay: serde_json::Value = serde_json::from_str(&book.layout(0).unwrap()).unwrap();
+        let hidden = lay["rows"].as_array().unwrap().iter().filter(|r| r["hidden"] == true).count();
+        assert_eq!(hidden, 1, "only the row with n = 1 is hidden");
+        book.filter_range(0, 20, 0, 4, 2, r#"{"kind":"clearAll"}"#).unwrap();
+        let lay: serde_json::Value = serde_json::from_str(&book.layout(0).unwrap()).unwrap();
+        assert_eq!(lay["rows"].as_array().unwrap().iter().filter(|r| r["hidden"] == true).count(), 0);
+        book.undo().unwrap();
+        book.undo().unwrap();
+        assert_eq!(book.layout(0).unwrap(), before, "undo of the filter and its creation is one step");
+    }
+    #[test]
+    fn filter_range_rejects_bad_input_and_protected_sheets() {
+        let mut book = HeadlessWorkbook::new(FIXTURE).unwrap();
+        let ok = r#"{"kind":"custom","column":0,"op":"contains","value":"a"}"#;
+        assert!(book.filter_range(0, 0, 0, 1, 2, ok).is_err());
+        assert!(book.filter_range(0, 0, 0, 3, 2, r#"{"kind":"custom","column":5,"op":"contains","value":"a"}"#).is_err());
+        assert!(book.filter_range(0, 0, 0, 3, 2, r#"{"kind":"custom","column":0,"op":"regex","value":"a"}"#).is_err());
+        assert!(book.filter_range(0, 0, 0, 3, 2, r#"{"kind":"custom","column":0,"op":"contains","value":""}"#).is_err());
+        assert!(book.filter_range(0, 0, 0, 3, 2, r#"{"kind":"clearAll"}"#).is_err());
+        assert!(book.filter_range(0, 0, 0, 3, 2, r#"{"kind":"off"}"#).is_err());
+        assert!(book.filter_range(0, 0, 0, 3, 2, "nope").is_err());
+        book.session.run("review.protectSheet", json!({})).unwrap();
+        assert!(book.filter_range(0, 0, 0, 3, 2, ok).unwrap_err().contains("protected"));
     }
     #[test]
     fn the_last_visible_sheet_cannot_be_deleted() {
