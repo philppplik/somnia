@@ -116,7 +116,7 @@ export class OllamaProvider implements AgentProvider {
       try { j = await r.json(); } catch { return no('invalid-response', 'Invalid JSON from /api/show'); }
       if (!j || typeof j !== 'object') return no('invalid-response', 'Unexpected /api/show response');
       if (j.remote_host || j.remote_model) return no('remote-model', `Model "${model}" is served by a remote host`);
-      if (!j.model_info || typeof j.model_info !== 'object' || Object.keys(j.model_info).length === 0) return no('no-local-weights', `No local model metadata for "${model}"`);
+      if (!j.model_info || typeof j.model_info !== 'object' || Array.isArray(j.model_info) || Object.keys(j.model_info).length === 0) return no('no-local-weights', `No local model metadata for "${model}"`);
       return { local: true, model };
     } catch (e) {
       const pe = this.toError(e, t.signal, signal);
@@ -203,6 +203,8 @@ export class OllamaProvider implements AgentProvider {
       let j: OllamaChunk;
       try { j = JSON.parse(line); } catch { throw new ProviderError('protocol', 'Invalid line in Ollama stream'); }
       if(!j||typeof j!=='object'||Array.isArray(j)||j.message?.content!==undefined&&typeof j.message.content!=='string'||j.message?.tool_calls!==undefined&&!Array.isArray(j.message.tool_calls)||j.done!==undefined&&typeof j.done!=='boolean')throw new ProviderError('protocol','Invalid Ollama event');
+      if(j.message!==undefined&&(!j.message||typeof j.message!=='object'||Array.isArray(j.message))||j.error!==undefined&&typeof j.error!=='string'||j.done_reason!==undefined&&typeof j.done_reason!=='string')throw new ProviderError('protocol','Invalid Ollama event fields');
+      for(const count of [j.prompt_eval_count,j.eval_count])if(count!==undefined&&(!Number.isSafeInteger(count)||count<0))throw new ProviderError('protocol','Invalid Ollama usage');
       if (this.locality === 'local' && (j.remote_host || j.remote_model)) throw new ProviderError('not-local', 'Ollama answered from a remote host; refusing to treat this as local processing');
       if (j.error) throw new ProviderError(/not found/i.test(j.error) ? 'model-not-found' : 'http', 'Ollama reported a streaming error.');
       const out: AgentProviderEvent[] = [];
@@ -210,7 +212,7 @@ export class OllamaProvider implements AgentProvider {
       for (const tc of j.message?.tool_calls ?? []) {
         if(!tc||typeof tc!=='object'||!tc.function||typeof tc.function!=='object')throw new ProviderError('protocol','Invalid Ollama tool call');
         const name = tc.function?.name;
-        if (!name) continue;
+        if(typeof name!=='string'||!name.trim()||tc.id!==undefined&&(typeof tc.id!=='string'||!tc.id))throw new ProviderError('protocol','Invalid Ollama tool identity');
         const args = tc.function?.arguments;
         // Ollama sends each call complete, arguments as an object. Contract wants a JSON string.
         out.push({ type: 'tool-call', index: toolIndex, id: tc.id || `ollama-call-${toolIndex}`, name, arguments: typeof args === 'string' ? args : JSON.stringify(args ?? {}) });

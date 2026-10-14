@@ -272,8 +272,8 @@ export function createStudioMcpSource(path:string):{studio:string;registry:Agent
 export const realCore:AgentCore={
  run(request,onEvent){
   const trimmed=request.context.localContext?normalizeLocalContext(request.context.localContext):null;if(trimmed)request={...request,context:trimLocalContext(request.context,trimmed)};
-  if(session?.status==='running'||proposals.size){queueMicrotask(()=>onEvent({type:'error',message:'Stop the active turn or review the pending proposal first.'}));return {cancel(){}};}
-  const controller=new AbortController();activeController=controller;let stopped=false;const runId=++runGeneration;
+  if((activeController&&!activeController.signal.aborted)||session?.status==='running'||proposals.size){queueMicrotask(()=>onEvent({type:'error',message:'Stop the active turn or review the pending proposal first.'}));return {cancel(){}};}
+  const controller=new AbortController();let stopped=false;const runId=++runGeneration;
   const deliver=(e:AgentEvent)=>{if(!stopped&&runId===runGeneration)onEvent(e);};send=deliver;
   const taskChoice=taskModelChoice(config.localRuntime?.taskModels,request.context.task??'chat');const requestProvider=taskChoice?.provider??config.provider;
   if(!taskChoice&&!config.model.trim()){queueMicrotask(()=>deliver({type:'error',message:'Choose a provider and model in Settings > AI first.'}));return {cancel(){stopped=true;}};}
@@ -284,7 +284,7 @@ export const realCore:AgentCore={
   const contextKey=JSON.stringify({choices:trimmed,document:request.context.activeMedia??request.context.activeFile,studio:request.context.studio?.studioId});
   const generation=getProjectGeneration();
   if(epoch!==generation){session?.cancel();session=null;sessionSerial++;proposals.clear();permissions.clear();appliedAgentProvenance.clear();documents.clear();transactions.clear();nativeIds.clear();mcpProposalMap.clear();syncMcpProposals();epoch=generation;}
-  photoPreviews.clear();policy.revoke();syncDocuments();
+  photoPreviews.clear();policy.revoke();syncDocuments();activeController=controller;
   void (async()=>{
    if(taskChoice){const runtime=new LocalModelsRuntime();const inventory=await runtime.snapshot();controller.signal.throwIfAborted();if(inventory.inventoryError||inventory.state!=='running'||!requiresExactInstalledTaskModel(taskChoice.model,inventory.models.map(m=>m.id)))throw Error(t('local.task.missing',{model:taskChoice.model}));deliver({type:'provenance',provider:'ollama',model:taskChoice.model});}
 
@@ -336,7 +336,7 @@ export const realCore:AgentCore={
    }});
    if(previous)session.restore({...previous,projectId:session.projectId,messages:previous.messages.filter(m=>m.role==='user'||m.role==='assistant'&&!m.toolCalls?.length)});
    await session.prompt(request.prompt);deliver({type:'done'});
-  })().catch(e=>deliver({type:'error',message:e instanceof Error?e.message:String(e)}));
+  })().catch(e=>deliver({type:'error',message:e instanceof Error?e.message:String(e)})).finally(()=>{if(activeController===controller)activeController=null;});
   return {cancel(){controller.abort();session?.cancel();stopped=true;}};
  },
  async applyProposal(id,decisions){
