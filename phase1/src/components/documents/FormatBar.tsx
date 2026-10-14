@@ -2,6 +2,7 @@ import {useMemo,useState} from 'react';
 import {TableSizeDialog} from './TableSizeDialog';
 import {HeaderFooterDialog} from './HeaderFooterDialog';
 import {ImageControls} from './ImageControls';
+import {TableStyleDialog} from './TableStyleDialog';
 import {DOC_COLORS} from '../../lib/documents/palette';
 import {FONT_SIZES,setAlign,setFont,setFontColor,setFontSize,setLineSpacing,setSpaceAfter,setParagraphStyle,setSpaceBefore,stepIndent,toggleFormat,toggleList,editTable,insertTable,setColumnWidth} from '../../lib/documents/session';
 import {MIN_COL_PT,MAX_COL_PT,TABLE_PRESETS,TABLE_OPS,type TableOp,DOC_STYLES,type DocStyleId,type FormatPatch,type FormatState,type ParaAlign,type ParaState} from '../../lib/documents/protocol';
@@ -21,7 +22,7 @@ const SPACE_STEPS=[0,4,6,8,10,12,18,24] as const;
 const withCurrent=(list:readonly number[],cur:number|null)=>cur!==null&&!list.includes(cur)?[...list,cur].sort((a,b)=>a-b):[...list];
 
 export function FormatBar({format,held,para,enabled,inCell=false}:{format:FormatState|null;held:FormatPatch|null;para:ParaState|null;enabled:boolean;inCell?:boolean}){
- const [sizeOpen,setSizeOpen]=useState(false),[hfOpen,setHfOpen]=useState(false),[colW,setColW]=useState('');
+ const [sizeOpen,setSizeOpen]=useState(false),[hfOpen,setHfOpen]=useState(false),[colW,setColW]=useState(''),[styleOpen,setStyleOpen]=useState(false);
  const colOk=/^\d+(\.\d+)?$/.test(colW)&&Number(colW)>=MIN_COL_PT&&Number(colW)<=MAX_COL_PT;
  const flag=(p:'bold'|'italic'|'underline')=>held?.[p]??format?.[p]==='on';
  const font=held?.font??format?.font??'';const size=held?.size??format?.size??null;const color=held?.color??format?.color??null;
@@ -58,6 +59,8 @@ export function FormatBar({format,held,para,enabled,inCell=false}:{format:Format
   <ImageControls/>
   {inCell&&<NativeSelect className={sel+' w-28'} aria-label={t('documents.table.label')} title={t('documents.table.label')} disabled={!enabled} value="" onChange={e=>{const op=e.currentTarget.value as TableOp;e.currentTarget.value='';if((TABLE_OPS as readonly string[]).includes(op))void editTable(op);}} data-testid="documents-table-menu">
    <option value="" disabled>{t('documents.table.label')}</option>{TABLE_OPS.map(o=><option key={o} value={o} data-testid={'documents-table-'+o}>{t('documents.table.'+o)}</option>)}</NativeSelect>}
+  {inCell&&<NativeButton className={tool+' border border-subtle'} disabled={!enabled} onClick={()=>setStyleOpen(true)} data-testid="documents-table-style-open">{t('documents.tableStyle.title')}</NativeButton>}
+  {styleOpen&&<TableStyleDialog onClose={()=>setStyleOpen(false)}/>}
   {inCell&&<span className="flex items-center gap-1"><NativeInput type="number" min={MIN_COL_PT} max={MAX_COL_PT} step={1} className={sel+' w-20 tabular-nums'} aria-label={t('documents.table.colWidth')} title={t('documents.table.colWidth')} placeholder={t('documents.table.colWidth')} value={colW} disabled={!enabled} onChange={e=>setColW(e.currentTarget.value)} onKeyDown={e=>{if(e.key==='Enter'&&colOk)void setColumnWidth(Number(colW));}} data-testid="documents-col-width"/>
    <NativeButton className={tool+' border border-subtle'} disabled={!enabled||!colOk} onClick={()=>void setColumnWidth(Number(colW))} data-testid="documents-col-width-set">{t('documents.table.colWidthSet')}</NativeButton></span>}
   <NativeSelect className={sel+' w-16 tabular-nums'} aria-label={t('documents.para.lineSpacing')} title={t('documents.para.lineSpacing')} disabled={!enabled} value={num(para?.lineSpacing)} onChange={e=>void setLineSpacing(Number(e.currentTarget.value))} data-testid="documents-line-spacing">

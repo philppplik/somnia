@@ -53,6 +53,8 @@ export class DocSession {
     fit_image(block: number, percent: number): void;
     /** Width in points (20-1000) of the grid column under cell paragraph `block`. */
     set_col_width(block: number, width: number): void;
+    /** Styles one cell (scope "cell") or the whole table ("table"); `style_json` has fill, border, rowHeight, padding. */
+    style_table(block: number, scope: string, style_json: string): void;
     set_image_alt(block: number, alt: string): void;
     remove_image(block: number): void;
     insert(block: number, utf8_byte_offset: number, text: string): void;

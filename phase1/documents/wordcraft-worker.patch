@@ -46,7 +46,7 @@ new file mode 100644
 index 0000000..5b80b79
 --- /dev/null
 +++ b/crates/somnia-worker/src/lib.rs
-@@ -0,0 +1,2110 @@
+@@ -0,0 +1,2243 @@
 +//! Experimental headless adapter. No DOM, egui, filesystem or UI thread access.
 +use wasm_bindgen::prelude::*;
 +use std::sync::Arc;
@@ -844,6 +844,102 @@ index 0000000..5b80b79
 +        self.pages = DocLayout::default();
 +        Ok(())
 +    }
++    /// Styles the cell under `block` (`scope` "cell") or every cell of its table ("table") from a JSON object with any of:
++    /// `fill` ("RRGGBB" or "none"), `border` ({"width":0.25-12,"color":"RRGGBB"|"auto"} or "none"), `rowHeight` (0 = automatic, else 1-400 pt minimum)
++    /// and `padding` (0-72 pt, all four sides). Unknown keys, bad types and out-of-range values change nothing.
++    fn do_style_table(&mut self, block: usize, scope: &str, json: &str) -> Result<(), String> {
++        use wordcraft_doc::props::{Border, BorderStyle, Borders, HeightRule, Rgb};
++        if json.len() > 512 {
++            return Err("the style is too long".into());
++        }
++        let v: serde_json::Value = serde_json::from_str(json).map_err(|_| "the style is not valid JSON".to_string())?;
++        let obj = v.as_object().ok_or("the style must be an object")?;
++        if obj.is_empty() {
++            return Err("nothing to change".into());
++        }
++        let mut fill: Option<Option<Rgb>> = None;
++        let mut border: Option<Border> = None;
++        let mut row_h: Option<f32> = None;
++        let mut pad: Option<f32> = None;
++        for (k, val) in obj {
++            match k.as_str() {
++                "fill" => {
++                    let s = val.as_str().ok_or("fill must be text")?;
++                    fill = Some(if s == "none" { None } else { Some(Rgb::parse(s).ok_or("fill must be RRGGBB or none")?) });
++                }
++                "border" => {
++                    border = Some(match val {
++                        serde_json::Value::String(s) if s == "none" => Border { style: BorderStyle::None, width: 0.0, color: None, space: 0.0 },
++                        serde_json::Value::Object(o) => {
++                            if o.keys().any(|k| k != "width" && k != "color") {
++                                return Err("unknown border field".into());
++                            }
++                            let w = o.get("width").and_then(|x| x.as_f64()).ok_or("border width is missing")? as f32;
++                            if !w.is_finite() || !(0.25..=12.0).contains(&w) {
++                                return Err("a border is 0.25 to 12 points wide".into());
++                            }
++                            let color = match o.get("color").and_then(|x| x.as_str()) {
++                                Some("auto") | None => None,
++                                Some(c) => Some(Rgb::parse(c).ok_or("border colour must be RRGGBB or auto")?),
++                            };
++                            Border { style: BorderStyle::Single, width: w, color, space: 0.0 }
++                        }
++                        _ => return Err("border must be \"none\" or {width, color}".into()),
++                    });
++                }
++                "rowHeight" => {
++                    let h = val.as_f64().ok_or("row height must be a number")? as f32;
++                    if !h.is_finite() || h < 0.0 || h > 400.0 || (h > 0.0 && h < 1.0) {
++                        return Err("a row height is 0 (automatic) or 1 to 400 points".into());
++                    }
++                    row_h = Some(h);
++                }
++                "padding" => {
++                    let p = val.as_f64().ok_or("padding must be a number")? as f32;
++                    if !p.is_finite() || !(0.0..=72.0).contains(&p) {
++                        return Err("padding is 0 to 72 points".into());
++                    }
++                    pad = Some(p);
++                }
++                _ => return Err(format!("unknown style field {k}")),
++            }
++        }
++        if scope != "cell" && scope != "table" {
++            return Err("scope is cell or table".into());
++        }
++        if block < CELL_BASE {
++            return Err("the caret is not inside a table cell".into());
++        }
++        let [b, r, c, _] = self.cell_paras().nth(block - CELL_BASE).ok_or_else(|| format!("no cell paragraph {block}"))?;
++        let Some(Block::Table(t)) = self.doc.body.get(b).map(|x| &**x) else { return Err("the caret is not inside a table".into()) };
++        let mut t2 = t.clone();
++        for (ri, row) in t2.rows.iter_mut().enumerate() {
++            if scope == "cell" && ri != r {
++                continue;
++            }
++            if let Some(h) = row_h {
++                row.props.height = if h == 0.0 { None } else { Some(h) };
++                row.props.height_rule = if h == 0.0 { HeightRule::Auto } else { HeightRule::AtLeast };
++            }
++            for (ci, cell) in row.cells.iter_mut().enumerate() {
++                if scope == "cell" && ci != c {
++                    continue;
++                }
++                if let Some(f) = fill {
++                    cell.props.shading = f;
++                }
++                if let Some(bd) = border {
++                    cell.props.borders = Some(Borders { top: Some(bd), left: Some(bd), bottom: Some(bd), right: Some(bd), between: None, inside_v: None });
++                }
++                if let Some(p) = pad {
++                    cell.props.margins = Some([p, p, p, p]);
++                }
++            }
++        }
++        self.doc.body[b] = Arc::new(Block::Table(t2));
++        self.pages = DocLayout::default();
++        Ok(())
++    }
 +    fn do_table_edit(&mut self, block: usize, op: &str) -> Result<(), String> {
 +        use wordcraft_doc::props::VMerge;
 +        if block < CELL_BASE {
@@ -1376,6 +1472,9 @@ index 0000000..5b80b79
 +    pub fn set_col_width(&mut self, block: usize, width: f32) -> Result<(), JsValue> {
 +        self.do_set_col_width(block, width).map_err(|e| JsValue::from_str(&e))
 +    }
++    pub fn style_table(&mut self, block: usize, scope: &str, style_json: &str) -> Result<(), JsValue> {
++        self.do_style_table(block, scope, style_json).map_err(|e| JsValue::from_str(&e))
++    }
 +    pub fn set_image_alt(&mut self, block: usize, alt: &str) -> Result<(), JsValue> {
 +        self.do_set_image_alt(block, alt).map_err(|e| JsValue::from_str(&e))
 +    }
@@ -1647,6 +1746,40 @@ index 0000000..5b80b79
 +                _ => panic!(),
 +            }
 +        }
++    }
++    #[test]
++    fn table_style_applies_to_a_cell_or_the_table_and_refuses_bad_values() {
++        use wordcraft_doc::props::{HeightRule, Rgb};
++        let mut s = DocSession::from_bytes(FIXTURE).unwrap();
++        s.do_insert_table(0, 2, 2).unwrap();
++        let id = CELL_BASE + s.cell_paras().position(|p| p == [1, 1, 1, 0]).unwrap();
++        let get = |s: &DocSession| match &*s.doc.body[1] {
++            Block::Table(t) => t.clone(),
++            _ => panic!(),
++        };
++        s.do_style_table(id, "cell", r#"{"fill":"C0392B","border":{"width":2,"color":"1F618D"},"rowHeight":30,"padding":6}"#).unwrap();
++        let t = get(&s);
++        assert_eq!(t.rows[1].cells[1].props.shading, Some(Rgb(0xC0, 0x39, 0x2B)));
++        assert_eq!(t.rows[0].cells[0].props.shading, None);
++        assert_eq!(t.rows[1].props.height, Some(30.0));
++        assert_eq!(t.rows[1].props.height_rule, HeightRule::AtLeast);
++        assert_eq!(t.rows[0].props.height, None);
++        assert_eq!(t.rows[1].cells[1].props.margins, Some([6.0; 4]));
++        assert_eq!(t.rows[1].cells[1].props.borders.unwrap().top.unwrap().width, 2.0);
++        s.do_style_table(id, "table", r#"{"fill":"none","border":"none","rowHeight":0}"#).unwrap();
++        let t = get(&s);
++        assert!(t.rows.iter().all(|r| r.props.height.is_none() && r.cells.iter().all(|c| c.props.shading.is_none() && !c.props.borders.unwrap().top.unwrap().is_visible())));
++        let saved = wordcraft_docx::write(&s.doc).unwrap();
++        assert!(DocSession::from_bytes(&saved).is_ok());
++        let before = get(&s);
++        for bad in ["", "[]", "{}", "{\"fill\":3}", "{\"fill\":\"red\"}", "{\"border\":{\"width\":0}}", "{\"border\":{\"width\":13}}", "{\"border\":{\"width\":1,\"x\":1}}", "{\"border\":5}", "{\"rowHeight\":401}", "{\"rowHeight\":0.5}", "{\"rowHeight\":-1}", "{\"padding\":73}", "{\"padding\":-1}", "{\"nope\":1}"] {
++            assert!(s.do_style_table(id, "cell", bad).is_err(), "{bad}");
++        }
++        assert!(s.do_style_table(id, "row", r#"{"fill":"none"}"#).is_err());
++        assert!(s.do_style_table(0, "cell", r#"{"fill":"none"}"#).is_err());
++        assert!(s.do_style_table(CELL_BASE + 99_999, "cell", r#"{"fill":"none"}"#).is_err());
++        assert!(s.do_style_table(id, "cell", &format!("{{\"fill\":\"{}\"}}", "A".repeat(600))).is_err());
++        assert!(get(&s) == before);
 +    }
 +    #[test]
 +    fn vertical_merge_hides_the_lower_cell_and_splits_back() {

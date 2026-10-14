@@ -65,6 +65,7 @@ export type DocumentsRequest=
  |{id:number;kind:'setList';first:number;last:number;list:ListKindId}
  |{id:number;kind:'listLevel';first:number;last:number;delta:number}
  |{id:number;kind:'tableEdit';block:number;op:TableOp}
+ |{id:number;kind:'tableStyle';block:number;scope:TableStyleScope;style:TableStyle}
  |{id:number;kind:'colWidth';block:number;width:number}
  |{id:number;kind:'insertImage';block:number;bytes:ArrayBuffer;alt:string}
  |{id:number;kind:'imageEdit';block:number;op:ImageOp}
@@ -99,6 +100,32 @@ export type TableOp=typeof TABLE_OPS[number];
 /** Bounds of a new table. */
 export const MAX_NEW_TABLE_ROWS=20,MAX_NEW_TABLE_COLS=10;
 export const MIN_COL_PT=20,MAX_COL_PT=1000;
+/** Table styling for one cell or the whole table. Colours are RRGGBB; rowHeight 0 means automatic. */
+export type TableStyleScope='cell'|'table';
+export interface TableStyle{fill?:string;border?:'none'|{width:number;color:string};rowHeight?:number;padding?:number}
+export const MIN_BORDER_PT=0.25,MAX_BORDER_PT=12,MAX_ROW_PT=400,MAX_PAD_PT=72;
+const HEX6=/^[0-9A-Fa-f]{6}$/;
+/** The first problem with a table style, or null when the engine will accept it. */
+export function tableStyleProblem(s:unknown):string|null{
+ if(!s||typeof s!=='object'||Array.isArray(s))return 'The table style is not valid.';
+ const o=s as Record<string,unknown>;const keys=Object.keys(o);
+ if(keys.length===0)return 'Nothing to change.';
+ for(const k of keys){
+  const v=o[k];
+  if(k==='fill'){if(v!=='none'&&!(typeof v==='string'&&HEX6.test(v)))return 'The fill must be a colour or none.';}
+  else if(k==='border'){
+   if(v==='none')continue;
+   if(!v||typeof v!=='object'||Array.isArray(v))return 'The border is not valid.';
+   const b=v as Record<string,unknown>;if(Object.keys(b).some(x=>x!=='width'&&x!=='color'))return 'The border is not valid.';
+   if(typeof b.width!=='number'||!Number.isFinite(b.width)||b.width<MIN_BORDER_PT||b.width>MAX_BORDER_PT)return `A border is ${MIN_BORDER_PT} to ${MAX_BORDER_PT} points wide.`;
+   if(b.color!=='auto'&&!(typeof b.color==='string'&&HEX6.test(b.color)))return 'The border colour is not valid.';
+  }
+  else if(k==='rowHeight'){if(typeof v!=='number'||!Number.isFinite(v)||v<0||v>MAX_ROW_PT||(v>0&&v<1))return `A row height is 0 (automatic) or 1 to ${MAX_ROW_PT} points.`;}
+  else if(k==='padding'){if(typeof v!=='number'||!Number.isFinite(v)||v<0||v>MAX_PAD_PT)return `Padding is 0 to ${MAX_PAD_PT} points.`;}
+  else return 'The table style is not valid.';
+ }
+ return null;
+}
 /** Size presets offered by the Insert table menu. */
 export const TABLE_PRESETS:readonly (readonly [number,number])[]=[[2,2],[3,3],[4,3],[5,4],[6,5]];
 

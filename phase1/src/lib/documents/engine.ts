@@ -47,6 +47,7 @@ export class DocumentsEngine{
  async setParagraphStyle(first:number,last:number,style:import('./protocol').DocStyleId):Promise<OpenedDocument>{return(await this.call('edited',id=>({id,kind:'paraStyle',first,last,style}))).document;}
  async setList(first:number,last:number,list:import('./protocol').ListKindId):Promise<OpenedDocument>{return(await this.call('edited',id=>({id,kind:'setList',first,last,list}))).document;}
  async shiftListLevel(first:number,last:number,delta:number):Promise<OpenedDocument>{return(await this.call('edited',id=>({id,kind:'listLevel',first,last,delta}))).document;}
+ async tableStyle(block:number,scope:import('./protocol').TableStyleScope,style:import('./protocol').TableStyle):Promise<OpenedDocument>{return(await this.call('edited',id=>({id,kind:'tableStyle',block,scope,style}))).document;}
  async colWidth(block:number,width:number):Promise<OpenedDocument>{return(await this.call('edited',id=>({id,kind:'colWidth',block,width}))).document;}
  async insertImage(block:number,bytes:Uint8Array,alt:string):Promise<OpenedDocument>{const buf=bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.byteLength) as ArrayBuffer;return(await this.call('edited',id=>({id,kind:'insertImage',block,bytes:buf,alt}),[buf])).document;}
  async imageEdit(block:number,op:import('./protocol').ImageOp):Promise<OpenedDocument>{return(await this.call('edited',id=>({id,kind:'imageEdit',block,op}))).document;}

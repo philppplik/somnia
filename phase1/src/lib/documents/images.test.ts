@@ -23,7 +23,7 @@ test('image limits: 5 MB, 8000 px a side, 25 megapixels',()=>{
 function core(){
  const calls:string[]=[];
  const S=class{constructor(_b?:Uint8Array){}free(){}blocks(){return '[]';}paginate(){return 1;}page_info(){return '{"pages":[],"cacheHits":0,"cacheMisses":0}';}text(){return '';}
-  insert_image(b:number,bytes:Uint8Array,alt:string){calls.push(`ins ${b} ${bytes.length} ${alt}`);}resize_image(b:number,w:number){calls.push(`size ${b} ${w}`);}fit_image(b:number,p:number){calls.push(`fit ${b} ${p}`);}set_image_alt(b:number,a:string){calls.push(`alt ${b} ${a}`);}remove_image(b:number){calls.push(`rm ${b}`);}set_col_width(b:number,w:number){calls.push(`col ${b} ${w}`);}} as unknown as new(b:Uint8Array)=>DocSessionLike;
+  insert_image(b:number,bytes:Uint8Array,alt:string){calls.push(`ins ${b} ${bytes.length} ${alt}`);}resize_image(b:number,w:number){calls.push(`size ${b} ${w}`);}fit_image(b:number,p:number){calls.push(`fit ${b} ${p}`);}set_image_alt(b:number,a:string){calls.push(`alt ${b} ${a}`);}remove_image(b:number){calls.push(`rm ${b}`);}set_col_width(b:number,w:number){calls.push(`col ${b} ${w}`);}style_table(b:number,sc:string,j:string){calls.push(`style ${b} ${sc} ${j}`);}} as unknown as new(b:Uint8Array)=>DocSessionLike;
  const k=new DocumentsCore(S);k.handle({id:1,kind:'open',bytes:new Uint8Array(4)} as never);return{k,calls};
 }
 const ins=(k:DocumentsCore,block:unknown,bytes:Uint8Array,alt:unknown='')=>k.handle({id:2,kind:'insertImage',block,bytes:bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.byteLength),alt} as never).res.ok;
@@ -46,4 +46,10 @@ test('column width requests are bounded before the engine',()=>{
  for(const [b,w] of [[-1,100],[1.5,100],[2**31,100],[0,19.9],[0,1000.1],[0,Number.NaN],[0,Infinity],[0,'100']] as [unknown,unknown][])assert.equal(send(b,w),false,String(b)+String(w));
  assert.deepEqual(calls,[]);
  assert.equal(send(1048577,123.5),true);assert.deepEqual(calls,['col 1048577 123.5']);
+});
+test('table style requests are validated before the engine',()=>{
+ const {k,calls}=core();const send=(block:unknown,scope:unknown,style:unknown)=>k.handle({id:5,kind:'tableStyle',block,scope,style} as never).res.ok;
+ for(const [b,sc,st] of [[-1,'cell',{fill:'none'}],[0,'row',{fill:'none'}],[0,'cell',{}],[0,'cell',{fill:'red'}],[0,'table',{padding:99}],[0.5,'cell',{fill:'none'}]] as [unknown,unknown,unknown][])assert.equal(send(b,sc,st),false,JSON.stringify([b,sc,st]));
+ assert.deepEqual(calls,[]);
+ assert.equal(send(1048577,'table',{fill:'none',padding:4}),true);assert.deepEqual(calls,['style 1048577 table {"fill":"none","padding":4}']);
 });

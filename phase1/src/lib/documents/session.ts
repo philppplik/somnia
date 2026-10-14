@@ -1,4 +1,4 @@
-import {validHfText,type HeaderFooterState,checkFormatPatch,checkParaPatch,MAX_HF_CHARS,MAX_NEW_TABLE_COLS,MAX_NEW_TABLE_ROWS,TABLE_OPS,type TableOp,DOC_STYLES,type DocStyleId,type ListKindId,type ParaPatch,type ImageOp,MIN_COL_PT,MAX_COL_PT,imageProblem,IMAGE_WIDTH_PERCENTS,MAX_IMAGES} from './protocol';
+import {validHfText,type HeaderFooterState,checkFormatPatch,checkParaPatch,MAX_HF_CHARS,MAX_NEW_TABLE_COLS,MAX_NEW_TABLE_ROWS,TABLE_OPS,type TableOp,DOC_STYLES,type DocStyleId,type ListKindId,type ParaPatch,type ImageOp,type TableStyle,type TableStyleScope,tableStyleProblem,MIN_COL_PT,MAX_COL_PT,imageProblem,IMAGE_WIDTH_PERCENTS,MAX_IMAGES} from './protocol';
 import {captureDocumentSelection} from './selectionCapture';
 import {CELL_BASE,caretAfterEdit,diffEdit,inverseOf,UndoStack,type TextEdit,type UndoEntry} from './edit';
 import {stepBoundary,utf16ToUtf8Offset,utf8ToUtf16Offset,wordBoundary} from './text';
@@ -486,6 +486,13 @@ export const setColumnWidth=(width:number)=>run(async()=>{
  const c=getDocumentsState().caret;if(!c||!cellOf(getDocumentsState().blocks,c.block))throw new Error('Place the caret in a table cell.');
  goalX=null;const spot={block:c.block,off:c.head};
  await structural(eng=>eng.colWidth(c.block,width),spot,spot);
+});
+/** Fill, borders, minimum row height and padding for the caret's cell or its whole table. One undo step; the caret stays. */
+export const styleTable=(scope:TableStyleScope,style:TableStyle)=>run(async()=>{
+ const bad=tableStyleProblem(style);if(bad)throw new Error(bad);if(scope!=='cell'&&scope!=='table')throw new Error('The table style scope is not valid.');
+ const c=getDocumentsState().caret;if(!c||!cellOf(getDocumentsState().blocks,c.block))throw new Error('Place the caret in a table cell.');
+ goalX=null;const spot={block:c.block,off:c.head};
+ await structural(eng=>eng.tableStyle(c.block,scope,style),spot,spot);
 });
 /* ---- Pictures: a PNG or JPEG lives in its own paragraph; clicking it selects it (imageBlock). ---- */
 /** First editable top-level paragraph at or after `from`, else the last one before it. */

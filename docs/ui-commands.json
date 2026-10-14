@@ -2939,6 +2939,17 @@
       "hasEnabled": true
     },
     {
+      "id": "documents.table.style",
+      "title": "Style table cells",
+      "category": "View",
+      "source": "documents",
+      "keywords": [
+        "document",
+        "docx"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "documents.toggleBold",
       "title": "Toggle bold",
       "category": "View",
