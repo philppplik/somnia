@@ -1,11 +1,12 @@
-import {useEffect,useId,useLayoutEffect,useRef,useState,type KeyboardEvent as ReactKeyboardEvent,type PointerEvent} from 'react';
+import {useEffect,useId,useLayoutEffect,useRef,useState,type KeyboardEvent as ReactKeyboardEvent,type MouseEvent as ReactMouseEvent,type PointerEvent} from 'react';
 import {animationSession} from '../../lib/animation/session';
 import type {Edit} from '../../lib/animation/edit';
 import {PROP_META,TRANSFORM_KEYS,type Composition,type KeyRef,type TransformKey} from '../../lib/animation/model';
 import {ZOOM_STEP,fitTargets,graphWindow,panWindow,zoomWindow,timeTicks,windowValueRange} from '../../lib/animation/graphWindow';
 import {channelOf,playheadReading,curveSamples,handleToEase,handlesOf,niceStep,valueRange,speedSamples,speedRange,EASE_PRESETS,type Handle} from '../../lib/animation/graph';
 import {clickSelect,sameKey,shiftSelection} from '../../lib/animation/selection';
-import {frameToTick,timecode} from '../../lib/animation/time';
+import {evaluate} from '../../lib/animation/interpolate';
+import {frameToTick,tickToFrame,timecode} from '../../lib/animation/time';
 import {useT} from '../../lib/useT';
 import {Button} from '../ui/button';
 import {MixedGraph} from './MixedGraph';
@@ -74,6 +75,12 @@ export function GraphEditor({comp,layerId,sel,playhead}:{comp:Composition;layerI
  const pts=(s:{t:number;v:number}[])=>s.map(p=>`${xOf(p.t).toFixed(1)},${yOf(p.v).toFixed(1)}`).join(' ');
  const selHere=sel.filter(k=>k.layer===layer.id&&k.prop===active);
  const sess=animationSession();
+ /** Double-click on the curve adds a key there (frame-snapped, value from the curve, so the shape is unchanged); elsewhere it resets the zoom. */
+ const addKeyAt=(e:ReactMouseEvent<SVGRectElement>)=>{
+  const {x,y}=local(e.clientX,e.clientY),tk=frameToTick(Math.round(tickToFrame(tOf(x),comp.fps)),comp.fps);
+  if(!speed&&!layer.locked&&tk>=comp.start&&tk<=comp.start+comp.duration&&!keys.some(k=>k.t===tk)&&Math.abs(yOf(channelOf(evaluate(prop,tk),ch))-y)<=9){try{sess.dispatch({type:'key.add',layer:layer.id,prop:active,t:tk});}catch{/* refused edits keep the graph as it was */}return;}
+  setZoom(null);
+ };
  /** Pointer drag with Escape to cancel. `commit=false` on cancel. */
  const startDrag=(e:PointerEvent<SVGElement>,move:(ev:globalThis.PointerEvent)=>void,end:(commit:boolean,moved:boolean)=>void)=>{
   e.stopPropagation();const el=e.currentTarget;el.setPointerCapture(e.pointerId);frozen.current=gtools.fit?windowValueRange(prop,ch,t0,t1):valueRange(keys,ch);frozenWin.current=win;
@@ -167,7 +174,7 @@ export function GraphEditor({comp,layerId,sel,playhead}:{comp:Composition;layerI
   <div ref={wrap} className="relative min-h-0 overflow-hidden">
    <svg ref={svgRef} width={w} height={h} role="group" aria-label={t('animation.graph.label',{name:t(PROP_LABEL[active])})} className="block touch-none select-none" data-testid="animation-graph-svg">
     <defs><clipPath id={clip}><rect x={PAD.l} y={PAD.t} width={pw} height={ph}/></clipPath></defs>
-    <rect x={PAD.l} y={PAD.t} width={pw} height={ph} fill="var(--bg-panel)" onPointerDown={scrubDown} onDoubleClick={()=>setZoom(null)} data-testid="animation-graph-plot"/>
+    <rect x={PAD.l} y={PAD.t} width={pw} height={ph} fill="var(--bg-panel)" onPointerDown={scrubDown} onDoubleClick={addKeyAt} data-testid="animation-graph-plot"/>
     {grid.map(v=><g key={v}><line x1={PAD.l} x2={PAD.l+pw} y1={yOf(v)} y2={yOf(v)} stroke="var(--border-subtle)" strokeWidth={1}/><text x={PAD.l-6} y={yOf(v)+3} textAnchor="end" fontSize={9} fill="var(--text-tertiary)">{fmt(v)}</text></g>)}
     <rect x={PAD.l} y={PAD.t} width={Math.max(0,xOf(comp.workArea.in)-PAD.l)} height={ph} fill="rgba(0,0,0,.18)" pointerEvents="none"/>
     <rect x={xOf(comp.workArea.out)} y={PAD.t} width={Math.max(0,PAD.l+pw-xOf(comp.workArea.out))} height={ph} fill="rgba(0,0,0,.18)" pointerEvents="none"/>
