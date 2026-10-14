@@ -2,6 +2,7 @@ import {ChatModel} from './chatModel';
 import {ChatSession,setChatSession} from './chatSession';
 import {CollabDoc} from './collabDoc';
 import {stampSchema} from './schema';
+import {announceBuild} from './buildSync';
 import {CollabClient,type CollabClientSnapshot} from './net/client';
 import {secureRoomLinks,managedRoomId,roomExpiry,DEFAULT_SESSION_MINUTES} from './roomSecurity';
 import {newLinkKey} from './net/crypto';
@@ -64,6 +65,7 @@ export class RealEngine implements CollabEngine{
  private async run(link:string,mode:'lan-direct'|'relay',role:'host'|'guest',name:string){
   const doc=this.doc=new CollabDoc();
   doc.awareness.setLocalStateField('user',makeUser(name,doc.doc.clientID));
+  announceBuild(doc.awareness);
   const chatModel=new ChatModel();
   if(role==='host'){stampSchema(doc.doc);for(const [path,text] of Object.entries(this.d.project.files()))if(isCollabFile(path))doc.text(path,text);}
   setSession(doc);
