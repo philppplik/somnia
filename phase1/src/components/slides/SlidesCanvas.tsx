@@ -11,7 +11,9 @@ import {selectedRun} from '../../lib/slides/panelModel';
 import {StudioEmptyState} from '../studios/StudioEmptyState';
 import {createBlankProject} from '../../lib/studios/blank';
 import {Presentation} from '../../lib/icons';
-import {useRef} from 'react';
+import {useMemo,useRef} from 'react';
+import {readHiddenSlides} from '../../lib/slides/deckPackage';
+import {pacedSlides} from '../../lib/slides/rehearsalPacing';
 import {SlidesTextToolbar} from './SlidesTextToolbar';
 import {SlidesShapeOverlay,useValidShape,describeShape} from './SlidesShapeOverlay';
 import {useState} from 'react';
@@ -24,7 +26,7 @@ import {getCollab,onSessionChange} from '../../lib/collab/session';
 import {peerSlides,type PeerSlidePresence} from '../../lib/collab/office/slidesPresence';
 import {Button} from '../ui/button';
 /** Embedded Code previews use the parent canvas's shared tab strip. */
-export function SlidesCanvas({embedded=false}:{embedded?:boolean}={}){const s=useSlidesSession();const t=useSlidesPanelText();const imageRef=useRef<HTMLImageElement>(null);const shape=useValidShape();const selected=useSlideTextSelection();const owner=useRef<ReturnType<typeof studioContextStore.claim>|null>(null);useEffect(()=>{owner.current=studioContextStore.claim('slides');return()=>{owner.current?.release();owner.current=null;};},[s.source]);useEffect(()=>{const run=selectedRun(s,selected);owner.current?.report({document:s.source?{id:s.source,kind:'pptx',dirty:s.dirty,readOnly:!s.diagnostics?.editable}:undefined,busy:s.busy,mode:s.presenting?'present':'design',selection:run?{kind:'one',type:'textRun',count:1,ids:[`${run.slide}:${run.run}`]}:shape?{kind:'one',type:'shape',count:1,ids:[`${shape.selection.slideId}:${shape.selection.shapeId}`]}:s.summary?{kind:'one',type:'slide',count:1,ids:[String(s.index)]}:{kind:'none',count:0,ids:[]},data:{slideIndex:s.index,slideCount:s.summary?.slides??0,presenting:s.presenting},services:{textEditing:!!s.diagnostics?.editable}});},[s,selected,shape]);const intake=useRef<HTMLInputElement>(null);const [intakeError,setIntakeError]=useState('');
+export function SlidesCanvas({embedded=false}:{embedded?:boolean}={}){const s=useSlidesSession();const paced=useMemo(()=>{try{return s.working&&s.summary?pacedSlides(readHiddenSlides(s.working),s.summary.slides):undefined;}catch{return undefined;}},[s.working,s.summary]);const t=useSlidesPanelText();const imageRef=useRef<HTMLImageElement>(null);const shape=useValidShape();const selected=useSlideTextSelection();const owner=useRef<ReturnType<typeof studioContextStore.claim>|null>(null);useEffect(()=>{owner.current=studioContextStore.claim('slides');return()=>{owner.current?.release();owner.current=null;};},[s.source]);useEffect(()=>{const run=selectedRun(s,selected);owner.current?.report({document:s.source?{id:s.source,kind:'pptx',dirty:s.dirty,readOnly:!s.diagnostics?.editable}:undefined,busy:s.busy,mode:s.presenting?'present':'design',selection:run?{kind:'one',type:'textRun',count:1,ids:[`${run.slide}:${run.run}`]}:shape?{kind:'one',type:'shape',count:1,ids:[`${shape.selection.slideId}:${shape.selection.shapeId}`]}:s.summary?{kind:'one',type:'slide',count:1,ids:[String(s.index)]}:{kind:'none',count:0,ids:[]},data:{slideIndex:s.index,slideCount:s.summary?.slides??0,presenting:s.presenting},services:{textEditing:!!s.diagnostics?.editable}});},[s,selected,shape]);const intake=useRef<HTMLInputElement>(null);const [intakeError,setIntakeError]=useState('');
  const [peers,setPeers]=useState<PeerSlidePresence[]>([]);
  useEffect(()=>{let off:(()=>void)|null=null;let offS:(()=>void)|null=null;
   const wire=()=>{off?.();off=null;const c=getCollab();
@@ -45,6 +47,6 @@ export function SlidesCanvas({embedded=false}:{embedded?:boolean}={}){const s=us
  {s.name&&s.model&&!s.presenting&&<SlidesDesignGroup/>}
  {s.name&&s.model&&!s.presenting&&<details open className="shrink-0 border-t border-subtle"><summary className="px-4 py-2">{t('slides.notes.title')}</summary><SlidesNotesEditor/></details>}
  {s.summary&&<details className="max-h-96 shrink-0 overflow-auto border-t border-subtle"><summary className="px-4 py-2">{t('slides.outline.title')}</summary><SlidesTextOutline key={s.source} source={s.source} total={s.summary.slides} runs={s.runs} busy={s.busy} current={()=>{const live=getSlidesSessionState();return {source:live.source,total:live.summary?.slides??0,runs:live.runs,busy:live.busy};}} navigate={showSlide}/></details>}
- {s.summary&&s.summary.slides<=10000&&<details className="max-h-80 shrink-0 overflow-auto border-t border-subtle"><summary className="px-4 py-2">{t('slides.rehearsal.title')}</summary><SlidesRehearsal key={s.source} index={s.index} total={s.summary.slides} busy={s.busy}/></details>}
+ {s.summary&&s.summary.slides<=10000&&<details className="max-h-80 shrink-0 overflow-auto border-t border-subtle"><summary className="px-4 py-2">{t('slides.rehearsal.title')}</summary><SlidesRehearsal key={s.source} index={s.index} total={s.summary.slides} paced={paced} busy={s.busy}/></details>}
  {s.summary&&<footer className="border-t border-subtle px-4 py-2 text-xs text-ink-2">Slide {s.index+1} of {s.summary.slides} · {s.summary.widthPt} × {s.summary.heightPt} pt · {s.dirty?'Unsaved text changes':'Original unchanged'}{peers.map(p=><span key={p.clientId} data-testid="slides-peer" className="ml-3 rounded-sm px-1" style={{background:p.user.colorLight,color:p.user.color}}>{p.user.name} · {p.slide+1}</span>)}</footer>}
  </main>;}
