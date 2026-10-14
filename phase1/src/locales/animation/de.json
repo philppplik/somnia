@@ -975,5 +975,9 @@
  "animation.rig.flag.solo": "Solo an / aus",
  "animation.rig.flag.locked": "Sperren / entsperren",
  "animation.rig.flag.shy": "Shy an / aus",
- "cmd.animation.layers.flag": "Ebenen-Schalter für die gewählten Ebenen umstellen"
+ "cmd.animation.layers.flag": "Ebenen-Schalter für die gewählten Ebenen umstellen",
+ "animation.markers.name": "Markername",
+ "animation.markers.rename": "Umbenennen",
+ "animation.markers.rename.hint": "Marke am Abspielkopf so benennen",
+ "cmd.animation.marker.update": "Zeitmarke umbenennen oder verschieben"
 }

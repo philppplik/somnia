@@ -33,7 +33,7 @@ export function AnimationTimeline({comp,at,selected,canUndo,canRedo}:{comp:Compo
  /** Left and width in percent of a tick range, clipped to the visible window. */
  const bar=(a:number,b:number)=>{const l=Math.max(0,(a-win.t0)/win.span*100),r=Math.min(100,(b-win.t0)/win.span*100);return {left:`${l}%`,width:`${Math.max(0,r-l)}%`};};const sectionRef=useRef<HTMLElement>(null);
  const frames=Math.max(1,tickToFrame(comp.duration,comp.fps));const frame=tickToFrame(at,comp.fps);
- const [playing,setPlaying]=useState(false);const [keepWorld,setKeepWorld]=useState(false);const raf=useRef<number|null>(null);
+ const [playing,setPlaying]=useState(false);const [markerName,setMarkerName]=useState('');const [keepWorld,setKeepWorld]=useState(false);const raf=useRef<number|null>(null);
  const live=useRef({comp,loop:view.loop});live.current={comp,loop:view.loop};
  const sel=pruneSelection(state.doc,view.selectedKeys).filter(k=>k.layer===selected);
  const styleSel=pruneStyleKeys(comp.layers,view.styleKeys).filter(k=>k.layer===selected);const isStyleSel=(lane:StyleLaneId,tk:number)=>styleSel.some(k=>k.lane===lane&&k.t===tk);
@@ -290,7 +290,9 @@ const marquee=(e:PointerEvent<SVGSVGElement>)=>{
    </div>
   </div>
   <div className="flex max-h-16 shrink-0 flex-wrap items-center gap-1 overflow-auto border-b border-subtle px-2 py-1" role="group" aria-label={t('animation.markers.title')}>
-   <Button size="tiny" variant="ghost" onClick={()=>run('animation.marker.add',{label:timecode(at,comp.fps)})}>{t('animation.markers.add')}</Button>
+   <span className="w-24 shrink-0"><NativeInput type="text" className="h-5 w-full rounded-sm border border-subtle bg-transparent px-1 text-xs text-ink-2" value={markerName} maxLength={100} placeholder={t('animation.markers.name')} aria-label={t('animation.markers.name')} onChange={e=>setMarkerName(e.target.value)} data-testid="animation-marker-name"/></span>
+   <Button size="tiny" variant="ghost" onClick={()=>run('animation.marker.add',{label:markerName.trim()||timecode(at,comp.fps)})}>{t('animation.markers.add')}</Button>
+   <Button size="tiny" variant="ghost" disabled={!markerName.trim()||!(comp.markers??[]).some(m=>m.t===at||m.t===snapToFrame(at,comp.fps))} title={t('animation.markers.rename.hint')} onClick={()=>run('animation.marker.update',{label:markerName.trim()})} data-testid="animation-marker-rename">{t('animation.markers.rename')}</Button>
    {layerSetIds(selected).length>1&&<span className="flex items-center gap-1" role="group" aria-label={t('animation.keySet.title')} data-testid="animation-keyset">
     <Button size="tiny" variant="ghost" title={t('animation.keySet.select.hint')} onClick={()=>run('animation.keys.selectSet',{layers:layerSetIds(selected)})} data-testid="animation-keyset-select">{t('animation.keySet.select')}</Button>
     <Button size="tiny" variant="ghost" title={t('animation.keySet.reverse.hint')} onClick={()=>run('animation.keys.reverse',{layers:layerSetIds(selected)})} data-testid="animation-keyset-reverse">{t('animation.keySet.reverse')}</Button>

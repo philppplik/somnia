@@ -975,5 +975,9 @@
  "animation.rig.flag.solo": "Solo sim / não",
  "animation.rig.flag.locked": "Bloquear / desbloquear",
  "animation.rig.flag.shy": "Shy sim / não",
- "cmd.animation.layers.flag": "Alternar um indicador de camada nas camadas selecionadas"
+ "cmd.animation.layers.flag": "Alternar um indicador de camada nas camadas selecionadas",
+ "animation.markers.name": "Nome do marcador",
+ "animation.markers.rename": "Renomear",
+ "animation.markers.rename.hint": "Dar este nome ao marcador na posição do cursor",
+ "cmd.animation.marker.update": "Renomear ou mover um marcador de tempo"
 }

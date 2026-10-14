@@ -1767,6 +1767,22 @@
       "hasEnabled": true
     },
     {
+      "id": "animation.marker.update",
+      "title": "Rename or move a timing marker",
+      "category": "Edit",
+      "source": "animation",
+      "keywords": [
+        "animation",
+        "cue",
+        "label",
+        "marker",
+        "move",
+        "rename",
+        "timing"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "animation.mask.boolean",
       "title": "Unite, subtract, intersect or exclude two masks",
       "category": "Insert",

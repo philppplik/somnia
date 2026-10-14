@@ -975,5 +975,9 @@
  "animation.rig.flag.solo": "Solo on / off",
  "animation.rig.flag.locked": "Lock / unlock",
  "animation.rig.flag.shy": "Shy on / off",
- "cmd.animation.layers.flag": "Switch a layer flag for the selected layers"
+ "cmd.animation.layers.flag": "Switch a layer flag for the selected layers",
+ "animation.markers.name": "Marker name",
+ "animation.markers.rename": "Rename",
+ "animation.markers.rename.hint": "Give the marker at the playhead this name",
+ "cmd.animation.marker.update": "Rename or move a timing marker"
 }

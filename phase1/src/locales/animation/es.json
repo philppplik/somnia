@@ -975,5 +975,9 @@
  "animation.rig.flag.solo": "Solo sí / no",
  "animation.rig.flag.locked": "Bloquear / desbloquear",
  "animation.rig.flag.shy": "Shy sí / no",
- "cmd.animation.layers.flag": "Cambiar un indicador de capa para las capas seleccionadas"
+ "cmd.animation.layers.flag": "Cambiar un indicador de capa para las capas seleccionadas",
+ "animation.markers.name": "Nombre del marcador",
+ "animation.markers.rename": "Renombrar",
+ "animation.markers.rename.hint": "Dar este nombre al marcador del cabezal",
+ "cmd.animation.marker.update": "Renombrar o mover un marcador de tiempo"
 }

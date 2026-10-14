@@ -975,5 +975,9 @@
  "animation.rig.flag.solo": "Solo oui / non",
  "animation.rig.flag.locked": "Verrouiller / déverrouiller",
  "animation.rig.flag.shy": "Shy oui / non",
- "cmd.animation.layers.flag": "Changer un indicateur de calque pour les calques sélectionnés"
+ "cmd.animation.layers.flag": "Changer un indicateur de calque pour les calques sélectionnés",
+ "animation.markers.name": "Nom du repère",
+ "animation.markers.rename": "Renommer",
+ "animation.markers.rename.hint": "Donner ce nom au repère sous la tête de lecture",
+ "cmd.animation.marker.update": "Renommer ou déplacer un repère de temps"
 }

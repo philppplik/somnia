@@ -527,3 +527,16 @@ test('P173 layer flags toggle for many layers, one undo step, locked layers only
  assert.throws(()=>run({flag:'visible',layers:[ids[0]]}),(e:any)=>e.expected===true);
  run({flag:'locked',layers:[ids[0]]});assert.equal(get('locked')[0],false);
 });
+
+test('P174 marker update renames the marker at the playhead or by id, moves it, one undo step',async()=>{
+ const {markerUpdateSpecs}=await import('./markerUpdateCommands');const run=markerUpdateSpecs()[0].run as (p?:unknown)=>unknown;
+ const s=open();setAnimationSession(s);const c0=findComp(s.document!)!;
+ s.dispatch({type:'markers.set',markers:[{id:'m1',t:c0.start+f(10),label:'one'},{id:'m2',t:c0.start+f(20),label:'two'}]});
+ const ms=()=>findComp(s.document!)!.markers!;
+ s.setView({playhead:c0.start+f(20)});const before=s.document!;
+ run({label:'  hit  '});assert.equal(ms()[1].label,'hit');s.undo();assert.equal(s.document,before);
+ run({id:'m1',label:'start',t:c0.start+f(25)});assert.deepEqual(ms().map(m=>m.label),['two','start']);
+ const e=(p:object)=>assert.throws(()=>run(p),(x:any)=>x.expected===true);
+ e({id:'nope',label:'x'});e({id:'m2',label:'two'});e({id:'m2',t:c0.start+c0.duration+f(5)});e({id:'m2',label:'  '});
+ s.setView({playhead:c0.start+f(3)});e({label:'x'});
+});

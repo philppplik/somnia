@@ -16,7 +16,7 @@ included; the `source` column names the owner. Dynamic sources that stay outside
 
 Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, fr, pt-BR); the gate enforces it.
 
-828 commands. Categories: Edit, Help, Insert, Project, Tools, View.
+829 commands. Categories: Edit, Help, Insert, Project, Tools, View.
 
 | id | title | category | source | shortcut |
 | --- | --- | --- | --- | --- |
@@ -149,6 +149,7 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `animation.layers.stagger` | Stagger selected layers | Edit | animation |  |
 | `animation.marker.add` | Add timing marker | Edit | animation |  |
 | `animation.marker.remove` | Remove timing marker | Edit | animation |  |
+| `animation.marker.update` | Rename or move a timing marker | Edit | animation |  |
 | `animation.mask.boolean` | Unite, subtract, intersect or exclude two masks | Insert | animation |  |
 | `animation.mask.toLayer` | Turn a path mask into a shape layer | Edit | animation |  |
 | `animation.modifier.add` | Add wiggle or loop modifier | Edit | animation |  |
