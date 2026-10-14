@@ -26,12 +26,9 @@ export const studio3DShell:StudioShellDef={
   {menu:'View',command:'studio3d.view.wireframe',group:'studio3d.view',order:40},
  ],defaultLayout:STUDIO3D_LAYOUT,
 };
-/**
- * Order 9 keeps Vibe Space last. Format claims are left empty on purpose in P0: Smart Open still has no 3D kind,
- * so a claim would route files to a studio the open pipeline cannot hand bytes to. The studio opens models itself.
- */
+/** Order 9 keeps Vibe Space last. Smart Open routes .glb and .gltf here (open handler `open.3d`, kind `model3d`). */
 export const studio3D:StudioDef={
- id:'3d',label:'studio.3d',icon:'Boxes',order:9,formats:[],
+ id:'3d',label:'studio.3d',icon:'Boxes',order:9,formats:[{ext:'glb',priority:100},{ext:'gltf',priority:100}],
  shell:{leftRail:[],rightRail:[],header:{menus:['Project','Edit','View','Help'],views:[],heroAction:{id:'studio3d.render.still',labelKey:'studio3d.hero.render',icon:'Image'}},bottomBar:{slots:[],viewportPresets:[]},inspector:'studio3d.inspector',tools:[]},
  commands:[],shortcuts:{},menus:{view:[]},canvas:'studio3d.canvas',shellV2:studio3DShell,
  agent:{tools:[],contextProviders:[],quickActions:[]},deriveContext:context=>context,

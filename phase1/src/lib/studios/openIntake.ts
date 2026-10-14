@@ -13,6 +13,7 @@ import {MAX_OPEN_TEXT_BYTES} from './openResolver';
 import './openHandlers';
 import {importSvg} from '../vectorio';
 import {openSvgSource,getVectorSession} from '../vectorstudio/session';
+import {queueStudio3DModel} from '../studio3d/session';
 /**
  * App wiring of the Smart Open coordinator: the single entry for EXPLICIT Open (Project > Open file, starter Open buttons, global drop,
  * native dropped copies). Not used by: Video "add source", canvas Place image, chat/convert drops (import / attach), folder media
@@ -42,7 +43,7 @@ export const registerOpenDocument=(identityToken:string,doc:{studioId:string;key
 export const forgetOpenDocument=(identityToken:string)=>{openDocuments.delete(identityToken);};
 const documentIsOpen=(d:{studioId:string;key:string})=>d.key.startsWith('media:')?!!findMedia(d.key.slice(6)):d.studioId==='vector'?getVectorSession().open:d.key in getState().files;
 /** Studios that hold one document only; extra files for them are deferred, not silently replaced. */
-const SINGLE_DOCUMENT_STUDIOS=new Set(['vector']);
+const SINGLE_DOCUMENT_STUDIOS=new Set(['vector','3d']);
 const textAffected=():AffectedDoc[]=>{const s=getState();
  // Additive: new files are created in the open project (or a new in-memory project) - nothing is overwritten, so never dirty. The token still invalidates the plan when the project changes during approval.
  return[{key:'text:'+(s.coreConnected?'project':'none'),studioId:'code',dirty:false,token:currentToken(SCOPE_TEXT)}];};
@@ -68,6 +69,13 @@ export const appDeps:OpenDeps={
    return{name:input.name,studioId:target,affectedDocs:textAffected,dispose(){live=false;},
     commit(){if(!live)return{ok:false,error:'cancelled'};added=commitTextFiles([{name:input.name,text}],{activate:false});return{ok:true,key:added[0]};},
     focus(key){openFileTab(key);}};
+  }
+  if(resolution.kind==='model3d'){
+   // The 3D studio parses the bytes itself in its lazy chunk. Smart Open only validated the container and hands the bytes over.
+   let live=true;const copy=input.bytes.slice();
+   return{name:input.name,studioId,affectedDocs:()=>[],dispose(){live=false;},
+    commit(){if(!live)return{ok:false,error:'cancelled'};queueStudio3DModel({name:input.name,bytes:copy});return{ok:true,key:'3d:'+input.name};},
+    focus(){/* the studio switch happens once, in the coordinator */}};
   }
   const prepared=await prepareMediaFile(new Blob([input.bytes as BlobPart]),input.name);
   if('error' in prepared)throw new Error(prepared.error);
@@ -99,7 +107,7 @@ export async function openIncoming(files:IntakeFile[],opts:BatchOptions={}):Prom
  for(const o of report.outcomes){
   if(o.status==='invalid'||o.status==='unsupported'||o.status==='failed'){
    const ext=o.name.split('.').pop()?.toLowerCase()??'';
-   const kinds:Record<string,OpenKind>={png:'image',jpg:'image',jpeg:'image',webp:'image',psd:'psd',docx:'docx',xlsx:'xlsx',pptx:'pptx',mp3:'audio',wav:'audio',flac:'audio',ogg:'audio',mp4:'video',webm:'video',mov:'video',svg:'svg'};
+   const kinds:Record<string,OpenKind>={png:'image',jpg:'image',jpeg:'image',webp:'image',psd:'psd',docx:'docx',xlsx:'xlsx',pptx:'pptx',mp3:'audio',wav:'audio',flac:'audio',ogg:'audio',mp4:'video',webm:'video',mov:'video',svg:'svg',glb:'model3d',gltf:'model3d'};
    const handlers=kinds[ext]?readyHandlersFor(kinds[ext]):[];
    const studio=o.studioId??opts.target??[...handlers].sort((a,b)=>b.priority-a.priority)[0]?.studioId??getState().activeStudio;
    reportError(studio+'.open',o.reason??report.summary,{context:{studio,file:o.name}});

@@ -22,7 +22,12 @@ export function Studio3DCanvas(){
   const c=studio3DController();if(!c){patchStudio3D({status:'error',error:'The 3D viewport could not start.'});return;}
   await run(c);
  };
- const active=s.status!=='idle'||s.blank;
+ useEffect(()=>{
+  const model=s.pending;if(!model)return;
+  patchStudio3D({pending:null});
+  void withController(c=>c.openFiles([new File([model.bytes as BlobPart],model.name)]));
+ },[s.pending]);
+ const active=s.status!=='idle'||s.blank||!!s.pending;
  return <main className="center" aria-label={t('studio3d.title')}><div className="workspace"><section className="code-pane" aria-label={t('studio3d.title')}>
   <FileTabs/>
   <input ref={input} type="file" accept={MODEL_ACCEPT} multiple hidden data-testid="studio3d-file-input" onChange={e=>{const files=[...(e.target.files??[])];e.target.value='';if(files.length)void withController(c=>c.openFiles(files));}}/>
