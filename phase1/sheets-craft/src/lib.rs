@@ -66,8 +66,8 @@ fn format_command(op: &serde_json::Value) -> Result<(&'static str, serde_json::V
             _ => return Err("delta must be 1 or -1".into()),
         },
         "borders" => {
-            const PRESETS: &[&str] = ["none", "all", "outside", "thickOutside", "inside", "insideHorizontal", "insideVertical", "top", "bottom", "left", "right", "thickBottom", "doubleBottom", "topBottom", "topThickBottom", "topDoubleBottom"];
-            const STYLES: &[&str] = ["thin", "medium", "thick", "dashed", "dotted", "double", "hair"];
+            const PRESETS: &[&str] = &["none", "all", "outside", "thickOutside", "inside", "insideHorizontal", "insideVertical", "top", "bottom", "left", "right", "thickBottom", "doubleBottom", "topBottom", "topThickBottom", "topDoubleBottom"];
+            const STYLES: &[&str] = &["thin", "medium", "thick", "dashed", "dotted", "double", "hair"];
             let preset = op.get("preset").and_then(|v| v.as_str()).filter(|p| PRESETS.contains(p)).ok_or("unsupported border preset")?;
             let style = match op.get("style") {
                 None => "thin",
@@ -836,7 +836,7 @@ mod tests {
         let st = style_of(&book, "H1");
         assert_eq!((st["h"].as_str(), st["v"].as_str(), st["wrap"].as_bool(), st["indent"].as_u64()), (Some("right"), Some("top"), Some(true), Some(1)));
         // Outside border on a 2x2 block only touches the block's edges.
-        book.format_range(0, 0, 7, 2, 2, r#"{"kind":"borders","preset":"outside","style":"medium","color":"#FF0000"}"#).unwrap();
+        book.format_range(0, 0, 7, 2, 2, r##"{"kind":"borders","preset":"outside","style":"medium","color":"#FF0000"}"##).unwrap();
         assert!(!style_of(&book, "H1")["borders"]["t"].is_null());
         assert!(style_of(&book, "I2")["borders"]["b"]["color"].as_str() == Some("#FF0000"));
         assert!(style_of(&book, "H1")["borders"]["b"].is_null(), "inner edge stays clear");
