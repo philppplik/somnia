@@ -130,3 +130,56 @@ test('cameras: add, fov validation, info and undo',()=>{
  const p=stage.addCamera({position:{x:1,y:2,z:3},quaternion:[0,0,0,1]},55);assert.equal(p.position.z,3);assert.equal(p.fov,55);
  assert.equal(stage.info(stage.addPrimitive('cube').id)?.camera,null);
 });
+test('spot and area lights: defaults, info, edits, validation and undo',()=>{
+ const stage=new Stage();const sp=stage.addLight('spot') as THREE.SpotLight;const ar=stage.addLight('area') as THREE.RectAreaLight;
+ assert.ok(sp.isSpotLight);assert.ok(ar.isRectAreaLight);assert.equal(sp.name,'Spot light');assert.equal(ar.name,'Area light');
+ assert.equal(Math.round(stage.info(sp.id)!.light!.angle!),30);assert.equal(stage.info(ar.id)!.light!.width,2);
+ stage.setLight(sp.id,{angle:45,penumbra:0.5,intensity:10,color:'#ff0000'});
+ assert.equal(Math.round(sp.angle*180/Math.PI),45);assert.equal(sp.penumbra,0.5);assert.equal(stage.info(sp.id)!.light!.color,'#ff0000');
+ stage.undo();assert.equal(Math.round(sp.angle*180/Math.PI),30);assert.equal(sp.intensity,120);
+ stage.setLight(ar.id,{width:4,height:1});assert.equal(ar.width,4);assert.equal(ar.height,1);
+ assert.throws(()=>stage.setLight(ar.id,{angle:10}),StageError);assert.throws(()=>stage.setLight(sp.id,{width:3}),StageError);
+ assert.throws(()=>stage.setLight(sp.id,{angle:0}),StageError);assert.throws(()=>stage.setLight(sp.id,{color:'red'}),StageError);
+ const c=stage.addPrimitive('cube');assert.throws(()=>stage.setLight(c.id,{intensity:1}),StageError);
+ const n=stage.addLight('point');stage.setLight(n.id,{intensity:n.intensity});assert.equal(stage.undoLabel.startsWith('Add'),true,'no-op adds no entry');
+});
+test('pivot to base moves the origin without moving the geometry and does not touch copies',()=>{
+ const stage=new Stage();const a=stage.addPrimitive('cube');const b=stage.duplicate(a.id) as THREE.Mesh;
+ const world=()=>{a.updateMatrixWorld(true);return new THREE.Box3().setFromObject(a);};
+ const before=world();stage.setPivot(a.id,'base');
+ const after=world();assert.ok(after.min.distanceTo(before.min)<1e-9&&after.max.distanceTo(before.max)<1e-9);
+ a.geometry.computeBoundingBox();assert.ok(Math.abs(a.geometry.boundingBox!.min.y)<1e-9);
+ b.geometry.computeBoundingBox();assert.ok(b.geometry.boundingBox!.min.y<-0.4,'copy keeps its own geometry');
+ stage.undo();a.geometry.computeBoundingBox();assert.ok(a.geometry.boundingBox!.min.y<-0.4);assert.equal(a.position.y,0.5);
+ stage.redo();assert.equal(a.position.y,0);
+ stage.setPivot(a.id,'center');assert.equal(a.position.y,0.5);
+ const l=stage.addLight('point');assert.throws(()=>stage.setPivot(l.id,'center'),StageError);
+});
+test('pivot respects rotation and scale',()=>{
+ const stage=new Stage();const a=stage.addPrimitive('cube');stage.setTransform(a.id,{position:{x:0,y:0,z:0},rotation:{z:90},scale:{x:2,y:2,z:2}});
+ const box=()=>{a.updateMatrixWorld(true);return new THREE.Box3().setFromObject(a);};
+ const b0=box();stage.setPivot(a.id,'base');const b1=box();
+ assert.ok(b0.min.distanceTo(b1.min)<1e-6&&b0.max.distanceTo(b1.max)<1e-6);
+});
+const boxOf=(o:THREE.Object3D)=>{o.updateMatrixWorld(true);return new THREE.Box3().setFromObject(o);};
+test('align moves bounds to min, centre or max in one undo step',()=>{
+ const stage=new Stage();const a=stage.addPrimitive('cube');const b=stage.addPrimitive('sphere');stage.setTransform(a.id,{position:{x:-3}});stage.setTransform(b.id,{position:{x:4}});
+ stage.align([a.id,b.id],'x','min');assert.ok(Math.abs(boxOf(a).min.x-boxOf(b).min.x)<1e-9);assert.ok(Math.abs(boxOf(a).min.x+3.5)<1e-9);
+ stage.undo();assert.equal(a.position.x,-3);assert.equal(b.position.x,4);
+ stage.align([a.id,b.id],'x','center');assert.ok(Math.abs((boxOf(a).min.x+boxOf(a).max.x)/2-(boxOf(b).min.x+boxOf(b).max.x)/2)<1e-9);
+ stage.undo();stage.align([a.id,b.id],'y','max');assert.ok(Math.abs(boxOf(a).max.y-boxOf(b).max.y)<1e-9);
+ stage.undo();assert.equal(a.position.y,0.5);
+ const before=stage.undoLabel;stage.align([a.id,b.id],'z','min');stage.align([a.id,b.id],'z','min');
+ assert.throws(()=>stage.align([a.id],'x','min'),StageError);assert.throws(()=>stage.align([a.id,a.id],'x','min'),StageError);
+ assert.throws(()=>stage.align([a.id,b.id],'w' as never,'min'),StageError);assert.throws(()=>stage.align([a.id,999999],'x','min'),StageError);
+ const l=stage.addLight('point');assert.throws(()=>stage.align([a.id,l.id],'x','min'),StageError);void before;
+});
+test('distribute makes the gaps equal and keeps the outer objects',()=>{
+ const stage=new Stage();const a=stage.addPrimitive('cube');const b=stage.addPrimitive('cube');const c=stage.addPrimitive('cube');
+ stage.setTransform(a.id,{position:{x:0}});stage.setTransform(b.id,{position:{x:1}});stage.setTransform(c.id,{position:{x:10}});
+ stage.distribute([c.id,a.id,b.id],'x');
+ const [ba,bb,bc]=[a,b,c].map(boxOf);assert.equal(a.position.x,0);assert.equal(c.position.x,10);
+ assert.ok(Math.abs((bb.min.x-ba.max.x)-(bc.min.x-bb.max.x))<1e-9);assert.ok(Math.abs(b.position.x-5)<1e-9);
+ stage.undo();assert.equal(b.position.x,1);
+ assert.throws(()=>stage.distribute([a.id,b.id],'x'),StageError);
+});

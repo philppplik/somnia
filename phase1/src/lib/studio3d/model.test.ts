@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {readModelHeader,modelFormatFor,externalResources,frameDistance,clipPlanes,boundsCenter,boundsSize,boundsRadius,boundsValid,emptyBounds,formatCount,ModelError,MAX_MODEL_BYTES,mergeEnv,defaultEnv,EnvError,nudgeFor,envFormatFor,isMeshFormat} from './model';
+import {readModelHeader,modelFormatFor,externalResources,frameDistance,clipPlanes,boundsCenter,boundsSize,boundsRadius,boundsValid,emptyBounds,formatCount,ModelError,MAX_MODEL_BYTES,mergeEnv,defaultEnv,EnvError,nudgeFor,envFormatFor,isMeshFormat,defaultSnap,mergeSnap,SnapError,snapTo,stlUnitHint,mtlReferences,mtlTextures,clampRenderSize} from './model';
 const pad=(b:Uint8Array,fill:number)=>{const n=(b.length+3)&~3;const o=new Uint8Array(n).fill(fill);o.set(b);return o;};
 function glb(json:unknown,bin?:Uint8Array,version=2):Uint8Array{
  const j=pad(new TextEncoder().encode(JSON.stringify(json)),0x20);const b=bin?pad(bin,0):null;
@@ -94,4 +94,24 @@ test('OBJ, STL and PLY are recognised by content checks',()=>{
 });
 test('a GLB renamed to .obj is still read as GLB',()=>{
  assert.equal(readModelHeader('x.obj',glb({asset:{version:'2.0'}})).format,'glb');
+});
+test('mergeSnap validates ranges and keeps untouched fields',()=>{
+ const d=defaultSnap();const n=mergeSnap(d,{on:true,move:0.5});assert.equal(n.on,true);assert.equal(n.move,0.5);assert.equal(n.rotate,d.rotate);
+ assert.throws(()=>mergeSnap(d,{move:0}),SnapError);assert.throws(()=>mergeSnap(d,{rotate:500}),SnapError);assert.throws(()=>mergeSnap(d,{scale:NaN}),SnapError);assert.throws(()=>mergeSnap(d,{on:1 as never}),SnapError);
+ assert.equal(d.on,false);
+});
+test('snapTo rounds to the nearest step',()=>{assert.equal(snapTo(0.37,0.25),0.25);assert.equal(snapTo(0.38,0.25),0.5);assert.equal(snapTo(-0.6,0.5),-0.5);assert.equal(snapTo(1.23,0),1.23);});
+test('stlUnitHint suggests millimetres for parts larger than 10 units only',()=>{
+ assert.deepEqual(stlUnitHint([120,40,10]),{unit:'mm',factor:0.001});assert.equal(stlUnitHint([1,2,0.5]),null);assert.equal(stlUnitHint([9.9,1,1]),null);
+ assert.equal(stlUnitHint([1e7,1,1]),null);assert.equal(stlUnitHint([NaN,1,1]),null);
+});
+test('mtl helpers list base names only and skip URLs',()=>{
+ assert.deepEqual(mtlReferences('mtllib a.mtl\nmtllib dir\\b.mtl\nv 0 0 0'),['a.mtl','b.mtl']);
+ const mtl='newmtl x\nmap_Kd wood.png\n map_Bump -bm 0.5 tex/normal.jpg\nmap_Ks http://evil.example/x.png\nmap_Kd file:///etc/passwd\nmap_d C:\\img\\a.png\nKd 1 1 1';
+ assert.deepEqual(mtlTextures(mtl),['wood.png','normal.jpg','a.png']);
+});
+test('clampRenderSize rounds, limits and keeps the aspect ratio',()=>{
+ assert.deepEqual(clampRenderSize(1920.4,1080,16384),{width:1920,height:1080});
+ assert.deepEqual(clampRenderSize(8000,4000,4000),{width:4000,height:2000});
+ assert.throws(()=>clampRenderSize(0,10,100),SnapError);assert.throws(()=>clampRenderSize(10,NaN,100),SnapError);
 });

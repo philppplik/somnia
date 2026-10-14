@@ -6,17 +6,22 @@ import {emptyStats,type ModelStats,type OutlineEntry,type Bounds} from './model'
  * Imported only by the lazy viewport chunk.
  */
 export type PrimitiveKind='cube'|'sphere'|'plane'|'cylinder'|'cone'|'torus';
-export type LightKind='directional'|'point';
+export type LightKind='directional'|'point'|'spot'|'area';
 export const PRIMITIVES:readonly PrimitiveKind[]=['cube','sphere','plane','cylinder','cone','torus'];
-export const LIGHTS:readonly LightKind[]=['directional','point'];
+export const LIGHTS:readonly LightKind[]=['directional','point','spot','area'];
 export interface Vec3{x:number;y:number;z:number}
 export interface TransformPatch{position?:Partial<Vec3>;/** degrees */rotation?:Partial<Vec3>;scale?:Partial<Vec3>}
 export interface MaterialPatch{color?:string;metalness?:number;roughness?:number}
 export interface ObjectInfo{
  camera:{fov:number}|null;
  id:number;name:string;kind:OutlineEntry['kind'];position:Vec3;rotation:Vec3;scale:Vec3;
- material:{color:string;metalness:number;roughness:number}|null;light:{intensity:number}|null;
+ material:{color:string;metalness:number;roughness:number}|null;light:LightInfo|null;
 }
+export interface LightInfo{intensity:number;color:string;/** spot cone, degrees */angle?:number;penumbra?:number;width?:number;height?:number}
+export interface LightPatch{intensity?:number;color?:string;angle?:number;penumbra?:number;width?:number;height?:number}
+export type AlignAxis='x'|'y'|'z';
+export type AlignTo='min'|'center'|'max';
+export type PivotAt='center'|'base';
 export const GROUP_MS=1000;
 export class StageError extends Error{constructor(message:string){super(message);this.name='StageError';}}
 const clamp01=(n:number)=>Math.min(1,Math.max(0,n));
@@ -32,6 +37,13 @@ function geometryFor(kind:PrimitiveKind):THREE.BufferGeometry{
   case 'cone':return new THREE.ConeGeometry(0.5,1,48);
   case 'torus':return new THREE.TorusGeometry(0.5,0.18,24,64);
  }
+}
+function lightInfo(l:THREE.Light):LightInfo{
+ const info:LightInfo={intensity:l.intensity,color:'#'+l.color.getHexString()};
+ const sp=l as THREE.SpotLight,ra=l as THREE.RectAreaLight;
+ if(sp.isSpotLight){info.angle=sp.angle/DEG;info.penumbra=sp.penumbra;}
+ if(ra.isRectAreaLight){info.width=ra.width;info.height=ra.height;}
+ return info;
 }
 const label=(s:string)=>s.charAt(0).toUpperCase()+s.slice(1);
 function disposeObject(root:THREE.Object3D){
@@ -89,8 +101,10 @@ export class Stage{
  }
  addLight(kind:LightKind):THREE.Light{
   if(!LIGHTS.includes(kind))throw new StageError(`Unknown light: ${String(kind)}.`);
-  const light=kind==='directional'?new THREE.DirectionalLight(0xffffff,2):new THREE.PointLight(0xffffff,40,0,2);
-  light.name=this.uniqueName(kind==='directional'?'Directional light':'Point light');light.position.set(3,4,2);
+  const light:THREE.Light=kind==='directional'?new THREE.DirectionalLight(0xffffff,2):kind==='point'?new THREE.PointLight(0xffffff,40,0,2)
+   :kind==='spot'?new THREE.SpotLight(0xffffff,120,0,Math.PI/6,0.3,2):new THREE.RectAreaLight(0xffffff,6,2,2);
+  light.name=this.uniqueName({directional:'Directional light',point:'Point light',spot:'Spot light',area:'Area light'}[kind]);light.position.set(3,4,2);
+  if(kind==='area')light.lookAt(0,0,0);
   this.attach(light,this.root,this.root.children.length,`Add ${light.name}`);return light;
  }
  addCamera(pose?:{position:Vec3;quaternion:[number,number,number,number]},fov=40):THREE.PerspectiveCamera{
@@ -133,6 +147,78 @@ export class Stage{
   let redo=()=>set(next);
   this.push({label:`Transform ${o.name}`,undo:()=>set(before),redo:()=>redo(),group:key,at:now,merge:r=>{redo=r;}});
  }
+ setLight(id:number,patch:LightPatch){
+  const o=this.need(id) as THREE.Light;if(!o.isLight)throw new StageError(`${o.name} is not a light.`);
+  const sp=o as THREE.SpotLight,ra=o as THREE.RectAreaLight;
+  if(patch.color!==undefined&&!HEX.test(patch.color))throw new StageError('color must look like #rrggbb.');
+  if(patch.angle!==undefined&&!sp.isSpotLight)throw new StageError('Only spot lights have a cone angle.');
+  if(patch.penumbra!==undefined&&!sp.isSpotLight)throw new StageError('Only spot lights have a penumbra.');
+  if((patch.width!==undefined||patch.height!==undefined)&&!ra.isRectAreaLight)throw new StageError('Only area lights have a width and height.');
+  const num=(v:number|undefined,what:string,min:number,max:number)=>{if(v===undefined)return undefined;const n=finite(v,what);if(n<min||n>max)throw new StageError(`${what} must be between ${min} and ${max}.`);return n;};
+  const next={i:num(patch.intensity,'intensity',0,100000),c:patch.color,a:num(patch.angle,'angle',1,90),p:num(patch.penumbra,'penumbra',0,1),w:num(patch.width,'width',0.01,1000),h:num(patch.height,'height',0.01,1000)};
+  const read=()=>({i:o.intensity,c:'#'+o.color.getHexString(),a:sp.isSpotLight?sp.angle/DEG:undefined,p:sp.isSpotLight?sp.penumbra:undefined,w:ra.isRectAreaLight?ra.width:undefined,h:ra.isRectAreaLight?ra.height:undefined});
+  const before=read();
+  const write=(v:ReturnType<typeof read>)=>{o.intensity=v.i;o.color.set(v.c);if(sp.isSpotLight){sp.angle=v.a!*DEG;sp.penumbra=v.p!;}if(ra.isRectAreaLight){ra.width=v.w!;ra.height=v.h!;}};
+  const after={i:next.i??before.i,c:next.c??before.c,a:next.a??before.a,p:next.p??before.p,w:next.w??before.w,h:next.h??before.h};
+  if(JSON.stringify(after)===JSON.stringify(before))return;
+  write(after);this.push({label:`Light ${o.name}`,undo:()=>write(before),redo:()=>write(after)});
+ }
+ /**
+  * Moves the origin of a mesh to the centre of its bounds or to the middle of its base, without moving what you see.
+  * The geometry is cloned first, so copies that shared it are not changed.
+  */
+ setPivot(id:number,at:PivotAt){
+  const o=this.need(id) as THREE.Mesh;if(!o.isMesh)throw new StageError(`${o.name} is not a mesh, so it has no editable pivot.`);
+  if(at!=='center'&&at!=='base')throw new StageError(`Unknown pivot: ${String(at)}.`);
+  const old=o.geometry;old.computeBoundingBox();const box=old.boundingBox!;
+  const c=box.getCenter(new THREE.Vector3());if(at==='base')c.y=box.min.y;
+  if(c.lengthSq()<1e-18)return;
+  const geo=old.clone().translate(-c.x,-c.y,-c.z);
+  o.updateMatrix();const shift=c.clone().multiply(o.scale).applyQuaternion(o.quaternion);
+  const p0=o.position.clone(),p1=o.position.clone().add(shift);
+  const set=(g:THREE.BufferGeometry,p:THREE.Vector3)=>{o.geometry=g;o.position.copy(p);};
+  set(geo,p1);this.push({label:`Pivot of ${o.name}`,undo:()=>set(old,p0),redo:()=>set(geo,p1)});
+ }
+ private worldBox(o:THREE.Object3D){o.updateWorldMatrix(true,true);return new THREE.Box3().setFromObject(o);}
+ private needMany(ids:number[],min:number){
+  if(!Array.isArray(ids)||new Set(ids).size!==ids.length)throw new StageError('Choose each object only once.');
+  if(ids.length<min)throw new StageError(`Select at least ${min} objects.`);
+  return ids.map(id=>{const o=this.need(id);if(o===this.root)throw new StageError('The scene root cannot be moved.');return o;});
+ }
+ /** One undo step for moving several objects in world space. */
+ private moveMany(text:string,moves:{o:THREE.Object3D;delta:THREE.Vector3}[]){
+  const list=moves.filter(m=>m.delta.lengthSq()>1e-18).map(m=>{
+   const before=m.o.position.clone();const w=m.o.getWorldPosition(new THREE.Vector3()).add(m.delta);
+   const after=m.o.parent?m.o.parent.worldToLocal(w):w;return{o:m.o,before,after};});
+  if(!list.length)return;
+  const set=(k:'before'|'after')=>{for(const l of list)l.o.position.copy(l[k]);};
+  set('after');this.push({label:text,undo:()=>set('before'),redo:()=>set('after')});
+ }
+ /** Aligns the world bounds of the objects to the lowest, middle or highest edge of their combined bounds along one axis. */
+ align(ids:number[],axis:AlignAxis,to:AlignTo){
+  if(!['x','y','z'].includes(axis))throw new StageError(`Unknown axis: ${String(axis)}.`);
+  if(!['min','center','max'].includes(to))throw new StageError(`Unknown alignment: ${String(to)}.`);
+  const objs=this.needMany(ids,2);const boxes=objs.map(o=>this.worldBox(o));
+  if(boxes.some(b=>b.isEmpty()))throw new StageError('Only objects with geometry can be aligned.');
+  const all=new THREE.Box3();boxes.forEach(b=>all.union(b));
+  const target=to==='min'?all.min[axis]:to==='max'?all.max[axis]:(all.min[axis]+all.max[axis])/2;
+  this.moveMany(`Align ${axis.toUpperCase()}`,objs.map((o,i)=>{const b=boxes[i];const cur=to==='min'?b.min[axis]:to==='max'?b.max[axis]:(b.min[axis]+b.max[axis])/2;
+   return{o,delta:new THREE.Vector3()[`set${axis.toUpperCase()}` as 'setX'](target-cur)};}));
+ }
+ /** Spreads three or more objects so the gaps between their bounds are equal. The outermost two stay where they are. */
+ distribute(ids:number[],axis:AlignAxis){
+  if(!['x','y','z'].includes(axis))throw new StageError(`Unknown axis: ${String(axis)}.`);
+  const objs=this.needMany(ids,3);
+  const items=objs.map(o=>({o,b:this.worldBox(o)}));if(items.some(i=>i.b.isEmpty()))throw new StageError('Only objects with geometry can be distributed.');
+  items.sort((a,b)=>(a.b.min[axis]+a.b.max[axis])-(b.b.min[axis]+b.b.max[axis]));
+  const first=items[0].b,last=items[items.length-1].b;
+  const span=Math.max(last.max[axis],...items.map(i=>i.b.max[axis]))-Math.min(first.min[axis],...items.map(i=>i.b.min[axis]));
+  const sizes=items.reduce((n,i)=>n+(i.b.max[axis]-i.b.min[axis]),0);
+  const gap=(span-sizes)/(items.length-1);
+  let cursor=Math.min(first.min[axis],...items.map(i=>i.b.min[axis]));const moves:{o:THREE.Object3D;delta:THREE.Vector3}[]=[];
+  for(const i of items){const d=new THREE.Vector3();d[axis]=cursor-i.b.min[axis];moves.push({o:i.o,delta:d});cursor+=(i.b.max[axis]-i.b.min[axis])+gap;}
+  this.moveMany(`Distribute ${axis.toUpperCase()}`,moves);
+ }
  setMaterial(id:number,patch:MaterialPatch){
   const o=this.need(id);const mesh=o as THREE.Mesh;
   if(!mesh.isMesh||Array.isArray(mesh.material)||!(mesh.material as THREE.MeshStandardMaterial).isMeshStandardMaterial)throw new StageError(`${o.name} has no editable PBR material.`);
@@ -167,7 +253,7 @@ export class Stage{
   return{id:o.id,name:o.name,kind:m.isMesh?'mesh':l.isLight?'light':(o as THREE.Camera).isCamera?'camera':'group',
    position:{x:o.position.x,y:o.position.y,z:o.position.z},rotation:{x:o.rotation.x/DEG,y:o.rotation.y/DEG,z:o.rotation.z/DEG},scale:{x:o.scale.x,y:o.scale.y,z:o.scale.z},
    camera:(o as THREE.PerspectiveCamera).isPerspectiveCamera?{fov:(o as THREE.PerspectiveCamera).fov}:null,
-   material:mat?{color:'#'+mat.color.getHexString(),metalness:mat.metalness,roughness:mat.roughness}:null,light:l.isLight?{intensity:l.intensity}:null};
+   material:mat?{color:'#'+mat.color.getHexString(),metalness:mat.metalness,roughness:mat.roughness}:null,light:l.isLight?lightInfo(l):null};
  }
  measure(animations=0):{stats:ModelStats;outline:OutlineEntry[];bounds:Bounds|null}{
   const stats=emptyStats();stats.animations=animations;const outline:OutlineEntry[]=[];const mats=new Set<THREE.Material>(),texs=new Set<THREE.Texture>();

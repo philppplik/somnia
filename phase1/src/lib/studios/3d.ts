@@ -12,7 +12,8 @@ export const studio3DShell:StudioShellDef={
  rightRail:[rail('inspector','Info','3D inspector',10)],
  inspector:{titleKey:'studio3d.shell.inspector',emptyKey:'studio3d.start.title',sections:[
   {id:'model',title:'Model',titleKey:'studio3d.shell.model',component:'studio3d.inspector.model',order:10},
-  {id:'object',title:'Selected object',titleKey:'studio3d.shell.object',component:'studio3d.inspector.object',order:20,commands:['studio3d.object.transform','studio3d.object.material','studio3d.object.rename','studio3d.object.delete','studio3d.object.duplicate','studio3d.object.nudge','studio3d.camera.set','studio3d.view.fromCamera']},
+  {id:'object',title:'Selected object',titleKey:'studio3d.shell.object',component:'studio3d.inspector.object',order:20,commands:['studio3d.object.transform','studio3d.object.material','studio3d.object.rename','studio3d.object.delete','studio3d.object.duplicate','studio3d.object.nudge','studio3d.camera.set','studio3d.view.fromCamera','studio3d.light.set','studio3d.object.pivot']},
+  {id:'tools',title:'Tools',titleKey:'studio3d.shell.tools',component:'studio3d.inspector.tools',order:22,commands:['studio3d.snap.set','studio3d.object.align','studio3d.object.distribute','studio3d.object.pivot']},
   {id:'env',title:'Environment',titleKey:'studio3d.shell.env',component:'studio3d.inspector.env',order:25,commands:['studio3d.env.set','studio3d.env.open']},
   {id:'view',title:'View',titleKey:'studio3d.shell.view',component:'studio3d.inspector.view',order:30,commands:['studio3d.view.grid','studio3d.view.wireframe','studio3d.view.reset','studio3d.view.frame']},
  ]},
@@ -29,6 +30,7 @@ export const studio3DShell:StudioShellDef={
   {menu:'Insert',command:'studio3d.insert.light',group:'studio3d.insert',order:20},
   {menu:'Insert',command:'studio3d.insert.camera',group:'studio3d.insert',order:30},
   {menu:'Tools',command:'studio3d.gizmo.mode',group:'studio3d.tools',order:10},
+  {menu:'Tools',command:'studio3d.snap.set',group:'studio3d.tools',order:20},
   {menu:'View',command:'studio3d.env.open',group:'studio3d.env',order:50},
   {menu:'View',command:'studio3d.view.reset',group:'studio3d.view',order:10},
   {menu:'View',command:'studio3d.view.frame',group:'studio3d.view',order:20},
