@@ -55,3 +55,5 @@ Persistence currently means an explicit JSON file with relinking, not autosave, 
 - Full app typecheck is blocked only by the baseline absent generated Slides WASM module in this checkout. Focused A1 model/mixer typecheck is green.
 
 Roadmap-Delta A2: usable bounded timeline/mixer with non-destructive edits, history, JSON save/reopen/relink and worker mix audition/export. Full DAW parity, long-form streaming, local speech, recording and the serial effects rack are not included.
+
+A2 follow-up: the browser dirty-session guard now persists when switching back to the clip editor. The mix worker also enforces an aggregate decoded-source budget including sources retained for undo, rather than relying only on current document limits. If that budget is reached after repeated imports and undo, save/reopen and relink the current sources to release unused worker media. Command-title keys are included under `cmd.sound.arrange.*` for the shared inventory gate. The integrator must add `registerArrangeCommands` to the shared `dump-ui-commands.ts` mount-time registration list and regenerate the inventory; that shared file is not edited by this slice.

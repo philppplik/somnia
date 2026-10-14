@@ -199,5 +199,20 @@
   "sound.arrange.command.export": "Organizar y mezclar: Exportar mezcla WAV",
   "sound.arrange.command.save": "Organizar y mezclar: Descargar sesión",
   "sound.arrange.clipLevel": "Ganancia de clip (dB)",
-  "sound.arrange.destination": "Pista de destino"
+  "sound.arrange.destination": "Pista de destino",
+  "cmd.sound.arrange.rename": "Organizar y mezclar: Nombre de sesión",
+  "cmd.sound.arrange.track.add": "Organizar y mezclar: Añadir pista",
+  "cmd.sound.arrange.track.set": "Organizar y mezclar: Mezclador de pistas",
+  "cmd.sound.arrange.clip.set": "Organizar y mezclar: Editor de clips",
+  "cmd.sound.arrange.clip.split": "Organizar y mezclar: Dividir aquí",
+  "cmd.sound.arrange.clip.duplicate": "Organizar y mezclar: Duplicar",
+  "cmd.sound.arrange.clip.delete": "Organizar y mezclar: Eliminar",
+  "cmd.sound.arrange.marker.add": "Organizar y mezclar: Marcador",
+  "cmd.sound.arrange.marker.delete": "Organizar y mezclar: Eliminar",
+  "cmd.sound.arrange.loop.set": "Organizar y mezclar: Repetir sesión",
+  "cmd.sound.arrange.undo": "Organizar y mezclar: Deshacer",
+  "cmd.sound.arrange.redo": "Organizar y mezclar: Rehacer",
+  "cmd.sound.arrange.render": "Organizar y mezclar: Renderizar mezcla",
+  "cmd.sound.arrange.export": "Organizar y mezclar: Exportar mezcla WAV",
+  "cmd.sound.arrange.save": "Organizar y mezclar: Descargar sesión"
 }

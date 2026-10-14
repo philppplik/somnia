@@ -199,5 +199,20 @@
   "sound.arrange.command.export": "Arranjo e mixagem: Exportar mixagem WAV",
   "sound.arrange.command.save": "Arranjo e mixagem: Baixar sessão",
   "sound.arrange.clipLevel": "Ganho do clipe (dB)",
-  "sound.arrange.destination": "Faixa de destino"
+  "sound.arrange.destination": "Faixa de destino",
+  "cmd.sound.arrange.rename": "Arranjo e mixagem: Nome da sessão",
+  "cmd.sound.arrange.track.add": "Arranjo e mixagem: Adicionar faixa",
+  "cmd.sound.arrange.track.set": "Arranjo e mixagem: Mixer de faixas",
+  "cmd.sound.arrange.clip.set": "Arranjo e mixagem: Editor de clipes",
+  "cmd.sound.arrange.clip.split": "Arranjo e mixagem: Dividir aqui",
+  "cmd.sound.arrange.clip.duplicate": "Arranjo e mixagem: Duplicar",
+  "cmd.sound.arrange.clip.delete": "Arranjo e mixagem: Excluir",
+  "cmd.sound.arrange.marker.add": "Arranjo e mixagem: Marcador",
+  "cmd.sound.arrange.marker.delete": "Arranjo e mixagem: Excluir",
+  "cmd.sound.arrange.loop.set": "Arranjo e mixagem: Repetir sessão",
+  "cmd.sound.arrange.undo": "Arranjo e mixagem: Desfazer",
+  "cmd.sound.arrange.redo": "Arranjo e mixagem: Refazer",
+  "cmd.sound.arrange.render": "Arranjo e mixagem: Renderizar mixagem",
+  "cmd.sound.arrange.export": "Arranjo e mixagem: Exportar mixagem WAV",
+  "cmd.sound.arrange.save": "Arranjo e mixagem: Baixar sessão"
 }

@@ -199,5 +199,20 @@
   "sound.arrange.command.export": "Arrangement & Mix: Mix als WAV exportieren",
   "sound.arrange.command.save": "Arrangement & Mix: Session herunterladen",
   "sound.arrange.clipLevel": "Clip-Pegel (dB)",
-  "sound.arrange.destination": "Zielspur"
+  "sound.arrange.destination": "Zielspur",
+  "cmd.sound.arrange.rename": "Arrangement & Mix: Sessionname",
+  "cmd.sound.arrange.track.add": "Arrangement & Mix: Spur hinzufügen",
+  "cmd.sound.arrange.track.set": "Arrangement & Mix: Spurmixer",
+  "cmd.sound.arrange.clip.set": "Arrangement & Mix: Clip-Editor",
+  "cmd.sound.arrange.clip.split": "Arrangement & Mix: An Abspielposition teilen",
+  "cmd.sound.arrange.clip.duplicate": "Arrangement & Mix: Duplizieren",
+  "cmd.sound.arrange.clip.delete": "Arrangement & Mix: Löschen",
+  "cmd.sound.arrange.marker.add": "Arrangement & Mix: Marker",
+  "cmd.sound.arrange.marker.delete": "Arrangement & Mix: Löschen",
+  "cmd.sound.arrange.loop.set": "Arrangement & Mix: Session wiederholen",
+  "cmd.sound.arrange.undo": "Arrangement & Mix: Rückgängig",
+  "cmd.sound.arrange.redo": "Arrangement & Mix: Wiederholen",
+  "cmd.sound.arrange.render": "Arrangement & Mix: Mix rendern",
+  "cmd.sound.arrange.export": "Arrangement & Mix: Mix als WAV exportieren",
+  "cmd.sound.arrange.save": "Arrangement & Mix: Session herunterladen"
 }
