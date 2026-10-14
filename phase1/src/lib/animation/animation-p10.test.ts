@@ -6,8 +6,8 @@ import {animatedChars,animatorEdit,defaultAnimator,mixHex} from './textAnimators
 import {copyTransformKeys,pasteTransformEdits} from './keysClipboard';
 import {animatedTargets,allTargetKeys,propertyOf,moveTargetKeys,easeTargetKeys,pruneTargetKeys,toggleTargetKey,editTargetKeys,copyTargetKeys,pasteTargetKeys,deleteTargetKeys,pasteClipOnTargets,staggerLayers,bounceClip,bounceTargetKeys} from './keyTargets';
 import {EASE_PRESETS,easePresetOf} from './graph';
-import {frameToTick} from './time';
 import {animationCommandSpecs} from './commands';
+import {frameToTick,TICKS_PER_SECOND as TICK_SEC} from './time';
 import {frameSvg} from './exportFrames';
 import {sceneAt} from './scene';
 const comp=(d:AnimationDocument)=>findComp(d)!;
@@ -388,4 +388,28 @@ test('P21: animation commands carry a global shortcut for ease-all and a bounce 
  const specs=animationCommandSpecs();const ease=specs.find(c=>c.id==='animation.keys.easeAll');assert.equal(ease?.shortcut,'Mod+Alt+E');
  assert.ok(specs.some(c=>c.id==='animation.keys.bounce')&&specs.some(c=>c.id==='animation.layers.stagger'));
  const shortcuts=specs.map(c=>c.shortcut).filter(Boolean);assert.equal(new Set(shortcuts).size,shortcuts.length);
+});
+
+test('P22: word units, selector stagger sweeps and bounds',()=>{
+ let d=base();d=applyEdit(d,{type:'text.animators',layer:'title',animators:[{...defaultAnimator('a'),start:0,end:30,softness:0,position:[0,0],scale:100,opacity:0}]});
+ const text='ab cd ef';const t0=comp(d).start;
+ const chars=layer(d,'title');
+ const wordOpacity=(unit:'char'|'word')=>{const dd=applyEdit(d,animatorEdit(d,'title',{op:'update',animator:'a',patch:{unit}}));return animatedChars(layer(dd,'title'),text,t0)!.map(c=>c.opacity);};
+ assert.deepEqual(wordOpacity('word'),[0,0,0,1,1,1,1,1],'first word (and the space after it) is inside 0..30 %');
+ assert.notDeepEqual(wordOpacity('char'),wordOpacity('word'));
+ const bad=applyEdit(d,animatorEdit(d,'title',{op:'update',animator:'a',patch:{}}));assert.ok(bad);
+ assert.throws(()=>applyEdit(d,{type:'text.animators',layer:'title',animators:[{...defaultAnimator('a'),unit:'line' as never}]}),EditError);
+ // wave: selector starts clear of the text and ends past it, as one edit
+ const rev=d.revision;const w=applyEdit(d,animatorEdit(d,'title',{op:'stagger',animator:'a',t:0,seconds:1,mode:'wave'}));assert.equal(w.revision,rev+1);
+ const a=layer(w,'title').animators![0];assert.equal(a.offset.keys.length,2);
+ const first=animatedChars(layer(w,'title'),text,0)!.map(c=>c.opacity),mid=animatedChars(layer(w,'title'),text,TICK_SEC/2)!.map(c=>c.opacity),end=animatedChars(layer(w,'title'),text,TICK_SEC)!.map(c=>c.opacity);
+ assert.ok(first.every(o=>o===1),'before the wave nothing is affected');assert.ok(mid.some(o=>o===0)&&mid.some(o=>o===1),'during the wave some characters are hit');assert.ok(end.every(o=>o===1),'after the wave nothing is affected');
+ // reveal: starts with the range covering the text, characters leave it from the left
+ let r=applyEdit(d,animatorEdit(d,'title',{op:'update',animator:'a',patch:{start:0,end:100,softness:0,unit:'char'}}));
+ r=applyEdit(r,animatorEdit(r,'title',{op:'stagger',animator:'a',t:0,seconds:1,mode:'reveal'}));
+ const r0=animatedChars(layer(r,'title'),text,0)!.map(c=>c.opacity),rm=animatedChars(layer(r,'title'),text,TICK_SEC/2)!.map(c=>c.opacity),r1=animatedChars(layer(r,'title'),text,TICK_SEC)!.map(c=>c.opacity);
+ assert.ok(r0.every(o=>o===0));assert.ok(rm[0]===1&&rm[rm.length-1]===0,'left characters appear first');assert.ok(r1.every(o=>o===1));
+ assert.throws(()=>animatorEdit(d,'title',{op:'stagger',animator:'a',t:0,seconds:0,mode:'wave'}),/0.1 to 30/);
+ assert.throws(()=>animatorEdit(d,'title',{op:'stagger',animator:'a',t:comp(d).duration,seconds:1,mode:'wave'}),/fit the composition/);
+ assert.deepEqual(validateDocument(w),[]);void chars;
 });
