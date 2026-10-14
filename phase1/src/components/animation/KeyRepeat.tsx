@@ -22,5 +22,6 @@ export function KeyRepeat({count:selected,layers}:{count:number;layers:readonly 
   <NativeInput className={`${field} w-16`} type="number" step={1} value={amt} aria-label={t('animation.keys.values.amount')} onChange={e=>setAmt(e.target.value)} data-testid="animation-keys-values-amount"/>
   <NativeSelect className={`${field} w-24 shrink-0`} value={vm} aria-label={t('animation.keys.values.mode')} onChange={e=>setVm(e.target.value as ValueMode)} data-testid="animation-keys-values-mode"><option value="offset">{t('animation.keys.values.offset')}</option><option value="scale">{t('animation.keys.values.scale')}</option><option value="snap">{t('animation.keys.values.snap')}</option><option value="wiggle">{t('animation.keys.values.wiggle')}</option></NativeSelect>
   <Button size="tiny" variant="ghost" disabled={selected<1||!amtOk} title={t('animation.keys.values.hint')} onClick={()=>{void executeCommand('animation.keys.values',{mode:vm,amount,seed});setSeed(x=>x+1);}} data-testid="animation-keys-values-go">{t('animation.keys.values')}</Button>
+  <Button size="tiny" variant="ghost" disabled={selected<1} title={t('animation.keys.easeRandom.hint')} onClick={()=>{void executeCommand('animation.keys.easeRandom',{seed});setSeed(x=>x+1);}} data-testid="animation-keys-ease-random">{t('animation.keys.easeRandom')}</Button>
  </span>;
 }

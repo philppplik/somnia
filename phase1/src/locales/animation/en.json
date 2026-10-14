@@ -822,5 +822,8 @@
  "animation.keys.values.hint": "Add the amount to the selected key values, scale their distance to the first selected key by that percent, round them to a step, or wiggle them randomly by up to that amount (new variation each click)",
  "cmd.animation.keys.values": "Offset or scale the values of the selected keys",
  "animation.keys.values.snap": "Snap to step",
- "animation.keys.values.wiggle": "Wiggle ±"
+ "animation.keys.values.wiggle": "Wiggle ±",
+ "animation.keys.easeRandom": "Random ease",
+ "animation.keys.easeRandom.hint": "Give every selected key a random preset ease",
+ "cmd.animation.keys.easeRandom": "Give the selected keys random eases"
 }

@@ -822,5 +822,8 @@
  "animation.keys.values.hint": "Suma la cantidad a las claves elegidas, escala su distancia a la primera clave (porcentaje), las redondea a un paso o las hace vibrar al azar hasta esa cantidad (variación nueva en cada clic)",
  "cmd.animation.keys.values": "Desplazar o escalar los valores de las claves elegidas",
  "animation.keys.values.snap": "Ajustar a paso",
- "animation.keys.values.wiggle": "Vibrar ±"
+ "animation.keys.values.wiggle": "Vibrar ±",
+ "animation.keys.easeRandom": "Ease aleatorio",
+ "animation.keys.easeRandom.hint": "Da a cada key seleccionada un ease predefinido aleatorio",
+ "cmd.animation.keys.easeRandom": "Dar eases aleatorios a las keys seleccionadas"
 }

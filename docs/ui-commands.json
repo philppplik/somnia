@@ -701,6 +701,21 @@
       "hasEnabled": true
     },
     {
+      "id": "animation.keys.easeRandom",
+      "title": "Give the selected keys random eases",
+      "category": "Edit",
+      "source": "animation",
+      "keywords": [
+        "animation",
+        "ease",
+        "easing",
+        "keys",
+        "organic",
+        "random"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "animation.keys.elastic",
       "title": "Bake an elastic settle between selected keys",
       "category": "Edit",

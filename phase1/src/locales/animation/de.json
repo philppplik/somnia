@@ -822,5 +822,8 @@
  "animation.keys.values.hint": "Betrag auf die gewählten Key-Werte addieren, deren Abstand zum ersten gewählten Key skalieren (Prozent), auf Schritte runden oder um bis zu diesen Betrag zufällig wackeln lassen (bei jedem Klick neue Variante)",
  "cmd.animation.keys.values": "Werte der gewählten Keys verschieben oder skalieren",
  "animation.keys.values.snap": "Auf Raster runden",
- "animation.keys.values.wiggle": "Wackeln ±"
+ "animation.keys.values.wiggle": "Wackeln ±",
+ "animation.keys.easeRandom": "Zufalls-Ease",
+ "animation.keys.easeRandom.hint": "Jedem gewählten Key ein zufälliges Preset-Ease geben",
+ "cmd.animation.keys.easeRandom": "Gewählten Keys zufällige Eases geben"
 }

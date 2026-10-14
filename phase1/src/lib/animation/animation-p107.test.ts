@@ -38,3 +38,9 @@ test('wiggle is bounded, reproducible per seed and different across seeds',()=>{
   const v=applyEdits(d,valueEdits(c,r('position',[0,10]),'wiggle',3,2));L(v).position.keys.forEach((k,i)=>(k.v as readonly number[]).forEach((x,j)=>assert.ok(Math.abs(x-(L(d).position.keys[i].v as readonly number[])[j])<=3)));
   assert.throws(()=>valueEdits(c,sel,'wiggle',0,1));assert.throws(()=>valueEdits(c,sel,'wiggle',-2,1));
 });
+import {randomEaseEdits} from './keyEaseRandom';
+test('random ease: deterministic per seed, one interp edit per key',()=>{
+ const refs=[{layer:'a',prop:'position' as const,t:0},{layer:'a',prop:'position' as const,t:10},{layer:'a',prop:'position' as const,t:20}];
+ const a=JSON.stringify(randomEaseEdits(refs,3)),b=JSON.stringify(randomEaseEdits(refs,3)),c=JSON.stringify(randomEaseEdits(refs,4));
+ assert.equal(a,b);assert.notEqual(a,c);assert.equal(randomEaseEdits(refs,3).length,3);
+});

@@ -822,5 +822,8 @@
  "animation.keys.values.hint": "Soma a quantidade às chaves escolhidas, escala a distância até a primeira chave (porcentagem), arredonda para um passo ou faz tremer aleatoriamente até essa quantidade (variação nova a cada clique)",
  "cmd.animation.keys.values": "Deslocar ou escalar os valores das chaves escolhidas",
  "animation.keys.values.snap": "Ajustar ao passo",
- "animation.keys.values.wiggle": "Tremer ±"
+ "animation.keys.values.wiggle": "Tremer ±",
+ "animation.keys.easeRandom": "Ease aleatório",
+ "animation.keys.easeRandom.hint": "Dá a cada key selecionada um ease predefinido aleatório",
+ "cmd.animation.keys.easeRandom": "Dar eases aleatórios às keys selecionadas"
 }

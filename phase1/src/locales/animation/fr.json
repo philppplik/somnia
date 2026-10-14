@@ -822,5 +822,8 @@
  "animation.keys.values.hint": "Ajoute la valeur aux clés choisies, met à l’échelle leur écart avec la première clé (pourcentage), les arrondit à un pas ou les fait trembler au hasard jusqu’à cette valeur (nouvelle variante à chaque clic)",
  "cmd.animation.keys.values": "Décaler ou mettre à l’échelle les valeurs des clés choisies",
  "animation.keys.values.snap": "Arrondir au pas",
- "animation.keys.values.wiggle": "Trembler ±"
+ "animation.keys.values.wiggle": "Trembler ±",
+ "animation.keys.easeRandom": "Ease aléatoire",
+ "animation.keys.easeRandom.hint": "Donne à chaque key sélectionnée un ease prédéfini aléatoire",
+ "cmd.animation.keys.easeRandom": "Donner des eases aléatoires aux keys sélectionnées"
 }
