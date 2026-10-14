@@ -112,6 +112,7 @@ export class ClaudeProvider implements AgentProvider {
   readonly locality = 'cloud' as const;
   constructor(private readonly options: ClaudeOptions) {}
   async *stream(request: AgentProviderRequest): AsyncGenerator<AgentProviderEvent> {
+    if(request.messages.some(m=>m.images?.length))throw new AgentError('provider-error','protocol','Image input is not supported by this provider adapter.');
     request = { ...request, messages: structuredClone(request.messages), tools: structuredClone(request.tools) };
     // Single-slot backpressure bridge keeps the shared gate alive until all SSE
     // consumption ends. Returning a Response from the gate would lose revocation.

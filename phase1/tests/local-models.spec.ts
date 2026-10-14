@@ -72,3 +72,10 @@ test('alternate runtimes are inspect-only with no inferred local execution',asyn
  await expect(page.getByRole('alert')).toContainText('requires desktop');
  await page.screenshot({path:'/tmp/local-runtime-discovery.png',fullPage:true});
 });
+test('vision file disclosure is explicit and disabled until opt-in',async({page})=>{
+ await page.goto('/test/local-models.html?state=vision');await page.getByText('Describe a local image (opt-in)',{exact:true}).click();
+ await expect(page.getByRole('button',{name:'Describe selected image',exact:true})).toBeDisabled();
+ await expect(page.getByRole('checkbox')).not.toBeChecked();
+ await expect(page.getByText('No tools, canvas capture, cloud fallback, image history or auto-apply.',{exact:false})).toBeVisible();
+ await page.screenshot({path:'/tmp/local-vision-opt-in.png',fullPage:true});
+});

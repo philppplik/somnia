@@ -96,7 +96,15 @@ export const LOCAL_MODELS_CATALOGUES:Record<string,Record<string,string>> = {
   "local.discovery.runtime": "Runtime",
   "local.discovery.endpoint": "HTTP loopback origin",
   "local.discovery.inspect": "Inspect metadata",
-  "local.discovery.desktop": "Runtime inspection requires desktop"
+  "local.discovery.desktop": "Runtime inspection requires desktop",
+  "local.vision.title": "Describe a local image (opt-in)",
+  "local.vision.boundary": "Choose a PNG/JPEG yourself. It is downscaled, re-encoded and sent only after approval to verified local Ollama with declared vision support. Set and save explicit context first. No tools, canvas capture, cloud fallback, image history or auto-apply.",
+  "local.vision.file": "Image to disclose",
+  "local.vision.optIn": "Send this prepared image to local model {model}",
+  "local.vision.describe": "Describe selected image",
+  "local.routing.title": "Studio model overrides (local tools)",
+  "local.routing.boundary": "Draft until Save. Choices affect Ollama only, never switch a cloud provider. Refresh lists verified local weights with declared tools, not task-tested quality. Each request rechecks locality and capabilities. Unknown references stay visible; no silent fallback.",
+  "local.routing.inherit": "Inherit Agent model"
  },
  "de": {
   "local.tab": "Lokal",
@@ -195,7 +203,15 @@ export const LOCAL_MODELS_CATALOGUES:Record<string,Record<string,string>> = {
   "local.discovery.runtime": "Laufzeit",
   "local.discovery.endpoint": "HTTP-Loopback-Ursprung",
   "local.discovery.inspect": "Metadaten prüfen",
-  "local.discovery.desktop": "Laufzeitprüfung benötigt Desktop"
+  "local.discovery.desktop": "Laufzeitprüfung benötigt Desktop",
+  "local.vision.title": "Lokales Bild beschreiben (Opt-in)",
+  "local.vision.boundary": "PNG/JPEG selbst wählen. Das Bild wird verkleinert, neu kodiert und erst nach Zustimmung an geprüftes lokales Ollama mit gemeldeter Bildfähigkeit gesendet. Zuerst expliziten Kontext speichern. Keine Werkzeuge, Canvas-Aufnahme, Cloud-Fallback, Bildhistorie oder automatische Anwendung.",
+  "local.vision.file": "Freizugebendes Bild",
+  "local.vision.optIn": "Dieses vorbereitete Bild an lokales Modell {model} senden",
+  "local.vision.describe": "Gewähltes Bild beschreiben",
+  "local.routing.title": "Studio-Modellzuordnung (lokale Werkzeuge)",
+  "local.routing.boundary": "Entwurf bis Save. Auswahl gilt nur für Ollama, wechselt nie Cloud-Provider. Aktualisieren zeigt lokal geprüfte Gewichte mit gemeldeten Werkzeugen, nicht getesteter Qualität. Jede Anfrage prüft Lokalität und Fähigkeiten erneut. Unbekannte Referenzen bleiben sichtbar; kein stiller Fallback.",
+  "local.routing.inherit": "Agent-Modell erben"
  },
  "es": {
   "local.tab": "Local",
@@ -294,7 +310,15 @@ export const LOCAL_MODELS_CATALOGUES:Record<string,Record<string,string>> = {
   "local.discovery.runtime": "Runtime",
   "local.discovery.endpoint": "Origen HTTP loopback",
   "local.discovery.inspect": "Inspeccionar metadatos",
-  "local.discovery.desktop": "La inspección requiere escritorio"
+  "local.discovery.desktop": "La inspección requiere escritorio",
+  "local.vision.title": "Describir imagen local (opcional)",
+  "local.vision.boundary": "Elige PNG/JPEG. Se reduce y recodifica antes de enviarlo con aprobación a Ollama local verificado con visión declarada. Guarda contexto explícito primero. Sin herramientas, captura, nube ni historial de imágenes.",
+  "local.vision.file": "Imagen a enviar",
+  "local.vision.optIn": "Enviar imagen preparada al modelo local {model}",
+  "local.vision.describe": "Describir imagen",
+  "local.routing.title": "Modelos por estudio (herramientas locales)",
+  "local.routing.boundary": "Borrador hasta guardar. Solo Ollama, no cambia proveedor cloud. La lista verifica pesos locales y herramientas declaradas, no calidad. Cada solicitud vuelve a verificar. Referencias desconocidas visibles; sin fallback silencioso.",
+  "local.routing.inherit": "Heredar modelo Agent"
  },
  "fr": {
   "local.tab": "Local",
@@ -393,7 +417,15 @@ export const LOCAL_MODELS_CATALOGUES:Record<string,Record<string,string>> = {
   "local.discovery.runtime": "Runtime",
   "local.discovery.endpoint": "Origine HTTP loopback",
   "local.discovery.inspect": "Inspecter les métadonnées",
-  "local.discovery.desktop": "L’inspection nécessite le bureau"
+  "local.discovery.desktop": "L’inspection nécessite le bureau",
+  "local.vision.title": "Décrire une image locale (optionnel)",
+  "local.vision.boundary": "Choisissez PNG/JPEG. Image réduite et réencodée, envoyée après accord à Ollama local vérifié avec vision déclarée. Enregistrez un contexte explicite. Aucun outil, capture, cloud ou historique d’image.",
+  "local.vision.file": "Image à transmettre",
+  "local.vision.optIn": "Envoyer cette image préparée au modèle local {model}",
+  "local.vision.describe": "Décrire l’image",
+  "local.routing.title": "Modèles par studio (outils locaux)",
+  "local.routing.boundary": "Brouillon jusqu’à enregistrer. Ollama uniquement, sans changer le cloud. Liste de poids locaux vérifiés avec outils déclarés, pas qualité testée. Chaque requête revérifie. Références inconnues visibles ; aucun repli silencieux.",
+  "local.routing.inherit": "Hériter du modèle Agent"
  },
  "pt-BR": {
   "local.tab": "Local",
@@ -492,6 +524,14 @@ export const LOCAL_MODELS_CATALOGUES:Record<string,Record<string,string>> = {
   "local.discovery.runtime": "Runtime",
   "local.discovery.endpoint": "Origem HTTP loopback",
   "local.discovery.inspect": "Inspecionar metadados",
-  "local.discovery.desktop": "A inspeção requer desktop"
+  "local.discovery.desktop": "A inspeção requer desktop",
+  "local.vision.title": "Descrever imagem local (opcional)",
+  "local.vision.boundary": "Escolha PNG/JPEG. Imagem reduzida e recodificada, enviada após aprovação ao Ollama local verificado com visão declarada. Salve contexto explícito antes. Sem ferramentas, captura, nuvem ou histórico de imagem.",
+  "local.vision.file": "Imagem a enviar",
+  "local.vision.optIn": "Enviar imagem preparada ao modelo local {model}",
+  "local.vision.describe": "Descrever imagem",
+  "local.routing.title": "Modelos por estúdio (ferramentas locais)",
+  "local.routing.boundary": "Rascunho até salvar. Só Ollama, sem trocar provedor cloud. Lista de pesos locais verificados com ferramentas declaradas, não qualidade testada. Cada solicitação verifica novamente. Referências desconhecidas visíveis; sem fallback silencioso.",
+  "local.routing.inherit": "Herdar modelo Agent"
  }
 };

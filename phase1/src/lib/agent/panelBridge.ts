@@ -1,3 +1,4 @@
+import {requireLocalCapabilities} from './localCapabilities';
 import {withAgentStudioContext,resolveAgentToolSet} from './studioContextAdapter';
 import type {AgentStudioContext} from './studioContextAdapter';
 import {subscribeMedia} from '../media';
@@ -54,6 +55,7 @@ export function withCustomPrompts(provider:AgentProvider,prompts:readonly Custom
 }
 /** A gated stream whose operation remains live through body consumption, with single-slot backpressure. */
 function guardedOllama(provider:OllamaProvider):AgentProvider {
+ const checked=requireLocalCapabilities(provider,config.localRuntime?.numCtx);
  return {id:provider.id,locality:provider.locality,async *stream(request:AgentProviderRequest){
   const check=await provider.verifyLocalModel(request.model,request.signal);
   if(!check.local)throw Error('Native studio mode requires a verified local Ollama model. Use a BYOK cloud provider with explicit disclosure instead.');
@@ -62,7 +64,7 @@ function guardedOllama(provider:OllamaProvider):AgentProvider {
   let gateSignal:AbortSignal|undefined;let slot:AgentProviderEvent|undefined,finished=false,error:unknown;let wake=()=>{},release=()=>{};
   const pending=agentPrivacy.run({provider:'ollama',endpoint:provider.baseUrl,processing:check.local?'local':'cloud'},async signal=>{
    gateSignal=signal;
-   for await(const event of provider.stream({...request,signal})){
+   for await(const event of checked.stream({...request,signal})){
     signal.throwIfAborted();
     await new Promise<void>(resolve=>{release=resolve;slot=event;wake();if(signal.aborted)resolve();else signal.addEventListener('abort',()=>resolve(),{once:true});});
     signal.throwIfAborted();
@@ -84,7 +86,7 @@ function openAIByMethod(options:ConstructorParameters<typeof OpenAIProvider>[0])
  }} as AgentProvider;
 }
 export function createProvider(id:AuthProvider):AgentProvider {
- if(id==='ollama')return guardedOllama(new OllamaProvider({numCtx:config.localRuntime?.numCtx,keepAliveSeconds:config.localRuntime?.keepAliveSeconds}));
+ if(id==='ollama')return guardedOllama(new OllamaProvider({numCtx:config.localRuntime?.numCtx,keepAliveSeconds:config.localRuntime?.keepAliveSeconds,maxRetries:0}));
  const options={getApiKey:()=>loadProviderKey(id),...(isTauri()?{fetch:nativeProviderFetch(id)}:{})};
  if(id==='openai'){
   if(!isTauri())return new OpenAIProvider(options);
@@ -237,6 +239,7 @@ export const realCore:AgentCore={
   const controller=new AbortController();activeController=controller;let stopped=false;const runId=++runGeneration;
   const deliver=(e:AgentEvent)=>{if(!stopped&&runId===runGeneration)onEvent(e);};send=deliver;
   if(!config.model.trim()){queueMicrotask(()=>deliver({type:'error',message:'Choose a provider and model in Settings > AI first.'}));return {cancel(){stopped=true;}};}
+  const requestModel=config.provider==='ollama'?(config.localRuntime?.studioModels?.[request.context.studio?.studioId??'']??config.model):config.model;
   const generation=getProjectGeneration();
   if(epoch!==generation){session?.cancel();session=null;sessionSerial++;proposals.clear();permissions.clear();appliedAgentProvenance.clear();documents.clear();transactions.clear();nativeIds.clear();mcpProposalMap.clear();syncMcpProposals();epoch=generation;}
   photoPreviews.clear();policy.revoke();syncDocuments();
@@ -246,7 +249,7 @@ export const realCore:AgentCore={
    if(!request.context.activeMedia&&!request.context.activeFile){
     // Empty workspaces can ask for guidance, but have no document tools or context.
     const previous=sessionProvider===config.provider?session?.snapshot():undefined;sessionProvider=config.provider;const sessionEpoch=epoch,sessionToken=++sessionSerial;
-    session=new AgentSession({provider:request.context.studio?withAgentStudioContext(withCustomPrompts(createProvider(config.provider),config.customPrompts),{...request.context.studio,documentRef:null,selectionSummary:'No selection',capabilities:[]}):withCustomPrompts(createProvider(config.provider),config.customPrompts),model:config.model,onEvent:event=>{
+    session=new AgentSession({provider:request.context.studio?withAgentStudioContext(withCustomPrompts(createProvider(config.provider),config.customPrompts),{...request.context.studio,documentRef:null,selectionSummary:'No selection',capabilities:[]}):withCustomPrompts(createProvider(config.provider),config.customPrompts),model:requestModel,onEvent:event=>{
      if(sessionEpoch!==epoch||sessionToken!==sessionSerial||controller.signal.aborted)return;
      if(event.type==='text')deliver({type:'text-delta',text:event.text});
      else if(event.type==='notice')deliver({type:'error',message:event.message,code:event.code,retryable:event.retryable});
@@ -273,7 +276,7 @@ export const realCore:AgentCore={
    const previous=sessionProvider===config.provider?session?.snapshot():undefined;sessionProvider=config.provider;const sessionEpoch=epoch,sessionToken=++sessionSerial;
    const scoped=scopedProvider(withCustomPrompts(createProvider(config.provider),config.customPrompts),context);
    const provider=request.context.studio?withAgentStudioContext(scoped,request.context.studio):scoped;
-   session=new AgentSession({provider,model:config.model,tools:createTools(String(generation),context,nodes,request.context.studio),onEvent:event=>{
+   session=new AgentSession({provider,model:requestModel,tools:createTools(String(generation),context,nodes,request.context.studio),onEvent:event=>{
     if(sessionEpoch!==epoch||sessionToken!==sessionSerial||controller.signal.aborted)return;
     if(event.type==='text')deliver({type:'text-delta',text:event.text});
     else if(event.type==='state'&&event.status==='running')deliver({type:'status',text:`Working on ${base.ref.path} · revision ${base.ref.revision}`});

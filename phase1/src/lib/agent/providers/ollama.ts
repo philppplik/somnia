@@ -53,6 +53,7 @@ function withTimeout(signal: AbortSignal | undefined, ms: number): { signal: Abo
 
 export class OllamaProvider implements AgentProvider {
   readonly id = 'ollama';
+  readonly supportsImages=true;
   /** Derived from the validated endpoint: 'local' only for http loopback, else 'cloud' (must pass the consent gate). */
   readonly locality: 'cloud' | 'local';
   private numCtx?: number;
@@ -119,6 +120,19 @@ export class OllamaProvider implements AgentProvider {
       const pe = this.toError(e, t.signal, signal);
       return no('unreachable', pe.message);
     } finally { t.done(); }
+  }
+
+  /** Declared daemon capabilities only. Missing/malformed stays unknown, never inferred from names. */
+  async capabilities(model:string,signal?:AbortSignal):Promise<string[]|null>{
+    if(this.locality!=='local')return null;
+    const timer=withTimeout(signal,this.timeout);
+    try{
+      const response=await this.f(this.baseUrl+'/api/show',{method:'POST',redirect:'error',headers:{'content-type':'application/json'},body:JSON.stringify({model}),signal:timer.signal});
+      if(!response.ok)return null;
+      const value=await response.json();
+      if(!value||value.remote_host||value.remote_model||!value.model_info||typeof value.model_info!=='object'||Array.isArray(value.model_info)||!Object.keys(value.model_info).length||!Array.isArray(value.capabilities)||!value.capabilities.every((c:unknown)=>typeof c==='string'))return null;
+      return value.capabilities;
+    }catch{return null;}finally{timer.done();}
   }
 
   async health(signal?: AbortSignal): Promise<HealthStatus> {
@@ -239,7 +253,8 @@ export function toOllamaMessages(messages: readonly AgentMessage[]): unknown[] {
     if (m.role === 'assistant' && m.toolCalls?.length) {
       return { role: 'assistant', content: m.content, tool_calls: m.toolCalls.map((c) => ({ function: { name: c.name, arguments: safeParse(c.arguments) } })) };
     }
-    return { role: m.role, content: m.content };
+    if(m.images?.length&&m.role!=='user')throw new ProviderError('protocol','Images require a user message');
+    return { role: m.role, content: m.content, ...(m.images?.length?{images:m.images.map(image=>image.base64)}:{}) };
   });
 }
 function safeParse(s: string): unknown { try { const v = JSON.parse(s); return v && typeof v === 'object' ? v : {}; } catch { return {}; } }

@@ -6,7 +6,7 @@ use std::path::Path;
 pub struct CustomPrompt { pub id: String, pub name: String, pub text: String, pub enabled: bool }
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all="camelCase",deny_unknown_fields)]
-pub struct LocalRuntimePreferences {pub version:u8,#[serde(default,skip_serializing_if="Option::is_none")]pub num_ctx:Option<u32>,#[serde(default,skip_serializing_if="Option::is_none")]pub keep_alive_seconds:Option<u32>}
+pub struct LocalRuntimePreferences {pub version:u8,#[serde(default,skip_serializing_if="Option::is_none")]pub num_ctx:Option<u32>,#[serde(default,skip_serializing_if="Option::is_none")]pub keep_alive_seconds:Option<u32>,#[serde(default,skip_serializing_if="Option::is_none")]pub studio_models:Option<std::collections::BTreeMap<String,String>>}
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct Preferences {
@@ -23,6 +23,7 @@ impl Preferences {
             return Err("Invalid agent preferences".into());
         }
         if let Some(p)=&self.local_runtime {
+            if let Some(models)=&p.studio_models {if models.len()>100||models.iter().any(|(id,model)|id.is_empty()||id.len()>80||!id.bytes().all(|c|c.is_ascii_alphanumeric()||b"._-".contains(&c))||model.trim().is_empty()||model.len()>512||model.contains(['\r','\n','\0'])){return Err("Invalid studio model choices".into());}}
             if p.version!=1 || p.num_ctx.is_some_and(|n|n==0||n>1_048_576) || p.keep_alive_seconds.is_some_and(|n|n>86_400){return Err("Invalid local runtime preferences".into());}
         }
         if self.custom_prompts.len() > 20 || self.custom_prompts.iter().map(|p| p.text.len()).sum::<usize>() > 16000 {

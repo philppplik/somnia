@@ -1,13 +1,18 @@
 import {invoke,isTauri} from '@tauri-apps/api/core';
 import type {AgentConfiguration} from './panelBridge';
-export interface LocalRuntimePreferences {version:1;numCtx?:number;keepAliveSeconds?:number}
+export interface LocalRuntimePreferences {version:1;numCtx?:number;keepAliveSeconds?:number;studioModels?:Record<string,string>}
 export function normalizeLocalRuntime(value:unknown):LocalRuntimePreferences|undefined {
  if(value===undefined)return undefined;
  if(!value||typeof value!=='object'||Array.isArray(value))throw Error('Invalid local runtime preferences');
  const p=value as Record<string,unknown>;
- if(Object.keys(p).some(k=>!['version','numCtx','keepAliveSeconds'].includes(k))||p.version!==1)throw Error('Invalid local runtime preferences');
+ if(Object.keys(p).some(k=>!['version','numCtx','keepAliveSeconds','studioModels'].includes(k))||p.version!==1)throw Error('Invalid local runtime preferences');
  for(const [key,min,max] of [['numCtx',1,1048576],['keepAliveSeconds',0,86400]] as const){const n=p[key];if(n!==undefined&&(typeof n!=='number'||!Number.isInteger(n)||n<min||n>max))throw Error('Invalid local runtime option: '+key);}
- return {version:1,...(p.numCtx!==undefined?{numCtx:p.numCtx as number}:{}),...(p.keepAliveSeconds!==undefined?{keepAliveSeconds:p.keepAliveSeconds as number}:{})};
+ let studioModels:Record<string,string>|undefined;
+ if(p.studioModels!==undefined){
+  if(!p.studioModels||typeof p.studioModels!=='object'||Array.isArray(p.studioModels)||Object.keys(p.studioModels).length>100)throw Error('Invalid studio model choices');
+  studioModels=Object.fromEntries(Object.entries(p.studioModels).map(([id,model])=>{if(!/^[a-zA-Z0-9._-]{1,80}$/.test(id)||typeof model!=='string'||!model.trim()||model.length>512||/[\r\n\0]/.test(model))throw Error('Invalid studio model choice');return [id,model];}));
+ }
+ return {version:1,...(studioModels?{studioModels}:{}),...(p.numCtx!==undefined?{numCtx:p.numCtx as number}:{}),...(p.keepAliveSeconds!==undefined?{keepAliveSeconds:p.keepAliveSeconds as number}:{})};
 }
 export interface CustomPrompt {id:string;name:string;text:string;enabled:boolean}
 const PREFS='somnia.agent.preferences.v1';

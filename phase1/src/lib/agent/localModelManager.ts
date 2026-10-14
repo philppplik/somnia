@@ -74,6 +74,7 @@ export class LocalModelManager {
  async remove(model:string,digest:string){
   if(this.busy||!this.allowed())throw Error('Another operation or AI request is active');
   const state=agentSettingsSnapshot();if(state.config.provider==='ollama'&&(state.config.model===model||state.config.model+':latest'===model))throw Error('This model is used by saved Agent settings. Choose and save a replacement first.');
+  if(Object.values(state.config.localRuntime?.studioModels??{}).some(value=>value===model||value+':latest'===model))throw Error('This model is assigned to a studio. Save a replacement first.');
   this.busy=true;
   try{if(!this.allowed())throw Error('AI request became active');await this.transport.remove(model,digest);const current=await this.runtime.snapshot();if(current.inventoryError||current.state!=='running'||current.models.some(m=>m.id===model))throw Error('Removal not confirmed. Refresh before retrying.');}
   finally{this.busy=false;this.listeners.forEach(listener=>listener());}
