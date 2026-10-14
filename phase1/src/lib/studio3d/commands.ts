@@ -44,6 +44,8 @@ export interface Studio3DController{
  keyShift(keys:KeyRef[],delta:number,id?:number):number;
  clipDuplicate(clip?:number):number;
  animRange(range:LoopRange|null):void;
+ selectBone(id:number):void;
+ setSkeleton(on:boolean):void;
  autoKey(on:boolean):void;
  animPlay(clip?:number):void;
  animPause():void;
@@ -101,6 +103,7 @@ const VEC={type:'object',properties:{x:{type:'number'},y:{type:'number'},z:{type
 const PRIMITIVE_PROPS:Record<string,unknown>=Object.fromEntries(Object.values(PARAM_SPECS).flat().map(p=>[p.id,{type:p.integer?'integer':'number',minimum:p.min,maximum:p.max}]));
 const hasClips=()=>hasScene()&&getStudio3DState().clips.length>0;
 const hasKeys=()=>hasScene()&&getStudio3DState().selected!=null&&getStudio3DState().clips.length>0;
+const hasBones=()=>hasScene()&&getStudio3DState().bones.length>0;
 const KEYREFS={type:'array',items:{type:'object',properties:{path:{enum:['position','rotation','scale']},time:{type:'number',minimum:0,maximum:3600}},required:['path','time'],additionalProperties:false},minItems:1,maxItems:6000};
 const hasScene=()=>!!controller&&getStudio3DState().status==='ready';
 const object=(properties:Record<string,unknown>,required=Object.keys(properties))=>({type:'object',properties,required,additionalProperties:false});
@@ -166,6 +169,8 @@ export function studio3DCommandSpecs():CommandSpec<unknown,unknown>[]{
    if(p?.clear)need().animRange(null);
    else{if(typeof p?.start!=='number'||typeof p?.end!=='number')throw Object.assign(new Error('Give a start and an end, or clear.'),{expected:true});need().animRange({start:p.start,end:p.end});}
   },object({start:{type:'number',minimum:0,maximum:3600},end:{type:'number',minimum:0,maximum:3600},clear:{type:'boolean'}},[]),hasClips),
+  add<{on?:boolean}>('studio3d.skeleton.show','Show or hide the skeleton overlay of a skinned 3D model','View',p=>need().setSkeleton(p?.on??!getStudio3DState().skeleton),object({on:{type:'boolean'}},[]),hasBones),
+  add<{id:number}>('studio3d.skeleton.select','Select a bone of a skinned 3D model','Edit',p=>need().selectBone(p.id),object({id:{type:'integer',minimum:0}}),hasBones),
   add<{on?:boolean}>('studio3d.anim.autokey','Turn auto-key on or off: transform changes are recorded as keys at the current time','View',p=>need().autoKey(p?.on??!getStudio3DState().autoKey),object({on:{type:'boolean'}},[]),hasScene),
   add('studio3d.export.glb','Export the scene as GLB','Project',()=>need().exportGlb()),
   add('studio3d.export.gltf','Export the scene as glTF (JSON with embedded data)','Project',()=>need().exportGltf()),

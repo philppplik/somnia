@@ -39,7 +39,7 @@ export function ClipTimeline(){
   const el=root.current;if(!el)return;
   const onWheel=(e:WheelEvent)=>{
    e.preventDefault();
-   const r=lane.current[KEY_PATHS[0]]?.getBoundingClientRect();
+   const r=(KEY_PATHS.map(p=>lane.current[p]).find(Boolean) as SVGSVGElement|undefined)?.getBoundingClientRect();
    setView(cur=>{
     const c=clampView(cur,duration);
     if(e.shiftKey||Math.abs(e.deltaX)>Math.abs(e.deltaY))return panView(c,duration,(e.shiftKey?e.deltaY:e.deltaX)/100*(c.span*0.25));
@@ -51,6 +51,8 @@ export function ClipTimeline(){
   return()=>el.removeEventListener('wheel',onWheel);
  },[duration]);
  if(!clip||!s.selectedInfo)return null;
+ // Bones take rotation keys only; meshes get all three lanes.
+ const paths:readonly KeyPath[]=s.selectedInfo.kind==='bone'?['rotation']:KEY_PATHS;
  const run=(id:string,p?:Record<string,unknown>)=>void executeCommand(id,p);
  const atX=(path:KeyPath,x:number)=>{const r=lane.current[path]?.getBoundingClientRect();return r?timeInView(x,r.left,r.width,v):v.start;};
  const isSel=(path:KeyPath,time:number)=>sel.some(r=>r.path===path&&Math.abs(r.time-time)<EPS);
@@ -91,7 +93,7 @@ export function ClipTimeline(){
      <text x={viewPercent(x,v)+'%'} y="14" fontSize={9} className="fill-current">{formatClock(x)}</text></g>)}
    </svg>
   </div>
-  {KEY_PATHS.map(path=>{const k=s.clipKeys.find(x=>x.path===path);const here=!!k&&k.times.some(x=>Math.abs(x-a.time)<EPS);
+  {paths.map(path=>{const k=s.clipKeys.find(x=>x.path===path);const here=!!k&&k.times.some(x=>Math.abs(x-a.time)<EPS);
    return <div key={path} className="flex items-center gap-2 text-xs text-ink-2" data-testid={'studio3d-keyrow-'+path}>
     <span className="w-14 shrink-0">{t('studio3d.key.'+path)}</span>
     <Button variant="outline" className="w-24 shrink-0 justify-center truncate" onClick={()=>run('studio3d.key.set',{path})}>{here?t('studio3d.key.update'):t('studio3d.key.add')}</Button>

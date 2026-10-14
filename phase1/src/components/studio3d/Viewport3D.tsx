@@ -22,6 +22,7 @@ import {getState as getAppState} from '../../store/appStore';
 import {readProjectUnit,writeProjectUnit} from '../../lib/studio3d/projectPrefs';
 import {toggleSelection,marqueeRect,inRect,turntablePlan,frameName,exportFileName,unitScale,isUnit,isMeshFormat,mergeSnap,snapTo,stlUnitHint,mtlReferences,mtlTextures,clampRenderSize,MAX_MTL_BYTES,MAX_TEXTURE_BYTES,MAX_TEXTURE_FILES,SnapError,mergeEnv,envFormatFor,nudgeFor,EnvError,modelFormatFor,readModelHeader,externalResources,ModelError,boundsValid,boundsCenter,boundsRadius,frameDistance,clipPlanes} from '../../lib/studio3d/model';
 import type {Bounds} from '../../lib/studio3d/model';
+import {checkSkins} from '../../lib/studio3d/skeleton';
 import {Stage,beginGroupDrag,applyGroupDrag,collectNodeExtras,applyNodeExtras,type GroupDragMember,type TransformSnapshot} from '../../lib/studio3d/stage';
 import {parseDocument,buildDocument,sceneBytes,fromBase64,DocumentError} from '../../lib/studio3d/document';
 import {registerStudio3DController} from '../../lib/studio3d/commands';
@@ -136,8 +137,8 @@ export default function Viewport3D(){
    const sel=getStudio3DState().selected;const info=sel==null?null:stage.info(sel);
    const infos=clipInfos();const an=getStudio3DState().anim;const keys=sel==null||!infos[an.clip]?[]:stage.keysOf(an.clip,sel);
    if(an.clip>=infos.length&&an.clip>0){stopAnim();patchStudio3D({anim:{clip:0,playing:false,time:0,loop:true,speed:1,range:null}});}
-   patchStudio3D({clips:infos,clipKeys:keys,stats:m.stats,outline:m.outline,bounds:m.bounds,selected:info?sel:null,selectedInfo:info,dirty:stage.dirty,canUndo:stage.canUndo,canRedo:stage.canRedo,undoLabel:stage.undoLabel});
-   drawSelection();applyWire(getStudio3DState().wireframe);for(const h of syncHooks)h();invalidate();
+   patchStudio3D({clips:infos,clipKeys:keys,stats:m.stats,outline:m.outline,bones:stage.bones(),bounds:m.bounds,selected:info?sel:null,selectedInfo:info,dirty:stage.dirty,canUndo:stage.canUndo,canRedo:stage.canRedo,undoLabel:stage.undoLabel});
+   drawSelection();applyWire(getStudio3DState().wireframe);syncSkeleton();for(const h of syncHooks)h();invalidate();
   };
   const offStage=stage.onChange(()=>{if(!disposed)sync();});
   const frameSelection=()=>{
@@ -196,6 +197,7 @@ export default function Viewport3D(){
      return{gltf:{scene,animations:[]},header,size:bytes.byteLength,notice,unitHint};
     }
     if(header.format==='gltf'||header.format==='glb'){
+     checkSkins(file.name,header.json);
      const missing=externalResources(header.json).filter(r=>!urls.has(base(decodeURIComponent(r)).toLowerCase()));
      if(missing.length)throw new ModelError(`${file.name} refers to files that were not selected: ${missing.slice(0,4).join(', ')}${missing.length>4?', ...':''}. Select the .gltf together with its .bin and texture files.`);
     }
@@ -237,6 +239,18 @@ export default function Viewport3D(){
     if(!groupPivot.parent)scene.add(groupPivot);groupPivot.updateMatrixWorld(true);gizmo.attach(groupPivot);return;
    }
    const id=getStudio3DState().selected;const o=id==null?null:stage.find(id);if(o)gizmo.attach(o);else gizmo.detach();
+  };
+  /** Skeleton overlay: rebuilt when the set of bones changes, shown when the session toggle is on. Kept out of the stage root so it never exports or alters bounds. */
+  let skelHelper:THREE.SkeletonHelper|null=null;let skelKey='';
+  const syncSkeleton=()=>{
+   const list=stage.bones();const key=list.map(b=>b.id).join(',');
+   if(key!==skelKey){
+    skelKey=key;
+    if(skelHelper){scene.remove(skelHelper);skelHelper.geometry.dispose();(skelHelper.material as THREE.Material).dispose();skelHelper=null;}
+    if(list.length)skelHelper=new THREE.SkeletonHelper(stage.root);
+    if(skelHelper)scene.add(skelHelper);
+   }
+   if(skelHelper)skelHelper.visible=getStudio3DState().skeleton;
   };
   const helpers=new Map<number,THREE.CameraHelper>();
   const syncCameraHelpers=()=>{
@@ -526,6 +540,11 @@ export default function Viewport3D(){
   };
   const keyShift=(keys:KeyRef[],delta:number,id?:number)=>stage.shiftKeys(anim().clip,keyTarget(id),keys,delta);
   const clipDuplicate=(clip?:number)=>{const i=stage.duplicateClip(clipIndex(clip));stopAnim();patchStudio3D({anim:{...anim(),clip:i,playing:false,time:0,range:null}});return i;};
+  const selectBone=(id:number)=>{
+   if(!stage.isBone(id))throw Object.assign(new Error('That is not a bone.'),{expected:true});
+   select(id);
+  };
+  const setSkeleton=(on:boolean)=>{patchStudio3D({skeleton:!!on});syncSkeleton();invalidate();};
   const animRange=(range:LoopRange|null)=>{
    const infos=clipInfos();const a=anim();checkClip(a.clip,infos);
    if(range===null){patchStudio3D({anim:{...a,range:null}});return;}
@@ -535,7 +554,7 @@ export default function Viewport3D(){
   /** Auto-key records transform changes into the current clip at the playhead. Turning it on without a clip makes one. */
   const autoKey=(on:boolean)=>{if(on&&!stage.clips.length)clipAdd();patchStudio3D({autoKey:!!on});};
   stage.autoKeySource=()=>getStudio3DState().autoKey&&stage.clips.length?{clip:anim().clip,time:anim().time}:null;
-  const off=registerStudio3DController({keyMove,keyEase,keyCopy,keyPaste,keyShift,clipDuplicate,animRange,autoKey,clipAdd,clipRemove,clipRename,clipDuration,keySet,keyRemove,animPlay,animPause,animSeek,animLoop,animSpeed,setTextureTransform:(id,slot,p)=>stage.setTextureTransform(id,slot,p),exportGltf,setTextureFile,mirrorSelection,applyScale:applyScaleSel,mergeSelection:mergeSel,viewPreset,setPrimitive:(id,p)=>stage.setPrimitive(id,p),
+  const off=registerStudio3DController({keyMove,keyEase,keyCopy,keyShift,clipDuplicate,animRange,selectBone,setSkeleton,keyPaste,autoKey,clipAdd,clipRemove,clipRename,clipDuration,keySet,keyRemove,animPlay,animPause,animSeek,animLoop,animSpeed,setTextureTransform:(id,slot,p)=>stage.setTextureTransform(id,slot,p),exportGltf,setTextureFile,mirrorSelection,applyScale:applyScaleSel,mergeSelection:mergeSel,viewPreset,setPrimitive:(id,p)=>stage.setPrimitive(id,p),
    save:saveDocument,deleteSelection,duplicateSelection,exportMesh,renderTurntable,cancelRender:()=>{cancelFlag=true;},setUnit,openFiles,newScene,resetView:frameAll,frameSelection,select,renderStill,exportGlb,
    addPrimitive:k=>{const o=stage.addPrimitive(k);select(o.id);return o.id;},addLight:k=>{const o=stage.addLight(k);select(o.id);return o.id;},
    setTransform:(id,p)=>stage.setTransform(id,p),setMaterial:(id,p)=>stage.setMaterial(id,p),rename:(id,n)=>stage.rename(id,n),
@@ -617,7 +636,7 @@ export default function Viewport3D(){
    disposed=true;opening++;stopAnim();mixer?.stopAllAction();stage.autoKeySource=null;off();offAuto();if(autoTimer)clearTimeout(autoTimer);cancelAnimationFrame(frame);ro.disconnect();controls.dispose();
    cv.removeEventListener('pointerdown',onDownCapture,true);cv.removeEventListener('pointerdown',onDown);window.removeEventListener('pointermove',onMove);window.removeEventListener('pointercancel',endMarquee);endMarquee();cv.removeEventListener('pointerup',onUp);cv.removeEventListener('keydown',onKey);
    if(getStudio3DState().status==='loading')patchStudio3D({status:stage.root.children.length?'ready':'idle',confirmReplace:null});
-   gizmo.detach();gizmo.dispose();offStage();clearSelection();for(const h of helpers.values())h.dispose();grid.geometry.dispose();(grid.material as THREE.Material).dispose();for(const t of envTargets)t.dispose();envCache.clear();pmrem.dispose();renderer.dispose();renderer.forceContextLoss();
+   gizmo.detach();gizmo.dispose();offStage();clearSelection();if(skelHelper){scene.remove(skelHelper);skelHelper.geometry.dispose();(skelHelper.material as THREE.Material).dispose();skelHelper=null;}for(const h of helpers.values())h.dispose();grid.geometry.dispose();(grid.material as THREE.Material).dispose();for(const t of envTargets)t.dispose();envCache.clear();pmrem.dispose();renderer.dispose();renderer.forceContextLoss();
    if(cv.parentNode===el)el.removeChild(cv);
   };
  // eslint-disable-next-line react-hooks/exhaustive-deps

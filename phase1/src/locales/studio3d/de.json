@@ -329,5 +329,10 @@
  "studio3d.range.from": "Schleife ab Abspielkopf",
  "studio3d.range.to": "Schleife bis Abspielkopf",
  "studio3d.range.clear": "Schleifenbereich aufheben",
- "studio3d.range.label": "Schleifenbereich {start} bis {end}"
+ "studio3d.range.label": "Schleifenbereich {start} bis {end}",
+ "cmd.studio3d.skeleton.show": "Ein- oder Ausblenden des Skelett-Overlays eines skinned 3D-Modells",
+ "cmd.studio3d.skeleton.select": "Wählt einen Knochen eines skinned 3D-Modells",
+ "studio3d.skeleton.bone": "Knochen",
+ "studio3d.skeleton.none": "Kein Knochen (Objekt-Keys)",
+ "studio3d.skeleton.show": "Skelett-Overlay"
 }

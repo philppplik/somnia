@@ -287,6 +287,13 @@ function AnimationControls(){
     <label className="flex items-center gap-2 text-xs text-ink-2">{t('studio3d.anim.speed')}<NativeSelect className="rounded-sm border border-subtle bg-surface p-1 text-xs text-ink" value={a.speed} onChange={e=>void executeCommand('studio3d.anim.speed',{speed:Number(e.currentTarget.value)})}>
      {SPEEDS.map(v=><option key={v} value={v}>{v}x</option>)}</NativeSelect></label></div>
    <label className="flex items-center gap-2 text-xs text-ink-2"><NativeInput type="checkbox" checked={s.autoKey} onChange={e=>void executeCommand('studio3d.anim.autokey',{on:e.currentTarget.checked})}/>{t('studio3d.anim.autokey')}</label>
+   {s.bones.length>0&&<div className="flex flex-wrap items-center gap-3" data-testid="studio3d-skeleton">
+    <label className="flex items-center gap-2 text-xs text-ink-2">{t('studio3d.skeleton.bone')}
+     <NativeSelect className="rounded-sm border border-subtle bg-surface p-1 text-xs text-ink" value={sel?.kind==='bone'?String(sel.id):''} onChange={e=>{const v=e.currentTarget.value;if(v==='')void executeCommand('studio3d.select',{id:null});else void executeCommand('studio3d.skeleton.select',{id:Number(v)});}}>
+      <option value="">{t('studio3d.skeleton.none')}</option>
+      {s.bones.map(b=><option key={b.id} value={b.id}>{'  '.repeat(b.depth)+b.name}</option>)}</NativeSelect></label>
+    <label className="flex items-center gap-2 text-xs text-ink-2"><NativeInput type="checkbox" checked={s.skeleton} onChange={e=>void executeCommand('studio3d.skeleton.show',{on:e.currentTarget.checked})}/>{t('studio3d.skeleton.show')}</label>
+   </div>}
    {sel?<div className="grid gap-1" data-testid="studio3d-keys" role="group" aria-label={t('studio3d.key.title',{name:sel!.name})}>
     <p className="m-0 text-xs text-ink-3">{t('studio3d.key.title',{name:sel!.name})}</p>
     <ClipTimeline/>

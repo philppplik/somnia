@@ -1,5 +1,21 @@
 import {readFileSync} from 'node:fs';
 import {test,expect} from './fixtures';
+/** A two-bone skinned box as GLB bytes, built with the real exporter (Node side, so the page test needs no fixture file). */
+async function skinnedGlb():Promise<Buffer>{
+ const THREE=await import('three');const {GLTFExporter}=await import('three/examples/jsm/exporters/GLTFExporter.js');
+ class FR{result:string|ArrayBuffer|null=null;onloadend:(()=>void)|null=null;onerror:(()=>void)|null=null;
+  readAsArrayBuffer(b:Blob){void b.arrayBuffer().then(r=>{this.result=r;this.onloadend?.();},()=>this.onerror?.());}
+  readAsDataURL(b:Blob){void b.arrayBuffer().then(r=>{this.result=`data:application/octet-stream;base64,${Buffer.from(r as ArrayBuffer).toString('base64')}`;this.onloadend?.();},()=>this.onerror?.());}}
+ (globalThis as unknown as {FileReader:unknown}).FileReader??=FR;(globalThis as unknown as {ProgressEvent:unknown}).ProgressEvent??=Event;
+ const geo=new THREE.BoxGeometry(1,2,1);const count=geo.getAttribute('position').count;
+ const si=new Uint16Array(count*4),sw=new Float32Array(count*4);for(let i=0;i<count;i++){si[i*4]=i%2;sw[i*4]=1;}
+ geo.setAttribute('skinIndex',new THREE.Uint16BufferAttribute(si,4));geo.setAttribute('skinWeight',new THREE.Float32BufferAttribute(sw,4));
+ const hip=new THREE.Bone();hip.name='Hip';const knee=new THREE.Bone();knee.name='Knee';knee.position.y=1;hip.add(knee);
+ const mesh=new THREE.SkinnedMesh(geo,new THREE.MeshStandardMaterial({color:0x8899aa}));mesh.name='Body';mesh.add(hip);mesh.bind(new THREE.Skeleton([hip,knee]));
+ const scene=new THREE.Scene();scene.add(mesh);
+ const out=await new GLTFExporter().parseAsync(scene,{binary:true}) as ArrayBuffer;
+ return Buffer.from(out);
+}
 /** CI-only: needs a browser with WebGL (headless Chromium uses SwiftShader). Not run in the authoring sandbox. */
 function triangleGlb():Buffer{
  const pos=Buffer.from(new Float32Array([0,0,0,1,0,0,0,1,0]).buffer),idx=Buffer.from(new Uint16Array([0,1,2,0]).buffer);
@@ -275,4 +291,37 @@ test('3D studio zooms the timeline, shifts and pastes key selections, duplicates
  await run(page,'studio3d.anim.pause',{});
  await run(page,'studio3d.anim.range',{clear:true});
  await expect.poll(async()=>(await session(page)).anim.range).toBe(null);
+});
+
+test('3D studio shows a skeleton overlay, keys a bone rotation and exports the skin back',async({page})=>{
+ const glb=await skinnedGlb();
+ await open3d(page);
+ await page.getByTestId('studio3d-file-input').setInputFiles({name:'rig.glb',mimeType:'model/gltf-binary',buffer:glb});
+ await expect(page.getByTestId('studio3d-viewport')).toBeVisible({timeout:20_000});
+ await expect(page.getByTestId('studio3d-skeleton')).toBeVisible();
+ // Bones are picked from the bone list, not the scene list.
+ await expect(page.getByTestId('studio3d-scene-panel')).not.toContainText('Knee');
+ await page.getByLabel('Bone').selectOption({index:2});
+ await expect.poll(async()=>(await session(page)).info?.kind).toBe('bone');
+ // The timeline reuses the clip editor with the rotation lane only.
+ await run(page,'studio3d.clip.add',{name:'Bend',duration:2});
+ await run(page,'studio3d.key.set',{path:'rotation',time:0});
+ await run(page,'studio3d.key.set',{path:'rotation',time:1,z:45});
+ await expect(page.getByTestId('studio3d-keyrow-rotation')).toContainText('0:01.00');
+ await expect(page.getByTestId('studio3d-keyrow-position')).toHaveCount(0);
+ // Position keys on a bone are refused with a readable error.
+ await run(page,'studio3d.key.set',{path:'position',time:0});
+ await expect(page.getByRole('alert')).toContainText('rotation keys only');
+ // The overlay toggles off and on.
+ await page.getByRole('checkbox',{name:/Skeleton overlay/}).uncheck();
+ await page.getByRole('checkbox',{name:/Skeleton overlay/}).check();
+ // Export keeps the skin, the clip and the authoring keys, and the reopened file behaves the same.
+ const [download]=await Promise.all([page.waitForEvent('download'),page.getByTestId('studio3d-export').getByRole('button',{name:'GLB'}).click()]);
+ const bytes=readFileSync(await download.path()!);
+ expect(bytes.toString('latin1')).toContain('"skins"');
+ await page.getByTestId('studio3d-file-input').setInputFiles({name:'rig2.glb',mimeType:'model/gltf-binary',buffer:bytes});
+ await expect(page.getByTestId('studio3d-skeleton')).toBeVisible({timeout:20_000});
+ await expect.poll(async()=>(await session(page)).clips[0]?.name).toBe('Bend');
+ await page.getByLabel('Bone').selectOption({index:2});
+ await expect.poll(async()=>(await session(page)).clipKeys.find(k=>k.path==='rotation')?.times).toEqual([0,1]);
 });

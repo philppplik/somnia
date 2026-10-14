@@ -329,5 +329,10 @@
  "studio3d.range.from": "Boucle depuis la lecture",
  "studio3d.range.to": "Boucle jusqu’à la lecture",
  "studio3d.range.clear": "Supprimer la boucle",
- "studio3d.range.label": "Boucle de {start} à {end}"
+ "studio3d.range.label": "Boucle de {start} à {end}",
+ "cmd.studio3d.skeleton.show": "Affiche ou masque la surimpression du squelette d’un modèle 3D skinné",
+ "cmd.studio3d.skeleton.select": "Sélectionne un os d’un modèle 3D skinné",
+ "studio3d.skeleton.bone": "Os",
+ "studio3d.skeleton.none": "Aucun os (clés d’objet)",
+ "studio3d.skeleton.show": "Surimpression du squelette"
 }

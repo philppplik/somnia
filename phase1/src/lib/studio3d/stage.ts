@@ -460,6 +460,19 @@ export class Stage{
   if(d===clip.duration)return;this.editClip(i,`Length of clip ${clip.name}`,c=>({...this.snapClip(c),duration:d}));
  }
  private keyNode(id:number):THREE.Object3D{const o=this.need(id);if(o===this.root)throw new ClipError('The scene root cannot be animated.');return o;}
+ /** Bones of every skin in the scene, depth-first. The depth indents the bone picker (roots at 0). */
+ bones():{id:number;name:string;depth:number}[]{
+  const out:{id:number;name:string;depth:number}[]=[];
+  const walk=(o:THREE.Object3D,inside:boolean,depth:number)=>{
+   for(const c of o.children){const bone=(c as THREE.Bone).isBone;if(bone)out.push({id:c.id,name:c.name||`Bone ${c.id}`,depth:bone?(inside?depth+1:0):depth});walk(c,bone,bone?(inside?depth+1:0):depth);}
+  };
+  walk(this.root,false,0);return out;
+ }
+ isBone(id:number):boolean{const o=this.find(id);return !!(o&&(o as THREE.Bone).isBone);}
+ /** Only rotation keys can be authored on bones. Tracks that a file already carries (translation, scale) still play and export, but are not key-editable here. */
+ private keyPathFor(node:THREE.Object3D,path:KeyPath){
+  if((node as THREE.Bone).isBone&&path!=='rotation')throw new ClipError('Bones take rotation keys only.');
+ }
  private trackOf(clip:THREE.AnimationClip,node:THREE.Object3D,path:KeyPath){const n=trackName(node.uuid,path);return clip.tracks.find(t=>t.name===n);}
  private makeTrack(name:string,path:KeyPath,times:number[],values:number[],interp?:THREE.InterpolationModes){return path==='rotation'?new THREE.QuaternionKeyframeTrack(name,times,values,interp):new THREE.VectorKeyframeTrack(name,times,values,interp);}
  /** The clip state after putting a key on one path of a node. Used by setKey and by auto-key. */
@@ -482,12 +495,12 @@ export class Stage{
  /** Adds or replaces a key on the position, rotation or scale of an object. Without a value the current transform of the object is recorded. One undo step. A key after the end extends the clip. */
  setKey(i:number,id:number,path:KeyPath,time:number,value?:Partial<Vec3>){
   if(!KEY_PATHS.includes(path))throw new ClipError('The path must be position, rotation or scale.');
-  const clip=this.needClip(i);const node=this.keyNode(id);const t=checkKeyTime(time);
+  const clip=this.needClip(i);const node=this.keyNode(id);this.keyPathFor(node,path);const t=checkKeyTime(time);
   const r=this.withKey(clip,node,path,t,this.valueOf(node,path,value));
   this.editClip(i,`${r.replaced?'Change':'Add'} ${path} key on ${node.name}`,()=>r.state);
  }
  removeKey(i:number,id:number,path:KeyPath,time:number){
-  const clip=this.needClip(i);const node=this.keyNode(id);const t=checkKeyTime(time);const old=this.trackOf(clip,node,path);
+  const clip=this.needClip(i);const node=this.keyNode(id);this.keyPathFor(node,path);const t=checkKeyTime(time);const old=this.trackOf(clip,node,path);
   if(!old||!isPlainTrack(old.times,old.values,path))throw new ClipError(`${node.name} has no ${path} keys in this clip.`);
   const k=findKey(old.times,t);if(k<0)throw new ClipError('There is no key at that time.');
   const r=removeKeyData(old.times,old.values,path,k);const name=trackName(node.uuid,path);
@@ -499,7 +512,7 @@ export class Stage{
  }
  /** Moves a key to another time (its value and easing go with it). One undo step. A key may not land on another key. */
  moveKey(i:number,id:number,path:KeyPath,from:number,to:number){
-  const clip=this.needClip(i);const node=this.keyNode(id);const f=checkKeyTime(from),t=checkKeyTime(to);const old=this.trackOf(clip,node,path);
+  const clip=this.needClip(i);const node=this.keyNode(id);this.keyPathFor(node,path);const f=checkKeyTime(from),t=checkKeyTime(to);const old=this.trackOf(clip,node,path);
   if(!old||!isPlainTrack(old.times,old.values,path))throw new ClipError(`${node.name} has no ${path} keys in this clip.`);
   const k=findKey(old.times,f);if(k<0)throw new ClipError('There is no key at that time.');
   if(Math.abs(f-t)<0.0005)return;if(findKey(old.times,t)>=0)throw new ClipError('There is already a key at that time.');
@@ -520,7 +533,7 @@ export class Stage{
  /** Copies keys with their values and easing, sorted by path and time. Throws when any key is missing. */
  copyKeys(i:number,id:number,refs:readonly KeyRef[]):KeyData[]{
   const clip=this.needClip(i);const node=this.keyNode(id);const out:KeyData[]=[];
-  for(const{path,times}of groupRefs(refs)){const{data}=this.dataOf(clip,node,path);out.push(...copyTrackKeys(data,path,keyIndices(data,times)));}
+  for(const{path,times}of groupRefs(refs)){this.keyPathFor(node,path);const{data}=this.dataOf(clip,node,path);out.push(...copyTrackKeys(data,path,keyIndices(data,times)));}
   return out;
  }
  /** Moves a set of keys by the same delta, possibly across paths. One undo step. */
@@ -528,7 +541,7 @@ export class Stage{
   const clip=this.needClip(i);const node=this.keyNode(id);
   const plan=new Map<string,{path:KeyPath;interp?:THREE.InterpolationModes;data:TrackData}>();
   for(const{path,times}of groupRefs(refs)){
-   const{name,track,data}=this.dataOf(clip,node,path);
+   this.keyPathFor(node,path);const{name,track,data}=this.dataOf(clip,node,path);
    plan.set(name,{path,interp:track.getInterpolation(),data:shiftTrackKeys(data,path,keyIndices(data,times),dt)});
   }
   this.editClip(i,`Move keys on ${node.name}`,c=>{
@@ -546,7 +559,7 @@ export class Stage{
   const plan=new Map<string,{path:KeyPath;interp?:THREE.InterpolationModes;data:TrackData}>();
   for(const path of KEY_PATHS){
    const ks=keys.filter(k=>k.path===path);if(!ks.length)continue;
-   const cur=this.trackOf(clip,node,path);
+   this.keyPathFor(node,path);const cur=this.trackOf(clip,node,path);
    if(cur&&!isPlainTrack(cur.times,cur.values,path))throw new ClipError('This track uses cubic spline keys and cannot be edited key by key.');
    const data=pasteTrackKeys(cur?this.dataOf(clip,node,path).data:undefined,path,ks,t);
    plan.set(trackName(node.uuid,path),{path,interp:cur?.getInterpolation(),data});
@@ -561,7 +574,7 @@ export class Stage{
  /** Easing of the segment that starts at a key. */
  setKeyEase(i:number,id:number,path:KeyPath,time:number,ease:Ease){
   if(!isEase(ease))throw new ClipError(`Easing must be one of ${EASES.join(', ')}.`);
-  const clip=this.needClip(i);const node=this.keyNode(id);const t=checkKeyTime(time);const old=this.trackOf(clip,node,path);
+  const clip=this.needClip(i);const node=this.keyNode(id);this.keyPathFor(node,path);const t=checkKeyTime(time);const old=this.trackOf(clip,node,path);
   if(!old||!isPlainTrack(old.times,old.values,path))throw new ClipError(`${node.name} has no ${path} keys in this clip.`);
   const k=findKey(old.times,t);if(k<0)throw new ClipError('There is no key at that time.');
   const name=trackName(node.uuid,path);const eases=(this.easeOf(clip)[name]??[]).slice();while(eases.length<old.times.length)eases.push('linear');
@@ -696,11 +709,13 @@ export class Stage{
  }
  remove(id:number){
   const o=this.need(id);const parent=o.parent;if(!parent)throw new StageError('The scene root cannot be deleted.');
+  if((o as THREE.Bone).isBone)throw new StageError('Bones cannot be deleted: the skin would lose a joint.');
   const at=parent.children.indexOf(o);parent.remove(o);let owned=false;
   this.push({label:`Delete ${o.name}`,undo:()=>{this.attach0(o,parent,at);owned=true;},redo:()=>{parent.remove(o);owned=false;},release:()=>{if(!owned)disposeObject(o);}});
  }
  duplicate(id:number):THREE.Object3D{
   const o=this.need(id);if(o===this.root)throw new StageError('The scene root cannot be duplicated.');
+  if((o as THREE.Bone).isBone)throw new StageError('Bones cannot be duplicated: the skin would lose a joint.');
   const copy=o.clone(true);
   // clone() shares geometry and material. Give the copy its own material so edits stay independent; geometry stays shared and is only freed with the last owner.
   copy.traverse(c=>{const m=c as THREE.Mesh;if(m.isMesh&&!Array.isArray(m.material))m.material=(m.material as THREE.Material).clone();});
@@ -710,7 +725,7 @@ export class Stage{
  info(id:number):ObjectInfo|null{
   const o=this.find(id);if(!o)return null;const m=o as THREE.Mesh;const l=o as THREE.Light;
   const mat=m.isMesh&&!Array.isArray(m.material)&&(m.material as THREE.MeshStandardMaterial).isMeshStandardMaterial?m.material as THREE.MeshStandardMaterial:null;
-  return{id:o.id,name:o.name,kind:m.isMesh?'mesh':l.isLight?'light':(o as THREE.Camera).isCamera?'camera':'group',
+  return{id:o.id,name:o.name,kind:(o as THREE.Bone).isBone?'bone':m.isMesh?'mesh':l.isLight?'light':(o as THREE.Camera).isCamera?'camera':'group',
    position:{x:o.position.x,y:o.position.y,z:o.position.z},rotation:{x:o.rotation.x/DEG,y:o.rotation.y/DEG,z:o.rotation.z/DEG},scale:{x:o.scale.x,y:o.scale.y,z:o.scale.z},
    camera:(o as THREE.PerspectiveCamera).isPerspectiveCamera?{fov:(o as THREE.PerspectiveCamera).fov}:null,
    primitive:this.primitiveOf(o),material:mat?{color:'#'+mat.color.getHexString(),metalness:mat.metalness,roughness:mat.roughness,emissive:'#'+mat.emissive.getHexString(),emissiveIntensity:mat.emissiveIntensity,opacity:mat.transparent||mat.alphaTest>0?mat.opacity:1,alphaMode:alphaModeOf(mat.transparent,mat.alphaTest),alphaCutoff:mat.alphaTest>0?mat.alphaTest:0.5,doubleSided:mat.side===THREE.DoubleSide,textures:Object.fromEntries((Object.keys(SLOT_CONFIG) as TextureSlot[]).map(k=>{const t=mat[SLOT_CONFIG[k].prop] as THREE.Texture|null;return[k,t?(t.name||'image'):null];})) as Record<TextureSlot,string|null>,transforms:Object.fromEntries((Object.keys(SLOT_CONFIG) as TextureSlot[]).map(k=>{const t=mat[SLOT_CONFIG[k].prop] as THREE.Texture|null;return[k,t?readTransform(t):null];})) as Record<TextureSlot,TextureTransform|null>}:null,light:l.isLight?lightInfo(l):null};
@@ -718,8 +733,9 @@ export class Stage{
  measure(animations=this.clipList.length):{stats:ModelStats;outline:OutlineEntry[];bounds:Bounds|null}{
   const stats=emptyStats();stats.animations=animations;const outline:OutlineEntry[]=[];const mats=new Set<THREE.Material>(),texs=new Set<THREE.Texture>();
   const walk=(o:THREE.Object3D,depth:number)=>{
-   const mesh=o as THREE.Mesh;const kind:OutlineEntry['kind']=mesh.isMesh?'mesh':(o as THREE.Light).isLight?'light':(o as THREE.Camera).isCamera?'camera':'group';
-   if(depth>0){stats.nodes++;outline.push({id:o.id,name:o.name||`${kind} ${o.id}`,depth:depth-1,kind});}
+   const mesh=o as THREE.Mesh;const kind:OutlineEntry['kind']=(o as THREE.Bone).isBone?'bone':mesh.isMesh?'mesh':(o as THREE.Light).isLight?'light':(o as THREE.Camera).isCamera?'camera':'group';
+   if(kind==='bone')stats.bones++;
+   if(depth>0){stats.nodes++;if(kind!=='bone')outline.push({id:o.id,name:o.name||`${kind} ${o.id}`,depth:depth-1,kind});}
    if(kind==='camera')stats.cameras++;
    if(depth>0&&(o.scale.x===0||o.scale.y===0||o.scale.z===0))stats.zeroScale++;
    if(mesh.isMesh&&mesh.geometry){

@@ -329,5 +329,10 @@
  "studio3d.range.from": "Loop from playhead",
  "studio3d.range.to": "Loop to playhead",
  "studio3d.range.clear": "Clear loop range",
- "studio3d.range.label": "Loop range {start} to {end}"
+ "studio3d.range.label": "Loop range {start} to {end}",
+ "cmd.studio3d.skeleton.show": "Show or hide the skeleton overlay of a skinned 3D model",
+ "cmd.studio3d.skeleton.select": "Select a bone of a skinned 3D model",
+ "studio3d.skeleton.bone": "Bone",
+ "studio3d.skeleton.none": "No bone (object keys)",
+ "studio3d.skeleton.show": "Skeleton overlay"
 }

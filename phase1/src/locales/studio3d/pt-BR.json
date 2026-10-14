@@ -329,5 +329,10 @@
  "studio3d.range.from": "Loop a partir do cursor",
  "studio3d.range.to": "Loop até o cursor",
  "studio3d.range.clear": "Limpar o loop",
- "studio3d.range.label": "Loop de {start} a {end}"
+ "studio3d.range.label": "Loop de {start} a {end}",
+ "cmd.studio3d.skeleton.show": "Mostra ou oculta a sobreposição do esqueleto de um modelo 3D com pele",
+ "cmd.studio3d.skeleton.select": "Seleciona um osso de um modelo 3D com pele",
+ "studio3d.skeleton.bone": "Osso",
+ "studio3d.skeleton.none": "Sem osso (chaves de objeto)",
+ "studio3d.skeleton.show": "Sobreposição do esqueleto"
 }
