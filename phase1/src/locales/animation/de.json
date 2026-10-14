@@ -545,5 +545,18 @@
  "animation.animators.preset.pop": "Aufpoppen",
  "animation.animators.preset.spin": "Drehen",
  "animation.animators.preset.fade": "Einblenden",
- "animation.animators.preset.typewriter": "Schreibmaschine"
+ "animation.animators.preset.typewriter": "Schreibmaschine",
+ "animation.layer.track": "Spurhöhe von {name}: {height}",
+ "animation.track.compact": "Kompakt",
+ "animation.track.normal": "Normal",
+ "animation.track.tall": "Hoch",
+ "animation.timeline.collapseAll": "Alle einklappen",
+ "animation.timeline.expandAll": "Alle ausklappen",
+ "cmd.animation.timeline.tracks": "Zeitleistenspuren ein-/ausklappen oder in der Höhe ändern",
+ "animation.animators.preset.delete": "Vorlage löschen",
+ "animation.animators.preset.name": "Name der Vorlage",
+ "animation.animators.preset.save": "Als Vorlage speichern",
+ "cmd.animation.text.preset.save": "Textanimator als Vorlage speichern",
+ "cmd.animation.text.preset.apply": "Gespeicherte Textanimator-Vorlage anwenden",
+ "cmd.animation.text.preset.delete": "Gespeicherte Textanimator-Vorlage löschen"
 }

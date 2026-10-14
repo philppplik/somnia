@@ -545,5 +545,18 @@
  "animation.animators.preset.pop": "Aparecer",
  "animation.animators.preset.spin": "Girar",
  "animation.animators.preset.fade": "Fundir",
- "animation.animators.preset.typewriter": "Máquina de escribir"
+ "animation.animators.preset.typewriter": "Máquina de escribir",
+ "animation.layer.track": "Altura de pista de {name}: {height}",
+ "animation.track.compact": "Compacta",
+ "animation.track.normal": "Normal",
+ "animation.track.tall": "Alta",
+ "animation.timeline.collapseAll": "Contraer todo",
+ "animation.timeline.expandAll": "Expandir todo",
+ "cmd.animation.timeline.tracks": "Contraer, expandir o cambiar la altura de las pistas",
+ "animation.animators.preset.delete": "Eliminar preajuste",
+ "animation.animators.preset.name": "Nombre del preajuste",
+ "animation.animators.preset.save": "Guardar como preajuste",
+ "cmd.animation.text.preset.save": "Guardar un animador de texto como preajuste",
+ "cmd.animation.text.preset.apply": "Aplicar un preajuste de animador de texto guardado",
+ "cmd.animation.text.preset.delete": "Eliminar un preajuste de animador de texto guardado"
 }

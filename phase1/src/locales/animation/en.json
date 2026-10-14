@@ -545,5 +545,18 @@
  "animation.animators.preset.pop": "Pop",
  "animation.animators.preset.spin": "Spin",
  "animation.animators.preset.fade": "Fade",
- "animation.animators.preset.typewriter": "Typewriter"
+ "animation.animators.preset.typewriter": "Typewriter",
+ "animation.layer.track": "Track height of {name}: {height}",
+ "animation.track.compact": "Compact",
+ "animation.track.normal": "Normal",
+ "animation.track.tall": "Tall",
+ "animation.timeline.collapseAll": "Collapse all",
+ "animation.timeline.expandAll": "Expand all",
+ "cmd.animation.timeline.tracks": "Collapse, expand or resize timeline tracks",
+ "animation.animators.preset.delete": "Delete preset",
+ "animation.animators.preset.name": "Preset name",
+ "animation.animators.preset.save": "Save as preset",
+ "cmd.animation.text.preset.save": "Save a text animator as a preset",
+ "cmd.animation.text.preset.apply": "Apply a saved text animator preset",
+ "cmd.animation.text.preset.delete": "Delete a saved text animator preset"
 }

@@ -62,7 +62,7 @@ export const MAX_TEXT_ANIMATORS=4;
 export const MAX_ANIMATED_CHARS=1000;
 export interface Marker{id:string;t:number;label:string}
 export interface Composition{id:string;name:string;width:number;height:number;fps:Rational;duration:number;start:number;background:string;workArea:{in:number;out:number};layers:readonly Layer[];markers?:readonly Marker[]}
-export interface AnimationDocument{schema:number;engine:string;id:string;name:string;revision:number;activeComp:string;compositions:readonly Composition[];assets:readonly InterfaceAsset[];audioAssets?:readonly AudioAsset[];motions?:MotionLib;easings?:import('./easingModel').EasingLib}
+export interface AnimationDocument{schema:number;engine:string;id:string;name:string;revision:number;activeComp:string;compositions:readonly Composition[];assets:readonly InterfaceAsset[];audioAssets?:readonly AudioAsset[];motions?:MotionLib;textPresets?:import('./textPresetModel').TextPresetLib;easings?:import('./easingModel').EasingLib}
 /** One copied key, with its time relative to the earliest copied key. */
 export interface ClipItem{prop:TransformKey;dt:number;key:Keyframe}
 export interface PropertyRef{layer:string;prop:TransformKey}
@@ -113,6 +113,7 @@ const okValue=(type:PropType,v:unknown)=>type==='scalar'?isNum(v):isVec(v);
 /** Strict structural validation used for recovery and import. Returns a list of problems; empty means valid. */
 import {validateModifiers,linkProblems} from './modifierModel';
 import {validateMotionLib,type MotionLib} from './motionModel';
+import {validateTextPresetLib} from './textPresetModel';
 import {validateEasingLib} from './easingModel';
 export function validateDocument(raw:unknown):string[]{
  const errs:string[]=[];const bad=(m:string)=>{if(errs.length<20)errs.push(m);};
@@ -124,6 +125,7 @@ export function validateDocument(raw:unknown):string[]{
  if(!Number.isInteger(d.revision))bad('bad revision');
  try{validateAnimationAssets(d as AnimationDocument);}catch(e){bad((e as Error).message);}
  for(const p of validateMotionLib(d.motions))bad(p);
+ for(const p of validateTextPresetLib(d.textPresets))bad(p);
  for(const p of validateEasingLib(d.easings))bad(p);
  if(!Array.isArray(d.compositions)||!d.compositions.length)return [...errs,'no compositions'];
  const compIds=new Set<string>();

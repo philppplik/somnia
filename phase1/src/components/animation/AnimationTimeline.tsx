@@ -1,5 +1,5 @@
 import {useEffect,useRef,useState,type KeyboardEvent as ReactKeyboardEvent,type PointerEvent} from 'react';
-import {Play,Pause,Undo2,Redo2,Eye,EyeOff,Lock,Unlock,ZoomIn,ZoomOut,ArrowUp,ArrowDown,ArrowUpDown,EyeOff as ShyIcon} from '../../lib/icons';
+import {Play,Pause,Undo2,Redo2,Eye,EyeOff,Lock,Unlock,ZoomIn,ZoomOut,ArrowUp,ArrowDown,ArrowUpDown,EyeOff as ShyIcon,ChevronDown,ChevronRight,ChevronsUpDown} from '../../lib/icons';
 import {animationSession,useAnimationState} from '../../lib/animation/session';
 import {NativeInput,NativeSelect} from '../ui/native-controls';
 import {TRANSFORM_KEYS,wouldCycle,type Composition,type KeyRef,type TransformKey} from '../../lib/animation/model';
@@ -10,7 +10,7 @@ import {AudioWaveform} from './AudioWaveform';
 import {clickSelect,marqueeSelect,pruneSelection,rectsOverlap,sameKey,shiftSelection} from '../../lib/animation/selection';
 import {frameToTick,snapToFrame,tickToFrame,timecode} from '../../lib/animation/time';
 import {executeCommand} from '../../lib/commands';
-import {reorderIndex,setShyHidden,useShyHidden,edgeScroll,revealTick,snapTargets,snapTick,timeWindow,useTimelineSnap,setTimelineSnap} from '../../lib/animation/timelineView';
+import {trackHeightOf,useTrackHeights,reorderIndex,setShyHidden,useShyHidden,edgeScroll,revealTick,snapTargets,snapTick,timeWindow,useTimelineSnap,setTimelineSnap} from '../../lib/animation/timelineView';
 import {clearLayerSet,layerSetIds,toggleLayerInSet,useLayerSet} from '../../lib/animation/layerSet';
 import {useT} from '../../lib/useT';
 import {Button} from '../ui/button';
@@ -23,7 +23,7 @@ interface Box{x0:number;y0:number;x1:number;y1:number}
 export function AnimationTimeline({comp,at,selected,canUndo,canRedo}:{comp:Composition;at:number;selected:string|null;canUndo:boolean;canRedo:boolean}){
  const {t}=useT();const state=useAnimationState();const view=state.view; const layerSet=useLayerSet();const [stagger,setStagger]=useState(2);const [staggerTiming,setStaggerTiming]=useState(true);
  const rulerRef=useRef<HTMLDivElement>(null);const lanesRef=useRef<HTMLDivElement>(null);
- const win=timeWindow(comp,view.zoom,view.scroll);const pc=(t:number)=>`${(t-win.t0)/win.span*100}%`;const snapOn=useTimelineSnap();const shyOff=useShyHidden();const [drop,setDrop]=useState<{over:string;after:boolean}|null>(null);const inWin=(t:number)=>t>=win.t0&&t<=win.t0+win.span;
+ const win=timeWindow(comp,view.zoom,view.scroll);const pc=(t:number)=>`${(t-win.t0)/win.span*100}%`;const snapOn=useTimelineSnap();const shyOff=useShyHidden();useTrackHeights();const [drop,setDrop]=useState<{over:string;after:boolean}|null>(null);const inWin=(t:number)=>t>=win.t0&&t<=win.t0+win.span;
  /** Left and width in percent of a tick range, clipped to the visible window. */
  const bar=(a:number,b:number)=>{const l=Math.max(0,(a-win.t0)/win.span*100),r=Math.min(100,(b-win.t0)/win.span*100);return {left:`${l}%`,width:`${Math.max(0,r-l)}%`};};const sectionRef=useRef<HTMLElement>(null);
  const frames=Math.max(1,tickToFrame(comp.duration,comp.fps));const frame=tickToFrame(at,comp.fps);
@@ -68,8 +68,8 @@ export function AnimationTimeline({comp,at,selected,canUndo,canRedo}:{comp:Compo
  const step=(d:number)=>{stop();animationSession().setView({playhead:frameToTick(frame+d,comp.fps)});};
  /** Tick under a pointer x. Snaps to markers, work-area edges and the playhead (Alt turns it off), then to a whole frame. */
  const tickAtX=(x:number,o:{free?:boolean;exclude?:readonly number[]}={})=>{
-  const r=rulerRef.current!.getBoundingClientRect();const raw=win.t0+Math.min(1,Math.max(0,(x-r.left)/Math.max(1,r.width)))*win.span;
-  const near=snapOn&&!o.free?snapTick(raw,snapTargets(comp,at,o.exclude),win.span/Math.max(1,r.width)):raw;
+  const r=rulerRef.current!.getBoundingClientRect();const v=animationSession().getState().view;const lw=timeWindow(live.current.comp,v.zoom,v.scroll);const raw=lw.t0+Math.min(1,Math.max(0,(x-r.left)/Math.max(1,r.width)))*lw.span;
+  const near=snapOn&&!o.free?snapTick(raw,snapTargets(comp,at,o.exclude),lw.span/Math.max(1,r.width)):raw;
   return snapToFrame(Math.min(comp.start+comp.duration,Math.max(comp.start,near)),comp.fps);
  };
  /** While a drag is held near the left or right edge of a zoomed track, the view scrolls with it. */
@@ -77,10 +77,27 @@ export function AnimationTimeline({comp,at,selected,canUndo,canRedo}:{comp:Compo
   const r=rulerRef.current?.getBoundingClientRect();if(!r)return;const c=live.current.comp;const v=animationSession().getState().view;const w=timeWindow(c,v.zoom,v.scroll);
   const sc=edgeScroll(c,w,(x-r.left)/Math.max(1,r.width));if(sc!==w.scroll)animationSession().setView({scroll:sc});
  };
+ /**
+  * Keeps a drag scrolling while the pointer rests near an edge: the track scrolls sideways, the lane list up and down.
+  * `again` re-evaluates the drag with the last pointer event after each scroll. Call `stop` when the drag ends.
+  */
+ const holdEdge=(again:(ev:globalThis.PointerEvent)=>void)=>{
+  let last:globalThis.PointerEvent|null=null,raf=0,on=true;
+  const frame=()=>{
+   if(!on)return;raf=requestAnimationFrame(frame);if(!last)return;
+   const before=animationSession().getState().view.scroll;autoScroll(last.clientX);
+   let moved=animationSession().getState().view.scroll!==before;
+   const lanes=lanesRef.current;if(lanes){const r=lanes.getBoundingClientRect();const band=24;const dy=last.clientY<r.top+band?-1:last.clientY>r.bottom-band?1:0;
+    if(dy){const was=lanes.scrollTop;lanes.scrollTop+=dy*12;if(lanes.scrollTop!==was)moved=true;}}
+   if(moved)again(last);
+  };
+  raf=requestAnimationFrame(frame);
+  return {track:(ev:globalThis.PointerEvent)=>{last=ev;},stop:()=>{on=false;cancelAnimationFrame(raf);}};
+ };
  const scrub=(e:PointerEvent<HTMLElement>)=>{
   stop();const el=e.currentTarget;el.setPointerCapture(e.pointerId);const go=(ev:globalThis.PointerEvent|PointerEvent<HTMLElement>)=>animationSession().setView({playhead:tickAtX(ev.clientX,{free:ev.altKey,exclude:[at]})});go(e);
-  const move=(ev:globalThis.PointerEvent)=>{autoScroll(ev.clientX);go(ev);};
-  const up=()=>{el.removeEventListener('pointermove',move);el.removeEventListener('pointerup',up);};
+  const hold=holdEdge(ev=>go(ev));const move=(ev:globalThis.PointerEvent)=>{hold.track(ev);autoScroll(ev.clientX);go(ev);};
+  const up=()=>{hold.stop();el.removeEventListener('pointermove',move);el.removeEventListener('pointerup',up);};
   el.addEventListener('pointermove',move);el.addEventListener('pointerup',up);
  };
  const dragWorkEdge=(edge:'in'|'out')=>(e:PointerEvent<HTMLButtonElement>)=>{
@@ -106,12 +123,13 @@ export function AnimationTimeline({comp,at,selected,canUndo,canRedo}:{comp:Compo
   let group=was?sel:clickSelect(sel,ref,additive);
   if(!was)animationSession().selectKeys(group);
   const from=ref.t;let moved=false;let applied=0;
-  const move=(ev:globalThis.PointerEvent)=>{
-   const delta=tickAtX(ev.clientX,{free:ev.altKey,exclude:[...group.map(k=>k.t),at]})-from;autoScroll(ev.clientX);if(delta===0&&!moved)return;
+  const hold=holdEdge(ev=>move(ev,true));
+  const move=(ev:globalThis.PointerEvent,fromHold=false)=>{
+   if(!fromHold){hold.track(ev);autoScroll(ev.clientX);}const delta=tickAtX(ev.clientX,{free:ev.altKey,exclude:[...group.map(k=>k.t),at]})-from;if(delta===0&&!moved)return;
    try{animationSession().previewEdits([{type:'keys.move',keys:group,delta}]);moved=true;applied=frameToTick(Math.round(delta*comp.fps.num/(comp.fps.den*240000)),comp.fps);}catch{/* collision or range: keep last valid preview */}
   };
   const finish=(commit:boolean)=>{
-   target.removeEventListener('pointermove',move);target.removeEventListener('pointerup',up);target.removeEventListener('keydown',key);
+   hold.stop();target.removeEventListener('pointermove',move);target.removeEventListener('pointerup',up);target.removeEventListener('keydown',key);
    if(moved&&commit){animationSession().commitPreview();animationSession().selectKeys(shiftSelection(group,applied));animationSession().setView({playhead:from+applied});return;}
    animationSession().cancelPreview();
    if(!commit)return;
@@ -136,7 +154,9 @@ export function AnimationTimeline({comp,at,selected,canUndo,canRedo}:{comp:Compo
   const x0=e.clientX,y0=e.clientY;let dragged=false;
   if(!additive)animationSession().selectKeys([]);
   const rectOf=(ev:globalThis.PointerEvent)=>({l:Math.min(x0,ev.clientX),r:Math.max(x0,ev.clientX),t:Math.min(y0,ev.clientY),b:Math.max(y0,ev.clientY)});
-  const move=(ev:globalThis.PointerEvent)=>{
+  const hold=holdEdge(ev=>move(ev,true));
+  const move=(ev:globalThis.PointerEvent,fromHold=false)=>{
+   if(!fromHold)hold.track(ev);
    if(!dragged&&Math.hypot(ev.clientX-x0,ev.clientY-y0)<4)return;dragged=true;
    const r=rectOf(ev);setBox({x0:r.l-origin.left+root.scrollLeft,y0:r.t-origin.top+root.scrollTop,x1:r.r-origin.left+root.scrollLeft,y1:r.b-origin.top+root.scrollTop});
    const hit:KeyRef[]=[];
@@ -146,7 +166,7 @@ export function AnimationTimeline({comp,at,selected,canUndo,canRedo}:{comp:Compo
    });
    animationSession().selectKeys(marqueeSelect(base,hit,additive));
   };
-  const up=()=>{el.removeEventListener('pointermove',move);el.removeEventListener('pointerup',up);setBox(null);};
+  const up=()=>{hold.stop();el.removeEventListener('pointermove',move);el.removeEventListener('pointerup',up);setBox(null);};
   el.addEventListener('pointermove',move);el.addEventListener('pointerup',up);
  };
  /** Pointer drag of a layer row by its handle: a line shows where it lands, release is one reorder edit, Escape cancels. */
@@ -158,8 +178,9 @@ export function AnimationTimeline({comp,at,selected,canUndo,canRedo}:{comp:Compo
    let hit=rows[rows.length-1];for(const r of rows){const b=r.getBoundingClientRect();if(ev.clientY<b.bottom){hit=r;break;}}
    const b=hit.getBoundingClientRect();return {over:hit.dataset.layerRow!,after:ev.clientY>b.top+b.height/2};
   };
-  const move=(ev:globalThis.PointerEvent)=>{target=find(ev);setDrop(target&&reorderIndex(live.current.comp.layers.map(l=>l.id),id,target.over,target.after)!==null?target:null);};
-  const finish=(commit:boolean)=>{el.removeEventListener('pointermove',move);el.removeEventListener('pointerup',up);window.removeEventListener('keydown',esc,true);setDrop(null);
+  const hold=holdEdge(ev=>move(ev,true));
+  const move=(ev:globalThis.PointerEvent,fromHold=false)=>{if(!fromHold)hold.track(ev);target=find(ev);setDrop(target&&reorderIndex(live.current.comp.layers.map(l=>l.id),id,target.over,target.after)!==null?target:null);};
+  const finish=(commit:boolean)=>{hold.stop();el.removeEventListener('pointermove',move);el.removeEventListener('pointerup',up);window.removeEventListener('keydown',esc,true);setDrop(null);
    if(!commit||!target)return;const idx=reorderIndex(live.current.comp.layers.map(l=>l.id),id,target.over,target.after);if(idx!==null)run('animation.layer.reorder',{layer:id,index:idx});};
   const up=()=>finish(true);const esc=(ev:KeyboardEvent)=>{if(ev.key==='Escape'){ev.stopPropagation();finish(false);}};
   el.addEventListener('pointermove',move);el.addEventListener('pointerup',up);window.addEventListener('keydown',esc,true);
@@ -201,6 +222,8 @@ export function AnimationTimeline({comp,at,selected,canUndo,canRedo}:{comp:Compo
     <Button size="tiny" variant="ghost" disabled={win.zoom<=1} onClick={()=>run('animation.timeline.zoom',{mode:'fit'})} data-testid="animation-zoom-fit">{t('animation.timeline.fit')}</Button>
     <Button size="tiny" variant="ghost" onClick={()=>run('animation.timeline.zoom',{mode:'workarea'})} data-testid="animation-zoom-wa">{t('animation.timeline.zoomWorkArea')}</Button>
     <Button size="tiny" variant={snapOn?'outline':'ghost'} aria-pressed={snapOn} title={t('animation.timeline.snapHint')} onClick={()=>run('animation.timeline.snap',{on:!snapOn})} data-testid="animation-snap">{t('animation.timeline.snap')}</Button>
+    <Button size="tiny" variant="ghost" onClick={()=>run('animation.timeline.tracks',{mode:'collapse'})} data-testid="animation-tracks-collapse"><ChevronsUpDown className="size-3"/>{t('animation.timeline.collapseAll')}</Button>
+    <Button size="tiny" variant="ghost" onClick={()=>run('animation.timeline.tracks',{mode:'expand'})} data-testid="animation-tracks-expand">{t('animation.timeline.expandAll')}</Button>
     <Button size="tiny" variant={shyOff?'outline':'ghost'} aria-pressed={shyOff} title={t('animation.timeline.hideShyHint')} onClick={()=>run('animation.timeline.shy',{hide:!shyOff})} data-testid="animation-hide-shy">{t('animation.timeline.hideShy')}</Button>
     {win.zoom>1&&<NativeInput type="range" className="w-24" min={0} max={Math.max(1,comp.duration-win.span)} step={Math.max(1,Math.round(win.span/50))} value={win.scroll} aria-label={t('animation.timeline.scroll')} onChange={e=>animationSession().setView({scroll:Number(e.target.value)})} data-testid="animation-scroll"/>}
    </span>
@@ -246,6 +269,7 @@ export function AnimationTimeline({comp,at,selected,canUndo,canRedo}:{comp:Compo
      <div className="flex items-center gap-1 px-2 py-1">
       <button type="button" aria-label={t('animation.layer.visible')} aria-pressed={l.visible} className="text-ink-2" onClick={()=>run('animation.layer.update',{layer:l.id,visible:!l.visible})}>{l.visible?<Eye className="size-3"/>:<EyeOff className="size-3"/>}</button>
       <button type="button" aria-label={t('animation.layer.locked')} aria-pressed={l.locked} className="text-ink-2" onClick={()=>run('animation.layer.update',{layer:l.id,locked:!l.locked})}>{l.locked?<Lock className="size-3"/>:<Unlock className="size-3"/>}</button>
+      <Button size="tiny" variant="ghost" aria-label={t('animation.layer.track',{name:l.name,height:t(`animation.track.${trackHeightOf(l.id)}`)})} title={t(`animation.track.${trackHeightOf(l.id)}`)} onClick={()=>run('animation.timeline.tracks',{layer:l.id,mode:'cycle'})} data-testid={`animation-track-${l.id}`}>{trackHeightOf(l.id)==='compact'?<ChevronRight className="size-3"/>:<ChevronDown className="size-3"/>}</Button>
       <Button size="tiny" variant="ghost" className="cursor-grab touch-none" aria-label={t('animation.layer.drag',{name:l.name})} onPointerDown={dragLayer(l.id)} data-testid={`animation-layer-drag-${l.id}`}><ArrowUpDown className="size-3"/></Button>
       <Button size="tiny" variant={l.shy?'outline':'ghost'} aria-label={t('animation.layer.shy')} aria-pressed={!!l.shy} onClick={()=>run('animation.layer.update',{layer:l.id,shy:!l.shy})} data-testid={`animation-shy-${l.id}`}><ShyIcon className="size-3"/></Button>
       <Button size="tiny" variant={l.solo?'outline':'ghost'} aria-label={t('animation.layer.solo')} aria-pressed={l.solo} onClick={()=>run('animation.layer.update',{layer:l.id,solo:!l.solo})} data-testid={`animation-solo-${l.id}`}>S</Button>
@@ -254,16 +278,16 @@ export function AnimationTimeline({comp,at,selected,canUndo,canRedo}:{comp:Compo
       <button type="button" aria-current={l.id===selected} className="min-w-0 flex-1 truncate text-left text-ink" onClick={e=>{if((e.shiftKey||e.ctrlKey||e.metaKey)&&selected&&l.id!==selected){toggleLayerInSet(l.id);return;}clearLayerSet();animationSession().setView({selectedLayer:l.id});}}>{l.parent?'↳ ':''}{l.name}{l.kind==='null'?' · Null':''}</button>
       <NativeSelect className="h-5 w-[96px] min-w-0 shrink-0 rounded-sm border border-subtle bg-transparent px-1 text-xs text-ink-2 select-text" aria-label={t('animation.parent.timeline',{name:l.name})} disabled={l.locked} value={l.parent??''} data-testid={`animation-parent-${l.id}`} onChange={e=>run('animation.layer.parent',{layer:l.id,parent:e.target.value||null,keepWorld})}><option value="">{t('animation.parent.none')}</option>{comp.layers.filter(o=>o.id!==l.id&&!wouldCycle(comp,l.id,o.id)).map(o=><option key={o.id} value={o.id}>{o.name}</option>)}</NativeSelect>
      </div>
-     <div className="relative h-5">
+     <div className={`relative ${trackHeightOf(l.id)==='compact'?'h-4':trackHeightOf(l.id)==='tall'?'h-10':'h-5'}`} data-track-height={trackHeightOf(l.id)}>
       {l.kind==='audio'&&l.audio?<div className="absolute inset-0 overflow-hidden" data-testid="animation-audio-clip"><div className="absolute inset-y-0.5 overflow-hidden rounded-sm bg-accent-soft" style={{left:`${(l.inT+l.offset-win.t0)/win.span*100}%`,width:`${Math.max(0,(l.outT-l.inT)/win.span*100)}%`}}>
        {(a=>a&&<AudioWaveform asset={a} trimIn={l.audio.trimIn} length={l.outT-l.inT} label={t('animation.audio.waveform',{name:a.sourceName})}/>)(state.doc?.audioAssets?.find(x=>x.id===l.audio!.assetId))}</div></div>
-      :<div className="absolute top-1 h-3 rounded-sm bg-accent-fill opacity-70" style={bar(l.inT,l.outT)}/>}
+      :<div className={`absolute h-3 rounded-sm bg-accent-fill opacity-70 ${trackHeightOf(l.id)==='tall'?'top-3':trackHeightOf(l.id)==='compact'?'top-0.5':'top-1'}`} style={bar(l.inT,l.outT)}/>}
      </div>
     </div>
-    {l.id===selected&&l.audio&&l.audio.volume.keys.length>0&&<div className="grid grid-cols-[280px_1fr] items-center" data-testid="animation-keyrow-volume">
+    {l.id===selected&&trackHeightOf(l.id)!=='compact'&&l.audio&&l.audio.volume.keys.length>0&&<div className="grid grid-cols-[280px_1fr] items-center" data-testid="animation-keyrow-volume">
      <span className="px-2 py-1 pl-6 text-ink-3">{t('animation.audio.volumeLane')}</span>
      <div className="relative h-5">{l.audio.volume.keys.filter(key=>inWin(key.t)).map(key=><Button key={key.t} size="tiny" variant="outline" className="absolute top-0.5 size-3 min-h-0 min-w-0 -translate-x-1/2 rotate-45 bg-accent-fill p-0" style={{left:pc(key.t)}} aria-label={t('animation.audio.volumeKey',{time:timecode(key.t,comp.fps)})} onClick={()=>animationSession().setView({playhead:key.t})} data-volume-key-t={key.t}/>)}</div></div>}
-    {l.id===selected&&animated.map(k=><div key={k} className="grid grid-cols-[280px_1fr] items-center" data-testid={`animation-keyrow-${k}`}>
+    {l.id===selected&&trackHeightOf(l.id)!=='compact'&&animated.map(k=><div key={k} className="grid grid-cols-[280px_1fr] items-center" data-testid={`animation-keyrow-${k}`}>
      <Button size="tiny" variant="ghost" className="justify-start pl-6 text-ink-3" disabled={l.locked} aria-label={t('animation.keys.selectRow',{name:t(PROP_LABEL[k])})} onClick={()=>animationSession().selectKeys(l.transform[k].keys.map(key=>({layer:l.id,prop:k,t:key.t})))} data-testid={`animation-keyrow-label-${k}`}>{t(PROP_LABEL[k])}</Button>
      <div className="relative h-5 touch-none" data-lane onPointerDown={startMarquee}>
       {l.transform[k].keys.map((key,ki)=>{if(!inWin(key.t))return null;const ref:KeyRef={layer:l.id,prop:k,t:key.t};const on=sel.some(x=>sameKey(x,ref));
@@ -271,7 +295,7 @@ export function AnimationTimeline({comp,at,selected,canUndo,canRedo}:{comp:Compo
         data-key-layer={l.id} data-key-prop={k} data-key-t={key.t} aria-pressed={on} data-selected={on||undefined}
         aria-label={t('animation.key.at',{time:timecode(key.t,comp.fps)})} onPointerDown={dragKey(ref)} onKeyDown={keyDown(ref)}/>;})}
      </div></div>)}
-    {l.id===selected&&l.masks?.length?<MaskLanes comp={comp} layer={l} tickAtX={x=>tickAtX(x)} pct={t=>pc(t)}/>:null}
+    {l.id===selected&&trackHeightOf(l.id)!=='compact'&&l.masks?.length?<MaskLanes comp={comp} layer={l} tickAtX={x=>tickAtX(x)} pct={t=>pc(t)}/>:null}
    </div>)}
    <div className="pointer-events-none absolute inset-y-0 left-[280px] right-0" aria-hidden="true">
     <div className="absolute inset-y-0 bg-black/20" style={bar(win.t0,wa.in)}/>

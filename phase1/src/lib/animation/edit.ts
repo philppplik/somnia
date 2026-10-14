@@ -1,6 +1,7 @@
 import {worldMatrix,invertMatrix,multiplyMatrix,decomposeMatrix} from './scene';
 import {validateEasingLib} from './easingModel';
 import {validateMotionLib} from './motionModel';
+import {validateTextPresetLib} from './textPresetModel';
 import type {InterfaceAsset} from '../interface/schema';
 import {validateAnimationAssets} from './assetsValidation';
 import {MAX_AUDIO_VOLUME,type AudioAsset} from './audioCore';
@@ -49,6 +50,7 @@ export type Edit=
  /** Replace the document's saved motion presets (library edits compute the full list). */
  |{type:'easings.set';items:readonly import('./easingModel').EasingSet[]}
  |{type:'motions.set';items:readonly import('./motionModel').MotionSet[]}
+ |{type:'textPresets.set';items:readonly import('./textPresetModel').TextPresetSet[]}
  /** Embed a prepared audio asset and add an audio layer whose clip starts at `t` (default 0). */
  |{type:'audio.import';asset:AudioAsset;t?:number;id?:string}
  /** Trim and place an audio clip. All values in ticks; `length` is the played duration. */
@@ -153,6 +155,7 @@ function reduce(doc:AnimationDocument,e:Edit):AnimationDocument{
    return setLayer(doc,{...l,effects:l.effects!.map(x=>x.id===effect.id?next:x)});}
   case 'easings.set':{const easings={version:1 as const,items:e.items};const p=validateEasingLib(easings);if(p.length)fail('invalid',p[0]);return {...doc,easings};}
   case 'motions.set':{const motions={version:1 as const,items:e.items};const p=validateMotionLib(motions);if(p.length)fail('invalid',p[0]);return {...doc,motions};}
+  case 'textPresets.set':{const textPresets={version:1 as const,items:e.items};const p=validateTextPresetLib(textPresets);if(p.length)fail('invalid',p[0]);return {...doc,textPresets};}
   case 'asset.import':{const next={...doc,assets:doc.assets.some(a=>a.id===e.asset.id)?doc.assets:[...doc.assets,e.asset]};validateAnimationAssets(next);const c=compOf(doc);const l=createLayer('raster',c,{name:e.asset.sourceName,source:{assetId:e.asset.id,width:e.asset.width,height:e.asset.height}});return withLayers(next,ls=>[l,...ls]);}
   case 'audio.import':{
    const existing=doc.audioAssets??[];const next={...doc,audioAssets:existing.some(a=>a.id===e.asset.id)?existing:[...existing,e.asset]};validateAnimationAssets(next);

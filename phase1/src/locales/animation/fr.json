@@ -545,5 +545,18 @@
  "animation.animators.preset.pop": "Apparition",
  "animation.animators.preset.spin": "Rotation",
  "animation.animators.preset.fade": "Fondu",
- "animation.animators.preset.typewriter": "Machine à écrire"
+ "animation.animators.preset.typewriter": "Machine à écrire",
+ "animation.layer.track": "Hauteur de piste de {name} : {height}",
+ "animation.track.compact": "Compacte",
+ "animation.track.normal": "Normale",
+ "animation.track.tall": "Haute",
+ "animation.timeline.collapseAll": "Tout réduire",
+ "animation.timeline.expandAll": "Tout développer",
+ "cmd.animation.timeline.tracks": "Réduire, développer ou redimensionner les pistes",
+ "animation.animators.preset.delete": "Supprimer le préréglage",
+ "animation.animators.preset.name": "Nom du préréglage",
+ "animation.animators.preset.save": "Enregistrer comme préréglage",
+ "cmd.animation.text.preset.save": "Enregistrer un animateur de texte comme préréglage",
+ "cmd.animation.text.preset.apply": "Appliquer un préréglage d’animateur de texte enregistré",
+ "cmd.animation.text.preset.delete": "Supprimer un préréglage d’animateur de texte enregistré"
 }

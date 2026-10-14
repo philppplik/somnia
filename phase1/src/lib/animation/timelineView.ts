@@ -60,3 +60,16 @@ export function reorderIndex(order:readonly string[],dragged:string,over:string,
  const from=order.indexOf(dragged),at=order.indexOf(over);if(from<0||at<0||dragged===over)return null;
  const target=after?at+1:at;const idx=target>from?target-1:target;return idx===from?null:idx;
 }
+
+/** Track height of one layer in the timeline: compact hides the property lanes, tall gives the bar more room. Absent means normal. View state only. */
+export type TrackHeight='compact'|'normal'|'tall';
+export const nextTrackHeight=(h:TrackHeight):TrackHeight=>h==='normal'?'tall':h==='tall'?'compact':'normal';
+const MAX_TRACK_ENTRIES=500;
+let heights:Readonly<Record<string,TrackHeight>>={};const hl=new Set<()=>void>();
+const hset=(next:Record<string,TrackHeight>)=>{heights=next;hl.forEach(f=>f());};
+export const trackHeights=()=>heights;
+export const trackHeightOf=(id:string):TrackHeight=>heights[id]??'normal';
+export function setTrackHeight(id:string,h:TrackHeight){const next={...heights};if(h==='normal')delete next[id];else next[id]=h;if(Object.keys(next).length<=MAX_TRACK_ENTRIES)hset(next);}
+/** Collapse every listed layer to a compact track, or restore all tracks to normal. */
+export function setAllTracks(ids:readonly string[],mode:'collapse'|'expand'){hset(mode==='expand'?{}:Object.fromEntries(ids.slice(0,MAX_TRACK_ENTRIES).map(i=>[i,'compact' as TrackHeight])));}
+export const useTrackHeights=()=>useSyncExternalStore(f=>{hl.add(f);return()=>{hl.delete(f);};},()=>heights,()=>heights);

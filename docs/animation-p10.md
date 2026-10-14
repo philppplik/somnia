@@ -226,3 +226,10 @@ Added:
 - Shy: optional `Layer.shy` (absent means false, legacy files and output unchanged). Toggle per row or in the inspector (`animation.layer.update shy`). `animation.timeline.shy` / "Hide shy" hides shy layers from the timeline list only; the selected layer stays visible. Viewer and exports ignore the flag. The toggle is view state, not saved in the document.
 - Text presets: `animation.text.animator {op:'preset',preset:'rise'|'pop'|'spin'|'fade'|'typewriter',seconds}` adds one per-character animator with a reveal sweep from the playhead. Counts toward the animator limit. Existing animator controls edit it afterwards.
 - Not built: autoscroll while dragging, user-saved text presets.
+
+## P41 - Edge autoscroll, track heights, saved text presets
+
+- Autoscroll: while a scrub, key drag, layer drag or marquee is held with the pointer near the left/right edge of a zoomed track (or the top/bottom of the lane list), the view keeps scrolling each frame and the drag is re-evaluated. Earlier it only scrolled on pointer moves, and key positions used the window from the start of the drag; both fixed.
+- Track heights: a chevron per layer cycles normal, tall, compact. Compact hides the selected layer's property lanes. `animation.timeline.tracks {mode:'collapse'|'expand'|'cycle'|'compact'|'normal'|'tall', layer?}`. View state, not saved, no undo.
+- Saved text presets: `Document.textPresets {version:1, items}` (max 50, validated, saved with the document). Save an animator's look and keyed sweep under a name (`animation.text.preset.save`), apply it as a new animator at the playhead (`...apply`, one undo step, hover previews), delete (`...delete`). Names cannot repeat or reuse the built-in ones.
+- Not built: file export/import of text presets.

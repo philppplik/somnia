@@ -3,7 +3,7 @@ import {createDocument,findComp,findLayer,validateDocument,MAX_LAYER_MASKS,type 
 import {applyEdit,applyEdits,EditError} from './edit';
 import {readFileSync} from 'node:fs';
 import {morphPath,morphProblem,resamplePath,MorphError,maskEdit,matteEdit,maskPath,copyMaskKey,insertPoint,handleMaskKey,copyMaskKeys} from './masks';
-import {TEXT_PRESETS,animatedChars,animatorEdit,defaultAnimator,mixHex,charWeight,textPathEdit,textPathD} from './textAnimators';
+import {saveTextPresetEdit,applyTextPresetEdit,deleteTextPresetEdit,userTextPresets,TEXT_PRESETS,animatedChars,animatorEdit,defaultAnimator,mixHex,charWeight,textPathEdit,textPathD} from './textAnimators';
 import {copyTransformKeys,pasteTransformEdits} from './keysClipboard';
 import {animatedTargets,allTargetKeys,propertyOf,moveTargetKeys,easeTargetKeys,pruneTargetKeys,toggleTargetKey,editTargetKeys,copyTargetKeys,pasteTargetKeys,deleteTargetKeys,pasteClipOnTargets,staggerLayers,bounceClip,bounceTargetKeys} from './keyTargets';
 import {EASE_PRESETS,easePresetOf} from './graph';
@@ -1164,3 +1164,27 @@ test('P40 text presets add one valid reveal animator per call',()=>{
  assert.equal(t0.every(x=>x.opacity<1),true);assert.equal(t1.every(x=>x.opacity===1),true);
 });
 const secondsToTicksP40=(s:number)=>Math.round(s*240000);
+
+test('P41 track heights: cycle, collapse all and expand all',async()=>{
+ const v=await import('./timelineView');
+ assert.equal(v.nextTrackHeight('normal'),'tall');assert.equal(v.nextTrackHeight('tall'),'compact');assert.equal(v.nextTrackHeight('compact'),'normal');
+ v.setAllTracks(['a','b'],'collapse');assert.equal(v.trackHeightOf('a'),'compact');assert.equal(v.trackHeightOf('z'),'normal');
+ v.setTrackHeight('a','normal');assert.equal(v.trackHeightOf('a'),'normal');assert.equal('a' in v.trackHeights(),false);
+ v.setAllTracks(['a','b'],'expand');assert.deepEqual(v.trackHeights(),{});
+});
+test('P41 saved text presets round-trip through the document and stay valid',()=>{
+ const d0=base();const c=findComp(d0)!;
+ const d1=applyEdit(d0,animatorEdit(d0,'title',{op:'preset',preset:'rise',t:c.start,seconds:2}));
+ const a=findLayer(findComp(d1)!,'title')!.animators![0];
+ const {edit,preset}=saveTextPresetEdit(d1,'title',a.id,'My rise');
+ const d2=applyEdit(d1,edit);assert.equal(userTextPresets(d2).length,1);assert.deepEqual(validateDocument(d2),[]);
+ assert.equal(preset.sweep!.mode,'reveal');assert.equal(preset.sweep!.seconds,2);
+ assert.throws(()=>saveTextPresetEdit(d2,'title',a.id,'My rise'),/already exists/);assert.throws(()=>saveTextPresetEdit(d2,'title',a.id,'Rise'),/already exists/);
+ const d3=applyEdit(d2,applyTextPresetEdit(d2,'title',preset,c.start));const l=findLayer(findComp(d3)!,'title')!.animators!;
+ assert.equal(l.length,2);assert.equal(l[1].position[1],a.position[1]);assert.equal(l[1].offset.keys.length,2);assert.notEqual(l[1].id,a.id);assert.deepEqual(validateDocument(d3),[]);
+ assert.throws(()=>applyTextPresetEdit(d2,'photo',preset,c.start),Error);
+ assert.throws(()=>applyEdit(d2,{type:'textPresets.set',items:[{...preset,opacity:500}]}),EditError);
+ const back=parseAnimationSnapshot(serializeAnimationSnapshot(d2,defaultView()));assert.equal(userTextPresets(back.doc).length,1);
+ const d4=applyEdit(d2,deleteTextPresetEdit(d2,preset.id));assert.equal(userTextPresets(d4).length,0);assert.throws(()=>deleteTextPresetEdit(d4,preset.id),Error);
+ const none=applyEdit(d0,animatorEdit(d0,'title',{op:'add',id:'z'}));assert.equal(saveTextPresetEdit(none,'title','z','Plain').preset.sweep,undefined);
+});

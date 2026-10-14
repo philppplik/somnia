@@ -1056,6 +1056,42 @@
       "hasEnabled": true
     },
     {
+      "id": "animation.text.preset.apply",
+      "title": "Apply a saved text animator preset",
+      "category": "Edit",
+      "source": "animation",
+      "keywords": [
+        "animation",
+        "keyframe",
+        "timeline"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "animation.text.preset.delete",
+      "title": "Delete a saved text animator preset",
+      "category": "Edit",
+      "source": "animation",
+      "keywords": [
+        "animation",
+        "keyframe",
+        "timeline"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "animation.text.preset.save",
+      "title": "Save a text animator as a preset",
+      "category": "Edit",
+      "source": "animation",
+      "keywords": [
+        "animation",
+        "keyframe",
+        "timeline"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "animation.timeline.shy",
       "title": "Hide or show shy layers in the timeline",
       "category": "Project",
@@ -1071,6 +1107,18 @@
       "id": "animation.timeline.snap",
       "title": "Snap timeline drags to markers, work area and playhead",
       "category": "Project",
+      "source": "animation",
+      "keywords": [
+        "animation",
+        "keyframe",
+        "timeline"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "animation.timeline.tracks",
+      "title": "Collapse, expand or resize timeline tracks",
+      "category": "View",
       "source": "animation",
       "keywords": [
         "animation",

@@ -279,3 +279,9 @@ Depends on: v10 diff viewer, v11 updater for smooth extension and app updates.
 - Done: drag-to-reorder layers by pointer (handle, drop line, one undo step, Escape cancels); shy layers (optional `shy` flag, "Hide shy" timeline toggle, render and export unaffected); per-character text presets (Rise, Pop, Spin, Fade, Typewriter).
 - Open: per-layer track heights; touch-specific drag (pointer events only, no autoscroll while dragging); named user text presets.
 
+
+### Animation P41 (2026-10-14, integration pending)
+
+- Done: held edge autoscroll for scrub, key drag, layer drag and marquee (keeps scrolling while the pointer rests near the edge; lane list scrolls vertically); fixed tick math during autoscroll (used a stale window); per-layer track heights (compact / normal / tall) plus Collapse all / Expand all; user-saved text animator presets in the document (save, apply with preview, delete).
+- Open: import/export of text presets as files, tall-track height for lanes (only the layer bar grows), autoscroll for work-area edge drag.
+

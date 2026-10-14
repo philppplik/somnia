@@ -4,6 +4,7 @@ import {MAX_TEXT_ANIMATORS,EASE_IN,EASE_OUT,findComp,findLayer,newId,type Animat
 import {worldMatrix} from './scene';
 import {bezierPath} from './masks';
 import type {Edit} from './edit';
+import {validTextPreset,MAX_USER_TEXT_PRESETS,type TextPresetSet} from './textPresetModel';
 /** One rendered character: its text, the shift relative to the previous character, and neutral-based style values. */
 export interface CharSpan{ch:string;dx:number;dy:number;scale:number;opacity:number;/** Degrees, absolute per glyph. */rotate:number;/** Mixed fill colour, or undefined when no animator changes it. */fill?:string}
 const clamp=(v:number,min:number,max:number)=>Math.max(min,Math.min(max,v));
@@ -55,6 +56,7 @@ export type AnimatorOp=
  |{op:'stagger';animator:string;t:number;seconds:number;mode:'wave'|'reveal'}
  /** Adds a ready-made per-character entrance that plays over `seconds` from `t`. Counts toward the animator limit. */
  |{op:'preset';preset:TextPreset;t:number;seconds:number;unit?:'char'|'word'};
+export const userTextPresets=(doc:AnimationDocument|null|undefined):readonly TextPresetSet[]=>doc?.textPresets?.items??[];
 export const TEXT_PRESETS=['rise','pop','spin','fade','typewriter'] as const;
 export type TextPreset=typeof TEXT_PRESETS[number];
 const PRESET_BASE:Record<TextPreset,Partial<TextAnimator>>={
@@ -63,6 +65,33 @@ const PRESET_BASE:Record<TextPreset,Partial<TextAnimator>>={
 /** A neutral-to-visible starter: first half of the text drops 40 px and fades, softly. */
 export const defaultAnimator=(id=newId('anim')):TextAnimator=>({id,enabled:true,start:0,end:50,softness:25,offset:{type:'scalar',value:0,keys:[]},position:[0,40],scale:100,opacity:0});
 const key=(t:number,v:number)=>({t,v,interp:'linear' as const,out:EASE_OUT,in:EASE_IN});
+/** Edit that saves one animator's look (and its sweep, when keyed) as a named preset. */
+export function saveTextPresetEdit(doc:AnimationDocument,layerId:string,animatorId:string,name:string):{edit:Edit;preset:TextPresetSet}{
+ const l=findComp(doc)&&findLayer(findComp(doc)!,layerId);const a=l?.animators?.find(x=>x.id===animatorId);if(!l||!a)throw Error('Animator no longer exists.');
+ const n=name.trim();const items=userTextPresets(doc);
+ if(items.some(m=>m.name===n)||(TEXT_PRESETS as readonly string[]).includes(n.toLowerCase()))throw Error('A preset with this name already exists.');
+ if(items.length>=MAX_USER_TEXT_PRESETS)throw Error(`At most ${MAX_USER_TEXT_PRESETS} saved text presets.`);
+ const k=a.offset.keys;const sweep=k.length>=2?{mode:(k[0].v as number)<0?'wave' as const:'reveal' as const,seconds:Math.min(30,Math.max(0.1,Math.round((k[k.length-1].t-k[0].t)/TICKS_PER_SECOND*100)/100))}:undefined;
+ const preset:TextPresetSet={id:newId('tpreset'),name:n,start:a.start,end:a.end,softness:a.softness,position:a.position,scale:a.scale,opacity:a.opacity,...(a.rotation!==undefined?{rotation:a.rotation}:{}),...(a.unit?{unit:a.unit}:{}),...(a.color?{color:a.color}:{}),...(a.tracking!==undefined?{tracking:a.tracking}:{}),...(a.ease?{ease:a.ease}:{}),...(sweep?{sweep}:{})};
+ if(!validTextPreset(preset))throw Error('This preset is not valid.');
+ return {edit:{type:'textPresets.set',items:[...items,preset]},preset};
+}
+export function deleteTextPresetEdit(doc:AnimationDocument,id:string):Edit{
+ const items=userTextPresets(doc);if(!items.some(m=>m.id===id))throw Error('Preset no longer exists.');return {type:'textPresets.set',items:items.filter(m=>m.id!==id)};
+}
+/** Edit that adds the saved preset as a new animator on a text layer, sweeping from `t` when the preset has a sweep. */
+export function applyTextPresetEdit(doc:AnimationDocument,layerId:string,set:TextPresetSet,t:number):Edit{
+ const c=findComp(doc),l=c&&findLayer(c,layerId);if(!c||!l)throw Error('Select a layer.');if(l.kind!=='text')throw Error('Text animators require a text layer.');
+ const list=l.animators??[];if(list.length>=MAX_TEXT_ANIMATORS)throw Error(`At most ${MAX_TEXT_ANIMATORS} animators per text layer.`);
+ const {id:_i,name:_n,sweep,...look}=set;let offset:TextAnimator['offset']={type:'scalar',value:0,keys:[]};
+ if(sweep){
+  const t0=snapToFrame(t,c.fps),t1=snapToFrame(t+sweep.seconds*TICKS_PER_SECOND,c.fps);
+  if(t0<c.start||t1>c.start+c.duration||t1<=t0)throw Error('The stagger does not fit the composition.');
+  const from=sweep.mode==='wave'?-(set.end+set.softness):0,to=100-set.start+set.softness;
+  offset={type:'scalar',value:from,keys:[key(t0,from),key(t1,to)]};
+ }
+ return {type:'text.animators',layer:l.id,animators:[...list,{...defaultAnimator(),...look,offset} as TextAnimator]};
+}
 /** Turns one animator operation into a single undoable edit. Bounds are enforced again by document validation. */
 export function animatorEdit(doc:AnimationDocument,layerId:string,o:AnimatorOp):Edit{
  const c=findComp(doc),l=c&&findLayer(c,layerId);if(!c||!l)throw Error('Select a layer.');if(l.kind!=='text')throw Error('Text animators require a text layer.');
