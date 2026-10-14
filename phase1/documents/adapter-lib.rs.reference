@@ -16,6 +16,7 @@ const CELL_LIST_MAX: usize = 20_000;
 type Snap = (wordcraft_doc::Blocks, std::collections::BTreeMap<u32, wordcraft_doc::Part>, wordcraft_doc::SectionProps, std::collections::BTreeMap<String, Arc<Vec<u8>>>, std::collections::BTreeMap<u32, wordcraft_doc::Comment>);
 const COMMENT_MAX_CHARS: usize = 2000;
 const COMMENT_MAX_COUNT: usize = 500;
+const LINK_MAX_CHARS: usize = 2048;
 const HF_MAX_CHARS: usize = 500;: usize = 500;
 /// Page sizes the page setup offers: name, portrait width and height in points.
 const PAGE_SIZES: [(&str, f32, f32); 4] = [("a4", 595.3, 841.9), ("letter", 612.0, 792.0), ("legal", 612.0, 1008.0), ("a5", 419.5, 595.3)];
@@ -374,6 +375,39 @@ impl DocSession {
         }
         Ok(out)
     }
+    fn highlight_of(name: &str) -> Result<wordcraft_doc::props::Highlight, String> {
+        use wordcraft_doc::props::Highlight;
+        Ok(match name {
+            "none" => Highlight::None,
+            "yellow" => Highlight::Yellow,
+            "green" => Highlight::BrightGreen,
+            "cyan" => Highlight::Turquoise,
+            "pink" => Highlight::Pink,
+            "gray" => Highlight::Gray25,
+            _ => return Err("format field highlight must be none, yellow, green, cyan, pink or gray".into()),
+        })
+    }
+    fn highlight_name(h: wordcraft_doc::props::Highlight) -> &'static str {
+        use wordcraft_doc::props::Highlight;
+        match h {
+            Highlight::None => "none",
+            Highlight::Yellow => "yellow",
+            Highlight::BrightGreen => "green",
+            Highlight::Turquoise => "cyan",
+            Highlight::Pink => "pink",
+            Highlight::Gray25 => "gray",
+            _ => "other",
+        }
+    }
+    /// A hyperlink target: http, https or mailto, up to 2048 characters, no spaces or control characters.
+    fn link_ok(l: &str) -> Result<String, String> {
+        let low = l.to_ascii_lowercase();
+        let rest = ["https://", "http://", "mailto:"].iter().find(|p| low.starts_with(*p)).map(|p| &l[p.len()..]);
+        if l.chars().count() > LINK_MAX_CHARS || l.chars().any(|c| c.is_control() || c.is_whitespace()) || rest.is_none_or(|r| r.is_empty()) {
+            return Err(format!("a link must start with http://, https:// or mailto: and be at most {LINK_MAX_CHARS} characters without spaces"));
+        }
+        Ok(l.to_string())
+    }
     /// Sets bold / italic / underline (each `true` or `false`) on a selection. The patch is a JSON object
     /// such as `{"bold":true}`; unknown or non-boolean fields are refused. All paragraphs are changed on
     /// clones and committed together, so a failure leaves the document unchanged.
@@ -386,8 +420,33 @@ impl DocSession {
         let mut font: Option<String> = None;
         let mut size: Option<f32> = None;
         let mut color: Option<wordcraft_doc::props::TextColor> = None;
+        let mut strike: Option<bool> = None;
+        let mut small_caps: Option<bool> = None;
+        let mut vert: Option<wordcraft_doc::props::VertAlign> = None;
+        let mut highlight: Option<wordcraft_doc::props::Highlight> = None;
+        let mut link: Option<Option<String>> = None;
+        let mut clear = false;
         for (k, val) in obj {
             match k.as_str() {
+                "vertAlign" => {
+                    use wordcraft_doc::props::VertAlign;
+                    vert = Some(match val.as_str() {
+                        Some("baseline") => VertAlign::Baseline,
+                        Some("superscript") => VertAlign::Superscript,
+                        Some("subscript") => VertAlign::Subscript,
+                        _ => return Err("format field vertAlign must be baseline, superscript or subscript".into()),
+                    });
+                    continue;
+                }
+                "highlight" => {
+                    highlight = Some(Self::highlight_of(val.as_str().ok_or_else(|| "format field highlight must be text".to_string())?)?);
+                    continue;
+                }
+                "link" => {
+                    let l = val.as_str().ok_or_else(|| "format field link must be text".to_string())?;
+                    link = Some(if l.is_empty() { None } else { Some(Self::link_ok(l)?) });
+                    continue;
+                }
                 "font" => {
                     let f = val.as_str().ok_or_else(|| "format field font must be text".to_string())?;
                     if f.is_empty() || f.chars().count() > 64 || f.chars().any(|c| c.is_control()) {
@@ -422,6 +481,14 @@ impl DocSession {
             match k.as_str() {
                 "bold" => bold = Some(flag),
                 "italic" => italic = Some(flag),
+                "strike" => strike = Some(flag),
+                "smallCaps" => small_caps = Some(flag),
+                "clear" => {
+                    if !flag {
+                        return Err("format field clear must be true".into());
+                    }
+                    clear = true;
+                }
                 "underline" => {
                     underline = Some(if flag { wordcraft_doc::props::Underline::Single } else { wordcraft_doc::props::Underline::None })
                 }
@@ -436,6 +503,33 @@ impl DocSession {
         for (b, start, end) in ranges {
             let mut p = self.fmt_para(b)?.clone();
             p.format(start, end, &|cp: &mut CharProps| {
+                if clear {
+                    // Direct character formatting goes; the link and tracked-change marks stay.
+                    let keep = (cp.link.take(), cp.ins, cp.del, cp.style.take());
+                    *cp = CharProps::default();
+                    cp.link = keep.0;
+                    cp.ins = keep.1;
+                    cp.del = keep.2;
+                    cp.style = keep.3;
+                }
+                if let Some(v) = strike {
+                    cp.strike = Some(v);
+                    if v {
+                        cp.double_strike = None;
+                    }
+                }
+                if let Some(v) = small_caps {
+                    cp.small_caps = Some(v);
+                }
+                if let Some(v) = vert {
+                    cp.vert_align = Some(v);
+                }
+                if let Some(v) = highlight {
+                    cp.highlight = Some(v);
+                }
+                if let Some(v) = &link {
+                    cp.link = v.clone();
+                }
                 if let Some(v) = bold {
                     cp.bold = Some(v);
                 }
@@ -464,11 +558,18 @@ impl DocSession {
         self.pages = DocLayout::default();
         Ok(())
     }
+    fn extra_of(rc: &wordcraft_doc::resolve::ResolvedChar, cp: &CharProps) -> (bool, bool, wordcraft_doc::props::VertAlign, &'static str, String) {
+        // The resolved highlight is a colour; the direct property names the palette entry.
+        let hl = cp.highlight.map(Self::highlight_name).unwrap_or("none");
+        (rc.strike, rc.small_caps, rc.vert_align, hl, rc.link.clone().unwrap_or_default())
+    }
     /// Effective (style + direct) bold / italic / underline over a selection, each `"on"`, `"off"` or
     /// `"mixed"`. A collapsed selection reports what typing at that point would get.
     fn do_format_state(&self, sb: usize, so: usize, eb: usize, eo: usize) -> Result<String, String> {
         let mut seen: Vec<(bool, bool, bool)> = Vec::new();
         let mut look: Vec<(String, f32, wordcraft_doc::props::TextColor)> = Vec::new();
+        // strike, small caps, vertical alignment, highlight name, link ("" for none).
+        let mut extra: Vec<(bool, bool, wordcraft_doc::props::VertAlign, &'static str, String)> = Vec::new();
         if sb == eb && so == eo {
             let p = self.fmt_para(sb)?;
             if so > p.text.len() || !p.text.is_char_boundary(so) {
@@ -477,6 +578,7 @@ impl DocSession {
             let rc = self.doc.styles.resolve_char(p.props.style.as_deref(), p.props_at(so));
             seen.push((rc.bold, rc.italic, rc.underline != wordcraft_doc::props::Underline::None));
             look.push((rc.font.clone(), rc.size, rc.color));
+            extra.push(Self::extra_of(&rc, p.props_at(so)));
         } else {
             for (b, start, end) in self.span_ranges(sb, so, eb, eo)? {
                 let p = self.fmt_para(b)?;
@@ -485,6 +587,7 @@ impl DocSession {
                         let rc = self.doc.styles.resolve_char(p.props.style.as_deref(), cp);
                         seen.push((rc.bold, rc.italic, rc.underline != wordcraft_doc::props::Underline::None));
                         look.push((rc.font.clone(), rc.size, rc.color));
+                        extra.push(Self::extra_of(&rc, cp));
                     }
                 }
             }
@@ -507,7 +610,18 @@ impl DocSession {
             wordcraft_doc::props::TextColor::Auto => "auto".to_string(),
             wordcraft_doc::props::TextColor::Rgb(c) => c.hex(),
         });
-        Ok(serde_json::json!({"bold": tri(&seen, |x| x.0), "italic": tri(&seen, |x| x.1), "underline": tri(&seen, |x| x.2), "font": font, "size": size, "color": color}).to_string())
+        let all_same = |f: &dyn Fn(&(bool, bool, wordcraft_doc::props::VertAlign, &'static str, String)) -> bool| !extra.is_empty() && extra.iter().all(|x| f(x));
+        let tri_b = |f: &dyn Fn(&(bool, bool, wordcraft_doc::props::VertAlign, &'static str, String)) -> bool| if all_same(f) { "on" } else if extra.iter().any(|x| f(x)) { "mixed" } else { "off" };
+        let e0 = extra.first();
+        let vert = e0.filter(|x| all_same(&|y| y.2 == x.2)).map(|x| match x.2 {
+            wordcraft_doc::props::VertAlign::Baseline => "baseline",
+            wordcraft_doc::props::VertAlign::Superscript => "superscript",
+            wordcraft_doc::props::VertAlign::Subscript => "subscript",
+        });
+        let hl = e0.filter(|x| all_same(&|y| y.3 == x.3)).map(|x| x.3);
+        let lk = e0.filter(|x| all_same(&|y| y.4 == x.4)).map(|x| x.4.clone());
+        Ok(serde_json::json!({"bold": tri(&seen, |x| x.0), "italic": tri(&seen, |x| x.1), "underline": tri(&seen, |x| x.2), "font": font, "size": size, "color": color,
+            "strike": tri_b(&|x| x.0), "smallCaps": tri_b(&|x| x.1), "vertAlign": vert, "highlight": hl, "link": lk}).to_string())
     }
     /// Paragraph formatting for the whole paragraphs `first..=last` (selection coordinates are not needed:
     /// alignment, indents and spacing belong to a paragraph). Any non-paragraph block in the span, or an
@@ -2132,6 +2246,53 @@ mod tests {
         assert_eq!(s.doc.body.len(), len);
         s.do_remove_image(1).unwrap();
         assert_eq!(s.doc.body.len(), len - 1);
+    }
+    #[test]
+    fn text_effects_links_and_clear() {
+        let mut s = DocSession::from_bytes(FIXTURE).unwrap();
+        s.do_format(0, 0, 0, 3, r#"{"strike":true,"smallCaps":true,"vertAlign":"superscript","highlight":"yellow","link":"https://example.com/a?b=1"}"#).unwrap();
+        let v: serde_json::Value = serde_json::from_str(&s.do_format_state(0, 0, 0, 3).unwrap()).unwrap();
+        assert_eq!(v["strike"], "on");
+        assert_eq!(v["smallCaps"], "on");
+        assert_eq!(v["vertAlign"], "superscript");
+        assert_eq!(v["highlight"], "yellow");
+        assert_eq!(v["link"], "https://example.com/a?b=1");
+        // A selection that straddles formatted and plain text reports mixed / no shared value.
+        let m: serde_json::Value = serde_json::from_str(&s.do_format_state(0, 0, 0, 6).unwrap()).unwrap();
+        assert_eq!(m["strike"], "mixed");
+        assert!(m["vertAlign"].is_null() && m["link"].is_null() && m["highlight"].is_null());
+        // The link survives a save and reload.
+        let saved = wordcraft_docx::write(&s.doc).unwrap();
+        let re = DocSession::from_bytes(&saved).unwrap();
+        let r: serde_json::Value = serde_json::from_str(&re.do_format_state(0, 0, 0, 3).unwrap()).unwrap();
+        assert_eq!(r["link"], "https://example.com/a?b=1");
+        // Removing the link and clearing formatting.
+        s.do_format(0, 0, 0, 3, r#"{"link":""}"#).unwrap();
+        s.do_format(0, 0, 0, 3, r#"{"bold":true}"#).unwrap();
+        s.do_format(0, 0, 0, 3, r#"{"clear":true}"#).unwrap();
+        let c: serde_json::Value = serde_json::from_str(&s.do_format_state(0, 0, 0, 3).unwrap()).unwrap();
+        assert_eq!((c["strike"].as_str(), c["bold"].as_str(), c["smallCaps"].as_str()), (Some("off"), Some("off"), Some("off")));
+        assert_eq!(c["vertAlign"], "baseline");
+        assert_eq!(c["highlight"], "none");
+        assert_eq!(c["link"], "");
+        // Refusals change nothing.
+        let before = s.doc.body.clone();
+        for bad in [
+            r#"{"link":"javascript:alert(1)"}"#,
+            r#"{"link":"http://"}"#,
+            r#"{"link":"https://a b.com"}"#,
+            r#"{"link":"ftp://x.org"}"#,
+            r#"{"link":5}"#,
+            r#"{"highlight":"purple"}"#,
+            r#"{"vertAlign":"up"}"#,
+            r#"{"clear":false}"#,
+            r#"{"strike":"yes"}"#,
+        ] {
+            assert!(s.do_format(0, 0, 0, 3, bad).is_err(), "{bad}");
+        }
+        let long = format!(r#"{{"link":"https://{}"}}"#, "a".repeat(LINK_MAX_CHARS));
+        assert!(s.do_format(0, 0, 0, 3, &long).is_err());
+        assert!(s.doc.body == before);
     }
     #[test]
     fn comments_add_resolve_delete_and_roundtrip() {

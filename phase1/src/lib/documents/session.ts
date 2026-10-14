@@ -1,4 +1,4 @@
-import {commentProblem,COMMENT_AUTHOR,type CommentItem,validHfText,type HeaderFooterState,checkFormatPatch,checkParaPatch,MAX_HF_CHARS,MAX_NEW_TABLE_COLS,MAX_NEW_TABLE_ROWS,TABLE_OPS,type TableOp,DOC_STYLES,type DocStyleId,type ListKindId,type ParaPatch,type ImageOp,type PageSetupPatch,type PageSetupState,pageSetupProblem,type TableStyle,type TableStyleScope,tableStyleProblem,MIN_COL_PT,MAX_COL_PT,imageProblem,IMAGE_WIDTH_PERCENTS,MAX_IMAGES} from './protocol';
+import {linkProblem,commentProblem,COMMENT_AUTHOR,type CommentItem,validHfText,type HeaderFooterState,checkFormatPatch,checkParaPatch,MAX_HF_CHARS,MAX_NEW_TABLE_COLS,MAX_NEW_TABLE_ROWS,TABLE_OPS,type TableOp,DOC_STYLES,type DocStyleId,type ListKindId,type ParaPatch,type ImageOp,type PageSetupPatch,type PageSetupState,pageSetupProblem,type TableStyle,type TableStyleScope,tableStyleProblem,MIN_COL_PT,MAX_COL_PT,imageProblem,IMAGE_WIDTH_PERCENTS,MAX_IMAGES} from './protocol';
 import {captureDocumentSelection} from './selectionCapture';
 import {CELL_BASE,caretAfterEdit,diffEdit,inverseOf,UndoStack,type TextEdit,type UndoEntry} from './edit';
 import {findMatches,nextMatchIndex,textStats,validFindQuery,validReplaceText,MAX_FIND_HIGHLIGHTS,MAX_REPLACE_BLOCKS,type FindMatch} from './find';
@@ -237,7 +237,7 @@ export const typeText=(text:string)=>run(async()=>{
  if(n.s.block===n.e.block)await applyAtCaret({start:n.s.off,end:n.e.off,text:t},n.s.off===n.e.off);
  else await replaceRange(n.s,n.e,t,n.h);
 });
-const FORMAT_PROPS=['bold','italic','underline'] as const;
+const FORMAT_PROPS=['bold','italic','underline','strike','smallCaps'] as const;
 export type FormatProp=typeof FORMAT_PROPS[number];
 /**
  * Bold/italic/underline on the selection with Word semantics: when every character already has it, it is removed, otherwise it is applied to all.
@@ -273,6 +273,27 @@ async function applyFormat(patch:import('./protocol').FormatPatch){
 export const setFont=(font:string)=>run(()=>applyFormat({font}));
 export const setFontSize=(size:number)=>run(()=>applyFormat({size}));
 export const setFontColor=(color:string)=>run(()=>applyFormat({color}));
+/** Superscript or subscript; choosing the one already set returns to normal. */
+export const toggleVertAlign=(v:'superscript'|'subscript')=>run(async()=>{
+ const cur=heldFormat()?.vertAlign??getDocumentsState().format?.vertAlign??'baseline';
+ await applyFormat({vertAlign:cur===v?'baseline':v});
+});
+/** Highlight colour of the selection, or of the next typed text at a caret. `none` removes it. */
+export const setHighlight=(h:import('./protocol').HighlightName)=>run(()=>applyFormat({highlight:h}));
+/** The selected text must exist: a link cannot be held for typing. */
+const needSelection=()=>{const c=getDocumentsState().caret;if(!c)return false;const n=norm(c);return cmp(n.s,n.e)!==0;};
+/** Link (or, with an empty URL, unlink) the selected text. One undo step. */
+export const setLink=(url:string)=>run(async()=>{
+ const bad=linkProblem(url);if(bad)throw new Error(bad);
+ if(!needSelection())throw new Error('Select the text to link first.');
+ await applyFormat({link:url});
+});
+/** Remove direct character formatting from the selection (links stay). One undo step. */
+export const clearFormatting=()=>run(async()=>{
+ if(!needSelection())throw new Error('Select text to clear its formatting.');
+ await applyFormat({clear:true});
+});
+export const hasTextSelection=needSelection;
 /** Grows or shrinks the size by one step of the usual size ladder (stays within 1-400 pt; a mixed selection starts from 11 pt). */
 export const FONT_SIZES=[8,9,10,11,12,14,16,18,20,24,28,32,36,48,72] as const;
 export const stepFontSize=(dir:-1|1)=>run(async()=>{

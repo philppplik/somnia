@@ -10,7 +10,8 @@ import {goToBlock,scrollToPage} from './navigate';
 import {safeCopyName} from './saveCopy';
 import {commentsOpen,setCommentsOpen} from './comments';
 import {addComment,commentSelection,deleteComment,resolveComment} from './session';
-import {commentProblem} from './protocol';
+import {commentProblem,HIGHLIGHTS,linkProblem,type HighlightName} from './protocol';
+import {clearFormatting,hasTextSelection,setHighlight,setLink,toggleVertAlign} from './session';
 import {documentsExportReady,patchDocumentsExportUi,requestDocumentsSaveCopy} from './exportBridge';
 /**
  * Documents studio commands. Registered while the Documents canvas is mounted (registerDocumentsCommands),
@@ -54,6 +55,20 @@ export function registerDocumentsCommands(){
   add('documents.toggleBold','Toggle bold',async()=>{await toggleFormat('bold');},()=>ready()&&!!getDocumentsState().caret),
   add('documents.toggleItalic','Toggle italic',async()=>{await toggleFormat('italic');},()=>ready()&&!!getDocumentsState().caret),
   add('documents.toggleUnderline','Toggle underline',async()=>{await toggleFormat('underline');},()=>ready()&&!!getDocumentsState().caret),
+  add('documents.toggleStrike','Toggle strikethrough',async()=>{await toggleFormat('strike');},()=>ready()&&!!getDocumentsState().caret),
+  add('documents.toggleSmallCaps','Toggle small caps',async()=>{await toggleFormat('smallCaps');},()=>ready()&&!!getDocumentsState().caret),
+  add('documents.toggleSuperscript','Toggle superscript',async()=>{await toggleVertAlign('superscript');},()=>ready()&&!!getDocumentsState().caret),
+  add('documents.toggleSubscript','Toggle subscript',async()=>{await toggleVertAlign('subscript');},()=>ready()&&!!getDocumentsState().caret),
+  add('documents.highlight.set','Set highlight colour',async p=>{
+   const c=(p as Record<string,unknown>|undefined)?.color;if(!(HIGHLIGHTS as readonly unknown[]).includes(c))throw expected('Invalid "color" (none, yellow, green, cyan, pink or gray).');
+   await setHighlight(c as HighlightName);
+  },()=>ready()&&!!getDocumentsState().caret),
+  add('documents.link.set','Link the selected text',async p=>{
+   const u=(p as Record<string,unknown>|undefined)?.url;const bad=linkProblem(u);if(bad||typeof u!=='string')throw expected(bad??'Invalid "url".');
+   await setLink(u);
+  },()=>ready()&&hasTextSelection()),
+  add('documents.link.remove','Remove the link from the selected text',async()=>{await setLink('');},()=>ready()&&hasTextSelection()),
+  add('documents.clearFormatting','Clear text formatting',async()=>{await clearFormatting();},()=>ready()&&hasTextSelection()),
   add('documents.fontSize.increase','Increase font size',async()=>{await stepFontSize(1);},()=>ready()&&!!getDocumentsState().caret),
   add('documents.fontSize.decrease','Decrease font size',async()=>{await stepFontSize(-1);},()=>ready()&&!!getDocumentsState().caret),
   add('documents.align.left','Align left',async()=>{await setAlign('left');},()=>ready()&&!!getDocumentsState().caret),

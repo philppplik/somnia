@@ -2474,6 +2474,17 @@
       "hasEnabled": true
     },
     {
+      "id": "documents.clearFormatting",
+      "title": "Clear text formatting",
+      "category": "View",
+      "source": "documents",
+      "keywords": [
+        "document",
+        "docx"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "documents.clearSelection",
       "title": "Clear document selection",
       "category": "View",
@@ -2671,6 +2682,17 @@
       "hasEnabled": true
     },
     {
+      "id": "documents.highlight.set",
+      "title": "Set highlight colour",
+      "category": "View",
+      "source": "documents",
+      "keywords": [
+        "document",
+        "docx"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "documents.image.alt",
       "title": "Set picture alt text",
       "category": "View",
@@ -2728,6 +2750,28 @@
     {
       "id": "documents.indent.increase",
       "title": "Increase indent",
+      "category": "View",
+      "source": "documents",
+      "keywords": [
+        "document",
+        "docx"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "documents.link.remove",
+      "title": "Remove the link from the selected text",
+      "category": "View",
+      "source": "documents",
+      "keywords": [
+        "document",
+        "docx"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "documents.link.set",
+      "title": "Link the selected text",
       "category": "View",
       "source": "documents",
       "keywords": [
@@ -3139,6 +3183,50 @@
     {
       "id": "documents.toggleItalic",
       "title": "Toggle italic",
+      "category": "View",
+      "source": "documents",
+      "keywords": [
+        "document",
+        "docx"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "documents.toggleSmallCaps",
+      "title": "Toggle small caps",
+      "category": "View",
+      "source": "documents",
+      "keywords": [
+        "document",
+        "docx"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "documents.toggleStrike",
+      "title": "Toggle strikethrough",
+      "category": "View",
+      "source": "documents",
+      "keywords": [
+        "document",
+        "docx"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "documents.toggleSubscript",
+      "title": "Toggle subscript",
+      "category": "View",
+      "source": "documents",
+      "keywords": [
+        "document",
+        "docx"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "documents.toggleSuperscript",
+      "title": "Toggle superscript",
       "category": "View",
       "source": "documents",
       "keywords": [

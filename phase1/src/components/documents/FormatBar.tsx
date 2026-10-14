@@ -5,6 +5,7 @@ import {ImageControls} from './ImageControls';
 import {TableStyleDialog} from './TableStyleDialog';
 import {PageSetupDialog} from './PageSetupDialog';
 import {GoToPageDialog} from './GoToPageDialog';
+import {TextEffects} from './TextEffects';
 import {setCommentsOpen,useCommentsOpen} from '../../lib/documents/comments';
 import {DOC_COLORS} from '../../lib/documents/palette';
 import {FONT_SIZES,setAlign,setFont,setFontColor,setFontSize,setLineSpacing,setSpaceAfter,setParagraphStyle,setSpaceBefore,stepIndent,toggleFormat,toggleList,shiftListLevel,editTable,insertTable,setColumnWidth} from '../../lib/documents/session';
@@ -40,6 +41,7 @@ export function FormatBar({format,held,para,enabled,inCell=false}:{format:Format
   <NativeSelect className={sel+' w-16 tabular-nums'} aria-label={t('documents.format.size')} title={t('documents.format.size')} disabled={!enabled} value={size===null?'':String(size)} onChange={e=>void setFontSize(Number(e.currentTarget.value))} data-testid="documents-format-size">
    {size===null&&<option value="" disabled>{'–'}</option>}{sizes.map(s=><option key={s} value={String(s)}>{s}</option>)}</NativeSelect>
   {(['bold','italic','underline'] as const).map(p=><NativeButton key={p} className={tool+' w-6'} aria-label={t('documents.format.'+p)} title={t('documents.format.'+p)} aria-pressed={flag(p)} disabled={!enabled} onClick={()=>void toggleFormat(p)} data-testid={'documents-format-'+p}><span className={p==='bold'?'font-bold':p==='italic'?'italic':'underline'}>{p==='bold'?'B':p==='italic'?'I':'U'}</span></NativeButton>)}
+  <TextEffects format={format} held={held} enabled={enabled}/>
   <span className="flex items-center gap-1" role="group" aria-label={t('documents.format.color')}>
    <NativeButton className={tool} aria-pressed={color==='auto'} disabled={!enabled} onClick={()=>void setFontColor('auto')} data-testid="documents-color-auto">{t('documents.format.colorAuto')}</NativeButton>
    {DOC_COLORS.map(([h,cls])=><NativeButton key={h} className={'h-5 w-5 cursor-pointer rounded-sm border disabled:cursor-default disabled:opacity-50 '+cls+' '+(color?.toUpperCase()===h?'border-ink':'border-subtle')} aria-label={t('documents.format.colorOne',{hex:'#'+h})} title={'#'+h} aria-pressed={color?.toUpperCase()===h} disabled={!enabled} onClick={()=>void setFontColor(h)} data-testid={'documents-color-'+h}/>)}
