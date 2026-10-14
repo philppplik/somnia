@@ -1,6 +1,6 @@
 import {validateAnimationAssets} from './assetsValidation';
 import {validEffects,validSource} from './model';
-import {effectPrimitives,effectBounds} from './effects';
+import {effectPrimitives,effectBounds,revealedText} from './effects';
 import type {InterfaceAsset} from '../interface/schema';
 import {Zip,ZipPassThrough,strToU8} from 'fflate';
 import {sceneAt} from './scene';
@@ -15,7 +15,7 @@ export const MAX_PIXELS=8192*8192;
 export class ExportError extends Error{constructor(message:string,readonly code:'too-large'|'too-many'|'raster'|'cancelled'|'empty'){super(message);this.name='ExportError';}}
 const esc=(s:string)=>s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 const num=(n:number)=>String(Math.round(n*1e4)/1e4);
-function layerSvg(l:Layer,assets:readonly InterfaceAsset[]):string{
+function layerSvg(l:Layer,assets:readonly InterfaceAsset[],tick:number):string{
  const s=l.source;
  if(l.kind==='raster'){const asset=assets.find(a=>a.id===s.assetId);if(!asset)throw new ExportError('Missing image asset.','raster');return `<image href="${asset.data}" width="${num(s.width??asset.width)}" height="${num(s.height??asset.height)}"/>`;}
 
@@ -23,14 +23,14 @@ function layerSvg(l:Layer,assets:readonly InterfaceAsset[]):string{
  if(l.kind==='shape')return s.shape==='ellipse'
   ?`<ellipse cx="${num((s.width??0)/2)}" cy="${num((s.height??0)/2)}" rx="${num((s.width??0)/2)}" ry="${num((s.height??0)/2)}" fill="${esc(s.color??'#000')}"/>`
   :`<rect x="0" y="0" width="${num(s.width??0)}" height="${num(s.height??0)}" fill="${esc(s.color??'#000')}"/>`;
- return `<text x="0" y="${num(s.size??48)}" font-size="${num(s.size??48)}" fill="${esc(s.color??'#fff')}" font-family="system-ui, sans-serif">${esc(s.text??'')}</text>`;
+ return `<text x="0" y="${num(s.size??48)}" font-size="${num(s.size??48)}" fill="${esc(s.color??'#fff')}" font-family="system-ui, sans-serif">${esc(revealedText(l,tick))}</text>`;
 }
 /** Standalone SVG of the composition at `tick`. `transparent` omits the background rectangle so PNG output keeps real alpha. */
 export function frameSvg(comp:Composition,tick:number,transparent=false,assets:readonly InterfaceAsset[]=[]):string{
  validateAnimationAssets({assets,compositions:[comp]});
  if(comp.layers.some(l=>!validSource(l.source)||!validEffects(l.effects)))throw new ExportError('Invalid layer source/effects.','raster');
- const defs=comp.layers.map((l,i)=>{const b=effectBounds(l);return `<filter id="effect-${i}" filterUnits="userSpaceOnUse" x="${b.x}" y="${b.y}" width="${b.width}" height="${b.height}" color-interpolation-filters="sRGB">${effectPrimitives(l)}</filter>`;}).join('');
- const body=sceneAt(comp,tick).map(({layer,matrix,opacity})=>`<g transform="matrix(${matrix.map(num).join(' ')})" opacity="${num(opacity)}">${effectPrimitives(layer)?`<g filter="url(#effect-${comp.layers.indexOf(layer)})">`:""}${layerSvg(layer,assets)}${effectPrimitives(layer)?"</g>":""}</g>`).join('');
+ const defs=comp.layers.map((l,i)=>{const b=effectBounds(l,tick);return `<filter id="effect-${i}" filterUnits="userSpaceOnUse" x="${b.x}" y="${b.y}" width="${b.width}" height="${b.height}" color-interpolation-filters="sRGB">${effectPrimitives(l,tick)}</filter>`;}).join('');
+ const body=sceneAt(comp,tick).map(({layer,matrix,opacity})=>`<g transform="matrix(${matrix.map(num).join(' ')})" opacity="${num(opacity)}">${effectPrimitives(layer,tick)?`<g filter="url(#effect-${comp.layers.indexOf(layer)})">`:""}${layerSvg(layer,assets,tick)}${effectPrimitives(layer,tick)?"</g>":""}</g>`).join('');
  return `<svg xmlns="http://www.w3.org/2000/svg" width="${comp.width}" height="${comp.height}" viewBox="0 0 ${comp.width} ${comp.height}"><defs>${defs}</defs>${transparent?'':`<rect width="${comp.width}" height="${comp.height}" fill="${esc(comp.background)}"/>`}${body}</svg>`;
 }
 export const exportSlug=(name:string)=>name.normalize('NFKD').replace(/[^\w.-]+/g,'_').replace(/^[_.]+|[_.]+$/g,'').slice(0,80)||'animation';

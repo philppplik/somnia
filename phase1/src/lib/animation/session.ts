@@ -1,6 +1,6 @@
 import {useSyncExternalStore} from 'react';
 import {applyEdit,applyEdits,type Edit} from './edit';
-import {createDocument,findComp,type AnimationDocument,type KeyRef} from './model';
+import {createDocument,findComp,validateDocument,type AnimationDocument,type KeyRef} from './model';
 import {clearJournal,defaultView,readJournal,writeJournal,type KeyValueStore,type ViewState} from './recovery';
 import {snapToFrame} from './time';
 export const HISTORY_LIMIT=200;
@@ -28,6 +28,7 @@ export class AnimationSession{
   this.recoveryFailed=!!this.store&&!writeJournal({savedRevision:this.savedRevision,doc:this.doc,view:this.view},this.store,this.now());
  }
  open(doc:AnimationDocument,view:Partial<ViewState>={}){
+  const errors=validateDocument(doc);if(errors.length)throw Error(errors.join('; '));
   this.past=[];this.future=[];this.doc=doc;this.preview=null;this.previewBase=null;this.view={...defaultView(),...view};this.savedRevision=doc.revision;this.renderSetup=false;this.checkpoint();this.emit();
  }
  createBlank(name?:string){this.open(createDocument(name));return this.doc!;}
@@ -69,6 +70,7 @@ export class AnimationSession{
  }
  /** Replaces the key selection; the primary key (last selected) mirrors into `selectedKey`. */
  selectKeys(keys:readonly KeyRef[]){const last=keys[keys.length-1];this.setView({selectedKeys:[...keys],selectedKey:last?{prop:last.prop,t:last.t}:null});}
+ markSaved(id:string,revision:number):boolean{if(this.doc?.id!==id||this.doc.revision!==revision)return false;this.savedRevision=revision;clearJournal(this.store);this.recoveryFailed=false;this.emit();return true;}
  setRenderSetup(open:boolean){this.renderSetup=open;this.emit();}
  /** Called on studio switch: dirty data, history and playhead stay in memory; the journal gets a fresh checkpoint. */
  suspend(){this.cancelPreview();this.checkpoint();this.emit();}

@@ -29,6 +29,11 @@ export type Edit=
  /** Spatial tangents of a position key, as offsets from the key value. */
  |{type:'key.spatial';layer:string;prop:TransformKey;t:number;sIn?:Vec2;sOut?:Vec2}
  |{type:'keys.spatial';keys:readonly KeyRef[];mode:'smooth'|'straight'}
+ |{type:'effect.amount';layer:string;effect:string;value:number;t:number}
+ |{type:'effect.animate';layer:string;effect:string;on:boolean;t:number}
+ |{type:'effect.key.remove';layer:string;effect:string;t:number}
+ |{type:'layer.reveal';layer:string;property:Property}
+ |{type:'markers.set';markers:readonly import('./model').Marker[]}
  |{type:'asset.import';asset:InterfaceAsset}
  |{type:'layer.effects';layer:string;effects:readonly LayerEffect[]}
  |{type:'prop.pathMode';layer:string;mode:'parameter'|'arcLength'}
@@ -90,9 +95,17 @@ function reduce(doc:AnimationDocument,e:Edit):AnimationDocument{
   case 'comp.update':{const c=findComp(doc,e.comp??doc.activeComp)??fail('missing','Composition does not exist.');checkSettings(e.settings);
    const duration=e.settings.duration??c.duration;
    const clipped=c.layers.map(l=>l.outT>duration?{...l,outT:Math.max(l.inT+1,duration)}:l);
-   return withComp(doc,{...c,...e.settings,duration,fps:e.settings.fps??c.fps,layers:clipped,workArea:{in:Math.min(c.workArea.in,duration-1),out:Math.min(c.workArea.out,duration)}});}
+   return withComp(doc,{...c,...e.settings,duration,fps:e.settings.fps??c.fps,markers:c.markers?.filter(m=>m.t<duration+c.start),layers:clipped,workArea:{in:Math.min(c.workArea.in,duration-1),out:Math.min(c.workArea.out,duration)}});}
   case 'comp.select':if(!findComp(doc,e.comp))return fail('missing','Composition does not exist.');return e.comp===doc.activeComp?doc:{...doc,activeComp:e.comp};
   case 'comp.remove':{if(doc.compositions.length<2)return fail('invalid','A document needs at least one composition.');if(!findComp(doc,e.comp))return fail('missing','Composition does not exist.');const rest=doc.compositions.filter(c=>c.id!==e.comp);return {...doc,compositions:rest,activeComp:doc.activeComp===e.comp?rest[0].id:doc.activeComp};}
+  case 'markers.set':{const c=compOf(doc);return withComp(doc,{...c,markers:[...e.markers].sort((a,b)=>a.t-b.t)});}
+  case 'layer.reveal':{const l=layerOf(doc,e.layer);if(l.kind!=='text')fail('invalid','Typewriter requires a text layer.');return setLayer(doc,{...l,textReveal:e.property});}
+  case 'effect.amount':case 'effect.animate':case 'effect.key.remove':{const l=layerOf(doc,e.layer),c=compOf(doc),t=tickOf(c,e.t),effect=l.effects?.find(x=>x.id===e.effect)??fail('missing','Effect no longer exists.');let next=effect;
+   const max=effect.kind==='blur'?64:1;
+   if(e.type==='effect.amount'){if(!Number.isFinite(e.value)||e.value<0||e.value>max)fail('invalid','Effect strength is outside its supported range.');next=effect.animation?.keys.length?{...effect,animation:{...effect.animation,keys:upsertKey(effect.animation.keys,makeKey(t,e.value))}}:{...effect,amount:e.value};}
+   else if(e.type==='effect.animate'){const sampled=effect.animation?evaluate(effect.animation,t) as number:effect.amount;next=e.on?{...effect,animation:effect.animation?.keys.length?effect.animation:{type:'scalar',value:sampled,keys:[makeKey(t,sampled)]}}:{...effect,amount:sampled,animation:undefined};}
+   else {const p=effect.animation??fail('missing','Effect is not animated.');const keys=p.keys.filter(k=>k.t!==t);next=keys.length?{...effect,animation:{...p,keys}}:{...effect,amount:evaluate(p,t) as number,animation:undefined};}
+   return setLayer(doc,{...l,effects:l.effects!.map(x=>x.id===effect.id?next:x)});}
   case 'asset.import':{const next={...doc,assets:doc.assets.some(a=>a.id===e.asset.id)?doc.assets:[...doc.assets,e.asset]};validateAnimationAssets(next);const c=compOf(doc);const l=createLayer('raster',c,{name:e.asset.sourceName,source:{assetId:e.asset.id,width:e.asset.width,height:e.asset.height}});return withLayers(next,ls=>[l,...ls]);}
   case 'layer.effects':{if(!validEffects(e.effects))fail('invalid','Invalid effect stack.');return setLayer(doc,{...layerOf(doc,e.layer),effects:e.effects.map(x=>({...x}))});}
   case 'prop.pathMode':{if(!['parameter','arcLength'].includes(e.mode))fail('invalid','Invalid path mode.');return setProp(doc,e.layer,'position',p=>({...p,pathMode:e.mode}));}

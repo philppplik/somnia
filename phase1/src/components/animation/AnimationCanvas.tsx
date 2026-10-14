@@ -1,4 +1,4 @@
-import {effectPrimitives,effectBounds} from '../../lib/animation/effects';
+import {effectPrimitives,effectBounds,revealedText} from '../../lib/animation/effects';
 import type {InterfaceAsset} from '../../lib/interface/schema';
 import {StudioStatus} from '../studios/StudioStatus';
 import {useEffect,useMemo,useRef} from 'react';
@@ -44,12 +44,12 @@ function Workspace({doc}:{doc:NonNullable<ReturnType<typeof animationSession>['d
   <AnimationTimeline comp={comp} at={at} selected={s.view.selectedLayer} canUndo={s.canUndo} canRedo={s.canRedo}/>
  </div>;
 }
-function layerNode(l:Layer,assets:readonly InterfaceAsset[]){
+function layerNode(l:Layer,assets:readonly InterfaceAsset[],at:number){
  const src=l.source;
  if(l.kind==='raster'){const asset=assets.find(a=>a.id===src.assetId);return asset?<image href={asset.data} width={src.width} height={src.height}/>:<text fill="var(--text-primary)">Missing image</text>;}
  if(l.kind==='solid')return <rect x={0} y={0} width={src.width} height={src.height} fill={src.color}/>;
  if(l.kind==='shape')return src.shape==='ellipse'?<ellipse cx={(src.width??0)/2} cy={(src.height??0)/2} rx={(src.width??0)/2} ry={(src.height??0)/2} fill={src.color}/>:<rect x={0} y={0} width={src.width} height={src.height} fill={src.color}/>;
- return <text x={0} y={src.size??48} fontSize={src.size} fill={src.color} fontFamily="system-ui, sans-serif" className="select-none">{src.text}</text>;
+ return <text x={0} y={src.size??48} fontSize={src.size} fill={src.color} fontFamily="system-ui, sans-serif" className="select-none">{revealedText(l,at)}</text>;
 }
 function Viewer({comp,at,selected,sel,assets}:{assets:readonly InterfaceAsset[];comp:Composition;at:number;selected:string|null;sel:readonly KeyRef[]}){
  const {t}=useT();const scene=useMemo(()=>sceneAt(comp,at),[comp,at]);
@@ -57,10 +57,10 @@ function Viewer({comp,at,selected,sel,assets}:{assets:readonly InterfaceAsset[];
  const posSel=sel.filter(k=>k.layer===selected&&k.prop==='position');
  return <div className="relative grid min-h-[160px] flex-1 place-items-center overflow-hidden bg-hover p-3" data-testid="animation-viewer">
   <svg role="img" aria-label={t('animation.viewer')} viewBox={`0 0 ${comp.width} ${comp.height}`} className="max-h-full max-w-full h-full overflow-visible">
-   <defs>{comp.layers.map((l,i)=><filter key={l.id} id={`preview-effect-${i}`} filterUnits="userSpaceOnUse" {...effectBounds(l)} colorInterpolationFilters="sRGB" dangerouslySetInnerHTML={{__html:effectPrimitives(l)}}/>)}</defs>
+   <defs>{comp.layers.map((l,i)=><filter key={l.id} id={`preview-effect-${i}`} filterUnits="userSpaceOnUse" {...effectBounds(l,at)} colorInterpolationFilters="sRGB" dangerouslySetInnerHTML={{__html:effectPrimitives(l,at)}}/>)}</defs>
    <rect width={comp.width} height={comp.height} fill={comp.background}/>
    {scene.map(({layer:l,matrix,opacity})=><g key={l.id} transform={`matrix(${matrix.join(' ')})`} opacity={opacity} data-layer={l.id} data-selected={l.id===selected||undefined}
-    onPointerDown={()=>animationSession().setView({selectedLayer:l.id})}><g filter={effectPrimitives(l)?`url(#preview-effect-${comp.layers.indexOf(l)})`:undefined}>{layerNode(l,assets)}</g></g>)}
+    onPointerDown={()=>animationSession().setView({selectedLayer:l.id})}><g filter={effectPrimitives(l,at)?`url(#preview-effect-${comp.layers.indexOf(l)})`:undefined}>{layerNode(l,assets,at)}</g></g>)}
    {layer&&hasPos&&<PathOverlay comp={comp} layer={layer} at={at} sel={sel}/>}
   </svg>
   {hasPos&&<div className="absolute right-2 top-2 flex gap-1" role="group" aria-label={t('animation.path.label')}>

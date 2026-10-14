@@ -154,6 +154,13 @@ export function AnimationTimeline({comp,at,selected,canUndo,canRedo}:{comp:Compo
     <div className="pointer-events-none absolute inset-y-0 w-px bg-ink" style={{left:pct(at,comp)}}/>
    </div>
   </div>
+  <div className="flex max-h-16 shrink-0 flex-wrap items-center gap-1 overflow-auto border-b border-subtle px-2 py-1" role="group" aria-label={t('animation.markers.title')}>
+   <Button size="tiny" variant="ghost" onClick={()=>run('animation.marker.add',{label:timecode(at,comp.fps)})}>{t('animation.markers.add')}</Button>
+   <Button size="tiny" variant="ghost" disabled={!(comp.markers??[]).some(m=>m.t<at)} onClick={()=>animationSession().setView({playhead:Math.max(...(comp.markers??[]).filter(m=>m.t<at).map(m=>m.t))})}>{t('animation.markers.previous')}</Button>
+   <Button size="tiny" variant="ghost" disabled={!(comp.markers??[]).some(m=>m.t>at)} onClick={()=>animationSession().setView({playhead:Math.min(...(comp.markers??[]).filter(m=>m.t>at).map(m=>m.t))})}>{t('animation.markers.next')}</Button>
+   <span className="text-ink-3">{t('animation.markers.frame',{frame:Math.floor(at*comp.fps.num/(240000*comp.fps.den))})}</span>
+   {(comp.markers??[]).map(m=><span key={m.id} className="flex items-center rounded-sm border border-subtle"><Button size="tiny" variant="ghost" onClick={()=>animationSession().setView({playhead:m.t})}>{m.label} · {timecode(m.t,comp.fps)}</Button><Button size="tiny" variant="ghost" aria-label={t('animation.markers.remove')} onClick={()=>run('animation.marker.remove',{id:m.id})}>×</Button></span>)}
+  </div>
   {view.graph?<GraphEditor comp={comp} layerId={selected} sel={sel} playhead={at}/>:
   <div className="relative min-h-0 flex-1 overflow-auto" role="list" ref={lanesRef}>
    {comp.layers.map(l=><div key={l.id} role="listitem" className="border-b border-subtle">
@@ -161,7 +168,7 @@ export function AnimationTimeline({comp,at,selected,canUndo,canRedo}:{comp:Compo
      <div className="flex items-center gap-1 px-2 py-1">
       <button type="button" aria-label={t('animation.layer.visible')} aria-pressed={l.visible} className="text-ink-2" onClick={()=>run('animation.layer.update',{layer:l.id,visible:!l.visible})}>{l.visible?<Eye className="size-3"/>:<EyeOff className="size-3"/>}</button>
       <button type="button" aria-label={t('animation.layer.locked')} aria-pressed={l.locked} className="text-ink-2" onClick={()=>run('animation.layer.update',{layer:l.id,locked:!l.locked})}>{l.locked?<Lock className="size-3"/>:<Unlock className="size-3"/>}</button>
-      <button type="button" aria-current={l.id===selected} className="min-w-0 flex-1 truncate text-left text-ink" onClick={()=>animationSession().setView({selectedLayer:l.id})}>{l.name}</button>
+      <button type="button" aria-current={l.id===selected} className="min-w-0 flex-1 truncate text-left text-ink" onClick={()=>animationSession().setView({selectedLayer:l.id})}>{l.parent?'↳ ':''}{l.name}{l.kind==='null'?' · Null':''}</button>
      </div>
      <div className="relative h-5">
       <div className="absolute top-1 h-3 rounded-sm bg-accent-fill opacity-70" style={{left:pct(l.inT,comp),width:`${Math.max(0,(l.outT-l.inT)/comp.duration*100)}%`}}/>

@@ -79,3 +79,8 @@ Depends on: v10 diff viewer, v11 updater for smooth extension and app updates.
 - Implemented: signed per-channel speed graph, separate X/Y easing for straight vec2 properties, bounded cached arc-length position paths, editable text/shape source settings, ordered blur/tint effects, bounded canonical PNG/JPEG and strict basic-SVG snapshot import. Existing P1 features/tests retained.
 - Validation: 69 Animation + Interface media unit/security tests pass; real-component German light/dark pixel review and transparent PNG render inspected. Full-app E2E and native/WASM gates remain CI-only. No new dependencies.
 - Scope/limits and validation details: `docs/animation-p2.md`. Mask/matte, precomp, footage/audio, animated effects, expressions, tracking and compressed exports remain later work.
+
+### Animation P3 (2026-10-14, integration pending)
+
+- Implemented: animated blur/tint strength, cycle-safe parent/Null controls, fade/slide/bounce/typewriter entrance presets, markers/frame timing aids, explicit experimental local .somnia snapshot save/open. No final container manifest or format association decision.
+- Validation: Animation + Interface media unit/security tests, DS ratchet, isolated German light/dark pixel and local snapshot round-trip review. Full-app/native/WASM coverage remains CI-only. Details/limits: `docs/animation-p3.md`.
