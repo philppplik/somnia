@@ -44,6 +44,17 @@ export function ungroupInterfaceSelection(doc:InterfaceDocument,ids:readonly str
   doc.nodes.splice(doc.nodes.indexOf(n),1);freed.push(...kids);}
  return freed;
 }
+export function interfaceMarqueeSelect(doc:InterfaceDocument,pageId:string,rect:{x:number;y:number;width:number;height:number}):string[]{
+ const page=doc.pages.find(p=>p.id===pageId);if(!page)throw Error('Page unavailable.');
+ const x=Math.min(rect.x,rect.x+rect.width),y=Math.min(rect.y,rect.y+rect.height),x2=Math.max(rect.x,rect.x+rect.width),y2=Math.max(rect.y,rect.y+rect.height);
+ const computed=computeInterfaceLayout(doc);
+ return page.children.filter(id=>{const n=doc.nodes.find(n=>n.id===id);if(!n||n.hidden||n.locked)return false;const b=computed.bounds.get(id)!;return b.x<x2&&b.x+b.width>x&&b.y<y2&&b.y+b.height>y;});
+}
+
+export function interfaceMarqueeStyle(m:{x0:number;y0:number;x1:number;y1:number}):Record<string,string|number>{
+ return {left:Math.min(m.x0,m.x1),top:Math.min(m.y0,m.y1),width:Math.abs(m.x1-m.x0),height:Math.abs(m.y1-m.y0),border:'1px dashed var(--accent)',background:'color-mix(in srgb,var(--accent) 12%,transparent)'};
+}
+
 export function deleteSelection(doc:InterfaceDocument,ids:readonly string[]){const nodes=selectionRoots(doc,ids);if(nodes.some(n=>n.locked||n.parentId&&insideInstance(doc,n.parentId)))throw Error('Selection contains protected layers.');for(const n of nodes)deleteNode(doc,n.id);}
 /** In-memory owner-scoped clipboard, never reads/writes the OS clipboard or imports arbitrary content. */
 export interface InterfaceClipboard {documentId:string;roots:string[];nodes:InterfaceNode[];bounds:Record<string,LayoutBounds>;}
