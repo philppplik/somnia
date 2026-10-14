@@ -1,4 +1,5 @@
 # Unreleased: 3D Studio P0
+- 3D Studio: material presets get personal: save the selected mesh's PBR material as a named local preset (stored in the browser, replace-in-place, removable), apply local or built-in presets with one undo step each, and edit the library from the material panel.
 - 3D Studio: UV step 2. Amber seam lines show in edit mode, angle-based unfolding joins the box unwrap (BFS layout with exact triangle angles), and islands pack non-overlapping with padding by default (grid layout as fallback toggle).
 - 3D Studio: UV tools basics: seam marking on edges (coincident copies included), seam-aware box unwrap and planar projection with attribute-safe vertex splits, checker-texture preview, and a read-only UV island view.
 - 3D Studio: modeling polish. Edge bevel gains a round multi-segment profile (1-8 segments), the mirror modifier can bisect-clip the far side before mirroring, and sculpt masks now show as a weighted color overlay in the viewport while sculpt mode is on.

@@ -21,6 +21,7 @@ import {MeshoptDecoder} from 'three/addons/libs/meshopt_decoder.module.js';
 import {useT} from '../../lib/useT';
 import {getState as getAppState} from '../../store/appStore';
 import {readProjectUnit,writeProjectUnit} from '../../lib/studio3d/projectPrefs';
+import {checkPreset,presetPatch,readPresets,removePreset,savePreset,MaterialPresetError,type MaterialPreset} from '../../lib/studio3d/materialPresets';
 import {toggleSelection,marqueeRect,inRect,turntablePlan,frameName,exportFileName,unitScale,isUnit,isMeshFormat,mergeSnap,snapTo,stlUnitHint,mtlReferences,mtlTextures,clampRenderSize,MAX_MTL_BYTES,MAX_TEXTURE_BYTES,MAX_TEXTURE_FILES,SnapError,mergeEnv,envFormatFor,nudgeFor,EnvError,modelFormatFor,readModelHeader,externalResources,ModelError,boundsValid,boundsCenter,boundsRadius,frameDistance,clipPlanes,pickClips,extractGltfTextures,GLTF_TEXTURE_MODES} from '../../lib/studio3d/model';
 import type {Bounds} from '../../lib/studio3d/model';
 import {checkSkins,bonePickRadius,pickBone} from '../../lib/studio3d/skeleton';
@@ -34,7 +35,7 @@ import type {KeyPath} from '../../lib/studio3d/clips';
 import type {KeyRef,KeyData} from '../../lib/studio3d/keyEdit';
 import {advance,clampTime,checkClip,checkRange,checkSpeed,startTime,rangeFits,AnimationError,type ClipInfo,type LoopRange} from '../../lib/studio3d/animation';
 import {exportBlocker,LIMITS} from '../../lib/studio3d/validate';
-import {inspectImage,isTextureSlot,MAX_TEXTURE_FILE_BYTES,MaterialError,type TextureSlot} from '../../lib/studio3d/materials';
+import {DEFAULT_PRESET_EMISSIVE,inspectImage,isTextureSlot,MAX_TEXTURE_FILE_BYTES,MaterialError,type TextureSlot} from '../../lib/studio3d/materials';
 import {viewDirection,type ViewPreset} from '../../lib/studio3d/viewPresets';
 import {rememberScene,forgetAutosave} from '../../lib/studio3d/recentSession';
 import {autosaveDue} from '../../lib/studio3d/recent';
@@ -667,6 +668,7 @@ export default function Viewport3D(){
   const projectName=()=>{try{return getAppState().projectName||'';}catch{return '';}};
   const loadUnit=()=>{try{patchStudio3D({unit:readProjectUnit(localStorage,projectName())});}catch{/* keep current */}};
   loadUnit();
+  try{patchStudio3D({materialPresets:readPresets(localStorage)});}catch{/* keep current */}
   const setUnit=(u:unknown)=>{if(!isUnit(u))throw Object.assign(new Error('Unit must be m, cm, mm or in.'),{expected:true});patchStudio3D({unit:u});try{writeProjectUnit(localStorage,projectName(),u);}catch{/* session only */}};
   const exportGlb=async(opts?:{clips?:string[]|null})=>{
    if(!holder.children.length)throw Object.assign(new Error('There is nothing to export. Open a model first.'),{expected:true});
@@ -857,6 +859,28 @@ export default function Viewport3D(){
    viewRemove:name=>{
     const views=getStudio3DState().views;if(!views.some(v=>v.name===name))throw Object.assign(new Error(`There is no saved view named ${name}.`),{expected:true});
     patchStudio3D({views:views.filter(v=>v.name!==name)});},
+   materialPresetSave:(name,id)=>{
+    const target=id??getStudio3DState().selected;
+    if(target==null)throw Object.assign(new Error('Select a mesh first.'),{expected:true});
+    const m=stage.info(target)?.material;
+    if(!m)throw Object.assign(new Error('Select a mesh with an editable PBR material.'),{expected:true});
+    let p:MaterialPreset;
+    try{p=checkPreset({name,color:m.color,metalness:m.metalness,roughness:m.roughness,emissive:m.emissive??DEFAULT_PRESET_EMISSIVE,emissiveIntensity:m.emissiveIntensity??1,opacity:m.opacity??1,alphaMode:m.alphaMode??'opaque',alphaCutoff:m.alphaCutoff??0.5,doubleSided:!!m.doubleSided});}
+    catch(e){throw Object.assign(new Error(e instanceof Error?e.message:String(e)),{expected:true});}
+    let list:MaterialPreset[];
+    try{list=savePreset(localStorage,p);}
+    catch(e){if(e instanceof MaterialPresetError)throw Object.assign(new Error(e.message),{expected:true});list=[...getStudio3DState().materialPresets.filter(x=>x.name!==p.name),p];}
+    patchStudio3D({materialPresets:list});},
+   materialPresetApply:(id,name)=>{
+    const user=getStudio3DState().materialPresets.find(p=>p.name===name);
+    stage.setMaterial(id,user?presetPatch(user):{preset:name});
+    const sel=getStudio3DState().selected;if(sel!=null)patchStudio3D({selectedInfo:stage.info(sel)});
+    sync();invalidate();},
+   materialPresetRemove:name=>{
+    let list:MaterialPreset[];
+    try{list=removePreset(localStorage,name);}
+    catch(e){if(e instanceof MaterialPresetError)throw Object.assign(new Error(e.message),{expected:true});list=getStudio3DState().materialPresets.filter(x=>x.name!==name);}
+    patchStudio3D({materialPresets:list});},
    setCamera:(id,p)=>stage.setCamera(id,p),
    editStart:(id,mode)=>{stage.editStart(id);patchStudio3D({edit:{id,mode:mode??'face',verts:0,edges:0,faces:0},selected:id,marked:[],selectedInfo:stage.info(id)});invalidate();},
    editEnd:()=>{stage.editEnd();patchStudio3D({edit:null});invalidate();},

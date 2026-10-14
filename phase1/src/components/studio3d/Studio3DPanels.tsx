@@ -75,6 +75,18 @@ function VecField({id,field,label,step}:{id:number;field:'position'|'rotation'|'
   <div className="grid grid-cols-3 gap-1">{AXES.map(a=><InspectorNumberField key={a} resetKey={id} label={`${label} ${a.toUpperCase()}`} value={Number(v[a].toFixed(4))} step={step}
    onCommit={n=>void executeCommand('studio3d.object.transform',{id,[field]:{[a]:n}})}/>)}</div></fieldset>;
 }
+/** User-saved local material presets: apply, remove, and save the mesh's current material under a name. */
+function MaterialUserPresets({id}:{id:number}){
+ const {t}=useT();const s=useStudio3D();const [presetName,setPresetName]=useState('');
+ const trimmed=presetName.trim();
+ return <div className="grid gap-1" data-testid="studio3d-material-user-presets">
+  {s.materialPresets.length>0&&<div className="flex flex-wrap gap-1" role="group" aria-label={t('studio3d.material.presetsUser')}>{s.materialPresets.map(p=><span key={p.name} className="inline-flex items-center gap-0.5">
+   <Button variant="outline" onClick={()=>void executeCommand('studio3d.material.preset.apply',{id,name:p.name})}>{p.name}</Button>
+   <Button variant="outline" aria-label={t('studio3d.material.removePreset',{name:p.name})} onClick={()=>void executeCommand('studio3d.material.preset.remove',{name:p.name})}>×</Button></span>)}</div>}
+  <div className="flex gap-1">
+   <NativeInput value={presetName} maxLength={60} placeholder={t('studio3d.material.presetName')} aria-label={t('studio3d.material.presetName')} onChange={e=>setPresetName(e.currentTarget.value)}/>
+   <Button variant="outline" disabled={!trimmed} onClick={()=>{void executeCommand('studio3d.material.preset.save',{id,name:trimmed});setPresetName('');}}>{t('studio3d.material.savePreset')}</Button></div></div>;
+}
 export function ObjectSection(_:InspectorSectionProps){
  const {t}=useT();const s=useStudio3D();const o=s.selectedInfo;
  if(!o)return <p className="p-3 text-xs text-ink-3">{t('studio3d.object.none')}</p>;
@@ -97,6 +109,7 @@ export function ObjectSection(_:InspectorSectionProps){
     onCommit={v=>void executeCommand('studio3d.object.primitive',{id:o.id,[sp.id]:sp.integer?Math.round(v):v})}/>)}</div></fieldset>}
   {o.material&&<fieldset className="m-0 grid gap-2 border-0 p-0" data-testid="studio3d-material"><legend className="text-xs text-ink-3">{t('studio3d.material.title')}</legend>
    <div className="flex flex-wrap gap-1" role="group" aria-label={t('studio3d.material.presets')} data-testid="studio3d-material-presets">{MATERIAL_PRESETS.map(p=><Button key={p.id} variant="outline" onClick={()=>void executeCommand('studio3d.object.material',{id:o.id,preset:p.id})}>{t('studio3d.material.preset.'+p.id)}</Button>)}</div>
+   <MaterialUserPresets id={o.id}/>
    <label className="flex items-center justify-between gap-2 text-xs text-ink-2">{t('studio3d.material.color')}<input type="color" key={o.material.color} defaultValue={o.material.color} onBlur={e=>{if(e.currentTarget.value!==o.material!.color)void executeCommand('studio3d.object.material',{id:o.id,color:e.currentTarget.value});}}/></label>
    {(['metalness','roughness'] as const).map(k=><label key={k} className="grid gap-1 text-xs text-ink-2">{t('studio3d.material.'+k)} <span className="text-ink-3">{o.material![k].toFixed(2)}</span>
     <input type="range" min={0} max={1} step={0.01} defaultValue={o.material![k]} key={k+o.material![k]} aria-label={t('studio3d.material.'+k)} onChange={e=>void executeCommand('studio3d.object.material',{id:o.id,[k]:Number(e.currentTarget.value)})}/></label>)}

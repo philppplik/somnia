@@ -531,5 +531,12 @@
  "studio3d.uvtools.method.box": "Boîte",
  "studio3d.uvtools.method.angle": "Par angles",
  "studio3d.uvtools.pack": "Empaqueter les îlots",
- "studio3d.uvtools.padding": "Marge des îlots"
+ "studio3d.uvtools.padding": "Marge des îlots",
+ "cmd.studio3d.material.preset.save": "Enregistrer le preset de matériau",
+ "cmd.studio3d.material.preset.apply": "Appliquer le preset de matériau",
+ "cmd.studio3d.material.preset.remove": "Supprimer le preset de matériau",
+ "studio3d.material.presetsUser": "Mes presets",
+ "studio3d.material.savePreset": "Enregistrer comme preset",
+ "studio3d.material.presetName": "Nom du preset",
+ "studio3d.material.removePreset": "Supprimer le preset {name}"
 }

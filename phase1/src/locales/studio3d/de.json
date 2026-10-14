@@ -531,5 +531,12 @@
  "studio3d.uvtools.method.box": "Box",
  "studio3d.uvtools.method.angle": "Winkelbasiert",
  "studio3d.uvtools.pack": "Inseln packen",
- "studio3d.uvtools.padding": "Inselabstand"
+ "studio3d.uvtools.padding": "Inselabstand",
+ "cmd.studio3d.material.preset.save": "Material-Preset speichern",
+ "cmd.studio3d.material.preset.apply": "Material-Preset anwenden",
+ "cmd.studio3d.material.preset.remove": "Material-Preset löschen",
+ "studio3d.material.presetsUser": "Meine Presets",
+ "studio3d.material.savePreset": "Als Preset speichern",
+ "studio3d.material.presetName": "Preset-Name",
+ "studio3d.material.removePreset": "Preset {name} entfernen"
 }

@@ -531,5 +531,12 @@
  "studio3d.uvtools.method.box": "Caja",
  "studio3d.uvtools.method.angle": "Por ángulos",
  "studio3d.uvtools.pack": "Empaquetar islas",
- "studio3d.uvtools.padding": "Relleno de islas"
+ "studio3d.uvtools.padding": "Relleno de islas",
+ "cmd.studio3d.material.preset.save": "Guardar preset de material",
+ "cmd.studio3d.material.preset.apply": "Aplicar preset de material",
+ "cmd.studio3d.material.preset.remove": "Eliminar preset de material",
+ "studio3d.material.presetsUser": "Mis presets",
+ "studio3d.material.savePreset": "Guardar como preset",
+ "studio3d.material.presetName": "Nombre del preset",
+ "studio3d.material.removePreset": "Eliminar preset {name}"
 }

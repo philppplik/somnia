@@ -531,5 +531,12 @@
  "studio3d.uvtools.method.box": "Box",
  "studio3d.uvtools.method.angle": "Angle-based",
  "studio3d.uvtools.pack": "Pack islands",
- "studio3d.uvtools.padding": "Island padding"
+ "studio3d.uvtools.padding": "Island padding",
+ "cmd.studio3d.material.preset.save": "Save material preset",
+ "cmd.studio3d.material.preset.apply": "Apply material preset",
+ "cmd.studio3d.material.preset.remove": "Delete material preset",
+ "studio3d.material.presetsUser": "My presets",
+ "studio3d.material.savePreset": "Save as preset",
+ "studio3d.material.presetName": "Preset name",
+ "studio3d.material.removePreset": "Remove preset {name}"
 }

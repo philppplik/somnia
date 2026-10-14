@@ -106,7 +106,7 @@ test('3D studio refuses a file that is not glTF with a readable error',async({pa
 /** Helpers for the scene tests below. They drive the real app through its command layer (dev build) and read the studio session. */
 type P=import('@playwright/test').Page;
 const run=(page:P,id:string,params:unknown={})=>page.evaluate(async([i,p])=>{const m=await import('/src/lib/commands.ts');return (await m.executeCommand(i as string,p)) as unknown;},[id,params] as const);
-const session=(page:P)=>page.evaluate(async()=>{const m=await import('/src/lib/studio3d/session.ts');const s=m.getStudio3DState();return {anim:s.anim,clips:s.clips,clipKeys:s.clipKeys,outline:s.outline,marked:s.marked,selected:s.selected,info:s.selectedInfo,dirty:s.dirty,notice:s.notice,status:s.status,name:s.name,bones:s.bones,weightPreview:s.weightPreview,stats:s.stats,exportClips:s.exportClips,poses:s.poses,ik:s.ik,boneLimits:s.boneLimits,views:s.views,edit:s.edit,sculpt:s.sculpt,uvChecker:s.uvChecker};});
+const session=(page:P)=>page.evaluate(async()=>{const m=await import('/src/lib/studio3d/session.ts');const s=m.getStudio3DState();return {anim:s.anim,clips:s.clips,clipKeys:s.clipKeys,outline:s.outline,marked:s.marked,selected:s.selected,info:s.selectedInfo,dirty:s.dirty,notice:s.notice,status:s.status,name:s.name,bones:s.bones,weightPreview:s.weightPreview,stats:s.stats,exportClips:s.exportClips,poses:s.poses,ik:s.ik,boneLimits:s.boneLimits,views:s.views,materialPresets:s.materialPresets,edit:s.edit,sculpt:s.sculpt,uvChecker:s.uvChecker};});
 const open3d=async(page:P)=>{await page.goto('/');await page.getByRole('button',{name:/3D/}).first().click();};
 const blank=async(page:P)=>{await open3d(page);await page.getByTestId('3d-create-blank').click();await expect(page.getByTestId('studio3d-viewport')).toBeVisible();};
 const insert=async(page:P,kind:string,x:number)=>{await run(page,'studio3d.insert.primitive',{kind});const s=await session(page);const id=s.selected as number;await run(page,'studio3d.object.transform',{id,position:{x,y:0,z:0}});return id;};
@@ -946,4 +946,28 @@ test('uv unwrap packs islands by default and angle unfolding works through comma
  expect(await run(page,'studio3d.uv.unwrap',{id,padding:0.5})).toBe(false);
  await expect(page.getByRole('alert')).toBeVisible();
  expect(await run(page,'studio3d.undo')).toBe(true);
+});
+
+test('3D studio saves, applies and removes local material presets',async({page})=>{
+ await blank(page);
+ const a=await insert(page,'cube',0);
+ await run(page,'studio3d.object.material',{id:a,color:'#2244cc',metalness:0.8,roughness:0.2});
+ const box=page.getByTestId('studio3d-material-user-presets');
+ await box.getByLabel('Preset name').fill('Blue steel');
+ await box.getByRole('button',{name:'Save as preset'}).click();
+ await expect.poll(async()=>(await session(page)).materialPresets?.map((p:{name:string})=>p.name)).toEqual(['Blue steel']);
+ await expect.poll(async()=>await page.evaluate(()=>localStorage.getItem('somnia.studio3d.materialPresets.v1')??'')).toContain('Blue steel');
+ await run(page,'studio3d.object.material',{id:a,color:'#cccccc',metalness:0});
+ await expect.poll(async()=>(await session(page)).info?.material?.color).toBe('#cccccc');
+ await box.getByRole('button',{name:'Blue steel',exact:true}).click();
+ await expect.poll(async()=>(await session(page)).info?.material?.color).toBe('#2244cc');
+ await expect.poll(async()=>(await session(page)).info?.material?.metalness).toBe(0.8);
+ await run(page,'studio3d.undo');
+ await expect.poll(async()=>(await session(page)).info?.material?.color).toBe('#cccccc');
+ await run(page,'studio3d.material.preset.apply',{id:a,name:'Blue steel'});
+ await expect.poll(async()=>(await session(page)).info?.material?.color).toBe('#2244cc');
+ await box.getByRole('button',{name:'Remove preset Blue steel'}).click();
+ await expect.poll(async()=>(await session(page)).materialPresets?.length).toBe(0);
+ await run(page,'studio3d.material.preset.remove',{name:'Blue steel'});
+ await expect(page.getByRole('alert')).toContainText('no preset called');
 });

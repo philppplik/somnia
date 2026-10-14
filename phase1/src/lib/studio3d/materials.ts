@@ -8,6 +8,8 @@ export interface PbrExtras{emissive?:string;emissiveIntensity?:number;opacity?:n
 export class MaterialError extends Error{constructor(message:string){super(message);this.name='MaterialError';}}
 const HEX=/^#[0-9a-fA-F]{6}$/;
 export const MAX_EMISSIVE_INTENSITY=20;
+/** Fallback emissive for a preset saved from a material that reports none. */
+export const DEFAULT_PRESET_EMISSIVE='#000000';
 const range=(v:unknown,min:number,max:number,what:string):number=>{
  if(typeof v!=='number'||!Number.isFinite(v))throw new MaterialError(`${what} must be a finite number.`);
  if(v<min||v>max)throw new MaterialError(`${what} must be between ${min} and ${max}.`);return v;

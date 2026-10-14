@@ -531,5 +531,12 @@
  "studio3d.uvtools.method.box": "Caixa",
  "studio3d.uvtools.method.angle": "Por ângulos",
  "studio3d.uvtools.pack": "Empacotar ilhas",
- "studio3d.uvtools.padding": "Margem das ilhas"
+ "studio3d.uvtools.padding": "Margem das ilhas",
+ "cmd.studio3d.material.preset.save": "Salvar preset de material",
+ "cmd.studio3d.material.preset.apply": "Aplicar preset de material",
+ "cmd.studio3d.material.preset.remove": "Excluir preset de material",
+ "studio3d.material.presetsUser": "Meus presets",
+ "studio3d.material.savePreset": "Salvar como preset",
+ "studio3d.material.presetName": "Nome do preset",
+ "studio3d.material.removePreset": "Remover preset {name}"
 }

@@ -109,6 +109,12 @@ export interface Studio3DController{
  viewSave(name?:string):string;
  viewApply(name:string):void;
  viewRemove(name:string):void;
+ /** Saves the material of a mesh (id or the selected one) as a named local preset. */
+ materialPresetSave(name:string,id?:number):void;
+ /** Applies a local or built-in material preset to a mesh; one undo step. */
+ materialPresetApply(id:number,name:string):void;
+ /** Deletes a local material preset. */
+ materialPresetRemove(name:string):void;
  viewFromCamera(id:number):void;
  setGizmo(mode:GizmoMode):void;
  nudge(id:number,delta:{x?:number;y?:number;z?:number}):void;
@@ -191,6 +197,9 @@ export function studio3DCommandSpecs():CommandSpec<unknown,unknown>[]{
   add<{name?:string}>('studio3d.view.save','Save the current viewport as a named view','View',p=>{need().viewSave(p?.name);},object({name:{type:'string',maxLength:60}},[]),hasScene),
   add<{name:string}>('studio3d.view.apply','Look at the scene from a saved named view','View',p=>need().viewApply(p.name),object({name:{type:'string'}}),hasScene),
   add<{name:string}>('studio3d.view.remove','Delete a saved named view','View',p=>need().viewRemove(p.name),object({name:{type:'string'}}),hasScene),
+  add<{name:string;id?:number}>('studio3d.material.preset.save','Save the material of a 3D mesh as a local material preset','Edit',p=>need().materialPresetSave(p.name,p?.id),object({name:{type:'string',minLength:1,maxLength:60},id:{type:'integer',minimum:0}},['name']),hasScene),
+  add<{id:number;name:string}>('studio3d.material.preset.apply','Apply a local or built-in material preset to a 3D mesh','Edit',p=>need().materialPresetApply(p.id,p.name),object({id:{type:'integer',minimum:0},name:{type:'string',minLength:1,maxLength:60}}),hasScene),
+  add<{name:string}>('studio3d.material.preset.remove','Delete a local material preset','Edit',p=>need().materialPresetRemove(p.name),object({name:{type:'string',minLength:1,maxLength:60}}),hasScene),
   add<{id:number}>('studio3d.view.fromCamera','Look through a 3D camera','View',p=>need().viewFromCamera(p.id),object({id:{type:'integer',minimum:0}}),hasScene),
   add<{mode:GizmoMode}>('studio3d.gizmo.mode','Set the 3D transform tool','Tools',p=>need().setGizmo(p.mode),object({mode:{enum:['translate','rotate','scale']}}),()=>!!controller),
   add<{id:number;x?:number;y?:number;z?:number}>('studio3d.object.nudge','Nudge a 3D object','Edit',p=>need().nudge(p.id,p),object({id:{type:'integer',minimum:0},x:{type:'number'},y:{type:'number'},z:{type:'number'}},['id']),hasScene),
