@@ -10,6 +10,8 @@ export const DOC_VERSION=1;
 export const DOC_EXTENSION='som3d';
 export const MAX_DOC_NODES=100_000;
 /** Largest environment map (decoded bytes) that may be embedded in a document. Bigger maps stay a separate file. */
+/** Largest GLB (with its embedded textures) a document may carry. Bigger scenes must be saved with the geometry as a separate file. */
+export const MAX_EMBED_SCENE_BYTES=256*1024*1024;
 export const MAX_EMBED_ENV_BYTES=16*1024*1024;
 export class DocumentError extends Error{constructor(message:string){super(message);this.name='DocumentError';}}
 export interface AreaLightSpec{position:[number,number,number];quaternion:[number,number,number,number];scale:[number,number,number];color:string;intensity:number;width:number;height:number;name:string}
@@ -86,7 +88,7 @@ export function parseDocument(text:string):SceneDocument{
   }
  }
  const s=d.scene as Record<string,unknown>|undefined;let scene:SceneSource;
- if(s&&typeof s==='object'&&s.encoding==='base64'&&typeof s.data==='string'){scene={encoding:'base64',data:s.data};}
+ if(s&&typeof s==='object'&&s.encoding==='base64'&&typeof s.data==='string'){if(s.data.length>Math.ceil(MAX_EMBED_SCENE_BYTES/3)*4)throw new DocumentError('The embedded scene is too large to open.');scene={encoding:'base64',data:s.data};}
  else if(s&&typeof s==='object'&&typeof s.uri==='string'){
   const uri=s.uri;if(!uri||/[\\/]/.test(uri)||/^[a-z][a-z0-9+.-]*:/i.test(uri)||uri.includes('..'))throw new DocumentError('The scene file reference must be a plain file name next to the document.');
   scene={uri};
@@ -107,6 +109,7 @@ export function parseDocument(text:string):SceneDocument{
 }
 export interface BuildInput{glb:Uint8Array;/** Name of a sidecar GLB. When set, the GLB is not embedded. */sidecar?:string;unit:ExportUnit;env:EnvSettings;snap:SnapSettings;view:SavedView|null;extras:NodeExtra[];/** Custom environment map to embed. Dropped with an error when over MAX_EMBED_ENV_BYTES. */envMap?:{name:string;bytes:Uint8Array}}
 export function buildDocument(i:BuildInput):string{
+ if(!i.sidecar&&i.glb.length>MAX_EMBED_SCENE_BYTES)throw new DocumentError(`The scene is larger than ${MAX_EMBED_SCENE_BYTES/1024/1024} MB and cannot be embedded. Save it with the geometry as a separate file.`);
  const scene:SceneSource=i.sidecar?{uri:i.sidecar}:{encoding:'base64',data:toBase64(i.glb)};
  let envMap:EmbeddedEnv|null=null;
  if(i.envMap){

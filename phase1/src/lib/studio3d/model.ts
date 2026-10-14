@@ -119,8 +119,8 @@ export function clipPlanes(distance:number,radius:number):{near:number;far:numbe
  const r=Math.max(radius,1e-6);
  return{near:Math.max(distance/1000,r/1000),far:Math.max(distance+r*20,distance*4)};
 }
-export interface ModelStats{meshes:number;nodes:number;triangles:number;vertices:number;materials:number;textures:number;animations:number;cameras:number;draws:number}
-export const emptyStats=():ModelStats=>({meshes:0,nodes:0,triangles:0,vertices:0,materials:0,textures:0,animations:0,cameras:0,draws:0});
+export interface ModelStats{meshes:number;nodes:number;triangles:number;vertices:number;materials:number;textures:number;animations:number;cameras:number;draws:number;/** Estimated decoded size of all textures. */textureBytes:number;maxTexture:number;/** Nodes with a zero scale on some axis. */zeroScale:number;/** Meshes that use a texture but have no UV set. */textureNoUv:number}
+export const emptyStats=():ModelStats=>({meshes:0,nodes:0,triangles:0,vertices:0,materials:0,textures:0,animations:0,cameras:0,draws:0,textureBytes:0,maxTexture:0,zeroScale:0,textureNoUv:0});
 export const formatCount=(n:number)=>n>=1e6?(n/1e6).toFixed(n>=1e7?0:1)+' M':n>=1e4?(n/1e3).toFixed(n>=1e5?0:1)+' k':String(n);
 export interface OutlineEntry{id:number;name:string;depth:number;kind:'group'|'mesh'|'light'|'camera'}
 

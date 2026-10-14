@@ -25,6 +25,8 @@ import type {Bounds} from '../../lib/studio3d/model';
 import {Stage,beginGroupDrag,applyGroupDrag,collectNodeExtras,applyNodeExtras,type GroupDragMember,type TransformSnapshot} from '../../lib/studio3d/stage';
 import {parseDocument,buildDocument,sceneBytes,fromBase64,DocumentError} from '../../lib/studio3d/document';
 import {registerStudio3DController} from '../../lib/studio3d/commands';
+import {advance,clampTime,checkClip,checkSpeed,startTime,AnimationError,type ClipInfo} from '../../lib/studio3d/animation';
+import {exportBlocker,LIMITS} from '../../lib/studio3d/validate';
 import {inspectImage,isTextureSlot,MAX_TEXTURE_FILE_BYTES,MaterialError,type TextureSlot} from '../../lib/studio3d/materials';
 import {viewDirection,type ViewPreset} from '../../lib/studio3d/viewPresets';
 import {rememberScene,forgetAutosave} from '../../lib/studio3d/recentSession';
@@ -284,7 +286,7 @@ export default function Viewport3D(){
    try{
     const {gltf,header,size,notice,unitHint}=await loadParsed(primary,files.filter(f=>f!==primary));
     if(ticket!==opening||disposed){gltf.scene.traverse(o=>{(o as THREE.Mesh).geometry?.dispose?.();});return;}
-    animationCount=gltf.animations.length;selectionReset();
+    selectionReset();setClips(gltf.animations as THREE.AnimationClip[]);
     stage.load(gltf.scene);
     patchStudio3D({status:'ready',name:primary.name,error:'',format:header.format.toUpperCase(),bytes:size,blank:false,confirmReplace:null,notice,unitHint});loadUnit();
     frameAll();
@@ -295,7 +297,7 @@ export default function Viewport3D(){
   };
   const selectionReset=()=>{patchStudio3D({selected:null,selectedInfo:null,marked:[],notice:'',unitHint:null});};
   const openFiles=async(files:File[],force?:boolean)=>{guard('open',files,force,()=>openNow(files));};
-  const newScene=(force?:boolean)=>{guard('new',[],force,()=>{opening++;animationCount=0;selectionReset();stage.clear();resetStudio3D({status:'ready',blank:true,name:''});sync();frameAll();});};
+  const newScene=(force?:boolean)=>{guard('new',[],force,()=>{opening++;setClips([]);selectionReset();stage.clear();resetStudio3D({status:'ready',blank:true,name:''});sync();frameAll();});};
   /** Renders one PNG at the requested size and puts the viewport back the way it was. */
   const capture=async(cam:THREE.PerspectiveCamera,want:{width:number;height:number}|null,transparent:boolean):Promise<Blob>=>{
    const dom=renderer.domElement;const w0=dom.width,h0=dom.height;const pr=renderer.getPixelRatio();
@@ -375,7 +377,9 @@ export default function Viewport3D(){
    return buildDocument({glb,sidecar,envMap:embedEnv&&customEnv?{name:customEnv.name,bytes:new Uint8Array(customEnv.bytes)}:undefined,unit:st.unit,env:st.env,snap:st.snap,extras:collectNodeExtras(holder),
     view:{position:camera.position.toArray() as [number,number,number],target:controls.target.toArray() as [number,number,number],fov:camera.fov}});
   };
-  const sceneGlb=async()=>new Uint8Array(await new GLTFExporter().parseAsync([...holder.children],{binary:true,onlyVisible:false}) as ArrayBuffer);
+  /** Images are embedded in the file; anything above the limit is scaled down, and a scene whose textures would not fit in memory is refused. */
+  const exportOpts=(binary:boolean)=>{const why=exportBlocker(stage.measure().stats);if(why)throw Object.assign(new Error(why),{expected:true});return{binary,maxTextureSize:LIMITS.exportMaxTextureSize};};
+  const sceneGlb=async()=>new Uint8Array(await new GLTFExporter().parseAsync([...holder.children],{...exportOpts(true),onlyVisible:false}) as ArrayBuffer);
   /** Saves the scene as a .som3d document: settings as JSON, geometry as an embedded or separate GLB. */
   const saveDocument=async(sidecar=false,embedEnv=false)=>{
    if(!holder.children.length)throw Object.assign(new Error('There is nothing to save. Open a model or add a shape first.'),{expected:true});
@@ -409,14 +413,14 @@ export default function Viewport3D(){
   const setUnit=(u:unknown)=>{if(!isUnit(u))throw Object.assign(new Error('Unit must be m, cm, mm or in.'),{expected:true});patchStudio3D({unit:u});try{writeProjectUnit(localStorage,projectName(),u);}catch{/* session only */}};
   const exportGlb=async()=>{
    if(!holder.children.length)throw Object.assign(new Error('There is nothing to export. Open a model first.'),{expected:true});
-   const result=await new GLTFExporter().parseAsync(holder.children.length===1?holder.children[0]:holder,{binary:true});
+   const result=await new GLTFExporter().parseAsync(holder.children.length===1?holder.children[0]:holder,exportOpts(true));
    download(new Blob([result as ArrayBuffer],{type:'model/gltf-binary'}),`${stem(getStudio3DState().name||'scene')}.glb`);
    stage.markSaved();
   };
   /** glTF 2.0 as one self-contained .gltf file (buffers and images embedded as data URIs). */
   const exportGltf=async()=>{
    if(!holder.children.length)throw Object.assign(new Error('There is nothing to export. Open a model first.'),{expected:true});
-   const result=await new GLTFExporter().parseAsync(holder.children.length===1?holder.children[0]:holder,{binary:false});
+   const result=await new GLTFExporter().parseAsync(holder.children.length===1?holder.children[0]:holder,exportOpts(false));
    download(new Blob([JSON.stringify(result)],{type:'model/gltf+json'}),`${stem(getStudio3DState().name||'scene')}.gltf`);
   };
   /** Reads an image the user chose for a texture slot. Type, size and pixel count are checked from the file header before anything decodes it. Nothing is fetched. */
@@ -446,7 +450,43 @@ export default function Viewport3D(){
    else if(bounds&&boundsValid(bounds))place(dir,new THREE.Vector3(...boundsCenter(bounds)),Math.max(boundsRadius(bounds),1e-4));
    else place(dir,new THREE.Vector3(0,0,0),5);
   };
-  const off=registerStudio3DController({exportGltf,setTextureFile,mirrorSelection,applyScale:applyScaleSel,mergeSelection:mergeSel,viewPreset,setPrimitive:(id,p)=>stage.setPrimitive(id,p),
+  /** Animation playback of imported glTF clips. The pose is a pure function of the clip and the time, so scrubbing is exact. Playing never changes the undo history. */
+  let clips:THREE.AnimationClip[]=[];let mixer:THREE.AnimationMixer|null=null;let animRaf=0;let lastTick=0;let lastPublish=0;
+  const anim=()=>getStudio3DState().anim;
+  const clipInfos=():ClipInfo[]=>clips.map((c,i)=>({name:c.name||`Clip ${i+1}`,duration:c.duration}));
+  const stopAnim=()=>{if(animRaf)cancelAnimationFrame(animRaf);animRaf=0;};
+  const pose=(clip:number,time:number)=>{
+   if(!mixer||!clips[clip])return;
+   mixer.stopAllAction();const a=mixer.clipAction(clips[clip]);a.setLoop(THREE.LoopOnce,1);a.clampWhenFinished=true;a.reset().play();mixer.setTime(time);
+   holder.updateMatrixWorld(true);drawSelection();invalidate();
+  };
+  const setClips=(list:THREE.AnimationClip[])=>{
+   stopAnim();mixer?.stopAllAction();mixer=null;clips=list.filter(c=>c.duration>0);
+   if(clips.length)mixer=new THREE.AnimationMixer(holder);
+   patchStudio3D({clips:clipInfos(),anim:{clip:0,playing:false,time:0,loop:true,speed:1}});animationCount=clips.length;
+  };
+  const tick=(now:number)=>{
+   animRaf=0;const a=anim();if(!a.playing||!clips[a.clip])return;
+   const dur=clips[a.clip].duration;const r=advance(a.time,(now-lastTick)/1000,dur,a.loop,a.speed);lastTick=now;
+   pose(a.clip,r.time);state_time=r.time;
+   // Publish about 15 times a second so the panel does not re-render every frame.
+   if(r.ended||now-lastPublish>66){lastPublish=now;patchStudio3D({anim:{...a,time:r.time,playing:!r.ended}});}
+   if(!r.ended)animRaf=requestAnimationFrame(tick);
+  };
+  let state_time=0;
+  const animPlay=(clip?:number)=>{
+   const infos=clipInfos();const a=anim();const idx=clip===undefined?a.clip:checkClip(clip,infos);checkClip(idx,infos);
+   const t=idx===a.clip?startTime(a.time,infos[idx].duration,a.loop):0;
+   patchStudio3D({anim:{...a,clip:idx,time:t,playing:true}});stopAnim();lastTick=performance.now();lastPublish=lastTick;pose(idx,t);animRaf=requestAnimationFrame(tick);
+  };
+  const animPause=()=>{stopAnim();const a=anim();patchStudio3D({anim:{...a,playing:false,time:a.playing&&state_time?state_time:a.time}});};
+  const animSeek=(time:number)=>{
+   const infos=clipInfos();const a=anim();checkClip(a.clip,infos);if(typeof time!=='number'||!Number.isFinite(time))throw new AnimationError('Time must be a number.');
+   const t=clampTime(time,infos[a.clip].duration);state_time=t;patchStudio3D({anim:{...a,time:t}});pose(a.clip,t);if(a.playing){lastTick=performance.now();}
+  };
+  const animLoop=(loop:boolean)=>patchStudio3D({anim:{...anim(),loop:!!loop}});
+  const animSpeed=(speed:number)=>patchStudio3D({anim:{...anim(),speed:checkSpeed(speed)}});
+  const off=registerStudio3DController({animPlay,animPause,animSeek,animLoop,animSpeed,setTextureTransform:(id,slot,p)=>stage.setTextureTransform(id,slot,p),exportGltf,setTextureFile,mirrorSelection,applyScale:applyScaleSel,mergeSelection:mergeSel,viewPreset,setPrimitive:(id,p)=>stage.setPrimitive(id,p),
    save:saveDocument,deleteSelection,duplicateSelection,exportMesh,renderTurntable,cancelRender:()=>{cancelFlag=true;},setUnit,openFiles,newScene,resetView:frameAll,frameSelection,select,renderStill,exportGlb,
    addPrimitive:k=>{const o=stage.addPrimitive(k);select(o.id);return o.id;},addLight:k=>{const o=stage.addLight(k);select(o.id);return o.id;},
    setTransform:(id,p)=>stage.setTransform(id,p),setMaterial:(id,p)=>stage.setMaterial(id,p),rename:(id,n)=>stage.rename(id,n),
@@ -525,7 +565,7 @@ export default function Viewport3D(){
   const cv=renderer.domElement;cv.addEventListener('pointerdown',onDownCapture,true);cv.addEventListener('pointerdown',onDown);window.addEventListener('pointermove',onMove);window.addEventListener('pointercancel',endMarquee);cv.addEventListener('pointerup',onUp);cv.addEventListener('keydown',onKey);
   sync();frameAll();void applyEnv();
   return()=>{
-   disposed=true;opening++;off();offAuto();if(autoTimer)clearTimeout(autoTimer);cancelAnimationFrame(frame);ro.disconnect();controls.dispose();
+   disposed=true;opening++;stopAnim();mixer?.stopAllAction();off();offAuto();if(autoTimer)clearTimeout(autoTimer);cancelAnimationFrame(frame);ro.disconnect();controls.dispose();
    cv.removeEventListener('pointerdown',onDownCapture,true);cv.removeEventListener('pointerdown',onDown);window.removeEventListener('pointermove',onMove);window.removeEventListener('pointercancel',endMarquee);endMarquee();cv.removeEventListener('pointerup',onUp);cv.removeEventListener('keydown',onKey);
    if(getStudio3DState().status==='loading')patchStudio3D({status:stage.root.children.length?'ready':'idle',confirmReplace:null});
    gizmo.detach();gizmo.dispose();offStage();clearSelection();for(const h of helpers.values())h.dispose();grid.geometry.dispose();(grid.material as THREE.Material).dispose();for(const t of envTargets)t.dispose();envCache.clear();pmrem.dispose();renderer.dispose();renderer.forceContextLoss();

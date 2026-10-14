@@ -33,7 +33,7 @@ test('3D studio refuses a file that is not glTF with a readable error',async({pa
 /** Helpers for the scene tests below. They drive the real app through its command layer (dev build) and read the studio session. */
 type P=import('@playwright/test').Page;
 const run=(page:P,id:string,params:unknown={})=>page.evaluate(async([i,p])=>{const m=await import('/src/lib/commands.ts');return (await m.executeCommand(i as string,p)) as unknown;},[id,params] as const);
-const session=(page:P)=>page.evaluate(async()=>{const m=await import('/src/lib/studio3d/session.ts');const s=m.getStudio3DState();return {outline:s.outline,marked:s.marked,selected:s.selected,info:s.selectedInfo,dirty:s.dirty,notice:s.notice,status:s.status,name:s.name};});
+const session=(page:P)=>page.evaluate(async()=>{const m=await import('/src/lib/studio3d/session.ts');const s=m.getStudio3DState();return {anim:s.anim,outline:s.outline,marked:s.marked,selected:s.selected,info:s.selectedInfo,dirty:s.dirty,notice:s.notice,status:s.status,name:s.name};});
 const open3d=async(page:P)=>{await page.goto('/');await page.getByRole('button',{name:/3D/}).first().click();};
 const blank=async(page:P)=>{await open3d(page);await page.getByTestId('3d-create-blank').click();await expect(page.getByTestId('studio3d-viewport')).toBeVisible();};
 const insert=async(page:P,kind:string,x:number)=>{await run(page,'studio3d.insert.primitive',{kind});const s=await session(page);const id=s.selected as number;await run(page,'studio3d.object.transform',{id,position:{x,y:0,z:0}});return id;};
@@ -149,4 +149,42 @@ test('3D studio sets PBR extras, mirrors, merges, applies a view preset and rend
  await w.getByLabel('Width (px)').fill('640');await w.getByLabel('Height (px)').fill('360');
  const [download]=await Promise.all([page.waitForEvent('download'),w.getByRole('button').last().click()]);
  expect(download.suggestedFilename()).toMatch(/\.png$/);
+});
+
+function animatedGltf():Buffer{
+ const f=(...n:number[])=>Buffer.concat(n.map(v=>{const b=Buffer.alloc(4);b.writeFloatLE(v);return b;}));
+ const q=(a:number)=>f(0,Math.sin(a/2),0,Math.cos(a/2));
+ const bin=Buffer.concat([f(0,0,0,1,0,0,0,1,0),f(0,2),q(0),q(Math.PI)]);
+ const gltf={asset:{version:'2.0'},scene:0,scenes:[{nodes:[0]}],nodes:[{mesh:0,name:'spinner'}],meshes:[{primitives:[{attributes:{POSITION:0}}]}],
+  buffers:[{uri:'data:application/octet-stream;base64,'+bin.toString('base64'),byteLength:bin.length}],
+  bufferViews:[{buffer:0,byteOffset:0,byteLength:36},{buffer:0,byteOffset:36,byteLength:8},{buffer:0,byteOffset:44,byteLength:32}],
+  accessors:[{bufferView:0,componentType:5126,count:3,type:'VEC3',min:[0,0,0],max:[1,1,0]},{bufferView:1,componentType:5126,count:2,type:'SCALAR',min:[0],max:[2]},{bufferView:2,componentType:5126,count:2,type:'VEC4'}],
+  animations:[{name:'Spin',samplers:[{input:1,output:2}],channels:[{sampler:0,target:{node:0,path:'rotation'}}]}]};
+ return Buffer.from(JSON.stringify(gltf));
+}
+test('3D studio plays, pauses and scrubs a glTF animation and lists scene checks',async({page})=>{
+ await open3d(page);
+ await page.getByTestId('studio3d-file-input').setInputFiles({name:'spin.gltf',mimeType:'model/gltf+json',buffer:animatedGltf()});
+ await expect(page.getByTestId('studio3d-animation')).toBeVisible({timeout:20_000});
+ await expect(page.getByTestId('studio3d-warn-animationsNotSaved')).toBeVisible();
+ await run(page,'studio3d.anim.seek',{time:1});
+ await expect.poll(async()=>(await session(page)).anim?.time).toBe(1);
+ await run(page,'studio3d.anim.loop',{loop:false});await run(page,'studio3d.anim.play',{});
+ await expect.poll(async()=>(await session(page)).anim?.playing,{timeout:10_000}).toBe(false);
+ await expect.poll(async()=>(await session(page)).anim?.time).toBe(2);
+});
+test('3D studio keeps a texture and its mapping through GLB export and a saved scene',async({page})=>{
+ await blank(page);
+ const id=await insert(page,'cube',0);
+ const png=Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGP4z8DwHwAFAAH/q842iQAAAABJRU5ErkJggg==','base64');
+ await page.getByTestId('studio3d-texture-input').setInputFiles({name:'t.png',mimeType:'image/png',buffer:png});
+ await run(page,'studio3d.texture.transform',{id,slot:'color',offsetX:0.5,scaleX:2,rotation:90});
+ const [download]=await Promise.all([page.waitForEvent('download'),page.getByTestId('studio3d-export').getByRole('button',{name:'GLB'}).click()]);
+ const bytes=readFileSync(await download.path()!);
+ expect(bytes.subarray(0,4).toString()).toBe('glTF');
+ expect(bytes.toString('latin1')).toContain('KHR_texture_transform');
+ await page.getByTestId('studio3d-file-input').setInputFiles({name:'back.glb',mimeType:'model/gltf-binary',buffer:bytes});
+ await expect.poll(async()=>(await session(page)).outline.some(o=>o.kind==='mesh')).toBe(true);
+ const mesh=(await session(page)).outline.find(o=>o.kind==='mesh')!;await run(page,'studio3d.select',{id:mesh.id});
+ await expect.poll(async()=>(await session(page)).info?.material?.transforms?.color?.scaleX).toBe(2);
 });

@@ -15,6 +15,8 @@ import {NativeInput,NativeSelect} from '../ui/native-controls';
 import {InspectorNumberField} from '../studios/InspectorNumberField';
 import {PARAM_SPECS,MATERIAL_PRESETS} from '../../lib/studio3d/primitives';
 import {ALPHA_MODES,TEXTURE_SLOTS,MAX_EMISSIVE_INTENSITY} from '../../lib/studio3d/materials';
+import {validateScene,toMB} from '../../lib/studio3d/validate';
+import {SPEEDS,formatClock} from '../../lib/studio3d/animation';
 import {VIEW_PRESETS,RENDER_SIZES} from '../../lib/studio3d/viewPresets';
 const PRIMS=['cube','sphere','plane','cylinder','cone','torus'] as const;
 const LIGHTS=['directional','point','spot','area'] as const;
@@ -50,9 +52,11 @@ export function ModelSection(_:InspectorSectionProps){
   <Row k={t('studio3d.model.name')} v={s.blank?t('studio3d.model.blank'):s.name||'-'}/>
   {!s.blank&&<><Row k={t('studio3d.model.format')} v={s.format||'-'}/><Row k={t('studio3d.model.size')} v={formatBytes(s.bytes)}/>
   <Row k={t('studio3d.model.triangles')} v={formatCount(s.stats.triangles)}/><Row k={t('studio3d.model.vertices')} v={formatCount(s.stats.vertices)}/>
-  <Row k={t('studio3d.model.meshes')} v={s.stats.meshes}/><Row k={t('studio3d.model.materials')} v={s.stats.materials}/><Row k={t('studio3d.model.textures')} v={s.stats.textures}/>
+  <Row k={t('studio3d.model.meshes')} v={s.stats.meshes}/><Row k={t('studio3d.model.materials')} v={s.stats.materials}/><Row k={t('studio3d.model.textures')} v={s.stats.textures}/><Row k={t('studio3d.model.textureMemory')} v={s.stats.textures?`${toMB(s.stats.textureBytes)} MB`:'-'}/><Row k={t('studio3d.model.draws')} v={formatCount(s.stats.draws)}/>
   <Row k={t('studio3d.model.animations')} v={s.stats.animations}/><Row k={t('studio3d.model.cameras')} v={s.stats.cameras}/><Row k={t('studio3d.model.dimensions')} v={size}/></>}
  </dl>
+  {!s.blank&&<SceneChecks/>}
+  {s.clips.length>0&&<AnimationControls/>}
   {s.notice&&<p role="status" className="m-0 px-3 text-xs text-ink-2" data-testid="studio3d-notice">{s.notice}</p>}
   {s.unitHint&&<div role="status" className="grid gap-1 px-3 pb-3 text-xs text-ink-2" data-testid="studio3d-unit-hint">{t('studio3d.unit.hint')}
    <Button variant="outline" onClick={()=>{const h=s.unitHint!;patchStudio3D({unitHint:null});void executeCommand('studio3d.object.transform',{id:h.id,scale:{x:h.factor,y:h.factor,z:h.factor}});}}>{t('studio3d.unit.convert')}</Button>
@@ -105,6 +109,15 @@ export function ObjectSection(_:InspectorSectionProps){
      <span className="w-20 shrink-0">{t('studio3d.texture.'+slot)}</span><span className="min-w-0 flex-1 truncate text-ink-3" title={name??''}>{name??t('studio3d.texture.none')}</span>
      <Button variant="outline" onClick={()=>void executeCommand('studio3d.texture.open',{slot})}>{t('studio3d.texture.choose')}</Button>
      <Button variant="outline" disabled={!name} onClick={()=>void executeCommand('studio3d.texture.clear',{id:o.id,slot})}>{t('studio3d.texture.clear')}</Button></div>;})}
+    {TEXTURE_SLOTS.map(slot=>{const tr=o.material!.transforms?.[slot];if(!tr)return null;const set=(p:Record<string,number>)=>void executeCommand('studio3d.texture.transform',{id:o.id,slot,...p});
+     return <details key={slot} className="text-xs text-ink-2" data-testid={'studio3d-uv-'+slot}><summary className="cursor-pointer">{t('studio3d.uv.title',{slot:t('studio3d.texture.'+slot)})}</summary>
+      <div className="grid grid-cols-2 gap-2 pt-1">
+       <NumField resetKey={o.id+slot+tr.offsetX} label={t('studio3d.uv.offsetX')} value={tr.offsetX} min={-100} max={100} step={0.05} onCommit={v=>set({offsetX:v})}/>
+       <NumField resetKey={o.id+slot+tr.offsetY} label={t('studio3d.uv.offsetY')} value={tr.offsetY} min={-100} max={100} step={0.05} onCommit={v=>set({offsetY:v})}/>
+       <NumField resetKey={o.id+slot+tr.scaleX} label={t('studio3d.uv.scaleX')} value={tr.scaleX} min={-1000} max={1000} step={0.1} onCommit={v=>set({scaleX:v})}/>
+       <NumField resetKey={o.id+slot+tr.scaleY} label={t('studio3d.uv.scaleY')} value={tr.scaleY} min={-1000} max={1000} step={0.1} onCommit={v=>set({scaleY:v})}/>
+       <NumField resetKey={o.id+slot+tr.rotation} label={t('studio3d.uv.rotation')} value={tr.rotation} min={-360} max={360} step={5} onCommit={v=>set({rotation:v})}/>
+       <Button variant="outline" onClick={()=>set({reset:true} as never)}>{t('studio3d.uv.reset')}</Button></div></details>;})}
     <p className="m-0 text-xs text-ink-3">{t('studio3d.texture.note')}</p></fieldset>
   </fieldset>}
   <div className="flex gap-2"><Button variant="outline" onClick={()=>void executeCommand('studio3d.object.duplicate',{id:o.id})}>{t('studio3d.object.duplicate')}</Button>
@@ -237,4 +250,30 @@ function MeshTools(){
   <div className="flex flex-wrap gap-1"><Button variant="outline" disabled={!ready} onClick={()=>void executeCommand('studio3d.mesh.applyScale',{})}>{t('studio3d.mesh.applyScale')}</Button>
    <Button variant="outline" disabled={s.status!=='ready'||set.length<2} onClick={()=>void executeCommand('studio3d.mesh.merge',{})}>{t('studio3d.mesh.merge')}</Button></div>
  </fieldset>;
+}
+
+/** Size and quality checks of the scene: counts, texture memory and things that usually cause trouble. */
+function SceneChecks(){
+ const {t}=useT();const s=useStudio3D();const warnings=validateScene(s.stats);
+ return <section className="grid gap-1 px-3" data-testid="studio3d-checks" aria-label={t('studio3d.checks.title')}>
+  <h3 className="m-0 text-xs font-medium text-ink-3">{t('studio3d.checks.title')}</h3>
+  {warnings.length===0?<p className="m-0 text-xs text-ink-2" role="status">{t('studio3d.checks.ok')}</p>
+   :<ul className="m-0 grid list-none gap-1 p-0 text-xs text-ink-2">{warnings.map(w=><li key={w.code} data-testid={'studio3d-warn-'+w.code} data-level={w.level}>{w.level==='warn'?t('studio3d.checks.warn'):t('studio3d.checks.info')}: {t('studio3d.warn.'+w.code,w.values)}</li>)}</ul>}
+ </section>;
+}
+/** Play, pause and scrub the animation clips of an imported glTF. Clips are played, not edited. */
+function AnimationControls(){
+ const {t}=useT();const s=useStudio3D();const a=s.anim;const clip=s.clips[a.clip];if(!clip)return null;
+ return <fieldset className="m-0 mx-3 mb-3 grid gap-2 border-0 p-0" data-testid="studio3d-animation"><legend className="text-xs text-ink-3">{t('studio3d.anim.title')}</legend>
+  {s.clips.length>1&&<NativeSelect className="rounded-sm border border-subtle bg-surface p-1 text-xs text-ink" value={a.clip} aria-label={t('studio3d.anim.clip')} onChange={e=>void executeCommand('studio3d.anim.play',{clip:Number(e.currentTarget.value)})}>
+   {s.clips.map((c,i)=><option key={i} value={i}>{c.name}</option>)}</NativeSelect>}
+  <div className="flex items-center gap-2">
+   <Button variant="outline" aria-pressed={a.playing} onClick={()=>void executeCommand(a.playing?'studio3d.anim.pause':'studio3d.anim.play',a.playing?undefined:{})}>{a.playing?t('studio3d.anim.pause'):t('studio3d.anim.play')}</Button>
+   <span className="text-xs text-ink-3" aria-live="off">{formatClock(a.time)} / {formatClock(clip.duration)}</span></div>
+  <NativeInput type="range" min={0} max={clip.duration} step={clip.duration/500} value={a.time} aria-label={t('studio3d.anim.scrub')} aria-valuetext={formatClock(a.time)} onChange={e=>void executeCommand('studio3d.anim.seek',{time:Number(e.currentTarget.value)})}/>
+  <div className="flex items-center gap-3">
+   <label className="flex items-center gap-2 text-xs text-ink-2"><NativeInput type="checkbox" checked={a.loop} onChange={e=>void executeCommand('studio3d.anim.loop',{loop:e.currentTarget.checked})}/>{t('studio3d.anim.loop')}</label>
+   <label className="flex items-center gap-2 text-xs text-ink-2">{t('studio3d.anim.speed')}<NativeSelect className="rounded-sm border border-subtle bg-surface p-1 text-xs text-ink" value={a.speed} onChange={e=>void executeCommand('studio3d.anim.speed',{speed:Number(e.currentTarget.value)})}>
+    {SPEEDS.map(v=><option key={v} value={v}>{v}x</option>)}</NativeSelect></label></div>
+  <p className="m-0 text-xs text-ink-3">{t('studio3d.anim.note')}</p></fieldset>;
 }

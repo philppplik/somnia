@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {MAX_EMBED_ENV_BYTES,buildDocument,parseDocument,migrate,sceneBytes,toBase64,fromBase64,DocumentError,DOC_VERSION,type Migrations} from './document';
+import {MAX_EMBED_SCENE_BYTES,MAX_EMBED_ENV_BYTES,buildDocument,parseDocument,migrate,sceneBytes,toBase64,fromBase64,DocumentError,DOC_VERSION,type Migrations} from './document';
 import {defaultEnv,defaultSnap} from './model';
 const glb=new Uint8Array([0x67,0x6c,0x54,0x46,2,0,0,0,12,0,0,0]);
 const base=()=>({glb,unit:'mm' as const,env:{...defaultEnv(),preset:'sky' as const,intensity:1.5,background:true},snap:{...defaultSnap(),on:true,move:0.5},view:{position:[1,2,3] as [number,number,number],target:[0,0,0] as [number,number,number],fov:45},extras:[{i:0,shadow:true},{i:3,area:{position:[1,2,3] as [number,number,number],quaternion:[0,0,0,1] as [number,number,number,number],scale:[1,1,1] as [number,number,number],color:'#ffffff',intensity:6,width:2,height:3,name:'Area light'}}]});
@@ -67,4 +67,11 @@ test('reading rejects a damaged, oversized or mistyped embedded map',()=>{
  for(const bad of [{name:'a.hdr',encoding:'base64',data:'!!!!'},{name:'a.png',encoding:'base64',data:'AAAA'},{name:'a.hdr',encoding:'hex',data:'AAAA'},{name:'a.hdr',encoding:'base64',data:'A'.repeat(Math.ceil(MAX_EMBED_ENV_BYTES/3)*4+4)},'x',[]])
   assert.throws(()=>parseDocument(doc(bad)),DocumentError);
  assert.equal(parseDocument(doc(null)).envMap,null);
+});
+test('an embedded scene above the size limit is refused when saving and when opening, a sidecar is fine',()=>{
+ const big=new Uint8Array(MAX_EMBED_SCENE_BYTES+1);
+ assert.throws(()=>buildDocument({...base(),glb:big}),DocumentError);
+ assert.doesNotThrow(()=>buildDocument({...base(),glb:big,sidecar:'big.glb'}));
+ const doc=JSON.parse(buildDocument(base()));doc.scene={encoding:'base64',data:'A'.repeat(Math.ceil(MAX_EMBED_SCENE_BYTES/3)*4+4)};
+ assert.throws(()=>parseDocument(JSON.stringify(doc)),/too large/);
 });

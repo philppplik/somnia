@@ -6,6 +6,7 @@ import {getStudio3DState,patchStudio3D} from './session';
 import type {EnvSettings,GizmoMode,SnapSettings,ExportUnit,ExportFormat} from './model';
 import {PARAM_SPECS,MATERIAL_PRESET_IDS} from './primitives';
 import {ALPHA_MODES,TEXTURE_SLOTS,MAX_EMISSIVE_INTENSITY,type TextureSlot} from './materials';
+import type {TextureTransform} from './uv';
 import {VIEW_PRESETS,type ViewPreset} from './viewPresets';
 import type {MirrorAxis,PrimitiveKind,LightKind,TransformPatch,MaterialPatch,LightPatch,AlignAxis,AlignTo,PivotAt} from './stage';
 export interface TurntableOptions{frames?:number;width?:number;height?:number;transparent?:boolean}
@@ -25,6 +26,12 @@ export interface Studio3DController{
  applyScale(ids?:number[]):void;
  mergeSelection(ids?:number[]):number;
  viewPreset(preset:ViewPreset):void;
+ setTextureTransform(id:number,slot:TextureSlot,patch:Partial<TextureTransform>|'reset'):void;
+ animPlay(clip?:number):void;
+ animPause():void;
+ animSeek(time:number):void;
+ animLoop(loop:boolean):void;
+ animSpeed(speed:number):void;
  rename(id:number,name:string):void;
  remove(id:number):void;
  duplicate(id:number):number;
@@ -74,6 +81,7 @@ export function registerStudio3DOpener(open:()=>void){opener=open;return()=>{if(
 const VEC={type:'object',properties:{x:{type:'number'},y:{type:'number'},z:{type:'number'}},additionalProperties:false,minProperties:1};
 /** Every primitive setting name with its widest range. The stage checks the range of the actual primitive. */
 const PRIMITIVE_PROPS:Record<string,unknown>=Object.fromEntries(Object.values(PARAM_SPECS).flat().map(p=>[p.id,{type:p.integer?'integer':'number',minimum:p.min,maximum:p.max}]));
+const hasClips=()=>hasScene()&&getStudio3DState().clips.length>0;
 const hasScene=()=>!!controller&&getStudio3DState().status==='ready';
 const object=(properties:Record<string,unknown>,required=Object.keys(properties))=>({type:'object',properties,required,additionalProperties:false});
 export function studio3DCommandSpecs():CommandSpec<unknown,unknown>[]{
@@ -116,6 +124,12 @@ export function studio3DCommandSpecs():CommandSpec<unknown,unknown>[]{
   add<{ids?:number[]}>('studio3d.mesh.applyScale','Apply the scale of 3D meshes to their geometry','Edit',p=>need().applyScale(p?.ids),object({ids:{type:'array',items:{type:'integer',minimum:0},minItems:1,maxItems:500}},[]),hasScene),
   add<{ids?:number[]}>('studio3d.mesh.merge','Merge 3D meshes into one','Edit',p=>need().mergeSelection(p?.ids),object({ids:{type:'array',items:{type:'integer',minimum:0},minItems:2,maxItems:500}},[]),hasScene),
   add<{preset:ViewPreset}>('studio3d.view.preset','Look at the 3D scene from the front, back, left, right, top, bottom or an isometric angle','View',p=>need().viewPreset(p.preset),object({preset:{enum:[...VIEW_PRESETS]}}),hasScene),
+  add<{id?:number;slot:TextureSlot;reset?:boolean}&Partial<TextureTransform>>('studio3d.texture.transform','Move, scale or rotate the image of a texture slot (UV mapping)','Edit',p=>{const{id,slot,reset,...patch}=p;need().setTextureTransform(id??getStudio3DState().selected??-1,slot,reset?'reset':patch);},object({id:{type:'integer',minimum:0},slot:{enum:[...TEXTURE_SLOTS]},reset:{type:'boolean'},offsetX:{type:'number',minimum:-100,maximum:100},offsetY:{type:'number',minimum:-100,maximum:100},scaleX:{type:'number'},scaleY:{type:'number'},rotation:{type:'number',minimum:-360,maximum:360}},['slot']),()=>hasScene()&&getStudio3DState().selectedInfo?.material!=null),
+  add<{clip?:number}>('studio3d.anim.play','Play an animation clip of the 3D model','View',p=>need().animPlay(p?.clip),object({clip:{type:'integer',minimum:0}},[]),hasClips),
+  add('studio3d.anim.pause','Pause the 3D animation','View',()=>need().animPause(),undefined,()=>hasClips()&&getStudio3DState().anim.playing),
+  add<{time:number}>('studio3d.anim.seek','Jump to a time in the 3D animation','View',p=>need().animSeek(p.time),object({time:{type:'number',minimum:0}}),hasClips),
+  add<{loop?:boolean}>('studio3d.anim.loop','Loop the 3D animation or play it once','View',p=>need().animLoop(p?.loop??!getStudio3DState().anim.loop),object({loop:{type:'boolean'}},[]),hasClips),
+  add<{speed:number}>('studio3d.anim.speed','Set the 3D animation speed','View',p=>need().animSpeed(p.speed),object({speed:{type:'number',minimum:0.01,maximum:4}}),hasClips),
   add('studio3d.export.glb','Export the scene as GLB','Project',()=>need().exportGlb()),
   add('studio3d.export.gltf','Export the scene as glTF (JSON with embedded data)','Project',()=>need().exportGltf()),
   add<{sidecar?:boolean;embedEnv?:boolean}>('studio3d.save','Save the 3D scene','Project',p=>need().save(!!p?.sidecar,!!p?.embedEnv),object({sidecar:{type:'boolean'},embedEnv:{type:'boolean'}},[]),hasScene),

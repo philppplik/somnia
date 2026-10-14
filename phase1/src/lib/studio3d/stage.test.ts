@@ -323,3 +323,24 @@ test('merge joins meshes into one at their world positions and undoes',()=>{
  stage.undo();assert.equal(stage.root.children.length,2);stage.redo();assert.equal(stage.root.children.length,1);
  assert.throws(()=>stage.merge([m.id]),StageError);
 });
+test('texture mapping (offset, scale, rotation) is one undo step, validated, and shows in info',()=>{
+ const stage=new Stage();const m=stage.addPrimitive('cube');const tex=new THREE.Texture();stage.setTexture(m.id,'color',tex);
+ assert.deepEqual(stage.info(m.id)!.material!.transforms!.color,{offsetX:0,offsetY:0,scaleX:1,scaleY:1,rotation:0});
+ assert.equal(stage.info(m.id)!.material!.transforms!.normal,null);
+ stage.setTextureTransform(m.id,'color',{offsetX:0.5,scaleX:2,rotation:90});
+ assert.equal(tex.offset.x,0.5);assert.equal(tex.repeat.x,2);assert.ok(Math.abs(tex.rotation-Math.PI/2)<1e-9);
+ assert.equal(stage.info(m.id)!.material!.transforms!.color!.rotation,90);
+ stage.undo();assert.equal(tex.offset.x,0);assert.equal(tex.repeat.x,1);assert.equal(tex.rotation,0);
+ stage.redo();assert.equal(tex.repeat.x,2);
+ stage.setTextureTransform(m.id,'color','reset');assert.equal(tex.repeat.x,1);
+ assert.throws(()=>stage.setTextureTransform(m.id,'color',{scaleX:0}),StageError);
+ assert.throws(()=>stage.setTextureTransform(m.id,'normal',{offsetX:1}),StageError);
+ assert.throws(()=>stage.setTextureTransform(stage.addLight('point').id,'color',{offsetX:1}),StageError);
+});
+test('measure reports texture memory, largest texture, zero scale and textures without UVs',()=>{
+ const stage=new Stage();const m=stage.addPrimitive('cube');
+ const tex=new THREE.DataTexture(new Uint8Array(4*4*4),4,4);stage.setTexture(m.id,'color',tex);
+ let s=stage.measure().stats;assert.equal(s.maxTexture,4);assert.equal(s.textureBytes,Math.ceil(4*4*4*4/3));assert.equal(s.zeroScale,0);assert.equal(s.textureNoUv,0);
+ m.scale.x=0;assert.equal(stage.measure().stats.zeroScale,1);
+ m.geometry.deleteAttribute('uv');assert.equal(stage.measure().stats.textureNoUv,1);
+});
