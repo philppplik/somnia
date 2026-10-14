@@ -1671,6 +1671,17 @@ test('3D studio mesh boolean: two cubes become one and undo restores both',async
  await expect.poll(async()=>(await session(page)).outline.length).toBe(2);
 });
 
+test('3D studio mesh remesh: a cube becomes a dense voxel grid and undo restores it',async({page})=>{
+ await blank(page);
+ await insert(page,'cube',0);
+ const tris=async()=>(await session(page)).stats.triangles;
+ const before=await tris();
+ expect(await run(page,'studio3d.mesh.remesh',{resolution:24})).toBe(true);
+ await expect.poll(tris).toBeGreaterThan(before*10);
+ expect(await run(page,'studio3d.undo',{})).toBe(true);
+ await expect.poll(tris).toBe(before);
+});
+
 test('3D studio mesh simplify: triangle count drops and undo restores it',async({page})=>{
  await blank(page);
  await insert(page,'sphere',0);

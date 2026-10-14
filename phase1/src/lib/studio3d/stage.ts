@@ -10,7 +10,7 @@ import type {NodeExtra} from './document';
 import {EASES,isEase,bakeTrack,type Ease} from './ease';
 import {buildExtras,type ClipMeta,type MetaTrack} from './clipMeta';
 import {groupRefs,keyIndices,copyTrackKeys,shiftTrackKeys,pasteTrackKeys,type KeyRef,type KeyData,type TrackData} from './keyEdit';
-import {extrudeFaces,insetFaces,bevelVertices,loopCut,bevelEdges,slideEdges,mirrorCombine,symmetrizeMesh,subdivideLoop,cleanupMesh,flipMesh,outsideMesh,smoothMesh,separateMesh,solidifyMesh,fillHolesMesh,relaxMesh,fattenMesh,bisectMesh,twistMesh,taperMesh,spinMesh,bridgeMesh,EditError,MAX_EDIT_VERTICES,MAX_EDIT_TRIANGLES,type MeshData,type CleanupResult,type NormalsOp} from './editMesh';
+import {extrudeFaces,insetFaces,bevelVertices,loopCut,bevelEdges,slideEdges,mirrorCombine,symmetrizeMesh,subdivideLoop,cleanupMesh,flipMesh,outsideMesh,smoothMesh,separateMesh,solidifyMesh,fillHolesMesh,relaxMesh,fattenMesh,bisectMesh,twistMesh,taperMesh,spinMesh,bridgeMesh,remeshMesh,EditError,MAX_EDIT_VERTICES,MAX_EDIT_TRIANGLES,type MeshData,type CleanupResult,type NormalsOp} from './editMesh';
 import {sculptDab,paintMask,SculptError,type SculptOpts} from './sculpt';
 import {KEY_PATHS,KEY_STRIDE,ClipError,MAX_CLIPS,MAX_KEYS_PER_TRACK,DEFAULT_CLIP_SECONDS,insertKey,removeKey as removeKeyData,findKey,isPlainTrack,trackName,parseTrackName,checkKeyTime,checkDuration,checkClipName,lastKeyTime,type KeyPath} from './clips';
 import {mergeTransform,DEFAULT_TRANSFORM,UvError,type TextureTransform} from './uv';
@@ -2167,6 +2167,24 @@ export class Stage{
   this.push({label:{key:'studio3d.hist.boolean',params:{name:meshes[0].name,other:meshes[1].name}},undo:()=>{this.root.remove(result);for(const i of items)this.attach0(i.o,i.parent,i.at);owned=false;},redo:()=>{for(const i of [...items].reverse())i.parent.remove(i.o);this.attach0(result,this.root,this.root.children.length);owned=true;},
    release:()=>{if(owned)for(const i of items)disposeObject(i.o);else disposeObject(result);}});
   return 1;
+ }
+ /** Rebuilds meshes as an even voxel grid (binary voxelization + surface nets, vertices projected onto the source). UVs, masks and seams are dropped. One undo step for the whole set. */
+ remesh(resolution:number,ids:number[]):number{
+  if(this.editId!=null)throw new StageError('Leave edit mode before remeshing.');
+  if(!Number.isInteger(resolution)||resolution<8||resolution>128)throw new StageError('The remesh resolution must be a whole number between 8 and 128.');
+  const objs=this.topLevel(this.needMany(ids,1));
+  for(const o of objs)if(!(o as THREE.Mesh).isMesh)throw new StageError(`${o.name} is not a mesh. Remesh works on meshes.`);
+  const list=(objs as THREE.Mesh[]).map(mesh=>{
+   const data=this.meshDataOf(mesh);
+   let out:MeshData;try{out=remeshMesh(data,resolution);}catch(e){throw e instanceof EditError?new StageError(e.message):e;}
+   const g=this.buildGeometry(out);
+   return{mesh,before:{g:mesh.geometry,d:mesh.userData.somniaPrimitive,s:this.seamsOf(mesh)},after:g};
+  });
+  const set=(k:'before'|'after')=>{for(const l of list){if(k==='after'){l.mesh.geometry=l.after;delete l.mesh.userData.somniaPrimitive;this.setSeams(l.mesh,[]);}else{l.mesh.geometry=l.before.g;if(l.before.d!==undefined)l.mesh.userData.somniaPrimitive=l.before.d;this.setSeams(l.mesh,l.before.s);}}};
+  let owned=true;
+  set('after');
+  this.push({label:{key:'studio3d.hist.remesh',params:{count:list.length,name:list[0].mesh.name}},undo:()=>{set('before');owned=false;},redo:()=>{set('after');owned=true;},release:()=>{for(const l of list)(owned?l.before.g:l.after).dispose();}});
+  return list.length;
  }
  /** Shows or hides an object. A hidden parent hides its whole subtree. One undo step. */
  setHidden(id:number,hidden:boolean){

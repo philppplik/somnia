@@ -867,5 +867,9 @@
  "studio3d.mesh.boolean.union": "Vereinigung",
  "studio3d.mesh.boolean.subtract": "Subtraktion",
  "studio3d.mesh.boolean.intersect": "Schnitt",
- "studio3d.hist.boolean": "Boolean auf {name} und {other}"
+ "studio3d.hist.boolean": "Boolean auf {name} und {other}",
+ "cmd.studio3d.mesh.remesh": "Meshes als gleichmäßiges Voxel-Gitter neu aufbauen (Remesh): einheitliche wasserdichte Dreiecke, scharfe Kanten zurückprojiziert",
+ "studio3d.mesh.remesh": "Remesh (Voxel)",
+ "studio3d.mesh.remeshRes": "Remesh-Auflösung",
+ "studio3d.hist.remesh": "Remesh auf {name}"
 }

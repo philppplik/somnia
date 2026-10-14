@@ -719,6 +719,7 @@ function MeshTools(){
  const [spSteps,setSpSteps]=useState(24);
  const [brTwist,setBrTwist]=useState(0);
  const [boolOp,setBoolOp]=useState<'union'|'subtract'|'intersect'>('union');
+ const [rmRes,setRmRes]=useState(32);
  const [rxFactor,setRxFactor]=useState(0.5);
  const [soOff,setSoOff]=useState(0);
  const set=s.marked.length?s.marked:s.selected!=null?[s.selected]:[];const ready=s.status==='ready'&&set.length>0;
@@ -777,6 +778,8 @@ function MeshTools(){
   <div className="flex flex-wrap items-center gap-1"><NativeSelect className="rounded-sm border border-subtle bg-surface p-1 text-xs text-ink" value={boolOp} aria-label={t('studio3d.mesh.booleanOp')} onChange={e=>setBoolOp(e.currentTarget.value as 'union'|'subtract'|'intersect')}>
    {(['union','subtract','intersect'] as const).map(k=><option key={k} value={k}>{t('studio3d.mesh.boolean.'+k)}</option>)}</NativeSelect>
    <Button variant="outline" disabled={!ready} onClick={()=>void executeCommand('studio3d.mesh.boolean',{op:boolOp})}>{t('studio3d.mesh.boolean')}</Button></div>
+  <div className="flex flex-wrap items-center gap-1"><NativeInput type="number" min={8} max={128} step={1} value={rmRes} aria-label={t('studio3d.mesh.remeshRes')} className="w-16" onChange={e=>setRmRes(Math.min(128,Math.max(8,Math.round(Number(e.currentTarget.value)||32))))}/>
+   <Button variant="outline" disabled={!ready} onClick={()=>void executeCommand('studio3d.mesh.remesh',{resolution:rmRes})}>{t('studio3d.mesh.remesh')}</Button></div>
  </fieldset>;
 }
 

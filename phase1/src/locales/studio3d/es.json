@@ -867,5 +867,9 @@
  "studio3d.mesh.boolean.union": "Unión",
  "studio3d.mesh.boolean.subtract": "Sustracción",
  "studio3d.mesh.boolean.intersect": "Intersección",
- "studio3d.hist.boolean": "Booleana en {name} y {other}"
+ "studio3d.hist.boolean": "Booleana en {name} y {other}",
+ "cmd.studio3d.mesh.remesh": "Reconstruir mallas como una rejilla de vóxeles uniforme (remesh): triángulos herméticos y uniformes, detalles proyectados",
+ "studio3d.mesh.remesh": "Remesh (vóxeles)",
+ "studio3d.mesh.remeshRes": "Resolución de remesh",
+ "studio3d.hist.remesh": "Remesh en {name}"
 }

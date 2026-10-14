@@ -867,5 +867,9 @@
  "studio3d.mesh.boolean.union": "Union",
  "studio3d.mesh.boolean.subtract": "Subtract",
  "studio3d.mesh.boolean.intersect": "Intersect",
- "studio3d.hist.boolean": "Boolean on {name} and {other}"
+ "studio3d.hist.boolean": "Boolean on {name} and {other}",
+ "cmd.studio3d.mesh.remesh": "Rebuild meshes as an even voxel grid (remesh): uniform watertight triangles, sharp features projected back",
+ "studio3d.mesh.remesh": "Remesh (voxel)",
+ "studio3d.mesh.remeshRes": "Remesh resolution",
+ "studio3d.hist.remesh": "Remesh {name}"
 }

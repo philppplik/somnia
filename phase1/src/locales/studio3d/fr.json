@@ -867,5 +867,9 @@
  "studio3d.mesh.boolean.union": "Union",
  "studio3d.mesh.boolean.subtract": "Soustraction",
  "studio3d.mesh.boolean.intersect": "Intersection",
- "studio3d.hist.boolean": "Booléen sur {name} et {other}"
+ "studio3d.hist.boolean": "Booléen sur {name} et {other}",
+ "cmd.studio3d.mesh.remesh": "Reconstruire les maillages en grille de voxels uniforme (remesh) : triangles uniformes et étanches, détails reprojetés",
+ "studio3d.mesh.remesh": "Remesh (voxels)",
+ "studio3d.mesh.remeshRes": "Résolution du remesh",
+ "studio3d.hist.remesh": "Remesh sur {name}"
 }

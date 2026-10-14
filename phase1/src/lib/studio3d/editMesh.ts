@@ -1229,3 +1229,164 @@ export function bridgeMesh(a:MeshData,b:MeshData,twist:number):MeshData{
  check(merged);
  return outsideMesh(merged).mesh;
 }
+
+/** Conservative triangle/AABB overlap (Akenine-Moeller SAT), boxes are axis-aligned cells. */
+function triBoxOverlap(cx:number,cy:number,cz:number,half:number,ax:number,ay:number,az:number,bx:number,by:number,bz:number,ex:number,ey:number,ez:number):boolean{
+ const v0x=ax-cx,v0y=ay-cy,v0z=az-cz,v1x=bx-cx,v1y=by-cy,v1z=bz-cz,v2x=ex-cx,v2y=ey-cy,v2z=ez-cz;
+ const e0x=v1x-v0x,e0y=v1y-v0y,e0z=v1z-v0z,e1x=v2x-v1x,e1y=v2y-v1y,e1z=v2z-v1z,e2x=v0x-v2x,e2y=v0y-v2y,e2z=v0z-v2z;
+ const axis=(xx:number,xy:number,xz:number)=>{
+  const p0=v0x*xx+v0y*xy+v0z*xz,p1=v1x*xx+v1y*xy+v1z*xz,p2=v2x*xx+v2y*xy+v2z*xz;
+  const mn=Math.min(p0,p1,p2),mx=Math.max(p0,p1,p2);
+  const r=half*(Math.abs(xx)+Math.abs(xy)+Math.abs(xz));
+  return mx>=-r&&mn<=r;
+ };
+ for(const [exx,exy,exz] of [[e0x,e0y,e0z],[e1x,e1y,e1z],[e2x,e2y,e2z]] as const){
+  if(!axis(0,-exz,exy))return false;
+  if(!axis(exz,0,-exx))return false;
+  if(!axis(-exy,exx,0))return false;
+ }
+ for(const [xx,xy,xz] of [[1,0,0],[0,1,0],[0,0,1]] as const)if(!axis(xx,xy,xz))return false;
+ const nx=e0y*e1z-e0z*e1y,ny=e0z*e1x-e0x*e1z,nz=e0x*e1y-e0y*e1x;
+ const d=-(nx*v0x+ny*v0y+nz*v0z);
+ const r=half*(Math.abs(nx)+Math.abs(ny)+Math.abs(nz));
+ return Math.abs(d)<=r;
+}
+
+/** Closest point on a triangle to p (Ericson, Real-Time Collision Detection). */
+function closestPointTriangle(px:number,py:number,pz:number,ax:number,ay:number,az:number,bx:number,by:number,bz:number,cx:number,cy:number,cz:number):[number,number,number]{
+ const abx=bx-ax,aby=by-ay,abz=bz-az,acx=cx-ax,acy=cy-ay,acz=cz-az,apx=px-ax,apy=py-ay,apz=pz-az;
+ const d1=abx*apx+aby*apy+abz*apz,d2=acx*apx+acy*apy+acz*apz;
+ if(d1<=0&&d2<=0)return[ax,ay,az];
+ const bpx=px-bx,bpy=py-by,bpz=pz-bz;
+ const d3=abx*bpx+aby*bpy+abz*bpz,d4=acx*bpx+acy*bpy+acz*bpz;
+ if(d3>=0&&d4<=d3)return[bx,by,bz];
+ const vc=d1*d4-d3*d2;
+ if(vc<=0&&d1>=0&&d3<=0){const v=d1/(d1-d3);return[ax+abx*v,ay+aby*v,az+abz*v];}
+ const cpx=px-cx,cpy=py-cy,cpz=pz-cz;
+ const d5=abx*cpx+aby*cpy+abz*cpz,d6=acx*cpx+acy*cpy+acz*cpz;
+ if(d6>=0&&d5<=d6)return[cx,cy,cz];
+ const vb=d5*d2-d1*d6;
+ if(vb<=0&&d2>=0&&d6<=0){const w=d2/(d2-d6);return[ax+acx*w,ay+acy*w,az+acz*w];}
+ const va=d3*d6-d5*d4;
+ if(va<=0&&(d4-d3)>=0&&(d5-d6)>=0){const w=(d4-d3)/((d4-d3)+(d5-d6));return[bx+(cx-bx)*w,by+(cy-by)*w,bz+(cz-bz)*w];}
+ const den=1/(va+vb+vc);
+ const v=vb*den,w=vc*den;
+ return[ax+abx*v+acx*w,ay+aby*v+acy*w,az+abz*v+acz*w];
+}
+
+/** Voxel-remeshes a closed mesh into an even triangle grid (binary voxelization + naive surface nets, vertices projected back onto the source surface). UVs, masks and explicit normals are dropped. */
+export function remeshMesh(m:MeshData,resolution:number):MeshData{
+ check(m);
+ if(!Number.isInteger(resolution)||resolution<8||resolution>128)throw new EditError('The remesh resolution must be a whole number between 8 and 128.');
+ const N=resolution+4; // margin cells both sides, plus one for the dual grid
+ let minX=Infinity,minY=Infinity,minZ=Infinity,maxX=-Infinity,maxY=-Infinity,maxZ=-Infinity;
+ for(let i=0;i<m.positions.length;i+=3){const x=m.positions[i],y=m.positions[i+1],z=m.positions[i+2];minX=Math.min(minX,x);minY=Math.min(minY,y);minZ=Math.min(minZ,z);maxX=Math.max(maxX,x);maxY=Math.max(maxY,y);maxZ=Math.max(maxZ,z);}
+ const ext=Math.max(maxX-minX,maxY-minY,maxZ-minZ);
+ if(!(ext>0))throw new EditError('This mesh has no extent to remesh.');
+ const h=ext/resolution;
+ const ox=minX-2*h,oy=minY-2*h,oz=minZ-2*h;
+ const n=N*N*N;
+ const blocked=new Uint8Array(n);
+ const at=(x:number,y:number,z:number)=>(z*N+y)*N+x;
+ // 1. mark cells overlapped by any triangle
+ for(let f=0;f<m.index.length;f+=3){
+  const a=m.index[f]*3,b=m.index[f+1]*3,c=m.index[f+2]*3;
+  const ax=m.positions[a],ay=m.positions[a+1],az=m.positions[a+2];
+  const bx=m.positions[b],by=m.positions[b+1],bz=m.positions[b+2];
+  const cx=m.positions[c],cy=m.positions[c+1],cz=m.positions[c+2];
+  const x0=Math.max(0,Math.floor((Math.min(ax,bx,cx)-ox)/h)),x1=Math.min(N-1,Math.ceil((Math.max(ax,bx,cx)-ox)/h));
+  const y0=Math.max(0,Math.floor((Math.min(ay,by,cy)-oy)/h)),y1=Math.min(N-1,Math.ceil((Math.max(ay,by,cy)-oy)/h));
+  const z0=Math.max(0,Math.floor((Math.min(az,bz,cz)-oz)/h)),z1=Math.min(N-1,Math.ceil((Math.max(az,bz,cz)-oz)/h));
+  for(let z=z0;z<=z1;z++)for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++){
+   if(!blocked[at(x,y,z)]&&triBoxOverlap(ox+(x+0.5)*h,oy+(y+0.5)*h,oz+(z+0.5)*h,h*0.5,ax,ay,az,bx,by,bz,cx,cy,cz))blocked[at(x,y,z)]=1;
+  }
+ }
+ // 2. flood fill the outside; unreached, unblocked cells are solid interior
+ const outside=new Uint8Array(n);
+ const stack:number[]=[];
+ for(let x=0;x<N;x++)for(let y=0;y<N;y++)for(let z=0;z<N;z++)if(x===0||y===0||z===0||x===N-1||y===N-1||z===N-1){const i=at(x,y,z);if(!blocked[i]&&!outside[i]){outside[i]=1;stack.push(i);}}
+ while(stack.length){
+  const i=stack.pop()!;
+  const z=Math.floor(i/(N*N)),y=Math.floor((i-z*N*N)/N),x=i-y*N-z*N*N;
+  for(const [dx,dy,dz] of [[1,0,0],[-1,0,0],[0,1,0],[0,-1,0],[0,0,1],[0,0,-1]] as const){
+   const nx=x+dx,ny=y+dy,nz=z+dz;
+   if(nx<0||ny<0||nz<0||nx>=N||ny>=N||nz>=N)continue;
+   const j=at(nx,ny,nz);
+   if(!blocked[j]&&!outside[j]){outside[j]=1;stack.push(j);}
+  }
+ }
+ let solid=0;for(let i=0;i<n;i++)if(!blocked[i]&&!outside[i])solid++;
+ if(solid<8)throw new EditError('Remesh needs a closed solid volume - this mesh is open or too thin for the chosen resolution.');
+ // sign field: blocked surface-band cells count as solid, so the only iso-surface is the outer band boundary
+ const inside=(x:number,y:number,z:number)=>!outside[at(x,y,z)];
+ // 3. naive surface nets: vertex per mixed dual cell at the average of its sign-changing edge midpoints
+ const vid=new Map<number,number>();
+ const positions:number[]=[];
+ const center=(x:number,y:number,z:number):[number,number,number]=>[ox+(x+0.5)*h,oy+(y+0.5)*h,oz+(z+0.5)*h];
+ const EDGES:[number,number,number,number,number,number][]=[[0,0,0,1,0,0],[0,1,0,1,1,0],[0,0,1,1,0,1],[0,1,1,1,1,1],[0,0,0,0,1,0],[1,0,0,1,1,0],[0,0,1,0,1,1],[1,0,1,1,1,1],[0,0,0,0,0,1],[1,0,0,1,0,1],[0,1,0,0,1,1],[1,1,0,1,1,1]];
+ for(let z=0;z<N-1;z++)for(let y=0;y<N-1;y++)for(let x=0;x<N-1;x++){
+  const c0=inside(x,y,z);
+  let mixed=false;
+  for(const [ddx,ddy,ddz] of [[1,0,0],[0,1,0],[0,0,1],[1,1,0],[1,0,1],[0,1,1],[1,1,1]] as const)if(inside(x+ddx,y+ddy,z+ddz)!==c0){mixed=true;break;}
+  if(!mixed)continue;
+  let sx=0,sy=0,sz=0,cnt=0;
+  for(const [ax2,ay2,az2,bx2,by2,bz2] of EDGES){
+   const A0=x+ax2,A1=y+ay2,A2=z+az2,B0=x+bx2,B1=y+by2,B2=z+bz2;
+   if(inside(A0,A1,A2)===inside(B0,B1,B2))continue;
+   const pa=center(A0,A1,A2),pb=center(B0,B1,B2);
+   sx+=(pa[0]+pb[0])/2;sy+=(pa[1]+pb[1])/2;sz+=(pa[2]+pb[2])/2;cnt++;
+  }
+  if(!cnt)continue;
+  vid.set(at(x,y,z),positions.length/3);
+  positions.push(sx/cnt,sy/cnt,sz/cnt);
+ }
+ if(!vid.size)throw new EditError('Remesh found no surface at this resolution.');
+ // 4. project every vertex back onto the source surface (bucket-accelerated closest point)
+ const G=Math.max(4,Math.min(64,Math.floor(resolution/2)));
+ const bs=ext/G;
+ const buckets=new Map<number,number[]>();
+ const bid=(x:number,y:number,z:number)=>(z*G+y)*G+x;
+ const clampB=(v:number)=>Math.max(0,Math.min(G-1,Math.floor(v/bs)));
+ for(let f=0;f<m.index.length;f+=3){
+  const a=m.index[f]*3,b=m.index[f+1]*3,c=m.index[f+2]*3;
+  const x0=clampB(Math.min(m.positions[a],m.positions[b],m.positions[c])-ox-1e-9),x1=clampB(Math.max(m.positions[a],m.positions[b],m.positions[c])-ox+1e-9);
+  const y0=clampB(Math.min(m.positions[a+1],m.positions[b+1],m.positions[c+1])-oy-1e-9),y1=clampB(Math.max(m.positions[a+1],m.positions[b+1],m.positions[c+1])-oy+1e-9);
+  const z0=clampB(Math.min(m.positions[a+2],m.positions[b+2],m.positions[c+2])-oz-1e-9),z1=clampB(Math.max(m.positions[a+2],m.positions[b+2],m.positions[c+2])-oz+1e-9);
+  for(let z=z0;z<=z1;z++)for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++){
+   const k=bid(x,y,z);const arr=buckets.get(k);if(arr)arr.push(f);else buckets.set(k,[f]);
+  }
+ }
+ const R=h*1.6; // vertices sit at most ~0.75h inside the band
+ for(let i=0;i<positions.length;i+=3){
+  const px=positions[i],py=positions[i+1],pz=positions[i+2];
+  let bestD=R*R,bx=0,by=0,bz=0,found=false;
+  const x0=clampB(px-R-ox),x1=clampB(px+R-ox),y0=clampB(py-R-oy),y1=clampB(py+R-oy),z0=clampB(pz-R-oz),z1=clampB(pz+R-oz);
+  const tris=new Set<number>();
+  for(let z=z0;z<=z1;z++)for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++){const arr=buckets.get(bid(x,y,z));if(arr)for(const f of arr)tris.add(f);}
+  for(const f of tris){
+   const a=m.index[f]*3,b=m.index[f+1]*3,c=m.index[f+2]*3;
+   const q=closestPointTriangle(px,py,pz,m.positions[a],m.positions[a+1],m.positions[a+2],m.positions[b],m.positions[b+1],m.positions[b+2],m.positions[c],m.positions[c+1],m.positions[c+2]);
+   const dx=q[0]-px,dy=q[1]-py,dz=q[2]-pz;
+   const d=dx*dx+dy*dy+dz*dz;
+   if(d<bestD){bestD=d;bx=q[0];by=q[1];bz=q[2];found=true;}
+  }
+  if(found){positions[i]=bx;positions[i+1]=by;positions[i+2]=bz;}
+ }
+ // 5. one quad per sign-changing primal edge, right-hand-rule cyclic order, flipped when the edge runs outside -> inside
+ const index:number[]=[];
+ const emit=(a:number,b:number,c:number,d:number,flip:boolean)=>{
+  const va=vid.get(a),vb=vid.get(b),vc=vid.get(c),vd=vid.get(d);
+  if(va===undefined||vb===undefined||vc===undefined||vd===undefined)return;
+  if(flip)index.push(va,vd,vc, va,vc,vb);else index.push(va,vb,vc, va,vc,vd);
+ };
+ for(let z=1;z<N;z++)for(let y=1;y<N;y++)for(let x=1;x<N;x++){
+  if(inside(x-1,y,z)!==inside(x,y,z))emit(at(x-1,y,z-1),at(x-1,y,z),at(x-1,y-1,z),at(x-1,y-1,z-1),!inside(x-1,y,z));
+  if(inside(x,y-1,z)!==inside(x,y,z))emit(at(x-1,y-1,z),at(x,y-1,z),at(x,y-1,z-1),at(x-1,y-1,z-1),!inside(x,y-1,z));
+  if(inside(x,y,z-1)!==inside(x,y,z))emit(at(x,y-1,z-1),at(x,y,z-1),at(x-1,y,z-1),at(x-1,y-1,z-1),!inside(x,y,z-1));
+ }
+ if(!index.length)throw new EditError('Remesh produced no surface at this resolution.');
+ const out:MeshData={positions,index};
+ check(out);
+ return outsideMesh(out).mesh;
+}
+
