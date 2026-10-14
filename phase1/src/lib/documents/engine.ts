@@ -53,6 +53,7 @@ export class DocumentsEngine{
  async imageEdit(block:number,op:import('./protocol').ImageOp):Promise<OpenedDocument>{return(await this.call('edited',id=>({id,kind:'imageEdit',block,op}))).document;}
  async commentsState():Promise<import('./protocol').CommentItem[]>{return(await this.call('comments',id=>({id,kind:'commentsState'}))).comments;}
  async addComment(block:number,start:number,end:number,text:string,author:string,date:string):Promise<OpenedDocument>{return(await this.call('edited',id=>({id,kind:'addComment',block,start,end,text,author,date}))).document;}
+ async replyComment(parent:number,text:string,author:string,date:string):Promise<OpenedDocument>{return(await this.call('edited',id=>({id,kind:'replyComment',parent,text,author,date}))).document;}
  async resolveComment(commentId:number,resolved:boolean):Promise<OpenedDocument>{return(await this.call('edited',id=>({id,kind:'resolveComment',commentId,resolved}))).document;}
  async deleteComment(commentId:number):Promise<OpenedDocument>{return(await this.call('edited',id=>({id,kind:'deleteComment',commentId}))).document;}
  async pageSetupState():Promise<import('./protocol').PageSetupState>{return(await this.call('pageSetup',id=>({id,kind:'pageSetupState'}))).state;}

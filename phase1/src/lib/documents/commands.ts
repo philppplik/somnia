@@ -13,7 +13,7 @@ import {setShortcutsOpen} from './shortcuts';
 import {setParagraphOptionsOpen} from './paragraphOptions';
 import {insertPageBreak,setParagraphOptions} from './session';
 import {checkParaPatch,PARA_FLAG_KEYS} from './protocol';
-import {addComment,commentSelection,deleteComment,resolveComment} from './session';
+import {addComment,commentSelection,deleteComment,goToComment,readComments,replyComment,resolveComment} from './session';
 import {commentProblem,HIGHLIGHTS,linkProblem,type HighlightName} from './protocol';
 import {clearFormatting,hasTextSelection,setHighlight,setLink,toggleVertAlign} from './session';
 import {documentsExportReady,patchDocumentsExportUi,requestDocumentsSaveCopy} from './exportBridge';
@@ -41,6 +41,17 @@ export function registerDocumentsCommands(){
    const text=(p as Record<string,unknown>|undefined)?.text;const bad=commentProblem(text);if(bad)throw expected(bad);
    await addComment(text as string);setCommentsOpen(true);
   },()=>ready()&&commentSelection()!==null),
+  add('documents.comments.reply','Reply to a comment',async p=>{
+   const r=p as Record<string,unknown>|undefined;const id=r?.id;
+   if(typeof id!=='number'||!Number.isInteger(id)||id<0||id>=2**31)throw expected('Invalid "id".');
+   const bad=commentProblem(r?.text);if(bad)throw expected(bad);
+   await replyComment(id,r?.text as string);setCommentsOpen(true);
+  }),
+  add('documents.comments.goTo','Go to a comment',async p=>{
+   const id=(p as Record<string,unknown>|undefined)?.id;if(typeof id!=='number'||!Number.isInteger(id)||id<0||id>=2**31)throw expected('Invalid "id".');
+   const list=await readComments();const c=list?.find(x=>x.id===id);if(!c)throw expected('No such comment.');
+   if(!(await goToComment(c.block)))throw expected('That comment has no place on a page.');
+  }),
   add('documents.comments.resolve','Resolve or reopen a comment',async p=>{
    const r=p as Record<string,unknown>|undefined;
    const id=r?.id;if(typeof id!=='number'||!Number.isInteger(id)||id<0||id>=2**31)throw expected('Invalid "id".');

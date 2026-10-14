@@ -2515,8 +2515,30 @@
       "hasEnabled": true
     },
     {
+      "id": "documents.comments.goTo",
+      "title": "Go to a comment",
+      "category": "View",
+      "source": "documents",
+      "keywords": [
+        "document",
+        "docx"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "documents.comments.panel",
       "title": "Show comments",
+      "category": "View",
+      "source": "documents",
+      "keywords": [
+        "document",
+        "docx"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "documents.comments.reply",
+      "title": "Reply to a comment",
       "category": "View",
       "source": "documents",
       "keywords": [

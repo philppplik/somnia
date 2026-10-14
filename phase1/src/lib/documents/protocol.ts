@@ -89,6 +89,7 @@ export type DocumentsRequest=
  |{id:number;kind:'setPageSetup';setup:PageSetupPatch}
  |{id:number;kind:'commentsState'}
  |{id:number;kind:'addComment';block:number;start:number;end:number;text:string;author:string;date:string}
+ |{id:number;kind:'replyComment';parent:number;text:string;author:string;date:string}
  |{id:number;kind:'resolveComment';commentId:number;resolved:boolean}
  |{id:number;kind:'deleteComment';commentId:number}
  |{id:number;kind:'headerFooterState'}

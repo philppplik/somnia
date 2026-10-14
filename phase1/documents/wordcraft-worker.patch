@@ -46,7 +46,7 @@ new file mode 100644
 index 0000000..5b80b79
 --- /dev/null
 +++ b/crates/somnia-worker/src/lib.rs
-@@ -0,0 +1,2759 @@
+@@ -0,0 +1,2841 @@
 +//! Experimental headless adapter. No DOM, egui, filesystem or UI thread access.
 +use wasm_bindgen::prelude::*;
 +use std::sync::Arc;
@@ -1668,6 +1668,59 @@ index 0000000..5b80b79
 +        self.pages = DocLayout::default();
 +        Ok(())
 +    }
++    /// Adds a reply to a comment (replying to a reply goes to its top-level comment). The reply is anchored inside the
++    /// parent's range, so it travels with the paragraph, and starts out resolved or open like its parent.
++    fn do_reply_comment(&mut self, parent: u32, text: &str, author: &str, date: &str) -> Result<(), String> {
++        use wordcraft_doc::{InlineObject, PartKind};
++        let body = text.trim();
++        if body.is_empty() || body.chars().count() > COMMENT_MAX_CHARS || body.chars().any(|c| c.is_control() && c != '\n') {
++            return Err(format!("a comment is 1 to {COMMENT_MAX_CHARS} characters"));
++        }
++        if author.chars().count() > 60 || author.chars().any(|c| c.is_control()) {
++            return Err("the author name is limited to 60 characters".into());
++        }
++        if date.len() > 40 || date.chars().any(|c| !(c.is_ascii_digit() || "-:.TZ+".contains(c))) {
++            return Err("the comment date is not valid".into());
++        }
++        if self.doc.comments.len() >= COMMENT_MAX_COUNT {
++            return Err(format!("a document holds at most {COMMENT_MAX_COUNT} comments"));
++        }
++        let root = match self.doc.comments.get(&parent) {
++            Some(c) => c.parent.unwrap_or(parent),
++            None => return Err(format!("no comment {parent}")),
++        };
++        let resolved = self.doc.comments.get(&root).map(|c| c.resolved).unwrap_or(false);
++        let mut found: Option<(usize, usize, usize)> = None;
++        for pid in self.all_para_ids() {
++            let Some(p) = self.para_at(pid) else { continue };
++            let (mut so, mut eo) = (None, None);
++            for (off, obj) in p.object_offsets().into_iter().zip(p.objects.iter()) {
++                match obj {
++                    InlineObject::CommentStart { id } if *id == root => so = Some(off),
++                    InlineObject::CommentEnd { id } if *id == root => eo = Some(off),
++                    _ => {}
++                }
++            }
++            if let (Some(a), Some(b)) = (so, eo) {
++                found = Some((pid, a, b));
++                break;
++            }
++        }
++        let (pid, so, eo) = found.ok_or_else(|| format!("comment {root} is not anchored inside one paragraph"))?;
++        let mut p = self.para_at(pid).ok_or_else(|| format!("no paragraph {pid}"))?.clone();
++        let id = self.doc.comments.keys().next_back().map(|k| k + 1).unwrap_or(0);
++        let props = p.props_at(eo.saturating_sub(1)).clone();
++        p.insert_object(eo, InlineObject::CommentEnd { id }, &props).map_err(|e| e.to_string())?;
++        p.insert_object(so + OBJ.len_utf8(), InlineObject::CommentStart { id }, &props).map_err(|e| e.to_string())?;
++        let blocks: wordcraft_doc::Blocks = body.split('\n').map(|l| wordcraft_doc::para_block(wordcraft_doc::Paragraph::with_text(l, CharProps::default()))).collect();
++        self.put_para(pid, p)?;
++        let part = self.doc.add_part(PartKind::Comment, blocks);
++        let initials: String = author.split_whitespace().filter_map(|w| w.chars().next()).take(2).flat_map(|c| c.to_uppercase()).collect();
++        let a = if author.trim().is_empty() { "Somnia" } else { author.trim() };
++        self.doc.comments.insert(id, wordcraft_doc::Comment { author: a.to_string(), initials, date: date.to_string(), parent: Some(root), resolved, part });
++        self.pages = DocLayout::default();
++        Ok(())
++    }
 +    /// Marks a comment and its replies resolved or open again.
 +    fn do_resolve_comment(&mut self, id: u32, resolved: bool) -> Result<(), String> {
 +        if !self.doc.comments.contains_key(&id) {
@@ -1852,6 +1905,9 @@ index 0000000..5b80b79
 +    /// Adds a comment on `start..end` of one paragraph. `date` is ISO 8601 from the host (the worker has no clock).
 +    pub fn add_comment(&mut self, block: usize, start: usize, end: usize, text: &str, author: &str, date: &str) -> Result<(), JsValue> {
 +        self.do_add_comment(block, start, end, text, author, date).map_err(|e| JsValue::from_str(&e))
++    }
++    pub fn reply_comment(&mut self, parent: u32, text: &str, author: &str, date: &str) -> Result<(), JsValue> {
++        self.do_reply_comment(parent, text, author, date).map_err(|e| JsValue::from_str(&e))
 +    }
 +    pub fn resolve_comment(&mut self, id: u32, resolved: bool) -> Result<(), JsValue> {
 +        self.do_resolve_comment(id, resolved).map_err(|e| JsValue::from_str(&e))
@@ -2385,6 +2441,32 @@ index 0000000..5b80b79
 +        let long = format!(r#"{{"link":"https://{}"}}"#, "a".repeat(LINK_MAX_CHARS));
 +        assert!(s.do_format(0, 0, 0, 3, &long).is_err());
 +        assert_eq!(s.do_para_state(0, 0).unwrap(), before);
++    }
++    #[test]
++    fn comment_replies_anchor_inside_parent_and_follow_it() {
++        let mut s = DocSession::from_bytes(FIXTURE).unwrap();
++        s.do_add_comment(0, 0, 3, "Check this", "Ada Lovelace", "2026-10-14T12:00:00Z").unwrap();
++        let root = *s.doc.comments.keys().next_back().unwrap();
++        s.do_reply_comment(root, "Done", "Grace Hopper", "2026-10-14T13:00:00Z").unwrap();
++        let reply = *s.doc.comments.keys().next_back().unwrap();
++        // Replying to a reply attaches to the top-level comment.
++        s.do_reply_comment(reply, "Thanks", "", "").unwrap();
++        let v: serde_json::Value = serde_json::from_str(&s.do_comments()).unwrap();
++        let items = v.as_array().unwrap();
++        let replies: Vec<_> = items.iter().filter(|c| c["parent"] == root).collect();
++        assert_eq!(replies.len(), 2);
++        assert!(replies.iter().all(|c| c["block"] == items.iter().find(|x| x["id"] == root).unwrap()["block"]));
++        s.do_resolve_comment(root, true).unwrap();
++        assert!(s.doc.comments.values().all(|c| c.resolved));
++        let saved = wordcraft_docx::write(&s.doc).unwrap();
++        let re = DocSession::from_bytes(&saved).unwrap();
++        assert_eq!(re.doc.comments.len(), s.doc.comments.len());
++        // Deleting the top-level comment removes the replies too.
++        s.do_delete_comment(root).unwrap();
++        assert!(s.doc.comments.is_empty() || !s.doc.comments.values().any(|c| c.parent == Some(root)));
++        // Refusals.
++        assert!(s.do_reply_comment(9999, "x", "", "").is_err());
++        assert!(s.do_reply_comment(root, "x", "", "").is_err());
 +    }
 +    #[test]
 +    fn comments_add_resolve_delete_and_roundtrip() {

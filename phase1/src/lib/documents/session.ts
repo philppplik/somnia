@@ -1,3 +1,4 @@
+import {scrollToPage} from './navigate';
 import {linkProblem,commentProblem,COMMENT_AUTHOR,type CommentItem,validHfText,type HeaderFooterState,checkFormatPatch,checkParaPatch,MAX_HF_CHARS,MAX_NEW_TABLE_COLS,MAX_NEW_TABLE_ROWS,TABLE_OPS,type TableOp,DOC_STYLES,type DocStyleId,type ListKindId,type ParaPatch,type ImageOp,type PageSetupPatch,type PageSetupState,pageSetupProblem,type TableStyle,type TableStyleScope,tableStyleProblem,MIN_COL_PT,MAX_COL_PT,imageProblem,IMAGE_WIDTH_PERCENTS,MAX_IMAGES} from './protocol';
 import {captureDocumentSelection} from './selectionCapture';
 import {CELL_BASE,caretAfterEdit,diffEdit,inverseOf,UndoStack,type TextEdit,type UndoEntry} from './edit';
@@ -689,6 +690,19 @@ const commentStep=(op:(e:DocumentsEngine)=>Promise<import('./protocol').OpenedDo
  const c=getDocumentsState().caret;const spot=c?{block:c.block,off:c.head}:await nearEditable(engine!,0);
  await structural(op,spot,spot);if(!c)patchDocuments({caret:null});
 });
+/** Reply to a comment (a reply to a reply joins the top-level comment). One undo step. */
+export const replyComment=(parent:number,text:string)=>run(async()=>{
+ const bad=commentProblem(text);if(bad)throw new Error(bad);
+ if(!Number.isInteger(parent)||parent<0||parent>=2**31)throw new Error('The comment is not valid.');
+ const c=getDocumentsState().caret;const spot=c?{block:c.block,off:c.head}:await nearEditable(engine!,0);
+ await structural(eng=>eng.replyComment(parent,text.trim(),COMMENT_AUTHOR,new Date().toISOString()),spot,spot);if(!c)patchDocuments({caret:null});
+});
+/** Scrolls to the page holding a comment's paragraph without moving the caret. False when the comment has no place in the layout. */
+export async function goToComment(block:number|null):Promise<boolean>{
+ const e=engine;if(!e||getDocumentsState().status!=='ready'||block===null||!Number.isInteger(block)||block<0)return false;
+ const check=ownerGuard();let box;try{box=await e.caret(block,0);}catch{return false;}check();
+ return box?scrollToPage(box.page):false;
+}
 /** Resolve or reopen a comment and its replies. One undo step. */
 export const resolveComment=(id:number,resolved:boolean)=>commentStep(eng=>eng.resolveComment(id,resolved));
 /** Delete a comment, its replies and their anchors. One undo step. */

@@ -1,7 +1,7 @@
 import {useEffect,useState} from 'react';
 import {setCommentsOpen,useCommentsOpen} from '../../lib/documents/comments';
 import {commentProblem,MAX_COMMENT_CHARS,type CommentItem} from '../../lib/documents/protocol';
-import {addComment,commentSelection,deleteComment,readComments,resolveComment} from '../../lib/documents/session';
+import {addComment,commentSelection,deleteComment,goToComment,readComments,replyComment,resolveComment} from '../../lib/documents/session';
 import {useDocuments} from '../../lib/documents/store';
 import {useT} from '../../lib/useT';
 import {NativeButton,Textarea} from '../ui/native-controls';
@@ -9,7 +9,7 @@ const tool='grid h-7 cursor-pointer grid-flow-col items-center gap-1 rounded-sm 
 const when=(iso:string)=>{const d=new Date(iso);return Number.isNaN(d.getTime())?'':d.toLocaleDateString();};
 /** Comments list with add on the selection, resolve or reopen, and delete. Each change is one undo step. */
 export function CommentsPanel(){
- const {t}=useT();const doc=useDocuments();const open=useCommentsOpen();const [items,setItems]=useState<CommentItem[]>([]);const [text,setText]=useState('');
+ const {t}=useT();const doc=useDocuments();const open=useCommentsOpen();const [items,setItems]=useState<CommentItem[]>([]);const [text,setText]=useState('');const [replyTo,setReplyTo]=useState<number|null>(null);const [reply,setReply]=useState('');
  useEffect(()=>{if(!open||doc.status!=='ready')return;let live=true;void readComments().then(l=>{if(live&&l)setItems(l);}).catch(()=>undefined);return()=>{live=false;};},[open,doc.rev,doc.status]);
  if(!open||doc.status!=='ready')return null;
  const sel=commentSelection();const okText=commentProblem(text)===null;
@@ -26,7 +26,11 @@ export function CommentsPanel(){
     <div className="flex flex-wrap items-center gap-2 text-ink-3"><span className="text-ink">{c.author||'?'}</span><span>{when(c.date)}</span>{c.resolved&&<span data-testid="documents-comment-resolved">{t('documents.comments.resolved')}</span>}</div>
     {c.quote&&<p className="break-words italic text-ink-3">{c.quote}</p>}
     <p className="whitespace-pre-wrap break-words text-ink">{c.text}</p>
-    <div className="flex gap-2"><NativeButton className={tool} onClick={()=>void resolveComment(c.id,!c.resolved)} data-testid="documents-comment-resolve">{c.resolved?t('documents.comments.reopen'):t('documents.comments.resolve')}</NativeButton>
+    {replyTo===c.id&&<div className="flex items-start gap-2"><Textarea className="min-h-8 flex-1 rounded-sm border border-subtle bg-surface px-2 py-1 text-xs text-ink" rows={2} maxLength={MAX_COMMENT_CHARS} value={reply} placeholder={t('documents.comments.replyPlaceholder')} aria-label={t('documents.comments.replyPlaceholder')} onChange={e=>setReply(e.currentTarget.value)} data-testid="documents-comment-reply-input"/>
+     <NativeButton className={tool} disabled={commentProblem(reply)!==null} onClick={()=>{const v=reply;setReply('');setReplyTo(null);void replyComment(c.id,v);}} data-testid="documents-comment-reply-send">{t('documents.comments.replySend')}</NativeButton></div>}
+    <div className="flex gap-2"><NativeButton className={tool} onClick={()=>{setReply('');setReplyTo(replyTo===c.id?null:c.id);}} aria-expanded={replyTo===c.id} data-testid="documents-comment-reply">{t('documents.comments.reply')}</NativeButton>
+     <NativeButton className={tool} disabled={c.block===null} onClick={()=>void goToComment(c.block)} data-testid="documents-comment-goto">{t('documents.comments.goTo')}</NativeButton>
+     <NativeButton className={tool} onClick={()=>void resolveComment(c.id,!c.resolved)} data-testid="documents-comment-resolve">{c.resolved?t('documents.comments.reopen'):t('documents.comments.resolve')}</NativeButton>
      <NativeButton className={tool} onClick={()=>void deleteComment(c.id)} data-testid="documents-comment-delete">{t('documents.comments.delete')}</NativeButton></div></li>)}</ul>}
  </section>;
 }
