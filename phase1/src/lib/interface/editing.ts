@@ -45,6 +45,17 @@ export function ungroupInterfaceSelection(doc:InterfaceDocument,ids:readonly str
   doc.nodes.splice(doc.nodes.indexOf(n),1);freed.push(...kids);}
  return freed;
 }
+export interface InterfaceZoomTarget {zoom:number;scrollLeft:number;scrollTop:number;}
+export function interfaceZoomFit(bounds:LayoutBounds[],viewport:{width:number;height:number},padding=48,fixedZoom?:number):InterfaceZoomTarget{
+ const visible=bounds.filter(b=>b&&b.width>0&&b.height>0);
+ if(!visible.length||viewport.width<8||viewport.height<8)return {zoom:fixedZoom??1,scrollLeft:0,scrollTop:0};
+ const minX=Math.min(...visible.map(b=>b.x)),minY=Math.min(...visible.map(b=>b.y));
+ const maxX=Math.max(...visible.map(b=>b.x+b.width)),maxY=Math.max(...visible.map(b=>b.y+b.height));
+ const zoom=fixedZoom??Math.min(4,Math.max(0.05,Math.min((viewport.width-padding*2)/(maxX-minX),(viewport.height-padding*2)/(maxY-minY))));
+ const cx=(minX+maxX)/2,cy=(minY+maxY)/2;
+ return {zoom:Math.round(zoom*1000)/1000,scrollLeft:Math.max(0,Math.round(cx*zoom+32-viewport.width/2)),scrollTop:Math.max(0,Math.round(cy*zoom+32-viewport.height/2))};
+}
+
 export function setInterfaceStroke(doc:InterfaceDocument,id:string,enabled:boolean,color?:string,width?:number){
  const n=doc.nodes.find(n=>n.id===id);if(!n)throw Error('Layer unavailable.');
  if(!['frame','group','rectangle','ellipse','line','path','image'].includes(n.kind))throw Error('Strokes apply to shapes, images and frames.');

@@ -16,6 +16,9 @@ export const INTERFACE_SHORTCUT_ENTRIES:readonly InterfaceShortcutEntry[]=[
  {combo:'Enter/Space',labelKey:'interface.sc.select'},
  {combo:'Esc',labelKey:'interface.sc.cancel'},
  {combo:'Shift+Click',labelKey:'interface.sc.multiSelect'},
+ {combo:'Shift+1',labelKey:'interface.sc.zoomFit'},
+ {combo:'Shift+2',labelKey:'interface.sc.zoomSelection'},
+ {combo:'Shift+0',labelKey:'interface.sc.zoom100'},
  {combo:'?',labelKey:'interface.sc.openCheatsheet'},
 ];
 export const formatInterfaceShortcut=(combo:string,mac:boolean)=>combo.replace(/^Mod\+/,mac?'⌘+':'Ctrl+');

@@ -1,0 +1,16 @@
+import test from 'node:test';import assert from 'node:assert/strict';
+import {interfaceZoomFit} from './editing';
+import {INTERFACE_SHORTCUT_ENTRIES} from './shortcuts';
+import {t,setLocale} from '../i18n';
+const vp={width:1000,height:800};
+test('zoom fit centers bounds and fits both axes with padding',()=>{const t=interfaceZoomFit([{x:0,y:0,width:400,height:200}],vp);
+ assert.equal(t.zoom,2.26);assert.equal(t.scrollLeft,0);assert.equal(t.scrollTop,0);
+ const tall=interfaceZoomFit([{x:0,y:0,width:200,height:2000}],vp);assert.equal(tall.zoom,Math.round((800-96)/2000*1000)/1000);assert.equal(tall.scrollTop,0);
+ const wide=interfaceZoomFit([{x:0,y:0,width:4000,height:100}],vp);assert.equal(wide.zoom,Math.round((1000-96)/4000*1000)/1000);});
+test('zoom fit clamps to 0.05..4 and keeps negative coordinates',()=>{assert.equal(interfaceZoomFit([{x:0,y:0,width:10,height:10}],vp).zoom,4);assert.equal(interfaceZoomFit([{x:0,y:0,width:100000,height:100000}],vp).zoom,0.05);
+ const neg=interfaceZoomFit([{x:-200,y:-100,width:100,height:100}],vp);assert.ok(Number.isFinite(neg.scrollLeft));assert.ok(neg.scrollLeft>=0);});
+test('fixed zoom keeps zoom and still centers; empty bounds and merged multi-node bounds behave',()=>{const t=interfaceZoomFit([{x:100,y:100,width:200,height:200}],vp,48,1);assert.equal(t.zoom,1);assert.equal(t.scrollLeft,0);assert.equal(t.scrollTop,0);const z1=interfaceZoomFit([{x:0,y:0,width:200,height:2000}],vp,48,1);assert.ok(z1.scrollTop>0,'100% on tall content scrolls');
+ assert.deepEqual(interfaceZoomFit([],vp),{zoom:1,scrollLeft:0,scrollTop:0});
+ const two=interfaceZoomFit([{x:0,y:0,width:100,height:100},{x:300,y:0,width:100,height:100}],vp);assert.ok(two.zoom<2.4&&two.zoom>2,'spans both');});
+test('cheatsheet lists zoom shortcuts and labels exist in all five locales',()=>{const combos=INTERFACE_SHORTCUT_ENTRIES.map(e=>e.combo);for(const c of ['Shift+1','Shift+2','Shift+0'])assert.ok(combos.includes(c),c);
+ for(const locale of ['en','de','es','fr','pt-BR']){setLocale(locale);assert.ok(t('interface.sc.zoomFit').length>2,locale);assert.ok(t('interface.sc.zoom100').length>2,locale);}setLocale('en');});
