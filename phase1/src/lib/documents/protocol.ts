@@ -64,16 +64,29 @@ export function tabsProblem(v:unknown):string|null{
  for(let i=1;i<pos.length;i++)if(pos[i]-pos[i-1]<0.5)return 'Tab stops must be at least 0.5 points apart.';
  return null;
 }
-export interface ParaPatch{tabs?:TabStopSpec[];align?:ParaAlign;indentLeft?:number;indentFirst?:number;spaceBefore?:number;spaceAfter?:number;lineSpacing?:number;indentRight?:number;pageBreakBefore?:boolean;keepNext?:boolean;keepLines?:boolean;widowControl?:boolean}
+export interface ParaPatch{tabs?:TabStopSpec[];align?:ParaAlign;indentLeft?:number;indentFirst?:number;spaceBefore?:number;spaceAfter?:number;lineSpacing?:number;indentRight?:number;pageBreakBefore?:boolean;keepNext?:boolean;keepLines?:boolean;widowControl?:boolean;/** `RRGGBB`, or `none` to clear. */shading?:string;/** A box border on all four sides, or `none`. */border?:'none'|ParaBorder}
+export const BORDER_STYLES=['single','double','dotted','dashed','thick'] as const;
+export interface ParaBorder{style:typeof BORDER_STYLES[number];width:number;color:string}
+/** Why the shading or border value is refused, or null. */
+export function paraLookProblem(k:'shading'|'border',v:unknown):string|null{
+ if(k==='shading')return v==='none'||(typeof v==='string'&&/^[0-9a-fA-F]{6}$/.test(v))?null:'Shading is none or six hex digits.';
+ if(v==='none')return null;
+ if(!v||typeof v!=='object'||Array.isArray(v))return 'The border is not valid.';
+ const o=v as Record<string,unknown>;if(Object.keys(o).some(x=>x!=='style'&&x!=='width'&&x!=='color'))return 'The border is not valid.';
+ if(!(BORDER_STYLES as readonly unknown[]).includes(o.style))return 'The border style is not valid.';
+ if(typeof o.width!=='number'||!Number.isFinite(o.width)||o.width<0.25||o.width>12)return 'Border width is 0.25 to 12 points.';
+ return typeof o.color==='string'&&/^[0-9a-fA-F]{6}$/.test(o.color)?null:'Border colour must be six hex digits.';
+}
 export const PARA_FLAG_KEYS=['pageBreakBefore','keepNext','keepLines','widowControl'] as const;
 /** Shared effective value over the paragraphs, or null when they differ (line spacing: also null for exact/at-least heights). */
-export interface ParaState{align:ParaAlign|null;indentLeft:number|null;indentFirst:number|null;spaceBefore:number|null;spaceAfter:number|null;lineSpacing:number|null;indentRight?:number|null;/** Resolved tab stops when shared, else null. */tabs?:TabStopSpec[]|null;/** Shared flags, or null when the paragraphs differ. */pageBreakBefore?:boolean|null;keepNext?:boolean|null;keepLines?:boolean|null;widowControl?:boolean|null;/** Paragraph style id (`Normal`, `Heading2`, ...) when shared. */style?:string|null;list?:'none'|'bullet'|'numbered'|null;/** The shared list style, `other` for a list from a file that matches none, `none` outside lists, null when mixed. */listStyle?:ListStyleId|'other'|'none'|null;listLevel?:number|null}
+export interface ParaState{align:ParaAlign|null;indentLeft:number|null;indentFirst:number|null;spaceBefore:number|null;spaceAfter:number|null;lineSpacing:number|null;indentRight?:number|null;/** Resolved tab stops when shared, else null. */tabs?:TabStopSpec[]|null;/** Shared flags, or null when the paragraphs differ. */pageBreakBefore?:boolean|null;keepNext?:boolean|null;keepLines?:boolean|null;widowControl?:boolean|null;/** Shared shading (`RRGGBB` or `none`) and whether a box border is set; null when mixed. */shading?:string|null;border?:'box'|'none'|null;/** Paragraph style id (`Normal`, `Heading2`, ...) when shared. */style?:string|null;list?:'none'|'bullet'|'numbered'|null;/** The shared list style, `other` for a list from a file that matches none, `none` outside lists, null when mixed. */listStyle?:ListStyleId|'other'|'none'|null;listLevel?:number|null}
 const PARA_RANGES:Record<string,[number,number]>={indentLeft:[0,1440],indentRight:[0,1440],indentFirst:[-1440,1440],spaceBefore:[0,1584],spaceAfter:[0,1584],lineSpacing:[0.5,10]};
 export function checkParaPatch(patch:unknown){
  if(!patch||typeof patch!=='object'||Array.isArray(patch))throw new Error('Paragraph change is not valid.');
  const o=patch as Record<string,unknown>;const keys=Object.keys(o);if(!keys.length)throw new Error('Paragraph change is not valid.');
  for(const k of keys){const v=o[k];
   if(k==='align'){if(v!=='left'&&v!=='center'&&v!=='right'&&v!=='justify')throw new Error('Alignment is not valid.');}
+  else if(k==='shading'||k==='border'){const bad=paraLookProblem(k,v);if(bad)throw new Error(bad);}
   else if(k==='tabs'){const bad=tabsProblem(v);if(bad)throw new Error(bad);}
   else if((PARA_FLAG_KEYS as readonly string[]).includes(k)){if(typeof v!=='boolean')throw new Error('Paragraph change is not valid.');}
   else if(PARA_RANGES[k]){const [lo,hi]=PARA_RANGES[k];if(typeof v!=='number'||!Number.isFinite(v)||v<lo||v>hi)throw new Error(`${k} must be between ${lo} and ${hi}.`);}
