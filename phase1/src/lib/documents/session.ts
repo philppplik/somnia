@@ -1,4 +1,4 @@
-import {validHfText,type HeaderFooterState,checkFormatPatch,checkParaPatch,MAX_HF_CHARS,MAX_NEW_TABLE_COLS,MAX_NEW_TABLE_ROWS,TABLE_OPS,type TableOp,DOC_STYLES,type DocStyleId,type ListKindId,type ParaPatch,type ImageOp,type TableStyle,type TableStyleScope,tableStyleProblem,MIN_COL_PT,MAX_COL_PT,imageProblem,IMAGE_WIDTH_PERCENTS,MAX_IMAGES} from './protocol';
+import {validHfText,type HeaderFooterState,checkFormatPatch,checkParaPatch,MAX_HF_CHARS,MAX_NEW_TABLE_COLS,MAX_NEW_TABLE_ROWS,TABLE_OPS,type TableOp,DOC_STYLES,type DocStyleId,type ListKindId,type ParaPatch,type ImageOp,type PageSetupPatch,type PageSetupState,pageSetupProblem,type TableStyle,type TableStyleScope,tableStyleProblem,MIN_COL_PT,MAX_COL_PT,imageProblem,IMAGE_WIDTH_PERCENTS,MAX_IMAGES} from './protocol';
 import {captureDocumentSelection} from './selectionCapture';
 import {CELL_BASE,caretAfterEdit,diffEdit,inverseOf,UndoStack,type TextEdit,type UndoEntry} from './edit';
 import {findMatches,nextMatchIndex,textStats,validFindQuery,validReplaceText,MAX_FIND_HIGHLIGHTS,MAX_REPLACE_BLOCKS,type FindMatch} from './find';
@@ -622,3 +622,16 @@ export function documentStats():{words:number;chars:number;charsNoSpaces:number;
  const all=textStats(getDocumentsState().blocks.filter(b=>b.text!==undefined).map(b=>b.text!).join('\n'));
  return{...all,selectionWords:textStats(selectedText()).words};
 }
+
+/* ---- Page setup and go to page ---- */
+/** The page size, orientation and margins as the engine reports them (not an edit). */
+export async function readPageSetup():Promise<PageSetupState|null>{
+ const e=engine;if(!e||getDocumentsState().status!=='ready')return null;const check=ownerGuard();const st=await e.pageSetupState();check();return st;
+}
+/** Page size, orientation and margins for every section. One undo step; the caret stays where it is. */
+export const setPageSetup=(patch:PageSetupPatch)=>run(async()=>{
+ const bad=pageSetupProblem(patch);if(bad)throw new Error(bad);
+ const c=getDocumentsState().caret;const spot=c?{block:c.block,off:c.head}:await nearEditable(engine!,0);
+ await structural(eng=>eng.setPageSetup(patch),spot,spot);
+ if(!c)patchDocuments({caret:null});
+});

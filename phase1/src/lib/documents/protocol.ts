@@ -69,6 +69,8 @@ export type DocumentsRequest=
  |{id:number;kind:'colWidth';block:number;width:number}
  |{id:number;kind:'insertImage';block:number;bytes:ArrayBuffer;alt:string}
  |{id:number;kind:'imageEdit';block:number;op:ImageOp}
+ |{id:number;kind:'pageSetupState'}
+ |{id:number;kind:'setPageSetup';setup:PageSetupPatch}
  |{id:number;kind:'headerFooterState'}
  |{id:number;kind:'setHeaderFooter';header?:string;footer?:string;pageNumber?:boolean}
  |{id:number;kind:'insertTable';block:number;rows:number;cols:number}
@@ -81,6 +83,7 @@ export type DocumentsResponse=
  |{id:number;ok:true;kind:'edited';document:OpenedDocument}
  |{id:number;ok:true;kind:'blocks';blocks:import('./edit').DocBlock[]}
  |{id:number;ok:true;kind:'headerFooter';state:HeaderFooterState}
+ |{id:number;ok:true;kind:'pageSetup';state:PageSetupState}
  |{id:number;ok:true;kind:'hit';hit:HitResult|null}
  |{id:number;ok:true;kind:'caret';caret:CaretBox|null}
  |{id:number;ok:true;kind:'rects';rects:Rect5[]}
@@ -159,6 +162,30 @@ export function imageProblem(b:Uint8Array):'empty'|'size'|'type'|'dimensions'|nu
 }
 /** Header/footer text limit and the shape of the engine's report on the default header and footer. */
 export const MAX_HF_CHARS=500;
+/** Page setup in points. `size` is "custom" when the page matches none of the offered sizes. */
+export const PAGE_SIZE_IDS=['a4','letter','legal','a5'] as const;
+export type PageSizeId=typeof PAGE_SIZE_IDS[number];
+export interface PageMargins{top:number;bottom:number;left:number;right:number}
+export interface PageSetupState{size:PageSizeId|'custom';landscape:boolean;width:number;height:number;margins:PageMargins}
+export interface PageSetupPatch{size?:PageSizeId;landscape?:boolean;margins?:Partial<PageMargins>}
+export const MAX_MARGIN_PT=288;
+/** The first problem with a page setup change, or null when the engine will accept the shape (the text-area minimum is the engine's call). */
+export function pageSetupProblem(p:unknown):string|null{
+ if(!p||typeof p!=='object'||Array.isArray(p))return 'The page setup is not valid.';
+ const o=p as Record<string,unknown>;const keys=Object.keys(o);if(keys.length===0)return 'Nothing to change.';
+ for(const k of keys){
+  const v=o[k];
+  if(k==='size'){if(!(PAGE_SIZE_IDS as readonly unknown[]).includes(v))return 'The page size is not valid.';}
+  else if(k==='landscape'){if(typeof v!=='boolean')return 'The orientation is not valid.';}
+  else if(k==='margins'){
+   if(!v||typeof v!=='object'||Array.isArray(v))return 'The margins are not valid.';
+   const m=v as Record<string,unknown>;const ks=Object.keys(m);if(ks.length===0)return 'The margins are not valid.';
+   for(const mk of ks){if(!['top','bottom','left','right'].includes(mk))return 'The margins are not valid.';const x=m[mk];if(typeof x!=='number'||!Number.isFinite(x)||x<0||x>MAX_MARGIN_PT)return `A margin is 0 to ${MAX_MARGIN_PT} points.`;}
+  }
+  else return 'The page setup is not valid.';
+ }
+ return null;
+}
 export interface HeaderFooterState{header:{text:string;editable:boolean};footer:{text:string;pageNumber:boolean;editable:boolean}}
 /** A header/footer text the engine accepts: at most 500 characters and no control characters or line breaks. */
 export const validHfText=(v:unknown):v is string=>typeof v==='string'&&Array.from(v).length<=MAX_HF_CHARS&&!/[\u0000-\u001f\u007f-\u009f\ufffc\u2028\u2029]/u.test(v);

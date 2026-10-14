@@ -1,6 +1,7 @@
 import {registerCommand} from '../commandRegistry';
 import {getDocumentsState,patchDocuments,stepZoom} from './store';
-import {redoEdit,setAlign,setParagraphStyle,toggleList,clearList,shiftListLevel,stepFontSize,stepIndent,toggleFormat,undoEdit,editTable,insertTable,setHeaderFooter,insertImage,resizeImageToPercent,setImageAlt,removeImage,setColumnWidth,styleTable,setFindOpen,setFindQuery,findStep,replaceAll,replaceCurrent} from './session';
+import {redoEdit,setAlign,setParagraphStyle,toggleList,clearList,shiftListLevel,stepFontSize,stepIndent,toggleFormat,undoEdit,editTable,insertTable,setHeaderFooter,insertImage,resizeImageToPercent,setImageAlt,removeImage,setColumnWidth,styleTable,setPageSetup,setFindOpen,setFindQuery,findStep,replaceAll,replaceCurrent} from './session';
+import {pageSetupProblem} from './protocol';
 import {validFindQuery,validReplaceText} from './find';
 import {findMedia} from '../media';
 import {tableStyleProblem,IMAGE_WIDTH_PERCENTS,MAX_IMAGE_BYTES,MIN_COL_PT,MAX_COL_PT} from './protocol';
@@ -56,6 +57,7 @@ export function registerDocumentsCommands(){
   }),
   add('documents.find.replace','Replace current match',async p=>{const r=(p as Record<string,unknown>|undefined)?.text;if(!validReplaceText(r))throw expected('Missing or invalid "text" (up to 1000 characters, one line).');await replaceCurrent(r);},()=>ready()&&getDocumentsState().find.open&&getDocumentsState().find.count>0),
   add('documents.find.replaceAll','Replace all matches',async p=>{const r=(p as Record<string,unknown>|undefined)?.text;if(!validReplaceText(r))throw expected('Missing or invalid "text" (up to 1000 characters, one line).');await replaceAll(r);},()=>ready()&&getDocumentsState().find.open&&getDocumentsState().find.count>0),
+  add('documents.pageSetup.set','Set page setup',async p=>{const bad=pageSetupProblem(p);if(bad)throw expected(bad);await setPageSetup(p as import('./protocol').PageSetupPatch);}),
   add('documents.list.bullet','Toggle bulleted list',async()=>{await toggleList('bullet');},()=>ready()&&!!getDocumentsState().caret),
   add('documents.list.numbered','Toggle numbered list',async()=>{await toggleList('numbered');},()=>ready()&&!!getDocumentsState().caret),
   add('documents.list.indent','Demote list item',async()=>{await shiftListLevel(1);},()=>ready()&&!!getDocumentsState().caret),

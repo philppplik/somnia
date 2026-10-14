@@ -23,7 +23,7 @@ test('image limits: 5 MB, 8000 px a side, 25 megapixels',()=>{
 function core(){
  const calls:string[]=[];
  const S=class{constructor(_b?:Uint8Array){}free(){}blocks(){return '[]';}paginate(){return 1;}page_info(){return '{"pages":[],"cacheHits":0,"cacheMisses":0}';}text(){return '';}
-  insert_image(b:number,bytes:Uint8Array,alt:string){calls.push(`ins ${b} ${bytes.length} ${alt}`);}resize_image(b:number,w:number){calls.push(`size ${b} ${w}`);}fit_image(b:number,p:number){calls.push(`fit ${b} ${p}`);}set_image_alt(b:number,a:string){calls.push(`alt ${b} ${a}`);}remove_image(b:number){calls.push(`rm ${b}`);}set_col_width(b:number,w:number){calls.push(`col ${b} ${w}`);}style_table(b:number,sc:string,j:string){calls.push(`style ${b} ${sc} ${j}`);}} as unknown as new(b:Uint8Array)=>DocSessionLike;
+  insert_image(b:number,bytes:Uint8Array,alt:string){calls.push(`ins ${b} ${bytes.length} ${alt}`);}resize_image(b:number,w:number){calls.push(`size ${b} ${w}`);}fit_image(b:number,p:number){calls.push(`fit ${b} ${p}`);}set_image_alt(b:number,a:string){calls.push(`alt ${b} ${a}`);}remove_image(b:number){calls.push(`rm ${b}`);}set_col_width(b:number,w:number){calls.push(`col ${b} ${w}`);}style_table(b:number,sc:string,j:string){calls.push(`style ${b} ${sc} ${j}`);}page_setup(){return '{"size":"a4","landscape":false,"width":595.3,"height":841.9,"margins":{"top":72,"bottom":72,"left":72,"right":72}}';}set_page_setup(j:string){calls.push(`page ${j}`);}} as unknown as new(b:Uint8Array)=>DocSessionLike;
  const k=new DocumentsCore(S);k.handle({id:1,kind:'open',bytes:new Uint8Array(4)} as never);return{k,calls};
 }
 const ins=(k:DocumentsCore,block:unknown,bytes:Uint8Array,alt:unknown='')=>k.handle({id:2,kind:'insertImage',block,bytes:bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.byteLength),alt} as never).res.ok;
@@ -52,4 +52,10 @@ test('table style requests are validated before the engine',()=>{
  for(const [b,sc,st] of [[-1,'cell',{fill:'none'}],[0,'row',{fill:'none'}],[0,'cell',{}],[0,'cell',{fill:'red'}],[0,'table',{padding:99}],[0.5,'cell',{fill:'none'}]] as [unknown,unknown,unknown][])assert.equal(send(b,sc,st),false,JSON.stringify([b,sc,st]));
  assert.deepEqual(calls,[]);
  assert.equal(send(1048577,'table',{fill:'none',padding:4}),true);assert.deepEqual(calls,['style 1048577 table {"fill":"none","padding":4}']);
+});
+test('page setup requests are validated before the engine and the state is passed through',()=>{
+ const {k,calls}=core();const send=(setup:unknown)=>k.handle({id:6,kind:'setPageSetup',setup} as never).res.ok;
+ for(const bad of [null,{},{size:'b7'},{margins:{top:289}},{landscape:1}])assert.equal(send(bad),false,JSON.stringify(bad));
+ assert.deepEqual(calls,[]);assert.equal(send({size:'a4',margins:{left:50}}),true);assert.deepEqual(calls,['page {"size":"a4","margins":{"left":50}}']);
+ const r=k.handle({id:7,kind:'pageSetupState'} as never).res as {ok:boolean;state:{size:string}};assert.equal(r.ok,true);assert.equal(r.state.size,'a4');
 });

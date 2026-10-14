@@ -55,6 +55,10 @@ export class DocSession {
     set_col_width(block: number, width: number): void;
     /** Styles one cell (scope "cell") or the whole table ("table"); `style_json` has fill, border, rowHeight, padding. */
     style_table(block: number, scope: string, style_json: string): void;
+    /** JSON `{size,landscape,width,height,margins:{top,bottom,left,right}}` of the page setup (points). */
+    page_setup(): string;
+    /** Sets size (a4, letter, legal, a5), landscape and margins (0-288 pt) on every section; JSON with any of those keys. */
+    set_page_setup(setup_json: string): void;
     set_image_alt(block: number, alt: string): void;
     remove_image(block: number): void;
     insert(block: number, utf8_byte_offset: number, text: string): void;

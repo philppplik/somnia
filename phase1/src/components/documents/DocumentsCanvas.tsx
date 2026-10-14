@@ -66,6 +66,7 @@ function CaretInput({left,top}:{left:number;top:number}){
    if(keys[e.key]&&!mod&&!e.altKey){e.preventDefault();void moveCaret(keys[e.key],e.shiftKey);return;}
    if(e.key==='Backspace'||e.key==='Delete'){e.preventDefault();void deleteAtCaret(e.key==='Backspace'?-1:1,word);return;}
    if(e.key==='Escape'){e.preventDefault();clearCaret();return;}
+   if(mod&&!e.altKey&&!e.shiftKey&&e.key.toLowerCase()==='g'){e.preventDefault();document.querySelector<HTMLElement>('[data-testid="documents-goto-open"]')?.click();return;}
    if(mod&&!e.altKey&&!e.shiftKey&&(e.key.toLowerCase()==='f'||e.key.toLowerCase()==='h')){e.preventDefault();setFindOpen(true);return;}
    if(mod&&e.altKey&&!e.shiftKey&&/^Digit[0-4]$/.test(e.code)){e.preventDefault();void setParagraphStyle((['Normal','Heading1','Heading2','Heading3','Heading4'] as const)[Number(e.code.slice(5))]);return;}
    if(e.key==='Enter'){e.preventDefault();void splitAtCaret();return;}

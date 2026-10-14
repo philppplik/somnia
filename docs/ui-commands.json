@@ -2759,6 +2759,17 @@
       "hasEnabled": true
     },
     {
+      "id": "documents.pageSetup.set",
+      "title": "Set page setup",
+      "category": "View",
+      "source": "documents",
+      "keywords": [
+        "document",
+        "docx"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "documents.panelRedo",
       "title": "Redo document edit",
       "category": "Edit",

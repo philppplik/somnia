@@ -3,6 +3,8 @@ import {TableSizeDialog} from './TableSizeDialog';
 import {HeaderFooterDialog} from './HeaderFooterDialog';
 import {ImageControls} from './ImageControls';
 import {TableStyleDialog} from './TableStyleDialog';
+import {PageSetupDialog} from './PageSetupDialog';
+import {GoToPageDialog} from './GoToPageDialog';
 import {DOC_COLORS} from '../../lib/documents/palette';
 import {FONT_SIZES,setAlign,setFont,setFontColor,setFontSize,setLineSpacing,setSpaceAfter,setParagraphStyle,setSpaceBefore,stepIndent,toggleFormat,toggleList,shiftListLevel,editTable,insertTable,setColumnWidth} from '../../lib/documents/session';
 import {MIN_COL_PT,MAX_COL_PT,TABLE_PRESETS,TABLE_OPS,type TableOp,DOC_STYLES,type DocStyleId,type FormatPatch,type FormatState,type ParaAlign,type ParaState} from '../../lib/documents/protocol';
@@ -22,7 +24,7 @@ const SPACE_STEPS=[0,4,6,8,10,12,18,24] as const;
 const withCurrent=(list:readonly number[],cur:number|null)=>cur!==null&&!list.includes(cur)?[...list,cur].sort((a,b)=>a-b):[...list];
 
 export function FormatBar({format,held,para,enabled,inCell=false}:{format:FormatState|null;held:FormatPatch|null;para:ParaState|null;enabled:boolean;inCell?:boolean}){
- const [sizeOpen,setSizeOpen]=useState(false),[hfOpen,setHfOpen]=useState(false),[colW,setColW]=useState(''),[styleOpen,setStyleOpen]=useState(false);
+ const [sizeOpen,setSizeOpen]=useState(false),[hfOpen,setHfOpen]=useState(false),[colW,setColW]=useState(''),[styleOpen,setStyleOpen]=useState(false),[pageOpen,setPageOpen]=useState(false),[gotoOpen,setGotoOpen]=useState(false);
  const colOk=/^\d+(\.\d+)?$/.test(colW)&&Number(colW)>=MIN_COL_PT&&Number(colW)<=MAX_COL_PT;
  const flag=(p:'bold'|'italic'|'underline')=>held?.[p]??format?.[p]==='on';
  const font=held?.font??format?.font??'';const size=held?.size??format?.size??null;const color=held?.color??format?.color??null;
@@ -58,6 +60,10 @@ export function FormatBar({format,held,para,enabled,inCell=false}:{format:Format
   {sizeOpen&&<TableSizeDialog onClose={()=>setSizeOpen(false)}/>}
   <NativeButton className={tool+' border border-subtle'} disabled={!enabled} onClick={()=>setHfOpen(true)} data-testid="documents-hf-open">{t('documents.hf.title')}</NativeButton>
   {hfOpen&&<HeaderFooterDialog onClose={()=>setHfOpen(false)}/>}
+  <NativeButton className={tool+' border border-subtle'} disabled={!enabled} onClick={()=>setPageOpen(true)} data-testid="documents-page-open">{t('documents.page.title')}</NativeButton>
+  {pageOpen&&<PageSetupDialog onClose={()=>setPageOpen(false)}/>}
+  <NativeButton className={tool+' border border-subtle'} onClick={()=>setGotoOpen(true)} data-testid="documents-goto-open">{t('documents.goto.title')}</NativeButton>
+  {gotoOpen&&<GoToPageDialog onClose={()=>setGotoOpen(false)}/>}
   <ImageControls/>
   {inCell&&<NativeSelect className={sel+' w-28'} aria-label={t('documents.table.label')} title={t('documents.table.label')} disabled={!enabled} value="" onChange={e=>{const op=e.currentTarget.value as TableOp;e.currentTarget.value='';if((TABLE_OPS as readonly string[]).includes(op))void editTable(op);}} data-testid="documents-table-menu">
    <option value="" disabled>{t('documents.table.label')}</option>{TABLE_OPS.map(o=><option key={o} value={o} data-testid={'documents-table-'+o}>{t('documents.table.'+o)}</option>)}</NativeSelect>}
