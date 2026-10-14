@@ -56,6 +56,7 @@
  "photos.p.history.cropSet": "Recorte aplicado",
  "photos.p.history.cropRemoved": "Recorte quitado",
  "photos.p.history.rotated": "Girada",
+ "photos.p.key.brushes": "Trazos de pincel",
  "photos.p.history.note": "Haz clic en un paso para ir a él. Los pasos posteriores siguen disponibles hasta que hagas una edición nueva. El historial solo dura esta sesión (50 pasos).",
  "photos.p.versions.title": "Versiones",
  "photos.p.versions.none": "Aún no hay versiones.",

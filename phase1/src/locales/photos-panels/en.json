@@ -56,6 +56,7 @@
  "photos.p.history.cropSet": "Crop set",
  "photos.p.history.cropRemoved": "Crop removed",
  "photos.p.history.rotated": "Rotated",
+ "photos.p.key.brushes": "Brush strokes",
  "photos.p.history.note": "Click a step to jump to it. Steps after it stay available until you make a new edit. History is kept for this session only (50 steps).",
  "photos.p.versions.title": "Versions",
  "photos.p.versions.none": "No versions yet.",

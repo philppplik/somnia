@@ -2,13 +2,14 @@ import {StudioStatus} from '../studios/StudioStatus';
 import {reportError} from '../../lib/log';
 import {usePublishPhotosContext} from './panels/publishContext';
 import {useCallback,useEffect,useRef,useState} from 'react';
-import {AlertTriangle,Bandage,Contrast,ArrowLeft,ArrowRight,Check,ClipboardPaste,Columns2,Copy,Download,Eye,Frame,Grid3x3,RotateCcw,Undo2,Redo2,X,ZoomIn,ZoomOut,Maximize2,Minimize2,SquareDashed,Circle} from '../../lib/icons';
+import {AlertTriangle,Bandage,Brush,Contrast,ArrowLeft,ArrowRight,Check,ClipboardPaste,Columns2,Copy,Download,Eye,Frame,Grid3x3,RotateCcw,Undo2,Redo2,X,ZoomIn,ZoomOut,Maximize2,Minimize2,SquareDashed,Circle} from '../../lib/icons';
 import {Button} from '../ui/button';
 import {NativeInput} from '../ui/native-controls';
 import {useT} from '../../lib/useT';
 import {applyPhotoCrop,cancelPhotoCrop,dirtyPhoto,exportPhotoCopy,historyPhoto,openPhoto,resetPhoto,rotatePhoto,setPhotoCropping,setPhotoCropDraft,usePhotoSession,type PhotoFrame} from '../../lib/photos/studioSession';
 import {autoSource,clampSpot} from '../../lib/photos/healSpots';
 import {clampGrad,MAX_GRADS,type GradFilter,clampRad,MAX_RADS,type RadFilter} from '../../lib/photos/localAdjust';
+import {MAX_BRUSH_STROKES,MAX_BRUSH_TOTAL_DABS,brushTotalDabs,type BrushStroke} from '../../lib/photos/brushStrokes';
 import {clampDab} from '../../lib/photos/localAdjust';
 import type {PhotoCrop} from '../../lib/photos/studioSettings';
 import {cropGuideLines} from '../../lib/photos/cropGuides';
@@ -74,21 +75,27 @@ export function PhotosWorkspace({item}:{item:MediaItem}){
  const [grading,setGrading]=useState(false);
  const gradDraft=useRef<GradFilter|null>(null); // in-flight graduated filter drag
  const [radial,setRadial]=useState(false);
+ const [brushing,setBrushing]=useState(false);
+ const [brushStrokeR,setBrushStrokeR]=usePanelState<number>('photos.brushRadius',0.05);
+ const [brushEV,setBrushEV]=usePanelState<number>('photos.brushEV',0.5);
+ const [brushTemp,setBrushTemp]=usePanelState<number>('photos.brushTemp',0);
+ const [brushSat,setBrushSat]=usePanelState<number>('photos.brushSat',0);
+ const brushChain=useRef<{x:number;y:number;r:number}[]|null>(null); // dabs of the in-flight brush stroke
  const [curvesTarget,setCurvesTarget]=usePanelState<boolean>('photos.curves.target',false);
  const [hslTarget,setHslTarget]=usePanelState<boolean>('photos.hsl.target',false);
  const [curveChannel]=usePanelState<CurveChannel>('photos.curves','master');
  const [,setTargetBand]=usePanelState<string>('photos.hsl','red');
- const targetArmed=(curvesTarget||hslTarget)&&!healing&&!dodging&&!grading&&!radial; // tool modes win over the target tool
+ const targetArmed=(curvesTarget||hslTarget)&&!healing&&!dodging&&!grading&&!radial&&!brushing; // tool modes win over the target tool
  const targetDrag=useRef<{startY:number;trackPx:number}|null>(null);
  const targetIndex=useRef<number|null>(null);   // grabbed curve point (index in the sanitized array)
  const targetBase=useRef<number|null>(null);    // its y, or the band's saturation at drag start
  const targetBandRef=useRef<HslBandId|null>(null);
  const radDraft=useRef<{x0:number;y0:number;x1:number;y1:number}|null>(null); // in-flight radial filter drag (bounding box)
  useEffect(()=>{ // Escape disarms the target tool and the split view from anywhere
-  if(!curvesTarget&&!hslTarget&&!showSplit)return;
-  const onKey=(e:KeyboardEvent)=>{if(e.key==='Escape'){setCurvesTarget(false);setHslTarget(false);setShowSplit(false);}};
+  if(!curvesTarget&&!hslTarget&&!showSplit&&!brushing)return;
+  const onKey=(e:KeyboardEvent)=>{if(e.key==='Escape'){setCurvesTarget(false);setHslTarget(false);setShowSplit(false);setBrushing(false);}};
   window.addEventListener('keydown',onKey);return()=>window.removeEventListener('keydown',onKey);
- },[curvesTarget,hslTarget,showSplit,setCurvesTarget,setHslTarget,setShowSplit]);
+ },[curvesTarget,hslTarget,showSplit,brushing,setCurvesTarget,setHslTarget,setShowSplit]);
  const [dabR,setDabR]=usePanelState<number>('photos.dodgeRadius',0.05);
  const dabChain=useRef<{x:number;y:number;r:number}[]|null>(null); // dabs of the in-flight dodge stroke
  const healPath=useRef<{x:number;y:number}[]|null>(null); // path points of the in-flight heal stroke
@@ -134,6 +141,7 @@ export function PhotosWorkspace({item}:{item:MediaItem}){
   (e.target as HTMLElement).setPointerCapture(e.pointerId);
   if(healing){const p=pointerPos(e);healStart.current=p;healPath.current=[p];return;} // heal mode never pans
   if(dodging){const p=pointerPos(e);healStart.current=p;dabChain.current=[{x:p.x,y:p.y,r:dabR}];return;} // dodge/burn paints on release
+  if(brushing){const p=pointerPos(e);healStart.current=p;brushChain.current=[{x:p.x,y:p.y,r:brushStrokeR}];return;} // brush paints on release, values freeze then
   if(grading){const p=pointerPos(e);gradDraft.current={x0:p.x,y0:p.y,x1:p.x,y1:p.y};return;} // graduated filter defines its ramp on release
   if(radial){const p=pointerPos(e);radDraft.current={x0:p.x,y0:p.y,x1:p.x,y1:p.y};return;} // radial filter defines its bounding box on release
   if(targetArmed&&shown){ // targeted adjustment: the photo itself is the slider
@@ -158,7 +166,9 @@ export function PhotosWorkspace({item}:{item:MediaItem}){
   drag.current={pan:{x:pan[0],y:pan[1],px:e.clientX,py:e.clientY}};
  };
  const onStageMove=(e:React.PointerEvent)=>{
-  if(healing||dodging||grading||radial){
+  if(brushing&&brushChain.current){const p=pointerPos(e);const last=brushChain.current[brushChain.current.length-1];const fw2=session?.frame?.width??1,fh2=session?.frame?.height??1;
+   if(Math.hypot((p.x-last.x)*fw2,(p.y-last.y)*fh2)/Math.min(fw2,fh2)>=brushStrokeR/2)brushChain.current.push({x:p.x,y:p.y,r:brushStrokeR});}
+  if(healing||dodging||grading||radial||brushing){
    const p=pointerPos(e);setHealCursor(p);
    if(shown){
     if(dodging&&dabChain.current){ // extend the stroke every half radius (distance in short-side units)
@@ -214,6 +224,16 @@ export function PhotosWorkspace({item}:{item:MediaItem}){
     commitPhotoSettings(item.name,now=>{const room=Math.max(0,200-now.dabs.length);return room?{...now,dabs:[...now.dabs,...chain.slice(0,room).map(clampDab)]}:now;});
     return;
    }
+   if(brushing){ // one stroke = one commit = one undo step; ev/temp/sat freeze into the stroke
+    const chain=brushChain.current??[{x:start.x,y:start.y,r:brushStrokeR}];brushChain.current=null;
+    const stroke:BrushStroke={dabs:chain.map(clampDab),ev:brushEV,temp:brushTemp,sat:brushSat};
+    commitPhotoSettings(item.name,now=>{
+     if(now.brushes.length>=MAX_BRUSH_STROKES)return now;
+     const room=Math.max(0,MAX_BRUSH_TOTAL_DABS-brushTotalDabs(now.brushes));if(!room)return now;
+     return{...now,brushes:[...now.brushes,{...stroke,dabs:stroke.dabs.slice(0,room)}]};
+    });
+    return;
+   }
    const path=healPath.current??[start];healPath.current=null;
    if(Math.hypot(end.x-start.x,end.y-start.y)>0.01){ // paint over the defect, release on a clean area: every path point heals from that one offset
     const dx=end.x-start.x,dy=end.y-start.y;
@@ -231,7 +251,8 @@ export function PhotosWorkspace({item}:{item:MediaItem}){
  const removeSpot=(i:number)=>commitPhotoSettings(item.name,now=>({...now,spots:now.spots.filter((_,j)=>j!==i)}));
  const removeGrad=(i:number)=>commitPhotoSettings(item.name,now=>({...now,grads:now.grads.filter((_,j)=>j!==i)}));
  const removeRad=(i:number)=>commitPhotoSettings(item.name,now=>({...now,rads:now.rads.filter((_,j)=>j!==i)}));
- const markerProps=(i:number,kind:'dab'|'spot'|'grad'|'rad')=>({pointerEvents:'all' as const,cursor:'pointer',role:'button','aria-label':t('photos.overlay.remove'),'data-testid':`photos-${kind==='dab'?'mask':kind==='spot'?'heal':kind}-marker-${i}`,onPointerDown:(e:React.PointerEvent)=>e.stopPropagation(),onPointerUp:(e:React.PointerEvent)=>e.stopPropagation(),onClick:(e:React.MouseEvent)=>{e.stopPropagation();if(kind==='dab')removeDab(i);else if(kind==='spot')removeSpot(i);else if(kind==='grad')removeGrad(i);else removeRad(i);}});
+ const removeBrush=(i:number)=>commitPhotoSettings(item.name,now=>({...now,brushes:now.brushes.filter((_,j)=>j!==i)})); // one commit = one undo step
+ const markerProps=(i:number,kind:'dab'|'spot'|'grad'|'rad'|'brush')=>({pointerEvents:'all' as const,cursor:'pointer',role:'button','aria-label':t('photos.overlay.remove'),'data-testid':`photos-${kind==='dab'?'mask':kind==='spot'?'heal':kind}-marker-${i}`,onPointerDown:(e:React.PointerEvent)=>e.stopPropagation(),onPointerUp:(e:React.PointerEvent)=>e.stopPropagation(),onClick:(e:React.MouseEvent)=>{e.stopPropagation();if(kind==='dab')removeDab(i);else if(kind==='spot')removeSpot(i);else if(kind==='grad')removeGrad(i);else if(kind==='brush')removeBrush(i);else removeRad(i);}});
  const startCropDrag=(mode:DragMode)=>(e:React.PointerEvent)=>{
   e.stopPropagation();(e.target as HTMLElement).setPointerCapture(e.pointerId);
   if(mode.kind==='move'){const p=pointerPos(e);const d=session!.cropDraft!;drag.current={crop:{kind:'move',dx:p.x-d.x0,dy:p.y-d.y0}};}
@@ -287,28 +308,35 @@ export function PhotosWorkspace({item}:{item:MediaItem}){
     <Button size="compact" variant="primary" onClick={()=>applyPhotoCrop(item.name)} data-testid="photos-crop-apply"><Check size={13}/>{t('photos.crop.apply')}</Button>
     <Button size="compact" variant="outline" onClick={()=>cancelPhotoCrop(item.name)} data-testid="photos-crop-cancel"><X size={13}/>{t('photos.crop.cancel')}</Button>
    </>}
-   <Button size="compact" variant="outline" aria-pressed={healing} disabled={!ready||session?.cropping} aria-label={t('photos.heal.toggle')} title={t('photos.heal.toggle')} onClick={()=>{setHealing(h=>!h);setDodging(false);setGrading(false);setRadial(false);}} data-testid="photos-heal"><Bandage size={13}/>{t('photos.heal.toggle')}</Button>
+   <Button size="compact" variant="outline" aria-pressed={healing} disabled={!ready||session?.cropping} aria-label={t('photos.heal.toggle')} title={t('photos.heal.toggle')} onClick={()=>{setHealing(h=>!h);setDodging(false);setGrading(false);setRadial(false);setBrushing(false);}} data-testid="photos-heal"><Bandage size={13}/>{t('photos.heal.toggle')}</Button>
    {healing&&<NativeInput type="range" className="accent-[var(--accent)]" min={0.005} max={0.2} step={0.005} value={brushR} aria-label={t('photos.heal.radius')} onChange={e=>setBrushR(Number(e.currentTarget.value))} data-testid="photos-heal-radius"/>}
-   <Button size="compact" variant="outline" aria-pressed={dodging} disabled={!ready||session?.cropping} aria-label={t('photos.dodge.toggle')} title={t('photos.dodge.toggle')} onClick={()=>{setDodging(d=>!d);setHealing(false);setGrading(false);setRadial(false);}} data-testid="photos-dodge"><Contrast size={13}/>{t('photos.dodge.toggle')}</Button>
+   <Button size="compact" variant="outline" aria-pressed={dodging} disabled={!ready||session?.cropping} aria-label={t('photos.dodge.toggle')} title={t('photos.dodge.toggle')} onClick={()=>{setDodging(d=>!d);setHealing(false);setGrading(false);setRadial(false);setBrushing(false);}} data-testid="photos-dodge"><Contrast size={13}/>{t('photos.dodge.toggle')}</Button>
    {dodging&&<>
     <NativeInput type="range" className="accent-[var(--accent)]" min={0.005} max={0.2} step={0.005} value={dabR} aria-label={t('photos.dodge.radius')} onChange={e=>setDabR(Number(e.currentTarget.value))} data-testid="photos-dodge-radius"/>
     <NativeInput type="range" className="accent-[var(--accent)]" min={-1} max={1} step={0.05} value={session?.now.localEV??0} aria-label={t('photos.dodge.amount')} onChange={e=>commitPhotoSettings(item.name,now=>({...now,localEV:Number(e.currentTarget.value)}))} data-testid="photos-dodge-amount"/>
     <NativeInput type="range" className="accent-[var(--accent)]" min={-100} max={100} step={5} value={session?.now.localSat??0} aria-label={t('photos.dodge.sat')} onChange={e=>commitPhotoSettings(item.name,now=>({...now,localSat:Number(e.currentTarget.value)}))} data-testid="photos-dodge-sat"/>
    </>}
-   <Button size="compact" variant="outline" aria-pressed={grading} disabled={!ready||session?.cropping} aria-label={t('photos.grad.toggle')} title={t('photos.grad.toggle')} onClick={()=>{setGrading(g=>!g);setHealing(false);setDodging(false);setRadial(false);}} data-testid="photos-grad"><SquareDashed size={13}/>{t('photos.grad.toggle')}</Button>
+   <Button size="compact" variant="outline" aria-pressed={grading} disabled={!ready||session?.cropping} aria-label={t('photos.grad.toggle')} title={t('photos.grad.toggle')} onClick={()=>{setGrading(g=>!g);setHealing(false);setDodging(false);setRadial(false);setBrushing(false);}} data-testid="photos-grad"><SquareDashed size={13}/>{t('photos.grad.toggle')}</Button>
    {grading&&<>
     <NativeInput type="range" className="accent-[var(--accent)]" min={-1} max={1} step={0.05} value={session?.now.gradEV??0} aria-label={t('photos.grad.ev')} onChange={e=>commitPhotoSettings(item.name,now=>({...now,gradEV:Number(e.currentTarget.value)}))} data-testid="photos-grad-ev"/>
     <NativeInput type="range" className="accent-[var(--accent)]" min={-100} max={100} step={5} value={session?.now.gradSat??0} aria-label={t('photos.grad.sat')} onChange={e=>commitPhotoSettings(item.name,now=>({...now,gradSat:Number(e.currentTarget.value)}))} data-testid="photos-grad-sat"/>
    </>}
-   <Button size="compact" variant="outline" aria-pressed={radial} disabled={!ready||session?.cropping} aria-label={t('photos.rad.toggle')} title={t('photos.rad.toggle')} onClick={()=>{setRadial(r=>!r);setHealing(false);setDodging(false);setGrading(false);}} data-testid="photos-rad"><Circle size={13}/>{t('photos.rad.toggle')}</Button>
+   <Button size="compact" variant="outline" aria-pressed={radial} disabled={!ready||session?.cropping} aria-label={t('photos.rad.toggle')} title={t('photos.rad.toggle')} onClick={()=>{setRadial(r=>!r);setHealing(false);setDodging(false);setGrading(false);setBrushing(false);}} data-testid="photos-rad"><Circle size={13}/>{t('photos.rad.toggle')}</Button>
    {radial&&<>
     <NativeInput type="range" className="accent-[var(--accent)]" min={-1} max={1} step={0.05} value={session?.now.gradEV??0} aria-label={t('photos.grad.ev')} onChange={e=>commitPhotoSettings(item.name,now=>({...now,gradEV:Number(e.currentTarget.value)}))} data-testid="photos-rad-ev"/>
     <NativeInput type="range" className="accent-[var(--accent)]" min={-100} max={100} step={5} value={session?.now.gradSat??0} aria-label={t('photos.grad.sat')} onChange={e=>commitPhotoSettings(item.name,now=>({...now,gradSat:Number(e.currentTarget.value)}))} data-testid="photos-rad-sat"/>
    </>}
+   <Button size="compact" variant="outline" aria-pressed={brushing} disabled={!ready||session?.cropping} aria-label={t('photos.brush.toggle')} title={t('photos.brush.toggle')} onClick={()=>{setBrushing(b=>!b);setHealing(false);setDodging(false);setGrading(false);setRadial(false);}} data-testid="photos-brush"><Brush size={13}/>{t('photos.brush.toggle')}</Button>
+   {brushing&&<>
+    <NativeInput type="range" className="accent-[var(--accent)]" min={0.005} max={0.2} step={0.005} value={brushStrokeR} aria-label={t('photos.brush.radius')} onChange={e=>setBrushStrokeR(Number(e.currentTarget.value))} data-testid="photos-brush-radius"/>
+    <NativeInput type="range" className="accent-[var(--accent)]" min={-1} max={1} step={0.05} value={brushEV} aria-label={t('photos.brush.ev')} onChange={e=>setBrushEV(Number(e.currentTarget.value))} data-testid="photos-brush-ev"/>
+    <NativeInput type="range" className="accent-[var(--accent)]" min={-100} max={100} step={5} value={brushTemp} aria-label={t('photos.brush.temp')} onChange={e=>setBrushTemp(Number(e.currentTarget.value))} data-testid="photos-brush-temp"/>
+    <NativeInput type="range" className="accent-[var(--accent)]" min={-100} max={100} step={5} value={brushSat} aria-label={t('photos.brush.sat')} onChange={e=>setBrushSat(Number(e.currentTarget.value))} data-testid="photos-brush-sat"/>
+   </>}
    <Button size="compact" disabled={!ready||session?.cropping} onClick={()=>void doExport('png')} data-testid="photos-export-png" title={t('photos.export.hint')}><Download size={13}/>{t('photos.export.png')}</Button>
    <Button size="compact" disabled={!ready||session?.cropping} onClick={()=>void doExport('jpeg')} data-testid="photos-export-jpeg" title={t('photos.export.hint')}><Download size={13}/>{t('photos.export.jpeg')}</Button>
   </div>
-  <div ref={stage} className="media-checker relative min-h-0 w-full flex-1 overflow-hidden" onWheel={onWheel} onPointerDown={onStageDown} onPointerMove={onStageMove} onPointerUp={onStageUp} onPointerCancel={onStageUp} onPointerLeave={()=>setHealCursor(null)} data-testid="photos-stage" style={{touchAction:'none',cursor:session?.cropping?'default':healing||dodging||grading||radial||targetArmed?'crosshair':'grab'}}>
+  <div ref={stage} className="media-checker relative min-h-0 w-full flex-1 overflow-hidden" onWheel={onWheel} onPointerDown={onStageDown} onPointerMove={onStageMove} onPointerUp={onStageUp} onPointerCancel={onStageUp} onPointerLeave={()=>setHealCursor(null)} data-testid="photos-stage" style={{touchAction:'none',cursor:session?.cropping?'default':healing||dodging||grading||radial||brushing||targetArmed?'crosshair':'grab'}}>
    <div ref={imgBox} className="absolute left-1/2 top-1/2" style={{width:dispW,height:dispH,transform:`translate(-50%,-50%) translate(${pan[0]}px,${pan[1]}px)`}}>
     <canvas ref={canvas} className="block size-full rounded-[2px] shadow-sm" style={{imageRendering:scale>4?'pixelated':'auto'}} data-testid="photos-canvas"/>
     {showClipping&&<canvas ref={clipCanvas} className={`pointer-events-none absolute inset-0 size-full${scale>4?' pixelated':''}`} data-testid="photos-clipping-canvas"/>}
@@ -334,14 +362,23 @@ export function PhotosWorkspace({item}:{item:MediaItem}){
      <div className="absolute" style={{left:`${crop.x0*100}%`,top:`${crop.y0*100}%`,width:`${(crop.x1-crop.x0)*100}%`,height:`${(crop.y1-crop.y0)*100}%`,cursor:'move'}} onPointerDown={startCropDrag({kind:'move',dx:0,dy:0})} data-testid="photos-crop-frame"/>
      {(['nw','ne','sw','se'] as const).map(k=><div key={k} className="absolute size-3 rounded-[3px] border border-white bg-[var(--accent)]" style={{left:`calc(${(k==='nw'||k==='sw'?crop.x0:crop.x1)*100}% - 6px)`,top:`calc(${(k==='nw'||k==='ne'?crop.y0:crop.y1)*100}% - 6px)`,cursor:k==='nw'||k==='se'?'nwse-resize':'nesw-resize'}} onPointerDown={startCropDrag({kind:k})} data-testid={`photos-crop-${k}`}/>)}
     </div>}
-    {(healing||dodging)&&healCursor&&!session?.cropping&&<svg className="pointer-events-none absolute inset-0 size-full" data-testid="photos-heal-cursor">
+    {(healing||dodging||brushing)&&healCursor&&!session?.cropping&&<svg className="pointer-events-none absolute inset-0 size-full" data-testid="photos-heal-cursor">
      {healStart.current&&<line x1={healStart.current.x*dispW} y1={healStart.current.y*dispH} x2={healCursor.x*dispW} y2={healCursor.y*dispH} stroke="rgba(255,255,255,0.75)" strokeWidth={1}/>}
      {healStart.current&&<circle cx={healStart.current.x*dispW} cy={healStart.current.y*dispH} r={Math.max(2,brushR*Math.min(fw,fh)*scale)} fill="none" stroke="rgba(255,255,255,0.9)" strokeWidth={1.5} strokeDasharray="4 3"/>}
-     <circle cx={healCursor.x*dispW} cy={healCursor.y*dispH} r={Math.max(2,(healing?brushR:dabR)*Math.min(fw,fh)*scale)} fill="none" stroke="var(--accent)" strokeWidth={1.5}/>
+     <circle cx={healCursor.x*dispW} cy={healCursor.y*dispH} r={Math.max(2,(healing?brushR:dodging?dabR:brushStrokeR)*Math.min(fw,fh)*scale)} fill="none" stroke="var(--accent)" strokeWidth={1.5}/>
     </svg>}
     {dodging&&!session?.cropping&&session&&(session.now.dabs.length>0||dabChain.current)&&<svg className="pointer-events-none absolute inset-0 size-full" data-testid="photos-mask-overlay">
      {session.now.dabs.map((d,i)=><circle key={i} cx={d.x*dispW} cy={d.y*dispH} r={Math.max(2,d.r*Math.min(fw,fh)*scale)} fill="var(--accent)" fillOpacity={0.2} stroke="var(--accent)" strokeWidth={1} strokeOpacity={0.6} {...markerProps(i,'dab')}/>)}
      {dabChain.current?.map((d,i)=><circle key={`c${i}`} cx={d.x*dispW} cy={d.y*dispH} r={Math.max(2,d.r*Math.min(fw,fh)*scale)} fill="var(--accent)" fillOpacity={0.3}/>)}
+    </svg>}
+    {brushing&&!session?.cropping&&session&&(session.now.brushes.length>0||brushChain.current)&&<svg className="pointer-events-none absolute inset-0 size-full" data-testid="photos-brush-overlay">
+     {session.now.brushes.map((st,i)=>{
+      const cx=st.dabs.reduce((a,d)=>a+d.x,0)/st.dabs.length,cy=st.dabs.reduce((a,d)=>a+d.y,0)/st.dabs.length;
+      return<g key={i}>
+       {st.dabs.map((d,j)=><circle key={j} cx={d.x*dispW} cy={d.y*dispH} r={Math.max(2,d.r*Math.min(fw,fh)*scale)} fill="var(--accent)" fillOpacity={0.15} pointerEvents="none"/>)}
+       <circle cx={cx*dispW} cy={cy*dispH} r={7} fill="var(--accent)" fillOpacity={0.3} stroke="var(--accent)" strokeWidth={1} {...markerProps(i,'brush')}/>
+      </g>;})}
+     {brushChain.current?.map((d,i)=><circle key={`c${i}`} cx={d.x*dispW} cy={d.y*dispH} r={Math.max(2,d.r*Math.min(fw,fh)*scale)} fill="var(--accent)" fillOpacity={0.3}/>)}
     </svg>}
     {healing&&!session?.cropping&&session&&session.now.spots.length>0&&<svg className="pointer-events-none absolute inset-0 size-full" data-testid="photos-heal-overlay">
      {session.now.spots.map((sp,i)=><g key={i}>

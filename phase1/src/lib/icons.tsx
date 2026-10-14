@@ -123,6 +123,7 @@ export const Download=make("download","<path d=\"M3 17.005C3 19.203 4.58 22 7.37
 
 export const Bot=make("bot",'<path d="M12 6.064h6c2.21 0 4 2.095 4 4.679v6.579C22 19.905 20.21 22 18 22H6c-2.21 0-4-2.095-4-4.678v-6.58C2 8.16 3.79 6.065 6 6.065zm0 0V2.4m3.333-.4a14.1 14.1 0 0 1-6.666 0M8 12v-1.5m8 1.5v-1.5"/><path d="M15.75 16.5A6.27 6.27 0 0 1 12 17.75a6.27 6.27 0 0 1-3.75-1.25"/>');
 export const Camera=make("camera","<path fill=\"none\" stroke=\"currentColor\" stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z\"/><circle cx=\"12\" cy=\"13\" r=\"3\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"/>");
+export const Brush=make("brush","<path fill=\"none\" stroke=\"currentColor\" stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"m9.06 11.9 8.07-8.06a2.85 2.85 0 1 1 4.03 4.03l-8.06 8.08\"/><path fill=\"none\" stroke=\"currentColor\" stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M7.07 14.94c-1.66 0-3 1.35-3 3.02 0 1.33-2.5 1.52-2 2.02 1.08 1.1 2.49 2.02 4 2.02 2.2 0 4-1.8 4-4.04a3.01 3.01 0 0 0-3-3.02z\"/>");
 export const makeVadivamIcon=make;
 export const AlignLeft=make("align-left","<path d=\"M4 6h16M4 10h10M4 14h16M4 18h10\"/>");
 export const AlignCenter=make("align-center","<path d=\"M4 6h16M7 10h10M4 14h16M7 18h10\"/>");

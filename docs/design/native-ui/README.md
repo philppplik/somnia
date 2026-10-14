@@ -70,6 +70,8 @@ All file links are repository-relative, so they remain useful on a feature branc
 40. [Photos HSL color mixer](photos-hsl-mixer.md)
 41. [Photos targeted adjustment](photos-targeted-adjustment.md)
 42. [Photos versions and split polish](photos-versions.md)
+43. [Photos adjustment brush](photos-adjustment-brush.md)
+44. [Photos lens correction](photos-lens-correction.md)
 
 ## The system in one view
 
