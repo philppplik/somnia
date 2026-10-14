@@ -5,7 +5,8 @@ export interface AnimationKeyProposal{target:AnimationKeyTarget;before:PropValue
 export interface AnimationKeyHost{session:AnimationSession;permission(effect:'inspect'|'propose',target:AnimationKeyTarget):void;stage(proposal:AnimationKeyProposal):void;/** Host-only execution grant, absent by default. */execution?:{permission(effect:'apply'|'undo',proposal:AnimationKeyProposal):void};}
 /** Host-selected transform key only. Derive from real native session; no model target arguments. */
 export function createAnimationKeyPort(host:AnimationKeyHost){
- const reviews=new WeakMap<AnimationKeyProposal,{doc:AnimationDocument;target:AnimationKeyTarget;before:PropValue;after:PropValue;reviewId:string}>();const receipts=new WeakMap<ReviewedReceipt,AnimationKeyProposal>();
+ const reviews=new WeakMap<AnimationKeyProposal,{doc:AnimationDocument;target:AnimationKeyTarget;before:PropValue;after:PropValue;reviewId:string}>();const receipts=new WeakMap<ReviewedReceipt,{proposal:AnimationKeyProposal;native:ReviewedReceipt}>();
+ const detached=(r:ReviewedReceipt):ReviewedReceipt=>{const copy=structuredClone(r);if(Array.isArray(copy.before))Object.freeze(copy.before);if(Array.isArray(copy.after))Object.freeze(copy.after);return Object.freeze(copy);};
  const capture=()=>{const s=host.session.getState(),d=s.doc,v=s.view;if(!d||s.preview||v.selectedKeys.length!==1)throw Error('Select one committed animation key.');const k=v.selectedKeys[0],c=findComp(d),l=findLayer(c,k.layer),p=l?.transform[k.prop],keys=p?.keys.filter(x=>x.t===k.t);if(!c||!l||l.locked||l.id!==v.selectedLayer||!keys||keys.length!==1)throw Error('Selected animation key unavailable.');const target:AnimationKeyTarget={documentId:d.id,revision:d.revision,composition:c.id,layer:l.id,prop:k.prop,t:k.t};return {doc:d,target,value:structuredClone(keys[0].v)};};
  const assert=(d:AnimationDocument,target:AnimationKeyTarget)=>{const now=capture();if(now.doc!==d||JSON.stringify(now.target)!==JSON.stringify(target))throw Error('Animation key changed. Refresh preview.');};
  const object=(properties:Record<string,unknown>,required:string[]=[])=>({type:'object',properties,required,additionalProperties:false});
@@ -14,13 +15,13 @@ export function createAnimationKeyPort(host:AnimationKeyHost){
  return Object.assign(registry,{
  /** Called only by the host after exact preview approval, never registered as a model tool. */
  acceptReviewed(proposal:AnimationKeyProposal,reviewId:string,reviewedAfter:PropValue,origin:string,signal:AbortSignal):ReviewedReceipt{
-  const r=reviews.get(proposal);if(!host.execution||!r||reviewId!==r.reviewId||JSON.stringify(reviewedAfter)!==JSON.stringify(r.after)||JSON.stringify(proposal.target)!==JSON.stringify(r.target)||JSON.stringify(proposal.before)!==JSON.stringify(r.before)||JSON.stringify(proposal.after)!==JSON.stringify(r.after)||!origin.startsWith('ai:'))throw Error('Exact host review and execution grant required.');
+  const r=reviews.get(proposal);if(!host.execution||!r||reviewId!==r.reviewId||JSON.stringify(reviewedAfter)!==JSON.stringify(r.after)||JSON.stringify(proposal.target)!==JSON.stringify(r.target)||JSON.stringify(proposal.before)!==JSON.stringify(r.before)||JSON.stringify(proposal.after)!==JSON.stringify(r.after)||!origin.startsWith('ai:')||origin.length>80||/[\x00-\x1f\x7f]/.test(origin))throw Error('Exact host review and execution grant required.');
   signal.throwIfAborted();host.execution.permission('apply',structuredClone(proposal));signal.throwIfAborted();assert(r.doc,r.target);
   // Consume before native entry: unknown mutation must never be blindly retried.
-  reviews.delete(proposal);const receipt=host.session.applyReviewed({doc:r.doc,layer:r.target.layer,prop:r.target.prop,t:r.target.t,expected:r.before,value:r.after,origin});receipts.set(receipt,structuredClone(proposal));return receipt;
+  reviews.delete(proposal);const receipt=host.session.applyReviewed({doc:r.doc,layer:r.target.layer,prop:r.target.prop,t:r.target.t,expected:r.before,value:r.after,origin});const safe=detached(receipt);if(receipt.applied===1)receipts.set(safe,{proposal:structuredClone(proposal),native:receipt});return safe;
  },
  undoReviewed(receipt:ReviewedReceipt,signal:AbortSignal):ReviewedReceipt{
-  const proposal=receipts.get(receipt);if(!host.execution||!proposal)throw Error('Unknown reviewed Animation receipt.');signal.throwIfAborted();host.execution.permission('undo',structuredClone(proposal));signal.throwIfAborted();const result=host.session.undoReviewed(receipt);receipts.delete(receipt);return result;
+  const owned=receipts.get(receipt);if(!host.execution||!owned)throw Error('Unknown reviewed Animation receipt.');signal.throwIfAborted();host.execution.permission('undo',structuredClone(owned.proposal));signal.throwIfAborted();const result=host.session.undoReviewed(owned.native);receipts.delete(receipt);return detached(result);
  }
  });
 }
