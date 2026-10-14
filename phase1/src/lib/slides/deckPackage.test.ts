@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {readFileSync,readdirSync} from 'node:fs';
 import {fileURLToPath} from 'node:url';
 import {unzipSync,zipSync,strFromU8,strToU8} from 'fflate';
-import {setAllSlideBackgrounds,backgroundSummary,setSlideBackground,readSlideBackground,editLayoutBox,readLayoutBoxes,editMasterBox,readMaster,editTheme,readTheme,insertTable,editTable,readTable,setShapeStyle,readShapeStyle,setSlideNotes,groupShapes,ungroupShape,readSlideTransition,setSlideTransition,arrangeShapes,arrangedOrder,setShapesBounds,readSlideNotes,insertPicture,replacePicture,removePicture,fitImage,formatShapeText,addTextBox,removeTextBox,nextShapeId,setShapeBounds,boundsEditIssue,readDeckModel,moveSlide,reorderSlides,duplicateSlide,deleteSlide,newSlideFromLayout,readLayouts} from './deckPackage';
+import {setSlideSize,readSlideSize,setAllSlideBackgrounds,backgroundSummary,setSlideBackground,readSlideBackground,editLayoutBox,readLayoutBoxes,editMasterBox,readMaster,editTheme,readTheme,insertTable,editTable,readTable,setShapeStyle,readShapeStyle,setSlideNotes,groupShapes,ungroupShape,readSlideTransition,setSlideTransition,arrangeShapes,arrangedOrder,setShapesBounds,readSlideNotes,insertPicture,replacePicture,removePicture,fitImage,formatShapeText,addTextBox,removeTextBox,nextShapeId,setShapeBounds,boundsEditIssue,readDeckModel,moveSlide,reorderSlides,duplicateSlide,deleteSlide,newSlideFromLayout,readLayouts} from './deckPackage';
 import {readRuns,makeEditedCopy} from './editCopy';
 import {png,jpeg} from './imageFixtures';
 
@@ -842,4 +842,22 @@ test('background all: one pass over every slide, refuses decks with unsupported 
   z[part]=strToU8(strFromU8(z[part]).replace(/<p:cSld\b([^>]*)>/,'<p:cSld$1><p:bg><p:bgRef idx="1001"><a:schemeClr val="bg1"/></p:bgRef></p:bg>'));
   const odd=zipSync(z);assert.equal(backgroundSummary(odd).other,1);assert.throws(()=>setAllSlideBackgrounds(odd,{kind:'solid',color:'112233'}),/cannot be edited/);
   assert.deepEqual(readSlideBackground(odd,sid[0]),{kind:'inherit'});
+});
+
+test('slide size: fit and center content uniformly, text and ids unchanged',()=>{
+  const b=deck(2),was=readSlideSize(b),m0=readDeckModel(b);
+  const c=setSlideSize(b,9144000,6858000),s=readSlideSize(c);assert.deepEqual(s,{cx:9144000,cy:6858000});
+  const k=Math.min(9144000/was.cx,6858000/was.cy),dx=Math.round((9144000-was.cx*k)/2),dy=Math.round((6858000-was.cy*k)/2),m1=readDeckModel(c);
+  for(const sh of m0.slides[0].shapes)if(sh.bounds&&sh.parentId===null){const n=m1.slides[0].shapes.find(x=>x.id===sh.id)!.bounds!;assert.equal(n.x,Math.round(sh.bounds.x*k)+dx);assert.equal(n.w,Math.round(sh.bounds.w*k));assert.equal(n.h,Math.round(sh.bounds.h*k));}
+  assert.deepEqual(titles(c),titles(b));assert.deepEqual(ids(c),ids(b));assert.equal(setSlideSize(c,9144000,6858000),c);
+  const back=setSlideSize(c,was.cx,was.cy);assert.deepEqual(readSlideSize(back),was);
+});
+test('slide size: bounds and fail-closed structure',()=>{
+  const b=deck(1);
+  for(const [x,y] of [[0,6858000],[1000,1000],[1.5,6858000],[60000000,6858000],[12192000,NaN]])assert.throws(()=>setSlideSize(b,x,y),/out of range/);
+  const z=unzipSync(b),part=readDeckModel(b).slides[0].part;
+  z[part]=strToU8(strFromU8(z[part]).replace('</p:spTree>','<p:graphicFrame><p:nvGraphicFramePr><p:cNvPr id="40" name="T"/><p:cNvGraphicFramePr/><p:nvPr/></p:nvGraphicFramePr><p:xfrm><a:off x="0" y="0"/><a:ext cx="100" cy="100"/></p:xfrm></p:graphicFrame></p:spTree>'));
+  assert.throws(()=>setSlideSize(zipSync(z),9144000,6858000),/graphic frames/);
+  const z2=unzipSync(b);z2[part]=strToU8(strFromU8(z2[part]).replace('</p:spTree>','<p:sp><p:nvSpPr><p:cNvPr id="41" name="X"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr><a:xfrm><a:off x="1.5" y="0"/><a:ext cx="100" cy="100"/></a:xfrm></p:spPr></p:sp></p:spTree>'));
+  assert.throws(()=>setSlideSize(zipSync(z2),9144000,6858000));
 });

@@ -2,7 +2,7 @@ import {diagnosePptx} from './diagnostics';
 import {readRuns,makeEditedCopy} from './editCopy';
 /// <reference lib="webworker" />
 import init,{SlidesEngine} from '../../../slides-engine/pkg/somnia_slides.js';
-import {setAllSlideBackgrounds,setSlideBackground,editLayoutBox,editMasterBox,editTheme,insertTable,editTable,setShapeStyle,setSlideNotes,groupShapes,ungroupShape,setSlideTransition,arrangeShapes,setShapesBounds,insertPicture,replacePicture,removePicture,formatShapeText,addTextBox,removeTextBox,readDeckModel,moveSlide,setShapeBounds,duplicateSlide,deleteSlide,newSlideFromLayout,readLayouts} from './deckPackage';
+import {setSlideSize,setAllSlideBackgrounds,setSlideBackground,editLayoutBox,editMasterBox,editTheme,insertTable,editTable,setShapeStyle,setSlideNotes,groupShapes,ungroupShape,setSlideTransition,arrangeShapes,setShapesBounds,insertPicture,replacePicture,removePicture,formatShapeText,addTextBox,removeTextBox,readDeckModel,moveSlide,setShapeBounds,duplicateSlide,deleteSlide,newSlideFromLayout,readLayouts} from './deckPackage';
 import type {SlidesRequest,SlidesReply} from './protocol';
 let engine:SlidesEngine|undefined;let wasmMemory:WebAssembly.Memory|undefined;
 // Serialize even asynchronous initialization. No user-defined method invocation.
@@ -33,6 +33,7 @@ self.onmessage=({data}:{data:SlidesRequest})=>{queue=queue.then(async()=>{
    case 'group':result=groupShapes(data.bytes,data.slideId,data.shapeIds);break;
    case 'ungroup':result=ungroupShape(data.bytes,data.slideId,data.shapeId);break;
    case 'backgroundAll':result=setAllSlideBackgrounds(data.bytes,data.background);break;
+   case 'slideSize':result=setSlideSize(data.bytes,data.cx,data.cy);break;
    case 'background':result=setSlideBackground(data.bytes,data.slideId,data.background);break;
    case 'transition':result=setSlideTransition(data.bytes,data.slideId,data.transition);break;
    case 'formatText':result=formatShapeText(data.bytes,data.slideId,data.shapeId,data.format);break;

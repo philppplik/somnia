@@ -1711,3 +1711,42 @@ export function setAllSlideBackgrounds(bytes:Uint8Array,next:Exclude<SlideBackgr
   const re=unzipSync(res);for(const k of Object.keys(zip))if(!(k in changed)&&(!re[k]||re[k].length!==zip[k].length||re[k].some((v,i)=>v!==zip[k][i])))throw Error('Edited deck changed an unrelated part');
   return res;
 }
+
+/** Slide size in EMU. Presets are the common PowerPoint sizes; custom sizes are bounded. */
+export const MIN_SLIDE_EMU=1270000,MAX_SLIDE_EMU=51206400;
+export const SLIDE_SIZE_PRESETS={'16:9':{cx:12192000,cy:6858000},'4:3':{cx:9144000,cy:6858000},'16:10':{cx:10972800,cy:6858000}} as const;
+export function readSlideSize(bytes:Uint8Array):{cx:number;cy:number}{
+  const s=readDeckModel(bytes).slideSize;if(!s)throw Error('Slide size is not readable');return s;
+}
+/**
+ * Sets the slide size and fits the existing content: every explicit position and size on slides, layouts and the master
+ * is scaled by one uniform factor (min of both axes) and centered, so pictures keep their proportions. Font sizes are NOT changed.
+ * Decks with charts, tables or other graphic frames, or any box that cannot be read exactly, are refused.
+ */
+export function setSlideSize(bytes:Uint8Array,cx:number,cy:number):Uint8Array{
+  if(!Number.isInteger(cx)||!Number.isInteger(cy)||cx<MIN_SLIDE_EMU||cy<MIN_SLIDE_EMU||cx>MAX_SLIDE_EMU||cy>MAX_SLIDE_EMU)throw Error('Slide size is out of range');
+  const model=readDeckModel(bytes),old=model.slideSize;if(!old)throw Error('Slide size is not readable');
+  if(old.cx===cx&&old.cy===cy)return bytes;
+  const zip=openPackage(bytes),pres=text(zip,'ppt/presentation.xml');
+  const szTag=/<p:sldSz\b[^>]*\/?>/.exec(pres);if(!szTag||(pres.match(/<p:sldSz\b/g)??[]).length!==1)throw Error('Presentation has no single slide size');
+  const k=Math.min(cx/old.cx,cy/old.cy),dx=Math.round((cx-old.cx*k)/2),dy=Math.round((cy-old.cy*k)/2);
+  const changed:Record<string,string>={};
+  const parts=Object.keys(zip).filter(n=>/^ppt\/(slides\/slide|slideLayouts\/slideLayout|slideMasters\/slideMaster)\d+\.xml$/.test(n));
+  const re=/(<a:xfrm\b[^>]*>\s*)<a:off x="(-?\d+)" y="(-?\d+)"\s*\/>(\s*)<a:ext cx="(\d+)" cy="(\d+)"\s*\/>/g;
+  for(const part of parts){
+    const xml=text(zip,part);
+    if(/<p:graphicFrame\b|<p:xfrm\b/.test(xml))throw Error('Slides with tables, charts or other graphic frames cannot be resized safely');
+    const offs=(xml.match(/<a:off\b/g)??[]).length,exts=(xml.match(/<a:ext cx=/g)??[]).length;let n=0;
+    const next=xml.replace(re,(_m,a,x,y,sp,w,h)=>{n++;const v=[Math.round(+x*k)+dx,Math.round(+y*k)+dy,Math.round(+w*k),Math.round(+h*k)];if(v.some(t=>!Number.isSafeInteger(t)||Math.abs(t)>=1e10))throw Error('Scaled box is out of range');return `${a}<a:off x="${v[0]}" y="${v[1]}"/>${sp}<a:ext cx="${v[2]}" cy="${v[3]}"/>`;});
+    if(n!==offs||n!==exts)throw Error('A shape box uses markup that cannot be scaled exactly');
+    if(next!==xml)changed[part]=next;
+  }
+  changed['ppt/presentation.xml']=pres.replace(szTag[0],szTag[0].replace(/(\scx=")\d+(")/,`$1${cx}$2`).replace(/(\scy=")\d+(")/,`$1${cy}$2`));
+  const out=repack(zip,changed),after=readDeckModel(out);
+  if(after.slideSize?.cx!==cx||after.slideSize?.cy!==cy||after.slides.length!==model.slides.length||after.runs.length!==model.runs.length||after.runs.some((r,i)=>r.text!==model.runs[i].text))throw Error('Edited deck failed verification');
+  after.slides.forEach((s,i)=>{const b=model.slides[i];if(s.id!==b.id||s.problems.length!==b.problems.length||s.shapes.length!==b.shapes.length)throw Error('Edited deck failed verification');
+    s.shapes.forEach((sh,j)=>{const o=b.shapes[j];if(sh.id!==o.id||sh.kind!==o.kind||sh.parentId!==o.parentId||(!!sh.bounds!==!!o.bounds))throw Error('Edited deck failed verification');
+      if(o.bounds&&sh.bounds&&o.parentId===null){const e=[Math.round(o.bounds.x*k)+dx,Math.round(o.bounds.y*k)+dy,Math.round(o.bounds.w*k),Math.round(o.bounds.h*k)];if(sh.bounds.x!==e[0]||sh.bounds.y!==e[1]||sh.bounds.w!==e[2]||sh.bounds.h!==e[3])throw Error('Edited deck failed verification');}});});
+  const rz=unzipSync(out);for(const key of Object.keys(zip))if(!(key in changed)&&(!rz[key]||rz[key].length!==zip[key].length||rz[key].some((v,i)=>v!==zip[key][i])))throw Error('Edited deck changed an unrelated part');
+  return out;
+}

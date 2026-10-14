@@ -5628,6 +5628,24 @@
       "hasEnabled": true
     },
     {
+      "id": "slides.setSlideSize",
+      "title": "Set slide size",
+      "category": "Edit",
+      "source": "slides",
+      "keywords": [
+        "16:10",
+        "16:9",
+        "4:3",
+        "aspect",
+        "dimensions",
+        "page setup",
+        "slide size",
+        "standard",
+        "widescreen"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "slides.setTransition",
       "title": "Set slide transition",
       "category": "Edit",
