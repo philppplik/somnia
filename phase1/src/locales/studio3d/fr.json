@@ -934,5 +934,8 @@
  "studio3d.edit.moveZ": "Décalage Z",
  "cmd.studio3d.edit.rip": "Détacher les faces sélectionnées du reste du maillage",
  "studio3d.edit.rip": "Déchirer",
- "studio3d.hist.editRip": "Déchirer la sélection"
+ "studio3d.hist.editRip": "Déchirer la sélection",
+ "cmd.studio3d.edit.separate": "Séparer les faces sélectionnées en un nouvel objet",
+ "studio3d.edit.separate": "Séparer en objet",
+ "studio3d.hist.editSeparate": "Séparer la sélection en objet"
 }

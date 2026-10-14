@@ -1031,6 +1031,27 @@ test('mesh edit mode: rip splits a welded corner back apart',async({page})=>{
  await expect(page.getByRole('alert')).toContainText('does not share vertices');
 });
 
+test('mesh edit mode: separate splits selected faces into a new object, undo restores it',async({page})=>{
+ await blank(page);
+ const id=await insert(page,'cube',0);
+ expect(await run(page,'studio3d.edit.start',{id,mode:'face'})).toBe(true);
+ expect(await run(page,'studio3d.edit.select',{kind:'face',ids:[4,5]})).toBe(true);
+ expect(await run(page,'studio3d.edit.separate',{})).toBe(true);
+ let s=await session(page);
+ expect(s.stats.triangles).toBe(12);
+ expect(s.outline.length).toBe(2);
+ expect(s.edit).toMatchObject({faces:0,verts:0,edges:0});
+ await run(page,'studio3d.undo');
+ s=await session(page);
+ expect(s.outline.length).toBe(1);
+ expect(s.stats.triangles).toBe(12);
+ expect(await run(page,'studio3d.edit.separate',{})).toBe(false);
+ await expect(page.getByRole('alert')).toContainText('Select faces to separate');
+ expect(await run(page,'studio3d.edit.selectAll',{op:'all'})).toBe(true);
+ expect(await run(page,'studio3d.edit.separate',{})).toBe(false);
+ await expect(page.getByRole('alert')).toContainText('empty mesh');
+});
+
 test('mesh edit mode: weld merges selected vertices at their centre, undo restores them',async({page})=>{
  await blank(page);
  const id=await insert(page,'cube',0);

@@ -934,5 +934,8 @@
  "studio3d.edit.moveZ": "Versatz Z",
  "cmd.studio3d.edit.rip": "Ausgewählte Faces vom Rest der Meshes abtrennen",
  "studio3d.edit.rip": "Abtrennen",
- "studio3d.hist.editRip": "Auswahl abtrennen"
+ "studio3d.hist.editRip": "Auswahl abtrennen",
+ "cmd.studio3d.edit.separate": "Ausgewählte Faces als neues Objekt abspalten",
+ "studio3d.edit.separate": "Als Objekt abspalten",
+ "studio3d.hist.editSeparate": "Auswahl als Objekt abspalten"
 }

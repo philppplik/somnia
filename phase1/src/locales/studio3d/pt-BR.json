@@ -934,5 +934,8 @@
  "studio3d.edit.moveZ": "Deslocamento Z",
  "cmd.studio3d.edit.rip": "Rasgar as faces selecionadas do resto da malha",
  "studio3d.edit.rip": "Rasgar",
- "studio3d.hist.editRip": "Rasgar seleção"
+ "studio3d.hist.editRip": "Rasgar seleção",
+ "cmd.studio3d.edit.separate": "Separar as faces selecionadas em um novo objeto",
+ "studio3d.edit.separate": "Separar para objeto",
+ "studio3d.hist.editSeparate": "Separar seleção para objeto"
 }

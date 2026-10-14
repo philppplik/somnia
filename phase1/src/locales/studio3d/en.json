@@ -934,5 +934,8 @@
  "studio3d.edit.moveZ": "Offset Z",
  "cmd.studio3d.edit.rip": "Rip the selected faces off the rest of the mesh",
  "studio3d.edit.rip": "Rip",
- "studio3d.hist.editRip": "Rip selection"
+ "studio3d.hist.editRip": "Rip selection",
+ "cmd.studio3d.edit.separate": "Split the selected faces out into a new object",
+ "studio3d.edit.separate": "Separate to Object",
+ "studio3d.hist.editSeparate": "Separate selection to object"
 }

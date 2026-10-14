@@ -7390,6 +7390,19 @@
       "hasEnabled": true
     },
     {
+      "id": "studio3d.edit.separate",
+      "title": "Split the selected faces out into a new object",
+      "category": "Edit",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "studio3d.edit.start",
       "title": "Edit mesh",
       "category": "Edit",

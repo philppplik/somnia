@@ -10,7 +10,7 @@ import type {NodeExtra} from './document';
 import {EASES,isEase,bakeTrack,type Ease} from './ease';
 import {buildExtras,type ClipMeta,type MetaTrack} from './clipMeta';
 import {groupRefs,keyIndices,copyTrackKeys,shiftTrackKeys,pasteTrackKeys,type KeyRef,type KeyData,type TrackData} from './keyEdit';
-import {extrudeFaces,insetFaces,bevelVertices,deleteElements,weldSelected,subdivideFaces,pokeFaces,duplicateFaces,fattenSelected,relaxSelected,flipFaces,dissolveFaces,fillSelected,collapseSelected,toSphereSelected,randomizeSelected,moveSelected,ripSelected,loopCut,bevelEdges,slideEdges,mirrorCombine,symmetrizeMesh,subdivideLoop,cleanupMesh,flipMesh,outsideMesh,smoothMesh,separateMesh,solidifyMesh,fillHolesMesh,relaxMesh,fattenMesh,bisectMesh,twistMesh,taperMesh,spinMesh,bridgeMesh,remeshMesh,EditError,MAX_EDIT_VERTICES,MAX_EDIT_TRIANGLES,type MeshData,type CleanupResult,type NormalsOp} from './editMesh';
+import {extrudeFaces,insetFaces,bevelVertices,deleteElements,weldSelected,subdivideFaces,pokeFaces,duplicateFaces,fattenSelected,relaxSelected,flipFaces,dissolveFaces,fillSelected,collapseSelected,toSphereSelected,randomizeSelected,moveSelected,ripSelected,extractFaces,loopCut,bevelEdges,slideEdges,mirrorCombine,symmetrizeMesh,subdivideLoop,cleanupMesh,flipMesh,outsideMesh,smoothMesh,separateMesh,solidifyMesh,fillHolesMesh,relaxMesh,fattenMesh,bisectMesh,twistMesh,taperMesh,spinMesh,bridgeMesh,remeshMesh,EditError,MAX_EDIT_VERTICES,MAX_EDIT_TRIANGLES,type MeshData,type CleanupResult,type NormalsOp} from './editMesh';
 import {sculptDab,paintMask,SculptError,type SculptOpts} from './sculpt';
 import {KEY_PATHS,KEY_STRIDE,ClipError,MAX_CLIPS,MAX_KEYS_PER_TRACK,DEFAULT_CLIP_SECONDS,insertKey,removeKey as removeKeyData,findKey,isPlainTrack,trackName,parseTrackName,checkKeyTime,checkDuration,checkClipName,lastKeyTime,type KeyPath} from './clips';
 import {mergeTransform,DEFAULT_TRANSFORM,UvError,type TextureTransform} from './uv';
@@ -893,6 +893,31 @@ export class Stage{
  editMove(offset:[number,number,number]){this.editOp({key:'studio3d.hist.editMove'},m=>moveSelected(m,[...this.editSel.verts],offset));}
  /** Rips the selected edit-mode faces off the rest of the mesh by duplicating the shared vertices, one undo step. The selection stays. */
  editRip(){this.editOp({key:'studio3d.hist.editRip'},m=>ripSelected(m,[...this.editSel.faces]));}
+ /** Splits the selected edit-mode faces out of the mesh into a new sibling object with the same transform and a cloned material, one undo step. The selection is cleared afterwards because face ordinals shift. */
+ editSeparate(){
+  const mesh=this.editMesh();
+  const data=this.meshDataOf(mesh);
+  const sel=[...this.editSel.faces];
+  let extracted:MeshData,rest:MeshData;
+  try{extracted=extractFaces(data,sel);rest=deleteElements(data,'face',{faces:sel});}catch(e){throw e instanceof EditError?new StageError(e.message):e;}
+  const before=mesh.geometry,beforeData=mesh.userData.somniaPrimitive;
+  const after=this.buildGeometry(rest);
+  const seams0=this.seamsOf(mesh);let seams1:[number,number][]=[];
+  if(seams0.length){try{seams1=remapSeams(data,seams0,rest);}catch{seams1=[];}}
+  const m2=new THREE.Mesh(this.buildGeometry(extracted),(mesh.material as THREE.Material).clone());
+  m2.name=this.uniqueName(`${mesh.name}.part`);
+  m2.position.copy(mesh.position);m2.quaternion.copy(mesh.quaternion);m2.scale.copy(mesh.scale);m2.visible=mesh.visible;
+  const parent=mesh.parent!;const at=parent.children.indexOf(mesh)+1;
+  let owned=true;
+  const set=(k:'before'|'after')=>{
+   if(k==='after'){mesh.geometry=after;delete mesh.userData.somniaPrimitive;this.setSeams(mesh,seams1);this.attach0(m2,parent,at);}
+   else{parent.remove(m2);mesh.geometry=before;if(beforeData!==undefined)mesh.userData.somniaPrimitive=beforeData;this.setSeams(mesh,seams0);}
+  };
+  set('after');
+  this.push({label:{key:'studio3d.hist.editSeparate'},undo:()=>{set('before');owned=false;},redo:()=>{set('after');owned=true;},
+   release:()=>{if(owned)before.dispose();else{after.dispose();disposeObject(m2);}}});
+  this.editSel={verts:new Set(),edges:new Map(),faces:new Set()};
+ }
  /** Collapses each connected island of the selection into one vertex at its centroid, one undo step. The selection is cleared afterwards because face ordinals shift. */
  editCollapse(){
   this.editOp({key:'studio3d.hist.editCollapse'},m=>collapseSelected(m,{verts:[...this.editSel.verts],edges:[...this.editSel.edges.values()],faces:[...this.editSel.faces]}));

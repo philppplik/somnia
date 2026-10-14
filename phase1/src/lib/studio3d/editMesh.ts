@@ -377,6 +377,27 @@ export function weldSelected(m:MeshData,verts:number[]):MeshData{
  if(m.uvs)out.uvs=m.uvs;
  return out;
 }
+/** Extracts the selected triangles into a standalone mesh with vertices compacted in order of first use. UVs travel; masks and explicit normals are dropped. */
+export function extractFaces(m:MeshData,faces:number[]):MeshData{
+ if(!faces.length)throw new EditError('Select faces to separate.');
+ const tris=m.index.length/3;
+ const sel=new Set<number>();
+ for(const f of faces){if(!Number.isInteger(f)||f<0||f>=tris)throw new EditError(`Face ${f} does not exist.`);sel.add(f);}
+ if(sel.size===tris)throw new EditError('Separating everything would leave an empty mesh.');
+ const remap=new Map<number,number>();
+ const positions:number[]=[];
+ const uvs=m.uvs?[]:undefined;
+ const index:number[]=[];
+ for(const f of sel)for(let e=0;e<3;e++){
+  const v=m.index[f*3+e];
+  let i=remap.get(v);
+  if(i===undefined){i=positions.length/3;remap.set(v,i);positions.push(m.positions[v*3],m.positions[v*3+1],m.positions[v*3+2]);if(uvs)uvs.push(m.uvs![v*2],m.uvs![v*2+1]);}
+  index.push(i);
+ }
+ const out:MeshData={positions,index};
+ if(uvs)out.uvs=uvs;
+ return out;
+}
 /** Rips the selected faces off the rest of the mesh in place: every vertex shared between selected and unselected faces is duplicated, the selected faces keep the originals and the unselected faces get the copies. Nothing moves - the mesh just stops being connected there. UVs travel with the copies; masks and explicit normals are dropped. */
 export function ripSelected(m:MeshData,faces:number[]):MeshData{
  check(m);
