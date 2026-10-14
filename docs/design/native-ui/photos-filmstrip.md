@@ -122,3 +122,16 @@ Coverage: `photos-filmstrip.spec.ts` gains a light/dark leg that
 selects two photos, applies the b/w preset, reads `saturation: -100`
 back from both sessions, verifies the unselected photo stayed neutral
 and the picker reset.
+
+## Auto-advance (P84)
+
+A filmstrip toggle (`photos.autoAdvance`, SkipForward icon) turns on
+Lightroom-style auto advance: after a rating or flag key lands on the
+active photo — single selection only, multi-select batches stay put —
+the workspace moves to the next photo in library order. On the last
+photo it simply stays.
+
+Coverage: `photos-filmstrip.spec.ts` gains a light/dark leg that
+enables the toggle, rates (badge on the first photo, active moves to
+the second), flags (moves to the third), hits the end without moving,
+proves multi-select batches don't advance, and disables the toggle.

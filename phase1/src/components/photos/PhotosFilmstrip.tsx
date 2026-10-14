@@ -1,6 +1,6 @@
 import {useEffect,useRef,useState} from 'react';
 import {Star} from 'lucide-react';
-import {Flag} from '../../lib/icons';
+import {Flag,SkipForward} from '../../lib/icons';
 import {useT} from '../../lib/useT';
 import {setActiveMedia,useMedia} from '../../lib/media';
 import {developablePhotos} from '../../lib/photos/photoNav';
@@ -25,6 +25,7 @@ export function PhotosFilmstrip({active}:{active:string}){
  const [minRating,setMinRating]=usePanelState<number|string>('photos.ratingFilter',0);
  const [sort,setSort]=usePanelState<FilmstripSort>('photos.filmstripSort','library');
  const [sel,setSel]=usePanelState<string[]>('photos.filmstripSelection',[]);
+ const [autoAdvance,setAutoAdvance]=usePanelState<boolean>('photos.autoAdvance',false);
  const [anchor,setAnchor]=usePanelState<string|null>('photos.filmstripAnchor',null);
  const [applyNote,setApplyNote]=useState<string|null>(null);
  const [rawPresets]=usePanelState<unknown>('photos.presets.user',[]);
@@ -70,6 +71,7 @@ export function PhotosFilmstrip({active}:{active:string}){
    {BUILT_IN_PRESETS.map(p=><option key={p.id} value={p.id}>{t(p.labelKey)}</option>)}
    {userPresets.map(p=><option key={p.id} value={`user:${p.id}`}>{p.name}</option>)}
   </NativeSelect>}
+  <Button variant="outline" size="icon" aria-pressed={autoAdvance} aria-label={t('photos.filmstrip.autoAdvance')} title={t('photos.filmstrip.autoAdvance')} onClick={()=>setAutoAdvance(!autoAdvance)} className="h-7 w-7 shrink-0" data-testid="photos-filmstrip-autoadvance"><SkipForward size={12}/></Button>
   {applyNote&&<span className="shrink-0 text-ink-3" data-testid="photos-filmstrip-apply-note">{applyNote}</span>}
   <RatingStars name={active} prefix="photos-filmstrip"/>
   {photos.map(p=><Button key={p.name} variant="outline" size="compact" aria-pressed={p.name===active} aria-label={p.name} onClick={e=>{

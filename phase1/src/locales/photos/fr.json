@@ -129,5 +129,6 @@
  "photos.filmstrip.sort.flag": "Marqueur",
  "photos.filmstrip.apply": "Appliquer à {count} photos",
  "photos.filmstrip.applyDone": "{applied} appliquées, {failed} échouées",
- "photos.filmstrip.applyPreset": "Appliquer le préréglage à la sélection"
+ "photos.filmstrip.applyPreset": "Appliquer le préréglage à la sélection",
+ "photos.filmstrip.autoAdvance": "Avance automatique après notation"
 }

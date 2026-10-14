@@ -166,6 +166,8 @@ export function PhotosWorkspace({item}:{item:MediaItem}){
  },[zoom,fit,zoomTo]);
  /** Rating/flag keys act on the filmstrip selection when more than one photo is selected, otherwise on the active photo. */
  const cullTargets=(active:string):string[]=>{const sel=panelStateStore.get<string[]>('photos.filmstripSelection',[]);return sel.length>1?sel:[active];};
+ /** Lightroom-style auto advance: after a rating/flag key on the active photo (not a multi-selection), move to the next one. */
+ const maybeAdvance=(active:string,targets:string[])=>{if(targets.length===1&&targets[0]===active&&panelStateStore.get<boolean>('photos.autoAdvance',false)&&nav.next)setActiveMedia(nav.next);};
  useEffect(()=>{ // arrows walk the library like the prev/next buttons, digits 0-5 rate the active photo; editable targets and modifiers keep their keys
   const onKey=(e:KeyboardEvent)=>{
    if(e.metaKey||e.ctrlKey||e.altKey)return;
@@ -180,10 +182,10 @@ export function PhotosWorkspace({item}:{item:MediaItem}){
    }
    if(e.key==='ArrowLeft'&&nav.prev){e.preventDefault();setActiveMedia(nav.prev);}
    else if(e.key==='ArrowRight'&&nav.next){e.preventDefault();setActiveMedia(nav.next);}
-   else if(/^[0-5]$/.test(e.key)){const t=cullTargets(item.name);for(const n of t)setRating(n,Number(e.key));}
-   else if(e.key==='p'||e.key==='P'){const t=cullTargets(item.name);for(const n of t)setFlag(n,'pick');}
-   else if(e.key==='x'||e.key==='X'){const t=cullTargets(item.name);for(const n of t)setFlag(n,'reject');}
-   else if(e.key==='u'||e.key==='U'){const t=cullTargets(item.name);for(const n of t)setFlag(n,null);}
+   else if(/^[0-5]$/.test(e.key)){const t=cullTargets(item.name);for(const n of t)setRating(n,Number(e.key));maybeAdvance(item.name,t);}
+   else if(e.key==='p'||e.key==='P'){const t=cullTargets(item.name);for(const n of t)setFlag(n,'pick');maybeAdvance(item.name,t);}
+   else if(e.key==='x'||e.key==='X'){const t=cullTargets(item.name);for(const n of t)setFlag(n,'reject');maybeAdvance(item.name,t);}
+   else if(e.key==='u'||e.key==='U'){const t=cullTargets(item.name);for(const n of t)setFlag(n,null);maybeAdvance(item.name,t);}
    else if(e.key==='o'||e.key==='O')setGuideStyle(CROP_GUIDE_STYLES[(CROP_GUIDE_STYLES.indexOf(guideStyle)+1)%CROP_GUIDE_STYLES.length]);
    else if(e.key==='z'||e.key==='Z'){if(zoom===null){setZoom(1);setPan([0,0]);}else{setZoom(null);setPan([0,0]);}} // same states as the fit/actual buttons
    else if(e.key==='\\'&&!e.repeat)setCompare(true); // hold to peek at the original, like the compare button

@@ -129,5 +129,6 @@
  "photos.filmstrip.sort.flag": "Flag",
  "photos.filmstrip.apply": "Apply to {count} photos",
  "photos.filmstrip.applyDone": "{applied} applied, {failed} failed",
- "photos.filmstrip.applyPreset": "Apply preset to selection"
+ "photos.filmstrip.applyPreset": "Apply preset to selection",
+ "photos.filmstrip.autoAdvance": "Auto-advance after rating"
 }

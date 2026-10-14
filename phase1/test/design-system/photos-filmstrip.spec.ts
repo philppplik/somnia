@@ -231,3 +231,36 @@ test('batch preset: applying a built-in preset hits every selected photo (light 
   await page.evaluate(async()=>{const mod=await import('/src/lib/photos/studioSession.ts');for(const n of['strip-1.png','strip-3.png'])mod.commitPhotoSettings(n,(s:{saturation:number})=>({...s,saturation:0}));}); // clean up for the next leg
  }
 });
+test('auto-advance: rating keys move to the next photo when enabled (light and dark)',async({page})=>{
+ for(const theme of['light','dark']){
+  await page.goto('/test/design-system/?view=photos-filmstrip');
+  await page.evaluate(t=>document.documentElement.setAttribute('data-theme',t),theme);
+  await expect(page.getByTestId('photos-workspace')).toBeVisible();
+  await expect(page.getByTestId('photos-filmstrip-item-strip-3.png')).toBeVisible();
+  await page.getByTestId('photos-filmstrip-item-strip-1.png').click();
+  const toggle=page.getByTestId('photos-filmstrip-autoadvance');
+  if(await toggle.getAttribute('aria-pressed')!=='true')await toggle.click();
+  await page.keyboard.press('4');
+  await expect(page.getByTestId('photos-filmstrip-rating-badge-strip-1.png')).toHaveText('4');
+  await expect(page.getByTestId('photos-name')).toHaveText('strip-2.png'); // advanced
+  await page.keyboard.press('x');
+  await expect(page.getByTestId('photos-filmstrip-flag-strip-2.png')).toHaveAttribute('data-flag','reject');
+  await expect(page.getByTestId('photos-name')).toHaveText('strip-3.png'); // advanced again
+  await page.screenshot({path:`test-results/ds-photos-autoadvance-${theme}.png`,fullPage:true});
+  await page.keyboard.press('p'); // last photo: nowhere to advance
+  await expect(page.getByTestId('photos-name')).toHaveText('strip-3.png');
+  await page.getByTestId('photos-filmstrip-item-strip-1.png').click();
+  await page.getByTestId('photos-filmstrip-item-strip-2.png').click({modifiers:['ControlOrMeta']}); // multi-selection: no advance
+  await page.keyboard.press('u');
+  await expect(page.getByTestId('photos-name')).toHaveText('strip-1.png');
+  await toggle.click(); // off
+  await page.getByTestId('photos-filmstrip-item-strip-2.png').click(); // collapses selection
+  await page.keyboard.press('0');
+  await expect(page.getByTestId('photos-name')).toHaveText('strip-2.png'); // stays put
+  await page.keyboard.press('0');
+  await page.getByTestId('photos-filmstrip-item-strip-3.png').click();
+  await page.keyboard.press('u');await page.keyboard.press('0'); // clean up for the next leg
+  await page.getByTestId('photos-filmstrip-item-strip-1.png').click();
+  await page.keyboard.press('0');
+ }
+});

@@ -129,5 +129,6 @@
  "photos.filmstrip.sort.flag": "Markierung",
  "photos.filmstrip.apply": "Auf {count} Fotos anwenden",
  "photos.filmstrip.applyDone": "{applied} übernommen, {failed} fehlgeschlagen",
- "photos.filmstrip.applyPreset": "Preset auf Auswahl anwenden"
+ "photos.filmstrip.applyPreset": "Preset auf Auswahl anwenden",
+ "photos.filmstrip.autoAdvance": "Auto-Weiterschalten nach Bewertung"
 }
