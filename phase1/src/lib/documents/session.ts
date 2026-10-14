@@ -2,7 +2,7 @@ import {scrollToPage} from './scrollPage';
 import {commentAuthor} from './author';
 import {setStyleList} from './styles';
 import {stylePatchProblem,STYLE_ID_RE,tocProblem,isListKind,listOptionsProblem,type ListStyleId} from './protocol';
-import {propertiesProblem,linkProblem,commentProblem,type CommentItem,validHfText,type HeaderFooterState,checkFormatPatch,checkParaPatch,MAX_HF_CHARS,MAX_NEW_TABLE_COLS,MAX_NEW_TABLE_ROWS,TABLE_OPS,type TableOp,DOC_STYLES,type DocStyleId,type ListKindId,type ParaPatch,type ImageOp,type PageSetupPatch,type PageSetupState,pageSetupProblem,type TableStyle,type TableStyleScope,tableStyleProblem,MIN_COL_PT,MAX_COL_PT,imageProblem,IMAGE_WIDTH_PERCENTS,MAX_IMAGES} from './protocol';
+import {HF_ALIGNS,propertiesProblem,linkProblem,commentProblem,type CommentItem,validHfText,type HeaderFooterState,checkFormatPatch,checkParaPatch,MAX_HF_CHARS,MAX_NEW_TABLE_COLS,MAX_NEW_TABLE_ROWS,TABLE_OPS,type TableOp,DOC_STYLES,type DocStyleId,type ListKindId,type ParaPatch,type ImageOp,type PageSetupPatch,type PageSetupState,pageSetupProblem,type TableStyle,type TableStyleScope,tableStyleProblem,MIN_COL_PT,MAX_COL_PT,imageProblem,IMAGE_WIDTH_PERCENTS,MAX_IMAGES} from './protocol';
 import {captureDocumentSelection} from './selectionCapture';
 import {CELL_BASE,caretAfterEdit,applyEdit,diffEdit,inverseOf,UndoStack,type TextEdit,type UndoEntry} from './edit';
 import {findMatches,nextMatchIndex,textStats,validFindQuery,validReplaceText,MAX_FIND_HIGHLIGHTS,MAX_REPLACE_BLOCKS,type FindMatch} from './find';
@@ -622,9 +622,10 @@ export async function readHeaderFooter():Promise<HeaderFooterState|null>{
  const e=engine;if(!e||getDocumentsState().status!=='ready')return null;const check=ownerGuard();const st=await e.headerFooterState();check();return st;
 }
 /** Set the default header text, footer text and footer page number for every section. A part left undefined stays as it is. One undo step; the caret does not move. */
-export const setHeaderFooter=(patch:{header?:string;footer?:string;pageNumber?:boolean})=>run(async()=>{
+export const setHeaderFooter=(patch:{header?:string;footer?:string;pageNumber?:boolean;headerAlign?:import('./protocol').HfAlign;footerAlign?:import('./protocol').HfAlign})=>run(async()=>{
+ for(const v of [patch.headerAlign,patch.footerAlign])if(v!==undefined&&!(HF_ALIGNS as readonly unknown[]).includes(v))throw new Error('The alignment is not valid.');
  if((patch.header!==undefined&&!validHfText(patch.header))||(patch.footer!==undefined&&!validHfText(patch.footer))||(patch.pageNumber!==undefined&&typeof patch.pageNumber!=='boolean'))throw new Error(`Header and footer text is limited to ${MAX_HF_CHARS} characters, without line breaks.`);
- if(patch.header===undefined&&patch.footer===undefined&&patch.pageNumber===undefined)return;
+ if(patch.header===undefined&&patch.footer===undefined&&patch.pageNumber===undefined&&patch.headerAlign===undefined&&patch.footerAlign===undefined)return;
  const c=getDocumentsState().caret;if(!c)throw new Error('Place the caret in the document first.');
  const spot={block:c.block,off:c.head};
  await structural(eng=>eng.setHeaderFooter(patch),spot,spot);

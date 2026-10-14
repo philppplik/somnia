@@ -2222,7 +2222,53 @@ impl DocSession {
         };
         let (h, _, he) = one(false);
         let (f, fp, fe) = one(true);
-        serde_json::json!({"header": {"text": h, "editable": he}, "footer": {"text": f, "pageNumber": fp, "editable": fe}}).to_string()
+        let al = |footer: bool| self.hf_story(footer).map_or(if footer { "center" } else { "left" }, |id| self.hf_align(id, footer));
+        serde_json::json!({"header": {"text": h, "editable": he, "align": al(false)}, "footer": {"text": f, "pageNumber": fp, "editable": fe, "align": al(true)}}).to_string()
+    }
+    /// The alignment of a one-paragraph header/footer story as `left`, `center` or `right` (the default of a new one when unset).
+    fn hf_align(&self, id: u32, footer: bool) -> &'static str {
+        use wordcraft_doc::Align;
+        let a = self.doc.parts.get(&id).and_then(|p| p.blocks.first()).and_then(|b| if let Block::Para(p) = &**b { p.props.align } else { None });
+        match a {
+            Some(Align::Center) => "center",
+            Some(Align::Right) => "right",
+            Some(Align::Left) => "left",
+            _ => if footer { "center" } else { "left" },
+        }
+    }
+    /// Sets the alignment of the existing simple header and/or footer story (`left`, `center`, `right`). A missing story is refused.
+    fn do_set_hf_align(&mut self, header: Option<&str>, footer: Option<&str>) -> Result<(), String> {
+        use wordcraft_doc::Align;
+        let parse = |v: &str| match v {
+            "left" => Ok(Align::Left),
+            "center" => Ok(Align::Center),
+            "right" => Ok(Align::Right),
+            _ => Err("alignment must be left, center or right".to_string()),
+        };
+        let mut plan: Vec<(u32, Align)> = Vec::new();
+        for (v, footer) in [(header, false), (footer, true)] {
+            let Some(v) = v else { continue };
+            let a = parse(v)?;
+            let id = self.hf_story(footer).ok_or(if footer { "there is no footer to align" } else { "there is no header to align" })?;
+            if self.hf_simple(id).is_none() {
+                return Err("that part has content that cannot be edited here".into());
+            }
+            plan.push((id, a));
+        }
+        if plan.is_empty() {
+            return Err("nothing to change".into());
+        }
+        for (id, a) in plan {
+            if let Some(part) = self.doc.parts.get_mut(&id) {
+                if let Some(first) = part.blocks.first_mut() {
+                    if let Block::Para(p) = Arc::make_mut(first) {
+                        p.props.align = Some(a);
+                    }
+                }
+            }
+        }
+        self.pages = DocLayout::default();
+        Ok(())
     }
     fn hf_validate(text: &str) -> Result<(), String> {
         if text.chars().count() > HF_MAX_CHARS {
@@ -2267,7 +2313,8 @@ impl DocSession {
                     return Err("the header has content that cannot be edited here".into());
                 }
             }
-            plan.push((PartKind::Header, if h.is_empty() { None } else { Some(Self::hf_para(h, false, wordcraft_doc::Align::Left)?) }));
+            let keep = match self.hf_story(false).map(|id| self.hf_align(id, false)) { Some("center") => wordcraft_doc::Align::Center, Some("right") => wordcraft_doc::Align::Right, _ => wordcraft_doc::Align::Left };
+            plan.push((PartKind::Header, if h.is_empty() { None } else { Some(Self::hf_para(h, false, keep)?) }));
         }
         if footer.is_some() || page_number.is_some() {
             let existing = self.hf_story(true);
@@ -2277,7 +2324,8 @@ impl DocSession {
             };
             let text = footer.map(str::to_string).unwrap_or(old_text);
             let page = page_number.unwrap_or(old_page);
-            plan.push((PartKind::Footer, if text.is_empty() && !page { None } else { Some(Self::hf_para(&text, page, wordcraft_doc::Align::Center)?) }));
+            let keep = match existing.map(|id| self.hf_align(id, true)) { Some("left") => wordcraft_doc::Align::Left, Some("right") => wordcraft_doc::Align::Right, _ => wordcraft_doc::Align::Center };
+            plan.push((PartKind::Footer, if text.is_empty() && !page { None } else { Some(Self::hf_para(&text, page, keep)?) }));
         }
         for (kind, para) in plan {
             let footer = matches!(kind, PartKind::Footer);
@@ -2871,6 +2919,10 @@ impl DocSession {
         self.do_header_footer_state()
     }
     /// Sets the default header text, footer text and page number of every section; `undefined` keeps a part as it is.
+    /// `header` / `footer`: `left`, `center` or `right` for the existing story.
+    pub fn set_header_footer_align(&mut self, header: Option<String>, footer: Option<String>) -> Result<(), JsValue> {
+        self.do_set_hf_align(header.as_deref(), footer.as_deref()).map_err(|e| JsValue::from_str(&e))
+    }
     pub fn set_header_footer(&mut self, header: Option<String>, footer: Option<String>, page_number: Option<bool>) -> Result<(), JsValue> {
         self.do_set_header_footer(header.as_deref(), footer.as_deref(), page_number).map_err(|e| JsValue::from_str(&e))
     }
@@ -3338,6 +3390,33 @@ mod tests {
         s.do_table_edit(CELL_BASE, "split_down").unwrap();
         assert_eq!(s.cell_paras().count(), n);
         assert!(s.do_table_edit(CELL_BASE, "split_down").is_err());
+    }
+    #[test]
+    fn header_footer_alignment_set_kept_across_text_edits_and_validated() {
+        let mut s = DocSession::from_bytes(FIXTURE).unwrap();
+        let st = |s: &DocSession| -> serde_json::Value { serde_json::from_str(&s.do_header_footer_state()).unwrap() };
+        let start = st(&s);
+        if start["header"]["editable"] != true || start["footer"]["editable"] != true {
+            return;
+        }
+        s.do_set_header_footer(Some("Report"), Some("Draft"), Some(true)).unwrap();
+        assert_eq!((st(&s)["header"]["align"].as_str(), st(&s)["footer"]["align"].as_str()), (Some("left"), Some("center")));
+        s.do_set_hf_align(Some("right"), Some("left")).unwrap();
+        assert_eq!((st(&s)["header"]["align"].as_str(), st(&s)["footer"]["align"].as_str()), (Some("right"), Some("left")));
+        s.do_set_header_footer(Some("Report 2"), Some("Draft 2"), None).unwrap();
+        assert_eq!((st(&s)["header"]["align"].as_str(), st(&s)["footer"]["align"].as_str()), (Some("right"), Some("left")), "text edits keep the alignment");
+        let saved = wordcraft_docx::write(&s.doc).unwrap();
+        let re = DocSession::from_bytes(&saved).unwrap();
+        let v = re.do_header_footer_state();
+        let v: serde_json::Value = serde_json::from_str(&v).unwrap();
+        assert_eq!((v["header"]["align"].as_str(), v["footer"]["align"].as_str()), (Some("right"), Some("left")));
+        let before = s.do_header_footer_state();
+        for (h, f) in [(Some("middle"), None), (None, Some("")), (None, None)] {
+            assert!(s.do_set_hf_align(h, f).is_err());
+        }
+        assert_eq!(before, s.do_header_footer_state());
+        s.do_set_header_footer(Some(""), Some(""), Some(false)).unwrap();
+        assert!(s.do_set_hf_align(Some("left"), None).is_err(), "no header to align");
     }
     #[test]
     fn header_footer_roundtrip_undo_and_refusals() {

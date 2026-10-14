@@ -158,7 +158,7 @@ export type DocumentsRequest=
  |{id:number;kind:'resolveComment';commentId:number;resolved:boolean}
  |{id:number;kind:'deleteComment';commentId:number}
  |{id:number;kind:'headerFooterState'}
- |{id:number;kind:'setHeaderFooter';header?:string;footer?:string;pageNumber?:boolean}
+ |{id:number;kind:'setHeaderFooter';header?:string;footer?:string;pageNumber?:boolean;headerAlign?:HfAlign;footerAlign?:HfAlign}
  |{id:number;kind:'insertTable';block:number;rows:number;cols:number}
  |{id:number;kind:'save';date?:string;author?:string}
  |{id:number;kind:'exportPdf';options?:PdfOptions;date?:string}
@@ -306,7 +306,9 @@ export function pageSetupProblem(p:unknown):string|null{
  }
  return null;
 }
-export interface HeaderFooterState{header:{text:string;editable:boolean};footer:{text:string;pageNumber:boolean;editable:boolean}}
+export type HfAlign='left'|'center'|'right';
+export const HF_ALIGNS:readonly HfAlign[]=['left','center','right'];
+export interface HeaderFooterState{header:{text:string;editable:boolean;align?:HfAlign};footer:{text:string;pageNumber:boolean;editable:boolean;align?:HfAlign}}
 /** A header/footer text the engine accepts: at most 500 characters and no control characters or line breaks. */
 export const validHfText=(v:unknown):v is string=>typeof v==='string'&&Array.from(v).length<=MAX_HF_CHARS&&!/[\u0000-\u001f\u007f-\u009f\ufffc\u2028\u2029]/u.test(v);
 
