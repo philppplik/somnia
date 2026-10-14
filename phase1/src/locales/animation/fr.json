@@ -808,5 +808,10 @@
  "cmd.animation.keys.reverse": "Inverser les clés dans le temps",
  "animation.keys.invert": "Inverser les valeurs",
  "animation.keys.invert.hint": "Reflète les valeurs des clés choisies autour du milieu de la plage de chaque propriété ; temps et courbes inchangés",
- "cmd.animation.keys.invert": "Inverser les valeurs des clés choisies"
+ "cmd.animation.keys.invert": "Inverser les valeurs des clés choisies",
+ "animation.keys.range.before": "Clés ≤ tête",
+ "animation.keys.range.before.hint": "Choisir les clés à la tête de lecture ou avant sur les calques choisis",
+ "animation.keys.range.after": "Clés ≥ tête",
+ "animation.keys.range.after.hint": "Choisir les clés à la tête de lecture ou après sur les calques choisis",
+ "cmd.animation.keys.selectRange": "Choisir les clés avant ou après la tête de lecture"
 }

@@ -808,5 +808,10 @@
  "cmd.animation.keys.reverse": "Inverter chaves no tempo",
  "animation.keys.invert": "Inverter valores",
  "animation.keys.invert.hint": "Espelha os valores das chaves escolhidas em torno do meio da faixa de cada propriedade; tempos e curvas não mudam",
- "cmd.animation.keys.invert": "Inverter os valores das chaves escolhidas"
+ "cmd.animation.keys.invert": "Inverter os valores das chaves escolhidas",
+ "animation.keys.range.before": "Chaves ≤ cursor",
+ "animation.keys.range.before.hint": "Escolher as chaves no cursor ou antes nas camadas escolhidas",
+ "animation.keys.range.after": "Chaves ≥ cursor",
+ "animation.keys.range.after.hint": "Escolher as chaves no cursor ou depois nas camadas escolhidas",
+ "cmd.animation.keys.selectRange": "Escolher as chaves antes ou depois do cursor"
 }

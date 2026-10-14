@@ -295,7 +295,7 @@ const marquee=(e:PointerEvent<SVGSVGElement>)=>{
     <Button size="tiny" variant="ghost" disabled={!setClip} title={t('animation.keySet.paste.hint')} onClick={()=>run('animation.keys.pasteToSet',{layers:layerSetIds(selected)})} data-testid="animation-keyset-paste">{t('animation.keySet.paste')}</Button>
     <Button size="tiny" variant="ghost" disabled={!setClip} title={t('animation.keySet.place.hint')} onClick={()=>run('animation.keys.pasteInPlace')} data-testid="animation-keyset-place">{t('animation.keySet.place')}</Button></span>}
    <KeyStretch comp={comp} keys={pruneSelection(state.doc,view.selectedKeys)} styleKeys={pruneStyleKeys(comp.layers,view.styleKeys)} at={at}/>
-   <KeyRepeat count={pruneSelection(state.doc,view.selectedKeys).length}/>
+   <KeyRepeat count={pruneSelection(state.doc,view.selectedKeys).length} layers={layerSetIds(selected)}/>
    <Button size="tiny" variant="ghost" disabled={sel.length===0||!(comp.markers??[]).length} title={t('animation.keys.quantize.hint')} onClick={()=>run('animation.keys.quantize')} data-testid="animation-keys-quantize">{t('animation.keys.quantize')}</Button>
    <Button size="tiny" variant="ghost" disabled={!(comp.markers??[]).some(m=>m.t<at)} onClick={()=>animationSession().setView({playhead:Math.max(...(comp.markers??[]).filter(m=>m.t<at).map(m=>m.t))})}>{t('animation.markers.previous')}</Button>
    <Button size="tiny" variant="ghost" disabled={!(comp.markers??[]).some(m=>m.t>at)} onClick={()=>animationSession().setView({playhead:Math.min(...(comp.markers??[]).filter(m=>m.t>at).map(m=>m.t))})}>{t('animation.markers.next')}</Button>

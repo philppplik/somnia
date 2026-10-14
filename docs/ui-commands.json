@@ -837,6 +837,22 @@
       "hasEnabled": true
     },
     {
+      "id": "animation.keys.selectRange",
+      "title": "Select the keys before or after the playhead",
+      "category": "View",
+      "source": "animation",
+      "keywords": [
+        "after",
+        "animation",
+        "before",
+        "keys",
+        "playhead",
+        "range",
+        "select"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "animation.keys.selectSet",
       "title": "Select all keys of several layers",
       "category": "View",

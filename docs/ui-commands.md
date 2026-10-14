@@ -16,7 +16,7 @@ included; the `source` column names the owner. Dynamic sources that stay outside
 
 Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, fr, pt-BR); the gate enforces it.
 
-574 commands. Categories: Edit, Help, Insert, Project, Tools, View.
+575 commands. Categories: Edit, Help, Insert, Project, Tools, View.
 
 | id | title | category | source | shortcut |
 | --- | --- | --- | --- | --- |
@@ -88,6 +88,7 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `animation.keys.repeat` | Repeat the selected keys as cycles or ping-pong | Edit | animation |  |
 | `animation.keys.reverse` | Reverse keys in time | Edit | animation |  |
 | `animation.keys.selectAll` | Select all keys of the layer | View | animation |  |
+| `animation.keys.selectRange` | Select the keys before or after the playhead | View | animation |  |
 | `animation.keys.selectSet` | Select all keys of several layers | View | animation |  |
 | `animation.keys.smooth` | Smooth position path through selected keys | Edit | animation |  |
 | `animation.keys.straighten` | Straighten position path at selected keys | Edit | animation |  |

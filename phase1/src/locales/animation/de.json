@@ -808,5 +808,10 @@
  "cmd.animation.keys.reverse": "Keys zeitlich umkehren",
  "animation.keys.invert": "Werte invertieren",
  "animation.keys.invert.hint": "Werte der gewählten Keys an der Mitte des Wertebereichs jeder Eigenschaft spiegeln; Zeiten und Easing bleiben",
- "cmd.animation.keys.invert": "Werte der gewählten Keys invertieren"
+ "cmd.animation.keys.invert": "Werte der gewählten Keys invertieren",
+ "animation.keys.range.before": "Keys ≤ Position",
+ "animation.keys.range.before.hint": "Keys an oder vor der Abspielposition auf den gewählten Ebenen auswählen",
+ "animation.keys.range.after": "Keys ≥ Position",
+ "animation.keys.range.after.hint": "Keys an oder nach der Abspielposition auf den gewählten Ebenen auswählen",
+ "cmd.animation.keys.selectRange": "Keys vor oder nach der Abspielposition auswählen"
 }

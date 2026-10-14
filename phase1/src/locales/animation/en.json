@@ -808,5 +808,10 @@
  "cmd.animation.keys.reverse": "Reverse keys in time",
  "animation.keys.invert": "Invert values",
  "animation.keys.invert.hint": "Flip the values of the selected keys around the middle of each property range; times and easing stay",
- "cmd.animation.keys.invert": "Invert the values of the selected keys"
+ "cmd.animation.keys.invert": "Invert the values of the selected keys",
+ "animation.keys.range.before": "Keys ≤ playhead",
+ "animation.keys.range.before.hint": "Select the keys at or before the playhead on the selected layers",
+ "animation.keys.range.after": "Keys ≥ playhead",
+ "animation.keys.range.after.hint": "Select the keys at or after the playhead on the selected layers",
+ "cmd.animation.keys.selectRange": "Select the keys before or after the playhead"
 }
