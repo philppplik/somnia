@@ -807,6 +807,20 @@ test('mesh edit mode: delete selected faces removes triangles, undo restores the
  await expect(page.getByRole('alert')).toContainText('Select faces to delete');
 });
 
+test('mesh edit mode: subdivide splits selected faces into four, undo restores them',async({page})=>{
+ await blank(page);
+ const id=await insert(page,'cube',0);
+ expect(await run(page,'studio3d.edit.start',{id,mode:'face'})).toBe(true);
+ expect(await run(page,'studio3d.edit.select',{kind:'face',ids:[4,5]})).toBe(true);
+ expect(await run(page,'studio3d.edit.subdivide',{})).toBe(true);
+ await expect.poll(async()=>(await session(page)).stats.triangles).toBe(18);
+ let s=await session(page);expect(s.edit).toMatchObject({faces:0,verts:0,edges:0});
+ await run(page,'studio3d.undo');
+ await expect.poll(async()=>(await session(page)).stats.triangles).toBe(12);
+ expect(await run(page,'studio3d.edit.subdivide',{})).toBe(false);
+ await expect(page.getByRole('alert')).toContainText('Select faces to subdivide');
+});
+
 test('mesh edit mode: weld merges selected vertices at their centre, undo restores them',async({page})=>{
  await blank(page);
  const id=await insert(page,'cube',0);

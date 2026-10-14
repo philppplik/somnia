@@ -885,5 +885,8 @@
  "studio3d.hist.editDelete": "Delete elements",
  "cmd.studio3d.edit.weld": "Merge selected vertices at centre",
  "studio3d.edit.weld": "Merge",
- "studio3d.hist.editWeld": "Merge vertices"
+ "studio3d.hist.editWeld": "Merge vertices",
+ "cmd.studio3d.edit.subdivide": "Split selected triangles into four by edge midpoints",
+ "studio3d.edit.subdivide": "Subdivide",
+ "studio3d.hist.editSubdivide": "Subdivide faces"
 }

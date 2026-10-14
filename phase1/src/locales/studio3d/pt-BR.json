@@ -885,5 +885,8 @@
  "studio3d.hist.editDelete": "Excluir elementos",
  "cmd.studio3d.edit.weld": "Mesclar os vértices selecionados no centro",
  "studio3d.edit.weld": "Mesclar",
- "studio3d.hist.editWeld": "Mesclar vértices"
+ "studio3d.hist.editWeld": "Mesclar vértices",
+ "cmd.studio3d.edit.subdivide": "Dividir os triângulos selecionados em quatro pelos pontos médios das arestas",
+ "studio3d.edit.subdivide": "Subdividir",
+ "studio3d.hist.editSubdivide": "Subdividir faces"
 }

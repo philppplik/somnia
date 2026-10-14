@@ -377,6 +377,34 @@ export function weldSelected(m:MeshData,verts:number[]):MeshData{
  if(m.uvs)out.uvs=m.uvs;
  return out;
 }
+/** Splits each selected triangle into four by inserting edge midpoints (planar, no smoothing): midpoints are shared between neighbouring selected triangles, unselected triangles pass through unchanged. UVs interpolate with the positions; masks and explicit normals are dropped. */
+export function subdivideFaces(m:MeshData,faces:number[]):MeshData{
+ if(!faces.length)throw new EditError('Select faces to subdivide.');
+ const tris=m.index.length/3;
+ const sel=new Set<number>();
+ for(const f of faces){if(!Number.isInteger(f)||f<0||f>=tris)throw new EditError(`Face ${f} does not exist.`);sel.add(f);}
+ const positions=[...m.positions];
+ const uvs=m.uvs?[...m.uvs]:undefined;
+ const mids=new Map<string,number>();
+ const midpoint=(a:number,b:number):number=>{
+  const k=a<b?`${a}_${b}`:`${b}_${a}`;
+  const hit=mids.get(k);if(hit!==undefined)return hit;
+  const i=positions.length/3;
+  positions.push((positions[a*3]+positions[b*3])/2,(positions[a*3+1]+positions[b*3+1])/2,(positions[a*3+2]+positions[b*3+2])/2);
+  if(uvs)uvs.push((uvs[a*2]+uvs[b*2])/2,(uvs[a*2+1]+uvs[b*2+1])/2);
+  mids.set(k,i);return i;
+ };
+ const index:number[]=[];
+ for(let f=0;f<tris;f++){
+  const a=m.index[f*3],b=m.index[f*3+1],c=m.index[f*3+2];
+  if(!sel.has(f)){index.push(a,b,c);continue;}
+  const ab=midpoint(a,b),bc=midpoint(b,c),ca=midpoint(c,a);
+  index.push(a,ab,ca, ab,b,bc, ca,bc,c, ab,bc,ca);
+ }
+ const out:MeshData={positions,index};
+ if(uvs)out.uvs=uvs;
+ return out;
+}
 /** Deletes selected elements: faces drop their own triangles, edges and vertices drop every triangle that touches them. Positions stay put (orphan vertices are allowed), so undo restores the exact geometry. Refuses an empty selection and a delete that would leave no triangle. */
 export function deleteElements(m:MeshData,kind:'vertex'|'edge'|'face',sel:{verts?:number[];edges?:[number,number][];faces?:number[]}):MeshData{
  const tris=m.index.length/3,total=m.positions.length/3;

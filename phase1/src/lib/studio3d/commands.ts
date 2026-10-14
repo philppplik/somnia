@@ -122,6 +122,7 @@ export interface Studio3DController{
  editSelectGrow(steps?:number,shrink?:boolean,kind?:'vertex'|'edge'|'face'):void;
  editDelete(kind?:'vertex'|'edge'|'face'):void;
  editWeld():void;
+ editSubdivide():void;
  editExtrude(offset:number):void;
  editInset(amount:number):void;
  editBevel(width:number):void;
@@ -295,6 +296,7 @@ export function studio3DCommandSpecs():CommandSpec<unknown,unknown>[]{
   add<{steps?:number;shrink?:boolean;kind?:'vertex'|'edge'|'face'}>('studio3d.edit.selectGrow','Grow or shrink the edited 3D mesh selection to neighbouring elements','Edit',p=>need().editSelectGrow(p?.steps,p?.shrink,p?.kind),object({steps:{type:'integer',minimum:1,maximum:64},shrink:{type:'boolean'},kind:{enum:['vertex','edge','face']}},[]),()=>getStudio3DState().edit!=null),
   add<{kind?:'vertex'|'edge'|'face'}>('studio3d.edit.delete','Delete the selected elements of the edited 3D mesh','Edit',p=>need().editDelete(p?.kind),object({kind:{enum:['vertex','edge','face']}},[]),()=>getStudio3DState().edit!=null),
   add('studio3d.edit.weld','Merge the selected vertices of the edited 3D mesh at their centre','Edit',()=>need().editWeld(),undefined,()=>getStudio3DState().edit!=null),
+  add('studio3d.edit.subdivide','Split each selected triangle of the edited 3D mesh into four by edge midpoints','Edit',()=>need().editSubdivide(),undefined,()=>getStudio3DState().edit!=null),
   add<{offset:number}>('studio3d.edit.extrude','Extrude the selected faces of the edited 3D mesh','Edit',p=>need().editExtrude(p.offset),object({offset:{type:'number',minimum:-1000,maximum:1000}}),()=>getStudio3DState().edit!=null),
   add<{amount:number}>('studio3d.edit.inset','Inset the selected faces of the edited 3D mesh','Edit',p=>need().editInset(p.amount),object({amount:{type:'number',exclusiveMinimum:0,maximum:1}}),()=>getStudio3DState().edit!=null),
   add<{width:number}>('studio3d.edit.bevel','Bevel (chamfer) the selected vertices of the edited 3D mesh','Edit',p=>need().editBevel(p.width),object({width:{type:'number',exclusiveMinimum:0,maximum:1000}}),()=>getStudio3DState().edit!=null),

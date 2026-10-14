@@ -885,5 +885,8 @@
  "studio3d.hist.editDelete": "Elemente löschen",
  "cmd.studio3d.edit.weld": "Ausgewählte Vertices im Zentrum verschmelzen",
  "studio3d.edit.weld": "Verschmelzen",
- "studio3d.hist.editWeld": "Vertices verschmelzen"
+ "studio3d.hist.editWeld": "Vertices verschmelzen",
+ "cmd.studio3d.edit.subdivide": "Ausgewählte Dreiecke an Kantenmitten in vier Teile teilen",
+ "studio3d.edit.subdivide": "Unterteilen",
+ "studio3d.hist.editSubdivide": "Faces unterteilen"
 }
