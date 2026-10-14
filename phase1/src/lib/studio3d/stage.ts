@@ -9,6 +9,7 @@ import {groupRefs,keyIndices,copyTrackKeys,shiftTrackKeys,pasteTrackKeys,type Ke
 import {KEY_PATHS,KEY_STRIDE,ClipError,MAX_CLIPS,MAX_KEYS_PER_TRACK,DEFAULT_CLIP_SECONDS,insertKey,removeKey as removeKeyData,findKey,isPlainTrack,trackName,parseTrackName,checkKeyTime,checkDuration,checkClipName,lastKeyTime,type KeyPath} from './clips';
 import {mergeTransform,DEFAULT_TRANSFORM,UvError,type TextureTransform} from './uv';
 import {textureBytes} from './validate';
+import {smoothWeights,rigidWeights,SkinError,type BoneSegment,type SkinWeights} from './skinning';
 import {emptyStats,type ModelStats,type OutlineEntry,type Bounds} from './model';
 /**
  * Scene operations for the 3D studio (P1 staging). Pure three.js core, no renderer and no DOM, so the logic runs under tsx --test.
@@ -28,6 +29,7 @@ export interface ObjectInfo{
  camera:{fov:number}|null;
  /** Kind and parameters when the mesh is an editable primitive. */primitive?:PrimitiveData|null;
  id:number;name:string;kind:OutlineEntry['kind'];position:Vec3;rotation:Vec3;scale:Vec3;
+ /** True for a skinned mesh (bound to a skeleton). */skinned:boolean;
  material:{color:string;metalness:number;roughness:number;emissive?:string;emissiveIntensity?:number;opacity?:number;alphaMode?:AlphaMode;alphaCutoff?:number;doubleSided?:boolean;/** Name of the image in each slot, or null */textures?:Record<TextureSlot,string|null>;/** UV transform per slot, null where the slot is empty */transforms?:Record<TextureSlot,TextureTransform|null>}|null;light:LightInfo|null;
 }
 export interface LightInfo{intensity:number;color:string;/** shadow casting; absent for area lights, which cannot cast shadows */shadow?:boolean;/** spot cone, degrees */angle?:number;penumbra?:number;width?:number;height?:number}
@@ -722,11 +724,72 @@ export class Stage{
   copy.name=this.uniqueName(o.name+' copy');copy.position.x+=0.5;
   const parent=o.parent??this.root;this.attach(copy,parent,parent.children.indexOf(o)+1,`Duplicate ${o.name}`);return copy;
  }
+ /** The chain below (and including) a root bone, depth-first - the same order bones() lists them in. */
+ private boneChain(root:THREE.Bone):THREE.Bone[]{const out:THREE.Bone[]=[];root.traverse(o=>{if((o as THREE.Bone).isBone)out.push(o as THREE.Bone);});return out;}
+ /** Bone segments in a mesh's local space: head is the joint, tail runs towards the average child joint; leaf joints extend their incoming direction, a lone root goes a small step up. Deterministic. */
+ private boneSegments(chain:THREE.Bone[],space:THREE.Object3D):BoneSegment[]{
+  const heads=chain.map(b=>space.worldToLocal(b.getWorldPosition(new THREE.Vector3())));
+  return chain.map((b,i)=>{
+   const kids=chain.map((c,j)=>c.parent===b?j:-1).filter(j=>j>=0);
+   let tail:THREE.Vector3;
+   if(kids.length)tail=kids.reduce((a,j)=>a.add(heads[j]),new THREE.Vector3()).multiplyScalar(1/kids.length);
+   else{const p=chain.indexOf(b.parent as THREE.Bone);tail=p>=0?heads[i].clone().multiplyScalar(2).sub(heads[p]):heads[i].clone().add(new THREE.Vector3(0,0.1,0));}
+   return{head:[heads[i].x,heads[i].y,heads[i].z],tail:[tail.x,tail.y,tail.z]};
+  });
+ }
+ private weightsFor(mesh:THREE.Mesh,chain:THREE.Bone[],mode:'smooth'|'rigid'):SkinWeights{
+  const pos=mesh.geometry.getAttribute('position');if(!pos)throw new StageError(`${mesh.name} has no vertices to skin.`);
+  const segments=this.boneSegments(chain,mesh);
+  return mode==='rigid'?rigidWeights(pos.array as ArrayLike<number>,segments):smoothWeights(pos.array as ArrayLike<number>,segments);
+ }
+ /** Binds a plain mesh to the chain below a bone: it becomes a skinned mesh with auto-computed weights (smooth falloff or rigid nearest-joint). The mesh keeps its id, uuid, transform, material and clips; its parametric shape editing ends. One undo step. */
+ skinBind(id:number,boneId:number,mode:'smooth'|'rigid'):THREE.SkinnedMesh{
+  const o=this.need(id);const mesh=o as THREE.Mesh;const bone=this.need(boneId) as THREE.Bone;
+  if(!mesh.isMesh)throw new StageError(`${o.name} is not a mesh.`);
+  if((mesh as THREE.SkinnedMesh).isSkinnedMesh)throw new StageError(`${o.name} is already skinned; recompute its weights instead.`);
+  if(!bone.isBone)throw new StageError('That target is not a bone.');
+  const parent=o.parent??this.root;const at=parent.children.indexOf(o);
+  this.root.updateMatrixWorld(true);
+  const chain=this.boneChain(bone);
+  let w:SkinWeights;try{w=this.weightsFor(mesh,chain,mode);}catch(e){throw e instanceof SkinError?new StageError(e.message):e;}
+  // The geometry is cloned: duplicates share it and must not grow skin attributes.
+  const geo=mesh.geometry.clone();
+  geo.setAttribute('skinIndex',new THREE.Uint16BufferAttribute(w.indices,4));
+  geo.setAttribute('skinWeight',new THREE.Float32BufferAttribute(w.weights,4));
+  const skinned=new THREE.SkinnedMesh(geo,mesh.material);
+  skinned.name=mesh.name;skinned.position.copy(mesh.position);skinned.quaternion.copy(mesh.quaternion);skinned.scale.copy(mesh.scale);
+  skinned.visible=mesh.visible;skinned.castShadow=mesh.castShadow;skinned.receiveShadow=mesh.receiveShadow;
+  skinned.userData={...mesh.userData};delete skinned.userData.somniaPrimitive;
+  // Same uuid: existing clip tracks keep binding to the mesh. (Object3D.id is read-only, so the caller re-selects the returned mesh.)
+  skinned.uuid=mesh.uuid;
+  skinned.bind(new THREE.Skeleton(chain,chain.map(b=>b.matrixWorld.clone().invert())),mesh.matrixWorld.clone());
+  const swap=(inn:THREE.Object3D,out:THREE.Object3D)=>{parent.remove(out);this.attach0(inn,parent,at);};
+  swap(skinned,mesh);let meshLive=false;
+  this.push({label:`Bind ${o.name} to ${bone.name||'bones'}`,undo:()=>{swap(mesh,skinned);meshLive=true;},redo:()=>{swap(skinned,mesh);meshLive=false;},
+   // Only the cloned geometry is exclusively ours; the original mesh may share its geometry and material with duplicates.
+   release:()=>{if(meshLive)geo.dispose();}});
+  this.emit();return skinned;
+ }
+ /** Recomputes the weights of an already skinned mesh against its current skeleton: smooth falloff, or rigid as the reset-to-nearest-joint bind. One undo step. */
+ skinRebind(id:number,mode:'smooth'|'rigid'){
+  const o=this.need(id);const mesh=o as THREE.SkinnedMesh;
+  if(!mesh.isSkinnedMesh)throw new StageError(`${o.name} is not a skinned mesh; bind it to a bone chain first.`);
+  this.root.updateMatrixWorld(true);
+  let w:SkinWeights;try{w=this.weightsFor(mesh,mesh.skeleton.bones,mode);}catch(e){throw e instanceof SkinError?new StageError(e.message):e;}
+  const geo=mesh.geometry;
+  const beforeI=geo.getAttribute('skinIndex') as THREE.BufferAttribute,beforeW=geo.getAttribute('skinWeight') as THREE.BufferAttribute;
+  const afterI=new THREE.Uint16BufferAttribute(w.indices,4),afterW=new THREE.Float32BufferAttribute(w.weights,4);
+  let owned=true;const apply=(i:THREE.BufferAttribute,wt:THREE.BufferAttribute)=>{geo.setAttribute('skinIndex',i);geo.setAttribute('skinWeight',wt);};
+  apply(afterI,afterW);
+  this.push({label:`Weights of ${o.name}`,undo:()=>{apply(beforeI,beforeW);owned=false;},redo:()=>{apply(afterI,afterW);owned=true;},release:()=>{(owned?beforeI:afterI).dispose?.();(owned?beforeW:afterW).dispose?.();}});
+  this.emit();
+ }
  info(id:number):ObjectInfo|null{
   const o=this.find(id);if(!o)return null;const m=o as THREE.Mesh;const l=o as THREE.Light;
   const mat=m.isMesh&&!Array.isArray(m.material)&&(m.material as THREE.MeshStandardMaterial).isMeshStandardMaterial?m.material as THREE.MeshStandardMaterial:null;
   return{id:o.id,name:o.name,kind:(o as THREE.Bone).isBone?'bone':m.isMesh?'mesh':l.isLight?'light':(o as THREE.Camera).isCamera?'camera':'group',
    position:{x:o.position.x,y:o.position.y,z:o.position.z},rotation:{x:o.rotation.x/DEG,y:o.rotation.y/DEG,z:o.rotation.z/DEG},scale:{x:o.scale.x,y:o.scale.y,z:o.scale.z},
+   skinned:(m as THREE.SkinnedMesh).isSkinnedMesh===true,
    camera:(o as THREE.PerspectiveCamera).isPerspectiveCamera?{fov:(o as THREE.PerspectiveCamera).fov}:null,
    primitive:this.primitiveOf(o),material:mat?{color:'#'+mat.color.getHexString(),metalness:mat.metalness,roughness:mat.roughness,emissive:'#'+mat.emissive.getHexString(),emissiveIntensity:mat.emissiveIntensity,opacity:mat.transparent||mat.alphaTest>0?mat.opacity:1,alphaMode:alphaModeOf(mat.transparent,mat.alphaTest),alphaCutoff:mat.alphaTest>0?mat.alphaTest:0.5,doubleSided:mat.side===THREE.DoubleSide,textures:Object.fromEntries((Object.keys(SLOT_CONFIG) as TextureSlot[]).map(k=>{const t=mat[SLOT_CONFIG[k].prop] as THREE.Texture|null;return[k,t?(t.name||'image'):null];})) as Record<TextureSlot,string|null>,transforms:Object.fromEntries((Object.keys(SLOT_CONFIG) as TextureSlot[]).map(k=>{const t=mat[SLOT_CONFIG[k].prop] as THREE.Texture|null;return[k,t?readTransform(t):null];})) as Record<TextureSlot,TextureTransform|null>}:null,light:l.isLight?lightInfo(l):null};
  }

@@ -12,7 +12,7 @@ export const studio3DShell:StudioShellDef={
  rightRail:[rail('inspector','Info','3D inspector',10)],
  inspector:{titleKey:'studio3d.shell.inspector',emptyKey:'studio3d.start.title',sections:[
   {id:'model',title:'Model',titleKey:'studio3d.shell.model',component:'studio3d.inspector.model',order:10,commands:['studio3d.anim.play','studio3d.anim.pause','studio3d.anim.seek','studio3d.anim.loop','studio3d.anim.speed','studio3d.clip.add','studio3d.clip.remove','studio3d.clip.rename','studio3d.clip.duration','studio3d.clip.duplicate','studio3d.key.set','studio3d.key.remove','studio3d.key.move','studio3d.key.ease','studio3d.key.copy','studio3d.key.paste','studio3d.key.shift','studio3d.anim.range','studio3d.anim.autokey','studio3d.skeleton.show','studio3d.skeleton.select']},
-  {id:'object',title:'Selected object',titleKey:'studio3d.shell.object',component:'studio3d.inspector.object',order:20,commands:['studio3d.texture.transform','studio3d.object.transform','studio3d.object.material','studio3d.object.primitive','studio3d.texture.open','studio3d.texture.clear','studio3d.object.rename','studio3d.object.delete','studio3d.object.duplicate','studio3d.object.nudge','studio3d.camera.set','studio3d.view.fromCamera','studio3d.light.set','studio3d.object.pivot']},
+  {id:'object',title:'Selected object',titleKey:'studio3d.shell.object',component:'studio3d.inspector.object',order:20,commands:['studio3d.texture.transform','studio3d.object.transform','studio3d.object.material','studio3d.skin.bind','studio3d.skin.reweight','studio3d.skin.preview','studio3d.object.primitive','studio3d.texture.open','studio3d.texture.clear','studio3d.object.rename','studio3d.object.delete','studio3d.object.duplicate','studio3d.object.nudge','studio3d.camera.set','studio3d.view.fromCamera','studio3d.light.set','studio3d.object.pivot']},
   {id:'tools',title:'Tools',titleKey:'studio3d.shell.tools',component:'studio3d.inspector.tools',order:22,commands:['studio3d.save','studio3d.recent.open','studio3d.recent.clear','studio3d.selection.delete','studio3d.mesh.mirror','studio3d.mesh.applyScale','studio3d.mesh.merge','studio3d.selection.duplicate','studio3d.snap.set','studio3d.export.mesh','studio3d.unit.set','studio3d.render.turntable','studio3d.render.cancel','studio3d.object.align','studio3d.object.distribute','studio3d.object.pivot']},
   {id:'env',title:'Environment',titleKey:'studio3d.shell.env',component:'studio3d.inspector.env',order:25,commands:['studio3d.env.set','studio3d.env.open']},
   {id:'view',title:'View',titleKey:'studio3d.shell.view',component:'studio3d.inspector.view',order:30,commands:['studio3d.view.grid','studio3d.view.wireframe','studio3d.view.reset','studio3d.view.frame','studio3d.view.preset','studio3d.render.still']},
@@ -52,6 +52,9 @@ export const studio3DShell:StudioShellDef={
   {menu:'View',command:'studio3d.anim.range',group:'studio3d.anim',order:48},
   {menu:'View',command:'studio3d.skeleton.show',group:'studio3d.anim',order:49},
   {menu:'Edit',command:'studio3d.texture.transform',group:'studio3d.texture',order:50},
+  {menu:'Edit',command:'studio3d.skin.bind',group:'studio3d.skin',order:55},
+  {menu:'Edit',command:'studio3d.skin.reweight',group:'studio3d.skin',order:56},
+  {menu:'View',command:'studio3d.skin.preview',group:'studio3d.anim',order:50},
   {menu:'View',command:'studio3d.view.grid',group:'studio3d.view',order:30},
   {menu:'View',command:'studio3d.view.wireframe',group:'studio3d.view',order:40},
  ],defaultLayout:STUDIO3D_LAYOUT,

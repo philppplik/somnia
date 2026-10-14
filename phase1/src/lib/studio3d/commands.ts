@@ -46,6 +46,9 @@ export interface Studio3DController{
  animRange(range:LoopRange|null):void;
  selectBone(id:number):void;
  setSkeleton(on:boolean):void;
+ skinBind(id:number,bone:number,mode:'smooth'|'rigid'):void;
+ skinRebind(id:number,mode:'smooth'|'rigid'):void;
+ setWeightPreview(bone:number|null):void;
  autoKey(on:boolean):void;
  animPlay(clip?:number):void;
  animPause():void;
@@ -104,6 +107,8 @@ const PRIMITIVE_PROPS:Record<string,unknown>=Object.fromEntries(Object.values(PA
 const hasClips=()=>hasScene()&&getStudio3DState().clips.length>0;
 const hasKeys=()=>hasScene()&&getStudio3DState().selected!=null&&getStudio3DState().clips.length>0;
 const hasBones=()=>hasScene()&&getStudio3DState().bones.length>0;
+const hasPlainMesh=()=>hasBones()&&getStudio3DState().selectedInfo?.kind==='mesh'&&!getStudio3DState().selectedInfo?.skinned;
+const hasSkinnedMesh=()=>hasBones()&&getStudio3DState().selectedInfo?.skinned===true;
 const KEYREFS={type:'array',items:{type:'object',properties:{path:{enum:['position','rotation','scale']},time:{type:'number',minimum:0,maximum:3600}},required:['path','time'],additionalProperties:false},minItems:1,maxItems:6000};
 const hasScene=()=>!!controller&&getStudio3DState().status==='ready';
 const object=(properties:Record<string,unknown>,required=Object.keys(properties))=>({type:'object',properties,required,additionalProperties:false});
@@ -171,6 +176,9 @@ export function studio3DCommandSpecs():CommandSpec<unknown,unknown>[]{
   },object({start:{type:'number',minimum:0,maximum:3600},end:{type:'number',minimum:0,maximum:3600},clear:{type:'boolean'}},[]),hasClips),
   add<{on?:boolean}>('studio3d.skeleton.show','Show or hide the skeleton overlay of a skinned 3D model','View',p=>need().setSkeleton(p?.on??!getStudio3DState().skeleton),object({on:{type:'boolean'}},[]),hasBones),
   add<{id:number}>('studio3d.skeleton.select','Select a bone of a skinned 3D model','Edit',p=>need().selectBone(p.id),object({id:{type:'integer',minimum:0}}),hasBones),
+  add<{id?:number;bone?:number;mode?:'smooth'|'rigid'}>('studio3d.skin.bind','Bind a 3D mesh to a bone chain with auto-weights','Edit',p=>need().skinBind(p?.id??getStudio3DState().selected!,p?.bone??getStudio3DState().bones.find(b=>b.depth===0)!.id,p?.mode??'smooth'),object({id:{type:'integer',minimum:0},bone:{type:'integer',minimum:0},mode:{enum:['smooth','rigid']}},[]),hasPlainMesh),
+  add<{id?:number;mode?:'smooth'|'rigid'}>('studio3d.skin.reweight','Recompute the weights of a skinned 3D mesh (smooth falloff or rigid bind)','Edit',p=>need().skinRebind(p?.id??getStudio3DState().selected!,p?.mode??'smooth'),object({id:{type:'integer',minimum:0},mode:{enum:['smooth','rigid']}},[]),hasSkinnedMesh),
+  add<{bone:number|null}>('studio3d.skin.preview','Preview a bone's influence as vertex colours on the selected skinned 3D mesh','View',p=>need().setWeightPreview(p.bone),object({bone:{anyOf:[{type:'null'},{type:'integer',minimum:0}]}},['bone']),hasSkinnedMesh),
   add<{on?:boolean}>('studio3d.anim.autokey','Turn auto-key on or off: transform changes are recorded as keys at the current time','View',p=>need().autoKey(p?.on??!getStudio3DState().autoKey),object({on:{type:'boolean'}},[]),hasScene),
   add('studio3d.export.glb','Export the scene as GLB','Project',()=>need().exportGlb()),
   add('studio3d.export.gltf','Export the scene as glTF (JSON with embedded data)','Project',()=>need().exportGltf()),

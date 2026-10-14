@@ -334,5 +334,15 @@
  "cmd.studio3d.skeleton.select": "Select a bone of a skinned 3D model",
  "studio3d.skeleton.bone": "Bone",
  "studio3d.skeleton.none": "No bone (object keys)",
- "studio3d.skeleton.show": "Skeleton overlay"
+ "studio3d.skeleton.show": "Skeleton overlay",
+ "cmd.studio3d.skin.bind": "Bind a 3D mesh to a bone chain with auto-weights",
+ "cmd.studio3d.skin.reweight": "Recompute the weights of a skinned 3D mesh (smooth falloff or rigid bind)",
+ "cmd.studio3d.skin.preview": "Preview a bone's influence as vertex colours on the selected skinned 3D mesh",
+ "studio3d.skinning.title": "Skinning",
+ "studio3d.skinning.bindSmooth": "Smooth bind",
+ "studio3d.skinning.bindRigid": "Rigid bind",
+ "studio3d.skinning.reSmooth": "Smooth weights",
+ "studio3d.skinning.reRigid": "Rigid weights",
+ "studio3d.skinning.preview": "Weight preview",
+ "studio3d.skinning.off": "Off"
 }

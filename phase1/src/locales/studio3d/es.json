@@ -334,5 +334,15 @@
  "cmd.studio3d.skeleton.select": "Selecciona un hueso de un modelo 3D con piel",
  "studio3d.skeleton.bone": "Hueso",
  "studio3d.skeleton.none": "Sin hueso (claves de objeto)",
- "studio3d.skeleton.show": "Superposición del esqueleto"
+ "studio3d.skeleton.show": "Superposición del esqueleto",
+ "cmd.studio3d.skin.bind": "Vincula una malla 3D a una cadena de huesos con pesos automáticos",
+ "cmd.studio3d.skin.reweight": "Recalcula los pesos de una malla 3D con skin (caída suave o vinculación rígida)",
+ "cmd.studio3d.skin.preview": "Muestra la influencia de un hueso como colores de vértice en la malla 3D con skin seleccionada",
+ "studio3d.skinning.title": "Skinning",
+ "studio3d.skinning.bindSmooth": "Vinculación suave",
+ "studio3d.skinning.bindRigid": "Vinculación rígida",
+ "studio3d.skinning.reSmooth": "Pesos suaves",
+ "studio3d.skinning.reRigid": "Pesos rígidos",
+ "studio3d.skinning.preview": "Vista previa de pesos",
+ "studio3d.skinning.off": "Desactivada"
 }

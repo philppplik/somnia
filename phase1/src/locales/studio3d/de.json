@@ -334,5 +334,15 @@
  "cmd.studio3d.skeleton.select": "Wählt einen Knochen eines skinned 3D-Modells",
  "studio3d.skeleton.bone": "Knochen",
  "studio3d.skeleton.none": "Kein Knochen (Objekt-Keys)",
- "studio3d.skeleton.show": "Skelett-Overlay"
+ "studio3d.skeleton.show": "Skelett-Overlay",
+ "cmd.studio3d.skin.bind": "Bindet ein 3D-Mesh mit Auto-Gewichten an eine Knochenkette",
+ "cmd.studio3d.skin.reweight": "Berechnet die Gewichte eines skinned 3D-Mesh neu (weicher Abfall oder starre Bindung)",
+ "cmd.studio3d.skin.preview": "Zeigt den Einfluss eines Knochens als Vertexfarben auf dem gewählten skinned 3D-Mesh",
+ "studio3d.skinning.title": "Skinning",
+ "studio3d.skinning.bindSmooth": "Weich binden",
+ "studio3d.skinning.bindRigid": "Starr binden",
+ "studio3d.skinning.reSmooth": "Weiche Gewichte",
+ "studio3d.skinning.reRigid": "Starre Gewichte",
+ "studio3d.skinning.preview": "Gewichts-Vorschau",
+ "studio3d.skinning.off": "Aus"
 }

@@ -49,7 +49,7 @@ test('3D studio refuses a file that is not glTF with a readable error',async({pa
 /** Helpers for the scene tests below. They drive the real app through its command layer (dev build) and read the studio session. */
 type P=import('@playwright/test').Page;
 const run=(page:P,id:string,params:unknown={})=>page.evaluate(async([i,p])=>{const m=await import('/src/lib/commands.ts');return (await m.executeCommand(i as string,p)) as unknown;},[id,params] as const);
-const session=(page:P)=>page.evaluate(async()=>{const m=await import('/src/lib/studio3d/session.ts');const s=m.getStudio3DState();return {anim:s.anim,clips:s.clips,clipKeys:s.clipKeys,outline:s.outline,marked:s.marked,selected:s.selected,info:s.selectedInfo,dirty:s.dirty,notice:s.notice,status:s.status,name:s.name};});
+const session=(page:P)=>page.evaluate(async()=>{const m=await import('/src/lib/studio3d/session.ts');const s=m.getStudio3DState();return {anim:s.anim,clips:s.clips,clipKeys:s.clipKeys,outline:s.outline,marked:s.marked,selected:s.selected,info:s.selectedInfo,dirty:s.dirty,notice:s.notice,status:s.status,name:s.name,bones:s.bones,weightPreview:s.weightPreview};});
 const open3d=async(page:P)=>{await page.goto('/');await page.getByRole('button',{name:/3D/}).first().click();};
 const blank=async(page:P)=>{await open3d(page);await page.getByTestId('3d-create-blank').click();await expect(page.getByTestId('studio3d-viewport')).toBeVisible();};
 const insert=async(page:P,kind:string,x:number)=>{await run(page,'studio3d.insert.primitive',{kind});const s=await session(page);const id=s.selected as number;await run(page,'studio3d.object.transform',{id,position:{x,y:0,z:0}});return id;};
@@ -340,4 +340,29 @@ test('3D studio shows a skeleton overlay, keys a bone rotation and exports the s
  await page.getByLabel('Clip').selectOption({index:1});
  await page.getByLabel('Bone').selectOption({index:1});
  await expect.poll(async()=>(await session(page)).clipKeys.find(k=>k.path==='rotation')?.times).toEqual([0,1.5]);
+});
+
+test('3D studio binds a primitive onto a bone chain, previews a weight and undoes it',async({page})=>{
+ const glb=await skinnedGlb();
+ await open3d(page);
+ await page.getByTestId('studio3d-file-input').setInputFiles({name:'rig.glb',mimeType:'model/gltf-binary',buffer:glb});
+ await expect(page.getByTestId('studio3d-viewport')).toBeVisible({timeout:20_000});
+ await expect(page.getByTestId('studio3d-skeleton')).toBeVisible();
+ // A fresh cube next to the rig is not skinned yet.
+ await run(page,'studio3d.insert.primitive',{kind:'cube'});
+ const cube=(await session(page)).selected as number;
+ await run(page,'studio3d.object.transform',{id:cube,position:{x:2,y:1,z:0}});
+ // The skinning section offers a bind; smooth bind makes the cube a skinned mesh on the Hip chain.
+ await expect(page.getByTestId('studio3d-skinning')).toBeVisible();
+ await page.getByRole('button',{name:'Smooth bind'}).click();
+ await expect.poll(async()=>(await session(page)).info?.skinned).toBe(true);
+ // The weight preview tints the cube by one bone's influence, and turns back off.
+ await page.getByLabel('Weight preview').selectOption({index:2});
+ await expect.poll(async()=>(await session(page)).weightPreview).not.toBe(null);
+ await page.getByLabel('Weight preview').selectOption({index:0});
+ await expect.poll(async()=>(await session(page)).weightPreview).toBe(null);
+ // Rigid re-weights in one undo step; undoing twice brings the plain cube back.
+ await page.getByRole('button',{name:'Rigid weights'}).click();
+ await run(page,'studio3d.undo');await run(page,'studio3d.undo');
+ await expect.poll(async()=>{await run(page,'studio3d.select',{id:cube});return (await session(page)).info?.skinned;}).toBe(false);
 });

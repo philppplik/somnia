@@ -334,5 +334,15 @@
  "cmd.studio3d.skeleton.select": "Seleciona um osso de um modelo 3D com pele",
  "studio3d.skeleton.bone": "Osso",
  "studio3d.skeleton.none": "Sem osso (chaves de objeto)",
- "studio3d.skeleton.show": "Sobreposição do esqueleto"
+ "studio3d.skeleton.show": "Sobreposição do esqueleto",
+ "cmd.studio3d.skin.bind": "Vincula uma malha 3D a uma cadeia de ossos com pesos automáticos",
+ "cmd.studio3d.skin.reweight": "Recalcula os pesos de uma malha 3D com skin (suavização ou vínculo rígido)",
+ "studio3d.skinning.title": "Skinning",
+ "cmd.studio3d.skin.preview": "Mostra a influência de um osso como cores de vértice na malha 3D com skin selecionada",
+ "studio3d.skinning.bindSmooth": "Vínculo suave",
+ "studio3d.skinning.bindRigid": "Vínculo rígido",
+ "studio3d.skinning.reSmooth": "Pesos suaves",
+ "studio3d.skinning.reRigid": "Pesos rígidos",
+ "studio3d.skinning.preview": "Prévia de pesos",
+ "studio3d.skinning.off": "Desligada"
 }

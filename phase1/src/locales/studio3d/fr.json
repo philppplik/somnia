@@ -334,5 +334,15 @@
  "cmd.studio3d.skeleton.select": "Sélectionne un os d’un modèle 3D skinné",
  "studio3d.skeleton.bone": "Os",
  "studio3d.skeleton.none": "Aucun os (clés d’objet)",
- "studio3d.skeleton.show": "Surimpression du squelette"
+ "studio3d.skeleton.show": "Surimpression du squelette",
+ "cmd.studio3d.skin.bind": "Lie un maillage 3D à une chaîne d'os avec des poids automatiques",
+ "cmd.studio3d.skin.reweight": "Recalcule les poids d'un maillage 3D skinné (atténuation douce ou liaison rigide)",
+ "cmd.studio3d.skin.preview": "Affiche l'influence d'un os en couleurs de sommets sur le maillage 3D skinné sélectionné",
+ "studio3d.skinning.title": "Skinning",
+ "studio3d.skinning.bindSmooth": "Liaison douce",
+ "studio3d.skinning.bindRigid": "Liaison rigide",
+ "studio3d.skinning.reSmooth": "Poids doux",
+ "studio3d.skinning.reRigid": "Poids rigides",
+ "studio3d.skinning.preview": "Aperçu des poids",
+ "studio3d.skinning.off": "Désactivé"
 }

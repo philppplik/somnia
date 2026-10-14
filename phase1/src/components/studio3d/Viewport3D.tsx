@@ -23,6 +23,7 @@ import {readProjectUnit,writeProjectUnit} from '../../lib/studio3d/projectPrefs'
 import {toggleSelection,marqueeRect,inRect,turntablePlan,frameName,exportFileName,unitScale,isUnit,isMeshFormat,mergeSnap,snapTo,stlUnitHint,mtlReferences,mtlTextures,clampRenderSize,MAX_MTL_BYTES,MAX_TEXTURE_BYTES,MAX_TEXTURE_FILES,SnapError,mergeEnv,envFormatFor,nudgeFor,EnvError,modelFormatFor,readModelHeader,externalResources,ModelError,boundsValid,boundsCenter,boundsRadius,frameDistance,clipPlanes} from '../../lib/studio3d/model';
 import type {Bounds} from '../../lib/studio3d/model';
 import {checkSkins,bonePickRadius,pickBone} from '../../lib/studio3d/skeleton';
+import {weightColor} from '../../lib/studio3d/skinning';
 import {Stage,beginGroupDrag,applyGroupDrag,collectNodeExtras,applyNodeExtras,type GroupDragMember,type TransformSnapshot} from '../../lib/studio3d/stage';
 import {parseDocument,buildDocument,sceneBytes,fromBase64,DocumentError} from '../../lib/studio3d/document';
 import {registerStudio3DController} from '../../lib/studio3d/commands';
@@ -140,7 +141,7 @@ export default function Viewport3D(){
    const infos=clipInfos();const an=getStudio3DState().anim;const keys=sel==null||!infos[an.clip]?[]:stage.keysOf(an.clip,sel);
    if(an.clip>=infos.length&&an.clip>0){stopAnim();patchStudio3D({anim:{clip:0,playing:false,time:0,loop:true,speed:1,range:null}});}
    patchStudio3D({clips:infos,clipKeys:keys,stats:m.stats,outline:m.outline,bones:stage.bones(),bounds:m.bounds,selected:info?sel:null,selectedInfo:info,dirty:stage.dirty,canUndo:stage.canUndo,canRedo:stage.canRedo,undoLabel:stage.undoLabel});
-   drawSelection();applyWire(getStudio3DState().wireframe);syncSkeleton();for(const h of syncHooks)h();invalidate();
+   drawSelection();applyWire(getStudio3DState().wireframe);syncSkeleton();syncWeightPreview();for(const h of syncHooks)h();invalidate();
   };
   const offStage=stage.onChange(()=>{if(!disposed)sync();});
   const frameSelection=()=>{
@@ -251,11 +252,34 @@ export default function Viewport3D(){
    const list=stage.bones();const key=list.map(b=>b.id).join(',');
    if(key!==skelKey){
     skelKey=key;
-    if(skelHelper){scene.remove(skelHelper);skelHelper.geometry.dispose();(skelHelper.material as THREE.Material).dispose();skelHelper=null;}
+    if(skelHelper){scene.remove(skelHelper);skelHelper.geometry.dispose();(skelHelper.material as THREE.Material).dispose();skelHelper=null;}if(weightOverlay){scene.remove(weightOverlay);weightOverlay.geometry.dispose();(weightOverlay.material as THREE.Material).dispose();weightOverlay=null;}
     if(list.length)skelHelper=new THREE.SkeletonHelper(stage.root);
     if(skelHelper)scene.add(skelHelper);
    }
    if(skelHelper)skelHelper.visible=getStudio3DState().skeleton;
+  };
+  /** Weight preview: an overlay copy of the selected skinned mesh, vertex-coloured by one bone's influence. Lives in the outer scene so exports never see it; rebuilt when the mesh, the bone or the weights change. */
+  let weightOverlay:THREE.Mesh|null=null;let weightKey='';
+  const syncWeightPreview=()=>{
+   const st=getStudio3DState();const mesh=st.selected==null?null:stage.find(st.selected) as THREE.SkinnedMesh|null;
+   const ok=!!(mesh&&mesh.isSkinnedMesh&&st.weightPreview!=null&&mesh.skeleton.bones.some(b=>b.id===st.weightPreview));
+   const si=ok?mesh!.geometry.getAttribute('skinIndex'):null,sw=ok?mesh!.geometry.getAttribute('skinWeight'):null;
+   const key=ok?`${mesh!.id}:${st.weightPreview}`:'';
+   if(weightOverlay&&(key!==weightKey||weightOverlay.userData.srcWeight!==sw||weightOverlay.userData.srcIndex!==si)){
+    scene.remove(weightOverlay);weightOverlay.geometry.dispose();(weightOverlay.material as THREE.Material).dispose();weightOverlay=null;
+   }
+   weightKey=key;
+   if(ok&&!weightOverlay){
+    const boneIdx=mesh!.skeleton.bones.findIndex(b=>b.id===st.weightPreview);
+    const pos=mesh!.geometry.getAttribute('position');const colors=new Float32Array(pos.count*3);
+    for(let p=0;p<pos.count;p++){let w=0;for(let k=0;k<4;k++)if(si!.getComponent(p,k)===boneIdx)w+=sw!.getComponent(p,k);
+     const c=weightColor(w);colors[p*3]=c[0];colors[p*3+1]=c[1];colors[p*3+2]=c[2];}
+    const geo=mesh!.geometry.clone();geo.setAttribute('color',new THREE.BufferAttribute(colors,3));
+    const mat=new THREE.MeshBasicMaterial({vertexColors:true});mat.polygonOffset=true;mat.polygonOffsetFactor=-2;
+    weightOverlay=new THREE.Mesh(geo,mat);weightOverlay.userData={srcIndex:si,srcWeight:sw};
+    weightOverlay.position.copy(mesh!.position);weightOverlay.quaternion.copy(mesh!.quaternion);weightOverlay.scale.copy(mesh!.scale);weightOverlay.visible=mesh!.visible;
+    scene.add(weightOverlay);
+   }
   };
   const helpers=new Map<number,THREE.CameraHelper>();
   const syncCameraHelpers=()=>{
@@ -337,7 +361,7 @@ export default function Viewport3D(){
   const capture=async(cam:THREE.PerspectiveCamera,want:{width:number;height:number}|null,transparent:boolean):Promise<Blob>=>{
    const dom=renderer.domElement;const w0=dom.width,h0=dom.height;const pr=renderer.getPixelRatio();
    const aspect0=cam.aspect,bg=scene.background;
-   const hidden:[THREE.Object3D,boolean][]=[grid,gizmoHelper,marks,...(selection?[selection]:[]),...helpers.values()].map(o=>[o,o.visible]);
+   const hidden:[THREE.Object3D,boolean][]=[grid,gizmoHelper,marks,...(selection?[selection]:[]),...(weightOverlay?[weightOverlay]:[]),...helpers.values()].map(o=>[o,o.visible]);
    try{
     for(const [o] of hidden)o.visible=false;
     if(transparent){scene.background=null;renderer.setClearColor(0x000000,0);}
@@ -550,6 +574,9 @@ export default function Viewport3D(){
    select(id);
   };
   const setSkeleton=(on:boolean)=>{patchStudio3D({skeleton:!!on});syncSkeleton();invalidate();};
+  const skinBind=(id:number,bone:number,mode:'smooth'|'rigid')=>{const sk=stage.skinBind(id,bone,mode);patchStudio3D({selected:sk.id,marked:[],weightPreview:null});sync();};
+  const skinRebind=(id:number,mode:'smooth'|'rigid')=>{stage.skinRebind(id,mode);};
+  const setWeightPreview=(bone:number|null)=>{patchStudio3D({weightPreview:bone});syncWeightPreview();invalidate();};
   const animRange=(range:LoopRange|null)=>{
    const infos=clipInfos();const a=anim();checkClip(a.clip,infos);
    if(range===null){patchStudio3D({anim:{...a,range:null}});return;}
@@ -559,7 +586,7 @@ export default function Viewport3D(){
   /** Auto-key records transform changes into the current clip at the playhead. Turning it on without a clip makes one. */
   const autoKey=(on:boolean)=>{if(on&&!stage.clips.length)clipAdd();patchStudio3D({autoKey:!!on});};
   stage.autoKeySource=()=>getStudio3DState().autoKey&&stage.clips.length?{clip:anim().clip,time:anim().time}:null;
-  const off=registerStudio3DController({keyMove,keyEase,keyCopy,keyShift,clipDuplicate,animRange,selectBone,setSkeleton,keyPaste,autoKey,clipAdd,clipRemove,clipRename,clipDuration,keySet,keyRemove,animPlay,animPause,animSeek,animLoop,animSpeed,setTextureTransform:(id,slot,p)=>stage.setTextureTransform(id,slot,p),exportGltf,setTextureFile,mirrorSelection,applyScale:applyScaleSel,mergeSelection:mergeSel,viewPreset,setPrimitive:(id,p)=>stage.setPrimitive(id,p),
+  const off=registerStudio3DController({keyMove,keyEase,keyCopy,keyShift,clipDuplicate,animRange,selectBone,setSkeleton,skinBind,skinRebind,setWeightPreview,keyPaste,autoKey,clipAdd,clipRemove,clipRename,clipDuration,keySet,keyRemove,animPlay,animPause,animSeek,animLoop,animSpeed,setTextureTransform:(id,slot,p)=>stage.setTextureTransform(id,slot,p),exportGltf,setTextureFile,mirrorSelection,applyScale:applyScaleSel,mergeSelection:mergeSel,viewPreset,setPrimitive:(id,p)=>stage.setPrimitive(id,p),
    save:saveDocument,deleteSelection,duplicateSelection,exportMesh,renderTurntable,cancelRender:()=>{cancelFlag=true;},setUnit,openFiles,newScene,resetView:frameAll,frameSelection,select,renderStill,exportGlb,
    addPrimitive:k=>{const o=stage.addPrimitive(k);select(o.id);return o.id;},addLight:k=>{const o=stage.addLight(k);select(o.id);return o.id;},
    setTransform:(id,p)=>stage.setTransform(id,p),setMaterial:(id,p)=>stage.setMaterial(id,p),rename:(id,n)=>stage.rename(id,n),
@@ -649,7 +676,7 @@ export default function Viewport3D(){
    disposed=true;opening++;stopAnim();mixer?.stopAllAction();stage.autoKeySource=null;off();offAuto();if(autoTimer)clearTimeout(autoTimer);cancelAnimationFrame(frame);ro.disconnect();controls.dispose();
    cv.removeEventListener('pointerdown',onDownCapture,true);cv.removeEventListener('pointerdown',onDown);window.removeEventListener('pointermove',onMove);window.removeEventListener('pointercancel',endMarquee);endMarquee();cv.removeEventListener('pointerup',onUp);cv.removeEventListener('keydown',onKey);
    if(getStudio3DState().status==='loading')patchStudio3D({status:stage.root.children.length?'ready':'idle',confirmReplace:null});
-   gizmo.detach();gizmo.dispose();offStage();clearSelection();if(skelHelper){scene.remove(skelHelper);skelHelper.geometry.dispose();(skelHelper.material as THREE.Material).dispose();skelHelper=null;}for(const h of helpers.values())h.dispose();grid.geometry.dispose();(grid.material as THREE.Material).dispose();for(const t of envTargets)t.dispose();envCache.clear();pmrem.dispose();renderer.dispose();renderer.forceContextLoss();
+   gizmo.detach();gizmo.dispose();offStage();clearSelection();if(skelHelper){scene.remove(skelHelper);skelHelper.geometry.dispose();(skelHelper.material as THREE.Material).dispose();skelHelper=null;}if(weightOverlay){scene.remove(weightOverlay);weightOverlay.geometry.dispose();(weightOverlay.material as THREE.Material).dispose();weightOverlay=null;}for(const h of helpers.values())h.dispose();grid.geometry.dispose();(grid.material as THREE.Material).dispose();for(const t of envTargets)t.dispose();envCache.clear();pmrem.dispose();renderer.dispose();renderer.forceContextLoss();
    if(cv.parentNode===el)el.removeChild(cv);
   };
  // eslint-disable-next-line react-hooks/exhaustive-deps

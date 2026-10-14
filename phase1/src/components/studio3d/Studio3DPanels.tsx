@@ -122,9 +122,31 @@ export function ObjectSection(_:InspectorSectionProps){
        <Button variant="outline" onClick={()=>set({reset:true} as never)}>{t('studio3d.uv.reset')}</Button></div></details>;})}
     <p className="m-0 text-xs text-ink-3">{t('studio3d.texture.note')}</p></fieldset>
   </fieldset>}
+  {s.bones.length>0&&o.kind==='mesh'&&<SkinningFields id={o.id} skinned={o.skinned}/>}
   <div className="flex gap-2"><Button variant="outline" onClick={()=>void executeCommand('studio3d.object.duplicate',{id:o.id})}>{t('studio3d.object.duplicate')}</Button>
    <Button variant="outline" onClick={()=>void executeCommand('studio3d.object.delete',{id:o.id})}>{t('studio3d.object.delete')}</Button></div>
  </div>;
+}
+/** Bind a plain mesh to a bone chain, recompute weights of a skinned one, and preview a bone's influence. */
+function SkinningFields({id,skinned}:{id:number;skinned:boolean}){
+ const {t}=useT();const s=useStudio3D();
+ const roots=s.bones.filter(b=>b.depth===0);const [bone,setBone]=useState(roots[0]?.id??s.bones[0]?.id??0);
+ const indent=(name:string,depth:number)=>'\u00a0\u00a0'.repeat(depth)+name;
+ return <fieldset className="m-0 grid gap-2 border-0 p-0" data-testid="studio3d-skinning"><legend className="text-xs text-ink-3">{t('studio3d.skinning.title')}</legend>
+  {!skinned&&<>
+   <NativeSelect className="rounded-sm border border-subtle bg-surface p-1 text-xs text-ink" value={bone} aria-label={t('studio3d.skeleton.bone')} onChange={e=>setBone(Number(e.currentTarget.value))}>
+    {roots.map(b=><option key={b.id} value={b.id}>{indent(b.name,b.depth)}</option>)}</NativeSelect>
+   <div className="flex flex-wrap gap-1">
+    <Button variant="outline" onClick={()=>void executeCommand('studio3d.skin.bind',{id,bone,mode:'smooth'})}>{t('studio3d.skinning.bindSmooth')}</Button>
+    <Button variant="outline" onClick={()=>void executeCommand('studio3d.skin.bind',{id,bone,mode:'rigid'})}>{t('studio3d.skinning.bindRigid')}</Button></div></>}
+  {skinned&&<>
+   <div className="flex flex-wrap gap-1">
+    <Button variant="outline" onClick={()=>void executeCommand('studio3d.skin.reweight',{id,mode:'smooth'})}>{t('studio3d.skinning.reSmooth')}</Button>
+    <Button variant="outline" onClick={()=>void executeCommand('studio3d.skin.reweight',{id,mode:'rigid'})}>{t('studio3d.skinning.reRigid')}</Button></div>
+   <NativeSelect className="rounded-sm border border-subtle bg-surface p-1 text-xs text-ink" value={s.weightPreview??''} aria-label={t('studio3d.skinning.preview')} onChange={e=>void executeCommand('studio3d.skin.preview',{bone:e.currentTarget.value===''?null:Number(e.currentTarget.value)})}>
+    <option value="">{t('studio3d.skinning.off')}</option>
+    {s.bones.map(b=><option key={b.id} value={b.id}>{indent(b.name,b.depth)}</option>)}</NativeSelect></>}
+ </fieldset>;
 }
 export function ViewSection(_:InspectorSectionProps){
  const {t}=useT();const s=useStudio3D();const ready=s.status==='ready';
