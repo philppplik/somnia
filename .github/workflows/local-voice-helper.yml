@@ -1,6 +1,11 @@
 name: Optional local voice helper
 on:
   workflow_dispatch:
+    inputs:
+      build_review_assets:
+        description: 'Build optional helper assets from reviewed target audit files (not a release)'
+        type: boolean
+        default: false
   pull_request:
     paths:
       - 'phase1/src-tauri/src/local_voice.rs'
@@ -16,6 +21,11 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Review manifest and missing-audit contracts
+        run: node --test phase1/scripts/voice/asset-manifest.test.mjs
       - uses: dtolnay/rust-toolchain@stable
       - run: sudo apt-get update && sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
       - name: Pure voice contract tests
@@ -23,18 +33,29 @@ jobs:
       - name: Desktop voice command compilation
         run: cargo check --locked --manifest-path phase1/src-tauri/Cargo.toml --features desktop
   helper:
+    if: github.event_name == 'workflow_dispatch' && inputs.build_review_assets
     strategy:
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
+        include:
+          - os: ubuntu-24.04
+            target: linux-x86_64
+          - os: windows-2022
+            target: windows-x86_64
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 24
-      - run: node phase1/scripts/voice/build-helper.mjs
+      - name: Build pinned audited optional asset
+        env:
+          SOMNIA_VOICE_LICENSE_AUDIT: phase1/voice-audits/${{ matrix.target }}.json
+        run: node phase1/scripts/voice/build-helper.mjs
+      - name: Compute review-only asset manifest from actual bytes
+        run: node phase1/scripts/voice/asset-manifest.mjs phase1/dist-voice/helper
+
       - uses: actions/upload-artifact@v4
         with:
-          name: whisper-helper-${{ matrix.os }}
-          path: phase1/src-tauri/resources/voice/
+          name: whisper-helper-review-${{ matrix.target }}
+          path: phase1/dist-voice/helper/
           if-no-files-found: error

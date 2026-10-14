@@ -1,5 +1,13 @@
 export const LOCAL_MODELS_CATALOGUES:Record<string,Record<string,string>> = {
  "en": {
+  "local.voice.failure.permission": "Microphone permission denied or blocked. Allow it in system/browser settings, then try again. Nothing was inserted or sent.",
+  "local.voice.failure.device": "No usable microphone or the device disconnected. Check the input device, then try again.",
+  "local.voice.failure.capture": "Microphone capture failed. Check the device and try again. Nothing was inserted or sent.",
+  "local.voice.failure.too-large": "Recording exceeded the audio size limit. Record a shorter clip. Nothing was inserted or sent.",
+  "local.voice.failure.timeout": "Recording reached two minutes and was discarded. Record a shorter clip.",
+  "local.voice.failure.decode": "This recorded audio format could not be decoded locally. Try another microphone or recording format.",
+  "local.voice.failure.transcribe": "Local transcription failed. Inspect the verified helper and model in AI > Local. No cloud fallback; nothing inserted or sent.",
+
   "local.task.clear": "Clear task override",
   "local.task.title": "Default local model per task",
   "local.task.boundary": "Explicit task defaults override provider routing for that task: Ollama only, no cloud fallback. Use sets a draft; Save configuration applies it. Existing runs are unchanged. One undo restores the last draft choice. Tasks are chosen explicitly, not guessed from prompt words.",
@@ -324,6 +332,14 @@ export const LOCAL_MODELS_CATALOGUES:Record<string,Record<string,string>> = {
   "local.route.earlier": "Move earlier after local"
  },
  "de": {
+  "local.voice.failure.permission": "Mikrofonfreigabe verweigert oder gesperrt. In System-/Browsereinstellungen erlauben und erneut versuchen. Nichts eingefügt oder gesendet.",
+  "local.voice.failure.device": "Kein nutzbares Mikrofon oder Gerät getrennt. Eingabegerät prüfen und erneut versuchen.",
+  "local.voice.failure.capture": "Mikrofonaufnahme fehlgeschlagen. Gerät prüfen und erneut versuchen. Nichts eingefügt oder gesendet.",
+  "local.voice.failure.too-large": "Aufnahme überschreitet das Audiolimit. Kürzer aufnehmen. Nichts eingefügt oder gesendet.",
+  "local.voice.failure.timeout": "Aufnahme nach zwei Minuten verworfen. Kürzer aufnehmen.",
+  "local.voice.failure.decode": "Dieses Audioformat konnte lokal nicht dekodiert werden. Anderes Mikrofon oder Aufnahmeformat versuchen.",
+  "local.voice.failure.transcribe": "Lokale Transkription fehlgeschlagen. Geprüften Helper und Modell unter AI > Lokal prüfen. Kein Cloud-Fallback; nichts eingefügt oder gesendet.",
+
   "local.task.clear": "Aufgabenvorgabe entfernen",
   "local.task.title": "Lokales Standardmodell je Aufgabe",
   "local.task.boundary": "Ausdrückliche Aufgabenvorgaben überschreiben Provider-Routing für diese Aufgabe: nur Ollama, kein Cloud-Fallback. Verwenden setzt einen Entwurf; Konfiguration speichern übernimmt ihn. Laufende Arbeit bleibt unverändert. Ein Undo stellt die letzte Entwurfswahl wieder her. Aufgabe ausdrücklich wählen, nicht aus Prompt-Wörtern raten.",
@@ -648,6 +664,14 @@ export const LOCAL_MODELS_CATALOGUES:Record<string,Record<string,string>> = {
   "local.route.earlier": "Nach lokal früher einordnen"
  },
  "es": {
+  "local.voice.failure.permission": "Permiso de micrófono denegado o bloqueado. Revisa los ajustes del sistema/navegador. Nada insertado ni enviado.",
+  "local.voice.failure.device": "Micrófono no disponible o desconectado. Revisa el dispositivo.",
+  "local.voice.failure.capture": "Falló la grabación. Revisa el dispositivo. Nada insertado ni enviado.",
+  "local.voice.failure.too-large": "Audio demasiado grande. Graba un clip más corto.",
+  "local.voice.failure.timeout": "Grabación descartada tras dos minutos. Graba un clip más corto.",
+  "local.voice.failure.decode": "No se pudo decodificar este audio localmente. Prueba otro dispositivo o formato.",
+  "local.voice.failure.transcribe": "Falló la transcripción local. Revisa programa y modelo en AI > Local. Sin nube; nada insertado ni enviado.",
+
   "local.task.clear": "Quitar elección de tarea",
   "local.task.title": "Modelo local predeterminado por tarea",
   "local.task.boundary": "Las elecciones explícitas anulan rutas de proveedor: solo Ollama, sin nube. Usar cambia el borrador; guardar aplica. Ejecuciones actuales sin cambios. Un deshacer restaura la última elección. Tarea explícita, no adivinada.",
@@ -972,6 +996,14 @@ export const LOCAL_MODELS_CATALOGUES:Record<string,Record<string,string>> = {
   "local.route.earlier": "Mover antes tras local"
  },
  "fr": {
+  "local.voice.failure.permission": "Permission du micro refusée ou bloquée. Vérifier les réglages système/navigateur. Rien inséré ni envoyé.",
+  "local.voice.failure.device": "Micro indisponible ou déconnecté. Vérifier le périphérique.",
+  "local.voice.failure.capture": "Échec de capture. Vérifier le micro. Rien inséré ni envoyé.",
+  "local.voice.failure.too-large": "Audio trop volumineux. Enregistrer un extrait plus court.",
+  "local.voice.failure.timeout": "Enregistrement supprimé après deux minutes. Enregistrer plus court.",
+  "local.voice.failure.decode": "Décodage local impossible. Essayer un autre micro ou format.",
+  "local.voice.failure.transcribe": "Échec de transcription locale. Vérifier le programme et le modèle dans AI > Local. Aucun cloud; rien inséré ni envoyé.",
+
   "local.task.clear": "Supprimer le choix de tâche",
   "local.task.title": "Modèle local par défaut par tâche",
   "local.task.boundary": "Choix explicites prioritaires : Ollama uniquement, aucun cloud. Utiliser modifie le brouillon; enregistrer applique. Exécutions inchangées. Une annulation restaure le dernier choix. Tâche explicite, jamais devinée.",
@@ -1296,6 +1328,14 @@ export const LOCAL_MODELS_CATALOGUES:Record<string,Record<string,string>> = {
   "local.route.earlier": "Avancer après local"
  },
  "pt-BR": {
+  "local.voice.failure.permission": "Permissão do microfone negada ou bloqueada. Confira os ajustes do sistema/navegador. Nada inserido ou enviado.",
+  "local.voice.failure.device": "Microfone indisponível ou desconectado. Confira o dispositivo.",
+  "local.voice.failure.capture": "Falha na gravação. Confira o microfone. Nada inserido ou enviado.",
+  "local.voice.failure.too-large": "Áudio excede o limite. Grave um trecho menor.",
+  "local.voice.failure.timeout": "Gravação descartada após dois minutos. Grave um trecho menor.",
+  "local.voice.failure.decode": "Não foi possível decodificar o áudio localmente. Tente outro dispositivo ou formato.",
+  "local.voice.failure.transcribe": "Falha na transcrição local. Confira programa e modelo em AI > Local. Sem nuvem; nada inserido ou enviado.",
+
   "local.task.clear": "Remover escolha da tarefa",
   "local.task.title": "Modelo local padrão por tarefa",
   "local.task.boundary": "Escolhas explícitas substituem rotas: só Ollama, sem nuvem. Usar muda o rascunho; salvar aplica. Execuções atuais não mudam. Um desfazer restaura a última escolha. Tarefa explícita, nunca adivinhada.",
