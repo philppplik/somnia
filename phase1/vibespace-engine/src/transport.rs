@@ -26,8 +26,11 @@ pub struct HttpModel {
     endpoint: Url,
     client: reqwest::Client,
     propose: bool,
+    cloud_guard: Option<std::sync::Arc<dyn Fn()->bool+Send+Sync>>,
 }
 impl HttpModel {
+    /// Host-owned live policy, checked before each request and while awaiting response.
+    pub fn with_cloud_guard(mut self, guard:std::sync::Arc<dyn Fn()->bool+Send+Sync>)->Self{self.cloud_guard=Some(guard);self}
     /// `propose_effects = false` is the read-only smoke mode.
     pub fn new(
         config: ModelConfig,
@@ -76,12 +79,24 @@ impl HttpModel {
             endpoint,
             client,
             propose: propose_effects,
+            cloud_guard:None,
         })
     }
 }
 #[async_trait]
 impl ModelTransport for HttpModel {
     async fn complete(&self, input: ModelInput) -> Result<ModelReply, Failure> {
+        if let Some(guard)=&self.cloud_guard {
+                if !guard(){return Err(Failure::InvalidRequest);}
+                let response=self.complete_checked(input);tokio::pin!(response);
+                let mut interval=tokio::time::interval(Duration::from_millis(25));
+                loop{tokio::select!{result=&mut response=>{if !guard(){return Err(Failure::InvalidRequest);}return result;},_=interval.tick()=>{if !guard(){return Err(Failure::InvalidRequest);}}}}
+        }
+        self.complete_checked(input).await
+    }
+}
+impl HttpModel {
+    async fn complete_checked(&self,input:ModelInput)->Result<ModelReply,Failure>{
         if input.config.model() != self.config.model()
             || input.config.endpoint() != self.config.endpoint()
             || std::mem::discriminant(&input.config) != std::mem::discriminant(&self.config)
@@ -203,4 +218,14 @@ pub(crate) fn parse_openai_reply(value: &serde_json::Value, propose: bool) -> Re
             ..Usage::default()
         },
     })
+}
+
+#[cfg(test)]mod host_guard_tests{
+ use super::*;
+ #[tokio::test]async fn host_denial_prevents_even_loopback_request(){
+  let config=ModelConfig::Local{endpoint:"http://127.0.0.1:1/v1/chat/completions".into(),model:"fixture".into()};
+  let model=HttpModel::new(config.clone(),None,false).unwrap().with_cloud_guard(std::sync::Arc::new(||false));
+  let input=ModelInput{config,messages:vec![]};
+  assert!(matches!(model.complete(input).await,Err(Failure::InvalidRequest)));
+ }
 }

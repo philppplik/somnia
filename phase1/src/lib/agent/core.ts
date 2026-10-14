@@ -8,6 +8,7 @@ export interface AgentApproval {id:string;path:string;action:string;resolve:(dec
 export type AgentEvent =
  | {type:'status';text:string;file?:string}
  | {type:'text-delta';text:string}
+ | {type:'provenance';provider:string;model:string}
  | {type:'proposal';proposal:AgentProposal}
  | {type:'approval';approval:AgentApproval}
  | {type:'usage';inputTokens?:number;outputTokens?:number;costUsd?:number}

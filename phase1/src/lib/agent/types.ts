@@ -37,6 +37,7 @@ export type AgentProviderEvent =
 export interface AgentProvider {
   readonly id: string;
   readonly supportsImages?:boolean;
+  identity?:()=>{provider:string;model:string};
   readonly locality: 'cloud' | 'local';
   stream(request: AgentProviderRequest): AsyncIterable<AgentProviderEvent>;
 }

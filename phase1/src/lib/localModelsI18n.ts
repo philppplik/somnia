@@ -252,7 +252,16 @@ export const LOCAL_MODELS_CATALOGUES:Record<string,Record<string,string>> = {
   "local.disk.failed": "Model volume check failed",
   "local.modelContext.label": "Requested context for {model}",
   "local.modelContext.inherit": "Inherit global/daemon default",
-  "local.modelContext.notice": "Per-model requested context overrides the global value on the next saved run. Not model maximum or measured token capacity. Save Settings to apply; blank inherits."
+  "local.modelContext.notice": "Per-model requested context overrides the global value on the next saved run. Not model maximum or measured token capacity. Save Settings to apply; blank inherits.",
+  "local.route.title": "Provider order and request limits",
+  "local.route.notice": "Saved routing starts local. Cloud fallback applies only to general chat without document/media/studio context and still requires cloud consent. No fallback after output, tools, auth or consent failure. Actual provider/model provenance is retained. Drafts apply only on Save. Local-only denies cloud even with prior consent. Retries/failover can cost money without output. Vibe is disabled in local-only mode until daemon locality is verified. The whole-turn time limit still applies.",
+  "local.route.enable": "Set up local-first routing",
+  "local.route.localOnly": "Local-only: block every cloud AI request",
+  "local.route.include": "Include in general-chat fallback",
+  "local.route.model": "Exact model for this provider",
+  "local.route.timeout": "Request timeout (milliseconds)",
+  "local.route.retries": "Retries before stream output",
+  "local.route.earlier": "Move earlier after local"
  },
  "de": {
   "local.tab": "Lokal",
@@ -507,7 +516,16 @@ export const LOCAL_MODELS_CATALOGUES:Record<string,Record<string,string>> = {
   "local.disk.failed": "Modellvolume-Prüfung fehlgeschlagen",
   "local.modelContext.label": "Angeforderter Kontext für {model}",
   "local.modelContext.inherit": "Global-/Daemonstandard erben",
-  "local.modelContext.notice": "Modellspezifischer Kontext überschreibt den globalen Wert im nächsten gespeicherten Lauf. Keine Modellhöchstgrenze oder gemessene Tokenkapazität. Einstellungen speichern; leer erbt."
+  "local.modelContext.notice": "Modellspezifischer Kontext überschreibt den globalen Wert im nächsten gespeicherten Lauf. Keine Modellhöchstgrenze oder gemessene Tokenkapazität. Einstellungen speichern; leer erbt.",
+  "local.route.title": "Providerreihenfolge und Anfragegrenzen",
+  "local.route.notice": "Gespeicherte Route beginnt lokal. Cloud-Fallback nur für allgemeinen Chat ohne Dokument-/Medien-/Studiokontext und mit Cloud-Zustimmung. Kein Wechsel nach Ausgabe, Tools, Auth- oder Zustimmungsfehler. Tatsächlicher Provider/Modell bleibt in Herkunft. Entwurf erst nach Speichern. Nur lokal blockiert Cloud trotz früherer Zustimmung. Wiederholungen/Fallback können ohne Ausgabe Geld kosten. Vibe ist im Nur-lokal-Modus gesperrt, bis die Daemon-Lokalität geprüft ist. Das Gesamtzeitlimit gilt weiter.",
+  "local.route.enable": "Lokal-zuerst-Route einrichten",
+  "local.route.localOnly": "Nur lokal: alle Cloud-AI-Anfragen blockieren",
+  "local.route.include": "Im allgemeinen Chat als Fallback nutzen",
+  "local.route.model": "Genaues Modell für diesen Provider",
+  "local.route.timeout": "Anfragezeitlimit (Millisekunden)",
+  "local.route.retries": "Wiederholungen vor Streamausgabe",
+  "local.route.earlier": "Nach lokal früher einordnen"
  },
  "es": {
   "local.tab": "Local",
@@ -762,7 +780,16 @@ export const LOCAL_MODELS_CATALOGUES:Record<string,Record<string,string>> = {
   "local.disk.failed": "Falló revisión de volumen",
   "local.modelContext.label": "Contexto solicitado para {model}",
   "local.modelContext.inherit": "Heredar global/daemon",
-  "local.modelContext.notice": "Contexto por modelo sustituye global tras guardar. No máximo medido. Vacío hereda."
+  "local.modelContext.notice": "Contexto por modelo sustituye global tras guardar. No máximo medido. Vacío hereda.",
+  "local.route.title": "Orden y límites",
+  "local.route.notice": "Ruta local primero. Nube solo para chat general sin contexto y con consentimiento. Sin fallback tras salida, herramientas, autenticación o consentimiento. Guardar aplica; solo local bloquea nube. Los reintentos pueden costar sin salida. Vibe se bloquea en modo local hasta verificar el daemon. Sigue el límite del turno.",
+  "local.route.enable": "Configurar ruta local",
+  "local.route.localOnly": "Solo local: bloquear nube",
+  "local.route.include": "Incluir fallback",
+  "local.route.model": "Modelo exacto",
+  "local.route.timeout": "Tiempo límite (ms)",
+  "local.route.retries": "Reintentos antes de salida",
+  "local.route.earlier": "Mover antes tras local"
  },
  "fr": {
   "local.tab": "Local",
@@ -1017,7 +1044,16 @@ export const LOCAL_MODELS_CATALOGUES:Record<string,Record<string,string>> = {
   "local.disk.failed": "Échec de vérification du volume",
   "local.modelContext.label": "Contexte demandé pour {model}",
   "local.modelContext.inherit": "Hériter global/daemon",
-  "local.modelContext.notice": "Contexte par modèle remplace global après sauvegarde. Pas maximum mesuré. Vide hérite."
+  "local.modelContext.notice": "Contexte par modèle remplace global après sauvegarde. Pas maximum mesuré. Vide hérite.",
+  "local.route.title": "Ordre et limites",
+  "local.route.notice": "Local en premier. Cloud seulement pour chat général sans contexte et avec consentement. Pas de repli après sortie, outils, auth ou refus. Sauvegarder applique ; local seul bloque cloud. Les essais peuvent coûter sans sortie. Vibe est bloqué en mode local avant vérification du daemon. Le délai du tour reste actif.",
+  "local.route.enable": "Configurer local en premier",
+  "local.route.localOnly": "Local seul : bloquer cloud",
+  "local.route.include": "Inclure repli",
+  "local.route.model": "Modèle exact",
+  "local.route.timeout": "Délai (ms)",
+  "local.route.retries": "Essais avant sortie",
+  "local.route.earlier": "Avancer après local"
  },
  "pt-BR": {
   "local.tab": "Local",
@@ -1272,6 +1308,15 @@ export const LOCAL_MODELS_CATALOGUES:Record<string,Record<string,string>> = {
   "local.disk.failed": "Falha de verificação de volume",
   "local.modelContext.label": "Contexto solicitado para {model}",
   "local.modelContext.inherit": "Herdar global/daemon",
-  "local.modelContext.notice": "Contexto por modelo substitui global após salvar. Não máximo medido. Vazio herda."
+  "local.modelContext.notice": "Contexto por modelo substitui global após salvar. Não máximo medido. Vazio herda.",
+  "local.route.title": "Ordem e limites",
+  "local.route.notice": "Local primeiro. Nuvem só para chat geral sem contexto e com consentimento. Sem fallback após saída, ferramentas, autenticação ou consentimento. Salvar aplica; só local bloqueia nuvem. Tentativas podem custar sem saída. Vibe fica bloqueado no modo local até verificar o daemon. O limite do turno continua.",
+  "local.route.enable": "Configurar local primeiro",
+  "local.route.localOnly": "Só local: bloquear nuvem",
+  "local.route.include": "Incluir fallback",
+  "local.route.model": "Modelo exato",
+  "local.route.timeout": "Tempo limite (ms)",
+  "local.route.retries": "Tentativas antes da saída",
+  "local.route.earlier": "Mover antes após local"
  }
 };

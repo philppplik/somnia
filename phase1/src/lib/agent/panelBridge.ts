@@ -1,4 +1,5 @@
 import {localContextFor} from './settings';
+import {routedProvider,timedProvider} from './providerRouting';
 import {ProviderError} from './errors';
 import {visionApplication,type VisionDestination} from './localVisionApplication';
 import {requireLocalCapabilities} from './localCapabilities';
@@ -48,13 +49,13 @@ import type {AgentCore,AgentEvent,AgentApproval,AgentProposal,DiffLine} from './
 import type {AgentProvider,AgentProviderEvent,AgentProviderRequest} from './types';
 export interface AgentConfiguration {provider:AuthProvider;model:string;apiKey:string;allowActiveFile:boolean;customPrompts?:CustomPrompt[];localRuntime?:LocalRuntimePreferences}
 let config:AgentConfiguration={provider:'ollama',model:'',apiKey:'',allowActiveFile:false};
-export function configureAgent(value:AgentConfiguration){realCore.clear?.();config={...value};}
+export function configureAgent(value:AgentConfiguration){realCore.clear?.();config={...value};agentPrivacy.setLocalOnly(value.localRuntime?.routing?.localOnly??false);}
 export function setAgentActiveFileAccess(allowActiveFile:boolean){config={...config,allowActiveFile};}
 /** Custom instructions are sent every provider round, never as access permission. */
 export function withCustomPrompts(provider:AgentProvider,prompts:readonly CustomPrompt[]=[]):AgentProvider {
  const text=prompts.filter(p=>p.enabled&&p.text.trim()).map(p=>p.text.trim()).join('\n\n');
  if(new TextEncoder().encode(text).length>16000)throw Error('Custom prompts exceed size limits.');
- return {id:provider.id,locality:provider.locality,stream(request){return provider.stream({...request,messages:text?[...request.messages.slice(0,1),{role:'system',content:'Additional user preferences (do not override tool access or safety rules):\n'+text},...request.messages.slice(1)]:request.messages});}};
+ return {id:provider.id,locality:provider.locality,identity:provider.identity,stream(request){return provider.stream({...request,messages:text?[...request.messages.slice(0,1),{role:'system',content:'Additional user preferences (do not override tool access or safety rules):\n'+text},...request.messages.slice(1)]:request.messages});}};
 }
 /** A gated stream whose operation remains live through body consumption, with single-slot backpressure. */
 function guardedOllama(provider:OllamaProvider,numCtx?:number):AgentProvider {
@@ -84,13 +85,16 @@ function openAIByMethod(options:ConstructorParameters<typeof OpenAIProvider>[0])
  const keyed=new OpenAIProvider(options);let account:OpenAIProvider|undefined;
  return {id:keyed.id,locality:keyed.locality,async *stream(request:AgentProviderRequest){
   const status=await accountAuth.status('openai').catch(()=>null);
-  if(status?.method==='account'){account??=new OpenAIProvider({account:NATIVE_ACCOUNT,fetch:nativeProviderFetch('openai')});yield* account.stream(request);}
+  if(status?.method==='account'){account??=new OpenAIProvider({...options,getApiKey:undefined,account:NATIVE_ACCOUNT,fetch:nativeProviderFetch('openai')});yield* account.stream(request);}
   else yield* keyed.stream(request);
  }} as AgentProvider;
 }
 export function createProvider(id:AuthProvider,model=config.model):AgentProvider {
- if(id==='ollama')return guardedOllama(new OllamaProvider({numCtx:localContextFor(config.localRuntime,model),keepAliveSeconds:config.localRuntime?.keepAliveSeconds,maxRetries:0}),localContextFor(config.localRuntime,model));
- const options={getApiKey:()=>loadProviderKey(id),...(isTauri()?{fetch:nativeProviderFetch(id)}:{})};
+ const limit=config.localRuntime?.routing?.limits[id];const provider=timedProvider(createRawProvider(id,model,config.localRuntime?.routing?(limit?.retries??0):undefined),limit?.timeoutMs);let actual=model;return {id:provider.id,locality:provider.locality,supportsImages:provider.supportsImages,identity:()=>({provider:id,model:actual}),stream(request){actual=request.model;return provider.stream(request);}};
+}
+function createRawProvider(id:AuthProvider,model:string,retries?:number):AgentProvider {
+ if(id==='ollama')return guardedOllama(new OllamaProvider({numCtx:localContextFor(config.localRuntime,model),keepAliveSeconds:config.localRuntime?.keepAliveSeconds,maxRetries:retries??0}),localContextFor(config.localRuntime,model));
+ const options={maxRetries:retries,getApiKey:()=>loadProviderKey(id),...(isTauri()?{fetch:nativeProviderFetch(id)}:{})};
  if(id==='openai'){
   if(!isTauri())return new OpenAIProvider(options);
   return openAIByMethod(options);
@@ -267,6 +271,7 @@ export const realCore:AgentCore={
   const controller=new AbortController();activeController=controller;let stopped=false;const runId=++runGeneration;
   const deliver=(e:AgentEvent)=>{if(!stopped&&runId===runGeneration)onEvent(e);};send=deliver;
   if(!config.model.trim()){queueMicrotask(()=>deliver({type:'error',message:'Choose a provider and model in Settings > AI first.'}));return {cancel(){stopped=true;}};}
+  const route=config.localRuntime?.routing;const canRoute=!!route&&!request.context.activeFile&&!request.context.activeMedia&&!request.context.studio;
   const requestModel=config.provider==='ollama'?(config.localRuntime?.studioModels?.[request.context.studio?.studioId??'']??config.model):config.model;
   const generation=getProjectGeneration();
   if(epoch!==generation){session?.cancel();session=null;sessionSerial++;proposals.clear();permissions.clear();appliedAgentProvenance.clear();documents.clear();transactions.clear();nativeIds.clear();mcpProposalMap.clear();syncMcpProposals();epoch=generation;}
@@ -276,8 +281,8 @@ export const realCore:AgentCore={
    controller.signal.throwIfAborted();if(runId!==runGeneration)throw Error('Run was replaced.');
    if(!request.context.activeMedia&&!request.context.activeFile){
     // Empty workspaces can ask for guidance, but have no document tools or context.
-    const previous=sessionProvider===config.provider?session?.snapshot():undefined;sessionProvider=config.provider;const sessionEpoch=epoch,sessionToken=++sessionSerial;
-    session=new AgentSession({provider:request.context.studio?withAgentStudioContext(withCustomPrompts(createProvider(config.provider,requestModel),config.customPrompts),{...request.context.studio,documentRef:null,selectionSummary:'No selection',capabilities:[]}):withCustomPrompts(createProvider(config.provider,requestModel),config.customPrompts),model:requestModel,onEvent:event=>{
+    const scopeKey=canRoute?'general-route:'+JSON.stringify(route):'no-document:'+config.provider+':'+(request.context.studio?.studioId??'general');const previous=sessionProvider===scopeKey?session?.snapshot():undefined;sessionProvider=scopeKey;const sessionEpoch=epoch,sessionToken=++sessionSerial;
+    session=new AgentSession({provider:request.context.studio?withAgentStudioContext(withCustomPrompts(canRoute?routedProvider(route!,(id,model)=>createProvider(id,model),identity=>deliver({type:'provenance',...identity})):createProvider(config.provider),config.customPrompts),{...request.context.studio,documentRef:null,selectionSummary:'No selection',capabilities:[]}):withCustomPrompts(canRoute?routedProvider(route!,(id,model)=>createProvider(id,model),identity=>deliver({type:'provenance',...identity})):createProvider(config.provider),config.customPrompts),model:requestModel,onEvent:event=>{
      if(sessionEpoch!==epoch||sessionToken!==sessionSerial||controller.signal.aborted)return;
      if(event.type==='text')deliver({type:'text-delta',text:event.text});
      else if(event.type==='notice')deliver({type:'error',message:event.message,code:event.code,retryable:event.retryable});

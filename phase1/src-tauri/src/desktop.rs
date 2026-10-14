@@ -367,6 +367,7 @@ struct NativeStart { id: String, status: u16, headers: BTreeMap<String,String> }
 #[tauri::command]
 async fn provider_http_start(window: WebviewWindow, state: State<'_, ProviderNetwork>, provider: String, url: String, method: String, body: Option<String>, candidate_key: Option<String>) -> std::result::Result<NativeStart,String> {
     gate(&window).map_err(|_| "Only trusted editor may use provider transport")?;
+    if crate::agent_settings::local_only(){return Err("Local-only mode blocks cloud providers".into());}
     crate::provider_transport::endpoint(&provider,&url,&method)?;
     if body.as_ref().is_some_and(|b|b.len()>2_000_000) { return Err("Provider request is too large".into()); }
     if method=="GET" && body.is_some() {return Err("GET request body is not allowed".into());}
@@ -378,31 +379,34 @@ async fn provider_http_start(window: WebviewWindow, state: State<'_, ProviderNet
         if provider=="openai" && blocking_store(|s|s.method()).await.is_ok_and(|m|m==crate::oauth_store::Method::Account) { oauth_access_token().await? } else {
         let p=provider.clone();tauri::async_runtime::spawn_blocking(move||agent_key_for(&p)?.get_password().map_err(|_| "OS credential store is locked or key is missing".to_string())).await.map_err(|_| "Credential lookup failed")?? }
     };
-    let client=reqwest::Client::builder().no_proxy().redirect(reqwest::redirect::Policy::none()).connect_timeout(Duration::from_secs(15)).timeout(Duration::from_secs(120)).build().map_err(|_| "Provider transport unavailable")?;
+    let client=reqwest::Client::builder().no_proxy().redirect(reqwest::redirect::Policy::none()).connect_timeout(Duration::from_secs(15)).timeout(Duration::from_secs(300)).build().map_err(|_| "Provider transport unavailable")?;
     let mut request=client.request(if method=="GET" {reqwest::Method::GET} else {reqwest::Method::POST},&url);
     request=if provider=="claude" {request.header("x-api-key",key).header("anthropic-version","2023-06-01")} else {request.bearer_auth(key)};
     if let Some(body)=body {request=request.header("content-type","application/json").body(body);}
-    let response=request.send().await.map_err(|_| "Provider connection failed")?;
+    if crate::agent_settings::local_only(){return Err("Local-only mode blocks cloud providers".into());}
+    let response=crate::agent_settings::cloud_request(request.send()).await?;
     let mut headers=BTreeMap::new();
     for name in ["content-type","retry-after"] {if let Some(v)=response.headers().get(name).and_then(|v|v.to_str().ok()) {headers.insert(name.into(),v.into());}}
     let status=response.status().as_u16();let id=uuid::Uuid::new_v4().to_string();
+    if crate::agent_settings::local_only(){return Err("Local-only mode blocks cloud providers".into());}
     let mut active=state.0.lock().await;active.retain(|_,r|r.expires>std::time::Instant::now());
     if active.len()>=4 { return Err("Too many active provider requests".into()); }
     let (sender,receiver)=tokio::sync::mpsc::channel(1);
     let task=tokio::spawn(async move {
       let mut response=response;
-      loop {match response.chunk().await {
+      loop {match crate::agent_settings::cloud_request(response.chunk()).await {
        Ok(Some(chunk)) if chunk.len()<=1_000_000 => {if sender.send(Ok(chunk.to_vec())).await.is_err(){break;}},
        Ok(None)=>break,
        _=>{let _=sender.send(Err("Provider stream interrupted".into())).await;break;}
       }}
     });
-    active.insert(id.clone(),Arc::new(NativeResponse{receiver:tokio::sync::Mutex::new(receiver),task:task.abort_handle(),expires:std::time::Instant::now()+Duration::from_secs(120)}));
+    active.insert(id.clone(),Arc::new(NativeResponse{receiver:tokio::sync::Mutex::new(receiver),task:task.abort_handle(),expires:std::time::Instant::now()+Duration::from_secs(300)}));
     Ok(NativeStart{id,status,headers})
 }
 #[tauri::command]
 async fn provider_http_next(window: WebviewWindow,state: State<'_, ProviderNetwork>,id:String) -> std::result::Result<Option<Vec<u8>>,String> {
     gate(&window).map_err(|_| "Only trusted editor may read provider transport")?;
+    if crate::agent_settings::local_only(){state.0.lock().await.clear();return Err("Local-only mode blocks cloud output".into());}
     let r=state.0.lock().await.get(&id).cloned().ok_or("Provider request is closed")?;
     if r.expires<std::time::Instant::now() {state.0.lock().await.remove(&id);return Err("Provider request timed out".into());}
     let mut receiver=r.receiver.lock().await;
@@ -563,22 +567,23 @@ async fn agent_settings_load(window: WebviewWindow) -> std::result::Result<Agent
     let dir = window.app_handle().path().app_config_dir().map_err(|_| "App config directory is unavailable")?;
     tauri::async_runtime::spawn_blocking(move || {
         let _guard = AGENT_SETTINGS_LOCK.lock().map_err(|_| "Agent settings are busy")?;
-        let p = crate::agent_settings::load(&dir.join("agent-settings.json"))?;
+        let p = crate::agent_settings::load(&dir.join("agent-settings.json"))?;crate::agent_settings::configure_local_only(&p);
         let api_key = String::new(); // Keys are loaded independently through agent_key_load.
         Ok(AgentSettingsReply { provider: p.provider, model: p.model, api_key, custom_prompts: p.custom_prompts, local_runtime:p.local_runtime })
     }).await.map_err(|_| "Could not load agent settings")?
 }
 #[tauri::command]
-async fn agent_settings_save(window: WebviewWindow, settings: AgentSettingsReply) -> std::result::Result<(), String> {
+async fn agent_settings_save(window: WebviewWindow, state:State<'_,ProviderNetwork>, settings: AgentSettingsReply) -> std::result::Result<(), String> {
     gate(&window).map_err(|_| "Only the trusted editor may save agent settings")?;
     let dir = window.app_handle().path().app_config_dir().map_err(|_| "App config directory is unavailable")?;
-    tauri::async_runtime::spawn_blocking(move || {
+    let result=tauri::async_runtime::spawn_blocking(move || {
         let _guard = AGENT_SETTINGS_LOCK.lock().map_err(|_| "Agent settings are busy")?;
         let p = crate::agent_settings::Preferences { provider: settings.provider, model: settings.model, custom_prompts: settings.custom_prompts,local_runtime:settings.local_runtime };
         p.validate()?;
         if settings.api_key.len() > 8192 || settings.api_key.contains(['\r', '\n', '\0']) { return Err("Invalid API key".into()); }
-        crate::agent_settings::save(&dir.join("agent-settings.json"), &p)
-    }).await.map_err(|_| "Could not save agent settings")?
+        crate::agent_settings::save(&dir.join("agent-settings.json"), &p)?;crate::agent_settings::configure_local_only(&p);Ok(())
+    }).await.map_err(|_| "Could not save agent settings")?;
+    if crate::agent_settings::local_only(){state.0.lock().await.clear();}result
 }
 
 #[tauri::command]
@@ -2741,6 +2746,8 @@ pub fn run() {
         .manage(AudioGrants::default())
         .manage(crate::lan_host::LanHost::default())
         .setup(move |app| {
+            let prefs_path=app.path().app_config_dir()?.join("agent-settings.json");
+            crate::agent_settings::initialize_local_only(&prefs_path);
             crate::vibespace_commands::manage(app.handle(), Vec::new())?;
             app.manage(crate::vibespace_schedule_commands::VibeScheduleState::default());
             app.manage(crate::vibespace_acp_commands::AcpState::default());

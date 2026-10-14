@@ -151,8 +151,8 @@ export class AgentSession {
         const toolCalls = [...fragments.entries()].sort((a, b) => a[0] - b[0]).map(([, value]) => value);
         if (toolCalls.length && finish !== 'tool_calls' || !toolCalls.length && finish === 'tool_calls') throw new AgentError('provider-error', 'protocol', 'Incomplete tool-call response.', true);
         if (!toolCalls.length) {
-          working.push({ role: 'assistant', content: text, provenance: createAIProvenance(this.options.provider.id, this.options.model) });
-          this.options.tools?.markProvenance(createAIProvenance(this.options.provider.id, this.options.model));
+          working.push({ role: 'assistant', content: text, provenance: createAIProvenance(this.options.provider.identity?.().provider??this.options.provider.id,this.options.provider.identity?.().model??this.options.model) });
+          this.options.tools?.markProvenance(createAIProvenance(this.options.provider.identity?.().provider??this.options.provider.id,this.options.provider.identity?.().model??this.options.model));
           if (bytes(working) > this.limits.context) throw new AgentError('limit', 'context', 'Agent history exceeds limit.');
           this.messages = clone(working);
           const proposals = this.options.tools?.proposals() ?? [];
@@ -172,7 +172,7 @@ export class AgentSession {
         if (calls + toolCalls.length > this.limits.calls) throw new AgentError('limit', 'tool-calls', 'Agent tool-call limit reached.');
         // Do not stage writes on the last step: no request remains to complete the turn.
         if (finalStep) throw new AgentError('limit', 'steps', 'Agent step limit reached.');
-        working.push({ role: 'assistant', content: text, toolCalls, provenance: createAIProvenance(this.options.provider.id, this.options.model) });
+        working.push({ role: 'assistant', content: text, toolCalls, provenance: createAIProvenance(this.options.provider.identity?.().provider??this.options.provider.id,this.options.provider.identity?.().model??this.options.model) });
         for (const call of toolCalls) {
           controller.signal.throwIfAborted(); calls++;
           this.emit({ type: 'tool', call, status: 'running', turnId });

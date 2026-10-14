@@ -1,3 +1,4 @@
+import {ProviderRoutingSettings} from './ProviderRoutingSettings';
 import {NativeVoiceSettings} from './NativeVoiceSettings';
 import {Button} from '../ui/button';
 import {LocalToolDiagnostics} from './LocalToolDiagnostics';
@@ -51,7 +52,7 @@ export function AgentSettings({searchQuery='',legacyPrivacy=false}:{searchQuery?
    {tabs.map(id=><TabsTrigger id={'ai-tab-'+id} value={id} aria-controls={'ai-content-'+id} key={id}>{labels[id]}</TabsTrigger>)}
   </TabsList>
   <TabsContent keepMounted value="local" id="ai-content-local" aria-labelledby="ai-tab-local"><LocalModelsSettings active={visible('local')}/><AlternateRuntimeDiscovery/><NativeVoiceSettings/><LocalToolDiagnostics/><LocalStudioModels value={cfg.localRuntime} disabled={locked} onChange={localRuntime=>{setCfg({...cfg,localRuntime});setSaved(false);}}/>{settings.config.provider==='ollama'&&<LocalQualityProbes model={settings.config.model} options={settings.config.localRuntime}/>}
-{settings.config.provider==='ollama'&&<LocalVisionTest model={settings.config.model} options={settings.config.localRuntime}/>}<LocalRuntimeAdvanced model={cfg.model} value={cfg.localRuntime} disabled={locked} onChange={localRuntime=>{setCfg({...cfg,localRuntime});setSaved(false);}}/><Button type="button" disabled={locked||authBusy||invalid} onClick={()=>void saveConfiguration()}>{saving?'Saving...':t('agent.settings.save')}</Button>{saved&&<p role="status">Configuration saved.</p>}</TabsContent>
+{settings.config.provider==='ollama'&&<LocalVisionTest model={settings.config.model} options={settings.config.localRuntime}/>}<ProviderRoutingSettings value={cfg.localRuntime} model={cfg.model} disabled={locked} onChange={localRuntime=>{setCfg({...cfg,localRuntime});setSaved(false);}}/><LocalRuntimeAdvanced model={cfg.model} value={cfg.localRuntime} disabled={locked} onChange={localRuntime=>{setCfg({...cfg,localRuntime});setSaved(false);}}/><Button type="button" disabled={locked||authBusy||invalid} onClick={()=>void saveConfiguration()}>{saving?'Saving...':t('agent.settings.save')}</Button>{saved&&<p role="status">Configuration saved.</p>}</TabsContent>
   {settings.running&&<p role="status">Stop the current generation before changing AI configuration.</p>}
   {settings.pendingReview&&<p role="status">Accept or discard pending proposals before changing AI configuration.</p>}
   <p hidden={tab!=='providers'&&tab!=='instructions'}>Saving starts a new AI session. Your visible chat history stays. API key actions apply immediately; cloud consent is separate.</p>
