@@ -899,5 +899,10 @@
  "studio3d.edit.selBoundary": "Rand",
  "cmd.studio3d.edit.fatten": "Ausgewählte Vertices entlang ihrer Normalen verschieben",
  "studio3d.edit.fatten": "Spreizen",
- "studio3d.hist.editFatten": "Vertices spreizen"
+ "studio3d.hist.editFatten": "Vertices spreizen",
+ "cmd.studio3d.edit.relax": "Ausgewählte Vertices zu ihren Nachbarn glätten",
+ "studio3d.edit.relax": "Glätten",
+ "studio3d.edit.relaxIt": "Glättungs-Iterationen",
+ "studio3d.edit.relaxFactor": "Glättungsfaktor",
+ "studio3d.hist.editRelax": "Vertices glätten"
 }

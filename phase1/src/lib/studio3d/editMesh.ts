@@ -946,12 +946,9 @@ export function fillHolesMesh(m:MeshData):{mesh:MeshData;holes:number}{
 }
 
 /** Laplacian smoothing of the whole mesh: every vertex moves a fraction of the way to the average of its neighbours, for the given iterations. Vertices are grouped by position so UV-seam twins move as one and never rip; true border vertices stay pinned so open meshes keep their outline; sculpt masks scale the movement down to zero. UVs, explicit normals and masks are carried (normals are rebuilt smooth on the stage). */
-export function relaxMesh(m:MeshData,iterations:number,factor:number):MeshData{
- check(m);
- if(!Number.isInteger(iterations)||iterations<1||iterations>50)throw new EditError('The relax iterations must be a whole number between 1 and 50.');
- if(!Number.isFinite(factor)||factor<=0||factor>1)throw new EditError('The relax factor must be between 0 (exclusive) and 1.');
+/** Shared Laplacian core of the relax ops: position-grouped vertices (twins move together), border groups pinned, masks damp per group; move() picks which groups relax. */
+const relaxRun=(m:MeshData,iterations:number,factor:number,move:(g:number,groups:number[][])=>boolean):MeshData=>{
  const nv=m.positions.length/3;
- // Group vertices by position: twins share a group and move together.
  const gk:string[]=[];
  const gid=new Map<string,number>();
  const groups:number[][]=[];
@@ -963,7 +960,6 @@ export function relaxMesh(m:MeshData,iterations:number,factor:number):MeshData{
   groups[g].push(v);
  }
  const ng=groups.length;
- // True borders: position-keyed edges used once.
  const edgeUse=new Map<string,number>();
  const edges:[number,number][]=[];
  for(let f=0;f<m.index.length;f+=3)for(let e=0;e<3;e++){
@@ -977,7 +973,6 @@ export function relaxMesh(m:MeshData,iterations:number,factor:number):MeshData{
  for(const[k,n]of edgeUse)if(n===1){const[a,b]=k.split('_').map(Number);pinned.add(a);pinned.add(b);}
  const nbr:Set<number>[]=[];for(let g=0;g<ng;g++)nbr.push(new Set());
  for(const[a,b]of edges){nbr[a].add(b);nbr[b].add(a);}
- // Group centre, mask average (1 = protected) and pin flag.
  const cur:number[]=[];const gmask:number[]=[];
  for(let g=0;g<ng;g++){
   let x=0,y=0,z=0,mk=0;
@@ -988,7 +983,7 @@ export function relaxMesh(m:MeshData,iterations:number,factor:number):MeshData{
  for(let it=0;it<iterations;it++){
   const next=[...cur];
   for(let g=0;g<ng;g++){
-   if(pinned.has(g)||!nbr[g].size)continue;
+   if(pinned.has(g)||!nbr[g].size||!move(g,groups))continue;
    const f=factor*(1-gmask[g]);if(f<=0)continue;
    let x=0,y=0,z=0;
    for(const h of nbr[g]){x+=cur[h*3];y+=cur[h*3+1];z+=cur[h*3+2];}
@@ -1001,7 +996,28 @@ export function relaxMesh(m:MeshData,iterations:number,factor:number):MeshData{
  }
  const positions=[...m.positions];
  for(let g=0;g<ng;g++)for(const v of groups[g]){positions[v*3]=cur[g*3];positions[v*3+1]=cur[g*3+1];positions[v*3+2]=cur[g*3+2];}
- const out:MeshData={positions,index:[...m.index],...(m.uvs?{uvs:[...m.uvs]}:{}),...(m.mask?{mask:[...m.mask]}:{})};
+ return {positions,index:[...m.index],...(m.uvs?{uvs:[...m.uvs]}:{}),...(m.mask?{mask:[...m.mask]}:{})};
+};
+const relaxCheck=(iterations:number,factor:number)=>{
+ if(!Number.isInteger(iterations)||iterations<1||iterations>50)throw new EditError('The relax iterations must be a whole number between 1 and 50.');
+ if(!Number.isFinite(factor)||factor<=0||factor>1)throw new EditError('The relax factor must be between 0 (exclusive) and 1.');
+};
+/** Relaxes the whole mesh: vertices drift toward their neighbourhood average, borders stay put. */
+export function relaxMesh(m:MeshData,iterations:number,factor:number):MeshData{
+ check(m);
+ relaxCheck(iterations,factor);
+ const out=relaxRun(m,iterations,factor,()=>true);
+ check(out);return out;
+}
+/** Laplacian-smooths only the selected vertices: their position groups drift toward the neighbourhood average (twins move together), border groups stay pinned, masks damp per group. Topology, UVs and masks stay. */
+export function relaxSelected(m:MeshData,verts:number[],iterations:number,factor:number):MeshData{
+ check(m);
+ if(!verts.length)throw new EditError('Select vertices to relax.');
+ const nv=m.positions.length/3;
+ const sel=new Set<number>();
+ for(const v of verts){if(!Number.isInteger(v)||v<0||v>=nv)throw new EditError(`Vertex ${v} does not exist.`);sel.add(v);}
+ relaxCheck(iterations,factor);
+ const out=relaxRun(m,iterations,factor,(g,groups)=>groups[g].some(v=>sel.has(v)));
  check(out);return out;
 }
 

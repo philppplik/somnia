@@ -899,5 +899,10 @@
  "studio3d.edit.selBoundary": "Bord",
  "cmd.studio3d.edit.fatten": "Déplacer les sommets sélectionnés le long de leurs normales",
  "studio3d.edit.fatten": "Gonfler",
- "studio3d.hist.editFatten": "Gonfler les sommets"
+ "studio3d.hist.editFatten": "Gonfler les sommets",
+ "cmd.studio3d.edit.relax": "Lisser les sommets sélectionnés vers leurs voisins",
+ "studio3d.edit.relax": "Lisser",
+ "studio3d.edit.relaxIt": "Itérations de lissage",
+ "studio3d.edit.relaxFactor": "Facteur de lissage",
+ "studio3d.hist.editRelax": "Lisser les sommets"
 }

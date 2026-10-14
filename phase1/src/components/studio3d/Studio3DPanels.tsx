@@ -311,7 +311,7 @@ function UvFields({id}:{id:number}){
 /** Bind a plain mesh to a bone chain, recompute weights of a skinned one, and preview a bone's influence. */
 function EditSculptFields({id}:{id:number}){
  const {t}=useT();const s=useStudio3D();const o=s.selectedInfo;
- const [extrude,setExtrude]=useState(0.5);const [inset,setInset]=useState(0.2);const [bevel,setBevel]=useState(0.1);const [slide,setSlide]=useState(0.5);const [merge,setMerge]=useState(0.01);const [mirrorAxis,setMirrorAxis]=useState<'x'|'y'|'z'>('x');const [segments,setSegments]=useState(1);const [bisect,setBisect]=useState(false);const [fattenAmt,setFattenAmt]=useState(0.1);
+ const [extrude,setExtrude]=useState(0.5);const [inset,setInset]=useState(0.2);const [bevel,setBevel]=useState(0.1);const [slide,setSlide]=useState(0.5);const [merge,setMerge]=useState(0.01);const [mirrorAxis,setMirrorAxis]=useState<'x'|'y'|'z'>('x');const [segments,setSegments]=useState(1);const [bisect,setBisect]=useState(false);const [fattenAmt,setFattenAmt]=useState(0.1);const [relaxIt,setRelaxIt]=useState(1);const [relaxF,setRelaxF]=useState(0.5);
  const ed=s.edit;const on=ed!=null&&ed.id===id;const sc=s.sculpt;
  if(!o||o.kind!=='mesh')return null;
  const modeBtn=(m:'vertex'|'edge'|'face')=><Button key={m} variant={ed?.mode===m?'primary':'outline'} aria-pressed={ed?.mode===m} onClick={()=>void executeCommand('studio3d.edit.mode',{mode:m})}>{t('studio3d.edit.mode.'+m)}</Button>;
@@ -336,6 +336,8 @@ function EditSculptFields({id}:{id:number}){
      <NumField label={t('studio3d.edit.loopSlide')} value={slide} min={-1.5} max={1.5} step={0.1} onCommit={setSlide}/>
      <NumField label={t('studio3d.edit.segments')} value={segments} min={1} max={8} step={1} onCommit={v=>setSegments(Math.round(v))}/>
      <NumField label={t('studio3d.edit.fatten')} value={fattenAmt} min={-10} max={10} step={0.05} onCommit={setFattenAmt}/>
+     <NumField label={t('studio3d.edit.relaxIt')} value={relaxIt} min={1} max={50} step={1} onCommit={v=>setRelaxIt(Math.round(v))}/>
+     <NumField label={t('studio3d.edit.relaxFactor')} value={relaxF} min={0.01} max={1} step={0.05} onCommit={setRelaxF}/>
     </div>
     <div className="flex flex-wrap gap-1">
      <Button variant="outline" onClick={()=>void executeCommand('studio3d.edit.extrude',{offset:extrude})}>{t('studio3d.edit.extrude')}</Button>
@@ -350,6 +352,7 @@ function EditSculptFields({id}:{id:number}){
      <Button variant="outline" onClick={()=>void executeCommand('studio3d.edit.poke',{})}>{t('studio3d.edit.poke')}</Button>
      <Button variant="outline" onClick={()=>void executeCommand('studio3d.edit.duplicate',{})}>{t('studio3d.edit.duplicate')}</Button>
      <Button variant="outline" onClick={()=>void executeCommand('studio3d.edit.fatten',{amount:fattenAmt})}>{t('studio3d.edit.fatten')}</Button>
+     <Button variant="outline" onClick={()=>void executeCommand('studio3d.edit.relax',{iterations:relaxIt,factor:relaxF})}>{t('studio3d.edit.relax')}</Button>
      <Button variant="outline" onClick={()=>void executeCommand('studio3d.edit.end')}>{t('studio3d.edit.end')}</Button>
     </div></>}
   </fieldset>

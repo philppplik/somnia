@@ -899,5 +899,10 @@
  "studio3d.edit.selBoundary": "Boundary",
  "cmd.studio3d.edit.fatten": "Move selected vertices along their normals",
  "studio3d.edit.fatten": "Fatten",
- "studio3d.hist.editFatten": "Shrink/fatten vertices"
+ "studio3d.hist.editFatten": "Shrink/fatten vertices",
+ "cmd.studio3d.edit.relax": "Smooth selected vertices towards their neighbours",
+ "studio3d.edit.relax": "Relax",
+ "studio3d.edit.relaxIt": "Relax iterations",
+ "studio3d.edit.relaxFactor": "Relax factor",
+ "studio3d.hist.editRelax": "Relax vertices"
 }

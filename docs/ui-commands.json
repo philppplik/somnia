@@ -7032,6 +7032,19 @@
       "hasEnabled": true
     },
     {
+      "id": "studio3d.edit.relax",
+      "title": "Smooth selected vertices towards their neighbours",
+      "category": "Edit",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "studio3d.edit.select",
       "title": "Select element",
       "category": "Edit",

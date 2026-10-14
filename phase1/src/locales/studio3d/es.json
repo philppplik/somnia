@@ -899,5 +899,10 @@
  "studio3d.edit.selBoundary": "Borde",
  "cmd.studio3d.edit.fatten": "Mover los vértices seleccionados a lo largo de sus normales",
  "studio3d.edit.fatten": "Engrosar",
- "studio3d.hist.editFatten": "Engrosar vértices"
+ "studio3d.hist.editFatten": "Engrosar vértices",
+ "cmd.studio3d.edit.relax": "Suavizar los vértices seleccionados hacia sus vecinos",
+ "studio3d.edit.relax": "Suavizar",
+ "studio3d.edit.relaxIt": "Iteraciones de suavizado",
+ "studio3d.edit.relaxFactor": "Factor de suavizado",
+ "studio3d.hist.editRelax": "Suavizar vértices"
 }

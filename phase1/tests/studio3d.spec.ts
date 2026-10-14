@@ -876,6 +876,19 @@ test('mesh edit mode: fatten pushes selected vertices along their normals, undo 
  await expect(page.getByRole('alert')).toContainText('Select vertices to shrink or fatten');
 });
 
+test('mesh edit mode: relax smooths selected vertices towards their neighbours, undo restores them',async({page})=>{
+ await blank(page);
+ const id=await insert(page,'cube',0);
+ expect(await run(page,'studio3d.edit.start',{id,mode:'vertex'})).toBe(true);
+ expect(await run(page,'studio3d.edit.select',{kind:'vertex',ids:[0,1,2,3]})).toBe(true);
+ expect(await run(page,'studio3d.edit.relax',{iterations:1,factor:0.5})).toBe(true);
+ await expect.poll(async()=>(await session(page)).stats.triangles).toBe(12);
+ await run(page,'studio3d.undo');
+ expect(await run(page,'studio3d.edit.selectAll',{op:'none'})).toBe(true);
+ expect(await run(page,'studio3d.edit.relax',{iterations:1,factor:0.5})).toBe(false);
+ await expect(page.getByRole('alert')).toContainText('Select vertices to relax');
+});
+
 test('mesh edit mode: weld merges selected vertices at their centre, undo restores them',async({page})=>{
  await blank(page);
  const id=await insert(page,'cube',0);
