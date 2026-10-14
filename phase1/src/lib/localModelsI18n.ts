@@ -135,6 +135,8 @@ export const LOCAL_MODELS_CATALOGUES:Record<string,Record<string,string>> = {
   "local.search.review.partial": "Excerpt shows first512 characters only. Open the source to review the full text.",
   "local.search.review.consent": "Embed these exact selected open texts locally into a memory-only index.",
 
+  "local.search.recovery.boundary": "Refresh the runtime in setup. If the exact model is missing, review its download; if stopped, start it explicitly. Then review sources, consent and rebuild. No automatic retry or cloud fallback.",
+  "local.search.recovery.download": "Download failed or interrupted. Installation is not confirmed. Read the job status, refresh the runtime and review a new pull with fresh disk selection and acknowledgement. Nothing retries automatically.",
   "local.search.error.binding": "Model/runtime changed or unavailable. Memory index and old results discarded. Review setup and rebuild selected sources.",
   "local.search.bindingNotice": "Model identity is checked before each search and citation open. No automatic polling or rebuild; search returns source snippets, never generated answers.",
   "local.search.bindingChecking": "Checking current model identity before opening citation…",
@@ -866,6 +868,8 @@ export const LOCAL_MODELS_CATALOGUES:Record<string,Record<string,string>> = {
   "local.search.review.partial": "Nur erste512 Zeichen. Quelle öffnen, um ganzen Text zu prüfen.",
   "local.search.review.consent": "Diese exakten gewählten offenen Texte lokal in Memory-Only-Index einbetten.",
 
+  "local.search.recovery.boundary": "Runtime im Setup aktualisieren. Fehlt das genaue Modell, Download prüfen; bei gestoppter Runtime explizit starten. Danach Quellen und Zustimmung prüfen und neu indexieren. Kein automatischer Versuch oder Cloud-Fallback.",
+  "local.search.recovery.download": "Download fehlgeschlagen oder unterbrochen. Installation nicht bestätigt. Jobstatus lesen, Runtime aktualisieren und neuen Pull mit frischer Laufwerkswahl und Zustimmung prüfen. Kein automatischer Versuch.",
   "local.search.error.binding": "Modell/Runtime geändert oder nicht verfügbar. Speicherindex/alte Resultate verworfen. Setup prüfen und gewählte Quellen neu indexieren.",
   "local.search.bindingNotice": "Modellidentität vor jeder Suche und jedem Citation-Open geprüft. Kein Polling/Auto-Rebuild; nur Quellenausschnitte, keine generierten Antworten.",
   "local.search.bindingChecking": "Aktuelle Modellidentität vor Citation-Open prüfen…",
@@ -1597,6 +1601,8 @@ export const LOCAL_MODELS_CATALOGUES:Record<string,Record<string,string>> = {
   "local.search.review.partial": "Solo primeros512 caracteres. Abre fuente para revisar texto completo.",
   "local.search.review.consent": "Incrustar estos textos exactos localmente en índice solo en memoria.",
 
+  "local.search.recovery.boundary": "Actualiza el entorno en la configuración. Si falta el modelo exacto, revisa su descarga; si está detenido, inícialo explícitamente. Después revisa fuentes, consentimiento y reconstruye. Sin reintento automático ni nube.",
+  "local.search.recovery.download": "Descarga fallida o interrumpida. Instalación no confirmada. Lee el estado, actualiza el entorno y revisa una nueva descarga con selección de disco y consentimiento nuevos. Sin reintento automático.",
   "local.search.error.binding": "Modelo/runtime cambió o no disponible. Índice y resultados descartados. Revisa setup y reconstruye fuentes seleccionadas.",
   "local.search.bindingNotice": "Identidad verificada antes de búsqueda/cita. Sin sondeo/reconstrucción automática; fragmentos de fuentes, nunca respuestas generadas.",
   "local.search.bindingChecking": "Comprobando identidad del modelo antes de abrir cita…",
@@ -2328,6 +2334,8 @@ export const LOCAL_MODELS_CATALOGUES:Record<string,Record<string,string>> = {
   "local.search.review.partial": "Premiers512 caractères seulement. Ouvrez source pour vérifier texte complet.",
   "local.search.review.consent": "Indexer ces textes exacts localement dans index en mémoire seulement.",
 
+  "local.search.recovery.boundary": "Actualisez le moteur dans la configuration. Si le modèle exact manque, vérifiez son téléchargement; si arrêté, démarrez-le explicitement. Puis vérifiez sources, consentement et reconstruisez. Aucun nouvel essai automatique ni cloud.",
+  "local.search.recovery.download": "Téléchargement échoué ou interrompu. Installation non confirmée. Lisez le statut, actualisez le moteur et vérifiez un nouveau téléchargement avec disque et consentement renouvelés. Aucun nouvel essai automatique.",
   "local.search.error.binding": "Modèle/runtime modifié ou indisponible. Index/résultats supprimés. Vérifiez setup et reconstruisez sources choisies.",
   "local.search.bindingNotice": "Identité vérifiée avant recherche/citation. Sans sondage/reconstruction automatique; extraits de sources, jamais réponses générées.",
   "local.search.bindingChecking": "Vérification identité modèle avant citation…",
@@ -3059,6 +3067,8 @@ export const LOCAL_MODELS_CATALOGUES:Record<string,Record<string,string>> = {
   "local.search.review.partial": "Só primeiros512 caracteres. Abra fonte para revisar texto completo.",
   "local.search.review.consent": "Indexar estes textos exatos localmente em índice só em memória.",
 
+  "local.search.recovery.boundary": "Atualize o ambiente na configuração. Se faltar o modelo exato, revise o download; se parado, inicie explicitamente. Depois revise fontes, consentimento e reconstrua. Sem nova tentativa automática ou nuvem.",
+  "local.search.recovery.download": "Download falhou ou foi interrompido. Instalação não confirmada. Leia o estado, atualize o ambiente e revise um novo download com seleção de disco e consentimento novos. Sem nova tentativa automática.",
   "local.search.error.binding": "Modelo/runtime mudou ou indisponível. Índice/resultados descartados. Revise setup e reconstrua fontes selecionadas.",
   "local.search.bindingNotice": "Identidade verificada antes de busca/citação. Sem polling/reconstrução automática; trechos de fontes, nunca respostas geradas.",
   "local.search.bindingChecking": "Verificando identidade do modelo antes de abrir citação…",

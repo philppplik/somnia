@@ -16,19 +16,19 @@ import {Dialog,DialogContent,DialogTitle,DialogDescription} from '../ui/dialog';
 export function LocalModelActions({snapshot,onChanged,manager=localModelManager,chooseDisk=chooseModelDisk,embeddingOnly=false}:{snapshot:RuntimeSnapshot|null;onChanged:()=>Promise<void>;manager?:LocalModelManager;chooseDisk?:()=>Promise<ModelDisk|null>;embeddingOnly?:boolean}){
  const {t,locale}=useT();const job=useSyncExternalStore(manager.subscribe,manager.snapshot,manager.snapshot);
  useSyncExternalStore(subscribeAgentSettings,agentSettingsSnapshot,agentSettingsSnapshot);
- const [filter,setFilter]=useState(''),[page,setPage]=useState(0);const [name,setName]=useState(''),[error,setError]=useState(''),[instruction,setInstruction]=useState(''),[busy,setBusy]=useState(false);
+ const [errorKind,setErrorKind]=useState<'pull'|'delete'|'launch'>('pull');const [filter,setFilter]=useState(''),[page,setPage]=useState(0);const [name,setName]=useState(''),[error,setError]=useState(''),[instruction,setInstruction]=useState(''),[busy,setBusy]=useState(false);
  const [confirm,setConfirm]=useState<{kind:'pull'|'delete';model:string;entry?:InstalledModel}|null>(null);
  const [ack,setAck]=useState(false);const [disk,setDisk]=useState<ModelDisk|null>(null);const [diskBusy,setDiskBusy]=useState(false);
  const diskAdvice=modelDiskAdvice(confirm?.model??'',disk);
  const inspectDisk=async()=>{setDiskBusy(true);setError('');try{setDisk(await chooseDisk());}catch{setError(t('local.disk.failed'));}finally{setDiskBusy(false);}};
  const active=!!job&&['preparing','downloading','verifying','installing','reconciling','cancel-requested'].includes(job.phase)&&!job.error;
  const locked=busy||manager.isBusy()||active||!manager.canMutate();
- const act=async(action:()=>Promise<unknown>)=>{setBusy(true);setError('');try{await action();await onChanged();}catch{setError(t('local.action.failed'));}finally{setBusy(false);}};
+ const act=async(action:()=>Promise<unknown>,kind:'pull'|'delete'|'launch'='pull')=>{setErrorKind(kind);setBusy(true);setError('');try{await action();await onChanged();}catch{setError(t('local.action.failed'));}finally{setBusy(false);}};
  const propose=(raw:string)=>{try{const model=registryModel(raw);if(embeddingOnly&&model!=='embeddinggemma:300m')throw Error('Exact search model only');setAck(false);setDisk(null);setConfirm({kind:'pull',model});setError('');}catch{setError(t('local.action.invalid'));}};
  const matches=(snapshot?.models??[]).filter(model=>model.id.toLowerCase().includes(filter.trim().toLowerCase()));const lastPage=Math.max(0,Math.ceil(matches.length/20)-1),currentPage=Math.min(page,lastPage);const size=(n:number|undefined)=>n===undefined?t('local.unknown'):new Intl.NumberFormat(locale,{maximumFractionDigits:2}).format(n/1e9)+' GB';
  return <div className="local-model-actions">
-  {error&&<StudioStatus tone="error" live="assertive">{t('local.deleteReview.failed')}</StudioStatus>}
-  {snapshot?.state==='stopped'&&<Button disabled={locked} type="button" onClick={()=>void act(async()=>{const result=await manager.launch();setInstruction(result.instruction??'');})}>{t('local.action.start')}</Button>}
+  {error&&<StudioStatus tone="error" live="assertive">{t(errorKind==='delete'?'local.deleteReview.failed':errorKind==='pull'?'local.search.recovery.download': 'local.action.failed')}</StudioStatus>}
+  {snapshot?.state==='stopped'&&<Button disabled={locked} type="button" onClick={()=>void act(async()=>{const result=await manager.launch();setInstruction(result.instruction??'');},'launch')}>{t('local.action.start')}</Button>}
   {instruction&&<p>{t('local.action.manual')} <code>{instruction}</code></p>}
   {snapshot?.state==='running'&&<>
    <EmbeddingModelReview disabled={locked} onReview={()=>propose('embeddinggemma:300m')}/>{!embeddingOnly&&<><LocalRecommendedPicker disabled={locked} onDownload={propose}/>
@@ -45,7 +45,7 @@ export function LocalModelActions({snapshot,onChanged,manager=localModelManager,
   <Dialog open={!!confirm} onOpenChange={open=>{if(!open)setConfirm(null);}}><DialogContent className="local-model-confirm"><DialogTitle>{t(confirm?.kind==='delete'?'local.action.confirmDelete':'local.action.confirmPull')}</DialogTitle><DialogDescription>{confirm?.model}</DialogDescription>
    {confirm?.kind==='pull'?<>{confirm.model==='embeddinggemma:300m'&&<EmbeddingModelReview/>}<p>{t('local.action.source')} ollama.com/library/{confirm.model.split(':')[0]}</p><p>{t('local.action.downloadNotice')}</p><p>{t('local.disk.notice')}</p><Button disabled={diskBusy||locked} onClick={()=>void inspectDisk()}>{t('local.disk.choose')}</Button><StudioStatus>{t('local.disk.'+diskAdvice.state)}{disk&&` · ${disk.freeBytes} bytes`}{diskAdvice.requiredBytes&&` / ${diskAdvice.requiredBytes} bytes`}</StudioStatus></>:<><p>{t('local.action.deleteNotice')}</p><p>{t('local.deleteReview.boundary')}</p><p>{size(confirm?.entry?.sizeBytes)} · {t('local.deleteReview.digest')}: <code className="break-all">{confirm?.entry?.digest??t('local.unknown')}</code></p></>}
    <Checkbox label={t('local.action.ack')} checked={ack} onChange={e=>setAck(e.target.checked)}/>
-   <div className="local-models-badges"><Button type="button" onClick={()=>setConfirm(null)}>{t('local.action.cancel')}</Button><Button type="button" disabled={!ack||locked||diskBusy||confirm?.kind==='pull'&&(!disk||diskAdvice.state==='insufficient'||diskAdvice.state==='stale')} onClick={()=>{const action=confirm!;setConfirm(null);void act(()=>action.kind==='pull'?manager.pull(action.model,disk??undefined):manager.remove(action.model,action.entry!.digest!));}}>{t('local.action.confirm')}</Button></div>
+   <div className="local-models-badges"><Button type="button" onClick={()=>setConfirm(null)}>{t('local.action.cancel')}</Button><Button type="button" disabled={!ack||locked||diskBusy||confirm?.kind==='pull'&&(!disk||diskAdvice.state==='insufficient'||diskAdvice.state==='stale')} onClick={()=>{const action=confirm!;setConfirm(null);void act(()=>action.kind==='pull'?manager.pull(action.model,disk??undefined):manager.remove(action.model,action.entry!.digest!),action.kind);}}>{t('local.action.confirm')}</Button></div>
   </DialogContent></Dialog>
  </div>;
 }
