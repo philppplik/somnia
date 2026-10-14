@@ -16,7 +16,8 @@ import type {StudioLifecycleAdapter,StudioSnapshot} from '../lifecycle/types';
 import {VIDEO_SNAPSHOT_SCHEMA,verifyVideoSnapshot,videoSnapshotBytes,videoSnapshotChecksum,type VideoSessionSnapshot,type VideoSnapshotPayload} from './lifecycleSnapshot';
 export type VideoStatus='loading'|'ready'|'error'|'exporting';
 export interface VideoResult{blob:Blob;url:string;report:VideoReport}
-export interface VideoSession{name:string;status:VideoStatus;error:string;probe:VideoProbe|null;capabilities:VideoCapabilities|null;clips:TimelineClip[];selectedClipId:string|null;format:VideoFormat;progress:VideoProgress|null;result:VideoResult|null;ext:string}
+export type VideoExportOutcome='downloaded'|'cancelled'|'unavailable';
+export interface VideoSession{exportOutcome?:VideoExportOutcome;name:string;status:VideoStatus;error:string;probe:VideoProbe|null;capabilities:VideoCapabilities|null;clips:TimelineClip[];selectedClipId:string|null;format:VideoFormat;progress:VideoProgress|null;result:VideoResult|null;ext:string}
 const sessions=new Map<string,VideoSession>();
 const exports=new Map<string,AbortController>();
 let filmstrip:FilmstripController|null|undefined;
@@ -160,7 +161,7 @@ export async function runVideoExport(name:string):Promise<'exported'|'cancelled'
   const bytes=sources.get(n);if(!bytes){patch(name,{status:'error',error:`Clip source is no longer open: ${n}`});return'unavailable';}input[n]=bytes;
  }
  const controller=new AbortController();exports.set(name,controller);
- revoke(s.result);put({...s,status:'exporting',error:'',progress:null,result:null});
+ revoke(s.result);put({...s,status:'exporting',error:'',progress:null,result:null,exportOutcome:undefined});
  try{
   const r=await jobScheduler.run({kind:'export',priority:2,documentId:name,resources:['video.engine',...Object.keys(input).map(n=>'video.source:'+n)],exclusive:['video.export'],estimatedBytes:Object.values(input).reduce((sum,b)=>sum+b.byteLength,0),signal:controller.signal},async lease=>{
    const {engine:e}=await getEngine();const cancel=()=>e.cancelExport();lease.signal.addEventListener('abort',cancel,{once:true});
@@ -189,9 +190,12 @@ export function downloadVideo(name:string):boolean{
 }
 /** Full UI flow: encode, then download the result. */
 export async function exportVideoFile(name:string):Promise<'downloaded'|'cancelled'|'unavailable'>{
+ // Clear the previous notification even when encoding cannot start.
+ patch(name,{exportOutcome:undefined});
  const r=await runVideoExport(name);
- if(r!=='exported')return r;
- return downloadVideo(name)?'downloaded':'unavailable';
+ const outcome=r==='exported'?(downloadVideo(name)?'downloaded':'unavailable'):r;
+ patch(name,{exportOutcome:outcome});
+ return outcome;
 }
 export function cancelVideoExport(name:string){if(sessions.get(name)?.status==='exporting')exports.get(name)?.abort();}
 export function closeVideo(name:string){

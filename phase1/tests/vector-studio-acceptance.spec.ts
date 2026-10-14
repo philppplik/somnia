@@ -1,3 +1,4 @@
+import {showPanel} from './helpers';
 import {test,expect} from './fixtures';
 import {readFileSync} from 'node:fs';
 import path from 'node:path';
@@ -7,6 +8,7 @@ async function studio(page:any){
  await page.goto('/');await expect(page.locator('[data-storage]')).toBeVisible();
  await page.getByRole('radio',{name:'Somnia Vector'}).click();
  await expect(page.getByTestId('vector-start')).toBeVisible();
+ await showPanel(page,'Layers');await showPanel(page,'Vector inspector');
 }
 async function open(page:any,name:string){
  const chooser=page.waitForEvent('filechooser');await page.getByTestId('vector-open').click();
@@ -22,7 +24,7 @@ test('Vector real empty start creates a blank document without a file chooser',a
 });
 
 test('Vector failed strict panel import preserves artwork and its undo history',async({page})=>{
- await studio(page);await open(page,'primitives.svg');await expect(page.getByTestId('vector-layer')).toHaveCount(6);
+ await studio(page);await open(page,'primitives.svg');await expect(page.getByTestId('vector-shell-layers').locator('li')).toHaveCount(6);
  const before=await session(page);
  const chooser=page.waitForEvent('filechooser');await page.getByTestId('vector-import-svg').click();await (await chooser).setFiles(asset('reject-event.svg'));
  await expect(page.getByTestId('vector-io-status')).toContainText('event attribute');
@@ -42,8 +44,8 @@ test('Vector pointer cancellation and Escape discard drawing previews without un
 });
 
 test('Vector PNG export keeps compound holes transparent and encodes real PNG pixels',async({page})=>{
- await studio(page);await open(page,'compound-hole.svg');await expect(page.getByTestId('vector-layer')).toHaveCount(2);
- const download=page.waitForEvent('download');await page.getByTestId('vector-export-png').click();const file=await download;
+ await studio(page);await open(page,'compound-hole.svg');await expect(page.getByTestId('vector-shell-layers').locator('li')).toHaveCount(2);
+ await showPanel(page,'File');const exportPanel=page.getByTestId('vector-shell-export');await exportPanel.getByRole('combobox',{name:'Format',exact:true}).selectOption('png');await exportPanel.getByRole('combobox',{name:'PNG scale',exact:true}).selectOption('2');const download=page.waitForEvent('download');await exportPanel.getByRole('button',{name:'Export PNG',exact:true}).click();const file=await download;
  expect(file.suggestedFilename()).toBe('compound-hole.png');const bytes=readFileSync((await file.path())!);
  expect([...bytes.subarray(0,8)]).toEqual([137,80,78,71,13,10,26,10]);
  const pixels=await page.evaluate(async raw=>{
