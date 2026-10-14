@@ -1056,5 +1056,8 @@
  "animation.export.blur.comp": "Como en la composición",
  "animation.export.blur.off": "Desactivado",
  "animation.export.blur.high": "Suave (16 muestras)",
- "animation.export.problem.blur": "El desenfoque de movimiento debe estar desactivado o en alto."
+ "animation.export.problem.blur": "El desenfoque de movimiento debe estar desactivado o en alto.",
+ "animation.export.selectedOnly": "Solo capas seleccionadas",
+ "animation.export.selectedOnly.hint": "Exporta solo las capas seleccionadas al empezar. Los padres y las mates siguen funcionando.",
+ "animation.export.problem.selectedOnly": "«Solo capas seleccionadas» debe estar activado o desactivado."
 }

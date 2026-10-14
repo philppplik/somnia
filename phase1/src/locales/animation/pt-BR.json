@@ -1056,5 +1056,8 @@
  "animation.export.blur.comp": "Como na composição",
  "animation.export.blur.off": "Desligado",
  "animation.export.blur.high": "Suave (16 amostras)",
- "animation.export.problem.blur": "O desfoque de movimento deve ser desligado ou alto."
+ "animation.export.problem.blur": "O desfoque de movimento deve ser desligado ou alto.",
+ "animation.export.selectedOnly": "Somente camadas selecionadas",
+ "animation.export.selectedOnly.hint": "Exporta só as camadas selecionadas ao iniciar. Pais e mattes continuam funcionando.",
+ "animation.export.problem.selectedOnly": "“Somente camadas selecionadas” deve estar ligado ou desligado."
 }

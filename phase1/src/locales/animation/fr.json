@@ -1056,5 +1056,8 @@
  "animation.export.blur.comp": "Comme dans la composition",
  "animation.export.blur.off": "Désactivé",
  "animation.export.blur.high": "Lisse (16 échantillons)",
- "animation.export.problem.blur": "Le flou de mouvement doit être désactivé ou élevé."
+ "animation.export.problem.blur": "Le flou de mouvement doit être désactivé ou élevé.",
+ "animation.export.selectedOnly": "Calques sélectionnés seulement",
+ "animation.export.selectedOnly.hint": "Exporte seulement les calques sélectionnés au départ. Les parents et les mattes restent actifs.",
+ "animation.export.problem.selectedOnly": "« Calques sélectionnés seulement » doit être activé ou désactivé."
 }

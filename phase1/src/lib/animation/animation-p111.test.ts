@@ -899,3 +899,18 @@ test('P211 export motion blur: off drops the shutter, high uses 16 samples, docu
  assert.throws(()=>setExportSettings({blur:'max' as never}),(e:any)=>e.code==='unsupported');assert.deepEqual(settingsProblems({...defaultExportSettings(),blur:'high'}),[]);assert.deepEqual(settingsProblems({...defaultExportSettings(),blur:null}),[]);
  resetExportSettings();
 });
+
+test('P212 export selected layers only: hides the others in the output, keeps parents and mattes working, document untouched',async()=>{
+ const {exportCurrentFrame,setExportSettings,resetExportSettings,resetExport}=await import('./exportJob');const {settingsProblems,defaultExportSettings}=await import('./exportSettings');
+ const s=open();setAnimationSession(s);resetExport();resetExportSettings();
+ const svgs:string[]=[];const rasterize=async(svg:string)=>{svgs.push(svg);return new Uint8Array([1]);};const save=()=>{};
+ s.dispatch({type:'layer.add',kind:'shape',id:'zz'});s.dispatch({type:'layer.add',kind:'shape',id:'yy'});const ids=findComp(s.document!).layers.map(l=>l.id);assert.ok(ids.length>=3);
+ s.setView({playhead:f(1),selectedLayer:'zz'});await exportCurrentFrame({rasterize,save});
+ setExportSettings({selectedOnly:true});await exportCurrentFrame({rasterize,save});
+ assert.ok(svgs[1].length<svgs[0].length);
+ s.setView({selectedLayer:null});let code='';try{await exportCurrentFrame({rasterize,save});}catch(e){code=(e as {code:string}).code;}assert.equal(code,'empty');
+ assert.ok(findComp(s.document!).layers.every(l=>l.visible));
+ setExportSettings({selectedOnly:false});svgs.length=0;s.setView({selectedLayer:'zz'});await exportCurrentFrame({rasterize,save});assert.ok(svgs[0].length>0);
+ assert.throws(()=>setExportSettings({selectedOnly:'yes' as never}),(e:any)=>e.code==='unsupported');assert.deepEqual(settingsProblems({...defaultExportSettings(),selectedOnly:true}),[]);
+ resetExportSettings();
+});

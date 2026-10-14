@@ -1056,5 +1056,8 @@
  "animation.export.blur.comp": "As in the composition",
  "animation.export.blur.off": "Off",
  "animation.export.blur.high": "Smooth (16 samples)",
- "animation.export.problem.blur": "Motion blur must be off or high."
+ "animation.export.problem.blur": "Motion blur must be off or high.",
+ "animation.export.selectedOnly": "Selected layers only",
+ "animation.export.selectedOnly.hint": "Exports only the layers selected when the export starts. Parents and mattes still work.",
+ "animation.export.problem.selectedOnly": "Selected layers only must be on or off."
 }

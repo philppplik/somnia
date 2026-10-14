@@ -4,7 +4,8 @@ import {encodeGif,GIF_MAX_FRAMES,type GifFrame} from './gifEncode';
 import {encodeApng} from './apngEncode';
 import {recordWebm} from './exportVideo';
 import {browserAudioContext} from './audioPreview';
-import {findComp} from './model';
+import {findComp,type Layer} from './model';
+import {layerSetIds} from './layerSet';
 import {defaultExportSettings,exportPlan,problemMessage,settingsProblems,EXPORT_PRESETS,EXPORT_LIMITS,DEFAULT_FRAME_QUALITY,webmBitrate,type ExportFormat,type ExportSettings} from './exportSettings';
 import {animationSession} from './session';
 import {exportFrameSvg} from './exportSvg';
@@ -41,9 +42,15 @@ export async function withExportComp<T>(compId:string,fn:()=>Promise<T>):Promise
 export const exportSetupSnapshot=()=>({settings:state.settings,transparent:state.transparent});
 export function restoreExportSetup(x:{settings:ExportSettings;transparent:boolean}){if(state.status!=='running')set({settings:x.settings,transparent:x.transparent});}
 /** The export background colour replaces the composition's for this export only; the document is untouched. */
-const withBg=<T extends {background:string;shutter?:{angle:number;samples:number}}>(c:T):T=>{
- const {background,blur}=state.settings;let o=background?{...c,background}:c;
+const withBg=<T extends {background:string;shutter?:{angle:number;samples:number};layers:readonly Layer[]}>(c:T):T=>{
+ const {background,blur,selectedOnly}=state.settings;let o=background?{...c,background}:c;
  if(blur==='off'&&o.shutter){const {shutter:_s,...rest}=o;o=rest as T;}else if(blur==='high'&&o.shutter)o={...o,shutter:{...o.shutter,samples:16}};
+ if(selectedOnly){
+  const sel=new Set(layerSetIds(animationSession().getState().view.selectedLayer).filter(id=>c.layers.some(l=>l.id===id)));
+  if(!sel.size)throw new ExportError('Select a layer first, or turn off "Selected layers only".','empty');
+  const keep=new Set(c.layers.flatMap(l=>sel.has(l.id)&&l.matte?[l.matte.source]:[]));
+  o={...o,layers:o.layers.map(l=>sel.has(l.id)||keep.has(l.id)||!l.visible?l:{...l,visible:false})};
+ }
  return o;};
 function target(format?:ExportFormat){
  const base=animationSession().document;const fileName=state.settings.fileName?.trim();
