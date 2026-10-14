@@ -16,7 +16,7 @@ export function requireLocalCapabilities(provider:OllamaProvider,numCtx?:number)
   const images=validateImages(request.messages);
   request.signal.throwIfAborted();
   const local=await provider.verifyLocalModel(request.model,request.signal);
-  if(!local.local)throw new ProviderError('not-local','This request requires verified local model weights');
+  if(!local.local)throw new ProviderError(local.reason==='model-not-found'?'model-not-found':local.reason==='unreachable'?'unreachable':'not-local','This request requires verified local model weights');
   if(images&&numCtx===undefined)throw new ProviderError('protocol','Set an explicit requested context before vision use');
   if(request.tools.length||images){
    const capabilities=await provider.capabilities(request.model,request.signal);

@@ -77,7 +77,7 @@ export function describeAgentError(e: AgentError): string {
     case 'usage-limit': return `This ChatGPT account reached its usage limit. ${none} Check your ChatGPT usage settings or wait for the limit to reset. Automatic retries were stopped; no switch to other billing happens silently.`;
     case 'quota': return `The provider reports that this key's quota or spending limit is exhausted. ${none} Check usage and limits in your provider account, or choose another provider. Automatic retries were stopped.`;
     case 'credit': return `The provider reports no credit or quota for this key (HTTP 402). ${none} Add credit or use a free model.`;
-    case 'model-not-found': return `The provider has no available endpoint for this model under the current privacy settings. ${none} Check the model name; for Ollama, install the model first. Or choose another model.`;
+    case 'model-not-found': return `The provider has no available endpoint for this model under the current privacy settings. ${none} Check the model name; for Ollama, review and pull the exact model in Settings > AI > Local Models first (no automatic download). Or choose another model.`;
     case 'server': return `The provider had a server error${e.status ? ` (HTTP ${e.status})` : ''}. ${none} ${e.retryAfterMs !== undefined ? `Wait at least ${Math.ceil(e.retryAfterMs / 1000)} seconds before retrying.` : 'Retry in a moment.'}`;
     case 'network': return `Could not reach the provider. ${none} Check your connection; for Ollama, make sure it is running. Retry when connected.`;
     case 'no-tool-support': return `This model or provider does not support tool calls, which the agent needs to read and propose file changes. ${none} Choose a model with tool support.`;

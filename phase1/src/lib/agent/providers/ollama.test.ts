@@ -169,3 +169,12 @@ test('keep_alive seconds are optional, include zero and reject unbounded values'
  assert.equal(bodies[0].keep_alive,0);assert.equal(bodies[1].keep_alive,300);assert.equal('keep_alive' in bodies[2],false);
  for(const value of [-1,86401,0.5])assert.throws(()=>new OllamaProvider({keepAliveSeconds:value}));
 });
+test('stream rejects huge unterminated line and malformed content without uncontrolled accumulation',async()=>{
+ for(const body of ['x'.repeat(1024*1024+1),'null\n','{"message":{"content":42}}\n'])await assert.rejects(collect(mk(async()=>nd([body],65536)).stream(req())),code('protocol'));
+});
+test('abort in delivered chunk drops later lines in the same network chunk',async()=>{
+ const ac=new AbortController(),events:any[]=[];const p=mk(async()=>nd(['{"message":{"content":"first"}}\n{"message":{"content":"late"}}\n{"done":true}\n']));for await(const event of p.stream(req({signal:ac.signal}))){events.push(event);if(event.type==='text')ac.abort();}assert.deepEqual(events,[{type:'text',text:'first'},{type:'finish',reason:'aborted'}]);
+});
+test('explicit local context caps requested output and fails text safety bound before HTTP',async()=>{
+ let sent:any,calls=0;const p=new OllamaProvider({numCtx:1024,fetch:async(_url,init)=>{calls++;sent=JSON.parse(String(init?.body));return nd(['{"done":true}']);}});await collect(p.stream(req({maxOutputTokens:8192})));assert.equal(sent.options.num_predict,256);await assert.rejects(collect(p.stream(req({messages:[{role:'user',content:'😀'.repeat(200)}]}))),(e:any)=>e.detail==='context');assert.equal(calls,1);
+});

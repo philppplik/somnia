@@ -1,3 +1,4 @@
+import {ProviderError} from './errors';
 import {visionApplication,type VisionDestination} from './localVisionApplication';
 import {requireLocalCapabilities} from './localCapabilities';
 import {withAgentStudioContext,resolveAgentToolSet} from './studioContextAdapter';
@@ -59,7 +60,7 @@ function guardedOllama(provider:OllamaProvider):AgentProvider {
  const checked=requireLocalCapabilities(provider,config.localRuntime?.numCtx);
  return {id:provider.id,locality:provider.locality,async *stream(request:AgentProviderRequest){
   const check=await provider.verifyLocalModel(request.model,request.signal);
-  if(!check.local)throw Error('Native studio mode requires a verified local Ollama model. Use a BYOK cloud provider with explicit disclosure instead.');
+  if(!check.local)throw new ProviderError(check.reason==='model-not-found'?'model-not-found':check.reason==='unreachable'?'unreachable':'not-local','Native studio mode requires verified local Ollama weights.');
   const controller=new AbortController();const abort=()=>controller.abort(request.signal.reason);
   request.signal.addEventListener('abort',abort,{once:true});if(request.signal.aborted)abort();
   let gateSignal:AbortSignal|undefined;let slot:AgentProviderEvent|undefined,finished=false,error:unknown;let wake=()=>{},release=()=>{};

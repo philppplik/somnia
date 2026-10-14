@@ -1,3 +1,4 @@
+import {checkLocalContext} from '../localContext';
 import { AgentError, ProviderError } from '../errors';
 import { fetchProviderResponse, type RetryOptions } from '../retry';
 import type { AgentMessage, AgentProvider, AgentProviderEvent, AgentProviderRequest } from '../types';
@@ -165,13 +166,15 @@ export class OllamaProvider implements AgentProvider {
   async *stream(req: AgentProviderRequest): AsyncGenerator<AgentProviderEvent> {
     const { signal } = req;
     if (signal.aborted) { yield { type: 'finish', reason: 'aborted' }; return; }
+    const maxOutputTokens=this.numCtx===undefined?req.maxOutputTokens:Math.min(req.maxOutputTokens,Math.max(1,Math.floor(this.numCtx/4)));
+    checkLocalContext({...req,maxOutputTokens},this.numCtx);
     const body = {
       model: req.model,
       messages: toOllamaMessages(req.messages),
       ...(req.tools.length && { tools: req.tools.map((t) => ({ type: 'function', function: { name: t.name, description: t.description, parameters: t.parameters } })) }),
       stream: true,
       ...(this.keepAliveSeconds!==undefined?{keep_alive:this.keepAliveSeconds}:{}),
-      options: { num_predict: req.maxOutputTokens, ...(this.numCtx && { num_ctx: this.numCtx }) },
+      options: { num_predict: maxOutputTokens, ...(this.numCtx && { num_ctx: this.numCtx }) },
     };
     let res: Response;
     try {
@@ -190,18 +193,21 @@ export class OllamaProvider implements AgentProvider {
     const abortReader=()=>{void reader.cancel().catch(()=>{});};
     signal.addEventListener('abort',abortReader,{once:true});
     const dec = new TextDecoder();
-    let buf = '';
+    let buf = '';let totalBytes=0;const MAX_LINE=1024*1024,MAX_STREAM=16*1024*1024;
     let toolIndex = 0;
     let finished = false;
     const handle = (line: string): AgentProviderEvent[] => {
+      if (line.length>MAX_LINE)throw new ProviderError('protocol','Ollama frame exceeds limit');
       if (!line.trim()) return [];
       let j: OllamaChunk;
       try { j = JSON.parse(line); } catch { throw new ProviderError('protocol', 'Invalid line in Ollama stream'); }
+      if(!j||typeof j!=='object'||Array.isArray(j)||j.message?.content!==undefined&&typeof j.message.content!=='string'||j.message?.tool_calls!==undefined&&!Array.isArray(j.message.tool_calls)||j.done!==undefined&&typeof j.done!=='boolean')throw new ProviderError('protocol','Invalid Ollama event');
       if (this.locality === 'local' && (j.remote_host || j.remote_model)) throw new ProviderError('not-local', 'Ollama answered from a remote host; refusing to treat this as local processing');
       if (j.error) throw new ProviderError(/not found/i.test(j.error) ? 'model-not-found' : 'http', 'Ollama reported a streaming error.');
       const out: AgentProviderEvent[] = [];
       if (j.message?.content) out.push({ type: 'text', text: j.message.content });
       for (const tc of j.message?.tool_calls ?? []) {
+        if(!tc||typeof tc!=='object'||!tc.function||typeof tc.function!=='object')throw new ProviderError('protocol','Invalid Ollama tool call');
         const name = tc.function?.name;
         if (!name) continue;
         const args = tc.function?.arguments;
@@ -219,17 +225,20 @@ export class OllamaProvider implements AgentProvider {
     try {
       for (;;) {
         const { done, value } = await reader.read();
+        if(signal.aborted){yield {type:'finish',reason:'aborted'};return;}
         if (done) break;
+        totalBytes+=value.byteLength;if(totalBytes>MAX_STREAM)throw new ProviderError('protocol','Ollama stream exceeds limit');
         buf += dec.decode(value, { stream: true });
         let i: number;
         while ((i = buf.indexOf('\n')) >= 0) {
-          const line = buf.slice(0, i); buf = buf.slice(i + 1);
-          for (const ev of handle(line)) { yield ev; if (ev.type === 'finish') finished = true; }
+          signal.throwIfAborted();const line = buf.slice(0, i); buf = buf.slice(i + 1);
+          for (const ev of handle(line)) { signal.throwIfAborted();yield ev; if (ev.type === 'finish') finished = true; }
           if (finished) { await reader.cancel().catch(() => {}); return; }
         }
+        if(buf.length>MAX_LINE)throw new ProviderError('protocol','Ollama frame exceeds limit');
       }
-      buf += dec.decode();
-      for (const ev of handle(buf)) { yield ev; if (ev.type === 'finish') finished = true; }
+      signal.throwIfAborted();buf += dec.decode();
+      for (const ev of handle(buf)) { signal.throwIfAborted();yield ev; if (ev.type === 'finish') finished = true; }
       if (!finished) throw new ProviderError('protocol', 'Ollama stream ended before completion');
     } catch (e) {
       if (e instanceof ProviderError) throw e;
