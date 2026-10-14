@@ -1,4 +1,4 @@
-import type {SheetOp,FormatOp,RangeResult,SheetInfo,SheetLayout,SheetsRequest,SheetsResponse,ViewResult,WorkbookInfo} from './protocol';
+import type {SheetOp,FormatOp,LineAxis,LineOp,RangeResult,SheetInfo,SheetLayout,SheetsRequest,SheetsResponse,ViewResult,WorkbookInfo} from './protocol';
 import {MAX_INPUT_BYTES} from './protocol';
 type Req=SheetsRequest extends infer R?R extends {id:number}?Omit<R,'id'>:never:never;
 /** One module Worker per open workbook. A timeout or crash discards the session: callers must keep the original bytes. */
@@ -47,6 +47,10 @@ export class SheetsEngine{
  clear(sheet:number,row:number,col:number,rows:number,cols:number){return this.result<unknown>({op:'clear',sheet,row,col,rows,cols});}
  /** One typed formatting operation over a block (one undo step). */
  format(sheet:number,row:number,col:number,rows:number,cols:number,format:FormatOp){return this.result<unknown>({op:'format',sheet,row,col,rows,cols,format});}
+ /** Resize, autofit, hide or unhide whole rows or columns (one undo step). */
+ resize(sheet:number,axis:LineAxis,first:number,count:number,line:LineOp){return this.result<unknown>({op:'resize',sheet,axis,first,count,line});}
+ /** Freeze the first rows/columns (0,0 unfreezes), one undo step. */
+ freeze(sheet:number,rows:number,cols:number){return this.result<unknown>({op:'freeze',sheet,rows,cols});}
  /** Current sheet list (reload after sheet edits and history). */
  sheets(){return this.result<WorkbookInfo>({op:'sheets'});}
  /** Add, rename, duplicate, move or delete a sheet (one undo step). Resolves to the sheet to show afterwards. */

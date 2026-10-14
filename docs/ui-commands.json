@@ -4608,6 +4608,14 @@
       "hasEnabled": true
     },
     {
+      "id": "sheets.freeze",
+      "title": "Freeze panes",
+      "category": "View",
+      "source": "sheets",
+      "allowInInput": true,
+      "hasEnabled": true
+    },
+    {
       "id": "sheets.navigate",
       "title": "Go to spreadsheet cell",
       "category": "View",
@@ -4620,6 +4628,14 @@
       "title": "Redo workbook change",
       "category": "Edit",
       "source": "sheets",
+      "hasEnabled": true
+    },
+    {
+      "id": "sheets.resize",
+      "title": "Resize, autofit or hide rows and columns",
+      "category": "Edit",
+      "source": "sheets",
+      "allowInInput": true,
       "hasEnabled": true
     },
     {

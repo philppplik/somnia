@@ -6,6 +6,9 @@ use serde_json::json;
 use wasm_bindgen::prelude::*;
 
 const MAX_INPUT: usize = 32 * 1024 * 1024;
+const MAX_RESIZE_ROWS: u32 = 100_000;
+const MAX_RESIZE_COLS: u32 = 16_384;
+const MAX_FREEZE: u32 = 20;
 const MAX_SHEETS: usize = 255;
 const MAX_FORMAT_CELLS: u64 = 1_000_000;
 
@@ -359,6 +362,78 @@ impl HeadlessWorkbook {
         }
         let active = self.session.doc().map_err(|e| e.to_string())?.wb.active_sheet;
         Ok(json!({"active": active}).to_string())
+    }
+
+    /// Resizes, autofits, hides or unhides whole rows or columns as ONE history entry. `axis` is "rows" or
+    /// "cols"; `op_json` is `{"kind":"size","px":n}`, `{"kind":"autofit"}`, `{"kind":"hide"}` or
+    /// `{"kind":"unhide"}`. Counts are bounded, protected sheets refused (the engine's size commands do not
+    /// look at protection), and the target sheet is activated first because those commands act on it.
+    pub fn resize_lines(&mut self, sheet: usize, axis: &str, first: u32, count: u32, op_json: &str) -> Result<String, String> {
+        let rows = match axis {
+            "rows" => true,
+            "cols" => false,
+            _ => return Err("axis must be rows or cols".into()),
+        };
+        let (limit, cap) = if rows { (gridcraft_engine::core::MAX_ROWS, MAX_RESIZE_ROWS) } else { (gridcraft_engine::core::MAX_COLS, MAX_RESIZE_COLS) };
+        if count == 0 || count > cap || first.checked_add(count).is_none_or(|v| v > limit) {
+            return Err(format!("invalid {axis} span (1 to {cap} lines inside the sheet)"));
+        }
+        {
+            let doc = self.session.doc().map_err(|e| e.to_string())?;
+            let sh = doc.wb.sheet(sheet).ok_or("unknown sheet")?;
+            if sh.is_protected() {
+                return Err("The sheet is protected. Unprotect it to change rows or columns.".into());
+            }
+        }
+        let op: serde_json::Value = serde_json::from_str(op_json).map_err(|_| "operation must be a JSON object".to_string())?;
+        let kind = op.get("kind").and_then(|v| v.as_str()).ok_or("missing operation kind")?;
+        let a = if rows { first + 1 } else { first };
+        let b = if rows { first + count } else { first + count - 1 };
+        let name = |n: u32| if rows { (n).to_string() } else { CellRef::new(0, n).a1().trim_end_matches(char::is_numeric).to_string() };
+        let span = format!("{}:{}", name(a), name(b));
+        let mut params = json!({});
+        params[axis] = json!(span);
+        let command = match (kind, rows) {
+            ("size", _) => {
+                let px = op.get("px").and_then(|v| v.as_f64()).filter(|v| v.is_finite()).ok_or("size must be a number")?;
+                let max_px = if rows { 409.0 * 96.0 / 72.0 } else { 1800.0 * 96.0 / 72.0 };
+                if !(0.0..=max_px).contains(&px) {
+                    return Err(format!("size must be between 0 and {} px", max_px.floor()));
+                }
+                let pt = px * 72.0 / 96.0;
+                if rows { params["height"] = json!(pt) } else { params["width"] = json!(pt) }
+                if rows { "home.rowHeight" } else { "home.columnWidth" }
+            }
+            ("autofit", true) => "home.autofitRowHeight",
+            ("autofit", false) => "home.autofitColumnWidth",
+            ("hide", true) => "home.hideRows",
+            ("hide", false) => "home.hideColumns",
+            ("unhide", true) => "home.unhideRows",
+            ("unhide", false) => "home.unhideColumns",
+            _ => return Err("unsupported row or column operation".into()),
+        };
+        self.session.run("sheet.activate", json!({"sheet": sheet}))?;
+        self.session.run(command, params).map(|v| v.to_string())
+    }
+
+    /// Freezes the first `rows` rows and `cols` columns (0 and 0 unfreezes), as one history entry.
+    pub fn freeze_panes(&mut self, sheet: usize, rows: u32, cols: u32) -> Result<String, String> {
+        if rows > MAX_FREEZE || cols > MAX_FREEZE {
+            return Err(format!("freeze at most {MAX_FREEZE} rows and columns"));
+        }
+        {
+            let doc = self.session.doc().map_err(|e| e.to_string())?;
+            let sh = doc.wb.sheet(sheet).ok_or("unknown sheet")?;
+            if sh.is_protected() {
+                return Err("The sheet is protected. Unprotect it to change the view.".into());
+            }
+        }
+        self.session.run("sheet.activate", json!({"sheet": sheet}))?;
+        if rows == 0 && cols == 0 {
+            self.session.run("view.unfreezePanes", json!({})).map(|v| v.to_string())
+        } else {
+            self.session.run("view.freezePanes", json!({"cell": CellRef::new(rows, cols).a1()})).map(|v| v.to_string())
+        }
     }
 
     /// Applies ONE typed formatting operation to a block as one history entry. `op_json` is
@@ -748,6 +823,54 @@ mod tests {
         ] {
             assert!(book.format_range(0, 0, 7, 1, 1, op).is_err(), "{op}");
         }
+    }
+    fn layout_of(b: &HeadlessWorkbook) -> serde_json::Value {
+        serde_json::from_str(&b.layout(0).unwrap()).unwrap()
+    }
+    #[test]
+    fn resize_hide_autofit_and_freeze_read_back_roundtrip_and_undo() {
+        let mut book = HeadlessWorkbook::new(FIXTURE).unwrap();
+        book.set_cell(0, "H1", "a fairly long piece of text to fit").unwrap();
+        book.resize_lines(0, "cols", 7, 2, r#"{"kind":"size","px":200}"#).unwrap();
+        let l = layout_of(&book);
+        let w = |i: u64| l["cols"].as_array().unwrap().iter().find(|c| c["i"] == i).map(|c| c["w"].as_f64().unwrap());
+        assert_eq!((w(7), w(8), w(9)), (Some(200.0), Some(200.0), None), "columns H:I resized, J untouched");
+        book.resize_lines(0, "cols", 7, 1, r#"{"kind":"autofit"}"#).unwrap();
+        assert!(layout_of(&book)["cols"].as_array().unwrap().iter().any(|c| c["i"] == 7 && c["w"].as_f64().unwrap() > 100.0));
+        book.resize_lines(0, "cols", 8, 1, r#"{"kind":"hide"}"#).unwrap();
+        assert!(layout_of(&book)["cols"].as_array().unwrap().iter().any(|c| c["i"] == 8 && c["hidden"] == true));
+        book.resize_lines(0, "cols", 8, 1, r#"{"kind":"unhide"}"#).unwrap();
+        assert!(layout_of(&book)["cols"].as_array().unwrap().iter().all(|c| c["i"] != 8 || c["hidden"] == false));
+        book.resize_lines(0, "rows", 2, 3, r#"{"kind":"size","px":40}"#).unwrap();
+        let rows = layout_of(&book);
+        assert!(rows["rows"].as_array().unwrap().iter().filter(|r| (2..5).contains(&r["i"].as_u64().unwrap())).all(|r| r["h"] == 40.0));
+        book.resize_lines(0, "rows", 3, 1, r#"{"kind":"hide"}"#).unwrap();
+        assert!(layout_of(&book)["rows"].as_array().unwrap().iter().any(|r| r["i"] == 3 && r["hidden"] == true));
+        book.freeze_panes(0, 1, 2).unwrap();
+        assert_eq!(layout_of(&book)["freeze"], json!({"rows": 1, "cols": 2}));
+        let reopened = HeadlessWorkbook::new(&book.export_xlsx().unwrap()).unwrap();
+        assert_eq!(layout_of(&reopened)["freeze"], json!({"rows": 1, "cols": 2}));
+        book.undo().unwrap();
+        assert!(layout_of(&book)["freeze"].is_null(), "one undo removes the freeze");
+        book.freeze_panes(0, 1, 0).unwrap();
+        book.freeze_panes(0, 0, 0).unwrap();
+        assert!(layout_of(&book)["freeze"].is_null());
+        for (axis, first, count, op) in [
+            ("cells", 0, 1, r#"{"kind":"hide"}"#),
+            ("cols", 0, 0, r#"{"kind":"hide"}"#),
+            ("cols", 16_383, 2, r#"{"kind":"hide"}"#),
+            ("rows", 0, 100_001, r#"{"kind":"hide"}"#),
+            ("cols", 0, 1, r#"{"kind":"size","px":3000}"#),
+            ("cols", 0, 1, r#"{"kind":"size","px":-1}"#),
+            ("rows", 0, 1, r#"{"kind":"size","px":600}"#),
+            ("rows", 0, 1, r#"{"kind":"size"}"#),
+            ("rows", 0, 1, r#"{"kind":"delete"}"#),
+        ] {
+            assert!(book.resize_lines(0, axis, first, count, op).is_err(), "{axis} {first} {count} {op}");
+        }
+        assert!(book.resize_lines(9, "cols", 0, 1, r#"{"kind":"hide"}"#).is_err(), "unknown sheet");
+        assert!(book.freeze_panes(0, 21, 0).is_err());
+        assert!(book.freeze_panes(9, 1, 0).is_err());
     }
     #[test]
     fn number_format_presets_display_roundtrip_and_undo() {

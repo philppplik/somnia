@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import React from 'react';
 import {renderToStaticMarkup} from 'react-dom/server';
-import {SheetsWorkbookPanel,SheetsCellPanel,SheetsAnalysisPanel,SheetsFormulasPanel,SheetsFormatPanel} from './SheetsPanels';
+import {SheetsWorkbookPanel,SheetsCellPanel,SheetsAnalysisPanel,SheetsFormulasPanel,SheetsFormatPanel,SheetsLayoutPanel} from './SheetsPanels';
 import {setSheetsSelection,type SheetsSelection} from '../../lib/sheets/sheetsStore';
 import type {StudioContext} from '../../lib/shell/types';
 const context:StudioContext={studio:'sheets',document:{id:'test.xlsx',kind:'xlsx',dirty:false,readOnly:false},selection:{kind:'one',count:1},busy:false,services:{}};
@@ -55,5 +55,14 @@ test('alignment, wrap, indent and border controls reflect the active cell',()=>{
  assert.match(markup,/data-testid="sheets-format-border-all"/);assert.match(markup,/data-testid="sheets-format-border-topDoubleBottom"/);assert.match(markup,/Line style/);
  assert.doesNotMatch(markup,/disabled=""[^>]*data-testid="sheets-format-indent-less"/,'indent can shrink while indented');
  setSheetsSelection({...selection,style:{...style,indent:0}});assert.match(html(SheetsFormatPanel),/disabled=""[^>]*data-testid="sheets-format-indent-less"/);
+ setSheetsSelection(null);
+});
+test('rows and columns panel shows current sizes and freeze state from the layout',()=>{
+ const layout={sheet:0,defaultColWidth:85,defaultRowHeight:20,cols:[{i:0,w:140,hidden:false}],rows:[],showGridlines:true,freeze:{rows:1,cols:0},merges:[]};
+ setSheetsSelection({...selection,layout});const markup=html(SheetsLayoutPanel);
+ assert.match(markup,/value="140"/);assert.match(markup,/value="20"/);assert.match(markup,/Frozen: 1 rows, 0 columns/);assert.match(markup,/data-testid="sheets-layout-freeze-top"/);
+ assert.doesNotMatch(markup,/disabled=""[^>]*data-testid="sheets-layout-unfreeze"/);
+ setSheetsSelection({...selection,layout:{...layout,freeze:null}});assert.match(html(SheetsLayoutPanel),/Nothing frozen/);assert.match(html(SheetsLayoutPanel),/disabled=""[^>]*data-testid="sheets-layout-unfreeze"/);
+ setSheetsSelection({...selection,layout:null});assert.match(html(SheetsLayoutPanel),/disabled=""[^>]*data-testid="sheets-layout-autofit-cols"/,'no layout yet: controls disabled');
  setSheetsSelection(null);
 });

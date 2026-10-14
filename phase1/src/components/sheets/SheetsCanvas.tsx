@@ -12,7 +12,7 @@ import {Table2,Redo2,Undo2} from '../../lib/icons';
 import {addMediaFile,formatBytes,useMedia,type MediaItem} from '../../lib/media';
 import {useT} from '../../lib/useT';
 import {SheetsEngine} from '../../lib/sheets/engine';
-import type {SheetOp,FormatOp,SheetInfo,SheetLayout,ViewCell,WorkbookInfo} from '../../lib/sheets/protocol';
+import type {SheetOp,FormatOp,LineAxis,LineOp,SheetInfo,SheetLayout,ViewCell,WorkbookInfo} from '../../lib/sheets/protocol';
 import {Geometry} from '../../lib/sheets/geometry';
 import {MAX_CELL_BYTES} from '../../lib/sheets/protocol';
 import {addressOf,cellText,colName,displayValue,editText,isErrorValue,cellAlign} from '../../lib/sheets/format';
@@ -51,7 +51,7 @@ function Workbook({item}:{item:MediaItem}){
   return()=>{live=false;offRead();engine.current=null;session.current=null;setSheetsSelection(null);};},[item.url,item.name]);
  // Sheet info (used range, history flags) after open, sheet switch and every edit.
  useEffect(()=>{if(phase.kind!=='ready')return;let live=true;engine.current?.info(sheet).then(i=>{if(live)setInfo(i);}).catch(fail);return()=>{live=false;};},[phase,sheet,rev,fail]);
- useEffect(()=>{if(phase.kind!=='ready')return;let live=true;engine.current?.layout(sheet).then(l=>{if(live)setLayout(l);}).catch(fail);return()=>{live=false;};},[phase,sheet,fail]);
+ useEffect(()=>{if(phase.kind!=='ready')return;let live=true;engine.current?.layout(sheet).then(l=>{if(live)setLayout(l);}).catch(fail);return()=>{live=false;};},[phase,sheet,fail,rev]);
  const totalRows=Math.min(MAX_ROWS,Math.max(100,(info?.rows??0)+50,sel.row+50)),totalCols=Math.min(MAX_COLS,Math.max(26,(info?.cols??0)+6,sel.col+6));
  const geo=useMemo(()=>new Geometry(layout,totalRows,totalCols),[layout,totalRows,totalCols]);
  // Bounded viewport read (values, formats and styles) for the visible window only.
@@ -85,10 +85,18 @@ function Workbook({item}:{item:MediaItem}){
   if(!formatRectOk(rectCells(range)))throw Error('Selection is too large to format.');
   const sent:FormatOp=op.kind==='decimals'?{...op,at:{row:sel.row,col:sel.col}}:op;
   try{await engine.current!.format(sheet,range.r0,range.c0,range.r1-range.r0+1,range.c1-range.c0+1,sent);setDirty(true);setNotice('');setRev(x=>x+1);}catch(e){fail(e);throw e;}};
+ // Row/column sizing acts on whole lines spanned by the selection; the layout reloads through `rev`.
+ const applyLines=async(axis:LineAxis,op:LineOp)=>{
+  if(draftRef.current!==null)await commit(draftRef.current);
+  const first=axis==='rows'?range.r0:range.c0,count=(axis==='rows'?range.r1-range.r0:range.c1-range.c0)+1;
+  try{await engine.current!.resize(sheet,axis,first,count,op);setDirty(true);setNotice('');setRev(x=>x+1);}catch(e){fail(e);throw e;}};
+ const applyFreeze=async(rows:number,cols:number)=>{
+  if(draftRef.current!==null)await commit(draftRef.current);
+  try{await engine.current!.freeze(sheet,rows,cols);setDirty(true);setNotice('');setRev(x=>x+1);}catch(e){fail(e);throw e;}};
  const toggleFormat=(kind:ToggleKind)=>{void applyFormat(toggleOp(kind,cur?.style)).catch(()=>undefined);};
  const panelOperations=useRef<SheetsPanelController>(null!);
- panelOperations.current={ready:()=>phase.kind==='ready'&&!!engine.current&&!engine.current.isDisposed,navigate:async(sheetIndex,targetAddress)=>{const target=parseAddress(targetAddress);if(!target||!book?.sheets.some(s=>s.index===sheetIndex&&s.visibility==='Visible'))throw Error('Invalid sheet or cell.');if(draftRef.current!==null)await commit(draftRef.current);setSheet(sheetIndex);setSel(target);setExt(null);setDraft(null);},setCell:async input=>{if(new TextEncoder().encode(input).length>MAX_CELL_BYTES)throw Error('Cell input is too long.');const eng=engine.current!;await eng.set(sheet,address,input);setDraft(null);setDirty(true);setNotice('');setRev(r=>r+1);},formatCells:async op=>{await applyFormat(op);},editSheet:async op=>{await applySheet(op);},readRange:async(input)=>{const r=parsePanelRange(input);if(!r)throw Error('Invalid range.');return (await engine.current!.range(sheet,r.r0,r.c0,r.r1-r.r0+1,r.c1-r.c0+1)).cells;}};
- useEffect(()=>registerSheetsPanelController({ready:()=>panelOperations.current.ready(),navigate:(...args)=>panelOperations.current.navigate(...args),setCell:input=>panelOperations.current.setCell(input),readRange:input=>panelOperations.current.readRange(input),formatCells:op=>panelOperations.current.formatCells(op),editSheet:op=>panelOperations.current.editSheet(op)}),[]);
+ panelOperations.current={ready:()=>phase.kind==='ready'&&!!engine.current&&!engine.current.isDisposed,navigate:async(sheetIndex,targetAddress)=>{const target=parseAddress(targetAddress);if(!target||!book?.sheets.some(s=>s.index===sheetIndex&&s.visibility==='Visible'))throw Error('Invalid sheet or cell.');if(draftRef.current!==null)await commit(draftRef.current);setSheet(sheetIndex);setSel(target);setExt(null);setDraft(null);},setCell:async input=>{if(new TextEncoder().encode(input).length>MAX_CELL_BYTES)throw Error('Cell input is too long.');const eng=engine.current!;await eng.set(sheet,address,input);setDraft(null);setDirty(true);setNotice('');setRev(r=>r+1);},formatCells:async op=>{await applyFormat(op);},resizeLines:async(axis,op)=>{await applyLines(axis,op);},freezePanes:async(rows,cols)=>{await applyFreeze(rows,cols);},editSheet:async op=>{await applySheet(op);},readRange:async(input)=>{const r=parsePanelRange(input);if(!r)throw Error('Invalid range.');return (await engine.current!.range(sheet,r.r0,r.c0,r.r1-r.r0+1,r.c1-r.c0+1)).cells;}};
+ useEffect(()=>registerSheetsPanelController({ready:()=>panelOperations.current.ready(),navigate:(...args)=>panelOperations.current.navigate(...args),setCell:input=>panelOperations.current.setCell(input),readRange:input=>panelOperations.current.readRange(input),formatCells:op=>panelOperations.current.formatCells(op),resizeLines:(axis,op)=>panelOperations.current.resizeLines(axis,op),freezePanes:(rows,cols)=>panelOperations.current.freezePanes(rows,cols),editSheet:op=>panelOperations.current.editSheet(op)}),[]);
  useEffect(()=>{if(phase.kind!=='ready')return;const el=scroller.current;if(!el)return;const top=geo.rowTop(sel.row),left=geo.colLeft(sel.col);if(top<el.scrollTop||top+geo.rowHeight(sel.row)>el.scrollTop+el.clientHeight-HEAD_H)el.scrollTop=Math.max(0,top);if(left<el.scrollLeft||left+geo.colWidth(sel.col)>el.scrollLeft+el.clientWidth-HEAD_W)el.scrollLeft=Math.max(0,left);},[sel.row,sel.col,sheet,geo,phase.kind]);
  const readRange=async()=>{if(rectCells(range)>MAX_READ_CELLS){setNotice(t('sheets.rangeTooLarge'));return null;}
   const r=await engine.current!.range(sheet,range.r0,range.c0,range.r1-range.r0+1,range.c1-range.c0+1);const m=new Map(r.cells.map(c=>[c.address,c]));

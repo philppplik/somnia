@@ -13,6 +13,7 @@ import {rectCells} from '../../lib/sheets/clipboard';
 import {addressOf,parseAddress} from '../../lib/sheets/format';
 import {MAX_SHEETS,sheetNameProblem} from '../../lib/sheets/sheetOps';
 import type {BorderLineStyle,RangeCell} from '../../lib/sheets/protocol';
+import {colWidthPx,rowHeightPx,MAX_COL_PX,MAX_ROW_PX,MAX_FREEZE} from '../../lib/sheets/lineOps';
 import {BORDER_PRESETS,BORDER_STYLES,DEFAULT_BORDER_COLOR,H_ALIGNS,V_ALIGNS,CURRENCY_SYMBOLS,DECIMAL_PRESETS,MAX_DECIMALS,NUM_PRESETS,detectNumFmt,DEFAULT_FILL_COLOR,DEFAULT_TEXT_COLOR,FONT_NAMES,FONT_SIZES,MAX_FONT_SIZE,MIN_FONT_SIZE,isHexColor,toggleOp,type ToggleKind} from '../../lib/sheets/formatOps';
 import {Button} from '../ui/button';
 import {NativeInput,NativeSelect} from '../ui/native-controls';
@@ -166,3 +167,27 @@ export function SheetsFormatPanel({context}:PanelHostProps){
   <p role="status">{action.notice}</p></Region>;
 }
 export function SheetsFormatSection({sectionId,context}:InspectorSectionProps){return <SheetsFormatPanel panelId={sectionId} context={context}/>;}
+
+/** Column width, row height, autofit, hide/show and freeze panes for the rows and columns spanned by the selection. Each control dispatches `sheets.resize` or `sheets.freeze`: one operation, one undo step. */
+export function SheetsLayoutPanel({context}:PanelHostProps){
+ const {t}=useT(),s=usePanelWorkbook(context);const action=useAction();
+ if(!s)return <Region><p>{t('sheets.panel.none')}</p></Region>;
+ const r=s.range,col=r?r.c0:0,row=r?r.r0:0;const layout=s.layout;
+ const resize=(axis:'rows'|'cols',kind:string,px?:number)=>void action.run('sheets.resize',{axis,kind,...(px===undefined?{}:{px})});
+ const freeze=(rows:number,cols:number)=>void action.run('sheets.freeze',{rows,cols});
+ const sizeField=(label:string,axis:'rows'|'cols',value:number|null,max:number)=><NumberField label={label} unit="px" value={value} resetKey={`${axis}:${s.address}:${s.revision??0}`} min={0} max={max} step={1} disabled={action.busy||!layout} constraintError={t('sheets.layout.sizeInvalid')} parse={v=>{const n=Number(v.trim().replace(',','.'));return v.trim()&&Number.isFinite(n)&&n>=0&&n<=max?{ok:true,value:n}:{ok:false,error:t('sheets.layout.sizeInvalid')};}} onCommit={px=>resize(axis,'size',px)}/>;
+ const btn=(key:string,onClick:()=>void,id:string,off=false)=><Button variant="outline" size="compact" disabled={action.busy||!layout||off} onClick={onClick} data-testid={id}>{t(key)}</Button>;
+ const frozen=layout?.freeze;
+ return <Region>
+  {sizeField(t('sheets.layout.colWidth'),'cols',colWidthPx(layout,col),MAX_COL_PX)}
+  <div className="flex flex-wrap gap-1">{btn('sheets.layout.autofitCols',()=>resize('cols','autofit'),'sheets-layout-autofit-cols')}{btn('sheets.layout.hideCols',()=>resize('cols','hide'),'sheets-layout-hide-cols')}{btn('sheets.layout.showCols',()=>resize('cols','unhide'),'sheets-layout-show-cols')}</div>
+  {sizeField(t('sheets.layout.rowHeight'),'rows',rowHeightPx(layout,row),MAX_ROW_PX)}
+  <div className="flex flex-wrap gap-1">{btn('sheets.layout.autofitRows',()=>resize('rows','autofit'),'sheets-layout-autofit-rows')}{btn('sheets.layout.hideRows',()=>resize('rows','hide'),'sheets-layout-hide-rows')}{btn('sheets.layout.showRows',()=>resize('rows','unhide'),'sheets-layout-show-rows')}</div>
+  <div className="flex flex-col gap-2 border-t border-subtle pt-3" role="group" aria-label={t('sheets.layout.freeze')}>
+   <span>{t('sheets.layout.freeze')}</span>
+   <span className="text-ink-3">{frozen?t('sheets.layout.frozen',{rows:frozen.rows,cols:frozen.cols}):t('sheets.layout.notFrozen')}</span>
+   <div className="flex flex-wrap gap-1">{btn('sheets.layout.freezeTop',()=>freeze(1,0),'sheets-layout-freeze-top')}{btn('sheets.layout.freezeFirstCol',()=>freeze(0,1),'sheets-layout-freeze-col')}{btn('sheets.layout.freezeAtCell',()=>freeze(row,col),'sheets-layout-freeze-cell',row===0&&col===0||row>MAX_FREEZE||col>MAX_FREEZE)}{btn('sheets.layout.unfreeze',()=>freeze(0,0),'sheets-layout-unfreeze',!frozen)}</div>
+  </div>
+  <p role="status">{action.notice}</p></Region>;
+}
+export function SheetsLayoutSection({sectionId,context}:InspectorSectionProps){return <SheetsLayoutPanel panelId={sectionId} context={context}/>;}
