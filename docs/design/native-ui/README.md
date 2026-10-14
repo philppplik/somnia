@@ -95,3 +95,10 @@ Context adaptation is not permission. A selected object can suggest a control; i
 Do not create competing homes for format-specific behavior. Use [vector tools](../vector-tools.md), [PDF/layout design](../pdf-layout-tools.md), [appearance surfaces](../appearance-surfaces.md), [glass behavior](../../GLASS.md), [window background](../../WINDOW-BACKGROUND.md), [Components](../../features/component-system.md), [collaboration](../../collaboration.md), [Agent](../../agent/README.md) and [settings deep links](../../SETTINGS-DEEP-LINKS.md) for their own details.
 
 This guide supplies the cross-cutting system. The [verification guide](verification.md) lists known gaps and the procedure for keeping it current.
+
+## Current contributor entry points
+
+- [Component usage](contributor-guide.md)
+- [Token tables and exchange aliases](contributor-tokens.md)
+- [Theme importer](theme-importer-guide.md)
+- [P3 Settings plan and CI-only capture harness](settings-migration-plan.md)
