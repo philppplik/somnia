@@ -112,8 +112,9 @@ function InterfaceLayoutControls({node,run,patch}:{node:InterfaceNode;run:(f:()=
 }
 function InterfaceA11yReview(){
  const s=useInterfaceState(),{t}=useT();const audit=useMemo(()=>s.document?auditInterfaceDocument(s.document):null,[s.document]);
- if(!audit)return null;
- return <InspectorGroup title={t('interface.a11y')}>{audit.findings.length?<ul className="flex flex-col gap-2 text-xs">{audit.findings.map(f=><li key={f.id}><p>{t(`interface.a11y.${f.kind}`,f.params)}</p>{f.suggestions?.length?<p className="text-ink-2">{t('interface.a11y.suggest')}: {f.suggestions.map(sg=>`${sg.name} (${sg.value}, ${sg.ratio}:1)`).join(' · ')}</p>:null}</li>)}</ul>:<p className="text-xs text-ink-2">{t('interface.a11y.ok')}</p>}</InspectorGroup>;
+ if(!audit)return null;const doc=s.document!;
+ const reveal=(id:string)=>{const target=doc.nodes.find(n=>n.id===id);if(!target)return;interfaceSession.page(target.pageId);interfaceSession.select(id);window.dispatchEvent(new CustomEvent('interface-reveal',{detail:id}));};
+ return <InspectorGroup title={t('interface.a11y')}>{audit.findings.length?<ul className="flex flex-col gap-2 text-xs">{audit.findings.map(f=><li key={f.id} className="flex flex-col gap-1"><Button size="compact" variant="outline" className="w-full whitespace-normal h-auto min-h-7 py-1 text-left justify-start" onClick={()=>reveal(f.layerId)}>{t(`interface.a11y.${f.kind}`,f.params)}</Button>{f.suggestions?.length?<><p className="text-ink-2">{t('interface.a11y.suggest')}: {f.suggestions.map(sg=>`${sg.name} (${sg.value}, ${sg.ratio}:1)`).join(' · ')}</p><div className="flex flex-wrap gap-1">{f.suggestions.map(sg=><Button key={sg.name} size="compact" disabled={doc.nodes.find(n=>n.id===f.layerId)?.locked} onClick={()=>interfaceSession.transact(d=>patchInterfaceNode(d,f.layerId,{fill:sg.value}))}>{t('interface.a11y.apply',{name:`${sg.name} (${sg.ratio}:1)`})}</Button>)}</div></>:null}</li>)}</ul>:<p className="text-xs text-ink-2">{t('interface.a11y.ok')}</p>}</InspectorGroup>;
 }
 function InterfaceCopyCss({node,run}:{node:InterfaceNode;run:(f:()=>void)=>void}){
  const {t}=useT();const s=useInterfaceState();const [copied,setCopied]=useState(false);
