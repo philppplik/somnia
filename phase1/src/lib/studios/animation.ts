@@ -15,7 +15,7 @@ export const animationShell:StudioShellDef={
  inspector:{titleKey:'animation.shell.inspector',emptyKey:'animation.shell.empty',emptyWhen:'!services.ready',sections:[
   {id:'properties',title:'Properties',titleKey:'animation.shell.properties',component:'animation.inspector.properties',when:"selection.kind == 'one'",order:10,commands:['animation.layer.update','animation.prop.set','animation.prop.animate','animation.key.add','animation.key.remove','animation.key.interp']},
   {id:'composition',title:'Composition',titleKey:'animation.shell.composition',component:'animation.inspector.composition',when:'services.ready',order:20,commands:['animation.comp.update']},
-  {id:'render',title:'Render',titleKey:'animation.shell.render',component:'animation.inspector.render',when:'services.renderSetup',order:30,commands:['animation.render.close']},
+  {id:'render',title:'Render',titleKey:'animation.shell.render',component:'animation.inspector.render',when:'services.renderSetup',order:30,commands:['animation.render.close','animation.export.frame','animation.export.sequence']},
  ]},
  defaultLayout:{leftOpen:true,rightOpen:true,leftWidth:260,rightWidth:320,leftPanels:['compositions'],rightPanels:['inspector'],activeLeft:'compositions',activeRight:'inspector'},
  menus:[
@@ -25,6 +25,18 @@ export const animationShell:StudioShellDef={
   {menu:'Edit',command:'animation.edit.undo',group:'animation',order:10},
   {menu:'Edit',command:'animation.edit.redo',group:'animation',order:20},
   {menu:'Edit',command:'animation.layer.remove',group:'animation',order:30},
+  {menu:'Edit',command:'animation.keys.copy',group:'animation-keys',order:10},
+  {menu:'Edit',command:'animation.keys.cut',group:'animation-keys',order:20},
+  {menu:'Edit',command:'animation.keys.paste',group:'animation-keys',order:30},
+  {menu:'Edit',command:'animation.keys.delete',group:'animation-keys',order:40},
+  {menu:'Edit',command:'animation.keys.selectAll',group:'animation-keys',order:50},
+  {menu:'View',command:'animation.graph.toggle',group:'animation',order:10},
+  {menu:'View',command:'animation.playback.loop',group:'animation',order:20},
+  {menu:'View',command:'animation.workarea.in',group:'animation-workarea',order:30},
+  {menu:'View',command:'animation.workarea.out',group:'animation-workarea',order:40},
+  {menu:'View',command:'animation.workarea.reset',group:'animation-workarea',order:50},
+  {menu:'Project',command:'animation.export.frame',group:'animation',order:90},
+  {menu:'Project',command:'animation.export.sequence',group:'animation',order:100},
   {menu:'Insert',command:'animation.comp.add',group:'animation',order:10},
  ],
 };

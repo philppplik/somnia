@@ -7,7 +7,9 @@ export type PropValue=number|Vec2;
 export type PropType='scalar'|'vec2';
 export type Interp='hold'|'linear'|'bezier';
 /** Temporal ease handles in CSS cubic-bezier form: `out` belongs to this key, `in` to the next key of the segment. */
-export interface Keyframe{t:number;v:PropValue;interp:Interp;out:readonly [number,number];in:readonly [number,number]}
+/** `sIn`/`sOut` are spatial tangents (offsets from the key value, vec2 properties only). Absent or [0,0] means a straight spatial segment. */
+export interface Keyframe{t:number;v:PropValue;interp:Interp;out:readonly [number,number];in:readonly [number,number];sIn?:Vec2;sOut?:Vec2}
+export interface KeyRef{layer:string;prop:TransformKey;t:number}
 export interface Property{type:PropType;value:PropValue;keys:readonly Keyframe[];/** Inert text only; never evaluated in P0. */expression?:string}
 export type LayerKind='solid'|'text'|'shape'|'null';
 export interface Transform{anchor:Property;position:Property;scale:Property;rotation:Property;opacity:Property}
@@ -17,6 +19,8 @@ export interface LayerSource{color?:string;width?:number;height?:number;text?:st
 export interface Layer{id:string;name:string;kind:LayerKind;source:LayerSource;inT:number;outT:number;offset:number;parent:string|null;transform:Transform;visible:boolean;solo:boolean;locked:boolean}
 export interface Composition{id:string;name:string;width:number;height:number;fps:Rational;duration:number;start:number;background:string;workArea:{in:number;out:number};layers:readonly Layer[]}
 export interface AnimationDocument{schema:number;engine:string;id:string;name:string;revision:number;activeComp:string;compositions:readonly Composition[];assets:readonly never[]}
+/** One copied key, with its time relative to the earliest copied key. */
+export interface ClipItem{prop:TransformKey;dt:number;key:Keyframe}
 export interface PropertyRef{layer:string;prop:TransformKey}
 export const PROP_META:Record<TransformKey,{type:PropType;min?:number;max?:number}>={
  anchor:{type:'vec2'},position:{type:'vec2'},scale:{type:'vec2',min:0,max:10000},rotation:{type:'scalar',min:-36000,max:36000},opacity:{type:'scalar',min:0,max:100}};
@@ -77,6 +81,8 @@ export function validateDocument(raw:unknown):string[]{
   if(!Number.isInteger(c.width)||!Number.isInteger(c.height)||c.width<1||c.height<1||c.width>16384||c.height>16384)bad(`${c.id}: bad size`);
   if(!validRate(c.fps))bad(`${c.id}: bad frame rate`);
   if(!Number.isInteger(c.duration)||c.duration<1)bad(`${c.id}: bad duration`);
+  const wa=c.workArea;
+  if(!wa||!Number.isInteger(wa.in)||!Number.isInteger(wa.out)||wa.in<0||wa.out>c.duration||wa.out<=wa.in)bad(`${c.id}: bad work area`);
   if(!Array.isArray(c.layers)){bad(`${c.id}: layers missing`);continue;}
   const ids=new Set<string>();
   for(const l of c.layers){
@@ -94,6 +100,7 @@ export function validateDocument(raw:unknown):string[]{
      if(!okValue(meta.type,key.v))bad(`${l.id}.${k}: bad key value`);
      if(!['hold','linear','bezier'].includes(key.interp))bad(`${l.id}.${k}: bad interpolation`);
      if(!Array.isArray(key.out)||!Array.isArray(key.in)||![...key.out,...key.in].every(isNum)||key.out[0]<0||key.out[0]>1||key.in[0]<0||key.in[0]>1)bad(`${l.id}.${k}: bad ease handles`);
+     for(const s of [key.sIn,key.sOut])if(s!==undefined&&(meta.type!=='vec2'||!isVec(s)))bad(`${l.id}.${k}: bad spatial tangent`);
     }
    }
   }

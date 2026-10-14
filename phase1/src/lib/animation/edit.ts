@@ -1,6 +1,6 @@
-import {createComposition,createLayer,findComp,findLayer,PROP_META,wouldCycle,EASE_IN,EASE_OUT,TRANSFORM_KEYS,validateDocument,type AnimationDocument,type CompSettings,type Composition,type Interp,type Keyframe,type Layer,type LayerKind,type LayerSource,type Property,type PropValue,type TransformKey} from './model';
+import {createComposition,type ClipItem,type KeyRef,type Vec2,createLayer,findComp,findLayer,PROP_META,wouldCycle,EASE_IN,EASE_OUT,TRANSFORM_KEYS,validateDocument,type AnimationDocument,type CompSettings,type Composition,type Interp,type Keyframe,type Layer,type LayerKind,type LayerSource,type Property,type PropValue,type TransformKey} from './model';
 import {evaluate} from './interpolate';
-import {snapToFrame,validRate} from './time';
+import {snapToFrame,tickToFrame,frameToTick,validRate} from './time';
 /** Typed `animation.*` edits. Every mutation goes through applyEdit so undo, recovery and AI share one path. */
 export type Edit=
  |{type:'comp.add';settings?:CompSettings;id?:string}
@@ -18,7 +18,16 @@ export type Edit=
  |{type:'key.add';layer:string;prop:TransformKey;t:number}
  |{type:'key.remove';layer:string;prop:TransformKey;t:number}
  |{type:'key.move';layer:string;prop:TransformKey;from:number;to:number;replace?:boolean}
- |{type:'key.interp';layer:string;prop:TransformKey;t:number;interp:Interp;out?:readonly [number,number];in?:readonly [number,number]};
+ |{type:'key.interp';layer:string;prop:TransformKey;t:number;interp:Interp;out?:readonly [number,number];in?:readonly [number,number]}
+ /** Move many keys by the same number of ticks (snapped to whole frames) as one step. */
+ |{type:'keys.move';keys:readonly KeyRef[];delta:number;replace?:boolean}
+ |{type:'keys.remove';keys:readonly KeyRef[]}
+ |{type:'keys.paste';layer:string;items:readonly ClipItem[];t:number}
+ |{type:'keys.interp';keys:readonly KeyRef[];interp?:Interp;out?:readonly [number,number];in?:readonly [number,number]}
+ /** Spatial tangents of a position key, as offsets from the key value. */
+ |{type:'key.spatial';layer:string;prop:TransformKey;t:number;sIn?:Vec2;sOut?:Vec2}
+ |{type:'keys.spatial';keys:readonly KeyRef[];mode:'smooth'|'straight'}
+ |{type:'workarea.set';in:number;out:number};
 export class EditError extends Error{constructor(message:string,readonly code:'locked'|'missing'|'invalid'|'collision'|'cycle'){super(message);this.name='EditError';}}
 const fail=(code:EditError['code'],m:string):never=>{throw new EditError(m,code);};
 const compOf=(doc:AnimationDocument)=>findComp(doc)??fail('missing','No active composition.');
@@ -53,6 +62,19 @@ function checkSettings(s:CompSettings){
  if(s.duration!==undefined&&(!Number.isInteger(s.duration)||s.duration<1))fail('invalid','Duration must be a positive number of ticks.');
  if(s.background!==undefined&&!/^#[0-9a-fA-F]{6}$/.test(s.background))fail('invalid','Background must be a #rrggbb colour.');
 }
+const checkHandle=(h:readonly [number,number])=>Array.isArray(h)&&h.length===2&&h.every(Number.isFinite)&&h[0]>=0&&h[0]<=1;
+/** Groups key refs by layer and property (times snapped to frames, existence checked), then applies `fn` per group. Locked layers fail. */
+function foldGroups(doc:AnimationDocument,refs:readonly KeyRef[],fn:(d:AnimationDocument,layer:string,prop:TransformKey,times:Set<number>)=>AnimationDocument):AnimationDocument{
+ if(!refs?.length)return fail('invalid','No keys selected.');
+ const c=compOf(doc);const groups=new Map<string,{layer:string;prop:TransformKey;times:Set<number>}>();
+ for(const r of refs){
+  if(!TRANSFORM_KEYS.includes(r.prop))return fail('invalid','Unknown property.');
+  const l=layerOf(doc,r.layer);const t=tickOf(c,r.t);
+  if(!l.transform[r.prop].keys.some(k=>k.t===t))return fail('missing','A selected key no longer exists.');
+  const id=`${r.layer}\u0000${r.prop}`;const g=groups.get(id)??{layer:r.layer,prop:r.prop,times:new Set<number>()};g.times.add(t);groups.set(id,g);
+ }
+ let cur=doc;for(const g of groups.values())cur=fn(cur,g.layer,g.prop,g.times);return cur;
+}
 /** Pure reducer. Returns a new document with revision+1, or throws EditError and leaves the input untouched. */
 export function applyEdit(doc:AnimationDocument,e:Edit):AnimationDocument{
  const out=reduce(doc,e);return out===doc?doc:{...out,revision:doc.revision+1};
@@ -83,7 +105,8 @@ function reduce(doc:AnimationDocument,e:Edit):AnimationDocument{
   case 'layer.reorder':{const l=layerOf(doc,e.layer);if(!Number.isInteger(e.index)||e.index<0)fail('invalid','Bad index.');
    return withLayers(doc,ls=>{const r=ls.filter(x=>x.id!==l.id);r.splice(Math.min(e.index,r.length),0,l);return r;});}
   case 'prop.set':{const c=compOf(doc);const v=checkValue(e.prop,e.value);
-   return setProp(doc,e.layer,e.prop,p=>p.keys.length?{...p,keys:upsertKey(p.keys,makeKey(tickOf(c,e.t),v,p.keys.find(k=>k.t===snapToFrame(e.t,c.fps))?.interp??'bezier'))}:{...p,value:v});}
+   return setProp(doc,e.layer,e.prop,p=>{if(!p.keys.length)return {...p,value:v};const t=tickOf(c,e.t);const at=p.keys.find(k=>k.t===t);
+    return {...p,keys:upsertKey(p.keys,at?{...at,v}:makeKey(t,v))};});}
   case 'prop.animate':{const c=compOf(doc);const t=tickOf(c,e.t);
    return setProp(doc,e.layer,e.prop,p=>e.on?(p.keys.length?p:{...p,keys:[makeKey(t,p.value)]}):(p.keys.length?{...p,value:evaluate(p,t),keys:[]}:p));}
   case 'key.add':{const c=compOf(doc);const t=tickOf(c,e.t);return setProp(doc,e.layer,e.prop,p=>({...p,keys:upsertKey(p.keys,makeKey(t,evaluate(p,t)))}));}
@@ -100,6 +123,58 @@ function reduce(doc:AnimationDocument,e:Edit):AnimationDocument{
    const out=h(e.out),inn=h(e.in);
    return setProp(doc,e.layer,e.prop,p=>{if(!p.keys.some(k=>k.t===t))return fail('missing','No key at that time.');
     return {...p,keys:p.keys.map(k=>k.t===t?{...k,interp:e.interp,out:out??k.out,in:inn??k.in}:k)};});}
+  case 'keys.move':{const c=compOf(doc);if(!Number.isFinite(e.delta))return fail('invalid','Delta must be a number.');
+   const df=Math.round(e.delta*c.fps.num/(c.fps.den*240000));if(df===0)return doc;
+   return foldGroups(doc,e.keys,(d,layer,prop,times)=>setProp(d,layer,prop,p=>{
+    const moved=p.keys.filter(k=>times.has(k.t)).map(k=>({...k,t:frameToTick(tickToFrame(k.t,c.fps)+df,c.fps)}));
+    if(new Set(moved.map(k=>k.t)).size!==moved.length)return fail('collision','Moved keys would overlap.');
+    if(moved.some(k=>k.t<c.start||k.t>c.start+c.duration))return fail('invalid','Keys cannot move outside the composition.');
+    const times2=new Set(moved.map(k=>k.t));const rest=p.keys.filter(k=>!times.has(k.t));
+    if(!e.replace&&rest.some(k=>times2.has(k.t)))return fail('collision','A key already exists at that time. Replace it explicitly.');
+    return {...p,keys:[...rest.filter(k=>!times2.has(k.t)),...moved].sort((a,b)=>a.t-b.t)};}));}
+  case 'keys.remove':return foldGroups(doc,e.keys,(d,layer,prop,times)=>setProp(d,layer,prop,p=>{
+   const keys=p.keys.filter(k=>!times.has(k.t));return keys.length?{...p,keys}:{...p,value:p.keys[0].v,keys:[]};}));
+  case 'keys.paste':{const c=compOf(doc);layerOf(doc,e.layer);
+   if(!e.items?.length)return fail('invalid','Nothing to paste.');
+   let cur=doc;const base=tickOf(c,e.t);
+   const byProp=new Map<TransformKey,Keyframe[]>();
+   for(const it of e.items){
+    if(!TRANSFORM_KEYS.includes(it.prop))return fail('invalid','Unknown property in clipboard.');
+    const t=snapToFrame(base+it.dt,c.fps);if(t<c.start||t>c.start+c.duration)return fail('invalid','Pasted keys would end outside the composition.');
+    const v=checkValue(it.prop,it.key.v);const isVec=PROP_META[it.prop].type==='vec2';
+    const k:Keyframe={t,v,interp:it.key.interp,out:it.key.out,in:it.key.in,...(isVec&&it.key.sIn?{sIn:it.key.sIn}:{}),...(isVec&&it.key.sOut?{sOut:it.key.sOut}:{})};
+    if(!['hold','linear','bezier'].includes(k.interp)||!checkHandle(k.out)||!checkHandle(k.in))return fail('invalid','Clipboard key has invalid easing.');
+    byProp.set(it.prop,[...(byProp.get(it.prop)??[]),k]);
+   }
+   for(const [prop,ks] of byProp)cur=setProp(cur,e.layer,prop,p=>{
+    const times=new Set(ks.map(k=>k.t));return {...p,keys:[...p.keys.filter(k=>!times.has(k.t)),...ks].sort((a,b)=>a.t-b.t)};});
+   return cur;}
+  case 'keys.interp':{
+   if(e.interp===undefined&&!e.out&&!e.in)return fail('invalid','Nothing to change.');
+   if((e.out&&!checkHandle(e.out))||(e.in&&!checkHandle(e.in)))return fail('invalid','Ease handle x must be within 0 and 1.');
+   return foldGroups(doc,e.keys,(d,layer,prop,times)=>setProp(d,layer,prop,p=>({...p,keys:p.keys.map(k=>times.has(k.t)?{...k,interp:e.interp??k.interp,out:e.out??k.out,in:e.in??k.in}:k)})));}
+  case 'key.spatial':{const c=compOf(doc);const t=tickOf(c,e.t);
+   if(e.prop!=='position')return fail('invalid','Spatial tangents apply to position only.');
+   const ok=(v?:Vec2)=>v===undefined||(Array.isArray(v)&&v.length===2&&v.every(n=>Number.isFinite(n)&&Math.abs(n)<=1e6));
+   if(!ok(e.sIn)||!ok(e.sOut))return fail('invalid','Tangents must be two finite numbers.');
+   return setProp(doc,e.layer,e.prop,p=>{if(!p.keys.some(k=>k.t===t))return fail('missing','No key at that time.');
+    return {...p,keys:p.keys.map(k=>k.t===t?{...k,...(e.sIn?{sIn:e.sIn}:{}),...(e.sOut?{sOut:e.sOut}:{})}:k)};});}
+  case 'keys.spatial':return foldGroups(doc,e.keys,(d,layer,prop,times)=>{
+   if(prop!=='position')return fail('invalid','Spatial tangents apply to position only.');
+   return setProp(d,layer,prop,p=>({...p,keys:p.keys.map((k,i)=>{
+    if(!times.has(k.t))return k;
+    const {sIn:_i,sOut:_o,...bare}=k;if(e.mode==='straight')return bare;
+    const prev=p.keys[i-1]?.v as Vec2|undefined,next=p.keys[i+1]?.v as Vec2|undefined,cur=k.v as Vec2;
+    let sOut:Vec2=[0,0],sIn:Vec2=[0,0];
+    if(prev&&next){sOut=[(next[0]-prev[0])/6,(next[1]-prev[1])/6];sIn=[-sOut[0],-sOut[1]];}
+    else if(next)sOut=[(next[0]-cur[0])/3,(next[1]-cur[1])/3];
+    else if(prev)sIn=[(prev[0]-cur[0])/3,(prev[1]-cur[1])/3];
+    return {...bare,sIn,sOut};})}));});
+  case 'workarea.set':{const c=compOf(doc);num(e.in,'Work area in must be a number.');num(e.out,'Work area out must be a number.');
+   const a=snapToFrame(e.in,c.fps),b=snapToFrame(e.out,c.fps);
+   if(a<0||b>c.duration||b<=a)return fail('invalid','Work area must lie inside the composition with out after in.');
+   if(a===c.workArea.in&&b===c.workArea.out)return doc;
+   return withComp(doc,{...c,workArea:{in:a,out:b}});}
  }
 }
 /** Apply several edits as one atomic step. Any failure throws and nothing is applied. */

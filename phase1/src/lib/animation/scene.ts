@@ -9,14 +9,24 @@ export function localMatrix(l:Layer,t:number):Matrix{
  const c=Math.cos(r),n=Math.sin(r);
  return mul([1,0,0,1,p[0],p[1]],mul([c*s[0]/100,n*s[0]/100,-n*s[1]/100,c*s[1]/100,0,0],[1,0,0,1,-a[0],-a[1]]));
 }
+/** World matrix of a layer at tick `t` (parents applied, cycle safe). */
+export function worldMatrix(comp:Composition,l:Layer,t:number,seen=new Set<string>()):Matrix{
+ const m=localMatrix(l,t);if(!l.parent||seen.has(l.id))return m;seen.add(l.id);
+ const p=findLayer(comp,l.parent);return p?mul(worldMatrix(comp,p,t,seen),m):m;
+}
+/** Matrix that maps a layer's parent space (where its position keys live) to composition space. */
+export function parentMatrix(comp:Composition,l:Layer,t:number):Matrix{
+ const p=l.parent?findLayer(comp,l.parent):undefined;return p?worldMatrix(comp,p,t):IDENTITY;
+}
+export function invertMatrix(m:Matrix):Matrix|null{
+ const det=m[0]*m[3]-m[1]*m[2];if(!Number.isFinite(det)||Math.abs(det)<1e-12)return null;
+ return [m[3]/det,-m[1]/det,-m[2]/det,m[0]/det,(m[2]*m[5]-m[3]*m[4])/det,(m[1]*m[4]-m[0]*m[5])/det];
+}
+export const applyMatrix=(m:Matrix,p:Vec2):Vec2=>[m[0]*p[0]+m[2]*p[1]+m[4],m[1]*p[0]+m[3]*p[1]+m[5]];
 export interface DrawLayer{layer:Layer;matrix:Matrix;opacity:number}
 /** Layers visible at tick `t`, bottom-most first (paint order), with world matrices. Opacity is not inherited. */
 export function sceneAt(comp:Composition,t:number):DrawLayer[]{
  const solo=comp.layers.some(l=>l.solo);
- const world=(l:Layer,seen=new Set<string>()):Matrix=>{
-  const m=localMatrix(l,t);if(!l.parent||seen.has(l.id))return m;seen.add(l.id);
-  const p=findLayer(comp,l.parent);return p?mul(world(p,seen),m):m;
- };
  return [...comp.layers].reverse().filter(l=>l.visible&&(!solo||l.solo)&&t>=l.inT+l.offset&&t<l.outT+l.offset&&l.kind!=='null')
-  .map(l=>({layer:l,matrix:world(l),opacity:Math.min(1,Math.max(0,(evaluate(l.transform.opacity,t) as number)/100))}));
+  .map(l=>({layer:l,matrix:worldMatrix(comp,l,t),opacity:Math.min(1,Math.max(0,(evaluate(l.transform.opacity,t) as number)/100))}));
 }
