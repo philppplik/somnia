@@ -1,3 +1,4 @@
+import {SlidesTitleReport} from './SlidesTitleReport';
 import {SlidesAltReport} from './SlidesAltReport';
 import {SlidesSectionsEditor} from './SlidesSectionsEditor';
 import {SlidesLayoutGallery} from './SlidesLayoutGallery';
@@ -52,6 +53,7 @@ export function SlidesOverviewPanel(){
   <button className={button} disabled={s.busy} onClick={()=>void action.run('slides.loadThumbnails')}>{t('cmd.slides.loadThumbnails')}</button>
   <details className="rounded-lg border border-subtle"><summary className="px-2 py-1.5 text-xs">{t('slides.sections.title')}</summary><SlidesSectionsEditor/></details>
   <details className="rounded-lg border border-subtle"><summary className="px-2 py-1.5 text-xs">{t('slides.altReport.title')}</summary><SlidesAltReport/></details>
+  <details className="rounded-lg border border-subtle"><summary className="px-2 py-1.5 text-xs">{t('slides.titleReport.title')}</summary><SlidesTitleReport/></details>
   <nav aria-label={t('slides.panel.overview')} className="flex flex-col gap-2">{rows.map(row=>{
    const id=s.slideIds[row.index],last=s.summary!.slides-1;
    return <div key={id??`i${row.index}`} className="flex items-stretch gap-1" draggable={canMove} onDragStart={e=>{if(canMove){e.dataTransfer.setData('text/plain',String(row.index));e.dataTransfer.effectAllowed='move';}}} onDragOver={e=>{if(canMove)e.preventDefault();}} onDrop={e=>{if(!canMove)return;e.preventDefault();const from=Number(e.dataTransfer.getData('text/plain'));if(Number.isInteger(from)&&s.slideIds[from]!==undefined&&from!==row.index)void move(from,row.index);}}>

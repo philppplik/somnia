@@ -1996,3 +1996,17 @@ export function missingAltText(bytes:Uint8Array):{items:MissingAlt[];total:numbe
   });
   return {items,total};
 }
+
+/** Slides whose title placeholder is missing or has no text. Slides with unsupported structure are skipped, not guessed. */
+export interface UntitledSlide {slideId:number;slideIndex:number;reason:'missing'|'empty'}
+export function untitledSlides(bytes:Uint8Array):{items:UntitledSlide[];total:number}{
+  const model=readDeckModel(bytes),zip=openPackage(bytes),items:UntitledSlide[]=[];let total=0;
+  const textOf=new Map<string,string>();for(const r of model.runs)textOf.set(`${r.slideId}:${r.shapeId}`,(textOf.get(`${r.slideId}:${r.shapeId}`)??'')+r.text);
+  model.slides.forEach((slide,slideIndex)=>{
+    if(slide.problems.length)return;
+    const xml=text(zip,slide.part),titles=topLevelShapes(xml).filter(sh=>/<p:ph\b[^>]*\stype="(?:title|ctrTitle)"/.test(xml.slice(sh.start,sh.end)));
+    const reason=!titles.length?'missing':titles.every(t=>(textOf.get(`${slide.id}:${t.id}`)??'').trim()==='')?'empty':null;
+    if(reason){total++;if(items.length<MAX_ALT_REPORT)items.push({slideId:slide.id,slideIndex,reason});}
+  });
+  return {items,total};
+}

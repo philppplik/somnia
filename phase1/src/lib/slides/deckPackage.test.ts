@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {readFileSync,readdirSync} from 'node:fs';
 import {fileURLToPath} from 'node:url';
 import {unzipSync,zipSync,strFromU8,strToU8} from 'fflate';
-import {missingAltText,MAX_ALT_REPORT,setPictureAlt,readPictureAlt,editSections,setSlideHidden,readHiddenSlides,setFirstSlideNum,readFirstSlideNum,setSlideFooter,setAllSlideFooters,readSlideFooter,setSlideSize,readSlideSize,setAllSlideBackgrounds,backgroundSummary,setSlideBackground,readSlideBackground,editLayoutBox,readLayoutBoxes,editMasterBox,readMaster,editTheme,readTheme,insertTable,editTable,readTable,setShapeStyle,readShapeStyle,setSlideNotes,groupShapes,ungroupShape,readSlideTransition,setSlideTransition,arrangeShapes,arrangedOrder,setShapesBounds,readSlideNotes,insertPicture,replacePicture,removePicture,fitImage,formatShapeText,addTextBox,removeTextBox,nextShapeId,setShapeBounds,boundsEditIssue,readDeckModel,moveSlide,reorderSlides,duplicateSlide,deleteSlide,newSlideFromLayout,readLayouts} from './deckPackage';
+import {untitledSlides,missingAltText,MAX_ALT_REPORT,setPictureAlt,readPictureAlt,editSections,setSlideHidden,readHiddenSlides,setFirstSlideNum,readFirstSlideNum,setSlideFooter,setAllSlideFooters,readSlideFooter,setSlideSize,readSlideSize,setAllSlideBackgrounds,backgroundSummary,setSlideBackground,readSlideBackground,editLayoutBox,readLayoutBoxes,editMasterBox,readMaster,editTheme,readTheme,insertTable,editTable,readTable,setShapeStyle,readShapeStyle,setSlideNotes,groupShapes,ungroupShape,readSlideTransition,setSlideTransition,arrangeShapes,arrangedOrder,setShapesBounds,readSlideNotes,insertPicture,replacePicture,removePicture,fitImage,formatShapeText,addTextBox,removeTextBox,nextShapeId,setShapeBounds,boundsEditIssue,readDeckModel,moveSlide,reorderSlides,duplicateSlide,deleteSlide,newSlideFromLayout,readLayouts} from './deckPackage';
 import {readRuns,makeEditedCopy} from './editCopy';
 import {png,jpeg} from './imageFixtures';
 
@@ -971,4 +971,13 @@ test('missing alt report: lists pictures without alt in slide order, updates aft
   const c=setPictureAlt(b,sid,pic.id,'Chart');assert.deepEqual(missingAltText(c),{items:[],total:0});
   assert.equal(missingAltText(setPictureAlt(c,sid,pic.id,null)).total,1);
   assert.ok(MAX_ALT_REPORT>=1&&MAX_ALT_REPORT<=1000);
+});
+
+test('untitled slides: missing placeholder, empty title, titled; ordered',()=>{
+  const b=deck(3),m=readDeckModel(b);assert.deepEqual(untitledSlides(b).items.map(i=>[i.slideIndex,i.reason]),[[0,'missing'],[1,'missing'],[2,'missing']]);
+  const z=unzipSync(b),part=m.slides[0].part,xml=strFromU8(z[part]);assert.ok(xml.includes('<p:cNvSpPr txBox="1"/><p:nvPr/>'));
+  z[part]=strToU8(xml.replace('<p:cNvSpPr txBox="1"/><p:nvPr/>','<p:cNvSpPr txBox="1"/><p:nvPr><p:ph type="title"/></p:nvPr>'));
+  const c=zipSync(z);assert.deepEqual(untitledSlides(c).items.map(i=>i.slideIndex),[1,2]);assert.equal(untitledSlides(c).total,2);
+  const z2=unzipSync(c);z2[part]=strToU8(strFromU8(z2[part]).replace(/<a:t>[^<]*<\/a:t>/,'<a:t> </a:t>'));
+  assert.deepEqual(untitledSlides(zipSync(z2)).items.map(i=>[i.slideIndex,i.reason]),[[0,'empty'],[1,'missing'],[2,'missing']]);
 });
