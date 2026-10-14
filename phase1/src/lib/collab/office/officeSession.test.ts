@@ -35,3 +35,15 @@ test('slides share/adopt: hash verify, not-shared and mismatch',async()=>{
  assert.equal(bad.ok,false);if(!bad.ok)assert.equal(bad.reason,'hash-mismatch');
  const missing=await adoptSlidesFile(b,'none.pptx',bytes);
  assert.equal(missing.ok,false);if(!missing.ok)assert.equal(missing.reason,'not-shared');});
+
+test('docs share/adopt: hash verify and mismatch',async()=>{
+ const{shareDocsFile,adoptDocsFile}=await import('./officeSession');
+ const a=mk(),b=mk();
+ a.on('update',(u:Uint8Array)=>Y.applyUpdate(b,u));
+ const bytes=new TextEncoder().encode('docx-bytes');
+ const m=await shareDocsFile(a,'brief.docx',bytes);
+ assert.equal(m.ops.length,0);
+ const ok=await adoptDocsFile(b,'brief.docx',bytes);
+ assert.equal(ok.ok,true);
+ const bad=await adoptDocsFile(b,'brief.docx',new TextEncoder().encode('other'));
+ assert.equal(bad.ok,false);if(!bad.ok)assert.equal(bad.reason,'hash-mismatch');});
