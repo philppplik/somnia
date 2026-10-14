@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {extrudeFaces,insetFaces,bevelVertices,loopCut,faceNormal,MAX_EDIT_VERTICES,MAX_EDIT_TRIANGLES,type MeshData} from './editMesh';
+import {extrudeFaces,insetFaces,bevelVertices,loopCut,bevelEdges,slideEdges,mirrorCombine,faceNormal,MAX_EDIT_VERTICES,MAX_EDIT_TRIANGLES,type MeshData} from './editMesh';
 
 // Unit cube centered at origin, 8 unique corners, 12 triangles (two per face).
 function cube():MeshData{
@@ -103,4 +103,63 @@ test('vertex and triangle caps are enforced',()=>{
  assert.throws(()=>extrudeFaces(bigV,[0],1),/too large/);
  const bigT:MeshData={positions:[0,0,0,1,0,0,0,1,0],index:new Array((MAX_EDIT_TRIANGLES+1)*3).fill(0)};
  assert.throws(()=>extrudeFaces(bigT,[0],1),/too large/);
+});
+
+test('bevelEdges chamfers one cube edge into a flat face',()=>{
+ const m=cube();
+ // edge between verts 0 (-.5,-.5,-.5) and 1 (-.5,-.5,.5): along z at the bottom -x corner
+ const out=bevelEdges(m,[[0,1]],0.2);
+ assert.equal(out.positions.length/3,12); // 8 + 2 faces * 2 pulled verts
+ assert.equal(out.index.length/3,14);     // 12 - 0 + 2 chamfer tris (faces rewritten in place)
+ // pulled verts sit 0.2 inside both adjacent faces
+ const np=out.positions.slice(8*3);
+ for(let i=0;i<4;i++){
+  const x=np[i*3],y=np[i*3+1];
+  assert.ok(x>=-0.5&&y>=-0.5&&(x>-0.31||y>-0.31),`pulled inside one face: ${x} ${y}`);
+ }
+});
+
+test('bevelEdges refuses touching edges, boundary edges and bad width',()=>{
+ const m=cube();
+ assert.throws(()=>bevelEdges(m,[],0.2),/Select at least one edge/);
+ assert.throws(()=>bevelEdges(m,[[0,1],[1,2]],0.2),/may not touch/);
+ assert.throws(()=>bevelEdges(m,[[0,1]],0),/positive/);
+ assert.throws(()=>bevelEdges(m,[[0,7]],0.2),/two neighbouring faces/); // 0 and 7 share no face
+});
+
+test('slideEdges moves a loop along its spokes',()=>{
+ // two stacked quads: bottom ring z=0..3 at y=0, top ring y=1; slide the bottom loop upward
+ const m:MeshData={positions:[-0.5,0,-0.5, 0.5,0,-0.5, 0.5,0,0.5, -0.5,0,0.5, -0.5,1,-0.5, 0.5,1,-0.5, 0.5,1,0.5, -0.5,1,0.5],
+  index:[0,1,5, 0,5,4, 1,2,6, 1,6,5, 2,3,7, 2,7,6, 3,0,4, 3,4,7]};
+ const out=slideEdges(m,[[0,1]],0.5);
+ for(const v of[0,1])assert.ok(Math.abs(out.positions[v*3+1]-0.5)<1e-9,`v${v} at y=${out.positions[v*3+1]}`);
+ for(const v of[2,3])assert.ok(out.positions[v*3+1]===0,'only the selected loop moves');
+});
+
+test('slideEdges refuses non-grid regions and zero factor',()=>{
+ const m=cube();
+ assert.throws(()=>slideEdges(m,[[0,1]],0),/not zero/);
+ // cube corner vertex has 3 incident edges; with a 2-vertex loop both verts have 2 outside neighbours? corners have 3 neighbours, 1 in loop, 2 outside -> ok on cube. Use a fan instead:
+ const fan:MeshData={positions:[0,0,0, 1,0,0, 0,1,0, -1,0,0],index:[0,1,2, 0,2,3]};
+ // vertex 1 sits at the fan boundary with no outside neighbour once 0 and 2 are in the loop
+ assert.throws(()=>slideEdges(fan,[[0,1],[1,2]],0.5),/grid-like/);
+});
+
+test('mirrorCombine mirrors a half mesh and welds the plane',()=>{
+ // right half of a cube: x from 0..0.5, quad + cap
+ const m:MeshData={positions:[0,-0.5,-0.5, 0.5,-0.5,-0.5, 0.5,0.5,-0.5, 0,0.5,-0.5, 0,-0.5,0.5, 0.5,-0.5,0.5, 0.5,0.5,0.5, 0,0.5,0.5],
+  index:[0,1,2, 0,2,3, 4,6,5, 4,7,6, 1,5,6, 1,6,2, 3,2,6, 3,6,7, 0,4,5, 0,5,1]};
+ const out=mirrorCombine(m,'x',0.001);
+ // plane verts 0,3,4,7 welded; 4,5,6 mirrored -> 8+3=11 verts... wait 4 off-plane verts (1,2,5,6) mirrored = 4 new
+ assert.equal(out.positions.length/3,12);
+ assert.equal(out.index.length/3,20); // 10 original + 10 mirrored (none collapse)
+ const minX=Math.min(...out.positions.filter((_,i)=>i%3===0));
+ assert.ok(Math.abs(minX+0.5)<1e-9,'mirrored to x=-0.5');
+});
+
+test('mirrorCombine drops faces collapsed onto the plane',()=>{
+ const flat:MeshData={positions:[0,0,0, 0,1,0, 0,0,1],index:[0,1,2]};
+ const out=mirrorCombine(flat,'x',0.01);
+ assert.equal(out.positions.length/3,3); // all welded, no mirrored verts
+ assert.equal(out.index.length/3,1);     // mirrored copy of the on-plane face is dropped
 });

@@ -6,8 +6,8 @@ import type {NodeExtra} from './document';
 import {EASES,isEase,bakeTrack,type Ease} from './ease';
 import {buildExtras,type ClipMeta,type MetaTrack} from './clipMeta';
 import {groupRefs,keyIndices,copyTrackKeys,shiftTrackKeys,pasteTrackKeys,type KeyRef,type KeyData,type TrackData} from './keyEdit';
-import {extrudeFaces,insetFaces,bevelVertices,loopCut,EditError,MAX_EDIT_VERTICES,MAX_EDIT_TRIANGLES,type MeshData} from './editMesh';
-import {sculptDab,SculptError,type SculptOpts} from './sculpt';
+import {extrudeFaces,insetFaces,bevelVertices,loopCut,bevelEdges,slideEdges,mirrorCombine,EditError,MAX_EDIT_VERTICES,MAX_EDIT_TRIANGLES,type MeshData} from './editMesh';
+import {sculptDab,paintMask,SculptError,type SculptOpts} from './sculpt';
 import {KEY_PATHS,KEY_STRIDE,ClipError,MAX_CLIPS,MAX_KEYS_PER_TRACK,DEFAULT_CLIP_SECONDS,insertKey,removeKey as removeKeyData,findKey,isPlainTrack,trackName,parseTrackName,checkKeyTime,checkDuration,checkClipName,lastKeyTime,type KeyPath} from './clips';
 import {mergeTransform,DEFAULT_TRANSFORM,UvError,type TextureTransform} from './uv';
 import {textureBytes} from './validate';
@@ -36,6 +36,7 @@ export interface ObjectInfo{
  /** Kind and parameters when the mesh is an editable primitive. */primitive?:PrimitiveData|null;
  id:number;name:string;kind:OutlineEntry['kind'];position:Vec3;rotation:Vec3;scale:Vec3;
  /** True for a skinned mesh (bound to a skeleton). */skinned:boolean;
+ /** Non-destructive mirror modifier state, if on. */mirror:{axis:'x'|'y'|'z';merge:number}|null;
  material:{color:string;metalness:number;roughness:number;emissive?:string;emissiveIntensity?:number;opacity?:number;alphaMode?:AlphaMode;alphaCutoff?:number;doubleSided?:boolean;/** Name of the image in each slot, or null */textures?:Record<TextureSlot,string|null>;/** UV transform per slot, null where the slot is empty */transforms?:Record<TextureSlot,TextureTransform|null>}|null;light:LightInfo|null;
 }
 export interface LightInfo{intensity:number;color:string;/** shadow casting; absent for area lights, which cannot cast shadows */shadow?:boolean;/** spot cone, degrees */angle?:number;penumbra?:number;width?:number;height?:number}
@@ -473,11 +474,12 @@ export class Stage{
  /** Edit mode: one mesh edited at a time, selection lives here so undo of ops stays coherent. */
  private editId:number|null=null;
  private editSel={verts:new Set<number>(),edges:new Map<string,[number,number]>(),faces:new Set<number>()};
- private sculptShot:{id:number;positions:Float32Array}|null=null;
+ private sculptShot:{id:number;positions:Float32Array;mask:Float32Array|null}|null=null;
  private editableMesh(id:number):THREE.Mesh{
   const o=this.need(id);const m=o as THREE.Mesh;
   if(!m.isMesh)throw new StageError(`${o.name} is not a mesh.`);
   if((m as THREE.SkinnedMesh).isSkinnedMesh)throw new StageError(`${o.name} is skinned: mesh editing would break the skin. Unbind it first.`);
+  if(o.userData?.somniaMirror)throw new StageError(`${o.name} has a mirror modifier. Turn it off before editing or sculpting.`);
   const verts=(m.geometry.getAttribute('position')?.count??0);
   if(verts>MAX_EDIT_VERTICES||m.geometry.getIndex()&&m.geometry.getIndex()!.count/3>MAX_EDIT_TRIANGLES)throw new StageError(`${o.name} is too large to edit (${verts.toLocaleString('en-US')} vertices).`);
   return m;
@@ -488,7 +490,9 @@ export class Stage{
   const positions=Array.from((pos.array as ArrayLike<number>)).slice(0,pos.count*3) as number[];
   const idx=m.geometry.getIndex();
   const index=idx?Array.from(idx.array as ArrayLike<number>) as number[]:Array.from({length:pos.count},(_,i)=>i);
-  return{positions,index};
+  const ma=m.geometry.getAttribute('somniaMask');
+  const mask=ma?Array.from(ma.array as ArrayLike<number>).slice(0,pos.count) as number[]:undefined;
+  return{positions,index,...(mask?{mask}:{})};
  }
  private applyMeshData(m:THREE.Mesh,data:MeshData,label:string){
   const before=m.geometry,beforeData=m.userData.somniaPrimitive;
@@ -537,30 +541,88 @@ export class Stage{
   if(edges.length!==1)throw new StageError('Select exactly one edge for a loop cut.');
   this.editOp('Loop cut',m=>loopCut(m,edges[0]));
  }
+ editBevelEdge(width:number){this.editOp('Bevel edges',m=>bevelEdges(m,[...this.editSel.edges.values()],width));}
+ editLoopSlide(factor:number){this.editOp('Loop slide',m=>slideEdges(m,[...this.editSel.edges.values()],factor));}
+ /** Toggles the non-destructive mirror modifier: while on, the mesh shows base + mirrored half (exports include both); the base geometry stays in userData and editing is refused. One undo step per toggle. */
+ mirrorMod(id:number,axis:MirrorAxis,merge:number,on:boolean){
+  const o=this.need(id);const m=o as THREE.Mesh;
+  if(!m.isMesh)throw new StageError(`${o.name} is not a mesh.`);
+  if((m as THREE.SkinnedMesh).isSkinnedMesh)throw new StageError(`${o.name} is skinned: mirror it after binding is removed.`);
+  const cur=o.userData.somniaMirror as {axis:MirrorAxis;merge:number}|undefined;
+  if(on&&cur)throw new StageError(`${o.name} already has a mirror modifier. Turn it off first.`);
+  if(!on&&!cur)throw new StageError(`${o.name} has no mirror modifier.`);
+  if(on){
+   const base=m.geometry;
+   let data:MeshData;try{data=mirrorCombine(this.meshDataOf(m),axis,merge);}catch(e){throw e instanceof EditError?new StageError(e.message):e;}
+   const combined=new THREE.BufferGeometry();
+   combined.setAttribute('position',new THREE.Float32BufferAttribute(data.positions,3));
+   combined.setIndex(data.index);combined.computeVertexNormals();
+   let owned=true;
+   const apply=(g:THREE.BufferGeometry,mark:boolean)=>{m.geometry=g;if(mark){o.userData.somniaMirror={axis,merge};o.userData.somniaMirrorBase=base;}else{delete o.userData.somniaMirror;delete o.userData.somniaMirrorBase;}};
+   apply(combined,true);
+   this.push({label:`Mirror ${o.name}`,undo:()=>{apply(base,false);owned=false;},redo:()=>{apply(combined,true);owned=true;},release:()=>{(owned?base:combined).dispose();}});
+  }else{
+   const combined=m.geometry;const base=o.userData.somniaMirrorBase as THREE.BufferGeometry;
+   if(!base)throw new StageError(`${o.name} has no stored base mesh.`);
+   let owned=false;
+   const apply=(g:THREE.BufferGeometry,mark:boolean)=>{m.geometry=g;if(mark){o.userData.somniaMirror={axis:cur!.axis,merge:cur!.merge};o.userData.somniaMirrorBase=base;}else{delete o.userData.somniaMirror;delete o.userData.somniaMirrorBase;}};
+   apply(base,false);
+   this.push({label:`Mirror off ${o.name}`,undo:()=>{apply(combined,true);owned=true;},redo:()=>{apply(base,false);owned=false;},release:()=>{(owned?base:combined).dispose();}});
+  }
+ }
  /** Starts a sculpt stroke: the positions snapshot becomes one undo step when the stroke ends. */
  sculptBegin(id:number){
   const m=this.editableMesh(id);
   if(this.sculptShot)this.sculptEnd();
-  this.sculptShot={id,positions:new Float32Array((m.geometry.getAttribute('position').array as ArrayLike<number>) as number[])};
+  const ma=m.geometry.getAttribute('somniaMask');
+  this.sculptShot={id,positions:new Float32Array((m.geometry.getAttribute('position').array as ArrayLike<number>) as number[]),mask:ma?new Float32Array(ma.array as ArrayLike<number> as number[]):null};
  }
- sculptDabAt(id:number,center:[number,number,number],opts:SculptOpts):number{
+ sculptDabAt(id:number,center:[number,number,number],opts:Omit<SculptOpts,'brush'>&{brush:string},erase=false):number{
   const m=this.editableMesh(id);
   if(!this.sculptShot||this.sculptShot.id!==id)this.sculptBegin(id);
+  if(opts.brush==='mask'){
+   let mask:number[];
+   try{mask=paintMask(this.meshDataOf(m),center,{radius:opts.radius,strength:opts.strength,falloff:opts.falloff,erase});}catch(e){throw e instanceof SculptError?new StageError(e.message):e;}
+   const g=m.geometry;let attr=g.getAttribute('somniaMask') as THREE.BufferAttribute|undefined;
+   if(!attr){attr=new THREE.BufferAttribute(new Float32Array(mask),1);g.setAttribute('somniaMask',attr);}
+   else{(attr.array as Float32Array).set(mask);attr.needsUpdate=true;}
+   return mask.length;
+  }
   let out:MeshData;
-  try{out=sculptDab(this.meshDataOf(m),center,opts);}catch(e){throw e instanceof SculptError?new StageError(e.message):e;}
+  try{out=sculptDab(this.meshDataOf(m),center,opts as SculptOpts);}catch(e){throw e instanceof SculptError?new StageError(e.message):e;}
   const g=m.geometry;const pos=g.getAttribute('position') as THREE.BufferAttribute;
   (pos.array as Float32Array).set(out.positions);pos.needsUpdate=true;g.computeVertexNormals();
   return out.positions.length/3;
+ }
+ /** Clears the sculpt mask of a mesh. One undo step. */
+ sculptMaskClear(id:number){
+  const m=this.editableMesh(id);const g=m.geometry;const attr=g.getAttribute('somniaMask') as THREE.BufferAttribute|undefined;
+  if(!attr)throw new StageError(`${m.name} has no sculpt mask.`);
+  const before=new Float32Array(attr.array as ArrayLike<number> as number[]);
+  const after=new Float32Array(before.length);
+  const set=(arr:Float32Array)=>{(g.getAttribute('somniaMask') as THREE.BufferAttribute).set(arr);(g.getAttribute('somniaMask') as THREE.BufferAttribute).needsUpdate=true;};
+  set(after);
+  this.push({label:`Clear mask ${m.name}`,undo:()=>set(before),redo:()=>set(after)});
  }
  sculptEnd(){
   const shot=this.sculptShot;this.sculptShot=null;if(!shot)return;
   const m=this.find(shot.id) as THREE.Mesh|undefined;if(!m||!(m as THREE.Mesh).isMesh)return;
   const before=shot.positions;const pos=m.geometry.getAttribute('position') as THREE.BufferAttribute;
   const after=new Float32Array(pos.array as ArrayLike<number> as number[]);
-  let changed=false;for(let i=0;i<after.length;i++)if(after[i]!==before[i]){changed=true;break;}
+  const maskAttr=m.geometry.getAttribute('somniaMask') as THREE.BufferAttribute|undefined;
+  const maskBefore=shot.mask;const maskAfter=maskAttr?new Float32Array(maskAttr.array as ArrayLike<number> as number[]):null;
+  let changed=false;
+  for(let i=0;i<after.length;i++)if(after[i]!==before[i]){changed=true;break;}
+  if(!changed&&maskBefore&&maskAfter)for(let i=0;i<maskAfter.length;i++)if(maskAfter[i]!==maskBefore[i]){changed=true;break;}
+  if(!changed&&((maskBefore==null)!==(maskAfter==null)))changed=true;
   if(!changed)return;
-  const set=(arr:Float32Array)=>{(m.geometry.getAttribute('position') as THREE.BufferAttribute).set(arr);(m.geometry.getAttribute('position') as THREE.BufferAttribute).needsUpdate=true;m.geometry.computeVertexNormals();};
-  this.push({label:`Sculpt ${m.name}`,undo:()=>set(before),redo:()=>set(after)});
+  const set=(arr:Float32Array,msk:Float32Array|null)=>{
+   (m.geometry.getAttribute('position') as THREE.BufferAttribute).set(arr);(m.geometry.getAttribute('position') as THREE.BufferAttribute).needsUpdate=true;
+   if(msk){let a=m.geometry.getAttribute('somniaMask') as THREE.BufferAttribute|undefined;if(!a){a=new THREE.BufferAttribute(new Float32Array(msk),1);m.geometry.setAttribute('somniaMask',a);}else{a.set(msk);a.needsUpdate=true;}}
+   else if(m.geometry.getAttribute('somniaMask'))m.geometry.deleteAttribute('somniaMask');
+   m.geometry.computeVertexNormals();
+  };
+  this.push({label:`Sculpt ${m.name}`,undo:()=>set(before,maskBefore),redo:()=>set(after,maskAfter)});
  }
  /** Changes the parameters of a primitive (radius, size, segments). The mesh keeps its place and material; one undo step. */
  primitiveOf(o:THREE.Object3D):PrimitiveData|null{return (o as THREE.Mesh).isMesh?readPrimitive(o.userData?.somniaPrimitive):null;}
@@ -1492,6 +1554,7 @@ export class Stage{
   return{id:o.id,name:o.name,kind:(o as THREE.Bone).isBone?'bone':m.isMesh?'mesh':l.isLight?'light':(o as THREE.Camera).isCamera?'camera':'group',
    position:{x:o.position.x,y:o.position.y,z:o.position.z},rotation:{x:o.rotation.x/DEG,y:o.rotation.y/DEG,z:o.rotation.z/DEG},scale:{x:o.scale.x,y:o.scale.y,z:o.scale.z},
    skinned:(m as THREE.SkinnedMesh).isSkinnedMesh===true,
+   mirror:(o.userData.somniaMirror as {axis:'x'|'y'|'z';merge:number}|undefined)??null,
    camera:(o as THREE.PerspectiveCamera).isPerspectiveCamera?{kind:'perspective' as const,fov:(o as THREE.PerspectiveCamera).fov}:(o as THREE.OrthographicCamera).isOrthographicCamera?{kind:'orthographic' as const,zoom:(o as THREE.OrthographicCamera).zoom}:null,
    primitive:this.primitiveOf(o),material:mat?{color:'#'+mat.color.getHexString(),metalness:mat.metalness,roughness:mat.roughness,emissive:'#'+mat.emissive.getHexString(),emissiveIntensity:mat.emissiveIntensity,opacity:mat.transparent||mat.alphaTest>0?mat.opacity:1,alphaMode:alphaModeOf(mat.transparent,mat.alphaTest),alphaCutoff:mat.alphaTest>0?mat.alphaTest:0.5,doubleSided:mat.side===THREE.DoubleSide,textures:Object.fromEntries((Object.keys(SLOT_CONFIG) as TextureSlot[]).map(k=>{const t=mat[SLOT_CONFIG[k].prop] as THREE.Texture|null;return[k,t?(t.name||'image'):null];})) as Record<TextureSlot,string|null>,transforms:Object.fromEntries((Object.keys(SLOT_CONFIG) as TextureSlot[]).map(k=>{const t=mat[SLOT_CONFIG[k].prop] as THREE.Texture|null;return[k,t?readTransform(t):null];})) as Record<TextureSlot,TextureTransform|null>}:null,light:l.isLight?lightInfo(l):null};
  }

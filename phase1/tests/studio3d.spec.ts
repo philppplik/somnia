@@ -811,3 +811,61 @@ test('sculpt on a light is refused readably',async({page})=>{
  expect(await run(page,'studio3d.sculpt.begin',{id:lightId})).toBe(false);
  await expect(page.getByRole('alert')).toContainText('not a mesh');
 });
+
+test('edge bevel and loop slide work through commands with undo',async({page})=>{
+ await blank(page);
+ const id=await insert(page,'cube',0);
+ await run(page,'studio3d.edit.start',{id,mode:'edge'});
+ // BoxGeometry: vert 0 = (0.5,0.5,0.5), vert 2 = (0.5,-0.5,0.5) - a vertical edge
+ // select edge [0,4]: vertical on the indexed box geometry (corner 0 bottom, 4 top on BoxGeometry)
+ expect(await run(page,'studio3d.edit.select',{kind:'edge',ids:[[0,2]]})).toBe(true);
+ const s1=await session(page);expect(s1.edit!.edges).toBe(1);
+ const before=s1.stats.triangles;
+ expect(await run(page,'studio3d.edit.bevelEdge',{width:0.1})).toBe(true);
+ await expect.poll(async()=>(await session(page)).stats.triangles).toBeGreaterThan(before);
+ await run(page,'studio3d.undo');
+ await expect.poll(async()=>(await session(page)).stats.triangles).toBe(before);
+ expect(await run(page,'studio3d.edit.loopSlide',{factor:0.5})).toBe(true);
+ expect(await run(page,'studio3d.undo')).toBe(true);
+});
+
+test('mirror modifier doubles the cube in the session and exports, undo restores',async({page})=>{
+ await blank(page);
+ const id=await insert(page,'cube',0);
+ expect(await run(page,'studio3d.mesh.mirrorMod',{id,axis:'x',merge:0,on:true})).toBe(true);
+ await expect.poll(async()=>(await session(page)).stats.triangles).toBe(24);
+ expect((await session(page)).info!.mirror).toMatchObject({axis:'x'});
+ // editing is refused while the modifier is on
+ expect(await run(page,'studio3d.edit.start',{id,mode:'face'})).toBe(false);
+ await expect(page.getByRole('alert')).toContainText('mirror modifier');
+ expect(await run(page,'studio3d.mesh.mirrorMod',{id,axis:'x',merge:0,on:false})).toBe(true);
+ await expect.poll(async()=>(await session(page)).stats.triangles).toBe(12);
+ expect((await session(page)).info!.mirror).toBeNull();
+});
+
+test('mask brush protects vertices and clears with undo',async({page})=>{
+ await blank(page);
+ const id=await insert(page,'cube',0);
+ await run(page,'studio3d.sculpt.brush',{brush:'mask',radius:2,strength:1});
+ expect(await run(page,'studio3d.sculpt.begin',{id})).toBe(true);
+ expect(await run(page,'studio3d.sculpt.dab',{id,center:[0.5,1,0.5]})).toBe(true);
+ expect(await run(page,'studio3d.sculpt.end')).toBe(true);
+ await run(page,'studio3d.sculpt.brush',{brush:'grab'});
+ expect(await run(page,'studio3d.sculpt.begin',{id})).toBe(true);
+ expect(await run(page,'studio3d.sculpt.dab',{id,center:[0.5,1,0.5],delta:[0,0.5,0]})).toBe(true);
+ expect(await run(page,'studio3d.sculpt.end')).toBe(true);
+ expect(await run(page,'studio3d.sculpt.maskClear',{id})).toBe(true);
+ expect(await run(page,'studio3d.undo')).toBe(true); // clear undone
+});
+
+test('crease, pinch and flatten brushes run through the dab command',async({page})=>{
+ await blank(page);
+ const id=await insert(page,'cube',0);
+ for(const brush of['crease','pinch','flatten']){
+  await run(page,'studio3d.sculpt.brush',{brush,radius:2,strength:0.8});
+  expect(await run(page,'studio3d.sculpt.begin',{id})).toBe(true);
+  expect(await run(page,'studio3d.sculpt.dab',{id,center:[0.5,1,0.5]})).toBe(true);
+  expect(await run(page,'studio3d.sculpt.end')).toBe(true);
+  expect(await run(page,'studio3d.undo')).toBe(true);
+ }
+});

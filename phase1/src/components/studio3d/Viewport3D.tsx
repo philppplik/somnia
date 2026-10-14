@@ -798,9 +798,13 @@ export default function Viewport3D(){
    editInset:a=>{stage.editInset(a);afterEditOp();},
    editBevel:w=>{stage.editBevel(w);afterEditOp();},
    editLoopCut:()=>{stage.editLoopCut();afterEditOp();},
+   editBevelEdge:w=>{stage.editBevelEdge(w);afterEditOp();},
+   editLoopSlide:f=>{stage.editLoopSlide(f);afterEditOp();},
+   mirrorMod:(id,axis,merge,on)=>{stage.mirrorMod(id,axis,merge,on);const sel=getStudio3DState().selected;if(sel!=null)patchStudio3D({selectedInfo:stage.info(sel)});sync();invalidate();},
+   sculptMaskClear:id=>{stage.sculptMaskClear(id);invalidate();},
    sculptBrush:patch=>{patchStudio3D({sculpt:{...getStudio3DState().sculpt,...patch}});},
    sculptBegin:id=>stage.sculptBegin(id),
-   sculptDab:(id,center,delta)=>{const b=getStudio3DState().sculpt;stage.sculptDabAt(id,center,{brush:b.brush,radius:b.radius,strength:b.strength,falloff:b.falloff,symmetry:b.symmetry,delta});invalidate();},
+   sculptDab:(id,center,delta,erase)=>{const b=getStudio3DState().sculpt;stage.sculptDabAt(id,center,{brush:b.brush,radius:b.radius,strength:b.strength,falloff:b.falloff,symmetry:b.symmetry,delta},!!erase);invalidate();},
    sculptEnd:()=>{stage.sculptEnd();sync();invalidate();},
    group:ids=>{const g=stage.group(ids);select(g.id);return g.id;},
    ungroup:id=>{const g=stage.find(id);const first=g?.children[0]?.id??null;stage.ungroup(id);if(first!=null)select(first);else sync();},
@@ -864,7 +868,7 @@ export default function Viewport3D(){
      controls.enabled=false;gizmo.enabled=false;
      const mesh=hit.object as THREE.Mesh;const lp=mesh.worldToLocal(hit.point.clone());
      const b=getStudio3DState().sculpt;
-     stage.sculptDabAt(mesh.id,[lp.x,lp.y,lp.z],{brush:b.brush,radius:b.radius,strength:b.strength,falloff:b.falloff,symmetry:b.symmetry});
+     stage.sculptDabAt(mesh.id,[lp.x,lp.y,lp.z],{brush:b.brush,radius:b.radius,strength:b.strength,falloff:b.falloff,symmetry:b.symmetry},e.ctrlKey||e.metaKey);
      invalidate();
     }catch{sculpting=null;}
     down=null;return;
@@ -879,7 +883,7 @@ export default function Viewport3D(){
      const mesh=hit.object as THREE.Mesh;const lp=mesh.worldToLocal(hit.point.clone());
      const b=getStudio3DState().sculpt;const lastL=mesh.worldToLocal(sculpting.last.clone());
      const d:[number,number,number]|undefined=b.brush==='grab'?[lp.x-lastL.x,lp.y-lastL.y,lp.z-lastL.z]:undefined;
-     stage.sculptDabAt(mesh.id,[lp.x,lp.y,lp.z],{brush:b.brush,radius:b.radius,strength:b.strength,falloff:b.falloff,symmetry:b.symmetry,delta:d});
+     stage.sculptDabAt(mesh.id,[lp.x,lp.y,lp.z],{brush:b.brush,radius:b.radius,strength:b.strength,falloff:b.falloff,symmetry:b.symmetry,delta:d},e.ctrlKey||e.metaKey);
      sculpting.last.copy(hit.point);invalidate();
     }
     return;

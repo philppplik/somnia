@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {sculptDab} from './sculpt';
+import {sculptDab,paintMask} from './sculpt';
 import type {MeshData} from './editMesh';
 
 // Flat 3x3 grid in the xz plane (9 verts, 8 tris), 1 unit wide, centered on origin.
@@ -74,4 +74,47 @@ test('dab never changes the index or vertex count',()=>{
  const out=sculptDab(m,[0,0,0],{brush:'inflate',radius:10,strength:1,falloff:'constant',symmetry:'z'});
  assert.equal(out.positions.length,m.positions.length);
  assert.deepEqual(out.index,m.index);
+});
+
+test('crease carves a valley opposite to inflate',()=>{
+ const m=grid();
+ const out=sculptDab(m,[0,0,0],{brush:'crease',radius:0.6,strength:1,falloff:'constant',symmetry:'none'});
+ const y=at(out,4)[1];
+ assert.ok(Math.abs(y)>0.005,`centre moved: ${y}`);
+ const inf=sculptDab(m,[0,0,0],{brush:'inflate',radius:0.6,strength:1,falloff:'constant',symmetry:'none'});
+ assert.ok(Math.sign(y)!==Math.sign(at(inf,4)[1]),'crease goes the other way');
+});
+
+test('pinch pulls vertices toward the centre',()=>{
+ const m=grid();
+ const out=sculptDab(m,[0,0,0],{brush:'pinch',radius:1,strength:0.5,falloff:'constant',symmetry:'none'});
+ const before=Math.hypot(...at(m,2).filter((_,i)=>i!==1));
+ const after=Math.hypot(at(out,2)[0],at(out,2)[2]);
+ assert.ok(after<before,`${before} -> ${after}`);
+ assert.ok(at(out,2)[1]===0,'stays on the plane toward a planar centre');
+});
+
+test('flatten pulls vertices onto the centre plane',()=>{
+ const m=grid();m.positions[4*3+1]=0.6; // spike
+ const out=sculptDab(m,[0,0,0],{brush:'flatten',radius:1.2,strength:1,falloff:'constant',symmetry:'none'});
+ assert.ok(Math.abs(at(out,4)[1])<0.01,`spike flattened to ${at(out,4)[1]}`);
+});
+
+test('a fully masked vertex does not move, a partial one moves less',()=>{
+ const m=grid();
+ m.mask=new Array(9).fill(0);m.mask[4]=1;m.mask[1]=0.5;
+ const out=sculptDab(m,[0,0,0],{brush:'grab',radius:1,strength:1,falloff:'constant',delta:[0,1,0],symmetry:'none'});
+ assert.ok(at(out,4)[1]===0,'masked centre protected');
+ assert.ok(Math.abs(at(out,1)[1]-0.5)<1e-9,'half-masked side moved half');
+});
+
+test('paintMask paints and erases within the radius',()=>{
+ const m=grid();
+ const painted=paintMask(m,[0,0,0],{radius:0.6,strength:1,falloff:'constant'});
+ assert.equal(painted.length,9);
+ assert.ok(painted[4]===1&&painted[0]===0,JSON.stringify(painted));
+ const withMask:MeshData={...m,mask:painted};
+ const erased=paintMask(withMask,[0,0,0],{radius:0.6,strength:1,falloff:'constant',erase:true});
+ assert.ok(erased[4]===0);
+ assert.throws(()=>paintMask(m,[0,0,0],{radius:0,strength:1,falloff:'smooth'}),/radius/);
 });

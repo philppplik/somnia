@@ -1,6 +1,6 @@
 /** Mesh edit operations on plain position/index arrays - no three.js, so every op is testable in Node and the viewport stays the only three consumer. All meshes are indexed triangle lists. */
 export class EditError extends Error{name='EditError';}
-export interface MeshData{positions:number[];index:number[];}
+export interface MeshData{positions:number[];index:number[];/** Per-vertex sculpt mask 0..1 (1 = fully protected). Dropped by topology-changing ops. */mask?:number[];}
 /** Hard cap for one editable mesh; operations that would pass it are refused. */
 export const MAX_EDIT_VERTICES=200_000;
 export const MAX_EDIT_TRIANGLES=400_000;
@@ -163,5 +163,133 @@ export function loopCut(m:MeshData,edge:[number,number]):MeshData{
   index.push(lone,m1,m2, m1,others[0],others[1], m1,others[1],m2);
  }
  if(!cuts)throw new EditError('No edge loop crosses the chosen edge; loop cut needs a grid-like region.');
+ const out={positions,index};check(out);return out;
+}
+/** Chamfers the selected edges: each edge becomes a flat face set back from both sides. Edges are matched geometrically, so unwelded primitives (per-face corners) work. Selected edges may not touch or share a face. */
+export function bevelEdges(m:MeshData,edges:[number,number][],width:number):MeshData{
+ check(m);
+ if(!edges.length)throw new EditError('Select at least one edge first.');
+ if(!Number.isFinite(width)||width<=0||width>1e6)throw new EditError('The bevel width must be a positive number.');
+ const nv=m.positions.length/3;
+ const EPS=1e-6;
+ const same=(i:number,p:[number,number,number])=>Math.abs(m.positions[i*3]-p[0])<EPS&&Math.abs(m.positions[i*3+1]-p[1])<EPS&&Math.abs(m.positions[i*3+2]-p[2])<EPS;
+ // validate everything on the original mesh first, so a bad edge cannot leave a half-applied bevel
+ const plans:{f:number;va:number;vb:number;c:number;pa:[number,number,number];pb:[number,number,number];forward:boolean}[][]=[];
+ const usedFaces=new Set<number>();const usedPts:[number,number,number][]=[];
+ for(const e of edges){
+  if(!Array.isArray(e)||e.length!==2||!e.every(v=>Number.isInteger(v)&&v>=0&&v<nv)||e[0]===e[1])throw new EditError('A selected edge does not exist.');
+  const pa=v3(m,e[0]),pb=v3(m,e[1]);
+  for(const q of[pa,pb])for(const u of usedPts)if(Math.abs(q[0]-u[0])<EPS&&Math.abs(q[1]-u[1])<EPS&&Math.abs(q[2]-u[2])<EPS)throw new EditError('Selected edges may not touch; bevel them one area at a time.');
+  usedPts.push(pa,pb);
+  const adj:{f:number;va:number;vb:number;c:number;pa:[number,number,number];pb:[number,number,number];forward:boolean}[]=[];
+  for(let f=0;f<m.index.length/3;f++){
+   const t=[m.index[f*3],m.index[f*3+1],m.index[f*3+2]];
+   let va=-1,vb=-1,c=-1,forward=false;
+   for(let k=0;k<3;k++){
+    const x=t[k],y=t[(k+1)%3],z=t[(k+2)%3];
+    if(same(x,pa)&&same(y,pb)){va=x;vb=y;c=z;forward=true;break;}
+    if(same(x,pb)&&same(y,pa)){va=y;vb=x;c=z;forward=false;break;}
+   }
+   if(va>=0)adj.push({f,va,vb,c,pa,pb,forward});
+  }
+  if(adj.length!==2)throw new EditError('Edge bevel needs edges with exactly two neighbouring faces.');
+  for(const a of adj){if(usedFaces.has(a.f))throw new EditError('Selected edges may not share a face; bevel them one area at a time.');usedFaces.add(a.f);}
+  plans.push(adj);
+ }
+ const positions=[...m.positions];const index=[...m.index];
+ for(const adj of plans){
+  const pulled:number[][]=[]; // per face: [newA,newB]
+  for(const a of adj){
+   const edgeDir=norm(sub(a.pb,a.pa));
+   const pc=v3(m,a.c);const pair:number[]=[];
+   for(const[v,pv]of[[a.va,a.pa],[a.vb,a.pb]] as [number,[number,number,number]][]){
+    const vec=sub(pc,pv);const along=vec[0]*edgeDir[0]+vec[1]*edgeDir[1]+vec[2]*edgeDir[2];
+    const perp:[number,number,number]=[vec[0]-edgeDir[0]*along,vec[1]-edgeDir[1]*along,vec[2]-edgeDir[2]*along];
+    const l=len(perp);if(l<1e-9)throw new EditError('A face next to a selected edge is degenerate.');
+    const w=Math.min(width,l*0.49);const ni=positions.length/3;
+    positions.push(pv[0]+perp[0]/l*w,pv[1]+perp[1]/l*w,pv[2]+perp[2]/l*w);
+    pair.push(ni);
+    for(let k=0;k<3;k++)if(index[a.f*3+k]===v)index[a.f*3+k]=ni;
+   }
+   pulled.push(pair);
+  }
+  const[[a1,b1],[a2,b2]]=[pulled[0],pulled[1]];
+  if(adj[0].forward)index.push(a1,b1,b2, a1,b2,a2);else index.push(a1,b2,b1, a1,a2,b2);
+ }
+ const out={positions,index};check(out);return out;
+}
+/** Slides an edge loop along its neighbouring faces: every loop vertex moves along the guide edge most perpendicular to the loop tangent, scaled by factor (-1.5..1.5). */
+export function slideEdges(m:MeshData,edges:[number,number][],factor:number):MeshData{
+ check(m);
+ if(!edges.length)throw new EditError('Select at least one edge first.');
+ if(!Number.isFinite(factor)||factor===0||Math.abs(factor)>1.5)throw new EditError('The slide factor must be between -1.5 and 1.5 and not zero.');
+ const nv=m.positions.length/3;
+ const loopVerts=new Set<number>();
+ for(const e of edges){
+  if(!Array.isArray(e)||e.length!==2||!e.every(v=>Number.isInteger(v)&&v>=0&&v<nv)||e[0]===e[1])throw new EditError('A selected edge does not exist.');
+  loopVerts.add(e[0]);loopVerts.add(e[1]);
+ }
+ const incident:number[][]=Array.from({length:nv},()=>[]);
+ for(let f=0;f<m.index.length/3;f++)for(let e=0;e<3;e++){
+  const a=m.index[f+e],b=m.index[f+(e+1)%3];incident[a].push(b);incident[b].push(a);
+ }
+ // per-vertex guide: the spoke (edge to a non-loop neighbour) most perpendicular to the loop tangent
+ const guide=new Map<number,[number,number,number]>();
+ for(const v of loopVerts){
+  const nbs=[...new Set(incident[v])];
+  const loopNbs=nbs.filter(u=>loopVerts.has(u));
+  const spokes=nbs.filter(u=>!loopVerts.has(u));
+  if(!spokes.length||!loopNbs.length)throw new EditError('Loop slide needs a grid-like region: every loop vertex needs neighbours inside and outside the loop.');
+  const pv=v3(m,v);
+  let tangent:[number,number,number];
+  if(loopNbs.length>=2){const d=sub(v3(m,loopNbs[1]),v3(m,loopNbs[0]));tangent=norm([d[0],d[1],d[2]]);}
+  else tangent=norm(sub(v3(m,loopNbs[0]),pv));
+  let best:number|null=null,bestScore=Infinity;
+  for(const u of spokes){
+   const d=sub(v3(m,u),pv);const l=len(d);if(l<1e-9)continue;
+   const score=Math.abs((d[0]*tangent[0]+d[1]*tangent[1]+d[2]*tangent[2])/l);
+   if(score<bestScore){bestScore=score;best=u;}
+  }
+  if(best===null)throw new EditError('Loop slide needs a grid-like region: a loop vertex has no usable guide edge.');
+  guide.set(v,sub(v3(m,best),pv));
+ }
+ // consistent orientation against the first vertex's guide
+ const first=[...loopVerts][0];const ref=guide.get(first)!;
+ const positions=[...m.positions];
+ for(const v of loopVerts){
+  let g=guide.get(v)!;
+  if(g[0]*ref[0]+g[1]*ref[1]+g[2]*ref[2]<0)g=[-g[0],-g[1],-g[2]];
+  positions[v*3]+=g[0]*factor;positions[v*3+1]+=g[1]*factor;positions[v*3+2]+=g[2]*factor;
+ }
+ const out={positions,index:[...m.index]};check(out);return out;
+}
+export type MirrorAxis='x'|'y'|'z';
+/** Combines a mesh with its mirror across a local axis plane through the origin. Vertices within merge distance of the plane are welded onto it. */
+export function mirrorCombine(m:MeshData,axis:MirrorAxis,merge:number):MeshData{
+ check(m);
+ if(!Number.isFinite(merge)||merge<0||merge>1e6)throw new EditError('The mirror merge distance must be zero or a positive number.');
+ const ai=axis==='x'?0:axis==='y'?1:2;
+ const nv=m.positions.length/3;
+ const positions:number[]=[];const map=new Array<number>(nv);
+ for(let i=0;i<nv;i++){
+  const c=m.positions[i*3+ai];
+  if(Math.abs(c)<=merge){positions.push(m.positions[i*3],m.positions[i*3+1],m.positions[i*3+2]);positions[positions.length-3+ai]=0;map[i]=i;}
+  else{positions.push(m.positions[i*3],m.positions[i*3+1],m.positions[i*3+2]);map[i]=-1;}
+ }
+ for(let i=0;i<nv;i++){
+  if(map[i]!==-1)continue;
+  const x=m.positions[i*3],y=m.positions[i*3+1],z=m.positions[i*3+2];
+  map[i]=positions.length/3;
+  positions.push(axis==='x'?-x:x,axis==='y'?-y:y,axis==='z'?-z:z);
+ }
+ const welded=new Set<number>();for(let i=0;i<nv;i++)if(map[i]===i&&Math.abs(m.positions[i*3+ai])<=merge)welded.add(i);
+ const index=[...m.index];
+ for(let f=0;f<m.index.length/3;f++){
+  const va=m.index[f*3],vb=m.index[f*3+1],vc=m.index[f*3+2];
+  if(welded.has(va)&&welded.has(vb)&&welded.has(vc))continue; // on-plane face: its mirror is the same triangle
+  const a=map[va],b=map[vb],c=map[vc];
+  if(a===b||b===c||a===c)continue; // face collapsed onto the plane
+  index.push(a,c,b); // mirrored winding
+ }
  const out={positions,index};check(out);return out;
 }

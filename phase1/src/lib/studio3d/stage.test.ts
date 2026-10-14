@@ -500,3 +500,64 @@ test('sculpt without begin still lands as one undo',()=>{
  stage.undo();
  assert.deepEqual(Array.from(o.geometry.getAttribute('position').array as Float32Array),before);
 });
+
+test('edge bevel and loop slide run through edit mode with one undo each',()=>{
+ const stage=new Stage();const o=stage.addPrimitive('cube') as THREE.Mesh;
+ stage.editStart(o.id);
+ // vertical edge of the indexed box
+ const pos=o.geometry.getAttribute('position');const idx=o.geometry.getIndex()!;
+ let edge:[number,number]|null=null;
+ for(let f=0;f<idx.count&&!edge;f+=3)for(let e=0;e<3;e++){
+  const a=idx.getX(f+e),b=idx.getX(f+(e+1)%3);
+  if(pos.getX(a)===pos.getX(b)&&pos.getZ(a)===pos.getZ(b)&&pos.getY(a)!==pos.getY(b)){edge=[a,b];break;}
+ }
+ assert.ok(edge);
+ stage.editSelect('edge',[edge]);
+ const tris0=tri(stage);
+ stage.editBevelEdge(0.1);
+ assert.ok(tri(stage)>tris0,'edge bevel adds triangles');
+ stage.undo();assert.equal(tri(stage),tris0);
+ stage.editLoopSlide(0.5);
+ assert.ok(tri(stage)===tris0,'slide keeps topology');
+ const moved=Array.from(o.geometry.getAttribute('position').array as Float32Array);
+ stage.undo();
+ assert.notDeepEqual(Array.from(o.geometry.getAttribute('position').array as Float32Array),moved,'undo restores positions');
+});
+
+test('mirror modifier doubles the cube, blocks editing, and undoes cleanly',()=>{
+ const stage=new Stage();const o=stage.addPrimitive('cube') as THREE.Mesh;
+ const before=stage.info(o.id)!;
+ assert.equal(before.mirror,null);
+ stage.mirrorMod(o.id,'x',0,true);
+ assert.equal(tri(stage),24);
+ assert.ok(stage.info(o.id)!.mirror);
+ assert.throws(()=>stage.editStart(o.id),/mirror modifier/);
+ assert.throws(()=>stage.sculptBegin(o.id),/mirror modifier/);
+ assert.throws(()=>stage.mirrorMod(o.id,'y',0,true),/already/);
+ stage.mirrorMod(o.id,'x',0,false);
+ assert.equal(tri(stage),12);
+ assert.equal(stage.info(o.id)!.mirror,null);
+ stage.undo();assert.equal(tri(stage),24); // undo of the toggle-off
+ stage.undo();assert.equal(tri(stage),12); // undo of the toggle-on
+});
+
+test('mask brush paints, blocks grab, and clears with undo',()=>{
+ const stage=new Stage();const o=stage.addPrimitive('cube') as THREE.Mesh;
+ stage.sculptBegin(o.id);
+ stage.sculptDabAt(o.id,[0.5,1,0.5],{brush:'mask',radius:2,strength:1,falloff:'constant',symmetry:'none'} as never);
+ stage.sculptEnd();
+ assert.ok(o.geometry.getAttribute('somniaMask'),'mask attribute exists');
+ const before=Array.from(o.geometry.getAttribute('position').array as Float32Array);
+ stage.sculptBegin(o.id);
+ stage.sculptDabAt(o.id,[0.5,1,0.5],{brush:'grab',radius:2,strength:1,falloff:'constant',symmetry:'none',delta:[0,0.5,0]} as never);
+ stage.sculptEnd();
+ const after=Array.from(o.geometry.getAttribute('position').array as Float32Array);
+ const moved=before.map((v,i)=>Math.abs(after[i]-v)).filter(d=>d>1e-9).length;
+ const masked=o.geometry.getAttribute('somniaMask');
+ assert.ok(moved<before.length/3,'masked verts stayed put');
+ assert.ok(masked&&Array.from(masked.array as Float32Array).some(v=>v>0.9));
+ stage.sculptMaskClear(o.id);
+ assert.ok(Array.from(o.geometry.getAttribute('somniaMask').array as Float32Array).every(v=>v===0));
+ stage.undo();
+ assert.ok(Array.from(o.geometry.getAttribute('somniaMask').array as Float32Array).some(v=>v>0.9),'undo restores the mask');
+});
