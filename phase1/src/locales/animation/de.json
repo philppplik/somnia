@@ -832,5 +832,8 @@
  "cmd.animation.keys.selectNth": "Jeden n-ten gewählten Key auswählen",
  "animation.keys.distribute": "Verteilen",
  "animation.keys.distribute.hint": "Gewählte Keys je Eigenschaft gleichmäßig zwischen erstem und letztem Key verteilen",
- "cmd.animation.keys.distribute": "Gewählte Keys zeitlich gleichmäßig verteilen"
+ "cmd.animation.keys.distribute": "Gewählte Keys zeitlich gleichmäßig verteilen",
+ "animation.keys.toPlayhead": "Zum Playhead",
+ "animation.keys.toPlayhead.hint": "Gewählte Keys verschieben, sodass der erste auf dem Playhead liegt",
+ "cmd.animation.keys.toPlayhead": "Gewählte Keys so verschieben, dass der erste auf dem Playhead liegt"
 }

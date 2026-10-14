@@ -953,6 +953,22 @@
       "hasEnabled": true
     },
     {
+      "id": "animation.keys.toPlayhead",
+      "title": "Move the selected keys so the first one lands on the playhead",
+      "category": "Edit",
+      "source": "animation",
+      "keywords": [
+        "align",
+        "animation",
+        "keys",
+        "move",
+        "playhead",
+        "slide",
+        "start"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "animation.keys.values",
       "title": "Offset or scale the values of the selected keys",
       "category": "Edit",

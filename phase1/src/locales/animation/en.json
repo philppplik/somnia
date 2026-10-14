@@ -832,5 +832,8 @@
  "cmd.animation.keys.selectNth": "Select every n-th selected key",
  "animation.keys.distribute": "Distribute",
  "animation.keys.distribute.hint": "Space the selected keys of each property evenly between its first and last key",
- "cmd.animation.keys.distribute": "Space the selected keys evenly in time"
+ "cmd.animation.keys.distribute": "Space the selected keys evenly in time",
+ "animation.keys.toPlayhead": "To playhead",
+ "animation.keys.toPlayhead.hint": "Move the selected keys so the first one lands on the playhead",
+ "cmd.animation.keys.toPlayhead": "Move the selected keys so the first one lands on the playhead"
 }

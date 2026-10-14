@@ -832,5 +832,8 @@
  "cmd.animation.keys.selectNth": "Seleccionar cada n-ésima key seleccionada",
  "animation.keys.distribute": "Distribuir",
  "animation.keys.distribute.hint": "Reparte las keys seleccionadas de cada propiedad entre la primera y la última",
- "cmd.animation.keys.distribute": "Repartir las keys seleccionadas de forma uniforme en el tiempo"
+ "cmd.animation.keys.distribute": "Repartir las keys seleccionadas de forma uniforme en el tiempo",
+ "animation.keys.toPlayhead": "Al cabezal",
+ "animation.keys.toPlayhead.hint": "Mueve las keys seleccionadas para que la primera quede en el cabezal",
+ "cmd.animation.keys.toPlayhead": "Mover las keys seleccionadas para que la primera quede en el cabezal"
 }

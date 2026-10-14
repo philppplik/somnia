@@ -68,3 +68,9 @@ test('distribute: even spacing, ends stay, skips collisions, needs three keys',(
  assert.equal(distributeMoves(c,[k(0),k(20)]).moves.length,0);
  assert.equal(distributeMoves(c,[k(0),k(10),k(20)]).moves.length,0);
 });
+import {toPlayheadDelta} from './keyToPlayhead';
+test('to playhead: delta puts the earliest key on the playhead',()=>{
+ const fps={num:30,den:1},k=(n:number)=>({layer:'a',prop:'position' as const,t:f(n)});
+ assert.equal(toPlayheadDelta([k(4),k(9)],f(10),fps),f(6));
+ assert.equal(toPlayheadDelta([k(4)],f(4),fps),0);assert.equal(toPlayheadDelta([],f(3),fps),0);
+});
