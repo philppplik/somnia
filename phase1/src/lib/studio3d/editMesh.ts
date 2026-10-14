@@ -452,6 +452,100 @@ export function edgeLoop(m:MeshData,seeds:[number,number][]):[number,number][]{
  }
  return out;
 }
+/** Bridges the border loops of two selected face groups with a sewn triangle strip (bridge edge loops). The selected faces are removed; each group's border loop keeps its original vertices and the loops are sewn with an arc-length zigzag, so unequal loop lengths work. The start vertex and direction are chosen for the shortest strip, twist shifts the start by hand; winding is unified outward across the whole result. UVs survive untouched because no vertex is created; sculpt masks are dropped (topology changes). */
+export function bridgeFacesSelected(m:MeshData,sel:number[],twist:number):MeshData{
+ check(m);
+ if(!Number.isInteger(twist)||Math.abs(twist)>64)throw new EditError('The bridge twist must be a whole number between -64 and 64.');
+ const nt=m.index.length/3;
+ if(!sel.length)throw new EditError('Select two groups of faces to bridge.');
+ const S=new Set<number>();
+ for(const f of sel){if(!Number.isInteger(f)||f<0||f>=nt)throw new EditError('A selected face does not exist.');S.add(f);}
+ const pos=m.positions,idx=m.index;
+ const pk=(v:number)=>`${Math.round(pos[v*3]*1e6)}_${Math.round(pos[v*3+1]*1e6)}_${Math.round(pos[v*3+2]*1e6)}`;
+ const ekey=(a:string,b:string)=>a<b?a+'|'+b:b+'|'+a;
+ // Connected islands of selected triangles (position-keyed edge sharing).
+ const edgeUse=new Map<string,number[]>();
+ for(const f of S)for(let e=0;e<3;e++){
+  const a=pk(idx[f*3+e]),b=pk(idx[f*3+(e+1)%3]);if(a===b)continue;
+  const k=ekey(a,b);const l=edgeUse.get(k);if(l)l.push(f);else edgeUse.set(k,[f]);
+ }
+ const island=new Map<number,number>();let ni=0;
+ for(const f of S){
+  if(island.has(f))continue;
+  island.set(f,ni);
+  const q=[f];
+  while(q.length){
+   const g=q.pop()!;
+   for(let e=0;e<3;e++){
+    const a=pk(idx[g*3+e]),b=pk(idx[g*3+(e+1)%3]);if(a===b)continue;
+    for(const h of edgeUse.get(ekey(a,b))!)if(!island.has(h)){island.set(h,ni);q.push(h);}
+   }
+  }
+  ni++;
+ }
+ if(ni!==2)throw new EditError('Select exactly two separate groups of faces to bridge.');
+ // Directed boundary loop per island (edges used by exactly one selected triangle, directed as that triangle uses them); reversed below to match the kept surface's traversal of the hole.
+ const loops:number[][]=[];
+ for(let isl=0;isl<2;isl++){
+  const bnd:[number,number,string,string][]=[];
+  for(const f of S){
+   if(island.get(f)!==isl)continue;
+   for(let e=0;e<3;e++){
+    const va=idx[f*3+e],vb=idx[f*3+(e+1)%3];
+    const ka=pk(va),kb=pk(vb);if(ka===kb)continue;
+    if(edgeUse.get(ekey(ka,kb))!.length===1)bnd.push([va,vb,ka,kb]);
+   }
+  }
+  if(!bnd.length)throw new EditError('Each bridge group needs a single border loop.');
+  const byStart=new Map<string,number[]>();
+  bnd.forEach((e,i)=>{const l=byStart.get(e[2]);if(l)l.push(i);else byStart.set(e[2],[i]);});
+  const used=new Array<boolean>(bnd.length).fill(false);
+  const loop:number[]=[];
+  let cur=0;const startKey=bnd[0][2];
+  for(;;){
+   if(used[cur])throw new EditError('Each bridge group needs a single border loop.');
+   used[cur]=true;
+   loop.push(bnd[cur][0]);
+   if(bnd[cur][3]===startKey)break;
+   const next=(byStart.get(bnd[cur][3])||[]).find(x=>!used[x]);
+   if(next===undefined)throw new EditError('Each bridge group needs a single border loop.');
+   cur=next;
+  }
+  if(used.some(u=>!u)||loop.length<3)throw new EditError('Each bridge group needs a single border loop.');
+  loop.reverse();
+  loops.push(loop);
+ }
+ const A=loops[0],B=loops[1];
+ const na=A.length,nb=B.length;
+ // Align the start: B vertex nearest to A[0]; direction: forward or reversed, whichever gives the shorter first strip edges (same scheme as bridgeMesh).
+ let j0=0,best=Infinity;
+ for(let j=0;j<nb;j++){const d=len(sub(v3(m,B[j]),v3(m,A[0])));if(d<best){best=d;j0=j;}}
+ const at=(k:number,rev:boolean)=>rev?B[((j0-k)%nb+nb)%nb]:B[(j0+k)%nb];
+ const costF=len(sub(v3(m,at(1,false)),v3(m,A[1%na])))+len(sub(v3(m,at(nb-1,false)),v3(m,A[0])));
+ const costR=len(sub(v3(m,at(1,true)),v3(m,A[1%na])))+len(sub(v3(m,at(nb-1,true)),v3(m,A[0])));
+ const rev=costR<costF;
+ const off=((twist%nb)+nb)%nb;
+ const Bk=(k:number)=>rev?B[(((j0+off)-k)%nb+nb)%nb]:B[((j0+off+k)%nb)%nb];
+ const cum=(L:number[])=>{
+  const c:number[]=[0];let t=0;
+  for(let i=0;i<L.length;i++){t+=len(sub(v3(m,L[(i+1)%L.length]),v3(m,L[i])));c.push(t);}
+  return c.map(x=>x/(t||1));
+ };
+ const pa=cum(A);
+ const Bverts:number[]=[];for(let k=0;k<nb;k++)Bverts.push(Bk(k));
+ const pb=cum(Bverts);
+ const index:number[]=[];
+ for(let f=0;f<nt;f++)if(!S.has(f))index.push(idx[f*3],idx[f*3+1],idx[f*3+2]);
+ let i=0,j=0;
+ const Ai=(k:number)=>A[k%na],Bi=(k:number)=>Bverts[k%nb];
+ while(i<na||j<nb){
+  if(i<na&&(j>=nb||pa[i+1]<=pb[j+1])){index.push(Ai(i),Ai(i+1),Bi(j));i++;}
+  else{index.push(Ai(i),Bi(j),Bi(j+1));j++;}
+ }
+ const out:MeshData=m.uvs?{positions:[...pos],index,uvs:[...m.uvs]}:{positions:[...pos],index};
+ check(out);
+ return outsideMesh(out).mesh;
+}
 /** Cuts the mesh by an axis-aligned plane and keeps both halves in one mesh (two shells), optionally capping the cut on each side. UVs travel when both halves carry them. Drops the sculpt mask like every topology-changing op. */
 export function bisectEdit(m:MeshData,axis:'x'|'y'|'z',offset:number,fill:boolean):MeshData{
  if(axis!=='x'&&axis!=='y'&&axis!=='z')throw new EditError('The bisect axis must be x, y or z.');

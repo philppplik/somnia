@@ -974,5 +974,8 @@
  "studio3d.edit.bisectOff": "Deslocamento do plano",
  "studio3d.edit.bisectFill": "Preencher o corte",
  "cmd.studio3d.edit.selectLoop": "Estender as arestas selecionadas para seus loops completos",
- "studio3d.edit.selLoop": "Loop de arestas"
+ "studio3d.edit.selLoop": "Loop de arestas",
+ "cmd.studio3d.edit.bridgeFaces": "Conecta as bordas de dois grupos de faces selecionadas da malha 3D editada com uma faixa de triângulos costurada",
+ "studio3d.edit.bridgeFaces": "Conectar faces",
+ "studio3d.hist.editBridgeFaces": "Grupos de faces conectados"
 }

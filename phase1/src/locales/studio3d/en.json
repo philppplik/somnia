@@ -974,5 +974,8 @@
  "studio3d.edit.bisectOff": "Cut plane offset",
  "studio3d.edit.bisectFill": "Fill the cut",
  "cmd.studio3d.edit.selectLoop": "Extend the selected edges to their full edge loops",
- "studio3d.edit.selLoop": "Edge loop"
+ "studio3d.edit.selLoop": "Edge loop",
+ "cmd.studio3d.edit.bridgeFaces": "Bridge the borders of two selected face groups of the edited 3D mesh with a sewn triangle strip",
+ "studio3d.edit.bridgeFaces": "Bridge faces",
+ "studio3d.hist.editBridgeFaces": "Bridge face groups"
 }

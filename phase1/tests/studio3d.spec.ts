@@ -1170,6 +1170,21 @@ test('mesh edit mode: bisect cuts the mesh by a plane and keeps both halves',asy
  await expect(page.getByRole('alert')).toContainText('does not cut through the mesh');
 });
 
+test('mesh edit mode: bridge faces sews two selected face groups into a strip',async({page})=>{
+ await blank(page);
+ const id=await insert(page,'cube',0);
+ expect(await run(page,'studio3d.edit.start',{id,mode:'face'})).toBe(true);
+ expect(await run(page,'studio3d.edit.bridgeFaces',{})).toBe(false);
+ await expect(page.getByRole('alert')).toContainText('Select two groups of faces to bridge');
+ expect(await run(page,'studio3d.edit.select',{kind:'face',ids:[0,1,2,3]})).toBe(true);
+ expect(await run(page,'studio3d.edit.bridgeFaces',{})).toBe(true);
+ expect((await session(page)).stats.triangles).toBe(16);
+ expect(await run(page,'studio3d.edit.bridgeFaces',{})).toBe(false);
+ await expect(page.getByRole('alert')).toContainText('Select two groups of faces to bridge');
+ expect(await run(page,'studio3d.undo',{})).toBe(true);
+ expect((await session(page)).stats.triangles).toBe(12);
+});
+
 test('mesh edit mode: select edge loop grows a seed edge into its loop',async({page})=>{
  await blank(page);
  const id=await insert(page,'cube',0);

@@ -974,5 +974,8 @@
  "studio3d.edit.bisectOff": "Desplazamiento del plano",
  "studio3d.edit.bisectFill": "Rellenar el corte",
  "cmd.studio3d.edit.selectLoop": "Extender las aristas seleccionadas a sus bucles completos",
- "studio3d.edit.selLoop": "Bucle de aristas"
+ "studio3d.edit.selLoop": "Bucle de aristas",
+ "cmd.studio3d.edit.bridgeFaces": "Une los bordes de dos grupos de caras seleccionadas de la malla 3D editada con una tira de triángulos cosida",
+ "studio3d.edit.bridgeFaces": "Unir caras",
+ "studio3d.hist.editBridgeFaces": "Grupos de caras unidos"
 }

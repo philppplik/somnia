@@ -974,5 +974,8 @@
  "studio3d.edit.bisectOff": "Versatz der Schnittebene",
  "studio3d.edit.bisectFill": "Schnitt füllen",
  "cmd.studio3d.edit.selectLoop": "Ausgewählte Kanten auf ihre vollständigen Kantenschleifen erweitern",
- "studio3d.edit.selLoop": "Kantenschleife"
+ "studio3d.edit.selLoop": "Kantenschleife",
+ "cmd.studio3d.edit.bridgeFaces": "Verbrückt die Ränder zweier ausgewählter Flächengruppen des bearbeiteten 3D-Meshs mit einer genähten Dreiecksbrücke",
+ "studio3d.edit.bridgeFaces": "Flächen verbrücken",
+ "studio3d.hist.editBridgeFaces": "Flächengruppen verbrückt"
 }

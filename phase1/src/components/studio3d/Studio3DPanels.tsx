@@ -392,6 +392,7 @@ function EditSculptFields({id}:{id:number}){
       {(['x','y','z'] as const).map(a=><option key={a} value={a}>{t('studio3d.sculpt.symmetry.'+a)}</option>)}</NativeSelect>
      <label className="flex items-center gap-2 text-xs text-ink-2"><NativeInput type="checkbox" checked={bisectFill} onChange={e=>setBisectFill(e.currentTarget.checked)}/>{t('studio3d.edit.bisectFill')}</label>
      <Button variant="outline" onClick={()=>void executeCommand('studio3d.edit.bisect',{axis:bisectAxis,offset:bisectOff,fill:bisectFill})}>{t('studio3d.edit.bisect')}</Button>
+     <Button variant="outline" onClick={()=>void executeCommand('studio3d.edit.bridgeFaces',{})}>{t('studio3d.edit.bridgeFaces')}</Button>
      <Button variant="outline" onClick={()=>void executeCommand('studio3d.edit.rip',{})}>{t('studio3d.edit.rip')}</Button>
      <Button variant="outline" onClick={()=>void executeCommand('studio3d.edit.separate',{})}>{t('studio3d.edit.separate')}</Button>
      <Button variant="outline" onClick={()=>void executeCommand('studio3d.edit.end')}>{t('studio3d.edit.end')}</Button>
