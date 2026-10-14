@@ -90,7 +90,13 @@ export const LOCAL_MODELS_CATALOGUES:Record<string,Record<string,string>> = {
   "local.advanced.title": "Advanced runtime settings",
   "local.advanced.boundary": "Draft until Save. Blank uses daemon defaults; requested context may be clamped. Keep-alive is a hint, not exclusive ownership. Zero unloads after each request. No inference or preload on edit.",
   "local.advanced.context": "Requested context tokens (blank: daemon default)",
-  "local.advanced.keepAlive": "Keep-alive seconds (0–86400, blank: daemon default)"
+  "local.advanced.keepAlive": "Keep-alive seconds (0–86400, blank: daemon default)",
+  "local.discovery.title": "Other local runtimes: inspect only",
+  "local.discovery.boundary": "Metadata only. Loopback is not proof of local inference. No chat, tool execution, download, process start or automatic fallback is enabled. Manage GGUF files and start servers yourself. Authenticated LM Studio servers may refuse inspection.",
+  "local.discovery.runtime": "Runtime",
+  "local.discovery.endpoint": "HTTP loopback origin",
+  "local.discovery.inspect": "Inspect metadata",
+  "local.discovery.desktop": "Runtime inspection requires desktop"
  },
  "de": {
   "local.tab": "Lokal",
@@ -183,7 +189,13 @@ export const LOCAL_MODELS_CATALOGUES:Record<string,Record<string,string>> = {
   "local.advanced.title": "Erweiterte Laufzeiteinstellungen",
   "local.advanced.boundary": "Entwurf bis zum Speichern. Leer nutzt Daemon-Defaults; Kontext kann begrenzt werden. Keep-alive ist ein Hinweis, keine Exklusivnutzung. Null entlädt nach jeder Anfrage. Bearbeiten startet keine Inferenz.",
   "local.advanced.context": "Angeforderte Kontext-Tokens (leer: Daemon-Default)",
-  "local.advanced.keepAlive": "Keep-alive Sekunden (0–86400, leer: Daemon-Default)"
+  "local.advanced.keepAlive": "Keep-alive Sekunden (0–86400, leer: Daemon-Default)",
+  "local.discovery.title": "Andere lokale Laufzeiten: nur prüfen",
+  "local.discovery.boundary": "Nur Metadaten. Loopback beweist keine lokale Inferenz. Kein Chat, Werkzeugausführen, Download, Start oder automatischer Fallback. GGUF-Dateien und Server selbst verwalten. LM Studio mit Auth kann die Prüfung ablehnen.",
+  "local.discovery.runtime": "Laufzeit",
+  "local.discovery.endpoint": "HTTP-Loopback-Ursprung",
+  "local.discovery.inspect": "Metadaten prüfen",
+  "local.discovery.desktop": "Laufzeitprüfung benötigt Desktop"
  },
  "es": {
   "local.tab": "Local",
@@ -276,7 +288,13 @@ export const LOCAL_MODELS_CATALOGUES:Record<string,Record<string,string>> = {
   "local.advanced.title": "Ajustes avanzados",
   "local.advanced.boundary": "Borrador hasta guardar. Vacío usa valores del daemon; contexto puede limitarse. Keep-alive es una sugerencia. Cero descarga de memoria tras cada solicitud. Editar no ejecuta inferencia.",
   "local.advanced.context": "Tokens de contexto (vacío: predeterminado)",
-  "local.advanced.keepAlive": "Segundos keep-alive (0–86400, vacío: predeterminado)"
+  "local.advanced.keepAlive": "Segundos keep-alive (0–86400, vacío: predeterminado)",
+  "local.discovery.title": "Otros runtimes: solo inspección",
+  "local.discovery.boundary": "Solo metadatos. Loopback no prueba inferencia local. Sin chat, herramientas, descarga, inicio ni fallback automático. Gestiona GGUF y servidores manualmente. LM Studio con autenticación puede rechazar.",
+  "local.discovery.runtime": "Runtime",
+  "local.discovery.endpoint": "Origen HTTP loopback",
+  "local.discovery.inspect": "Inspeccionar metadatos",
+  "local.discovery.desktop": "La inspección requiere escritorio"
  },
  "fr": {
   "local.tab": "Local",
@@ -369,7 +387,13 @@ export const LOCAL_MODELS_CATALOGUES:Record<string,Record<string,string>> = {
   "local.advanced.title": "Réglages avancés",
   "local.advanced.boundary": "Brouillon jusqu’à Enregistrer. Vide utilise les valeurs du daemon ; contexte peut être limité. Keep-alive est indicatif. Zéro décharge après chaque requête. Aucune inférence en modifiant.",
   "local.advanced.context": "Tokens de contexte (vide : valeur par défaut)",
-  "local.advanced.keepAlive": "Secondes keep-alive (0–86400, vide : défaut)"
+  "local.advanced.keepAlive": "Secondes keep-alive (0–86400, vide : défaut)",
+  "local.discovery.title": "Autres runtimes : inspection uniquement",
+  "local.discovery.boundary": "Métadonnées uniquement. Loopback ne prouve pas l’inférence locale. Aucun chat, outil, téléchargement, démarrage ou repli automatique. Gérez GGUF et serveurs manuellement. LM Studio authentifié peut refuser.",
+  "local.discovery.runtime": "Runtime",
+  "local.discovery.endpoint": "Origine HTTP loopback",
+  "local.discovery.inspect": "Inspecter les métadonnées",
+  "local.discovery.desktop": "L’inspection nécessite le bureau"
  },
  "pt-BR": {
   "local.tab": "Local",
@@ -462,6 +486,12 @@ export const LOCAL_MODELS_CATALOGUES:Record<string,Record<string,string>> = {
   "local.advanced.title": "Configurações avançadas",
   "local.advanced.boundary": "Rascunho até salvar. Vazio usa padrões do daemon; contexto pode ser limitado. Keep-alive é uma dica. Zero descarrega após cada solicitação. Editar não executa inferência.",
   "local.advanced.context": "Tokens de contexto (vazio: padrão)",
-  "local.advanced.keepAlive": "Segundos keep-alive (0–86400, vazio: padrão)"
+  "local.advanced.keepAlive": "Segundos keep-alive (0–86400, vazio: padrão)",
+  "local.discovery.title": "Outros runtimes: apenas inspeção",
+  "local.discovery.boundary": "Somente metadados. Loopback não prova inferência local. Sem chat, ferramentas, download, início ou fallback automático. Gerencie GGUF e servidores manualmente. LM Studio autenticado pode recusar.",
+  "local.discovery.runtime": "Runtime",
+  "local.discovery.endpoint": "Origem HTTP loopback",
+  "local.discovery.inspect": "Inspecionar metadados",
+  "local.discovery.desktop": "A inspeção requer desktop"
  }
 };

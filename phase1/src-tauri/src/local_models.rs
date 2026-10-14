@@ -90,3 +90,15 @@ mod tests {
         assert!(executable(&path));
     }
 }
+
+/// Alternate runtimes expose metadata only. No locality upgrade or inference endpoint.
+#[cfg(feature="desktop")]
+pub async fn discover(base:&str,runtime:&str)->Result<serde_json::Value,String>{
+ let mut url=url::Url::parse(&endpoint(base,"tags")?).map_err(|_|"Invalid runtime origin")?;
+ url.set_path(match runtime{"llama.cpp"=>"/v1/models","lmstudio"=>"/api/v1/models",_=>return Err("Unsupported discovery runtime".into())});
+ let client=reqwest::Client::builder().no_proxy().redirect(reqwest::redirect::Policy::none()).timeout(std::time::Duration::from_secs(5)).build().map_err(|_|"Discovery transport unavailable")?;
+ let mut response=client.get(url).send().await.map_err(|_|"Runtime unreachable; start it manually")?;
+ if !response.status().is_success(){return Err(format!("Runtime answered {}",response.status().as_u16()));}
+ let mut bytes=Vec::new();while let Some(chunk)=response.chunk().await.map_err(|_|"Inventory interrupted")?{if bytes.len()+chunk.len()>2_000_000{return Err("Inventory too large".into());}bytes.extend_from_slice(&chunk);}
+ serde_json::from_slice(&bytes).map_err(|_|"Invalid runtime JSON".into())
+}

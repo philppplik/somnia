@@ -1,4 +1,5 @@
 // Task-engine sidecar entry ("somnia.task-engine/1"). Bundled to engine.mjs by build.mjs and started by `somnia run`.
+import {modelDiscoveryMain} from './modelDiscovery';
 import readline from 'node:readline';
 import { ENGINE_CONTRACT, MAX_ANSWERS, MAX_ANSWER_CHARS, MAX_QUESTION_CHARS, isTerminal } from './contract';
 import type { EngineOut, EngineTask, TaskAnswer } from './contract';
@@ -61,4 +62,4 @@ async function main(): Promise<void> {
   });
   rl.on('close', () => { if (!started) process.exit(1); abort.abort(); });
 }
-void main();
+if(process.argv[2]==='--models')void modelDiscoveryMain(process.argv.slice(3));else void main();

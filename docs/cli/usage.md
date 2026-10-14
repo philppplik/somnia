@@ -73,3 +73,8 @@ somnia attach "$id"
 | `XDG_RUNTIME_DIR` | Where the private socket directory is created. Fallback: `/tmp/somnia-<uid>`. |
 
 Provider keys are read by the engine sidecar from its own environment (details: [TASK-ENGINE-CONTRACT.md](../agent/TASK-ENGINE-CONTRACT.md)). The CLI never puts them in a protocol frame, record or commit.
+
+## Read-only local model discovery
+
+`somnia models --runtime ollama --json` inspects the default HTTP loopback daemon.
+Alternate metadata sources: `somnia models --runtime llama.cpp` (127.0.0.1:8080 `/v1/models`) or `somnia models --runtime lmstudio` (127.0.0.1:1234 `/api/v1/models`). `--endpoint http://127.0.0.1:PORT` changes only the loopback origin. No redirects, proxies, credentials, service starts, downloads or inference. Auth-required LM Studio endpoints return an error. Every returned model remains local-inference unverified; metadata availability is not an adapter certification. Keep the bundled engine.mjs sidecar next to the CLI as for `somnia run`.

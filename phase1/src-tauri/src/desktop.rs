@@ -311,6 +311,11 @@ async fn local_models_read(window: WebviewWindow, base_url: String, operation: S
     crate::local_models::read(&base_url, &operation, model.as_deref()).await
 }
 #[tauri::command]
+async fn local_models_discover(window:WebviewWindow,base_url:String,runtime:String)->std::result::Result<serde_json::Value,String>{
+ gate(&window).map_err(|_|"Only trusted editor may inspect runtimes")?;
+ crate::local_models::discover(&base_url,&runtime).await
+}
+#[tauri::command]
 async fn local_models_hardware(window:WebviewWindow)->std::result::Result<crate::local_hardware::Hardware,String>{
  gate(&window).map_err(|_| "Only trusted editor may inspect hardware")?;
  tauri::async_runtime::spawn_blocking(crate::local_hardware::snapshot).await.map_err(|_| "Hardware probe failed".into())
@@ -2907,6 +2912,7 @@ pub fn run() {
             selftest_env,
             selftest_write,
             selftest_exit,
+            local_models_discover,
             local_models_hardware,
             local_models_start,
             local_models_pull,

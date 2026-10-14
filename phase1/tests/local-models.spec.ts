@@ -59,3 +59,16 @@ test('hardware fit remains an estimate and daemon residency reports actual size_
  await expect(page.getByText('Model storage volume/free space: not checked',{exact:true})).toBeVisible();
  await expect(page.getByText('Image input adapter not enabled',{exact:false})).toBeVisible();
 });
+test('advanced runtime options expose requested values and daemon-default limits',async({page})=>{
+ await page.goto('/test/local-models.html?state=advanced');await page.getByText('Advanced runtime settings',{exact:true}).click();
+ await expect(page.getByRole('spinbutton',{name:'Requested context tokens (blank: daemon default)'})).toHaveValue('16384');
+ await expect(page.getByText('Draft until Save.',{exact:false})).toBeVisible();
+ await page.screenshot({path:'/tmp/local-runtime-advanced.png',fullPage:true});
+});
+test('alternate runtimes are inspect-only with no inferred local execution',async({page})=>{
+ await page.goto('/test/local-models.html');await page.getByText('Other local runtimes: inspect only',{exact:true}).click();
+ await expect(page.getByText('Metadata only. Loopback is not proof of local inference.',{exact:false})).toBeVisible();
+ await page.getByRole('button',{name:'Inspect metadata',exact:true}).click();
+ await expect(page.getByRole('alert')).toContainText('requires desktop');
+ await page.screenshot({path:'/tmp/local-runtime-discovery.png',fullPage:true});
+});
