@@ -71,7 +71,8 @@ export class AgentToolRegistry {
     const spec = this.tools.get(name);
     if (!spec || !this.enabled(spec, g)) throw Error('Unknown agent tool.');
     signal.throwIfAborted();
-    const out = await spec.run(args, ctx, signal);
+    const pinnedArgs=structuredClone(args);
+    const out = await spec.run(pinnedArgs, ctx, signal);
     signal.throwIfAborted();
     return out;
   }
