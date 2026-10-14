@@ -747,5 +747,8 @@
  "animation.onion.after": "Danach",
  "animation.onion.step": "Schritt (Frames)",
  "animation.onion.hint": "Frühere Frames kühl, spätere warm. Nur Ansicht, nie im Export.",
- "cmd.animation.onion.set": "Onion Skin einstellen"
+ "cmd.animation.onion.set": "Onion Skin einstellen",
+ "animation.onion.opacity": "Deckkraft (%)",
+ "animation.onion.selectedOnly": "Nur gewählte Ebene",
+ "animation.onion.tint": "Frühere und spätere Frames einfärben"
 }

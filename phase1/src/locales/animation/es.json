@@ -747,5 +747,8 @@
  "animation.onion.after": "Después",
  "animation.onion.step": "Paso (fotogramas)",
  "animation.onion.hint": "Los anteriores se ven fríos y los posteriores cálidos. Solo vista, nunca se exporta.",
- "cmd.animation.onion.set": "Ajustar piel de cebolla"
+ "cmd.animation.onion.set": "Ajustar piel de cebolla",
+ "animation.onion.opacity": "Opacidad (%)",
+ "animation.onion.selectedOnly": "Solo la capa seleccionada",
+ "animation.onion.tint": "Teñir fotogramas anteriores y posteriores"
 }

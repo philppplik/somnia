@@ -747,5 +747,8 @@
  "animation.onion.after": "Depois",
  "animation.onion.step": "Passo (quadros)",
  "animation.onion.hint": "Quadros anteriores em tom frio, posteriores em tom quente. Só visualização, nunca exportado.",
- "cmd.animation.onion.set": "Ajustar onion skin"
+ "cmd.animation.onion.set": "Ajustar onion skin",
+ "animation.onion.opacity": "Opacidade (%)",
+ "animation.onion.selectedOnly": "Somente a camada selecionada",
+ "animation.onion.tint": "Colorir quadros anteriores e posteriores"
 }

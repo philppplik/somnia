@@ -747,5 +747,8 @@
  "animation.onion.after": "Après",
  "animation.onion.step": "Pas (images)",
  "animation.onion.hint": "Les images précédentes sont froides, les suivantes chaudes. Affichage seul, jamais exporté.",
- "cmd.animation.onion.set": "Régler la pelure d'oignon"
+ "cmd.animation.onion.set": "Régler la pelure d'oignon",
+ "animation.onion.opacity": "Opacité (%)",
+ "animation.onion.selectedOnly": "Calque sélectionné seulement",
+ "animation.onion.tint": "Teinter les images précédentes et suivantes"
 }

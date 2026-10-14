@@ -747,5 +747,8 @@
  "animation.onion.after": "After",
  "animation.onion.step": "Step (frames)",
  "animation.onion.hint": "Earlier frames show cool, later frames warm. View only, never exported.",
- "cmd.animation.onion.set": "Set onion skin"
+ "cmd.animation.onion.set": "Set onion skin",
+ "animation.onion.opacity": "Opacity (%)",
+ "animation.onion.selectedOnly": "Selected layer only",
+ "animation.onion.tint": "Tint earlier and later frames"
 }
