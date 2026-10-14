@@ -977,5 +977,11 @@
  "studio3d.edit.selLoop": "Edge loop",
  "cmd.studio3d.edit.bridgeFaces": "Bridge the borders of two selected face groups of the edited 3D mesh with a sewn triangle strip",
  "studio3d.edit.bridgeFaces": "Bridge faces",
- "studio3d.hist.editBridgeFaces": "Bridge face groups"
+ "studio3d.hist.editBridgeFaces": "Bridge face groups",
+ "cmd.studio3d.edit.vertSlide": "Slide the selected vertex of the edited 3D mesh along an incident edge by a factor of the edge vector",
+ "studio3d.edit.vertSlide": "Vertex slide",
+ "studio3d.hist.editVertSlide": "Vertex slide",
+ "studio3d.edit.vertSlideEdgeA": "Edge vertex A",
+ "studio3d.edit.vertSlideEdgeB": "Edge vertex B",
+ "studio3d.edit.vertSlideFactor": "Slide factor"
 }

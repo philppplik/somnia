@@ -977,5 +977,11 @@
  "studio3d.edit.selLoop": "Loop de arestas",
  "cmd.studio3d.edit.bridgeFaces": "Conecta as bordas de dois grupos de faces selecionadas da malha 3D editada com uma faixa de triângulos costurada",
  "studio3d.edit.bridgeFaces": "Conectar faces",
- "studio3d.hist.editBridgeFaces": "Grupos de faces conectados"
+ "studio3d.hist.editBridgeFaces": "Grupos de faces conectados",
+ "cmd.studio3d.edit.vertSlide": "Desliza o vértice selecionado da malha 3D editada ao longo de uma aresta incidente por um fator do vetor da aresta",
+ "studio3d.edit.vertSlide": "Deslizar vértice",
+ "studio3d.hist.editVertSlide": "Vértice deslizado ao longo da aresta",
+ "studio3d.edit.vertSlideEdgeA": "Vértice A da aresta",
+ "studio3d.edit.vertSlideEdgeB": "Vértice B da aresta",
+ "studio3d.edit.vertSlideFactor": "Fator de deslize"
 }

@@ -977,5 +977,11 @@
  "studio3d.edit.selLoop": "Bucle de aristas",
  "cmd.studio3d.edit.bridgeFaces": "Une los bordes de dos grupos de caras seleccionadas de la malla 3D editada con una tira de triángulos cosida",
  "studio3d.edit.bridgeFaces": "Unir caras",
- "studio3d.hist.editBridgeFaces": "Grupos de caras unidos"
+ "studio3d.hist.editBridgeFaces": "Grupos de caras unidos",
+ "cmd.studio3d.edit.vertSlide": "Desliza el vértice seleccionado de la malla 3D editada a lo largo de una arista incidente por un factor del vector de la arista",
+ "studio3d.edit.vertSlide": "Deslizar vértice",
+ "studio3d.hist.editVertSlide": "Vértice deslizado",
+ "studio3d.edit.vertSlideEdgeA": "Vértice A de la arista",
+ "studio3d.edit.vertSlideEdgeB": "Vértice B de la arista",
+ "studio3d.edit.vertSlideFactor": "Factor de deslizamiento"
 }

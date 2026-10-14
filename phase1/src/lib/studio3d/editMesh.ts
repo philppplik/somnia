@@ -820,6 +820,32 @@ export function moveSelected(m:MeshData,verts:number[],offset:[number,number,num
  const out:MeshData={positions,index:[...m.index],...(m.uvs?{uvs:[...m.uvs]}:{}),...(m.mask?{mask:[...m.mask]}:{})};
  check(out);return out;
 }
+/** Slides one selected vertex along an incident edge by `factor` of the edge vector (0 = stay, 1 = the far endpoint, negative slides the other way along the edge line). The edge is matched position-keyed so twin indices work. Position-equal twins move together via moveSelected; masks and UVs are carried. */
+export function vertSlideSelected(m:MeshData,verts:number[],edge:[number,number],factor:number):MeshData{
+ check(m);
+ if(verts.length!==1)throw new EditError('Select exactly one vertex to slide.');
+ if(!Number.isFinite(factor)||factor<-1||factor>1)throw new EditError('The slide factor must be between -1 and 1.');
+ const nv=m.positions.length/3;
+ const v=verts[0];
+ if(!Number.isInteger(v)||v<0||v>=nv)throw new EditError(`Vertex ${v} does not exist.`);
+ const [a,b]=edge;
+ for(const e of edge){if(!Number.isInteger(e)||e<0||e>=nv)throw new EditError('The slide edge does not exist.');}
+ if(a===b)throw new EditError('The slide edge does not exist.');
+ if(v!==a&&v!==b)throw new EditError('The slide edge must touch the selected vertex.');
+ const pk=(x:number)=>`${Math.round(m.positions[x*3]*1e6)},${Math.round(m.positions[x*3+1]*1e6)},${Math.round(m.positions[x*3+2]*1e6)}`;
+ const ka=pk(a),kb=pk(b);
+ if(ka===kb)throw new EditError('The slide edge does not exist.');
+ const k=ka<kb?ka+'|'+kb:kb+'|'+ka;
+ let found=false;
+ for(let f=0;f<m.index.length&&!found;f+=3)for(let e=0;e<3;e++){
+  const x=pk(m.index[f+e]),y=pk(m.index[f+(e+1)%3]);if(x===y)continue;
+  if((x<y?x+'|'+y:y+'|'+x)===k){found=true;break;}
+ }
+ if(!found)throw new EditError('The slide edge does not exist.');
+ const other=v===a?b:a;
+ const dx=m.positions[other*3]-m.positions[v*3],dy=m.positions[other*3+1]-m.positions[v*3+1],dz=m.positions[other*3+2]-m.positions[v*3+2];
+ return moveSelected(m,[v],[dx*factor,dy*factor,dz*factor]);
+}
 /** Shears the selected vertices: offsets them along one world axis proportional to their distance from the selection centroid on a second axis. Position-equal twins shear together; the strongest mask at a position dams the whole seam (as a partial shear). Masks are carried; UVs are carried. */
 export function shearSelected(m:MeshData,verts:number[],along:'x'|'y'|'z',by:'x'|'y'|'z',factor:number):MeshData{
  check(m);

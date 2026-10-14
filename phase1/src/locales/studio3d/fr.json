@@ -977,5 +977,11 @@
  "studio3d.edit.selLoop": "Boucle d’arêtes",
  "cmd.studio3d.edit.bridgeFaces": "Relie les bords de deux groupes de faces sélectionnées du maillage 3D édité avec une bande de triangles cousue",
  "studio3d.edit.bridgeFaces": "Relier les faces",
- "studio3d.hist.editBridgeFaces": "Groupes de faces reliés"
+ "studio3d.hist.editBridgeFaces": "Groupes de faces reliés",
+ "cmd.studio3d.edit.vertSlide": "Fait glisser le sommet sélectionné du maillage 3D édité le long d'une arête incidente selon un facteur du vecteur d'arête",
+ "studio3d.edit.vertSlide": "Glisser le sommet",
+ "studio3d.hist.editVertSlide": "Sommet glissé le long de l'arête",
+ "studio3d.edit.vertSlideEdgeA": "Sommet A de l'arête",
+ "studio3d.edit.vertSlideEdgeB": "Sommet B de l'arête",
+ "studio3d.edit.vertSlideFactor": "Facteur de glissement"
 }

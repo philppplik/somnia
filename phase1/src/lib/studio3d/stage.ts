@@ -10,7 +10,7 @@ import type {NodeExtra} from './document';
 import {EASES,isEase,bakeTrack,type Ease} from './ease';
 import {buildExtras,type ClipMeta,type MetaTrack} from './clipMeta';
 import {groupRefs,keyIndices,copyTrackKeys,shiftTrackKeys,pasteTrackKeys,type KeyRef,type KeyData,type TrackData} from './keyEdit';
-import {extrudeFaces,insetFaces,bevelVertices,deleteElements,weldSelected,subdivideFaces,pokeFaces,duplicateFaces,fattenSelected,relaxSelected,flipFaces,dissolveFaces,fillSelected,collapseSelected,toSphereSelected,randomizeSelected,moveSelected,ripSelected,extractFaces,sharpEdges,similarFaces,rotateSelected,scaleSelected,shearSelected,flipEdges,mergeByDistanceSelected,bisectEdit,edgeLoop,bridgeFacesSelected,loopCut,bevelEdges,slideEdges,mirrorCombine,symmetrizeMesh,subdivideLoop,cleanupMesh,flipMesh,outsideMesh,smoothMesh,separateMesh,solidifyMesh,fillHolesMesh,relaxMesh,fattenMesh,bisectMesh,twistMesh,taperMesh,spinMesh,bridgeMesh,remeshMesh,EditError,MAX_EDIT_VERTICES,MAX_EDIT_TRIANGLES,type MeshData,type CleanupResult,type NormalsOp} from './editMesh';
+import {extrudeFaces,insetFaces,bevelVertices,deleteElements,weldSelected,subdivideFaces,pokeFaces,duplicateFaces,fattenSelected,relaxSelected,flipFaces,dissolveFaces,fillSelected,collapseSelected,toSphereSelected,randomizeSelected,moveSelected,ripSelected,extractFaces,sharpEdges,similarFaces,rotateSelected,scaleSelected,shearSelected,flipEdges,mergeByDistanceSelected,bisectEdit,edgeLoop,bridgeFacesSelected,vertSlideSelected,loopCut,bevelEdges,slideEdges,mirrorCombine,symmetrizeMesh,subdivideLoop,cleanupMesh,flipMesh,outsideMesh,smoothMesh,separateMesh,solidifyMesh,fillHolesMesh,relaxMesh,fattenMesh,bisectMesh,twistMesh,taperMesh,spinMesh,bridgeMesh,remeshMesh,EditError,MAX_EDIT_VERTICES,MAX_EDIT_TRIANGLES,type MeshData,type CleanupResult,type NormalsOp} from './editMesh';
 import {sculptDab,paintMask,SculptError,type SculptOpts} from './sculpt';
 import {KEY_PATHS,KEY_STRIDE,ClipError,MAX_CLIPS,MAX_KEYS_PER_TRACK,DEFAULT_CLIP_SECONDS,insertKey,removeKey as removeKeyData,findKey,isPlainTrack,trackName,parseTrackName,checkKeyTime,checkDuration,checkClipName,lastKeyTime,type KeyPath} from './clips';
 import {mergeTransform,DEFAULT_TRANSFORM,UvError,type TextureTransform} from './uv';
@@ -808,6 +808,8 @@ export class Stage{
   this.editSel.edges=new Map();
   for(const [a,b] of edges)this.editSel.edges.set(`${a}_${b}`,[a,b]);
  }
+ /** Slides the single selected vertex along an incident edge by `factor` of the edge vector, one undo step. Position-equal twins move together. */
+ editVertSlide(edge:[number,number],factor:number){this.editOp({key:'studio3d.hist.editVertSlide'},m=>vertSlideSelected(m,[...this.editSel.verts],edge,factor));}
  /** Bridges the border loops of two selected face groups with a sewn triangle strip (twist shifts the start vertex), one undo step. The selection is cleared afterwards because face ordinals shift. */
  editBridgeFaces(twist:number){this.editOp({key:'studio3d.hist.editBridgeFaces'},m=>bridgeFacesSelected(m,[...this.editSel.faces],twist));this.editSel={verts:new Set(),edges:new Map(),faces:new Set()};}
  /** Extends the face selection to every face whose normal lies within `degrees` of the current selection's average normal. Replaces the face selection; selection changes are not undo steps. */

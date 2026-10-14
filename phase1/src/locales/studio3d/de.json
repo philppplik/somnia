@@ -977,5 +977,11 @@
  "studio3d.edit.selLoop": "Kantenschleife",
  "cmd.studio3d.edit.bridgeFaces": "Verbrückt die Ränder zweier ausgewählter Flächengruppen des bearbeiteten 3D-Meshs mit einer genähten Dreiecksbrücke",
  "studio3d.edit.bridgeFaces": "Flächen verbrücken",
- "studio3d.hist.editBridgeFaces": "Flächengruppen verbrückt"
+ "studio3d.hist.editBridgeFaces": "Flächengruppen verbrückt",
+ "cmd.studio3d.edit.vertSlide": "Schiebt den selektierten Vertex des bearbeiteten 3D-Meshs entlang einer inzidenten Kante um einen Faktor des Kantenvektors",
+ "studio3d.edit.vertSlide": "Vertex-Slide",
+ "studio3d.hist.editVertSlide": "Vertex entlang Kante verschoben",
+ "studio3d.edit.vertSlideEdgeA": "Kanten-Vertex A",
+ "studio3d.edit.vertSlideEdgeB": "Kanten-Vertex B",
+ "studio3d.edit.vertSlideFactor": "Slide-Faktor"
 }

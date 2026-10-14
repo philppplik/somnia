@@ -7662,6 +7662,19 @@
       "hasEnabled": true
     },
     {
+      "id": "studio3d.edit.vertSlide",
+      "title": "Slide the selected vertex of the edited 3D mesh along an incident edge by a factor of the edge vector",
+      "category": "Edit",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "studio3d.edit.weld",
       "title": "Merge selected vertices at centre",
       "category": "Edit",

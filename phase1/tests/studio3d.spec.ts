@@ -1170,6 +1170,19 @@ test('mesh edit mode: bisect cuts the mesh by a plane and keeps both halves',asy
  await expect(page.getByRole('alert')).toContainText('does not cut through the mesh');
 });
 
+test('mesh edit mode: vertex slide moves a selected vertex along an incident edge',async({page})=>{
+ await blank(page);
+ const id=await insert(page,'cube',0);
+ expect(await run(page,'studio3d.edit.start',{id,mode:'vertex'})).toBe(true);
+ expect(await run(page,'studio3d.edit.vertSlide',{edge:[8,10],factor:1})).toBe(false);
+ await expect(page.getByRole('alert')).toContainText('Select exactly one vertex to slide');
+ expect(await run(page,'studio3d.edit.select',{kind:'vertex',ids:[8]})).toBe(true);
+ expect(await run(page,'studio3d.edit.vertSlide',{edge:[8,10],factor:1})).toBe(true);
+ expect(await run(page,'studio3d.edit.vertSlide',{edge:[8,10],factor:2})).toBe(false);
+ await expect(page.getByRole('alert')).toContainText('The slide factor must be between -1 and 1');
+ expect(await run(page,'studio3d.undo',{})).toBe(true);
+});
+
 test('mesh edit mode: bridge faces sews two selected face groups into a strip',async({page})=>{
  await blank(page);
  const id=await insert(page,'cube',0);
