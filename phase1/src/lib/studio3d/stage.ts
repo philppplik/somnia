@@ -12,6 +12,7 @@ import {textureBytes} from './validate';
 import {smoothWeights,rigidWeights,paintWeights,SkinError,type BoneSegment,type SkinWeights,type BrushSettings} from './skinning';
 import {checkPoseName,mirrorPose,blendPoses,PoseError,MAX_POSES} from './poses';import type {Pose,PoseBone} from './poses';
 import {solveTwoBone,clampEuler,checkLimits,hasLimits,IkError,MAX_IK_CHAINS,fabrikSolve,aimBasis,MIN_FABRIK_SEGMENTS,MAX_FABRIK_SEGMENTS} from './ik';import type {AxisLimits} from './ik';
+import {RetargetError,mapBoneNames,retargetClipName,MAX_RETARGET_SAMPLES} from './retarget';
 import {emptyStats,type ModelStats,type OutlineEntry,type Bounds} from './model';
 /**
  * Scene operations for the 3D studio (P1 staging). Pure three.js core, no renderer and no DOM, so the logic runs under tsx --test.
@@ -811,6 +812,114 @@ export class Stage{
   this.restoreClip(clip,cur);
   this.push({label:`Record pose at ${Math.round(t*1000)/1000}s`,undo:()=>this.restoreClip(clip,was),redo:()=>this.restoreClip(clip,cur)});
   this.emit();return bones.length;
+ }
+ /** Evaluates every track of a clip at a time (clamped): node uuid -> local transform parts. The review tools (onion skin, motion path, retarget) read poses through this and never touch the scene. */
+ poseAt(i:number,time:number):Map<string,{p?:[number,number,number];q?:[number,number,number,number];s?:[number,number,number]}>{
+  const clip=this.needClip(i);const t=Math.min(Math.max(time,0),clip.duration);
+  const out=new Map<string,{p?:[number,number,number];q?:[number,number,number,number];s?:[number,number,number]}>();
+  for(const tr of clip.tracks){
+   const parsed=parseTrackName(tr.name);if(!parsed)continue;
+   const v=Array.from(tr.createInterpolant().evaluate(t));
+   const slot=out.get(parsed.node)??{};out.set(parsed.node,slot);
+   if(parsed.path==='position')slot.p=v as [number,number,number];
+   else if(parsed.path==='rotation')slot.q=v as [number,number,number,number];
+   else slot.s=v as [number,number,number];
+  }
+  return out;
+ }
+ /** Local rest rotations of a rig's bones from the bind matrices of the skinned mesh that owns the rig (same recipe as the bind-pose reset; empty when the rig drives no skinned mesh, callers then fall back to the current locals). */
+ private rigRestQuats(root:THREE.Bone):Map<string,THREE.Quaternion>{
+  const out=new Map<string,THREE.Quaternion>();
+  let skeleton:THREE.Skeleton|undefined;
+  this.root.traverse(o=>{const m=o as THREE.SkinnedMesh;if(!skeleton&&m.isSkinnedMesh&&m.skeleton.bones.includes(root))skeleton=m.skeleton;});
+  if(!skeleton)return out;
+  const bones=skeleton.bones,bindWorld=skeleton.boneInverses.map(m=>m.clone().invert());
+  const chain=new Set(this.boneChain(root).map(b=>b.uuid));
+  bones.forEach((b,i)=>{
+   if(!chain.has(b.uuid))return;
+   const pi=bones.indexOf(b.parent as THREE.Bone);
+   const parentWorld=pi>=0?bindWorld[pi]:(b.parent?b.parent.matrixWorld:new THREE.Matrix4());
+   const q=new THREE.Quaternion();
+   parentWorld.clone().invert().multiply(bindWorld[i]).decompose(new THREE.Vector3(),q,new THREE.Vector3());
+   out.set(b.uuid,q);
+  });
+  return out;
+ }
+ /** Bone pairs of a retarget between two rigs, matched by name. Throws when the rigs are the same or nothing maps. */
+ retargetMap(sourceId:number,targetId:number):{pairs:{source:THREE.Bone;target:THREE.Bone}[];unmatchedSource:string[];unmatchedTarget:string[]}{
+  const src=this.rigOf(sourceId),dst=this.rigOf(targetId);
+  if(src.id===dst.id)throw new RetargetError('Source and target are the same rig.');
+  const srcBones=this.boneChain(src),dstBones=this.boneChain(dst);
+  const m=mapBoneNames(srcBones.map(b=>b.name),dstBones.map(b=>b.name));
+  if(!m.pairs.length)throw new RetargetError('No bone names match between the two rigs.');
+  const srcByName=new Map(srcBones.map(b=>[b.name,b])),dstByName=new Map(dstBones.map(b=>[b.name,b]));
+  return{pairs:m.pairs.map(p=>({source:srcByName.get(p.source)!,target:dstByName.get(p.target)!})),unmatchedSource:m.unmatchedSource,unmatchedTarget:m.unmatchedTarget};
+ }
+ /** Retargeted local rotation of one pair: the source's rotation away from its rest pose, applied on top of the target's rest pose. */
+ private retargetDelta(pair:{source:THREE.Bone;target:THREE.Bone},srcRest:Map<string,THREE.Quaternion>,dstRest:Map<string,THREE.Quaternion>,srcLocal:THREE.Quaternion):THREE.Quaternion{
+  const rs=srcRest.get(pair.source.uuid)??pair.source.quaternion;
+  const rd=dstRest.get(pair.target.uuid)??pair.target.quaternion;
+  return rd.clone().multiply(rs.clone().invert()).multiply(srcLocal);
+ }
+ /** Poses the target rig with the retargeted pose of a clip at a time. One undo step. Returns the number of mapped bones. */
+ retargetPreview(sourceId:number,targetId:number,i:number,time:number):number{
+  this.needClip(i);const map=this.retargetMap(sourceId,targetId);
+  const src=this.rigOf(sourceId),dst=this.rigOf(targetId);
+  const srcRest=this.rigRestQuats(src),dstRest=this.rigRestQuats(dst);
+  const pose=this.poseAt(i,time);
+  const chain=this.boneChain(dst);const before=this.captureLocals(chain);
+  for(const p of map.pairs){
+   const srcLocal=pose.get(p.source.uuid)?.q;
+   const q=srcLocal?this.retargetDelta(p,srcRest,dstRest,new THREE.Quaternion(...srcLocal)):dstRest.get(p.target.uuid);
+   if(q)p.target.quaternion.copy(q);
+  }
+  this.root.updateMatrixWorld(true);const after=this.captureLocals(chain);
+  this.push({label:'Retarget preview',undo:()=>this.restoreLocals(chain,before),redo:()=>this.restoreLocals(chain,after)});
+  this.emit();return map.pairs.length;
+ }
+ /** Bakes a clip retargeted onto the target rig as a new clip with quaternion tracks on the mapped target bones. One undo step. Returns the new clip index. */
+ retargetApply(sourceId:number,targetId:number,i:number,name?:string):number{
+  if(this.clipList.length>=MAX_CLIPS)throw new ClipError(`A scene can have at most ${MAX_CLIPS} clips.`);
+  const clip=this.needClip(i);const map=this.retargetMap(sourceId,targetId);
+  const src=this.rigOf(sourceId),dst=this.rigOf(targetId);
+  const srcRest=this.rigRestQuats(src),dstRest=this.rigRestQuats(dst);
+  // Sample at the union of the mapped source key times plus both ends, capped.
+  const times=new Set<number>([0,clip.duration]);
+  for(const p of map.pairs){const tr=clip.tracks.find(t=>t.name===trackName(p.source.uuid,'rotation'));if(tr)for(const t of Array.from(tr.times))times.add(Math.min(Math.max(t,0),clip.duration));}
+  let samples=[...times].sort((a,b)=>a-b);
+  if(samples.length>MAX_RETARGET_SAMPLES)samples=Array.from({length:MAX_RETARGET_SAMPLES},(_,k)=>clip.duration*k/(MAX_RETARGET_SAMPLES-1));
+  const tracks:THREE.QuaternionKeyframeTrack[]=[];
+  for(const p of map.pairs){
+   const tr=clip.tracks.find(t=>t.name===trackName(p.source.uuid,'rotation'));
+   if(!tr)continue; // No source motion on this bone: the target keeps its rest pose.
+   const it=tr.createInterpolant();const values:number[]=[];
+   for(const t of samples){const v=it.evaluate(Math.min(t,clip.duration));const q=this.retargetDelta(p,srcRest,dstRest,new THREE.Quaternion(v[0],v[1],v[2],v[3]));values.push(q.x,q.y,q.z,q.w);}
+   tracks.push(new THREE.QuaternionKeyframeTrack(trackName(p.target.uuid,'rotation'),samples,values));
+  }
+  if(!tracks.length)throw new ClipError(`Clip ${clip.name} has no rotation keys on the mapped source bones.`);
+  const made=new THREE.AnimationClip(this.uniqueClipName(name===undefined?retargetClipName(clip.name):checkClipName(name)),clip.duration,tracks);
+  const at=this.clipList.length;const add=()=>{this.clipList.splice(at,0,made);this.clipRevision++;};add();
+  this.push({label:`Add clip ${made.name}`,undo:()=>{this.clipList.splice(at,1);this.clipRevision++;},redo:add});this.emit();
+  return at;
+ }
+ /** World positions of a bone across a clip, sampled evenly: the motion path polyline. */
+ motionPathOf(boneId:number,i:number,samples=64):[number,number,number][]{
+  const clip=this.needClip(i);const n=Math.min(Math.max(Math.floor(samples),2),256);
+  const o=this.need(boneId) as THREE.Bone;if(!o.isBone)throw new ClipError('A motion path follows a bone.');
+  const chain:THREE.Object3D[]=[];for(let b:THREE.Object3D|null=o;b&&b!==this.root;b=b.parent)chain.unshift(b);
+  const out:[number,number,number][]=[];
+  const m=new THREE.Matrix4(),lm=new THREE.Matrix4();
+  for(let k=0;k<n;k++){
+   const pose=this.poseAt(i,clip.duration*k/(n-1));
+   m.identity();
+   for(const node of chain){
+    const t=pose.get(node.uuid);
+    lm.compose(t?.p?new THREE.Vector3(...t.p):node.position,t?.q?new THREE.Quaternion(...t.q):node.quaternion,t?.s?new THREE.Vector3(...t.s):node.scale);
+    m.multiply(lm);
+   }
+   out.push([m.elements[12],m.elements[13],m.elements[14]]);
+  }
+  return out;
  }
  removeKey(i:number,id:number,path:KeyPath,time:number){
   const clip=this.needClip(i);const node=this.keyNode(id);this.keyPathFor(node,path);const t=checkKeyTime(time);const old=this.trackOf(clip,node,path);

@@ -33,6 +33,28 @@ async function skinnedGlb3():Promise<Buffer>{
  const out=await new GLTFExporter().parseAsync(scene,{binary:true}) as ArrayBuffer;
  return Buffer.from(out);
 }
+/** Two rigs with the same bone names (Hip > Knee > Ankle) in one scene, for retarget tests. */
+async function skinnedGlbTwoRigs():Promise<Buffer>{
+ const THREE=await import('three');const {GLTFExporter}=await import('three/examples/jsm/exporters/GLTFExporter.js');
+ class FR{result:string|ArrayBuffer|null=null;onloadend:(()=>void)|null=null;onerror:(()=>void)|null=null;
+  readAsArrayBuffer(b:Blob){void b.arrayBuffer().then(r=>{this.result=r;this.onloadend?.();},()=>this.onerror?.());}
+  readAsDataURL(b:Blob){void b.arrayBuffer().then(r=>{this.result=`data:application/octet-stream;base64,${Buffer.from(r as ArrayBuffer).toString('base64')}`;this.onloadend?.();},()=>this.onerror?.());}}
+ (globalThis as unknown as {FileReader:unknown}).FileReader??=FR;(globalThis as unknown as {ProgressEvent:unknown}).ProgressEvent??=Event;
+ const scene=new THREE.Scene();
+ for(const x of[-1,1]){
+  const geo=new THREE.BoxGeometry(0.4,3,0.4);const count=geo.getAttribute('position').count;
+  const si=new Uint16Array(count*4),sw=new Float32Array(count*4);for(let i=0;i<count;i++){si[i*4]=i%3;sw[i*4]=1;}
+  geo.setAttribute('skinIndex',new THREE.Uint16BufferAttribute(si,4));geo.setAttribute('skinWeight',new THREE.Float32BufferAttribute(sw,4));
+  const hip=new THREE.Bone();hip.name='Hip';const knee=new THREE.Bone();knee.name='Knee';knee.position.y=1;hip.add(knee);
+  const ankle=new THREE.Bone();ankle.name='Ankle';ankle.position.y=1;knee.add(ankle);
+  hip.position.x=x;
+  const mesh=new THREE.SkinnedMesh(geo,new THREE.MeshStandardMaterial({color:0x8899aa}));mesh.name=x<0?'BodyA':'BodyB';mesh.add(hip);
+  mesh.updateMatrixWorld(true);mesh.bind(new THREE.Skeleton([hip,knee,ankle]));
+  scene.add(mesh);
+ }
+ const out=await new GLTFExporter().parseAsync(scene,{binary:true}) as ArrayBuffer;
+ return Buffer.from(out);
+}
 /** A four-bone skinned box (Hip > Knee > Ankle > Toe = 3 segments) for FABRIK tests. */
 async function skinnedGlb4():Promise<Buffer>{
  const THREE=await import('three');const {GLTFExporter}=await import('three/examples/jsm/exporters/GLTFExporter.js');
@@ -586,4 +608,35 @@ test('3D studio records keyframe poses at the playhead for selected or all bones
  await run(page,'studio3d.clip.remove',{});
  await run(page,'studio3d.clip.record',{all:true});
  await expect(page.getByRole('alert')).toBeVisible();
+});
+
+test('3D studio reviews animation with onion skin, motion path and retarget',async({page})=>{
+ const glb=await skinnedGlbTwoRigs();
+ await open3d(page);
+ await page.getByTestId('studio3d-file-input').setInputFiles({name:'two-rigs.glb',mimeType:'model/gltf-binary',buffer:glb});
+ await expect(page.getByTestId('studio3d-viewport')).toBeVisible({timeout:20_000});
+ // A clip with source motion: rotate a bone of rig A and record everything.
+ await run(page,'studio3d.clip.add',{name:'Wave',duration:2});
+ await page.getByLabel('Bone').selectOption({index:2});
+ await expect.poll(async()=>(await session(page)).info?.kind).toBe('bone');
+ const boneA=(await session(page)).selected as number;
+ await run(page,'studio3d.object.transform',{id:boneA,rotation:{z:45}});
+ await run(page,'studio3d.anim.seek',{time:1});
+ await run(page,'studio3d.clip.record',{all:true});
+ // Onion skin and motion path are review toggles in the session.
+ await page.getByLabel('Onion skin').check();
+ await expect.poll(async()=>(await session(page)).onion?.on).toBe(true);
+ await page.getByLabel('Motion path').check();
+ await expect.poll(async()=>(await session(page)).motionPath).toBe(true);
+ // Retarget: selecting a bone of rig B offers rig A as the source; applying bakes a new clip.
+ await page.getByLabel('Bone').selectOption({index:5});
+ await expect.poll(async()=>(await session(page)).info?.kind).toBe('bone');
+ await expect(page.getByTestId('studio3d-retarget')).toBeVisible();
+ await page.getByLabel('Source rig').selectOption({index:1});
+ await page.getByRole('button',{name:'Apply as new clip'}).click();
+ await expect.poll(async()=>(await session(page)).clips.length).toBe(2);
+ expect((await session(page)).clips[1].name).toBe('Retarget: Wave');
+ // The bake is one undo step; the retargeted keys ride on rig B bones.
+ await run(page,'studio3d.undo');
+ await expect.poll(async()=>(await session(page)).clips.length).toBe(1);
 });

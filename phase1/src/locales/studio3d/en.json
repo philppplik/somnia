@@ -405,5 +405,16 @@
  "studio3d.fabrik.hint": "Drag the target (green) and look (pink) markers in the viewport.",
  "cmd.studio3d.clip.record": "Record the current pose as keys at the playhead",
  "studio3d.clip.record": "Record pose",
- "studio3d.clip.recordAll": "Record all bones"
+ "studio3d.clip.recordAll": "Record all bones",
+ "cmd.studio3d.onion.skin": "Show ghost poses around the playhead (onion skin)",
+ "cmd.studio3d.motionpath": "Show the motion path of the selected bone",
+ "cmd.studio3d.retarget.preview": "Preview a clip retargeted from another rig",
+ "cmd.studio3d.retarget.apply": "Bake a retargeted clip onto this rig",
+ "studio3d.onion.on": "Onion skin",
+ "studio3d.onion.before": "Ghosts before",
+ "studio3d.onion.after": "Ghosts after",
+ "studio3d.motionpath.on": "Motion path",
+ "studio3d.retarget.title": "Retarget",
+ "studio3d.retarget.source": "Source rig",
+ "studio3d.retarget.apply": "Apply as new clip"
 }

@@ -171,6 +171,20 @@ function IkFields({id}:{id:number}){
   {s.ik.on&&<p className="m-0 text-xs text-ink-3">{t('studio3d.ik.hint')}</p>}
  </fieldset>;
 }
+/** Retarget review: pick a source rig to preview its clip pose on the selected rig, or bake it as a new clip. */
+function RetargetFields({targetId}:{targetId:number}){
+ const {t}=useT();const s=useStudio3D();
+ const[src,setSrc]=useState<number|null>(null);
+ const rigs=s.rigs.filter(r=>r.id!==targetId);
+ if(rigs.length===0)return null;
+ return <div className="flex flex-wrap items-center gap-2" data-testid="studio3d-retarget">
+  <span className="text-xs text-ink-3">{t('studio3d.retarget.title')}</span>
+  <NativeSelect className="rounded-sm border border-subtle bg-surface p-1 text-xs text-ink" value={src??''} aria-label={t('studio3d.retarget.source')} onChange={e=>{const v=e.currentTarget.value;const id=v?Number(v):null;setSrc(id);if(id!=null)void executeCommand('studio3d.retarget.preview',{source:id});}}>
+   <option value="">{t('studio3d.retarget.source')}</option>
+   {rigs.map(r=><option key={r.id} value={r.id}>{r.name||'Rig'}</option>)}</NativeSelect>
+  {src!=null&&<Button variant="outline" onClick={()=>void executeCommand('studio3d.retarget.apply',{source:src})}>{t('studio3d.retarget.apply')}</Button>}
+ </div>;
+}
 /** FABRIK switch and look-at for the 3+ segment chain the selected bone belongs to; the target and look gizmos live in the viewport. */
 function FabrikFields(){
  const {t}=useT();const s=useStudio3D();
@@ -401,6 +415,13 @@ function AnimationControls(){
    {s.bones.length>0&&<div className="flex flex-wrap items-center gap-2" data-testid="studio3d-record">
     <Button variant="outline" onClick={()=>void executeCommand('studio3d.clip.record',{})}>{t('studio3d.clip.record')}</Button>
     <Button variant="outline" onClick={()=>void executeCommand('studio3d.clip.record',{all:true})}>{t('studio3d.clip.recordAll')}</Button></div>}
+   <div className="flex flex-wrap items-center gap-3" data-testid="studio3d-onion">
+    <label className="flex items-center gap-2 text-xs text-ink-2"><NativeInput type="checkbox" checked={s.onion.on} onChange={e=>void executeCommand('studio3d.onion.skin',{on:e.currentTarget.checked})}/>{t('studio3d.onion.on')}</label>
+    {s.onion.on&&<><NumField resetKey={`onion-b${s.onion.before}`} label={t('studio3d.onion.before')} value={s.onion.before} min={0} max={4} step={1} onCommit={v=>void executeCommand('studio3d.onion.skin',{on:true,before:v})}/>
+    <NumField resetKey={`onion-a${s.onion.after}`} label={t('studio3d.onion.after')} value={s.onion.after} min={0} max={4} step={1} onCommit={v=>void executeCommand('studio3d.onion.skin',{on:true,after:v})}/></>}
+    {s.bones.length>0&&<label className="flex items-center gap-2 text-xs text-ink-2"><NativeInput type="checkbox" checked={s.motionPath} onChange={e=>void executeCommand('studio3d.motionpath',{on:e.currentTarget.checked})}/>{t('studio3d.motionpath.on')}</label>}
+   </div>
+   {s.rigs.length>1&&sel?.kind==='bone'&&<RetargetFields targetId={sel.id}/>}
    {s.bones.length>0&&<div className="flex flex-wrap items-center gap-3" data-testid="studio3d-skeleton">
     <label className="flex items-center gap-2 text-xs text-ink-2">{t('studio3d.skeleton.bone')}
      <NativeSelect className="rounded-sm border border-subtle bg-surface p-1 text-xs text-ink" value={sel?.kind==='bone'?String(sel.id):''} onChange={e=>{const v=e.currentTarget.value;if(v==='')void executeCommand('studio3d.select',{id:null});else void executeCommand('studio3d.skeleton.select',{id:Number(v)});}}>

@@ -8,6 +8,7 @@ import {OBJLoader} from 'three/addons/loaders/OBJLoader.js';
 import {MTLLoader} from 'three/addons/loaders/MTLLoader.js';
 import {RectAreaLightUniformsLib} from 'three/addons/lights/RectAreaLightUniformsLib.js';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
+import {clone as skeletonClone} from 'three/addons/utils/SkeletonUtils.js';
 import {STLExporter} from 'three/addons/exporters/STLExporter.js';
 import {OBJExporter} from 'three/addons/exporters/OBJExporter.js';
 import {GLTFExporter} from 'three/addons/exporters/GLTFExporter.js';
@@ -142,8 +143,8 @@ export default function Viewport3D(){
    if(an.clip>=infos.length&&an.clip>0){stopAnim();patchStudio3D({anim:{clip:0,playing:false,time:0,loop:true,speed:1,range:null}});}
    const head=sel==null?null:stage.ikChainHead(sel);const ik=head?{...stage.ikState(head.id)!,root:head.id}:null;
    const fhead=sel==null?null:stage.fabrikChainHead(sel);const fabrik=fhead?{...stage.fabrikState(fhead.id)!,root:fhead.id}:null;
-   patchStudio3D({clips:infos,clipKeys:keys,stats:m.stats,outline:m.outline,bones:stage.bones(),bounds:m.bounds,selected:info?sel:null,selectedInfo:info,poses:sel==null?[]:stage.poseList(sel),ik,fabrik,boneLimits:sel==null?null:stage.boneLimitsOf(sel),dirty:stage.dirty,canUndo:stage.canUndo,canRedo:stage.canRedo,undoLabel:stage.undoLabel});
-   syncIk();syncFabrik();
+   patchStudio3D({clips:infos,clipKeys:keys,stats:m.stats,outline:m.outline,bones:stage.bones(),bounds:m.bounds,selected:info?sel:null,selectedInfo:info,poses:sel==null?[]:stage.poseList(sel),ik,fabrik,rigs:stage.bones().filter(b=>b.depth===0).map(b=>({id:b.id,name:b.name})),boneLimits:sel==null?null:stage.boneLimitsOf(sel),dirty:stage.dirty,canUndo:stage.canUndo,canRedo:stage.canRedo,undoLabel:stage.undoLabel});
+   syncIk();syncFabrik();syncOnion();syncMotionPath();
    drawSelection();applyWire(getStudio3DState().wireframe);syncSkeleton();syncWeightPreview();for(const h of syncHooks)h();invalidate();
   };
   const offStage=stage.onChange(()=>{if(!disposed)sync();});
@@ -266,6 +267,48 @@ export default function Viewport3D(){
     if(!fkLook.parent){scene.add(fkLook);lookGizmo.attach(fkLook);}
     if(!fkDrag)fkLook.position.fromArray(fk.look.target);
    }else if(fkLook.parent){scene.remove(fkLook);lookGizmo.detach();}
+  };
+  // Onion skin: tinted ghost clones of every skinned rig at frames around the playhead. Kept out of the stage root so they never export or alter bounds.
+  const ghosts=new THREE.Group();ghosts.name='onion skin';scene.add(ghosts);
+  let ghostKey='';
+  const clearGhosts=()=>{for(const g of[...ghosts.children]){ghosts.remove(g);g.traverse(o=>{const m=o as THREE.Mesh;if(m.isMesh)for(const mat of Array.isArray(m.material)?m.material:[m.material])(mat as THREE.Material).dispose();});}};
+  const syncOnion=()=>{
+   const st=getStudio3DState();const o=st.onion;const clip=st.clips[st.anim.clip];
+   const key=o.on&&clip?`${st.anim.clip}|${Math.round(st.anim.time*24)}|${o.before}|${o.after}|${stage.clipRevision}|${stage.bones().length}`:'';
+   if(key===ghostKey)return;ghostKey=key;clearGhosts();
+   if(!key||!clip)return;
+   const rigs:THREE.Object3D[]=[];
+   stage.root.traverse(x=>{const m=x as THREE.SkinnedMesh;if(!m.isSkinnedMesh)return;let top:THREE.Object3D=m;while(top.parent&&top.parent!==stage.root)top=top.parent;if(!rigs.includes(top))rigs.push(top);});
+   const step=Math.max(clip.duration/16,1/24);if(!(step>0))return;
+   const times:{t:number;before:boolean}[]=[];
+   for(let k=1;k<=o.before;k++){const t=st.anim.time-k*step;if(t>=0)times.push({t,before:true});}
+   for(let k=1;k<=o.after;k++){const t=st.anim.time+k*step;if(t<=clip.duration)times.push({t,before:false});}
+   for(const{t,before}of times){
+    const pose=stage.poseAt(st.anim.clip,t);
+    for(const rig of rigs){
+     const clone=skeletonClone(rig) as THREE.Object3D;
+     const srcNodes:THREE.Object3D[]=[],dstNodes:THREE.Object3D[]=[];
+     rig.traverse(n=>{srcNodes.push(n);});clone.traverse(n=>{dstNodes.push(n);});
+     srcNodes.forEach((n,idx)=>{const c=dstNodes[idx];if(!c)return;const tr=pose.get(n.uuid);if(!tr)return;if(tr.p)c.position.fromArray(tr.p);if(tr.q)c.quaternion.fromArray(tr.q);if(tr.s)c.scale.fromArray(tr.s);});
+     clone.traverse(n=>{const mesh=n as THREE.Mesh;if(!mesh.isMesh)return;mesh.material=new THREE.MeshBasicMaterial({color:before?0x38bdf8:0xfb923c,transparent:true,opacity:0.35,depthWrite:false});mesh.renderOrder=15;});
+     clone.updateMatrixWorld(true);ghosts.add(clone);
+    }
+   }
+  };
+  // Motion path: the selected bone's world positions across the current clip as a polyline. Kept out of the stage root.
+  let pathLine:THREE.Line|null=null;let pathKey='';
+  const syncMotionPath=()=>{
+   const st=getStudio3DState();const clip=st.clips[st.anim.clip];
+   const bone=st.selected==null?null:stage.find(st.selected) as THREE.Bone|null;
+   const on=!!(st.motionPath&&clip&&bone?.isBone);
+   const key=on?`${st.selected}|${st.anim.clip}|${stage.clipRevision}`:'';
+   if(key===pathKey)return;pathKey=key;
+   if(pathLine){scene.remove(pathLine);pathLine.geometry.dispose();(pathLine.material as THREE.Material).dispose();pathLine=null;}
+   if(on&&clip&&bone){
+    const pts=stage.motionPathOf(bone.id,st.anim.clip,64).map(p=>new THREE.Vector3(...p));
+    pathLine=new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts),new THREE.LineBasicMaterial({color:0xc084fc,transparent:true,opacity:0.9}));
+    pathLine.renderOrder=16;pathLine.name='motion path';scene.add(pathLine);
+   }
   };
   // A group pivot carries the multi-selection: its movement is applied to every member (see applyGroupDrag).
   const groupPivot=new THREE.Object3D();groupPivot.name='group pivot';
@@ -590,7 +633,7 @@ export default function Viewport3D(){
   const pose=(clip:number,time:number)=>{
    const c=stage.playableClip(clip);if(!c)return;
    const m=ensureMixer();m.stopAllAction();const a=m.clipAction(c);a.setLoop(THREE.LoopOnce,1);a.clampWhenFinished=true;a.reset().play();m.setTime(time);
-   holder.updateMatrixWorld(true);drawSelection();invalidate();
+   holder.updateMatrixWorld(true);drawSelection();syncOnion();invalidate();
   };
   /** Back to the start of the first clip, e.g. after a new model was opened. */
   const resetAnim=()=>{stopAnim();mixer?.stopAllAction();mixer=null;patchStudio3D({clips:clipInfos(),anim:{clip:0,playing:false,time:0,loop:true,speed:1,range:null}});};
@@ -668,6 +711,10 @@ export default function Viewport3D(){
    if(!ids.length)throw Object.assign(new Error(all?'This scene has no bones.':'Select at least one bone to record.'),{expected:true});
    return stage.recordPose(i,t,ids);
   };
+  const onionSkin=(on?:boolean,before?:number,after?:number)=>{const o=getStudio3DState().onion;patchStudio3D({onion:{on:on??!o.on,before:Math.min(Math.max(Math.round(before??o.before),0),4),after:Math.min(Math.max(Math.round(after??o.after),0),4)}});syncOnion();invalidate();};
+  const motionPathToggle=(on?:boolean)=>{patchStudio3D({motionPath:on??!getStudio3DState().motionPath});syncMotionPath();invalidate();};
+  const retargetPreviewC=(source:number,target?:number,clip?:number)=>stage.retargetPreview(source,target??poseTarget(),clip??getStudio3DState().anim.clip,getStudio3DState().anim.time);
+  const retargetApplyC=(source:number,target?:number,clip?:number,name?:string)=>stage.retargetApply(source,target??poseTarget(),clip??getStudio3DState().anim.clip,name);
   const fabrikToggle=(on:boolean,id?:number)=>{stage.fabrikToggle(id??poseTarget(),on);};
   const fabrikSetTarget=(p:readonly[number,number,number],id?:number)=>{stage.fabrikSetTarget(id??poseTarget(),p);};
   const fabrikLookToggle=(on:boolean,id?:number)=>{stage.fabrikLookToggle(id??poseTarget(),on);};
@@ -700,7 +747,7 @@ export default function Viewport3D(){
   /** Auto-key records transform changes into the current clip at the playhead. Turning it on without a clip makes one. */
   const autoKey=(on:boolean)=>{if(on&&!stage.clips.length)clipAdd();patchStudio3D({autoKey:!!on});};
   stage.autoKeySource=()=>getStudio3DState().autoKey&&stage.clips.length?{clip:anim().clip,time:anim().time}:null;
-  const off=registerStudio3DController({keyMove,keyEase,keyCopy,keyShift,clipDuplicate,animRange,selectBone,setSkeleton,skinBind,skinRebind,setWeightPreview,setWeightBrush,paintDab,poseSave,poseApply,poseRemove,poseMirror,poseBlend,ikToggle,ikSetTarget,ikSetPole,recordPose,fabrikToggle,fabrikSetTarget,fabrikLookToggle,fabrikSetLook,setBoneLimits,keyPaste,autoKey,clipAdd,clipRemove,clipRename,clipDuration,keySet,keyRemove,animPlay,animPause,animSeek,animLoop,animSpeed,setTextureTransform:(id,slot,p)=>stage.setTextureTransform(id,slot,p),exportGltf,setTextureFile,mirrorSelection,applyScale:applyScaleSel,mergeSelection:mergeSel,viewPreset,setPrimitive:(id,p)=>stage.setPrimitive(id,p),
+  const off=registerStudio3DController({keyMove,keyEase,keyCopy,keyShift,clipDuplicate,animRange,selectBone,setSkeleton,skinBind,skinRebind,setWeightPreview,setWeightBrush,paintDab,poseSave,poseApply,poseRemove,poseMirror,poseBlend,ikToggle,ikSetTarget,ikSetPole,recordPose,onionSkin,motionPathToggle,retargetPreview:retargetPreviewC,retargetApply:retargetApplyC,fabrikToggle,fabrikSetTarget,fabrikLookToggle,fabrikSetLook,setBoneLimits,keyPaste,autoKey,clipAdd,clipRemove,clipRename,clipDuration,keySet,keyRemove,animPlay,animPause,animSeek,animLoop,animSpeed,setTextureTransform:(id,slot,p)=>stage.setTextureTransform(id,slot,p),exportGltf,setTextureFile,mirrorSelection,applyScale:applyScaleSel,mergeSelection:mergeSel,viewPreset,setPrimitive:(id,p)=>stage.setPrimitive(id,p),
    save:saveDocument,deleteSelection,duplicateSelection,exportMesh,setExportOptions,renderTurntable,cancelRender:()=>{cancelFlag=true;},setUnit,openFiles,newScene,resetView:frameAll,frameSelection,select,renderStill,exportGlb,
    addPrimitive:k=>{const o=stage.addPrimitive(k);select(o.id);return o.id;},addLight:k=>{const o=stage.addLight(k);select(o.id);return o.id;},
    setTransform:(id,p)=>stage.setTransform(id,p),setMaterial:(id,p)=>stage.setMaterial(id,p),rename:(id,n)=>stage.rename(id,n),
@@ -810,7 +857,7 @@ export default function Viewport3D(){
    disposed=true;opening++;stopAnim();mixer?.stopAllAction();stage.autoKeySource=null;off();offAuto();if(autoTimer)clearTimeout(autoTimer);cancelAnimationFrame(frame);ro.disconnect();controls.dispose();
    cv.removeEventListener('pointerdown',onDownCapture,true);cv.removeEventListener('pointerdown',onDown);window.removeEventListener('pointermove',onMove);window.removeEventListener('pointercancel',endMarquee);endMarquee();cv.removeEventListener('pointerup',onUp);cv.removeEventListener('keydown',onKey);
    if(getStudio3DState().status==='loading')patchStudio3D({status:stage.root.children.length?'ready':'idle',confirmReplace:null});
-   gizmo.detach();gizmo.dispose();ikGizmo.detach();ikGizmo.dispose();poleGizmo.detach();poleGizmo.dispose();fkGizmo.detach();fkGizmo.dispose();lookGizmo.detach();lookGizmo.dispose();fkTarget.geometry.dispose();(fkTarget.material as THREE.Material).dispose();fkLook.geometry.dispose();(fkLook.material as THREE.Material).dispose();ikTarget.geometry.dispose();(ikTarget.material as THREE.Material).dispose();ikPoleM.geometry.dispose();(ikPoleM.material as THREE.Material).dispose();offStage();clearSelection();if(painting){painting=false;}const openSel=getStudio3DState().selected;if(openSel!=null)stage.skinPaintEnd(openSel);if(skelHelper){scene.remove(skelHelper);skelHelper.geometry.dispose();(skelHelper.material as THREE.Material).dispose();skelHelper=null;}if(weightOverlay){scene.remove(weightOverlay);weightOverlay.geometry.dispose();(weightOverlay.material as THREE.Material).dispose();weightOverlay=null;}for(const h of helpers.values())h.dispose();grid.geometry.dispose();(grid.material as THREE.Material).dispose();for(const t of envTargets)t.dispose();envCache.clear();pmrem.dispose();renderer.dispose();renderer.forceContextLoss();
+   gizmo.detach();gizmo.dispose();ikGizmo.detach();ikGizmo.dispose();poleGizmo.detach();poleGizmo.dispose();fkGizmo.detach();fkGizmo.dispose();lookGizmo.detach();lookGizmo.dispose();clearGhosts();scene.remove(ghosts);if(pathLine){pathLine.geometry.dispose();(pathLine.material as THREE.Material).dispose();pathLine=null;}fkTarget.geometry.dispose();(fkTarget.material as THREE.Material).dispose();fkLook.geometry.dispose();(fkLook.material as THREE.Material).dispose();ikTarget.geometry.dispose();(ikTarget.material as THREE.Material).dispose();ikPoleM.geometry.dispose();(ikPoleM.material as THREE.Material).dispose();offStage();clearSelection();if(painting){painting=false;}const openSel=getStudio3DState().selected;if(openSel!=null)stage.skinPaintEnd(openSel);if(skelHelper){scene.remove(skelHelper);skelHelper.geometry.dispose();(skelHelper.material as THREE.Material).dispose();skelHelper=null;}if(weightOverlay){scene.remove(weightOverlay);weightOverlay.geometry.dispose();(weightOverlay.material as THREE.Material).dispose();weightOverlay=null;}for(const h of helpers.values())h.dispose();grid.geometry.dispose();(grid.material as THREE.Material).dispose();for(const t of envTargets)t.dispose();envCache.clear();pmrem.dispose();renderer.dispose();renderer.forceContextLoss();
    if(cv.parentNode===el)el.removeChild(cv);
   };
  // eslint-disable-next-line react-hooks/exhaustive-deps

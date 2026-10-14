@@ -60,6 +60,10 @@ export interface Studio3DController{
  ikSetTarget(p:readonly[number,number,number],id?:number):void;
  ikSetPole(p:readonly[number,number,number],id?:number):void;
  recordPose(all?:boolean,id?:number,clip?:number,time?:number):number;
+ onionSkin(on?:boolean,before?:number,after?:number):void;
+ motionPathToggle(on?:boolean):void;
+ retargetPreview(source:number,target?:number,clip?:number):number;
+ retargetApply(source:number,target?:number,clip?:number,name?:string):number;
  fabrikToggle(on:boolean,id?:number):void;
  fabrikSetTarget(p:readonly[number,number,number],id?:number):void;
  fabrikLookToggle(on:boolean,id?:number):void;
@@ -179,6 +183,10 @@ export function studio3DCommandSpecs():CommandSpec<unknown,unknown>[]{
   add<{clip?:number}>('studio3d.clip.remove','Delete a 3D animation clip','View',p=>need().clipRemove(p?.clip),object({clip:{type:'integer',minimum:0}},[]),hasClips),
   add<{name:string;clip?:number}>('studio3d.clip.rename','Rename a 3D animation clip','View',p=>need().clipRename(p.name,p.clip),object({name:{type:'string',minLength:1,maxLength:80},clip:{type:'integer',minimum:0}},['name']),hasClips),
   add<{duration:number;clip?:number}>('studio3d.clip.duration','Set the length of a 3D animation clip in seconds','View',p=>need().clipDuration(p.duration,p.clip),object({duration:{type:'number',minimum:0.001,maximum:3600},clip:{type:'integer',minimum:0}},['duration']),hasClips),
+  add<{on?:boolean;before?:number;after?:number}>('studio3d.onion.skin','Show ghost poses of the skinned meshes this many frames before and after the playhead (onion skinning)','View',p=>need().onionSkin(p.on,p.before,p.after),object({on:{type:'boolean'},before:{type:'integer',minimum:0,maximum:4},after:{type:'integer',minimum:0,maximum:4}},[]),hasClips),
+  add<{on?:boolean}>('studio3d.motionpath','Show the motion path of the selected bone over the current clip','View',p=>need().motionPathToggle(p.on),object({on:{type:'boolean'}},[]),()=>hasClips()&&getStudio3DState().bones.length>0),
+  add<{source:number;target?:number;clip?:number}>('studio3d.retarget.preview','Pose the target rig with the retargeted pose of the source rig clip at the playhead (bone names are matched)','Edit',p=>need().retargetPreview(p.source,p.target,p.clip),object({source:{type:'integer',minimum:0},target:{type:'integer',minimum:0},clip:{type:'integer',minimum:0}},['source']),()=>hasClips()&&getStudio3DState().bones.length>0),
+  add<{source:number;target?:number;clip?:number;name?:string}>('studio3d.retarget.apply','Bake the current clip retargeted from the source rig onto the target rig as a new clip (bone names are matched)','Edit',p=>need().retargetApply(p.source,p.target,p.clip,p.name),object({source:{type:'integer',minimum:0},target:{type:'integer',minimum:0},clip:{type:'integer',minimum:0},name:{type:'string',minLength:1,maxLength:80}},['source']),()=>hasClips()&&getStudio3DState().bones.length>0),
   add<{all?:boolean;id?:number;clip?:number;time?:number}>('studio3d.clip.record','Record the current pose of the selected bones (or every bone with all) as rotation keys at the playhead time in a clip','View',p=>need().recordPose(p.all,p.id,p.clip,p.time),object({all:{type:'boolean'},id:{type:'integer',minimum:0},clip:{type:'integer',minimum:0},time:{type:'number',minimum:0}},[]),()=>hasClips()&&getStudio3DState().bones.length>0),
   add<{path:KeyPath;time?:number;id?:number;x?:number;y?:number;z?:number}>('studio3d.key.set','Add or replace a position, rotation or scale key of a 3D object in the current clip','View',p=>{const{path,time,id,...v}=p;need().keySet(path,time,id,Object.keys(v).length?v:undefined);},object({path:{enum:[...KEY_PATHS]},time:{type:'number',minimum:0,maximum:3600},id:{type:'integer',minimum:0},x:{type:'number'},y:{type:'number'},z:{type:'number'}},['path']),()=>hasScene()&&(getStudio3DState().selected!=null||getStudio3DState().clips.length>0)),
   add<{path:KeyPath;time?:number;id?:number}>('studio3d.key.remove','Remove a position, rotation or scale key of a 3D object in the current clip','View',p=>need().keyRemove(p.path,p.time,p.id),object({path:{enum:[...KEY_PATHS]},time:{type:'number',minimum:0,maximum:3600},id:{type:'integer',minimum:0}},['path']),hasClips),

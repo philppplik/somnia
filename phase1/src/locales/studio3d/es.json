@@ -405,5 +405,16 @@
  "studio3d.fabrik.hint": "Arrastra los marcadores de objetivo (verde) y mirada (rosa) en la vista.",
  "cmd.studio3d.clip.record": "Grabar la pose actual como claves en el cursor",
  "studio3d.clip.record": "Grabar pose",
- "studio3d.clip.recordAll": "Grabar todos los huesos"
+ "studio3d.clip.recordAll": "Grabar todos los huesos",
+ "cmd.studio3d.onion.skin": "Mostrar poses fantasma alrededor del cursor (piel de cebolla)",
+ "cmd.studio3d.motionpath": "Mostrar la trayectoria del hueso seleccionado",
+ "cmd.studio3d.retarget.preview": "Previsualizar un clip reorientado desde otro rig",
+ "cmd.studio3d.retarget.apply": "Hornear un clip reorientado en este rig",
+ "studio3d.onion.on": "Piel de cebolla",
+ "studio3d.onion.before": "Fantasmas antes",
+ "studio3d.onion.after": "Fantasmas después",
+ "studio3d.motionpath.on": "Trayectoria",
+ "studio3d.retarget.title": "Reorientación",
+ "studio3d.retarget.source": "Rig de origen",
+ "studio3d.retarget.apply": "Aplicar como clip nuevo"
 }

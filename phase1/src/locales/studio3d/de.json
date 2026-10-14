@@ -405,5 +405,16 @@
  "studio3d.fabrik.hint": "Ziel- (grün) und Blick-Marker (pink) im Ansichtsfeld ziehen.",
  "cmd.studio3d.clip.record": "Aktuelle Pose als Schlüssel am Abspielkopf aufnehmen",
  "studio3d.clip.record": "Pose aufnehmen",
- "studio3d.clip.recordAll": "Alle Knochen aufnehmen"
+ "studio3d.clip.recordAll": "Alle Knochen aufnehmen",
+ "cmd.studio3d.onion.skin": "Geisterposen um den Abspielkopf anzeigen (Onion Skin)",
+ "cmd.studio3d.motionpath": "Bewegungspfad des gewählten Knochens anzeigen",
+ "cmd.studio3d.retarget.preview": "Clip von einem anderen Rig als Vorschau übertragen",
+ "cmd.studio3d.retarget.apply": "Übertragenen Clip auf diesem Rig backen",
+ "studio3d.onion.on": "Onion Skin",
+ "studio3d.onion.before": "Geister davor",
+ "studio3d.onion.after": "Geister danach",
+ "studio3d.motionpath.on": "Bewegungspfad",
+ "studio3d.retarget.title": "Retargeting",
+ "studio3d.retarget.source": "Quell-Rig",
+ "studio3d.retarget.apply": "Als neuen Clip anwenden"
 }

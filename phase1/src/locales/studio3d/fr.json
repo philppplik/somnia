@@ -405,5 +405,16 @@
  "studio3d.fabrik.hint": "Faites glisser les marqueurs de cible (vert) et de visée (rose) dans la vue.",
  "cmd.studio3d.clip.record": "Enregistrer la pose actuelle en clés au curseur",
  "studio3d.clip.record": "Enregistrer la pose",
- "studio3d.clip.recordAll": "Enregistrer tous les os"
+ "studio3d.clip.recordAll": "Enregistrer tous les os",
+ "cmd.studio3d.onion.skin": "Afficher les poses fantômes autour du curseur (peau d'oignon)",
+ "cmd.studio3d.motionpath": "Afficher la trajectoire de l'os sélectionné",
+ "cmd.studio3d.retarget.preview": "Aperçu d'un clip reciblé depuis un autre rig",
+ "cmd.studio3d.retarget.apply": "Cuire un clip reciblé sur ce rig",
+ "studio3d.onion.on": "Peau d'oignon",
+ "studio3d.onion.before": "Fantômes avant",
+ "studio3d.onion.after": "Fantômes après",
+ "studio3d.motionpath.on": "Trajectoire",
+ "studio3d.retarget.title": "Reciblage",
+ "studio3d.retarget.source": "Rig source",
+ "studio3d.retarget.apply": "Appliquer en nouveau clip"
 }
