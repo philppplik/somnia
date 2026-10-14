@@ -416,3 +416,6 @@ Depends on: v10 diff viewer, v11 updater for smooth extension and app updates.
 - Done: the keys in the style lanes (comp layer volume, stroke width, stroke opacity, fill and stroke colour) can be dragged along the time axis. The drag previews live, snaps to frames (Alt = free, then snapped to the nearest frame by the edit), is one undo step on release, and Escape cancels. A key cannot be dropped on another key of the same lane (the last valid position stays). Pressing a key still moves the playhead to it. New edit `style.key.move`; no new strings or commands.
 - Open: no multi-select, copy/paste or delete from the lane (use the inspector buttons); no keyboard nudging; per-key easing for colour keys; effect colour keys have no lane.
 
+\n\n### Animation P61 (2026-10-14, integration pending)
+- Done: per-key easing for fill and stroke colour keys (12 presets, same bezier handles as the graph presets; hold keeps the colour until the next key). Easing shapes the segment that starts at the key. Select in the inspector when a key sits at the playhead, command `animation.color.ease`, edit `color.ease`. One undo step.
+- Open: lane delete and multi-select, keyboard nudging, effect colour keys have no easing or lane.

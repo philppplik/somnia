@@ -613,5 +613,7 @@
  "animation.color.animate.stroke": "Animar color del trazo",
  "cmd.animation.color.animate": "Alternar fotogramas clave de color de relleno o trazo",
  "cmd.animation.color.keyRemove": "Quitar fotograma clave de color de relleno o trazo",
- "animation.keys.styleKey": "Fotograma clave de {name} en {time}"
+ "animation.keys.styleKey": "Fotograma clave de {name} en {time}",
+ "animation.color.ease": "Suavizado del fotograma clave de color",
+ "cmd.animation.color.ease": "Ajustar el suavizado del fotograma clave de color de relleno o trazo en el cabezal"
 }

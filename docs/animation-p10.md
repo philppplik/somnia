@@ -328,3 +328,6 @@ Added:
 ## P60 - Moving style keys
 
 - `style.key.move {layer,lane,from,to}` moves one key of the lane (`gain`, `strokeWidth`, `strokeOpacity`, `fill`, `stroke`) to the frame-snapped tick `to`; a missing key or a key already at `to` is refused. The timeline drags with `previewEdits` and `commitPreview` like the mask lanes (rects keyed by index so pointer capture survives the re-render).
+
+## P61 - Colour key easing
+`ColorKey.ease` (optional, 12 presets from `COLOR_EASES`) shapes the segment from that key to the next. Absent or `linear` is the old behaviour and is not stored, so existing documents are byte-identical. `hold` keeps the key colour until the next key. Channels are clamped to 0..1 so overshoot cannot leave the colour range. Editing a key colour or moving a key keeps its ease. Edit: `color.ease {layer,prop,t,ease}`; command `animation.color.ease`.

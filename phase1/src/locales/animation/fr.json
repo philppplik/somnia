@@ -613,5 +613,7 @@
  "animation.color.animate.stroke": "Animer la couleur du contour",
  "cmd.animation.color.animate": "Activer les images clés de couleur de remplissage ou de contour",
  "cmd.animation.color.keyRemove": "Supprimer l'image clé de couleur de remplissage ou de contour",
- "animation.keys.styleKey": "Image clé {name} à {time}"
+ "animation.keys.styleKey": "Image clé {name} à {time}",
+ "animation.color.ease": "Accélération de l'image clé de couleur",
+ "cmd.animation.color.ease": "Régler l'accélération de l'image clé de couleur de remplissage ou de contour à la tête de lecture"
 }

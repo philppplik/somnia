@@ -613,5 +613,7 @@
  "animation.color.animate.stroke": "Animate stroke colour",
  "cmd.animation.color.animate": "Toggle fill or stroke colour keyframes",
  "cmd.animation.color.keyRemove": "Remove fill or stroke colour keyframe",
- "animation.keys.styleKey": "{name} key at {time}"
+ "animation.keys.styleKey": "{name} key at {time}",
+ "animation.color.ease": "Colour key ease",
+ "cmd.animation.color.ease": "Set ease of the fill or stroke colour key at the playhead"
 }

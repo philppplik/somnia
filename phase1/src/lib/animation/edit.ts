@@ -5,7 +5,7 @@ import {validateTextPresetLib} from './textPresetModel';
 import type {InterfaceAsset} from '../interface/schema';
 import {validateAnimationAssets} from './assetsValidation';
 import {MAX_AUDIO_VOLUME,type AudioAsset} from './audioCore';
-import {STYLE_KINDS,OFFSET_KINDS,MAX_COLOR_KEYS,type ColorKey,validShutter,type Shutter,validatePrecomps,precompTransform,prop,createComposition,type TextAnimator,type LayerMask,type LayerMatte,type ClipItem,type KeyRef,type Vec2,createLayer,findComp,findLayer,PROP_META,wouldCycle,EASE_IN,EASE_OUT,TRANSFORM_KEYS,validateDocument,type AnimationDocument,type CompSettings,type Composition,type Interp,type Keyframe,type Layer,type LayerKind,type LayerSource,type LayerEffect,validSource,validEffects,type Property,type PropValue,type TransformKey} from './model';
+import {STYLE_KINDS,OFFSET_KINDS,MAX_COLOR_KEYS,type ColorKey,type ColorEase,COLOR_EASES,validShutter,type Shutter,validatePrecomps,precompTransform,prop,createComposition,type TextAnimator,type LayerMask,type LayerMatte,type ClipItem,type KeyRef,type Vec2,createLayer,findComp,findLayer,PROP_META,wouldCycle,EASE_IN,EASE_OUT,TRANSFORM_KEYS,validateDocument,type AnimationDocument,type CompSettings,type Composition,type Interp,type Keyframe,type Layer,type LayerKind,type LayerSource,type LayerEffect,validSource,validEffects,type Property,type PropValue,type TransformKey} from './model';
 import {evaluate} from './interpolate';
 import {colorAt} from './colorKeys';
 import {validateModifiers,linkProblems} from './modifiers';
@@ -67,6 +67,7 @@ export type Edit=
  |{type:'audio.volume.set';layer:string;value:number;t:number}
  |{type:'audio.volume.animate';layer:string;on:boolean;t:number}
  |{type:'audio.volume.key.remove';layer:string;t:number}
+ |{type:'color.ease';layer:string;prop:'fill'|'stroke';t:number;ease:ColorEase|null}
  |{type:'style.key.move';layer:string;lane:'gain'|'strokeWidth'|'strokeOpacity'|'fill'|'stroke';from:number;to:number}
  |{type:'color.prop';layer:string;prop:'fill'|'stroke';op:'set'|'animate'|'remove';color?:string;on?:boolean;t:number}
  |{type:'stroke.prop';layer:string;prop:'width'|'opacity';op:'set'|'animate'|'remove';value?:number;on?:boolean;t:number}
@@ -201,6 +202,12 @@ function reduce(doc:AnimationDocument,e:Edit):AnimationDocument{
    else if(e.type==='audio.volume.animate'){const sampled=evaluate(vol,t) as number;next=e.on?(vol.keys.length?vol:{...vol,keys:[makeKey(t,sampled)]}):{...vol,value:sampled,keys:[]};}
    else{if(!vol.keys.some(k=>k.t===t))fail('missing','No volume key at that time.');const keys=vol.keys.filter(k=>k.t!==t);next=keys.length?{...vol,keys}:{...vol,value:evaluate(vol,t) as number,keys:[]};}
    return setLayer(doc,{...l,audio:{...l.audio!,volume:next}});}
+  case 'color.ease':{
+   const l=layerOf(doc,e.layer),t=tickOf(compOf(doc),e.t),keys=l.colorKeys?.[e.prop];
+   if(e.ease!==null&&!(COLOR_EASES as readonly string[]).includes(e.ease))fail('invalid','Unknown ease.');
+   if(!keys||!keys.some(k=>k.t===t))fail('missing','No colour key at that time.');
+   const next=keys!.map(k=>{if(k.t!==t)return k;const {ease:_o,...rest}=k;return e.ease===null||e.ease==='linear'?rest:{...rest,ease:e.ease as ColorEase};});
+   return setLayer(doc,{...l,colorKeys:{...l.colorKeys,[e.prop]:next}});}
   case 'style.key.move':{
    const l=layerOf(doc,e.layer),to=tickOf(compOf(doc),e.to);
    const shift=<K extends {t:number}>(keys:readonly K[]|undefined):K[]=>{
@@ -219,7 +226,7 @@ function reduce(doc:AnimationDocument,e:Edit):AnimationDocument{
    if(e.op==='set'){
     if(typeof e.color!=='string'||!/^#[0-9a-fA-F]{6}$/.test(e.color))fail('invalid','Colour must be #rrggbb.');
     const c=(e.color as string).toLowerCase();
-    if(keys?.length){const next=[...keys.filter(k=>k.t!==t),{t,color:c}].sort((a,b)=>a.t-b.t);if(next.length>MAX_COLOR_KEYS)fail('invalid',`At most ${MAX_COLOR_KEYS} colour keys.`);return setLayer(doc,withKeys(l,next));}
+    if(keys?.length){const old=keys.find(k=>k.t===t),next=[...keys.filter(k=>k.t!==t),{t,color:c,...(old?.ease?{ease:old.ease}:{})}].sort((a,b)=>a.t-b.t);if(next.length>MAX_COLOR_KEYS)fail('invalid',`At most ${MAX_COLOR_KEYS} colour keys.`);return setLayer(doc,withKeys(l,next));}
     return setLayer(doc,withStatic(l,c));}
    if(e.op==='animate'){
     if(e.on)return keys?.length?doc:setLayer(doc,withKeys(l,[{t,color:cur}]));

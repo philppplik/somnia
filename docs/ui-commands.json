@@ -131,6 +131,18 @@
       "hasEnabled": true
     },
     {
+      "id": "animation.color.ease",
+      "title": "Set ease of the fill or stroke colour key at the playhead",
+      "category": "Edit",
+      "source": "animation",
+      "keywords": [
+        "animation",
+        "keyframe",
+        "timeline"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "animation.color.keyRemove",
       "title": "Remove fill or stroke colour keyframe",
       "category": "Edit",

@@ -15,6 +15,7 @@ import {booleanEdits,maskBooleanEdit,expandStrokeEdits} from './pathLayer';
 import {frameSvg} from './exportFrames';
 import {strokeAttributes,layerColorsAt} from './effects';
 import {styleKeyLanes} from './keyLanes';
+import {colorAt,easeProgress,COLOR_EASE_HANDLES} from './colorKeys';
 import {strokeOutline,simplifyRing} from './pathBoolean';
 import {deleteEasingEdit,findEasing,saveEasingEdit,userEasings,validateEasingLib,MAX_EASINGS} from './easingLibrary';
 import {elasticTargetKeys} from './keyTargets';
@@ -1505,4 +1506,24 @@ test('P60 style keys move in time: all lanes, collisions, frame snapping, one ed
  // comp layer volume lane
  const b0=base();let g=applyEdit(b0,{type:'comp.add',id:'par'});g=applyEdit(g,{type:'precomp.add',comp:b0.activeComp,id:'pc'});g=applyEdit(g,{type:'layer.gain.animate',layer:'pc',on:true,t:0});
  g=applyEdit(g,{type:'style.key.move',layer:'pc',lane:'gain',from:0,to:240000});assert.deepEqual(g.compositions.find(c=>c.id==='par')!.layers.find(l=>l.id==='pc')!.gain!.keys.map(k=>k.t),[240000]);
+});
+
+test('P61 colour key ease: segment shaping, hold, overshoot clamp, edits and matching presets',()=>{
+ for(const [name,h] of Object.entries(COLOR_EASE_HANDLES)){const p=EASE_PRESETS[name as keyof typeof EASE_PRESETS] as {out:readonly number[];in:readonly number[]};assert.deepEqual([...h],[p.out[0],p.out[1],p.in[0],p.in[1]],name);}
+ assert.equal(easeProgress(undefined,0.3),0.3);assert.equal(easeProgress('hold',0.99),0);
+ assert.ok(easeProgress('easeIn',0.25)<0.25&&easeProgress('easeOut',0.25)>0.25);assert.ok(Math.abs(easeProgress('ease',0.5)-0.5)<0.02);
+ const keys=[{t:0,color:'#000000'},{t:1000,color:'#ffffff'}];
+ assert.equal(colorAt(keys,'#123456',500),'#808080');
+ assert.equal(colorAt([{...keys[0],ease:'hold' as const},keys[1]],'#123456',999),'#000000');assert.equal(colorAt([{...keys[0],ease:'hold' as const},keys[1]],'#123456',1000),'#ffffff');
+ const over=colorAt([{...keys[0],ease:'overshoot' as const},keys[1]],'#123456',800);assert.match(over,/^#[0-9a-f]{6}$/);
+ let d=applyEdit(base(),{type:'layer.update',layer:'stencil',source:{color:'#000000'}});
+ const L=()=>d.compositions[0].layers.find(l=>l.id==='stencil')!;
+ d=applyEdit(d,{type:'color.prop',layer:'stencil',prop:'fill',op:'animate',on:true,t:0});d=applyEdit(d,{type:'color.prop',layer:'stencil',prop:'fill',op:'set',color:'#ffffff',t:240000});
+ d=applyEdit(d,{type:'color.ease',layer:'stencil',prop:'fill',t:0,ease:'hold'});assert.equal(L().colorKeys!.fill![0].ease,'hold');
+ assert.equal(layerColorsAt(L(),120000).source.color,'#000000');assert.equal(layerColorsAt(L(),240000).source.color,'#ffffff');
+ d=applyEdit(d,{type:'color.prop',layer:'stencil',prop:'fill',op:'set',color:'#101010',t:0});assert.equal(L().colorKeys!.fill![0].ease,'hold','a colour change keeps the ease');
+ d=applyEdit(d,{type:'style.key.move',layer:'stencil',lane:'fill',from:0,to:80000});assert.equal(L().colorKeys!.fill![0].ease,'hold','a move keeps the ease');
+ d=applyEdit(d,{type:'color.ease',layer:'stencil',prop:'fill',t:80000,ease:'linear'});assert.equal('ease' in L().colorKeys!.fill![0],false,'linear is the default and is not stored');
+ assert.deepEqual(validateDocument(d),[]);
+ assert.throws(()=>applyEdit(d,{type:'color.ease',layer:'stencil',prop:'fill',t:8000,ease:'ease'}));assert.throws(()=>applyEdit(d,{type:'color.ease',layer:'stencil',prop:'fill',t:80000,ease:'bogus' as never}));
 });

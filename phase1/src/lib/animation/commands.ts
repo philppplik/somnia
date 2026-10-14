@@ -9,7 +9,7 @@ import {registerCommandSpec} from '../commandBridge';
 import {commandRegistry} from '../commandRegistry';
 import type {CommandSchema,CommandSpec} from '../commandSpec';
 import {EditError,type Edit} from './edit';
-import {findComp,findLayer,TEXT_FONTS,TRANSFORM_KEYS,type KeyRef,type LayerKind,type LayerEffect,type PropValue,type TextFont,type TransformKey} from './model';
+import {findComp,findLayer,COLOR_EASES,type ColorEase,TEXT_FONTS,TRANSFORM_KEYS,type KeyRef,type LayerKind,type LayerEffect,type PropValue,type TextFont,type TransformKey} from './model';
 import {animationSession} from './session';
 import {setLayerPen,getLayerPen} from './maskSelection';
 import {allTargetKeys,bounceTargetKeys,elasticTargetKeys,easeTargetKeys,staggerLayers} from './keyTargets';
@@ -82,6 +82,8 @@ export function animationCommandSpecs():CommandSpec<unknown,unknown>[]{
   spec('animation.stroke.keyRemove','Remove stroke width or opacity keyframe',(p:{layer?:string;prop:'width'|'opacity';t?:number})=>run({type:'stroke.prop',layer:layerIdOf(p),prop:p.prop,op:'remove',t:p.t??playhead()}),object({layer:layerRef,prop:{enum:['width','opacity']},t:tick},['prop'])),
   spec('animation.color.animate','Toggle fill or stroke colour keyframes',(p:{layer?:string;prop:'fill'|'stroke';on:boolean})=>run({type:'color.prop',layer:layerIdOf(p),prop:p.prop,op:'animate',on:p.on,t:playhead()}),object({layer:layerRef,prop:{enum:['fill','stroke']},on:{type:'boolean'}},['prop','on'])),
   spec('animation.color.keyRemove','Remove fill or stroke colour keyframe',(p:{layer?:string;prop:'fill'|'stroke';t?:number})=>run({type:'color.prop',layer:layerIdOf(p),prop:p.prop,op:'remove',t:p.t??playhead()}),object({layer:layerRef,prop:{enum:['fill','stroke']},t:tick},['prop'])),
+  spec('animation.color.ease','Set ease of the fill or stroke colour key at the playhead',(p:{layer?:string;prop:'fill'|'stroke';t?:number;preset:EasePreset})=>{if(!(COLOR_EASES as readonly string[]).includes(p.preset))fail('Unknown ease preset.');return run({type:'color.ease',layer:layerIdOf(p),prop:p.prop,t:p.t??playhead(),ease:p.preset as ColorEase});},
+   object({layer:layerRef,prop:{enum:['fill','stroke']},t:tick,preset:{enum:[...COLOR_EASES]}},['prop','preset'])),
   spec('animation.blur.layers','Toggle motion blur on layers',(p:{layers?:string[];enabled?:boolean})=>{const ids=p.layers??layerSetIds(animationSession().getState().view.selectedLayer);if(!ids.length)fail('Select a layer first.');
    const enabled=p.enabled??!ids.every(id=>findLayer(comp(),id)?.motionBlur);return run({type:'layer.motionBlur',layers:ids,enabled});},
    object({layers:{type:'array',items:layerRef,minItems:1,maxItems:200},enabled:{type:'boolean'}},[]),()=>open()&&layerSetIds(animationSession().getState().view.selectedLayer).length>0,'Edit'),
