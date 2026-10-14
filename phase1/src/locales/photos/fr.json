@@ -62,6 +62,7 @@
  "photos.batch.progress": "Exportation {done} sur {total}…",
  "photos.batch.summary": "Export par lot : {saved} enregistrées, {skipped} ignorées, {failed} échouées",
  "photos.batch.failures": "Échecs : {names}",
+ "photos.batch.unsupported": "L2019export par lot nécessite l2019accès au système de fichiers (Chrome/Edge).",
  "photos.settings.copy": "Copier les réglages",
  "photos.settings.paste": "Coller les réglages",
  "photos.settings.copied": "Réglages copiés.",

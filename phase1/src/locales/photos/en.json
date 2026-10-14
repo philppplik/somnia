@@ -62,6 +62,7 @@
  "photos.batch.progress": "Exporting {done} of {total}…",
  "photos.batch.summary": "Batch export: {saved} saved, {skipped} skipped, {failed} failed",
  "photos.batch.failures": "Failed: {names}",
+ "photos.batch.unsupported": "Batch export needs File System Access (Chrome/Edge).",
  "photos.settings.copy": "Copy settings",
  "photos.settings.paste": "Paste settings",
  "photos.settings.copied": "Settings copied.",

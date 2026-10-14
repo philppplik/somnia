@@ -27,7 +27,11 @@ export function ExportPanel(){
     if(!dir)return;
     const uniq=uniqueFileNames(photos.map(p=>p.name),ext);
     host=directoryPhotoHost(dir,new Map(photos.map(p=>[editedName(p.name,ext),uniq.get(p.name)!])));
-   }else host=await defaultImageHost();
+   }else{
+    const core=await import('@tauri-apps/api/core');
+    if(core.isTauri()){setBatchNote(t('photos.batch.unsupported'));return;}
+    host=await defaultImageHost();
+   }
    const out=await runPhotoBatch(photos.map(p=>p.name),async n=>{
     const item=media.items.find(i=>i.name===n);
     if(!item)throw Error(n);

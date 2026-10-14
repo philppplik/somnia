@@ -21,9 +21,11 @@ series of shots.
 - Export panel: below the single-photo buttons, two batch buttons
   ("Export all as PNG/JPEG (n)") appear when at least two developable
   photos exist. With File System Access support the run writes into one
-  picked directory; without it the run falls back to the default host
-  (downloads / native per-file saves). Cancelling the directory pick
-  aborts quietly. A live status line shows "Exporting done of total…"
+  picked directory; on the open web without it the run falls back to
+  the default host (browser downloads). On the Tauri desktop app the
+  batch is FS-Access-only: instead of one native save dialog per file
+  it stops with a short unsupported note (P42). Cancelling the
+  directory pick aborts quietly. A live status line shows "Exporting done of total…"
   during the run and a saved/skipped/failed summary (with failed names)
   after it. All existing buttons and the single-export flow untouched.
 - Every copy still goes through the existing bounded engine export

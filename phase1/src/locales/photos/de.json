@@ -62,6 +62,7 @@
  "photos.batch.progress": "Exportiere {done} von {total}…",
  "photos.batch.summary": "Stapelexport: {saved} gespeichert, {skipped} übersprungen, {failed} fehlgeschlagen",
  "photos.batch.failures": "Fehlgeschlagen: {names}",
+ "photos.batch.unsupported": "Stapelexport benötigt Dateisystem-Zugriff (Chrome/Edge).",
  "photos.settings.copy": "Einstellungen kopieren",
  "photos.settings.paste": "Einstellungen einfügen",
  "photos.settings.copied": "Einstellungen kopiert.",

@@ -62,6 +62,7 @@
  "photos.batch.progress": "Exportando {done} de {total}…",
  "photos.batch.summary": "Exportación por lotes: {saved} guardadas, {skipped} omitidas, {failed} fallidas",
  "photos.batch.failures": "Fallidas: {names}",
+ "photos.batch.unsupported": "La exportación por lotes necesita acceso al sistema de archivos (Chrome/Edge).",
  "photos.settings.copy": "Copiar ajustes",
  "photos.settings.paste": "Pegar ajustes",
  "photos.settings.copied": "Ajustes copiados.",

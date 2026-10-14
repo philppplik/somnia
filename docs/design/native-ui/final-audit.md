@@ -175,6 +175,9 @@ through native control primitives, see below.
   default-host fallback without directory support; named CSS rule
   instead of a ratcheted pixel-text utility; no raw controls), unit
   tests and gallery proof added (?view=photos-batch).
+- P42: batch export limited to File System Access on Tauri (no per-file
+  native dialog storm; short unsupported note instead), web-download
+  fallback unchanged; i18n note added in all five photo locales.
 
 
 
