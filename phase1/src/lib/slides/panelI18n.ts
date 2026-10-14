@@ -2,6 +2,15 @@ import {CATALOGUES,getLocale,subscribeLocale,translate} from '../i18n';
 import {useSyncExternalStore} from 'react';
 export const SLIDES_PANEL_CATALOGUES:Record<string,Record<string,string>>={
   "en": {
+  "slides.find.title": "Find slide text",
+  "slides.find.query": "Text to find",
+  "slides.find.case": "Match case",
+  "slides.find.boundary": "Literal text search of canonical slide runs only, not notes/images/layout. Select a result to navigate; no edits or AI.",
+  "slides.find.count": "{count} matching runs",
+  "slides.find.limited": "{count} matching runs. Scan/result limits reached; narrow the search.",
+  "slides.find.stale": "Deck or run changed; search again.",
+  "slides.find.result": "Slide {slide}, run {run} · {count} matches",
+
   "slides.summary.length": "Summary length",
   "slides.summary.brief": "Brief",
   "slides.summary.standard": "Standard",
@@ -64,6 +73,15 @@ export const SLIDES_PANEL_CATALOGUES:Record<string,Record<string,string>>={
     "cmd.slides.editText": "Apply slide text"
   },
   "de": {
+  "slides.find.title": "Folientext finden",
+  "slides.find.query": "Suchtext",
+  "slides.find.case": "Groß/Kleinschreibung beachten",
+  "slides.find.boundary": "Literale Suche nur in kanonischen Text-Runs, nicht Notes/Bilder/Layout. Resultat navigiert; keine Edits/KI.",
+  "slides.find.count": "{count} passende Runs",
+  "slides.find.limited": "{count} passende Runs. Scan/Result-Limit erreicht; Suche eingrenzen.",
+  "slides.find.stale": "Deck/Run geändert; erneut suchen.",
+  "slides.find.result": "Folie {slide}, Run {run} · {count} Treffer",
+
   "slides.summary.length": "Summary-Länge",
   "slides.summary.brief": "Kurz",
   "slides.summary.standard": "Standard",
@@ -126,6 +144,15 @@ export const SLIDES_PANEL_CATALOGUES:Record<string,Record<string,string>>={
     "cmd.slides.editText": "Folientext anwenden"
   },
   "es": {
+  "slides.find.title": "Buscar texto de diapositiva",
+  "slides.find.query": "Texto a buscar",
+  "slides.find.case": "Distinguir mayúsculas",
+  "slides.find.boundary": "Búsqueda literal solo en runs canónicos, sin notas/imágenes/layout. Resultado navega; sin editar ni IA.",
+  "slides.find.count": "{count} runs coincidentes",
+  "slides.find.limited": "{count} runs. Límite alcanzado; precisa búsqueda.",
+  "slides.find.stale": "Presentación/run cambió; busca otra vez.",
+  "slides.find.result": "Diapositiva {slide}, run {run} · {count} coincidencias",
+
   "slides.summary.length": "Longitud del resumen",
   "slides.summary.brief": "Breve",
   "slides.summary.standard": "Estándar",
@@ -188,6 +215,15 @@ export const SLIDES_PANEL_CATALOGUES:Record<string,Record<string,string>>={
     "cmd.slides.editText": "Aplicar texto"
   },
   "fr": {
+  "slides.find.title": "Chercher texte de diapositive",
+  "slides.find.query": "Texte recherché",
+  "slides.find.case": "Respecter casse",
+  "slides.find.boundary": "Recherche littérale des runs canoniques, sans notes/images/layout. Résultat navigue; aucune édition/IA.",
+  "slides.find.count": "{count} runs correspondants",
+  "slides.find.limited": "{count} runs. Limite atteinte; précisez recherche.",
+  "slides.find.stale": "Présentation/run modifiés; cherchez encore.",
+  "slides.find.result": "Diapositive {slide}, run {run} · {count} résultats",
+
   "slides.summary.length": "Longueur du résumé",
   "slides.summary.brief": "Bref",
   "slides.summary.standard": "Standard",
@@ -250,6 +286,15 @@ export const SLIDES_PANEL_CATALOGUES:Record<string,Record<string,string>>={
     "cmd.slides.editText": "Appliquer le texte"
   },
   "pt-BR": {
+  "slides.find.title": "Buscar texto de slide",
+  "slides.find.query": "Texto a buscar",
+  "slides.find.case": "Distinguir maiúsculas",
+  "slides.find.boundary": "Busca literal só em runs canônicos, sem notas/imagens/layout. Resultado navega; sem editar/IA.",
+  "slides.find.count": "{count} runs encontrados",
+  "slides.find.limited": "{count} runs. Limite atingido; refine busca.",
+  "slides.find.stale": "Apresentação/run mudou; busque novamente.",
+  "slides.find.result": "Slide {slide}, run {run} · {count} ocorrências",
+
   "slides.summary.length": "Tamanho do resumo",
   "slides.summary.brief": "Breve",
   "slides.summary.standard": "Padrão",

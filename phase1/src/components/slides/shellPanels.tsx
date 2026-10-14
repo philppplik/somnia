@@ -1,3 +1,5 @@
+import {SlidesTextSearch} from './SlidesTextSearch';
+import {getSlidesSessionState} from '../../lib/slides/session';
 import {captureCurrentSlideSummary} from '../../lib/slides/currentSummarySelection';
 import {SlidesSelectionPreview} from './SlidesSelectionPreview';
 import {useState} from 'react';
@@ -53,7 +55,7 @@ export function SlidesOutlinePanel(){
  const s=useSlidesSession(),t=useSlidesPanelText(),action=useAction();const [query,setQuery]=usePanelState('slides.outline.filter','');
  if(!s.summary)return <Empty/>;
  const rows=slideOutline(s.runs,s.summary.slides,query);
- return <Region><input className={input} aria-label={t('slides.search')} placeholder={t('slides.search')} value={query} onChange={e=>setQuery(e.target.value)}/>
+ return <Region><SlidesTextSearch key={s.source} source={s.source} runs={s.runs} busy={s.busy} current={getSlidesSessionState} navigate={async params=>{const result=await commandDispatcher.tryRunCommand('slides.selectText',params,{origin:'ui'});if(!result.ok)throw Error(result.error.message);}}/><input className={input} aria-label={t('slides.search')} placeholder={t('slides.search')} value={query} onChange={e=>setQuery(e.target.value)}/>
   {rows.map(row=><section key={row.index} className="min-w-0"><button className={`${button} mb-2 w-full text-left`} disabled={s.busy} onClick={()=>void action.run('slides.showSlide',{index:row.index})}>{t('slides.slide',{number:row.index+1})}</button>
    <ul className="flex flex-col gap-1">{row.texts.map(run=><li key={run.run}><button className="w-full rounded p-2 text-left text-xs hover:bg-hover focus-visible:outline-accent" disabled={s.busy} onClick={()=>void action.run('slides.selectText',{source:s.source,slide:run.slide,run:run.run,old:run.text})}><span className="block whitespace-pre-wrap break-words line-clamp-4">{run.text||t('slides.run',{number:run.run+1})}</span></button></li>)}</ul>
   </section>)}{!rows.length&&<p className="text-xs text-ink-3">{t('slides.noMatches')}</p>}<Notice error={action.error}/></Region>;
