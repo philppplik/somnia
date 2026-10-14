@@ -43,7 +43,7 @@ export function LocalModelsSettings({active,runtime:provided,hardwareProbe}:{act
   <div className="local-models-header"><h3>{t('local.title')}</h3><Button type="button" variant="outline" disabled={busy} onClick={()=>void refresh(true)}>{t(busy?'local.checking':'local.refresh')}</Button></div>
   <p>{t('local.boundary')}</p>
   <LocalAIHealth snapshot={snapshot} busy={busy} refreshError={refreshError} onRefresh={()=>void refresh(true)}/>
-  <LocalModelHealth configured={configured} snapshot={snapshot} runtime={runtime}/><LocalFirstRunGuide snapshot={snapshot} busy={busy} onRefresh={()=>void refresh(true)}/>
+  <LocalModelHealth configured={configured} snapshot={snapshot} runtime={runtime}/><LocalFirstRunGuide endpoint={runtime.baseUrl} snapshot={snapshot} busy={busy} onRefresh={()=>void refresh(true)}/>
   <LocalModelAdvice hardwareProbe={hardwareProbe} active={active} runtime={runtime} snapshot={snapshot}/>
   {!provided&&<LocalModelActions snapshot={snapshot} onChanged={refresh}/>}
   {snapshot?.state==='running'&&<>
