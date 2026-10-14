@@ -44,6 +44,7 @@ All file links are repository-relative, so they remain useful on a feature branc
 14. [Vectorstudio area DS adoption](vectorstudio-adoption.md)
 15. [Settings area DS adoption](settings-adoption.md)
 16. [Svgedit area DS adoption](svgedit-adoption.md)
+17. [Documents area DS adoption](documents-adoption.md)
 
 ## The system in one view
 

@@ -273,25 +273,25 @@
       "rawTextarea": 3
     },
     "src/components/documents/DocumentsCanvas.tsx": {
-      "rawButton": 8,
+      "rawButton": 0,
       "rawInput": 0,
       "rawSelect": 0,
-      "rawTextarea": 2
+      "rawTextarea": 0
     },
     "src/components/documents/DocumentsExportDialog.tsx": {
-      "rawButton": 2,
+      "rawButton": 0,
       "rawInput": 0,
-      "rawSelect": 1,
+      "rawSelect": 0,
       "rawTextarea": 0
     },
     "src/components/documents/DocumentsPanelContents.tsx": {
-      "rawButton": 10,
-      "rawInput": 6,
-      "rawSelect": 1,
-      "rawTextarea": 1
+      "rawButton": 0,
+      "rawInput": 0,
+      "rawSelect": 0,
+      "rawTextarea": 0
     },
     "src/components/documents/DocumentsPanels.tsx": {
-      "rawButton": 2,
+      "rawButton": 0,
       "rawInput": 0,
       "rawSelect": 0,
       "rawTextarea": 0

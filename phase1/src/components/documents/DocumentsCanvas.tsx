@@ -16,6 +16,7 @@ import {registerDocumentsCommands} from '../../lib/documents/commands';
 import {studioContextStore} from '../../lib/shell/studioContext';
 import {useT} from '../../lib/useT';
 import {getState,patchState} from '../../store/appStore';
+import {NativeButton,Textarea} from '../ui/native-controls';
 const bar='media-bar flex items-center gap-2 border-b border-subtle px-3 py-1.5 text-[12px]';
 const tool='grid h-7 cursor-pointer grid-flow-col items-center gap-1 rounded-sm border-0 bg-transparent px-2 text-[12px] text-ink-2 hover:bg-hover disabled:cursor-default disabled:opacity-50';
 /** Only pages near the viewport are rasterised (IntersectionObserver with margin); the rest release their image. */
@@ -50,7 +51,7 @@ function CaretInput({left,top}:{left:number;top:number}){
   const h=(n:InputEvent)=>{if(composing.current||n.isComposing||n.inputType==='insertCompositionText')return;n.preventDefault();if((n.inputType==='insertText'||n.inputType==='insertReplacementText')&&n.data)void typeText(n.data);};
   el.addEventListener('beforeinput',h);return()=>el.removeEventListener('beforeinput',h);},[]);
  const keys:Record<string,'left'|'right'|'up'|'down'|'home'|'end'>={ArrowLeft:'left',ArrowRight:'right',ArrowUp:'up',ArrowDown:'down',Home:'home',End:'end'};
- return <textarea ref={ref} data-testid="documents-input" aria-label={t('documents.caret.input')} className="absolute m-0 h-4 w-px resize-none overflow-hidden border-0 bg-transparent p-0 opacity-0" style={{left,top}} autoCapitalize="off" autoCorrect="off" spellCheck={false}
+ return <Textarea ref={ref} data-testid="documents-input" aria-label={t('documents.caret.input')} className="absolute m-0 h-4 w-px resize-none overflow-hidden border-0 bg-transparent p-0 opacity-0" style={{left,top}} autoCapitalize="off" autoCorrect="off" spellCheck={false}
   onKeyDown={e=>{
    if(composing.current||e.nativeEvent.isComposing)return;const mod=e.ctrlKey||e.metaKey;
    if(keys[e.key]&&!mod&&!e.altKey){e.preventDefault();void moveCaret(keys[e.key],e.shiftKey);return;}
@@ -103,14 +104,14 @@ export function DocumentsCanvas(){
  return <section className="canvas-stage flex min-h-0 flex-1 flex-col" aria-label={t('documents.title')}>
   <div className={bar}><span className="truncate" data-testid="documents-name">{item.name}</span><span className="text-ink-3">{formatBytes(item.size)}</span>
    {doc.status==='ready'&&<span className="text-ink-3" data-testid="documents-pages">{t('documents.pages',{n:doc.pages})}</span>}<span className="flex-1"/>
-   <button className={tool} aria-label={t('documents.undo')} title={t('documents.undo')} disabled={!doc.canUndo} onClick={()=>void undoEdit()} data-testid="documents-undo"><Undo2 size={13}/></button>
-   <button className={tool} aria-label={t('documents.redo')} title={t('documents.redo')} disabled={!doc.canRedo} onClick={()=>void redoEdit()} data-testid="documents-redo"><Redo2 size={13}/></button>
-   <button className={tool} aria-label={t('documents.zoomOut')} title={t('documents.zoomOut')} disabled={doc.status!=='ready'} onClick={()=>stepZoom(-1)}><Minus size={13}/></button>
+   <NativeButton className={tool} aria-label={t('documents.undo')} title={t('documents.undo')} disabled={!doc.canUndo} onClick={()=>void undoEdit()} data-testid="documents-undo"><Undo2 size={13}/></NativeButton>
+   <NativeButton className={tool} aria-label={t('documents.redo')} title={t('documents.redo')} disabled={!doc.canRedo} onClick={()=>void redoEdit()} data-testid="documents-redo"><Redo2 size={13}/></NativeButton>
+   <NativeButton className={tool} aria-label={t('documents.zoomOut')} title={t('documents.zoomOut')} disabled={doc.status!=='ready'} onClick={()=>stepZoom(-1)}><Minus size={13}/></NativeButton>
    <span className="w-10 text-center tabular-nums" data-testid="documents-zoom">{Math.round(doc.zoom*100)}%</span>
-   <button className={tool} aria-label={t('documents.zoomIn')} title={t('documents.zoomIn')} disabled={doc.status!=='ready'} onClick={()=>stepZoom(1)}><Plus size={13}/></button>
-   <button className={tool} disabled={doc.status!=='ready'||doc.saving} onClick={()=>void executeCommand('documents.saveCopy')} data-testid="documents-save-copy">{t('documents.saveCopy')}</button></div>
+   <NativeButton className={tool} aria-label={t('documents.zoomIn')} title={t('documents.zoomIn')} disabled={doc.status!=='ready'} onClick={()=>stepZoom(1)}><Plus size={13}/></NativeButton>
+   <NativeButton className={tool} disabled={doc.status!=='ready'||doc.saving} onClick={()=>void executeCommand('documents.saveCopy')} data-testid="documents-save-copy">{t('documents.saveCopy')}</NativeButton></div>
   {doc.status==='loading'&&<div role="status" className="grid flex-1 place-items-center text-[12px] text-ink-3">{t('documents.loading')}</div>}
-  {doc.status==='error'&&<div role="alert" className="grid flex-1 place-items-center"><div className="grid max-w-md justify-items-center gap-2 text-center"><p className="text-[13px] text-ink" data-testid="documents-error">{doc.error}</p><button className={tool+' border border-subtle'} onClick={()=>setAttempt(a=>a+1)}>{t('documents.retry')}</button></div></div>}
+  {doc.status==='error'&&<div role="alert" className="grid flex-1 place-items-center"><div className="grid max-w-md justify-items-center gap-2 text-center"><p className="text-[13px] text-ink" data-testid="documents-error">{doc.error}</p><NativeButton className={tool+' border border-subtle'} onClick={()=>setAttempt(a=>a+1)}>{t('documents.retry')}</NativeButton></div></div>}
   {doc.notice&&<p role="status" className="border-b border-subtle px-3 py-1 text-xs text-ink-3" data-testid="documents-session-notice">{t('documents.session.'+doc.notice)}</p>}
   {doc.caretLocked&&<p role="status" className="border-b border-subtle px-3 py-1 text-[12px] text-ink-3" data-testid="documents-caret-locked">{t('documents.caret.locked')}</p>}
   {doc.status==='ready'&&engine&&<div className="min-h-0 flex-1 overflow-auto bg-hover/40 p-6" data-testid="documents-scroll"><div className="flex flex-col gap-4">
@@ -118,7 +119,7 @@ export function DocumentsCanvas(){
   {exportUi.confirmOpen&&<div role="alertdialog" aria-modal="true" aria-labelledby="documents-confirm-title" className="absolute inset-0 z-20 grid place-items-center bg-black/30"><div className="grid max-w-md gap-3 rounded-[var(--r-popup,25px)] bg-surface p-5 shadow-xl">
    <h2 id="documents-confirm-title" className="text-[14px] font-medium">{t('documents.lossTitle')}</h2><p className="text-[12px] text-ink-2">{t('documents.lossBody')}</p>
    <ul className="list-disc pl-5 text-[12px] text-ink-2" data-testid="documents-loss-list">{doc.risks.map(r=><li key={r}>{t('documents.risk.'+r)}</li>)}</ul>
-   <div className="flex justify-end gap-2"><button className={tool} autoFocus onClick={()=>patchDocumentsExportUi({confirmOpen:false})}>{t('documents.cancel')}</button><button className={tool+' border border-subtle'} onClick={()=>void confirmDocumentsSaveCopy()} data-testid="documents-save-anyway">{t('documents.saveAnyway')}</button></div></div></div>}
+   <div className="flex justify-end gap-2"><NativeButton className={tool} autoFocus onClick={()=>patchDocumentsExportUi({confirmOpen:false})}>{t('documents.cancel')}</NativeButton><NativeButton className={tool+' border border-subtle'} onClick={()=>void confirmDocumentsSaveCopy()} data-testid="documents-save-anyway">{t('documents.saveAnyway')}</NativeButton></div></div></div>}
   <DocumentsExportDialog/>
  </section>;
 }
@@ -151,6 +152,6 @@ export function ParagraphEditor(){
 }
 export function ParagraphField({index,text}:{index:number;text:string}){
  const {t}=useT();const [draft,setDraft]=useState(text);useEffect(()=>setDraft(text),[text]);
- return <textarea className="w-full resize-y rounded-sm border border-subtle bg-transparent p-1.5 text-[12px] text-ink" rows={Math.min(6,Math.max(1,Math.ceil(text.length/34)))} value={draft} aria-label={t('documents.edit.paragraph',{n:index+1})} data-testid={'documents-para-'+index}
+ return <Textarea className="w-full resize-y rounded-sm border border-subtle bg-transparent p-1.5 text-[12px] text-ink" rows={Math.min(6,Math.max(1,Math.ceil(text.length/34)))} value={draft} aria-label={t('documents.edit.paragraph',{n:index+1})} data-testid={'documents-para-'+index}
   onChange={e=>setDraft(e.target.value.replace(/[\r\n]+/g,' '))} onBlur={()=>{if(draft!==text)void editParagraph(index,draft);}}/>;
 }
