@@ -572,5 +572,9 @@
  "animation.keys.quantize": "Claves a marcadores",
  "animation.keys.quantize.hint": "Mover las claves seleccionadas al marcador más cercano (un paso de deshacer)",
  "cmd.animation.audio.grid": "Colocar marcadores de beat en una cuadrícula de BPM estable",
- "cmd.animation.keys.quantize": "Ajustar las claves seleccionadas al marcador más cercano"
+ "cmd.animation.keys.quantize": "Ajustar las claves seleccionadas al marcador más cercano",
+ "animation.precomp.pick": "Composición a anidar",
+ "animation.precomp.none": "Anidar una composición...",
+ "animation.precomp.add": "Añadir como capa",
+ "cmd.animation.precomp.add": "Añadir una composición como capa"
 }

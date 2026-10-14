@@ -5,7 +5,7 @@ import {validateTextPresetLib} from './textPresetModel';
 import type {InterfaceAsset} from '../interface/schema';
 import {validateAnimationAssets} from './assetsValidation';
 import {MAX_AUDIO_VOLUME,type AudioAsset} from './audioCore';
-import {prop,createComposition,type TextAnimator,type LayerMask,type LayerMatte,type ClipItem,type KeyRef,type Vec2,createLayer,findComp,findLayer,PROP_META,wouldCycle,EASE_IN,EASE_OUT,TRANSFORM_KEYS,validateDocument,type AnimationDocument,type CompSettings,type Composition,type Interp,type Keyframe,type Layer,type LayerKind,type LayerSource,type LayerEffect,validSource,validEffects,type Property,type PropValue,type TransformKey} from './model';
+import {validatePrecomps,prop,createComposition,type TextAnimator,type LayerMask,type LayerMatte,type ClipItem,type KeyRef,type Vec2,createLayer,findComp,findLayer,PROP_META,wouldCycle,EASE_IN,EASE_OUT,TRANSFORM_KEYS,validateDocument,type AnimationDocument,type CompSettings,type Composition,type Interp,type Keyframe,type Layer,type LayerKind,type LayerSource,type LayerEffect,validSource,validEffects,type Property,type PropValue,type TransformKey} from './model';
 import {evaluate} from './interpolate';
 import {validateModifiers,linkProblems} from './modifiers';
 import {snapToFrame,tickToFrame,frameToTick,validRate} from './time';
@@ -30,6 +30,8 @@ export type Edit=
  /** Move many keys by the same number of ticks (snapped to whole frames) as one step. */
  |{type:'keys.move';keys:readonly KeyRef[];delta:number;replace?:boolean}
  /** Gives keys exact new ticks in one step (each key its own target). */
+ /** Adds a layer that shows another composition of the document. */
+ |{type:'precomp.add';comp:string;id?:string}
  |{type:'keys.retime';moves:readonly {layer:string;prop:TransformKey;from:number;to:number}[]}
  |{type:'keys.remove';keys:readonly KeyRef[]}
  |{type:'keys.paste';layer:string;items:readonly ClipItem[];t:number}
@@ -248,6 +250,11 @@ function reduce(doc:AnimationDocument,e:Edit):AnimationDocument{
     const times2=new Set(moved.map(k=>k.t));const rest=p.keys.filter(k=>!times.has(k.t));
     if(!e.replace&&rest.some(k=>times2.has(k.t)))return fail('collision','A key already exists at that time. Replace it explicitly.');
     return {...p,keys:[...rest.filter(k=>!times2.has(k.t)),...moved].sort((a,b)=>a.t-b.t)};}));}
+  case 'precomp.add':{const c=compOf(doc);const child=doc.compositions.find(x=>x.id===e.comp);if(!child)return fail('missing','That composition no longer exists.');
+   if(child.id===c.id)return fail('invalid','A composition cannot contain itself.');
+   const l=createLayer('comp',c,{name:child.name,source:{compId:child.id,width:child.width,height:child.height},outT:Math.max(1,Math.min(c.duration,child.duration))},e.id);
+   if(c.layers.some(x=>x.id===l.id))return fail('invalid','Duplicate layer id.');
+   const next=withLayers(doc,ls=>[l,...ls]);const probs=validatePrecomps(next);if(probs.length)return fail('invalid',probs[0].replace(/^[^:]*: /,'').replace(/^./,m=>m.toUpperCase())+'.');return next;}
   case 'keys.retime':{const c=compOf(doc);if(!e.moves?.length||e.moves.length>2000)return fail('invalid','Nothing to move.');
    const groups=new Map<string,{layer:string;prop:TransformKey;m:Map<number,number>}>();
    for(const mv of e.moves){if(!TRANSFORM_KEYS.includes(mv.prop))return fail('invalid','Unknown property.');layerOf(doc,mv.layer);

@@ -572,5 +572,9 @@
  "animation.keys.quantize": "Keys an Marker",
  "animation.keys.quantize.hint": "Gewählte Keys zum nächsten Marker verschieben (ein Undo-Schritt)",
  "cmd.animation.audio.grid": "Beat-Marker auf ein gleichmäßiges BPM-Raster legen",
- "cmd.animation.keys.quantize": "Gewählte Keys am nächsten Marker einrasten"
+ "cmd.animation.keys.quantize": "Gewählte Keys am nächsten Marker einrasten",
+ "animation.precomp.pick": "Zu verschachtelnde Komposition",
+ "animation.precomp.none": "Komposition verschachteln ...",
+ "animation.precomp.add": "Als Ebene hinzufügen",
+ "cmd.animation.precomp.add": "Komposition als Ebene hinzufügen"
 }

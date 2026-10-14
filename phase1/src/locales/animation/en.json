@@ -572,5 +572,9 @@
  "animation.keys.quantize": "Keys to markers",
  "animation.keys.quantize.hint": "Move selected keys to the nearest marker (one undo step)",
  "cmd.animation.audio.grid": "Place beat markers on a steady BPM grid",
- "cmd.animation.keys.quantize": "Snap selected keys to the nearest marker"
+ "cmd.animation.keys.quantize": "Snap selected keys to the nearest marker",
+ "animation.precomp.pick": "Composition to nest",
+ "animation.precomp.none": "Nest a composition...",
+ "animation.precomp.add": "Add as layer",
+ "cmd.animation.precomp.add": "Add a composition as a layer"
 }

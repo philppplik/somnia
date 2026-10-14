@@ -572,5 +572,9 @@
  "animation.keys.quantize": "Clés vers repères",
  "animation.keys.quantize.hint": "Déplacer les clés sélectionnées vers le repère le plus proche (une étape d’annulation)",
  "cmd.animation.audio.grid": "Placer les repères de temps sur une grille BPM régulière",
- "cmd.animation.keys.quantize": "Aimanter les clés sélectionnées au repère le plus proche"
+ "cmd.animation.keys.quantize": "Aimanter les clés sélectionnées au repère le plus proche",
+ "animation.precomp.pick": "Composition à imbriquer",
+ "animation.precomp.none": "Imbriquer une composition...",
+ "animation.precomp.add": "Ajouter comme calque",
+ "cmd.animation.precomp.add": "Ajouter une composition comme calque"
 }

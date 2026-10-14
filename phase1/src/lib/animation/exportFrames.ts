@@ -1,7 +1,7 @@
 import {radialPath,gradientVector} from './shapes';
 import {layerPathD,layerFillRule} from './pathLayer';
 import {validateAnimationAssets} from './assetsValidation';
-import {textFontStack,validEffects,validSource} from './model';
+import {textFontStack,validEffects,validSource,MAX_PRECOMP_DEPTH} from './model';
 import {effectPrimitives,effectBounds,revealedText,strokeAttributes} from './effects';
 import type {InterfaceAsset} from '../interface/schema';
 import {Zip,ZipPassThrough,strToU8} from 'fflate';
@@ -25,8 +25,22 @@ export function layerBody(layer:Layer,i:number,assets:readonly InterfaceAsset[],
  const content=layerSvg(layer,assets,tick,layer.source.gradient?`url(#${prefix}gradient-${i})`:undefined);
  return fx?`<g filter="${fx}">${content}</g>`:content;
 }
+/**
+ * Compositions a comp layer may show. frameSvg sets them for the duration of one (synchronous) call and the live viewer sets them while it renders,
+ * so layer drawing needs no extra parameter. `nest` counts how deep a precomp is being drawn.
+ */
+let renderComps:readonly Composition[]=[];let nest=0;
+export const setRenderComps=(comps:readonly Composition[])=>{renderComps=comps;};
+/** Picture of a comp layer: the other composition at its own time, as a self-contained SVG image (no background, so it composites). Empty when it cannot be drawn. */
+export function precompImage(l:Layer,tick:number,assets:readonly InterfaceAsset[]):{href:string;width:number;height:number}|null{
+ const child=renderComps.find(c=>c.id===l.source.compId);if(!child||nest>=MAX_PRECOMP_DEPTH+1)return null;
+ const local=child.start+(tick-(l.inT+l.offset));const keep=nest;nest++;
+ try{const svg=frameSvg(child,local,true,assets,renderComps);return {href:`data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`,width:l.source.width??child.width,height:l.source.height??child.height};}
+ finally{nest=keep;}
+}
 function layerSvg(l:Layer,assets:readonly InterfaceAsset[],tick:number,fillOverride?:string):string{
  const s=l.source;const fill=fillOverride??esc(s.color??'#000');
+ if(l.kind==='comp'){const p=precompImage(l,tick,assets);return p?`<image href="${p.href}" width="${num(p.width)}" height="${num(p.height)}"/>`:'';}
  if(l.kind==='raster'){const asset=assets.find(a=>a.id===s.assetId);if(!asset)throw new ExportError('Missing image asset.','raster');return `<image href="${asset.data}" width="${num(s.width??asset.width)}" height="${num(s.height??asset.height)}"/>`;}
 
  if(l.kind==='solid')return `<rect x="0" y="0" width="${num(s.width??0)}" height="${num(s.height??0)}" fill="${fill}"/>`;
@@ -41,7 +55,11 @@ function layerSvg(l:Layer,assets:readonly InterfaceAsset[],tick:number,fillOverr
  return `<text x="0" y="${num(s.size??48)}" font-size="${num(s.size??48)}" fill="${esc(s.color??'#fff')}" font-family="${esc(textFontStack(s.font))}">${textBody(l,tick,num(s.size??48))}</text>`;
 }
 /** Standalone SVG of the composition at `tick`. `transparent` omits the background rectangle so PNG output keeps real alpha. */
-export function frameSvg(comp:Composition,tick:number,transparent=false,assets:readonly InterfaceAsset[]=[]):string{
+export function frameSvg(comp:Composition,tick:number,transparent=false,assets:readonly InterfaceAsset[]=[],comps?:readonly Composition[]):string{
+ const prev=renderComps;if(comps)renderComps=comps;
+ try{return frameSvgBody(comp,tick,transparent,assets);}finally{renderComps=prev;}
+}
+function frameSvgBody(comp:Composition,tick:number,transparent:boolean,assets:readonly InterfaceAsset[]):string{
  /** Audio layers are not drawn and their files are not part of frame export, so only the pictures are checked here. */
  validateAnimationAssets({assets,compositions:[{...comp,layers:comp.layers.filter(l=>l.kind!=='audio')}]});
  if(comp.layers.some(l=>!validSource(l.source)||!validEffects(l.effects)))throw new ExportError('Invalid layer source/effects.','raster');

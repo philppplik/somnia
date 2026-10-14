@@ -16,7 +16,7 @@ included; the `source` column names the owner. Dynamic sources that stay outside
 
 Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, fr, pt-BR); the gate enforces it.
 
-412 commands. Categories: Edit, Help, Insert, Project, Tools, View.
+413 commands. Categories: Edit, Help, Insert, Project, Tools, View.
 
 | id | title | category | source | shortcut |
 | --- | --- | --- | --- | --- |
@@ -101,6 +101,7 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `animation.path.mode` | Set position path timing | Edit | animation |  |
 | `animation.playback.loop` | Toggle looped playback | View | animation |  |
 | `animation.playhead.set` | Move playhead | View | animation |  |
+| `animation.precomp.add` | Add a composition as a layer | Insert | animation |  |
 | `animation.preset.apply` | Apply entrance preset | Edit | animation |  |
 | `animation.project.new` | New animation | Project | animation |  |
 | `animation.project.recover` | Restore last animation session | Project | animation |  |

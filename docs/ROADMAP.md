@@ -299,3 +299,9 @@ Depends on: v10 diff viewer, v11 updater for smooth extension and app updates.
 - Done: tempo estimate from detected beats (shown in the audio inspector; votes with each gap and its double/half in 60-180 BPM, so a missed beat does not change it), optional tempo override, "Snap markers to beat grid" (`animation.audio.grid`: steady grid through the first detected beat, replaces only "Beat n" markers, one undo step); "Keys to markers" (`animation.keys.quantize`): selected keys move to the nearest marker in one undo step through the new `keys.retime` edit; keys that would collide are skipped.
 - Open: grid only for the first audio clip's tempo (no tempo changes), quantize only to markers (not to a free BPM grid), no "strength" or partial quantize, transform keys only.
 
+
+### Animation P44 (2026-10-14, integration pending)
+
+- Done: precomps. A `comp` layer nests another composition (`animation.precomp.add`, Insert panel "Add as layer"). Cycles, depth over 3 and over 600 expanded layers are rejected. Viewer, PNG/SVG/WebM export share one renderer. WebM audio mixing already existed.
+- Open: no "precompose selected layers", no time remap or loop, no child audio or child background in the nested image.
+

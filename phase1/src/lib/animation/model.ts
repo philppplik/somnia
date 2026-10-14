@@ -15,7 +15,9 @@ export type PropType='scalar'|'vec2';
 export interface Keyframe{t:number;v:PropValue;interp:Interp;out:readonly [number,number];in:readonly [number,number];sIn?:Vec2;sOut?:Vec2;channelOut?:readonly [Vec2,Vec2];channelIn?:readonly [Vec2,Vec2]}
 export interface KeyRef{layer:string;prop:TransformKey;t:number}
 export interface Property{type:PropType;value:PropValue;keys:readonly Keyframe[];/** Inert text only; never evaluated in P0. */expression?:string;pathMode?:'parameter'|'arcLength';modifiers?:readonly import('./modifiers').Modifier[]}
-export type LayerKind='solid'|'text'|'shape'|'null'|'raster'|'audio';
+export type LayerKind='solid'|'text'|'shape'|'null'|'raster'|'audio'|'comp';
+/** A comp layer shows another composition of the document. Nesting deeper than this is refused so one frame stays cheap. */
+export const MAX_PRECOMP_DEPTH=3,MAX_PRECOMP_LAYERS=600;
 /** Safe system font stacks for text layers. Nothing is bundled or downloaded: every entry is a CSS family stack the host already has. The snapshot stores the id, never the stack. */
 export const TEXT_FONTS={
  system:{name:'System UI',stack:'system-ui, sans-serif'},
@@ -33,7 +35,7 @@ export const textFontStack=(font:TextFont|undefined):string=>TEXT_FONTS[font&&fo
 /** Audio layer parameters. The clip plays file time `trimIn + (t - (inT + offset))` for comp time t inside [inT+offset, outT+offset). `volume` is a percent (0..200) keyed in composition time. */
 export interface AudioParams{assetId:string;trimIn:number;volume:Property}
 export interface Transform{anchor:Property;position:Property;scale:Property;rotation:Property;opacity:Property}
-export interface LayerSource{color?:string;width?:number;height?:number;text?:string;size?:number;font?:TextFont;shape?:'rect'|'ellipse'|'path'|'roundedRect'|'star'|'polygon';radius?:number;sides?:number;innerRatio?:number;gradient?:{start:string;end:string;angle:number};path?:{points:readonly {x:number;y:number;inX?:number;inY?:number;outX?:number;outY?:number}[];closed:boolean};/** Morph keys of a path shape (same point count and closed flag as `path`; points normalized to the layer box). */pathKeys?:readonly MaskShapeKey[];/** Compound paths: further subpaths drawn together with `path` (even-odd fill, so inner ones cut holes). Static only: not combined with `pathKeys`. */subpaths?:readonly {points:readonly {x:number;y:number;inX?:number;inY?:number;outX?:number;outY?:number}[];closed:boolean}[];assetId?:string;/** Text layers: the baseline follows this path (points in layer pixels, handles in pixels). Absent means the straight baseline. */textPath?:{points:readonly {x:number;y:number;inX?:number;inY?:number;outX?:number;outY?:number}[];closed:boolean};/** Where the text starts on `textPath`, percent of its length 0..100. */textPathStart?:number}
+export interface LayerSource{color?:string;width?:number;height?:number;text?:string;size?:number;font?:TextFont;shape?:'rect'|'ellipse'|'path'|'roundedRect'|'star'|'polygon';radius?:number;sides?:number;innerRatio?:number;gradient?:{start:string;end:string;angle:number};path?:{points:readonly {x:number;y:number;inX?:number;inY?:number;outX?:number;outY?:number}[];closed:boolean};/** Morph keys of a path shape (same point count and closed flag as `path`; points normalized to the layer box). */pathKeys?:readonly MaskShapeKey[];/** Compound paths: further subpaths drawn together with `path` (even-odd fill, so inner ones cut holes). Static only: not combined with `pathKeys`. */subpaths?:readonly {points:readonly {x:number;y:number;inX?:number;inY?:number;outX?:number;outY?:number}[];closed:boolean}[];assetId?:string;/** Composition shown by a comp layer. */compId?:string;/** Text layers: the baseline follows this path (points in layer pixels, handles in pixels). Absent means the straight baseline. */textPath?:{points:readonly {x:number;y:number;inX?:number;inY?:number;outX?:number;outY?:number}[];closed:boolean};/** Where the text starts on `textPath`, percent of its length 0..100. */textPathStart?:number}
 export interface LayerEffect{id:string;kind:'blur'|'tint';enabled:boolean;amount:number;color:string;animation?:Property;colorKeys?:readonly {t:number;color:string}[];bypassKeys?:readonly {t:number;bypass:boolean}[]}
 export const STROKE_JOINS=['miter','round','bevel'] as const;
 export const STROKE_CAPS=['butt','round','square'] as const;
@@ -95,6 +97,7 @@ export function createLayer(kind:LayerKind,comp:Composition,over:Partial<Layer>=
   shape:{name:'Shape',source:{shape:'rect',width:400,height:240,color:'#ff7a59'}},
   raster:{name:'Image',source:{}},
   audio:{name:'Audio',source:{}},
+  comp:{name:'Precomp',source:{}},
   null:{name:'Null',source:{width:100,height:100}}};
  const n=comp.layers.filter(l=>l.kind===kind).length+1;
  return {id,name:`${base[kind].name} ${n}`,kind,source:{...base[kind].source},inT:0,outT:comp.duration,offset:0,parent:null,transform:makeTransform(comp.width,comp.height),visible:true,solo:false,locked:false,...over};
@@ -124,6 +127,7 @@ export function validateDocument(raw:unknown):string[]{
  if(typeof d.name!=='string')bad('missing name');
  if(!Number.isInteger(d.revision))bad('bad revision');
  try{validateAnimationAssets(d as AnimationDocument);}catch(e){bad((e as Error).message);}
+ for(const p of validatePrecomps(d as AnimationDocument))bad(p);
  for(const p of validateMotionLib(d.motions))bad(p);
  for(const p of validateTextPresetLib(d.textPresets))bad(p);
  for(const p of validateEasingLib(d.easings))bad(p);
@@ -144,7 +148,7 @@ export function validateDocument(raw:unknown):string[]{
   for(const l of c.layers){
    if(!l||typeof l.id!=='string'){bad(`${c.id}: layer without id`);continue;}
    if(ids.has(l.id))bad(`${c.id}: duplicate layer ${l.id}`);ids.add(l.id);
-   if(!['solid','text','shape','null','raster','audio'].includes(l.kind))bad(`${l.id}: unknown kind`);
+   if(!['solid','text','shape','null','raster','audio','comp'].includes(l.kind))bad(`${l.id}: unknown kind`);
    if(l.stroke!==undefined&&(l.kind!=='shape'||!/^#[0-9a-fA-F]{6}$/.test(l.stroke.color)||!isNum(l.stroke.width)||l.stroke.width<0||l.stroke.width>256||(l.stroke.trim!==undefined&&!validScalarProperty(l.stroke.trim,0,100))||(l.stroke.dash!==undefined&&!validScalarProperty(l.stroke.dash,-1000,1000))||(l.stroke.join!==undefined&&!(STROKE_JOINS as readonly string[]).includes(l.stroke.join))||(l.stroke.cap!==undefined&&!(STROKE_CAPS as readonly string[]).includes(l.stroke.cap))))bad(`${l.id}: invalid stroke`);
    if(!validAudio(l,d as AnimationDocument))bad(`${l.id}: invalid audio`);
    if(l.textReveal!==undefined&&(l.kind!=='text'||!validScalarProperty(l.textReveal,0,100)))bad(`${l.id}: invalid text reveal`);
@@ -181,7 +185,7 @@ export function validateDocument(raw:unknown):string[]{
 }
 export {frameToTick};
 
-export function validSource(s:LayerSource):boolean{return !!s&&typeof s==='object'&&(s.color===undefined||/^#[0-9a-fA-F]{6}$/.test(s.color))&&[s.width,s.height,s.size].every(n=>n===undefined||(isNum(n)&&n>=1&&n<=16384))&&(s.text===undefined||(typeof s.text==='string'&&s.text.length<=2000))&&(s.font===undefined||s.font in TEXT_FONTS)&&(s.shape===undefined||['rect','ellipse','path','roundedRect','star','polygon'].includes(s.shape))&&(s.radius===undefined||(isNum(s.radius)&&s.radius>=0&&s.radius<=8192))&&(s.sides===undefined||(Number.isInteger(s.sides)&&s.sides>=3&&s.sides<=64))&&(s.innerRatio===undefined||(isNum(s.innerRatio)&&s.innerRatio>=0.05&&s.innerRatio<=0.95))&&(s.gradient===undefined||(!!s.gradient&&/^#[0-9a-fA-F]{6}$/.test(s.gradient.start)&&/^#[0-9a-fA-F]{6}$/.test(s.gradient.end)&&isNum(s.gradient.angle)&&s.gradient.angle>=0&&s.gradient.angle<=360))&&(s.shape!=='path'||!!s.path)&&(s.path===undefined||validNormPath(s.path,256,1))&&validPathKeys(s)&&validSubpaths(s)&&validTextPath(s);}
+export function validSource(s:LayerSource):boolean{return !!s&&typeof s==='object'&&(s.color===undefined||/^#[0-9a-fA-F]{6}$/.test(s.color))&&[s.width,s.height,s.size].every(n=>n===undefined||(isNum(n)&&n>=1&&n<=16384))&&(s.text===undefined||(typeof s.text==='string'&&s.text.length<=2000))&&(s.compId===undefined||(typeof s.compId==='string'&&s.compId.length>0&&s.compId.length<=64))&&(s.font===undefined||s.font in TEXT_FONTS)&&(s.shape===undefined||['rect','ellipse','path','roundedRect','star','polygon'].includes(s.shape))&&(s.radius===undefined||(isNum(s.radius)&&s.radius>=0&&s.radius<=8192))&&(s.sides===undefined||(Number.isInteger(s.sides)&&s.sides>=3&&s.sides<=64))&&(s.innerRatio===undefined||(isNum(s.innerRatio)&&s.innerRatio>=0.05&&s.innerRatio<=0.95))&&(s.gradient===undefined||(!!s.gradient&&/^#[0-9a-fA-F]{6}$/.test(s.gradient.start)&&/^#[0-9a-fA-F]{6}$/.test(s.gradient.end)&&isNum(s.gradient.angle)&&s.gradient.angle>=0&&s.gradient.angle<=360))&&(s.shape!=='path'||!!s.path)&&(s.path===undefined||validNormPath(s.path,256,1))&&validPathKeys(s)&&validSubpaths(s)&&validTextPath(s);}
 export const MAX_TEXT_PATH_POINTS=64;
 function validTextPath(s:LayerSource):boolean{
  if(s.textPathStart!==undefined&&!(isNum(s.textPathStart)&&s.textPathStart>=0&&s.textPathStart<=100))return false;
@@ -257,4 +261,19 @@ export function validMatte(l:Layer,layers:readonly Layer[]):boolean{
  if(!m||typeof m.source!=='string'||!['alpha','luma'].includes(m.mode)||typeof m.invert!=='boolean'||l.kind==='null'||l.kind==='audio'||m.source===l.id)return false;
  const src=layers.find(x=>x.id===m.source);
  return !!src&&src.kind!=='audio'&&src.kind!=='null'&&!src.matte&&!layers.some(x=>x.matte?.source===l.id);
+}
+
+/** Problems with comp layers: missing target, a composition that contains itself (directly or through others), nesting too deep, or too many layers once everything is expanded. */
+export function validatePrecomps(d:AnimationDocument):string[]{
+ const comps=new Map((d.compositions??[]).map(c=>[c.id,c]));const out:string[]=[];const memo=new Map<string,{depth:number;layers:number}>();
+ const visit=(id:string,stack:readonly string[]):{depth:number;layers:number}|null=>{
+  if(stack.includes(id))return null;const hit=memo.get(id);if(hit)return hit;const c=comps.get(id);if(!c)return {depth:0,layers:0};
+  let depth=0,layers=c.layers?.length??0;
+  for(const l of c.layers??[]){if(l?.kind!=='comp')continue;const t=l.source?.compId;
+   if(!t||!comps.has(t)){out.push(`${l.id}: comp layer points at a missing composition`);continue;}
+   const r=visit(t,[...stack,id]);if(!r){out.push(`${l.id}: a composition cannot contain itself`);continue;}
+   depth=Math.max(depth,r.depth+1);layers+=r.layers;}
+  const res={depth,layers};memo.set(id,res);return res;};
+ for(const c of comps.values()){const r=visit(c.id,[]);if(r&&r.depth>MAX_PRECOMP_DEPTH)out.push(`${c.id}: precomps are nested more than ${MAX_PRECOMP_DEPTH} deep`);if(r&&r.layers>MAX_PRECOMP_LAYERS)out.push(`${c.id}: precomps expand to more than ${MAX_PRECOMP_LAYERS} layers`);}
+ return [...new Set(out)];
 }

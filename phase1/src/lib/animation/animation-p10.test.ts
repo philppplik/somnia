@@ -1,5 +1,5 @@
 import test from 'node:test';import assert from 'node:assert/strict';
-import {createDocument,findComp,findLayer,validateDocument,MAX_LAYER_MASKS,type AnimationDocument} from './model';
+import {validatePrecomps,MAX_PRECOMP_DEPTH,createDocument,findComp,findLayer,validateDocument,MAX_LAYER_MASKS,type AnimationDocument} from './model';
 import {applyEdit,applyEdits,EditError} from './edit';
 import {readFileSync} from 'node:fs';
 import {morphPath,morphProblem,resamplePath,MorphError,maskEdit,matteEdit,maskPath,copyMaskKey,insertPoint,handleMaskKey,copyMaskKeys} from './masks';
@@ -1230,4 +1230,35 @@ test('P43 keys.retime and quantizeMoves snap keys to markers in one undo step',a
  assert.equal(quantizeMoves(c,keys,[],0).moves.length,0);
  assert.equal(quantizeMoves(c,keys,[10000],100).moves.length,0);
  void S;
+});
+
+test('P44 precomp layers: add, render the other composition at its own time, refuse cycles and deep nesting',()=>{
+ let d=base();const mainId=d.activeComp;
+ d=applyEdit(d,{type:'comp.add',id:'inner',settings:{width:200,height:100,duration:240000*2}});
+ d=applyEdit(d,{type:'layer.add',kind:'solid',id:'redbox',over:{source:{color:'#ff0000',width:50,height:50},inT:240000}});
+ d=applyEdit(d,{type:'comp.select',comp:mainId});
+ const plain=frameSvg(findComp(d,mainId)!,0);assert.equal(plain.includes('data:image/svg+xml'),false);
+ d=applyEdit(d,{type:'precomp.add',comp:'inner',id:'nest'});
+ const l=findLayer(findComp(d)!,'nest')!;assert.equal(l.kind,'comp');assert.equal(l.source.compId,'inner');assert.equal(l.outT,240000*2);assert.deepEqual(validateDocument(d),[]);
+ const at=(t:number)=>decodeURIComponent(frameSvg(findComp(d)!,t,false,[],d.compositions).split('data:image/svg+xml;charset=utf-8,')[1]?.split('"')[0]??'');
+ assert.equal(at(0).includes('#ff0000'),false);assert.equal(at(240000).includes('#ff0000'),true);
+ assert.equal(at(240000).includes('width="200"'),true);
+ assert.equal(frameSvg(findComp(d)!,0),frameSvg(findComp(d)!,0));
+ // no composition list: nothing drawn, no throw
+ assert.equal(frameSvg(findComp(d)!,240000,false,[],[]).includes('data:image/svg+xml'),false);
+ // cycles
+ assert.throws(()=>applyEdit(d,{type:'precomp.add',comp:mainId}),EditError);
+ const d2=applyEdit(d,{type:'comp.select',comp:'inner'});assert.throws(()=>applyEdit(d2,{type:'precomp.add',comp:mainId}),/contain itself|more than|missing/i);
+ assert.throws(()=>applyEdit(d,{type:'precomp.add',comp:'nope'}),EditError);
+ assert.throws(()=>applyEdit(d,{type:'comp.remove',comp:'inner'}),EditError);
+ // depth
+ let e=base();const ids=['c0','c1','c2','c3','c4'];
+ for(const id of ids)e=applyEdit(e,{type:'comp.add',id});
+ for(let i=0;i<MAX_PRECOMP_DEPTH;i++){e=applyEdit(e,{type:'comp.select',comp:ids[i]});e=applyEdit(e,{type:'precomp.add',comp:ids[i+1]});}
+ e=applyEdit(e,{type:'comp.select',comp:ids[MAX_PRECOMP_DEPTH+1-1]});
+ e=applyEdit(e,{type:'comp.select',comp:ids[MAX_PRECOMP_DEPTH]});assert.throws(()=>applyEdit(e,{type:'precomp.add',comp:ids[MAX_PRECOMP_DEPTH+1]}),EditError);
+ assert.deepEqual(validatePrecomps(e),[]);
+ const bad={...d,compositions:d.compositions.map(c=>c.id==='inner'?{...c,layers:[{...l,id:'back',source:{compId:mainId}},...c.layers]}:c)};
+ assert.ok(validatePrecomps(bad).length>0);
+ const back=parseAnimationSnapshot(serializeAnimationSnapshot(d,defaultView()));assert.equal(findLayer(findComp(back.doc)!,'nest')!.source.compId,'inner');
 });

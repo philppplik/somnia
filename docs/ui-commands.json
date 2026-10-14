@@ -972,6 +972,18 @@
       "hasEnabled": true
     },
     {
+      "id": "animation.precomp.add",
+      "title": "Add a composition as a layer",
+      "category": "Insert",
+      "source": "animation",
+      "keywords": [
+        "animation",
+        "keyframe",
+        "timeline"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "animation.preset.apply",
       "title": "Apply entrance preset",
       "category": "Edit",

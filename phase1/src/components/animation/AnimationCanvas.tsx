@@ -11,7 +11,7 @@ import {animationSession,useAnimationState} from '../../lib/animation/session';
 import {findComp,type Composition,type KeyRef,type Layer} from '../../lib/animation/model';
 import {animatedChars,textPathD,textPathId} from '../../lib/animation/textAnimators';
 import {maskDefs,maskId,matteId,hasMasks} from '../../lib/animation/masks';
-import {layerBody} from '../../lib/animation/exportFrames';
+import {layerBody,precompImage,setRenderComps} from '../../lib/animation/exportFrames';
 import {sceneAt} from '../../lib/animation/scene';
 import {pruneSelection} from '../../lib/animation/selection';
 import {executeCommand} from '../../lib/commands';
@@ -47,7 +47,7 @@ export function AnimationCanvas(){
 function Workspace({doc}:{doc:NonNullable<ReturnType<typeof animationSession>['document']>}){
  const {t}=useT();const s=useAnimationState();const comp=findComp(doc)!;const at=s.view.playhead;
  return <div className="flex min-h-0 flex-1 flex-col" data-testid="animation-workspace">
-  <Viewer assets={doc.assets} comp={comp} at={at} selected={s.view.selectedLayer} sel={pruneSelection(s.doc,s.view.selectedKeys)}/>
+  <Viewer assets={doc.assets} comps={doc.compositions} comp={comp} at={at} selected={s.view.selectedLayer} sel={pruneSelection(s.doc,s.view.selectedKeys)}/>
   {s.recoveryFailed&&<StudioStatus tone="error" live="assertive" className="m-0 px-3 py-1 text-[11px]">{t('animation.recoveryFailed')}</StudioStatus>}
   <AnimationTimeline comp={comp} at={at} selected={s.view.selectedLayer} canUndo={s.canUndo} canRedo={s.canRedo}/>
  </div>;
@@ -60,6 +60,7 @@ function animatedText(l:Layer,at:number){
 const canClosePath=(l?:Layer)=>!!l&&l.kind==='shape'&&l.source.shape==='path'&&!!l.source.path;
 function layerNode(l:Layer,assets:readonly InterfaceAsset[],at:number,fillOverride?:string){
  const src=l.source;const fill=fillOverride??src.color;
+ if(l.kind==='comp'){const p=precompImage(l,at,assets);return p?<image href={p.href} width={p.width} height={p.height}/>:<text fill="var(--text-primary)">Missing composition</text>;}
  if(l.kind==='raster'){const asset=assets.find(a=>a.id===src.assetId);return asset?<image href={asset.data} width={src.width} height={src.height}/>:<text fill="var(--text-primary)">Missing image</text>;}
  if(l.kind==='solid')return <rect x={0} y={0} width={src.width} height={src.height} fill={fill}/>;
  if(l.kind==='shape'&&['star','polygon'].includes(src.shape??''))return <path {...strokeAttributes(l,at)} d={radialPath(src)} fill={fill}/>;
@@ -69,8 +70,8 @@ function layerNode(l:Layer,assets:readonly InterfaceAsset[],at:number,fillOverri
  if(tp)return <><defs><path id={textPathId(l)} d={tp}/></defs><text fontSize={src.size} fill={fill} fontFamily="system-ui, sans-serif" className="select-none"><textPath href={`#${textPathId(l)}`} startOffset={`${src.textPathStart??0}%`}>{animatedText(l,at)}</textPath></text></>;
  return <text x={0} y={src.size??48} fontSize={src.size} fill={fill} fontFamily="system-ui, sans-serif" className="select-none">{animatedText(l,at)}</text>;
 }
-function Viewer({comp,at,selected,sel,assets}:{assets:readonly InterfaceAsset[];comp:Composition;at:number;selected:string|null;sel:readonly KeyRef[]}){
- const {t}=useT();const scene=useMemo(()=>sceneAt(comp,at),[comp,at]);const maskDefsHtml=useMemo(()=>maskDefs(comp,at,'preview-',(l,i)=>{try{return layerBody(l,i,assets,at,'preview-');}catch{return '';}}),[comp,at,assets]);
+function Viewer({comp,at,selected,sel,assets,comps}:{assets:readonly InterfaceAsset[];comps:readonly Composition[];comp:Composition;at:number;selected:string|null;sel:readonly KeyRef[]}){
+ const {t}=useT();setRenderComps(comps);const scene=useMemo(()=>sceneAt(comp,at),[comp,at]);const maskDefsHtml=useMemo(()=>maskDefs(comp,at,'preview-',(l,i)=>{try{return layerBody(l,i,assets,at,'preview-');}catch{return '';}}),[comp,at,assets]);
  const layer=comp.layers.find(l=>l.id===selected);const hasPos=!!layer&&layer.transform.position.keys.length>0;const msel=useMaskSelection(),penOn=msel.layerPen,lp=canClosePath(layer)&&msel.layerPoint?.layer===layer!.id?msel.layerPoint.i:null,lset:readonly number[]=canClosePath(layer)&&msel.layerSet?.layer===layer!.id?msel.layerSet.set:lp!==null?[lp]:[],lpt=lp!==null?layer!.source.path!.points[lp]:undefined;const canClose=canClosePath(layer)&&!layer!.source.path!.closed&&layer!.source.path!.points.length>=3&&!layer!.source.pathKeys?.length;
  const posSel=sel.filter(k=>k.layer===selected&&k.prop==='position');
  return <div className="relative grid min-h-[160px] flex-1 place-items-center overflow-hidden bg-hover p-3" data-testid="animation-viewer">

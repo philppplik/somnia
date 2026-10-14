@@ -245,3 +245,10 @@ Added:
 - `animation.audio.grid {layer?, bpm?, sensitivity?}`: anchors a steady grid on the first detected beat in the clip (tempo from the estimate or `bpm`, 30-300), maps through trim and offset, snaps to frames, replaces the "Beat n" markers in one `markers.set`. Other markers stay.
 - `animation.keys.quantize {maxSeconds?}`: each selected transform key moves to the nearest marker. The new `keys.retime` edit gives each key its own target in one step; two keys landing on one tick, or on a key that is not moving, are skipped (counted, nothing half-applied). Keys already on a marker stay. Selection follows the keys.
 - Limits: markers are the only targets; one tempo per clip.
+
+## P44 - Precomps
+
+- Layer kind `comp` with `source.compId`. `precomp.add {comp}` creates it, named after the child, out point = the shorter duration. Undo is one step.
+- `validatePrecomps`: missing target, cycles, depth over `MAX_PRECOMP_DEPTH` (3), expanded layers over `MAX_PRECOMP_LAYERS` (600). Removing a used composition is rejected.
+- Render: the child frame is built as SVG and embedded as a data-URI image; child time = child.start + (tick - in point - offset). No child audio, no child background, no time remap.
+- Older app versions reject documents with comp layers.

@@ -1,5 +1,5 @@
 import {useSyncExternalStore} from 'react';
-import {canvasPixels,canvasRasterize,downloadBlob,exportFramePng,exportSequenceZip,exportSlug,ExportError,frameSvg,sequencePlan,type Rasterize,type RasterizePixels} from './exportFrames';
+import {setRenderComps,canvasPixels,canvasRasterize,downloadBlob,exportFramePng,exportSequenceZip,exportSlug,ExportError,frameSvg,sequencePlan,type Rasterize,type RasterizePixels} from './exportFrames';
 import {encodeGif,GIF_MAX_FRAMES,type GifFrame} from './gifEncode';
 import {encodeApng} from './apngEncode';
 import {recordWebm} from './exportVideo';
@@ -35,6 +35,7 @@ interface Deps{rasterize?:Rasterize;pixels?:RasterizePixels;save?:(b:Blob,name:s
 function target(format?:ExportFormat){
  const doc=animationSession().document;const comp=doc&&findComp(doc);
  if(!doc||!comp)throw new ExportError('Open an animation first.','empty');
+ setRenderComps(doc.compositions);
  if(!format){const out={width:Math.max(1,Math.round(comp.width*state.settings.scale/100)),height:Math.max(1,Math.round(comp.height*state.settings.scale/100))};
   if(out.width*out.height>EXPORT_LIMITS.maxPixels||out.width>16384||out.height>16384)throw new ExportError(problemMessage('size'),'too-large');
   return {doc,comp,out,ec:comp};}

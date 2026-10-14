@@ -572,5 +572,9 @@
  "animation.keys.quantize": "Chaves aos marcadores",
  "animation.keys.quantize.hint": "Mover as chaves selecionadas para o marcador mais próximo (um passo de desfazer)",
  "cmd.animation.audio.grid": "Colocar marcadores de batida em uma grade de BPM estável",
- "cmd.animation.keys.quantize": "Ajustar as chaves selecionadas ao marcador mais próximo"
+ "cmd.animation.keys.quantize": "Ajustar as chaves selecionadas ao marcador mais próximo",
+ "animation.precomp.pick": "Composição a aninhar",
+ "animation.precomp.none": "Aninhar uma composição...",
+ "animation.precomp.add": "Adicionar como camada",
+ "cmd.animation.precomp.add": "Adicionar uma composição como camada"
 }
