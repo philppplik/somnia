@@ -1,5 +1,5 @@
 import {registerStudio,type StudioDef} from './registry';
-import {registerBlankProjectFactory} from './blank';
+import {registerBlankProjectFactory} from './blankRegistry';
 import {startInterface} from '../interface/session';
 import {INTERFACE_COMMANDS} from '../interface/commands';
 export const interfaceStudio:StudioDef={

@@ -1,13 +1,8 @@
 import {listStudios} from './registry';
 import {blankDocx,blankXlsx,blankPptx,blankWav,blankName} from './blankFiles';
 
-export type BlankProjectFactory=()=>void|Promise<void>;
-const factories=new Map<string,BlankProjectFactory>();
-/** Runtime studios with their own document store register a factory at module load. */
-export function registerBlankProjectFactory(studioId:string,factory:BlankProjectFactory):()=>void{
- if(factories.has(studioId))throw Error(`Blank project factory already registered: ${studioId}`);
- factories.set(studioId,factory);return()=>{if(factories.get(studioId)===factory)factories.delete(studioId);};
-}
+import {factories} from './blankRegistry';
+export {registerBlankProjectFactory,type BlankProjectFactory} from './blankRegistry';
 const creating=new Map<string,Promise<void>>();
 /** Creates an unsaved local project without opening a file picker. Errors reject, never silently succeed. */
 export function createBlankProject(studioId:string):Promise<void>{
