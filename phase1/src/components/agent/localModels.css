@@ -1,0 +1,15 @@
+.agent-settings .local-models { display: grid; gap: 12px; min-width: 0; }
+.agent-settings .local-models-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.agent-settings .local-models-runtime, .agent-settings .local-models-list li { border: 1px solid var(--border-default); border-radius: var(--r-control); padding: 12px; overflow-wrap: anywhere; }
+.agent-settings .local-models-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.agent-settings .local-models-badges { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.agent-settings .local-models p { margin: 0; }
+.agent-settings > .tabs-root { height: auto; gap: 16px; flex: none; }
+.agent-settings > .tabs-root > .tabs-list { flex-wrap: wrap; height: auto; }
+.agent-settings > .tabs-root .tabs-content { overflow: visible; flex: none; }
+
+.agent-settings .local-model-actions { display: grid; gap: 12px; }
+.local-model-confirm { padding: 20px; display: grid; gap: 14px; overflow-wrap: anywhere; max-height: 85vh; overflow-y: auto; }
+.local-model-confirm input[type=checkbox] { width: auto; margin-right: 8px; }
+
+.agent-settings .local-model-advice { display: grid; gap: 10px; }

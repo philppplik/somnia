@@ -1,3 +1,4 @@
+import {LOCAL_MODELS_CATALOGUES} from './localModelsI18n';
 import {CODE_PANEL_CATALOGUES} from './codePanels/i18n';
 import {DIAGNOSTIC_LOCALES} from './diagnostics/locales';
 import {CONSENT_CATALOGUES} from './extensions/consentLocales';
@@ -29,6 +30,7 @@ export type Catalogue = Record<string, string>;
 export const BASE_LOCALE = 'en';
 /** Languages with a catalogue. Add a file in src/locales and an entry here. */
 export const CATALOGUES: Record<string, Catalogue> = {en, de, es, fr, 'pt-BR': ptBR};
+for (const [tag, extra] of Object.entries(LOCAL_MODELS_CATALOGUES)) Object.assign(CATALOGUES[tag], extra);
 for (const [tag, extra] of Object.entries(CODE_PANEL_CATALOGUES)) Object.assign(CATALOGUES[tag], extra);
 // Studio-owned strings live next to their studio and merge here, so the shared catalogues stay free of merge hotspots.
 for (const [tag, extra] of Object.entries(PHOTOS_CATALOGUES)) Object.assign(CATALOGUES[tag], extra);
