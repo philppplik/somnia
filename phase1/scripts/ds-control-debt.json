@@ -118,7 +118,7 @@
     },
     "src/components/CommandPalette.tsx": {
       "rawButton": 0,
-      "rawInput": 1,
+      "rawInput": 0,
       "rawSelect": 0,
       "rawTextarea": 0
     },
@@ -381,7 +381,7 @@
       "rawTextarea": 0
     },
     "src/components/FileTabs.tsx": {
-      "rawButton": 5,
+      "rawButton": 0,
       "rawInput": 0,
       "rawSelect": 0,
       "rawTextarea": 0
@@ -1095,7 +1095,7 @@
       "rawTextarea": 0
     },
     "src/components/WindowControls.tsx": {
-      "rawButton": 3,
+      "rawButton": 0,
       "rawInput": 0,
       "rawSelect": 0,
       "rawTextarea": 0

@@ -124,8 +124,8 @@
       "inlineStyle": 1
     },
     "src/components": {
-      "rawButton": 158,
-      "rawInput": 119,
+      "rawButton": 150,
+      "rawInput": 117,
       "rawSelect": 42,
       "rawTextarea": 8,
       "hexTsx": 26,
@@ -240,7 +240,7 @@
       "rawTextarea": 0,
       "hexTsx": 3,
       "hexCss": 0,
-      "pixelText": 18,
+      "pixelText": 15,
       "inlineStyle": 11
     },
     "src/components/sheets": {
@@ -286,7 +286,7 @@
     "src/components/studios": {
       "rawButton": 2,
       "rawInput": 4,
-      "rawSelect": 1,
+      "rawSelect": 0,
       "rawTextarea": 0,
       "hexTsx": 0,
       "hexCss": 3,
@@ -344,7 +344,7 @@
       "inlineStyle": 2
     },
     "src/components/vibespace": {
-      "rawButton": 81,
+      "rawButton": 80,
       "rawInput": 17,
       "rawSelect": 5,
       "rawTextarea": 6,
@@ -465,30 +465,30 @@
     },
     "src/components/animation": {
       "rawButton": 7,
-      "rawInput": 9,
-      "rawSelect": 1,
+      "rawInput": 1,
+      "rawSelect": 0,
       "rawTextarea": 0,
-      "hexTsx": 2,
+      "hexTsx": 0,
       "hexCss": 0,
       "pixelText": 3,
-      "inlineStyle": 17
+      "inlineStyle": 14
     },
     "src/components/interface": {
       "rawButton": 2,
-      "rawInput": 9,
-      "rawSelect": 13,
+      "rawInput": 8,
+      "rawSelect": 11,
       "rawTextarea": 1,
       "hexTsx": 1,
       "hexCss": 0,
       "pixelText": 2,
-      "inlineStyle": 18
+      "inlineStyle": 16
     },
     "src/components/studio3d": {
-      "rawButton": 4,
+      "rawButton": 1,
       "rawInput": 13,
       "rawSelect": 2,
       "rawTextarea": 0,
-      "hexTsx": 1,
+      "hexTsx": 0,
       "hexCss": 0,
       "pixelText": 0,
       "inlineStyle": 1
