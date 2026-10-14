@@ -30,7 +30,9 @@ test('returning from a PPTX to Code renders one source tab, not a nested Slides 
  const html=renderToStaticMarkup(<><FileTabs/><MediaViewer item={item}/></>);
  assert.equal((html.match(/role="tablist"/g)||[]).length,1);
  assert.equal((html.match(/role="tab"[^>]*title="index.html"/g)||[]).length,1);
- assert.match(html,/aria-label="Slides Studio"/,'the presentation preview remains available');
+ // MediaViewer is lazy on perf/integrated: static markup shows only the Suspense fallback, so the preview itself is checked directly.
+ assert.match(renderToStaticMarkup(<SlidesCanvas embedded/>),/aria-label="Slides Studio"/,'the embedded presentation preview remains available');
+ assert.match(readFileSync('src/components/MediaPreview.tsx','utf8'),/<SlidesCanvas[^>]*\bembedded\b/,'MediaViewer embeds Slides without its own tab strip');
 });
 
 test('standalone Slides canvas retains its own shared tabs, embedded Slides does not',()=>{
