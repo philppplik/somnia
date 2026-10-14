@@ -3,7 +3,7 @@ import {registerBlankProjectFactory} from './blankRegistry';
 import {startInterface} from '../interface/session';
 import {INTERFACE_COMMANDS} from '../interface/commands';
 export const interfaceStudio:StudioDef={
- id:'interface',label:'studio.interface',icon:'LayoutTemplate',order:9,formats:[],
+ id:'interface',label:'studio.interface',icon:'LayoutTemplate',order:10,formats:[],
  shell:{leftRail:[],rightRail:[],header:{menus:['Project','Edit','View','Insert','Tools','Help'],views:[],heroAction:{id:'interface.save',labelKey:'interface.save',icon:'Download',when:"studio == 'interface'"}},bottomBar:{slots:[],viewportPresets:[]},inspector:'interface.properties',tools:[]},
  commands:[],shortcuts:{},menus:{view:[]},canvas:'interface.canvas',agent:{tools:[],contextProviders:[],quickActions:[]},deriveContext:context=>context,
  shellV2:{
