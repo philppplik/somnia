@@ -240,5 +240,19 @@
   "sound.rack.tail": "Gleiche Dauer: Effektfahnen enden an der Sessiongrenze.",
   "sound.rack.order": "Clip-Änderungen → Spur-Rack → Pegel/Panorama → Summe → Master-Rack. Nach Änderungen neu rendern.",
   "sound.arrange.command.rack.set": "Effekt-Rack",
-  "cmd.sound.arrange.rack.set": "Effekt-Rack"
+  "cmd.sound.arrange.rack.set": "Effekt-Rack",
+  "sound.analysis.title": "Ausgabeanalyse",
+  "sound.analysis.sample": "Sample-Spitze",
+  "sound.analysis.true": "True Peak",
+  "sound.analysis.integrated": "Integriert",
+  "sound.analysis.short": "Kurzzeit (letzte 3 s)",
+  "sound.analysis.momentary": "Momentan (letzte 400 ms)",
+  "sound.analysis.na": "Nicht verfügbar",
+  "sound.analysis.spectrum": "Statisches Spektrum des Mixes",
+  "sound.analysis.scope": "Gesamter Mix, Render-Version",
+  "sound.analysis.stereo": "Stereo-Leistung, erste 4096 Samples",
+  "sound.analysis.measured-unverified": "Unverifizierte Messung: keine zertifizierte Sendekonformität.",
+  "sound.analysis.unavailable": "Lautheit/True Peak nicht verfügbar. Sound-WASM für Analyse neu bauen.",
+  "sound.analysis.insufficient": "Stille oder zu kurz: keine nutzbare Lautheitsmessung.",
+  "sound.analysis.stale": "Aktuellen Mix rendern. Änderungen machen diesen Bericht ungültig."
 }

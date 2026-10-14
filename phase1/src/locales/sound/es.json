@@ -240,5 +240,19 @@
   "sound.rack.tail": "Duración fija: las colas terminan al final de la sesión.",
   "sound.rack.order": "Ediciones → rack de pista → nivel/panorama → suma → rack máster. Renderiza de nuevo al editar.",
   "sound.arrange.command.rack.set": "Rack de efectos",
-  "cmd.sound.arrange.rack.set": "Rack de efectos"
+  "cmd.sound.arrange.rack.set": "Rack de efectos",
+  "sound.analysis.title": "Análisis de salida",
+  "sound.analysis.sample": "Pico de muestras",
+  "sound.analysis.true": "Pico real",
+  "sound.analysis.integrated": "Integrada",
+  "sound.analysis.short": "Corto plazo (últimos 3 s)",
+  "sound.analysis.momentary": "Momentánea (últimos 400 ms)",
+  "sound.analysis.na": "No disponible",
+  "sound.analysis.spectrum": "Espectro fijo de la mezcla",
+  "sound.analysis.scope": "Mezcla completa, revisión",
+  "sound.analysis.stereo": "potencia estéreo, primeras 4096 muestras",
+  "sound.analysis.measured-unverified": "Medidor sin verificar: no certifica normas de emisión.",
+  "sound.analysis.unavailable": "Loudness/pico real no disponible. Reconstruye Sound WASM.",
+  "sound.analysis.insufficient": "Silencio o duración insuficiente para medir loudness.",
+  "sound.analysis.stale": "Renderiza la mezcla actual. Los cambios invalidan este informe."
 }

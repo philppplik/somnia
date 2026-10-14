@@ -240,5 +240,19 @@
   "sound.rack.tail": "Same-length render: effect tails stop at the session boundary.",
   "sound.rack.order": "Clip edits → track rack → track level/pan → sum → master rack. Render again after changes.",
   "sound.arrange.command.rack.set": "Effects rack",
-  "cmd.sound.arrange.rack.set": "Effects rack"
+  "cmd.sound.arrange.rack.set": "Effects rack",
+  "sound.analysis.title": "Output analysis",
+  "sound.analysis.sample": "Sample peak",
+  "sound.analysis.true": "True peak",
+  "sound.analysis.integrated": "Integrated",
+  "sound.analysis.short": "Short-term (last 3 s)",
+  "sound.analysis.momentary": "Momentary (last 400 ms)",
+  "sound.analysis.na": "Unavailable",
+  "sound.analysis.spectrum": "Frozen spectrum of rendered mix",
+  "sound.analysis.scope": "Full mix, rendered revision",
+  "sound.analysis.stereo": "stereo power, first 4096 samples",
+  "sound.analysis.measured-unverified": "Unverified meter implementation: not certified for broadcast compliance.",
+  "sound.analysis.unavailable": "Loudness/true peak unavailable. Rebuild the Sound WASM engine for analysis.",
+  "sound.analysis.insufficient": "Silence or insufficient duration: no usable loudness measurement.",
+  "sound.analysis.stale": "Render the current mix to inspect its actual output. Changes invalidate this report."
 }

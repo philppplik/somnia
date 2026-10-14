@@ -393,3 +393,19 @@ pub fn process_rack_pcm(left: &[f32], right: &[f32], rack_json: &str) -> Result<
     if channels.iter().flatten().any(|v| !v.is_finite()) { return Err(JsError::new("Processor produced invalid audio")); }
     let mut planar = channels.remove(0);planar.extend_from_slice(&channels[0]);Ok(planar)
 }
+
+/// Frozen output loudness facts; code follows the pinned meter, not a conformity claim.
+#[wasm_bindgen]
+pub fn analyze_mix_pcm(left: &[f32], right: &[f32]) -> Result<String, JsError> {
+    if left.len() != right.len() || left.is_empty() || left.len() > 48_000 * 120 || left.iter().chain(right).any(|v| !v.is_finite()) { return Err(JsError::new("Invalid analysis PCM")); }
+    let mut meter = soundcraft_dsp::meter::LoudnessMeter::new(48_000.0, 2);
+    let channels = vec![left.to_vec(), right.to_vec()];
+    meter.process(&channels, left.len());
+    let valid = |value: f32, minimum: usize| -> Option<f32> { if left.len() < minimum || !value.is_finite() || value <= -140.0 { None } else { Some(value) } };
+    serde_json::to_string(&serde_json::json!({
+        "integratedLufs": valid(meter.integrated_lufs(), 19_200),
+        "shortTermLufs": valid(meter.short_term_lufs(), 144_000),
+        "momentaryLufs": valid(meter.momentary_lufs(), 19_200),
+        "truePeakDb": valid(meter.true_peak_db(), 1)
+    })).map_err(|e| JsError::new(&e.to_string()))
+}

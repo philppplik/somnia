@@ -8,9 +8,9 @@ export function renderRackedArrangement(raw:Arrangement,sources:DecodedSource[],
  // Validate missing/invalid media before considering mute/solo.
  renderArrangement({...s,masterRack:emptyRack(),tracks:s.tracks.map(t=>({...t,mute:true,rack:emptyRack()}))},sources);
  const output:[Float32Array,Float32Array]=[new Float32Array(frames),new Float32Array(frames)],solo=s.tracks.some(t=>t.solo);
- for(const track of s.tracks){if(track.mute||solo&&!track.solo)continue;
+ for(const track of s.tracks){if(track.mute||solo&&!track.solo||!track.clips.length)continue;
   const neutral={...track,gainDb:0,pan:0,rack:emptyRack()};
-  const clips=renderArrangement({...s,masterRack:emptyRack(),tracks:[neutral]},sources).channels;
+  const rendered=renderArrangement({...s,masterRack:emptyRack(),tracks:[neutral]},sources).channels;const clips:[Float32Array,Float32Array]=[new Float32Array(frames),new Float32Array(frames)];clips[0].set(rendered[0]);clips[1].set(rendered[1]);
   const processed=bypass?clips:process(clips,track.rack);if(processed.length!==2||processed.some(ch=>ch.length!==clips[0].length))throw Error('Rack must preserve session length');
   const gain=10**(track.gainDb/20),left=Math.min(1,1-track.pan),right=Math.min(1,1+track.pan);
   for(let i=0;i<processed[0].length;i++){output[0][i]+=processed[0][i]*gain*left;output[1][i]+=processed[1][i]*gain*right;}

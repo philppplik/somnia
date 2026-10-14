@@ -240,5 +240,19 @@
   "sound.rack.tail": "Durée fixe : les queues s’arrêtent à la fin de la session.",
   "sound.rack.order": "Éditions → rack de piste → niveau/pan → somme → rack master. Recalculer après modification.",
   "sound.arrange.command.rack.set": "Rack d’effets",
-  "cmd.sound.arrange.rack.set": "Rack d’effets"
+  "cmd.sound.arrange.rack.set": "Rack d’effets",
+  "sound.analysis.title": "Analyse de sortie",
+  "sound.analysis.sample": "Crête échantillon",
+  "sound.analysis.true": "Crête vraie",
+  "sound.analysis.integrated": "Intégrée",
+  "sound.analysis.short": "Court terme (3 dernières s)",
+  "sound.analysis.momentary": "Momentanée (400 dernières ms)",
+  "sound.analysis.na": "Indisponible",
+  "sound.analysis.spectrum": "Spectre figé du mixage",
+  "sound.analysis.scope": "Mixage complet, révision",
+  "sound.analysis.stereo": "puissance stéréo, 4096 premiers échantillons",
+  "sound.analysis.measured-unverified": "Mesure non vérifiée : aucune certification de diffusion.",
+  "sound.analysis.unavailable": "Sonie/crête vraie indisponible. Reconstruire Sound WASM.",
+  "sound.analysis.insufficient": "Silence ou durée insuffisante pour mesurer la sonie.",
+  "sound.analysis.stale": "Calculer le mixage actuel. Les modifications invalident le rapport."
 }
