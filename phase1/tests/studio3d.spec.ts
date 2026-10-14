@@ -1396,3 +1396,22 @@ test('3D studio turntable renders a WebM video and refuses transparency for it',
  const [zip]=await Promise.all([page.waitForEvent('download'),run(page,'studio3d.render.turntable',{frames:2,width:120,height:90})]);
  expect(zip.suggestedFilename()).toMatch(/-turntable\.zip$/);
 });
+
+test('3D studio asset drags: primitive lands at the drop point, material assigns to the dropped mesh',async({page})=>{
+ await blank(page);
+ await insert(page,'cube',0);
+ // A primitive dragged from the insert panel lands on the ground plane as one undo step.
+ await page.evaluate(()=>{const dt=new DataTransfer();dt.setData('application/x-somnia3d-asset',JSON.stringify({kind:'primitive',primitive:'sphere'}));
+  const el=document.querySelector('[data-testid="studio3d-viewport"] > div')!;
+  el.dispatchEvent(new DragEvent('dragover',{dataTransfer:dt,bubbles:true,cancelable:true}));
+  const r=el.getBoundingClientRect();
+  el.dispatchEvent(new DragEvent('drop',{dataTransfer:dt,bubbles:true,cancelable:true,clientX:r.left+r.width/2,clientY:r.top+r.height/2}));});
+ await expect.poll(async()=>(await session(page)).outline.filter(o=>o.kind==='mesh').length).toBe(2);
+ await run(page,'studio3d.undo');
+ await expect.poll(async()=>(await session(page)).outline.filter(o=>o.kind==='mesh').length).toBe(1);
+ // A scene material dragged from the material list assigns to the mesh under the cursor.
+ await page.evaluate(()=>{const dt=new DataTransfer();dt.setData('application/x-somnia3d-asset',JSON.stringify({kind:'material',key:'missing'}));
+  const el=document.querySelector('[data-testid="studio3d-viewport"] > div')!;
+  el.dispatchEvent(new DragEvent('drop',{dataTransfer:dt,bubbles:true,cancelable:true,clientX:10,clientY:10}));});
+ await expect(page.getByRole('alert')).toBeVisible();
+});

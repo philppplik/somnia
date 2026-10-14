@@ -30,6 +30,7 @@ const Row=({k,v}:{k:string;v:string|number})=><div className="flex justify-betwe
 const fmt=(n:number)=>(Math.abs(n)>=100?n.toFixed(0):Math.abs(n)>=10?n.toFixed(1):n.toFixed(2));
 /** Outliner: every node of the opened model, filterable, click to select. */
 const NODE_MIME='application/x-somnia3d-node';
+import {ASSET_MIME,assetDragData} from '../../lib/studio3d/assetDrag';
 const parseNodeDrag=(raw:string):number[]|null=>{if(!raw)return null;try{const v=JSON.parse(raw) as unknown;return Array.isArray(v)&&v.length&&v.every(x=>Number.isInteger(x)&&x>=0)?v as number[]:null;}catch{return null;}};
 export function ScenePanel(_:PanelHostProps){
  const {t}=useT();const s=useStudio3D();const [filter,setFilter]=useState('');const [renaming,setRenaming]=useState<number|null>(null);
@@ -43,7 +44,7 @@ export function ScenePanel(_:PanelHostProps){
  const fold=(id:number)=>patchStudio3D({collapsed:collapsed.includes(id)?collapsed.filter(x=>x!==id):[...collapsed,id]});
  return <div className="grid gap-2 p-3" data-testid="studio3d-scene-panel">
   <div className="flex flex-wrap gap-1" role="group" aria-label={t('studio3d.insert.group')} data-testid="studio3d-insert">
-   {PRIMS.map(k=><Button key={k} variant="outline" onClick={()=>void executeCommand('studio3d.insert.primitive',{kind:k})}>{t('studio3d.insert.'+k)}</Button>)}
+   {PRIMS.map(k=><Button key={k} variant="outline" draggable onDragStart={e=>{e.dataTransfer.setData(ASSET_MIME,assetDragData({kind:'primitive',primitive:k}));e.dataTransfer.effectAllowed='copy';}} onClick={()=>void executeCommand('studio3d.insert.primitive',{kind:k})}>{t('studio3d.insert.'+k)}</Button>)}
    {LIGHTS.map(k=><Button key={k} variant="outline" onClick={()=>void executeCommand('studio3d.insert.light',{kind:k})}>{t('studio3d.insert.'+k)}</Button>)}
    {(['three-point','studio','sunset','outdoor'] as const).map(preset=><Button key={preset} variant="outline" onClick={()=>void executeCommand('studio3d.light.rig',{preset})}>{t('studio3d.light.rig.'+preset)}</Button>)}
    <Button variant="outline" onClick={()=>void executeCommand('studio3d.insert.camera',{})}>{t('studio3d.insert.camera')}</Button>
@@ -125,6 +126,7 @@ export function ModelSection(_:InspectorSectionProps){
    <p className="m-0 text-xs text-ink-3">{t('studio3d.material.list')}</p>
    <ul className="m-0 grid list-none gap-0.5 p-0">{s.materialList.map(m=><li key={m.key}>
     <Button variant="ghost" className="flex w-full items-center justify-start gap-2 px-1 py-0.5 text-left text-xs text-ink-2 hover:bg-hover" aria-label={t('studio3d.material.selectUsers',{name:m.name})}
+     draggable onDragStart={e=>{e.dataTransfer.setData(ASSET_MIME,assetDragData({kind:'material',key:m.key}));e.dataTransfer.effectAllowed='copy';}}
      onClick={()=>void executeCommand('studio3d.select',{id:m.ids[0]}).then(()=>patchStudio3D({marked:m.ids}))}>
      <svg width="12" height="12" viewBox="0 0 12 12" className="shrink-0 rounded-full border border-subtle" role="img" aria-label={m.color}><rect width="12" height="12" fill={m.color}/></svg>
      <span className="min-w-0 flex-1 truncate">{m.name}</span><span className="text-ink-3">{t('studio3d.material.users',{count:m.count})}</span></Button></li>)}</ul></div>}
@@ -161,7 +163,7 @@ function MaterialUserPresets({id}:{id:number}){
  const trimmed=presetName.trim();
  return <div className="grid gap-1" data-testid="studio3d-material-user-presets">
   {s.materialPresets.length>0&&<div className="flex flex-wrap gap-1" role="group" aria-label={t('studio3d.material.presetsUser')}>{s.materialPresets.map(p=><span key={p.name} className="inline-flex items-center gap-0.5">
-   <Button variant="outline" onClick={()=>void executeCommand('studio3d.material.preset.apply',{id,name:p.name})}>{p.name}</Button>
+   <Button variant="outline" draggable onDragStart={e=>{e.dataTransfer.setData(ASSET_MIME,assetDragData({kind:'userPreset',name:p.name}));e.dataTransfer.effectAllowed='copy';}} onClick={()=>void executeCommand('studio3d.material.preset.apply',{id,name:p.name})}>{p.name}</Button>
    <Button variant="outline" aria-label={t('studio3d.material.removePreset',{name:p.name})} onClick={()=>void executeCommand('studio3d.material.preset.remove',{name:p.name})}>×</Button></span>)}</div>}
   <div className="flex gap-1">
    <NativeInput value={presetName} maxLength={60} placeholder={t('studio3d.material.presetName')} aria-label={t('studio3d.material.presetName')} onChange={e=>setPresetName(e.currentTarget.value)}/>
@@ -195,7 +197,7 @@ export function ObjectSection(_:InspectorSectionProps){
      <circle cx="11" cy="10" r={sw.highlight.r} fill={sw.highlight.color} opacity={sw.highlight.opacity}/>
     </>;})()}
    </svg>
-   <div className="flex flex-wrap gap-1" role="group" aria-label={t('studio3d.material.presets')} data-testid="studio3d-material-presets">{MATERIAL_PRESETS.map(p=><Button key={p.id} variant="outline" onClick={()=>void executeCommand('studio3d.object.material',{id:o.id,preset:p.id})}>{t('studio3d.material.preset.'+p.id)}</Button>)}</div>
+   <div className="flex flex-wrap gap-1" role="group" aria-label={t('studio3d.material.presets')} data-testid="studio3d-material-presets">{MATERIAL_PRESETS.map(p=><Button key={p.id} variant="outline" draggable onDragStart={e=>{e.dataTransfer.setData(ASSET_MIME,assetDragData({kind:'preset',preset:p.id}));e.dataTransfer.effectAllowed='copy';}} onClick={()=>void executeCommand('studio3d.object.material',{id:o.id,preset:p.id})}>{t('studio3d.material.preset.'+p.id)}</Button>)}</div>
    <MaterialUserPresets id={o.id}/>
    <div className="flex gap-1" data-testid="studio3d-material-copy-paste">
     <Button variant="outline" onClick={()=>void executeCommand('studio3d.material.copy',{id:o.id})}>{t('studio3d.material.copy')}</Button>

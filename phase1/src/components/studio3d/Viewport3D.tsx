@@ -28,6 +28,7 @@ import {getState as getAppState} from '../../store/appStore';
 import {readProjectUnit,writeProjectUnit} from '../../lib/studio3d/projectPrefs';
 import {checkPreset,presetPatch,readPresets,removePreset,savePreset,MaterialPresetError,type MaterialPreset} from '../../lib/studio3d/materialPresets';
 import type {MaterialSnapshot} from '../../lib/studio3d/stage';
+import {ASSET_MIME,parseAssetDrag} from '../../lib/studio3d/assetDrag';
 import {toggleSelection,marqueeRect,inRect,turntablePlan,frameName,exportFileName,unitScale,isUnit,isMeshFormat,mergeSnap,snapTo,measureInfo,stlUnitHint,mtlReferences,mtlTextures,externalGltfNeeds,clampRenderSize,shadowMapSize,formatPerf,webmMime,MAX_MTL_BYTES,MAX_TEXTURE_BYTES,MAX_TEXTURE_FILES,SnapError,mergeEnv,envFormatFor,isShadowQuality,isShadowType,nudgeFor,EnvError,modelFormatFor,readModelHeader,ModelError,boundsValid,boundsCenter,boundsRadius,frameDistance,clipPlanes,pickClips,extractGltfTextures,GLTF_TEXTURE_MODES} from '../../lib/studio3d/model';
 import type {Bounds} from '../../lib/studio3d/model';
 import {checkSkins,bonePickRadius,pickBone} from '../../lib/studio3d/skeleton';
@@ -1035,6 +1036,11 @@ export default function Viewport3D(){
    if(id==null||getStudio3DState().selectedInfo?.material==null)return;
    void setTextureFile(id,slot,file).catch((e:unknown)=>patchStudio3D({error:e instanceof Error?e.message:String(e)})).then(()=>{const sel=getStudio3DState().selected;if(sel!=null)patchStudio3D({selectedInfo:stage.info(sel)});sync();invalidate();});
   });
+  /** Applies a user-saved or built-in material preset by name. */
+  const applyPresetByName=(id:number,name:string)=>{
+   const user=getStudio3DState().materialPresets.find(p=>p.name===name);
+   stage.setMaterial(id,user?presetPatch(user):{preset:name});
+  };
   const off=registerStudio3DController({keyMove,keyEase,keyCopy,keyShift,clipDuplicate,animRange,selectBone,setSkeleton,skinBind,skinRebind,setWeightPreview,setWeightBrush,paintDab,poseSave,poseApply,poseRemove,poseMirror,poseBlend,ikToggle,ikSetTarget,ikSetPole,recordPose,onionSkin,motionPathToggle,retargetPreview:retargetPreviewC,retargetApply:retargetApplyC,fabrikToggle,fabrikSetTarget,fabrikLookToggle,fabrikSetLook,setBoneLimits,keyPaste,autoKey,clipAdd,clipRemove,clipRename,clipDuration,keySet,keyRemove,animPlay,animPause,animSeek,animLoop,animSpeed,setTextureTransform:(id,slot,p)=>stage.setTextureTransform(id,slot,p),exportGltf,setTextureFile,mirrorSelection,applyScale:applyScaleSel,mergeSelection:mergeSel,viewPreset,setPrimitive:(id,p)=>stage.setPrimitive(id,p),
    save:saveDocument,deleteSelection,duplicateSelection,exportMesh,setExportOptions,renderTurntable,cancelRender:()=>{cancelFlag=true;},setUnit,openFiles,newScene,resetView:frameAll,frameSelection,select,renderStill,exportGlb,
    addPrimitive:k=>{const o=stage.addPrimitive(k);select(o.id);return o.id;},addLight:k=>{const o=stage.addLight(k);select(o.id);return o.id;},addLightRig:preset=>{const l=stage.addLightRig(preset);select(l[0].id);return l.map(x=>x.id);},
@@ -1066,8 +1072,7 @@ export default function Viewport3D(){
     catch(e){if(e instanceof MaterialPresetError)throw Object.assign(new Error(e.message),{expected:true});list=[...getStudio3DState().materialPresets.filter(x=>x.name!==p.name),p];}
     patchStudio3D({materialPresets:list});},
    materialPresetApply:(id,name)=>{
-    const user=getStudio3DState().materialPresets.find(p=>p.name===name);
-    stage.setMaterial(id,user?presetPatch(user):{preset:name});
+    applyPresetByName(id,name);
     const sel=getStudio3DState().selected;if(sel!=null)patchStudio3D({selectedInfo:stage.info(sel)});
     sync();invalidate();},
    materialPresetRemove:name=>{
@@ -1163,6 +1168,27 @@ export default function Viewport3D(){
   let down:{x:number;y:number}|null=null;const ray=new THREE.Raycaster();
   // Picking skips hidden and locked objects (locked parents lock their whole subtree).
   const chainOk=(o:THREE.Object3D):boolean=>{for(let n:THREE.Object3D|null=o;n;n=n.parent){if(!n.visible)return false;if(n.userData.somniaLocked===true)return false;}return true;};
+  // Assets dragged from the panels: primitives land on the ground plane, materials and presets apply to the mesh under the cursor.
+  const onAssetDragOver=(e:DragEvent)=>{if(e.dataTransfer&&Array.from(e.dataTransfer.types).includes(ASSET_MIME)){e.preventDefault();e.dataTransfer.dropEffect='copy';}};
+  const onAssetDrop=(e:DragEvent)=>{
+   const data=parseAssetDrag(e.dataTransfer?.getData(ASSET_MIME)??'');if(!data)return;
+   e.preventDefault();e.stopPropagation();
+   try{
+    const rect=renderer.domElement.getBoundingClientRect();
+    ray.setFromCamera(new THREE.Vector2(((e.clientX-rect.left)/rect.width)*2-1,-(((e.clientY-rect.top)/rect.height)*2-1)),camera);
+    if(data.kind==='primitive'){
+     const hit=ray.ray.intersectPlane(new THREE.Plane(new THREE.Vector3(0,1,0),0),new THREE.Vector3());
+     const b=stage.measure().bounds;const c=b&&boundsValid(b)?boundsCenter(b):[0,0,0] as [number,number,number];
+     stage.addPrimitive(data.primitive,hit?{x:hit.x,z:hit.z}:{x:c[0],z:c[2]});
+    }else{
+     const hit=ray.intersectObject(holder,true).find(h=>(h.object as THREE.Mesh).isMesh&&chainOk(h.object));
+     if(!hit){patchStudio3D({notice:'Drop it onto a mesh in the viewport to use it.'});return;}
+     if(data.kind==='material')stage.assignMaterial(hit.object.id,data.key);
+     else applyPresetByName(hit.object.id,data.kind==='preset'?data.preset:data.name);
+    }
+   }catch(err){patchStudio3D({notice:err instanceof Error?err.message:String(err)});}
+  };
+  el.addEventListener('dragover',onAssetDragOver);el.addEventListener('drop',onAssetDrop);
   let shiftDrag=false;let marquee:HTMLDivElement|null=null;
   const endMarquee=()=>{marquee?.remove();marquee=null;if(shiftDrag){shiftDrag=false;controls.enabled=true;}};
   // Capture phase, so orbit never starts when shift is held: shift+click toggles, shift+drag draws a marquee.
@@ -1307,7 +1333,7 @@ export default function Viewport3D(){
   sync();frameAll();void applyEnv();
   return()=>{
    disposed=true;opening++;stopAnim();if(previewRaf)cancelAnimationFrame(previewRaf);offDrop();mixer?.stopAllAction();stage.autoKeySource=null;off();offAuto();if(autoTimer)clearTimeout(autoTimer);cancelAnimationFrame(frame);ro.disconnect();controls.dispose();
-   cv.removeEventListener('pointerdown',onDownCapture,true);cv.removeEventListener('pointerdown',onDown);window.removeEventListener('pointermove',onMove);window.removeEventListener('pointercancel',endMarquee);endMarquee();cv.removeEventListener('pointerup',onUp);cv.removeEventListener('keydown',onKey);
+   el.removeEventListener('dragover',onAssetDragOver);el.removeEventListener('drop',onAssetDrop);cv.removeEventListener('pointerdown',onDownCapture,true);cv.removeEventListener('pointerdown',onDown);window.removeEventListener('pointermove',onMove);window.removeEventListener('pointercancel',endMarquee);endMarquee();cv.removeEventListener('pointerup',onUp);cv.removeEventListener('keydown',onKey);
    if(getStudio3DState().status==='loading')patchStudio3D({status:stage.root.children.length?'ready':'idle',confirmReplace:null});
    gizmo.detach();gizmo.dispose();ikGizmo.detach();ikGizmo.dispose();poleGizmo.detach();poleGizmo.dispose();fkGizmo.detach();fkGizmo.dispose();lookGizmo.detach();lookGizmo.dispose();clearGhosts();scene.remove(ghosts);if(pathLine){pathLine.geometry.dispose();(pathLine.material as THREE.Material).dispose();pathLine=null;}fkTarget.geometry.dispose();(fkTarget.material as THREE.Material).dispose();fkLook.geometry.dispose();(fkLook.material as THREE.Material).dispose();ikTarget.geometry.dispose();(ikTarget.material as THREE.Material).dispose();ikPoleM.geometry.dispose();(ikPoleM.material as THREE.Material).dispose();offStage();clearSelection();if(painting){painting=false;}const openSel=getStudio3DState().selected;if(openSel!=null)stage.skinPaintEnd(openSel);if(lightHelper){scene.remove(lightHelper);(lightHelper as HelperObj).dispose?.();lightHelper=null;}if(skelHelper){scene.remove(skelHelper);skelHelper.geometry.dispose();(skelHelper.material as THREE.Material).dispose();skelHelper=null;}if(weightOverlay){scene.remove(weightOverlay);weightOverlay.geometry.dispose();(weightOverlay.material as THREE.Material).dispose();weightOverlay=null;}if(maskOverlay){scene.remove(maskOverlay);maskOverlay.geometry.dispose();(maskOverlay.material as THREE.Material).dispose();maskOverlay=null;}for(const h of helpers.values())h.dispose();grid.geometry.dispose();(grid.material as THREE.Material).dispose();cursorGeo.dispose();cursorMat.dispose();scene.remove(cursorMark);mLineGeo.dispose();mLineMat.dispose();mDotGeo.dispose();mDotMat.dispose();scene.remove(measureGroup);for(const t of envTargets)t.dispose();envCache.clear();pmrem.dispose();composer?.dispose();renderer.dispose();renderer.forceContextLoss();
    if(cv.parentNode===el)el.removeChild(cv);

@@ -256,13 +256,26 @@ export class Stage{
   this.push({label:text,undo:()=>{parent.remove(obj);owned=false;},redo:()=>{this.attach0(obj,parent,index);owned=true;},release:()=>{if(!owned)disposeObject(obj);}});
  }
  private attach0(obj:THREE.Object3D,parent:THREE.Object3D,at:number){parent.add(obj);const i=parent.children.indexOf(obj);if(i!==at&&at<parent.children.length){parent.children.splice(i,1);parent.children.splice(at,0,obj);}}
- addPrimitive(kind:PrimitiveKind):THREE.Mesh{
+ addPrimitive(kind:PrimitiveKind,at?:{x:number;z:number}):THREE.Mesh{
   if(!PRIMITIVES.includes(kind))throw new StageError(`Unknown primitive: ${String(kind)}.`);
   const params=defaultParams(kind);
   const mesh=new THREE.Mesh(geometryFor(kind,params),new THREE.MeshStandardMaterial({color:0xb8bcc8,metalness:0,roughness:0.6}));
   mesh.name=this.uniqueName(label(kind));mesh.userData.somniaPrimitive={kind,params};
   if(kind!=='plane')mesh.position.y=kind==='cube'||kind==='cylinder'||kind==='cone'?0.5:kind==='sphere'?0.5:0.68;
+  if(at&&Number.isFinite(at.x)&&Number.isFinite(at.z)){mesh.position.x=at.x;mesh.position.z=at.z;}
   this.attach(mesh,this.root,this.root.children.length,`Add ${mesh.name}`);return mesh;
+ }
+ /** Assigns a material already used in the scene to a single-material mesh. One undo step. */
+ assignMaterial(id:number,key:string){
+  const o=this.need(id) as THREE.Mesh;
+  if(!o.isMesh)throw new StageError('Materials can only be assigned to meshes.');
+  if(Array.isArray(o.material))throw new StageError('That mesh uses several materials: edit the slots instead.');
+  let mat:THREE.Material|null=null;
+  this.root.traverse(x=>{const m=x as THREE.Mesh;if(!m.isMesh||mat)return;for(const cand of Array.isArray(m.material)?m.material:[m.material])if(cand&&cand.uuid===key)mat=cand;});
+  if(!mat)throw new StageError('That material is no longer in the scene.');
+  const next=mat as THREE.Material;if(o.material===next)return;
+  const before=o.material;const apply=(m:THREE.Material)=>{o.material=m;};
+  apply(next);this.push({label:`Assign ${next.name||'material'} to ${o.name||'mesh'}`,undo:()=>apply(before),redo:()=>apply(next)});
  }
  addLight(kind:LightKind):THREE.Light{
   if(!LIGHTS.includes(kind))throw new StageError(`Unknown light: ${String(kind)}.`);
