@@ -12,7 +12,7 @@ import type {KeyRef} from './keyEdit';
 import type {LoopRange} from './animation';
 import type {TextureTransform} from './uv';
 import {VIEW_PRESETS,type ViewPreset} from './viewPresets';
-import type {MirrorAxis,PrimitiveKind,LightKind,TransformPatch,MaterialPatch,LightPatch,AlignAxis,AlignTo,PivotAt,CameraKind} from './stage';
+import type {MirrorAxis,PrimitiveKind,LightKind,LightRigPreset,TransformPatch,MaterialPatch,LightPatch,AlignAxis,AlignTo,PivotAt,CameraKind} from './stage';
 import type {Vec3} from './stage';
 export interface TurntableOptions{frames?:number;width?:number;height?:number;transparent?:boolean;/** 'zip' downloads one archive; 'folder' writes the PNG frames into a folder the user picks. */out?:'zip'|'folder';}
 export interface RenderOptions{/** id of a camera object; the viewport camera when omitted */camera?:number;width?:number;height?:number;transparent?:boolean}
@@ -22,7 +22,7 @@ export interface Studio3DController{
  newScene(force?:boolean):void;
  addPrimitive(kind:PrimitiveKind):number;
  addLight(kind:LightKind):number;
- addLightRig():number[];
+ addLightRig(preset?:LightRigPreset):number[];
  setTransform(id:number,patch:TransformPatch):void;
  setMaterial(id:number,patch:MaterialPatch):void;
  setPrimitive(id:number,patch:Record<string,number>):void;
@@ -195,7 +195,7 @@ export function studio3DCommandSpecs():CommandSpec<unknown,unknown>[]{
   add<{id:number|null}>('studio3d.select','Select a 3D object','Edit',p=>need().select(p.id),object({id:{anyOf:[{type:'null'},{type:'integer',minimum:0}]}})),
   add<{kind:PrimitiveKind}>('studio3d.insert.primitive','Insert a 3D primitive','Insert',p=>need().addPrimitive(p.kind),object({kind:{enum:['cube','sphere','plane','cylinder','cone','torus']}}),()=>!!controller),
   add<{kind:LightKind}>('studio3d.insert.light','Insert a 3D light','Insert',p=>need().addLight(p.kind),object({kind:{enum:['directional','point','spot','area','ambient']}}),()=>!!controller),
-  add('studio3d.light.rig','Insert a three-point light rig (key, fill and rim aimed at the scene)','Insert',()=>need().addLightRig(),undefined,()=>!!controller),
+  add<{preset?:LightRigPreset}>('studio3d.light.rig','Insert a light rig aimed at the scene','Insert',p=>need().addLightRig(p?.preset),object({preset:{enum:['three-point','studio','sunset']}},[]),()=>!!controller),
   add<{id:number;position?:object;rotation?:object;scale?:object}>('studio3d.object.transform','Move, rotate or scale a 3D object','Edit',p=>need().setTransform(p.id,p as TransformPatch),object({id:{type:'integer',minimum:0},position:VEC,rotation:VEC,scale:VEC},['id']),hasScene),
   add<{id:number;preset?:string;color?:string;metalness?:number;roughness?:number;emissive?:string;emissiveIntensity?:number;opacity?:number;alphaMode?:string;alphaCutoff?:number;doubleSided?:boolean}>('studio3d.object.material','Change the material of a 3D object','Edit',p=>need().setMaterial(p.id,p as never),object({id:{type:'integer',minimum:0},preset:{enum:MATERIAL_PRESET_IDS},emissive:{type:'string',pattern:'^#[0-9a-fA-F]{6}$'},emissiveIntensity:{type:'number',minimum:0,maximum:MAX_EMISSIVE_INTENSITY},opacity:{type:'number',minimum:0,maximum:1},alphaMode:{enum:[...ALPHA_MODES]},alphaCutoff:{type:'number',minimum:0,maximum:1},doubleSided:{type:'boolean'},color:{type:'string',pattern:'^#[0-9a-fA-F]{6}$'},metalness:{type:'number',minimum:0,maximum:1},roughness:{type:'number',minimum:0,maximum:1}},['id']),hasScene),
   add<{id:number}&Record<string,number>>('studio3d.object.primitive','Change the size or segments of a 3D primitive','Edit',({id,...rest})=>need().setPrimitive(id,rest),object({id:{type:'integer',minimum:0},...PRIMITIVE_PROPS},['id']),hasScene),
@@ -228,7 +228,7 @@ export function studio3DCommandSpecs():CommandSpec<unknown,unknown>[]{
   add('studio3d.env.open','Open an HDR environment map','View',()=>envOpener!(),undefined,()=>!!controller&&!!envOpener),
   add('studio3d.undo','Undo 3D change','Edit',()=>need().undo(),undefined,()=>!!controller&&getStudio3DState().canUndo),
   add('studio3d.redo','Redo 3D change','Edit',()=>need().redo(),undefined,()=>!!controller&&getStudio3DState().canRedo),
-  add<{id:number}&LightPatch>('studio3d.light.set','Change a 3D light','Edit',p=>need().setLight(p.id,p),object({id:{type:'integer',minimum:0},intensity:{type:'number',minimum:0,maximum:100000},color:{type:'string',pattern:'^#[0-9a-fA-F]{6}$'},shadow:{type:'boolean'},angle:{type:'number',minimum:1,maximum:90},penumbra:{type:'number',minimum:0,maximum:1},width:{type:'number',minimum:0.01,maximum:1000},height:{type:'number',minimum:0.01,maximum:1000}},['id']),hasScene),
+  add<{id:number}&LightPatch>('studio3d.light.set','Change a 3D light','Edit',p=>need().setLight(p.id,p),object({id:{type:'integer',minimum:0},intensity:{type:'number',minimum:0,maximum:100000},color:{type:'string',pattern:'^#[0-9a-fA-F]{6}$'},shadow:{type:'boolean'},radius:{type:'number',minimum:0,maximum:50},angle:{type:'number',minimum:1,maximum:90},penumbra:{type:'number',minimum:0,maximum:1},width:{type:'number',minimum:0.01,maximum:1000},height:{type:'number',minimum:0.01,maximum:1000}},['id']),hasScene),
   add<{id:number;mode?:'vertex'|'edge'|'face'}>('studio3d.edit.start','Start editing a 3D mesh (vertex, edge or face mode)','Edit',p=>need().editStart(p.id,p?.mode),object({id:{type:'integer',minimum:0},mode:{enum:['vertex','edge','face']}},['id']),hasScene),
   add('studio3d.edit.end','Leave mesh edit mode','Edit',()=>need().editEnd(),undefined,()=>getStudio3DState().edit!=null),
   add<{mode:'vertex'|'edge'|'face'}>('studio3d.edit.mode','Switch the mesh edit selection mode','Edit',p=>need().editMode(p.mode),object({mode:{enum:['vertex','edge','face']}}),()=>getStudio3DState().edit!=null),

@@ -592,5 +592,9 @@
  "cmd.studio3d.measure.set": "3D-Messwerkzeug umschalten",
  "cmd.studio3d.object.reorder": "3D-Objekte im Gliederungsbaum neben ein Geschwister verschieben",
  "studio3d.material.preset.emissive": "Emissiv",
- "studio3d.material.swatch": "Materialvorschau"
+ "studio3d.material.swatch": "Materialvorschau",
+ "studio3d.light.rig.threePoint": "Dreipunkt",
+ "studio3d.light.rig.studio": "Studio",
+ "studio3d.light.rig.sunset": "Sonnenuntergang",
+ "studio3d.light.softness": "Schattenweichheit"
 }

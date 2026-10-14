@@ -17,7 +17,7 @@ export class DocumentError extends Error{constructor(message:string){super(messa
 export interface AreaLightSpec{position:[number,number,number];quaternion:[number,number,number,number];scale:[number,number,number];color:string;intensity:number;width:number;height:number;name:string}
 export interface AmbientLightSpec{color:string;intensity:number;name:string}
 /** Data for one node, addressed by its depth-first index below the scene root. */
-export interface NodeExtra{i:number;shadow?:boolean;area?:AreaLightSpec;ambient?:AmbientLightSpec;/** Node was hidden in the outliner. */hidden?:boolean;/** Node was locked against viewport selection. */locked?:boolean}
+export interface NodeExtra{i:number;shadow?:boolean;/** Shadow softness (light.shadow.radius), saved next to the shadow flag. */radius?:number;area?:AreaLightSpec;ambient?:AmbientLightSpec;/** Node was hidden in the outliner. */hidden?:boolean;/** Node was locked against viewport selection. */locked?:boolean}
 export interface SavedView{position:[number,number,number];target:[number,number,number];fov:number}
 export type SceneSource={encoding:'base64';data:string}|{uri:string};
 export interface SceneDocument{
@@ -88,6 +88,7 @@ export function parseDocument(text:string):SceneDocument{
    if(typeof x.i!=='number'||!Number.isInteger(x.i)||x.i<0||x.i>=MAX_DOC_NODES||seen.has(x.i))throw new DocumentError('A node entry has an invalid or repeated index.');
    seen.add(x.i);const e:NodeExtra={i:x.i};
    if(x.shadow!==undefined){if(typeof x.shadow!=='boolean')throw new DocumentError('shadow must be true or false.');e.shadow=x.shadow;}
+   if(x.radius!==undefined){if(typeof x.radius!=='number'||!Number.isFinite(x.radius)||x.radius<0||x.radius>50)throw new DocumentError('radius must be a number between 0 and 50.');e.radius=x.radius;}
    if(x.hidden!==undefined){if(typeof x.hidden!=='boolean')throw new DocumentError('hidden must be true or false.');e.hidden=x.hidden;}
    if(x.locked!==undefined){if(typeof x.locked!=='boolean')throw new DocumentError('locked must be true or false.');e.locked=x.locked;}
    if(x.area!==undefined){

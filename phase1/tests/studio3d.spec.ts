@@ -1215,3 +1215,28 @@ test('3D studio materials: emissive preset and inspector preview swatch',async({
  await page.getByTestId('studio3d-material-copy-paste').getByRole('button',{name:'Paste'}).click();
  expect((await session(page)).info?.material?.color).toBe('#b8bcc8');
 });
+
+test('3D studio lights: shadow softness and one-click studio and sunset rigs',async({page})=>{
+ await blank(page);
+ await insert(page,'cube',0);
+ const sun=await run(page,'studio3d.insert.light',{kind:'directional'});
+ // Shadow softness appears once shadows are on and edits in one undo step.
+ await run(page,'studio3d.light.set',{id:(await session(page)).selected,shadow:true});
+ const soft=page.getByRole('textbox',{name:'Shadow softness'});
+ await soft.fill('6');await soft.press('Enter');
+ await expect.poll(async()=>(await session(page)).info?.light?.radius).toBe(6);
+ await run(page,'studio3d.undo');
+ await expect.poll(async()=>(await session(page)).info?.light?.radius).toBe(1);
+ // Studio rig: two area softboxes plus a directional top, added and removed in one undo step.
+ await page.getByTestId('studio3d-insert').getByRole('button',{name:'Studio'}).click();
+ await expect.poll(async()=>(await session(page)).outline.filter(o=>o.kind==='light').length).toBe(4);
+ await run(page,'studio3d.undo');
+ await expect.poll(async()=>(await session(page)).outline.filter(o=>o.kind==='light').length).toBe(1);
+ // Sunset rig: a warm directional sun and a cool ambient sky.
+ await page.getByTestId('studio3d-insert').getByRole('button',{name:'Sunset'}).click();
+ await expect.poll(async()=>(await session(page)).outline.filter(o=>o.kind==='light').length).toBe(3);
+ await run(page,'studio3d.undo');
+ // The classic three-point rig still works from the same command.
+ expect(await run(page,'studio3d.light.rig',{preset:'three-point'})).toBe(true);
+ await expect.poll(async()=>(await session(page)).outline.filter(o=>o.kind==='light').length).toBe(4);
+});

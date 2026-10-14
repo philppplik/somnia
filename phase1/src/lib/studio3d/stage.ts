@@ -25,6 +25,8 @@ import {emptyStats,boundsValid,boundsCenter,boundsRadius,unitScale,type ModelSta
  */
 export type {PrimitiveKind}from './primitives';
 export type LightKind='directional'|'point'|'spot'|'area'|'ambient';
+/** One-click light rig presets. */
+export type LightRigPreset='three-point'|'studio'|'sunset';
 export const PRIMITIVES:readonly PrimitiveKind[]=PRIMITIVE_KINDS;
 export const LIGHTS:readonly LightKind[]=['directional','point','spot','area','ambient'];
 export interface Vec3{x:number;y:number;z:number}
@@ -42,8 +44,8 @@ export interface ObjectInfo{
  /** UV state of a mesh: whether a uv attribute exists, the island count (0 when unreadable) and the marked seam count; null for non-meshes. */uv:{hasUv:boolean;islands:number;seams:number}|null;
  material:{color:string;metalness:number;roughness:number;emissive?:string;emissiveIntensity?:number;opacity?:number;alphaMode?:AlphaMode;alphaCutoff?:number;doubleSided?:boolean;/** Name of the image in each slot, or null */textures?:Record<TextureSlot,string|null>;/** UV transform per slot, null where the slot is empty */transforms?:Record<TextureSlot,TextureTransform|null>}|null;light:LightInfo|null;
 }
-export interface LightInfo{intensity:number;color:string;/** shadow casting; absent for area lights, which cannot cast shadows */shadow?:boolean;/** spot cone, degrees */angle?:number;penumbra?:number;width?:number;height?:number}
-export interface LightPatch{intensity?:number;color?:string;shadow?:boolean;angle?:number;penumbra?:number;width?:number;height?:number}
+export interface LightInfo{intensity:number;color:string;/** shadow casting; absent for area lights, which cannot cast shadows */shadow?:boolean;/** shadow softness (light.shadow.radius); present on shadow-capable lights */radius?:number;/** spot cone, degrees */angle?:number;penumbra?:number;width?:number;height?:number}
+export interface LightPatch{intensity?:number;color?:string;shadow?:boolean;/** shadow softness, 0 to 50 */radius?:number;angle?:number;penumbra?:number;width?:number;height?:number}
 export type AlignAxis='x'|'y'|'z';
 export type AlignTo='min'|'center'|'max';
 export type PivotAt='center'|'base';
@@ -74,7 +76,7 @@ export function collectNodeExtras(root:THREE.Object3D):NodeExtra[]{
    e={i,area:{position:o.position.toArray() as [number,number,number],quaternion:o.quaternion.toArray().slice(0,4) as [number,number,number,number],scale:o.scale.toArray() as [number,number,number],color:'#'+ra.color.getHexString(),intensity:ra.intensity,width:ra.width,height:ra.height,name:o.name}};
   }else if(am.isAmbientLight){
    e={i,ambient:{color:'#'+am.color.getHexString(),intensity:am.intensity,name:o.name}};
-  }else if(l.isLight&&l.castShadow)e={i,shadow:true};
+  }else if(l.isLight&&l.castShadow)e={i,shadow:true,radius:(l as THREE.DirectionalLight).shadow?.radius??1};
   if(!o.visible){e=e??{i};e.hidden=true;}
   if(o.userData.somniaLocked===true){e=e??{i};e.locked=true;}
   if(e)out.push(e);
@@ -99,7 +101,7 @@ export function applyNodeExtras(root:THREE.Object3D,extras:readonly NodeExtra[])
    light.name=a.name||o.name;light.position.fromArray(a.position);light.quaternion.fromArray(a.quaternion);light.scale.fromArray(a.scale);
    const parent=o.parent;const at=parent.children.indexOf(o);parent.remove(o);parent.add(light);parent.children.splice(parent.children.indexOf(light),1);parent.children.splice(at,0,light);
    target=light;
-  }else if(e.shadow){const l=o as THREE.Light;if(l.isLight&&!(l as THREE.RectAreaLight).isRectAreaLight)l.castShadow=true;else skipped++;}
+  }else if(e.shadow){const l=o as THREE.Light;if(l.isLight&&!(l as THREE.RectAreaLight).isRectAreaLight){l.castShadow=true;if(e.radius!==undefined)(l as THREE.DirectionalLight).shadow.radius=e.radius;}else skipped++;}
   if(e.hidden)target.visible=false;
   if(e.locked)target.userData.somniaLocked=true;
  }
@@ -162,7 +164,7 @@ function geometryFor(kind:PrimitiveKind,p:PrimitiveParams):THREE.BufferGeometry{
 function lightInfo(l:THREE.Light):LightInfo{
  const info:LightInfo={intensity:l.intensity,color:'#'+l.color.getHexString()};
  const sp=l as THREE.SpotLight,ra=l as THREE.RectAreaLight;
- if(l.castShadow!==undefined&&!(l as THREE.RectAreaLight).isRectAreaLight&&!(l as THREE.AmbientLight).isAmbientLight)info.shadow=l.castShadow;
+ if(l.castShadow!==undefined&&!(l as THREE.RectAreaLight).isRectAreaLight&&!(l as THREE.AmbientLight).isAmbientLight){info.shadow=l.castShadow;info.radius=(l as THREE.DirectionalLight).shadow?.radius??1;}
  if(sp.isSpotLight){info.angle=sp.angle/DEG;info.penumbra=sp.penumbra;}
  if(ra.isRectAreaLight){info.width=ra.width;info.height=ra.height;}
  return info;
@@ -268,25 +270,41 @@ export class Stage{
   if(kind==='area')light.lookAt(0,0,0);
   this.attach(light,this.root,this.root.children.length,`Add ${light.name}`);return light;
  }
- /** Adds a classic three-point light rig (key, fill, rim) aimed at the scene bounds centre. One undo step. Returns key, fill and rim. */
- addLightRig():THREE.DirectionalLight[]{
+ /** Adds a one-click light rig aimed at the scene bounds centre. One undo step. */
+ addLightRig(preset?:'three-point'):THREE.DirectionalLight[];
+ addLightRig(preset?:LightRigPreset):THREE.Light[];
+ addLightRig(preset:LightRigPreset='three-point'):THREE.Light[]{
   const b=this.measure().bounds;const ok=b&&boundsValid(b);
   const c=ok?boundsCenter(b):[0,0.5,0] as [number,number,number];
   const r=ok?Math.max(boundsRadius(b),0.25):1;
-  const defs:{name:string;i:number;off:[number,number,number];shadow:boolean}[]=[
-   {name:'Key light',i:3,off:[1.5,2,1.2],shadow:true},
-   {name:'Fill light',i:1.1,off:[-1.8,0.9,1.4],shadow:false},
-   {name:'Rim light',i:2.4,off:[-0.4,1.8,-2],shadow:false}];
-  const lights=defs.map(d=>{
-   const l=new THREE.DirectionalLight(0xffffff,d.i);l.name=this.uniqueName(d.name);
-   l.position.set(c[0]+d.off[0]*r,c[1]+d.off[1]*r,c[2]+d.off[2]*r);
-   l.castShadow=d.shadow;l.target.name=`${l.name} target`;l.target.position.set(c[0],c[1],c[2]);
-   return l;
-  });
-  const added:THREE.Object3D[]=[];
-  for(const l of lights){this.root.add(l);added.push(l);this.root.add(l.target);added.push(l.target);}
+  const added:THREE.Object3D[]=[];const lights:THREE.Light[]=[];
+  const aim=(l:THREE.DirectionalLight)=>{l.target.name=`${l.name} target`;l.target.position.set(c[0],c[1],c[2]);this.root.add(l.target);added.push(l.target);};
+  const put=<L extends THREE.Light>(l:L,pos:[number,number,number]):L=>{l.position.set(...pos);this.root.add(l);added.push(l);lights.push(l);return l;};
+  let label='Add three-point light rig';
+  if(preset==='studio'){
+   // Product-shot softboxes: a large key from the left, a gentler fill from the right and a small shadow-casting top light.
+   const key=put(new THREE.RectAreaLight(0xffffff,4,5*r,4*r),[c[0]-2.5*r,c[1]+2*r,c[2]+2*r]);key.name=this.uniqueName('Studio key');
+   const fill=put(new THREE.RectAreaLight(0xffffff,1.6,3*r,3*r),[c[0]+2.5*r,c[1]+1.2*r,c[2]+1.6*r]);fill.name=this.uniqueName('Studio fill');
+   const top=put(new THREE.DirectionalLight(0xffffff,1.4),[c[0],c[1]+3.5*r,c[2]+0.5*r]);top.name=this.uniqueName('Studio top');top.castShadow=true;aim(top);
+   key.lookAt(c[0],c[1],c[2]);fill.lookAt(c[0],c[1],c[2]);
+   label='Add studio light rig';
+  }else if(preset==='sunset'){
+   // Low warm sun with long shadows plus a cool sky bounce.
+   const sun=put(new THREE.DirectionalLight(0xffb36b,2.5),[c[0]+3*r,c[1]+0.7*r,c[2]-1.5*r]);sun.name=this.uniqueName('Sunset sun');sun.castShadow=true;aim(sun);
+   put(new THREE.AmbientLight(0x5a6b8c,0.6),[0,0,0]).name=this.uniqueName('Sunset sky');
+   label='Add sunset light rig';
+  }else{
+   const defs:{name:string;i:number;off:[number,number,number];shadow:boolean}[]=[
+    {name:'Key light',i:3,off:[1.5,2,1.2],shadow:true},
+    {name:'Fill light',i:1.1,off:[-1.8,0.9,1.4],shadow:false},
+    {name:'Rim light',i:2.4,off:[-0.4,1.8,-2],shadow:false}];
+   for(const d of defs){
+    const l=put(new THREE.DirectionalLight(0xffffff,d.i),[c[0]+d.off[0]*r,c[1]+d.off[1]*r,c[2]+d.off[2]*r]);
+    l.name=this.uniqueName(d.name);l.castShadow=d.shadow;aim(l);
+   }
+  }
   let owned=true;
-  this.push({label:'Add three-point light rig',
+  this.push({label,
    undo:()=>{for(const o of added)this.root.remove(o);owned=false;},
    redo:()=>{for(const o of added)this.root.add(o);owned=true;},
    release:()=>{if(!owned)for(const l of lights)disposeObject(l);}});
@@ -354,12 +372,13 @@ export class Stage{
   if(patch.angle!==undefined&&!sp.isSpotLight)throw new StageError('Only spot lights have a cone angle.');
   if(patch.penumbra!==undefined&&!sp.isSpotLight)throw new StageError('Only spot lights have a penumbra.');
   if((patch.width!==undefined||patch.height!==undefined)&&!ra.isRectAreaLight)throw new StageError('Only area lights have a width and height.');
+  if(patch.radius!==undefined&&(ra.isRectAreaLight||(o as THREE.AmbientLight).isAmbientLight))throw new StageError('Only directional, point and spot lights have shadow softness.');
   const num=(v:number|undefined,what:string,min:number,max:number)=>{if(v===undefined)return undefined;const n=finite(v,what);if(n<min||n>max)throw new StageError(`${what} must be between ${min} and ${max}.`);return n;};
-  const next={i:num(patch.intensity,'intensity',0,100000),c:patch.color,sh:patch.shadow,a:num(patch.angle,'angle',1,90),p:num(patch.penumbra,'penumbra',0,1),w:num(patch.width,'width',0.01,1000),h:num(patch.height,'height',0.01,1000)};
-  const read=()=>({i:o.intensity,c:'#'+o.color.getHexString(),sh:o.castShadow,a:sp.isSpotLight?sp.angle/DEG:undefined,p:sp.isSpotLight?sp.penumbra:undefined,w:ra.isRectAreaLight?ra.width:undefined,h:ra.isRectAreaLight?ra.height:undefined});
+  const next={i:num(patch.intensity,'intensity',0,100000),c:patch.color,sh:patch.shadow,r:num(patch.radius,'radius',0,50),a:num(patch.angle,'angle',1,90),p:num(patch.penumbra,'penumbra',0,1),w:num(patch.width,'width',0.01,1000),h:num(patch.height,'height',0.01,1000)};
+  const read=()=>({i:o.intensity,c:'#'+o.color.getHexString(),sh:o.castShadow,r:(o as THREE.DirectionalLight).shadow?.radius??1,a:sp.isSpotLight?sp.angle/DEG:undefined,p:sp.isSpotLight?sp.penumbra:undefined,w:ra.isRectAreaLight?ra.width:undefined,h:ra.isRectAreaLight?ra.height:undefined});
   const before=read();
-  const write=(v:ReturnType<typeof read>)=>{o.intensity=v.i;o.castShadow=v.sh;o.color.set(v.c);if(sp.isSpotLight){sp.angle=v.a!*DEG;sp.penumbra=v.p!;}if(ra.isRectAreaLight){ra.width=v.w!;ra.height=v.h!;}};
-  const after={i:next.i??before.i,c:next.c??before.c,sh:next.sh??before.sh,a:next.a??before.a,p:next.p??before.p,w:next.w??before.w,h:next.h??before.h};
+  const write=(v:ReturnType<typeof read>)=>{o.intensity=v.i;o.castShadow=v.sh;o.color.set(v.c);const sh=(o as THREE.DirectionalLight).shadow;if(sh)sh.radius=v.r;if(sp.isSpotLight){sp.angle=v.a!*DEG;sp.penumbra=v.p!;}if(ra.isRectAreaLight){ra.width=v.w!;ra.height=v.h!;}};
+  const after={i:next.i??before.i,c:next.c??before.c,sh:next.sh??before.sh,r:next.r??before.r,a:next.a??before.a,p:next.p??before.p,w:next.w??before.w,h:next.h??before.h};
   if(JSON.stringify(after)===JSON.stringify(before))return;
   write(after);this.push({label:`Light ${o.name}`,undo:()=>write(before),redo:()=>write(after)});
  }

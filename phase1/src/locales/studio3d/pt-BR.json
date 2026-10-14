@@ -592,5 +592,9 @@
  "cmd.studio3d.measure.set": "Alternar a ferramenta de medição 3D",
  "cmd.studio3d.object.reorder": "Mover objetos 3D para ao lado de um irmão no esquema",
  "studio3d.material.preset.emissive": "Emissivo",
- "studio3d.material.swatch": "Prévia do material"
+ "studio3d.material.swatch": "Prévia do material",
+ "studio3d.light.rig.threePoint": "Três pontos",
+ "studio3d.light.rig.studio": "Estúdio",
+ "studio3d.light.rig.sunset": "Pôr do sol",
+ "studio3d.light.softness": "Suavidade da sombra"
 }

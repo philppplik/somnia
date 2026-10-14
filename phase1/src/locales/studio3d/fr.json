@@ -592,5 +592,9 @@
  "cmd.studio3d.measure.set": "Activer l'outil de mesure 3D",
  "cmd.studio3d.object.reorder": "Déplacer des objets 3D à côté d'un voisin dans le plan",
  "studio3d.material.preset.emissive": "Émissif",
- "studio3d.material.swatch": "Aperçu du matériau"
+ "studio3d.material.swatch": "Aperçu du matériau",
+ "studio3d.light.rig.threePoint": "Trois points",
+ "studio3d.light.rig.studio": "Studio",
+ "studio3d.light.rig.sunset": "Coucher de soleil",
+ "studio3d.light.softness": "Douceur d'ombre"
 }

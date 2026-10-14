@@ -7,6 +7,7 @@ import {PLYLoader} from 'three/addons/loaders/PLYLoader.js';
 import {OBJLoader} from 'three/addons/loaders/OBJLoader.js';
 import {MTLLoader} from 'three/addons/loaders/MTLLoader.js';
 import {RectAreaLightUniformsLib} from 'three/addons/lights/RectAreaLightUniformsLib.js';
+import {RectAreaLightHelper} from 'three/addons/helpers/RectAreaLightHelper.js';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import {clone as skeletonClone} from 'three/addons/utils/SkeletonUtils.js';
 import {STLExporter} from 'three/addons/exporters/STLExporter.js';
@@ -66,7 +67,7 @@ export default function Viewport3D(){
  useEffect(()=>{
   const el=host.current!;
   const renderer=new THREE.WebGLRenderer({antialias:true,alpha:true,powerPreference:'high-performance'});
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,2));renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;RectAreaLightUniformsLib.init();renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,2));renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;RectAreaLightUniformsLib.init();renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.VSMShadowMap; // VSM honours shadow.radius, so the softness slider really works.
   renderer.domElement.style.cssText='display:block;width:100%;height:100%;outline:none;touch-action:none';
   renderer.domElement.tabIndex=0;renderer.domElement.setAttribute('role','img');renderer.domElement.setAttribute('aria-label',t('studio3d.canvas.label'));
   el.appendChild(renderer.domElement);
@@ -351,7 +352,7 @@ export default function Viewport3D(){
      const hit=stage.snapPoint({x:w.x,y:w.y,z:w.z},sn.mode,[id],Math.max(sn.move,0.05));
      if(hit){o.position.copy(o.parent.worldToLocal(new THREE.Vector3(hit.x,hit.y,hit.z)));o.updateMatrixWorld(true);drawSelection();invalidate();}}
    }
-   if(id!=null)patchStudio3D({selectedInfo:stage.info(id)});drawSelection();});
+   if(id!=null)patchStudio3D({selectedInfo:stage.info(id)});drawSelection();syncLightHelper();});
   /** The objects an edit acts on: the multi-selection, or the single selected object. */
   const currentSet=():number[]=>{const st=getStudio3DState();const m=st.marked.filter(x=>stage.find(x));return m.length?m:st.selected!=null&&stage.find(st.selected)?[st.selected]:[];};
   // The transform pivot: the selection centre (default), the world origin, or the 3D cursor.
@@ -403,7 +404,7 @@ export default function Viewport3D(){
    const list=stage.bones();const key=list.map(b=>b.id).join(',');
    if(key!==skelKey){
     skelKey=key;
-    if(painting){painting=false;}const openSel=getStudio3DState().selected;if(openSel!=null)stage.skinPaintEnd(openSel);if(skelHelper){scene.remove(skelHelper);skelHelper.geometry.dispose();(skelHelper.material as THREE.Material).dispose();skelHelper=null;}if(weightOverlay){scene.remove(weightOverlay);weightOverlay.geometry.dispose();(weightOverlay.material as THREE.Material).dispose();weightOverlay=null;}if(maskOverlay){scene.remove(maskOverlay);maskOverlay.geometry.dispose();(maskOverlay.material as THREE.Material).dispose();maskOverlay=null;}
+    if(painting){painting=false;}const openSel=getStudio3DState().selected;if(openSel!=null)stage.skinPaintEnd(openSel);if(lightHelper){scene.remove(lightHelper);(lightHelper as HelperObj).dispose?.();lightHelper=null;}if(skelHelper){scene.remove(skelHelper);skelHelper.geometry.dispose();(skelHelper.material as THREE.Material).dispose();skelHelper=null;}if(weightOverlay){scene.remove(weightOverlay);weightOverlay.geometry.dispose();(weightOverlay.material as THREE.Material).dispose();weightOverlay=null;}if(maskOverlay){scene.remove(maskOverlay);maskOverlay.geometry.dispose();(maskOverlay.material as THREE.Material).dispose();maskOverlay=null;}
     if(list.length)skelHelper=new THREE.SkeletonHelper(stage.root);
     if(skelHelper)scene.add(skelHelper);
    }
@@ -506,7 +507,24 @@ export default function Viewport3D(){
    stage.root.traverse(o=>{const c=o as THREE.PerspectiveCamera;if(!c.isPerspectiveCamera)return;live.add(c.id);let h=helpers.get(c.id);if(!h){h=new THREE.CameraHelper(c);helpers.set(c.id,h);scene.add(h);}c.updateMatrixWorld(true);h.update();});
    for(const [id,h] of helpers)if(!live.has(id)){scene.remove(h);h.dispose();helpers.delete(id);}
   };
-  syncHooks.push(()=>{syncGizmo();syncCameraHelpers();});
+  /** Helper for the selected light (directional, point, spot or area). Lives in the outer scene, so exports and bounds never see it. */
+  let lightHelper:THREE.Object3D|null=null;let lightHelperId=-1;
+  type HelperObj=THREE.Object3D&{update?:()=>void;dispose?:()=>void};
+  const syncLightHelper=()=>{
+   const id=getStudio3DState().selected;const o=id==null?null:stage.find(id) as THREE.Light|null;
+   const ok=!!o&&!!o.isLight&&!(o as THREE.AmbientLight).isAmbientLight;
+   if(lightHelper&&(!ok||lightHelperId!==o!.id)){scene.remove(lightHelper);(lightHelper as HelperObj).dispose?.();lightHelper=null;lightHelperId=-1;}
+   if(!ok)return;
+   if(!lightHelper){
+    if((o as THREE.DirectionalLight).isDirectionalLight)lightHelper=new THREE.DirectionalLightHelper(o as THREE.DirectionalLight,0.6);
+    else if((o as THREE.PointLight).isPointLight)lightHelper=new THREE.PointLightHelper(o as THREE.PointLight,0.35);
+    else if((o as THREE.SpotLight).isSpotLight)lightHelper=new THREE.SpotLightHelper(o as THREE.SpotLight);
+    else if((o as THREE.RectAreaLight).isRectAreaLight)lightHelper=new RectAreaLightHelper(o as THREE.RectAreaLight);
+    if(lightHelper){scene.add(lightHelper);lightHelperId=o!.id;}
+   }
+   (lightHelper as HelperObj|null)?.update?.();
+  };
+  syncHooks.push(()=>{syncGizmo();syncCameraHelpers();syncLightHelper();});
   const syncShadows=()=>{
    const r=bounds&&boundsValid(bounds)?Math.max(boundsRadius(bounds),1):5;
    holder.traverse(o=>{
@@ -905,7 +923,7 @@ export default function Viewport3D(){
   });
   const off=registerStudio3DController({keyMove,keyEase,keyCopy,keyShift,clipDuplicate,animRange,selectBone,setSkeleton,skinBind,skinRebind,setWeightPreview,setWeightBrush,paintDab,poseSave,poseApply,poseRemove,poseMirror,poseBlend,ikToggle,ikSetTarget,ikSetPole,recordPose,onionSkin,motionPathToggle,retargetPreview:retargetPreviewC,retargetApply:retargetApplyC,fabrikToggle,fabrikSetTarget,fabrikLookToggle,fabrikSetLook,setBoneLimits,keyPaste,autoKey,clipAdd,clipRemove,clipRename,clipDuration,keySet,keyRemove,animPlay,animPause,animSeek,animLoop,animSpeed,setTextureTransform:(id,slot,p)=>stage.setTextureTransform(id,slot,p),exportGltf,setTextureFile,mirrorSelection,applyScale:applyScaleSel,mergeSelection:mergeSel,viewPreset,setPrimitive:(id,p)=>stage.setPrimitive(id,p),
    save:saveDocument,deleteSelection,duplicateSelection,exportMesh,setExportOptions,renderTurntable,cancelRender:()=>{cancelFlag=true;},setUnit,openFiles,newScene,resetView:frameAll,frameSelection,select,renderStill,exportGlb,
-   addPrimitive:k=>{const o=stage.addPrimitive(k);select(o.id);return o.id;},addLight:k=>{const o=stage.addLight(k);select(o.id);return o.id;},addLightRig:()=>{const l=stage.addLightRig();select(l[0].id);return l.map(x=>x.id);},
+   addPrimitive:k=>{const o=stage.addPrimitive(k);select(o.id);return o.id;},addLight:k=>{const o=stage.addLight(k);select(o.id);return o.id;},addLightRig:preset=>{const l=stage.addLightRig(preset);select(l[0].id);return l.map(x=>x.id);},
    setTransform:(id,p)=>stage.setTransform(id,p),setMaterial:(id,p)=>stage.setMaterial(id,p),rename:(id,n)=>stage.rename(id,n),
    setObjectVisible:(id,on)=>{stage.setHidden(id,!on);sync();invalidate();},setObjectLocked:(id,on)=>{stage.setLocked(id,on);sync();},reparent:(ids,parent)=>{stage.reparent(ids,parent);sync();invalidate();},reorder:(ids,target,where)=>{stage.reorder(ids,target,where);sync();invalidate();},
    addCamera:(fromView,kind)=>{
@@ -1150,7 +1168,7 @@ export default function Viewport3D(){
    disposed=true;opening++;stopAnim();offDrop();mixer?.stopAllAction();stage.autoKeySource=null;off();offAuto();if(autoTimer)clearTimeout(autoTimer);cancelAnimationFrame(frame);ro.disconnect();controls.dispose();
    cv.removeEventListener('pointerdown',onDownCapture,true);cv.removeEventListener('pointerdown',onDown);window.removeEventListener('pointermove',onMove);window.removeEventListener('pointercancel',endMarquee);endMarquee();cv.removeEventListener('pointerup',onUp);cv.removeEventListener('keydown',onKey);
    if(getStudio3DState().status==='loading')patchStudio3D({status:stage.root.children.length?'ready':'idle',confirmReplace:null});
-   gizmo.detach();gizmo.dispose();ikGizmo.detach();ikGizmo.dispose();poleGizmo.detach();poleGizmo.dispose();fkGizmo.detach();fkGizmo.dispose();lookGizmo.detach();lookGizmo.dispose();clearGhosts();scene.remove(ghosts);if(pathLine){pathLine.geometry.dispose();(pathLine.material as THREE.Material).dispose();pathLine=null;}fkTarget.geometry.dispose();(fkTarget.material as THREE.Material).dispose();fkLook.geometry.dispose();(fkLook.material as THREE.Material).dispose();ikTarget.geometry.dispose();(ikTarget.material as THREE.Material).dispose();ikPoleM.geometry.dispose();(ikPoleM.material as THREE.Material).dispose();offStage();clearSelection();if(painting){painting=false;}const openSel=getStudio3DState().selected;if(openSel!=null)stage.skinPaintEnd(openSel);if(skelHelper){scene.remove(skelHelper);skelHelper.geometry.dispose();(skelHelper.material as THREE.Material).dispose();skelHelper=null;}if(weightOverlay){scene.remove(weightOverlay);weightOverlay.geometry.dispose();(weightOverlay.material as THREE.Material).dispose();weightOverlay=null;}if(maskOverlay){scene.remove(maskOverlay);maskOverlay.geometry.dispose();(maskOverlay.material as THREE.Material).dispose();maskOverlay=null;}for(const h of helpers.values())h.dispose();grid.geometry.dispose();(grid.material as THREE.Material).dispose();cursorGeo.dispose();cursorMat.dispose();scene.remove(cursorMark);mLineGeo.dispose();mLineMat.dispose();mDotGeo.dispose();mDotMat.dispose();scene.remove(measureGroup);for(const t of envTargets)t.dispose();envCache.clear();pmrem.dispose();renderer.dispose();renderer.forceContextLoss();
+   gizmo.detach();gizmo.dispose();ikGizmo.detach();ikGizmo.dispose();poleGizmo.detach();poleGizmo.dispose();fkGizmo.detach();fkGizmo.dispose();lookGizmo.detach();lookGizmo.dispose();clearGhosts();scene.remove(ghosts);if(pathLine){pathLine.geometry.dispose();(pathLine.material as THREE.Material).dispose();pathLine=null;}fkTarget.geometry.dispose();(fkTarget.material as THREE.Material).dispose();fkLook.geometry.dispose();(fkLook.material as THREE.Material).dispose();ikTarget.geometry.dispose();(ikTarget.material as THREE.Material).dispose();ikPoleM.geometry.dispose();(ikPoleM.material as THREE.Material).dispose();offStage();clearSelection();if(painting){painting=false;}const openSel=getStudio3DState().selected;if(openSel!=null)stage.skinPaintEnd(openSel);if(lightHelper){scene.remove(lightHelper);(lightHelper as HelperObj).dispose?.();lightHelper=null;}if(skelHelper){scene.remove(skelHelper);skelHelper.geometry.dispose();(skelHelper.material as THREE.Material).dispose();skelHelper=null;}if(weightOverlay){scene.remove(weightOverlay);weightOverlay.geometry.dispose();(weightOverlay.material as THREE.Material).dispose();weightOverlay=null;}if(maskOverlay){scene.remove(maskOverlay);maskOverlay.geometry.dispose();(maskOverlay.material as THREE.Material).dispose();maskOverlay=null;}for(const h of helpers.values())h.dispose();grid.geometry.dispose();(grid.material as THREE.Material).dispose();cursorGeo.dispose();cursorMat.dispose();scene.remove(cursorMark);mLineGeo.dispose();mLineMat.dispose();mDotGeo.dispose();mDotMat.dispose();scene.remove(measureGroup);for(const t of envTargets)t.dispose();envCache.clear();pmrem.dispose();renderer.dispose();renderer.forceContextLoss();
    if(cv.parentNode===el)el.removeChild(cv);
   };
  // eslint-disable-next-line react-hooks/exhaustive-deps

@@ -39,7 +39,7 @@ export function ScenePanel(_:PanelHostProps){
   <div className="flex flex-wrap gap-1" role="group" aria-label={t('studio3d.insert.group')} data-testid="studio3d-insert">
    {PRIMS.map(k=><Button key={k} variant="outline" onClick={()=>void executeCommand('studio3d.insert.primitive',{kind:k})}>{t('studio3d.insert.'+k)}</Button>)}
    {LIGHTS.map(k=><Button key={k} variant="outline" onClick={()=>void executeCommand('studio3d.insert.light',{kind:k})}>{t('studio3d.insert.'+k)}</Button>)}
-   <Button variant="outline" onClick={()=>void executeCommand('studio3d.light.rig',{})}>{t('studio3d.light.rig')}</Button>
+   {(['three-point','studio','sunset'] as const).map(preset=><Button key={preset} variant="outline" onClick={()=>void executeCommand('studio3d.light.rig',{preset})}>{t('studio3d.light.rig.'+preset)}</Button>)}
    <Button variant="outline" onClick={()=>void executeCommand('studio3d.insert.camera',{})}>{t('studio3d.insert.camera')}</Button>
    <Button variant="outline" onClick={()=>void executeCommand('studio3d.insert.camera',{fromView:true})}>{t('studio3d.insert.camera.view')}</Button>
    <Button variant="outline" onClick={()=>void executeCommand('studio3d.insert.camera',{kind:'orthographic'})}>{t('studio3d.insert.camera.ortho')}</Button>
@@ -466,6 +466,7 @@ function LightFields({id,light}:{id:number;light:NonNullable<ObjectInfo['light']
  const {t}=useT();const set=(p:Record<string,unknown>)=>void executeCommand('studio3d.light.set',{id,...p});
  return <fieldset className="m-0 grid gap-2 border-0 p-0" data-testid="studio3d-light"><legend className="text-xs text-ink-3">{t('studio3d.light.title')}</legend>
   {light.shadow!==undefined&&<label className="flex items-center gap-2 text-xs text-ink-2"><input type="checkbox" checked={light.shadow} onChange={e=>set({shadow:e.currentTarget.checked})}/>{t('studio3d.light.shadow')}</label>}
+  {light.shadow&&light.radius!==undefined&&<NumField resetKey={id} label={t('studio3d.light.softness')} value={light.radius} min={0} max={50} step={0.5} onCommit={v=>set({radius:v})}/>}
   <NumField resetKey={id} label={t('studio3d.light.intensity')} value={light.intensity} min={0} max={100000} step={1} onCommit={n=>set({intensity:n})}/>
   <label className="flex items-center justify-between gap-2 text-xs text-ink-2">{t('studio3d.material.color')}<input type="color" key={light.color} defaultValue={light.color} onBlur={e=>{if(e.currentTarget.value!==light.color)set({color:e.currentTarget.value});}}/></label>
   {light.angle!==undefined&&<NumField resetKey={id} label={t('studio3d.light.angle')} value={light.angle} min={1} max={90} step={1} onCommit={n=>set({angle:n})}/>}
