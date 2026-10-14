@@ -1860,5 +1860,34 @@ test('P79 path effects: zig zag and wave markup, absent field unchanged, validat
  assert.equal(frameSvg(comp(applyEdit(zz,{type:'layer.pathFx',layer:'pa',pathFx:null})),0),plain);
  assert.equal(frameSvg(comp(applyEdit(d,{type:'layer.pathFx',layer:'pa',pathFx:{kind:'zigzag',size:0,ridges:2}})),0).includes('<path'),true);
  assert.deepEqual(validateDocument(zz),[]);
- for(const bad of [{kind:'x'},{size:-1},{size:201},{ridges:0},{ridges:21},{ridges:1.5}])assert.throws(()=>applyEdit(d,{type:'layer.pathFx',layer:'pa',pathFx:{kind:'zigzag',size:10,ridges:2,...bad} as never}),Error);
+ for(const bad of [{kind:'x'},{size:-201},{size:201},{ridges:0},{ridges:21},{ridges:1.5}])assert.throws(()=>applyEdit(d,{type:'layer.pathFx',layer:'pa',pathFx:{kind:'zigzag',size:10,ridges:2,...bad} as never}),Error);
+});
+
+test('P80 path effects: round corners, twist, keyable size, lanes, bake, validation',()=>{
+ const d=strokeDoc([{x:0.1,y:0.1},{x:0.9,y:0.1},{x:0.9,y:0.9},{x:0.1,y:0.9}],true,4);
+ const pathD=(x:string)=>/<path d="([^"]*)"/.exec(x)![1];
+ const plain=pathD(frameSvg(comp(d),0));
+ const round=applyEdit(d,{type:'layer.pathFx',layer:'pa',pathFx:{kind:'round',size:10,ridges:1}});
+ const rd=pathD(frameSvg(comp(round),0));
+ assert.equal((rd.match(/C/g)??[]).length,8,'4 corners become 2 anchors each');
+ const twisted=pathD(frameSvg(comp(applyEdit(d,{type:'layer.pathFx',layer:'pa',pathFx:{kind:'twist',size:45,ridges:2}})),0));
+ assert.notEqual(twisted,plain);
+ // keyable size
+ const T=8000*30;
+ let k=applyEdit(d,{type:'layer.pathFx',layer:'pa',pathFx:{kind:'zigzag',size:0,ridges:2}});
+ k=applyEdit(k,{type:'pathfx.size',layer:'pa',op:'animate',on:true,t:0});
+ k=applyEdit(k,{type:'pathfx.size',layer:'pa',op:'set',value:20,t:T*2});
+ assert.equal(pathD(frameSvg(comp(k),0)),pathD(frameSvg(comp(applyEdit(d,{type:'layer.pathFx',layer:'pa',pathFx:{kind:'zigzag',size:0,ridges:2}})),0)),'key at the static size changes nothing');
+ const half=pathD(frameSvg(comp(k),T)),full=pathD(frameSvg(comp(k),T*2));
+ assert.notEqual(half,full);
+ assert.deepEqual(validateDocument(k),[]);
+ const lay=comp(k).layers.find(l=>l.id==='pa')!;
+ assert.deepEqual(styleKeyLanes(lay).find(l=>l.id==='pathFxSize')!.ticks,[0,T*2]);
+ const moved=applyEdit(k,{type:'style.key.move',layer:'pa',lane:'pathFxSize',from:T*2,to:T*3});
+ assert.deepEqual(styleKeyLanes(comp(moved).layers.find(l=>l.id==='pa')!).find(l=>l.id==='pathFxSize')!.ticks,[0,T*3]);
+ const gone=applyEdits(k,styleKeyDeleteEdits('pa',[{lane:'pathFxSize',t:0},{lane:'pathFxSize',t:T*2}]));
+ const fx=comp(gone).layers.find(l=>l.id==='pa')!.pathFx!;
+ assert.equal(fx.sizeAnim,undefined);assert.equal(fx.size,20);
+ assert.throws(()=>applyEdit(k,{type:'pathfx.size',layer:'pa',op:'set',value:300,t:0}),Error);
+ assert.throws(()=>applyEdit(d,{type:'pathfx.size',layer:'pa',op:'set',value:1,t:0}),Error);
 });

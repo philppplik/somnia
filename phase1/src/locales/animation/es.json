@@ -661,5 +661,11 @@
  "animation.pathfx.zigzag": "Zigzag",
  "animation.pathfx.wave": "Onda",
  "animation.pathfx.size": "Tamaño (px)",
- "animation.pathfx.ridges": "Crestas por segmento"
+ "animation.pathfx.ridges": "Crestas por segmento",
+ "animation.pathfx.round": "Redondear esquinas",
+ "animation.pathfx.twist": "Torsión",
+ "animation.pathfx.size.round": "Radio (px)",
+ "animation.pathfx.size.zigzag": "Tamaño del zigzag (px)",
+ "animation.pathfx.size.wave": "Tamaño de la onda (px)",
+ "animation.pathfx.size.twist": "Ángulo de torsión (°)"
 }

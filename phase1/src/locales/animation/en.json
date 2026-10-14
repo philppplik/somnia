@@ -661,5 +661,11 @@
  "animation.pathfx.zigzag": "Zig zag",
  "animation.pathfx.wave": "Wave",
  "animation.pathfx.size": "Size (px)",
- "animation.pathfx.ridges": "Ridges per segment"
+ "animation.pathfx.ridges": "Ridges per segment",
+ "animation.pathfx.round": "Round corners",
+ "animation.pathfx.twist": "Twist",
+ "animation.pathfx.size.round": "Radius (px)",
+ "animation.pathfx.size.zigzag": "Zig zag size (px)",
+ "animation.pathfx.size.wave": "Wave size (px)",
+ "animation.pathfx.size.twist": "Twist angle (°)"
 }

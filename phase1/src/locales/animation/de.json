@@ -661,5 +661,11 @@
  "animation.pathfx.zigzag": "Zickzack",
  "animation.pathfx.wave": "Welle",
  "animation.pathfx.size": "Größe (px)",
- "animation.pathfx.ridges": "Zacken pro Segment"
+ "animation.pathfx.ridges": "Zacken pro Segment",
+ "animation.pathfx.round": "Ecken abrunden",
+ "animation.pathfx.twist": "Verdrehen",
+ "animation.pathfx.size.round": "Radius (px)",
+ "animation.pathfx.size.zigzag": "Zickzack-Größe (px)",
+ "animation.pathfx.size.wave": "Wellen-Größe (px)",
+ "animation.pathfx.size.twist": "Drehwinkel (°)"
 }

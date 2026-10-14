@@ -7,7 +7,7 @@ export type TransformKey=typeof TRANSFORM_KEYS[number];
 
 export const REPEATER_KEYS=['x','y','rotation','scale','opacity','hue'] as const;
 export type RepeaterKey=typeof REPEATER_KEYS[number];
-export type StyleLaneId='gain'|'strokeWidth'|'strokeOpacity'|'fill'|'stroke'|'repX'|'repY'|'repRotation'|'repScale'|'repOpacity'|'repHue'|'gradFillAngle'|'gradStrokeAngle'|GradientLaneId|GradientStopLaneId;
+export type StyleLaneId='gain'|'strokeWidth'|'strokeOpacity'|'fill'|'stroke'|'repX'|'repY'|'repRotation'|'repScale'|'repOpacity'|'repHue'|'gradFillAngle'|'gradStrokeAngle'|GradientLaneId|GradientStopLaneId|'pathFxSize';
 export const GRADIENT_KEYS=['cx','cy','radius','startOpacity','endOpacity'] as const;
 export type GradientKey=typeof GRADIENT_KEYS[number];
 export type GradientLaneId=`grad${'Fill'|'Stroke'}${'Cx'|'Cy'|'Radius'|'StartOpacity'|'EndOpacity'|'StartColor'|'EndColor'}`;

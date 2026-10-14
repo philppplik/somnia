@@ -394,3 +394,7 @@ Repeater `hue` (deg per copy, -360..360): copy i gets `filter=hue-rotate(hue*i d
 ## P79
 
 `Layer.pathFx {kind:'zigzag'|'wave',size,ridges}` on path shape layers. `applyPathFx` (pathFx.ts) samples every segment into 2*ridges parts, keeps anchors and offsets interior samples alternately by +/-size along the normal; wave adds tangent handles. Applied in `layerPathD`.
+
+## P80
+
+Path effects: `round` (size = corner radius px, only handle-less corners, KAPPA 0.5523 arcs) and `twist` (size = degrees at the farthest point, segments sampled into 2*ridges parts). `pathFx.sizeAnim` is a scalar Property (-200..200) sampled by `pathFxAt`; lane `pathFxSize`; edit `pathfx.size` (set/animate/remove, last key bakes). Bounds, Expand stroke, masks and the edit overlay still use the original path.

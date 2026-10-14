@@ -54,6 +54,7 @@ export type Edit=
  |{type:'gradient.prop';layer:string;target:'fill'|'stroke';prop:GradientKey;op:'set'|'animate'|'remove';value?:number;on?:boolean;t:number}
  |{type:'gradient.angle';layer:string;target:'fill'|'stroke';op:'set'|'animate'|'remove';value?:number;on?:boolean;t:number}
  |{type:'repeater.prop';layer:string;prop:RepeaterKey;op:'set'|'animate'|'remove';value?:number;on?:boolean;t:number}
+ |{type:'pathfx.size';layer:string;op:'set'|'animate'|'remove';value?:number;on?:boolean;t:number}
  |{type:'layer.pathFx';layer:string;pathFx:NonNullable<Layer['pathFx']>|null}
  |{type:'layer.repeater';layer:string;repeater:NonNullable<Layer['repeater']>|null}
  |{type:'effect.style';layer:string;effect:string;blur?:number;distance?:number;angle?:number}
@@ -273,7 +274,22 @@ function reduce(doc:AnimationDocument,e:Edit):AnimationDocument{
    const keys=anim!.keys.filter(x=>x.t!==t);
    if(keys.length)return put({},{...anim!,keys});
    return put({[k]:round(evaluate(anim!,t) as number)},undefined);}
-  case 'layer.pathFx':{const l=layerOf(doc,e.layer);if(e.pathFx===null){const {pathFx:_p,...rest}=l;return setLayer(doc,rest);}if(l.kind!=='shape'||l.source.shape!=='path')fail('invalid','Path effects need a path shape layer.');if(!validPathFx(e.pathFx))fail('invalid','Path effect: size 0 to 200 px, 1 to 20 ridges.');return setLayer(doc,{...l,pathFx:e.pathFx});}
+  case 'pathfx.size':{
+   const l=layerOf(doc,e.layer),fx=l.pathFx;if(!fx)fail('invalid','The layer has no path effect.');
+   const t=tickOf(compOf(doc),e.t),anim=fx!.sizeAnim,round=(n:number)=>Math.round(n*100)/100;
+   const put=(size:number|undefined,a:Property|undefined)=>{const {sizeAnim:_s,...rest}=fx!;return setLayer(doc,{...l,pathFx:{...rest,...(size!==undefined?{size}:{}),...(a?{sizeAnim:a}:{})}});};
+   if(e.op==='set'){
+    if(typeof e.value!=='number'||!Number.isFinite(e.value)||e.value<-200||e.value>200)fail('invalid','Path effect size must be -200 to 200.');
+    if(anim?.keys.length)return put(undefined,{...anim,keys:upsertKey(anim.keys,makeKey(t,e.value as number))});
+    return put(e.value as number,undefined);}
+   if(e.op==='animate'){
+    if(e.on)return anim?.keys.length?doc:put(undefined,{...prop('scalar',fx!.size),keys:[makeKey(t,fx!.size)]});
+    if(!anim?.keys.length)return doc;return put(round(evaluate(anim,t) as number),undefined);}
+   if(!anim||!anim.keys.some(x=>x.t===t))fail('missing','No path effect key at that time.');
+   const keys=anim!.keys.filter(x=>x.t!==t);
+   if(keys.length)return put(undefined,{...anim!,keys});
+   return put(round(evaluate(anim!,t) as number),undefined);}
+  case 'layer.pathFx':{const l=layerOf(doc,e.layer);if(e.pathFx===null){const {pathFx:_p,...rest}=l;return setLayer(doc,rest);}if(l.kind!=='shape'||l.source.shape!=='path')fail('invalid','Path effects need a path shape layer.');if(!validPathFx(e.pathFx))fail('invalid','Path effect: size -200 to 200, 1 to 20 ridges.');return setLayer(doc,{...l,pathFx:e.pathFx});}
   case 'layer.repeater':{const l=layerOf(doc,e.layer);if(e.repeater===null){const {repeater:_r,...rest}=l;return setLayer(doc,rest);}if(!validRepeater(e.repeater))fail('invalid','Repeater: 2 to 20 copies, offset up to 4096 px, rotation up to 3600 degrees, scale 1 to 400 percent, opacity 0 to 100 percent.');return setLayer(doc,{...l,repeater:e.repeater});}
   case 'layer.stroke':{const l=layerOf(doc,e.layer);if(e.stroke===null){const {stroke:_s,...rest}=l;return setLayer(doc,rest);}return setLayer(doc,{...l,stroke:e.stroke});}
   case 'effect.colorKey':case 'effect.bypassKey':{const l=layerOf(doc,e.layer),t=tickOf(compOf(doc),e.t),effect=l.effects?.find(x=>x.id===e.effect)??fail('missing','Effect no longer exists.');
@@ -338,6 +354,7 @@ function reduce(doc:AnimationDocument,e:Edit):AnimationDocument{
     return keys!.map(k=>k.t===e.from?{...k,t:to}:k).sort((a,b)=>a.t-b.t);};
    if(e.lane==='gain'){if(l.kind!=='comp'||!l.gain)fail('missing','No volume keys.');return setLayer(doc,{...l,gain:{...l.gain!,keys:shift(l.gain!.keys)}});}
    if(e.lane==='strokeWidth'||e.lane==='strokeOpacity'){const f=e.lane==='strokeWidth'?'widthAnim':'opacityAnim',a=l.stroke?.[f];if(!l.stroke||!a)fail('missing','No stroke keys.');return setLayer(doc,{...l,stroke:{...l.stroke!,[f]:{...a!,keys:shift(a!.keys)}}});}
+   if(e.lane==='pathFxSize'){const a=l.pathFx?.sizeAnim;if(!l.pathFx||!a)fail('missing','No path effect keys.');return setLayer(doc,{...l,pathFx:{...l.pathFx!,sizeAnim:{...a!,keys:shift(a!.keys)}}});}
    const gs=parseGradientStopLane(e.lane);
    if(gs){const fill=gs.target==='fill',g=fill?l.source.gradient:l.stroke?.gradient,st=g?.stops?.[gs.index];if(!g||!st||(gs.prop==='offset'?!st.offsetAnim:!st.colorKeys))fail('missing','No gradient stop keys.');
     const ns:GradientStop=gs.prop==='offset'?{...st!,offsetAnim:{...st!.offsetAnim!,keys:shift(st!.offsetAnim!.keys)}}:{...st!,colorKeys:shift(st!.colorKeys!)};
@@ -571,6 +588,7 @@ export {TRANSFORM_KEYS};
 export function styleKeyDeleteEdits(layer:string,picks:readonly {lane:StyleLaneId;t:number}[]):Edit[]{
  return picks.map((p):Edit=>p.lane==='gain'?{type:'layer.gain.key.remove',layer,t:p.t}
   :p.lane==='strokeWidth'||p.lane==='strokeOpacity'?{type:'stroke.prop',layer,prop:p.lane==='strokeWidth'?'width':'opacity',op:'remove',t:p.t}
+  :p.lane==='pathFxSize'?{type:'pathfx.size',layer,op:'remove',t:p.t}
   :parseGradientStopLane(p.lane)?{type:'gradient.stop',layer,target:parseGradientStopLane(p.lane)!.target,index:parseGradientStopLane(p.lane)!.index,prop:parseGradientStopLane(p.lane)!.prop,op:'remove',t:p.t}
   :parseGradientColorLane(p.lane)?{type:'gradient.color',layer,target:parseGradientColorLane(p.lane)!.target,which:parseGradientColorLane(p.lane)!.key,op:'remove',t:p.t}
   :parseGradientLane(p.lane)?{type:'gradient.prop',layer,target:parseGradientLane(p.lane)!.target,prop:parseGradientLane(p.lane)!.key,op:'remove',t:p.t}
