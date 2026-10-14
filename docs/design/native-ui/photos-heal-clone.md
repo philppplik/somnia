@@ -77,3 +77,23 @@ distractions.
   theme test shows the active toggle, radius slider and brush cursor;
   its canvas bitmaps are pixel-identical to the P44 base (3bb96d93) run
   with the same proof and spec.
+
+## Heal mode (P62)
+
+The stamp gains an optional `mode: 'clone' | 'heal'` per spot
+(absent = clone, so existing spots and payloads are unchanged). Clone
+still copies the source verbatim. Heal keeps the source's texture but
+shifts it to the destination surround: `applySpots` computes the
+coverage-weighted source mean and the mean of a clean annulus
+(1.0-1.4x radius) around the target and adds the difference before
+feathering, clamped to the channel range. When the annulus has no
+samples (stamp at the frame edge) the delta is zero and heal degrades
+to clone. `spotSignature` covers the mode, so undo, dirty tracking
+and the engine reload invariant see a mode flip like any other edit.
+
+The workspace shows a small "Heal" toggle (panel-persisted
+`photos.healMode`) next to the brush radius while the stamp tool is
+armed; drag strokes and auto-source clicks stamp new spots with the
+current mode. Unit tests pin the color adoption, the texture
+preservation and the mode-aware validation/signature; the gallery
+spec heals the red defect in heal mode in light and dark.

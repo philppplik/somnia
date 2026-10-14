@@ -72,6 +72,7 @@ export function PhotosWorkspace({item}:{item:MediaItem}){
  const splitDrag=useRef(false);
  const [healing,setHealing]=useState(false);
  const [brushR,setBrushR]=usePanelState<number>('photos.healRadius',0.03);
+ const [healMode,setHealMode]=usePanelState<boolean>('photos.healMode',false);
  const [healCursor,setHealCursor]=useState<{x:number;y:number}|null>(null);
  const healStart=useRef<{x:number;y:number}|null>(null);
  const [dodging,setDodging]=useState(false);
@@ -263,10 +264,11 @@ export function PhotosWorkspace({item}:{item:MediaItem}){
    const path=healPath.current??[start];healPath.current=null;
    if(Math.hypot(end.x-start.x,end.y-start.y)>0.01){ // paint over the defect, release on a clean area: every path point heals from that one offset
     const dx=end.x-start.x,dy=end.y-start.y;
-    commitPhotoSettings(item.name,now=>{const room=Math.max(0,200-now.spots.length);return room?{...now,spots:[...now.spots,...path.slice(0,room).map(pt=>clampSpot({x:pt.x,y:pt.y,r:brushR,dx,dy}))]}:now;});
+    const mode=healMode?'heal' as const:'clone' as const;
+    commitPhotoSettings(item.name,now=>{const room=Math.max(0,200-now.spots.length);return room?{...now,spots:[...now.spots,...path.slice(0,room).map(pt=>clampSpot({x:pt.x,y:pt.y,r:brushR,dx,dy,mode}))]}:now;});
    }else if(shown){ // a plain click auto-picks the flattest nearby source disc
     const sp=autoSource(shown,start.x,start.y,brushR);
-    if(sp)commitPhotoSettings(item.name,now=>({...now,spots:[...now.spots,clampSpot(sp)]}));
+    if(sp)commitPhotoSettings(item.name,now=>({...now,spots:[...now.spots,clampSpot({...sp,mode:healMode?'heal':'clone'})]}));
    }
    return;
   }
@@ -337,6 +339,7 @@ export function PhotosWorkspace({item}:{item:MediaItem}){
    <Button size="compact" variant="outline" aria-pressed={straightening} disabled={!ready||session?.cropping} aria-label={t('photos.straighten.toggle')} title={t('photos.straighten.toggle')} onClick={()=>{setStraightening(v=>!v);setHealing(false);setDodging(false);setGrading(false);setRadial(false);setBrushing(false);straightDraft.current=null;}} data-testid="photos-straighten-tool"><Ruler size={13}/>{t('photos.straighten.toggle')}</Button>
    <Button size="compact" variant="outline" aria-pressed={healing} disabled={!ready||session?.cropping} aria-label={t('photos.heal.toggle')} title={t('photos.heal.toggle')} onClick={()=>{setHealing(h=>!h);setDodging(false);setGrading(false);setRadial(false);setBrushing(false);setStraightening(false);}} data-testid="photos-heal"><Bandage size={13}/>{t('photos.heal.toggle')}</Button>
    {healing&&<NativeInput type="range" className="accent-[var(--accent)]" min={0.005} max={0.2} step={0.005} value={brushR} aria-label={t('photos.heal.radius')} onChange={e=>setBrushR(Number(e.currentTarget.value))} data-testid="photos-heal-radius"/>}
+   {healing&&<Button size="compact" variant="outline" aria-pressed={healMode} aria-label={t('photos.heal.mode')} title={t('photos.heal.mode')} onClick={()=>setHealMode(!healMode)} data-testid="photos-heal-mode">{t('photos.heal.mode')}</Button>}
    <Button size="compact" variant="outline" aria-pressed={dodging} disabled={!ready||session?.cropping} aria-label={t('photos.dodge.toggle')} title={t('photos.dodge.toggle')} onClick={()=>{setDodging(d=>!d);setHealing(false);setGrading(false);setRadial(false);setBrushing(false);setStraightening(false);}} data-testid="photos-dodge"><Contrast size={13}/>{t('photos.dodge.toggle')}</Button>
    {dodging&&<>
     <NativeInput type="range" className="accent-[var(--accent)]" min={0.005} max={0.2} step={0.005} value={dabR} aria-label={t('photos.dodge.radius')} onChange={e=>setDabR(Number(e.currentTarget.value))} data-testid="photos-dodge-radius"/>

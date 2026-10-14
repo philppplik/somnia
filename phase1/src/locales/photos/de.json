@@ -108,5 +108,6 @@
  "cmd.photos.export.open": "Fotos: Kopie exportieren...",
  "cmd.photos.export.png": "Fotos: Als PNG exportieren",
  "cmd.photos.export.jpeg": "Fotos: Als JPEG exportieren",
- "photos.hero.disabled": "Öffne ein Foto zum Exportieren, beende den Zuschnitt oder warte auf die Verarbeitung."
+ "photos.hero.disabled": "Öffne ein Foto zum Exportieren, beende den Zuschnitt oder warte auf die Verarbeitung.",
+ "photos.heal.mode": "Heilen"
 }

@@ -108,5 +108,6 @@
  "cmd.photos.export.open": "Photos : Exporter une copie...",
  "cmd.photos.export.png": "Photos : Exporter en PNG",
  "cmd.photos.export.jpeg": "Photos : Exporter en JPEG",
- "photos.hero.disabled": "Ouvrez une photo, terminez le recadrage ou attendez le traitement."
+ "photos.hero.disabled": "Ouvrez une photo, terminez le recadrage ou attendez le traitement.",
+ "photos.heal.mode": "Correcteur"
 }

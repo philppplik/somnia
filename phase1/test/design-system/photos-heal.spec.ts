@@ -114,3 +114,24 @@ test('clone stamp mode renders in light and dark',async({page})=>{
   writeFileSync(`test-results/ds-photos-heal-canvas-${theme}.png`,Buffer.from((await canvasBitmap(page)).split(',')[1],'base64'));
  }
 });
+test('heal mode: the toggle switches new spots to texture-blend healing',async({page})=>{
+ for(const theme of['light','dark']){
+  await page.goto('/test/design-system/?view=photos-heal');
+  await page.evaluate(t=>document.documentElement.setAttribute('data-theme',t),theme);
+  await expect(page.getByTestId('photos-workspace')).toBeVisible();
+  await page.getByTestId('photos-heal').click();
+  const mode=page.getByTestId('photos-heal-mode');
+  await expect(mode).toBeVisible();
+  if(await mode.getAttribute('aria-pressed')!=='true')await mode.click(); // panel state persists across the theme loop
+  await expect(mode).toHaveAttribute('aria-pressed','true');
+  await page.getByTestId('photos-heal-radius').fill('0.06'); // cover the whole defect block
+  const box=await page.getByTestId('photos-canvas').boundingBox();
+  await page.mouse.click(box!.x+0.2917*box!.width,box!.y+0.375*box!.height); // heal-mode click on the red defect
+  await page.waitForTimeout(700);
+  const c=await pixel(page,70,60);
+  expect(Math.abs(c[0]-40)).toBeLessThanOrEqual(3); // healed toward the green surround
+  expect(Math.abs(c[1]-140)).toBeLessThanOrEqual(3);
+  expect(Math.abs(c[2]-80)).toBeLessThanOrEqual(3);
+  await page.screenshot({path:`test-results/ds-photos-heal-mode-${theme}.png`,fullPage:true});
+ }
+});

@@ -79,3 +79,33 @@ test('autoSource returns null when no candidate disc fits the frame',()=>{
  const edge=autoSource(frame,0.02,0.02,0.05); // corner: only down-right-ish candidates fit
  assert.ok(edge===null||validSpot(edge));
 });
+test('heal mode shifts the source texture to the destination surround brightness',()=>{
+ const f=frame(64,64,(x,y)=>[x>=36&&x<=60&&y>=8&&y<=40?60:200,200,200,255]);
+ const spot:HealSpot={x:16/64,y:32/64,r:0.2,dx:32/64,dy:-8/64,mode:'heal'};
+ const out=applySpots(f,[spot]);
+ const c=px(out,16,32);
+ assert.ok(Math.abs(c[0]-200)<=1,`healed centre should adopt the surround value 200, got ${c[0]}`);
+});
+test('heal mode keeps the source texture while clone copies its level',()=>{
+ const f=frame(64,64,(x,y)=>[x>=36&&x<=60&&y>=8&&y<=40?(x%2?60:80):200,0,0,255]);
+ const base={x:16/64,y:32/64,r:0.2,dx:32/64,dy:-8/64};
+ const healed=applySpots(f,[{...base,mode:'heal'}]);
+ const cloned=applySpots(f,[{...base}]);
+ assert.ok(px(healed,16,32)[0]>200,`healed bright stripe expected, got ${px(healed,16,32)[0]}`); // source 80 + ~130 shift
+ assert.ok(px(healed,17,32)[0]<200,`healed dark stripe expected, got ${px(healed,17,32)[0]}`); // source 60 + ~130 shift
+ assert.ok(px(cloned,16,32)[0]<100,`clone copies the dark source level, got ${px(cloned,16,32)[0]}`);
+});
+test('validSpot and clampSpot handle the optional mode',()=>{
+ const ok={x:0.5,y:0.5,r:0.1,dx:0.1,dy:0.1};
+ assert.ok(validSpot(ok));
+ assert.ok(validSpot({...ok,mode:'heal'}));
+ assert.ok(validSpot({...ok,mode:'clone'}));
+ assert.ok(!validSpot({...ok,mode:'x'}));
+ assert.equal(clampSpot({...ok,mode:'heal'}).mode,'heal');
+ assert.equal(clampSpot(ok).mode,undefined);
+});
+test('spotSignature distinguishes the mode and defaults to clone',()=>{
+ const s={x:0.5,y:0.5,r:0.1,dx:0.1,dy:0.1};
+ assert.equal(spotSignature([s]),spotSignature([{...s,mode:'clone'}]));
+ assert.notEqual(spotSignature([s]),spotSignature([{...s,mode:'heal'}]));
+});

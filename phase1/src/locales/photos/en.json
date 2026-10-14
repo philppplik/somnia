@@ -108,5 +108,6 @@
  "cmd.photos.export.open": "Photos: Export copy...",
  "cmd.photos.export.png": "Photos: Export as PNG",
  "cmd.photos.export.jpeg": "Photos: Export as JPEG",
- "photos.hero.disabled": "Open a photo to export, finish cropping, or wait for processing."
+ "photos.hero.disabled": "Open a photo to export, finish cropping, or wait for processing.",
+ "photos.heal.mode": "Heal"
 }
