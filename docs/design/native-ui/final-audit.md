@@ -168,6 +168,13 @@ through native control primitives, see below.
   scroll-into-view, setActiveMedia switching; bento.css strip override
   mirroring media-bar; no raw controls, ratchets unchanged), unit tests
   and gallery proof added (?view=photos-filmstrip).
+- P41: photos batch export feature (Export-panel batch section writing
+  every developable photo through the existing bounded engine export
+  into one picked File-System-Access directory with collision-unique
+  names, per-photo failure isolation and progress/summary status;
+  default-host fallback without directory support; named CSS rule
+  instead of a ratcheted pixel-text utility; no raw controls), unit
+  tests and gallery proof added (?view=photos-batch).
 
 
 

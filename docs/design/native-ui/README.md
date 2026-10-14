@@ -59,6 +59,7 @@ All file links are repository-relative, so they remain useful on a feature branc
 29. [Photos prev/next navigation](photos-nav.md)
 30. [Photos zoom presets](photos-zoom-presets.md)
 31. [Photos filmstrip](photos-filmstrip.md)
+32. [Photos batch export](photos-batch-export.md)
 
 ## The system in one view
 
