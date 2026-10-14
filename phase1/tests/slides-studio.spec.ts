@@ -70,10 +70,10 @@ test('source FileTab leaves Slides without assigning the deck Studio to the sour
  await page.getByLabel('Open PPTX',{exact:true}).setInputFiles(path.resolve('slides-engine/fixtures/independent.pptx'));
  await expect(page.getByAltText('Slide 1',{exact:true})).toBeVisible({timeout:30000});
  // File tabs are scoped per Studio (7fa54d22): the source tab is not listed in Slides, it stays owned by Code.
- await expect(page.getByRole('tab',{name:'index.html',exact:true})).toHaveCount(0);
+ await expect(page.getByRole('tab',{name:'index.html Close index.html',exact:true})).toHaveCount(0);
  await page.getByRole('radio',{name:'Somnia Code',exact:true}).click();
- await expect(page.getByRole('tab',{name:'index.html',exact:true})).toBeVisible();
- await page.getByRole('tab',{name:'index.html',exact:true}).click();
+ await expect(page.getByRole('tab',{name:'index.html Close index.html',exact:true})).toBeVisible();
+ await page.getByRole('tab',{name:'index.html Close index.html',exact:true}).click();
  await expect(page.getByRole('radio',{name:'Somnia Code',exact:true})).toBeChecked();
  await expect(page.getByRole('radio',{name:'Slides',exact:true})).not.toBeChecked();
 });
