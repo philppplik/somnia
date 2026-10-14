@@ -305,3 +305,28 @@ test('D3a: alignment, indent and spacing change the engine render, one undo step
  await page.getByTestId('documents-undo').click();
  await expect(page.getByTestId('documents-align-center')).toHaveAttribute('aria-pressed','true');
 });
+
+test('D3b: heading style and lists from the format bar change the engine render, outline lists headings, undo is one step',async({page})=>{
+ await page.goto('/');await expect(page.locator('[data-storage]')).toBeVisible();
+ await openBuffers(page,[{name:'sample.docx',mimeType:DOCX,buffer:sample()}]);
+ await expect(page.getByTestId('documents-pages')).toHaveText('1 pages');
+ const pg=page.getByTestId('documents-page').first();const img=pg.locator('img');
+ await expect.poll(()=>img.evaluate((i:HTMLImageElement)=>i.complete&&i.naturalWidth)).toBeGreaterThan(300);
+ const box=(await pg.boundingBox())!;
+ await page.mouse.click(box.x+box.width*0.125,box.y+box.height*0.127);
+ await expect(page.getByTestId('documents-caret')).toBeVisible();
+ const before=await img.screenshot();
+ await page.getByTestId('documents-style').selectOption('Heading2');
+ await expect(page.getByTestId('documents-style')).toHaveValue('Heading2');
+ await expect.poll(async()=>!(await img.screenshot()).equals(before)).toBe(true);
+ await expect(page.getByTestId('documents-outline-headings-only')).toBeVisible();
+ await page.getByTestId('documents-outline-headings-only').check();
+ await expect(page.getByTestId('documents-outline-panel').getByRole('listitem')).not.toHaveCount(0);
+ await page.getByTestId('documents-list-bullet').click();
+ await expect(page.getByTestId('documents-list-bullet')).toHaveAttribute('aria-pressed','true');
+ await page.getByTestId('documents-list-bullet').click();
+ await expect(page.getByTestId('documents-list-bullet')).toHaveAttribute('aria-pressed','false');
+ await page.getByTestId('documents-page').first().screenshot({path:shot('style-list')});
+ await page.getByTestId('documents-undo').click();
+ await expect(page.getByTestId('documents-list-bullet')).toHaveAttribute('aria-pressed','true');
+});

@@ -16,7 +16,7 @@ included; the `source` column names the owner. Dynamic sources that stay outside
 
 Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, fr, pt-BR); the gate enforces it.
 
-483 commands. Categories: Edit, Help, Insert, Project, Tools, View.
+492 commands. Categories: Edit, Help, Insert, Project, Tools, View.
 
 | id | title | category | source | shortcut |
 | --- | --- | --- | --- | --- |
@@ -241,6 +241,10 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `documents.goToPage` | Go to document page | View | documents-panels |  |
 | `documents.indent.decrease` | Decrease indent | View | documents |  |
 | `documents.indent.increase` | Increase indent | View | documents |  |
+| `documents.list.bullet` | Toggle bulleted list | View | documents |  |
+| `documents.list.indent` | Demote list item | View | documents |  |
+| `documents.list.numbered` | Toggle numbered list | View | documents |  |
+| `documents.list.outdent` | Promote list item | View | documents |  |
 | `documents.outline.goto` | Go to document paragraph | View | documents |  |
 | `documents.pages.goto` | Go to document page | View | documents |  |
 | `documents.panelRedo` | Redo document edit | Edit | documents-panels |  |
@@ -251,6 +255,11 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `documents.selectMatch` | Select search result | View | documents-panels |  |
 | `documents.selectParagraph` | Select entire paragraph | View | documents-panels |  |
 | `documents.setZoom` | Set document zoom | View | documents-panels |  |
+| `documents.style.heading1` | Apply Heading 1 | View | documents |  |
+| `documents.style.heading2` | Apply Heading 2 | View | documents |  |
+| `documents.style.heading3` | Apply Heading 3 | View | documents |  |
+| `documents.style.normal` | Apply Normal style | View | documents |  |
+| `documents.style.title` | Apply Title style | View | documents |  |
 | `documents.toggleBold` | Toggle bold | View | documents |  |
 | `documents.toggleItalic` | Toggle italic | View | documents |  |
 | `documents.toggleUnderline` | Toggle underline | View | documents |  |

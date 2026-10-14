@@ -1,4 +1,4 @@
-import {checkFormatPatch,checkParaPatch,type ParaPatch} from './protocol';
+import {checkFormatPatch,checkParaPatch,DOC_STYLES,type DocStyleId,type ListKindId,type ParaPatch} from './protocol';
 import {captureDocumentSelection} from './selectionCapture';
 import {caretAfterEdit,diffEdit,inverseOf,UndoStack,type TextEdit,type UndoEntry} from './edit';
 import {stepBoundary,utf16ToUtf8Offset,utf8ToUtf16Offset,wordBoundary} from './text';
@@ -378,6 +378,30 @@ export const setAlign=(align:import('./protocol').ParaAlign)=>run(()=>applyPara(
 export const setLineSpacing=(lineSpacing:number)=>run(()=>applyPara({lineSpacing}));
 export const setSpaceBefore=(spaceBefore:number)=>run(()=>applyPara({spaceBefore}));
 export const setSpaceAfter=(spaceAfter:number)=>run(()=>applyPara({spaceAfter}));
+/** Paragraph style (Normal, Title, Subtitle, Heading 1-4, Quote) for every paragraph the selection touches. One undo step. */
+async function paraSpan(){
+ const c=getDocumentsState().caret;if(!c)return null;const n=norm(c);goalX=null;
+ if(n.e.block-n.s.block+1>MAX_SPAN_BLOCKS)throw new Error(`Selection is too large for one edit (limit ${MAX_SPAN_BLOCKS} paragraphs).`);
+ const blocks=getDocumentsState().blocks;
+ for(let i=n.s.block;i<=n.e.block;i++){if(blocks.find(b=>b.index===i)?.kind!=='para')throw new Error('This selection includes a part that cannot be formatted as a paragraph.');}
+ return n;
+}
+export const setParagraphStyle=(style:DocStyleId)=>run(async()=>{
+ if(!(DOC_STYLES as readonly string[]).includes(style))throw new Error('Style is not offered.');
+ const n=await paraSpan();if(!n)return;
+ await structural(eng=>eng.setParagraphStyle(n.s.block,n.e.block,style),n.h,n.h);setSel(n.a,n.h);
+});
+/** Bullet or numbered list. Choosing the kind the whole selection already has removes the list (Word behaviour). */
+export const toggleList=(kind:'bullet'|'numbered')=>run(async()=>{
+ const n=await paraSpan();if(!n)return;
+ const next:ListKindId=getDocumentsState().para?.list===kind?'none':kind;
+ await structural(eng=>eng.setList(n.s.block,n.e.block,next),n.h,n.h);setSel(n.a,n.h);
+});
+/** Tab / Shift+Tab inside a list: one level deeper or shallower. Outside a list the engine refuses and nothing changes. */
+export const shiftListLevel=(delta:1|-1)=>run(async()=>{
+ const n=await paraSpan();if(!n)return;
+ await structural(eng=>eng.shiftListLevel(n.s.block,n.e.block,delta),n.h,n.h);setSel(n.a,n.h);
+});
 export const INDENT_STEP_PT=36;
 /** Moves the left indent by one 36 pt step (clamped to 0-1440); a mixed selection starts from 0. */
 export const stepIndent=(dir:-1|1)=>run(()=>{

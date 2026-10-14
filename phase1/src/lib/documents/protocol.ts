@@ -28,7 +28,7 @@ export type ParaAlign='left'|'center'|'right'|'justify';
 /** Whole-paragraph formatting in points; line spacing is a multiple of single. */
 export interface ParaPatch{align?:ParaAlign;indentLeft?:number;indentFirst?:number;spaceBefore?:number;spaceAfter?:number;lineSpacing?:number}
 /** Shared effective value over the paragraphs, or null when they differ (line spacing: also null for exact/at-least heights). */
-export interface ParaState{align:ParaAlign|null;indentLeft:number|null;indentFirst:number|null;spaceBefore:number|null;spaceAfter:number|null;lineSpacing:number|null}
+export interface ParaState{align:ParaAlign|null;indentLeft:number|null;indentFirst:number|null;spaceBefore:number|null;spaceAfter:number|null;lineSpacing:number|null;/** Paragraph style id (`Normal`, `Heading2`, ...) when shared. */style?:string|null;list?:'none'|'bullet'|'numbered'|null;listLevel?:number|null}
 const PARA_RANGES:Record<string,[number,number]>={indentLeft:[0,1440],indentFirst:[-1440,1440],spaceBefore:[0,1584],spaceAfter:[0,1584],lineSpacing:[0.5,10]};
 export function checkParaPatch(patch:unknown){
  if(!patch||typeof patch!=='object'||Array.isArray(patch))throw new Error('Paragraph change is not valid.');
@@ -39,6 +39,9 @@ export function checkParaPatch(patch:unknown){
   else throw new Error('Paragraph change is not valid.');
  }
 }
+export const DOC_STYLES=['Normal','Title','Subtitle','Heading1','Heading2','Heading3','Heading4','Quote'] as const;
+export type DocStyleId=typeof DOC_STYLES[number];
+export type ListKindId='bullet'|'numbered'|'none';
 export type Rect5=[number,number,number,number,number];
 export type DocumentsRequest=
  |{id:number;kind:'init';wasmUrl:string}
@@ -58,6 +61,9 @@ export type DocumentsRequest=
  |{id:number;kind:'formatState';start:DocPos;end:DocPos}
  |{id:number;kind:'paraFormat';first:number;last:number;patch:ParaPatch}
  |{id:number;kind:'paraState';first:number;last:number}
+ |{id:number;kind:'paraStyle';first:number;last:number;style:DocStyleId}
+ |{id:number;kind:'setList';first:number;last:number;list:ListKindId}
+ |{id:number;kind:'listLevel';first:number;last:number;delta:number}
  |{id:number;kind:'save'}
  |{id:number;kind:'close'};
 export type DocumentsResponse=

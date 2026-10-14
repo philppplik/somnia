@@ -1,6 +1,6 @@
 import {registerCommand} from '../commandRegistry';
 import {getDocumentsState,patchDocuments,stepZoom} from './store';
-import {redoEdit,setAlign,stepFontSize,stepIndent,toggleFormat,undoEdit} from './session';
+import {redoEdit,setAlign,setParagraphStyle,toggleList,shiftListLevel,stepFontSize,stepIndent,toggleFormat,undoEdit} from './session';
 import {goToBlock,scrollToPage} from './navigate';
 import {documentsExportReady,patchDocumentsExportUi,requestDocumentsSaveCopy} from './exportBridge';
 /**
@@ -32,6 +32,15 @@ export function registerDocumentsCommands(){
   add('documents.align.justify','Align justify',async()=>{await setAlign('justify');},()=>ready()&&!!getDocumentsState().caret),
   add('documents.indent.increase','Increase indent',async()=>{await stepIndent(1);},()=>ready()&&!!getDocumentsState().caret),
   add('documents.indent.decrease','Decrease indent',async()=>{await stepIndent(-1);},()=>ready()&&!!getDocumentsState().caret),
+  add('documents.style.normal','Apply Normal style',async()=>{await setParagraphStyle('Normal');},()=>ready()&&!!getDocumentsState().caret),
+  add('documents.style.heading1','Apply Heading 1',async()=>{await setParagraphStyle('Heading1');},()=>ready()&&!!getDocumentsState().caret),
+  add('documents.style.heading2','Apply Heading 2',async()=>{await setParagraphStyle('Heading2');},()=>ready()&&!!getDocumentsState().caret),
+  add('documents.style.heading3','Apply Heading 3',async()=>{await setParagraphStyle('Heading3');},()=>ready()&&!!getDocumentsState().caret),
+  add('documents.style.title','Apply Title style',async()=>{await setParagraphStyle('Title');},()=>ready()&&!!getDocumentsState().caret),
+  add('documents.list.bullet','Toggle bulleted list',async()=>{await toggleList('bullet');},()=>ready()&&!!getDocumentsState().caret),
+  add('documents.list.numbered','Toggle numbered list',async()=>{await toggleList('numbered');},()=>ready()&&!!getDocumentsState().caret),
+  add('documents.list.indent','Demote list item',async()=>{await shiftListLevel(1);},()=>ready()&&!!getDocumentsState().caret),
+  add('documents.list.outdent','Promote list item',async()=>{await shiftListLevel(-1);},()=>ready()&&!!getDocumentsState().caret),
   add('documents.pages.goto','Go to page',p=>{const n=int(p,'page');if(n>=getDocumentsState().pages)throw expected('That page does not exist.');if(!scrollToPage(n))throw expected('The page is not on screen yet.');}),
   add('documents.outline.goto','Go to paragraph',async p=>{if(!await goToBlock(int(p,'block')))throw expected('That block has no text position.');}),
  ];

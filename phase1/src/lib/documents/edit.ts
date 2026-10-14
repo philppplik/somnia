@@ -1,4 +1,5 @@
-export interface DocBlock{index:number;kind:'para'|'table';text?:string;editable:boolean}
+/** `outline` is the heading level 0-8 (Heading 1 = 0) when the paragraph is an outline entry. */
+export interface DocBlock{index:number;kind:'para'|'table';text?:string;editable:boolean;outline?:number|null}
 /** One replacement in UTF-8 byte offsets of the paragraph text it applies to. */
 export interface Hunk{start:number;end:number;text:string}
 /** All hunks of one paragraph, ascending and non-overlapping, applied atomically. */

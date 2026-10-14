@@ -44,6 +44,9 @@ export class DocumentsEngine{
  async formatState(start:import('./protocol').DocPos,end:import('./protocol').DocPos):Promise<import('./protocol').FormatState>{return(await this.call('formatState',id=>({id,kind:'formatState',start,end}))).state;}
  async formatParagraphs(first:number,last:number,patch:import('./protocol').ParaPatch):Promise<OpenedDocument>{return(await this.call('edited',id=>({id,kind:'paraFormat',first,last,patch}))).document;}
  async paragraphState(first:number,last:number):Promise<import('./protocol').ParaState>{return(await this.call('paraState',id=>({id,kind:'paraState',first,last}))).state;}
+ async setParagraphStyle(first:number,last:number,style:import('./protocol').DocStyleId):Promise<OpenedDocument>{return(await this.call('edited',id=>({id,kind:'paraStyle',first,last,style}))).document;}
+ async setList(first:number,last:number,list:import('./protocol').ListKindId):Promise<OpenedDocument>{return(await this.call('edited',id=>({id,kind:'setList',first,last,list}))).document;}
+ async shiftListLevel(first:number,last:number,delta:number):Promise<OpenedDocument>{return(await this.call('edited',id=>({id,kind:'listLevel',first,last,delta}))).document;}
  async snapshot():Promise<number>{return(await this.call('snapshot',id=>({id,kind:'snapshot'}))).snap;}
  async restore(snap:number):Promise<OpenedDocument>{return(await this.call('edited',id=>({id,kind:'restore',snap}))).document;}
  async hit(page:number,x:number,y:number){return(await this.call('hit',id=>({id,kind:'hit',page,x,y}))).hit;}

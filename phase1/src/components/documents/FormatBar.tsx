@@ -1,8 +1,8 @@
 import {useMemo} from 'react';
 import {DOC_COLORS} from '../../lib/documents/palette';
-import {FONT_SIZES,setAlign,setFont,setFontColor,setFontSize,setLineSpacing,setSpaceAfter,setSpaceBefore,stepIndent,toggleFormat} from '../../lib/documents/session';
-import type {FormatPatch,FormatState,ParaAlign,ParaState} from '../../lib/documents/protocol';
-import {AlignCenter,AlignJustify,AlignLeft,AlignRight,IndentDecrease,IndentIncrease} from '../../lib/icons';
+import {FONT_SIZES,setAlign,setFont,setFontColor,setFontSize,setLineSpacing,setSpaceAfter,setParagraphStyle,setSpaceBefore,stepIndent,toggleFormat,toggleList} from '../../lib/documents/session';
+import {DOC_STYLES,type DocStyleId,type FormatPatch,type FormatState,type ParaAlign,type ParaState} from '../../lib/documents/protocol';
+import {AlignCenter,AlignJustify,AlignLeft,AlignRight,IndentDecrease,IndentIncrease,ListBullet,ListNumbered} from '../../lib/icons';
 import {t} from '../../lib/i18n';
 import {NativeButton,NativeSelect} from '../ui/native-controls';
 
@@ -34,10 +34,16 @@ export function FormatBar({format,held,para,enabled}:{format:FormatState|null;he
    <NativeButton className={tool} aria-pressed={color==='auto'} disabled={!enabled} onClick={()=>void setFontColor('auto')} data-testid="documents-color-auto">{t('documents.format.colorAuto')}</NativeButton>
    {DOC_COLORS.map(([h,cls])=><NativeButton key={h} className={'h-5 w-5 cursor-pointer rounded-sm border disabled:cursor-default disabled:opacity-50 '+cls+' '+(color?.toUpperCase()===h?'border-ink':'border-subtle')} aria-label={t('documents.format.colorOne',{hex:'#'+h})} title={'#'+h} aria-pressed={color?.toUpperCase()===h} disabled={!enabled} onClick={()=>void setFontColor(h)} data-testid={'documents-color-'+h}/>)}
   </span>
+  <NativeSelect className={sel+' w-32'} aria-label={t('documents.style.label')} title={t('documents.style.label')} disabled={!enabled} value={para?.style&&(DOC_STYLES as readonly string[]).includes(para.style)?para.style:''} onChange={e=>void setParagraphStyle(e.currentTarget.value as DocStyleId)} data-testid="documents-style">
+   {!(para?.style&&(DOC_STYLES as readonly string[]).includes(para.style))&&<option value="" disabled>{para?.style??t('documents.format.mixed')}</option>}{DOC_STYLES.map(s=><option key={s} value={s}>{t('documents.style.'+s)}</option>)}</NativeSelect>
   <span className="flex items-center gap-0.5" role="group" aria-label={t('documents.para.align')}>
    {ALIGNS.map(([a,Icon])=><NativeButton key={a} className={tool+' w-7 px-0'} aria-label={t('documents.para.align.'+a)} title={t('documents.para.align.'+a)} aria-pressed={para?.align===a} disabled={!enabled} onClick={()=>void setAlign(a)} data-testid={'documents-align-'+a}><Icon size={14}/></NativeButton>)}
    <NativeButton className={tool+' w-7 px-0'} aria-label={t('documents.para.indent.decrease')} title={t('documents.para.indent.decrease')} disabled={!enabled||para?.indentLeft===0} onClick={()=>void stepIndent(-1)} data-testid="documents-indent-decrease"><IndentDecrease size={14}/></NativeButton>
    <NativeButton className={tool+' w-7 px-0'} aria-label={t('documents.para.indent.increase')} title={t('documents.para.indent.increase')} disabled={!enabled} onClick={()=>void stepIndent(1)} data-testid="documents-indent-increase"><IndentIncrease size={14}/></NativeButton>
+  </span>
+  <span className="flex items-center gap-0.5" role="group" aria-label={t('documents.list.label')}>
+   <NativeButton className={tool+' w-7 px-0'} aria-label={t('documents.list.bullet')} title={t('documents.list.bullet')} aria-pressed={para?.list==='bullet'} disabled={!enabled} onClick={()=>void toggleList('bullet')} data-testid="documents-list-bullet"><ListBullet size={14}/></NativeButton>
+   <NativeButton className={tool+' w-7 px-0'} aria-label={t('documents.list.numbered')} title={t('documents.list.numbered')} aria-pressed={para?.list==='numbered'} disabled={!enabled} onClick={()=>void toggleList('numbered')} data-testid="documents-list-numbered"><ListNumbered size={14}/></NativeButton>
   </span>
   <NativeSelect className={sel+' w-16 tabular-nums'} aria-label={t('documents.para.lineSpacing')} title={t('documents.para.lineSpacing')} disabled={!enabled} value={num(para?.lineSpacing)} onChange={e=>void setLineSpacing(Number(e.currentTarget.value))} data-testid="documents-line-spacing">
    {para?.lineSpacing==null&&<option value="" disabled>{'–'}</option>}{lines.map(s=><option key={s} value={String(s)}>{s}</option>)}</NativeSelect>

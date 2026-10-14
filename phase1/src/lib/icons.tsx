@@ -127,3 +127,5 @@ export const AlignRight=make("align-right","<path d=\"M4 6h16M10 10h10M4 14h16M1
 export const AlignJustify=make("align-justify","<path d=\"M4 6h16M4 10h16M4 14h16M4 18h16\"/>");
 export const IndentIncrease=make("indent-increase","<path d=\"M4 5h16M12 10h8M12 14h8M4 19h16M4 9l3 3-3 3\"/>");
 export const IndentDecrease=make("indent-decrease","<path d=\"M4 5h16M12 10h8M12 14h8M4 19h16M7 9l-3 3 3 3\"/>");
+export const ListBullet=make("list-bullet","<path d=\"M10 6h10M10 12h10M10 18h10\"/><circle cx=\"5\" cy=\"6\" r=\"1\"/><circle cx=\"5\" cy=\"12\" r=\"1\"/><circle cx=\"5\" cy=\"18\" r=\"1\"/>");
+export const ListNumbered=make("list-numbered","<path d=\"M10 6h10M10 12h10M10 18h10M4 5l1-1v4M4 11h2l-2 3h2M4 17h2v1H4.5M4.5 18H6v2H4\"/>");

@@ -42,7 +42,10 @@ impl DocSession {
             .map(|(i, b)| match &**b {
                 Block::Para(p) => {
                     let editable = !p.text.contains(OBJ) && p.objects.is_empty();
-                    serde_json::json!({"index": i, "kind": "para", "text": if editable { p.text.clone() } else { p.plain_text() }, "editable": editable})
+                    let rp = self.doc.styles.resolve_para(&p.props);
+                    // Heading level 0..8 (style or direct outline level); body text (9) is not an outline entry.
+                    let outline = rp.outline_level.filter(|l| *l < 9);
+                    serde_json::json!({"index": i, "kind": "para", "text": if editable { p.text.clone() } else { p.plain_text() }, "editable": editable, "outline": outline})
                 }
                 Block::Table(_) => serde_json::json!({"index": i, "kind": "table", "editable": false}),
             })
@@ -403,6 +406,10 @@ impl DocSession {
                 _ => return Err(format!("block {b} is not a paragraph")),
             }
         }
+        fn same_str(v: &[&str]) -> Option<String> {
+            let first = *v.first()?;
+            v.iter().all(|x| *x == first).then(|| first.to_string())
+        }
         fn same<T: PartialEq + Copy>(rows: &[wordcraft_doc::resolve::ResolvedPara], f: impl Fn(&wordcraft_doc::resolve::ResolvedPara) -> T) -> Option<T> {
             let first = f(rows.first()?);
             rows.iter().all(|r| f(r) == first).then_some(first)
@@ -426,8 +433,148 @@ impl DocSession {
             "spaceBefore": same(&rows, |r| r.space_before.to_bits()).map(f32::from_bits),
             "spaceAfter": same(&rows, |r| r.space_after.to_bits()).map(f32::from_bits),
             "lineSpacing": ls,
+            "style": same_str(&rows.iter().map(|r| r.style.as_str()).collect::<Vec<_>>()),
+            "list": same_str(&rows.iter().map(|r| self.list_kind(r.numbering)).collect::<Vec<_>>()),
+            "listLevel": same(&rows, |r| match r.numbering { Some(n) if n.num != 0 => Some(n.level), _ => None }).flatten(),
         })
         .to_string())
+    }
+    /// `"none"`, `"bullet"` or `"numbered"` for a resolved numbering reference.
+    fn list_kind(&self, n: Option<wordcraft_doc::props::NumRef>) -> &'static str {
+        match n {
+            Some(n) if n.num != 0 => match self.doc.numbering.level(n.num, n.level.min(8)) {
+                Some(l) if l.format == wordcraft_doc::section::NumFormat::Bullet => "bullet",
+                Some(_) => "numbered",
+                None => "none",
+            },
+            _ => "none",
+        }
+    }
+    /// Copies built-in styles that the document lacks (and their `basedOn` chain) into `styles`.
+    fn ensure_style(styles: &mut wordcraft_doc::StyleSheet, id: &str) -> Result<(), String> {
+        let mut next = Some(id.to_string());
+        let mut guard = 0;
+        while let Some(cur) = next.take() {
+            guard += 1;
+            if guard > 8 || styles.get(&cur).is_some() {
+                continue;
+            }
+            let st = wordcraft_doc::StyleSheet::builtin().get(&cur).cloned().ok_or_else(|| format!("unknown style {cur}"))?;
+            next = st.based_on.clone();
+            styles.upsert(st);
+        }
+        Ok(())
+    }
+    fn para_span(&self, first: usize, last: usize) -> Result<Vec<wordcraft_doc::Paragraph>, String> {
+        if last < first || last >= self.doc.body.len() || last - first >= 2000 {
+            return Err("paragraph range is out of bounds".into());
+        }
+        (first..=last)
+            .map(|b| match self.doc.body.get(b).map(|x| &**x) {
+                Some(Block::Para(p)) => Ok(p.clone()),
+                _ => Err(format!("block {b} is not a paragraph")),
+            })
+            .collect()
+    }
+    /// Applies a paragraph style from a fixed list to `first..=last`; the document gains the built-in style if it lacks it.
+    fn do_set_style(&mut self, first: usize, last: usize, id: &str) -> Result<(), String> {
+        const OK: [&str; 8] = ["Normal", "Title", "Subtitle", "Heading1", "Heading2", "Heading3", "Heading4", "Quote"];
+        if !OK.contains(&id) {
+            return Err(format!("style {id} is not offered"));
+        }
+        let mut paras = self.para_span(first, last)?;
+        let mut styles = self.doc.styles.clone();
+        Self::ensure_style(&mut styles, id)?;
+        for p in paras.iter_mut() {
+            p.props.style = if id == "Normal" { None } else { Some(id.to_string()) };
+        }
+        self.doc.styles = styles;
+        for (i, p) in paras.into_iter().enumerate() {
+            self.doc.body[first + i] = Arc::new(Block::Para(p));
+        }
+        self.pages = DocLayout::default();
+        Ok(())
+    }
+    /// `kind`: `"bullet"`, `"numbered"` or `"none"`. A numbered list continues the list directly above when there is one.
+    fn do_set_list(&mut self, first: usize, last: usize, kind: &str) -> Result<(), String> {
+        use wordcraft_doc::numbering::ListKind;
+        use wordcraft_doc::props::NumRef;
+        let mut paras = self.para_span(first, last)?;
+        let mut numbering = self.doc.numbering.clone();
+        let mut styles = self.doc.styles.clone();
+        let num = match kind {
+            "none" => 0,
+            "bullet" => {
+                let found = numbering.find_kind(ListKind::Bullet);
+                found.unwrap_or_else(|| numbering.add_list(ListKind::Bullet))
+            }
+            "numbered" => {
+                let above = if first > 0 {
+                    match self.doc.body.get(first - 1).map(|x| &**x) {
+                        Some(Block::Para(p)) => self.doc.styles.resolve_para(&p.props).numbering,
+                        _ => None,
+                    }
+                } else {
+                    None
+                };
+                match above {
+                    Some(n) if n.num != 0 && self.list_kind(Some(n)) == "numbered" => n.num,
+                    _ => numbering.add_list(ListKind::Numbered),
+                }
+            }
+            _ => return Err("list kind must be bullet, numbered or none".into()),
+        };
+        if num != 0 {
+            Self::ensure_style(&mut styles, "ListParagraph")?;
+        }
+        for p in paras.iter_mut() {
+            let cur = self.doc.styles.resolve_para(&p.props).numbering;
+            if num == 0 {
+                if cur.is_some_and(|n| n.num != 0) {
+                    p.props.numbering = Some(NumRef { num: 0, level: 0 });
+                }
+                if p.props.style.as_deref() == Some("ListParagraph") {
+                    p.props.style = None;
+                }
+            } else {
+                let level = cur.filter(|n| n.num != 0).map(|n| n.level).unwrap_or(0);
+                p.props.numbering = Some(NumRef { num, level });
+                if p.props.style.is_none() {
+                    p.props.style = Some("ListParagraph".into());
+                }
+            }
+        }
+        self.doc.numbering = numbering;
+        self.doc.styles = styles;
+        for (i, p) in paras.into_iter().enumerate() {
+            self.doc.body[first + i] = Arc::new(Block::Para(p));
+        }
+        self.pages = DocLayout::default();
+        Ok(())
+    }
+    /// Moves list paragraphs in `first..=last` by `delta` levels (clamped 0..=8). Refuses when none is in a list.
+    fn do_list_level(&mut self, first: usize, last: usize, delta: i32) -> Result<(), String> {
+        use wordcraft_doc::props::NumRef;
+        if !(-8..=8).contains(&delta) {
+            return Err("level change must be between -8 and 8".into());
+        }
+        let mut paras = self.para_span(first, last)?;
+        let mut any = false;
+        for p in paras.iter_mut() {
+            if let Some(n) = self.doc.styles.resolve_para(&p.props).numbering.filter(|n| n.num != 0) {
+                any = true;
+                let lv = (n.level as i32 + delta).clamp(0, 8) as u8;
+                p.props.numbering = Some(NumRef { num: n.num, level: lv });
+            }
+        }
+        if !any {
+            return Err("the selection is not in a list".into());
+        }
+        for (i, p) in paras.into_iter().enumerate() {
+            self.doc.body[first + i] = Arc::new(Block::Para(p));
+        }
+        self.pages = DocLayout::default();
+        Ok(())
     }
     fn do_replace(&mut self, block: usize, start: usize, end: usize, text: &str) -> Result<(), String> {
         self.do_replace_many(block, &[(start, end, text.to_string())])
@@ -495,6 +642,18 @@ impl DocSession {
     /// JSON of the shared (or null when mixed) effective paragraph formatting over `first_block..=last_block`.
     pub fn paragraph_state(&self, first_block: usize, last_block: usize) -> Result<String, JsValue> {
         self.do_para_state(first_block, last_block).map_err(|e| JsValue::from_str(&e))
+    }
+    /// Applies one of Normal, Title, Subtitle, Heading1-4 or Quote to the paragraphs `first_block..=last_block`.
+    pub fn set_paragraph_style(&mut self, first_block: usize, last_block: usize, style_id: &str) -> Result<(), JsValue> {
+        self.do_set_style(first_block, last_block, style_id).map_err(|e| JsValue::from_str(&e))
+    }
+    /// `kind`: `bullet`, `numbered` or `none`.
+    pub fn set_list(&mut self, first_block: usize, last_block: usize, kind: &str) -> Result<(), JsValue> {
+        self.do_set_list(first_block, last_block, kind).map_err(|e| JsValue::from_str(&e))
+    }
+    /// Moves list paragraphs by `delta` levels (indent / outdent).
+    pub fn shift_list_level(&mut self, first_block: usize, last_block: usize, delta: i32) -> Result<(), JsValue> {
+        self.do_list_level(first_block, last_block, delta).map_err(|e| JsValue::from_str(&e))
     }
     pub fn split_block(&mut self, block: usize, utf8_off: usize) -> Result<(), JsValue> {
         self.do_split(block, utf8_off).map_err(|e| JsValue::from_str(&e))
@@ -688,6 +847,43 @@ mod tests {
         let t = v.as_array().unwrap().iter().position(|b| b["kind"] == "table").unwrap();
         assert!(s.do_para_format(0, t, r#"{"align":"right"}"#).is_err());
         assert!(s.do_para_state(0, t).is_err());
+        assert_eq!(wordcraft_docx::write(&s.doc).unwrap(), before);
+    }
+    #[test]
+    fn styles_and_lists_apply_roundtrip_and_stay_atomic() {
+        let mut s = DocSession::from_bytes(FIXTURE).unwrap();
+        let ps = |s: &DocSession, a: usize, b: usize| -> serde_json::Value { serde_json::from_str(&s.do_para_state(a, b).unwrap()).unwrap() };
+        s.do_set_style(0, 0, "Heading2").unwrap();
+        assert_eq!(ps(&s, 0, 0)["style"], "Heading2");
+        let blocks: serde_json::Value = serde_json::from_str(&s.block_list()).unwrap();
+        assert_eq!(blocks[0]["outline"], 1);
+        s.do_set_list(0, 1, "bullet").unwrap();
+        assert_eq!(ps(&s, 0, 1)["list"], "bullet");
+        s.do_list_level(0, 0, 1).unwrap();
+        assert_eq!(ps(&s, 0, 0)["listLevel"], 1);
+        s.do_list_level(0, 0, -5).unwrap();
+        assert_eq!(ps(&s, 0, 0)["listLevel"], 0);
+        s.do_set_list(0, 1, "numbered").unwrap();
+        assert_eq!(ps(&s, 0, 1)["list"], "numbered");
+        let saved = wordcraft_docx::write(&s.doc).unwrap();
+        let again = DocSession::from_bytes(&saved).unwrap();
+        assert_eq!(ps(&again, 0, 0)["style"], "Heading2");
+        assert_eq!(ps(&again, 0, 1)["list"], "numbered");
+        s.do_set_list(0, 1, "none").unwrap();
+        assert_eq!(ps(&s, 0, 1)["list"], "none");
+        s.do_set_style(0, 0, "Normal").unwrap();
+        assert_eq!(ps(&s, 0, 0)["style"], "Normal");
+        let before = wordcraft_docx::write(&s.doc).unwrap();
+        assert!(s.do_set_style(0, 0, "Heading9").is_err());
+        assert!(s.do_set_style(0, 0, "../x").is_err());
+        assert!(s.do_set_list(0, 0, "roman").is_err());
+        assert!(s.do_list_level(0, 0, 1).is_err());
+        assert!(s.do_list_level(0, 0, 99).is_err());
+        assert!(s.do_set_style(0, 999, "Title").is_err());
+        let v: serde_json::Value = serde_json::from_str(&s.block_list()).unwrap();
+        let t = v.as_array().unwrap().iter().position(|b| b["kind"] == "table").unwrap();
+        assert!(s.do_set_style(0, t, "Title").is_err());
+        assert!(s.do_set_list(0, t, "bullet").is_err());
         assert_eq!(wordcraft_docx::write(&s.doc).unwrap(), before);
     }
     #[test]

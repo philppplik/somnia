@@ -31,6 +31,12 @@ export class DocSession {
     format_paragraphs(first_block: number, last_block: number, patch_json: string): void;
     /** JSON of the shared (null when mixed) effective paragraph formatting over `first_block..=last_block`. */
     paragraph_state(first_block: number, last_block: number): string;
+    /** Applies Normal, Title, Subtitle, Heading1-4 or Quote to `first_block..=last_block`. */
+    set_paragraph_style(first_block: number, last_block: number, style_id: string): void;
+    /** `kind`: `bullet`, `numbered` or `none`. */
+    set_list(first_block: number, last_block: number, kind: string): void;
+    /** Moves list paragraphs by `delta` levels. */
+    shift_list_level(first_block: number, last_block: number, delta: number): void;
     insert(block: number, utf8_byte_offset: number, text: string): void;
     merge_with_previous(block: number): void;
     constructor(bytes: Uint8Array);

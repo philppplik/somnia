@@ -4,7 +4,7 @@ import {readFileSync} from 'node:fs';
 import {applyEdit,type TextEdit} from './edit';
 import type {DocumentsEngine} from './engine';
 import {getDocumentsState,patchDocuments} from './store';
-import {setAlign,setLineSpacing,setSpaceAfter,stepIndent,setFont,setFontColor,setFontSize,stepFontSize,toggleFormat,deleteAtCaret,moveCaret,MAX_INSERT_LINES,pasteText,redoEdit,resetSessionsForTest,selectAllText,selectedText,setSessionDeps,splitAtCaret,switchDocument,typeText,undoEdit,syncGeometry} from './session';
+import {setParagraphStyle,shiftListLevel,toggleList,setAlign,setLineSpacing,setSpaceAfter,stepIndent,setFont,setFontColor,setFontSize,stepFontSize,toggleFormat,deleteAtCaret,moveCaret,MAX_INSERT_LINES,pasteText,redoEdit,resetSessionsForTest,selectAllText,selectedText,setSessionDeps,splitAtCaret,switchDocument,typeText,undoEdit,syncGeometry} from './session';
 import {stepBoundary,wordBoundary} from './text';
 const docx=new Uint8Array(readFileSync(new URL('../../../test/documents/sample.docx',import.meta.url)));
 type Row={text:string;locked?:boolean;f?:Set<string>[];p?:Record<string,number|string>};
@@ -33,7 +33,10 @@ class Doc{
   const z:Record<string,unknown>={...out,font:val('font'),size:val('size')===null?null:Number(val('size')),color:val('color')};
   return z as never;}
  async formatParagraphs(a:number,b:number,patch:Record<string,number|string>){this.tick();for(let i=a;i<=b;i++)if(this.rows[i].locked)throw new Error('not a paragraph');for(let i=a;i<=b;i++)this.rows[i]={...this.rows[i],p:{...this.rows[i].p,...patch}};return this.doc();}
- async paragraphState(a:number,b:number){const out:Record<string,unknown>={};for(const k of ['align','indentLeft','indentFirst','spaceBefore','spaceAfter','lineSpacing']){const v=new Set<unknown>();for(let i=a;i<=b;i++)v.add(this.rows[i].p?.[k]??(k==='align'?'left':k==='lineSpacing'?1:0));out[k]=v.size===1?[...v][0]:null;}return out as never;}
+ async paragraphState(a:number,b:number){const out:Record<string,unknown>={};for(const k of ['align','indentLeft','indentFirst','spaceBefore','spaceAfter','lineSpacing','style','list','listLevel']){const v=new Set<unknown>();for(let i=a;i<=b;i++)v.add(this.rows[i].p?.[k]??(k==='align'?'left':k==='lineSpacing'?1:k==='style'?'Normal':k==='list'?'none':0));out[k]=v.size===1?[...v][0]:null;}return out as never;}
+ async setParagraphStyle(a:number,b:number,style:string){return this.formatParagraphs(a,b,{style});}
+ async setList(a:number,b:number,list:string){return this.formatParagraphs(a,b,{list});}
+ async shiftListLevel(a:number,b:number,delta:number){this.tick();let any=false;for(let i=a;i<=b;i++){if(this.rows[i].locked)throw new Error('not a paragraph');if(this.rows[i].p?.list&&this.rows[i].p?.list!=='none'){any=true;this.rows[i]={...this.rows[i],p:{...this.rows[i].p,listLevel:Math.min(8,Math.max(0,Number(this.rows[i].p?.listLevel??0)+delta))}};}}if(!any)throw new Error('not in a list');return this.doc();}
  async snapshot(){const id=++this.n;this.snaps.set(id,this.rows.map(r=>({...r,f:r.f?.map(x=>new Set(x))})));return id;}
  async restore(id:number){this.rows=this.snaps.get(id)!.map(r=>({...r,f:r.f?.map(x=>new Set(x))}));return this.doc();}
  async hit(p:number,x:number,y:number){return this.hits(p,x,y);}async caret(){return null;}async rects(b:number,a:number,z:number){return[[0,b,a,z,1]] as never;}
@@ -221,4 +224,24 @@ test('invalid spacing never reaches the engine; a table in the span is refused w
 test('an engine failure while changing paragraph formatting restores and records no undo step',async()=>{
  await open(['abc','def']);at(1,1,{block:0,off:0});d.failAt=d.calls+1;await setAlign('right');
  assert.equal(getDocumentsState().canUndo,false);assert.ok(getDocumentsState().editError);assert.equal(d.rows[0].p?.align,undefined);
+});
+
+test('heading style applies to every paragraph in the selection as one undo step; unknown styles never reach the engine',async()=>{
+ await open(['abc','def','ghi']);at(1,1,{block:0,off:1});await setParagraphStyle('Heading1');
+ assert.deepEqual(d.rows.map(r=>r.p?.style),['Heading1','Heading1',undefined]);await syncGeometry();assert.equal(getDocumentsState().para?.style,'Heading1');
+ const calls=d.calls;await setParagraphStyle('Heading9' as never);assert.ok(getDocumentsState().editError);assert.equal(d.calls,calls);
+ patchDocuments({editError:''});await undoEdit();assert.deepEqual(d.rows.map(r=>r.p?.style),[undefined,undefined,undefined]);
+});
+test('list button toggles: on, then off when the whole selection already has that kind; Tab levels need a list',async()=>{
+ await open(['abc','def']);at(1,1,{block:0,off:0});
+ await shiftListLevel(1);assert.ok(getDocumentsState().editError);patchDocuments({editError:''});
+ await toggleList('bullet');assert.deepEqual(d.rows.map(r=>r.p?.list),['bullet','bullet']);await syncGeometry();assert.equal(getDocumentsState().para?.list,'bullet');
+ await shiftListLevel(1);assert.equal(d.rows[0].p?.listLevel,1);await shiftListLevel(-1);await shiftListLevel(-1);assert.equal(d.rows[1].p?.listLevel,0);
+ await toggleList('bullet');assert.deepEqual(d.rows.map(r=>r.p?.list),['none','none']);
+ await toggleList('numbered');await syncGeometry();await toggleList('bullet');assert.deepEqual(d.rows.map(r=>r.p?.list),['bullet','bullet']);
+});
+test('a table in the span refuses style and list changes',async()=>{
+ await open(['ab',{text:'',locked:true},'cd']);patchDocuments({caret:{block:2,head:1,anchor:0,anchorBlock:0}});
+ await setParagraphStyle('Title');assert.ok(getDocumentsState().editError);patchDocuments({editError:''});await toggleList('numbered');assert.ok(getDocumentsState().editError);
+ assert.equal(getDocumentsState().canUndo,false);assert.equal(d.rows[0].p,undefined);
 });

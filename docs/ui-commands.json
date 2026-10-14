@@ -2561,6 +2561,50 @@
       "hasEnabled": true
     },
     {
+      "id": "documents.list.bullet",
+      "title": "Toggle bulleted list",
+      "category": "View",
+      "source": "documents",
+      "keywords": [
+        "document",
+        "docx"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "documents.list.indent",
+      "title": "Demote list item",
+      "category": "View",
+      "source": "documents",
+      "keywords": [
+        "document",
+        "docx"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "documents.list.numbered",
+      "title": "Toggle numbered list",
+      "category": "View",
+      "source": "documents",
+      "keywords": [
+        "document",
+        "docx"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "documents.list.outdent",
+      "title": "Promote list item",
+      "category": "View",
+      "source": "documents",
+      "keywords": [
+        "document",
+        "docx"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "documents.outline.goto",
       "title": "Go to document paragraph",
       "category": "View",
@@ -2650,6 +2694,61 @@
       "category": "View",
       "source": "documents-panels",
       "allowInInput": true,
+      "hasEnabled": true
+    },
+    {
+      "id": "documents.style.heading1",
+      "title": "Apply Heading 1",
+      "category": "View",
+      "source": "documents",
+      "keywords": [
+        "document",
+        "docx"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "documents.style.heading2",
+      "title": "Apply Heading 2",
+      "category": "View",
+      "source": "documents",
+      "keywords": [
+        "document",
+        "docx"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "documents.style.heading3",
+      "title": "Apply Heading 3",
+      "category": "View",
+      "source": "documents",
+      "keywords": [
+        "document",
+        "docx"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "documents.style.normal",
+      "title": "Apply Normal style",
+      "category": "View",
+      "source": "documents",
+      "keywords": [
+        "document",
+        "docx"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "documents.style.title",
+      "title": "Apply Title style",
+      "category": "View",
+      "source": "documents",
+      "keywords": [
+        "document",
+        "docx"
+      ],
       "hasEnabled": true
     },
     {

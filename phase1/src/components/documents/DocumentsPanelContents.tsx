@@ -11,14 +11,15 @@ function useAction(){const [error,setError]=useState('');return {error,run:async
 function Message({error}:{error:string}){return error?<p role="alert" className="doc-panel-error">{error}</p>:null;}
 function Empty(){const {t}=useT();return <p className="doc-panel-note">{t('documents.inspector.none')}</p>;}
 export function DocumentsOutlinePanel({context}:PanelHostProps){
- const {t}=useT(),d=useDocuments(),a=useAction();const [filter,setFilter]=usePanelState('documents.outline.filter','');const [editableOnly,setEditableOnly]=usePanelState('documents.outline.editableOnly',false);
+ const {t}=useT(),d=useDocuments(),a=useAction();const [filter,setFilter]=usePanelState('documents.outline.filter','');const [editableOnly,setEditableOnly]=usePanelState('documents.outline.editableOnly',false);const [headingsOnly,setHeadingsOnly]=usePanelState('documents.outline.headingsOnly',false);
  const ready=context.studio==='documents'&&documentPanelReady();
  return <section className="doc-panel" data-testid="documents-outline-panel"><Message error={a.error}/>{!ready?<Empty/>:<>
   <label>{t('documents.panels.filter')}<NativeInput value={filter} onChange={e=>setFilter(e.target.value)}/></label>
   <label className="doc-panel-check"><NativeInput type="checkbox" checked={editableOnly} onChange={e=>setEditableOnly(e.target.checked)}/>{t('documents.panels.editableOnly')}</label>
+  <label className="doc-panel-check"><NativeInput type="checkbox" checked={headingsOnly} onChange={e=>setHeadingsOnly(e.target.checked)} data-testid="documents-outline-headings-only"/>{t('documents.panels.headingsOnly')}</label>
   <p className="doc-panel-note">{t('documents.panels.outlineHint')}</p>
-  <ol className="doc-panel-list">{d.blocks.filter(b=>(!editableOnly||b.editable)&&(!filter||(b.text??'').toLocaleLowerCase().includes(filter.toLocaleLowerCase()))).map(b=><li key={b.index}><NativeButton disabled={!b.editable} aria-current={d.caret?.block===b.index?'true':undefined} onClick={()=>a.run('documents.focusParagraph',{block:b.index})}>
-   <span className="doc-panel-meta">{t(b.kind==='table'?'documents.edit.table':'documents.edit.paragraph',{n:b.index+1})}{!b.editable&&' · '+t('documents.panels.locked')}</span>
+  <ol className="doc-panel-list">{d.blocks.filter(b=>(!editableOnly||b.editable)&&(!headingsOnly||(b.outline!=null))&&(!filter||(b.text??'').toLocaleLowerCase().includes(filter.toLocaleLowerCase()))).map(b=><li key={b.index}><NativeButton disabled={!b.editable} aria-current={d.caret?.block===b.index?'true':undefined} onClick={()=>a.run('documents.focusParagraph',{block:b.index})}>
+   <span className="doc-panel-meta">{b.outline!=null?t('documents.panels.headingLevel',{n:b.outline+1})+' · ':''}{t(b.kind==='table'?'documents.edit.table':'documents.edit.paragraph',{n:b.index+1})}{!b.editable&&' · '+t('documents.panels.locked')}</span>
    <span className="doc-panel-excerpt">{b.text||(b.kind==='para'&&b.editable?t('documents.panels.emptyParagraph'):'')}</span></NativeButton></li>)}</ol>
  </>}</section>;
 }

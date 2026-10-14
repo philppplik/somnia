@@ -37,3 +37,13 @@ test('paragraph patches and ranges are validated before the engine',()=>{
  assert.equal(calls.length,0);send(0,1,{align:'justify',indentFirst:-18,lineSpacing:1.5});assert.equal(calls.length,1);
  assert.equal(k.handle({id:3,kind:'paraState',first:0,last:0} as never).res.ok,true);assert.equal(k.handle({id:4,kind:'paraState',first:3,last:1} as never).res.ok,false);
 });
+
+test('style, list and level requests are validated before the engine',()=>{
+ const calls:string[]=[];
+ const S=class{constructor(_b?:Uint8Array){}free(){}blocks(){return '[]';}set_paragraph_style(...a:[number,number,string]){calls.push('s'+a[2]);}set_list(...a:[number,number,string]){calls.push('l'+a[2]);}shift_list_level(...a:[number,number,number]){calls.push('v'+a[2]);}paginate(){return {};}} as unknown as new(b:Uint8Array)=>DocSessionLike;
+ const k=new DocumentsCore(S);k.handle({id:1,kind:'open',bytes:new Uint8Array(4)} as never);
+ const go=(r:object)=>k.handle({id:2,first:0,last:0,...r} as never).res.ok;
+ for(const bad of [{kind:'paraStyle',style:'Heading9'},{kind:'paraStyle',style:'../x'},{kind:'setList',list:'roman'},{kind:'listLevel',delta:9},{kind:'listLevel',delta:1.5},{kind:'listLevel',delta:Number.NaN},{kind:'paraStyle',style:'Title',first:3,last:1},{kind:'setList',list:'bullet',last:5000}])assert.equal(go(bad),false,JSON.stringify(bad));
+ assert.equal(calls.length,0);go({kind:'paraStyle',style:'Heading2'});go({kind:'setList',list:'numbered'});go({kind:'listLevel',delta:-1});
+ assert.deepEqual(calls,['sHeading2','lnumbered','v-1']);
+});
