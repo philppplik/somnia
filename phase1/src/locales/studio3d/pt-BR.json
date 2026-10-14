@@ -909,5 +909,8 @@
  "studio3d.edit.flip": "Inverter normais",
  "studio3d.hist.editFlip": "Inverter normais das faces",
  "cmd.studio3d.edit.selectLinked": "Selecionar tudo ligado à seleção",
- "studio3d.edit.selLinked": "Ligado"
+ "studio3d.edit.selLinked": "Ligado",
+ "cmd.studio3d.edit.dissolve": "Mesclar as faces selecionadas em uma única face",
+ "studio3d.edit.dissolve": "Dissolver",
+ "studio3d.hist.editDissolve": "Dissolver faces"
 }

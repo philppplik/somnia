@@ -461,6 +461,57 @@ export function flipFaces(m:MeshData,faces:number[]):MeshData{
  if(m.mask)out.mask=[...m.mask];
  return out;
 }
+/** Merges the selected triangles into one face: interior edges and vertices disappear and the boundary is retriangulated as a fan with the original winding. Vertices only kept alive by the dissolved triangles are removed; UVs travel with the kept vertices; masks and explicit normals are dropped. */
+export function dissolveFaces(m:MeshData,faces:number[]):MeshData{
+ if(!faces.length)throw new EditError('Select faces to dissolve.');
+ const tris=m.index.length/3;
+ const sel=new Set<number>();
+ for(const f of faces){if(!Number.isInteger(f)||f<0||f>=tris)throw new EditError(`Face ${f} does not exist.`);sel.add(f);}
+ const use=new Map<string,{a:number;b:number;n:number}>();
+ for(const f of sel)for(let e=0;e<3;e++){
+  const a=m.index[f*3+e],b=m.index[f*3+(e+1)%3];
+  const k=a<b?`${a}_${b}`:`${b}_${a}`;
+  const hit=use.get(k);
+  if(hit)hit.n++;else use.set(k,{a,b,n:1});
+ }
+ const fwd=new Map<number,number>();
+ let boundaryEdges=0;
+ for(const v of use.values())if(v.n===1){fwd.set(v.a,v.b);boundaryEdges++;}
+ if(boundaryEdges<3)throw new EditError('Dissolve needs a single simple face region.');
+ const start=fwd.keys().next().value!;
+ const cycle=[start];
+ let cur=start;
+ for(let i=0;i<boundaryEdges;i++){
+  const nxt=fwd.get(cur);
+  if(nxt===undefined)throw new EditError('Dissolve needs a single simple face region.');
+  if(nxt!==start)cycle.push(nxt);
+  cur=nxt;
+ }
+ if(cur!==start||cycle.length!==boundaryEdges)throw new EditError('Dissolve needs a single simple face region.');
+ const boundarySet=new Set(cycle);
+ const usedOutside=new Set<number>();
+ for(let f=0;f<tris;f++){if(sel.has(f))continue;usedOutside.add(m.index[f*3]);usedOutside.add(m.index[f*3+1]);usedOutside.add(m.index[f*3+2]);}
+ const drop=new Set<number>();
+ for(const f of sel)for(let e=0;e<3;e++){const v=m.index[f*3+e];if(!boundarySet.has(v)&&!usedOutside.has(v))drop.add(v);}
+ const remap=new Map<number,number>();
+ const positions:number[]=[];
+ const uvs=m.uvs?[]:undefined;
+ for(let v=0;v<m.positions.length/3;v++)if(!drop.has(v)){
+  remap.set(v,positions.length/3);
+  positions.push(m.positions[v*3],m.positions[v*3+1],m.positions[v*3+2]);
+  if(uvs)uvs.push(m.uvs![v*2],m.uvs![v*2+1]);
+ }
+ const index:number[]=[];
+ for(let f=0;f<tris;f++){
+  if(sel.has(f))continue;
+  index.push(remap.get(m.index[f*3])!,remap.get(m.index[f*3+1])!,remap.get(m.index[f*3+2])!);
+ }
+ const c=cycle.map(v=>remap.get(v)!);
+ for(let i=1;i+1<c.length;i++)index.push(c[0],c[i],c[i+1]);
+ const out:MeshData={positions,index};
+ if(uvs)out.uvs=uvs;
+ return out;
+}
 /** Deletes selected elements: faces drop their own triangles, edges and vertices drop every triangle that touches them. Positions stay put (orphan vertices are allowed), so undo restores the exact geometry. Refuses an empty selection and a delete that would leave no triangle. */
 export function deleteElements(m:MeshData,kind:'vertex'|'edge'|'face',sel:{verts?:number[];edges?:[number,number][];faces?:number[]}):MeshData{
  const tris=m.index.length/3,total=m.positions.length/3;

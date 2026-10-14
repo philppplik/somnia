@@ -909,5 +909,8 @@
  "studio3d.edit.flip": "Flip normals",
  "studio3d.hist.editFlip": "Flip face normals",
  "cmd.studio3d.edit.selectLinked": "Select everything linked to the selection",
- "studio3d.edit.selLinked": "Linked"
+ "studio3d.edit.selLinked": "Linked",
+ "cmd.studio3d.edit.dissolve": "Merge selected faces into one face",
+ "studio3d.edit.dissolve": "Dissolve",
+ "studio3d.hist.editDissolve": "Dissolve faces"
 }

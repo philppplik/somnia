@@ -909,5 +909,8 @@
  "studio3d.edit.flip": "Normalen umkehren",
  "studio3d.hist.editFlip": "Face-Normalen umkehren",
  "cmd.studio3d.edit.selectLinked": "Alles mit der Auswahl Verbundene auswählen",
- "studio3d.edit.selLinked": "Verbunden"
+ "studio3d.edit.selLinked": "Verbunden",
+ "cmd.studio3d.edit.dissolve": "Ausgewählte Faces zu einem Face verschmelzen",
+ "studio3d.edit.dissolve": "Auflösen",
+ "studio3d.hist.editDissolve": "Faces auflösen"
 }

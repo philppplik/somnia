@@ -611,6 +611,7 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `studio3d.edit.bevel` | Bevel vertices | Edit | studio3d |  |
 | `studio3d.edit.bevelEdge` | Bevel edges | Edit | studio3d |  |
 | `studio3d.edit.delete` | Delete selected elements | Edit | studio3d |  |
+| `studio3d.edit.dissolve` | Merge selected faces into one face | Edit | studio3d |  |
 | `studio3d.edit.duplicate` | Duplicate selected faces as a detached shell | Edit | studio3d |  |
 | `studio3d.edit.end` | Finish editing | Edit | studio3d |  |
 | `studio3d.edit.extrude` | Extrude selection | Edit | studio3d |  |
