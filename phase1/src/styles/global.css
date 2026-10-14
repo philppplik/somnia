@@ -337,3 +337,4 @@ body{font-size:var(--ui-font-size,13px)}
 .textLayer :is(span,br){color:transparent;position:absolute;white-space:pre;cursor:text;transform-origin:0 0;user-select:text!important}
 .textLayer>span:not(.markedContent),.textLayer .markedContent span:not(.markedContent){z-index:1}
 .textLayer span.markedContent{top:0;height:0}.textLayer ::selection{background:#8060ff55;color:transparent}
+.settings-transfer-panel fieldset{border:0;padding:0;margin:12px 0}.settings-transfer-panel legend{font-weight:600;padding:0 0 4px}.settings-transfer-panel input[type=text],.settings-transfer-panel select{max-width:60%}.settings-transfer-panel li label{border:0;padding:0;gap:12px}.settings-transfer-panel li{grid-template-columns:minmax(0,1fr) auto auto}.settings-transfer-panel li .settings-transfer-resolve{grid-column:1/-1;justify-content:flex-start}.settings-transfer-panel h3,.settings-transfer-panel h4{margin:16px 0 4px}
