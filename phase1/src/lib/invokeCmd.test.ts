@@ -132,14 +132,14 @@ describe('typed contracts (compile-time + runtime)', () => {
     // @ts-expect-error snake_case key is not part of the JS contract
     await invokeCmd('claim_open_request', { request_id: 'x' }).catch(() => undefined);
   });
-  it('the 8 intake commands and the diagnostics commands are wrapped', () => {
+  it('the 8 intake commands, the diagnostics commands and lifecycle_memory_sample are wrapped', () => {
     const wrapped = COMMAND_NAMES.filter((n) => COMMAND_META[n].wrapped).sort();
     assert.deepEqual(wrapped, [
       'ack_open_request', 'build_diagnostic_zip', 'claim_open_request', 'delete_crash_reports', 'discard_diagnostic_snapshot',
-      'drain_open_requests', 'get_intake_policy', 'list_crash_reports', 'mark_crash_reports_reviewed', 'read_by_grant',
+      'drain_open_requests', 'get_intake_policy', 'lifecycle_memory_sample', 'list_crash_reports', 'mark_crash_reports_reviewed', 'read_by_grant',
       'record_frontend_fatal', 'release_candidate', 'retry_open_item', 'set_intake_policy', 'write_diagnostic_zip',
     ]);
-    for (const n of wrapped) assert.ok(['intake', 'diagnostics'].includes(COMMAND_META[n].domain));
+    for (const n of wrapped) assert.ok(['intake', 'diagnostics', 'lifecycle'].includes(COMMAND_META[n].domain));
     for (const n of wrapped.filter((x) => COMMAND_META[x].domain === 'intake')) assert.equal(COMMAND_META[n].boundary, 'B7');
   });
   it('write_diagnostic_zip takes only snapshotId (no grant/path)', () => {

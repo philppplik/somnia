@@ -2,6 +2,7 @@ import {getRegisteredLifecycleAdapter} from '../lifecycle/adapters';
 import {registerStudio,type StudioDef} from './registry';
 import type {PanelDef,RailItemDef,StudioShellDef,InspectorDef,StudioLayout} from '../shell/types';
 import {DOCUMENTS_PANEL_COMMANDS,DOCUMENTS_PANELS} from '../documents/panels';
+import '../documents/panelI18n';
 import {registerDocumentsRailIcons} from '../documents/railIcons';
 /**
  * Documents studio manifest (pure data). Hosts live in components/documents/registerShell.ts (foundation:
