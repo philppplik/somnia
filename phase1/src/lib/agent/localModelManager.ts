@@ -79,14 +79,17 @@ export class LocalModelManager {
   const cancelOutcome=this.id?await this.transport.cancel(this.id).catch(()=> 'unknown' as const):'unknown';
   this.update({phase:'interrupted',cancelOutcome});
  }
- async remove(model:string,digest:string){
-  registryModel(model);if(model!==model.trim()||typeof digest!=='string'||!digest||digest.length>512||/[\x00-\x1f\x7f]/.test(digest))throw Error('Invalid model identity');
-  if(this.busy||!this.allowed())throw Error('Another operation or AI request is active');
+ private assertRemovable(model:string){
   const state=agentSettingsSnapshot();if(state.config.provider==='ollama'&&(state.config.model===model||state.config.model+':latest'===model))throw Error('This model is used by saved Agent settings. Choose and save a replacement first.');
   if(Object.values(state.config.localRuntime?.studioModels??{}).some(value=>value===model||value+':latest'===model))throw Error('This model is assigned to a studio. Save a replacement first.');
   if(Object.values(state.config.localRuntime?.taskModels??{}).some(value=>value===model||value+':latest'===model))throw Error('This model is assigned to a task. Save a replacement first.');
+ }
+ async remove(model:string,digest:string){
+  registryModel(model);if(model!==model.trim()||typeof digest!=='string'||!digest||digest.length>512||/[\x00-\x1f\x7f]/.test(digest))throw Error('Invalid model identity');
+  if(this.busy||!this.allowed())throw Error('Another operation or AI request is active');
+  this.assertRemovable(model);
   this.busy=true;
-  try{if(!this.allowed())throw Error('AI request became active');await this.transport.remove(model,digest);const current=await this.runtime.snapshot();if(current.inventoryError||current.state!=='running'||current.models.some(m=>m.id===model))throw Error('Removal not confirmed. Refresh before retrying.');}
+  try{const before=await this.runtime.snapshot();const matches=before.models.filter(entry=>entry.id===model);if(before.state!=='running'||before.inventoryError||matches.length!==1||matches[0].digest!==digest)throw Error('Reviewed model identity changed or unavailable; refresh and review deletion again');if(!this.allowed())throw Error('AI request became active');this.assertRemovable(model);await this.transport.remove(model,digest);const current=await this.runtime.snapshot();if(current.inventoryError||current.state!=='running'||current.models.some(m=>m.id===model))throw Error('Removal not confirmed. Refresh before retrying.');}
   finally{this.busy=false;this.listeners.forEach(listener=>listener());}
  }
 }
