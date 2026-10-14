@@ -1429,3 +1429,38 @@ test('3D studio pins: insert at the cursor, label in the inspector, one undo',as
  await run(page,'studio3d.undo');
  await expect.poll(async()=>(await session(page)).outline.filter(o=>o.kind==='pin').length).toBe(0);
 });
+
+test('3D studio pin labels: labeled pins show a viewport overlay label; empty or hidden pins do not',async({page})=>{
+ await blank(page);
+ await insert(page,'cube',0);
+ expect(await run(page,'studio3d.insert.pin',{})).toBe(true);
+ const pinId=(await session(page)).selected as number;
+ expect(await run(page,'studio3d.pin.set',{id:pinId,text:'weld seam'})).toBe(true);
+ const label=page.locator('[data-pin-label]');
+ await expect(label).toHaveCount(1);
+ await expect(label).toHaveText('weld seam');
+ // Renaming the label updates the overlay.
+ expect(await run(page,'studio3d.pin.set',{id:pinId,text:'crack'})).toBe(true);
+ await expect(label).toHaveText('crack');
+ // Clearing the text removes the overlay.
+ expect(await run(page,'studio3d.pin.set',{id:pinId,text:''})).toBe(true);
+ await expect(page.locator('[data-pin-label]')).toHaveCount(0);
+ // A hidden pin shows no label either.
+ expect(await run(page,'studio3d.pin.set',{id:pinId,text:'back'})).toBe(true);
+ await run(page,'studio3d.object.visible',{id:pinId,on:false});
+ await expect(page.locator('[data-pin-label]')).toHaveCount(0);
+ await run(page,'studio3d.object.visible',{id:pinId,on:true});
+ await expect(page.locator('[data-pin-label]')).toHaveCount(1);
+});
+
+test('3D studio outliner: the focus button selects the row and frames it',async({page})=>{
+ await blank(page);
+ await insert(page,'cube',0);
+ const id=await insert(page,'sphere',6);
+ await run(page,'studio3d.select',{id:null});
+ await expect.poll(async()=>(await session(page)).selected).toBe(null);
+ // One focus button per outline row.
+ await expect(page.getByRole('button',{name:/focus/i})).toHaveCount(2);
+ await page.getByRole('button',{name:/focus/i}).nth(1).click();
+ await expect.poll(async()=>(await session(page)).selected).toBe(id);
+});

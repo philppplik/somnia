@@ -641,5 +641,6 @@
  "studio3d.insert.pin": "Alfinete",
  "studio3d.pin.text": "Rótulo do alfinete",
  "cmd.studio3d.insert.pin": "Inserir um alfinete de anotação no cursor 3D ou em um ponto",
- "cmd.studio3d.pin.set": "Definir o texto de um alfinete de anotação"
+ "cmd.studio3d.pin.set": "Definir o texto de um alfinete de anotação",
+ "studio3d.focus": "Focar {name}"
 }

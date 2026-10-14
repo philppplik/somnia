@@ -641,5 +641,6 @@
  "studio3d.insert.pin": "Pin",
  "studio3d.pin.text": "Pin-Beschriftung",
  "cmd.studio3d.insert.pin": "Einen Notiz-Pin am 3D-Cursor oder einem Punkt einfügen",
- "cmd.studio3d.pin.set": "Die Beschriftung eines Notiz-Pins setzen"
+ "cmd.studio3d.pin.set": "Die Beschriftung eines Notiz-Pins setzen",
+ "studio3d.focus": "{name} fokussieren"
 }

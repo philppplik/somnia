@@ -134,7 +134,36 @@ export default function Viewport3D(){
    const dt=now-perfLast;if(dt<1000)return;
    patchStudio3D({perf:{fps:Math.round(perfFrames*1000/dt),calls:renderer.info.render.calls,tris:renderer.info.render.triangles}});perfFrames=0;perfLast=now;
   };
+  /** CSS overlay: one small label per annotation pin with text, projected to screen space each frame. */
+  const pinLabelHost=document.createElement('div');
+  pinLabelHost.className='pointer-events-none absolute inset-0 overflow-hidden';
+  pinLabelHost.setAttribute('aria-hidden','true');
+  el.append(pinLabelHost);
+  const pinLabels=new Map<number,HTMLDivElement>();
+  const pinLabelPos=new THREE.Vector3();
+  const updatePinLabels=()=>{
+   const seen=new Set<number>();const w=el.clientWidth,h=el.clientHeight;
+   for(const p of stage.pins()){
+    seen.add(p.id);
+    let lbl=pinLabels.get(p.id);
+    if(!lbl){
+     lbl=document.createElement('div');
+     lbl.className='absolute max-w-[160px] truncate rounded-md border border-subtle bg-surface px-1.5 py-0.5 text-xs text-ink';
+     lbl.style.transform='translate(-50%,calc(-100% - 8px))';
+     lbl.setAttribute('data-pin-label',String(p.id));
+     pinLabelHost.append(lbl);pinLabels.set(p.id,lbl);
+    }
+    if(lbl.textContent!==p.text)lbl.textContent=p.text;
+    pinLabelPos.set(p.position.x,p.position.y,p.position.z).project(camera);
+    if(pinLabelPos.z>1){lbl.style.display='none';continue;}
+    lbl.style.display='';
+    lbl.style.left=((pinLabelPos.x*0.5+0.5)*w)+'px';
+    lbl.style.top=((-pinLabelPos.y*0.5+0.5)*h)+'px';
+   }
+   for(const [id,lbl] of pinLabels){if(!seen.has(id)){lbl.remove();pinLabels.delete(id);}}
+  };
   const renderFrame=()=>{
+   updatePinLabels();
    const ao=getStudio3DState().ao;
    if(!ao.on){renderer.render(scene,camera);samplePerf();return;}
    if(!composer){
@@ -195,7 +224,7 @@ export default function Viewport3D(){
    const fhead=sel==null?null:stage.fabrikChainHead(sel);const fabrik=fhead?{...stage.fabrikState(fhead.id)!,root:fhead.id}:null;
    patchStudio3D({clips:infos,clipKeys:keys,stats:m.stats,outline:m.outline,materialList:stage.materialUsage(),bones:stage.bones(),bounds:m.bounds,selected:info?sel:null,selectedInfo:info,poses:sel==null?[]:stage.poseList(sel),ik,fabrik,rigs:stage.bones().filter(b=>b.depth===0).map(b=>({id:b.id,name:b.name})),boneLimits:sel==null?null:stage.boneLimitsOf(sel),uvView:sel==null?null:stage.uvLayout(sel),dirty:stage.dirty,canUndo:stage.canUndo,canRedo:stage.canRedo,undoLabel:stage.undoLabel});
    syncIk();syncFabrik();syncOnion();syncMotionPath();
-   drawSelection();applyWire(getStudio3DState().wireframe);applyShadowQuality();syncSkeleton();syncWeightPreview();syncMaskOverlay();syncUvChecker();syncSeams();for(const h of syncHooks)h();invalidate();
+   drawSelection();applyWire(getStudio3DState().wireframe);applyShadowQuality();syncSkeleton();syncWeightPreview();syncMaskOverlay();syncUvChecker();syncSeams();for(const h of syncHooks)h();updatePinLabels();invalidate();
   };
   /** Turntable preview: the orbit controls auto-rotate while a rAF loop renders. View only - it never touches the stage, documents or exports. */
   let previewRaf=0;
@@ -1338,13 +1367,14 @@ export default function Viewport3D(){
    el.removeEventListener('dragover',onAssetDragOver);el.removeEventListener('drop',onAssetDrop);cv.removeEventListener('pointerdown',onDownCapture,true);cv.removeEventListener('pointerdown',onDown);window.removeEventListener('pointermove',onMove);window.removeEventListener('pointercancel',endMarquee);endMarquee();cv.removeEventListener('pointerup',onUp);cv.removeEventListener('keydown',onKey);
    if(getStudio3DState().status==='loading')patchStudio3D({status:stage.root.children.length?'ready':'idle',confirmReplace:null});
    gizmo.detach();gizmo.dispose();ikGizmo.detach();ikGizmo.dispose();poleGizmo.detach();poleGizmo.dispose();fkGizmo.detach();fkGizmo.dispose();lookGizmo.detach();lookGizmo.dispose();clearGhosts();scene.remove(ghosts);if(pathLine){pathLine.geometry.dispose();(pathLine.material as THREE.Material).dispose();pathLine=null;}fkTarget.geometry.dispose();(fkTarget.material as THREE.Material).dispose();fkLook.geometry.dispose();(fkLook.material as THREE.Material).dispose();ikTarget.geometry.dispose();(ikTarget.material as THREE.Material).dispose();ikPoleM.geometry.dispose();(ikPoleM.material as THREE.Material).dispose();offStage();clearSelection();if(painting){painting=false;}const openSel=getStudio3DState().selected;if(openSel!=null)stage.skinPaintEnd(openSel);if(lightHelper){scene.remove(lightHelper);(lightHelper as HelperObj).dispose?.();lightHelper=null;}if(skelHelper){scene.remove(skelHelper);skelHelper.geometry.dispose();(skelHelper.material as THREE.Material).dispose();skelHelper=null;}if(weightOverlay){scene.remove(weightOverlay);weightOverlay.geometry.dispose();(weightOverlay.material as THREE.Material).dispose();weightOverlay=null;}if(maskOverlay){scene.remove(maskOverlay);maskOverlay.geometry.dispose();(maskOverlay.material as THREE.Material).dispose();maskOverlay=null;}for(const h of helpers.values())h.dispose();grid.geometry.dispose();(grid.material as THREE.Material).dispose();cursorGeo.dispose();cursorMat.dispose();scene.remove(cursorMark);mLineGeo.dispose();mLineMat.dispose();mDotGeo.dispose();mDotMat.dispose();scene.remove(measureGroup);for(const t of envTargets)t.dispose();envCache.clear();pmrem.dispose();composer?.dispose();renderer.dispose();renderer.forceContextLoss();
+   pinLabelHost.remove();pinLabels.clear();
    if(cv.parentNode===el)el.removeChild(cv);
   };
  // eslint-disable-next-line react-hooks/exhaustive-deps
  },[]);
  const s=useStudio3D();
  return <div className="relative flex min-h-0 flex-1 flex-col" data-testid="studio3d-viewport">
-  <div ref={host} className="min-h-0 flex-1 overflow-hidden rounded-[25px]"/>
+  <div ref={host} className="relative min-h-0 flex-1 overflow-hidden rounded-[25px]"/>
   {s.status==='loading'&&<StudioStatus className="pointer-events-none absolute left-4 top-3 m-0 rounded-md bg-surface px-2 py-1 text-xs" data-testid="studio3d-loading">{t('studio3d.status.loading',{name:s.name})}{s.loadPhase?` · ${t('studio3d.load.phase.'+s.loadPhase)}`:''}</StudioStatus>}
   {s.status==='error'&&<StudioStatus tone="error" live="assertive" className="absolute left-4 top-3 m-0 max-w-[80%] rounded-md bg-surface px-2 py-1 text-xs">{t('studio3d.status.error')}: {s.error}</StudioStatus>}
   {s.measure&&<StudioStatus className="pointer-events-none absolute right-4 top-3 m-0 rounded-md bg-surface px-2 py-1 text-xs" data-testid="studio3d-measure">{s.measure.a&&s.measure.b?(()=>{const mi=measureInfo(s.measure!.a!,s.measure!.b!);return `${mi.distance.toFixed(3)} m · ${mi.angle.toFixed(1)}°`;})():t('studio3d.measure.pick')}</StudioStatus>}

@@ -1,4 +1,5 @@
 # Unreleased: 3D Studio P0
+- Pin labels in the viewport: annotation pins with a label show a small overlay tag anchored to the pin that follows the camera, hides when the pin points away, and disappears with the pin; the outliner rows gained a focus button that selects the object and frames it in the viewport.
 - Annotation pins: small amber markers with an optional label, inserted at the 3D cursor or a point, movable and deletable like any object; the label lives in the node's extras, so pins survive save/load and glTF export, and the inspector edits it with undo.
 - Asset panels as drag sources: primitives, scene materials and material presets (built-in and saved) drag from the panels into the viewport - primitives land at the drop point on the ground plane, materials and presets apply to the mesh under the cursor, each as one undo step.
 - Turntable WebM video export: the turntable panel and studio3d.render.turntable gain a WebM output (MediaRecorder, 1-60 fps, no new dependencies) next to the PNG zip and folder outputs; transparent stays exclusive to the PNG outputs.

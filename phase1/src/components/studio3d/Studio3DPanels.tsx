@@ -10,7 +10,7 @@ import {useT} from '../../lib/useT';
 import {formatBytes} from '../../lib/media';
 import {useStudio3D} from '../../lib/studio3d/session';
 import {formatCount,boundsSize,GIZMO_MODES,ENV_PRESETS,ENV_ACCEPT,UNIT_IDS,BG_MODES,SHADOW_QUALITIES,SHADOW_TYPES,toggleSelection,transformExpr,outlineVisible,type BgMode} from '../../lib/studio3d/model';
-import {ChevronDown,ChevronRight,Eye,EyeOff,Lock,LockOpen} from 'lucide-react';
+import {ChevronDown,ChevronRight,Crosshair,Eye,EyeOff,Lock,LockOpen} from 'lucide-react';
 import type {PanelHostProps,InspectorSectionProps} from '../../lib/shell/types';
 import {Input} from '../ui/input';
 import {Button} from '../ui/button';
@@ -84,6 +84,7 @@ export function ScenePanel(_:PanelHostProps){
     <input type="checkbox" checked={s.marked.includes(o.id)} aria-label={t('studio3d.mark.object',{name:o.name})} onChange={e=>patchStudio3D({marked:e.currentTarget.checked?[...s.marked,o.id]:s.marked.filter(x=>x!==o.id)})}/>
     <Button variant="outline" className="px-1" aria-pressed={!o.hidden} aria-label={t(o.hidden?'studio3d.outline.show':'studio3d.outline.hide',{name:o.name})} onClick={()=>void executeCommand('studio3d.object.visible',{id:o.id,on:o.hidden})}>{o.hidden?<EyeOff size={13} aria-hidden/>:<Eye size={13} aria-hidden/>}</Button>
     <Button variant="outline" className="px-1" aria-pressed={o.locked} aria-label={t(o.locked?'studio3d.outline.unlock':'studio3d.outline.lock',{name:o.name})} onClick={()=>void executeCommand('studio3d.object.locked',{id:o.id,on:!o.locked})}>{o.locked?<Lock size={13} aria-hidden/>:<LockOpen size={13} aria-hidden/>}</Button>
+    <Button variant="outline" className="px-1" aria-label={t('studio3d.focus',{name:o.name})} title={t('studio3d.focus',{name:o.name})} onClick={()=>{void executeCommand('studio3d.select',{id:o.id});void executeCommand('studio3d.view.frame');}}><Crosshair size={13} aria-hidden/></Button>
     {renaming===o.id?
      <Input autoFocus defaultValue={o.name} aria-label={t('studio3d.outline.rename',{name:o.name})} className="min-w-0 flex-1"
       onBlur={e=>{const n=e.currentTarget.value.trim();setRenaming(null);if(n&&n!==o.name)void executeCommand('studio3d.object.rename',{id:o.id,name:n});}}

@@ -641,5 +641,6 @@
  "studio3d.insert.pin": "Pin",
  "studio3d.pin.text": "Pin label",
  "cmd.studio3d.insert.pin": "Insert an annotation pin at the 3D cursor or a given point",
- "cmd.studio3d.pin.set": "Set the label text of an annotation pin"
+ "cmd.studio3d.pin.set": "Set the label text of an annotation pin",
+ "studio3d.focus": "Focus {name}"
 }

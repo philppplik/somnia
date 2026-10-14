@@ -285,6 +285,12 @@ export class Stage{
   const apply=(v:string)=>{o.userData.somniaPin={text:v};};
   apply(next);this.push({label:`Edit ${o.name||'pin'}`,undo:()=>apply(before),redo:()=>apply(next)});
  }
+ /** Pins with a non-empty label plus their world position, for viewport overlay labels. Hidden pins are skipped. */
+ pins():{id:number;text:string;position:Vec3}[]{
+  const out:{id:number;text:string;position:Vec3}[]=[];const v=new THREE.Vector3();
+  this.root.traverse(o=>{if(!o.visible)return;const text=readPin(o.userData);if(text===null||text==='')return;o.getWorldPosition(v);out.push({id:o.id,text,position:{x:v.x,y:v.y,z:v.z}});});
+  return out;
+ }
  /** Assigns a material already used in the scene to a single-material mesh. One undo step. */
  assignMaterial(id:number,key:string){
   const o=this.need(id) as THREE.Mesh;

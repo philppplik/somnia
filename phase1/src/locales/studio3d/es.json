@@ -641,5 +641,6 @@
  "studio3d.insert.pin": "Chincheta",
  "studio3d.pin.text": "Etiqueta de la chincheta",
  "cmd.studio3d.insert.pin": "Insertar una chincheta de anotación en el cursor 3D o en un punto",
- "cmd.studio3d.pin.set": "Definir el texto de una chincheta de anotación"
+ "cmd.studio3d.pin.set": "Definir el texto de una chincheta de anotación",
+ "studio3d.focus": "Enfocar {name}"
 }

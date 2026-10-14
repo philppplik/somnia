@@ -48,3 +48,31 @@ test('pins survive a glTF export and import round-trip',async()=>{
  let found:string|null=null;loaded.scene.traverse(o=>{const t=readPin(o.userData);if(t!==null)found=t;});
  assert.equal(found,'weld seam');
 });
+
+test('pins() lists labeled pins with their world position and skips empty or hidden ones',()=>{
+ const st=new Stage();
+ st.addPrimitive('cube');
+ const a=st.addPin({x:1,y:2,z:3});st.setPinText(a.id,'anchor');
+ const empty=st.addPin({x:9,y:9,z:9});
+ const hidden=st.addPin({x:5,y:5,z:5});st.setPinText(hidden.id,'gone');st.setHidden(hidden.id,true);
+ const list=st.pins();
+ assert.equal(list.length,1);
+ assert.equal(list[0]!.id,a.id);
+ assert.equal(list[0]!.text,'anchor');
+ assert.deepEqual(list[0]!.position,{x:1,y:2,z:3});
+ assert.ok(!list.some(p=>p.id===empty.id));
+ st.setHidden(hidden.id,false);
+ assert.equal(st.pins().length,2);
+ st.setPinText(a.id,'');
+ assert.equal(st.pins().length,1);
+});
+test('pins() reports the world position inside a moved group',()=>{
+ const st=new Stage();
+ const pin=st.addPin({x:1,y:0,z:0});st.setPinText(pin.id,'in group');
+ const cube=st.addPrimitive('cube');
+ const grp=st.group([pin.id,cube.id]);
+ st.setTransform(grp.id,{position:{x:10,y:0,z:0}});
+ const p=st.pins().find(p=>p.id===pin.id);
+ assert.ok(p);
+ assert.ok(p!.position.x>10,`world x ${p!.position.x} follows the moved group`);
+});
