@@ -1311,6 +1311,21 @@
       "args": []
     },
     {
+      "name": "local_models_discover",
+      "domain": "fs",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "base_url",
+        "runtime"
+      ],
+      "args": [
+        "baseUrl",
+        "runtime"
+      ]
+    },
+    {
       "name": "local_models_hardware",
       "domain": "fs",
       "status": "native",

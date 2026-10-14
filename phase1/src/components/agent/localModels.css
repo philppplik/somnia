@@ -13,3 +13,6 @@
 .local-model-confirm input[type=checkbox] { width: auto; margin-right: 8px; }
 
 .agent-settings .local-model-advice { display: grid; gap: 10px; }
+
+.local-runtime-discovery[open] { display: grid; gap: 10px; }
+.local-runtime-discovery label { display: grid; gap: 6px; }

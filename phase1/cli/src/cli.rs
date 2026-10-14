@@ -21,6 +21,8 @@ struct Cli {
 enum Cmd {
     /// Run an agent task on the current project (local branch, never pushes).
     Run(RunArgs),
+    /// Inspect local runtime model metadata. Never starts services or runs inference.
+    Models(ModelsArgs),
     /// Follow a detached run's events.
     Attach(TaskArgs),
     /// Print a run's current summary.
@@ -31,6 +33,14 @@ enum Cmd {
     Serve { root: PathBuf, task_id: String },
 }
 
+#[derive(Args)]
+struct ModelsArgs {
+    #[arg(long,default_value="ollama",value_parser=["ollama","llama.cpp","lmstudio"])]
+    runtime:String,
+    /// HTTP loopback origin. Defaults depend on runtime.
+    #[arg(long)] endpoint:Option<String>,
+    #[arg(long)] json:bool,
+}
 #[derive(Args)]
 struct RunArgs {
     /// The task prompt.
@@ -114,6 +124,7 @@ pub fn main_entry() -> i32 {
                 Err(e) => emit_error(json, &e),
             }
         }
+        Cmd::Models(a)=>finish_task_cmd(a.json,models_cmd(&a)),
         Cmd::Attach(a) => finish_task_cmd(a.json, attach_cmd(&a)),
         Cmd::Status(a) => finish_task_cmd(a.json, status_cmd(&a)),
         Cmd::Cancel(a) => finish_task_cmd(a.json, cancel_cmd(&a)),
@@ -122,6 +133,26 @@ pub fn main_entry() -> i32 {
             Err(_) => EXIT_FAILED,
         },
     }
+}
+
+fn models_cmd(a:&ModelsArgs)->Result<i32>{
+    let endpoint=a.endpoint.clone().unwrap_or_else(||match a.runtime.as_str(){"llama.cpp"=>"http://127.0.0.1:8080", "lmstudio"=>"http://127.0.0.1:1234",_=>"http://127.0.0.1:11434"}.into());
+    let engine=SidecarEngine::from_env()?;
+    use std::io::Read;
+    let mut child=std::process::Command::new(&engine.command[0]).args(&engine.command[1..]).args(["--models",&a.runtime,&endpoint]).stdin(std::process::Stdio::null()).stdout(std::process::Stdio::piped()).stderr(std::process::Stdio::null()).spawn().map_err(|_|CliError::new(ErrorKind::EngineUnavailable,"Cannot inspect local models"))?;
+    let stdout=child.stdout.take().ok_or_else(||CliError::new(ErrorKind::EngineUnavailable,"Discovery output missing"))?;
+    let (tx,rx)=std::sync::mpsc::channel();
+    std::thread::spawn(move||{let mut bytes=Vec::new();let ok=stdout.take(2_000_001).read_to_end(&mut bytes).is_ok();let _=tx.send((ok,bytes));});
+    let start=std::time::Instant::now();
+    let status=loop{match child.try_wait()?{Some(status)=>break status,None if start.elapsed()<std::time::Duration::from_secs(10)=>std::thread::sleep(std::time::Duration::from_millis(20)),None=>{let _=child.kill();let _=child.wait();return Err(CliError::new(ErrorKind::EngineUnavailable,"Model discovery timed out"));}}};
+    let (ok,bytes)=rx.recv_timeout(std::time::Duration::from_secs(1)).map_err(|_|CliError::new(ErrorKind::EngineUnavailable,"Discovery output interrupted"))?;
+    if !ok||bytes.len()>2_000_000{return Err(CliError::new(ErrorKind::BadRequest,"Model inventory invalid or too large"));}
+    let data:serde_json::Value=serde_json::from_slice(&bytes).map_err(|_|CliError::new(ErrorKind::EngineUnavailable,"Invalid model discovery response"))?;
+    if a.json{println!("{}",data);}else if let Some(error)=data.get("error"){println!("Discovery failed: {}",error.as_str().unwrap_or("unknown"));}else{
+        println!("{} at {} (metadata only, local inference unverified)",a.runtime,endpoint);
+        if let Some(models)=data.get("models").and_then(|v|v.as_array()){for model in models{if let Some(id)=model.get("id").and_then(|v|v.as_str()){println!("{}",id);}}}
+    }
+    Ok(if status.success(){0}else{EXIT_FAILED})
 }
 
 fn finish_task_cmd(json: bool, r: Result<i32>) -> i32 {
