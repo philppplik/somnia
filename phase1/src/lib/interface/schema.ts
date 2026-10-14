@@ -33,6 +33,7 @@ export type InterfaceTextAlign='left'|'center'|'right';
 export type InterfaceTextDecoration='underline'|'line-through';
 export interface InterfaceShadow {x:number;y:number;blur:number;color:string;}
 export const DEFAULT_INTERFACE_SHADOW:InterfaceShadow={x:0,y:2,blur:4,color:'#000000'};
+export const DEFAULT_INTERFACE_STROKE='#000000';
 export interface InterfaceGradientStop {offset:number;color:string;}
 export interface InterfaceGradient {angle:number;stops:InterfaceGradientStop[];}
 export const DEFAULT_INTERFACE_GRADIENT:InterfaceGradient={angle:90,stops:[{offset:0,color:'#7756e8'},{offset:1,color:'#38bdf8'}]};

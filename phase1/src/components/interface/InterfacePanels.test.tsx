@@ -6,6 +6,7 @@ import {renderToStaticMarkup} from 'react-dom/server';
 import {InterfaceLayers,InterfaceProperties} from './InterfacePanels';
 import {InterfaceCanvas} from './InterfaceCanvas';
 import {interfaceSession} from '../../lib/interface/session';
+import {setInterfaceStroke} from '../../lib/interface/editing';
 import {addNode} from '../../lib/interface/model';import {DEFAULT_LAYOUT} from '../../lib/interface/schema';import {addVariable} from '../../lib/interface/tokens';import {createComponent,addComponentVariant,instantiateComponent} from '../../lib/interface/components';import {addVariantProperty,addTypedProperty} from '../../lib/interface/variantProperties';
 import {setLocale} from '../../lib/i18n';
 test('separate ordinary panels render tree and properties without a second inspector host',()=>{
@@ -172,6 +173,10 @@ test('P52 gradient controls render for a shape in English and German',async()=>{
  const german=renderToStaticMarkup(<InterfaceProperties/>);assert.ok(german.includes('Verlauf'));assert.ok(!german.includes('Verlaufswinkel'),'gradient fields stay hidden until the gradient exists');
  interfaceSession.transact(d=>{d.nodes.find(n=>n.id===interfaceSession.get().selectedIds[0])!.gradient={angle:90,stops:[{offset:0,color:'#7756e8'},{offset:1,color:'#38bdf8'}]};});
  const on=renderToStaticMarkup(<InterfaceProperties/>);assert.ok(on.includes('Verlaufswinkel'));assert.ok(on.includes('Startfarbe'));assert.ok(on.includes('Endfarbe'));}finally{interfaceSession.clear();setLocale('en');}});
+test('P56 stroke controls render in English and German',async()=>{interfaceSession.start();interfaceSession.transact(d=>{const f=addNode(d,d.pages[0].id,'frame');const r=addNode(d,d.pages[0].id,'rectangle',f);setInterfaceStroke(d,r,true,'#2255cc',3);});interfaceSession.select(interfaceSession.get().document!.nodes[1].id);
+ const html=renderToStaticMarkup(<InterfaceProperties/>);assert.ok(html.includes('Stroke width'));assert.ok(html.includes('Stroke color'));
+ interfaceSession.clear();setLocale('de');try{interfaceSession.start();interfaceSession.transact(d=>{const f=addNode(d,d.pages[0].id,'frame');const r=addNode(d,d.pages[0].id,'rectangle',f);setInterfaceStroke(d,r,true,'#2255cc',3);});interfaceSession.select(interfaceSession.get().document!.nodes[1].id);
+ const german=renderToStaticMarkup(<InterfaceProperties/>);assert.ok(german.includes('Konturbreite'));assert.ok(german.includes('Konturfarbe'));}finally{interfaceSession.clear();setLocale('en');}});
 test('P54 group and ungroup buttons render in English and German',async()=>{interfaceSession.start();interfaceSession.transact(d=>{const f=addNode(d,d.pages[0].id,'frame');addNode(d,d.pages[0].id,'rectangle',f);});interfaceSession.select(interfaceSession.get().document!.nodes[1].id);
  const html=renderToStaticMarkup(<InterfaceProperties/>);assert.ok(html.includes('Group</button>'));assert.ok(html.includes('Ungroup'));
  interfaceSession.clear();setLocale('de');try{interfaceSession.start();interfaceSession.transact(d=>{const f=addNode(d,d.pages[0].id,'frame');addNode(d,d.pages[0].id,'rectangle',f);});interfaceSession.select(interfaceSession.get().document!.nodes[1].id);

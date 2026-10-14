@@ -1,6 +1,7 @@
 import {DEFAULT_SNAP,validateSnap,type SnapSettings} from './snapCore';
 export {DEFAULT_SNAP,validateSnap,type SnapSettings} from './snapCore';
 import {insideInstance,deleteNode,uid,type InterfaceDocument,type InterfaceNode} from './model';
+import {DEFAULT_INTERFACE_STROKE} from './schema';
 import {computeInterfaceLayout,type LayoutBounds} from './layout';
 import {patchInterfaceNode} from './components';
 export type AlignMode='left'|'centerX'|'right'|'top'|'centerY'|'bottom';
@@ -44,6 +45,15 @@ export function ungroupInterfaceSelection(doc:InterfaceDocument,ids:readonly str
   doc.nodes.splice(doc.nodes.indexOf(n),1);freed.push(...kids);}
  return freed;
 }
+export function setInterfaceStroke(doc:InterfaceDocument,id:string,enabled:boolean,color?:string,width?:number){
+ const n=doc.nodes.find(n=>n.id===id);if(!n)throw Error('Layer unavailable.');
+ if(!['frame','group','rectangle','ellipse','line','path','image'].includes(n.kind))throw Error('Strokes apply to shapes, images and frames.');
+ if(!enabled){patchInterfaceNode(doc,id,{stroke:undefined,strokeWidth:undefined});return;}
+ const w=width===undefined?(n.strokeWidth??2):Math.round(width);if(!Number.isFinite(w)||w<1||w>64)throw Error('Stroke width must be 1..64 px.');
+ const c=(color??n.stroke??DEFAULT_INTERFACE_STROKE).trim();if(!/^#[\da-fA-F]{6}$/.test(c))throw Error('Stroke color must be a hex color like #2255cc.');
+ patchInterfaceNode(doc,id,{stroke:c,strokeWidth:w});
+}
+
 export function interfaceMarqueeSelect(doc:InterfaceDocument,pageId:string,rect:{x:number;y:number;width:number;height:number}):string[]{
  const page=doc.pages.find(p=>p.id===pageId);if(!page)throw Error('Page unavailable.');
  const x=Math.min(rect.x,rect.x+rect.width),y=Math.min(rect.y,rect.y+rect.height),x2=Math.max(rect.x,rect.x+rect.width),y2=Math.max(rect.y,rect.y+rect.height);
