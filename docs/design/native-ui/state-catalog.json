@@ -2,18 +2,265 @@
   "version": 1,
   "scope": "P1 primitives, synthetic developer fixtures. App/studio and native verification remain separate.",
   "components": [
-    {"id":"field","exports":["Field","FieldMessage"],"states":["label","hint","error","long-label","disabled-control","read-only-control"],"tests":["src/components/ui/primitives.test.tsx","test/design-system/primitives.spec.ts"],"status":"implemented"},
-    {"id":"native-controls","exports":["NativeInput","NativeSelect","Textarea"],"states":["idle","focus","disabled","read-only","invalid"],"tests":["src/components/ui/primitives.test.tsx","test/design-system/primitives.spec.ts"],"status":"implemented","caveat":"Existing styled Input remains unchanged; these exports have native bare-control parity."},
-    {"id":"number","exports":["NumberField"],"states":["draft","invalid","empty","out-of-range","mixed","read-only","disabled","commit-on-enter-blur","cancel-on-escape","arrow-step","identity-reset"],"tests":["src/components/ui/primitives.test.tsx","test/design-system/primitives.spec.ts"],"status":"implemented","caveat":"Domain parsing and identity reset are caller-owned. Async/stale engine writes are not a primitive concern."},
-    {"id":"range","exports":["RangeField"],"states":["idle","keyboard-preview","pointer-preview","commit","escape-cancel","pointer-cancel","lost-capture","disabled","read-only","unmount-cleanup"],"tests":["src/components/ui/primitives.test.tsx","test/design-system/primitives.spec.ts"],"status":"implemented","caveat":"Caller restores preview and owns undo. Unmount and lost-capture cleanup are implemented, not separately browser-tested yet."},
-    {"id":"boolean-choice","exports":["Checkbox","Switch","RadioGroup"],"states":["checked","unchecked","checkbox-mixed","disabled","keyboard","native-radio-selection","radio-read-only"],"tests":["src/components/ui/primitives.test.tsx","test/design-system/primitives.spec.ts"],"status":"implemented","caveat":"Checkbox/Switch use native checkbox semantics. Only RadioGroup implements explicit read-only behavior; disable boolean controls when edits are forbidden."},
-    {"id":"panel","exports":["PanelBody","PanelHeader","PanelSection","PropertyList"],"states":["open","collapsed","long-value","copyable-value"],"tests":["src/components/ui/primitives.test.tsx","test/design-system/primitives.spec.ts"],"status":"implemented","caveat":"Collapse persistence and studio host registry remain caller-owned."},
-    {"id":"notice","exports":["Notice"],"states":["info","success","warning","danger","silent","polite","assertive"],"tests":["src/components/ui/primitives.test.tsx"],"status":"implemented","caveat":"Caller supplies safe localized text; no automatic retries or consent."},
-    {"id":"menu","exports":["Menu","MenuTrigger","MenuContent","MenuItem"],"states":["open","closed","keyboard","typeahead","disabled-non-activation","escape","focus-return"],"tests":["test/design-system/primitives.spec.ts"],"status":"implemented","caveat":"Base UI permits focus on disabled items. Checkbox/radio/submenu exports retain Base UI behavior but lack dedicated new tests."},
-    {"id":"tooltip","exports":["TooltipProvider","Tooltip","TooltipTrigger","TooltipContent","StudioTooltip"],"states":["hover","portal","theme","contrast","existing-studio-jsx"],"tests":["test/design-system/primitives.spec.ts","src/components/StudioPill.test.tsx"],"status":"implemented"},
-    {"id":"popover","exports":["Popover","PopoverTrigger","PopoverContent","PopoverTitle","PopoverDescription","PopoverClose"],"states":["open","closed","escape","focus-return","theme","contrast"],"tests":["test/design-system/primitives.spec.ts"],"status":"implemented"},
-    {"id":"icon-button","exports":["IconButton"],"states":["required-accessible-name","icon-size","row-size"],"tests":[],"status":"implemented","caveat":"Composes existing Button; no separate visual matrix yet."}
+    {
+      "id": "field",
+      "exports": [
+        "Field",
+        "FieldMessage"
+      ],
+      "states": [
+        "label",
+        "hint",
+        "error",
+        "long-label",
+        "disabled-control",
+        "read-only-control"
+      ],
+      "tests": [
+        "src/components/ui/primitives.test.tsx",
+        "test/design-system/primitives.spec.ts"
+      ],
+      "status": "implemented"
+    },
+    {
+      "id": "native-controls",
+      "exports": [
+        "NativeInput",
+        "NativeSelect",
+        "Textarea"
+      ],
+      "states": [
+        "idle",
+        "focus",
+        "disabled",
+        "read-only",
+        "invalid"
+      ],
+      "tests": [
+        "src/components/ui/primitives.test.tsx",
+        "test/design-system/primitives.spec.ts"
+      ],
+      "status": "implemented",
+      "caveat": "Existing styled Input remains unchanged; these exports have native bare-control parity."
+    },
+    {
+      "id": "number",
+      "exports": [
+        "NumberField"
+      ],
+      "states": [
+        "draft",
+        "invalid",
+        "empty",
+        "out-of-range",
+        "mixed",
+        "read-only",
+        "disabled",
+        "commit-on-enter-blur",
+        "cancel-on-escape",
+        "arrow-step",
+        "identity-reset"
+      ],
+      "tests": [
+        "src/components/ui/primitives.test.tsx",
+        "test/design-system/primitives.spec.ts"
+      ],
+      "status": "implemented",
+      "caveat": "Domain parsing and identity reset are caller-owned. Async/stale engine writes are not a primitive concern."
+    },
+    {
+      "id": "range",
+      "exports": [
+        "RangeField"
+      ],
+      "states": [
+        "idle",
+        "keyboard-preview",
+        "pointer-preview",
+        "commit",
+        "escape-cancel",
+        "pointer-cancel",
+        "lost-capture",
+        "disabled",
+        "read-only",
+        "unmount-cleanup"
+      ],
+      "tests": [
+        "src/components/ui/primitives.test.tsx",
+        "test/design-system/primitives.spec.ts"
+      ],
+      "status": "implemented",
+      "caveat": "Caller restores preview and owns undo. Unmount and lost-capture cleanup are implemented, not separately browser-tested yet."
+    },
+    {
+      "id": "boolean-choice",
+      "exports": [
+        "Checkbox",
+        "Switch",
+        "RadioGroup"
+      ],
+      "states": [
+        "checked",
+        "unchecked",
+        "checkbox-mixed",
+        "disabled",
+        "keyboard",
+        "native-radio-selection",
+        "radio-read-only"
+      ],
+      "tests": [
+        "src/components/ui/primitives.test.tsx",
+        "test/design-system/primitives.spec.ts"
+      ],
+      "status": "implemented",
+      "caveat": "Checkbox/Switch use native checkbox semantics. Only RadioGroup implements explicit read-only behavior; disable boolean controls when edits are forbidden."
+    },
+    {
+      "id": "panel",
+      "exports": [
+        "PanelBody",
+        "PanelHeader",
+        "PanelSection",
+        "PropertyList"
+      ],
+      "states": [
+        "open",
+        "collapsed",
+        "long-value",
+        "copyable-value"
+      ],
+      "tests": [
+        "src/components/ui/primitives.test.tsx",
+        "test/design-system/primitives.spec.ts"
+      ],
+      "status": "implemented",
+      "caveat": "Collapse persistence and studio host registry remain caller-owned."
+    },
+    {
+      "id": "notice",
+      "exports": [
+        "Notice"
+      ],
+      "states": [
+        "info",
+        "success",
+        "warning",
+        "danger",
+        "silent",
+        "polite",
+        "assertive"
+      ],
+      "tests": [
+        "src/components/ui/primitives.test.tsx"
+      ],
+      "status": "implemented",
+      "caveat": "Caller supplies safe localized text; no automatic retries or consent."
+    },
+    {
+      "id": "menu",
+      "exports": [
+        "Menu",
+        "MenuTrigger",
+        "MenuContent",
+        "MenuItem"
+      ],
+      "states": [
+        "open",
+        "closed",
+        "keyboard",
+        "typeahead",
+        "disabled-non-activation",
+        "escape",
+        "focus-return"
+      ],
+      "tests": [
+        "test/design-system/primitives.spec.ts"
+      ],
+      "status": "implemented",
+      "caveat": "Base UI permits focus on disabled items. Checkbox/radio/submenu exports retain Base UI behavior but lack dedicated new tests."
+    },
+    {
+      "id": "tooltip",
+      "exports": [
+        "TooltipProvider",
+        "Tooltip",
+        "TooltipTrigger",
+        "TooltipContent",
+        "StudioTooltip"
+      ],
+      "states": [
+        "hover",
+        "portal",
+        "theme",
+        "contrast",
+        "existing-studio-jsx"
+      ],
+      "tests": [
+        "test/design-system/primitives.spec.ts",
+        "src/components/StudioPill.test.tsx"
+      ],
+      "status": "implemented"
+    },
+    {
+      "id": "popover",
+      "exports": [
+        "Popover",
+        "PopoverTrigger",
+        "PopoverContent",
+        "PopoverTitle",
+        "PopoverDescription",
+        "PopoverClose"
+      ],
+      "states": [
+        "open",
+        "closed",
+        "escape",
+        "focus-return",
+        "theme",
+        "contrast"
+      ],
+      "tests": [
+        "test/design-system/primitives.spec.ts"
+      ],
+      "status": "implemented"
+    },
+    {
+      "id": "icon-button",
+      "exports": [
+        "IconButton"
+      ],
+      "states": [
+        "required-accessible-name",
+        "icon-size",
+        "row-size"
+      ],
+      "tests": [],
+      "status": "implemented",
+      "caveat": "Composes existing Button; no separate visual matrix yet."
+    }
   ],
-  "sharedGates":{"themes":["light","dark"],"contrast":["standard","high"],"zoom":[0.85,1.3],"motion":"OS reduced-motion emulation","pixels":"review evidence, not canonical snapshots"},
-  "remaining":["Named palette matrix","200 percent text enlargement","native desktop and forced-colors verification","full accessibility/contrast audit","app/studio baselines before consumer migration"]
+  "sharedGates": {
+    "themes": "All 27 explicit THEME_CHOICES (system uses separate OS semantics)",
+    "contrast": [
+      "standard",
+      "high"
+    ],
+    "zoom": [
+      0.85,
+      1.3
+    ],
+    "motion": "OS reduced-motion emulation",
+    "pixels": "review evidence, not canonical snapshots",
+    "density": [
+      "compact",
+      "normal",
+      "comfortable"
+    ],
+    "textResize": "200% font stress fixture"
+  },
+  "remaining": [
+    "native desktop and forced-colors verification",
+    "full accessibility/contrast audit",
+    "app/studio baselines before consumer migration"
+  ]
 }
