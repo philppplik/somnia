@@ -126,7 +126,7 @@ export function AnimationTimeline({comp,at,selected,canUndo,canRedo}:{comp:Compo
  const wa=comp.workArea;const layer=comp.layers.find(l=>l.id===selected);
  const animated=layer?TRANSFORM_KEYS.filter(k=>layer.transform[k].keys.length>0):[];
  return <section tabIndex={0} onKeyDown={onKeyDown} className="flex max-h-[55%] min-h-[150px] shrink-0 flex-col border-t border-subtle text-xs outline-none focus-visible:ring-1 focus-visible:ring-accent" style={{height:view.graph?300:240}} aria-label={t('animation.timeline')} data-testid="animation-timeline">
-  <div className="flex flex-wrap items-center gap-1 border-b border-subtle px-2 py-1">
+  <div role="group" aria-label={t('animation.timeline')} className="flex flex-wrap items-center gap-1 border-b border-subtle px-2 py-1">
    <Button size="row" aria-label={t('animation.undo')} disabled={!canUndo} onClick={()=>run('animation.edit.undo')}><Undo2/></Button>
    <Button size="row" aria-label={t('animation.redo')} disabled={!canRedo} onClick={()=>run('animation.edit.redo')}><Redo2/></Button>
    <Button size="compact" aria-label={t('animation.step.back')} onClick={()=>step(-1)}>‹</Button>

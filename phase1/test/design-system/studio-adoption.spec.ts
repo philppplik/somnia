@@ -20,3 +20,7 @@ for(const theme of ['light','dark'])for(const density of ['compact','normal','co
  expect(audit.contrast).toBeGreaterThanOrEqual(4.5);expect(audit.width).toBeGreaterThanOrEqual(2);expect(audit.outline).not.toBe('none');expect(audit.labels).toBe(1);expect(audit.gap).toBe({compact:'3px',normal:'6px',comfortable:'10px'}[density]);expect(audit.radius).toBe('25px');
  await proof.screenshot({path:`test-results/ds-inspector-audit-${theme}-${density}.png`});
 });
+test('3D replacement review announces title/body, cancel focus, traps focus, Escape and returns focus',async({page})=>{
+ await page.goto('./');const trigger=page.getByRole('button',{name:'Open replacement review'});await trigger.click();const dialog=page.getByRole('alertdialog');await expect(dialog).toBeVisible();await expect(dialog).toHaveAccessibleName(/Replace/);await expect(dialog).toHaveAccessibleDescription(/not exported/i);
+ const cancel=dialog.getByRole('button',{name:/Keep scene/i});await expect(cancel).toBeFocused();await dialog.screenshot({path:'test-results/ds-3d-replace-dialog.png',animations:'disabled'});await cancel.press('Shift+Tab');expect(await dialog.evaluate(el=>el.contains(document.activeElement))).toBe(true);await page.keyboard.press('Escape');await expect(dialog).toBeHidden();await expect(trigger).toBeFocused();await expect(page.getByTestId('studio-adoption-events')).not.toContainText('replace-confirmed');
+});
