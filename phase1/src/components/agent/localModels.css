@@ -18,3 +18,7 @@
 .local-runtime-discovery label { display: grid; gap: 6px; }
 
 .local-runtime-discovery input[type=checkbox] { width: auto; justify-self: start; }
+.local-vision-text { white-space: pre-wrap; }
+.local-vision-destination { margin-right: 8px; margin-bottom: 8px; }
+.local-tool-reasons { padding-left: 18px; list-style: disc; }
+.local-tool-reasons-nested { list-style: circle; }

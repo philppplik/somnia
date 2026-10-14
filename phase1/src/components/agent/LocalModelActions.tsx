@@ -1,3 +1,4 @@
+import {Checkbox} from '../ui/checkbox';
 import {useState,useSyncExternalStore} from 'react';
 import {useT} from '../../lib/useT';
 import {localModelManager,type LocalModelManager,registryModel} from '../../lib/agent/localModelManager';
@@ -34,7 +35,7 @@ export function LocalModelActions({snapshot,onChanged,manager=localModelManager}
   </div>}
   <Dialog open={!!confirm} onOpenChange={open=>{if(!open)setConfirm(null);}}><DialogContent className="local-model-confirm"><DialogTitle>{t(confirm?.kind==='delete'?'local.action.confirmDelete':'local.action.confirmPull')}</DialogTitle><DialogDescription>{confirm?.model}</DialogDescription>
    {confirm?.kind==='pull'?<><p>{t('local.action.source')} ollama.com/library/{confirm.model.split(':')[0]}</p><p>{t('local.action.downloadNotice')}</p></>:<p>{t('local.action.deleteNotice')}</p>}
-   <label><input type="checkbox" checked={ack} onChange={e=>setAck(e.target.checked)}/>{t('local.action.ack')}</label>
+   <Checkbox label={t('local.action.ack')} checked={ack} onChange={e=>setAck(e.target.checked)}/>
    <div className="local-models-badges"><Button type="button" onClick={()=>setConfirm(null)}>{t('local.action.cancel')}</Button><Button type="button" disabled={!ack||locked} onClick={()=>{const action=confirm!;setConfirm(null);void act(()=>action.kind==='pull'?manager.pull(action.model):manager.remove(action.model,action.entry!.digest!));}}>{t('local.action.confirm')}</Button></div>
   </DialogContent></Dialog>
  </div>;

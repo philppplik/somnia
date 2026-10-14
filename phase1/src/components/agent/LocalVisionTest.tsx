@@ -1,3 +1,6 @@
+import {NativeInput} from '../ui/native-controls';
+import {Field} from '../ui/field';
+import {Checkbox} from '../ui/checkbox';
 import {LocalVisionApplication} from './LocalVisionApplication';
 import {useEffect,useRef,useState} from 'react';
 import {useT} from '../../lib/useT';
@@ -20,5 +23,5 @@ export function LocalVisionTest({model,options}:{model:string;options:LocalRunti
   abort.signal.throwIfAborted();if(!finished)throw Error('Incomplete description. Retry before applying.');setComplete(true);
   }finally{clearTimeout(timeout);}
  }catch(e){if(!abort.signal.aborted)setError(e instanceof Error?e.message:t('local.action.failed'));}finally{setAgentActivity(false,false);setBusy(false);controller.current=null;}};
- return <details className="local-runtime-discovery"><summary>{t('local.vision.title')}</summary><p>{t('local.vision.boundary')}</p><label>{t('local.vision.file')}<input type="file" accept="image/png,image/jpeg" disabled={busy} onChange={e=>{setFile(e.target.files?.[0]??null);setOptIn(false);setText('');setComplete(false);}}/></label><label><input type="checkbox" checked={optIn} disabled={busy} onChange={e=>setOptIn(e.target.checked)}/>{t('local.vision.optIn',{model})}</label><Button type="button" disabled={busy||!file||!optIn||!options?.numCtx} onClick={()=>void describe()}>{t('local.vision.describe')}</Button>{busy&&<Button type="button" onClick={()=>controller.current?.abort()}>{t('local.action.cancel')}</Button>}{error&&<p role="alert">{error}</p>}{text&&<p style={{whiteSpace:'pre-wrap'}}>{text}</p>}{complete&&text&&<LocalVisionApplication text={text} model={model}/>}</details>;
+ return <details className="local-runtime-discovery"><summary>{t('local.vision.title')}</summary><p>{t('local.vision.boundary')}</p><Field label={t('local.vision.file')}>{control=><NativeInput {...control} type="file" accept="image/png,image/jpeg" disabled={busy} onChange={e=>{setFile(e.target.files?.[0]??null);setOptIn(false);setText('');setComplete(false);}}/>}</Field><Checkbox label={t('local.vision.optIn',{model})} checked={optIn} disabled={busy} onChange={e=>setOptIn(e.target.checked)}/><Button type="button" disabled={busy||!file||!optIn||!options?.numCtx} onClick={()=>void describe()}>{t('local.vision.describe')}</Button>{busy&&<Button type="button" onClick={()=>controller.current?.abort()}>{t('local.action.cancel')}</Button>}{error&&<p role="alert">{error}</p>}{text&&<p className="local-vision-text">{text}</p>}{complete&&text&&<LocalVisionApplication text={text} model={model}/>}</details>;
 }
