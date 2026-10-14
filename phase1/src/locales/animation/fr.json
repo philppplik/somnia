@@ -583,5 +583,11 @@
  "animation.precomp.make": "Précomposer",
  "animation.precomp.make.hint": "Déplacer les calques sélectionnés dans une nouvelle composition et les remplacer par un calque",
  "cmd.animation.precomp.make": "Précomposer les calques sélectionnés",
- "cmd.animation.precomp.time": "Régler vitesse, boucle et début du calque de composition"
+ "cmd.animation.precomp.time": "Régler vitesse, boucle et début du calque de composition",
+ "animation.blur.layer": "Flou de mouvement (calque)",
+ "animation.blur.comp": "Flou de mouvement (composition)",
+ "animation.blur.angle": "Angle d'obturation (°)",
+ "animation.blur.samples": "Échantillons",
+ "cmd.animation.blur.layers": "Activer le flou de mouvement sur les calques",
+ "cmd.animation.blur.comp": "Régler le flou de mouvement de la composition (obturateur)"
 }

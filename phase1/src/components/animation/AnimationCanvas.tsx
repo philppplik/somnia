@@ -12,7 +12,7 @@ import {findComp,type Composition,type KeyRef,type Layer} from '../../lib/animat
 import {animatedChars,textPathD,textPathId} from '../../lib/animation/textAnimators';
 import {maskDefs,maskId,matteId,hasMasks} from '../../lib/animation/masks';
 import {layerBody,precompImage,setRenderComps} from '../../lib/animation/exportFrames';
-import {sceneAt} from '../../lib/animation/scene';
+import {sceneAt,motionBlurSamples} from '../../lib/animation/scene';
 import {pruneSelection} from '../../lib/animation/selection';
 import {executeCommand} from '../../lib/commands';
 import {useT} from '../../lib/useT';
@@ -81,8 +81,11 @@ function Viewer({comp,at,selected,sel,assets,comps}:{assets:readonly InterfaceAs
    <rect width={comp.width} height={comp.height} fill={comp.background}/>
    <defs dangerouslySetInnerHTML={{__html:maskDefsHtml}}/>
    {scene.map(({layer:l,matrix,opacity})=>{const i=comp.layers.indexOf(l);
-    const drawn=<g key={l.id} transform={`matrix(${matrix.join(' ')})`} opacity={opacity} data-layer={l.id} data-selected={l.id===selected||undefined}
-     onPointerDown={()=>animationSession().setView({selectedLayer:l.id})}><g mask={hasMasks(l)?`url(#${maskId('preview-',i)})`:undefined}><g filter={effectPrimitives(l,at)?`url(#preview-effect-${i})`:undefined}>{layerNode(l,assets,at,l.source.gradient?`url(#preview-gradient-${i})`:undefined)}</g></g></g>;
+    const content=<g mask={hasMasks(l)?`url(#${maskId('preview-',i)})`:undefined}><g filter={effectPrimitives(l,at)?`url(#preview-effect-${i})`:undefined}>{layerNode(l,assets,at,l.source.gradient?`url(#preview-gradient-${i})`:undefined)}</g></g>;
+    const blur=motionBlurSamples(comp,l,at);
+    const drawn=blur.length?<g key={l.id} opacity={opacity} data-layer={l.id} data-blur={blur.length} data-selected={l.id===selected||undefined} onPointerDown={()=>animationSession().setView({selectedLayer:l.id})}>{blur.map((m,j)=><g key={j} transform={`matrix(${m.join(' ')})`} opacity={1/(j+1)}>{content}</g>)}</g>
+     :<g key={l.id} transform={`matrix(${matrix.join(' ')})`} opacity={opacity} data-layer={l.id} data-selected={l.id===selected||undefined}
+     onPointerDown={()=>animationSession().setView({selectedLayer:l.id})}>{content}</g>;
     return l.matte?<g key={l.id} mask={`url(#${matteId('preview-',i)})`}>{drawn}</g>:drawn;})}
    {layer&&hasPos&&<PathOverlay comp={comp} layer={layer} at={at} sel={sel}/>}
    {layer&&hasMasks(layer)&&<MaskOverlay comp={comp} layer={layer} at={at}/>}

@@ -41,7 +41,7 @@ export const STROKE_JOINS=['miter','round','bevel'] as const;
 export const STROKE_CAPS=['butt','round','square'] as const;
 export type StrokeJoin=typeof STROKE_JOINS[number];
 export type StrokeCap=typeof STROKE_CAPS[number];
-export interface Layer{id:string;name:string;kind:LayerKind;source:LayerSource;inT:number;outT:number;offset:number;parent:string|null;transform:Transform;visible:boolean;solo:boolean;locked:boolean;/** Hidden from the timeline list when shy layers are hidden. Never affects rendering. */shy?:boolean;effects?:readonly LayerEffect[];audio?:AudioParams;textReveal?:Property;animators?:readonly TextAnimator[];masks?:readonly LayerMask[];matte?:LayerMatte;stroke?:{color:string;width:number;trim?:Property;dash?:Property;/** Absent means miter (SVG default). */join?:StrokeJoin;/** Absent means butt (SVG default). */cap?:StrokeCap}}
+export interface Layer{id:string;name:string;kind:LayerKind;source:LayerSource;inT:number;outT:number;offset:number;parent:string|null;transform:Transform;visible:boolean;solo:boolean;locked:boolean;/** Hidden from the timeline list when shy layers are hidden. Never affects rendering. */shy?:boolean;/** Motion blur switch. Only draws when the composition has a shutter. */motionBlur?:boolean;effects?:readonly LayerEffect[];audio?:AudioParams;textReveal?:Property;animators?:readonly TextAnimator[];masks?:readonly LayerMask[];matte?:LayerMatte;stroke?:{color:string;width:number;trim?:Property;dash?:Property;/** Absent means miter (SVG default). */join?:StrokeJoin;/** Absent means butt (SVG default). */cap?:StrokeCap}}
 /** Per-character text animator. The selector covers `start`..`end` percent of the characters, shifted by the keyed `offset` percent, with a linear `softness` ramp at both edges. Characters inside get the full `position` shift, `scale` percent and `opacity` percent; the others keep the neutral values. */
 export const TEXT_EASES=['linear','smooth','in','out'] as const;
 export type TextEase=typeof TEXT_EASES[number];
@@ -63,7 +63,11 @@ export const MAX_TEXT_ANIMATORS=4;
 /** Animated text stays small enough to render one span per character. */
 export const MAX_ANIMATED_CHARS=1000;
 export interface Marker{id:string;t:number;label:string}
-export interface Composition{id:string;name:string;width:number;height:number;fps:Rational;duration:number;start:number;background:string;workArea:{in:number;out:number};layers:readonly Layer[];markers?:readonly Marker[]}
+/** Composition motion blur: shutter angle in degrees (1..720) and sample count (2..16). Absent means off. */
+export interface Shutter{angle:number;samples:number}
+export const SHUTTER_MAX_SAMPLES=16,SHUTTER_MAX_ANGLE=720;
+export const validShutter=(s:Shutter|undefined)=>s===undefined||(!!s&&typeof s==='object'&&isNum(s.angle)&&s.angle>=1&&s.angle<=SHUTTER_MAX_ANGLE&&Number.isInteger(s.samples)&&s.samples>=2&&s.samples<=SHUTTER_MAX_SAMPLES);
+export interface Composition{shutter?:Shutter;id:string;name:string;width:number;height:number;fps:Rational;duration:number;start:number;background:string;workArea:{in:number;out:number};layers:readonly Layer[];markers?:readonly Marker[]}
 export interface AnimationDocument{schema:number;engine:string;id:string;name:string;revision:number;activeComp:string;compositions:readonly Composition[];assets:readonly InterfaceAsset[];audioAssets?:readonly AudioAsset[];motions?:MotionLib;textPresets?:import('./textPresetModel').TextPresetLib;easings?:import('./easingModel').EasingLib}
 /** One copied key, with its time relative to the earliest copied key. */
 export interface ClipItem{prop:TransformKey;dt:number;key:Keyframe}
@@ -139,6 +143,7 @@ export function validateDocument(raw:unknown):string[]{
   if(!Number.isInteger(c.width)||!Number.isInteger(c.height)||c.width<1||c.height<1||c.width>16384||c.height>16384)bad(`${c.id}: bad size`);
   if(!validRate(c.fps))bad(`${c.id}: bad frame rate`);
   if(!Number.isInteger(c.duration)||c.duration<1)bad(`${c.id}: bad duration`);
+  if(!validShutter(c.shutter))bad(`${c.id}: bad shutter`);
   const wa=c.workArea;
   if(!wa||!Number.isInteger(wa.in)||!Number.isInteger(wa.out)||wa.in<0||wa.out>c.duration||wa.out<=wa.in)bad(`${c.id}: bad work area`);
   if(c.markers!==undefined&&(!Array.isArray(c.markers)||c.markers.length>200||new Set(c.markers.map((m:Marker)=>m?.id)).size!==c.markers.length||!c.markers.every((m:Marker)=>m&&typeof m.id==='string'&&typeof m.label==='string'&&m.label.length<=100&&Number.isInteger(m.t)&&m.t>=c.start&&m.t<c.start+c.duration)))bad(`${c.id}: invalid markers`);
@@ -148,6 +153,7 @@ export function validateDocument(raw:unknown):string[]{
   for(const l of c.layers){
    if(!l||typeof l.id!=='string'){bad(`${c.id}: layer without id`);continue;}
    if(ids.has(l.id))bad(`${c.id}: duplicate layer ${l.id}`);ids.add(l.id);
+   if(l.motionBlur!==undefined&&typeof l.motionBlur!=='boolean')bad(`${c.id}: layer ${l.id} has a bad motion blur flag`);
    if(!['solid','text','shape','null','raster','audio','comp'].includes(l.kind))bad(`${l.id}: unknown kind`);
    if(l.stroke!==undefined&&(l.kind!=='shape'||!/^#[0-9a-fA-F]{6}$/.test(l.stroke.color)||!isNum(l.stroke.width)||l.stroke.width<0||l.stroke.width>256||(l.stroke.trim!==undefined&&!validScalarProperty(l.stroke.trim,0,100))||(l.stroke.dash!==undefined&&!validScalarProperty(l.stroke.dash,-1000,1000))||(l.stroke.join!==undefined&&!(STROKE_JOINS as readonly string[]).includes(l.stroke.join))||(l.stroke.cap!==undefined&&!(STROKE_CAPS as readonly string[]).includes(l.stroke.cap))))bad(`${l.id}: invalid stroke`);
    if(!validAudio(l,d as AnimationDocument))bad(`${l.id}: invalid audio`);

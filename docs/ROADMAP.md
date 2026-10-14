@@ -311,3 +311,10 @@ Depends on: v10 diff viewer, v11 updater for smooth extension and app updates.
 - Done: "Precompose" (timeline toolbar, `animation.precomp.make`): the selected layers move into a new composition (same size, rate, duration, start, background) and one comp layer replaces them at the top-most position, one undo step. Comp layers get speed (10-1000 %), start time in the child and loop (`animation.precomp.time`, inspector fields). Comp layers are now centered on the parent (anchor at the child's center), so a same-size child lines up exactly.
 - Open: selections linked by parent or matte to unselected layers are refused (not auto-extended); audio layers cannot be precomposed; speed and start are static values, not keyframes; no reverse playback; the child is not drawn with its background.
 
+
+### Animation P46 (2026-10-14, integration pending)
+
+- Picked: motion blur (child audio mix from precomps and expressions-lite not chosen: wiggle, loop and property links already exist as modifiers).
+- Done: composition shutter (angle 1-720 degrees, 2-16 samples, `comp.shutter` / `animation.blur.comp`) and a per-layer switch (`layer.motionBlur` / `animation.blur.layers`, inspector checkboxes). A blurred layer is drawn as averaged samples of its transform at times spread over the shutter window, centered on the frame. Viewer and all exports (PNG, SVG, GIF, APNG, WebM, nested comps) share it. Off by default, output byte-identical when off.
+- Open: only transform motion is blurred (position, scale, rotation, parent motion); text animators, path morphs, effect and mask animation, and opacity keys are not sampled. No adaptive samples. Cost grows with samples times blurred layers.
+

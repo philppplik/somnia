@@ -95,6 +95,30 @@
       "hasEnabled": true
     },
     {
+      "id": "animation.blur.comp",
+      "title": "Set composition motion blur (shutter)",
+      "category": "Edit",
+      "source": "animation",
+      "keywords": [
+        "animation",
+        "keyframe",
+        "timeline"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "animation.blur.layers",
+      "title": "Toggle motion blur on layers",
+      "category": "Edit",
+      "source": "animation",
+      "keywords": [
+        "animation",
+        "keyframe",
+        "timeline"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "animation.comp.add",
       "title": "Add composition",
       "category": "Insert",

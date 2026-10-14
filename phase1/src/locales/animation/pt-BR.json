@@ -583,5 +583,11 @@
  "animation.precomp.make": "Pré-compor",
  "animation.precomp.make.hint": "Mover as camadas selecionadas para uma nova composição e substituí-las por uma camada",
  "cmd.animation.precomp.make": "Pré-compor camadas selecionadas",
- "cmd.animation.precomp.time": "Definir velocidade, repetição e início da camada de composição"
+ "cmd.animation.precomp.time": "Definir velocidade, repetição e início da camada de composição",
+ "animation.blur.layer": "Desfoque de movimento (camada)",
+ "animation.blur.comp": "Desfoque de movimento (composição)",
+ "animation.blur.angle": "Ângulo do obturador (°)",
+ "animation.blur.samples": "Amostras",
+ "cmd.animation.blur.layers": "Alternar desfoque de movimento nas camadas",
+ "cmd.animation.blur.comp": "Definir desfoque de movimento da composição (obturador)"
 }

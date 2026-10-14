@@ -583,5 +583,11 @@
  "animation.precomp.make": "Precompose",
  "animation.precomp.make.hint": "Move the selected layers into a new composition and replace them with one layer",
  "cmd.animation.precomp.make": "Precompose selected layers",
- "cmd.animation.precomp.time": "Set comp layer speed, loop and start"
+ "cmd.animation.precomp.time": "Set comp layer speed, loop and start",
+ "animation.blur.layer": "Motion blur (layer)",
+ "animation.blur.comp": "Motion blur (composition)",
+ "animation.blur.angle": "Shutter angle (°)",
+ "animation.blur.samples": "Samples",
+ "cmd.animation.blur.layers": "Toggle motion blur on layers",
+ "cmd.animation.blur.comp": "Set composition motion blur (shutter)"
 }

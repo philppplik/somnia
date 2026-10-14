@@ -1,4 +1,5 @@
 import test from 'node:test';import assert from 'node:assert/strict';
+import {motionBlurSamples} from './scene';
 import {validatePrecomps,MAX_PRECOMP_DEPTH,createDocument,findComp,findLayer,validateDocument,MAX_LAYER_MASKS,type AnimationDocument} from './model';
 import {applyEdit,applyEdits,EditError} from './edit';
 import {readFileSync} from 'node:fs';
@@ -1309,4 +1310,24 @@ test('P45 time remap and loop on comp layers',()=>{
  // validation
  for(const bad of [{speed:5},{speed:1001},{timeOffset:-1},{timeOffset:1.5},{loop:'yes' as unknown as boolean}])assert.throws(()=>applyEdit(d,{type:'layer.update',layer:'nest',source:bad}),EditError);
  assert.deepEqual(validateDocument(d),[]);
+});
+
+test('P46 motion blur: off by default and byte-identical, samples average inside the shutter, validation, undo-friendly edits',()=>{
+ let d=base();const id=findComp(d)!.layers[0].id;
+ const plain=frameSvg(findComp(d)!,120000,false,d.assets,d.compositions);
+ d=applyEdit(d,{type:'layer.motionBlur',layers:[id],enabled:true});
+ assert.equal(frameSvg(findComp(d)!,120000,false,d.assets,d.compositions),plain,'layer flag alone draws nothing extra');
+ d=applyEdit(d,{type:'comp.shutter',shutter:{angle:180,samples:4}});
+ assert.deepEqual(validateDocument(d),[]);
+ const blurred=frameSvg(findComp(d)!,120000,false,d.assets,d.compositions);assert.notEqual(blurred,plain);
+ assert.equal(blurred.split('opacity="0.25"').length-1>=1,true);assert.equal(blurred.includes('opacity="0.333'),true);
+ assert.equal(frameSvg(findComp(d)!,120000,false,d.assets,d.compositions),blurred,'deterministic');
+ // samples: symmetric window around t, 2..16 of them
+ const c=findComp(d)!,l=findLayer(c,id)!;const m=motionBlurSamples(c,l,120000);assert.equal(m.length,4);
+ // switching the layer off restores the plain picture and drops the flag
+ const off=applyEdit(d,{type:'layer.motionBlur',layers:[id],enabled:false});assert.equal(frameSvg(findComp(off)!,120000,false,off.assets,off.compositions),plain);assert.equal('motionBlur' in findLayer(findComp(off)!,id)!,false);
+ const none=applyEdit(d,{type:'comp.shutter',shutter:null});assert.equal(none.compositions[0].shutter,undefined);
+ for(const bad of [{angle:0,samples:4},{angle:721,samples:4},{angle:180,samples:1},{angle:180,samples:17},{angle:180,samples:2.5}])assert.throws(()=>applyEdit(d,{type:'comp.shutter',shutter:bad}),EditError);
+ assert.throws(()=>applyEdit(d,{type:'layer.motionBlur',layers:[],enabled:true}),EditError);
+ assert.throws(()=>applyEdit(d,{type:'layer.motionBlur',layers:['nope'],enabled:true}),EditError);
 });

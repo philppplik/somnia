@@ -583,5 +583,11 @@
  "animation.precomp.make": "Vorkomponieren",
  "animation.precomp.make.hint": "Gewählte Ebenen in eine neue Komposition verschieben und durch eine Ebene ersetzen",
  "cmd.animation.precomp.make": "Gewählte Ebenen vorkomponieren",
- "cmd.animation.precomp.time": "Tempo, Schleife und Start der Kompositionsebene setzen"
+ "cmd.animation.precomp.time": "Tempo, Schleife und Start der Kompositionsebene setzen",
+ "animation.blur.layer": "Bewegungsunschärfe (Ebene)",
+ "animation.blur.comp": "Bewegungsunschärfe (Komposition)",
+ "animation.blur.angle": "Verschlusswinkel (°)",
+ "animation.blur.samples": "Samples",
+ "cmd.animation.blur.layers": "Bewegungsunschärfe für Ebenen umschalten",
+ "cmd.animation.blur.comp": "Bewegungsunschärfe der Komposition einstellen (Verschluss)"
 }

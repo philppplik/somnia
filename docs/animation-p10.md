@@ -258,3 +258,9 @@ Added:
 - `precomp.make {layers, name?, id?, compId?}`: layers move, in order, into a new composition with the parent's size, rate, duration, start, background and work area. One comp layer (in = comp start, out = comp end) takes the top-most selected slot. Refused: no layers, more than 200, audio layers, parent or matte links crossing the selection, depth and size limits.
 - Comp layer source fields: `speed` 10-1000 (percent), `timeOffset` ticks 0..86400000, `loop`. Child time = child.start + round((tick - in - offset) * speed / 100) + timeOffset; with `loop` it wraps inside the child duration, without it runs on (nothing is drawn past the child's layers). Without these fields the P44 mapping is unchanged.
 - `precomp.add` now centers the child on the parent (anchor at the child's center). P44 layers that were added earlier keep their stored transform.
+
+## P46 - Motion blur
+
+- `Composition.shutter {angle, samples}` (absent = off) and `Layer.motionBlur` (absent = off). Both must be set for a layer to blur.
+- Samples: `round(t - w/2 + w*(j+0.5)/n)` with `w = frame * angle/360`; only samples inside the layer's time count and fewer than two means no blur. Each sample draws the same layer content with its own matrix; sample j has opacity 1/(j+1), which gives an exact average. The layer's opacity applies to the whole group at the frame time.
+- Edits `layer.motionBlur {layers, enabled}` and `comp.shutter {comp?, shutter|null}` are single undo steps. Audio layers cannot be blurred.

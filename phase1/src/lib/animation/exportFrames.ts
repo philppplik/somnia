@@ -7,7 +7,7 @@ import type {InterfaceAsset} from '../interface/schema';
 import {Zip,ZipPassThrough,strToU8} from 'fflate';
 import {maskDefs,maskId,matteId,hasMasks} from './masks';
 import {animatedChars,textPathD,textPathId} from './textAnimators';
-import {sceneAt} from './scene';
+import {sceneAt,motionBlurSamples} from './scene';
 import {workAreaFrames} from './playback';
 import {frameToTick,tickToFrame} from './time';
 import type {Composition,Layer} from './model';
@@ -76,7 +76,8 @@ function frameSvgBody(comp:Composition,tick:number,transparent:boolean,assets:re
  const body=sceneAt(comp,tick).map(({layer,matrix,opacity})=>{const i=comp.layers.indexOf(layer);
   const inner=layerBody(layer,i,assets,tick,'');
   const masked=hasMasks(layer)?`<g mask="url(#${maskId('',i)})">${inner}</g>`:inner;
-  const drawn=`<g transform="matrix(${matrix.map(num).join(' ')})" opacity="${num(opacity)}">${masked}</g>`;
+  const blur=motionBlurSamples(comp,layer,tick);
+  const drawn=blur.length?`<g opacity="${num(opacity)}">${blur.map((m,j)=>`<g transform="matrix(${m.map(num).join(' ')})" opacity="${num(1/(j+1))}">${masked}</g>`).join('')}</g>`:`<g transform="matrix(${matrix.map(num).join(' ')})" opacity="${num(opacity)}">${masked}</g>`;
   return layer.matte?`<g mask="url(#${matteId('',i)})">${drawn}</g>`:drawn;}).join('');
  const maskDefsSvg=maskDefs(comp,tick,'',(l,i)=>layerBody(l,i,assets,tick,''));
  return `<svg xmlns="http://www.w3.org/2000/svg" width="${comp.width}" height="${comp.height}" viewBox="0 0 ${comp.width} ${comp.height}"><defs>${defs}${gradients}${maskDefsSvg}</defs>${transparent?'':`<rect width="${comp.width}" height="${comp.height}" fill="${esc(comp.background)}"/>`}${body}</svg>`;

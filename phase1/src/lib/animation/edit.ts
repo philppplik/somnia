@@ -5,7 +5,7 @@ import {validateTextPresetLib} from './textPresetModel';
 import type {InterfaceAsset} from '../interface/schema';
 import {validateAnimationAssets} from './assetsValidation';
 import {MAX_AUDIO_VOLUME,type AudioAsset} from './audioCore';
-import {validatePrecomps,precompTransform,prop,createComposition,type TextAnimator,type LayerMask,type LayerMatte,type ClipItem,type KeyRef,type Vec2,createLayer,findComp,findLayer,PROP_META,wouldCycle,EASE_IN,EASE_OUT,TRANSFORM_KEYS,validateDocument,type AnimationDocument,type CompSettings,type Composition,type Interp,type Keyframe,type Layer,type LayerKind,type LayerSource,type LayerEffect,validSource,validEffects,type Property,type PropValue,type TransformKey} from './model';
+import {validShutter,type Shutter,validatePrecomps,precompTransform,prop,createComposition,type TextAnimator,type LayerMask,type LayerMatte,type ClipItem,type KeyRef,type Vec2,createLayer,findComp,findLayer,PROP_META,wouldCycle,EASE_IN,EASE_OUT,TRANSFORM_KEYS,validateDocument,type AnimationDocument,type CompSettings,type Composition,type Interp,type Keyframe,type Layer,type LayerKind,type LayerSource,type LayerEffect,validSource,validEffects,type Property,type PropValue,type TransformKey} from './model';
 import {evaluate} from './interpolate';
 import {validateModifiers,linkProblems} from './modifiers';
 import {snapToFrame,tickToFrame,frameToTick,validRate} from './time';
@@ -32,6 +32,8 @@ export type Edit=
  /** Gives keys exact new ticks in one step (each key its own target). */
  /** Adds a layer that shows another composition of the document. */
  |{type:'precomp.add';comp:string;id?:string}
+ |{type:'layer.motionBlur';layers:readonly string[];enabled:boolean}
+ |{type:'comp.shutter';comp?:string;shutter:Shutter|null}
  |{type:'precomp.make';layers:readonly string[];name?:string;id?:string;compId?:string}
  |{type:'keys.retime';moves:readonly {layer:string;prop:TransformKey;from:number;to:number}[]}
  |{type:'keys.remove';keys:readonly KeyRef[]}
@@ -268,6 +270,12 @@ function reduce(doc:AnimationDocument,e:Edit):AnimationDocument{
    const rest=c.layers.filter(l=>!set.has(l.id));const at=c.layers.slice(0,top).filter(l=>!set.has(l.id)).length;
    const next:AnimationDocument={...doc,compositions:[...doc.compositions.map(x=>x.id===c.id?{...c,layers:[...rest.slice(0,at),pl,...rest.slice(at)]}:x),child]};
    const probs=validatePrecomps(next);if(probs.length)return fail('invalid',probs[0].replace(/^[^:]*: /,'').replace(/^./,m=>m.toUpperCase())+'.');return next;}
+  case 'layer.motionBlur':{const ids=[...new Set(e.layers??[])];if(!ids.length||ids.length>200)return fail('invalid','Select 1 to 200 layers.');if(typeof e.enabled!=='boolean')return fail('invalid','Motion blur must be on or off.');
+   const ls=ids.map(id=>layerOf(doc,id));if(ls.some(l=>l.kind==='audio'))return fail('invalid','Audio layers have no motion blur.');
+   const set=new Set(ids);return withLayers(doc,all=>all.map(l=>set.has(l.id)?(e.enabled?{...l,motionBlur:true}:Object.fromEntries(Object.entries(l).filter(([k])=>k!=='motionBlur')) as unknown as Layer):l));}
+  case 'comp.shutter':{const c=findComp(doc,e.comp??doc.activeComp)??fail('missing','Composition does not exist.');
+   if(e.shutter!==null&&!(validShutter(e.shutter)&&e.shutter!==undefined))return fail('invalid','Shutter angle must be 1 to 720 degrees and samples 2 to 16.');
+   const {shutter:_old,...rest}=c;return withComp(doc,e.shutter===null?rest as Composition:{...rest,shutter:{angle:e.shutter.angle,samples:e.shutter.samples}} as Composition);}
   case 'precomp.add':{const c=compOf(doc);const child=doc.compositions.find(x=>x.id===e.comp);if(!child)return fail('missing','That composition no longer exists.');
    if(child.id===c.id)return fail('invalid','A composition cannot contain itself.');
    const l=createLayer('comp',c,{name:child.name,source:{compId:child.id,width:child.width,height:child.height},transform:precompTransform(child.width,child.height,c.width,c.height),outT:Math.max(1,Math.min(c.duration,child.duration))},e.id);

@@ -1,4 +1,5 @@
 import {evaluateMod,MAX_LINK_DEPTH,type LinkResolver} from './modifiers';
+import {TICKS_PER_SECOND} from './time';
 import {findLayer,type Composition,type Layer,type Vec2} from './model';
 export type Matrix=readonly [number,number,number,number,number,number];
 const mul=(a:Matrix,b:Matrix):Matrix=>[a[0]*b[0]+a[2]*b[1],a[1]*b[0]+a[3]*b[1],a[0]*b[2]+a[2]*b[3],a[1]*b[2]+a[3]*b[3],a[0]*b[4]+a[2]*b[5]+a[4],a[1]*b[4]+a[3]*b[5]+a[5]];
@@ -46,4 +47,12 @@ export function decomposeMatrix(m:Matrix,anchor:Vec2):{position:Vec2;scale:Vec2;
  const sx=Math.hypot(m[0],m[1]);if(sx<1e-8)return null;const det=m[0]*m[3]-m[1]*m[2],sy=det/sx;
  if(sy<1e-8||Math.abs(m[0]*m[2]+m[1]*m[3])>1e-6*Math.max(1,sx*sy))return null;
  return {position:[m[4]+m[0]*anchor[0]+m[2]*anchor[1],m[5]+m[1]*anchor[0]+m[3]*anchor[1]],scale:[sx*100,sy*100],rotation:Math.atan2(m[1],m[0])*180/Math.PI};
+}
+
+/** Motion blur samples of one layer: its matrix at evenly spread times inside the shutter window (centered on `t`). Empty when blur is off or fewer than two samples fall inside the layer's time. */
+export function motionBlurSamples(comp:Composition,layer:Layer,t:number):readonly Matrix[]{
+ const s=comp.shutter;if(!s||!layer.motionBlur)return [];
+ const frame=TICKS_PER_SECOND*comp.fps.den/comp.fps.num,w=frame*s.angle/360;const out:Matrix[]=[];
+ for(let j=0;j<s.samples;j++){const tj=Math.round(t-w/2+w*(j+0.5)/s.samples);if(tj>=layer.inT+layer.offset&&tj<layer.outT+layer.offset)out.push(worldMatrix(comp,layer,tj));}
+ return out.length>=2?out:[];
 }
