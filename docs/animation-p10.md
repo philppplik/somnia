@@ -63,3 +63,10 @@ One builder (`masks.ts`) produces the `<mask>` and filter definitions for both t
 - Speed mode: the Value/Speed buttons (shared with the transform graph) switch the mask curve to units per second; keys are hidden in speed mode like in the transform graph.
 - Clipboard: Copy keeps the selected keys of one property with times relative to the first key and their ease; Paste puts them at the playhead on the property shown in the graph, on any mask, when the value type matches (scalar or vec2). Values must fit the target range (feather 0..64, opacity 0..100); otherwise the paste is refused and nothing changes.
 - Not covered: pasting between mask and transform properties (transform keys use a different edit path), box selection across several properties, keyboard-only multi-select.
+
+## P17: one key clipboard for transform and mask keys
+
+- `keysClipboard.ts` defines the shared clipboard model (`KeysClip`: value type, times relative to the first key, values, ease) with adapters per target: mask keys (`copyMaskKeys` / `pasteMaskKeys`) and transform keys (`copyTransformKeys` / `pasteTransformEdits`). Both graphs show Copy and Paste next to their property list.
+- Paste lands at the playhead on the property being shown. It works across mask and transform properties when the value type matches (scalar to scalar, vec2 to vec2); otherwise it is refused. Values must fit the target range. A paste is one undo step (transform pastes dispatch their edits as one batch; an unanimated transform property is animated first).
+- The existing transform key clipboard (`keyclip.ts`, timeline copy/paste) is unchanged.
+- Not covered: box selection across several properties (each graph still selects within its own property), a single graph view that mixes transform and mask curves. Transform and mask graphs stay separate components over the shared clipboard model.

@@ -3,6 +3,7 @@ import {createDocument,findComp,findLayer,validateDocument,MAX_LAYER_MASKS,type 
 import {applyEdit,applyEdits,EditError} from './edit';
 import {maskEdit,matteEdit,maskPath,copyMaskKey,insertPoint,handleMaskKey,copyMaskKeys} from './masks';
 import {animatedChars,animatorEdit,defaultAnimator,mixHex} from './textAnimators';
+import {copyTransformKeys,pasteTransformEdits} from './keysClipboard';
 import {frameSvg} from './exportFrames';
 import {sceneAt} from './scene';
 const comp=(d:AnimationDocument)=>findComp(d)!;
@@ -272,4 +273,16 @@ test('P16: several keys move, ease and paste as single edits; types must match',
  d=applyEdit(d,maskEdit(d,'photo',{op:'keysPaste',mask:'n',prop:'feather',t:sec,clip:one}));
  assert.deepEqual(layer(d,'photo').masks![1].anim!.feather!.keys.map(k=>k.v),[0,30]);
  assert.throws(()=>maskEdit(d,'photo',{op:'keysPaste',mask:'n',prop:'feather',t:0,clip:{...one,type:'vec2'}}),/another value type/);
+});
+
+test('P17: keys copy between transform and mask properties in one undo step; types must match',()=>{
+ let d=keyed();d=applyEdit(d,maskEdit(d,'photo',{op:'animate',mask:'m',prop:'opacity',on:true,t:0}));d=applyEdit(d,maskEdit(d,'photo',{op:'set',mask:'m',prop:'opacity',value:40,t:sec}));
+ const mk=layer(d,'photo').masks![0];const clip=copyMaskKeys(mk,'opacity',[0,sec]);
+ const before=d;const edits=pasteTransformEdits(layer(d,'photo'),'opacity',sec,clip);d=applyEdits(d,edits);
+ const tk=layer(d,'photo').transform.opacity.keys;assert.deepEqual(tk.filter(k=>k.t>=sec).map(k=>k.v),[100,40]);assert.equal(d.revision,before.revision+1);
+ assert.throws(()=>pasteTransformEdits(layer(d,'photo'),'position',0,clip),/another value type/);
+ const back=copyTransformKeys(layer(d,'photo'),'opacity',tk.map(k=>k.t));
+ d=applyEdit(d,maskEdit(d,'photo',{op:'add',id:'z'}));d=applyEdit(d,maskEdit(d,'photo',{op:'animate',mask:'z',prop:'opacity',on:true,t:0}));
+ d=applyEdit(d,maskEdit(d,'photo',{op:'keysPaste',mask:'z',prop:'opacity',t:sec*2,clip:back}));assert.ok(layer(d,'photo').masks![1].anim!.opacity!.keys.length>=back.keys.length);
+ assert.deepEqual(validateDocument(d),[]);
 });

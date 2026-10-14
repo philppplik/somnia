@@ -110,6 +110,10 @@ Depends on: v10 diff viewer, v11 updater for smooth extension and app updates.
 - Implemented: the render panel exports the work area as animated GIF (own GIF89a encoder: median-cut palette, from-scratch LZW, loop, per-frame delays), APNG (browser PNG frames re-assembled with acTL/fcTL/fdAT) and WebM (real-time `canvas.captureStream` + `MediaRecorder`, VP9/VP8 with Opus; the P5b preview mix joins the recording when audio layers are audible). All three run with StudioProgress and cancel, under shared caps (GIF 300 frames, WebM 60 s real time, 64 MB per file). New commands `animation.export.gif/.apng/.webm`; no new dependencies.
 - Validation: 7 new and 115 total Animation unit tests, DS ratchet, isolated Chrome German light/dark pixels plus real GIF/APNG/WebM decode checks. Full-app/native/WASM gates remain CI-only (`tests/animation-p7.spec.ts` not run). Details and limits: `docs/animation-p7.md`.
 
+### Animation P17 (2026-10-14)
+- Implemented: one key clipboard model (`keysClipboard.ts`) with adapters for transform and mask keys; copy/paste between transform and mask properties where value types match, from both graphs. One undo per paste. Details: `docs/animation-p10.md` (P17 section).
+- Open: box selection across properties and one mixed graph view, per-point lanes, native webview check.
+
 ### Animation P16 (2026-10-14)
 - Implemented: mask graph multi-key selection (click, shift, box), group move/revalue and ease in one edit, speed mode, copy/paste of several mask keys between masks (same value type). Transform graph unchanged. One undo per edit, five locales, DS-clean. Details: `docs/animation-p10.md` (P16 section).
 - Open: copy/paste between mask and transform properties, a shared graph core, per-point lanes, native webview check.

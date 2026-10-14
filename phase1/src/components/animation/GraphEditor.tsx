@@ -8,7 +8,8 @@ import {frameToTick,timecode} from '../../lib/animation/time';
 import {useT} from '../../lib/useT';
 import {Button} from '../ui/button';
 import {MaskGraph,MaskTargetButtons,maskTargets} from './MaskGraph';
-import {setGraphTarget,useMaskSelection} from '../../lib/animation/maskSelection';
+import {setGraphTarget,setMaskClip,useMaskSelection} from '../../lib/animation/maskSelection';
+import {copyTransformKeys,pasteTransformEdits} from '../../lib/animation/keysClipboard';
 import {EASE_LABEL,EASES,fmt,PROP_LABEL} from './format';
 const PAD={l:46,r:12,t:10,b:16};
 function useSize(ref:React.RefObject<HTMLElement|null>){
@@ -130,6 +131,8 @@ export function GraphEditor({comp,layerId,sel,playhead}:{comp:Composition;layerI
    {speed&&<p className="px-2 text-ink-3">{t('animation.graph.unitsSecond')}</p>}
    {animated.map(k=><button key={k} type="button" aria-pressed={k===active} className={`block w-full truncate rounded-sm px-2 py-1 text-left ${k===active?'bg-hover text-ink':'text-ink-3'}`} onClick={()=>{setGraphTarget(null);sess.setView({openProps:[k]});}} data-testid={`animation-graph-prop-${k}`}>{t(PROP_LABEL[k])}</button>)}
    <MaskTargetButtons layer={layer} active={null}/>
+   <div className="mt-1 flex gap-1 px-1"><Button size="tiny" disabled={!selHere.length} onClick={()=>{try{setMaskClip({kind:'keys',keys:copyTransformKeys(layer,active,selHere.map(r=>r.t))});}catch{/* stale */}}} data-testid="animation-graph-keys-copy">{t('animation.masks.copy')}</Button>
+    <Button size="tiny" disabled={msel.clip?.kind!=='keys'||layer.locked} onClick={()=>{if(msel.clip?.kind==='keys'){try{sess.dispatch(pasteTransformEdits(layer,active,playhead,msel.clip.keys));}catch{/* other type or range */}}}} data-testid="animation-graph-keys-paste">{t('animation.masks.paste')}</Button></div>
    {prop.type==='vec2'&&<div className="mt-1 flex gap-1 px-1" role="group" aria-label={t('animation.graph.channel')}>
     {([0,1] as const).map(c=><Button key={c} size="tiny" variant={ch===c?'outline':'ghost'} aria-pressed={ch===c} onClick={()=>sess.setView({graphChannel:c})} data-testid={`animation-graph-channel-${c}`}>{t(c===0?'animation.prop.x':'animation.prop.y')}</Button>)}
    </div>}
