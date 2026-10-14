@@ -68,7 +68,8 @@ export function checkExportable(comp:Composition,frames:number){
  if(frames>MAX_FRAMES)throw new ExportError(`${frames} frames is above the limit of ${MAX_FRAMES} for one ZIP. Shorten the work area.`,'too-many');
 }
 export type Rasterize=(svg:string,width:number,height:number)=>Promise<Uint8Array>;
-export interface SequenceOptions{rasterize:Rasterize;assets?:readonly InterfaceAsset[];transparent?:boolean;signal?:AbortSignal;onProgress?:(done:number,total:number)=>void;maxBytes?:number}
+export interface OutputSize{width:number;height:number}
+export interface SequenceOptions{size?:OutputSize;rasterize:Rasterize;assets?:readonly InterfaceAsset[];transparent?:boolean;signal?:AbortSignal;onProgress?:(done:number,total:number)=>void;maxBytes?:number}
 export interface SequenceResult{blob:Blob;fileName:string;frames:number;bytes:number}
 export function sequenceManifest(comp:Composition,plan:readonly {frame:number;tick:number}[],name:string,transparent:boolean){
  return {format:'somnia-animation-png-sequence',version:1,composition:comp.name,width:comp.width,height:comp.height,frameRate:{num:comp.fps.num,den:comp.fps.den},ticksPerSecond:240000,
@@ -86,7 +87,7 @@ export async function exportSequenceZip(comp:Composition,name:string,o:SequenceO
  for(let i=0;i<plan.length;i++){
   stop();
   let png:Uint8Array;
-  try{png=await o.rasterize(frameSvg(comp,plan[i].tick,!!o.transparent,o.assets),comp.width,comp.height);}
+  try{png=await o.rasterize(frameSvg(comp,plan[i].tick,!!o.transparent,o.assets),o.size?.width??comp.width,o.size?.height??comp.height);}
   catch(e){if(e instanceof ExportError)throw e;throw new ExportError(`Frame ${plan[i].frame} could not be rendered: ${(e as Error).message}`,'raster');}
   stop();bytes+=png.byteLength;
   if(bytes>limit)throw new ExportError(`The sequence is larger than ${Math.round(limit/1048576)} MB. Shorten the work area or reduce the size.`,'too-large');
@@ -100,9 +101,9 @@ export async function exportSequenceZip(comp:Composition,name:string,o:SequenceO
  return {blob:new Blob(parts as BlobPart[],{type:'application/zip'}),fileName:`${exportSlug(name)}_frames.zip`,frames:plan.length,bytes};
 }
 /** One PNG of the playhead frame. */
-export async function exportFramePng(comp:Composition,tick:number,name:string,rasterize:Rasterize,transparent=false,assets:readonly InterfaceAsset[]=[]){
+export async function exportFramePng(comp:Composition,tick:number,name:string,rasterize:Rasterize,transparent=false,assets:readonly InterfaceAsset[]=[],size?:OutputSize){
  checkExportable(comp,1);
- try{const png=await rasterize(frameSvg(comp,tick,transparent,assets),comp.width,comp.height);
+ try{const png=await rasterize(frameSvg(comp,tick,transparent,assets),size?.width??comp.width,size?.height??comp.height);
   return {blob:new Blob([png as BlobPart],{type:'image/png'}),fileName:frameFileName(name,tickToFrame(tick,comp.fps)-tickToFrame(comp.start,comp.fps))};}
  catch(e){if(e instanceof ExportError)throw e;throw new ExportError(`The frame could not be rendered: ${(e as Error).message}`,'raster');}
 }

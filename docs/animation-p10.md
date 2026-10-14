@@ -194,3 +194,15 @@ Added:
 - Mirror handles toggle (off by default): dragging one handle moves the opposite handle of the same key through the key. Both handles change in one `key.interp` edit, so it is one undo step. It does nothing at the first or last key.
 - Copy and paste an easing curve (`animation.ease.copy`, `animation.ease.paste`, buttons in the Easing editor). Paste is one `keys.interp` edit on all selected keys.
 - Limits: snap, mirror and the curve clipboard are view state and are not saved. Mirroring is point reflection in time and value, so with unequal neighbour spans the two handle values differ.
+
+## P38 - Export settings
+
+Already there: PNG frame, PNG sequence ZIP, GIF, APNG and WebM (real time) exports of the work area, transparency option, progress with Cancel for every multi-frame export, size caps (1800 frames, 8192x8192 px, 64 MB, GIF 300 frames, WebM 60 s).
+Added (`exportSettings.ts`, `ExportSettingsPanel.tsx`, `animation.export.settings`):
+
+- Output size (scale 10 to 400 percent), output frame rate (1 to 60, or the composition rate) and a frame range (first and last composition frame, default the work area). All export builders honour them; the SVG is scaled into the output size, so vector artwork stays sharp.
+- Presets: Web GIF, Small GIF, Social WebM, Transparent APNG, Transparent PNG frames, PNG frames at 2x. A preset sets scale, rate and transparency; the range is kept.
+- Readout per format before rendering: frame count, duration, pixel size and a rough size guess. Format caps are checked up front and shown in red; export refuses with the same message.
+- Settings are session state, not document data: no undo step, not saved with the file.
+- Not supported and skipped: animated WebP and MP4 (no encoder in the app, would need a new dependency or an unreliable MediaRecorder codec), Lottie JSON (no converter exists).
+- Limits: sizes are guesses from pixel count; a rate that does not divide the composition rate samples at exact times, so frames can fall between source frames. First and last frame are composition frames, not output frames. GIF delays round to whole centiseconds (existing).

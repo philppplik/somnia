@@ -287,6 +287,18 @@
       "hasEnabled": true
     },
     {
+      "id": "animation.export.settings",
+      "title": "Set export size, frame rate, frame range or preset",
+      "category": "Project",
+      "source": "animation",
+      "keywords": [
+        "animation",
+        "keyframe",
+        "timeline"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "animation.export.webm",
       "title": "Export work area as WebM video (real time)",
       "category": "Project",

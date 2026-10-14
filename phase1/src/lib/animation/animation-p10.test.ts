@@ -22,6 +22,12 @@ import {frameToTick,TICKS_PER_SECOND as TICK_SEC} from './time';
 import {sceneAt,worldMatrix,localMatrix,linkResolver} from './scene';
 import {evaluateMod,linkProblems,type Modifier} from './modifiers';
 import {snapEase,mirrorEase,copyCurve,pasteCurveEdit,resetGraphTools} from './graphTools';
+import {exportPlan,settingsProblems,defaultExportSettings,estimateBytes,EXPORT_LIMITS,EXPORT_PRESETS,EXPORT_FORMATS} from './exportSettings';
+import {exportGif,exportApng,exportWorkAreaSequence,exportCurrentFrame,setExportSettings,resetExportSettings,applyExportPreset,cancelExport,exportState,resetExport} from './exportJob';
+import {animationSession} from './session';
+import {MAX_FRAMES,MAX_PIXELS} from './exportFrames';
+import {GIF_MAX_FRAMES} from './gifEncode';
+import {WEBM_MAX_SECONDS,WEBM_MAX_BYTES} from './exportVideo';
 import {EASES,EASE_LABEL} from '../../components/animation/format';
 const comp=(d:AnimationDocument)=>findComp(d)!;
 const layer=(d:AnimationDocument,id:string)=>findLayer(comp(d),id)!;
@@ -1021,4 +1027,67 @@ test('P37: copy and paste an easing curve onto many keys in one edit',()=>{
 });
 test('P37: ease copy and paste commands are registered with titles in all locales',()=>{
  const ids=animationCommandSpecs().map(s=>s.id);assert.ok(ids.includes('animation.ease.copy')&&ids.includes('animation.ease.paste'));
+});
+const expComp=(secs=2,fps=10,w=400,h=200)=>{const s=animationSession();s.createBlank('x');s.dispatch({type:'comp.update',settings:{width:w,height:h,duration:secs*TICK_SEC,fps:{num:fps,den:1}}});s.dispatch({type:'workarea.set',in:0,out:secs*TICK_SEC});return comp(s.document!);};
+test('P38: export limits match the real format caps',()=>{
+ assert.equal(EXPORT_LIMITS.maxFrames,MAX_FRAMES);assert.equal(EXPORT_LIMITS.maxPixels,MAX_PIXELS);assert.equal(EXPORT_LIMITS.gifFrames,GIF_MAX_FRAMES);assert.equal(EXPORT_LIMITS.webmSeconds,WEBM_MAX_SECONDS);assert.equal(EXPORT_LIMITS.maxBytes,WEBM_MAX_BYTES);
+});
+test('P38: plan defaults to the work area at full size and the composition rate',()=>{
+ const c=expComp();const p=exportPlan(c,'gif',defaultExportSettings());
+ assert.equal(p.width,400);assert.equal(p.height,200);assert.equal(p.frames,20);assert.equal(p.seconds,2);assert.deepEqual(p.problems,[]);assert.equal(p.from,0);assert.equal(p.to,19);assert.equal(p.fps.num,10);
+});
+test('P38: scale, frame rate and range change size, frame count and duration; invalid values are reported',()=>{
+ const c=expComp();
+ let p=exportPlan(c,'gif',{...defaultExportSettings(),scale:50});assert.equal(p.width,200);assert.equal(p.height,100);
+ p=exportPlan(c,'gif',{...defaultExportSettings(),fps:5});assert.equal(p.frames,10);assert.equal(p.seconds,2);assert.equal(p.comp.fps.num,5);
+ p=exportPlan(c,'gif',{...defaultExportSettings(),from:5,to:14});assert.equal(p.frames,10);assert.equal(p.seconds,1);assert.equal(p.from,5);assert.equal(p.to,14);assert.equal(p.comp.workArea.in,TICK_SEC/2);
+ p=exportPlan(c,'gif',{...defaultExportSettings(),fps:20,from:0,to:9});assert.equal(p.frames,20,'one second at 20 fps');
+ assert.ok(exportPlan(c,'gif',{...defaultExportSettings(),from:0,to:20}).problems.includes('range'),'last frame is beyond the composition');
+ assert.ok(exportPlan(c,'gif',{...defaultExportSettings(),from:8,to:3}).problems.includes('range'));
+ assert.deepEqual(settingsProblems({scale:5,fps:0,from:null,to:null}).sort(),['fps','scale']);assert.deepEqual(settingsProblems({scale:100,fps:2.5,from:null,to:null}),['fps']);
+ assert.equal(exportPlan(c,'gif',{...defaultExportSettings(),scale:5}).width,400,'invalid scale falls back to 100 percent');
+});
+test('P38: plan flags format caps before rendering',()=>{
+ const long=expComp(40,10);
+ assert.ok(exportPlan(long,'gif',defaultExportSettings()).problems.includes('frames'),'400 frames is above the GIF cap');
+ assert.ok(!exportPlan(long,'apng',defaultExportSettings()).problems.includes('frames'));
+ assert.ok(exportPlan(expComp(70,10),'webm',defaultExportSettings()).problems.includes('seconds'));
+ assert.ok(exportPlan(long,'gif',{...defaultExportSettings(),fps:5}).problems.length===0,'a lower rate brings it under the cap');
+ assert.ok(exportPlan(expComp(2,10,8000,8000),'sequence',{...defaultExportSettings(),scale:200}).problems.includes('size'));
+ const big=exportPlan(expComp(30,60,4000,4000),'sequence',defaultExportSettings());assert.ok(big.overCap);
+ assert.ok(estimateBytes('gif',100,100,10,10)<estimateBytes('sequence',100,100,10,10));
+});
+test('P38: presets set scale, rate and transparency; settings are refused when invalid and need no document edit',()=>{
+ const c=expComp();const rev=animationSession().document!.revision;resetExport();resetExportSettings();
+ assert.equal(applyExportPreset('web-gif'),'gif');assert.equal(exportState().settings.scale,50);assert.equal(exportState().settings.fps,15);assert.equal(exportState().transparent,false);
+ assert.equal(applyExportPreset('alpha-apng'),'apng');assert.equal(exportState().transparent,true);assert.equal(exportState().settings.fps,null);
+ assert.throws(()=>applyExportPreset('nope'),/Unknown/);assert.throws(()=>setExportSettings({scale:1000}),/Scale/);assert.equal(exportState().settings.scale,100);
+ assert.equal(animationSession().document!.revision,rev,'settings never touch the document');assert.ok(c);
+ for(const p of EXPORT_PRESETS)assert.ok(EXPORT_FORMATS.includes(p.format));
+ resetExportSettings();
+});
+test('P38: exports honour size, rate and range, and nothing is saved when cancelled',async()=>{
+ expComp(2,10,400,200);resetExport();resetExportSettings();setExportSettings({scale:50,fps:5,from:0,to:9});
+ const sizes:string[]=[];const saved:string[]=[];
+ const pixels=async(_s:string,w:number,h:number)=>{sizes.push(`${w}x${h}`);return new Uint8ClampedArray(w*h*4);};
+ const name=await exportGif({pixels,save:(_b,n)=>void saved.push(n)});
+ assert.equal(sizes.length,5,'one second at 5 fps');assert.ok(sizes.every(s=>s==='200x100'));assert.ok(name.endsWith('.gif'));
+ const psizes:string[]=[];const png=async(_s:string,w:number,h:number)=>{psizes.push(`png${w}x${h}`);return new Uint8Array([137,80,78,71,13,10,26,10]);};
+ await exportWorkAreaSequence({rasterize:png,save:(_b,n)=>void saved.push(n)}).catch(()=>undefined);
+ assert.equal(psizes.length,5);assert.ok(psizes.every(s=>s==='png200x100'));
+ psizes.length=0;await exportCurrentFrame({rasterize:png,save:()=>undefined});assert.deepEqual(psizes,['png200x100']);
+ // cancel in the middle of a GIF
+ resetExport();saved.length=0;let n=0;
+ const slow=async(_s:string,w:number,h:number)=>{if(++n===2)cancelExport();return new Uint8ClampedArray(w*h*4);};
+ await assert.rejects(exportGif({pixels:slow,save:(_b,nm)=>void saved.push(nm)}),/cancelled/);
+ assert.equal(saved.length,0,'no partial file');assert.equal(exportState().status,'error');assert.ok(n<5,'stopped early');
+ resetExport();assert.equal(exportState().settings.scale,50,'settings survive a reset of the job');resetExportSettings();
+ setExportSettings({scale:400});await assert.rejects(exportGif({pixels,save:()=>undefined}).catch(e=>{throw e;}),Error).catch(()=>undefined);
+ resetExportSettings();
+});
+test('P38: export settings command, panel keys and locale keys exist in all locales',()=>{
+ assert.ok(animationCommandSpecs().some(s=>s.id==='animation.export.settings'));
+ const keys=['animation.export.settings','animation.export.preset','animation.export.scale','animation.export.fps','animation.export.from','animation.export.to','animation.export.readout','animation.export.estimateNote','animation.export.problem.range','animation.export.preset.web-gif','animation.export.kind.webm','cmd.animation.export.settings'];
+ for(const l of ['en','de','es','fr','pt-BR']){const j=JSON.parse(readFileSync(new URL(`../../locales/animation/${l}.json`,import.meta.url),'utf8'));for(const k of keys)assert.ok(j[k],`${l} ${k}`);
+  assert.match(j['animation.export.readout'],/\{frames\}/);assert.match(j['animation.export.readout'],/\{bytes\}/);}
 });

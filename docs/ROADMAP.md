@@ -263,3 +263,8 @@ Depends on: v10 diff viewer, v11 updater for smooth extension and app updates.
 - Done: presets smooth, snappy, back, expo; handle snapping; mirror handles; copy and paste of easing curves.
 - Open: box-select of handles, per-segment graph-pane resize.
 
+### Animation P38 (2026-10-14, integration pending)
+
+- Done: export size, frame rate and frame range controls, six presets, per-format readout (frames, duration, size, rough bytes) with cap warnings before rendering.
+- Open: animated WebP, MP4 and Lottie JSON (need new dependencies or converters, skipped); size estimates are rough.
+

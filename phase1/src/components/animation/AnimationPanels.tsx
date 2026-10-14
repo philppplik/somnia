@@ -32,6 +32,7 @@ import {InspectorNumberField} from '../studios/InspectorNumberField';
 import {easePresetOf} from '../../lib/animation/graph';
 import {EASE_LABEL,fmt,PROP_LABEL,renderSummary} from './format';
 import {PropertyModifiers} from './PropertyModifiers';
+import {ExportSettingsPanel} from './ExportSettingsPanel';
 const field='h-8 w-full min-w-0 rounded-sm border border-subtle bg-transparent px-2 text-xs text-ink select-text';
 const run=(id:string,params?:unknown)=>void executeCommand(id,params);
 const KINDS:LayerKind[]=['solid','text','shape','null'];
@@ -162,6 +163,7 @@ export function RenderSection(_:InspectorSectionProps){
  return <div className="grid gap-2 p-3 text-xs" data-testid="animation-render-setup">
   <p className="m-0 text-ink">{t('animation.render.summary',renderSummary(comp) as unknown as Record<string,string|number>)}</p>
   <p className="m-0 text-ink-3" data-testid="animation-export-range">{t('animation.export.range',{frames:plan.count,from:timecode(comp.workArea.in,comp.fps),to:timecode(comp.workArea.out,comp.fps)})}</p>
+  <ExportSettingsPanel comp={comp} busy={busy}/>
   <label className="flex items-center gap-2 text-ink-2"><NativeInput type="checkbox" className="animation-checkbox" checked={job.transparent} disabled={busy} onChange={e=>setExportTransparent(e.target.checked)} data-testid="animation-export-alpha"/>{t('animation.export.transparent')}</label>
   <div className="grid gap-2">
    <Button size="compact" variant="outline" disabled={busy} onClick={()=>run('animation.export.frame')} data-testid="animation-export-frame">{t('animation.export.frame')}</Button>

@@ -30,6 +30,8 @@ export interface WebmDeps{
  draw?:(ctx:CanvasRenderingContext2D,svg:string,width:number,height:number)=>Promise<void>;
  now?:()=>number;
  schedule?:(cb:()=>void)=>void;
+ /** Output size when it differs from the drawing size (the SVG is scaled into the canvas). */
+ size?:{width:number;height:number};
  signal?:AbortSignal;
  onProgress?:(done:number,total:number)=>void;
 }
@@ -86,7 +88,7 @@ export async function recordWebm(doc:AnimationDocument,comp:Composition,d:WebmDe
    const frame=tickToFrame(r.tick,comp.fps);
    if(frame!==lastFrame&&!drawing){
     lastFrame=frame;drawing=true;
-    draw(ctx,frameSvg(comp,r.tick,false,doc.assets),comp.width,comp.height)
+    draw(ctx,frameSvg(comp,r.tick,false,doc.assets),d.size?.width??comp.width,d.size?.height??comp.height)
      .then(()=>{drawing=false;d.onProgress?.(Math.min(plan.frames,frame-first+1),plan.frames);if(r.ended){try{recorder.stop();}catch(e){fail(e);}return;}schedule(tickLoop);},fail)
      .catch(fail);
     return;

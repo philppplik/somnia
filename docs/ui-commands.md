@@ -16,7 +16,7 @@ included; the `source` column names the owner. Dynamic sources that stay outside
 
 Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, fr, pt-BR); the gate enforces it.
 
-392 commands. Categories: Edit, Help, Insert, Project, Tools, View.
+396 commands. Categories: Edit, Help, Insert, Project, Tools, View.
 
 | id | title | category | source | shortcut |
 | --- | --- | --- | --- | --- |
@@ -44,6 +44,7 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `animation.export.frame` | Export current frame as PNG | Project | animation |  |
 | `animation.export.gif` | Export work area as GIF | Project | animation |  |
 | `animation.export.sequence` | Export work area as PNG sequence (ZIP) | Project | animation |  |
+| `animation.export.settings` | Set export size, frame rate, frame range or preset | Project | animation |  |
 | `animation.export.webm` | Export work area as WebM video (real time) | Project | animation |  |
 | `animation.graph.toggle` | Switch between timeline and graph editor | View | animation |  |
 | `animation.key.add` | Add keyframe at playhead | Edit | animation |  |
