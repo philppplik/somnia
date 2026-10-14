@@ -4,6 +4,7 @@ import type {MediaItem} from '../../src/lib/media';
 import {setPhotoEngineFactory} from '../../src/lib/photos/studioSession';
 import type {PhotoEngineLike} from '../../src/lib/photos/studioSession';
 import {PhotosWorkspace} from '../../src/components/photos/PhotosWorkspace';
+import {TransformPanel} from '../../src/components/photos/panels/TransformPanel';
 
 function frame(){const w=240,h=160,b=new Uint8Array(w*h*4);
  for(let y=0;y<h;y++)for(let x=0;x<w;x++){const i=(y*w+x)*4;b[i]=Math.round(40+180*(x/w));b[i+1]=Math.round(50+140*(y/h));b[i+2]=140;b[i+3]=255;}
@@ -28,5 +29,8 @@ export function PhotosCropProof(){
   return()=>{live=false;};
  },[]);
  if(!item)return null;
- return <main data-testid="photos-crop-proof" style={{height:760,display:'flex',flexDirection:'column'}}><PhotosWorkspace item={item}/></main>;
+ return <main data-testid="photos-crop-proof" style={{height:760,display:'flex',gap:8,padding:8}}>
+  <div style={{flex:1,display:'flex',flexDirection:'column',minWidth:0}}><PhotosWorkspace item={item}/></div>
+  <div style={{width:260,flexShrink:0,overflowY:'auto'}}><TransformPanel/></div>
+ </main>;
 }

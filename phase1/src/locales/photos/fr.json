@@ -25,6 +25,7 @@
  "photos.redo": "Rétablir",
  "photos.reset": "Tout réinitialiser",
  "photos.crop": "Recadrer",
+ "photos.straighten.toggle": "Horizon",
  "photos.heal.toggle": "Tampon de clonage",
  "photos.overlay.remove": "Supprimer ce réglage",
  "photos.heal.radius": "Rayon du pinceau",

@@ -25,6 +25,7 @@
  "photos.redo": "Wiederholen",
  "photos.reset": "Alles zurücksetzen",
  "photos.crop": "Zuschneiden",
+ "photos.straighten.toggle": "Horizont",
  "photos.heal.toggle": "Klonstempel",
  "photos.overlay.remove": "Diese Anpassung entfernen",
  "photos.heal.radius": "Pinselradius",

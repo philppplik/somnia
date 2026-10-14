@@ -25,6 +25,7 @@
  "photos.redo": "Redo",
  "photos.reset": "Reset all",
  "photos.crop": "Crop",
+ "photos.straighten.toggle": "Horizon",
  "photos.heal.toggle": "Clone stamp",
  "photos.overlay.remove": "Remove this adjustment",
  "photos.heal.radius": "Brush radius",
