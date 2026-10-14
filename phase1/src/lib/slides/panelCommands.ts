@@ -13,7 +13,7 @@ const MIN_GROUP_EMU=127000;
 export interface PanelCommandDeps {
  setTransition(slideId:number,transition:SlideTransition):Promise<void>;
  style(slideId:number,shapeIds:number[],patch:ShapeStylePatch):Promise<void>;
- table(slideId:number,shapeId:number,edit:TableEdit):Promise<void>;theme(edit:ThemeEdit):Promise<void>;masterBox(shapeId:number,expected:BoundsBox,next:BoundsBox):Promise<void>;layoutBox(layoutPart:string,shapeId:number,expected:BoundsBox,next:BoundsBox):Promise<void>;background(slideId:number,background:SlideBackground):Promise<void>;slideSize(cx:number,cy:number):Promise<void>;firstNum(value:number):Promise<void>;hide(slideId:number,hidden:boolean):Promise<void>;section(edit:{kind:'rename';index:number;name:string}|{kind:'add';slideId:number;name:string}|{kind:'remove';index:number}):Promise<void>;footer(slideId:number|null,want:{number:boolean;footer:string|null;date?:string|null}):Promise<void>;backgroundAll(background:{kind:'inherit'}|{kind:'solid';color:string}):Promise<void>;
+ table(slideId:number,shapeId:number,edit:TableEdit):Promise<void>;theme(edit:ThemeEdit):Promise<void>;masterBox(shapeId:number,expected:BoundsBox,next:BoundsBox):Promise<void>;layoutBox(layoutPart:string,shapeId:number,expected:BoundsBox,next:BoundsBox):Promise<void>;background(slideId:number,background:SlideBackground):Promise<void>;slideSize(cx:number,cy:number):Promise<void>;firstNum(value:number):Promise<void>;hide(slideId:number,hidden:boolean):Promise<void>;section(edit:{kind:'rename';index:number;name:string}|{kind:'add';slideId:number;name:string}|{kind:'remove';index:number}|{kind:'move';index:number;toIndex:number}):Promise<void>;footer(slideId:number|null,want:{number:boolean;footer:string|null;date?:string|null}):Promise<void>;backgroundAll(background:{kind:'inherit'}|{kind:'solid';color:string}):Promise<void>;
  insertTable(slideId:number,rows:number,cols:number):Promise<void>;
  setNotes(slideId:number,lines:string[]):Promise<void>;
  group(slideId:number,shapeIds:number[]):Promise<void>;
@@ -200,6 +200,13 @@ export function slidesPanelCommandSpecs(d:PanelCommandDeps):CommandSpec[]{
     const issue=sectionNameIssue(v.name);if(issue)throw expected(issue);
     const m=readDeckModel(s.working).sections;if(m?.some(x=>x.ids[0]===v.slideId))throw expected('This slide already starts a section.');
     await d.section({kind:'add',slideId:v.slideId,name:v.name});}},
+  {id:'slides.moveSection',title:'Move section',category:'Edit',level:'ui',keywords:['section','move','reorder','up','down','chapter'],enabled:available,params:{type:'object',properties:{source:identity.source,index:{type:'integer',minimum:0,maximum:9999},expectedName:{type:'string',maxLength:MAX_SECTION_NAME},toIndex:{type:'integer',minimum:0,maximum:9999}},required:['source','index','expectedName','toIndex'],additionalProperties:false},
+   run:async p=>{const v=p as {source:string;index:number;expectedName:string;toIndex:number},s=d.state();
+    if(s.source!==v.source||!s.working)throw expected('Deck changed since the section was chosen.');
+    const m=readDeckModel(s.working).sections,cur=m?.[v.index];if(!m||!cur||cur.name!==v.expectedName)throw expected('Section changed since it was chosen.');
+    if(v.toIndex>=m.length)throw expected('Target position is outside the sections.');
+    if(v.toIndex===v.index)return;
+    await d.section({kind:'move',index:v.index,toIndex:v.toIndex});}},
   {id:'slides.removeSection',title:'Remove section',category:'Edit',level:'ui',keywords:['section','remove','delete section','merge','ungroup slides'],enabled:available,params:{type:'object',properties:{source:identity.source,index:{type:'integer',minimum:0,maximum:9999},expectedName:{type:'string',maxLength:MAX_SECTION_NAME}},required:['source','index','expectedName'],additionalProperties:false},
    run:async p=>{const v=p as {source:string;index:number;expectedName:string},s=d.state();
     if(s.source!==v.source||!s.working)throw expected('Deck changed since the section was chosen.');

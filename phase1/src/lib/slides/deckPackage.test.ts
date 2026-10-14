@@ -938,3 +938,15 @@ test('sections: create from none, split, rename, merge up/down; order and other 
   const withSec=deck(3,{sections:[[1],[2,3]]});assert.deepEqual(names(editSections(withSec,{kind:'add',slideId:ids(withSec)[2],name:'Tail'})),['Sec 1','Sec 2','Tail']);
   const gap=deck(3,{sections:[[1],[3]]});assert.throws(()=>editSections(gap,{kind:'rename',index:0,name:'Z'}),/cover the slides/);
 });
+
+test('sections: move reorders sections and their slides together, keeps slide ids and parts, refuses bad targets',()=>{
+  const b=deck(5,{sections:[[1,2],[3],[4,5]]}),sid=ids(b),names=(x:Uint8Array)=>readDeckModel(x).sections!.map(s=>s.name);
+  const up=editSections(b,{kind:'move',index:2,toIndex:0});assert.deepEqual(names(up),['Sec 3','Sec 1','Sec 2']);assert.deepEqual(ids(up),[sid[3],sid[4],sid[0],sid[1],sid[2]]);
+  assert.deepEqual(readDeckModel(up).sections!.map(s=>s.ids),[[sid[3],sid[4]],[sid[0],sid[1]],[sid[2]]]);
+  const mid=editSections(b,{kind:'move',index:0,toIndex:1});assert.deepEqual(names(mid),['Sec 2','Sec 1','Sec 3']);assert.deepEqual(ids(mid),[sid[2],sid[0],sid[1],sid[3],sid[4]]);
+  assert.deepEqual(titles(mid).slice().sort(),titles(b).slice().sort());
+  const back=editSections(mid,{kind:'move',index:1,toIndex:0});assert.deepEqual(ids(back),sid);assert.deepEqual(names(back),['Sec 1','Sec 2','Sec 3']);
+  assert.equal(editSections(b,{kind:'move',index:1,toIndex:1}),b);
+  assert.throws(()=>editSections(b,{kind:'move',index:3,toIndex:0}),/no longer exists/);assert.throws(()=>editSections(b,{kind:'move',index:0,toIndex:3}),/no longer exists/);assert.throws(()=>editSections(b,{kind:'move',index:-1,toIndex:0}),/no longer exists/);
+  const none=deck(3);assert.throws(()=>editSections(none,{kind:'move',index:0,toIndex:1}),/no sections/);
+});

@@ -5799,6 +5799,21 @@
       "hasEnabled": true
     },
     {
+      "id": "slides.moveSection",
+      "title": "Move section",
+      "category": "Edit",
+      "source": "slides",
+      "keywords": [
+        "chapter",
+        "down",
+        "move",
+        "reorder",
+        "section",
+        "up"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "slides.moveSlide",
       "title": "Move slide",
       "category": "Edit",

@@ -1891,12 +1891,12 @@ export function setSlideHidden(bytes:Uint8Array,slideId:number,hidden:boolean):U
 /** Sections (p14:sectionLst): rename, start a new one at a slide, or merge one into its neighbour. Slide order never changes. */
 export const MAX_SECTION_NAME=80;
 export const sectionNameIssue=(n:string)=>!n.trim()||n!==n.trim()?'Section name cannot be empty or padded':n.length>MAX_SECTION_NAME?`Section name is limited to ${MAX_SECTION_NAME} characters`:/[\u0000-\u001f\u007f\ud800-\udfff\ufffe\uffff]/.test(n)?'Section name contains unsupported characters':'';
-export type SectionEdit={kind:'rename';index:number;name:string}|{kind:'add';slideId:number;name:string}|{kind:'remove';index:number};
+export type SectionEdit={kind:'rename';index:number;name:string}|{kind:'add';slideId:number;name:string}|{kind:'remove';index:number}|{kind:'move';index:number;toIndex:number};
 const SECTION_EXT='{521415D9-36F7-43E2-AB2F-B90AF26B5E84}',P14_NS='http://schemas.microsoft.com/office/powerpoint/2010/main';
 export function editSections(bytes:Uint8Array,edit:SectionEdit):Uint8Array{
-  if(edit.kind!=='remove'&&sectionNameIssue(edit.name))throw Error(sectionNameIssue(edit.name));
+  if((edit.kind==='rename'||edit.kind==='add')&&sectionNameIssue(edit.name))throw Error(sectionNameIssue(edit.name));
   const model=readDeckModel(bytes),order=model.slides.map(s=>s.id),zip=openPackage(bytes),pres=text(zip,'ppt/presentation.xml'),sec=sections(pres);
-  let out:string;
+  let out:string,newOrder=order;
   const idRaw=new Map<number,string>();
   const list=(ids:number[])=>'<p14:sldIdLst>'+ids.map(i=>idRaw.get(i)??`<p14:sldId id="${i}"/>`).join('')+'</p14:sldIdLst>';
   if(!sec){
@@ -1923,6 +1923,11 @@ export function editSections(bytes:Uint8Array,edit:SectionEdit):Uint8Array{
       const g=sec.items[gi],p=g.ids.indexOf(edit.slideId);if(p===0)throw Error('This slide already starts a section');
       const fresh=`<p14:section name="${attrEsc(edit.name)}" id="{${crypto.randomUUID().toUpperCase()}}">${list(g.ids.slice(p))}</p14:section>`;
       next=[...items.slice(0,gi),withIds(gi,g.ids.slice(0,p)),fresh,...items.slice(gi+1)];
+    }else if(edit.kind==='move'){
+      const n=items.length;if(![edit.index,edit.toIndex].every(i=>Number.isInteger(i)&&i>=0&&i<n))throw Error('Section no longer exists');
+      if(edit.index===edit.toIndex)return bytes;
+      const idx=[...items.keys()];idx.splice(edit.toIndex,0,...idx.splice(edit.index,1));
+      next=idx.map(i=>items[i]);newOrder=idx.flatMap(i=>sec.items[i].ids);
     }else{
       if(!Number.isInteger(edit.index)||edit.index<0||edit.index>=items.length)throw Error('Section no longer exists');
       if(items.length<2)throw Error('The last section cannot be removed here');
@@ -1932,14 +1937,17 @@ export function editSections(bytes:Uint8Array,edit:SectionEdit):Uint8Array{
     }
     const open=/^<p14:sectionLst\b[^>]*>/.exec(sec.block)![0];
     out=pres.slice(0,sec.index)+open+next.join('')+'</p14:sectionLst>'+pres.slice(sec.index+sec.block.length);
+    if(edit.kind==='move'){const sl=slideList(out),byId=new Map(sl.items.map(i=>[i.id,i.raw]));out=out.slice(0,sl.start)+newOrder.map(id=>byId.get(id)!).join('')+out.slice(sl.end);}
   }
   const res=repack(zip,{'ppt/presentation.xml':out}),after=readDeckModel(res);
-  if(JSON.stringify(after.slides.map(s=>[s.id,s.part,s.shapes]))!==JSON.stringify(model.slides.map(s=>[s.id,s.part,s.shapes]))||after.runs.length!==model.runs.length)throw Error('Edited deck failed verification');
-  const got=after.sections;if(!got||got.flatMap(s=>s.ids).join()!==order.join()||got.some(s=>!s.ids.length))throw Error('Edited deck failed verification');
+  const byIdKey=(m:DeckModel)=>JSON.stringify([...m.slides].sort((a,b)=>a.id-b.id).map(s=>[s.id,s.part,s.shapes]));
+  if(byIdKey(after)!==byIdKey(model)||after.runs.length!==model.runs.length||after.slides.map(s=>s.id).join()!==newOrder.join())throw Error('Edited deck failed verification');
+  const got=after.sections;if(!got||got.flatMap(s=>s.ids).join()!==newOrder.join()||got.some(s=>!s.ids.length))throw Error('Edited deck failed verification');
   const was=model.sections,expect=edit.kind==='rename'?was!.map((s,i)=>i===edit.index?edit.name:s.name):[];
   if(edit.kind==='rename'&&got.map(s=>s.name).join('\u0001')!==expect!.join('\u0001'))throw Error('Edited deck failed verification');
   if(edit.kind==='add'&&!got.some(s=>s.name===edit.name&&s.ids[0]===edit.slideId))throw Error('Edited deck failed verification');
   if(edit.kind==='remove'&&got.length!==was!.length-1)throw Error('Edited deck failed verification');
+  if(edit.kind==='move'&&(got.length!==was!.length||got[edit.toIndex].name!==was![edit.index].name||got[edit.toIndex].ids.join()!==was![edit.index].ids.join()))throw Error('Edited deck failed verification');
   const rz=unzipSync(res);for(const key of Object.keys(zip))if(key!=='ppt/presentation.xml'&&(!rz[key]||rz[key].length!==zip[key].length||rz[key].some((v,i)=>v!==zip[key][i])))throw Error('Edited deck changed an unrelated part');
   return res;
 }

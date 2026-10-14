@@ -1,6 +1,8 @@
 import {useMemo,useState} from 'react';
 import {NativeInput} from '../ui/native-controls';
 import {Button} from '../ui/button';
+import {IconButton} from '../ui/icon-button';
+import {ArrowDown,ArrowUp} from 'lucide-react';
 import {useSlidesSession} from '../../lib/slides/session';
 import {useSlidesPanelText} from '../../lib/slides/panelI18n';
 import {commandDispatcher} from '../../lib/commandDispatcher';
@@ -21,6 +23,8 @@ export function SlidesSectionsEditor(){
       return <div key={key} className="flex flex-wrap items-center gap-2">
         <NativeInput aria-label={`${t('slides.sections.name')} ${i+1}`} maxLength={MAX_SECTION_NAME} className="w-44" value={name} disabled={!ready} onChange={e=>setDrafts(d=>({...d,[key]:e.target.value}))}/>
         <Button size="compact" variant="outline" disabled={!ready||!!issue||name===sec.name} onClick={()=>run('slides.renameSection',{index:i,expectedName:sec.name,name},()=>setDrafts({}))}>{t('slides.sections.rename')}</Button>
+        <IconButton size="row" variant="outline" aria-label={`${t('slides.sections.up')} (${sec.name})`} disabled={!ready||i===0} onClick={()=>run('slides.moveSection',{index:i,expectedName:sec.name,toIndex:i-1},()=>setDrafts({}))}><ArrowUp aria-hidden/></IconButton>
+        <IconButton size="row" variant="outline" aria-label={`${t('slides.sections.down')} (${sec.name})`} disabled={!ready||i===sections.length-1} onClick={()=>run('slides.moveSection',{index:i,expectedName:sec.name,toIndex:i+1},()=>setDrafts({}))}><ArrowDown aria-hidden/></IconButton>
         <Button size="compact" variant="outline" disabled={!ready||sections.length<2} onClick={()=>run('slides.removeSection',{index:i,expectedName:sec.name},()=>setDrafts({}))}>{t('slides.sections.remove')}</Button>
       </div>;})}
     <div className="flex flex-wrap items-center gap-2">

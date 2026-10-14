@@ -449,6 +449,13 @@ test('section commands check identity, stale names, bounds and duplicates before
  await rem({source:'blob:deck1',index:1,expectedName:'B'});assert.deepEqual(f.calls.at(-1),['section',{kind:'remove',index:1}]);
  const m=f.calls.length;
  await ren({source:'blob:deck1',index:1,expectedName:'B',name:'B'});assert.equal(f.calls.length,m);
+ const mv=(p:unknown)=>f.dispatcher.runCommand('slides.moveSection',p,{origin:'ui'});
+ await mv({source:'blob:deck1',index:1,expectedName:'B',toIndex:0});assert.deepEqual(f.calls.at(-1),['section',{kind:'move',index:1,toIndex:0}]);
+ const m2=f.calls.length;await mv({source:'blob:deck1',index:1,expectedName:'B',toIndex:1});assert.equal(f.calls.length,m2);
+ await assert.rejects(()=>mv({source:'blob:deck1',index:1,expectedName:'B',toIndex:2}),/outside/);
+ await assert.rejects(()=>mv({source:'blob:deck1',index:1,expectedName:'Old',toIndex:0}),/changed/);
+ await assert.rejects(()=>mv({source:'blob:other',index:1,expectedName:'B',toIndex:0}),/changed/);
+ await assert.rejects(()=>mv({source:'blob:deck1',index:1,expectedName:'B',toIndex:-1}));
  await assert.rejects(()=>ren({source:'blob:deck1',index:1,expectedName:'Old',name:'C'}),/changed/);
  await assert.rejects(()=>rem({source:'blob:deck1',index:1,expectedName:'Old'}),/changed/);
  await assert.rejects(()=>ren({source:'blob:other',index:1,expectedName:'B',name:'C'}),/changed/);
@@ -457,7 +464,7 @@ test('section commands check identity, stale names, bounds and duplicates before
  await assert.rejects(()=>add({source:'blob:deck1',slideId:sid[1],name:'Dup'}),/already starts/);
  await assert.rejects(()=>add({source:'blob:deck1',slideId:99999,name:'X'}),/no longer exists/);
  await assert.rejects(()=>add({source:'blob:deck1',slideId:sid[0],name:''}));
- assert.equal(f.calls.length,m);void n;
+ assert.equal(f.calls.length,m+1);void n;
 });
 test('setFirstSlideNumber checks identity, bounds and no-op before mutation',async()=>{
  const f=fixture(),run=(p:unknown)=>f.dispatcher.runCommand('slides.setFirstSlideNumber',p,{origin:'ui'});
