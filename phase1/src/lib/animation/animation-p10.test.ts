@@ -111,3 +111,52 @@ test('P11: path masks are bounded beziers with straight corners or smooth handle
  d=applyEdit(d,maskEdit(d,'photo',{op:'update',mask:'p',patch:{shape:'path'}}));assert.equal(layer(d,'photo').masks![0].path!.points.length,4);
  assert.deepEqual(validateDocument(JSON.parse(JSON.stringify(d))),[]);
 });
+
+import {moveMaskKey,removeMaskKey,easeMaskKey} from './masks';
+import {maskBox,moveBox,resizeBox,corners} from './maskHandles';
+import {selectMask,activeMask} from './maskSelection';
+const keyed=()=>{let d=base();d=applyEdit(d,maskEdit(d,'photo',{op:'add',id:'m'}));
+ d=applyEdit(d,maskEdit(d,'photo',{op:'animate',mask:'m',prop:'position',on:true,t:0}));
+ return applyEdit(d,maskEdit(d,'photo',{op:'set',mask:'m',prop:'position',value:[100,40],t:sec}));};
+test('P12: mask keys move, delete and take eases as single edits',()=>{
+ let d=keyed();const keys=()=>layer(d,'photo').masks![0].anim?.position?.keys.map(k=>k.t)??[];
+ d=applyEdit(d,maskEdit(d,'photo',{op:'keyMove',mask:'m',prop:'position',from:sec,to:2*sec}));assert.deepEqual(keys(),[0,2*sec]);
+ assert.throws(()=>maskEdit(d,'photo',{op:'keyMove',mask:'m',prop:'position',from:2*sec,to:0}),/already/);
+ assert.throws(()=>maskEdit(d,'photo',{op:'keyMove',mask:'m',prop:'position',from:2*sec,to:comp(d).duration+sec}),/outside/);
+ assert.throws(()=>maskEdit(d,'photo',{op:'keyMove',mask:'m',prop:'position',from:123,to:5}),/no longer/);
+ assert.throws(()=>maskEdit(d,'photo',{op:'keyMove',mask:'m',prop:'feather',from:0,to:5}),/no keys/);
+ d=applyEdit(d,maskEdit(d,'photo',{op:'keyEase',mask:'m',prop:'position',t:0,preset:'easeIn'}));
+ const k0=layer(d,'photo').masks![0].anim!.position!.keys[0];assert.equal(k0.interp,'bezier');assert.deepEqual([...k0.out],[0.42,0]);
+ d=applyEdit(d,maskEdit(d,'photo',{op:'keyEase',mask:'m',prop:'position',t:0,preset:'hold'}));assert.equal(layer(d,'photo').masks![0].anim!.position!.keys[0].interp,'hold');
+ d=applyEdit(d,maskEdit(d,'photo',{op:'keyRemove',mask:'m',prop:'position',t:0}));assert.deepEqual(keys(),[2*sec]);
+ d=applyEdit(d,maskEdit(d,'photo',{op:'keyRemove',mask:'m',prop:'position',t:2*sec}));
+ const m=layer(d,'photo').masks![0];assert.equal(m.anim,undefined);assert.deepEqual([m.x,m.y],[100,40]);
+ assert.deepEqual(validateDocument(JSON.parse(JSON.stringify(d))),[]);
+ const mm=layer(keyed(),'photo').masks![0];assert.equal(moveMaskKey(mm,'position',0,sec/2,comp(keyed())).anim!.position!.keys[0].t,sec/2);
+ assert.equal(removeMaskKey(mm,'position',0).anim!.position!.keys.length,1);assert.equal(easeMaskKey(mm,'position',0,'linear').anim!.position!.keys[0].interp,'linear');
+});
+test('P12: box and point drags are single edits; handle maths is bounded',()=>{
+ let d=keyed();
+ d=applyEdit(d,maskEdit(d,'photo',{op:'box',mask:'m',x:10,y:20,width:50,height:60,t:sec}));
+ const m=layer(d,'photo').masks![0];assert.deepEqual([m.width,m.height],[50,60]);assert.deepEqual(m.anim!.position!.keys.find(k=>k.t===sec)!.v,[10,20]);
+ assert.equal(d.revision,keyed().revision+1);
+ assert.throws(()=>applyEdit(d,maskEdit(d,'photo',{op:'box',mask:'m',x:0,y:0,width:0,height:5,t:0})),EditError);
+ const b={x:10,y:10,width:100,height:50};
+ assert.deepEqual(resizeBox(b,'se',20,10),{x:10,y:10,width:120,height:60});
+ assert.deepEqual(resizeBox(b,'nw',20,10),{x:30,y:20,width:80,height:40});
+ assert.deepEqual(resizeBox(b,'nw',500,500),{x:109,y:59,width:1,height:1});
+ assert.equal(resizeBox(b,'se',1e9,0).width,16384);
+ assert.deepEqual(moveBox(b,5.26,-3),{x:15.3,y:7,width:100,height:50});
+ assert.deepEqual(corners(b).sw,[10,60]);
+ let p=applyEdit(base(),maskEdit(base(),'photo',{op:'add',id:'p'}));
+ p=applyEdit(p,maskEdit(p,'photo',{op:'path',mask:'p',points:[{x:0,y:0},{x:50,y:0},{x:25,y:40}],closed:true,smooth:false}));
+ const moved=applyEdit(p,maskEdit(p,'photo',{op:'point',mask:'p',index:1,x:70.123456,y:5}));
+ assert.deepEqual(layer(moved,'photo').masks![0].path!.points[1],{x:70.1235,y:5});
+ assert.throws(()=>maskEdit(p,'photo',{op:'point',mask:'p',index:9,x:0,y:0}).type&&applyEdit(p,maskEdit(p,'photo',{op:'point',mask:'p',index:9,x:0,y:0})),/no longer/);
+ assert.deepEqual(maskBox(layer(p,'photo').masks![0]),{x:75,y:50,width:50,height:40});
+});
+test('P12: mask selection falls back to the first mask of the layer',()=>{
+ const d=keyed();const l=layer(d,'photo');
+ selectMask(null,null);assert.equal(activeMask(l,{layer:null,mask:null})!.id,'m');
+ assert.equal(activeMask(l,{layer:'other',mask:'zzz'})!.id,'m');assert.equal(activeMask(undefined,{layer:null,mask:null}),undefined);
+});

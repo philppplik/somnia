@@ -309,5 +309,10 @@
  "animation.masks.prop.position": "la position",
  "animation.masks.prop.size": "la taille",
  "animation.masks.prop.feather": "le contour progressif",
- "animation.masks.prop.opacity": "l'opacité"
+ "animation.masks.prop.opacity": "l'opacité",
+ "animation.masks.lane": "Masque {n} {prop}",
+ "animation.masks.ease": "Accélération de cette clé",
+ "animation.masks.keyAt": "Clé de masque à {time}",
+ "animation.masks.handle": "Redimensionner le masque, coin {corner}",
+ "animation.masks.point": "Point {n} du tracé du masque"
 }

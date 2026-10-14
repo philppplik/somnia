@@ -27,3 +27,11 @@ One builder (`masks.ts`) produces the `<mask>` and filter definitions for both t
 - Path masks (`shape: 'path'`): 2 to 32 points (3 or more when closed), each with optional bezier in/out handles as offsets, coordinates within 16384. x and y move the whole path, width and height are ignored. The inspector takes a point list and a Smooth curves switch (Catmull-Rom handles, deterministic); open paths keep straight end handles. There is no pen tool and no per-point keyframing yet.
 - Same builder for viewer and all exports; every operation is a single undo step (`layer.masks` edit) and validated. Command `animation.layer.mask` gains ops `set`, `animate`, `path`.
 - Local pixel review: `test/animation-preview.html?masks=1` (keyed smooth path mask plus translucent rect mask).
+
+## P12: mask key lanes and on-canvas handles
+
+- Timeline: the selected layer shows one key lane per animated mask property (position, size, feather, opacity). Diamonds select, drag to move (one undo step, Esc cancels), Delete removes (the last key bakes to a static value), arrow keys nudge a frame, and a select sets the ease preset per key.
+- Canvas: the selected mask (click its "Mask n" label) shows an outline that drags the mask, four corner handles that resize rect and ellipse masks, and draggable path points. One drag is one undo step. Arrow keys nudge a handle.
+- Handles write at the playhead: on an animated property they add or update a key there.
+- Not covered: mask keys are not part of the transform key selection, copy/paste or graph editor. No in/out bezier handle dragging, no pen tool, no per-point keys. Ease is preset-based.
+- Tests: `animation-p10.test.ts` (ops, box math), `test/animation-preview.html?masks=1` for the pixel review, `tests/animation-p10.spec.ts` (CI-only).

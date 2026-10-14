@@ -309,5 +309,10 @@
  "animation.masks.prop.position": "posição",
  "animation.masks.prop.size": "tamanho",
  "animation.masks.prop.feather": "suavização",
- "animation.masks.prop.opacity": "opacidade"
+ "animation.masks.prop.opacity": "opacidade",
+ "animation.masks.lane": "Máscara {n} {prop}",
+ "animation.masks.ease": "Suavização desta chave",
+ "animation.masks.keyAt": "Chave da máscara em {time}",
+ "animation.masks.handle": "Redimensionar máscara, canto {corner}",
+ "animation.masks.point": "Ponto {n} do caminho da máscara"
 }

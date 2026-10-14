@@ -309,5 +309,10 @@
  "animation.masks.prop.position": "position",
  "animation.masks.prop.size": "size",
  "animation.masks.prop.feather": "feather",
- "animation.masks.prop.opacity": "opacity"
+ "animation.masks.prop.opacity": "opacity",
+ "animation.masks.lane": "Mask {n} {prop}",
+ "animation.masks.ease": "Ease of this key",
+ "animation.masks.keyAt": "Mask key at {time}",
+ "animation.masks.handle": "Resize mask, {corner} corner",
+ "animation.masks.point": "Mask path point {n}"
 }

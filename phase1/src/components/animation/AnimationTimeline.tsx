@@ -13,6 +13,7 @@ import {executeCommand} from '../../lib/commands';
 import {useT} from '../../lib/useT';
 import {Button} from '../ui/button';
 import {EASE_LABEL,EASES,PROP_LABEL} from './format';
+import {MaskLanes} from './MaskLanes';
 import {GraphEditor} from './GraphEditor';
 const run=(id:string,params?:unknown)=>void executeCommand(id,params);
 const pct=(t:number,c:Composition)=>`${Math.min(100,Math.max(0,(t-c.start)/c.duration*100))}%`;
@@ -199,6 +200,7 @@ export function AnimationTimeline({comp,at,selected,canUndo,canRedo}:{comp:Compo
         data-key-layer={l.id} data-key-prop={k} data-key-t={key.t} aria-pressed={on} data-selected={on||undefined}
         aria-label={t('animation.key.at',{time:timecode(key.t,comp.fps)})} onPointerDown={dragKey(ref)} onKeyDown={keyDown(ref)}/>;})}
      </div></div>)}
+    {l.id===selected&&l.masks?.length?<MaskLanes comp={comp} layer={l} tickAtX={tickAtX} pct={pct}/>:null}
    </div>)}
    <div className="pointer-events-none absolute inset-y-0 left-[280px] right-0" aria-hidden="true">
     <div className="absolute inset-y-0 bg-black/20" style={{left:0,width:pct(wa.in,comp)}}/>

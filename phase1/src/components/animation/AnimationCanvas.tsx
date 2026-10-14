@@ -20,6 +20,7 @@ import {FileTabs} from '../FileTabs';
 import {StudioEmptyState} from '../studios/StudioEmptyState';
 import {Button} from '../ui/button';
 import {AnimationTimeline} from './AnimationTimeline';
+import {MaskOverlay} from './MaskOverlay';
 import {PathOverlay} from './PathOverlay';
 const run=(id:string,params?:unknown)=>void executeCommand(id,params);
 /** Canvas of the Animation studio: viewer above a timeline, or a starter when no composition is open. */
@@ -78,6 +79,7 @@ function Viewer({comp,at,selected,sel,assets}:{assets:readonly InterfaceAsset[];
      onPointerDown={()=>animationSession().setView({selectedLayer:l.id})}><g mask={hasMasks(l)?`url(#${maskId('preview-',i)})`:undefined}><g filter={effectPrimitives(l,at)?`url(#preview-effect-${i})`:undefined}>{layerNode(l,assets,at,l.source.gradient?`url(#preview-gradient-${i})`:undefined)}</g></g></g>;
     return l.matte?<g key={l.id} mask={`url(#${matteId('preview-',i)})`}>{drawn}</g>:drawn;})}
    {layer&&hasPos&&<PathOverlay comp={comp} layer={layer} at={at} sel={sel}/>}
+   {layer&&hasMasks(layer)&&<MaskOverlay comp={comp} layer={layer} at={at}/>}
   </svg>
   {hasPos&&<div className="absolute right-2 top-2 flex gap-1" role="group" aria-label={t('animation.path.label')}>
    <Button size="tiny" variant="outline" disabled={!posSel.length||!!layer?.locked} onClick={()=>void executeCommand('animation.keys.smooth')} data-testid="animation-path-smooth">{t('animation.path.smooth')}</Button>

@@ -21,4 +21,12 @@ test('P10 masks, track matte and text rotation/colour animators',async({page})=>
  await expect(page.getByTestId('animation-mask-path-0')).toBeVisible();
  await page.getByTestId('animation-mask-0').getByRole('checkbox',{name:/Animate position|position animieren/i}).check();
  await expect(page.getByTestId('animation-mask-0').getByRole('checkbox',{name:/Animate position|position animieren/i})).toBeChecked();
+ // P12 (CI-only): animated mask gets key lanes and on-canvas handles; one drag is one undo step.
+ await page.getByTestId('animation-mask-0').getByRole('checkbox',{name:/Animate position|position animieren/i}).check();
+ await expect(page.getByTestId('animation-maskrow-0-position')).toBeVisible();
+ await expect(page.getByTestId('animation-mask-overlay')).toBeVisible();
+ const pt=page.getByTestId('animation-mask-point').first();const box=(await pt.boundingBox())!;
+ await page.mouse.move(box.x+box.width/2,box.y+box.height/2);await page.mouse.down();await page.mouse.move(box.x+40,box.y+30,{steps:5});await page.mouse.up();
+ await page.keyboard.press('Control+z');
+ await expect(page.getByTestId('animation-mask-point').first()).toBeVisible();
 });

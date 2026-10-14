@@ -3,6 +3,7 @@ import {worldMatrix,type Matrix} from './scene';
 import {EASE_IN,EASE_OUT,MAX_LAYER_MASKS,MAX_MASK_POINTS,findComp,findLayer,newId,type AnimationDocument,type Composition,type Layer,type LayerMask,type LayerMatte,type MaskPath,type MaskProp,type MaskPoint,type PropValue,type Property,type Vec2} from './model';
 import {evaluate} from './interpolate';
 import {snapToFrame} from './time';
+import {EASE_PRESETS,type EasePreset} from './graph';
 import type {Edit} from './edit';
 const num=(n:number)=>String(Math.round(n*1e4)/1e4);
 /** A mask with every keyed property read at one tick. */
@@ -69,6 +70,11 @@ export type MaskOp=
  |{op:'set';mask:string;prop:MaskProp;value:PropValue;t:number}
  |{op:'animate';mask:string;prop:MaskProp;on:boolean;t:number}
  |{op:'path';mask:string;points:readonly {x:number;y:number}[];closed:boolean;smooth:boolean}
+ |{op:'keyMove';mask:string;prop:MaskProp;from:number;to:number}
+ |{op:'keyRemove';mask:string;prop:MaskProp;t:number}
+ |{op:'keyEase';mask:string;prop:MaskProp;t:number;preset:EasePreset}
+ |{op:'box';mask:string;x:number;y:number;width:number;height:number;t:number}
+ |{op:'point';mask:string;index:number;x:number;y:number}
  |{op:'add';id?:string}
  |{op:'remove';mask:string}
  |{op:'update';mask:string;patch:MaskPatch};
@@ -88,6 +94,12 @@ export function maskEdit(doc:AnimationDocument,layerId:string,o:MaskOp):Edit{
   case 'update':need(o.mask);return set(list.map(m=>{if(m.id!==o.mask)return m;const n={...m,...o.patch};
    if(n.shape==='path'){if(!n.path)n.path=smoothPath(boxPoints(n),true,true);}else delete n.path;return n;}));
   case 'path':{need(o.mask);if(o.points.length>MAX_MASK_POINTS)throw Error(`At most ${MAX_MASK_POINTS} path points.`);return set(list.map(m=>m.id===o.mask?{...m,shape:'path',path:smoothPath(o.points,o.closed,o.smooth)}:m));}
+  case 'keyMove':case 'keyRemove':case 'keyEase':{need(o.mask);
+   return set(list.map(m=>m.id===o.mask?(o.op==='keyMove'?moveMaskKey(m,o.prop,o.from,o.to,c):o.op==='keyRemove'?removeMaskKey(m,o.prop,o.t):easeMaskKey(m,o.prop,o.t,o.preset)):m));}
+  case 'box':{need(o.mask);const t=snapToFrame(o.t,c.fps);if(t<c.start||t>=c.start+c.duration)throw Error('Time is outside the composition.');
+   return set(list.map(m=>m.id===o.mask?setMaskValue(setMaskValue(m,'position',[o.x,o.y],t),'size',[o.width,o.height],t):m));}
+  case 'point':{need(o.mask);return set(list.map(m=>{if(m.id!==o.mask)return m;if(!m.path||!m.path.points[o.index])throw Error('Path point no longer exists.');
+   return {...m,path:{...m.path,points:m.path.points.map((q,i)=>i===o.index?{...q,x:round(o.x),y:round(o.y)}:q)}};}));}
   case 'set':case 'animate':{need(o.mask);const t=snapToFrame(o.t,c.fps);if(t<c.start||t>=c.start+c.duration)throw Error('Time is outside the composition.');
    return set(list.map(m=>m.id===o.mask?(o.op==='set'?setMaskValue(m,o.prop,o.value,t):animateMask(m,o.prop,o.on,t)):m));}
  }
@@ -132,3 +144,24 @@ export function smoothPath(points:readonly {x:number;y:number}[],closed:boolean,
  })};
 }
 const round=(v:number)=>Math.round(v*1e4)/1e4;
+
+const keysOf=(m:LayerMask,prop:MaskProp)=>{const p=m.anim?.[prop];if(!p?.keys.length)throw Error('Mask property has no keys.');return p;};
+/** Moves one key to another frame. The target must be inside the composition and free. */
+export function moveMaskKey(m:LayerMask,prop:MaskProp,from:number,to:number,comp:Composition):LayerMask{
+ const p=keysOf(m,prop),target=snapToFrame(to,comp.fps),k=p.keys.find(x=>x.t===from);
+ if(!k)throw Error('Key no longer exists.');
+ if(target<comp.start||target>=comp.start+comp.duration)throw Error('Time is outside the composition.');
+ if(target!==from&&p.keys.some(x=>x.t===target))throw Error('Another key already sits at that time.');
+ return {...m,anim:{...m.anim,[prop]:{...p,keys:p.keys.map(x=>x===k?{...x,t:target}:x).sort((a,b)=>a.t-b.t)}}};
+}
+/** Deletes a key. The last key turns the property static with that key's value. */
+export function removeMaskKey(m:LayerMask,prop:MaskProp,t:number):LayerMask{
+ const p=keysOf(m,prop),k=p.keys.find(x=>x.t===t);if(!k)throw Error('Key no longer exists.');
+ if(p.keys.length>1)return {...m,anim:{...m.anim,[prop]:{...p,keys:p.keys.filter(x=>x!==k)}}};
+ const next=staticSet(m,prop,k.v),anim={...m.anim};delete anim[prop];return {...next,anim:Object.keys(anim).length?anim:undefined};
+}
+/** Applies an ease preset to the segment that starts at key `t`. */
+export function easeMaskKey(m:LayerMask,prop:MaskProp,t:number,preset:EasePreset):LayerMask{
+ const p=keysOf(m,prop),e=EASE_PRESETS[preset];if(!e)throw Error('Unknown ease preset.');if(!p.keys.some(x=>x.t===t))throw Error('Key no longer exists.');
+ return {...m,anim:{...m.anim,[prop]:{...p,keys:p.keys.map(x=>x.t===t?{...x,interp:e.interp,...('out' in e?{out:e.out,in:e.in}:{})}:x)}}};
+}

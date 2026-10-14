@@ -309,5 +309,10 @@
  "animation.masks.prop.position": "Position",
  "animation.masks.prop.size": "Größe",
  "animation.masks.prop.feather": "Weiche Kante",
- "animation.masks.prop.opacity": "Deckkraft"
+ "animation.masks.prop.opacity": "Deckkraft",
+ "animation.masks.lane": "Maske {n} {prop}",
+ "animation.masks.ease": "Ease dieses Keys",
+ "animation.masks.keyAt": "Masken-Key bei {time}",
+ "animation.masks.handle": "Maske skalieren, Ecke {corner}",
+ "animation.masks.point": "Maskenpfad-Punkt {n}"
 }

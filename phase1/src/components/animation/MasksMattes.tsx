@@ -3,6 +3,7 @@ import {Button} from '../ui/button';
 import {NativeInput,NativeSelect} from '../ui/native-controls';
 import {InspectorNumberField} from '../studios/InspectorNumberField';
 import {MAX_LAYER_MASKS,type Composition,type Layer,type LayerMask} from '../../lib/animation/model';
+import {selectMask,useMaskSelection,activeMask} from '../../lib/animation/maskSelection';
 import {resolveMask} from '../../lib/animation/masks';
 import {MAX_MASK_POINTS,type MaskProp} from '../../lib/animation/model';
 import {executeCommand} from '../../lib/commands';
@@ -12,7 +13,7 @@ const mask=(params:unknown)=>void executeCommand('animation.layer.mask',params);
 const matte=(params:unknown)=>void executeCommand('animation.layer.matte',params);
 /** Inspector sections for layer masks (up to 4 shapes) and the track matte (alpha or luma, optionally inverted). */
 export function MasksMattes({layer,comp,at}:{layer:Layer;comp:Composition;at:number}){
- const {t}=useT();const masks=layer.masks??[];
+ const {t}=useT();const masks=layer.masks??[];const sel=useMaskSelection();const current=activeMask(layer,sel);
  const val=(m:LayerMask,key:'x'|'y'|'width'|'height'|'feather'|'opacity')=>{const r=resolveMask(m,at);return key==='opacity'?r.opacity??100:r[key];};
  const field2=(m:LayerMask,label:string,key:'x'|'y'|'width'|'height'|'feather'|'opacity',min:number,max:number)=>{
   const set=(v:number)=>{const r=resolveMask(m,at);const prop:MaskProp=key==='x'||key==='y'?'position':key==='width'||key==='height'?'size':key;
@@ -25,7 +26,7 @@ export function MasksMattes({layer,comp,at}:{layer:Layer;comp:Composition;at:num
  return <>
   <fieldset className="m-0 grid gap-2 border border-subtle p-2" disabled={layer.locked} data-testid="animation-masks"><legend className="text-ink-3">{t('animation.masks.title')}</legend>
    {masks.map((m,i)=><div key={m.id} className="grid gap-1 border-b border-subtle pb-2" data-testid={`animation-mask-${i}`}>
-    <div className="flex items-center gap-1"><span className="flex-1 text-ink-3">{t('animation.masks.item',{n:i+1})}</span>
+    <div className="flex items-center gap-1"><Button size="tiny" className={`flex-1 justify-start ${current?.id===m.id?'text-ink':'text-ink-3'}`} aria-pressed={current?.id===m.id} onClick={()=>selectMask(layer.id,m.id)} data-testid={`animation-mask-select-${i}`}>{t('animation.masks.item',{n:i+1})}</Button>
      <Button size="tiny" variant="ghost" aria-label={t('animation.masks.remove')} onClick={()=>mask({layer:layer.id,op:'remove',mask:m.id})}>×</Button></div>
     <div className="grid grid-cols-2 gap-2">
      <label className="grid gap-1 text-ink-3">{t('animation.masks.shape')}<NativeSelect className={field} value={m.shape} onChange={e=>mask({layer:layer.id,op:'update',mask:m.id,patch:{shape:e.target.value}})}><option value="rect">{t('animation.masks.rect')}</option><option value="ellipse">{t('animation.masks.ellipse')}</option><option value="path">{t('animation.masks.path')}</option></NativeSelect></label>
