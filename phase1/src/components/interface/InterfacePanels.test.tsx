@@ -124,3 +124,8 @@ test('P43 corner radius field renders for frames and rectangles in English and G
  html=renderToStaticMarkup(<InterfaceProperties/>);assert.ok(!html.includes('Corner radius'),'text layers hide the radius field');
  interfaceSession.clear();setLocale('de');try{interfaceSession.start();interfaceSession.transact(d=>{const f=addNode(d,d.pages[0].id,'frame');addNode(d,d.pages[0].id,'rectangle',f);});interfaceSession.select(interfaceSession.get().document!.nodes[1].id);
  const german=renderToStaticMarkup(<InterfaceProperties/>);assert.ok(german.includes('Eckenradius'));}finally{interfaceSession.clear();setLocale('en');}});
+test('P44 opacity field renders for any layer in English and German with percent mapping',async()=>{interfaceSession.start();interfaceSession.transact(d=>{const f=addNode(d,d.pages[0].id,'frame');const r=addNode(d,d.pages[0].id,'rectangle',f);d.nodes.find(n=>n.id===r)!.opacity=0.5;});interfaceSession.select(interfaceSession.get().document!.nodes[1].id);
+ const html=renderToStaticMarkup(<InterfaceProperties/>);assert.ok(html.includes('Opacity'));assert.ok(html.includes('value="50"'),'stored fraction renders as percent');
+ interfaceSession.select(interfaceSession.get().document!.nodes[0].id);assert.ok(renderToStaticMarkup(<InterfaceProperties/>).includes('Opacity'),'frames show the opacity field too');
+ interfaceSession.clear();setLocale('de');try{interfaceSession.start();interfaceSession.transact(d=>{addNode(d,d.pages[0].id,'frame');});interfaceSession.select(interfaceSession.get().document!.nodes[0].id);
+ const german=renderToStaticMarkup(<InterfaceProperties/>);assert.ok(german.includes('Deckkraft'));}finally{interfaceSession.clear();setLocale('en');}});
