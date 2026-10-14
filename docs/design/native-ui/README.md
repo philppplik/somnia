@@ -41,6 +41,7 @@ All file links are repository-relative, so they remain useful on a feature branc
 11. [Vibespace area DS adoption](vibespace-adoption.md)
 12. [Pdf/pdfedit areas DS adoption](pdf-adoption.md)
 13. [Agent area DS adoption](agent-adoption.md)
+14. [Vectorstudio area DS adoption](vectorstudio-adoption.md)
 
 ## The system in one view
 

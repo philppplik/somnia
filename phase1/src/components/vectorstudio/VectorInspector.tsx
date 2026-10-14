@@ -9,6 +9,7 @@ import {downloadPng} from '../../lib/vectorstudio/exportFiles';
 import {openActiveProjectSvg} from '../../lib/vectorstudio/open';
 import {commit,duplicateSelection,importSvgInto,renamePath,reorder,resizePage,select,selectNode,setStyle,setTool,toggleHidden,useVectorSession} from '../../lib/vectorstudio/session';
 import {useAppStore} from '../../store/appStore';
+import {NativeButton,NativeInput} from '../ui/native-controls';
 const field='h-7 w-full min-w-0 rounded-sm border border-line bg-elevated px-1.5 text-[12px] text-ink';
 const label='flex flex-col gap-1 text-[11px] text-ink-3';
 const section='flex flex-col gap-2 border-b border-subtle p-3';
@@ -29,12 +30,12 @@ export function VectorInspector(){
   <section className={section} data-testid="vector-style-panel"><h2 className="m-0 text-[11px] font-semibold uppercase tracking-wide text-ink-3">{t('vector.style')}</h2>
    {!first?<p className="m-0 text-ink-3">{t('vector.nothingSelected')}</p>:<>
     <div className="grid grid-cols-2 gap-2">
-     <label className={label}>{t('vector.fill')}<span className="flex gap-1"><input type="color" className="h-7 w-10 shrink-0 cursor-pointer" aria-label={t('vector.fill')} value={isColor(fill)?fill:'#000000'} onChange={e=>setStyle({fill:e.target.value})} data-testid="vector-fill"/>
+     <label className={label}>{t('vector.fill')}<span className="flex gap-1"><NativeInput type="color" className="h-7 w-10 shrink-0 cursor-pointer" aria-label={t('vector.fill')} value={isColor(fill)?fill:'#000000'} onChange={e=>setStyle({fill:e.target.value})} data-testid="vector-fill"/>
       <Button size="compact" onClick={()=>setStyle({fill:fill==='none'?'#6d5ef5':'none'})} data-testid="vector-fill-none">{fill==='none'?t('vector.add'):t('vector.none')}</Button></span></label>
-     <label className={label}>{t('vector.stroke')}<span className="flex gap-1"><input type="color" className="h-7 w-10 shrink-0 cursor-pointer" aria-label={t('vector.stroke')} value={isColor(stroke)?stroke:'#000000'} onChange={e=>setStyle({stroke:e.target.value})} data-testid="vector-stroke"/>
+     <label className={label}>{t('vector.stroke')}<span className="flex gap-1"><NativeInput type="color" className="h-7 w-10 shrink-0 cursor-pointer" aria-label={t('vector.stroke')} value={isColor(stroke)?stroke:'#000000'} onChange={e=>setStyle({stroke:e.target.value})} data-testid="vector-stroke"/>
       <Button size="compact" onClick={()=>setStyle({stroke:stroke==='none'?'#1f1b4d':'none'})} data-testid="vector-stroke-none">{stroke==='none'?t('vector.add'):t('vector.none')}</Button></span></label>
-     <label className={label}>{t('vector.strokeWidth')}<input className={field} type="number" min={0} step={0.5} value={sw} onChange={e=>{const n=num(e.target.value);if(n!==null&&n>=0)setStyle({strokeWidth:n});}} data-testid="vector-stroke-width"/></label>
-     <label className={label}>{t('vector.opacity')}<input className={field} type="number" min={0} max={1} step={0.05} value={op} onChange={e=>{const n=num(e.target.value);if(n!==null)setStyle({opacity:Math.min(1,Math.max(0,n))});}} data-testid="vector-opacity"/></label>
+     <label className={label}>{t('vector.strokeWidth')}<NativeInput className={field} type="number" min={0} step={0.5} value={sw} onChange={e=>{const n=num(e.target.value);if(n!==null&&n>=0)setStyle({strokeWidth:n});}} data-testid="vector-stroke-width"/></label>
+     <label className={label}>{t('vector.opacity')}<NativeInput className={field} type="number" min={0} max={1} step={0.05} value={op} onChange={e=>{const n=num(e.target.value);if(n!==null)setStyle({opacity:Math.min(1,Math.max(0,n))});}} data-testid="vector-opacity"/></label>
     </div></>}
   </section>
   <section className={section} data-testid="vector-arrange-panel"><h2 className="m-0 text-[11px] font-semibold uppercase tracking-wide text-ink-3">{t('vector.arrange')}</h2>
@@ -46,11 +47,11 @@ export function VectorInspector(){
    {s.doc.paths.length===0?<p className="m-0 text-ink-3">{t('vector.noLayers')}</p>:<ul className="m-0 flex list-none flex-col gap-0.5 p-0">
     {[...s.doc.paths].reverse().map(p=><li key={p.id} className={`flex items-center gap-1 rounded-sm px-1 ${s.selection.includes(p.id)?'bg-hover':''}`} data-testid="vector-layer">
      <Button size="row" aria-label={p.hidden?t('vector.show'):t('vector.hide')} onClick={()=>toggleHidden(p.id)}>{p.hidden?<EyeOff/>:<Eye/>}</Button>
-     <button type="button" className="min-w-0 flex-1 truncate bg-transparent py-1 text-left text-ink" onClick={e=>select(e.shiftKey?[...new Set([...s.selection,p.id])]:[p.id])} onDoubleClick={()=>{const n=window.prompt(t('vector.rename'),p.name??'');if(n)renamePath(p.id,n);}}>{p.name??t('vector.path')}</button></li>)}</ul>}
+     <NativeButton type="button" className="min-w-0 flex-1 truncate bg-transparent py-1 text-left text-ink" onClick={e=>select(e.shiftKey?[...new Set([...s.selection,p.id])]:[p.id])} onDoubleClick={()=>{const n=window.prompt(t('vector.rename'),p.name??'');if(n)renamePath(p.id,n);}}>{p.name??t('vector.path')}</NativeButton></li>)}</ul>}
   </section>
   <section className={section} data-testid="vector-page-panel"><h2 className="m-0 text-[11px] font-semibold uppercase tracking-wide text-ink-3">{t('vector.page')}</h2>
-   <div className="grid grid-cols-2 gap-2"><label className={label}>W<input className={field} type="number" min={1} max={16384} value={s.doc.width} onChange={e=>{const n=num(e.target.value);if(n)resizePage(n,s.doc.height);}} data-testid="vector-page-w"/></label>
-    <label className={label}>H<input className={field} type="number" min={1} max={16384} value={s.doc.height} onChange={e=>{const n=num(e.target.value);if(n)resizePage(s.doc.width,n);}} data-testid="vector-page-h"/></label></div></section>
+   <div className="grid grid-cols-2 gap-2"><label className={label}>W<NativeInput className={field} type="number" min={1} max={16384} value={s.doc.width} onChange={e=>{const n=num(e.target.value);if(n)resizePage(n,s.doc.height);}} data-testid="vector-page-w"/></label>
+    <label className={label}>H<NativeInput className={field} type="number" min={1} max={16384} value={s.doc.height} onChange={e=>{const n=num(e.target.value);if(n)resizePage(s.doc.width,n);}} data-testid="vector-page-h"/></label></div></section>
   <section className={section}><h2 className="m-0 text-[11px] font-semibold uppercase tracking-wide text-ink-3">{t('vector.file')}</h2>
    <div className="flex flex-wrap gap-2">
     <Button variant="outline" size="compact" disabled={busy} onClick={()=>void pngExport()} data-testid="vector-export-png"><Download size={14}/>{t('vector.exportPng')}</Button>

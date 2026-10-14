@@ -15,6 +15,7 @@ import {studioContextStore} from '../../lib/shell/studioContext';
 import {getVectorSession,subscribeVector} from '../../lib/vectorstudio/session';
 import {VectorToolbar} from './VectorToolbar';
 
+import {NativeSelect} from '../ui/native-controls';
 type Drag=
  |{kind:'move';start:Point;dx:number;dy:number}
  |{kind:'marquee';start:Point;cur:Point}
@@ -122,8 +123,8 @@ export function VectorCanvas(){
  if(!s.open)return <main className="center" aria-label={t('vector.title')}><VectorExportSetup/><div className="workspace"><section className="code-pane" aria-label={t('vector.title')}><FileTabs/>
   <StudioEmptyState studio="vector" icon={<PenNibIcon/>} onOpen={()=>void openSvgDialog()} onCreate={()=>{const p=PAGE_PRESETS.find(x=>x.id===presetId)??PAGE_PRESETS[0];createBlankVector(p.width,p.height);}}
    extraActions={<label className="flex items-center gap-2 text-[12px] text-ink-2">{t('vector.start.pageSize')}
-    <select className="h-9 rounded-sm border border-line bg-elevated px-2 text-[12px] text-ink" value={presetId} onChange={e=>setPresetId(e.target.value)} data-testid="vector-start-preset">
-     {PAGE_PRESETS.map(p=><option key={p.id} value={p.id}>{p.label}</option>)}</select></label>}/>
+    <NativeSelect className="h-9 rounded-sm border border-line bg-elevated px-2 text-[12px] text-ink" value={presetId} onChange={e=>setPresetId(e.target.value)} data-testid="vector-start-preset">
+     {PAGE_PRESETS.map(p=><option key={p.id} value={p.id}>{p.label}</option>)}</NativeSelect></label>}/>
   {s.error&&<p role="alert" className="mx-auto max-w-[460px] p-3 text-[12px] text-danger" data-testid="vector-error">{s.error}</p>}
  </section></div></main>;
 

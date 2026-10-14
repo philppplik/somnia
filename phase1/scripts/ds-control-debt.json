@@ -897,39 +897,39 @@
       "rawTextarea": 0
     },
     "src/components/vectorstudio/tools/VectorNodePanel.tsx": {
-      "rawButton": 3,
-      "rawInput": 1,
+      "rawButton": 0,
+      "rawInput": 0,
       "rawSelect": 0,
       "rawTextarea": 0
     },
     "src/components/vectorstudio/tools/VectorToolsPanel.tsx": {
-      "rawButton": 7,
-      "rawInput": 3,
+      "rawButton": 0,
+      "rawInput": 0,
       "rawSelect": 0,
       "rawTextarea": 0
     },
     "src/components/vectorstudio/VectorCanvas.tsx": {
       "rawButton": 0,
       "rawInput": 0,
-      "rawSelect": 1,
+      "rawSelect": 0,
       "rawTextarea": 0
     },
     "src/components/vectorstudio/VectorImportControls.tsx": {
       "rawButton": 0,
-      "rawInput": 1,
+      "rawInput": 0,
       "rawSelect": 0,
       "rawTextarea": 0
     },
     "src/components/vectorstudio/VectorInspector.tsx": {
-      "rawButton": 1,
-      "rawInput": 6,
+      "rawButton": 0,
+      "rawInput": 0,
       "rawSelect": 0,
       "rawTextarea": 0
     },
     "src/components/vectorstudio/VectorPanels.tsx": {
-      "rawButton": 1,
-      "rawInput": 9,
-      "rawSelect": 3,
+      "rawButton": 0,
+      "rawInput": 0,
+      "rawSelect": 0,
       "rawTextarea": 0
     },
     "src/components/versions/ChangesTab.tsx": {

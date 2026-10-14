@@ -6,6 +6,7 @@ import {useT} from '../../lib/useT';
 import {reportError} from '../../lib/log';
 import {Button} from '../ui/button';
 
+import {NativeInput} from '../ui/native-controls';
 /** Replaces artwork as one undoable edit, unlike opening a new Vector session. */
 export function VectorImportControls(){
  const {t}=useT(),s=useVectorSession(),file=useRef<HTMLInputElement>(null),importing=useRef(false);
@@ -22,7 +23,7 @@ export function VectorImportControls(){
   }finally{importing.current=false;setBusy(false);}
  };
  return <div className="col-span-2 grid gap-2 text-xs">
-  <input ref={file} type="file" accept=".svg,image/svg+xml" hidden disabled={!s.open||busy} aria-label={t('vector.openSvg')} data-testid="vector-svg-file" onChange={e=>{const selected=e.currentTarget.files?.[0];e.currentTarget.value='';void open(selected);}}/>
+  <NativeInput ref={file} type="file" accept=".svg,image/svg+xml" hidden disabled={!s.open||busy} aria-label={t('vector.openSvg')} data-testid="vector-svg-file" onChange={e=>{const selected=e.currentTarget.files?.[0];e.currentTarget.value='';void open(selected);}}/>
   <Button size="compact" variant="outline" disabled={!s.open||busy} title={t('vector.shell.replaceHint')} data-testid="vector-import-svg" onClick={()=>file.current?.click()}>{t('vector.openSvg')}</Button>
   {note&&<p role="status" className="m-0 break-words text-ink-3" data-testid="vector-io-status">{note}</p>}
  </div>;

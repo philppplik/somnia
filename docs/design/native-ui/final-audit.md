@@ -30,7 +30,7 @@ native-platform acceptance claim.
 | components/extensions | 69 | 13 | 0 | 2 | 84 |
 | components/pdfedit | 0 | 0 | 0 | 0 | 0 |
 | components/agent | 0 | 0 | 0 | 0 | 0 |
-| components/vectorstudio | 12 | 20 | 4 | 0 | 36 |
+| components/vectorstudio | 0 | 0 | 0 | 0 | 0 |
 | components/svgedit | 15 | 17 | 1 | 1 | 34 |
 | components/documents | 22 | 6 | 2 | 3 | 33 |
 | components/video | 1 | 24 | 4 | 1 | 30 |
@@ -95,9 +95,12 @@ selects). Its migration is deliberately gated, see below.
 - P19: same hardening for vs-back and vs-studio-card.
 - P20: vibespace checkboxes keep natural width under the global
   `input{width:100%}` rule, fixing the vertically squeezed hunk filename.
-- P21 (this slice): agent area migrated (48 controls to native primitives),
+- P21: agent area migrated (48 controls to native primitives),
   ratchet budgets shrunk to zero for all 9 files, adoption tests and gallery
-  proof added. This branch carries P14 through P20 stacked beneath P21.
+  proof added.
+- P22 (this slice): vectorstudio area migrated (36 controls to native
+  primitives), ratchet budgets shrunk to zero for all 6 files, adoption tests
+  and gallery proof added.
 
 ## Remaining bespoke areas
 
