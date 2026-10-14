@@ -1,4 +1,5 @@
-import {useMemo} from 'react';
+import {useMemo,useState} from 'react';
+import {TableSizeDialog} from './TableSizeDialog';
 import {DOC_COLORS} from '../../lib/documents/palette';
 import {FONT_SIZES,setAlign,setFont,setFontColor,setFontSize,setLineSpacing,setSpaceAfter,setParagraphStyle,setSpaceBefore,stepIndent,toggleFormat,toggleList,editTable,insertTable} from '../../lib/documents/session';
 import {TABLE_PRESETS,TABLE_OPS,type TableOp,DOC_STYLES,type DocStyleId,type FormatPatch,type FormatState,type ParaAlign,type ParaState} from '../../lib/documents/protocol';
@@ -18,6 +19,7 @@ const SPACE_STEPS=[0,4,6,8,10,12,18,24] as const;
 const withCurrent=(list:readonly number[],cur:number|null)=>cur!==null&&!list.includes(cur)?[...list,cur].sort((a,b)=>a-b):[...list];
 
 export function FormatBar({format,held,para,enabled,inCell=false}:{format:FormatState|null;held:FormatPatch|null;para:ParaState|null;enabled:boolean;inCell?:boolean}){
+ const [sizeOpen,setSizeOpen]=useState(false);
  const flag=(p:'bold'|'italic'|'underline')=>held?.[p]??format?.[p]==='on';
  const font=held?.font??format?.font??'';const size=held?.size??format?.size??null;const color=held?.color??format?.color??null;
  const fonts=useMemo(()=>font&&!(DOC_FONTS as readonly string[]).includes(font)?[font,...DOC_FONTS]:[...DOC_FONTS],[font]);
@@ -45,8 +47,9 @@ export function FormatBar({format,held,para,enabled,inCell=false}:{format:Format
    <NativeButton className={tool+' w-7 px-0'} aria-label={t('documents.list.bullet')} title={t('documents.list.bullet')} aria-pressed={para?.list==='bullet'} disabled={!enabled} onClick={()=>void toggleList('bullet')} data-testid="documents-list-bullet"><ListBullet size={14}/></NativeButton>
    <NativeButton className={tool+' w-7 px-0'} aria-label={t('documents.list.numbered')} title={t('documents.list.numbered')} aria-pressed={para?.list==='numbered'} disabled={!enabled} onClick={()=>void toggleList('numbered')} data-testid="documents-list-numbered"><ListNumbered size={14}/></NativeButton>
   </span>
-  <NativeSelect className={sel+' w-28'} aria-label={t('documents.table.insert')} title={t('documents.table.insert')} disabled={!enabled} value="" onChange={e=>{const v=e.currentTarget.value;e.currentTarget.value='';const [r,c]=v.split('x').map(Number);if(TABLE_PRESETS.some(p=>p[0]===r&&p[1]===c))void insertTable(r,c);}} data-testid="documents-table-insert">
-   <option value="" disabled>{t('documents.table.insert')}</option>{TABLE_PRESETS.map(([r,c])=><option key={r+'x'+c} value={r+'x'+c}>{r+' × '+c}</option>)}</NativeSelect>
+  <NativeSelect className={sel+' w-28'} aria-label={t('documents.table.insert')} title={t('documents.table.insert')} disabled={!enabled} value="" onChange={e=>{const v=e.currentTarget.value;e.currentTarget.value='';if(v==='custom'){setSizeOpen(true);return;}const [r,c]=v.split('x').map(Number);if(TABLE_PRESETS.some(p=>p[0]===r&&p[1]===c))void insertTable(r,c);}} data-testid="documents-table-insert">
+   <option value="" disabled>{t('documents.table.insert')}</option>{TABLE_PRESETS.map(([r,c])=><option key={r+'x'+c} value={r+'x'+c}>{r+' × '+c}</option>)}<option value="custom">{t('documents.table.custom')}</option></NativeSelect>
+  {sizeOpen&&<TableSizeDialog onClose={()=>setSizeOpen(false)}/>}
   {inCell&&<NativeSelect className={sel+' w-28'} aria-label={t('documents.table.label')} title={t('documents.table.label')} disabled={!enabled} value="" onChange={e=>{const op=e.currentTarget.value as TableOp;e.currentTarget.value='';if((TABLE_OPS as readonly string[]).includes(op))void editTable(op);}} data-testid="documents-table-menu">
    <option value="" disabled>{t('documents.table.label')}</option>{TABLE_OPS.map(o=><option key={o} value={o} data-testid={'documents-table-'+o}>{t('documents.table.'+o)}</option>)}</NativeSelect>}
   <NativeSelect className={sel+' w-16 tabular-nums'} aria-label={t('documents.para.lineSpacing')} title={t('documents.para.lineSpacing')} disabled={!enabled} value={num(para?.lineSpacing)} onChange={e=>void setLineSpacing(Number(e.currentTarget.value))} data-testid="documents-line-spacing">

@@ -398,3 +398,20 @@ test('table cells: Enter splits a paragraph, Backspace joins it, Tab moves to th
  await expect(page.getByTestId('documents-edit-error')).toHaveCount(0);await expect(page.getByTestId('documents-caret')).toHaveCount(1);
  await page.keyboard.press('Shift+Tab');await expect(page.getByTestId('documents-caret')).toHaveCount(1);
 });
+test('table menu: a custom size inserts a table; bad sizes keep the dialog button disabled; Escape closes',async({page})=>{
+ await page.goto('/');await expect(page.locator('[data-storage]')).toBeVisible();
+ await openBuffers(page,[{name:'sample.docx',mimeType:DOCX,buffer:sample()}]);
+ await expect(page.getByTestId('documents-pages')).toHaveText('1 pages');
+ const pg=page.getByTestId('documents-page').first();const img=pg.locator('img');
+ await expect.poll(()=>img.evaluate((i:HTMLImageElement)=>i.complete&&i.naturalWidth)).toBeGreaterThan(300);
+ const box=(await pg.boundingBox())!;await page.mouse.click(box.x+box.width*0.125,box.y+box.height*0.127);
+ await expect(page.getByTestId('documents-caret')).toHaveCount(1);
+ await page.getByTestId('documents-table-insert').selectOption('custom');
+ await expect(page.getByTestId('documents-table-size-dialog')).toBeVisible();
+ await page.getByTestId('documents-table-size-rows').fill('21');await expect(page.getByTestId('documents-table-size-ok')).toBeDisabled();
+ await page.keyboard.press('Escape');await expect(page.getByTestId('documents-table-size-dialog')).toHaveCount(0);
+ await page.getByTestId('documents-table-insert').selectOption('custom');
+ await page.getByTestId('documents-table-size-rows').fill('4');await page.getByTestId('documents-table-size-cols').fill('2');
+ await page.getByTestId('documents-table-size-ok').click();await page.waitForTimeout(300);
+ await expect(page.getByTestId('documents-edit-error')).toHaveCount(0);await expect(page.getByTestId('documents-table-menu')).toBeVisible();
+});

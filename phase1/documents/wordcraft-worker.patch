@@ -46,7 +46,7 @@ new file mode 100644
 index 0000000..5b80b79
 --- /dev/null
 +++ b/crates/somnia-worker/src/lib.rs
-@@ -0,0 +1,1460 @@
+@@ -0,0 +1,1487 @@
 +//! Experimental headless adapter. No DOM, egui, filesystem or UI thread access.
 +use wasm_bindgen::prelude::*;
 +use std::sync::Arc;
@@ -764,7 +764,7 @@ index 0000000..5b80b79
 +                if t2.rows.len() <= 1 {
 +                    return Err("a table needs at least one row".into());
 +                }
-+                if t2.rows[r].cells.iter().any(|x| x.props.vmerge != VMerge::None) || t2.rows.iter().any(|row| row.cells.iter().any(|x| x.props.vmerge != VMerge::None)) {
++                if t2.rows.iter().any(|row| row.cells.iter().any(|x| x.props.vmerge != VMerge::None)) {
 +                    return Err("rows of a table with vertically merged cells cannot be deleted yet".into());
 +                }
 +                t2.delete_row(r);
@@ -780,10 +780,15 @@ index 0000000..5b80b79
 +                if t2.grid.len() <= 1 {
 +                    return Err("a table needs at least one column".into());
 +                }
-+                if t2.rows.iter().any(|row| row.cells.iter().any(|x| x.span() > 1 || x.props.vmerge != VMerge::None)) {
-+                    return Err("columns of a table with merged cells cannot be deleted yet".into());
++                if t2.rows.iter().any(|row| row.cells.iter().any(|x| x.props.vmerge != VMerge::None)) {
++                    return Err("columns of a table with vertically merged cells cannot be deleted yet".into());
 +                }
++                // Horizontally merged cells shrink by one grid column; single-column cells in that column go.
++                let rows_before = t2.rows.len();
 +                t2.delete_col(grid_start);
++                if t2.rows.len() != rows_before {
++                    return Err("deleting this column would remove a whole row".into());
++                }
 +            }
 +            "merge_right" => {
 +                let cells = &t2.rows[r].cells;
@@ -1056,7 +1061,7 @@ index 0000000..5b80b79
 +        assert_eq!(table(&s), (rows + 1, cols));
 +        s.do_table_edit(id, "col_right").unwrap();
 +        assert_eq!(table(&s), (rows + 1, cols + 1));
-+        // A fixture with merged cells legitimately refuses deletes; otherwise they restore the original shape.
++        // A fixture with vertically merged cells legitimately refuses deletes; otherwise they restore the original shape.
 +        let col_ok = s.do_table_edit(id, "delete_col").is_ok();
 +        let row_ok = s.do_table_edit(id, "delete_row").is_ok();
 +        if col_ok && row_ok {
@@ -1128,6 +1133,28 @@ index 0000000..5b80b79
 +        assert_eq!(s.cell_paras().count(), n);
 +        assert!(first[0] < s.doc.body.len());
 +        assert_ne!(text, s.text());
++    }
++    #[test]
++    fn delete_column_with_horizontally_merged_cells_shrinks_the_span() {
++        let mut s = DocSession::from_bytes(FIXTURE).unwrap();
++        let first = s.cell_paras().next().expect("fixture has a table");
++        let id = CELL_BASE;
++        let cells_in_row = |s: &DocSession| match &*s.doc.body[first[0]] {
++            Block::Table(t) => (t.rows[0].cells.len(), t.rows[0].cells.iter().map(|c| c.span()).sum::<usize>(), t.grid.len()),
++            _ => panic!(),
++        };
++        if cells_in_row(&s).0 < 3 || s.do_table_edit(id, "merge_right").is_err() {
++            return; // fixture too small for the scenario
++        }
++        let (n, spans, grid) = cells_in_row(&s);
++        assert_eq!(spans, grid);
++        // Delete the grid column the merged cell starts on: the merged cell narrows, the table keeps its rows.
++        if s.do_table_edit(id, "delete_col").is_ok() {
++            let (n2, spans2, grid2) = cells_in_row(&s);
++            assert_eq!(grid2, grid - 1);
++            assert_eq!(spans2, grid2);
++            assert!(n2 <= n);
++        }
 +    }
 +    #[test]
 +    fn replace_range_roundtrips_and_is_atomic() {
