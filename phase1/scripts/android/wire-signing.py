@@ -31,7 +31,8 @@ signing = '''
         }
     }
 '''
-s = "import java.util.Properties\n" + s
+if "import java.util.Properties" not in s:
+    s = "import java.util.Properties\n" + s
 s = s.replace("android {", props + "android {" + signing, 1)
 s = s.replace('getByName("release") {', 'getByName("release") {\n            signingConfig = signingConfigs.getByName("release")', 1)
 p.write_text(s)
