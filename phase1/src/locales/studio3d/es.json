@@ -972,5 +972,7 @@
  "studio3d.hist.editBisect": "Cortar la malla en dos",
  "studio3d.edit.bisectAxis": "Eje de corte",
  "studio3d.edit.bisectOff": "Desplazamiento del plano",
- "studio3d.edit.bisectFill": "Rellenar el corte"
+ "studio3d.edit.bisectFill": "Rellenar el corte",
+ "cmd.studio3d.edit.selectLoop": "Extender las aristas seleccionadas a sus bucles completos",
+ "studio3d.edit.selLoop": "Bucle de aristas"
 }

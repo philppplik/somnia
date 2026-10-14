@@ -146,6 +146,7 @@ export interface Studio3DController{
  editFlipEdge():void;
  editMergeByDistance(distance:number):void;
  editBisect(axis:'x'|'y'|'z',offset:number,fill:boolean):void;
+ editSelectLoop():void;
  editExtrude(offset:number):void;
  editInset(amount:number):void;
  editBevel(width:number):void;
@@ -335,6 +336,7 @@ export function studio3DCommandSpecs():CommandSpec<unknown,unknown>[]{
   add<{x?:number;y?:number;z?:number}>('studio3d.edit.move','Move the selected vertices of the edited 3D mesh by an offset','Edit',p=>need().editMove([p?.x??0,p?.y??0,p?.z??0]),object({x:{type:'number',minimum:-1000000,maximum:1000000},y:{type:'number',minimum:-1000000,maximum:1000000},z:{type:'number',minimum:-1000000,maximum:1000000}},[]),()=>getStudio3DState().edit!=null),
   add('studio3d.edit.rip','Rip the selected faces of the edited 3D mesh off the rest by duplicating the shared vertices','Edit',()=>need().editRip(),undefined,()=>getStudio3DState().edit!=null),
   add('studio3d.edit.separate','Split the selected faces of the edited 3D mesh out into a new object','Edit',()=>need().editSeparate(),undefined,()=>getStudio3DState().edit!=null),
+  add('studio3d.edit.selectLoop','Extend the selected edges of the edited 3D mesh to their full edge loops','Edit',()=>need().editSelectLoop(),undefined,()=>getStudio3DState().edit!=null),
   add<{axis?:'x'|'y'|'z';offset?:number;fill?:boolean}>('studio3d.edit.bisect','Cut the edited 3D mesh by an axis plane and keep both halves','Edit',p=>need().editBisect(p?.axis??'y',p?.offset??0,p?.fill??true),object({axis:{enum:['x','y','z']},offset:{type:'number',minimum:-1000000000,maximum:1000000000},fill:{type:'boolean'}},[]),()=>getStudio3DState().edit!=null),
   add<{distance?:number}>('studio3d.edit.mergeByDistance','Weld the selected vertices of the edited 3D mesh that lie within the given distance','Edit',p=>need().editMergeByDistance(p?.distance??0.001),object({distance:{type:'number',exclusiveMinimum:0,maximum:1000000}},[]),()=>getStudio3DState().edit!=null),
   add('studio3d.edit.flipEdge','Rotate each selected edge of the edited 3D mesh shared by two triangles to the other diagonal','Edit',()=>need().editFlipEdge(),undefined,()=>getStudio3DState().edit!=null),

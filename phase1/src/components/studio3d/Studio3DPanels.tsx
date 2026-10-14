@@ -331,6 +331,7 @@ function EditSculptFields({id}:{id:number}){
      <Button variant="outline" onClick={()=>void executeCommand('studio3d.edit.selectLinked',{})}>{t('studio3d.edit.selLinked')}</Button>
      <Button variant="outline" onClick={()=>void executeCommand('studio3d.edit.selectSharp',{})}>{t('studio3d.edit.selSharp')}</Button>
      <Button variant="outline" onClick={()=>void executeCommand('studio3d.edit.selectSimilar',{})}>{t('studio3d.edit.selSimilar')}</Button>
+     <Button variant="outline" onClick={()=>void executeCommand('studio3d.edit.selectLoop',{})}>{t('studio3d.edit.selLoop')}</Button>
     </div>
     <div className="grid grid-cols-2 gap-2">
      <NumField label={t('studio3d.edit.extrude')} value={extrude} min={-10} max={10} step={0.1} onCommit={setExtrude}/>

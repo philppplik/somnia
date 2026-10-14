@@ -972,5 +972,7 @@
  "studio3d.hist.editBisect": "Couper le maillage en deux",
  "studio3d.edit.bisectAxis": "Axe de coupe",
  "studio3d.edit.bisectOff": "Décalage du plan",
- "studio3d.edit.bisectFill": "Remplir la coupe"
+ "studio3d.edit.bisectFill": "Remplir la coupe",
+ "cmd.studio3d.edit.selectLoop": "Étendre les arêtes sélectionnées à leurs boucles complètes",
+ "studio3d.edit.selLoop": "Boucle d’arêtes"
 }

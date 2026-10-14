@@ -1,4 +1,5 @@
 # Unreleased: 3D Studio P0
+- 3D Studio: edit mode extends selected edges to their full edge loops (`studio3d.edit.selectLoop`).
 - 3D Studio: edit mode cuts the mesh by an axis plane and keeps both halves in the session (`studio3d.edit.bisect`).
 - 3D Studio: edit mode welds selected vertices within a distance (`studio3d.edit.mergeByDistance`).
 - 3D Studio: edit mode rotates selected edges shared by two triangles to the other diagonal (`studio3d.edit.flipEdge`).

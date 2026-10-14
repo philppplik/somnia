@@ -972,5 +972,7 @@
  "studio3d.hist.editBisect": "Cortar a malha em duas",
  "studio3d.edit.bisectAxis": "Eixo de corte",
  "studio3d.edit.bisectOff": "Deslocamento do plano",
- "studio3d.edit.bisectFill": "Preencher o corte"
+ "studio3d.edit.bisectFill": "Preencher o corte",
+ "cmd.studio3d.edit.selectLoop": "Estender as arestas selecionadas para seus loops completos",
+ "studio3d.edit.selLoop": "Loop de arestas"
 }

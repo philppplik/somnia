@@ -972,5 +972,7 @@
  "studio3d.hist.editBisect": "Mesh in zwei Teile schneiden",
  "studio3d.edit.bisectAxis": "Schnittachse",
  "studio3d.edit.bisectOff": "Versatz der Schnittebene",
- "studio3d.edit.bisectFill": "Schnitt füllen"
+ "studio3d.edit.bisectFill": "Schnitt füllen",
+ "cmd.studio3d.edit.selectLoop": "Ausgewählte Kanten auf ihre vollständigen Kantenschleifen erweitern",
+ "studio3d.edit.selLoop": "Kantenschleife"
 }

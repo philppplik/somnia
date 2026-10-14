@@ -377,6 +377,81 @@ export function weldSelected(m:MeshData,verts:number[]):MeshData{
  if(m.uvs)out.uvs=m.uvs;
  return out;
 }
+/** Extends each selected edge to its edge loop (Blender Alt+click): walks both directions through vertices, continuing on the unique incident edge that shares no triangle with the arrival edge, stopping at ambiguous or boundary vertices. Vertex positions key the walk, so loops cross split shells; the result maps back to index edges. Replaces nothing else of the selection - returns the loop's index edges including the seeds. */
+export function edgeLoop(m:MeshData,seeds:[number,number][]):[number,number][]{
+ if(!seeds.length)throw new EditError('Select edges to grow into loops.');
+ const nv=m.positions.length/3;
+ for(const [a,b] of seeds){if(!Number.isInteger(a)||!Number.isInteger(b)||a===b||a<0||b<0||a>=nv||b>=nv)throw new EditError('A selected edge does not exist.');}
+ const pos=m.positions,idx=m.index;
+ const pk=(v:number)=>`${Math.round(pos[v*3]*1e6)}_${Math.round(pos[v*3+1]*1e6)}_${Math.round(pos[v*3+2]*1e6)}`;
+ const neighbors=new Map<string,Set<string>>();
+ const triKeys=new Set<string>();
+ for(let f=0;f<idx.length;f+=3){
+  const t=[pk(idx[f]),pk(idx[f+1]),pk(idx[f+2])];
+  triKeys.add([...t].sort().join('|'));
+  for(let e=0;e<3;e++){
+   const a=t[e],b=t[(e+1)%3];
+   if(!neighbors.has(a))neighbors.set(a,new Set());
+   if(!neighbors.has(b))neighbors.set(b,new Set());
+   neighbors.get(a)!.add(b);neighbors.get(b)!.add(a);
+  }
+ }
+ const hasTri=(a:string,b:string,c:string)=>triKeys.has([a,b,c].sort().join('|'));
+ const loopKeys=new Set<string>();
+ const ekey=(a:string,b:string)=>a<b?a+'|'+b:b+'|'+a;
+ for(const [sa,sb] of seeds){
+  const a0=pk(sa),b0=pk(sb);
+  loopKeys.add(ekey(a0,b0));
+  const coords=new Map<string,[number,number,number]>();
+  for(let v=0;v<nv;v++){const k=pk(v);if(!coords.has(k))coords.set(k,[pos[v*3],pos[v*3+1],pos[v*3+2]]);}
+  for(const dir of [[a0,b0],[b0,a0]] as [string,string][]){
+   let prev=dir[0],cur=dir[1];
+   for(;;){
+    const ns=neighbors.get(cur);
+    if(!ns)break;
+    const cand:string[]=[];
+    for(const n of ns){
+     if(n===prev)continue;
+     if(hasTri(prev,cur,n))continue;
+     cand.push(n);
+    }
+    if(!cand.length)break;
+    let next:string;
+    if(cand.length===1)next=cand[0];
+    else{
+     // Ambiguous junction (triangulated quads): take the straightest continuation when it is clear enough.
+     const a=coords.get(prev)!,b=coords.get(cur)!;
+     const dx=b[0]-a[0],dy=b[1]-a[1],dz=b[2]-a[2];
+     const dl=Math.hypot(dx,dy,dz)||1;
+     let best=0.9;let bn:string|null=null;
+     for(const n of cand){
+      const c=coords.get(n)!;
+      const ex=c[0]-b[0],ey=c[1]-b[1],ez=c[2]-b[2];
+      const el=Math.hypot(ex,ey,ez)||1;
+      const dot=(dx*ex+dy*ey+dz*ez)/(dl*el);
+      if(dot>best){best=dot;bn=n;}
+     }
+     if(bn===null)break;
+     next=bn;
+    }
+    const k=ekey(cur,next);
+    if(loopKeys.has(k))break;
+    loopKeys.add(k);
+    prev=cur;cur=next;
+   }
+  }
+ }
+ // Map position-keyed loop edges back to representative index edges (low index first).
+ const seen=new Set<string>();const out:[number,number][]=[];
+ for(let f=0;f<idx.length;f+=3)for(let e=0;e<3;e++){
+  const v0=idx[f+e],v1=idx[f+(e+1)%3];
+  const k=ekey(pk(v0),pk(v1));
+  if(!loopKeys.has(k)||seen.has(k))continue;
+  seen.add(k);
+  out.push(v0<v1?[v0,v1]:[v1,v0]);
+ }
+ return out;
+}
 /** Cuts the mesh by an axis-aligned plane and keeps both halves in one mesh (two shells), optionally capping the cut on each side. UVs travel when both halves carry them. Drops the sculpt mask like every topology-changing op. */
 export function bisectEdit(m:MeshData,axis:'x'|'y'|'z',offset:number,fill:boolean):MeshData{
  if(axis!=='x'&&axis!=='y'&&axis!=='z')throw new EditError('The bisect axis must be x, y or z.');

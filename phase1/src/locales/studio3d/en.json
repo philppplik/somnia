@@ -972,5 +972,7 @@
  "studio3d.hist.editBisect": "Cut the mesh in two",
  "studio3d.edit.bisectAxis": "Bisect axis",
  "studio3d.edit.bisectOff": "Cut plane offset",
- "studio3d.edit.bisectFill": "Fill the cut"
+ "studio3d.edit.bisectFill": "Fill the cut",
+ "cmd.studio3d.edit.selectLoop": "Extend the selected edges to their full edge loops",
+ "studio3d.edit.selLoop": "Edge loop"
 }

@@ -1170,6 +1170,21 @@ test('mesh edit mode: bisect cuts the mesh by a plane and keeps both halves',asy
  await expect(page.getByRole('alert')).toContainText('does not cut through the mesh');
 });
 
+test('mesh edit mode: select edge loop grows a seed edge into its loop',async({page})=>{
+ await blank(page);
+ const id=await insert(page,'cube',0);
+ expect(await run(page,'studio3d.edit.start',{id,mode:'edge'})).toBe(true);
+ expect(await run(page,'studio3d.edit.selectLoop',{})).toBe(false);
+ await expect(page.getByRole('alert')).toContainText('Select edges to grow into loops');
+ expect(await run(page,'studio3d.edit.mode',{mode:'face'})).toBe(true);
+ expect(await run(page,'studio3d.edit.selectAll',{op:'all'})).toBe(true);
+ expect(await run(page,'studio3d.edit.subdivide',{})).toBe(true);
+ expect(await run(page,'studio3d.edit.mode',{mode:'edge'})).toBe(true);
+ expect(await run(page,'studio3d.edit.select',{kind:'edge',edges:[[0,24]]})).toBe(true);
+ expect(await run(page,'studio3d.edit.selectLoop',{})).toBe(true);
+ const s=await session(page);expect(s.edit.edges).toBe(4);
+});
+
 test('mesh edit mode: weld merges selected vertices at their centre, undo restores them',async({page})=>{
  await blank(page);
  const id=await insert(page,'cube',0);
