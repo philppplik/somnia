@@ -13,7 +13,7 @@ export type Interp='hold'|'linear'|'bezier';
 /** `sIn`/`sOut` are spatial tangents (offsets from the key value, vec2 properties only). Absent or [0,0] means a straight spatial segment. */
 export interface Keyframe{t:number;v:PropValue;interp:Interp;out:readonly [number,number];in:readonly [number,number];sIn?:Vec2;sOut?:Vec2;channelOut?:readonly [Vec2,Vec2];channelIn?:readonly [Vec2,Vec2]}
 export interface KeyRef{layer:string;prop:TransformKey;t:number}
-export interface Property{type:PropType;value:PropValue;keys:readonly Keyframe[];/** Inert text only; never evaluated in P0. */expression?:string;pathMode?:'parameter'|'arcLength'}
+export interface Property{type:PropType;value:PropValue;keys:readonly Keyframe[];/** Inert text only; never evaluated in P0. */expression?:string;pathMode?:'parameter'|'arcLength';modifiers?:readonly import('./modifiers').Modifier[]}
 export type LayerKind='solid'|'text'|'shape'|'null'|'raster'|'audio';
 /** Safe system font stacks for text layers. Nothing is bundled or downloaded: every entry is a CSS family stack the host already has. The snapshot stores the id, never the stack. */
 export const TEXT_FONTS={
@@ -88,6 +88,7 @@ const isNum=(n:unknown):n is number=>typeof n==='number'&&Number.isFinite(n);
 const isVec=(v:unknown):v is Vec2=>Array.isArray(v)&&v.length===2&&v.every(isNum);
 const okValue=(type:PropType,v:unknown)=>type==='scalar'?isNum(v):isVec(v);
 /** Strict structural validation used for recovery and import. Returns a list of problems; empty means valid. */
+import {validateModifiers} from './modifierModel';
 export function validateDocument(raw:unknown):string[]{
  const errs:string[]=[];const bad=(m:string)=>{if(errs.length<20)errs.push(m);};
  const d=raw as Partial<AnimationDocument>|null;
@@ -124,6 +125,7 @@ export function validateDocument(raw:unknown):string[]{
     if(!p||p.type!==meta.type||!okValue(meta.type,p.value)){bad(`${l.id}.${k}: bad property`);continue;}
     if(p.pathMode!==undefined&&!['parameter','arcLength'].includes(p.pathMode))bad(`${l.id}.${k}: bad path mode`);
     if(!Array.isArray(p.keys)){bad(`${l.id}.${k}: keys missing`);continue;}
+    for(const m of validateModifiers(p.modifiers as never))bad(`${l.id}.${k}: ${m}`);
     let prev=-Infinity;
     for(const key of p.keys){
      if(!Number.isInteger(key.t)||key.t<=prev)bad(`${l.id}.${k}: keys must be strictly ascending integers`);prev=key.t;

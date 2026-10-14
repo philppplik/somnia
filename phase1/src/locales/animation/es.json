@@ -32,6 +32,8 @@
  "cmd.animation.key.move": "Mover fotograma clave",
  "cmd.animation.key.interp": "Fijar interpolación del fotograma clave",
  "cmd.animation.key.ease": "Fijar suavizado de la clave en el cursor",
+ "cmd.animation.modifier.add": "Añadir modificador de oscilación o bucle",
+ "cmd.animation.modifier.remove": "Quitar modificador de propiedad",
  "cmd.animation.playhead.set": "Mover el cabezal",
  "animation.comp.list": "Composiciones",
  "animation.comp.new": "Nueva composición",

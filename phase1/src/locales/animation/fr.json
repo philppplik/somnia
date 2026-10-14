@@ -32,6 +32,8 @@
  "cmd.animation.key.move": "Déplacer l'image clé",
  "cmd.animation.key.interp": "Définir l'interpolation de l'image clé",
  "cmd.animation.key.ease": "Définir l'adoucissement de la clé au curseur",
+ "cmd.animation.modifier.add": "Ajouter un modificateur d’oscillation ou de boucle",
+ "cmd.animation.modifier.remove": "Supprimer un modificateur de propriété",
  "cmd.animation.playhead.set": "Déplacer la tête de lecture",
  "animation.comp.list": "Compositions",
  "animation.comp.new": "Nouvelle composition",

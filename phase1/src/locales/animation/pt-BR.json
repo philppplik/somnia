@@ -32,6 +32,8 @@
  "cmd.animation.key.move": "Mover quadro-chave",
  "cmd.animation.key.interp": "Definir interpolação do quadro-chave",
  "cmd.animation.key.ease": "Definir suavização da chave no cursor",
+ "cmd.animation.modifier.add": "Adicionar modificador de oscilação ou repetição",
+ "cmd.animation.modifier.remove": "Remover modificador de propriedade",
  "cmd.animation.playhead.set": "Mover o cursor de reprodução",
  "animation.comp.list": "Composições",
  "animation.comp.new": "Nova composição",

@@ -32,6 +32,8 @@
  "cmd.animation.key.move": "Move keyframe",
  "cmd.animation.key.interp": "Set keyframe interpolation",
  "cmd.animation.key.ease": "Set ease of the key at the playhead",
+ "cmd.animation.modifier.add": "Add wiggle or loop modifier",
+ "cmd.animation.modifier.remove": "Remove property modifier",
  "cmd.animation.playhead.set": "Move playhead",
  "animation.comp.list": "Compositions",
  "animation.comp.new": "New composition",

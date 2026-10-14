@@ -100,6 +100,11 @@ Depends on: v10 diff viewer, v11 updater for smooth extension and app updates.
 - Implemented: WAV/MP3 audio layers embedded in the local `.somnia` snapshot (2 MB per file, 10 minutes, 4 MB total), bounded waveform from a validated peak table, trim, offset and volume keyframes, and preview playback driven by the audio clock so picture and sound share one time base. Audio is not part of any export; no mux, no codecs, no new dependencies.
 - Validation: 19 new and 102 total Animation unit tests, DS ratchet, isolated Chrome German light/dark pixels and a real AudioContext sync measurement. Full-app/native/WASM gates remain CI-only (`tests/animation-p5b.spec.ts` not run). Details and limits: `docs/animation-p5b.md`.
 
+### Animation P8 (2026-10-14, integration pending)
+
+- Implemented: expression-free keyframe modifiers. `wiggle` adds deterministic seeded noise per channel (bounded amplitude/frequency), `loop` repeats the keyed range as cycle, pingpong or accumulating offset. Modifiers are serialised in the document, validated on load, undoable via `modifier.add`/`modifier.remove` edits and the new `animation.modifier.add/.remove` commands, and applied in `scene.ts` so preview and every export agree. No new deps, no UI changes.
+- Validation: 6 new and 121 total Animation unit tests, i18n, tsc, command registry in sync. Pre-existing upstream `check:ds` red on interface inline styles (not this area). Timeline parenting UI and per-character text animators explicitly deferred. Details and limits: `docs/animation-p8.md`.
+
 ### Animation P7 (2026-10-14, integration pending)
 
 - Implemented: the render panel exports the work area as animated GIF (own GIF89a encoder: median-cut palette, from-scratch LZW, loop, per-frame delays), APNG (browser PNG frames re-assembled with acTL/fcTL/fdAT) and WebM (real-time `canvas.captureStream` + `MediaRecorder`, VP9/VP8 with Opus; the P5b preview mix joins the recording when audio layers are audible). All three run with StudioProgress and cancel, under shared caps (GIF 300 frames, WebM 60 s real time, 64 MB per file). New commands `animation.export.gif/.apng/.webm`; no new dependencies.

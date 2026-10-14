@@ -1,5 +1,6 @@
 import {presetEdits,type MotionPreset} from './presets';
 import {newId} from './model';
+import type {Modifier} from './modifiers';
 import {saveAnimationSnapshot} from './persistence';
 import {registerCommandSpec} from '../commandBridge';
 import {commandRegistry} from '../commandRegistry';
@@ -79,6 +80,8 @@ export function animationCommandSpecs():CommandSpec<unknown,unknown>[]{
   spec('animation.key.remove','Remove keyframe',(p:{layer?:string;prop:TransformKey;t?:number})=>run({type:'key.remove',layer:layerIdOf(p),prop:p.prop,t:p.t??playhead()}),object({layer:layerRef,prop:propKey,t:tick},['prop'])),
   spec('animation.key.move','Move keyframe',(p:{layer?:string;prop:TransformKey;from:number;to:number;replace?:boolean})=>run({type:'key.move',layer:layerIdOf(p),prop:p.prop,from:p.from,to:p.to,replace:p.replace}),object({layer:layerRef,prop:propKey,from:tick,to:tick,replace:{type:'boolean'}},['prop','from','to'])),
   spec('animation.key.interp','Set keyframe interpolation',(p:{layer?:string;prop:TransformKey;t?:number;interp:'hold'|'linear'|'bezier'})=>run({type:'key.interp',layer:layerIdOf(p),prop:p.prop,t:p.t??playhead(),interp:p.interp}),object({layer:layerRef,prop:propKey,t:tick,interp:{enum:['hold','linear','bezier']}},['prop','interp'])),
+  spec('animation.modifier.add','Add a wiggle or loop modifier to a property',(p:{layer?:string;prop:TransformKey;modifier:Modifier})=>run({type:'modifier.add',layer:layerIdOf(p),prop:p.prop,modifier:p.modifier}),object({layer:layerRef,prop:propKey,modifier:{enum:['wiggle','loop']}},['prop','modifier'])),
+  spec('animation.modifier.remove','Remove a modifier from a property',(p:{layer?:string;prop:TransformKey;index:number})=>run({type:'modifier.remove',layer:layerIdOf(p),prop:p.prop,index:p.index}),object({layer:layerRef,prop:propKey,index:{type:'number'}},['prop','index'])),
   spec('animation.key.ease','Set ease of the key at the playhead',(p:{layer?:string;prop:TransformKey;t?:number;preset:EasePreset})=>{const e=EASE_PRESETS[p.preset]??fail('Unknown ease preset.');return run({type:'key.interp',layer:layerIdOf(p),prop:p.prop,t:p.t??playhead(),interp:e.interp,...('out' in e?{out:e.out,in:e.in}:{})});},object({layer:layerRef,prop:propKey,t:tick,preset:{enum:Object.keys(EASE_PRESETS)}},['prop','preset'])),
   spec('animation.keys.selectAll','Select all keys of the layer',(p:{layer?:string}={})=>{const id=layerIdOf(p);animationSession().selectKeys(allKeysOf(doc(),id));},object({layer:layerRef},[]),open,'View'),
   spec('animation.keys.delete','Delete selected keys',(p:{keys?:KeyRef[]}={})=>{const keys=p.keys??selKeys();run({type:'keys.remove',keys});animationSession().selectKeys([]);},object({keys:keyRefs},[]),hasSel),

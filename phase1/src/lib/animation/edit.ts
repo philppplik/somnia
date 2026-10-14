@@ -4,6 +4,7 @@ import {validateAnimationAssets} from './assetsValidation';
 import {MAX_AUDIO_VOLUME,type AudioAsset} from './audioCore';
 import {prop,createComposition,type ClipItem,type KeyRef,type Vec2,createLayer,findComp,findLayer,PROP_META,wouldCycle,EASE_IN,EASE_OUT,TRANSFORM_KEYS,validateDocument,type AnimationDocument,type CompSettings,type Composition,type Interp,type Keyframe,type Layer,type LayerKind,type LayerSource,type LayerEffect,validSource,validEffects,type Property,type PropValue,type TransformKey} from './model';
 import {evaluate} from './interpolate';
+import {validateModifiers} from './modifiers';
 import {snapToFrame,tickToFrame,frameToTick,validRate} from './time';
 /** Typed `animation.*` edits. Every mutation goes through applyEdit so undo, recovery and AI share one path. */
 export type Edit=
@@ -49,7 +50,9 @@ export type Edit=
  |{type:'audio.volume.key.remove';layer:string;t:number}
  |{type:'layer.effects';layer:string;effects:readonly LayerEffect[]}
  |{type:'prop.pathMode';layer:string;mode:'parameter'|'arcLength'}
- |{type:'workarea.set';in:number;out:number};
+ |{type:'workarea.set';in:number;out:number}
+ |{type:'modifier.add';layer:string;prop:TransformKey;modifier:import('./modifiers').Modifier}
+ |{type:'modifier.remove';layer:string;prop:TransformKey;index:number};
 export class EditError extends Error{constructor(message:string,readonly code:'locked'|'missing'|'invalid'|'collision'|'cycle'){super(message);this.name='EditError';}}
 const fail=(code:EditError['code'],m:string):never=>{throw new EditError(m,code);};
 const compOf=(doc:AnimationDocument)=>findComp(doc)??fail('missing','No active composition.');
@@ -265,6 +268,11 @@ function reduce(doc:AnimationDocument,e:Edit):AnimationDocument{
    if(a<0||b>c.duration||b<=a)return fail('invalid','Work area must lie inside the composition with out after in.');
    if(a===c.workArea.in&&b===c.workArea.out)return doc;
    return withComp(doc,{...c,workArea:{in:a,out:b}});}
+  case 'modifier.add':{
+   const errs=validateModifiers([e.modifier]);if(errs.length)return fail('invalid',errs[0]);
+   return setProp(doc,e.layer,e.prop,p=>({...p,modifiers:[...(p.modifiers??[]),e.modifier]}));}
+  case 'modifier.remove':
+   return setProp(doc,e.layer,e.prop,p=>{const ms=[...(p.modifiers??[])];if(!Number.isInteger(e.index)||e.index<0||e.index>=ms.length)return fail('missing','No modifier at that index.');ms.splice(e.index,1);return {...p,modifiers:ms.length?ms:undefined};});
  }
 }
 /** Apply several edits as one atomic step. Any failure throws and nothing is applied. */
