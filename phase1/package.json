@@ -54,7 +54,7 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "docx": "^9.9.0",
-    "entities": "^6.0.1",
+    "entities": "^8.1.0",
     "fflate": "^0.8.3",
     "imagetracerjs": "^1.2.6",
     "katex": "^0.16.47",
