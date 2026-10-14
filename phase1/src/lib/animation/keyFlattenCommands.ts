@@ -9,7 +9,7 @@ export const keyFlattenSpecs=():CommandSpec<unknown,unknown>[]=>[{
  id:'animation.keys.flatten',title:'Give the selected keys the value of the earliest selected key',category:'Edit',level:'ui',keywords:['animation','keys','flatten','same','value','hold','pose','equal'],
  params:{type:'object',properties:{to:{enum:[...FLATTEN_TARGETS]}},additionalProperties:false},
  enabled:()=>{const s=animationSession(),d=s.document;return !!d&&pruneSelection(d,s.getState().view.selectedKeys).length>1;},
- run:((p:{to?:FlattenTo})=>{
+ run:((p:{to?:FlattenTo}={})=>{
   const s=animationSession(),d=s.document,c=d?findComp(d):undefined;if(!c)throw Object.assign(new Error('No composition is open.'),{expected:true});
   const edits=flattenEdits(c,pruneSelection(d!,s.getState().view.selectedKeys),p.to??'first');
   if(!edits.length)throw Object.assign(new Error('The keys already share one value.'),{expected:true});

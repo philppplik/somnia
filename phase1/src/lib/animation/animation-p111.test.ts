@@ -323,3 +323,14 @@ test('duplicate layers: command is one undo step and selects the copy',async()=>
  assert.equal(s.getState().view.selectedLayer!==null&&s.getState().view.selectedLayer!=='a',true);
  s.undo();assert.deepEqual(findComp(s.document!)!.layers.map(l=>l.id),findComp(before)!.layers.map(l=>l.id));setAnimationSession(null);
 });
+test('key and layer commands with optional-only params tolerate a call with no payload',async()=>{
+ const {animationCommandSpecs}=await import('./commands');
+ const cmds=animationCommandSpecs().filter(c=>/^animation\.(keys|layers?|key)\./.test(c.id)&&!(c.params&&'required' in c.params&&(c.params as {required?:unknown[]}).required?.length));
+ assert.ok(cmds.length>10);
+ for(const c of cmds){
+  const s=open();setAnimationSession(s);s.setView({selectedLayer:'a'});
+  try{await (c.run as (p?:unknown)=>unknown)(undefined);}
+  catch(e){const x=e as {expected?:boolean;message?:string};if(!x.expected&&e instanceof TypeError)assert.fail(`${c.id}: ${x.message}`);}
+ }
+ setAnimationSession(null);
+});

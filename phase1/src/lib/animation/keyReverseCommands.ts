@@ -10,7 +10,7 @@ export const keyReverseSpecs=():CommandSpec<unknown,unknown>[]=>[{
  id:'animation.keys.reverse',title:'Reverse keys in time',category:'Edit',level:'ui',keywords:['animation','keys','reverse','backwards','mirror','flip','time'],
  params:{type:'object',properties:{layers:{type:'array',items:{type:'string',minLength:1,maxLength:64},minItems:1,maxItems:64}},additionalProperties:false},
  enabled:()=>{const s=animationSession(),d=s.document;return !!d&&pruneSelection(d,s.getState().view.selectedKeys).length>1;},
- run:((p:{layers?:string[]})=>{
+ run:((p:{layers?:string[]}={})=>{
   const s=animationSession(),d=s.document,c=d?findComp(d):undefined;if(!c)return expected('No composition is open.');
   const refs=p.layers?layerKeyRefs(c,p.layers):pruneSelection(d!,s.getState().view.selectedKeys);
   const edits=reverseEdits(c,refs,!!p.layers);

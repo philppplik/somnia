@@ -9,7 +9,7 @@ export const keyTrimSpecs=():CommandSpec<unknown,unknown>[]=>[{
  id:'animation.keys.trimToWorkArea',title:'Remove the keys outside the work area',category:'Edit',level:'ui',keywords:['animation','keys','trim','work area','outside','remove','clean','delete'],
  params:{type:'object',properties:{layers:{type:'array',items:{type:'string',minLength:1,maxLength:64},minItems:1,maxItems:64}},additionalProperties:false},
  enabled:()=>!!animationSession().document,
- run:((p:{layers?:string[]})=>{
+ run:((p:{layers?:string[]}={})=>{
   const s=animationSession(),d=s.document,c=d?findComp(d):undefined;if(!c)return expected('No composition is open.');
   const v=s.getState().view,ids=p.layers??(v.selectedLayer?[v.selectedLayer]:expected('Select a layer first.'));
   const gone=trimKeys(c,ids);if(!gone.length)return expected('No keys outside the work area.');

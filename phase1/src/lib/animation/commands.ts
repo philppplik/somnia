@@ -100,7 +100,7 @@ const run=(e:Edit|readonly Edit[])=>guard(()=>animationSession().dispatch(e).rev
 /** Typed `animation.*` command specs. All document mutations dispatch into the one session transaction/undo owner. */
 export function animationCommandSpecs():CommandSpec<unknown,unknown>[]{
  type Cat=CommandSpec['category'];
- const spec=<P,>(id:string,title:string,fn:(p:P)=>unknown,params?:CommandSchema,enabled:()=>boolean=open,category:Cat='Edit',shortcut?:string):CommandSpec<P,unknown>=>({id,title,category,level:'ui',params,enabled,keywords:['animation','timeline','keyframe'],run:fn,...(shortcut?{shortcut}:{})});
+ const spec=<P,>(id:string,title:string,fn:(p:P)=>unknown,params?:CommandSchema,enabled:()=>boolean=open,category:Cat='Edit',shortcut?:string):CommandSpec<P,unknown>=>({id,title,category,level:'ui',params,enabled,keywords:['animation','timeline','keyframe'],run:(p:P)=>fn((p??{}) as P),...(shortcut?{shortcut}:{})});
  const layerIdOf=(p:{layer?:string})=>p.layer??selected();
  return [
   spec('animation.project.new','New animation',()=>{animationSession().createBlank();},undefined,()=>true,'Project'),
