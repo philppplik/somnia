@@ -25,6 +25,7 @@
  "photos.reset": "Tout réinitialiser",
  "photos.crop": "Recadrer",
   "photos.heal.toggle": "Tampon de clonage",
+  "photos.overlay.remove": "Supprimer ce réglage",
   "photos.heal.radius": "Rayon du pinceau",
   "photos.dodge.toggle": "Éclaircir/Assombrir",
   "photos.dodge.radius": "Rayon du pinceau",

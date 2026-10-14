@@ -223,6 +223,13 @@ through native control primitives, see below.
   panel, sync buttons only with 2+ photos), unit tests and gallery
   proof added (?view=photos-presets; canvas bitmaps pixel-identical
   to the P48 base c9110a49).
+- P50: interactive overlay markers (every committed dodge dab and heal
+  spot is a clickable marker that deletes exactly that adjustment as
+  one commit/undo step; subtle white target rings in heal mode;
+  pointer events + stopPropagation + role/aria-label per marker,
+  overlays stay pointer-transparent between markers; mode-scoped,
+  canvas untouched), gallery specs extended; canvas bitmaps
+  pixel-identical to the P49 base (e57eb867).
 
 
 

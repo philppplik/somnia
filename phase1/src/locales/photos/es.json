@@ -25,6 +25,7 @@
  "photos.reset": "Restablecer todo",
  "photos.crop": "Recortar",
   "photos.heal.toggle": "Tampón de clonar",
+  "photos.overlay.remove": "Eliminar este ajuste",
   "photos.heal.radius": "Radio del pincel",
   "photos.dodge.toggle": "Aclarar/Oscurecer",
   "photos.dodge.radius": "Radio del pincel",

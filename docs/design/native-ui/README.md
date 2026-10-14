@@ -63,6 +63,7 @@ All file links are repository-relative, so they remain useful on a feature branc
 33. [Photos heal / clone stamp](photos-heal-clone.md)
 34. [Photos dodge/burn — local adjustment mask](photos-dodge-burn.md)
 35. [Photos preset sync](photos-preset-sync.md)
+36. [Photos overlay markers](photos-overlay-markers.md)
 
 ## The system in one view
 

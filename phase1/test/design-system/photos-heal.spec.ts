@@ -69,6 +69,33 @@ test('clone stamp: a stroke through the defect heals every path point from the r
  await page.waitForTimeout(800);
  expect(await canvasBitmap(page)).toEqual(before);
 });
+test('heal markers: rings show committed spots, clicking one deletes exactly that spot',async({page})=>{
+ await page.goto('/test/design-system/?view=photos-heal');
+ await expect(page.getByTestId('photos-workspace')).toBeVisible();
+ const before=await canvasBitmap(page);
+ await page.getByTestId('photos-heal').click();
+ await page.getByTestId('photos-heal-radius').fill('0.06'); // wide enough to cover the whole defect block
+ const box=await page.getByTestId('photos-canvas').boundingBox();
+ const at=(nx:number,ny:number):[number,number]=>[box!.x+nx*box!.width,box!.y+ny*box!.height];
+ await page.mouse.click(...at(0.2917,0.375)); // spot 0 heals the red defect
+ await page.waitForTimeout(700);
+ await page.mouse.click(...at(0.6,0.375)); // spot 1 on clean green (green onto green)
+ await page.waitForTimeout(700);
+ await expect(page.locator('[data-testid="photos-heal-overlay"] [data-testid^="photos-heal-marker-"]')).toHaveCount(2);
+ expect(await pixel(page,70,60)).toEqual([40,140,80,255]); // defect healed
+ expect(await pixel(page,65,60)).toEqual([40,140,80,255]); // defect edge covered by the wider brush
+ const withBoth=await canvasBitmap(page);
+ await page.getByTestId('photos-heal-marker-0').click(); // delete the defect spot via its ring
+ await page.waitForTimeout(700);
+ await expect(page.locator('[data-testid="photos-heal-overlay"] [data-testid^="photos-heal-marker-"]')).toHaveCount(1);
+ expect(await pixel(page,70,60)).toEqual([210,40,40,255]); // the defect is back
+ expect(await canvasBitmap(page)).toEqual(before); // the remaining spot heals green onto green: pristine pixels
+ await page.getByTestId('photos-undo').click(); // ONE undo restores the deleted spot
+ await page.waitForTimeout(700);
+ await expect(page.locator('[data-testid="photos-heal-overlay"] [data-testid^="photos-heal-marker-"]')).toHaveCount(2);
+ expect(await canvasBitmap(page)).toEqual(withBoth);
+ await page.screenshot({path:'test-results/ds-photos-heal-markers.png',fullPage:true});
+});
 test('clone stamp mode renders in light and dark',async({page})=>{
  for(const theme of['light','dark']){
   await page.goto('/test/design-system/?view=photos-heal');

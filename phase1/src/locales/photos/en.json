@@ -25,6 +25,7 @@
  "photos.reset": "Reset all",
  "photos.crop": "Crop",
   "photos.heal.toggle": "Clone stamp",
+  "photos.overlay.remove": "Remove this adjustment",
   "photos.heal.radius": "Brush radius",
   "photos.dodge.toggle": "Dodge/Burn",
   "photos.dodge.radius": "Brush radius",

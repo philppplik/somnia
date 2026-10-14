@@ -145,6 +145,9 @@ export function PhotosWorkspace({item}:{item:MediaItem}){
   }
   if(drag.current?.pan)drag.current=null;
  };
+ const removeDab=(i:number)=>commitPhotoSettings(item.name,now=>({...now,dabs:now.dabs.filter((_,j)=>j!==i)})); // one commit = one undo step
+ const removeSpot=(i:number)=>commitPhotoSettings(item.name,now=>({...now,spots:now.spots.filter((_,j)=>j!==i)}));
+ const markerProps=(i:number,kind:'dab'|'spot')=>({pointerEvents:'all' as const,cursor:'pointer',role:'button','aria-label':t('photos.overlay.remove'),'data-testid':`photos-${kind==='dab'?'mask':'heal'}-marker-${i}`,onPointerDown:(e:React.PointerEvent)=>e.stopPropagation(),onPointerUp:(e:React.PointerEvent)=>e.stopPropagation(),onClick:(e:React.MouseEvent)=>{e.stopPropagation();if(kind==='dab')removeDab(i);else removeSpot(i);}});
  const startCropDrag=(mode:DragMode)=>(e:React.PointerEvent)=>{
   e.stopPropagation();(e.target as HTMLElement).setPointerCapture(e.pointerId);
   if(mode.kind==='move'){const p=pointerPos(e);const d=session!.cropDraft!;drag.current={crop:{kind:'move',dx:p.x-d.x0,dy:p.y-d.y0}};}
@@ -242,8 +245,14 @@ export function PhotosWorkspace({item}:{item:MediaItem}){
      <circle cx={healCursor.x*dispW} cy={healCursor.y*dispH} r={Math.max(2,(healing?brushR:dabR)*Math.min(fw,fh)*scale)} fill="none" stroke="var(--accent)" strokeWidth={1.5}/>
     </svg>}
     {dodging&&!session?.cropping&&session&&(session.now.dabs.length>0||dabChain.current)&&<svg className="pointer-events-none absolute inset-0 size-full" data-testid="photos-mask-overlay">
-     {session.now.dabs.map((d,i)=><circle key={i} cx={d.x*dispW} cy={d.y*dispH} r={Math.max(2,d.r*Math.min(fw,fh)*scale)} fill="var(--accent)" fillOpacity={0.2} stroke="var(--accent)" strokeWidth={1} strokeOpacity={0.6}/>)}
+     {session.now.dabs.map((d,i)=><circle key={i} cx={d.x*dispW} cy={d.y*dispH} r={Math.max(2,d.r*Math.min(fw,fh)*scale)} fill="var(--accent)" fillOpacity={0.2} stroke="var(--accent)" strokeWidth={1} strokeOpacity={0.6} {...markerProps(i,'dab')}/>)}
      {dabChain.current?.map((d,i)=><circle key={`c${i}`} cx={d.x*dispW} cy={d.y*dispH} r={Math.max(2,d.r*Math.min(fw,fh)*scale)} fill="var(--accent)" fillOpacity={0.3}/>)}
+    </svg>}
+    {healing&&!session?.cropping&&session&&session.now.spots.length>0&&<svg className="pointer-events-none absolute inset-0 size-full" data-testid="photos-heal-overlay">
+     {session.now.spots.map((sp,i)=><g key={i}>
+      <circle cx={sp.x*dispW} cy={sp.y*dispH} r={Math.max(3,sp.r*Math.min(fw,fh)*scale)} fill="transparent" stroke="rgba(255,255,255,0.8)" strokeWidth={1.5} {...markerProps(i,'spot')}/>
+      <circle cx={sp.x*dispW} cy={sp.y*dispH} r={1.8} fill="rgba(255,255,255,0.9)" pointerEvents="none"/>
+     </g>)}
     </svg>}
    </div>
   </div>

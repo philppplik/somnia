@@ -25,6 +25,7 @@
  "photos.reset": "Alles zurücksetzen",
  "photos.crop": "Zuschneiden",
   "photos.heal.toggle": "Klonstempel",
+  "photos.overlay.remove": "Diese Anpassung entfernen",
   "photos.heal.radius": "Pinselradius",
   "photos.dodge.toggle": "Abwedeln/Nachbelichten",
   "photos.dodge.radius": "Pinselradius",

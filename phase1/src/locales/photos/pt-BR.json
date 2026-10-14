@@ -25,6 +25,7 @@
  "photos.reset": "Redefinir tudo",
  "photos.crop": "Recortar",
   "photos.heal.toggle": "Carimbo de clonagem",
+  "photos.overlay.remove": "Remover este ajuste",
   "photos.heal.radius": "Raio do pincel",
   "photos.dodge.toggle": "Clarear/Escurecer",
   "photos.dodge.radius": "Raio do pincel",

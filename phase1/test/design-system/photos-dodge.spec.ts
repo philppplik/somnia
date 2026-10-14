@@ -90,6 +90,31 @@ test('mask overlay shows painted dabs and the in-flight stroke',async({page})=>{
  await page.waitForTimeout(800);
  await expect(page.locator('[data-testid="photos-mask-overlay"] circle')).toHaveCount(2);
 });
+test('mask markers: clicking a marker deletes exactly that dab as one undo step',async({page})=>{
+ await page.goto('/test/design-system/?view=photos-dodge');
+ await expect(page.getByTestId('photos-workspace')).toBeVisible();
+ await page.getByTestId('photos-dodge').click();
+ await page.getByTestId('photos-dodge-amount').fill('0.7');
+ const box=await page.getByTestId('photos-canvas').boundingBox();
+ const at=(nx:number,ny:number):[number,number]=>[box!.x+nx*box!.width,box!.y+ny*box!.height];
+ await page.mouse.click(...at(0.3,0.5));
+ await page.waitForTimeout(800);
+ await page.mouse.click(...at(0.7,0.5));
+ await page.waitForTimeout(800);
+ await expect(page.locator('[data-testid="photos-mask-overlay"] circle')).toHaveCount(2);
+ const withBoth=await canvasBitmap(page);
+ await page.getByTestId('photos-mask-marker-0').click(); // delete the left dab via its marker
+ await page.waitForTimeout(800);
+ await expect(page.locator('[data-testid="photos-mask-overlay"] circle')).toHaveCount(1);
+ expect(await pixel(page,72,80)).toEqual([100,140,90,255]); // 0.3*240 back to the base green
+ const[r]=await pixel(page,168,80);
+ expect(r).toBeGreaterThan(155); // 0.7*240 still dodged
+ await page.getByTestId('photos-undo').click(); // ONE undo restores the deleted dab
+ await page.waitForTimeout(800);
+ await expect(page.locator('[data-testid="photos-mask-overlay"] circle')).toHaveCount(2);
+ expect(await canvasBitmap(page)).toEqual(withBoth);
+ await page.screenshot({path:'test-results/ds-photos-dodge-markers.png',fullPage:true});
+});
 test('dodge/burn mode renders in light and dark',async({page})=>{
  for(const theme of['light','dark']){
   await page.goto('/test/design-system/?view=photos-dodge');
