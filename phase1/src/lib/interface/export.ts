@@ -21,6 +21,22 @@ export function exportInterfaceFrame(source:InterfaceDocument,frameId:string):Fr
  if(new TextEncoder().encode(svg).length>8_000_000)throw Error('SVG exceeds the 8 MB export limit.');
  return {documentId:doc.id,revision:doc.revision,frameId,name:frame.name,width:bounds.width,height:bounds.height,svg,warnings:[...new Set(warnings)]};
 }
+/** Preview-only helper for the prototype player: renders one layer subtree as SVG at its own bounds. Not part of the export pipeline. */
+export function exportInterfaceLayerSVG(source:InterfaceDocument,nodeId:string):{width:number;height:number;svg:string}{
+ const original=parseInterfaceDocument(serializeInterfaceDocument(source)),resolved=resolveInterfaceValues(original),doc=resolved.document,layout=computeInterfaceLayout(doc),nodes=new Map(doc.nodes.map(n=>[n.id,n])),node=nodes.get(nodeId),bounds=layout.bounds.get(nodeId);
+ if(!node||!bounds)throw Error('Select a layer to render.');let clips='';const warnings:string[]=[];
+ const render=(id:string,root=false):string=>{const n=nodes.get(id)!,b=layout.bounds.get(id)!;if(n.hidden)return '';const clip=`clip-${escape(n.id)}`;if(n.kind==='frame'||n.imageFill)clips+=`<clipPath id="${clip}"><rect width="${b.width}" height="${b.height}"/></clipPath>`;let content='';
+ if(n.kind==='frame'||n.kind==='rectangle')content+=`<rect width="${b.width}" height="${b.height}" fill="${n.fill}"/>`;
+ if(n.imageFill){const asset=doc.assets!.find(a=>a.id===n.imageFill!.assetId)!;content+=`<image width="${b.width}" height="${b.height}" href="${asset.data}" preserveAspectRatio="${n.imageFill.fit==='cover'?'xMidYMid slice':'xMidYMid meet'}"/>`;}
+ if(n.kind==='ellipse'&&!n.imageFill)content+=`<ellipse cx="${b.width/2}" cy="${b.height/2}" rx="${b.width/2}" ry="${b.height/2}" fill="${n.fill}" stroke="${n.stroke??'none'}" stroke-width="${n.strokeWidth??0}"/>`;
+ if(n.kind==='line')content+=`<line x1="0" y1="0" x2="${b.width}" y2="${b.height}" stroke="${n.stroke??n.fill}" stroke-width="${n.strokeWidth??2}"/>`;
+ if(n.kind==='path')content+=`<path d="${pathData(n.path!,b.width,b.height)}" fill="${n.path!.closed?n.fill:'none'}" stroke="${n.stroke??n.fill}" stroke-width="${n.strokeWidth??2}"/>`;
+ if(n.kind==='text'){const style=resolvedTextStyle(doc,n);const line=style.fontSize*style.lineHeight;content+=`<svg width="${b.width}" height="${b.height}" overflow="hidden"><text fill="${n.fill}" font-family="${style.fontFamily}" font-size="${style.fontSize}" font-weight="${style.fontWeight}" dominant-baseline="text-before-edge">${(n.text??'').split('\n').map((text,index)=>`<tspan x="0" y="${index*line}">${escape(text)}</tspan>`).join('')}</text></svg>`;}
+ content+=n.children.map(child=>render(child)).join('');return `<g transform="translate(${root?0:b.x} ${root?0:b.y})"${n.kind==='frame'||n.imageFill?` clip-path="url(#${clip})"`:''}>${content}</g>`;};
+ const body=render(nodeId,true),svg=`<svg xmlns="http://www.w3.org/2000/svg" width="${bounds.width}" height="${bounds.height}" viewBox="0 0 ${bounds.width} ${bounds.height}"><defs>${clips}</defs>${body}</svg>`;
+ if(new TextEncoder().encode(svg).length>8_000_000)throw Error('SVG exceeds the 8 MB export limit.');
+ return {width:bounds.width,height:bounds.height,svg};
+}
 export function buildInterfaceHandoff(source:InterfaceDocument,frameId:string){
  const doc=parseInterfaceDocument(serializeInterfaceDocument(source)),resolved=resolveInterfaceValues(doc),layout=computeInterfaceLayout(resolved.document),root=doc.nodes.find(n=>n.id===frameId);if(!root||root.kind!=='frame')throw Error('Select a frame for handoff.');
  const nodes=new Map(resolved.document.nodes.map(n=>[n.id,n])),rows:unknown[]=[];const walk=(id:string)=>{const n=nodes.get(id)!;rows.push({id:n.id,parentId:n.parentId,name:n.name,kind:n.kind,bounds:layout.bounds.get(id),fill:n.fill,text:n.text,textStyle:n.kind==='text'?resolvedTextStyle(doc,n):undefined,bindings:n.bindings,layout:n.layout,sizing:n.sizing,component:n.instance,altText:n.altText,annotation:n.annotation??'',ready:n.ready??false,hidden:n.hidden,variableMode:n.variableMode,path:n.path,stroke:n.stroke,strokeWidth:n.strokeWidth,imageFill:n.imageFill});n.children.forEach(walk);};walk(frameId);

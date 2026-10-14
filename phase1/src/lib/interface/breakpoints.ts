@@ -30,10 +30,11 @@ export function auditInterfaceResponsive(source:InterfaceDocument,frameId:string
   checked++;const capped=()=>issues.length>=MAX_ISSUES;
   const doc=resolveInterfaceValues(parseInterfaceDocument(serializeInterfaceDocument(source))).document;resizeInterfaceFrame(doc,frameId,{width:bp.width,height:bp.height});
   const layout:LayoutResult=computeInterfaceLayout(doc),fb=layout.bounds.get(frameId);if(!fb)continue;
+  const space=new Map<string,{x:number;y:number;width:number;height:number}>();const walkSpace=(id:string,ox:number,oy:number)=>{for(const c of doc.nodes.find(n=>n.id===id)?.children??[]){const b=layout.bounds.get(c);if(!b)continue;space.set(c,{x:ox+b.x,y:oy+b.y,width:b.width,height:b.height});walkSpace(c,ox+b.x,oy+b.y);}};walkSpace(frameId,0,0);
   const size={width:String(bp.width),height:String(bp.height)},push=(kind:ResponsiveIssue['kind'],n:InterfaceNode,extra:Record<string,string>={})=>{if(!capped())issues.push({id:`${bp.id}:${n.id}:${kind}:${extra.other??''}`,breakpoint:bp.name,kind,name:n.name,params:{name:n.name,breakpoint:bp.name,...size,...extra}});};
   for(const n of descendants(doc,frameId)){
-   if(n.hidden)continue;const b=layout.bounds.get(n.id);if(!b)continue;
-   if(b.x<fb.x-.5||b.y<fb.y-.5||b.x+b.width>fb.x+fb.width+.5||b.y+b.height>fb.y+fb.height+.5)push('overflow',n);
+   if(n.hidden)continue;const b=space.get(n.id);if(!b)continue;
+   if(b.x<-.5||b.y<-.5||b.x+b.width>fb.width+.5||b.y+b.height>fb.height+.5)push('overflow',n);
    if(n.kind==='text'&&(n.text??'').trim()&&(n.sizing?.height??'fixed')!=='hug'){const style=resolvedTextStyle(doc,n),need=(n.text??'').split('\n').length*style.fontSize*style.lineHeight;if(need>b.height+1)push('text-clipped',n);}
   }
   for(const container of [doc.nodes.find(n=>n.id===frameId)!,...descendants(doc,frameId).filter(n=>['frame','group'].includes(n.kind))]){

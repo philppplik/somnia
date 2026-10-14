@@ -21,8 +21,10 @@ export interface InterfaceAsset {id:string;hash:string;mime:'image/png';width:nu
 export interface PathPoint {x:number;y:number;}
 export interface InterfacePath {points:PathPoint[];closed:boolean;}
 export type NodeKind='frame'|'group'|'rectangle'|'text'|'ellipse'|'line'|'path'|'image';
-export type PrototypeTransitionKind='instant'|'dissolve'|'smart-animate';
-export interface PrototypeTransition {kind:PrototypeTransitionKind;durationMs:number;}
+export type PrototypeTransitionKind='instant'|'dissolve'|'slide'|'push'|'smart-animate';
+export type PrototypeEasing='linear'|'ease'|'ease-in'|'ease-out'|'ease-in-out';
+export type PrototypeDirection='left'|'right'|'up'|'down';
+export interface PrototypeTransition {kind:PrototypeTransitionKind;durationMs:number;easing?:PrototypeEasing;direction?:PrototypeDirection;}
 export interface PrototypeLink {action?:'navigate'|'overlay';trigger:'click'|'hover'|'afterDelay';targetFrameId:string;delayMs?:number;transition?:PrototypeTransition;}
 export interface InterfaceBreakpoint {id:string;name:string;width:number;height:number;}
 export interface InterfaceNode {
