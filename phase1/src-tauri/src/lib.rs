@@ -23,6 +23,7 @@ pub use desktop::run;
 pub mod lan_host;
 
 pub mod agent_settings;
+pub mod model_locality;
 pub mod mcp_host;
 pub mod mcp_broker;
 pub mod mcp_health;

@@ -1,3 +1,4 @@
+import {ModelHealthPanel} from './ModelHealthPanel';
 import {useState} from 'react';
 import type {FolderGrant,ModelRef,Space,VibeIntent} from '../../lib/vibespace/types';
 import {NativeButton,NativeInput,NativeSelect,Textarea} from '../ui/native-controls';
@@ -25,6 +26,7 @@ export function CreateStudioForm({space,models,busy,template='',onCreate,onClose
   <h3>New Studio</h3><label>Goal<Textarea required rows={4} maxLength={8192} value={goal} disabled={busy} onChange={e=>setGoal(e.target.value)}/></label>
   <label>Model<NativeSelect required value={model?modelKey:''} disabled={busy||!models.length} onChange={e=>setModelKey(e.target.value)}><option value="">Choose a configured model</option>{models.map(m=><option key={modelId(m)} value={modelId(m)}>{m.provider} / {m.model} ({m.locality})</option>)}</NativeSelect></label>
   {!models.length&&<p role="status">No configured model. Add a model in AI settings first.</p>}
+  {model?.locality==='local'&&<ModelHealthPanel model={model}/>}
   {model?.locality==='cloud'&&<p className="vs-notice">This cloud model receives the selected folder's task context. The native consent broker checks cloud and tool permissions before work begins.</p>}
   <label>Folder scope<output data-copyable>{space.scopeLabel}</output></label><p className="vs-muted">Ask for writes. No real project changes until review and Apply.</p>
   <div className="vs-actions"><NativeButton className="vs-primary" disabled={busy||!valid}>Create Studio</NativeButton><NativeButton type="button" disabled={busy} onClick={onClose}>Cancel</NativeButton></div>

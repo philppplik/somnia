@@ -291,8 +291,7 @@ fn provider_config(reference: &w::ModelReference) -> Result<engine::ModelConfig>
 pub(crate) fn resolve(
     reference: &w::ModelReference,
 ) -> Result<(Arc<dyn engine::ModelTransport>, engine::ModelConfig)> {
-    // Loopback alone cannot prove daemon/model locality. Fail closed until native evidence exists.
-    if crate::agent_settings::local_only(){return Err(error("vibespace_local_only",true));}
+    if crate::agent_settings::local_only()&&reference.provider!="ollama"{return Err(error("vibespace_local_only",true));}
     let config = provider_config(reference)?;
     let credential = if reference.locality == w::ModelLocality::Cloud {
         let secret = keyring::Entry::new(KEY_SERVICE, &reference.provider)
@@ -307,7 +306,15 @@ pub(crate) fn resolve(
         None
     };
     // HttpModel uses no_proxy(), redirects disabled and no environment credentials.
-    let transport = engine::HttpModel::new(config.clone(), credential, true).map_err(failed)?.with_cloud_guard(Arc::new(||!crate::agent_settings::local_only()));
+    let is_ollama=reference.provider=="ollama"&&reference.locality==w::ModelLocality::Local;
+    let selected_model=reference.model.clone();
+    let transport = engine::HttpModel::new(config.clone(), credential, true).map_err(failed)?
+      .with_cloud_guard(Arc::new(move ||is_ollama||!crate::agent_settings::local_only()))
+      .with_request_guard(Arc::new(move ||{let model=selected_model.clone();Box::pin(async move{
+        // All Ollama Vibe requests need positive evidence, even outside local-only.
+        // LM Studio stays unknown in local-only until its weight evidence is supported.
+        if is_ollama{crate::model_locality::verify_ollama(&model).await}else{!crate::agent_settings::local_only()}
+      })}));
     Ok((Arc::new(transport), config))
 }
 
