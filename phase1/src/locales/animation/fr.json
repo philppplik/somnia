@@ -861,5 +861,7 @@
  "cmd.animation.keys.easeCopy": "Donner aux keys sélectionnées l’ease de la première key sélectionnée",
  "animation.keys.ramp": "Rampe",
  "animation.keys.ramp.hint": "Place les keys sélectionnées d’une propriété sur une droite entre la première et la dernière sélectionnée",
- "cmd.animation.keys.ramp": "Placer les keys sélectionnées sur une droite entre la première et la dernière"
+ "cmd.animation.keys.ramp": "Placer les keys sélectionnées sur une droite entre la première et la dernière",
+ "animation.keys.matchNext": "Comme après",
+ "animation.keys.matchNext.hint": "Donne à chaque key sélectionnée la valeur de la key suivante"
 }

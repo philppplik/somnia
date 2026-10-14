@@ -861,5 +861,7 @@
  "cmd.animation.keys.easeCopy": "Gewählten Keys das Ease des frühesten gewählten Keys geben",
  "animation.keys.ramp": "Rampe",
  "animation.keys.ramp.hint": "Gewählte Keys einer Eigenschaft auf eine Gerade zwischen erstem und letztem gewählten Key legen",
- "cmd.animation.keys.ramp": "Gewählte Keys auf eine Gerade zwischen erstem und letztem Key legen"
+ "cmd.animation.keys.ramp": "Gewählte Keys auf eine Gerade zwischen erstem und letztem Key legen",
+ "animation.keys.matchNext": "Wie nachher",
+ "animation.keys.matchNext.hint": "Jedem gewählten Key den Wert des nächsten Keys geben"
 }
