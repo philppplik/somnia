@@ -357,6 +357,7 @@ function EditSculptFields({id}:{id:number}){
      <Button variant="outline" onClick={()=>void executeCommand('studio3d.edit.flip',{})}>{t('studio3d.edit.flip')}</Button>
      <Button variant="outline" onClick={()=>void executeCommand('studio3d.edit.dissolve',{})}>{t('studio3d.edit.dissolve')}</Button>
      <Button variant="outline" onClick={()=>void executeCommand('studio3d.edit.fill',{})}>{t('studio3d.edit.fill')}</Button>
+     <Button variant="outline" onClick={()=>void executeCommand('studio3d.edit.collapse',{})}>{t('studio3d.edit.collapse')}</Button>
      <Button variant="outline" onClick={()=>void executeCommand('studio3d.edit.end')}>{t('studio3d.edit.end')}</Button>
     </div></>}
   </fieldset>

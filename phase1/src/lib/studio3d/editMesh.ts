@@ -377,6 +377,46 @@ export function weldSelected(m:MeshData,verts:number[]):MeshData{
  if(m.uvs)out.uvs=m.uvs;
  return out;
 }
+/** Collapses each connected island of the selection into a single vertex at its centroid: weldSelected merges everything into one point, this keeps separate islands separate. Islands are linked through selected edges, faces and shared vertices; degenerate triangles are dropped. UVs stay with the kept vertices; masks and explicit normals are dropped. */
+export function collapseSelected(m:MeshData,sel:{verts:number[];edges:[number,number][];faces:number[]}):MeshData{
+ const total=m.positions.length/3,tris=m.index.length/3;
+ const groups:number[][]=[];
+ for(const v of sel.verts){if(!Number.isInteger(v)||v<0||v>=total)throw new EditError(`Vertex ${v} does not exist.`);groups.push([v]);}
+ for(const [a,b] of sel.edges){if(!Number.isInteger(a)||!Number.isInteger(b)||a<0||b<0||a>=total||b>=total||a===b)throw new EditError('A selected edge does not exist.');groups.push([a,b]);}
+ for(const f of sel.faces){if(!Number.isInteger(f)||f<0||f>=tris)throw new EditError(`Face ${f} does not exist.`);groups.push([m.index[f*3],m.index[f*3+1],m.index[f*3+2]]);}
+ if(!groups.length)throw new EditError('Select something to collapse.');
+ const parent=new Map<number,number>();
+ const find=(v:number):number=>{let r=v;while(parent.get(r)!==r&&parent.has(r))r=parent.get(r)!;return r;};
+ const unite=(a:number,b:number)=>{const ra=find(a),rb=find(b);if(ra!==rb)parent.set(rb,ra);};
+ for(const g of groups){for(const v of g)if(!parent.has(v))parent.set(v,v);for(let i=1;i<g.length;i++)unite(g[0],g[i]);}
+ const islands=new Map<number,number[]>();
+ for(const v of parent.keys()){const r=find(v);const l=islands.get(r);if(l)l.push(v);else islands.set(r,[v]);}
+ const remap=new Map<number,number>();
+ const centroid=new Map<number,[number,number,number]>();
+ let islandsUsed=0;
+ for(const vs of islands.values()){
+  if(vs.length<2){for(const v of vs)remap.set(v,v);continue;}
+  islandsUsed++;
+  const keep=Math.min(...vs);
+  let cx=0,cy=0,cz=0;
+  for(const v of vs){cx+=m.positions[v*3];cy+=m.positions[v*3+1];cz+=m.positions[v*3+2];remap.set(v,keep);}
+  centroid.set(keep,[cx/vs.length,cy/vs.length,cz/vs.length]);
+ }
+ if(!islandsUsed)throw new EditError('Select at least two connected elements to collapse.');
+ const positions=[...m.positions];
+ for(const [keep,c] of centroid){positions[keep*3]=c[0];positions[keep*3+1]=c[1];positions[keep*3+2]=c[2];}
+ const index:number[]=[];
+ const mapV=(i:number)=>remap.has(i)?remap.get(i)!:i;
+ for(let f=0;f<m.index.length;f+=3){
+  const t=[mapV(m.index[f]),mapV(m.index[f+1]),mapV(m.index[f+2])];
+  if(t[0]===t[1]||t[1]===t[2]||t[2]===t[0])continue;
+  index.push(t[0],t[1],t[2]);
+ }
+ if(!index.length)throw new EditError('Collapsing the selection would leave an empty mesh.');
+ const out:MeshData={positions,index};
+ if(m.uvs)out.uvs=m.uvs;
+ return out;
+}
 /** Splits each selected triangle into four by inserting edge midpoints (planar, no smoothing): midpoints are shared between neighbouring selected triangles, unselected triangles pass through unchanged. UVs interpolate with the positions; masks and explicit normals are dropped. */
 export function subdivideFaces(m:MeshData,faces:number[]):MeshData{
  if(!faces.length)throw new EditError('Select faces to subdivide.');

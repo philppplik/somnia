@@ -915,5 +915,8 @@
  "studio3d.hist.editDissolve": "Dissoudre les faces",
  "cmd.studio3d.edit.fill": "Remplir la boucle fermée d'arêtes sélectionnée avec un éventail de faces",
  "studio3d.edit.fill": "Remplir",
- "studio3d.hist.editFill": "Remplir la boucle d'arêtes"
+ "studio3d.hist.editFill": "Remplir la boucle d'arêtes",
+ "cmd.studio3d.edit.collapse": "Réduire chaque îlot connecté de la sélection en un sommet",
+ "studio3d.edit.collapse": "Réduire",
+ "studio3d.hist.editCollapse": "Réduire la sélection"
 }

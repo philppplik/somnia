@@ -915,5 +915,8 @@
  "studio3d.hist.editDissolve": "Dissolver faces",
  "cmd.studio3d.edit.fill": "Preencher o loop fechado de arestas selecionado com um leque de faces",
  "studio3d.edit.fill": "Preencher",
- "studio3d.hist.editFill": "Preencher loop de arestas"
+ "studio3d.hist.editFill": "Preencher loop de arestas",
+ "cmd.studio3d.edit.collapse": "Colapsar cada ilha conectada da seleção em um vértice",
+ "studio3d.edit.collapse": "Colapsar",
+ "studio3d.hist.editCollapse": "Colapsar seleção"
 }

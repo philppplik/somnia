@@ -6935,6 +6935,19 @@
       "hasEnabled": true
     },
     {
+      "id": "studio3d.edit.collapse",
+      "title": "Collapse each connected island of the selection into one vertex",
+      "category": "Edit",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "studio3d.edit.delete",
       "title": "Delete selected elements",
       "category": "Edit",

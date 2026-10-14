@@ -958,6 +958,20 @@ test('mesh edit mode: fill closes a deleted side with a centroid fan',async({pag
  await expect(page.getByRole('alert')).toContainText('Select an edge loop to fill');
 });
 
+test('mesh edit mode: collapse merges each selected island at its centroid',async({page})=>{
+ await blank(page);
+ const id=await insert(page,'cube',0);
+ expect(await run(page,'studio3d.edit.start',{id,mode:'edge'})).toBe(true);
+ expect(await run(page,'studio3d.edit.select',{kind:'edge',edges:[[8,10]]})).toBe(true);
+ expect(await run(page,'studio3d.edit.collapse',{})).toBe(true);
+ let s=await session(page);expect(s.stats.triangles).toBe(11);
+ await run(page,'studio3d.undo');
+ await expect.poll(async()=>(await session(page)).stats.triangles).toBe(12);
+ expect(await run(page,'studio3d.edit.selectAll',{op:'none'})).toBe(true);
+ expect(await run(page,'studio3d.edit.collapse',{})).toBe(false);
+ await expect(page.getByRole('alert')).toContainText('Select something to collapse');
+});
+
 test('mesh edit mode: weld merges selected vertices at their centre, undo restores them',async({page})=>{
  await blank(page);
  const id=await insert(page,'cube',0);

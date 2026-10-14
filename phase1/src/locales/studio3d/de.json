@@ -915,5 +915,8 @@
  "studio3d.hist.editDissolve": "Faces auflösen",
  "cmd.studio3d.edit.fill": "Selektierte geschlossene Kantenschleife mit einem Face-Fan füllen",
  "studio3d.edit.fill": "Füllen",
- "studio3d.hist.editFill": "Kantenschleife füllen"
+ "studio3d.hist.editFill": "Kantenschleife füllen",
+ "cmd.studio3d.edit.collapse": "Jede zusammenhängende Insel der Auswahl zu einem Vertex kollabieren",
+ "studio3d.edit.collapse": "Kollabieren",
+ "studio3d.hist.editCollapse": "Auswahl kollabieren"
 }

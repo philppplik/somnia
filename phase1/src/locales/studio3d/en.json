@@ -915,5 +915,8 @@
  "studio3d.hist.editDissolve": "Dissolve faces",
  "cmd.studio3d.edit.fill": "Fill the selected closed edge loop with a centroid triangle fan",
  "studio3d.edit.fill": "Fill",
- "studio3d.hist.editFill": "Fill edge loop"
+ "studio3d.hist.editFill": "Fill edge loop",
+ "cmd.studio3d.edit.collapse": "Collapse each connected island of the selection into one vertex",
+ "studio3d.edit.collapse": "Collapse",
+ "studio3d.hist.editCollapse": "Collapse selection"
 }

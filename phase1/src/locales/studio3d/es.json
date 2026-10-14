@@ -915,5 +915,8 @@
  "studio3d.hist.editDissolve": "Disolver caras",
  "cmd.studio3d.edit.fill": "Rellenar el bucle cerrado de aristas seleccionado con un abanico de caras",
  "studio3d.edit.fill": "Rellenar",
- "studio3d.hist.editFill": "Rellenar bucle de aristas"
+ "studio3d.hist.editFill": "Rellenar bucle de aristas",
+ "cmd.studio3d.edit.collapse": "Colapsar cada isla conectada de la selección en un vértice",
+ "studio3d.edit.collapse": "Colapsar",
+ "studio3d.hist.editCollapse": "Colapsar selección"
 }
