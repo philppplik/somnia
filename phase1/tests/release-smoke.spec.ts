@@ -56,8 +56,9 @@ test('release smoke: explicit studio choice routes only the active tab, and clos
  });
  await expect(page.getByRole('tab',{name:/^other\.html/})).toBeVisible();
  await page.getByRole('radio',{name:'Somnia Vector',exact:true}).click();
- await expect(tab).toBeVisible();await expect(page.getByRole('tab',{name:/^other\.html/})).toHaveCount(0);
- expect(await page.evaluate(async()=>{const {getState}=await import('/src/store/appStore.ts');return getState().studioByTab['index.html'];})).toBe('vector');
+ // A manual visit to a Studio that cannot open a source file does not claim it (f0b52c48): the Code tabs stay with Code.
+ await expect(tab).toHaveCount(0);await expect(page.getByRole('tab',{name:/^other\.html/})).toHaveCount(0);
+ expect(await page.evaluate(async()=>{const {getState}=await import('/src/store/appStore.ts');return getState().studioByTab['index.html']??'code';})).toBe('code');
  await page.getByRole('radio',{name:'Somnia Code',exact:true}).click();await expect(tab).toBeVisible();
  await page.getByRole('button',{name:'Close index.html',exact:true}).click();await expect(tab).toHaveCount(0);
 });

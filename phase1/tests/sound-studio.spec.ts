@@ -31,7 +31,7 @@ test('Sound Studio: open MP3, edit in the WASM worker, A/B, play, export WAV',as
  await page.getByRole('radio',{name:'Original'}).click();await expect(page.getByRole('radio',{name:'Original'})).toHaveAttribute('aria-checked','true');
  await page.getByRole('radio',{name:'Edited'}).click();
  // playback really advances
- await page.getByTestId('sound-play').click();await expect.poll(async()=>page.evaluate(()=>document.querySelector('audio')!.currentTime),{timeout:8000}).toBeGreaterThan(0.2);
+ await page.getByTestId('sound-play').click();await expect.poll(async()=>page.evaluate(async()=>{const {getSoundPlayback}=await import('/src/lib/sound/transport.ts');return getSoundPlayback('arpeggio.mp3').time;}),{timeout:8000}).toBeGreaterThan(0.2);
  await page.getByTestId('sound-play').click();
  // export is a real 16-bit WAV of the edited result
  const download=page.waitForEvent('download');await page.getByTestId('sound-export').click();const d=await download;
