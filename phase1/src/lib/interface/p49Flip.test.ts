@@ -1,0 +1,22 @@
+import test from 'node:test';import assert from 'node:assert/strict';
+import {createInterfaceSession} from './session';
+import {addNode} from './model';
+import {exportInterfaceLayerSVG,interfaceLayerCSS,inspectInterfaceCSS,buildInterfaceHandoff} from './export';
+import {interfaceHandoffSnippets} from './handoffSnippets';
+import {interfaceLayerTailwind,interfaceLayerSwiftUI} from './devMode';
+function scene(){const s=createInterfaceSession();s.start();let frame='',rect='';s.transact(d=>{frame=addNode(d,d.pages[0].id,'frame');rect=addNode(d,d.pages[0].id,'rectangle',frame);d.nodes.find(n=>n.id===rect)!.width=100;d.nodes.find(n=>n.id===rect)!.height=60;});return {s,frame,rect};}
+test('flip reaches svg transform and every css/snippet/dev channel',()=>{const {s,frame,rect}=scene();s.transact(d=>{d.nodes.find(n=>n.id===rect)!.flipH=true;});const doc=s.get().document!;
+ const svg=exportInterfaceLayerSVG(doc,frame).svg;assert.ok(svg.includes('scale(-1 1)'),'svg flips horizontally');assert.ok(svg.includes('translate(50 30)'),'flip pivots at the layer center');
+ assert.ok(interfaceLayerCSS(doc,rect).css.includes('transform: scale(-1, 1)'));
+ assert.ok(inspectInterfaceCSS(doc,frame).find(r=>r.id===rect)!.values.transform==='scale(-1, 1)');
+ assert.ok(interfaceHandoffSnippets(doc,frame).css.includes('transform: scale(-1, 1)'));
+ assert.ok(interfaceLayerTailwind(doc,rect).snippet.includes('-scale-x-100'));
+ assert.ok(interfaceLayerSwiftUI(doc,rect).snippet.includes('.scaleEffect(x: -1, y: 1)'));
+ const row=(buildInterfaceHandoff(doc,frame).nodes as {id:string;flipH?:boolean}[]).find(r=>r.id===rect)!;assert.equal(row.flipH,true);});
+test('flip composes with rotation in one transform',()=>{const {s,rect}=scene();s.transact(d=>{const n=d.nodes.find(n=>n.id===rect)!;n.rotation=45;n.flipV=true;});
+ const css=interfaceLayerCSS(s.get().document!,rect).css;assert.ok(css.includes('transform: rotate(45deg) scale(1, -1)'),'rotate then flip');});
+test('layer flip validates booleans, clears on untoggle and undoes once',()=>{const {s,rect}=scene();s.transact(d=>{d.nodes.find(n=>n.id===rect)!.flipV=true;});
+ assert.equal(s.get().document!.nodes.find(n=>n.id===rect)!.flipV,true);
+ const before=s.get();assert.throws(()=>s.transact(d=>{d.nodes.find(n=>n.id===rect)!.flipH=false as never;}));assert.equal(s.get(),before);
+ const before2=s.get();assert.throws(()=>s.transact(d=>{d.nodes.find(n=>n.id===rect)!.flipV='yes' as never;}));assert.equal(s.get(),before2);
+ s.transact(d=>{delete d.nodes.find(n=>n.id===rect)!.flipV;});assert.equal(s.get().document!.nodes.find(n=>n.id===rect)!.flipV,undefined);});
