@@ -1,0 +1,9 @@
+# Animation selected-key port: preparation only
+
+Base55a32f61a. Read/propose one existing selected transform key (`anchor`, `position`, `scale`, `rotation`, `opacity`) through the real AnimationSession. Exactly one key, unlocked selected layer, committed document only; live preview, absent or multiple selection refused. Pin native document object identity plus id/revision/active composition/layer/property/tick. Native object identity also catches reopened same-id/revision and ABA. Host inspect/propose permissions are mandatory and rechecked by target capture before stage.
+
+Model supplies value only, not target or edit type. Finite scalar or two-number vector, then real `applyEdit(prop.set)` validates property shape and bounds against the immutable native document. No generic JSON overwrite, expression evaluation, project bytes, runtime registration or execution callback. Typed proposal carries exact before/after/target, review-only/executeAvailable=false, saved=false. Native session is unchanged.
+
+AnimationSession has synchronous snapshot history but dispatch/checkpoint/emit currently do not expose logical origin/history receipts; observer exceptions may occur after commit, and there is no reviewed origin-bound undo guard. Rather than promote execute from history length, this slice is preparation only. Next: implement atomic reviewed commit/receipt and origin-bound undo in AnimationSession, isolate post-commit observer errors, validate readback and newest identity protecting manual edits/ABA/reopen. Never report failure0 for uncertain postcommit states. Prove native owner receipt/recovery/undo before runtime registration.
+
+Real JS session tests cover read/propose immutability, native validator bounds/type, permission denial, reentrant edit/reopen/selection, preview/lock/selection/cancel. Light/Dark synthetic fixture inspected. Native desktop/render/model/save/recovery disk proof is Unknown. No dependencies/cloud/spending.
