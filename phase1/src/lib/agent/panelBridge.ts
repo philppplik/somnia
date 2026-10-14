@@ -1,3 +1,6 @@
+import {t} from '../i18n';
+import {LocalModelsRuntime} from './localModels';
+import {requiresExactInstalledTaskModel,taskModelChoice} from './taskRouting';
 import {localContextFor} from './settings';
 import {routedProvider,timedProvider} from './providerRouting';
 import {ProviderError} from './errors';
@@ -270,19 +273,22 @@ export const realCore:AgentCore={
   if(session?.status==='running'||proposals.size){queueMicrotask(()=>onEvent({type:'error',message:'Stop the active turn or review the pending proposal first.'}));return {cancel(){}};}
   const controller=new AbortController();activeController=controller;let stopped=false;const runId=++runGeneration;
   const deliver=(e:AgentEvent)=>{if(!stopped&&runId===runGeneration)onEvent(e);};send=deliver;
-  if(!config.model.trim()){queueMicrotask(()=>deliver({type:'error',message:'Choose a provider and model in Settings > AI first.'}));return {cancel(){stopped=true;}};}
-  const route=config.localRuntime?.routing;const canRoute=!!route&&!request.context.activeFile&&!request.context.activeMedia&&!request.context.studio;
-  const requestModel=config.provider==='ollama'?(config.localRuntime?.studioModels?.[request.context.studio?.studioId??'']??config.model):config.model;
+  const taskChoice=taskModelChoice(config.localRuntime?.taskModels,request.context.task??'chat');const requestProvider=taskChoice?.provider??config.provider;
+  if(!taskChoice&&!config.model.trim()){queueMicrotask(()=>deliver({type:'error',message:'Choose a provider and model in Settings > AI first.'}));return {cancel(){stopped=true;}};}
+  const route=config.localRuntime?.routing;const canRoute=!taskChoice&&!!route&&!request.context.activeFile&&!request.context.activeMedia&&!request.context.studio;
+  const requestModel=taskChoice?.model??(config.provider==='ollama'?(config.localRuntime?.studioModels?.[request.context.studio?.studioId??'']??config.model):config.model);
   const generation=getProjectGeneration();
   if(epoch!==generation){session?.cancel();session=null;sessionSerial++;proposals.clear();permissions.clear();appliedAgentProvenance.clear();documents.clear();transactions.clear();nativeIds.clear();mcpProposalMap.clear();syncMcpProposals();epoch=generation;}
   photoPreviews.clear();policy.revoke();syncDocuments();
   void (async()=>{
+   if(taskChoice){const runtime=new LocalModelsRuntime();const inventory=await runtime.snapshot();controller.signal.throwIfAborted();if(inventory.inventoryError||inventory.state!=='running'||!requiresExactInstalledTaskModel(taskChoice.model,inventory.models.map(m=>m.id)))throw Error(t('local.task.missing',{model:taskChoice.model}));deliver({type:'provenance',provider:'ollama',model:taskChoice.model});}
+
    if(request.context.activeMedia){if(Object.hasOwn(currentFiles(),request.context.activeMedia))throw Error('A text buffer and media asset share this path. Close or rename one before using AI.');if(getPhoto(request.context.activeMedia))await preparePhoto(request.context.activeMedia,controller.signal);syncDocuments();}
    controller.signal.throwIfAborted();if(runId!==runGeneration)throw Error('Run was replaced.');
    if(!request.context.activeMedia&&!request.context.activeFile){
     // Empty workspaces can ask for guidance, but have no document tools or context.
-    const scopeKey=canRoute?'general-route:'+JSON.stringify(route):'no-document:'+config.provider+':'+(request.context.studio?.studioId??'general');const previous=sessionProvider===scopeKey?session?.snapshot():undefined;sessionProvider=scopeKey;const sessionEpoch=epoch,sessionToken=++sessionSerial;
-    session=new AgentSession({provider:request.context.studio?withAgentStudioContext(withCustomPrompts(canRoute?routedProvider(route!,(id,model)=>createProvider(id,model),identity=>deliver({type:'provenance',...identity})):createProvider(config.provider),config.customPrompts),{...request.context.studio,documentRef:null,selectionSummary:'No selection',capabilities:[]}):withCustomPrompts(canRoute?routedProvider(route!,(id,model)=>createProvider(id,model),identity=>deliver({type:'provenance',...identity})):createProvider(config.provider),config.customPrompts),model:requestModel,onEvent:event=>{
+    const scopeKey=canRoute?'general-route:'+JSON.stringify(route):'no-document:'+requestProvider+':'+requestModel+':'+(request.context.studio?.studioId??'general');const previous=sessionProvider===scopeKey?session?.snapshot():undefined;sessionProvider=scopeKey;const sessionEpoch=epoch,sessionToken=++sessionSerial;
+    session=new AgentSession({provider:request.context.studio?withAgentStudioContext(withCustomPrompts(canRoute?routedProvider(route!,(id,model)=>createProvider(id,model),identity=>deliver({type:'provenance',...identity})):createProvider(requestProvider,requestModel),config.customPrompts),{...request.context.studio,documentRef:null,selectionSummary:'No selection',capabilities:[]}):withCustomPrompts(canRoute?routedProvider(route!,(id,model)=>createProvider(id,model),identity=>deliver({type:'provenance',...identity})):createProvider(requestProvider,requestModel),config.customPrompts),model:requestModel,onEvent:event=>{
      if(sessionEpoch!==epoch||sessionToken!==sessionSerial||controller.signal.aborted)return;
      if(event.type==='text')deliver({type:'text-delta',text:event.text});
      else if(event.type==='notice')deliver({type:'error',message:event.message,code:event.code,retryable:event.retryable});
@@ -301,13 +307,13 @@ export const realCore:AgentCore={
    controller.signal.throwIfAborted();syncDocuments();documents.assert(base.ref);
    policy.grant({effect:'inspect',documentIds:[base.ref.documentId]});
    const context=buildContext(documents,policy,base.ref.path,selection);
-   if(config.provider!=='ollama'){
+   if(requestProvider!=='ollama'){
     if(request.context.disclosureProvider!==config.provider)throw Error('Confirm disclosure to the selected provider before sending document context.');
     agentPrivacy.assert({provider:config.provider,processing:'cloud'});
    }
-   policy.grant({effect:'disclose',documentIds:[base.ref.documentId],destination:config.provider});
-   const previous=sessionProvider===config.provider?session?.snapshot():undefined;sessionProvider=config.provider;const sessionEpoch=epoch,sessionToken=++sessionSerial;
-   const scoped=scopedProvider(withCustomPrompts(createProvider(config.provider,requestModel),config.customPrompts),context);
+   policy.grant({effect:'disclose',documentIds:[base.ref.documentId],destination:requestProvider});
+   const identity=requestProvider+':'+requestModel;const previous=sessionProvider===identity?session?.snapshot():undefined;sessionProvider=identity;const sessionEpoch=epoch,sessionToken=++sessionSerial;
+   const scoped=scopedProvider(withCustomPrompts(createProvider(requestProvider,requestModel),config.customPrompts),context);
    const provider=request.context.studio?withAgentStudioContext(scoped,request.context.studio):scoped;
    session=new AgentSession({provider,model:requestModel,tools:createTools(String(generation),context,nodes,request.context.studio),onEvent:event=>{
     if(sessionEpoch!==epoch||sessionToken!==sessionSerial||controller.signal.aborted)return;

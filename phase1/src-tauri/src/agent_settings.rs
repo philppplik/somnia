@@ -6,7 +6,7 @@ use std::path::Path;
 pub struct CustomPrompt { pub id: String, pub name: String, pub text: String, pub enabled: bool }
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all="camelCase",deny_unknown_fields)]
-pub struct LocalRuntimePreferences {pub version:u8,#[serde(default,skip_serializing_if="Option::is_none")]pub num_ctx:Option<u32>,#[serde(default,skip_serializing_if="Option::is_none")]pub keep_alive_seconds:Option<u32>,#[serde(default,skip_serializing_if="Option::is_none")]pub studio_models:Option<std::collections::BTreeMap<String,String>>,#[serde(default,skip_serializing_if="Option::is_none")]pub model_contexts:Option<std::collections::BTreeMap<String,u32>>,#[serde(default,skip_serializing_if="Option::is_none")]pub routing:Option<ProviderRouting>}
+pub struct LocalRuntimePreferences {pub version:u8,#[serde(default,skip_serializing_if="Option::is_none")]pub task_models:Option<std::collections::BTreeMap<String,String>>,#[serde(default,skip_serializing_if="Option::is_none")]pub num_ctx:Option<u32>,#[serde(default,skip_serializing_if="Option::is_none")]pub keep_alive_seconds:Option<u32>,#[serde(default,skip_serializing_if="Option::is_none")]pub studio_models:Option<std::collections::BTreeMap<String,String>>,#[serde(default,skip_serializing_if="Option::is_none")]pub model_contexts:Option<std::collections::BTreeMap<String,u32>>,#[serde(default,skip_serializing_if="Option::is_none")]pub routing:Option<ProviderRouting>}
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct Preferences {
@@ -34,6 +34,7 @@ impl Preferences {
             return Err("Invalid agent preferences".into());
         }
         if let Some(p)=&self.local_runtime {
+            if let Some(models)=&p.task_models {if models.len()>4||models.iter().any(|(task,model)|!matches!(task.as_str(),"chat"|"vibe"|"code"|"summarize")||model.trim().is_empty()||model.trim()!=model||model.len()>512||model.contains(['\r','\n','\0'])||model.to_ascii_lowercase().rsplit([':','-','_','/']).next()==Some("cloud")){return Err("Invalid local task models".into());}}
             if let Some(models)=&p.studio_models {if models.len()>100||models.iter().any(|(id,model)|id.is_empty()||id.len()>80||!id.bytes().all(|c|c.is_ascii_alphanumeric()||b"._-".contains(&c))||model.trim().is_empty()||model.len()>512||model.contains(['\r','\n','\0'])){return Err("Invalid studio model choices".into());}}
             if let Some(models)=&p.model_contexts {if models.len()>100||models.iter().any(|(model,n)|model.is_empty()||model.len()>512||model.contains(['\r','\n','\0'])||*n==0||*n>1_048_576){return Err("Invalid model contexts".into());}}
             if let Some(route)=&p.routing{route.validate()?;}
@@ -124,3 +125,5 @@ pub async fn cloud_request<F,T>(future:F)->Result<T,String> where F:std::future:
   let dir=tempfile::tempdir().unwrap();let path=dir.path().join("prefs");save(&path,&p).unwrap();assert!(load(&path).unwrap().local_runtime.unwrap().routing.unwrap().local_only);
  }
 }
+
+#[cfg(test)]mod task_model_tests{use super::*;#[test]fn local_task_model_persistence_and_schema(){let raw=r#"{"provider":"openai","model":"cloud","localRuntime":{"version":1,"taskModels":{"chat":"qwen:4b","vibe":"coder:7b","code":"coder:7b","summarize":"small:1b"}}}"#;let p:Preferences=serde_json::from_str(raw).unwrap();assert!(p.validate().is_ok());let dir=tempfile::tempdir().unwrap();let path=dir.path().join("prefs");save(&path,&p).unwrap();assert_eq!(load(&path).unwrap().local_runtime.unwrap().task_models.unwrap()["chat"],"qwen:4b");for broken in [raw.replace("qwen:4b","qwen-cloud"),raw.replace("summarize","unknown")]{assert!(serde_json::from_str::<Preferences>(&broken).unwrap().validate().is_err());}}}

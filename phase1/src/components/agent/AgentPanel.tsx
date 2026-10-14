@@ -1,3 +1,5 @@
+import {LOCAL_TASKS,type LocalTask} from '../../lib/agent/taskRouting';
+import {Field} from '../ui/field';
 import {PromptVoiceInput} from './PromptVoiceInput';
 import {Button} from '../ui/button';
 import {StudioStatus} from '../studios/StudioStatus';
@@ -28,7 +30,7 @@ import {AgentReview} from '../AgentReview';
 import type {Decisions} from '../../lib/agentDiff';
 import {AgentErrorNotice,AIGeneratedLabel} from './AgentPrivacy';
 
-import {NativeButton,NativeInput} from '../ui/native-controls';
+import {NativeButton,NativeInput,NativeSelect} from '../ui/native-controls';
 export function AgentPanel(){
  const media=useMedia();const app=useAppStore();const target=activeStudioDocument(app,media);const studio=studioAgentContext(app.activeStudio,target.path,app.editorKind);const [disclosure,setDisclosure]=useState<string|null>(null);
  const ui=useUiContext();const definition=getStudio(app.activeStudio);const adapted=hasAgentContextAdapter(definition)&&!(definition.id==='code'&&(target.media||['raster','vector','pdf'].includes(ui.domain)));
@@ -38,10 +40,12 @@ export function AgentPanel(){
  const quickActions=adapted?resolveAgentQuickActions(definition,commandContext(app,ui,target.path),lookupCommand):[];
  const quickAction=(id:string)=>{const state=getState();if(state.activeStudio!==definition.id)return;void runAgentQuickAction(id,getStudio(state.activeStudio),commandContext(state,getUiContext(),target.path),lookupCommand,executeCommand);};
  const {t}=useT();const [chat,dispatch]=useReducer(chatReducer,initialChat);const [draft,setDraft]=useState('');
+ const [task,setTask]=useState<LocalTask>('chat');
  const settings=useSyncExternalStore(subscribeAgentSettings,agentSettingsSnapshot,agentSettingsSnapshot);
+ const selectedTaskModel=settings.config.localRuntime?.taskModels?.[task];const effectiveProvider=selectedTaskModel?'ollama':settings.config.provider;const effectiveModel=selectedTaskModel??settings.config.model;
  const {ready:settingsReady,saving,authBusy,error:settingsError}=settings;
  useEffect(()=>{void initializeAgentSettings();},[]);
- useEffect(()=>setDisclosure(null),[settings.config.provider,target.path,app.activeStudio,app.editorKind]);
+ useEffect(()=>setDisclosure(null),[settings.config.provider,task,target.path,app.activeStudio,app.editorKind]);
  const openSettings=()=>patchState({settingsOpen:true,settingsSection:'AI',settingsAITab:'providers',settingsNavigationId:getState().settingsNavigationId+1});
  const requestGeneration=useRef(0);const stream=useRef<ReturnType<typeof createStreamSink>|null>(null);
  const run=useRef<AgentRun|null>(null);const scroller=useRef<HTMLDivElement>(null);const input=useRef<HTMLInputElement>(null);const pinned=useRef(true);
@@ -58,8 +62,8 @@ export function AgentPanel(){
   const text=raw.trim();if(!text||chat.busy||!settingsReady||saving||authBusy)return;
   const pinnedContext=agentContext;const generation=++requestGeneration.current;dispatch({type:'send',text});setDraft('');setDisclosure(null);pinned.current=true;const s=getState();
   stream.current?.close();const sink=createStreamSink(event=>{if(generation===requestGeneration.current)dispatch({type:'event',event});});stream.current=sink;
-  void getAgentCore().then(core=>{if(generation!==requestGeneration.current)return;run.current=core.run({prompt:text,context:{activeFile:target.media?'':target.path,activeMedia:target.media?target.path:undefined,selectedElementId:s.selectedElementId,disclosureProvider:disclosure??undefined,studio:pinnedContext}},event=>{if(generation===requestGeneration.current)sink.receive(event);});}).catch(e=>{if(generation!==requestGeneration.current)return;reportError('agent.start',e,{message:'Agent could not start'});sink.receive({type:'error',message:'Agent could not start. Check your configuration and try again.',retryable:true});});
- },[chat.busy,settingsReady,saving,authBusy,disclosure,target.path,target.media,agentContext]);
+  void getAgentCore().then(core=>{if(generation!==requestGeneration.current)return;run.current=core.run({prompt:text,context:{task,activeFile:target.media?'':target.path,activeMedia:target.media?target.path:undefined,selectedElementId:s.selectedElementId,disclosureProvider:disclosure??undefined,studio:pinnedContext}},event=>{if(generation===requestGeneration.current)sink.receive(event);});}).catch(e=>{if(generation!==requestGeneration.current)return;reportError('agent.start',e,{message:'Agent could not start'});sink.receive({type:'error',message:'Agent could not start. Check your configuration and try again.',retryable:true});});
+ },[chat.busy,settingsReady,saving,authBusy,disclosure,target.path,target.media,agentContext,task]);
  const stop=()=>{stream.current?.close(true);requestGeneration.current++;run.current?.cancel();run.current=null;dispatch({type:'stop'});input.current?.focus();};
  const reset=()=>{stop();void getAgentCore().then(c=>c.clear?.());dispatch({type:'reset'});setDraft('');};
  const resolve=async(p:AgentProposal,state:'accepted'|'rejected',decisions?:Decisions)=>{
@@ -74,18 +78,18 @@ export function AgentPanel(){
    <div className="ag-hd-right"><NativeButton type="button" className="ag-ib" title="Agent configuration" aria-label="Agent configuration" disabled={chat.busy||!settingsReady||saving||authBusy} onClick={openSettings}><Settings size={17}/></NativeButton><NativeButton type="button" className="ag-ib" title={t('agent.collapse')} aria-label={t('agent.collapse')} onClick={()=>patchState({agentOpen:false})}><PanelRightClose size={17}/></NativeButton></div>
   </header>
   <div className="ag-chat" ref={scroller} onScroll={e=>{const el=e.currentTarget;pinned.current=el.scrollHeight-el.scrollTop-el.clientHeight<48;}} role="log" aria-live="off" aria-label={t('agent.title')}>
-   <AgentAccountStatus provider={settings.config.provider}/>
-   <div className="ag-safety"><AgentErrorNotice/><p role="status">{settings.config.provider} · {settings.config.model||'No model selected'}</p><NativeButton type="button" onClick={()=>patchState({settingsOpen:true,settingsSection:'AI',settingsAITab:'privacy',settingsNavigationId:getState().settingsNavigationId+1})}>Cloud data consent</NativeButton></div>
+   <AgentAccountStatus provider={effectiveProvider}/>
+   <div className="ag-safety"><AgentErrorNotice/><p role="status">{effectiveProvider} · {effectiveModel||'No model selected'}</p><NativeButton type="button" onClick={()=>patchState({settingsOpen:true,settingsSection:'AI',settingsAITab:'privacy',settingsNavigationId:getState().settingsNavigationId+1})}>Cloud data consent</NativeButton></div>
    <label className="ag-context-permission"><NativeInput type="checkbox" checked={settings.config.allowActiveFile} disabled={chat.busy||saving||authBusy} onChange={e=>setActiveFileAccess(e.target.checked)}/>Allow inspecting the active studio document and selection. Every edit requires preview acceptance.</label>
    <p className="ag-context-chip" role="status">{studio.label}: {target.path||'No document'} · {target.path?studio.scope:'General guidance, no document context'}</p>
-   {settings.config.provider!=='ollama'&&target.path&&<label className="ag-context-permission"><NativeInput type="checkbox" checked={disclosure===settings.config.provider} disabled={chat.busy} onChange={e=>setDisclosure(e.target.checked?settings.config.provider:null)}/>Disclose this run's active document and selection to {settings.config.provider}. Cloud consent is also required.</label>}
-   {settings.config.provider==='ollama'&&<><StudioStatus>{t('local.stream.boundary')}</StudioStatus><Button type="button" disabled={chat.busy} onClick={()=>patchState({settingsOpen:true,settingsSection:'AI',settingsAITab:'local',settingsNavigationId:getState().settingsNavigationId+1})}>{t('local.stream.models')}</Button>{['interface','animation','3d'].includes(app.activeStudio)&&<LocalStudioAssistant kind={app.activeStudio==='3d'?'studio3d':app.activeStudio as 'interface'|'animation'} model={settings.config.localRuntime?.studioModels?.[app.activeStudio]??settings.config.model} options={settings.config.localRuntime}/>}<LocalToolDiagnostics/><LocalVisionTest model={settings.config.model} options={settings.config.localRuntime}/></>}
+   {effectiveProvider!=='ollama'&&target.path&&<label className="ag-context-permission"><NativeInput type="checkbox" checked={disclosure===settings.config.provider} disabled={chat.busy} onChange={e=>setDisclosure(e.target.checked?settings.config.provider:null)}/>Disclose this run's active document and selection to {settings.config.provider}. Cloud consent is also required.</label>}
+   {effectiveProvider==='ollama'&&<><StudioStatus>{t('local.stream.boundary')}</StudioStatus><Button type="button" disabled={chat.busy} onClick={()=>patchState({settingsOpen:true,settingsSection:'AI',settingsAITab:'local',settingsNavigationId:getState().settingsNavigationId+1})}>{t('local.stream.models')}</Button>{['interface','animation','3d'].includes(app.activeStudio)&&<LocalStudioAssistant kind={app.activeStudio==='3d'?'studio3d':app.activeStudio as 'interface'|'animation'} model={selectedTaskModel??settings.config.localRuntime?.studioModels?.[app.activeStudio]??settings.config.model} options={settings.config.localRuntime}/>}<LocalToolDiagnostics/><LocalVisionTest model={effectiveModel} options={settings.config.localRuntime}/></>}
    {settingsError&&<StudioStatus tone="error" live="assertive">{settingsError}</StudioStatus>}
    {empty?<div className="ag-empty"><div className="ag-orb" aria-hidden="true"/><h3>{t('agent.empty.title')}</h3><span>{studio.label==='Code'?t('agent.empty.body'):`Describe what you want to do in ${studio.label}. ${studio.scope}.`}</span><div className="ag-chips">{quickActions.map(c=><NativeButton type="button" key={c.id} className="ag-chip" disabled={!c.enabled||chat.busy} data-command={c.id} onClick={()=>quickAction(c.id)}>{c.title}</NativeButton>)}{studio.actions.map(c=><NativeButton type="button" key={c} className="ag-chip" onClick={()=>{setDraft(c);input.current?.focus();}}>{c}</NativeButton>)}</div><p className="ag-tip">Choose a model, then describe your task. File access and proposed changes need your review.</p></div>:chat.items.map((item,index)=><Row key={item.id} item={item} busy={chat.busy} onRetry={()=>{const last=chat.items.slice(0,index).reverse().find(i=>i.kind==='user');if(last&&last.kind==='user')send(last.text);}} onAccept={(p,d)=>void resolve(p,'accepted',d)} onReject={p=>void resolve(p,'rejected')} onUndo={async p=>{try{await(await getAgentCore()).revertProposal(p.id);dispatch({type:'resolve',proposalId:p.id,state:'undone'});}catch(e){dispatch({type:'event',event:{type:'error',message:e instanceof Error?e.message:String(e)}});}}}/>)}
    {mcpProposals.map(p=><div key={p.id} className="ag-review" data-state="pending" data-testid="mcp-proposal"><AIGeneratedLabel provenance={p.changeSet?.provenance}/><NativeProposalReview proposal={p} onAccept={(pr,d)=>void resolve(pr,'accepted',d)} onReject={()=>void resolve(p,'rejected')}/></div>)}
   </div>
   <div className="ag-bar" aria-hidden="true"><div className="ag-pb"><i/><i/><i/><i/></div><div className="ag-grad"/></div>
-  <div className="ag-inp"><form className="ag-field" onSubmit={e=>{e.preventDefault();if(chat.busy)stop();else send(draft);}}>
+  <div className="ag-inp"><Field label={t('local.task.active')}>{control=><NativeSelect {...control} disabled={chat.busy} value={task} onChange={e=>setTask(e.target.value as LocalTask)}>{LOCAL_TASKS.filter(x=>x!=='vibe').map(x=><option key={x} value={x}>{t('local.task.'+x)}</option>)}</NativeSelect>}</Field><p>{t('local.task.current')}: {settings.config.localRuntime?.taskModels?.[task]??settings.config.model} · {settings.config.localRuntime?.taskModels?.[task]?'ollama / local':settings.config.provider}</p><form className="ag-field" onSubmit={e=>{e.preventDefault();if(chat.busy)stop();else send(draft);}}>
    <NativeInput ref={input} value={draft} disabled={chat.busy||!settingsReady||saving||authBusy} onChange={e=>setDraft(e.target.value)} placeholder={chat.busy?t('agent.input.busy'):t('agent.input.placeholder')} aria-label={t('agent.input.label')} autoComplete="off"/>
    {chat.busy?<NativeButton type="submit" className="ag-send ag-stop" title={t('agent.stop')} aria-label={t('agent.stop')}><Square size={14} fill="currentColor"/></NativeButton>:<NativeButton type="submit" className="ag-send" title={t('agent.send')} aria-label={t('agent.send')} disabled={!draft.trim()||!settingsReady||saving||authBusy}><Send size={17}/></NativeButton>}
   </form><PromptVoiceInput draft={draft} onDraft={setDraft} disabled={chat.busy||!settingsReady||saving||authBusy}/></div>

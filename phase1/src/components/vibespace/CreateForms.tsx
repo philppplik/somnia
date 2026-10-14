@@ -1,3 +1,7 @@
+import {LocalModelsRuntime} from '../../lib/agent/localModels';
+import {useSyncExternalStore} from 'react';
+import {agentSettingsSnapshot,subscribeAgentSettings} from '../../lib/agent/settingsRuntime';
+import {useT} from '../../lib/useT';
 import {PromptVoiceInput} from '../agent/PromptVoiceInput';
 import {LocalReadinessCard} from './LocalReadinessCard';
 import {ModelHealthPanel} from './ModelHealthPanel';
@@ -22,16 +26,19 @@ export function CreateSpaceForm({busy,onCreate,onChoose,onClose}:{busy:boolean;o
  </form>;
 }
 export function CreateStudioForm({space,models,busy,template='',onCreate,onClose}:{space:Space;models:ModelRef[];busy:boolean;template?:string;onCreate:(intent:VibeIntent)=>Promise<boolean>;onClose:()=>void}){
+ const {t}=useT();const settings=useSyncExternalStore(subscribeAgentSettings,agentSettingsSnapshot,agentSettingsSnapshot);const savedDefault=settings.config.localRuntime?.taskModels?.vibe;const defaultChoice=models.find(m=>m.provider==='ollama'&&m.locality==='local'&&m.model===savedDefault);
+ const [defaultError,setDefaultError]=useState(false),[checkingDefault,setCheckingDefault]=useState(false);const chooseDefault=async()=>{if(!defaultChoice||busy)return;setCheckingDefault(true);setDefaultError(false);try{const runtime=new LocalModelsRuntime();const inventory=await runtime.snapshot();if(inventory.inventoryError||inventory.state!=='running'||!inventory.models.some(m=>m.id===defaultChoice.model)||!await runtime.verify(defaultChoice.model))throw Error();setModelKey(modelId(defaultChoice));}catch{setDefaultError(true);}finally{setCheckingDefault(false);}};
  const [goal,setGoal]=useState(template),[modelKey,setModelKey]=useState('');
  const model=models.find(m=>modelId(m)===modelKey);const valid=!!model&&!!goal.trim();
- return <form className="vs-form vs-card" aria-label="Create Studio" onSubmit={e=>{e.preventDefault();if(!valid||busy)return;void onCreate({type:'create-studio',spaceId:space.spaceId,goal:goal.trim(),model}).then(ok=>{if(ok)onClose();});}}>
+ return <form className="vs-form vs-card" aria-label="Create Studio" onSubmit={e=>{e.preventDefault();if(!valid||busy||checkingDefault)return;void onCreate({type:'create-studio',spaceId:space.spaceId,goal:goal.trim(),model}).then(ok=>{if(ok)onClose();});}}>
   <h3>New Studio</h3><LocalReadinessCard/><label>Goal<Textarea required rows={4} maxLength={8192} value={goal} disabled={busy} onChange={e=>setGoal(e.target.value)}/></label>
   <PromptVoiceInput draft={goal} onDraft={setGoal} maxLength={8192} disabled={busy}/>
+  {savedDefault&&<p>{t('local.task.current')}: {savedDefault} · ollama / local</p>}{savedDefault&&(!defaultChoice||defaultError)&&<p role="alert">{t('local.task.missing',{model:savedDefault})}</p>}{defaultChoice&&<NativeButton type="button" disabled={busy||checkingDefault} onClick={()=>void chooseDefault()}>{t('local.task.use',{task:t('local.task.vibe')})}</NativeButton>}
   <label>Model<NativeSelect required value={model?modelKey:''} disabled={busy||!models.length} onChange={e=>setModelKey(e.target.value)}><option value="">Choose a configured model</option>{models.map(m=><option key={modelId(m)} value={modelId(m)}>{m.provider} / {m.model} ({m.locality})</option>)}</NativeSelect></label>
   {!models.length&&<p role="status">No configured model. Add a model in AI settings first.</p>}
   {model?.locality==='local'&&<ModelHealthPanel model={model}/>}
   {model?.locality==='cloud'&&<p className="vs-notice">This cloud model receives the selected folder's task context. The native consent broker checks cloud and tool permissions before work begins.</p>}
   <label>Folder scope<output data-copyable>{space.scopeLabel}</output></label><p className="vs-muted">Ask for writes. No real project changes until review and Apply.</p>
-  <div className="vs-actions"><NativeButton className="vs-primary" disabled={busy||!valid}>Create Studio</NativeButton><NativeButton type="button" disabled={busy} onClick={onClose}>Cancel</NativeButton></div>
+  <div className="vs-actions"><NativeButton className="vs-primary" disabled={busy||checkingDefault||!valid}>Create Studio</NativeButton><NativeButton type="button" disabled={busy} onClick={onClose}>Cancel</NativeButton></div>
  </form>;
 }

@@ -194,6 +194,9 @@ impl VibeSpaceState {
                 refs.push(reference);
             }
         }
+        if let Some(tasks)=prefs.local_runtime.as_ref().and_then(|p|p.task_models.as_ref()){
+            for model in tasks.values(){let reference=w::ModelReference{provider:"ollama".into(),model:model.clone(),locality:w::ModelLocality::Local};if provider_config(&reference).is_ok()&&!refs.contains(&reference){refs.push(reference);}}
+        }
         Ok(refs)
     }
 }
