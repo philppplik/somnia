@@ -12,6 +12,8 @@
  "photos.p.empty": "Öffne ein JPEG- oder PNG-Foto, um dieses Panel zu nutzen.",
  "photos.p.dblReset": "Doppelklick zum Zurücksetzen",
  "photos.p.reset": "Zurücksetzen",
+ "photos.p.auto.tone": "Auto",
+ "photos.p.auto.wb": "Auto-WA",
  "photos.p.resetSection": "{section} zurücksetzen",
  "photos.p.hist.aria": "Histogramm. Mittlere Helligkeit {mean} von 255, {shadows} der Pixel in den Tiefen abgeschnitten, {highlights} in den Lichtern.",
  "photos.p.hist.ch.luma": "Luma",

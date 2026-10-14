@@ -12,6 +12,8 @@
  "photos.p.empty": "Abra uma foto JPEG ou PNG para usar este painel.",
  "photos.p.dblReset": "Clique duplo para redefinir",
  "photos.p.reset": "Redefinir",
+ "photos.p.auto.tone": "Auto",
+ "photos.p.auto.wb": "BB automático",
  "photos.p.resetSection": "Redefinir {section}",
  "photos.p.hist.aria": "Histograma. Brilho médio {mean} de 255, {shadows} dos pixels cortados nas sombras e {highlights} nas altas luzes.",
  "photos.p.hist.ch.luma": "Luma",

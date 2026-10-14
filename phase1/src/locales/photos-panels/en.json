@@ -12,6 +12,8 @@
  "photos.p.empty": "Open a JPEG or PNG photo to use this panel.",
  "photos.p.dblReset": "Double-click to reset",
  "photos.p.reset": "Reset",
+ "photos.p.auto.tone": "Auto",
+ "photos.p.auto.wb": "Auto WB",
  "photos.p.resetSection": "Reset {section}",
  "photos.p.hist.aria": "Histogram. Mean brightness {mean} of 255, {shadows} of pixels clipped in the shadows, {highlights} in the highlights.",
  "photos.p.hist.ch.luma": "Luma",

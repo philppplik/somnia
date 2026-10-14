@@ -12,6 +12,8 @@
  "photos.p.empty": "Abre una foto JPEG o PNG para usar este panel.",
  "photos.p.dblReset": "Doble clic para restablecer",
  "photos.p.reset": "Restablecer",
+ "photos.p.auto.tone": "Auto",
+ "photos.p.auto.wb": "BB automático",
  "photos.p.resetSection": "Restablecer {section}",
  "photos.p.hist.aria": "Histograma. Brillo medio {mean} de 255, {shadows} de los píxeles recortados en sombras y {highlights} en luces.",
  "photos.p.hist.ch.luma": "Luma",

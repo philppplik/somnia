@@ -49,9 +49,10 @@ test('overlay toggle paints the weight map, undo restores the neutral mask',asyn
  await expect(page.getByTestId('photos-lummask-overlay')).toBeVisible();
  await page.waitForTimeout(500);
  await page.screenshot({path:'test-results/ds-photos-mask-overlay.png',fullPage:true});
- await page.keyboard.press('Control+z');
+ await page.getByRole('button',{name:'Undo',exact:true}).click(); // photos undo has no Ctrl+z binding; the toolbar button is the real path
  await page.waitForTimeout(600);
- await expect(page.getByTestId('photos-mask-reset')).toBeDisabled();
+ await expect(page.getByTestId('photos-mask-value-lumaHi')).toHaveText('100%'); // zone window truly restored
+ await expect(page.getByTestId('photos-lummask-overlay')).toHaveCount(0);
 });
 test('mask panel renders in light and dark (parity captures the pristine gray canvas)',async({page})=>{
  for(const theme of['light','dark']){

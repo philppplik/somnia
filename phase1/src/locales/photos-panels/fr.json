@@ -12,6 +12,8 @@
  "photos.p.empty": "Ouvrez une photo JPEG ou PNG pour utiliser ce panneau.",
  "photos.p.dblReset": "Double-clic pour réinitialiser",
  "photos.p.reset": "Réinitialiser",
+ "photos.p.auto.tone": "Auto",
+ "photos.p.auto.wb": "BB auto",
  "photos.p.resetSection": "Réinitialiser {section}",
  "photos.p.hist.aria": "Histogramme. Luminosité moyenne {mean} sur 255, {shadows} des pixels écrêtés dans les ombres et {highlights} dans les hautes lumières.",
  "photos.p.hist.ch.luma": "Luma",

@@ -73,6 +73,7 @@ All file links are repository-relative, so they remain useful on a feature branc
 43. [Photos adjustment brush](photos-adjustment-brush.md)
 44. [Photos lens correction](photos-lens-correction.md)
 45. [Photos luminosity mask](photos-lum-mask.md)
+46. [Photos auto tone and auto white balance](photos-auto-tone.md)
 
 ## The system in one view
 
