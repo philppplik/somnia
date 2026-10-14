@@ -59,7 +59,7 @@ export class AgentPrivacyGate {
     this.notify();
   }
   private revoked = false;
-  private notify(): void { this.listeners.forEach(listener => listener()); }
+  private notify(): void { this.listeners.forEach(listener => {try { listener(); } catch { /* A view cannot change consent or stop other notifications. */ }}); }
   subscribe = (listener: () => void): (() => void) => {
     this.listeners.add(listener);
     return () => { this.listeners.delete(listener); };
@@ -82,6 +82,7 @@ export class AgentPrivacyGate {
     if (!isLocalOllama(target) && !this.hasConsent()) throw new AgentConsentRequiredError();
   }
   async run<T>(target: ProviderTarget, operation: (signal: AbortSignal) => Promise<T>, signal?: AbortSignal): Promise<T> {
+    target = {...target};
     this.assert(target);
     const cloud = !isLocalOllama(target);
     const controller = new AbortController();
