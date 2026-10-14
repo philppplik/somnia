@@ -13,9 +13,9 @@ test('keep-world reparent/detach preserves every matrix component for representa
  let d=base();d=applyEdits(d,[{type:'prop.set',layer:'parent',prop:'rotation',value:30,t:0},{type:'prop.set',layer:'parent',prop:'scale',value:[200,200],t:0},{type:'prop.set',layer:'shape',prop:'anchor',value:[80,40],t:0}]);const world=worldMatrix(findComp(d)!,layer(d),0);
  d=applyEdit(d,{type:'layer.parent',layer:'shape',parent:'parent',keepWorld:true,t:0});close(worldMatrix(findComp(d)!,layer(d),0),world);d=applyEdit(d,{type:'layer.parent',layer:'shape',parent:null,keepWorld:true,t:0});close(worldMatrix(findComp(d)!,layer(d),0),world);
 });
-test('keep-world refuses animated hierarchies, singular parents and unrepresentable shear, no approximation',()=>{
- let d=base();d=applyEdit(d,{type:'prop.animate',layer:'parent',prop:'position',on:true,t:0});assert.throws(()=>applyEdit(d,{type:'layer.parent',layer:'shape',parent:'parent',keepWorld:true,t:0}));
- d=applyEdit(base(),{type:'prop.set',layer:'parent',prop:'scale',value:[0,100],t:0});assert.throws(()=>applyEdit(d,{type:'layer.parent',layer:'shape',parent:'parent',keepWorld:true,t:0}));
+test('keep-world refuses singular parents, unrepresentable shear and animated anchors, no approximation',()=>{
+ let d=base();d=applyEdit(base(),{type:'prop.set',layer:'parent',prop:'scale',value:[0,100],t:0});assert.throws(()=>applyEdit(d,{type:'layer.parent',layer:'shape',parent:'parent',keepWorld:true,t:0}),/singular/);
+ d=applyEdits(base(),[{type:'prop.animate',layer:'shape',prop:'anchor',on:true,t:0},{type:'prop.set',layer:'shape',prop:'anchor',value:[10,10],t:sec}]);assert.throws(()=>applyEdit(d,{type:'layer.parent',layer:'shape',parent:'parent',keepWorld:true,t:0}),/anchor/);
  assert.equal(decomposeMatrix([1,0,1,1,0,0],[0,0]),null);assert.equal(decomposeMatrix([-1,0,0,1,0,0],[0,0]),null);
 });
 test('tint colour interpolation is RGB-linear and bypass uses hold keys at exact times',()=>{

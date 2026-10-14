@@ -5,7 +5,7 @@ import {registerCommandSpec} from '../commandBridge';
 import {commandRegistry} from '../commandRegistry';
 import type {CommandSchema,CommandSpec} from '../commandSpec';
 import {EditError,type Edit} from './edit';
-import {findComp,findLayer,TRANSFORM_KEYS,type KeyRef,type LayerKind,type LayerEffect,type PropValue,type TransformKey} from './model';
+import {findComp,findLayer,TEXT_FONTS,TRANSFORM_KEYS,type KeyRef,type LayerKind,type LayerEffect,type PropValue,type TextFont,type TransformKey} from './model';
 import {animationSession} from './session';
 import {secondsToTicks,snapToFrame} from './time';
 import {ClipError,copyKeys,getKeyClip,pastedRefs,setKeyClip} from './keyclip';
@@ -50,10 +50,10 @@ export function animationCommandSpecs():CommandSpec<unknown,unknown>[]{
   spec('animation.comp.select','Switch composition',(p:{comp:string})=>run({type:'comp.select',comp:p.comp}),object({comp:layerRef}),open,'View'),
   spec('animation.layer.add','Add layer',(p:{kind:LayerKind})=>{run({type:'layer.add',kind:p.kind});const c=comp();animationSession().setView({selectedLayer:c.layers[0]?.id??null});},object({kind:{enum:['solid','text','shape','null']}}),open,'Insert'),
   spec('animation.layer.remove','Delete layer',(p:{layer?:string})=>{run({type:'layer.remove',layer:layerIdOf(p)});animationSession().setView({selectedLayer:null,selectedKey:null});},object({layer:layerRef},[])),
-  spec('animation.layer.update','Edit layer',(p:{layer?:string;name?:string;visible?:boolean;solo?:boolean;locked?:boolean;text?:string;size?:number;color?:string})=>{
-   const {layer,text,size,color,...flags}=p;const source={...(text!==undefined?{text}:{}),...(size!==undefined?{size}:{}),...(color!==undefined?{color}:{})};
+  spec('animation.layer.update','Edit layer',(p:{layer?:string;name?:string;visible?:boolean;solo?:boolean;locked?:boolean;text?:string;size?:number;color?:string;font?:TextFont})=>{
+   const {layer,text,size,color,font,...flags}=p;const source={...(text!==undefined?{text}:{}),...(size!==undefined?{size}:{}),...(color!==undefined?{color}:{}),...(font!==undefined?{font}:{})};
    return run({type:'layer.update',layer:layer??selected(),...flags,...(Object.keys(source).length?{source}:{})});},
-   object({layer:layerRef,name:{type:'string',maxLength:200},visible:{type:'boolean'},solo:{type:'boolean'},locked:{type:'boolean'},text:{type:'string',maxLength:2000},size:{type:'number',minimum:1,maximum:2000},color:{type:'string',pattern:'^#[0-9a-fA-F]{6}$'}},[])),
+   object({layer:layerRef,name:{type:'string',maxLength:200},visible:{type:'boolean'},solo:{type:'boolean'},locked:{type:'boolean'},text:{type:'string',maxLength:2000},size:{type:'number',minimum:1,maximum:2000},color:{type:'string',pattern:'^#[0-9a-fA-F]{6}$'},font:{enum:Object.keys(TEXT_FONTS)}},[])),
   spec('animation.audio.import','Import audio (WAV or MP3)',()=>{window.dispatchEvent(new CustomEvent(AUDIO_IMPORT_EVENT));},undefined,open,'Insert'),
   spec('animation.audio.update','Trim and place audio clip',(p:{layer?:string;trimIn?:number;length?:number;offset?:number})=>run({type:'audio.update',layer:layerIdOf(p),...(p.trimIn!==undefined?{trimIn:secondsToTicks(p.trimIn)}:{}),...(p.length!==undefined?{length:secondsToTicks(p.length)}:{}),...(p.offset!==undefined?{offset:secondsToTicks(p.offset)}:{})}),object({layer:layerRef,trimIn:{type:'number',minimum:0,maximum:600},length:{type:'number',minimum:0.001,maximum:600},offset:{type:'number',minimum:-3600,maximum:3600}},[])),
   spec('animation.audio.volume.set','Set audio volume (percent)',(p:{layer?:string;value:number;t?:number})=>run({type:'audio.volume.set',layer:layerIdOf(p),value:p.value,t:p.t??playhead()}),object({layer:layerRef,value:{type:'number',minimum:0,maximum:200},t:tick},['value'])),
@@ -79,6 +79,7 @@ export function animationCommandSpecs():CommandSpec<unknown,unknown>[]{
   spec('animation.key.remove','Remove keyframe',(p:{layer?:string;prop:TransformKey;t?:number})=>run({type:'key.remove',layer:layerIdOf(p),prop:p.prop,t:p.t??playhead()}),object({layer:layerRef,prop:propKey,t:tick},['prop'])),
   spec('animation.key.move','Move keyframe',(p:{layer?:string;prop:TransformKey;from:number;to:number;replace?:boolean})=>run({type:'key.move',layer:layerIdOf(p),prop:p.prop,from:p.from,to:p.to,replace:p.replace}),object({layer:layerRef,prop:propKey,from:tick,to:tick,replace:{type:'boolean'}},['prop','from','to'])),
   spec('animation.key.interp','Set keyframe interpolation',(p:{layer?:string;prop:TransformKey;t?:number;interp:'hold'|'linear'|'bezier'})=>run({type:'key.interp',layer:layerIdOf(p),prop:p.prop,t:p.t??playhead(),interp:p.interp}),object({layer:layerRef,prop:propKey,t:tick,interp:{enum:['hold','linear','bezier']}},['prop','interp'])),
+  spec('animation.key.ease','Set ease of the key at the playhead',(p:{layer?:string;prop:TransformKey;t?:number;preset:EasePreset})=>{const e=EASE_PRESETS[p.preset]??fail('Unknown ease preset.');return run({type:'key.interp',layer:layerIdOf(p),prop:p.prop,t:p.t??playhead(),interp:e.interp,...('out' in e?{out:e.out,in:e.in}:{})});},object({layer:layerRef,prop:propKey,t:tick,preset:{enum:Object.keys(EASE_PRESETS)}},['prop','preset'])),
   spec('animation.keys.selectAll','Select all keys of the layer',(p:{layer?:string}={})=>{const id=layerIdOf(p);animationSession().selectKeys(allKeysOf(doc(),id));},object({layer:layerRef},[]),open,'View'),
   spec('animation.keys.delete','Delete selected keys',(p:{keys?:KeyRef[]}={})=>{const keys=p.keys??selKeys();run({type:'keys.remove',keys});animationSession().selectKeys([]);},object({keys:keyRefs},[]),hasSel),
   spec('animation.keys.copy','Copy selected keys',()=>{setKeyClip(guard(()=>copyKeys(doc(),selKeys())));},undefined,hasSel),

@@ -56,6 +56,16 @@ export const EASE_PRESETS={
  easeOut:{interp:'bezier' as const,out:[0,0] as const,in:[0.58,1] as const},
 };
 export type EasePreset=keyof typeof EASE_PRESETS;
+const sameHandle=(a:readonly [number,number],b:readonly [number,number])=>Math.abs(a[0]-b[0])<1e-9&&Math.abs(a[1]-b[1])<1e-9;
+/** Preset a key's ease matches, or 'custom'. Channel ease (vec2 without spatial tangents) is compared per channel when `ch` is set. */
+export function easePresetOf(k:Keyframe,ch?:0|1):EasePreset|'custom'{
+ const out=ch!==undefined?(k.channelOut?.[ch]??k.out):k.out,inn=ch!==undefined?(k.channelIn?.[ch]??k.in):k.in;
+ for(const name of Object.keys(EASE_PRESETS) as EasePreset[]){const e=EASE_PRESETS[name];
+  if(k.interp!==e.interp)continue;
+  if(!('out' in e))return name;
+  if(sameHandle(out,e.out)&&sameHandle(inn,e.in))return name;}
+ return 'custom';
+}
 
 /** Channel velocity in units/second. Segment-local differences never straddle a hold jump or a key discontinuity. */
 export function speedAt(p:Property,ch:0|1,t:number):number{

@@ -7,17 +7,14 @@ import {AudioPreview,browserAudioContext} from '../../lib/animation/audioPreview
 import {audioSignature} from '../../lib/animation/audioTiming';
 import {AudioWaveform} from './AudioWaveform';
 import {clickSelect,marqueeSelect,pruneSelection,rectsOverlap,sameKey,shiftSelection} from '../../lib/animation/selection';
-import {EASE_PRESETS,type EasePreset} from '../../lib/animation/graph';
 import {frameToTick,snapToFrame,tickToFrame,timecode} from '../../lib/animation/time';
 import {executeCommand} from '../../lib/commands';
 import {useT} from '../../lib/useT';
 import {Button} from '../ui/button';
-import {PROP_LABEL} from './format';
+import {EASE_LABEL,EASES,PROP_LABEL} from './format';
 import {GraphEditor} from './GraphEditor';
 const run=(id:string,params?:unknown)=>void executeCommand(id,params);
 const pct=(t:number,c:Composition)=>`${Math.min(100,Math.max(0,(t-c.start)/c.duration*100))}%`;
-const EASES:EasePreset[]=['linear','ease','easeIn','easeOut','hold'];
-const EASE_LABEL:Record<EasePreset,string>={linear:'animation.key.linear',ease:'animation.ease.ease',easeIn:'animation.ease.in',easeOut:'animation.ease.out',hold:'animation.key.hold'};
 interface Box{x0:number;y0:number;x1:number;y1:number}
 /** Timeline of the Animation studio: transport, work area, layer bars, key lanes with marquee selection, or the graph editor. */
 export function AnimationTimeline({comp,at,selected,canUndo,canRedo}:{comp:Composition;at:number;selected:string|null;canUndo:boolean;canRedo:boolean}){

@@ -2,12 +2,12 @@ import {useEffect,useId,useLayoutEffect,useRef,useState,type KeyboardEvent as Re
 import {animationSession} from '../../lib/animation/session';
 import type {Edit} from '../../lib/animation/edit';
 import {PROP_META,TRANSFORM_KEYS,type Composition,type KeyRef,type TransformKey} from '../../lib/animation/model';
-import {channelOf,curveSamples,handleToEase,handlesOf,niceStep,valueRange,speedSamples,speedRange,type Handle} from '../../lib/animation/graph';
+import {channelOf,curveSamples,handleToEase,handlesOf,niceStep,valueRange,speedSamples,speedRange,EASE_PRESETS,type Handle} from '../../lib/animation/graph';
 import {clickSelect,sameKey,shiftSelection} from '../../lib/animation/selection';
 import {frameToTick,timecode} from '../../lib/animation/time';
 import {useT} from '../../lib/useT';
 import {Button} from '../ui/button';
-import {fmt,PROP_LABEL} from './format';
+import {EASE_LABEL,EASES,fmt,PROP_LABEL} from './format';
 const PAD={l:46,r:12,t:10,b:16};
 function useSize(ref:React.RefObject<HTMLElement|null>){
  const [size,setSize]=useState({w:600,h:180});
@@ -118,6 +118,9 @@ export function GraphEditor({comp,layerId,sel,playhead}:{comp:Composition;layerI
  return <div className="grid min-h-0 flex-1 grid-cols-[180px_1fr]" data-testid="animation-graph">
   <div className="min-h-0 overflow-auto border-r border-subtle p-1" role="group" aria-label={t('animation.graph.props')}>
    <div className="mb-2 flex gap-1">{(['value','speed'] as const).map(mode=><Button key={mode} size="tiny" variant={view.graphMode===mode?'outline':'ghost'} onClick={()=>sess.setView({graphMode:mode})} data-testid={`animation-graph-mode-${mode}`}>{t(`animation.graph.${mode}`)}</Button>)}</div>
+   {sel.length>0&&<div className="mb-2 flex flex-wrap gap-1" role="group" aria-label={t('animation.ease.group')}>
+    {EASES.map(p=><Button key={p} size="tiny" variant="ghost" disabled={layer.locked} onClick={()=>{const e=EASE_PRESETS[p];try{sess.dispatch({type:'keys.interp',keys:[...sel],interp:e.interp,...('out'in e?{out:e.out,in:e.in}:{})});}catch{/* locked layer */}}} data-testid={`animation-graph-ease-${p}`}>{t(EASE_LABEL[p])}</Button>)}
+   </div>}
    {prop.type==='vec2'&&<p className="px-2 text-ink-3">{t(keys.some(k=>k.sIn||k.sOut)?'animation.graph.pathEase':'animation.graph.channelEase')}</p>}
    {speed&&<p className="px-2 text-ink-3">{t('animation.graph.unitsSecond')}</p>}
    {animated.map(k=><button key={k} type="button" aria-pressed={k===active} className={`block w-full truncate rounded-sm px-2 py-1 text-left ${k===active?'bg-hover text-ink':'text-ink-3'}`} onClick={()=>sess.setView({openProps:[k]})} data-testid={`animation-graph-prop-${k}`}>{t(PROP_LABEL[k])}</button>)}

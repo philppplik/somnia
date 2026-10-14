@@ -171,13 +171,24 @@ function reduce(doc:AnimationDocument,e:Edit):AnimationDocument{
    if(e.parent!==null&&!findLayer(c,e.parent))fail('missing','Parent layer does not exist.');
    if(e.parent!==null&&wouldCycle(c,l.id,e.parent))fail('cycle','That parent would create a cycle.');
    if(!e.keepWorld)return setLayer(doc,{...l,parent:e.parent});
-   const t=tickOf(c,e.t??0);const transformKeys=['anchor','position','scale','rotation'] as const;
-   const animated=(id:string|null):boolean=>{if(!id)return false;const current=findLayer(c,id)!;return transformKeys.some(k=>current.transform[k].keys.length>0)||animated(current.parent);};
-   if(animated(l.id)||animated(e.parent))fail('invalid','Keep-world currently requires static layer and parent transforms. Use local-space parenting for animated hierarchies.');
+   const t=tickOf(c,e.t??0);
+   if(l.transform.anchor.keys.length)fail('invalid','Keep-world needs a static anchor on the reparented layer.');
    const parent=e.parent?findLayer(c,e.parent)!:null,inv=parent?invertMatrix(worldMatrix(c,parent,t)):[1,0,0,1,0,0] as const;if(!inv)fail('invalid','Parent transform is singular.');
    const values=decomposeMatrix(multiplyMatrix(inv!,worldMatrix(c,l,t)),evaluate(l.transform.anchor,t) as Vec2);if(!values)fail('invalid','Keep-world needs shear or reflection, which this transform model cannot represent.');
    if(values!.scale.some(v=>v<0||v>10000))fail('invalid','Keep-world scale exceeds the supported range.');
-   return setLayer(doc,{...l,parent:e.parent,transform:{...l.transform,position:{...l.transform.position,value:values!.position},scale:{...l.transform.scale,value:values!.scale},rotation:{...l.transform.rotation,value:values!.rotation}}});}
+   /* Animated hierarchies: the world pose is preserved exactly at t by rewriting the value at t into the new parent
+      space (a key is inserted when none sits there); other keys keep their local motion, now read in the new space.
+      Spatial tangents follow the exact linear map. Per-channel ease under a rotated map would lie, so it is refused. */
+   const axisAligned=Math.abs(inv![1])<1e-9&&Math.abs(inv![2])<1e-9;
+   const mapTangent=(v:Vec2):Vec2=>[inv![0]*v[0]+inv![2]*v[1],inv![1]*v[0]+inv![3]*v[1]];
+   const writeProp=(p:Property,v:PropValue):Property=>{
+    if(!p.keys.length)return {...p,value:v};
+    const at=p.keys.find(k=>k.t===t);
+    if(!at)return {...p,keys:upsertKey(p.keys,makeKey(t,v))};
+    if((at.channelOut||at.channelIn)&&!axisAligned)fail('invalid','Keep-world with per-channel easing needs an axis-aligned parent transform.');
+    const moved:Keyframe={...at,v,...(at.sIn?{sIn:mapTangent(at.sIn)}:{}),...(at.sOut?{sOut:mapTangent(at.sOut)}:{})};
+    return {...p,keys:p.keys.map(k=>k.t===t?moved:k)};};
+   return setLayer(doc,{...l,parent:e.parent,transform:{...l.transform,position:writeProp(l.transform.position,values!.position),scale:writeProp(l.transform.scale,values!.scale),rotation:writeProp(l.transform.rotation,values!.rotation)}});}
   case 'layer.reorder':{const l=layerOf(doc,e.layer);if(!Number.isInteger(e.index)||e.index<0)fail('invalid','Bad index.');
    return withLayers(doc,ls=>{const r=ls.filter(x=>x.id!==l.id);r.splice(Math.min(e.index,r.length),0,l);return r;});}
   case 'prop.set':{const c=compOf(doc);const v=checkValue(e.prop,e.value);

@@ -1,7 +1,7 @@
 import {StudioStatus} from '../studios/StudioStatus';
 import {effectColor,effectBypassed} from '../../lib/animation/effects';
 import {NativeInput,NativeSelect} from '../ui/native-controls';
-import {DEFAULT_LAYER_COLOR} from '../../lib/animation/model';
+import {DEFAULT_LAYER_COLOR,TEXT_FONTS} from '../../lib/animation/model';
 import {StudioProgress} from '../studios/StudioProgress';
 import {saveAnimationSnapshot,parseAnimationSnapshot,SNAPSHOT_LIMIT} from '../../lib/animation/persistence';
 import {wouldCycle} from '../../lib/animation/model';
@@ -24,7 +24,8 @@ import {cancelExport,setExportTransparent,useExportState} from '../../lib/animat
 import type {InspectorSectionProps,PanelHostProps} from '../../lib/shell/types';
 import {Button} from '../ui/button';
 import {InspectorNumberField} from '../studios/InspectorNumberField';
-import {fmt,PROP_LABEL,renderSummary} from './format';
+import {easePresetOf} from '../../lib/animation/graph';
+import {EASE_LABEL,fmt,PROP_LABEL,renderSummary} from './format';
 const field='h-8 w-full min-w-0 rounded-sm border border-subtle bg-transparent px-2 text-xs text-ink select-text';
 const run=(id:string,params?:unknown)=>void executeCommand(id,params);
 const KINDS:LayerKind[]=['solid','text','shape','null'];
@@ -70,6 +71,7 @@ export function PropertiesSection(_:InspectorSectionProps){
   {layer.kind==='text'&&<label className="grid gap-1 text-ink-3">{t('animation.layer.text.content')}<NativeInput className={field} disabled={layer.locked} defaultValue={layer.source.text} key={layer.id+(layer.source.text??'')} onBlur={e=>{if(e.currentTarget.value!==layer.source.text)run('animation.layer.update',{layer:layer.id,text:e.currentTarget.value});}}/></label>}
   {layer.kind!=='null'&&layer.kind!=='raster'&&<label className="grid gap-1 text-ink-3">{t('animation.layer.color')}<NativeInput type="color" className="h-8 w-16 rounded-sm border border-subtle bg-transparent" disabled={layer.locked} value={layer.source.color??DEFAULT_LAYER_COLOR} onChange={e=>run('animation.layer.update',{layer:layer.id,color:e.target.value})}/></label>}
   {layer.kind==='text'&&<div className="grid gap-1 text-ink-3"><NumberField label={t('animation.layer.text.size')} value={layer.source.size??48} disabled={layer.locked} onCommit={size=>run('animation.layer.update',{layer:layer.id,size})}/></div>}
+  {layer.kind==='text'&&<label className="grid gap-1 text-ink-3">{t('animation.layer.text.font')}<NativeSelect className={field} disabled={layer.locked} value={layer.source.font??'system'} onChange={e=>run('animation.layer.update',{layer:layer.id,font:e.target.value})} data-testid="animation-text-font">{Object.entries(TEXT_FONTS).map(([id,f])=><option key={id} value={id}>{f.name}</option>)}</NativeSelect></label>}
   {(layer.kind==='shape'||layer.kind==='solid')&&<div className="grid grid-cols-2 gap-2">{(['width','height'] as const).map(axis=><div key={axis} className="grid gap-1 text-ink-3"><NumberField label={t(`animation.comp.${axis}`)} value={layer.source[axis]??100} disabled={layer.locked} onCommit={n=>edit({type:'layer.update',layer:layer.id,source:{[axis]:n}})}/></div>)}</div>}
   {layer.kind==='shape'&&<label className="grid gap-1 text-ink-3">{t('animation.shape.type')}<NativeSelect className={field} disabled={layer.locked} value={layer.source.shape??'rect'} onChange={e=>edit({type:'layer.update',layer:layer.id,source:{shape:e.target.value as NonNullable<typeof layer.source.shape>,...(e.target.value==='path'?{path:layer.source.path??{points:[{x:0.5,y:0},{x:1,y:1},{x:0,y:1}],closed:true}}:{})}})}><option value="rect">{t('animation.shape.rect')}</option><option value="ellipse">{t('animation.shape.ellipse')}</option><option value="path">{t('animation.shape.path')}</option>{(['roundedRect','star','polygon'] as const).map(shape=><option key={shape} value={shape}>{t(`animation.shape.${shape}`)}</option>)}</NativeSelect></label>}
   {layer.kind==='shape'&&<div className="grid gap-2">
@@ -118,6 +120,10 @@ export function PropertiesSection(_:InspectorSectionProps){
     </div>
     {key&&<NativeSelect className={field} aria-label={t('animation.key.interp')} value={key.interp} disabled={layer.locked} onChange={e=>run('animation.key.interp',{layer:layer.id,prop,interp:e.target.value})}>
      {(['hold','linear','bezier'] as const).map(i=><option key={i} value={i}>{t(`animation.key.${i}`)}</option>)}</NativeSelect>}
+    {key&&key.interp==='bezier'&&<NativeSelect className={field} aria-label={t('animation.ease.perKey')} value={easePresetOf(key)} disabled={layer.locked} onChange={e=>{if(e.target.value!=='custom')run('animation.key.ease',{layer:layer.id,prop,preset:e.target.value});}} data-testid="animation-key-ease">
+     {(['ease','easeIn','easeOut'] as const).map(pr=><option key={pr} value={pr}>{t(EASE_LABEL[pr])}</option>)}
+     <option value="custom" disabled={easePresetOf(key)!=='custom'}>{t('animation.ease.custom')}</option>
+    </NativeSelect>}
    </fieldset>;})}
  </div>;
 }
