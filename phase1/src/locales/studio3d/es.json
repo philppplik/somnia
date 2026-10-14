@@ -986,5 +986,9 @@
  "studio3d.edit.vertSlideFactor": "Factor de deslizamiento",
  "cmd.studio3d.edit.convexHull": "Reemplaza la malla 3D editada con la envolvente convexa de sus vértices seleccionados",
  "studio3d.edit.convexHull": "Envolvente convexa",
- "studio3d.hist.editConvexHull": "Envolvente convexa"
+ "studio3d.hist.editConvexHull": "Envolvente convexa",
+ "cmd.studio3d.edit.symmetrize": "Hornea una simetría especular en la malla 3D editada: conserva un lado del plano de espejo local, lo refleja en el otro y suelda la costura",
+ "studio3d.edit.symmetrize": "Simetrizar",
+ "studio3d.hist.editSymmetrize": "Simetrizado",
+ "studio3d.edit.symmetrizeAxis": "Eje de simetría"
 }

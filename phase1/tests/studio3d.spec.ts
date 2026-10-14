@@ -1170,6 +1170,19 @@ test('mesh edit mode: bisect cuts the mesh by a plane and keeps both halves',asy
  await expect(page.getByRole('alert')).toContainText('does not cut through the mesh');
 });
 
+test('mesh edit mode: symmetrize mirrors one side of the edited mesh onto the other',async({page})=>{
+ await blank(page);
+ const id=await insert(page,'cube',0);
+ expect(await run(page,'studio3d.edit.start',{id,mode:'face'})).toBe(true);
+ expect(await run(page,'studio3d.edit.select',{kind:'face',ids:[2,3]})).toBe(true);
+ expect(await run(page,'studio3d.edit.delete',{kind:'face'})).toBe(true);
+ expect((await session(page)).stats.triangles).toBe(10);
+ expect(await run(page,'studio3d.edit.symmetrize',{axis:'x'})).toBe(true);
+ expect((await session(page)).stats.triangles).toBeGreaterThanOrEqual(12);
+ expect(await run(page,'studio3d.undo',{})).toBe(true);
+ expect((await session(page)).stats.triangles).toBe(10);
+});
+
 test('mesh edit mode: convex hull replaces the mesh with the hull of the selected vertices',async({page})=>{
  await blank(page);
  const id=await insert(page,'cube',0);

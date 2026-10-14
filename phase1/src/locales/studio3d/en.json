@@ -986,5 +986,9 @@
  "studio3d.edit.vertSlideFactor": "Slide factor",
  "cmd.studio3d.edit.convexHull": "Replace the edited 3D mesh with the convex hull of its selected vertices",
  "studio3d.edit.convexHull": "Convex hull",
- "studio3d.hist.editConvexHull": "Convex hull"
+ "studio3d.hist.editConvexHull": "Convex hull",
+ "cmd.studio3d.edit.symmetrize": "Bake a mirror symmetry into the edited 3D mesh: keep one side of the local mirror plane, mirror it onto the other and weld the seam",
+ "studio3d.edit.symmetrize": "Symmetrize",
+ "studio3d.hist.editSymmetrize": "Symmetrize",
+ "studio3d.edit.symmetrizeAxis": "Symmetry axis"
 }

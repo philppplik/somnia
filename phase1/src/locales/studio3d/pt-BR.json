@@ -986,5 +986,9 @@
  "studio3d.edit.vertSlideFactor": "Fator de deslize",
  "cmd.studio3d.edit.convexHull": "Substitui a malha 3D editada pela envoltória convexa de seus vértices selecionados",
  "studio3d.edit.convexHull": "Envoltória convexa",
- "studio3d.hist.editConvexHull": "Envoltória convexa"
+ "studio3d.hist.editConvexHull": "Envoltória convexa",
+ "cmd.studio3d.edit.symmetrize": "Aplica uma simetria espelhada à malha 3D editada: mantém um lado do plano de espelho local, espelha-o no outro e solda a costura",
+ "studio3d.edit.symmetrize": "Simetrizar",
+ "studio3d.hist.editSymmetrize": "Simetrizado",
+ "studio3d.edit.symmetrizeAxis": "Eixo de simetria"
 }

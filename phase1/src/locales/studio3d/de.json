@@ -986,5 +986,9 @@
  "studio3d.edit.vertSlideFactor": "Slide-Faktor",
  "cmd.studio3d.edit.convexHull": "Ersetzt das bearbeitete 3D-Mesh durch die konvexe Hülle seiner selektierten Vertices",
  "studio3d.edit.convexHull": "Konvexe Hülle",
- "studio3d.hist.editConvexHull": "Konvexe Hülle"
+ "studio3d.hist.editConvexHull": "Konvexe Hülle",
+ "cmd.studio3d.edit.symmetrize": "Backt eine Spiegelsymmetrie in das bearbeitete 3D-Mesh: eine Seite der lokalen Spiegelebene behalten, auf die andere spiegeln und die Naht schweißen",
+ "studio3d.edit.symmetrize": "Symmetrisieren",
+ "studio3d.hist.editSymmetrize": "Symmetrisiert",
+ "studio3d.edit.symmetrizeAxis": "Symmetrieachse"
 }

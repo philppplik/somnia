@@ -809,6 +809,8 @@ export class Stage{
   this.editSel.edges=new Map();
   for(const [a,b] of edges)this.editSel.edges.set(`${a}_${b}`,[a,b]);
  }
+ /** Bakes a mirror symmetry into the edited mesh: keeps one side of the local mirror plane, mirrors it onto the other and welds the seam, one undo step. The selection is cleared afterwards because ordinals shift. */
+ editSymmetrize(axis:'x'|'y'|'z',side:'positive'|'negative',merge:number){this.editOp({key:'studio3d.hist.editSymmetrize'},m=>symmetrizeMesh(m,axis,side,merge));this.editSel={verts:new Set(),edges:new Map(),faces:new Set()};}
  /** Replaces the edited mesh with the convex hull of the selected vertices, one undo step. The selection is cleared afterwards because ordinals shift. */
  editConvexHull(){this.editOp({key:'studio3d.hist.editConvexHull'},m=>convexHullMesh(m,[...this.editSel.verts]));this.editSel={verts:new Set(),edges:new Map(),faces:new Set()};}
  /** Slides the single selected vertex along an incident edge by `factor` of the edge vector, one undo step. Position-equal twins move together. */

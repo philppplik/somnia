@@ -1,4 +1,5 @@
 # Unreleased: 3D Studio P0
+- 3D Studio: edit mode bakes a mirror symmetry into the edited mesh (`studio3d.edit.symmetrize`).
 - 3D Studio: edit mode replaces the mesh with the convex hull of its selected vertices (`studio3d.edit.convexHull`).
 - 3D Studio: edit mode slides a selected vertex along an incident edge (`studio3d.edit.vertSlide`).
 - 3D Studio: edit mode bridges the borders of two selected face groups with a sewn triangle strip (`studio3d.edit.bridgeFaces`).

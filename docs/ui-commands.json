@@ -7662,6 +7662,19 @@
       "hasEnabled": true
     },
     {
+      "id": "studio3d.edit.symmetrize",
+      "title": "Bake a mirror symmetry into the edited 3D mesh: keep one side of the local mirror plane, mirror it onto the other and weld the seam",
+      "category": "Edit",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "studio3d.edit.toSphere",
       "title": "Pull the selected vertices onto a sphere",
       "category": "Edit",

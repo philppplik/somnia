@@ -986,5 +986,9 @@
  "studio3d.edit.vertSlideFactor": "Facteur de glissement",
  "cmd.studio3d.edit.convexHull": "Remplace le maillage 3D édité par l'enveloppe convexe de ses sommets sélectionnés",
  "studio3d.edit.convexHull": "Enveloppe convexe",
- "studio3d.hist.editConvexHull": "Enveloppe convexe"
+ "studio3d.hist.editConvexHull": "Enveloppe convexe",
+ "cmd.studio3d.edit.symmetrize": "Applique une symétrie miroir au maillage 3D édité : conserve un côté du plan miroir local, le reflète sur l'autre et soude la jointure",
+ "studio3d.edit.symmetrize": "Symétriser",
+ "studio3d.hist.editSymmetrize": "Symétrisé",
+ "studio3d.edit.symmetrizeAxis": "Axe de symétrie"
 }

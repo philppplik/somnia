@@ -150,6 +150,7 @@ export interface Studio3DController{
  editBridgeFaces(twist:number):void;
  editVertSlide(edge:[number,number],factor:number):void;
  editConvexHull():void;
+ editSymmetrize(axis:MirrorAxis,side:'positive'|'negative',merge:number):void;
  editExtrude(offset:number):void;
  editInset(amount:number):void;
  editBevel(width:number):void;
@@ -343,6 +344,7 @@ export function studio3DCommandSpecs():CommandSpec<unknown,unknown>[]{
   add<{twist?:number}>('studio3d.edit.bridgeFaces','Bridge the borders of two selected face groups of the edited 3D mesh with a sewn triangle strip','Edit',p=>need().editBridgeFaces(p?.twist??0),object({twist:{type:'integer',minimum:-64,maximum:64}},[]),()=>getStudio3DState().edit!=null),
   add<{edge?:[number,number];factor?:number}>('studio3d.edit.vertSlide','Slide the selected vertex of the edited 3D mesh along an incident edge by a factor of the edge vector','Edit',p=>need().editVertSlide(p.edge,p?.factor??0.5),object({edge:{type:'array',items:{type:'integer',minimum:0},minItems:2,maxItems:2},factor:{type:'number',minimum:-1,maximum:1}},['edge']),()=>getStudio3DState().edit!=null),
   add('studio3d.edit.convexHull','Replace the edited 3D mesh with the convex hull of its selected vertices','Edit',()=>need().editConvexHull(),undefined,()=>getStudio3DState().edit!=null),
+  add<{axis:MirrorAxis;side?:'positive'|'negative';merge?:number}>('studio3d.edit.symmetrize','Bake a mirror symmetry into the edited 3D mesh: keep one side of the local mirror plane, mirror it onto the other and weld the seam','Edit',p=>need().editSymmetrize(p.axis,p?.side??'positive',p?.merge??0.0001),object({axis:{enum:['x','y','z']},side:{enum:['positive','negative']},merge:{type:'number',minimum:0,maximum:1000}},['axis']),()=>getStudio3DState().edit!=null),
   add<{axis?:'x'|'y'|'z';offset?:number;fill?:boolean}>('studio3d.edit.bisect','Cut the edited 3D mesh by an axis plane and keep both halves','Edit',p=>need().editBisect(p?.axis??'y',p?.offset??0,p?.fill??true),object({axis:{enum:['x','y','z']},offset:{type:'number',minimum:-1000000000,maximum:1000000000},fill:{type:'boolean'}},[]),()=>getStudio3DState().edit!=null),
   add<{distance?:number}>('studio3d.edit.mergeByDistance','Weld the selected vertices of the edited 3D mesh that lie within the given distance','Edit',p=>need().editMergeByDistance(p?.distance??0.001),object({distance:{type:'number',exclusiveMinimum:0,maximum:1000000}},[]),()=>getStudio3DState().edit!=null),
   add('studio3d.edit.flipEdge','Rotate each selected edge of the edited 3D mesh shared by two triangles to the other diagonal','Edit',()=>need().editFlipEdge(),undefined,()=>getStudio3DState().edit!=null),
