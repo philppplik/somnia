@@ -109,5 +109,8 @@
  "cmd.photos.export.png": "Fotos: Exportar como PNG",
  "cmd.photos.export.jpeg": "Fotos: Exportar como JPEG",
  "photos.hero.disabled": "Abre una foto, termina el recorte o espera al procesamiento.",
- "photos.heal.mode": "Curar"
+ "photos.heal.mode": "Curar",
+ "photos.rating.label": "Valoración",
+ "photos.rating.filter": "Filtro de valoración",
+ "photos.rating.filter.all": "Todas"
 }
