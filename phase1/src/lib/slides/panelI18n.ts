@@ -2,6 +2,13 @@ import {CATALOGUES,getLocale,subscribeLocale,translate} from '../i18n';
 import {useSyncExternalStore} from 'react';
 export const SLIDES_PANEL_CATALOGUES:Record<string,Record<string,string>>={
   "en": {
+  "slides.jump.title": "Jump to slide",
+  "slides.jump.position": "Slide {current} of {total}",
+  "slides.jump.target": "Slide number",
+  "slides.jump.go": "Go to slide",
+  "slides.jump.invalid": "Enter a whole slide number from 1 to {total}.",
+  "slides.jump.failed": "Deck changed or navigation failed. Check the current slide before retrying.",
+
   "slides.find.title": "Find slide text",
   "slides.find.query": "Text to find",
   "slides.find.case": "Match case",
@@ -73,6 +80,13 @@ export const SLIDES_PANEL_CATALOGUES:Record<string,Record<string,string>>={
     "cmd.slides.editText": "Apply slide text"
   },
   "de": {
+  "slides.jump.title": "Zur Folie springen",
+  "slides.jump.position": "Folie {current} von {total}",
+  "slides.jump.target": "Foliennummer",
+  "slides.jump.go": "Zur Folie",
+  "slides.jump.invalid": "Ganze Foliennummer von1 bis{total} eingeben.",
+  "slides.jump.failed": "Deck geändert oder Navigation fehlgeschlagen. Aktuelle Folie vor erneutem Versuch prüfen.",
+
   "slides.find.title": "Folientext finden",
   "slides.find.query": "Suchtext",
   "slides.find.case": "Groß/Kleinschreibung beachten",
@@ -144,6 +158,13 @@ export const SLIDES_PANEL_CATALOGUES:Record<string,Record<string,string>>={
     "cmd.slides.editText": "Folientext anwenden"
   },
   "es": {
+  "slides.jump.title": "Ir a diapositiva",
+  "slides.jump.position": "Diapositiva {current} de {total}",
+  "slides.jump.target": "Número de diapositiva",
+  "slides.jump.go": "Ir a diapositiva",
+  "slides.jump.invalid": "Introduce número entero de1 a{total}.",
+  "slides.jump.failed": "Presentación cambió o navegación falló. Revisa diapositiva actual antes de reintentar.",
+
   "slides.find.title": "Buscar texto de diapositiva",
   "slides.find.query": "Texto a buscar",
   "slides.find.case": "Distinguir mayúsculas",
@@ -215,6 +236,13 @@ export const SLIDES_PANEL_CATALOGUES:Record<string,Record<string,string>>={
     "cmd.slides.editText": "Aplicar texto"
   },
   "fr": {
+  "slides.jump.title": "Aller à diapositive",
+  "slides.jump.position": "Diapositive {current} sur {total}",
+  "slides.jump.target": "Numéro de diapositive",
+  "slides.jump.go": "Aller à diapositive",
+  "slides.jump.invalid": "Entrez numéro entier de1 à{total}.",
+  "slides.jump.failed": "Présentation modifiée ou navigation échouée. Vérifiez diapositive actuelle avant réessayer.",
+
   "slides.find.title": "Chercher texte de diapositive",
   "slides.find.query": "Texte recherché",
   "slides.find.case": "Respecter casse",
@@ -286,6 +314,13 @@ export const SLIDES_PANEL_CATALOGUES:Record<string,Record<string,string>>={
     "cmd.slides.editText": "Appliquer le texte"
   },
   "pt-BR": {
+  "slides.jump.title": "Ir ao slide",
+  "slides.jump.position": "Slide {current} de {total}",
+  "slides.jump.target": "Número do slide",
+  "slides.jump.go": "Ir ao slide",
+  "slides.jump.invalid": "Digite número inteiro de1 a{total}.",
+  "slides.jump.failed": "Apresentação mudou ou navegação falhou. Verifique slide atual antes de tentar novamente.",
+
   "slides.find.title": "Buscar texto de slide",
   "slides.find.query": "Texto a buscar",
   "slides.find.case": "Distinguir maiúsculas",
