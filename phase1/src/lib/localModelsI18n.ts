@@ -1,5 +1,9 @@
 export const LOCAL_MODELS_CATALOGUES:Record<string,Record<string,string>> = {
  "en": {
+  "local.search.error.binding": "Model/runtime changed or unavailable. Memory index and old results discarded. Review setup and rebuild selected sources.",
+  "local.search.bindingNotice": "Model identity is checked before each search and citation open. No automatic polling or rebuild; search returns source snippets, never generated answers.",
+  "local.search.bindingChecking": "Checking current model identity before opening citation…",
+
   "local.sort.label": "Sort installed models",
   "local.sort.name": "Exact name",
   "local.sort.size": "Reported size, largest first",
@@ -592,6 +596,10 @@ export const LOCAL_MODELS_CATALOGUES:Record<string,Record<string,string>> = {
   "local.route.earlier": "Move earlier after local"
  },
  "de": {
+  "local.search.error.binding": "Modell/Runtime geändert oder nicht verfügbar. Speicherindex/alte Resultate verworfen. Setup prüfen und gewählte Quellen neu indexieren.",
+  "local.search.bindingNotice": "Modellidentität vor jeder Suche und jedem Citation-Open geprüft. Kein Polling/Auto-Rebuild; nur Quellenausschnitte, keine generierten Antworten.",
+  "local.search.bindingChecking": "Aktuelle Modellidentität vor Citation-Open prüfen…",
+
   "local.sort.label": "Installierte Modelle sortieren",
   "local.sort.name": "Exakter Name",
   "local.sort.size": "Gemeldete Größe, größte zuerst",
@@ -1184,6 +1192,10 @@ export const LOCAL_MODELS_CATALOGUES:Record<string,Record<string,string>> = {
   "local.route.earlier": "Nach lokal früher einordnen"
  },
  "es": {
+  "local.search.error.binding": "Modelo/runtime cambió o no disponible. Índice y resultados descartados. Revisa setup y reconstruye fuentes seleccionadas.",
+  "local.search.bindingNotice": "Identidad verificada antes de búsqueda/cita. Sin sondeo/reconstrucción automática; fragmentos de fuentes, nunca respuestas generadas.",
+  "local.search.bindingChecking": "Comprobando identidad del modelo antes de abrir cita…",
+
   "local.sort.label": "Ordenar modelos instalados",
   "local.sort.name": "Nombre exacto",
   "local.sort.size": "Tamaño informado, mayor primero",
@@ -1776,6 +1788,10 @@ export const LOCAL_MODELS_CATALOGUES:Record<string,Record<string,string>> = {
   "local.route.earlier": "Mover antes tras local"
  },
  "fr": {
+  "local.search.error.binding": "Modèle/runtime modifié ou indisponible. Index/résultats supprimés. Vérifiez setup et reconstruisez sources choisies.",
+  "local.search.bindingNotice": "Identité vérifiée avant recherche/citation. Sans sondage/reconstruction automatique; extraits de sources, jamais réponses générées.",
+  "local.search.bindingChecking": "Vérification identité modèle avant citation…",
+
   "local.sort.label": "Trier modèles installés",
   "local.sort.name": "Nom exact",
   "local.sort.size": "Taille déclarée, plus grande d’abord",
@@ -2368,6 +2384,10 @@ export const LOCAL_MODELS_CATALOGUES:Record<string,Record<string,string>> = {
   "local.route.earlier": "Avancer après local"
  },
  "pt-BR": {
+  "local.search.error.binding": "Modelo/runtime mudou ou indisponível. Índice/resultados descartados. Revise setup e reconstrua fontes selecionadas.",
+  "local.search.bindingNotice": "Identidade verificada antes de busca/citação. Sem polling/reconstrução automática; trechos de fontes, nunca respostas geradas.",
+  "local.search.bindingChecking": "Verificando identidade do modelo antes de abrir citação…",
+
   "local.sort.label": "Ordenar modelos instalados",
   "local.sort.name": "Nome exato",
   "local.sort.size": "Tamanho informado, maior primeiro",
