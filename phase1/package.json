@@ -57,7 +57,9 @@
     "generate:local-guide": "node scripts/generate-local-guide.mjs",
     "pretypecheck": "npm run generate:local-guide",
     "pretest:core": "npm run generate:local-guide && node --test scripts/generate-local-guide.test.mjs",
-    "test:local-guide": "npm run generate:local-guide && node --test scripts/generate-local-guide.test.mjs && tsx --test src/lib/localAIHelp.test.ts"
+    "test:local-guide": "npm run generate:local-guide && node --test scripts/generate-local-guide.test.mjs && tsx --test src/lib/localAIHelp.test.ts",
+    "eval:local-search": "tsx scripts/eval-local-search.ts",
+    "test:local-search-eval": "tsx --test test/retrieval-eval/*.test.ts"
   },
   "dependencies": {
     "@base-ui/react": "1.8.0",
