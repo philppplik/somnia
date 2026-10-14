@@ -882,5 +882,8 @@
  "animation.keys.tools": "Key-Werkzeuge",
  "animation.keys.tools.values": "Werte",
  "animation.keys.tools.ease": "Ease",
- "animation.keys.tools.select": "Auswahl"
+ "animation.keys.tools.select": "Auswahl",
+ "animation.keys.echo": "Echo",
+ "animation.keys.echo.hint": "Gewählte Keys einige Frames später (+) oder früher (-) kopieren; die Originale bleiben",
+ "cmd.animation.keys.echo": "Gewählte Keys einige Frames später oder früher kopieren"
 }

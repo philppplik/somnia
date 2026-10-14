@@ -882,5 +882,8 @@
  "animation.keys.tools": "Herramientas de keys",
  "animation.keys.tools.values": "Valores",
  "animation.keys.tools.ease": "Ease",
- "animation.keys.tools.select": "Selección"
+ "animation.keys.tools.select": "Selección",
+ "animation.keys.echo": "Eco",
+ "animation.keys.echo.hint": "Copia las keys seleccionadas unos fotogramas después (+) o antes (-); los originales se quedan",
+ "cmd.animation.keys.echo": "Copiar las keys seleccionadas unos fotogramas después o antes"
 }

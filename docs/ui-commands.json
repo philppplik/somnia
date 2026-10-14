@@ -749,6 +749,23 @@
       "hasEnabled": true
     },
     {
+      "id": "animation.keys.echo",
+      "title": "Copy the selected keys some frames later or earlier",
+      "category": "Edit",
+      "source": "animation",
+      "keywords": [
+        "animation",
+        "copy",
+        "delay",
+        "duplicate",
+        "echo",
+        "keys",
+        "offset",
+        "shift"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "animation.keys.elastic",
       "title": "Bake an elastic settle between selected keys",
       "category": "Edit",

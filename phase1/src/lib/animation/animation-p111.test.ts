@@ -183,3 +183,12 @@ test('tame: clamps handle y into 0..1, skips keys that do not overshoot',()=>{
  const e=tameEdits(c,[k(0),k(10)]) as {out:number[];in:number[]}[];
  assert.equal(e.length,1);assert.deepEqual([...e[0].out],[0.3,1]);assert.deepEqual([...e[0].in],[0.5,0]);
 });
+import {echoEdits} from './keyEcho';
+test('echo: copies later or earlier, originals stay, copies outside the comp dropped, validated',()=>{
+ const c=findComp(base())!,k=(n:number)=>({layer:'a',prop:'position' as const,t:f(n)});
+ const e=echoEdits(c,[k(0),k(10)],5) as {items:{key:{t:number}}[]}[];
+ assert.equal(e.length,1);assert.deepEqual(e[0].items.map(i=>i.key.t),[f(5),f(15)]);
+ assert.deepEqual((echoEdits(c,[k(0),k(10)],-5) as {items:{key:{t:number}}[]}[])[0].items.map(i=>i.key.t),[f(5)]);
+ assert.throws(()=>echoEdits(c,[k(0)],0));assert.throws(()=>echoEdits(c,[k(0)],-5));
+ const s=open();s.dispatch(echoEdits(s.document!.compositions[0],[k(0)],5));assert.equal(findLayer(findComp(s.document!)!,'a')!.transform.position.keys.length,3);
+});
