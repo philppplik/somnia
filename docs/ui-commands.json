@@ -5687,6 +5687,21 @@
       "hasEnabled": true
     },
     {
+      "id": "slides.setAllSlideFooters",
+      "title": "Set slide number and footer on all slides",
+      "category": "Edit",
+      "source": "slides",
+      "keywords": [
+        "all",
+        "every",
+        "footer",
+        "numbering",
+        "page number",
+        "slide number"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "slides.setNotes",
       "title": "Set speaker notes",
       "category": "Edit",
@@ -5726,6 +5741,20 @@
         "fill",
         "master",
         "slide"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "slides.setSlideFooter",
+      "title": "Set slide number and footer",
+      "category": "Edit",
+      "source": "slides",
+      "keywords": [
+        "footer",
+        "header and footer",
+        "numbering",
+        "page number",
+        "slide number"
       ],
       "hasEnabled": true
     },
