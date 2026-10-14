@@ -445,7 +445,7 @@ export default function Viewport3D(){
   const onDown=(e:PointerEvent)=>{down=gizmo.axis!==null?null:{x:e.clientX,y:e.clientY};};
   const onMove=(e:PointerEvent)=>{
    if(!shiftDrag||!down||Math.hypot(e.clientX-down.x,e.clientY-down.y)<=4)return;
-   if(!marquee){marquee=document.createElement('div');marquee.style.cssText='position:fixed;pointer-events:none;border:1px dashed #6d4aff;background:rgba(109,74,255,0.12);z-index:50';marquee.setAttribute('aria-hidden','true');document.body.appendChild(marquee);}
+   if(!marquee){marquee=document.createElement('div');marquee.style.cssText='position:fixed;pointer-events:none;border:1px dashed var(--focus-ring);background:var(--accent-soft);z-index:50';marquee.setAttribute('aria-hidden','true');document.body.appendChild(marquee);}
    const r=marqueeRect(down,{x:e.clientX,y:e.clientY});marquee.style.left=r.x0+'px';marquee.style.top=r.y0+'px';marquee.style.width=(r.x1-r.x0)+'px';marquee.style.height=(r.y1-r.y0)+'px';
   };
   const onUp=(e:PointerEvent)=>{

@@ -60,7 +60,7 @@ export function PathOverlay({comp,layer,at,sel}:{comp:Composition;layer:Layer;at
       onPointerDown={locked?undefined:handleDown(ref,v,kind)} onKeyDown={locked?undefined:nudge((dx,dy)=>sess.dispatch({type:'key.spatial',layer:layer.id,prop:'position',t:key.t,[kind]:[off[0]+dx,off[1]+dy]}))} data-testid={`animation-path-${kind}`}/></g>;});
   })}
   {keys.map((key,ki)=>{const ref:KeyRef={layer:layer.id,prop:'position',t:key.t};const on=sel.some(s=>sameKey(s,ref));const v=key.v as Vec2;
-   return <rect key={ki} x={v[0]-sq} y={v[1]-sq} width={sq*2} height={sq*2} fill={on?'var(--text-primary)':'var(--accent-fill)'} stroke={on?'var(--accent)':'#fff'} strokeWidth={(on?2:1.5)*k}
+   return <rect key={ki} x={v[0]-sq} y={v[1]-sq} width={sq*2} height={sq*2} fill={on?'var(--text-primary)':'var(--accent-fill)'} stroke={on?'var(--focus-ring)':'var(--action-ink)'} strokeWidth={(on?2:1.5)*k}
     tabIndex={locked?-1:0} role="button" aria-pressed={on} aria-label={t('animation.path.key',{time:timecode(key.t,comp.fps)})} style={{cursor:locked?'default':'grab',touchAction:'none'}}
     onPointerDown={locked?undefined:keyDown(ref,v)} onKeyDown={locked?undefined:nudge((dx,dy)=>sess.dispatch({type:'prop.set',layer:layer.id,prop:'position',t:key.t,value:[v[0]+dx,v[1]+dy]}))} data-testid="animation-path-key" data-selected={on||undefined}/>;})}
  </g>;

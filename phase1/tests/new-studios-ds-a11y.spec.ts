@@ -1,0 +1,13 @@
+import {test,expect} from './fixtures';
+/** CI-only actual application/engine inspector audit. No injected engine substitute. */
+for(const studio of ['animation','interface','3d'] as const)for(const theme of ['light','dark'] as const)for(const density of ['compact','normal','comfortable'] as const)test(`${studio}/${theme}/${density}: inspector controls keep labels, token focus and readable text`,async({page})=>{
+ await page.goto('/');await expect(page.getByRole('radio',{name:'Somnia Code',exact:true})).toBeVisible();
+ await page.evaluate(async({studio,theme,density})=>{const {patchState,requestStudio}=await import('/src/store/appStore.ts');const {DEFAULT_LOOK}=await import('/src/lib/look.ts');patchState({theme,themeChoice:theme,contrast:'standard',look:{...DEFAULT_LOOK,density}});requestStudio(studio);},{studio,theme,density});
+ if(studio==='animation'){await page.getByTestId('animation-create-blank').click();await page.getByTestId('animation-add-shape').click();}
+ else if(studio==='interface'){await page.getByRole('button',{name:'Create blank document',exact:true}).click();await page.getByRole('button',{name:'Frame',exact:true}).click();}
+ else {await page.getByTestId('studio3d-insert').getByRole('button',{name:'Cube',exact:true}).click();}
+ const input=studio==='animation'?page.getByTestId('animation-prop-opacity').locator('[data-slot=number-field]'):studio==='interface'?page.getByLabel('Width',{exact:true}).first():page.getByTestId('studio3d-object-section').getByLabel('Position X',{exact:true});await expect(input).toBeVisible();await input.focus();
+ const audit=await input.evaluate(el=>{const cs=getComputedStyle(el),root=getComputedStyle(document.documentElement);const rgb=(s:string)=>s.match(/[\d.]+/g)!.slice(0,3).map(Number);const luminance=(s:string)=>rgb(s).map(n=>{const c=n/255;return c<=.04045?c/12.92:((c+.055)/1.055)**2.4;}).reduce((v,n,i)=>v+n*[.2126,.7152,.0722][i],0);let bg=el as HTMLElement;while(getComputedStyle(bg).backgroundColor==='rgba(0, 0, 0, 0)'&&bg.parentElement)bg=bg.parentElement;const a=luminance(cs.color),b=luminance(getComputedStyle(bg).backgroundColor);return{contrast:(Math.max(a,b)+.05)/(Math.min(a,b)+.05),outline:cs.outlineStyle,outlineWidth:parseFloat(cs.outlineWidth),labels:(el as HTMLInputElement).labels?.length,invalid:el.getAttribute('aria-invalid'),gap:root.getPropertyValue('--gap').trim()};});
+ expect(audit.labels).toBeGreaterThan(0);expect(audit.outline).not.toBe('none');expect(audit.outlineWidth).toBeGreaterThanOrEqual(2);expect(audit.contrast).toBeGreaterThanOrEqual(4.5);expect(audit.gap).toBe({compact:'3px',normal:'6px',comfortable:'10px'}[density]);
+ await page.screenshot({path:`test-results/new-studios-ds-${studio}-${theme}-${density}.png`,animations:'disabled'});
+});

@@ -13,3 +13,10 @@ test('new-studio numeric adapters commit once, validate/cancel, reset identity, 
 test('adapter screenshots use actual production styles',async({page})=>{
  await page.goto('./');const proof=page.getByTestId('studio-adoption-proof');for(const theme of ['light','dark']){await page.evaluate(theme=>{document.documentElement.dataset.theme=theme;document.documentElement.dataset.contrast='standard';},theme);await proof.screenshot({path:`test-results/ds-studio-adoption-${theme}.png`});}
 });
+for(const theme of ['light','dark'])for(const density of ['compact','normal','comfortable'])test(`${theme}/${density}: inspector token/focus/contrast audit`,async({page})=>{
+ await page.goto('./');await page.evaluate(({theme,density})=>{const root=document.documentElement;root.dataset.theme=theme;root.dataset.contrast='standard';const api=(window as any).dsAppearance;api.applyLook({...api.DEFAULT_LOOK,density});},{theme,density});
+ const proof=page.getByTestId('studio-adoption-proof'),input=proof.getByLabel('Position X',{exact:true});await input.focus();
+ const audit=await input.evaluate(el=>{const cs=getComputedStyle(el),root=getComputedStyle(document.documentElement);const channels=(s:string)=>s.match(/[\d.]+/g)!.slice(0,3).map(Number);const lum=(s:string)=>channels(s).map(x=>{const n=x/255;return n<=.04045?n/12.92:((n+.055)/1.055)**2.4;}).reduce((a,n,i)=>a+n*[.2126,.7152,.0722][i],0);const a=lum(cs.color),b=lum(cs.backgroundColor);return {contrast:(Math.max(a,b)+.05)/(Math.min(a,b)+.05),outline:cs.outlineStyle,width:parseFloat(cs.outlineWidth),gap:root.getPropertyValue('--gap').trim(),radius:root.getPropertyValue('--r-outer').trim(),labels:el.labels?.length};});
+ expect(audit.contrast).toBeGreaterThanOrEqual(4.5);expect(audit.width).toBeGreaterThanOrEqual(2);expect(audit.outline).not.toBe('none');expect(audit.labels).toBe(1);expect(audit.gap).toBe({compact:'3px',normal:'6px',comfortable:'10px'}[density]);expect(audit.radius).toBe('25px');
+ await proof.screenshot({path:`test-results/ds-inspector-audit-${theme}-${density}.png`});
+});
