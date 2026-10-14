@@ -99,7 +99,7 @@ function Viewer({comp,at,selected,sel,assets,comps}:{assets:readonly InterfaceAs
    <defs dangerouslySetInnerHTML={{__html:maskDefsHtml}}/>
    {scene.map(({layer:l,matrix,opacity})=>{const i=comp.layers.indexOf(l);
     const contentOnce=(tk:number)=><g mask={hasMasks(l)?`url(#${maskId('preview-',i)})`:undefined}><g filter={effectPrimitives(l,at)?`url(#preview-effect-${i})`:undefined}>{layerNode(l,assets,tk,l.source.gradient?`url(#preview-gradient-${i})`:undefined,l.stroke?.gradient?`url(#preview-stroke-gradient-${i})`:undefined)}</g></g>;
-    const contentAt=(tk:number)=>{if(!l.repeater)return contentOnce(tk);const a=evaluate(l.transform.anchor,tk) as [number,number];return <>{repeaterCopies(l.repeater,[a[0],a[1]]).map((c,ci)=><g key={ci} transform={c.transform} opacity={c.opacity<1?c.opacity:undefined}>{contentOnce(tk)}</g>)}{contentOnce(tk)}</>;};
+    const contentAt=(tk:number)=>{if(!l.repeater)return contentOnce(tk);const a=evaluate(l.transform.anchor,tk) as [number,number];return <>{repeaterCopies(l.repeater,[a[0],a[1]]).map((c,ci)=><g key={ci} transform={c.transform} opacity={c.opacity<1?c.opacity:undefined} filter={c.filter}>{contentOnce(tk)}</g>)}{contentOnce(tk)}</>;};
     const content=contentAt(at),each=contentSampled(l);
     const blur=motionBlurTicks(comp,l,at);
     const drawn=blur.length?<g key={l.id} opacity={opacity} data-layer={l.id} data-blur={blur.length} data-selected={l.id===selected||undefined} onPointerDown={()=>animationSession().setView({selectedLayer:l.id})}>{blur.map((m,j)=><g key={j} transform={`matrix(${m.matrix.join(' ')})`} opacity={1/(j+1)}>{each?contentAt(m.tick):content}</g>)}</g>

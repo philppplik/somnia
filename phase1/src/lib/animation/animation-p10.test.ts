@@ -1689,3 +1689,13 @@ test('P71 repeater: copies markup, absent field is identical, validation, undo',
  assert.deepEqual(validateDocument(r),[]);
  for(const bad of [{copies:1},{copies:21},{copies:2.5},{scale:0},{opacity:101},{x:Infinity}])assert.throws(()=>applyEdit(d,{type:'layer.repeater',layer:'pa',repeater:{copies:3,x:0,y:0,rotation:0,scale:100,opacity:100,...bad}}),Error);
 });
+
+test('P72 repeater hue shift: per-copy hue-rotate, zero or absent unchanged, validation',()=>{
+ const d=strokeDoc([{x:0.2,y:0.2},{x:0.8,y:0.2},{x:0.8,y:0.8}],true,8);
+ const mk=(hue?:number)=>applyEdit(d,{type:'layer.repeater',layer:'pa',repeater:{copies:3,x:40,y:0,rotation:0,scale:100,opacity:100,...(hue===undefined?{}:{hue})}});
+ const svg=frameSvg(comp(mk(30)),0);
+ assert.ok(svg.includes('filter="hue-rotate(60deg)"')&&svg.includes('filter="hue-rotate(30deg)"'),svg);
+ assert.equal(frameSvg(comp(mk(0)),0),frameSvg(comp(mk()),0));
+ assert.deepEqual(validateDocument(mk(30)),[]);
+ assert.throws(()=>mk(361),Error);
+});

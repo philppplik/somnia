@@ -457,6 +457,12 @@ Depends on: v10 diff viewer, v11 updater for smooth extension and app updates.
 - Done: layer Repeater (2 to 20 copies; per-copy offset, rotation, scale and opacity falloff around the anchor). Viewer and all exports share it; absent field is byte-identical; one undo step; five locales.
 - Open: repeater values are not keyable; no per-copy colour shift; not applied to masks of other layers beyond the shared layer body.
 
+
+### Animation P72 (2026-10-14, integration pending)
+
+- Done: repeater hue shift per copy (hue-rotate, -360..360 deg; 0 or absent is unchanged). Inspector field, 5 locales, test.
+- Open: not keyable; viewer and exports use the SVG hue-rotate filter, so raster exporters that ignore it show uncoloured copies (not verified per exporter).
+
 ### Animation P69 (2026-10-14, integration pending)
 - Done: stroke alignment for closed shapes (centre, inside, outside). Inside clips a double-width stroke to the shape, outside masks the shape out of it, so the visible band keeps the set width. Select in the stroke section. Viewer and every export share the behaviour; open paths stay centred. Absent field means centred and byte-identical output.
 - Open: "Expand stroke" outlines ignore the alignment (centre only), gradient strokes use the same bounding box, no alignment keys.

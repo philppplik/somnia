@@ -643,5 +643,6 @@
  "animation.repeater.y": "Deslocamento Y",
  "animation.repeater.rotation": "Rotação por cópia",
  "animation.repeater.scale": "Escala por cópia %",
- "animation.repeater.opacity": "Opacidade por cópia %"
+ "animation.repeater.opacity": "Opacidade por cópia %",
+ "animation.repeater.hue": "Mudança de matiz por cópia"
 }

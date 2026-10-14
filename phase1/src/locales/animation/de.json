@@ -643,5 +643,6 @@
  "animation.repeater.y": "Versatz Y",
  "animation.repeater.rotation": "Drehung pro Kopie",
  "animation.repeater.scale": "Skalierung pro Kopie %",
- "animation.repeater.opacity": "Deckkraft pro Kopie %"
+ "animation.repeater.opacity": "Deckkraft pro Kopie %",
+ "animation.repeater.hue": "Farbtonverschiebung pro Kopie"
 }

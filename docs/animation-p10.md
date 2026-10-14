@@ -362,3 +362,7 @@ A pointer drag on a key that is part of a multi-key selection builds `styleKeySh
 ## P71
 
 Layer `repeater` {copies,x,y,rotation,scale,opacity}; edit `layer.repeater` (null removes). Copies are drawn in layer space around the anchor, last copy first, original on top. Scale and opacity are percent factors per step (default 100, stored as given).
+
+## P72
+
+Repeater `hue` (deg per copy, -360..360): copy i gets `filter=hue-rotate(hue*i deg)`. Absent or 0 adds nothing.

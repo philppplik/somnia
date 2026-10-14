@@ -643,5 +643,6 @@
  "animation.repeater.y": "Décalage Y",
  "animation.repeater.rotation": "Rotation par copie",
  "animation.repeater.scale": "Échelle par copie %",
- "animation.repeater.opacity": "Opacité par copie %"
+ "animation.repeater.opacity": "Opacité par copie %",
+ "animation.repeater.hue": "Décalage de teinte par copie"
 }
