@@ -1,5 +1,5 @@
 import {useState} from 'react';
-import {BORDER_STYLES,PARA_FLAG_KEYS,paraLookProblem,type ParaPatch,type ParaState} from '../../lib/documents/protocol';
+import {MAX_DROP_CAP,BORDER_STYLES,PARA_FLAG_KEYS,paraLookProblem,type ParaPatch,type ParaState} from '../../lib/documents/protocol';
 import {setParagraphOptionsOpen,useParagraphOptionsOpen} from '../../lib/documents/paragraphOptions';
 import {setParagraphOptions} from '../../lib/documents/session';
 import {useDocuments} from '../../lib/documents/store';
@@ -9,13 +9,14 @@ const tool='grid h-7 cursor-pointer grid-flow-col items-center gap-1 rounded-sm 
 /** Right indent in points typed as "12" or "12.5"; null when it is not a number inside 0..1440. */
 export const parseIndentPt=(v:string):number|null=>{if(!/^\d{1,4}([.,]\d{1,2})?$/.test(v))return null;const n=Number(v.replace(',','.'));return n>=0&&n<=1440?n:null;};
 /** Only what the user changed: flags that differ from the shared state, and a right indent that differs. Null when nothing changed or the indent is not valid. */
-export interface ParaLook{shading:string;border:string;width:string;color:string}
-export const EMPTY_LOOK:ParaLook={shading:'',border:'',width:'1',color:'000000'};
-export const initialLook=(para:ParaState|null):ParaLook=>({...EMPTY_LOOK,shading:para?.shading&&para.shading!=='none'?para.shading:''});
+export interface ParaLook{dropCap:string;shading:string;border:string;width:string;color:string}
+export const EMPTY_LOOK:ParaLook={dropCap:'',shading:'',border:'',width:'1',color:'000000'};
+export const initialLook=(para:ParaState|null):ParaLook=>({...EMPTY_LOOK,dropCap:para?.dropCap==null?'':String(para.dropCap),shading:para?.shading&&para.shading!=='none'?para.shading:''});
 const hex=(v:string)=>v.trim().replace(/^#/,'').toUpperCase();
 export function buildParagraphPatch(para:ParaState|null,flags:Partial<Record<typeof PARA_FLAG_KEYS[number],boolean>>,indent:string,look?:ParaLook):ParaPatch|null{
  const p:ParaPatch={};
  if(look){
+  if(look.dropCap!==initialLook(para).dropCap&&look.dropCap!==''){const n=Number(look.dropCap);if(!/^\d{1,2}$/.test(look.dropCap)||n>MAX_DROP_CAP)return null;p.dropCap=n;}
   const s=hex(look.shading);
   if(s!==initialLook(para).shading){const v=s===''?'none':s;if(paraLookProblem('shading',v))return null;p.shading=v;}
   if(look.border==='none')p.border='none';
@@ -39,7 +40,7 @@ export function ParagraphForm({para,onClose}:{para:ParaState|null;onClose:()=>vo
  const {t}=useT();const [flags,setFlags]=useState<Partial<Record<typeof PARA_FLAG_KEYS[number],boolean>>>({});
  const [indent,setIndent]=useState(para?.indentRight==null?'':String(para.indentRight));
  const [look,setLook]=useState<ParaLook>(initialLook(para));const borderOn=look.border!==''&&look.border!=='none';
- const patch=buildParagraphPatch(para,flags,indent,look);const bad=indent!==''&&parseIndentPt(indent)===null;const badLook=look.border===''&&look.shading===''?false:buildParagraphPatch(para,{},'',look)===null&&(hex(look.shading)!==initialLook(para).shading||look.border!=='');
+ const patch=buildParagraphPatch(para,flags,indent,look);const bad=indent!==''&&parseIndentPt(indent)===null;const badLook=buildParagraphPatch(para,{},'',look)===null&&(hex(look.shading)!==initialLook(para).shading||look.border!==''||look.dropCap!==initialLook(para).dropCap);
  const apply=()=>{if(!patch)return;onClose();void setParagraphOptions(patch);};
  return <div role="dialog" aria-modal="true" aria-labelledby="documents-paraopt-title" className="fixed inset-0 z-20 grid place-items-center bg-black/30" onKeyDown={e=>{if(e.key==='Escape'){e.stopPropagation();onClose();}}}>
   <div className="grid w-96 max-w-full gap-3 rounded-[var(--r-popup,25px)] bg-surface p-5 shadow-xl" data-testid="documents-paraopt-dialog">
@@ -48,6 +49,9 @@ export function ParagraphForm({para,onClose}:{para:ParaState|null;onClose:()=>vo
     <NativeInput type="checkbox" checked={flags[k]??para?.[k]??false} onChange={e=>setFlags({...flags,[k]:e.currentTarget.checked})} data-testid={'documents-paraopt-'+k}/>{t('documents.para.opt.'+k)}</label>)}
    <label className="grid gap-1 text-xs text-ink-2">{t('documents.para.opt.indentRight')}
     <NativeInput className="w-24 rounded-lg border border-subtle bg-transparent px-2 py-1.5 text-ink tabular-nums" inputMode="decimal" value={indent} aria-invalid={bad} onChange={e=>setIndent(e.currentTarget.value.trim())} data-testid="documents-paraopt-indent"/></label>
+   <label className="grid gap-1 text-xs text-ink-2">{t('documents.para.dropCap')}
+    <NativeSelect className="w-28 rounded-lg border border-subtle bg-transparent px-2 py-1.5 text-ink" value={look.dropCap} onChange={e=>setLook({...look,dropCap:e.currentTarget.value})} data-testid="documents-para-dropcap">
+     {look.dropCap===''&&<option value="">{t('documents.para.border.keep')}</option>}<option value="0">{t('documents.para.dropCap.off')}</option>{[2,3,4,5].map(n=><option key={n} value={String(n)}>{t('documents.para.dropCap.lines',{n})}</option>)}</NativeSelect></label>
    <label className="grid gap-1 text-xs text-ink-2">{t('documents.para.shading')}
     <NativeInput className="w-28 rounded-lg border border-subtle bg-transparent px-2 py-1.5 text-ink uppercase" maxLength={7} value={look.shading} placeholder={t('documents.para.shading.none')} aria-invalid={look.shading!==''&&!/^#?[0-9a-fA-F]{6}$/.test(look.shading.trim())} onChange={e=>setLook({...look,shading:e.currentTarget.value})} data-testid="documents-para-shading"/></label>
    <div className="grid grid-cols-3 gap-2">

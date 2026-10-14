@@ -31,4 +31,13 @@ describe('paragraph options',()=>{
   checkParaPatch({shading:'none'});checkParaPatch({shading:'ABCDEF'});checkParaPatch({border:'none'});checkParaPatch({border:{style:'thick',width:2,color:'000000'}});
   for(const bad of [{shading:'red'},{shading:3},{border:'box'},{border:{style:'x',width:1,color:'000000'}},{border:{style:'single',width:0,color:'000000'}},{border:{style:'single',width:1,color:'000000',z:1}}])assert.throws(()=>checkParaPatch(bad));
  });
+ it('drop cap: only changes, whole lines 0..10',()=>{
+  const dc:any={dropCap:0};const l=initialLook(dc);assert.equal(l.dropCap,'0');assert.equal(buildParagraphPatch(dc,{},'',l),null);
+  assert.deepEqual(buildParagraphPatch(dc,{},'',{...l,dropCap:'3'}),{dropCap:3});
+  assert.deepEqual(buildParagraphPatch({dropCap:3} as any,{},'',{...initialLook({dropCap:3} as any),dropCap:'0'}),{dropCap:0});
+  assert.equal(initialLook(null).dropCap,'');assert.equal(buildParagraphPatch(para,{},'',EMPTY_LOOK),null);
+  for(const bad of ['11','x','-1','1.5','100'])assert.equal(buildParagraphPatch(dc,{},'',{...l,dropCap:bad}),null,bad);
+  checkParaPatch({dropCap:0});checkParaPatch({dropCap:10});
+  for(const bad of [{dropCap:11},{dropCap:-1},{dropCap:1.5},{dropCap:'3'},{dropCap:null}])assert.throws(()=>checkParaPatch(bad));
+ });
 });

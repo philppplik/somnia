@@ -99,7 +99,7 @@ export function registerDocumentsCommands(){
   add('documents.paragraph.options','Paragraph options',()=>{setParagraphOptionsOpen(true);},()=>ready()&&!!getDocumentsState().caret),
   add('documents.paragraph.set','Set paragraph flow options',async p=>{
    const o=(p as Record<string,unknown>|undefined)??{};const keys=Object.keys(o);
-   if(!keys.length||keys.some(k=>k!=='indentRight'&&k!=='shading'&&k!=='border'&&!(PARA_FLAG_KEYS as readonly string[]).includes(k)))throw expected('Use indentRight, shading, border, pageBreakBefore, keepNext, keepLines or widowControl.');
+   if(!keys.length||keys.some(k=>k!=='indentRight'&&k!=='shading'&&k!=='border'&&k!=='dropCap'&&!(PARA_FLAG_KEYS as readonly string[]).includes(k)))throw expected('Use indentRight, shading, border, dropCap, pageBreakBefore, keepNext, keepLines or widowControl.');
    try{checkParaPatch(o);}catch(err){throw expected(err instanceof Error?err.message:'Invalid options.');}
    await setParagraphOptions(o as import('./protocol').ParaPatch);
   },()=>ready()&&!!getDocumentsState().caret),

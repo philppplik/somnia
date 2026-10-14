@@ -48,7 +48,7 @@ new file mode 100644
 index 0000000..5b80b79
 --- /dev/null
 +++ b/crates/somnia-worker/src/lib.rs
-@@ -0,0 +1,4227 @@
+@@ -0,0 +1,4247 @@
 +//! Experimental headless adapter. No DOM, egui, filesystem or UI thread access.
 +use wasm_bindgen::prelude::*;
 +use std::sync::Arc;
@@ -789,6 +789,7 @@ index 0000000..5b80b79
 +        let mut align: Option<Align> = None;
 +        let mut shading: Option<Option<wordcraft_doc::props::Rgb>> = None;
 +        let mut border: Option<Option<wordcraft_doc::props::Border>> = None;
++        let mut drop_cap: Option<u8> = None;
 +        let (mut il, mut ifirst, mut sb, mut sa, mut ls): (Option<f32>, Option<f32>, Option<f32>, Option<f32>, Option<f32>) = (None, None, None, None, None);
 +        for (k, val) in obj {
 +            match k.as_str() {
@@ -802,6 +803,7 @@ index 0000000..5b80b79
 +                    })
 +                }
 +                "indentLeft" => il = Some(num(k, val, 0.0, 1440.0)?),
++                "dropCap" => drop_cap = Some(val.as_u64().filter(|n| *n <= 10).ok_or("paragraph field dropCap must be a whole number from 0 to 10")? as u8),
 +                "shading" => shading = Some(Self::parse_para_rgb(val)?),
 +                "border" => border = Some(Self::parse_para_border(val)?),
 +                "tabs" => tabs = Some(Self::parse_tabs(val)?),
@@ -830,6 +832,9 @@ index 0000000..5b80b79
 +            }
 +            if let Some(x) = il {
 +                p.props.indent_left = Some(x);
++            }
++            if let Some(n) = drop_cap {
++                p.props.drop_cap = if n == 0 { None } else { Some(n) };
 +            }
 +            if let Some(x) = shading {
 +                p.props.shading = x;
@@ -915,6 +920,7 @@ index 0000000..5b80b79
 +            "keepNext": same(&rows, |r| r.keep_next),
 +            "keepLines": same(&rows, |r| r.keep_lines),
 +            "widowControl": same(&rows, |r| r.widow_control),
++            "dropCap": same(&rows, |r| r.drop_cap),
 +            "shading": same(&rows, |r| r.shading).map(|c| c.map(|c| format!("{:02X}{:02X}{:02X}", c.0, c.1, c.2)).unwrap_or_else(|| "none".into())),
 +            "border": same(&rows, |r| r.borders.map_or(false, |b| b.top.is_some() || b.left.is_some() || b.bottom.is_some() || b.right.is_some())).map(|on| if on { "box" } else { "none" }),
 +            "spaceBefore": same(&rows, |r| r.space_before.to_bits()).map(f32::from_bits),
@@ -3538,6 +3544,20 @@ index 0000000..5b80b79
 +        }
 +        if s.toc_entries(9).unwrap().is_empty() {
 +            assert!(s.do_insert_toc(0, 3, "", true).is_err());
++        }
++    }
++    #[test]
++    fn paragraph_drop_cap_sets_clears_validates_and_paginates() {
++        let mut s = DocSession::from_bytes(FIXTURE).unwrap();
++        let st = |s: &DocSession| -> serde_json::Value { serde_json::from_str(&s.do_para_state(0, 0).unwrap()).unwrap() };
++        assert_eq!(st(&s)["dropCap"].as_u64(), Some(0));
++        s.do_para_format(0, 0, r#"{"dropCap":3}"#).unwrap();
++        assert_eq!(st(&s)["dropCap"].as_u64(), Some(3));
++        assert!(s.paginate() >= 1);
++        s.do_para_format(0, 0, r#"{"dropCap":0}"#).unwrap();
++        assert_eq!(st(&s)["dropCap"].as_u64(), Some(0));
++        for bad in [r#"{"dropCap":11}"#, r#"{"dropCap":-1}"#, r#"{"dropCap":1.5}"#, r#"{"dropCap":"3"}"#, r#"{"dropCap":null}"#] {
++            assert!(s.do_para_format(0, 0, bad).is_err(), "{bad}");
 +        }
 +    }
 +    #[test]
