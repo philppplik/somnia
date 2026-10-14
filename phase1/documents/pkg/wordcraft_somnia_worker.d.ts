@@ -61,6 +61,10 @@ export class DocSession {
     set_page_setup(setup_json: string): void;
     set_image_alt(block: number, alt: string): void;
     remove_image(block: number): void;
+    comments(): string;
+    add_comment(block: number, start: number, end: number, text: string, author: string, date: string): void;
+    resolve_comment(id: number, resolved: boolean): void;
+    delete_comment(id: number): void;
     insert(block: number, utf8_byte_offset: number, text: string): void;
     merge_with_previous(block: number): void;
     constructor(bytes: Uint8Array);

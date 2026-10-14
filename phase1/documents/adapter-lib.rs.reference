@@ -13,8 +13,10 @@ const CELL_BASE: usize = 1 << 20;
 const CELL_LIST_MAX: usize = 20_000;
 
 /// A structural snapshot: the body (blocks are shared, not copied), the header/footer stories and the last section.
-type Snap = (wordcraft_doc::Blocks, std::collections::BTreeMap<u32, wordcraft_doc::Part>, wordcraft_doc::SectionProps, std::collections::BTreeMap<String, Arc<Vec<u8>>>);
-const HF_MAX_CHARS: usize = 500;
+type Snap = (wordcraft_doc::Blocks, std::collections::BTreeMap<u32, wordcraft_doc::Part>, wordcraft_doc::SectionProps, std::collections::BTreeMap<String, Arc<Vec<u8>>>, std::collections::BTreeMap<u32, wordcraft_doc::Comment>);
+const COMMENT_MAX_CHARS: usize = 2000;
+const COMMENT_MAX_COUNT: usize = 500;
+const HF_MAX_CHARS: usize = 500;: usize = 500;
 /// Page sizes the page setup offers: name, portrait width and height in points.
 const PAGE_SIZES: [(&str, f32, f32); 4] = [("a4", 595.3, 841.9), ("letter", 612.0, 792.0), ("legal", 612.0, 1008.0), ("a5", 419.5, 595.3)];
 const IMG_MAX_BYTES: usize = 5 * 1024 * 1024;
@@ -1387,6 +1389,140 @@ impl DocSession {
         self.pages = DocLayout::default();
         Ok(())
     }
+    /// Every body paragraph id the host uses: top-level paragraphs, then table-cell paragraphs.
+    fn all_para_ids(&self) -> Vec<usize> {
+        let mut v: Vec<usize> = self.doc.body.iter().enumerate().filter(|(_, b)| matches!(&***b, Block::Para(_))).map(|(i, _)| i).collect();
+        v.extend((0..self.cell_paras().count()).map(|n| CELL_BASE + n));
+        v
+    }
+    /// Where each comment is anchored: (paragraph id, quoted text when start and end share the paragraph).
+    fn comment_anchors(&self) -> std::collections::HashMap<u32, (usize, Option<String>)> {
+        use wordcraft_doc::InlineObject;
+        let mut starts: std::collections::HashMap<u32, (usize, usize)> = Default::default();
+        let mut ends: std::collections::HashMap<u32, (usize, usize)> = Default::default();
+        for pid in self.all_para_ids() {
+            let Some(p) = self.para_at(pid) else { continue };
+            for (off, obj) in p.object_offsets().into_iter().zip(p.objects.iter()) {
+                match obj {
+                    InlineObject::CommentStart { id } => {
+                        starts.insert(*id, (pid, off));
+                    }
+                    InlineObject::CommentEnd { id } => {
+                        ends.insert(*id, (pid, off));
+                    }
+                    _ => {}
+                }
+            }
+        }
+        starts
+            .into_iter()
+            .map(|(id, (pid, so))| {
+                let quote = match (ends.get(&id), self.para_at(pid)) {
+                    (Some((ep, eo)), Some(p)) if *ep == pid && *eo >= so + OBJ.len_utf8() => {
+                        let q: String = p.text.get(so + OBJ.len_utf8()..*eo).unwrap_or("").chars().filter(|c| *c != OBJ).take(200).collect();
+                        Some(q)
+                    }
+                    _ => None,
+                };
+                (id, (pid, quote))
+            })
+            .collect()
+    }
+    fn comment_text(&self, c: &wordcraft_doc::Comment) -> String {
+        let t = self.doc.parts.get(&c.part).map(|p| p.blocks.iter().filter_map(|b| b.as_para()).map(|p| p.plain_text()).collect::<Vec<_>>().join("\n")).unwrap_or_default();
+        t.chars().take(COMMENT_MAX_CHARS).collect()
+    }
+    /// The comments (imported and new) with their quoted text and the paragraph they sit in.
+    fn do_comments(&self) -> String {
+        let anchors = self.comment_anchors();
+        let items: Vec<_> = self
+            .doc
+            .comments
+            .iter()
+            .take(2000)
+            .map(|(id, c)| {
+                let a = anchors.get(id);
+                serde_json::json!({"id": id, "parent": c.parent, "author": c.author, "initials": c.initials, "date": c.date, "resolved": c.resolved, "text": self.comment_text(c), "quote": a.and_then(|a| a.1.clone()), "block": a.map(|a| a.0)})
+            })
+            .collect();
+        serde_json::Value::Array(items).to_string()
+    }
+    /// Anchors a new comment on `start..end` (UTF-8 bytes) of one paragraph that has no inline objects.
+    fn do_add_comment(&mut self, block: usize, start: usize, end: usize, text: &str, author: &str, date: &str) -> Result<(), String> {
+        use wordcraft_doc::{InlineObject, PartKind};
+        let body = text.trim();
+        if body.is_empty() || body.chars().count() > COMMENT_MAX_CHARS || body.chars().any(|c| c.is_control() && c != '\n') {
+            return Err(format!("a comment is 1 to {COMMENT_MAX_CHARS} characters"));
+        }
+        if author.chars().count() > 60 || author.chars().any(|c| c.is_control()) {
+            return Err("the author name is limited to 60 characters".into());
+        }
+        if date.len() > 40 || date.chars().any(|c| !(c.is_ascii_digit() || "-:.TZ+".contains(c))) {
+            return Err("the comment date is not valid".into());
+        }
+        if self.doc.comments.len() >= COMMENT_MAX_COUNT {
+            return Err(format!("a document holds at most {COMMENT_MAX_COUNT} comments"));
+        }
+        let mut p = self.para_at(block).ok_or_else(|| format!("no paragraph {block}"))?.clone();
+        if p.text.contains(OBJ) || !p.objects.is_empty() {
+            return Err(format!("paragraph {block} already has an inline object (such as a comment) and cannot take another"));
+        }
+        if start >= end || end > p.text.len() || !p.text.is_char_boundary(start) || !p.text.is_char_boundary(end) {
+            return Err("the comment needs a non-empty selection inside one paragraph".into());
+        }
+        let id = self.doc.comments.keys().next_back().map(|k| k + 1).unwrap_or(0);
+        let props = p.props_at(end.saturating_sub(1)).clone();
+        p.insert_object(end, InlineObject::CommentEnd { id }, &props).map_err(|e| e.to_string())?;
+        p.insert_object(start, InlineObject::CommentStart { id }, &props).map_err(|e| e.to_string())?;
+        let blocks: wordcraft_doc::Blocks = body.split('\n').map(|l| wordcraft_doc::para_block(wordcraft_doc::Paragraph::with_text(l, CharProps::default()))).collect();
+        self.put_para(block, p)?;
+        let part = self.doc.add_part(PartKind::Comment, blocks);
+        let initials: String = author.split_whitespace().filter_map(|w| w.chars().next()).take(2).flat_map(|c| c.to_uppercase()).collect();
+        let a = if author.trim().is_empty() { "Somnia" } else { author.trim() };
+        self.doc.comments.insert(id, wordcraft_doc::Comment { author: a.to_string(), initials, date: date.to_string(), parent: None, resolved: false, part });
+        self.pages = DocLayout::default();
+        Ok(())
+    }
+    /// Marks a comment and its replies resolved or open again.
+    fn do_resolve_comment(&mut self, id: u32, resolved: bool) -> Result<(), String> {
+        if !self.doc.comments.contains_key(&id) {
+            return Err(format!("no comment {id}"));
+        }
+        for (cid, c) in self.doc.comments.iter_mut() {
+            if *cid == id || c.parent == Some(id) {
+                c.resolved = resolved;
+            }
+        }
+        Ok(())
+    }
+    /// Deletes a comment, its replies, their text and their anchors (the paragraph becomes editable again).
+    fn do_delete_comment(&mut self, id: u32) -> Result<(), String> {
+        use wordcraft_doc::InlineObject;
+        if !self.doc.comments.contains_key(&id) {
+            return Err(format!("no comment {id}"));
+        }
+        let gone: Vec<u32> = self.doc.comments.iter().filter(|(cid, c)| **cid == id || c.parent == Some(id)).map(|(cid, _)| *cid).collect();
+        for pid in self.all_para_ids() {
+            let Some(p) = self.para_at(pid) else { continue };
+            let hit = |o: &InlineObject| matches!(o, InlineObject::CommentStart { id } | InlineObject::CommentEnd { id } if gone.contains(id));
+            if !p.objects.iter().any(hit) {
+                continue;
+            }
+            let mut q = p.clone();
+            let offs: Vec<usize> = q.object_offsets().into_iter().zip(q.objects.iter()).filter(|(_, o)| hit(o)).map(|(off, _)| off).collect();
+            for off in offs.into_iter().rev() {
+                q.delete(off, off + OBJ.len_utf8()).map_err(|e| e.to_string())?;
+            }
+            self.put_para(pid, q)?;
+        }
+        for cid in gone {
+            if let Some(c) = self.doc.comments.remove(&cid) {
+                self.doc.parts.remove(&c.part);
+            }
+        }
+        self.pages = DocLayout::default();
+        Ok(())
+    }
     fn do_replace(&mut self, block: usize, start: usize, end: usize, text: &str) -> Result<(), String> {
         self.do_replace_many(block, &[(start, end, text.to_string())])
     }
@@ -1525,6 +1661,19 @@ impl DocSession {
     pub fn remove_image(&mut self, block: usize) -> Result<(), JsValue> {
         self.do_remove_image(block).map_err(|e| JsValue::from_str(&e))
     }
+    pub fn comments(&self) -> String {
+        self.do_comments()
+    }
+    /// Adds a comment on `start..end` of one paragraph. `date` is ISO 8601 from the host (the worker has no clock).
+    pub fn add_comment(&mut self, block: usize, start: usize, end: usize, text: &str, author: &str, date: &str) -> Result<(), JsValue> {
+        self.do_add_comment(block, start, end, text, author, date).map_err(|e| JsValue::from_str(&e))
+    }
+    pub fn resolve_comment(&mut self, id: u32, resolved: bool) -> Result<(), JsValue> {
+        self.do_resolve_comment(id, resolved).map_err(|e| JsValue::from_str(&e))
+    }
+    pub fn delete_comment(&mut self, id: u32) -> Result<(), JsValue> {
+        self.do_delete_comment(id).map_err(|e| JsValue::from_str(&e))
+    }
     pub fn split_block(&mut self, block: usize, utf8_off: usize) -> Result<(), JsValue> {
         self.do_split(block, utf8_off).map_err(|e| JsValue::from_str(&e))
     }
@@ -1535,15 +1684,16 @@ impl DocSession {
     pub fn snapshot(&mut self) -> u32 {
         let id = self.next_snap;
         self.next_snap += 1;
-        self.snaps.insert(id, (self.doc.body.clone(), self.doc.parts.clone(), self.doc.last_section.clone(), self.doc.media.clone()));
+        self.snaps.insert(id, (self.doc.body.clone(), self.doc.parts.clone(), self.doc.last_section.clone(), self.doc.media.clone(), self.doc.comments.clone()));
         id
     }
     pub fn restore(&mut self, id: u32) -> Result<(), JsValue> {
-        let (b, parts, last, media) = self.snaps.get(&id).ok_or_else(|| JsValue::from_str("unknown snapshot"))?.clone();
+        let (b, parts, last, media, comments) = self.snaps.get(&id).ok_or_else(|| JsValue::from_str("unknown snapshot"))?.clone();
         self.doc.body = b;
         self.doc.parts = parts;
         self.doc.last_section = last;
         self.doc.media = media;
+        self.doc.comments = comments;
         self.pages = DocLayout::default();
         Ok(())
     }
@@ -1982,6 +2132,48 @@ mod tests {
         assert_eq!(s.doc.body.len(), len);
         s.do_remove_image(1).unwrap();
         assert_eq!(s.doc.body.len(), len - 1);
+    }
+    #[test]
+    fn comments_add_resolve_delete_and_roundtrip() {
+        let mut s = DocSession::from_bytes(FIXTURE).unwrap();
+        let before = s.text();
+        let n0 = s.doc.comments.len();
+        let snap = s.snapshot();
+        s.do_add_comment(0, 0, 3, "Check this", "Ada Lovelace", "2026-10-14T12:00:00Z").unwrap();
+        let v: serde_json::Value = serde_json::from_str(&s.do_comments()).unwrap();
+        let mine = v.as_array().unwrap().iter().find(|c| c["text"] == "Check this").unwrap().clone();
+        assert_eq!(mine["quote"], before.chars().take(3).collect::<String>());
+        assert_eq!(mine["initials"], "AL");
+        assert_eq!(mine["block"], 0);
+        assert_eq!(s.doc.comments.len(), n0 + 1);
+        // The paragraph now holds anchors, so it is read-only and takes no second comment.
+        assert!(s.do_add_comment(0, 0, 2, "Again", "", "").is_err());
+        let id = mine["id"].as_u64().unwrap() as u32;
+        s.do_resolve_comment(id, true).unwrap();
+        assert!(s.doc.comments[&id].resolved);
+        let saved = wordcraft_docx::write(&s.doc).unwrap();
+        let re = DocSession::from_bytes(&saved).unwrap();
+        assert_eq!(re.doc.comments.len(), n0 + 1);
+        assert!(serde_json::from_str::<serde_json::Value>(&re.do_comments()).unwrap().as_array().unwrap().iter().any(|c| c["text"] == "Check this" && c["resolved"] == true));
+        s.do_delete_comment(id).unwrap();
+        assert_eq!(s.doc.comments.len(), n0);
+        assert_eq!(s.text(), before);
+        assert!(s.do_delete_comment(id).is_err());
+        // Undo restores the comment (snapshots carry comments).
+        let snap2 = s.snapshot();
+        s.do_add_comment(0, 0, 3, "Undo me", "", "").unwrap();
+        s.restore(snap2).unwrap();
+        assert_eq!(s.doc.comments.len(), n0);
+        s.restore(snap).unwrap();
+        // Refusals change nothing.
+        assert!(s.do_add_comment(0, 3, 3, "x", "", "").is_err());
+        assert!(s.do_add_comment(0, 0, 3, "   ", "", "").is_err());
+        assert!(s.do_add_comment(0, 0, 3, "bad\u{7}", "", "").is_err());
+        assert!(s.do_add_comment(0, 0, 3, &"x".repeat(COMMENT_MAX_CHARS + 1), "", "").is_err());
+        assert!(s.do_add_comment(0, 0, 3, "x", "", "not a date").is_err());
+        assert!(s.do_add_comment(0, 0, 99_999, "x", "", "").is_err());
+        assert!(s.do_add_comment(99_999, 0, 1, "x", "", "").is_err());
+        assert_eq!(s.doc.comments.len(), n0);
     }
     #[test]
     fn replace_range_roundtrips_and_is_atomic() {

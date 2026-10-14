@@ -71,6 +71,10 @@ export type DocumentsRequest=
  |{id:number;kind:'imageEdit';block:number;op:ImageOp}
  |{id:number;kind:'pageSetupState'}
  |{id:number;kind:'setPageSetup';setup:PageSetupPatch}
+ |{id:number;kind:'commentsState'}
+ |{id:number;kind:'addComment';block:number;start:number;end:number;text:string;author:string;date:string}
+ |{id:number;kind:'resolveComment';commentId:number;resolved:boolean}
+ |{id:number;kind:'deleteComment';commentId:number}
  |{id:number;kind:'headerFooterState'}
  |{id:number;kind:'setHeaderFooter';header?:string;footer?:string;pageNumber?:boolean}
  |{id:number;kind:'insertTable';block:number;rows:number;cols:number}
@@ -82,6 +86,7 @@ export type DocumentsResponse=
  |{id:number;ok:true;kind:'rendered';png:ArrayBuffer;renderMs:number}
  |{id:number;ok:true;kind:'edited';document:OpenedDocument}
  |{id:number;ok:true;kind:'blocks';blocks:import('./edit').DocBlock[]}
+ |{id:number;ok:true;kind:'comments';comments:CommentItem[]}
  |{id:number;ok:true;kind:'headerFooter';state:HeaderFooterState}
  |{id:number;ok:true;kind:'pageSetup';state:PageSetupState}
  |{id:number;ok:true;kind:'hit';hit:HitResult|null}
@@ -189,3 +194,15 @@ export function pageSetupProblem(p:unknown):string|null{
 export interface HeaderFooterState{header:{text:string;editable:boolean};footer:{text:string;pageNumber:boolean;editable:boolean}}
 /** A header/footer text the engine accepts: at most 500 characters and no control characters or line breaks. */
 export const validHfText=(v:unknown):v is string=>typeof v==='string'&&Array.from(v).length<=MAX_HF_CHARS&&!/[\u0000-\u001f\u007f-\u009f\ufffc\u2028\u2029]/u.test(v);
+
+/** A comment as the engine lists it: imported and new ones, with the quoted text when its anchor sits in one paragraph. */
+export interface CommentItem{id:number;parent:number|null;author:string;initials:string;date:string;resolved:boolean;text:string;quote:string|null;block:number|null}
+export const MAX_COMMENT_CHARS=2000,COMMENT_AUTHOR='Somnia user';
+/** Why a comment text is refused (empty, too long, control characters), or null when it is fine. Line breaks are allowed. */
+export function commentProblem(text:unknown):string|null{
+ if(typeof text!=='string')return 'The comment needs text.';
+ const t=text.trim();if(!t)return 'The comment needs text.';
+ if(Array.from(t).length>MAX_COMMENT_CHARS)return `A comment is limited to ${MAX_COMMENT_CHARS} characters.`;
+ if(/[\u0000-\u0009\u000b-\u001f\u007f]/.test(t))return 'The comment has characters that are not allowed.';
+ return null;
+}

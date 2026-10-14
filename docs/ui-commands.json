@@ -2482,6 +2482,50 @@
       "hasEnabled": true
     },
     {
+      "id": "documents.comments.add",
+      "title": "Comment on selection",
+      "category": "View",
+      "source": "documents",
+      "keywords": [
+        "document",
+        "docx"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "documents.comments.delete",
+      "title": "Delete a comment",
+      "category": "View",
+      "source": "documents",
+      "keywords": [
+        "document",
+        "docx"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "documents.comments.panel",
+      "title": "Show comments",
+      "category": "View",
+      "source": "documents",
+      "keywords": [
+        "document",
+        "docx"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "documents.comments.resolve",
+      "title": "Resolve or reopen a comment",
+      "category": "View",
+      "source": "documents",
+      "keywords": [
+        "document",
+        "docx"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "documents.commitParagraph",
       "title": "Apply paragraph text",
       "category": "Edit",

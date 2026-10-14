@@ -1,5 +1,5 @@
 import type {DocumentsRequest,DocumentsResponse,OpenedDocument} from './protocol';
-import {validHfText,checkFormatPatch,checkParaPatch,MAX_NEW_TABLE_COLS,MAX_NEW_TABLE_ROWS,TABLE_OPS,DOC_STYLES,MAX_DOCX_BYTES,MAX_FORMAT_BLOCKS,MAX_SCALE,MIN_SCALE,imageProblem,tableStyleProblem,pageSetupProblem,MIN_COL_PT,MAX_COL_PT,IMAGE_WIDTH_PERCENTS,MIN_IMAGE_PT,MAX_IMAGE_PT} from './protocol';
+import {commentProblem,validHfText,checkFormatPatch,checkParaPatch,MAX_NEW_TABLE_COLS,MAX_NEW_TABLE_ROWS,TABLE_OPS,DOC_STYLES,MAX_DOCX_BYTES,MAX_FORMAT_BLOCKS,MAX_SCALE,MIN_SCALE,imageProblem,tableStyleProblem,pageSetupProblem,MIN_COL_PT,MAX_COL_PT,IMAGE_WIDTH_PERCENTS,MIN_IMAGE_PT,MAX_IMAGE_PT} from './protocol';
 const IMAGE_ERRORS={empty:'The image is empty.',size:'An image is limited to 5 MB.',type:'Only PNG and JPEG images can be inserted.',dimensions:'An image is limited to 8000 pixels a side and 25 megapixels.'} as const;
 const posOk=(p:{block:number;off:number})=>Number.isInteger(p.block)&&p.block>=0&&Number.isInteger(p.off)&&p.off>=0;
 function checkParaRange(first:number,last:number){
@@ -12,7 +12,7 @@ function checkSpan(start:{block:number;off:number},end:{block:number;off:number}
  if(end.block-start.block>=MAX_FORMAT_BLOCKS)throw new Error('Selection spans too many paragraphs.');
 }
 /** The slice of the wasm DocSession the host uses. Lets tests run the real engine without a Worker. */
-export interface DocSessionLike{free():void;blocks():string;replace_ranges(block:number,hunksJson:string):void;format_range(sb:number,so:number,eb:number,eo:number,patchJson:string):void;format_state(sb:number,so:number,eb:number,eo:number):string;format_paragraphs(first:number,last:number,patchJson:string):void;paragraph_state(first:number,last:number):string;set_paragraph_style(first:number,last:number,style:string):void;set_list(first:number,last:number,kind:string):void;edit_table(block:number,op:string):void;insert_table(block:number,rows:number,cols:number):void;header_footer():string;set_header_footer(header?:string|null,footer?:string|null,pageNumber?:boolean|null):void;insert_image(block:number,bytes:Uint8Array,alt:string):void;resize_image(block:number,width:number):void;fit_image(block:number,percent:number):void;set_col_width(block:number,width:number):void;page_setup():string;set_page_setup(setupJson:string):void;style_table(block:number,scope:string,styleJson:string):void;set_image_alt(block:number,alt:string):void;remove_image(block:number):void;shift_list_level(first:number,last:number,delta:number):void;insert(block:number,utf8Offset:number,text:string):void;page_info():string;paginate():number;render_png(page:number,scale:number):Uint8Array;save():Uint8Array;text():string;split_block(block:number,off:number):void;merge_with_previous(block:number):void;snapshot():number;restore(snap:number):void;hit_test(page:number,x:number,y:number):string;caret_at(block:number,off:number):string;selection_rects(block:number,a:number,b:number):string}
+export interface DocSessionLike{free():void;blocks():string;replace_ranges(block:number,hunksJson:string):void;format_range(sb:number,so:number,eb:number,eo:number,patchJson:string):void;format_state(sb:number,so:number,eb:number,eo:number):string;format_paragraphs(first:number,last:number,patchJson:string):void;paragraph_state(first:number,last:number):string;set_paragraph_style(first:number,last:number,style:string):void;set_list(first:number,last:number,kind:string):void;edit_table(block:number,op:string):void;insert_table(block:number,rows:number,cols:number):void;header_footer():string;set_header_footer(header?:string|null,footer?:string|null,pageNumber?:boolean|null):void;insert_image(block:number,bytes:Uint8Array,alt:string):void;resize_image(block:number,width:number):void;fit_image(block:number,percent:number):void;set_col_width(block:number,width:number):void;page_setup():string;set_page_setup(setupJson:string):void;style_table(block:number,scope:string,styleJson:string):void;set_image_alt(block:number,alt:string):void;remove_image(block:number):void;shift_list_level(first:number,last:number,delta:number):void;insert(block:number,utf8Offset:number,text:string):void;page_info():string;paginate():number;render_png(page:number,scale:number):Uint8Array;save():Uint8Array;text():string;split_block(block:number,off:number):void;merge_with_previous(block:number):void;snapshot():number;restore(snap:number):void;hit_test(page:number,x:number,y:number):string;caret_at(block:number,off:number):string;selection_rects(block:number,a:number,b:number):string;comments():string;add_comment(block:number,start:number,end:number,text:string,author:string,date:string):void;resolve_comment(id:number,resolved:boolean):void;delete_comment(id:number):void}
 export interface DocSessionCtor{new(bytes:Uint8Array):DocSessionLike}
 const ab=(u:Uint8Array):ArrayBuffer=>u.byteOffset===0&&u.byteLength===u.buffer.byteLength?u.buffer as ArrayBuffer:u.slice().buffer as ArrayBuffer;
 /** Owns one open session. Every failure leaves the previous state usable and never keeps a freed pointer. */
@@ -113,6 +113,21 @@ export class DocumentsCore{
    if(req.kind==='setPageSetup'){
     const bad=pageSetupProblem(req.setup);if(bad)throw new Error(bad);
     const s=this.need();const [,editMs]=this.timed(()=>s.set_page_setup(JSON.stringify(req.setup)));const [pages,layoutMs]=this.timed(()=>s.paginate());
+    return{res:{id:req.id,ok:true,kind:'edited',document:this.describe(editMs,layoutMs,pages)},transfer:[]};
+   }
+   if(req.kind==='commentsState')return{res:{id:req.id,ok:true,kind:'comments',comments:JSON.parse(this.need().comments())},transfer:[]};
+   if(req.kind==='addComment'){
+    const int=(n:unknown)=>typeof n==='number'&&Number.isInteger(n)&&n>=0&&n<2**31;
+    if(!int(req.block)||!int(req.start)||!int(req.end)||req.start>=req.end)throw new Error('The comment needs a selection inside one paragraph.');
+    const bad=commentProblem(req.text);if(bad)throw new Error(bad);
+    if(typeof req.author!=='string'||req.author.length>60||/[\u0000-\u001f\u007f]/.test(req.author)||typeof req.date!=='string'||!/^[0-9TZ:.+-]{1,40}$/.test(req.date))throw new Error('The comment author or date is not valid.');
+    const s=this.need();const [,editMs]=this.timed(()=>s.add_comment(req.block,req.start,req.end,req.text.trim(),req.author,req.date));const [pages,layoutMs]=this.timed(()=>s.paginate());
+    return{res:{id:req.id,ok:true,kind:'edited',document:this.describe(editMs,layoutMs,pages)},transfer:[]};
+   }
+   if(req.kind==='resolveComment'||req.kind==='deleteComment'){
+    if(typeof req.commentId!=='number'||!Number.isInteger(req.commentId)||req.commentId<0||req.commentId>=2**31)throw new Error('The comment is not valid.');
+    if(req.kind==='resolveComment'&&typeof req.resolved!=='boolean')throw new Error('The comment change is not valid.');
+    const s=this.need();const [,editMs]=this.timed(()=>{if(req.kind==='resolveComment')s.resolve_comment(req.commentId,req.resolved);else s.delete_comment(req.commentId);});const [pages,layoutMs]=this.timed(()=>s.paginate());
     return{res:{id:req.id,ok:true,kind:'edited',document:this.describe(editMs,layoutMs,pages)},transfer:[]};
    }
    if(req.kind==='headerFooterState')return{res:{id:req.id,ok:true,kind:'headerFooter',state:JSON.parse(this.need().header_footer())},transfer:[]};

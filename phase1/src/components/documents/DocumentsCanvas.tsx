@@ -19,6 +19,7 @@ import {useT} from '../../lib/useT';
 import {getState,patchState} from '../../store/appStore';
 import {FormatBar} from './FormatBar';
 import {FindBar,StatusBar} from './FindBar';
+import {CommentsPanel} from './CommentsPanel';
 import {NativeButton,Textarea} from '../ui/native-controls';
 const bar='media-bar flex items-center gap-2 border-b border-subtle px-3 py-1.5 text-[12px]';
 const tool='grid h-7 cursor-pointer grid-flow-col items-center gap-1 rounded-sm border-0 bg-transparent px-2 text-[12px] text-ink-2 hover:bg-hover disabled:cursor-default disabled:opacity-50';
@@ -130,6 +131,7 @@ export function DocumentsCanvas(){
    <NativeButton className={tool} disabled={doc.status!=='ready'||doc.saving} onClick={()=>void executeCommand('documents.saveCopy')} data-testid="documents-save-copy">{t('documents.saveCopy')}</NativeButton></div>
   {doc.status==='ready'&&<FormatBar para={doc.para} format={doc.format} held={doc.pendingFormat&&doc.caret&&doc.pendingFormat.block===doc.caret.block&&doc.pendingFormat.off===doc.caret.head&&doc.caret.anchor===doc.caret.head&&doc.caret.anchorBlock===undefined?doc.pendingFormat.patch:null} enabled={!!doc.caret} inCell={!!doc.caret&&doc.caret.block>=CELL_BASE}/>}
   {doc.status==='ready'&&<FindBar/>}
+  {doc.status==='ready'&&<CommentsPanel/>}
   {doc.status==='loading'&&<div role="status" className="grid flex-1 place-items-center text-[12px] text-ink-3">{t('documents.loading')}</div>}
   {doc.status==='error'&&<div role="alert" className="grid flex-1 place-items-center"><div className="grid max-w-md justify-items-center gap-2 text-center"><p className="text-[13px] text-ink" data-testid="documents-error">{doc.error}</p><NativeButton className={tool+' border border-subtle'} onClick={()=>setAttempt(a=>a+1)}>{t('documents.retry')}</NativeButton></div></div>}
   {doc.notice&&<p role="status" className="border-b border-subtle px-3 py-1 text-xs text-ink-3" data-testid="documents-session-notice">{t('documents.session.'+doc.notice)}</p>}

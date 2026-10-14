@@ -8,6 +8,9 @@ import {tableStyleProblem,IMAGE_WIDTH_PERCENTS,MAX_IMAGE_BYTES,MIN_COL_PT,MAX_CO
 import {CELL_BASE} from './edit';
 import {goToBlock,scrollToPage} from './navigate';
 import {safeCopyName} from './saveCopy';
+import {commentsOpen,setCommentsOpen} from './comments';
+import {addComment,commentSelection,deleteComment,resolveComment} from './session';
+import {commentProblem} from './protocol';
 import {documentsExportReady,patchDocumentsExportUi,requestDocumentsSaveCopy} from './exportBridge';
 /**
  * Documents studio commands. Registered while the Documents canvas is mounted (registerDocumentsCommands),
@@ -28,6 +31,21 @@ export function registerDocumentsCommands(){
    if(n!==undefined&&(typeof n!=='string'||n.length>400))throw expected('Invalid "name".');
    patchDocumentsExportUi({copyName:typeof n==='string'&&n.trim()?safeCopyName(n,getDocumentsState().name):null});await requestDocumentsSaveCopy();
   },()=>documentsExportReady(),'Project',()=>'hero.export.none'),
+  add('documents.comments.panel','Show comments',()=>{setCommentsOpen(!commentsOpen());}),
+  add('documents.comments.add','Comment on selection',async p=>{
+   const text=(p as Record<string,unknown>|undefined)?.text;const bad=commentProblem(text);if(bad)throw expected(bad);
+   await addComment(text as string);setCommentsOpen(true);
+  },()=>ready()&&commentSelection()!==null),
+  add('documents.comments.resolve','Resolve or reopen a comment',async p=>{
+   const r=p as Record<string,unknown>|undefined;
+   const id=r?.id;if(typeof id!=='number'||!Number.isInteger(id)||id<0||id>=2**31)throw expected('Invalid "id".');
+   if(r?.resolved!==undefined&&typeof r.resolved!=='boolean')throw expected('Invalid "resolved".');
+   await resolveComment(id,r?.resolved!==false);
+  }),
+  add('documents.comments.delete','Delete a comment',async p=>{
+   const id=(p as Record<string,unknown>|undefined)?.id;if(typeof id!=='number'||!Number.isInteger(id)||id<0||id>=2**31)throw expected('Invalid "id".');
+   await deleteComment(id);
+  }),
   add('documents.zoomIn','Zoom in on the document',()=>stepZoom(1)),
   add('documents.zoomOut','Zoom out of the document',()=>stepZoom(-1)),
   add('documents.zoomReset','Reset document zoom to 100%',()=>patchDocuments({zoom:1})),

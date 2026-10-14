@@ -51,6 +51,10 @@ export class DocumentsEngine{
  async colWidth(block:number,width:number):Promise<OpenedDocument>{return(await this.call('edited',id=>({id,kind:'colWidth',block,width}))).document;}
  async insertImage(block:number,bytes:Uint8Array,alt:string):Promise<OpenedDocument>{const buf=bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.byteLength) as ArrayBuffer;return(await this.call('edited',id=>({id,kind:'insertImage',block,bytes:buf,alt}),[buf])).document;}
  async imageEdit(block:number,op:import('./protocol').ImageOp):Promise<OpenedDocument>{return(await this.call('edited',id=>({id,kind:'imageEdit',block,op}))).document;}
+ async commentsState():Promise<import('./protocol').CommentItem[]>{return(await this.call('comments',id=>({id,kind:'commentsState'}))).comments;}
+ async addComment(block:number,start:number,end:number,text:string,author:string,date:string):Promise<OpenedDocument>{return(await this.call('edited',id=>({id,kind:'addComment',block,start,end,text,author,date}))).document;}
+ async resolveComment(commentId:number,resolved:boolean):Promise<OpenedDocument>{return(await this.call('edited',id=>({id,kind:'resolveComment',commentId,resolved}))).document;}
+ async deleteComment(commentId:number):Promise<OpenedDocument>{return(await this.call('edited',id=>({id,kind:'deleteComment',commentId}))).document;}
  async pageSetupState():Promise<import('./protocol').PageSetupState>{return(await this.call('pageSetup',id=>({id,kind:'pageSetupState'}))).state;}
  async setPageSetup(setup:import('./protocol').PageSetupPatch):Promise<OpenedDocument>{return(await this.call('edited',id=>({id,kind:'setPageSetup',setup}))).document;}
  async headerFooterState():Promise<import('./protocol').HeaderFooterState>{return(await this.call('headerFooter',id=>({id,kind:'headerFooterState'}))).state;}

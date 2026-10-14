@@ -1,4 +1,4 @@
-import {validHfText,type HeaderFooterState,checkFormatPatch,checkParaPatch,MAX_HF_CHARS,MAX_NEW_TABLE_COLS,MAX_NEW_TABLE_ROWS,TABLE_OPS,type TableOp,DOC_STYLES,type DocStyleId,type ListKindId,type ParaPatch,type ImageOp,type PageSetupPatch,type PageSetupState,pageSetupProblem,type TableStyle,type TableStyleScope,tableStyleProblem,MIN_COL_PT,MAX_COL_PT,imageProblem,IMAGE_WIDTH_PERCENTS,MAX_IMAGES} from './protocol';
+import {commentProblem,COMMENT_AUTHOR,type CommentItem,validHfText,type HeaderFooterState,checkFormatPatch,checkParaPatch,MAX_HF_CHARS,MAX_NEW_TABLE_COLS,MAX_NEW_TABLE_ROWS,TABLE_OPS,type TableOp,DOC_STYLES,type DocStyleId,type ListKindId,type ParaPatch,type ImageOp,type PageSetupPatch,type PageSetupState,pageSetupProblem,type TableStyle,type TableStyleScope,tableStyleProblem,MIN_COL_PT,MAX_COL_PT,imageProblem,IMAGE_WIDTH_PERCENTS,MAX_IMAGES} from './protocol';
 import {captureDocumentSelection} from './selectionCapture';
 import {CELL_BASE,caretAfterEdit,diffEdit,inverseOf,UndoStack,type TextEdit,type UndoEntry} from './edit';
 import {findMatches,nextMatchIndex,textStats,validFindQuery,validReplaceText,MAX_FIND_HIGHLIGHTS,MAX_REPLACE_BLOCKS,type FindMatch} from './find';
@@ -635,3 +635,29 @@ export const setPageSetup=(patch:PageSetupPatch)=>run(async()=>{
  await structural(eng=>eng.setPageSetup(patch),spot,spot);
  if(!c)patchDocuments({caret:null});
 });
+
+/* ---- Comments ---- */
+/** The comments as the engine reports them (not an edit). */
+export async function readComments():Promise<CommentItem[]|null>{
+ const e=engine;if(!e||getDocumentsState().status!=='ready')return null;const check=ownerGuard();const list=await e.commentsState();check();return list;
+}
+/** The selected range a comment can anchor to: one editable paragraph, non-empty. Null when there is none. */
+export function commentSelection():{block:number;start:number;end:number}|null{
+ const c=getDocumentsState().caret;if(!c||(c.anchorBlock!==undefined&&c.anchorBlock!==c.block)||c.anchor===c.head)return null;
+ const t=blockText(c.block);if(t===null)return null;const start=Math.min(c.anchor,c.head),end=Math.max(c.anchor,c.head);return end<=u8(t)?{block:c.block,start,end}:null;
+}
+/** Comment on the selected text. One undo step. The commented paragraph becomes read-only (the engine keeps the anchors as inline objects) until the comment is deleted. */
+export const addComment=(text:string)=>run(async()=>{
+ const bad=commentProblem(text);if(bad)throw new Error(bad);
+ const sel=commentSelection();if(!sel)throw new Error('Select text inside one paragraph to comment on.');
+ const c=getDocumentsState().caret!;
+ await structural(eng=>eng.addComment(sel.block,sel.start,sel.end,text.trim(),COMMENT_AUTHOR,new Date().toISOString()),{block:c.block,off:c.head},eng=>nearEditable(eng,sel.block));
+});
+const commentStep=(op:(e:DocumentsEngine)=>Promise<import('./protocol').OpenedDocument>)=>run(async()=>{
+ const c=getDocumentsState().caret;const spot=c?{block:c.block,off:c.head}:await nearEditable(engine!,0);
+ await structural(op,spot,spot);if(!c)patchDocuments({caret:null});
+});
+/** Resolve or reopen a comment and its replies. One undo step. */
+export const resolveComment=(id:number,resolved:boolean)=>commentStep(eng=>eng.resolveComment(id,resolved));
+/** Delete a comment, its replies and their anchors. One undo step. */
+export const deleteComment=(id:number)=>commentStep(eng=>eng.deleteComment(id));
