@@ -5,7 +5,7 @@ import {patchDocuments} from './store';
 
 test('export is ready only with a live bridge, a ready document and no running save',()=>{
  assert.equal(documentsExportReady(),false,'no bridge registered');
- const off=registerDocumentsExport({save:async()=>{}});
+ const off=registerDocumentsExport({savePdf:async()=>undefined,save:async()=>{}});
  patchDocuments({status:'ready',saving:false});
  assert.equal(documentsExportReady(),true);
  patchDocuments({saving:true});
@@ -17,7 +17,7 @@ test('export is ready only with a live bridge, a ready document and no running s
 });
 test('risks route through the warning gate; Save anyway runs the one save path',async()=>{
  let saved=0;
- const off=registerDocumentsExport({save:async()=>{saved++;}});
+ const off=registerDocumentsExport({savePdf:async()=>undefined,save:async()=>{saved++;}});
  patchDocuments({status:'ready',saving:false,risks:['charts']});
  patchDocumentsExportUi({confirmOpen:false});
  await requestDocumentsSaveCopy();

@@ -7,7 +7,7 @@ import {findMedia} from '../media';
 import {tableStyleProblem,IMAGE_WIDTH_PERCENTS,MAX_IMAGE_BYTES,MIN_COL_PT,MAX_COL_PT} from './protocol';
 import {CELL_BASE} from './edit';
 import {goToBlock,scrollToPage} from './navigate';
-import {safeCopyName} from './saveCopy';
+import {safeCopyName,safePdfName} from './saveCopy';
 import {commentsOpen,setCommentsOpen} from './comments';
 import {setShortcutsOpen} from './shortcuts';
 import {setParagraphOptionsOpen} from './paragraphOptions';
@@ -17,7 +17,7 @@ import {checkParaPatch,PARA_FLAG_KEYS,propertiesProblem,tabsProblem} from './pro
 import {addComment,commentSelection,deleteComment,goToComment,readComments,replyComment,resolveComment} from './session';
 import {commentProblem,HIGHLIGHTS,linkProblem,type HighlightName} from './protocol';
 import {clearFormatting,hasTextSelection,setHighlight,setLink,toggleVertAlign} from './session';
-import {documentsExportReady,patchDocumentsExportUi,requestDocumentsSaveCopy} from './exportBridge';
+import {documentsExportReady,patchDocumentsExportUi,requestDocumentsExportPdf,requestDocumentsSaveCopy} from './exportBridge';
 /**
  * Documents studio commands. Registered while the Documents canvas is mounted (registerDocumentsCommands),
  * the same pattern as Sheets. Payload commands take `{page}` (0-based) or `{block}` (paragraph index).
@@ -36,6 +36,11 @@ export function registerDocumentsCommands(){
    const n=(p as Record<string,unknown>|undefined)?.name;
    if(n!==undefined&&(typeof n!=='string'||n.length>400))throw expected('Invalid "name".');
    patchDocumentsExportUi({copyName:typeof n==='string'&&n.trim()?safeCopyName(n,getDocumentsState().name):null});await requestDocumentsSaveCopy();
+  },()=>documentsExportReady(),'Project',()=>'hero.export.none'),
+  add('documents.export.pdf','Export as PDF',async p=>{
+   const n=(p as Record<string,unknown>|undefined)?.name;
+   if(n!==undefined&&(typeof n!=='string'||n.length>400))throw expected('Invalid "name".');
+   patchDocumentsExportUi({pdfName:typeof n==='string'&&n.trim()?safePdfName(n,getDocumentsState().name):null});await requestDocumentsExportPdf();
   },()=>documentsExportReady(),'Project',()=>'hero.export.none'),
   add('documents.comments.panel','Show comments',()=>{setCommentsOpen(!commentsOpen());}),
   add('documents.comments.add','Comment on selection',async p=>{

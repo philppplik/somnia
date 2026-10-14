@@ -81,6 +81,7 @@ export class DocSession {
     replace_ranges(block: number, hunks_json: string): void;
     restore(id: number): void;
     save(): Uint8Array;
+    export_pdf(): Uint8Array;
     /**
      * Highlight rectangles inside one top-level paragraph: `[[page,x,y,w,h],...]`.
      */

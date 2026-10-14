@@ -16,6 +16,8 @@ const CELL_LIST_MAX: usize = 20_000;
 type Snap = (wordcraft_doc::Blocks, std::collections::BTreeMap<u32, wordcraft_doc::Part>, wordcraft_doc::SectionProps, std::collections::BTreeMap<String, Arc<Vec<u8>>>, std::collections::BTreeMap<u32, wordcraft_doc::Comment>, wordcraft_doc::CoreProps);
 const COMMENT_MAX_CHARS: usize = 2000;
 const COMMENT_MAX_COUNT: usize = 500;
+const PDF_MAX_PAGES: usize = 2000;
+const PDF_MAX_BYTES: usize = 100 * 1024 * 1024;
 const LINK_MAX_CHARS: usize = 2048;
 const HF_MAX_CHARS: usize = 500;: usize = 500;
 /// Page sizes the page setup offers: name, portrait width and height in points.
@@ -1663,6 +1665,20 @@ impl DocSession {
         self.pages = DocLayout::default();
         Ok(())
     }
+    fn do_export_pdf(&self) -> Result<Vec<u8>, String> {
+        let n = self.pages.pages.len();
+        if n == 0 {
+            return Err("the document has no pages to export".into());
+        }
+        if n > PDF_MAX_PAGES {
+            return Err(format!("adapter PDF limit: {PDF_MAX_PAGES} pages"));
+        }
+        let bytes = wordcraft_pdf::export_layout(&self.doc, &self.pages, &wordcraft_pdf::PdfOptions::default()).map_err(|e| e.to_string())?;
+        if bytes.len() > PDF_MAX_BYTES {
+            return Err("adapter PDF limit: the file would be larger than 100 MB".into());
+        }
+        Ok(bytes)
+    }
     /// Document properties (title, subject, author, keywords, description, category) as JSON.
     fn do_properties(&self) -> String {
         let c = &self.doc.core;
@@ -2004,6 +2020,11 @@ impl DocSession {
     }
     pub fn save(&self) -> Result<Vec<u8>, JsValue> {
         wordcraft_docx::write(&self.doc).map_err(|e| JsValue::from_str(&e.to_string()))
+    }
+    /// The current layout as a PDF: selectable text with embedded font subsets, links, outline, pictures.
+    /// Call after `paginate`. Refuses documents past the adapter limits instead of writing a huge file.
+    pub fn export_pdf(&self) -> Result<Vec<u8>, JsValue> {
+        self.do_export_pdf().map_err(|e| JsValue::from_str(&e))
     }
 }
 
@@ -2408,6 +2429,25 @@ mod tests {
         assert_eq!(s.doc.body.len(), len);
         s.do_remove_image(1).unwrap();
         assert_eq!(s.doc.body.len(), len - 1);
+    }
+    #[test]
+    fn pdf_export_writes_a_pdf_with_selectable_text() {
+        let mut s = DocSession::from_bytes(FIXTURE).unwrap();
+        // No layout yet: refused, nothing is written.
+        assert!(s.do_export_pdf().is_err());
+        let pages = s.paginate();
+        assert!(pages >= 1);
+        s.do_set_properties(r#"{"title":"Somnia PDF test","creator":"Ada"}"#).unwrap();
+        let pdf = s.do_export_pdf().unwrap();
+        assert!(pdf.starts_with(b"%PDF-"));
+        assert!(pdf.windows(5).any(|w| w == b"%%EOF"));
+        assert!(pdf.len() > 1000);
+        // Deterministic enough to export twice from the same layout.
+        assert!(s.do_export_pdf().unwrap().starts_with(b"%PDF-"));
+        // Editing text keeps exporting.
+        s.do_set_properties(r#"{"title":""}"#).unwrap();
+        s.paginate();
+        assert!(s.do_export_pdf().is_ok());
     }
     #[test]
     fn tab_stops_set_report_roundtrip_and_refuse() {

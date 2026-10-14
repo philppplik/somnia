@@ -120,6 +120,7 @@ export type DocumentsRequest=
  |{id:number;kind:'setHeaderFooter';header?:string;footer?:string;pageNumber?:boolean}
  |{id:number;kind:'insertTable';block:number;rows:number;cols:number}
  |{id:number;kind:'save'}
+ |{id:number;kind:'exportPdf'}
  |{id:number;kind:'close'};
 export type DocumentsResponse=
  |{id:number;ok:true;kind:'ready';initMs:number}
@@ -141,6 +142,8 @@ export type DocumentsResponse=
  |{id:number;ok:true;kind:'closed'}
  |{id:number;ok:false;error:string};
 export const MAX_DOCX_BYTES=16*1024*1024;
+/** The largest PDF the app accepts from the engine (the engine enforces the same bound). */
+export const MAX_PDF_BYTES=100*1024*1024;
 export const MIN_SCALE=0.1,MAX_SCALE=2;
 
 /** Row and column operations around the caret's table cell. */

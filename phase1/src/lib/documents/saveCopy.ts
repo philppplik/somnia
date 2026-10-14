@@ -14,6 +14,19 @@ export function safeCopyName(typed:string,original:string):string{
  const out=n+'.docx';
  return out.toLowerCase()===baseName(original).toLowerCase()?n+' (copy).docx':out;
 }
+export const pdfName=(name:string)=>name.replace(/^.*[\\/]/,'').replace(/\.docx$/i,'')+'.pdf';
+/** The file name for a PDF export: a typed name made safe (no folders, no control or reserved characters, at most 120 characters, always ending in .pdf). Empty falls back to the document name. */
+export function safePdfName(typed:string,original:string):string{
+ let n=baseName(typed).replace(/[\u0000-\u001f\u007f-\u009f<>:"|?*\\/]/g,'').replace(/\.pdf$/i,'').trim().replace(/^\.+|\.+$/g,'').trim();
+ n=Array.from(n).slice(0,MAX_COPY_NAME-4).join('').trim();
+ return n?n+'.pdf':pdfName(original);
+}
+/** Writes the PDF the engine lays out and downloads it. The opened document is untouched. */
+export async function savePdf(engine:DocumentsEngine,name:string,fileName?:string|null){
+ const bytes=await engine.exportPdf();
+ const url=URL.createObjectURL(new Blob([bytes as BlobPart],{type:'application/pdf'}));
+ const a=document.createElement('a');a.href=url;a.download=fileName?safePdfName(fileName,name):pdfName(name);a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
 export async function saveCopy(engine:DocumentsEngine,name:string,fileName?:string|null){
  const bytes=await engine.save();
  const url=URL.createObjectURL(new Blob([bytes as BlobPart],{type:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'}));

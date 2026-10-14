@@ -2589,6 +2589,17 @@
       "hasEnabled": true
     },
     {
+      "id": "documents.export.pdf",
+      "title": "Export as PDF",
+      "category": "Project",
+      "source": "documents",
+      "keywords": [
+        "document",
+        "docx"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "documents.find.next",
       "title": "Find next",
       "category": "View",

@@ -9,6 +9,8 @@ import {getDocumentsState} from './store';
 export interface DocumentsExportBridge{
  /** Produce and download the DOCX copy. Must reject (not swallow) engine failures. */
  save():Promise<void>;
+ /** Produce and download the PDF. Must reject (not swallow) engine failures. */
+ savePdf():Promise<void>;
 }
 let bridge:DocumentsExportBridge|null=null;
 export function registerDocumentsExport(next:DocumentsExportBridge):()=>void{
@@ -17,8 +19,8 @@ export function registerDocumentsExport(next:DocumentsExportBridge):()=>void{
 export const getDocumentsExport=()=>bridge;
 
 /** Export popup and loss-warning dialog visibility. Session-only. */
-export interface DocumentsExportUi{exportOpen:boolean;confirmOpen:boolean;/** A typed copy name for the next save; null means the default name. */copyName:string|null}
-let ui:DocumentsExportUi={exportOpen:false,confirmOpen:false,copyName:null};
+export interface DocumentsExportUi{exportOpen:boolean;confirmOpen:boolean;/** A typed copy name for the next save; null means the default name. */copyName:string|null;/** A typed PDF file name for the next PDF export; null means the default name. */pdfName:string|null;/** The format chosen in the export popup. */format:'docx'|'pdf'}
+let ui:DocumentsExportUi={exportOpen:false,confirmOpen:false,copyName:null,pdfName:null,format:'docx'};
 const listeners=new Set<()=>void>();
 export const getDocumentsExportUi=()=>ui;
 export function patchDocumentsExportUi(patch:Partial<DocumentsExportUi>){ui={...ui,...patch};listeners.forEach(fn=>fn());}
@@ -43,4 +45,11 @@ export async function requestDocumentsSaveCopy():Promise<void>{
 export async function confirmDocumentsSaveCopy():Promise<void>{
  patchDocumentsExportUi({confirmOpen:false});
  await bridge?.save();
+}
+
+/** Exports the document as PDF (selectable text, embedded fonts). A rendering of the current layout, so the DOCX loss warning does not apply. */
+export async function requestDocumentsExportPdf():Promise<void>{
+ const s=getDocumentsState();
+ if(s.status!=='ready'||s.saving||!bridge)return;
+ await bridge.savePdf();
 }
