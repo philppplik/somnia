@@ -3,6 +3,7 @@ import {MemoryController,canDownload,canEnable,downloadPercent,formatBytes,vecto
 import type {MemoryKind,MemoryTransport} from '../../lib/vibespace/memory';
 import {ms} from '../../lib/vibespace/i18nMemorySkills';
 import './memory-skills.css';
+import {NativeButton,NativeInput,NativeSelect,Textarea} from '../ui/native-controls';
 /** Memory of ONE Vibe Space. Vector search is opt-in and every download or storage step is a visible choice. */
 export function MemoryPanel({transport,spaceId,locale='en'}:{transport:MemoryTransport;spaceId:string;locale?:string}){
  const c=useMemo(()=>new MemoryController(transport,spaceId),[transport,spaceId]);
@@ -21,14 +22,14 @@ export function MemoryPanel({transport,spaceId,locale='en'}:{transport:MemoryTra
   <form className="vsx-card" onSubmit={e=>{e.preventDefault();void c.add(kind,title,content).then(()=>{setTitle('');setContent('');});}}>
    <h3>{t('vsm.add')}</h3>
    <div className="vsx-row">
-    <label>{t('vsm.add.kind')} <select aria-label={t('vsm.add.kind')} value={kind} onChange={e=>setKind(e.target.value as MemoryKind)}>{(['fact','preference','note'] as const).map(k=><option key={k} value={k}>{t(`vsm.kind.${k}` as 'vsm.kind.fact')}</option>)}</select></label>
-    <input aria-label={t('vsm.add.title')} placeholder={t('vsm.add.title')} value={title} maxLength={200} onChange={e=>setTitle(e.target.value)}/>
+    <label>{t('vsm.add.kind')} <NativeSelect aria-label={t('vsm.add.kind')} value={kind} onChange={e=>setKind(e.target.value as MemoryKind)}>{(['fact','preference','note'] as const).map(k=><option key={k} value={k}>{t(`vsm.kind.${k}` as 'vsm.kind.fact')}</option>)}</NativeSelect></label>
+    <NativeInput aria-label={t('vsm.add.title')} placeholder={t('vsm.add.title')} value={title} maxLength={200} onChange={e=>setTitle(e.target.value)}/>
    </div>
-   <textarea aria-label={t('vsm.add.content')} placeholder={t('vsm.add.content')} value={content} onChange={e=>setContent(e.target.value)}/>
-   <div className="vsx-row"><button type="submit" disabled={s.busy||!content.trim()}>{t('vsm.add')}</button></div>
+   <Textarea aria-label={t('vsm.add.content')} placeholder={t('vsm.add.content')} value={content} onChange={e=>setContent(e.target.value)}/>
+   <div className="vsx-row"><NativeButton type="submit" disabled={s.busy||!content.trim()}>{t('vsm.add')}</NativeButton></div>
   </form>
   <form className="vsx-card" role="search" onSubmit={e=>{e.preventDefault();void c.search(q);}}>
-   <div className="vsx-row"><input aria-label={t('vsm.search')} placeholder={t('vsm.search')} value={q} onChange={e=>setQ(e.target.value)}/><button type="submit" disabled={s.busy}>{t('vsm.search.go')}</button></div>
+   <div className="vsx-row"><NativeInput aria-label={t('vsm.search')} placeholder={t('vsm.search')} value={q} onChange={e=>setQ(e.target.value)}/><NativeButton type="submit" disabled={s.busy}>{t('vsm.search.go')}</NativeButton></div>
    {s.search&&<><p className="vsx-muted" role="status">{t('vsm.search.mode',{mode:modeLabel})}</p>
     {s.search.hits.length===0?<p className="vsx-muted">{t('vsm.search.none')}</p>:<ul aria-label="search results">{s.search.hits.map(h=><li key={h.item.id}>{h.item.title?<b>{h.item.title}: </b>:null}{h.item.content}</li>)}</ul>}</>}
   </form>
@@ -38,16 +39,16 @@ export function MemoryPanel({transport,spaceId,locale='en'}:{transport:MemoryTra
    {phase&&phase!=='unavailable'&&phase!=='on'&&phase!=='indexing'&&<p className="vsx-muted">{t('vsm.vector.off')}</p>}
    {s.vector&&s.model&&phase!=='unavailable'&&<>
     {(phase==='needs-model')&&<><p className="vsx-muted">{t('vsm.vector.explain',{size})}</p>
-     {!confirmDl?<div className="vsx-row"><button type="button" disabled={s.busy||!canDownload(s.vector,s.model)} onClick={()=>setConfirmDl(true)}>{t('vsm.vector.download',{size})}</button></div>
-      :<div className="vsx-row"><button type="button" disabled={s.busy} onClick={()=>{setConfirmDl(false);void c.downloadModel();}}>{t('vsm.vector.downloadConfirm',{size})}</button><button type="button" onClick={()=>setConfirmDl(false)}>{t('vsm.vector.cancel')}</button></div>}</>}
+     {!confirmDl?<div className="vsx-row"><NativeButton type="button" disabled={s.busy||!canDownload(s.vector,s.model)} onClick={()=>setConfirmDl(true)}>{t('vsm.vector.download',{size})}</NativeButton></div>
+      :<div className="vsx-row"><NativeButton type="button" disabled={s.busy} onClick={()=>{setConfirmDl(false);void c.downloadModel();}}>{t('vsm.vector.downloadConfirm',{size})}</NativeButton><NativeButton type="button" onClick={()=>setConfirmDl(false)}>{t('vsm.vector.cancel')}</NativeButton></div>}</>}
     {phase==='downloading'&&<><div className="vsx-bar" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={downloadPercent(s.model)}><span style={{width:`${downloadPercent(s.model)}%`}}/></div>
      <p className="vsx-muted" role="status">{t('vsm.vector.downloading',{percent:downloadPercent(s.model),done:formatBytes(s.model.downloadedBytes),size})}</p>
-     <div className="vsx-row"><button type="button" onClick={()=>void c.cancelDownload()}>{t('vsm.vector.cancel')}</button></div></>}
+     <div className="vsx-row"><NativeButton type="button" onClick={()=>void c.cancelDownload()}>{t('vsm.vector.cancel')}</NativeButton></div></>}
     {phase==='ready-to-enable'&&<><p className="vsx-muted">{t('vsm.vector.ready')}</p>
-     <label className="vsx-row"><input type="checkbox" checked={ack} onChange={e=>setAck(e.target.checked)}/><span>{t('vsm.vector.ack')}</span></label>
-     <div className="vsx-row"><button type="button" disabled={s.busy||!canEnable(s.vector,s.model,ack)} onClick={()=>{void c.enableVector(ack);setAck(false);}}>{t('vsm.vector.enable')}</button></div></>}
+     <label className="vsx-row"><NativeInput type="checkbox" checked={ack} onChange={e=>setAck(e.target.checked)}/><span>{t('vsm.vector.ack')}</span></label>
+     <div className="vsx-row"><NativeButton type="button" disabled={s.busy||!canEnable(s.vector,s.model,ack)} onClick={()=>{void c.enableVector(ack);setAck(false);}}>{t('vsm.vector.enable')}</NativeButton></div></>}
     {(phase==='indexing'||phase==='on')&&<><p className="vsx-muted" role="status">{phase==='indexing'?t('vsm.vector.indexing',{indexed:s.vector.indexed,total:s.vector.total}):t('vsm.vector.on',{indexed:s.vector.indexed,total:s.vector.total})}</p>
-     <div className="vsx-row"><button type="button" disabled={s.busy} onClick={()=>void c.disableVector()}>{t('vsm.vector.disable')}</button></div></>}
+     <div className="vsx-row"><NativeButton type="button" disabled={s.busy} onClick={()=>void c.disableVector()}>{t('vsm.vector.disable')}</NativeButton></div></>}
    </>}
   </div>
   <div className="vsx-card">
@@ -56,10 +57,10 @@ export function MemoryPanel({transport,spaceId,locale='en'}:{transport:MemoryTra
      <div className="vsx-row"><span className="vsx-badge" data-tone={p.needsReview?'warn':'ok'}>{t(`vsm.kind.${i.kind}` as 'vsm.kind.fact')}</span>{i.title&&<b>{i.title}</b>}</div>
      <p style={{margin:0}} data-copyable>{i.content}</p>
      <p className="vsx-muted">{t('vsm.source')}: {p.source} · {p.needsReview?t('vsm.review.waiting'):p.consent}</p>
-     <div className="vsx-row">{p.needsReview&&<><button type="button" disabled={s.busy} onClick={()=>void c.review(i.id,true)}>{t('vsm.review.approve')}</button><button type="button" disabled={s.busy} onClick={()=>void c.review(i.id,false)}>{t('vsm.review.reject')}</button></>}
-      <button type="button" disabled={s.busy} onClick={()=>void c.remove(i.id)}>{t('vsm.delete')}</button></div></li>;})}</ul>}
-   {s.items.length>0&&(!confirmClear?<div className="vsx-row"><button type="button" onClick={()=>setConfirmClear(true)}>{t('vsm.clearAll')}</button></div>
-    :<div className="vsx-row"><span>{t('vsm.clearAll.confirm',{count:s.items.length})}</span><button type="button" onClick={()=>{setConfirmClear(false);void c.clearAll();}}>{t('vsm.delete')}</button><button type="button" onClick={()=>setConfirmClear(false)}>{t('vsm.vector.cancel')}</button></div>)}
+     <div className="vsx-row">{p.needsReview&&<><NativeButton type="button" disabled={s.busy} onClick={()=>void c.review(i.id,true)}>{t('vsm.review.approve')}</NativeButton><NativeButton type="button" disabled={s.busy} onClick={()=>void c.review(i.id,false)}>{t('vsm.review.reject')}</NativeButton></>}
+      <NativeButton type="button" disabled={s.busy} onClick={()=>void c.remove(i.id)}>{t('vsm.delete')}</NativeButton></div></li>;})}</ul>}
+   {s.items.length>0&&(!confirmClear?<div className="vsx-row"><NativeButton type="button" onClick={()=>setConfirmClear(true)}>{t('vsm.clearAll')}</NativeButton></div>
+    :<div className="vsx-row"><span>{t('vsm.clearAll.confirm',{count:s.items.length})}</span><NativeButton type="button" onClick={()=>{setConfirmClear(false);void c.clearAll();}}>{t('vsm.delete')}</NativeButton><NativeButton type="button" onClick={()=>setConfirmClear(false)}>{t('vsm.vector.cancel')}</NativeButton></div>)}
   </div>
  </section>;
 }

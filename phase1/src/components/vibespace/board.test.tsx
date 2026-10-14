@@ -56,7 +56,7 @@ test('schedulesError surfaces an honest note instead of fake data',()=>{
 test('pending locks stop/steer and draft start; board never enables what the controller would reject',()=>{
  const snapshot=fixtureSnapshot();
  const html=renderToStaticMarkup(<BoardView space={fixtureSpace} snapshot={snapshot} schedules={null} pending={true} capabilities={ALL} mode="fixture" onAction={onAction} onOpenRun={onOpen} nowMs={NOW}/>);
- const stops=html.match(/<button type="button" disabled="">(?:(?!<\/button>).)*?Stop<\/button>/gs)??[];
+ const stops=html.match(/<button[^>]*type="button"[^>]*disabled=""[^>]*>(?:(?!<\/button>).)*?Stop<\/button>/gs)??[];
  assert.equal(stops.length,2,'both active runs show a disabled stop while pending');
  const noSteer=renderToStaticMarkup(<BoardView space={fixtureSpace} snapshot={snapshot} schedules={null} pending={false} capabilities={ALL.filter(c=>c!=='steer')} mode="fixture" onAction={onAction} onOpenRun={onOpen} nowMs={NOW}/>);
  assert.match(noSteer,/disabled=""[^>]*>Steer</);

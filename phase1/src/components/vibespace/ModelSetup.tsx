@@ -1,6 +1,7 @@
 import {useCallback,useEffect,useState} from 'react';
 import {useT} from '../../lib/useT';
 import {probeLocal,TRIAL_PULL_COMMAND,type LocalProviderId,type Readiness} from '../../lib/vibespace/modelReadiness';
+import {NativeButton} from '../ui/native-controls';
 type Probe=(p:LocalProviderId)=>Promise<Readiness>;
 type Entry={status:'checking'}|{status:'error'}|{status:'done';readiness:Readiness};
 const PROVIDERS:LocalProviderId[]=['ollama','lmstudio'];
@@ -22,7 +23,7 @@ export function ModelSetup({probe=p=>probeLocal(p),initial}:{probe?:Probe;initia
     {r&&r.state!=='ready'&&<p className="vs-muted">{t(r.hintKey)}</p>}
     {r&&r.state!=='ready'&&p==='ollama'&&<pre data-copyable>{TRIAL_PULL_COMMAND}</pre>}
     {r&&r.state!=='server-down'&&<p className="vs-muted">{t('vs.model.installed',{count:r.installed.length})}</p>}
-    <button type="button" disabled={e.status==='checking'} onClick={()=>check(p)}>{t('vs.model.recheck')}</button>
+    <NativeButton type="button" disabled={e.status==='checking'} onClick={()=>check(p)}>{t('vs.model.recheck')}</NativeButton>
    </div>;})}
   <p className="vs-muted">{t('vs.model.localOnly')}</p>
  </section>;

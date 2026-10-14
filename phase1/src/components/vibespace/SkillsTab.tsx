@@ -4,6 +4,7 @@ import type {BundleDiff,IndexEntry,SkillScope,SkillSummary,SkillVersion,SkillsTr
 import {parseSkillsIndex} from '../../lib/vibespace/skills';
 import {ms} from '../../lib/vibespace/i18nMemorySkills';
 import './memory-skills.css';
+import {NativeButton,NativeSelect,Textarea} from '../ui/native-controls';
 /** Skills of one Vibe Space + user-wide. Installing never runs anything; allowed-tools is only shown as requested. */
 export function SkillsTab({transport,spaceId,locale='en'}:{transport:SkillsTransport;spaceId:string;locale?:string}){
  const t=(k:Parameters<typeof ms>[1],p?:Record<string,string|number>)=>ms(locale,k,p);
@@ -20,9 +21,9 @@ export function SkillsTab({transport,spaceId,locale='en'}:{transport:SkillsTrans
   {error&&<div className="vsx-card vsx-error" role="alert"><strong>{t('vsk.error')}</strong><p className="vsx-muted" data-copyable>{error}</p></div>}
   <form className="vsx-card" onSubmit={e=>{e.preventDefault();void guard(async()=>{await transport.install({scope,spaceId:scope==='space'?spaceId:null,source:'local',sourceRef:null,skillMd:md,files:[]});setMd('');await refresh();});}}>
    <h3>{t('vsk.install')}</h3>
-   <textarea aria-label={t('vsk.install.skillmd')} placeholder={t('vsk.install.skillmd')} value={md} onChange={e=>setMd(e.target.value)}/>
-   <div className="vsx-row"><label>{t('vsk.install.scope')} <select aria-label={t('vsk.install.scope')} value={scope} onChange={e=>setScope(e.target.value as SkillScope)}><option value="space">{t('vsk.scope.space')}</option><option value="user">{t('vsk.scope.user')}</option></select></label>
-    <button type="submit" disabled={!md.trim()}>{t('vsk.install.go')}</button></div>
+   <Textarea aria-label={t('vsk.install.skillmd')} placeholder={t('vsk.install.skillmd')} value={md} onChange={e=>setMd(e.target.value)}/>
+   <div className="vsx-row"><label>{t('vsk.install.scope')} <NativeSelect aria-label={t('vsk.install.scope')} value={scope} onChange={e=>setScope(e.target.value as SkillScope)}><option value="space">{t('vsk.scope.space')}</option><option value="user">{t('vsk.scope.user')}</option></NativeSelect></label>
+    <NativeButton type="submit" disabled={!md.trim()}>{t('vsk.install.go')}</NativeButton></div>
    <p className="vsx-muted">{t('vsk.install.note')}</p>
   </form>
   <div className="vsx-card">
@@ -31,9 +32,9 @@ export function SkillsTab({transport,spaceId,locale='en'}:{transport:SkillsTrans
     <p style={{margin:0}}>{s.description}</p>
     {s.trust==='unreviewed'&&<p className="vsx-muted" role="note">{t('vsk.banner.unreviewed')}</p>}
     <p className="vsx-muted">{t('vsk.scripts.off')}</p>
-    <div className="vsx-row"><button type="button" onClick={()=>void view(s)}>{open===s.id?t('vsk.hide'):t('vsk.view')}</button>
-     {s.updatePending&&<button type="button" onClick={()=>void startReview(s)}>{t('vsk.update.review')}</button>}
-     <button type="button" onClick={()=>void guard(async()=>{await transport.uninstall(s.id);await refresh();})}>{t('vsk.uninstall')}</button></div>
+    <div className="vsx-row"><NativeButton type="button" onClick={()=>void view(s)}>{open===s.id?t('vsk.hide'):t('vsk.view')}</NativeButton>
+     {s.updatePending&&<NativeButton type="button" onClick={()=>void startReview(s)}>{t('vsk.update.review')}</NativeButton>}
+     <NativeButton type="button" onClick={()=>void guard(async()=>{await transport.uninstall(s.id);await refresh();})}>{t('vsk.uninstall')}</NativeButton></div>
     {s.updatePending&&<p className="vsx-muted" role="status">{t('vsk.update')}</p>}
     {open===s.id&&detail&&<div>
      {detail.requestedTools.length>0&&<p className="vsx-muted">{t('vsk.requested',{tools:detail.requestedTools.join(', ')})}</p>}
@@ -47,13 +48,13 @@ export function SkillsTab({transport,spaceId,locale='en'}:{transport:SkillsTrans
      {review.diff.changedFiles.length>0&&<><h3>{t('vsk.update.files')}</h3>{review.diff.changedFiles.map(f=><details key={f.path} open><summary>{f.path} ({f.status})</summary><pre>{f.lines.map((l,i)=><span key={i} className={`vsx-diff-${l.kind}`}>{l.kind==='add'?'+ ':l.kind==='del'?'- ':'  '}{l.text}</span>)}</pre></details>)}</>}
      {review.diff.newFindings.length>0&&<><h3>{t('vsk.update.newFindings')}</h3><ul>{review.diff.newFindings.map((f,i)=><li key={i}>{f.severity}: {f.rule} · {f.file}:{f.line}</li>)}</ul></>}
      {review.diff.toolsAdded.length>0&&<p className="vsx-muted">{t('vsk.update.newTools')}: {review.diff.toolsAdded.join(', ')}</p>}
-     <div className="vsx-row"><button type="button" onClick={()=>void guard(async()=>{await transport.acceptUpdate(s.id);setReview(null);await refresh();})}>{t('vsk.update.accept')}</button>
-      <button type="button" onClick={()=>void guard(async()=>{await transport.rejectUpdate(s.id);setReview(null);await refresh();})}>{t('vsk.update.reject')}</button></div>
+     <div className="vsx-row"><NativeButton type="button" onClick={()=>void guard(async()=>{await transport.acceptUpdate(s.id);setReview(null);await refresh();})}>{t('vsk.update.accept')}</NativeButton>
+      <NativeButton type="button" onClick={()=>void guard(async()=>{await transport.rejectUpdate(s.id);setReview(null);await refresh();})}>{t('vsk.update.reject')}</NativeButton></div>
     </div>}
    </li>;})}</ul>}
   </div>
   <div className="vsx-card"><h3>{t('vsk.index')}</h3>
-   {transport.fetchIndex?<><button type="button" onClick={()=>void guard(async()=>setIndex(parseSkillsIndex(await transport.fetchIndex!(true))))}>{t('vsk.index.consent')}</button>
+   {transport.fetchIndex?<><NativeButton type="button" onClick={()=>void guard(async()=>setIndex(parseSkillsIndex(await transport.fetchIndex!(true))))}>{t('vsk.index.consent')}</NativeButton>
     {index&&<ul>{index.map(e=><li key={e.repo+e.name}><b>{e.name}</b> <span className="vsx-muted">{e.repo}</span> {e.description}</li>)}</ul>}</>
     :<p className="vsx-muted">{t('vsk.index.unavailable')}</p>}
   </div>

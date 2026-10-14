@@ -7,6 +7,7 @@ import type {Schedule} from '../../lib/vibespace/schedule';
 import type {Space,Studio,VibeIntent,VibeSnapshot} from '../../lib/vibespace/types';
 import {StudioScheduleButton} from './StudioScheduleButton';
 import {StudioMetrics} from './StudioDetail';
+import {NativeButton,NativeInput} from '../ui/native-controls';
 
 /**
  * A8 multi-agent board: read/steer UX over several parallel isolated runs of one
@@ -48,7 +49,7 @@ export function BoardView({space,snapshot,schedules,schedulesError=false,pending
       <h3>{session.goal.split('\n')[0].slice(0,100)}</h3>
       <p>{session.model.provider} / {session.model.model}</p>
       <p className="vs-muted">No run yet. Starting creates an isolated copy and checkpoint before work begins.</p>
-      <button type="button" className="vs-primary" disabled={pending||!session.canStart||!capabilities.includes('start')} onClick={()=>void onAction({type:'start',studioId:session.studioId})}>Start Studio</button>
+      <NativeButton type="button" className="vs-primary" disabled={pending||!session.canStart||!capabilities.includes('start')} onClick={()=>void onAction({type:'start',studioId:session.studioId})}>Start Studio</NativeButton>
       {mode==='native'&&<StudioScheduleButton studioId={session.studioId} disabled={pending}/>}
      </section>)}
      {columnRuns.map(studio=><RunCard key={studio.runId} studio={studio} pending={pending} capabilities={capabilities} onAction={onAction} onOpenRun={onOpenRun}/>)}
@@ -103,15 +104,15 @@ function RunCard({studio,pending,capabilities,onAction,onOpenRun}:{studio:Studio
  const review=studio.review;
  const active=['running','claimed','paused'].includes(studio.executionState);
  return <article className="vs-run-card" data-state={state}>
-  <button type="button" className="vs-run-open" onClick={()=>onOpenRun(studio.runId)}>
+  <NativeButton type="button" className="vs-run-open" onClick={()=>onOpenRun(studio.runId)}>
    <strong>{studio.goal.split('\n')[0].slice(0,100)}</strong>
    <StudioMetrics studio={studio}/>
    <span className="vs-last-step">{studio.failure?.message||studio.pendingConsents[0]?.reason||studio.lastStep||'No step recorded yet.'}</span>
    {review&&<span className="vs-run-review">{t('vs.board.files',{count:review.files.length})}{review.conflicts.length>0&&<> · <span className="vs-conflict">{t('vs.board.conflict',{count:review.conflicts.length})}</span></>}</span>}
-  </button>
+  </NativeButton>
   {active&&<div className="vs-run-controls">
-   <button type="button" disabled={!controls.stop||!capabilities.includes('stop')} onClick={()=>void onAction({type:'stop',runId:studio.runId})}><Square size={13}/>{t('vs.board.stop')}</button>
-   <button type="button" aria-pressed={steerOpen} disabled={!controls.steer||!capabilities.includes('steer')} onClick={()=>setSteerOpen(open=>!open)}>{t('vs.board.steer.toggle')}</button>
+   <NativeButton type="button" disabled={!controls.stop||!capabilities.includes('stop')} onClick={()=>void onAction({type:'stop',runId:studio.runId})}><Square size={13}/>{t('vs.board.stop')}</NativeButton>
+   <NativeButton type="button" aria-pressed={steerOpen} disabled={!controls.steer||!capabilities.includes('steer')} onClick={()=>setSteerOpen(open=>!open)}>{t('vs.board.steer.toggle')}</NativeButton>
   </div>}
   {active&&steerOpen&&<form className="vs-steer-inline" aria-label={`${t('vs.board.steer.toggle')}: ${studio.goal.split('\n')[0].slice(0,60)}`} onSubmit={event=>{
    event.preventDefault();
@@ -119,8 +120,8 @@ function RunCard({studio,pending,capabilities,onAction,onOpenRun}:{studio:Studio
    if(!text||!controls.steer||!capabilities.includes('steer'))return;
    void onAction({type:'steer',runId:studio.runId,message:text}).then(ok=>{if(ok){setMessage('');setSteerOpen(false);}});
   }}>
-   <label>{t('vs.board.steer.toggle')}<input value={message} maxLength={8192} disabled={!controls.steer} placeholder={t('vs.board.steer.placeholder')} onChange={event=>setMessage(event.target.value)}/></label>
-   <div className="vs-actions"><button type="submit" disabled={!controls.steer||!message.trim()}><Send size={13}/>{t('vs.board.steer.send')}</button></div>
+   <label>{t('vs.board.steer.toggle')}<NativeInput value={message} maxLength={8192} disabled={!controls.steer} placeholder={t('vs.board.steer.placeholder')} onChange={event=>setMessage(event.target.value)}/></label>
+   <div className="vs-actions"><NativeButton type="submit" disabled={!controls.steer||!message.trim()}><Send size={13}/>{t('vs.board.steer.send')}</NativeButton></div>
   </form>}
  </article>;
 }

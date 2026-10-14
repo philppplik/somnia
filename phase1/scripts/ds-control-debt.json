@@ -981,80 +981,80 @@
       "rawTextarea": 0
     },
     "src/components/vibespace/AcpPanel.tsx": {
-      "rawButton": 10,
-      "rawInput": 3,
+      "rawButton": 0,
+      "rawInput": 0,
       "rawSelect": 0,
-      "rawTextarea": 1
+      "rawTextarea": 0
     },
     "src/components/vibespace/BoardView.tsx": {
-      "rawButton": 5,
-      "rawInput": 1,
+      "rawButton": 0,
+      "rawInput": 0,
       "rawSelect": 0,
       "rawTextarea": 0
     },
     "src/components/vibespace/CreateForms.tsx": {
-      "rawButton": 5,
-      "rawInput": 1,
-      "rawSelect": 1,
-      "rawTextarea": 1
+      "rawButton": 0,
+      "rawInput": 0,
+      "rawSelect": 0,
+      "rawTextarea": 0
     },
     "src/components/vibespace/MemoryPanel.tsx": {
-      "rawButton": 14,
-      "rawInput": 3,
-      "rawSelect": 1,
-      "rawTextarea": 1
+      "rawButton": 0,
+      "rawInput": 0,
+      "rawSelect": 0,
+      "rawTextarea": 0
     },
     "src/components/vibespace/ModelSetup.tsx": {
-      "rawButton": 1,
+      "rawButton": 0,
       "rawInput": 0,
       "rawSelect": 0,
       "rawTextarea": 0
     },
     "src/components/vibespace/ReviewExtensions.tsx": {
-      "rawButton": 8,
-      "rawInput": 2,
+      "rawButton": 0,
+      "rawInput": 0,
       "rawSelect": 0,
-      "rawTextarea": 1
+      "rawTextarea": 0
     },
     "src/components/vibespace/ScheduleDialog.tsx": {
-      "rawButton": 3,
-      "rawInput": 5,
-      "rawSelect": 2,
+      "rawButton": 0,
+      "rawInput": 0,
+      "rawSelect": 0,
       "rawTextarea": 0
     },
     "src/components/vibespace/shell-fixture-entry.tsx": {
-      "rawButton": 2,
+      "rawButton": 0,
       "rawInput": 0,
       "rawSelect": 0,
       "rawTextarea": 0
     },
     "src/components/vibespace/SkillsTab.tsx": {
-      "rawButton": 7,
+      "rawButton": 0,
       "rawInput": 0,
-      "rawSelect": 1,
-      "rawTextarea": 1
+      "rawSelect": 0,
+      "rawTextarea": 0
     },
     "src/components/vibespace/StudioDetail.tsx": {
-      "rawButton": 12,
-      "rawInput": 1,
+      "rawButton": 0,
+      "rawInput": 0,
       "rawSelect": 0,
-      "rawTextarea": 1
+      "rawTextarea": 0
     },
     "src/components/vibespace/StudioScheduleButton.tsx": {
-      "rawButton": 1,
+      "rawButton": 0,
       "rawInput": 0,
       "rawSelect": 0,
       "rawTextarea": 0
     },
     "src/components/vibespace/VibeSpaceHome.tsx": {
-      "rawButton": 6,
+      "rawButton": 0,
       "rawInput": 0,
       "rawSelect": 0,
       "rawTextarea": 0
     },
     "src/components/vibespace/VibeSpacePanels.tsx": {
-      "rawButton": 6,
-      "rawInput": 1,
+      "rawButton": 0,
+      "rawInput": 0,
       "rawSelect": 0,
       "rawTextarea": 0
     },

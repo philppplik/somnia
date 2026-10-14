@@ -344,10 +344,10 @@
       "inlineStyle": 2
     },
     "src/components/vibespace": {
-      "rawButton": 80,
-      "rawInput": 17,
-      "rawSelect": 5,
-      "rawTextarea": 6,
+      "rawButton": 0,
+      "rawInput": 0,
+      "rawSelect": 0,
+      "rawTextarea": 0,
       "hexTsx": 0,
       "hexCss": 96,
       "pixelText": 0,

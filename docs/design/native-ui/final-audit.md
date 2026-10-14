@@ -26,7 +26,7 @@ native-platform acceptance claim.
 | Area | button | input | select | textarea | total |
 | --- | --- | --- | --- | --- | --- |
 | src/components (flat files) | 158 | 118 | 42 | 8 | 326 |
-| components/vibespace | 80 | 17 | 5 | 6 | 108 |
+| components/vibespace | 0 | 0 | 0 | 0 | 0 |
 | components/extensions | 69 | 13 | 0 | 2 | 84 |
 | components/pdfedit | 50 | 24 | 4 | 6 | 84 |
 | components/agent | 30 | 13 | 2 | 3 | 48 |
@@ -80,9 +80,12 @@ selects). Its migration is deliberately gated, see below.
   (5 buttons, 1 input, 3 buttons) until integration lands.
 - P14 (in flight): contributor guardrails - per-file raw control lint ratchet,
   migration guide, this audit. This branch carries P14 stacked beneath P15.
-- P15 (this slice): Extensions area migrated (84 controls to native primitives),
+- P15: Extensions area migrated (84 controls to native primitives),
   ratchet budgets shrunk to zero for all 10 files, adoption tests and gallery
   proof added.
+- P16 (this slice): Vibespace area migrated (108 controls to native primitives),
+  ratchet budgets shrunk to zero for all 13 files, adoption tests and gallery
+  proof added. This branch carries P14 and P15 stacked beneath P16.
 
 ## Remaining bespoke areas
 
@@ -91,9 +94,12 @@ selects). Its migration is deliberately gated, see below.
   fixtures exist in [settings-migration-plan.md](settings-migration-plan.md) and
   [settings-slice-plan.md](settings-slice-plan.md); no consumer changes until the
   artifacts arrive.
-- **Vibespace (108 controls, 96 hex)**: largest remaining studio surface;
-  bespoke button CSS was scoped in P11 to stop painting shared Buttons. Needs a
-  dedicated slice series with gallery evidence.
+- **Vibespace**: migrated in P16. All 108 controls render through native control
+  primitives with their bespoke geometry and behavior intact; file allowances are
+  at zero, so reintroduction fails the ratchet. A pre-existing P11 specificity
+  side effect (run cards render pill-like because
+  `.vs-root button:not([data-slot="button"])` outranks `.vs-root .vs-run-open`)
+  is unchanged by the migration and awaits a separate CSS fix.
 - **Extensions**: migrated in P15. All 84 controls render through native control
   primitives with their bespoke geometry and behavior intact; file allowances are
   at zero, so reintroduction fails the ratchet. Consent flows already used shared
