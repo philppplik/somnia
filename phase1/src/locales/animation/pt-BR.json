@@ -602,5 +602,7 @@
  "animation.stroke.opacity": "Opacidade do traço (%)",
  "animation.stroke.dashLen": "Comprimento do traço (0 = contínuo)",
  "animation.stroke.dashGap": "Espaço do traço",
- "animation.stroke.miter": "Limite de esquadria"
+ "animation.stroke.miter": "Limite de esquadria",
+ "cmd.animation.precomp.volume.animate": "Alternar quadros-chave de volume da camada de composição",
+ "cmd.animation.precomp.volume.keyRemove": "Remover quadro-chave de volume da camada de composição"
 }

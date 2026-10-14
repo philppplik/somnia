@@ -40,16 +40,16 @@ export function playbackPlan(startTick:number,area:{in:number;out:number},fps:Ra
 }
 /** Gain (0..2) samples for composition ticks [from,to], at most 30 per second and 1024 in total. A constant volume returns one value. */
 export function gainCurve(l:Layer,from:number,to:number):{constant:number}|{curve:Float32Array}{
- const vol=l.audio!.volume,clamp=(v:number)=>Math.min(MAX_AUDIO_VOLUME,Math.max(0,v))/100;
- if(!vol.keys.length||to<=from)return {constant:clamp(vol.value as number)};
+ const vol=l.audio!.volume,gains=l.audio!.gains??[],clamp=(v:number)=>Math.min(MAX_AUDIO_VOLUME,Math.max(0,v))/100;
+ if((!vol.keys.length&&!gains.length)||to<=from)return {constant:clamp(vol.value as number)};
  const n=Math.max(2,Math.min(1024,Math.ceil((to-from)/TICKS_PER_SECOND*30)+1)),curve=new Float32Array(n);
- for(let i=0;i<n;i++)curve[i]=clamp(evaluate(vol,Math.round(from+(to-from)*i/(n-1))) as number);
+ for(let i=0;i<n;i++){const tk=Math.round(from+(to-from)*i/(n-1));let v=evaluate(vol,tk) as number;for(const g of gains)v*=(evaluate(g,tk) as number)/100;curve[i]=clamp(v);}
  return {curve};
 }
 /** Signature of everything that changes what is heard. A change while playing pauses playback instead of drifting out of sync. */
 export function audioSignature(doc:AnimationDocument|null,comp0:Composition|undefined):string{
  if(!doc||!comp0)return '';const comp=withPrecompAudio(comp0,doc.compositions);const ls=comp.layers.filter(isAudioLayer);if(!ls.length)return '';
- return JSON.stringify([comp.layers.some(l=>l.solo),ls.map(l=>[l.id,l.visible,l.solo,l.inT,l.outT,l.offset,l.audio!.assetId,l.audio!.trimIn,l.audio!.volume,l.audio!.rate??1])]);
+ return JSON.stringify([comp.layers.some(l=>l.solo),ls.map(l=>[l.id,l.visible,l.solo,l.inT,l.outT,l.offset,l.audio!.assetId,l.audio!.trimIn,l.audio!.volume,l.audio!.rate??1,l.audio!.gains??0])]);
 }
 /** Waveform columns (0..1) for file range [from,from+length) ticks, at most `columns` (hard cap 400) so the drawing stays bounded whatever the zoom. */
 export function visiblePeaks(peaks:readonly number[],durationTicks:number,from:number,length:number,columns:number):number[]{
@@ -79,7 +79,7 @@ function nestedAudio(comp:Composition,comps:readonly Composition[],depth:number)
   const child=comps.find(c=>c.id===pl.source.compId);if(!child||child.id===comp.id)continue;
   const clips=[...audibleLayers(child),...nestedAudio(child,comps,depth+1)];
   const plStart=pl.inT+pl.offset,plEnd=pl.outT+pl.offset,cStart=child.start,cEnd=child.start+child.duration,dur=Math.max(1,child.duration);
-  const speed=(pl.source.speed??100)/100,gain=(pl.source.volume??100)/100,t0=pl.source.timeOffset??0;
+  const speed=(pl.source.speed??100)/100,keyed=!!pl.gain?.keys.length,gain=keyed?1:(pl.source.volume??100)/100,t0=pl.source.timeOffset??0;
   /** Parent tick of child tick `x` in pass `k`. */
   const at=(x:number,k:number)=>plStart+Math.round((x-cStart-t0+k*dur)/speed);
   for(let k=0;k<(pl.source.loop?64:1);k++){
@@ -91,7 +91,7 @@ function nestedAudio(comp:Composition,comps:readonly Composition[],depth:number)
     if(out.length>=MAX_PRECOMP_AUDIO_LAYERS)return out;
     const rate=(cl.audio.rate??1)*speed,vol=cl.audio.volume;
     out.push({...cl,id:`${pl.id}:${k}:${cl.id}`,inT:ns,outT:ne,offset:0,solo:solo,visible:true,
-     audio:{...cl.audio,trimIn:cl.audio.trimIn+Math.round((ns-ps)*rate),...(rate!==1?{rate}:{}),
+     audio:{...cl.audio,...(keyed||cl.audio.gains?{gains:[...(cl.audio.gains??[]).map(g=>({...g,keys:g.keys.map(x=>({...x,t:at(x.t,k)}))})),...(keyed?[pl.gain!]:[])]}:{}),trimIn:cl.audio.trimIn+Math.round((ns-ps)*rate),...(rate!==1?{rate}:{}),
       volume:gain===1?{...vol,keys:vol.keys.map(x=>({...x,t:at(x.t,k)}))}:{...vol,value:(vol.value as number)*gain,keys:vol.keys.map(x=>({...x,t:at(x.t,k),v:(x.v as number)*gain}))}}});
    }
   }

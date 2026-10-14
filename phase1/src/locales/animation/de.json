@@ -602,5 +602,7 @@
  "animation.stroke.opacity": "Konturdeckkraft (%)",
  "animation.stroke.dashLen": "Strichlänge (0 = durchgezogen)",
  "animation.stroke.dashGap": "Strichlücke",
- "animation.stroke.miter": "Gehrungsgrenze"
+ "animation.stroke.miter": "Gehrungsgrenze",
+ "cmd.animation.precomp.volume.animate": "Lautstärke-Keyframes der Kompositionsebene umschalten",
+ "cmd.animation.precomp.volume.keyRemove": "Lautstärke-Keyframe der Kompositionsebene entfernen"
 }

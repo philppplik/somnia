@@ -71,8 +71,13 @@ export function animationCommandSpecs():CommandSpec<unknown,unknown>[]{
    const id=newId('layer');run({type:'precomp.make',layers:ids,name:p.name,id});clearLayerSet();animationSession().setView({selectedLayer:id,selectedKey:null});},
    object({layers:{type:'array',items:layerRef,minItems:1,maxItems:200},name:{type:'string',minLength:1,maxLength:200}},[]),()=>open()&&layerSetIds(animationSession().getState().view.selectedLayer).length>0,'Edit'),
   spec('animation.precomp.time','Set comp layer speed, volume, loop and start',(p:{layer?:string;speed?:number;volume?:number;loop?:boolean;offset?:number})=>{const layer=p.layer??selected();const l=findLayer(comp(),layer);if(l?.kind!=='comp')fail('Select a comp layer.');
+   if(p.volume!==undefined&&l?.gain?.keys.length){if(p.speed!==undefined||p.loop!==undefined||p.offset!==undefined)fail('Set the animated volume on its own.');return run({type:'layer.gain.set',layer,value:p.volume,t:playhead()});}
    const source={...(p.speed!==undefined?{speed:p.speed}:{}),...(p.volume!==undefined?{volume:p.volume}:{}),...(p.loop!==undefined?{loop:p.loop}:{}),...(p.offset!==undefined?{timeOffset:Math.max(0,secondsToTicks(p.offset))}:{})};if(!Object.keys(source).length)fail('Nothing to change.');return run({type:'layer.update',layer,source});},
    object({layer:layerRef,speed:{type:'number',minimum:10,maximum:1000},volume:{type:'number',minimum:0,maximum:200},loop:{type:'boolean'},offset:{type:'number',minimum:0,maximum:3600}},[]),()=>open()&&findLayer(comp(),animationSession().getState().view.selectedLayer??'')?.kind==='comp','Edit'),
+  spec('animation.precomp.volume.animate','Toggle comp layer volume keyframes',(p:{layer?:string;on:boolean})=>{const layer=p.layer??selected();if(findLayer(comp(),layer)?.kind!=='comp')fail('Select a comp layer.');return run({type:'layer.gain.animate',layer,on:p.on,t:playhead()});},
+   object({layer:layerRef,on:{type:'boolean'}},['on']),()=>open()&&findLayer(comp(),animationSession().getState().view.selectedLayer??'')?.kind==='comp','Edit'),
+  spec('animation.precomp.volume.keyRemove','Remove comp layer volume keyframe',(p:{layer?:string;t?:number})=>{const layer=p.layer??selected();if(findLayer(comp(),layer)?.kind!=='comp')fail('Select a comp layer.');return run({type:'layer.gain.key.remove',layer,t:p.t??playhead()});},
+   object({layer:layerRef,t:tick},[]),()=>open()&&!!findLayer(comp(),animationSession().getState().view.selectedLayer??'')?.gain?.keys.length,'Edit'),
   spec('animation.blur.layers','Toggle motion blur on layers',(p:{layers?:string[];enabled?:boolean})=>{const ids=p.layers??layerSetIds(animationSession().getState().view.selectedLayer);if(!ids.length)fail('Select a layer first.');
    const enabled=p.enabled??!ids.every(id=>findLayer(comp(),id)?.motionBlur);return run({type:'layer.motionBlur',layers:ids,enabled});},
    object({layers:{type:'array',items:layerRef,minItems:1,maxItems:200},enabled:{type:'boolean'}},[]),()=>open()&&layerSetIds(animationSession().getState().view.selectedLayer).length>0,'Edit'),
@@ -254,7 +259,7 @@ export function animationCommandSpecs():CommandSpec<unknown,unknown>[]{
  ] as CommandSpec<unknown,unknown>[];
 }
 export const ANIMATION_COMMANDS=animationCommandSpecs().map(s=>s.id);
-const DESTRUCTIVE=new Set(['animation.layer.remove','animation.keys.delete','animation.keys.cut','animation.audio.volume.keyRemove']);
+const DESTRUCTIVE=new Set(['animation.layer.remove','animation.keys.delete','animation.keys.cut','animation.audio.volume.keyRemove','animation.precomp.volume.keyRemove']);
 export function registerAnimationCommands(){
  const offs=animationCommandSpecs().map(s=>{const off=registerCommandSpec(s);const c=commandRegistry.get(s.id);if(c){c.studio='animation';c.argsSchema=s.params;c.risk=DESTRUCTIVE.has(s.id)?'destructive':'content';}return off;});
  return()=>offs.forEach(off=>off());

@@ -602,5 +602,7 @@
  "animation.stroke.opacity": "Stroke opacity (%)",
  "animation.stroke.dashLen": "Dash length (0 = solid)",
  "animation.stroke.dashGap": "Dash gap",
- "animation.stroke.miter": "Miter limit"
+ "animation.stroke.miter": "Miter limit",
+ "cmd.animation.precomp.volume.animate": "Toggle comp layer volume keyframes",
+ "cmd.animation.precomp.volume.keyRemove": "Remove comp layer volume keyframe"
 }

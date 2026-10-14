@@ -305,3 +305,8 @@ Added:
 ## P55 - Stroke miter limit
 
 - `stroke.miter` (1..20) becomes `stroke-miterlimit` in `strokeAttributes` only for miter or absent joins; round and bevel joins ignore it. Spiky shapes (stars, sharp paths) show the effect: below the limit corners are cut to a bevel.
+
+## P56 - Keyframed comp layer volume
+
+- `Layer.gain` (comp layers only, scalar 0..200 with at least one key) replaces `source.volume` when present. Edits: `layer.gain.set` (keys when animated, else the static value), `layer.gain.animate`, `layer.gain.key.remove` (the last key falls back to the static value).
+- `withPrecompAudio` adds `audio.gains`: the comp layer gain (parent time) plus every deeper gain with its keys remapped through the comp layer's speed, start time and loop pass. `gainCurve` multiplies `volume x gains / 100^n` per sample and clamps once at the end; `audioSignature` includes the gains.

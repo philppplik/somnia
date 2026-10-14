@@ -1044,6 +1044,30 @@
       "hasEnabled": true
     },
     {
+      "id": "animation.precomp.volume.animate",
+      "title": "Toggle comp layer volume keyframes",
+      "category": "Edit",
+      "source": "animation",
+      "keywords": [
+        "animation",
+        "keyframe",
+        "timeline"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "animation.precomp.volume.keyRemove",
+      "title": "Remove comp layer volume keyframe",
+      "category": "Edit",
+      "source": "animation",
+      "keywords": [
+        "animation",
+        "keyframe",
+        "timeline"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "animation.preset.apply",
       "title": "Apply entrance preset",
       "category": "Edit",

@@ -241,3 +241,21 @@ test('P52 comp layer volume scales nested audio and its keys; invalid values are
  assert.throws(()=>applyEdit(d,{type:'layer.update',layer:'pc',source:{volume:201}}));assert.throws(()=>applyEdit(d,{type:'layer.update',layer:'pc',source:{volume:-1}}));
  const d2=applyEdit(d,{type:'layer.update',layer:'pc',source:{volume:100}});assert.notEqual(audioSignature(d,findComp(d)),audioSignature(d2,findComp(d2)));
 });
+
+test('P56 comp layer volume keyframes: edits, mapping through time and nesting, curve, validation',()=>{
+ const b=withAudio();let d=applyEdit(b,{type:'comp.add',id:'par'});d=applyEdit(d,{type:'precomp.add',comp:b.activeComp,id:'pc'});
+ const lay=()=>findComp(d)!.layers.find(l=>l.id==='pc')!;
+ const mixed=()=>audibleLayers(withPrecompAudio(findComp(d)!,d.compositions))[0];
+ d=applyEdit(d,{type:'layer.gain.set',layer:'pc',value:50,t:0});assert.equal(lay().source.volume,50);assert.equal(lay().gain,undefined);
+ d=applyEdit(d,{type:'layer.gain.animate',layer:'pc',on:true,t:0});assert.deepEqual(lay().gain!.keys.map(k=>[k.t,k.v]),[[0,50]]);
+ d=applyEdit(d,{type:'layer.gain.set',layer:'pc',value:150,t:sec});assert.deepEqual(lay().gain!.keys.map(k=>[k.t,k.v]),[[0,50],[sec,150]]);
+ assert.equal(mixed().audio!.gains!.length,1);assert.equal(mixed().audio!.volume.value,100,'clip volume untouched');
+ const c=gainCurve(mixed(),0,sec);assert.ok('curve' in c&&Math.abs(c.curve[0]-0.5)<1e-6&&Math.abs(c.curve[c.curve.length-1]-1.5)<1e-6);
+ const sig=audioSignature(d,findComp(d));
+ d=applyEdit(d,{type:'layer.gain.key.remove',layer:'pc',t:sec});assert.notEqual(audioSignature(d,findComp(d)),sig);
+ d=applyEdit(d,{type:'layer.gain.key.remove',layer:'pc',t:0});assert.equal(lay().gain,undefined);assert.equal(lay().source.volume,50);assert.equal(mixed().audio!.gains,undefined);
+ assert.throws(()=>applyEdit(d,{type:'layer.gain.key.remove',layer:'pc',t:0}));assert.throws(()=>applyEdit(d,{type:'layer.gain.set',layer:'pc',value:201,t:0}));assert.throws(()=>applyEdit(d,{type:'layer.gain.set',layer:'aud',value:50,t:0}));
+ // keys follow the clip through speed 200 %
+ d=applyEdit(d,{type:'layer.update',layer:'pc',source:{speed:200}});d=applyEdit(d,{type:'layer.gain.animate',layer:'pc',on:true,t:0});d=applyEdit(d,{type:'layer.gain.set',layer:'pc',value:150,t:sec});
+ assert.deepEqual(mixed().audio!.gains![0].keys.map(k=>k.t),[0,sec],'comp layer keys are already in the parent time');
+});

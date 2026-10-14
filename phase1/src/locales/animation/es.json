@@ -602,5 +602,7 @@
  "animation.stroke.opacity": "Opacidad del trazo (%)",
  "animation.stroke.dashLen": "Longitud del guion (0 = continuo)",
  "animation.stroke.dashGap": "Espacio del guion",
- "animation.stroke.miter": "Límite de inglete"
+ "animation.stroke.miter": "Límite de inglete",
+ "cmd.animation.precomp.volume.animate": "Alternar fotogramas clave de volumen de la capa de composición",
+ "cmd.animation.precomp.volume.keyRemove": "Quitar fotograma clave de volumen de la capa de composición"
 }

@@ -66,6 +66,9 @@ export type Edit=
  |{type:'audio.volume.set';layer:string;value:number;t:number}
  |{type:'audio.volume.animate';layer:string;on:boolean;t:number}
  |{type:'audio.volume.key.remove';layer:string;t:number}
+ |{type:'layer.gain.set';layer:string;value:number;t:number}
+ |{type:'layer.gain.animate';layer:string;on:boolean;t:number}
+ |{type:'layer.gain.key.remove';layer:string;t:number}
  |{type:'layer.effects';layer:string;effects:readonly LayerEffect[]}
  |{type:'prop.pathMode';layer:string;mode:'parameter'|'arcLength'}
  |{type:'workarea.set';in:number;out:number}
@@ -194,6 +197,19 @@ function reduce(doc:AnimationDocument,e:Edit):AnimationDocument{
    else if(e.type==='audio.volume.animate'){const sampled=evaluate(vol,t) as number;next=e.on?(vol.keys.length?vol:{...vol,keys:[makeKey(t,sampled)]}):{...vol,value:sampled,keys:[]};}
    else{if(!vol.keys.some(k=>k.t===t))fail('missing','No volume key at that time.');const keys=vol.keys.filter(k=>k.t!==t);next=keys.length?{...vol,keys}:{...vol,value:evaluate(vol,t) as number,keys:[]};}
    return setLayer(doc,{...l,audio:{...l.audio!,volume:next}});}
+  case 'layer.gain.set':case 'layer.gain.animate':case 'layer.gain.key.remove':{
+   const l=layerOf(doc,e.layer);if(l.kind!=='comp')fail('invalid','Select a comp layer.');const t=tickOf(compOf(doc),e.t),g=l.gain,staticV=l.source.volume??100;
+   const strip=(x:Layer):Layer=>{const {gain:_g,...rest}=x;return rest as Layer;};
+   if(e.type==='layer.gain.set'){
+    if(!Number.isFinite(e.value)||e.value<0||e.value>MAX_AUDIO_VOLUME)fail('invalid','Volume must be 0 to 200 percent.');
+    if(g?.keys.length)return setLayer(doc,{...l,gain:{...g,keys:upsertKey(g.keys,makeKey(t,e.value))}});
+    return setLayer(doc,{...l,source:{...l.source,volume:e.value}});}
+   if(e.type==='layer.gain.animate'){
+    if(e.on)return g?.keys.length?doc:setLayer(doc,{...l,gain:{...prop('scalar',staticV),keys:[makeKey(t,staticV)]}});
+    return g?.keys.length?setLayer(doc,{...strip(l),source:{...l.source,volume:Math.round(evaluate(g,t) as number)}}):doc;}
+   if(!g||!g.keys.some(k=>k.t===t))fail('missing','No volume key at that time.');
+   const keys=g!.keys.filter(k=>k.t!==t);
+   return keys.length?setLayer(doc,{...l,gain:{...g!,keys}}):setLayer(doc,{...strip(l),source:{...l.source,volume:Math.round(evaluate(g!,t) as number)}});}
   case 'layer.effects':{if(!validEffects(e.effects))fail('invalid','Invalid effect stack.');return setLayer(doc,{...layerOf(doc,e.layer),effects:e.effects.map(x=>({...x}))});}
   case 'prop.pathMode':{if(!['parameter','arcLength'].includes(e.mode))fail('invalid','Invalid path mode.');return setProp(doc,e.layer,'position',p=>({...p,pathMode:e.mode}));}
   case 'layer.add':{const c=compOf(doc);const l=createLayer(e.kind,c,e.over,e.id);if(c.layers.some(x=>x.id===l.id))fail('invalid','Duplicate layer id.');if(l.parent&&!findLayer(c,l.parent))fail('missing','Parent layer does not exist.');return withLayers(doc,ls=>[l,...ls]);}

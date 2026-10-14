@@ -602,5 +602,7 @@
  "animation.stroke.opacity": "Opacité du contour (%)",
  "animation.stroke.dashLen": "Longueur du tiret (0 = plein)",
  "animation.stroke.dashGap": "Espace du tiret",
- "animation.stroke.miter": "Limite de onglet"
+ "animation.stroke.miter": "Limite de onglet",
+ "cmd.animation.precomp.volume.animate": "Activer les images clés du volume du calque de composition",
+ "cmd.animation.precomp.volume.keyRemove": "Supprimer l'image clé du volume du calque de composition"
 }

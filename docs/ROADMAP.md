@@ -381,3 +381,10 @@ Depends on: v10 diff viewer, v11 updater for smooth extension and app updates.
 - Done: shape strokes with a miter join (the default) get a "Miter limit" (1..20, default 4). It is written as `stroke-miterlimit` only when set and the join is miter, so existing strokes give byte-identical output. Viewer and export share the attribute. Undoable, validated, 5 locales.
 - Open: no stroke gradient, no inside/outside alignment; opacity, dashes and miter limit stay constants.
 
+
+### Animation P56 (2026-10-14, integration pending)
+
+- Picked: keyframed volume for comp layers (fades of nested audio).
+- Done: next to the "Audio volume (%)" field of a comp layer there is now an animate switch, "Key at playhead" and "Remove key". With keys, the keyed `gain` (0..200 %, bezier eased, in the composition time of the comp layer) replaces the static value and is multiplied with each nested clip's own volume at playback. Keys follow nesting: gains of inner comp layers are moved into the outer time through speed, start time and loops. New commands `animation.precomp.volume.animate` and `.keyRemove`; `animation.precomp.time` with `volume` keys the value when animated. Undoable, validated, 5 locales. Turning animation off keeps the value at the playhead as the static volume.
+- Open: no keyframe lane for the comp layer volume in the timeline (keys are listed in the inspector); the volume curve is sampled at 30 points per second as for audio layers; not heard in a real browser this round.
+
