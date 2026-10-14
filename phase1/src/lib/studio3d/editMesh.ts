@@ -377,6 +377,36 @@ export function weldSelected(m:MeshData,verts:number[]):MeshData{
  if(m.uvs)out.uvs=m.uvs;
  return out;
 }
+/** Jitters the selected vertices by a seeded pseudo-random displacement per distinct position: position-equal twins get the identical displacement so split sides never rip, the strongest mask at a position dams the whole seam, and the same seed always reproduces the same result. Masks are carried; UVs are carried. */
+export function randomizeSelected(m:MeshData,verts:number[],amount:number,seed:number):MeshData{
+ check(m);
+ if(!verts.length)throw new EditError('Select vertices to randomize.');
+ if(!Number.isFinite(amount)||amount===0||Math.abs(amount)>1e6)throw new EditError('The randomize amount must be a non-zero number.');
+ if(!Number.isInteger(seed)||seed<1||seed>1000000000)throw new EditError('The randomize seed must be a whole number between 1 and 1000000000.');
+ const nv=m.positions.length/3;
+ for(const v of verts){if(!Number.isInteger(v)||v<0||v>=nv)throw new EditError(`Vertex ${v} does not exist.`);}
+ const pk=(v:number)=>`${Math.round(m.positions[v*3]*1e6)},${Math.round(m.positions[v*3+1]*1e6)},${Math.round(m.positions[v*3+2]*1e6)}`;
+ const keys=[...new Set(verts.map(pk))].sort();
+ let st=seed>>>0;
+ const rnd=()=>{st=st+0x6D2B79F5|0;let t=Math.imul(st^st>>>15,1|st);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};
+ const disp=new Map<string,[number,number,number]>();
+ for(const k of keys)disp.set(k,[(rnd()*2-1)*amount,(rnd()*2-1)*amount,(rnd()*2-1)*amount]);
+ // Damping is per position, not per vertex: the strongest mask at a position protects the whole seam, so twins can never be pulled apart.
+ const damp=new Map<string,number>();
+ for(let v=0;v<nv;v++){
+  const k=pk(v);if(!disp.has(k))continue;
+  const mk=m.mask?m.mask[v]:0;
+  damp.set(k,Math.min(damp.get(k)??mk,mk));
+ }
+ const positions=[...m.positions];
+ for(let v=0;v<nv;v++){
+  const d=disp.get(pk(v));if(!d)continue;
+  const f=1-damp.get(pk(v))!;if(f===0)continue;
+  positions[v*3]+=d[0]*f;positions[v*3+1]+=d[1]*f;positions[v*3+2]+=d[2]*f;
+ }
+ const out:MeshData={positions,index:[...m.index],...(m.uvs?{uvs:[...m.uvs]}:{}),...(m.mask?{mask:[...m.mask]}:{})};
+ check(out);return out;
+}
 /** Pulls the selected vertices onto a sphere: the sphere centre is the centroid of the distinct selected positions, its radius their mean distance, and each vertex moves along its own ray by the factor. Position-equal twins move together so split sides never rip; masks damp the pull and are carried; UVs are carried. */
 export function toSphereSelected(m:MeshData,verts:number[],factor:number):MeshData{
  check(m);

@@ -921,5 +921,9 @@
  "studio3d.hist.editCollapse": "Colapsar selección",
  "cmd.studio3d.edit.toSphere": "Llevar los vértices seleccionados a una esfera",
  "studio3d.edit.toSphere": "A esfera",
- "studio3d.hist.editToSphere": "Llevar la selección a una esfera"
+ "studio3d.hist.editToSphere": "Llevar la selección a una esfera",
+ "cmd.studio3d.edit.randomize": "Desplazar los vértices seleccionados aleatoriamente con semilla",
+ "studio3d.edit.randomize": "Aleatorio",
+ "studio3d.hist.editRandomize": "Aleatorizar selección",
+ "studio3d.edit.randomSeed": "Semilla"
 }

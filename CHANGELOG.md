@@ -1,4 +1,5 @@
 # Unreleased: 3D Studio P0
+- 3D Studio: edit mode jitters the selected vertices by a seeded, reproducible random displacement, with position-equal twins staying glued (`studio3d.edit.randomize`).
 - 3D Studio: edit mode pulls the selected vertices onto a sphere around their centroid with an adjustable factor, turning slabs and shells round (`studio3d.edit.toSphere`).
 - 3D Studio: edit mode collapses each connected island of the selection into a single vertex at its centroid, where weld merges everything into one point (`studio3d.edit.collapse`).
 - 3D Studio: edit mode fills a selected closed edge loop with a centroid triangle fan, plugging holes after a delete (`studio3d.edit.fill`).

@@ -987,6 +987,21 @@ test('mesh edit mode: to sphere rounds a grown vertex selection, undo restores i
  await expect(page.getByRole('alert')).toContainText('Select vertices to pull onto a sphere');
 });
 
+test('mesh edit mode: randomize jitters the selection reproducibly by seed',async({page})=>{
+ await blank(page);
+ const id=await insert(page,'cube',0);
+ expect(await run(page,'studio3d.edit.start',{id,mode:'vertex'})).toBe(true);
+ expect(await run(page,'studio3d.edit.select',{kind:'vertex',ids:[0,1,2,3]})).toBe(true);
+ expect(await run(page,'studio3d.edit.randomize',{amount:0.2,seed:42})).toBe(true);
+ let s=await session(page);expect(s.edit).toMatchObject({verts:4});
+ expect(await run(page,'studio3d.undo',{})).toBe(true);
+ expect(await run(page,'studio3d.redo',{})).toBe(true);
+ s=await session(page);expect(s.stats.triangles).toBe(12);
+ expect(await run(page,'studio3d.edit.selectAll',{op:'none'})).toBe(true);
+ expect(await run(page,'studio3d.edit.randomize',{amount:0.2,seed:42})).toBe(false);
+ await expect(page.getByRole('alert')).toContainText('Select vertices to randomize');
+});
+
 test('mesh edit mode: weld merges selected vertices at their centre, undo restores them',async({page})=>{
  await blank(page);
  const id=await insert(page,'cube',0);

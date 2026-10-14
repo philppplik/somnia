@@ -921,5 +921,9 @@
  "studio3d.hist.editCollapse": "Réduire la sélection",
  "cmd.studio3d.edit.toSphere": "Tirer les sommets sélectionnés sur une sphère",
  "studio3d.edit.toSphere": "Vers la sphère",
- "studio3d.hist.editToSphere": "Tirer la sélection sur une sphère"
+ "studio3d.hist.editToSphere": "Tirer la sélection sur une sphère",
+ "cmd.studio3d.edit.randomize": "Déplacer les sommets sélectionnés aléatoirement avec une graine",
+ "studio3d.edit.randomize": "Aléatoire",
+ "studio3d.hist.editRandomize": "Randomiser la sélection",
+ "studio3d.edit.randomSeed": "Graine"
 }

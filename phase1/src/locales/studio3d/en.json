@@ -921,5 +921,9 @@
  "studio3d.hist.editCollapse": "Collapse selection",
  "cmd.studio3d.edit.toSphere": "Pull the selected vertices onto a sphere",
  "studio3d.edit.toSphere": "To Sphere",
- "studio3d.hist.editToSphere": "Pull selection onto a sphere"
+ "studio3d.hist.editToSphere": "Pull selection onto a sphere",
+ "cmd.studio3d.edit.randomize": "Jitter the selected vertices by a seeded random displacement",
+ "studio3d.edit.randomize": "Randomize",
+ "studio3d.hist.editRandomize": "Randomize selection",
+ "studio3d.edit.randomSeed": "Seed"
 }
