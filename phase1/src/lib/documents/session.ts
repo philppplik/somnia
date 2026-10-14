@@ -1,6 +1,7 @@
 import {validHfText,type HeaderFooterState,checkFormatPatch,checkParaPatch,MAX_HF_CHARS,MAX_NEW_TABLE_COLS,MAX_NEW_TABLE_ROWS,TABLE_OPS,type TableOp,DOC_STYLES,type DocStyleId,type ListKindId,type ParaPatch,type ImageOp,type TableStyle,type TableStyleScope,tableStyleProblem,MIN_COL_PT,MAX_COL_PT,imageProblem,IMAGE_WIDTH_PERCENTS,MAX_IMAGES} from './protocol';
 import {captureDocumentSelection} from './selectionCapture';
 import {CELL_BASE,caretAfterEdit,diffEdit,inverseOf,UndoStack,type TextEdit,type UndoEntry} from './edit';
+import {findMatches,nextMatchIndex,textStats,validFindQuery,validReplaceText,MAX_FIND_HIGHLIGHTS,MAX_REPLACE_BLOCKS,type FindMatch} from './find';
 import {listMarkerKind,stepBoundary,utf16ToUtf8Offset,utf8ToUtf16Offset,wordBoundary} from './text';
 import {getDocumentsState,patchDocuments,resetDocuments,INITIAL_VIEW,type Caret,type DocumentsState} from './store';
 import {DocumentsEngine} from './engine';
@@ -106,6 +107,7 @@ export function attachEngine(e:DocumentsEngine|null,key?:string){
 async function refresh(d:{pages:number;pageSizes:readonly {width:number;height:number}[];text:string}){
  const owner=gen,e=engine!;const blocks=await e.blocks();if(owner!==gen||e!==engine)throw Error('Document owner changed during refresh');
  patchDocuments({blocks,pages:d.pages,pageSizes:d.pageSizes,words:d.text.split(/\s+/).filter(Boolean).length,rev:getDocumentsState().rev+1,...flags()});
+ if(getDocumentsState().find.open)void updateFind();
 }
 export async function loadBlocks(d:{pages:number;pageSizes:readonly {width:number;height:number}[];text:string}){await refresh(d);}
 async function apply(edit:TextEdit,record:'new'|'undo'|'redo',o:{merge?:boolean;caret?:number|null}={}){
@@ -545,3 +547,78 @@ export const resizeImageToPercent=(percent:number)=>run(async()=>{
 export const setImageWidth=(width:number)=>run(()=>editImage({op:'resize',width}));
 export const setImageAlt=(alt:string)=>run(()=>editImage({op:'alt',alt}));
 export const removeImage=()=>run(()=>editImage({op:'remove'}));
+
+/* ---- Find and replace over the editable paragraphs (body and table cells). ---- */
+let findGen=0;
+const textsForFind=()=>getDocumentsState().blocks.filter(b=>b.editable&&b.text!==undefined).map(b=>({index:b.index,text:b.text!}));
+function currentMatches(){const f=getDocumentsState().find;return findMatches(textsForFind(),f.query,f);}
+/** Recomputes the match list, the count, which match the selection is on, and the highlight rectangles (first 300 matches). */
+export async function updateFind(){
+ const e=engine,g=++findGen,owner=gen;if(!e)return;
+ const st=getDocumentsState();if(!st.find.open||!validFindQuery(st.find.query)){patchDocuments({find:{...st.find,count:0,current:0,capped:false},findRects:[]});return;}
+ const r=currentMatches();const c=st.caret;let current=0;
+ if(c){const n=norm(c);if(n.s.block===n.e.block){const i=r.matches.findIndex(m=>m.block===n.s.block&&m.start===n.s.off&&m.end===n.e.off);current=i+1;}}
+ patchDocuments({find:{...st.find,count:r.matches.length,current,capped:r.capped}});
+ const rects:import('./protocol').Rect5[]=[];const shown=r.matches.slice(0,MAX_FIND_HIGHLIGHTS);
+ try{
+  for(let k=0;k<shown.length;k+=32){
+   const part=await Promise.all(shown.slice(k,k+32).map(m=>e.rects(m.block,m.start,m.end).catch(()=>[] as import('./protocol').Rect5[])));
+   if(g!==findGen||owner!==gen||e!==engine)return;for(const p of part)rects.push(...p);
+  }
+ }catch{return;}
+ if(g===findGen&&owner===gen&&e===engine)patchDocuments({findRects:rects});
+}
+/** Opens or closes the find bar. Opening keeps the last query; closing drops the highlights. */
+export function setFindOpen(open:boolean){
+ const f=getDocumentsState().find;if(f.open===open)return;
+ if(!open){findGen++;patchDocuments({find:{...f,open:false,count:0,current:0,capped:false},findRects:[]});return;}
+ patchDocuments({find:{...f,open:true}});void updateFind();
+}
+/** Changes the query or an option (a bad query shows no matches). */
+export function setFindQuery(p:Partial<{query:string;matchCase:boolean;wholeWord:boolean}>){
+ const f=getDocumentsState().find;const next={...f,...p};
+ if(typeof next.query!=='string'||next.query.length>1000)return;
+ patchDocuments({find:{...next,open:true}});void updateFind();
+}
+/** Selects the next or previous match from the caret, wrapping around. Resolves with false when there is none. */
+export const findStep=(dir:1|-1):Promise<boolean>=>{
+ let found=false;
+ return run(async()=>{
+  const r=currentMatches();if(r.matches.length===0)return;
+  const c=getDocumentsState().caret;const n=c?norm(c):null;
+  const i=n?nextMatchIndex(r.matches,dir>0?n.e.block:n.s.block,dir>0?n.e.off:n.s.off,dir):0;
+  // Moving on from a match that is selected: next starts after its end, previous before its start.
+  const m=r.matches[i];goalX=null;patchDocuments({caretLocked:false,imageBlock:null,caret:{block:m.block,anchor:m.start,head:m.end}});found=true;await syncGeometry();await updateFind();
+ }).then(()=>found);
+};
+const selectedMatch=(ms:readonly FindMatch[]):FindMatch|null=>{const c=getDocumentsState().caret;if(!c)return null;const n=norm(c);return ms.find(m=>m.block===n.s.block&&n.s.block===n.e.block&&m.start===n.s.off&&m.end===n.e.off)??null;};
+/** Replaces the selected match (when the selection is on one) and moves to the next; otherwise just selects the next match. One undo step. */
+export const replaceCurrent=(text:string)=>run(async()=>{
+ if(!validReplaceText(text))throw new Error('The replacement is limited to 1000 characters, without line breaks.');
+ const r=currentMatches();if(r.matches.length===0)return;const m=selectedMatch(r.matches);
+ if(!m){const c=getDocumentsState().caret;const n=c?norm(c):null;const i=n?nextMatchIndex(r.matches,n.s.block,n.s.off,1):0;const x=r.matches[i];patchDocuments({caret:{block:x.block,anchor:x.start,head:x.end}});await syncGeometry();await updateFind();return;}
+ goalX=null;const end=m.start+u8(text);
+ await structural(eng=>eng.replace({block:m.block,hunks:[{start:m.start,end:m.end,text}]}),{block:m.block,off:m.start},{block:m.block,off:end});
+ const after=currentMatches();
+ const i=nextMatchIndex(after.matches,m.block,end,1);const x=i>=0?after.matches[i]:null;
+ if(x){patchDocuments({caret:{block:x.block,anchor:x.start,head:x.end}});await syncGeometry();}
+ await updateFind();
+});
+/** Replaces every match (up to 5000) in one undo step and reports how many. */
+export const replaceAll=(text:string):Promise<number>=>{
+ let count=0;
+ return run(async()=>{
+  if(!validReplaceText(text))throw new Error('The replacement is limited to 1000 characters, without line breaks.');
+  const r=currentMatches();if(r.matches.length===0)return;
+  const byBlock=new Map<number,FindMatch[]>();for(const m of r.matches)(byBlock.get(m.block)??byBlock.set(m.block,[]).get(m.block)!).push(m);
+  if(byBlock.size>MAX_REPLACE_BLOCKS)throw new Error(`Replace all is limited to ${MAX_REPLACE_BLOCKS} paragraphs. Narrow the search.`);
+  const first=r.matches[0];const c=getDocumentsState().caret;goalX=null;
+  await structural(async eng=>{let d:import('./protocol').OpenedDocument|null=null;for(const [block,ms] of byBlock)d=await eng.replace({block,hunks:ms.map(m=>({start:m.start,end:m.end,text}))});return d!;},c?{block:c.block,off:c.head}:{block:first.block,off:first.start},{block:first.block,off:first.start});
+  count=r.matches.length;
+ }).then(()=>count);
+};
+/** Words and characters of the whole document and, when text is selected, of the selection. */
+export function documentStats():{words:number;chars:number;charsNoSpaces:number;selectionWords:number}{
+ const all=textStats(getDocumentsState().blocks.filter(b=>b.text!==undefined).map(b=>b.text!).join('\n'));
+ return{...all,selectionWords:textStats(selectedText()).words};
+}

@@ -2501,6 +2501,72 @@
       "hasEnabled": true
     },
     {
+      "id": "documents.find.next",
+      "title": "Find next",
+      "category": "View",
+      "source": "documents",
+      "keywords": [
+        "document",
+        "docx"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "documents.find.open",
+      "title": "Find in document",
+      "category": "View",
+      "source": "documents",
+      "keywords": [
+        "document",
+        "docx"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "documents.find.previous",
+      "title": "Find previous",
+      "category": "View",
+      "source": "documents",
+      "keywords": [
+        "document",
+        "docx"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "documents.find.replace",
+      "title": "Replace current match",
+      "category": "View",
+      "source": "documents",
+      "keywords": [
+        "document",
+        "docx"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "documents.find.replaceAll",
+      "title": "Replace all matches",
+      "category": "View",
+      "source": "documents",
+      "keywords": [
+        "document",
+        "docx"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "documents.find.set",
+      "title": "Set search text",
+      "category": "View",
+      "source": "documents",
+      "keywords": [
+        "document",
+        "docx"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "documents.focusParagraph",
       "title": "Focus paragraph",
       "category": "View",

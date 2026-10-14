@@ -4,7 +4,7 @@ import {readFileSync} from 'node:fs';
 import {applyEdit,CELL_BASE,type TextEdit} from './edit';
 import type {DocumentsEngine} from './engine';
 import {getDocumentsState,patchDocuments} from './store';
-import {setHeaderFooter,readHeaderFooter,tabInCell,insertTable,editTable,setParagraphStyle,shiftListLevel,toggleList,setAlign,setLineSpacing,setSpaceAfter,stepIndent,setFont,setFontColor,setFontSize,stepFontSize,toggleFormat,deleteAtCaret,moveCaret,MAX_INSERT_LINES,pasteText,redoEdit,resetSessionsForTest,selectAllText,selectedText,setSessionDeps,splitAtCaret,switchDocument,typeText,undoEdit,syncGeometry} from './session';
+import {setHeaderFooter,readHeaderFooter,tabInCell,insertTable,editTable,setParagraphStyle,shiftListLevel,toggleList,setAlign,setLineSpacing,setSpaceAfter,stepIndent,setFont,setFontColor,setFontSize,stepFontSize,toggleFormat,deleteAtCaret,moveCaret,MAX_INSERT_LINES,pasteText,redoEdit,resetSessionsForTest,selectAllText,selectedText,setSessionDeps,splitAtCaret,switchDocument,typeText,undoEdit,syncGeometry,settleDocument,setFindOpen,setFindQuery,findStep,replaceAll,replaceCurrent,documentStats} from './session';
 import {stepBoundary,wordBoundary} from './text';
 const docx=new Uint8Array(readFileSync(new URL('../../../test/documents/sample.docx',import.meta.url)));
 type Row={text:string;locked?:boolean;f?:Set<string>[];p?:Record<string,number|string>};
@@ -260,6 +260,31 @@ test('typing a list marker and a space starts a list in one undo step; other tex
  await open(['a-']);at(0,2);await typeText(' ');assert.deepEqual(d.texts(),['a- ']);assert.equal(d.rows[0].p?.list,undefined);
  await open(['- x']);at(0,1);await typeText(' ');assert.equal(d.rows[0].p?.list,undefined);
  await open(['-']);at(0,1);await toggleList('numbered');await syncGeometry();await typeText(' ');assert.deepEqual(d.texts(),['- ']);
+});
+test('find selects matches in order and wraps; the count and selection follow',async()=>{
+ await open(['one Two two','nothing','TWO']);at(0,0);setFindOpen(true);setFindQuery({query:'two'});await settleDocument();
+ assert.equal(getDocumentsState().find.count,3);
+ assert.equal(await findStep(1),true);assert.deepEqual([c().block,c().anchor,c().head],[0,4,7]);assert.equal(getDocumentsState().find.current,1);
+ await findStep(1);assert.deepEqual([c().block,c().anchor,c().head],[0,8,11]);await findStep(1);assert.deepEqual([c().block,c().anchor],[2,0]);
+ await findStep(1);assert.deepEqual([c().block,c().anchor],[0,4]);
+ await findStep(-1);assert.deepEqual([c().block,c().anchor],[2,0]);
+ setFindQuery({matchCase:true});await settleDocument();assert.equal(getDocumentsState().find.count,1);
+ setFindQuery({query:'zzz'});assert.equal(await findStep(1),false);assert.equal(getDocumentsState().find.count,0);
+ setFindOpen(false);assert.equal(getDocumentsState().find.open,false);assert.deepEqual(getDocumentsState().findRects,[]);
+});
+test('replace all is one undo step across paragraphs; replace one moves on; bad replacements change nothing',async()=>{
+ await open(['aa bb aa','cc','aa']);at(1,0);setFindOpen(true);setFindQuery({query:'aa'});await settleDocument();
+ await replaceAll('x\ny');assert.match(getDocumentsState().editError,/limited to 1000/);assert.deepEqual(d.texts(),['aa bb aa','cc','aa']);patchDocuments({editError:''});
+ assert.equal(await replaceAll('Z'),3);assert.deepEqual(d.texts(),['Z bb Z','cc','Z']);
+ await undoEdit();assert.deepEqual(d.texts(),['aa bb aa','cc','aa']);
+ await replaceCurrent('Q');assert.deepEqual(d.texts(),['aa bb aa','cc','aa']);assert.equal(getDocumentsState().find.current,3);// first press only selects the next match
+ await replaceCurrent('Q');assert.deepEqual(d.texts(),['aa bb aa','cc','Q']);assert.deepEqual([c().block,c().anchor,c().head],[0,0,2]);// then wraps to the first
+ await undoEdit();assert.equal(d.texts()[2],'aa');
+ setFindQuery({query:'nope'});await settleDocument();assert.equal(await replaceAll('x'),0);
+});
+test('document statistics count words and characters and the selection',async()=>{
+ await open(['one two','three']);at(0,0,{block:0,off:0});assert.deepEqual(documentStats(),{words:3,chars:12,charsNoSpaces:11,selectionWords:0});
+ at(1,3,{block:0,off:4});assert.equal(documentStats().selectionWords,2);
 });
 test('a table in the span refuses style and list changes',async()=>{
  await open(['ab',{text:'',locked:true},'cd']);patchDocuments({caret:{block:2,head:1,anchor:0,anchorBlock:0}});

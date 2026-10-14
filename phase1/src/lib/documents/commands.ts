@@ -1,6 +1,7 @@
 import {registerCommand} from '../commandRegistry';
 import {getDocumentsState,patchDocuments,stepZoom} from './store';
-import {redoEdit,setAlign,setParagraphStyle,toggleList,clearList,shiftListLevel,stepFontSize,stepIndent,toggleFormat,undoEdit,editTable,insertTable,setHeaderFooter,insertImage,resizeImageToPercent,setImageAlt,removeImage,setColumnWidth,styleTable} from './session';
+import {redoEdit,setAlign,setParagraphStyle,toggleList,clearList,shiftListLevel,stepFontSize,stepIndent,toggleFormat,undoEdit,editTable,insertTable,setHeaderFooter,insertImage,resizeImageToPercent,setImageAlt,removeImage,setColumnWidth,styleTable,setFindOpen,setFindQuery,findStep,replaceAll,replaceCurrent} from './session';
+import {validFindQuery,validReplaceText} from './find';
 import {findMedia} from '../media';
 import {tableStyleProblem,IMAGE_WIDTH_PERCENTS,MAX_IMAGE_BYTES,MIN_COL_PT,MAX_COL_PT} from './protocol';
 import {CELL_BASE} from './edit';
@@ -45,6 +46,16 @@ export function registerDocumentsCommands(){
   add('documents.style.heading4','Apply Heading 4',async()=>{await setParagraphStyle('Heading4');},()=>ready()&&!!getDocumentsState().caret),
   add('documents.style.quote','Apply Quote style',async()=>{await setParagraphStyle('Quote');},()=>ready()&&!!getDocumentsState().caret),
   add('documents.list.clear','Remove list',async()=>{await clearList();},()=>ready()&&!!getDocumentsState().caret),
+  add('documents.find.open','Find in document',()=>{setFindOpen(true);}),
+  add('documents.find.next','Find next',async()=>{if(!getDocumentsState().find.open)setFindOpen(true);if(!await findStep(1))throw expected('No matches.');}),
+  add('documents.find.previous','Find previous',async()=>{if(!getDocumentsState().find.open)setFindOpen(true);if(!await findStep(-1))throw expected('No matches.');}),
+  add('documents.find.set','Set search text',p=>{
+   const o=(p??{}) as Record<string,unknown>;if(!validFindQuery(o.query))throw expected('Missing or invalid "query" (1-200 characters, one line).');
+   if(o.matchCase!==undefined&&typeof o.matchCase!=='boolean')throw expected('Invalid "matchCase".');if(o.wholeWord!==undefined&&typeof o.wholeWord!=='boolean')throw expected('Invalid "wholeWord".');
+   setFindQuery({query:o.query,...(o.matchCase!==undefined?{matchCase:o.matchCase}:{}),...(o.wholeWord!==undefined?{wholeWord:o.wholeWord}:{})});
+  }),
+  add('documents.find.replace','Replace current match',async p=>{const r=(p as Record<string,unknown>|undefined)?.text;if(!validReplaceText(r))throw expected('Missing or invalid "text" (up to 1000 characters, one line).');await replaceCurrent(r);},()=>ready()&&getDocumentsState().find.open&&getDocumentsState().find.count>0),
+  add('documents.find.replaceAll','Replace all matches',async p=>{const r=(p as Record<string,unknown>|undefined)?.text;if(!validReplaceText(r))throw expected('Missing or invalid "text" (up to 1000 characters, one line).');await replaceAll(r);},()=>ready()&&getDocumentsState().find.open&&getDocumentsState().find.count>0),
   add('documents.list.bullet','Toggle bulleted list',async()=>{await toggleList('bullet');},()=>ready()&&!!getDocumentsState().caret),
   add('documents.list.numbered','Toggle numbered list',async()=>{await toggleList('numbered');},()=>ready()&&!!getDocumentsState().caret),
   add('documents.list.indent','Demote list item',async()=>{await shiftListLevel(1);},()=>ready()&&!!getDocumentsState().caret),

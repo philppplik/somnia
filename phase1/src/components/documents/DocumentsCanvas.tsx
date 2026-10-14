@@ -7,7 +7,7 @@ import type {DocumentsEngine} from '../../lib/documents';
 import {getDocumentsState,patchDocuments,resetDocuments,stepZoom,useDocuments} from '../../lib/documents/store';
 import '../../lib/documents/guards';
 import {CELL_BASE} from '../../lib/documents/edit';
-import {setParagraphStyle,clearCaret,deleteAtCaret,dragTo,editParagraph,getEngine,moveCaret,pasteText,settleDocument,switchDocument,pointerAt,redoEdit,selectAllText,setAlign,shiftListLevel,tabInCell,stepFontSize,stepIndent,toggleFormat,selectedText,splitAtCaret,syncGeometry,typeText,undoEdit} from '../../lib/documents/session';
+import {setFindOpen,setParagraphStyle,clearCaret,deleteAtCaret,dragTo,editParagraph,getEngine,moveCaret,pasteText,settleDocument,switchDocument,pointerAt,redoEdit,selectAllText,setAlign,shiftListLevel,tabInCell,stepFontSize,stepIndent,toggleFormat,selectedText,splitAtCaret,syncGeometry,typeText,undoEdit} from '../../lib/documents/session';
 import {saveCopy} from '../../lib/documents/saveCopy';
 import {confirmDocumentsSaveCopy,patchDocumentsExportUi,registerDocumentsExport,useDocumentsExportUi} from '../../lib/documents/exportBridge';
 import {executeCommand} from '../../lib/commands';
@@ -18,6 +18,7 @@ import {studioContextStore} from '../../lib/shell/studioContext';
 import {useT} from '../../lib/useT';
 import {getState,patchState} from '../../store/appStore';
 import {FormatBar} from './FormatBar';
+import {FindBar,StatusBar} from './FindBar';
 import {NativeButton,Textarea} from '../ui/native-controls';
 const bar='media-bar flex items-center gap-2 border-b border-subtle px-3 py-1.5 text-[12px]';
 const tool='grid h-7 cursor-pointer grid-flow-col items-center gap-1 rounded-sm border-0 bg-transparent px-2 text-[12px] text-ink-2 hover:bg-hover disabled:cursor-default disabled:opacity-50';
@@ -40,7 +41,7 @@ function Page({engine,index,width,height,zoom,rev,visible,onVisible}:{engine:Doc
   onPointerMove={e=>{if(down.current&&e.buttons&1){const [x,y]=at(e);dragTo(index,x,y);}}} onPointerUp={()=>{down.current=false;}} onPointerCancel={()=>{down.current=false;}}>
   {src&&<img src={src} alt="" draggable={false} className="absolute inset-0 h-full w-full select-none"/>}
   {failed&&<span role="alert" className="absolute inset-0 grid place-items-center text-[12px] text-ink-3">{t('documents.pageFailed')}</span>}
-  {[...doc.selRects.map(r=>({r,img:false})),...doc.imageRects.map(r=>({r,img:true}))].filter(x=>x.r[0]===index).map(({r,img},i)=><span key={i} aria-hidden="true" className={img?'pointer-events-none absolute rounded-sm outline outline-2 outline-sky-500':'pointer-events-none absolute bg-sky-500/30'} data-testid={img?'documents-image-outline':'documents-selection'} style={{left:r[1]*zoom,top:r[2]*zoom,width:r[3]*zoom,height:r[4]*zoom}}/>)}
+  {[...doc.findRects.map(r=>({r,k:'find'})),...doc.selRects.map(r=>({r,k:'sel'})),...doc.imageRects.map(r=>({r,k:'img'}))].filter(x=>x.r[0]===index).map(({r,k},i)=><span key={i} aria-hidden="true" className={k==='img'?'pointer-events-none absolute rounded-sm outline outline-2 outline-sky-500':k==='find'?'pointer-events-none absolute bg-amber-400/40':'pointer-events-none absolute bg-sky-500/30'} data-testid={k==='img'?'documents-image-outline':k==='find'?'documents-find-highlight':'documents-selection'} style={{left:r[1]*zoom,top:r[2]*zoom,width:r[3]*zoom,height:r[4]*zoom}}/>)}
   {box&&<><span aria-hidden="true" className="documents-caret pointer-events-none absolute bg-black" data-testid="documents-caret" style={{left:box.x*zoom-0.5,top:box.top*zoom,width:1.5,height:box.height*zoom}}/>
    <CaretInput left={box.x*zoom} top={box.top*zoom}/></>}
  </div>;
@@ -65,6 +66,7 @@ function CaretInput({left,top}:{left:number;top:number}){
    if(keys[e.key]&&!mod&&!e.altKey){e.preventDefault();void moveCaret(keys[e.key],e.shiftKey);return;}
    if(e.key==='Backspace'||e.key==='Delete'){e.preventDefault();void deleteAtCaret(e.key==='Backspace'?-1:1,word);return;}
    if(e.key==='Escape'){e.preventDefault();clearCaret();return;}
+   if(mod&&!e.altKey&&!e.shiftKey&&(e.key.toLowerCase()==='f'||e.key.toLowerCase()==='h')){e.preventDefault();setFindOpen(true);return;}
    if(mod&&e.altKey&&!e.shiftKey&&/^Digit[0-4]$/.test(e.code)){e.preventDefault();void setParagraphStyle((['Normal','Heading1','Heading2','Heading3','Heading4'] as const)[Number(e.code.slice(5))]);return;}
    if(e.key==='Enter'){e.preventDefault();void splitAtCaret();return;}
    if(mod&&e.key.toLowerCase()==='a'){e.preventDefault();selectAllText();return;}
@@ -126,12 +128,14 @@ export function DocumentsCanvas(){
    <NativeButton className={tool} aria-label={t('documents.zoomIn')} title={t('documents.zoomIn')} disabled={doc.status!=='ready'} onClick={()=>stepZoom(1)}><Plus size={13}/></NativeButton>
    <NativeButton className={tool} disabled={doc.status!=='ready'||doc.saving} onClick={()=>void executeCommand('documents.saveCopy')} data-testid="documents-save-copy">{t('documents.saveCopy')}</NativeButton></div>
   {doc.status==='ready'&&<FormatBar para={doc.para} format={doc.format} held={doc.pendingFormat&&doc.caret&&doc.pendingFormat.block===doc.caret.block&&doc.pendingFormat.off===doc.caret.head&&doc.caret.anchor===doc.caret.head&&doc.caret.anchorBlock===undefined?doc.pendingFormat.patch:null} enabled={!!doc.caret} inCell={!!doc.caret&&doc.caret.block>=CELL_BASE}/>}
+  {doc.status==='ready'&&<FindBar/>}
   {doc.status==='loading'&&<div role="status" className="grid flex-1 place-items-center text-[12px] text-ink-3">{t('documents.loading')}</div>}
   {doc.status==='error'&&<div role="alert" className="grid flex-1 place-items-center"><div className="grid max-w-md justify-items-center gap-2 text-center"><p className="text-[13px] text-ink" data-testid="documents-error">{doc.error}</p><NativeButton className={tool+' border border-subtle'} onClick={()=>setAttempt(a=>a+1)}>{t('documents.retry')}</NativeButton></div></div>}
   {doc.notice&&<p role="status" className="border-b border-subtle px-3 py-1 text-xs text-ink-3" data-testid="documents-session-notice">{t('documents.session.'+doc.notice)}</p>}
   {doc.caretLocked&&<p role="status" className="border-b border-subtle px-3 py-1 text-[12px] text-ink-3" data-testid="documents-caret-locked">{t('documents.caret.locked')}</p>}
   {doc.status==='ready'&&engine&&<div className="min-h-0 flex-1 overflow-auto bg-hover/40 p-6" data-testid="documents-scroll"><div className="flex flex-col gap-4">
    {doc.pageSizes.map((p,i)=><Page key={i} engine={engine} index={i} width={p.width} height={p.height} zoom={doc.zoom} rev={doc.rev} visible={near.has(i)} onVisible={onVisible}/>)}</div></div>}
+  <StatusBar/>
   {exportUi.confirmOpen&&<div role="alertdialog" aria-modal="true" aria-labelledby="documents-confirm-title" className="absolute inset-0 z-20 grid place-items-center bg-black/30"><div className="grid max-w-md gap-3 rounded-[var(--r-popup,25px)] bg-surface p-5 shadow-xl">
    <h2 id="documents-confirm-title" className="text-[14px] font-medium">{t('documents.lossTitle')}</h2><p className="text-[12px] text-ink-2">{t('documents.lossBody')}</p>
    <ul className="list-disc pl-5 text-[12px] text-ink-2" data-testid="documents-loss-list">{doc.risks.map(r=><li key={r}>{t('documents.risk.'+r)}</li>)}</ul>
