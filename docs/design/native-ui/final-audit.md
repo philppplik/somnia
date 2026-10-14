@@ -230,6 +230,12 @@ through native control primitives, see below.
   overlays stay pointer-transparent between markers; mode-scoped,
   canvas untouched), gallery specs extended; canvas bitmaps
   pixel-identical to the P49 base (e57eb867).
+- P51: linear graduated filter (drag-defined ramp, EV/sat along the
+  ramp as source preprocessing, own strength sliders independent from
+  dodge, overlay with start/end planes and a delete-handle per filter,
+  one drag/commit/undo step each, cap 20), unit tests and gallery
+  proof added (?view=photos-grad; canvas bitmaps pixel-identical to
+  the P50 base 2d9d494e).
 
 
 
