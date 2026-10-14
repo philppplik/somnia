@@ -2,6 +2,12 @@
 
 - The update pill installs signed prerelease builds in-app. Per-channel manifests (`latest-beta.json`, `latest-alpha.json` on the `updater-channels` release), full SemVer comparison against `somniaRelease`, `make-latest-json.py --channels-dir`, new Tauri commands `check_channel_update` and `install_channel_update`. Docs: phase1/notes/UPDATER.md.
 
+# Unreleased: Studio shell regression fixes
+
+- Code Studio restores the inline SVG inspector inside the shared Design section, including paint, fill/stroke gradients, guides, grid and clip/mask controls.
+- Vector page settings restore strict SVG replacement as one undoable edit. Rejected or stale imports leave the artwork and history intact.
+- Video download/cancel/unavailable notifications follow the video session, including exports started from the new review panel.
+
 # Unreleased: Vector hero export
 
 - Vector Export... opens/focuses the Export panel without writing; output format setup, capped PNG dimensions, separated import controls and five-language labels.

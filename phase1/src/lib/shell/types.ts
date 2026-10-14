@@ -58,7 +58,7 @@ export interface InspectorSectionDef{
  commands?:readonly string[];
  defaultCollapsed?:boolean;
 }
-export interface InspectorDef{titleKey?:string;/** i18n key shown when no section applies */emptyKey?:string;sections:readonly InspectorSectionDef[]}
+export interface InspectorDef{titleKey?:string;/** i18n key shown when no section applies */emptyKey?:string;/** `when` expression over the studio context: when true the inspector shows only the empty message and no section chrome. */emptyWhen?:string;sections:readonly InspectorSectionDef[]}
 /** Section hosts receive the merged StudioContext. */
 export interface InspectorSectionProps{sectionId:string;context:StudioContext}
 export const INSPECTOR_HOST='shell.inspector';
