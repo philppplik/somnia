@@ -2,7 +2,7 @@ import {settingsProblems,type ExportSettings} from './exportSettings';
 /** Own export presets: the reusable part of the export setup under a name. The frame range and file name belong to one document, so they are not saved. Kept in the browser (localStorage), at most MAX_USER_PRESETS. */
 export const MAX_USER_PRESETS=12;
 export const MAX_PRESET_NAME=40;
-const KEEP=['scale','fps','columns','dither','loop','quality','background','firstNumber','colors','frameFormat','frameQuality','sheetPadding'] as const;
+const KEEP=['scale','fps','columns','dither','loop','quality','background','blur','firstNumber','colors','frameFormat','frameQuality','sheetPadding'] as const;
 export type PresetSettings=Pick<ExportSettings,typeof KEEP[number]>;
 export interface UserExportPreset{id:string;name:string;settings:PresetSettings;transparent:boolean}
 const KEY='somnia.exportPresets.v1';

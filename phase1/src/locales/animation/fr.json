@@ -1051,5 +1051,10 @@
  "animation.export.presetDelete": "Supprimer mon préréglage",
  "cmd.animation.export.preset.save": "Enregistrer les réglages d’export comme préréglage perso",
  "cmd.animation.export.preset.apply": "Appliquer un de mes préréglages d’export",
- "cmd.animation.export.preset.delete": "Supprimer un de mes préréglages d’export"
+ "cmd.animation.export.preset.delete": "Supprimer un de mes préréglages d’export",
+ "animation.export.blur": "Flou de mouvement",
+ "animation.export.blur.comp": "Comme dans la composition",
+ "animation.export.blur.off": "Désactivé",
+ "animation.export.blur.high": "Lisse (16 échantillons)",
+ "animation.export.problem.blur": "Le flou de mouvement doit être désactivé ou élevé."
 }

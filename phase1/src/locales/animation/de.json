@@ -1051,5 +1051,10 @@
  "animation.export.presetDelete": "Eigene Vorgabe löschen",
  "cmd.animation.export.preset.save": "Export-Einstellungen als eigene Vorgabe speichern",
  "cmd.animation.export.preset.apply": "Eine eigene Export-Vorgabe anwenden",
- "cmd.animation.export.preset.delete": "Eine eigene Export-Vorgabe löschen"
+ "cmd.animation.export.preset.delete": "Eine eigene Export-Vorgabe löschen",
+ "animation.export.blur": "Bewegungsunschärfe",
+ "animation.export.blur.comp": "Wie in der Komposition",
+ "animation.export.blur.off": "Aus",
+ "animation.export.blur.high": "Glatt (16 Samples)",
+ "animation.export.problem.blur": "Bewegungsunschärfe muss aus oder hoch sein."
 }

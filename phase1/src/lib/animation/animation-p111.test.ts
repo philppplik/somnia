@@ -884,3 +884,18 @@ test('P210 own export presets: save, apply, replace, delete, limits and persiste
  assert.deepEqual(u.userExportPresets().map(p=>p.id),['ok']);mem.set('somnia.exportPresets.v1','{not json');u.setPresetStore({getItem:k=>mem.get(k)??null,setItem:()=>{}});assert.equal(u.userExportPresets().length,0);
  u.setPresetStore(null);run(0,{name:'session only'});assert.equal(u.userExportPresets().length,1);u.setPresetStore(undefined);resetExportSettings();setExportTransparent(false);
 });
+
+test('P211 export motion blur: off drops the shutter, high uses 16 samples, document untouched, no effect without a shutter',async()=>{
+ const {exportCurrentFrame,setExportSettings,resetExportSettings,resetExport}=await import('./exportJob');const {settingsProblems,defaultExportSettings}=await import('./exportSettings');
+ const s=open();setAnimationSession(s);resetExport();resetExportSettings();
+ const svgs:string[]=[];const rasterize=async(svg:string)=>{svgs.push(svg);return new Uint8Array([1]);};const save=()=>{};
+ const ids=findComp(s.document!).layers.map(l=>l.id);s.dispatch({type:'layer.motionBlur',layers:ids,enabled:true});s.setView({playhead:f(1)});
+ await exportCurrentFrame({rasterize,save});assert.equal(svgs[0],svgs[0]);const plain=svgs[0].length;
+ s.dispatch({type:'comp.shutter',shutter:{angle:180,samples:3}});
+ await exportCurrentFrame({rasterize,save});setExportSettings({blur:'off'});await exportCurrentFrame({rasterize,save});setExportSettings({blur:'high'});await exportCurrentFrame({rasterize,save});setExportSettings({blur:null});await exportCurrentFrame({rasterize,save});
+ const [,comp3,off,high,again]=svgs.map(x=>x.length);
+ assert.ok(comp3>plain);assert.equal(off,plain);assert.ok(high>comp3);assert.equal(again,comp3);
+ assert.deepEqual(findComp(s.document!).shutter,{angle:180,samples:3});
+ assert.throws(()=>setExportSettings({blur:'max' as never}),(e:any)=>e.code==='unsupported');assert.deepEqual(settingsProblems({...defaultExportSettings(),blur:'high'}),[]);assert.deepEqual(settingsProblems({...defaultExportSettings(),blur:null}),[]);
+ resetExportSettings();
+});

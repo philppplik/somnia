@@ -41,7 +41,10 @@ export async function withExportComp<T>(compId:string,fn:()=>Promise<T>):Promise
 export const exportSetupSnapshot=()=>({settings:state.settings,transparent:state.transparent});
 export function restoreExportSetup(x:{settings:ExportSettings;transparent:boolean}){if(state.status!=='running')set({settings:x.settings,transparent:x.transparent});}
 /** The export background colour replaces the composition's for this export only; the document is untouched. */
-const withBg=<T extends {background:string}>(c:T):T=>state.settings.background?{...c,background:state.settings.background}:c;
+const withBg=<T extends {background:string;shutter?:{angle:number;samples:number}}>(c:T):T=>{
+ const {background,blur}=state.settings;let o=background?{...c,background}:c;
+ if(blur==='off'&&o.shutter){const {shutter:_s,...rest}=o;o=rest as T;}else if(blur==='high'&&o.shutter)o={...o,shutter:{...o.shutter,samples:16}};
+ return o;};
 function target(format?:ExportFormat){
  const base=animationSession().document;const fileName=state.settings.fileName?.trim();
  /** A custom export name replaces the document name in every file name this export writes. */

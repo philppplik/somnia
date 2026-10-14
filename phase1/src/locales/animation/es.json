@@ -1051,5 +1051,10 @@
  "animation.export.presetDelete": "Eliminar mi ajuste",
  "cmd.animation.export.preset.save": "Guardar los ajustes de exportación como ajuste propio",
  "cmd.animation.export.preset.apply": "Aplicar uno de mis ajustes de exportación",
- "cmd.animation.export.preset.delete": "Eliminar uno de mis ajustes de exportación"
+ "cmd.animation.export.preset.delete": "Eliminar uno de mis ajustes de exportación",
+ "animation.export.blur": "Desenfoque de movimiento",
+ "animation.export.blur.comp": "Como en la composición",
+ "animation.export.blur.off": "Desactivado",
+ "animation.export.blur.high": "Suave (16 muestras)",
+ "animation.export.problem.blur": "El desenfoque de movimiento debe estar desactivado o en alto."
 }
