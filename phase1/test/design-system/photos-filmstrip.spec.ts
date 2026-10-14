@@ -118,3 +118,24 @@ test('flags: P picks, X rejects, U unflags; the filter narrows by flag (light an
   await expect(page.getByTestId('photos-filmstrip-flag-strip-2.png')).toHaveCount(0);
  }
 });
+test('filmstrip sort: rating reorders the strip, library restores it (light and dark)',async({page})=>{
+ for(const theme of['light','dark']){
+  await page.goto('/test/design-system/?view=photos-filmstrip');
+  await page.evaluate(t=>document.documentElement.setAttribute('data-theme',t),theme);
+  await expect(page.getByTestId('photos-workspace')).toBeVisible();
+  const sort=page.getByTestId('photos-filmstrip-sort');
+  if(await sort.inputValue()!=='library')await sort.selectOption('library'); // normalize persisted sort
+  await expect(page.getByTestId('photos-filmstrip-item-strip-3.png')).toBeVisible(); // the proof adds its media files progressively
+  const names=()=>page.getByTestId('photos-filmstrip').locator('[data-testid^="photos-filmstrip-item-"]').evaluateAll(els=>els.map(e=>e.getAttribute('data-testid')!.replace('photos-filmstrip-item-','')));
+  expect(await names()).toEqual(['strip-1.png','strip-2.png','strip-3.png']);
+  await page.getByTestId('photos-filmstrip-item-strip-2.png').click();
+  await page.keyboard.press('3'); // rate strip-2 three stars
+  await page.getByTestId('photos-filmstrip-item-strip-1.png').click();
+  await page.keyboard.press('5'); // rate strip-1 five stars
+  await sort.selectOption('rating');
+  expect(await names()).toEqual(['strip-1.png','strip-2.png','strip-3.png']); // 5 stars first, then 3, unrated last
+  await page.screenshot({path:`test-results/ds-photos-filmstrip-sort-${theme}.png`,fullPage:true});
+  await sort.selectOption('library');
+  expect(await names()).toEqual(['strip-1.png','strip-2.png','strip-3.png']); // back to library order
+ }
+});

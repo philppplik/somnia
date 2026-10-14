@@ -122,5 +122,9 @@
  "photos.split.dir": "Ausrichtung",
  "photos.crop.guide.thirds": "Drittel",
  "photos.crop.guide.golden": "Goldener Schnitt",
- "photos.crop.guide.center": "Mitte"
+ "photos.crop.guide.center": "Mitte",
+ "photos.filmstrip.sort": "Sortieren",
+ "photos.filmstrip.sort.library": "Bibliothek",
+ "photos.filmstrip.sort.rating": "Bewertung",
+ "photos.filmstrip.sort.flag": "Markierung"
 }

@@ -46,3 +46,25 @@ to the P38 prev/next navigation.
   adds only the strip below the bar.
 - No new raw controls (thumbnails are the DS `Button`); ratchets
   unchanged. Actual app photos E2E remains CI-only.
+
+## Filmstrip sort (P73)
+
+The filmstrip sorts its thumbnails now: a second `NativeSelect` next to
+the rating filter offers Library (default), Rating (descending) and Flag
+(picks first, rejects last), persisted via `panelStateStore` under
+`photos.filmstripSort`.
+
+- `src/lib/photos/filmstripSort.ts`: `sortFilmstrip(photos, sort,
+  ratings, flags)` — stable sorts (JS `Array.sort` keeps library order
+  inside each rating/flag group), never mutates the input. Sorting is
+  display-only: the workspace prev/next navigation and the position
+  readout keep library order on purpose.
+- `PhotosFilmstrip`: filter first, then sort; the select reuses the
+  filmstrip's compact styling; labels `photos.filmstrip.sort(.library|
+  .rating|.flag)` in all five photo locales.
+
+Coverage: `filmstripSort.test.ts` (4 tests: default order, rating
+descending with tie stability, flag ranking, no input mutation);
+`photos-filmstrip.spec.ts` gains a light/dark leg that rates two photos
+from the keyboard, sorts by rating, asserts the DOM order both ways and
+screenshots the sorted strip.

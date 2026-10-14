@@ -122,5 +122,9 @@
  "photos.split.dir": "Orientação",
  "photos.crop.guide.thirds": "Terços",
  "photos.crop.guide.golden": "Proporção áurea",
- "photos.crop.guide.center": "Centro"
+ "photos.crop.guide.center": "Centro",
+ "photos.filmstrip.sort": "Ordenar",
+ "photos.filmstrip.sort.library": "Biblioteca",
+ "photos.filmstrip.sort.rating": "Avaliação",
+ "photos.filmstrip.sort.flag": "Sinalização"
 }

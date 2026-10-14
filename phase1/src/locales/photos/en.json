@@ -122,5 +122,9 @@
  "photos.split.dir": "Direction",
  "photos.crop.guide.thirds": "Thirds",
  "photos.crop.guide.golden": "Golden ratio",
- "photos.crop.guide.center": "Center"
+ "photos.crop.guide.center": "Center",
+ "photos.filmstrip.sort": "Sort",
+ "photos.filmstrip.sort.library": "Library",
+ "photos.filmstrip.sort.rating": "Rating",
+ "photos.filmstrip.sort.flag": "Flag"
 }

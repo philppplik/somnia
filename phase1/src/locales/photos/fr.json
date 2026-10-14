@@ -122,5 +122,9 @@
  "photos.split.dir": "Orientation",
  "photos.crop.guide.thirds": "Tiers",
  "photos.crop.guide.golden": "Nombre d’or",
- "photos.crop.guide.center": "Centre"
+ "photos.crop.guide.center": "Centre",
+ "photos.filmstrip.sort": "Trier",
+ "photos.filmstrip.sort.library": "Bibliothèque",
+ "photos.filmstrip.sort.rating": "Note",
+ "photos.filmstrip.sort.flag": "Marqueur"
 }

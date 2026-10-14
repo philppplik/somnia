@@ -4,6 +4,7 @@ import {Flag} from '../../lib/icons';
 import {useT} from '../../lib/useT';
 import {setActiveMedia,useMedia} from '../../lib/media';
 import {developablePhotos} from '../../lib/photos/photoNav';
+import {FILMSTRIP_SORTS,sortFilmstrip,type FilmstripSort} from '../../lib/photos/filmstripSort';
 import {MAX_RATING,useRatings} from '../../lib/photos/ratings';
 import {useFlags} from '../../lib/photos/flags';
 import {usePanelState} from '../../store/panelStateStore';
@@ -18,9 +19,10 @@ export function PhotosFilmstrip({active}:{active:string}){
  const ratings=useRatings();
  const flags=useFlags();
  const [minRating,setMinRating]=usePanelState<number|string>('photos.ratingFilter',0);
+ const [sort,setSort]=usePanelState<FilmstripSort>('photos.filmstripSort','library');
  const filter=String(minRating); // legacy stored numbers and 'pick'/'reject' share one select
  const all=developablePhotos(media.items);
- const photos=all.filter(p=>filter==='pick'?flags[p.name]==='pick':filter==='reject'?flags[p.name]==='reject':(ratings[p.name]??0)>=Number(filter)); // the filter never hides the strip itself
+ const photos=sortFilmstrip(all.filter(p=>filter==='pick'?flags[p.name]==='pick':filter==='reject'?flags[p.name]==='reject':(ratings[p.name]??0)>=Number(filter)),sort,ratings,flags); // the filter never hides the strip itself; sorting is display-only, prev/next keeps library order
  const strip=useRef<HTMLDivElement|null>(null);
  useEffect(()=>{strip.current?.querySelector('[aria-pressed="true"]')?.scrollIntoView({block:'nearest',inline:'nearest'});},[active]);
  if(all.length<2)return null;
@@ -30,6 +32,9 @@ export function PhotosFilmstrip({active}:{active:string}){
    {Array.from({length:MAX_RATING},(_,i)=>i+1).map(n=><option key={n} value={String(n)}>{`≥ ${n}`}</option>)}
    <option value="pick">{t('photos.flag.filter.pick')}</option>
    <option value="reject">{t('photos.flag.filter.reject')}</option>
+  </NativeSelect>
+  <NativeSelect value={sort} aria-label={t('photos.filmstrip.sort')} title={t('photos.filmstrip.sort')} onChange={e=>setSort(e.currentTarget.value as FilmstripSort)} className="h-7 shrink-0" data-testid="photos-filmstrip-sort">
+   {FILMSTRIP_SORTS.map(m=><option key={m} value={m}>{t(`photos.filmstrip.sort.${m}`)}</option>)}
   </NativeSelect>
   <RatingStars name={active} prefix="photos-filmstrip"/>
   {photos.map(p=><Button key={p.name} variant="outline" size="compact" aria-pressed={p.name===active} aria-label={p.name} onClick={()=>setActiveMedia(p.name)} className="relative h-14 shrink-0 overflow-hidden px-0.5" data-testid={`photos-filmstrip-item-${p.name}`}>
