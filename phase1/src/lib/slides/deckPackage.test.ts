@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {readFileSync,readdirSync} from 'node:fs';
 import {fileURLToPath} from 'node:url';
 import {unzipSync,zipSync,strFromU8,strToU8} from 'fflate';
-import {untitledSlides,missingAltText,MAX_ALT_REPORT,setPictureAlt,readPictureAlt,editSections,setSlideHidden,readHiddenSlides,setFirstSlideNum,readFirstSlideNum,setSlideFooter,setAllSlideFooters,readSlideFooter,setSlideSize,readSlideSize,setAllSlideBackgrounds,backgroundSummary,setSlideBackground,readSlideBackground,editLayoutBox,readLayoutBoxes,editMasterBox,readMaster,editTheme,readTheme,insertTable,editTable,readTable,setShapeStyle,readShapeStyle,setSlideNotes,groupShapes,ungroupShape,readSlideTransition,setSlideTransition,arrangeShapes,arrangedOrder,setShapesBounds,readSlideNotes,insertPicture,replacePicture,removePicture,fitImage,formatShapeText,addTextBox,removeTextBox,nextShapeId,setShapeBounds,boundsEditIssue,readDeckModel,moveSlide,reorderSlides,duplicateSlide,deleteSlide,newSlideFromLayout,readLayouts} from './deckPackage';
+import {setPictureDecorative,readPictureDecorative,untitledSlides,missingAltText,MAX_ALT_REPORT,setPictureAlt,readPictureAlt,editSections,setSlideHidden,readHiddenSlides,setFirstSlideNum,readFirstSlideNum,setSlideFooter,setAllSlideFooters,readSlideFooter,setSlideSize,readSlideSize,setAllSlideBackgrounds,backgroundSummary,setSlideBackground,readSlideBackground,editLayoutBox,readLayoutBoxes,editMasterBox,readMaster,editTheme,readTheme,insertTable,editTable,readTable,setShapeStyle,readShapeStyle,setSlideNotes,groupShapes,ungroupShape,readSlideTransition,setSlideTransition,arrangeShapes,arrangedOrder,setShapesBounds,readSlideNotes,insertPicture,replacePicture,removePicture,fitImage,formatShapeText,addTextBox,removeTextBox,nextShapeId,setShapeBounds,boundsEditIssue,readDeckModel,moveSlide,reorderSlides,duplicateSlide,deleteSlide,newSlideFromLayout,readLayouts} from './deckPackage';
 import {readRuns,makeEditedCopy} from './editCopy';
 import {png,jpeg} from './imageFixtures';
 
@@ -980,4 +980,18 @@ test('untitled slides: missing placeholder, empty title, titled; ordered',()=>{
   const c=zipSync(z);assert.deepEqual(untitledSlides(c).items.map(i=>i.slideIndex),[1,2]);assert.equal(untitledSlides(c).total,2);
   const z2=unzipSync(c);z2[part]=strToU8(strFromU8(z2[part]).replace(/<a:t>[^<]*<\/a:t>/,'<a:t> </a:t>'));
   assert.deepEqual(untitledSlides(zipSync(z2)).items.map(i=>[i.slideIndex,i.reason]),[[0,'empty'],[1,'missing'],[2,'missing']]);
+});
+
+test('decorative picture: mark clears alt, excluded from missing report, toggles back, alt refused while decorative, fails closed',()=>{
+  const b=deck(2,{picture:true}),sid=ids(b)[0],pic=readDeckModel(b).slides[0].shapes.find(s=>s.kind==='picture')!.id;
+  assert.equal(readPictureDecorative(b,sid,pic),false);assert.equal(setPictureDecorative(b,sid,pic,false),b);
+  const withAlt=setPictureAlt(b,sid,pic,'Chart'),c=setPictureDecorative(withAlt,sid,pic,true);
+  assert.equal(readPictureDecorative(c,sid,pic),true);assert.equal(readPictureAlt(c,sid,pic),null);assert.equal(setPictureDecorative(c,sid,pic,true),c);
+  assert.deepEqual(readDeckModel(c).slides[0].shapes,readDeckModel(b).slides[0].shapes);
+  assert.equal(missingAltText(b).items.some(i=>i.shapeId===pic),true);assert.equal(missingAltText(c).items.some(i=>i.shapeId===pic),false);
+  assert.throws(()=>setPictureAlt(c,sid,pic,'x'),/decorative/);
+  const d=setPictureDecorative(c,sid,pic,false);assert.equal(readPictureDecorative(d,sid,pic),false);assert.equal(missingAltText(d).items.some(i=>i.shapeId===pic),true);
+  assert.equal(setPictureAlt(d,sid,pic,'Again') instanceof Uint8Array,true);
+  const text=readDeckModel(b).slides[0].shapes.find(s=>s.kind==='text')!.id;
+  assert.throws(()=>setPictureDecorative(b,sid,text,true),/Only pictures/);assert.throws(()=>setPictureDecorative(b,99999,pic,true),/no longer exists/);assert.throws(()=>setPictureDecorative(b,sid,99999,true),/no longer exists/);
 });

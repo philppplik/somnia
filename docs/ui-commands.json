@@ -6155,6 +6155,22 @@
       "hasEnabled": true
     },
     {
+      "id": "slides.setPictureDecorative",
+      "title": "Mark picture as decorative",
+      "category": "Edit",
+      "source": "slides",
+      "keywords": [
+        "accessibility",
+        "alt text",
+        "decorative",
+        "image",
+        "picture",
+        "screen reader",
+        "skip"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "slides.setShapeBounds",
       "title": "Move or resize text box",
       "category": "Edit",

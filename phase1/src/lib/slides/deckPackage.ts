@@ -1970,12 +1970,46 @@ export function readPictureAlt(bytes:Uint8Array,slideId:number,shapeId:number):s
 export function setPictureAlt(bytes:Uint8Array,slideId:number,shapeId:number,alt:string|null):Uint8Array{
   if(alt!==null){const issue=altTextIssue(alt);if(issue)throw Error(issue);}
   const p=altParts(bytes,slideId,shapeId),cur=/\sdescr="([^"]*)"/.exec(p.tag),now=cur?dec(cur[1]):null;
+  if(alt!==null&&readPictureDecorative(bytes,slideId,shapeId))throw Error('Picture is marked decorative');
   if(now===alt||(now===''&&alt===null))return bytes;
   const next=alt===null?p.tag.replace(/\sdescr="[^"]*"/,''):cur?p.tag.replace(/(\sdescr=")[^"]*(")/,(_m,a,b)=>a+attrEsc(alt)+b):p.tag.replace(/\s*(\/?)>$/,(_m,s)=>` descr="${attrEsc(alt)}"${s}>`);
   const xml=p.xml.slice(0,p.at)+next+p.xml.slice(p.at+p.tag.length),out=repack(p.zip,{[p.slide.part]:xml}),after=readDeckModel(out);
   const as=after.slides.find(s=>s.id===slideId);
   if(!as||as.problems.length||JSON.stringify(as.shapes)!==JSON.stringify(p.slide.shapes)||after.slides.length!==p.model.slides.length||after.runs.length!==p.model.runs.length)throw Error('Edited deck failed verification');
   if(readPictureAlt(out,slideId,shapeId)!==alt)throw Error('Edited deck failed verification');
+  const rz=unzipSync(out);for(const key of Object.keys(p.zip))if(key!==p.slide.part&&(!rz[key]||rz[key].length!==p.zip[key].length||rz[key].some((v,i)=>v!==p.zip[key][i])))throw Error('Edited deck changed an unrelated part');
+  return out;
+}
+
+/** Decorative flag of a top-level picture (the a16-style decorative extension inside cNvPr). Marking a picture decorative clears its alt text in the same edit. */
+const DECOR_URI='{C183D7F6-B498-43B3-948B-1728B52AA6E4}';
+const DECOR_EXT=`<a:ext uri="${DECOR_URI}"><adec:decorative xmlns:adec="http://schemas.microsoft.com/office/drawing/2017/decorative" val="1"/></a:ext>`;
+const DECOR_RE=/<a:ext\s+uri="\{C183D7F6-B498-43B3-948B-1728B52AA6E4\}"\s*>\s*<adec:decorative\b[^>]*?\sval="(?:1|true)"[^>]*\/>\s*<\/a:ext>/;
+function decorParts(bytes:Uint8Array,slideId:number,shapeId:number){
+  const p=altParts(bytes,slideId,shapeId),open=p.at,closeSelf=p.tag.endsWith('/>');
+  let end=open+p.tag.length;if(!closeSelf){const c=p.xml.indexOf('</p:cNvPr>',end);if(c<0)throw Error('Picture has no readable properties');end=c+'</p:cNvPr>'.length;}
+  const el=p.xml.slice(open,end);
+  if(/<a:extLst>/.test(el)&&(el.match(/<a:extLst>/g)?.length??0)>1)throw Error('Picture properties have unsupported structure');
+  return {...p,open,end,el,closeSelf,decor:DECOR_RE.test(el)};
+}
+export function readPictureDecorative(bytes:Uint8Array,slideId:number,shapeId:number):boolean{return decorParts(bytes,slideId,shapeId).decor;}
+export function setPictureDecorative(bytes:Uint8Array,slideId:number,shapeId:number,decorative:boolean):Uint8Array{
+  const p=decorParts(bytes,slideId,shapeId);if(p.decor===decorative)return bytes;
+  let el=p.el;
+  if(decorative){
+    el=el.replace(/\sdescr="[^"]*"/,'');
+    if(/<a:extLst>/.test(el))el=el.replace('<a:extLst>','<a:extLst>'+DECOR_EXT);
+    else if(/<a:extLst\s*\/>/.test(el)||/<a:extLst\s[^>]*>/.test(el))throw Error('Picture properties have unsupported structure');
+    else if(p.closeSelf)el=el.replace(/\s*\/>$/,`><a:extLst>${DECOR_EXT}</a:extLst></p:cNvPr>`);
+    else el=el.replace('</p:cNvPr>',`<a:extLst>${DECOR_EXT}</a:extLst></p:cNvPr>`);
+  }else{
+    el=el.replace(DECOR_RE,'').replace(/<a:extLst>\s*<\/a:extLst>/,'');
+    if(DECOR_RE.test(el))throw Error('Picture properties have unsupported structure');
+  }
+  const xml=p.xml.slice(0,p.open)+el+p.xml.slice(p.end),out=repack(p.zip,{[p.slide.part]:xml}),after=readDeckModel(out),as=after.slides.find(s=>s.id===slideId);
+  if(!as||as.problems.length||JSON.stringify(as.shapes)!==JSON.stringify(p.slide.shapes)||after.slides.length!==p.model.slides.length||after.runs.length!==p.model.runs.length)throw Error('Edited deck failed verification');
+  if(readPictureDecorative(out,slideId,shapeId)!==decorative)throw Error('Edited deck failed verification');
+  if(decorative&&readPictureAlt(out,slideId,shapeId)!==null)throw Error('Edited deck failed verification');
   const rz=unzipSync(out);for(const key of Object.keys(p.zip))if(key!==p.slide.part&&(!rz[key]||rz[key].length!==p.zip[key].length||rz[key].some((v,i)=>v!==p.zip[key][i])))throw Error('Edited deck changed an unrelated part');
   return out;
 }
@@ -1989,9 +2023,9 @@ export function missingAltText(bytes:Uint8Array):{items:MissingAlt[];total:numbe
     if(slide.problems.length)return;const pics=slide.shapes.filter(s=>s.parentId===null&&s.kind==='picture');if(!pics.length)return;
     const xml=text(zip,slide.part);
     for(const pic of pics){
-      let alt:string|null=null;
-      try{const r=spRange(xml,pic.id,'p:pic','p:nvPicPr'),t=/<p:cNvPr\b[^>]*>/.exec(xml.slice(r.start,r.end));alt=t?(/\sdescr="([^"]*)"/.exec(t[0])?.[1]??''):'';}catch{continue;}
-      if(dec(alt).trim()==='' ){total++;if(items.length<MAX_ALT_REPORT)items.push({slideId:slide.id,slideIndex,shapeId:pic.id,name:pic.name});}
+      let alt:string|null=null,decor=false;
+      try{const r=spRange(xml,pic.id,'p:pic','p:nvPicPr'),nv=xml.slice(r.start,r.end),t=/<p:cNvPr\b[^>]*>/.exec(nv);alt=t?(/\sdescr="([^"]*)"/.exec(t[0])?.[1]??''):'';decor=DECOR_RE.test(nv);}catch{continue;}
+      if(dec(alt).trim()===''&&!decor){total++;if(items.length<MAX_ALT_REPORT)items.push({slideId:slide.id,slideIndex,shapeId:pic.id,name:pic.name});}
     }
   });
   return {items,total};
