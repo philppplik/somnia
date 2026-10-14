@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {readFileSync,readdirSync} from 'node:fs';
 import {fileURLToPath} from 'node:url';
 import {unzipSync,zipSync,strFromU8,strToU8} from 'fflate';
-import {setSlideSize,readSlideSize,setAllSlideBackgrounds,backgroundSummary,setSlideBackground,readSlideBackground,editLayoutBox,readLayoutBoxes,editMasterBox,readMaster,editTheme,readTheme,insertTable,editTable,readTable,setShapeStyle,readShapeStyle,setSlideNotes,groupShapes,ungroupShape,readSlideTransition,setSlideTransition,arrangeShapes,arrangedOrder,setShapesBounds,readSlideNotes,insertPicture,replacePicture,removePicture,fitImage,formatShapeText,addTextBox,removeTextBox,nextShapeId,setShapeBounds,boundsEditIssue,readDeckModel,moveSlide,reorderSlides,duplicateSlide,deleteSlide,newSlideFromLayout,readLayouts} from './deckPackage';
+import {setSlideFooter,setAllSlideFooters,readSlideFooter,setSlideSize,readSlideSize,setAllSlideBackgrounds,backgroundSummary,setSlideBackground,readSlideBackground,editLayoutBox,readLayoutBoxes,editMasterBox,readMaster,editTheme,readTheme,insertTable,editTable,readTable,setShapeStyle,readShapeStyle,setSlideNotes,groupShapes,ungroupShape,readSlideTransition,setSlideTransition,arrangeShapes,arrangedOrder,setShapesBounds,readSlideNotes,insertPicture,replacePicture,removePicture,fitImage,formatShapeText,addTextBox,removeTextBox,nextShapeId,setShapeBounds,boundsEditIssue,readDeckModel,moveSlide,reorderSlides,duplicateSlide,deleteSlide,newSlideFromLayout,readLayouts} from './deckPackage';
 import {readRuns,makeEditedCopy} from './editCopy';
 import {png,jpeg} from './imageFixtures';
 
@@ -860,4 +860,28 @@ test('slide size: bounds and fail-closed structure',()=>{
   assert.throws(()=>setSlideSize(zipSync(z),9144000,6858000),/graphic frames/);
   const z2=unzipSync(b);z2[part]=strToU8(strFromU8(z2[part]).replace('</p:spTree>','<p:sp><p:nvSpPr><p:cNvPr id="41" name="X"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr><a:xfrm><a:off x="1.5" y="0"/><a:ext cx="100" cy="100"/></a:xfrm></p:spPr></p:sp></p:spTree>'));
   assert.throws(()=>setSlideSize(zipSync(z2),9144000,6858000));
+});
+
+test('footer: add, change, remove slide number and footer on one slide only',()=>{
+  const b=deck(2),sid=ids(b),f0=readSlideFooter(b,sid[0]);assert.deepEqual(f0,{editable:true,problem:'',number:false,footer:null,canNumber:true,canFooter:true});
+  const c=setSlideFooter(b,sid[0],{number:true,footer:'Q3 <review> & plan'});
+  assert.deepEqual(readSlideFooter(c,sid[0]),{...f0,number:true,footer:'Q3 <review> & plan'});assert.equal(readSlideFooter(c,sid[1]).number,false);
+  const m0=readDeckModel(b).slides[0].shapes.length,m1=readDeckModel(c).slides[0].shapes.length;assert.equal(m1,m0+2);
+  const d=setSlideFooter(c,sid[0],{number:true,footer:'Changed'});assert.equal(readSlideFooter(d,sid[0]).footer,'Changed');assert.equal(readDeckModel(d).slides[0].shapes.length,m1);
+  assert.equal(setSlideFooter(d,sid[0],{number:true,footer:'Changed'}),d);
+  const e=setSlideFooter(d,sid[0],{number:false,footer:null});assert.equal(readDeckModel(e).slides[0].shapes.length,m0);assert.deepEqual(readSlideFooter(e,sid[0]),f0);
+  const za=unzipSync(b),zc=unzipSync(c),part=readDeckModel(b).slides[0].part;for(const k of Object.keys(za))if(k!==part)assert.equal(za[k].length,zc[k].length,k);
+});
+test('footer: all slides in one pass; bounds and unsupported content refused',()=>{
+  const b=deck(3),sid=ids(b),c=setAllSlideFooters(b,{number:true,footer:'Deck'});
+  for(const id of sid)assert.deepEqual([readSlideFooter(c,id).number,readSlideFooter(c,id).footer],[true,'Deck']);
+  const d=setAllSlideFooters(c,{number:false,footer:null});for(const id of sid)assert.equal(readSlideFooter(d,id).number,false);
+  for(const bad of ['',' pad','a\nb','x'.repeat(201),'\u0001'])assert.throws(()=>setSlideFooter(b,sid[0],{number:false,footer:bad}));
+  assert.throws(()=>setSlideFooter(b,9999,{number:true,footer:null}),/no longer exists/);
+  const z=unzipSync(b),part=readDeckModel(b).slides[0].part;
+  z[part]=strToU8(strFromU8(z[part]).replace('</p:spTree>','<p:sp><p:nvSpPr><p:cNvPr id="50" name="F"/><p:cNvSpPr/><p:nvPr><p:ph type="ftr" idx="11"/></p:nvPr></p:nvSpPr><p:spPr/><p:txBody><a:bodyPr/><a:lstStyle/><a:p><a:r><a:t>a</a:t></a:r></a:p><a:p><a:r><a:t>b</a:t></a:r></a:p></p:txBody></p:sp></p:spTree>'));
+  const odd=zipSync(z);assert.equal(readSlideFooter(odd,sid[0]).editable,false);assert.throws(()=>setSlideFooter(odd,sid[0],{number:true,footer:null}),/unsupported/);assert.throws(()=>setAllSlideFooters(odd,{number:true,footer:null}));
+  const z2=unzipSync(b);const lay=Object.keys(z2).filter(k=>/slideLayouts\/slideLayout\d+\.xml$/.test(k));for(const k of lay)z2[k]=strToU8(strFromU8(z2[k]).replace(/<p:ph\b[^>]*type="(?:sldNum|ftr)"[^>]*\/>/g,'<p:ph type="body" idx="99"/>'));
+  const none=zipSync(z2);assert.equal(readSlideFooter(none,sid[0]).canNumber,false);assert.throws(()=>setSlideFooter(none,sid[0],{number:true,footer:null}),/no slide number placeholder/);
+  assert.throws(()=>setSlideFooter(none,sid[0],{number:false,footer:'x'}),/no footer placeholder/);assert.equal(setSlideFooter(none,sid[0],{number:false,footer:null}),none);
 });

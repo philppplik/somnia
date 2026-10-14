@@ -1,19 +1,19 @@
 import type {CommandSpec} from '../commandSpec';
 import {registerCommandSpec} from '../commandBridge';
 import {selectSlideText} from './panelSelection';
-import {getSlidesSessionState,loadThumbnails,editSlideText,showSlide,moveSlideTo,duplicateSlideAt,deleteSlideAt,addSlideFromLayout,setShapeBoundsAt,setShapesBoundsAt,arrangeShapesAt,setTransitionAt,insertTableAt,editTableAt,editThemeAt,editMasterBoxAt,editLayoutBoxAt,setBackgroundAt,setAllBackgroundsAt,setSlideSizeAt,styleShapesAt,setNotesAt,groupShapesAt,ungroupShapeAt,formatShapeAt,addTextBoxAt,removeTextBoxAt,insertPictureAt,replacePictureAt,removePictureAt} from './session';
+import {getSlidesSessionState,loadThumbnails,editSlideText,showSlide,moveSlideTo,duplicateSlideAt,deleteSlideAt,addSlideFromLayout,setShapeBoundsAt,setShapesBoundsAt,arrangeShapesAt,setTransitionAt,insertTableAt,editTableAt,editThemeAt,editMasterBoxAt,editLayoutBoxAt,setBackgroundAt,setAllBackgroundsAt,setSlideSizeAt,setFooterAt,styleShapesAt,setNotesAt,groupShapesAt,ungroupShapeAt,formatShapeAt,addTextBoxAt,removeTextBoxAt,insertPictureAt,replacePictureAt,removePictureAt} from './session';
 import {textIssue} from './panelModel';
 import type {TextRun} from './editCopy';
 import './panelI18n';
 import {selectShape,getShapeSelection,type ShapeSelection} from './shapeSelection';
 import {stepShape,moveBox,resizeBox,resizeBoxAspect,boxOf,alignBox,alignBoxes,unionBox,transformGroup,distributeBoxes,ALIGN_MODES,type AlignMode} from './shapeGeometry';
 import {sniffImage,altFromName,decodeBase64,MAX_IMAGE_BASE64} from './imageSniff';
-import {MIN_SLIDE_EMU,MAX_SLIDE_EMU,backgroundSummary,readSlideBackground,type SlideBackground,readLayoutBoxes,readMaster,readTheme,themeFontIssue,THEME_SLOTS,MAX_FONT_NAME,type ThemeEdit,type ThemeSlot,boundsEditIssue,nextShapeId,MIN_SIZE_PT,MAX_SIZE_PT,MAX_SHAPES_PER_SLIDE,MAX_BOX_TEXT,MAX_MULTI_EDIT,MAX_NOTES_CHARS,MAX_NOTES_PARAGRAPHS,ARRANGE_MODES,TRANSITION_KINDS,TRANSITION_DIRS,TRANSITION_SPEEDS,type SlideTransition,type ShapeStylePatch,type TableEdit,MAX_ROW_PT,MAX_COL_PT,MIN_ROW_PT,MIN_COL_PT,MAX_TABLE_ROWS,MAX_TABLE_COLS,MAX_CELL_TEXT,LINE_DASHES,type ArrangeMode,type ShapeBoundsEdit,type RunFormat,type ShapeRef,type BoundsBox} from './deckPackage';
+import {footerTextIssue,readSlideFooter,MAX_FOOTER_TEXT,MIN_SLIDE_EMU,MAX_SLIDE_EMU,backgroundSummary,readSlideBackground,type SlideBackground,readLayoutBoxes,readMaster,readTheme,themeFontIssue,THEME_SLOTS,MAX_FONT_NAME,type ThemeEdit,type ThemeSlot,boundsEditIssue,nextShapeId,MIN_SIZE_PT,MAX_SIZE_PT,MAX_SHAPES_PER_SLIDE,MAX_BOX_TEXT,MAX_MULTI_EDIT,MAX_NOTES_CHARS,MAX_NOTES_PARAGRAPHS,ARRANGE_MODES,TRANSITION_KINDS,TRANSITION_DIRS,TRANSITION_SPEEDS,type SlideTransition,type ShapeStylePatch,type TableEdit,MAX_ROW_PT,MAX_COL_PT,MIN_ROW_PT,MIN_COL_PT,MAX_TABLE_ROWS,MAX_TABLE_COLS,MAX_CELL_TEXT,LINE_DASHES,type ArrangeMode,type ShapeBoundsEdit,type RunFormat,type ShapeRef,type BoundsBox} from './deckPackage';
 const MIN_GROUP_EMU=127000;
 export interface PanelCommandDeps {
  setTransition(slideId:number,transition:SlideTransition):Promise<void>;
  style(slideId:number,shapeIds:number[],patch:ShapeStylePatch):Promise<void>;
- table(slideId:number,shapeId:number,edit:TableEdit):Promise<void>;theme(edit:ThemeEdit):Promise<void>;masterBox(shapeId:number,expected:BoundsBox,next:BoundsBox):Promise<void>;layoutBox(layoutPart:string,shapeId:number,expected:BoundsBox,next:BoundsBox):Promise<void>;background(slideId:number,background:SlideBackground):Promise<void>;backgroundAll(background:{kind:'inherit'}|{kind:'solid';color:string}):Promise<void>;
+ table(slideId:number,shapeId:number,edit:TableEdit):Promise<void>;theme(edit:ThemeEdit):Promise<void>;masterBox(shapeId:number,expected:BoundsBox,next:BoundsBox):Promise<void>;layoutBox(layoutPart:string,shapeId:number,expected:BoundsBox,next:BoundsBox):Promise<void>;background(slideId:number,background:SlideBackground):Promise<void>;slideSize(cx:number,cy:number):Promise<void>;footer(slideId:number|null,want:{number:boolean;footer:string|null}):Promise<void>;backgroundAll(background:{kind:'inherit'}|{kind:'solid';color:string}):Promise<void>;
  insertTable(slideId:number,rows:number,cols:number):Promise<void>;
  setNotes(slideId:number,lines:string[]):Promise<void>;
  group(slideId:number,shapeIds:number[]):Promise<void>;

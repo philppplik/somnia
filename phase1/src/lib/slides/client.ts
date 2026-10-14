@@ -1,6 +1,6 @@
 import type {SlidesDiagnostics} from './diagnostics';
 import type {TextRun,TextEdit} from './editCopy';
-import type {DeckModel,LayoutInfo,BoundsBox,RunFormat,ShapeBoundsEdit,ArrangeMode,SlideTransition,ShapeStylePatch,TableEdit,ThemeEdit,SlideBackground} from './deckPackage';
+import type {DeckModel,LayoutInfo,BoundsBox,RunFormat,ShapeBoundsEdit,ArrangeMode,SlideTransition,ShapeStylePatch,TableEdit,ThemeEdit,SlideBackground,FooterEdit} from './deckPackage';
 import type {DeckSummary,SlidesReply,SlidesRequest} from './protocol';
 type Request=SlidesRequest extends infer R?R extends SlidesRequest?Omit<R,'id'>:never:never;
 export class SlidesClient {
@@ -24,6 +24,7 @@ export class SlidesClient {
  async shapesBounds(bytes:Uint8Array,slideId:number,edits:ShapeBoundsEdit[]){return await this.request({op:'shapesBounds',bytes,slideId,edits}) as Uint8Array;}
  async styleShapes(bytes:Uint8Array,slideId:number,shapeIds:number[],patch:ShapeStylePatch){return await this.request({op:'style',bytes,slideId,shapeIds,patch}) as Uint8Array;}
  async insertTable(bytes:Uint8Array,slideId:number,rows:number,cols:number){return await this.request({op:'insertTable',bytes,slideId,rows,cols}) as Uint8Array;}
+ async setFooter(bytes:Uint8Array,slideId:number|null,want:FooterEdit){return await this.request({op:'footer',bytes,slideId,want}) as Uint8Array;}
  async setSlideSize(bytes:Uint8Array,cx:number,cy:number){return await this.request({op:'slideSize',bytes,cx,cy}) as Uint8Array;}
  async setAllBackgrounds(bytes:Uint8Array,background:{kind:'inherit'}|{kind:'solid';color:string}){return await this.request({op:'backgroundAll',bytes,background}) as Uint8Array;}
  async setBackground(bytes:Uint8Array,slideId:number,background:SlideBackground){return await this.request({op:'background',bytes,slideId,background}) as Uint8Array;}

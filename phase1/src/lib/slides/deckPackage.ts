@@ -1750,3 +1750,79 @@ export function setSlideSize(bytes:Uint8Array,cx:number,cy:number):Uint8Array{
   const rz=unzipSync(out);for(const key of Object.keys(zip))if(!(key in changed)&&(!rz[key]||rz[key].length!==zip[key].length||rz[key].some((v,i)=>v!==zip[key][i])))throw Error('Edited deck changed an unrelated part');
   return out;
 }
+
+/** Slide number and footer placeholders of one slide. They inherit position and style from the slide's layout. */
+export const MAX_FOOTER_TEXT=200;
+export interface SlideFooter {editable:boolean;problem:string;number:boolean;footer:string|null;canNumber:boolean;canFooter:boolean}
+export interface FooterEdit {number:boolean;footer:string|null}
+export const footerTextIssue=(t:string)=>!t.trim()||t!==t.trim()?'Footer text cannot be empty or padded':t.length>MAX_FOOTER_TEXT?`Footer text is limited to ${MAX_FOOTER_TEXT} characters`:/[\u0000-\u0008\u000b\u000c\u000e-\u001f\ud800-\udfff\ufffe\uffff]/.test(t)||/[\r\n\t]/.test(t)?'Footer text contains unsupported characters':'';
+function layoutPh(zip:Record<string,Uint8Array>,slidePart:string,type:'sldNum'|'ftr'):string|null{
+  const l=readRels(zip,slidePart).filter(r=>r.type===RT+'slideLayout'&&!r.external);if(l.length!==1)return null;
+  const xml=text(zip,resolve(slidePart,l[0].target)),m=new RegExp(`<p:ph\\b([^>]*\\stype="${type}"[^>]*?)\\/?>`).exec(xml);if(!m)return null;
+  const sz=/\ssz="([a-z]+)"/.exec(m[1]),idx=/\sidx="(\d+)"/.exec(m[1]);
+  return `type="${type}"${sz?` sz="${sz[1]}"`:''}${idx?` idx="${idx[1]}"`:''}`;
+}
+function footerShapes(xml:string,type:'sldNum'|'ftr'){
+  return topLevelShapes(xml).map(s=>({...s,raw:xml.slice(s.start,s.end)})).filter(s=>s.raw.startsWith('<p:sp')&&new RegExp(`<p:ph\\b[^>]*\\stype="${type}"`).test(s.raw));
+}
+function parseFooter(zip:Record<string,Uint8Array>,slidePart:string):SlideFooter{
+  const xml=text(zip,slidePart),nums=footerShapes(xml,'sldNum'),fts=footerShapes(xml,'ftr');
+  const bad=(problem:string)=>({editable:false,problem,number:nums.length>0,footer:null,canNumber:false,canFooter:false});
+  if(nums.length>1||fts.length>1)return bad('The slide has more than one number or footer placeholder');
+  if(nums[0]&&!/<a:fld\b[^>]*\stype="slidenum"/.test(nums[0].raw))return bad('The slide number placeholder has unsupported content');
+  let footer:string|null=null;
+  if(fts[0]){const m=/<p:txBody>(?:(?!<\/p:txBody>)[\s\S])*?<a:lstStyle\s*\/>\s*<a:p>\s*<a:r>\s*(?:<a:rPr\b[^>]*\/>)?\s*<a:t>([^<]*)<\/a:t>\s*<\/a:r>\s*(?:<a:endParaRPr\b[^>]*\/>)?\s*<\/a:p>\s*<\/p:txBody>/.exec(fts[0].raw);if(!m)return bad('The footer placeholder has unsupported content');footer=xmlAttr(m[1]);}
+  return {editable:true,problem:'',number:nums.length>0,footer,canNumber:!!layoutPh(zip,slidePart,'sldNum'),canFooter:!!layoutPh(zip,slidePart,'ftr')};
+}
+export function readSlideFooter(bytes:Uint8Array,slideId:number):SlideFooter{
+  const slide=readDeckModel(bytes).slides.find(s=>s.id===slideId);if(!slide)throw Error('Slide no longer exists');
+  return parseFooter(openPackage(bytes),slide.part);
+}
+const xmlText=(t:string)=>t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+function footerXml(zip:Record<string,Uint8Array>,slide:SlideModel,xml:string,want:FooterEdit):string{
+  const cur=parseFooter(zip,slide.part);if(!cur.editable)throw Error(cur.problem);
+  let out=xml;
+  const refd=(id:number)=>new RegExp(`\\b(?:spid|id)="${id}"(?![\\d])`).test(out.replace(/<p:cNvPr\b[^>]*>/g,''));
+  const drop=(type:'sldNum'|'ftr')=>{const s=footerShapes(out,type)[0];if(!s)return;const id=topLevelShapes(out).find(x=>x.start===s.start)!.id;if(refd(id))throw Error('A placeholder is referenced by an animation or connector');out=out.slice(0,s.start)+out.slice(s.end);};
+  const add=(type:'sldNum'|'ftr',body:string)=>{
+    const ph=layoutPh(zip,slide.part,type);if(!ph)throw Error(type==='sldNum'?'The slide layout has no slide number placeholder':'The slide layout has no footer placeholder');
+    const used=topLevelShapes(out).map(s=>s.id),id=Math.max(1,...used)+1;
+    const tail=/(<p:extLst>(?:(?!<\/p:spTree>)[\s\S])*?<\/p:extLst>\s*)?<\/p:spTree>/.exec(out);if(!tail)throw Error('Slide shape tree is not in a supported form');
+    const sp=`<p:sp><p:nvSpPr><p:cNvPr id="${id}" name="${type==='sldNum'?'Slide Number Placeholder':'Footer Placeholder'} ${id-1}"/><p:cNvSpPr><a:spLocks noGrp="1"/></p:cNvSpPr><p:nvPr><p:ph ${ph}/></p:nvPr></p:nvSpPr><p:spPr/><p:txBody><a:bodyPr/><a:lstStyle/>${body}</p:txBody></p:sp>`;
+    out=out.slice(0,tail.index)+sp+out.slice(tail.index);
+  };
+  if(want.number&&!cur.number)add('sldNum','<a:p><a:fld id="{B6F15528-21DE-4FAA-801E-634DDDAF4B2B}" type="slidenum"><a:rPr lang="en-US"/><a:t>\u2039#\u203a</a:t></a:fld><a:endParaRPr lang="en-US"/></a:p>');
+  if(!want.number&&cur.number)drop('sldNum');
+  if(want.footer===null){if(cur.footer!==null)drop('ftr');}
+  else if(cur.footer===null)add('ftr',`<a:p><a:r><a:rPr lang="en-US"/><a:t>${xmlText(want.footer)}</a:t></a:r></a:p>`);
+  else if(cur.footer!==want.footer){drop('ftr');add('ftr',`<a:p><a:r><a:rPr lang="en-US"/><a:t>${xmlText(want.footer)}</a:t></a:r></a:p>`);}
+  return out;
+}
+function footerCheck(want:FooterEdit){
+  if(typeof want.number!=='boolean')throw Error('Slide number must be on or off');
+  if(want.footer!==null){const issue=footerTextIssue(want.footer);if(issue)throw Error(issue);}
+}
+function footerApply(bytes:Uint8Array,slideIds:'all'|number,want:FooterEdit):Uint8Array{
+  footerCheck(want);
+  const model=readDeckModel(bytes),slides=slideIds==='all'?model.slides:model.slides.filter(s=>s.id===slideIds);
+  if(!slides.length)throw Error('Slide no longer exists');
+  const zip=openPackage(bytes),changed:Record<string,string>={};
+  for(const slide of slides){
+    if(slide.problems.length)throw Error('This slide has unsupported structure');
+    if(changed[slide.part]!==undefined)throw Error('Two slides share one part');
+    const xml=text(zip,slide.part),next=footerXml(zip,slide,xml,want);if(next!==xml)changed[slide.part]=next;
+  }
+  if(!Object.keys(changed).length)return bytes;
+  const out=repack(zip,changed),after=readDeckModel(out),oz=openPackage(out);
+  if(after.slides.length!==model.slides.length)throw Error('Edited deck failed verification');
+  for(const slide of slides){const got=parseFooter(oz,slide.part);if(!got.editable||got.number!==want.number||got.footer!==want.footer)throw Error('Edited deck failed verification');}
+  const isFooterPh=(s:ShapeRef,xml:string)=>{const t=topLevelShapes(xml).find(x=>x.id===s.id&&s.parentId===null);return !!t&&/<p:ph\b[^>]*\stype="(?:sldNum|ftr)"/.test(xml.slice(t.start,t.end));};
+  after.slides.forEach((s,i)=>{const b=model.slides[i];if(s.id!==b.id||s.problems.length)throw Error('Edited deck failed verification');
+    const keep=(x:ShapeRef[],xml:string)=>JSON.stringify(x.filter(sh=>!isFooterPh(sh,xml)));
+    if(keep(s.shapes,text(oz,s.part))!==keep(b.shapes,text(zip,b.part)))throw Error('Edited deck failed verification');});
+  const re=unzipSync(out);for(const k of Object.keys(zip))if(!(k in changed)&&(!re[k]||re[k].length!==zip[k].length||re[k].some((v,i)=>v!==zip[k][i])))throw Error('Edited deck changed an unrelated part');
+  return out;
+}
+export const setSlideFooter=(bytes:Uint8Array,slideId:number,want:FooterEdit)=>footerApply(bytes,slideId,want);
+/** Same edit on every slide; one slide that cannot take it (no layout placeholder, unsupported content) refuses the whole action. */
+export const setAllSlideFooters=(bytes:Uint8Array,want:FooterEdit)=>footerApply(bytes,'all',want);
