@@ -46,3 +46,4 @@
 .local-search-panel fieldset label { display: flex; align-items: center; gap: 8px; }
 .local-search-panel fieldset input[type=checkbox] { width: auto; }
 .local-search-panel fieldset [data-slot=field] { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.local-search-phrase-evidence { background: var(--accent-soft); color: inherit; border-bottom: 2px solid var(--accent); }

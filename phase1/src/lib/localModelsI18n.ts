@@ -1,5 +1,6 @@
 export const LOCAL_MODELS_CATALOGUES:Record<string,Record<string,string>> = {
  "en": {
+  "local.search.phrase.evidencePartial": "Only the first100 safely mapped matches are highlighted per chunk. Unicode case expansion may leave matches unhighlighted; counts remain literal, not confidence.",
   "local.search.phrase.mode": "Search mode",
   "local.search.phrase.semantic": "Semantic similarity",
   "local.search.phrase.literal": "Exact phrase (ignore case)",
@@ -639,6 +640,7 @@ export const LOCAL_MODELS_CATALOGUES:Record<string,Record<string,string>> = {
   "local.route.earlier": "Move earlier after local"
  },
  "de": {
+  "local.search.phrase.evidencePartial": "Pro Abschnitt werden nur die ersten100 sicher zugeordneten Treffer markiert. Unicode-Kleinschreibung kann Treffer ohne Markierung lassen; Anzahl ist keine Sicherheit.",
   "local.search.phrase.mode": "Suchmodus",
   "local.search.phrase.semantic": "Semantische Ähnlichkeit",
   "local.search.phrase.literal": "Exakte Phrase (Case ignorieren)",
@@ -1278,6 +1280,7 @@ export const LOCAL_MODELS_CATALOGUES:Record<string,Record<string,string>> = {
   "local.route.earlier": "Nach lokal früher einordnen"
  },
  "es": {
+  "local.search.phrase.evidencePartial": "Solo se resaltan las primeras100 coincidencias con posiciones seguras por fragmento. La conversión Unicode puede dejar coincidencias sin resaltar; el conteo no es confianza.",
   "local.search.phrase.mode": "Modo de búsqueda",
   "local.search.phrase.semantic": "Similitud semántica",
   "local.search.phrase.literal": "Frase exacta (ignorar mayúsculas)",
@@ -1917,6 +1920,7 @@ export const LOCAL_MODELS_CATALOGUES:Record<string,Record<string,string>> = {
   "local.route.earlier": "Mover antes tras local"
  },
  "fr": {
+  "local.search.phrase.evidencePartial": "Seules les premières100 correspondances aux positions sûres sont surlignées par fragment. La casse Unicode peut laisser des résultats sans surlignage; le nombre ne mesure pas la confiance.",
   "local.search.phrase.mode": "Mode de recherche",
   "local.search.phrase.semantic": "Similarité sémantique",
   "local.search.phrase.literal": "Phrase exacte (ignorer casse)",
@@ -2556,6 +2560,7 @@ export const LOCAL_MODELS_CATALOGUES:Record<string,Record<string,string>> = {
   "local.route.earlier": "Avancer après local"
  },
  "pt-BR": {
+  "local.search.phrase.evidencePartial": "Só as primeiras100 correspondências com posições seguras são destacadas por trecho. A conversão Unicode pode deixar resultados sem destaque; a contagem não mede confiança.",
   "local.search.phrase.mode": "Modo de busca",
   "local.search.phrase.semantic": "Similaridade semântica",
   "local.search.phrase.literal": "Frase exata (ignorar maiúsculas)",
