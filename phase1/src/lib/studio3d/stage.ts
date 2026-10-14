@@ -11,7 +11,7 @@ import {mergeTransform,DEFAULT_TRANSFORM,UvError,type TextureTransform} from './
 import {textureBytes} from './validate';
 import {smoothWeights,rigidWeights,paintWeights,SkinError,type BoneSegment,type SkinWeights,type BrushSettings} from './skinning';
 import {checkPoseName,mirrorPose,blendPoses,PoseError,MAX_POSES} from './poses';import type {Pose,PoseBone} from './poses';
-import {solveTwoBone,clampEuler,checkLimits,hasLimits,IkError,MAX_IK_CHAINS} from './ik';import type {AxisLimits} from './ik';
+import {solveTwoBone,clampEuler,checkLimits,hasLimits,IkError,MAX_IK_CHAINS,fabrikSolve,aimBasis,MIN_FABRIK_SEGMENTS,MAX_FABRIK_SEGMENTS} from './ik';import type {AxisLimits} from './ik';
 import {emptyStats,type ModelStats,type OutlineEntry,type Bounds} from './model';
 /**
  * Scene operations for the 3D studio (P1 staging). Pure three.js core, no renderer and no DOM, so the logic runs under tsx --test.
@@ -127,6 +127,7 @@ export class Stage{
  private entries:Entry[]=[];private cursor=0;private saved=0;private listeners=new Set<()=>void>();private revision=0;
  /** Pose libraries, keyed by the id of the rig's root bone. */private poseLibs=new Map<number,Pose[]>();
  /** IK chains keyed by the chain's root bone id. */private ikChains=new Map<number,{on:boolean;target:THREE.Vector3;pole:THREE.Vector3}>();
+ /** FABRIK chains (3+ segments) keyed by the chain's root bone id. */private fabrikChains=new Map<number,{on:boolean;target:THREE.Vector3;look:{on:boolean;target:THREE.Vector3}}>();
  /** Joint limits keyed by bone uuid (uuid survives reloads; Object3D.id does not). */private boneLimits=new Map<string,AxisLimits>();
  constructor(){this.root.name='model';}
  onChange(l:()=>void){this.listeners.add(l);return()=>{this.listeners.delete(l);};}
@@ -150,7 +151,7 @@ export class Stage{
   this.clear();if(model)this.root.add(model);this.emit();
  }
  clear(){
-  this.bakedCache.clear();this.clipList=[];this.clipRevision++;this.poseLibs.clear();this.ikChains.clear();this.boneLimits.clear();
+  this.bakedCache.clear();this.clipList=[];this.clipRevision++;this.poseLibs.clear();this.ikChains.clear();this.fabrikChains.clear();this.boneLimits.clear();
   for(const c of [...this.root.children]){this.root.remove(c);disposeObject(c);}
   for(const e of this.entries)e.release?.();this.entries=[];this.cursor=0;this.saved=0;this.emit();
  }
@@ -617,6 +618,138 @@ export class Stage{
  /** Command path: move the target (and solve) as one undo step. */
  ikSetTarget(rootId:number,p:readonly[number,number,number]){const before=this.ikBegin(rootId);this.ikDragTarget(rootId,p);this.ikCommit(rootId,before,'IK target');}
  ikSetPole(rootId:number,p:readonly[number,number,number]){const before=this.ikBegin(rootId);this.ikDragPole(rootId,p);this.ikCommit(rootId,before,'IK pole');}
+ /** The joint chain starting at root for FABRIK: root plus first-bone-child walks, 3..8 segments. */
+ private fabrikChainOf(rootId:number):THREE.Bone[]{
+  const o=this.need(rootId) as THREE.Bone;
+  if(!o.isBone)throw new IkError('Select a bone to drive a FABRIK chain.');
+  const chain:THREE.Bone[]=[o];
+  for(let b=o;;){const c=b.children.find(k=>(k as THREE.Bone).isBone) as THREE.Bone|undefined;if(!c)break;chain.push(c);b=c;}
+  const segments=chain.length-1;
+  if(segments<MIN_FABRIK_SEGMENTS||segments>MAX_FABRIK_SEGMENTS)throw new IkError(`The bone ${o.name||rootId} does not head a chain of ${MIN_FABRIK_SEGMENTS}..${MAX_FABRIK_SEGMENTS} segments (it has ${segments}). Two-segment chains use the two-bone IK.`);
+  return chain;
+ }
+ /** Nearest FABRIK head for any bone in a 3+ segment chain: the bone itself or an ancestor; an active chain wins over a nearer inactive one. */
+ fabrikChainHead(boneId:number):THREE.Bone|null{
+  const o=this.find(boneId) as THREE.Bone|null;if(!o||!o.isBone)return null;
+  let first:THREE.Bone|null=null;
+  for(let b:THREE.Object3D|null=o;b;b=b.parent){
+   if(!(b as THREE.Bone).isBone)return first;
+   try{this.fabrikChainOf(b.id);}catch{continue;}
+   if(this.fabrikOf(b.id)?.on)return b as THREE.Bone;
+   first??=b as THREE.Bone;
+  }
+  return first;
+ }
+ private fabrikOf(rootId:number){return this.fabrikChains.get(rootId)??null;}
+ /** True when an active FABRIK chain drives this bone: every chain joint except the end, plus the end while look-at is on. FK edits step back. */
+ fabrikDriven(boneId:number):boolean{
+  for(const[rid,c]of this.fabrikChains){
+   if(!c.on)continue;
+   let chain:THREE.Bone[];try{chain=this.fabrikChainOf(rid);}catch{continue;}
+   const at=chain.findIndex(b=>b.id===boneId);
+   if(at>=0)return at<chain.length-1||c.look.on;
+  }
+  return false;
+ }
+ /** FABRIK state of the chain rooted here, or null when the bone does not head a 3+ segment chain. */
+ fabrikState(rootId:number):{on:boolean;target:[number,number,number];look:{on:boolean;target:[number,number,number]}}|null{
+  try{this.fabrikChainOf(rootId);}catch{return null;}
+  const c=this.fabrikOf(rootId);
+  if(!c)return{on:false,target:[0,0,0],look:{on:false,target:[0,0,0]}};
+  return{on:c.on,target:c.target.toArray() as [number,number,number],look:{on:c.look.on,target:c.look.target.toArray() as [number,number,number]}};
+ }
+ /** FK -> FABRIK snaps the target to the current end effector (and the look target just past it), so the pose does not move. FABRIK -> FK keeps the solved pose. One undo step. */
+ fabrikToggle(rootId:number,on:boolean){
+  const chain=this.fabrikChainOf(rootId);const root=chain[0];const end=chain[chain.length-1];
+  const before=this.fabrikOf(rootId);
+  if(on&&this.fabrikChains.size>=MAX_IK_CHAINS&&(!before||!before.on))throw new IkError(`At most ${MAX_IK_CHAINS} FABRIK chains.`);
+  this.root.updateMatrixWorld(true);
+  let next:{on:boolean;target:THREE.Vector3;look:{on:boolean;target:THREE.Vector3}}|null=null;
+  if(on){
+   const e=end.getWorldPosition(new THREE.Vector3());
+   const dir=new THREE.Vector3(0,1,0).applyQuaternion(end.getWorldQuaternion(new THREE.Quaternion()));
+   next={on:true,target:e.clone(),look:{on:false,target:e.clone().add(dir.multiplyScalar(1))}};
+  }
+  if(next)this.fabrikChains.set(root.id,next);else this.fabrikChains.delete(root.id);
+  this.push({label:on?`FABRIK on ${root.name}`:`FK for ${root.name}`,
+   undo:()=>{if(before)this.fabrikChains.set(root.id,{...before,target:before.target.clone(),look:{...before.look,target:before.look.target.clone()}});else this.fabrikChains.delete(root.id);},
+   redo:()=>{if(next)this.fabrikChains.set(root.id,{...next,target:next.target.clone(),look:{...next.look,target:next.look.target.clone()}});else this.fabrikChains.delete(root.id);}});
+  this.emit();
+ }
+ /** Aims a bone so its child lands on the solved direction, then clamps it into its joint limits. */
+ private fabrikAim(bone:THREE.Bone,childPos:THREE.Vector3,want:THREE.Vector3){
+  const p=bone.getWorldPosition(new THREE.Vector3());
+  const old=childPos.clone().sub(p).normalize();
+  const q=new THREE.Quaternion().setFromUnitVectors(old,want.clone().sub(p).normalize());
+  const pw=new THREE.Quaternion();(bone.parent as THREE.Object3D).getWorldQuaternion(pw);
+  bone.quaternion.copy(pw.clone().invert().multiply(q).multiply(bone.getWorldQuaternion(new THREE.Quaternion())));
+  this.root.updateMatrixWorld(true);
+  this.clampBone(bone);
+ }
+ /** Solves the chain onto its current target and applies the rotations root to leaf (with joint limits), then the optional look-at on the end bone. No undo: the caller owns the step. */
+ private fabrikSolveChain(chain:THREE.Bone[],c:{target:THREE.Vector3;look:{on:boolean;target:THREE.Vector3}}){
+  this.root.updateMatrixWorld(true);
+  const joints=chain.map(b=>b.getWorldPosition(new THREE.Vector3()));
+  const lengths:number[]=[];
+  for(let i=0;i+1<chain.length;i++)lengths.push(joints[i].distanceTo(joints[i+1]));
+  const solved=fabrikSolve(joints.map(j=>[j.x,j.y,j.z] as [number,number,number]),lengths,[c.target.x,c.target.y,c.target.z]);
+  for(let i=0;i+1<chain.length;i++){
+   const cur=chain[i+1].getWorldPosition(new THREE.Vector3());
+   this.fabrikAim(chain[i],cur,new THREE.Vector3(...solved[i+1]));
+  }
+  if(c.look.on){
+   const end=chain[chain.length-1];
+   const e=end.getWorldPosition(new THREE.Vector3());
+   const dir=c.look.target.clone().sub(e);
+   if(dir.lengthSq()>1e-12){
+    const up=new THREE.Vector3(0,0,1).applyQuaternion(end.getWorldQuaternion(new THREE.Quaternion()));
+    const[x,y,z]=aimBasis([dir.x,dir.y,dir.z],[up.x,up.y,up.z]);
+    const m=new THREE.Matrix4().makeBasis(new THREE.Vector3(...x),new THREE.Vector3(...y),new THREE.Vector3(...z));
+    const q=new THREE.Quaternion().setFromRotationMatrix(m);
+    const pw=new THREE.Quaternion();(end.parent as THREE.Object3D).getWorldQuaternion(pw);
+    end.quaternion.copy(pw.clone().invert().multiply(q));
+    this.root.updateMatrixWorld(true);
+    this.clampBone(end);
+   }
+  }
+ }
+ /** Snapshot of a chain's pose plus FABRIK state; the drag commit turns it into one undo entry. */
+ fabrikBegin(rootId:number){const chain=this.fabrikChainOf(rootId);const c=this.fabrikOf(rootId);return{chain,rows:this.captureLocals(chain),fabrik:c?{target:c.target.clone(),look:{on:c.look.on,target:c.look.target.clone()}}:null};}
+ /** Live target/look moves during a drag: solve without an undo entry. */
+ fabrikDragTarget(rootId:number,p:readonly[number,number,number]){const chain=this.fabrikChainOf(rootId);const c=this.fabrikOf(rootId);if(!c||!c.on)throw new IkError('FABRIK is off for this chain.');c.target.set(p[0],p[1],p[2]);this.fabrikSolveChain(chain,c);this.emit();}
+ fabrikDragLook(rootId:number,p:readonly[number,number,number]){const chain=this.fabrikChainOf(rootId);const c=this.fabrikOf(rootId);if(!c||!c.on||!c.look.on)throw new IkError('Look-at is off for this chain.');c.look.target.set(p[0],p[1],p[2]);this.fabrikSolveChain(chain,c);this.emit();}
+ /** Closes a drag or a command move as one undo step. */
+ fabrikCommit(rootId:number,before:{chain:THREE.Bone[];rows:{p:readonly[number,number,number];q:readonly[number,number,number,number];s:readonly[number,number,number]}[];fabrik:{target:THREE.Vector3;look:{on:boolean;target:THREE.Vector3}}|null},label:string){
+  const after=this.fabrikBegin(rootId);
+  this.push({label,
+   undo:()=>{this.restoreLocals(before.chain,before.rows);const c=this.fabrikOf(rootId);if(c&&before.fabrik){c.target.copy(before.fabrik.target);c.look.on=before.fabrik.look.on;c.look.target.copy(before.fabrik.look.target);}},
+   redo:()=>{this.restoreLocals(after.chain,after.rows);const c=this.fabrikOf(rootId);if(c&&after.fabrik){c.target.copy(after.fabrik.target);c.look.on=after.fabrik.look.on;c.look.target.copy(after.fabrik.look.target);}}});
+  this.emit();
+ }
+ /** Command path: move the target (and solve) as one undo step. */
+ fabrikSetTarget(rootId:number,p:readonly[number,number,number]){const before=this.fabrikBegin(rootId);this.fabrikDragTarget(rootId,p);this.fabrikCommit(rootId,before,'FABRIK target');}
+ /** Command path: move the look target (and solve) as one undo step. */
+ fabrikSetLook(rootId:number,p:readonly[number,number,number]){const before=this.fabrikBegin(rootId);this.fabrikDragLook(rootId,p);this.fabrikCommit(rootId,before,'FABRIK look target');}
+ /** Toggles the look-at constraint of an active chain. One undo step. */
+ fabrikLookToggle(rootId:number,on:boolean){
+  const chain=this.fabrikChainOf(rootId);const c=this.fabrikOf(rootId);
+  if(!c||!c.on)throw new IkError('FABRIK is off for this chain.');
+  const before={on:c.look.on,target:c.look.target.clone()};
+  if(on&&!before.on){
+   const end=chain[chain.length-1];this.root.updateMatrixWorld(true);
+   const e=end.getWorldPosition(new THREE.Vector3());
+   const dir=new THREE.Vector3(0,1,0).applyQuaternion(end.getWorldQuaternion(new THREE.Quaternion()));
+   c.look.target.copy(e.clone().add(dir));
+  }
+  const rowsB=this.captureLocals(chain);
+  c.look.on=on;if(on)this.fabrikSolveChain(chain,c);
+  const rowsA=this.captureLocals(chain);
+  const after={on,target:c.look.target.clone()};
+  this.push({label:on?'Look-at on':'Look-at off',
+   undo:()=>{const k=this.fabrikOf(rootId);if(k){k.look.on=before.on;k.look.target.copy(before.target);}this.restoreLocals(chain,rowsB);},
+   redo:()=>{const k=this.fabrikOf(rootId);if(k){k.look.on=after.on;k.look.target.copy(after.target);}this.restoreLocals(chain,rowsA);}});
+  this.emit();
+ }
  /** Joint limits of a bone in degrees, or null when unlimited. */
  boneLimitsOf(id:number):{min:[number,number,number];max:[number,number,number]}|null{
   const o=this.find(id) as THREE.Bone|null;if(!o||!o.isBone)return null;

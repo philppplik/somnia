@@ -33,6 +33,24 @@ async function skinnedGlb3():Promise<Buffer>{
  const out=await new GLTFExporter().parseAsync(scene,{binary:true}) as ArrayBuffer;
  return Buffer.from(out);
 }
+/** A four-bone skinned box (Hip > Knee > Ankle > Toe = 3 segments) for FABRIK tests. */
+async function skinnedGlb4():Promise<Buffer>{
+ const THREE=await import('three');const {GLTFExporter}=await import('three/examples/jsm/exporters/GLTFExporter.js');
+ class FR{result:string|ArrayBuffer|null=null;onloadend:(()=>void)|null=null;onerror:(()=>void)|null=null;
+  readAsArrayBuffer(b:Blob){void b.arrayBuffer().then(r=>{this.result=r;this.onloadend?.();},()=>this.onerror?.());}
+  readAsDataURL(b:Blob){void b.arrayBuffer().then(r=>{this.result=`data:application/octet-stream;base64,${Buffer.from(r as ArrayBuffer).toString('base64')}`;this.onloadend?.();},()=>this.onerror?.());}}
+ (globalThis as unknown as {FileReader:unknown}).FileReader??=FR;(globalThis as unknown as {ProgressEvent:unknown}).ProgressEvent??=Event;
+ const geo=new THREE.BoxGeometry(1,4,1);const count=geo.getAttribute('position').count;
+ const si=new Uint16Array(count*4),sw=new Float32Array(count*4);for(let i=0;i<count;i++){si[i*4]=i%4;sw[i*4]=1;}
+ geo.setAttribute('skinIndex',new THREE.Uint16BufferAttribute(si,4));geo.setAttribute('skinWeight',new THREE.Float32BufferAttribute(sw,4));
+ const hip=new THREE.Bone();hip.name='Hip';const knee=new THREE.Bone();knee.name='Knee';knee.position.y=1;hip.add(knee);
+ const ankle=new THREE.Bone();ankle.name='Ankle';ankle.position.y=1;knee.add(ankle);
+ const toe=new THREE.Bone();toe.name='Toe';toe.position.y=1;ankle.add(toe);
+ const mesh=new THREE.SkinnedMesh(geo,new THREE.MeshStandardMaterial({color:0x8899aa}));mesh.name='Body';mesh.add(hip);mesh.bind(new THREE.Skeleton([hip,knee,ankle,toe]));
+ const scene=new THREE.Scene();scene.add(mesh);
+ const out=await new GLTFExporter().parseAsync(scene,{binary:true}) as ArrayBuffer;
+ return Buffer.from(out);
+}
 /** CI-only: needs a browser with WebGL (headless Chromium uses SwiftShader). Not run in the authoring sandbox. */
 function triangleGlb():Buffer{
  const pos=Buffer.from(new Float32Array([0,0,0,1,0,0,0,1,0]).buffer),idx=Buffer.from(new Uint16Array([0,1,2,0]).buffer);
@@ -509,5 +527,35 @@ test('3D studio drives a chain with IK, moves the target and sets joint limits',
  // With IK off again, target moves refuse with a notice instead of throwing.
  await page.getByLabel('IK drives this chain').uncheck();
  await run(page,'studio3d.ik.target',{x:0,y:1,z:0});
+ await expect(page.getByRole('alert')).toBeVisible();
+});
+
+test('3D studio drives an N-bone chain with FABRIK, look-at and limits',async({page})=>{
+ const glb=await skinnedGlb4();
+ await open3d(page);
+ await page.getByTestId('studio3d-file-input').setInputFiles({name:'rig4.glb',mimeType:'model/gltf-binary',buffer:glb});
+ await expect(page.getByTestId('studio3d-viewport')).toBeVisible({timeout:20_000});
+ await expect(page.getByTestId('studio3d-skeleton')).toBeVisible();
+ // The chain root shows the FABRIK switch; toggling on snaps the target to the end effector without moving the pose.
+ await page.getByLabel('Bone').selectOption({index:1});
+ await expect.poll(async()=>(await session(page)).info?.kind).toBe('bone');
+ await expect(page.getByTestId('studio3d-fabrik')).toBeVisible();
+ await page.getByLabel('FABRIK drives this chain').check();
+ await expect.poll(async()=>(await session(page)).fabrik?.on).toBe(true);
+ const snapped=(await session(page)).fabrik!.target;
+ expect(snapped[1]).toBeGreaterThan(2.9);
+ // Moving the target is one undo step and the chain bends to reach it.
+ await run(page,'studio3d.fabrik.target',{x:1.5,y:1.5,z:0});
+ await expect.poll(async()=>(await session(page)).fabrik?.target[0]).toBeCloseTo(1.5,3);
+ await run(page,'studio3d.undo');
+ await expect.poll(async()=>(await session(page)).fabrik?.target[0]).toBeCloseTo(snapped[0],3);
+ // Look-at aims the end bone; the toggle lands in the panel state.
+ await page.getByLabel('Aim the end bone at the look target').check();
+ await expect.poll(async()=>(await session(page)).fabrik?.look.on).toBe(true);
+ await run(page,'studio3d.fabrik.looktarget',{x:0,y:3,z:3});
+ await expect.poll(async()=>(await session(page)).fabrik?.look.target[2]).toBeCloseTo(3,3);
+ // With FABRIK off again, target moves refuse with a notice instead of throwing.
+ await page.getByLabel('FABRIK drives this chain').uncheck();
+ await run(page,'studio3d.fabrik.target',{x:0,y:1,z:0});
  await expect(page.getByRole('alert')).toBeVisible();
 });

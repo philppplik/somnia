@@ -394,5 +394,13 @@
  "studio3d.limits.title": "Límites articulares (grados)",
  "studio3d.limits.min": "Mín",
  "studio3d.limits.max": "Máx",
- "studio3d.limits.clear": "Quitar límites"
+ "studio3d.limits.clear": "Quitar límites",
+ "cmd.studio3d.fabrik.toggle": "Cambiar una cadena entre FK y FABRIK",
+ "cmd.studio3d.fabrik.target": "Mover el objetivo FABRIK",
+ "cmd.studio3d.fabrik.lookat": "Activar la restricción de mirada FABRIK",
+ "cmd.studio3d.fabrik.looktarget": "Mover el objetivo de mirada FABRIK",
+ "studio3d.fabrik.title": "FABRIK",
+ "studio3d.fabrik.on": "FABRIK controla esta cadena",
+ "studio3d.fabrik.lookat": "Apuntar el hueso final al objetivo de mirada",
+ "studio3d.fabrik.hint": "Arrastra los marcadores de objetivo (verde) y mirada (rosa) en la vista."
 }

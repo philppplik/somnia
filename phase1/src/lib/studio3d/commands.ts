@@ -59,6 +59,10 @@ export interface Studio3DController{
  ikToggle(on:boolean,id?:number):void;
  ikSetTarget(p:readonly[number,number,number],id?:number):void;
  ikSetPole(p:readonly[number,number,number],id?:number):void;
+ fabrikToggle(on:boolean,id?:number):void;
+ fabrikSetTarget(p:readonly[number,number,number],id?:number):void;
+ fabrikLookToggle(on:boolean,id?:number):void;
+ fabrikSetLook(p:readonly[number,number,number],id?:number):void;
  setBoneLimits(min:(number|null)[]|null,max:(number|null)[]|null,id?:number):void;
  paintDab(x:number,y:number,z:number,opts?:{bone?:number;mode?:'add'|'subtract'|'smooth';radius?:number;strength?:number;falloff?:'smooth'|'linear'|'constant'}):number;
  autoKey(on:boolean):void;
@@ -200,6 +204,10 @@ export function studio3DCommandSpecs():CommandSpec<unknown,unknown>[]{
   add<{id?:number;on:boolean}>('studio3d.ik.toggle','Switch a two-bone chain between FK and IK; switching to IK snaps the target to the end effector','Edit',p=>need().ikToggle(p.on,p.id),object({id:{type:'integer',minimum:0},on:{type:'boolean'}},['on']),hasSkinnedMesh),
   add<{id?:number;x:number;y:number;z:number}>('studio3d.ik.target','Move the IK target of a chain (world space) and solve','Edit',p=>need().ikSetTarget([p.x,p.y,p.z],p.id),object({id:{type:'integer',minimum:0},x:{type:'number'},y:{type:'number'},z:{type:'number'}},['x','y','z']),hasSkinnedMesh),
   add<{id?:number;x:number;y:number;z:number}>('studio3d.ik.pole','Move the IK pole target of a chain (world space) and re-solve','Edit',p=>need().ikSetPole([p.x,p.y,p.z],p.id),object({id:{type:'integer',minimum:0},x:{type:'number'},y:{type:'number'},z:{type:'number'}},['x','y','z']),hasSkinnedMesh),
+  add<{id?:number;on:boolean}>('studio3d.fabrik.toggle','Switch a chain of 3 to 8 segments between FK and FABRIK; switching to FABRIK snaps the target to the end effector','Edit',p=>need().fabrikToggle(p.on,p.id),object({id:{type:'integer',minimum:0},on:{type:'boolean'}},['on']),hasSkinnedMesh),
+  add<{id?:number;x:number;y:number;z:number}>('studio3d.fabrik.target','Move the FABRIK target of a chain (world space) and solve','Edit',p=>need().fabrikSetTarget([p.x,p.y,p.z],p.id),object({id:{type:'integer',minimum:0},x:{type:'number'},y:{type:'number'},z:{type:'number'}},['x','y','z']),hasSkinnedMesh),
+  add<{id?:number;on:boolean}>('studio3d.fabrik.lookat','Toggle the look-at constraint of a FABRIK chain (aims the end bone at the look target)','Edit',p=>need().fabrikLookToggle(p.on,p.id),object({id:{type:'integer',minimum:0},on:{type:'boolean'}},['on']),hasSkinnedMesh),
+  add<{id?:number;x:number;y:number;z:number}>('studio3d.fabrik.looktarget','Move the look-at target of a FABRIK chain (world space) and re-solve','Edit',p=>need().fabrikSetLook([p.x,p.y,p.z],p.id),object({id:{type:'integer',minimum:0},x:{type:'number'},y:{type:'number'},z:{type:'number'}},['x','y','z']),hasSkinnedMesh),
   add<{id?:number;min?:(number|null)[]|null;max?:(number|null)[]|null}>('studio3d.bone.limits','Set or clear joint limits of a bone in degrees (null keeps an axis open)','Edit',p=>need().setBoneLimits(p.min??null,p.max??null,p.id),object({id:{type:'integer',minimum:0},min:{anyOf:[{type:'null'},{type:'array',items:{anyOf:[{type:'number',minimum:-720,maximum:720},{type:'null'}]},minItems:3,maxItems:3}]},max:{anyOf:[{type:'null'},{type:'array',items:{anyOf:[{type:'number',minimum:-720,maximum:720},{type:'null'}]},minItems:3,maxItems:3}]}},[]),hasSkinnedMesh),
   add<{bone:number|null}>('studio3d.skin.preview','Preview a bone\'s influence as vertex colours on the selected skinned 3D mesh','View',p=>need().setWeightPreview(p.bone),object({bone:{anyOf:[{type:'null'},{type:'integer',minimum:0}]}},['bone']),hasSkinnedMesh),
   add<{on?:boolean}>('studio3d.anim.autokey','Turn auto-key on or off: transform changes are recorded as keys at the current time','View',p=>need().autoKey(p?.on??!getStudio3DState().autoKey),object({on:{type:'boolean'}},[]),hasScene),

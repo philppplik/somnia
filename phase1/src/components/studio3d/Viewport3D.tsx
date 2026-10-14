@@ -141,8 +141,9 @@ export default function Viewport3D(){
    const infos=clipInfos();const an=getStudio3DState().anim;const keys=sel==null||!infos[an.clip]?[]:stage.keysOf(an.clip,sel);
    if(an.clip>=infos.length&&an.clip>0){stopAnim();patchStudio3D({anim:{clip:0,playing:false,time:0,loop:true,speed:1,range:null}});}
    const head=sel==null?null:stage.ikChainHead(sel);const ik=head?{...stage.ikState(head.id)!,root:head.id}:null;
-   patchStudio3D({clips:infos,clipKeys:keys,stats:m.stats,outline:m.outline,bones:stage.bones(),bounds:m.bounds,selected:info?sel:null,selectedInfo:info,poses:sel==null?[]:stage.poseList(sel),ik,boneLimits:sel==null?null:stage.boneLimitsOf(sel),dirty:stage.dirty,canUndo:stage.canUndo,canRedo:stage.canRedo,undoLabel:stage.undoLabel});
-   syncIk();
+   const fhead=sel==null?null:stage.fabrikChainHead(sel);const fabrik=fhead?{...stage.fabrikState(fhead.id)!,root:fhead.id}:null;
+   patchStudio3D({clips:infos,clipKeys:keys,stats:m.stats,outline:m.outline,bones:stage.bones(),bounds:m.bounds,selected:info?sel:null,selectedInfo:info,poses:sel==null?[]:stage.poseList(sel),ik,fabrik,boneLimits:sel==null?null:stage.boneLimitsOf(sel),dirty:stage.dirty,canUndo:stage.canUndo,canRedo:stage.canRedo,undoLabel:stage.undoLabel});
+   syncIk();syncFabrik();
    drawSelection();applyWire(getStudio3DState().wireframe);syncSkeleton();syncWeightPreview();for(const h of syncHooks)h();invalidate();
   };
   const offStage=stage.onChange(()=>{if(!disposed)sync();});
@@ -240,6 +241,32 @@ export default function Viewport3D(){
     if(!ikDrag){ikTarget.position.fromArray(ik.target);ikPoleM.position.fromArray(ik.pole);}
    }else if(ikTarget.parent){scene.remove(ikTarget);scene.remove(ikPoleM);ikGizmo.detach();poleGizmo.detach();}
   };
+  // FABRIK: a target and a look-at marker for 3+ segment chains, each with its own translate gizmo; visible while a chain has FABRIK on (the look marker only while look-at is on).
+  const fkTarget=ikMarker(0x4ade80),fkLook=ikMarker(0xf472b6);fkTarget.name='fabrik target';fkLook.name='fabrik look';
+  const fkGizmo=new TransformControls(camera,renderer.domElement);fkGizmo.setMode('translate');
+  const lookGizmo=new TransformControls(camera,renderer.domElement);lookGizmo.setMode('translate');
+  const fkHelpers=[fkGizmo.getHelper(),lookGizmo.getHelper()];for(const h of fkHelpers){h.visible=false;scene.add(h);}
+  let fkDrag:{root:number;before:ReturnType<Stage['fabrikBegin']>;kind:'FABRIK target'|'FABRIK look target'}|null=null;
+  const fkRoot=():number|null=>getStudio3DState().fabrik?.root??null;
+  const fkDragStart=(kind:'FABRIK target'|'FABRIK look target')=>{const r=fkRoot();if(r==null)return;fkDrag={root:r,before:stage.fabrikBegin(r),kind};controls.enabled=false;gizmo.enabled=false;};
+  const fkDragEnd=()=>{const d=fkDrag;fkDrag=null;controls.enabled=true;gizmo.enabled=true;if(d)stage.fabrikCommit(d.root,d.before,d.kind);};
+  fkGizmo.addEventListener('dragging-changed',e=>{if(!!(e as unknown as {value:boolean}).value)fkDragStart('FABRIK target');else fkDragEnd();});
+  lookGizmo.addEventListener('dragging-changed',e=>{if(!!(e as unknown as {value:boolean}).value)fkDragStart('FABRIK look target');else fkDragEnd();});
+  fkGizmo.addEventListener('change',()=>{if(fkDrag?.kind==='FABRIK target'){const r=fkDrag.root;stage.fabrikDragTarget(r,[fkTarget.position.x,fkTarget.position.y,fkTarget.position.z]);}invalidate();});
+  lookGizmo.addEventListener('change',()=>{if(fkDrag?.kind==='FABRIK look target'){const r=fkDrag.root;stage.fabrikDragLook(r,[fkLook.position.x,fkLook.position.y,fkLook.position.z]);}invalidate();});
+  /** Shows or hides the FABRIK markers from the session state; their positions follow the chain state. */
+  const syncFabrik=()=>{
+   const fk=getStudio3DState().fabrik;const on=!!fk?.on;const lookOn=on&&!!fk?.look.on;
+   fkHelpers[0].visible=on;fkHelpers[1].visible=lookOn;
+   if(on&&fk){
+    if(!fkTarget.parent){scene.add(fkTarget);fkGizmo.attach(fkTarget);}
+    if(!fkDrag)fkTarget.position.fromArray(fk.target);
+   }else if(fkTarget.parent){scene.remove(fkTarget);fkGizmo.detach();}
+   if(lookOn&&fk){
+    if(!fkLook.parent){scene.add(fkLook);lookGizmo.attach(fkLook);}
+    if(!fkDrag)fkLook.position.fromArray(fk.look.target);
+   }else if(fkLook.parent){scene.remove(fkLook);lookGizmo.detach();}
+  };
   // A group pivot carries the multi-selection: its movement is applied to every member (see applyGroupDrag).
   const groupPivot=new THREE.Object3D();groupPivot.name='group pivot';
   let group:{members:GroupDragMember[];p0:THREE.Matrix4;before:TransformSnapshot[]}|null=null;
@@ -270,7 +297,7 @@ export default function Viewport3D(){
    // Bones rotate only: moving or scaling a joint would break the bind pose, so the gizmo steps back in those modes.
    if(o&&(o as THREE.Bone).isBone&&gizmo.mode!=='rotate'){gizmo.detach();return;}
    // A bone an IK chain drives is posed through the target gizmo, not directly.
-   if(o&&(o as THREE.Bone).isBone&&stage.ikDriven(o.id)){gizmo.detach();return;}
+   if(o&&(o as THREE.Bone).isBone&&(stage.ikDriven(o.id)||stage.fabrikDriven(o.id))){gizmo.detach();return;}
    if(o)gizmo.attach(o);else gizmo.detach();
   };
   /** Skeleton overlay: rebuilt when the set of bones changes, shown when the session toggle is on. Kept out of the stage root so it never exports or alters bounds. */
@@ -635,6 +662,10 @@ export default function Viewport3D(){
   const ikToggle=(on:boolean,id?:number)=>{stage.ikToggle(id??poseTarget(),on);};
   const ikSetTarget=(p:readonly[number,number,number],id?:number)=>{stage.ikSetTarget(id??poseTarget(),p);};
   const ikSetPole=(p:readonly[number,number,number],id?:number)=>{stage.ikSetPole(id??poseTarget(),p);};
+  const fabrikToggle=(on:boolean,id?:number)=>{stage.fabrikToggle(id??poseTarget(),on);};
+  const fabrikSetTarget=(p:readonly[number,number,number],id?:number)=>{stage.fabrikSetTarget(id??poseTarget(),p);};
+  const fabrikLookToggle=(on:boolean,id?:number)=>{stage.fabrikLookToggle(id??poseTarget(),on);};
+  const fabrikSetLook=(p:readonly[number,number,number],id?:number)=>{stage.fabrikSetLook(id??poseTarget(),p);};
   const setBoneLimits=(min:(number|null)[]|null,max:(number|null)[]|null,id?:number)=>{const rad=(a:(number|null)[]|null)=>(a??[null,null,null]).map(x=>x==null?Number.NaN:x) as [number,number,number];stage.setBoneLimits(id??poseTarget(),min?rad(min):null,max?rad(max):null);};
   const poseId=(id?:number)=>id??poseTarget();
   const poseSave=(name:string,id?:number)=>{stage.poseSave(poseId(id),name);};
@@ -663,7 +694,7 @@ export default function Viewport3D(){
   /** Auto-key records transform changes into the current clip at the playhead. Turning it on without a clip makes one. */
   const autoKey=(on:boolean)=>{if(on&&!stage.clips.length)clipAdd();patchStudio3D({autoKey:!!on});};
   stage.autoKeySource=()=>getStudio3DState().autoKey&&stage.clips.length?{clip:anim().clip,time:anim().time}:null;
-  const off=registerStudio3DController({keyMove,keyEase,keyCopy,keyShift,clipDuplicate,animRange,selectBone,setSkeleton,skinBind,skinRebind,setWeightPreview,setWeightBrush,paintDab,poseSave,poseApply,poseRemove,poseMirror,poseBlend,ikToggle,ikSetTarget,ikSetPole,setBoneLimits,keyPaste,autoKey,clipAdd,clipRemove,clipRename,clipDuration,keySet,keyRemove,animPlay,animPause,animSeek,animLoop,animSpeed,setTextureTransform:(id,slot,p)=>stage.setTextureTransform(id,slot,p),exportGltf,setTextureFile,mirrorSelection,applyScale:applyScaleSel,mergeSelection:mergeSel,viewPreset,setPrimitive:(id,p)=>stage.setPrimitive(id,p),
+  const off=registerStudio3DController({keyMove,keyEase,keyCopy,keyShift,clipDuplicate,animRange,selectBone,setSkeleton,skinBind,skinRebind,setWeightPreview,setWeightBrush,paintDab,poseSave,poseApply,poseRemove,poseMirror,poseBlend,ikToggle,ikSetTarget,ikSetPole,fabrikToggle,fabrikSetTarget,fabrikLookToggle,fabrikSetLook,setBoneLimits,keyPaste,autoKey,clipAdd,clipRemove,clipRename,clipDuration,keySet,keyRemove,animPlay,animPause,animSeek,animLoop,animSpeed,setTextureTransform:(id,slot,p)=>stage.setTextureTransform(id,slot,p),exportGltf,setTextureFile,mirrorSelection,applyScale:applyScaleSel,mergeSelection:mergeSel,viewPreset,setPrimitive:(id,p)=>stage.setPrimitive(id,p),
    save:saveDocument,deleteSelection,duplicateSelection,exportMesh,setExportOptions,renderTurntable,cancelRender:()=>{cancelFlag=true;},setUnit,openFiles,newScene,resetView:frameAll,frameSelection,select,renderStill,exportGlb,
    addPrimitive:k=>{const o=stage.addPrimitive(k);select(o.id);return o.id;},addLight:k=>{const o=stage.addLight(k);select(o.id);return o.id;},
    setTransform:(id,p)=>stage.setTransform(id,p),setMaterial:(id,p)=>stage.setMaterial(id,p),rename:(id,n)=>stage.rename(id,n),
@@ -773,7 +804,7 @@ export default function Viewport3D(){
    disposed=true;opening++;stopAnim();mixer?.stopAllAction();stage.autoKeySource=null;off();offAuto();if(autoTimer)clearTimeout(autoTimer);cancelAnimationFrame(frame);ro.disconnect();controls.dispose();
    cv.removeEventListener('pointerdown',onDownCapture,true);cv.removeEventListener('pointerdown',onDown);window.removeEventListener('pointermove',onMove);window.removeEventListener('pointercancel',endMarquee);endMarquee();cv.removeEventListener('pointerup',onUp);cv.removeEventListener('keydown',onKey);
    if(getStudio3DState().status==='loading')patchStudio3D({status:stage.root.children.length?'ready':'idle',confirmReplace:null});
-   gizmo.detach();gizmo.dispose();ikGizmo.detach();ikGizmo.dispose();poleGizmo.detach();poleGizmo.dispose();ikTarget.geometry.dispose();(ikTarget.material as THREE.Material).dispose();ikPoleM.geometry.dispose();(ikPoleM.material as THREE.Material).dispose();offStage();clearSelection();if(painting){painting=false;}const openSel=getStudio3DState().selected;if(openSel!=null)stage.skinPaintEnd(openSel);if(skelHelper){scene.remove(skelHelper);skelHelper.geometry.dispose();(skelHelper.material as THREE.Material).dispose();skelHelper=null;}if(weightOverlay){scene.remove(weightOverlay);weightOverlay.geometry.dispose();(weightOverlay.material as THREE.Material).dispose();weightOverlay=null;}for(const h of helpers.values())h.dispose();grid.geometry.dispose();(grid.material as THREE.Material).dispose();for(const t of envTargets)t.dispose();envCache.clear();pmrem.dispose();renderer.dispose();renderer.forceContextLoss();
+   gizmo.detach();gizmo.dispose();ikGizmo.detach();ikGizmo.dispose();poleGizmo.detach();poleGizmo.dispose();fkGizmo.detach();fkGizmo.dispose();lookGizmo.detach();lookGizmo.dispose();fkTarget.geometry.dispose();(fkTarget.material as THREE.Material).dispose();fkLook.geometry.dispose();(fkLook.material as THREE.Material).dispose();ikTarget.geometry.dispose();(ikTarget.material as THREE.Material).dispose();ikPoleM.geometry.dispose();(ikPoleM.material as THREE.Material).dispose();offStage();clearSelection();if(painting){painting=false;}const openSel=getStudio3DState().selected;if(openSel!=null)stage.skinPaintEnd(openSel);if(skelHelper){scene.remove(skelHelper);skelHelper.geometry.dispose();(skelHelper.material as THREE.Material).dispose();skelHelper=null;}if(weightOverlay){scene.remove(weightOverlay);weightOverlay.geometry.dispose();(weightOverlay.material as THREE.Material).dispose();weightOverlay=null;}for(const h of helpers.values())h.dispose();grid.geometry.dispose();(grid.material as THREE.Material).dispose();for(const t of envTargets)t.dispose();envCache.clear();pmrem.dispose();renderer.dispose();renderer.forceContextLoss();
    if(cv.parentNode===el)el.removeChild(cv);
   };
  // eslint-disable-next-line react-hooks/exhaustive-deps

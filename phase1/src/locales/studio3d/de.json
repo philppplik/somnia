@@ -394,5 +394,13 @@
  "studio3d.limits.title": "Gelenkgrenzen (Grad)",
  "studio3d.limits.min": "Min",
  "studio3d.limits.max": "Max",
- "studio3d.limits.clear": "Grenzen aufheben"
+ "studio3d.limits.clear": "Grenzen aufheben",
+ "cmd.studio3d.fabrik.toggle": "Kette zwischen FK und FABRIK umschalten",
+ "cmd.studio3d.fabrik.target": "FABRIK-Ziel bewegen",
+ "cmd.studio3d.fabrik.lookat": "FABRIK-Blickbindung umschalten",
+ "cmd.studio3d.fabrik.looktarget": "FABRIK-Blickziel bewegen",
+ "studio3d.fabrik.title": "FABRIK",
+ "studio3d.fabrik.on": "FABRIK steuert diese Kette",
+ "studio3d.fabrik.lookat": "Endknochen auf das Blickziel ausrichten",
+ "studio3d.fabrik.hint": "Ziel- (grün) und Blick-Marker (pink) im Ansichtsfeld ziehen."
 }

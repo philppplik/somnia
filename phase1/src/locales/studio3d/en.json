@@ -394,5 +394,13 @@
  "studio3d.limits.title": "Joint limits (degrees)",
  "studio3d.limits.min": "Min",
  "studio3d.limits.max": "Max",
- "studio3d.limits.clear": "Clear limits"
+ "studio3d.limits.clear": "Clear limits",
+ "cmd.studio3d.fabrik.toggle": "Switch a chain between FK and FABRIK",
+ "cmd.studio3d.fabrik.target": "Move the FABRIK target",
+ "cmd.studio3d.fabrik.lookat": "Toggle the FABRIK look-at constraint",
+ "cmd.studio3d.fabrik.looktarget": "Move the FABRIK look-at target",
+ "studio3d.fabrik.title": "FABRIK",
+ "studio3d.fabrik.on": "FABRIK drives this chain",
+ "studio3d.fabrik.lookat": "Aim the end bone at the look target",
+ "studio3d.fabrik.hint": "Drag the target (green) and look (pink) markers in the viewport."
 }

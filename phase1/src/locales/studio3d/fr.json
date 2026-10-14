@@ -394,5 +394,13 @@
  "studio3d.limits.title": "Limites articulaires (degrés)",
  "studio3d.limits.min": "Min",
  "studio3d.limits.max": "Max",
- "studio3d.limits.clear": "Effacer les limites"
+ "studio3d.limits.clear": "Effacer les limites",
+ "cmd.studio3d.fabrik.toggle": "Basculer une chaîne entre FK et FABRIK",
+ "cmd.studio3d.fabrik.target": "Déplacer la cible FABRIK",
+ "cmd.studio3d.fabrik.lookat": "Activer la contrainte de visée FABRIK",
+ "cmd.studio3d.fabrik.looktarget": "Déplacer la cible de visée FABRIK",
+ "studio3d.fabrik.title": "FABRIK",
+ "studio3d.fabrik.on": "FABRIK pilote cette chaîne",
+ "studio3d.fabrik.lookat": "Viser l'os final vers la cible de visée",
+ "studio3d.fabrik.hint": "Faites glisser les marqueurs de cible (vert) et de visée (rose) dans la vue."
 }

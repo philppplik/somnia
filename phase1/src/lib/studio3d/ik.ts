@@ -58,3 +58,43 @@ export function clampEuler(rot:Vec3,limits:AxisLimits):[number,number,number]{
 }
 /** True when any side of any axis is bounded. */
 export const hasLimits=(l:AxisLimits|null|undefined):l is AxisLimits=>!!l&&[...l.min,...l.max].some(v=>!Number.isNaN(v));
+
+/** FABRIK (forward and backward reaching) for chains of 3..8 segments, plus an aim-with-up helper. */
+export const MAX_FABRIK_SEGMENTS=8,MIN_FABRIK_SEGMENTS=3,FABRIK_ITERATIONS=32,FABRIK_TOLERANCE=1e-4;
+/** Solves joint positions for a chain. joints[0] stays fixed; lengths are kept exactly. Returns the new joint positions (same length as joints). */
+export function fabrikSolve(joints:readonly Vec3[],lengths:readonly number[],target:Vec3):Vec3[]{
+ const n=joints.length;
+ if(n<2||lengths.length!==n-1)throw new IkError('A chain needs joints and one length per segment.');
+ if(n-1>MAX_FABRIK_SEGMENTS)throw new IkError(`A FABRIK chain has at most ${MAX_FABRIK_SEGMENTS} segments.`);
+ const total=lengths.reduce((a,b)=>a+b,0);
+ if(!(total>0))throw new IkError('The chain has no length.');
+ const root=joints[0];
+ const reach=sub(target,root);const dist=len(reach);
+ // Unreachable: stretch every joint straight toward the target.
+ if(dist>=total){
+  const dir=norm(reach);const out:Vec3[]=[root];
+  for(let i=0;i<lengths.length;i++)out.push(add(out[i],mul(dir,lengths[i])));
+  return out;
+ }
+ let p:Vec3[]=joints.map(j=>[...j] as [number,number,number]);
+ for(let it=0;it<FABRIK_ITERATIONS;it++){
+  // Backward: end at the target, walk to the root keeping lengths.
+  p[n-1]=target;
+  for(let i=n-2;i>=0;i--)p[i]=add(p[i+1],mul(norm(sub(p[i],p[i+1])),lengths[i]));
+  // Forward: root back home, walk to the end.
+  p[0]=root;
+  for(let i=0;i<n-1;i++)p[i+1]=add(p[i],mul(norm(sub(p[i+1],p[i])),lengths[i]));
+  if(len(sub(p[n-1],target))<FABRIK_TOLERANCE)break;
+ }
+ return p;
+}
+/** Right-handed orthonormal basis aiming +Y at dir with an up hint (the hint resolves the roll, its perpendicular part lands on the -Z side): returns [x,y,z] unit axes (column vectors of the aim rotation). */
+export function aimBasis(dir:Vec3,up:Vec3):[Vec3,Vec3,Vec3]{
+ const y=norm(dir);
+ if(len(y)<1e-12)throw new IkError('The aim target sits on the bone.');
+ let x=cross(up,y);
+ if(len(x)<1e-9)x=cross(Math.abs(y[1])<0.99?[0,1,0]:[1,0,0],y);
+ x=norm(x);
+ const z=norm(cross(x,y));
+ return[x,y,z];
+}

@@ -125,6 +125,7 @@ export function ObjectSection(_:InspectorSectionProps){
   {s.bones.length>0&&o.kind==='mesh'&&<SkinningFields id={o.id} skinned={o.skinned}/>}
   {s.bones.length>0&&(o.kind==='bone'||o.skinned)&&<PoseFields id={o.id}/>}
   {o.kind==='bone'&&<IkFields id={o.id}/>}
+  {o.kind==='bone'&&<FabrikFields/>}
   {o.kind==='bone'&&<LimitFields id={o.id}/>}
   <div className="flex gap-2"><Button variant="outline" onClick={()=>void executeCommand('studio3d.object.duplicate',{id:o.id})}>{t('studio3d.object.duplicate')}</Button>
    <Button variant="outline" onClick={()=>void executeCommand('studio3d.object.delete',{id:o.id})}>{t('studio3d.object.delete')}</Button></div>
@@ -168,6 +169,17 @@ function IkFields({id}:{id:number}){
  return <fieldset className="m-0 grid gap-2 border-0 p-0" data-testid="studio3d-ik"><legend className="text-xs text-ink-3">{t('studio3d.ik.title')}</legend>
   <label className="flex items-center gap-2 text-xs text-ink-2"><NativeInput type="checkbox" checked={s.ik.on} onChange={e=>void executeCommand('studio3d.ik.toggle',{id,on:e.currentTarget.checked})}/>{t('studio3d.ik.on')}</label>
   {s.ik.on&&<p className="m-0 text-xs text-ink-3">{t('studio3d.ik.hint')}</p>}
+ </fieldset>;
+}
+/** FABRIK switch and look-at for the 3+ segment chain the selected bone belongs to; the target and look gizmos live in the viewport. */
+function FabrikFields(){
+ const {t}=useT();const s=useStudio3D();
+ if(!s.fabrik)return null;
+ const id=s.fabrik.root;
+ return <fieldset className="m-0 grid gap-2 border-0 p-0" data-testid="studio3d-fabrik"><legend className="text-xs text-ink-3">{t('studio3d.fabrik.title')}</legend>
+  <label className="flex items-center gap-2 text-xs text-ink-2"><NativeInput type="checkbox" checked={s.fabrik.on} onChange={e=>void executeCommand('studio3d.fabrik.toggle',{id,on:e.currentTarget.checked})}/>{t('studio3d.fabrik.on')}</label>
+  {s.fabrik.on&&<label className="flex items-center gap-2 text-xs text-ink-2"><NativeInput type="checkbox" checked={s.fabrik.look.on} onChange={e=>void executeCommand('studio3d.fabrik.lookat',{id,on:e.currentTarget.checked})}/>{t('studio3d.fabrik.lookat')}</label>}
+  {s.fabrik.on&&<p className="m-0 text-xs text-ink-3">{t('studio3d.fabrik.hint')}</p>}
  </fieldset>;
 }
 /** Joint limits of the selected bone in degrees; an empty field leaves the axis open. */
