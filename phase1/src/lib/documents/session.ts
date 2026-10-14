@@ -138,16 +138,34 @@ export const editParagraph=(index:number,next:string)=>run(async()=>{
  if(/[\r\n\uFFFC]/.test(next))throw new Error('Line breaks are not supported in this version. Edit one paragraph at a time.');
  const edit=diffEdit(index,block.text,next);if(!edit)return;await apply(edit,'new');
 });
-export type ReceiptFailure='stale-revision'|'stale-text'|'not-editable'|'closed'|'readback-mismatch'|'failed';
-export class EditReceiptError extends Error{constructor(readonly code:ReceiptFailure,message:string){super(message);this.name='EditReceiptError';}}
-export interface EditReceipt{block:number;/** The document revision after the edit. */rev:number;/** The paragraph text read back from the engine after the edit. */text:string;/** True once the edit is on the undo stack. */undoable:boolean}
+export type ReceiptFailure='stale-revision'|'stale-text'|'not-editable'|'closed'|'readback-mismatch'|'failed'|'stale-history'|'invalid';
+/** `mutated` is false for every proven pre-commit refusal (nothing changed), true for a post-commit failure (the edit stands), and null when it could not be proven. */
+export class EditReceiptError extends Error{constructor(readonly code:ReceiptFailure,message:string,readonly mutated:boolean|null=false){super(message);this.name='EditReceiptError';}}
+export interface EditReceipt{block:number;/** The document revision after the edit. */rev:number;/** The paragraph text read back from the engine after the edit. */text:string;/** True once the edit is on the undo stack. */undoable:boolean;
+ /** Who asked for the edit (caller supplied, bounded). */origin:string;kind:'apply'|'undo';beforeRev:number;afterRev:number;beforeText:string;afterText:string;
+ /** Undo entries added (apply) or consumed (undo): 1 changed, 0 no-op, null when the history could not prove it. */applied:0|1|null;
+ /** Listener errors after the commit; the edit still stands. */postCommitErrors:number}
+export type ReceiptListener=(r:EditReceipt)=>void;
+const receiptListeners=new Set<ReceiptListener>();
+/** Observes reviewed edits. A throwing listener never affects the edit or other listeners; it only counts in `postCommitErrors`. */
+export function onReviewedEdit(fn:ReceiptListener):()=>void{receiptListeners.add(fn);return()=>{receiptListeners.delete(fn);};}
+interface UndoToken{e:DocumentsEngine;g:number;en:Entry|null;rev:number;depth:number;block:number;before:string;after:string;origin:string;used:boolean}
+const tokens=new WeakMap<EditReceipt,UndoToken>();
+const MAX_ORIGIN=80;
+const checkOrigin=(o:unknown)=>{if(o===undefined)return '';if(typeof o!=='string'||o.length>MAX_ORIGIN)throw new EditReceiptError('invalid','The origin is not valid.');return o;};
+function finish(r:EditReceipt,tok:UndoToken|null):EditReceipt{
+ let errs=0;for(const fn of [...receiptListeners]){try{fn(r);}catch{errs++;}}
+ const out=Object.freeze({...r,postCommitErrors:errs});if(tok)tokens.set(out,tok);return out;
+}
 /**
  * Applies one reviewed paragraph edit atomically. It refuses (changing nothing) when the document revision is not `expectedRev` or the
  * paragraph no longer reads `expectedText`; the worker checks the text again inside the same call as the replacement. The edit is on the
  * undo stack before this resolves, and the receipt carries the text read back from the engine, which must equal the expected result.
- * Serialised with every other edit. Errors are EditReceiptError and are not shown as an editing error in the document.
+ * Serialised with every other edit. Errors are EditReceiptError (`mutated` tells a pre-commit refusal from a post-commit mismatch) and are
+ * not shown as an editing error in the document. The receipt can be passed to undoReviewedEdit.
  */
-export function applyReviewedEdit(req:{block:number;expectedRev:number;expectedText:string;hunks:import('./edit').Hunk[]}):Promise<EditReceipt>{
+export function applyReviewedEdit(req:{block:number;expectedRev:number;expectedText:string;hunks:import('./edit').Hunk[];origin?:string}):Promise<EditReceipt>{
+ let origin:string;try{origin=checkOrigin(req.origin);}catch(err){return Promise.reject(err);}
  const en=cur;pending++;
  const p=chain.then(async():Promise<EditReceipt>=>{
   if(!engine||cur!==en)throw new EditReceiptError('closed','The document is not open.');
@@ -157,11 +175,36 @@ export function applyReviewedEdit(req:{block:number;expectedRev:number;expectedT
   if(!block||!block.editable||block.text===undefined)throw new EditReceiptError('not-editable','This paragraph cannot be edited as text.');
   if(block.text!==req.expectedText)throw new EditReceiptError('stale-text','The paragraph changed since the edit was prepared.');
   const edit:TextEdit={block:req.block,hunks:req.hunks};const want=applyEdit(req.expectedText,edit);
-  let got:string|undefined;
+  const e=engine,g=gen,d0=undo.depth,r0=st.rev;let got:string|undefined;
   try{got=await apply(edit,'new',{expect:req.expectedText});}
-  catch(err){const m=msg(err);throw new EditReceiptError(m.startsWith('stale:')?'stale-text':'failed',m);}
-  if(got!==want)throw new EditReceiptError('readback-mismatch','The paragraph does not read back as the edit intended; undo it.');
-  return{block:req.block,rev:getDocumentsState().rev,text:got,undoable:getDocumentsState().canUndo};
+  catch(err){const m=msg(err);const moved=getDocumentsState().rev!==r0||undo.depth!==d0;throw new EditReceiptError(m.startsWith('stale:')?'stale-text':'failed',m,m.startsWith('stale:')?false:moved?null:false);}
+  if(got!==want)throw new EditReceiptError('readback-mismatch','The paragraph does not read back as the edit intended; undo it.',true);
+  const after=getDocumentsState().rev,delta=undo.depth-d0;
+  const r:EditReceipt={block:req.block,rev:after,text:got,undoable:getDocumentsState().canUndo,origin,kind:'apply',beforeRev:r0,afterRev:after,beforeText:req.expectedText,afterText:got,applied:delta===1?1:delta===0?0:null,postCommitErrors:0};
+  return finish(r,delta===1?{e,g,en:cur,rev:after,depth:undo.depth,block:req.block,before:req.expectedText,after:got,origin,used:false}:null);
+ }).finally(()=>{pending--;});
+ chain=p.then(()=>undefined,()=>undefined);return p;
+}
+/**
+ * Undoes exactly the edit a receipt describes, once. Refuses (nothing changed, code stale-history) when the receipt is not from
+ * applyReviewedEdit, was already used, the document was reopened or switched, or any newer edit, undo or redo happened since.
+ */
+export function undoReviewedEdit(receipt:EditReceipt,origin?:string):Promise<EditReceipt>{
+let o:string;try{o=checkOrigin(origin);}catch(err){return Promise.reject(err);}
+ const tok=tokens.get(receipt);const en=cur;pending++;
+ const p=chain.then(async():Promise<EditReceipt>=>{
+  const stale=()=>new EditReceiptError('stale-history','The document changed since this edit; it cannot be undone from here.');
+  if(!tok||tok.used)throw stale();
+  if(!engine||cur!==en||engine!==tok.e||gen!==tok.g||cur!==tok.en||tok.e.isDisposed)throw stale();
+  const st=getDocumentsState();if(st.rev!==tok.rev||undo.depth!==tok.depth)throw stale();
+  const block=st.blocks.find(b=>b.index===tok.block);if(!block||block.text!==tok.after)throw stale();
+  const x=undo.popUndo();if(!x||x.snap){if(x)undo.pushUndoEntry(x);throw stale();}
+  tok.used=true;const r0=st.rev;
+  try{await apply(x.inverse,'undo');}
+  catch(err){const moved=getDocumentsState().rev!==r0;if(!moved){undo.pushUndoEntry(x);tok.used=false;}throw new EditReceiptError('failed',msg(err),moved?null:false);}
+  const now=getDocumentsState(),text=now.blocks.find(b=>b.index===tok.block)?.text;
+  if(text!==tok.before)throw new EditReceiptError('readback-mismatch','The paragraph does not read back as it did before the edit.',true);
+  return finish({block:tok.block,rev:now.rev,text,undoable:now.canUndo,origin:o||tok.origin,kind:'undo',beforeRev:r0,afterRev:now.rev,beforeText:tok.after,afterText:text,applied:1,postCommitErrors:0},null);
  }).finally(()=>{pending--;});
  chain=p.then(()=>undefined,()=>undefined);return p;
 }

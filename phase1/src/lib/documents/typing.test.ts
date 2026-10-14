@@ -6,7 +6,7 @@ import type {DocumentsEngine} from './engine';
 import {getDocumentsState,patchDocuments} from './store';
 import {setHeaderFooter,readHeaderFooter,tabInCell,insertTable,editTable,setParagraphStyle,shiftListLevel,toggleList,setAlign,setLineSpacing,setSpaceAfter,stepIndent,setFont,setFontColor,setFontSize,stepFontSize,toggleFormat,deleteAtCaret,moveCaret,MAX_INSERT_LINES,pasteText,redoEdit,resetSessionsForTest,selectAllText,selectedText,setSessionDeps,splitAtCaret,switchDocument,typeText,undoEdit,syncGeometry,settleDocument,setFindOpen,setFindQuery,findStep,replaceAll,replaceCurrent,documentStats} from './session';
 import {stepBoundary,wordBoundary} from './text';
-import {applyReviewedEdit,EditReceiptError} from './session';
+import {applyReviewedEdit,EditReceiptError,editParagraph} from './session';
 const docx=new Uint8Array(readFileSync(new URL('../../../test/documents/sample.docx',import.meta.url)));
 type Row={text:string;locked?:boolean;f?:Set<string>[];p?:Record<string,number|string>};
 /** Paragraph model of the engine: replace/split/merge/snapshot/restore with the same UTF-8 offset rules. */
@@ -398,4 +398,28 @@ test('reviewed edit: text changed under us is refused by the worker check; engin
  assert.deepEqual(d.texts(),['abc']);d.failAt=-1;
  const orig=d.replaceChecked.bind(d);d.replaceChecked=async(e,x)=>{const r=await orig(e,x);return{...r,text:r.text+'?'};};
  assert.equal(await code(applyReviewedEdit({block:0,expectedRev:rev,expectedText:'abc',hunks:[{start:0,end:0,text:'X'}]})),'readback-mismatch');
+});
+test('reviewed edit receipt: revisions, origin, applied, isolated listeners and bound undo',async()=>{
+ const {undoReviewedEdit,onReviewedEdit}=await import('./session');
+ await open(['hello world','x']);const rev=getDocumentsState().rev;let seen=0;
+ const off1=onReviewedEdit(()=>{throw new Error('boom');});const off2=onReviewedEdit(()=>{seen++;});
+ const r=await applyReviewedEdit({block:0,expectedRev:rev,expectedText:'hello world',hunks:[{start:0,end:5,text:'howdy'}],origin:'agent:1'});
+ off1();off2();
+ assert.deepEqual([r.origin,r.kind,r.beforeRev,r.afterRev,r.beforeText,r.afterText,r.applied,r.postCommitErrors,seen],['agent:1','apply',rev,getDocumentsState().rev,'hello world','howdy world',1,1,1]);
+ assert.ok(Object.isFrozen(r));
+ assert.equal(await code(applyReviewedEdit({block:0,expectedRev:rev,expectedText:'a',hunks:[],origin:'x'.repeat(81)})),'invalid');
+ assert.equal(await code(undoReviewedEdit({...r})),'stale-history','forged copy');
+ const u=await undoReviewedEdit(r,'agent:1');
+ assert.deepEqual([u.kind,u.text,u.applied,u.beforeText,d.texts()[0]],['undo','hello world',1,'howdy world','hello world']);
+ assert.equal(await code(undoReviewedEdit(r)),'stale-history','one-shot');
+ // A newer edit blocks the undo.
+ const rev2=getDocumentsState().rev;const r2=await applyReviewedEdit({block:0,expectedRev:rev2,expectedText:'hello world',hunks:[{start:0,end:0,text:'A'}]});
+ await editParagraph(1,'xy');
+ assert.equal(await code(undoReviewedEdit(r2)),'stale-history');
+ // Reopen blocks it too.
+ const r3=await applyReviewedEdit({block:0,expectedRev:getDocumentsState().rev,expectedText:'Ahello world',hunks:[{start:0,end:0,text:'B'}]});
+ await open(['fresh']);assert.equal(await code(undoReviewedEdit(r3)),'stale-history');
+ // Post-commit mismatch carries mutated=true; refusals carry false.
+ await open(['abc']);const rv=getDocumentsState().rev;
+ try{await applyReviewedEdit({block:0,expectedRev:rv-1,expectedText:'abc',hunks:[]});assert.fail('x');}catch(e){assert.equal((e as EditReceiptError).mutated,false);}
 });

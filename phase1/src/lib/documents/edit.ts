@@ -60,7 +60,7 @@ export interface SnapStep{before:number;after:number;caretBefore:{block:number;o
 export interface UndoEntry{inverse:TextEdit;snap?:SnapStep}
 export class UndoStack{
  private undoS:UndoEntry[]=[];private redoS:UndoEntry[]=[];
- get canUndo(){return this.undoS.length>0;}get canRedo(){return this.redoS.length>0;}
+ get depth(){return this.undoS.length;}get canUndo(){return this.undoS.length>0;}get canRedo(){return this.redoS.length>0;}
  private mergeAt=-Infinity;
  /** `merge`: consecutive typing in one place within `windowMs` becomes one undo step. */
  push(inverse:TextEdit,merge=false,now=Date.now(),windowMs=1200){
