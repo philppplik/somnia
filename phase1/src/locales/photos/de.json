@@ -135,5 +135,8 @@
  "photos.survey.title": "{count} Fotos im Vergleich",
  "photos.survey.close": "Vergleich schließen",
  "photos.filmstrip.removeRejects": "{count} Rejects entfernen",
- "photos.filmstrip.removeRejectsConfirm": "Wirklich {count} entfernen?"
+ "photos.filmstrip.removeRejectsConfirm": "Wirklich {count} entfernen?",
+ "photos.filmstrip.copy": "Einstellungen kopieren",
+ "photos.filmstrip.paste": "Einstellungen einfuegen",
+ "photos.rating.filter.unrated": "Unbewertet"
 }

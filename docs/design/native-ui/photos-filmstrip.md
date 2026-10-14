@@ -184,3 +184,17 @@ new pick target and additionally rates a photo inside the survey
 (filmstrip badge shows the rating) and cycles a reject flag back to
 off. Because ratings persist across the light/dark legs, the leg first
 resets the photo's rating through the `ratings` store before clicking.
+
+## Copy/paste settings and unrated filter (P90)
+
+Two buttons next to the batch apply copy the active photo's look
+(`extractLook`) into a persisted panel-state clipboard and paste it
+onto any other photo as one undo step (`commitPhotoSettings` +
+`applyLook`). Copy is disabled while the active photo is neutral, paste
+while the clipboard is empty. The rating filter gains an "unrated"
+option that shows exactly the photos with no stars yet.
+
+Coverage: `photos-filmstrip.spec.ts` gains a light/dark leg that
+filters to unrated (a fresh rating removes the photo from the view),
+copies a warm white balance from one photo and pastes it onto the
+next, asserting the pasted value through the photo session.

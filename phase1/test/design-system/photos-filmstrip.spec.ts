@@ -321,3 +321,26 @@ test('remove rejected: two-click confirm drops rejects from the library (light a
   await expect(remove).toHaveCount(0); // no rejects left: button gone
  }
 });
+test('copy/paste settings and the unrated filter (light and dark)',async({page})=>{
+ for(const theme of['light','dark']){
+  await page.goto('/test/design-system/?view=photos-filmstrip');
+  await page.evaluate(t=>document.documentElement.setAttribute('data-theme',t),theme);
+  await expect(page.getByTestId('photos-workspace')).toBeVisible();
+  await expect(page.getByTestId('photos-filmstrip-item-strip-3.png')).toBeVisible(); // media added progressively
+  await page.evaluate(async()=>{const m=await import('/src/lib/photos/ratings.ts');m.setRating('strip-1.png',0);}); // the other leg's rating persists via localStorage
+  const filter=page.getByTestId('photos-filmstrip-rating-filter');
+  await filter.selectOption('unrated');
+  await expect(page.getByTestId('photos-filmstrip-item-strip-3.png')).toBeVisible(); // all three unrated
+  await page.getByTestId('photos-filmstrip-rating-star-3').click(); // rate the active strip-1
+  await expect(page.getByTestId('photos-filmstrip-item-strip-1.png')).toHaveCount(0); // rated photo leaves the unrated view
+  await filter.selectOption('0');
+  await page.evaluate(async()=>{const m=await import('/src/lib/photos/studioSession.ts');m.commitPhotoSettings('strip-1.png',s=>({...s,temp:7800}));});
+  await page.getByTestId('photos-filmstrip-item-strip-1.png').click();
+  await page.getByTestId('photos-filmstrip-copy').click();
+  await page.getByTestId('photos-filmstrip-item-strip-2.png').click();
+  await page.getByTestId('photos-filmstrip-paste').click();
+  const temp=await page.evaluate(async()=>{const m=await import('/src/lib/photos/studioSession.ts');return m.getPhotoSession('strip-2.png')?.now.temp;});
+  expect(temp).toBe(7800);
+  await page.screenshot({path:`test-results/ds-photos-copy-paste-${theme}.png`,fullPage:true});
+ }
+});

@@ -135,5 +135,8 @@
  "photos.survey.title": "{count} photos in survey",
  "photos.survey.close": "Close survey",
  "photos.filmstrip.removeRejects": "Remove {count} rejected",
- "photos.filmstrip.removeRejectsConfirm": "Really remove {count}?"
+ "photos.filmstrip.removeRejectsConfirm": "Really remove {count}?",
+ "photos.filmstrip.copy": "Copy settings",
+ "photos.filmstrip.paste": "Paste settings",
+ "photos.rating.filter.unrated": "Unrated"
 }
