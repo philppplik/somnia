@@ -388,7 +388,26 @@ export function deleteSlide(bytes:Uint8Array,slideId:number):Uint8Array{
   });
 }
 
-export interface LayoutInfo {part:string;name:string;supported:boolean;placeholders:string[]}
+/** Placeholder frame in EMU, for a schematic preview only. */
+export interface LayoutBox {type:string;x:number;y:number;w:number;h:number}
+export interface LayoutInfo {part:string;name:string;supported:boolean;placeholders:string[];boxes:LayoutBox[]}
+const MAX_LAYOUT_BOXES=24;
+function placeholderBoxes(xml:string,master:string):LayoutBox[]{
+  const frame=(sp:string)=>{const m=/<a:off\s+x="(-?\d+)"\s+y="(-?\d+)"\s*\/>\s*<a:ext\s+cx="(\d+)"\s+cy="(\d+)"\s*\/>/.exec(sp);return m?{x:+m[1],y:+m[2],w:+m[3],h:+m[4]}:null;};
+  const inherited=new Map<string,{x:number;y:number;w:number;h:number}>();
+  for(const sp of master.match(/<p:sp\b[\s\S]*?<\/p:sp>/g)??[]){
+    const ph=/<p:ph\b([^>]*?)\/?>/.exec(sp);const f=frame(sp);if(!ph||!f)continue;
+    const t=attr(ph[1],'type')??'body';if(!inherited.has(t))inherited.set(t,f);
+  }
+  const out:LayoutBox[]=[];
+  for(const sp of xml.match(/<p:sp\b[\s\S]*?<\/p:sp>/g)??[]){
+    const ph=/<p:ph\b([^>]*?)\/?>/.exec(sp);if(!ph)continue;
+    const type=attr(ph[1],'type')??'body';if(SKIP_PH.has(type))continue;
+    const f=frame(sp)??inherited.get(type)??(type==='ctrTitle'?inherited.get('title'):type==='subTitle'?inherited.get('body'):undefined);
+    if(f&&f.w>0&&f.h>0&&out.length<MAX_LAYOUT_BOXES)out.push({type,...f});
+  }
+  return out;
+}
 const TEXT_PH=new Set(['title','ctrTitle','subTitle','body','']);
 const SKIP_PH=new Set(['dt','ftr','sldNum']);
 /** Layouts reachable from the slide master(s), with a verdict on whether new slides can be built from them. */
@@ -403,7 +422,7 @@ export function readLayouts(bytes:Uint8Array):LayoutInfo[]{
       const xml=strFromU8(zip[part]);const name=dec(/<p:cSld\b[^>]*\sname="([^"]*)"/.exec(xml)?.[1]??part.split('/').pop()!);
       const phs=[...xml.matchAll(/<p:ph\b([^>]*?)\/?>/g)].map(x=>attr(x[1],'type')??'');
       const real=phs.filter(t=>!SKIP_PH.has(t));
-      out.push({part,name,supported:real.every(t=>TEXT_PH.has(t)),placeholders:real});
+      out.push({part,name,supported:real.every(t=>TEXT_PH.has(t)),placeholders:real,boxes:placeholderBoxes(xml,zip[mp]?strFromU8(zip[mp]):'')});
     }
   }
   return out;

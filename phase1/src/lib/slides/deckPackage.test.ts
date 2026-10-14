@@ -519,3 +519,12 @@ test('slide transitions: set, change, clear, keep attributes, fail closed',()=>{
   assert.throws(()=>setSlideTransition(b,sid,{kind:'spin' as never,dir:'l',speed:'med'}),/Unknown transition/);
   assert.throws(()=>setSlideTransition(b,999,{kind:'fade',dir:'l',speed:'med'}),/no longer exists/);
 });
+
+test('layouts expose bounded placeholder frames for previews (own or inherited from the master)',()=>{
+  const ls=readLayouts(deck(2));assert.ok(ls.length>0);
+  for(const l of ls){assert.ok(l.boxes.length<=24);for(const b of l.boxes){assert.ok(b.w>0&&b.h>0);assert.ok(Number.isFinite(b.x)&&Number.isFinite(b.y));}}
+  assert.ok(ls.some(l=>l.supported&&l.boxes.length>0),'at least one supported layout has a frame');
+  assert.ok(ls.every(l=>l.boxes.length<=l.placeholders.length),'never more frames than placeholders');
+  const corpus=readLayouts(readFileSync(fileURLToPath(new URL('../../../slides-engine/corpus/google-slides-effects-transitions-2026-05-08.pptx',import.meta.url))));
+  assert.ok(corpus.some(l=>l.boxes.length>0),'real Google Slides deck gives frames');
+});

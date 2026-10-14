@@ -737,6 +737,9 @@ export const SLIDES_STRUCTURE_CATALOGUES:Record<string,Record<string,string>>={
     "slides.delete": "Delete",
     "slides.newFromLayout": "New slide",
     "slides.layoutUnsupported": "{name} (not supported yet)",
+    "slides.gallery.title": "Choose a layout",
+    "slides.gallery.desc": "The new slide is added as slide {number}. Sketches show placeholder positions only.",
+    "slides.gallery.close": "Cancel",
     "slides.duplicated": "Slide {number} duplicated",
     "slides.deleted": "Slide {number} deleted",
     "slides.added": "New slide added at position {position}"
@@ -749,6 +752,9 @@ export const SLIDES_STRUCTURE_CATALOGUES:Record<string,Record<string,string>>={
     "slides.delete": "Löschen",
     "slides.newFromLayout": "Neue Folie",
     "slides.layoutUnsupported": "{name} (noch nicht unterstützt)",
+    "slides.gallery.title": "Layout wählen",
+    "slides.gallery.desc": "Die neue Folie wird als Folie {number} eingefügt. Die Skizzen zeigen nur die Platzhalterpositionen.",
+    "slides.gallery.close": "Abbrechen",
     "slides.duplicated": "Folie {number} dupliziert",
     "slides.deleted": "Folie {number} gelöscht",
     "slides.added": "Neue Folie an Position {position} eingefügt"
@@ -761,6 +767,9 @@ export const SLIDES_STRUCTURE_CATALOGUES:Record<string,Record<string,string>>={
     "slides.delete": "Eliminar",
     "slides.newFromLayout": "Nueva diapositiva",
     "slides.layoutUnsupported": "{name} (aún no compatible)",
+    "slides.gallery.title": "Elegir un diseño",
+    "slides.gallery.desc": "La nueva diapositiva se añade como diapositiva {number}. Los bocetos solo muestran la posición de los marcadores.",
+    "slides.gallery.close": "Cancelar",
     "slides.duplicated": "Diapositiva {number} duplicada",
     "slides.deleted": "Diapositiva {number} eliminada",
     "slides.added": "Nueva diapositiva añadida en la posición {position}"
@@ -773,6 +782,9 @@ export const SLIDES_STRUCTURE_CATALOGUES:Record<string,Record<string,string>>={
     "slides.delete": "Supprimer",
     "slides.newFromLayout": "Nouvelle diapositive",
     "slides.layoutUnsupported": "{name} (pas encore pris en charge)",
+    "slides.gallery.title": "Choisir une disposition",
+    "slides.gallery.desc": "La nouvelle diapositive est ajoutée en position {number}. Les aperçus montrent seulement l'emplacement des zones.",
+    "slides.gallery.close": "Annuler",
     "slides.duplicated": "Diapositive {number} dupliquée",
     "slides.deleted": "Diapositive {number} supprimée",
     "slides.added": "Nouvelle diapositive ajoutée à la position {position}"
@@ -785,6 +797,9 @@ export const SLIDES_STRUCTURE_CATALOGUES:Record<string,Record<string,string>>={
     "slides.delete": "Excluir",
     "slides.newFromLayout": "Novo slide",
     "slides.layoutUnsupported": "{name} (ainda não suportado)",
+    "slides.gallery.title": "Escolher um layout",
+    "slides.gallery.desc": "O novo slide é adicionado como slide {number}. Os esboços mostram apenas a posição dos espaços reservados.",
+    "slides.gallery.close": "Cancelar",
     "slides.duplicated": "Slide {number} duplicado",
     "slides.deleted": "Slide {number} excluído",
     "slides.added": "Novo slide adicionado na posição {position}"

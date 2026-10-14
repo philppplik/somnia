@@ -1,3 +1,4 @@
+import {SlidesLayoutGallery} from './SlidesLayoutGallery';
 import {SlidesDirectJump} from './SlidesDirectJump';
 import {SlidesTextSearch} from './SlidesTextSearch';
 import {getSlidesSessionState} from '../../lib/slides/session';
@@ -36,7 +37,7 @@ export function SlidesOverviewPanel(){
  return <Region><p className="truncate text-xs text-ink-2" title={s.name}>{s.name}</p>
   <SlidesDirectJump key={s.source} source={s.source} index={s.index} total={s.summary.slides} busy={s.busy} current={getSlidesSessionState} navigate={async index=>{const result=await commandDispatcher.tryRunCommand('slides.showSlide',{index},{origin:'ui'});if(!result.ok)throw Error(result.error.message);const after=getSlidesSessionState();if(after.source!==s.source||after.index!==index||after.busy)throw Error('Slide navigation changed');}}/><div className="flex flex-wrap gap-1"><button className={button} disabled={s.busy||s.index===0} onClick={()=>void action.run('slides.showSlide',{index:s.index-1})}>{t('slides.previous')}</button><button className={button} disabled={s.busy||s.index>=s.summary.slides-1} onClick={()=>void action.run('slides.showSlide',{index:s.index+1})}>{t('slides.next')}</button></div>
   <div className="flex flex-wrap gap-1" role="group" aria-label={t('slides.panel.overview')}>
-   <Menu><MenuTrigger render={<Button size="compact" variant="outline" disabled={s.busy||!s.layouts.some(l=>l.supported)||!s.slideIds.length}>{t('slides.newFromLayout')}</Button>}/><MenuContent>{s.layouts.map(l=><MenuItem key={l.part} disabled={!l.supported} onClick={()=>void structure('slides.newSlide',{source:s.source,layoutPart:l.part,afterSlideId:currentId},t('slides.added',{position:s.index+2}))}>{l.supported?l.name:t('slides.layoutUnsupported',{name:l.name})}</MenuItem>)}</MenuContent></Menu>
+   <SlidesLayoutGallery/>
    <Button size="compact" variant="outline" disabled={s.busy||currentId===undefined} onClick={()=>void structure('slides.duplicateSlide',{source:s.source,slideId:currentId},t('slides.duplicated',{number:s.index+1}))}>{t('slides.duplicate')}</Button>
    <Button size="compact" variant="outline" disabled={s.busy||currentId===undefined||s.slideIds.length<2} onClick={()=>void structure('slides.deleteSlide',{source:s.source,slideId:currentId},t('slides.deleted',{number:s.index+1}))}>{t('slides.delete')}</Button>
   </div>
