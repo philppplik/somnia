@@ -280,8 +280,8 @@
       "rawTextarea": 0,
       "hexTsx": 3,
       "hexCss": 0,
-      "pixelText": 3,
-      "inlineStyle": 1
+      "pixelText": 10,
+      "inlineStyle": 8
     },
     "src/components/studios": {
       "rawButton": 2,
