@@ -4,7 +4,7 @@ import {Stage} from './stage';
 import {IkError} from './ik';
 class NFR{result:string|ArrayBuffer|null=null;onloadend:(()=>void)|null=null;onerror:(()=>void)|null=null;
  readAsArrayBuffer(b:Blob){void b.arrayBuffer().then(r=>{this.result=r;this.onloadend?.();},()=>this.onerror?.());}
- readAsDataURL(b:Blob){void b.arrayBuffer().then(r=>{this.result='data:;base64,x';this.onloadend?.();},()=>this.onerror?.());}}
+ readAsDataURL(b:Blob){void b.arrayBuffer().then(()=>{this.result='data:;base64,x';this.onloadend?.();},()=>this.onerror?.());}}
 (globalThis as unknown as {FileReader:unknown}).FileReader??=NFR;
 (globalThis as unknown as {ProgressEvent:unknown}).ProgressEvent??=Event;
 /** Chain Root(0,0,0) -> Mid(0,1,0) -> End(0,2,0). */

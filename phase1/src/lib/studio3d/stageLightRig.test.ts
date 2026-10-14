@@ -3,7 +3,7 @@ import * as THREE from 'three';
 import {Stage} from './stage';
 class NFR{result:string|ArrayBuffer|null=null;onloadend:(()=>void)|null=null;onerror:(()=>void)|null=null;
  readAsArrayBuffer(b:Blob){void b.arrayBuffer().then(r=>{this.result=r;this.onloadend?.();},()=>this.onerror?.());}
- readAsDataURL(b:Blob){void b.arrayBuffer().then(r=>{this.result='data:;base64,x';this.onloadend?.();},()=>this.onerror?.());}}
+ readAsDataURL(b:Blob){void b.arrayBuffer().then(()=>{this.result='data:;base64,x';this.onloadend?.();},()=>this.onerror?.());}}
 (globalThis as unknown as {FileReader:unknown}).FileReader??=NFR;
 (globalThis as unknown as {ProgressEvent:unknown}).ProgressEvent??=Event;
 test('the three-point rig adds key, fill and rim aimed at the scene, one undo step',()=>{
@@ -17,7 +17,7 @@ test('the three-point rig adds key, fill and rim aimed at the scene, one undo st
  assert.equal(fill.castShadow,false);assert.equal(rim.castShadow,false);
  assert.ok(key.intensity>fill.intensity,'the key is the strongest');
  // Every light sits on the stage with its target, aimed at the bounds centre (the cube at x=4).
- let nodes=0;st.root.traverse(o=>{nodes++;});
+ let nodes=0;st.root.traverse(()=>{nodes++;});
  assert.equal(nodes,8,'root + cube + 3 lights + 3 targets');
  for(const l of lights){assert.ok(Math.abs(l.target.position.x-4)<1e-6,'target on the bounds centre');assert.ok(l.target.parent===st.root,'the target is in the scene so the direction holds');}
  assert.ok(key.position.x>4&&key.position.y>0,'key front-right-top of the subject');

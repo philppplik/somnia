@@ -5,7 +5,7 @@ import {RetargetError} from './retarget';
 import {ClipError} from './clips';
 class NFR{result:string|ArrayBuffer|null=null;onloadend:(()=>void)|null=null;onerror:(()=>void)|null=null;
  readAsArrayBuffer(b:Blob){void b.arrayBuffer().then(r=>{this.result=r;this.onloadend?.();},()=>this.onerror?.());}
- readAsDataURL(b:Blob){void b.arrayBuffer().then(r=>{this.result='data:;base64,x';this.onloadend?.();},()=>this.onerror?.());}}
+ readAsDataURL(b:Blob){void b.arrayBuffer().then(()=>{this.result='data:;base64,x';this.onloadend?.();},()=>this.onerror?.());}}
 (globalThis as unknown as {FileReader:unknown}).FileReader??=NFR;
 (globalThis as unknown as {ProgressEvent:unknown}).ProgressEvent??=Event;
 /** Two rigs with the same bone names; the target's mid bone rests rotated 45 degrees about Z. Each rig has a skinned mesh so the bind pose is real. */

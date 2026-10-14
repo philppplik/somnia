@@ -811,7 +811,7 @@ export default function Viewport3D(){
   const ikSetPole=(p:readonly[number,number,number],id?:number)=>{stage.ikSetPole(id??poseTarget(),p);};
   const recordPose=(all?:boolean,id?:number,clip?:number,time?:number)=>{
    const st=getStudio3DState();const i=clip??st.anim.clip;const t=time??st.anim.time;
-   const ids=all?stage.bones().map(b=>b.id):id!=null?[id]:[...new Set([...st.marked,st.selected].filter((x):x is number=>x!=null&&stage.find(x)))];
+   const ids=all?stage.bones().map(b=>b.id):id!=null?[id]:[...new Set([...st.marked,st.selected].filter((x):x is number=>x!=null&&!!stage.find(x)))];
    if(!ids.length)throw Object.assign(new Error(all?'This scene has no bones.':'Select at least one bone to record.'),{expected:true});
    return stage.recordPose(i,t,ids);
   };

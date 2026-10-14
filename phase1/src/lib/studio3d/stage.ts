@@ -136,6 +136,8 @@ function disposeObject(root:THREE.Object3D){
  });
 }
 interface Entry{label:string;undo():void;redo():void;/** Edits with the same group id and object within GROUP_MS merge into one undo step (gizmo drags, key nudges). */group?:string;at?:number;merge?(redo:()=>void):void;/** Called when the entry falls off the history; frees objects only the redo side still owned. */release?():void}
+type TrackWithInterpolant=THREE.KeyframeTrack&{createInterpolant(result?:number[]):{evaluate(t:number):ArrayLike<number>}};
+const trackInterpolant=(tr:THREE.KeyframeTrack)=>(tr as TrackWithInterpolant).createInterpolant();
 export class Stage{
  readonly root=new THREE.Group();
  private entries:Entry[]=[];private cursor=0;private saved=0;private listeners=new Set<()=>void>();private revision=0;
@@ -258,7 +260,7 @@ export class Stage{
  }
  /** Records a transform that already happened (a gizmo drag changed the object live). One undo step for the whole drag. */
  commitTransform(id:number,before:{p:THREE.Vector3;r:THREE.Euler;s:THREE.Vector3}){
-  const o=this.need(id);if((o as THREE.Bone).isBone)this.clampBone(o);
+  const o=this.need(id);if((o as THREE.Bone).isBone)this.clampBone(o as THREE.Bone);
   const next={p:o.position.clone(),r:o.rotation.clone(),s:o.scale.clone()};
   if(before.p.equals(next.p)&&before.r.equals(next.r)&&before.s.equals(next.s))return;
   this.applyTransform(o,before,next,{},true);
@@ -894,8 +896,8 @@ export class Stage{
  /** Poses of the rig this object belongs to (name and bone count, for the panel). */
  poseList(id:number):{name:string;bones:number}[]{try{return this.poseLib(this.rigOf(id)).map(p=>({name:p.name,bones:Object.keys(p.bones).length}));}catch{return [];}}
  private captureLocals(chain:THREE.Bone[]):PoseBone[]{return chain.map(b=>({p:b.position.toArray() as [number,number,number],q:b.quaternion.toArray() as [number,number,number,number],s:b.scale.toArray() as [number,number,number]}));}
- private restoreLocals(chain:THREE.Bone[],rows:PoseBone[]){chain.forEach((b,i)=>{const r=rows[i];if(!r)return;b.position.fromArray(r.p as number[]);b.quaternion.fromArray(r.q as number[]);b.scale.fromArray(r.s as number[]);});this.root.updateMatrixWorld(true);}
- private applyPoseRecord(chain:THREE.Bone[],bones:Record<string,PoseBone>){for(const b of chain){const r=bones[b.name];if(!r)continue;b.position.fromArray(r.p as number[]);b.quaternion.fromArray(r.q as number[]);b.scale.fromArray(r.s as number[]);}this.root.updateMatrixWorld(true);}
+ private restoreLocals(chain:THREE.Bone[],rows:PoseBone[]){chain.forEach((b,i)=>{const r=rows[i];if(!r)return;b.position.fromArray([...r.p]);b.quaternion.fromArray([...r.q]);b.scale.fromArray([...r.s]);});this.root.updateMatrixWorld(true);}
+ private applyPoseRecord(chain:THREE.Bone[],bones:Record<string,PoseBone>){for(const b of chain){const r=bones[b.name];if(!r)continue;b.position.fromArray([...r.p]);b.quaternion.fromArray([...r.q]);b.scale.fromArray([...r.s]);}this.root.updateMatrixWorld(true);}
  /** Applies a pose record to the rig as one undo step. */
  private poseSet(id:number,label:string,bones:Record<string,PoseBone>){
   const root=this.rigOf(id);const chain=this.boneChain(root);const before=this.captureLocals(chain);
@@ -1220,7 +1222,7 @@ export class Stage{
   const out=new Map<string,{p?:[number,number,number];q?:[number,number,number,number];s?:[number,number,number]}>();
   for(const tr of clip.tracks){
    const parsed=parseTrackName(tr.name);if(!parsed)continue;
-   const v=Array.from(tr.createInterpolant().evaluate(t));
+   const v=Array.from(trackInterpolant(tr).evaluate(t));
    const slot=out.get(parsed.node)??{};out.set(parsed.node,slot);
    if(parsed.path==='position')slot.p=v as [number,number,number];
    else if(parsed.path==='rotation')slot.q=v as [number,number,number,number];
@@ -1293,7 +1295,7 @@ export class Stage{
   for(const p of map.pairs){
    const tr=clip.tracks.find(t=>t.name===trackName(p.source.uuid,'rotation'));
    if(!tr)continue; // No source motion on this bone: the target keeps its rest pose.
-   const it=tr.createInterpolant();const values:number[]=[];
+   const it=trackInterpolant(tr);const values:number[]=[];
    for(const t of samples){const v=it.evaluate(Math.min(t,clip.duration));const q=this.retargetDelta(p,srcRest,dstRest,new THREE.Quaternion(v[0],v[1],v[2],v[3]));values.push(q.x,q.y,q.z,q.w);}
    tracks.push(new THREE.QuaternionKeyframeTrack(trackName(p.target.uuid,'rotation'),samples,values));
   }
