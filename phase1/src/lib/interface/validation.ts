@@ -1,5 +1,5 @@
 /* Structural view of the document: importing model.ts here would create a cycle (model validates through this file). */
-type InterfaceDocument={nodes:Array<any>;pages:Array<any>;components?:Array<any>;[key:string]:unknown};
+type InterfaceDocument={id:string;name:string;nodes:Array<any>;pages:Array<any>;components?:Array<any>;[key:string]:unknown};
 const obj=(v:unknown):v is Record<string,unknown>=>!!v&&typeof v==='object'&&!Array.isArray(v);
 const num=(v:unknown,min=0,max=32768)=>typeof v==='number'&&Number.isFinite(v)&&v>=min&&v<=max;
 const id=(v:unknown)=>typeof v==='string'&&/^[a-zA-Z0-9_-]{1,100}$/.test(v);
