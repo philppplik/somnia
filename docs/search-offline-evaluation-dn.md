@@ -9,7 +9,7 @@ npm run eval:local-search
 npm run test:local-search-eval
 ```
 
-The report prints JSON to stdout. It includes the evidence label, each query's returned source IDs and precision, and macro precision by locale/mode/k. Redirecting stdout is an explicit developer choice, not app search persistence. Corpus and evaluator live in `phase1/test/retrieval-eval/`; there is no production command or bundled evaluation surface.
+The default report now uses the [expanded DO corpus](search-expanded-corpus-do.md). Use `npm run eval:local-search -- --original` to reproduce the original eight-source baseline below. The report prints JSON to stdout. It includes the evidence label, each query's returned source IDs and precision, and macro precision by locale/mode/k. Redirecting stdout is an explicit developer choice, not app search persistence. Corpus and evaluator live in `phase1/test/retrieval-eval/`; there is no production command or bundled evaluation surface.
 
 ## Corpus and metric
 
