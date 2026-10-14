@@ -390,9 +390,15 @@ pub(crate) fn check_lease(lease: &dyn CredentialLease, remote: &ParsedRemote) ->
 // ---------------------------------------------------------------- git helpers
 
 pub(crate) fn iso_env() -> Vec<(&'static str, OsString)> {
-    let null = if cfg!(windows) { "NUL" } else { "/dev/null" };
+    // Isolate global config with a real empty file, not the NUL device:
+    // git on the windows-11-arm runner (emulated toolchain) cannot open NUL
+    // and fails with "unable to access 'NUL': Invalid argument".
+    let empty = std::env::temp_dir().join("somnia-empty-gitconfig");
+    if !empty.exists() {
+        let _ = std::fs::write(&empty, b"");
+    }
     vec![
-        ("GIT_CONFIG_GLOBAL", OsString::from(null)),
+        ("GIT_CONFIG_GLOBAL", OsString::from(empty)),
         ("GIT_CONFIG_NOSYSTEM", OsString::from("1")),
         ("GIT_LFS_SKIP_SMUDGE", OsString::from("1")),
     ]

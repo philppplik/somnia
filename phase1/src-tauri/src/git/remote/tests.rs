@@ -10,11 +10,21 @@ use std::time::Instant;
 
 // ---------------------------------------------------------------- fixtures
 
+fn empty_gitconfig() -> std::path::PathBuf {
+    // Real empty file instead of the null device: windows-11-arm git cannot
+    // open NUL, which broke config isolation on the ARM runner.
+    let p = std::env::temp_dir().join("somnia-test-empty-gitconfig");
+    if !p.exists() {
+        std::fs::write(&p, b"").unwrap();
+    }
+    p
+}
+
 fn git(dir: &Path, args: &[&str]) -> String {
     let out = Command::new("git")
         .current_dir(dir)
         .args(args)
-        .env("GIT_CONFIG_GLOBAL", "/dev/null")
+        .env("GIT_CONFIG_GLOBAL", empty_gitconfig())
         .env("GIT_CONFIG_NOSYSTEM", "1")
         .env("GIT_AUTHOR_NAME", "T")
         .env("GIT_AUTHOR_EMAIL", "t@example.com")
