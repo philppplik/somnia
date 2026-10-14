@@ -12,6 +12,7 @@ import {studioContextStore} from '../../lib/shell/studioContext';
 import {registerAnimationCommands} from '../../lib/animation/commands';
 import {animationSession,useAnimationState} from '../../lib/animation/session';
 import {findComp,type Composition,type KeyRef,type Layer} from '../../lib/animation/model';
+import {ViewerGuides} from './ViewerGuides';
 import {animatedChars,textPathD,textPathId,textPathStartAt} from '../../lib/animation/textAnimators';
 import {maskDefs,maskId,matteId,hasMasks} from '../../lib/animation/masks';
 import {layerBody,precompImage,setRenderComps} from '../../lib/animation/exportFrames';
@@ -110,6 +111,7 @@ function Viewer({comp,at,selected,sel,assets,comps}:{assets:readonly InterfaceAs
    {layer&&hasPos&&<PathOverlay comp={comp} layer={layer} at={at} sel={sel}/>}
    {layer&&hasMasks(layer)&&<MaskOverlay comp={comp} layer={layer} at={at}/>}
    <PathLayerOverlay comp={comp} layer={layer} at={at}/>
+   <ViewerGuides comp={comp}/>
   </svg>
   <div className="absolute left-2 top-2 flex gap-1" role="group" aria-label={t('animation.pathLayer.tools')}>
    <Button size="tiny" variant="outline" aria-pressed={penOn} disabled={!!layer?.locked} onClick={()=>void executeCommand('animation.layer.pen')} title={t('animation.pathLayer.penHint')} data-testid="animation-layerpen-toggle">{t('animation.pathLayer.pen')}</Button>

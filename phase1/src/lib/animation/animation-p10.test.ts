@@ -1,3 +1,5 @@
+import {normalizeOverlays,safeRects,overlayLines,gridStep,MAX_GUIDES,defaultOverlays} from './guides';
+import {defaultView} from './recovery';
 import {buildTemplate} from './layerTemplates';
 import {templateEdits,TEMPLATE_IDS,TEMPLATE_LAYERS} from './templates';
 import test from 'node:test';import assert from 'node:assert/strict';
@@ -26,7 +28,6 @@ import {deleteEasingEdit,findEasing,saveEasingEdit,userEasings,validateEasingLib
 import {elasticTargetKeys} from './keyTargets';
 import {BUILTIN_MOTIONS,MAX_USER_MOTIONS,LEGACY_KEY,deleteMotionEdit,exportMotionsJson,findMotion,legacyMotions,listMotions,mergeMotionsEdit,motionEdits,motionFromKeys,parseMotionsJson,saveMotionEdit,userMotions,validMotion} from './motionLibrary';
 import {serializeAnimationSnapshot,parseAnimationSnapshot} from './persistence';
-import {defaultView} from './recovery';
 import {frameToTick,TICKS_PER_SECOND as TICK_SEC} from './time';
 import {sceneAt,worldMatrix,localMatrix,linkResolver} from './scene';
 import {evaluateMod,linkProblems,type Modifier} from './modifiers';
@@ -1949,4 +1950,22 @@ test('P84: saved layer templates keep keys, shift in time, validate and undo as 
  assert.throws(()=>buildTemplate(applyEdit(d,{type:'layer.update',layer:'p',name:'x'}),'zzz',undefined,'a'),/Select a layer/);
  const back=applyEdit(e,{type:'layerTemplates.set',items:[]});assert.equal(back.layerTemplates,undefined);
  const child=applyEdit(d,{type:'layer.parent',layer:'s',parent:'p'} as never);assert.throws(()=>buildTemplate(child,'s',undefined,'a'),/parent/);
+});
+
+test('P85: guides and safe areas: pure overlays, saved ruler guides, never exported',()=>{
+ const o=normalizeOverlays({safe:true,grid:1,junk:true});assert.deepEqual(o,{safe:true,center:false,thirds:false,grid:false});
+ const s=safeRects(800,450);assert.equal(s.title.width,720);assert.equal(s.title.x,40);assert.ok(Math.abs(s.action.height-418.5)<1e-9);
+ const l=overlayLines(1920,1080,{safe:false,center:true,thirds:true,grid:true});
+ assert.equal(l.center.length,2);assert.equal(l.thirds.length,4);assert.deepEqual(l.thirds[0],{x1:640,y1:0,x2:640,y2:1080});assert.ok(l.grid.length>0&&l.grid.length<=100,'bounded grid '+l.grid.length);
+ assert.equal(gridStep(800,450),50);assert.ok(overlayLines(8192,8192,{safe:false,center:false,thirds:false,grid:true}).grid.length<=200);
+ const d0=createDocument(),c0=findComp(d0)!;const before=frameSvg(c0,0);
+ const g=[{axis:'x' as const,at:100},{axis:'y' as const,at:225.5}];
+ const r=d0.revision;const d=applyEdit(d0,{type:'guides.set',guides:g});assert.equal(d.revision,r+1);assert.deepEqual(validateDocument(d),[]);assert.deepEqual(findComp(d)!.guides,g);
+ assert.equal(frameSvg(findComp(d)!,0),before,'guides never reach exports');
+ assert.throws(()=>applyEdit(d0,{type:'guides.set',guides:[{axis:'x',at:c0.width+1}]}),/inside the composition/);
+ assert.throws(()=>applyEdit(d0,{type:'guides.set',guides:[g[0],g[0]]}),/unique/);
+ assert.throws(()=>applyEdit(d0,{type:'guides.set',guides:Array.from({length:MAX_GUIDES+1},(_,i)=>({axis:'x' as const,at:i}))}),/at most/);
+ assert.equal(findComp(applyEdit(d,{type:'guides.set',guides:[]}))!.guides,undefined,'empty clears the field');
+ const bad=structuredClone(d);(findComp(bad)as {guides:unknown}).guides=[{axis:'z',at:1}];assert.ok(validateDocument(bad).length>0);
+ const ov=defaultOverlays();assert.deepEqual(defaultView().overlays,ov);
 });

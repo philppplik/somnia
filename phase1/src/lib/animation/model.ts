@@ -77,7 +77,7 @@ export interface Marker{id:string;t:number;label:string}
 export interface Shutter{angle:number;samples:number}
 export const SHUTTER_MAX_SAMPLES=16,SHUTTER_MAX_ANGLE=720;
 export const validShutter=(s:Shutter|undefined)=>s===undefined||(!!s&&typeof s==='object'&&isNum(s.angle)&&s.angle>=1&&s.angle<=SHUTTER_MAX_ANGLE&&Number.isInteger(s.samples)&&s.samples>=2&&s.samples<=SHUTTER_MAX_SAMPLES);
-export interface Composition{shutter?:Shutter;id:string;name:string;width:number;height:number;fps:Rational;duration:number;start:number;background:string;workArea:{in:number;out:number};layers:readonly Layer[];markers?:readonly Marker[]}
+export interface Composition{shutter?:Shutter;id:string;name:string;width:number;height:number;fps:Rational;duration:number;start:number;background:string;workArea:{in:number;out:number};layers:readonly Layer[];markers?:readonly Marker[];/** Ruler guides for the viewer; never drawn in exports. */guides?:readonly import('./guides').Guide[]}
 export interface AnimationDocument{schema:number;engine:string;id:string;name:string;revision:number;activeComp:string;compositions:readonly Composition[];assets:readonly InterfaceAsset[];audioAssets?:readonly AudioAsset[];motions?:MotionLib;textPresets?:import('./textPresetModel').TextPresetLib;easings?:import('./easingModel').EasingLib;layerTemplates?:LayerTemplateLib}
 /** A user-saved layer: one self-contained shape, text or solid layer with its keys, times counted from its own start (the earliest of its in point and keys is 0). */
 export interface LayerTemplate{id:string;name:string;layer:Layer}
@@ -135,6 +135,7 @@ const okValue=(type:PropType,v:unknown)=>type==='scalar'?isNum(v):isVec(v);
 import {validateModifiers,linkProblems} from './modifierModel';
 import {validateMotionLib,type MotionLib} from './motionModel';
 import {validateTextPresetLib} from './textPresetModel';
+import {validGuides} from './guides';
 import {validateEasingLib} from './easingModel';
 export function validateDocument(raw:unknown):string[]{
  const errs:string[]=[];const bad=(m:string)=>{if(errs.length<20)errs.push(m);};
@@ -161,6 +162,7 @@ export function validateDocument(raw:unknown):string[]{
   if(!validShutter(c.shutter))bad(`${c.id}: bad shutter`);
   const wa=c.workArea;
   if(!wa||!Number.isInteger(wa.in)||!Number.isInteger(wa.out)||wa.in<0||wa.out>c.duration||wa.out<=wa.in)bad(`${c.id}: bad work area`);
+  if(!validGuides(c.guides,c.width,c.height))bad(`${c.id}: invalid guides`);
   if(c.markers!==undefined&&(!Array.isArray(c.markers)||c.markers.length>200||new Set(c.markers.map((m:Marker)=>m?.id)).size!==c.markers.length||!c.markers.every((m:Marker)=>m&&typeof m.id==='string'&&typeof m.label==='string'&&m.label.length<=100&&Number.isInteger(m.t)&&m.t>=c.start&&m.t<c.start+c.duration)))bad(`${c.id}: invalid markers`);
   if(!Array.isArray(c.layers)){bad(`${c.id}: layers missing`);continue;}
   for(const m of linkProblems(c.layers as never))bad(`${c.id}: ${m}`);

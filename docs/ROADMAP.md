@@ -526,6 +526,10 @@ Depends on: v10 diff viewer, v11 updater for smooth extension and app updates.
 - Also fixed: the P83 template row made the left panel 23 px too wide in German; the picker now stacks.
 - Open: one layer per template (no groups or parented layers, no track matte, audio, image or precomp layers); templates live in the project, not shared across projects; no rename; thumbnails show the last frame of the motion.
 
+### Animation P85 (2026-10-14, integration pending)
+- Done: guides and safe areas. A "Guides" section in the left panel switches viewer overlays (title safe 90 % and action safe 93 %, centre cross, thirds, grid) and manages ruler guides (vertical or horizontal, position in px). Overlays are view state (not saved, never exported). Ruler guides are saved with the composition, undoable, up to 20, unique, inside the composition. Commands `animation.guides.overlay` / `add` / `remove`.
+- Open: guides are not draggable on the canvas and there are no on-canvas rulers; layers do not snap to guides; the overlay colours are fixed; the real viewer shares the pixel-checked overlay component but I only pixel-checked it in the dev preview fixture.
+
 ### Animation P69 (2026-10-14, integration pending)
 - Done: stroke alignment for closed shapes (centre, inside, outside). Inside clips a double-width stroke to the shape, outside masks the shape out of it, so the visible band keeps the set width. Select in the stroke section. Viewer and every export share the behaviour; open paths stay centred. Absent field means centred and byte-identical output.
 - Open: "Expand stroke" outlines ignore the alignment (centre only), gradient strokes use the same bounding box, no alignment keys.

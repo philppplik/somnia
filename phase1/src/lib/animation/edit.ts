@@ -9,6 +9,7 @@ import {validPathFx,validateLayerTemplates,type GradientStop,GRADIENT_RANGE,REPE
 import {setGradientStop} from './shapes';
 import {parseGradientStopLane,parseGradientLane,parseGradientColorLane,type GradientKey,type RepeaterKey,type StyleLaneId} from './keyTypes';
 import {evaluate} from './interpolate';
+import {validGuides,MAX_GUIDES} from './guides';
 import {templateLayer} from './layerTemplates';
 import {REACTIVE_RANGE,MAX_REACTIVE_KEYS} from './audioReactive';
 import {colorAt} from './colorKeys';
@@ -69,6 +70,7 @@ export type Edit=
  |{type:'layer.matte';layer:string;matte:LayerMatte|null}
  |{type:'layer.reveal';layer:string;property:Property}
  |{type:'audio.reactive';layer:string;prop:'scale'|'opacity'|'rotation';keys:readonly {t:number;v:number}[]}
+ |{type:'guides.set';guides:readonly import('./guides').Guide[]}
  |{type:'markers.set';markers:readonly import('./model').Marker[]}
  |{type:'asset.import';asset:InterfaceAsset}
  /** Replace the document's saved motion presets (library edits compute the full list). */
@@ -319,6 +321,7 @@ function reduce(doc:AnimationDocument,e:Edit):AnimationDocument{
    if(e.type==='effect.colorKey'&&(effect.kind==='blur'||!/^#[0-9a-fA-F]{6}$/.test(e.color)))fail('invalid','Blur has no colour.');
    const next=e.type==='effect.colorKey'?{...effect,colorKeys:[...(effect.colorKeys??[]).filter(k=>k.t!==t),{t,color:e.color}].sort((a,b)=>a.t-b.t)}:{...effect,bypassKeys:[...(effect.bypassKeys??[]).filter(k=>k.t!==t),{t,bypass:e.bypass}].sort((a,b)=>a.t-b.t)};
    return setLayer(doc,{...l,effects:l.effects!.map(x=>x.id===effect.id?next:x)});}
+  case 'guides.set':{const c=compOf(doc);if(e.guides.length&&!validGuides(e.guides,c.width,c.height))fail('invalid',`Guides must be unique, inside the composition and at most ${MAX_GUIDES}.`);return withComp(doc,{...c,guides:e.guides.length?e.guides:undefined});}
   case 'markers.set':{const c=compOf(doc);return withComp(doc,{...c,markers:[...e.markers].sort((a,b)=>a.t-b.t)});}
   case 'text.animators':{const l=layerOf(doc,e.layer);if(l.kind!=='text')fail('invalid','Text animators require a text layer.');return setLayer(doc,{...l,animators:e.animators.length?e.animators:undefined});}
   case 'layer.masks':{const l=layerOf(doc,e.layer);if(l.kind==='null'||l.kind==='audio')fail('invalid','Masks need a drawable layer.');return setLayer(doc,{...l,masks:e.masks.length?e.masks:undefined});}

@@ -414,3 +414,7 @@ Path effects: `round` (size = corner radius px, only handle-less corners, KAPPA 
 ## P84
 
 `document.layerTemplates={version:1,items:[{id,name,layer}]}`; `validateLayerTemplates` (model.ts) checks every item as a layer of the first composition (kind shape/text/solid, no parent, matte or audio). `layerTemplates.ts`: `buildTemplate` normalises times so the earlier of the in point and the first key is 0 (`shiftTimes` moves every integer `t` found in an array); `templateLayer` shifts them back to the insert time. Edits `layerTemplates.set` and `layerTemplate.insert` (one step); `TemplateThumb` draws `frameSvg` of the template.
+
+## P85
+
+`guides.ts` (pure): `Overlays` (safe, center, thirds, grid) live in `ViewState.overlays` (optional, normalised on recovery); `safeRects` (90 % / 93 %), `overlayLines` (grid step 50 px or more so it stays near 80 lines), `validGuides`. `composition.guides` is an optional list of `{axis,at}` (max 20, unique, inside the composition), set by the edit `guides.set` (one step). `ViewerGuides` draws everything inside the viewer svg only; `frameSvg` and exports never see it.

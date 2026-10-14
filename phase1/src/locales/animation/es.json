@@ -691,5 +691,22 @@
  "animation.template.save": "Guardar capa como plantilla",
  "animation.template.delete": "Eliminar",
  "cmd.animation.template.save": "Guardar la capa seleccionada como plantilla",
- "cmd.animation.template.delete": "Eliminar una plantilla guardada"
+ "cmd.animation.template.delete": "Eliminar una plantilla guardada",
+ "animation.guides.title": "Guías",
+ "animation.guides.safe": "Áreas seguras",
+ "animation.guides.center": "Centro",
+ "animation.guides.thirds": "Tercios",
+ "animation.guides.grid": "Cuadrícula",
+ "animation.guides.axis": "Dirección",
+ "animation.guides.vertical": "Vertical (x)",
+ "animation.guides.horizontal": "Horizontal (y)",
+ "animation.guides.position": "Posición (px)",
+ "animation.guides.add": "Añadir guía",
+ "animation.guides.itemX": "Vertical en {at} px",
+ "animation.guides.itemY": "Horizontal en {at} px",
+ "animation.guides.remove": "Quitar guía en {at} px",
+ "animation.guides.removeShort": "Quitar",
+ "cmd.animation.guides.overlay": "Mostrar u ocultar una superposición del visor",
+ "cmd.animation.guides.add": "Añadir una guía",
+ "cmd.animation.guides.remove": "Quitar una guía"
 }

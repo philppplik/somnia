@@ -691,5 +691,22 @@
  "animation.template.save": "Ebene als Vorlage speichern",
  "animation.template.delete": "Löschen",
  "cmd.animation.template.save": "Die gewählte Ebene als Vorlage speichern",
- "cmd.animation.template.delete": "Eine gespeicherte Vorlage löschen"
+ "cmd.animation.template.delete": "Eine gespeicherte Vorlage löschen",
+ "animation.guides.title": "Hilfslinien",
+ "animation.guides.safe": "Sichere Bereiche",
+ "animation.guides.center": "Mitte",
+ "animation.guides.thirds": "Drittel",
+ "animation.guides.grid": "Raster",
+ "animation.guides.axis": "Richtung",
+ "animation.guides.vertical": "Vertikal (x)",
+ "animation.guides.horizontal": "Horizontal (y)",
+ "animation.guides.position": "Position (px)",
+ "animation.guides.add": "Linie hinzufügen",
+ "animation.guides.itemX": "Vertikal bei {at} px",
+ "animation.guides.itemY": "Horizontal bei {at} px",
+ "animation.guides.remove": "Linie bei {at} px entfernen",
+ "animation.guides.removeShort": "Entfernen",
+ "cmd.animation.guides.overlay": "Eine Viewer-Einblendung ein- oder ausschalten",
+ "cmd.animation.guides.add": "Eine Hilfslinie hinzufügen",
+ "cmd.animation.guides.remove": "Eine Hilfslinie entfernen"
 }

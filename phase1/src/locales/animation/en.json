@@ -691,5 +691,22 @@
  "animation.template.save": "Save layer as template",
  "animation.template.delete": "Delete",
  "cmd.animation.template.save": "Save the selected layer as a template",
- "cmd.animation.template.delete": "Delete a saved template"
+ "cmd.animation.template.delete": "Delete a saved template",
+ "animation.guides.title": "Guides",
+ "animation.guides.safe": "Safe areas",
+ "animation.guides.center": "Centre",
+ "animation.guides.thirds": "Thirds",
+ "animation.guides.grid": "Grid",
+ "animation.guides.axis": "Direction",
+ "animation.guides.vertical": "Vertical (x)",
+ "animation.guides.horizontal": "Horizontal (y)",
+ "animation.guides.position": "Position (px)",
+ "animation.guides.add": "Add guide",
+ "animation.guides.itemX": "Vertical at {at} px",
+ "animation.guides.itemY": "Horizontal at {at} px",
+ "animation.guides.remove": "Remove guide at {at} px",
+ "animation.guides.removeShort": "Remove",
+ "cmd.animation.guides.overlay": "Show or hide a viewer overlay",
+ "cmd.animation.guides.add": "Add a ruler guide",
+ "cmd.animation.guides.remove": "Remove a ruler guide"
 }

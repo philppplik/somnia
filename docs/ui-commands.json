@@ -431,6 +431,42 @@
       "hasEnabled": true
     },
     {
+      "id": "animation.guides.add",
+      "title": "Add a ruler guide",
+      "category": "View",
+      "source": "animation",
+      "keywords": [
+        "animation",
+        "keyframe",
+        "timeline"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "animation.guides.overlay",
+      "title": "Show or hide a viewer overlay",
+      "category": "View",
+      "source": "animation",
+      "keywords": [
+        "animation",
+        "keyframe",
+        "timeline"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "animation.guides.remove",
+      "title": "Remove a ruler guide",
+      "category": "View",
+      "source": "animation",
+      "keywords": [
+        "animation",
+        "keyframe",
+        "timeline"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "animation.key.add",
       "title": "Add keyframe at playhead",
       "category": "Edit",

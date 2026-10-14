@@ -691,5 +691,22 @@
  "animation.template.save": "Enregistrer le calque comme modèle",
  "animation.template.delete": "Supprimer",
  "cmd.animation.template.save": "Enregistrer le calque sélectionné comme modèle",
- "cmd.animation.template.delete": "Supprimer un modèle enregistré"
+ "cmd.animation.template.delete": "Supprimer un modèle enregistré",
+ "animation.guides.title": "Repères",
+ "animation.guides.safe": "Zones de sécurité",
+ "animation.guides.center": "Centre",
+ "animation.guides.thirds": "Tiers",
+ "animation.guides.grid": "Grille",
+ "animation.guides.axis": "Direction",
+ "animation.guides.vertical": "Vertical (x)",
+ "animation.guides.horizontal": "Horizontal (y)",
+ "animation.guides.position": "Position (px)",
+ "animation.guides.add": "Ajouter un repère",
+ "animation.guides.itemX": "Vertical à {at} px",
+ "animation.guides.itemY": "Horizontal à {at} px",
+ "animation.guides.remove": "Supprimer le repère à {at} px",
+ "animation.guides.removeShort": "Supprimer",
+ "cmd.animation.guides.overlay": "Afficher ou masquer une incrustation du visualiseur",
+ "cmd.animation.guides.add": "Ajouter un repère",
+ "cmd.animation.guides.remove": "Supprimer un repère"
 }

@@ -691,5 +691,22 @@
  "animation.template.save": "Salvar camada como modelo",
  "animation.template.delete": "Excluir",
  "cmd.animation.template.save": "Salvar a camada selecionada como modelo",
- "cmd.animation.template.delete": "Excluir um modelo salvo"
+ "cmd.animation.template.delete": "Excluir um modelo salvo",
+ "animation.guides.title": "Guias",
+ "animation.guides.safe": "Áreas seguras",
+ "animation.guides.center": "Centro",
+ "animation.guides.thirds": "Terços",
+ "animation.guides.grid": "Grade",
+ "animation.guides.axis": "Direção",
+ "animation.guides.vertical": "Vertical (x)",
+ "animation.guides.horizontal": "Horizontal (y)",
+ "animation.guides.position": "Posição (px)",
+ "animation.guides.add": "Adicionar guia",
+ "animation.guides.itemX": "Vertical em {at} px",
+ "animation.guides.itemY": "Horizontal em {at} px",
+ "animation.guides.remove": "Remover guia em {at} px",
+ "animation.guides.removeShort": "Remover",
+ "cmd.animation.guides.overlay": "Mostrar ou ocultar uma sobreposição do visualizador",
+ "cmd.animation.guides.add": "Adicionar uma guia",
+ "cmd.animation.guides.remove": "Remover uma guia"
 }

@@ -23,6 +23,7 @@ import {ClipError,copyKeys,getKeyClip,pastedRefs,setKeyClip} from './keyclip';
 import {allKeysOf,pruneSelection,shiftSelection} from './selection';
 import {EASE_PRESETS,type EasePreset} from './graph';
 import {copyCurve,pasteCurveEdit} from './graphTools';
+import {addGuide,normalizeOverlays,OVERLAY_KEYS,type OverlayKey} from './guides';
 import {buildTemplate,layerTemplates} from './layerTemplates';
 import {templateEdits,TEMPLATE_IDS,TEMPLATE_LAYERS,type TemplateId} from './templates';
 import {reactiveKeys,REACTIVE_PROPS,MAX_SMOOTH,type ReactiveProp} from './audioReactive';
@@ -144,6 +145,19 @@ export function animationCommandSpecs():CommandSpec<unknown,unknown>[]{
    run(templateEdits(c,p.template,p.at!==undefined?secondsToTicks(p.at):animationSession().getState().view.playhead,ids));
    animationSession().setView({selectedLayer:ids[0]});
   },object({template:{enum:[...TEMPLATE_IDS]},saved:{type:'string',minLength:1,maxLength:64},at:{type:'number',minimum:0}},[]),open,'Insert'),
+  spec('animation.guides.overlay','Show or hide a viewer overlay',(p:{overlay:OverlayKey;on?:boolean})=>{
+   const cur=normalizeOverlays(animationSession().getState().view.overlays);animationSession().setView({overlays:{...cur,[p.overlay]:p.on??!cur[p.overlay]}});
+  },object({overlay:{enum:[...OVERLAY_KEYS]},on:{type:'boolean'}},['overlay']),open,'View'),
+  spec('animation.guides.add','Add a ruler guide',(p:{axis:'x'|'y';at:number})=>{
+   const g=comp().guides??[];if(g.some(x=>x.axis===p.axis&&x.at===p.at))throw Object.assign(Error('That guide already exists.'),{expected:true});
+   run({type:'guides.set',guides:addGuide(g,{axis:p.axis,at:Math.round(p.at*100)/100})});
+  },object({axis:{enum:['x','y']},at:{type:'number',minimum:0}}),open,'View'),
+  spec('animation.guides.remove','Remove a ruler guide',(p:{index?:number;all?:boolean})=>{
+   const g=comp().guides??[];if(!g.length)throw Object.assign(Error('There are no guides.'),{expected:true});
+   if(p.all){run({type:'guides.set',guides:[]});return;}
+   if(p.index===undefined||!g[p.index])throw Object.assign(Error('That guide no longer exists.'),{expected:true});
+   run({type:'guides.set',guides:g.filter((_,i)=>i!==p.index)});
+  },object({index:{type:'integer',minimum:0},all:{type:'boolean'}},[]),()=>open()&&!!comp().guides?.length,'View'),
   spec('animation.audio.grid','Place beat markers on a steady BPM grid',(p:{layer?:string;bpm?:number;sensitivity?:number})=>{
    const c=comp();const l=findLayer(c,layerIdOf(p));if(!l||l.kind!=='audio'||!l.audio)throw Object.assign(Error('Select an audio layer.'),{expected:true});
    const asset=doc().audioAssets?.find(a=>a.id===l.audio!.assetId);if(!asset)throw Object.assign(Error('The audio file is missing.'),{expected:true});
