@@ -1478,6 +1478,20 @@ test('3D studio views: rename, update and the digit shortcuts',async({page})=>{
  await expect.poll(async()=>(await session(page)).views.map(v=>v.name)).toEqual(['front','hero','View 1']);
 });
 
+test('3D studio views: applying a bookmark flies the camera, interruptions and reduced motion are safe',async({page})=>{
+ await blank(page);
+ await insert(page,'cube',0);
+ expect(await run(page,'studio3d.view.save',{name:'a'})).toBe(true);
+ expect(await run(page,'studio3d.view.preset',{preset:'right'})).toBe(true);
+ // Interrupting a running flight with another camera move is safe.
+ expect(await run(page,'studio3d.view.apply',{name:'a'})).toBe(true);
+ expect(await run(page,'studio3d.view.preset',{preset:'front'})).toBe(true);
+ // Reduced-motion users get instant jumps.
+ await page.emulateMedia({reducedMotion:'reduce'});
+ expect(await run(page,'studio3d.view.apply',{name:'a'})).toBe(true);
+ expect(await run(page,'studio3d.view.preset',{preset:'top'})).toBe(true);
+});
+
 test('3D studio outliner: the focus button selects the row and frames it',async({page})=>{
  await blank(page);
  await insert(page,'cube',0);

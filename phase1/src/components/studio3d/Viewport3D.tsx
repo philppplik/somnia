@@ -38,7 +38,8 @@ import {parseDocument,buildDocument,sceneBytes,fromBase64,DocumentError} from '.
 import {registerStudio3DController,registerStudio3DTextureDrop} from '../../lib/studio3d/commands';
 import {parseExtras,type ClipMeta} from '../../lib/studio3d/clipMeta';
 import {nextViewName,updateView,renameView,viewSlotIndex} from '../../lib/studio3d/views';
-import type {Ease} from '../../lib/studio3d/ease';
+import {tweenPose,CAMERA_FLY_MS,type CameraPose} from '../../lib/studio3d/cameraTween';
+import {easeAt,type Ease} from '../../lib/studio3d/ease';
 import type {KeyPath} from '../../lib/studio3d/clips';
 import type {KeyRef,KeyData} from '../../lib/studio3d/keyEdit';
 import {advance,clampTime,checkClip,checkRange,checkSpeed,startTime,rangeFits,AnimationError,type ClipInfo,type LoopRange} from '../../lib/studio3d/animation';
@@ -182,10 +183,32 @@ export default function Viewport3D(){
   controls.addEventListener('change',invalidate);
   const resize=()=>{const w=Math.max(1,el.clientWidth),h=Math.max(1,el.clientHeight);renderer.setSize(w,h,false);const a=w/h;perspCam.aspect=a;perspCam.updateProjectionMatrix();orthoCam.left=-orthoCam.top*a;orthoCam.right=orthoCam.top*a;orthoCam.updateProjectionMatrix();composer?.setSize(w,h);invalidate();};
   const ro=new ResizeObserver(resize);ro.observe(el);resize();
+  /** Smooth camera flights between poses. Reduced-motion users and the orthographic projection get instant jumps. */
+  let flyRaf=0;
+  const cancelFly=()=>{if(flyRaf){cancelAnimationFrame(flyRaf);flyRaf=0;}};
+  const reducedMotion=()=>typeof matchMedia==='function'&&matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const setPose=(p:CameraPose)=>{camera.position.set(...p.position);controls.target.set(...p.target);camera.updateMatrixWorld(true);controls.update();};
+  const flyTo=(to:CameraPose,prepare?:()=>void)=>{
+   cancelFly();
+   prepare?.();
+   if(reducedMotion()||(camera as THREE.OrthographicCamera).isOrthographicCamera){setPose(to);invalidate();return;}
+   const from:CameraPose={position:[camera.position.x,camera.position.y,camera.position.z],target:[controls.target.x,controls.target.y,controls.target.z]};
+   const start=performance.now();
+   const step=()=>{
+    if(disposed){flyRaf=0;return;}
+    const u=Math.min(1,(performance.now()-start)/CAMERA_FLY_MS);
+    setPose(tweenPose(from,to,easeAt('easeInOut',u)));
+    renderFrame();
+    flyRaf=u<1?requestAnimationFrame(step):0;
+   };
+   flyRaf=requestAnimationFrame(step);
+  };
+  controls.addEventListener('start',cancelFly);
   const place=(dir:THREE.Vector3,center:THREE.Vector3,radius:number)=>{
    const d=frameDistance(radius,perspCam.fov,perspCam.aspect);const {near,far}=clipPlanes(d,radius);
    camera.near=near;camera.far=far;camera.position.copy(center).addScaledVector(dir,d);
    if((camera as THREE.OrthographicCamera).isOrthographicCamera){const halfH=Math.max(radius*1.25,1e-4),a=perspCam.aspect||1;orthoCam.top=halfH;orthoCam.bottom=-halfH;orthoCam.left=-halfH*a;orthoCam.right=halfH*a;orthoCam.zoom=1;}
+   cancelFly();
    camera.updateProjectionMatrix();
    controls.target.copy(center);controls.minDistance=radius*0.05;controls.maxDistance=d*20;controls.update();invalidate();
   };
@@ -229,7 +252,7 @@ export default function Viewport3D(){
   };
   /** Turntable preview: the orbit controls auto-rotate while a rAF loop renders. View only - it never touches the stage, documents or exports. */
   let previewRaf=0;
-  const stopPreview=()=>{if(previewRaf){cancelAnimationFrame(previewRaf);previewRaf=0;}controls.autoRotate=false;if(getStudio3DState().turntable)patchStudio3D({turntable:false});};
+  const stopPreview=()=>{cancelFly();if(previewRaf){cancelAnimationFrame(previewRaf);previewRaf=0;}controls.autoRotate=false;if(getStudio3DState().turntable)patchStudio3D({turntable:false});};
   const setTurntable=(on:boolean):boolean=>{
    if(on){
     if(previewRaf)return true;
@@ -250,7 +273,7 @@ export default function Viewport3D(){
   };
   const applyViewByName=(name:string)=>{
    const v=getStudio3DState().views.find(x=>x.name===name);if(!v)throw Object.assign(new Error(`There is no saved view named ${name}.`),{expected:true});
-   camera.position.set(...v.position);camera.quaternion.set(...v.quaternion);controls.target.set(...v.target);camera.updateMatrixWorld(true);controls.update();invalidate();
+   flyTo({position:v.position,target:v.target});
   };
   const loadParsed=async(file:File,extras:File[])=>{
    const tmpUrls:string[]=[];let notice='';let unitHint:{id:number;factor:number}|null=null;
@@ -938,9 +961,16 @@ export default function Viewport3D(){
    const id=getStudio3DState().selected;const obj=id==null?null:stage.find(id);
    const box=obj?new THREE.Box3().setFromObject(obj):null;
    const dir=new THREE.Vector3(...viewDirection(preset));
-   if(box&&!box.isEmpty())place(dir,box.getCenter(new THREE.Vector3()),Math.max(box.getSize(new THREE.Vector3()).length()/2,1e-4));
-   else if(bounds&&boundsValid(bounds))place(dir,new THREE.Vector3(...boundsCenter(bounds)),Math.max(boundsRadius(bounds),1e-4));
-   else place(dir,new THREE.Vector3(0,0,0),5);
+   const center=box&&!box.isEmpty()?box.getCenter(new THREE.Vector3()):bounds&&boundsValid(bounds)?new THREE.Vector3(...boundsCenter(bounds)):new THREE.Vector3(0,0,0);
+   const radius=box&&!box.isEmpty()?Math.max(box.getSize(new THREE.Vector3()).length()/2,1e-4):bounds&&boundsValid(bounds)?Math.max(boundsRadius(bounds),1e-4):5;
+   const d=frameDistance(radius,perspCam.fov,perspCam.aspect);
+   flyTo({position:[center.x+dir.x*d,center.y+dir.y*d,center.z+dir.z*d],target:[center.x,center.y,center.z]},()=>{
+    const {near,far}=clipPlanes(d,radius);
+    camera.near=near;camera.far=far;
+    if((camera as THREE.OrthographicCamera).isOrthographicCamera){const halfH=Math.max(radius*1.25,1e-4),a=perspCam.aspect||1;orthoCam.top=halfH;orthoCam.bottom=-halfH;orthoCam.left=-halfH*a;orthoCam.right=halfH*a;orthoCam.zoom=1;}
+    camera.updateProjectionMatrix();
+    controls.minDistance=radius*0.05;controls.maxDistance=d*20;
+   });
   };
   /** Animation clips live in the stage (so edits are undoable and get saved). Playback poses the nodes as a pure function of clip and time and never touches the undo history. */
   const anim=()=>getStudio3DState().anim;
@@ -1382,7 +1412,7 @@ export default function Viewport3D(){
   const cv=renderer.domElement;cv.addEventListener('pointerdown',onDownCapture,true);cv.addEventListener('pointerdown',onDown);window.addEventListener('pointermove',onMove);window.addEventListener('pointercancel',endMarquee);cv.addEventListener('pointerup',onUp);cv.addEventListener('keydown',onKey);
   sync();frameAll();void applyEnv();
   return()=>{
-   disposed=true;opening++;stopAnim();if(previewRaf)cancelAnimationFrame(previewRaf);offDrop();mixer?.stopAllAction();stage.autoKeySource=null;off();offAuto();if(autoTimer)clearTimeout(autoTimer);cancelAnimationFrame(frame);ro.disconnect();controls.dispose();
+   disposed=true;opening++;stopAnim();cancelFly();if(previewRaf)cancelAnimationFrame(previewRaf);offDrop();mixer?.stopAllAction();stage.autoKeySource=null;off();offAuto();if(autoTimer)clearTimeout(autoTimer);cancelAnimationFrame(frame);ro.disconnect();controls.dispose();
    el.removeEventListener('dragover',onAssetDragOver);el.removeEventListener('drop',onAssetDrop);cv.removeEventListener('pointerdown',onDownCapture,true);cv.removeEventListener('pointerdown',onDown);window.removeEventListener('pointermove',onMove);window.removeEventListener('pointercancel',endMarquee);endMarquee();cv.removeEventListener('pointerup',onUp);cv.removeEventListener('keydown',onKey);
    if(getStudio3DState().status==='loading')patchStudio3D({status:stage.root.children.length?'ready':'idle',confirmReplace:null});
    gizmo.detach();gizmo.dispose();ikGizmo.detach();ikGizmo.dispose();poleGizmo.detach();poleGizmo.dispose();fkGizmo.detach();fkGizmo.dispose();lookGizmo.detach();lookGizmo.dispose();clearGhosts();scene.remove(ghosts);if(pathLine){pathLine.geometry.dispose();(pathLine.material as THREE.Material).dispose();pathLine=null;}fkTarget.geometry.dispose();(fkTarget.material as THREE.Material).dispose();fkLook.geometry.dispose();(fkLook.material as THREE.Material).dispose();ikTarget.geometry.dispose();(ikTarget.material as THREE.Material).dispose();ikPoleM.geometry.dispose();(ikPoleM.material as THREE.Material).dispose();offStage();clearSelection();if(painting){painting=false;}const openSel=getStudio3DState().selected;if(openSel!=null)stage.skinPaintEnd(openSel);if(lightHelper){scene.remove(lightHelper);(lightHelper as HelperObj).dispose?.();lightHelper=null;}if(skelHelper){scene.remove(skelHelper);skelHelper.geometry.dispose();(skelHelper.material as THREE.Material).dispose();skelHelper=null;}if(weightOverlay){scene.remove(weightOverlay);weightOverlay.geometry.dispose();(weightOverlay.material as THREE.Material).dispose();weightOverlay=null;}if(maskOverlay){scene.remove(maskOverlay);maskOverlay.geometry.dispose();(maskOverlay.material as THREE.Material).dispose();maskOverlay=null;}for(const h of helpers.values())h.dispose();grid.geometry.dispose();(grid.material as THREE.Material).dispose();cursorGeo.dispose();cursorMat.dispose();scene.remove(cursorMark);mLineGeo.dispose();mLineMat.dispose();mDotGeo.dispose();mDotMat.dispose();scene.remove(measureGroup);for(const t of envTargets)t.dispose();envCache.clear();pmrem.dispose();composer?.dispose();renderer.dispose();renderer.forceContextLoss();

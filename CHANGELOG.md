@@ -1,4 +1,5 @@
 # Unreleased: 3D Studio P0
+- Smooth camera flights: applying a saved view or a view preset glides the camera to its new pose over a third of a second (ease-in-out), interrupted cleanly by grabbing the viewport or by another move; reduced-motion users and the orthographic projection keep instant jumps.
 - Camera bookmarks polish: saved views can be renamed (command or inline in the view panel) and overwritten with the current camera, default names fill gaps left by removed views, and the viewport maps keys 1-9 to apply a saved view slot and Shift+1-9 to save the current camera into that slot.
 - Pin labels in the viewport: annotation pins with a label show a small overlay tag anchored to the pin that follows the camera, hides when the pin points away, and disappears with the pin; the outliner rows gained a focus button that selects the object and frames it in the viewport.
 - Annotation pins: small amber markers with an optional label, inserted at the 3D cursor or a point, movable and deletable like any object; the label lives in the node's extras, so pins survive save/load and glTF export, and the inspector edits it with undo.
