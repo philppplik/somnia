@@ -6112,6 +6112,22 @@
       "hasEnabled": true
     },
     {
+      "id": "slides.setAltText",
+      "title": "Set picture alt text",
+      "category": "Edit",
+      "source": "slides",
+      "keywords": [
+        "accessibility",
+        "alt text",
+        "alternative text",
+        "description",
+        "image",
+        "picture",
+        "screen reader"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "slides.setFirstSlideNumber",
       "title": "Set first slide number",
       "category": "Edit",

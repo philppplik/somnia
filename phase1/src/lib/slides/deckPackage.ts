@@ -1951,3 +1951,31 @@ export function editSections(bytes:Uint8Array,edit:SectionEdit):Uint8Array{
   const rz=unzipSync(res);for(const key of Object.keys(zip))if(key!=='ppt/presentation.xml'&&(!rz[key]||rz[key].length!==zip[key].length||rz[key].some((v,i)=>v!==zip[key][i])))throw Error('Edited deck changed an unrelated part');
   return res;
 }
+
+/** Alternative text (cNvPr descr) of a top-level picture, for screen readers and exports. */
+export const MAX_ALT_TEXT=500;
+export const altTextIssue=(t:string)=>!t||t!==t.trim()?'Alt text cannot be empty or padded':t.length>MAX_ALT_TEXT?`Alt text is limited to ${MAX_ALT_TEXT} characters`:/[\u0000-\u001f\u007f\ud800-\udfff\ufffe\uffff]/.test(t)?'Alt text contains unsupported characters':'';
+function altParts(bytes:Uint8Array,slideId:number,shapeId:number){
+  const model=readDeckModel(bytes),slide=model.slides.find(s=>s.id===slideId);
+  if(!slide)throw Error('Slide no longer exists');if(slide.problems.length)throw Error('This slide has unsupported structure');
+  const shape=slide.shapes.find(s=>s.id===shapeId);if(!shape)throw Error('Shape no longer exists');
+  if(shape.parentId!==null||shape.kind!=='picture')throw Error('Only pictures have alt text here');
+  const zip=openPackage(bytes),xml=text(zip,slide.part),range=spRange(xml,shapeId,'p:pic','p:nvPicPr'),pic=xml.slice(range.start,range.end);
+  const tag=/<p:cNvPr\b[^>]*>/.exec(pic);if(!tag||tag.index>pic.indexOf('</p:nvPicPr>'))throw Error('Picture has no readable properties');
+  const at=range.start+tag.index;return {model,slide,zip,xml,tag:tag[0],at};
+}
+export function readPictureAlt(bytes:Uint8Array,slideId:number,shapeId:number):string|null{
+  const t=altParts(bytes,slideId,shapeId).tag,m=/\sdescr="([^"]*)"/.exec(t);return m?dec(m[1]):null;
+}
+export function setPictureAlt(bytes:Uint8Array,slideId:number,shapeId:number,alt:string|null):Uint8Array{
+  if(alt!==null){const issue=altTextIssue(alt);if(issue)throw Error(issue);}
+  const p=altParts(bytes,slideId,shapeId),cur=/\sdescr="([^"]*)"/.exec(p.tag),now=cur?dec(cur[1]):null;
+  if(now===alt||(now===''&&alt===null))return bytes;
+  const next=alt===null?p.tag.replace(/\sdescr="[^"]*"/,''):cur?p.tag.replace(/(\sdescr=")[^"]*(")/,(_m,a,b)=>a+attrEsc(alt)+b):p.tag.replace(/\s*(\/?)>$/,(_m,s)=>` descr="${attrEsc(alt)}"${s}>`);
+  const xml=p.xml.slice(0,p.at)+next+p.xml.slice(p.at+p.tag.length),out=repack(p.zip,{[p.slide.part]:xml}),after=readDeckModel(out);
+  const as=after.slides.find(s=>s.id===slideId);
+  if(!as||as.problems.length||JSON.stringify(as.shapes)!==JSON.stringify(p.slide.shapes)||after.slides.length!==p.model.slides.length||after.runs.length!==p.model.runs.length)throw Error('Edited deck failed verification');
+  if(readPictureAlt(out,slideId,shapeId)!==alt)throw Error('Edited deck failed verification');
+  const rz=unzipSync(out);for(const key of Object.keys(p.zip))if(key!==p.slide.part&&(!rz[key]||rz[key].length!==p.zip[key].length||rz[key].some((v,i)=>v!==p.zip[key][i])))throw Error('Edited deck changed an unrelated part');
+  return out;
+}

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {readFileSync,readdirSync} from 'node:fs';
 import {fileURLToPath} from 'node:url';
 import {unzipSync,zipSync,strFromU8,strToU8} from 'fflate';
-import {editSections,setSlideHidden,readHiddenSlides,setFirstSlideNum,readFirstSlideNum,setSlideFooter,setAllSlideFooters,readSlideFooter,setSlideSize,readSlideSize,setAllSlideBackgrounds,backgroundSummary,setSlideBackground,readSlideBackground,editLayoutBox,readLayoutBoxes,editMasterBox,readMaster,editTheme,readTheme,insertTable,editTable,readTable,setShapeStyle,readShapeStyle,setSlideNotes,groupShapes,ungroupShape,readSlideTransition,setSlideTransition,arrangeShapes,arrangedOrder,setShapesBounds,readSlideNotes,insertPicture,replacePicture,removePicture,fitImage,formatShapeText,addTextBox,removeTextBox,nextShapeId,setShapeBounds,boundsEditIssue,readDeckModel,moveSlide,reorderSlides,duplicateSlide,deleteSlide,newSlideFromLayout,readLayouts} from './deckPackage';
+import {setPictureAlt,readPictureAlt,editSections,setSlideHidden,readHiddenSlides,setFirstSlideNum,readFirstSlideNum,setSlideFooter,setAllSlideFooters,readSlideFooter,setSlideSize,readSlideSize,setAllSlideBackgrounds,backgroundSummary,setSlideBackground,readSlideBackground,editLayoutBox,readLayoutBoxes,editMasterBox,readMaster,editTheme,readTheme,insertTable,editTable,readTable,setShapeStyle,readShapeStyle,setSlideNotes,groupShapes,ungroupShape,readSlideTransition,setSlideTransition,arrangeShapes,arrangedOrder,setShapesBounds,readSlideNotes,insertPicture,replacePicture,removePicture,fitImage,formatShapeText,addTextBox,removeTextBox,nextShapeId,setShapeBounds,boundsEditIssue,readDeckModel,moveSlide,reorderSlides,duplicateSlide,deleteSlide,newSlideFromLayout,readLayouts} from './deckPackage';
 import {readRuns,makeEditedCopy} from './editCopy';
 import {png,jpeg} from './imageFixtures';
 
@@ -949,4 +949,17 @@ test('sections: move reorders sections and their slides together, keeps slide id
   assert.equal(editSections(b,{kind:'move',index:1,toIndex:1}),b);
   assert.throws(()=>editSections(b,{kind:'move',index:3,toIndex:0}),/no longer exists/);assert.throws(()=>editSections(b,{kind:'move',index:0,toIndex:3}),/no longer exists/);assert.throws(()=>editSections(b,{kind:'move',index:-1,toIndex:0}),/no longer exists/);
   const none=deck(3);assert.throws(()=>editSections(none,{kind:'move',index:0,toIndex:1}),/no sections/);
+});
+
+test('picture alt text: add, change, clear, no-op, escaping; only pictures; other parts untouched',()=>{
+  const b=deck(2,{picture:true}),sid=ids(b)[0],pic=readDeckModel(b).slides[0].shapes.find(s=>s.kind==='picture')!.id;
+  assert.equal(readPictureAlt(b,sid,pic),null);
+  const c=setPictureAlt(b,sid,pic,'A "chart" & <more>');assert.equal(readPictureAlt(c,sid,pic),'A "chart" & <more>');assert.deepEqual(readDeckModel(c).slides[0].shapes,readDeckModel(b).slides[0].shapes);
+  assert.equal(setPictureAlt(c,sid,pic,'A "chart" & <more>'),c);
+  const d=setPictureAlt(c,sid,pic,'Changed');assert.equal(readPictureAlt(d,sid,pic),'Changed');
+  const e=setPictureAlt(d,sid,pic,null);assert.equal(readPictureAlt(e,sid,pic),null);assert.equal(setPictureAlt(b,sid,pic,null),b);
+  const shapes=readDeckModel(b).slides[0].shapes;const text=shapes.find(s=>s.kind==='text')!.id;
+  assert.throws(()=>setPictureAlt(b,sid,text,'x'),/Only pictures/);assert.throws(()=>setPictureAlt(b,sid,9999,'x'),/no longer exists/);assert.throws(()=>setPictureAlt(b,99999,pic,'x'),/no longer exists/);
+  for(const bad of ['',' pad ','x'.repeat(501),'a\nb'])assert.throws(()=>setPictureAlt(b,sid,pic,bad));
+  assert.deepEqual(titles(c),titles(b));
 });
