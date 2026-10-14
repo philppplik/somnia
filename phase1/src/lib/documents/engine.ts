@@ -44,11 +44,14 @@ export class DocumentsEngine{
  async formatState(start:import('./protocol').DocPos,end:import('./protocol').DocPos):Promise<import('./protocol').FormatState>{return(await this.call('formatState',id=>({id,kind:'formatState',start,end}))).state;}
  async formatParagraphs(first:number,last:number,patch:import('./protocol').ParaPatch):Promise<OpenedDocument>{return(await this.call('edited',id=>({id,kind:'paraFormat',first,last,patch}))).document;}
  async paragraphState(first:number,last:number):Promise<import('./protocol').ParaState>{return(await this.call('paraState',id=>({id,kind:'paraState',first,last}))).state;}
- async setParagraphStyle(first:number,last:number,style:import('./protocol').DocStyleId):Promise<OpenedDocument>{return(await this.call('edited',id=>({id,kind:'paraStyle',first,last,style}))).document;}
+ async setParagraphStyle(first:number,last:number,style:string):Promise<OpenedDocument>{return(await this.call('edited',id=>({id,kind:'paraStyle',first,last,style}))).document;}
  async continueList(first:number,last:number):Promise<OpenedDocument>{return(await this.call('edited',id=>({id,kind:'continueList',first,last}))).document;}
  async insertToc(block:number,o:import('./protocol').TocOptions):Promise<OpenedDocument>{return(await this.call('edited',id=>({id,kind:'insertToc',block,levels:o.levels,title:o.title,pages:o.pages}))).document;}
  async updateToc(block:number):Promise<OpenedDocument>{return(await this.call('edited',id=>({id,kind:'updateToc',block}))).document;}
  async removeToc(block:number):Promise<OpenedDocument>{return(await this.call('edited',id=>({id,kind:'removeToc',block}))).document;}
+ async listStyles():Promise<import('./protocol').StyleItem[]>{return(await this.call('styles',id=>({id,kind:'listStyles'}))).items;}
+ async upsertStyle(patch:import('./protocol').StylePatch):Promise<{styleId:string;document:OpenedDocument}>{const r=await this.call('styleSaved',id=>({id,kind:'upsertStyle',patch}));return{styleId:r.styleId,document:r.document};}
+ async deleteStyle(styleId:string):Promise<OpenedDocument>{return(await this.call('edited',id=>({id,kind:'deleteStyle',styleId}))).document;}
  async restartList(first:number,last:number):Promise<OpenedDocument>{return(await this.call('edited',id=>({id,kind:'restartList',first,last}))).document;}
  async setList(first:number,last:number,list:import('./protocol').ListKindId):Promise<OpenedDocument>{return(await this.call('edited',id=>({id,kind:'setList',first,last,list}))).document;}
  async shiftListLevel(first:number,last:number,delta:number):Promise<OpenedDocument>{return(await this.call('edited',id=>({id,kind:'listLevel',first,last,delta}))).document;}

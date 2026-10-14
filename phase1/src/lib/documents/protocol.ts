@@ -16,13 +16,15 @@ export function linkProblem(v:unknown):string|null{
  if(Array.from(v).length>MAX_LINK_CHARS||/[\s\u0000-\u001f\u007f-\u009f]/.test(v)||!/^(https?:\/\/|mailto:)./i.test(v))return 'A link starts with http://, https:// or mailto: and has no spaces.';
  return null;
 }
-export interface FormatPatch{bold?:boolean;italic?:boolean;underline?:boolean;font?:string;size?:number;color?:string;strike?:boolean;smallCaps?:boolean;vertAlign?:VertAlign;highlight?:HighlightName;link?:string;/** Remove direct character formatting (links stay). Only `true`. */clear?:true}
+export interface FormatPatch{bold?:boolean;italic?:boolean;underline?:boolean;font?:string;size?:number;color?:string;strike?:boolean;smallCaps?:boolean;vertAlign?:VertAlign;highlight?:HighlightName;link?:string;/** Character style id; an empty string removes it. */charStyle?:string;/** Remove direct character formatting (links stay). Only `true`. */clear?:true}
 export const MIN_FONT_PT=1,MAX_FONT_PT=400,MAX_FONT_NAME=64;
 /** Selection endpoints: top-level paragraph index and UTF-8 byte offset. */
 export interface DocPos{block:number;off:number}
 export const MAX_FORMAT_BLOCKS=2000;
 const FLAG_KEYS=['bold','italic','underline','strike','smallCaps'];
 /** Validates a format patch: flags are booleans, font is short printable text, size is 1-400 pt, color is auto or RRGGBB. */
+/** A style id: letters, digits, underscore and hyphen, at most 80 characters (the engine checks that the style exists). */
+export const STYLE_ID_RE=/^[\p{L}\p{N}_-]{1,80}$/u;
 export function checkFormatPatch(patch:unknown){
  if(!patch||typeof patch!=='object'||Array.isArray(patch))throw new Error('Format change is not valid.');
  const o=patch as Record<string,unknown>;const keys=Object.keys(o);if(!keys.length)throw new Error('Format change is not valid.');
@@ -34,6 +36,7 @@ export function checkFormatPatch(patch:unknown){
   else if(k==='vertAlign'){if(v!=='baseline'&&v!=='superscript'&&v!=='subscript')throw new Error('Format change is not valid.');}
   else if(k==='highlight'){if(!(HIGHLIGHTS as readonly unknown[]).includes(v))throw new Error('Highlight colour is not valid.');}
   else if(k==='link'){const bad=linkProblem(v);if(bad)throw new Error(bad);}
+  else if(k==='charStyle'){if(typeof v!=='string'||!STYLE_ID_RE.test(v)&&v!=='')throw new Error('Style is not valid.');}
   else if(k==='clear'){if(v!==true)throw new Error('Format change is not valid.');}
   else throw new Error('Format change is not valid.');
  }
@@ -103,11 +106,14 @@ export type DocumentsRequest=
  |{id:number;kind:'formatState';start:DocPos;end:DocPos}
  |{id:number;kind:'paraFormat';first:number;last:number;patch:ParaPatch}
  |{id:number;kind:'paraState';first:number;last:number}
- |{id:number;kind:'paraStyle';first:number;last:number;style:DocStyleId}
+ |{id:number;kind:'paraStyle';first:number;last:number;style:string}
  |{id:number;kind:'setList';first:number;last:number;list:ListKindId}
  |{id:number;kind:'insertToc';block:number;levels:number;title:string;pages:boolean}
  |{id:number;kind:'updateToc';block:number}
  |{id:number;kind:'removeToc';block:number}
+ |{id:number;kind:'listStyles'}
+ |{id:number;kind:'upsertStyle';patch:StylePatch}
+ |{id:number;kind:'deleteStyle';styleId:string}
  |{id:number;kind:'restartList';first:number;last:number}
  |{id:number;kind:'continueList';first:number;last:number}
  |{id:number;kind:'listLevel';first:number;last:number;delta:number}
@@ -142,6 +148,8 @@ export type DocumentsResponse=
  |{id:number;ok:true;kind:'comments';comments:CommentItem[]}
  |{id:number;ok:true;kind:'headerFooter';state:HeaderFooterState}
  |{id:number;ok:true;kind:'properties';state:PropertiesState}
+ |{id:number;ok:true;kind:'styles';items:StyleItem[]}
+ |{id:number;ok:true;kind:'styleSaved';styleId:string;document:OpenedDocument}
  |{id:number;ok:true;kind:'listOptions';state:ListOptionsState}
  |{id:number;ok:true;kind:'pageSetup';state:PageSetupState}
  |{id:number;ok:true;kind:'hit';hit:HitResult|null}
@@ -340,6 +348,37 @@ export function tocProblem(o:unknown):string|null{
  if(typeof t.levels!=='number'||!Number.isInteger(t.levels)||t.levels<1||t.levels>MAX_TOC_LEVELS)return `Use 1 to ${MAX_TOC_LEVELS} heading levels.`;
  if(typeof t.title!=='string'||Array.from(t.title).length>MAX_TOC_TITLE||/[\u0000-\u001f\u007f-\u009f\ufffc\u2028\u2029]/u.test(t.title))return `The title is limited to ${MAX_TOC_TITLE} characters, without line breaks.`;
  if(typeof t.pages!=='boolean')return 'The page numbers option is not valid.';
+ return null;
+}
+
+/** A style as the styles editor shows it (null = inherited from the base style). */
+export interface StyleItem{id:string;name:string;kind:'paragraph'|'character';builtin:boolean;basedOn:string|null;font:string|null;size:number|null;bold:boolean|null;italic:boolean|null;color:string|null;align:ParaAlign|null;spaceBefore:number|null;spaceAfter:number|null;lineSpacing:number|null}
+/** A style change: with `id` it modifies that style (only the given fields), without it creates one (`name` and `kind` required). `null` clears a property. */
+export interface StylePatch{id?:string;name?:string;kind?:'paragraph'|'character';basedOn?:string|null;font?:string|null;size?:number|null;bold?:boolean|null;italic?:boolean|null;color?:string|null;align?:ParaAlign|null;spaceBefore?:number|null;spaceAfter?:number|null;lineSpacing?:number|null}
+export const MAX_STYLE_NAME=60;
+const STYLE_KEYS=['id','name','kind','basedOn','font','size','bold','italic','color','align','spaceBefore','spaceAfter','lineSpacing'];
+/** The first problem with a style change, or null when the engine will accept the shape (name clashes and base chains are the engine's call). */
+export function stylePatchProblem(p:unknown):string|null{
+ if(!p||typeof p!=='object'||Array.isArray(p))return 'The style is not valid.';
+ const o=p as Record<string,unknown>;
+ for(const k of Object.keys(o))if(!STYLE_KEYS.includes(k))return `Unknown style field ${k}.`;
+ if(o.id!==undefined&&(typeof o.id!=='string'||!STYLE_ID_RE.test(o.id)))return 'The style is not valid.';
+ if(o.id===undefined){
+  if(typeof o.name!=='string')return 'A new style needs a name.';
+  if(o.kind!=='paragraph'&&o.kind!=='character')return 'The style kind is not valid.';
+ }
+ else if(Object.keys(o).length===1)return 'Nothing to change.';
+ if(o.name!==undefined&&(typeof o.name!=='string'||o.name.trim()===''||Array.from(o.name.trim()).length>MAX_STYLE_NAME||/[\u0000-\u001f\u007f-\u009f]/.test(o.name)))return `A style name is 1 to ${MAX_STYLE_NAME} characters.`;
+ if(o.basedOn!==undefined&&o.basedOn!==null&&(typeof o.basedOn!=='string'||!STYLE_ID_RE.test(o.basedOn)))return 'The base style is not valid.';
+ if(o.font!==undefined&&o.font!==null&&(typeof o.font!=='string'||o.font===''||Array.from(o.font).length>MAX_FONT_NAME||/[\u0000-\u001f\u007f]/.test(o.font)))return 'Font name is not valid.';
+ const num=(k:string,lo:number,hi:number)=>{const v=o[k];return v===undefined||v===null||(typeof v==='number'&&Number.isFinite(v)&&v>=lo&&v<=hi);};
+ if(!num('size',MIN_FONT_PT,MAX_FONT_PT))return `Font size must be between ${MIN_FONT_PT} and ${MAX_FONT_PT} pt.`;
+ if(!num('spaceBefore',0,1584)||!num('spaceAfter',0,1584))return 'Spacing is 0 to 1584 points.';
+ if(!num('lineSpacing',0.5,5))return 'Line spacing is 0.5 to 5.';
+ for(const k of ['bold','italic'])if(o[k]!==undefined&&o[k]!==null&&typeof o[k]!=='boolean')return 'Bold and italic are on, off or inherited.';
+ if(o.color!==undefined&&o.color!==null&&(typeof o.color!=='string'||!/^[0-9a-fA-F]{6}$/.test(o.color)))return 'Colour must be six hex digits.';
+ if(o.align!==undefined&&o.align!==null&&!['left','center','right','justify'].includes(o.align as string))return 'The alignment is not valid.';
+ if(o.kind==='character'||o.id===undefined&&o.kind!=='paragraph')for(const k of ['align','spaceBefore','spaceAfter','lineSpacing'])if(o[k]!==undefined)return 'Paragraph settings belong to paragraph styles.';
  return null;
 }
 

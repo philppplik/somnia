@@ -3192,6 +3192,50 @@
       "hasEnabled": true
     },
     {
+      "id": "documents.styles.apply",
+      "title": "Apply a style",
+      "category": "View",
+      "source": "documents",
+      "keywords": [
+        "document",
+        "docx"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "documents.styles.delete",
+      "title": "Delete a custom style",
+      "category": "View",
+      "source": "documents",
+      "keywords": [
+        "document",
+        "docx"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "documents.styles.open",
+      "title": "Styles",
+      "category": "View",
+      "source": "documents",
+      "keywords": [
+        "document",
+        "docx"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "documents.styles.save",
+      "title": "Create or change a style",
+      "category": "View",
+      "source": "documents",
+      "keywords": [
+        "document",
+        "docx"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "documents.table.col_left",
       "title": "Insert column left",
       "category": "View",

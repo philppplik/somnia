@@ -37,6 +37,9 @@ export class DocSession {
     set_list(first_block: number, last_block: number, kind: string): void;
     /** Moves list paragraphs by `delta` levels. */
     restart_list(first: number, last: number): void;
+    styles_list(): string;
+    upsert_style(json: string): string;
+    delete_style(id: string): void;
     insert_toc(block: number, levels: number, title: string, pages: boolean): void;
     update_toc(block: number): void;
     remove_toc(block: number): void;

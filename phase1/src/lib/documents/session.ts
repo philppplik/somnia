@@ -1,6 +1,7 @@
 import {scrollToPage} from './navigate';
 import {commentAuthor} from './author';
-import {tocProblem,isListKind,listOptionsProblem,type ListStyleId} from './protocol';
+import {setStyleList} from './styles';
+import {stylePatchProblem,STYLE_ID_RE,tocProblem,isListKind,listOptionsProblem,type ListStyleId} from './protocol';
 import {propertiesProblem,linkProblem,commentProblem,type CommentItem,validHfText,type HeaderFooterState,checkFormatPatch,checkParaPatch,MAX_HF_CHARS,MAX_NEW_TABLE_COLS,MAX_NEW_TABLE_ROWS,TABLE_OPS,type TableOp,DOC_STYLES,type DocStyleId,type ListKindId,type ParaPatch,type ImageOp,type PageSetupPatch,type PageSetupState,pageSetupProblem,type TableStyle,type TableStyleScope,tableStyleProblem,MIN_COL_PT,MAX_COL_PT,imageProblem,IMAGE_WIDTH_PERCENTS,MAX_IMAGES} from './protocol';
 import {captureDocumentSelection} from './selectionCapture';
 import {CELL_BASE,caretAfterEdit,diffEdit,inverseOf,UndoStack,type TextEdit,type UndoEntry} from './edit';
@@ -138,7 +139,7 @@ async function restoreSnap(x:UndoEntry,to:'before'|'after'){
  const check=ownerGuard(),e=engine!;const sn=x.snap!;const d=await e.restore(to==='before'?sn.before:sn.after);check();const c=to==='before'?sn.caretBefore:sn.caretAfter;
  patchDocuments({edited:true,editError:'',caretLocked:false,caret:{block:c.block,anchor:c.off,head:c.off}});await refresh(d);
 }
-export const undoEdit=()=>run(async()=>{const check=ownerGuard(),x=undo.popUndo();if(!x)return;if(x.snap){await restoreSnap(x,'before');check();undo.pushRedoEntry(x);}else await apply(x.inverse,'undo');});
+export const undoEdit=()=>run(async()=>{const check=ownerGuard(),x=undo.popUndo();if(!x)return;if(x.snap){await restoreSnap(x,'before');check();undo.pushRedoEntry(x);}else await apply(x.inverse,'undo');}).then(()=>refreshStyles());
 export const redoEdit=()=>run(async()=>{const check=ownerGuard(),x=undo.popRedo();if(!x)return;if(x.snap){await restoreSnap(x,'after');check();undo.pushUndoEntry(x);}else await apply(x.inverse,'redo');});
 
 type Spot={block:number;off:number};
@@ -458,8 +459,8 @@ async function paraSpan(){
  for(let i=n.s.block;i<=n.e.block;i++){if(blocks.find(b=>b.index===i)?.kind!=='para'&&blocks.find(b=>b.index===i)?.kind!=='cell')throw new Error('This selection includes a part that cannot be formatted as a paragraph.');}
  return n;
 }
-export const setParagraphStyle=(style:DocStyleId)=>run(async()=>{
- if(!(DOC_STYLES as readonly string[]).includes(style))throw new Error('Style is not offered.');
+export const setParagraphStyle=(style:string)=>run(async()=>{
+ if(!(DOC_STYLES as readonly string[]).includes(style)&&!STYLE_ID_RE.test(style))throw new Error('Style is not offered.');
  const n=await paraSpan();if(!n)return;
  await structural(eng=>eng.setParagraphStyle(n.s.block,n.e.block,style),n.h,n.h);setSel(n.a,n.h);
 });
@@ -476,6 +477,32 @@ export const setListStyle=(style:ListStyleId)=>run(async()=>{
  await structural(eng=>eng.setList(n.s.block,n.e.block,style),n.h,n.h);setSel(n.a,n.h);
 });
 /** Restarts numbering at the first selected paragraph: it and the later items of the same numbered list count from 1 again. One undo step; refused outside a numbered list. */
+/* ---- Styles editor ---- */
+/** Reads the document's paragraph and character styles into the shared list (not an edit). */
+export async function refreshStyles():Promise<void>{
+ const e=engine;if(!e||getDocumentsState().status!=='ready'){setStyleList([]);return;}const check=ownerGuard();
+ try{const items=await e.listStyles();check();setStyleList(items);}catch{check();}
+}
+/** Creates a style (no `id`) or changes one (with `id`) and returns its id. One undo step; the text keeps its look until the style is used. */
+export async function saveStyle(patch:import('./protocol').StylePatch):Promise<string|null>{
+ const bad=stylePatchProblem(patch);if(bad)throw new Error(bad);
+ let out:string|null=null;
+ await run(async()=>{const c=getDocumentsState().caret;const spot=c?{block:c.block,off:c.head}:await nearEditable(engine!,0);
+  await structural(async eng=>{const r=await eng.upsertStyle(patch);out=r.styleId;return r.document;},spot,spot);if(!c)patchDocuments({caret:null});});
+ await refreshStyles();return out;
+}
+/** Deletes a custom style: paragraphs and text that used it go back to Normal / no character style. One undo step. */
+export const deleteStyle=(styleId:string)=>run(async()=>{
+ if(!STYLE_ID_RE.test(styleId))throw new Error('The style is not valid.');
+ const c=getDocumentsState().caret;const spot=c?{block:c.block,off:c.head}:await nearEditable(engine!,0);
+ await structural(eng=>eng.deleteStyle(styleId),spot,spot);if(!c)patchDocuments({caret:null});await refreshStyles();
+});
+/** Applies a character style to the selected text (an empty id removes it). One undo step. */
+export const setCharStyle=(styleId:string)=>run(async()=>{
+ if(styleId!==''&&!STYLE_ID_RE.test(styleId))throw new Error('The style is not valid.');
+ if(!needSelection())throw new Error('Select the text first.');
+ await applyFormat({charStyle:styleId});
+});
 /* ---- Table of contents (static entries built from the headings; the engine finds it again by its TOC styles) ---- */
 const tocSpot=()=>{const c=getDocumentsState().caret;const b=c?norm(c).s.block:0;return{block:b,off:c?norm(c).s.off:0};};
 /** Inserts a table of contents above the caret paragraph (below the table when the caret is in one). One undo step; refused when the document has no headings. */

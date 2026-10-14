@@ -12,8 +12,8 @@ const CELL_BASE: usize = 1 << 20;
 /// The block list names at most this many cell paragraphs (the rest stay read-only for the host).
 const CELL_LIST_MAX: usize = 20_000;
 
-/// A structural snapshot: the body (blocks are shared, not copied), the header/footer stories and the last section.
-type Snap = (wordcraft_doc::Blocks, std::collections::BTreeMap<u32, wordcraft_doc::Part>, wordcraft_doc::SectionProps, std::collections::BTreeMap<String, Arc<Vec<u8>>>, std::collections::BTreeMap<u32, wordcraft_doc::Comment>, wordcraft_doc::CoreProps);
+/// A structural snapshot: the body (blocks are shared, not copied), the header/footer stories, the last section, media, comments, properties, styles and list definitions.
+type Snap = (wordcraft_doc::Blocks, std::collections::BTreeMap<u32, wordcraft_doc::Part>, wordcraft_doc::SectionProps, std::collections::BTreeMap<String, Arc<Vec<u8>>>, std::collections::BTreeMap<u32, wordcraft_doc::Comment>, wordcraft_doc::CoreProps, wordcraft_doc::StyleSheet, wordcraft_doc::Numbering);
 const COMMENT_MAX_CHARS: usize = 2000;
 const COMMENT_MAX_COUNT: usize = 500;
 const PDF_MAX_PAGES: usize = 2000;
@@ -427,9 +427,21 @@ impl DocSession {
         let mut vert: Option<wordcraft_doc::props::VertAlign> = None;
         let mut highlight: Option<wordcraft_doc::props::Highlight> = None;
         let mut link: Option<Option<String>> = None;
+        let mut char_style: Option<Option<String>> = None;
         let mut clear = false;
         for (k, val) in obj {
             match k.as_str() {
+                "charStyle" => {
+                    let id = val.as_str().ok_or_else(|| "format field charStyle must be text".to_string())?;
+                    if id.is_empty() {
+                        char_style = Some(None);
+                    } else if self.doc.styles.get(id).is_some_and(|st| st.kind == wordcraft_doc::StyleKind::Character && !st.hidden) {
+                        char_style = Some(Some(id.to_string()));
+                    } else {
+                        return Err("format field charStyle must name a character style of the document".into());
+                    }
+                    continue;
+                }
                 "vertAlign" => {
                     use wordcraft_doc::props::VertAlign;
                     vert = Some(match val.as_str() {
@@ -513,6 +525,9 @@ impl DocSession {
                     cp.ins = keep.1;
                     cp.del = keep.2;
                     cp.style = keep.3;
+                }
+                if let Some(v) = &char_style {
+                    cp.style = v.clone();
                 }
                 if let Some(v) = strike {
                     cp.strike = Some(v);
@@ -875,12 +890,15 @@ impl DocSession {
     /// Applies a paragraph style from a fixed list to `first..=last`; the document gains the built-in style if it lacks it.
     fn do_set_style(&mut self, first: usize, last: usize, id: &str) -> Result<(), String> {
         const OK: [&str; 8] = ["Normal", "Title", "Subtitle", "Heading1", "Heading2", "Heading3", "Heading4", "Quote"];
-        if !OK.contains(&id) {
+        let custom = !OK.contains(&id) && self.doc.styles.get(id).is_some_and(|st| st.kind == wordcraft_doc::StyleKind::Paragraph && !st.hidden);
+        if !OK.contains(&id) && !custom {
             return Err(format!("style {id} is not offered"));
         }
         let mut paras = self.para_span(first, last)?;
         let mut styles = self.doc.styles.clone();
-        Self::ensure_style(&mut styles, id)?;
+        if !custom {
+            Self::ensure_style(&mut styles, id)?;
+        }
         for p in paras.iter_mut() {
             p.props.style = if id == "Normal" { None } else { Some(id.to_string()) };
         }
@@ -1123,6 +1141,225 @@ impl DocSession {
         }
         for (id, p) in changed {
             self.put_para(id, p)?;
+        }
+        self.pages = DocLayout::default();
+        Ok(())
+    }
+    /// The paragraph and character styles a user can see, with the properties the styles editor edits (first 300).
+    fn do_styles_list(&self) -> String {
+        let hex = |c: &Option<wordcraft_doc::props::TextColor>| match c {
+            Some(wordcraft_doc::props::TextColor::Rgb(r)) => serde_json::Value::String(format!("{:02X}{:02X}{:02X}", r.0, r.1, r.2)),
+            _ => serde_json::Value::Null,
+        };
+        let mut shown: Vec<&wordcraft_doc::Style> = self
+            .doc
+            .styles
+            .styles
+            .iter()
+            .filter(|st| matches!(st.kind, wordcraft_doc::StyleKind::Paragraph | wordcraft_doc::StyleKind::Character) && !st.hidden && (!st.builtin || st.quick || st.id == "Normal"))
+            .collect();
+        shown.sort_by_key(|st| st.builtin);
+        let items: Vec<_> = shown
+            .into_iter()
+            .take(300)
+            .map(|st| {
+                let para = st.kind == wordcraft_doc::StyleKind::Paragraph;
+                serde_json::json!({
+                    "id": st.id, "name": st.name, "kind": if para { "paragraph" } else { "character" }, "builtin": st.builtin,
+                    "basedOn": st.based_on, "font": st.chr.font, "size": st.chr.size, "bold": st.chr.bold, "italic": st.chr.italic, "color": hex(&st.chr.color),
+                    "align": if para { st.para.align.map(|a| match a { wordcraft_doc::Align::Left => "left", wordcraft_doc::Align::Center => "center", wordcraft_doc::Align::Right => "right", _ => "justify" }) } else { None },
+                    "spaceBefore": if para { st.para.space_before } else { None }, "spaceAfter": if para { st.para.space_after } else { None },
+                    "lineSpacing": if para { match st.para.line_spacing { Some(wordcraft_doc::props::LineSpacing::Multiple(m)) => Some(m), _ => None } } else { None },
+                })
+            })
+            .collect();
+        serde_json::Value::Array(items).to_string()
+    }
+    /// Creates (no `id`) or changes (with `id`) a paragraph or character style. Fields: `name`, `kind` (new styles only), `basedOn`
+    /// (style id or null), `font`, `size`, `bold`, `italic`, `color` (RRGGBB), and for paragraph styles `align`, `spaceBefore`, `spaceAfter`,
+    /// `lineSpacing` (multiple of single). `null` clears a property. Returns the style id. Invalid values change nothing.
+    fn do_upsert_style(&mut self, json: &str) -> Result<String, String> {
+        use wordcraft_doc::props::{Align, LineSpacing, Rgb, TextColor};
+        use wordcraft_doc::StyleKind;
+        if json.len() > 2_000 {
+            return Err("the style is too large".into());
+        }
+        let v: serde_json::Value = serde_json::from_str(json).map_err(|e| format!("the style is not valid JSON: {e}"))?;
+        let obj = v.as_object().ok_or("the style must be an object")?;
+        let mut styles = self.doc.styles.clone();
+        let existing = match obj.get("id") {
+            None => None,
+            Some(x) => {
+                let id = x.as_str().ok_or("id must be text")?;
+                let st = styles.get(id).filter(|st| matches!(st.kind, StyleKind::Paragraph | StyleKind::Character)).ok_or("no such style")?;
+                Some(st.clone())
+            }
+        };
+        let mut st = match &existing {
+            Some(e) => e.clone(),
+            None => {
+                let name = obj.get("name").and_then(|n| n.as_str()).ok_or("a new style needs a name")?;
+                let kind = match obj.get("kind").and_then(|k| k.as_str()) {
+                    Some("paragraph") => StyleKind::Paragraph,
+                    Some("character") => StyleKind::Character,
+                    _ => return Err("kind must be paragraph or character".into()),
+                };
+                let n = styles.styles.iter().filter(|s| !s.builtin).count();
+                if n >= 200 {
+                    return Err("a document has at most 200 custom styles".into());
+                }
+                let id = styles.new_id(name.trim());
+                wordcraft_doc::Style {
+                    id,
+                    name: name.trim().to_string(),
+                    kind,
+                    based_on: if kind == StyleKind::Paragraph { Some("Normal".into()) } else { None },
+                    next: None,
+                    quick: true,
+                    builtin: false,
+                    priority: Some(100),
+                    ..Default::default()
+                }
+            }
+        };
+        let para = st.kind == StyleKind::Paragraph;
+        let num = |x: &serde_json::Value, lo: f64, hi: f64, what: &str| -> Result<Option<f32>, String> {
+            if x.is_null() {
+                return Ok(None);
+            }
+            x.as_f64().filter(|n| n.is_finite() && (lo..=hi).contains(n)).map(|n| Some(n as f32)).ok_or_else(|| format!("{what} must be {lo} to {hi}"))
+        };
+        for (k, val) in obj {
+            match k.as_str() {
+                "id" | "kind" => {}
+                "name" => {
+                    let name = val.as_str().ok_or("name must be text")?.trim().to_string();
+                    if name.is_empty() || name.chars().count() > 60 || name.chars().any(|c| c.is_control()) {
+                        return Err("a style name is 1-60 characters of plain text".into());
+                    }
+                    if existing.as_ref().is_some_and(|e| e.builtin && e.name != name) {
+                        return Err("a built-in style cannot be renamed".into());
+                    }
+                    if styles.styles.iter().any(|o| o.id != st.id && o.name.to_lowercase() == name.to_lowercase()) {
+                        return Err("another style already has this name".into());
+                    }
+                    st.name = name;
+                }
+                "basedOn" => {
+                    st.based_on = if val.is_null() {
+                        None
+                    } else {
+                        let b = val.as_str().ok_or("basedOn must be a style id or null")?;
+                        let base = styles.get(b).ok_or("the base style does not exist")?;
+                        if base.kind != st.kind {
+                            return Err("a style can only be based on a style of the same kind".into());
+                        }
+                        // No cycles: the base chain must not lead back to this style.
+                        if b == st.id || styles.chain(b).iter().any(|c| c.id == st.id) {
+                            return Err("a style cannot be based on itself".into());
+                        }
+                        Some(b.to_string())
+                    };
+                }
+                "font" => {
+                    st.chr.font = if val.is_null() {
+                        None
+                    } else {
+                        let f = val.as_str().ok_or("font must be text")?;
+                        if f.is_empty() || f.chars().count() > 64 || f.chars().any(|c| c.is_control()) {
+                            return Err("font must be 1-64 printable characters".into());
+                        }
+                        Some(f.to_string())
+                    };
+                }
+                "size" => st.chr.size = num(val, 1.0, 400.0, "size")?.map(|n| (n * 2.0).round() / 2.0),
+                "bold" | "italic" => {
+                    let b = if val.is_null() { None } else { Some(val.as_bool().ok_or_else(|| format!("{k} must be true, false or null"))?) };
+                    if k == "bold" {
+                        st.chr.bold = b;
+                    } else {
+                        st.chr.italic = b;
+                    }
+                }
+                "color" => {
+                    st.chr.color = if val.is_null() {
+                        None
+                    } else {
+                        let c = val.as_str().filter(|c| c.len() == 6 && c.bytes().all(|b| b.is_ascii_hexdigit())).ok_or("color must be RRGGBB")?;
+                        let n = u32::from_str_radix(c, 16).map_err(|e| e.to_string())?;
+                        Some(TextColor::Rgb(Rgb((n >> 16) as u8, (n >> 8) as u8, n as u8)))
+                    };
+                }
+                "align" | "spaceBefore" | "spaceAfter" | "lineSpacing" if !para => return Err(format!("{k} belongs to paragraph styles")),
+                "align" => {
+                    st.para.align = if val.is_null() {
+                        None
+                    } else {
+                        Some(match val.as_str() {
+                            Some("left") => Align::Left,
+                            Some("center") => Align::Center,
+                            Some("right") => Align::Right,
+                            Some("justify") => Align::Justify,
+                            _ => return Err("align must be left, center, right or justify".into()),
+                        })
+                    };
+                }
+                "spaceBefore" => st.para.space_before = num(val, 0.0, 1584.0, "spaceBefore")?,
+                "spaceAfter" => st.para.space_after = num(val, 0.0, 1584.0, "spaceAfter")?,
+                "lineSpacing" => st.para.line_spacing = num(val, 0.5, 5.0, "lineSpacing")?.map(LineSpacing::Multiple),
+                _ => return Err(format!("unknown style field {k}")),
+            }
+        }
+        let id = st.id.clone();
+        styles.upsert(st);
+        self.doc.styles = styles;
+        self.pages = DocLayout::default();
+        Ok(id)
+    }
+    /// Deletes a custom style: paragraphs and runs that used it fall back to Normal / no character style, and styles based on it
+    /// move to its own base. Built-in styles stay.
+    fn do_delete_style(&mut self, id: &str) -> Result<(), String> {
+        let st = self.doc.styles.get(id).filter(|s| matches!(s.kind, wordcraft_doc::StyleKind::Paragraph | wordcraft_doc::StyleKind::Character)).ok_or("no such style")?.clone();
+        if st.builtin {
+            return Err("a built-in style cannot be deleted".into());
+        }
+        let mut ids: Vec<usize> = (0..self.doc.body.len().min(100_000)).collect();
+        ids.extend((0..self.cell_paras().count().min(CELL_LIST_MAX)).map(|k| CELL_BASE + k));
+        let mut changed: Vec<(usize, wordcraft_doc::Paragraph)> = Vec::new();
+        for i in ids {
+            let Some(p) = self.para_at(i) else { continue };
+            let uses_para = p.props.style.as_deref() == Some(id);
+            let uses_char = p.runs.iter().any(|r| r.props.style.as_deref() == Some(id)) || p.mark.style.as_deref() == Some(id);
+            if !uses_para && !uses_char {
+                continue;
+            }
+            let mut p = p.clone();
+            if uses_para {
+                p.props.style = None;
+            }
+            for r in p.runs.iter_mut() {
+                if r.props.style.as_deref() == Some(id) {
+                    r.props.style = None;
+                }
+            }
+            if p.mark.style.as_deref() == Some(id) {
+                p.mark.style = None;
+            }
+            changed.push((i, p));
+        }
+        let mut styles = self.doc.styles.clone();
+        styles.styles.retain(|s| s.id != id);
+        for s in styles.styles.iter_mut() {
+            if s.based_on.as_deref() == Some(id) {
+                s.based_on = st.based_on.clone();
+            }
+            if s.next.as_deref() == Some(id) {
+                s.next = None;
+            }
+        }
+        self.doc.styles = styles;
+        for (i, p) in changed {
+            self.put_para(i, p)?;
         }
         self.pages = DocLayout::default();
         Ok(())
@@ -2404,6 +2641,18 @@ impl DocSession {
     pub fn set_list_options(&mut self, block: usize, patch_json: &str) -> Result<(), JsValue> {
         self.do_set_list_options(block, patch_json).map_err(|e| JsValue::from_str(&e))
     }
+    /// The paragraph and character styles with their editable properties (see `do_styles_list`).
+    pub fn styles_list(&self) -> String {
+        self.do_styles_list()
+    }
+    /// Creates or changes a style and returns its id (see `do_upsert_style`).
+    pub fn upsert_style(&mut self, json: &str) -> Result<String, JsValue> {
+        self.do_upsert_style(json).map_err(|e| JsValue::from_str(&e))
+    }
+    /// Deletes a custom style (see `do_delete_style`).
+    pub fn delete_style(&mut self, id: &str) -> Result<(), JsValue> {
+        self.do_delete_style(id).map_err(|e| JsValue::from_str(&e))
+    }
     /// Inserts a table of contents from the headings (see `do_insert_toc`).
     pub fn insert_toc(&mut self, block: usize, levels: u32, title: &str, pages: bool) -> Result<(), JsValue> {
         self.do_insert_toc(block, levels.min(255) as u8, title, pages).map_err(|e| JsValue::from_str(&e))
@@ -2506,17 +2755,19 @@ impl DocSession {
     pub fn snapshot(&mut self) -> u32 {
         let id = self.next_snap;
         self.next_snap += 1;
-        self.snaps.insert(id, (self.doc.body.clone(), self.doc.parts.clone(), self.doc.last_section.clone(), self.doc.media.clone(), self.doc.comments.clone(), self.doc.core.clone()));
+        self.snaps.insert(id, (self.doc.body.clone(), self.doc.parts.clone(), self.doc.last_section.clone(), self.doc.media.clone(), self.doc.comments.clone(), self.doc.core.clone(), self.doc.styles.clone(), self.doc.numbering.clone()));
         id
     }
     pub fn restore(&mut self, id: u32) -> Result<(), JsValue> {
-        let (b, parts, last, media, comments, core) = self.snaps.get(&id).ok_or_else(|| JsValue::from_str("unknown snapshot"))?.clone();
+        let (b, parts, last, media, comments, core, styles, numbering) = self.snaps.get(&id).ok_or_else(|| JsValue::from_str("unknown snapshot"))?.clone();
         self.doc.body = b;
         self.doc.parts = parts;
         self.doc.last_section = last;
         self.doc.media = media;
         self.doc.comments = comments;
         self.doc.core = core;
+        self.doc.styles = styles;
+        self.doc.numbering = numbering;
         self.pages = DocLayout::default();
         Ok(())
     }
@@ -3158,6 +3409,59 @@ mod tests {
         if s.toc_entries(9).unwrap().is_empty() {
             assert!(s.do_insert_toc(0, 3, "", true).is_err());
         }
+    }
+    #[test]
+    fn styles_editor_creates_modifies_deletes_and_applies() {
+        let mut s = DocSession::from_bytes(FIXTURE).unwrap();
+        let list = |s: &DocSession| -> Vec<serde_json::Value> { serde_json::from_str(&s.do_styles_list()).unwrap() };
+        let find = |s: &DocSession, id: &str| list(s).into_iter().find(|v| v["id"] == id);
+        let id = s.do_upsert_style(r#"{"name":"Callout","kind":"paragraph","font":"Georgia","size":13,"italic":true,"color":"C0392B","align":"center","spaceBefore":6,"spaceAfter":12,"lineSpacing":1.5}"#).unwrap();
+        let v = find(&s, &id).unwrap();
+        assert_eq!((v["name"].clone(), v["kind"].clone(), v["builtin"].clone(), v["basedOn"].clone()), ("Callout".into(), "paragraph".into(), false.into(), "Normal".into()));
+        assert_eq!((v["size"].as_f64(), v["color"].as_str(), v["align"].as_str(), v["lineSpacing"].as_f64()), (Some(13.0), Some("C0392B"), Some("center"), Some(1.5)));
+        let cid = s.do_upsert_style(r#"{"name":"Code","kind":"character","font":"Courier New","bold":true}"#).unwrap();
+        assert_ne!(id, cid);
+        // Apply: paragraph style by id, character style to a range.
+        s.do_set_style(0, 0, &id).unwrap();
+        s.do_format(0, 0, 0, 1, &format!(r#"{{"charStyle":"{cid}"}}"#)).unwrap();
+        assert!(s.do_set_style(0, 0, &cid).is_err(), "a character style is not a paragraph style");
+        assert!(s.do_format(0, 0, 0, 1, r#"{"charStyle":"Callout"}"#).is_err(), "a paragraph style is not a character style");
+        assert!(s.do_format(0, 0, 0, 1, r#"{"charStyle":"Nope"}"#).is_err());
+        let re = DocSession::from_bytes(&wordcraft_docx::write(&s.doc).unwrap()).unwrap();
+        assert!(find(&re, &id).is_some() && find(&re, &cid).is_some(), "custom styles survive a save");
+        // Modify: only the given fields change, null clears.
+        s.do_upsert_style(&format!(r#"{{"id":"{id}","size":15,"italic":null,"basedOn":"Heading1"}}"#)).unwrap();
+        let v = find(&s, &id).unwrap();
+        assert_eq!((v["size"].as_f64(), v["italic"].clone(), v["font"].as_str(), v["basedOn"].clone()), (Some(15.0), serde_json::Value::Null, Some("Georgia"), "Heading1".into()));
+        // Undo gap: a snapshot restores the styles.
+        let snap = s.snapshot();
+        s.do_upsert_style(&format!(r#"{{"id":"{id}","size":20}}"#)).unwrap();
+        s.restore(snap).unwrap();
+        assert_eq!(find(&s, &id).unwrap()["size"].as_f64(), Some(15.0));
+        // Refusals change nothing.
+        let before = s.do_styles_list();
+        for bad in [
+            "{}", "[]", "nope", r#"{"name":"x"}"#, r#"{"name":"","kind":"paragraph"}"#, r#"{"name":"a\nb","kind":"paragraph"}"#, r#"{"name":"callout","kind":"paragraph"}"#,
+            r#"{"name":"Z","kind":"table"}"#, r#"{"id":"Nope","size":10}"#, r#"{"id":"Heading1","name":"Big"}"#, r#"{"name":"Q","kind":"paragraph","size":0}"#, r#"{"name":"Q","kind":"paragraph","size":401}"#,
+            r#"{"name":"Q","kind":"paragraph","color":"red"}"#, r#"{"name":"Q","kind":"paragraph","align":"middle"}"#, r#"{"name":"Q","kind":"paragraph","lineSpacing":9}"#,
+            r#"{"name":"Q","kind":"paragraph","spaceAfter":-1}"#, r#"{"name":"Q","kind":"paragraph","bold":"yes"}"#, r#"{"name":"Q","kind":"character","align":"left"}"#,
+            r#"{"name":"Q","kind":"paragraph","basedOn":"Nope"}"#, r#"{"name":"Q","kind":"paragraph","font":""}"#, r#"{"name":"Q","kind":"paragraph","weird":1}"#,
+        ] {
+            assert!(s.do_upsert_style(bad).is_err(), "{bad}");
+        }
+        assert!(s.do_upsert_style(&format!(r#"{{"id":"{id}","basedOn":"{id}"}}"#)).is_err(), "no self base");
+        let child = s.do_upsert_style(&format!(r#"{{"name":"Child","kind":"paragraph","basedOn":"{id}"}}"#)).unwrap();
+        assert!(s.do_upsert_style(&format!(r#"{{"id":"{id}","basedOn":"{child}"}}"#)).is_err(), "no cycles");
+        assert!(s.do_upsert_style(&format!(r#"{{"id":"{id}","basedOn":"{cid}"}}"#)).is_err(), "base must be the same kind");
+        // Delete: users fall back, children are re-parented, built-ins stay.
+        assert!(s.do_delete_style("Heading1").is_err() && s.do_delete_style("Nope").is_err());
+        s.do_delete_style(&id).unwrap();
+        assert!(find(&s, &id).is_none());
+        assert_eq!(find(&s, &child).unwrap()["basedOn"], "Heading1");
+        assert!(s.para_at(0).unwrap().props.style.is_none());
+        s.do_delete_style(&cid).unwrap();
+        assert!(s.para_at(0).unwrap().runs.iter().all(|r| r.props.style.is_none()));
+        let _ = before;
     }
     #[test]
     fn save_records_last_modified_by_on_the_copy_only() {

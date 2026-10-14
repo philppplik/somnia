@@ -1,4 +1,6 @@
-import {useMemo,useState} from 'react';
+import {useEffect,useMemo,useState} from 'react';
+import {useDocuments} from '../../lib/documents/store';
+import {customParagraphStyles,useStyleList} from '../../lib/documents/styles';
 import {TableSizeDialog} from './TableSizeDialog';
 import {HeaderFooterDialog} from './HeaderFooterDialog';
 import {ImageControls} from './ImageControls';
@@ -8,7 +10,7 @@ import {GoToPageDialog} from './GoToPageDialog';
 import {TextEffects} from './TextEffects';
 import {setCommentsOpen,useCommentsOpen} from '../../lib/documents/comments';
 import {DOC_COLORS} from '../../lib/documents/palette';
-import {FONT_SIZES,setAlign,setFont,setFontColor,setFontSize,setLineSpacing,setSpaceAfter,setParagraphStyle,setSpaceBefore,stepIndent,toggleFormat,toggleList,shiftListLevel,setListStyle,restartNumbering,continueNumbering,editTable,insertTable,setColumnWidth} from '../../lib/documents/session';
+import {FONT_SIZES,setAlign,setFont,setFontColor,setFontSize,setLineSpacing,setSpaceAfter,setParagraphStyle,setSpaceBefore,stepIndent,toggleFormat,toggleList,shiftListLevel,refreshStyles,setListStyle,restartNumbering,continueNumbering,editTable,insertTable,setColumnWidth} from '../../lib/documents/session';
 import {LIST_STYLES,type ListStyleId,MIN_COL_PT,MAX_COL_PT,TABLE_PRESETS,TABLE_OPS,type TableOp,DOC_STYLES,type DocStyleId,type FormatPatch,type FormatState,type ParaAlign,type ParaState} from '../../lib/documents/protocol';
 import {AlignCenter,AlignJustify,AlignLeft,AlignRight,IndentDecrease,IndentIncrease,ListBullet,ListNumbered} from '../../lib/icons';
 import {t} from '../../lib/i18n';
@@ -26,7 +28,9 @@ const SPACE_STEPS=[0,4,6,8,10,12,18,24] as const;
 const withCurrent=(list:readonly number[],cur:number|null)=>cur!==null&&!list.includes(cur)?[...list,cur].sort((a,b)=>a-b):[...list];
 
 export function FormatBar({format,held,para,enabled,inCell=false}:{format:FormatState|null;held:FormatPatch|null;para:ParaState|null;enabled:boolean;inCell?:boolean}){
- const commentsOpen=useCommentsOpen();
+ const commentsOpen=useCommentsOpen();const docState=useDocuments();const styles=useStyleList();const customStyles=customParagraphStyles(styles);
+ useEffect(()=>{if(docState.status==='ready')void refreshStyles();},[docState.status,docState.name,docState.rev]);
+ const styleKnown=!!para?.style&&((DOC_STYLES as readonly string[]).includes(para.style)||customStyles.some(s=>s.id===para.style));
  const [sizeOpen,setSizeOpen]=useState(false),[hfOpen,setHfOpen]=useState(false),[colW,setColW]=useState(''),[styleOpen,setStyleOpen]=useState(false),[pageOpen,setPageOpen]=useState(false),[gotoOpen,setGotoOpen]=useState(false);
  const colOk=/^\d+(\.\d+)?$/.test(colW)&&Number(colW)>=MIN_COL_PT&&Number(colW)<=MAX_COL_PT;
  const flag=(p:'bold'|'italic'|'underline')=>held?.[p]??format?.[p]==='on';
@@ -46,8 +50,8 @@ export function FormatBar({format,held,para,enabled,inCell=false}:{format:Format
    <NativeButton className={tool} aria-pressed={color==='auto'} disabled={!enabled} onClick={()=>void setFontColor('auto')} data-testid="documents-color-auto">{t('documents.format.colorAuto')}</NativeButton>
    {DOC_COLORS.map(([h,cls])=><NativeButton key={h} className={'h-5 w-5 cursor-pointer rounded-sm border disabled:cursor-default disabled:opacity-50 '+cls+' '+(color?.toUpperCase()===h?'border-ink':'border-subtle')} aria-label={t('documents.format.colorOne',{hex:'#'+h})} title={'#'+h} aria-pressed={color?.toUpperCase()===h} disabled={!enabled} onClick={()=>void setFontColor(h)} data-testid={'documents-color-'+h}/>)}
   </span>
-  <NativeSelect className={sel+' w-32'} aria-label={t('documents.style.label')} title={t('documents.style.label')} disabled={!enabled} value={para?.style&&(DOC_STYLES as readonly string[]).includes(para.style)?para.style:''} onChange={e=>void setParagraphStyle(e.currentTarget.value as DocStyleId)} data-testid="documents-style">
-   {!(para?.style&&(DOC_STYLES as readonly string[]).includes(para.style))&&<option value="" disabled>{para?.style??t('documents.format.mixed')}</option>}{DOC_STYLES.map(s=><option key={s} value={s}>{t('documents.style.'+s)}</option>)}</NativeSelect>
+  <NativeSelect className={sel+' w-32'} aria-label={t('documents.style.label')} title={t('documents.style.label')} disabled={!enabled} value={styleKnown?para!.style!:''} onChange={e=>void setParagraphStyle(e.currentTarget.value)} data-testid="documents-style">
+   {!styleKnown&&<option value="" disabled>{para?.style??t('documents.format.mixed')}</option>}{DOC_STYLES.map(s=><option key={s} value={s}>{t('documents.style.'+s)}</option>)}{customStyles.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}</NativeSelect>
   <span className="flex items-center gap-0.5" role="group" aria-label={t('documents.para.align')}>
    {ALIGNS.map(([a,Icon])=><NativeButton key={a} className={tool+' w-7 px-0'} aria-label={t('documents.para.align.'+a)} title={t('documents.para.align.'+a)} aria-pressed={para?.align===a} disabled={!enabled} onClick={()=>void setAlign(a)} data-testid={'documents-align-'+a}><Icon size={14}/></NativeButton>)}
    <NativeButton className={tool+' w-7 px-0'} aria-label={t('documents.para.indent.decrease')} title={t('documents.para.indent.decrease')} disabled={!enabled||para?.indentLeft===0} onClick={()=>void stepIndent(-1)} data-testid="documents-indent-decrease"><IndentDecrease size={14}/></NativeButton>

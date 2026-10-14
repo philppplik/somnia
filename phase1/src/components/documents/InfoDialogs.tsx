@@ -5,6 +5,7 @@ import {authorProblem,MAX_AUTHOR_CHARS,savedAuthor,setAuthor} from '../../lib/do
 import {insertToc,removeToc,updateToc,readListOptions,readProperties,selectedText,setListOptions,setProperties,setTabStops} from '../../lib/documents/session';
 import {detailedStats} from '../../lib/documents/stats';
 import {useDocuments} from '../../lib/documents/store';
+import {StylesDialog} from './StylesDialog';
 import {useT} from '../../lib/useT';
 import {NativeButton,NativeInput,NativeSelect,Textarea} from '../ui/native-controls';
 const tool='grid h-7 cursor-pointer grid-flow-col items-center gap-1 rounded-sm border border-subtle bg-transparent px-2 text-xs text-ink-2 hover:bg-hover disabled:cursor-default disabled:opacity-50';
@@ -20,7 +21,7 @@ export function InfoDialogs(){
  const which=useInfoDialog();const doc=useDocuments();
  if(doc.status!=='ready'||which===null)return null;
  const close=()=>setInfoDialog(null);
- return which==='properties'?<PropertiesDialog onClose={close}/>:which==='tabs'?<TabsDialog onClose={close}/>:which==='list'?<ListOptionsDialog onClose={close}/>:which==='toc'?<TocDialog onClose={close}/>:<WordCountDialog onClose={close}/>;
+ return which==='properties'?<PropertiesDialog onClose={close}/>:which==='tabs'?<TabsDialog onClose={close}/>:which==='list'?<ListOptionsDialog onClose={close}/>:which==='toc'?<TocDialog onClose={close}/>:which==='styles'?<StylesDialog onClose={close}/>:<WordCountDialog onClose={close}/>;
 }
 function PropertiesDialog({onClose}:{onClose:()=>void}){
  const {t}=useT();const [orig,setOrig]=useState<PropertiesState|null>(null);const [form,setForm]=useState<PropertiesState|null>(null);

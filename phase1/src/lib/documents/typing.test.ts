@@ -229,7 +229,7 @@ test('an engine failure while changing paragraph formatting restores and records
 test('heading style applies to every paragraph in the selection as one undo step; unknown styles never reach the engine',async()=>{
  await open(['abc','def','ghi']);at(1,1,{block:0,off:1});await setParagraphStyle('Heading1');
  assert.deepEqual(d.rows.map(r=>r.p?.style),['Heading1','Heading1',undefined]);await syncGeometry();assert.equal(getDocumentsState().para?.style,'Heading1');
- const calls=d.calls;await setParagraphStyle('Heading9' as never);assert.ok(getDocumentsState().editError);assert.equal(d.calls,calls);
+ const calls=d.calls;await setParagraphStyle('a b');assert.ok(getDocumentsState().editError);assert.equal(d.calls,calls);
  patchDocuments({editError:''});await undoEdit();assert.deepEqual(d.rows.map(r=>r.p?.style),[undefined,undefined,undefined]);
 });
 test('list button toggles: on, then off when the whole selection already has that kind; Tab levels need a list',async()=>{

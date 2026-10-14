@@ -1,12 +1,13 @@
 import {registerCommand} from '../commandRegistry';
 import {getDocumentsState,patchDocuments,stepZoom} from './store';
 import {redoEdit,setAlign,setParagraphStyle,toggleList,clearList,shiftListLevel,stepFontSize,stepIndent,toggleFormat,undoEdit,editTable,insertTable,setHeaderFooter,insertImage,resizeImageToPercent,setImageAlt,removeImage,setColumnWidth,styleTable,setPageSetup,setFindOpen,setFindQuery,findStep,replaceAll,replaceCurrent} from './session';
-import {tocProblem,type TocOptions,listOptionsProblem,type ListOptionsPatch,pageSetupProblem,LIST_STYLES,type ListStyleId} from './protocol';
-import {insertToc,updateToc,removeToc,continueNumbering,restartNumbering,setListStyle,setListOptions} from './session';
+import {stylePatchProblem,STYLE_ID_RE,type StylePatch,tocProblem,type TocOptions,listOptionsProblem,type ListOptionsPatch,pageSetupProblem,LIST_STYLES,type ListStyleId} from './protocol';
+import {deleteStyle,saveStyle,setCharStyle,insertToc,updateToc,removeToc,continueNumbering,restartNumbering,setListStyle,setListOptions} from './session';
 import {validFindQuery,validReplaceText} from './find';
 import {findMedia} from '../media';
 import {tableStyleProblem,IMAGE_WIDTH_PERCENTS,MAX_IMAGE_BYTES,MIN_COL_PT,MAX_COL_PT} from './protocol';
 import {CELL_BASE} from './edit';
+import {styleList} from './styles';
 import {goToBlock,scrollToPage} from './navigate';
 import {safeCopyName,safePdfName} from './saveCopy';
 import {commentsOpen,setCommentsOpen} from './comments';
@@ -140,6 +141,21 @@ export function registerDocumentsCommands(){
    await setListStyle(st as ListStyleId);
   },()=>ready()&&!!getDocumentsState().caret),
   add('documents.list.restart','Restart list numbering',async()=>{await restartNumbering();},()=>ready()&&!!getDocumentsState().caret),
+  add('documents.styles.open','Styles',()=>{setInfoDialog('styles');},()=>ready()),
+  add('documents.styles.save','Create or change a style',async p=>{
+   const bad=stylePatchProblem(p);if(bad)throw expected(bad);
+   await saveStyle(p as StylePatch);
+  },()=>ready()),
+  add('documents.styles.delete','Delete a custom style',async p=>{
+   const id=(p as Record<string,unknown>|undefined)?.id;if(typeof id!=='string'||!STYLE_ID_RE.test(id))throw expected('Missing or invalid "id".');
+   await deleteStyle(id);
+  },()=>ready()),
+  add('documents.styles.apply','Apply a style',async p=>{
+   const r=(p??{}) as Record<string,unknown>;
+   if(typeof r.id!=='string'||!STYLE_ID_RE.test(r.id))throw expected('Missing or invalid "id".');
+   const it=styleList().find(s=>s.id===r.id);
+   if(it?.kind==='character')await setCharStyle(r.id);else await setParagraphStyle(r.id);
+  },()=>ready()&&!!getDocumentsState().caret),
   add('documents.toc.open','Table of contents',()=>{setInfoDialog('toc');},()=>ready()&&!!getDocumentsState().caret),
   add('documents.toc.insert','Insert table of contents',async p=>{
    const r=(p??{}) as Record<string,unknown>;const o={levels:r.levels??3,title:r.title??'',pages:r.pages??true};
