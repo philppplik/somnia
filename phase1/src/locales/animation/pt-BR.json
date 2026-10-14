@@ -986,5 +986,15 @@
  "animation.export.dither": "Pontilhar GIF",
  "animation.export.dither.hint": "Gradientes mais suaves em GIFs, com um pouco mais de ruído e tamanho. Outros formatos ignoram.",
  "animation.export.loop": "Repetir GIF e APNG",
- "animation.export.loop.hint": "Ligado: repete sempre. Desligado: toca uma vez e para no último quadro."
+ "animation.export.loop.hint": "Ligado: repete sempre. Desligado: toca uma vez e para no último quadro.",
+ "animation.rig.group.align": "Alinhar",
+ "animation.rig.align.left": "Alinhar à esquerda",
+ "animation.rig.align.centerX": "Centralizar na horizontal",
+ "animation.rig.align.right": "Alinhar à direita",
+ "animation.rig.align.top": "Alinhar ao topo",
+ "animation.rig.align.centerY": "Centralizar na vertical",
+ "animation.rig.align.bottom": "Alinhar embaixo",
+ "animation.rig.align.distributeX": "Distribuir na horizontal",
+ "animation.rig.align.distributeY": "Distribuir na vertical",
+ "cmd.animation.layers.align": "Alinhar ou distribuir as camadas selecionadas"
 }

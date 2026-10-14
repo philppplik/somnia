@@ -1645,6 +1645,27 @@
       "hasEnabled": true
     },
     {
+      "id": "animation.layers.align",
+      "title": "Align or distribute the selected layers",
+      "category": "Edit",
+      "source": "animation",
+      "keywords": [
+        "align",
+        "animation",
+        "bottom",
+        "center",
+        "distribute",
+        "layer",
+        "left",
+        "middle",
+        "position",
+        "right",
+        "spacing",
+        "top"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "animation.layers.arrange",
       "title": "Arrange the stacking order of the selected layers",
       "category": "Edit",

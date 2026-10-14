@@ -595,3 +595,31 @@ test('P182 graph time axis: readable frame steps, bounded count, aligned to the 
  assert.ok(timeTicks(0,T(3600*30),fps,500).length<=61);
  const ntsc={num:30000,den:1001};assert.ok(timeTicks(0,T(300),ntsc,6).length>=2);
 });
+
+test('P184 align: world anchor points line up, parents respected, distribute is even, locked skipped, one undo step',async()=>{
+ const {alignTargets}=await import('./layerAlign');const {layerAlignSpecs}=await import('./layerAlignCommands');const run=layerAlignSpecs()[0].run as (p?:unknown)=>unknown;
+ const T=(a:number[],m:any)=>[...alignTargets(a.map((v,i)=>({id:'k'+i,v})),m)!.values()];
+ assert.deepEqual(T([10,40,20],'left'),[10,10,10]);assert.deepEqual(T([10,40,20],'right'),[40,40,40]);assert.deepEqual(T([10,40,20],'centerX'),[25,25,25]);
+ assert.deepEqual(T([0,100,10],'distributeX'),[0,50,100]);
+ assert.equal(alignTargets([{id:'a',v:1},{id:'b',v:2}],'distributeX'),null);
+ const s=open();setAnimationSession(s);for(const id of ['b','c'])s.dispatch({type:'layer.add',kind:'shape',id});
+ const at=s.getState().view.playhead;
+ s.dispatch({type:'prop.set',layer:'a',prop:'position',t:at,value:[100,50]});s.dispatch({type:'prop.set',layer:'b',prop:'position',t:at,value:[300,150]});s.dispatch({type:'prop.set',layer:'c',prop:'position',t:at,value:[150,90]});
+ const {evaluate}=await import('./interpolate');const pos=(id:string)=>Array.from(evaluate(findLayer(findComp(s.document!)!,id)!.transform.position,at) as number[]);
+ const before=s.document!;run({mode:'left',layers:['a','b','c']});assert.deepEqual(['a','b','c'].map(i=>pos(i)[0]),[100,100,100]);assert.deepEqual(pos('b')[1],150);
+ s.undo();assert.equal(s.document,before);
+ run({mode:'distributeX',layers:['a','b','c']});assert.deepEqual(['a','c','b'].map(i=>pos(i)[0]),[100,200,300]);
+ const e=(p:object)=>assert.throws(()=>run(p),(x:any)=>x.expected===true);
+ e({mode:'distributeX',layers:['a','b','c']});e({mode:'left',layers:['a']});e({mode:'distributeY',layers:['a','b']});
+});
+
+test('P184 align works in composition space through a scaled parent',async()=>{
+ const {layerAlignSpecs}=await import('./layerAlignCommands');const run=layerAlignSpecs()[0].run as (p?:unknown)=>unknown;const {worldMatrix,applyMatrix}=await import('./scene');const {evaluate}=await import('./interpolate');
+ const s=open();setAnimationSession(s);for(const id of ['b','c'])s.dispatch({type:'layer.add',kind:'shape',id});s.dispatch({type:'layer.add',kind:'null',id:'p'});
+ const at=s.getState().view.playhead;
+ s.dispatch({type:'prop.set',layer:'p',prop:'scale',t:at,value:[200,200]});s.dispatch({type:'layer.parent',layer:'b',parent:'p',keepWorld:false,t:at});
+ s.dispatch({type:'prop.set',layer:'b',prop:'position',t:at,value:[300,40]});s.dispatch({type:'prop.set',layer:'c',prop:'position',t:at,value:[250,90]});
+ const wx=(id:string)=>{const c=findComp(s.document!)!,l=findLayer(c,id)!;return applyMatrix(worldMatrix(c,l,at),evaluate(l.transform.anchor,at) as [number,number])[0];};
+ const bx=wx('b'),cx=wx('c');run({mode:'left',layers:['b','c']});
+ assert.ok(Math.abs(wx('b')-Math.min(bx,cx))<0.05&&Math.abs(wx('c')-Math.min(bx,cx))<0.05,`${wx('b')} ${wx('c')} want ${Math.min(bx,cx)}`);
+});

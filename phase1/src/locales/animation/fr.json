@@ -986,5 +986,15 @@
  "animation.export.dither": "Tramage GIF",
  "animation.export.dither.hint": "Dégradés plus doux dans les GIF, un peu plus de bruit et de poids. Les autres formats l’ignorent.",
  "animation.export.loop": "Répéter GIF et APNG",
- "animation.export.loop.hint": "Activé : boucle sans fin. Désactivé : une lecture, puis arrêt sur la dernière image."
+ "animation.export.loop.hint": "Activé : boucle sans fin. Désactivé : une lecture, puis arrêt sur la dernière image.",
+ "animation.rig.group.align": "Aligner",
+ "animation.rig.align.left": "Aligner à gauche",
+ "animation.rig.align.centerX": "Centrer horizontalement",
+ "animation.rig.align.right": "Aligner à droite",
+ "animation.rig.align.top": "Aligner en haut",
+ "animation.rig.align.centerY": "Centrer verticalement",
+ "animation.rig.align.bottom": "Aligner en bas",
+ "animation.rig.align.distributeX": "Répartir horizontalement",
+ "animation.rig.align.distributeY": "Répartir verticalement",
+ "cmd.animation.layers.align": "Aligner ou répartir les calques sélectionnés"
 }

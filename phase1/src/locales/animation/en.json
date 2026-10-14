@@ -986,5 +986,15 @@
  "animation.export.dither": "Dither GIF",
  "animation.export.dither.hint": "Smoother gradients in GIF exports, a little noisier and larger. Other formats ignore it.",
  "animation.export.loop": "Loop GIF and APNG",
- "animation.export.loop.hint": "On: repeats forever. Off: plays once and stops on the last frame."
+ "animation.export.loop.hint": "On: repeats forever. Off: plays once and stops on the last frame.",
+ "animation.rig.group.align": "Align",
+ "animation.rig.align.left": "Align left",
+ "animation.rig.align.centerX": "Center horizontally",
+ "animation.rig.align.right": "Align right",
+ "animation.rig.align.top": "Align top",
+ "animation.rig.align.centerY": "Center vertically",
+ "animation.rig.align.bottom": "Align bottom",
+ "animation.rig.align.distributeX": "Distribute horizontally",
+ "animation.rig.align.distributeY": "Distribute vertically",
+ "cmd.animation.layers.align": "Align or distribute the selected layers"
 }

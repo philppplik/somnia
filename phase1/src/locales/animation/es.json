@@ -986,5 +986,15 @@
  "animation.export.dither": "Tramado en GIF",
  "animation.export.dither.hint": "Degradados más suaves en GIF, con algo más de ruido y tamaño. Otros formatos lo ignoran.",
  "animation.export.loop": "Repetir GIF y APNG",
- "animation.export.loop.hint": "Activado: se repite siempre. Desactivado: se reproduce una vez y queda en el último fotograma."
+ "animation.export.loop.hint": "Activado: se repite siempre. Desactivado: se reproduce una vez y queda en el último fotograma.",
+ "animation.rig.group.align": "Alinear",
+ "animation.rig.align.left": "Alinear a la izquierda",
+ "animation.rig.align.centerX": "Centrar horizontalmente",
+ "animation.rig.align.right": "Alinear a la derecha",
+ "animation.rig.align.top": "Alinear arriba",
+ "animation.rig.align.centerY": "Centrar verticalmente",
+ "animation.rig.align.bottom": "Alinear abajo",
+ "animation.rig.align.distributeX": "Distribuir horizontalmente",
+ "animation.rig.align.distributeY": "Distribuir verticalmente",
+ "cmd.animation.layers.align": "Alinear o distribuir las capas seleccionadas"
 }

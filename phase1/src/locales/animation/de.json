@@ -986,5 +986,15 @@
  "animation.export.dither": "GIF dithern",
  "animation.export.dither.hint": "Weichere Verläufe in GIF-Exporten, etwas körniger und größer. Andere Formate ignorieren es.",
  "animation.export.loop": "GIF und APNG wiederholen",
- "animation.export.loop.hint": "An: läuft endlos. Aus: spielt einmal und bleibt auf dem letzten Bild."
+ "animation.export.loop.hint": "An: läuft endlos. Aus: spielt einmal und bleibt auf dem letzten Bild.",
+ "animation.rig.group.align": "Ausrichten",
+ "animation.rig.align.left": "Links ausrichten",
+ "animation.rig.align.centerX": "Horizontal zentrieren",
+ "animation.rig.align.right": "Rechts ausrichten",
+ "animation.rig.align.top": "Oben ausrichten",
+ "animation.rig.align.centerY": "Vertikal zentrieren",
+ "animation.rig.align.bottom": "Unten ausrichten",
+ "animation.rig.align.distributeX": "Horizontal verteilen",
+ "animation.rig.align.distributeY": "Vertikal verteilen",
+ "cmd.animation.layers.align": "Gewählte Ebenen ausrichten oder verteilen"
 }
