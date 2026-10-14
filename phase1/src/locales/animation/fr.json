@@ -589,5 +589,11 @@
  "animation.blur.angle": "Angle d'obturation (°)",
  "animation.blur.samples": "Échantillons",
  "cmd.animation.blur.layers": "Activer le flou de mouvement sur les calques",
- "cmd.animation.blur.comp": "Régler le flou de mouvement de la composition (obturateur)"
+ "cmd.animation.blur.comp": "Régler le flou de mouvement de la composition (obturateur)",
+ "animation.effects.shadow": "Ombre portée",
+ "animation.effects.glow": "Lueur",
+ "animation.effects.radius": "Rayon",
+ "animation.effects.distance": "Distance",
+ "animation.effects.angle": "Angle",
+ "cmd.animation.effect.style": "Régler rayon, distance et angle de l'ombre ou de la lueur"
 }

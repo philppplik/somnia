@@ -16,7 +16,7 @@ included; the `source` column names the owner. Dynamic sources that stay outside
 
 Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, fr, pt-BR); the gate enforces it.
 
-417 commands. Categories: Edit, Help, Insert, Project, Tools, View.
+418 commands. Categories: Edit, Help, Insert, Project, Tools, View.
 
 | id | title | category | source | shortcut |
 | --- | --- | --- | --- | --- |
@@ -44,6 +44,7 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `animation.effect.animate` | Toggle effect animation | Edit | animation |  |
 | `animation.effect.bypassKey` | Set effect bypass key | Edit | animation |  |
 | `animation.effect.colorKey` | Set tint colour key | Edit | animation |  |
+| `animation.effect.style` | Set shadow or glow radius, distance and angle | Edit | animation |  |
 | `animation.export.apng` | Export work area as APNG (animated PNG) | Project | animation |  |
 | `animation.export.frame` | Export current frame as PNG | Project | animation |  |
 | `animation.export.gif` | Export work area as GIF | Project | animation |  |

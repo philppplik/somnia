@@ -45,6 +45,7 @@ export type Edit=
  |{type:'effect.colorKey';layer:string;effect:string;color:string;t:number}
  |{type:'effect.bypassKey';layer:string;effect:string;bypass:boolean;t:number}
  |{type:'layer.stroke';layer:string;stroke:NonNullable<Layer['stroke']>|null}
+ |{type:'effect.style';layer:string;effect:string;blur?:number;distance?:number;angle?:number}
  |{type:'effect.amount';layer:string;effect:string;value:number;t:number}
  |{type:'effect.animate';layer:string;effect:string;on:boolean;t:number}
  |{type:'effect.key.remove';layer:string;effect:string;t:number}
@@ -146,7 +147,7 @@ function reduce(doc:AnimationDocument,e:Edit):AnimationDocument{
   case 'comp.remove':{if(doc.compositions.length<2)return fail('invalid','A document needs at least one composition.');if(!findComp(doc,e.comp))return fail('missing','Composition does not exist.');const rest=doc.compositions.filter(c=>c.id!==e.comp);return {...doc,compositions:rest,activeComp:doc.activeComp===e.comp?rest[0].id:doc.activeComp};}
   case 'layer.stroke':{const l=layerOf(doc,e.layer);if(e.stroke===null){const {stroke:_s,...rest}=l;return setLayer(doc,rest);}return setLayer(doc,{...l,stroke:e.stroke});}
   case 'effect.colorKey':case 'effect.bypassKey':{const l=layerOf(doc,e.layer),t=tickOf(compOf(doc),e.t),effect=l.effects?.find(x=>x.id===e.effect)??fail('missing','Effect no longer exists.');
-   if(e.type==='effect.colorKey'&&(effect.kind!=='tint'||!/^#[0-9a-fA-F]{6}$/.test(e.color)))fail('invalid','Only tint accepts colour keys.');
+   if(e.type==='effect.colorKey'&&(effect.kind==='blur'||!/^#[0-9a-fA-F]{6}$/.test(e.color)))fail('invalid','Blur has no colour.');
    const next=e.type==='effect.colorKey'?{...effect,colorKeys:[...(effect.colorKeys??[]).filter(k=>k.t!==t),{t,color:e.color}].sort((a,b)=>a.t-b.t)}:{...effect,bypassKeys:[...(effect.bypassKeys??[]).filter(k=>k.t!==t),{t,bypass:e.bypass}].sort((a,b)=>a.t-b.t)};
    return setLayer(doc,{...l,effects:l.effects!.map(x=>x.id===effect.id?next:x)});}
   case 'markers.set':{const c=compOf(doc);return withComp(doc,{...c,markers:[...e.markers].sort((a,b)=>a.t-b.t)});}
@@ -154,6 +155,13 @@ function reduce(doc:AnimationDocument,e:Edit):AnimationDocument{
   case 'layer.masks':{const l=layerOf(doc,e.layer);if(l.kind==='null'||l.kind==='audio')fail('invalid','Masks need a drawable layer.');return setLayer(doc,{...l,masks:e.masks.length?e.masks:undefined});}
   case 'layer.matte':{const l=layerOf(doc,e.layer);return setLayer(doc,{...l,matte:e.matte??undefined});}
   case 'layer.reveal':{const l=layerOf(doc,e.layer);if(l.kind!=='text')fail('invalid','Typewriter requires a text layer.');return setLayer(doc,{...l,textReveal:e.property});}
+  case 'effect.style':{const l=layerOf(doc,e.layer),effect=l.effects?.find(x=>x.id===e.effect)??fail('missing','Effect no longer exists.');
+   if(effect.kind!=='shadow'&&effect.kind!=='glow')return fail('invalid','Only shadow and glow have these settings.');
+   if(e.distance!==undefined&&effect.kind!=='shadow')return fail('invalid','Only a shadow has a distance.');if(e.angle!==undefined&&effect.kind!=='shadow')return fail('invalid','Only a shadow has an angle.');
+   if(e.blur===undefined&&e.distance===undefined&&e.angle===undefined)return fail('invalid','Nothing to change.');
+   const next={...effect,...(e.blur!==undefined?{blur:e.blur}:{}),...(e.distance!==undefined?{distance:e.distance}:{}),...(e.angle!==undefined?{angle:e.angle}:{})};
+   if(!validEffects([next]))return fail('invalid','Blur must be 0 to 64, distance 0 to 500, angle -360 to 360.');
+   return setLayer(doc,{...l,effects:l.effects!.map(x=>x.id===effect.id?next:x)});}
   case 'effect.amount':case 'effect.animate':case 'effect.key.remove':{const l=layerOf(doc,e.layer),c=compOf(doc),t=tickOf(c,e.t),effect=l.effects?.find(x=>x.id===e.effect)??fail('missing','Effect no longer exists.');let next=effect;
    const max=effect.kind==='blur'?64:1;
    if(e.type==='effect.amount'){if(!Number.isFinite(e.value)||e.value<0||e.value>max)fail('invalid','Effect strength is outside its supported range.');next=effect.animation?.keys.length?{...effect,animation:{...effect.animation,keys:upsertKey(effect.animation.keys,makeKey(t,e.value))}}:{...effect,amount:e.value};}

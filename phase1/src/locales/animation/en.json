@@ -589,5 +589,11 @@
  "animation.blur.angle": "Shutter angle (°)",
  "animation.blur.samples": "Samples",
  "cmd.animation.blur.layers": "Toggle motion blur on layers",
- "cmd.animation.blur.comp": "Set composition motion blur (shutter)"
+ "cmd.animation.blur.comp": "Set composition motion blur (shutter)",
+ "animation.effects.shadow": "Drop shadow",
+ "animation.effects.glow": "Glow",
+ "animation.effects.radius": "Radius",
+ "animation.effects.distance": "Distance",
+ "animation.effects.angle": "Angle",
+ "cmd.animation.effect.style": "Set shadow or glow radius, distance and angle"
 }

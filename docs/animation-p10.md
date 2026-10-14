@@ -264,3 +264,9 @@ Added:
 - `Composition.shutter {angle, samples}` (absent = off) and `Layer.motionBlur` (absent = off). Both must be set for a layer to blur.
 - Samples: `round(t - w/2 + w*(j+0.5)/n)` with `w = frame * angle/360`; only samples inside the layer's time count and fewer than two means no blur. Each sample draws the same layer content with its own matrix; sample j has opacity 1/(j+1), which gives an exact average. The layer's opacity applies to the whole group at the frame time.
 - Edits `layer.motionBlur {layers, enabled}` and `comp.shutter {comp?, shutter|null}` are single undo steps. Audio layers cannot be blurred.
+
+## P47 - Layer styles
+
+- `LayerEffect.kind` adds `shadow` and `glow`. Shared fields: `amount` (strength 0..1, animatable), `color` (colour keys allowed). Optional `blur` 0..64 (default 8, glow 12), shadow only `distance` 0..500 (default 12) and `angle` -360..360 (0 = right, 90 = down; default 45).
+- Render: shadow is one `feDropShadow` with dx/dy from angle and distance; glow is the same primitive twice with dx = dy = 0. Filter region adds 3 sigma + distance per shadow and 6 sigma per glow.
+- `effect.style {layer, effect, blur?, distance?, angle?}` is one undo step; distance and angle are refused on glow.

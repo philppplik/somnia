@@ -589,5 +589,11 @@
  "animation.blur.angle": "Ângulo do obturador (°)",
  "animation.blur.samples": "Amostras",
  "cmd.animation.blur.layers": "Alternar desfoque de movimento nas camadas",
- "cmd.animation.blur.comp": "Definir desfoque de movimento da composição (obturador)"
+ "cmd.animation.blur.comp": "Definir desfoque de movimento da composição (obturador)",
+ "animation.effects.shadow": "Sombra projetada",
+ "animation.effects.glow": "Brilho",
+ "animation.effects.radius": "Raio",
+ "animation.effects.distance": "Distância",
+ "animation.effects.angle": "Ângulo",
+ "cmd.animation.effect.style": "Definir raio, distância e ângulo da sombra ou do brilho"
 }

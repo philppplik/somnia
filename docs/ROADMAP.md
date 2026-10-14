@@ -318,3 +318,10 @@ Depends on: v10 diff viewer, v11 updater for smooth extension and app updates.
 - Done: composition shutter (angle 1-720 degrees, 2-16 samples, `comp.shutter` / `animation.blur.comp`) and a per-layer switch (`layer.motionBlur` / `animation.blur.layers`, inspector checkboxes). A blurred layer is drawn as averaged samples of its transform at times spread over the shutter window, centered on the frame. Viewer and all exports (PNG, SVG, GIF, APNG, WebM, nested comps) share it. Off by default, output byte-identical when off.
 - Open: only transform motion is blurred (position, scale, rotation, parent motion); text animators, path morphs, effect and mask animation, and opacity keys are not sampled. No adaptive samples. Cost grows with samples times blurred layers.
 
+
+### Animation P47 (2026-10-14, integration pending)
+
+- Picked: layer styles. Effects only had blur and tint; child audio mix and text-animator blur sampling not chosen.
+- Done: two new effect kinds, `shadow` (radius 0-64, distance 0-500 px, angle, color, strength 0-1) and `glow` (radius, color, strength). They sit in the existing effect stack: same order, bypass key, animated strength, colour keys, 8-effect cap. New edit `effect.style` and command `animation.effect.style`; inspector "Drop shadow +" and "Glow +". Viewer and every export share the SVG filter (feDropShadow); filter bounds grow with radius and distance so nothing is clipped.
+- Open: shadow and glow settings other than strength and colour (radius, distance, angle) are static, not keyed; no inner shadow/glow, no spread or choke; glow is two stacked drop-shadow passes, not a separate threshold glow; the colour-key button still says "tint" for these effects.
+

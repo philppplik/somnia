@@ -1,17 +1,28 @@
 import {evaluate} from './interpolate';
 import type {Layer,LayerEffect} from './model';
+export const EFFECT_KINDS=['blur','tint','shadow','glow'] as const;
+/** Starting values for a new effect of each kind. */
+export function defaultEffect(kind:LayerEffect['kind'],id:string,accent:string):LayerEffect{
+ return kind==='blur'?{id,kind,enabled:true,amount:4,color:accent}:kind==='tint'?{id,kind,enabled:true,amount:1,color:accent}
+  :kind==='shadow'?{id,kind,enabled:true,amount:0.6,color:'#000000',blur:8,distance:12,angle:45}:{id,kind,enabled:true,amount:1,color:accent,blur:12};
+}
+const shadowDelta=(e:LayerEffect):[number,number]=>{const r=(e.angle??45)*Math.PI/180,d=e.kind==='shadow'?e.distance??12:0;return [Math.round(Math.cos(r)*d*1000)/1000,Math.round(Math.sin(r)*d*1000)/1000];};
+
 const rgb=(hex:string)=>[1,3,5].map(i=>parseInt(hex.slice(i,i+2),16)/255);
 /** Tint uses a luminance-to-colour matrix, preserving alpha. Ordered with blur in SVG filter definitions. */
 export function effectPrimitives(layer:Layer,tick=0):string{
  return (layer.effects??[]).filter(e=>!effectBypassed(e,tick)).map(original=>{const e={...original,amount:original.animation?Math.max(0,Math.min(original.kind==='blur'?64:1,evaluate(original.animation,tick) as number)):original.amount};
   if(e.kind==='blur')return `<feGaussianBlur stdDeviation="${e.amount}"/>`;
+  if(e.kind==='shadow'||e.kind==='glow'){const [dx,dy]=shadowDelta(e),pass=`<feDropShadow dx="${dx}" dy="${dy}" stdDeviation="${e.blur??(e.kind==='glow'?12:8)}" flood-color="${effectColor(e,tick)}" flood-opacity="${e.amount}"/>`;return e.kind==='glow'?pass+pass:pass;}
   const color=rgb(effectColor(e,tick)),a=e.amount,rows=color.map((c,i)=>[0.2126,0.7152,0.0722].map((w,j)=>w*c*a+(i===j?1-a:0)).join(' ')+' 0 0');
   return `<feColorMatrix type="matrix" values="${rows.join(' ')} 0 0 0 1 0"/>`;
  }).join('');
 }
 /** Three-sigma growth for each blur pass; source-space bounds also cover editable text conservatively. */
 export function effectBounds(layer:Layer,tick=0){
- const blur=(layer.effects??[]).filter(e=>!effectBypassed(e,tick)&&e.kind==='blur').reduce((n,e)=>n+(e.animation?Math.max(0,Math.min(64,evaluate(e.animation,tick) as number)):e.amount)*3,0);
+ const live=(layer.effects??[]).filter(e=>!effectBypassed(e,tick));
+ const blur=live.filter(e=>e.kind==='blur').reduce((n,e)=>n+(e.animation?Math.max(0,Math.min(64,evaluate(e.animation,tick) as number)):e.amount)*3,0)
+  +live.filter(e=>e.kind==='shadow'||e.kind==='glow').reduce((n,e)=>n+(e.blur??(e.kind==='glow'?12:8))*(e.kind==='glow'?6:3)+(e.kind==='shadow'?e.distance??12:0),0);
  const strokePad=layer.stroke?.width??0;
  const width=layer.kind==='text'?(layer.source.size??48)*(layer.source.text?.length??1):layer.source.width??1;
  const height=layer.kind==='text'?(layer.source.size??48)*1.5:layer.source.height??1;

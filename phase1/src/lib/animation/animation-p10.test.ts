@@ -1,5 +1,6 @@
 import test from 'node:test';import assert from 'node:assert/strict';
 import {motionBlurSamples} from './scene';
+import {defaultEffect,effectBounds} from './effects';
 import {validatePrecomps,MAX_PRECOMP_DEPTH,createDocument,findComp,findLayer,validateDocument,MAX_LAYER_MASKS,type AnimationDocument} from './model';
 import {applyEdit,applyEdits,EditError} from './edit';
 import {readFileSync} from 'node:fs';
@@ -1330,4 +1331,31 @@ test('P46 motion blur: off by default and byte-identical, samples average inside
  for(const bad of [{angle:0,samples:4},{angle:721,samples:4},{angle:180,samples:1},{angle:180,samples:17},{angle:180,samples:2.5}])assert.throws(()=>applyEdit(d,{type:'comp.shutter',shutter:bad}),EditError);
  assert.throws(()=>applyEdit(d,{type:'layer.motionBlur',layers:[],enabled:true}),EditError);
  assert.throws(()=>applyEdit(d,{type:'layer.motionBlur',layers:['nope'],enabled:true}),EditError);
+});
+
+test('P47 layer styles: drop shadow and glow are bounded effects with their own settings',()=>{
+ let d=base();const id=findComp(d)!.layers[0].id;const plain=frameSvg(findComp(d)!,0,false,d.assets,d.compositions);
+ const sh=defaultEffect('shadow','fx-s','#7c5cff'),gl=defaultEffect('glow','fx-g','#ffd166');
+ d=applyEdit(d,{type:'layer.effects',layer:id,effects:[sh,gl]});assert.deepEqual(validateDocument(d),[]);
+ const svg=frameSvg(findComp(d)!,0,false,d.assets,d.compositions);
+ assert.notEqual(svg,plain);assert.equal(svg.includes('<feDropShadow dx="8.485'),true);assert.equal(svg.includes('stdDeviation="12" flood-color="#ffd166"'),true);
+ assert.equal(svg.split('<feDropShadow').length-1,3,'shadow once, glow twice');
+ // filter region grows with radius and distance
+ const l=findLayer(findComp(d)!,id)!;const b=effectBounds(l,0);assert.ok(b.x<=-(8*3+12+12*6));
+ // settings edit, one step, validated
+ d=applyEdit(d,{type:'effect.style',layer:id,effect:'fx-s',blur:20,distance:40,angle:90});
+ const s2=findLayer(findComp(d)!,id)!.effects![0];assert.deepEqual([s2.blur,s2.distance,s2.angle],[20,40,90]);
+ assert.equal(frameSvg(findComp(d)!,0,false,d.assets,d.compositions).includes('dx="0" dy="40" stdDeviation="20"'),true);
+ for(const bad of [{blur:65},{blur:-1},{distance:501},{angle:361},{}])assert.throws(()=>applyEdit(d,{type:'effect.style',layer:id,effect:'fx-s',...bad}),EditError);
+ assert.throws(()=>applyEdit(d,{type:'effect.style',layer:id,effect:'fx-g',distance:5}),EditError);
+ assert.throws(()=>applyEdit(d,{type:'effect.style',layer:id,effect:'nope',blur:5}),EditError);
+ // strength animates like tint and takes colour keys; blur has no colour
+ d=applyEdit(d,{type:'effect.colorKey',layer:id,effect:'fx-g',color:'#ff0000',t:0});
+ assert.equal(frameSvg(findComp(d)!,0,false,d.assets,d.compositions).includes('flood-color="#ff0000"'),true);
+ d=applyEdit(d,{type:'effect.amount',layer:id,effect:'fx-s',value:0.2,t:0});assert.equal(findLayer(findComp(d)!,id)!.effects![0].amount,0.2);
+ assert.throws(()=>applyEdit(d,{type:'effect.amount',layer:id,effect:'fx-s',value:2,t:0}),EditError);
+ assert.throws(()=>applyEdit(d,{type:'layer.effects',layer:id,effects:[{...sh,kind:'blur',distance:3}]}),EditError);
+ // bypass drops the primitives
+ d=applyEdit(d,{type:'layer.effects',layer:id,effects:[{...sh,enabled:false},{...gl,enabled:false}]});
+ assert.equal(frameSvg(findComp(d)!,0,false,d.assets,d.compositions).includes('feDropShadow'),false);
 });

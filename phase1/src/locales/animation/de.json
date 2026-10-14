@@ -589,5 +589,11 @@
  "animation.blur.angle": "Verschlusswinkel (°)",
  "animation.blur.samples": "Samples",
  "cmd.animation.blur.layers": "Bewegungsunschärfe für Ebenen umschalten",
- "cmd.animation.blur.comp": "Bewegungsunschärfe der Komposition einstellen (Verschluss)"
+ "cmd.animation.blur.comp": "Bewegungsunschärfe der Komposition einstellen (Verschluss)",
+ "animation.effects.shadow": "Schlagschatten",
+ "animation.effects.glow": "Leuchten",
+ "animation.effects.radius": "Radius",
+ "animation.effects.distance": "Abstand",
+ "animation.effects.angle": "Winkel",
+ "cmd.animation.effect.style": "Radius, Abstand und Winkel von Schatten oder Leuchten setzen"
 }

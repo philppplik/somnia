@@ -589,5 +589,11 @@
  "animation.blur.angle": "Ángulo de obturador (°)",
  "animation.blur.samples": "Muestras",
  "cmd.animation.blur.layers": "Alternar desenfoque de movimiento en capas",
- "cmd.animation.blur.comp": "Ajustar desenfoque de movimiento de la composición (obturador)"
+ "cmd.animation.blur.comp": "Ajustar desenfoque de movimiento de la composición (obturador)",
+ "animation.effects.shadow": "Sombra paralela",
+ "animation.effects.glow": "Resplandor",
+ "animation.effects.radius": "Radio",
+ "animation.effects.distance": "Distancia",
+ "animation.effects.angle": "Ángulo",
+ "cmd.animation.effect.style": "Ajustar radio, distancia y ángulo de sombra o resplandor"
 }
