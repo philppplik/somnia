@@ -121,17 +121,17 @@ test('commitTransform records one undo step for a finished gizmo drag',()=>{
  stage.undo();stage.undo();assert.equal(stage.canUndo,false,'an unchanged drag adds no entry (only add + one drag)');
 });
 test('cameras: add, fov validation, info and undo',()=>{
- const stage=new Stage();const c=stage.addCamera();assert.ok(c.isPerspectiveCamera);
- assert.equal(stage.info(c.id)?.camera?.fov,40);assert.equal(stage.info(c.id)?.kind,'camera');
- stage.setCamera(c.id,{fov:70});assert.equal(stage.info(c.id)?.camera?.fov,70);
+ const stage=new Stage();const c=stage.addCamera() as THREE.PerspectiveCamera;assert.ok(c.isPerspectiveCamera);
+ assert.deepEqual(stage.info(c.id)?.camera,{kind:'perspective',fov:40});assert.equal(stage.info(c.id)?.kind,'camera');
+ stage.setCamera(c.id,{fov:70});assert.deepEqual(stage.info(c.id)?.camera,{kind:'perspective',fov:70});
  assert.throws(()=>stage.setCamera(c.id,{fov:0}),StageError);assert.throws(()=>stage.setCamera(c.id,{fov:121}),StageError);
- stage.undo();assert.equal(stage.info(c.id)?.camera?.fov,40);
+ stage.undo();assert.deepEqual(stage.info(c.id)?.camera,{kind:'perspective',fov:40});
  stage.undo();assert.equal(stage.find(c.id),undefined);
- const p=stage.addCamera({position:{x:1,y:2,z:3},quaternion:[0,0,0,1]},55);assert.equal(p.position.z,3);assert.equal(p.fov,55);
+ const p=stage.addCamera({position:{x:1,y:2,z:3},quaternion:[0,0,0,1]},55) as THREE.PerspectiveCamera;assert.equal(p.position.z,3);assert.equal(p.fov,55);
  assert.equal(stage.info(stage.addPrimitive('cube').id)?.camera,null);
 });
 test('orthographic cameras: kind, zoom, validation, info and undo',()=>{
- const stage=new Stage();const c=stage.addCamera(undefined,40,'orthographic');
+ const stage=new Stage();const c=stage.addCamera(undefined,40,'orthographic') as THREE.OrthographicCamera;
  assert.ok(c.isOrthographicCamera);assert.equal(c.name,'Ortho camera');
  const info=stage.info(c.id)?.camera;assert.equal(info?.kind,'orthographic');
  if(info?.kind==='orthographic')assert.equal(info.zoom,1);
@@ -140,7 +140,7 @@ test('orthographic cameras: kind, zoom, validation, info and undo',()=>{
  assert.throws(()=>stage.setCamera(c.id,{fov:70}),StageError,'a perspective-only patch is refused on an ortho camera');
  assert.throws(()=>stage.setCamera(c.id,{zoom:0}),StageError);assert.throws(()=>stage.setCamera(c.id,{zoom:101}),StageError);
  stage.undo();const back=stage.info(c.id)?.camera;if(back?.kind==='orthographic')assert.equal(back.zoom,1);
- const p=stage.addCamera();assert.ok(p.isPerspectiveCamera);
+ const p=stage.addCamera() as THREE.PerspectiveCamera;assert.ok(p.isPerspectiveCamera);
  assert.throws(()=>stage.setCamera(p.id,{zoom:2}),StageError,'zoom is refused on a perspective camera');
  assert.equal(stage.info(p.id)?.camera?.kind,'perspective');
  stage.undo();assert.equal(stage.find(p.id),undefined,'undo removes the perspective camera');
@@ -366,4 +366,64 @@ test('measure estimates geometry memory from the buffers',()=>{
  const m=stage.measure();assert.ok(m.stats.geometryBytes>0);
  const pos=stage.root.children[0] as THREE.Mesh;const want=(pos.geometry.getAttribute('position') as THREE.BufferAttribute).array.byteLength;
  assert.ok(m.stats.geometryBytes>=want);
+});
+
+test('group and ungroup keep world transforms and undo as one step each',()=>{
+ const stage=new Stage();
+ const a=stage.addPrimitive('cube');stage.setTransform(a.id,{position:{x:1,y:0.5,z:0}});
+ const b=stage.addPrimitive('sphere');stage.setTransform(b.id,{position:{x:-1,y:0.5,z:0}});
+ const aw=a.getWorldPosition(new THREE.Vector3()).clone(),bw=b.getWorldPosition(new THREE.Vector3()).clone();
+ const g=stage.group([a.id,b.id]);
+ assert.ok(g.isGroup);assert.equal(stage.info(g.id)?.kind,'group');
+ assert.equal(g.children.length,2);
+ stage.root.updateMatrixWorld(true);
+ assert.ok(a.getWorldPosition(new THREE.Vector3()).distanceTo(aw)<1e-6,'cube keeps its world position');
+ assert.ok(b.getWorldPosition(new THREE.Vector3()).distanceTo(bw)<1e-6,'sphere keeps its world position');
+ const c=stage.addPrimitive('cube');
+ assert.throws(()=>stage.group([c.id]),StageError,'one object cannot form a group');
+ stage.undo(); // undo the extra cube insert
+ stage.undo(); // undo the group
+ assert.equal(stage.find(g.id),undefined);assert.equal(stage.find(a.id)?.parent,stage.root);
+ stage.redo();assert.ok(stage.find(g.id));
+ stage.ungroup(g.id);
+ assert.equal(stage.find(g.id),undefined);assert.equal(stage.find(a.id)?.parent,stage.root);
+ stage.root.updateMatrixWorld(true);
+ assert.ok(a.getWorldPosition(new THREE.Vector3()).distanceTo(aw)<1e-6,'ungroup keeps world positions');
+ stage.undo();assert.ok(stage.find(g.id),'undo restores the group');
+ assert.throws(()=>stage.ungroup(a.id),StageError,'a mesh is not a group');
+});
+test('linear and radial arrays place copies and undo as one step',()=>{
+ const stage=new Stage();const a=stage.addPrimitive('cube');
+ const lin=stage.arrayDuplicate([a.id],{mode:'linear',count:3,offset:{x:2,y:0,z:0}});
+ assert.equal(lin.length,2);
+ assert.ok(Math.abs(lin[0].position.x-2)<1e-6);assert.ok(Math.abs(lin[1].position.x-4)<1e-6);
+ assert.throws(()=>stage.arrayDuplicate([a.id],{mode:'linear',count:2,offset:{x:0,y:0,z:0}}),StageError,'zero offset refused');
+ assert.throws(()=>stage.arrayDuplicate([a.id],{mode:'linear',count:1,offset:{x:1,y:0,z:0}}),StageError,'count below 2 refused');
+ const rad=stage.arrayDuplicate([a.id],{mode:'radial',count:4,axis:'y',angle:90,center:{x:0,y:0,z:0}});
+ assert.equal(rad.length,3);
+ stage.undo(); // radial
+ stage.setTransform(a.id,{position:{x:1,y:0.5,z:0}});
+ const rad2=stage.arrayDuplicate([a.id],{mode:'radial',count:4,axis:'y',angle:90,center:{x:0,y:0,z:0}});
+ const p1=rad2[0].position;
+ assert.ok(Math.abs(p1.z-(-1))<1e-5&&Math.abs(p1.x)<1e-5,`90 deg about +y moves (1,*,0) to (0,*,-1), got ${p1.x},${p1.z}`);
+ assert.ok(Math.abs(rad2[1].position.x+1)<1e-5,'the 180-degree copy lands opposite the source');
+ assert.throws(()=>stage.arrayDuplicate([a.id],{mode:'radial',count:4,axis:'y',angle:0,center:{x:0,y:0,z:0}}),StageError,'zero angle refused');
+ stage.undo(); // rad2
+ assert.equal(stage.root.children.filter(o=>o.name.startsWith('Cube copy')).length,2,'array undo removes only its own copies');
+ stage.undo(); // the transform
+ stage.undo(); // lin
+ assert.equal(stage.root.children.length,1,'one undo clears the whole linear array');
+});
+test('snapPoint finds vertices and surfaces of other meshes, never of the excluded one',()=>{
+ const stage=new Stage();const a=stage.addPrimitive('cube'); // unit cube, base on the ground: corners at (±0.5, 0 or 1, ±0.5)
+ const hit=stage.snapPoint({x:0.48,y:0.97,z:0.51},'vertex',[],0.25);
+ assert.ok(hit);assert.ok(Math.abs(hit.x-0.5)<1e-6&&Math.abs(hit.y-1)<1e-6&&Math.abs(hit.z-0.5)<1e-6,'nearest vertex is the top corner');
+ assert.equal(stage.snapPoint({x:5,y:5,z:5},'vertex',[],0.25),null,'nothing within radius');
+ assert.equal(stage.snapPoint({x:0.48,y:0.97,z:0.51},'vertex',[a.id],0.25),null,'the excluded mesh is skipped');
+ const surf=stage.snapPoint({x:0,y:1.2,z:0},'surface',[],0.5);
+ assert.ok(surf);assert.ok(Math.abs(surf.y-1)<1e-3,`surface snap lands on the top face, got y=${surf.y}`);
+ assert.equal(stage.snapPoint({x:0,y:1.2,z:0},'surface',[a.id],0.5),null,'surface ignores the excluded mesh');
+ const b=stage.addPrimitive('cube');stage.setTransform(b.id,{position:{x:3,y:0,z:0}});
+ const bCorner=stage.snapPoint({x:3.4,y:0.4,z:0.4},'vertex',[a.id],0.5);
+ assert.ok(bCorner&&Math.abs(bCorner.x-3.5)<1e-5&&Math.abs(bCorner.y-0.5)<1e-5,'vertex snap respects the moved mesh transform');
 });

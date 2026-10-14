@@ -683,3 +683,27 @@ test('3D studio adds an orthographic camera, edits zoom and manages named views'
  await run(page,'studio3d.undo');
  await expect.poll(async()=>(await session(page)).outline.filter(o=>o.kind==='camera').length).toBe(0);
 });
+
+test('3D studio groups, ungroups, builds a linear array and picks snap modes',async({page})=>{
+ await blank(page);
+ const a=await insert(page,'cube',0);
+ await run(page,'studio3d.view.preset',{preset:'front'});
+ const b=await insert(page,'sphere',1);
+ await page.getByTestId('studio3d-tools-section').scrollIntoViewIfNeeded();
+ // tick both in the outline via marked: use group command directly
+ await run(page,'studio3d.group',{ids:[a,b]});
+ await expect.poll(async()=>(await session(page)).outline.filter(o=>o.kind==='group').length).toBe(1);
+ const gid=(await session(page)).outline.find(o=>o.kind==='group')!.id;
+ await run(page,'studio3d.ungroup',{id:gid});
+ await expect.poll(async()=>(await session(page)).outline.filter(o=>o.kind==='group').length).toBe(0);
+ await run(page,'studio3d.undo');
+ await expect.poll(async()=>(await session(page)).outline.filter(o=>o.kind==='group').length).toBe(1);
+ await run(page,'studio3d.object.array',{ids:[a],mode:'linear',count:4,dx:2,dy:0,dz:0});
+ await expect.poll(async()=>(await session(page)).outline.filter(o=>o.kind==='mesh').length).toBe(5);
+ await run(page,'studio3d.undo');
+ await expect.poll(async()=>(await session(page)).outline.filter(o=>o.kind==='mesh').length).toBe(2);
+ await run(page,'studio3d.object.array',{ids:[a],mode:'linear',count:2,dx:0,dy:0,dz:0});
+ await expect(page.getByRole('alert')).toContainText(/offset cannot be zero/);
+ await run(page,'studio3d.snap.set',{on:true,mode:'vertex'});
+ await expect.poll(async()=>(await session(page)).notice).toBe('');
+});

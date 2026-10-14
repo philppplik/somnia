@@ -13,6 +13,7 @@ import type {LoopRange} from './animation';
 import type {TextureTransform} from './uv';
 import {VIEW_PRESETS,type ViewPreset} from './viewPresets';
 import type {MirrorAxis,PrimitiveKind,LightKind,TransformPatch,MaterialPatch,LightPatch,AlignAxis,AlignTo,PivotAt,CameraKind} from './stage';
+import type {Vec3} from './stage';
 export interface TurntableOptions{frames?:number;width?:number;height?:number;transparent?:boolean;/** 'zip' downloads one archive; 'folder' writes the PNG frames into a folder the user picks. */out?:'zip'|'folder';}
 export interface RenderOptions{/** id of a camera object; the viewport camera when omitted */camera?:number;width?:number;height?:number;transparent?:boolean}
 /** What the lazy viewport offers. The command layer never imports three.js. */
@@ -80,6 +81,9 @@ export interface Studio3DController{
  rename(id:number,name:string):void;
  remove(id:number):void;
  duplicate(id:number):number;
+ group(ids:number[]):number;
+ ungroup(id:number):void;
+ arrayDuplicate(ids:number[],spec:{mode:'linear'|'radial';count:number;offset?:Vec3;axis?:'x'|'y'|'z';angle?:number;center?:Vec3}):number[];
  addCamera(fromView:boolean,kind?:CameraKind):number;
  setCamera(id:number,patch:{fov?:number;zoom?:number}):void;
  viewSave(name?:string):string;
@@ -157,6 +161,11 @@ export function studio3DCommandSpecs():CommandSpec<unknown,unknown>[]{
   add<{id:number;name:string}>('studio3d.object.rename','Rename a 3D object','Edit',p=>need().rename(p.id,p.name),object({id:{type:'integer',minimum:0},name:{type:'string',minLength:1,maxLength:120}}),hasScene),
   add<{id:number}>('studio3d.object.delete','Delete a 3D object','Edit',p=>need().remove(p.id),object({id:{type:'integer',minimum:0}}),hasScene),
   add<{id:number}>('studio3d.object.duplicate','Duplicate a 3D object','Edit',p=>need().duplicate(p.id),object({id:{type:'integer',minimum:0}}),hasScene),
+  add<{ids:number[]}>('studio3d.group','Group 3D objects under a new parent','Edit',p=>{need().group(p.ids);},object({ids:{type:'array',items:{type:'integer',minimum:0},minItems:2,maxItems:500}}),hasScene),
+  add<{id:number}>('studio3d.ungroup','Dissolve a 3D group, keeping its children','Edit',p=>need().ungroup(p.id),object({id:{type:'integer',minimum:0}}),hasScene),
+  add<{ids:number[];mode:'linear'|'radial';count:number;dx?:number;dy?:number;dz?:number;axis?:'x'|'y'|'z';angle?:number;cx?:number;cy?:number;cz?:number}>('studio3d.object.array','Duplicate 3D objects as a linear or radial array','Edit',
+   p=>need().arrayDuplicate(p.ids,{mode:p.mode,count:p.count,offset:p.mode==='linear'?{x:p.dx??0,y:p.dy??0,z:p.dz??0}:undefined,axis:p.axis,angle:p.angle,center:p.mode==='radial'?{x:p.cx??0,y:p.cy??0,z:p.cz??0}:undefined}),
+   object({ids:{type:'array',items:{type:'integer',minimum:0},minItems:1,maxItems:500},mode:{enum:['linear','radial']},count:{type:'integer',minimum:2,maximum:100},dx:{type:'number',minimum:-1000,maximum:1000},dy:{type:'number',minimum:-1000,maximum:1000},dz:{type:'number',minimum:-1000,maximum:1000},axis:{enum:['x','y','z']},angle:{type:'number',minimum:-360,maximum:360},cx:{type:'number',minimum:-10000,maximum:10000},cy:{type:'number',minimum:-10000,maximum:10000},cz:{type:'number',minimum:-10000,maximum:10000}},['ids','mode','count']),hasScene),
   add<{fromView?:boolean;kind?:CameraKind}>('studio3d.insert.camera','Insert a 3D camera (perspective or orthographic)','Insert',p=>need().addCamera(!!p?.fromView,p?.kind),object({fromView:{type:'boolean'},kind:{enum:['perspective','orthographic']}},[]),()=>!!controller),
   add<{id:number;fov?:number;zoom?:number}>('studio3d.camera.set','Change the field of view (perspective) or zoom (orthographic) of a 3D camera','Edit',p=>need().setCamera(p.id,{fov:p.fov,zoom:p.zoom}),object({id:{type:'integer',minimum:0},fov:{type:'number',minimum:1,maximum:120},zoom:{type:'number',minimum:0.01,maximum:100}},['id']),hasScene),
   add<{name?:string}>('studio3d.view.save','Save the current viewport as a named view','View',p=>{need().viewSave(p?.name);},object({name:{type:'string',maxLength:60}},[]),hasScene),
@@ -173,7 +182,7 @@ export function studio3DCommandSpecs():CommandSpec<unknown,unknown>[]{
   add<{id:number;at:PivotAt}>('studio3d.object.pivot','Move the pivot of a 3D mesh','Edit',p=>need().setPivot(p.id,p.at),object({id:{type:'integer',minimum:0},at:{enum:['center','base']}}),hasScene),
   add<{ids:number[];axis:AlignAxis;to:AlignTo}>('studio3d.object.align','Align 3D objects','Edit',p=>need().align(p.ids,p.axis,p.to),object({ids:{type:'array',items:{type:'integer',minimum:0},minItems:2,maxItems:500},axis:{enum:['x','y','z']},to:{enum:['min','center','max']}}),hasScene),
   add<{ids:number[];axis:AlignAxis}>('studio3d.object.distribute','Distribute 3D objects evenly','Edit',p=>need().distribute(p.ids,p.axis),object({ids:{type:'array',items:{type:'integer',minimum:0},minItems:3,maxItems:500},axis:{enum:['x','y','z']}}),hasScene),
-  add<Partial<SnapSettings>>('studio3d.snap.set','Change 3D transform snapping','Tools',p=>need().setSnap(p&&Object.keys(p).length?p:{on:!getStudio3DState().snap.on}),object({on:{type:'boolean'},move:{type:'number',minimum:0.001,maximum:100},rotate:{type:'number',minimum:1,maximum:180},scale:{type:'number',minimum:0.001,maximum:10}},[]),()=>!!controller),
+  add<Partial<SnapSettings>>('studio3d.snap.set','Change 3D transform snapping','Tools',p=>need().setSnap(p&&Object.keys(p).length?p:{on:!getStudio3DState().snap.on}),object({on:{type:'boolean'},move:{type:'number',minimum:0.001,maximum:100},rotate:{type:'number',minimum:1,maximum:180},scale:{type:'number',minimum:0.001,maximum:10},mode:{enum:['grid','vertex','surface']}},[]),()=>!!controller),
   add<RenderOptions>('studio3d.render.still','Render a PNG still of the 3D view or a 3D camera','Project',p=>need().renderStill(p??{}),object({camera:{type:'integer',minimum:0},width:{type:'integer',minimum:1,maximum:16384},height:{type:'integer',minimum:1,maximum:16384},transparent:{type:'boolean'}},[])),
   add<{slot:TextureSlot}>('studio3d.texture.open','Choose an image for a texture slot of the selected 3D object','Edit',p=>textureOpener!(p.slot),object({slot:{enum:[...TEXTURE_SLOTS]}}),()=>hasScene()&&!!textureOpener&&getStudio3DState().selectedInfo?.material!=null),
   add<{id?:number;slot:TextureSlot}>('studio3d.texture.clear','Remove the image from a texture slot','Edit',p=>need().setTextureFile(p.id??getStudio3DState().selected??-1,p.slot,null),object({id:{type:'integer',minimum:0},slot:{enum:[...TEXTURE_SLOTS]}},['slot']),hasScene),

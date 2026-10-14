@@ -75,3 +75,17 @@ test('an embedded scene above the size limit is refused when saving and when ope
  const doc=JSON.parse(buildDocument(base()));doc.scene={encoding:'base64',data:'A'.repeat(Math.ceil(MAX_EMBED_SCENE_BYTES/3)*4+4)};
  assert.throws(()=>parseDocument(JSON.stringify(doc)),/too large/);
 });
+
+test('named views round-trip, default to empty and reject damaged entries',()=>{
+ const views=[{name:'Front',position:[0,1,4] as [number,number,number],quaternion:[0,0,0,1] as [number,number,number,number],target:[0,0.5,0] as [number,number,number]}];
+ const d=parseDocument(buildDocument({...base(),views}));
+ assert.deepEqual(d.views,views);
+ const empty=parseDocument(buildDocument(base()));
+ assert.deepEqual(empty.views,[],'a document without views parses as an empty list');
+ const raw=JSON.parse(buildDocument(base()));
+ assert.ok(Array.isArray(raw.views)&&raw.views.length===0);
+ const bad=JSON.parse(buildDocument(base()));bad.views=[{name:'Broken',position:[0,1],quaternion:[0,0,0,1],target:[0,0,0]}];
+ assert.throws(()=>parseDocument(JSON.stringify(bad)),DocumentError);
+ const bad2=JSON.parse(buildDocument(base()));bad2.views='not-a-list';
+ assert.throws(()=>parseDocument(JSON.stringify(bad2)),DocumentError);
+});

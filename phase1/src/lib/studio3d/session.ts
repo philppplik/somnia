@@ -1,12 +1,12 @@
 import {useSyncExternalStore} from 'react';
-import {emptyStats,defaultEnv,defaultSnap,type SnapSettings,type ExportUnit,type EnvSettings,type GizmoMode,type ModelStats,type OutlineEntry,type Bounds} from './model';
+import {emptyStats,defaultEnv,defaultSnap,type SnapSettings,type NamedView,type ExportUnit,type EnvSettings,type GizmoMode,type ModelStats,type OutlineEntry,type Bounds} from './model';
 import type {ObjectInfo} from './stage';
 import type {KeyPath} from './clips';
 import type {Ease} from './ease';
 import {initialAnim,type AnimState,type ClipInfo} from './animation';
 import type {RecentEntry} from './recent';
 export type Studio3DStatus='idle'|'loading'|'ready'|'error';
-export interface NamedView{name:string;position:[number,number,number];quaternion:[number,number,number,number];target:[number,number,number];}
+export type {NamedView} from './model';
 export interface Studio3DState{
  status:Studio3DStatus;name:string;error:string;stats:ModelStats;outline:readonly OutlineEntry[];bounds:Bounds|null;
  pending:{name:string;bytes:Uint8Array}|null;dirty:boolean;canUndo:boolean;canRedo:boolean;undoLabel:string;/** Saved scenes and the autosave slot kept in this browser, newest first. */recent:readonly RecentEntry[];selectedInfo:ObjectInfo|null;

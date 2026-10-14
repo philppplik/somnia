@@ -150,8 +150,10 @@ export function nudgeFor(key:string,step=0.1):{x?:number;y?:number;z?:number}|nu
 }
 
 /** Snapping for the transform gizmo. Steps are in scene units, degrees, and scale factor. */
-export interface SnapSettings{on:boolean;move:number;rotate:number;scale:number}
-export const defaultSnap=():SnapSettings=>({on:false,move:0.25,rotate:15,scale:0.1});
+export interface NamedView{name:string;position:[number,number,number];quaternion:[number,number,number,number];target:[number,number,number];}
+export type SnapMode='grid'|'vertex'|'surface';
+export interface SnapSettings{on:boolean;move:number;rotate:number;scale:number;/** Translate drags snap to grid increments, to the nearest vertex, or onto the surface of other meshes. */mode:SnapMode}
+export const defaultSnap=():SnapSettings=>({on:false,move:0.25,rotate:15,scale:0.1,mode:'grid'});
 export class SnapError extends Error{constructor(message:string){super(message);this.name='SnapError';}}
 export function mergeSnap(current:SnapSettings,patch:Partial<SnapSettings>):SnapSettings{
  const next={...current};
@@ -159,6 +161,7 @@ export function mergeSnap(current:SnapSettings,patch:Partial<SnapSettings>):Snap
  const num=(k:'move'|'rotate'|'scale',min:number,max:number)=>{const v=patch[k];if(v===undefined)return;
   if(typeof v!=='number'||!Number.isFinite(v)||v<min||v>max)throw new SnapError(`${k} must be a number between ${min} and ${max}.`);next[k]=v;};
  num('move',0.001,100);num('rotate',1,180);num('scale',0.001,10);
+ if(patch.mode!==undefined){if(patch.mode!=='grid'&&patch.mode!=='vertex'&&patch.mode!=='surface')throw new SnapError("mode must be 'grid', 'vertex' or 'surface'.");next.mode=patch.mode;}
  return next;
 }
 /** Rounds to the nearest multiple of step. Used by keyboard nudges and numeric snapping. */

@@ -362,6 +362,101 @@ export class Stage{
   this.push({label:`Delete ${items.length} objects`,undo:()=>{for(const i of items)this.attach0(i.o,i.parent,i.at);owned=true;},redo:()=>{for(const i of items)i.parent.remove(i.o);owned=false;},release:()=>{if(!owned)for(const i of items)disposeObject(i.o);}});
  }
  /** Duplicates several objects in one undo step. Copies get their own materials and a small offset. */
+ /** Wraps two or more objects sharing a parent in a new group placed at their combined centre. One undo step. */
+ group(ids:number[]):THREE.Group{
+  const objs=this.topLevel(this.needMany(ids,2));
+  const parent=objs[0].parent;
+  if(!parent)throw new StageError('These objects cannot be grouped.');
+  if(objs.some(o=>o.parent!==parent))throw new StageError('Group objects that sit under the same parent.');
+  const before=objs.map(o=>({o,at:parent.children.indexOf(o),p:o.position.clone(),q:o.quaternion.clone(),s:o.scale.clone()}));
+  this.root.updateMatrixWorld(true);
+  const box=new THREE.Box3();for(const o of objs)box.expandByObject(o);
+  const center=box.getCenter(new THREE.Vector3());
+  const g=new THREE.Group();g.name=this.uniqueName('Group');
+  const gAt=Math.min(...before.map(b=>b.at));
+  parent.add(g);g.position.copy(parent.worldToLocal(center.clone()));g.updateMatrixWorld(true);
+  for(const o of objs)g.attach(o);
+  const moveBack=()=>{for(const b of before){parent.add(b.o);b.o.position.copy(b.p);b.o.quaternion.copy(b.q);b.o.scale.copy(b.s);
+   const ch=parent.children;ch.splice(ch.indexOf(b.o),1);ch.splice(Math.min(b.at,ch.length),0,b.o);}parent.remove(g);};
+  const moveIn=()=>{parent.add(g);const ch=parent.children;ch.splice(ch.indexOf(g),1);ch.splice(Math.min(gAt,ch.length),0,g);
+   g.updateMatrixWorld(true);for(const b of before)g.attach(b.o);};
+  this.push({label:`Group ${objs.length} objects`,undo:moveBack,redo:moveIn});
+  return g;
+ }
+ /** Dissolves a group: its children move back to the group's parent, keeping their world transforms. One undo step. */
+ ungroup(id:number){
+  const g=this.need(id);
+  if(g===this.root)throw new StageError('The scene root cannot be ungrouped.');
+  if(!(g as THREE.Group).isGroup)throw new StageError(`${g.name} is not a group.`);
+  const parent=g.parent!;const at=parent.children.indexOf(g);const kids=[...g.children];
+  const split=()=>{for(const k of kids)parent.attach(k);parent.remove(g);};
+  const join=()=>{parent.add(g);const ch=parent.children;ch.splice(ch.indexOf(g),1);ch.splice(Math.min(at,ch.length),0,g);
+   g.updateMatrixWorld(true);for(const k of kids)g.attach(k);};
+  split();this.push({label:`Ungroup ${g.name}`,undo:join,redo:split});
+ }
+ /** Duplicates objects as a linear or radial array. count is the total including the source; one undo step. */
+ arrayDuplicate(ids:number[],spec:{mode:'linear'|'radial';count:number;offset?:Vec3;axis?:'x'|'y'|'z';angle?:number;center?:Vec3}):THREE.Object3D[]{
+  const objs=this.topLevel(this.needMany(ids,1));
+  const count=Math.floor(Number(spec.count));
+  if(!Number.isFinite(count)||count<2||count>100)throw new StageError('count must be a whole number between 2 and 100.');
+  const mats:THREE.Matrix4[]=[];
+  for(let i=1;i<count;i++){
+   if(spec.mode==='linear'){
+    if(!spec.offset)throw new StageError('A linear array needs an offset.');
+    const off={x:finite(spec.offset.x,'offset x'),y:finite(spec.offset.y,'offset y'),z:finite(spec.offset.z,'offset z')};
+    if(off.x===0&&off.y===0&&off.z===0)throw new StageError('The offset cannot be zero.');
+    mats.push(new THREE.Matrix4().makeTranslation(off.x*i,off.y*i,off.z*i));
+   }else if(spec.mode==='radial'){
+    const ang=finite(spec.angle,'angle');if(ang===0||ang<-360||ang>360)throw new StageError('angle must be between -360 and 360 degrees, and not zero.');
+    if(!spec.center)throw new StageError('A radial array needs a centre.');
+    const c={x:finite(spec.center.x,'center x'),y:finite(spec.center.y,'center y'),z:finite(spec.center.z,'center z')};
+    const ax=spec.axis==='x'?new THREE.Vector3(1,0,0):spec.axis==='z'?new THREE.Vector3(0,0,1):new THREE.Vector3(0,1,0);
+    mats.push(new THREE.Matrix4().makeTranslation(c.x,c.y,c.z).multiply(new THREE.Matrix4().makeRotationAxis(ax,THREE.MathUtils.degToRad(ang*i))).multiply(new THREE.Matrix4().makeTranslation(-c.x,-c.y,-c.z)));
+   }else throw new StageError("mode must be 'linear' or 'radial'.");
+  }
+  this.root.updateMatrixWorld(true);
+  const items:{o:THREE.Object3D;parent:THREE.Object3D;at:number}[]=[];
+  for(const src of objs)for(const m of mats){
+   const copy=src.clone(true);copy.traverse(c=>{const me=c as THREE.Mesh;if(me.isMesh&&!Array.isArray(me.material))me.material=(me.material as THREE.Material).clone();});
+   copy.name=this.uniqueName(src.name+' copy');
+   const parent=src.parent??this.root;
+   const world=new THREE.Matrix4().multiplyMatrices(m,src.matrixWorld);
+   const local=new THREE.Matrix4().copy(parent.matrixWorld).invert().multiply(world);
+   local.decompose(copy.position,copy.quaternion,copy.scale);
+   items.push({o:copy,parent,at:parent.children.length});this.attach0(copy,parent,parent.children.length);
+  }
+  let owned=true;
+  this.push({label:`Array of ${objs.length* (count-1)} copies`,undo:()=>{for(const i of items)i.parent.remove(i.o);owned=false;},redo:()=>{for(const i of items)this.attach0(i.o,i.parent,i.at);owned=true;},release:()=>{if(!owned)for(const i of items)disposeObject(i.o);}});
+  return items.map(i=>i.o);
+ }
+ /** Nearest snap target for a world-space point: another mesh's vertex, or a point on another mesh's surface, within radius. */
+ snapPoint(p:Vec3,mode:'vertex'|'surface',exclude:number[],radius:number):Vec3|null{
+  const skip=new Set<number>();
+  for(const id of exclude){const o=this.find(id);if(o)o.traverse(c=>skip.add(c.id));}
+  this.root.updateMatrixWorld(true);
+  const v=new THREE.Vector3(finite(p.x,'x'),finite(p.y,'y'),finite(p.z,'z'));
+  const r=Math.max(0.01,finite(radius,'radius'));
+  const meshes:THREE.Mesh[]=[];
+  this.root.traverse(o=>{const m=o as THREE.Mesh;if(m.isMesh&&!skip.has(m.id))meshes.push(m);});
+  let best:THREE.Vector3|null=null;let bd=r;
+  if(mode==='vertex'){
+   const w=new THREE.Vector3();
+   for(const m of meshes){
+    const pos=(m.geometry as THREE.BufferGeometry).getAttribute('position');
+    if(!pos||pos.count>100000)continue;
+    for(let i=0;i<pos.count;i++){w.fromBufferAttribute(pos as THREE.BufferAttribute,i);m.localToWorld(w);const d=w.distanceTo(v);if(d<bd){bd=d;best=w.clone();}}
+   }
+  }else{
+   const ray=new THREE.Raycaster();const dirs=[[0,1,0],[0,-1,0],[1,0,0],[-1,0,0],[0,0,1],[0,0,-1]];
+   for(const[dx,dy,dz]of dirs){
+    const dir=new THREE.Vector3(dx,dy,dz);
+    ray.set(v.clone().addScaledVector(dir,r),dir.clone().negate());ray.far=2*r;
+    const hits=ray.intersectObjects(meshes,false);
+    if(hits.length&&hits[0].distance<=2*r){const d=hits[0].point.distanceTo(v);if(d<bd){bd=d;best=hits[0].point.clone();}}
+   }
+  }
+  return best?{x:best.x,y:best.y,z:best.z}:null;
+ }
  duplicateMany(ids:number[]):THREE.Object3D[]{
   const objs=this.topLevel(this.needMany(ids,1));const items:{o:THREE.Object3D;parent:THREE.Object3D;at:number}[]=[];
   for(const src of objs){

@@ -296,6 +296,34 @@ function LightFields({id,light}:{id:number;light:NonNullable<ObjectInfo['light']
   {light.height!==undefined&&<NumField resetKey={id} label={t('studio3d.light.height')} value={light.height} min={0.01} max={1000} step={0.1} onCommit={n=>set({height:n})}/>}
  </fieldset>;
 }
+/** Linear or radial duplication of the ticked objects. */
+function ArrayTools({ids}:{ids:number[]}){
+ const {t}=useT();
+ const [mode,setMode]=useState<'linear'|'radial'>('linear');const [count,setCount]=useState(4);
+ const [dx,setDx]=useState(1.5);const [dy,setDy]=useState(0);const [dz,setDz]=useState(0);
+ const [axis,setAxis]=useState<'x'|'y'|'z'>('y');const [angle,setAngle]=useState(60);
+ const [cx,setCx]=useState(0);const [cy,setCy]=useState(0);const [cz,setCz]=useState(0);
+ const ready=ids.length>0;
+ return <fieldset className="m-0 grid gap-1 border-0 p-0" data-testid="studio3d-array"><legend className="text-xs text-ink-3">{t('studio3d.array.title')}</legend>
+  <div className="grid grid-cols-2 gap-1">
+   <NativeSelect className="rounded-sm border border-subtle bg-surface p-1 text-xs text-ink" value={mode} aria-label={t('studio3d.array.mode')} onChange={e=>setMode(e.currentTarget.value as 'linear'|'radial')}>
+    <option value="linear">{t('studio3d.array.linear')}</option><option value="radial">{t('studio3d.array.radial')}</option></NativeSelect>
+   <NumField label={t('studio3d.array.count')} value={count} min={2} max={100} step={1} onCommit={v=>setCount(Math.round(v))}/></div>
+  {mode==='linear'?<div className="grid grid-cols-3 gap-1">
+    <NumField label={t('studio3d.array.dx')} value={dx} step={0.1} onCommit={setDx}/>
+    <NumField label={t('studio3d.array.dy')} value={dy} step={0.1} onCommit={setDy}/>
+    <NumField label={t('studio3d.array.dz')} value={dz} step={0.1} onCommit={setDz}/></div>:
+   <><div className="grid grid-cols-2 gap-1">
+    <NativeSelect className="rounded-sm border border-subtle bg-surface p-1 text-xs text-ink" value={axis} aria-label={t('studio3d.array.axis')} onChange={e=>setAxis(e.currentTarget.value as 'x'|'y'|'z')}>
+     {(['x','y','z'] as const).map(a=><option key={a} value={a}>{a.toUpperCase()}</option>)}</NativeSelect>
+    <NumField label={t('studio3d.array.angle')} value={angle} min={-360} max={360} step={5} onCommit={setAngle}/></div>
+   <div className="grid grid-cols-3 gap-1">
+    <NumField label={t('studio3d.array.cx')} value={cx} step={0.1} onCommit={setCx}/>
+    <NumField label={t('studio3d.array.cy')} value={cy} step={0.1} onCommit={setCy}/>
+    <NumField label={t('studio3d.array.cz')} value={cz} step={0.1} onCommit={setCz}/></div></>}
+  <Button variant="outline" disabled={!ready} onClick={()=>void executeCommand('studio3d.object.array',mode==='linear'?{ids,mode,count,dx,dy,dz}:{ids,mode,count,axis,angle,cx,cy,cz})}>{t('studio3d.array.apply')}</Button>
+ </fieldset>;
+}
 /** Snapping, pivot, align and distribute. Align and distribute work on the objects ticked in the scene list. */
 export function ToolsSection(_:InspectorSectionProps){
  const {t}=useT();const s=useStudio3D();const sn=s.snap;const n=s.marked.filter(id=>s.outline.some(o=>o.id===id));const [frames,setFrames]=useState(36);const [out,setOut]=useState<'zip'|'folder'>('zip');
@@ -306,6 +334,9 @@ export function ToolsSection(_:InspectorSectionProps){
    <NumField label={t('studio3d.snap.move')} value={sn.move} min={0.001} max={100} step={0.05} onCommit={v=>void executeCommand('studio3d.snap.set',{move:v})}/>
    <NumField label={t('studio3d.snap.rotate')} value={sn.rotate} min={1} max={180} step={5} onCommit={v=>void executeCommand('studio3d.snap.set',{rotate:v})}/>
    <NumField label={t('studio3d.snap.scale')} value={sn.scale} min={0.001} max={10} step={0.05} onCommit={v=>void executeCommand('studio3d.snap.set',{scale:v})}/></div>
+  <label className="grid gap-1 text-xs text-ink-2">{t('studio3d.snap.mode')}
+   <NativeSelect className="rounded-sm border border-subtle bg-surface p-1 text-xs text-ink" value={sn.mode} aria-label={t('studio3d.snap.mode')} onChange={e=>void executeCommand('studio3d.snap.set',{mode:e.currentTarget.value})}>
+    {(['grid','vertex','surface'] as const).map(m=><option key={m} value={m}>{t('studio3d.snap.mode.'+m)}</option>)}</NativeSelect></label>
   <fieldset className="m-0 grid gap-1 border-0 p-0"><legend className="text-xs text-ink-3">{t('studio3d.pivot.title')}</legend>
    <div className="flex gap-1">{(['center','base'] as const).map(at=><Button key={at} variant="outline" disabled={s.selectedInfo?.kind!=='mesh'} onClick={()=>void executeCommand('studio3d.object.pivot',{id:s.selected,at})}>{t('studio3d.pivot.'+at)}</Button>)}</div></fieldset>
   <fieldset className="m-0 grid gap-2 border-0 p-0" data-testid="studio3d-save"><legend className="text-xs text-ink-3">{t('studio3d.save.title')}</legend>
@@ -348,7 +379,10 @@ export function ToolsSection(_:InspectorSectionProps){
   <fieldset className="m-0 grid gap-1 border-0 p-0" data-testid="studio3d-align"><legend className="text-xs text-ink-3">{t('studio3d.align.title',{count:n.length})}</legend>
    <p className="m-0 text-xs text-ink-3">{t('studio3d.align.hint')}</p>
    <div className="flex flex-wrap gap-1"><Button variant="outline" disabled={n.length<2} onClick={()=>void executeCommand('studio3d.selection.duplicate',{ids:n})}>{t('studio3d.selection.duplicate')}</Button>
-    <Button variant="outline" disabled={n.length<2} onClick={()=>void executeCommand('studio3d.selection.delete',{ids:n})}>{t('studio3d.selection.delete')}</Button></div>
+    <Button variant="outline" disabled={n.length<2} onClick={()=>void executeCommand('studio3d.selection.delete',{ids:n})}>{t('studio3d.selection.delete')}</Button>
+    <Button variant="outline" disabled={n.length<2} data-testid="studio3d-group" onClick={()=>void executeCommand('studio3d.group',{ids:n})}>{t('studio3d.group')}</Button>
+    <Button variant="outline" disabled={s.selectedInfo?.kind!=='group'} data-testid="studio3d-ungroup" onClick={()=>void executeCommand('studio3d.ungroup',{id:s.selected})}>{t('studio3d.ungroup')}</Button></div>
+   <ArrayTools ids={n}/>
    {(['x','y','z'] as const).map(a=><div key={a} className="flex flex-wrap items-center gap-1" role="group" aria-label={a.toUpperCase()}><span className="w-4 text-xs text-ink-3">{a.toUpperCase()}</span>
     {(['min','center','max'] as const).map(to=><Button key={to} variant="outline" disabled={n.length<2} aria-label={t('studio3d.align.aria',{axis:a.toUpperCase(),to:t('studio3d.align.'+to)})} onClick={()=>align(a,to)}>{t('studio3d.align.'+to)}</Button>)}
     <Button variant="outline" disabled={n.length<3} aria-label={t('studio3d.align.distributeAria',{axis:a.toUpperCase()})} onClick={()=>void executeCommand('studio3d.object.distribute',{ids:n,axis:a})}>{t('studio3d.align.distribute')}</Button></div>)}
