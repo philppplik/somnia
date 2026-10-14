@@ -149,9 +149,15 @@ const marquee=(e:PointerEvent<SVGSVGElement>)=>{
    try{animationSession().previewEdits([{type:'markers.set',markers:ms.map(m=>m.id===id?{...m,t:tk}:m)}]);}catch{/* keep last valid */}
   };
   const finish=(commit:boolean)=>{target.removeEventListener('pointermove',move);target.removeEventListener('pointerup',up);target.removeEventListener('keydown',key);
-   if(moved&&commit)animationSession().commitPreview();else animationSession().cancelPreview();};
+   if(moved&&commit)animationSession().commitPreview();else{animationSession().cancelPreview();if(commit){const m=live.current.comp.markers?.find(x=>x.id===id);if(m)animationSession().setView({playhead:m.t});}}};
   const up=()=>finish(true);const key=(ev:KeyboardEvent)=>{if(ev.key==='Escape')finish(false);};
   target.addEventListener('pointermove',move);target.addEventListener('pointerup',up);target.addEventListener('keydown',key);
+ };
+ /** Marker handle keys: arrows move one frame, Delete removes it. */
+ const markerKey=(m:{id:string;t:number})=>(e:ReactKeyboardEvent<SVGCircleElement>)=>{
+  const d=e.key==='ArrowLeft'?-1:e.key==='ArrowRight'?1:0;
+  if(d){e.preventDefault();e.stopPropagation();run('animation.marker.update',{id:m.id,t:m.t+frameToTick(1,comp.fps)*d});}
+  else if(e.key==='Delete'||e.key==='Backspace'){e.preventDefault();e.stopPropagation();run('animation.marker.remove',{id:m.id});}
  };
  const nudgeEdge=(edge:'in'|'out')=>(e:ReactKeyboardEvent<HTMLButtonElement>)=>{
   const d=e.key==='ArrowLeft'?-1:e.key==='ArrowRight'?1:0;if(!d)return;e.preventDefault();
@@ -298,7 +304,7 @@ const marquee=(e:PointerEvent<SVGSVGElement>)=>{
     <div className="pointer-events-none absolute inset-y-0 rounded-sm bg-accent-soft" style={bar(wa.in,wa.out)} data-testid="animation-workarea"/>
     {(['in','out'] as const).filter(edge=>inWin(wa[edge])).map(edge=><button key={edge} type="button" className="absolute top-0 h-5 w-2 -translate-x-1/2 cursor-ew-resize rounded-sm border border-line bg-accent-fill" style={{left:pc(wa[edge])}}
      aria-label={t(edge==='in'?'animation.workarea.handleIn':'animation.workarea.handleOut')} aria-valuetext={timecode(wa[edge],comp.fps)} onPointerDown={dragWorkEdge(edge)} onKeyDown={nudgeEdge(edge)} data-testid={`animation-wa-handle-${edge}`}/>)}
-    <svg className="pointer-events-none absolute inset-0 h-full w-full overflow-visible" role="group" aria-label={t('animation.markers.title')} data-testid="animation-marker-ticks">{(comp.markers??[]).filter(m=>inWin(m.t)).map(m=><g key={m.id} data-testid="animation-marker-tick"><line x1={pc(m.t)} x2={pc(m.t)} y1="0" y2="100%" strokeWidth="2" className="stroke-warning"/><circle cx={pc(m.t)} cy="5" r="5" className="pointer-events-auto cursor-ew-resize fill-warning" onPointerDown={dragMarker(m.id)} data-testid={`animation-marker-handle-${m.id}`}><title>{`${m.label} · ${timecode(m.t,comp.fps)}`}</title></circle></g>)}</svg>
+    <svg className="pointer-events-none absolute inset-0 h-full w-full overflow-visible" role="group" aria-label={t('animation.markers.title')} data-testid="animation-marker-ticks">{(comp.markers??[]).filter(m=>inWin(m.t)).map(m=><g key={m.id} data-testid="animation-marker-tick"><line x1={pc(m.t)} x2={pc(m.t)} y1="0" y2="100%" strokeWidth="2" className="stroke-warning"/><circle cx={pc(m.t)} cy="5" r="5" className="pointer-events-auto cursor-ew-resize fill-warning outline-none focus-visible:stroke-ink" strokeWidth="2" tabIndex={0} role="button" aria-label={`${m.label} · ${timecode(m.t,comp.fps)}`} onPointerDown={dragMarker(m.id)} onKeyDown={markerKey(m)} data-testid={`animation-marker-handle-${m.id}`}><title>{`${m.label} · ${timecode(m.t,comp.fps)}`}</title></circle></g>)}</svg>
     {inWin(at)&&<div className="pointer-events-none absolute inset-y-0 w-px bg-ink" style={{left:pc(at)}}/>}
    </div>
   </div>
