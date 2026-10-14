@@ -1,6 +1,6 @@
 # Native C++ libraries in Somnia: where it makes sense
 
-Status: concept/research only. No implementation, no build or runtime validation.
+Status: concept/research only. No implementation, no build or runtime validation. License decision recorded 2026-10-14 08:46 (see section 6).
 Research date: 2026-10-14.
 Source baseline: `int/shell`, `c3922d01671178cad68ed95b7422bca7215f9319`.
 Question: can Somnia integrate C++ for tools and engines (creative software, video/audio, CAD, animation, image editing, performant desktop, local AI)?
@@ -121,7 +121,7 @@ Native-speed work that today runs in JS is better moved to **Rust** (Tauri comma
 ## 6. Risks and open decisions for the owner
 
 - **Signing debt.** Each new binary raises SmartScreen/Gatekeeper friction until an Apple Developer ID (open, $99/yr) and a Windows signing route (SignPath application prepared) exist. Recommendation: do not add new bundled native binaries before that, except as downloaded modules with digest pinning.
-- **LGPL handling.** One decision needed: allow LGPL libraries as downloadable sidecars (recommended) or ban them outright (simpler, loses FFmpeg and OCCT).
+- **LGPL handling. DECIDED (owner, 2026-10-14 08:46):** LGPL libraries are allowed as optional, downloadable, replaceable sidecars (source offer, notice in Settings > Licenses). GPL is never bundled. Ban option is rejected.
 - **Microsoft Store.** Packaged helpers must pass store policy review (MSIX); unverified for downloaded executables. Test before promising modules in the Store build.
 - **GPU matrix.** CUDA/Metal/DirectML/Vulkan behaviour is untested on real devices here.
 - **Maintenance.** Bindings (`whisper-rs`, `llama-cpp-2`, `opencv-rust`) lag upstream; pin revisions and keep a small C API wrapper as the escape hatch.
