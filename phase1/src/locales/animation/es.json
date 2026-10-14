@@ -793,5 +793,12 @@
  "animation.keySet.place.hint": "Pegar las claves copiadas en sus tiempos originales",
  "cmd.animation.keys.pasteToSet": "Pegar claves copiadas en varias capas",
  "cmd.animation.keys.pasteInPlace": "Pegar claves copiadas en sus tiempos originales",
- "cmd.animation.keys.selectSet": "Elegir todas las claves de varias capas"
+ "cmd.animation.keys.selectSet": "Elegir todas las claves de varias capas",
+ "animation.keys.repeat": "Repetir claves",
+ "animation.keys.repeat.count": "Repeticiones",
+ "animation.keys.repeat.mode": "Modo de repetición",
+ "animation.keys.repeat.cycle": "Ciclo",
+ "animation.keys.repeat.pingpong": "Ping-pong",
+ "animation.keys.repeat.hint": "Repite las claves elegidas tras la selección; ping-pong reproduce una de cada dos rondas al revés. Las rondas más allá del final de la composición se descartan.",
+ "cmd.animation.keys.repeat": "Repetir las claves elegidas en ciclos o ping-pong"
 }

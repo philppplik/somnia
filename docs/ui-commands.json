@@ -778,6 +778,22 @@
       "hasEnabled": true
     },
     {
+      "id": "animation.keys.repeat",
+      "title": "Repeat the selected keys as cycles or ping-pong",
+      "category": "Edit",
+      "source": "animation",
+      "keywords": [
+        "animation",
+        "boomerang",
+        "cycle",
+        "keys",
+        "loop",
+        "ping-pong",
+        "repeat"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "animation.keys.selectAll",
       "title": "Select all keys of the layer",
       "category": "View",

@@ -793,5 +793,12 @@
  "animation.keySet.place.hint": "Paste the copied keys at their original times",
  "cmd.animation.keys.pasteToSet": "Paste copied keys onto several layers",
  "cmd.animation.keys.pasteInPlace": "Paste copied keys at their original times",
- "cmd.animation.keys.selectSet": "Select all keys of several layers"
+ "cmd.animation.keys.selectSet": "Select all keys of several layers",
+ "animation.keys.repeat": "Repeat keys",
+ "animation.keys.repeat.count": "Repeats",
+ "animation.keys.repeat.mode": "Repeat mode",
+ "animation.keys.repeat.cycle": "Cycle",
+ "animation.keys.repeat.pingpong": "Ping-pong",
+ "animation.keys.repeat.hint": "Repeat the selected keys after the selection; ping-pong plays every second round backwards. Rounds past the end of the composition are dropped.",
+ "cmd.animation.keys.repeat": "Repeat the selected keys as cycles or ping-pong"
 }

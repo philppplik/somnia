@@ -793,5 +793,12 @@
  "animation.keySet.place.hint": "Kopierte Keys zu ihren ursprünglichen Zeiten einfügen",
  "cmd.animation.keys.pasteToSet": "Kopierte Keys auf mehrere Ebenen einfügen",
  "cmd.animation.keys.pasteInPlace": "Kopierte Keys zu ihren Originalzeiten einfügen",
- "cmd.animation.keys.selectSet": "Alle Keys mehrerer Ebenen auswählen"
+ "cmd.animation.keys.selectSet": "Alle Keys mehrerer Ebenen auswählen",
+ "animation.keys.repeat": "Keys wiederholen",
+ "animation.keys.repeat.count": "Wiederholungen",
+ "animation.keys.repeat.mode": "Wiederholmodus",
+ "animation.keys.repeat.cycle": "Zyklus",
+ "animation.keys.repeat.pingpong": "Ping-Pong",
+ "animation.keys.repeat.hint": "Wiederholt die gewählten Keys nach der Auswahl; Ping-Pong spielt jede zweite Runde rückwärts. Runden hinter dem Kompositionsende entfallen.",
+ "cmd.animation.keys.repeat": "Gewählte Keys als Zyklus oder Ping-Pong wiederholen"
 }
