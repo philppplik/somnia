@@ -896,5 +896,8 @@
  "studio3d.edit.duplicate": "Duplizieren",
  "studio3d.hist.editDuplicate": "Faces duplizieren",
  "cmd.studio3d.edit.selectBoundary": "Randkanten oder -vertices auswählen",
- "studio3d.edit.selBoundary": "Rand"
+ "studio3d.edit.selBoundary": "Rand",
+ "cmd.studio3d.edit.fatten": "Ausgewählte Vertices entlang ihrer Normalen verschieben",
+ "studio3d.edit.fatten": "Spreizen",
+ "studio3d.hist.editFatten": "Vertices spreizen"
 }

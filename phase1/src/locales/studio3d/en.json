@@ -896,5 +896,8 @@
  "studio3d.edit.duplicate": "Duplicate",
  "studio3d.hist.editDuplicate": "Duplicate faces",
  "cmd.studio3d.edit.selectBoundary": "Select boundary edges or vertices",
- "studio3d.edit.selBoundary": "Boundary"
+ "studio3d.edit.selBoundary": "Boundary",
+ "cmd.studio3d.edit.fatten": "Move selected vertices along their normals",
+ "studio3d.edit.fatten": "Fatten",
+ "studio3d.hist.editFatten": "Shrink/fatten vertices"
 }

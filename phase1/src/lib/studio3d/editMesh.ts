@@ -1006,9 +1006,8 @@ export function relaxMesh(m:MeshData,iterations:number,factor:number):MeshData{
 }
 
 /** Pushes every vertex along its smooth surface normal (negative amounts shrink). Normals are angle-weighted and averaged across position-equal twins, so UV seams stay welded; sculpt masks scale the push down to zero. UVs and masks are carried, explicit normals are dropped (rebuilt smooth on the stage). */
-export function fattenMesh(m:MeshData,amount:number):MeshData{
- check(m);
- if(!Number.isFinite(amount)||amount===0||Math.abs(amount)>1e6)throw new EditError('The fatten amount must be a non-zero number.');
+/** Corner-angle-weighted vertex normals, averaged across position-equal twins (1e6 rounding) so every twin pushes along the same direction. Shared by the fatten ops. */
+const fattenNormals=(m:MeshData):number[]=>{
  const nv=m.positions.length/3,nt=m.index.length/3;
  const nrm:number[]=new Array(nv*3).fill(0);
  for(let f=0;f<nt;f++){
@@ -1023,7 +1022,6 @@ export function fattenMesh(m:MeshData,amount:number):MeshData{
    nrm[a]+=n[0]*w;nrm[a+1]+=n[1]*w;nrm[a+2]+=n[2]*w;
   }
  }
- // Average across position-equal twins, so every twin pushes along the same normal.
  const pkN=new Map<string,number[]>();
  for(let v=0;v<nv;v++){
   const k=`${Math.round(m.positions[v*3]*1e6)},${Math.round(m.positions[v*3+1]*1e6)},${Math.round(m.positions[v*3+2]*1e6)}`;
@@ -1035,6 +1033,33 @@ export function fattenMesh(m:MeshData,amount:number):MeshData{
   for(const v of l){nrm[v*3]=x;nrm[v*3+1]=y;nrm[v*3+2]=z;}
  }
  for(let v=0;v<nv;v++){const l=Math.hypot(nrm[v*3],nrm[v*3+1],nrm[v*3+2])||1;nrm[v*3]/=l;nrm[v*3+1]/=l;nrm[v*3+2]/=l;}
+ return nrm;
+};
+/** Moves the selected vertices along their corner-angle-weighted normals (negative amounts shrink). Position-equal twins move together so the mesh does not rip, the normals come from the whole mesh so rim vertices push out evenly, and sculpt masks damp the movement per vertex. Topology, UVs and masks stay. */
+export function fattenSelected(m:MeshData,verts:number[],amount:number):MeshData{
+ check(m);
+ if(!verts.length)throw new EditError('Select vertices to shrink or fatten.');
+ if(!Number.isFinite(amount)||amount===0||Math.abs(amount)>1e6)throw new EditError('The fatten amount must be a non-zero number.');
+ const nv=m.positions.length/3;
+ const want=new Set<number>();
+ for(const v of verts){if(!Number.isInteger(v)||v<0||v>=nv)throw new EditError(`Vertex ${v} does not exist.`);want.add(v);}
+ const pk=(v:number)=>`${Math.round(m.positions[v*3]*1e6)},${Math.round(m.positions[v*3+1]*1e6)},${Math.round(m.positions[v*3+2]*1e6)}`;
+ const wpos=new Set<string>();for(const v of want)wpos.add(pk(v));
+ const nrm=fattenNormals(m);
+ const positions=[...m.positions];
+ for(let v=0;v<nv;v++){
+  if(!wpos.has(pk(v)))continue;
+  const f=amount*(1-(m.mask?m.mask[v]:0));if(f===0)continue;
+  positions[v*3]+=nrm[v*3]*f;positions[v*3+1]+=nrm[v*3+1]*f;positions[v*3+2]+=nrm[v*3+2]*f;
+ }
+ const out:MeshData={positions,index:[...m.index],...(m.uvs?{uvs:[...m.uvs]}:{}),...(m.mask?{mask:[...m.mask]}:{})};
+ check(out);return out;
+}
+export function fattenMesh(m:MeshData,amount:number):MeshData{
+ check(m);
+ if(!Number.isFinite(amount)||amount===0||Math.abs(amount)>1e6)throw new EditError('The fatten amount must be a non-zero number.');
+ const nv=m.positions.length/3;
+ const nrm=fattenNormals(m);
  const positions=[...m.positions];
  for(let v=0;v<nv;v++){
   const f=amount*(1-(m.mask?m.mask[v]:0));if(f===0)continue;

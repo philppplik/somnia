@@ -1,4 +1,5 @@
 # Unreleased: 3D Studio P0
+- 3D Studio: edit mode shrinks or fattens the selected vertices along their corner-angle-weighted normals (position-equal twins move together, masks damp), with one undo (`studio3d.edit.fatten`, negative amounts shrink).
 - 3D Studio: edit mode selects boundary edges or vertices (position-keyed, so split UV seams do not read as holes), pairing with hole filling (`studio3d.edit.selectBoundary`).
 - 3D Studio: edit mode duplicates the selected faces as a detached shell with fresh vertices inside the same mesh, with one undo (`studio3d.edit.duplicate`, empty selection refused readably).
 - 3D Studio: edit mode pokes the selected faces, splitting each triangle into three around its centroid, with one undo (`studio3d.edit.poke`, empty selection refused readably).

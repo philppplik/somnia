@@ -896,5 +896,8 @@
  "studio3d.edit.duplicate": "Duplicar",
  "studio3d.hist.editDuplicate": "Duplicar faces",
  "cmd.studio3d.edit.selectBoundary": "Selecionar arestas ou vértices da borda",
- "studio3d.edit.selBoundary": "Borda"
+ "studio3d.edit.selBoundary": "Borda",
+ "cmd.studio3d.edit.fatten": "Mover os vértices selecionados ao longo de suas normais",
+ "studio3d.edit.fatten": "Engordar",
+ "studio3d.hist.editFatten": "Engordar vértices"
 }

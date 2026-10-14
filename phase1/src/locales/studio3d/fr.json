@@ -896,5 +896,8 @@
  "studio3d.edit.duplicate": "Dupliquer",
  "studio3d.hist.editDuplicate": "Dupliquer les faces",
  "cmd.studio3d.edit.selectBoundary": "Sélectionner les arêtes ou sommets du bord",
- "studio3d.edit.selBoundary": "Bord"
+ "studio3d.edit.selBoundary": "Bord",
+ "cmd.studio3d.edit.fatten": "Déplacer les sommets sélectionnés le long de leurs normales",
+ "studio3d.edit.fatten": "Gonfler",
+ "studio3d.hist.editFatten": "Gonfler les sommets"
 }

@@ -6809,6 +6809,19 @@
       "hasEnabled": true
     },
     {
+      "id": "studio3d.edit.fatten",
+      "title": "Move selected vertices along their normals",
+      "category": "Edit",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "studio3d.edit.inset",
       "title": "Inset faces",
       "category": "Edit",

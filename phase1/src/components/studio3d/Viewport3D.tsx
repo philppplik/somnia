@@ -1209,6 +1209,7 @@ export default function Viewport3D(){
    editSubdivide:()=>{stage.editSubdivide();patchEdit();invalidate();},
    editPoke:()=>{stage.editPoke();patchEdit();invalidate();},
    editDuplicate:()=>{stage.editDuplicate();patchEdit();invalidate();},
+   editFatten:(amount)=>{stage.editFatten(amount);patchEdit();invalidate();},
    editExtrude:o=>{stage.editExtrude(o);afterEditOp();},
    editInset:a=>{stage.editInset(a);afterEditOp();},
    editBevel:w=>{stage.editBevel(w);afterEditOp();},
