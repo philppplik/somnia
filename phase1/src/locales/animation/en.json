@@ -984,5 +984,7 @@
  "cmd.animation.marker.fromLayers": "Add markers at the in points of the selected layers",
  "cmd.animation.marker.clear": "Clear timing markers",
  "animation.export.dither": "Dither GIF",
- "animation.export.dither.hint": "Smoother gradients in GIF exports, a little noisier and larger. Other formats ignore it."
+ "animation.export.dither.hint": "Smoother gradients in GIF exports, a little noisier and larger. Other formats ignore it.",
+ "animation.export.loop": "Loop GIF and APNG",
+ "animation.export.loop.hint": "On: repeats forever. Off: plays once and stops on the last frame."
 }

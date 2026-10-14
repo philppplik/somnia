@@ -95,7 +95,7 @@ export function exportGif(d:Deps={}){
    frames.push({pixels:await pixels(frameSvg(comp,plan[i].tick,false,doc.assets),out.width,out.height),delayCs:100*comp.fps.den/comp.fps.num});
    set({done:i+1,total:plan.length});
   }
-  return {blob:new Blob([encodeGif(out.width,out.height,frames,true,state.settings.dither===true) as unknown as BlobPart],{type:'image/gif'}),fileName:`${exportSlug(doc.name)}.gif`};
+  return {blob:new Blob([encodeGif(out.width,out.height,frames,state.settings.loop!==false,state.settings.dither===true) as unknown as BlobPart],{type:'image/gif'}),fileName:`${exportSlug(doc.name)}.gif`};
  },d.save??downloadBlob);
 }
 /** Animated PNG of the work area; honours the transparency setting. PNG frames bounded like the sequence export, result capped at 64 MB. */
@@ -109,7 +109,7 @@ export function exportApng(d:Deps={}){
    frames.push(await rasterize(frameSvg(comp,plan[i].tick,state.transparent,doc.assets),out.width,out.height));
    set({done:i+1,total:plan.length});
   }
-  return {blob:new Blob([encodeApng(frames,{delayNum:comp.fps.den,delayDen:comp.fps.num}) as unknown as BlobPart],{type:'image/apng'}),fileName:`${exportSlug(doc.name)}.apng`};
+  return {blob:new Blob([encodeApng(frames,{delayNum:comp.fps.den,delayDen:comp.fps.num,loop:state.settings.loop!==false}) as unknown as BlobPart],{type:'image/apng'}),fileName:`${exportSlug(doc.name)}.apng`};
  },d.save??downloadBlob);
 }
 /** WebM video of the work area, recorded in real time with the audio layers mixed in when the browser supports it. */

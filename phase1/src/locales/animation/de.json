@@ -984,5 +984,7 @@
  "cmd.animation.marker.fromLayers": "Marker an den Einpunkten der gewählten Ebenen setzen",
  "cmd.animation.marker.clear": "Zeitmarken löschen",
  "animation.export.dither": "GIF dithern",
- "animation.export.dither.hint": "Weichere Verläufe in GIF-Exporten, etwas körniger und größer. Andere Formate ignorieren es."
+ "animation.export.dither.hint": "Weichere Verläufe in GIF-Exporten, etwas körniger und größer. Andere Formate ignorieren es.",
+ "animation.export.loop": "GIF und APNG wiederholen",
+ "animation.export.loop.hint": "An: läuft endlos. Aus: spielt einmal und bleibt auf dem letzten Bild."
 }

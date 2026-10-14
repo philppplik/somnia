@@ -984,5 +984,7 @@
  "cmd.animation.marker.fromLayers": "Ajouter des repères aux points d’entrée des calques sélectionnés",
  "cmd.animation.marker.clear": "Effacer les repères de temps",
  "animation.export.dither": "Tramage GIF",
- "animation.export.dither.hint": "Dégradés plus doux dans les GIF, un peu plus de bruit et de poids. Les autres formats l’ignorent."
+ "animation.export.dither.hint": "Dégradés plus doux dans les GIF, un peu plus de bruit et de poids. Les autres formats l’ignorent.",
+ "animation.export.loop": "Répéter GIF et APNG",
+ "animation.export.loop.hint": "Activé : boucle sans fin. Désactivé : une lecture, puis arrêt sur la dernière image."
 }

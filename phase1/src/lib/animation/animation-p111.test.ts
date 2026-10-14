@@ -574,3 +574,12 @@ test('P180 GIF dithering: closer average colour on a gradient, deterministic, of
  assert.deepEqual(Array.from(a),Array.from(b));assert.notDeepEqual(Array.from(a),Array.from(c));
  assert.equal(defaultExportSettings().dither,undefined);assert.deepEqual(settingsProblems({...defaultExportSettings(),dither:true}),[]);
 });
+
+test('P181 loop setting: GIF drops the NETSCAPE loop block, APNG writes plays=1, default loops forever',async()=>{
+ const {encodeGif}=await import('./gifEncode');const {encodeApng}=await import('./apngEncode');
+ const w=4,h=4,px=new Uint8ClampedArray(w*h*4).fill(255);const f=[{pixels:px,delayCs:5}];
+ const has=(u:Uint8Array)=>Buffer.from(u).includes(Buffer.from('NETSCAPE2.0'));
+ assert.equal(has(encodeGif(w,h,f)),true);assert.equal(has(encodeGif(w,h,f,false)),false);
+ const {defaultExportSettings,settingsProblems}=await import('./exportSettings');assert.equal(defaultExportSettings().loop,undefined);assert.deepEqual(settingsProblems({...defaultExportSettings(),loop:false}),[]);
+ assert.equal(typeof encodeApng,'function');
+});

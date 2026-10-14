@@ -22,6 +22,8 @@ export interface ExportSettings{
  columns?:number|null;
  /** GIF only: Floyd-Steinberg dithering. Off or absent keeps the plain palette mapping. */
  dither?:boolean;
+ /** GIF and APNG: false plays once, absent or true loops forever. */
+ loop?:boolean;
 }
 export const defaultExportSettings=():ExportSettings=>({scale:100,fps:null,from:null,to:null});
 export interface ExportPreset{id:string;format:ExportFormat;scale:number;fps:number|null;transparent:boolean}

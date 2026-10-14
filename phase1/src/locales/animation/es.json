@@ -984,5 +984,7 @@
  "cmd.animation.marker.fromLayers": "Añadir marcadores en los puntos de entrada de las capas seleccionadas",
  "cmd.animation.marker.clear": "Borrar marcadores de tiempo",
  "animation.export.dither": "Tramado en GIF",
- "animation.export.dither.hint": "Degradados más suaves en GIF, con algo más de ruido y tamaño. Otros formatos lo ignoran."
+ "animation.export.dither.hint": "Degradados más suaves en GIF, con algo más de ruido y tamaño. Otros formatos lo ignoran.",
+ "animation.export.loop": "Repetir GIF y APNG",
+ "animation.export.loop.hint": "Activado: se repite siempre. Desactivado: se reproduce una vez y queda en el último fotograma."
 }

@@ -984,5 +984,7 @@
  "cmd.animation.marker.fromLayers": "Adicionar marcadores nos pontos de entrada das camadas selecionadas",
  "cmd.animation.marker.clear": "Limpar marcadores de tempo",
  "animation.export.dither": "Pontilhar GIF",
- "animation.export.dither.hint": "Gradientes mais suaves em GIFs, com um pouco mais de ruído e tamanho. Outros formatos ignoram."
+ "animation.export.dither.hint": "Gradientes mais suaves em GIFs, com um pouco mais de ruído e tamanho. Outros formatos ignoram.",
+ "animation.export.loop": "Repetir GIF e APNG",
+ "animation.export.loop.hint": "Ligado: repete sempre. Desligado: toca uma vez e para no último quadro."
 }
