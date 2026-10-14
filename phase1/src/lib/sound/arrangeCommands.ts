@@ -1,3 +1,4 @@
+import {validateRack} from './rack';
 import {t} from '../i18n';
 import {registerCommandSpec} from '../commandBridge';
 import type {CommandSpec} from '../commandSpec';
@@ -20,6 +21,7 @@ export function registerArrangeCommands(){
  add('marker.add',p=>editArrangement(s=>s.markers.push({id:id(),name:p.name,frame:p.frame})),schema({name:str,frame:num})),
  add('marker.delete',p=>editArrangement(s=>{s.markers=s.markers.filter(m=>m.id!==p.id);}),schema({id:str})),
  add('loop.set',p=>editArrangement(s=>{s.loop=p.enabled?{start:p.start,end:p.end}:null;}),schema({enabled:bool,start:num,end:num})),
+ add('rack.set',p=>editArrangement(s=>{const rack=validateRack(p.rack);if(p.target==='master')s.masterRack=rack;else{const track=s.tracks.find(t=>t.id===p.target);if(!track)throw Error('Rack target no longer exists');track.rack=rack;}}),schema({target:str,rack:{type:'object'}})),
  add('undo',undoArrangement),add('redo',redoArrangement),add('render',renderSession),add('export',exportArrangement),add('save',downloadArrangement),add('saveNative',saveArrangementNative)
  ];const off=specs.map(spec=>registerCommandSpec(spec));return()=>off.forEach(f=>f());
 }

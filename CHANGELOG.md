@@ -324,3 +324,4 @@ This entry collects the beta.6 wave and the features already present in
 - Correct the outdated Sound AI bridge documentation.
 - Sound Arrange & Mix: bounded multitrack timeline with source waveforms, split/trim/duplicate/move, fades, clip gain, track gain/pan/mute/solo, markers, looping and undo/redo. JSON save/reopen with explicit relinking, plus worker-rendered mix audition and WAV export; no new dependencies.
 - Sound session follow-up: native-folder JSON save with collision/revision/readback checks, work-registry and native close protection, undoable track removal and direct fade handles. Real compressed-source validation remains a desktop/CI check.
+- Sound B1: ordered per-track/master insert racks, bypass and local presets; version-2 session migration and float-PCM DSP bridge. Active DSP verification requires rebuilt WASM/CI; no new dependencies.
