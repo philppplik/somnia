@@ -15,7 +15,7 @@ import {clampGrad,MAX_GRADS,type GradFilter,clampRad,MAX_RADS,type RadFilter} fr
 import {MAX_BRUSH_STROKES,MAX_BRUSH_TOTAL_DABS,brushTotalDabs,type BrushStroke} from '../../lib/photos/brushStrokes';
 import {clampDab} from '../../lib/photos/localAdjust';
 import type {PhotoCrop} from '../../lib/photos/studioSettings';
-import {cropGuideLines} from '../../lib/photos/cropGuides';
+import {CROP_GUIDE_STYLES,cropGuideLines,type CropGuideStyle} from '../../lib/photos/cropGuides';
 import {clippingOverlayImage} from '../../lib/photos/clippingOverlay';
 import {clampSplitX,splitClearRect} from '../../lib/photos/splitView';
 import {decodeSettingsPayload,encodeSettingsPayload,settingsPayloadToText,type SettingsPayload} from '../../lib/photos/settingsClipboard';
@@ -66,6 +66,7 @@ export function PhotosWorkspace({item}:{item:MediaItem}){
  const [compare,setCompare]=useState(false);
  const [note,setNote]=useState('');
  const [showGuides,setShowGuides]=usePanelState<boolean>('photos.cropGuides',true);
+ const [guideStyle,setGuideStyle]=usePanelState<CropGuideStyle>('photos.cropGuideStyle','thirds');
  const [showClipping,setShowClipping]=usePanelState<boolean>('photos.clipping',false);
  const [showMaskOverlay]=usePanelState<boolean>('photos.lummask.overlay',false);
  const [showSplit,setShowSplit]=usePanelState<boolean>('photos.split',false);
@@ -119,9 +120,10 @@ export function PhotosWorkspace({item}:{item:MediaItem}){
    else if(e.key==='p'||e.key==='P')setFlag(item.name,'pick');
    else if(e.key==='x'||e.key==='X')setFlag(item.name,'reject');
    else if(e.key==='u'||e.key==='U')setFlag(item.name,null);
+   else if(e.key==='o'||e.key==='O')setGuideStyle(CROP_GUIDE_STYLES[(CROP_GUIDE_STYLES.indexOf(guideStyle)+1)%CROP_GUIDE_STYLES.length]);
   };
   window.addEventListener('keydown',onKey);return()=>window.removeEventListener('keydown',onKey);
- },[nav.prev,nav.next,item.name]);
+ },[nav.prev,nav.next,item.name,guideStyle,setGuideStyle]);
  const [dabR,setDabR]=usePanelState<number>('photos.dodgeRadius',0.05);
  const dabChain=useRef<{x:number;y:number;r:number}[]|null>(null); // dabs of the in-flight dodge stroke
  const healPath=useRef<{x:number;y:number}[]|null>(null); // path points of the in-flight heal stroke
@@ -336,7 +338,7 @@ export function PhotosWorkspace({item}:{item:MediaItem}){
  const ready=session?.status==='ready'||session?.status==='processing';
  const dirty=session?dirtyPhoto(session):false;
  const crop=session?.cropDraft;
- const guideLines=crop?cropGuideLines(crop):null;
+ const guideLines=crop?cropGuideLines(crop,guideStyle):null;
  return <section className="canvas-stage flex min-h-0 w-full flex-1 flex-col" aria-label={t('photos.title')} data-testid="photos-workspace">
   <div className={bar}>
    <span className="truncate font-medium text-ink" data-testid="photos-name">{item.name}</span>
@@ -363,7 +365,7 @@ export function PhotosWorkspace({item}:{item:MediaItem}){
    }} data-testid="photos-settings-paste"><ClipboardPaste size={14}/></Button>
    <Button size="compact" variant="outline" aria-pressed={!!session?.cropping} disabled={!ready} onClick={()=>setPhotoCropping(item.name,!session?.cropping)} data-testid="photos-crop"><Frame size={13}/>{t('photos.crop')}</Button>
    {session?.cropping&&<>
-    <Button size="icon" variant="outline" aria-pressed={showGuides} aria-label={t('photos.crop.guides')} title={t('photos.crop.guides')} onClick={()=>setShowGuides(!showGuides)} data-testid="photos-crop-guides"><Grid3x3 size={14}/></Button>
+    <Button size="icon" variant="outline" aria-pressed={showGuides} aria-label={t('photos.crop.guides')} title={`${t('photos.crop.guides')}: ${t(`photos.crop.guide.${guideStyle}`)}`} onClick={()=>setShowGuides(!showGuides)} data-testid="photos-crop-guides"><Grid3x3 size={14}/></Button>
     <Button size="compact" variant="primary" onClick={()=>applyPhotoCrop(item.name)} data-testid="photos-crop-apply"><Check size={13}/>{t('photos.crop.apply')}</Button>
     <Button size="compact" variant="outline" onClick={()=>cancelPhotoCrop(item.name)} data-testid="photos-crop-cancel"><X size={13}/>{t('photos.crop.cancel')}</Button>
    </>}
@@ -426,7 +428,7 @@ export function PhotosWorkspace({item}:{item:MediaItem}){
      <svg className="absolute inset-0 size-full" aria-hidden="true">
       <path d={`M0 0H${dispW}V${dispH}H0Z M${crop.x0*dispW} ${crop.y0*dispH}H${crop.x1*dispW}V${crop.y1*dispH}H${crop.x0*dispW}Z`} fill="rgba(0,0,0,0.45)" fillRule="evenodd"/>
       <rect x={crop.x0*dispW} y={crop.y0*dispH} width={(crop.x1-crop.x0)*dispW} height={(crop.y1-crop.y0)*dispH} fill="none" stroke="var(--accent)" strokeWidth="1.5"/>
-      {showGuides&&guideLines&&<g data-testid="photos-crop-grid" stroke="rgba(255,255,255,0.85)" strokeWidth="1">
+      {showGuides&&guideLines&&<g data-testid="photos-crop-grid" data-style={guideStyle} stroke="rgba(255,255,255,0.85)" strokeWidth="1">
        {guideLines.vertical.map(x=><line key={`v${x}`} x1={x*dispW} y1={crop.y0*dispH} x2={x*dispW} y2={crop.y1*dispH}/>)}
        {guideLines.horizontal.map(y=><line key={`h${y}`} x1={crop.x0*dispW} y1={y*dispH} x2={crop.x1*dispW} y2={y*dispH}/>)}
       </g>}

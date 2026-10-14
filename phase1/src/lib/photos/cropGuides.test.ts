@@ -22,3 +22,16 @@ test('inverted rects are normalized to their bounds',()=>{
  for(const x of g.vertical){assert.ok(x>0.3&&x<0.9);}
  for(const y of g.horizontal){assert.ok(y>0.3&&y<0.6);}
 });
+test('golden style places the golden-section lines inside the crop',()=>{
+ const crop={x0:0,y0:0,x1:1,y1:1},g=cropGuideLines(crop,'golden'),phi=(3-Math.sqrt(5))/2;
+ assert.ok(Math.abs(g.vertical[0]-phi)<1e-12);assert.ok(Math.abs(g.vertical[1]-(1-phi))<1e-12);
+ assert.ok(Math.abs(g.horizontal[0]-phi)<1e-12);
+});
+test('center style yields a single centered cross',()=>{
+ const g=cropGuideLines({x0:0.2,y0:0.1,x1:0.8,y1:0.9},'center');
+ assert.deepEqual(g.vertical,[0.5]);assert.deepEqual(g.horizontal,[0.5]);
+});
+test('unknown style falls back to thirds',()=>{
+ const g=cropGuideLines({x0:0,y0:0,x1:1,y1:1},'bogus' as never);
+ assert.deepEqual(g.vertical,[1/3,2/3]);
+});

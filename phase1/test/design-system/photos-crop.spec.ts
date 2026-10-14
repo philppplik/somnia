@@ -112,3 +112,27 @@ test('auto straighten: the estimated horizon commits as one undo step (light and
   expect(await value()).toBe(0); // one undo restores the level setting
  }
 });
+test('crop guide styles: O key cycles thirds, golden and center (light and dark)',async({page})=>{
+ for(const theme of['light','dark']){
+  await page.goto('/test/design-system/?view=photos-crop');
+  await page.evaluate(t=>document.documentElement.setAttribute('data-theme',t),theme);
+  await expect(page.getByTestId('photos-workspace')).toBeVisible();
+  await page.getByTestId('photos-crop').click();
+  await expect(page.getByTestId('photos-crop-overlay')).toBeVisible();
+  const grid=page.getByTestId('photos-crop-grid');
+  if(await grid.getAttribute('data-style')!=='thirds'){ // normalize persisted style
+   for(let i=0;i<3&&await grid.getAttribute('data-style')!=='thirds';i++)await page.keyboard.press('o');
+  }
+  await expect(grid).toHaveAttribute('data-style','thirds');
+  await expect(grid.locator('line')).toHaveCount(4);
+  await page.keyboard.press('o');
+  await expect(grid).toHaveAttribute('data-style','golden');
+  await expect(grid.locator('line')).toHaveCount(4); // golden: still two lines per axis
+  await page.screenshot({path:`test-results/ds-photos-crop-golden-${theme}.png`,fullPage:true});
+  await page.keyboard.press('o');
+  await expect(grid).toHaveAttribute('data-style','center');
+  await expect(grid.locator('line')).toHaveCount(2); // center cross: one per axis
+  await page.keyboard.press('o');
+  await expect(grid).toHaveAttribute('data-style','thirds'); // wraps around
+ }
+});

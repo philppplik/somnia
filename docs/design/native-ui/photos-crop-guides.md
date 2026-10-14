@@ -64,3 +64,27 @@ untouched. Sign convention matches the horizon drag: a horizon sloping
 down to the right takes the negative correction. Accuracy on a
 pixel-quantized edge is about +-1 degree; the drag or slider refines
 the last degree.
+
+## Guide styles (P71)
+
+The crop overlay is not limited to thirds anymore: the `O` key cycles the
+guide style through thirds, golden section and a center cross (the
+Lightroom convention), persisted via `panelStateStore` under
+`photos.cropGuideStyle` (default `thirds`).
+
+- `src/lib/photos/cropGuides.ts`: `CropGuideStyle` +
+  `CROP_GUIDE_STYLES` and a `cropGuideLines(crop, style = 'thirds')`
+  parameter — golden-section lines at 1/phi and 1-1/phi of the crop
+  rect, `center` a single mid-line per axis. The default keeps thirds,
+  so every existing caller and test is untouched; `CropGuideLines`
+  widens to plain `number[]` to allow the single-line center cross.
+- `PhotosWorkspace`: the style lives in panel state, feeds
+  `cropGuideLines`, is exposed as `data-style` on the grid group, and
+  the guides toggle title names the active style
+  (`photos.crop.guide.thirds|golden|center` in all five photo locales).
+  The `O` key sits in the existing workspace key handler with the same
+  guards (no modifiers, no editable targets).
+
+Coverage: `cropGuides.test.ts` gains golden/center/fallback cases;
+`photos-crop.spec.ts` gains a light/dark leg that cycles with `O`,
+asserts `data-style` and line counts (4, 4, 2) and the wrap-around.

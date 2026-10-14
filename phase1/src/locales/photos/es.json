@@ -119,5 +119,8 @@
  "photos.flag.filter.pick": "Seleccionadas",
  "photos.flag.filter.reject": "Rechazadas",
  "photos.p.straighten.auto": "Auto",
- "photos.split.dir": "Orientación"
+ "photos.split.dir": "Orientación",
+ "photos.crop.guide.thirds": "Tercios",
+ "photos.crop.guide.golden": "Proporción áurea",
+ "photos.crop.guide.center": "Centro"
 }
