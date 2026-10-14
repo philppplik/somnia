@@ -2,7 +2,7 @@ import {useEffect,useId,useLayoutEffect,useRef,useState,type KeyboardEvent as Re
 import {animationSession} from '../../lib/animation/session';
 import type {Edit} from '../../lib/animation/edit';
 import {PROP_META,TRANSFORM_KEYS,type Composition,type KeyRef,type TransformKey} from '../../lib/animation/model';
-import {fitTargets,graphWindow} from '../../lib/animation/graphWindow';
+import {fitTargets,graphWindow,windowValueRange} from '../../lib/animation/graphWindow';
 import {channelOf,curveSamples,handleToEase,handlesOf,niceStep,valueRange,speedSamples,speedRange,EASE_PRESETS,type Handle} from '../../lib/animation/graph';
 import {clickSelect,sameKey,shiftSelection} from '../../lib/animation/selection';
 import {frameToTick,timecode} from '../../lib/animation/time';
@@ -50,7 +50,7 @@ export function GraphEditor({comp,layerId,sel,playhead}:{comp:Composition;layerI
  const ch:0|1=prop.type==='vec2'&&view.graphChannel===1?1:0;
  const w=size.w,h=size.h;const fitKeys=fitTargets(keys,sel.filter(k=>k.layer===layer.id&&k.prop===active));const win=frozenWin.current??graphWindow(comp.start,comp.duration,comp.fps,fitKeys,gtools.fit);const {t0,t1}=win;
  const speed=view.graphMode==='speed';
- const range=frozen.current??(speed?speedRange(prop,ch,t0,t1):valueRange(keys,ch));
+ const range=frozen.current??(speed?speedRange(prop,ch,t0,t1):gtools.fit?windowValueRange(prop,ch,t0,t1):valueRange(keys,ch));
  const pw=Math.max(10,w-PAD.l-PAD.r),ph=Math.max(10,h-PAD.t-PAD.b);
  const xOf=(tk:number)=>PAD.l+(tk-t0)/(t1-t0)*pw;
  const yOf=(v:number)=>PAD.t+(1-(v-range.min)/(range.max-range.min))*ph;
@@ -66,7 +66,7 @@ export function GraphEditor({comp,layerId,sel,playhead}:{comp:Composition;layerI
  const sess=animationSession();
  /** Pointer drag with Escape to cancel. `commit=false` on cancel. */
  const startDrag=(e:PointerEvent<SVGElement>,move:(ev:globalThis.PointerEvent)=>void,end:(commit:boolean,moved:boolean)=>void)=>{
-  e.stopPropagation();const el=e.currentTarget;el.setPointerCapture(e.pointerId);frozen.current=valueRange(keys,ch);frozenWin.current=win;
+  e.stopPropagation();const el=e.currentTarget;el.setPointerCapture(e.pointerId);frozen.current=gtools.fit?windowValueRange(prop,ch,t0,t1):valueRange(keys,ch);frozenWin.current=win;
   const x0=e.clientX,y0=e.clientY;let moved=false;
   const mv=(ev:globalThis.PointerEvent)=>{if(!moved&&Math.hypot(ev.clientX-x0,ev.clientY-y0)<3)return;moved=true;move(ev);};
   const done=(commit:boolean)=>{el.removeEventListener('pointermove',mv);el.removeEventListener('pointerup',up);window.removeEventListener('keydown',esc,true);frozen.current=null;frozenWin.current=null;end(commit,moved);};

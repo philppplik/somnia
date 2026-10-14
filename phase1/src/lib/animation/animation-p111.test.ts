@@ -293,3 +293,9 @@ test('fit targets: selected keys when two or more, else all',()=>{
  assert.equal(fitTargets(ks,[]).length,ks.length);
  assert.equal(fitTargets(ks,ks.slice(0,2)).length,2);
 });
+import {windowValueRange} from './graphWindow';
+test('window value range: covers the curve in the window, narrower than the full range',()=>{
+ const c=findComp(base())!,p=c.layers.find(l=>l.id==='a')!.transform.position,ks=p.keys;
+ const full=windowValueRange(p,0,ks[0].t,ks[ks.length-1].t),part=windowValueRange(p,0,ks[0].t,ks[0].t+(ks[1].t-ks[0].t)/4);
+ assert.ok(full.max>full.min&&part.max>part.min&&part.max-part.min<=full.max-full.min+1e-9);
+});
