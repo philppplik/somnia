@@ -1,6 +1,7 @@
 import {useEffect,useState} from 'react';
-import {MAX_FONT_NAME,MAX_STYLE_NAME,stylePatchProblem,type ParaAlign,type StyleItem,type StylePatch} from '../../lib/documents/protocol';
+import {MAX_FONT_NAME,MAX_STYLE_NAME,stylePatchProblem,type FormatState,type ParaAlign,type StyleItem,type StylePatch} from '../../lib/documents/protocol';
 import {deleteStyle,refreshStyles,saveStyle,setCharStyle,setParagraphStyle} from '../../lib/documents/session';
+import {useDocuments} from '../../lib/documents/store';
 import {useStyleList} from '../../lib/documents/styles';
 import {useT} from '../../lib/useT';
 import {NativeButton,NativeInput,NativeSelect} from '../ui/native-controls';
@@ -13,6 +14,16 @@ export const EMPTY_STYLE_FORM:StyleForm={name:'',kind:'paragraph',basedOn:'Norma
 const text=(n:number|null)=>n===null?'':String(n);
 const tri=(b:boolean|null)=>b===null?'':b?'on':'off';
 export const formFromStyle=(s:StyleItem):StyleForm=>({name:s.name,kind:s.kind,basedOn:s.basedOn??'',font:s.font??'',size:text(s.size),bold:tri(s.bold),italic:tri(s.italic),color:s.color??'',align:s.align??'',spaceBefore:text(s.spaceBefore),spaceAfter:text(s.spaceAfter),lineSpacing:text(s.lineSpacing)});
+/** Copies the selection's shared character formatting (bold, italic, font, size, colour) into the form; mixed or automatic values stay as they were. */
+export function formFromSelection(f:StyleForm,fmt:FormatState|null):StyleForm{
+ if(!fmt)return f;const o={...f};
+ if(fmt.bold==='on'||fmt.bold==='off')o.bold=fmt.bold;
+ if(fmt.italic==='on'||fmt.italic==='off')o.italic=fmt.italic;
+ if(typeof fmt.font==='string'&&fmt.font!=='')o.font=fmt.font;
+ if(typeof fmt.size==='number'&&Number.isFinite(fmt.size))o.size=String(Math.round(fmt.size*100)/100);
+ if(typeof fmt.color==='string'&&/^[0-9a-fA-F]{6}$/.test(fmt.color))o.color=fmt.color.toUpperCase();
+ return o;
+}
 /** A number typed with a dot or comma and up to two decimals; '' is "inherit" (null); undefined when the text is not a number. */
 export function parseStyleNum(v:string):number|null|undefined{
  const t=v.trim();if(t==='')return null;if(!/^\d{1,4}([.,]\d{1,2})?$/.test(t))return undefined;return Number(t.replace(',','.'));
@@ -40,7 +51,7 @@ export function buildStylePatch(orig:StyleItem|null,f:StyleForm):StylePatch|null
 }
 /** Create, change, delete and apply paragraph and character styles. */
 export function StylesDialog({onClose}:{onClose:()=>void}){
- const {t}=useT();const list=useStyleList();const [sel,setSel]=useState<string>('');const [f,setF]=useState<StyleForm>(EMPTY_STYLE_FORM);const [failed,setFailed]=useState('');
+ const {t}=useT();const list=useStyleList();const fmt=useDocuments().format;const [sel,setSel]=useState<string>('');const [f,setF]=useState<StyleForm>(EMPTY_STYLE_FORM);const [failed,setFailed]=useState('');
  useEffect(()=>{void refreshStyles();},[]);
  const cur=list.find(s=>s.id===sel)??null;
  const pick=(id:string)=>{setSel(id);setFailed('');const s=list.find(x=>x.id===id);setF(s?formFromStyle(s):EMPTY_STYLE_FORM);};
@@ -88,6 +99,7 @@ export function StylesDialog({onClose}:{onClose:()=>void}){
     <div className="flex gap-2">
      <NativeButton className={tool} disabled={!cur||cur.builtin} onClick={()=>{if(!cur)return;const id=cur.id;setSel('');setF(EMPTY_STYLE_FORM);void deleteStyle(id).catch(e=>setFailed(e instanceof Error?e.message:String(e)));}} data-testid="documents-styles-delete">{t('documents.styles.delete')}</NativeButton>
      <NativeButton className={tool} disabled={!cur} onClick={()=>{if(!cur)return;onClose();void (cur.kind==='paragraph'?setParagraphStyle(cur.id):setCharStyle(cur.id));}} data-testid="documents-styles-apply">{t('documents.styles.apply')}</NativeButton>
+     <NativeButton className={tool} disabled={!fmt} onClick={()=>setF(formFromSelection(f,fmt))} data-testid="documents-styles-fromsel">{t('documents.styles.fromSelection')}</NativeButton>
      <NativeButton className={tool} disabled={cur?.kind!=='character'} onClick={()=>{onClose();void setCharStyle('');}} data-testid="documents-styles-clearchar">{t('documents.styles.clearChar')}</NativeButton></div>
     <div className="flex gap-2"><NativeButton className={tool} onClick={onClose}>{t('documents.styles.close')}</NativeButton>
      <NativeButton className={tool} disabled={!patch} onClick={save} data-testid="documents-styles-save">{cur?t('documents.styles.save'):t('documents.styles.create')}</NativeButton></div></div>

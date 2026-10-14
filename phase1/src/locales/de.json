@@ -2389,6 +2389,7 @@
   "documents.styles.align.center": "Zentriert",
   "documents.styles.align.right": "Rechts",
   "documents.styles.align.justify": "Blocksatz",
+  "documents.styles.fromSelection": "Aus Auswahl übernehmen",
   "documents.list.demote": "Listeneintrag tieferstufen",
   "documents.find.label": "Suchen und Ersetzen",
   "documents.find.query": "Suchen",

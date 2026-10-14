@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {stylePatchProblem,type StyleItem} from './protocol';
-import {buildStylePatch,EMPTY_STYLE_FORM,formFromStyle,parseStyleNum} from '../../components/documents/StylesDialog';
+import {formFromSelection,buildStylePatch,EMPTY_STYLE_FORM,formFromStyle,parseStyleNum} from '../../components/documents/StylesDialog';
 const item=(o:Partial<StyleItem>={}):StyleItem=>({id:'s1',name:'Note',kind:'paragraph',builtin:false,basedOn:'Normal',font:null,size:11,bold:null,italic:null,color:null,align:null,spaceBefore:null,spaceAfter:null,lineSpacing:null,...o});
 test('stylePatchProblem accepts good and rejects bad patches',()=>{
  for(const g of [{name:'A',kind:'paragraph'},{name:'C',kind:'character',bold:true},{id:'s1',size:12},{id:'s1',color:null}])assert.equal(stylePatchProblem(g),null,JSON.stringify(g));
@@ -24,4 +24,12 @@ test('buildStylePatch: modify sends only the diff; bad numbers give null',()=>{
 test('buildStylePatch: character styles do not carry paragraph fields',()=>{
  const p=buildStylePatch(null,{...EMPTY_STYLE_FORM,name:'Em',kind:'character',basedOn:'',italic:'on',spaceBefore:'5'});
  assert.deepEqual(p,{name:'Em',kind:'character',italic:true});
+});
+test('formFromSelection copies shared character formatting and keeps mixed or automatic values',()=>{
+ const f={...EMPTY_STYLE_FORM,name:'Em',font:'Old',size:'9'};
+ assert.equal(formFromSelection(f,null),f);
+ const o=formFromSelection(f,{bold:'on',italic:'mixed',underline:'off',font:'Inter',size:12.345,color:'c0392b'} as never);
+ assert.deepEqual([o.bold,o.italic,o.font,o.size,o.color],['on','','Inter','12.35','C0392B']);
+ const k=formFromSelection(f,{bold:'off',italic:'off',underline:'off',font:null,size:null,color:'auto'} as never);
+ assert.deepEqual([k.font,k.size,k.color,k.bold],['Old','9','','off']);
 });

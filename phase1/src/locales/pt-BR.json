@@ -2389,6 +2389,7 @@
   "documents.styles.align.center": "Centralizado",
   "documents.styles.align.right": "Direita",
   "documents.styles.align.justify": "Justificado",
+  "documents.styles.fromSelection": "Copiar da seleção",
   "documents.list.demote": "Descer nível do item da lista",
   "documents.find.label": "Localizar e substituir",
   "documents.find.query": "Localizar",
