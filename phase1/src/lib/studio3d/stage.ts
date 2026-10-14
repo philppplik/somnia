@@ -13,7 +13,7 @@ import {smoothWeights,rigidWeights,paintWeights,SkinError,type BoneSegment,type 
 import {checkPoseName,mirrorPose,blendPoses,PoseError,MAX_POSES} from './poses';import type {Pose,PoseBone} from './poses';
 import {solveTwoBone,clampEuler,checkLimits,hasLimits,IkError,MAX_IK_CHAINS,fabrikSolve,aimBasis,MIN_FABRIK_SEGMENTS,MAX_FABRIK_SEGMENTS} from './ik';import type {AxisLimits} from './ik';
 import {RetargetError,mapBoneNames,retargetClipName,MAX_RETARGET_SAMPLES} from './retarget';
-import {emptyStats,type ModelStats,type OutlineEntry,type Bounds} from './model';
+import {emptyStats,boundsValid,boundsCenter,boundsRadius,type ModelStats,type OutlineEntry,type Bounds} from './model';
 /**
  * Scene operations for the 3D studio (P1 staging). Pure three.js core, no renderer and no DOM, so the logic runs under tsx --test.
  * Every user-visible change is one undo entry. Objects are addressed by Object3D.id.
@@ -184,6 +184,30 @@ export class Stage{
   light.name=this.uniqueName({directional:'Directional light',point:'Point light',spot:'Spot light',area:'Area light'}[kind]);light.position.set(3,4,2);
   if(kind==='area')light.lookAt(0,0,0);
   this.attach(light,this.root,this.root.children.length,`Add ${light.name}`);return light;
+ }
+ /** Adds a classic three-point light rig (key, fill, rim) aimed at the scene bounds centre. One undo step. Returns key, fill and rim. */
+ addLightRig():THREE.DirectionalLight[]{
+  const b=this.measure().bounds;const ok=b&&boundsValid(b);
+  const c=ok?boundsCenter(b):[0,0.5,0] as [number,number,number];
+  const r=ok?Math.max(boundsRadius(b),0.25):1;
+  const defs:{name:string;i:number;off:[number,number,number];shadow:boolean}[]=[
+   {name:'Key light',i:3,off:[1.5,2,1.2],shadow:true},
+   {name:'Fill light',i:1.1,off:[-1.8,0.9,1.4],shadow:false},
+   {name:'Rim light',i:2.4,off:[-0.4,1.8,-2],shadow:false}];
+  const lights=defs.map(d=>{
+   const l=new THREE.DirectionalLight(0xffffff,d.i);l.name=this.uniqueName(d.name);
+   l.position.set(c[0]+d.off[0]*r,c[1]+d.off[1]*r,c[2]+d.off[2]*r);
+   l.castShadow=d.shadow;l.target.name=`${l.name} target`;l.target.position.set(c[0],c[1],c[2]);
+   return l;
+  });
+  const added:THREE.Object3D[]=[];
+  for(const l of lights){this.root.add(l);added.push(l);this.root.add(l.target);added.push(l.target);}
+  let owned=true;
+  this.push({label:'Add three-point light rig',
+   undo:()=>{for(const o of added)this.root.remove(o);owned=false;},
+   redo:()=>{for(const o of added)this.root.add(o);owned=true;},
+   release:()=>{if(!owned)for(const l of lights)disposeObject(l);}});
+  return lights;
  }
  addCamera(pose?:{position:Vec3;quaternion:[number,number,number,number]},fov=40):THREE.PerspectiveCamera{
   const f=finite(fov,'fov');if(f<1||f>120)throw new StageError('fov must be between 1 and 120 degrees.');

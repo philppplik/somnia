@@ -21,6 +21,7 @@ export interface Studio3DController{
  newScene(force?:boolean):void;
  addPrimitive(kind:PrimitiveKind):number;
  addLight(kind:LightKind):number;
+ addLightRig():number[];
  setTransform(id:number,patch:TransformPatch):void;
  setMaterial(id:number,patch:MaterialPatch):void;
  setPrimitive(id:number,patch:Record<string,number>):void;
@@ -146,6 +147,7 @@ export function studio3DCommandSpecs():CommandSpec<unknown,unknown>[]{
   add<{id:number|null}>('studio3d.select','Select a 3D object','Edit',p=>need().select(p.id),object({id:{anyOf:[{type:'null'},{type:'integer',minimum:0}]}})),
   add<{kind:PrimitiveKind}>('studio3d.insert.primitive','Insert a 3D primitive','Insert',p=>need().addPrimitive(p.kind),object({kind:{enum:['cube','sphere','plane','cylinder','cone','torus']}}),()=>!!controller),
   add<{kind:LightKind}>('studio3d.insert.light','Insert a 3D light','Insert',p=>need().addLight(p.kind),object({kind:{enum:['directional','point','spot','area']}}),()=>!!controller),
+  add('studio3d.light.rig','Insert a three-point light rig (key, fill and rim aimed at the scene)','Insert',()=>need().addLightRig(),undefined,()=>!!controller),
   add<{id:number;position?:object;rotation?:object;scale?:object}>('studio3d.object.transform','Move, rotate or scale a 3D object','Edit',p=>need().setTransform(p.id,p as TransformPatch),object({id:{type:'integer',minimum:0},position:VEC,rotation:VEC,scale:VEC},['id']),hasScene),
   add<{id:number;preset?:string;color?:string;metalness?:number;roughness?:number;emissive?:string;emissiveIntensity?:number;opacity?:number;alphaMode?:string;alphaCutoff?:number;doubleSided?:boolean}>('studio3d.object.material','Change the material of a 3D object','Edit',p=>need().setMaterial(p.id,p as never),object({id:{type:'integer',minimum:0},preset:{enum:MATERIAL_PRESET_IDS},emissive:{type:'string',pattern:'^#[0-9a-fA-F]{6}$'},emissiveIntensity:{type:'number',minimum:0,maximum:MAX_EMISSIVE_INTENSITY},opacity:{type:'number',minimum:0,maximum:1},alphaMode:{enum:[...ALPHA_MODES]},alphaCutoff:{type:'number',minimum:0,maximum:1},doubleSided:{type:'boolean'},color:{type:'string',pattern:'^#[0-9a-fA-F]{6}$'},metalness:{type:'number',minimum:0,maximum:1},roughness:{type:'number',minimum:0,maximum:1}},['id']),hasScene),
   add<{id:number}&Record<string,number>>('studio3d.object.primitive','Change the size or segments of a 3D primitive','Edit',({id,...rest})=>need().setPrimitive(id,rest),object({id:{type:'integer',minimum:0},...PRIMITIVE_PROPS},['id']),hasScene),

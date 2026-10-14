@@ -416,5 +416,7 @@
  "studio3d.motionpath.on": "Trajectoire",
  "studio3d.retarget.title": "Reciblage",
  "studio3d.retarget.source": "Rig source",
- "studio3d.retarget.apply": "Appliquer en nouveau clip"
+ "studio3d.retarget.apply": "Appliquer en nouveau clip",
+ "cmd.studio3d.light.rig": "Insérer un éclairage trois points",
+ "studio3d.light.rig": "Éclairage 3 points"
 }

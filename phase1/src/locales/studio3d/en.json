@@ -416,5 +416,7 @@
  "studio3d.motionpath.on": "Motion path",
  "studio3d.retarget.title": "Retarget",
  "studio3d.retarget.source": "Source rig",
- "studio3d.retarget.apply": "Apply as new clip"
+ "studio3d.retarget.apply": "Apply as new clip",
+ "cmd.studio3d.light.rig": "Insert a three-point light rig",
+ "studio3d.light.rig": "3-point rig"
 }

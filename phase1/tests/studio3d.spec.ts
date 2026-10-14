@@ -640,3 +640,16 @@ test('3D studio reviews animation with onion skin, motion path and retarget',asy
  await run(page,'studio3d.undo');
  await expect.poll(async()=>(await session(page)).clips.length).toBe(1);
 });
+
+test('3D studio inserts a three-point light rig as one undo step',async({page})=>{
+ const glb=await skinnedGlb3();
+ await open3d(page);
+ await page.getByTestId('studio3d-file-input').setInputFiles({name:'rig3.glb',mimeType:'model/gltf-binary',buffer:glb});
+ await expect(page.getByTestId('studio3d-viewport')).toBeVisible({timeout:20_000});
+ await page.getByRole('button',{name:'3-point rig'}).click();
+ await expect.poll(async()=>(await session(page)).outline.filter(o=>o.kind==='light').length).toBe(3);
+ const names=(await session(page)).outline.filter(o=>o.kind==='light').map(o=>o.name);
+ expect(names).toEqual(['Key light','Fill light','Rim light']);
+ await run(page,'studio3d.undo');
+ await expect.poll(async()=>(await session(page)).outline.filter(o=>o.kind==='light').length).toBe(0);
+});

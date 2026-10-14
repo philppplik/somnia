@@ -416,5 +416,7 @@
  "studio3d.motionpath.on": "Trajetória",
  "studio3d.retarget.title": "Redirecionamento",
  "studio3d.retarget.source": "Rig de origem",
- "studio3d.retarget.apply": "Aplicar como novo clipe"
+ "studio3d.retarget.apply": "Aplicar como novo clipe",
+ "cmd.studio3d.light.rig": "Inserir um esquema de luz de três pontos",
+ "studio3d.light.rig": "Esquema de 3 pontos"
 }

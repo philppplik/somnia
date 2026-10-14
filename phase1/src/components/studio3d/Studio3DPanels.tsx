@@ -32,6 +32,7 @@ export function ScenePanel(_:PanelHostProps){
   <div className="flex flex-wrap gap-1" role="group" aria-label={t('studio3d.insert.group')} data-testid="studio3d-insert">
    {PRIMS.map(k=><Button key={k} variant="outline" onClick={()=>void executeCommand('studio3d.insert.primitive',{kind:k})}>{t('studio3d.insert.'+k)}</Button>)}
    {LIGHTS.map(k=><Button key={k} variant="outline" onClick={()=>void executeCommand('studio3d.insert.light',{kind:k})}>{t('studio3d.insert.'+k)}</Button>)}
+   <Button variant="outline" onClick={()=>void executeCommand('studio3d.light.rig',{})}>{t('studio3d.light.rig')}</Button>
    <Button variant="outline" onClick={()=>void executeCommand('studio3d.insert.camera',{})}>{t('studio3d.insert.camera')}</Button>
    <Button variant="outline" onClick={()=>void executeCommand('studio3d.insert.camera',{fromView:true})}>{t('studio3d.insert.camera.view')}</Button>
   </div>

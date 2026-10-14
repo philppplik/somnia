@@ -416,5 +416,7 @@
  "studio3d.motionpath.on": "Bewegungspfad",
  "studio3d.retarget.title": "Retargeting",
  "studio3d.retarget.source": "Quell-Rig",
- "studio3d.retarget.apply": "Als neuen Clip anwenden"
+ "studio3d.retarget.apply": "Als neuen Clip anwenden",
+ "cmd.studio3d.light.rig": "Dreipunkt-Lichtsetup einfügen",
+ "studio3d.light.rig": "3-Punkt-Setup"
 }
