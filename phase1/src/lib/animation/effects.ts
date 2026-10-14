@@ -28,7 +28,7 @@ export function effectBounds(layer:Layer,tick=0){
  const live=(layer.effects??[]).filter(e=>!effectBypassed(e,tick));
  const blur=live.filter(e=>e.kind==='blur').reduce((n,e)=>n+(e.animation?Math.max(0,Math.min(64,evaluate(e.animation,tick) as number)):e.amount)*3,0)
   +live.filter(e=>e.kind==='shadow'||e.kind==='glow').reduce((n,e)=>n+(e.blur??(e.kind==='glow'?12:8))*(e.kind==='glow'?6:3)+(e.kind==='shadow'?e.distance??12:0),0);
- const strokePad=layer.stroke?.width??0;
+ const strokePad=layer.stroke?strokeWidthAt(layer.stroke,tick):0;
  const width=layer.kind==='text'?(layer.source.size??48)*(layer.source.text?.length??1):layer.source.width??1;
  const height=layer.kind==='text'?(layer.source.size??48)*1.5:layer.source.height??1;
  return {x:-blur-strokePad,y:-blur-strokePad,width:width+(blur+strokePad)*2,height:height+(blur+strokePad)*2};
@@ -47,7 +47,10 @@ export function effectColor(effect:LayerEffect,tick:number):string{
  const keys=effect.colorKeys;if(!keys?.length)return effect.color;if(tick<=keys[0].t)return keys[0].color;
  let a=keys[0];for(const b of keys.slice(1)){if(tick<b.t){const u=(tick-a.t)/(b.t-a.t),av=rgb(a.color),bv=rgb(b.color);return '#'+av.map((v,i)=>Math.round((v+(bv[i]-v)*u)*255).toString(16).padStart(2,'0')).join('');}a=b;}return a.color;
 }
+/** Stroke width at `tick`: the keyed width when it has keys, else the static one. */
+export const strokeWidthAt=(s:NonNullable<Layer['stroke']>,tick:number):number=>s.widthAnim?.keys.length?Math.max(0,Math.min(256,evaluate(s.widthAnim,tick) as number)):s.width;
+export const strokeOpacityAt=(s:NonNullable<Layer['stroke']>,tick:number):number=>s.opacityAnim?.keys.length?Math.max(0,Math.min(100,evaluate(s.opacityAnim,tick) as number)):s.opacity??100;
 export function strokeAttributes(layer:Layer,tick:number):{stroke:string;strokeWidth:number;pathLength:number;strokeDasharray:string;strokeDashoffset:number;fill:string;strokeLinejoin?:'round'|'bevel';strokeLinecap?:'round'|'square';strokeOpacity?:number;strokeMiterlimit?:number}|undefined{
  if(layer.kind!=='shape'||!layer.stroke)return undefined;const s=layer.stroke,trim=s.trim?Math.min(100,Math.max(0,evaluate(s.trim,tick) as number)):100,dash=s.dash?evaluate(s.dash,tick) as number:0;
- return {stroke:s.color,strokeWidth:s.width,pathLength:100,strokeDasharray:trim<100?`${trim} 100`:s.dash||s.dashLen!==undefined||s.dashGap!==undefined?`${s.dashLen??8} ${s.dashGap??4}`:'100 0',strokeDashoffset:dash,fill:layer.source.color??'none',...(s.join==='round'||s.join==='bevel'?{strokeLinejoin:s.join}:{}),...(s.cap==='round'||s.cap==='square'?{strokeLinecap:s.cap}:{}),...(s.miter!==undefined&&s.join!=='round'&&s.join!=='bevel'?{strokeMiterlimit:s.miter}:{}),...(s.opacity!==undefined&&s.opacity<100?{strokeOpacity:s.opacity/100}:{})};
+ return {stroke:s.color,strokeWidth:strokeWidthAt(s,tick),pathLength:100,strokeDasharray:trim<100?`${trim} 100`:s.dash||s.dashLen!==undefined||s.dashGap!==undefined?`${s.dashLen??8} ${s.dashGap??4}`:'100 0',strokeDashoffset:dash,fill:layer.source.color??'none',...(s.join==='round'||s.join==='bevel'?{strokeLinejoin:s.join}:{}),...(s.cap==='round'||s.cap==='square'?{strokeLinecap:s.cap}:{}),...(s.miter!==undefined&&s.join!=='round'&&s.join!=='bevel'?{strokeMiterlimit:s.miter}:{}),...(strokeOpacityAt(s,tick)<100?{strokeOpacity:strokeOpacityAt(s,tick)/100}:{})};
 }

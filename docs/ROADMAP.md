@@ -388,3 +388,10 @@ Depends on: v10 diff viewer, v11 updater for smooth extension and app updates.
 - Done: next to the "Audio volume (%)" field of a comp layer there is now an animate switch, "Key at playhead" and "Remove key". With keys, the keyed `gain` (0..200 %, bezier eased, in the composition time of the comp layer) replaces the static value and is multiplied with each nested clip's own volume at playback. Keys follow nesting: gains of inner comp layers are moved into the outer time through speed, start time and loops. New commands `animation.precomp.volume.animate` and `.keyRemove`; `animation.precomp.time` with `volume` keys the value when animated. Undoable, validated, 5 locales. Turning animation off keeps the value at the playhead as the static volume.
 - Open: no keyframe lane for the comp layer volume in the timeline (keys are listed in the inspector); the volume curve is sampled at 30 points per second as for audio layers; not heard in a real browser this round.
 
+
+### Animation P57 (2026-10-14, integration pending)
+
+- Picked: keyframes for stroke width and stroke opacity.
+- Done: "Animate width" and "Animate opacity" switches in the stroke section, each with "Key at playhead", "Remove key" and a key list. With keys the keyed value (bezier eased, width 0..256, opacity 0..100 %) replaces the static one; the fields show and edit the value at the playhead. Viewer, every export and the effect bounds read the same value per tick. New edit `stroke.prop` and commands `animation.stroke.animate` and `.keyRemove`. Turning animation off or removing the last key keeps the value at the playhead as the static one (rounded to 0.01). Strokes without keys give byte-identical output. Undoable, validated, 5 locales.
+- Open: no stroke colour keyframes, no timeline lane for these keys (inspector list only), the outline from "Expand stroke" uses the static width; dash lengths and miter limit stay constants.
+

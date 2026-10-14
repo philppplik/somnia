@@ -604,5 +604,9 @@
  "animation.stroke.dashGap": "Espacio del guion",
  "animation.stroke.miter": "Límite de inglete",
  "cmd.animation.precomp.volume.animate": "Alternar fotogramas clave de volumen de la capa de composición",
- "cmd.animation.precomp.volume.keyRemove": "Quitar fotograma clave de volumen de la capa de composición"
+ "cmd.animation.precomp.volume.keyRemove": "Quitar fotograma clave de volumen de la capa de composición",
+ "animation.stroke.animate.width": "Animar grosor",
+ "animation.stroke.animate.opacity": "Animar opacidad",
+ "cmd.animation.stroke.animate": "Alternar fotogramas clave de grosor u opacidad del trazo",
+ "cmd.animation.stroke.keyRemove": "Quitar fotograma clave de grosor u opacidad del trazo"
 }

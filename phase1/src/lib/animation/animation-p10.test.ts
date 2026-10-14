@@ -1419,3 +1419,26 @@ test('P55 stroke miter limit: only for miter joins, validated, legacy output unc
  assert.equal(strokeAttributes(get(),0)!.strokeMiterlimit,undefined);
  for(const bad of [0.5,21,NaN])assert.throws(()=>applyEdit(d,{type:'layer.stroke',layer:'stencil',stroke:{color:'#00ff00',width:6,miter:bad}}));
 });
+
+test('P57 keyframed stroke width and opacity: edits, rendering per tick, bounds, validation, legacy output',()=>{
+ let d=applyEdit(base(),{type:'layer.stroke',layer:'stencil',stroke:{color:'#00ff00',width:6}});
+ const st=()=>d.compositions[0].layers.find(l=>l.id==='stencil')!.stroke!,get=()=>d.compositions[0].layers.find(l=>l.id==='stencil')!;
+ const legacy=frameSvg(d.compositions[0],0);
+ d=applyEdit(d,{type:'stroke.prop',layer:'stencil',prop:'width',op:'set',value:10,t:0});assert.equal(st().width,10);assert.equal(st().widthAnim,undefined);
+ d=applyEdit(d,{type:'stroke.prop',layer:'stencil',prop:'width',op:'animate',on:true,t:0});
+ d=applyEdit(d,{type:'stroke.prop',layer:'stencil',prop:'width',op:'set',value:40,t:240000});
+ assert.deepEqual(st().widthAnim!.keys.map(k=>[k.t,k.v]),[[0,10],[240000,40]]);
+ assert.equal(strokeAttributes(get(),0)!.strokeWidth,10);assert.equal(strokeAttributes(get(),240000)!.strokeWidth,40);
+ const mid=strokeAttributes(get(),120000)!.strokeWidth;assert.ok(mid>10&&mid<40);
+ assert.ok(frameSvg(d.compositions[0],240000).includes('stroke-width="40"'));
+ d=applyEdit(d,{type:'stroke.prop',layer:'stencil',prop:'opacity',op:'animate',on:true,t:0});d=applyEdit(d,{type:'stroke.prop',layer:'stencil',prop:'opacity',op:'set',value:20,t:240000});
+ assert.equal(strokeAttributes(get(),240000)!.strokeOpacity,0.2);assert.equal(strokeAttributes(get(),0)!.strokeOpacity,undefined);
+ assert.deepEqual(validateDocument(d),[]);
+ for(const bad of [{prop:'width' as const,value:257},{prop:'opacity' as const,value:101},{prop:'width' as const,value:-1}])assert.throws(()=>applyEdit(d,{type:'stroke.prop',layer:'stencil',...bad,op:'set',t:0}));
+ assert.throws(()=>applyEdit(d,{type:'stroke.prop',layer:'stencil',prop:'width',op:'remove',t:100000}));assert.throws(()=>applyEdit(d,{type:'stroke.prop',layer:'photo',prop:'width',op:'set',value:3,t:0}));
+ d=applyEdit(d,{type:'stroke.prop',layer:'stencil',prop:'width',op:'remove',t:240000});d=applyEdit(d,{type:'stroke.prop',layer:'stencil',prop:'width',op:'remove',t:0});
+ assert.equal(st().widthAnim,undefined);assert.equal(st().width,10);assert.ok(st().opacityAnim,'other property stays animated');
+ d=applyEdit(d,{type:'stroke.prop',layer:'stencil',prop:'opacity',op:'animate',on:false,t:0});assert.equal(st().opacityAnim,undefined);
+ d=applyEdit(d,{type:'stroke.prop',layer:'stencil',prop:'width',op:'set',value:6,t:0});d=applyEdit(d,{type:'stroke.prop',layer:'stencil',prop:'opacity',op:'set',value:100,t:0});
+ assert.equal(frameSvg(d.compositions[0],0),legacy,'back to the original output');
+});

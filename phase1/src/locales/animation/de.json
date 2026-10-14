@@ -604,5 +604,9 @@
  "animation.stroke.dashGap": "Strichlücke",
  "animation.stroke.miter": "Gehrungsgrenze",
  "cmd.animation.precomp.volume.animate": "Lautstärke-Keyframes der Kompositionsebene umschalten",
- "cmd.animation.precomp.volume.keyRemove": "Lautstärke-Keyframe der Kompositionsebene entfernen"
+ "cmd.animation.precomp.volume.keyRemove": "Lautstärke-Keyframe der Kompositionsebene entfernen",
+ "animation.stroke.animate.width": "Breite animieren",
+ "animation.stroke.animate.opacity": "Deckkraft animieren",
+ "cmd.animation.stroke.animate": "Konturbreite- oder Deckkraft-Keyframes umschalten",
+ "cmd.animation.stroke.keyRemove": "Konturbreite- oder Deckkraft-Keyframe entfernen"
 }

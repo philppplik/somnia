@@ -1164,6 +1164,30 @@
       "hasEnabled": true
     },
     {
+      "id": "animation.stroke.animate",
+      "title": "Toggle stroke width or opacity keyframes",
+      "category": "Edit",
+      "source": "animation",
+      "keywords": [
+        "animation",
+        "keyframe",
+        "timeline"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "animation.stroke.keyRemove",
+      "title": "Remove stroke width or opacity keyframe",
+      "category": "Edit",
+      "source": "animation",
+      "keywords": [
+        "animation",
+        "keyframe",
+        "timeline"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "animation.text.animator",
       "title": "Edit text animator",
       "category": "Edit",

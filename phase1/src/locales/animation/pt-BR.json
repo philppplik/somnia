@@ -604,5 +604,9 @@
  "animation.stroke.dashGap": "Espaço do traço",
  "animation.stroke.miter": "Limite de esquadria",
  "cmd.animation.precomp.volume.animate": "Alternar quadros-chave de volume da camada de composição",
- "cmd.animation.precomp.volume.keyRemove": "Remover quadro-chave de volume da camada de composição"
+ "cmd.animation.precomp.volume.keyRemove": "Remover quadro-chave de volume da camada de composição",
+ "animation.stroke.animate.width": "Animar espessura",
+ "animation.stroke.animate.opacity": "Animar opacidade",
+ "cmd.animation.stroke.animate": "Alternar quadros-chave de espessura ou opacidade do traço",
+ "cmd.animation.stroke.keyRemove": "Remover quadro-chave de espessura ou opacidade do traço"
 }

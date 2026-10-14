@@ -604,5 +604,9 @@
  "animation.stroke.dashGap": "Dash gap",
  "animation.stroke.miter": "Miter limit",
  "cmd.animation.precomp.volume.animate": "Toggle comp layer volume keyframes",
- "cmd.animation.precomp.volume.keyRemove": "Remove comp layer volume keyframe"
+ "cmd.animation.precomp.volume.keyRemove": "Remove comp layer volume keyframe",
+ "animation.stroke.animate.width": "Animate width",
+ "animation.stroke.animate.opacity": "Animate opacity",
+ "cmd.animation.stroke.animate": "Toggle stroke width or opacity keyframes",
+ "cmd.animation.stroke.keyRemove": "Remove stroke width or opacity keyframe"
 }

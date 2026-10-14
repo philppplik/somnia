@@ -66,6 +66,7 @@ export type Edit=
  |{type:'audio.volume.set';layer:string;value:number;t:number}
  |{type:'audio.volume.animate';layer:string;on:boolean;t:number}
  |{type:'audio.volume.key.remove';layer:string;t:number}
+ |{type:'stroke.prop';layer:string;prop:'width'|'opacity';op:'set'|'animate'|'remove';value?:number;on?:boolean;t:number}
  |{type:'layer.gain.set';layer:string;value:number;t:number}
  |{type:'layer.gain.animate';layer:string;on:boolean;t:number}
  |{type:'layer.gain.key.remove';layer:string;t:number}
@@ -197,6 +198,23 @@ function reduce(doc:AnimationDocument,e:Edit):AnimationDocument{
    else if(e.type==='audio.volume.animate'){const sampled=evaluate(vol,t) as number;next=e.on?(vol.keys.length?vol:{...vol,keys:[makeKey(t,sampled)]}):{...vol,value:sampled,keys:[]};}
    else{if(!vol.keys.some(k=>k.t===t))fail('missing','No volume key at that time.');const keys=vol.keys.filter(k=>k.t!==t);next=keys.length?{...vol,keys}:{...vol,value:evaluate(vol,t) as number,keys:[]};}
    return setLayer(doc,{...l,audio:{...l.audio!,volume:next}});}
+  case 'stroke.prop':{
+   const l=layerOf(doc,e.layer);if(l.kind!=='shape'||!l.stroke)fail('invalid','The layer has no stroke.');const st=l.stroke as NonNullable<Layer['stroke']>;
+   const t=tickOf(compOf(doc),e.t),w=e.prop==='width',max=w?256:100,anim=(w?st.widthAnim:st.opacityAnim),staticV:number=w?st.width:st.opacity??100;
+   const put=(x:NonNullable<Layer['stroke']>)=>setLayer(doc,{...l,stroke:x});
+   const drop=(x:NonNullable<Layer['stroke']>)=>{const {widthAnim:a,opacityAnim:b,...rest}=x;return {...rest,...(w?(b?{opacityAnim:b}:{}):(a?{widthAnim:a}:{}))} as NonNullable<Layer['stroke']>;};
+   const round=(n:number)=>Math.round(n*100)/100;
+   if(e.op==='set'){
+    if(typeof e.value!=='number'||!Number.isFinite(e.value)||e.value<0||e.value>max)fail('invalid',`Stroke ${e.prop} must be 0 to ${max}.`);
+    if(anim?.keys.length)return put({...st,[w?'widthAnim':'opacityAnim']:{...anim,keys:upsertKey(anim.keys,makeKey(t,e.value as number))}});
+    return put(w?{...st,width:e.value as number}:{...st,opacity:e.value as number});}
+   if(e.op==='animate'){
+    if(e.on)return anim?.keys.length?doc:put({...st,[w?'widthAnim':'opacityAnim']:{...prop('scalar',staticV),keys:[makeKey(t,staticV)]}});
+    if(!anim?.keys.length)return doc;const v=round(evaluate(anim,t) as number);return put(w?{...drop(st),width:v}:{...drop(st),opacity:v});}
+   if(!anim||!anim.keys.some(k=>k.t===t))fail('missing','No stroke key at that time.');
+   const keys=anim!.keys.filter(k=>k.t!==t);
+   if(keys.length)return put({...st,[w?'widthAnim':'opacityAnim']:{...anim!,keys}});
+   const v=round(evaluate(anim!,t) as number);return put(w?{...drop(st),width:v}:{...drop(st),opacity:v});}
   case 'layer.gain.set':case 'layer.gain.animate':case 'layer.gain.key.remove':{
    const l=layerOf(doc,e.layer);if(l.kind!=='comp')fail('invalid','Select a comp layer.');const t=tickOf(compOf(doc),e.t),g=l.gain,staticV=l.source.volume??100;
    const strip=(x:Layer):Layer=>{const {gain:_g,...rest}=x;return rest as Layer;};

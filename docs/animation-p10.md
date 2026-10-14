@@ -310,3 +310,8 @@ Added:
 
 - `Layer.gain` (comp layers only, scalar 0..200 with at least one key) replaces `source.volume` when present. Edits: `layer.gain.set` (keys when animated, else the static value), `layer.gain.animate`, `layer.gain.key.remove` (the last key falls back to the static value).
 - `withPrecompAudio` adds `audio.gains`: the comp layer gain (parent time) plus every deeper gain with its keys remapped through the comp layer's speed, start time and loop pass. `gainCurve` multiplies `volume x gains / 100^n` per sample and clamps once at the end; `audioSignature` includes the gains.
+
+## P57 - Stroke width and opacity keys
+
+- `stroke.widthAnim` / `stroke.opacityAnim` (scalar, at least one key) replace `stroke.width` / `stroke.opacity` when present. `strokeWidthAt` and `strokeOpacityAt` in `effects.ts` give the value at a tick and feed `strokeAttributes` and `effectBounds`.
+- `stroke.prop {prop:'width'|'opacity', op:'set'|'animate'|'remove'}`: set keys when animated and writes the static value otherwise; the last removed key (or animate off) writes the sampled value back and drops the property.

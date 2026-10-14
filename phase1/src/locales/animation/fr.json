@@ -604,5 +604,9 @@
  "animation.stroke.dashGap": "Espace du tiret",
  "animation.stroke.miter": "Limite de onglet",
  "cmd.animation.precomp.volume.animate": "Activer les images clés du volume du calque de composition",
- "cmd.animation.precomp.volume.keyRemove": "Supprimer l'image clé du volume du calque de composition"
+ "cmd.animation.precomp.volume.keyRemove": "Supprimer l'image clé du volume du calque de composition",
+ "animation.stroke.animate.width": "Animer l'épaisseur",
+ "animation.stroke.animate.opacity": "Animer l'opacité",
+ "cmd.animation.stroke.animate": "Activer les images clés d'épaisseur ou d'opacité du contour",
+ "cmd.animation.stroke.keyRemove": "Supprimer l'image clé d'épaisseur ou d'opacité du contour"
 }
