@@ -1,12 +1,104 @@
-import type {DocumentsEngine} from './engine';
 import {caretAfterEdit,diffEdit,inverseOf,UndoStack,type TextEdit,type UndoEntry} from './edit';
 import {stepBoundary,utf16ToUtf8Offset,utf8ToUtf16Offset} from './text';
-import {getDocumentsState,patchDocuments} from './store';
+import {getDocumentsState,patchDocuments,resetDocuments,INITIAL_VIEW,type DocumentsState} from './store';
+import {DocumentsEngine} from './engine';
+import {inspectDocx} from './inspect';
 /** The one open document: engine, undo history and the refresh after each edit. UI components only call these functions. */
-let engine:DocumentsEngine|null=null;const undo=new UndoStack();let chain:Promise<unknown>=Promise.resolve();
+let engine:DocumentsEngine|null=null;let undo=new UndoStack();let chain:Promise<unknown>=Promise.resolve();let pending=0;
 export const getEngine=()=>engine;
 const flags=()=>({canUndo:undo.canUndo,canRedo:undo.canRedo});
-export function attachEngine(e:DocumentsEngine|null){engine=e;undo.clear();chain=Promise.resolve();patchDocuments({...flags(),editError:'',edited:false});}
+/* ---- Per-file sessions: a file keeps its engine, undo history and dirty flag while the studio or tab is switched away. ---- */
+const STASH=['blocks','pages','pageSizes','words','rev','canUndo','canRedo','edited','caret','risks','engineMs','editError','notice'] as const;
+interface Entry{key:string;url:string;engine:DocumentsEngine|null;undo:UndoStack;stash:Partial<DocumentsState>;working:Uint8Array|null;dirty:boolean;used:number;undoReleased:boolean}
+const entries=new Map<string,Entry>();let cur:Entry|null=null;let gen=0;let tick=0;
+export const MAX_LIVE_SESSIONS=4;
+export interface SessionDeps{createEngine:()=>DocumentsEngine;loadBytes:(url:string)=>Promise<Uint8Array>}
+const defaultDeps:SessionDeps={createEngine:()=>new DocumentsEngine(),loadBytes:async url=>new Uint8Array(await(await fetch(url)).arrayBuffer())};
+let deps=defaultDeps;
+export const setSessionDeps=(d:Partial<SessionDeps>|null)=>{deps=d?{...defaultDeps,...d}:defaultDeps;};
+/** Test hook: forget every session without touching engines. */
+export function resetSessionsForTest(){for(const e of entries.values())e.engine?.dispose();entries.clear();cur=null;engine=null;undo=new UndoStack();chain=Promise.resolve();pending=0;gen=0;goalX=null;}
+const live=(e:Entry)=>!!e.engine&&!e.engine.isDisposed;
+const msg=(err:unknown)=>err instanceof Error?err.message:String(err);
+/** Queue a task behind every pending edit, so a switch never overtakes an edit that was already accepted. */
+function queue<T>(fn:()=>Promise<T>|T):Promise<T>{const p=chain.then(fn);chain=p.catch(()=>undefined);return p;}
+/** Resolves once every edit accepted so far has reached the engine. Export calls this first. Never rejects. */
+export const settleDocument=():Promise<void>=>chain.then(()=>undefined,()=>undefined);
+export const hasPendingEdits=()=>pending>0;
+export const isDocumentDirty=(key:string)=>{if(cur&&cur.key===key&&pending>0)return true;if(cur&&cur.key===key)return getDocumentsState().edited;return !!entries.get(key)?.dirty;};
+export const hasUnsavedDocuments=()=>pending>0||(cur?getDocumentsState().edited:false)||[...entries.values()].some(e=>e.dirty);
+export const dirtyDocumentNames=()=>[...entries.keys()].filter(isDocumentDirty);
+function stashCurrent(){
+ if(!cur)return;const s=getDocumentsState();const stash:Record<string,unknown>={};for(const k of STASH)stash[k]=s[k];
+ cur.stash=stash as Partial<DocumentsState>;cur.dirty=s.edited;
+}
+/** Drops a file's session (the file was closed or replaced). Synchronous, so close cleanups can call it. */
+export function discardDocument(key:string){
+ const e=entries.get(key);if(!e)return;entries.delete(key);e.engine?.dispose();e.engine=null;
+ if(cur===e){cur=null;engine=null;undo=new UndoStack();}
+}
+async function evictExtra(){
+ const liveEntries=()=>[...entries.values()].filter(e=>live(e));
+ while(liveEntries().length>MAX_LIVE_SESSIONS){
+  const victim=liveEntries().filter(e=>e!==cur).sort((a,b)=>a.used-b.used)[0];if(!victim)return;
+  if(victim.dirty){
+   try{const bytes=await victim.engine!.save();if(!inspectDocx(bytes).ok){victim.used=++tick;continue;}victim.working=bytes;}
+   catch{victim.used=++tick;if(liveEntries().length>MAX_LIVE_SESSIONS+4)return;continue;}
+   victim.undoReleased=true;
+  }
+  victim.engine!.dispose();victim.engine=null;victim.undo=new UndoStack();
+ }
+}
+/**
+ * Makes `target` the open document (or none). Everything queued before it, including edits, finishes first.
+ * A file that was open before keeps its engine, undo history and edits; a reopened one starts from its checked working bytes.
+ * Resolves to the engine, or null when closed, superseded by a newer switch, or failed (the store then shows the error).
+ */
+export function switchDocument(target:{key:string;url:string;retry?:boolean}|null):Promise<DocumentsEngine|null>{
+ const my=++gen;
+ return queue(async()=>{
+  if(my!==gen)return null;
+  stashCurrent();cur=null;engine=null;undo=new UndoStack();goalX=null;
+  if(!target){resetDocuments();return null;}
+  let entry=entries.get(target.key);
+  if(entry&&entry.url!==target.url){discardDocument(target.key);entry=undefined;}
+  patchDocuments({...INITIAL_VIEW,status:'loading',name:target.key,error:''});
+  try{
+   if(entry&&live(entry)&&!target.retry){
+    cur=entry;engine=entry.engine;undo=entry.undo;entry.used=++tick;
+    patchDocuments({...entry.stash,status:'ready',name:target.key,error:'',rev:getDocumentsState().rev+1,...flags()});return entry.engine;
+   }
+   let lost=false;
+   if(entry&&!live(entry)&&entry.dirty&&!entry.working)lost=true;
+   const raw=entry?.working??await deps.loadBytes(target.url);
+   const check=inspectDocx(raw);if(!check.ok)throw new Error(check.error);
+   const e=deps.createEngine();
+   try{
+    await e.init();const d=await e.open(raw.slice().buffer);
+    if(my!==gen){e.dispose();return null;}
+    const fresh:Entry={key:target.key,url:target.url,engine:e,undo:new UndoStack(),stash:{},working:null,dirty:false,used:++tick,undoReleased:false};
+    const restored=!!entry?.working;if(entry&&!live(entry))entries.delete(target.key);else if(entry)discardDocument(target.key);
+    entries.set(target.key,fresh);cur=fresh;engine=e;undo=fresh.undo;
+    const notice=lost?'lost':restored&&entry!.undoReleased?'undoReleased':'';
+    patchDocuments({...INITIAL_VIEW,status:'loading',name:target.key,error:'',risks:check.risks,engineMs:Math.round(d.openMs+d.layoutMs),edited:restored,notice,...flags()});
+    await refresh(d);
+    if(my!==gen)return null;
+    patchDocuments({status:'ready'});await evictExtra();return e;
+   }catch(err){e.dispose();throw err;}
+  }catch(err){
+   if(my===gen)patchDocuments({status:'error',error:msg(err)},err);
+   return null;
+  }
+ });
+}
+/** Hands over an already open engine as the current document, synchronously (tests and callers that open the engine themselves). Null closes the current document. */
+export function attachEngine(e:DocumentsEngine|null,key='document'){
+ if(!e){void switchDocument(null);return;}
+ ++gen;stashCurrent();if(entries.get(key)?.engine!==e)discardDocument(key);
+ const en:Entry={key,url:key,engine:e,undo:new UndoStack(),stash:{},working:null,dirty:false,used:++tick,undoReleased:false};
+ entries.set(key,en);cur=en;engine=e;undo=en.undo;chain=Promise.resolve();goalX=null;
+ patchDocuments({...INITIAL_VIEW,name:key,...flags(),editError:'',edited:false,notice:''});
+}
 async function refresh(d:{pages:number;pageSizes:readonly {width:number;height:number}[];text:string}){
  const blocks=await engine!.blocks();
  patchDocuments({blocks,pages:d.pages,pageSizes:d.pageSizes,words:d.text.split(/\s+/).filter(Boolean).length,rev:getDocumentsState().rev+1,...flags()});
@@ -20,9 +112,13 @@ async function apply(edit:TextEdit,record:'new'|'undo'|'redo',o:{merge?:boolean;
  const d=await e.replace(edit);
  if(record==='new')undo.push(inv,o.merge);else if(record==='undo')undo.pushRedo(inv);else undo.pushUndo(inv);
  const at=record==='new'?o.caret:caretAfterEdit(edit);
- patchDocuments({edited:true,editError:'',caretLocked:false,caret:at==null?null:{block:edit.block,anchor:at,head:at}});await refresh(d);
+ patchDocuments({edited:true,notice:'',editError:'',caretLocked:false,caret:at==null?null:{block:edit.block,anchor:at,head:at}});await refresh(d);
 }
-const run=(fn:()=>Promise<void>)=>{chain=chain.then(fn).catch(err=>patchDocuments({editError:err instanceof Error?err.message:String(err)},err));return chain;};
+const run=(fn:()=>Promise<void>)=>{
+ const en=cur;pending++;
+ const p=chain.then(fn).catch(err=>{if(cur===en)patchDocuments({editError:msg(err)},err);}).finally(()=>{pending--;});
+ chain=p;return p;
+};
 /** Applies the difference between the paragraph's current text and `next` as one replacement. */
 export const editParagraph=(index:number,next:string)=>run(async()=>{
  const block=getDocumentsState().blocks.find(b=>b.index===index);if(!block||!block.editable||block.text===undefined)throw new Error('This paragraph cannot be edited as text.');
@@ -31,7 +127,7 @@ export const editParagraph=(index:number,next:string)=>run(async()=>{
 });
 async function restoreSnap(x:UndoEntry,to:'before'|'after'){
  const e=engine!;const sn=x.snap!;const d=await e.restore(to==='before'?sn.before:sn.after);const c=to==='before'?sn.caretBefore:sn.caretAfter;
- patchDocuments({edited:true,editError:'',caretLocked:false,caret:{block:c.block,anchor:c.off,head:c.off}});await refresh(d);
+ patchDocuments({edited:true,notice:'',editError:'',caretLocked:false,caret:{block:c.block,anchor:c.off,head:c.off}});await refresh(d);
 }
 export const undoEdit=()=>run(async()=>{const x=undo.popUndo();if(!x)return;if(x.snap){await restoreSnap(x,'before');undo.pushRedoEntry(x);}else await apply(x.inverse,'undo');});
 export const redoEdit=()=>run(async()=>{const x=undo.popRedo();if(!x)return;if(x.snap){await restoreSnap(x,'after');undo.pushUndoEntry(x);}else await apply(x.inverse,'redo');});
@@ -42,7 +138,7 @@ async function structural(op:(e:DocumentsEngine)=>Promise<import('./protocol').O
  const e=engine;if(!e)return;const b=await e.snapshot();let d;
  try{d=await op(e);}catch(err){await e.restore(b).catch(()=>undefined);throw err;}
  const a=await e.snapshot();undo.pushSnap({before:b,after:a,caretBefore:before,caretAfter:after});
- patchDocuments({edited:true,editError:'',caretLocked:false,caret:{block:after.block,anchor:after.off,head:after.off}});await refresh(d);
+ patchDocuments({edited:true,notice:'',editError:'',caretLocked:false,caret:{block:after.block,anchor:after.off,head:after.off}});await refresh(d);
 }
 /* ---- On-page caret (package 4): all offsets are UTF-8 bytes of the paragraph's current text ---- */
 const enc=new TextEncoder();const u8=(s:string)=>enc.encode(s).length;

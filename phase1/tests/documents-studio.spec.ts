@@ -152,3 +152,53 @@ test('Enter splits a paragraph, Backspace at its start joins it again, undo/redo
  await page.getByTestId('documents-redo').click();await expect(boxes).toHaveCount(n+1);
  await expect(page.getByTestId('documents-edit-error')).toHaveCount(0);
 });
+/* ---- D0 session safety. Written against the real engine; runs in CI only (the WASM build is not available in the authoring sandbox). ---- */
+const clickSecondParagraph=async(page:any)=>{
+ const pg=page.getByTestId('documents-page').first();const img=pg.locator('img');
+ await expect.poll(()=>img.evaluate((i:HTMLImageElement)=>i.complete&&i.naturalWidth)).toBeGreaterThan(300);
+ const box=(await pg.boundingBox())!;await page.mouse.click(box.x+box.width*0.125,box.y+box.height*0.127);
+ await expect(page.getByTestId('documents-caret')).toBeVisible();await expect(page.getByTestId('documents-input')).toBeFocused();
+};
+const secondText=(page:any)=>page.getByTestId('documents-editor').getByRole('textbox').nth(1);
+test('D0: an edit survives switching to Code and back; dirty state and undo are kept',async({page})=>{
+ await page.goto('/');await expect(page.locator('[data-storage]')).toBeVisible();
+ await openBuffers(page,[{name:'sample.docx',mimeType:DOCX,buffer:sample()}]);
+ await expect(page.getByTestId('documents-pages')).toHaveText('1 pages');
+ const old2=await secondText(page).inputValue();await clickSecondParagraph(page);await page.keyboard.type('Keep ');
+ await expect.poll(()=>secondText(page).inputValue()).toBe('Keep '+old2);
+ await page.keyboard.press('Control+1');await expect(page.getByRole('radio',{name:'Somnia Code'})).toHaveAttribute('aria-checked','true');
+ await page.keyboard.press('Control+2');await expect(page.getByRole('radio',{name:'Somnia Documents'})).toHaveAttribute('aria-checked','true');
+ await expect(page.getByTestId('documents-pages')).toHaveText('1 pages');
+ await expect.poll(()=>secondText(page).inputValue()).toBe('Keep '+old2);
+ await expect(page.getByTestId('documents-undo')).toBeEnabled();
+ await page.getByTestId('documents-undo').click();await expect.poll(()=>secondText(page).inputValue()).toBe(old2);
+ await page.getByTestId('documents-redo').click();await expect.poll(()=>secondText(page).inputValue()).toBe('Keep '+old2);
+});
+test('D0: switching between two DOCX tabs keeps each file\'s edits',async({page})=>{
+ await page.goto('/');await expect(page.locator('[data-storage]')).toBeVisible();
+ await openBuffers(page,[{name:'one.docx',mimeType:DOCX,buffer:sample()}]);await expect(page.getByTestId('documents-name')).toHaveText('one.docx');
+ const old2=await secondText(page).inputValue();await clickSecondParagraph(page);await page.keyboard.type('One ');
+ await expect.poll(()=>secondText(page).inputValue()).toBe('One '+old2);
+ await openBuffers(page,[{name:'two.docx',mimeType:DOCX,buffer:sample()}]);await expect(page.getByTestId('documents-name')).toHaveText('two.docx');
+ await expect.poll(()=>secondText(page).inputValue()).toBe(old2);
+ await page.evaluate(async()=>{(await import('/src/lib/media.ts')).setActiveMedia('one.docx');});
+ await expect(page.getByTestId('documents-name')).toHaveText('one.docx');await expect.poll(()=>secondText(page).inputValue()).toBe('One '+old2);
+});
+test('D0: Save a copy right after typing contains the pending edit',async({page})=>{
+ await page.goto('/');await expect(page.locator('[data-storage]')).toBeVisible();
+ await openBuffers(page,[{name:'sample.docx',mimeType:DOCX,buffer:sample()}]);await expect(page.getByTestId('documents-pages')).toHaveText('1 pages');
+ await clickSecondParagraph(page);const download=page.waitForEvent('download');
+ await page.keyboard.type('Pending');await page.getByTestId('documents-save-copy').click();
+ const d=await download;const xml=Buffer.from(unzipSync(new Uint8Array(readFileSync((await d.path())!)))['word/document.xml']).toString('utf8');
+ expect(xml).toContain('Pending');
+});
+test('D0: closing a file with unsaved edits asks first; declining keeps the edits',async({page})=>{
+ await page.goto('/');await expect(page.locator('[data-storage]')).toBeVisible();
+ await openBuffers(page,[{name:'sample.docx',mimeType:DOCX,buffer:sample()}]);await expect(page.getByTestId('documents-pages')).toHaveText('1 pages');
+ const old2=await secondText(page).inputValue();await clickSecondParagraph(page);await page.keyboard.type('Guard ');
+ await expect.poll(()=>secondText(page).inputValue()).toBe('Guard '+old2);
+ const prompts:string[]=[];page.on('dialog',d=>{prompts.push(d.message());void d.dismiss();});
+ const closed=await page.evaluate(async()=>{const m=await import('/src/lib/media.ts');m.closeMedia('sample.docx');return !m.findMedia('sample.docx');});
+ expect(closed).toBe(false);expect(prompts.length).toBe(1);expect(prompts[0]).toContain('sample.docx');
+ await expect.poll(()=>secondText(page).inputValue()).toBe('Guard '+old2);
+});

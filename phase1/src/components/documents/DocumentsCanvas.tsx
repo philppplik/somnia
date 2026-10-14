@@ -3,9 +3,10 @@ import {createBlankProject} from '../../lib/studios/blank';
 import {useCallback,useEffect,useMemo,useRef,useState} from 'react';
 import {FileText,Minus,Plus,Undo2,Redo2} from '../../lib/icons';
 import {addMediaFile,findMedia,formatBytes,MEDIA_ACCEPT,useMedia} from '../../lib/media';
-import {DocumentsEngine,inspectDocx,type OpenedDocument} from '../../lib/documents';
+import type {DocumentsEngine} from '../../lib/documents';
 import {patchDocuments,resetDocuments,stepZoom,useDocuments} from '../../lib/documents/store';
-import {attachEngine,clearCaret,deleteAtCaret,dragTo,editParagraph,loadBlocks,moveCaret,pointerAt,redoEdit,selectAllInParagraph,selectedText,splitAtCaret,syncGeometry,typeText,undoEdit} from '../../lib/documents/session';
+import '../../lib/documents/guards';
+import {clearCaret,deleteAtCaret,dragTo,editParagraph,getEngine,moveCaret,settleDocument,switchDocument,pointerAt,redoEdit,selectAllInParagraph,selectedText,splitAtCaret,syncGeometry,typeText,undoEdit} from '../../lib/documents/session';
 import {saveCopy} from '../../lib/documents/saveCopy';
 import {confirmDocumentsSaveCopy,patchDocumentsExportUi,registerDocumentsExport,useDocumentsExportUi} from '../../lib/documents/exportBridge';
 import {executeCommand} from '../../lib/commands';
@@ -72,7 +73,6 @@ export function DocumentsCanvas(){
  const engineRef=useRef<DocumentsEngine|null>(null);const [engine,setEngine]=useState<DocumentsEngine|null>(null);
  const [near,setNear]=useState<Set<number>>(new Set([0]));const [attempt,setAttempt]=useState(0);
  const exportUi=useDocumentsExportUi();
- const bytesRef=useRef<Uint8Array|null>(null);
  useEffect(()=>{void syncGeometry();},[doc.caret,doc.rev,doc.zoom]);
  useEffect(()=>registerDocumentsCommands(),[]);
  useEffect(()=>registerDocumentPanelCommands(),[]);
@@ -85,22 +85,16 @@ export function DocumentsCanvas(){
  },[item?.name,doc.edited,doc.caret?.block,doc.status,doc.risks.length,doc.saving,doc.canUndo,doc.canRedo]);
  /** The Layers tree belongs to the web page, not to a document: land on Files when this studio opens. */
  useEffect(()=>{if(!['files','search','versions'].includes(getState().leftTab))patchState({leftTab:'files'});},[]);
+ /* The engine and its edits belong to the file, not to this component: switching studio or tab parks the session, coming back restores it. */
  useEffect(()=>{
-  if(!item){attachEngine(null);resetDocuments();return;}
-  let live=true;const e=new DocumentsEngine();engineRef.current=e;setEngine(null);setNear(new Set([0]));
-  patchDocuments({status:'loading',name:item.name,error:'',pages:0,risks:[],words:0,engineMs:null});
-  (async()=>{
-   const raw=new Uint8Array(await (await fetch(item.url)).arrayBuffer());bytesRef.current=raw;
-   const check=inspectDocx(raw);if(!check.ok)throw new Error(check.error);
-   await e.init();const d=await e.open(raw.slice().buffer);
-   if(!live)return;attachEngine(e);patchDocuments({risks:check.risks,engineMs:Math.round(d.openMs+d.layoutMs)});await loadBlocks(d);
-   if(!live)return;setEngine(e);patchDocuments({status:'ready'});
-  })().catch(err=>{if(live)patchDocuments({status:'error',error:err instanceof Error?err.message:String(err)});});
-  return()=>{live=false;e.dispose();engineRef.current=null;};
- },[item?.url,attempt]);
+  if(!item){void switchDocument(null);setEngine(null);return;}
+  let live=true;setEngine(null);setNear(new Set([0]));
+  void switchDocument({key:item.name,url:item.url,retry:attempt>0}).then(e=>{if(live&&e){engineRef.current=e;setEngine(e);}});
+  return()=>{live=false;};
+ },[item?.url,item?.name,attempt]);
  const onVisible=useCallback((i:number,v:boolean)=>setNear(prev=>{if(prev.has(i)===v)return prev;const n=new Set(prev);v?n.add(i):n.delete(i);return n;}),[]);
  const pick=async()=>{const input=document.createElement('input');input.type='file';input.accept=MEDIA_ACCEPT.split(',').filter(x=>/docx|wordprocessingml/.test(x)).join(',');input.onchange=async()=>{const f=input.files?.[0];if(f){const r=await addMediaFile(f,f.name);if('error' in r)patchDocuments({status:'error',error:r.error});}};input.click();};
- const doSave=async()=>{patchDocuments({saving:true});try{await saveCopy(engineRef.current!,doc.name);}catch(err){patchDocuments({status:'error',error:err instanceof Error?err.message:String(err)});}finally{patchDocuments({saving:false});}};
+ const doSave=async()=>{patchDocuments({saving:true});try{await settleDocument();const e=getEngine();if(!e)throw new Error(t('documents.session.noEngine'));await saveCopy(e,doc.name);}catch(err){patchDocuments({status:'error',error:err instanceof Error?err.message:String(err)});}finally{patchDocuments({saving:false});}};
  // One save implementation for every entry point (toolbar, hero popup, Project menu, palette).
  const doSaveRef=useRef(doSave);doSaveRef.current=doSave;
  useEffect(()=>registerDocumentsExport({save:()=>doSaveRef.current()}),[]);
@@ -117,6 +111,7 @@ export function DocumentsCanvas(){
    <button className={tool} disabled={doc.status!=='ready'||doc.saving} onClick={()=>void executeCommand('documents.saveCopy')} data-testid="documents-save-copy">{t('documents.saveCopy')}</button></div>
   {doc.status==='loading'&&<div role="status" className="grid flex-1 place-items-center text-[12px] text-ink-3">{t('documents.loading')}</div>}
   {doc.status==='error'&&<div role="alert" className="grid flex-1 place-items-center"><div className="grid max-w-md justify-items-center gap-2 text-center"><p className="text-[13px] text-ink" data-testid="documents-error">{doc.error}</p><button className={tool+' border border-subtle'} onClick={()=>setAttempt(a=>a+1)}>{t('documents.retry')}</button></div></div>}
+  {doc.notice&&<p role="status" className="border-b border-subtle px-3 py-1 text-xs text-ink-3" data-testid="documents-session-notice">{t('documents.session.'+doc.notice)}</p>}
   {doc.caretLocked&&<p role="status" className="border-b border-subtle px-3 py-1 text-[12px] text-ink-3" data-testid="documents-caret-locked">{t('documents.caret.locked')}</p>}
   {doc.status==='ready'&&engine&&<div className="min-h-0 flex-1 overflow-auto bg-hover/40 p-6" data-testid="documents-scroll"><div className="flex flex-col gap-4">
    {doc.pageSizes.map((p,i)=><Page key={i} engine={engine} index={i} width={p.width} height={p.height} zoom={doc.zoom} rev={doc.rev} visible={near.has(i)} onVisible={onVisible}/>)}</div></div>}
