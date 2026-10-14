@@ -103,3 +103,5 @@ This guide supplies the cross-cutting system. The [verification guide](verificat
 - [Theme importer](theme-importer-guide.md)
 - [P3 Settings plan and CI-only capture harness](settings-migration-plan.md)
 - [Theme author guide and advisory contrast warnings](theme-author-guide.md)
+
+- [Keyboard and focus checklist](a11y-checklist.md)

@@ -1,3 +1,4 @@
+import {FocusProof} from './focus-proof';
 import {ShellStateProof} from './shell-state-proof';
 import {StudioAdoptionProof} from './studio-adoption-proof';
 import {THEME_CHOICES,resolveTheme} from '../../src/lib/theme';
@@ -59,4 +60,4 @@ function Gallery(){
  <RawTooltip.Provider delay={0}><RawTooltip.Root><RawTooltip.Trigger>Raw tooltip</RawTooltip.Trigger><RawTooltip.Portal><RawTooltip.Positioner side="bottom" sideOffset={8}><RawTooltip.Popup data-testid="raw-tooltip" className="studio-pill-tooltip">Raw tooltip</RawTooltip.Popup></RawTooltip.Positioner></RawTooltip.Portal></RawTooltip.Root></RawTooltip.Provider>
  </section><ExchangeProof/><ThemeImportPanel/></div><pre data-testid="events" aria-label="Fixture events">{events.join('\n')}</pre></main>;
 }
-createRoot(document.getElementById('root')!).render(<Gallery/>);
+createRoot(document.getElementById('root')!).render(new URLSearchParams(location.search).has('focus-audit')?<FocusProof/>:<Gallery/>);
