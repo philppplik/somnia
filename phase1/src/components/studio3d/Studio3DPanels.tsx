@@ -10,6 +10,7 @@ import type {PanelHostProps,InspectorSectionProps} from '../../lib/shell/types';
 import {Input} from '../ui/input';
 import {Button} from '../ui/button';
 import {InspectorNumberField} from '../studios/InspectorNumberField';
+import {PARAM_SPECS,MATERIAL_PRESETS} from '../../lib/studio3d/primitives';
 const PRIMS=['cube','sphere','plane','cylinder','cone','torus'] as const;
 const LIGHTS=['directional','point','spot','area'] as const;
 const Row=({k,v}:{k:string;v:string|number})=><div className="flex justify-between gap-3 text-xs"><dt className="text-ink-3">{k}</dt><dd className="m-0 truncate text-ink-2" title={String(v)}>{v}</dd></div>;
@@ -75,7 +76,11 @@ export function ObjectSection(_:InspectorSectionProps){
    <Button variant="outline" onClick={()=>void executeCommand('studio3d.render.still',{camera:o.id})}>{t('studio3d.camera.render')}</Button>
    <Button variant="outline" onClick={()=>void executeCommand('studio3d.render.still',{camera:o.id,transparent:true})}>{t('studio3d.camera.renderTransparent')}</Button></div>}
   {o.light&&<LightFields id={o.id} light={o.light}/>}
+  {o.primitive&&<fieldset className="m-0 grid gap-2 border-0 p-0" data-testid="studio3d-primitive"><legend className="text-xs text-ink-3">{t('studio3d.shape.title',{kind:t('studio3d.insert.'+o.primitive.kind)})}</legend>
+   <div className="grid grid-cols-2 gap-2">{PARAM_SPECS[o.primitive.kind].map(sp=><NumField key={sp.id} label={t('studio3d.shape.'+sp.id)} value={o.primitive!.params[sp.id]} min={sp.min} max={sp.max} step={sp.step}
+    onCommit={v=>void executeCommand('studio3d.object.primitive',{id:o.id,[sp.id]:sp.integer?Math.round(v):v})}/>)}</div></fieldset>}
   {o.material&&<fieldset className="m-0 grid gap-2 border-0 p-0" data-testid="studio3d-material"><legend className="text-xs text-ink-3">{t('studio3d.material.title')}</legend>
+   <div className="flex flex-wrap gap-1" role="group" aria-label={t('studio3d.material.presets')} data-testid="studio3d-material-presets">{MATERIAL_PRESETS.map(p=><Button key={p.id} variant="outline" onClick={()=>void executeCommand('studio3d.object.material',{id:o.id,preset:p.id})}>{t('studio3d.material.preset.'+p.id)}</Button>)}</div>
    <label className="flex items-center justify-between gap-2 text-xs text-ink-2">{t('studio3d.material.color')}<input type="color" key={o.material.color} defaultValue={o.material.color} onBlur={e=>{if(e.currentTarget.value!==o.material!.color)void executeCommand('studio3d.object.material',{id:o.id,color:e.currentTarget.value});}}/></label>
    {(['metalness','roughness'] as const).map(k=><label key={k} className="grid gap-1 text-xs text-ink-2">{t('studio3d.material.'+k)} <span className="text-ink-3">{o.material![k].toFixed(2)}</span>
     <input type="range" min={0} max={1} step={0.01} defaultValue={o.material![k]} key={k+o.material![k]} aria-label={t('studio3d.material.'+k)} onChange={e=>void executeCommand('studio3d.object.material',{id:o.id,[k]:Number(e.currentTarget.value)})}/></label>)}
@@ -153,6 +158,7 @@ export function ToolsSection(_:InspectorSectionProps){
      {UNIT_IDS.map(u=><option key={u} value={u}>{t('studio3d.unit.'+u)}</option>)}</select></label>
    <div className="flex flex-wrap gap-1">
     <Button variant="outline" disabled={s.status!=='ready'} onClick={()=>void executeCommand('studio3d.export.glb')}>GLB</Button>
+    <Button variant="outline" disabled={s.status!=='ready'} onClick={()=>void executeCommand('studio3d.export.gltf')}>glTF</Button>
     <Button variant="outline" disabled={s.status!=='ready'} onClick={()=>void executeCommand('studio3d.export.mesh',{format:'stl'})}>STL</Button>
     <Button variant="outline" disabled={s.status!=='ready'} onClick={()=>void executeCommand('studio3d.export.mesh',{format:'obj'})}>OBJ</Button></div>
    <p className="m-0 text-xs text-ink-3">{t('studio3d.export.unitNote')}</p>

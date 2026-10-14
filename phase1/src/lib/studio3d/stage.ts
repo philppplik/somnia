@@ -1,3 +1,4 @@
+import {PRIMITIVE_KINDS,PrimitiveError,defaultParams,patchParams,readPrimitive,resolveMaterial,type PrimitiveKind,type PrimitiveData,type PrimitiveParams,type MaterialRequest} from './primitives';
 import * as THREE from 'three';
 import type {NodeExtra} from './document';
 import {emptyStats,type ModelStats,type OutlineEntry,type Bounds} from './model';
@@ -6,15 +7,16 @@ import {emptyStats,type ModelStats,type OutlineEntry,type Bounds} from './model'
  * Every user-visible change is one undo entry. Objects are addressed by Object3D.id.
  * Imported only by the lazy viewport chunk.
  */
-export type PrimitiveKind='cube'|'sphere'|'plane'|'cylinder'|'cone'|'torus';
+export type {PrimitiveKind}from './primitives';
 export type LightKind='directional'|'point'|'spot'|'area';
-export const PRIMITIVES:readonly PrimitiveKind[]=['cube','sphere','plane','cylinder','cone','torus'];
+export const PRIMITIVES:readonly PrimitiveKind[]=PRIMITIVE_KINDS;
 export const LIGHTS:readonly LightKind[]=['directional','point','spot','area'];
 export interface Vec3{x:number;y:number;z:number}
 export interface TransformPatch{position?:Partial<Vec3>;/** degrees */rotation?:Partial<Vec3>;scale?:Partial<Vec3>}
-export interface MaterialPatch{color?:string;metalness?:number;roughness?:number}
+export interface MaterialPatch extends MaterialRequest{}
 export interface ObjectInfo{
  camera:{fov:number}|null;
+ /** Kind and parameters when the mesh is an editable primitive. */primitive:PrimitiveData|null;
  id:number;name:string;kind:OutlineEntry['kind'];position:Vec3;rotation:Vec3;scale:Vec3;
  material:{color:string;metalness:number;roughness:number}|null;light:LightInfo|null;
 }
@@ -70,14 +72,14 @@ const clamp01=(n:number)=>Math.min(1,Math.max(0,n));
 const finite=(n:unknown,what:string):number=>{if(typeof n!=='number'||!Number.isFinite(n))throw new StageError(`${what} must be a finite number.`);return n;};
 const DEG=Math.PI/180;
 const HEX=/^#[0-9a-fA-F]{6}$/;
-function geometryFor(kind:PrimitiveKind):THREE.BufferGeometry{
+function geometryFor(kind:PrimitiveKind,p:PrimitiveParams):THREE.BufferGeometry{
  switch(kind){
-  case 'cube':return new THREE.BoxGeometry(1,1,1);
-  case 'sphere':return new THREE.SphereGeometry(0.5,48,24);
-  case 'plane':return new THREE.PlaneGeometry(2,2).rotateX(-Math.PI/2);
-  case 'cylinder':return new THREE.CylinderGeometry(0.5,0.5,1,48);
-  case 'cone':return new THREE.ConeGeometry(0.5,1,48);
-  case 'torus':return new THREE.TorusGeometry(0.5,0.18,24,64);
+  case 'cube':return new THREE.BoxGeometry(p.width,p.height,p.depth,p.segments,p.segments,p.segments);
+  case 'sphere':return new THREE.SphereGeometry(p.radius,p.widthSegments,p.heightSegments);
+  case 'plane':return new THREE.PlaneGeometry(p.width,p.depth,p.segments,p.segments).rotateX(-Math.PI/2);
+  case 'cylinder':return new THREE.CylinderGeometry(p.radius,p.radius,p.height,p.radialSegments);
+  case 'cone':return new THREE.ConeGeometry(p.radius,p.height,p.radialSegments);
+  case 'torus':return new THREE.TorusGeometry(p.radius,p.tube,p.radialSegments,p.tubularSegments);
  }
 }
 function lightInfo(l:THREE.Light):LightInfo{
@@ -139,8 +141,9 @@ export class Stage{
  private attach0(obj:THREE.Object3D,parent:THREE.Object3D,at:number){parent.add(obj);const i=parent.children.indexOf(obj);if(i!==at&&at<parent.children.length){parent.children.splice(i,1);parent.children.splice(at,0,obj);}}
  addPrimitive(kind:PrimitiveKind):THREE.Mesh{
   if(!PRIMITIVES.includes(kind))throw new StageError(`Unknown primitive: ${String(kind)}.`);
-  const mesh=new THREE.Mesh(geometryFor(kind),new THREE.MeshStandardMaterial({color:0xb8bcc8,metalness:0,roughness:0.6}));
-  mesh.name=this.uniqueName(label(kind));
+  const params=defaultParams(kind);
+  const mesh=new THREE.Mesh(geometryFor(kind,params),new THREE.MeshStandardMaterial({color:0xb8bcc8,metalness:0,roughness:0.6}));
+  mesh.name=this.uniqueName(label(kind));mesh.userData.somniaPrimitive={kind,params};
   if(kind!=='plane')mesh.position.y=kind==='cube'||kind==='cylinder'||kind==='cone'?0.5:kind==='sphere'?0.5:0.68;
   this.attach(mesh,this.root,this.root.children.length,`Add ${mesh.name}`);return mesh;
  }
@@ -301,8 +304,20 @@ export class Stage{
   this.push({label:`Duplicate ${items.length} objects`,undo:()=>{for(const i of items)i.parent.remove(i.o);owned=false;},redo:()=>{for(const i of items)this.attach0(i.o,i.parent,i.at);owned=true;},release:()=>{if(!owned)for(const i of items)disposeObject(i.o);}});
   return items.map(i=>i.o);
  }
- setMaterial(id:number,patch:MaterialPatch){
-  const o=this.need(id);const mesh=o as THREE.Mesh;
+ /** Changes the parameters of a primitive (radius, size, segments). The mesh keeps its place and material; one undo step. */
+ primitiveOf(o:THREE.Object3D):PrimitiveData|null{return (o as THREE.Mesh).isMesh?readPrimitive(o.userData?.somniaPrimitive):null;}
+ setPrimitive(id:number,patch:Record<string,unknown>){
+  const o=this.need(id);const mesh=o as THREE.Mesh;const cur=this.primitiveOf(o);
+  if(!cur)throw new StageError(`${o.name} is not a parametric primitive.`);
+  let params:PrimitiveParams;try{params=patchParams(cur.kind,cur.params,patch);}catch(e){throw e instanceof PrimitiveError?new StageError(e.message):e;}
+  if(Object.keys(params).every(k=>params[k]===cur.params[k]))return;
+  const before=mesh.geometry,beforeData=o.userData.somniaPrimitive;const after=geometryFor(cur.kind,params);const afterData={kind:cur.kind,params};
+  let owned=true;const apply=(g:THREE.BufferGeometry,d:unknown)=>{mesh.geometry=g;o.userData.somniaPrimitive=d;};
+  apply(after,afterData);
+  this.push({label:`Shape of ${o.name}`,undo:()=>{apply(before,beforeData);owned=false;},redo:()=>{apply(after,afterData);owned=true;},release:()=>{(owned?before:after).dispose();}});
+ }
+ setMaterial(id:number,request:MaterialPatch){
+  const o=this.need(id);const mesh=o as THREE.Mesh;let patch:{color?:string;metalness?:number;roughness?:number};try{patch=resolveMaterial(request);}catch(e){throw e instanceof PrimitiveError?new StageError(e.message):e;}
   if(!mesh.isMesh||Array.isArray(mesh.material)||!(mesh.material as THREE.MeshStandardMaterial).isMeshStandardMaterial)throw new StageError(`${o.name} has no editable PBR material.`);
   if(patch.color!==undefined&&!HEX.test(patch.color))throw new StageError('color must look like #rrggbb.');
   const mat=mesh.material as THREE.MeshStandardMaterial;
@@ -335,7 +350,7 @@ export class Stage{
   return{id:o.id,name:o.name,kind:m.isMesh?'mesh':l.isLight?'light':(o as THREE.Camera).isCamera?'camera':'group',
    position:{x:o.position.x,y:o.position.y,z:o.position.z},rotation:{x:o.rotation.x/DEG,y:o.rotation.y/DEG,z:o.rotation.z/DEG},scale:{x:o.scale.x,y:o.scale.y,z:o.scale.z},
    camera:(o as THREE.PerspectiveCamera).isPerspectiveCamera?{fov:(o as THREE.PerspectiveCamera).fov}:null,
-   material:mat?{color:'#'+mat.color.getHexString(),metalness:mat.metalness,roughness:mat.roughness}:null,light:l.isLight?lightInfo(l):null};
+   primitive:this.primitiveOf(o),material:mat?{color:'#'+mat.color.getHexString(),metalness:mat.metalness,roughness:mat.roughness}:null,light:l.isLight?lightInfo(l):null};
  }
  measure(animations=0):{stats:ModelStats;outline:OutlineEntry[];bounds:Bounds|null}{
   const stats=emptyStats();stats.animations=animations;const outline:OutlineEntry[]=[];const mats=new Set<THREE.Material>(),texs=new Set<THREE.Texture>();

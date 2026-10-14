@@ -29,6 +29,8 @@ import {autosaveDue} from '../../lib/studio3d/recent';
 import {patchStudio3D,resetStudio3D,getStudio3DState,useStudio3D} from '../../lib/studio3d/session';
 
 const DEFAULT_DIR=new THREE.Vector3(1,0.75,1).normalize();
+/** Anything a model names that was not selected with it resolves to this empty pixel, so nothing is ever fetched from the network. */
+const BLOCKED='data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==';
 const safeDecode=(u:string)=>{try{return decodeURIComponent(u);}catch{return u;}};
 /** MTL materials are Phong. The studio edits PBR, so they become standard materials with the same maps. */
 function toStandard(m:THREE.Material):THREE.Material{
@@ -135,7 +137,7 @@ export default function Viewport3D(){
    const bytes=new Uint8Array(await file.arrayBuffer());const header=readModelHeader(file.name,bytes);
    const urls=new Map<string,string>();for(const f of extras)urls.set(base(f.name).toLowerCase(),URL.createObjectURL(f));
    const manager=new THREE.LoadingManager();
-   manager.setURLModifier(u=>{if(u.startsWith('data:')||u.startsWith('blob:'))return u;const hit=urls.get(base(decodeURIComponent(u)).toLowerCase());return hit??u;});
+   manager.setURLModifier(u=>{if(u.startsWith('data:')||u.startsWith('blob:'))return u;const hit=urls.get(base(safeDecode(u)).toLowerCase());return hit??BLOCKED;});
    try{
     if(isMeshFormat(header.format)){
      const scene=new THREE.Group();scene.name=file.name.replace(/\.[^.]+$/,'');
@@ -164,9 +166,8 @@ export default function Viewport3D(){
        const blobs=new Map<string,string>();
        for(const w of use){const f=have.get(w.toLowerCase())!;if(f.size>MAX_TEXTURE_BYTES)throw new ModelError(`${f.name} is larger than ${MAX_TEXTURE_BYTES/1048576} MB.`);const u=URL.createObjectURL(f);tmpUrls.push(u);blobs.set(w.toLowerCase(),u);}
        // Only the selected files are readable. Any other reference gets an empty pixel, so nothing is fetched from the network.
-       const BLANK='data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==';
        const tm=new THREE.LoadingManager();
-       tm.setURLModifier(u=>u.startsWith('data:')||u.startsWith('blob:')?u:blobs.get(base(safeDecode(u)).toLowerCase())??BLANK);
+       tm.setURLModifier(u=>u.startsWith('data:')||u.startsWith('blob:')?u:blobs.get(base(safeDecode(u)).toLowerCase())??BLOCKED);
        const mats=new MTLLoader(tm).parse(mtlText,'');mats.preload();objLoader.setMaterials(mats);
        if(missing.length)notice=`Textures not found: ${missing.slice(0,4).join(', ')}${missing.length>4?', ...':''}. Select them together with the OBJ.`;
       }else if(refs.length)notice=`Material file not found: ${refs[0]}. Select it together with the OBJ to get its materials.`;
@@ -180,7 +181,7 @@ export default function Viewport3D(){
      if(header.format==='stl'){const sz=new THREE.Box3().setFromObject(scene).getSize(new THREE.Vector3());const hint=stlUnitHint([sz.x,sz.y,sz.z]);if(hint)unitHint={id:scene.id,factor:hint.factor};}
      return{gltf:{scene,animations:[]},header,size:bytes.byteLength,notice,unitHint};
     }
-    if(header.format==='gltf'){
+    if(header.format==='gltf'||header.format==='glb'){
      const missing=externalResources(header.json).filter(r=>!urls.has(base(decodeURIComponent(r)).toLowerCase()));
      if(missing.length)throw new ModelError(`${file.name} refers to files that were not selected: ${missing.slice(0,4).join(', ')}${missing.length>4?', ...':''}. Select the .gltf together with its .bin and texture files.`);
     }
@@ -409,7 +410,13 @@ export default function Viewport3D(){
    download(new Blob([result as ArrayBuffer],{type:'model/gltf-binary'}),`${stem(getStudio3DState().name||'scene')}.glb`);
    stage.markSaved();
   };
-  const off=registerStudio3DController({
+  /** glTF 2.0 as one self-contained .gltf file (buffers and images embedded as data URIs). */
+  const exportGltf=async()=>{
+   if(!holder.children.length)throw Object.assign(new Error('There is nothing to export. Open a model first.'),{expected:true});
+   const result=await new GLTFExporter().parseAsync(holder.children.length===1?holder.children[0]:holder,{binary:false});
+   download(new Blob([JSON.stringify(result)],{type:'model/gltf+json'}),`${stem(getStudio3DState().name||'scene')}.gltf`);
+  };
+  const off=registerStudio3DController({exportGltf,setPrimitive:(id,p)=>stage.setPrimitive(id,p),
    save:saveDocument,deleteSelection,duplicateSelection,exportMesh,renderTurntable,cancelRender:()=>{cancelFlag=true;},setUnit,openFiles,newScene,resetView:frameAll,frameSelection,select,renderStill,exportGlb,
    addPrimitive:k=>{const o=stage.addPrimitive(k);select(o.id);return o.id;},addLight:k=>{const o=stage.addLight(k);select(o.id);return o.id;},
    setTransform:(id,p)=>stage.setTransform(id,p),setMaterial:(id,p)=>stage.setMaterial(id,p),rename:(id,n)=>stage.rename(id,n),

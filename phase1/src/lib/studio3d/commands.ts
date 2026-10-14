@@ -4,6 +4,7 @@ import type {CommandSpec} from '../commandSpec';
 import {clearRecentScenes} from './recentSession';
 import {getStudio3DState,patchStudio3D} from './session';
 import type {EnvSettings,GizmoMode,SnapSettings,ExportUnit,ExportFormat} from './model';
+import {PARAM_SPECS,MATERIAL_PRESET_IDS} from './primitives';
 import type {PrimitiveKind,LightKind,TransformPatch,MaterialPatch,LightPatch,AlignAxis,AlignTo,PivotAt} from './stage';
 export interface TurntableOptions{frames?:number;width?:number;height?:number;transparent?:boolean}
 export interface RenderOptions{/** id of a camera object; the viewport camera when omitted */camera?:number;width?:number;height?:number;transparent?:boolean}
@@ -15,6 +16,8 @@ export interface Studio3DController{
  addLight(kind:LightKind):number;
  setTransform(id:number,patch:TransformPatch):void;
  setMaterial(id:number,patch:MaterialPatch):void;
+ setPrimitive(id:number,patch:Record<string,number>):void;
+ exportGltf():Promise<void>;
  rename(id:number,name:string):void;
  remove(id:number):void;
  duplicate(id:number):number;
@@ -59,6 +62,8 @@ export function registerStudio3DEnvOpener(open:()=>void){envOpener=open;return()
 /** The canvas owns the file dialog (user gesture). */
 export function registerStudio3DOpener(open:()=>void){opener=open;return()=>{if(opener===open)opener=null;};}
 const VEC={type:'object',properties:{x:{type:'number'},y:{type:'number'},z:{type:'number'}},additionalProperties:false,minProperties:1};
+/** Every primitive setting name with its widest range. The stage checks the range of the actual primitive. */
+const PRIMITIVE_PROPS:Record<string,unknown>=Object.fromEntries(Object.values(PARAM_SPECS).flat().map(p=>[p.id,{type:p.integer?'integer':'number',minimum:p.min,maximum:p.max}]));
 const hasScene=()=>!!controller&&getStudio3DState().status==='ready';
 const object=(properties:Record<string,unknown>,required=Object.keys(properties))=>({type:'object',properties,required,additionalProperties:false});
 export function studio3DCommandSpecs():CommandSpec<unknown,unknown>[]{
@@ -75,7 +80,8 @@ export function studio3DCommandSpecs():CommandSpec<unknown,unknown>[]{
   add<{kind:PrimitiveKind}>('studio3d.insert.primitive','Insert a 3D primitive','Insert',p=>need().addPrimitive(p.kind),object({kind:{enum:['cube','sphere','plane','cylinder','cone','torus']}}),()=>!!controller),
   add<{kind:LightKind}>('studio3d.insert.light','Insert a 3D light','Insert',p=>need().addLight(p.kind),object({kind:{enum:['directional','point','spot','area']}}),()=>!!controller),
   add<{id:number;position?:object;rotation?:object;scale?:object}>('studio3d.object.transform','Move, rotate or scale a 3D object','Edit',p=>need().setTransform(p.id,p as TransformPatch),object({id:{type:'integer',minimum:0},position:VEC,rotation:VEC,scale:VEC},['id']),hasScene),
-  add<{id:number;color?:string;metalness?:number;roughness?:number}>('studio3d.object.material','Change the material of a 3D object','Edit',p=>need().setMaterial(p.id,p),object({id:{type:'integer',minimum:0},color:{type:'string',pattern:'^#[0-9a-fA-F]{6}$'},metalness:{type:'number',minimum:0,maximum:1},roughness:{type:'number',minimum:0,maximum:1}},['id']),hasScene),
+  add<{id:number;preset?:string;color?:string;metalness?:number;roughness?:number}>('studio3d.object.material','Change the material of a 3D object','Edit',p=>need().setMaterial(p.id,p),object({id:{type:'integer',minimum:0},preset:{enum:MATERIAL_PRESET_IDS},color:{type:'string',pattern:'^#[0-9a-fA-F]{6}$'},metalness:{type:'number',minimum:0,maximum:1},roughness:{type:'number',minimum:0,maximum:1}},['id']),hasScene),
+  add<{id:number}&Record<string,number>>('studio3d.object.primitive','Change the size or segments of a 3D primitive','Edit',({id,...rest})=>need().setPrimitive(id,rest),object({id:{type:'integer',minimum:0},...PRIMITIVE_PROPS},['id']),hasScene),
   add<{id:number;name:string}>('studio3d.object.rename','Rename a 3D object','Edit',p=>need().rename(p.id,p.name),object({id:{type:'integer',minimum:0},name:{type:'string',minLength:1,maxLength:120}}),hasScene),
   add<{id:number}>('studio3d.object.delete','Delete a 3D object','Edit',p=>need().remove(p.id),object({id:{type:'integer',minimum:0}}),hasScene),
   add<{id:number}>('studio3d.object.duplicate','Duplicate a 3D object','Edit',p=>need().duplicate(p.id),object({id:{type:'integer',minimum:0}}),hasScene),
@@ -95,6 +101,7 @@ export function studio3DCommandSpecs():CommandSpec<unknown,unknown>[]{
   add<Partial<SnapSettings>>('studio3d.snap.set','Change 3D transform snapping','Tools',p=>need().setSnap(p&&Object.keys(p).length?p:{on:!getStudio3DState().snap.on}),object({on:{type:'boolean'},move:{type:'number',minimum:0.001,maximum:100},rotate:{type:'number',minimum:1,maximum:180},scale:{type:'number',minimum:0.001,maximum:10}},[]),()=>!!controller),
   add<RenderOptions>('studio3d.render.still','Render a PNG still of the 3D view or a 3D camera','Project',p=>need().renderStill(p??{}),object({camera:{type:'integer',minimum:0},width:{type:'integer',minimum:1,maximum:16384},height:{type:'integer',minimum:1,maximum:16384},transparent:{type:'boolean'}},[])),
   add('studio3d.export.glb','Export the scene as GLB','Project',()=>need().exportGlb()),
+  add('studio3d.export.gltf','Export the scene as glTF (JSON with embedded data)','Project',()=>need().exportGltf()),
   add<{sidecar?:boolean;embedEnv?:boolean}>('studio3d.save','Save the 3D scene','Project',p=>need().save(!!p?.sidecar,!!p?.embedEnv),object({sidecar:{type:'boolean'},embedEnv:{type:'boolean'}},[]),hasScene),
   add<{ids?:number[]}>('studio3d.selection.delete','Delete the selected 3D objects','Edit',p=>need().deleteSelection(p?.ids),object({ids:{type:'array',items:{type:'integer',minimum:0},minItems:1,maxItems:500}},[]),hasScene),
   add<{ids?:number[]}>('studio3d.selection.duplicate','Duplicate the selected 3D objects','Edit',p=>need().duplicateSelection(p?.ids),object({ids:{type:'array',items:{type:'integer',minimum:0},minItems:1,maxItems:500}},[]),hasScene),

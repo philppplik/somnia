@@ -243,3 +243,34 @@ test('node extras round-trip shadows and area lights and survive stale indices',
 test('loadMany puts nodes at the root without a wrapper and starts clean',()=>{
  const stage=new Stage();stage.addPrimitive('cube');stage.loadMany([new THREE.Group(),new THREE.Group()]);assert.equal(stage.root.children.length,2);assert.equal(stage.dirty,false);assert.equal(stage.canUndo,false);
 });
+test('a primitive can be edited by parameters, with one undo step each and no change to its material or place',()=>{
+ const stage=new Stage();const m=stage.addPrimitive('sphere');const id=m.id;stage.setMaterial(id,{color:'#112233'});m.position.x=3;
+ const before=stage.info(id)!;assert.equal(before.primitive?.kind,'sphere');assert.equal(before.primitive?.params.radius,0.5);
+ const count0=(m.geometry.attributes.position as {count:number}).count;
+ stage.setPrimitive(id,{radius:2,widthSegments:12,heightSegments:6});
+ const after=stage.info(id)!;assert.equal(after.primitive?.params.radius,2);assert.equal(after.primitive?.params.widthSegments,12);
+ assert.ok((m.geometry.attributes.position as {count:number}).count<count0);
+ m.geometry.computeBoundingBox();assert.ok(Math.abs(m.geometry.boundingBox!.max.x-2)<1e-6);
+ assert.equal(m.position.x,3);assert.equal(after.material?.color,'#112233');
+ stage.undo();assert.equal(stage.info(id)!.primitive?.params.radius,0.5);assert.equal((m.geometry.attributes.position as {count:number}).count,count0);
+ stage.redo();assert.equal(stage.info(id)!.primitive?.params.radius,2);
+});
+test('a bad primitive edit throws a readable error and changes nothing',()=>{
+ const stage=new Stage();const m=stage.addPrimitive('cube');const steps=stage.canUndo;
+ assert.throws(()=>stage.setPrimitive(m.id,{width:-1}),StageError);assert.throws(()=>stage.setPrimitive(m.id,{radius:1}),StageError);
+ assert.throws(()=>stage.setPrimitive(m.id,{segments:1e6}),StageError);
+ assert.equal(stage.info(m.id)!.primitive?.params.width,1);assert.equal(stage.canUndo,steps);
+ const light=stage.addLight('point');assert.throws(()=>stage.setPrimitive(light.id,{radius:1}),StageError);
+});
+test('a duplicate keeps its own parameters, and damaged stored data means no primitive',()=>{
+ const stage=new Stage();const a=stage.addPrimitive('cylinder');const b=stage.duplicate(a.id);
+ stage.setPrimitive(b.id,{height:4});assert.equal(stage.info(a.id)!.primitive?.params.height,1);assert.equal(stage.info(b.id)!.primitive?.params.height,4);
+ a.userData.somniaPrimitive={kind:'cylinder',params:{radius:-5}};assert.equal(stage.info(a.id)!.primitive,null);
+});
+test('material presets apply as one undo step and explicit values win',()=>{
+ const stage=new Stage();const m=stage.addPrimitive('cube');
+ stage.setMaterial(m.id,{preset:'gold'});let i=stage.info(m.id)!.material!;assert.equal(i.metalness,1);assert.equal(i.color,'#ffc857');
+ stage.setMaterial(m.id,{preset:'steel',roughness:0.9});i=stage.info(m.id)!.material!;assert.equal(i.roughness,0.9);assert.equal(i.metalness,1);
+ stage.undo();assert.equal(stage.info(m.id)!.material!.color,'#ffc857');
+ assert.throws(()=>stage.setMaterial(m.id,{preset:'nope'}),StageError);
+});

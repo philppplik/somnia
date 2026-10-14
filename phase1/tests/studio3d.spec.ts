@@ -110,3 +110,28 @@ test('3D studio offers an autosaved scene again after a reload and shows it in t
  await page.getByTestId('studio3d-recent-autosave').click();
  await expect.poll(async()=>(await session(page)).outline.some(o=>o.kind==='mesh')).toBe(true);
 });
+
+test('3D studio refuses a glTF that points at a remote file and never requests it',async({page})=>{
+ const requested:string[]=[];page.on('request',r=>{if(/example\.test/.test(r.url()))requested.push(r.url());});
+ await open3d(page);
+ const gltf={asset:{version:'2.0'},scene:0,scenes:[{nodes:[0]}],nodes:[{mesh:0}],meshes:[{primitives:[{attributes:{POSITION:0}}]}],buffers:[{uri:'https://example.test/a.bin',byteLength:36}],bufferViews:[{buffer:0,byteLength:36}],accessors:[{bufferView:0,componentType:5126,count:3,type:'VEC3'}]};
+ await page.getByTestId('studio3d-file-input').setInputFiles({name:'remote.gltf',mimeType:'model/gltf+json',buffer:Buffer.from(JSON.stringify(gltf))});
+ await expect(page.getByRole('alert')).toContainText('remote.gltf');
+ expect(requested).toEqual([]);
+});
+
+test('3D studio edits a primitive by parameters, applies a material preset and exports glTF',async({page})=>{
+ await blank(page);
+ const id=await insert(page,'sphere',0);
+ await expect(page.getByTestId('studio3d-primitive')).toBeVisible();
+ await page.getByTestId('studio3d-primitive').getByLabel('Radius').fill('2');await page.getByTestId('studio3d-primitive').getByLabel('Radius').blur();
+ await expect.poll(async()=>(await session(page)).info?.primitive?.params.radius).toBe(2);
+ await page.getByTestId('studio3d-material-presets').getByRole('button',{name:'Gold'}).click();
+ await expect.poll(async()=>(await session(page)).info?.material?.metalness).toBe(1);
+ const [download]=await Promise.all([page.waitForEvent('download'),page.getByTestId('studio3d-export').getByRole('button',{name:'glTF'}).click()]);
+ expect(download.suggestedFilename()).toMatch(/\.gltf$/);
+ const json=JSON.parse(readFileSync(await download.path()!,'utf8'));
+ expect(json.asset.version).toBe('2.0');
+ expect(JSON.stringify(json.nodes)).toContain('somniaPrimitive');
+ expect(id).toBeGreaterThan(0);
+});

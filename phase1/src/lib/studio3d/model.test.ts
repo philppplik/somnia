@@ -145,3 +145,7 @@ test('som3d files are recognised by their format marker',()=>{
  assert.equal(readModelHeader('a.som3d',enc('{"format":"somnia-3d","version":1}')).format,'som3d');
  assert.throws(()=>readModelHeader('a.som3d',enc('{"format":"other"}')),ModelError);assert.throws(()=>readModelHeader('a.som3d',enc('x')),ModelError);
 });
+test('a glTF that names a remote file is listed as an external resource, so opening refuses it instead of fetching',()=>{
+ const json={asset:{version:'2.0'},buffers:[{uri:'https://example.test/a.bin',byteLength:1}],images:[{uri:'//cdn.example.test/t.png'},{uri:'data:image/png;base64,AAAA'},{uri:'tex/local.png'}]};
+ assert.deepEqual(externalResources(json).sort(),['//cdn.example.test/t.png','https://example.test/a.bin','tex/local.png']);
+});

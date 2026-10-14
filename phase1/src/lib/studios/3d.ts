@@ -12,7 +12,7 @@ export const studio3DShell:StudioShellDef={
  rightRail:[rail('inspector','Info','3D inspector',10)],
  inspector:{titleKey:'studio3d.shell.inspector',emptyKey:'studio3d.start.title',sections:[
   {id:'model',title:'Model',titleKey:'studio3d.shell.model',component:'studio3d.inspector.model',order:10},
-  {id:'object',title:'Selected object',titleKey:'studio3d.shell.object',component:'studio3d.inspector.object',order:20,commands:['studio3d.object.transform','studio3d.object.material','studio3d.object.rename','studio3d.object.delete','studio3d.object.duplicate','studio3d.object.nudge','studio3d.camera.set','studio3d.view.fromCamera','studio3d.light.set','studio3d.object.pivot']},
+  {id:'object',title:'Selected object',titleKey:'studio3d.shell.object',component:'studio3d.inspector.object',order:20,commands:['studio3d.object.transform','studio3d.object.material','studio3d.object.primitive','studio3d.object.rename','studio3d.object.delete','studio3d.object.duplicate','studio3d.object.nudge','studio3d.camera.set','studio3d.view.fromCamera','studio3d.light.set','studio3d.object.pivot']},
   {id:'tools',title:'Tools',titleKey:'studio3d.shell.tools',component:'studio3d.inspector.tools',order:22,commands:['studio3d.save','studio3d.recent.open','studio3d.recent.clear','studio3d.selection.delete','studio3d.selection.duplicate','studio3d.snap.set','studio3d.export.mesh','studio3d.unit.set','studio3d.render.turntable','studio3d.render.cancel','studio3d.object.align','studio3d.object.distribute','studio3d.object.pivot']},
   {id:'env',title:'Environment',titleKey:'studio3d.shell.env',component:'studio3d.inspector.env',order:25,commands:['studio3d.env.set','studio3d.env.open']},
   {id:'view',title:'View',titleKey:'studio3d.shell.view',component:'studio3d.inspector.view',order:30,commands:['studio3d.view.grid','studio3d.view.wireframe','studio3d.view.reset','studio3d.view.frame']},
@@ -23,6 +23,7 @@ export const studio3DShell:StudioShellDef={
   {menu:'Project',command:'studio3d.save',group:'studio3d.save',order:10},
   {menu:'Project',command:'studio3d.recent.clear',group:'studio3d.save',order:12},
   {menu:'Project',command:'studio3d.export.glb',group:'studio3d.export',order:30},
+  {menu:'Project',command:'studio3d.export.gltf',group:'studio3d.export',order:31},
   {menu:'Project',command:'studio3d.render.turntable',group:'studio3d.export',order:40},
   {menu:'Project',command:'studio3d.render.still',group:'studio3d.export',order:40},
   {menu:'Edit',command:'studio3d.undo',group:'studio3d.history',order:10},
