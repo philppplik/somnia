@@ -1,3 +1,4 @@
+import {normalizeLocalContext,trimLocalContext} from './localAssistant';
 import {t} from '../i18n';
 import {LocalModelsRuntime} from './localModels';
 import {requiresExactInstalledTaskModel,taskModelChoice} from './taskRouting';
@@ -270,13 +271,17 @@ export function createStudioMcpSource(path:string):{studio:string;registry:Agent
 
 export const realCore:AgentCore={
  run(request,onEvent){
+  const trimmed=request.context.localContext?normalizeLocalContext(request.context.localContext):null;if(trimmed)request={...request,context:trimLocalContext(request.context,trimmed)};
   if(session?.status==='running'||proposals.size){queueMicrotask(()=>onEvent({type:'error',message:'Stop the active turn or review the pending proposal first.'}));return {cancel(){}};}
   const controller=new AbortController();activeController=controller;let stopped=false;const runId=++runGeneration;
   const deliver=(e:AgentEvent)=>{if(!stopped&&runId===runGeneration)onEvent(e);};send=deliver;
   const taskChoice=taskModelChoice(config.localRuntime?.taskModels,request.context.task??'chat');const requestProvider=taskChoice?.provider??config.provider;
   if(!taskChoice&&!config.model.trim()){queueMicrotask(()=>deliver({type:'error',message:'Choose a provider and model in Settings > AI first.'}));return {cancel(){stopped=true;}};}
-  const route=config.localRuntime?.routing;const canRoute=!taskChoice&&!!route&&!request.context.activeFile&&!request.context.activeMedia&&!request.context.studio;
+  const route=config.localRuntime?.routing;const canRoute=!trimmed&&!taskChoice&&!!route&&!request.context.activeFile&&!request.context.activeMedia&&!request.context.studio;
   const requestModel=taskChoice?.model??(config.provider==='ollama'?(config.localRuntime?.studioModels?.[request.context.studio?.studioId??'']??config.model):config.model);
+  if(trimmed&&requestProvider!=='ollama'){queueMicrotask(()=>deliver({type:'error',message:t('local.assistant.cloudBlocked')}));return {cancel(){stopped=true;}};}
+  const runPrompts=trimmed&&!trimmed.customPrompts?[]:config.customPrompts;
+  const contextKey=JSON.stringify({choices:trimmed,document:request.context.activeMedia??request.context.activeFile,studio:request.context.studio?.studioId});
   const generation=getProjectGeneration();
   if(epoch!==generation){session?.cancel();session=null;sessionSerial++;proposals.clear();permissions.clear();appliedAgentProvenance.clear();documents.clear();transactions.clear();nativeIds.clear();mcpProposalMap.clear();syncMcpProposals();epoch=generation;}
   photoPreviews.clear();policy.revoke();syncDocuments();
@@ -287,8 +292,8 @@ export const realCore:AgentCore={
    controller.signal.throwIfAborted();if(runId!==runGeneration)throw Error('Run was replaced.');
    if(!request.context.activeMedia&&!request.context.activeFile){
     // Empty workspaces can ask for guidance, but have no document tools or context.
-    const scopeKey=canRoute?'general-route:'+JSON.stringify(route):'no-document:'+requestProvider+':'+requestModel+':'+(request.context.studio?.studioId??'general');const previous=sessionProvider===scopeKey?session?.snapshot():undefined;sessionProvider=scopeKey;const sessionEpoch=epoch,sessionToken=++sessionSerial;
-    session=new AgentSession({provider:request.context.studio?withAgentStudioContext(withCustomPrompts(canRoute?routedProvider(route!,(id,model)=>createProvider(id,model),identity=>deliver({type:'provenance',...identity})):createProvider(requestProvider,requestModel),config.customPrompts),{...request.context.studio,documentRef:null,selectionSummary:'No selection',capabilities:[]}):withCustomPrompts(canRoute?routedProvider(route!,(id,model)=>createProvider(id,model),identity=>deliver({type:'provenance',...identity})):createProvider(requestProvider,requestModel),config.customPrompts),model:requestModel,onEvent:event=>{
+    const scopeKey=canRoute?'general-route:'+JSON.stringify(route):'no-document:'+requestProvider+':'+requestModel+':'+(request.context.studio?.studioId??'general');const scopedKey=scopeKey+contextKey;const previous=(!trimmed||trimmed.history)&&sessionProvider===scopedKey?session?.snapshot():undefined;sessionProvider=scopedKey;const sessionEpoch=epoch,sessionToken=++sessionSerial;
+    session=new AgentSession({provider:request.context.studio?withAgentStudioContext(withCustomPrompts(canRoute?routedProvider(route!,(id,model)=>createProvider(id,model),identity=>deliver({type:'provenance',...identity})):createProvider(requestProvider,requestModel),runPrompts),{...request.context.studio,documentRef:null,selectionSummary:'No selection',capabilities:[]}):withCustomPrompts(canRoute?routedProvider(route!,(id,model)=>createProvider(id,model),identity=>deliver({type:'provenance',...identity})):createProvider(requestProvider,requestModel),runPrompts),model:requestModel,onEvent:event=>{
      if(sessionEpoch!==epoch||sessionToken!==sessionSerial||controller.signal.aborted)return;
      if(event.type==='text')deliver({type:'text-delta',text:event.text});
      else if(event.type==='notice')deliver({type:'error',message:event.message,code:event.code,retryable:event.retryable});
@@ -299,21 +304,21 @@ export const realCore:AgentCore={
   let base:ReturnType<DocumentRegistry['snapshot']>;
   try{base=documents.snapshot(request.context.activeMedia??request.context.activeFile);if(base.ref.studioKind==='unsupported')throw Error('No safe context for this document.');}
   catch(e){throw e;}
-  const textSelection=readActiveSelection();const selectedNode=getState().nodes.flatMap(function flatten(n):import('../editorPort').EditorNode[] {return [n,...n.children.flatMap(flatten)];}).find(n=>n.id===request.context.selectedElementId);
+  const textSelection=trimmed&&!trimmed.selection?null:readActiveSelection();const selectedNode=getState().nodes.flatMap(function flatten(n):import('../editorPort').EditorNode[] {return [n,...n.children.flatMap(flatten)];}).find(n=>n.id===request.context.selectedElementId);
   const selection:SelectionRef|null=base.ref.studioKind!=='code'?null:textSelection?.path===base.ref.path&&textSelection.to>textSelection.from?{from:textSelection.from,to:textSelection.to}:selectedNode?{from:selectedNode.from,to:selectedNode.to,nodeId:selectedNode.id}:null;
   const nodes=structuredClone(getState().designFile===base.ref.path?getState().nodes:[]);
 
    if(!config.allowActiveFile)await authorize(base.ref.path,'read',controller.signal);
    controller.signal.throwIfAborted();syncDocuments();documents.assert(base.ref);
    policy.grant({effect:'inspect',documentIds:[base.ref.documentId]});
-   const context=buildContext(documents,policy,base.ref.path,selection);
+   const context=buildContext(documents,policy,base.ref.path,selection,trimmed?.maxDocumentBytes);
    if(requestProvider!=='ollama'){
     if(request.context.disclosureProvider!==config.provider)throw Error('Confirm disclosure to the selected provider before sending document context.');
     agentPrivacy.assert({provider:config.provider,processing:'cloud'});
    }
    policy.grant({effect:'disclose',documentIds:[base.ref.documentId],destination:requestProvider});
-   const identity=requestProvider+':'+requestModel;const previous=sessionProvider===identity?session?.snapshot():undefined;sessionProvider=identity;const sessionEpoch=epoch,sessionToken=++sessionSerial;
-   const scoped=scopedProvider(withCustomPrompts(createProvider(requestProvider,requestModel),config.customPrompts),context);
+   const identity=requestProvider+':'+requestModel+contextKey;const previous=(!trimmed||trimmed.history)&&sessionProvider===identity?session?.snapshot():undefined;sessionProvider=identity;const sessionEpoch=epoch,sessionToken=++sessionSerial;
+   const scoped=scopedProvider(withCustomPrompts(createProvider(requestProvider,requestModel),runPrompts),context);
    const provider=request.context.studio?withAgentStudioContext(scoped,request.context.studio):scoped;
    session=new AgentSession({provider,model:requestModel,tools:createTools(String(generation),context,nodes,request.context.studio),onEvent:event=>{
     if(sessionEpoch!==epoch||sessionToken!==sessionSerial||controller.signal.aborted)return;
