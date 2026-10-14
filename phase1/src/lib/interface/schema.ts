@@ -1,6 +1,7 @@
 import type {SnapSettings} from './snapCore';
 export type AxisSizing='fixed'|'hug'|'fill';
-export interface InterfaceLayout {direction:'free'|'row'|'column'|'grid';wrap:boolean;gap:number;padding:[number,number,number,number];align:'start'|'center'|'end'|'stretch';columns?:number;}
+export type InterfaceJustify='start'|'center'|'end'|'space-between';
+export interface InterfaceLayout {direction:'free'|'row'|'column'|'grid';wrap:boolean;gap:number;padding:[number,number,number,number];align:'start'|'center'|'end'|'stretch';columns?:number;justify?:InterfaceJustify;crossGap?:number;}
 export interface InterfaceSizing {width:AxisSizing;height:AxisSizing;minWidth:number;minHeight:number;maxWidth:number;maxHeight:number;absolute:boolean;}
 export type ConstraintMode='start'|'end'|'center'|'stretch'|'scale';
 export interface InterfaceConstraints {horizontal:ConstraintMode;vertical:ConstraintMode;parentWidth:number;parentHeight:number;}
