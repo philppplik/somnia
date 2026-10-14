@@ -37,6 +37,7 @@ All file links are repository-relative, so they remain useful on a feature branc
 7. [Foundation palette values](palette-reference.md) and [machine-readable reference](token-reference.json)
 8. [Migration guide: bespoke controls to DS primitives](migration-guide.md)
 9. [Design-system audit report](final-audit.md)
+10. [Extensions area DS adoption](extensions-adoption.md)
 
 ## The system in one view
 

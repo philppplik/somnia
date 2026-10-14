@@ -12,6 +12,7 @@ import {VerifiedExplainer} from './VerifiedExplainer';
 import {ReportConcern} from './ReportConcern';
 import {chipFor} from '../../lib/extensions/storeView';
 import {REQUIRED_GATES} from '../../lib/extensions/store';
+import {NativeButton,NativeInput} from '../ui/native-controls';
 
 type Tab='overview'|'access'|'evidence'|'versions'|'privacy';
 type Err={id:string;key:string}|null;
@@ -47,10 +48,10 @@ export function StoreScreen({host,store,installed,detailId,onOpen,onOpenInstalle
  const act={start,busy,err,paused,onOpenInstalled};
  if(!res)return <p className="ext-meta ext-pad" role="status">{t('store.loading')}</p>;
  if(!snap){const reason=res.status==='unavailable'?res.reason:undefined;const rk=reason==='rate-limited'?'.rateLimited':reason==='server-error'?'.serverError':'';
-  return <div className="ext-empty"><h3>{t(`store.unavailable${rk}`)}</h3><p>{t(`store.unavailable${rk}.body`)}</p><button type="button" className="ext-btn ext-btn-primary" onClick={reload}>{t('store.retry')}</button></div>;}
+  return <div className="ext-empty"><h3>{t(`store.unavailable${rk}`)}</h3><p>{t(`store.unavailable${rk}.body`)}</p><NativeButton type="button" className="ext-btn ext-btn-primary" onClick={reload}>{t('store.retry')}</NativeButton></div>;}
  const detail=detailId?cards.find(c=>c.id===detailId)??null:null;
  return <>
-  {detailId?(detail?<StoreDetail key={detail.id} card={detail} store={store} host={host} snapshot={snap} now={now} act={act} onBack={onBack} onExplain={()=>setExplain(true)}/>:<div className="ext-empty"><h3>{t('ext.detail.gone')}</h3><button type="button" className="ext-btn" onClick={onBack}>{t('store.back')}</button></div>)
+  {detailId?(detail?<StoreDetail key={detail.id} card={detail} store={store} host={host} snapshot={snap} now={now} act={act} onBack={onBack} onExplain={()=>setExplain(true)}/>:<div className="ext-empty"><h3>{t('ext.detail.gone')}</h3><NativeButton type="button" className="ext-btn" onClick={onBack}>{t('store.back')}</NativeButton></div>)
   :<StoreBrowse cards={cards} offline={snap.offline} fetchedAt={snap.fetchedAt} q={q} setQ={setQ} cat={cat} setCat={setCat} onOpen={onOpen} act={act} onExplain={()=>setExplain(true)}/>}
   <VerifiedExplainer open={explain} onClose={()=>setExplain(false)}/>
  </>;
@@ -59,29 +60,29 @@ interface Act{start:(c:StoreCard,m:'install'|'update')=>Promise<void>;busy:strin
 
 function ActionButton({card,act,large=false}:{card:StoreCard;act:Act;large?:boolean}){
  const {t}=useT();const cls=`ext-btn${large?' store-btn-lg':''}`;const working=act.busy===card.id;
- if(card.state==='blocked')return <button type="button" className={`${cls} store-btn-blocked`} disabled>{t('store.blocked')}</button>;
- if(card.state==='installed')return <button type="button" className={`${cls} store-btn-installed`} onClick={()=>act.onOpenInstalled(card.id)}>{t('store.installed')}</button>;
+ if(card.state==='blocked')return <NativeButton type="button" className={`${cls} store-btn-blocked`} disabled>{t('store.blocked')}</NativeButton>;
+ if(card.state==='installed')return <NativeButton type="button" className={`${cls} store-btn-installed`} onClick={()=>act.onOpenInstalled(card.id)}>{t('store.installed')}</NativeButton>;
  const mode=card.state==='update'?'update':'install';const off=act.paused||card.unknownPermission||working;
- return <button type="button" className={`${cls} ext-btn-primary`} disabled={off} aria-describedby={act.paused?'store-paused':undefined} onClick={()=>void act.start(card,mode)}>{large&&mode==='install'?<Download size={16} aria-hidden="true"/>:null}{working?t('store.preparing'):mode==='update'?t('store.update'):t('store.install')}</button>;
+ return <NativeButton type="button" className={`${cls} ext-btn-primary`} disabled={off} aria-describedby={act.paused?'store-paused':undefined} onClick={()=>void act.start(card,mode)}>{large&&mode==='install'?<Download size={16} aria-hidden="true"/>:null}{working?t('store.preparing'):mode==='update'?t('store.update'):t('store.install')}</NativeButton>;
 }
 function StoreBrowse({cards,offline,fetchedAt,q,setQ,cat,setCat,onOpen,act,onExplain}:{cards:StoreCard[];offline:boolean;fetchedAt:string|null;q:string;setQ:(v:string)=>void;cat:string;setCat:(v:string)=>void;onOpen:(id:string)=>void;act:Act;onExplain:()=>void}){
  const {t,locale}=useT();const cats=useMemo(()=>categoriesOf(cards),[cards]);
  const shown=filterCards(cards,q,cat,t);
  return <div className="ext-view store-view">
-  <div className="store-searchrow"><label className="store-search"><Search size={16} aria-hidden="true"/><input type="search" aria-label={t('store.search')} placeholder={t('store.search')} value={q} onChange={e=>setQ(e.target.value)}/></label></div>
-  {cats.length>0?<div className="ext-chips" role="group" aria-label={t('store.cat.aria')}>{['all',...cats].map(c=><button key={c} type="button" className="ext-chip" aria-pressed={cat===c} onClick={()=>setCat(c)}>{c==='all'?t('store.cat.all'):c}</button>)}</div>:null}
+  <div className="store-searchrow"><label className="store-search"><Search size={16} aria-hidden="true"/><NativeInput type="search" aria-label={t('store.search')} placeholder={t('store.search')} value={q} onChange={e=>setQ(e.target.value)}/></label></div>
+  {cats.length>0?<div className="ext-chips" role="group" aria-label={t('store.cat.aria')}>{['all',...cats].map(c=><NativeButton key={c} type="button" className="ext-chip" aria-pressed={cat===c} onClick={()=>setCat(c)}>{c==='all'?t('store.cat.all'):c}</NativeButton>)}</div>:null}
   {offline&&fetchedAt?<p className="ext-callout" role="status">{t('store.offline',{date:fmtDate(fetchedAt,locale)})}</p>:null}
   {act.paused?<p id="store-paused" className="ext-callout" role="status">{t('store.paused')}</p>:null}
   {shown.length===0?<div className="ext-empty"><h3>{t('store.empty')}</h3></div>
   :<section aria-labelledby="store-all-h"><h3 id="store-all-h" className="store-section">{t('store.section.all')}</h3>
    <ul className="store-grid">{shown.map(c=><StoreCardItem key={c.id} card={c} act={act} onOpen={onOpen} onExplain={onExplain}/>)}</ul></section>}
-  <p className="ext-meta ext-foot">{t('store.footer')} <button type="button" className="ext-link" onClick={onExplain}>{t('store.footer.link')}</button></p>
+  <p className="ext-meta ext-foot">{t('store.footer')} <NativeButton type="button" className="ext-link" onClick={onExplain}>{t('store.footer.link')}</NativeButton></p>
  </div>;
 }
 function StoreCardItem({card,act,onOpen,onExplain}:{card:StoreCard;act:Act;onOpen:(id:string)=>void;onExplain:()=>void}){
  const {t}=useT();const e=act.err?.id===card.id?act.err:null;
  return <li className="store-card" data-state={card.state}>
-  <div className="store-card-head"><StoreLogo card={card}/><div className="store-card-id"><div className="ext-name-row"><button type="button" className="store-card-open" aria-label={t('store.openAria',{name:card.name})} onClick={()=>onOpen(card.id)}><h3 className="ext-name">{card.name}</h3></button>{card.verified?<StoreBadge onExplain={onExplain}/>:<span className="store-tag" title={t('store.unreviewed.body')}>{t('store.unreviewed')}</span>}{card.deprecated?<span className="store-tag store-tag-amber">{t('store.deprecated')}</span>:null}</div><p className="ext-meta">{card.publisherName}</p></div></div>
+  <div className="store-card-head"><StoreLogo card={card}/><div className="store-card-id"><div className="ext-name-row"><NativeButton type="button" className="store-card-open" aria-label={t('store.openAria',{name:card.name})} onClick={()=>onOpen(card.id)}><h3 className="ext-name">{card.name}</h3></NativeButton>{card.verified?<StoreBadge onExplain={onExplain}/>:<span className="store-tag" title={t('store.unreviewed.body')}>{t('store.unreviewed')}</span>}{card.deprecated?<span className="store-tag store-tag-amber">{t('store.deprecated')}</span>:null}</div><p className="ext-meta">{card.publisherName}</p></div></div>
   <p className="store-card-desc">{card.summary}</p>
   <AccessTags card={card}/>
   <div className="store-card-foot"><span className="ext-version">v{card.release.version}</span><ActionButton card={card} act={act}/></div>
@@ -99,7 +100,7 @@ function StoreDetail({card,store,host,snapshot,now,act,onBack,onExplain}:{card:S
  const tabs:{id:Tab;label:string}[]=[{id:'overview',label:t('store.tab.overview')},{id:'access',label:t('store.tab.access')},{id:'evidence',label:t('store.tab.evidence')},{id:'versions',label:t('store.tab.versions')},{id:'privacy',label:t('store.tab.privacy')}];
  const meta=[card.publisherName,card.verified&&pub?.domain?pub.domain.name:null,t('store.header.version',{version:r.version}),t('store.header.size',{size:Math.round(r.artifact.bytes/1024)})].filter(Boolean).join(' · ');
  return <div className="store-detail">
-  <button type="button" className="store-back" onClick={onBack}><ArrowLeft size={16} aria-hidden="true"/>{t('store.back')}</button>
+  <NativeButton type="button" className="store-back" onClick={onBack}><ArrowLeft size={16} aria-hidden="true"/>{t('store.back')}</NativeButton>
   <header className="store-dhead"><StoreLogo card={card} size={72}/><div className="store-dhead-id"><div className="ext-name-row"><h2 className="store-dname">{card.name}</h2>{card.verified?<StoreBadge size={22} onExplain={onExplain}/>:<span className="store-tag" title={t('store.unreviewed.body')}>{t('store.unreviewed')}</span>}{card.official?<span className="store-tag store-tag-official">{t('store.official')}</span>:null}</div><p className="ext-meta">{meta}</p></div><ActionButton card={card} act={act} large/></header>
   {e?<p role="alert" className="ext-error">{t(e.key)}</p>:null}
   {card.state==='blocked'?<p className="store-banner store-banner-red" role="status">{t('store.banner.blocked')}</p>:card.deprecated?<p className="store-banner store-banner-amber" role="status">{t('store.banner.deprecated')}</p>:null}
@@ -116,8 +117,8 @@ function StoreDetail({card,store,host,snapshot,now,act,onBack,onExplain}:{card:S
      </>:null}
      {tab==='overview'?<>
       <p className="store-lead">{card.summary}</p>
-      <dl className="ext-dl"><dt>{t('store.ov.category')}</dt><dd>{card.category}</dd><dt>{t('store.ov.package')}</dt><dd>{t('store.header.size',{size:Math.round(r.artifact.bytes/1024)})} · {t('store.ov.files',{count:r.artifact.fileCount})}</dd><dt>Somnia</dt><dd>{t('store.ov.minSomnia',{version:r.minSomnia})}</dd><dt>{t('store.ov.source')}</dt><dd><button type="button" className="ext-link" onClick={()=>open(r.source.url)}>{r.source.url.replace(/^https:\/\//,'')}</button></dd></dl>
-      <h4 className="ext-sub">{t('store.ov.docs')}</h4><ul className="store-links">{(['readme','license','changelog','thirdPartyNotices','security'] as const).map(k=><li key={k}><button type="button" className="ext-link" onClick={()=>open(r.docs[k])}>{t(`store.doc.${k}`)}</button></li>)}</ul>
+      <dl className="ext-dl"><dt>{t('store.ov.category')}</dt><dd>{card.category}</dd><dt>{t('store.ov.package')}</dt><dd>{t('store.header.size',{size:Math.round(r.artifact.bytes/1024)})} · {t('store.ov.files',{count:r.artifact.fileCount})}</dd><dt>Somnia</dt><dd>{t('store.ov.minSomnia',{version:r.minSomnia})}</dd><dt>{t('store.ov.source')}</dt><dd><NativeButton type="button" className="ext-link" onClick={()=>open(r.source.url)}>{r.source.url.replace(/^https:\/\//,'')}</NativeButton></dd></dl>
+      <h4 className="ext-sub">{t('store.ov.docs')}</h4><ul className="store-links">{(['readme','license','changelog','thirdPartyNotices','security'] as const).map(k=><li key={k}><NativeButton type="button" className="ext-link" onClick={()=>open(r.docs[k])}>{t(`store.doc.${k}`)}</NativeButton></li>)}</ul>
      </>:null}
      {tab==='evidence'?<>
       <h3 className="store-ph">{t('store.ev.title',{version:r.version})}</h3>
@@ -136,7 +137,7 @@ function StoreDetail({card,store,host,snapshot,now,act,onBack,onExplain}:{card:S
       <h3 className="store-ph">{t('store.priv.title')}</h3>
       <dl className="ext-dl"><dt>{t('store.priv.local')}</dt><dd>{r.dataHandling.localStorage}</dd><dt>{t('store.priv.retention')}</dt><dd>{r.dataHandling.retention}</dd><dt>{t('store.priv.deletion')}</dt><dd>{r.dataHandling.deletion}</dd>{r.dataHandling.remoteProcessors.length?<><dt>{t('store.priv.remote')}</dt><dd>{r.dataHandling.remoteProcessors.join(', ')}</dd></>:null}</dl>
       <h4 className="ext-sub">{t('store.priv.network')}</h4>
-      {r.network.length===0?<p className="ext-meta">{t('store.priv.none')}</p>:<ul className="store-links">{r.network.map(n=><li key={n.origin} className="store-net"><strong>{n.origin.replace(/^https:\/\//,'')}</strong><p className="ext-meta">{n.purpose}</p><p className="ext-meta">{t('store.priv.sends')}: {n.dataSent.join(', ')}</p><p className="ext-meta">{t('store.priv.receives')}: {n.dataReceived.join(', ')}</p>{n.accountRequired?<p className="ext-meta">{t('store.priv.account')}</p>:null}{n.paymentRequired?<p className="ext-meta">{t('store.priv.payment')}</p>:null}<button type="button" className="ext-link" onClick={()=>open(n.privacyUrl)}>{t('store.priv.policy')}</button></li>)}</ul>}
+      {r.network.length===0?<p className="ext-meta">{t('store.priv.none')}</p>:<ul className="store-links">{r.network.map(n=><li key={n.origin} className="store-net"><strong>{n.origin.replace(/^https:\/\//,'')}</strong><p className="ext-meta">{n.purpose}</p><p className="ext-meta">{t('store.priv.sends')}: {n.dataSent.join(', ')}</p><p className="ext-meta">{t('store.priv.receives')}: {n.dataReceived.join(', ')}</p>{n.accountRequired?<p className="ext-meta">{t('store.priv.account')}</p>:null}{n.paymentRequired?<p className="ext-meta">{t('store.priv.payment')}</p>:null}<NativeButton type="button" className="ext-link" onClick={()=>open(n.privacyUrl)}>{t('store.priv.policy')}</NativeButton></li>)}</ul>}
      </>:null}
     </div>
     {tab==='access'?<p className="store-info"><Info size={16} aria-hidden="true"/>{t('store.access.updates')}</p>:null}
@@ -144,12 +145,12 @@ function StoreDetail({card,store,host,snapshot,now,act,onBack,onExplain}:{card:S
    <aside className="store-rail">
     <section className="store-rail-card" aria-label={t('store.ev.title',{version:r.version})}><h3 className="store-ph">{t('store.ev.title',{version:r.version})}</h3>
      <EvidenceList rows={rows} now={now} lastTrustedCheck={snapshot.lastTrustedCheck} hasEvidence={!!ev}/>
-     <p className="ext-meta store-signed">{t('store.ev.signed',{digest:shortDigest(r.evidence.sha256)})} · <button type="button" className="ext-link" onClick={()=>setTab('evidence')}>{t('store.ev.full')}</button></p></section>
+     <p className="ext-meta store-signed">{t('store.ev.signed',{digest:shortDigest(r.evidence.sha256)})} · <NativeButton type="button" className="ext-link" onClick={()=>setTab('evidence')}>{t('store.ev.full')}</NativeButton></p></section>
     <section className="store-rail-card" aria-label={t('store.pub.title')}><h3 className="store-ph">{t('store.pub.title')}</h3>
      <div className="ext-name-row"><strong>{card.publisherName}</strong>{card.verified?<StoreBadge onExplain={onExplain}/>:<span className="store-tag" title={t('store.unreviewed.body')}>{t('store.unreviewed')}</span>}</div>
      {ind?<div className="ext-tags">{ind.githubLinked?<span className="store-tag">{t('store.pub.github')}</span>:null}{ind.domainVerified?<span className="store-tag">{t('store.pub.domain')}</span>:null}{ind.declaresTwoFactor?<span className="store-tag">{t('store.pub.twofa')}</span>:null}</div>:null}
-     <button type="button" className="ext-link" onClick={onExplain}>{t('store.pub.explain')}</button></section>
-    <section className="store-rail-card store-report-card"><span className="store-report-q"><Flag size={16} aria-hidden="true"/>{t('store.report.card')}</span><button type="button" className="ext-btn" onClick={()=>setReport(true)}>{t('store.report.open')}</button></section>
+     <NativeButton type="button" className="ext-link" onClick={onExplain}>{t('store.pub.explain')}</NativeButton></section>
+    <section className="store-rail-card store-report-card"><span className="store-report-q"><Flag size={16} aria-hidden="true"/>{t('store.report.card')}</span><NativeButton type="button" className="ext-btn" onClick={()=>setReport(true)}>{t('store.report.open')}</NativeButton></section>
    </aside>
   </div>
   <ReportConcern card={card} store={store} open={report} onClose={()=>setReport(false)} openExternal={u=>host.openExternal(u)}/>

@@ -315,61 +315,61 @@
       "rawTextarea": 0
     },
     "src/components/extensions/AddBrowseActivity.tsx": {
-      "rawButton": 14,
-      "rawInput": 5,
+      "rawButton": 0,
+      "rawInput": 0,
       "rawSelect": 0,
-      "rawTextarea": 1
+      "rawTextarea": 0
     },
     "src/components/extensions/ConsentUI.tsx": {
-      "rawButton": 2,
-      "rawInput": 1,
+      "rawButton": 0,
+      "rawInput": 0,
       "rawSelect": 0,
       "rawTextarea": 0
     },
     "src/components/extensions/ExtensionSecuritySettings.tsx": {
       "rawButton": 0,
-      "rawInput": 2,
+      "rawInput": 0,
       "rawSelect": 0,
       "rawTextarea": 0
     },
     "src/components/extensions/ExtensionsPopup.tsx": {
-      "rawButton": 4,
+      "rawButton": 0,
       "rawInput": 0,
       "rawSelect": 0,
       "rawTextarea": 0
     },
     "src/components/extensions/InstalledDetail.tsx": {
-      "rawButton": 20,
-      "rawInput": 2,
+      "rawButton": 0,
+      "rawInput": 0,
       "rawSelect": 0,
       "rawTextarea": 0
     },
     "src/components/extensions/parts.tsx": {
-      "rawButton": 5,
+      "rawButton": 0,
       "rawInput": 0,
       "rawSelect": 0,
       "rawTextarea": 0
     },
     "src/components/extensions/ReportConcern.tsx": {
-      "rawButton": 5,
-      "rawInput": 2,
+      "rawButton": 0,
+      "rawInput": 0,
       "rawSelect": 0,
-      "rawTextarea": 1
+      "rawTextarea": 0
     },
     "src/components/extensions/StoreParts.tsx": {
-      "rawButton": 3,
+      "rawButton": 0,
       "rawInput": 0,
       "rawSelect": 0,
       "rawTextarea": 0
     },
     "src/components/extensions/StoreView.tsx": {
-      "rawButton": 15,
-      "rawInput": 1,
+      "rawButton": 0,
+      "rawInput": 0,
       "rawSelect": 0,
       "rawTextarea": 0
     },
     "src/components/extensions/VerifiedExplainer.tsx": {
-      "rawButton": 1,
+      "rawButton": 0,
       "rawInput": 0,
       "rawSelect": 0,
       "rawTextarea": 0

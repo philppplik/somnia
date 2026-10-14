@@ -78,6 +78,11 @@ selects). Its migration is deliberately gated, see below.
 - P13 (in flight): shell chrome controls migrated to native primitives in
   FileTabs, CommandPalette and WindowControls. This base still shows their debt
   (5 buttons, 1 input, 3 buttons) until integration lands.
+- P14 (in flight): contributor guardrails - per-file raw control lint ratchet,
+  migration guide, this audit. This branch carries P14 stacked beneath P15.
+- P15 (this slice): Extensions area migrated (84 controls to native primitives),
+  ratchet budgets shrunk to zero for all 10 files, adoption tests and gallery
+  proof added.
 
 ## Remaining bespoke areas
 
@@ -89,8 +94,12 @@ selects). Its migration is deliberately gated, see below.
 - **Vibespace (108 controls, 96 hex)**: largest remaining studio surface;
   bespoke button CSS was scoped in P11 to stop painting shared Buttons. Needs a
   dedicated slice series with gallery evidence.
-- **Extensions (84) and pdfedit/pdf (107 combined)**: dense bespoke dialogs and
-  store UI. Untouched by the migration series so far.
+- **Extensions**: migrated in P15. All 84 controls render through native control
+  primitives with their bespoke geometry and behavior intact; file allowances are
+  at zero, so reintroduction fails the ratchet. Consent flows already used shared
+  Button/Dialog and are unchanged.
+- **pdfedit/pdf (107 combined)**: dense bespoke dialogs and editors. Untouched by
+  the migration series so far.
 - **Compound tab strips and context menus**: FileTabs-style hosts keep their div
   structure by design (middle-click, fixed menus, drag behavior); inner controls
   migrate, hosts stay bespoke until a reviewed Tabs/Menu redesign.

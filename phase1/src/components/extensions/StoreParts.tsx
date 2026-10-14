@@ -4,6 +4,7 @@ import {Dialog,DialogContent,DialogTitle} from '../ui/dialog';
 import {useT} from '../../lib/useT';
 import {VerifiedBadge,Logo} from './parts';
 import {candidateBound,chipTone,relativeAge,type AccessRow,type EvidenceRow,type StoreCard} from '../../lib/extensions/storeView';
+import {NativeButton} from '../ui/native-controls';
 
 const ICONS={folder:Folder,globe:Globe,key:KeyRound,clipboard:Clipboard,agent:Sparkles,bolt:Zap,bell:Bell,database:Database,other:CircleHelp};
 export {candidateBound,chipTone};
@@ -13,7 +14,7 @@ export function useAge(){const {t}=useT();return (ts:number,now:number)=>{const 
 /** Icon-only verified mark. A real button so Enter opens the explainer; the name never relies on colour. */
 export function StoreBadge({size=18,onExplain}:{size?:number;onExplain:()=>void}){
  const {t}=useT();
- return <button type="button" className="store-badge" aria-label={t('store.verified')} title={t('store.verified')} onClick={e=>{e.stopPropagation();onExplain();}}><VerifiedBadge criterion={t('store.verified')} size={size}/></button>;
+ return <NativeButton type="button" className="store-badge" aria-label={t('store.verified')} title={t('store.verified')} onClick={e=>{e.stopPropagation();onExplain();}}><VerifiedBadge criterion={t('store.verified')} size={size}/></NativeButton>;
 }
 export function StatusChip({tone,children}:{tone:'ok'|'warn'|'bad'|'neutral';children:ReactNode}){return <span className={`store-chip store-chip-${tone}`}>{children}</span>;}
 export function AccessTags({card}:{card:StoreCard}){
@@ -43,13 +44,13 @@ export function EvidenceList({rows,now,lastTrustedCheck,hasEvidence}:{rows:Evide
 export function TabList<T extends string>({tabs,value,onChange,label,idPrefix}:{tabs:{id:T;label:string}[];value:T;onChange:(v:T)=>void;label:string;idPrefix:string}){
  const refs=useRef<Record<string,HTMLButtonElement|null>>({});
  const key=(e:KeyboardEvent)=>{const i=tabs.findIndex(x=>x.id===value);let n=i;if(e.key==='ArrowRight')n=(i+1)%tabs.length;else if(e.key==='ArrowLeft')n=(i-1+tabs.length)%tabs.length;else if(e.key==='Home')n=0;else if(e.key==='End')n=tabs.length-1;else return;e.preventDefault();onChange(tabs[n].id);refs.current[tabs[n].id]?.focus();};
- return <div className="store-tabs" role="tablist" aria-label={label} onKeyDown={key}>{tabs.map(x=><button key={x.id} ref={el=>{refs.current[x.id]=el;}} type="button" role="tab" id={`${idPrefix}-tab-${x.id}`} aria-selected={value===x.id} aria-controls={`${idPrefix}-panel`} tabIndex={value===x.id?0:-1} className="store-tab" onClick={()=>onChange(x.id)}>{x.label}</button>)}</div>;
+ return <div className="store-tabs" role="tablist" aria-label={label} onKeyDown={key}>{tabs.map(x=><NativeButton key={x.id} ref={el=>{refs.current[x.id]=el;}} type="button" role="tab" id={`${idPrefix}-tab-${x.id}`} aria-selected={value===x.id} aria-controls={`${idPrefix}-panel`} tabIndex={value===x.id?0:-1} className="store-tab" onClick={()=>onChange(x.id)}>{x.label}</NativeButton>)}</div>;
 }
 /** Nested modal. Focus trap and Escape come from the dialog primitive; Escape closes only this modal. */
 export function StoreModal({open,onClose,title,subtitle,children,wide=false}:{open:boolean;onClose:()=>void;title:string;subtitle?:ReactNode;children:ReactNode;wide?:boolean}){
  const {t}=useT();
  return <Dialog open={open} onOpenChange={o=>{if(!o)onClose();}}><DialogContent className={`store-modal${wide?' store-modal-wide':''}`} aria-label={title}>
-  <div className="store-modal-head"><div><DialogTitle render={<h2 className="store-modal-title"/>}>{title}</DialogTitle>{subtitle?<p className="store-modal-sub">{subtitle}</p>:null}</div><button type="button" className="ext-close" aria-label={t('store.close')} onClick={onClose}><XIcon size={18} aria-hidden="true"/></button></div>
+  <div className="store-modal-head"><div><DialogTitle render={<h2 className="store-modal-title"/>}>{title}</DialogTitle>{subtitle?<p className="store-modal-sub">{subtitle}</p>:null}</div><NativeButton type="button" className="ext-close" aria-label={t('store.close')} onClick={onClose}><XIcon size={18} aria-hidden="true"/></NativeButton></div>
   {children}</DialogContent></Dialog>;
 }
 export function StoreLogo({card,size=46}:{card:Pick<StoreCard,'name'>;size?:number}){return <Logo name={card.name} size={size}/>;}

@@ -204,6 +204,7 @@
         "src/lib/agent/deckStudio.ts",
         "src/lib/agent/documentCore.ts",
         "src/lib/agent/localCapabilities.ts",
+        "src/lib/agent/localContext.ts",
         "src/lib/agent/localModelAdvice.ts",
         "src/lib/agent/localModelManager.ts",
         "src/lib/agent/localQualityProbes.ts",
@@ -750,6 +751,7 @@
       "kind": "attribute",
       "value": "aria-busy",
       "readers": [
+        "tests/local-models.spec.ts",
         "tests/slides-agent.spec.ts",
         "tests/slides-corpus.spec.ts",
         "tests/slides-studio.spec.ts"
@@ -1275,6 +1277,7 @@
         "src/components/SessionChat.tsx",
         "src/components/sheets/SheetsCanvas.tsx",
         "src/components/SourceEditor.tsx",
+        "src/components/studio3d/ClipTimeline.tsx",
         "src/components/studio3d/Studio3DPanels.tsx",
         "src/components/svgedit/SvgInspector.tsx",
         "src/components/svgedit/SvgSidebar.tsx",
@@ -2842,6 +2845,7 @@
         "src/components/animation/AnimationPanels.tsx",
         "src/components/animation/AnimationTimeline.tsx",
         "src/components/animation/AudioInspector.tsx",
+        "src/components/animation/GraphEditor.tsx",
         "src/components/Canvas.tsx",
         "src/components/CanvasContextMenu.tsx",
         "src/components/CanvasSelection.tsx",
@@ -3933,6 +3937,7 @@
         "src/lib/studio3d/clips.ts",
         "src/lib/studio3d/document.ts",
         "src/lib/studio3d/ease.ts",
+        "src/lib/studio3d/keyEdit.ts",
         "src/lib/studio3d/materials.ts",
         "src/lib/studio3d/model.ts",
         "src/lib/studio3d/primitives.ts",
@@ -5071,6 +5076,7 @@
         "src/lib/agent/editorTools.ts",
         "src/lib/agent/errors.ts",
         "src/lib/agent/localCapabilities.ts",
+        "src/lib/agent/localContext.ts",
         "src/lib/agent/localModelAdvice.ts",
         "src/lib/agent/localModelManager.ts",
         "src/lib/agent/localModelPicker.ts",
@@ -5632,6 +5638,7 @@
         "src/lib/studio3d/commands.ts",
         "src/lib/studio3d/document.ts",
         "src/lib/studio3d/ease.ts",
+        "src/lib/studio3d/keyEdit.ts",
         "src/lib/studio3d/materials.ts",
         "src/lib/studio3d/model.ts",
         "src/lib/studio3d/primitives.ts",
@@ -6161,6 +6168,7 @@
         "src/lib/studio3d/clips.ts",
         "src/lib/studio3d/commands.ts",
         "src/lib/studio3d/ease.ts",
+        "src/lib/studio3d/keyEdit.ts",
         "src/lib/studio3d/model.ts",
         "src/lib/studio3d/recent.ts",
         "src/lib/studio3d/recentStore.ts",
@@ -8294,7 +8302,6 @@
       ],
       "owners": [
         "src/components/Account.tsx",
-        "src/components/agent/AgentPanel.tsx",
         "src/components/agent/AgentPrivacy.tsx",
         "src/components/agent/AgentSettings.tsx",
         "src/components/agent/AlternateRuntimeDiscovery.tsx",
@@ -9716,6 +9723,7 @@
         "src/lib/starterKit.ts",
         "src/lib/structureCommands.ts",
         "src/lib/studio3d/clipMeta.ts",
+        "src/lib/studio3d/keyEdit.ts",
         "src/lib/studio3d/model.ts",
         "src/lib/studio3d/recent.ts",
         "src/lib/studio3d/recentSession.ts",
@@ -9760,6 +9768,7 @@
       "kind": "role",
       "value": "listitem",
       "readers": [
+        "tests/animation-p6.spec.ts",
         "tests/documents-studio.spec.ts"
       ],
       "owners": [
@@ -11136,7 +11145,8 @@
       "kind": "testId",
       "value": "animation-add-null",
       "readers": [
-        "tests/animation-p3.spec.ts"
+        "tests/animation-p3.spec.ts",
+        "tests/animation-p6.spec.ts"
       ],
       "owners": []
     },
@@ -11147,6 +11157,7 @@
         "tests/animation-p0.spec.ts",
         "tests/animation-p1.spec.ts",
         "tests/animation-p4.spec.ts",
+        "tests/animation-p6.spec.ts",
         "tests/new-studios-ds-a11y.spec.ts"
       ],
       "owners": []
@@ -11156,7 +11167,8 @@
       "value": "animation-add-text",
       "readers": [
         "tests/animation-p2.spec.ts",
-        "tests/animation-p3.spec.ts"
+        "tests/animation-p3.spec.ts",
+        "tests/animation-p6.spec.ts"
       ],
       "owners": []
     },
@@ -11200,6 +11212,7 @@
         "tests/animation-p3.spec.ts",
         "tests/animation-p4.spec.ts",
         "tests/animation-p5b.spec.ts",
+        "tests/animation-p6.spec.ts",
         "tests/new-studios-ds-a11y.spec.ts",
         "tests/new-studios-keyboard.spec.ts"
       ],
@@ -11256,6 +11269,24 @@
     },
     {
       "kind": "testId",
+      "value": "animation-graph-ease-easeOut",
+      "readers": [
+        "tests/animation-p6.spec.ts"
+      ],
+      "owners": []
+    },
+    {
+      "kind": "testId",
+      "value": "animation-graph-key",
+      "readers": [
+        "tests/animation-p6.spec.ts"
+      ],
+      "owners": [
+        "src/components/animation/GraphEditor.tsx"
+      ]
+    },
+    {
+      "kind": "testId",
       "value": "animation-graph-mode-speed",
       "readers": [
         "tests/animation-p2.spec.ts"
@@ -11285,7 +11316,8 @@
       "value": "animation-graph-toggle",
       "readers": [
         "tests/animation-p1.spec.ts",
-        "tests/animation-p2.spec.ts"
+        "tests/animation-p2.spec.ts",
+        "tests/animation-p6.spec.ts"
       ],
       "owners": [
         "src/components/animation/AnimationTimeline.tsx"
@@ -11296,6 +11328,16 @@
       "value": "animation-import-audio",
       "readers": [
         "tests/animation-p5b.spec.ts"
+      ],
+      "owners": [
+        "src/components/animation/AnimationPanels.tsx"
+      ]
+    },
+    {
+      "kind": "testId",
+      "value": "animation-key-ease",
+      "readers": [
+        "tests/animation-p6.spec.ts"
       ],
       "owners": [
         "src/components/animation/AnimationPanels.tsx"
@@ -11366,6 +11408,14 @@
     },
     {
       "kind": "testId",
+      "value": "animation-prop-position",
+      "readers": [
+        "tests/animation-p6.spec.ts"
+      ],
+      "owners": []
+    },
+    {
+      "kind": "testId",
       "value": "animation-properties",
       "readers": [
         "tests/animation-p2.spec.ts"
@@ -11392,6 +11442,16 @@
         "tests/animation-p0.spec.ts"
       ],
       "owners": []
+    },
+    {
+      "kind": "testId",
+      "value": "animation-text-font",
+      "readers": [
+        "tests/animation-p6.spec.ts"
+      ],
+      "owners": [
+        "src/components/animation/AnimationPanels.tsx"
+      ]
     },
     {
       "kind": "testId",
@@ -14952,6 +15012,16 @@
     },
     {
       "kind": "testId",
+      "value": "studio3d-key",
+      "readers": [
+        "tests/studio3d.spec.ts"
+      ],
+      "owners": [
+        "src/components/studio3d/ClipTimeline.tsx"
+      ]
+    },
+    {
+      "kind": "testId",
       "value": "studio3d-keyrow-position",
       "readers": [
         "tests/studio3d.spec.ts"
@@ -15036,6 +15106,36 @@
       ],
       "owners": [
         "src/components/studio3d/Studio3DCanvas.tsx"
+      ]
+    },
+    {
+      "kind": "testId",
+      "value": "studio3d-timeline-ruler",
+      "readers": [
+        "tests/studio3d.spec.ts"
+      ],
+      "owners": [
+        "src/components/studio3d/ClipTimeline.tsx"
+      ]
+    },
+    {
+      "kind": "testId",
+      "value": "studio3d-timeline-zoom-fit",
+      "readers": [
+        "tests/studio3d.spec.ts"
+      ],
+      "owners": [
+        "src/components/studio3d/ClipTimeline.tsx"
+      ]
+    },
+    {
+      "kind": "testId",
+      "value": "studio3d-timeline-zoom-in",
+      "readers": [
+        "tests/studio3d.spec.ts"
+      ],
+      "owners": [
+        "src/components/studio3d/ClipTimeline.tsx"
       ]
     },
     {

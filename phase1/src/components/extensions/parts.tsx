@@ -1,6 +1,7 @@
 import {useId,useState,type ReactNode} from 'react';
 import {useT} from '../../lib/useT';
 import {badgeText,permissionTags,type GrantKey,type PopupExtension,type PopupView} from '../../lib/extensions/popupModel';
+import {NativeButton} from '../ui/native-controls';
 
 /** Icon from api.iconify.design/vadivam/badge-check.svg, inlined so no network fetch is needed. */
 export function VerifiedBadge({criterion,size=18}:{criterion:string;size?:number}){
@@ -9,7 +10,7 @@ export function VerifiedBadge({criterion,size=18}:{criterion:string;size?:number
 }
 /** 38x22 drawn switch inside a 40px target. Not nested in any card button. */
 export function Switch({checked,label,onChange,disabled,busy}:{checked:boolean;label:string;onChange:(next:boolean)=>void;disabled?:boolean;busy?:boolean}){
- return <button type="button" role="switch" aria-checked={checked} aria-label={label} aria-busy={busy||undefined} disabled={disabled||busy} className="ext-switch" onClick={()=>onChange(!checked)}><span aria-hidden="true" className="ext-switch-track"><span className="ext-switch-thumb"/></span></button>;
+ return <NativeButton type="button" role="switch" aria-checked={checked} aria-label={label} aria-busy={busy||undefined} disabled={disabled||busy} className="ext-switch" onClick={()=>onChange(!checked)}><span aria-hidden="true" className="ext-switch-track"><span className="ext-switch-thumb"/></span></NativeButton>;
 }
 export function Logo({name,size=48}:{name:string;size?:number}){
  const hue=[...name].reduce((a,c)=>a+c.charCodeAt(0),0)%360;
@@ -21,15 +22,15 @@ export function ExtensionIdentity({ext,size=48,badgeSize=18,children}:{ext:Pick<
 /** Exactly one of these per visible popup. */
 export function NetworkNotice({onViewActivity}:{onViewActivity:()=>void}){
  const {t}=useT();
- return <div className="ext-notice" role="note"><span>{t('ext.notice')}</span><button type="button" className="ext-link" onClick={onViewActivity}>{t('ext.notice.view')}</button></div>;
+ return <div className="ext-notice" role="note"><span>{t('ext.notice')}</span><NativeButton type="button" className="ext-link" onClick={onViewActivity}>{t('ext.notice.view')}</NativeButton></div>;
 }
 export function ExtensionNav({view,counts,onSelect,onAdd}:{view:PopupView;counts:{installed:number;updates:number};onSelect:(v:PopupView)=>void;onAdd:()=>void}){
  const {t}=useT();
  const items:{id:PopupView;label:string;n:number}[]=[{id:'installed',label:t('ext.nav.installed'),n:counts.installed},{id:'browse',label:t('ext.nav.browse'),n:0},{id:'updates',label:t('ext.nav.updates'),n:counts.updates},{id:'activity',label:t('ext.nav.activity'),n:0}];
  const current=view==='detail'?'installed':view==='store-detail'?'browse':view==='add'?null:view;
  return <nav className="ext-nav" aria-label={t('ext.nav.aria')}><h2 className="ext-nav-title">{t('ext.title')}</h2>
-  <div role="tablist" aria-orientation="vertical" className="ext-nav-list">{items.map(i=>{const b=badgeText(i.n);return <button key={i.id} role="tab" id={`ext-tab-${i.id}`} aria-selected={current===i.id} aria-controls="ext-panel" tabIndex={current===i.id||(current===null&&i.id==='installed')?0:-1} className="ext-nav-item" onClick={()=>onSelect(i.id)}><span>{i.label}</span>{b?<span className="ext-count" aria-label={t('ext.count.aria',{count:i.n})}>{b}</span>:null}</button>;})}</div>
-  <button type="button" className={`ext-add-btn${view==='add'?' is-active':''}`} onClick={onAdd}>{t('ext.add.button')}</button></nav>;
+  <div role="tablist" aria-orientation="vertical" className="ext-nav-list">{items.map(i=>{const b=badgeText(i.n);return <NativeButton key={i.id} role="tab" id={`ext-tab-${i.id}`} aria-selected={current===i.id} aria-controls="ext-panel" tabIndex={current===i.id||(current===null&&i.id==='installed')?0:-1} className="ext-nav-item" onClick={()=>onSelect(i.id)}><span>{i.label}</span>{b?<span className="ext-count" aria-label={t('ext.count.aria',{count:i.n})}>{b}</span>:null}</NativeButton>;})}</div>
+  <NativeButton type="button" className={`ext-add-btn${view==='add'?' is-active':''}`} onClick={onAdd}>{t('ext.add.button')}</NativeButton></nav>;
 }
 const TAG_KEYS:Record<GrantKey,string>={'project.read':'ext.tag.read','project.write':'ext.tag.write',network:'ext.tag.network',clipboard:'ext.tag.clipboard',folders:'ext.tag.folders',agent:'ext.tag.agent'};
 export function PermissionTags({ext,onOverflow}:{ext:PopupExtension;onOverflow:()=>void}){
@@ -37,7 +38,7 @@ export function PermissionTags({ext,onOverflow}:{ext:PopupExtension;onOverflow:(
  const contrib=ext.contributions.filter(c=>c!=='snippets'||true);
  return <div className="ext-tags">
   {none?<span className="ext-tag ext-tag-ok">{t('ext.tag.none')}</span>:tags.map(g=><span key={g.key} className={`ext-tag ${g.key==='project.write'?'ext-tag-warn':'ext-tag-perm'}`}>{g.key==='network'?t('ext.tag.networkN',{count:g.count??1}):t(TAG_KEYS[g.key as GrantKey])}</span>)}
-  {overflow>0?<button type="button" className="ext-tag ext-tag-more" aria-label={t('ext.tag.moreAria',{count:overflow})} onClick={onOverflow}>+{overflow}</button>:null}
+  {overflow>0?<NativeButton type="button" className="ext-tag ext-tag-more" aria-label={t('ext.tag.moreAria',{count:overflow})} onClick={onOverflow}>+{overflow}</NativeButton>:null}
   {contrib.map(c=><span key={c} className="ext-tag">{t(`ext.contrib.${c}`)}</span>)}
  </div>;
 }
