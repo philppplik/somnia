@@ -29,7 +29,7 @@ native-platform acceptance claim.
 | components/vibespace | 0 | 0 | 0 | 0 | 0 |
 | components/extensions | 69 | 13 | 0 | 2 | 84 |
 | components/pdfedit | 0 | 0 | 0 | 0 | 0 |
-| components/agent | 30 | 13 | 2 | 3 | 48 |
+| components/agent | 0 | 0 | 0 | 0 | 0 |
 | components/vectorstudio | 12 | 20 | 4 | 0 | 36 |
 | components/svgedit | 15 | 17 | 1 | 1 | 34 |
 | components/documents | 22 | 6 | 2 | 3 | 33 |
@@ -89,10 +89,15 @@ selects). Its migration is deliberately gated, see below.
 - P17: pdf/pdfedit areas migrated (107 controls to native
   primitives), ratchet budgets shrunk to zero for all 10 files, adoption tests
   and gallery proof added.
-- P18 (this slice): vs-run-open specificity fix - the run-card override now
+- P18: vs-run-open specificity fix - the run-card override now
   matches the P11 base button rule's specificity and wins by source order, so
-  board run cards render as cards again. This branch carries P14 through P17
-  stacked beneath P18.
+  board run cards render as cards again.
+- P19: same hardening for vs-back and vs-studio-card.
+- P20: vibespace checkboxes keep natural width under the global
+  `input{width:100%}` rule, fixing the vertically squeezed hunk filename.
+- P21 (this slice): agent area migrated (48 controls to native primitives),
+  ratchet budgets shrunk to zero for all 9 files, adoption tests and gallery
+  proof added. This branch carries P14 through P20 stacked beneath P21.
 
 ## Remaining bespoke areas
 

@@ -9,56 +9,56 @@
       "rawTextarea": 0
     },
     "src/components/agent/AgentAccountStatus.tsx": {
-      "rawButton": 1,
+      "rawButton": 0,
       "rawInput": 0,
       "rawSelect": 0,
       "rawTextarea": 0
     },
     "src/components/agent/AgentPanel.tsx": {
-      "rawButton": 11,
-      "rawInput": 3,
+      "rawButton": 0,
+      "rawInput": 0,
       "rawSelect": 0,
       "rawTextarea": 0
     },
     "src/components/agent/AgentPrivacy.tsx": {
-      "rawButton": 2,
-      "rawInput": 1,
+      "rawButton": 0,
+      "rawInput": 0,
       "rawSelect": 0,
       "rawTextarea": 0
     },
     "src/components/agent/AgentRailButton.tsx": {
-      "rawButton": 1,
+      "rawButton": 0,
       "rawInput": 0,
       "rawSelect": 0,
       "rawTextarea": 0
     },
     "src/components/agent/AgentSettings.tsx": {
-      "rawButton": 6,
-      "rawInput": 3,
-      "rawSelect": 1,
-      "rawTextarea": 1
+      "rawButton": 0,
+      "rawInput": 0,
+      "rawSelect": 0,
+      "rawTextarea": 0
     },
     "src/components/agent/McpSettings.tsx": {
       "rawButton": 0,
-      "rawInput": 5,
+      "rawInput": 0,
       "rawSelect": 0,
-      "rawTextarea": 2
+      "rawTextarea": 0
     },
     "src/components/agent/NativeProposalReview.tsx": {
-      "rawButton": 2,
+      "rawButton": 0,
       "rawInput": 0,
       "rawSelect": 0,
       "rawTextarea": 0
     },
     "src/components/agent/ProviderAccountConnection.tsx": {
-      "rawButton": 4,
+      "rawButton": 0,
       "rawInput": 0,
-      "rawSelect": 1,
+      "rawSelect": 0,
       "rawTextarea": 0
     },
     "src/components/agent/ProviderAuthentication.tsx": {
-      "rawButton": 3,
-      "rawInput": 1,
+      "rawButton": 0,
+      "rawInput": 0,
       "rawSelect": 0,
       "rawTextarea": 0
     },

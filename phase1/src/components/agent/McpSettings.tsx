@@ -3,6 +3,7 @@ import {useT} from '../../lib/useT';
 import {Button} from '../ui/button';
 import {getMcpRuntime,type McpRuntime,type McpServerConfig} from '../../lib/agent/mcpRuntime';
 import {getStudioMcpHost,type StudioMcpHost,type StudioMcpSnapshot} from '../../lib/agent/studioMcpHost';
+import {NativeInput,Textarea} from '../ui/native-controls';
 const none={subscribe:()=>()=>{},getSnapshot:()=>null};
 const parseArgs=(s:string)=>s.split('\n').map(x=>x.trim()).filter(Boolean);
 const parseEnv=(s:string):Record<string,string>|null=>{const o:Record<string,string>={};for(const line of s.split('\n').map(x=>x.trim()).filter(Boolean)){const i=line.indexOf('=');if(i<1)return null;o[line.slice(0,i)]=line.slice(i+1);}return o;};
@@ -27,7 +28,7 @@ export function McpSettings({runtime=getMcpRuntime()}:{runtime?:McpRuntime|null}
    <div className="mt-1 flex gap-2">
     {s.running?<Button onClick={()=>void runtime.stop(s.config.id)} disabled={snap.busy}>{t('mcp.stop')}</Button>:<Button onClick={()=>void runtime.start(s.config.id)} disabled={snap.busy}>{t('mcp.start')}</Button>}
     <Button onClick={()=>{if(window.confirm(t('mcp.removeConfirm',{id:s.config.id})))void runtime.remove(s.config.id);}} disabled={snap.busy}>{t('mcp.remove')}</Button></div>
-   {s.running&&<ul className="m-0 mt-2 list-none p-0" aria-label={t('mcp.tools')}>{toolsOf(s.config.id).map(tool=><li key={tool.name}><label className="flex items-start justify-start! gap-2 text-left"><input type="checkbox" className="mt-1 size-4 shrink-0 grow-0 basis-4" checked={runtime.isGranted(tool)} onChange={e=>runtime.setGranted(tool,e.target.checked)}/><span className="min-w-0 flex-1 text-left"><strong>{tool.name}</strong><br/><small>{t('mcp.untrustedText')} {tool.description.slice(0,200)}</small></span></label></li>)}{!toolsOf(s.config.id).length&&<li><small>{t('mcp.noTools')}</small></li>}</ul>}
+   {s.running&&<ul className="m-0 mt-2 list-none p-0" aria-label={t('mcp.tools')}>{toolsOf(s.config.id).map(tool=><li key={tool.name}><label className="flex items-start justify-start! gap-2 text-left"><NativeInput type="checkbox" className="mt-1 size-4 shrink-0 grow-0 basis-4" checked={runtime.isGranted(tool)} onChange={e=>runtime.setGranted(tool,e.target.checked)}/><span className="min-w-0 flex-1 text-left"><strong>{tool.name}</strong><br/><small>{t('mcp.untrustedText')} {tool.description.slice(0,200)}</small></span></label></li>)}{!toolsOf(s.config.id).length&&<li><small>{t('mcp.noTools')}</small></li>}</ul>}
   </li>)}</ul>
   {!snap.servers.length&&<p>{t('mcp.noServers')}</p>}
   <section className="mt-3" aria-label={t('mcp.grants.title')} data-testid="mcp-grants">
@@ -41,10 +42,10 @@ export function McpSettings({runtime=getMcpRuntime()}:{runtime?:McpRuntime|null}
    {snap.activity.length===0?<p><small>{t('mcp.activityEmpty')}</small></p>:<ul className="m-0 list-none p-0">{snap.activity.map((a,i)=><li key={`${a.at}-${i}`} data-testid="mcp-activity-row"><small>{new Date(a.at).toLocaleTimeString()} · {a.server}/{a.tool} · {t(`mcp.outcome.${a.outcome}`)} · {a.ms} ms{a.detail?` · ${a.detail}`:''}</small></li>)}</ul>}
   </section>
   <fieldset className="mt-3 flex flex-col gap-2"><legend>{t('mcp.add')}</legend>
-   <label>{t('mcp.id')}<input value={form.id} onChange={e=>setForm({...form,id:e.target.value})} placeholder="files"/></label>
-   <label>{t('mcp.command')}<input value={form.command} onChange={e=>setForm({...form,command:e.target.value})} placeholder="/usr/local/bin/my-mcp-server"/></label>
-   <label>{t('mcp.args')}<textarea value={form.args} onChange={e=>setForm({...form,args:e.target.value})} rows={2}/></label>
-   <label>{t('mcp.env')}<textarea value={form.env} onChange={e=>setForm({...form,env:e.target.value})} rows={2}/></label>
+   <label>{t('mcp.id')}<NativeInput value={form.id} onChange={e=>setForm({...form,id:e.target.value})} placeholder="files"/></label>
+   <label>{t('mcp.command')}<NativeInput value={form.command} onChange={e=>setForm({...form,command:e.target.value})} placeholder="/usr/local/bin/my-mcp-server"/></label>
+   <label>{t('mcp.args')}<Textarea value={form.args} onChange={e=>setForm({...form,args:e.target.value})} rows={2}/></label>
+   <label>{t('mcp.env')}<Textarea value={form.env} onChange={e=>setForm({...form,env:e.target.value})} rows={2}/></label>
    <p><small>{t('mcp.saveHint')}</small></p>
    {formError&&<p role="alert">{formError}</p>}
    <Button variant="primary" onClick={()=>void add()} disabled={snap.busy||!form.id.trim()||!form.command.trim()} data-testid="mcp-save">{t('mcp.save')}</Button></fieldset>
@@ -62,8 +63,8 @@ function StudioServerSection({host,snap}:{host:StudioMcpHost;snap:StudioMcpSnaps
   <p className="pr-8"><small>{t('mcp.server.hint')}</small></p>
   {snap.error&&<p role="alert">{snap.error}</p>}
   {snap.running?<div className="flex flex-col gap-2">
-    <label>{t('mcp.server.url')}<input readOnly value={url} data-testid="mcp-server-url" onFocus={e=>e.target.select()}/></label>
-    <label>{t('mcp.server.token')}<input readOnly value={snap.token} data-testid="mcp-server-token" onFocus={e=>e.target.select()}/></label>
+    <label>{t('mcp.server.url')}<NativeInput readOnly value={url} data-testid="mcp-server-url" onFocus={e=>e.target.select()}/></label>
+    <label>{t('mcp.server.token')}<NativeInput readOnly value={snap.token} data-testid="mcp-server-token" onFocus={e=>e.target.select()}/></label>
     <div className="flex gap-2">
      <Button onClick={()=>void copy(`${url}\n${snap.token}`)}>{t(copied?'mcp.server.copied':'mcp.server.copy')}</Button>
      <Button onClick={()=>void host.stop()} disabled={snap.busy} data-testid="mcp-server-stop">{t('mcp.server.stop')}</Button>

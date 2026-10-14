@@ -20,6 +20,7 @@ import {Tabs,TabsList,TabsTrigger,TabsContent} from '../ui/tabs';
 import {LocalModelsSettings} from './LocalModelsSettings';
 import {McpSettings} from './McpSettings';
 import {agentSettingsSnapshot,subscribeAgentSettings,initializeAgentSettings,applyAgentSettings,setAgentAuthenticationBusy,agentCredentialsChanged} from '../../lib/agent/settingsRuntime';
+import {NativeButton,NativeInput,NativeSelect,Textarea} from '../ui/native-controls';
 /** Provider credentials still use the existing broker, never preference storage. */
 /** Roving tab index for Left/Right/Home/End over `count` tabs; wraps around. */
 export function nextTabIndex(index:number,count:number,key:string):number{return key==='Home'?0:key==='End'?count-1:(index+(key==='ArrowRight'?1:count-1))%count;}
@@ -61,27 +62,27 @@ export function AgentSettings({searchQuery='',legacyPrivacy=false}:{searchQuery?
   <form hidden={tab!=='providers'&&tab!=='instructions'} aria-label="Agent configuration" onChange={()=>setSaved(false)} onSubmit={e=>{e.preventDefault();void saveConfiguration();}}>
    <fieldset disabled={locked}>
     <TabsContent keepMounted value="providers" id="ai-content-providers" aria-labelledby="ai-tab-providers">
-    <label>Provider<select value={cfg.provider} disabled={authBusy||saving} onChange={e=>setCfg({...cfg,provider:e.target.value as AgentConfiguration['provider']})}><option value="ollama">Ollama (local verification required)</option><option value="openrouter">OpenRouter (cloud)</option><option value="openai">OpenAI API (cloud)</option><option value="claude">Anthropic Claude API (desktop)</option></select></label>
-    <label>Model<input required value={cfg.model} onChange={e=>setCfg({...cfg,model:e.target.value})} placeholder="Installed model or provider/model" list="agent-model-catalog"/></label>
+    <label>Provider<NativeSelect value={cfg.provider} disabled={authBusy||saving} onChange={e=>setCfg({...cfg,provider:e.target.value as AgentConfiguration['provider']})}><option value="ollama">Ollama (local verification required)</option><option value="openrouter">OpenRouter (cloud)</option><option value="openai">OpenAI API (cloud)</option><option value="claude">Anthropic Claude API (desktop)</option></NativeSelect></label>
+    <label>Model<NativeInput required value={cfg.model} onChange={e=>setCfg({...cfg,model:e.target.value})} placeholder="Installed model or provider/model" list="agent-model-catalog"/></label>
     <datalist id="agent-model-catalog">{models.map(m=><option key={m.id} value={m.id}>{m.name}</option>)}</datalist>
-    <button type="button" disabled={modelsBusy||authBusy} onClick={()=>void refreshModels()}>{modelsBusy?'Loading models...':'Refresh models'}</button>{modelsBusy&&<button type="button" onClick={()=>modelRequest.current?.abort()}>Cancel model refresh</button>}{modelsError&&<p role="alert">{modelsError}</p>}
+    <NativeButton type="button" disabled={modelsBusy||authBusy} onClick={()=>void refreshModels()}>{modelsBusy?'Loading models...':'Refresh models'}</NativeButton>{modelsBusy&&<NativeButton type="button" onClick={()=>modelRequest.current?.abort()}>Cancel model refresh</NativeButton>}{modelsError&&<p role="alert">{modelsError}</p>}
     <p>Refresh is a metadata request, not inference. Cloud consent is required for cloud catalogs. A listed model is not a promise of tool support or available credits.</p>
-    <button type="button" onClick={()=>patchState({settingsAITab:'local'})}>{t('local.title')}</button>
+    <NativeButton type="button" onClick={()=>patchState({settingsAITab:'local'})}>{t('local.title')}</NativeButton>
     <ProviderAuthentication provider={cfg.provider} disabled={locked} onBusyChange={setAgentAuthenticationBusy} onCredentialChange={()=>void agentCredentialsChanged()}/>
     </TabsContent>
     <TabsContent keepMounted value="instructions" id="ai-content-instructions" aria-labelledby="ai-tab-instructions">
     <fieldset><legend>Custom prompts</legend><p>{totalBytes} / 16000 UTF-8 bytes · {(cfg.customPrompts??[]).length} / 20 prompts · Applies to every AI request on this device.</p><p>Enabled prompts are included with every AI request. Do not put secrets here. File access and cloud consent still require approval.</p>
      {(cfg.customPrompts??[]).map((p,i)=><div key={p.id}>
-      <label>Prompt name {i+1}<input maxLength={120} value={p.name} onChange={e=>setCfg({...cfg,customPrompts:cfg.customPrompts!.map(x=>x.id===p.id?{...x,name:e.target.value}:x)})}/></label>
-      <label>Prompt text {i+1}<textarea aria-label={`Prompt text ${i+1}`} maxLength={8000} value={p.text} onChange={e=>setCfg({...cfg,customPrompts:cfg.customPrompts!.map(x=>x.id===p.id?{...x,text:e.target.value}:x)})}/></label>
+      <label>Prompt name {i+1}<NativeInput maxLength={120} value={p.name} onChange={e=>setCfg({...cfg,customPrompts:cfg.customPrompts!.map(x=>x.id===p.id?{...x,name:e.target.value}:x)})}/></label>
+      <label>Prompt text {i+1}<Textarea aria-label={`Prompt text ${i+1}`} maxLength={8000} value={p.text} onChange={e=>setCfg({...cfg,customPrompts:cfg.customPrompts!.map(x=>x.id===p.id?{...x,text:e.target.value}:x)})}/></label>
       <p role={bytes(p.text)>8000?'alert':undefined}>{bytes(p.text)} / 8000 UTF-8 bytes</p>
-      <label><input type="checkbox" checked={p.enabled} onChange={e=>setCfg({...cfg,customPrompts:cfg.customPrompts!.map(x=>x.id===p.id?{...x,enabled:e.target.checked}:x)})}/>Enable prompt {i+1}</label>
-      <button type="button" onClick={()=>setCfg({...cfg,customPrompts:cfg.customPrompts!.filter(x=>x.id!==p.id)})}>Delete prompt {i+1}</button>
+      <label><NativeInput type="checkbox" checked={p.enabled} onChange={e=>setCfg({...cfg,customPrompts:cfg.customPrompts!.map(x=>x.id===p.id?{...x,enabled:e.target.checked}:x)})}/>Enable prompt {i+1}</label>
+      <NativeButton type="button" onClick={()=>setCfg({...cfg,customPrompts:cfg.customPrompts!.filter(x=>x.id!==p.id)})}>Delete prompt {i+1}</NativeButton>
      </div>)}
-     <button type="button" disabled={(cfg.customPrompts?.length??0)>=20} onClick={()=>setCfg({...cfg,customPrompts:[...(cfg.customPrompts??[]),{id:crypto.randomUUID(),name:'',text:'',enabled:true}]})}>Add custom prompt</button>
+     <NativeButton type="button" disabled={(cfg.customPrompts?.length??0)>=20} onClick={()=>setCfg({...cfg,customPrompts:[...(cfg.customPrompts??[]),{id:crypto.randomUUID(),name:'',text:'',enabled:true}]})}>Add custom prompt</NativeButton>
     </fieldset>
     </TabsContent>
-    <button type="submit" disabled={locked||authBusy||invalid}>{saving?'Saving...':t('agent.settings.save')}</button>{saved&&<p role="status">Configuration saved.</p>}
+    <NativeButton type="submit" disabled={locked||authBusy||invalid}>{saving?'Saving...':t('agent.settings.save')}</NativeButton>{saved&&<p role="status">Configuration saved.</p>}
 
    </fieldset>
   </form>
