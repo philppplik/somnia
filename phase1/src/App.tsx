@@ -68,6 +68,7 @@ import './components/vibespace/registerShell';
 import './components/vectorstudio/registerShell';
 import './store/vectorBootstrap';
 import './components/video/registerShell';
+import './components/animation/registerShell';
 import './components/sound/registerShell';
 import './components/design/registerShell';
 import {AppDialogs} from './components/AppDialogs';
