@@ -1,5 +1,13 @@
 export const LOCAL_MODELS_CATALOGUES:Record<string,Record<string,string>> = {
  "en": {
+  "local.ram.likely": "RAM estimate: likely fits",
+  "local.ram.tight": "RAM estimate: tight",
+  "local.ram.too-big": "RAM estimate: too big",
+  "local.ram.unknown": "RAM estimate: unknown",
+  "local.ram.boundary": "RAM-only estimate uses reported available RAM, weights + 25% + 1 GiB; likely needs another 25% margin. Snapshot expires after 2 minutes. No GPU addition, speed/quality or allocation guarantee. Suggestions are untested catalog starting points, not automatic selections; Vibe still needs fresh tool checks.",
+  "local.ram.suggestion": "First candidate to review: {model}",
+  "local.ram.noSuggestion": "No likely-fit first candidate from known RAM.",
+
   "local.polish.exportName": "Export local JSON: {store}",
   "local.polish.deleteName": "Delete store: {store}",
   "local.polish.clearName": "Clear saved task model: {task}",
@@ -460,6 +468,14 @@ export const LOCAL_MODELS_CATALOGUES:Record<string,Record<string,string>> = {
   "local.route.earlier": "Move earlier after local"
  },
  "de": {
+  "local.ram.likely": "RAM-Schätzung: passt wahrscheinlich",
+  "local.ram.tight": "RAM-Schätzung: knapp",
+  "local.ram.too-big": "RAM-Schätzung: zu groß",
+  "local.ram.unknown": "RAM-Schätzung: unbekannt",
+  "local.ram.boundary": "RAM-Schätzung mit gemeldetem verfügbarem RAM, Gewichten + 25% + 1 GiB; wahrscheinlich passend benötigt weitere 25% Reserve. Snapshot verfällt nach 2 Minuten. Keine GPU-Addition oder Tempo-, Qualitäts- oder Zuteilungsgarantie. Vorschläge sind ungetestete Katalog-Startpunkte, keine automatische Auswahl; Vibe braucht aktuelle Tool-Prüfung.",
+  "local.ram.suggestion": "Ersten Kandidaten prüfen: {model}",
+  "local.ram.noSuggestion": "Kein wahrscheinlich passender erster Kandidat aus bekanntem RAM.",
+
   "local.polish.exportName": "Lokales JSON exportieren: {store}",
   "local.polish.deleteName": "Speicher löschen: {store}",
   "local.polish.clearName": "Gespeichertes Aufgabenmodell löschen: {task}",
@@ -920,6 +936,14 @@ export const LOCAL_MODELS_CATALOGUES:Record<string,Record<string,string>> = {
   "local.route.earlier": "Nach lokal früher einordnen"
  },
  "es": {
+  "local.ram.likely": "Estimación RAM: probablemente cabe",
+  "local.ram.tight": "Estimación RAM: ajustado",
+  "local.ram.too-big": "Estimación RAM: demasiado grande",
+  "local.ram.unknown": "Estimación RAM: desconocida",
+  "local.ram.boundary": "Estimación con RAM disponible declarada, pesos + 25% + 1 GiB; requiere otro 25% de margen para probable ajuste. Caduca en 2 minutos. No suma GPU ni garantiza velocidad, calidad o asignación. Sugerencias del catálogo sin probar, no selección automática; Vibe necesita verificar tools.",
+  "local.ram.suggestion": "Primer candidato para revisar: {model}",
+  "local.ram.noSuggestion": "Sin primer candidato probable con RAM conocida.",
+
   "local.polish.exportName": "Exportar JSON local: {store}",
   "local.polish.deleteName": "Borrar almacén: {store}",
   "local.polish.clearName": "Quitar modelo de tarea: {task}",
@@ -1380,6 +1404,14 @@ export const LOCAL_MODELS_CATALOGUES:Record<string,Record<string,string>> = {
   "local.route.earlier": "Mover antes tras local"
  },
  "fr": {
+  "local.ram.likely": "Estimation RAM: tient probablement",
+  "local.ram.tight": "Estimation RAM: serré",
+  "local.ram.too-big": "Estimation RAM: trop grand",
+  "local.ram.unknown": "Estimation RAM: inconnue",
+  "local.ram.boundary": "Estimation avec RAM disponible déclarée, poids + 25% + 1 GiB; 25% de marge en plus pour probable. Expire après 2 minutes. Aucun ajout GPU ni garantie de vitesse, qualité ou allocation. Suggestions du catalogue non testées, sans sélection automatique; Vibe exige une vérification des tools.",
+  "local.ram.suggestion": "Premier candidat à examiner: {model}",
+  "local.ram.noSuggestion": "Aucun premier candidat probable avec la RAM connue.",
+
   "local.polish.exportName": "Exporter le JSON local: {store}",
   "local.polish.deleteName": "Supprimer le stockage: {store}",
   "local.polish.clearName": "Retirer le modèle de tâche: {task}",
@@ -1840,6 +1872,14 @@ export const LOCAL_MODELS_CATALOGUES:Record<string,Record<string,string>> = {
   "local.route.earlier": "Avancer après local"
  },
  "pt-BR": {
+  "local.ram.likely": "Estimativa RAM: deve caber",
+  "local.ram.tight": "Estimativa RAM: apertado",
+  "local.ram.too-big": "Estimativa RAM: grande demais",
+  "local.ram.unknown": "Estimativa RAM: desconhecida",
+  "local.ram.boundary": "Estimativa com RAM disponível declarada, pesos + 25% + 1 GiB; mais 25% de margem para provável ajuste. Expira em 2 minutos. Sem somar GPU nem garantir velocidade, qualidade ou alocação. Sugestões de catálogo sem teste, não seleção automática; Vibe exige verificar tools.",
+  "local.ram.suggestion": "Primeiro candidato para revisar: {model}",
+  "local.ram.noSuggestion": "Nenhum primeiro candidato provável com RAM conhecida.",
+
   "local.polish.exportName": "Exportar JSON local: {store}",
   "local.polish.deleteName": "Excluir armazenamento: {store}",
   "local.polish.clearName": "Remover modelo da tarefa: {task}",
