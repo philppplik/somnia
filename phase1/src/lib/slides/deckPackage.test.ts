@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {readFileSync,readdirSync} from 'node:fs';
 import {fileURLToPath} from 'node:url';
 import {unzipSync,zipSync,strFromU8,strToU8} from 'fflate';
-import {setShapeBounds,boundsEditIssue,readDeckModel,moveSlide,reorderSlides,duplicateSlide,deleteSlide,newSlideFromLayout,readLayouts} from './deckPackage';
+import {formatShapeText,addTextBox,removeTextBox,nextShapeId,setShapeBounds,boundsEditIssue,readDeckModel,moveSlide,reorderSlides,duplicateSlide,deleteSlide,newSlideFromLayout,readLayouts} from './deckPackage';
 import {readRuns,makeEditedCopy} from './editCopy';
 
 const base=new Uint8Array(readFileSync(fileURLToPath(new URL('../../../slides-engine/fixtures/independent.pptx',import.meta.url))));
@@ -300,6 +300,67 @@ test('setShapeBounds on real corpus decks: moves text boxes with own geometry or
         const nb=readDeckModel(out).slides.find(s=>s.id===sl.id)!.shapes.find(s=>s.id===sh.id)!.bounds!;
         assert.equal(nb.x,from.x+12700,f);edited++;}}}
   assert.ok(edited>0);
+});
+const shapeOf=(b:Uint8Array,slide:number,id:number)=>readDeckModel(b).slides.find(s=>s.id===slide)!.shapes.find(s=>s.id===id)!;
+test('model reports shared explicit run formatting, null when mixed or inherited',()=>{
+  const m=readDeckModel(deck(2)).slides[0].shapes;
+  assert.deepEqual(m[0].fmt,{bold:true,italic:null,sizePt:32,color:'281E5A'});
+  assert.deepEqual(m[1].fmt,{bold:null,italic:null,sizePt:20,color:null});
+});
+test('formatShapeText sets bold, italic, size and colour on every run and nothing else',()=>{
+  const src=deck(2),out=formatShapeText(src,256,3,{bold:true,italic:true,sizePt:44,color:'c62828'});
+  assert.deepEqual(shapeOf(out,256,3).fmt,{bold:true,italic:true,sizePt:44,color:'C62828'});
+  assert.deepEqual(shapeOf(out,256,2),shapeOf(src,256,2));
+  assert.deepEqual(readDeckModel(out).slides[1].shapes,readDeckModel(src).slides[1].shapes);
+  assert.deepEqual(readDeckModel(out).runs,readDeckModel(src).runs);
+  const x=strFromU8(unzipSync(out)['ppt/slides/slide1.xml']);
+  assert.match(x,/<a:rPr sz="4400"[^>]*>|<a:rPr [^>]*sz="4400"/);assert.match(x,/<a:latin typeface="Ubuntu"\/>/);
+  assert.equal((x.match(/<a:solidFill>/g)??[]).length,2);
+  const a=unzipSync(src),z=unzipSync(out);for(const n of Object.keys(a))if(n!=='ppt/slides/slide1.xml')assert.deepEqual(z[n],a[n],n);
+});
+test('formatShapeText replaces an existing fill, keeps a:ln first, creates rPr when absent, and is idempotent',()=>{
+  const lnDeck=patchPart(deck(2),'ppt/slides/slide1.xml',x=>x.replace('<a:rPr sz="2000">','<a:rPr sz="2000"><a:ln w="9525"><a:solidFill><a:srgbClr val="FF0000"/></a:solidFill></a:ln><a:gradFill><a:gsLst/></a:gradFill>'));
+  const out=formatShapeText(lnDeck,256,3,{color:'00ff00'}),x=strFromU8(unzipSync(out)['ppt/slides/slide1.xml']);
+  assert.match(x,/<a:ln w="9525"><a:solidFill><a:srgbClr val="FF0000"\/><\/a:solidFill><\/a:ln><a:solidFill><a:srgbClr val="00FF00"\/><\/a:solidFill>/);assert.doesNotMatch(x,/gradFill/);
+  assert.equal(shapeOf(out,256,3).fmt?.color,'00FF00');
+  const bare=patchPart(deck(2),'ppt/slides/slide1.xml',x=>x.replace(/<a:rPr sz="2000">.*?<\/a:rPr>/,''));
+  assert.equal(shapeOf(formatShapeText(bare,256,3,{bold:true}),256,3).fmt?.bold,true);
+  const once=formatShapeText(deck(2),256,3,{bold:true});assert.equal(formatShapeText(once,256,3,{bold:true}),once);
+  assert.equal(shapeOf(formatShapeText(once,256,3,{bold:false}),256,3).fmt?.bold,false);
+});
+test('formatShapeText refuses bad input, other shape kinds and unsupported slides',()=>{
+  const src=deck(2),bad=(f:object)=>()=>formatShapeText(src,256,2,f as never);
+  assert.throws(bad({}),/Nothing to format/);assert.throws(bad({bold:1}),/on or off/);assert.throws(bad({sizePt:5}),/Size must be/);assert.throws(bad({sizePt:201}),/Size must be/);assert.throws(bad({sizePt:12.5}),/Size must be/);
+  assert.throws(bad({color:'#fff'}),/six hex/);assert.throws(bad({color:'GG0000'}),/six hex/);assert.throws(bad({font:'x'}),/Nothing to format/);
+  assert.throws(()=>formatShapeText(src,999,2,{bold:true}),/Slide no longer exists/);assert.throws(()=>formatShapeText(src,256,99,{bold:true}),/Shape no longer exists/);
+  assert.throws(()=>formatShapeText(deck(2,{picture:true}),256,9,{bold:true}),/Only text boxes/);
+  const broken=patchPart(deck(2),'ppt/slides/slide1.xml',x=>x.replace('</p:spTree>',''));assert.throws(()=>formatShapeText(broken,256,2,{bold:true}));
+});
+test('addTextBox appends a verified text box with the next id and is undone by removeTextBox',()=>{
+  const src=deck(2),out=addTextBox(src,256,'Hello & <you>'),id=nextShapeId(readDeckModel(src).slides[0]);
+  assert.equal(id,4);const sh=shapeOf(out,256,id);assert.equal(sh.kind,'text');assert.equal(sh.name,'TextBox 3');assert.equal(sh.bounds?.source,'slide');
+  assert.equal(readDeckModel(out).runs.find(r=>r.shapeId===id)?.text,'Hello & <you>');
+  assert.deepEqual(readDeckModel(out).slides[1],readDeckModel(src).slides[1]);
+  const a=unzipSync(src),z=unzipSync(out);for(const n of Object.keys(a))if(n!=='ppt/slides/slide1.xml')assert.deepEqual(z[n],a[n],n);
+  const back=removeTextBox(out,256,id);assert.deepEqual(readDeckModel(back).slides,readDeckModel(src).slides);assert.deepEqual(readDeckModel(back).runs,readDeckModel(src).runs);
+  assert.ok(sh.bounds!.x>=0&&sh.bounds!.x+sh.bounds!.w<=readDeckModel(out).slideSize!.cx);
+  const moved=setShapeBounds(out,256,id,{x:sh.bounds!.x,y:sh.bounds!.y,w:sh.bounds!.w,h:sh.bounds!.h},{x:1,y:1,w:300000,h:300000});assert.equal(shapeOf(moved,256,id).bounds?.x,1);
+});
+test('addTextBox inserts before a trailing extLst and refuses bad text, missing slides and the shape cap',()=>{
+  const ext=patchPart(deck(2),'ppt/slides/slide1.xml',x=>x.replace('</p:spTree>','<p:extLst><p:ext uri="{x}"/></p:extLst></p:spTree>'));
+  const out=addTextBox(ext,256,'x'),xml=strFromU8(unzipSync(out)['ppt/slides/slide1.xml']);assert.ok(xml.indexOf('TextBox 3')<xml.indexOf('<p:extLst>'));
+  assert.throws(()=>addTextBox(deck(2),256,''),/invalid/);assert.throws(()=>addTextBox(deck(2),256,'a\u0000b'),/invalid/);assert.throws(()=>addTextBox(deck(2),256,'a'.repeat(16385)),/invalid/);
+  assert.throws(()=>addTextBox(deck(2),999,'x'),/no longer exists/);
+  const many=patchPart(deck(2),'ppt/slides/slide1.xml',x=>x.replace('</p:spTree>',Array.from({length:498},(_,i)=>`<p:sp><p:nvSpPr><p:cNvPr id="${10+i}" name="s"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr/></p:sp>`).join('')+'</p:spTree>'));
+  assert.throws(()=>addTextBox(many,256,'x'),/at most 500/);
+});
+test('removeTextBox removes one text box, refuses referenced, missing and non-text shapes',()=>{
+  const src=deck(2),out=removeTextBox(src,256,2);assert.deepEqual(readDeckModel(out).slides[0].shapes.map(s=>s.id),[3]);
+  assert.equal(readDeckModel(out).runs.length,readDeckModel(src).runs.length-1);assert.deepEqual(readDeckModel(out).slides[1],readDeckModel(src).slides[1]);
+  const anim=patchPart(deck(2),'ppt/slides/slide1.xml',x=>x.replace('</p:cSld>','</p:cSld><p:timing><p:tnLst><p:par><p:cTn id="1"><p:childTnLst><p:set><p:cBhvr><p:tgtEl><p:spTgt spid="3"/></p:tgtEl></p:cBhvr></p:set></p:childTnLst></p:cTn></p:par></p:tnLst></p:timing>'));
+  assert.throws(()=>removeTextBox(anim,256,3),/referenced/);assert.equal(readDeckModel(removeTextBox(anim,256,2)).slides[0].shapes.length,1);
+  assert.throws(()=>removeTextBox(src,256,99),/no longer exists/);assert.throws(()=>removeTextBox(src,999,2),/no longer exists/);
+  assert.throws(()=>removeTextBox(deck(2,{picture:true}),256,9),/Only text boxes/);
 });
 test('committed Rust importer fixtures match the generator (regenerate if the model changes)',()=>{
   const d=new URL('../../../slides-engine/fixtures/',import.meta.url),f=(n:string)=>new Uint8Array(readFileSync(fileURLToPath(new URL(n,d))));

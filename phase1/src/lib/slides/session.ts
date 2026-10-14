@@ -3,7 +3,7 @@ import {reportError} from '../log';
 import {readDeckDocument,serializeDeck,parseDeck,editedDeckBytes} from './deckDocument';
 import type {SlidesDiagnostics} from './diagnostics';
 import type {TextRun} from './editCopy';
-import type {LayoutInfo,DeckModel,BoundsBox} from './deckPackage';
+import type {LayoutInfo,DeckModel,BoundsBox,RunFormat} from './deckPackage';
 import {installBeforeUnload} from '../closeFlow';
 import {useEffect,useSyncExternalStore} from 'react';
 import {SlidesClient} from './client';
@@ -113,6 +113,9 @@ export const duplicateSlideAt=(slideId:number)=>structuralEdit(async(e,before)=>
 export const deleteSlideAt=(slideId:number)=>structuralEdit(async(e,before)=>{const i=idAt(e,slideId);return {bytes:await e.client.slideEdit(before,'delete',slideId),index:Math.min(i,e.state.slideIds.length-2)};});
 /** Moves or resizes one text box as one undo step. Stays on the same slide; the box stays selected. */
 export const setShapeBoundsAt=(slideId:number,shapeId:number,expected:BoundsBox,next:BoundsBox)=>structuralEdit(async(e,before)=>{const i=idAt(e,slideId);return {bytes:await e.client.shapeBounds(before,slideId,shapeId,expected,next),index:i};});
+export const formatShapeAt=(slideId:number,shapeId:number,format:RunFormat)=>structuralEdit(async(e,before)=>({bytes:await e.client.formatText(before,slideId,shapeId,format),index:idAt(e,slideId)}));
+export const addTextBoxAt=(slideId:number,label:string)=>structuralEdit(async(e,before)=>({bytes:await e.client.addBox(before,slideId,label),index:idAt(e,slideId)}));
+export const removeTextBoxAt=(slideId:number,shapeId:number)=>structuralEdit(async(e,before)=>({bytes:await e.client.removeBox(before,slideId,shapeId),index:idAt(e,slideId)}));
 export const addSlideFromLayout=(layoutPart:string,afterSlideId:number|null)=>structuralEdit(async(e,before)=>{const i=afterSlideId===null?e.state.slideIds.length-1:idAt(e,afterSlideId);return {bytes:await e.client.newSlide(before,layoutPart,afterSlideId),index:i+1};});
 /** Metadata lease for selected-run summary. No deck serialization or worker call. */
 export function getSlideSummaryOwner(){const e=sessions.get(getMedia().active??'');if(!e||e.disposed||e.state.busy||!e.state.working||!e.state.summary||!e.state.diagnostics?.editable)throw Error('Slide selection unavailable');return {source:e.state.source,generation:e.generation,revision:e.revision,index:e.state.index,runs:e.state.runs};}

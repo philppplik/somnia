@@ -1,17 +1,17 @@
 import type {CommandSpec} from '../commandSpec';
 import {registerCommandSpec} from '../commandBridge';
 import {selectSlideText} from './panelSelection';
-import {getSlidesSessionState,loadThumbnails,editSlideText,showSlide,moveSlideTo,duplicateSlideAt,deleteSlideAt,addSlideFromLayout,setShapeBoundsAt} from './session';
+import {getSlidesSessionState,loadThumbnails,editSlideText,showSlide,moveSlideTo,duplicateSlideAt,deleteSlideAt,addSlideFromLayout,setShapeBoundsAt,formatShapeAt,addTextBoxAt,removeTextBoxAt} from './session';
 import {textIssue} from './panelModel';
 import type {TextRun} from './editCopy';
 import './panelI18n';
 import {selectShape,getShapeSelection,type ShapeSelection} from './shapeSelection';
 import {stepShape,moveBox,resizeBox,boxOf} from './shapeGeometry';
-import {boundsEditIssue,type ShapeRef,type BoundsBox} from './deckPackage';
+import {boundsEditIssue,nextShapeId,MIN_SIZE_PT,MAX_SIZE_PT,MAX_SHAPES_PER_SLIDE,MAX_BOX_TEXT,type RunFormat,type ShapeRef,type BoundsBox} from './deckPackage';
 export interface PanelCommandDeps {
  state():{source:string;index:number;busy:boolean;working:Uint8Array|null;runs:TextRun[];slideIds:number[];layouts:{part:string;supported:boolean}[];model:{slides:{id:number;shapes:ShapeRef[]}[];slideSize:{cx:number;cy:number}|null}|null;summary:{slides:number}|null};
  thumbnails():Promise<void>;edit(run:TextRun,text:string):Promise<void>;show(index:number):Promise<void>;
- select(value:{source:string;slide:number;run:number}):void;move(slideId:number,toIndex:number):Promise<void>;duplicate(slideId:number):Promise<void>;remove(slideId:number):Promise<void>;add(layoutPart:string,afterSlideId:number|null):Promise<void>;setBounds(slideId:number,shapeId:number,expected:BoundsBox,next:BoundsBox):Promise<void>;pick(value:ShapeSelection|null):void;picked():ShapeSelection|null;
+ select(value:{source:string;slide:number;run:number}):void;move(slideId:number,toIndex:number):Promise<void>;duplicate(slideId:number):Promise<void>;remove(slideId:number):Promise<void>;add(layoutPart:string,afterSlideId:number|null):Promise<void>;setBounds(slideId:number,shapeId:number,expected:BoundsBox,next:BoundsBox):Promise<void>;format(slideId:number,shapeId:number,f:RunFormat):Promise<void>;addBox(slideId:number,label:string):Promise<void>;removeBox(slideId:number,shapeId:number):Promise<void>;pick(value:ShapeSelection|null):void;picked():ShapeSelection|null;
 }
 const identity={source:{type:'string',minLength:1},slide:{type:'integer',minimum:0},run:{type:'integer',minimum:0},old:{type:'string'}};
 export function slidesPanelCommandSpecs(d:PanelCommandDeps):CommandSpec[]{
@@ -74,6 +74,28 @@ export function slidesPanelCommandSpecs(d:PanelCommandDeps):CommandSpec[]{
    const next=v.mode==='move'?moveBox(from,dx,dy,size):resizeBox(from,'se',dx,dy,size);
    if(next.x===from.x&&next.y===from.y&&next.w===from.w&&next.h===from.h)return;
    await d.setBounds(pick.slideId,pick.shapeId,from,next);}},
+  {id:'slides.formatText',title:'Format text box text',category:'Edit',level:'ui',keywords:['bold','italic','size','color','font','format','text'],enabled:available,params:{type:'object',properties:{source:identity.source,slideId:slideId,shapeId:{type:'integer',minimum:0,maximum:2147483647},bold:{type:'boolean'},italic:{type:'boolean'},sizePt:{type:'integer',minimum:MIN_SIZE_PT,maximum:MAX_SIZE_PT},color:{type:'string',pattern:'^[0-9A-Fa-f]{6}$'}},required:['source','slideId','shapeId'],additionalProperties:false},run:async p=>{
+   const {source,slideId:sid,shapeId,...f}=p as {source:string;slideId:number;shapeId:number}&RunFormat;const s=d.state();
+   if(!Object.keys(f).length)throw expected('Choose a format to apply.');
+   if(s.source!==source||s.slideIds[s.index]!==sid)throw expected('Slide changed since selection.');
+   const shape=s.model?.slides.find(x=>x.id===sid)?.shapes.find(x=>x.id===shapeId);
+   if(!shape||shape.parentId!==null)throw expected('Shape no longer exists.');
+   if(shape.kind!=='text'||shape.runCount===0)throw expected('Only text boxes with text can be formatted.');
+   await d.format(sid,shapeId,f);}},
+  {id:'slides.addTextBox',title:'Add text box',category:'Edit',level:'ui',keywords:['text box','add','insert','text'],enabled:()=>available()&&!!d.state().model?.slideSize,params:{type:'object',properties:{source:identity.source,slideId:slideId,text:{type:'string',minLength:1,maxLength:MAX_BOX_TEXT}},required:['source','slideId','text'],additionalProperties:false},run:async p=>{
+   const v=p as {source:string;slideId:number;text:string};const s=d.state();
+   if(s.source!==v.source||s.slideIds[s.index]!==v.slideId)throw expected('Slide changed since selection.');
+   const slide=s.model?.slides.find(x=>x.id===v.slideId);if(!slide)throw expected('Slide no longer exists.');
+   if(slide.shapes.length>=MAX_SHAPES_PER_SLIDE)throw expected(`A slide can hold at most ${MAX_SHAPES_PER_SLIDE} shapes.`);
+   if(textIssue(v.text))throw expected('Text contains unsupported characters.');
+   const id=nextShapeId(slide);await d.addBox(v.slideId,v.text);d.pick({source:v.source,slideId:v.slideId,shapeId:id});}},
+  {id:'slides.removeTextBox',title:'Remove text box',category:'Edit',level:'ui',keywords:['text box','remove','delete'],enabled:available,params:{type:'object',properties:{source:identity.source,slideId:slideId,shapeId:{type:'integer',minimum:0,maximum:2147483647}},required:['source','slideId','shapeId'],additionalProperties:false},run:async p=>{
+   const v=p as {source:string;slideId:number;shapeId:number};const s=d.state();
+   if(s.source!==v.source||s.slideIds[s.index]!==v.slideId)throw expected('Slide changed since selection.');
+   const shape=s.model?.slides.find(x=>x.id===v.slideId)?.shapes.find(x=>x.id===v.shapeId);
+   if(!shape||shape.parentId!==null)throw expected('Shape no longer exists.');
+   if(shape.kind!=='text')throw expected('Only text boxes can be removed.');
+   await d.removeBox(v.slideId,v.shapeId);d.pick(null);}},
   {id:'slides.selectNextShape',title:'Select next shape',category:'View',level:'ui',keywords:['shape','object','tab','next'],enabled:()=>available()&&shapesOf().length>0,run:()=>cycle(1)},
   {id:'slides.selectPreviousShape',title:'Select previous shape',category:'View',level:'ui',keywords:['shape','object','previous'],enabled:()=>available()&&shapesOf().length>0,run:()=>cycle(-1)},
   {id:'slides.editText',title:'Apply slide text',category:'Edit',level:'ui',enabled:available,allowInInput:true,params:{type:'object',properties:{...identity,text:{type:'string',maxLength:16384}},required:['source','slide','run','old','text'],additionalProperties:false},run:async p=>{
@@ -84,5 +106,5 @@ export function slidesPanelCommandSpecs(d:PanelCommandDeps):CommandSpec[]{
   }},
  ];
 }
-const deps:PanelCommandDeps={state:getSlidesSessionState,thumbnails:loadThumbnails,edit:editSlideText,show:showSlide,select:selectSlideText,move:moveSlideTo,duplicate:duplicateSlideAt,remove:deleteSlideAt,add:addSlideFromLayout,setBounds:setShapeBoundsAt,pick:selectShape,picked:getShapeSelection};
+const deps:PanelCommandDeps={state:getSlidesSessionState,thumbnails:loadThumbnails,edit:editSlideText,show:showSlide,select:selectSlideText,move:moveSlideTo,duplicate:duplicateSlideAt,remove:deleteSlideAt,add:addSlideFromLayout,setBounds:setShapeBoundsAt,format:formatShapeAt,addBox:addTextBoxAt,removeBox:removeTextBoxAt,pick:selectShape,picked:getShapeSelection};
 export function registerSlidesPanelCommands(){const offs=slidesPanelCommandSpecs(deps).map(s=>registerCommandSpec(s));return()=>offs.forEach(off=>off());}

@@ -21,7 +21,9 @@ export type ShapeKind='text'|'picture'|'table'|'chart'|'group'|'connector'|'othe
 /** Stored geometry in EMU. `source` says where it came from; only `slide` bounds are the shape's own. */
 export interface ShapeBounds {x:number;y:number;w:number;h:number;rot:number;flipH:boolean;flipV:boolean;source:'slide'|'layout'|'master'}
 export interface ShapePlaceholder {type:string;idx:string}
-export interface ShapeRef {id:number;name:string;kind:ShapeKind;runCount:number;parentId:number|null;bounds:ShapeBounds|null;ph:ShapePlaceholder|null}
+/** Explicit run formatting shared by every run of a shape; null when mixed, inherited or absent. */
+export interface ShapeFormat {bold:boolean|null;italic:boolean|null;sizePt:number|null;color:string|null}
+export interface ShapeRef {id:number;name:string;kind:ShapeKind;runCount:number;parentId:number|null;bounds:ShapeBounds|null;ph:ShapePlaceholder|null;fmt?:ShapeFormat}
 export interface SlideModel {id:number;rid:string;part:string;shapes:ShapeRef[];problems:string[]}
 export interface ModelRun {slideId:number;shapeId:number;paragraph:number;run:number;ordinal:number;text:string;key:string}
 export interface SectionInfo {name:string;ids:number[]}
@@ -79,6 +81,7 @@ const TAG=/<!--[\s\S]*?-->|<!\[CDATA\[[\s\S]*?\]\]>|<\?[\s\S]*?\?>|<(\/?)([A-Za-
 /** Tokenizes one slide part into top-level shapes and text runs with stable ids. */
 export function readSlidePart(xml:string,slideId:number):{shapes:ShapeRef[];runs:ModelRun[];problems:string[]}{
   const shapes:ShapeRef[]=[],runs:ModelRun[]=[],problems:string[]=[];
+  const runFmt=new Map<ShapeRef,{b?:string;i?:string;sz?:string;u?:string;c?:string;skip?:boolean}[]>();
   const stack:{tag:string;shape?:ShapeRef;xf?:{owner:ShapeRef}}[]=[];const parentOf=new Map<ShapeRef,ShapeRef|undefined>();
   let para=-1,run=-1,ordinal=0,open:{start:number;shape?:ShapeRef;para:number;run:number}|null=null;
   for(const m of xml.matchAll(TAG)){
@@ -115,6 +118,9 @@ export function readSlidePart(xml:string,slideId:number):{shapes:ShapeRef[];runs
       if(b){if(tag==='a:off'){b.x=Number(attr(m[3],'x'));b.y=Number(attr(m[3],'y'));}else{b.w=Number(attr(m[3],'cx'));b.h=Number(attr(m[3],'cy'));}}}
     if(tag==='a:tbl'&&enclosing)enclosing.kind='table';
     if(tag==='c:chart'&&enclosing)enclosing.kind='chart';
+    if(tag==='a:r'||tag==='a:fld'){if(enclosing){const l=runFmt.get(enclosing)??[];l.push(tag==='a:r'?{}:{skip:true});runFmt.set(enclosing,l);}}
+    if(tag==='a:rPr'&&enclosing&&parent?.tag==='a:r'){const r=runFmt.get(enclosing)?.at(-1);if(r){r.b=attr(m[3],'b');r.i=attr(m[3],'i');r.sz=attr(m[3],'sz');r.u=attr(m[3],'u');}}
+    if(tag==='a:srgbClr'&&enclosing&&parent?.tag==='a:solidFill'&&stack.at(-2)?.tag==='a:rPr'&&stack.at(-3)?.tag==='a:r'){const r=runFmt.get(enclosing)?.at(-1);if(r)r.c=attr(m[3],'val');}
     if(tag==='a:p'){para++;run=-1;}
     if(tag==='a:r'||tag==='a:fld'){run++;}
     if(tag==='a:t'&&!self)open={start:m.index!+m[0].length,shape:enclosing,para:Math.max(para,0),run:Math.max(run,0)};
@@ -129,6 +135,11 @@ export function readSlidePart(xml:string,slideId:number):{shapes:ShapeRef[];runs
     // Nested shapes live in group child space; only top-level shapes expose usable bounds.
     if(b&&(par||![b.x,b.y,b.w,b.h,b.rot].every(Number.isFinite)||b.w<0||b.h<0||[b.x,b.y,b.w,b.h].some(v=>Math.abs(v)>BIG)||!Number.isInteger(b.x)||!Number.isInteger(b.y)||!Number.isInteger(b.w)||!Number.isInteger(b.h)))sh.bounds=null;
   }
+  const same=<T,>(v:(T|undefined|null)[]):T|null=>v.length&&v.every(x=>x!=null&&x===v[0])?v[0]!:null;
+  for(const [sh,list] of runFmt){if(!list.length)continue;
+    const ok=list.every(r=>!r.skip),flag=(k:'b'|'i')=>ok?same(list.map(r=>r[k]==='1'||r[k]==='true'?true:r[k]==='0'||r[k]==='false'?false:null)):null;
+    const sz=ok?same(list.map(r=>r.sz&&/^\d+$/.test(r.sz)?Number(r.sz):null)):null,c=ok?same(list.map(r=>r.c&&/^[0-9A-Fa-f]{6}$/.test(r.c)?r.c.toUpperCase():null)):null;
+    sh.fmt={bold:flag('b'),italic:flag('i'),sizePt:sz!==null?sz/100:null,color:c};}
   // Shape ids must be unique positive integers for stable addressing.
   const ids=shapes.map(s=>s.id);
   if(ids.some(i=>!Number.isInteger(i)||i<0))problems.push('Shape without a numeric id');
@@ -492,6 +503,116 @@ export function setShapeBounds(bytes:Uint8Array,slideId:number,shapeId:number,ex
   if(!as||!moved?.bounds||!sameBox(moved.bounds,next)||moved.bounds.rot!==0||as.problems.length)throw Error('Edited deck failed verification');
   if(as.shapes.length!==slide.shapes.length||as.shapes.some((s,i)=>{const b=slide.shapes[i];return s.id!==b.id||s.kind!==b.kind||s.runCount!==b.runCount||(s.id!==shapeId&&JSON.stringify(s.bounds)!==JSON.stringify(b.bounds));}))throw Error('Edited deck failed verification');
   if(after.runs.length!==model.runs.length||after.runs.some((r,i)=>r.text!==model.runs[i].text))throw Error('Edited deck failed verification');
+  const re=unzipSync(out);
+  for(const name of Object.keys(zip))if(name!==slide.part&&(!re[name]||re[name].length!==zip[name].length||re[name].some((v,i)=>v!==zip[name][i])))throw Error('Edited deck changed an unrelated part');
+  return out;
+}
+
+/* ---------------------------------------------------------------------------------------
+ * P3: character formatting of one text box, and adding/removing a text box. Same contract
+ * as P2b: patch only what the action owns, reopen, verify, refuse what is not understood.
+ * ------------------------------------------------------------------------------------- */
+export interface RunFormat {bold?:boolean;italic?:boolean;sizePt?:number;color?:string}
+export const MIN_SIZE_PT=6,MAX_SIZE_PT=200,MAX_SHAPES_PER_SLIDE=500,MAX_BOX_TEXT=16384;
+/** Source range of one top-level p:sp, found by tokenizing (never by regex over nested markup). */
+function spRange(xml:string,shapeId:number):{start:number;end:number}{
+  const stack:{tag:string;start?:number;id?:number}[]=[];const hits:{start:number;end:number}[]=[];
+  for(const m of xml.matchAll(TAG)){
+    if(m[2]===undefined)continue;const tag=m[2];
+    if(m[1]==='/'){const top=stack.pop();if(top?.tag==='p:sp'&&top.start!==undefined&&top.id===shapeId)hits.push({start:top.start,end:m.index!+m[0].length});continue;}
+    const parent=stack.at(-1),self=m[4]==='/';
+    if(tag==='p:sp'&&parent?.tag==='p:spTree'){if(self)throw Error('Empty shape element');stack.push({tag,start:m.index!});continue;}
+    if(tag==='p:cNvPr'&&parent?.tag==='p:nvSpPr'&&stack.at(-2)?.start!==undefined)stack.at(-2)!.id=Number(attr(m[3],'id'));
+    if(!self)stack.push({tag});
+  }
+  if(hits.length!==1)throw Error('Shape geometry is not in a supported form');
+  return hits[0];
+}
+const FILL=/<a:solidFill>[\s\S]*?<\/a:solidFill>|<a:(?:gradFill|pattFill|blipFill)\b[\s\S]*?<\/a:(?:gradFill|pattFill|blipFill)>|<a:(?:noFill|grpFill)\s*\/>/g;
+const LN=/<a:ln\b(?:[^>]*\/>|[\s\S]*?<\/a:ln>)/;
+const setAttr=(open:string,name:string,value:string|null)=>{
+  const re=new RegExp(`\\s${name}="[^"]*"`);
+  return value===null?open.replace(re,''):re.test(open)?open.replace(re,` ${name}="${value}"`):open.replace(/^<a:rPr/,`<a:rPr ${name}="${value}"`);
+};
+function formatRun(inner:string,f:RunFormat):string{
+  const m=/^<a:rPr\b((?:[^>"']|"[^"]*"|'[^']*')*?)(\/?)>/.exec(inner);
+  let open=m?m[0].replace(/\/?>$/,''):'<a:rPr',body='';
+  if(m&&m[2]!=='/'){const end=inner.indexOf('</a:rPr>');if(end<0)throw Error('Run properties are not in a supported form');body=inner.slice(m[0].length,end);}
+  const rest=m?(m[2]==='/'?inner.slice(m[0].length):inner.slice(inner.indexOf('</a:rPr>')+8)):inner;
+  if(!m)open='<a:rPr';
+  if(f.bold!==undefined)open=setAttr(open,'b',f.bold?'1':'0');
+  if(f.italic!==undefined)open=setAttr(open,'i',f.italic?'1':'0');
+  if(f.sizePt!==undefined)open=setAttr(open,'sz',String(f.sizePt*100));
+  if(f.color!==undefined){
+    const ln=LN.exec(body),head=ln?body.slice(0,ln.index+ln[0].length):'',tail=ln?body.slice(head.length):body;
+    body=head+`<a:solidFill><a:srgbClr val="${f.color.toUpperCase()}"/></a:solidFill>`+tail.replace(FILL,'');
+  }
+  return body?`${open}>${body}</a:rPr>${rest}`:`${open}/>${rest}`;
+}
+/** Applies explicit bold, italic, size and/or colour to every plain run (a:r) of one text box. */
+export function formatShapeText(bytes:Uint8Array,slideId:number,shapeId:number,f:RunFormat):Uint8Array{
+  const keys=Object.keys(f) as (keyof RunFormat)[];
+  if(!keys.length||keys.some(k=>!['bold','italic','sizePt','color'].includes(k)))throw Error('Nothing to format');
+  if((f.bold!==undefined&&typeof f.bold!=='boolean')||(f.italic!==undefined&&typeof f.italic!=='boolean'))throw Error('Bold and italic must be on or off');
+  if(f.sizePt!==undefined&&(!Number.isInteger(f.sizePt)||f.sizePt<MIN_SIZE_PT||f.sizePt>MAX_SIZE_PT))throw Error(`Size must be a whole number from ${MIN_SIZE_PT} to ${MAX_SIZE_PT} pt`);
+  if(f.color!==undefined&&!/^[0-9A-Fa-f]{6}$/.test(f.color))throw Error('Color must be six hex digits');
+  const model=readDeckModel(bytes),slide=model.slides.find(s=>s.id===slideId);
+  if(!slide)throw Error('Slide no longer exists');if(slide.problems.length)throw Error('This slide has unsupported structure');
+  const shape=slide.shapes.find(s=>s.id===shapeId);if(!shape)throw Error('Shape no longer exists');
+  if(shape.parentId!==null||shape.kind!=='text')throw Error('Only text boxes can be formatted');
+  const zip=openPackage(bytes),xml=text(zip,slide.part),{start,end}=spRange(xml,shapeId),sp=xml.slice(start,end);
+  let n=0;
+  const next=sp.replace(/<a:r>([\s\S]*?)<\/a:r>/g,(_all,inner:string)=>{n++;return `<a:r>${formatRun(inner,f)}</a:r>`;});
+  if(!n)throw Error('This text box has no formattable text');
+  if(next===sp)return bytes;
+  const out=repack(zip,{[slide.part]:xml.slice(0,start)+next+xml.slice(end)});
+  const after=readDeckModel(out),as=after.slides.find(s=>s.id===slideId);
+  if(!as||as.problems.length||as.shapes.length!==slide.shapes.length||as.shapes.some((s,i)=>s.id!==slide.shapes[i].id||JSON.stringify(s.bounds)!==JSON.stringify(slide.shapes[i].bounds)))throw Error('Formatted deck failed verification');
+  if(after.runs.length!==model.runs.length||after.runs.some((r,i)=>r.text!==model.runs[i].text||r.key!==model.runs[i].key))throw Error('Formatted deck failed verification');
+  const fmt=as.shapes.find(s=>s.id===shapeId)!.fmt;
+  if(!fmt||(f.bold!==undefined&&fmt.bold!==f.bold)||(f.italic!==undefined&&fmt.italic!==f.italic)||(f.sizePt!==undefined&&fmt.sizePt!==f.sizePt)||(f.color!==undefined&&fmt.color!==f.color.toUpperCase()))throw Error('Formatted deck failed verification');
+  const re=unzipSync(out);
+  for(const name of Object.keys(zip))if(name!==slide.part&&(!re[name]||re[name].length!==zip[name].length||re[name].some((v,i)=>v!==zip[name][i])))throw Error('Formatted deck changed an unrelated part');
+  return out;
+}
+const esc=(t:string)=>t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+/** The id a new shape on this slide receives. Callers use it to select the new box. */
+export const nextShapeId=(s:{shapes:readonly {id:number}[]})=>s.shapes.reduce((m,x)=>Math.max(m,x.id),1)+1;
+/** Adds an empty-styled text box with `label` as its text, centred in the lower half of the slide. */
+export function addTextBox(bytes:Uint8Array,slideId:number,label:string):Uint8Array{
+  if(typeof label!=='string'||!label.length||label.length>MAX_BOX_TEXT||/[\u0000-\u0008\u000b\u000c\u000e-\u001f\ud800-\udfff\ufffe\uffff]/.test(label))throw Error('Text box text is invalid');
+  const model=readDeckModel(bytes),size=model.slideSize,slide=model.slides.find(s=>s.id===slideId);
+  if(!size)throw Error('Slide size is not readable');if(!slide)throw Error('Slide no longer exists');
+  if(slide.problems.length)throw Error('This slide has unsupported structure');
+  if(slide.shapes.length>=MAX_SHAPES_PER_SLIDE)throw Error(`A slide can hold at most ${MAX_SHAPES_PER_SLIDE} shapes`);
+  const id=nextShapeId(slide),w=Math.round(size.cx*0.6),h=Math.max(MIN_BOX_EMU,Math.round(size.cy*0.12)),x=Math.round((size.cx-w)/2),y=Math.round(size.cy*0.55);
+  const zip=openPackage(bytes),xml=text(zip,slide.part);
+  const sp=`<p:sp><p:nvSpPr><p:cNvPr id="${id}" name="TextBox ${id-1}"/><p:cNvSpPr txBox="1"/><p:nvPr/></p:nvSpPr><p:spPr><a:xfrm><a:off x="${x}" y="${y}"/><a:ext cx="${w}" cy="${h}"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom><a:noFill/></p:spPr><p:txBody><a:bodyPr wrap="square" rtlCol="0"><a:spAutoFit/></a:bodyPr><a:lstStyle/><a:p><a:r><a:rPr lang="en-US" sz="1800"/><a:t>${esc(label)}</a:t></a:r></a:p></p:txBody></p:sp>`;
+  const tail=/(<p:extLst>(?:(?!<\/p:spTree>)[\s\S])*?<\/p:extLst>\s*)?<\/p:spTree>/.exec(xml);
+  if(!tail||xml.indexOf('</p:spTree>')!==tail.index+tail[0].length-'</p:spTree>'.length)throw Error('Slide shape tree is not in a supported form');
+  const out=repack(zip,{[slide.part]:xml.slice(0,tail.index)+sp+xml.slice(tail.index)});
+  const after=readDeckModel(out),as=after.slides.find(s=>s.id===slideId),box=as?.shapes.find(s=>s.id===id);
+  if(!as||as.problems.length||!box||box.kind!=='text'||box.parentId!==null||as.shapes.length!==slide.shapes.length+1)throw Error('Edited deck failed verification');
+  if(after.runs.length!==model.runs.length+1||after.runs.find(r=>r.slideId===slideId&&r.shapeId===id)?.text!==label)throw Error('Edited deck failed verification');
+  const re=unzipSync(out);
+  for(const name of Object.keys(zip))if(name!==slide.part&&(!re[name]||re[name].length!==zip[name].length||re[name].some((v,i)=>v!==zip[name][i])))throw Error('Edited deck changed an unrelated part');
+  return out;
+}
+/** Removes one top-level text box. Refused while an animation or connector still points at it. */
+export function removeTextBox(bytes:Uint8Array,slideId:number,shapeId:number):Uint8Array{
+  const model=readDeckModel(bytes),slide=model.slides.find(s=>s.id===slideId);
+  if(!slide)throw Error('Slide no longer exists');if(slide.problems.length)throw Error('This slide has unsupported structure');
+  const shape=slide.shapes.find(s=>s.id===shapeId);if(!shape)throw Error('Shape no longer exists');
+  if(shape.parentId!==null||shape.kind!=='text')throw Error('Only text boxes can be removed');
+  const zip=openPackage(bytes),xml=text(zip,slide.part);
+  if(new RegExp(`\\b(?:spid|id)="${shapeId}"(?![\\d])`).test(xml.replace(/<p:cNvPr\b[^>]*>/g,'')))throw Error('This text box is referenced by an animation or connector');
+  const {start,end}=spRange(xml,shapeId);
+  const out=repack(zip,{[slide.part]:xml.slice(0,start)+xml.slice(end)});
+  const after=readDeckModel(out),as=after.slides.find(s=>s.id===slideId);
+  const keep=slide.shapes.filter(s=>s.id!==shapeId);
+  if(!as||as.problems.length||as.shapes.length!==keep.length||as.shapes.some((s,i)=>s.id!==keep[i].id||JSON.stringify(s.bounds)!==JSON.stringify(keep[i].bounds)))throw Error('Edited deck failed verification');
+  const kept=model.runs.filter(r=>!(r.slideId===slideId&&r.shapeId===shapeId));
+  if(after.runs.length!==kept.length||after.runs.some((r,i)=>r.text!==kept[i].text))throw Error('Edited deck failed verification');
   const re=unzipSync(out);
   for(const name of Object.keys(zip))if(name!==slide.part&&(!re[name]||re[name].length!==zip[name].length||re[name].some((v,i)=>v!==zip[name][i])))throw Error('Edited deck changed an unrelated part');
   return out;

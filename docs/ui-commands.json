@@ -3490,6 +3490,19 @@
       "hasEnabled": true
     },
     {
+      "id": "slides.addTextBox",
+      "title": "Add text box",
+      "category": "Edit",
+      "source": "slides",
+      "keywords": [
+        "add",
+        "insert",
+        "text",
+        "text box"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "slides.deleteSlide",
       "title": "Delete slide",
       "category": "Edit",
@@ -3518,6 +3531,22 @@
       "category": "Edit",
       "source": "slides",
       "allowInInput": true,
+      "hasEnabled": true
+    },
+    {
+      "id": "slides.formatText",
+      "title": "Format text box text",
+      "category": "Edit",
+      "source": "slides",
+      "keywords": [
+        "bold",
+        "color",
+        "font",
+        "format",
+        "italic",
+        "size",
+        "text"
+      ],
       "hasEnabled": true
     },
     {
@@ -3620,6 +3649,18 @@
       "title": "Redo slide text",
       "category": "Edit",
       "source": "slides",
+      "hasEnabled": true
+    },
+    {
+      "id": "slides.removeTextBox",
+      "title": "Remove text box",
+      "category": "Edit",
+      "source": "slides",
+      "keywords": [
+        "delete",
+        "remove",
+        "text box"
+      ],
       "hasEnabled": true
     },
     {

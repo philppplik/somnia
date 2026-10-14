@@ -16,7 +16,7 @@ included; the `source` column names the owner. Dynamic sources that stay outside
 
 Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, fr, pt-BR); the gate enforces it.
 
-431 commands. Categories: Edit, Help, Insert, Project, Tools, View.
+434 commands. Categories: Edit, Help, Insert, Project, Tools, View.
 
 | id | title | category | source | shortcut |
 | --- | --- | --- | --- | --- |
@@ -334,9 +334,11 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `shell.rail.show` | Show hidden rail icon | View | core |  |
 | `shell.rail.unpin` | Move rail icon to overflow | View | core |  |
 | `sidebar.toggle` | Toggle sidebar | View | core | `Mod+B` |
+| `slides.addTextBox` | Add text box | Edit | slides |  |
 | `slides.deleteSlide` | Delete slide | Edit | slides |  |
 | `slides.duplicateSlide` | Duplicate slide | Edit | slides |  |
 | `slides.editText` | Apply slide text | Edit | slides |  |
+| `slides.formatText` | Format text box text | Edit | slides |  |
 | `slides.loadThumbnails` | Load slide thumbnails | View | slides |  |
 | `slides.moveSlide` | Move slide | Edit | slides |  |
 | `slides.moveSlideEarlier` | Move slide earlier | Edit | slides |  |
@@ -347,6 +349,7 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `slides.present.exit` | Exit presentation | View | slides |  |
 | `slides.present.fromStart` | Present from start | View | slides | `Shift+F5` |
 | `slides.redo` | Redo slide text | Edit | slides |  |
+| `slides.removeTextBox` | Remove text box | Edit | slides |  |
 | `slides.saveCopy` | Save presentation copy | Project | slides |  |
 | `slides.selectNextShape` | Select next shape | View | slides |  |
 | `slides.selectPreviousShape` | Select previous shape | View | slides |  |

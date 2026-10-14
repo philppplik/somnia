@@ -9,7 +9,7 @@ const runs=[{slide:0,run:0,text:'Hello world',part:'ppt/slides/slide1.xml'},{sli
 let picked:import('./shapeSelection').ShapeSelection|null=null;
 function fixture(){picked=null;
  const state={source:'blob:deck1',index:0,busy:false,working:new Uint8Array(40),runs:runs.map(r=>({...r})),slideIds:[256,257],layouts:[{part:'ppt/slideLayouts/slideLayout1.xml',supported:true},{part:'ppt/slideLayouts/slideLayout2.xml',supported:false}],model:{slides:[{id:256,shapes:[{id:2,name:'A',kind:'text' as const,runCount:1,parentId:null,bounds:{x:1000000,y:1000000,w:2000000,h:1000000,rot:0,flipH:false,flipV:false,source:'slide' as const},ph:null},{id:3,name:'B',kind:'text' as const,runCount:1,parentId:null,bounds:null,ph:null}]},{id:257,shapes:[]}],slideSize:{cx:9144000,cy:6858000}},summary:{slides:2}};
- const calls:unknown[]=[];const deps:PanelCommandDeps={state:()=>state,thumbnails:async()=>{calls.push('thumbnails');},show:async index=>{state.index=index;calls.push(['show',index]);},edit:async(run,text)=>{state.runs=state.runs.map(r=>r.slide===run.slide&&r.run===run.run?{...r,text}:r);calls.push(['edit',text]);},select:v=>calls.push(v),move:async(id,to)=>{const a=state.slideIds.slice();a.splice(to,0,a.splice(a.indexOf(id),1)[0]);state.slideIds=a;calls.push(['move',id,to]);},duplicate:async id=>{calls.push(['dup',id]);},remove:async id=>{calls.push(['del',id]);},add:async(l,a)=>{calls.push(['add',l,a]);},setBounds:async(id,sid,e,n)=>{calls.push(['bounds',id,sid,e,n]);},pick:v=>{picked=v;calls.push(['pick',v]);},picked:()=>picked};
+ const calls:unknown[]=[];const deps:PanelCommandDeps={state:()=>state,thumbnails:async()=>{calls.push('thumbnails');},show:async index=>{state.index=index;calls.push(['show',index]);},edit:async(run,text)=>{state.runs=state.runs.map(r=>r.slide===run.slide&&r.run===run.run?{...r,text}:r);calls.push(['edit',text]);},select:v=>calls.push(v),move:async(id,to)=>{const a=state.slideIds.slice();a.splice(to,0,a.splice(a.indexOf(id),1)[0]);state.slideIds=a;calls.push(['move',id,to]);},duplicate:async id=>{calls.push(['dup',id]);},remove:async id=>{calls.push(['del',id]);},add:async(l,a)=>{calls.push(['add',l,a]);},setBounds:async(id,sid,e,n)=>{calls.push(['bounds',id,sid,e,n]);},format:async(sid,id,f)=>{calls.push(['format',sid,id,f]);},addBox:async(sid,l)=>{calls.push(['addBox',sid,l]);},removeBox:async(sid,id)=>{calls.push(['removeBox',sid,id]);},pick:v=>{picked=v;calls.push(['pick',v]);},picked:()=>picked};
  const dispatcher=new CommandDispatcher();slidesPanelCommandSpecs(deps).forEach(s=>dispatcher.register(s));return {state,calls,dispatcher};
 }
 test('outline searches text and slide number and preserves empty slides',()=>{
@@ -128,4 +128,22 @@ test('nudgeShape moves or resizes by whole points, clamps, and is a no-op at the
  await assert.rejects(()=>nudge({mode:'move',dxPt:101,dyPt:0}));
  picked={source:'blob:deck1',slideId:256,shapeId:3};
  await assert.rejects(()=>nudge({mode:'move',dxPt:1,dyPt:0}),/noBounds/);
+});
+
+test('formatText, addTextBox and removeTextBox validate identity and schema before mutation',async()=>{
+ const f=fixture(),run=(id:string,p:unknown)=>f.dispatcher.runCommand(id,p,{origin:'ui'}),base={source:'blob:deck1',slideId:256};
+ await run('slides.formatText',{...base,shapeId:2,bold:true,sizePt:24,color:'c62828'});assert.deepEqual(f.calls.at(-1),['format',256,2,{bold:true,sizePt:24,color:'c62828'}]);
+ const n=f.calls.length;
+ await assert.rejects(()=>run('slides.formatText',{...base,shapeId:2}),/Choose a format/);
+ await assert.rejects(()=>run('slides.formatText',{...base,shapeId:2,sizePt:5}));
+ await assert.rejects(()=>run('slides.formatText',{...base,shapeId:2,color:'red'}));
+ await assert.rejects(()=>run('slides.formatText',{...base,shapeId:2,font:'x'}));
+ await assert.rejects(()=>run('slides.formatText',{...base,source:'x',shapeId:2,bold:true}),/Slide changed/);
+ await assert.rejects(()=>run('slides.formatText',{...base,shapeId:99,bold:true}),/no longer exists/);
+ await run('slides.addTextBox',{...base,text:'Hi'});assert.deepEqual(f.calls.at(-2),['addBox',256,'Hi']);assert.deepEqual(picked,{source:'blob:deck1',slideId:256,shapeId:4});
+ await assert.rejects(()=>run('slides.addTextBox',{...base,text:''}));await assert.rejects(()=>run('slides.addTextBox',{...base,text:'a\u0000'}),/unsupported/);await assert.rejects(()=>run('slides.addTextBox',{...base,slideId:257,source:'zzz',text:'x'}),/Slide changed/);
+ picked={source:'blob:deck1',slideId:256,shapeId:2};
+ await run('slides.removeTextBox',{...base,shapeId:2});assert.deepEqual(f.calls.at(-2),['removeBox',256,2]);assert.equal(picked,null);
+ await assert.rejects(()=>run('slides.removeTextBox',{...base,shapeId:99}),/no longer exists/);
+ assert.ok(f.calls.length>n);
 });
