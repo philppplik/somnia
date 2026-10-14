@@ -46,7 +46,7 @@ export function ExportSettingsPanel({comp,busy}:{comp:Composition;busy:boolean})
   <ul className="m-0 grid list-none gap-1 p-0 text-ink-2" aria-label={t('animation.export.estimate')} data-testid="animation-export-estimate">
    {EXPORT_FORMATS.map((f:ExportFormat)=>{const p=exportPlan(comp,f,s);const bad=p.problems.length>0;
     return <li key={f} data-testid={`animation-export-estimate-${f}`} data-problem={bad||undefined} className={bad||p.overCap?'text-danger':undefined}>
-     {t(`animation.export.kind.${f}`)}: {t('animation.export.readout',{frames:p.frames,seconds:Math.round(p.seconds*10)/10,size:`${p.width}x${p.height}`,bytes:size(p.estimateBytes)})}
+     {t(`animation.export.kind.${f}`)}: {t('animation.export.readout',{frames:p.frames,seconds:Math.round(p.seconds*10)/10,size:p.sheet?`${p.sheet.width}x${p.sheet.height}`:`${p.width}x${p.height}`,bytes:size(p.estimateBytes)})}
      {bad&&` - ${t(`animation.export.problem.${p.problems[0]}`)}`}{!bad&&p.overCap&&` - ${t('animation.export.overCap')}`}</li>;})}
   </ul>
   <p className="m-0 text-ink-3">{t('animation.export.estimateNote')}</p>

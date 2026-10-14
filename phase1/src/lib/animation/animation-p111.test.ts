@@ -846,3 +846,12 @@ test('P207 GIF merges identical consecutive frames: summed delay, fewer images, 
  assert.deepEqual(info(g),{n:3,d:[7,11,7]});assert.equal(g.length,one.length);assert.equal(g[g.length-1],0x3B);
  const plain=encodeGif(w,h,[{pixels:A,delayCs:3},{pixels:A2,delayCs:4},{pixels:A,delayCs:3}]);assert.equal(info(plain).n,1);
 });
+
+test('P208 export plan: sheet size and grid in the readout, padding included, absent for other formats and bad settings',async()=>{
+ const {exportPlan,defaultExportSettings}=await import('./exportSettings');
+ const s=open();const c=findComp(s.document!)!;const base={...defaultExportSettings(),scale:25};
+ const a=exportPlan(c,'sheet',base);assert.ok(a.sheet);assert.equal(a.sheet!.width,a.sheet!.columns*a.width);assert.equal(a.sheet!.height,a.sheet!.rows*a.height);assert.ok(a.sheet!.columns*a.sheet!.rows>=a.frames);
+ const b=exportPlan(c,'sheet',{...base,sheetPadding:4,columns:5});assert.equal(b.sheet!.columns,5);assert.equal(b.sheet!.width,5*(a.width+4)+4);assert.equal(b.sheet!.height,b.sheet!.rows*(a.height+4)+4);
+ assert.equal(exportPlan(c,'gif',base).sheet,undefined);assert.equal(exportPlan(c,'sheet',{...base,scale:400,columns:1}).sheet,undefined);
+ assert.equal(exportPlan(c,'sheet',{...base,sheetPadding:99}).sheet!.width,a.sheet!.width);
+});

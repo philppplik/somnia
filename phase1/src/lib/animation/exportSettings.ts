@@ -68,6 +68,8 @@ export interface ExportPlan{
  from:number;to:number;
  /** Composition with the export rate and range; drawing size is unchanged, output size is `width` x `height`. */
  comp:Composition;
+ /** Sprite sheet only: size and grid of the finished sheet (padding included), absent when the sheet cannot be planned. */
+ sheet?:{width:number;height:number;columns:number;rows:number};
  estimateBytes:number;overCap:boolean;problems:ExportProblem[];
 }
 const whole=(n:unknown,lo:number,hi:number)=>typeof n==='number'&&Number.isInteger(n)&&n>=lo&&n<=hi;
@@ -114,10 +116,11 @@ export function exportPlan(comp:Composition,format:ExportFormat,s:ExportSettings
  const seconds=frames*rate.den/rate.num;
  if(comp.width*comp.height>EXPORT_LIMITS.maxPixels||width*height>EXPORT_LIMITS.maxPixels||width>16384||height>16384)problems.push('size');
  if(frames>EXPORT_LIMITS.maxFrames||(format==='gif'&&frames>EXPORT_LIMITS.gifFrames))problems.push('frames');
- if(format==='sheet'){try{sheetPlan(frames,width,height,s.columns??undefined,ok('padding')?s.sheetPadding??0:0);}catch(x){if(x instanceof SheetError)problems.push(x.code==='too-large'?'size':'frames');else throw x;}}
+ let sheet:ExportPlan['sheet'];
+ if(format==='sheet'){try{const g=sheetPlan(frames,width,height,s.columns??undefined,ok('padding')?s.sheetPadding??0:0);sheet={width:g.width,height:g.height,columns:g.columns,rows:g.rows};}catch(x){if(x instanceof SheetError)problems.push(x.code==='too-large'?'size':'frames');else throw x;}}
  if(format==='webm'&&seconds>EXPORT_LIMITS.webmSeconds)problems.push('seconds');
  const est=estimateBytes(format,width,height,frames,rate.num/rate.den,ok('quality')?s.quality:'medium',ok('colors')?s.colors:256);
- return {format,width,height,frames,seconds,fps:rate,from,to,comp:derived,estimateBytes:est,overCap:est>EXPORT_LIMITS.maxBytes,problems:[...new Set(problems)]};
+ return {format,width,height,frames,seconds,fps:rate,from,to,comp:derived,...(sheet?{sheet}:{}),estimateBytes:est,overCap:est>EXPORT_LIMITS.maxBytes,problems:[...new Set(problems)]};
 }
 const MSG:Record<ExportProblem,string>={size:'The output size is above the supported limit. Lower the scale.',frames:'Too many frames for this format. Shorten the range or lower the frame rate.',seconds:`WebM records in real time and is limited to ${EXPORT_LIMITS.webmSeconds} seconds. Shorten the range.`,range:'The frame range is not valid for this composition.',scale:`Scale must be a whole number from ${SCALE_MIN} to ${SCALE_MAX} percent.`,fps:`Frame rate must be a whole number from 1 to ${FPS_MAX}.`,columns:'Sprite sheet columns must be a whole number from 1 to 256.',name:'The file name must be at most 80 characters.',padding:'Sheet padding must be a whole number from 0 to 32.',frameFormat:'The frame format must be PNG, JPEG or WebP.',frameQuality:'The frame quality must be a whole number from 1 to 100.',colors:'GIF colors must be 16, 32, 64, 128 or 256.',number:'The first frame number must be a whole number from 0 to 99999.',background:'The background colour must look like #ffffff.',quality:'WebM quality must be low, medium or high.'};
 export const problemMessage=(p:ExportProblem)=>MSG[p];
