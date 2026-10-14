@@ -144,5 +144,9 @@
  "photos.wb.daylight": "Tageslicht",
  "photos.wb.cloudy": "Bewölkt",
  "photos.wb.shade": "Schatten",
- "photos.wb.flash": "Blitz"
+ "photos.wb.flash": "Blitz",
+ "photos.filmstrip.selectAll": "Alle auswaehlen",
+ "photos.filmstrip.selectUnrated": "Unbewertete auswaehlen",
+ "photos.filmstrip.selectNone": "Auswahl aufheben",
+ "photos.filmstrip.select": "Auswahl"
 }

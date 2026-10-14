@@ -212,3 +212,14 @@ Coverage: `photos-filmstrip.spec.ts` gains a light/dark leg that
 copies a warm white balance, pastes it onto a two-photo selection
 (both sessions updated, note visible) and applies the cloudy WB preset
 from the dropdown (temp/tint land on the photo).
+
+## Selection helpers (P92)
+
+A compact "Selection" dropdown in the filmstrip selects every photo
+in the current filter view, selects only the unrated ones, or clears
+the selection - the fast path into batch rating, batch apply and the
+survey without modifier clicks.
+
+Coverage: `photos-filmstrip.spec.ts` gains a light/dark leg that
+rates one photo, selects unrated (two photos), selects all (three),
+and clears the selection.

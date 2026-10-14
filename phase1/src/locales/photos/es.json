@@ -144,5 +144,9 @@
  "photos.wb.daylight": "Luz de día",
  "photos.wb.cloudy": "Nublado",
  "photos.wb.shade": "Sombra",
- "photos.wb.flash": "Flash"
+ "photos.wb.flash": "Flash",
+ "photos.filmstrip.selectAll": "Seleccionar todo",
+ "photos.filmstrip.selectUnrated": "Seleccionar sin valorar",
+ "photos.filmstrip.selectNone": "Quitar seleccion",
+ "photos.filmstrip.select": "Seleccion"
 }

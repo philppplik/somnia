@@ -75,6 +75,17 @@ export function PhotosFilmstrip({active,onSurvey}:{active:string;onSurvey?:()=>v
   <NativeSelect value={sort} aria-label={t('photos.filmstrip.sort')} title={t('photos.filmstrip.sort')} onChange={e=>setSort(e.currentTarget.value as FilmstripSort)} className="h-7 shrink-0" data-testid="photos-filmstrip-sort">
    {FILMSTRIP_SORTS.map(m=><option key={m} value={m}>{t(`photos.filmstrip.sort.${m}`)}</option>)}
   </NativeSelect>
+  <NativeSelect value="" aria-label={t('photos.filmstrip.select')} title={t('photos.filmstrip.select')} onChange={e=>{
+   const v=e.currentTarget.value;e.currentTarget.value='';
+   if(v==='all')setSel(photos.map(p=>p.name));
+   else if(v==='unrated')setSel(photos.filter(p=>!(ratings[p.name]>=1)).map(p=>p.name));
+   else if(v==='none')setSel([]);
+  }} className="h-7 shrink-0" data-testid="photos-filmstrip-select">
+   <option value="" disabled>{t('photos.filmstrip.select')}</option>
+   <option value="all">{t('photos.filmstrip.selectAll')}</option>
+   <option value="unrated">{t('photos.filmstrip.selectUnrated')}</option>
+   <option value="none">{t('photos.filmstrip.selectNone')}</option>
+  </NativeSelect>
   <Button variant="outline" size="compact" disabled={neutral} onClick={()=>activeSession&&setCopied(extractLook(activeSession.now))} data-testid="photos-filmstrip-copy">{t('photos.filmstrip.copy')}</Button>
   <Button variant="outline" size="compact" disabled={!copied||applying||(!active&&selected.length<2)} onClick={()=>{
    if(!copied)return;

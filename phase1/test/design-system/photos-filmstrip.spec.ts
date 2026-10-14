@@ -364,3 +364,20 @@ test('paste applies to the selection and WB presets join the preset dropdown (li
   await page.screenshot({path:`test-results/ds-photos-paste-selection-${theme}.png`,fullPage:true});
  }
 });
+test('selection helpers: all, unrated, clear (light and dark)',async({page})=>{
+ for(const theme of['light','dark']){
+  await page.goto('/test/design-system/?view=photos-filmstrip');
+  await page.evaluate(t=>document.documentElement.setAttribute('data-theme',t),theme);
+  await expect(page.getByTestId('photos-workspace')).toBeVisible();
+  await expect(page.getByTestId('photos-filmstrip-item-strip-3.png')).toBeVisible(); // media added progressively
+  await page.evaluate(async()=>{const m=await import('/src/lib/photos/ratings.ts');for(const n of['strip-1.png','strip-2.png','strip-3.png'])m.setRating(n,0);}); // ratings persist via localStorage
+  await page.getByTestId('photos-filmstrip-rating-star-2').click(); // rate the active strip-1
+  await page.getByTestId('photos-filmstrip-select').selectOption('unrated');
+  await expect(page.getByTestId('photos-filmstrip-apply')).toHaveText('Apply to 2 photos'); // strip-2 + strip-3
+  await page.getByTestId('photos-filmstrip-select').selectOption('all');
+  await expect(page.getByTestId('photos-filmstrip-apply')).toHaveText('Apply to 3 photos');
+  await page.screenshot({path:`test-results/ds-photos-select-helpers-${theme}.png`,fullPage:true});
+  await page.getByTestId('photos-filmstrip-select').selectOption('none');
+  await expect(page.getByTestId('photos-filmstrip-apply')).toHaveCount(0);
+ }
+});
