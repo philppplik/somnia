@@ -3,7 +3,7 @@ import {reportError} from '../log';
 import {readDeckDocument,serializeDeck,parseDeck,editedDeckBytes} from './deckDocument';
 import type {SlidesDiagnostics} from './diagnostics';
 import type {TextRun} from './editCopy';
-import type {LayoutInfo,DeckModel,BoundsBox,RunFormat,ShapeBoundsEdit,ArrangeMode,SlideTransition,ShapeStylePatch,TableEdit} from './deckPackage';
+import type {LayoutInfo,DeckModel,BoundsBox,RunFormat,ShapeBoundsEdit,ArrangeMode,SlideTransition,ShapeStylePatch,TableEdit,ThemeEdit} from './deckPackage';
 import {installBeforeUnload} from '../closeFlow';
 import {useEffect,useSyncExternalStore} from 'react';
 import {SlidesClient} from './client';
@@ -119,6 +119,7 @@ export const arrangeShapesAt=(slideId:number,shapeIds:number[],mode:ArrangeMode)
 export const setTransitionAt=(slideId:number,transition:SlideTransition)=>structuralEdit(async(e,before)=>({bytes:await e.client.setTransition(before,slideId,transition),index:idAt(e,slideId)}));
 export const styleShapesAt=(slideId:number,shapeIds:number[],patch:ShapeStylePatch)=>structuralEdit(async(e,before)=>({bytes:await e.client.styleShapes(before,slideId,shapeIds,patch),index:idAt(e,slideId)}));
 export const insertTableAt=(slideId:number,rows:number,cols:number)=>structuralEdit(async(e,before)=>({bytes:await e.client.insertTable(before,slideId,rows,cols),index:idAt(e,slideId)}));
+export const editThemeAt=(edit:ThemeEdit)=>structuralEdit(async(e,before)=>({bytes:await e.client.editTheme(before,edit),index:e.state.index}));
 export const editTableAt=(slideId:number,shapeId:number,edit:TableEdit)=>structuralEdit(async(e,before)=>({bytes:await e.client.editTable(before,slideId,shapeId,edit),index:idAt(e,slideId)}));
 export const setNotesAt=(slideId:number,lines:string[])=>structuralEdit(async(e,before)=>({bytes:await e.client.setNotes(before,slideId,lines),index:idAt(e,slideId)}));
 export const groupShapesAt=(slideId:number,shapeIds:number[])=>structuralEdit(async(e,before)=>({bytes:await e.client.group(before,slideId,shapeIds),index:idAt(e,slideId)}));

@@ -1523,3 +1523,51 @@ export function insertTable(bytes:Uint8Array,slideId:number,rows:number,cols:num
   if(!got.editable||got.rows!==rows||got.cols!==cols||got.merged.length)throw Error('Edited deck failed verification');
   return res;
 }
+
+/** Deck theme: the 12 color slots and the major/minor Latin fonts of the single slide master's theme. */
+export const THEME_SLOTS=['dk1','lt1','dk2','lt2','accent1','accent2','accent3','accent4','accent5','accent6','hlink','folHlink'] as const;
+export type ThemeSlot=typeof THEME_SLOTS[number];
+export const MAX_FONT_NAME=64;
+export interface ThemeInfo {editable:boolean;problem:string;name:string;colors:Record<ThemeSlot,string>;major:string;minor:string}
+export type ThemeEdit={kind:'color';slot:ThemeSlot;color:string}|{kind:'font';role:'major'|'minor';name:string};
+const EMPTY_THEME:ThemeInfo={editable:false,problem:'',name:'',colors:Object.fromEntries(THEME_SLOTS.map(s=>[s,''])) as Record<ThemeSlot,string>,major:'',minor:''};
+const xmlAttr=(s:string)=>s.replace(/&amp;/g,'&').replace(/&quot;/g,'"').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&apos;/g,"'");
+export const themeFontIssue=(name:string)=>!name.trim()||name!==name.trim()?'Font name cannot be empty or padded':name.length>MAX_FONT_NAME?`Font name is limited to ${MAX_FONT_NAME} characters`:/[\u0000-\u001f\u007f<>&"']/.test(name)?'Font name contains unsupported characters':'';
+function themePart(zip:Record<string,Uint8Array>):string{
+  const masters=readRels(zip,'ppt/presentation.xml').filter(r=>r.type===RT+'slideMaster'&&!r.external);
+  if(masters.length!==1)throw Error('Themes are editable only when the deck has exactly one slide master');
+  const mp=resolve('ppt/presentation.xml',masters[0].target);
+  const themes=readRels(zip,mp).filter(r=>r.type===RT+'theme'&&!r.external);
+  if(themes.length!==1)throw Error('The slide master does not have exactly one theme');
+  const tp=resolve(mp,themes[0].target);if(!zip[tp])throw Error('Theme part is missing');return tp;
+}
+function parseTheme(xml:string):ThemeInfo{
+  const clr=xml.match(/<a:clrScheme\b[^>]*>([\s\S]*?)<\/a:clrScheme>/);if(!clr)throw Error('Theme has no color scheme');
+  const colors={...EMPTY_THEME.colors};
+  for(const slot of THEME_SLOTS){
+    const m=new RegExp(`<a:${slot}>\\s*(?:<a:srgbClr val="([0-9A-Fa-f]{6})"\\s*/>|<a:sysClr\\b[^>]*\\slastClr="([0-9A-Fa-f]{6})"[^>]*/>)\\s*</a:${slot}>`).exec(clr[1]);
+    if(!m)throw Error(`Theme color ${slot} uses unsupported markup`);colors[slot]=(m[1]??m[2]).toUpperCase();
+  }
+  const font=(role:'major'|'minor')=>{const m=new RegExp(`<a:${role}Font>\\s*<a:latin\\b[^>]*\\stypeface="([^"]*)"`).exec(xml);if(!m)throw Error(`Theme ${role} font uses unsupported markup`);return xmlAttr(m[1]);};
+  return {editable:true,problem:'',name:xmlAttr(/<a:theme\b[^>]*\sname="([^"]*)"/.exec(xml)?.[1]??''),colors,major:font('major'),minor:font('minor')};
+}
+export function readTheme(bytes:Uint8Array):ThemeInfo{
+  try{const zip=openPackage(bytes);return parseTheme(text(zip,themePart(zip)));}
+  catch(e){return {...EMPTY_THEME,problem:(e as Error).message};}
+}
+/** Patches only the theme part, then reopens and compares. One call, one undo step. Other slots and fonts stay byte-identical. */
+export function editTheme(bytes:Uint8Array,edit:ThemeEdit):Uint8Array{
+  const c=context(bytes),tp=themePart(c.zip),xml=text(c.zip,tp),before=parseTheme(xml);let next=xml;
+  const expect:ThemeInfo={...before,colors:{...before.colors}};
+  if(edit.kind==='color'){
+    if(!THEME_SLOTS.includes(edit.slot))throw Error('Unknown theme color');if(!/^[0-9A-F]{6}$/.test(edit.color))throw Error('Color must be six uppercase hex digits');
+    next=xml.replace(new RegExp(`(<a:${edit.slot}>)\\s*(?:<a:srgbClr\\b[^>]*/>|<a:sysClr\\b[^>]*/>)\\s*(</a:${edit.slot}>)`),(_m,a,b)=>`${a}<a:srgbClr val="${edit.color}"/>${b}`);expect.colors[edit.slot]=edit.color;
+  }else if(edit.kind==='font'){
+    if(edit.role!=='major'&&edit.role!=='minor')throw Error('Unknown theme font');const issue=themeFontIssue(edit.name);if(issue)throw Error(issue);
+    next=xml.replace(new RegExp(`(<a:${edit.role}Font>\\s*<a:latin\\b[^>]*?\\stypeface=")[^"]*(")`),(_m,a,b)=>`${a}${edit.name}${b}`);expect[edit.role]=edit.name;
+  }else throw Error('Unknown theme edit');
+  if(next===xml&&JSON.stringify(expect)!==JSON.stringify(before))throw Error('Theme edit did not apply');
+  const res=finish(c,{[tp]:next},{},[],()=>{});
+  const got=readTheme(res);if(!got.editable||JSON.stringify({...got,problem:''})!==JSON.stringify({...expect,problem:''}))throw Error('Edited deck failed verification');
+  return res;
+}

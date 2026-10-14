@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {readFileSync,readdirSync} from 'node:fs';
 import {fileURLToPath} from 'node:url';
 import {unzipSync,zipSync,strFromU8,strToU8} from 'fflate';
-import {insertTable,editTable,readTable,setShapeStyle,readShapeStyle,setSlideNotes,groupShapes,ungroupShape,readSlideTransition,setSlideTransition,arrangeShapes,arrangedOrder,setShapesBounds,readSlideNotes,insertPicture,replacePicture,removePicture,fitImage,formatShapeText,addTextBox,removeTextBox,nextShapeId,setShapeBounds,boundsEditIssue,readDeckModel,moveSlide,reorderSlides,duplicateSlide,deleteSlide,newSlideFromLayout,readLayouts} from './deckPackage';
+import {editTheme,readTheme,insertTable,editTable,readTable,setShapeStyle,readShapeStyle,setSlideNotes,groupShapes,ungroupShape,readSlideTransition,setSlideTransition,arrangeShapes,arrangedOrder,setShapesBounds,readSlideNotes,insertPicture,replacePicture,removePicture,fitImage,formatShapeText,addTextBox,removeTextBox,nextShapeId,setShapeBounds,boundsEditIssue,readDeckModel,moveSlide,reorderSlides,duplicateSlide,deleteSlide,newSlideFromLayout,readLayouts} from './deckPackage';
 import {readRuns,makeEditedCopy} from './editCopy';
 import {png,jpeg} from './imageFixtures';
 
@@ -750,4 +750,23 @@ test('table merge, split, row height and column width',()=>{
   for(const [at,h] of [[0,7],[0,501],[0,NaN],[5,20]])assert.throws(()=>editTable(b,sid,tid,{kind:'rowHeight',at,heightPt:h}),/Row/);
   for(const [at,w] of [[0,19],[0,1501],[0,Infinity],[9,100]])assert.throws(()=>editTable(b,sid,tid,{kind:'colWidth',at,widthPt:w}),/Column/);
   assert.deepEqual(Object.keys(unzipSync(m)).sort(),Object.keys(unzipSync(b)).sort());void r0;
+});
+
+test('theme: read, edit color and font, one part changes',()=>{
+  const b=deck(2),t0=readTheme(b);assert.equal(t0.editable,true);assert.equal(t0.colors.accent1,'4F81BD');assert.equal(t0.colors.dk1,'000000');assert.equal(t0.major,'Calibri');
+  const c=editTheme(b,{kind:'color',slot:'accent1',color:'112233'});assert.equal(readTheme(c).colors.accent1,'112233');assert.equal(readTheme(c).colors.accent2,t0.colors.accent2);
+  const d=editTheme(c,{kind:'color',slot:'dk1',color:'0A0B0C'});assert.equal(readTheme(d).colors.dk1,'0A0B0C');
+  const f=editTheme(d,{kind:'font',role:'minor',name:'Georgia'});assert.equal(readTheme(f).minor,'Georgia');assert.equal(readTheme(f).major,'Calibri');
+  assert.deepEqual(titles(f),titles(b));
+  const za=unzipSync(b),zb=unzipSync(f);for(const k of Object.keys(za))if(k!=='ppt/theme/theme1.xml')assert.equal(za[k].length,zb[k].length,k);
+});
+test('theme: bounded inputs and fail-closed structure',()=>{
+  const b=deck(1);
+  for(const bad of ['','<b>','a&b','x'.repeat(65),' pad','a"b'])assert.throws(()=>editTheme(b,{kind:'font',role:'major',name:bad}));
+  for(const bad of ['abcdef','12345','1234567','#112233','11223G'])assert.throws(()=>editTheme(b,{kind:'color',slot:'accent1',color:bad}));
+  assert.throws(()=>editTheme(b,{kind:'color',slot:'bogus' as never,color:'112233'}));
+  const z=unzipSync(b);z['ppt/theme/theme1.xml']=strToU8(strFromU8(z['ppt/theme/theme1.xml']).replace('<a:accent2><a:srgbClr val="C0504D"/></a:accent2>','<a:accent2><a:schemeClr val="accent1"/></a:accent2>'));
+  const odd=zipSync(z);assert.equal(readTheme(odd).editable,false);assert.throws(()=>editTheme(odd,{kind:'color',slot:'accent1',color:'112233'}));
+  const z2=unzipSync(b);z2['ppt/slideMasters/_rels/slideMaster1.xml.rels']=strToU8(strFromU8(z2['ppt/slideMasters/_rels/slideMaster1.xml.rels']).replace(/<Relationship [^>]*relationships\/theme"[^>]*\/>/,''));
+  assert.equal(readTheme(zipSync(z2)).editable,false);
 });

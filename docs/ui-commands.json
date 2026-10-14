@@ -5151,6 +5151,23 @@
       "hasEnabled": true
     },
     {
+      "id": "slides.editTheme",
+      "title": "Edit theme",
+      "category": "Edit",
+      "source": "slides",
+      "keywords": [
+        "accent",
+        "color",
+        "colour",
+        "font",
+        "master",
+        "palette",
+        "theme",
+        "typeface"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "slides.formatText",
       "title": "Format text box text",
       "category": "Edit",
