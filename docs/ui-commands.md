@@ -99,7 +99,7 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `animation.keys.repeat` | Repeat the selected keys as cycles or ping-pong | Edit | animation |  |
 | `animation.keys.reverse` | Reverse keys in time | Edit | animation |  |
 | `animation.keys.selectAll` | Select all keys of the layer | View | animation |  |
-| `animation.keys.selectAroundPlayhead` | Select the keys before or after the playhead | View | animation |  |
+| `animation.keys.selectAroundPlayhead` | Select the keys before, after or at the playhead | View | animation |  |
 | `animation.keys.selectInWorkArea` | Select the keys in the work area | View | animation |  |
 | `animation.keys.selectNth` | Select every n-th selected key | View | animation |  |
 | `animation.keys.selectPeaks` | Select the keys that are peaks or dips | View | animation |  |

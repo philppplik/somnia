@@ -1021,15 +1021,17 @@
     },
     {
       "id": "animation.keys.selectAroundPlayhead",
-      "title": "Select the keys before or after the playhead",
+      "title": "Select the keys before, after or at the playhead",
       "category": "View",
       "source": "animation",
       "keywords": [
         "after",
         "animation",
+        "at",
         "before",
         "cursor",
         "earlier",
+        "exact",
         "keys",
         "later",
         "playhead",

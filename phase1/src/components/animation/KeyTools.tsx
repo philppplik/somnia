@@ -29,6 +29,7 @@ export function KeyTools({selected,layers}:{selected:number;layers:readonly stri
    {id:'inArea',testid:'animation-keys-in-work-area',label:t('animation.keys.inArea'),hint:t('animation.keys.inArea.hint'),cmd:'animation.keys.selectInWorkArea',params:L,min:0,layers:true},
    {id:'selBefore',testid:'animation-keys-select-before',label:t('animation.keys.selBefore'),hint:t('animation.keys.selBefore.hint'),cmd:'animation.keys.selectAroundPlayhead',params:{side:'before',...L},min:0,layers:true},
    {id:'selAfter',testid:'animation-keys-select-after',label:t('animation.keys.selAfter'),hint:t('animation.keys.selAfter.hint'),cmd:'animation.keys.selectAroundPlayhead',params:{side:'after',...L},min:0,layers:true},
+   {id:'selAt',testid:'animation-keys-select-at',label:t('animation.keys.selAt'),hint:t('animation.keys.selAt.hint'),cmd:'animation.keys.selectAroundPlayhead',params:{side:'at',...L},min:0,layers:true},
    {id:'peaks',testid:'animation-keys-peaks',label:t('animation.keys.peaks'),hint:t('animation.keys.peaks.hint'),cmd:'animation.keys.selectPeaks',params:L,min:0,layers:true},
    {id:'invertSel',testid:'animation-keys-invert-selection',label:t('animation.keys.invertSel'),hint:t('animation.keys.invertSel.hint'),cmd:'animation.keys.invertSelection',params:L,min:0,layers:true},
    {id:'property',testid:'animation-keys-property',label:t('animation.keys.property'),hint:t('animation.keys.property.hint'),cmd:'animation.keys.selectProperty',params:{},min:1},

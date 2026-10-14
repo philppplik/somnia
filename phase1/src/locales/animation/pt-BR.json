@@ -902,5 +902,7 @@
  "animation.keys.selAfter": "Keys depois do cursor",
  "animation.keys.selBefore.hint": "Seleciona todas as keys antes do cursor",
  "animation.keys.selAfter.hint": "Seleciona todas as keys depois do cursor",
- "cmd.animation.keys.selectAroundPlayhead": "Selecionar as keys antes ou depois do cursor"
+ "cmd.animation.keys.selectAroundPlayhead": "Selecionar as keys antes, depois ou no cursor",
+ "animation.keys.selAt": "Keys no cursor",
+ "animation.keys.selAt.hint": "Seleciona todas as keys exatamente no cursor"
 }

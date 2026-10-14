@@ -902,5 +902,7 @@
  "animation.keys.selAfter": "Keys nach dem Playhead",
  "animation.keys.selBefore.hint": "Alle Keys vor dem Playhead auswählen",
  "animation.keys.selAfter.hint": "Alle Keys nach dem Playhead auswählen",
- "cmd.animation.keys.selectAroundPlayhead": "Keys vor oder nach dem Playhead auswählen"
+ "cmd.animation.keys.selectAroundPlayhead": "Keys vor, nach oder am Playhead auswählen",
+ "animation.keys.selAt": "Keys am Playhead",
+ "animation.keys.selAt.hint": "Alle Keys genau am Playhead auswählen"
 }

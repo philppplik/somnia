@@ -902,5 +902,7 @@
  "animation.keys.selAfter": "Keys después del cabezal",
  "animation.keys.selBefore.hint": "Selecciona todas las keys antes del cabezal",
  "animation.keys.selAfter.hint": "Selecciona todas las keys después del cabezal",
- "cmd.animation.keys.selectAroundPlayhead": "Seleccionar las keys antes o después del cabezal"
+ "cmd.animation.keys.selectAroundPlayhead": "Seleccionar las keys antes, después o en el cabezal",
+ "animation.keys.selAt": "Keys en el cabezal",
+ "animation.keys.selAt.hint": "Selecciona todas las keys exactamente en el cabezal"
 }

@@ -227,3 +227,8 @@ test('keys around playhead: strict before/after, listed layers only',()=>{
  assert.deepEqual(keysAroundPlayhead(c,['a'],f(5),'after').map(x=>x.t),[f(10)]);
  assert.equal(keysAroundPlayhead(c,['a'],f(0),'before').length,0);assert.equal(keysAroundPlayhead(c,['zz'],f(5),'after').length,0);
 });
+test('keys at playhead: exact tick only',()=>{
+ const c=findComp(base())!;
+ assert.deepEqual(keysAroundPlayhead(c,['a'],f(10),'at').map(x=>x.t),[f(10)]);
+ assert.equal(keysAroundPlayhead(c,['a'],f(5),'at').length,0);
+});
