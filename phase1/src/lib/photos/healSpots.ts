@@ -25,6 +25,28 @@ export function spotCoverage(dist:number):number{
  return 1-u*u*(3-2*u);
 }
 interface Frame{bytes:ArrayBuffer;width:number;height:number;}
+/** Picks the flattest nearby disc as the clone source for a click at (x,y): eight directions at 2.2r, lowest sampled luma variance wins; null when every candidate leaves the frame. */
+export function autoSource(frame:Frame,x:number,y:number,r:number):HealSpot|null{
+ const {width:w,height:h}=frame,data=new Uint8ClampedArray(frame.bytes);
+ const rp=r*Math.min(w,h),off=2.2*rp;
+ let best:HealSpot|null=null,bestVar=Infinity;
+ for(let k=0;k<8;k++){
+  const a=k*Math.PI/4,sx=x*w+Math.cos(a)*off,sy=y*h+Math.sin(a)*off;
+  if(sx-rp<0||sy-rp<0||sx+rp>w||sy+rp>h)continue;
+  const stride=Math.max(1,Math.floor(rp/8));
+  const x0=Math.round(sx-rp),x1=Math.round(sx+rp),y0=Math.round(sy-rp),y1=Math.round(sy+rp);
+  let n=0,m=0,q=0;
+  for(let py=y0;py<=y1;py+=stride)for(let px=x0;px<=x1;px+=stride){
+   const ex=px-sx,ey=py-sy;if(ex*ex+ey*ey>rp*rp)continue;
+   const i=(py*w+px)*4,l=0.2126*data[i]+0.7152*data[i+1]+0.0722*data[i+2];
+   n++;m+=l;q+=l*l;
+  }
+  if(n<4)continue;
+  const v=q/n-(m/n)*(m/n);
+  if(v<bestVar){bestVar=v;best={x,y,r,dx:(sx-x*w)/w,dy:(sy-y*h)/h};}
+ }
+ return best;
+}
 /** Returns the input unchanged when there is nothing to stamp; otherwise a fresh frame with every spot applied in order. */
 export function applySpots(frame:Frame,spots:readonly HealSpot[]):Frame{
  if(spots.length===0)return frame;

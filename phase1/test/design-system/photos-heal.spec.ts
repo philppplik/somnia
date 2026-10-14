@@ -35,6 +35,20 @@ test('clone stamp: drag copies the clean area onto the defect, undo restores the
  await page.waitForTimeout(700);
  expect(await canvasBitmap(page)).toEqual(before); // undo restores the untouched source
 });
+test('clone stamp: a plain click auto-picks a clean source',async({page})=>{
+ await page.goto('/test/design-system/?view=photos-heal');
+ await expect(page.getByTestId('photos-workspace')).toBeVisible();
+ await page.getByTestId('photos-heal').click();
+ const before=await canvasBitmap(page);
+ const box=await page.getByTestId('photos-canvas').boundingBox();
+ await page.mouse.click(box!.x+0.2917*box!.width,box!.y+0.375*box!.height); // click the defect, no drag
+ await page.waitForTimeout(700);
+ expect(await canvasBitmap(page)).not.toEqual(before);
+ expect(await pixel(page,70,60)).toEqual([40,140,80,255]); // auto-source copied clean green
+ await page.getByTestId('photos-undo').click();
+ await page.waitForTimeout(700);
+ expect(await canvasBitmap(page)).toEqual(before);
+});
 test('clone stamp mode renders in light and dark',async({page})=>{
  for(const theme of['light','dark']){
   await page.goto('/test/design-system/?view=photos-heal');

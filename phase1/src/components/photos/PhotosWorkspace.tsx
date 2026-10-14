@@ -7,7 +7,7 @@ import {Button} from '../ui/button';
 import {NativeInput} from '../ui/native-controls';
 import {useT} from '../../lib/useT';
 import {applyPhotoCrop,cancelPhotoCrop,dirtyPhoto,exportPhotoCopy,historyPhoto,openPhoto,resetPhoto,rotatePhoto,setPhotoCropping,setPhotoCropDraft,usePhotoSession,type PhotoFrame} from '../../lib/photos/studioSession';
-import {clampSpot} from '../../lib/photos/healSpots';
+import {autoSource,clampSpot} from '../../lib/photos/healSpots';
 import type {PhotoCrop} from '../../lib/photos/studioSettings';
 import {cropGuideLines} from '../../lib/photos/cropGuides';
 import {clippingOverlayImage} from '../../lib/photos/clippingOverlay';
@@ -111,6 +111,10 @@ export function PhotosWorkspace({item}:{item:MediaItem}){
    const end=pointerPos(e);
    if(Math.hypot(end.x-start.x,end.y-start.y)>0.01)
     commitPhotoSettings(item.name,now=>({...now,spots:[...now.spots,clampSpot({x:start.x,y:start.y,r:brushR,dx:end.x-start.x,dy:end.y-start.y})]}));
+   else if(shown){ // a plain click auto-picks the flattest nearby source disc
+    const sp=autoSource(shown,start.x,start.y,brushR);
+    if(sp)commitPhotoSettings(item.name,now=>({...now,spots:[...now.spots,clampSpot(sp)]}));
+   }
    return;
   }
   if(drag.current?.pan)drag.current=null;

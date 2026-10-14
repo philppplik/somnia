@@ -44,19 +44,28 @@ distractions.
   never pans; zoom and pan gestures are unchanged outside it.
 - i18n: `photos.heal.toggle` / `photos.heal.radius` in all five photo
   locales (en, de, es, fr, pt-BR).
+- P45: a plain click (no drag) heals in one step — `autoSource` samples
+  eight source discs around the target at 2.2x the radius, scores each
+  by strided luma variance, and picks the flattest (flat surroundings
+  are the safe clone source for specks and blemishes); candidates that
+  would leave the frame are skipped, and the click is a no-op when none
+  fit. One click is one undo step, same as a drag stroke.
 
 ## Coverage
 
-- Unit: `src/lib/photos/healSpots.test.ts` (8 tests: clamping,
+- Unit: `src/lib/photos/healSpots.test.ts` (10 tests: clamping,
   validation, signature stability, empty passthrough, opaque-core and
-  soft-edge coverage, multi-spot ordering). The full photos suite —
-  119 tests including the new file — passes with every pre-existing
+  soft-edge coverage, multi-spot ordering, auto-source flatness choice
+  with determinism, auto-source bounds/null). The full photos suite —
+  121 tests including the new file — passes with every pre-existing
   test unmodified.
 - Browser: `test/design-system/photos-heal.spec.ts` drives the real
   workspace via the `?view=photos-heal` gallery route on an engine that
   truly decodes its loaded bytes: a drag from the red defect block onto
   the clean green flips the target pixel from `rgb(210,40,40)` to
   `rgb(40,140,80)`, and one undo restores the canvas bitmap
-  byte-for-byte. The light/dark theme test shows the active toggle,
-  radius slider and brush cursor; its canvas bitmaps are pixel-identical
-  to the P43 base (79233d16) run with the same proof and spec.
+  byte-for-byte; a second test clicks the defect without dragging and
+  asserts the auto-picked source heals it pixel-exactly. The light/dark
+  theme test shows the active toggle, radius slider and brush cursor;
+  its canvas bitmaps are pixel-identical to the P44 base (3bb96d93) run
+  with the same proof and spec.

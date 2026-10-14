@@ -28,7 +28,7 @@ async function defectPng():Promise<Blob>{
  const w=240,h=160,c=document.createElement('canvas');c.width=w;c.height=h;
  const ctx=c.getContext('2d');if(!ctx)throw Error('no 2d');
  ctx.fillStyle='rgb(40,140,80)';ctx.fillRect(0,0,w,h);
- ctx.fillStyle='rgb(210,40,40)';ctx.fillRect(40,40,60,40);
+ ctx.fillStyle='rgb(210,40,40)';ctx.fillRect(64,55,12,10);
  return new Promise((res,rej)=>c.toBlob(b=>b?res(b):rej(Error('png encode failed')),'image/png'));
 }
 

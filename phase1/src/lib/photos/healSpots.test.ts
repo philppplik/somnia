@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {applySpots,clampSpot,spotCoverage,spotSignature,validSpot,type HealSpot} from './healSpots';
+import {applySpots,autoSource,clampSpot,spotCoverage,spotSignature,validSpot,type HealSpot} from './healSpots';
 const frame=(w:number,h:number,fill:(x:number,y:number)=>[number,number,number,number])=>{
  const b=new Uint8Array(w*h*4);
  for(let y=0;y<h;y++)for(let x=0;x<w;x++){const i=(y*w+x)*4;const p=fill(x,y);b[i]=p[0];b[i+1]=p[1];b[i+2]=p[2];b[i+3]=p[3];}
@@ -57,4 +57,25 @@ test('coverage is 1 inside, 0 outside, smooth between',()=>{
  assert.equal(spotCoverage(1.2),0);
  const m=spotCoverage(0.85);
  assert.ok(m>0&&m<1);
+});
+
+test('autoSource picks the flattest direction and stays deterministic',()=>{
+ const w=64,h=64,b=new Uint8Array(w*h*4);
+ for(let i=0;i<w*h;i++){b[i*4]=40;b[i*4+1]=140;b[i*4+2]=80;b[i*4+3]=255;}
+ // high-contrast checkerboard noise to the right of the target
+ for(let y=24;y<40;y++)for(let x=40;x<56;x++){const v=(x+y)%2?255:0;const i=(y*w+x)*4;b[i]=v;b[i+1]=v;b[i+2]=v;}
+ const frame={bytes:b.buffer as ArrayBuffer,width:w,height:h};
+ const sp=autoSource(frame,0.5,0.5,0.08);
+ assert.ok(sp&&validSpot(sp));
+ assert.ok(sp!.dx<=0,'must not pick the noisy right-hand direction');
+ const again=autoSource(frame,0.5,0.5,0.08);
+ assert.equal(spotSignature([sp!]),spotSignature([again!]));
+});
+
+test('autoSource returns null when no candidate disc fits the frame',()=>{
+ const w=64,h=64,b=new Uint8Array(w*h*4).fill(120);
+ const frame={bytes:b.buffer as ArrayBuffer,width:w,height:h};
+ assert.equal(autoSource(frame,0.5,0.5,0.6),null); // disc plus offset fits nowhere
+ const edge=autoSource(frame,0.02,0.02,0.05); // corner: only down-right-ish candidates fit
+ assert.ok(edge===null||validSpot(edge));
 });

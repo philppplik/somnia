@@ -190,6 +190,11 @@ through native control primitives, see below.
   stroke; bandage toggle, persisted radius slider, SVG brush cursor; no
   raw controls, ratchets unchanged), unit tests and gallery proof added
   (?view=photos-heal; canvas bitmaps pixel-identical to the P43 base).
+- P45: heal click mode (a plain click auto-picks the clone source:
+  flattest of eight surrounding discs by strided luma variance at 2.2r,
+  out-of-frame candidates skipped, no-op when none fit; one undo step,
+  drag behaviour unchanged), unit tests and gallery spec extended;
+  canvas bitmaps pixel-identical to the P44 base (3bb96d93).
 
 
 
