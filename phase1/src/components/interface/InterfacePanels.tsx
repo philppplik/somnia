@@ -11,6 +11,7 @@ import {resizeInterfaceFrame,diffInterfaceReflow,setInterfaceSizingLimit} from '
 import {computeInterfaceLayout} from '../../lib/interface/layout';
 import {interfaceLayerCSS} from '../../lib/interface/export';
 import {auditInterfaceDocument,interfaceFocusOrder,moveInterfaceFocus} from '../../lib/interface/a11y';
+import {addInterfaceComment,removeInterfaceComment,setInterfaceCommentResolved,interfaceComments} from '../../lib/interface/comments';
 import {addInterfaceBreakpoint,removeInterfaceBreakpoint,applyInterfaceBreakpoint,auditInterfaceResponsive} from '../../lib/interface/breakpoints';
 import {INTERFACE_FRAME_PRESETS} from '../../lib/interface/pages';
 import {getInterfacePresetPreview,setInterfacePresetPreview,useInterfacePresetPreview} from './presetPreview';
@@ -86,6 +87,7 @@ export function InterfaceProperties(){
   </>}
   {node&&s.selectedIds.length===1&&<InterfaceInteractions node={node} run={run}/>}
   <InterfaceA11yReview/>
+  <InterfaceComments/>
   <InterfaceDevMode/>
   <InterfaceOutput/>
  </div>}</Guard>;
@@ -164,4 +166,14 @@ function InterfaceComponentControls({node,run}:{node:InterfaceNode;run:(f:()=>vo
   {component&&<><span className="text-xs text-ink-2">{component.name}</span><Button size="compact" variant="outline" disabled={node.locked} onClick={()=>run(()=>{let id='';interfaceSession.transact(d=>{id=instantiateComponent(d,component.id,component.variants.find(v=>v.rootId===node.id)!.id,s.pageId!);});interfaceSession.select(id);})}>{t('interface.createInstance')}</Button><Button size="compact" variant="outline" disabled={node.locked} onClick={()=>edit(d=>{addComponentVariant(d,component.id,component.variants.find(v=>v.rootId===node.id)!.id,`${t('interface.variant')} ${component.variants.length+1}`);})}>{t('interface.addVariant')}</Button></>}
   {owner&&<><p className="text-xs text-ink-2">{t('interface.instanceNote')}</p>{owner.id!==node.id?<Button size="compact" variant="outline" onClick={()=>interfaceSession.select(owner.id)}>{t('interface.selectInstance')}</Button>:<><Choice label={t('interface.variant')} value={owner.instance!.variantId} options={doc.components!.find(c=>c.id===owner.instance!.componentId)!.variants.map(v=>[v.id,v.name])} disabled={owner.locked} onChange={id=>edit(d=>switchInstanceVariant(d,owner.id,id))}/><div className="flex flex-wrap gap-1"><Button size="compact" variant="outline" disabled={owner.locked} onClick={()=>edit(d=>resetInstanceOverrides(d,owner.id))}>{t('interface.resetOverrides')}</Button><Button size="compact" variant="outline" disabled={owner.locked} onClick={()=>edit(d=>detachInstance(d,owner.id))}>{t('interface.detach')}</Button><Button size="compact" variant="outline" onClick={()=>{const id=doc.components!.find(c=>c.id===owner.instance!.componentId)!.variants.find(v=>v.id===owner.instance!.variantId)!.rootId;interfaceSession.page(doc.nodes.find(n=>n.id===id)!.pageId);interfaceSession.select(id);}}>{t('interface.goMaster')}</Button></div></>}</>}
  </div></InspectorGroup>;
+}
+function InterfaceComments(){
+ const s=useInterfaceState(),{t}=useT();const doc=s.document;const [draft,setDraft]=useState('');const [filter,setFilter]=useState<'open'|'resolved'|'all'>('open');
+ if(!doc)return null;
+ const comments=interfaceComments(doc,filter),selected=s.selection?doc.nodes.find(n=>n.id===s.selection):undefined;
+ const reveal=(id:string)=>{const target=doc.nodes.find(n=>n.id===id);if(!target)return;interfaceSession.page(target.pageId);interfaceSession.select(id);window.dispatchEvent(new CustomEvent('interface-reveal',{detail:id}));};
+ return <InspectorGroup title={t('interface.comments')}><NativeSelect aria-label={t('interface.commentsFilter')} className="w-full bg-panel p-2 mb-2" value={filter} onChange={e=>setFilter(e.target.value as typeof filter)}>{(['open','resolved','all'] as const).map(f=><option key={f} value={f}>{t(`interface.commentsFilter.${f}`)}</option>)}</NativeSelect>
+ {comments.length?<ul className="flex flex-col gap-2 text-xs mb-2">{comments.map(c=><li key={c.id} className="flex flex-col gap-1 rounded border border-subtle p-2"><span className="flex items-center gap-1"><Button size="compact" variant="outline" className="grow whitespace-normal h-auto min-h-7 py-1 text-left justify-start" disabled={c.missing} onClick={()=>reveal(c.nodeId)}>{c.missing?t('interface.commentMissing'):c.layerName}</Button><Button size="compact" variant="outline" aria-label={t('interface.commentDelete')} onClick={()=>interfaceSession.transact(d=>removeInterfaceComment(d,c.id))}>×</Button></span><p className="whitespace-pre-wrap">{c.text}</p><Checkbox label={t('interface.commentResolved')} checked={!!c.resolved} onChange={e=>interfaceSession.transact(d=>setInterfaceCommentResolved(d,c.id,e.target.checked))}/></li>)}</ul>:<p className="text-xs text-ink-2 mb-2">{t('interface.commentsEmpty')}</p>}
+ {selected&&<span className="flex items-end gap-1"><span className="grow"><Field name={t('interface.commentFor',{name:selected.name})} value={draft} onCommit={setDraft}/></span><Button size="compact" disabled={!draft.trim()} onClick={()=>{interfaceSession.transact(d=>addInterfaceComment(d,selected.id,draft));setDraft('');}}>{t('interface.commentAdd')}</Button></span>}
+ </InspectorGroup>;
 }

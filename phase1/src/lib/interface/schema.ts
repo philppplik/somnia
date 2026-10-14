@@ -36,4 +36,5 @@ export interface InterfaceNode {
  [key:string]:unknown;
 }
 export interface InterfacePage {snap?:SnapSettings;id:string;name:string;children:string[];[key:string]:unknown;}
-export interface InterfaceDocument {kind:'somnia-interface';version:1;id:string;name:string;revision:number;pages:InterfacePage[];nodes:InterfaceNode[];components?:InterfaceComponent[];variables?:InterfaceVariable[];textStyles?:InterfaceTextStyle[];assets?:InterfaceAsset[];prototypeStartFrameId?:string;[key:string]:unknown;}
+export interface InterfaceComment {id:string;nodeId:string;text:string;createdAt:number;resolved?:boolean;}
+export interface InterfaceDocument {kind:'somnia-interface';version:1;id:string;name:string;revision:number;pages:InterfacePage[];nodes:InterfaceNode[];components?:InterfaceComponent[];variables?:InterfaceVariable[];textStyles?:InterfaceTextStyle[];assets?:InterfaceAsset[];prototypeStartFrameId?:string;comments?:InterfaceComment[];[key:string]:unknown;}
