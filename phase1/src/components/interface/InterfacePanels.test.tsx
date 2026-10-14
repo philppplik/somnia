@@ -160,3 +160,9 @@ test('P50 drop shadow controls render for any layer in English and German',async
  const german=renderToStaticMarkup(<InterfaceProperties/>);assert.ok(german.includes('Schlagschatten'));assert.ok(!german.includes('Weichzeichner</'),'blur fields stay hidden until the shadow exists');
  interfaceSession.transact(d=>{d.nodes.find(n=>n.id===interfaceSession.get().selectedIds[0])!.shadow={x:0,y:2,blur:4,color:'#000000'};});
  assert.ok(renderToStaticMarkup(<InterfaceProperties/>).includes('Weichzeichner'));}finally{interfaceSession.clear();setLocale('en');}});
+test('P51 layer blur controls render for any layer in English and German',async()=>{interfaceSession.start();interfaceSession.transact(d=>{const f=addNode(d,d.pages[0].id,'frame');const r=addNode(d,d.pages[0].id,'rectangle',f);d.nodes.find(n=>n.id===r)!.blur=6;});interfaceSession.select(interfaceSession.get().document!.nodes[1].id);
+ const html=renderToStaticMarkup(<InterfaceProperties/>);assert.ok(html.includes('Layer blur'));assert.ok(html.includes('Blur radius'));
+ interfaceSession.clear();setLocale('de');try{interfaceSession.start();interfaceSession.transact(d=>{const f=addNode(d,d.pages[0].id,'frame');addNode(d,d.pages[0].id,'rectangle',f);});interfaceSession.select(interfaceSession.get().document!.nodes[1].id);
+ const german=renderToStaticMarkup(<InterfaceProperties/>);assert.ok(german.includes('Ebenenunschärfe'));assert.ok(!german.includes('Unschärferadius'),'radius field stays hidden until blur exists');
+ interfaceSession.transact(d=>{d.nodes.find(n=>n.id===interfaceSession.get().selectedIds[0])!.blur=6;});
+ assert.ok(renderToStaticMarkup(<InterfaceProperties/>).includes('Unschärferadius'));}finally{interfaceSession.clear();setLocale('en');}});
