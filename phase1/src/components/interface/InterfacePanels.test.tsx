@@ -70,3 +70,11 @@ test('P28 transition presets and hotspot highlight toggle render in English and 
  interfaceSession.clear();setLocale('de');try{interfaceSession.start();interfaceSession.transact(d=>{const a=addNode(d,d.pages[0].id,'frame');const b=addNode(d,d.pages[0].id,'frame');const r=addNode(d,d.pages[0].id,'rectangle',a);d.nodes[2].prototypeLinks=[{trigger:'click',targetFrameId:b}];});interfaceSession.select(interfaceSession.get().document!.nodes[2].id);
  const german=renderToStaticMarkup(<InterfaceProperties/>);assert.ok(german.includes('Übergangs-Presets'));assert.ok(german.includes('Sofort'));assert.ok(german.includes('Überblenden'));
  const germanPlayer=renderToStaticMarkup(<InterfacePrototypePlayer initial={startInterfacePrototype(interfaceSession.get().document!)} onClose={()=>{}}/>);assert.ok(germanPlayer.includes('Hotspots hervorheben'));}finally{interfaceSession.clear();setLocale('en');}});
+
+test('P29 variable collections and the canvas mode preview render in English and German',async()=>{const {InterfaceResources}=await import('./InterfaceResources');const {setVariableCollection}=await import('../../lib/interface/tokens');
+ interfaceSession.start();interfaceSession.transact(d=>{const a=addVariable(d,'color','Accent');addVariable(d,'number','Gap');setVariableCollection(d,a,'Brand');});
+ const run=(f:()=>void)=>f();const html=renderToStaticMarkup(<InterfaceResources run={run}/>);assert.ok(html.includes('Collection'));assert.ok(html.includes('Brand'));assert.ok(html.includes('No collection'));
+ const canvas=renderToStaticMarkup(<InterfaceCanvas/>);assert.ok(canvas.includes('Mode preview'));
+ interfaceSession.clear();setLocale('de');try{interfaceSession.start();interfaceSession.transact(d=>{const a=addVariable(d,'color','Akzent');addVariable(d,'number','Abstand');setVariableCollection(d,a,'Marke');});
+ const german=renderToStaticMarkup(<InterfaceResources run={run}/>);assert.ok(german.includes('Sammlung'));assert.ok(german.includes('Marke'));assert.ok(german.includes('Keine Sammlung'));
+ const germanCanvas=renderToStaticMarkup(<InterfaceCanvas/>);assert.ok(germanCanvas.includes('Modus-Vorschau'));}finally{interfaceSession.clear();setLocale('en');}});
