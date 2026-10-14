@@ -6967,6 +6967,19 @@
       "hasEnabled": true
     },
     {
+      "id": "studio3d.edit.flip",
+      "title": "Flip the normals of selected faces",
+      "category": "Edit",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "studio3d.edit.inset",
       "title": "Inset faces",
       "category": "Edit",

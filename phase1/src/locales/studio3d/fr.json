@@ -904,5 +904,8 @@
  "studio3d.edit.relax": "Lisser",
  "studio3d.edit.relaxIt": "Itérations de lissage",
  "studio3d.edit.relaxFactor": "Facteur de lissage",
- "studio3d.hist.editRelax": "Lisser les sommets"
+ "studio3d.hist.editRelax": "Lisser les sommets",
+ "cmd.studio3d.edit.flip": "Inverser les normales des faces sélectionnées",
+ "studio3d.edit.flip": "Inverser les normales",
+ "studio3d.hist.editFlip": "Inverser les normales des faces"
 }

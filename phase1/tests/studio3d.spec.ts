@@ -889,6 +889,20 @@ test('mesh edit mode: relax smooths selected vertices towards their neighbours, 
  await expect(page.getByRole('alert')).toContainText('Select vertices to relax');
 });
 
+test('mesh edit mode: flip reverses only the selected faces, undo restores them',async({page})=>{
+ await blank(page);
+ const id=await insert(page,'cube',0);
+ expect(await run(page,'studio3d.edit.start',{id,mode:'face'})).toBe(true);
+ expect(await run(page,'studio3d.edit.select',{kind:'face',ids:[4,5]})).toBe(true);
+ expect(await run(page,'studio3d.edit.flip',{})).toBe(true);
+ await expect.poll(async()=>(await session(page)).stats.triangles).toBe(12);
+ let s=await session(page);expect(s.edit).toMatchObject({faces:2});
+ await run(page,'studio3d.undo');
+ expect(await run(page,'studio3d.edit.selectAll',{op:'none'})).toBe(true);
+ expect(await run(page,'studio3d.edit.flip',{})).toBe(false);
+ await expect(page.getByRole('alert')).toContainText('Select faces to flip');
+});
+
 test('mesh edit mode: weld merges selected vertices at their centre, undo restores them',async({page})=>{
  await blank(page);
  const id=await insert(page,'cube',0);

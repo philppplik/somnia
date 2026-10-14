@@ -904,5 +904,8 @@
  "studio3d.edit.relax": "Suavizar",
  "studio3d.edit.relaxIt": "Iteraciones de suavizado",
  "studio3d.edit.relaxFactor": "Factor de suavizado",
- "studio3d.hist.editRelax": "Suavizar vértices"
+ "studio3d.hist.editRelax": "Suavizar vértices",
+ "cmd.studio3d.edit.flip": "Invertir las normales de las caras seleccionadas",
+ "studio3d.edit.flip": "Invertir normales",
+ "studio3d.hist.editFlip": "Invertir normales de caras"
 }

@@ -448,6 +448,19 @@ export function duplicateFaces(m:MeshData,faces:number[]):MeshData{
  if(uvs)out.uvs=uvs;
  return out;
 }
+/** Flips the winding of the selected triangles, turning their normals inside out. Positions, UVs and masks stay; explicit normals are dropped. */
+export function flipFaces(m:MeshData,faces:number[]):MeshData{
+ if(!faces.length)throw new EditError('Select faces to flip.');
+ const tris=m.index.length/3;
+ const sel=new Set<number>();
+ for(const f of faces){if(!Number.isInteger(f)||f<0||f>=tris)throw new EditError(`Face ${f} does not exist.`);sel.add(f);}
+ const index=[...m.index];
+ for(const f of sel){const t=index[f*3+1];index[f*3+1]=index[f*3+2];index[f*3+2]=t;}
+ const out:MeshData={positions:[...m.positions],index};
+ if(m.uvs)out.uvs=[...m.uvs];
+ if(m.mask)out.mask=[...m.mask];
+ return out;
+}
 /** Deletes selected elements: faces drop their own triangles, edges and vertices drop every triangle that touches them. Positions stay put (orphan vertices are allowed), so undo restores the exact geometry. Refuses an empty selection and a delete that would leave no triangle. */
 export function deleteElements(m:MeshData,kind:'vertex'|'edge'|'face',sel:{verts?:number[];edges?:[number,number][];faces?:number[]}):MeshData{
  const tris=m.index.length/3,total=m.positions.length/3;

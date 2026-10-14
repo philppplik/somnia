@@ -904,5 +904,8 @@
  "studio3d.edit.relax": "Relax",
  "studio3d.edit.relaxIt": "Relax iterations",
  "studio3d.edit.relaxFactor": "Relax factor",
- "studio3d.hist.editRelax": "Relax vertices"
+ "studio3d.hist.editRelax": "Relax vertices",
+ "cmd.studio3d.edit.flip": "Flip the normals of selected faces",
+ "studio3d.edit.flip": "Flip normals",
+ "studio3d.hist.editFlip": "Flip face normals"
 }
