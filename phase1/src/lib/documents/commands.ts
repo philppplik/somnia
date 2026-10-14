@@ -1,6 +1,6 @@
 import {registerCommand} from '../commandRegistry';
 import {getDocumentsState,patchDocuments,stepZoom} from './store';
-import {redoEdit,setAlign,setParagraphStyle,toggleList,clearList,shiftListLevel,stepFontSize,stepIndent,toggleFormat,undoEdit,editTable,insertTable,setHeaderFooter,insertImage,resizeImageToPercent,setImageAlt,removeImage,setColumnWidth,styleTable,setPageSetup,setFindOpen,setFindQuery,findStep,replaceAll,replaceCurrent} from './session';
+import {typeText,redoEdit,setAlign,setParagraphStyle,toggleList,clearList,shiftListLevel,stepFontSize,stepIndent,toggleFormat,undoEdit,editTable,insertTable,setHeaderFooter,insertImage,resizeImageToPercent,setImageAlt,removeImage,setColumnWidth,styleTable,setPageSetup,setFindOpen,setFindQuery,findStep,replaceAll,replaceCurrent} from './session';
 import {stylePatchProblem,STYLE_ID_RE,type StylePatch,tocProblem,type TocOptions,listOptionsProblem,type ListOptionsPatch,pageSetupProblem,LIST_STYLES,type ListStyleId} from './protocol';
 import {deleteStyle,saveStyle,setCharStyle,insertToc,updateToc,removeToc,continueNumbering,restartNumbering,setListStyle,setListOptions} from './session';
 import {validFindQuery,validReplaceText} from './find';
@@ -14,6 +14,7 @@ import {commentsOpen,setCommentsOpen} from './comments';
 import {setShortcutsOpen} from './shortcuts';
 import {setParagraphOptionsOpen} from './paragraphOptions';
 import {setInfoDialog} from './infoDialog';
+import {symbolProblem} from './symbols';
 import {authorProblem,setAuthor} from './author';
 import {insertPageBreak,setParagraphOptions,setProperties,setTabStops} from './session';
 import {parsePdfPages,checkParaPatch,PARA_FLAG_KEYS,propertiesProblem,tabsProblem} from './protocol';
@@ -141,6 +142,8 @@ export function registerDocumentsCommands(){
    await setListStyle(st as ListStyleId);
   },()=>ready()&&!!getDocumentsState().caret),
   add('documents.list.restart','Restart list numbering',async()=>{await restartNumbering();},()=>ready()&&!!getDocumentsState().caret),
+  add('documents.symbol.open','Insert symbol',()=>{setInfoDialog('symbol');},()=>ready()&&!!getDocumentsState().caret),
+  add('documents.symbol.insert','Insert symbol text',async p=>{const v=(p as Record<string,unknown>|undefined)?.text;const bad=symbolProblem(v);if(bad)throw expected(bad);await typeText(v as string);},()=>ready()&&!!getDocumentsState().caret),
   add('documents.styles.open','Styles',()=>{setInfoDialog('styles');},()=>ready()),
   add('documents.styles.save','Create or change a style',async p=>{
    const bad=stylePatchProblem(p);if(bad)throw expected(bad);

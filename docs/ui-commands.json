@@ -3311,6 +3311,28 @@
       "hasEnabled": true
     },
     {
+      "id": "documents.symbol.insert",
+      "title": "Insert a symbol or date",
+      "category": "View",
+      "source": "documents",
+      "keywords": [
+        "document",
+        "docx"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "documents.symbol.open",
+      "title": "Insert symbol",
+      "category": "View",
+      "source": "documents",
+      "keywords": [
+        "document",
+        "docx"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "documents.table.col_left",
       "title": "Insert column left",
       "category": "View",

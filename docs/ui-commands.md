@@ -16,7 +16,7 @@ included; the `source` column names the owner. Dynamic sources that stay outside
 
 Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, fr, pt-BR); the gate enforces it.
 
-571 commands. Categories: Edit, Help, Insert, Project, Tools, View.
+573 commands. Categories: Edit, Help, Insert, Project, Tools, View.
 
 | id | title | category | source | shortcut |
 | --- | --- | --- | --- | --- |
@@ -309,6 +309,8 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `documents.styles.delete` | Delete a custom style | View | documents |  |
 | `documents.styles.open` | Styles | View | documents |  |
 | `documents.styles.save` | Create or change a style | View | documents |  |
+| `documents.symbol.insert` | Insert a symbol or date | View | documents |  |
+| `documents.symbol.open` | Insert symbol | View | documents |  |
 | `documents.table.col_left` | Insert column left | View | documents |  |
 | `documents.table.col_right` | Insert column right | View | documents |  |
 | `documents.table.colWidth` | Set column width | View | documents |  |
