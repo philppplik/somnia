@@ -1,0 +1,13 @@
+# Voice helper integration preparation
+
+The helper stays optional, separately downloaded, not bundled. Both preview gates remain default-off; voice-releases.json stays empty. No real helper, invented release URL/checksum, dependency, download or workflow dispatch in this slice.
+
+Settings now explains no release / unreviewed / not installed / needs repair / ready. Source, checksum, exact size, license and platform are visible before opening consent when a reviewed asset exists. Review still binds the exact digest, remove has separate confirmation and keeps the speech model. Missing release explicitly has no source/hash. An unreviewed asset cannot enable install. Native remains authoritative and rechecks artifacts at execution.
+
+`voiceHelperContract.ts` is preparation/test ordering, not an OS sandbox or replacement runtime. A fake port must check isolation and exclusive orphan cleanup before launch; termination and scratch cleanup must finish before a successful final transcript can escape. If termination is unconfirmed, scratch stays for exclusive startup cleanup instead of being removed underneath an active process. Unit tests cover failed gates, crash, cancel, invalid/late output and failed termination. The development-only integrated fixture wires the actual PromptVoiceInput capture/session/review/explicit insertion UI to this fake port. No microphone or native helper is used. Fake flags cannot set production release evidence.
+
+Node tests launch a real inert JavaScript child via the existing Node runtime, validate final output, force a cancellation/crash, reap the owned child, and remove only owned scratch. They do not demonstrate parent-crash survival behavior or OS isolation. Added native CI-only test reexecutes the inert Rust test worker, uses existing process-group/job protection and kill/reap before scratch cleanup. Existing native CI parent-crash, startup exclusive owner and symlink tests remain untouched.
+
+Release isolation remains unproven. Existing Linux direct-child parent-death protection does not prove hostile grandchild containment; existing Windows post-spawn job attachment still has an assignment window. Real sandbox egress and owner-crash evidence must come from reviewed target CI output, not these fake results. No release gate is relaxed.
+
+Roadmap-Delta: clearer helper settings status and artifact review, fail-closed UI gate, fake process lifecycle contract and actual prompt-only dictation integration evidence. Five locales. No production enablement or claims of secure helper execution. Native compilation/full application E2E remain CI-only.
