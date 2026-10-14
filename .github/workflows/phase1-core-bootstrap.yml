@@ -42,7 +42,7 @@ jobs:
       - name: Sound Studio core tests (native, real MP3 fixture)
         run: cargo +1.95.0 test --locked --manifest-path sound/Cargo.toml
       - name: Design-system ratchet and script tests
-        run: npm run check:ds && npm run test:ds && npm run test:ds:unit
+        run: npm run check:ds && npm run test:ds && npm run test:ds:unit && npm run test:ds:exchange
       - name: Layer rules (new violations only)
         run: npm run check:layers
       - name: Dreamweaver parity checklist is current
@@ -83,7 +83,9 @@ jobs:
           name: somnia-design-system-gallery-${{ github.sha }}
           retention-days: 7
           if-no-files-found: ignore
-          path: phase1/test-results/ds-p1*.png
+          path: |
+            phase1/test-results/ds-p1*.png
+            phase1/test-results/ds-exchange*.png
       - run: npm run test:e2e
       - name: Render corpus guards
         if: ${{ !cancelled() }}
