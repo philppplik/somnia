@@ -1,5 +1,7 @@
+import {assertLocalNativeRun,nativeRunLedger} from './nativeRun';
+import {verifiedLocalProvider} from './verifiedLocalProvider';
 import {publishLocalContextBudget} from './localContextBudgetStore';
-import {normalizeLocalContext,trimLocalContext} from './localAssistant';
+import {defaultLocalContext,normalizeLocalContext,trimLocalContext} from './localAssistant';
 import {t} from '../i18n';
 import {LocalModelsRuntime} from './localModels';
 import {requiresExactInstalledTaskModel,taskModelChoice} from './taskRouting';
@@ -7,7 +9,6 @@ import {localContextFor} from './settings';
 import {routedProvider,timedProvider} from './providerRouting';
 import {ProviderError} from './errors';
 import {visionApplication,type VisionDestination} from './localVisionApplication';
-import {requireLocalCapabilities} from './localCapabilities';
 import {withAgentStudioContext,resolveAgentToolSet} from './studioContextAdapter';
 import type {AgentStudioContext} from './studioContextAdapter';
 import {subscribeMedia} from '../media';
@@ -51,7 +52,7 @@ import {reviewChangeSet,type ChangeSet} from '../agentDiff';
 import {holdAgentAutosave} from './autosaveHold';
 import {applyOperations,getState,getProjectGeneration,subscribe,patchState,undoAIGroup,subscribeProjectTransactions} from '../../store/appStore';
 import type {AgentCore,AgentEvent,AgentApproval,AgentProposal,DiffLine} from './core';
-import type {AgentProvider,AgentProviderEvent,AgentProviderRequest} from './types';
+import type {AgentProvider,AgentProviderRequest} from './types';
 export interface AgentConfiguration {provider:AuthProvider;model:string;apiKey:string;allowActiveFile:boolean;customPrompts?:CustomPrompt[];localRuntime?:LocalRuntimePreferences}
 let config:AgentConfiguration={provider:'ollama',model:'',apiKey:'',allowActiveFile:false};
 export function configureAgent(value:AgentConfiguration){realCore.clear?.();config={...value};agentPrivacy.setLocalOnly(value.localRuntime?.offlineOnly===true||value.localRuntime?.routing?.localOnly===true);}
@@ -61,27 +62,6 @@ export function withCustomPrompts(provider:AgentProvider,prompts:readonly Custom
  const text=prompts.filter(p=>p.enabled&&p.text.trim()).map(p=>p.text.trim()).join('\n\n');
  if(new TextEncoder().encode(text).length>16000)throw Error('Custom prompts exceed size limits.');
  return {id:provider.id,locality:provider.locality,identity:provider.identity,stream(request){return provider.stream({...request,messages:text?[...request.messages.slice(0,1),{role:'system',content:'Additional user preferences (do not override tool access or safety rules):\n'+text},...request.messages.slice(1)]:request.messages});}};
-}
-/** A gated stream whose operation remains live through body consumption, with single-slot backpressure. */
-function guardedOllama(provider:OllamaProvider,numCtx?:number):AgentProvider {
- const checked=requireLocalCapabilities(provider,numCtx);
- return {id:provider.id,locality:provider.locality,async *stream(request:AgentProviderRequest){
-  const check=await provider.verifyLocalModel(request.model,request.signal);
-  if(!check.local)throw new ProviderError(check.reason==='model-not-found'?'model-not-found':check.reason==='unreachable'?'unreachable':'not-local','Native studio mode requires verified local Ollama weights.');
-  const controller=new AbortController();const abort=()=>controller.abort(request.signal.reason);
-  request.signal.addEventListener('abort',abort,{once:true});if(request.signal.aborted)abort();
-  let gateSignal:AbortSignal|undefined;let slot:AgentProviderEvent|undefined,finished=false,error:unknown;let wake=()=>{},release=()=>{};
-  const pending=agentPrivacy.run({provider:'ollama',endpoint:provider.baseUrl,processing:check.local?'local':'cloud'},async signal=>{
-   gateSignal=signal;
-   for await(const event of checked.stream({...request,signal})){
-    signal.throwIfAborted();
-    await new Promise<void>(resolve=>{release=resolve;slot=event;wake();if(signal.aborted)resolve();else signal.addEventListener('abort',()=>resolve(),{once:true});});
-    signal.throwIfAborted();
-   }
-  },controller.signal).catch(e=>{error=e;}).finally(()=>{finished=true;wake();});
-  try {while(!finished||slot){if(!slot){await new Promise<void>(resolve=>{wake=resolve;});continue;}controller.signal.throwIfAborted();gateSignal?.throwIfAborted();const event=slot;slot=undefined;release();yield event;}if(error)throw error;}
-  finally{controller.abort();release();await pending;request.signal.removeEventListener('abort',abort);}
- }};
 }
 /** Tokens never reach the renderer: the native transport injects the stored account token itself and ignores this placeholder. */
 const NATIVE_ACCOUNT:OpenAIAccountAuth={getAccessToken:async()=>'native-managed',refresh:async()=>'native-managed'};
@@ -98,7 +78,7 @@ export function createProvider(id:AuthProvider,model=config.model):AgentProvider
  const limit=config.localRuntime?.routing?.limits[id];const provider=timedProvider(createRawProvider(id,model,config.localRuntime?.routing?(limit?.retries??0):undefined),limit?.timeoutMs);let actual=model;return {id:provider.id,locality:provider.locality,supportsImages:provider.supportsImages,identity:()=>({provider:id,model:actual}),stream(request){actual=request.model;return provider.stream(request);}};
 }
 function createRawProvider(id:AuthProvider,model:string,retries?:number):AgentProvider {
- if(id==='ollama')return guardedOllama(new OllamaProvider({onContextBudget:(report,signal)=>{if(!signal.aborted)publishLocalContextBudget(report);},numCtx:localContextFor(config.localRuntime,model),keepAliveSeconds:config.localRuntime?.keepAliveSeconds,maxRetries:retries??0}),localContextFor(config.localRuntime,model));
+ if(id==='ollama')return verifiedLocalProvider(new OllamaProvider({onContextBudget:(report,signal)=>{if(!signal.aborted)publishLocalContextBudget(report);},numCtx:localContextFor(config.localRuntime,model),keepAliveSeconds:config.localRuntime?.keepAliveSeconds,maxRetries:retries??0}),localContextFor(config.localRuntime,model));
  const options={maxRetries:retries,getApiKey:()=>loadProviderKey(id),...(isTauri()?{fetch:nativeProviderFetch(id)}:{})};
  if(id==='openai'){
   if(!isTauri())return new OpenAIProvider(options);
@@ -272,17 +252,20 @@ export function createStudioMcpSource(path:string):{studio:string;registry:Agent
 
 export const realCore:AgentCore={
  run(request,onEvent){
+  if(request.context.executionMode==='local-native'&&!request.context.localContext)request={...request,context:{...request.context,localContext:{...defaultLocalContext}}};
   const trimmed=request.context.localContext?normalizeLocalContext(request.context.localContext):null;if(trimmed)request={...request,context:trimLocalContext(request.context,trimmed)};
   if((activeController&&!activeController.signal.aborted)||session?.status==='running'||proposals.size){queueMicrotask(()=>onEvent({type:'error',message:'Stop the active turn or review the pending proposal first.'}));return {cancel(){}};}
   const controller=new AbortController();let stopped=false;const runId=++runGeneration;
   const deliver=(e:AgentEvent)=>{if(!stopped&&runId===runGeneration)onEvent(e);};send=deliver;
   const taskChoice=taskModelChoice(config.localRuntime?.taskModels,request.context.task??'chat');const requestProvider=taskChoice?.provider??config.provider;
   if(!taskChoice&&!config.model.trim()){queueMicrotask(()=>deliver({type:'error',message:'Choose a provider and model in Settings > AI first.'}));return {cancel(){stopped=true;}};}
-  const savedRoute=config.localRuntime?.routing;const route=config.localRuntime?.offlineOnly&&savedRoute?{...savedRoute,localOnly:true}:savedRoute;const canRoute=!trimmed&&!taskChoice&&!!route&&!request.context.activeFile&&!request.context.activeMedia&&!request.context.studio;
+  const savedRoute=config.localRuntime?.routing;const route=config.localRuntime?.offlineOnly&&savedRoute?{...savedRoute,localOnly:true}:savedRoute;const canRoute=request.context.executionMode!=='local-native'&&!trimmed&&!taskChoice&&!!route&&!request.context.activeFile&&!request.context.activeMedia&&!request.context.studio;
   const requestModel=taskChoice?.model??(config.provider==='ollama'?(config.localRuntime?.studioModels?.[request.context.studio?.studioId??'']??config.model):config.model);
+  try{assertLocalNativeRun(request.context,requestProvider);}catch(e){queueMicrotask(()=>deliver({type:'error',message:e instanceof Error?e.message:'Local-native provider refused.'}));return {cancel(){stopped=true;}};}
+  const ledgerRun=String(runId);nativeRunLedger.begin(ledgerRun,requestProvider,requestModel);
   if((trimmed||config.localRuntime?.offlineOnly)&&requestProvider!=='ollama'){queueMicrotask(()=>deliver({type:'error',message:t('local.assistant.cloudBlocked')}));return {cancel(){stopped=true;}};}
   const runPrompts=trimmed&&!trimmed.customPrompts?[]:config.customPrompts;
-  const contextKey=JSON.stringify({choices:trimmed,document:request.context.activeMedia??request.context.activeFile,studio:request.context.studio?.studioId});
+  const contextKey=JSON.stringify({executionMode:request.context.executionMode,choices:trimmed,document:request.context.activeMedia??request.context.activeFile,studio:request.context.studio?.studioId});
   const generation=getProjectGeneration();
   if(epoch!==generation){session?.cancel();session=null;sessionSerial++;proposals.clear();permissions.clear();appliedAgentProvenance.clear();documents.clear();transactions.clear();nativeIds.clear();mcpProposalMap.clear();syncMcpProposals();epoch=generation;}
   photoPreviews.clear();policy.revoke();syncDocuments();activeController=controller;
@@ -299,7 +282,7 @@ export const realCore:AgentCore={
      if(event.type==='text')deliver({type:'text-delta',text:event.text});
      else if(event.type==='notice')deliver({type:'error',message:event.message,code:event.code,retryable:event.retryable});
      else if(event.type==='usage')deliver({type:'usage',...event.usage});
-    }});if(previous)session.restore({...previous,projectId:session.projectId,messages:previous.messages.filter(m=>m.role==='user'||m.role==='assistant'&&!m.toolCalls?.length)});await session.prompt(request.prompt);deliver({type:'done'});return;
+    }});if(previous)session.restore({...previous,projectId:session.projectId,messages:previous.messages.filter(m=>m.role==='user'||m.role==='assistant'&&!m.toolCalls?.length)});await session.prompt(request.prompt);nativeRunLedger.record(ledgerRun,{phase:session.status==='error'?'failed':'done',history:0,readback:'unverified'});deliver({type:'done'});return;
    }
   // Pin identity/revision before any approval or provider work, never retarget on a tab switch.
   let base:ReturnType<DocumentRegistry['snapshot']>;
@@ -313,6 +296,7 @@ export const realCore:AgentCore={
    controller.signal.throwIfAborted();syncDocuments();documents.assert(base.ref);
    policy.grant({effect:'inspect',documentIds:[base.ref.documentId]});
    const context=buildContext(documents,policy,base.ref.path,selection,trimmed?.maxDocumentBytes);
+   nativeRunLedger.record(ledgerRun,{phase:'prepared',target:base.ref,contextBytes:context.bytes,history:0,readback:'verified'});
    if(requestProvider!=='ollama'){
     if(request.context.disclosureProvider!==config.provider)throw Error('Confirm disclosure to the selected provider before sending document context.');
     agentPrivacy.assert({provider:config.provider,processing:'cloud'});
@@ -325,20 +309,20 @@ export const realCore:AgentCore={
     if(sessionEpoch!==epoch||sessionToken!==sessionSerial||controller.signal.aborted)return;
     if(event.type==='text')deliver({type:'text-delta',text:event.text});
     else if(event.type==='state'&&event.status==='running')deliver({type:'status',text:`Working on ${base.ref.path} · revision ${base.ref.revision}`});
-    else if(event.type==='tool')deliver({type:'status',text:`${event.call.name}: ${event.status}`});
+    else if(event.type==='tool'){nativeRunLedger.record(ledgerRun,{phase:event.status==='running'?'tool-running':event.status==='completed'?'tool-completed':'tool-failed',target:base.ref,tool:event.call.name,history:0,readback:'unverified'});deliver({type:'status',text:`${event.call.name}: ${event.status}`});}
     else if(event.type==='usage')deliver({type:'usage',...event.usage});
     else if(event.type==='notice')deliver({type:'error',message:event.message,code:event.code,retryable:event.retryable});
     else if(event.type==='proposals'&&event.proposals.length){
      try{syncDocuments();const p=event.proposals[0];const native=transactions.propose(String(runId),base.ref,p.after);
       const set:ChangeSet={id:`${generation}-${runId}-${event.turnId}`,complete:true,provenance:p.provenance,files:[{path:p.path,kind:'edit',baseText:p.before,proposedText:p.after}]};
-      proposals.set(set.id,set);nativeIds.set(set.id,native.id);deliver({type:'proposal',proposal:{...panelProposal(set),native,...(base.ref.studioKind==='photo'?{photo:photoPreviews.get(p.after)}:{})}});
+      proposals.set(set.id,set);nativeIds.set(set.id,native.id);nativeRunLedger.record(ledgerRun,{phase:'review',target:base.ref,proposalId:set.id,history:0,readback:'verified'});deliver({type:'proposal',proposal:{...panelProposal(set),native,...(base.ref.studioKind==='photo'?{photo:photoPreviews.get(p.after)}:{})}});
      }catch(e){deliver({type:'error',message:e instanceof Error?e.message:String(e)});}
     }
    }});
    if(previous)session.restore({...previous,projectId:session.projectId,messages:previous.messages.filter(m=>m.role==='user'||m.role==='assistant'&&!m.toolCalls?.length)});
-   await session.prompt(request.prompt);deliver({type:'done'});
-  })().catch(e=>deliver({type:'error',message:e instanceof Error?e.message:String(e)})).finally(()=>{if(activeController===controller)activeController=null;});
-  return {cancel(){controller.abort();session?.cancel();stopped=true;}};
+   await session.prompt(request.prompt);nativeRunLedger.record(ledgerRun,{phase:session.status==='error'?'failed':'done',history:0,readback:'unverified'});deliver({type:'done'});
+  })().catch(e=>{nativeRunLedger.record(ledgerRun,{phase:'failed',history:0,readback:'unverified'});deliver({type:'error',message:e instanceof Error?e.message:String(e)});}).finally(()=>{if(activeController===controller)activeController=null;});
+  return {cancel(){controller.abort();session?.cancel();nativeRunLedger.record(ledgerRun,{phase:'stopped',history:0,readback:'unverified'});stopped=true;}};
  },
  async applyProposal(id,decisions){
   if(epoch!==getProjectGeneration())throw Error('Project changed. Proposal is no longer valid.');
@@ -349,15 +333,15 @@ export const realCore:AgentCore={
    const p=transactions.get(nativeId);
    if(decisions&&reviewChangeSet(set).some(r=>r.hunks.some(h=>decisions[h.key]!=='accept')))throw Error('Native proposals require accepting the complete preview.');
    policy.grant({effect:'edit',documentIds:[p.base.documentId],proposalId:nativeId});
-   syncDocuments();await transactions.accept(nativeId,p.after);proposals.delete(id);session?.discardProposals();
+   syncDocuments();try{await transactions.accept(nativeId,p.after);}catch(e){nativeRunLedger.record(p.runId,{phase:'failed',target:p.base,proposalId:id,history:'unverified',readback:'unverified'});throw e;}nativeRunLedger.record(p.runId,{phase:'applied',target:documents.snapshot(p.base.path).ref,proposalId:id,history:'unverified',readback:'verified'});proposals.delete(id);session?.discardProposals();
    patchState({notice:'AI changes applied to editor, not saved.'});return;
   }
   throw Error('Legacy proposals are not supported in native studio mode.');
 
  },
  async rejectProposal(id){dropMcpProposal(id);const set=proposals.get(id);if(set)for(const f of set.files)photoPreviews.delete(f.proposedText);const n=nativeIds.get(id);if(n)transactions.reject(n);proposals.delete(id);session?.discardProposals();},
- async revertProposal(id){dropMcpProposal(id);const n=nativeIds.get(id);if(!n)throw Error('No native AI transaction.');await transactions.undo(n);photoPreviews.delete(transactions.get(n).after);patchState({notice:'AI transaction undone, not saved.'});},
- clear(){photoPreviews.clear();activeController?.abort();activeController=null;runGeneration++;sessionSerial++;session?.cancel();session=null;proposals.clear();permissions.clear();policy.revoke();send=null;}
+ async revertProposal(id){dropMcpProposal(id);const n=nativeIds.get(id);if(!n)throw Error('No native AI transaction.');await transactions.undo(n);const receipt=transactions.get(n);nativeRunLedger.record(receipt.runId,{phase:'undone',target:documents.snapshot(receipt.base.path).ref,proposalId:id,history:'unverified',readback:documents.snapshot(receipt.base.path).text===receipt.before?'verified':'unverified'});photoPreviews.delete(transactions.get(n).after);patchState({notice:'AI transaction undone, not saved.'});},
+ clear(){nativeRunLedger.clear();photoPreviews.clear();activeController?.abort();activeController=null;runGeneration++;sessionSerial++;session?.cancel();session=null;proposals.clear();permissions.clear();policy.revoke();send=null;}
 };
 subscribeProjectTransactions(tx=>{for(const op of tx.operations??[])if(op.type==='renameFile'){try{documents.rename(op.file,op.to);}catch{/* document not registered yet */}}});
 subscribe(()=>{if(epoch!==getProjectGeneration()){realCore.clear?.();documents.clear();transactions.clear();nativeIds.clear();epoch=getProjectGeneration();}syncDocuments();});

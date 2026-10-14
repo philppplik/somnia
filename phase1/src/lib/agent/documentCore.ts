@@ -53,6 +53,7 @@ export class PolicyGateway {
 }
 export interface ContextPackage { document:DocumentRef; selection:SelectionRef|null; data:{trust:'untrusted-document'; text:string; from:number; to:number}; bytes:number }
 export function buildContext(registry:DocumentRegistry,policy:PolicyGateway,path:string,selection:SelectionRef|null,maxBytes=64*1024):ContextPackage {
+ if(!Number.isSafeInteger(maxBytes)||maxBytes<1||maxBytes>65536)throw Error('Invalid context byte limit.');
  const s=registry.snapshot(path);policy.assert({effect:'inspect',documentIds:[s.ref.documentId]});
  const from=selection?.from??0,to=selection?.to??s.text.length;
  if(!Number.isSafeInteger(from)||!Number.isSafeInteger(to)||from<0||to<from||to>s.text.length)throw Error('Selection is outside the document.');

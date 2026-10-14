@@ -78,3 +78,4 @@ test('locked nodes, malformed HTML and unknown adapters fail clearly',async()=>{
  assert.throws(()=>validateHTML('<p a="unclosed>'),/parse failed/);
  const r=new DocumentRegistry([codeAdapter]);r.sync({'photo.png':'image'});assert.throws(()=>r.validate(r.snapshot('photo.png').ref,'image2'),/No implemented/);
 });
+test('context limits cannot be NaN, negative, fractional or above shared maximum',()=>{const f=fixture();for(const max of [NaN,Infinity,0,-1,1.5,65537])assert.throws(()=>buildContext(f.registry,f.policy,'index.html',null,max),/Invalid context/);});
