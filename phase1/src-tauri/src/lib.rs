@@ -1,7 +1,10 @@
 #[cfg(feature = "desktop")]
 mod desktop;
 #[cfg(any(feature = "desktop", test))]
-mod update_channel;
+mod update_channel;#[cfg(all(feature = "mobile", not(feature = "desktop")))]
+mod mobile;
+#[cfg(all(feature = "mobile", not(feature = "desktop")))]
+pub use mobile::run;
 pub(crate) mod no_window;
 #[cfg(any(feature = "desktop", test))]
 mod drop_grant;

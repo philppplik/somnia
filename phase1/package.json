@@ -10,6 +10,7 @@
     "licenses": "node scripts/licenses.mjs",
     "dev": "node scripts/check-craft.mjs && vite --host 127.0.0.1",
     "build": "node scripts/check-craft.mjs && tsc -b && vite build",
+    "build:mobile": "node scripts/check-craft.mjs && vite build --mode mobile",
     "preview": "vite preview --host 127.0.0.1",
     "test": "playwright test",
     "bench": "tsx scripts/bench.ts",

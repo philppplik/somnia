@@ -1,0 +1,9 @@
+{
+  "$schema": "../gen/schemas/mobile-schema.json",
+  "identifier": "mobile",
+  "description": "Mobile shell: the bundled local frontend only. No custom commands, no remote URLs.",
+  "local": true,
+  "windows": ["main"],
+  "platforms": ["android", "iOS"],
+  "permissions": ["core:default"]
+}

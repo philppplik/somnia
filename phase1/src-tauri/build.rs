@@ -1,4 +1,7 @@
 fn main() {
+    // Mobile: no custom command manifest (the desktop commands are not compiled in), default app manifest only.
+    #[cfg(all(feature = "mobile", not(feature = "desktop")))]
+    tauri_build::build();
     #[cfg(feature = "desktop")]
     tauri_build::try_build(tauri_build::Attributes::new().app_manifest(
         tauri_build::AppManifest::new().commands(&[

@@ -16,3 +16,8 @@ phase1/src/lib/generated/localAIGuides.ts
 phase1/installer/target
 
 phase1/out-installer
+# Android project is generated in CI (tauri android init); never commit it or a keystore
+phase1/src-tauri/gen/
+*.jks
+*.keystore
+keystore.properties
