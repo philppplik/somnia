@@ -99,6 +99,17 @@ export function lzwEncode(minCodeSize:number,indices:Uint8Array):Uint8Array{
  blocks.push(0);
  return new Uint8Array(blocks);
 }
+/** Merges runs of identical consecutive frames into one frame with the summed delay (capped at the 16-bit delay limit). Playback timing and pixels stay the same. */
+export function mergeIdenticalFrames(frames:readonly GifFrame[]):GifFrame[]{
+ const out:GifFrame[]=[];
+ for(const f of frames){
+  const last=out[out.length-1];
+  if(last&&last.delayCs+f.delayCs<=65535&&last.pixels.length===f.pixels.length&&sameBytes(last.pixels,f.pixels))out[out.length-1]={pixels:last.pixels,delayCs:last.delayCs+f.delayCs};
+  else out.push({pixels:f.pixels,delayCs:f.delayCs});
+ }
+ return out;
+}
+function sameBytes(a:Uint8Array|Uint8ClampedArray,b:Uint8Array|Uint8ClampedArray):boolean{for(let i=0;i<a.length;i++)if(a[i]!==b[i])return false;return true;}
 /** Assemble a GIF89a. Opaque: the caller composites onto the background first. Throws GifError on bound violations. */
 export function encodeGif(width:number,height:number,frames:readonly GifFrame[],loop=true,dither=false,colors=256):Uint8Array{
  if(![2,4,8,16,32,64,128,256].includes(colors))throw new GifError('Colors must be a power of two from 2 to 256.','bad-colors');
@@ -106,6 +117,7 @@ export function encodeGif(width:number,height:number,frames:readonly GifFrame[],
  if(!frames.length)throw new GifError('Nothing to export.','empty');
  if(frames.length>GIF_MAX_FRAMES)throw new GifError(`A GIF is limited to ${GIF_MAX_FRAMES} frames. Shorten the work area.`,'too-many');
  if(width<1||height<1||width>16384||height>16384)throw new GifError('Bad frame size.','too-large');
+ frames=mergeIdenticalFrames(frames);
  const palette=buildPalette(frames,width,height,colors);
  const parts:Uint8Array[]=[];let bytes=0;
  const push=(u:Uint8Array)=>{bytes+=u.length;if(bytes>GIF_MAX_BYTES)throw new GifError('The GIF is larger than 64 MB. Shorten the work area or reduce the size.','too-large');parts.push(u);};

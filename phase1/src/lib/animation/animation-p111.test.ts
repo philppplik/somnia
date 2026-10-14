@@ -834,3 +834,15 @@ test('P206 graph value zoom: anchor keeps its relative position, span clamps, ba
  assert.equal(zoomRange(r,50,0),null);assert.equal(zoomRange({min:3,max:3},3,2),null);assert.equal(zoomRange(r,NaN,2),null);
  assert.equal(zoomRange(r,500,2)!.max,100);
 });
+
+test('P207 GIF merges identical consecutive frames: summed delay, fewer images, smaller file, order kept',async()=>{
+ const {encodeGif,mergeIdenticalFrames}=await import('./gifEncode');
+ const w=16,h=16,mk=(r:number)=>{const px=new Uint8Array(w*h*4);for(let i=0;i<w*h;i++){px[i*4]=r;px[i*4+1]=(i*5)&255;px[i*4+2]=40;px[i*4+3]=255;}return px;};
+ const A=mk(10),B=mk(200),A2=mk(10);const fr=[{pixels:A,delayCs:3},{pixels:A2,delayCs:4},{pixels:B,delayCs:5},{pixels:B,delayCs:6},{pixels:A,delayCs:7}];
+ const m=mergeIdenticalFrames(fr);assert.deepEqual(m.map(f=>f.delayCs),[7,11,7]);assert.equal(m.reduce((n,f)=>n+f.delayCs,0),fr.reduce((n,f)=>n+f.delayCs,0));
+ assert.equal(mergeIdenticalFrames([{pixels:A,delayCs:40000},{pixels:A,delayCs:40000}]).length,2);assert.equal(mergeIdenticalFrames([]).length,0);
+ const info=(g:Uint8Array)=>{let n=0;const d:number[]=[];for(let i=0;i<g.length-1;i++){if(g[i]===0x21&&g[i+1]===0xF9&&g[i+2]===4)d.push(g[i+4]|g[i+5]<<8);if(g[i]===0x2C&&g[i+1]===0&&g[i+2]===0&&g[i+3]===0&&g[i+4]===0)n++;}return {n,d};};
+ const g=encodeGif(w,h,fr),one=encodeGif(w,h,[{pixels:A,delayCs:3},{pixels:B,delayCs:5},{pixels:A,delayCs:7}]);
+ assert.deepEqual(info(g),{n:3,d:[7,11,7]});assert.equal(g.length,one.length);assert.equal(g[g.length-1],0x3B);
+ const plain=encodeGif(w,h,[{pixels:A,delayCs:3},{pixels:A2,delayCs:4},{pixels:A,delayCs:3}]);assert.equal(info(plain).n,1);
+});
