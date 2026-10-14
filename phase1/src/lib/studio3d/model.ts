@@ -134,6 +134,16 @@ export function clipPlanes(distance:number,radius:number):{near:number;far:numbe
 }
 export interface ModelStats{meshes:number;nodes:number;/** Bones (joints) of skinned meshes. */bones:number;triangles:number;vertices:number;materials:number;textures:number;animations:number;cameras:number;draws:number;/** Estimated decoded size of all textures. */textureBytes:number;/** Estimated size of all geometry buffers (attributes and index). */geometryBytes:number;maxTexture:number;/** Nodes with a zero scale on some axis. */zeroScale:number;/** Meshes that use a texture but have no UV set. */textureNoUv:number}
 export const emptyStats=():ModelStats=>({meshes:0,nodes:0,bones:0,triangles:0,vertices:0,materials:0,textures:0,animations:0,cameras:0,draws:0,textureBytes:0,geometryBytes:0,maxTexture:0,zeroScale:0,textureNoUv:0});
+/** Which outline rows are visible with collapsible groups: a row hides when any ancestor group is collapsed. Unknown or non-group ids in the collapsed list are harmless; a name filter ignores collapse (a match always shows). */
+export function outlineVisible(outline:readonly OutlineEntry[],collapsed:readonly number[]):boolean[]{
+ const col=new Set(collapsed);const blocked:number[]=[];const out=new Array<boolean>(outline.length);
+ for(let i=0;i<outline.length;i++){
+  const o=outline[i];while(blocked.length&&blocked[blocked.length-1]>=o.depth)blocked.pop();
+  out[i]=!blocked.length;
+  if(o.kind==='group'&&col.has(o.id))blocked.push(o.depth);
+ }
+ return out;
+}
 export const formatCount=(n:number)=>n>=1e6?(n/1e6).toFixed(n>=1e7?0:1)+' M':n>=1e4?(n/1e3).toFixed(n>=1e5?0:1)+' k':String(n);
 export interface OutlineEntry{id:number;name:string;depth:number;kind:'group'|'mesh'|'light'|'camera'|'bone';/** Own visibility flag (a hidden parent hides children too). */hidden:boolean;/** Locked nodes are skipped by viewport picking and marquee selection. */locked:boolean}
 

@@ -606,5 +606,8 @@
  "cmd.studio3d.view.projection": "Switch the 3D viewport between perspective and orthographic",
  "cmd.studio3d.view.fov": "Set the viewport field of view or focal length",
  "cmd.studio3d.view.turntable": "Start or stop the turntable preview (view only)",
- "studio3d.import.summary": "Imported {tris} triangles, {materials} materials, {animations} animations."
+ "studio3d.import.summary": "Imported {tris} triangles, {materials} materials, {animations} animations.",
+ "studio3d.outline.expand": "Expand {name}",
+ "studio3d.outline.collapse": "Collapse {name}",
+ "studio3d.outline.selection": "Selection"
 }

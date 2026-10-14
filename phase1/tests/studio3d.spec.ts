@@ -1285,3 +1285,46 @@ test('3D studio opens a dropped model with its sidecars and shows an import summ
  await page.getByTestId('studio3d-replace').getByRole('button',{name:/replace/i}).first().click();
  await expect.poll(async()=>(await session(page)).name).toBe('second.glb');
 });
+
+test('3D studio outliner: folding groups, keyboard navigation and selection-set actions',async({page})=>{
+ await blank(page);
+ const a=await insert(page,'cube',-1);await insert(page,'sphere',1);
+ await page.getByTestId('studio3d-outline-row-'+a).click();
+ await run(page,'studio3d.select',{id:null});
+ await run(page,'studio3d.group',{ids:[a,(await session(page)).outline.find(o=>o.kind==='mesh'&&o.id!==a)!.id]});
+ const group=(await session(page)).outline.find(o=>o.kind==='group')!;
+ // Folding hides the children; expanding brings them back. The group row itself stays.
+ await page.getByRole('button',{name:`Collapse ${group.name}`}).click();
+ await expect(page.getByTestId('studio3d-outline-row-'+a)).toHaveCount(0);
+ await expect(page.getByTestId('studio3d-outline-row-'+group.id)).toBeVisible();
+ await page.getByRole('button',{name:`Expand ${group.name}`}).click();
+ await expect(page.getByTestId('studio3d-outline-row-'+a)).toBeVisible();
+ // A name filter still finds rows inside a folded group.
+ await page.getByRole('button',{name:`Collapse ${group.name}`}).click();
+ await page.getByTestId('studio3d-scene-panel').getByRole('textbox').first().fill('Cube');
+ await expect(page.getByTestId('studio3d-outline-row-'+a)).toBeVisible();
+ await page.getByTestId('studio3d-scene-panel').getByRole('textbox').first().fill('');
+ await page.getByRole('button',{name:`Expand ${group.name}`}).click();
+ // Keyboard: F2 renames, arrows move between rows, ArrowLeft folds an open group.
+ await page.getByTestId('studio3d-outline-row-'+a).focus();
+ await page.keyboard.press('F2');
+ await page.getByRole('textbox',{name:/Rename/}).fill('Hero cube');
+ await page.keyboard.press('Enter');
+ await expect.poll(async()=>(await session(page)).outline.find(o=>o.id===a)?.name).toBe('Hero cube');
+ await page.getByTestId('studio3d-outline-row-'+group.id).focus();
+ await page.keyboard.press('ArrowLeft');
+ await expect(page.getByTestId('studio3d-outline-row-'+a)).toHaveCount(0);
+ await page.keyboard.press('ArrowRight');
+ await expect(page.getByTestId('studio3d-outline-row-'+a)).toBeVisible();
+ // Duplicate and delete act on the selection set (the group with its two children) and undo as one step each.
+ await page.getByTestId('studio3d-outline-row-'+group.id).click();
+ await expect.poll(async()=>(await session(page)).selected).toBe(group.id);
+ await page.getByTestId('studio3d-outline-selection').getByRole('button',{name:'Duplicate selected'}).click();
+ await expect.poll(async()=>(await session(page)).outline.length).toBe(6);
+ await run(page,'studio3d.undo');
+ await expect.poll(async()=>(await session(page)).outline.length).toBe(3);
+ await page.getByTestId('studio3d-outline-selection').getByRole('button',{name:'Delete selected'}).click();
+ await expect.poll(async()=>(await session(page)).outline.length).toBe(0);
+ await run(page,'studio3d.undo');
+ await expect.poll(async()=>(await session(page)).outline.length).toBe(3);
+});

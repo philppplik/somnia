@@ -606,5 +606,8 @@
  "cmd.studio3d.view.projection": "3D-Ansicht zwischen Perspektive und Orthografie umschalten",
  "cmd.studio3d.view.fov": "Sichtfeld oder Brennweite der Ansicht einstellen",
  "cmd.studio3d.view.turntable": "Drehteller-Vorschau starten oder stoppen (nur Ansicht)",
- "studio3d.import.summary": "{tris} Dreiecke, {materials} Materialien und {animations} Animationen importiert."
+ "studio3d.import.summary": "{tris} Dreiecke, {materials} Materialien und {animations} Animationen importiert.",
+ "studio3d.outline.expand": "{name} aufklappen",
+ "studio3d.outline.collapse": "{name} zuklappen",
+ "studio3d.outline.selection": "Auswahl"
 }

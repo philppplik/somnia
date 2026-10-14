@@ -1,4 +1,5 @@
 # Unreleased: 3D Studio P0
+- 3D Studio outliner polish: groups fold and expand with a chevron or the arrow keys, rows support keyboard navigation (arrows, Home/End, F2 to rename), and duplicate/delete buttons act on the whole selection set.
 - 3D Studio import polish: drop model files (with .bin/.mtl/texture sidecars) straight onto the studio, glTF imports fall back to an empty pixel for missing textures instead of failing, and a localized import summary reports triangles, materials and animations.
 - 3D Studio camera polish: viewport perspective/orthographic toggle, field-of-view and 35mm focal length fields, and a preview-only turntable orbit (view state only, never exported); saved views, frame-selected (F) and frame-all already shipped.
 - 3D Studio: lights polish. The selected light shows a viewport helper (directional, point, spot or area; never exported), shadow-casting lights get a softness slider (VSM shadows honour shadow.radius, saved in the document extras), and the one-click rigs now come in three flavours: three-point, studio softboxes and sunset. Types, shadow toggle and the three-point rig already existed.
