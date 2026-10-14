@@ -3376,6 +3376,43 @@
       "hasEnabled": true
     },
     {
+      "id": "slides.selectNextShape",
+      "title": "Select next shape",
+      "category": "View",
+      "source": "slides",
+      "keywords": [
+        "next",
+        "object",
+        "shape",
+        "tab"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "slides.selectPreviousShape",
+      "title": "Select previous shape",
+      "category": "View",
+      "source": "slides",
+      "keywords": [
+        "object",
+        "previous",
+        "shape"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "slides.selectShape",
+      "title": "Select shape",
+      "category": "View",
+      "source": "slides",
+      "keywords": [
+        "object",
+        "select",
+        "shape"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "slides.selectText",
       "title": "Select slide text",
       "category": "View",

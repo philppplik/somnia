@@ -6,9 +6,10 @@ import {slidesPanels,slidesInspector} from './panelDefinitions';
 import {SLIDES_PANEL_CATALOGUES} from './panelI18n';
 import {deckMetrics,selectedRun,slideOutline,textIssue} from './panelModel';
 const runs=[{slide:0,run:0,text:'Hello world',part:'ppt/slides/slide1.xml'},{slide:1,run:0,text:'Second slide',part:'ppt/slides/slide2.xml'}];
-function fixture(){
- const state={source:'blob:deck1',index:0,busy:false,working:new Uint8Array(40),runs:runs.map(r=>({...r})),slideIds:[256,257],layouts:[{part:'ppt/slideLayouts/slideLayout1.xml',supported:true},{part:'ppt/slideLayouts/slideLayout2.xml',supported:false}],summary:{slides:2}};
- const calls:unknown[]=[];const deps:PanelCommandDeps={state:()=>state,thumbnails:async()=>{calls.push('thumbnails');},show:async index=>{state.index=index;calls.push(['show',index]);},edit:async(run,text)=>{state.runs=state.runs.map(r=>r.slide===run.slide&&r.run===run.run?{...r,text}:r);calls.push(['edit',text]);},select:v=>calls.push(v),move:async(id,to)=>{const a=state.slideIds.slice();a.splice(to,0,a.splice(a.indexOf(id),1)[0]);state.slideIds=a;calls.push(['move',id,to]);},duplicate:async id=>{calls.push(['dup',id]);},remove:async id=>{calls.push(['del',id]);},add:async(l,a)=>{calls.push(['add',l,a]);}};
+let picked:import('./shapeSelection').ShapeSelection|null=null;
+function fixture(){picked=null;
+ const state={source:'blob:deck1',index:0,busy:false,working:new Uint8Array(40),runs:runs.map(r=>({...r})),slideIds:[256,257],layouts:[{part:'ppt/slideLayouts/slideLayout1.xml',supported:true},{part:'ppt/slideLayouts/slideLayout2.xml',supported:false}],model:{slides:[{id:256,shapes:[{id:2,name:'A',kind:'text' as const,runCount:1,parentId:null,bounds:null,ph:null},{id:3,name:'B',kind:'text' as const,runCount:1,parentId:null,bounds:null,ph:null}]},{id:257,shapes:[]}]},summary:{slides:2}};
+ const calls:unknown[]=[];const deps:PanelCommandDeps={state:()=>state,thumbnails:async()=>{calls.push('thumbnails');},show:async index=>{state.index=index;calls.push(['show',index]);},edit:async(run,text)=>{state.runs=state.runs.map(r=>r.slide===run.slide&&r.run===run.run?{...r,text}:r);calls.push(['edit',text]);},select:v=>calls.push(v),move:async(id,to)=>{const a=state.slideIds.slice();a.splice(to,0,a.splice(a.indexOf(id),1)[0]);state.slideIds=a;calls.push(['move',id,to]);},duplicate:async id=>{calls.push(['dup',id]);},remove:async id=>{calls.push(['del',id]);},add:async(l,a)=>{calls.push(['add',l,a]);},pick:v=>{picked=v;calls.push(['pick',v]);},picked:()=>picked};
  const dispatcher=new CommandDispatcher();slidesPanelCommandSpecs(deps).forEach(s=>dispatcher.register(s));return {state,calls,dispatcher};
 }
 test('outline searches text and slide number and preserves empty slides',()=>{
@@ -39,7 +40,7 @@ test('thumbnail command uses session operation',async()=>{const f=fixture();awai
 test('every panel command and UI key exists in all five locales',()=>{
  const keys=Object.keys(SLIDES_PANEL_CATALOGUES.en).sort();for(const locale of ['en','de','es','fr','pt-BR'])assert.deepEqual(Object.keys(SLIDES_PANEL_CATALOGUES[locale]).sort(),keys);
  for(const p of slidesPanels){assert.equal(p.component,p.id==='inspector'?'shell.inspector':`slides.${p.id}`);assert.ok(SLIDES_PANEL_CATALOGUES.en[p.titleKey!]);}
- for(const id of ['loadThumbnails','selectText','editText','moveSlide','moveSlideEarlier','moveSlideLater','duplicateSlide','deleteSlide','newSlide'])for(const locale of Object.keys(SLIDES_PANEL_CATALOGUES))assert.ok(SLIDES_PANEL_CATALOGUES[locale][`cmd.slides.${id}`]);
+ for(const id of ['loadThumbnails','selectText','editText','moveSlide','moveSlideEarlier','moveSlideLater','duplicateSlide','deleteSlide','newSlide','selectShape','selectNextShape','selectPreviousShape'])for(const locale of Object.keys(SLIDES_PANEL_CATALOGUES))assert.ok(SLIDES_PANEL_CATALOGUES[locale][`cmd.slides.${id}`]);
 });
 
 test('inspector section titles and commands are declared',()=>{
@@ -85,4 +86,20 @@ test('delete is disabled for a single slide; busy and unsupported-layout states 
  const f=fixture();f.state.slideIds=[256];f.state.summary={slides:1};assert.equal(f.dispatcher.isEnabled('slides.deleteSlide'),false);assert.equal(f.dispatcher.isEnabled('slides.duplicateSlide'),true);
  f.state.layouts=[{part:'ppt/slideLayouts/slideLayout2.xml',supported:false}];assert.equal(f.dispatcher.isEnabled('slides.newSlide'),false);
  f.state.busy=true;for(const id of ['slides.duplicateSlide','slides.deleteSlide','slides.newSlide'])assert.equal(f.dispatcher.isEnabled(id),false);
+});
+
+test('selectShape validates source, slide, shape ids and origin; null clears',async()=>{
+ const f=fixture();const ok={source:'blob:deck1',slideId:256,shapeId:2};
+ for(const p of [{...ok,source:'x'},{...ok,slideId:257},{...ok,shapeId:99},{...ok,shapeId:-1},{...ok,shapeId:'2'},{...ok,extra:1},{source:'blob:deck1',slideId:256}])await assert.rejects(f.dispatcher.runCommand('slides.selectShape',p,{origin:'ui'}));
+ await assert.rejects(f.dispatcher.runCommand('slides.selectShape',ok,{origin:'agent'}));assert.equal(f.calls.length,0);
+ await f.dispatcher.runCommand('slides.selectShape',ok,{origin:'ui'});assert.deepEqual(picked,{source:'blob:deck1',slideId:256,shapeId:2});
+ await f.dispatcher.runCommand('slides.selectShape',{...ok,shapeId:null},{origin:'ui'});assert.equal(picked,null);
+});
+test('next/previous shape cycle in z-order, wrap, and are disabled without shapes',async()=>{
+ const f=fixture();await f.dispatcher.runCommand('slides.selectNextShape',undefined,{origin:'ui'});assert.equal(picked!.shapeId,2);
+ await f.dispatcher.runCommand('slides.selectNextShape',undefined,{origin:'ui'});assert.equal(picked!.shapeId,3);
+ await f.dispatcher.runCommand('slides.selectNextShape',undefined,{origin:'ui'});assert.equal(picked!.shapeId,2);
+ await f.dispatcher.runCommand('slides.selectPreviousShape',undefined,{origin:'ui'});assert.equal(picked!.shapeId,3);
+ f.state.index=1;assert.equal(f.dispatcher.isEnabled('slides.selectNextShape'),false);
+ f.state.index=0;f.state.busy=true;assert.equal(f.dispatcher.isEnabled('slides.selectShape'),false);
 });

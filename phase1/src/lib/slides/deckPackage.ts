@@ -18,11 +18,14 @@ import {unzipSync,zipSync,strFromU8,strToU8,type Zippable} from 'fflate';
 import {listZip} from '../office/zipProbe';
 
 export type ShapeKind='text'|'picture'|'table'|'chart'|'group'|'connector'|'other';
-export interface ShapeRef {id:number;name:string;kind:ShapeKind;runCount:number}
+/** Stored geometry in EMU. `source` says where it came from; only `slide` bounds are the shape's own. */
+export interface ShapeBounds {x:number;y:number;w:number;h:number;rot:number;flipH:boolean;flipV:boolean;source:'slide'|'layout'|'master'}
+export interface ShapePlaceholder {type:string;idx:string}
+export interface ShapeRef {id:number;name:string;kind:ShapeKind;runCount:number;parentId:number|null;bounds:ShapeBounds|null;ph:ShapePlaceholder|null}
 export interface SlideModel {id:number;rid:string;part:string;shapes:ShapeRef[];problems:string[]}
 export interface ModelRun {slideId:number;shapeId:number;paragraph:number;run:number;ordinal:number;text:string;key:string}
 export interface SectionInfo {name:string;ids:number[]}
-export interface DeckModel {slides:SlideModel[];runs:ModelRun[];sections:SectionInfo[]|null;layouts?:LayoutInfo[]}
+export interface DeckModel {slides:SlideModel[];runs:ModelRun[];sections:SectionInfo[]|null;layouts?:LayoutInfo[];slideSize:{cx:number;cy:number}|null}
 
 export const MAX_SLIDES=200;
 const MAX_ENTRY=16*1024*1024;
@@ -76,7 +79,7 @@ const TAG=/<!--[\s\S]*?-->|<!\[CDATA\[[\s\S]*?\]\]>|<\?[\s\S]*?\?>|<(\/?)([A-Za-
 /** Tokenizes one slide part into top-level shapes and text runs with stable ids. */
 export function readSlidePart(xml:string,slideId:number):{shapes:ShapeRef[];runs:ModelRun[];problems:string[]}{
   const shapes:ShapeRef[]=[],runs:ModelRun[]=[],problems:string[]=[];
-  const stack:{tag:string;shape?:ShapeRef}[]=[];
+  const stack:{tag:string;shape?:ShapeRef;xf?:{owner:ShapeRef}}[]=[];const parentOf=new Map<ShapeRef,ShapeRef|undefined>();
   let para=-1,run=-1,ordinal=0,open:{start:number;shape?:ShapeRef;para:number;run:number}|null=null;
   for(const m of xml.matchAll(TAG)){
     if(m[2]===undefined)continue;
@@ -92,7 +95,8 @@ export function readSlidePart(xml:string,slideId:number):{shapes:ShapeRef[];runs
     const parent=stack.at(-1);
     const enclosing=[...stack].reverse().find(s=>s.shape)?.shape;
     if(SHAPE_TAGS[tag]&&parent&&(parent.tag==='p:spTree'||parent.tag==='p:grpSp')){
-      const shape:ShapeRef={id:-1,name:'',kind:tag==='p:sp'?'other':SHAPE_TAGS[tag]==='table'?'other':SHAPE_TAGS[tag],runCount:0};
+      const shape:ShapeRef={id:-1,name:'',kind:tag==='p:sp'?'other':SHAPE_TAGS[tag]==='table'?'other':SHAPE_TAGS[tag],runCount:0,parentId:null,bounds:null,ph:null};
+      parentOf.set(shape,parent.tag==='p:grpSp'?parent.shape:undefined);
       shapes.push(shape);
       if(self){problems.push('Empty shape element');continue;}
       stack.push({tag,shape});continue;
@@ -101,6 +105,14 @@ export function readSlidePart(xml:string,slideId:number):{shapes:ShapeRef[];runs
       const owner=stack[stack.length-2]?.shape;
       if(owner&&stack.at(-1)!.tag.startsWith('p:nv')){owner.id=Number(attr(m[3],'id'));owner.name=dec(attr(m[3],'name')??'');}
     }
+    if(tag==='p:ph'&&enclosing&&parent?.tag==='p:nvPr')enclosing.ph={type:attr(m[3],'type')??'',idx:attr(m[3],'idx')??''};
+    if((tag==='a:xfrm'||tag==='p:xfrm')&&enclosing&&!self&&(parent?.tag==='p:spPr'||parent?.tag==='p:grpSpPr'||parent?.tag==='p:graphicFrame')&&!enclosing.bounds){
+      const rot=Number(attr(m[3],'rot')??0);
+      enclosing.bounds={x:NaN,y:NaN,w:NaN,h:NaN,rot:Number.isFinite(rot)?rot:NaN,flipH:attr(m[3],'flipH')==='1'||attr(m[3],'flipH')==='true',flipV:attr(m[3],'flipV')==='1'||attr(m[3],'flipV')==='true',source:'slide'};
+      stack.push({tag,xf:{owner:enclosing}});continue;
+    }
+    if((tag==='a:off'||tag==='a:ext')&&parent?.xf){const b=parent.xf.owner.bounds;
+      if(b){if(tag==='a:off'){b.x=Number(attr(m[3],'x'));b.y=Number(attr(m[3],'y'));}else{b.w=Number(attr(m[3],'cx'));b.h=Number(attr(m[3],'cy'));}}}
     if(tag==='a:tbl'&&enclosing)enclosing.kind='table';
     if(tag==='c:chart'&&enclosing)enclosing.kind='chart';
     if(tag==='a:p'){para++;run=-1;}
@@ -110,6 +122,13 @@ export function readSlidePart(xml:string,slideId:number):{shapes:ShapeRef[];runs
     if(tag==='p:txBody'&&enclosing){para=-1;if(enclosing.kind==='other')enclosing.kind='text';}
   }
   if(stack.length)problems.push('Unclosed slide XML');
+  const BIG=1e10;
+  for(const sh of shapes){
+    const par=parentOf.get(sh);sh.parentId=par?par.id:null;
+    const b=sh.bounds;
+    // Nested shapes live in group child space; only top-level shapes expose usable bounds.
+    if(b&&(par||![b.x,b.y,b.w,b.h,b.rot].every(Number.isFinite)||b.w<0||b.h<0||[b.x,b.y,b.w,b.h].some(v=>Math.abs(v)>BIG)||!Number.isInteger(b.x)||!Number.isInteger(b.y)||!Number.isInteger(b.w)||!Number.isInteger(b.h)))sh.bounds=null;
+  }
   // Shape ids must be unique positive integers for stable addressing.
   const ids=shapes.map(s=>s.id);
   if(ids.some(i=>!Number.isInteger(i)||i<0))problems.push('Shape without a numeric id');
@@ -134,13 +153,35 @@ export function readDeckModel(bytes:Uint8Array):DeckModel{
     if(!part||!/^ppt\/slides\/slide\d+\.xml$/.test(part)||!zip[part])throw Error('Slide list needs canonical internal slide relationships');
     if(parts.has(part))throw Error('Two slides share one slide part');parts.add(part);
     const r=readSlidePart(strFromU8(zip[part]),item.id);
+    inheritBounds(zip,part,r.shapes);
     slides.push({id:item.id,rid:item.rid,part,shapes:r.shapes,problems:r.problems});
     if(!r.problems.length)runs.push(...r.runs);
   }
   const s=sections(pres);
-  return {slides,runs,sections:s?s.items.map(i=>({name:i.name,ids:i.ids})):null};
+  const sz=/<p:sldSz\b([^>]*)\/?>/.exec(pres),cx=Number(attr(sz?.[1]??'','cx')),cy=Number(attr(sz?.[1]??'','cy'));
+  return {slides,runs,sections:s?s.items.map(i=>({name:i.name,ids:i.ids})):null,slideSize:sz&&Number.isInteger(cx)&&Number.isInteger(cy)&&cx>0&&cy>0&&cx<1e10&&cy<1e10?{cx,cy}:null};
 }
 
+const PH_ALIAS:Record<string,string>={ctrTitle:'title',subTitle:'body',obj:'body','':'body'};
+const phKey=(t:string)=>PH_ALIAS[t]??t;
+/** Placeholders without their own xfrm inherit position from the layout, then the master. Display-only (`source` says so). */
+function inheritBounds(zip:Record<string,Uint8Array>,slidePart:string,shapes:ShapeRef[]){
+  if(!shapes.some(s=>!s.bounds&&s.ph&&s.parentId===null))return;
+  const chain:{part:string;source:'layout'|'master'}[]=[];
+  try{
+    const layout=readRels(zip,slidePart).find(r=>r.type===RT+'slideLayout'&&!r.external);if(!layout)return;
+    const lp=resolve(slidePart,layout.target);chain.push({part:lp,source:'layout'});
+    const master=readRels(zip,lp).find(r=>r.type===RT+'slideMaster'&&!r.external);if(master)chain.push({part:resolve(lp,master.target),source:'master'});
+  }catch{return;}
+  const parsed=chain.filter(c=>zip[c.part]).map(c=>({source:c.source,shapes:readSlidePart(strFromU8(zip[c.part]),0).shapes.filter(x=>x.ph&&x.bounds&&x.parentId===null)}));
+  for(const sh of shapes){
+    const ph=sh.ph;if(sh.bounds||!ph||sh.parentId!==null)continue;
+    for(const p of parsed){
+      const hit=(ph.idx!==''?p.shapes.find(x=>x.ph!.idx===ph.idx&&phKey(x.ph!.type)===phKey(ph.type)):undefined)??p.shapes.find(x=>phKey(x.ph!.type)===phKey(ph.type)&&(ph.idx===''||x.ph!.idx===''||p.source==='master'));
+      if(hit?.bounds){sh.bounds={...hit.bounds,source:p.source};break;}
+    }
+  }
+}
 const MEDIA=/\.(png|jpe?g|gif|webp|mp4|m4a|mp3|wmv|zip|docx|xlsx|pptx)$/i;
 function repack(zip:Record<string,Uint8Array>,changed:Record<string,string>):Uint8Array{
   const out:Zippable={};

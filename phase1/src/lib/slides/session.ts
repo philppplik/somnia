@@ -3,16 +3,16 @@ import {reportError} from '../log';
 import {readDeckDocument,serializeDeck,parseDeck,editedDeckBytes} from './deckDocument';
 import type {SlidesDiagnostics} from './diagnostics';
 import type {TextRun} from './editCopy';
-import type {LayoutInfo} from './deckPackage';
+import type {LayoutInfo,DeckModel} from './deckPackage';
 import {installBeforeUnload} from '../closeFlow';
 import {useEffect,useSyncExternalStore} from 'react';
 import {SlidesClient} from './client';
 import {assertPptx,type DeckSummary} from './protocol';
 import {addMediaFile,closeMedia,findMedia,getMedia,setActiveMedia,subscribeMedia,registerMediaCloseGuard} from '../media';
-export interface SlidesSession {presenting:boolean;wasmBytes:number;diagnostics:SlidesDiagnostics|null;name:string;source:string;summary:DeckSummary|null;index:number;image:string;texts:string[];thumbnails:Record<number,string>;busy:boolean;error:string;original:Uint8Array|null;working:Uint8Array|null;runs:TextRun[];slideIds:number[];layouts:LayoutInfo[];dirty:boolean;undo:Uint8Array[];redo:Uint8Array[]}
+export interface SlidesSession {presenting:boolean;wasmBytes:number;diagnostics:SlidesDiagnostics|null;name:string;source:string;summary:DeckSummary|null;index:number;image:string;texts:string[];thumbnails:Record<number,string>;busy:boolean;error:string;original:Uint8Array|null;working:Uint8Array|null;runs:TextRun[];slideIds:number[];layouts:LayoutInfo[];model:DeckModel|null;dirty:boolean;undo:Uint8Array[];redo:Uint8Array[]}
 interface Entry {revision:number;state:SlidesSession;client:SlidesClient;sequence:number;disposed:boolean;presentCache:Map<string,Promise<string>>;exiting?:boolean}
 const bounded=(history:Uint8Array[])=>{let total=0;return history.slice(-10).reverse().filter(b=>(total+=b.byteLength)<=64*1024*1024).reverse();};
-const empty:SlidesSession={presenting:false,wasmBytes:0,diagnostics:null,name:'',source:'',summary:null,index:0,image:'',texts:[],thumbnails:{},busy:false,error:'',original:null,working:null,runs:[],slideIds:[],layouts:[],dirty:false,undo:[],redo:[]};
+const empty:SlidesSession={presenting:false,wasmBytes:0,diagnostics:null,name:'',source:'',summary:null,index:0,image:'',texts:[],thumbnails:{},busy:false,error:'',original:null,working:null,runs:[],slideIds:[],layouts:[],model:null,dirty:false,undo:[],redo:[]};
 const sessions=new Map<string,Entry>();const listeners=new Set<()=>void>();let version=0;
 function emit(){version++;listeners.forEach(f=>f());}
 function patch(e:Entry,p:Partial<SlidesSession>,cause?:unknown){if(e.disposed)return;if(p.error)reportError('slides.engine',cause??p.error,{context:{studio:'slides',file:e.state.name}});e.state={...e.state,...p};emit();}
@@ -25,7 +25,7 @@ subscribeMedia(()=>{const media=getMedia();for(const [name,e]of sessions){if(med
 export async function ensureSlides(name:string){const m=findMedia(name);if(!m||m.kind!=='pptx')return;if(sessions.get(name)?.state.source===m.url)return;
  if(sessions.size>=3){const victim=[...sessions].find(([n,e])=>n!==getMedia().active&&!e.state.dirty);if(victim){dispose(victim[1]);sessions.delete(victim[0]);}else return;}
  const e:Entry={revision:0,state:{...empty,name,source:m.url,busy:true,thumbnails:{}},client:new SlidesClient(),sequence:0,disposed:false,presentCache:new Map()};sessions.set(name,e);emit();
- try{const bytes=new Uint8Array(await(await fetch(m.url)).arrayBuffer());if(e.disposed)return;const summary=await e.client.open(bytes);if(e.disposed)return;let runs:TextRun[]=[];let slideIds:number[]=[];let layouts:LayoutInfo[]=[];try{runs=await e.client.runs(bytes);slideIds=await modelIds(e,bytes,summary.slides);layouts=await layoutsOf(e,bytes);}catch{/* Noncanonical text remains preview-only. */}if(e.disposed)return;const diagnostics=await e.client.diagnostics(bytes);patch(e,{summary,original:bytes,working:bytes,runs,slideIds,layouts,diagnostics});await renderSlide(e,0);}
+ try{const bytes=new Uint8Array(await(await fetch(m.url)).arrayBuffer());if(e.disposed)return;const summary=await e.client.open(bytes);if(e.disposed)return;let runs:TextRun[]=[];let slideIds:number[]=[];let model:DeckModel|null=null;let layouts:LayoutInfo[]=[];try{runs=await e.client.runs(bytes);model=await modelOf(e,bytes,summary.slides);slideIds=idsOf(model);layouts=await layoutsOf(e,bytes);}catch{/* Noncanonical text remains preview-only. */}if(e.disposed)return;const diagnostics=await e.client.diagnostics(bytes);patch(e,{summary,original:bytes,working:bytes,runs,slideIds,layouts,model,diagnostics});await renderSlide(e,0);}
  catch(error){patch(e,{busy:false,error:String(error)},error);e.client.dispose();}
 }
 export async function openSlides(file:File){try{assertPptx(file);}catch(error){return String(error);}if(sessions.size>=3&&[...sessions.values()].every(e=>e.state.dirty))return 'Save or close an edited deck before opening another';const r=await addMediaFile(file,file.name);if('error'in r)return r.error;await ensureSlides(r.name);return '';}
@@ -45,10 +45,11 @@ export const slidesIsDirty=(name:string)=>sessions.get(name)?.state.dirty??false
 if(typeof window!=='undefined')installBeforeUnload(()=>[...sessions.values()].some(e=>e.state.dirty));
 registerMediaCloseGuard(name=>!slidesIsDirty(name)||window.confirm(`Discard unsaved presentation edits to ${name}?`));
 /** Stable slide ids in deck order; empty when the deck is not canonical (reordering stays off). */
-async function modelIds(e:Entry,bytes:Uint8Array,slides:number){try{const m=await e.client.model(bytes);const ids=m.slides.map(s=>s.id);return ids.length===slides?ids:[];}catch{return [];}}
+async function modelOf(e:Entry,bytes:Uint8Array,slides:number){try{const m=await e.client.model(bytes);return m.slides.length===slides?m:null;}catch{return null;}}
+const idsOf=(m:DeckModel|null)=>m?m.slides.map(s=>s.id):[];
 async function layoutsOf(e:Entry,bytes:Uint8Array){try{return await e.client.layouts(bytes);}catch{return [];}}
 async function setWorking(e:Entry,bytes:Uint8Array,index=e.state.index){const summary=await e.client.open(bytes);
-const runs=await e.client.runs(bytes);const slideIds=await modelIds(e,bytes,summary.slides);const layouts=await layoutsOf(e,bytes);e.revision++;clearPresentCache(e);Object.values(e.state.thumbnails).forEach(URL.revokeObjectURL);patch(e,{working:bytes,summary,runs,slideIds,layouts,dirty:true,thumbnails:{}});await renderSlide(e,Math.min(Math.max(index,0),summary.slides-1));}
+const runs=await e.client.runs(bytes);const model=await modelOf(e,bytes,summary.slides);const slideIds=idsOf(model);const layouts=await layoutsOf(e,bytes);e.revision++;clearPresentCache(e);Object.values(e.state.thumbnails).forEach(URL.revokeObjectURL);patch(e,{working:bytes,summary,runs,slideIds,layouts,model,dirty:true,thumbnails:{}});await renderSlide(e,Math.min(Math.max(index,0),summary.slides-1));}
 /** One user action, one undo entry: the whole before-deck is pushed once. The viewed slide follows its id. */
 export async function moveSlideTo(slideId:number,toIndex:number){const e=sessions.get(getMedia().active??'');if(!e?.state.working||e.state.busy)return;
 const before=e.state.working,ids=e.state.slideIds,from=ids.indexOf(slideId);

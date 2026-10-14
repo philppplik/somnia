@@ -5,16 +5,21 @@ import {getSlidesSessionState,loadThumbnails,editSlideText,showSlide,moveSlideTo
 import {textIssue} from './panelModel';
 import type {TextRun} from './editCopy';
 import './panelI18n';
+import {selectShape,getShapeSelection,type ShapeSelection} from './shapeSelection';
+import {stepShape} from './shapeGeometry';
+import type {ShapeRef} from './deckPackage';
 export interface PanelCommandDeps {
- state():{source:string;index:number;busy:boolean;working:Uint8Array|null;runs:TextRun[];slideIds:number[];layouts:{part:string;supported:boolean}[];summary:{slides:number}|null};
+ state():{source:string;index:number;busy:boolean;working:Uint8Array|null;runs:TextRun[];slideIds:number[];layouts:{part:string;supported:boolean}[];model:{slides:{id:number;shapes:ShapeRef[]}[]}|null;summary:{slides:number}|null};
  thumbnails():Promise<void>;edit(run:TextRun,text:string):Promise<void>;show(index:number):Promise<void>;
- select(value:{source:string;slide:number;run:number}):void;move(slideId:number,toIndex:number):Promise<void>;duplicate(slideId:number):Promise<void>;remove(slideId:number):Promise<void>;add(layoutPart:string,afterSlideId:number|null):Promise<void>;
+ select(value:{source:string;slide:number;run:number}):void;move(slideId:number,toIndex:number):Promise<void>;duplicate(slideId:number):Promise<void>;remove(slideId:number):Promise<void>;add(layoutPart:string,afterSlideId:number|null):Promise<void>;pick(value:ShapeSelection|null):void;picked():ShapeSelection|null;
 }
 const identity={source:{type:'string',minLength:1},slide:{type:'integer',minimum:0},run:{type:'integer',minimum:0},old:{type:'string'}};
 export function slidesPanelCommandSpecs(d:PanelCommandDeps):CommandSpec[]{
  const available=()=>{const s=d.state();return !!s.working&&!!s.summary&&!s.busy;};
  const reorderable=()=>{const s=d.state();return available()&&s.slideIds.length>1&&s.slideIds.length===s.summary!.slides;};
  const slideId={type:'integer',minimum:256,maximum:2147483647} as const;
+ const shapesOf=()=>{const s=d.state(),id=s.slideIds[s.index];return s.model?.slides.find(x=>x.id===id)?.shapes??[];};
+ const cycle=(delta:1|-1)=>{const s=d.state(),id=s.slideIds[s.index],cur=d.picked();const next=stepShape(shapesOf(),cur&&cur.source===s.source&&cur.slideId===id?cur.shapeId:null,delta);if(next)d.pick({source:s.source,slideId:id,shapeId:next.id});};
  const expected=(m:string)=>Object.assign(new Error(m),{expected:true});
  const step=async(delta:number)=>{const s=d.state(),to=s.index+delta;if(to<0||to>=s.slideIds.length)throw expected('The slide is already at the edge of the deck.');await d.move(s.slideIds[s.index],to);};
  return [
@@ -44,6 +49,15 @@ export function slidesPanelCommandSpecs(d:PanelCommandDeps):CommandSpec[]{
    if(!layout)throw expected('Layout no longer exists.');if(!layout.supported)throw expected('This layout has placeholders new slides cannot create yet.');
    if(v.afterSlideId!=null&&!s.slideIds.includes(v.afterSlideId))throw expected('Slide no longer exists. Reselect the slide.');if(s.slideIds.length>=200)throw expected('A deck can hold at most 200 slides.');
    await d.add(v.layoutPart,v.afterSlideId??null);}},
+  {id:'slides.selectShape',title:'Select shape',category:'View',level:'ui',keywords:['shape','object','select'],enabled:()=>{const s=d.state();return available()&&!!s.model&&s.slideIds.length>0;},params:{type:'object',properties:{source:identity.source,slideId:slideId,shapeId:{type:['integer','null'],minimum:0,maximum:2147483647}},required:['source','slideId','shapeId'],additionalProperties:false},run:p=>{
+   const v=p as {source:string;slideId:number;shapeId:number|null};const s=d.state();
+   if(s.source!==v.source||s.slideIds[s.index]!==v.slideId)throw expected('Slide changed since selection.');
+   if(v.shapeId===null){d.pick(null);return;}
+   const shape=s.model?.slides.find(x=>x.id===v.slideId)?.shapes.find(x=>x.id===v.shapeId);
+   if(!shape||shape.parentId!==null)throw expected('Shape no longer exists.');
+   d.pick({source:v.source,slideId:v.slideId,shapeId:v.shapeId});}},
+  {id:'slides.selectNextShape',title:'Select next shape',category:'View',level:'ui',keywords:['shape','object','tab','next'],enabled:()=>available()&&shapesOf().length>0,run:()=>cycle(1)},
+  {id:'slides.selectPreviousShape',title:'Select previous shape',category:'View',level:'ui',keywords:['shape','object','previous'],enabled:()=>available()&&shapesOf().length>0,run:()=>cycle(-1)},
   {id:'slides.editText',title:'Apply slide text',category:'Edit',level:'ui',enabled:available,allowInInput:true,params:{type:'object',properties:{...identity,text:{type:'string',maxLength:16384}},required:['source','slide','run','old','text'],additionalProperties:false},run:async p=>{
    const v=p as {source:string;slide:number;run:number;old:string;text:string};const s=d.state();const r=s.runs.find(r=>r.slide===v.slide&&r.run===v.run);
    if(s.source!==v.source||s.index!==v.slide||!r||r.text!==v.old)throw Error('Text changed since selection.');
@@ -52,5 +66,5 @@ export function slidesPanelCommandSpecs(d:PanelCommandDeps):CommandSpec[]{
   }},
  ];
 }
-const deps:PanelCommandDeps={state:getSlidesSessionState,thumbnails:loadThumbnails,edit:editSlideText,show:showSlide,select:selectSlideText,move:moveSlideTo,duplicate:duplicateSlideAt,remove:deleteSlideAt,add:addSlideFromLayout};
+const deps:PanelCommandDeps={state:getSlidesSessionState,thumbnails:loadThumbnails,edit:editSlideText,show:showSlide,select:selectSlideText,move:moveSlideTo,duplicate:duplicateSlideAt,remove:deleteSlideAt,add:addSlideFromLayout,pick:selectShape,picked:getShapeSelection};
 export function registerSlidesPanelCommands(){const offs=slidesPanelCommandSpecs(deps).map(s=>registerCommandSpec(s));return()=>offs.forEach(off=>off());}
