@@ -999,5 +999,6 @@
  "cmd.animation.layers.align": "Gewählte Ebenen ausrichten oder verteilen",
  "animation.export.fileName": "Dateiname",
  "animation.export.fileNameAuto": "Dokumentname",
- "animation.export.problem.name": "Der Dateiname darf höchstens 80 Zeichen haben"
+ "animation.export.problem.name": "Der Dateiname darf höchstens 80 Zeichen haben",
+ "animation.rig.pickAll": "Alle Ebenen"
 }

@@ -999,5 +999,6 @@
  "cmd.animation.layers.align": "Aligner ou répartir les calques sélectionnés",
  "animation.export.fileName": "Nom du fichier",
  "animation.export.fileNameAuto": "Nom du document",
- "animation.export.problem.name": "Le nom du fichier ne peut pas dépasser 80 caractères"
+ "animation.export.problem.name": "Le nom du fichier ne peut pas dépasser 80 caractères",
+ "animation.rig.pickAll": "Tous les calques"
 }

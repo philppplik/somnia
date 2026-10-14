@@ -999,5 +999,6 @@
  "cmd.animation.layers.align": "Alinear o distribuir las capas seleccionadas",
  "animation.export.fileName": "Nombre de archivo",
  "animation.export.fileNameAuto": "Nombre del documento",
- "animation.export.problem.name": "El nombre de archivo admite como máximo 80 caracteres"
+ "animation.export.problem.name": "El nombre de archivo admite como máximo 80 caracteres",
+ "animation.rig.pickAll": "Todas las capas"
 }

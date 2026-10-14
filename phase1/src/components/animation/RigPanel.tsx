@@ -7,6 +7,8 @@ import {useAnimationState} from '../../lib/animation/session';
 import {timingPlan,TIMING_MODES,FRAME_MODES,SIGNED_MODES,MAX_STAGGER_FRAMES,type TimingMode} from '../../lib/animation/layerTiming';
 import {executeCommand} from '../../lib/commands';
 import type {Composition} from '../../lib/animation/model';
+/** The commands take at most 50 layers, so "all" stops there. */
+const MAX_PICK=50;
 const groups:{key:string;items:{testid:string;label:string;cmd:string;min:number;args?:object}[]}[]=[
  {key:'hierarchy',items:[
   {testid:'animation-rig-chain',label:'animation.rig.chain',cmd:'animation.rig.chain',min:2},
@@ -32,8 +34,9 @@ export function RigPanel({comp}:{comp:Composition}){
  const fn=Number(frames),usesFrames=FRAME_MODES.includes(mode),framesOk=!usesFrames||(frames.trim()!==''&&Number.isInteger(fn)&&fn>=(SIGNED_MODES.includes(mode)?-MAX_STAGGER_FRAMES:0)&&fn<=MAX_STAGGER_FRAMES);
  const plan=ids.length&&framesOk?timingPlan(comp,ids,mode,{playhead,frames:usesFrames?fn:undefined}):null;
  const fieldCls='h-8 w-full min-w-0 rounded-sm border border-subtle bg-transparent px-2 text-xs text-ink select-text';
- const real=comp.layers.filter(l=>l.kind!=='audio');
+ const real=comp.layers.filter(l=>l.kind!=='audio');const pickable=real.slice(0,MAX_PICK),allOn=pickable.length>0&&ids.length===pickable.length;
  return <fieldset className="m-0 grid min-w-0 gap-2 border border-subtle p-2" data-testid="animation-rig"><legend className="text-ink-3">{t('animation.rig.title')}</legend>
+  {real.length>1&&<label className="flex min-w-0 items-center gap-1 text-ink-3"><NativeInput type="checkbox" className="animation-checkbox" checked={allOn} ref={el=>{if(el)el.indeterminate=ids.length>0&&!allOn;}} onChange={()=>setTicked(allOn?[]:pickable.map(l=>l.id))} data-testid="animation-rig-pick-all"/><span className="min-w-0 truncate">{t('animation.rig.pickAll')}</span></label>}
   <ul className="m-0 grid max-h-40 list-none gap-1 overflow-auto p-0">{real.map(l=>{const n=ids.indexOf(l.id);return <li key={l.id}><label className="flex min-w-0 items-center gap-1 text-ink-2"><NativeInput type="checkbox" className="animation-checkbox" checked={n>=0} onChange={()=>toggle(l.id)} data-testid={`animation-rig-pick-${l.id}`}/><span className="min-w-0 truncate">{l.name}</span>{n>=0&&<span className="text-ink-3">{n+1}</span>}</label></li>;})}</ul>
   <div className="grid min-w-0 gap-1">
    <Menu><MenuTrigger render={<Button size="compact" variant="outline" className="h-auto min-w-0 whitespace-normal" disabled={ids.length<1} data-testid="animation-rig-menu">{t('animation.rig.menu')}</Button>}/>

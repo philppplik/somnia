@@ -999,5 +999,6 @@
  "cmd.animation.layers.align": "Align or distribute the selected layers",
  "animation.export.fileName": "File name",
  "animation.export.fileNameAuto": "Document name",
- "animation.export.problem.name": "The file name must be at most 80 characters"
+ "animation.export.problem.name": "The file name must be at most 80 characters",
+ "animation.rig.pickAll": "All layers"
 }
