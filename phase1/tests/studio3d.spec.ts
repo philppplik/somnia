@@ -1486,6 +1486,22 @@ test('3D studio history: labels list and multi-step undo/redo',async({page})=>{
  await expect.poll(async()=>(await session(page)).outline.filter(o=>o.kind==='mesh').length).toBe(0);
 });
 
+test('3D studio keyboard help: the question mark opens the overlay, Escape closes it',async({page})=>{
+ await blank(page);
+ await insert(page,'cube',0);
+ await page.getByTestId('studio3d-viewport').locator('canvas').click();
+ await page.keyboard.press('?');
+ await expect(page.getByTestId('studio3d-keys')).toBeVisible();
+ await expect(page.getByTestId('studio3d-keys').getByRole('listitem')).toHaveCount(11);
+ // The command toggles it off and on too.
+ expect(await run(page,'studio3d.view.keys',{on:false})).toBe(true);
+ await expect(page.getByTestId('studio3d-keys')).toHaveCount(0);
+ expect(await run(page,'studio3d.view.keys',{})).toBe(true);
+ await expect(page.getByTestId('studio3d-keys')).toBeVisible();
+ await page.keyboard.press('Escape');
+ await expect(page.getByTestId('studio3d-keys')).toHaveCount(0);
+});
+
 test('3D studio views: rename, update and the digit shortcuts',async({page})=>{
  await blank(page);
  await insert(page,'cube',0);

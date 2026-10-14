@@ -653,5 +653,19 @@
  "studio3d.history.redo": "Wiederholen-Schritte",
  "studio3d.history.undoTo": "Rückgängig bis",
  "studio3d.history.redoTo": "Wiederholen bis",
- "studio3d.history.empty": "Noch keine Änderungen."
+ "studio3d.history.empty": "Noch keine Änderungen.",
+ "studio3d.keys.title": "Tastenkürzel",
+ "studio3d.keys.close": "Schließen",
+ "studio3d.keys.gizmo": "Auswahl verschieben, drehen oder skalieren",
+ "studio3d.keys.frame": "Auswahl in den Blick rücken",
+ "studio3d.keys.snap": "Fang ein-/ausschalten",
+ "studio3d.keys.measure": "Maßwerkzeug ein-/ausschalten",
+ "studio3d.keys.viewApply": "Gespeicherte Ansicht aufrufen",
+ "studio3d.keys.viewSave": "Kamera in einen Ansichts-Slot speichern",
+ "studio3d.keys.orbit": "Kamera drehen",
+ "studio3d.keys.zoom": "Hinein- und herauszoomen",
+ "studio3d.keys.reset": "Ansicht zurücksetzen",
+ "studio3d.keys.escape": "Abbrechen oder schließen",
+ "studio3d.keys.help": "Diese Hilfe ein-/ausblenden",
+ "cmd.studio3d.view.keys": "3D-Tastenkürzelhilfe ein- oder ausblenden"
 }

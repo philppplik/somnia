@@ -653,5 +653,19 @@
  "studio3d.history.redo": "Etapas de refazer",
  "studio3d.history.undoTo": "Desfazer até",
  "studio3d.history.redoTo": "Refazer até",
- "studio3d.history.empty": "Nenhuma alteração ainda."
+ "studio3d.history.empty": "Nenhuma alteração ainda.",
+ "studio3d.keys.title": "Atalhos de teclado",
+ "studio3d.keys.close": "Fechar",
+ "studio3d.keys.gizmo": "Mover, girar ou escalar a seleção",
+ "studio3d.keys.frame": "Enquadrar a seleção",
+ "studio3d.keys.snap": "Ativar ou desativar o encaixe",
+ "studio3d.keys.measure": "Ativar ou desativar a ferramenta de medição",
+ "studio3d.keys.viewApply": "Aplicar uma vista salva",
+ "studio3d.keys.viewSave": "Salvar a câmera em um slot de vista",
+ "studio3d.keys.orbit": "Orbitar a câmera",
+ "studio3d.keys.zoom": "Aproximar e afastar",
+ "studio3d.keys.reset": "Redefinir a vista",
+ "studio3d.keys.escape": "Cancelar ou fechar",
+ "studio3d.keys.help": "Mostrar ou ocultar esta ajuda",
+ "cmd.studio3d.view.keys": "Mostrar ou ocultar a ajuda de atalhos de teclado 3D"
 }

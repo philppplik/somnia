@@ -653,5 +653,19 @@
  "studio3d.history.redo": "Redo steps",
  "studio3d.history.undoTo": "Undo up to",
  "studio3d.history.redoTo": "Redo up to",
- "studio3d.history.empty": "No changes yet."
+ "studio3d.history.empty": "No changes yet.",
+ "studio3d.keys.title": "Keyboard shortcuts",
+ "studio3d.keys.close": "Close",
+ "studio3d.keys.gizmo": "Move, rotate or scale the selection",
+ "studio3d.keys.frame": "Frame the selection",
+ "studio3d.keys.snap": "Toggle snapping",
+ "studio3d.keys.measure": "Toggle the measure tool",
+ "studio3d.keys.viewApply": "Apply a saved view",
+ "studio3d.keys.viewSave": "Save the camera into a view slot",
+ "studio3d.keys.orbit": "Orbit the camera",
+ "studio3d.keys.zoom": "Zoom in and out",
+ "studio3d.keys.reset": "Reset the view",
+ "studio3d.keys.escape": "Cancel or close",
+ "studio3d.keys.help": "Toggle this help",
+ "cmd.studio3d.view.keys": "Show or hide the 3D keyboard shortcut help"
 }

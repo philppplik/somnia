@@ -653,5 +653,19 @@
  "studio3d.history.redo": "Étapes à rétablir",
  "studio3d.history.undoTo": "Annuler jusqu’à",
  "studio3d.history.redoTo": "Rétablir jusqu’à",
- "studio3d.history.empty": "Aucune modification pour l’instant."
+ "studio3d.history.empty": "Aucune modification pour l’instant.",
+ "studio3d.keys.title": "Raccourcis clavier",
+ "studio3d.keys.close": "Fermer",
+ "studio3d.keys.gizmo": "Déplacer, pivoter ou redimensionner la sélection",
+ "studio3d.keys.frame": "Cadrer la sélection",
+ "studio3d.keys.snap": "Activer ou désactiver le magnétisme",
+ "studio3d.keys.measure": "Activer ou désactiver l’outil de mesure",
+ "studio3d.keys.viewApply": "Appliquer une vue enregistrée",
+ "studio3d.keys.viewSave": "Enregistrer la caméra dans un emplacement de vue",
+ "studio3d.keys.orbit": "Orbiter la caméra",
+ "studio3d.keys.zoom": "Zoomer et dézoomer",
+ "studio3d.keys.reset": "Réinitialiser la vue",
+ "studio3d.keys.escape": "Annuler ou fermer",
+ "studio3d.keys.help": "Afficher ou masquer cette aide",
+ "cmd.studio3d.view.keys": "Afficher ou masquer l’aide des raccourcis clavier 3D"
 }

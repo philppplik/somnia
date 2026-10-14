@@ -38,6 +38,9 @@ import {parseDocument,buildDocument,sceneBytes,fromBase64,DocumentError} from '.
 import {registerStudio3DController,registerStudio3DTextureDrop} from '../../lib/studio3d/commands';
 import {parseExtras,type ClipMeta} from '../../lib/studio3d/clipMeta';
 import {nextViewName,updateView,renameView,viewSlotIndex} from '../../lib/studio3d/views';
+import {SHORTCUT_HINTS} from '../../lib/studio3d/shortcuts';
+import {X} from 'lucide-react';
+import {Button} from '../ui/button';
 import {tweenPose,CAMERA_FLY_MS,type CameraPose} from '../../lib/studio3d/cameraTween';
 import {easeAt,type Ease} from '../../lib/studio3d/ease';
 import type {KeyPath} from '../../lib/studio3d/clips';
@@ -1408,7 +1411,9 @@ export default function Viewport3D(){
     }
     if(views[slot]){applyViewByName(views[slot].name);e.preventDefault();return;}
    }
-    if(e.key==='Escape'&&getStudio3DState().measure){patchStudio3D({measure:null});syncMeasure();invalidate();e.preventDefault();return;}
+    if(e.key==='?'){patchStudio3D({keysHelp:!getStudio3DState().keysHelp});e.preventDefault();return;}
+   if(e.key==='Escape'&&getStudio3DState().keysHelp){patchStudio3D({keysHelp:false});e.preventDefault();return;}
+   if(e.key==='Escape'&&getStudio3DState().measure){patchStudio3D({measure:null});syncMeasure();invalidate();e.preventDefault();return;}
     if((e.key==='Delete'||e.key==='Backspace')&&currentSet().length){deleteSelection();e.preventDefault();return;}
     const stepNow=getStudio3DState().snap.on?getStudio3DState().snap.move:0.1;const n=e.shiftKey&&sel!=null?nudgeFor(e.key,stepNow):null;
     if(n&&sel!=null){nudgeBy(sel,n);e.preventDefault();return;}
@@ -1438,6 +1443,13 @@ export default function Viewport3D(){
   <div ref={host} className="relative min-h-0 flex-1 overflow-hidden rounded-[25px]"/>
   {s.status==='loading'&&<StudioStatus className="pointer-events-none absolute left-4 top-3 m-0 rounded-md bg-surface px-2 py-1 text-xs" data-testid="studio3d-loading">{t('studio3d.status.loading',{name:s.name})}{s.loadPhase?` · ${t('studio3d.load.phase.'+s.loadPhase)}`:''}</StudioStatus>}
   {s.status==='error'&&<StudioStatus tone="error" live="assertive" className="absolute left-4 top-3 m-0 max-w-[80%] rounded-md bg-surface px-2 py-1 text-xs">{t('studio3d.status.error')}: {s.error}</StudioStatus>}
+  {s.keysHelp&&<div className="absolute right-4 top-12 z-10 grid max-h-[80%] w-80 gap-1 overflow-auto rounded-[25px] border border-subtle bg-surface p-3" role="dialog" aria-label={t('studio3d.keys.title')} data-testid="studio3d-keys">
+   <div className="flex items-center justify-between"><span className="text-xs font-semibold text-ink">{t('studio3d.keys.title')}</span>
+    <Button variant="outline" className="px-1" aria-label={t('studio3d.keys.close')} onClick={()=>patchStudio3D({keysHelp:false})}><X size={13} aria-hidden/></Button></div>
+   <ul className="m-0 grid list-none gap-1 p-0">{SHORTCUT_HINTS.map(h=><li key={h.labelKey} className="flex items-center gap-2 text-xs">
+    <kbd className="min-w-20 rounded-sm border border-subtle px-1 py-0.5 text-center text-xs text-ink-2">{h.keys}</kbd>
+    <span className="text-ink-2">{t(h.labelKey)}</span></li>)}</ul>
+  </div>}
   {s.measure&&<StudioStatus className="pointer-events-none absolute right-4 top-3 m-0 rounded-md bg-surface px-2 py-1 text-xs" data-testid="studio3d-measure">{s.measure.a&&s.measure.b?formatMeasure(measureInfo(s.measure.a,s.measure.b),s.unit):t('studio3d.measure.pick')}</StudioStatus>}
   {s.perf&&<StudioStatus className="pointer-events-none absolute right-4 top-12 m-0 rounded-md bg-surface px-2 py-1 text-xs" data-testid="studio3d-perf">{formatPerf(s.perf.fps,s.perf.calls,s.perf.tris)}</StudioStatus>}
   <p className="sr-only">{t('studio3d.keys.hint')}</p>

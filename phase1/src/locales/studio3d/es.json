@@ -653,5 +653,19 @@
  "studio3d.history.redo": "Pasos de rehacer",
  "studio3d.history.undoTo": "Deshacer hasta",
  "studio3d.history.redoTo": "Rehacer hasta",
- "studio3d.history.empty": "Aún no hay cambios."
+ "studio3d.history.empty": "Aún no hay cambios.",
+ "studio3d.keys.title": "Atajos de teclado",
+ "studio3d.keys.close": "Cerrar",
+ "studio3d.keys.gizmo": "Mover, rotar o escalar la selección",
+ "studio3d.keys.frame": "Encuadrar la selección",
+ "studio3d.keys.snap": "Activar o desactivar el ajuste",
+ "studio3d.keys.measure": "Activar o desactivar la herramienta de medición",
+ "studio3d.keys.viewApply": "Aplicar una vista guardada",
+ "studio3d.keys.viewSave": "Guardar la cámara en una ranura de vista",
+ "studio3d.keys.orbit": "Orbitar la cámara",
+ "studio3d.keys.zoom": "Acercar y alejar",
+ "studio3d.keys.reset": "Restablecer la vista",
+ "studio3d.keys.escape": "Cancelar o cerrar",
+ "studio3d.keys.help": "Mostrar u ocultar esta ayuda",
+ "cmd.studio3d.view.keys": "Mostrar u ocultar la ayuda de atajos de teclado 3D"
 }
