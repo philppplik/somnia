@@ -614,5 +614,21 @@
  "studio3d.material.users": "{count} objets",
  "studio3d.material.selectUsers": "Sélectionner les objets utilisant {name}",
  "studio3d.texture.previewAlt": "Aperçu de la texture {slot}",
- "cmd.studio3d.texture.preview": "Afficher un petit aperçu d’un canal de texture"
+ "cmd.studio3d.texture.preview": "Afficher un petit aperçu d’un canal de texture",
+ "studio3d.light.rig.outdoor": "Extérieur",
+ "studio3d.shadow.title": "Ombres",
+ "studio3d.shadow.quality": "Qualité des ombres",
+ "studio3d.shadow.quality.off": "Désactivées",
+ "studio3d.shadow.quality.low": "Basse",
+ "studio3d.shadow.quality.medium": "Moyenne",
+ "studio3d.shadow.quality.high": "Haute",
+ "studio3d.shadow.type": "Algorithme d’ombres",
+ "studio3d.shadow.type.vsm": "VSM (doux)",
+ "studio3d.shadow.type.pcf": "PCF (classique)",
+ "studio3d.light.helpers": "Helpers de lumière",
+ "studio3d.ao.toggle": "Occlusion ambiante",
+ "studio3d.ao.strength": "Intensité d’occlusion",
+ "cmd.studio3d.shadow.set": "Régler la qualité et l’algorithme des ombres",
+ "cmd.studio3d.light.helpers": "Afficher ou masquer le helper de la lumière sélectionnée",
+ "cmd.studio3d.view.ao": "Activer ou désactiver l’aperçu d’occlusion ambiante (vue seulement)"
 }

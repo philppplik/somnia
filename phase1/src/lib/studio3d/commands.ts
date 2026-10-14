@@ -3,7 +3,7 @@ import {registerCommandSpec} from '../commandBridge';
 import type {CommandSpec} from '../commandSpec';
 import {clearRecentScenes} from './recentSession';
 import {getStudio3DState,patchStudio3D} from './session';
-import {isUnit,type EnvSettings,type GizmoMode,type SnapSettings,type ExportUnit,type ExportFormat,type PivotMode} from './model';
+import {SHADOW_QUALITIES,SHADOW_TYPES,isUnit,type EnvSettings,type GizmoMode,type SnapSettings,type ExportUnit,type ExportFormat,type PivotMode} from './model';
 import {PARAM_SPECS,MATERIAL_PRESET_IDS} from './primitives';
 import {ALPHA_MODES,TEXTURE_SLOTS,MAX_EMISSIVE_INTENSITY,type TextureSlot} from './materials';
 import {EASES,type Ease} from './ease';
@@ -114,6 +114,12 @@ export interface Studio3DController{
  setCamera(id:number,patch:{fov?:number;zoom?:number}):void;
  /** Switch the viewport between perspective and orthographic (view state). */
  setProjection(kind:CameraKind):void;
+ /** Shadow map quality and algorithm for the viewport (render state). */
+ setShadows(patch:{quality?:string;type?:string}):void;
+ /** Show or hide the selected light's viewport helper. */
+ setLightHelpers(on:boolean):void;
+ /** Ambient occlusion preview (viewport only). */
+ setAo(patch:{on?:boolean;strength?:number}):void;
  /** Set the viewport perspective field of view in degrees (view state). */
  setViewFov(fov:number):void;
  /** Start or stop the turntable preview; returns the new state (view only, never exported). */
@@ -203,7 +209,7 @@ export function studio3DCommandSpecs():CommandSpec<unknown,unknown>[]{
   add<{id:number|null}>('studio3d.select','Select a 3D object','Edit',p=>need().select(p.id),object({id:{anyOf:[{type:'null'},{type:'integer',minimum:0}]}})),
   add<{kind:PrimitiveKind}>('studio3d.insert.primitive','Insert a 3D primitive','Insert',p=>need().addPrimitive(p.kind),object({kind:{enum:['cube','sphere','plane','cylinder','cone','torus']}}),()=>!!controller),
   add<{kind:LightKind}>('studio3d.insert.light','Insert a 3D light','Insert',p=>need().addLight(p.kind),object({kind:{enum:['directional','point','spot','area','ambient']}}),()=>!!controller),
-  add<{preset?:LightRigPreset}>('studio3d.light.rig','Insert a light rig aimed at the scene','Insert',p=>need().addLightRig(p?.preset),object({preset:{enum:['three-point','studio','sunset']}},[]),()=>!!controller),
+  add<{preset?:LightRigPreset}>('studio3d.light.rig','Insert a light rig aimed at the scene','Insert',p=>need().addLightRig(p?.preset),object({preset:{enum:['three-point','studio','sunset','outdoor']}},[]),()=>!!controller),
   add<{id:number;position?:object;rotation?:object;scale?:object}>('studio3d.object.transform','Move, rotate or scale a 3D object','Edit',p=>need().setTransform(p.id,p as TransformPatch),object({id:{type:'integer',minimum:0},position:VEC,rotation:VEC,scale:VEC},['id']),hasScene),
   add<{id:number;preset?:string;color?:string;metalness?:number;roughness?:number;emissive?:string;emissiveIntensity?:number;opacity?:number;alphaMode?:string;alphaCutoff?:number;doubleSided?:boolean}>('studio3d.object.material','Change the material of a 3D object','Edit',p=>need().setMaterial(p.id,p as never),object({id:{type:'integer',minimum:0},preset:{enum:MATERIAL_PRESET_IDS},emissive:{type:'string',pattern:'^#[0-9a-fA-F]{6}$'},emissiveIntensity:{type:'number',minimum:0,maximum:MAX_EMISSIVE_INTENSITY},opacity:{type:'number',minimum:0,maximum:1},alphaMode:{enum:[...ALPHA_MODES]},alphaCutoff:{type:'number',minimum:0,maximum:1},doubleSided:{type:'boolean'},color:{type:'string',pattern:'^#[0-9a-fA-F]{6}$'},metalness:{type:'number',minimum:0,maximum:1},roughness:{type:'number',minimum:0,maximum:1}},['id']),hasScene),
   add<{id:number}&Record<string,number>>('studio3d.object.primitive','Change the size or segments of a 3D primitive','Edit',({id,...rest})=>need().setPrimitive(id,rest),object({id:{type:'integer',minimum:0},...PRIMITIVE_PROPS},['id']),hasScene),
@@ -221,6 +227,9 @@ export function studio3DCommandSpecs():CommandSpec<unknown,unknown>[]{
    object({ids:{type:'array',items:{type:'integer',minimum:0},minItems:1,maxItems:500},mode:{enum:['linear','radial']},count:{type:'integer',minimum:2,maximum:100},dx:{type:'number',minimum:-1000,maximum:1000},dy:{type:'number',minimum:-1000,maximum:1000},dz:{type:'number',minimum:-1000,maximum:1000},axis:{enum:['x','y','z']},angle:{type:'number',minimum:-360,maximum:360},cx:{type:'number',minimum:-10000,maximum:10000},cy:{type:'number',minimum:-10000,maximum:10000},cz:{type:'number',minimum:-10000,maximum:10000}},['ids','mode','count']),hasScene),
   add<{fromView?:boolean;kind?:CameraKind}>('studio3d.insert.camera','Insert a 3D camera (perspective or orthographic)','Insert',p=>need().addCamera(!!p?.fromView,p?.kind),object({fromView:{type:'boolean'},kind:{enum:['perspective','orthographic']}},[]),()=>!!controller),
   add<{id:number;fov?:number;zoom?:number}>('studio3d.camera.set','Change the field of view (perspective) or zoom (orthographic) of a 3D camera','Edit',p=>need().setCamera(p.id,{fov:p.fov,zoom:p.zoom}),object({id:{type:'integer',minimum:0},fov:{type:'number',minimum:1,maximum:120},zoom:{type:'number',minimum:0.01,maximum:100}},['id']),hasScene),
+  add<{quality?:string;type?:string}>('studio3d.shadow.set','Set the shadow map quality (off, low, medium, high) and algorithm (VSM or PCF)','Edit',p=>need().setShadows({quality:p.quality,type:p.type}),object({quality:{enum:[...SHADOW_QUALITIES]},type:{enum:[...SHADOW_TYPES]}},[]),()=>!!controller),
+  add<{on?:boolean}>('studio3d.light.helpers','Show or hide the viewport helper of the selected light','View',p=>need().setLightHelpers(p?.on??!getStudio3DState().lightHelpers),object({on:{type:'boolean'}},[]),()=>!!controller),
+  add<{on?:boolean;strength?:number}>('studio3d.view.ao','Switch the ambient occlusion preview on or off (viewport only, never exported)','View',p=>need().setAo({on:p?.on??!getStudio3DState().ao.on,strength:p?.strength}),object({on:{type:'boolean'},strength:{type:'number',minimum:0,maximum:1}},[]),()=>!!controller),
   add<{kind?:CameraKind}>('studio3d.view.projection','Switch the 3D viewport between perspective and orthographic','View',p=>need().setProjection(p?.kind==='orthographic'?'orthographic':p?.kind==='perspective'?'perspective':getStudio3DState().viewKind==='perspective'?'orthographic':'perspective'),object({kind:{enum:['perspective','orthographic']}},[]),()=>!!controller),
   add<{fov?:number;mm?:number}>('studio3d.view.fov','Set the viewport field of view (degrees) or 35mm-equivalent focal length','View',p=>{if(p.mm!==undefined)need().setViewFov(focalToFov(p.mm));else if(p.fov!==undefined)need().setViewFov(p.fov);else throw new Error('Pass fov or mm.');},object({fov:{type:'number',minimum:1,maximum:120},mm:{type:'number',minimum:3,maximum:1400}},[]),()=>!!controller),
   add<{on?:boolean}>('studio3d.view.turntable','Start or stop the turntable preview of the 3D viewport (view only, never exported)','View',p=>{need().setTurntable(p?.on??!getStudio3DState().turntable);},object({on:{type:'boolean'}},[]),hasScene),

@@ -614,5 +614,21 @@
  "studio3d.material.users": "{count} objetos",
  "studio3d.material.selectUsers": "Selecionar os objetos que usam {name}",
  "studio3d.texture.previewAlt": "Prévia da textura {slot}",
- "cmd.studio3d.texture.preview": "Mostrar uma prévia pequena de um canal de textura"
+ "cmd.studio3d.texture.preview": "Mostrar uma prévia pequena de um canal de textura",
+ "studio3d.light.rig.outdoor": "Externo",
+ "studio3d.shadow.title": "Sombras",
+ "studio3d.shadow.quality": "Qualidade das sombras",
+ "studio3d.shadow.quality.off": "Desativadas",
+ "studio3d.shadow.quality.low": "Baixa",
+ "studio3d.shadow.quality.medium": "Média",
+ "studio3d.shadow.quality.high": "Alta",
+ "studio3d.shadow.type": "Algoritmo de sombras",
+ "studio3d.shadow.type.vsm": "VSM (suave)",
+ "studio3d.shadow.type.pcf": "PCF (clássico)",
+ "studio3d.light.helpers": "Auxiliares de luz",
+ "studio3d.ao.toggle": "Oclusão ambiente",
+ "studio3d.ao.strength": "Intensidade de oclusão",
+ "cmd.studio3d.shadow.set": "Definir a qualidade e o algoritmo das sombras",
+ "cmd.studio3d.light.helpers": "Mostrar ou ocultar o auxiliar da luz selecionada",
+ "cmd.studio3d.view.ao": "Ativar ou desativar a prévia de oclusão ambiente (somente visualização)"
 }

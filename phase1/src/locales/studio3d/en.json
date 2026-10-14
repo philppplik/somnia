@@ -614,5 +614,21 @@
  "studio3d.material.users": "{count} objects",
  "studio3d.material.selectUsers": "Select the objects using {name}",
  "studio3d.texture.previewAlt": "Preview of the {slot} texture",
- "cmd.studio3d.texture.preview": "Show a small preview image of a texture slot"
+ "cmd.studio3d.texture.preview": "Show a small preview image of a texture slot",
+ "studio3d.light.rig.outdoor": "Outdoor",
+ "studio3d.shadow.title": "Shadows",
+ "studio3d.shadow.quality": "Shadow quality",
+ "studio3d.shadow.quality.off": "Off",
+ "studio3d.shadow.quality.low": "Low",
+ "studio3d.shadow.quality.medium": "Medium",
+ "studio3d.shadow.quality.high": "High",
+ "studio3d.shadow.type": "Shadow algorithm",
+ "studio3d.shadow.type.vsm": "VSM (soft)",
+ "studio3d.shadow.type.pcf": "PCF (classic)",
+ "studio3d.light.helpers": "Light helpers",
+ "studio3d.ao.toggle": "Ambient occlusion",
+ "studio3d.ao.strength": "Occlusion strength",
+ "cmd.studio3d.shadow.set": "Set the shadow map quality and algorithm",
+ "cmd.studio3d.light.helpers": "Show or hide the viewport helper of the selected light",
+ "cmd.studio3d.view.ao": "Switch the ambient occlusion preview on or off (viewport only)"
 }

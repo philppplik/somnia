@@ -106,7 +106,7 @@ test('3D studio refuses a file that is not glTF with a readable error',async({pa
 /** Helpers for the scene tests below. They drive the real app through its command layer (dev build) and read the studio session. */
 type P=import('@playwright/test').Page;
 const run=(page:P,id:string,params:unknown={})=>page.evaluate(async([i,p])=>{const m=await import('/src/lib/commands.ts');return (await m.executeCommand(i as string,p)) as unknown;},[id,params] as const);
-const session=(page:P)=>page.evaluate(async()=>{const m=await import('/src/lib/studio3d/session.ts');const s=m.getStudio3DState();return {anim:s.anim,clips:s.clips,clipKeys:s.clipKeys,outline:s.outline,marked:s.marked,selected:s.selected,info:s.selectedInfo,dirty:s.dirty,notice:s.notice,status:s.status,name:s.name,bones:s.bones,weightPreview:s.weightPreview,stats:s.stats,exportClips:s.exportClips,poses:s.poses,ik:s.ik,boneLimits:s.boneLimits,views:s.views,materialPresets:s.materialPresets,env:s.env,edit:s.edit,sculpt:s.sculpt,uvChecker:s.uvChecker,snap:s.snap,pivot:s.pivot,cursor:s.cursor,measure:s.measure,viewKind:s.viewKind,viewFov:s.viewFov,turntable:s.turntable};});
+const session=(page:P)=>page.evaluate(async()=>{const m=await import('/src/lib/studio3d/session.ts');const s=m.getStudio3DState();return {anim:s.anim,clips:s.clips,clipKeys:s.clipKeys,outline:s.outline,marked:s.marked,selected:s.selected,info:s.selectedInfo,dirty:s.dirty,notice:s.notice,status:s.status,name:s.name,bones:s.bones,weightPreview:s.weightPreview,stats:s.stats,exportClips:s.exportClips,poses:s.poses,ik:s.ik,boneLimits:s.boneLimits,views:s.views,materialPresets:s.materialPresets,env:s.env,edit:s.edit,sculpt:s.sculpt,uvChecker:s.uvChecker,snap:s.snap,pivot:s.pivot,cursor:s.cursor,measure:s.measure,viewKind:s.viewKind,viewFov:s.viewFov,turntable:s.turntable,shadows:s.shadows,lightHelpers:s.lightHelpers,ao:s.ao};});
 const open3d=async(page:P)=>{await page.goto('/');await page.getByRole('button',{name:/3D/}).first().click();};
 const blank=async(page:P)=>{await open3d(page);await page.getByTestId('3d-create-blank').click();await expect(page.getByTestId('studio3d-viewport')).toBeVisible();};
 const insert=async(page:P,kind:string,x:number)=>{await run(page,'studio3d.insert.primitive',{kind});const s=await session(page);const id=s.selected as number;await run(page,'studio3d.object.transform',{id,position:{x,y:0,z:0}});return id;};
@@ -1348,4 +1348,25 @@ test('3D studio materials: texture slot preview and the material list with usage
  await list.getByRole('button').first().click();
  await expect.poll(async()=>(await session(page)).marked.length).toBeGreaterThan(0);
  await expect.poll(async()=>(await session(page)).selected).not.toBeNull();
+});
+
+test('3D studio lights: outdoor rig, shadow quality, helper toggle and ambient occlusion preview',async({page})=>{
+ await blank(page);
+ await insert(page,'cube',0);
+ // Outdoor rig: a shadow-casting sun plus a cool sky fill in one undo step.
+ await page.getByTestId('studio3d-insert').getByRole('button',{name:'Outdoor'}).click();
+ await expect.poll(async()=>(await session(page)).outline.filter(o=>o.kind==='light').length).toBe(2);
+ await run(page,'studio3d.undo');
+ await expect.poll(async()=>(await session(page)).outline.filter(o=>o.kind==='light').length).toBe(0);
+ // Shadow quality and algorithm are render state, set from the env panel.
+ expect(await run(page,'studio3d.shadow.set',{quality:'low'})).toBe(true);
+ await expect.poll(async()=>(await session(page)).shadows.quality).toBe('low');
+ expect(await run(page,'studio3d.shadow.set',{type:'pcf'})).toBe(true);
+ await expect.poll(async()=>(await session(page)).shadows.type).toBe('pcf');
+ // The selected light's helper and the AO preview toggle from the view panel.
+ expect(await run(page,'studio3d.light.helpers',{on:false})).toBe(true);
+ await expect.poll(async()=>(await session(page)).lightHelpers).toBe(false);
+ expect(await run(page,'studio3d.view.ao',{on:true,strength:0.6})).toBe(true);
+ await expect.poll(async()=>(await session(page)).ao.on).toBe(true);
+ await expect.poll(async()=>(await session(page)).ao.strength).toBe(0.6);
 });

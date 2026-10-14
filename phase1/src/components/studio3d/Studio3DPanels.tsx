@@ -9,13 +9,15 @@ import {dropTextureFile} from '../../lib/studio3d/commands';
 import {useT} from '../../lib/useT';
 import {formatBytes} from '../../lib/media';
 import {useStudio3D} from '../../lib/studio3d/session';
-import {formatCount,boundsSize,GIZMO_MODES,ENV_PRESETS,ENV_ACCEPT,UNIT_IDS,BG_MODES,toggleSelection,transformExpr,outlineVisible,type BgMode} from '../../lib/studio3d/model';
+import {formatCount,boundsSize,GIZMO_MODES,ENV_PRESETS,ENV_ACCEPT,UNIT_IDS,BG_MODES,SHADOW_QUALITIES,SHADOW_TYPES,toggleSelection,transformExpr,outlineVisible,type BgMode} from '../../lib/studio3d/model';
 import {ChevronDown,ChevronRight,Eye,EyeOff,Lock,LockOpen} from 'lucide-react';
 import type {PanelHostProps,InspectorSectionProps} from '../../lib/shell/types';
 import {Input} from '../ui/input';
 import {Button} from '../ui/button';
 import {NativeInput,NativeSelect} from '../ui/native-controls';
 import {InspectorNumberField} from '../studios/InspectorNumberField';
+import {Checkbox} from '../ui/checkbox';
+import {RangeField} from '../ui/range-field';
 import {PARAM_SPECS,MATERIAL_PRESETS} from '../../lib/studio3d/primitives';
 import {ALPHA_MODES,TEXTURE_SLOTS,MAX_EMISSIVE_INTENSITY,materialSwatch,type TextureSlot} from '../../lib/studio3d/materials';
 import {validateScene,toMB} from '../../lib/studio3d/validate';
@@ -43,7 +45,7 @@ export function ScenePanel(_:PanelHostProps){
   <div className="flex flex-wrap gap-1" role="group" aria-label={t('studio3d.insert.group')} data-testid="studio3d-insert">
    {PRIMS.map(k=><Button key={k} variant="outline" onClick={()=>void executeCommand('studio3d.insert.primitive',{kind:k})}>{t('studio3d.insert.'+k)}</Button>)}
    {LIGHTS.map(k=><Button key={k} variant="outline" onClick={()=>void executeCommand('studio3d.insert.light',{kind:k})}>{t('studio3d.insert.'+k)}</Button>)}
-   {(['three-point','studio','sunset'] as const).map(preset=><Button key={preset} variant="outline" onClick={()=>void executeCommand('studio3d.light.rig',{preset})}>{t('studio3d.light.rig.'+preset)}</Button>)}
+   {(['three-point','studio','sunset','outdoor'] as const).map(preset=><Button key={preset} variant="outline" onClick={()=>void executeCommand('studio3d.light.rig',{preset})}>{t('studio3d.light.rig.'+preset)}</Button>)}
    <Button variant="outline" onClick={()=>void executeCommand('studio3d.insert.camera',{})}>{t('studio3d.insert.camera')}</Button>
    <Button variant="outline" onClick={()=>void executeCommand('studio3d.insert.camera',{fromView:true})}>{t('studio3d.insert.camera.view')}</Button>
    <Button variant="outline" onClick={()=>void executeCommand('studio3d.insert.camera',{kind:'orthographic'})}>{t('studio3d.insert.camera.ortho')}</Button>
@@ -460,6 +462,9 @@ export function ViewSection(_:InspectorSectionProps){
  return <div className="grid gap-2 p-3" data-testid="studio3d-view-section">
   <label className="flex items-center gap-2 text-xs text-ink-2"><input type="checkbox" checked={s.grid} onChange={e=>void executeCommand('studio3d.view.grid',{on:e.target.checked})}/>{t('studio3d.view.grid')}</label>
   <label className="flex items-center gap-2 text-xs text-ink-2"><input type="checkbox" checked={s.wireframe} disabled={!ready} onChange={e=>void executeCommand('studio3d.view.wireframe',{on:e.target.checked})}/>{t('studio3d.view.wireframe')}</label>
+  <Checkbox label={t('studio3d.light.helpers')} checked={s.lightHelpers} onChange={e=>void executeCommand('studio3d.light.helpers',{on:e.currentTarget.checked})}/>
+  <Checkbox label={t('studio3d.ao.toggle')} checked={s.ao.on} disabled={!ready} onChange={e=>void executeCommand('studio3d.view.ao',{on:e.currentTarget.checked})}/>
+  {s.ao.on&&<RangeField label={t('studio3d.ao.strength')} min={0} max={1} step={0.05} value={s.ao.strength} readout={s.ao.strength.toFixed(2)} onPreview={v=>void executeCommand('studio3d.view.ao',{strength:v})} onCommit={v=>void executeCommand('studio3d.view.ao',{strength:v})} onCancel={()=>{}}/>}
   <div className="flex gap-2"><Button variant="outline" disabled={!s.canUndo} onClick={()=>void executeCommand('studio3d.undo')}>{t('studio3d.undo')}</Button><Button variant="outline" disabled={!s.canRedo} onClick={()=>void executeCommand('studio3d.redo')}>{t('studio3d.redo')}</Button></div>
   <div className="flex gap-2"><Button variant="outline" disabled={!ready} onClick={()=>void executeCommand('studio3d.view.reset')}>{t('studio3d.view.reset')}</Button>
    <Button variant="outline" disabled={!ready||s.selected==null} onClick={()=>void executeCommand('studio3d.view.frame')}>{t('studio3d.view.frame')}</Button></div>
@@ -502,6 +507,13 @@ export function EnvSection(_:InspectorSectionProps){
   {(e.bg==='color'||e.bg==='gradient')&&<label className="flex items-center justify-between gap-2 text-xs text-ink-2">{t(e.bg==='color'?'studio3d.env.bgColor':'studio3d.env.bgTop')}<NativeInput type="color" value={e.bgColor} aria-label={t(e.bg==='color'?'studio3d.env.bgColor':'studio3d.env.bgTop')} onChange={ev=>void executeCommand('studio3d.env.set',{bgColor:ev.currentTarget.value})}/></label>}
   {e.bg==='gradient'&&<label className="flex items-center justify-between gap-2 text-xs text-ink-2">{t('studio3d.env.bgBottom')}<NativeInput type="color" value={e.bgColor2} aria-label={t('studio3d.env.bgBottom')} onChange={ev=>void executeCommand('studio3d.env.set',{bgColor2:ev.currentTarget.value})}/></label>}
   <Button variant="outline" onClick={()=>void executeCommand('studio3d.env.open')} title={ENV_ACCEPT}>{t('studio3d.env.open')}</Button>
+  <fieldset className="m-0 grid gap-1 border-0 p-0" data-testid="studio3d-shadow-settings"><legend className="text-xs text-ink-3">{t('studio3d.shadow.title')}</legend>
+   <label className="grid gap-1 text-xs text-ink-2">{t('studio3d.shadow.quality')}
+    <NativeSelect className="rounded-sm border border-subtle bg-surface p-1 text-xs text-ink" value={s.shadows.quality} aria-label={t('studio3d.shadow.quality')} onChange={ev=>void executeCommand('studio3d.shadow.set',{quality:ev.currentTarget.value})}>
+     {SHADOW_QUALITIES.map(q=><option key={q} value={q}>{t('studio3d.shadow.quality.'+q)}</option>)}</NativeSelect></label>
+   <label className="grid gap-1 text-xs text-ink-2">{t('studio3d.shadow.type')}
+    <NativeSelect className="rounded-sm border border-subtle bg-surface p-1 text-xs text-ink" value={s.shadows.type} aria-label={t('studio3d.shadow.type')} onChange={ev=>void executeCommand('studio3d.shadow.set',{type:ev.currentTarget.value})}>
+     {SHADOW_TYPES.map(ty=><option key={ty} value={ty}>{t('studio3d.shadow.type.'+ty)}</option>)}</NativeSelect></label></fieldset>
  </div>;
 }
 

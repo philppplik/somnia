@@ -614,5 +614,21 @@
  "studio3d.material.users": "{count} objetos",
  "studio3d.material.selectUsers": "Seleccionar los objetos que usan {name}",
  "studio3d.texture.previewAlt": "Vista previa de la textura {slot}",
- "cmd.studio3d.texture.preview": "Mostrar una vista previa pequeña de un canal de textura"
+ "cmd.studio3d.texture.preview": "Mostrar una vista previa pequeña de un canal de textura",
+ "studio3d.light.rig.outdoor": "Exterior",
+ "studio3d.shadow.title": "Sombras",
+ "studio3d.shadow.quality": "Calidad de sombras",
+ "studio3d.shadow.quality.off": "Desactivadas",
+ "studio3d.shadow.quality.low": "Baja",
+ "studio3d.shadow.quality.medium": "Media",
+ "studio3d.shadow.quality.high": "Alta",
+ "studio3d.shadow.type": "Algoritmo de sombras",
+ "studio3d.shadow.type.vsm": "VSM (suave)",
+ "studio3d.shadow.type.pcf": "PCF (clásico)",
+ "studio3d.light.helpers": "Ayudantes de luz",
+ "studio3d.ao.toggle": "Oclusión ambiental",
+ "studio3d.ao.strength": "Intensidad de oclusión",
+ "cmd.studio3d.shadow.set": "Ajustar la calidad y el algoritmo de sombras",
+ "cmd.studio3d.light.helpers": "Mostrar u ocultar el ayudante de la luz seleccionada",
+ "cmd.studio3d.view.ao": "Activar o desactivar la vista previa de oclusión ambiental (solo vista)"
 }

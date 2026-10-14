@@ -8,6 +8,10 @@ import {OBJLoader} from 'three/addons/loaders/OBJLoader.js';
 import {MTLLoader} from 'three/addons/loaders/MTLLoader.js';
 import {RectAreaLightUniformsLib} from 'three/addons/lights/RectAreaLightUniformsLib.js';
 import {RectAreaLightHelper} from 'three/addons/helpers/RectAreaLightHelper.js';
+import {EffectComposer} from 'three/addons/postprocessing/EffectComposer.js';
+import {RenderPass} from 'three/addons/postprocessing/RenderPass.js';
+import {GTAOPass} from 'three/addons/postprocessing/GTAOPass.js';
+import {OutputPass} from 'three/addons/postprocessing/OutputPass.js';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import {clone as skeletonClone} from 'three/addons/utils/SkeletonUtils.js';
 import {STLExporter} from 'three/addons/exporters/STLExporter.js';
@@ -24,7 +28,7 @@ import {getState as getAppState} from '../../store/appStore';
 import {readProjectUnit,writeProjectUnit} from '../../lib/studio3d/projectPrefs';
 import {checkPreset,presetPatch,readPresets,removePreset,savePreset,MaterialPresetError,type MaterialPreset} from '../../lib/studio3d/materialPresets';
 import type {MaterialSnapshot} from '../../lib/studio3d/stage';
-import {toggleSelection,marqueeRect,inRect,turntablePlan,frameName,exportFileName,unitScale,isUnit,isMeshFormat,mergeSnap,snapTo,measureInfo,stlUnitHint,mtlReferences,mtlTextures,externalGltfNeeds,clampRenderSize,MAX_MTL_BYTES,MAX_TEXTURE_BYTES,MAX_TEXTURE_FILES,SnapError,mergeEnv,envFormatFor,nudgeFor,EnvError,modelFormatFor,readModelHeader,ModelError,boundsValid,boundsCenter,boundsRadius,frameDistance,clipPlanes,pickClips,extractGltfTextures,GLTF_TEXTURE_MODES} from '../../lib/studio3d/model';
+import {toggleSelection,marqueeRect,inRect,turntablePlan,frameName,exportFileName,unitScale,isUnit,isMeshFormat,mergeSnap,snapTo,measureInfo,stlUnitHint,mtlReferences,mtlTextures,externalGltfNeeds,clampRenderSize,shadowMapSize,MAX_MTL_BYTES,MAX_TEXTURE_BYTES,MAX_TEXTURE_FILES,SnapError,mergeEnv,envFormatFor,isShadowQuality,isShadowType,nudgeFor,EnvError,modelFormatFor,readModelHeader,ModelError,boundsValid,boundsCenter,boundsRadius,frameDistance,clipPlanes,pickClips,extractGltfTextures,GLTF_TEXTURE_MODES} from '../../lib/studio3d/model';
 import type {Bounds} from '../../lib/studio3d/model';
 import {checkSkins,bonePickRadius,pickBone} from '../../lib/studio3d/skeleton';
 import {weightColor} from '../../lib/studio3d/skinning';
@@ -119,9 +123,24 @@ export default function Viewport3D(){
   const stage=sharedStage??(sharedStage=new Stage());const holder=stage.root;scene.add(holder);
   const previewCache=new Map<string,string>();
   let selection:THREE.Box3Helper|null=null;let bounds:Bounds|null=null;let disposed=false;let frame=0;
-  const invalidate=()=>{if(frame||disposed)return;frame=requestAnimationFrame(()=>{frame=0;if(!disposed)renderer.render(scene,camera);});};
+  /** Ambient occlusion: a composer chain (render + GTAO + output) replaces the direct render while on. Preview only - stills, turntables and exports keep the plain renderer. */
+  let composer:EffectComposer|null=null;let renderPass:RenderPass|null=null;let gtaoPass:GTAOPass|null=null;
+  const renderFrame=()=>{
+   const ao=getStudio3DState().ao;
+   if(!ao.on){renderer.render(scene,camera);return;}
+   if(!composer){
+    const w=Math.max(1,el.clientWidth),h=Math.max(1,el.clientHeight);
+    composer=new EffectComposer(renderer);composer.setSize(w,h);
+    renderPass=new RenderPass(scene,camera);composer.addPass(renderPass);
+    gtaoPass=new GTAOPass(scene,camera,w,h);composer.addPass(gtaoPass);
+    composer.addPass(new OutputPass());
+   }
+   renderPass!.camera=camera;gtaoPass!.camera=camera;gtaoPass!.blendIntensity=ao.strength;
+   composer.render();
+  };
+  const invalidate=()=>{if(frame||disposed)return;frame=requestAnimationFrame(()=>{frame=0;if(!disposed)renderFrame();});};
   controls.addEventListener('change',invalidate);
-  const resize=()=>{const w=Math.max(1,el.clientWidth),h=Math.max(1,el.clientHeight);renderer.setSize(w,h,false);const a=w/h;perspCam.aspect=a;perspCam.updateProjectionMatrix();orthoCam.left=-orthoCam.top*a;orthoCam.right=orthoCam.top*a;orthoCam.updateProjectionMatrix();invalidate();};
+  const resize=()=>{const w=Math.max(1,el.clientWidth),h=Math.max(1,el.clientHeight);renderer.setSize(w,h,false);const a=w/h;perspCam.aspect=a;perspCam.updateProjectionMatrix();orthoCam.left=-orthoCam.top*a;orthoCam.right=orthoCam.top*a;orthoCam.updateProjectionMatrix();composer?.setSize(w,h);invalidate();};
   const ro=new ResizeObserver(resize);ro.observe(el);resize();
   const place=(dir:THREE.Vector3,center:THREE.Vector3,radius:number)=>{
    const d=frameDistance(radius,perspCam.fov,perspCam.aspect);const {near,far}=clipPlanes(d,radius);
@@ -166,7 +185,7 @@ export default function Viewport3D(){
    const fhead=sel==null?null:stage.fabrikChainHead(sel);const fabrik=fhead?{...stage.fabrikState(fhead.id)!,root:fhead.id}:null;
    patchStudio3D({clips:infos,clipKeys:keys,stats:m.stats,outline:m.outline,materialList:stage.materialUsage(),bones:stage.bones(),bounds:m.bounds,selected:info?sel:null,selectedInfo:info,poses:sel==null?[]:stage.poseList(sel),ik,fabrik,rigs:stage.bones().filter(b=>b.depth===0).map(b=>({id:b.id,name:b.name})),boneLimits:sel==null?null:stage.boneLimitsOf(sel),uvView:sel==null?null:stage.uvLayout(sel),dirty:stage.dirty,canUndo:stage.canUndo,canRedo:stage.canRedo,undoLabel:stage.undoLabel});
    syncIk();syncFabrik();syncOnion();syncMotionPath();
-   drawSelection();applyWire(getStudio3DState().wireframe);syncSkeleton();syncWeightPreview();syncMaskOverlay();syncUvChecker();syncSeams();for(const h of syncHooks)h();invalidate();
+   drawSelection();applyWire(getStudio3DState().wireframe);applyShadowQuality();syncSkeleton();syncWeightPreview();syncMaskOverlay();syncUvChecker();syncSeams();for(const h of syncHooks)h();invalidate();
   };
   /** Turntable preview: the orbit controls auto-rotate while a rAF loop renders. View only - it never touches the stage, documents or exports. */
   let previewRaf=0;
@@ -175,7 +194,7 @@ export default function Viewport3D(){
    if(on){
     if(previewRaf)return true;
     controls.autoRotate=true;
-    const tick=()=>{if(disposed){previewRaf=0;return;}controls.update();renderer.render(scene,camera);previewRaf=requestAnimationFrame(tick);};
+    const tick=()=>{if(disposed){previewRaf=0;return;}controls.update();renderFrame();previewRaf=requestAnimationFrame(tick);};
     previewRaf=requestAnimationFrame(tick);
     if(!getStudio3DState().turntable)patchStudio3D({turntable:true});
    }
@@ -548,7 +567,7 @@ export default function Viewport3D(){
   type HelperObj=THREE.Object3D&{update?:()=>void;dispose?:()=>void};
   const syncLightHelper=()=>{
    const id=getStudio3DState().selected;const o=id==null?null:stage.find(id) as THREE.Light|null;
-   const ok=!!o&&!!o.isLight&&!(o as THREE.AmbientLight).isAmbientLight;
+   const ok=!!o&&!!o.isLight&&!(o as THREE.AmbientLight).isAmbientLight&&getStudio3DState().lightHelpers;
    if(lightHelper&&(!ok||lightHelperId!==o!.id)){scene.remove(lightHelper);(lightHelper as HelperObj).dispose?.();lightHelper=null;lightHelperId=-1;}
    if(!ok)return;
    if(!lightHelper){
@@ -561,6 +580,21 @@ export default function Viewport3D(){
    (lightHelper as HelperObj|null)?.update?.();
   };
   syncHooks.push(()=>{syncGizmo();syncCameraHelpers();syncLightHelper();});
+  /** Applies the shadow quality (off/low/medium/high) and algorithm (VSM/PCF) to the renderer and every shadow-casting light. Runs from sync: it only mutates on change, so new lights pick the quality up as they appear. */
+  const applyShadowQuality=()=>{
+   const sh=getStudio3DState().shadows;
+   const on=sh.quality!=='off';
+   const toggled=renderer.shadowMap.enabled!==on;
+   if(toggled)renderer.shadowMap.enabled=on;
+   const type=sh.type==='vsm'?THREE.VSMShadowMap:THREE.PCFSoftShadowMap;
+   const typed=renderer.shadowMap.type!==type;
+   if(typed)renderer.shadowMap.type=type;
+   let resized=false;
+   if(on){const size=shadowMapSize(sh.quality as Exclude<typeof sh.quality,'off'>);
+    stage.root.traverse(o=>{const l=o as THREE.DirectionalLight;if(!l.isLight||!l.castShadow||!l.shadow)return;
+     if(l.shadow.mapSize.x!==size){l.shadow.mapSize.set(size,size);if(l.shadow.map){l.shadow.map.dispose();l.shadow.map=null;}l.shadow.needsUpdate=true;resized=true;}});}
+   if(toggled||typed||resized)stage.root.traverse(o=>{const m=o as THREE.Mesh;if(!m.isMesh)return;for(const mat of Array.isArray(m.material)?m.material:[m.material])(mat as THREE.Material).needsUpdate=true;});
+  };
   const syncShadows=()=>{
    const r=bounds&&boundsValid(bounds)?Math.max(boundsRadius(bounds),1):5;
    holder.traverse(o=>{
@@ -1028,6 +1062,9 @@ export default function Viewport3D(){
     previewCache.set(tex.uuid,url);
     return url;
    },
+   setShadows:patch=>{const cur=getStudio3DState().shadows;const next={quality:patch.quality&&isShadowQuality(patch.quality)?patch.quality:cur.quality,type:patch.type&&isShadowType(patch.type)?patch.type:cur.type};patchStudio3D({shadows:next});applyShadowQuality();invalidate();},
+   setLightHelpers:on=>{patchStudio3D({lightHelpers:on});syncLightHelper();invalidate();},
+   setAo:patch=>{const cur=getStudio3DState().ao;patchStudio3D({ao:{on:patch.on??cur.on,strength:Math.min(1,Math.max(0,patch.strength??cur.strength))}});invalidate();},
    setProjection:applyProjection,
    setViewFov:fov=>{const f=Math.min(120,Math.max(1,fov));if(perspCam.fov!==f){perspCam.fov=f;perspCam.updateProjectionMatrix();invalidate();}if(getStudio3DState().viewFov!==f)patchStudio3D({viewFov:f});},
    setTurntable,
@@ -1228,7 +1265,7 @@ export default function Viewport3D(){
    disposed=true;opening++;stopAnim();if(previewRaf)cancelAnimationFrame(previewRaf);offDrop();mixer?.stopAllAction();stage.autoKeySource=null;off();offAuto();if(autoTimer)clearTimeout(autoTimer);cancelAnimationFrame(frame);ro.disconnect();controls.dispose();
    cv.removeEventListener('pointerdown',onDownCapture,true);cv.removeEventListener('pointerdown',onDown);window.removeEventListener('pointermove',onMove);window.removeEventListener('pointercancel',endMarquee);endMarquee();cv.removeEventListener('pointerup',onUp);cv.removeEventListener('keydown',onKey);
    if(getStudio3DState().status==='loading')patchStudio3D({status:stage.root.children.length?'ready':'idle',confirmReplace:null});
-   gizmo.detach();gizmo.dispose();ikGizmo.detach();ikGizmo.dispose();poleGizmo.detach();poleGizmo.dispose();fkGizmo.detach();fkGizmo.dispose();lookGizmo.detach();lookGizmo.dispose();clearGhosts();scene.remove(ghosts);if(pathLine){pathLine.geometry.dispose();(pathLine.material as THREE.Material).dispose();pathLine=null;}fkTarget.geometry.dispose();(fkTarget.material as THREE.Material).dispose();fkLook.geometry.dispose();(fkLook.material as THREE.Material).dispose();ikTarget.geometry.dispose();(ikTarget.material as THREE.Material).dispose();ikPoleM.geometry.dispose();(ikPoleM.material as THREE.Material).dispose();offStage();clearSelection();if(painting){painting=false;}const openSel=getStudio3DState().selected;if(openSel!=null)stage.skinPaintEnd(openSel);if(lightHelper){scene.remove(lightHelper);(lightHelper as HelperObj).dispose?.();lightHelper=null;}if(skelHelper){scene.remove(skelHelper);skelHelper.geometry.dispose();(skelHelper.material as THREE.Material).dispose();skelHelper=null;}if(weightOverlay){scene.remove(weightOverlay);weightOverlay.geometry.dispose();(weightOverlay.material as THREE.Material).dispose();weightOverlay=null;}if(maskOverlay){scene.remove(maskOverlay);maskOverlay.geometry.dispose();(maskOverlay.material as THREE.Material).dispose();maskOverlay=null;}for(const h of helpers.values())h.dispose();grid.geometry.dispose();(grid.material as THREE.Material).dispose();cursorGeo.dispose();cursorMat.dispose();scene.remove(cursorMark);mLineGeo.dispose();mLineMat.dispose();mDotGeo.dispose();mDotMat.dispose();scene.remove(measureGroup);for(const t of envTargets)t.dispose();envCache.clear();pmrem.dispose();renderer.dispose();renderer.forceContextLoss();
+   gizmo.detach();gizmo.dispose();ikGizmo.detach();ikGizmo.dispose();poleGizmo.detach();poleGizmo.dispose();fkGizmo.detach();fkGizmo.dispose();lookGizmo.detach();lookGizmo.dispose();clearGhosts();scene.remove(ghosts);if(pathLine){pathLine.geometry.dispose();(pathLine.material as THREE.Material).dispose();pathLine=null;}fkTarget.geometry.dispose();(fkTarget.material as THREE.Material).dispose();fkLook.geometry.dispose();(fkLook.material as THREE.Material).dispose();ikTarget.geometry.dispose();(ikTarget.material as THREE.Material).dispose();ikPoleM.geometry.dispose();(ikPoleM.material as THREE.Material).dispose();offStage();clearSelection();if(painting){painting=false;}const openSel=getStudio3DState().selected;if(openSel!=null)stage.skinPaintEnd(openSel);if(lightHelper){scene.remove(lightHelper);(lightHelper as HelperObj).dispose?.();lightHelper=null;}if(skelHelper){scene.remove(skelHelper);skelHelper.geometry.dispose();(skelHelper.material as THREE.Material).dispose();skelHelper=null;}if(weightOverlay){scene.remove(weightOverlay);weightOverlay.geometry.dispose();(weightOverlay.material as THREE.Material).dispose();weightOverlay=null;}if(maskOverlay){scene.remove(maskOverlay);maskOverlay.geometry.dispose();(maskOverlay.material as THREE.Material).dispose();maskOverlay=null;}for(const h of helpers.values())h.dispose();grid.geometry.dispose();(grid.material as THREE.Material).dispose();cursorGeo.dispose();cursorMat.dispose();scene.remove(cursorMark);mLineGeo.dispose();mLineMat.dispose();mDotGeo.dispose();mDotMat.dispose();scene.remove(measureGroup);for(const t of envTargets)t.dispose();envCache.clear();pmrem.dispose();composer?.dispose();renderer.dispose();renderer.forceContextLoss();
    if(cv.parentNode===el)el.removeChild(cv);
   };
  // eslint-disable-next-line react-hooks/exhaustive-deps

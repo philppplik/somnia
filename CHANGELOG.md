@@ -1,4 +1,5 @@
 # Unreleased: 3D Studio P0
+- Shadow quality and PCF option, outdoor rig, light helper toggle, ambient occlusion preview: the env panel sets shadow map quality (off/low/medium/high) and switches VSM/PCF (PCF restores the pre-VSM look; softness radius stays VSM-only), the rig row gains an outdoor sun+sky preset, the view panel toggles the selected light's helper and previews ambient occlusion (viewport only, stills/exports unchanged).
 - 3D Studio materials polish: texture slots show a 64px preview thumbnail, and a material list in the Model panel shows every material with its usage count and selects the objects that share it.
 - 3D Studio outliner polish: groups fold and expand with a chevron or the arrow keys, rows support keyboard navigation (arrows, Home/End, F2 to rename), and duplicate/delete buttons act on the whole selection set.
 - 3D Studio import polish: drop model files (with .bin/.mtl/texture sidecars) straight onto the studio, glTF imports fall back to an empty pixel for missing textures instead of failing, and a localized import summary reports triangles, materials and animations.

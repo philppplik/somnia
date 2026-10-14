@@ -147,6 +147,16 @@ export function outlineVisible(outline:readonly OutlineEntry[],collapsed:readonl
 export const formatCount=(n:number)=>n>=1e6?(n/1e6).toFixed(n>=1e7?0:1)+' M':n>=1e4?(n/1e3).toFixed(n>=1e5?0:1)+' k':String(n);
 export interface OutlineEntry{id:number;name:string;depth:number;kind:'group'|'mesh'|'light'|'camera'|'bone';/** Own visibility flag (a hidden parent hides children too). */hidden:boolean;/** Locked nodes are skipped by viewport picking and marquee selection. */locked:boolean}
 
+export const SHADOW_QUALITIES=['off','low','medium','high'] as const;
+export type ShadowQuality=typeof SHADOW_QUALITIES[number];
+export const isShadowQuality=(v:unknown):v is ShadowQuality=>typeof v==='string'&&(SHADOW_QUALITIES as readonly string[]).includes(v);
+export const SHADOW_TYPES=['vsm','pcf'] as const;
+export type ShadowType=typeof SHADOW_TYPES[number];
+export const isShadowType=(v:unknown):v is ShadowType=>typeof v==='string'&&(SHADOW_TYPES as readonly string[]).includes(v);
+/** Shadow map resolution per quality. 'off' disables shadow mapping entirely, so it has no size. */
+export interface ShadowSettings{quality:ShadowQuality;/** 'vsm' honours the per-light softness radius; 'pcf' keeps the classic pre-softness look. */type:ShadowType}
+export const defaultShadows=():ShadowSettings=>({quality:'high',type:'vsm'});
+export function shadowMapSize(q:Exclude<ShadowQuality,'off'>):number{return q==='low'?512:q==='medium'?1024:2048;}
 export const ENV_PRESETS=['studio','outdoor','sky','dark','neutral','none','custom'] as const;
 export type EnvPreset=typeof ENV_PRESETS[number];
 export const BG_MODES=['default','env','color','gradient'] as const;

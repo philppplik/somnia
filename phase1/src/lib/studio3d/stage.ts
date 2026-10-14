@@ -26,7 +26,7 @@ import {emptyStats,boundsValid,boundsCenter,boundsRadius,unitScale,type ModelSta
 export type {PrimitiveKind}from './primitives';
 export type LightKind='directional'|'point'|'spot'|'area'|'ambient';
 /** One-click light rig presets. */
-export type LightRigPreset='three-point'|'studio'|'sunset';
+export type LightRigPreset='three-point'|'studio'|'sunset'|'outdoor';
 export const PRIMITIVES:readonly PrimitiveKind[]=PRIMITIVE_KINDS;
 export const LIGHTS:readonly LightKind[]=['directional','point','spot','area','ambient'];
 export interface Vec3{x:number;y:number;z:number}
@@ -290,6 +290,11 @@ export class Stage{
    const top=put(new THREE.DirectionalLight(0xffffff,1.4),[c[0],c[1]+3.5*r,c[2]+0.5*r]);top.name=this.uniqueName('Studio top');top.castShadow=true;aim(top);
    key.lookAt(c[0],c[1],c[2]);fill.lookAt(c[0],c[1],c[2]);
    label='Add studio light rig';
+  }else if(preset==='outdoor'){
+   // Midday daylight: a bright, slightly warm high sun with shadows plus a cool sky bounce.
+   const sun=put(new THREE.DirectionalLight(0xfff2dd,3),[c[0]+1.5*r,c[1]+4*r,c[2]+2*r]);sun.name=this.uniqueName('Outdoor sun');sun.castShadow=true;aim(sun);
+   put(new THREE.AmbientLight(0x9db8d9,0.9),[0,0,0]).name=this.uniqueName('Outdoor sky');
+   label='Add outdoor light rig';
   }else if(preset==='sunset'){
    // Low warm sun with long shadows plus a cool sky bounce.
    const sun=put(new THREE.DirectionalLight(0xffb36b,2.5),[c[0]+3*r,c[1]+0.7*r,c[2]-1.5*r]);sun.name=this.uniqueName('Sunset sun');sun.castShadow=true;aim(sun);

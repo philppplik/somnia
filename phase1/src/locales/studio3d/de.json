@@ -614,5 +614,21 @@
  "studio3d.material.users": "{count} Objekte",
  "studio3d.material.selectUsers": "Objekte mit {name} auswählen",
  "studio3d.texture.previewAlt": "Vorschau der {slot}-Textur",
- "cmd.studio3d.texture.preview": "Kleine Vorschau eines Texturkanals anzeigen"
+ "cmd.studio3d.texture.preview": "Kleine Vorschau eines Texturkanals anzeigen",
+ "studio3d.light.rig.outdoor": "Draussen",
+ "studio3d.shadow.title": "Schatten",
+ "studio3d.shadow.quality": "Schattenqualität",
+ "studio3d.shadow.quality.off": "Aus",
+ "studio3d.shadow.quality.low": "Niedrig",
+ "studio3d.shadow.quality.medium": "Mittel",
+ "studio3d.shadow.quality.high": "Hoch",
+ "studio3d.shadow.type": "Schatten-Algorithmus",
+ "studio3d.shadow.type.vsm": "VSM (weich)",
+ "studio3d.shadow.type.pcf": "PCF (klassisch)",
+ "studio3d.light.helpers": "Licht-Helfer",
+ "studio3d.ao.toggle": "Ambient Occlusion",
+ "studio3d.ao.strength": "Stärke der Verdeckung",
+ "cmd.studio3d.shadow.set": "Schattenqualität und -algorithmus einstellen",
+ "cmd.studio3d.light.helpers": "Helfer der gewählten Lichtquelle ein- oder ausblenden",
+ "cmd.studio3d.view.ao": "Ambient-Occlusion-Vorschau ein- oder ausschalten (nur Ansicht)"
 }
